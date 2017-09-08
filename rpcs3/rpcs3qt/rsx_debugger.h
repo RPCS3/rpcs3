@@ -29,15 +29,11 @@
 
 class Buffer : public QWidget
 {
-	QHBoxLayout* m_layout;
-	QImage m_scaled;
 	u32 m_id;
 	bool m_isTex;
-
-public:
-	QLabel* m_canvas;
 	QImage m_image;
 
+public:
 	Buffer(QWidget* parent, bool isTex, u32 id = 4)
 		: QWidget(parent), m_isTex(isTex), m_id(id){};
 	void showImage(const QImage& image = QImage());
@@ -52,17 +48,7 @@ class rsx_debugger : public QDialog
 
 	u32 m_addr;
 
-	u32 m_panel_width;
-	u32 m_panel_height;
-	u32 m_text_width;
-	u32 m_text_height;
-
-	u32 pSize;
-
-	QLineEdit* t_addr;
-	QPalette palette_bg;
-	QFont mono;
-	QFontMetrics* fontMetrics;
+	QLineEdit* m_addr_line;
 
 	u32 m_item_count;
 	QTableWidget* m_list_commands;
@@ -103,10 +89,7 @@ public:
 	const char* ParseGCMEnum(u32 value, u32 type);
 	QString DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioAddr);
 
-	void SetPC(const uint pc) { m_addr = pc; }
-
-private:
-	QSignalMapper *signalMapper;
+	void SetPC(const uint pc);
 
 public Q_SLOTS:
 	virtual void keyPressEvent(QKeyEvent* event);

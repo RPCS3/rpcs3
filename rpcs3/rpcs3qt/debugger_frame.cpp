@@ -11,15 +11,12 @@ extern bool user_asked_for_frame_capture;
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent)
 	: QDockWidget(tr("Debugger"), parent), xgui_settings(settings)
 {
-	pSize = 10;
-
-	update = new QTimer(this);
-	connect(update, &QTimer::timeout, this, &debugger_frame::UpdateUI);
+	m_update = new QTimer(this);
+	connect(m_update, &QTimer::timeout, this, &debugger_frame::UpdateUI);
 	EnableUpdateTimer(true);
 
-	body = new QWidget(this);
-	mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-	mono.setPointSize(pSize);
+	m_mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+	m_mono.setPointSize(10);
 
 	QVBoxLayout* vbox_p_main = new QVBoxLayout();
 	QHBoxLayout* hbox_b_main = new QHBoxLayout();
@@ -57,8 +54,8 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	m_regs->setLineWrapMode(QTextEdit::NoWrap);
 	m_regs->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 
-	m_list->setFont(mono);
-	m_regs->setFont(mono);
+	m_list->setFont(m_mono);
+	m_regs->setFont(m_mono);
 
 	m_splitter = new QSplitter(this);
 	m_splitter->addWidget(m_list);
@@ -70,6 +67,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	vbox_p_main->addLayout(hbox_b_main);
 	vbox_p_main->addLayout(hbox_w_list);
 
+	QWidget* body = new QWidget(this);
 	body->setLayout(vbox_p_main);
 	setWidget(body);
 	
@@ -191,7 +189,7 @@ void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
 
-	if (m_noThreadSelected) return;
+	if (m_no_thread_selected) return;
 
 	const auto cpu = this->cpu.lock();
 
@@ -279,13 +277,13 @@ void debugger_frame::OnSelectUnit()
 	if (m_choice_units->count() < 1 || m_current_choice == m_choice_units->currentText()) return;
 
 	m_current_choice = m_choice_units->currentText();
-	m_noThreadSelected = m_current_choice == NoThread;
-	m_list->m_noThreadSelected = m_noThreadSelected;
+	m_no_thread_selected = m_current_choice == NoThread;
+	m_list->m_no_thread_selected = m_no_thread_selected;
 
 	m_disasm.reset();
 	cpu.reset();
 
-	if (!m_noThreadSelected)
+	if (!m_no_thread_selected)
 	{
 		const auto on_select = [&](u32, cpu_thread& cpu)
 		{
@@ -356,11 +354,11 @@ void debugger_frame::Show_Val()
 	QHBoxLayout* hbox_text_panel(new QHBoxLayout());
 	QHBoxLayout* hbox_button_panel(new QHBoxLayout());
 	QLineEdit* p_pc(new QLineEdit(diag));
-	p_pc->setFont(mono);
+	p_pc->setFont(m_mono);
 	p_pc->setMaxLength(8);
 	p_pc->setFixedWidth(90);
 	QLabel* addr(new QLabel(diag));
-	addr->setFont(mono);
+	addr->setFont(m_mono);
 	
 	hbox_text_panel->addWidget(addr);
 	hbox_text_panel->addWidget(p_pc);
@@ -450,7 +448,7 @@ void debugger_frame::DoStep()
 
 void debugger_frame::EnableUpdateTimer(bool enable)
 {
-	enable ? update->start(50) : update->stop();
+	enable ? m_update->start(50) : m_update->stop();
 }
 
 void debugger_frame::EnableButtons(bool enable)
@@ -589,7 +587,7 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 
 void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 {
-	if (event->button() == Qt::LeftButton && !Emu.IsStopped() && !m_noThreadSelected)
+	if (event->button() == Qt::LeftButton && !Emu.IsStopped() && !m_no_thread_selected)
 	{
 		long i = currentRow();
 		if (i < 0) return;

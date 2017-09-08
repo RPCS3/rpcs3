@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/bin_patch.h"
 #include "Crypto/sha1.h"
@@ -732,6 +732,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 				ppu_segment _seg;
 				_seg.addr = addr;
 				_seg.size = mem_size;
+				_seg.filesz = file_size;
 				_seg.type = p_type;
 				_seg.flags = prog.p_flags;
 				prx->segs.emplace_back(_seg);
@@ -766,6 +767,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 					_sec.size = size;
 					_sec.type = s.sh_type;
 					_sec.flags = s.sh_flags & 7;
+					_sec.filesz = 0;
 					prx->secs.emplace_back(_sec);
 					break;
 				}
@@ -885,7 +887,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		struct ppu_prx_library_info
 		{
 			be_t<u16> attributes;
-			be_t<u16> version;
+			u8 version[2];
 			char name[28];
 			be_t<u32> toc;
 			be_t<u32> exports_start;
@@ -897,6 +899,11 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		// Access library information (TODO)
 		const auto& lib_info = vm::cptr<ppu_prx_library_info>(vm::cast(prx->segs[0].addr + elf.progs[0].p_paddr - elf.progs[0].p_offset, HERE));
 		const auto& lib_name = std::string(lib_info->name);
+
+		std::memcpy(prx->module_info_name, lib_info->name, sizeof(prx->module_info_name));
+		prx->module_info_version[0] = lib_info->version[0];
+		prx->module_info_version[1] = lib_info->version[1];
+		prx->module_info_attributes = lib_info->attributes;
 
 		LOG_WARNING(LOADER, "Library %s (rtoc=0x%x):", lib_name, lib_info->toc);
 
@@ -979,6 +986,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
 		const u32 type = _seg.type = prog.p_type;
 		const u32 flag = _seg.flags = prog.p_flags;
+		_seg.filesz = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
 
 		// Hash big-endian values
 		sha1_update(&sha, (uchar*)&prog.p_type, sizeof(prog.p_type));
@@ -1019,6 +1027,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		const u32 size = _sec.size = vm::cast(s.sh_size);
 		const u32 type = _sec.type = s.sh_type;
 		const u32 flag = _sec.flags = s.sh_flags & 7;
+		_sec.filesz = 0;
 
 		if (s.sh_type == 1 && addr && size)
 		{

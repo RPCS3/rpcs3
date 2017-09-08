@@ -146,73 +146,74 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	m_Icon_Size = sizeFromSlider(m_icon_size_index);
 	m_xgrid = new game_list_grid(m_Icon_Size, m_Icon_Color, m_Margin_Factor, m_Text_Factor, showText);
 
-	gameList = new game_list();
-	gameList->setShowGrid(false);
-	gameList->setItemDelegate(new table_item_delegate(this));
-	gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
-	gameList->setSelectionMode(QAbstractItemView::SingleSelection);
-	gameList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
-	gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);	
-	gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
-	gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
-	gameList->verticalHeader()->setVisible(false);
-	gameList->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
-	gameList->horizontalHeader()->setHighlightSections(false);
-	gameList->horizontalHeader()->setSortIndicatorShown(true);
-	gameList->horizontalHeader()->setStretchLastSection(true);
-	gameList->horizontalHeader()->setDefaultSectionSize(150);
-	gameList->setContextMenuPolicy(Qt::CustomContextMenu);
-	gameList->setAlternatingRowColors(true);
+	m_gameList = new game_list();
+	m_gameList->setShowGrid(false);
+	m_gameList->setItemDelegate(new table_item_delegate(this));
+	m_gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
+	m_gameList->setSelectionMode(QAbstractItemView::SingleSelection);
+	m_gameList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);	
+	m_gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
+	m_gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
+	m_gameList->verticalHeader()->setVisible(false);
+	m_gameList->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
+	m_gameList->horizontalHeader()->setHighlightSections(false);
+	m_gameList->horizontalHeader()->setSortIndicatorShown(true);
+	m_gameList->horizontalHeader()->setStretchLastSection(true);
+	m_gameList->horizontalHeader()->setDefaultSectionSize(150);
+	m_gameList->setContextMenuPolicy(Qt::CustomContextMenu);
+	m_gameList->setAlternatingRowColors(true);
 
-	gameList->setColumnCount(10);
-	gameList->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Icon")));
-	gameList->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Name")));
-	gameList->setHorizontalHeaderItem(2, new QTableWidgetItem(tr("Serial")));
-	gameList->setHorizontalHeaderItem(3, new QTableWidgetItem(tr("Firmware")));
-	gameList->setHorizontalHeaderItem(4, new QTableWidgetItem(tr("Version")));
-	gameList->setHorizontalHeaderItem(5, new QTableWidgetItem(tr("Category")));
-	gameList->setHorizontalHeaderItem(6, new QTableWidgetItem(tr("Path")));
-	gameList->setHorizontalHeaderItem(7, new QTableWidgetItem(tr("Supported Resolutions")));
-	gameList->setHorizontalHeaderItem(8, new QTableWidgetItem(tr("Sound Formats")));
-	gameList->setHorizontalHeaderItem(9, new QTableWidgetItem(tr("Parental Level")));
+	m_gameList->setColumnCount(10);
+	m_gameList->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Icon")));
+	m_gameList->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Name")));
+	m_gameList->setHorizontalHeaderItem(2, new QTableWidgetItem(tr("Serial")));
+	m_gameList->setHorizontalHeaderItem(3, new QTableWidgetItem(tr("Firmware")));
+	m_gameList->setHorizontalHeaderItem(4, new QTableWidgetItem(tr("Version")));
+	m_gameList->setHorizontalHeaderItem(5, new QTableWidgetItem(tr("Category")));
+	m_gameList->setHorizontalHeaderItem(6, new QTableWidgetItem(tr("Path")));
+	m_gameList->setHorizontalHeaderItem(7, new QTableWidgetItem(tr("Supported Resolutions")));
+	m_gameList->setHorizontalHeaderItem(8, new QTableWidgetItem(tr("Sound Formats")));
+	m_gameList->setHorizontalHeaderItem(9, new QTableWidgetItem(tr("Parental Level")));
 
 	// since this won't work somehow: gameList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);	
-	for (int i = 0; i < gameList->horizontalHeader()->count(); i++)
+	for (int i = 0; i < m_gameList->horizontalHeader()->count(); i++)
 	{
-		gameList->horizontalHeaderItem(i)->setTextAlignment(Qt::AlignLeft);
+		m_gameList->horizontalHeaderItem(i)->setTextAlignment(Qt::AlignLeft);
 	}
 
 	m_Central_Widget = new QStackedWidget(this);
-	m_Central_Widget->addWidget(gameList);
+	m_Central_Widget->addWidget(m_gameList);
 	m_Central_Widget->addWidget(m_xgrid);
-	m_Central_Widget->setCurrentWidget(m_isListLayout ? gameList : m_xgrid);
+	m_Central_Widget->setCurrentWidget(m_isListLayout ? m_gameList : m_xgrid);
 
 	m_Game_Dock->setCentralWidget(m_Central_Widget);
 
-	// Actions
-	showIconColAct = new QAction(tr("Show Icons"), this);
-	showNameColAct = new QAction(tr("Show Names"), this);
-	showSerialColAct = new QAction(tr("Show Serials"), this);
-	showFWColAct = new QAction(tr("Show Firmwares"), this);
-	showAppVersionColAct = new QAction(tr("Show Versions"), this);
-	showCategoryColAct = new QAction(tr("Show Categories"), this);
-	showPathColAct = new QAction(tr("Show Paths"), this);
-	showResolutionColAct = new QAction(tr("Show Supported Resolutions"), this);
-	showSoundFormatColAct = new QAction(tr("Show Sound Formats"), this);
-	showParentalLevelColAct = new QAction(tr("Show Parental Levels"), this);
+	// Actions regarding showing/hiding columns
+	QAction* showIconColAct = new QAction(tr("Show Icons"), this);
+	QAction* showNameColAct = new QAction(tr("Show Names"), this);
+	QAction* showSerialColAct = new QAction(tr("Show Serials"), this);
+	QAction* showFWColAct = new QAction(tr("Show Firmwares"), this);
+	QAction* showAppVersionColAct = new QAction(tr("Show Versions"), this);
+	QAction* showCategoryColAct = new QAction(tr("Show Categories"), this);
+	QAction* showPathColAct = new QAction(tr("Show Paths"), this);
+	QAction* showResolutionColAct = new QAction(tr("Show Supported Resolutions"), this);
+	QAction* showSoundFormatColAct = new QAction(tr("Show Sound Formats"), this);
+	QAction* showParentalLevelColAct = new QAction(tr("Show Parental Levels"), this);
 
-	columnActs = { showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct,
+	m_columnActs = { showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct,
 		showResolutionColAct, showSoundFormatColAct, showParentalLevelColAct };
 
 	// Events
-	connect(gameList, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
-	connect(gameList->horizontalHeader(), &QHeaderView::customContextMenuRequested, [=](const QPoint& pos) {
+	connect(m_gameList, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
+	connect(m_gameList->horizontalHeader(), &QHeaderView::customContextMenuRequested, [=](const QPoint& pos)
+	{
 		QMenu* configure = new QMenu(this);
-		configure->addActions(columnActs);
+		configure->addActions(m_columnActs);
 		configure->exec(mapToGlobal(pos));
 	});
-	connect(gameList, &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
-	connect(gameList->horizontalHeader(), &QHeaderView::sectionClicked, this, &game_list_frame::OnColClicked);
+	connect(m_gameList, &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
+	connect(m_gameList->horizontalHeader(), &QHeaderView::sectionClicked, this, &game_list_frame::OnColClicked);
 
 	connect(m_xgrid, &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
 	connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
@@ -239,29 +240,28 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 		Q_EMIT RequestCategoryActSet(m_categoryActs->actions().indexOf(act));
 	});
 
-	for (int col = 0; col < columnActs.count(); ++col)
+	for (int col = 0; col < m_columnActs.count(); ++col)
 	{
-		columnActs[col]->setCheckable(true);
+		m_columnActs[col]->setCheckable(true);
 
-		auto l_CallBack = [this, col](bool val) {
+		connect(m_columnActs[col], &QAction::triggered, [this, col](bool val)
+		{
 			if (!val) // be sure to have at least one column left so you can call the context menu at all time
 			{
 				int c = 0;
-				for (int i = 0; i < columnActs.count(); ++i)
+				for (int i = 0; i < m_columnActs.count(); ++i)
 				{
 					if (xgui_settings->GetGamelistColVisibility(i)) { if (++c > 1) { break; } }
 				}
 				if (c < 2)
 				{
-					columnActs[col]->setChecked(true); // re-enable the checkbox if we don't change the actual state
+					m_columnActs[col]->setChecked(true); // re-enable the checkbox if we don't change the actual state
 					return;
 				}
 			}
-			gameList->setColumnHidden(col, !val); // Negate because it's a set col hidden and we have menu say show.
+			m_gameList->setColumnHidden(col, !val); // Negate because it's a set col hidden and we have menu say show.
 			xgui_settings->SetGamelistColVisibility(col, val);
-		};
-
-		connect(columnActs[col], &QAction::triggered, l_CallBack);
+		});
 	}
 }
 
@@ -271,27 +271,27 @@ void game_list_frame::LoadSettings()
 
 	if (state.isEmpty())
 	{ // If no settings exist, go to default.
-		if (gameList->rowCount() > 0)
+		if (m_gameList->rowCount() > 0)
 		{
-			gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-			gameList->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-			gameList->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+			m_gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+			m_gameList->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+			m_gameList->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
 		}
 	}
 	else
 	{
-		gameList->horizontalHeader()->restoreState(state);
+		m_gameList->horizontalHeader()->restoreState(state);
 	}
 
-	for (int col = 0; col < columnActs.count(); ++col)
+	for (int col = 0; col < m_columnActs.count(); ++col)
 	{
 		bool vis = xgui_settings->GetGamelistColVisibility(col);
-		columnActs[col]->setChecked(vis);
-		gameList->setColumnHidden(col, !vis);
+		m_columnActs[col]->setChecked(vis);
+		m_gameList->setColumnHidden(col, !vis);
 	}
 
-	gameList->horizontalHeader()->restoreState(gameList->horizontalHeader()->saveState());
-	gameList->horizontalHeader()->stretchLastSection();
+	m_gameList->horizontalHeader()->restoreState(m_gameList->horizontalHeader()->saveState());
+	m_gameList->horizontalHeader()->stretchLastSection();
 
 	m_colSortOrder = xgui_settings->GetValue(GUI::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
 
@@ -350,11 +350,11 @@ void game_list_frame::FilterData()
 
 void game_list_frame::SortGameList()
 {
-	gameList->sortByColumn(m_sortColumn, m_colSortOrder);
-	gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
-	gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
-	gameList->resizeRowsToContents();
-	gameList->resizeColumnToContents(0);
+	m_gameList->sortByColumn(m_sortColumn, m_colSortOrder);
+	m_gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
+	m_gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
+	m_gameList->resizeRowsToContents();
+	m_gameList->resizeColumnToContents(0);
 }
 
 void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
@@ -475,12 +475,12 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 	{
 		FilterData();
 		int row = PopulateGameList();
-		gameList->selectRow(row);
+		m_gameList->selectRow(row);
 		SortGameList();
 
 		if (scrollAfter)
 		{
-			gameList->scrollTo(gameList->currentIndex(), QAbstractItemView::PositionAtCenter);
+			m_gameList->scrollTo(m_gameList->currentIndex(), QAbstractItemView::PositionAtCenter);
 		}
 	}
 	else
@@ -526,14 +526,14 @@ void game_list_frame::ToggleCategoryFilter(const QStringList& categories, bool s
 
 void game_list_frame::SaveSettings()
 {
-	for (int col = 0; col < columnActs.count(); ++col)
+	for (int col = 0; col < m_columnActs.count(); ++col)
 	{
-		xgui_settings->SetGamelistColVisibility(col, columnActs[col]->isChecked());
+		xgui_settings->SetGamelistColVisibility(col, m_columnActs[col]->isChecked());
 	}
 	xgui_settings->SetValue(GUI::gl_sortCol, m_sortColumn);
 	xgui_settings->SetValue(GUI::gl_sortAsc, m_colSortOrder == Qt::AscendingOrder);
 
-	xgui_settings->SetValue(GUI::gl_state, gameList->horizontalHeader()->saveState());
+	xgui_settings->SetValue(GUI::gl_state, m_gameList->horizontalHeader()->saveState());
 }
 
 static void open_dir(const std::string& spath)
@@ -559,7 +559,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 
 	if (m_isListLayout)
 	{
-		i = gameList->item(index.row(), 0)->data(Qt::UserRole).toInt();
+		i = m_gameList->item(index.row(), 0)->data(Qt::UserRole).toInt();
 	}
 	else
 	{
@@ -585,8 +585,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	if (m_isListLayout)
 	{
-		int row = gameList->indexAt(pos).row();
-		QTableWidgetItem* item = gameList->item(row, 0);
+		int row = m_gameList->indexAt(pos).row();
+		QTableWidgetItem* item = m_gameList->item(row, 0);
 		if (item == nullptr) return;  // null happens if you are double clicking in dockwidget area on nothing.
 		index = item->data(Qt::UserRole).toInt();
 	}
@@ -613,7 +613,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 	if (m_isListLayout)
 	{
-		globalPos = gameList->mapToGlobal(pos);
+		globalPos = m_gameList->mapToGlobal(pos);
 	}
 	else
 	{
@@ -712,7 +712,7 @@ bool game_list_frame::Boot(const GameInfo& game)
 	}
 	else
 	{
-		Q_EMIT RequestAddRecentGame(q_string_pair(qstr(Emu.GetBoot()), qstr("[" + game.serial + "] " + game.name)));
+		Q_EMIT RequestAddRecentGame(GUI::Recent_Game(qstr(Emu.GetBoot()), qstr("[" + game.serial + "] " + game.name)));
 		Refresh(true);
 		return true;
 	}
@@ -847,7 +847,7 @@ void game_list_frame::SetListMode(const bool& isList)
 
 	Refresh(true);
 
-	m_Central_Widget->setCurrentWidget(m_isListLayout ? gameList : m_xgrid);
+	m_Central_Widget->setCurrentWidget(m_isListLayout ? m_gameList : m_xgrid);
 }
 
 void game_list_frame::SetToolBarVisible(const bool& showToolBar)
@@ -933,14 +933,13 @@ int game_list_frame::PopulateGameList()
 
 	std::string selected_item = CurrentSelectionIconPath();
 
-	gameList->clearContents();
-	gameList->setRowCount((int)m_game_data.size());
+	m_gameList->clearContents();
+	m_gameList->setRowCount((int)m_game_data.size());
 
 	auto l_GetItem = [](const std::string& text)
 	{
 		// force single line text ("hack" used instead of Qt shenanigans like Qt::TextSingleLine)
-		QString formattedText = qstr(text);
-		formattedText.replace("\n", " - ");
+		QString formattedText = GUI::get_Single_Line(qstr(text));
 
 		QTableWidgetItem* curr = new QTableWidgetItem;
 		curr->setFlags(curr->flags() & ~Qt::ItemIsEditable);
@@ -968,23 +967,23 @@ int game_list_frame::PopulateGameList()
 			titleItem->setIcon(QIcon(":/Icons/cog_black.png"));
 		}
 
-		gameList->setItem(row, 0, iconItem);
-		gameList->setItem(row, 1, titleItem);
-		gameList->setItem(row, 2, l_GetItem(m_game_data[i].info.serial));
-		gameList->setItem(row, 3, l_GetItem(m_game_data[i].info.fw));
-		gameList->setItem(row, 4, l_GetItem(m_game_data[i].info.app_ver));
-		gameList->setItem(row, 5, l_GetItem(m_game_data[i].info.category));
-		gameList->setItem(row, 6, l_GetItem(m_game_data[i].info.path));
-		gameList->setItem(row, 7, l_GetItem(GetStringFromU32(m_game_data[i].info.resolution, resolution::mode, true)));
-		gameList->setItem(row, 8, l_GetItem(GetStringFromU32(m_game_data[i].info.sound_format, sound::format, true)));
-		gameList->setItem(row, 9, l_GetItem(GetStringFromU32(m_game_data[i].info.parental_lvl, parental::level)));
+		m_gameList->setItem(row, 0, iconItem);
+		m_gameList->setItem(row, 1, titleItem);
+		m_gameList->setItem(row, 2, l_GetItem(m_game_data[i].info.serial));
+		m_gameList->setItem(row, 3, l_GetItem(m_game_data[i].info.fw));
+		m_gameList->setItem(row, 4, l_GetItem(m_game_data[i].info.app_ver));
+		m_gameList->setItem(row, 5, l_GetItem(m_game_data[i].info.category));
+		m_gameList->setItem(row, 6, l_GetItem(m_game_data[i].info.path));
+		m_gameList->setItem(row, 7, l_GetItem(GetStringFromU32(m_game_data[i].info.resolution, resolution::mode, true)));
+		m_gameList->setItem(row, 8, l_GetItem(GetStringFromU32(m_game_data[i].info.sound_format, sound::format, true)));
+		m_gameList->setItem(row, 9, l_GetItem(GetStringFromU32(m_game_data[i].info.parental_lvl, parental::level)));
 
 		if (selected_item == m_game_data[i].info.icon_path) result = row;
 
 		row++;
 	}
 
-	gameList->setRowCount(row);
+	m_gameList->setRowCount(row);
 
 	return result;
 }
@@ -1053,8 +1052,7 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 
 		if (category == category::hdd_Game || category == category::disc_Game)
 		{
-			QString title = qstr(m_game_data[i].info.name);
-			title.replace("\n", " - ");
+			QString title = GUI::get_Single_Line(qstr(m_game_data[i].info.name));
 
 			m_xgrid->addItem(m_game_data[i].pxmap, title, i, r, c);
 
@@ -1104,9 +1102,9 @@ std::string game_list_frame::CurrentSelectionIconPath()
 	std::string selection = "";
 
 	// The index can be more than the size of m_game_data if you use the VFS to load a directory which has less games.
-	if (m_oldLayoutIsList && gameList->selectedItems().count() && gameList->currentRow() < m_game_data.size())
+	if (m_oldLayoutIsList && m_gameList->selectedItems().count() && m_gameList->currentRow() < m_game_data.size())
 	{
-		selection = m_game_data.at(gameList->item(gameList->currentRow(), 0)->data(Qt::UserRole).toInt()).info.icon_path;
+		selection = m_game_data.at(m_gameList->item(m_gameList->currentRow(), 0)->data(Qt::UserRole).toInt()).info.icon_path;
 	}
 	else if (!m_oldLayoutIsList && m_xgrid->selectedItems().count())
 	{

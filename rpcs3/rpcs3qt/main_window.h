@@ -34,23 +34,23 @@ class main_window : public QMainWindow
 
 	Render_Creator m_Render_Creator;
 
-	QIcon appIcon;
-	QIcon icon_play;
-	QIcon icon_pause;
-	QIcon icon_stop;
-	QIcon icon_restart;
-	QIcon icon_fullscreen_on;
-	QIcon icon_fullscreen_off;
+	QIcon m_appIcon;
+	QIcon m_icon_play;
+	QIcon m_icon_pause;
+	QIcon m_icon_stop;
+	QIcon m_icon_restart;
+	QIcon m_icon_fullscreen_on;
+	QIcon m_icon_fullscreen_off;
 
 #ifdef _WIN32
-	QIcon icon_thumb_play;
-	QIcon icon_thumb_pause;
-	QIcon icon_thumb_stop;
-	QIcon icon_thumb_restart;
-	QWinThumbnailToolBar *thumb_bar;
-	QWinThumbnailToolButton *thumb_playPause;
-	QWinThumbnailToolButton *thumb_stop;
-	QWinThumbnailToolButton *thumb_restart;
+	QIcon m_icon_thumb_play;
+	QIcon m_icon_thumb_pause;
+	QIcon m_icon_thumb_stop;
+	QIcon m_icon_thumb_restart;
+	QWinThumbnailToolBar *m_thumb_bar;
+	QWinThumbnailToolButton *m_thumb_playPause;
+	QWinThumbnailToolButton *m_thumb_stop;
+	QWinThumbnailToolButton *m_thumb_restart;
 	QStringList m_vulkan_adapters;
 #endif
 #ifdef _MSC_VER
@@ -106,14 +106,14 @@ private:
 	q_pair_list m_rg_entries;
 	QList<QAction*> m_recentGameActs;
 
-	QActionGroup* iconSizeActGroup;
-	QActionGroup* listModeActGroup;
-	QActionGroup* categoryVisibleActGroup;
+	QActionGroup* m_iconSizeActGroup;
+	QActionGroup* m_listModeActGroup;
+	QActionGroup* m_categoryVisibleActGroup;
 
 	// Dockable widget frames
 	QMainWindow *m_mw;
-	log_frame *logFrame;
-	debugger_frame *debuggerFrame;
-	game_list_frame *gameListFrame;
+	log_frame *m_logFrame;
+	debugger_frame *m_debuggerFrame;
+	game_list_frame *m_gameListFrame;
 	std::shared_ptr<gui_settings> guiSettings;
 };
