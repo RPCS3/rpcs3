@@ -463,22 +463,12 @@ void GLGSRender::end()
 	{
 		int location;
 		if (!rsx::method_registers.fragment_textures[i].enabled())
-		{
-			if (m_textures_dirty[i])
-			{
-				glActiveTexture(GL_TEXTURE0 + i);
-				glBindTexture(GL_TEXTURE_2D, 0);
-
-				m_textures_dirty[i] = false;
-			}
 			continue;
-		}
 
 		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
 		{
-			m_gl_textures[i].set_target(get_gl_target_for_texture(rsx::method_registers.fragment_textures[i]));
-			__glcheck m_gl_texture_cache.upload_texture(i, rsx::method_registers.fragment_textures[i], m_gl_textures[i], m_rtts);
-			__glcheck m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i]);
+			m_gl_texture_cache.upload_and_bind_texture(i, get_gl_target_for_texture(rsx::method_registers.fragment_textures[i]), rsx::method_registers.fragment_textures[i], m_rtts);
+			m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i]);
 		}
 	}
 
@@ -489,16 +479,11 @@ void GLGSRender::end()
 		int location;
 
 		if (!rsx::method_registers.vertex_textures[i].enabled())
-		{
-			//glActiveTexture(GL_TEXTURE0 + texture_index);
-			//glBindTexture(GL_TEXTURE_2D, 0);
 			continue;
-		}
 
 		if (m_program->uniforms.has_location("vtex" + std::to_string(i), &location))
 		{
-			m_gl_vertex_textures[i].set_target(get_gl_target_for_texture(rsx::method_registers.vertex_textures[i]));
-			__glcheck m_gl_texture_cache.upload_texture(texture_index, rsx::method_registers.vertex_textures[i], m_gl_vertex_textures[i], m_rtts);
+			m_gl_texture_cache.upload_and_bind_texture(texture_index, GL_TEXTURE_2D, rsx::method_registers.vertex_textures[i], m_rtts);
 		}
 	}
 
@@ -766,7 +751,8 @@ void GLGSRender::on_init_thread()
 	glEnable(GL_CLIP_DISTANCE0 + 4);
 	glEnable(GL_CLIP_DISTANCE0 + 5);
 
-	m_gl_texture_cache.initialize(this);
+	m_gl_texture_cache.initialize();
+	m_thread_id = std::this_thread::get_id();
 
 	m_shaders_cache->load();
 }
@@ -831,7 +817,7 @@ void GLGSRender::on_exit()
 	}
 
 	m_text_printer.close();
-	m_gl_texture_cache.close();
+	m_gl_texture_cache.destroy();
 
 	for (u32 i = 0; i < occlusion_query_count; ++i)
 	{
@@ -1107,15 +1093,10 @@ void GLGSRender::flip(int buffer)
 	//Check the texture cache for a blitted copy
 	const u32 size = buffer_pitch * buffer_height;
 	auto surface = m_gl_texture_cache.find_texture_from_range(absolute_address, size);
-	bool ignore_scaling = false;
 
 	if (surface != nullptr)
 	{
-		auto dims = surface->get_dimensions();
-		buffer_width = std::get<0>(dims);
-		buffer_height = std::get<1>(dims);
-
-		m_flip_fbo.color = surface->id();
+		m_flip_fbo.color = surface->get_raw_view();
 		m_flip_fbo.read_buffer(m_flip_fbo.color);
 	}
 	else if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
@@ -1125,7 +1106,6 @@ void GLGSRender::flip(int buffer)
 
 		m_flip_fbo.color = *render_target_texture;
 		m_flip_fbo.read_buffer(m_flip_fbo.color);
-		ignore_scaling = true;
 	}
 	else
 	{
@@ -1156,20 +1136,6 @@ void GLGSRender::flip(int buffer)
 
 		m_flip_fbo.color = m_flip_tex_color;
 		m_flip_fbo.read_buffer(m_flip_fbo.color);
-		ignore_scaling = true;
-	}
-
-	if (!ignore_scaling && buffer_region.tile && buffer_region.tile->comp != CELL_GCM_COMPMODE_DISABLED)
-	{
-		LOG_ERROR(RSX, "Output buffer compression mode = 0x%X", buffer_region.tile->comp);
-
-		switch (buffer_region.tile->comp)
-		{
-		case CELL_GCM_COMPMODE_C32_2X2:
-		case CELL_GCM_COMPMODE_C32_2X1:
-			buffer_height = display_buffers[buffer].height / 2;
-			break;
-		}
 	}
 
 	// Blit source image to the screen
@@ -1196,7 +1162,7 @@ void GLGSRender::flip(int buffer)
 	rsx::thread::flip(buffer);
 
 	// Cleanup
-	m_gl_texture_cache.clear_temporary_surfaces();
+	m_gl_texture_cache.on_frame_end();
 
 	for (auto &tex : m_rtts.invalidated_resources)
 		tex->remove();
@@ -1229,9 +1195,31 @@ u64 GLGSRender::timestamp() const
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
 	if (is_writing)
-		return m_gl_texture_cache.mark_as_dirty(address);
+		return m_gl_texture_cache.invalidate_address(address);
 	else
-		return m_gl_texture_cache.flush_section(address);
+	{
+		if (std::this_thread::get_id() != m_thread_id)
+		{
+			bool flushable;
+			gl::cached_texture_section* section_to_post;
+			
+			std::tie(flushable, section_to_post) = m_gl_texture_cache.address_is_flushable(address);
+			if (!flushable) return false;
+			
+			work_item &task = post_flush_request(address, section_to_post);
+
+			vm::temporary_unlock();
+			{
+				std::unique_lock<std::mutex> lock(task.guard_mutex);
+				task.cv.wait(lock, [&task] { return task.processed; });
+			}
+
+			task.received = true;
+			return task.result;
+		}
+					
+		return m_gl_texture_cache.flush_address(address);
+	}
 }
 
 void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
@@ -1273,7 +1261,7 @@ void GLGSRender::do_local_task()
 	}
 }
 
-work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::cached_texture_section *section)
+work_item& GLGSRender::post_flush_request(u32 address, gl::cached_texture_section *section)
 {
 	std::lock_guard<std::mutex> lock(queue_guard);
 
@@ -1295,7 +1283,7 @@ void GLGSRender::synchronize_buffers()
 
 bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 {
-	return m_gl_texture_cache.upload_scaled_image(src, dst, interpolate, m_rtts);
+	return m_gl_texture_cache.blit(src, dst, interpolate, m_rtts);
 }
 
 void GLGSRender::check_zcull_status(bool framebuffer_swap, bool force_read)

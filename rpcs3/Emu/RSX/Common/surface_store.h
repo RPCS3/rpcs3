@@ -43,6 +43,16 @@ namespace rsx
 		u8 bpp;
 	};
 
+	template <typename image_storage_type>
+	struct render_target_descriptor
+	{
+		virtual image_storage_type get_surface() const = 0;
+		virtual u16 get_surface_width() const = 0;
+		virtual u16 get_surface_height() const = 0;
+		virtual u16 get_rsx_pitch() const = 0;
+		virtual u16 get_native_pitch() const = 0;
+	};
+
 	/**
 	 * Helper for surface (ie color and depth stencil render target) management.
 	 * It handles surface creation and storage. Backend should only retrieve pointer to surface.
@@ -614,7 +624,7 @@ namespace rsx
 
 					if (region_fits(info.surface_width, info.surface_height, x_offset, y_offset, real_width, requested_height))
 					{
-						w = info.surface_width;
+						w = real_width;
 						h = info.surface_height;
 						clipped = false;
 
@@ -627,8 +637,8 @@ namespace rsx
 							u16 remaining_width = info.surface_width - x_offset;
 							u16 remaining_height = info.surface_height - y_offset;
 
-							w = remaining_width;
-							h = remaining_height;
+							w = std::min(real_width, remaining_width);
+							h = std::min(requested_height, remaining_height);
 							clipped = true;
 
 							return true;
@@ -637,7 +647,7 @@ namespace rsx
 						if (info.surface_width >= requested_width && info.surface_height >= requested_height)
 						{
 							LOG_WARNING(RSX, "Overlapping surface exceeds bounds; returning full surface region");
-							w = requested_width;
+							w = real_width;
 							h = requested_height;
 							clipped = true;
 

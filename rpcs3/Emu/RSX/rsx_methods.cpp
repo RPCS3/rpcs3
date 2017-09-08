@@ -593,6 +593,7 @@ namespace rsx
 			const s32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
 			const tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);
+			const tiled_region dst_region = rsx->get_tiled_address(dst_offset + out_offset, dst_dma & 0xf);
 
 			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
 			u8* pixels_dst = vm::ps3::_ptr<u8>(get_address(dst_offset + out_offset, dst_dma));
@@ -626,12 +627,19 @@ namespace rsx
 			u32 convert_h = (u32)(scale_y * in_h);
 
 			u32 slice_h = clip_h;
+			blit_src_info src_info = {};
+			blit_dst_info dst_info = {};
 
 			if (src_region.tile)
 			{
-				if (src_region.tile->comp == CELL_GCM_COMPMODE_C32_2X2)
+				switch(src_region.tile->comp)
 				{
+				case CELL_GCM_COMPMODE_C32_2X2:
 					slice_h *= 2;
+					src_info.compressed_y = true;
+				case CELL_GCM_COMPMODE_C32_2X1:
+					src_info.compressed_x = true;
+					break;
 				}
 
 				u32 size = slice_h * in_pitch;
@@ -643,20 +651,29 @@ namespace rsx
 				}
 			}
 
+			if (dst_region.tile)
+			{
+				switch (dst_region.tile->comp)
+				{
+				case CELL_GCM_COMPMODE_C32_2X2:
+					dst_info.compressed_y = true;
+				case CELL_GCM_COMPMODE_C32_2X1:
+					dst_info.compressed_x = true;
+					break;
+				}
+			}
+
 			if (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER)
 			{
 				//For now, only use this for actual scaled images, there are use cases that should not go through 3d engine, e.g program ucode transfer
 				//TODO: Figure out more instances where we can use this without problems
-
-				blit_src_info src_info;
-				blit_dst_info dst_info;
-
+				//NOTE: In cases where slice_h is modified due to compression (read from tiled memory), the new value (clip_h * 2) does not matter if memory is on the GPU
 				src_info.format = src_color_format;
 				src_info.origin = in_origin;
 				src_info.width = in_w;
 				src_info.height = in_h;
 				src_info.pitch = in_pitch;
-				src_info.slice_h = slice_h;
+				src_info.slice_h = clip_h;
 				src_info.offset_x = (u16)in_x;
 				src_info.offset_y = (u16)in_y;
 				src_info.pixels = pixels_src;
@@ -672,6 +689,8 @@ namespace rsx
 				dst_info.offset_x = out_x;
 				dst_info.offset_y = out_y;
 				dst_info.pitch = out_pitch;
+				dst_info.scale_x = scale_x;
+				dst_info.scale_y = scale_y;
 				dst_info.pixels = pixels_dst;
 				dst_info.rsx_address = get_address(dst_offset, dst_dma);
 				dst_info.swizzled = (method_registers.blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);

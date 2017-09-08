@@ -18,6 +18,7 @@ struct rsx_subresource_layout
 * Get size to store texture in a linear fashion.
 * Storage is assumed to use a rowPitchAlignement boundary for every row of texture.
 */
+size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignement, size_t mipmap_alignment);
 size_t get_placed_texture_storage_size(const rsx::fragment_texture &texture, size_t row_pitch_alignement, size_t mipmap_alignment = 0x200);
 size_t get_placed_texture_storage_size(const rsx::vertex_texture &texture, size_t row_pitch_alignement, size_t mipmap_alignment = 0x200);
 

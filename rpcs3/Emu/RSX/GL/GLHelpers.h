@@ -1512,6 +1512,11 @@ namespace gl
 			return (texture::format)result;
 		}
 
+		virtual texture::internal_format get_compatible_internal_format() const
+		{
+			return (texture::internal_format)get_internal_format();
+		}
+
 		texture::channel_type get_channel_type(texture::channel_name channel) const
 		{
 			save_binding_state save(*this);
