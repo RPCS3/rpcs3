@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 
 #include "keyboard_pad_handler.h"
 
@@ -119,9 +119,40 @@ void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
 		event->ignore();
 		return;
 	}
-
-	Key(event->key(), 1);
-	event->ignore();
+	switch (event->key())
+	{
+		case Qt::Key_L:
+			if (!(event->modifiers() == Qt::AltModifier)) { Key(event->key(), 1); }
+			event->ignore();
+			break;
+		case Qt::Key_Return:
+			if (!(event->modifiers() == Qt::AltModifier)) { Key(event->key(), 1); }
+			event->ignore();
+			break;
+		case Qt::Key_Escape:
+			event->ignore();
+			break;
+		case Qt::Key_P:
+			if (!(event->modifiers() == Qt::ControlModifier)) { Key(event->key(), 1); }
+			event->ignore();
+			break;
+		case Qt::Key_S:
+			if (!(event->modifiers() == Qt::ControlModifier)) { Key(event->key(), 1); }
+			event->ignore();
+			break;
+		case Qt::Key_R:
+			if (!(event->modifiers() == Qt::ControlModifier)) { Key(event->key(), 1); }
+			event->ignore();
+			break;
+		case Qt::Key_E:
+			if (!(event->modifiers() == Qt::ControlModifier)) { Key(event->key(), 1); }
+			event->ignore();
+			break;
+		default:
+			Key(event->key(), 1);
+			event->ignore();
+			break;
+	}
 }
 
 void keyboard_pad_handler::keyReleaseEvent(QKeyEvent* event)
