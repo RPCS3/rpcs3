@@ -85,8 +85,13 @@ void main_window::Init()
 
 	// for highdpi resize toolbar icons and height dynamically
 	// choose factors to mimic Gui-Design in main_window.ui
+	// TODO: in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp we only need the else branch
+#ifdef _WIN32
 	const int toolBarHeight = menuBar()->sizeHint().height() * 1.5;
 	ui->toolBar->setIconSize(QSize(toolBarHeight, toolBarHeight));
+#else
+	const int toolBarHeight = ui->toolBar->iconSize().height();
+#endif
 	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 5);
 	ui->sizeSlider->setFixedHeight(toolBarHeight * 0.65f);
 
