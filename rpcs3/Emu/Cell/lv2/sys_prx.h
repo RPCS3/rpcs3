@@ -129,6 +129,10 @@ struct lv2_prx final : lv2_obj, ppu_module
 	vm::ps3::ptr<s32(u64 callback, u64 argc, vm::ps3::ptr<void, u64> argv)> prologue = vm::null;
 	vm::ps3::ptr<s32(u64 callback, u64 argc, vm::ps3::ptr<void, u64> argv)> epilogue = vm::null;
 	vm::ps3::ptr<s32()> exit = vm::null;
+
+	char module_info_name[28];
+	u8 module_info_version[2];
+	be_t<u16> module_info_attributes;
 };
 
 // SysCalls
