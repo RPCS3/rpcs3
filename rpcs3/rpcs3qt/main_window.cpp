@@ -70,7 +70,7 @@ void main_window::Init()
 {
 	ui->setupUi(this);
 
-	appIcon = QIcon(":/rpcs3.ico");
+	m_appIcon = QIcon(":/rpcs3.ico");
 
 	// hide utilities from the average user
 	ui->menuUtilities->menuAction()->setVisible(guiSettings->GetValue(GUI::m_showDebugTab).toBool());
@@ -98,12 +98,12 @@ void main_window::Init()
 	CreateConnects();
 
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
-	!appIcon.isNull() ? setWindowIcon(appIcon) : LOG_WARNING(GENERAL, "AppImage could not be loaded!");
+	!m_appIcon.isNull() ? setWindowIcon(m_appIcon) : LOG_WARNING(GENERAL, "AppImage could not be loaded!");
 
 	Q_EMIT RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
 	RepaintToolBarIcons();
-	gameListFrame->RepaintToolBarIcons();
+	m_gameListFrame->RepaintToolBarIcons();
 	
 	if (!utils::has_ssse3())
 	{
@@ -127,7 +127,7 @@ void main_window::Init()
 
 		QMessageBox msg;
 		msg.setWindowTitle("Experimental Build Warning");
-		msg.setWindowIcon(appIcon);
+		msg.setWindowIcon(m_appIcon);
 		msg.setIcon(QMessageBox::Critical);
 		msg.setTextFormat(Qt::RichText);
 		msg.setText("Please understand that this build is not an official RPCS3 release.<br>This build contains changes that may break games, or even <b>damage</b> your data.<br>It's recommended to download and use the official build from <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>Build origin: " STRINGIZE(BRANCH) "<br>Do you wish to use this build anyway?");
@@ -144,43 +144,43 @@ void main_window::Init()
 void main_window::CreateThumbnailToolbar()
 {
 #ifdef _WIN32
-	icon_thumb_play = QIcon(":/Icons/play_blue.png");
-	icon_thumb_pause = QIcon(":/Icons/pause_blue.png");
-	icon_thumb_stop = QIcon(":/Icons/stop_blue.png");
-	icon_thumb_restart = QIcon(":/Icons/restart_blue.png");
+	m_icon_thumb_play = QIcon(":/Icons/play_blue.png");
+	m_icon_thumb_pause = QIcon(":/Icons/pause_blue.png");
+	m_icon_thumb_stop = QIcon(":/Icons/stop_blue.png");
+	m_icon_thumb_restart = QIcon(":/Icons/restart_blue.png");
 
-	thumb_bar = new QWinThumbnailToolBar(this);
-	thumb_bar->setWindow(windowHandle());
+	m_thumb_bar = new QWinThumbnailToolBar(this);
+	m_thumb_bar->setWindow(windowHandle());
 
-	thumb_playPause = new QWinThumbnailToolButton(thumb_bar);
-	thumb_playPause->setToolTip(tr("Pause"));
-	thumb_playPause->setIcon(icon_thumb_pause);
-	thumb_playPause->setEnabled(false);
+	m_thumb_playPause = new QWinThumbnailToolButton(m_thumb_bar);
+	m_thumb_playPause->setToolTip(tr("Pause"));
+	m_thumb_playPause->setIcon(m_icon_thumb_pause);
+	m_thumb_playPause->setEnabled(false);
 
-	thumb_stop = new QWinThumbnailToolButton(thumb_bar);
-	thumb_stop->setToolTip(tr("Stop"));
-	thumb_stop->setIcon(icon_thumb_stop);
-	thumb_stop->setEnabled(false);
+	m_thumb_stop = new QWinThumbnailToolButton(m_thumb_bar);
+	m_thumb_stop->setToolTip(tr("Stop"));
+	m_thumb_stop->setIcon(m_icon_thumb_stop);
+	m_thumb_stop->setEnabled(false);
 
-	thumb_restart = new QWinThumbnailToolButton(thumb_bar);
-	thumb_restart->setToolTip(tr("Restart"));
-	thumb_restart->setIcon(icon_thumb_restart);
-	thumb_restart->setEnabled(false);
+	m_thumb_restart = new QWinThumbnailToolButton(m_thumb_bar);
+	m_thumb_restart->setToolTip(tr("Restart"));
+	m_thumb_restart->setIcon(m_icon_thumb_restart);
+	m_thumb_restart->setEnabled(false);
 
-	thumb_bar->addButton(thumb_playPause);
-	thumb_bar->addButton(thumb_stop);
-	thumb_bar->addButton(thumb_restart);
+	m_thumb_bar->addButton(m_thumb_playPause);
+	m_thumb_bar->addButton(m_thumb_stop);
+	m_thumb_bar->addButton(m_thumb_restart);
 
-	connect(thumb_stop, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop(); });
-	connect(thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop();	Emu.Load();	});
-	connect(thumb_playPause, &QWinThumbnailToolButton::clicked, Pause);
+	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop(); });
+	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop();	Emu.Load();	});
+	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, Pause);
 #endif
 }
 
 // returns appIcon
 QIcon main_window::GetAppIcon()
 {
-	return appIcon;
+	return m_appIcon;
 }
 
 // loads the appIcon from path and embeds it centered into an empty square icon
@@ -218,13 +218,13 @@ void main_window::SetAppIconFromPath(const std::string path)
 				painter.end();
 
 				// set Icon
-				appIcon = QIcon(QPixmap::fromImage(dest));
+				m_appIcon = QIcon(QPixmap::fromImage(dest));
 				return;
 			}
 		}
 	}
 	// if nothing was found reset the icon to default
-	appIcon = QIcon(":/rpcs3.ico");
+	m_appIcon = QIcon(":/rpcs3.ico");
 }
 
 void main_window::BootElf()
@@ -274,7 +274,7 @@ void main_window::BootElf()
 
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
 		AddRecentAction(GUI::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
-		gameListFrame->Refresh(true);
+		m_gameListFrame->Refresh(true);
 	}
 }
 
@@ -311,7 +311,7 @@ void main_window::BootGame()
 
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
 		AddRecentAction(GUI::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
-		gameListFrame->Refresh(true);
+		m_gameListFrame->Refresh(true);
 	}
 }
 
@@ -435,7 +435,7 @@ void main_window::InstallPkg(const QString& dropPath)
 					QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
 				{
 					fs::remove_all(local_path);
-					gameListFrame->Refresh(true);
+					m_gameListFrame->Refresh(true);
 					LOG_SUCCESS(LOADER, "PKG: removed incomplete installation in %s", local_path);
 					return;
 				}
@@ -461,7 +461,7 @@ void main_window::InstallPkg(const QString& dropPath)
 
 	if (progress >= 1.)
 	{
-		gameListFrame->Refresh(true);
+		m_gameListFrame->Refresh(true);
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
 		guiSettings->ShowInfoBox(GUI::ib_pkg_success, tr("Success!"), tr("Successfully installed software from package!"), this);
 
@@ -695,9 +695,9 @@ void main_window::SaveWindowState()
 	guiSettings->SetValue(GUI::mw_mwState, m_mw->saveState());
 
 	// Save column settings
-	gameListFrame->SaveSettings();
+	m_gameListFrame->SaveSettings();
 	// Save splitter state
-	debuggerFrame->SaveSettings();
+	m_debuggerFrame->SaveSettings();
 }
 
 void main_window::RepaintToolBarIcons()
@@ -713,12 +713,12 @@ void main_window::RepaintToolBarIcons()
 		newColor = GUI::get_Label_Color("toolbar_icon_color");
 	}
 
-	icon_play = gui_settings::colorizedIcon(QIcon(":/Icons/play.png"), GUI::mw_tool_icon_color, newColor);
-	icon_pause = gui_settings::colorizedIcon(QIcon(":/Icons/pause.png"), GUI::mw_tool_icon_color, newColor);
-	icon_stop = gui_settings::colorizedIcon(QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color, newColor);
-	icon_restart = gui_settings::colorizedIcon(QIcon(":/Icons/restart.png"), GUI::mw_tool_icon_color, newColor);
-	icon_fullscreen_on = gui_settings::colorizedIcon(QIcon(":/Icons/fullscreen.png"), GUI::mw_tool_icon_color, newColor);
-	icon_fullscreen_off = gui_settings::colorizedIcon(QIcon(":/Icons/fullscreen_invert.png"), GUI::mw_tool_icon_color, newColor);
+	m_icon_play = gui_settings::colorizedIcon(QIcon(":/Icons/play.png"), GUI::mw_tool_icon_color, newColor);
+	m_icon_pause = gui_settings::colorizedIcon(QIcon(":/Icons/pause.png"), GUI::mw_tool_icon_color, newColor);
+	m_icon_stop = gui_settings::colorizedIcon(QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color, newColor);
+	m_icon_restart = gui_settings::colorizedIcon(QIcon(":/Icons/restart.png"), GUI::mw_tool_icon_color, newColor);
+	m_icon_fullscreen_on = gui_settings::colorizedIcon(QIcon(":/Icons/fullscreen.png"), GUI::mw_tool_icon_color, newColor);
+	m_icon_fullscreen_off = gui_settings::colorizedIcon(QIcon(":/Icons/fullscreen_invert.png"), GUI::mw_tool_icon_color, newColor);
 
 	ui->toolbar_config->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/configure.png"), GUI::mw_tool_icon_color, newColor));
 	ui->toolbar_controls->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/controllers.png"), GUI::mw_tool_icon_color, newColor));
@@ -732,24 +732,24 @@ void main_window::RepaintToolBarIcons()
 	
 	if (Emu.IsRunning())
 	{
-		ui->toolbar_start->setIcon(icon_pause);
+		ui->toolbar_start->setIcon(m_icon_pause);
 	}
 	else if (Emu.IsStopped() && !Emu.GetPath().empty())
 	{
-		ui->toolbar_start->setIcon(icon_restart);
+		ui->toolbar_start->setIcon(m_icon_restart);
 	}
 	else
 	{
-		ui->toolbar_start->setIcon(icon_play);
+		ui->toolbar_start->setIcon(m_icon_play);
 	}
 	
 	if (isFullScreen())
 	{
-		ui->toolbar_fullscreen->setIcon(icon_fullscreen_on);
+		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
 	}
 	else
 	{
-		ui->toolbar_fullscreen->setIcon(icon_fullscreen_off);
+		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_off);
 	}
 
 	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
@@ -758,14 +758,14 @@ void main_window::RepaintToolBarIcons()
 
 void main_window::OnEmuRun()
 {
-	debuggerFrame->EnableButtons(true);
+	m_debuggerFrame->EnableButtons(true);
 #ifdef _WIN32
-	thumb_playPause->setToolTip(tr("Pause emulation"));
-	thumb_playPause->setIcon(icon_thumb_pause);
+	m_thumb_playPause->setToolTip(tr("Pause emulation"));
+	m_thumb_playPause->setIcon(m_icon_thumb_pause);
 #endif
 	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
-	ui->sysPauseAct->setIcon(icon_pause);
-	ui->toolbar_start->setIcon(icon_pause);
+	ui->sysPauseAct->setIcon(m_icon_pause);
+	ui->toolbar_start->setIcon(m_icon_pause);
 	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 	EnableMenus(true);
 }
@@ -773,66 +773,66 @@ void main_window::OnEmuRun()
 void main_window::OnEmuResume()
 {
 #ifdef _WIN32
-	thumb_playPause->setToolTip(tr("Pause emulation"));
-	thumb_playPause->setIcon(icon_thumb_pause);
+	m_thumb_playPause->setToolTip(tr("Pause emulation"));
+	m_thumb_playPause->setIcon(m_icon_thumb_pause);
 #endif
 	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
-	ui->sysPauseAct->setIcon(icon_pause);
-	ui->toolbar_start->setIcon(icon_pause);
+	ui->sysPauseAct->setIcon(m_icon_pause);
+	ui->toolbar_start->setIcon(m_icon_pause);
 	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 }
 
 void main_window::OnEmuPause()
 {
 #ifdef _WIN32
-	thumb_playPause->setToolTip(tr("Resume emulation"));
-	thumb_playPause->setIcon(icon_thumb_play);
+	m_thumb_playPause->setToolTip(tr("Resume emulation"));
+	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
 	ui->sysPauseAct->setText(tr("&Resume\tCtrl+E"));
-	ui->sysPauseAct->setIcon(icon_play);
-	ui->toolbar_start->setIcon(icon_play);
+	ui->sysPauseAct->setIcon(m_icon_play);
+	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setToolTip(tr("Resume emulation"));
 }
 
 void main_window::OnEmuStop()
 {
-	debuggerFrame->EnableButtons(false);
-	debuggerFrame->ClearBreakpoints();
+	m_debuggerFrame->EnableButtons(false);
+	m_debuggerFrame->ClearBreakpoints();
 
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
-	ui->sysPauseAct->setIcon(icon_play);
+	ui->sysPauseAct->setIcon(m_icon_play);
 #ifdef _WIN32
-	thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
-	thumb_playPause->setIcon(icon_thumb_play);
+	m_thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
+	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
 	EnableMenus(false);
 	if (!Emu.GetPath().empty())
 	{
 		ui->toolbar_start->setEnabled(true);
-		ui->toolbar_start->setIcon(icon_restart);
+		ui->toolbar_start->setIcon(m_icon_restart);
 		ui->toolbar_start->setToolTip(tr("Restart emulation"));
 		ui->sysRebootAct->setEnabled(true);
 #ifdef _WIN32
-		thumb_restart->setEnabled(true);
+		m_thumb_restart->setEnabled(true);
 #endif
 	}
 	else
 	{
-		ui->toolbar_start->setIcon(icon_play);
+		ui->toolbar_start->setIcon(m_icon_play);
 		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	}
 }
 
 void main_window::OnEmuReady()
 {
-	debuggerFrame->EnableButtons(true);
+	m_debuggerFrame->EnableButtons(true);
 #ifdef _WIN32
-	thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
-	thumb_playPause->setIcon(icon_thumb_play);
+	m_thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
+	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
-	ui->sysPauseAct->setIcon(icon_play);
-	ui->toolbar_start->setIcon(icon_play);
+	ui->sysPauseAct->setIcon(m_icon_play);
+	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	EnableMenus(true);
 }
@@ -841,9 +841,9 @@ void main_window::EnableMenus(bool enabled)
 {
 	// Thumbnail Buttons
 #ifdef _WIN32
-	thumb_playPause->setEnabled(enabled);
-	thumb_stop->setEnabled(enabled);
-	thumb_restart->setEnabled(enabled);
+	m_thumb_playPause->setEnabled(enabled);
+	m_thumb_stop->setEnabled(enabled);
+	m_thumb_restart->setEnabled(enabled);
 #endif
 
 	// Toolbar
@@ -937,7 +937,7 @@ void main_window::BootRecentAction(const QAction* act)
 	{
 		LOG_SUCCESS(LOADER, "Boot from Recent List: done");
 		AddRecentAction(GUI::Recent_Game(qstr(Emu.GetBoot()), nam));
-		gameListFrame->Refresh(true);
+		m_gameListFrame->Refresh(true);
 	}
 };
 
@@ -1043,8 +1043,8 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 
 void main_window::RepaintGui()
 {
-	gameListFrame->RepaintIcons(true);
-	gameListFrame->RepaintToolBarIcons();
+	m_gameListFrame->RepaintIcons(true);
+	m_gameListFrame->RepaintToolBarIcons();
 	RepaintToolbar();
 	RepaintToolBarIcons();
 }
@@ -1077,25 +1077,25 @@ void main_window::CreateActions()
 	ui->toolbar_start->setEnabled(false);
 	ui->toolbar_stop->setEnabled(false);
 
-	categoryVisibleActGroup = new QActionGroup(this); 
-	categoryVisibleActGroup->addAction(ui->showCatHDDGameAct);
-	categoryVisibleActGroup->addAction(ui->showCatDiscGameAct);
-	categoryVisibleActGroup->addAction(ui->showCatHomeAct);
-	categoryVisibleActGroup->addAction(ui->showCatAudioVideoAct);
-	categoryVisibleActGroup->addAction(ui->showCatGameDataAct);
-	categoryVisibleActGroup->addAction(ui->showCatUnknownAct);
-	categoryVisibleActGroup->addAction(ui->showCatOtherAct);
-	categoryVisibleActGroup->setExclusive(false);
+	m_categoryVisibleActGroup = new QActionGroup(this); 
+	m_categoryVisibleActGroup->addAction(ui->showCatHDDGameAct);
+	m_categoryVisibleActGroup->addAction(ui->showCatDiscGameAct);
+	m_categoryVisibleActGroup->addAction(ui->showCatHomeAct);
+	m_categoryVisibleActGroup->addAction(ui->showCatAudioVideoAct);
+	m_categoryVisibleActGroup->addAction(ui->showCatGameDataAct);
+	m_categoryVisibleActGroup->addAction(ui->showCatUnknownAct);
+	m_categoryVisibleActGroup->addAction(ui->showCatOtherAct);
+	m_categoryVisibleActGroup->setExclusive(false);
 
-	iconSizeActGroup = new QActionGroup(this);
-	iconSizeActGroup->addAction(ui->setIconSizeTinyAct);
-	iconSizeActGroup->addAction(ui->setIconSizeSmallAct);
-	iconSizeActGroup->addAction(ui->setIconSizeMediumAct);
-	iconSizeActGroup->addAction(ui->setIconSizeLargeAct);
+	m_iconSizeActGroup = new QActionGroup(this);
+	m_iconSizeActGroup->addAction(ui->setIconSizeTinyAct);
+	m_iconSizeActGroup->addAction(ui->setIconSizeSmallAct);
+	m_iconSizeActGroup->addAction(ui->setIconSizeMediumAct);
+	m_iconSizeActGroup->addAction(ui->setIconSizeLargeAct);
 
-	listModeActGroup = new QActionGroup(this);
-	listModeActGroup->addAction(ui->setlistModeListAct);
-	listModeActGroup->addAction(ui->setlistModeGridAct);
+	m_listModeActGroup = new QActionGroup(this);
+	m_listModeActGroup->addAction(ui->setlistModeListAct);
+	m_listModeActGroup->addAction(ui->setlistModeGridAct);
 }
 
 void main_window::CreateConnects()
@@ -1184,7 +1184,7 @@ void main_window::CreateConnects()
 	{
 		vfs_dialog dlg(this);
 		dlg.exec();
-		gameListFrame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
+		m_gameListFrame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
 	});
 
 	connect(ui->confSavedataManagerAct, &QAction::triggered, [=]
@@ -1224,16 +1224,22 @@ void main_window::CreateConnects()
 	});
 
 	connect(ui->toolsDecryptSprxLibsAct, &QAction::triggered, this, &main_window::DecryptSPRXLibraries);
-	connect(ui->showDebuggerAct, &QAction::triggered, [=](bool checked){
-		checked ? debuggerFrame->show() : debuggerFrame->hide();
+
+	connect(ui->showDebuggerAct, &QAction::triggered, [=](bool checked)
+	{
+		checked ? m_debuggerFrame->show() : m_debuggerFrame->hide();
 		guiSettings->SetValue(GUI::mw_debugger, checked);
 	});
-	connect(ui->showLogAct, &QAction::triggered, [=](bool checked){
-		checked ? logFrame->show() : logFrame->hide();
+
+	connect(ui->showLogAct, &QAction::triggered, [=](bool checked)
+	{
+		checked ? m_logFrame->show() : m_logFrame->hide();
 		guiSettings->SetValue(GUI::mw_logger, checked);
 	});
-	connect(ui->showGameListAct, &QAction::triggered, [=](bool checked){
-		checked ? gameListFrame->show() : gameListFrame->hide();
+
+	connect(ui->showGameListAct, &QAction::triggered, [=](bool checked)
+	{
+		checked ? m_gameListFrame->show() : m_gameListFrame->hide();
 		guiSettings->SetValue(GUI::mw_gamelist, checked);
 	});
 
@@ -1242,13 +1248,18 @@ void main_window::CreateConnects()
 		ui->toolBar->setVisible(checked);
 		guiSettings->SetValue(GUI::mw_toolBarVisible, checked);
 	});
-	connect(ui->showGameToolBarAct, &QAction::triggered, [=](bool checked) {
-		gameListFrame->SetToolBarVisible(checked);
+
+	connect(ui->showGameToolBarAct, &QAction::triggered, [=](bool checked)
+	{
+		m_gameListFrame->SetToolBarVisible(checked);
 	});
-	connect(ui->refreshGameListAct, &QAction::triggered, [=](){
-		gameListFrame->Refresh(true);
+
+	connect(ui->refreshGameListAct, &QAction::triggered, [=]
+	{
+		m_gameListFrame->Refresh(true);
 	});
-	connect(categoryVisibleActGroup, &QActionGroup::triggered, [=](QAction* act)
+
+	connect(m_categoryVisibleActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
 		QStringList categories;
 		int id;
@@ -1263,8 +1274,8 @@ void main_window::CreateConnects()
 		else if (act == ui->showCatOtherAct)      categories += category::others, id = Category::Others;
 		else LOG_WARNING(GENERAL, "categoryVisibleActGroup: category action not found");
 
-		gameListFrame->SetCategoryActIcon(categoryVisibleActGroup->actions().indexOf(act), checked);
-		gameListFrame->ToggleCategoryFilter(categories, checked);
+		m_gameListFrame->SetCategoryActIcon(m_categoryVisibleActGroup->actions().indexOf(act), checked);
+		m_gameListFrame->ToggleCategoryFilter(categories, checked);
 		guiSettings->SetCategoryVisibility(id, checked);
 	});
 
@@ -1283,17 +1294,18 @@ void main_window::CreateConnects()
 		{
 			ui->sizeSlider->setSliderPosition(index);
 		}
-		if (val != gameListFrame->GetSliderValue())
+		if (val != m_gameListFrame->GetSliderValue())
 		{
 			if (m_save_slider_pos)
 			{
 				m_save_slider_pos = false;
 				guiSettings->SetValue(GUI::gl_iconSize, index);
 			}
-			gameListFrame->ResizeIcons(index);
+			m_gameListFrame->ResizeIcons(index);
 		}
 	};
-	connect(iconSizeActGroup, &QActionGroup::triggered, [=](QAction* act)
+
+	connect(m_iconSizeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
 		int index;
 
@@ -1304,7 +1316,8 @@ void main_window::CreateConnects()
 
 		resizeIcons(index);
 	});
-	connect (gameListFrame, &game_list_frame::RequestIconSizeActSet, [=](const int& idx)
+
+	connect (m_gameListFrame, &game_list_frame::RequestIconSizeActSet, [=](const int& idx)
 	{
 		if (idx < GUI::get_Index((GUI::gl_icon_size_small + GUI::gl_icon_size_min) / 2)) ui->setIconSizeTinyAct->setChecked(true);
 		else if (idx < GUI::get_Index((GUI::gl_icon_size_medium + GUI::gl_icon_size_small) / 2)) ui->setIconSizeSmallAct->setChecked(true);
@@ -1313,24 +1326,32 @@ void main_window::CreateConnects()
 
 		resizeIcons(idx);
 	});
-	connect(gameListFrame, &game_list_frame::RequestSaveSliderPos, [=](const bool& save){ Q_UNUSED(save); m_save_slider_pos = true; });
-	connect(gameListFrame, &game_list_frame::RequestListModeActSet, [=](const bool& isList)
+
+	connect(m_gameListFrame, &game_list_frame::RequestSaveSliderPos, [=](const bool& save)
+	{
+		Q_UNUSED(save);
+		m_save_slider_pos = true;
+	});
+
+	connect(m_gameListFrame, &game_list_frame::RequestListModeActSet, [=](const bool& isList)
 	{
 		isList ? ui->setlistModeListAct->trigger() : ui->setlistModeGridAct->trigger();
 	});
-	connect(gameListFrame, &game_list_frame::RequestCategoryActSet, [=](const int& id)
+
+	connect(m_gameListFrame, &game_list_frame::RequestCategoryActSet, [=](const int& id)
 	{
-		categoryVisibleActGroup->actions().at(id)->trigger();
+		m_categoryVisibleActGroup->actions().at(id)->trigger();
 	});
-	connect(listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
+
+	connect(m_listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
 		bool isList = act == ui->setlistModeListAct;
-		gameListFrame->SetListMode(isList);
-		categoryVisibleActGroup->setEnabled(isList);
+		m_gameListFrame->SetListMode(isList);
+		m_categoryVisibleActGroup->setEnabled(isList);
 	});
 
 	connect(ui->toolbar_disc, &QAction::triggered, this, &main_window::BootGame);
-	connect(ui->toolbar_refresh, &QAction::triggered, [=]() { gameListFrame->Refresh(true); });
+	connect(ui->toolbar_refresh, &QAction::triggered, [=]() { m_gameListFrame->Refresh(true); });
 	connect(ui->toolbar_stop, &QAction::triggered, [=]() { Emu.Stop(); });
 	connect(ui->toolbar_start, &QAction::triggered, Pause);
 
@@ -1339,14 +1360,15 @@ void main_window::CreateConnects()
 		if (isFullScreen())
 		{
 			showNormal();
-			ui->toolbar_fullscreen->setIcon(icon_fullscreen_on);
+			ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
 		}
 		else
 		{
 			showFullScreen();
-			ui->toolbar_fullscreen->setIcon(icon_fullscreen_off);
+			ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_off);
 		}
 	});
+
 	connect(ui->toolbar_controls, &QAction::triggered, [=]() { pad_settings_dialog dlg(guiSettings, this); dlg.exec(); });
 	connect(ui->toolbar_config, &QAction::triggered, [=]() { openSettings(0); });
 	connect(ui->toolbar_list, &QAction::triggered, [=]() { ui->setlistModeListAct->trigger(); });
@@ -1361,7 +1383,8 @@ void main_window::CreateConnects()
 			m_save_slider_pos = true; // actionTriggered happens before the value was changed
 		}
 	});
-	connect(ui->mw_searchbar, &QLineEdit::textChanged, gameListFrame, &game_list_frame::SetSearchText);
+
+	connect(ui->mw_searchbar, &QLineEdit::textChanged, m_gameListFrame, &game_list_frame::SetSearchText);
 }
 
 void main_window::CreateDockWindows()
@@ -1369,20 +1392,20 @@ void main_window::CreateDockWindows()
 	// new mainwindow widget because existing seems to be bugged for now
 	m_mw = new QMainWindow();
 
-	gameListFrame = new game_list_frame(guiSettings, m_Render_Creator, m_mw);
-	gameListFrame->setObjectName("gamelist");
-	debuggerFrame = new debugger_frame(guiSettings, m_mw);
-	debuggerFrame->setObjectName("debugger");
-	logFrame = new log_frame(guiSettings, m_mw);
-	logFrame->setObjectName("logger");
+	m_gameListFrame = new game_list_frame(guiSettings, m_Render_Creator, m_mw);
+	m_gameListFrame->setObjectName("gamelist");
+	m_debuggerFrame = new debugger_frame(guiSettings, m_mw);
+	m_debuggerFrame->setObjectName("debugger");
+	m_logFrame = new log_frame(guiSettings, m_mw);
+	m_logFrame->setObjectName("logger");
 
-	m_mw->addDockWidget(Qt::LeftDockWidgetArea, gameListFrame);
-	m_mw->addDockWidget(Qt::LeftDockWidgetArea, logFrame);
-	m_mw->addDockWidget(Qt::RightDockWidgetArea, debuggerFrame);
+	m_mw->addDockWidget(Qt::LeftDockWidgetArea, m_gameListFrame);
+	m_mw->addDockWidget(Qt::LeftDockWidgetArea, m_logFrame);
+	m_mw->addDockWidget(Qt::RightDockWidgetArea, m_debuggerFrame);
 	m_mw->setDockNestingEnabled(true);
 	setCentralWidget(m_mw);
 
-	connect(logFrame, &log_frame::LogFrameClosed, [=]()
+	connect(m_logFrame, &log_frame::LogFrameClosed, [=]()
 	{
 		if (ui->showLogAct->isChecked())
 		{
@@ -1390,14 +1413,17 @@ void main_window::CreateDockWindows()
 			guiSettings->SetValue(GUI::mw_logger, false);
 		}
 	});
-	connect(debuggerFrame, &debugger_frame::DebugFrameClosed, [=](){
+
+	connect(m_debuggerFrame, &debugger_frame::DebugFrameClosed, [=]()
+	{
 		if (ui->showDebuggerAct->isChecked())
 		{
 			ui->showDebuggerAct->setChecked(false);
 			guiSettings->SetValue(GUI::mw_debugger, false);
 		}
 	});
-	connect(gameListFrame, &game_list_frame::GameListFrameClosed, [=]()
+
+	connect(m_gameListFrame, &game_list_frame::GameListFrameClosed, [=]()
 	{
 		if (ui->showGameListAct->isChecked())
 		{
@@ -1405,15 +1431,19 @@ void main_window::CreateDockWindows()
 			guiSettings->SetValue(GUI::mw_gamelist, false);
 		}
 	});
-	connect(gameListFrame, &game_list_frame::RequestIconPathSet, this, &main_window::SetAppIconFromPath);
-	connect(gameListFrame, &game_list_frame::RequestAddRecentGame, this, &main_window::AddRecentAction);
-	connect(gameListFrame, &game_list_frame::RequestPackageInstall, [this](const QStringList& paths){
+
+	connect(m_gameListFrame, &game_list_frame::RequestIconPathSet, this, &main_window::SetAppIconFromPath);
+	connect(m_gameListFrame, &game_list_frame::RequestAddRecentGame, this, &main_window::AddRecentAction);
+
+	connect(m_gameListFrame, &game_list_frame::RequestPackageInstall, [this](const QStringList& paths)
+	{
 		for (const auto& path : paths)
 		{
 			InstallPkg(path);
 		}
 	});
-	connect(gameListFrame, &game_list_frame::RequestFirmwareInstall, this, &main_window::InstallPup);
+
+	connect(m_gameListFrame, &game_list_frame::RequestFirmwareInstall, this, &main_window::InstallPup);
 }
 
 void main_window::ConfigureGuiFromSettings(bool configureAll)
@@ -1426,7 +1456,7 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	}
 	else
 	{	// By default, set the window to 70% of the screen and the debugger frame is hidden.
-		debuggerFrame->hide();
+		m_debuggerFrame->hide();
 
 		QSize defaultSize = QDesktopWidget().availableGeometry().size() * 0.7;
 		resize(defaultSize);
@@ -1471,10 +1501,10 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	ui->showToolBarAct->setChecked(guiSettings->GetValue(GUI::mw_toolBarVisible).toBool());
 	ui->showGameToolBarAct->setChecked(guiSettings->GetValue(GUI::gl_toolBarVisible).toBool());
 
-	debuggerFrame->setVisible(ui->showDebuggerAct->isChecked());
-	logFrame->setVisible(ui->showLogAct->isChecked());
-	gameListFrame->setVisible(ui->showGameListAct->isChecked());
-	gameListFrame->SetToolBarVisible(ui->showGameToolBarAct->isChecked());
+	m_debuggerFrame->setVisible(ui->showDebuggerAct->isChecked());
+	m_logFrame->setVisible(ui->showLogAct->isChecked());
+	m_gameListFrame->setVisible(ui->showGameListAct->isChecked());
+	m_gameListFrame->SetToolBarVisible(ui->showGameToolBarAct->isChecked());
 	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
 
 	RepaintToolbar();
@@ -1497,15 +1527,15 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	bool isListMode = guiSettings->GetValue(GUI::gl_listMode).toBool();
 	if (isListMode) ui->setlistModeListAct->setChecked(true);
 	else ui->setlistModeGridAct->setChecked(true);
-	categoryVisibleActGroup->setEnabled(isListMode);
+	m_categoryVisibleActGroup->setEnabled(isListMode);
 
 	if (configureAll)
 	{
 		// Handle log settings
-		logFrame->LoadSettings();
+		m_logFrame->LoadSettings();
 
 		// Gamelist
-		gameListFrame->LoadSettings();
+		m_gameListFrame->LoadSettings();
 	}
 }
 
@@ -1535,7 +1565,7 @@ void main_window::mouseDoubleClickEvent(QMouseEvent *event)
 		if (event->button() == Qt::LeftButton)
 		{
 			showNormal();
-			ui->toolbar_fullscreen->setIcon(icon_fullscreen_on);
+			ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
 		}
 	}
 }
