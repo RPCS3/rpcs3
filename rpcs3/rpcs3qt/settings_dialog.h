@@ -10,7 +10,8 @@
 
 #include <memory>
 
-namespace Ui {
+namespace Ui
+{
 	class settings_dialog;
 }
 

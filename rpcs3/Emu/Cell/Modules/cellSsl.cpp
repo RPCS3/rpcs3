@@ -69,9 +69,9 @@ s32 cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm::ptr<u
 			final.append(getCert(certPath, i));
 		}
 
-		memset(buffer.get_ptr(), 0, size-1);
-		strncpy(buffer.get_ptr(), final.c_str(), size - 1);
-		buffer.get_ptr()[size - 1] = '\0';
+		memset(buffer.get_ptr(), 0, size);
+		strncpy(buffer.get_ptr(), final.c_str(), size);
+		buffer.get_ptr()[size] = '\0';
 	}
 
 	return CELL_OK;

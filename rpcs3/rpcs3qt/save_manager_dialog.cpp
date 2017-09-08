@@ -119,7 +119,6 @@ void save_manager_dialog::Init(std::string dir)
 
 	UpdateList();
 
-	
 	// Connects and events
 	connect(push_close, &QAbstractButton::clicked, this, &save_manager_dialog::close);
 	connect(m_list, &QTableWidget::itemDoubleClicked, this, &save_manager_dialog::OnEntryInfo);
@@ -129,7 +128,8 @@ void save_manager_dialog::Init(std::string dir)
 		OnSort(col);
 	});
 
-	connect(m_list, &QTableWidget::cellChanged, [&](int row, int col) {
+	connect(m_list, &QTableWidget::cellChanged, [&](int row, int col)
+	{
 		int originalIndex = m_list->item(row, 0)->data(Qt::UserRole).toInt();
 		SaveDataEntry originalEntry = m_save_entries[originalIndex];
 		QString originalDirName = qstr(originalEntry.dirName);

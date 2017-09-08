@@ -36,7 +36,8 @@ class emu_settings : public QObject
 	*/
 	Q_OBJECT
 public:
-	enum SettingsType {
+	enum SettingsType
+	{
 		// Core
 		PPUDecoder,
 		SPUDecoder,
@@ -134,7 +135,8 @@ public Q_SLOTS:
 	void SaveSettings();
 private:
 	/** A helper map that keeps track of where a given setting type is located*/
-	const QMap<SettingsType, cfg_location> SettingsLoc = {
+	const QMap<SettingsType, cfg_location> SettingsLoc =
+	{
 		// Core Tab
 		{ PPUDecoder,		{ "Core", "PPU Decoder"}},
 		{ SPUDecoder,		{ "Core", "SPU Decoder"}},
@@ -202,7 +204,6 @@ private:
 		{ dev_hdd1Location, { "VFS", "/dev_hdd1/" }},
 		{ dev_flashLocation, { "VFS", "/dev_flash/"}},
 		{ dev_usb000Location, { "VFS", "/dev_usb000/"}},
-
 	};
 
 	YAML::Node currentSettings; // The current settings as a YAML node.

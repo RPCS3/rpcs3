@@ -62,11 +62,9 @@ namespace
 	}
 }
 
-
 // Helper methods to interact with YAML and the config settings.
 namespace cfg_adapter
 {
-
 	static cfg::_base& get_cfg(cfg::_base& root, const std::string& name)
 	{
 		if (root.get_type() == cfg::type::node)
@@ -88,7 +86,6 @@ namespace cfg_adapter
 		return begin == end ? root : get_cfg(get_cfg(root, *begin), begin + 1, end);
 	}
 
-
 	static YAML::Node get_node(const YAML::Node& node, cfg_location::const_iterator begin, cfg_location::const_iterator end)
 	{
 		return begin == end ? node : get_node(node[*begin], begin + 1, end); // TODO
@@ -100,7 +97,6 @@ namespace cfg_adapter
 		return get_node(node, loc.cbegin(), loc.cend());
 	}
 };
-
 
 /** Returns possible options for values for some particular setting.*/
 static QStringList getOptions(cfg_location location)
@@ -142,7 +138,6 @@ Render_Creator::Render_Creator()
 							D3D12Adapters.append(QString::fromWCharArray(desc.Description));
 					}
 				}
-				
 			}
 		}
 	}
@@ -199,7 +194,7 @@ emu_settings::~emu_settings()
 }
 
 void emu_settings::SaveSettings()
- {
+{
 	YAML::Emitter out;
 	emitData(out, currentSettings);
 
@@ -244,7 +239,8 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 		combobox->setCurrentIndex(index);
 	}
 
-	connect(combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=](int index) {
+	connect(combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=](int index)
+	{
 		SetSetting(type, sstr(combobox->itemData(index)));
 	});
 }
@@ -263,7 +259,9 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 	{
 		LOG_WARNING(GENERAL, "Passed in an invalid setting for creating enhanced checkbox");
 	}
-	connect(checkbox, &QCheckBox::stateChanged, [=](int val) {
+
+	connect(checkbox, &QCheckBox::stateChanged, [=](int val)
+	{
 		std::string str = val != 0 ? "true" : "false";
 		SetSetting(type, str);
 	});

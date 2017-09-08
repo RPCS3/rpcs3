@@ -16,12 +16,15 @@ struct GUI_SAVE
 	QString name;
 	QVariant def;
 
-	GUI_SAVE() {
+	GUI_SAVE()
+	{
 		key = "";
 		name = "";
 		def = QVariant();
 	};
-	GUI_SAVE(const QString& k, const QString& n, const QVariant& d) {
+
+	GUI_SAVE(const QString& k, const QString& n, const QVariant& d)
+	{
 		key = k;
 		name = n;
 		def = d;
@@ -59,6 +62,18 @@ namespace GUI
 		dummy_color.ensurePolished();
 		return dummy_color.palette().color(colorRole);
 	};
+
+	inline QString get_Single_Line(const QString& multi_line_string)
+	{
+		QString single_line_string = multi_line_string;
+		single_line_string.replace("\n"," ");
+		return single_line_string;
+	}
+
+	inline q_string_pair Recent_Game(const QString& path, const QString& title)
+	{
+		return q_string_pair(path, get_Single_Line(title));
+	}
 
 	const QString Default     = QObject::tr("default");
 	const QString main_window = "main_window";

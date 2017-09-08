@@ -18,7 +18,8 @@
 
 #include <memory>
 
-namespace Ui {
+namespace Ui
+{
 	class main_window;
 }
 
