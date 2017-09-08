@@ -37,6 +37,8 @@ int main(int argc, char** argv)
 	qputenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1");
 #endif
 
+	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+
 	rpcs3_app app(argc, argv);
 
 	// Command line args
