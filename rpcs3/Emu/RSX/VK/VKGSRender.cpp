@@ -638,6 +638,9 @@ VKGSRender::VKGSRender() : GSRender()
 
 	m_current_frame = &frame_context_storage[0];
 
+	m_texture_cache.initialize((*m_device), m_memory_type_mapping, m_optimal_tiling_supported_formats, m_swap_chain->get_present_queue(),
+			m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
+
 	supports_multidraw = true;
 }
 
@@ -742,16 +745,18 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	{
 		if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
 		{
-			bool flushable, synchronized;
-			u64 sync_timestamp;
-			std::tie(flushable, synchronized, sync_timestamp) = m_texture_cache.address_is_flushable(address);
+			bool flushable;
+			vk::cached_texture_section* section;
+
+			std::tie(flushable, section) = m_texture_cache.address_is_flushable(address);
 			
 			if (!flushable)
 				return false;
-
+				
+			const u64 sync_timestamp = section->get_sync_timestamp();
 			const bool is_rsxthr = std::this_thread::get_id() == rsx_thread;
 
-			if (synchronized)
+			if (section->is_synchronized())
 			{
 				//Wait for any cb submitted after the sync timestamp to finish
 				while (true)
@@ -841,7 +846,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 void VKGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 {
 	if (m_texture_cache.invalidate_range(address_base, size, false))
-		m_texture_cache.flush(true);
+		m_texture_cache.purge_dirty();
 }
 
 void VKGSRender::begin()
@@ -1038,8 +1043,7 @@ void VKGSRender::end()
 				continue;
 			}
 
-			vk::image_view *texture0 = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts, m_memory_type_mapping,
-				m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
+			vk::image_view *texture0 = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts);
 
 			if (!texture0)
 			{
@@ -1093,8 +1097,7 @@ void VKGSRender::end()
 				continue;
 			}
 
-			vk::image_view *texture0 = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.vertex_textures[i], m_rtts, m_memory_type_mapping,
-				m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
+			vk::image_view *texture0 = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.vertex_textures[i], m_rtts);
 
 			if (!texture0)
 			{
@@ -1429,7 +1432,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 			if (!m_surface_info[index].pitch)
 				continue;
 
-			m_texture_cache.flush_memory_to_cache(m_surface_info[index].address, m_surface_info[index].pitch * m_surface_info[index].height,
+			m_texture_cache.flush_memory_to_cache(m_surface_info[index].address, m_surface_info[index].pitch * m_surface_info[index].height, true,
 					*m_current_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 		}
 	}
@@ -1440,7 +1443,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 
 		if (m_depth_surface_info.pitch)
 		{
-			m_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height,
+			m_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, true,
 				*m_current_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 		}
 	}
@@ -1529,7 +1532,7 @@ void VKGSRender::advance_queued_frames()
 	m_rtts.free_invalidated();
 
 	//texture cache is also double buffered to prevent use-after-free
-	m_texture_cache.flush();
+	m_texture_cache.on_frame_end();
 
 	//Remove stale framebuffers. Ref counted to prevent use-after-free
 	m_framebuffers_to_clean.remove_if([](std::unique_ptr<vk::framebuffer_holder>& fbo)
@@ -2179,7 +2182,7 @@ void VKGSRender::prepare_rtts()
 			const u32 range = m_surface_info[index].pitch * m_surface_info[index].height;
 
 			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[index]), m_surface_info[index].address, range,
-				m_surface_info[index].width, m_surface_info[index].height);
+				m_surface_info[index].width, m_surface_info[index].height, m_surface_info[index].pitch);
 		}
 	}
 
@@ -2192,7 +2195,7 @@ void VKGSRender::prepare_rtts()
 
 			const u32 range = pitch * m_depth_surface_info.height;
 			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range,
-				m_depth_surface_info.width, m_depth_surface_info.height);
+				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch);
 		}
 	}
 
@@ -2584,6 +2587,5 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 {
 	close_render_pass();
 
-	return m_texture_cache.upload_scaled_image(src, dst, interpolate, (*m_device), *m_current_command_buffer, m_memory_type_mapping,
-			m_swap_chain->get_present_queue(), m_rtts, m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
+	return m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer);
 }

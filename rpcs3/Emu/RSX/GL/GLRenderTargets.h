@@ -48,7 +48,7 @@ namespace rsx
 
 namespace gl
 {
-	class render_target : public texture
+	class render_target : public texture, public rsx::render_target_descriptor<u32>
 	{
 		bool is_cleared = false;
 
@@ -82,7 +82,7 @@ namespace gl
 			native_pitch = pitch;
 		}
 
-		u16 get_native_pitch() const
+		u16 get_native_pitch() const override
 		{
 			return native_pitch;
 		}
@@ -93,17 +93,29 @@ namespace gl
 			rsx_pitch = pitch;
 		}
 
-		u16 get_rsx_pitch() const
+		u16 get_rsx_pitch() const override
 		{
 			return rsx_pitch;
 		}
 
-		std::pair<u16, u16> get_dimensions()
+		u16 get_surface_width() const override
 		{
-			if (!surface_height) surface_height = height();
-			if (!surface_width) surface_width = width();
+			return surface_width;
+		}
 
-			return std::make_pair(surface_width, surface_height);
+		u16 get_surface_height() const override
+		{
+			return surface_height;
+		}
+
+		u32 get_surface() const override
+		{
+			return id();
+		}
+
+		u32 get_view() const
+		{
+			return id();
 		}
 
 		void set_compatible_format(texture::internal_format format)
@@ -111,9 +123,15 @@ namespace gl
 			compatible_internal_format = format;
 		}
 
-		texture::internal_format get_compatible_internal_format()
+		texture::internal_format get_compatible_internal_format() const override
 		{
 			return compatible_internal_format;
+		}
+
+		void update_surface()
+		{
+			surface_width = width();
+			surface_height = height();
 		}
 	};
 }
@@ -159,6 +177,7 @@ struct gl_render_target_traits
 			result->old_contents = old_surface;
 
 		result->set_cleared();
+		result->update_surface();
 		return result;
 	}
 
@@ -198,18 +217,17 @@ struct gl_render_target_traits
 		if (old_surface != nullptr && old_surface->get_compatible_internal_format() == format.internal_format)
 			result->old_contents = old_surface;
 
+		result->update_surface();
 		return result;
 	}
 
 	static
 	void get_surface_info(gl::render_target *surface, rsx::surface_format_info *info)
 	{
-		const auto dims = surface->get_dimensions();
-
 		info->rsx_pitch = surface->get_rsx_pitch();
 		info->native_pitch = surface->get_native_pitch();
-		info->surface_width = std::get<0>(dims);
-		info->surface_height = std::get<1>(dims);
+		info->surface_width = surface->get_surface_width();
+		info->surface_height = surface->get_surface_height();
 		info->bpp = static_cast<u8>(info->native_pitch / info->surface_width);
 	}
 

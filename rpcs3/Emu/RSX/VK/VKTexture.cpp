@@ -157,7 +157,7 @@ namespace vk
 
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
 		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		vk::vk_data_heap &upload_heap, vk::buffer* upload_buffer)
+		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap, vk::buffer* upload_buffer)
 	{
 		u32 mipmap_level = 0;
 		u32 block_in_pixel = get_format_block_size_in_texel(format);
@@ -178,7 +178,7 @@ namespace vk
 			copy_info.imageExtent.height = layout.height_in_block * block_in_pixel;
 			copy_info.imageExtent.width = layout.width_in_block * block_in_pixel;
 			copy_info.imageExtent.depth = layout.depth;
-			copy_info.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			copy_info.imageSubresource.aspectMask = flags;
 			copy_info.imageSubresource.layerCount = 1;
 			copy_info.imageSubresource.baseArrayLayer = mipmap_level / mipmap_count;
 			copy_info.imageSubresource.mipLevel = mipmap_level % mipmap_count;

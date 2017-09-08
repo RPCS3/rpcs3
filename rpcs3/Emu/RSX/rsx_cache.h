@@ -21,6 +21,8 @@ namespace rsx
 		u16 pitch;
 		void *pixels;
 
+		bool compressed_x;
+		bool compressed_y;
 		u32 rsx_address;
 	};
 
@@ -36,10 +38,14 @@ namespace rsx
 		u16 clip_y;
 		u16 clip_width;
 		u16 clip_height;
+		f32 scale_x;
+		f32 scale_y;
 
 		bool swizzled;
 		void *pixels;
 
+		bool compressed_x;
+		bool compressed_y;
 		u32  rsx_address;
 	};
 

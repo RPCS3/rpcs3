@@ -16,7 +16,7 @@ struct ref_counted
 
 namespace vk
 {
-	struct render_target : public image, public ref_counted
+	struct render_target : public image, public ref_counted, public rsx::render_target_descriptor<vk::image*>
 	{
 		bool dirty = false;
 		u16 native_pitch = 0;
@@ -50,6 +50,31 @@ namespace vk
 						native_component_map, vk::get_image_subresource_range(0, 0, 1, 1, attachment_aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT)));
 
 			return view.get();
+		}
+
+		vk::image* get_surface() const override
+		{
+			return (vk::image*)this;
+		}
+
+		u16 get_surface_width() const override
+		{
+			return width();
+		}
+
+		u16 get_surface_height() const override
+		{
+			return height();
+		}
+
+		u16 get_rsx_pitch() const override
+		{
+			return rsx_pitch;
+		}
+
+		u16 get_native_pitch() const override
+		{
+			return native_pitch;
 		}
 	};
 
