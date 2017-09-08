@@ -886,23 +886,28 @@ void game_list_frame::RepaintToolBarIcons()
 		newColor = GUI::get_Label_Color("gamelist_toolbar_icon_color");
 	}
 
-	m_catActHDD.colored = gui_settings::colorizedIcon(QIcon(":/Icons/hdd_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActDisc.colored = gui_settings::colorizedIcon(QIcon(":/Icons/disc_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActHome.colored = gui_settings::colorizedIcon(QIcon(":/Icons/home_blue.png"), GUI::gl_tool_icon_color, newColor);
-	m_catActAudioVideo.colored = gui_settings::colorizedIcon(QIcon(":/Icons/media_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActGameData.colored = gui_settings::colorizedIcon(QIcon(":/Icons/data_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActUnknown.colored = gui_settings::colorizedIcon(QIcon(":/Icons/unknown_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActOther.colored = gui_settings::colorizedIcon(QIcon(":/Icons/other_blue.png"), GUI::gl_tool_icon_color, newColor);
+	auto icon = [&newColor](const QString& path, bool mask = false)
+	{
+		return gui_settings::colorizedIcon(QIcon(path), GUI::gl_tool_icon_color, newColor, mask);
+	};
+
+	m_catActHDD.colored        = icon(":/Icons/hdd_blue.png", true);
+	m_catActDisc.colored       = icon(":/Icons/disc_blue.png", true);
+	m_catActHome.colored       = icon(":/Icons/home_blue.png");
+	m_catActAudioVideo.colored = icon(":/Icons/media_blue.png", true);
+	m_catActGameData.colored   = icon(":/Icons/data_blue.png", true);
+	m_catActUnknown.colored    = icon(":/Icons/unknown_blue.png", true);
+	m_catActOther.colored      = icon(":/Icons/other_blue.png");
 
 	for (const auto& butt : m_categoryButtons)
 	{
 		butt->action->setIcon(butt->isActive ? butt->colored : butt->gray);
 	}
 
-	m_modeActList.colored = gui_settings::colorizedIcon(QIcon(":/Icons/list_blue.png"), GUI::gl_tool_icon_color, newColor);
+	m_modeActList.colored = icon(":/Icons/list_blue.png");
 	m_modeActList.action->setIcon(m_isListLayout ? m_modeActList.colored : m_modeActList.gray);
 
-	m_modeActGrid.colored = gui_settings::colorizedIcon(QIcon(":/Icons/grid_blue.png"), GUI::gl_tool_icon_color, newColor);
+	m_modeActGrid.colored = icon(":/Icons/grid_blue.png");
 	m_modeActGrid.action->setIcon(m_isListLayout ? m_modeActGrid.gray : m_modeActGrid.colored);
 
 	m_Slider_Size->setStyleSheet(m_Slider_Size->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
