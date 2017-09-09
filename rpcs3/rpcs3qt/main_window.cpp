@@ -15,7 +15,6 @@
 #include "debugger_frame.h"
 #include "log_frame.h"
 #include "settings_dialog.h"
-#include "pad_settings_dialog.h"
 #include "auto_pause_settings_dialog.h"
 #include "cg_disasm_window.h"
 #include "memory_string_searcher.h"
