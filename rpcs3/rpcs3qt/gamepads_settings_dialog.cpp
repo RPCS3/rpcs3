@@ -13,6 +13,26 @@
 
 input_config input_cfg;
 
+// taken from https://stackoverflow.com/a/30818424/8353754
+// because size policies won't work as expected (see similar bugs in Qt bugtracker)
+inline void resizeComboBoxView(QComboBox* combo)
+{
+	int max_width = 0;
+	QFontMetrics fm(combo->font());
+	for (int i = 0; i < combo->count(); ++i)
+	{
+		int width = fm.width(combo->itemText(i));
+		if (width > max_width) max_width = width;
+	}
+	if (combo->view()->minimumWidth() < max_width)
+	{
+		// add scrollbar width and margin
+		max_width += combo->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+		max_width += combo->view()->autoScrollMargin();
+		combo->view()->setMinimumWidth(max_width);
+	}
+};
+
 gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 	: QDialog(parent)
 {
@@ -31,6 +51,7 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 		{
 			combo->addItem(str_inputs[index].c_str());
 		}
+		resizeComboBoxView(combo);
 	};
 
 	for (int i = 0; i < 7; i++)
@@ -40,22 +61,31 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 		QVBoxLayout *ppad_layout = new QVBoxLayout();
 
 		co_inputtype[i] = new QComboBox();
-		fill_device_combo(co_inputtype[i]);
+		co_inputtype[i]->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
+		co_inputtype[i]->view()->setTextElideMode(Qt::ElideNone);
 		ppad_layout->addWidget(co_inputtype[i]);
 
 		co_deviceID[i] = new QComboBox();
 		co_deviceID[i]->setEnabled(false);
+		co_deviceID[i]->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
+		co_deviceID[i]->view()->setTextElideMode(Qt::ElideNone);	
 		ppad_layout->addWidget(co_deviceID[i]);
 
 		QHBoxLayout *button_layout = new QHBoxLayout();
 		bu_config[i] = new QPushButton(tr("Config"));
 		bu_config[i]->setEnabled(false);
+		bu_config[i]->setFixedSize(bu_config[i]->sizeHint());
 		button_layout->addSpacing(bu_config[i]->sizeHint().width()*0.50f);
 		button_layout->addWidget(bu_config[i]);
 		button_layout->addSpacing(bu_config[i]->sizeHint().width()*0.50f);
 		ppad_layout->addLayout(button_layout);
 
 		grp_player->setLayout(ppad_layout);
+		grp_player->setFixedSize(grp_player->sizeHint());
+
+		// fill comboboxes after setting the groupbox's size to prevent stretch
+		fill_device_combo(co_inputtype[i]);
+
 		all_players->addWidget(grp_player);
 
 		if (i == 3)
@@ -219,6 +249,7 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 		co_deviceID[player]->setEnabled(true);
 	}
 
+	resizeComboBoxView(co_deviceID[player]);
 	bu_config[player]->setEnabled(cur_pad_handler->has_config());
 }
 

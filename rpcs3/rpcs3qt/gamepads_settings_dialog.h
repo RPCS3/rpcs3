@@ -5,6 +5,7 @@
 #include <QGroupBox>
 #include <QComboBox>
 #include <QPushButton>
+#include <QListView>
 
 #include "../Emu/System.h"
 #include "../../Utilities/Config.h"
