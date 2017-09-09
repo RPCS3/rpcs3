@@ -63,6 +63,33 @@
     <Filter Include="Gui\saves">
       <UniqueIdentifier>{31799965-1274-4c87-83a3-3bff31e8715d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\vfs">
+      <UniqueIdentifier>{e0821fe5-e58f-4ddd-8b30-8c324916b15e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\debugger">
+      <UniqueIdentifier>{32359024-92ef-44f2-97d8-120a3539c629}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\dev tools">
+      <UniqueIdentifier>{2183c937-7c45-45d5-bab1-c654bba97e15}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\game list">
+      <UniqueIdentifier>{d181920e-98c2-49b9-9ad6-bf3c2caf886a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\game window">
+      <UniqueIdentifier>{92da2292-18f9-4c41-997e-b8d288f03d5a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\log">
+      <UniqueIdentifier>{b90a63fe-afa9-41e1-9f99-1db049864d58}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\message dialog">
+      <UniqueIdentifier>{dae67696-f925-4d24-b1b7-96d1d0176dec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\settings">
+      <UniqueIdentifier>{ce01674e-ca9e-4fb7-bb4e-cdde3764317d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\misc dialogs">
+      <UniqueIdentifier>{114eef25-61bf-4df5-8867-09156cf51b8a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\rpcs3qt\*.cpp">
@@ -70,9 +97,6 @@
     </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>rpcs3</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\auto_pause_settings_dialog.cpp">
-      <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_auto_pause_settings_dialog.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
@@ -98,9 +122,6 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_cg_disasm_window.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\cg_disasm_window.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_debugger_frame.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -112,9 +133,6 @@
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_debugger_frame.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\debugger_frame.cpp">
-      <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_emu_settings.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
@@ -128,9 +146,6 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_emu_settings.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\emu_settings.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_game_list_frame.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -142,12 +157,6 @@
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_game_list_frame.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\game_list_frame.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\gl_gs_frame.cpp">
-      <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_gs_frame.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
@@ -161,9 +170,6 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_gs_frame.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\gs_frame.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_gui_settings.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -175,9 +181,6 @@
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_gui_settings.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\gui_settings.cpp">
-      <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_kernel_explorer.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
@@ -191,9 +194,6 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_kernel_explorer.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\kernel_explorer.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_log_frame.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -205,9 +205,6 @@
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_log_frame.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\log_frame.cpp">
-      <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_main_window.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
@@ -221,9 +218,6 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_main_window.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\main_window.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_memory_string_searcher.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -235,9 +229,6 @@
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_memory_string_searcher.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\memory_string_searcher.cpp">
-      <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_pad_settings_dialog.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
@@ -251,9 +242,6 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_pad_settings_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\pad_settings_dialog.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_rsx_debugger.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -266,9 +254,6 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_rsx_debugger.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\rsx_debugger.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_settings_dialog.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -280,9 +265,6 @@
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_settings_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\settings_dialog.cpp">
-      <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="basic_keyboard_handler.cpp">
       <Filter>Io\Basic</Filter>
@@ -341,15 +323,6 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_rpcs3_app.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\instruction_editor_dialog.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\memory_viewer_panel.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\msg_dialog_frame.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_msg_dialog_frame.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -362,14 +335,8 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_msg_dialog_frame.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\register_editor_dialog.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\qrc_resources.cpp">
       <Filter>Generated Files</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\welcome_dialog.cpp">
-      <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_welcome_dialog.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
@@ -383,9 +350,6 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_welcome_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\game_list_grid.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_game_list_grid.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -397,12 +361,6 @@
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_game_list_grid.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\game_list_grid_delegate.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\vfs_dialog.cpp">
-      <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_vfs_dialog.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
@@ -416,9 +374,6 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_vfs_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\vfs_dialog_tab.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_vfs_dialog_tab.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -430,9 +385,6 @@
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_vfs_dialog_tab.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\about_dialog.cpp">
-      <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_about_dialog.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
@@ -497,19 +449,88 @@
     <ClCompile Include="pad_thread.cpp">
       <Filter>Io</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\about_dialog.cpp">
+      <Filter>Gui\misc dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\welcome_dialog.cpp">
+      <Filter>Gui\misc dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\auto_pause_settings_dialog.cpp">
+      <Filter>Gui\dev tools</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\cg_disasm_window.cpp">
+      <Filter>Gui\dev tools</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\debugger_frame.cpp">
+      <Filter>Gui\debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\emu_settings.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\gui_settings.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\gl_gs_frame.cpp">
+      <Filter>Gui\game window</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\gs_frame.cpp">
+      <Filter>Gui\game window</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\gamepads_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\pad_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\log_frame.cpp">
+      <Filter>Gui\log</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\main_window.cpp">
       <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\kernel_explorer.cpp">
+      <Filter>Gui\dev tools</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_frame.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_grid.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_grid_delegate.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\memory_string_searcher.cpp">
+      <Filter>Gui\dev tools</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\memory_viewer_panel.cpp">
+      <Filter>Gui\dev tools</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\vfs_dialog.cpp">
+      <Filter>Gui\vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\vfs_dialog_tab.cpp">
+      <Filter>Gui\vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\rsx_debugger.cpp">
+      <Filter>Gui\dev tools</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\register_editor_dialog.cpp">
+      <Filter>Gui\debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\instruction_editor_dialog.cpp">
+      <Filter>Gui\debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\msg_dialog_frame.cpp">
+      <Filter>Gui\message dialog</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\gl_gs_frame.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\table_item_delegate.h">
-      <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="keyboard_pad_handler.h">
       <Filter>Io\Basic</Filter>
@@ -522,18 +543,6 @@
     </ClInclude>
     <ClInclude Include="xinput_pad_handler.h">
       <Filter>Io\XInput</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\instruction_editor_dialog.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\memory_viewer_panel.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\register_editor_dialog.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\game_list_grid_delegate.h">
-      <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_about_dialog.h">
       <Filter>Generated Files</Filter>
@@ -550,17 +559,35 @@
     <ClInclude Include="QTGeneratedFiles\ui_welcome_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\game_list.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
     <ClInclude Include="rpcs3qt\save_data_dialog.h">
       <Filter>Gui\saves</Filter>
     </ClInclude>
     <ClInclude Include="pad_thread.h">
       <Filter>Io</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\gl_gs_frame.h">
+      <Filter>Gui\game window</Filter>
+    </ClInclude>
     <ClInclude Include="rpcs3qt\gamepads_settings_dialog.h">
-      <Filter>Gui</Filter>
+      <Filter>Gui\settings</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\game_list.h">
+      <Filter>Gui\game list</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\game_list_grid_delegate.h">
+      <Filter>Gui\game list</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\table_item_delegate.h">
+      <Filter>Gui\game list</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\memory_viewer_panel.h">
+      <Filter>Gui\dev tools</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\register_editor_dialog.h">
+      <Filter>Gui\debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\instruction_editor_dialog.h">
+      <Filter>Gui\debugger</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -569,48 +596,6 @@
     </CustomBuild>
     <CustomBuild Include="release\moc_predefs.h.cbt">
       <Filter>Generated Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\auto_pause_settings_dialog.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\cg_disasm_window.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\debugger_frame.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\emu_settings.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\game_list_frame.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\gs_frame.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\gui_settings.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\kernel_explorer.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\log_frame.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\main_window.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\memory_string_searcher.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\pad_settings_dialog.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\rsx_debugger.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\settings_dialog.h">
-      <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="basic_keyboard_handler.h">
       <Filter>Io\Basic</Filter>
@@ -621,26 +606,11 @@
     <CustomBuild Include="rpcs3_app.h">
       <Filter>rpcs3</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\msg_dialog_frame.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
     <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
     <CustomBuild Include="resources.qrc">
       <Filter>Resource Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\welcome_dialog.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\game_list_grid.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\vfs_dialog.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\vfs_dialog_tab.h">
-      <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\about_dialog.ui">
       <Filter>Form Files</Filter>
@@ -657,9 +627,6 @@
     <CustomBuild Include="rpcs3qt\welcome_dialog.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\about_dialog.h">
-      <Filter>Gui</Filter>
-    </CustomBuild>
     <CustomBuild Include="rpcs3qt\save_data_info_dialog.h">
       <Filter>Gui\saves</Filter>
     </CustomBuild>
@@ -668,6 +635,66 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\save_manager_dialog.h">
       <Filter>Gui\saves</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\about_dialog.h">
+      <Filter>Gui\misc dialogs</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\welcome_dialog.h">
+      <Filter>Gui\misc dialogs</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\auto_pause_settings_dialog.h">
+      <Filter>Gui\dev tools</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\cg_disasm_window.h">
+      <Filter>Gui\dev tools</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\debugger_frame.h">
+      <Filter>Gui\debugger</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\emu_settings.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\gui_settings.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\gs_frame.h">
+      <Filter>Gui\game window</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\pad_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\log_frame.h">
+      <Filter>Gui\log</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\main_window.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\kernel_explorer.h">
+      <Filter>Gui\dev tools</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list_frame.h">
+      <Filter>Gui\game list</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list_grid.h">
+      <Filter>Gui\game list</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\memory_string_searcher.h">
+      <Filter>Gui\dev tools</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\vfs_dialog_tab.h">
+      <Filter>Gui\vfs</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\vfs_dialog.h">
+      <Filter>Gui\vfs</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\rsx_debugger.h">
+      <Filter>Gui\dev tools</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\msg_dialog_frame.h">
+      <Filter>Gui\message dialog</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
