@@ -54,7 +54,34 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 		resizeComboBoxView(combo);
 	};
 
-	for (int i = 0; i < 7; i++)
+	auto configure_combos = [=]
+	{
+		//Set the values from config
+		for (int i = 0; i < MAX_PLAYERS; i++)
+		{
+			for (int j = 0; j < co_inputtype[i]->count(); j++)
+			{
+				if (co_inputtype[i]->itemText(j).toStdString() == input_cfg.player_input[i].to_string())
+				{
+					co_inputtype[i]->setCurrentIndex(j);
+					ChangeInputType(i);
+					break;
+				}
+			}
+
+			for (int j = 0; j < co_deviceID[i]->count(); j++)
+			{
+				if (co_deviceID[i]->itemText(j).toStdString() == input_cfg.player_device[i]->to_string())
+				{
+					co_deviceID[i]->setCurrentIndex(j);
+					ChangeDevice(i);
+					break;
+				}
+			}
+		}
+	};
+
+	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
 		QGroupBox *grp_player = new QGroupBox(QString(tr("Player %1").arg(i+1)));
 
@@ -101,8 +128,10 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 
 	QHBoxLayout *buttons_layout = new QHBoxLayout();
 	QPushButton *ok_button = new QPushButton(tr("OK"));
-	buttons_layout->addWidget(ok_button);
 	QPushButton *cancel_button = new QPushButton(tr("Cancel"));
+	QPushButton *refresh_button = new QPushButton(tr("Refresh"));
+	buttons_layout->addWidget(ok_button);
+	buttons_layout->addWidget(refresh_button);
 	buttons_layout->addWidget(cancel_button);
 	buttons_layout->addStretch();
 	dialog_layout->addLayout(buttons_layout);
@@ -110,31 +139,9 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 	setLayout(dialog_layout);
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 
-	//Set the values from config
-	for (int i = 0; i < 7; i++)
-	{
-		for (int j = 0; j < co_inputtype[i]->count(); j++)
-		{
-			if (co_inputtype[i]->itemText(j).toStdString() == input_cfg.player_input[i].to_string())
-			{
-				co_inputtype[i]->setCurrentIndex(j);
-				ChangeInputType(i);
-				break;
-			}
-		}
+	configure_combos();
 
-		for (int j = 0; j < co_deviceID[i]->count(); j++)
-		{
-			if (co_deviceID[i]->itemText(j).toStdString() == input_cfg.player_device[i]->to_string())
-			{
-				co_deviceID[i]->setCurrentIndex(j);
-				ChangeDevice(i);
-				break;
-			}
-		}
-	}
-
-	for (int i = 0; i < 7; i++)
+	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
 		connect(co_inputtype[i], &QComboBox::currentTextChanged, [=] { ChangeInputType(i); });
 		connect(co_deviceID[i], &QComboBox::currentTextChanged, [=] { ChangeDevice(i); });
@@ -142,12 +149,13 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 	}
 	connect(ok_button, &QPushButton::pressed, this, &gamepads_settings_dialog::SaveExit);
 	connect(cancel_button, &QPushButton::pressed, this, &gamepads_settings_dialog::CancelExit);
+	connect(refresh_button, &QPushButton::pressed, [=] { configure_combos(); });
 }
 
 void gamepads_settings_dialog::SaveExit()
 {
 	//Check for invalid selection
-	for (int i = 0; i < 7; i++)
+	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
 		if (co_deviceID[i]->currentData() == -1)
 		{

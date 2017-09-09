@@ -60,6 +60,8 @@ extern input_config input_cfg;
 
 class gamepads_settings_dialog : public QDialog
 {
+	const int MAX_PLAYERS = 7;
+
 protected:
 	std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
 	void ChangeInputType(int player);
