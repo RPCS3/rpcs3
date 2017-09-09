@@ -1,5 +1,9 @@
 #pragma once
 
+#include <vector>
+#include <memory>
+#include "../../Utilities/types.h"
+
 // TODO: HLE info (constants, structs, etc.) should not be available here
 
 enum PortStatus
@@ -190,6 +194,14 @@ struct Pad
 	u16 m_sensor_z;
 	u16 m_sensor_g;
 
+	void Init(u32 port_status, u32 port_setting, u32 device_capability, u32 device_type)
+	{
+		m_port_status = port_status;
+		m_port_setting = port_setting;
+		m_device_capability = device_capability;
+		m_device_type = device_type;
+	}
+
 	Pad(u32 port_status, u32 port_setting, u32 device_capability, u32 device_type)
 		: m_buffer_cleared(true)
 		, m_port_status(port_status)
@@ -226,79 +238,23 @@ struct Pad
 	}
 };
 
-struct PadInfo
-{
-	u32 max_connect;
-	u32 now_connect;
-	u32 system_info;
-};
-
 class PadHandlerBase
 {
 protected:
-	PadInfo m_info;
-	std::vector<Pad> m_pads;
+	bool b_has_config = false;
 
 public:
-	virtual void Init(const u32 max_connect) = 0;
+	virtual bool Init() { return true; };
 	virtual ~PadHandlerBase() = default;
 
-	//Set value to set pressure/axi to certain level, otherwise 0/255 default
-	void Key(const u32 code, bool pressed, u16 value=255)
-	{
-		for(Pad& pad : m_pads)
-		{
-			for (Button& button : pad.m_buttons)
-			{
-				if (button.m_keyCode != code)
-					continue;
-
-				if (value >= 256){ value = 255; }
-
-				//Todo: Is this flush necessary once games hit decent speeds?
-				if (button.m_pressed && !pressed)
-				{
-					button.m_flush = true;
-					
-				}
-				else
-				{
-					button.m_pressed = pressed;
-					if (pressed)
-						button.m_value = value;
-					else
-						button.m_value = 0;
-				}
-			}
-
-			for(AnalogStick& stick : pad.m_sticks)
-			{
-				if (stick.m_keyCodeMax != code && stick.m_keyCodeMin != code)
-					continue;
-
-				//slightly less hack job for key based analog stick
-				//	should also fix/make transitions when using keys smoother
-				//	the logic here is that when a key is released, 
-				//	if we are at the opposite end of the axis, dont reset to middle
-				if (stick.m_keyCodeMax == code)
-				{
-					if (pressed) stick.m_value = 255;
-					else if (stick.m_value==0) stick.m_value = 0;
-					else stick.m_value = 128;
-				}
-				if (stick.m_keyCodeMin == code)
-				{
-					if (pressed) stick.m_value = 0;
-					else if (stick.m_value == 255) stick.m_value = 255;
-					else stick.m_value = 128;
-				}
-			}
-		}
-	}
-
-	virtual PadInfo& GetInfo() { return m_info; }
-	virtual std::vector<Pad>& GetPads() { return m_pads; }
-	virtual void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor) {};
-	std::vector<Button>& GetButtons(const u32 pad) { return m_pads[pad].m_buttons; }
-	std::vector<AnalogStick>& GetSticks(const u32 pad) { return m_pads[pad].m_sticks; }
+	//Does it have GUI Config?
+	bool has_config() { return b_has_config; };
+	//Sets window to config the controller(optional)
+	virtual void ConfigController(std::string device) {};
+	//Return list of devices for that handler
+	virtual std::vector<std::string> ListDevices() = 0;
+	//Callback called during pad_thread::ThreadFunc
+	virtual void ThreadProc() = 0;
+	//Binds a Pad to a device
+	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) = 0;
 };
