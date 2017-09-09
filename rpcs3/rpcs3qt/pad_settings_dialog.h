@@ -65,12 +65,10 @@ private:
 	u32 m_seconds;
 	u32 m_button_id;
 	bool m_key_pressed;
-	QAction *onButtonClickedAct;
 	Ui::pad_settings_dialog *ui;
-	keyboard_pad_handler* keyhdlr;
 
 public:
-	explicit pad_settings_dialog(keyboard_pad_handler* keyhandler, QWidget *parent = nullptr);
+	explicit pad_settings_dialog(QWidget *parent = nullptr);
 	~pad_settings_dialog();
 	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void UpdateLabel();

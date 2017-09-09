@@ -20,7 +20,7 @@ keyboard_pad_handler::keyboard_pad_handler() : QObject()
 
 void keyboard_pad_handler::ConfigController(std::string device)
 {
-	pad_settings_dialog dlg(this);
+	pad_settings_dialog dlg;
 	dlg.exec();
 }
 

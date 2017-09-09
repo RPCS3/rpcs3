@@ -35,3 +35,8 @@ welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::we
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
+
+welcome_dialog::~welcome_dialog()
+{
+	delete ui;
+}

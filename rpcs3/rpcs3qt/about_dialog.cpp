@@ -25,3 +25,8 @@ about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
+
+about_dialog::~about_dialog()
+{
+	delete ui;
+}
