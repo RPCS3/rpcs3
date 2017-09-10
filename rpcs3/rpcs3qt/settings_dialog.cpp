@@ -596,6 +596,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	ui->cb_show_welcome->setToolTip(json_emu_gui["show_welcome"].toString());
 
+	ui->cb_enable_compatibility->setToolTip(json_emu_gui["enable_compatibility"].toString());
+
 	ui->cb_custom_colors->setToolTip(json_emu_gui["custom_colors"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->exitOnStop, emu_settings::ExitRPCS3OnFinish);
@@ -654,6 +656,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		AddColoredIcons();
 
 		ui->cb_show_welcome->setChecked(xgui_settings->GetValue(GUI::ib_show_welcome).toBool());
+		ui->cb_enable_compatibility->setChecked(xgui_settings->GetValue(GUI::gl_compatibility).toBool());
 
 		bool enableUIColors = xgui_settings->GetValue(GUI::m_enableUIColors).toBool();
 		ui->cb_custom_colors->setChecked(enableUIColors);
@@ -702,6 +705,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
 		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=]() {QDesktopServices::openUrl(xgui_settings->GetSettingsDir()); });
 		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val) {xgui_settings->SetValue(GUI::ib_show_welcome, val); });
+		connect(ui->cb_enable_compatibility, &QCheckBox::clicked, [=](bool val) {xgui_settings->SetValue(GUI::gl_compatibility, val); });
 		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=](bool val)
 		{
 			xgui_settings->SetValue(GUI::m_enableUIColors, val);

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>550</width>
-    <height>604</height>
+    <width>603</width>
+    <height>681</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -1007,6 +1007,13 @@
              <widget class="QCheckBox" name="cb_show_welcome">
               <property name="text">
                <string>Show Welcome Screen</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="cb_enable_compatibility">
+              <property name="text">
+               <string>Enable Compatibility Information</string>
               </property>
              </widget>
             </item>

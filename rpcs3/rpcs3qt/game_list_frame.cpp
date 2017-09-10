@@ -26,7 +26,6 @@
 #include <QMimeData>
 #include <QScrollBar>
 
-static const std::string m_class_name = "GameViewer";
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 inline QSize sizeFromSlider(const int& pos) { return GUI::gl_icon_size_min + (GUI::gl_icon_size_max - GUI::gl_icon_size_min) * (pos / (float)GUI::gl_max_slider_pos); }
 
@@ -165,7 +164,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	m_gameList->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_gameList->setAlternatingRowColors(true);
 
-	m_gameList->setColumnCount(10);
+	m_gameList->setColumnCount(11);
 	m_gameList->setHorizontalHeaderItem(0, new QTableWidgetItem(tr("Icon")));
 	m_gameList->setHorizontalHeaderItem(1, new QTableWidgetItem(tr("Name")));
 	m_gameList->setHorizontalHeaderItem(2, new QTableWidgetItem(tr("Serial")));
@@ -176,12 +175,15 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	m_gameList->setHorizontalHeaderItem(7, new QTableWidgetItem(tr("Supported Resolutions")));
 	m_gameList->setHorizontalHeaderItem(8, new QTableWidgetItem(tr("Sound Formats")));
 	m_gameList->setHorizontalHeaderItem(9, new QTableWidgetItem(tr("Parental Level")));
+	m_gameList->setHorizontalHeaderItem(10, new QTableWidgetItem(tr("Compatibility")));
 
 	// since this won't work somehow: gameList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);	
 	for (int i = 0; i < m_gameList->horizontalHeader()->count(); i++)
 	{
 		m_gameList->horizontalHeaderItem(i)->setTextAlignment(Qt::AlignLeft);
 	}
+
+	m_gameCompatibility = new game_compatibility(10, 2, xgui_settings, m_gameList);
 
 	m_Central_Widget = new QStackedWidget(this);
 	m_Central_Widget->addWidget(m_gameList);
@@ -201,9 +203,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	QAction* showResolutionColAct = new QAction(tr("Show Supported Resolutions"), this);
 	QAction* showSoundFormatColAct = new QAction(tr("Show Sound Formats"), this);
 	QAction* showParentalLevelColAct = new QAction(tr("Show Parental Levels"), this);
+	QAction* showCompatibilityAct = new QAction(tr("Show Compatibilities"), this);
 
 	m_columnActs = { showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct,
-		showResolutionColAct, showSoundFormatColAct, showParentalLevelColAct };
+		showResolutionColAct, showSoundFormatColAct, showParentalLevelColAct, showCompatibilityAct };
 
 	// Events
 	connect(m_gameList, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
@@ -308,6 +311,7 @@ void game_list_frame::LoadSettings()
 game_list_frame::~game_list_frame()
 {
 	SaveSettings();
+	delete m_gameCompatibility;
 }
 
 void game_list_frame::OnColClicked(int col)
@@ -1009,6 +1013,7 @@ int game_list_frame::PopulateGameList()
 		m_gameList->setItem(row, 7, l_GetItem(GetStringFromU32(m_game_data[i].info.resolution, resolution::mode, true)));
 		m_gameList->setItem(row, 8, l_GetItem(GetStringFromU32(m_game_data[i].info.sound_format, sound::format, true)));
 		m_gameList->setItem(row, 9, l_GetItem(GetStringFromU32(m_game_data[i].info.parental_lvl, parental::level)));
+		m_gameList->setItem(row, 10, l_GetItem(""));
 
 		if (selected_item == m_game_data[i].info.icon_path) result = row;
 
@@ -1016,6 +1021,7 @@ int game_list_frame::PopulateGameList()
 	}
 
 	m_gameList->setRowCount(row);
+	m_gameCompatibility->update();
 
 	return result;
 }

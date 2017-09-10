@@ -131,6 +131,7 @@ namespace GUI
 	const GUI_SAVE gl_marginFactor   = GUI_SAVE( game_list, "marginFactor",   (qreal) 0.09 );
 	const GUI_SAVE gl_toolBarVisible = GUI_SAVE( game_list, "toolBarVisible", false);
 	const GUI_SAVE gl_toolIconColor  = GUI_SAVE( game_list, "toolIconColor",  gl_tool_icon_color);
+	const GUI_SAVE gl_compatibility  = GUI_SAVE( game_list, "compatibility",  false);
 
 	const GUI_SAVE fs_emulator_dir_list = GUI_SAVE(fs, "emulator_dir_list", QStringList());
 	const GUI_SAVE fs_dev_hdd0_list     = GUI_SAVE(fs, "dev_hdd0_list",     QStringList());
