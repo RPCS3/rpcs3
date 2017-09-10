@@ -230,6 +230,12 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 
 	auto m_sysrsx = fxm::get<SysRsxConfig>();
 
+	if (!m_sysrsx)
+	{
+		sys_rsx.error("sys_rsx_context_attribute called before sys_rsx_context_allocate: context_id=0x%x, package_id=0x%x, a3=0x%llx, a4=0x%llx, a5=0x%llx, a6=0x%llx)", context_id, package_id, a3, a4, a5, a6);
+		return CELL_EINVAL;
+	}
+
 	auto &driverInfo = vm::_ref<RsxDriverInfo>(m_sysrsx->driverInfo);
 	switch (package_id)
 	{
