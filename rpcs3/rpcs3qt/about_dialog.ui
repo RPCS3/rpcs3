@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>609</width>
-    <height>565</height>
+    <width>880</width>
+    <height>630</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -209,8 +209,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>592</width>
-        <height>629</height>
+        <width>863</width>
+        <height>1013</height>
        </rect>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,1,1,1">
@@ -223,7 +223,7 @@
        <item>
         <widget class="QLabel" name="developers">
          <property name="text">
-          <string>&lt;p&gt;&lt;b&gt;Developers:&lt;/b&gt;&lt;br&gt;&lt;br&gt;¬DH&lt;br&gt;¬AlexAltea&lt;br&gt;¬Hykem&lt;br&gt;Oil&lt;br&gt;Nekotekina&lt;br&gt;Bigpet&lt;br&gt;¬gopalsr83&lt;br&gt;¬tambry&lt;br&gt;vlj&lt;br&gt;kd-11&lt;br&gt;jarveson&lt;br&gt;raven02&lt;br&gt;AniLeo&lt;br&gt;cornytrace&lt;br&gt;ssshadow&lt;br&gt;Numan&lt;/p&gt;</string>
+          <string>&lt;p&gt;&lt;b&gt;Developers:&lt;/b&gt;&lt;br&gt;&lt;br&gt;¬DH&lt;br&gt;¬AlexAltea&lt;br&gt;¬Hykem&lt;br&gt;Oil&lt;br&gt;Nekotekina&lt;br&gt;Bigpet&lt;br&gt;¬gopalsr83&lt;br&gt;¬tambry&lt;br&gt;vlj&lt;br&gt;kd-11&lt;br&gt;jarveson&lt;br&gt;raven02&lt;br&gt;AniLeo&lt;br&gt;cornytrace&lt;br&gt;ssshadow&lt;br&gt;Numan&lt;br&gt;hcorion&lt;br&gt;Megamouse&lt;br&gt;flash-fire&lt;br&gt;DAGINATSUKO&lt;br&gt;GalCiv&lt;/p&gt;</string>
          </property>
          <property name="scaledContents">
           <bool>false</bool>
@@ -236,7 +236,7 @@
        <item>
         <widget class="QLabel" name="contributors">
          <property name="text">
-          <string>&lt;p&gt;&lt;b&gt;Contributors:&lt;/b&gt;&lt;br&gt;&lt;br&gt;BlackDaemon&lt;br&gt;elisha464&lt;br&gt;Aishou&lt;br&gt;krofna&lt;br&gt;xsacha&lt;br&gt;danilaml&lt;br&gt;unknownbrackets&lt;br&gt;Zangetsu38&lt;br&gt;lioncash&lt;br&gt;achurch&lt;br&gt;darkf&lt;br&gt;Syphurith&lt;br&gt;Blaypeg&lt;br&gt;Survanium90&lt;br&gt;georgemoralis&lt;br&gt;ikki84&lt;br&gt;hcorion&lt;br&gt;Megamouse&lt;br&gt;flash-fire&lt;br&gt;DAGINATSUKO&lt;br&gt;GalCiv&lt;/p&gt;</string>
+          <string>&lt;p&gt;&lt;b&gt;Contributors:&lt;/b&gt;&lt;br&gt;&lt;br&gt;BlackDaemon&lt;br&gt;elisha464&lt;br&gt;Aishou&lt;br&gt;krofna&lt;br&gt;xsacha&lt;br&gt;danilaml&lt;br&gt;unknownbrackets&lt;br&gt;Zangetsu38&lt;br&gt;lioncash&lt;br&gt;achurch&lt;br&gt;darkf&lt;br&gt;Syphurith&lt;br&gt;Blaypeg&lt;br&gt;Survanium90&lt;br&gt;georgemoralis&lt;br&gt;ikki84&lt;/p&gt;</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
