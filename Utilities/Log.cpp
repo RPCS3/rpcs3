@@ -288,6 +288,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 }
 
 [[noreturn]] extern void catch_all_exceptions();
+extern void basic_error(const std::string& msg);
 
 logs::file_writer::file_writer(const std::string& name)
 	: m_name(fs::get_config_dir() + name)
@@ -312,6 +313,11 @@ logs::file_writer::file_writer(const std::string& name)
 
 		// Rotate backups (TODO)
 		fs::rename(m_name + ".gz", m_name + "1.gz", true);
+	}
+	//This will catch if RPCS3.log is already open
+	catch (const std::runtime_error& e)
+	{
+		basic_error("A runtime error occured.\nEither RPCS3.log is write-protected or an instance of RPCS3.exe is already running.");
 	}
 	catch (...)
 	{
