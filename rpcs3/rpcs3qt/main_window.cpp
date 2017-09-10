@@ -86,8 +86,13 @@ void main_window::Init()
 
 	// for highdpi resize toolbar icons and height dynamically
 	// choose factors to mimic Gui-Design in main_window.ui
+	// TODO: in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp we only need the else branch
+#ifdef _WIN32
 	const int toolBarHeight = menuBar()->sizeHint().height() * 1.5;
 	ui->toolBar->setIconSize(QSize(toolBarHeight, toolBarHeight));
+#else
+	const int toolBarHeight = ui->toolBar->iconSize().height();
+#endif
 	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 5);
 	ui->sizeSlider->setFixedHeight(toolBarHeight * 0.65f);
 
@@ -714,22 +719,27 @@ void main_window::RepaintToolBarIcons()
 		newColor = GUI::get_Label_Color("toolbar_icon_color");
 	}
 
-	m_icon_play = gui_settings::colorizedIcon(QIcon(":/Icons/play.png"), GUI::mw_tool_icon_color, newColor);
-	m_icon_pause = gui_settings::colorizedIcon(QIcon(":/Icons/pause.png"), GUI::mw_tool_icon_color, newColor);
-	m_icon_stop = gui_settings::colorizedIcon(QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color, newColor);
-	m_icon_restart = gui_settings::colorizedIcon(QIcon(":/Icons/restart.png"), GUI::mw_tool_icon_color, newColor);
-	m_icon_fullscreen_on = gui_settings::colorizedIcon(QIcon(":/Icons/fullscreen.png"), GUI::mw_tool_icon_color, newColor);
-	m_icon_fullscreen_off = gui_settings::colorizedIcon(QIcon(":/Icons/fullscreen_invert.png"), GUI::mw_tool_icon_color, newColor);
+	auto icon = [&newColor](const QString& path)
+	{
+		return gui_settings::colorizedIcon(QIcon(path), GUI::mw_tool_icon_color, newColor);
+	};
 
-	ui->toolbar_config->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/configure.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_controls->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/controllers.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_disc->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/disc.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_grid->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/grid.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_list->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/list.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_refresh->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/refresh.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_snap->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/screenshot.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_sort->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/sort.png"), GUI::mw_tool_icon_color, newColor));
-	ui->toolbar_stop->setIcon(gui_settings::colorizedIcon(QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color, newColor));
+	m_icon_play           = icon(":/Icons/play.png");
+	m_icon_pause          = icon(":/Icons/pause.png");
+	m_icon_stop           = icon(":/Icons/stop.png");
+	m_icon_restart        = icon(":/Icons/restart.png");
+	m_icon_fullscreen_on  = icon(":/Icons/fullscreen.png");
+	m_icon_fullscreen_off = icon(":/Icons/fullscreen_invert.png");
+
+	ui->toolbar_config  ->setIcon(icon(":/Icons/configure.png"));
+	ui->toolbar_controls->setIcon(icon(":/Icons/controllers.png"));
+	ui->toolbar_disc    ->setIcon(icon(":/Icons/disc.png"));
+	ui->toolbar_grid    ->setIcon(icon(":/Icons/grid.png"));
+	ui->toolbar_list    ->setIcon(icon(":/Icons/list.png"));
+	ui->toolbar_refresh ->setIcon(icon(":/Icons/refresh.png"));
+	ui->toolbar_snap    ->setIcon(icon(":/Icons/screenshot.png"));
+	ui->toolbar_sort    ->setIcon(icon(":/Icons/sort.png"));
+	ui->toolbar_stop    ->setIcon(icon(":/Icons/stop.png"));
 	
 	if (Emu.IsRunning())
 	{
