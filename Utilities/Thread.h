@@ -10,6 +10,8 @@
 #include "sema.h"
 #include "cond.h"
 
+#include "optional.hpp"
+
 // Will report exception and call std::abort() if put in catch(...)
 [[noreturn]] void catch_all_exceptions();
 
@@ -68,9 +70,9 @@ public:
 		_top->next.reset(_next);
 	}
 
-	void reset()
+	bool empty()
 	{
-		m_stack.reset();
+		return !m_stack;
 	}
 
 	void invoke() const
@@ -110,19 +112,22 @@ class thread_ctrl final
 	std::exception_ptr m_exception;
 
 	// Thread initial task or atexit task
-	task_stack m_task;
+	std::optional<task_stack> m_task;
 
 	// Fixed name
 	std::string m_name;
 
+	// Condition variable to wait on work
+	cond_variable m_task_cond;
+
 	// Start thread
-	static void start(const std::shared_ptr<thread_ctrl>&, task_stack);
+	static void start(std::shared_ptr<thread_ctrl>&, task_stack);
 
 	// Called at the thread start
 	void initialize();
 
 	// Called at the thread end
-	void finalize(std::exception_ptr) noexcept;
+	void finalize(std::exception_ptr, bool) noexcept;
 
 	// Add task (atexit)
 	static void _push(task_stack);
@@ -210,6 +215,8 @@ public:
 	template<typename F>
 	static inline void atexit(F&& func)
 	{
+		extern semaphore<> g_queue_mutex;
+		semaphore_lock{g_queue_mutex};
 		_push(std::forward<F>(func));
 	}
 

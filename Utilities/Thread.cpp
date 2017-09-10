@@ -22,6 +22,8 @@
 #include <sys/resource.h>
 #endif
 
+#include <queue>
+
 #include "sync.h"
 
 thread_local u64 g_tls_fault_all = 0;
@@ -1518,7 +1520,10 @@ thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
 extern thread_local std::string(*g_tls_log_prefix)();
 
-void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack task)
+static std::queue<thread_ctrl*> g_available_threads;
+semaphore<> g_queue_mutex;
+
+void thread_ctrl::start(std::shared_ptr<thread_ctrl>& ctrl, task_stack task)
 {
 #ifdef _WIN32
 	using thread_result = uint;
@@ -1533,37 +1538,70 @@ void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack tas
 	{
 		// Recover shared_ptr from short-circuited thread_ctrl object pointer
 		const std::shared_ptr<thread_ctrl> ctrl = static_cast<thread_ctrl*>(arg)->m_self;
+		std::exception_ptr exception = nullptr;
 
 		try
 		{
 			ctrl->initialize();
-			task_stack{std::move(ctrl->m_task)}.invoke();
+
+			while (true)
+			{
+				if (ctrl->m_task.value().empty())
+					break;
+
+				task_stack{std::move(ctrl->m_task.value())}.invoke();
+				ctrl->finalize(nullptr, false);
+
+				semaphore_lock lock(g_queue_mutex);
+				g_available_threads.push(ctrl.get());
+
+				while (!ctrl->m_task) // Protect against spurious wakeups
+				{
+					ctrl->m_task_cond.wait(lock);
+				}
+
+				g_available_threads.pop();
+			}
 		}
 		catch (...)
 		{
 			// Capture exception
-			ctrl->finalize(std::current_exception());
-			return 0;
+			exception = std::current_exception();
 		}
 
-		ctrl->finalize(nullptr);
+		ctrl->finalize(exception, true);
 		return 0;
 	};
 
-	ctrl->m_self = ctrl;
-	ctrl->m_task = std::move(task);
+	semaphore_lock{g_queue_mutex};
+	if (!g_available_threads.empty())
+	{
+		thread_ctrl* worker = g_available_threads.front();
+		ctrl = worker->m_self;
+		ctrl->m_task = std::move(task);
 
-	// TODO: implement simple thread pool
+		// Restore state from previous job to default
+		ctrl->m_signal = 0;
+		ctrl->m_exception = nullptr;
+
+		ctrl->m_task_cond.notify_one();
+	}
+	else
+	{
+		ctrl->m_self = ctrl;
+		ctrl->m_task = std::move(task);
+
 #ifdef _WIN32
-	std::uintptr_t thread = _beginthreadex(nullptr, 0, entry, ctrl.get(), 0, nullptr);
-	verify("thread_ctrl::start" HERE), thread != 0;
+		std::uintptr_t thread = _beginthreadex(nullptr, 0, entry, ctrl.get(), 0, nullptr);
+		verify("thread_ctrl::start" HERE), thread != 0;
 #else
-	pthread_t thread;
-	verify("thread_ctrl::start" HERE), pthread_create(&thread, nullptr, entry, ctrl.get()) == 0;
+		pthread_t thread;
+		verify("thread_ctrl::start" HERE), pthread_create(&thread, nullptr, entry, ctrl.get()) == 0;
 #endif
 
-	// TODO: this is unsafe and must be duplicated in thread_ctrl::initialize
-	ctrl->m_thread = (uintptr_t)thread;
+		// TODO: this is unsafe and must be duplicated in thread_ctrl::initialize
+		ctrl->m_thread = (uintptr_t)thread;
+	}
 }
 
 void thread_ctrl::initialize()
@@ -1607,11 +1645,11 @@ void thread_ctrl::initialize()
 #endif
 }
 
-void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
+void thread_ctrl::finalize(std::exception_ptr eptr, bool die) noexcept
 {
 	// Run atexit functions
-	m_task.invoke();
-	m_task.reset();
+	m_task.value().invoke();
+	m_task = std::optional<task_stack>();
 
 #ifdef _WIN32
 	ULONG64 cycles{};
@@ -1641,10 +1679,22 @@ void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
 		g_tls_fault_rsx,
 		g_tls_fault_spu);
 
-	--g_thread_count;
+	// Restore thread locals to default values
+	if (!die)
+	{
+		g_tls_fault_all = 0;
+		g_tls_fault_rsx = 0;
+		g_tls_fault_spu = 0;
+	}
+	else
+	{
+		--g_thread_count;
+	}
 
 	// Untangle circular reference, set exception
-	semaphore_lock{m_mutex}, m_self.reset(), m_exception = eptr;
+	semaphore_lock{m_mutex}, m_exception = eptr;
+	if (die)
+		m_self.reset();
 
 	// Signal joining waiters
 	m_jcv.notify_all();
@@ -1652,7 +1702,10 @@ void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
 
 void thread_ctrl::_push(task_stack task)
 {
-	g_tls_this_thread->m_task.push(std::move(task));
+	if (g_tls_this_thread->m_task)
+		g_tls_this_thread->m_task.value().push(std::move(task));
+	else
+		g_tls_this_thread->m_task = std::move(task);
 }
 
 bool thread_ctrl::_wait_for(u64 usec)
