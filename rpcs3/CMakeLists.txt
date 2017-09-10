@@ -413,27 +413,17 @@ set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SR
 
 if (MSVC)
   # Under Windows, some QT DLLs need to be in the same directory of the compiled
-  # RPCS3 binary, so copy them from the local QT installation at the end of the
-  # build
+  # RPCS3 binary, so call the windeployqt tool that will take care of copying
+  # them from the local QT installation at the end of the build.
   if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    # debug build uses different DDLs files
-    set (RUNTIME_DLLS
-      $ENV{QTDIR}/bin/Qt5Cored.dll
-      $ENV{QTDIR}/bin/Qt5Guid.dll
-      $ENV{QTDIR}/bin/Qt5Widgetsd.dll
-      $ENV{QTDIR}/bin/Qt5WinExtrasd.dll
+    add_custom_command(TARGET rpcs3 POST_BUILD
+      COMMAND $ENV{QTDIR}/bin/windeployqt --debug ${CMAKE_BINARY_DIR}/bin
       )
   else()
-    set (RUNTIME_DLLS
-      $ENV{QTDIR}/bin/Qt5Core.dll
-      $ENV{QTDIR}/bin/Qt5Gui.dll
-      $ENV{QTDIR}/bin/Qt5Widgets.dll
-      $ENV{QTDIR}/bin/Qt5WinExtras.dll
+    add_custom_command(TARGET rpcs3 POST_BUILD
+      COMMAND $ENV{QTDIR}/bin/windeployqt ${CMAKE_BINARY_DIR}/bin
       )
   endif()
-  add_custom_command(TARGET rpcs3 POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${RUNTIME_DLLS} ${CMAKE_BINARY_DIR}/bin
-    )
 endif()
 
 cotire(rpcs3)
