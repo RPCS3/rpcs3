@@ -397,6 +397,31 @@ target_link_libraries(rpcs3 ${RPCS3_QT_LIBS})
 
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 
+if (MSVC)
+  # Under Windows, some QT DLLs need to be in the same directory of the compiled
+  # RPCS3 binary, so copy them from the local QT installation at the end of the
+  # build
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    # debug build uses different DDLs files
+    set (RUNTIME_DLLS
+      $ENV{QTDIR}/bin/Qt5Cored.dll
+      $ENV{QTDIR}/bin/Qt5Guid.dll
+      $ENV{QTDIR}/bin/Qt5Widgetsd.dll
+      $ENV{QTDIR}/bin/Qt5WinExtrasd.dll
+      )
+  else()
+    set (RUNTIME_DLLS
+      $ENV{QTDIR}/bin/Qt5Core.dll
+      $ENV{QTDIR}/bin/Qt5Gui.dll
+      $ENV{QTDIR}/bin/Qt5Widgets.dll
+      $ENV{QTDIR}/bin/Qt5WinExtras.dll
+      )
+  endif()
+  add_custom_command(TARGET rpcs3 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${RUNTIME_DLLS} ${CMAKE_BINARY_DIR}/bin
+    )
+endif()
+
 cotire(rpcs3)
 
 # Unix installation
