@@ -169,6 +169,7 @@
         xcopy "$(QTDIR)\bin\Qt5Core.dll" "$(OutDir)" /d
         xcopy "$(QTDIR)\bin\Qt5Gui.dll" "$(OutDir)" /d
         xcopy "$(QTDIR)\bin\Qt5Widgets.dll" "$(OutDir)" /d
+        xcopy "$(QTDIR)\bin\Qt5WinExtras.dll" "$(OutDir)" /d
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -223,6 +224,7 @@
         xcopy "$(QTDIR)\bin\Qt5Core.dll" "$(OutDir)" /d
         xcopy "$(QTDIR)\bin\Qt5Gui.dll" "$(OutDir)" /d
         xcopy "$(QTDIR)\bin\Qt5Widgets.dll" "$(OutDir)" /d
+        xcopy "$(QTDIR)\bin\Qt5WinExtras.dll" "$(OutDir)" /d
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -278,6 +280,7 @@
         xcopy "$(QTDIR)\bin\Qt5Cored.dll" "$(OutDir)" /d
         xcopy "$(QTDIR)\bin\Qt5Guid.dll" "$(OutDir)" /d
         xcopy "$(QTDIR)\bin\Qt5Widgetsd.dll" "$(OutDir)" /d
+        xcopy "$(QTDIR)\bin\Qt5WinExtrasd.dll" "$(OutDir)" /d
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -333,6 +336,7 @@
         xcopy "$(QTDIR)\bin\Qt5Cored.dll" "$(OutDir)" /d
         xcopy "$(QTDIR)\bin\Qt5Guid.dll" "$(OutDir)" /d
         xcopy "$(QTDIR)\bin\Qt5Widgetsd.dll" "$(OutDir)" /d
+        xcopy "$(QTDIR)\bin\Qt5WinExtrasd.dll" "$(OutDir)" /d
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
