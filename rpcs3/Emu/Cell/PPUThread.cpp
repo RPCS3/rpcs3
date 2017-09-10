@@ -1239,10 +1239,10 @@ extern void ppu_initialize(const ppu_module& info)
 		return;
 	}
 
-	if (jit_mod.vars.empty())
-	{
+	// Jit can be null if the loop doesn't ever enter.
+	if (jit && jit_mod.vars.empty())
+	{	
 		jit->fin();
-
 		// Get and install function addresses
 		for (const auto& func : info.funcs)
 		{
