@@ -54,6 +54,21 @@ static void report_fatal_error(const std::string& msg)
 #endif
 }
 
+void basic_error(const std::string& msg)
+{
+#ifdef _WIN32
+	const std::size_t buf_size = msg.size() + 1;
+	const int size = static_cast<int>(buf_size);
+	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size]);
+	MultiByteToWideChar(CP_UTF8, 0, msg.c_str(), size, buffer.get(), size);
+
+	if (MessageBoxW(0, buffer.get(), L"Error", MB_ICONERROR | MB_OK))
+	{}
+#else
+	std::printf("Error: \n%s", _msg.c_str());
+#endif
+}
+
 [[noreturn]] void catch_all_exceptions()
 {
 	try
