@@ -166,7 +166,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt $(OutDir)
+        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw $(OutDir)
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -218,7 +218,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt $(OutDir)
+        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw $(OutDir)
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -271,7 +271,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt --debug $(OutDir)
+        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --debug $(OutDir)
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -324,7 +324,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt --debug $(OutDir)
+        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --debug $(OutDir)
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
