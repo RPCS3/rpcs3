@@ -96,7 +96,8 @@ void pad_thread::Init(const u32 max_connect)
 	thread = std::make_shared<std::thread>(&pad_thread::ThreadFunc, this);
 }
 
-void pad_thread::SetRumble(const u32 pad, u8 largeMotor, bool smallMotor) {
+void pad_thread::SetRumble(const u32 pad, u8 largeMotor, bool smallMotor)
+{
 	if (pad > m_pads.size())
 		return;
 

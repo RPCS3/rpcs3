@@ -282,6 +282,8 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
 	bindings.emplace_back(device_number, pad);
+
+	return true;
 }
 
 #endif
