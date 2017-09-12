@@ -417,11 +417,11 @@ if (MSVC)
   # them from the local QT installation at the end of the build.
   if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_custom_command(TARGET rpcs3 POST_BUILD
-      COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --debug ${CMAKE_BINARY_DIR}/bin
+      COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --debug ${CMAKE_BINARY_DIR}/bin
       )
   else()
     add_custom_command(TARGET rpcs3 POST_BUILD
-      COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw ${CMAKE_BINARY_DIR}/bin
+      COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations ${CMAKE_BINARY_DIR}/bin
       )
   endif()
 endif()
