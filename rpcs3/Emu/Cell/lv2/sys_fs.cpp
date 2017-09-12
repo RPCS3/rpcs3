@@ -622,6 +622,7 @@ error_code sys_fs_rmdir(vm::cptr<char> path)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
+		case fs::error::notempty: return {CELL_ENOTEMPTY, path};
 		default: sys_fs.error("sys_fs_rmdir(): unknown error %s", error);
 		}
 

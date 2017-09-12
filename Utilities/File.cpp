@@ -94,6 +94,7 @@ static fs::error to_error(DWORD e)
 	case ERROR_DIRECTORY: return fs::error::inval;
 	case ERROR_INVALID_NAME: return fs::error::inval;
 	case ERROR_SHARING_VIOLATION: return fs::error::acces;
+	case ERROR_DIR_NOT_EMPTY: return fs::error::notempty;
 	default: fmt::throw_exception("Unknown Win32 error: %u.", e);
 	}
 }
@@ -128,6 +129,7 @@ static fs::error to_error(int e)
 	case EEXIST: return fs::error::exist;
 	case EINVAL: return fs::error::inval;
 	case EACCES: return fs::error::acces;
+	case ENOTEMPTY: return fs::error::notempty;
 	default: fmt::throw_exception("Unknown system error: %d.", e);
 	}
 }
@@ -1449,6 +1451,7 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 		case fs::error::noent: return "Not found";
 		case fs::error::exist: return "Already exists";
 		case fs::error::acces: return "Access violation";
+		case fs::error::notempty: return "Not empty";
 		}
 
 		return unknown;
