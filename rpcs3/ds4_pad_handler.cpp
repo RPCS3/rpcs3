@@ -621,6 +621,8 @@ bool ds4_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::strin
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
 	bindings.emplace_back(device_id, pad);
+
+	return true;
 }
 
 void ds4_pad_handler::ThreadProc()

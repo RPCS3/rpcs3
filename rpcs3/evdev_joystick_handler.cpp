@@ -120,7 +120,7 @@ bool evdev_joystick_handler::try_open_dev(u32 index)
     pads[index]->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 
     int buttons=0;
-    for (int i=BTN_JOYSTICK; i<KEY_MAX; i++)
+    for (u32 i=BTN_JOYSTICK; i<KEY_MAX; i++)
         if (libevdev_has_event_code(dev, EV_KEY, i))
         {
             LOG_NOTICE(GENERAL, "Joystick #%d has button %d as %d", index, i, buttons);
@@ -128,7 +128,7 @@ bool evdev_joystick_handler::try_open_dev(u32 index)
         }
 
     int axes=0;
-    for (int i=ABS_X; i<=ABS_RZ; i++)
+    for (u32 i=ABS_X; i<=ABS_RZ; i++)
     {
 
         if (libevdev_has_event_code(dev, EV_ABS, i))
@@ -144,7 +144,7 @@ bool evdev_joystick_handler::try_open_dev(u32 index)
         }
     }
 
-    for (int i=ABS_HAT0X; i<=ABS_HAT3Y; i+=2)
+    for (u32 i=ABS_HAT0X; i<=ABS_HAT3Y; i+=2)
         if (libevdev_has_event_code(dev, EV_ABS, i) ||
             libevdev_has_event_code(dev, EV_ABS, i+1))
         {
@@ -204,8 +204,7 @@ std::vector<std::string> evdev_joystick_handler::ListDevices()
         {
             int fd = open(("/dev/input/" + et.name).c_str(), O_RDONLY|O_NONBLOCK);
             struct libevdev *dev = NULL;
-            int rc = 1;
-            rc = libevdev_new_from_fd(fd, &dev);
+            int rc = libevdev_new_from_fd(fd, &dev);
             if (rc < 0)
             {
                 // If it's just a bad file descriptor, don't bother logging, but otherwise, log it.
@@ -243,8 +242,7 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
             {
                 int fd = open(("/dev/input/" + et.name).c_str(), O_RDONLY|O_NONBLOCK);
                 struct libevdev *dev = NULL;
-                int rc = 1;
-                rc = libevdev_new_from_fd(fd, &dev);
+                int rc = libevdev_new_from_fd(fd, &dev);
                 if (rc < 0)
                 {
                     // If it's just a bad file descriptor, don't bother logging, but otherwise, log it.
@@ -415,7 +413,7 @@ void evdev_joystick_handler::ThreadProc()
                     }
                     else
                     {
-                        int code = -1;
+                        int code;
                         if (source_axis == EVDEV_DPAD_HAT_AXIS_X)
                         {
                             code = evt.value > 0 ? CELL_PAD_CTRL_RIGHT : CELL_PAD_CTRL_LEFT;

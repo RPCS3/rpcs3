@@ -100,11 +100,8 @@ void fmt_class_string<CellSysutilLang>::format(std::string& out, u64 arg)
 	});
 }
 
-// For test
-enum systemparam_id_name : s32 {};
-
 template <>
-void fmt_class_string<systemparam_id_name>::format(std::string& out, u64 arg)
+void fmt_class_string<CellSysutilParamId>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto value)
 	{
@@ -133,13 +130,13 @@ void fmt_class_string<systemparam_id_name>::format(std::string& out, u64 arg)
 	});
 }
 
-s32 cellSysutilGetSystemParamInt(systemparam_id_name id, vm::ptr<s32> value)
+s32 cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> value)
 {
 	cellSysutil.warning("cellSysutilGetSystemParamInt(id=0x%x(%s), value=*0x%x)", id, id, value);
 
 	// TODO: load this information from config (preferably "sys/" group)
 
-	switch(id)
+	switch (id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG:
 		*value = g_cfg.sys.language;
@@ -208,13 +205,13 @@ s32 cellSysutilGetSystemParamInt(systemparam_id_name id, vm::ptr<s32> value)
 	return CELL_OK;
 }
 
-s32 cellSysutilGetSystemParamString(systemparam_id_name id, vm::ptr<char> buf, u32 bufsize)
+s32 cellSysutilGetSystemParamString(CellSysutilParamId id, vm::ptr<char> buf, u32 bufsize)
 {
 	cellSysutil.trace("cellSysutilGetSystemParamString(id=0x%x(%s), buf=*0x%x, bufsize=%d)", id, id, buf, bufsize);
 
 	memset(buf.get_ptr(), 0, bufsize);
 
-	switch(id)
+	switch (id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME:
 		memcpy(buf.get_ptr(), "Unknown", 8); // for example
