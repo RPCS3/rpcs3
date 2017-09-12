@@ -36,6 +36,7 @@
 
 #include "Loader/PUP.h"
 #include "Loader/TAR.h"
+#include "Loader/PSF.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/StrUtil.h"
@@ -184,6 +185,137 @@ QIcon main_window::GetAppIcon()
 	return m_appIcon;
 }
 
+void main_window::InstallDiscExtra(const std::string path)
+{
+	// Get title id from PARAM.sfo
+	const auto insdir_psf = psf::load_object([&]
+	{
+		return fs::file(path + "/PS3_GAME/PARAM.SFO");
+	}());
+	std::string m_title_id = psf::get_string(insdir_psf, "TITLE_ID");
+	std::string local_path = Emu.GetHddDir() + "game/" + m_title_id;
+
+	// If dir not found on hdd0 , it's a first install and we can install any install packages
+	if (!fs::is_dir(local_path))
+	{
+		//Insdir check. We need to install the packages over the game install if this is the case.
+		const std::string insdir_disk_dir = path + "/PS3_GAME/INSDIR";
+		if (fs::is_dir(insdir_disk_dir))
+		{
+			LOG_NOTICE(LOADER, "Found insdir: %s", insdir_disk_dir);
+
+			//Check if the INSDIR's PARAM.SFO has a higher version number than what's installed
+			double app_ver_insdir;
+			const auto insdir_psf = psf::load_object([&]
+			{
+				return fs::file(insdir_disk_dir + "/PARAM.SFO");
+			}());
+
+			// Get app_ver from PARAM.SFO in install dir.
+			double app_ver_install;
+			const std::string local_path = Emu.GetHddDir() + "game/" + m_title_id;
+			const auto hdd_psf = psf::load_object([&]
+			{
+				return fs::file(local_path + "/PARAM.SFO");
+			}());
+
+			//Convert string app_ver's to number..
+			app_ver_insdir = ::atof(psf::get_string(insdir_psf, "APP_VER", "0.00").c_str());
+			app_ver_install = ::atof(psf::get_string(hdd_psf, "APP_VER", "0.00").c_str());
+
+			// If the pkg's app ver is higher, then install.
+			if (app_ver_insdir <= app_ver_install)
+			{
+				LOG_NOTICE(LOADER, "Insdir already installed.");
+			}
+			else
+			{
+				std::string file_base = "/DATA";
+				int file_number = 0;
+
+				// For .pkg in INSDIR named DATA### (Incrementing)
+				while (fs::is_file(insdir_disk_dir + file_base + std::string(3 - std::to_string(file_number).length(), '0').append(std::to_string(file_number)) + ".pkg"))
+				{
+					std::string pkg_dir = insdir_disk_dir + file_base + std::string(3 - std::to_string(file_number).length(), '0').append(std::to_string(file_number)) + ".pkg";
+					LOG_NOTICE(LOADER, "Installing package from insdir: %s", pkg_dir);
+
+					//Install package
+					InstallPkg(QString::fromStdString(pkg_dir));
+					file_number++;
+				}
+			}
+		}
+
+		//Tropdir check
+		const std::string tropdir_disk_dir = path + "/PS3_GAME/TROPDIR";
+		if (fs::is_dir(tropdir_disk_dir))
+		{
+			// Documentation: http://www.psdevwiki.com/ps3/Trophy_files
+			// Install any files to home/userid/trophy/
+			// It NPCOMMID already on disc , rename to _BU_ + NPCOMMID. Old backups are deleted if they exist (Only 2 can exist at one time)
+			// Copy folder inside tropdir to dev_hdd0/home/<user_id>/trohpy/NPCOMMID (It says install so not 100% sure)
+			// Update TROPSYS.dat (Don't know how , might have to read it , or check if there's a function)
+
+			// Trophy.prp is easily readable and has attrbutes. XML? Could maybe write if it exists.
+		}
+
+		//Pkgdir check
+		const std::string pkgdir_disk_dir = path + "/PS3_GAME/PKGDIR";
+		if (fs::is_dir(pkgdir_disk_dir))
+		{
+			LOG_NOTICE(LOADER, "Found PKGDIR dir: %s", pkgdir_disk_dir);
+			std::string file_base = "/PKG";
+			int file_number = 0;
+
+			// For dir /PKGDIR/PKG##
+			while (fs::is_dir(pkgdir_disk_dir + file_base + std::string(2 - std::to_string(file_number).length(), '0').append(std::to_string(file_number))))
+			{
+				// If it contains INSTALL.pkg , check the file header for the TITLE_ID. If it doesn't exist on HDD0 , install the pkg. There's also P3T files or MP4's but we're intentionally not handling them as RPCS3 can't use them.
+				std::string pkg_path = pkgdir_disk_dir + file_base + std::string(2 - std::to_string(file_number).length(), '0').append(std::to_string(file_number)) + "/INSTALL.pkg";
+
+				if (fs::is_file(pkg_path))
+				{
+					//Install package
+					InstallPkg(QString::fromStdString(pkg_path));
+				}
+				else
+				{
+					LOG_NOTICE(LOADER, "PKGDIR Directory contains no packages: %s", pkgdir_disk_dir + file_base + std::string(2 - std::to_string(file_number).length(), '0').append(std::to_string(file_number)));
+				}
+				file_number++;
+			}
+		}
+	}
+
+	//PS3_EXTRA CHECK , try and give the user the choice to install these, or maybe have installing extras as a right click option?
+	const std::string extra_disk_dir = path + "/PS3_EXTRA";
+	if (fs::is_dir(extra_disk_dir))
+	{
+		LOG_NOTICE(LOADER, "Found PS3_EXTRA dir: %s", extra_disk_dir);
+
+		// For all folders named D###
+		std::string file_base = "/D";
+		int file_number = 0;
+
+		// For dir /PS3_EXTRA/D###
+		while (fs::is_dir(extra_disk_dir + file_base + std::string(3 - std::to_string(file_number).length(), '0').append(std::to_string(file_number))))
+		{
+			// If it contains DATA000.pkg , check the file header for the TITLE_ID. If it doesn't exist on HDD0 , install the pkg. There's also P3T files or MP4's but we're intentionally not handling them as RPCS3 can't use them.
+			std::string extra_path = extra_disk_dir + file_base + std::string(3 - std::to_string(file_number).length(), '0').append(std::to_string(file_number)) + "/DATA000.pkg";
+
+			if (fs::is_file(extra_path))
+			{
+				InstallPkg(QString::fromStdString(extra_path));
+			}
+			else
+			{
+				LOG_NOTICE(LOADER, "PS3_EXTRA Directory contains no games: %s", extra_disk_dir + file_base + std::string(3 - std::to_string(file_number).length(), '0').append(std::to_string(file_number)));
+			}
+			file_number++;
+		}
+	}
+}
+
 // loads the appIcon from path and embeds it centered into an empty square icon
 void main_window::SetAppIconFromPath(const std::string path)
 {
@@ -301,6 +433,7 @@ void main_window::BootGame()
 	guiSettings->SetValue(GUI::fd_boot_game, QFileInfo(dirPath).path());
 	const std::string path = sstr(dirPath);
 	SetAppIconFromPath(path);
+	InstallDiscExtra(path);
 
 	if (!Emu.BootGame(path))
 	{
