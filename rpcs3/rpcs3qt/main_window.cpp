@@ -38,6 +38,7 @@
 
 #include "Loader/PUP.h"
 #include "Loader/TAR.h"
+#include "Loader/PSF.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/StrUtil.h"
@@ -67,7 +68,7 @@ auto Pause = []()
 	else if (!Emu.GetBoot().empty()) Emu.Load();
 };
 
-/* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).  
+/* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).
  * Simplifies logic a bit.
  */
 void main_window::Init()
@@ -108,7 +109,7 @@ void main_window::Init()
 
 	Q_EMIT RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
-	
+
 	if (!utils::has_ssse3())
 	{
 		QMessageBox::critical(this, "SSSE3 Error (with three S, not two)",
@@ -252,7 +253,7 @@ void main_window::BootElf()
 		"SELF files (EBOOT.BIN *.self);;"
 		"BOOT files (*BOOT.BIN);;"
 		"BIN files (*.bin);;"
-		"All files (*.*)"), 
+		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
 	if (filePath == NULL)
@@ -603,7 +604,7 @@ void main_window::DecryptSPRXLibraries()
 	LOG_NOTICE(GENERAL, "Finished decrypting all SPRX libraries.");
 }
 
-/** Needed so that when a backup occurs of window state in guisettings, the state is current. 
+/** Needed so that when a backup occurs of window state in guisettings, the state is current.
 * Also, so that on close, the window state is preserved.
 */
 void main_window::SaveWindowState()
@@ -622,7 +623,7 @@ void main_window::SaveWindowState()
 void main_window::RepaintThumbnailIcons()
 {
 	QColor newColor = gui::get_Label_Color("thumbnail_icon_color");
-	
+
 	auto icon = [&newColor](const QString& path)
 	{
 		return gui_settings::colorizedIcon(QPixmap::fromImage(gui_settings::GetOpaqueImageArea(path)), gui::mw_tool_icon_color, newColor);
@@ -918,7 +919,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	act->setData(entry.first);
 	act->setToolTip(entry.second);
 	act->setShortcut(tr("Ctrl+%1").arg(sc_idx));
-	
+
 	// truncate if too long
 	if (shown_name.length() > 60)
 	{
@@ -977,7 +978,7 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 		m_rg_entries.prepend(entry);
 		m_recentGameActs.prepend(act);
 	}
-	
+
 	// refill menu with actions
 	for (int i = 0; i < m_recentGameActs.count(); i++)
 	{
@@ -1040,7 +1041,7 @@ void main_window::CreateActions()
 	ui->toolbar_start->setEnabled(false);
 	ui->toolbar_stop->setEnabled(false);
 
-	m_categoryVisibleActGroup = new QActionGroup(this); 
+	m_categoryVisibleActGroup = new QActionGroup(this);
 	m_categoryVisibleActGroup->addAction(ui->showCatHDDGameAct);
 	m_categoryVisibleActGroup->addAction(ui->showCatDiscGameAct);
 	m_categoryVisibleActGroup->addAction(ui->showCatHomeAct);
@@ -1530,7 +1531,7 @@ void main_window::mouseDoubleClickEvent(QMouseEvent *event)
 	}
 }
 
-/** Override the Qt close event to have the emulator stop and the application die.  May add a warning dialog in future. 
+/** Override the Qt close event to have the emulator stop and the application die.  May add a warning dialog in future.
 */
 void main_window::closeEvent(QCloseEvent* closeEvent)
 {
