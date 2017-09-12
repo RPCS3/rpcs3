@@ -255,7 +255,7 @@ error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
 		return CELL_OK;
 	}
 
-	if (!area->falloc(addr, mem->size))
+	if (!area->falloc(addr, mem->size, mem->data.data()))
 	{
 		mem->addr = 0;
 		return CELL_EBUSY;
@@ -289,7 +289,7 @@ error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm:
 		return CELL_OK;
 	}
 
-	const u32 addr = area->alloc(mem->size, mem->align);
+	const u32 addr = area->alloc(mem->size, mem->align, mem->data.data());
 
 	if (!addr)
 	{
@@ -328,7 +328,7 @@ error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 		return CELL_EINVAL;
 	}
 
-	verify(HERE), area->dealloc(addr), mem->addr.exchange(0) == addr;
+	verify(HERE), area->dealloc(addr, mem->data.data()), mem->addr.exchange(0) == addr;
 	return CELL_OK;
 }
 
