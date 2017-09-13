@@ -41,7 +41,7 @@
 #ifdef _MSC_VER
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
 #endif
-#if defined(_WIN32) || defined(__linux__)
+#if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
 #ifdef _WIN32
@@ -201,7 +201,7 @@ void rpcs3_app::InitializeCallbacks()
 		{
 		case video_renderer::null: return std::make_shared<NullGSRender>();
 		case video_renderer::opengl: return std::make_shared<GLGSRender>();
-#if defined(_WIN32) || defined(__linux__)
+#if defined(_WIN32) || defined(HAVE_VULKAN)
 		case video_renderer::vulkan: return std::make_shared<VKGSRender>();
 #endif
 #ifdef _MSC_VER
