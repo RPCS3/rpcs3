@@ -377,26 +377,28 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	ui->scrictModeRendering->setToolTip(json_gpu_main["scrictModeRendering"].toString());
 
 	// Graphics Adapter
-	QStringList D3D12Adapters = r_Creator.D3D12Adapters;
-	QStringList vulkanAdapters = r_Creator.vulkanAdapters;
-	bool supportsD3D12 = r_Creator.supportsD3D12;
-	bool supportsVulkan = r_Creator.supportsVulkan;
-	QString r_D3D12 = r_Creator.render_D3D12;
-	QString r_Vulkan = r_Creator.render_Vulkan;
-	QString r_OpenGL = r_Creator.render_OpenGL;
-	QString old_D3D12;
-	QString old_Vulkan;
+	m_D3D12 = Render_Info(r_Creator.render_D3D12, r_Creator.D3D12Adapters, r_Creator.supportsD3D12, emu_settings::D3D12Adapter);
+	m_Vulkan = Render_Info(r_Creator.render_Vulkan, r_Creator.vulkanAdapters, r_Creator.supportsVulkan, emu_settings::VulkanAdapter);
+	m_OpenGL = Render_Info(r_Creator.render_OpenGL);
+	m_NullRender = Render_Info(r_Creator.render_Null);
 
-	if (supportsD3D12)
+	std::vector<Render_Info*> Render_List = { &m_D3D12, &m_Vulkan, &m_OpenGL, &m_NullRender };
+
+	// Remove renderers from the renderer Combobox if not supported
+	for (auto renderer : Render_List)
 	{
-		old_D3D12 = qstr(xemu_settings->GetSetting(emu_settings::D3D12Adapter));
-	}
-	else
-	{
-		// Remove D3D12 option from render combobox
+		if (renderer->supported)
+		{
+			if (renderer->has_adapters)
+			{
+				renderer->old_adapter = qstr(xemu_settings->GetSetting(renderer->type));
+			}
+			continue;
+		}
+
 		for (int i = 0; i < ui->renderBox->count(); i++)
 		{
-			if (ui->renderBox->itemText(i) == r_D3D12)
+			if (ui->renderBox->itemText(i) == renderer->name)
 			{
 				ui->renderBox->removeItem(i);
 				break;
@@ -404,112 +406,60 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		}
 	}
 
-	if (supportsVulkan)
-	{
-		old_Vulkan = qstr(xemu_settings->GetSetting(emu_settings::VulkanAdapter));
-	}
-	else
-	{
-		// Remove Vulkan option from render combobox
-		for (int i = 0; i < ui->renderBox->count(); i++)
-		{
-			if (ui->renderBox->itemText(i) == r_Vulkan)
-			{
-				ui->renderBox->removeItem(i);
-				break;
-			}
-		}
-	}
+	m_oldRender = ui->renderBox->currentText();
 
-	QString oldRender = ui->renderBox->itemText(ui->renderBox->currentIndex());
-
-	auto switchGraphicsAdapter = [=](int index)
+	auto setRenderer = [=](QString text)
 	{
-		QString render = ui->renderBox->itemText(index);
-		m_isD3D12 = render == r_D3D12;
-		m_isVulkan = render == r_Vulkan;
-		ui->graphicsAdapterBox->setEnabled(m_isD3D12 || m_isVulkan);
+		if (text.isEmpty()) return;
 
-		// D3D Adapter
-		if (m_isD3D12)
+		auto switchTo = [=](Render_Info renderer)
 		{
 			// Reset other adapters to old config
-			if (supportsVulkan)
+			for (const auto& render : Render_List)
 			{
-				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
+				if (renderer.name != render->name && render->has_adapters && render->supported)
+				{
+					xemu_settings->SetSetting(render->type, sstr(render->old_adapter));
+				}
+			}
+			// Fill combobox with placeholder if no adapters needed
+			if (!renderer.has_adapters)
+			{
+				ui->graphicsAdapterBox->clear();
+				ui->graphicsAdapterBox->addItem(tr("Not needed for %1 renderer").arg(text));
+				return;
 			}
 			// Fill combobox
 			ui->graphicsAdapterBox->clear();
-			for (const auto& adapter : D3D12Adapters)
+			for (const auto& adapter : renderer.adapters)
 			{
 				ui->graphicsAdapterBox->addItem(adapter);
 			}
 			// Reset Adapter to old config
-			int idx = ui->graphicsAdapterBox->findText(old_D3D12);
+			int idx = ui->graphicsAdapterBox->findText(renderer.old_adapter);
 			if (idx == -1)
 			{
 				idx = 0;
-				if (old_D3D12.isEmpty())
+				if (renderer.old_adapter.isEmpty())
 				{
-					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_D3D12));
+					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(renderer.name));
 				}
 				else
 				{
-					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_D3D12));
+					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(renderer.name));
 				}
 			}
 			ui->graphicsAdapterBox->setCurrentIndex(idx);
-			xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(ui->graphicsAdapterBox->currentText()));
-		}
+			xemu_settings->SetSetting(renderer.type, sstr(ui->graphicsAdapterBox->currentText()));
+		};
 
-		// Vulkan Adapter
-		else if (m_isVulkan)
+		for (auto render : Render_List)
 		{
-			// Reset other adapters to old config
-			if (supportsD3D12)
+			if (render->name == text)
 			{
-				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
+				switchTo(*render);
+				ui->graphicsAdapterBox->setEnabled(render->has_adapters);
 			}
-			// Fill combobox
-			ui->graphicsAdapterBox->clear();
-			for (const auto& adapter : vulkanAdapters)
-			{
-				ui->graphicsAdapterBox->addItem(adapter);
-			}
-			// Reset Adapter to old config
-			int idx = ui->graphicsAdapterBox->findText(old_Vulkan);
-			if (idx == -1)
-			{
-				idx = 0;
-				if (old_Vulkan.isEmpty())
-				{
-					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_Vulkan));
-				}
-				else
-				{
-					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_Vulkan));
-				}
-			}
-			ui->graphicsAdapterBox->setCurrentIndex(idx);
-			xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(ui->graphicsAdapterBox->currentText()));
-		}
-
-		// Other Adapter
-		else
-		{
-			// Reset Adapters to old config
-			if (supportsD3D12)
-			{
-				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
-			}
-			if (supportsVulkan)
-			{
-				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
-			}
-
-			// Fill combobox with placeholder
-			ui->graphicsAdapterBox->clear();
-			ui->graphicsAdapterBox->addItem(tr("Not needed for %1 renderer").arg(render));
 		}
 	};
 
@@ -518,35 +468,33 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		if (text.isEmpty()) return;
 
 		// don't set adapter if signal was created by switching render
-		QString newRender = ui->renderBox->itemText(ui->renderBox->currentIndex());
-		if (m_oldRender == newRender)
-		{
-			if (m_isD3D12 && D3D12Adapters.contains(text))
-			{
-				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(text));
-			}
-			else if (m_isVulkan && vulkanAdapters.contains(text))
-			{
-				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(text));
-			}
-		}
-		else
+		QString newRender = ui->renderBox->currentText();
+		if (m_oldRender != newRender)
 		{
 			m_oldRender = newRender;
+			return;
+		}
+		for (const auto& render : Render_List)
+		{
+			if (render->name == newRender && render->has_adapters && render->adapters.contains(text))
+			{
+				xemu_settings->SetSetting(render->type, sstr(text));
+				break;
+			}
 		}
 	};
 
 	// Init
+	setRenderer(ui->renderBox->currentText());
 	setAdapter(ui->graphicsAdapterBox->currentText());
-	switchGraphicsAdapter(ui->renderBox->currentIndex());
 
 	// Events
 	connect(ui->graphicsAdapterBox, &QComboBox::currentTextChanged, setAdapter);
-	connect(ui->renderBox, static_cast<void (QComboBox::*)(int index)>(&QComboBox::currentIndexChanged), switchGraphicsAdapter);
+	connect(ui->renderBox, &QComboBox::currentTextChanged, setRenderer);
 
 	auto fixGLLegacy = [=](const QString& text)
 	{
-		ui->glLegacyBuffers->setEnabled(text == r_OpenGL);
+		ui->glLegacyBuffers->setEnabled(text == m_OpenGL.name);
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.
