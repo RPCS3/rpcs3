@@ -23,14 +23,12 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 		std::string version = rpcs3::version.to_string();
 		version = version.substr(0 , version.find_last_of("-"));
 
-		//Attempts to get RPCS3_GIT_BRANCH from git-version.h
-		#ifdef RPCS3_GIT_BRANCH
-			if (RPCS3_GIT_BRANCH != "master")
-			{
-				version += "-";
-				version += RPCS3_GIT_BRANCH;
-			}
-		#endif
+		//Add branch to version on frame , unless it's master.
+		if (RPCS3_GIT_BRANCH != "master")
+		{
+			version += "-";
+			version += RPCS3_GIT_BRANCH;
+		}
 
 		m_windowTitle += qstr(" | " + version);
 	#endif

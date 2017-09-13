@@ -394,12 +394,8 @@ logs::file_listener::file_listener(const std::string& name)
 	ver.m.ch  = nullptr;
 	ver.m.sev = level::always;
 	ver.stamp = 0;
-    
-	#ifdef RPCS3_GIT_BRANCH
-		ver.text = fmt::format("RPCS3 v%s\nBranch: %s\n%s\n", rpcs3::version.to_string(), RPCS3_GIT_BRANCH, utils::get_system_info());
-	#else
-		ver.text = fmt::format("RPCS3 v%s\nBranch: %s\n%s\n", rpcs3::version.to_string(), "Unknown branch", utils::get_system_info());
-	#endif
+	ver.text = fmt::format("RPCS3 v%s\nBranch: %s\n%s\n", rpcs3::version.to_string(), RPCS3_GIT_BRANCH, utils::get_system_info());
+
 	file_writer::log(logs::level::always, ver.text.data(), ver.text.size());
 	file_writer::log(logs::level::always, "\n", 1);
 	g_messages.emplace_back(std::move(ver));
