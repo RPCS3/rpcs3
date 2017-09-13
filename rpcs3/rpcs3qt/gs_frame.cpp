@@ -18,20 +18,17 @@ constexpr auto qstr = QString::fromStdString;
 gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse)
 	: QWindow(), m_windowTitle(title), m_disable_mouse(disableMouse)
 {
-	#ifdef RPCS3_GIT_VERSION
-		//Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
-		std::string version = rpcs3::version.to_string();
-		version = version.substr(0 , version.find_last_of("-"));
+	//Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
+	std::string version = rpcs3::version.to_string();
+	version = version.substr(0 , version.find_last_of("-"));
 
-		//Add branch to version on frame , unless it's master.
-		if (RPCS3_GIT_BRANCH != "master")
-		{
-			version += "-";
-			version += RPCS3_GIT_BRANCH;
-		}
+	//Add branch to version on frame , unless it's master.
+	if (rpcs3::branch != "master")
+	{
+		version = version + "-" + rpcs3::branch;
+	}
 
-		m_windowTitle += qstr(" | " + version);
-	#endif
+	m_windowTitle += qstr(" | " + version);
 
 	if (!Emu.GetTitle().empty())
 	{

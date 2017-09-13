@@ -6,4 +6,5 @@
 namespace rpcs3
 {
 	extern const utils::version version;
+	extern const char* branch;
 }
