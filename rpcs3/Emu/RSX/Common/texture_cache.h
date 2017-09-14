@@ -53,6 +53,12 @@ namespace rsx
 
 				data.push_back(std::move(section));
 			}
+
+			void remove_one()
+			{
+				verify(HERE), valid_count > 0;
+				valid_count--;
+			}
 		};
 
 		// Keep track of cache misses to pre-emptively flush some addresses
@@ -104,8 +110,12 @@ namespace rsx
 				if (base == last_dirty_block && range_data.valid_count == 0)
 					continue;
 
-				if (trampled_range.first >= (base + get_block_size()) || base >= trampled_range.second)
-					continue;
+				if (trampled_range.first < trampled_range.second)
+				{
+					//Only if a valid range, ignore empty sets
+					if (trampled_range.first >= (base + range_data.max_range + get_block_size()) || base >= trampled_range.second)
+						continue;
+				}
 
 				for (int i = 0; i < range_data.data.size(); i++)
 				{
@@ -138,7 +148,7 @@ namespace rsx
 						}
 
 						m_unreleased_texture_objects++;
-						range_data.valid_count--;
+						range_data.remove_one();
 						response = true;
 					}
 				}
@@ -159,6 +169,7 @@ namespace rsx
 			bool response = false;
 			u32 last_dirty_block = 0;
 			std::pair<u32, u32> trampled_range = std::make_pair(0xffffffff, 0x0);
+			std::vector<section_storage_type*> sections_to_flush;
 
 			for (auto It = m_cache.begin(); It != m_cache.end(); It++)
 			{
@@ -169,8 +180,12 @@ namespace rsx
 				if (base == last_dirty_block && range_data.valid_count == 0)
 					continue;
 
-				if (trampled_range.first >= (base + get_block_size()) || base >= trampled_range.second)
-					continue;
+				if (trampled_range.first < trampled_range.second)
+				{
+					//Only if a valid range, ignore empty sets
+					if (trampled_range.first >= (base + range_data.max_range + get_block_size()) || base >= trampled_range.second)
+						continue;
+				}
 
 				for (int i = 0; i < range_data.data.size(); i++)
 				{
@@ -192,22 +207,28 @@ namespace rsx
 							range_reset = true;
 						}
 
-						//TODO: Map basic host_visible memory without coherent constraint
-						if (!tex.flush(std::forward<Args>(extras)...))
-						{
-							//Missed address, note this
-							//TODO: Lower severity when successful to keep the cache from overworking
-							record_cache_miss(tex);
-						}
+						//Defer actual flush operation until all affected regions are cleared to prevent recursion
+						tex.unprotect();
+						sections_to_flush.push_back(&tex);
 
 						response = true;
-						range_data.valid_count--;
+						range_data.remove_one();
 					}
 				}
 
 				if (range_reset)
 				{
 					It = m_cache.begin();
+				}
+			}
+
+			for (auto tex : sections_to_flush)
+			{
+				if (!tex->flush(std::forward<Args>(extras)...))
+				{
+					//Missed address, note this
+					//TODO: Lower severity when successful to keep the cache from overworking
+					record_cache_miss(*tex);
 				}
 			}
 
@@ -334,7 +355,7 @@ namespace rsx
 		void lock_memory_region(image_storage_type* image, const u32 memory_address, const u32 memory_size, const u32 width, const u32 height, const u32 pitch, Args&&... extras)
 		{
 			writer_lock lock(m_cache_mutex);
-			section_storage_type& region = find_cached_texture(memory_address, memory_size, true, width, height, 1);
+			section_storage_type& region = find_cached_texture(memory_address, memory_size, false);
 
 			if (!region.is_locked())
 			{
@@ -389,7 +410,7 @@ namespace rsx
 				address > no_access_range.second)
 				return std::make_tuple(false, nullptr);
 
-			reader_lock lock(m_cache_mutex);
+			rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_cache_mutex);
 
 			auto found = m_cache.find(get_block_address(address));
 			if (found != m_cache.end())
@@ -730,11 +751,11 @@ namespace rsx
 			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
 
 			//Check if src/dst are parts of render targets
-			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst.rsx_address, dst.width, dst.clip_height, dst.pitch, true, true, false);
+			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst.rsx_address, dst.width, dst.clip_height, dst.pitch, true, true, false, dst.compressed_y);
 			dst_is_render_target = dst_subres.surface != nullptr;
 
 			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src.rsx_address, src.width, src.height, src.pitch, true, true, false);
+			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src.rsx_address, src.width, src.slice_h, src.pitch, true, true, false, src.compressed_y);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			//Always use GPU blit if src or dst is in the surface store
@@ -747,15 +768,37 @@ namespace rsx
 			float scale_x = dst.scale_x;
 			float scale_y = dst.scale_y;
 
-			size2i clip_dimensions = { dst.clip_width, dst.clip_height };
+			//TODO: Investigate effects of compression in X axis
+			if (dst.compressed_y)
+			{
+				scale_y *= 0.5f;
+			}
 
-			//Dimensions passed are restricted to powers of 2; get real height from clip_height and width from pitch
-			size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), dst.clip_height };
+			if (src.compressed_y)
+			{
+				scale_y *= 2.f;
+			}
+
+			//1024 height is a hack (for ~720p buffers)
+			//It is possible to have a large buffer that goes up to around 4kx4k but anything above 1280x720 is rare
+			//RSX only handles 512x512 tiles so texture 'stitching' will eventually be needed to be completely accurate
+			//Sections will be submitted as (512x512 + 512x512 + 256x512 + 512x208 + 512x208 + 256x208) to blit a 720p surface to the backbuffer for example
+
+			int practical_height;
+			if (dst.max_tile_h < dst.height || !src_is_render_target)
+				practical_height = (s32)dst.height;
+			else
+			{
+				//Hack
+				practical_height = std::min((s32)dst.max_tile_h, 1024);
+			}
+
+			size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), practical_height };
 
 			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			//Reproject final clip onto source...
-			const u16 src_w = (const u16)((f32)clip_dimensions.width / dst.scale_x);
-			const u16 src_h = (const u16)((f32)clip_dimensions.height / dst.scale_y);
+			const u16 src_w = (const u16)((f32)dst.clip_width / scale_x);
+			const u16 src_h = (const u16)((f32)dst.clip_height / scale_y);
 
 			areai src_area = { 0, 0, src_w, src_h };
 			areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
@@ -794,7 +837,7 @@ namespace rsx
 					enforce_surface_creation_type(*cached_dest, dst.swizzled ? rsx::texture_create_flags::swapped_native_component_order : rsx::texture_create_flags::native_component_order);
 
 					const auto old_dst_area = dst_area;
-					if (const u32 address_offset = dst.rsx_address - cached_dest->get_section_base())
+					if (const u32 address_offset = dst_address - cached_dest->get_section_base())
 					{
 						const u16 bpp = dst_is_argb8 ? 4 : 2;
 						const u16 offset_y = address_offset / dst.pitch;
@@ -826,6 +869,7 @@ namespace rsx
 				if (!cached_dest && is_memcpy)
 				{
 					lock.upgrade();
+					flush_address_impl(src_address, std::forward<Args>(extras)...);
 					invalidate_range_impl(dst_address, memcpy_bytes_length, true);
 					memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
 					return true;
@@ -853,6 +897,7 @@ namespace rsx
 					if (rsx_pitch <= 64 && native_pitch != rsx_pitch)
 					{
 						lock.upgrade();
+						flush_address_impl(src_address, std::forward<Args>(extras)...);
 						invalidate_range_impl(dst_address, memcpy_bytes_length, true);
 						memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
 						return true;
@@ -892,13 +937,13 @@ namespace rsx
 			}
 			else
 			{
-				if (src_subres.w != clip_dimensions.width ||
-					src_subres.h != clip_dimensions.height)
+				if (src_subres.w != dst.clip_width ||
+					src_subres.h != dst.clip_height)
 				{
 					f32 subres_scaling_x = (f32)src.pitch / src_subres.surface->get_native_pitch();
 
-					const int dst_width = (int)(src_subres.w * dst.scale_x * subres_scaling_x);
-					const int dst_height = (int)(src_subres.h * dst.scale_y);
+					const int dst_width = (int)(src_subres.w * scale_x * subres_scaling_x);
+					const int dst_height = (int)(src_subres.h * scale_y);
 
 					dst_area.x2 = dst_area.x1 + dst_width;
 					dst_area.y2 = dst_area.y1 + dst_height;
@@ -911,14 +956,6 @@ namespace rsx
 				src_area.x2 += src_subres.x;
 				src_area.y1 += src_subres.y;
 				src_area.y2 += src_subres.y;
-
-				if (src.compressed_y)
-				{
-					dst_area.y1 *= 2;
-					dst_area.y2 *= 2;
-
-					dst_dimensions.height *= 2;
-				}
 
 				vram_texture = src_subres.surface->get_surface();
 			}
@@ -959,8 +996,8 @@ namespace rsx
 			//Reproject clip offsets onto source to simplify blit
 			if (dst.clip_x || dst.clip_y)
 			{
-				const u16 scaled_clip_offset_x = (const u16)((f32)dst.clip_x / dst.scale_x);
-				const u16 scaled_clip_offset_y = (const u16)((f32)dst.clip_y / dst.scale_y);
+				const u16 scaled_clip_offset_x = (const u16)((f32)dst.clip_x / scale_x);
+				const u16 scaled_clip_offset_y = (const u16)((f32)dst.clip_y / scale_y);
 
 				src_area.x1 += scaled_clip_offset_x;
 				src_area.x2 += scaled_clip_offset_x;
@@ -978,7 +1015,7 @@ namespace rsx
 
 				lock.upgrade();
 
-				dest_texture = create_new_texture(cmd, dst.rsx_address, dst.pitch * dst.clip_height,
+				dest_texture = create_new_texture(cmd, dst.rsx_address, dst.pitch * dst_dimensions.height,
 					dst_dimensions.width, dst_dimensions.height, 1, 1,
 					gcm_format, rsx::texture_dimension_extended::texture_dimension_2d,
 					dst.swizzled? rsx::texture_create_flags::swapped_native_component_order : rsx::texture_create_flags::native_component_order,

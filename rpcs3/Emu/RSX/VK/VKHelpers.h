@@ -1040,6 +1040,9 @@ namespace vk
 
 	class command_buffer
 	{
+	private:
+		bool is_open = false;
+
 	protected:
 		vk::command_pool *pool = nullptr;
 		VkCommandBuffer commands = nullptr;
@@ -1073,6 +1076,53 @@ namespace vk
 		operator VkCommandBuffer()
 		{
 			return commands;
+		}
+
+		void begin()
+		{
+			if (is_open)
+				return;
+
+			VkCommandBufferInheritanceInfo inheritance_info = {};
+			inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+
+			VkCommandBufferBeginInfo begin_infos = {};
+			begin_infos.pInheritanceInfo = &inheritance_info;
+			begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			CHECK_RESULT(vkBeginCommandBuffer(commands, &begin_infos));
+			is_open = true;
+		}
+
+		void end()
+		{
+			if (!is_open)
+			{
+				LOG_ERROR(RSX, "commandbuffer->end was called but commandbuffer is not in a recording state");
+				return;
+			}
+
+			CHECK_RESULT(vkEndCommandBuffer(commands));
+			is_open = false;
+		}
+
+		void submit(VkQueue queue, const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
+		{
+			if (is_open)
+			{
+				LOG_ERROR(RSX, "commandbuffer->submit was called whilst the command buffer is in a recording state");
+				return;
+			}
+
+			VkSubmitInfo infos = {};
+			infos.commandBufferCount = 1;
+			infos.pCommandBuffers = &commands;
+			infos.pWaitDstStageMask = &pipeline_stage_flags;
+			infos.pWaitSemaphores = semaphores.data();
+			infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
+			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
 		}
 	};
 

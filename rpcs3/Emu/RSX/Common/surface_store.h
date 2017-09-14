@@ -523,7 +523,7 @@ namespace rsx
 		 * address_is_bound - returns true if the surface at a given address is actively bound
 		 * get_surface_subresource_if_available - returns a sectiion descriptor that allows to crop surfaces stored in memory
 		 */
-		bool surface_overlaps_address(surface_type surface, u32 surface_address, u32 texaddr, u16 *x, u16 *y, bool scale_to_fit)
+		bool surface_overlaps_address(surface_type surface, u32 surface_address, u32 texaddr, u16 *x, u16 *y, bool scale_to_fit, bool double_height)
 		{
 			bool is_subslice = false;
 			u16  x_offset = 0;
@@ -535,7 +535,6 @@ namespace rsx
 			u32 offset = texaddr - surface_address;
 			if (texaddr >= surface_address)
 			{
-
 				if (offset == 0)
 				{
 					is_subslice = true;
@@ -546,6 +545,8 @@ namespace rsx
 					Traits::get_surface_info(surface, &info);
 
 					u32 range = info.rsx_pitch * info.surface_height;
+					if (double_height) range *= 2;
+
 					if (offset < range)
 					{
 						const u32 y = (offset / info.rsx_pitch);
@@ -560,6 +561,7 @@ namespace rsx
 						x_offset = x;
 						y_offset = y;
 
+						if (double_height) y_offset /= 2;
 						is_subslice = true;
 					}
 				}
@@ -602,11 +604,11 @@ namespace rsx
 			return true;
 		}
 
-		surface_subresource get_surface_subresource_if_applicable(u32 texaddr, u16 requested_width, u16 requested_height, u16 requested_pitch, bool scale_to_fit = false, bool crop = false, bool ignore_depth_formats = false)
+		surface_subresource get_surface_subresource_if_applicable(u32 texaddr, u16 requested_width, u16 requested_height, u16 requested_pitch, bool scale_to_fit = false, bool crop = false, bool ignore_depth_formats = false, bool double_height = false)
 		{
 			auto test_surface = [&](surface_type surface, u32 this_address, u16 &x_offset, u16 &y_offset, u16 &w, u16 &h, bool &clipped)
 			{
-				if (surface_overlaps_address(surface, this_address, texaddr, &x_offset, &y_offset, scale_to_fit))
+				if (surface_overlaps_address(surface, this_address, texaddr, &x_offset, &y_offset, scale_to_fit, double_height))
 				{
 					surface_format_info info;
 					Traits::get_surface_info(surface, &info);
@@ -625,7 +627,7 @@ namespace rsx
 					if (region_fits(info.surface_width, info.surface_height, x_offset, y_offset, real_width, requested_height))
 					{
 						w = real_width;
-						h = info.surface_height;
+						h = requested_height;
 						clipped = false;
 
 						return true;

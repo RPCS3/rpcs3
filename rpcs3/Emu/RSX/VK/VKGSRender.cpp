@@ -2013,32 +2013,14 @@ void VKGSRender::write_buffers()
 
 void VKGSRender::close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
 {
-	CHECK_RESULT(vkEndCommandBuffer(*m_current_command_buffer));
-
-	VkCommandBuffer cmd = *m_current_command_buffer;
-
-	VkSubmitInfo infos = {};
-	infos.commandBufferCount = 1;
-	infos.pCommandBuffers = &cmd;
-	infos.pWaitDstStageMask = &pipeline_stage_flags;
-	infos.pWaitSemaphores = semaphores.data();
-	infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
-	infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
+	m_current_command_buffer->end();
 	m_current_command_buffer->tag();
-	CHECK_RESULT(vkQueueSubmit(m_swap_chain->get_present_queue(), 1, &infos, fence));
+	m_current_command_buffer->submit(m_swap_chain->get_present_queue(), semaphores, fence, pipeline_stage_flags);
 }
 
 void VKGSRender::open_command_buffer()
 {
-	VkCommandBufferInheritanceInfo inheritance_info = {};
-	inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-
-	VkCommandBufferBeginInfo begin_infos = {};
-	begin_infos.pInheritanceInfo = &inheritance_info;
-	begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	CHECK_RESULT(vkBeginCommandBuffer(*m_current_command_buffer, &begin_infos));
+	m_current_command_buffer->begin();
 }
 
 
@@ -2587,5 +2569,8 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 {
 	close_render_pass();
 
-	return m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer);
+	auto result = m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer);
+	m_current_command_buffer->begin();
+
+	return result;
 }

@@ -355,7 +355,7 @@ namespace gl
 		
 		bool is_flushable() const
 		{
-			return pbo_id != 0;
+			return (locked && pbo_id != 0);
 		}
 
 		bool is_flushed() const
