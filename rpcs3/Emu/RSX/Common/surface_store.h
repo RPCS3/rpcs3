@@ -94,7 +94,7 @@ namespace rsx
 		using surface_type = typename Traits::surface_type;
 		using command_list_type = typename Traits::command_list_type;
 		using download_buffer_object = typename Traits::download_buffer_object;
-		using surface_subresource = typename surface_subresource_storage<surface_type>;
+		using surface_subresource = surface_subresource_storage<surface_type>;
 
 		std::unordered_map<u32, surface_storage_type> m_render_targets_storage = {};
 		std::unordered_map<u32, surface_storage_type> m_depth_stencil_storage = {};
