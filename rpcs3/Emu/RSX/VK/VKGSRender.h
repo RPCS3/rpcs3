@@ -249,7 +249,7 @@ private:
 	//Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
 	
-#ifdef __linux__
+#if !defined(_WIN32) && defined(HAVE_VULKAN)
 	Display *m_display_handle = nullptr;
 #endif
 

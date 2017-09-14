@@ -500,7 +500,7 @@ VKGSRender::VKGSRender() : GSRender()
 		m_swap_chain = m_thread_context.createSwapChain(hInstance, hWnd, gpus[0]);
 	}
 	
-#elif __linux__
+#elif HAVE_VULKAN
 
 	Window window = (Window)m_frame->handle();
 	Display *display = XOpenDisplay(0);
@@ -722,7 +722,7 @@ VKGSRender::~VKGSRender()
 
 	delete m_swap_chain;
 	
-#ifdef __linux__
+#if !defined(_WIN32) && defined(HAVE_VULKAN)
 	if (m_display_handle)
 		XCloseDisplay(m_display_handle);
 #endif
