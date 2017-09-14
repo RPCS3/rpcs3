@@ -151,6 +151,7 @@ namespace rsx
 
 	public:
 		RsxDmaControl* ctrl = nullptr;
+		atomic_t<u32> internal_get{ 0 };
 
 		Timer timer_sync;
 
