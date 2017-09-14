@@ -462,14 +462,15 @@ void GLGSRender::end()
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
 		int location;
-		if (!rsx::method_registers.fragment_textures[i].enabled())
-			continue;
-
-		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
+		if (rsx::method_registers.fragment_textures[i].enabled() && m_program->uniforms.has_location("tex" + std::to_string(i), &location))
 		{
 			m_gl_texture_cache.upload_and_bind_texture(i, get_gl_target_for_texture(rsx::method_registers.fragment_textures[i]), rsx::method_registers.fragment_textures[i], m_rtts);
-			m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i]);
+
+			if (m_textures_dirty[i])
+				m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i]);
 		}
+
+		m_textures_dirty[i] = false;
 	}
 
 	//Vertex textures
