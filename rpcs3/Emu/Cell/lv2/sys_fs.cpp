@@ -274,12 +274,18 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 
 	if (!file)
 	{
-		if (test(open_mode & fs::excl))
+		if (test(open_mode & fs::excl) && fs::g_tls_error == fs::error::exist)
 		{
-			return not_an_error(CELL_EEXIST); // approximation
+			return not_an_error(CELL_EEXIST);
 		}
 
-		return {CELL_ENOENT, path};
+		switch (auto error = fs::g_tls_error)
+		{
+		case fs::error::noent: return {CELL_ENOENT, path};
+		default: sys_fs.error("sys_fs_open(): unknown error %s", error);
+		}
+
+		return {CELL_EIO, path};
 	}
 
 	if ((flags & CELL_FS_O_MSELF) && (!verify_mself(*fd, file)))
@@ -435,7 +441,13 @@ error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 
 	if (!dir)
 	{
-		return {CELL_ENOENT, path};
+		switch (auto error = fs::g_tls_error)
+		{
+		case fs::error::noent: return {CELL_ENOENT, path};
+		default: sys_fs.error("sys_fs_opendir(): unknown error %s", error);
+		}
+
+		return {CELL_EIO, path};
 	}
 
 	if (const u32 id = idm::make<lv2_fs_object, lv2_dir>(path.get_ptr(), std::move(dir)))
@@ -507,7 +519,13 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 
 	if (!fs::stat(local_path, info))
 	{
-		return {CELL_ENOENT, path};
+		switch (auto error = fs::g_tls_error)
+		{
+		case fs::error::noent: return {CELL_ENOENT, path};
+		default: sys_fs.error("sys_fs_stat(): unknown error %s", error);
+		}
+
+		return {CELL_EIO, path};
 	}
 
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
@@ -560,15 +578,14 @@ error_code sys_fs_mkdir(vm::cptr<char> path, s32 mode)
 {
 	sys_fs.warning("sys_fs_mkdir(path=%s, mode=%#o)", path, mode);
 
-	const std::string& local_path = vfs::get(path.get_ptr());
-
-	if (fs::is_dir(local_path))
+	if (!fs::create_path(vfs::get(path.get_ptr())))
 	{
-		return {CELL_EEXIST, path};
-	}
+		switch (auto error = fs::g_tls_error)
+		{
+		case fs::error::exist: return {CELL_EEXIST, path};
+		default: sys_fs.error("sys_fs_mkdir(): unknown error %s", error);
+		}
 
-	if (!fs::create_path(local_path))
-	{
 		return {CELL_EIO, path}; // ???
 	}
 
@@ -605,6 +622,7 @@ error_code sys_fs_rmdir(vm::cptr<char> path)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
+		case fs::error::notempty: return {CELL_ENOTEMPTY, path};
 		default: sys_fs.error("sys_fs_rmdir(): unknown error %s", error);
 		}
 
@@ -752,6 +770,12 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 		fs::device_stat info;
 		if (!fs::statfs(vfs::get(arg->path.get_ptr()), info))
 		{
+			switch (auto error = fs::g_tls_error)
+			{
+			case fs::error::noent: return {CELL_ENOENT, arg->path};
+			default: sys_fs.error("sys_fs_fcntl(0xc0000002): unknown error %s", error);
+			}
+
 			return CELL_EIO; // ???
 		}
 
