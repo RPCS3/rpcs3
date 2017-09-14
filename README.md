@@ -20,7 +20,7 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 ## Dependencies
 
 ### Windows
-* [Visual Studio 2015](https://www.visualstudio.com/en-us/downloads/download-visual-studio-vs.aspx)
+* [Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/)
 * [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
 * [Cmake 3.1.0+](https://www.cmake.org/download/) (required; add to PATH)
 * [Python 3.3+](https://www.python.org/downloads/) (required; add to PATH)
