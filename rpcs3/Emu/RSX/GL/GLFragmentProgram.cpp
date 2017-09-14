@@ -30,7 +30,7 @@ std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 
 void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
-	OS << "#version 420\n";
+	OS << "#version 430\n";
 }
 
 void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)

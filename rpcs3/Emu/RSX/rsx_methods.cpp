@@ -661,6 +661,8 @@ namespace rsx
 					dst_info.compressed_x = true;
 					break;
 				}
+
+				dst_info.max_tile_h = static_cast<u16>((dst_region.tile->size - dst_region.base) / out_pitch);
 			}
 
 			if (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER)

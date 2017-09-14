@@ -399,7 +399,7 @@ namespace rsx
 
 		auto flush_command_queue = [&]()
 		{
-			const auto num_draws = method_registers.current_draw_clause.first_count_commands.size();
+			const auto num_draws = (u32)method_registers.current_draw_clause.first_count_commands.size();
 			bool emit_begin = false;
 			bool emit_end = true;
 
@@ -411,7 +411,7 @@ namespace rsx
 				u32 last = first_counts.front().first;
 				u32 last_index = 0;
 
-				for (size_t draw = 0; draw < num_draws; draw++)
+				for (u32 draw = 0; draw < num_draws; draw++)
 				{
 					if (first_counts[draw].first != last)
 					{

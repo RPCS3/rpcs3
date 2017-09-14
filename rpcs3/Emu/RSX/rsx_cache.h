@@ -38,6 +38,7 @@ namespace rsx
 		u16 clip_y;
 		u16 clip_width;
 		u16 clip_height;
+		u16 max_tile_h;
 		f32 scale_x;
 		f32 scale_y;
 
