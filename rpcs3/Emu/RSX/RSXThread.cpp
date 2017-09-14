@@ -403,7 +403,8 @@ namespace rsx
 			std::vector <std::pair<u32, u32>> split_ranges;
 			auto first_count_cmds = method_registers.current_draw_clause.first_count_commands;
 
-			if (method_registers.current_draw_clause.first_count_commands.size() > 1)
+			if (method_registers.current_draw_clause.first_count_commands.size() > 1 &&
+				method_registers.current_draw_clause.is_disjoint_primitive)
 			{
 				u32 next = method_registers.current_draw_clause.first_count_commands.front().first;
 				u32 last_head = 0;
@@ -433,13 +434,18 @@ namespace rsx
 			{
 				std::vector<std::pair<u32, u32>> tmp;
 				auto list_head = first_count_cmds.begin();
+				bool emit_begin = false;
 
 				for (auto &range : split_ranges)
 				{
 					tmp.resize(range.second - range.first + 1);
 					std::copy(list_head + range.first, list_head + range.second, tmp.begin());
 
-					methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
+					if (emit_begin)
+						methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
+					else
+						emit_begin = true;
+
 					method_registers.current_draw_clause.first_count_commands = tmp;
 					methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
 				}
@@ -565,41 +571,44 @@ namespace rsx
 							deferred_primitive_type = value;
 						else
 						{
-							deferred_call_size++;
-
-							// Combine all calls since the last one
-							auto &first_count = method_registers.current_draw_clause.first_count_commands;
-							if (first_count.size() > deferred_call_size)
-							{
-								const auto &batch_first_count = first_count[deferred_call_size - 1];
-								u32 count = batch_first_count.second;
-								u32 next = batch_first_count.first + count;
-
-								for (int n = deferred_call_size; n < first_count.size(); n++)
-								{
-									if (first_count[n].first != next)
-									{
-										LOG_ERROR(RSX, "Non-continous first-count range passed as one draw; will be split.");
-
-										first_count[deferred_call_size - 1].second = count;
-										deferred_call_size++;
-
-										count = first_count[deferred_call_size - 1].second;
-										next = first_count[deferred_call_size - 1].first + count;
-										continue;
-									}
-
-									count += first_count[n].second;
-									next += first_count[n].second;
-								}
-
-								first_count[deferred_call_size - 1].second = count;
-								first_count.resize(deferred_call_size);
-							}
-
 							has_deferred_call = true;
 							flush_commands_flag = false;
 							execute_method_call = false;
+
+							deferred_call_size++;
+
+							if (method_registers.current_draw_clause.is_disjoint_primitive)
+							{
+								// Combine all calls since the last one
+								auto &first_count = method_registers.current_draw_clause.first_count_commands;
+								if (first_count.size() > deferred_call_size)
+								{
+									const auto &batch_first_count = first_count[deferred_call_size - 1];
+									u32 count = batch_first_count.second;
+									u32 next = batch_first_count.first + count;
+
+									for (int n = deferred_call_size; n < first_count.size(); n++)
+									{
+										if (first_count[n].first != next)
+										{
+											LOG_ERROR(RSX, "Non-continous first-count range passed as one draw; will be split.");
+
+											first_count[deferred_call_size - 1].second = count;
+											deferred_call_size++;
+
+											count = first_count[deferred_call_size - 1].second;
+											next = first_count[deferred_call_size - 1].first + count;
+											continue;
+										}
+
+										count += first_count[n].second;
+										next += first_count[n].second;
+									}
+
+									first_count[deferred_call_size - 1].second = count;
+									first_count.resize(deferred_call_size);
+								}
+							}
 						}
 
 						break;
@@ -1049,24 +1058,33 @@ namespace rsx
 
 	void thread::get_current_vertex_program()
 	{
-		auto &result = current_vertex_program = {};
-
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
-		result.data.reserve((512 - transform_program_start) * 4);
-		result.rsx_vertex_inputs.reserve(rsx::limits::vertex_count);
+		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
+		current_vertex_program.skip_vertex_input_check = false;
+
+		current_vertex_program.rsx_vertex_inputs.resize(0);
+		current_vertex_program.data.resize(512 * 4);
+		current_vertex_program.rsx_vertex_inputs.reserve(rsx::limits::vertex_count);
+
+		u32* ucode_src = rsx::method_registers.transform_program.data() + (transform_program_start * 4);
+		u32* ucode_dst = current_vertex_program.data.data();
+		u32  ucode_size = 0;
+		D3   d3;
 
 		for (int i = transform_program_start; i < 512; ++i)
 		{
-			result.data.resize((i - transform_program_start) * 4 + 4);
-			memcpy(result.data.data() + (i - transform_program_start) * 4, rsx::method_registers.transform_program.data() + i * 4, 4 * sizeof(u32));
+			ucode_size += 4;
+			memcpy(ucode_dst, ucode_src, 4 * sizeof(u32));
 
-			D3 d3;
-			d3.HEX = rsx::method_registers.transform_program[i * 4 + 3];
-
+			d3.HEX = ucode_src[3];
 			if (d3.end)
 				break;
+
+			ucode_src += 4;
+			ucode_dst += 4;
 		}
-		result.output_mask = rsx::method_registers.vertex_attrib_output_mask();
+
+		current_vertex_program.data.resize(ucode_size);
 
 		const u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
 		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
@@ -1079,7 +1097,7 @@ namespace rsx
 
 			if (rsx::method_registers.vertex_arrays_info[index].size() > 0)
 			{
-				result.rsx_vertex_inputs.push_back(
+				current_vertex_program.rsx_vertex_inputs.push_back(
 					{index,
 						rsx::method_registers.vertex_arrays_info[index].size(),
 						rsx::method_registers.vertex_arrays_info[index].frequency(),
@@ -1089,7 +1107,7 @@ namespace rsx
 			}
 			else if (vertex_push_buffers[index].vertex_count > 1)
 			{
-				result.rsx_vertex_inputs.push_back(
+				current_vertex_program.rsx_vertex_inputs.push_back(
 				{ index,
 					rsx::method_registers.register_vertex_info[index].size,
 					1,
@@ -1099,7 +1117,7 @@ namespace rsx
 			}
 			else if (rsx::method_registers.register_vertex_info[index].size > 0)
 			{
-				result.rsx_vertex_inputs.push_back(
+				current_vertex_program.rsx_vertex_inputs.push_back(
 					{index,
 						rsx::method_registers.register_vertex_info[index].size,
 						rsx::method_registers.register_vertex_info[index].frequency,

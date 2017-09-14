@@ -565,7 +565,7 @@ namespace vk
 		}
 
 		cached_texture_section* upload_image_from_cpu(vk::command_buffer& cmd, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, const u32 gcm_format,
-			std::vector<rsx_subresource_layout>& subresource_layout, const rsx::texture_dimension_extended type, const bool swizzled,
+			const rsx::texture_upload_context context, std::vector<rsx_subresource_layout>& subresource_layout, const rsx::texture_dimension_extended type, const bool swizzled,
 			std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			auto section = create_new_texture(cmd, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, type,
@@ -578,7 +578,10 @@ namespace vk
 
 			vk::enter_uninterruptible();
 
-			vk::copy_mipmaped_image_using_buffer(cmd, image->value, subresource_layout, gcm_format, swizzled, mipmaps, subres_range.aspectMask,
+			//Swizzling is ignored for blit engine copy and emulated using a swapped order image view
+			bool input_swizzled = (context == rsx::texture_upload_context::blit_engine_src) ? false : swizzled;
+
+			vk::copy_mipmaped_image_using_buffer(cmd, image->value, subresource_layout, gcm_format, input_swizzled, mipmaps, subres_range.aspectMask,
 				*m_texture_upload_heap, m_texture_upload_buffer);
 
 			vk::leave_uninterruptible();

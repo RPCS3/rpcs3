@@ -70,7 +70,7 @@ namespace rsx
 		bool locked = false;
 		bool dirty = false;
 
-		inline bool region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2)
+		inline bool region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2) const
 		{
 			return (base1 < limit2 && base2 < limit1);
 		}
@@ -133,12 +133,12 @@ namespace rsx
 			locked = false;
 		}
 
-		bool overlaps(std::pair<u32, u32> range)
+		bool overlaps(std::pair<u32, u32> range) const
 		{
 			return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
 		}
 
-		bool overlaps(u32 address)
+		bool overlaps(u32 address) const
 		{
 			return (locked_address_base <= address && (address - locked_address_base) < locked_address_range);
 		}
@@ -148,7 +148,7 @@ namespace rsx
 		 * ignore_protection_range - if true, the test should not check against the aligned protection range, instead
 		 * tests against actual range of contents in memory
 		 */
-		bool overlaps(std::pair<u32, u32> range, bool ignore_protection_range)
+		bool overlaps(std::pair<u32, u32> range, bool ignore_protection_range) const
 		{
 			if (!ignore_protection_range)
 				return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
@@ -160,7 +160,7 @@ namespace rsx
 		 * Check if the page containing the address tramples this section. Also compares a former trampled page range to compare
 		 * If true, returns the range <min, max> with updated invalid range 
 		 */
-		std::tuple<bool, std::pair<u32, u32>> overlaps_page(std::pair<u32, u32> old_range, u32 address)
+		std::tuple<bool, std::pair<u32, u32>> overlaps_page(std::pair<u32, u32> old_range, u32 address) const
 		{
 			const u32 page_base = address & ~4095;
 			const u32 page_limit = address + 4096;
@@ -204,7 +204,7 @@ namespace rsx
 			return (cpu_address_base == cpu_address && cpu_address_range == size);
 		}
 
-		std::pair<u32, u32> get_min_max(std::pair<u32, u32> current_min_max)
+		std::pair<u32, u32> get_min_max(std::pair<u32, u32> current_min_max) const
 		{
 			u32 min = std::min(current_min_max.first, locked_address_base);
 			u32 max = std::max(current_min_max.second, locked_address_base + locked_address_range);

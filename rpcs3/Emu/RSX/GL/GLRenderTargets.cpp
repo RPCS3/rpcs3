@@ -186,8 +186,22 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 	draw_fbo.recreate();
 
+	bool old_format_found = false;
+	gl::texture::format old_format;
+
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
+		if (surface_info[i].pitch && g_cfg.video.write_color_buffers)
+		{
+			if (!old_format_found)
+			{
+				old_format = rsx::internals::surface_color_format_to_gl(surface_info[i].color_format).format;
+				old_format_found = true;
+			}
+
+			m_gl_texture_cache.flush_if_cache_miss_likely(old_format, surface_info[i].address, surface_info[i].pitch * surface_info[i].height);
+		}
+
 		if (std::get<0>(m_rtts.m_bound_render_targets[i]))
 		{
 			__glcheck draw_fbo.color[i] = *std::get<1>(m_rtts.m_bound_render_targets[i]);
