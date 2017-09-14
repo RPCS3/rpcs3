@@ -394,62 +394,64 @@ namespace rsx
 		// Deferred calls are used to batch draws together
 		u32 deferred_primitive_type = 0;
 		u32 deferred_call_size = 0;
+		std::vector<u32> deferred_stack;
 		bool has_deferred_call = false;
 
 		auto flush_command_queue = [&]()
 		{
-			//TODO: Split first-count pairs if not consecutive
-			bool split_command = false;
-			std::vector <std::pair<u32, u32>> split_ranges;
-			auto first_count_cmds = method_registers.current_draw_clause.first_count_commands;
+			const auto num_draws = method_registers.current_draw_clause.first_count_commands.size();
+			bool emit_begin = false;
+			bool emit_end = true;
 
-			if (method_registers.current_draw_clause.first_count_commands.size() > 1 &&
-				method_registers.current_draw_clause.is_disjoint_primitive)
+			if (num_draws > 1)
 			{
-				u32 next = method_registers.current_draw_clause.first_count_commands.front().first;
-				u32 last_head = 0;
+				auto& first_counts = method_registers.current_draw_clause.first_count_commands;
+				deferred_stack.resize(0);
 
-				for (int n = 0; n < first_count_cmds.size(); ++n)
+				u32 last = first_counts.front().first;
+				u32 last_index = 0;
+
+				for (size_t draw = 0; draw < num_draws; draw++)
 				{
-					const auto &v = first_count_cmds[n];
-					if (v.first != next)
+					if (first_counts[draw].first != last)
 					{
-						split_command = true;
-						split_ranges.push_back(std::make_pair(last_head, n));
-						last_head = n + 1;
+						//Disjoint
+						deferred_stack.push_back(draw);
 					}
 
-					next = v.first + v.second;
+					last = first_counts[draw].first + first_counts[draw].second;
 				}
 
-				if (split_command)
-					split_ranges.push_back(std::make_pair(last_head, first_count_cmds.size() - 1));
-			}
-
-			if (!split_command)
-			{
-				methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
-			}
-			else
-			{
-				std::vector<std::pair<u32, u32>> tmp;
-				auto list_head = first_count_cmds.begin();
-				bool emit_begin = false;
-
-				for (auto &range : split_ranges)
+				if (deferred_stack.size() > 0)
 				{
-					tmp.resize(range.second - range.first + 1);
-					std::copy(list_head + range.first, list_head + range.second, tmp.begin());
+					//TODO: Verify this works correctly
+					LOG_ERROR(RSX, "Disjoint draw range detected");
 
-					if (emit_begin)
-						methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
-					else
-						emit_begin = true;
+					deferred_stack.push_back(num_draws - 1); //Append last pair
+					std::vector<std::pair<u32, u32>> temp_range = first_counts;
 
-					method_registers.current_draw_clause.first_count_commands = tmp;
-					methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
+					u32 last_index = 0;
+
+					for (const u32 draw : deferred_stack)
+					{
+						first_counts.resize(draw - last_index);
+						std::copy(temp_range.begin() + last_index, temp_range.begin() + draw, first_counts.begin());
+
+						if (emit_begin)
+							methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
+						else
+							emit_begin = true;
+
+						methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
+						last_index = draw;
+					}
+
+					emit_end = false;
 				}
 			}
+
+			if (emit_end)
+				methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
 
 			deferred_primitive_type = 0;
 			deferred_call_size = 0;
@@ -577,7 +579,7 @@ namespace rsx
 
 							deferred_call_size++;
 
-							if (method_registers.current_draw_clause.is_disjoint_primitive)
+							if (!method_registers.current_draw_clause.is_disjoint_primitive)
 							{
 								// Combine all calls since the last one
 								auto &first_count = method_registers.current_draw_clause.first_count_commands;
