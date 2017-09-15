@@ -23,9 +23,9 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 	version = version.substr(0 , version.find_last_of("-"));
 
 	//Add branch to version on frame , unless it's master.
-	if (rpcs3::branch != "master")
+	if (rpcs3::get_branch() != "master")
 	{
-		version = version + "-" + rpcs3::branch;
+		version = version + "-" + rpcs3::get_branch();
 	}
 
 	m_windowTitle += qstr(" | " + version);
