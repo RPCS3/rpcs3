@@ -1247,7 +1247,7 @@ namespace vk
 
 			VkSurfaceKHR surface;
 			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface));
-#elif __linux__
+#elif HAVE_VULKAN
 		
 		vk::swap_chain* createSwapChain(Display *display, Window window, vk::physical_device &dev)
 		{

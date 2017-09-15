@@ -20,7 +20,7 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 ## Dependencies
 
 ### Windows
-* [Visual Studio 2015](https://www.visualstudio.com/en-us/downloads/download-visual-studio-vs.aspx)
+* [Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/)
 * [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
 * [Cmake 3.1.0+](https://www.cmake.org/download/) (required; add to PATH)
 * [Python 3.3+](https://www.python.org/downloads/) (required; add to PATH)
@@ -76,20 +76,23 @@ When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop no
 
 ## CMake Build Options (Linux & Mac OS)
 
-- ```-DUSE_SYSTEM_LIBPNG=ON/OFF``` (default = *OFF*) </br>
+- ```-DUSE_SYSTEM_LIBPNG=ON/OFF``` (default = *OFF*)  
 Build against the shared libpng instead of using the builtin one. libpng 1.6+ highly recommended. Try this option if you get version conflict errors or only see black game icons.
 
-- ```-DUSE_SYSTEM_FFMPEG=ON/OFF``` (default = *OFF*) </br>
+- ```-DUSE_SYSTEM_FFMPEG=ON/OFF``` (default = *OFF*)  
 Build against the shared ffmpeg libraries instead of using the builtin patched version. Try this if the builtin version breaks the OpenGL renderer for you.
 
-- ```-DUSE_SHARED_LLVM_LIBS=ON/OFF``` (default = *OFF*) </br>
+- ```-DUSE_SHARED_LLVM_LIBS=ON/OFF``` (default = *OFF*)  
 This builds against the shared LLVM libs, rather than the static ones. This may interfere with Mesa and render RPCS3 non-functional. Only recommended on gentoo.
 
-- ```-DWITHOUT_LLVM=ON/OFF``` (default = *OFF*) </br>
+- ```-DWITHOUT_LLVM=ON/OFF``` (default = *OFF*)  
 This forces RPCS3 to build without LLVM, not recommended.
 
-- ```-DWITH_GDB=ON/OFF``` (default = *OFF*) </br>
-This Builds RPCS3 with support for debugging PS3 games using gdb."
+- ```-DWITH_GDB=ON/OFF``` (default = *OFF*)  
+This Builds RPCS3 with support for debugging PS3 games using gdb.
+
+- ```-DUSE_VULKAN=ON/OFF``` (default = *ON*)  
+This builds RPCS3 with Vulkan support.
 
 ## License
 
