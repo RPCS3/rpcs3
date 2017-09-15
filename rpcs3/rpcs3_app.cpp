@@ -33,7 +33,6 @@
 
 #include "pad_thread.h"
 
-
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
 #include "Emu/Audio/Null/NullAudioThread.h"
@@ -292,6 +291,12 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 			"QLabel#toolbar_icon_color { color: rgba(%1, %2, %3, %4); }")
 			.arg(tic.red()).arg(tic.green()).arg(tic.blue()).arg(tic.alpha());
 
+		// thumbnail icon color stylesheet
+		QColor thic = GUI::mw_thumb_icon_color;
+		QString style_thumbnail_icons = QString(
+			"QLabel#thumbnail_icon_color { color: rgba(%1, %2, %3, %4); }")
+			.arg(thic.red()).arg(thic.green()).arg(thic.blue()).arg(thic.alpha());
+
 		// gamelist toolbar stylesheet
 		QColor gltic = GUI::gl_tool_icon_color;
 		QString style_gamelist_toolbar = QString(
@@ -311,7 +316,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 			"QLabel#l_controller { color: #434343; }"
 			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }");
 
-		setStyleSheet(style_toolbar + style_toolbar_icons + style_gamelist_toolbar + style_gamelist_icons  + style_rest);
+		setStyleSheet(style_toolbar + style_toolbar_icons + style_thumbnail_icons + style_gamelist_toolbar + style_gamelist_icons  + style_rest);
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{

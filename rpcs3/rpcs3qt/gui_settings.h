@@ -84,10 +84,11 @@ namespace GUI
 	const QString fs          = "FileSystem";
 	const QString gs_frame    = "GSFrame";
 
-	const QColor mw_tool_bar_color  = QColor(227, 227, 227, 255);
-	const QColor mw_tool_icon_color = QColor(64, 64, 64, 255);
-	const QColor gl_icon_color      = QColor(209, 209, 209, 255);
-	const QColor gl_tool_icon_color = QColor(0, 100, 231, 255);
+	const QColor mw_tool_bar_color   = QColor(227, 227, 227, 255);
+	const QColor mw_tool_icon_color  = QColor(64, 64, 64, 255);
+	const QColor mw_thumb_icon_color = QColor(0, 100, 231, 255);
+	const QColor gl_icon_color       = QColor(209, 209, 209, 255);
+	const QColor gl_tool_icon_color  = QColor(0, 100, 231, 255);
 
 	const GUI_SAVE rg_freeze  = GUI_SAVE(main_window, "recentGamesFrozen", false);
 	const GUI_SAVE rg_entries = GUI_SAVE(main_window, "recentGamesNames", QVariant::fromValue(q_pair_list()));
