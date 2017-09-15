@@ -491,7 +491,7 @@ namespace vm
 			fmt::throw_exception("Invalid memory location (%u)" HERE, (uint)location);
 		}
 
-		return block->alloc(size, align, sup);
+		return block->alloc(size, align, nullptr, sup);
 	}
 
 	u32 falloc(u32 addr, u32 size, memory_location_t location, u32 sup)
@@ -503,7 +503,7 @@ namespace vm
 			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, (uint)location, addr);
 		}
 
-		return block->falloc(addr, size, sup);
+		return block->falloc(addr, size, nullptr, sup);
 	}
 
 	u32 dealloc(u32 addr, memory_location_t location, u32* sup_out)
@@ -515,7 +515,7 @@ namespace vm
 			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, (uint)location, addr);
 		}
 
-		return block->dealloc(addr, sup_out);
+		return block->dealloc(addr, nullptr, sup_out);
 	}
 
 	void dealloc_verbose_nothrow(u32 addr, memory_location_t location) noexcept
@@ -576,12 +576,12 @@ namespace vm
 		}
 	}
 
-	u32 block_t::alloc(u32 size, u32 align, u32 sup)
+	u32 block_t::alloc(const u32 orig_size, u32 align, const uchar* data, u32 sup)
 	{
 		writer_lock lock;
 
 		// Align to minimal page size
-		size = ::align(size, 4096);
+		const u32 size = ::align(orig_size, 4096);
 
 		// Check alignment (it's page allocation, so passing small values there is just silly)
 		if (align < 4096 || align != (0x80000000u >> cntlz32(align, true)))
@@ -611,6 +611,11 @@ namespace vm
 		{
 			if (try_alloc(addr, size, pflags, sup))
 			{
+				if (data)
+				{
+					std::memcpy(vm::base(addr), data, orig_size);
+				}
+
 				return addr;
 			}
 		}
@@ -618,19 +623,21 @@ namespace vm
 		return 0;
 	}
 
-	u32 block_t::falloc(u32 addr, u32 size, u32 sup)
+	u32 block_t::falloc(u32 addr, const u32 orig_size, const uchar* data, u32 sup)
 	{
 		writer_lock lock;
 
 		// align to minimal page size
-		size = ::align(size, 4096);
+		const u32 size = ::align(orig_size, 4096);
 
 		// return if addr or size is invalid
 		if (!size || size > this->size || addr < this->addr || addr + size - 1 > this->addr + this->size - 1)
 		{
 			return 0;
 		}
+
 		u8 pflags = page_readable | page_writable;
+
 		if ((flags & SYS_MEMORY_PAGE_SIZE_1M) == SYS_MEMORY_PAGE_SIZE_1M)
 		{
 			pflags |= page_1m_size;
@@ -645,10 +652,15 @@ namespace vm
 			return 0;
 		}
 
+		if (data)
+		{
+			std::memcpy(vm::base(addr), data, orig_size);
+		}
+
 		return addr;
 	}
 
-	u32 block_t::dealloc(u32 addr, u32* sup_out)
+	u32 block_t::dealloc(u32 addr, uchar* data_out, u32* sup_out)
 	{
 		writer_lock lock;
 
@@ -661,6 +673,11 @@ namespace vm
 
 			// Remove entry
 			m_map.erase(found);
+
+			if (data_out)
+			{
+				std::memcpy(data_out, vm::base(addr), size);
+			}
 
 			// Unmap "real" memory pages
 			_page_unmap(addr, size);

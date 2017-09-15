@@ -140,15 +140,17 @@ else()
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /DYNAMICBASE:NO /BASE:0x10000 /FIXED")
 endif()
 
+set(ADDITIONAL_LIBS "")
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	#on some Linux distros shm_unlink and similar functions are in librt only
-	set(ADDITIONAL_LIBS "rt" "X11")
+	set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "rt")
 elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
 	#it seems like glibc includes the iconv functions we use but other libc
 	#implementations like the one on OSX don't seem implement them
-	set(ADDITIONAL_LIBS "iconv")
-else()
-	set(ADDITIONAL_LIBS "")
+	set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "iconv")
+endif()
+if(UNIX AND NOT APPLE)
+	set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "X11")
 endif()
 
 if(NOT RPCS3_SRC_DIR)
@@ -176,6 +178,7 @@ else()
 	option(USE_ALSA "ALSA audio backend" ON)
   option(USE_PULSE "PulseAudio audio backend" ON)
 	option(USE_LIBEVDEV "libevdev-based joystick support" ON)
+	option(USE_VULKAN "Vulkan render backend" ON)
 endif()
 
 if(USE_ALSA)
@@ -203,6 +206,15 @@ if(USE_LIBEVDEV)
 		add_definitions(-DHAVE_LIBEVDEV)
 		include_directories(SYSTEM ${LIBEVDEV_INCLUDE_DIRS})
 		list(APPEND ADDITIONAL_LIBS ${LIBEVDEV_LDFLAGS})
+	endif()
+endif()
+if(NOT WIN32 AND USE_VULKAN)
+	find_package(Vulkan)
+	if(VULKAN_FOUND)
+		add_definitions(-DHAVE_VULKAN)
+		list(APPEND ADDITIONAL_LIBS ${VULKAN_LIBRARY})
+	else()
+		message("WARNING! USE_VULKAN was enabled, but libvulkan was not found. RPCS3 will be compiled without Vulkan support.")
 	endif()
 endif()
 
@@ -304,7 +316,7 @@ RPCS3_SRC
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit/*.cpp"
 )
 
-if (NOT WIN32 AND "${CMAKE_SYSTEM}" MATCHES "Linux")
+if (NOT WIN32 AND VULKAN_FOUND)
 # Compile glslang and SPIRV modules needed for glsl compilation
 	file(
 	GLOB_RECURSE
@@ -322,8 +334,7 @@ endif()
 
 #File exclusion section
 
-#Ignore vulkan if not on windows or linux
-if(NOT WIN32 AND NOT "${CMAKE_SYSTEM}" MATCHES "Linux")
+if(NOT WIN32 AND NOT VULKAN_FOUND)
 	set (EXCLUDE_FILES "/RSX/VK/")
 endif()
 
@@ -366,9 +377,12 @@ else()
 	if(APPLE)
 		target_link_libraries(rpcs3 hidapi-mac "-framework CoreFoundation" "-framework IOKit")
 	elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-		target_link_libraries(rpcs3 hidapi-hidraw udev vulkan)
+		target_link_libraries(rpcs3 hidapi-hidraw udev)
 	else()
 		target_link_libraries(rpcs3 hidapi-libusb usb)
+	endif()
+	if(VULKAN_FOUND)
+		target_link_libraries(rpcs3 ${VULKAN_LIBRARIES})
 	endif()
 	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} -lpthread ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
 	if (USE_SYSTEM_FFMPEG)
@@ -396,6 +410,31 @@ endif()
 target_link_libraries(rpcs3 ${RPCS3_QT_LIBS})
 
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
+
+if (MSVC)
+  # Under Windows, some QT DLLs need to be in the same directory of the compiled
+  # RPCS3 binary, so copy them from the local QT installation at the end of the
+  # build
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    # debug build uses different DDLs files
+    set (RUNTIME_DLLS
+      $ENV{QTDIR}/bin/Qt5Cored.dll
+      $ENV{QTDIR}/bin/Qt5Guid.dll
+      $ENV{QTDIR}/bin/Qt5Widgetsd.dll
+      $ENV{QTDIR}/bin/Qt5WinExtrasd.dll
+      )
+  else()
+    set (RUNTIME_DLLS
+      $ENV{QTDIR}/bin/Qt5Core.dll
+      $ENV{QTDIR}/bin/Qt5Gui.dll
+      $ENV{QTDIR}/bin/Qt5Widgets.dll
+      $ENV{QTDIR}/bin/Qt5WinExtras.dll
+      )
+  endif()
+  add_custom_command(TARGET rpcs3 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${RUNTIME_DLLS} ${CMAKE_BINARY_DIR}/bin
+    )
+endif()
 
 cotire(rpcs3)
 

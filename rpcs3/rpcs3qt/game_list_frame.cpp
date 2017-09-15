@@ -24,6 +24,7 @@
 #include <QUrl>
 #include <QLabel>
 #include <QMimeData>
+#include <QScrollBar>
 
 static const std::string m_class_name = "GameViewer";
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
@@ -473,6 +474,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 	if (m_isListLayout)
 	{
+		int scroll_position = m_gameList->verticalScrollBar()->value();
 		FilterData();
 		int row = PopulateGameList();
 		m_gameList->selectRow(row);
@@ -481,6 +483,10 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		if (scrollAfter)
 		{
 			m_gameList->scrollTo(m_gameList->currentIndex(), QAbstractItemView::PositionAtCenter);
+		}
+		else
+		{
+			m_gameList->verticalScrollBar()->setValue(std::min(m_gameList->verticalScrollBar()->maximum(), scroll_position));
 		}
 	}
 	else
@@ -494,6 +500,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			m_games_per_row = 0;
 		}
 
+		int scroll_position = m_xgrid->verticalScrollBar()->value();
 		PopulateGameGrid(m_games_per_row, m_Icon_Size, m_Icon_Color);
 		connect(m_xgrid, &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
 		connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
@@ -503,6 +510,10 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		if (scrollAfter)
 		{
 			m_xgrid->scrollTo(m_xgrid->currentIndex());
+		}
+		else
+		{
+			m_xgrid->verticalScrollBar()->setValue(std::min(m_xgrid->verticalScrollBar()->maximum(), scroll_position));
 		}
 	}
 }
@@ -649,8 +660,12 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	});
 	connect(configure, &QAction::triggered, [=]
 	{
-		settings_dialog (xgui_settings, m_Render_Creator, 0, this, &currGame).exec();
-		Refresh(true, false);
+		settings_dialog dlg(xgui_settings, m_Render_Creator, 0, this, &currGame);
+		connect(&dlg, &QDialog::accepted, [this]
+		{
+			Refresh(true, false);
+		});
+		dlg.exec();
 	});
 	connect(removeGame, &QAction::triggered, [=]
 	{
@@ -661,11 +676,23 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 			Refresh();
 		}
 	});
-
-	connect(removeConfig, &QAction::triggered, [=]() {RemoveCustomConfiguration(row); Refresh(true, false); });
-	connect(deleteShadersCache, &QAction::triggered, [=]() { DeleteShadersCache(row); });
-	connect(openGameFolder, &QAction::triggered, [=]() {open_dir(currGame.path); });
-	connect(openConfig, &QAction::triggered, [=]() {open_dir(fs::get_config_dir() + "data/" + currGame.serial); });
+	connect(removeConfig, &QAction::triggered, [=]()
+	{
+		RemoveCustomConfiguration(row);
+		Refresh(true, false);
+	});
+	connect(deleteShadersCache, &QAction::triggered, [=]()
+	{
+		DeleteShadersCache(row);
+	});
+	connect(openGameFolder, &QAction::triggered, [=]()
+	{
+		open_dir(currGame.path);
+	});
+	connect(openConfig, &QAction::triggered, [=]()
+	{
+		open_dir(fs::get_config_dir() + "data/" + currGame.serial);
+	});
 	connect(checkCompat, &QAction::triggered, [=]
 	{
 		QString link = "https://rpcs3.net/compatibility?g=" + qstr(currGame.serial);
@@ -886,23 +913,28 @@ void game_list_frame::RepaintToolBarIcons()
 		newColor = GUI::get_Label_Color("gamelist_toolbar_icon_color");
 	}
 
-	m_catActHDD.colored = gui_settings::colorizedIcon(QIcon(":/Icons/hdd_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActDisc.colored = gui_settings::colorizedIcon(QIcon(":/Icons/disc_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActHome.colored = gui_settings::colorizedIcon(QIcon(":/Icons/home_blue.png"), GUI::gl_tool_icon_color, newColor);
-	m_catActAudioVideo.colored = gui_settings::colorizedIcon(QIcon(":/Icons/media_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActGameData.colored = gui_settings::colorizedIcon(QIcon(":/Icons/data_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActUnknown.colored = gui_settings::colorizedIcon(QIcon(":/Icons/unknown_blue.png"), GUI::gl_tool_icon_color, newColor, true);
-	m_catActOther.colored = gui_settings::colorizedIcon(QIcon(":/Icons/other_blue.png"), GUI::gl_tool_icon_color, newColor);
+	auto icon = [&newColor](const QString& path, bool mask = false)
+	{
+		return gui_settings::colorizedIcon(QIcon(path), GUI::gl_tool_icon_color, newColor, mask);
+	};
+
+	m_catActHDD.colored        = icon(":/Icons/hdd_blue.png", true);
+	m_catActDisc.colored       = icon(":/Icons/disc_blue.png", true);
+	m_catActHome.colored       = icon(":/Icons/home_blue.png");
+	m_catActAudioVideo.colored = icon(":/Icons/media_blue.png", true);
+	m_catActGameData.colored   = icon(":/Icons/data_blue.png", true);
+	m_catActUnknown.colored    = icon(":/Icons/unknown_blue.png", true);
+	m_catActOther.colored      = icon(":/Icons/other_blue.png");
 
 	for (const auto& butt : m_categoryButtons)
 	{
 		butt->action->setIcon(butt->isActive ? butt->colored : butt->gray);
 	}
 
-	m_modeActList.colored = gui_settings::colorizedIcon(QIcon(":/Icons/list_blue.png"), GUI::gl_tool_icon_color, newColor);
+	m_modeActList.colored = icon(":/Icons/list_blue.png");
 	m_modeActList.action->setIcon(m_isListLayout ? m_modeActList.colored : m_modeActList.gray);
 
-	m_modeActGrid.colored = gui_settings::colorizedIcon(QIcon(":/Icons/grid_blue.png"), GUI::gl_tool_icon_color, newColor);
+	m_modeActGrid.colored = icon(":/Icons/grid_blue.png");
 	m_modeActGrid.action->setIcon(m_isListLayout ? m_modeActGrid.gray : m_modeActGrid.colored);
 
 	m_Slider_Size->setStyleSheet(m_Slider_Size->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
