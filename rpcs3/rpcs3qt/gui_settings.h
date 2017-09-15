@@ -195,6 +195,7 @@ public:
 	*/
 	static QIcon colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks = false, bool colorizeAll = false);
 	static QPixmap colorizedPixmap(const QPixmap& old_pixmap, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks = false, bool colorizeAll = false);
+	static QImage GetOpaqueImageArea(const QString& path);
 
 public Q_SLOTS:
 	void Reset(bool removeMeta = false);
