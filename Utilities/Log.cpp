@@ -290,11 +290,11 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 [[noreturn]] extern void catch_all_exceptions();
 
 logs::file_writer::file_writer(const std::string& name)
-	: m_name(fs::get_config_dir() + name)
+	: m_name(name)
 {
 	try
 	{
-		if (!m_file.open(m_name, fs::read + fs::write + fs::create + fs::trunc + fs::unshare))
+		if (!m_file.open(fs::get_config_dir() + name, fs::read + fs::write + fs::create + fs::trunc + fs::unshare))
 		{
 			fmt::throw_exception("Can't create file %s (error %s)", name, fs::g_tls_error);
 		}
@@ -307,11 +307,13 @@ logs::file_writer::file_writer(const std::string& name)
 		m_fptr = (uchar*)::mmap(0, s_log_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_file.get_handle(), 0);
 #endif
 
-		verify(m_name.c_str()), m_fptr;
+		verify(name.c_str()), m_fptr;
 		std::memset(m_fptr, '\n', s_log_size);
 
 		// Rotate backups (TODO)
-		fs::rename(m_name + ".gz", m_name + "1.gz", true);
+		fs::remove_file(fs::get_config_dir() + name + "1.gz");
+		fs::create_dir(fs::get_config_dir() + "old_logs");
+		fs::rename(fs::get_config_dir() + m_name + ".gz", fs::get_config_dir() + "old_logs/" + m_name + ".gz", true);
 	}
 	catch (...)
 	{
@@ -338,7 +340,7 @@ logs::file_writer::~file_writer()
 
 		if (deflate(&zs, Z_FINISH) != Z_STREAM_ERROR)
 		{
-			fs::file(m_name + ".gz", fs::rewrite).write(buf.get(), zs.total_out);
+			fs::file(fs::get_config_dir() + m_name + ".gz", fs::rewrite).write(buf.get(), zs.total_out);
 		}
 
 		if (deflateEnd(&zs) != Z_OK)
