@@ -77,6 +77,30 @@ namespace logs
 		void log(logs::level sev, const char* text, std::size_t size);
 	};
 
+	struct channel_info
+	{
+		channel* pointer = nullptr;
+		level enabled = level::notice;
+
+		void set_level(level value)
+		{
+			enabled = value;
+
+			if (pointer)
+			{
+				pointer->enabled = value;
+			}
+		}
+	};
+
+	struct stored_message
+	{
+		message m;
+		u64 stamp;
+		std::string prefix;
+		std::string text;
+	};
+
 	struct file_listener : public file_writer, public listener
 	{
 		file_listener(const std::string& name);
@@ -85,6 +109,12 @@ namespace logs
 
 		// Encode level, current thread name, channel name and write log message
 		virtual void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override;
+
+		// Channel registry
+		std::unordered_map<std::string, channel_info> channels;
+
+		// Messages for delayed listener initialization
+		std::vector<stored_message> messages;
 	};
 
 	static file_listener* get_logger()
@@ -136,38 +166,8 @@ namespace logs
 	channel SPU("SPU");
 	channel ARMv7("ARMv7");
 
-	struct channel_info
-	{
-		channel* pointer = nullptr;
-		level enabled = level::notice;
-
-		void set_level(level value)
-		{
-			enabled = value;
-
-			if (pointer)
-			{
-				pointer->enabled = value;
-			}
-		}
-	};
-
-	struct stored_message
-	{
-		message m;
-		u64 stamp;
-		std::string prefix;
-		std::string text;
-	};
-
 	// Channel registry mutex
 	semaphore<> g_mutex;
-
-	// Channel registry
-	std::unordered_map<std::string, channel_info> g_channels;
-
-	// Messages for delayed listener initialization
-	std::vector<stored_message> g_messages;
 
 	// Must be set to true in main()
 	atomic_t<bool> g_init{false};
@@ -176,7 +176,7 @@ namespace logs
 	{
 		semaphore_lock lock(g_mutex);
 
-		for (auto&& pair : g_channels)
+		for (auto&& pair : get_logger()->channels)
 		{
 			pair.second.set_level(level::notice);
 		}
@@ -186,7 +186,7 @@ namespace logs
 	{
 		semaphore_lock lock(g_mutex);
 
-		g_channels[ch_name].set_level(value);
+		get_logger()->channels[ch_name].set_level(value);
 	}
 
 	// Must be called in main() to stop accumulating messages in g_messages
@@ -195,7 +195,7 @@ namespace logs
 		if (!g_init)
 		{
 			semaphore_lock lock(g_mutex);
-			g_messages.clear();
+			get_logger()->messages.clear();
 			g_init = true;
 		}
 	}
@@ -219,7 +219,7 @@ void logs::listener::add(logs::listener* _new)
 	}
 
 	// Send initial messages
-	for (const auto& msg : g_messages)
+	for (const auto& msg : get_logger()->messages)
 	{
 		_new->log(msg.stamp, msg.m, msg.prefix, msg.text);
 	}
@@ -235,7 +235,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 	{
 		semaphore_lock lock(g_mutex);
 
-		auto& info = g_channels[ch->name];
+		auto& info = get_logger()->channels[ch->name];
 
 		if (info.pointer && info.pointer != ch)
 		{
@@ -275,7 +275,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 			}
 
 			// Store message additionally
-			g_messages.emplace_back(stored_message{*this, stamp, std::move(prefix), text});
+			get_logger()->messages.emplace_back(stored_message{*this, stamp, std::move(prefix), text});
 		}
 	}
 
@@ -400,7 +400,7 @@ logs::file_listener::file_listener(const std::string& name)
 
 	file_writer::log(logs::level::always, ver.text.data(), ver.text.size());
 	file_writer::log(logs::level::always, "\n", 1);
-	g_messages.emplace_back(std::move(ver));
+	messages.emplace_back(std::move(ver));
 }
 
 void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::string& prefix, const std::string& _text)
