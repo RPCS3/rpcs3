@@ -152,7 +152,7 @@ s32 cellVideoOutSetCopyControl(u32 videoOut, u32 control)
 
 DECLARE(ppu_module_manager::cellAvconfExt)("cellSysutilAvconfExt", []()
 {
-	REG_VNID(cellSysutilAvconfExt, 0x00000000u, g_gamma).init = []
+	REG_VAR(cellSysutilAvconfExt, g_gamma).flag(MFF_HIDDEN).init = []
 	{
 		// Test
 		*g_gamma = 1.0f;

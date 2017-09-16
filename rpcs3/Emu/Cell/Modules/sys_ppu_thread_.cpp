@@ -266,12 +266,12 @@ error_code sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih)
 void sysPrxForUser_sys_ppu_thread_init()
 {
 	// Private
-	REG_VNID(sysPrxForUser, 0x00000000u, g_ppu_atexit_lwm);
-	REG_VNID(sysPrxForUser, 0x00000001u, g_ppu_once_mutex);
-	REG_VNID(sysPrxForUser, 0x00000002u, g_ppu_atexit);
-	REG_VNID(sysPrxForUser, 0x00000003u, g_ppu_prx_lwm);
+	REG_VAR(sysPrxForUser, g_ppu_atexit_lwm).flag(MFF_HIDDEN);
+	REG_VAR(sysPrxForUser, g_ppu_once_mutex).flag(MFF_HIDDEN);
+	REG_VAR(sysPrxForUser, g_ppu_atexit).flag(MFF_HIDDEN);
+	REG_VAR(sysPrxForUser, g_ppu_prx_lwm).flag(MFF_HIDDEN);
 
-	REG_FUNC(sysPrxForUser, sys_initialize_tls);
+	REG_FUNC(sysPrxForUser, sys_initialize_tls).args = {"main_thread_id", "tls_seg_addr", "tls_seg_size", "tls_mem_size"}; // Test
 	REG_FUNC(sysPrxForUser, sys_ppu_thread_create);
 	REG_FUNC(sysPrxForUser, sys_ppu_thread_get_id);
 	REG_FUNC(sysPrxForUser, sys_ppu_thread_exit);

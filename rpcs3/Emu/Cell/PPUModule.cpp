@@ -327,7 +327,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 			// Allocate HLE variable
 			if (variable.second.size >= 4096 || variable.second.align >= 4096)
 			{
-				variable.second.var->set(vm::alloc(variable.second.size, vm::main, std::max<u32>(variable.second.align, 4096)));
+				variable.second.addr = vm::alloc(variable.second.size, vm::main, std::max<u32>(variable.second.align, 4096));
 			}
 			else
 			{
@@ -343,8 +343,13 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 					alloc_addr = next;
 				}
 
-				variable.second.var->set(alloc_addr);
+				variable.second.addr = alloc_addr;
 				alloc_addr += variable.second.size;
+			}
+
+			if (variable.second.var)
+			{
+				variable.second.var->set(variable.second.addr);
 			}
 
 			LOG_TRACE(LOADER, "Allocated HLE variable %s.%s at 0x%x", module->name, variable.second.name, variable.second.var->addr());
@@ -355,10 +360,13 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 				variable.second.init();
 			}
 
-			auto& vlink = linkage.variables[variable.first];
-			
-			vlink.hle = true;
-			vlink.export_addr = variable.second.var->addr();
+			if ((variable.second.flags & MFF_HIDDEN) == 0)
+			{
+				auto& vlink = linkage.variables[variable.first];
+
+				vlink.hle = true;
+				vlink.export_addr = variable.second.var->addr();
+			}
 		}
 	}
 }

@@ -27,7 +27,7 @@ constexpr u32 ppu_generate_id(u32 id)
 }
 
 // Flags set with REG_FUNC
-enum ppu_static_function_flags : u32
+enum ppu_static_module_flags : u32
 {
 	MFF_FORCED_HLE = (1 << 0), // Always call HLE function
 	MFF_PERFECT    = (1 << 1), // Indicates complete implementation and LLE interchangeability
@@ -40,6 +40,14 @@ struct ppu_static_function
 	const char* name;
 	u32 index; // Index for ppu_function_manager
 	u32 flags;
+	const char* type;
+	std::vector<const char*> args; // Arg names
+
+	ppu_static_function& flag(ppu_static_module_flags value)
+	{
+		flags |= value;
+		return *this;
+	}
 };
 
 // HLE variable information
@@ -50,6 +58,15 @@ struct ppu_static_variable
 	void(*init)(); // Variable initialization function
 	u32 size;
 	u32 align;
+	const char* type;
+	u32 flags;
+	u32 addr;
+
+	ppu_static_variable& flag(ppu_static_module_flags value)
+	{
+		flags |= value;
+		return *this;
+	}
 };
 
 // HLE module information
@@ -103,6 +120,7 @@ public:
 		info.name  = name;
 		info.index = ppu_function_manager::register_function<T, Func>(func);
 		info.flags = 0;
+		info.type  = typeid(T).name();
 
 		return info;
 	}
@@ -119,6 +137,9 @@ public:
 		info.init  = [] {};
 		info.size  = SIZE_32(typename T::type);
 		info.align = ALIGN_32(typename T::type);
+		info.type  = typeid(T).name();
+		info.flags = 0;
+		info.addr  = 0;
 
 		return info;
 	}
