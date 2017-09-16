@@ -396,7 +396,7 @@ logs::file_listener::file_listener(const std::string& name)
 	ver.m.ch  = nullptr;
 	ver.m.sev = level::always;
 	ver.stamp = 0;
-	ver.text = fmt::format("RPCS3 v%s\nBranch: %s\n%s\n", rpcs3::version.to_string(), rpcs3::get_branch(), utils::get_system_info());
+	ver.text = fmt::format("RPCS3 v%s | %s\n%s\n", rpcs3::version.to_string(), rpcs3::get_branch(), utils::get_system_info());
 
 	file_writer::log(logs::level::always, ver.text.data(), ver.text.size());
 	file_writer::log(logs::level::always, "\n", 1);
