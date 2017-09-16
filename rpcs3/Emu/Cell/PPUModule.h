@@ -3,6 +3,7 @@
 #include "PPUFunction.h"
 #include "PPUCallback.h"
 #include "ErrorCodes.h"
+#include <typeinfo>
 
 // Helper function
 constexpr const char* ppu_select_name(const char* name, u32 id)

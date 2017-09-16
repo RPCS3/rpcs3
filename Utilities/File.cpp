@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cerrno>
+#include <typeinfo>
 
 using namespace std::literals::string_literals;
 

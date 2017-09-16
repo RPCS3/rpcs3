@@ -4,6 +4,7 @@
 #include "CPUThread.h"
 #include "Emu/IdManager.h"
 #include "Utilities/GDBDebugServer.h"
+#include <typeinfo>
 
 #ifdef _WIN32
 #include <Windows.h>

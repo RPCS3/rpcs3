@@ -24,6 +24,7 @@
 #include "yaml-cpp/yaml.h"
 
 #include <thread>
+#include <typeinfo>
 
 #include "Utilities/GDBDebugServer.h"
 

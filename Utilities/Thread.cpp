@@ -4,6 +4,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Thread.h"
+#include <typeinfo>
 
 #ifdef _WIN32
 #include <Windows.h>
