@@ -76,11 +76,11 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_process_kill),                            //19  (0x013)
 	null_func,                                              //20  (0x014)  UNS
 	null_func,//BIND_FUNC(_sys_process_spawn),              //21  (0x015)  DBG
-	null_func,//BIND_FUNC(sys_process_exit),                //22  (0x016)
+	BIND_FUNC(_sys_process_exit),                           //22  (0x016)
 	BIND_FUNC(sys_process_wait_for_child2),                 //23  (0x017)  DBG
 	null_func,//BIND_FUNC(),                                //24  (0x018)  DBG
 	BIND_FUNC(sys_process_get_sdk_version),                 //25  (0x019)
-	null_func,//BIND_FUNC(_sys_process_exit),               //26  (0x01A)
+	BIND_FUNC(_sys_process_exit2),                          //26  (0x01A)
 	null_func,//BIND_FUNC(),                                //27  (0x01B)  DBG
 	null_func,//BIND_FUNC(_sys_process_get_number_of_object)//28  (0x01C)  ROOT
 	BIND_FUNC(sys_process_get_id),                          //29  (0x01D)  ROOT

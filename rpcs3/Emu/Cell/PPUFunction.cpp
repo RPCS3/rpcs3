@@ -7,7 +7,6 @@ extern std::string ppu_get_syscall_name(u64 code)
 	{
 	case 1: return "sys_process_getpid";
 	case 2: return "sys_process_wait_for_child";
-	case 3: return "sys_process_exit";
 	case 4: return "sys_process_get_status";
 	case 5: return "sys_process_detach_child";
 	case 12: return "sys_process_get_number_of_object";
@@ -16,10 +15,10 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 18: return "sys_process_getppid";
 	case 19: return "sys_process_kill";
 	case 21: return "_sys_process_spawn";
-	case 22: return "sys_process_exit";
+	case 22: return "_sys_process_exit";
 	case 23: return "sys_process_wait_for_child2";
 	case 25: return "sys_process_get_sdk_version";
-	case 26: return "_sys_process_exit";
+	case 26: return "_sys_process_exit2";
 	case 28: return "_sys_process_get_number_of_object";
 	case 29: return "sys_process_get_id";
 	case 30: return "_sys_process_get_paramsfo";

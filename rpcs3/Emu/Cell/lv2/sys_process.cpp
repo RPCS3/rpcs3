@@ -46,23 +46,6 @@ s32 sys_process_getppid()
 	return 0;
 }
 
-s32 sys_process_exit(ppu_thread& ppu, s32 status)
-{
-	vm::temporary_unlock(ppu);
-
-	sys_process.warning("sys_process_exit(status=0x%x)", status);
-
-	Emu.CallAfter([]()
-	{
-		sys_process.success("Process finished");
-		Emu.Stop();
-	});
-
-	thread_ctrl::eternalize();
-
-	return CELL_OK;
-}
-
 template <typename T, typename Get>
 u32 idm_get_count()
 {

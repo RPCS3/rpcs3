@@ -21,6 +21,23 @@ s64 sys_time_get_system_time()
 	return get_system_time();
 }
 
+s32 sys_process_exit(ppu_thread& ppu, s32 status)
+{
+	vm::temporary_unlock(ppu);
+
+	sysPrxForUser.warning("sys_process_exit(status=0x%x)", status);
+
+	Emu.CallAfter([]()
+	{
+		sysPrxForUser.success("Process finished");
+		Emu.Stop();
+	});
+
+	thread_ctrl::eternalize();
+
+	return CELL_OK;
+}
+
 s64 _sys_process_atexitspawn()
 {
 	sysPrxForUser.todo("_sys_process_atexitspawn()");
@@ -236,7 +253,6 @@ DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 
 	REG_FUNC(sysPrxForUser, sys_time_get_system_time);
 
-	// TODO: split syscalls and liblv2 functions
 	REG_FUNC(sysPrxForUser, sys_process_exit);
 	REG_FUNC(sysPrxForUser, _sys_process_atexitspawn);
 	REG_FUNC(sysPrxForUser, _sys_process_at_Exitspawn);
