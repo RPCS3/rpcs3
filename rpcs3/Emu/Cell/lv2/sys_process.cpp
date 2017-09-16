@@ -232,3 +232,23 @@ s32 sys_process_detach_child(u64 unk)
 	sys_process.todo("sys_process_detach_child(unk=0x%llx)", unk);
 	return CELL_OK;
 }
+
+s32 _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_process.warning("_sys_process_exit(status=%d, arg2=0x%x, arg3=0x%x)", status);
+
+	Emu.CallAfter([]()
+	{
+		sys_process.success("Process finished");
+		Emu.Stop();
+	});
+
+	thread_ctrl::eternalize();
+}
+
+s32 _sys_process_exit2(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3, u32 arg4)
+{
+	fmt::throw_exception("_sys_process_exit2");
+}

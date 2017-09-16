@@ -25,7 +25,7 @@ s32 sys_process_exit(ppu_thread& ppu, s32 status)
 {
 	vm::temporary_unlock(ppu);
 
-	sysPrxForUser.warning("sys_process_exit(status=0x%x)", status);
+	sysPrxForUser.warning("sys_process_exit(status=%d)", status);
 
 	Emu.CallAfter([]()
 	{

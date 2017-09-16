@@ -1166,7 +1166,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 			if (info.name == "liblv2.sprx")
 			{
-				const be_t<u64> forced_upd = 1;
+				const be_t<u64> forced_upd = 2;
 				sha1_update(&ctx, reinterpret_cast<const u8*>(&forced_upd), sizeof(forced_upd));
 			}
 
