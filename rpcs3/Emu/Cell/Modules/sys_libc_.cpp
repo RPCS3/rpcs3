@@ -258,7 +258,7 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 	return dest;
 }
 
-s32 _sys_strncasecmp(vm::cptr<char> str1, vm::cptr<char> str2, s32 n)
+s32 _sys_strncasecmp(vm::cptr<char> str1, vm::cptr<char> str2, u32 n)
 {
 	sysPrxForUser.trace("_sys_strncasecmp(str1=%s, str2=%s, n=%d)", str1, str2, n);
 	
