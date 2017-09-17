@@ -297,18 +297,29 @@ vm::ptr<char> _sys_strcpy(vm::ptr<char> dst, vm::cptr<char> src)
 	}
 }
 
-vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
+vm::ptr<char> _sys_strncpy(vm::ptr<char> dst, vm::cptr<char> src, s32 len)
 {
-	sysPrxForUser.trace("_sys_strncpy(dest=*0x%x, source=%s, len=%d)", dest, source, len);
+	sysPrxForUser.trace("_sys_strncpy(dst=*0x%x %s, src=%s, len=%d)", dst, dst, src, len);
 
-	if (!dest || !source)
+	if (!dst || !src)
 	{
 		return vm::null;
 	}
 
-	verify(HERE), std::strncpy(dest.get_ptr(), source.get_ptr(), len) == dest.get_ptr();
+	for (s32 i = 0; i < len; i++)
+	{
+		if (!(dst[i] = src[i]))
+		{
+			for (++i; i < len; i++)
+			{
+				dst[i] = '\0';
+			}
 
-	return dest;
+			return dst;
+		}
+	}
+
+	return dst;
 }
 
 s32 _sys_strncasecmp(vm::cptr<char> str1, vm::cptr<char> str2, u32 n)
