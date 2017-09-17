@@ -275,13 +275,27 @@ vm::cptr<char> _sys_strchr(vm::cptr<char> str, char ch)
 	}
 }
 
-vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
+vm::ptr<char> _sys_strncat(vm::ptr<char> dst, vm::cptr<char> src, u32 max)
 {
-	sysPrxForUser.trace("_sys_strncat(dest=*0x%x, source=%s, len=%d)", dest, source, len);
+	sysPrxForUser.trace("_sys_strncat(dst=*0x%x %s, src=%s, max=%u)", dst, dst, src, max);
 
-	verify(HERE), std::strncat(dest.get_ptr(), source.get_ptr(), len) == dest.get_ptr();
+	auto str = dst;
 
-	return dest;
+	while (*str)
+	{
+		str++;
+	}
+
+	for (u32 i = 0; i < max; i++)
+	{
+		if (!(str[i] = src[i]))
+		{
+			return dst;
+		}
+	}
+
+	str[max] = '\0';
+	return dst;
 }
 
 vm::ptr<char> _sys_strcpy(vm::ptr<char> dst, vm::cptr<char> src)
