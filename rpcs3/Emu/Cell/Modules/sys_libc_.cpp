@@ -189,11 +189,22 @@ vm::ptr<void> _sys_memmove(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
 	return dst;
 }
 
-s64 _sys_strlen(vm::cptr<char> str)
+u32 _sys_strlen(vm::cptr<char> str)
 {
 	sysPrxForUser.trace("_sys_strlen(str=%s)", str);
 
-	return std::strlen(str.get_ptr());
+	if (!str)
+	{
+		return 0;
+	}
+
+	for (u32 i = 0;; i++)
+	{
+		if (str[i] == '\0')
+		{
+			return i;
+		}
+	}
 }
 
 s32 _sys_strcmp(vm::cptr<char> str1, vm::cptr<char> str2)
