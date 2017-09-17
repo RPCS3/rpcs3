@@ -500,7 +500,18 @@ void evdev_joystick_handler::ThreadProc()
                     }
                 }
                 else
-                    pad->m_sticks[axis].m_value = scale_axis(evt.code, evt.value);
+//takes care of axis reversal
+				{
+                        int value = scale_axis(evt.code, evt.value);
+
+                        if (revaxis[axis])
+                        {
+                            value = 255 - value;
+                        }
+
+                        pad->m_sticks[axis].m_value = value;
+                    }
+
             }
             break;
         default:
