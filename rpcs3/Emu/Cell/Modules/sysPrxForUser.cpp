@@ -83,12 +83,6 @@ s32 sys_get_random_number(vm::ptr<u8> addr, u64 size)
 	return CELL_OK;
 }
 
-s32 __sys_look_ctype_table()
-{
-	UNIMPLEMENTED_FUNC(sysPrxForUser);
-	return CELL_OK;
-}
-
 s32 console_getc()
 {
 	fmt::throw_exception("Unimplemented" HERE);
@@ -260,8 +254,6 @@ DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 	REG_FUNC(sysPrxForUser, sys_process_get_paramsfo); // 0xe75c40f2
 
 	REG_FUNC(sysPrxForUser, sys_get_random_number);
-
-	REG_FUNC(sysPrxForUser, __sys_look_ctype_table);
 
 	REG_FUNC(sysPrxForUser, console_getc);
 	REG_FUNC(sysPrxForUser, console_putc);

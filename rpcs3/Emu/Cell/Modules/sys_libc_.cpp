@@ -72,6 +72,51 @@ static std::string ps3_fmt(ppu_thread& context, vm::cptr<char> fmt, u32 g_count)
 	return result;
 }
 
+static const std::array<s16, 129> s_ctype_table
+{
+	0,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x408,
+	8, 8, 8, 8,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	0x18,
+	0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+	4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+	0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+	0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+	0x42, 0x42, 0x42, 0x42, 0x42, 0x42,
+	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+	0x10, 0x10, 0x10, 0x10, 0x20,
+};
+
+s16 __sys_look_ctype_table(s32 ch)
+{
+	sysPrxForUser.trace("__sys_look_ctype_table(ch=%d)", ch);
+
+	verify("__sys_look_ctype_table" HERE), ch >= -1 && ch <= 127;
+
+	return s_ctype_table[ch + 1];
+}
+
+s32 _sys_tolower(s32 ch)
+{
+	sysPrxForUser.trace("_sys_tolower(ch=%d)", ch);
+
+	verify("_sys_tolower" HERE), ch >= -1 && ch <= 127;
+
+	return s_ctype_table[ch + 1] & 1 ? ch + 0x20 : ch;
+}
+
+s32 _sys_toupper(s32 ch)
+{
+	sysPrxForUser.trace("_sys_toupper(ch=%d)", ch);
+
+	verify("_sys_toupper" HERE), ch >= -1 && ch <= 127;
+
+	return s_ctype_table[ch + 1] & 2 ? ch - 0x20 : ch;
+}
+
 vm::ptr<void> _sys_memset(vm::ptr<void> dst, s32 value, u32 size)
 {
 	sysPrxForUser.trace("_sys_memset(dst=*0x%x, value=%d, size=0x%x)", dst, value, size);
@@ -204,7 +249,7 @@ s32 _sys_strncasecmp(vm::cptr<char> str1, vm::cptr<char> str2, s32 n)
 	
 	for (u32 i = 0; i < n; i++)
 	{
-		const int ch1 = tolower(str1[i]), ch2 = tolower(str2[i]);
+		const int ch1 = _sys_tolower(str1[i]), ch2 = _sys_tolower(str2[i]);
 		if (ch1 < ch2)
 			return -1;
 		if (ch1 > ch2)
@@ -220,16 +265,6 @@ vm::ptr<char> _sys_strrchr(vm::cptr<char> str, s32 character)
 	sysPrxForUser.trace("_sys_strrchr(str=%s, character=%c)", str, (char)character);
 	
 	return vm::ptr<char>::make(vm::get_addr(strrchr(str.get_ptr(), character)));
-}
-
-s32 _sys_tolower()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 _sys_toupper()
-{
-	fmt::throw_exception("Unimplemented" HERE);
 }
 
 u32 _sys_malloc(u32 size)
@@ -320,6 +355,10 @@ s32 _sys_qsort()
 
 void sysPrxForUser_sys_libc_init()
 {
+	REG_FUNC(sysPrxForUser, __sys_look_ctype_table);
+	REG_FUNC(sysPrxForUser, _sys_tolower);
+	REG_FUNC(sysPrxForUser, _sys_toupper);
+
 	REG_FUNC(sysPrxForUser, _sys_memset);
 	REG_FUNC(sysPrxForUser, _sys_memcpy);
 	REG_FUNC(sysPrxForUser, _sys_memcmp);
@@ -336,8 +375,6 @@ void sysPrxForUser_sys_libc_init()
 	REG_FUNC(sysPrxForUser, _sys_strncpy);
 	REG_FUNC(sysPrxForUser, _sys_strncasecmp);
 	REG_FUNC(sysPrxForUser, _sys_strrchr);
-	REG_FUNC(sysPrxForUser, _sys_tolower);
-	REG_FUNC(sysPrxForUser, _sys_toupper);
 
 	REG_FUNC(sysPrxForUser, _sys_malloc);
 	REG_FUNC(sysPrxForUser, _sys_memalign);
