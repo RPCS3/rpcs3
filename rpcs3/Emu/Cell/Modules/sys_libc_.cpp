@@ -241,13 +241,24 @@ s32 _sys_strncmp(vm::cptr<char> str1, vm::cptr<char> str2, u32 max)
 	return 0;
 }
 
-vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::cptr<char> source)
+vm::ptr<char> _sys_strcat(vm::ptr<char> dst, vm::cptr<char> src)
 {
-	sysPrxForUser.trace("_sys_strcat(dest=*0x%x, source=%s)", dest, source);
+	sysPrxForUser.trace("_sys_strcat(dst=*0x%x %s, src=%s)", dst, dst, src);
 
-	verify(HERE), std::strcat(dest.get_ptr(), source.get_ptr()) == dest.get_ptr();
+	auto str = dst;
 
-	return dest;
+	while (*str)
+	{
+		str++;
+	}
+
+	for (u32 i = 0;; i++)
+	{
+		if (!(str[i] = src[i]))
+		{
+			return dst;
+		}
+	}
 }
 
 vm::cptr<char> _sys_strchr(vm::cptr<char> str, s32 ch)
