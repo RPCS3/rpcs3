@@ -328,11 +328,22 @@ s32 _sys_strncasecmp(vm::cptr<char> str1, vm::cptr<char> str2, u32 n)
 	return 0;
 }
 
-vm::ptr<char> _sys_strrchr(vm::cptr<char> str, s32 character)
+vm::cptr<char> _sys_strrchr(vm::cptr<char> str, char ch)
 {
-	sysPrxForUser.trace("_sys_strrchr(str=%s, character=%c)", str, (char)character);
+	sysPrxForUser.trace("_sys_strrchr(str=%s, ch=%d)", str, ch);
 	
-	return vm::ptr<char>::make(vm::get_addr(strrchr(str.get_ptr(), character)));
+	vm::cptr<char> res = vm::null;
+
+	for (u32 i = 0;; i++)
+	{
+		const char ch1 = str[i];
+		if (ch1 == ch)
+			res = str + i;
+		if (ch1 == '\0')
+			break;
+	}
+
+	return res;
 }
 
 u32 _sys_malloc(u32 size)
