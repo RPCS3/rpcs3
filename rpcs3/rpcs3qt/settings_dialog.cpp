@@ -11,6 +11,7 @@
 #include <QSpinBox>
 #include <QApplication>
 #include <QDesktopWidget>
+#include <QTimer>
 
 #include "settings_dialog.h"
 
@@ -933,10 +934,10 @@ void settings_dialog::OnApplyStylesheet()
 
 int settings_dialog::exec()
 {
-	for (int i = 0; i < ui->tabWidget->count(); i++)
-	{
-		ui->tabWidget->setCurrentIndex(i);
-	}
-	ui->tabWidget->setCurrentIndex(m_tab_Index);
+	// singleShot Hack to fix following bug:
+	// If we use setCurrentIndex now we will miraculously see a resize of the dialog as soon as we
+	// switch to the cpu tab after conjuring the settings_dialog with another tab opened first.
+	// Weirdly enough this won't happen if we change the tab order so that anything else is at index 0.
+	QTimer::singleShot(0, [=]{ ui->tabWidget->setCurrentIndex(m_tab_Index); });
 	return QDialog::exec();
 }

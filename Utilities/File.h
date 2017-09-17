@@ -502,6 +502,7 @@ namespace fs
 		noent,
 		exist,
 		acces,
+		notempty,
 	};
 
 	// Error code returned
