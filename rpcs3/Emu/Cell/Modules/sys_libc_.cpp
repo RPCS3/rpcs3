@@ -211,7 +211,16 @@ s32 _sys_strcmp(vm::cptr<char> str1, vm::cptr<char> str2)
 {
 	sysPrxForUser.trace("_sys_strcmp(str1=%s, str2=%s)", str1, str2);
 
-	return std::strcmp(str1.get_ptr(), str2.get_ptr());
+	for (u32 i = 0;; i++)
+	{
+		const u8 ch1 = str1[i], ch2 = str2[i];
+		if (ch1 < ch2)
+			return -1;
+		if (ch1 > ch2)
+			return 1;
+		if (ch1 == '\0')
+			return 0;
+	}
 }
 
 s32 _sys_strncmp(vm::cptr<char> str1, vm::cptr<char> str2, s32 max)
