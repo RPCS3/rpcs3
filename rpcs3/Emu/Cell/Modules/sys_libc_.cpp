@@ -135,11 +135,26 @@ vm::ptr<void> _sys_memcpy(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
 	return dst;
 }
 
-s32 _sys_memcmp(vm::cptr<void> buf1, vm::cptr<void> buf2, u32 size)
+s32 _sys_memcmp(vm::cptr<u8> buf1, vm::cptr<u8> buf2, u32 size)
 {
 	sysPrxForUser.trace("_sys_memcmp(buf1=*0x%x, buf2=*0x%x, size=%d)", buf1, buf2, size);
 
-	return std::memcmp(buf1.get_ptr(), buf2.get_ptr(), size);
+	for (u32 i = 0; i < size; i++)
+	{
+		const u8 b1 = buf1[i], b2 = buf2[i];
+
+		if (b1 < b2)
+		{
+			return -1;
+		}
+
+		if (b1 > b2)
+		{
+			return 1;
+		}
+	}
+
+	return 0;
 }
 
 vm::ptr<u8> _sys_memchr(vm::ptr<u8> buf, u8 ch, s32 size)
