@@ -261,11 +261,18 @@ vm::ptr<char> _sys_strcat(vm::ptr<char> dst, vm::cptr<char> src)
 	}
 }
 
-vm::cptr<char> _sys_strchr(vm::cptr<char> str, s32 ch)
+vm::cptr<char> _sys_strchr(vm::cptr<char> str, char ch)
 {
-	sysPrxForUser.trace("_sys_strchr(str=%s, ch=0x%x)", str, ch);
+	sysPrxForUser.trace("_sys_strchr(str=%s, ch=%d)", str, ch);
 
-	return vm::cptr<char>::make(vm::get_addr(strchr(str.get_ptr(), ch)));
+	for (u32 i = 0;; i++)
+	{
+		const char ch1 = str[i];
+		if (ch1 == ch)
+			return str + i;
+		if (ch1 == '\0')
+			return vm::null;
+	}
 }
 
 vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
