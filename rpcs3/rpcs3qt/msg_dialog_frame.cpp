@@ -255,25 +255,35 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text, u32
 	input->setText(QString::fromStdU16String(std::u16string(m_osk_text_return)));
 	input->setFocus();
 
+	//Text Input Counter
+	QLabel* inputCount = new QLabel(QString("%1/%2").arg(input->text().length()).arg(charlimit));
+
 	//Ok Button
 	QPushButton* button_ok = new QPushButton("Ok", m_osk_dialog);
 
-	//Layout
+	//Button Layout
 	QHBoxLayout* buttonsLayout = new QHBoxLayout;
 	buttonsLayout->setAlignment(Qt::AlignCenter);
 	buttonsLayout->addStretch();
 	buttonsLayout->addWidget(button_ok);
 	buttonsLayout->addStretch();
 
+	//Input Layout
+	QHBoxLayout* inputLayout = new QHBoxLayout;
+	inputLayout->setAlignment(Qt::AlignHCenter);
+	inputLayout->addWidget(input);
+	inputLayout->addWidget(inputCount);
+
 	QFormLayout* layout = new QFormLayout(m_osk_dialog);
 	layout->setFormAlignment(Qt::AlignHCenter);
-	layout->addRow(input);
+	layout->addRow(inputLayout);
 	layout->addRow(buttonsLayout);
 	m_osk_dialog->setLayout(layout);
 
 	//Events
-	connect(input, &QLineEdit::textChanged, [=]
+	connect(input, &QLineEdit::textChanged, [=](const QString& text)
 	{
+		inputCount->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 		on_osk_input_entered();
 	});
 
