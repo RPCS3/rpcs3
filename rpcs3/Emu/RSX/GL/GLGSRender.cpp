@@ -467,10 +467,11 @@ void GLGSRender::end()
 			m_gl_texture_cache.upload_and_bind_texture(i, get_gl_target_for_texture(rsx::method_registers.fragment_textures[i]), rsx::method_registers.fragment_textures[i], m_rtts);
 
 			if (m_textures_dirty[i])
+			{
 				m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i]);
+				m_textures_dirty[i] = false;
+			}
 		}
-
-		m_textures_dirty[i] = false;
 	}
 
 	//Vertex textures
@@ -969,6 +970,7 @@ void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 	vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
 	void* pipeline_properties = nullptr;
 
+	auto old_program = m_program;
 	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, pipeline_properties);
 	m_program->use();
 
@@ -1093,7 +1095,7 @@ void GLGSRender::flip(int buffer)
 	//The render might have been done offscreen and a blit used to display
 	//Check the texture cache for a blitted copy
 	const u32 size = buffer_pitch * buffer_height;
-	auto surface = m_gl_texture_cache.find_texture_from_range(absolute_address, size);
+	auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address);
 
 	if (surface != nullptr)
 	{
