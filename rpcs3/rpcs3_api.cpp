@@ -140,8 +140,7 @@ UTILS_DLL_C_EXPORT ps3emu_api_error_code ps3emu_api_load_elf(const char *path)
 		return ps3emu_api_not_found;
 	}
 
-	Emu.SetPath(path);
-	Emu.Load();
+	Emu.BootGame(path, true);
 
 	return ps3emu_api_ok;
 }

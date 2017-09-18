@@ -23,6 +23,16 @@ enum : u32
 	SYS_EVENT_FLAG_OBJECT            = 0x98,
 };
 
+struct sys_exit2_param
+{
+	be_t<u64> x0; // 0x85
+	be_t<u64> this_size; // 0x30
+	be_t<u64> next_size;
+	be_t<s64> prio;
+	be_t<u64> flags;
+	vm::ps3::bpptr<char, u64, u64> args;
+};
+
 // Auxiliary functions
 s32 process_getpid();
 s32 process_get_sdk_version(u32 pid, s32& ver);
@@ -41,5 +51,5 @@ s32 sys_process_kill(u32 pid);
 s32 sys_process_wait_for_child(u32 pid, vm::ps3::ptr<u32> status, u64 unk);
 s32 sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u64 unk5, u64 unk6);
 s32 sys_process_detach_child(u64 unk);
-s32 _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3);
-s32 _sys_process_exit2(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3, u32 arg4);
+void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3);
+void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ps3::ptr<sys_exit2_param> arg, u32 arg_size, u32 arg4);

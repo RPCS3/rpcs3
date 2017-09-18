@@ -587,7 +587,7 @@ void arm_load_exec(const arm_exec_object& elf)
 	// Initialize args
 	std::vector<char> argv_data;
 
-	for (const auto& arg : { Emu.GetPath(), "-emu"s })
+	for (const auto& arg : Emu.argv)
 	{
 		argv_data.insert(argv_data.end(), arg.begin(), arg.end());
 		argv_data.insert(argv_data.end(), '\0');

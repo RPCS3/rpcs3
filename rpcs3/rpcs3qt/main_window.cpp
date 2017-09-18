@@ -61,7 +61,7 @@ auto Pause = []()
 	if (Emu.IsReady()) Emu.Run();
 	else if (Emu.IsPaused()) Emu.Resume();
 	else if (Emu.IsRunning()) Emu.Pause();
-	else if (!Emu.GetPath().empty()) Emu.Load();
+	else if (!Emu.GetBoot().empty()) Emu.Load();
 };
 
 /* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).  
@@ -745,7 +745,7 @@ void main_window::RepaintToolBarIcons()
 	{
 		ui->toolbar_start->setIcon(m_icon_pause);
 	}
-	else if (Emu.IsStopped() && !Emu.GetPath().empty())
+	else if (Emu.IsStopped() && !Emu.GetBoot().empty())
 	{
 		ui->toolbar_start->setIcon(m_icon_restart);
 	}
@@ -817,7 +817,7 @@ void main_window::OnEmuStop()
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
 	EnableMenus(false);
-	if (!Emu.GetPath().empty())
+	if (!Emu.GetBoot().empty())
 	{
 		ui->toolbar_start->setEnabled(true);
 		ui->toolbar_start->setIcon(m_icon_restart);
@@ -1564,7 +1564,7 @@ void main_window::keyPressEvent(QKeyEvent *keyEvent)
 		case Qt::Key_E: if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(); return;
 		case Qt::Key_P: if (Emu.IsRunning()) Emu.Pause(); return;
 		case Qt::Key_S: if (!Emu.IsStopped()) Emu.Stop(); return;
-		case Qt::Key_R: if (!Emu.GetPath().empty()) { Emu.Stop(); Emu.Run(); } return;
+		case Qt::Key_R: if (!Emu.GetBoot().empty()) { Emu.Stop(); Emu.Run(); } return;
 		}
 	}
 }

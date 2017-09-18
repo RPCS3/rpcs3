@@ -13,6 +13,7 @@ extern logs::channel sysPrxForUser;
 
 vm::gvar<sys_lwmutex_t> g_ppu_atexit_lwm;
 vm::gvar<vm::ptr<void()>[8]> g_ppu_atexit;
+vm::gvar<u32> g_ppu_exit_mutex; // sys_process_exit2 mutex
 vm::gvar<u32> g_ppu_once_mutex;
 vm::gvar<sys_lwmutex_t> g_ppu_prx_lwm;
 
@@ -111,6 +112,10 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 	attr->flags     = 0;
 	attr->name_u64  = "_lv2ppu\0"_u64;
 	sys_mutex_create(g_ppu_once_mutex, attr);
+
+	attr->recursive = SYS_SYNC_RECURSIVE;
+	attr->name_u64  = "_lv2tls\0"_u64;
+	sys_mutex_create(g_ppu_exit_mutex, attr);
 
 	lwa->protocol   = SYS_SYNC_PRIORITY;
 	lwa->recursive  = SYS_SYNC_RECURSIVE;
@@ -270,6 +275,7 @@ void sysPrxForUser_sys_ppu_thread_init()
 	REG_VAR(sysPrxForUser, g_ppu_once_mutex).flag(MFF_HIDDEN);
 	REG_VAR(sysPrxForUser, g_ppu_atexit).flag(MFF_HIDDEN);
 	REG_VAR(sysPrxForUser, g_ppu_prx_lwm).flag(MFF_HIDDEN);
+	REG_VAR(sysPrxForUser, g_ppu_exit_mutex).flag(MFF_HIDDEN);
 
 	REG_FUNC(sysPrxForUser, sys_initialize_tls).args = {"main_thread_id", "tls_seg_addr", "tls_seg_size", "tls_mem_size"}; // Test
 	REG_FUNC(sysPrxForUser, sys_ppu_thread_create);

@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "Emu/Cell/lv2/sys_mutex.h"
 #include "Emu/Cell/lv2/sys_interrupt.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "sysPrxForUser.h"
@@ -13,6 +14,9 @@ extern u64 get_system_time();
 extern fs::file g_tty;
 
 vm::gvar<s32> sys_prx_version; // ???
+vm::gvar<vm::ptr<void()>> g_ppu_atexitspawn;
+vm::gvar<vm::ptr<void()>> g_ppu_at_Exitspawn;
+extern vm::gvar<u32> g_ppu_exit_mutex;
 
 s64 sys_time_get_system_time()
 {
@@ -21,33 +25,34 @@ s64 sys_time_get_system_time()
 	return get_system_time();
 }
 
-s32 sys_process_exit(ppu_thread& ppu, s32 status)
+void sys_process_exit(ppu_thread& ppu, s32 status)
 {
-	vm::temporary_unlock(ppu);
-
 	sysPrxForUser.warning("sys_process_exit(status=%d)", status);
 
-	Emu.CallAfter([]()
+	sys_mutex_lock(ppu, *g_ppu_exit_mutex, 0);
+
+	// TODO (process atexit)
+	return _sys_process_exit(ppu, status, 0, 0);
+}
+
+void _sys_process_atexitspawn(vm::ptr<void()> func)
+{
+	sysPrxForUser.warning("_sys_process_atexitspawn(0x%x)", func);
+
+	if (!*g_ppu_atexitspawn)
 	{
-		sysPrxForUser.success("Process finished");
-		Emu.Stop();
-	});
-
-	thread_ctrl::eternalize();
-
-	return CELL_OK;
+		*g_ppu_atexitspawn = func;
+	}
 }
 
-s64 _sys_process_atexitspawn()
+void _sys_process_at_Exitspawn(vm::ptr<void()> func)
 {
-	sysPrxForUser.todo("_sys_process_atexitspawn()");
-	return CELL_OK;
-}
+	sysPrxForUser.warning("_sys_process_at_Exitspawn(0x%x)", func);
 
-s64 _sys_process_at_Exitspawn()
-{
-	sysPrxForUser.todo("_sys_process_at_Exitspawn");
-	return CELL_OK;
+	if (!*g_ppu_at_Exitspawn)
+	{
+		*g_ppu_at_Exitspawn = func;
+	}
 }
 
 s32 sys_process_is_stack(u32 p)
@@ -244,6 +249,8 @@ DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 	sysPrxForUser_sys_rsxaudio_init();
 
 	REG_VAR(sysPrxForUser, sys_prx_version); // 0x7df066cf
+	REG_VAR(sysPrxForUser, g_ppu_atexitspawn).flag(MFF_HIDDEN);
+	REG_VAR(sysPrxForUser, g_ppu_at_Exitspawn).flag(MFF_HIDDEN);
 
 	REG_FUNC(sysPrxForUser, sys_time_get_system_time);
 

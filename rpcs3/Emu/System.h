@@ -177,7 +177,6 @@ class Emulator final
 	atomic_t<u64> m_pause_amend_time; // increased when resumed
 
 	std::string m_path;
-	std::string m_elf_path;
 	std::string m_cache_path;
 	std::string m_title_id;
 	std::string m_title;
@@ -210,12 +209,10 @@ public:
 	}
 
 	void Init();
-	void SetPath(const std::string& path, const std::string& elf_path = {});
 
-	const std::string& GetPath() const
-	{
-		return m_elf_path;
-	}
+	std::vector<std::string> argv;
+	std::vector<std::string> envp;
+	std::vector<u8> data;
 
 	const std::string& GetBoot() const
 	{

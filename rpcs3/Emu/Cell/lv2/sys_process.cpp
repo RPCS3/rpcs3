@@ -233,7 +233,7 @@ s32 sys_process_detach_child(u64 unk)
 	return CELL_OK;
 }
 
-s32 _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
+void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 {
 	vm::temporary_unlock(ppu);
 
@@ -248,7 +248,60 @@ s32 _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 	thread_ctrl::eternalize();
 }
 
-s32 _sys_process_exit2(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3, u32 arg4)
+void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> arg, u32 arg_size, u32 arg4)
 {
-	fmt::throw_exception("_sys_process_exit2");
+	sys_process.warning("_sys_process_exit2(status=%d, arg=*0x%x, arg_size=0x%x, arg4=0x%x)", status, arg, arg_size, arg4);
+
+	auto pstr = +arg->args;
+
+	std::vector<std::string> argv;
+	std::vector<std::string> envp;
+
+	while (auto ptr = *pstr++)
+	{
+		argv.emplace_back(ptr.get_ptr());
+		sys_process.notice(" *** arg: %s", ptr);
+	}
+
+	while (auto ptr = *pstr++)
+	{
+		envp.emplace_back(ptr.get_ptr());
+		sys_process.notice(" *** env: %s", ptr);
+	}
+
+	std::vector<u8> data;
+
+	if (arg_size > 0x1030)
+	{
+		data.resize(0x1000);
+		std::memcpy(data.data(), vm::base(arg.addr() + arg_size - 0x1000), 0x1000);
+	}
+
+	if (argv.empty())
+	{
+		return _sys_process_exit(ppu, status, 0, 0);
+	}
+
+	// TODO: set prio, flags
+
+	std::string path = vfs::get(argv[0]);
+
+	vm::temporary_unlock(ppu);
+
+	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data)]()
+	{
+		sys_process.success("Process finished -> %s", argv[0]);
+		Emu.Stop();
+		Emu.argv = std::move(argv);
+		Emu.envp = std::move(envp);
+		Emu.data = std::move(data);
+		Emu.BootGame(path, true);
+
+		if (Emu.IsReady() && !g_cfg.misc.autostart)
+		{
+			Emu.Run();
+		}
+	});
+
+	thread_ctrl::eternalize();
 }
