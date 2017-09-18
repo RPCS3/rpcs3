@@ -582,6 +582,7 @@ error_code sys_fs_mkdir(vm::cptr<char> path, s32 mode)
 	{
 		switch (auto error = fs::g_tls_error)
 		{
+		case fs::error::noent: return {CELL_ENOENT, path};
 		case fs::error::exist: return {CELL_EEXIST, path};
 		default: sys_fs.error("sys_fs_mkdir(): unknown error %s", error);
 		}
