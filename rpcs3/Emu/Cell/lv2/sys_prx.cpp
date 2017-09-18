@@ -87,9 +87,10 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 	{ "/dev_flash/sys/external/libvoice.sprx", 0 },
 };
 
-error_code prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
+error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
-	const auto name = path.substr(path.find_last_of('/') + 1);
+	std::string name = vpath.substr(vpath.find_last_of('/') + 1);
+	std::string path = vfs::get(vpath);
 
 	const auto existing = idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& prx)
 	{
@@ -106,26 +107,26 @@ error_code prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_mod
 		return CELL_PRX_ERROR_LIBRARY_FOUND;
 	}
 
-	if (s_prx_ignore.count(path))
+	if (s_prx_ignore.count(vpath))
 	{
-		sys_prx.warning("Ignored module: %s", path);
+		sys_prx.warning("Ignored module: %s", vpath);
 
 		const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
 
-		prx->name = name;
-		prx->path = path;
+		prx->name = std::move(name);
+		prx->path = std::move(path);
 
 		return not_an_error(idm::last_id());
 	}
 
-	const ppu_prx_object obj = decrypt_self(fs::file(vfs::get(path)), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
+	const ppu_prx_object obj = decrypt_self(fs::file(path), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
 
 	if (obj != elf_error::ok)
 	{
 		return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
 	}
 
-	const auto prx = ppu_load_prx(obj, vfs::get(path));
+	const auto prx = ppu_load_prx(obj, path);
 
 	if (!prx)
 	{
@@ -134,7 +135,7 @@ error_code prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_mod
 
 	ppu_initialize(*prx);
 
-	sys_prx.success("Loaded module: %s", path);
+	sys_prx.success("Loaded module: %s", vpath);
 
 	return not_an_error(idm::last_id());
 }
@@ -163,9 +164,7 @@ error_code _sys_prx_load_module_list(s32 count, vm::cpptr<char, u32, u64> path_l
 
 	for (s32 i = 0; i < count; ++i)
 	{
-		auto path = path_list[i];
-		std::string name = path.get_ptr();
-		error_code result = prx_load_module(name, flags, pOpt);
+		error_code result = prx_load_module(path_list[i].get_ptr(), flags, pOpt);
 
 		if (result < 0)
 			return result;
@@ -182,9 +181,7 @@ error_code _sys_prx_load_module_list_on_memcontainer(s32 count, vm::cpptr<char, 
 
 	for (s32 i = 0; i < count; ++i)
 	{
-		auto path = path_list[i];
-		std::string name = path.get_ptr();
-		error_code result = prx_load_module(name, flags, pOpt);
+		error_code result = prx_load_module(path_list[i].get_ptr(), flags, pOpt);
 
 		if (result < 0)
 			return result;
