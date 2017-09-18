@@ -25,7 +25,7 @@ namespace gl
 {
 	extern GLenum get_sized_internal_format(u32);
 
-	class cached_texture_section : public rsx::buffered_section
+	class cached_texture_section : public rsx::cached_texture_section
 	{
 	private:
 		fence m_fence;
@@ -38,16 +38,9 @@ namespace gl
 		bool flushed = false;
 		bool is_depth = false;
 
-		u32 current_width = 0;
-		u32 current_height = 0;
-		u32 current_pitch = 0;
-		u32 real_pitch = 0;
-
 		texture::format format = texture::format::rgba;
 		texture::type type = texture::type::ubyte;
 		bool pack_unpack_swap_bytes = false;
-
-		rsx::texture_create_flags view_flags = rsx::texture_create_flags::default_component_order;
 
 		u8 get_pixel_size(texture::format fmt_, texture::type type_)
 		{
@@ -150,7 +143,7 @@ namespace gl
 		}
 		
 		void create(const u16 w, const u16 h, const u16 /*depth*/, const u16 /*mipmaps*/, void*,
-				gl::texture* image, const u32 native_pitch, bool read_only,
+				gl::texture* image, const u32 rsx_pitch, bool read_only,
 				gl::texture::format gl_format, gl::texture::type gl_type, bool swap_bytes)
 		{
 			if (!read_only && pbo_id == 0)
@@ -160,9 +153,9 @@ namespace gl
 			copied = false;
 			is_depth = false;
 
-			current_width = w;
-			current_height = h;
-			current_pitch = native_pitch;
+			this->width = w;
+			this->height = h;
+			this->rsx_pitch = rsx_pitch;
 
 			vram_texture = image->id();
 			set_format(gl_format, gl_type, swap_bytes);
@@ -171,39 +164,19 @@ namespace gl
 		void create_read_only(const u32 id, const u32 width, const u32 height)
 		{
 			//Only to be used for ro memory, we dont care about most members, just dimensions and the vram texture handle
-			current_width = width;
-			current_height = height;
+			this->width = width;
+			this->height = height;
 			vram_texture = id;
 
-			current_pitch = 0;
+			rsx_pitch = 0;
 			real_pitch = 0;
-		}
-
-		bool matches(const u32 rsx_address, const u32 rsx_size)
-		{
-			return rsx::buffered_section::matches(rsx_address, rsx_size);
-		}
-
-		bool matches(const u32 rsx_address, const u32 width, const u32 height, const u32 mipmaps)
-		{
-			if (cpu_address_base == rsx_address && !dirty)
-			{
-				//Mostly only used to debug; matches textures without checking dimensions
-				if (width == 0 && height == 0)
-					return true;
-
-				return (current_width == width && current_height == height);
-			}
-
-			return false;
 		}
 
 		void set_dimensions(u32 width, u32 height, u32 pitch)
 		{
-			current_width = width;
-			current_height = height;
-			current_pitch = pitch;
-
+			this->width = width;
+			this->height = height;
+			rsx_pitch = pitch;
 			real_pitch = width * get_pixel_size(format, type);
 		}
 
@@ -213,7 +186,7 @@ namespace gl
 			type = gl_type;
 			pack_unpack_swap_bytes = swap_bytes;
 
-			real_pitch = current_width * get_pixel_size(format, type);
+			real_pitch = width * get_pixel_size(format, type);
 		}
 
 		void set_depth_flag(bool is_depth_fmt)
@@ -224,11 +197,6 @@ namespace gl
 		void set_source(gl::texture &source)
 		{
 			vram_texture = source.id();
-		}
-
-		void set_view_flags(const rsx::texture_create_flags flags)
-		{
-			view_flags = flags;
 		}
 
 		void copy_texture(bool=false)
@@ -261,8 +229,8 @@ namespace gl
 				return;
 			}
 
-			u32 min_width = std::min((u32)tex->width(), current_width);
-			u32 min_height = std::min((u32)tex->height(), current_height);
+			u32 min_width = std::min((u16)tex->width(), width);
+			u32 min_height = std::min((u16)tex->height(), height);
 
 			tex->bind();
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, pack_unpack_swap_bytes);
@@ -297,7 +265,7 @@ namespace gl
 			//throw if map failed since we'll segfault anyway
 			verify(HERE), data != nullptr;
 
-			if (real_pitch >= current_pitch)
+			if (real_pitch >= rsx_pitch)
 			{
 				memcpy(dst, data, cpu_address_range);
 			}
@@ -307,8 +275,8 @@ namespace gl
 				//TODO: Fall back to bilinear filtering if samples > 2
 
 				const u8 pixel_size = get_pixel_size(format, type);
-				const u8 samples = current_pitch / real_pitch;
-				rsx::scale_image_nearest(dst, const_cast<const void*>(data), current_width, current_height, current_pitch, real_pitch, pixel_size, samples);
+				const u8 samples = rsx_pitch / real_pitch;
+				rsx::scale_image_nearest(dst, const_cast<const void*>(data), width, height, rsx_pitch, real_pitch, pixel_size, samples);
 			}
 
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
@@ -388,16 +356,6 @@ namespace gl
 			return vram_texture;
 		}
 
-		u32 get_width() const
-		{
-			return current_width;
-		}
-		
-		u32 get_height() const
-		{
-			return current_height;
-		}
-
 		bool is_depth_texture() const
 		{
 			return is_depth;
@@ -415,11 +373,6 @@ namespace gl
 			}
 
 			return (gl::texture::format)fmt == tex->get_internal_format();
-		}
-
-		rsx::texture_create_flags get_view_flags() const
-		{
-			return view_flags;
 		}
 	};
 		
@@ -575,7 +528,8 @@ namespace gl
 		}
 
 		cached_texture_section* create_new_texture(void*&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, const u32 gcm_format,
-				const rsx::texture_dimension_extended type, const rsx::texture_create_flags flags, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+				const rsx::texture_upload_context context, const rsx::texture_dimension_extended type, const rsx::texture_create_flags flags,
+				std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			u32 vram_texture = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
 			bool depth_flag = false;
@@ -602,6 +556,7 @@ namespace gl
 			cached.set_dirty(false);
 			cached.set_depth_flag(depth_flag);
 			cached.set_view_flags(flags);
+			cached.set_context(context);
 
 			return &cached;
 		}
@@ -611,7 +566,7 @@ namespace gl
 			std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			void* unused = nullptr;
-			auto section = create_new_texture(unused, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, type,
+			auto section = create_new_texture(unused, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
 				rsx::texture_create_flags::default_component_order, remap_vector);
 
 			//Swizzling is ignored for blit engine copy and emulated using remapping
@@ -669,8 +624,20 @@ namespace gl
 		{
 			reader_lock lock(m_cache_mutex);
 
-			auto section = find_texture_from_range(rsx_address, 64u);
-			if (section != nullptr) return section->is_depth_texture();
+/*			auto found = m_cache.find(rsx_address);
+			if (found == m_cache.end())
+				return false;
+
+			if (found->second.valid_count == 0)
+				return false;
+
+			for (auto& tex : found->second.data)
+			{
+				if (tex.is_dirty())
+					continue;
+
+				return tex.is_depth_texture();
+			}*/
 
 			return false;
 		}

@@ -675,7 +675,7 @@ namespace rsx
 				src_info.width = in_w;
 				src_info.height = in_h;
 				src_info.pitch = in_pitch;
-				src_info.slice_h = clip_h;
+				src_info.slice_h = slice_h;
 				src_info.offset_x = (u16)in_x;
 				src_info.offset_y = (u16)in_y;
 				src_info.pixels = pixels_src;

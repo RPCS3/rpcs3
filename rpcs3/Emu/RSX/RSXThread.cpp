@@ -1355,8 +1355,14 @@ namespace rsx
 						case CELL_GCM_TEXTURE_DEPTH16:
 						case CELL_GCM_TEXTURE_DEPTH24_D8:
 						case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+						{
+							const auto compare_mode = (rsx::comparison_function)tex.zfunc();
+							if (result.textures_alpha_kill[i] == 0 &&
+								compare_mode < rsx::comparison_function::always &&
+								compare_mode > rsx::comparison_function::never)
 								result.shadow_textures |= (1 << i);
-								break;
+							break;
+						}
 						default:
 								LOG_ERROR(RSX, "Depth texture bound to pipeline with unexpected format 0x%X", format);
 						}

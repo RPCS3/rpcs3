@@ -17,7 +17,79 @@ namespace rsx
 	enum texture_upload_context
 	{
 		shader_read = 0,
-		blit_engine_src = 1
+		blit_engine_src = 1,
+		blit_engine_dst = 2
+	};
+
+	struct cached_texture_section : public rsx::buffered_section
+	{
+		u16 width;
+		u16 height;
+		u16 depth;
+		u16 mipmaps;
+
+		u16 real_pitch;
+		u16 rsx_pitch;
+
+		rsx::texture_create_flags view_flags = rsx::texture_create_flags::default_component_order;
+		rsx::texture_upload_context context = rsx::texture_upload_context::shader_read;
+
+		bool matches(const u32 rsx_address, const u32 rsx_size)
+		{
+			return rsx::buffered_section::matches(rsx_address, rsx_size);
+		}
+
+		bool matches(const u32 rsx_address, const u32 width, const u32 height, const u32 mipmaps)
+		{
+			if (rsx_address == cpu_address_base)
+			{
+				if (!width && !height && !mipmaps)
+					return true;
+
+				if (width && width != this->width)
+					return false;
+
+				if (height && height != this->height)
+					return false;
+
+				if (mipmaps && mipmaps != this->mipmaps)
+					return false;
+
+				return true;
+			}
+
+			return false;
+		}
+
+		void set_view_flags(const rsx::texture_create_flags flags)
+		{
+			view_flags = flags;
+		}
+
+		void set_context(const rsx::texture_upload_context upload_context)
+		{
+			context = upload_context;
+		}
+
+		u32 get_width() const
+		{
+			return width;
+		}
+
+		u32 get_height() const
+		{
+			return height;
+		}
+
+		rsx::texture_create_flags get_view_flags() const
+		{
+			return view_flags;
+		}
+
+		rsx::texture_upload_context get_context() const
+		{
+			return context;
+		}
 	};
 
 	template <typename commandbuffer_type, typename section_storage_type, typename image_resource_type, typename image_view_type, typename image_storage_type, typename texture_format>
@@ -87,7 +159,7 @@ namespace rsx
 		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_resource_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) = 0;
 		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_storage_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) = 0;
 		virtual section_storage_type* create_new_texture(commandbuffer_type&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, const u32 gcm_format,
-				const rsx::texture_dimension_extended type, const texture_create_flags flags, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
+				const rsx::texture_upload_context context, const rsx::texture_dimension_extended type, const texture_create_flags flags, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
 		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, const u32 gcm_format, const texture_upload_context context,
 				std::vector<rsx_subresource_layout>& subresource_layout, const rsx::texture_dimension_extended type, const bool swizzled, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
 		virtual void enforce_surface_creation_type(section_storage_type& section, const texture_create_flags expected) = 0;
@@ -247,8 +319,9 @@ namespace rsx
 		virtual bool is_depth_texture(const u32) = 0;
 		virtual void on_frame_end() = 0;
 
-		section_storage_type *find_texture_from_range(u32 rsx_address, u32 range)
+		std::vector<section_storage_type*> find_texture_from_range(u32 rsx_address, u32 range)
 		{
+			std::vector<section_storage_type*> results;
 			auto test = std::make_pair(rsx_address, range);
 			for (auto &address_range : m_cache)
 			{
@@ -261,11 +334,11 @@ namespace rsx
 						continue;
 
 					if (!tex.is_dirty() && tex.overlaps(test, true))
-						return &tex;
+						results.push_back(&tex);
 				}
 			}
 
-			return nullptr;
+			return results;
 		}
 
 		section_storage_type *find_texture_from_dimensions(u32 rsx_address, u16 width = 0, u16 height = 0, u16 mipmaps = 0)
@@ -644,6 +717,35 @@ namespace rsx
 				{
 					return cached_texture->get_raw_view();
 				}
+
+				//Find based on range instead
+				auto overlapping_surfaces = find_texture_from_range(texaddr, tex_pitch * tex_height);
+				if (!overlapping_surfaces.empty())
+				{
+					for (auto surface : overlapping_surfaces)
+					{
+						if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst)
+							continue;
+
+						if (surface->get_width() >= tex_width && surface->get_height() >= tex_height)
+						{
+							u16 offset_x = 0, offset_y = 0;
+							if (const u32 address_offset = texaddr - surface->get_section_base())
+							{
+								const auto bpp = get_format_block_size_in_bytes(format);
+								offset_y = address_offset / tex_pitch;
+								offset_x = (address_offset % tex_pitch) / bpp;
+							}
+
+							if ((offset_x + tex_width) <= surface->get_width() &&
+								(offset_y + tex_height) <= surface->get_height())
+							{
+								auto src_image = surface->get_raw_texture();
+								return create_temporary_subresource_view(cmd, &src_image, format, offset_x, offset_y, tex_width, tex_height);
+							}
+						}
+					}
+				}
 			}
 
 			/* Check if we are re-sampling a subresource of an RTV/DSV texture, bound or otherwise
@@ -666,8 +768,6 @@ namespace rsx
 				}
 				else
 				{
-					image_view_type bound_surface = 0;
-
 					if (format == CELL_GCM_TEXTURE_COMPRESSED_DXT1 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT23 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT45)
 					{
 						LOG_WARNING(RSX, "Performing an RTT blit but request is for a compressed texture");
@@ -686,16 +786,13 @@ namespace rsx
 							return rsc.surface->get_view();
 						}
 						else
-							bound_surface = create_temporary_subresource_view(cmd, rsc.surface, format, rsc.x, rsc.y, rsc.w, rsc.h);
+							return create_temporary_subresource_view(cmd, rsc.surface, format, rsc.x, rsc.y, rsc.w, rsc.h);
 					}
 					else
 					{
 						LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
-						bound_surface = create_temporary_subresource_view(cmd, rsc.surface, format, rsc.x, rsc.y, rsc.w, rsc.h);
+						return create_temporary_subresource_view(cmd, rsc.surface, format, rsc.x, rsc.y, rsc.w, rsc.h);
 					}
-
-					if (bound_surface)
-						return bound_surface;
 				}
 			}
 
@@ -750,17 +847,18 @@ namespace rsx
 			const u32 src_address = (u32)((u64)src.pixels - (u64)vm::base(0));
 			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
 
-			//Check if src/dst are parts of render targets
-			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst.rsx_address, dst.width, dst.clip_height, dst.pitch, true, true, false, dst.compressed_y);
-			dst_is_render_target = dst_subres.surface != nullptr;
+			u32 framebuffer_src_address = src_address;
 
-			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src.rsx_address, src.width, src.slice_h, src.pitch, true, true, false, src.compressed_y);
-			src_is_render_target = src_subres.surface != nullptr;
+			//Correct for tile compression
+			//TODO: Investigate whether DST compression also affects alignment
+			if (src.compressed_x || src.compressed_y)
+			{
+				const u32 x_bytes = src_is_argb8 ? (src.offset_x * 4) : (src.offset_x * 2);
+				const u32 y_bytes = src.pitch * src.offset_y;
 
-			//Always use GPU blit if src or dst is in the surface store
-			if (!g_cfg.video.use_gpu_texture_scaling && !(src_is_render_target || dst_is_render_target))
-				return false;
+				if (src.offset_x <= 16 && src.offset_y <= 16)
+					framebuffer_src_address -= (x_bytes + y_bytes);
+			}
 
 			u16 max_dst_width = dst.width;
 			u16 max_dst_height = dst.height;
@@ -779,11 +877,30 @@ namespace rsx
 				scale_y *= 2.f;
 			}
 
+			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
+			//Reproject final clip onto source...
+			const u16 src_w = (const u16)((f32)dst.clip_width / scale_x);
+			const u16 src_h = (const u16)((f32)dst.clip_height / scale_y);
+
+			areai src_area = { 0, 0, src_w, src_h };
+			areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
+
+			//Check if src/dst are parts of render targets
+			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, false, dst.compressed_y);
+			dst_is_render_target = dst_subres.surface != nullptr;
+
+			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
+			auto src_subres = m_rtts.get_surface_subresource_if_applicable(framebuffer_src_address, src_w, src_h, src.pitch, true, true, false, src.compressed_y);
+			src_is_render_target = src_subres.surface != nullptr;
+
+			//Always use GPU blit if src or dst is in the surface store
+			if (!g_cfg.video.use_gpu_texture_scaling && !(src_is_render_target || dst_is_render_target))
+				return false;
+
 			//1024 height is a hack (for ~720p buffers)
 			//It is possible to have a large buffer that goes up to around 4kx4k but anything above 1280x720 is rare
 			//RSX only handles 512x512 tiles so texture 'stitching' will eventually be needed to be completely accurate
 			//Sections will be submitted as (512x512 + 512x512 + 256x512 + 512x208 + 512x208 + 256x208) to blit a 720p surface to the backbuffer for example
-
 			int practical_height;
 			if (dst.max_tile_h < dst.height || !src_is_render_target)
 				practical_height = (s32)dst.height;
@@ -794,14 +911,6 @@ namespace rsx
 			}
 
 			size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), practical_height };
-
-			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
-			//Reproject final clip onto source...
-			const u16 src_w = (const u16)((f32)dst.clip_width / scale_x);
-			const u16 src_h = (const u16)((f32)dst.clip_height / scale_y);
-
-			areai src_area = { 0, 0, src_w, src_h };
-			areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
 
 			//Check if trivial memcpy can perform the same task
 			//Used to copy programs to the GPU in some cases
@@ -824,49 +933,65 @@ namespace rsx
 
 			if (!dst_is_render_target)
 			{
+				//Apply region offsets
+				dst_area.x1 += dst.offset_x;
+				dst_area.x2 += dst.offset_x;
+				dst_area.y1 += dst.offset_y;
+				dst_area.y2 += dst.offset_y;
+
 				//First check if this surface exists in VRAM with exact dimensions
 				//Since scaled GPU resources are not invalidated by the CPU, we need to reuse older surfaces if possible
 				cached_dest = find_texture_from_dimensions(dst.rsx_address, dst_dimensions.width, dst_dimensions.height);
 
 				//Check for any available region that will fit this one
-				if (!cached_dest) cached_dest = find_texture_from_range(dst_address, dst.pitch * dst.clip_height);
-
-				if (cached_dest)
+				if (!cached_dest)
 				{
-					//Prep surface
-					enforce_surface_creation_type(*cached_dest, dst.swizzled ? rsx::texture_create_flags::swapped_native_component_order : rsx::texture_create_flags::native_component_order);
+					auto overlapping_surfaces = find_texture_from_range(dst_address, dst.pitch * dst.clip_height);
 
-					const auto old_dst_area = dst_area;
-					if (const u32 address_offset = dst_address - cached_dest->get_section_base())
+					for (auto surface: overlapping_surfaces)
 					{
-						const u16 bpp = dst_is_argb8 ? 4 : 2;
-						const u16 offset_y = address_offset / dst.pitch;
-						const u16 offset_x = address_offset % dst.pitch;
-						const u16 offset_x_in_block = offset_x / bpp;
+						if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst)
+							continue;
 
-						dst_area.x1 += offset_x_in_block;
-						dst_area.x2 += offset_x_in_block;
-						dst_area.y1 += offset_y;
-						dst_area.y2 += offset_y;
-					}
+						const auto old_dst_area = dst_area;
+						if (const u32 address_offset = dst_address - surface->get_section_base())
+						{
+							const u16 bpp = dst_is_argb8 ? 4 : 2;
+							const u16 offset_y = address_offset / dst.pitch;
+							const u16 offset_x = address_offset % dst.pitch;
+							const u16 offset_x_in_block = offset_x / bpp;
 
-					//Validate clipping region
-					if ((unsigned)dst_area.x2 <= cached_dest->get_width() &&
-						(unsigned)dst_area.y2 <= cached_dest->get_height())
-					{
-						dest_texture = cached_dest->get_raw_texture();
+							dst_area.x1 += offset_x_in_block;
+							dst_area.x2 += offset_x_in_block;
+							dst_area.y1 += offset_y;
+							dst_area.y2 += offset_y;
+						}
 
-						max_dst_width = cached_dest->get_width();
-						max_dst_height = cached_dest->get_height();
-					}
-					else
-					{
-						cached_dest = nullptr;
-						dst_area = old_dst_area;
+						//Validate clipping region
+						if ((unsigned)dst_area.x2 <= surface->get_width() &&
+							(unsigned)dst_area.y2 <= surface->get_height())
+						{
+							cached_dest = surface;
+							break;
+						}
+						else
+						{
+							dst_area = old_dst_area;
+						}
 					}
 				}
 
-				if (!cached_dest && is_memcpy)
+				if (cached_dest)
+				{
+					dest_texture = cached_dest->get_raw_texture();
+
+					max_dst_width = cached_dest->get_width();
+					max_dst_height = cached_dest->get_height();
+
+					//Prep surface
+					enforce_surface_creation_type(*cached_dest, dst.swizzled ? rsx::texture_create_flags::swapped_native_component_order : rsx::texture_create_flags::native_component_order);
+				}
+				else if (is_memcpy)
 				{
 					lock.upgrade();
 					flush_address_impl(src_address, std::forward<Args>(extras)...);
@@ -877,9 +1002,11 @@ namespace rsx
 			}
 			else
 			{
-				dst_area.x1 += dst_subres.x;
+				//TODO: Investigate effects of tile compression
+
+				dst_area.x1 = dst_subres.x;
+				dst_area.y1 = dst_subres.y;
 				dst_area.x2 += dst_subres.x;
-				dst_area.y1 += dst_subres.y;
 				dst_area.y2 += dst_subres.y;
 
 				dest_texture = dst_subres.surface->get_surface();
@@ -952,9 +1079,9 @@ namespace rsx
 				src_area.x2 = src_subres.w;
 				src_area.y2 = src_subres.h;
 
-				src_area.x1 += src_subres.x;
+				src_area.x1 = src_subres.x;
+				src_area.y1 = src_subres.y;
 				src_area.x2 += src_subres.x;
-				src_area.y1 += src_subres.y;
 				src_area.y2 += src_subres.y;
 
 				vram_texture = src_subres.surface->get_surface();
@@ -1017,7 +1144,7 @@ namespace rsx
 
 				dest_texture = create_new_texture(cmd, dst.rsx_address, dst.pitch * dst_dimensions.height,
 					dst_dimensions.width, dst_dimensions.height, 1, 1,
-					gcm_format, rsx::texture_dimension_extended::texture_dimension_2d,
+					gcm_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
 					dst.swizzled? rsx::texture_create_flags::swapped_native_component_order : rsx::texture_create_flags::native_component_order,
 					default_remap_vector)->get_raw_texture();
 			}

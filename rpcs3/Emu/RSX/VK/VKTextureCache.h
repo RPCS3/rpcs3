@@ -12,19 +12,12 @@ extern u64 get_system_time();
 
 namespace vk
 {
-	class cached_texture_section : public rsx::buffered_section
+	class cached_texture_section : public rsx::cached_texture_section
 	{
-		u16 pitch;
-		u16 width;
-		u16 height;
-		u16 depth;
-		u16 mipmaps;
-
 		std::unique_ptr<vk::image_view> uploaded_image_view;
 		std::unique_ptr<vk::image> managed_texture = nullptr;
 
 		//DMA relevant data
-		u16 native_pitch;
 		VkFence dma_fence = VK_NULL_HANDLE;
 		bool synchronized = false;
 		u64 sync_timestamp = 0;
@@ -46,7 +39,7 @@ namespace vk
 			rsx::buffered_section::reset(base, length, policy);
 		}
 
-		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, vk::image_view *view, vk::image *image, const u32 native_pitch = 0, bool managed=true)
+		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, vk::image_view *view, vk::image *image, const u32 rsx_pitch = 0, bool managed=true)
 		{
 			width = w;
 			height = h;
@@ -59,8 +52,8 @@ namespace vk
 			if (managed) managed_texture.reset(image);
 
 			//TODO: Properly compute these values
-			this->native_pitch = native_pitch;
-			pitch = cpu_address_range / height;
+			this->rsx_pitch = rsx_pitch;
+			real_pitch = cpu_address_range / height;
 
 			//Even if we are managing the same vram section, we cannot guarantee contents are static
 			//The create method is only invoked when a new mangaged session is required
@@ -83,46 +76,9 @@ namespace vk
 			}
 		}
 
-		bool matches(u32 rsx_address, u32 rsx_size) const
-		{
-			return rsx::buffered_section::matches(rsx_address, rsx_size);
-		}
-
-		bool matches(u32 rsx_address, u32 width, u32 height, u32 mipmaps) const
-		{
-			if (rsx_address == cpu_address_base)
-			{
-				if (!width && !height && !mipmaps)
-					return true;
-
-				if (width && width != this->width)
-					return false;
-
-				if (height && height != this->height)
-					return false;
-
-				if (mipmaps && mipmaps != this->mipmaps)
-					return false;
-
-				return true;
-			}
-
-			return false;
-		}
-
 		bool exists() const
 		{
 			return (vram_texture != nullptr);
-		}
-
-		u16 get_width() const
-		{
-			return width;
-		}
-
-		u16 get_height() const
-		{
-			return height;
 		}
 
 		std::unique_ptr<vk::image_view>& get_view()
@@ -253,9 +209,9 @@ namespace vk
 			void* pixels_src = dma_buffer->map(0, cpu_address_range);
 			void* pixels_dst = vm::base(cpu_address_base);
 
-			const u8 bpp = native_pitch / width;
+			const u8 bpp = real_pitch / width;
 
-			if (pitch == native_pitch)
+			if (real_pitch == rsx_pitch)
 			{
 				//We have to do our own byte swapping since the driver doesnt do it for us
 				switch (bpp)
@@ -280,9 +236,9 @@ namespace vk
 			{
 				//Scale image to fit
 				//usually we can just get away with nearest filtering
-				const u8 samples = pitch / native_pitch;
+				const u8 samples = rsx_pitch / real_pitch;
 
-				rsx::scale_image_nearest(pixels_dst, pixels_src, width, height, pitch, native_pitch, bpp, samples, true);
+				rsx::scale_image_nearest(pixels_dst, pixels_src, width, height, rsx_pitch, real_pitch, bpp, samples, true);
 			}
 
 			dma_buffer->unmap();
@@ -395,7 +351,7 @@ namespace vk
 			image.reset(new vk::image(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				source->info.imageType,
 				source->info.format,
-				source->width(), source->height(), source->depth(), 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				w, h, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, source->info.flags));
 
 			VkImageSubresourceRange view_range = { aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 1 };
@@ -429,7 +385,8 @@ namespace vk
 		}
 
 		cached_texture_section* create_new_texture(vk::command_buffer& cmd, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, const u32 gcm_format,
-					const rsx::texture_dimension_extended type, const rsx::texture_create_flags flags, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+				const rsx::texture_upload_context context, const rsx::texture_dimension_extended type, const rsx::texture_create_flags flags,
+				std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
 			VkFormat vk_format;
@@ -538,6 +495,7 @@ namespace vk
 			region.create(width, height, depth, mipmaps, view, image);
 			region.protect(utils::protection::ro);
 			region.set_dirty(false);
+			region.set_context(context);
 
 			read_only_range = region.get_min_max(read_only_range);
 			return &region;
@@ -547,7 +505,7 @@ namespace vk
 			const rsx::texture_upload_context context, std::vector<rsx_subresource_layout>& subresource_layout, const rsx::texture_dimension_extended type, const bool swizzled,
 			std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
-			auto section = create_new_texture(cmd, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, type,
+			auto section = create_new_texture(cmd, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
 					rsx::texture_create_flags::default_component_order, remap_vector);
 
 			auto image = section->get_raw_texture();
