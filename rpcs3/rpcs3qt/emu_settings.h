@@ -19,6 +19,7 @@ struct Render_Creator
 	bool supportsVulkan = false;
 	QStringList D3D12Adapters;
 	QStringList vulkanAdapters;
+	QString render_Null = QObject::tr("Null");
 	QString render_Vulkan = QObject::tr("Vulkan");
 	QString render_D3D12 = QObject::tr("D3D12[DO NOT USE]");
 	QString render_OpenGL = QObject::tr("OpenGL");

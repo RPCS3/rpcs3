@@ -123,7 +123,7 @@ error_code sys_memory_free(u32 addr)
 	verify(HERE), area;
 
 	// Deallocate memory
-	u32 cid, size = area->dealloc(addr, &cid);
+	u32 cid, size = area->dealloc(addr, nullptr, &cid);
 
 	if (!size)
 	{
