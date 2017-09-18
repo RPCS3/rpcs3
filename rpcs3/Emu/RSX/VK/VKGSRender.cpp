@@ -909,6 +909,18 @@ void VKGSRender::begin()
 
 	vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
 
+	if (rsx::method_registers.poly_offset_fill_enabled())
+	{
+		//offset_bias is the constant factor, multiplied by the implementation factor R
+		//offst_scale is the slope factor, multiplied by the triangle slope factor M
+		vkCmdSetDepthBias(*m_current_command_buffer, rsx::method_registers.poly_offset_bias(), 0.f, rsx::method_registers.poly_offset_scale());
+	}
+	else
+	{
+		//Zero bias value - disables depth bias
+		vkCmdSetDepthBias(*m_current_command_buffer, 0.f, 0.f, 0.f);
+	}
+
 	//TODO: Set up other render-state parameters into the program pipeline
 
 	std::chrono::time_point<steady_clock> stop = steady_clock::now();
@@ -1837,7 +1849,9 @@ bool VKGSRender::check_program_status()
 	properties.rs.polygonMode = VK_POLYGON_MODE_FILL;
 	properties.rs.depthClampEnable = VK_FALSE;
 	properties.rs.rasterizerDiscardEnable = VK_FALSE;
-	properties.rs.depthBiasEnable = VK_FALSE;
+
+	//Disabled by setting factors to 0 as needed
+	properties.rs.depthBiasEnable = VK_TRUE;
 
 	if (rsx::method_registers.cull_face_enabled())
 		properties.rs.cullMode = vk::get_cull_face(rsx::method_registers.cull_face_mode());

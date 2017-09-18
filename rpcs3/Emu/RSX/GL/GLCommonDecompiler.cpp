@@ -44,6 +44,10 @@ namespace gl
 			return "textureLod($t, $0.xy * $t_coord_scale, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD:
 			return "textureGrad($t, $0.xy * $t_coord_scale , $1.xy, $2.xy)";
+		case FUNCTION::FUNCTION_TEXTURE_SHADOW2D:
+			return "texture($t, $0.xyz)";
+		case FUNCTION::FUNCTION_TEXTURE_SHADOW2D_PROJ:
+			return "textureProj($t, $0, $1.x)"; // Note: $1.x is bias
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE:
 			return "texture($t, $0.xyz)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ:
