@@ -264,6 +264,8 @@ void GLGSRender::begin()
 	gl_state.enable(rsx::method_registers.poly_offset_line_enabled(), GL_POLYGON_OFFSET_LINE);
 	gl_state.enable(rsx::method_registers.poly_offset_fill_enabled(), GL_POLYGON_OFFSET_FILL);
 
+	//offset_bias is the constant factor, multiplied by the implementation factor R
+	//offst_scale is the slope factor, multiplied by the triangle slope factor M
 	gl_state.polygon_offset(rsx::method_registers.poly_offset_scale(), rsx::method_registers.poly_offset_bias());
 
 	if (gl_state.enable(rsx::method_registers.cull_face_enabled(), GL_CULL_FACE))
