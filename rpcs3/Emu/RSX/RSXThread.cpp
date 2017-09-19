@@ -394,6 +394,7 @@ namespace rsx
 		// Deferred calls are used to batch draws together
 		u32 deferred_primitive_type = 0;
 		u32 deferred_call_size = 0;
+		s32 deferred_begin_end = 0;
 		std::vector<u32> deferred_stack;
 		bool has_deferred_call = false;
 
@@ -453,6 +454,10 @@ namespace rsx
 			if (emit_end)
 				methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
 
+			if (deferred_begin_end > 0) //Hanging draw call (useful for immediate rendering where the begin call needs to be noted)
+				methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
+
+			deferred_begin_end = 0;
 			deferred_primitive_type = 0;
 			deferred_call_size = 0;
 			has_deferred_call = false;
@@ -569,6 +574,11 @@ namespace rsx
 					case NV4097_SET_BEGIN_END:
 					{
 						// Hook; Allows begin to go through, but ignores end
+						if (value)
+							deferred_begin_end++;
+						else
+							deferred_begin_end--;
+
 						if (value && value != deferred_primitive_type)
 							deferred_primitive_type = value;
 						else
@@ -1065,8 +1075,7 @@ namespace rsx
 		current_vertex_program.skip_vertex_input_check = false;
 
 		current_vertex_program.rsx_vertex_inputs.resize(0);
-		current_vertex_program.data.resize(512 * 4);
-		current_vertex_program.rsx_vertex_inputs.reserve(rsx::limits::vertex_count);
+		current_vertex_program.data.resize((512 - transform_program_start) * 4);
 
 		u32* ucode_src = rsx::method_registers.transform_program.data() + (transform_program_start * 4);
 		u32* ucode_dst = current_vertex_program.data.data();

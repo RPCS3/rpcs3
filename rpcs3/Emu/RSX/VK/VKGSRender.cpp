@@ -1696,7 +1696,7 @@ bool VKGSRender::do_method(u32 cmd, u32 arg)
 
 bool VKGSRender::check_program_status()
 {
-	auto rtt_lookup_func = [this](u32 texaddr, rsx::fragment_texture&, bool is_depth) -> std::tuple<bool, u16>
+	auto rtt_lookup_func = [this](u32 texaddr, rsx::fragment_texture &tex, bool is_depth) -> std::tuple<bool, u16>
 	{
 		vk::render_target *surface = nullptr;
 
@@ -1706,7 +1706,7 @@ bool VKGSRender::check_program_status()
 		{
 			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
 
-			if (!surface && m_texture_cache.is_depth_texture(texaddr))
+			if (!surface && m_texture_cache.is_depth_texture(texaddr, (u32)get_texture_size(tex)))
 				return std::make_tuple(true, 0);
 		}
 

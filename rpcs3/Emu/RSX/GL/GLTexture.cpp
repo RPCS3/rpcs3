@@ -19,7 +19,7 @@ namespace gl
 		case CELL_GCM_TEXTURE_A8R8G8B8: return GL_RGBA8;
 		case CELL_GCM_TEXTURE_G8B8: return GL_RG8;
 		case CELL_GCM_TEXTURE_R6G5B5: return GL_RGB565;
-		case CELL_GCM_TEXTURE_DEPTH24_D8: return GL_DEPTH_COMPONENT24;
+		case CELL_GCM_TEXTURE_DEPTH24_D8: return GL_DEPTH24_STENCIL8;
 		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: return GL_DEPTH_COMPONENT24;
 		case CELL_GCM_TEXTURE_DEPTH16: return GL_DEPTH_COMPONENT16;
 		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return GL_DEPTH_COMPONENT16;
@@ -442,7 +442,7 @@ namespace gl
 		}
 	}
 
-	void upload_texture(const GLuint id, const u32 texaddr, const u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, bool is_swizzled, rsx::texture_dimension_extended type,
+	void upload_texture(const GLuint id, const u32 texaddr, const u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
 			std::vector<rsx_subresource_layout>& subresources_layout, std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap, bool static_state)
 	{
 		const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
