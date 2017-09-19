@@ -109,18 +109,24 @@ namespace rsx
 			std::vector<section_storage_type> data;  //Stored data
 			std::atomic_int valid_count = { 0 };  //Number of usable (non-dirty) blocks
 			u32 max_range = 0;  //Largest stored block
+			u32 max_addr = 0;
+			u32 min_addr = UINT32_MAX;
 
-			void notify(u32 data_size)
+			void notify(u32 addr, u32 data_size)
 			{
 				verify(HERE), valid_count >= 0;
 				max_range = std::max(data_size, max_range);
+				max_addr = std::max(max_addr, addr);
+				min_addr = std::min(min_addr, addr);
 				valid_count++;
 			}
 
-			void add(section_storage_type& section, u32 data_size)
+			void add(section_storage_type& section, u32 addr, u32 data_size)
 			{
 				verify(HERE), valid_count >= 0;
 				max_range = std::max(data_size, max_range);
+				max_addr = std::max(max_addr, addr);
+				min_addr = std::min(min_addr, addr);
 				valid_count++;
 
 				data.push_back(std::move(section));
@@ -141,7 +147,6 @@ namespace rsx
 			texture_format format;
 		};
 
-		std::atomic_bool in_access_violation_handler = { false };
 		shared_mutex m_cache_mutex;
 		std::unordered_map<u32, ranged_storage> m_cache;
 
@@ -149,6 +154,9 @@ namespace rsx
 		std::pair<u32, u32> no_access_range = std::make_pair(0xFFFFFFFF, 0);
 
 		std::unordered_map<u32, framebuffer_memory_characteristics> m_cache_miss_statistics_table;
+
+		//Set when a hw blit engine incompatibility is detected
+		bool blit_engine_incompatibility_warning_raised = false;
 		
 		//Memory usage
 		const s32 m_max_zombie_objects = 128; //Limit on how many texture objects to keep around for reuse after they are invalidated
@@ -165,12 +173,15 @@ namespace rsx
 		virtual void enforce_surface_creation_type(section_storage_type& section, const texture_create_flags expected) = 0;
 		virtual void insert_texture_barrier() = 0;
 
+		constexpr u32 get_block_size() const { return 0x1000000; }
+		inline u32 get_block_address(u32 address) const { return (address & ~0xFFFFFF); }
+
 	private:
 		//Internal implementation methods
 		bool invalidate_range_impl(u32 address, u32 range, bool unprotect)
 		{
 			bool response = false;
-			u32 last_dirty_block = 0;
+			u32 last_dirty_block = UINT32_MAX;
 			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
 
 			for (auto It = m_cache.begin(); It != m_cache.end(); It++)
@@ -185,7 +196,7 @@ namespace rsx
 				if (trampled_range.first < trampled_range.second)
 				{
 					//Only if a valid range, ignore empty sets
-					if (trampled_range.first >= (base + range_data.max_range + get_block_size()) || base >= trampled_range.second)
+					if (trampled_range.first >= (range_data.max_addr + range_data.max_range) || range_data.min_addr >= trampled_range.second)
 						continue;
 				}
 
@@ -239,7 +250,7 @@ namespace rsx
 		bool flush_address_impl(u32 address, Args&&... extras)
 		{
 			bool response = false;
-			u32 last_dirty_block = 0;
+			u32 last_dirty_block = UINT32_MAX;
 			std::pair<u32, u32> trampled_range = std::make_pair(0xffffffff, 0x0);
 			std::vector<section_storage_type*> sections_to_flush;
 
@@ -255,7 +266,7 @@ namespace rsx
 				if (trampled_range.first < trampled_range.second)
 				{
 					//Only if a valid range, ignore empty sets
-					if (trampled_range.first >= (base + range_data.max_range + get_block_size()) || base >= trampled_range.second)
+					if (trampled_range.first >= (range_data.max_addr + range_data.max_range) || range_data.min_addr >= trampled_range.second)
 						continue;
 				}
 
@@ -307,8 +318,19 @@ namespace rsx
 			return response;
 		}
 
-		constexpr u32 get_block_size() const { return 0x1000000; }
-		inline u32 get_block_address(u32 address) const { return (address & ~0xFFFFFF);  }
+		bool is_hw_blit_engine_compatible(const u32 format) const
+		{
+			switch (format)
+			{
+			case CELL_GCM_TEXTURE_A8R8G8B8:
+			case CELL_GCM_TEXTURE_R5G6B5:
+			case CELL_GCM_TEXTURE_DEPTH16:
+			case CELL_GCM_TEXTURE_DEPTH24_D8:
+				return true;
+			default:
+				return false;
+			}
+		}
 
 	public:
 
@@ -316,7 +338,7 @@ namespace rsx
 		~texture_cache() {}
 		
 		virtual void destroy() = 0;
-		virtual bool is_depth_texture(const u32) = 0;
+		virtual bool is_depth_texture(const u32, const u32) = 0;
 		virtual void on_frame_end() = 0;
 
 		std::vector<section_storage_type*> find_texture_from_range(u32 rsx_address, u32 range)
@@ -372,10 +394,13 @@ namespace rsx
 				{
 					if (tex.matches(rsx_address, rsx_size) && !tex.is_dirty())
 					{
-						if (!confirm_dimensions) return tex;
+						if (!confirm_dimensions || tex.matches(rsx_address, width, height, mipmaps))
+						{
+							if (!tex.is_locked())
+								range_data.notify(rsx_address, rsx_size);
 
-						if (tex.matches(rsx_address, width, height, mipmaps))
 							return tex;
+						}
 						else
 						{
 							LOG_ERROR(RSX, "Cached object for address 0x%X was found, but it does not match stored parameters.", rsx_address);
@@ -394,14 +419,14 @@ namespace rsx
 							free_texture_section(tex);
 						}
 
-						range_data.notify(rsx_size);
+						range_data.notify(rsx_address, rsx_size);
 						return tex;
 					}
 				}
 			}
 
 			section_storage_type tmp;
-			m_cache[block_address].add(tmp, rsx_size);
+			m_cache[block_address].add(tmp, rsx_address, rsx_size);
 			return m_cache[block_address].data.back();
 		}
 
@@ -483,7 +508,7 @@ namespace rsx
 				address > no_access_range.second)
 				return std::make_tuple(false, nullptr);
 
-			rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_cache_mutex);
+			reader_lock lock(m_cache_mutex);
 
 			auto found = m_cache.find(get_block_address(address));
 			if (found != m_cache.end())
@@ -494,7 +519,7 @@ namespace rsx
 					if (tex.is_dirty()) continue;
 					if (!tex.is_flushable()) continue;
 
-					if (tex.overlaps(address))
+					if (tex.overlaps(address, false))
 						return std::make_tuple(true, &tex);
 				}
 			}
@@ -518,7 +543,7 @@ namespace rsx
 					if (tex.is_dirty()) continue;
 					if (!tex.is_flushable()) continue;
 
-					if (tex.overlaps(address))
+					if (tex.overlaps(address, false))
 						return std::make_tuple(true, &tex);
 				}
 			}
@@ -533,7 +558,7 @@ namespace rsx
 				address > no_access_range.second)
 				return false;
 
-			rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_cache_mutex);
+			writer_lock lock(m_cache_mutex);
 			return flush_address_impl(address, std::forward<Args>(extras)...);
 		}
 
@@ -555,7 +580,7 @@ namespace rsx
 					return false;
 			}
 
-			rsx::conditional_lock<shared_mutex> lock(in_access_violation_handler, m_cache_mutex);
+			writer_lock lock(m_cache_mutex);
 			return invalidate_range_impl(address, range, unprotect);
 		}
 
@@ -651,17 +676,16 @@ namespace rsx
 		image_view_type upload_texture(commandbuffer_type& cmd, RsxTextureType& tex, surface_store_type& m_rtts)
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
-			const u32 range = (u32)get_texture_size(tex);
+			const u32 tex_size = (u32)get_texture_size(tex);
 
 			const u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 			const u32 tex_width = tex.width();
 			const u32 tex_height = tex.height();
-			const u32 native_pitch = (tex_width * get_format_block_size_in_bytes(format));
-			const u32 tex_pitch = (tex.pitch() == 0) ? native_pitch : tex.pitch();
+			const u32 tex_pitch = (tex_size / tex_height); //NOTE: Compressed textures dont have a real pitch (tex_size = (w*h)/6)
 
-			if (!texaddr || !range)
+			if (!texaddr || !tex_size)
 			{
-				LOG_ERROR(RSX, "Texture upload requested but texture not found, (address=0x%X, size=0x%X)", texaddr, range);
+				LOG_ERROR(RSX, "Texture upload requested but texture not found, (address=0x%X, size=0x%X)", texaddr, tex_size);
 				return 0;
 			}
 
@@ -718,30 +742,42 @@ namespace rsx
 					return cached_texture->get_raw_view();
 				}
 
-				//Find based on range instead
-				auto overlapping_surfaces = find_texture_from_range(texaddr, tex_pitch * tex_height);
-				if (!overlapping_surfaces.empty())
+				if ((!blit_engine_incompatibility_warning_raised && g_cfg.video.use_gpu_texture_scaling) || is_hw_blit_engine_compatible(format))
 				{
-					for (auto surface : overlapping_surfaces)
+					//Find based on range instead
+					auto overlapping_surfaces = find_texture_from_range(texaddr, tex_size);
+					if (!overlapping_surfaces.empty())
 					{
-						if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst)
-							continue;
-
-						if (surface->get_width() >= tex_width && surface->get_height() >= tex_height)
+						for (auto surface : overlapping_surfaces)
 						{
-							u16 offset_x = 0, offset_y = 0;
-							if (const u32 address_offset = texaddr - surface->get_section_base())
-							{
-								const auto bpp = get_format_block_size_in_bytes(format);
-								offset_y = address_offset / tex_pitch;
-								offset_x = (address_offset % tex_pitch) / bpp;
-							}
+							if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst)
+								continue;
 
-							if ((offset_x + tex_width) <= surface->get_width() &&
-								(offset_y + tex_height) <= surface->get_height())
+							if (surface->get_width() >= tex_width && surface->get_height() >= tex_height)
 							{
-								auto src_image = surface->get_raw_texture();
-								return create_temporary_subresource_view(cmd, &src_image, format, offset_x, offset_y, tex_width, tex_height);
+								u16 offset_x = 0, offset_y = 0;
+								if (const u32 address_offset = texaddr - surface->get_section_base())
+								{
+									const auto bpp = get_format_block_size_in_bytes(format);
+									offset_y = address_offset / tex_pitch;
+									offset_x = (address_offset % tex_pitch) / bpp;
+								}
+
+								if ((offset_x + tex_width) <= surface->get_width() &&
+									(offset_y + tex_height) <= surface->get_height())
+								{
+									if (!blit_engine_incompatibility_warning_raised && !is_hw_blit_engine_compatible(format))
+									{
+										LOG_ERROR(RSX, "Format 0x%X is not compatible with the hardware blit acceleration."
+												" Consider turning off GPU texture scaling in the options to partially handle textures on your CPU.", format);
+										blit_engine_incompatibility_warning_raised = true;
+										break;
+									}
+
+									auto src_image = surface->get_raw_texture();
+									if (auto result = create_temporary_subresource_view(cmd, &src_image, format, offset_x, offset_y, tex_width, tex_height))
+										return result;
+								}
 							}
 						}
 					}
@@ -754,6 +790,7 @@ namespace rsx
 			 * a bound render target. We can bypass the expensive download in this case
 			 */
 
+			const u32 native_pitch = tex_width * get_format_block_size_in_bytes(format);
 			const f32 internal_scale = (f32)tex_pitch / native_pitch;
 			const u32 internal_width = (const u32)(tex_width * internal_scale);
 
@@ -917,7 +954,7 @@ namespace rsx
 			bool is_memcpy = false;
 			u32 memcpy_bytes_length = 0;
 
-			if (dst_is_argb8 == src_is_argb8 && !dst.swizzled)
+			if (!src_is_render_target && !dst_is_render_target && dst_is_argb8 == src_is_argb8 && !dst.swizzled)
 			{
 				if ((src.slice_h == 1 && dst.clip_height == 1) ||
 					(dst.clip_width == src.width && dst.clip_height == src.slice_h && src.pitch == dst.pitch))
@@ -930,54 +967,42 @@ namespace rsx
 
 			reader_lock lock(m_cache_mutex);
 			section_storage_type* cached_dest = nullptr;
+			bool invalidate_dst_range = false;
 
 			if (!dst_is_render_target)
 			{
-				//Apply region offsets
-				dst_area.x1 += dst.offset_x;
-				dst_area.x2 += dst.offset_x;
-				dst_area.y1 += dst.offset_y;
-				dst_area.y2 += dst.offset_y;
-
-				//First check if this surface exists in VRAM with exact dimensions
-				//Since scaled GPU resources are not invalidated by the CPU, we need to reuse older surfaces if possible
-				cached_dest = find_texture_from_dimensions(dst.rsx_address, dst_dimensions.width, dst_dimensions.height);
-
 				//Check for any available region that will fit this one
-				if (!cached_dest)
+				auto overlapping_surfaces = find_texture_from_range(dst_address, dst.pitch * dst.clip_height);
+
+				for (auto surface: overlapping_surfaces)
 				{
-					auto overlapping_surfaces = find_texture_from_range(dst_address, dst.pitch * dst.clip_height);
+					if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst)
+						continue;
 
-					for (auto surface: overlapping_surfaces)
+					const auto old_dst_area = dst_area;
+					if (const u32 address_offset = dst_address - surface->get_section_base())
 					{
-						if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst)
-							continue;
+						const u16 bpp = dst_is_argb8 ? 4 : 2;
+						const u16 offset_y = address_offset / dst.pitch;
+						const u16 offset_x = address_offset % dst.pitch;
+						const u16 offset_x_in_block = offset_x / bpp;
 
-						const auto old_dst_area = dst_area;
-						if (const u32 address_offset = dst_address - surface->get_section_base())
-						{
-							const u16 bpp = dst_is_argb8 ? 4 : 2;
-							const u16 offset_y = address_offset / dst.pitch;
-							const u16 offset_x = address_offset % dst.pitch;
-							const u16 offset_x_in_block = offset_x / bpp;
+						dst_area.x1 += offset_x_in_block;
+						dst_area.x2 += offset_x_in_block;
+						dst_area.y1 += offset_y;
+						dst_area.y2 += offset_y;
+					}
 
-							dst_area.x1 += offset_x_in_block;
-							dst_area.x2 += offset_x_in_block;
-							dst_area.y1 += offset_y;
-							dst_area.y2 += offset_y;
-						}
-
-						//Validate clipping region
-						if ((unsigned)dst_area.x2 <= surface->get_width() &&
-							(unsigned)dst_area.y2 <= surface->get_height())
-						{
-							cached_dest = surface;
-							break;
-						}
-						else
-						{
-							dst_area = old_dst_area;
-						}
+					//Validate clipping region
+					if ((unsigned)dst_area.x2 <= surface->get_width() &&
+						(unsigned)dst_area.y2 <= surface->get_height())
+					{
+						cached_dest = surface;
+						break;
+					}
+					else
+					{
+						dst_area = old_dst_area;
 					}
 				}
 
@@ -998,6 +1023,10 @@ namespace rsx
 					invalidate_range_impl(dst_address, memcpy_bytes_length, true);
 					memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
 					return true;
+				}
+				else if (overlapping_surfaces.size() > 0)
+				{
+					invalidate_dst_range = true;
 				}
 			}
 			else
@@ -1114,6 +1143,11 @@ namespace rsx
 
 				dest_texture = 0;
 				cached_dest = nullptr;
+			}
+			else if (invalidate_dst_range)
+			{
+				lock.upgrade();
+				invalidate_range_impl(dst_address, dst.pitch * dst.height, true);
 			}
 
 			//Validate clipping region

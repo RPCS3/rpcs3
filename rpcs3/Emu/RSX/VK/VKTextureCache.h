@@ -39,7 +39,7 @@ namespace vk
 			rsx::buffered_section::reset(base, length, policy);
 		}
 
-		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, vk::image_view *view, vk::image *image, const u32 rsx_pitch = 0, bool managed=true)
+		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, vk::image_view *view, vk::image *image, const u32 rsx_pitch=0, bool managed=true)
 		{
 			width = w;
 			height = h;
@@ -52,8 +52,12 @@ namespace vk
 			if (managed) managed_texture.reset(image);
 
 			//TODO: Properly compute these values
-			this->rsx_pitch = rsx_pitch;
-			real_pitch = cpu_address_range / height;
+			if (rsx_pitch > 0)
+				this->rsx_pitch = rsx_pitch;
+			else
+				this->rsx_pitch = cpu_address_range / height;
+
+			real_pitch = vk::get_format_texel_width(image->info.format) * width;
 
 			//Even if we are managing the same vram section, we cannot guarantee contents are static
 			//The create method is only invoked when a new mangaged session is required
@@ -493,9 +497,12 @@ namespace vk
 			cached_texture_section& region = find_cached_texture(rsx_address, rsx_size, true, width, height, 0);
 			region.reset(rsx_address, rsx_size);
 			region.create(width, height, depth, mipmaps, view, image);
-			region.protect(utils::protection::ro);
 			region.set_dirty(false);
 			region.set_context(context);
+
+			//Its not necessary to lock blit dst textures as they are just reused as necessary
+			if (context != rsx::texture_upload_context::blit_engine_dst || g_cfg.video.strict_rendering_mode)
+				region.protect(utils::protection::ro);
 
 			read_only_range = region.get_min_max(read_only_range);
 			return &region;
@@ -580,11 +587,11 @@ namespace vk
 			purge_cache();
 		}
 
-		bool is_depth_texture(const u32 texaddr) override
+		bool is_depth_texture(const u32 rsx_address, const u32 rsx_size) override
 		{
 			reader_lock lock(m_cache_mutex);
 
-			auto found = m_cache.find(texaddr);
+			auto found = m_cache.find(get_block_address(rsx_address));
 			if (found == m_cache.end())
 				return false;
 
@@ -596,14 +603,20 @@ namespace vk
 				if (tex.is_dirty())
 					continue;
 
-				switch (tex.get_format())
+				if (!tex.overlaps(rsx_address, true))
+					continue;
+
+				if ((rsx_address + rsx_size - tex.get_section_base()) <= tex.get_section_size())
 				{
-				case VK_FORMAT_D16_UNORM:
-				case VK_FORMAT_D32_SFLOAT_S8_UINT:
-				case VK_FORMAT_D24_UNORM_S8_UINT:
-					return true;
-				default:
-					return false;
+					switch (tex.get_format())
+					{
+					case VK_FORMAT_D16_UNORM:
+					case VK_FORMAT_D32_SFLOAT_S8_UINT:
+					case VK_FORMAT_D24_UNORM_S8_UINT:
+						return true;
+					default:
+						return false;
+					}
 				}
 			}
 

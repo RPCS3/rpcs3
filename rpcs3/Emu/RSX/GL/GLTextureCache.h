@@ -476,6 +476,19 @@ namespace gl
 		{
 			u32 dst_id = 0;
 
+			GLenum ifmt;
+			glBindTexture(GL_TEXTURE_2D, src_id);
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, (GLint*)&ifmt);
+
+			switch (ifmt)
+			{
+			case GL_DEPTH_COMPONENT16:
+			case GL_DEPTH_COMPONENT24:
+			case GL_DEPTH24_STENCIL8:
+				sized_internal_fmt = ifmt;
+				break;
+			}
+
 			glGenTextures(1, &dst_id);
 			glBindTexture(GL_TEXTURE_2D, dst_id);
 
@@ -552,11 +565,14 @@ namespace gl
 			}
 
 			auto& cached = create_texture(vram_texture, rsx_address, rsx_size, width, height);
-			cached.protect(utils::protection::ro);
 			cached.set_dirty(false);
 			cached.set_depth_flag(depth_flag);
 			cached.set_view_flags(flags);
 			cached.set_context(context);
+
+			//Its not necessary to lock blit dst textures as they are just reused as necessary
+			if (context != rsx::texture_upload_context::blit_engine_dst || g_cfg.video.strict_rendering_mode)
+				cached.protect(utils::protection::ro);
 
 			return &cached;
 		}
@@ -572,7 +588,7 @@ namespace gl
 			//Swizzling is ignored for blit engine copy and emulated using remapping
 			bool input_swizzled = (context == rsx::texture_upload_context::blit_engine_src)? false : swizzled;
 
-			gl::upload_texture(section->get_raw_texture(), rsx_address, gcm_format, width, height, depth, mipmaps, pitch, input_swizzled, type, subresource_layout, remap_vector, false);
+			gl::upload_texture(section->get_raw_texture(), rsx_address, gcm_format, width, height, depth, mipmaps, input_swizzled, type, subresource_layout, remap_vector, false);
 			return section;
 		}
 
@@ -620,11 +636,11 @@ namespace gl
 			m_hw_blitter.destroy();
 		}
 		
-		bool is_depth_texture(const u32 rsx_address) override
+		bool is_depth_texture(const u32 rsx_address, const u32 rsx_size) override
 		{
 			reader_lock lock(m_cache_mutex);
 
-/*			auto found = m_cache.find(rsx_address);
+			auto found = m_cache.find(get_block_address(rsx_address));
 			if (found == m_cache.end())
 				return false;
 
@@ -636,8 +652,12 @@ namespace gl
 				if (tex.is_dirty())
 					continue;
 
-				return tex.is_depth_texture();
-			}*/
+				if (!tex.overlaps(rsx_address, true))
+					continue;
+
+				if ((rsx_address + rsx_size - tex.get_section_base()) <= tex.get_section_size())
+					return tex.is_depth_texture();
+			}
 
 			return false;
 		}

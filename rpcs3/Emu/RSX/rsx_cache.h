@@ -134,21 +134,24 @@ namespace rsx
 			locked = false;
 		}
 
+		/**
+		* Check if range overlaps with this section.
+		* ignore_protection_range - if true, the test should not check against the aligned protection range, instead
+		* tests against actual range of contents in memory
+		*/
 		bool overlaps(std::pair<u32, u32> range) const
 		{
 			return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
 		}
 
-		bool overlaps(u32 address) const
+		bool overlaps(u32 address, bool ignore_protection_range) const
 		{
-			return (locked_address_base <= address && (address - locked_address_base) < locked_address_range);
+			if (!ignore_protection_range)
+				return (locked_address_base <= address && (address - locked_address_base) < locked_address_range);
+			else
+				return (cpu_address_base <= address && (address - cpu_address_base) < cpu_address_range);
 		}
 
-		/**
-		 * Check if range overlaps with this section.
-		 * ignore_protection_range - if true, the test should not check against the aligned protection range, instead
-		 * tests against actual range of contents in memory
-		 */
 		bool overlaps(std::pair<u32, u32> range, bool ignore_protection_range) const
 		{
 			if (!ignore_protection_range)

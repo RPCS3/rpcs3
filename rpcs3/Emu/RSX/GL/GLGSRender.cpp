@@ -939,7 +939,7 @@ bool GLGSRender::check_program_state()
 		{
 			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
 
-			if (!surface && m_gl_texture_cache.is_depth_texture(texaddr))
+			if (!surface && m_gl_texture_cache.is_depth_texture(texaddr, (u32)get_texture_size(tex)))
 				return std::make_tuple(true, 0);
 		}
 
@@ -1094,22 +1094,20 @@ void GLGSRender::flip(int buffer)
 	m_flip_fbo.recreate();
 	m_flip_fbo.bind();
 
-	//The render might have been done offscreen and a blit used to display
-	//Check the texture cache for a blitted copy
 	const u32 size = buffer_pitch * buffer_height;
-	auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address);
-
-	if (surface != nullptr)
-	{
-		m_flip_fbo.color = surface->get_raw_view();
-		m_flip_fbo.read_buffer(m_flip_fbo.color);
-	}
-	else if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
+	if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
 	{
 		buffer_width = render_target_texture->width();
 		buffer_height = render_target_texture->height();
 
 		m_flip_fbo.color = *render_target_texture;
+		m_flip_fbo.read_buffer(m_flip_fbo.color);
+	}
+	else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address))
+	{
+		//Hack - this should be the first location to check for output
+		//The render might have been done offscreen or in software and a blit used to display
+		m_flip_fbo.color = surface->get_raw_view();
 		m_flip_fbo.read_buffer(m_flip_fbo.color);
 	}
 	else
@@ -1248,7 +1246,7 @@ void GLGSRender::do_local_task()
 		//Check if the suggested section is valid
 		if (!q.section_to_flush->is_flushed())
 		{
-			q.section_to_flush->flush();
+			m_gl_texture_cache.flush_address(q.address_to_flush);
 			q.result = true;
 		}
 		else
