@@ -26,8 +26,8 @@
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
-settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const Render_Creator& r_Creator, const int& tabIndex, QWidget *parent, const GameInfo* game)
-	: QDialog(parent), xgui_settings(xSettings), ui(new Ui::settings_dialog), m_tab_Index(tabIndex)
+settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, const int& tabIndex, QWidget *parent, const GameInfo* game)
+	: QDialog(parent), xgui_settings(guiSettings), xemu_settings(emuSettings), ui(new Ui::settings_dialog), m_tab_Index(tabIndex)
 {
 	ui->setupUi(this);
 	ui->cancelButton->setDefault(true);
@@ -69,15 +69,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	QJsonObject json_debug = json_obj.value("debug").toObject();
 
-	std::shared_ptr<emu_settings> xemu_settings;
 	if (game)
 	{
-		xemu_settings.reset(new emu_settings("data/" + game->serial));
+		xemu_settings->LoadSettings("data/" + game->serial);
 		setWindowTitle(tr("Settings: [") + qstr(game->serial) + "] " + qstr(game->name));
 	}
 	else
 	{
-		xemu_settings.reset(new emu_settings(""));
+		xemu_settings->LoadSettings();
 		setWindowTitle(tr("Settings"));
 	}
 
@@ -333,6 +332,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//   | |__| | |    | |__| |    | | (_| | |_) |
 	//    \_____|_|     \____/     |_|\__,_|_.__/ 
 
+	emu_settings::Render_Creator render_creator = xemu_settings.get()->m_render_creator;
+
 	// Comboboxes
 	ui->graphicsAdapterBox->setToolTip(json_gpu_cbo["graphicsAdapterBox"].toString());
 
@@ -343,7 +344,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	{
 		if (ui->renderBox->itemText(i) == "D3D12")
 		{
-			ui->renderBox->setItemText(i, r_Creator.render_D3D12);
+			ui->renderBox->setItemText(i, render_creator.name_D3D12);
 			break;
 		}
 	}
@@ -376,16 +377,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
 	ui->scrictModeRendering->setToolTip(json_gpu_main["scrictModeRendering"].toString());
 
-	// Graphics Adapter
-	m_D3D12 = Render_Info(r_Creator.render_D3D12, r_Creator.D3D12Adapters, r_Creator.supportsD3D12, emu_settings::D3D12Adapter);
-	m_Vulkan = Render_Info(r_Creator.render_Vulkan, r_Creator.vulkanAdapters, r_Creator.supportsVulkan, emu_settings::VulkanAdapter);
-	m_OpenGL = Render_Info(r_Creator.render_OpenGL);
-	m_NullRender = Render_Info(r_Creator.render_Null);
-
-	std::vector<Render_Info*> Render_List = { &m_D3D12, &m_Vulkan, &m_OpenGL, &m_NullRender };
-
 	// Remove renderers from the renderer Combobox if not supported
-	for (auto renderer : Render_List)
+	for (const auto& renderer : render_creator.renderers)
 	{
 		if (renderer->supported)
 		{
@@ -412,10 +405,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	{
 		if (text.isEmpty()) return;
 
-		auto switchTo = [=](Render_Info renderer)
+		auto switchTo = [=](emu_settings::Render_Info renderer)
 		{
 			// Reset other adapters to old config
-			for (const auto& render : Render_List)
+			for (const auto& render : render_creator.renderers)
 			{
 				if (renderer.name != render->name && render->has_adapters && render->supported)
 				{
@@ -453,12 +446,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 			xemu_settings->SetSetting(renderer.type, sstr(ui->graphicsAdapterBox->currentText()));
 		};
 
-		for (auto render : Render_List)
+		for (const auto& renderer : render_creator.renderers)
 		{
-			if (render->name == text)
+			if (renderer->name == text)
 			{
-				switchTo(*render);
-				ui->graphicsAdapterBox->setEnabled(render->has_adapters);
+				switchTo(*renderer);
+				ui->graphicsAdapterBox->setEnabled(renderer->has_adapters);
 			}
 		}
 	};
@@ -474,7 +467,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 			m_oldRender = newRender;
 			return;
 		}
-		for (const auto& render : Render_List)
+		for (const auto& render : render_creator.renderers)
 		{
 			if (render->name == newRender && render->has_adapters && render->adapters.contains(text))
 			{
@@ -494,7 +487,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	auto fixGLLegacy = [=](const QString& text)
 	{
-		ui->glLegacyBuffers->setEnabled(text == m_OpenGL.name);
+		ui->glLegacyBuffers->setEnabled(text == render_creator.name_OpenGL);
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.

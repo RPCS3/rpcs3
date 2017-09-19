@@ -32,8 +32,6 @@ class main_window : public QMainWindow
 	bool m_sys_menu_opened;
 	bool m_save_slider_pos = false;
 
-	Render_Creator m_Render_Creator;
-
 	QIcon m_appIcon;
 	QIcon m_icon_play;
 	QIcon m_icon_pause;
@@ -58,7 +56,7 @@ class main_window : public QMainWindow
 #endif
 
 public:
-	explicit main_window(std::shared_ptr<gui_settings> guiSettings, QWidget *parent = 0);
+	explicit main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent = 0);
 	void Init();
 	~main_window();
 	void CreateThumbnailToolbar();
@@ -117,4 +115,5 @@ private:
 	debugger_frame *m_debuggerFrame;
 	game_list_frame *m_gameListFrame;
 	std::shared_ptr<gui_settings> guiSettings;
+	std::shared_ptr<emu_settings> emuSettings;
 };

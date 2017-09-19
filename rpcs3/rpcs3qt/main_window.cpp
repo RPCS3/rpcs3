@@ -47,7 +47,8 @@
 
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-main_window::main_window(std::shared_ptr<gui_settings> guiSettings, QWidget *parent) : QMainWindow(parent), guiSettings(guiSettings), m_sys_menu_opened(false), ui(new Ui::main_window)
+main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
+	: QMainWindow(parent), guiSettings(guiSettings), emuSettings(emuSettings), m_sys_menu_opened(false), ui(new Ui::main_window)
 {
 }
 
@@ -1207,7 +1208,7 @@ void main_window::CreateConnects()
 
 	auto openSettings = [=](int tabIndex)
 	{
-		settings_dialog dlg(guiSettings, m_Render_Creator, tabIndex, this);
+		settings_dialog dlg(guiSettings, emuSettings,  tabIndex, this);
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
@@ -1235,7 +1236,7 @@ void main_window::CreateConnects()
 
 	connect(ui->confVFSDialogAct, &QAction::triggered, [=]
 	{
-		vfs_dialog dlg(this);
+		vfs_dialog dlg(guiSettings, emuSettings, this);
 		dlg.exec();
 		m_gameListFrame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
 	});
@@ -1445,7 +1446,7 @@ void main_window::CreateDockWindows()
 	// new mainwindow widget because existing seems to be bugged for now
 	m_mw = new QMainWindow();
 
-	m_gameListFrame = new game_list_frame(guiSettings, m_Render_Creator, m_mw);
+	m_gameListFrame = new game_list_frame(guiSettings, emuSettings, m_mw);
 	m_gameListFrame->setObjectName("gamelist");
 	m_debuggerFrame = new debugger_frame(guiSettings, m_mw);
 	m_debuggerFrame->setObjectName("debugger");
