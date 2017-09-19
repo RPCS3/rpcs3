@@ -30,8 +30,8 @@ static const std::string m_class_name = "GameViewer";
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 inline QSize sizeFromSlider(const int& pos) { return GUI::gl_icon_size_min + (GUI::gl_icon_size_max - GUI::gl_icon_size_min) * (pos / (float)GUI::gl_max_slider_pos); }
 
-game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const Render_Creator& r_Creator, QWidget *parent)
-	: QDockWidget(tr("Game List"), parent), xgui_settings(settings), m_Render_Creator(r_Creator)
+game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
+	: QDockWidget(tr("Game List"), parent), xgui_settings(guiSettings), xemu_settings(emuSettings)
 {
 	setAcceptDrops(true);
 
@@ -663,7 +663,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	});
 	connect(configure, &QAction::triggered, [=]
 	{
-		settings_dialog dlg(xgui_settings, m_Render_Creator, 0, this, &currGame);
+		settings_dialog dlg(xgui_settings, xemu_settings, 0, this, &currGame);
 		connect(&dlg, &QDialog::accepted, [this]
 		{
 			Refresh(true, false);

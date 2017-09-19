@@ -193,7 +193,7 @@ class game_list_frame : public QDockWidget
 	Q_OBJECT
 
 public:
-	explicit game_list_frame(std::shared_ptr<gui_settings> settings, const Render_Creator& r_Creator, QWidget *parent = nullptr);
+	explicit game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent = nullptr);
 	~game_list_frame();
 
 	/** Refresh the gamelist with/without loading game data from files. Public so that main frame can refresh after vfs or install */
@@ -298,6 +298,7 @@ private:
 
 	// TODO: Reorganize this into a sensible order for private variables.
 	std::shared_ptr<gui_settings> xgui_settings;
+	std::shared_ptr<emu_settings> xemu_settings;
 
 	int m_sortColumn;
 	Qt::SortOrder m_colSortOrder;
@@ -312,7 +313,6 @@ private:
 	qreal m_Text_Factor;
 	QStringList m_categoryFilters;
 	QString m_searchText;
-	Render_Creator m_Render_Creator;
 
 	uint m_games_per_row = 0;
 };
