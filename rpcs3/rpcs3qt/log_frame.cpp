@@ -105,17 +105,12 @@ log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
 	QTabWidget* tabWidget = new QTabWidget;
 
 	m_log = new QTextEdit(tabWidget);
-	QPalette logPalette = m_log->palette();
-	logPalette.setColor(QPalette::Base, Qt::black);
-	m_log->setPalette(logPalette);
+	m_log->setObjectName("log_frame");
 	m_log->setReadOnly(true);
 	m_log->setContextMenuPolicy(Qt::CustomContextMenu);
 
 	m_tty = new QTextEdit(tabWidget);
-	QPalette ttyPalette = m_log->palette();
-	ttyPalette.setColor(QPalette::Base, Qt::black);
-	ttyPalette.setColor(QPalette::Text, Qt::white);
-	m_tty->setPalette(ttyPalette);
+	m_log->setObjectName("tty_frame");
 	m_tty->setReadOnly(true);
 
 	tabWidget->addTab(m_log, tr("Log"));
@@ -264,6 +259,21 @@ void log_frame::LoadSettings()
 	m_stackAct->setChecked(m_stack_log);
 }
 
+void log_frame::RepaintTextColors()
+{
+	// Get text color. Do this once to prevent possible slowdown
+	m_color.clear();
+	m_color.append(GUI::get_Label_Color("log_level_always"));
+	m_color.append(GUI::get_Label_Color("log_level_fatal"));
+	m_color.append(GUI::get_Label_Color("log_level_error"));
+	m_color.append(GUI::get_Label_Color("log_level_todo"));
+	m_color.append(GUI::get_Label_Color("log_level_success"));
+	m_color.append(GUI::get_Label_Color("log_level_warning"));
+	m_color.append(GUI::get_Label_Color("log_level_notice"));
+	m_color.append(GUI::get_Label_Color("log_level_trace"));
+	m_color_stack = GUI::get_Label_Color("log_stack");
+}
+
 void log_frame::UpdateUI()
 {
 	std::vector<char> buf(4096);
@@ -320,14 +330,14 @@ void log_frame::UpdateUI()
 			QString text;
 			switch (packet->sev)
 			{
-			case logs::level::always: color = QColor(0x00, 0xFF, 0xFF); break; // Cyan
-			case logs::level::fatal: text = "F "; color = QColor(0xFF, 0x00, 0xFF); break; // Fuchsia
-			case logs::level::error: text = "E "; color = QColor(0xFF, 0x00, 0x00); break; // Red
-			case logs::level::todo: text = "U "; color = QColor(0xFF, 0x60, 0x00); break; // Orange
-			case logs::level::success: text = "S ";  color = QColor(0x00, 0xFF, 0x00); break; // Green
-			case logs::level::warning: text = "W "; color = QColor(0xFF, 0xFF, 0x00); break; // Yellow
-			case logs::level::notice: text = "! ";  color = QColor(0xFF, 0xFF, 0xFF); break; // White
-			case logs::level::trace: text = "T ";  color = QColor(0x80, 0x80, 0x80); break; // Gray
+			case logs::level::always: break;
+			case logs::level::fatal: text = "F "; break;
+			case logs::level::error: text = "E "; break;
+			case logs::level::todo: text = "U "; break;
+			case logs::level::success: text = "S "; break;
+			case logs::level::warning: text = "W "; break;
+			case logs::level::notice: text = "! "; break;
+			case logs::level::trace: text = "T "; break;
 			default: continue;
 			}
 
@@ -374,13 +384,13 @@ void log_frame::UpdateUI()
 			}
 
 			// add actual log message
-			m_log->setTextColor(color);
+			m_log->setTextColor(m_color[static_cast<int>(packet->sev)]);
 			m_log->append(text);
 
 			// add counter suffix if needed
 			if (m_stack_log && isSame)
 			{
-				m_log->setTextColor(Qt::white);
+				m_log->setTextColor(m_color_stack);
 				m_log->insertPlainText(suffix);
 			}
 

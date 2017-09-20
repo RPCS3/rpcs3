@@ -22,6 +22,10 @@ public:
 
 	/** Loads from settings. Public so that main_window can call this easily. */
 	void LoadSettings();
+
+	/** Repaint log colors after new stylesheet was applied */
+	void RepaintTextColors();
+
 Q_SIGNALS:
 	void LogFrameClosed();
 protected:
@@ -35,6 +39,8 @@ private:
 
 	void CreateAndConnectActions();
 
+	QList<QColor> m_color;
+	QColor m_color_stack;
 	QTextEdit *m_log;
 	QTextEdit *m_tty;
 	QString m_old_text;

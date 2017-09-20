@@ -98,18 +98,14 @@ void main_window::Init()
 
 	CreateActions();
 	CreateDockWindows();
-
-	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
-
 	CreateConnects();
 
+	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
 	!m_appIcon.isNull() ? setWindowIcon(m_appIcon) : LOG_WARNING(GENERAL, "AppImage could not be loaded!");
 
 	Q_EMIT RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
-	RepaintToolBarIcons();
-	m_gameListFrame->RepaintToolBarIcons();
 	
 	if (!utils::has_ssse3())
 	{
@@ -1074,8 +1070,17 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 
 void main_window::RepaintGui()
 {
-	m_gameListFrame->RepaintIcons(true);
-	m_gameListFrame->RepaintToolBarIcons();
+	if (m_gameListFrame)
+	{
+		m_gameListFrame->RepaintIcons(true);
+		m_gameListFrame->RepaintToolBarIcons();
+	}
+
+	if (m_logFrame)
+	{
+		m_logFrame->RepaintTextColors();
+	}
+
 	RepaintToolbar();
 	RepaintToolBarIcons();
 	RepaintThumbnailIcons();
