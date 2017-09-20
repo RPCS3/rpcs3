@@ -315,6 +315,22 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 			"QLabel#gamelist_icon_background_color { color: " + rgba(GUI::gl_icon_color) + " }"
 		);
 
+		// log stylesheet
+		QString style_log = QString
+		(
+			"QTextEdit#tty_frame { background-color: #ffffff; }"
+			"QTextEdit#log_frame { background-color: #ffffff; }"
+			"QLabel#log_level_always { color: #107896; }"
+			"QLabel#log_level_fatal { color: #ff00ff; }"
+			"QLabel#log_level_error { color: #C02F1D; }"
+			"QLabel#log_level_todo { color: #ff6000; }"
+			"QLabel#log_level_success { color: #008000; }"
+			"QLabel#log_level_warning { color: #BA8745; }"
+			"QLabel#log_level_notice { color: #000000; }"
+			"QLabel#log_level_trace { color: #808080; }"
+			"QLabel#log_stack { color: #000000; }"
+		);
+
 		// other objects' stylesheet
 		QString style_rest = QString
 		(
@@ -323,7 +339,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
 		);
 
-		setStyleSheet(style_toolbar + style_toolbar_icons + style_thumbnail_icons + style_gamelist_toolbar + style_gamelist_icons  + style_rest);
+		setStyleSheet(style_toolbar + style_toolbar_icons + style_thumbnail_icons + style_gamelist_toolbar + style_gamelist_icons + style_log + style_rest);
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
