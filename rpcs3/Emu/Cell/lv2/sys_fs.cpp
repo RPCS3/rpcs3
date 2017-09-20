@@ -282,6 +282,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
+		case fs::error::inval: return {CELL_EINVAL, path};
 		default: sys_fs.error("sys_fs_open(): unknown error %s", error);
 		}
 
@@ -533,6 +534,7 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
+		case fs::error::inval: return {CELL_EINVAL, path};
 		default: sys_fs.error("sys_fs_stat(): unknown error %s", error);
 		}
 
