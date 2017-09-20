@@ -371,7 +371,7 @@ void log_frame::UpdateUI()
 					m_log_counter++;
 					suffix = QString(" x%1").arg(m_log_counter);
 					m_log->moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
-					m_log->moveCursor(QTextCursor::StartOfLine, QTextCursor::MoveAnchor);
+					m_log->moveCursor(QTextCursor::StartOfBlock, QTextCursor::MoveAnchor);
 					m_log->moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
 					m_log->textCursor().removeSelectedText();
 					m_log->textCursor().deletePreviousChar();
