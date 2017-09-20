@@ -11,7 +11,6 @@
 #include <string>
 
 #include "rpcs3_version.h"
-#include "git-version.h"
 
 constexpr auto qstr = QString::fromStdString;
 
