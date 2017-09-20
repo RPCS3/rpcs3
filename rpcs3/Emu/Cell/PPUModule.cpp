@@ -1178,9 +1178,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Get LLE module list
 	std::set<std::string> load_libs;
 
-	if (g_cfg.core.lib_loading == lib_loading_type::manual || g_cfg.core.lib_loading == lib_loading_type::both)
+	if (g_cfg.core.lib_loading == lib_loading_type::manual)
 	{
-		// Load required set of modules
+		// Load required set of modules (lib_loading_type::both processed in sys_prx.cpp)
 		load_libs = g_cfg.core.load_libraries.get_set();
 	}
 	else if (g_cfg.core.lib_loading == lib_loading_type::liblv2only)
