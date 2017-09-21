@@ -485,7 +485,11 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 	std::string trophyPath = "/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/TROPUSR.DAT";
 	ctxt->tropusr->Save(trophyPath);
 
-	*platinumId = SCE_NP_TROPHY_INVALID_TROPHY_ID; // TODO
+	if (platinumId)
+	{
+		*platinumId = SCE_NP_TROPHY_INVALID_TROPHY_ID; // TODO
+	}
+
 	return CELL_OK;
 }
 
