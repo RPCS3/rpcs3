@@ -7,7 +7,6 @@
 #include "rpcs3_version.h"
 #include <string>
 #include <unordered_map>
-#include "git-version.h"
 
 #ifdef _WIN32
 #define NOMINMAX

@@ -354,13 +354,14 @@ void Emulator::Load(bool add_only)
 		const std::string home_dir = g_cfg.vfs.app_home;
 		std::string bdvd_dir = g_cfg.vfs.dev_bdvd;
 
+		// Mount default relative path to non-existent directory
+		vfs::mount("", fs::get_config_dir() + "delete_this_dir/");
 		vfs::mount("dev_hdd0", fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir));
 		vfs::mount("dev_hdd1", fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir));
 		vfs::mount("dev_flash", fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir));
 		vfs::mount("dev_usb", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
 		vfs::mount("dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
 		vfs::mount("app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
-		vfs::mount("", elf_dir + '/');
 
 		// Detect boot location
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
