@@ -1121,14 +1121,19 @@ namespace rsx
 			{
 				if (dest_texture)
 				{
-					if (dst_is_render_target && !dst_subres.is_depth_surface)
+					if (dst_is_render_target)
 					{
-						LOG_ERROR(RSX, "Depth->RGBA blit requested but not supported");
-						return true;
+						if (!dst_subres.is_depth_surface)
+						{
+							LOG_ERROR(RSX, "Depth->RGBA blit requested but not supported");
+							return true;
+						}
 					}
-
-					if (!cached_dest->has_compatible_format(src_subres.surface))
-						format_mismatch = true;
+					else
+					{
+						if (!cached_dest->has_compatible_format(src_subres.surface))
+							format_mismatch = true;
+					}
 				}
 
 				is_depth_blit = true;

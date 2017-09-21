@@ -572,6 +572,8 @@ namespace vk
 
 				view.reset(new_view);
 			}
+
+			section.set_view_flags(expected_flags);
 		}
 
 		void insert_texture_barrier() override
