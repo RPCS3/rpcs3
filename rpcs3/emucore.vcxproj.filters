@@ -929,6 +929,9 @@
     <ClCompile Include="Emu\Cell\lv2\sys_gamepad.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\LUrlParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1794,6 +1797,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\lv2\sys_gamepad.h">
       <Filter>Emu\Cell\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\texture_cache.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
