@@ -308,7 +308,8 @@ namespace gl
 				pbo_size = 0;
 			}
 
-			m_fence.destroy();
+			if (!m_fence.is_empty())
+				m_fence.destroy();
 		}
 		
 		texture::format get_format() const

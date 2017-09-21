@@ -518,6 +518,14 @@ namespace vk
 			auto image = section->get_raw_texture();
 			auto subres_range = section->get_raw_view()->info.subresourceRange;
 
+			switch (image->info.format)
+			{
+			case VK_FORMAT_D32_SFLOAT_S8_UINT:
+			case VK_FORMAT_D24_UNORM_S8_UINT:
+				subres_range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				break;
+			}
+
 			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subres_range);
 
 			vk::enter_uninterruptible();
