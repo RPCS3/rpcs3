@@ -33,7 +33,6 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 
 	default:
 		LOG_ERROR(RSX, "Bad scale: %d", u32{ src1.scale });
-		Emu.Pause();
 		break;
 	}
 
@@ -520,6 +519,12 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D));
 			return true;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
+			if (DstExpectsSca() && (m_prog.shadow_textures & (1 << dst.tex_num)))
+			{
+				m_shadow_sampled_textures |= (1 << dst.tex_num);
+				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SHADOW2D) + ".r", false);	//No swizzle mask on shadow lookup
+				return true;
+			}
 			if (m_prog.redirected_textures & (1 << dst.tex_num))
 				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA));
 			else
@@ -548,7 +553,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			if (DstExpectsSca() && (m_prog.shadow_textures & (1 << dst.tex_num)))
 			{
 				m_shadow_sampled_textures |= (1 << dst.tex_num);
-				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ), false);	//No swizzle mask on shadow lookup
+				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SHADOW2D_PROJ) + ".r", false);	//No swizzle mask on shadow lookup
 			}
 			else
 				SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ));
@@ -756,6 +761,14 @@ std::string FragmentProgramDecompiler::Decompile()
 
 		verify(HERE), m_offset % sizeof(u32) == 0;
 		data += m_offset / sizeof(u32);
+	}
+
+	while (m_code_level > 1)
+	{
+		LOG_ERROR(RSX, "Hanging block found at end of shader. Malformed shader?");
+
+		m_code_level--;
+		AddCode("}");
 	}
 
 	// flush m_code_level

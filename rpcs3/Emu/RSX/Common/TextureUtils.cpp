@@ -393,7 +393,7 @@ u8 get_format_block_size_in_bytes(rsx::surface_color_format format)
 	}
 }
 
-static size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignement, size_t mipmap_alignment)
+size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignement, size_t mipmap_alignment)
 {
 	size_t w = width;
 	size_t h = std::max<u16>(height, 1);

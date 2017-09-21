@@ -26,24 +26,36 @@ bool vfs::mount(const std::string& dev_name, const std::string& path)
 
 std::string vfs::get(const std::string& vpath, vfs::type _type)
 {
+	const auto table = fxm::get_always<vfs_manager>();
+
+	reader_lock lock(table->mutex);
+
 	std::smatch match;
 
 	if (!std::regex_match(vpath, match, _type == type::ps3 ? s_regex_ps3 : s_regex_psv))
 	{
-		LOG_WARNING(GENERAL, "vfs::get(): invalid input: %s", vpath);
-		return{};
+		const auto found = table->mounted.find("");
+
+		if (found == table->mounted.end())
+		{
+			LOG_WARNING(GENERAL, "vfs::get(): no default directory: %s", vpath);
+			return {};
+		}
+
+		return found->second + vpath;
 	}
 
-	const auto table = fxm::get_always<vfs_manager>();
-
-	reader_lock lock(table->mutex);
+	if (_type == type::ps3 && match.length(1) == 0)
+	{
+		return "/";
+	}
 
 	const auto found = table->mounted.find(match.str(1));
 
 	if (found == table->mounted.end())
 	{
 		LOG_WARNING(GENERAL, "vfs::get(): device not found: %s", vpath);
-		return{};
+		return {};
 	}
 
 	// Concatenate

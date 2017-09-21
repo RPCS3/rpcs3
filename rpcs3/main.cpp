@@ -60,8 +60,7 @@ int main(int argc, char** argv)
 		// Ugly workaround
 		QTimer::singleShot(2, [path = sstr(QFileInfo(parser.positionalArguments().at(0)).canonicalFilePath())]
 		{
-			Emu.SetPath(path);
-			Emu.Load();
+			Emu.BootGame(path, true);
 			Emu.Run();
 		});
 	}

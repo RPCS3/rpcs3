@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "Emu/Cell/lv2/sys_mutex.h"
 #include "Emu/Cell/lv2/sys_interrupt.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "sysPrxForUser.h"
@@ -13,6 +14,9 @@ extern u64 get_system_time();
 extern fs::file g_tty;
 
 vm::gvar<s32> sys_prx_version; // ???
+vm::gvar<vm::ptr<void()>> g_ppu_atexitspawn;
+vm::gvar<vm::ptr<void()>> g_ppu_at_Exitspawn;
+extern vm::gvar<u32> g_ppu_exit_mutex;
 
 s64 sys_time_get_system_time()
 {
@@ -21,16 +25,34 @@ s64 sys_time_get_system_time()
 	return get_system_time();
 }
 
-s64 _sys_process_atexitspawn()
+void sys_process_exit(ppu_thread& ppu, s32 status)
 {
-	sysPrxForUser.todo("_sys_process_atexitspawn()");
-	return CELL_OK;
+	sysPrxForUser.warning("sys_process_exit(status=%d)", status);
+
+	sys_mutex_lock(ppu, *g_ppu_exit_mutex, 0);
+
+	// TODO (process atexit)
+	return _sys_process_exit(ppu, status, 0, 0);
 }
 
-s64 _sys_process_at_Exitspawn()
+void _sys_process_atexitspawn(vm::ptr<void()> func)
 {
-	sysPrxForUser.todo("_sys_process_at_Exitspawn");
-	return CELL_OK;
+	sysPrxForUser.warning("_sys_process_atexitspawn(0x%x)", func);
+
+	if (!*g_ppu_atexitspawn)
+	{
+		*g_ppu_atexitspawn = func;
+	}
+}
+
+void _sys_process_at_Exitspawn(vm::ptr<void()> func)
+{
+	sysPrxForUser.warning("_sys_process_at_Exitspawn(0x%x)", func);
+
+	if (!*g_ppu_at_Exitspawn)
+	{
+		*g_ppu_at_Exitspawn = func;
+	}
 }
 
 s32 sys_process_is_stack(u32 p)
@@ -63,12 +85,6 @@ s32 sys_get_random_number(vm::ptr<u8> addr, u64 size)
 		addr[i] = rand() & 0xff;
 	}
 
-	return CELL_OK;
-}
-
-s32 __sys_look_ctype_table()
-{
-	UNIMPLEMENTED_FUNC(sysPrxForUser);
 	return CELL_OK;
 }
 
@@ -233,10 +249,11 @@ DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 	sysPrxForUser_sys_rsxaudio_init();
 
 	REG_VAR(sysPrxForUser, sys_prx_version); // 0x7df066cf
+	REG_VAR(sysPrxForUser, g_ppu_atexitspawn).flag(MFF_HIDDEN);
+	REG_VAR(sysPrxForUser, g_ppu_at_Exitspawn).flag(MFF_HIDDEN);
 
 	REG_FUNC(sysPrxForUser, sys_time_get_system_time);
 
-	// TODO: split syscalls and liblv2 functions
 	REG_FUNC(sysPrxForUser, sys_process_exit);
 	REG_FUNC(sysPrxForUser, _sys_process_atexitspawn);
 	REG_FUNC(sysPrxForUser, _sys_process_at_Exitspawn);
@@ -244,8 +261,6 @@ DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 	REG_FUNC(sysPrxForUser, sys_process_get_paramsfo); // 0xe75c40f2
 
 	REG_FUNC(sysPrxForUser, sys_get_random_number);
-
-	REG_FUNC(sysPrxForUser, __sys_look_ctype_table);
 
 	REG_FUNC(sysPrxForUser, console_getc);
 	REG_FUNC(sysPrxForUser, console_putc);

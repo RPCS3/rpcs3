@@ -14,7 +14,7 @@ enum
 };
 
 // Parameter IDs
-enum
+enum CellSysutilParamId: s32
 {
 	// Integers
 	CELL_SYSUTIL_SYSTEMPARAM_ID_LANG                            = 0x0111,

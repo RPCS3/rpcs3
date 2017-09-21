@@ -256,7 +256,7 @@ s32 cellVideoOutUnregisterCallback(u32 slot)
 void cellSysutil_VideoOut_init()
 {
 	REG_FUNC(cellSysutil, cellVideoOutGetState);
-	REG_FUNC(cellSysutil, cellVideoOutGetResolution).flags = MFF_PERFECT;
+	REG_FUNC(cellSysutil, cellVideoOutGetResolution).flag(MFF_PERFECT);
 	REG_FUNC(cellSysutil, cellVideoOutConfigure);
 	REG_FUNC(cellSysutil, cellVideoOutGetConfiguration);
 	REG_FUNC(cellSysutil, cellVideoOutGetDeviceInfo);
