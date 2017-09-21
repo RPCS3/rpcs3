@@ -115,21 +115,20 @@ namespace rsx
 			void notify(u32 addr, u32 data_size)
 			{
 				verify(HERE), valid_count >= 0;
-				max_range = std::max(data_size, max_range);
+
+				const u32 addr_base = addr & ~0xfff;
+				const u32 block_sz = align(addr + data_size, 4096u) - addr_base;
+
+				max_range = std::max(max_range, block_sz);
 				max_addr = std::max(max_addr, addr);
-				min_addr = std::min(min_addr, addr);
+				min_addr = std::min(min_addr, addr_base);
 				valid_count++;
 			}
 
 			void add(section_storage_type& section, u32 addr, u32 data_size)
 			{
-				verify(HERE), valid_count >= 0;
-				max_range = std::max(data_size, max_range);
-				max_addr = std::max(max_addr, addr);
-				min_addr = std::min(min_addr, addr);
-				valid_count++;
-
 				data.push_back(std::move(section));
+				notify(addr, data_size);
 			}
 
 			void remove_one()
