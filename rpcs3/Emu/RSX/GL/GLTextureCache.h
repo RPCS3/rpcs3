@@ -142,7 +142,7 @@ namespace gl
 			vram_texture = 0;
 		}
 		
-		void create(const u16 w, const u16 h, const u16 /*depth*/, const u16 /*mipmaps*/, void*,
+		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, void*,
 				gl::texture* image, const u32 rsx_pitch, bool read_only,
 				gl::texture::format gl_format, gl::texture::type gl_type, bool swap_bytes)
 		{
@@ -156,23 +156,27 @@ namespace gl
 			this->width = w;
 			this->height = h;
 			this->rsx_pitch = rsx_pitch;
+			this->depth = depth;
+			this->mipmaps = mipmaps;
 
 			vram_texture = image->id();
 			set_format(gl_format, gl_type, swap_bytes);
 		}
 
-		void create_read_only(const u32 id, const u32 width, const u32 height)
+		void create_read_only(const u32 id, const u32 width, const u32 height, const u32 depth, const u32 mipmaps)
 		{
 			//Only to be used for ro memory, we dont care about most members, just dimensions and the vram texture handle
 			this->width = width;
 			this->height = height;
+			this->depth = depth;
+			this->mipmaps = mipmaps;
 			vram_texture = id;
 
 			rsx_pitch = 0;
 			real_pitch = 0;
 		}
 
-		void set_dimensions(u32 width, u32 height, u32 pitch)
+		void set_dimensions(u32 width, u32 height, u32 depth, u32 pitch)
 		{
 			this->width = width;
 			this->height = height;
@@ -437,11 +441,11 @@ namespace gl
 		blitter m_hw_blitter;
 		std::vector<u32> m_temporary_surfaces;
 
-		cached_texture_section& create_texture(u32 id, u32 texaddr, u32 texsize, u32 w, u32 h)
+		cached_texture_section& create_texture(u32 id, u32 texaddr, u32 texsize, u32 w, u32 h, u32 depth, u32 mipmaps)
 		{
-			cached_texture_section& tex = find_cached_texture(texaddr, texsize, true, w, h);
+			cached_texture_section& tex = find_cached_texture(texaddr, texsize, true, w, h, depth);
 			tex.reset(texaddr, texsize, false);
-			tex.create_read_only(id, w, h);
+			tex.create_read_only(id, w, h, depth, mipmaps);
 			read_only_range = tex.get_min_max(read_only_range);
 			return tex;
 		}
@@ -565,7 +569,7 @@ namespace gl
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
 			}
 
-			auto& cached = create_texture(vram_texture, rsx_address, rsx_size, width, height);
+			auto& cached = create_texture(vram_texture, rsx_address, rsx_size, width, height, depth, mipmaps);
 			cached.set_dirty(false);
 			cached.set_depth_flag(depth_flag);
 			cached.set_view_flags(flags);

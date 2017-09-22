@@ -39,7 +39,7 @@ namespace rsx
 			return rsx::buffered_section::matches(rsx_address, rsx_size);
 		}
 
-		bool matches(const u32 rsx_address, const u32 width, const u32 height, const u32 mipmaps)
+		bool matches(const u32 rsx_address, const u32 width, const u32 height, const u32 depth, const u32 mipmaps)
 		{
 			if (rsx_address == cpu_address_base)
 			{
@@ -50,6 +50,9 @@ namespace rsx
 					return false;
 
 				if (height && height != this->height)
+					return false;
+
+				if (depth && depth != this->depth)
 					return false;
 
 				if (mipmaps && mipmaps != this->mipmaps)
@@ -71,12 +74,12 @@ namespace rsx
 			context = upload_context;
 		}
 
-		u32 get_width() const
+		u16 get_width() const
 		{
 			return width;
 		}
 
-		u32 get_height() const
+		u16 get_height() const
 		{
 			return height;
 		}
@@ -362,7 +365,7 @@ namespace rsx
 			return results;
 		}
 
-		section_storage_type *find_texture_from_dimensions(u32 rsx_address, u16 width = 0, u16 height = 0, u16 mipmaps = 0)
+		section_storage_type *find_texture_from_dimensions(u32 rsx_address, u16 width = 0, u16 height = 0, u16 depth = 0, u16 mipmaps = 0)
 		{
 			auto found = m_cache.find(get_block_address(rsx_address));
 			if (found != m_cache.end())
@@ -370,7 +373,7 @@ namespace rsx
 				auto &range_data = found->second;
 				for (auto &tex : range_data.data)
 				{
-					if (tex.matches(rsx_address, width, height, mipmaps) && !tex.is_dirty())
+					if (tex.matches(rsx_address, width, height, depth, mipmaps) && !tex.is_dirty())
 					{
 						return &tex;
 					}
@@ -380,7 +383,7 @@ namespace rsx
 			return nullptr;
 		}
 
-		section_storage_type& find_cached_texture(u32 rsx_address, u32 rsx_size, bool confirm_dimensions = false, u16 width = 0, u16 height = 0, u16 mipmaps = 0)
+		section_storage_type& find_cached_texture(u32 rsx_address, u32 rsx_size, bool confirm_dimensions = false, u16 width = 0, u16 height = 0, u16 depth = 0, u16 mipmaps = 0)
 		{
 			const u32 block_address = get_block_address(rsx_address);
 
@@ -393,7 +396,7 @@ namespace rsx
 				{
 					if (tex.matches(rsx_address, rsx_size) && !tex.is_dirty())
 					{
-						if (!confirm_dimensions || tex.matches(rsx_address, width, height, mipmaps))
+						if (!confirm_dimensions || tex.matches(rsx_address, width, height, depth, mipmaps))
 						{
 							if (!tex.is_locked())
 								range_data.notify(rsx_address, rsx_size);
@@ -676,11 +679,7 @@ namespace rsx
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 tex_size = (u32)get_texture_size(tex);
-
 			const u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-			const u32 tex_width = tex.width();
-			const u32 tex_height = tex.height();
-			const u32 tex_pitch = (tex_size / tex_height); //NOTE: Compressed textures dont have a real pitch (tex_size = (w*h)/6)
 
 			if (!texaddr || !tex_size)
 			{
@@ -688,9 +687,14 @@ namespace rsx
 				return 0;
 			}
 
+			const auto extended_dimension = tex.get_extended_texture_dimension();
+
 			//Check for sampleable rtts from previous render passes
 			if (auto texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 			{
+				if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
+					LOG_ERROR(RSX, "Texture resides in render target memory, but requested type is not 2D (%d)", (u32)extended_dimension);
+
 				for (const auto& tex : m_rtts.m_bound_render_targets)
 				{
 					if (std::get<0>(tex) == texaddr)
@@ -714,6 +718,9 @@ namespace rsx
 
 			if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 			{
+				if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
+					LOG_ERROR(RSX, "Texture resides in depth buffer memory, but requested type is not 2D (%d)", (u32)extended_dimension);
+
 				if (texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
 				{
 					if (g_cfg.video.strict_rendering_mode)
@@ -731,11 +738,33 @@ namespace rsx
 				return texptr->get_view();
 			}
 
+			u16 depth = 0;
+			u16 tex_height = (u16)tex.height();
+			const u16 tex_width = tex.width();
+			const u16 tex_pitch = (tex_size / tex_height); //NOTE: Compressed textures dont have a real pitch (tex_size = (w*h)/6)
+
+			switch (extended_dimension)
+			{
+			case rsx::texture_dimension_extended::texture_dimension_1d:
+				tex_height = 1;
+				depth = 1;
+				break;
+			case rsx::texture_dimension_extended::texture_dimension_2d:
+				depth = 1;
+				break;
+			case rsx::texture_dimension_extended::texture_dimension_cubemap:
+				depth = 6;
+				break;
+			case rsx::texture_dimension_extended::texture_dimension_3d:
+				depth = tex.depth();
+				break;
+			}
+
 			{
 				//Search in cache and upload/bind
 				reader_lock lock(m_cache_mutex);
 
-				auto cached_texture = find_texture_from_dimensions(texaddr, tex_width, tex_height);
+				auto cached_texture = find_texture_from_dimensions(texaddr, tex_width, tex_height, depth);
 				if (cached_texture)
 				{
 					return cached_texture->get_raw_view();
@@ -765,6 +794,12 @@ namespace rsx
 								if ((offset_x + tex_width) <= surface->get_width() &&
 									(offset_y + tex_height) <= surface->get_height())
 								{
+									if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
+									{
+										LOG_ERROR(RSX, "Texture resides in blit engine memory, but requested type is not 2D (%d)", (u32)extended_dimension);
+										break;
+									}
+
 									if (!blit_engine_incompatibility_warning_raised && !is_hw_blit_engine_compatible(format))
 									{
 										LOG_ERROR(RSX, "Format 0x%X is not compatible with the hardware blit acceleration."
@@ -833,36 +868,12 @@ namespace rsx
 			}
 
 			//Do direct upload from CPU as the last resort
-			const auto extended_dimension = tex.get_extended_texture_dimension();
-			u16 height = 0;
-			u16 depth = 0;
-
-			switch (extended_dimension)
-			{
-			case rsx::texture_dimension_extended::texture_dimension_1d:
-				height = 1;
-				depth = 1;
-				break;
-			case rsx::texture_dimension_extended::texture_dimension_2d:
-				height = tex_height;
-				depth = 1;
-				break;
-			case rsx::texture_dimension_extended::texture_dimension_cubemap:
-				height = tex_height;
-				depth = 1;
-				break;
-			case rsx::texture_dimension_extended::texture_dimension_3d:
-				height = tex_height;
-				depth = tex.depth();
-				break;
-			}
-
 			writer_lock lock(m_cache_mutex);
 			const bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
 			auto subresources_layout = get_subresources_layout(tex);
 			auto remap_vector = tex.decoded_remap();
 
-			return upload_image_from_cpu(cmd, texaddr, tex_width, height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
+			return upload_image_from_cpu(cmd, texaddr, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
 				texture_upload_context::shader_read, subresources_layout, extended_dimension, is_swizzled, remap_vector)->get_raw_view();
 		}
 

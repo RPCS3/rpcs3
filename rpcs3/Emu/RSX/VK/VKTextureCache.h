@@ -392,6 +392,7 @@ namespace vk
 				const rsx::texture_upload_context context, const rsx::texture_dimension_extended type, const rsx::texture_create_flags flags,
 				std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
+			const u16 section_depth = depth;
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
 			VkFormat vk_format;
 			VkComponentMapping mapping;
@@ -494,9 +495,9 @@ namespace vk
 
 			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect_flags, 0, mipmaps, 0, layer });
 
-			cached_texture_section& region = find_cached_texture(rsx_address, rsx_size, true, width, height, 0);
+			cached_texture_section& region = find_cached_texture(rsx_address, rsx_size, true, width, height, section_depth);
 			region.reset(rsx_address, rsx_size);
-			region.create(width, height, depth, mipmaps, view, image);
+			region.create(width, height, section_depth, mipmaps, view, image);
 			region.set_dirty(false);
 			region.set_context(context);
 
