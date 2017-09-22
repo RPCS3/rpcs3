@@ -1201,5 +1201,10 @@ namespace rsx
 			blitter.scale_image(vram_texture, dest_texture, src_area, dst_area, interpolate, is_depth_blit);
 			return true;
 		}
+
+		virtual const u32 get_unreleased_textures_count() const
+		{
+			return m_unreleased_texture_objects;
+		}
 	};
 }

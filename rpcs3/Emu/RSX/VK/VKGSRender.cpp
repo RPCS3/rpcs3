@@ -1261,24 +1261,6 @@ void VKGSRender::end()
 	copy_render_targets_to_dma_location();
 	m_draw_calls++;
 
-	if (g_cfg.video.overlay)
-	{
-		const auto vertex_count = std::get<1>(upload_info);
-
-		if (vertex_count < 1024)
-			m_uploads_small++;
-		else if (vertex_count < 2048)
-			m_uploads_1k++;
-		else if (vertex_count < 4096)
-			m_uploads_2k++;
-		else if (vertex_count < 8192)
-			m_uploads_4k++;
-		else if (vertex_count < 16384)
-			m_uploads_8k++;
-		else
-			m_uploads_16k++;
-	}
-
 	rsx::thread::end();
 }
 
@@ -2296,18 +2278,10 @@ void VKGSRender::flip(int buffer)
 		if (!skip_frame)
 		{
 			m_draw_calls = 0;
-			m_instanced_draws = 0;
 			m_draw_time = 0;
 			m_setup_time = 0;
 			m_vertex_upload_time = 0;
 			m_textures_upload_time = 0;
-
-			m_uploads_small = 0;
-			m_uploads_1k = 0;
-			m_uploads_2k = 0;
-			m_uploads_4k = 0;
-			m_uploads_8k = 0;
-			m_uploads_16k = 0;
 		}
 
 		return;
@@ -2490,31 +2464,15 @@ void VKGSRender::flip(int buffer)
 				direct_fbo.reset(new vk::framebuffer_holder(*m_device, single_target_pass, m_client_width, m_client_height, std::move(swap_image_view)));
 			}
 
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 0, direct_fbo->width(), direct_fbo->height(), "draw calls: " + std::to_string(m_draw_calls) + ", instanced repeats: " + std::to_string(m_instanced_draws));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 0, direct_fbo->width(), direct_fbo->height(), "draw calls: " + std::to_string(m_draw_calls));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 18, direct_fbo->width(), direct_fbo->height(), "draw call setup: " + std::to_string(m_setup_time) + "us");
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 36, direct_fbo->width(), direct_fbo->height(), "vertex upload time: " + std::to_string(m_vertex_upload_time) + "us");
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 54, direct_fbo->width(), direct_fbo->height(), "texture upload time: " + std::to_string(m_textures_upload_time) + "us");
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 72, direct_fbo->width(), direct_fbo->height(), "draw call execution: " + std::to_string(m_draw_time) + "us");
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 90, direct_fbo->width(), direct_fbo->height(), "submit and flip: " + std::to_string(m_flip_time) + "us");
-			
-			//Vertex upload statistics
-			u32 _small, _1k, _2k, _4k, _8k, _16k;
-			if (m_draw_calls > 0)
-			{
-				_small = m_uploads_small * 100 / m_draw_calls;
-				_1k = m_uploads_1k * 100 / m_draw_calls;
-				_2k = m_uploads_2k * 100 / m_draw_calls;
-				_4k = m_uploads_4k * 100 / m_draw_calls;
-				_8k = m_uploads_8k * 100 / m_draw_calls;
-				_16k = m_uploads_16k * 100 / m_draw_calls;
-			}
-			else
-			{
-				_small = _1k = _2k = _4k = _8k = _16k = 0;
-			}
 
-			std::string message = fmt::format("Vertex sizes: < 1k: %d%%, 1k+: %d%%, 2k+: %d%%, 4k+: %d%%, 8k+: %d%%, 16k+: %d%%", _small, _1k, _2k, _4k, _8k, _16k);
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 108, direct_fbo->width(), direct_fbo->height(), message);
+			auto num_dirty_textures = m_texture_cache.get_unreleased_textures_count();
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 126, direct_fbo->width(), direct_fbo->height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
 
 			vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, subres);
 			m_framebuffers_to_clean.push_back(std::move(direct_fbo));
@@ -2601,18 +2559,10 @@ void VKGSRender::flip(int buffer)
 	if (skip_frame) return;
 
 	m_draw_calls = 0;
-	m_instanced_draws = 0;
 	m_draw_time = 0;
 	m_setup_time = 0;
 	m_vertex_upload_time = 0;
 	m_textures_upload_time = 0;
-
-	m_uploads_small = 0;
-	m_uploads_1k = 0;
-	m_uploads_2k = 0;
-	m_uploads_4k = 0;
-	m_uploads_8k = 0;
-	m_uploads_16k = 0;
 }
 
 bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
