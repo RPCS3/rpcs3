@@ -89,6 +89,11 @@ namespace vk
 	void leave_uninterruptible();
 	bool is_uninterruptible();
 
+	void advance_completed_frame_counter();
+	void advance_frame_counter();
+	const u64 get_current_frame_id();
+	const u64 get_last_completed_frame_id();
+
 	struct memory_type_mapping
 	{
 		uint32_t host_visible_coherent;
