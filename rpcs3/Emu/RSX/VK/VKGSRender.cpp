@@ -878,14 +878,41 @@ void VKGSRender::begin()
 	{
 		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
 
-		flush_command_queue(true);
-		m_vertex_cache->purge();
+		frame_context_t *target_frame = nullptr;
+		u64 earliest_sync_time = UINT64_MAX;
+		for (s32 i = 0; i < VK_MAX_ASYNC_FRAMES; ++i)
+		{
+			auto ctx = &frame_context_storage[i];
+			if (ctx->swap_command_buffer)
+			{
+				if (ctx->last_frame_sync_time > m_last_heap_sync_time &&
+					ctx->last_frame_sync_time < earliest_sync_time)
+					target_frame = ctx;
+			}
+		}
 
-		m_index_buffer_ring_info.reset_allocation_stats();
-		m_uniform_buffer_ring_info.reset_allocation_stats();
-		m_attrib_ring_info.reset_allocation_stats();
-		m_texture_upload_buffer_ring_info.reset_allocation_stats();
-		m_current_frame->reset_heap_ptrs();
+		if (target_frame == nullptr)
+		{
+			flush_command_queue(true);
+			m_vertex_cache->purge();
+
+			m_index_buffer_ring_info.reset_allocation_stats();
+			m_uniform_buffer_ring_info.reset_allocation_stats();
+			m_attrib_ring_info.reset_allocation_stats();
+			m_texture_upload_buffer_ring_info.reset_allocation_stats();
+			m_current_frame->reset_heap_ptrs();
+		}
+		else
+		{
+			target_frame->swap_command_buffer->poke();
+			while (target_frame->swap_command_buffer->pending)
+			{
+				if (!target_frame->swap_command_buffer->poke())
+					std::this_thread::yield();
+			}
+
+			process_swap_request(target_frame, true);
+		}
 
 		std::chrono::time_point<steady_clock> submit_end = steady_clock::now();
 		m_flip_time += std::chrono::duration_cast<std::chrono::microseconds>(submit_end - submit_start).count();
@@ -1641,6 +1668,11 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 			m_uniform_buffer_ring_info.m_get_pos = ctx->ubo_heap_ptr;
 			m_index_buffer_ring_info.m_get_pos = ctx->index_heap_ptr;
 			m_texture_upload_buffer_ring_info.m_get_pos = ctx->texture_upload_heap_ptr;
+
+			m_attrib_ring_info.notify();
+			m_uniform_buffer_ring_info.notify();
+			m_index_buffer_ring_info.notify();
+			m_texture_upload_buffer_ring_info.notify();
 		}
 	}
 
