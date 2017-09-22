@@ -706,5 +706,10 @@ namespace vk
 
 			return upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, *m_device, cmd, m_memory_types, m_submit_queue);
 		}
+
+		const u32 get_unreleased_textures_count() const override
+		{
+			return m_unreleased_texture_objects + m_discardable_storage.size();
+		}
 	};
 }
