@@ -71,7 +71,7 @@ namespace vk
 	VkImageSubresourceRange get_image_subresource_range(uint32_t base_layer, uint32_t base_mip, uint32_t layer_count, uint32_t level_count, VkImageAspectFlags aspect);
 
 	VkSampler null_sampler();
-	VkImageView null_image_view();
+	VkImageView null_image_view(vk::command_buffer&);
 
 	void destroy_global_resources();
 
