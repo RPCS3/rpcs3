@@ -80,13 +80,15 @@ struct command_buffer_chunk: public vk::command_buffer
 		vkResetCommandBuffer(commands, 0);
 	}
 
-	void poke()
+	bool poke()
 	{
 		if (vkGetFenceStatus(m_device, submit_fence) == VK_SUCCESS)
 		{
 			vkResetFences(m_device, 1, &submit_fence);
 			pending = false;
 		}
+
+		return !pending;
 	}
 
 	void wait()
