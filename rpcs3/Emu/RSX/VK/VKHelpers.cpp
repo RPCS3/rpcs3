@@ -13,6 +13,9 @@ namespace vk
 
 	bool g_cb_no_interrupt_flag = false;
 
+	u64 g_num_processed_frames = 0;
+	u64 g_num_total_frames = 0;
+
 	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
 #ifdef _MSC_VER
@@ -346,6 +349,27 @@ namespace vk
 	bool is_uninterruptible()
 	{
 		return g_cb_no_interrupt_flag;
+	}
+
+	void advance_completed_frame_counter()
+	{
+		g_num_processed_frames++;
+	}
+
+	void advance_frame_counter()
+	{
+		verify(HERE), g_num_processed_frames <= g_num_total_frames;
+		g_num_total_frames++;
+	}
+
+	const u64 get_current_frame_id()
+	{
+		return g_num_total_frames;
+	}
+
+	const u64 get_last_completed_frame_id()
+	{
+		return (g_num_processed_frames > 0)? g_num_processed_frames - 1: 0;
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,

@@ -272,6 +272,40 @@ namespace vk
 		}
 	};
 	
+	struct discarded_storage
+	{
+		std::unique_ptr<vk::image_view> view;
+		std::unique_ptr<vk::image> img;
+
+		const u64 frame_tag = vk::get_current_frame_id();
+
+		discarded_storage(std::unique_ptr<vk::image_view>& _view)
+		{
+			view = std::move(_view);
+		}
+
+		discarded_storage(std::unique_ptr<vk::image>& _img)
+		{
+			img = std::move(_img);
+		}
+
+		discarded_storage(std::unique_ptr<vk::image>& _img, std::unique_ptr<vk::image_view>& _view)
+		{
+			img = std::move(_img);
+			view = std::move(_view);
+		}
+
+		discarded_storage(cached_texture_section& tex)
+		{
+			view = std::move(tex.get_view());
+			img = std::move(tex.get_texture());
+		}
+
+		const bool test(u64 ref_frame) const
+		{
+			return ref_frame > 0 && frame_tag <= ref_frame;
+		}
+	};
 
 	class texture_cache : public rsx::texture_cache<vk::command_buffer, cached_texture_section, vk::image*, vk::image_view*, vk::image, VkFormat>
 	{
@@ -285,12 +319,7 @@ namespace vk
 		vk::buffer* m_texture_upload_buffer;
 
 		//Stuff that has been dereferenced goes into these
-		std::vector<std::unique_ptr<vk::image_view> > m_temporary_image_view;
-		std::vector<std::unique_ptr<vk::image>> m_dirty_textures;
-
-		//Stuff that has been dereferenced twice goes here. Contents are evicted before new ones are added
-		std::vector<std::unique_ptr<vk::image_view>> m_image_views_to_purge;
-		std::vector<std::unique_ptr<vk::image>> m_images_to_purge;
+		std::list<discarded_storage> m_discardable_storage;
 		
 		void purge_cache()
 		{
@@ -301,8 +330,7 @@ namespace vk
 				{
 					if (tex.exists())
 					{
-						m_dirty_textures.push_back(std::move(tex.get_texture()));
-						m_temporary_image_view.push_back(std::move(tex.get_view()));
+						m_discardable_storage.push_back(tex);
 					}
 
 					if (tex.is_locked())
@@ -314,12 +342,7 @@ namespace vk
 				range_data.data.resize(0);
 			}
 
-			m_temporary_image_view.clear();
-			m_dirty_textures.clear();
-
-			m_image_views_to_purge.clear();
-			m_images_to_purge.clear();
-
+			m_discardable_storage.clear();
 			m_unreleased_texture_objects = 0;
 		}
 		
@@ -327,8 +350,7 @@ namespace vk
 
 		void free_texture_section(cached_texture_section& tex) override
 		{
-			m_dirty_textures.push_back(std::move(tex.get_texture()));
-			m_temporary_image_view.push_back(std::move(tex.get_view()));
+			m_discardable_storage.push_back(tex);
 			tex.release_dma_resources();
 		}
 
@@ -377,10 +399,8 @@ namespace vk
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
 			vk::change_image_layout(cmd, source, old_src_layout, subresource_range);
 
-			m_dirty_textures.push_back(std::move(image));
-			m_temporary_image_view.push_back(std::move(view));
-
-			return m_temporary_image_view.back().get();
+			m_discardable_storage.push_back({ image, view });
+			return m_discardable_storage.back().view.get();
 		}
 
 		vk::image_view* create_temporary_subresource_view(vk::command_buffer& cmd, vk::image** source, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) override
@@ -642,11 +662,8 @@ namespace vk
 				purge_dirty();
 			}
 
-			m_image_views_to_purge.clear();
-			m_images_to_purge.clear();
-
-			m_image_views_to_purge = std::move(m_temporary_image_view);
-			m_images_to_purge = std::move(m_dirty_textures);
+			const u64 last_complete_frame = vk::get_last_completed_frame_id();
+			m_discardable_storage.remove_if([&](const discarded_storage& o) {return o.test(last_complete_frame);});
 		}
 
 		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)

@@ -1589,6 +1589,8 @@ void VKGSRender::advance_queued_frames()
 
 	m_current_queue_index = (m_current_queue_index + 1) % VK_MAX_ASYNC_FRAMES;
 	m_current_frame = &frame_context_storage[m_current_queue_index];
+
+	vk::advance_frame_counter();
 }
 
 void VKGSRender::present(frame_context_t *ctx)
@@ -1606,6 +1608,8 @@ void VKGSRender::present(frame_context_t *ctx)
 
 	//Presentation image released; reset value
 	ctx->present_image = UINT32_MAX;
+
+	vk::advance_completed_frame_counter();
 }
 
 void VKGSRender::queue_swap_request()
