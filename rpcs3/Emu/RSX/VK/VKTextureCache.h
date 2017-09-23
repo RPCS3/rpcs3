@@ -709,7 +709,7 @@ namespace vk
 
 		const u32 get_unreleased_textures_count() const override
 		{
-			return m_unreleased_texture_objects + m_discardable_storage.size();
+			return std::max(m_unreleased_texture_objects, 0) + (u32)m_discardable_storage.size();
 		}
 	};
 }
