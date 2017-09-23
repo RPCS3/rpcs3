@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/bin_patch.h"
 #include "Crypto/sha1.h"
@@ -327,7 +327,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 			// Allocate HLE variable
 			if (variable.second.size >= 4096 || variable.second.align >= 4096)
 			{
-				variable.second.var->set(vm::alloc(variable.second.size, vm::main, std::max<u32>(variable.second.align, 4096)));
+				variable.second.addr = vm::alloc(variable.second.size, vm::main, std::max<u32>(variable.second.align, 4096));
 			}
 			else
 			{
@@ -343,8 +343,13 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 					alloc_addr = next;
 				}
 
-				variable.second.var->set(alloc_addr);
+				variable.second.addr = alloc_addr;
 				alloc_addr += variable.second.size;
+			}
+
+			if (variable.second.var)
+			{
+				variable.second.var->set(variable.second.addr);
 			}
 
 			LOG_TRACE(LOADER, "Allocated HLE variable %s.%s at 0x%x", module->name, variable.second.name, variable.second.var->addr());
@@ -355,10 +360,13 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 				variable.second.init();
 			}
 
-			auto& vlink = linkage.variables[variable.first];
-			
-			vlink.hle = true;
-			vlink.export_addr = variable.second.var->addr();
+			if ((variable.second.flags & MFF_HIDDEN) == 0)
+			{
+				auto& vlink = linkage.variables[variable.first];
+
+				vlink.hle = true;
+				vlink.export_addr = variable.second.var->addr();
+			}
 		}
 	}
 }
@@ -732,6 +740,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 				ppu_segment _seg;
 				_seg.addr = addr;
 				_seg.size = mem_size;
+				_seg.filesz = file_size;
 				_seg.type = p_type;
 				_seg.flags = prog.p_flags;
 				prx->segs.emplace_back(_seg);
@@ -766,6 +775,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 					_sec.size = size;
 					_sec.type = s.sh_type;
 					_sec.flags = s.sh_flags & 7;
+					_sec.filesz = 0;
 					prx->secs.emplace_back(_sec);
 					break;
 				}
@@ -885,7 +895,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		struct ppu_prx_library_info
 		{
 			be_t<u16> attributes;
-			be_t<u16> version;
+			u8 version[2];
 			char name[28];
 			be_t<u32> toc;
 			be_t<u32> exports_start;
@@ -897,6 +907,11 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		// Access library information (TODO)
 		const auto& lib_info = vm::cptr<ppu_prx_library_info>(vm::cast(prx->segs[0].addr + elf.progs[0].p_paddr - elf.progs[0].p_offset, HERE));
 		const auto& lib_name = std::string(lib_info->name);
+
+		std::memcpy(prx->module_info_name, lib_info->name, sizeof(prx->module_info_name));
+		prx->module_info_version[0] = lib_info->version[0];
+		prx->module_info_version[1] = lib_info->version[1];
+		prx->module_info_attributes = lib_info->attributes;
 
 		LOG_WARNING(LOADER, "Library %s (rtoc=0x%x):", lib_name, lib_info->toc);
 
@@ -979,6 +994,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
 		const u32 type = _seg.type = prog.p_type;
 		const u32 flag = _seg.flags = prog.p_flags;
+		_seg.filesz = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
 
 		// Hash big-endian values
 		sha1_update(&sha, (uchar*)&prog.p_type, sizeof(prog.p_type));
@@ -1019,6 +1035,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		const u32 size = _sec.size = vm::cast(s.sh_size);
 		const u32 type = _sec.type = s.sh_type;
 		const u32 flag = _sec.flags = s.sh_flags & 7;
+		_sec.filesz = 0;
 
 		if (s.sh_type == 1 && addr && size)
 		{
@@ -1161,9 +1178,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Get LLE module list
 	std::set<std::string> load_libs;
 
-	if (g_cfg.core.lib_loading == lib_loading_type::manual || g_cfg.core.lib_loading == lib_loading_type::both)
+	if (g_cfg.core.lib_loading == lib_loading_type::manual)
 	{
-		// Load required set of modules
+		// Load required set of modules (lib_loading_type::both processed in sys_prx.cpp)
 		load_libs = g_cfg.core.load_libraries.get_set();
 	}
 	else if (g_cfg.core.lib_loading == lib_loading_type::liblv2only)
@@ -1343,7 +1360,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	// Set path (TODO)
 	_main->name = "";
-	_main->path = vfs::get(Emu.GetPath());
+	_main->path = vfs::get(Emu.argv[0]);
 
 	// Analyse executable (TODO)
 	_main->analyse(0, static_cast<u32>(elf.header.e_entry));
@@ -1355,26 +1372,41 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	g_ps3_sdk_version = sdk_version;
 
 	// Initialize process arguments
-	std::initializer_list<std::string> args = { Emu.GetPath()/*, "-emu"s*/ };
+	auto args = vm::ptr<u64>::make(vm::alloc(SIZE_32(u64) * (::size32(Emu.argv) + ::size32(Emu.envp) + 2), vm::main));
+	auto argv = args;
 
-	auto argv = vm::ptr<u64>::make(vm::alloc(SIZE_32(u64) * ::size32(args), vm::main));
-	auto envp = vm::ptr<u64>::make(vm::alloc(::align(SIZE_32(u64), 0x10), vm::main));
-	*envp = 0;
-
-	for (const auto& arg : args)
+	for (const auto& arg : Emu.argv)
 	{
 		const u32 arg_size = ::align(::size32(arg) + 1, 0x10);
 		const u32 arg_addr = vm::alloc(arg_size, vm::main);
 
 		std::memcpy(vm::base(arg_addr), arg.data(), arg_size);
 
-		*argv++ = arg_addr;
+		*args++ = arg_addr;
 	}
 
-	argv -= ::size32(args);
+	*args++ = 0;
+	auto envp = args;
+
+	for (const auto& arg : Emu.envp)
+	{
+		const u32 arg_size = ::align(::size32(arg) + 1, 0x10);
+		const u32 arg_addr = vm::alloc(arg_size, vm::main);
+
+		std::memcpy(vm::base(arg_addr), arg.data(), arg_size);
+
+		*args++ = arg_addr;
+	}
 
 	// Initialize main thread
 	auto ppu = idm::make_ptr<ppu_thread>("main_thread", primary_prio, primary_stacksize);
+
+	// Write initial data (exitspawn)
+	if (Emu.data.size())
+	{
+		std::memcpy(vm::base(ppu->stack_addr + ppu->stack_size - ::size32(Emu.data)), Emu.data.data(), Emu.data.size());
+		ppu->gpr[1] -= Emu.data.size();
+	}
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 
@@ -1417,7 +1449,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Set command line arguments, run entry function
 	ppu->cmd_list
 	({
-		{ ppu_cmd::set_args, 8 }, u64{args.size()}, u64{argv.addr()}, u64{envp.addr()}, u64{0}, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
+		{ ppu_cmd::set_args, 8 }, u64{Emu.argv.size()}, u64{argv.addr()}, u64{envp.addr()}, u64{0}, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
 		{ ppu_cmd::set_gpr, 11 }, u64{elf.header.e_entry},
 		{ ppu_cmd::set_gpr, 12 }, u64{malloc_pagesize},
 		{ ppu_cmd::lle_call, entry },

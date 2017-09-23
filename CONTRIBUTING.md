@@ -1,6 +1,6 @@
 # Getting Started
 
-Before getting started using the emulator, read the [Quickstart Guide](https://rpcs3.net/quickstart) and the [FAQ](https://rpcs3.net/faq). After reading those, if you need support, visit our [Forums](http://www.emunewz.net/forum/forumdisplay.php?fid=172). 
+Before getting started using the emulator, read the [Quickstart Guide](https://rpcs3.net/quickstart) and the [FAQ](https://rpcs3.net/faq). After reading those, if you need support, visit our [Forums](https://forums.rpcs3.net). 
 
 # Issue Reporting
 
@@ -13,7 +13,7 @@ Before getting started using the emulator, read the [Quickstart Guide](https://r
 - Use understandable English. It doesn't need to be perfect, but clear enough to understand your message.
 - While reporting issues, don't forget to include details about your system (OS, CPU, GPU, etc.), as well as the RPCS3.log file.
 
-Submitting your test results for Commercial Games must be done on our forums' [Commercial Games](http://www.emunewz.net/forum/forumdisplay.php?fid=193) section. If there's already a thread for the game you want to report post in it, otherwise please make a new thread following the [Guidelines for submitting new games](http://www.emunewz.net/forum/showthread.php?tid=174376).
+Submitting your test results for Commercial Games must be done on our forums. Please read the [Game Compatibility](https://github.com/RPCS3/rpcs3/wiki/Game-Compatibility) wiki page before doing so.
 
 # Contributing
 

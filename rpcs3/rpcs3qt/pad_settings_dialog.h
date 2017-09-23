@@ -49,11 +49,12 @@ enum button_ids
 	id_cancel
 };
 
-namespace Ui {
+namespace Ui
+{
 	class pad_settings_dialog;
 }
 
-class pad_settings_dialog : public QDialog, PadHandlerBase
+class pad_settings_dialog : public QDialog
 {
 	Q_OBJECT
 
@@ -64,19 +65,15 @@ private:
 	u32 m_seconds;
 	u32 m_button_id;
 	bool m_key_pressed;
-	QAction *onButtonClickedAct;
 	Ui::pad_settings_dialog *ui;
 
 public:
-	// TODO get Init to work
-	virtual void Init(const u32 max_connect) override;
-	explicit pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget *parent = 0);
+	explicit pad_settings_dialog(QWidget *parent = nullptr);
 	~pad_settings_dialog();
 	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void UpdateLabel();
 	void UpdateTimerLabel(const u32 id);
 	void SwitchButtons(const bool IsEnabled);
 	void RunTimer(const u32 seconds, const u32 id);
-	void LoadSettings();
 	const QString GetKeyName(const u32 keyCode);
 };

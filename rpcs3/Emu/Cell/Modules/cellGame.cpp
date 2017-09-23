@@ -262,7 +262,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 			return CELL_GAME_ERROR_BUSY;
 		}
 	}
-	else if (category == "AP" || category == "AV" || category == "HG")
+	else if (category == "AP" || category == "AV" || category == "HG" || category == "AT" || category == "AM" || category == "SF")
 	{
 		*type = CELL_GAME_GAMETYPE_HDD;
 		*attributes = 0; // TODO
@@ -393,7 +393,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 			fmt::throw_exception("cellGameContentPermit(): epic fail: directory '%s' already exists", dir);
 		}
 
-		if (fs::rename(prm->temp, vdir))
+		if (fs::rename(prm->temp, vdir, false))
 		{
 			cellGame.success("cellGameContentPermit(): directory '%s' has been created", dir);
 		}

@@ -17,11 +17,10 @@
 
 class register_editor_dialog : public QDialog
 {
-	u32 pc;
-	CPUDisAsm* disasm;
-	QComboBox* t1_register;
-	QLineEdit* t2_value;
-	QLabel* t3_preview;
+	u32 m_pc;
+	CPUDisAsm* m_disasm;
+	QComboBox* m_register_combo;
+	QLineEdit* m_value_line;
 
 public:
 	std::weak_ptr<cpu_thread> cpu;

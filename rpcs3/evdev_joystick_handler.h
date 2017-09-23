@@ -70,7 +70,10 @@ public:
     evdev_joystick_handler();
     ~evdev_joystick_handler();
 
-    void Init(const u32 max_connect) override;
+    bool Init() override;
+    std::vector<std::string> ListDevices() override;
+    bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
+    void ThreadProc() override;
     void Close();
 
 private:
@@ -78,11 +81,9 @@ private:
     std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY);
     bool try_open_dev(u32 index);
     int scale_axis(int axis, int value);
-    void thread_func();
 
-    std::unique_ptr<std::thread> joy_thread;
-    mutable atomic_t<bool> active{false}, dead{false};
     std::vector<std::string> joy_paths;
+    std::vector<std::shared_ptr<Pad>> pads;
     std::vector<libevdev*> joy_devs;
     std::vector<std::vector<int>> joy_button_maps;
     std::vector<std::vector<int>> joy_axis_maps;

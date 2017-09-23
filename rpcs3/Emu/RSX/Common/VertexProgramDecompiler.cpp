@@ -209,6 +209,7 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 		{ "$awm", std::bind(std::mem_fn(&VertexProgramDecompiler::AddAddrRegWithoutMask), this) },
 		{ "$am", std::bind(std::mem_fn(&VertexProgramDecompiler::AddAddrMask), this) },
 		{ "$a", std::bind(std::mem_fn(&VertexProgramDecompiler::AddAddrReg), this) },
+		{ "$vm", std::bind(std::mem_fn(&VertexProgramDecompiler::GetVecMask), this) },
 
 		{ "$t", std::bind(std::mem_fn(&VertexProgramDecompiler::GetTex), this) },
 
@@ -606,8 +607,9 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_MAX: SetDSTVec("max($0, $1)"); break;
 		case RSX_VEC_OPCODE_SLT: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")"); break;
 		case RSX_VEC_OPCODE_SGE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); break;
-			// Note: It looks like ARL opcode ignore input/output swizzle mask (SH3)
-		case RSX_VEC_OPCODE_ARL: AddCode("$ifcond $awm = " + getIntTypeName(4) + "($0);");  break;
+			// Note: ARL uses the vec mask to determine channels and ignores the src input mask
+			// Tested with SH3, BLES00574 (G-Force) and NPUB90415 (Dead Space 2 Demo)
+		case RSX_VEC_OPCODE_ARL: AddCode("$ifcond $awm$vm = " + getIntTypeName(4) + "($0)$vm;");  break;
 		case RSX_VEC_OPCODE_FRC: SetDSTVec(getFunction(FUNCTION::FUNCTION_FRACT)); break;
 		case RSX_VEC_OPCODE_FLR: SetDSTVec("floor($0)"); break;
 		case RSX_VEC_OPCODE_SEQ: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); break;

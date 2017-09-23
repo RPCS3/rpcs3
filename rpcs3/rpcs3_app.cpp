@@ -31,6 +31,8 @@
 #include "evdev_joystick_handler.h"
 #endif
 
+#include "pad_thread.h"
+
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
@@ -39,7 +41,7 @@
 #ifdef _MSC_VER
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
 #endif
-#if defined(_WIN32) || defined(__linux__)
+#if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
 #ifdef _WIN32
@@ -47,6 +49,9 @@
 #endif
 #ifdef HAVE_ALSA
 #include "Emu/Audio/ALSA/ALSAThread.h"
+#endif
+#ifdef HAVE_PULSE
+#include "Emu/Audio/Pulse/PulseThread.h"
 #endif
 
 // For now, a trivial constructor/destructor.  May add command line usage later.
@@ -137,30 +142,9 @@ void rpcs3_app::InitializeCallbacks()
 		}
 	};
 
-	callbacks.get_pad_handler = [this]() -> std::shared_ptr<PadHandlerBase>
+	callbacks.get_pad_handler = [this]() -> std::shared_ptr<pad_thread>
 	{
-		switch (pad_handler type = g_cfg.io.pad)
-		{
-		case pad_handler::null: return std::make_shared<NullPadHandler>();
-		case pad_handler::keyboard:
-		{
-			keyboard_pad_handler* ret = new keyboard_pad_handler();
-			ret->moveToThread(thread());
-			ret->SetTargetWindow(gameWindow);
-			return std::shared_ptr<PadHandlerBase>(ret);
-		}
-		case pad_handler::ds4: return std::make_shared<ds4_pad_handler>();
-#ifdef _MSC_VER
-		case pad_handler::xinput: return std::make_shared<xinput_pad_handler>();
-#endif
-#ifdef _WIN32
-		case pad_handler::mm: return std::make_shared<mm_joystick_handler>();
-#endif
-#ifdef HAVE_LIBEVDEV
-		case pad_handler::evdev: return std::make_shared<evdev_joystick_handler>();
-#endif
-		default: fmt::throw_exception("Invalid pad handler: %s", type);
-		}
+		return std::make_shared<pad_thread>(thread(), gameWindow);
 	};
 
 	callbacks.get_gs_frame = [this]() -> std::unique_ptr<GSFrameBase>
@@ -217,7 +201,7 @@ void rpcs3_app::InitializeCallbacks()
 		{
 		case video_renderer::null: return std::make_shared<NullGSRender>();
 		case video_renderer::opengl: return std::make_shared<GLGSRender>();
-#if defined(_WIN32) || defined(__linux__)
+#if defined(_WIN32) || defined(HAVE_VULKAN)
 		case video_renderer::vulkan: return std::make_shared<VKGSRender>();
 #endif
 #ifdef _MSC_VER
@@ -234,9 +218,14 @@ void rpcs3_app::InitializeCallbacks()
 		case audio_renderer::null: return std::make_shared<NullAudioThread>();
 #ifdef _WIN32
 		case audio_renderer::xaudio: return std::make_shared<XAudio2Thread>();
-#elif defined(HAVE_ALSA)
+#endif
+#ifdef HAVE_ALSA
 		case audio_renderer::alsa: return std::make_shared<ALSAThread>();
 #endif
+#ifdef HAVE_PULSE
+		case audio_renderer::pulse: return std::make_shared<PulseThread>();
+#endif
+
 		case audio_renderer::openal: return std::make_shared<OpenALThread>();
 		default: fmt::throw_exception("Invalid audio renderer: %s" HERE, type);
 		}
@@ -330,6 +319,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 		file.close();
 	}
 	GUI::stylesheet = styleSheet();
+	RPCS3MainWin->RepaintGui();
 }
 
 /**

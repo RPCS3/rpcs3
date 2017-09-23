@@ -10,6 +10,12 @@
 
 namespace fs
 {
+#ifdef _WIN32
+	using native_handle = void*;
+#else
+	using native_handle = int;
+#endif
+
 	// File open mode flags
 	enum class open_mode : u32
 	{
@@ -19,6 +25,7 @@ namespace fs
 		create,
 		trunc,
 		excl,
+		unshare,
 
 		__bitset_enum_max
 	};
@@ -29,6 +36,7 @@ namespace fs
 	constexpr auto create  = +open_mode::create; // Create file if it doesn't exist
 	constexpr auto trunc   = +open_mode::trunc; // Clear opened file if it's not empty
 	constexpr auto excl    = +open_mode::excl; // Failure if the file already exists (used with `create`)
+	constexpr auto unshare = +open_mode::unshare; // Prevent opening the file twice
 
 	constexpr auto rewrite = open_mode::write + open_mode::create + open_mode::trunc;
 
@@ -53,6 +61,12 @@ namespace fs
 		s64 atime;
 		s64 mtime;
 		s64 ctime;
+	};
+
+	// Native handle getter
+	struct get_native_handle
+	{
+		virtual native_handle get() = 0;
 	};
 
 	// File handle base
@@ -145,7 +159,7 @@ namespace fs
 	bool create_path(const std::string& path);
 
 	// Rename (move) file or directory
-	bool rename(const std::string& from, const std::string& to);
+	bool rename(const std::string& from, const std::string& to, bool overwrite);
 
 	// Copy file contents
 	bool copy_file(const std::string& from, const std::string& to, bool overwrite);
@@ -347,6 +361,9 @@ namespace fs
 			if (seek(0), !read(result)) xfail();
 			return result;
 		}
+
+		// Get native handle if available
+		native_handle get_handle() const;
 	};
 
 	class dir final
@@ -485,6 +502,7 @@ namespace fs
 		noent,
 		exist,
 		acces,
+		notempty,
 	};
 
 	// Error code returned

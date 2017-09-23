@@ -52,6 +52,8 @@ std::string getFunctionImp(FUNCTION f)
 		return "$t.SampleLevel($tsampler, $0.x, $1)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_GRAD:
 		return "$t.SampleGrad($tsampler, $0.x, $1, $2)";
+	case FUNCTION::FUNCTION_TEXTURE_SHADOW2D: //TODO
+	case FUNCTION::FUNCTION_TEXTURE_SHADOW2D_PROJ:
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D:
 		return "$t.Sample($tsampler, $0.xy * $t_scale)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ:
@@ -123,6 +125,8 @@ void insert_d3d12_legacy_function(std::ostream& OS, bool is_fragment_program)
 
 	if (!is_fragment_program)
 		return;
+
+	program_common::insert_compare_op(OS);
 
 	OS << "uint packSnorm2x16(float2 val)";
 	OS << "{\n";

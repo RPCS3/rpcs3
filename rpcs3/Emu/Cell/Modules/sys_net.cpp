@@ -581,7 +581,7 @@ namespace sys_net
 #ifdef _WIN32
 			case OP_SO_NBIO:
 			{
-				unsigned long mode = *(unsigned long*)optval.get_ptr();
+				u_long mode = *static_cast<const be_t<u32>*>(optval.get_ptr());
 				ret = ioctlsocket(sock->s, FIONBIO, &mode);
 				break;
 			}
@@ -606,38 +606,38 @@ namespace sys_net
 #endif
 			case OP_SO_SNDBUF:
 			{
-				u32 sendbuff = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_SNDBUF, (const char*)&sendbuff, sizeof(sendbuff));
+				const u32 param = *static_cast<const be_t<u32>*>(optval.get_ptr());
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_SNDBUF, (const char*)&param, sizeof(param));
 				break;
 			}
 			case OP_SO_RCVBUF:
 			{
-				u32 recvbuff = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_RCVBUF, (const char*)&recvbuff, sizeof(recvbuff));
+				const u32 param = *static_cast<const be_t<u32>*>(optval.get_ptr());
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_RCVBUF, (const char*)&param, sizeof(param));
 				break;
 			}
 			case OP_SO_SNDTIMEO:
 			{
-				u32 sendtimeout = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_SNDTIMEO, (char*)&sendtimeout, sizeof(sendtimeout));
+				const u32 param = *static_cast<const be_t<u32>*>(optval.get_ptr());
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_SNDTIMEO, (const char*)&param, sizeof(param));
 				break;
 			}
 			case OP_SO_RCVTIMEO:
 			{
-				u32 recvtimeout = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_RCVTIMEO, (char*)&recvtimeout, sizeof(recvtimeout));
+				const u32 param = *static_cast<const be_t<u32>*>(optval.get_ptr());
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&param, sizeof(param));
 				break;
 			}
 			case OP_SO_SNDLOWAT:
 			{
-				u32 sendlowmark = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_SNDLOWAT, (char*)&sendlowmark, sizeof(sendlowmark));
+				const u32 param = *static_cast<const be_t<u32>*>(optval.get_ptr());
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_SNDLOWAT, (const char*)&param, sizeof(param));
 				break;
 			}
 			case OP_SO_RCVLOWAT:
 			{
-				u32 recvlowmark = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_RCVLOWAT, (char*)&recvlowmark, sizeof(recvlowmark));
+				const u32 param = *static_cast<const be_t<u32>*>(optval.get_ptr());
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_RCVLOWAT, (const char*)&param, sizeof(param));
 				break;
 			}
 			case  OP_SO_USECRYPTO:
@@ -654,14 +654,14 @@ namespace sys_net
 			}
 			case OP_SO_BROADCAST:
 			{
-				u32 enablebroadcast = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_BROADCAST, (char*)&enablebroadcast, sizeof(enablebroadcast));
+				const u32 param = *static_cast<const be_t<u32>*>(optval.get_ptr());
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_BROADCAST, (const char*)&param, sizeof(param));
 				break;
 			}
 			case OP_SO_REUSEADDR:
 			{
-				u32 reuseaddr = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_REUSEADDR, (char*)&reuseaddr, sizeof(reuseaddr));
+				const u32 param = *static_cast<const be_t<u32>*>(optval.get_ptr());
+				ret = ::setsockopt(sock->s, SOL_SOCKET, SO_REUSEADDR, (const char*)&param, sizeof(param));
 				break;
 			}
 			default:
@@ -675,11 +675,11 @@ namespace sys_net
 			case OP_TCP_NODELAY:
 			{
 #ifdef _WIN32
-				const char delay = *(char*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_NODELAY, &delay, sizeof(delay));
+				const u32 param = *static_cast<const be_t<u32>*>(optval.get_ptr());
+				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_NODELAY, (const char*)&param, sizeof(param));
 #else
-				u32 delay = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_NODELAY, &delay, optlen);
+				const u32 param = *static_cast<const be_t<u32>*>(optval.get_ptr());
+				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_NODELAY, (const char*)&param, sizeof(param));
 #endif
 				break;
 			}
@@ -689,8 +689,8 @@ namespace sys_net
 #ifdef _WIN32
 				libnet.warning("TCP_MAXSEG can't be set on Windows.");
 #else
-				u32 maxseg = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_MAXSEG, &maxseg, optlen);
+				const u32 param = *static_cast<const be_t<u32>*>(optval.get_ptr());
+				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_MAXSEG, (const char*)&param, sizeof(param));
 #endif
 				break;
 			}

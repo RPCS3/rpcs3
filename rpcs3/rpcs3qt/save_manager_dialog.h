@@ -21,11 +21,10 @@ public:
 private Q_SLOTS:
 	void OnEntryInfo();
 	void OnEntryRemove();
+	void OnSort(int logicalIndex);
 private:
 	void Init(std::string dir);
 	void UpdateList();
-
-	void OnSort(int id);
 
 	void ShowContextMenu(const QPoint &pos);
 
@@ -35,12 +34,6 @@ private:
 
 	QMenu* m_sort_options;
 
-	int m_sortColumn;
-	bool m_sortAscending;
-
-	QAction* saveIDAct;
-	QAction* titleAct;
-	QAction* subtitleAct;
-	QAction* removeAct;
-	QAction* infoAct;
+	int m_sort_column;
+	bool m_sort_ascending;
 };

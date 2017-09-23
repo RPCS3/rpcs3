@@ -4,7 +4,8 @@
 #include <QKeyEvent>
 #include <QCloseEvent>
 
-namespace Ui {
+namespace Ui
+{
 	class welcome_dialog;
 }
 
@@ -14,6 +15,7 @@ class welcome_dialog : public QDialog
 
 public:
 	explicit welcome_dialog(QWidget* parent = nullptr);
+	~welcome_dialog();
 
 private:
 	Ui::welcome_dialog *ui;

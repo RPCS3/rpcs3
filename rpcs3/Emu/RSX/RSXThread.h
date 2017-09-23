@@ -144,6 +144,11 @@ namespace rsx
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
 		std::vector<u32> element_push_buffer;
 
+		s32 m_skip_frame_ctr = 0;
+		bool skip_frame = false;
+
+		bool supports_multidraw = false;
+
 	public:
 		RsxDmaControl* ctrl = nullptr;
 
@@ -183,9 +188,6 @@ namespace rsx
 		bool m_transform_constants_dirty;
 		bool m_textures_dirty[16];
 
-	protected:
-		s32 m_skip_frame_ctr = 0;
-		bool skip_frame = false;
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
@@ -259,7 +261,7 @@ namespace rsx
 		//zcull
 		virtual void notify_zcull_info_changed() {}
 		virtual void clear_zcull_stats(u32 /*type*/) {}
-		virtual u32 get_zcull_stats(u32 /*type*/) { return UINT32_MAX; }
+		virtual u32 get_zcull_stats(u32 /*type*/) { return UINT16_MAX; }
 
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;

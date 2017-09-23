@@ -168,7 +168,8 @@ struct Tool_Bar_Button
 	bool isActive;
 };
 
-enum {
+enum
+{
 	DROP_ERROR,
 	DROP_PKG,
 	DROP_PUP,
@@ -177,7 +178,8 @@ enum {
 	DROP_GAME
 };
 
-class game_list_frame : public QDockWidget {
+class game_list_frame : public QDockWidget
+{
 	Q_OBJECT
 
 public:
@@ -260,22 +262,10 @@ private:
 	QToolBar* m_Tool_Bar;
 	QLineEdit* m_Search_Bar;
 	QSlider* m_Slider_Size;
-	game_list* gameList;
+	game_list* m_gameList;
 	game_list_grid* m_xgrid;
 
-	// Actions regarding showing/hiding columns
-	QAction* showIconColAct;
-	QAction* showNameColAct;
-	QAction* showSerialColAct;
-	QAction* showFWColAct;
-	QAction* showAppVersionColAct;
-	QAction* showCategoryColAct;
-	QAction* showPathColAct;
-	QAction* showResolutionColAct;
-	QAction* showSoundFormatColAct;
-	QAction* showParentalLevelColAct;
-
-	QList<QAction*> columnActs;
+	QList<QAction*> m_columnActs;
 
 	// Actions regarding showing/hiding categories
 	Tool_Bar_Button m_catActHDD;

@@ -51,3 +51,8 @@ QSize game_list_grid_delegate::sizeHint(const QStyleOptionViewItem & option, con
 	Q_UNUSED(index);
 	return m_size;
 }
+
+void game_list_grid_delegate::setItemSize(const QSize & size)
+{
+	m_size = size;
+}

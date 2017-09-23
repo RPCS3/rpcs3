@@ -35,30 +35,29 @@ private:
 
 	void CreateAndConnectActions();
 
-	QTabWidget *tabWidget;
-	QTextEdit *log;
-	QTextEdit *tty;
+	QTextEdit *m_log;
+	QTextEdit *m_tty;
 	QString m_old_text;
 	ullong m_log_counter;
 	bool m_stack_log;
 
-	fs::file tty_file;
+	fs::file m_tty_file;
 
-	QAction* clearAct;
+	QAction* m_clearAct;
 
-	QActionGroup* logLevels;
-	QAction* nothingAct;
-	QAction* fatalAct;
-	QAction* errorAct;
-	QAction* todoAct;
-	QAction* successAct;
-	QAction* warningAct;
-	QAction* noticeAct;
-	QAction* traceAct;
+	QActionGroup* m_logLevels;
+	QAction* m_nothingAct;
+	QAction* m_fatalAct;
+	QAction* m_errorAct;
+	QAction* m_todoAct;
+	QAction* m_successAct;
+	QAction* m_warningAct;
+	QAction* m_noticeAct;
+	QAction* m_traceAct;
 
-	QAction* stackAct;
+	QAction* m_stackAct;
 
-	QAction* TTYAct;
+	QAction* m_TTYAct;
 
 	std::shared_ptr<gui_settings> xgui_settings;
 };

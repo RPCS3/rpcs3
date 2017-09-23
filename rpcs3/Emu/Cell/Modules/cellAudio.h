@@ -5,7 +5,7 @@
 namespace vm { using namespace ps3; }
 
 // Error codes
-enum
+enum CellAudioError : u32
 {
 	CELL_AUDIO_ERROR_ALREADY_INIT               = 0x80310701,
 	CELL_AUDIO_ERROR_AUDIOSYSTEM                = 0x80310702,

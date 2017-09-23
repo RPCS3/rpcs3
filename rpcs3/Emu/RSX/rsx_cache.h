@@ -12,6 +12,7 @@ namespace rsx
 	struct blit_src_info
 	{
 		blit_engine::transfer_source_format format;
+		blit_engine::transfer_origin origin;
 		u16 offset_x;
 		u16 offset_y;
 		u16 width;
@@ -20,6 +21,8 @@ namespace rsx
 		u16 pitch;
 		void *pixels;
 
+		bool compressed_x;
+		bool compressed_y;
 		u32 rsx_address;
 	};
 
@@ -35,10 +38,15 @@ namespace rsx
 		u16 clip_y;
 		u16 clip_width;
 		u16 clip_height;
+		u16 max_tile_h;
+		f32 scale_x;
+		f32 scale_y;
 
 		bool swizzled;
 		void *pixels;
 
+		bool compressed_x;
+		bool compressed_y;
 		u32  rsx_address;
 	};
 
@@ -63,7 +71,7 @@ namespace rsx
 		bool locked = false;
 		bool dirty = false;
 
-		inline bool region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2)
+		inline bool region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2) const
 		{
 			return (base1 < limit2 && base2 < limit1);
 		}
@@ -126,22 +134,25 @@ namespace rsx
 			locked = false;
 		}
 
-		bool overlaps(std::pair<u32, u32> range)
+		/**
+		* Check if range overlaps with this section.
+		* ignore_protection_range - if true, the test should not check against the aligned protection range, instead
+		* tests against actual range of contents in memory
+		*/
+		bool overlaps(std::pair<u32, u32> range) const
 		{
 			return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
 		}
 
-		bool overlaps(u32 address)
+		bool overlaps(u32 address, bool ignore_protection_range) const
 		{
-			return (locked_address_base <= address && (address - locked_address_base) < locked_address_range);
+			if (!ignore_protection_range)
+				return (locked_address_base <= address && (address - locked_address_base) < locked_address_range);
+			else
+				return (cpu_address_base <= address && (address - cpu_address_base) < cpu_address_range);
 		}
 
-		/**
-		 * Check if range overlaps with this section.
-		 * ignore_protection_range - if true, the test should not check against the aligned protection range, instead
-		 * tests against actual range of contents in memory
-		 */
-		bool overlaps(std::pair<u32, u32> range, bool ignore_protection_range)
+		bool overlaps(std::pair<u32, u32> range, bool ignore_protection_range) const
 		{
 			if (!ignore_protection_range)
 				return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
@@ -153,7 +164,7 @@ namespace rsx
 		 * Check if the page containing the address tramples this section. Also compares a former trampled page range to compare
 		 * If true, returns the range <min, max> with updated invalid range 
 		 */
-		std::tuple<bool, std::pair<u32, u32>> overlaps_page(std::pair<u32, u32> old_range, u32 address)
+		std::tuple<bool, std::pair<u32, u32>> overlaps_page(std::pair<u32, u32> old_range, u32 address) const
 		{
 			const u32 page_base = address & ~4095;
 			const u32 page_limit = address + 4096;
@@ -197,7 +208,7 @@ namespace rsx
 			return (cpu_address_base == cpu_address && cpu_address_range == size);
 		}
 
-		std::pair<u32, u32> get_min_max(std::pair<u32, u32> current_min_max)
+		std::pair<u32, u32> get_min_max(std::pair<u32, u32> current_min_max) const
 		{
 			u32 min = std::min(current_min_max.first, locked_address_base);
 			u32 max = std::max(current_min_max.second, locked_address_base + locked_address_range);
@@ -409,11 +420,6 @@ namespace rsx
 			fp.ctrl = data.fp_ctrl;
 			fp.texture_dimensions = data.fp_texture_dimensions;
 			fp.unnormalized_coords = data.fp_unnormalized_coords;
-			fp.height = data.fp_height;
-			fp.pixel_center_mode = (rsx::window_pixel_center)(data.fp_pixel_layout & 0x3);
-			fp.origin_mode = (rsx::window_origin)((data.fp_pixel_layout >> 2) & 0x1);
-			fp.alpha_func = (rsx::comparison_function)((data.fp_pixel_layout >> 3) & 0xF);
-			fp.fog_equation = (rsx::fog_mode)((data.fp_pixel_layout >> 7) & 0xF);
 			fp.front_back_color_enabled = (data.fp_lighting_flags & 0x1) != 0;
 			fp.back_color_diffuse_output = ((data.fp_lighting_flags >> 1) & 0x1) != 0;
 			fp.back_color_specular_output = ((data.fp_lighting_flags >> 2) & 0x1) != 0;
@@ -444,8 +450,6 @@ namespace rsx
 			data_block.fp_ctrl = fp.ctrl;
 			data_block.fp_texture_dimensions = fp.texture_dimensions;
 			data_block.fp_unnormalized_coords = fp.unnormalized_coords;
-			data_block.fp_height = fp.height;
-			data_block.fp_pixel_layout = (u16)fp.pixel_center_mode | (u16)fp.origin_mode << 2 | (u16)fp.alpha_func << 3;
 			data_block.fp_lighting_flags = (u16)fp.front_back_color_enabled | (u16)fp.back_color_diffuse_output << 1 |
 				(u16)fp.back_color_specular_output << 2 | (u16)fp.front_color_diffuse_output << 3 | (u16)fp.front_color_specular_output << 4;
 			data_block.fp_shadow_textures = fp.shadow_textures;

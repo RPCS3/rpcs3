@@ -22,17 +22,17 @@ public:
 	s32 GetSelection();
 private Q_SLOTS:
 	void OnEntryInfo();
+	void OnSort(int logicalIndex);
 private:
 	void UpdateSelectionLabel(void);
 	void UpdateList(void);
-	void OnSort(int id);
 
-	s32 m_selectedEntry;
-	QLabel* selectedEntryLabel;
+	s32 m_entry;
+	QLabel* m_entry_label;
 
 	QTableWidget* m_list;
 	std::vector<SaveDataEntry> m_save_entries;
 
-	int m_sortColumn;
-	bool m_sortAscending;
+	int m_sort_column;
+	bool m_sort_ascending;
 };

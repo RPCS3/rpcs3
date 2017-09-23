@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Utilities/LUrlParser.h"
 
 #include "cellHttpUtil.h"
 
@@ -14,50 +15,15 @@ logs::channel cellHttpUtil("cellHttpUtil");
 
 s32 cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm::ptr<void> pool, u32 size, vm::ptr<u32> required)
 {
-
-#ifdef _WIN32
-
-	URL_COMPONENTS stUrlComp;
-
-	ZeroMemory(&stUrlComp, sizeof(URL_COMPONENTS));
-	stUrlComp.dwStructSize = sizeof(URL_COMPONENTS);
-
-	wchar_t lpszScheme[MAX_PATH] = { 0 };
-	wchar_t lpszHostName[MAX_PATH] = { 0 };
-	wchar_t lpszPath[MAX_PATH] = { 0 };
-	wchar_t lpszUserName[MAX_PATH] = { 0 };
-	wchar_t lpszPassword[MAX_PATH] = { 0 };
-
-	stUrlComp.lpszScheme = lpszScheme;
-	stUrlComp.dwSchemeLength = MAX_PATH;
-
-	stUrlComp.lpszHostName = lpszHostName;
-	stUrlComp.dwHostNameLength = MAX_PATH;
-
-	stUrlComp.lpszUrlPath = lpszPath;
-	stUrlComp.dwUrlPathLength = MAX_PATH;
-
-	stUrlComp.lpszUserName = lpszUserName;
-	stUrlComp.dwUserNameLength = MAX_PATH;
-
-	stUrlComp.lpszPassword = lpszPassword;
-	stUrlComp.dwPasswordLength = MAX_PATH;
-
-	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-
-	LPCWSTR stupidTypeUrlString = converter.from_bytes(str.get_ptr()).c_str();
-	if (!::WinHttpCrackUrl(stupidTypeUrlString, (DWORD)(LONG_PTR)wcslen(stupidTypeUrlString), ICU_ESCAPE, &stUrlComp))
+	cellHttpUtil.trace("cellHttpUtilParseUri(uri=*0x%x, str=%s, pool=*0x%x, size=%d, required=*0x%x)", uri, str, pool, size, required);
+	LUrlParser::clParseURL URL = LUrlParser::clParseURL::ParseURL(str.get_ptr());
+	if ( URL.IsValid() )
 	{
-		cellHttpUtil.error("Error %u in WinHttpCrackUrl.\n", GetLastError());
-	}
-	else
-	{
-
-		std::string scheme = converter.to_bytes(lpszScheme);
-		std::string host = converter.to_bytes(lpszHostName);
-		std::string path = converter.to_bytes(lpszPath);
-		std::string username = converter.to_bytes(lpszUserName);
-		std::string password = converter.to_bytes(lpszPassword);
+		std::string scheme = URL.m_Scheme;
+		std::string host = URL.m_Host;
+		std::string path = URL.m_Path;
+		std::string username = URL.m_UserName;
+		std::string password = URL.m_Password;
 
 		u32 schemeOffset = 0;
 		u32 hostOffset = scheme.length() + 1;
@@ -67,10 +33,13 @@ s32 cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm::ptr<v
 		u32 totalSize = passwordOffset + password.length() + 1;
 
 		//called twice, first to setup pool, then to populate.
-		if (!uri) {
+		if (!uri)
+		{
 			*required = totalSize;
 			return CELL_OK;
-		} else {
+		}
+		else
+		{
 			std::strncpy((char*)vm::base(pool.addr() + schemeOffset), (char*)scheme.c_str(), scheme.length() + 1);
 			std::strncpy((char*)vm::base(pool.addr() + hostOffset), (char*)host.c_str(), host.length() + 1);
 			std::strncpy((char*)vm::base(pool.addr() + pathOffset), (char*)path.c_str(), path.length() + 1);
@@ -82,14 +51,55 @@ s32 cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm::ptr<v
 			uri->path.set(pool.addr() + pathOffset);
 			uri->username.set(pool.addr() + usernameOffset);
 			uri->password.set(pool.addr() + passwordOffset);
-			uri->port = stUrlComp.nPort;
+
+			if (URL.m_Port != "")
+			{
+				int port = stoi(URL.m_Port);
+				uri->port = port;
+			}
+			else
+			{
+				uri->port = (u32)80;
+			}
+			return CELL_OK;
 		}
 	}
-
-#else
-	cellHttpUtil.todo("cellHttpUtilParseUri(uri=*0x%x, str=%s, pool=*0x%x, size=%d, required=*0x%x)", uri, str, pool, size, required);
-#endif
-	return CELL_OK;
+	else
+	{
+		std::string parseError;
+		switch(URL.m_ErrorCode)
+		{
+			case LUrlParser::LUrlParserError_Ok:
+				parseError = "No error, URL was parsed fine";
+				break;
+			case LUrlParser::LUrlParserError_Uninitialized:
+				parseError = "Error, LUrlParser is uninitialized";
+				break;
+			case LUrlParser::LUrlParserError_NoUrlCharacter:
+				parseError = "Error, the URL has invalid characters";
+				break;
+			case LUrlParser::LUrlParserError_InvalidSchemeName:
+				parseError = "Error, the URL has an invalid scheme";
+				break;
+			case LUrlParser::LUrlParserError_NoDoubleSlash:
+				parseError = "Error, the URL did not contain a double slash";
+				break;
+			case LUrlParser::LUrlParserError_NoAtSign:
+				parseError = "Error, the URL did not contain an @ sign";
+				break;
+			case LUrlParser::LUrlParserError_UnexpectedEndOfLine:
+				parseError = "Error, unexpectedly got the end of the line";
+				break;
+			case LUrlParser::LUrlParserError_NoSlash:
+				parseError = "Error, URI didn't contain a slash";
+				break;
+			default:
+				parseError = "Error, unkown error #" + std::to_string(static_cast<int>(URL.m_ErrorCode));
+				break;
+		}
+		cellHttpUtil.error("%s, while parsing URI, %s.", parseError, str.get_ptr());
+		return -1;
+	}
 }
 
 s32 cellHttpUtilParseUriPath(vm::ptr<CellHttpUriPath> path, vm::cptr<char> str, vm::ptr<void> pool, u32 size, vm::ptr<u32> required)

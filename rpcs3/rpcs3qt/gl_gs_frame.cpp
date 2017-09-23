@@ -42,7 +42,7 @@ void gl_gs_frame::set_current(draw_context_t ctx)
 
 void gl_gs_frame::delete_context(void* ctx)
 {
-	delete (QOpenGLContext*)ctx;
+	((QOpenGLContext*)ctx)->deleteLater();
 }
 
 void gl_gs_frame::flip(draw_context_t context, bool skip_frame)

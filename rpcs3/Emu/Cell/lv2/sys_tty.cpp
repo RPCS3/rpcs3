@@ -23,20 +23,20 @@ error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwrit
 	{
 		return CELL_EINVAL;
 	}
+	
+	const u32 written_len = static_cast<s32>(len) > 0 ? len : 0;
 
-	if (static_cast<s32>(len) <= 0)
-	{
-		*pwritelen = 0;
-
-		return CELL_OK;
-	}
-
-	if (g_tty)
+	if (written_len > 0 && g_tty)
 	{
 		g_tty.write(buf.get_ptr(), len);
 	}
+	
+	if (!pwritelen)
+	{
+		return CELL_EFAULT;
+	}
 
-	*pwritelen = len;
-
+	*pwritelen = written_len;
+	
 	return CELL_OK;
 }

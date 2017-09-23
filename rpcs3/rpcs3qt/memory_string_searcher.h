@@ -13,9 +13,7 @@ class memory_string_searcher : public QDialog
 {
 	Q_OBJECT
 
-	QLineEdit* le_addr;
-	QHBoxLayout* hbox_panel;
-	QPushButton* button_search;
+	QLineEdit* m_addr_line;
 
 public:
 	memory_string_searcher(QWidget* parent);

@@ -280,15 +280,16 @@ void ppu_thread::on_init(const std::shared_ptr<void>& _this)
 	if (!stack_addr)
 	{
 		// Allocate stack + gap between stacks
-		const_cast<u32&>(stack_addr) = vm::alloc(stack_size + 4096, vm::stack) + 4096;
-
-		if (!stack_addr)
+		auto new_stack_base = vm::alloc(stack_size + 4096, vm::stack);
+		if (!new_stack_base)
 		{
 			fmt::throw_exception("Out of stack memory (size=0x%x)" HERE, stack_size);
 		}
 
+		const_cast<u32&>(stack_addr) = new_stack_base + 4096;
+
 		// Make the gap inaccessible
-		vm::page_protect(stack_addr - 4096, 4096, 0, 0, vm::page_readable + vm::page_writable);
+		vm::page_protect(new_stack_base, 4096, 0, 0, vm::page_readable + vm::page_writable);
 
 		gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
 
@@ -578,7 +579,7 @@ ppu_thread::~ppu_thread()
 ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
 	: cpu_thread(idm::last_id())
 	, prio(prio)
-	, stack_size(std::max<u32>(stack, 0x4000))
+	, stack_size(stack ? ::align(std::min<u32>(stack, 0x100000), 0x1000) : 0x4000)
 	, stack_addr(0)
 	, start_time(get_system_time())
 	, m_name(name)
@@ -1165,7 +1166,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 			if (info.name == "liblv2.sprx")
 			{
-				const be_t<u64> forced_upd = 1;
+				const be_t<u64> forced_upd = 2;
 				sha1_update(&ctx, reinterpret_cast<const u8*>(&forced_upd), sizeof(forced_upd));
 			}
 
@@ -1238,10 +1239,10 @@ extern void ppu_initialize(const ppu_module& info)
 		return;
 	}
 
-	if (jit_mod.vars.empty())
-	{
+	// Jit can be null if the loop doesn't ever enter.
+	if (jit && jit_mod.vars.empty())
+	{	
 		jit->fin();
-
 		// Get and install function addresses
 		for (const auto& func : info.funcs)
 		{

@@ -15,6 +15,4 @@ public:
 private:
 	gui_settings m_gui_settings;
 	emu_settings m_emu_settings;
-
-	QTabWidget* tabs;
 };

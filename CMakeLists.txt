@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.0.2)
 
-option(WITH_GDB "WITH_GDB" OFF)
-option(WITHOUT_LLVM "WITHOUT_LLVM" OFF)
+option(WITH_GDB "Build RPCS3 with GNU GDB debugger support." OFF)
+option(WITHOUT_LLVM "Build RPCS3 without LLVM (not recommended)." OFF)
+option(USE_SHARED_LLVM_LIBS "Link against shared LLVM libs, instead of statically.
+Only recommended on Gentoo. May interfere with mesa driver and make RPCS3 non-functional." OFF)
 
 if (WITH_GDB)
 	add_definitions(-DWITH_GDB_DEBUGGER)

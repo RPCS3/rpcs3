@@ -30,7 +30,7 @@
       <bool>true</bool>
      </property>
      <property name="sizePolicy">
-      <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -46,7 +46,7 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout_8">
+          <layout class="QVBoxLayout" name="verticalLayout_8" stretch="0,0,0,1">
            <item>
             <widget class="QGroupBox" name="ppu">
              <property name="title">
@@ -655,13 +655,13 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_10">
          <item>
-          <widget class="QGroupBox" name="groupBox_52">
+          <widget class="QGroupBox" name="groupBox_51">
            <property name="title">
-            <string>Controller Handler</string>
+            <string>Keyboard Handler</string>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_29">
+           <layout class="QVBoxLayout" name="verticalLayout_27">
             <item>
-             <widget class="QComboBox" name="padHandlerBox"/>
+             <widget class="QComboBox" name="keyboardHandlerBox"/>
             </item>
            </layout>
           </widget>
@@ -683,13 +683,13 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_11">
          <item>
-          <widget class="QGroupBox" name="groupBox_51">
+          <widget class="QGroupBox" name="groupBox_53">
            <property name="title">
-            <string>Keyboard Handler</string>
+            <string>Mouse Handler</string>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_27">
+           <layout class="QVBoxLayout" name="verticalLayout_28">
             <item>
-             <widget class="QComboBox" name="keyboardHandlerBox"/>
+             <widget class="QComboBox" name="mouseHandlerBox"/>
             </item>
            </layout>
           </widget>
@@ -710,18 +710,6 @@
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_12">
-         <item>
-          <widget class="QGroupBox" name="groupBox_53">
-           <property name="title">
-            <string>Mouse Handler</string>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_28">
-            <item>
-             <widget class="QComboBox" name="mouseHandlerBox"/>
-            </item>
-           </layout>
-          </widget>
-         </item>
          <item>
           <widget class="QWidget" name="widget_3" native="true"/>
          </item>
@@ -856,7 +844,7 @@
           <item>
            <widget class="QLabel" name="label_7">
             <property name="text">
-             <string>System settings allow you change basic system settings found within a real PlayStation 3 system. Depending on the application in use, the console language setting will change the language of the application accordingly. More detailed settings will be added in the future.
+             <string>System settings allow you to change basic system settings found within a real PlayStation 3 system. Depending on the application in use, the console language setting will change the language of the application accordingly. More detailed settings will be added in the future.
 </string>
             </property>
             <property name="textFormat">

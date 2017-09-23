@@ -12,8 +12,14 @@ if (WIN32)
     set(RPCS3_QT_LIBS Qt5::Widgets Qt5::WinExtras)
     include_directories(${Qt5Widgets_INCLUDE_DIRS} ${Qt5WinExtras_INCLUDE_DIRS})
 else()
-    set(RPCS3_QT_LIBS Qt5::Widgets)
-    include_directories(${Qt5Widgets_INCLUDE_DIRS})
+	find_package(Qt5DBus)
+	if (Qt5DBus_FOUND)
+		set(RPCS3_QT_LIBS Qt5::Widgets Qt5::DBus)
+		add_definitions(-DHAVE_QTDBUS)
+	else()
+		set(RPCS3_QT_LIBS Qt5::Widgets)
+	endif()
+	include_directories(${Qt5Widgets_INCLUDE_DIRS})
 endif()
 
 # Let's make sure we have Qt before we continue
@@ -134,15 +140,17 @@ else()
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /DYNAMICBASE:NO /BASE:0x10000 /FIXED")
 endif()
 
+set(ADDITIONAL_LIBS "")
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	#on some Linux distros shm_unlink and similar functions are in librt only
-	set(ADDITIONAL_LIBS "rt" "X11")
+	set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "rt")
 elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
 	#it seems like glibc includes the iconv functions we use but other libc
 	#implementations like the one on OSX don't seem implement them
-	set(ADDITIONAL_LIBS "iconv")
-else()
-	set(ADDITIONAL_LIBS "")
+	set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "iconv")
+endif()
+if(UNIX AND NOT APPLE)
+	set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "X11")
 endif()
 
 if(NOT RPCS3_SRC_DIR)
@@ -168,7 +176,9 @@ elseif(WIN32)
 else()
 	set(PLATFORM_ARCH "linux/x86_64")
 	option(USE_ALSA "ALSA audio backend" ON)
+  option(USE_PULSE "PulseAudio audio backend" ON)
 	option(USE_LIBEVDEV "libevdev-based joystick support" ON)
+	option(USE_VULKAN "Vulkan render backend" ON)
 endif()
 
 if(USE_ALSA)
@@ -180,6 +190,15 @@ if(USE_ALSA)
 		list(APPEND ADDITIONAL_LIBS ${ALSA_LDFLAGS})
 	endif()
 endif()
+if(USE_PULSE)
+	find_package(PkgConfig)
+	pkg_check_modules(PULSE libpulse-simple)
+	if(PULSE_FOUND)
+		add_definitions(-DHAVE_PULSE)
+		include_directories(SYSTEM ${PULSE_INCLUDE_DIRS})
+		list(APPEND ADDITIONAL_LIBS ${PULSE_LDFLAGS})
+	endif()
+endif()
 if(USE_LIBEVDEV)
 	find_package(PkgConfig)
 	pkg_check_modules(LIBEVDEV libevdev)
@@ -187,6 +206,15 @@ if(USE_LIBEVDEV)
 		add_definitions(-DHAVE_LIBEVDEV)
 		include_directories(SYSTEM ${LIBEVDEV_INCLUDE_DIRS})
 		list(APPEND ADDITIONAL_LIBS ${LIBEVDEV_LDFLAGS})
+	endif()
+endif()
+if(NOT WIN32 AND USE_VULKAN)
+	find_package(Vulkan)
+	if(VULKAN_FOUND)
+		add_definitions(-DHAVE_VULKAN)
+		list(APPEND ADDITIONAL_LIBS ${VULKAN_LIBRARY})
+	else()
+		message("WARNING! USE_VULKAN was enabled, but libvulkan was not found. RPCS3 will be compiled without Vulkan support.")
 	endif()
 endif()
 
@@ -244,10 +272,17 @@ if(NOT LLVM_FOUND)
 else()
 	add_definitions(${LLVM_DEFINITIONS})
 	add_definitions(-DLLVM_AVAILABLE)
-	if (CMAKE_BUILD_TYPE STREQUAL "Release")
-		llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize ipo x86codegen x86disassembler)
+	
+	# Gentoo doesn't provide static LLVM libraries, so we need an option to use the shared ones.
+	if (USE_SHARED_LLVM_LIBS)
+		Message("WARNING! Linking against shared LLVM libs may conflict with your system's mesa, rendering RPCS3 non-functional!")
+		set(LLVM_LIBS LLVM)
 	else()
-		llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize ipo x86codegen x86disassembler mcdisassembler)
+		if (CMAKE_BUILD_TYPE STREQUAL "Release")
+			llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize ipo x86codegen x86disassembler)
+		else()
+			llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize ipo x86codegen x86disassembler mcdisassembler)
+		endif()
 	endif()
 
 	if (NOT MSVC)
@@ -281,7 +316,7 @@ RPCS3_SRC
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit/*.cpp"
 )
 
-if (NOT WIN32 AND "${CMAKE_SYSTEM}" MATCHES "Linux")
+if (NOT WIN32 AND VULKAN_FOUND)
 # Compile glslang and SPIRV modules needed for glsl compilation
 	file(
 	GLOB_RECURSE
@@ -299,8 +334,7 @@ endif()
 
 #File exclusion section
 
-#Ignore vulkan if not on windows or linux
-if(NOT WIN32 AND NOT "${CMAKE_SYSTEM}" MATCHES "Linux")
+if(NOT WIN32 AND NOT VULKAN_FOUND)
 	set (EXCLUDE_FILES "/RSX/VK/")
 endif()
 
@@ -343,9 +377,12 @@ else()
 	if(APPLE)
 		target_link_libraries(rpcs3 hidapi-mac "-framework CoreFoundation" "-framework IOKit")
 	elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-		target_link_libraries(rpcs3 hidapi-hidraw udev vulkan)
+		target_link_libraries(rpcs3 hidapi-hidraw udev)
 	else()
 		target_link_libraries(rpcs3 hidapi-libusb usb)
+	endif()
+	if(VULKAN_FOUND)
+		target_link_libraries(rpcs3 ${VULKAN_LIBRARIES})
 	endif()
 	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} -lpthread ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
 	if (USE_SYSTEM_FFMPEG)
@@ -373,6 +410,21 @@ endif()
 target_link_libraries(rpcs3 ${RPCS3_QT_LIBS})
 
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
+
+if (MSVC)
+  # Under Windows, some QT DLLs need to be in the same directory of the compiled
+  # RPCS3 binary, so call the windeployqt tool that will take care of copying
+  # them from the local QT installation at the end of the build.
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_custom_command(TARGET rpcs3 POST_BUILD
+      COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --debug ${CMAKE_BINARY_DIR}/bin
+      )
+  else()
+    add_custom_command(TARGET rpcs3 POST_BUILD
+      COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations ${CMAKE_BINARY_DIR}/bin
+      )
+  endif()
+endif()
 
 cotire(rpcs3)
 

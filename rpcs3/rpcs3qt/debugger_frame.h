@@ -35,10 +35,8 @@ class debugger_frame : public QDockWidget
 {
 	Q_OBJECT
 
-	QWidget* body;
 	debugger_list* m_list;
-	int pSize;
-	QFont mono;
+	QFont m_mono;
 	QTextEdit* m_regs;
 	QPushButton* m_go_to_addr;
 	QPushButton* m_go_to_pc;
@@ -47,14 +45,14 @@ class debugger_frame : public QDockWidget
 	QPushButton* m_btn_run;
 	QComboBox* m_choice_units;
 	QString m_current_choice;
-	bool m_noThreadSelected = true;
+	bool m_no_thread_selected = true;
 
 	u64 m_threads_created = 0;
 	u64 m_threads_deleted = 0;
 	u32 m_last_pc = -1;
 	u32 m_last_stat = 0;
 
-	QTimer* update;
+	QTimer* m_update;
 	QSplitter* m_splitter;
 
 	const QString NoThread = tr("No Thread");
@@ -109,7 +107,7 @@ class debugger_list : public QListWidget
 public:
 	u32 m_pc;
 	u32 m_item_count;
-	bool m_noThreadSelected;
+	bool m_no_thread_selected;
 
 public:
 	debugger_list(debugger_frame* parent);

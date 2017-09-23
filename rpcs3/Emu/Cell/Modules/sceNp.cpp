@@ -2,12 +2,13 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "Emu/Cell/lv2/sys_process.h"
+#include "sysPrxForUser.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unedat.h"
 #include "Crypto/unself.h"
 #include "cellRtc.h"
 #include "sceNp.h"
+#include "cellSysutil.h"
 
 logs::channel sceNp("sceNp");
 
@@ -43,26 +44,20 @@ s32 sceNpTerm()
 
 s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
-	const std::string& enc_drm_path = drm_path.get_ptr();
+	std::array<u8, 0x10> k_licensee{};
+
+	if (k_licensee_addr)
+	{
+		std::copy_n(k_licensee_addr.get_ptr(), k_licensee.size(), k_licensee.begin());
+		sceNp.notice("npDrmIsAvailable(): KLicense key %s", *reinterpret_cast<be_t<v128, 1>*>(k_licensee.data()));
+	}
+
+	const std::string enc_drm_path = drm_path.get_ptr();
 
 	if (!fs::is_file(vfs::get(enc_drm_path)))
 	{
 		sceNp.warning("npDrmIsAvailable(): '%s' not found", enc_drm_path);
 		return CELL_ENOENT;
-	}
-
-	std::string k_licensee_str = "";
-	std::array<u8, 0x10> k_licensee{0};
-
-	if (k_licensee_addr)
-	{
-		for (s8 i = 0; i < 0x10; i++)
-		{
-			k_licensee[i] = *(k_licensee_addr + i);
-			k_licensee_str += fmt::format("%02x", k_licensee[i]);
-		}
-
-		sceNp.notice("npDrmIsAvailable(): KLicense key %s", k_licensee_str);
 	}
 
 	auto npdrmkeys = fxm::get_always<LoadedNpdrmKeys_t>();
@@ -184,27 +179,29 @@ s32 sceNpDrmGetTimelimit(vm::cptr<char> path, vm::ptr<u64> time_remain)
 	return CELL_OK;
 }
 
-s32 sceNpDrmProcessExitSpawn(vm::cptr<u8> klicensee, vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+s32 sceNpDrmProcessExitSpawn(ppu_thread& ppu, vm::cptr<u8> klicensee, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 flags)
 {
-	sceNp.warning("sceNpDrmProcessExitSpawn() -> sys_game_process_exitspawn");
+	sceNp.warning("sceNpDrmProcessExitSpawn(klicensee=*0x%x, path=%s, argv=**0x%x, envp=**0x%x, data=*0x%x, data_size=0x%x, prio=%d, flags=0x%x)", klicensee, path, argv, envp, data, data_size, prio, flags);
 
-	sceNp.warning("klicensee: 0x%x", klicensee);
-	npDrmIsAvailable(klicensee, path);
+	if (s32 error = npDrmIsAvailable(klicensee, path))
+	{
+		return error;
+	}
 
-	sys_game_process_exitspawn(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
-
+	sys_game_process_exitspawn(ppu, path, argv, envp, data, data_size, prio, flags);
 	return CELL_OK;
 }
 
-s32 sceNpDrmProcessExitSpawn2(vm::cptr<u8> klicensee, vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+s32 sceNpDrmProcessExitSpawn2(ppu_thread& ppu, vm::cptr<u8> klicensee, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 flags)
 {
-	sceNp.warning("sceNpDrmProcessExitSpawn2() -> sys_game_process_exitspawn2");
+	sceNp.warning("sceNpDrmProcessExitSpawn2(klicensee=*0x%x, path=%s, argv=**0x%x, envp=**0x%x, data=*0x%x, data_size=0x%x, prio=%d, flags=0x%x)", klicensee, path, argv, envp, data, data_size, prio, flags);
 	
-	sceNp.warning("klicensee: 0x%x", klicensee);
-	npDrmIsAvailable(klicensee, path);
+	if (s32 error = npDrmIsAvailable(klicensee, path))
+	{
+		return error;
+	}
 
-	sys_game_process_exitspawn2(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
-
+	sys_game_process_exitspawn2(ppu, path, argv, envp, data, data_size, prio, flags);
 	return CELL_OK;
 }
 
@@ -905,12 +902,22 @@ s32 sceNpLookupTitleSmallStorageAsync()
 
 s32 sceNpManagerRegisterCallback(vm::ptr<SceNpManagerCallback> callback, vm::ptr<void> arg)
 {
-	sceNp.todo("sceNpManagerRegisterCallback(callback=*0x%x, arg=*0x%x)", callback, arg);
+	sceNp.warning("sceNpManagerRegisterCallback(callback=*0x%x, arg=*0x%x)", callback, arg);
 
 	if (!callback)
 	{
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
+
+	sysutil_register_cb([=](ppu_thread& ppu)->s32
+	{
+		callback(ppu, SCE_NP_MANAGER_STATUS_OFFLINE, CELL_OK, arg.addr());
+		return CELL_OK;
+	});
+
+	// TODO:
+	// * Save the callback somewhere for future updates once network is implemented
+	// * If register is called again, created cb needs to be canceled
 
 	return CELL_OK;
 }

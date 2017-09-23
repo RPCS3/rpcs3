@@ -42,8 +42,12 @@ void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 	OS << "	float4 userClipFactor[2];\n";
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
-	OS << "	int isAlphaTested;\n";
-	OS << "	float alphaRef;\n";
+	OS << "	uint alpha_test;\n";
+	OS << "	float alpha_ref;\n";
+	OS << "	uint alpha_func;\n";
+	OS << "	uint fog_mode;\n";
+	OS << "	uint window_origin;\n";
+	OS << "	uint window_height;\n";
 	OS << "	float4 texture_parameters[16];\n";
 	OS << "};\n";
 }
@@ -151,38 +155,6 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 
 namespace
 {
-	// Note: It's not clear whether fog is computed per pixel or per vertex.
-	// But it makes more sense to compute exp of interpoled value than to interpolate exp values.
-	void insert_fog_declaration(std::stringstream & OS, rsx::fog_mode mode)
-	{
-		switch (mode)
-		{
-		case rsx::fog_mode::linear:
-			OS << "	float4 fogc = float4(fog_param1 * In.fogc.x + (fog_param0 - 1.), fog_param1 * In.fogc.x + (fog_param0 - 1.), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::exponential:
-			OS << "	float4 fogc = float4(11.084 * (fog_param1 * In.fogc.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * In.fogc.x + fog_param0 - 1.5)), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::exponential2:
-			OS << "	float4 fogc = float4(4.709 * (fog_param1 * In.fogc.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * In.fogc.x + fog_param0 - 1.5), 2.)), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::linear_abs:
-			OS << "	float4 fogc = float4(fog_param1 * abs(In.fogc.x) + (fog_param0 - 1.), fog_param1 * abs(In.fogc.x) + (fog_param0 - 1.), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::exponential_abs:
-			OS << "	float4 fogc = float4(11.084 * (fog_param1 * abs(In.fogc.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(In.fogc.x) + fog_param0 - 1.5)), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::exponential2_abs:
-			OS << "	float4 fogc = float4(4.709 * (fog_param1 * abs(In.fogc.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(In.fogc.x) + fog_param0 - 1.5), 2.)), 0., 0.);\n";
-			break;
-		default:
-			OS << "	float4 fogc = float4(0., 0., 0., 0.);\n";
-			return;
-		}
-
-		OS << "	fogc.y = saturate(fogc.y);\n";
-	}
-	
 	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)
 	{
 		std::string tex_name = "tex" + std::to_string(index) + ".Sample";
@@ -204,6 +176,18 @@ namespace
 void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 {
 	insert_d3d12_legacy_function(OS, true);
+
+	for (const ParamType &PT : m_parr.params[PF_PARAM_IN])
+	{
+		for (const ParamItem &PI : PT.items)
+		{
+			if (PI.name == "fogc")
+			{
+				program_common::insert_fog_declaration(OS, "float4", "fogc", true);
+				break;
+			}
+		}
+	}
 
 	const std::set<std::string> output_value =
 	{
@@ -231,7 +215,7 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 			}
 			if (PI.name == "fogc")
 			{
-				insert_fog_declaration(OS, m_prog.fog_equation);
+				OS << "	float4 fogc = fetch_fog_value(fog_mode, In.fogc);\n";
 				continue;
 			}
 			if (PI.name == "ssa")
@@ -239,10 +223,9 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";\n";
 		}
 	}
-	// A bit unclean, but works.
-	OS << "	" << "float4 wpos = In.Position;\n";
-	if (m_prog.origin_mode == rsx::window_origin::bottom)
-		OS << "	wpos.y = (" << std::to_string(m_prog.height) << " - wpos.y);\n";
+
+	OS << "	float4 wpos = In.Position;\n";
+	OS << "	if (window_origin != 0) wpos.y = window_height - wpos.y;\n";
 	OS << "	float4 ssa = is_front_face ? float4(1., 1., 1., 1.) : float4(-1., -1., -1., -1.);\n";
 
 	// Declare output
@@ -363,7 +346,7 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 			}
 		}
 
-		OS << make_comparison_test(m_prog.alpha_func, "isAlphaTested && ", "Out." + first_output_name + ".a", "alphaRef");
+		OS << "	if (alpha_test != 0 && !comparison_passes(Out." << first_output_name << ".a, alpha_ref, alpha_func)) discard;\n";
 		
 	}
 	OS << "	return Out;\n";

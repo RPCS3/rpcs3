@@ -550,6 +550,8 @@ public:
 
 	spu_channel_4_t ch_in_mbox;
 
+	atomic_t<u32> mfc_prxy_mask;
+
 	spu_channel_t ch_out_mbox;
 	spu_channel_t ch_out_intr_mbox;
 

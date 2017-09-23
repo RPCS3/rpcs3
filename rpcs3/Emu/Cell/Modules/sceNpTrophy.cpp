@@ -181,9 +181,8 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	sceNpTrophy.warning("sceNpTrophyCreateContext term=%s data=%s num=%d", commId->term, commId->data, commId->num);
 	if (commId->term)
 	{
-		char trimchar[9];
-		memcpy(trimchar, commId->data, sizeof(trimchar));
-		trimchar[8] = 0;
+		char trimchar[10] = { 0 };
+		memcpy(trimchar, commId->data, sizeof(trimchar) - 1);
 		deleteTerminateChar(trimchar, commId->term);
 		name = fmt::format("%s_%02d", trimchar, commId->num);
 	}
@@ -398,12 +397,15 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 	}
 
 	// TODO: Get the path of the current user
-	const std::string& path = vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/TROPCONF.SFM");
+	fs::file config(vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/TROPCONF.SFM"));
 
-	// TODO: rXmlDocument can open only real file
-	verify(HERE), !fs::get_virtual_device(path);
+	if (!config)
+	{
+		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
+	}
+
 	rXmlDocument doc;
-	doc.Load(path);
+	doc.Read(config.to_string());
 
 	for (std::shared_ptr<rXmlNode> n = doc.GetRoot()->GetChildren(); n; n = n->GetNext())
 	{
@@ -474,7 +476,7 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	if (trophyId >= (s32)ctxt->tropusr->GetTrophiesCount())
+	if (trophyId < 0 || trophyId >= (s32)ctxt->tropusr->GetTrophiesCount())
 		return SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID;
 	if (ctxt->tropusr->GetTrophyUnlockState(trophyId))
 		return SCE_NP_TROPHY_ERROR_ALREADY_UNLOCKED;
@@ -483,7 +485,11 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 	std::string trophyPath = "/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/TROPUSR.DAT";
 	ctxt->tropusr->Save(trophyPath);
 
-	*platinumId = SCE_NP_TROPHY_INVALID_TROPHY_ID; // TODO
+	if (platinumId)
+	{
+		*platinumId = SCE_NP_TROPHY_INVALID_TROPHY_ID; // TODO
+	}
+
 	return CELL_OK;
 }
 
@@ -551,15 +557,25 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 	}
 
 	// TODO: Get the path of the current user
-	const std::string& path = vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/TROPCONF.SFM");
+	fs::file config(vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/TROPCONF.SFM"));
 
-	// TODO: rXmlDocument can open only real file
-	verify(HERE), !fs::get_virtual_device(path);
+	if (!config)
+	{
+		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
+	}
+
 	rXmlDocument doc;
-	doc.Load(path);
+	doc.Read(config.to_string());
+
+	auto trophy_base = doc.GetRoot();
+	if (trophy_base->GetChildren()->GetName() == "trophyconf")
+	{
+		trophy_base = trophy_base->GetChildren();
+	}
 
 	bool found = false;
-	for (std::shared_ptr<rXmlNode> n = doc.GetRoot()->GetChildren(); n; n = n->GetNext()) {
+	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
+	{
 		if (n->GetName() == "trophy" && (trophyId == atoi(n->GetAttribute("id").c_str())))
 		{
 			found = true;
@@ -676,21 +692,21 @@ error_code sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer,
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	const std::string& path = vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/ICON0.PNG");
+	fs::file icon_file(vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/ICON0.PNG"));
 
-	if (!fs::exists(path))
+	if (!icon_file)
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_FILE;
 	}
 
-	fs::file gameIconFile(path);
+	const u32 icon_size = ::size32(icon_file);
 
-	if (buffer && *size >= gameIconFile.size())
+	if (buffer && *size >= icon_size)
 	{
-		gameIconFile.read(buffer.get_ptr(), gameIconFile.size());
+		icon_file.read(buffer.get_ptr(), icon_size);
 	}
 
-	*size = gameIconFile.size();
+	*size = icon_size;
 
 	return CELL_OK;
 }
@@ -729,21 +745,21 @@ error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::p
 		return hidden ? SCE_NP_TROPHY_ERROR_HIDDEN : SCE_NP_TROPHY_ERROR_LOCKED;
 	}
 
-	const std::string& path = vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + fmt::format("/TROP%03d.PNG", trophyId));
+	fs::file icon_file(vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + fmt::format("/TROP%03d.PNG", trophyId)));
 
-	if (!fs::exists(path))
+	if (!icon_file)
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_FILE;
 	}
 
-	fs::file trophyIconFile(path);
+	const u32 icon_size = ::size32(icon_file);
 
-	if (buffer && *size >= trophyIconFile.size())
+	if (buffer && *size >= icon_size)
 	{
-		trophyIconFile.read(buffer.get_ptr(), trophyIconFile.size());
+		icon_file.read(buffer.get_ptr(), icon_size);
 	}
 
-	*size = trophyIconFile.size();
+	*size = icon_size;
 
 	return CELL_OK;
 }

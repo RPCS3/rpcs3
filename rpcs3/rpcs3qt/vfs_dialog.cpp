@@ -12,7 +12,7 @@ inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString();
 vfs_dialog::vfs_dialog(QWidget* parent) : QDialog(parent),
 	m_gui_settings(), m_emu_settings("")
 {
-	tabs = new QTabWidget();
+	QTabWidget* tabs = new QTabWidget();
 	tabs->setUsesScrollButtons(false);
 
 	// Create tabs
@@ -39,25 +39,32 @@ vfs_dialog::vfs_dialog(QWidget* parent) : QDialog(parent),
 
 	// Create buttons
 	QPushButton* addDir = new QPushButton(tr("Add New Directory"));
-	connect(addDir, &QAbstractButton::pressed, [this]() {
+	connect(addDir, &QAbstractButton::pressed, [=]
+	{
 		static_cast<vfs_dialog_tab*>(tabs->currentWidget())->AddNewDirectory();
 	});
+
 	QPushButton* reset = new QPushButton(tr("Reset"));
-	connect(reset, &QAbstractButton::pressed, [this]() {
+	connect(reset, &QAbstractButton::pressed, [=]
+	{
 		static_cast<vfs_dialog_tab*>(tabs->currentWidget())->Reset();
 	});
+
 	QPushButton* resetAll = new QPushButton(tr("Reset All"));
-	connect(resetAll, &QAbstractButton::pressed, [this]() {
+	connect(resetAll, &QAbstractButton::pressed, [=]
+	{
 		for (int i = 0; i < tabs->count(); ++i)
 		{
 			static_cast<vfs_dialog_tab*>(tabs->widget(i))->Reset();
 		}
 	});
+
 	QPushButton* okay = new QPushButton(tr("Okay"));
 	okay->setAutoDefault(true);
 	okay->setDefault(true);
 
-	connect(okay, &QAbstractButton::pressed, [this]() {
+	connect(okay, &QAbstractButton::pressed, [=]
+	{
 		for (int i = 0; i < tabs->count(); ++i)
 		{
 			static_cast<vfs_dialog_tab*>(tabs->widget(i))->SaveSettings();

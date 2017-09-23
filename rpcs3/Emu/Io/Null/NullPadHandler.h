@@ -5,10 +5,25 @@
 class NullPadHandler final : public PadHandlerBase
 {
 public:
-	void Init(const u32 max_connect) override
+	bool Init() override
 	{
-		memset(&m_info, 0, sizeof(PadInfo));
-		m_info.max_connect = max_connect;
-		m_pads.clear();
+		return true;
 	}
+
+	std::vector<std::string> ListDevices() override
+	{
+		std::vector<std::string> nulllist;
+		nulllist.push_back("Default Null Device");
+		return nulllist;
+	}
+
+	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override
+	{
+		return true;
+	}
+
+	void ThreadProc() override
+	{
+	}
+
 };

@@ -88,8 +88,12 @@ enum class audio_renderer
 	null,
 #ifdef _WIN32
 	xaudio,
-#elif defined(HAVE_ALSA)
+#endif
+#ifdef HAVE_ALSA
 	alsa,
+#endif
+#ifdef HAVE_PULSE
+	pulse,
 #endif
 	openal,
 };
@@ -155,7 +159,7 @@ struct EmuCallbacks
 	std::function<void()> exit;
 	std::function<std::shared_ptr<class KeyboardHandlerBase>()> get_kb_handler;
 	std::function<std::shared_ptr<class MouseHandlerBase>()> get_mouse_handler;
-	std::function<std::shared_ptr<class PadHandlerBase>()> get_pad_handler;
+	std::function<std::shared_ptr<class pad_thread>()> get_pad_handler;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
 	std::function<std::shared_ptr<class GSRender>()> get_gs_render;
 	std::function<std::shared_ptr<class AudioThread>()> get_audio;
@@ -173,7 +177,6 @@ class Emulator final
 	atomic_t<u64> m_pause_amend_time; // increased when resumed
 
 	std::string m_path;
-	std::string m_elf_path;
 	std::string m_cache_path;
 	std::string m_title_id;
 	std::string m_title;
@@ -206,12 +209,10 @@ public:
 	}
 
 	void Init();
-	void SetPath(const std::string& path, const std::string& elf_path = {});
 
-	const std::string& GetPath() const
-	{
-		return m_elf_path;
-	}
+	std::vector<std::string> argv;
+	std::vector<std::string> envp;
+	std::vector<u8> data;
 
 	const std::string& GetBoot() const
 	{
@@ -279,7 +280,7 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 16> spu_delay_penalty{this, "SPU delay penalty", 3}; //Number of milliseconds to block a thread if a virtual 'core' isn't free
 		cfg::_bool spu_loop_detection{this, "SPU loop detection", true}; //Try to detect wait loops and trigger thread yield
 
-		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::automatic};
+		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::liblv2only};
 		cfg::_bool hook_functions{this, "Hook static functions"};
 		cfg::set_entry load_libraries{this, "Load libraries"};
 

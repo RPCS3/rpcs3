@@ -24,7 +24,7 @@ struct rXmlDocument
 	rXmlDocument();
 	rXmlDocument(const rXmlDocument& other) = delete;
 	rXmlDocument &operator=(const rXmlDocument& other) = delete;
-	void Load(const std::string & path);
+	void Read(const std::string& data);
 	std::shared_ptr<rXmlNode> GetRoot();
 
 	pugi::xml_document handle;

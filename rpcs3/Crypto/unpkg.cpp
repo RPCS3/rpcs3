@@ -120,7 +120,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 		u64 cursize = pkg_f.size();
 		while (cursize != header.pkg_size)
 		{
-			std::string archive_filename = fmt::format("%s_%2d.pkg", name_wo_number, filelist.size());
+			std::string archive_filename = fmt::format("%s_%02d.pkg", name_wo_number, filelist.size());
 
 			fs::file archive_file(archive_filename);
 			if (!archive_file)

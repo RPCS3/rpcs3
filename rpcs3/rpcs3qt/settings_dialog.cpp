@@ -11,6 +11,7 @@
 #include <QSpinBox>
 #include <QApplication>
 #include <QDesktopWidget>
+#include <QTimer>
 
 #include "settings_dialog.h"
 
@@ -81,7 +82,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	}
 
 	// Various connects
-	connect(ui->okButton, &QAbstractButton::clicked, ui->coreTab, [=]() {
+	connect(ui->okButton, &QAbstractButton::clicked, [=]
+	{
 		std::set<std::string> selectedlle;
 		for (int i = 0; i<ui->lleList->count(); ++i)
 		{
@@ -93,10 +95,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		}
 		std::vector<std::string> selected_ls = std::vector<std::string>(selectedlle.begin(), selectedlle.end());
 		xemu_settings->SaveSelectedLibraries(selected_ls);
-		Q_EMIT GuiRepaintRequest();
+		xemu_settings->SaveSettings();
+		accept();
 	});
-	connect(ui->okButton, &QAbstractButton::clicked, xemu_settings.get(), &emu_settings::SaveSettings);
-	connect(ui->okButton, &QAbstractButton::clicked, this, &QDialog::accept);
 	connect(ui->cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
 	connect(ui->tabWidget, &QTabWidget::currentChanged, [=]() {ui->cancelButton->setFocus(); });
 
@@ -280,50 +281,29 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	auto l_OnSearchBoxTextChanged = [=](QString text)
 	{
 		QString searchTerm = text.toLower();
-		QList<QListWidgetItem*> checked_Libs;
-		QList<QListWidgetItem*> unchecked_Libs;
+		std::vector<QListWidgetItem*> items;
 
-		// create sublists. we need clones to preserve checkstates
-		for (int i = 0; i < ui->lleList->count(); ++i)
+		// duplicate current items, we need clones to preserve checkstates
+		for (int i = 0; i < ui->lleList->count(); i++)
 		{
-			if (ui->lleList->item(i)->checkState() == Qt::Checked)
-			{
-				checked_Libs.append(ui->lleList->item(i)->clone());
-			}
-			else
-			{
-				unchecked_Libs.append(ui->lleList->item(i)->clone());
-			}
+			items.push_back(ui->lleList->item(i)->clone());
 		}
 
-		// sort sublists
-		auto qLessThan = [](QListWidgetItem *i1, QListWidgetItem *i2) { return i1->text() < i2->text(); };
-		qSort(checked_Libs.begin(), checked_Libs.end(), qLessThan);
-		qSort(unchecked_Libs.begin(), unchecked_Libs.end(), qLessThan);
+		// sort items: checked items first then alphabetical order
+		std::sort(items.begin(), items.end(), [](QListWidgetItem *i1, QListWidgetItem *i2)
+		{
+			return (i1->checkState() != i2->checkState()) ? (i1->checkState() > i2->checkState()) : (i1->text() < i2->text());
+		});
 
 		// refill library list
 		ui->lleList->clear();
 
-		for (const auto& lib : checked_Libs)
+		for (uint i = 0; i < items.size(); i++)
 		{
-			ui->lleList->addItem(lib);
-		}
-		for (const auto& lib : unchecked_Libs)
-		{
-			ui->lleList->addItem(lib);
-		}
+			ui->lleList->addItem(items[i]);
 
-		// only show items filtered for search text
-		for (int i = 0; i < ui->lleList->count(); i++)
-		{
-			if (ui->lleList->item(i)->text().contains(searchTerm))
-			{
-				ui->lleList->setRowHidden(i, false);
-			}
-			else
-			{
-				ui->lleList->setRowHidden(i, true);
-			}
+			// only show items filtered for search text
+			ui->lleList->setRowHidden(i, !items[i]->text().contains(searchTerm));
 		}
 	};
 
@@ -332,7 +312,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	connect(ui->searchBox, &QLineEdit::textChanged, l_OnSearchBoxTextChanged);
 
 	// enable multiselection (there must be a better way)
-	connect(ui->lleList, &QListWidget::itemChanged, [&](QListWidgetItem* item){
+	connect(ui->lleList, &QListWidget::itemChanged, [&](QListWidgetItem* item)
+	{
 		for (auto cb : ui->lleList->selectedItems())
 		{
 			cb->setCheckState(item->checkState());
@@ -396,26 +377,28 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	ui->scrictModeRendering->setToolTip(json_gpu_main["scrictModeRendering"].toString());
 
 	// Graphics Adapter
-	QStringList D3D12Adapters = r_Creator.D3D12Adapters;
-	QStringList vulkanAdapters = r_Creator.vulkanAdapters;
-	bool supportsD3D12 = r_Creator.supportsD3D12;
-	bool supportsVulkan = r_Creator.supportsVulkan;
-	QString r_D3D12 = r_Creator.render_D3D12;
-	QString r_Vulkan = r_Creator.render_Vulkan;
-	QString r_OpenGL = r_Creator.render_OpenGL;
-	QString old_D3D12;
-	QString old_Vulkan;
+	m_D3D12 = Render_Info(r_Creator.render_D3D12, r_Creator.D3D12Adapters, r_Creator.supportsD3D12, emu_settings::D3D12Adapter);
+	m_Vulkan = Render_Info(r_Creator.render_Vulkan, r_Creator.vulkanAdapters, r_Creator.supportsVulkan, emu_settings::VulkanAdapter);
+	m_OpenGL = Render_Info(r_Creator.render_OpenGL);
+	m_NullRender = Render_Info(r_Creator.render_Null);
 
-	if (supportsD3D12)
+	std::vector<Render_Info*> Render_List = { &m_D3D12, &m_Vulkan, &m_OpenGL, &m_NullRender };
+
+	// Remove renderers from the renderer Combobox if not supported
+	for (auto renderer : Render_List)
 	{
-		old_D3D12 = qstr(xemu_settings->GetSetting(emu_settings::D3D12Adapter));
-	}
-	else
-	{
-		// Remove D3D12 option from render combobox
+		if (renderer->supported)
+		{
+			if (renderer->has_adapters)
+			{
+				renderer->old_adapter = qstr(xemu_settings->GetSetting(renderer->type));
+			}
+			continue;
+		}
+
 		for (int i = 0; i < ui->renderBox->count(); i++)
 		{
-			if (ui->renderBox->itemText(i) == r_D3D12)
+			if (ui->renderBox->itemText(i) == renderer->name)
 			{
 				ui->renderBox->removeItem(i);
 				break;
@@ -423,112 +406,60 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		}
 	}
 
-	if (supportsVulkan)
-	{
-		old_Vulkan = qstr(xemu_settings->GetSetting(emu_settings::VulkanAdapter));
-	}
-	else
-	{
-		// Remove Vulkan option from render combobox
-		for (int i = 0; i < ui->renderBox->count(); i++)
-		{
-			if (ui->renderBox->itemText(i) == r_Vulkan)
-			{
-				ui->renderBox->removeItem(i);
-				break;
-			}
-		}
-	}
+	m_oldRender = ui->renderBox->currentText();
 
-	QString oldRender = ui->renderBox->itemText(ui->renderBox->currentIndex());
-
-	auto switchGraphicsAdapter = [=](int index)
+	auto setRenderer = [=](QString text)
 	{
-		QString render = ui->renderBox->itemText(index);
-		m_isD3D12 = render == r_D3D12;
-		m_isVulkan = render == r_Vulkan;
-		ui->graphicsAdapterBox->setEnabled(m_isD3D12 || m_isVulkan);
+		if (text.isEmpty()) return;
 
-		// D3D Adapter
-		if (m_isD3D12)
+		auto switchTo = [=](Render_Info renderer)
 		{
 			// Reset other adapters to old config
-			if (supportsVulkan)
+			for (const auto& render : Render_List)
 			{
-				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
+				if (renderer.name != render->name && render->has_adapters && render->supported)
+				{
+					xemu_settings->SetSetting(render->type, sstr(render->old_adapter));
+				}
+			}
+			// Fill combobox with placeholder if no adapters needed
+			if (!renderer.has_adapters)
+			{
+				ui->graphicsAdapterBox->clear();
+				ui->graphicsAdapterBox->addItem(tr("Not needed for %1 renderer").arg(text));
+				return;
 			}
 			// Fill combobox
 			ui->graphicsAdapterBox->clear();
-			for (const auto& adapter : D3D12Adapters)
+			for (const auto& adapter : renderer.adapters)
 			{
 				ui->graphicsAdapterBox->addItem(adapter);
 			}
 			// Reset Adapter to old config
-			int idx = ui->graphicsAdapterBox->findText(old_D3D12);
+			int idx = ui->graphicsAdapterBox->findText(renderer.old_adapter);
 			if (idx == -1)
 			{
 				idx = 0;
-				if (old_D3D12.isEmpty())
+				if (renderer.old_adapter.isEmpty())
 				{
-					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_D3D12));
+					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(renderer.name));
 				}
 				else
 				{
-					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_D3D12));
+					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(renderer.name));
 				}
 			}
 			ui->graphicsAdapterBox->setCurrentIndex(idx);
-			xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(ui->graphicsAdapterBox->currentText()));
-		}
+			xemu_settings->SetSetting(renderer.type, sstr(ui->graphicsAdapterBox->currentText()));
+		};
 
-		// Vulkan Adapter
-		else if (m_isVulkan)
+		for (auto render : Render_List)
 		{
-			// Reset other adapters to old config
-			if (supportsD3D12)
+			if (render->name == text)
 			{
-				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
+				switchTo(*render);
+				ui->graphicsAdapterBox->setEnabled(render->has_adapters);
 			}
-			// Fill combobox
-			ui->graphicsAdapterBox->clear();
-			for (const auto& adapter : vulkanAdapters)
-			{
-				ui->graphicsAdapterBox->addItem(adapter);
-			}
-			// Reset Adapter to old config
-			int idx = ui->graphicsAdapterBox->findText(old_Vulkan);
-			if (idx == -1)
-			{
-				idx = 0;
-				if (old_Vulkan.isEmpty())
-				{
-					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_Vulkan));
-				}
-				else
-				{
-					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_Vulkan));
-				}
-			}
-			ui->graphicsAdapterBox->setCurrentIndex(idx);
-			xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(ui->graphicsAdapterBox->currentText()));
-		}
-
-		// Other Adapter
-		else
-		{
-			// Reset Adapters to old config
-			if (supportsD3D12)
-			{
-				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
-			}
-			if (supportsVulkan)
-			{
-				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
-			}
-
-			// Fill combobox with placeholder
-			ui->graphicsAdapterBox->clear();
-			ui->graphicsAdapterBox->addItem(tr("Not needed for %1 renderer").arg(render));
 		}
 	};
 
@@ -537,34 +468,33 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		if (text.isEmpty()) return;
 
 		// don't set adapter if signal was created by switching render
-		QString newRender = ui->renderBox->itemText(ui->renderBox->currentIndex());
-		if (m_oldRender == newRender)
-		{
-			if (m_isD3D12 && D3D12Adapters.contains(text))
-			{
-				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(text));
-			}
-			else if (m_isVulkan && vulkanAdapters.contains(text))
-			{
-				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(text));
-			}
-		}
-		else
+		QString newRender = ui->renderBox->currentText();
+		if (m_oldRender != newRender)
 		{
 			m_oldRender = newRender;
+			return;
+		}
+		for (const auto& render : Render_List)
+		{
+			if (render->name == newRender && render->has_adapters && render->adapters.contains(text))
+			{
+				xemu_settings->SetSetting(render->type, sstr(text));
+				break;
+			}
 		}
 	};
 
 	// Init
+	setRenderer(ui->renderBox->currentText());
 	setAdapter(ui->graphicsAdapterBox->currentText());
-	switchGraphicsAdapter(ui->renderBox->currentIndex());
 
 	// Events
 	connect(ui->graphicsAdapterBox, &QComboBox::currentTextChanged, setAdapter);
-	connect(ui->renderBox, static_cast<void (QComboBox::*)(int index)>(&QComboBox::currentIndexChanged), switchGraphicsAdapter);
+	connect(ui->renderBox, &QComboBox::currentTextChanged, setRenderer);
 
-	auto fixGLLegacy = [=](const QString& text) {
-		ui->glLegacyBuffers->setEnabled(text == r_OpenGL);
+	auto fixGLLegacy = [=](const QString& text)
+	{
+		ui->glLegacyBuffers->setEnabled(text == m_OpenGL.name);
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.
@@ -602,9 +532,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//   |_____| /_/      \____/     |_|\__,_|_.__/ 
 
 	// Comboboxes
-
-	xemu_settings->EnhanceComboBox(ui->padHandlerBox, emu_settings::PadHandler);
-	ui->padHandlerBox->setToolTip(json_input["padHandlerBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->keyboardHandlerBox, emu_settings::KeyboardHandler);
 	ui->keyboardHandlerBox->setToolTip(json_input["keyboardHandlerBox"].toString());
@@ -693,7 +620,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	else
 	{
 		// colorize preview icons
-		auto addColoredIcon = [&](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor()) {
+		auto addColoredIcon = [&](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor())
+		{
 			QLabel* text = new QLabel(button->text());
 			text->setObjectName("color_button");
 			text->setAlignment(Qt::AlignCenter);
@@ -716,7 +644,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 			button->layout()->addWidget(text);
 		};
 
-		auto AddColoredIcons = [=]() {
+		auto AddColoredIcons = [=]()
+		{
 			addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(GUI::gl_iconColor).value<QColor>());
 			addColoredIcon(ui->pb_tool_bar_color, xgui_settings->GetValue(GUI::mw_toolBarColor).value<QColor>());
 			addColoredIcon(ui->pb_gl_tool_icon_color, xgui_settings->GetValue(GUI::gl_toolIconColor).value<QColor>(), QIcon(":/Icons/home_blue.png"), GUI::gl_tool_icon_color);
@@ -733,7 +662,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		ui->pb_tool_bar_color->setEnabled(enableUIColors);
 		ui->pb_tool_icon_color->setEnabled(enableUIColors);
 
-		auto ApplyGuiOptions = [&](bool reset = false) {
+		auto ApplyGuiOptions = [&](bool reset = false)
+		{
 			if (reset)
 			{
 				m_currentConfig = GUI::Default;
@@ -753,16 +683,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		};
 
 		connect(ui->okButton, &QAbstractButton::clicked, [=]() { ApplyGuiOptions(); });
-		connect(ui->pb_reset_default, &QAbstractButton::clicked, [=]() {
+		connect(ui->pb_reset_default, &QAbstractButton::clicked, [=]
+		{
 			if (QMessageBox::question(this, tr("Reset GUI to default?"), tr("This will include your stylesheet as well. Do you wish to proceed?"),
 				QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
 			{
 				ApplyGuiOptions(true);
 				xgui_settings->Reset(true);
 				xgui_settings->ChangeToConfig(GUI::Default);
-				Q_EMIT GuiStylesheetRequest(GUI::Default);
 				Q_EMIT GuiSettingsSyncRequest();
-				Q_EMIT GuiRepaintRequest();
 				AddConfigs();
 				AddStylesheets();
 				AddColoredIcons();
@@ -773,7 +702,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
 		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=]() {QDesktopServices::openUrl(xgui_settings->GetSettingsDir()); });
 		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val) {xgui_settings->SetValue(GUI::ib_show_welcome, val); });
-		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=](bool val) {
+		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=](bool val)
+		{
 			xgui_settings->SetValue(GUI::m_enableUIColors, val);
 			ui->pb_gl_icon_color->setEnabled(val);
 			ui->pb_gl_tool_icon_color->setEnabled(val);
@@ -781,7 +711,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 			ui->pb_tool_icon_color->setEnabled(val);
 			Q_EMIT GuiRepaintRequest();
 		});
-		auto colorDialog = [&](const GUI_SAVE& color, const QString& title, QPushButton *button){
+		auto colorDialog = [&](const GUI_SAVE& color, const QString& title, QPushButton *button)
+		{
 			QColor oldColor = xgui_settings->GetValue(color).value<QColor>();
 			QColorDialog dlg(oldColor, this);
 			dlg.setWindowTitle(title);
@@ -822,18 +753,21 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		ui->gs_width->setValue(width < max_width ? width : max_width);
 		ui->gs_height->setValue(height < max_height ? height : max_height);
 
-		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=](bool val) {
+		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=](bool val)
+		{
 			xgui_settings->SetValue(GUI::gs_resize, val);
 			ui->gs_width->setEnabled(val);
 			ui->gs_height->setEnabled(val);
 		});
-		connect(ui->gs_width, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int w) {
+		connect(ui->gs_width, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int w)
+		{
 			int width = QApplication::desktop()->screenGeometry().width();
 			w = w > width ? width : w;
 			ui->gs_width->setValue(w);
 			xgui_settings->SetValue(GUI::gs_width, w);
 		});
-		connect(ui->gs_height, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int h) {
+		connect(ui->gs_height, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int h)
+		{
 			int height = QApplication::desktop()->screenGeometry().height();
 			h = h > height ? height : h;
 			ui->gs_height->setValue(h);
@@ -888,6 +822,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	// Layout fix for High Dpi
 	//
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
+}
+
+settings_dialog::~settings_dialog()
+{
+	delete ui;
 }
 
 void settings_dialog::AddConfigs()
@@ -995,10 +934,10 @@ void settings_dialog::OnApplyStylesheet()
 
 int settings_dialog::exec()
 {
-	for (int i = 0; i < ui->tabWidget->count(); i++)
-	{
-		ui->tabWidget->setCurrentIndex(i);
-	}
-	ui->tabWidget->setCurrentIndex(m_tab_Index);
+	// singleShot Hack to fix following bug:
+	// If we use setCurrentIndex now we will miraculously see a resize of the dialog as soon as we
+	// switch to the cpu tab after conjuring the settings_dialog with another tab opened first.
+	// Weirdly enough this won't happen if we change the tab order so that anything else is at index 0.
+	QTimer::singleShot(0, [=]{ ui->tabWidget->setCurrentIndex(m_tab_Index); });
 	return QDialog::exec();
 }

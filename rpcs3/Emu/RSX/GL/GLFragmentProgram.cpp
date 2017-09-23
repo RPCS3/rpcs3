@@ -3,9 +3,10 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "GLFragmentProgram.h"
-
+#include "../Common/ProgramStateCache.h"
 #include "GLCommonDecompiler.h"
 #include "../GCM.h"
+
 
 std::string GLFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 {
@@ -14,7 +15,7 @@ std::string GLFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 
 std::string GLFragmentDecompilerThread::getFunction(FUNCTION f)
 {
-	return getFunctionImpl(f);
+	return gl::getFunctionImpl(f);
 }
 
 std::string GLFragmentDecompilerThread::saturate(const std::string & code)
@@ -29,12 +30,13 @@ std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 
 void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
-	OS << "#version 420\n";
+	OS << "#version 430\n";
 }
 
 void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 {
 	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
+	std::vector<std::string> inputs_to_declare;
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
@@ -57,7 +59,7 @@ void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 			if (var_name == "fogc")
 				var_name = "fog_c";
 
-			OS << "in " << PT.type << " " << var_name << ";\n";
+			inputs_to_declare.push_back(var_name);
 		}
 	}
 
@@ -65,13 +67,18 @@ void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 	{
 		if (m_prog.front_color_diffuse_output && m_prog.back_color_diffuse_output)
 		{
-			OS << "in vec4 front_diff_color;\n";
+			inputs_to_declare.push_back("front_diff_color");
 		}
 
 		if (m_prog.front_color_specular_output && m_prog.back_color_specular_output)
 		{
-			OS << "in vec4 front_spec_color;\n";
+			inputs_to_declare.push_back("front_spec_color");
 		}
+	}
+
+	for (auto &name: inputs_to_declare)
+	{
+		OS << "layout(location=" << gl::get_varying_register_location(name) << ") in vec4 " << name << ";\n";
 	}
 }
 
@@ -88,7 +95,7 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
-			OS << "out vec4 " << table[i].first << ";\n";
+			OS << "layout(location=" << i << ") out vec4 " << table[i].first << ";\n";
 	}
 }
 
@@ -145,45 +152,16 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	float fog_param1;\n";
 	OS << "	uint alpha_test;\n";
 	OS << "	float alpha_ref;\n";
+	OS << "	uint alpha_func;\n";
+	OS << "	uint fog_mode;\n";
+	OS << "	uint window_origin;\n";
+	OS << "	uint window_height;\n";
 	OS << "	vec4 texture_parameters[16];\n";	//sampling: x,y scaling and (unused) offsets data
 	OS << "};\n";
 }
 
-
 namespace
 {
-	// Note: It's not clear whether fog is computed per pixel or per vertex.
-	// But it makes more sense to compute exp of interpoled value than to interpolate exp values.
-	void insert_fog_declaration(std::stringstream & OS, rsx::fog_mode mode)
-	{
-		switch (mode)
-		{
-		case rsx::fog_mode::linear:
-			OS << "	vec4 fogc = vec4(fog_param1 * fog_c.x + (fog_param0 - 1.), fog_param1 * fog_c.x + (fog_param0 - 1.), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::exponential:
-			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::exponential2:
-			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5), 2.)), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::linear_abs:
-			OS << "	vec4 fogc = vec4(fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::exponential_abs:
-			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 0., 0.);\n";
-			break;
-		case rsx::fog_mode::exponential2_abs:
-			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), 2.)), 0., 0.);\n";
-			break;
-		default:
-			OS << "	vec4 fogc = vec4(0.);\n";
-			return;
-		}
-
-		OS << "	fogc.y = clamp(fogc.y, 0., 1.);\n";
-	}
-
 	void insert_texture_scale(std::stringstream & OS, const RSXFragmentProgram& prog, int index)
 	{
 		std::string vec_type = "vec2";
@@ -223,6 +201,19 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program);
 
+	//TODO: Generate input mask during parse stage to avoid this
+	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
+	{
+		for (const ParamItem& PI : PT.items)
+		{
+			if (PI.name == "fogc")
+			{
+				glsl::insert_fog_declaration(OS);
+				break;
+			}
+		}
+	}
+
 	const std::set<std::string> output_values =
 	{
 		"r0", "r1", "r2", "r3", "r4",
@@ -261,11 +252,7 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 
 	OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
 	OS << "	vec4 wpos = gl_FragCoord;\n";
-
-	//Flip wpos in Y
-	//We could optionally export wpos from the VS, but this is so much easier
-	if (m_prog.origin_mode == rsx::window_origin::bottom)
-		OS << "	wpos.y = " << std::to_string(m_prog.height) << " - wpos.y;\n";
+	OS << "	if (window_origin != 0) wpos.y = window_height - wpos.y;\n";
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
@@ -326,7 +313,7 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 
 			if (PI.name == "fogc")
 			{
-				insert_fog_declaration(OS, m_prog.fog_equation);
+				OS << "	vec4 fogc = fetch_fog_value(fog_mode);\n";
 				continue;
 			}
 		}
@@ -394,7 +381,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 			}
 		}
 
-		OS << make_comparison_test(m_prog.alpha_func, "alpha_test != 0 && ", first_output_name + ".a", "alpha_ref");
+		OS << "	if (alpha_test != 0 && !comparison_passes(" << first_output_name << ".a, alpha_ref, alpha_func)) discard;\n";
 	}
 
 	OS << "}\n\n";

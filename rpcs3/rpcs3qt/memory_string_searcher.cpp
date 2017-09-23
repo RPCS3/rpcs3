@@ -8,15 +8,15 @@ memory_string_searcher::memory_string_searcher(QWidget* parent)
 	setAttribute(Qt::WA_DeleteOnClose);
 	setFixedSize(QSize(545, 64));
 
-	le_addr = new QLineEdit(this);
-	le_addr->setFixedWidth(460);
-	le_addr->setPlaceholderText(tr("Search..."));
+	m_addr_line = new QLineEdit(this);
+	m_addr_line->setFixedWidth(460);
+	m_addr_line->setPlaceholderText(tr("Search..."));
 
-	button_search = new QPushButton(tr("&Search"), this);
+	QPushButton* button_search = new QPushButton(tr("&Search"), this);
 	button_search->setFixedWidth(60);
 
-	hbox_panel = new QHBoxLayout();
-	hbox_panel->addWidget(le_addr);
+	QHBoxLayout* hbox_panel = new QHBoxLayout();
+	hbox_panel->addWidget(m_addr_line);
 	hbox_panel->addWidget(button_search);
 
 	setLayout(hbox_panel);
@@ -26,7 +26,7 @@ memory_string_searcher::memory_string_searcher(QWidget* parent)
 
 void memory_string_searcher::OnSearch()
 {
-	const QString wstr = le_addr->text();
+	const QString wstr = m_addr_line->text();
 	const char *str = wstr.toStdString().c_str();
 	const u32 len = wstr.length();
 
@@ -36,15 +36,19 @@ void memory_string_searcher::OnSearch()
 	u32 strIndex = 0;
 	u32 numFound = 0;
 	const auto area = vm::get(vm::main);
-	for (u32 addr = area->addr; addr < area->addr + area->size; addr++) {
-		if (!vm::check_addr(addr)) {
+	for (u32 addr = area->addr; addr < area->addr + area->size; addr++)
+	{
+		if (!vm::check_addr(addr))
+		{
 			strIndex = 0;
 			continue;
 		}
 
 		u8 byte = vm::read8(addr);
-		if (byte == str[strIndex]) {
-			if (strIndex == len) {
+		if (byte == str[strIndex])
+		{
+			if (strIndex == len)
+			{
 				// Found it
 				LOG_NOTICE(GENERAL, "Found @ %04x", addr - len);
 				numFound++;
@@ -55,9 +59,12 @@ void memory_string_searcher::OnSearch()
 			strIndex++;
 		}
 		else
+		{
 			strIndex = 0;
+		}
 
-		if (addr % (1024 * 1024 * 64) == 0) { // Log every 64mb
+		if (addr % (1024 * 1024 * 64) == 0) // Log every 64mb
+		{
 			LOG_NOTICE(GENERAL, "Searching %04x ...", addr);
 		}
 	}

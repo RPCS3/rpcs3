@@ -96,6 +96,16 @@ namespace vm
 		{
 			return m_size / SIZE_32(T);
 		}
+
+		auto begin() const
+		{
+			return *this + 0;
+		}
+
+		auto end() const
+		{
+			return *this + get_count();
+		}
 	};
 
 	// LE variable

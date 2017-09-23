@@ -304,7 +304,7 @@ D3D12_PRIMITIVE_TOPOLOGY get_primitive_topology(rsx::primitive_type draw_mode)
 	case rsx::primitive_type::triangle_strip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 	case rsx::primitive_type::triangle_fan: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	case rsx::primitive_type::quads: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	case rsx::primitive_type::quad_strip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	case rsx::primitive_type::quad_strip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 	case rsx::primitive_type::polygon: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	}
 	fmt::throw_exception("Invalid draw mode (0x%x)" HERE, (u32)draw_mode);
