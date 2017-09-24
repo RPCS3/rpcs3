@@ -27,6 +27,15 @@ enum
 	CELL_PAD_PCLASS_TYPE_NAVIGATION = 0x05,
 };
 
+// Length returned in CellPadData struct
+enum
+{
+	CELL_PAD_LEN_NO_CHANGE = 0,
+	CELL_PAD_LEN_CHANGE_DEFAULT = 8,
+	CELL_PAD_LEN_CHANGE_PRESS_ON = 20,
+	CELL_PAD_LEN_CHANGE_SENSOR_ON = 24,
+};
+
 struct CellPadData
 {
 	be_t<s32> len;
