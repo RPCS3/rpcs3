@@ -71,7 +71,7 @@ namespace vk
 	VkImageSubresourceRange get_image_subresource_range(uint32_t base_layer, uint32_t base_mip, uint32_t layer_count, uint32_t level_count, VkImageAspectFlags aspect);
 
 	VkSampler null_sampler();
-	VkImageView null_image_view();
+	VkImageView null_image_view(vk::command_buffer&);
 
 	void destroy_global_resources();
 
@@ -88,6 +88,11 @@ namespace vk
 	void enter_uninterruptible();
 	void leave_uninterruptible();
 	bool is_uninterruptible();
+
+	void advance_completed_frame_counter();
+	void advance_frame_counter();
+	const u64 get_current_frame_id();
+	const u64 get_last_completed_frame_id();
 
 	struct memory_type_mapping
 	{
