@@ -152,6 +152,56 @@ protected:
 	}
 
 public:
+
+	struct program_buffer_patch_entry
+	{
+		union
+		{
+			u32 hex_key;
+			f32 fp_key;
+		};
+
+		union
+		{
+			u32 hex_value;
+			f32 fp_value;
+		};
+
+		program_buffer_patch_entry(f32& key, f32& value)
+		{
+			fp_key = key;
+			fp_value = value;
+		}
+
+		program_buffer_patch_entry(u32& key, u32& value)
+		{
+			hex_key = key;
+			hex_value = value;
+		}
+	};
+
+	struct
+	{
+		std::vector<program_buffer_patch_entry> keys;
+
+		void add(program_buffer_patch_entry& e)
+		{
+			keys.push_back(e);
+		}
+
+		void clear()
+		{
+			keys.resize(0);
+		}
+
+		bool is_empty() const
+		{
+			return keys.size() == 0;
+		}
+	}
+	patch_table;
+
+public:
 	program_state_cache() = default;
 	~program_state_cache()
 	{
@@ -238,13 +288,48 @@ public:
 		verify(HERE), (dst_buffer.size_bytes() >= ::narrow<int>(I->second.FragmentConstantOffsetCache.size()) * 16);
 
 		size_t offset = 0;
-		for (size_t offset_in_fragment_program : I->second.FragmentConstantOffsetCache)
+		if (patch_table.is_empty())
 		{
-			void *data = (char*)fragment_program.addr + (u32)offset_in_fragment_program;
-			const __m128i &vector = _mm_loadu_si128((__m128i*)data);
-			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
-			_mm_stream_si128((__m128i*)dst_buffer.subspan(offset, 4).data(), shuffled_vector);
-			offset += sizeof(f32);
+			for (size_t offset_in_fragment_program : I->second.FragmentConstantOffsetCache)
+			{
+				void *data = (char*)fragment_program.addr + (u32)offset_in_fragment_program;
+				const __m128i &vector = _mm_loadu_si128((__m128i*)data);
+				const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
+				_mm_stream_si128((__m128i*)dst_buffer.subspan(offset, 4).data(), shuffled_vector);
+				offset += 4;
+			}
+		}
+		else
+		{
+			for (size_t offset_in_fragment_program : I->second.FragmentConstantOffsetCache)
+			{
+				void *data = (char*)fragment_program.addr + (u32)offset_in_fragment_program;
+				f32* src = (f32*)data;
+				f32* dst = dst_buffer.subspan(offset, 4).data();
+				bool patched;
+
+				for (int i = 0; i < 4; ++i)
+				{
+					patched = false;
+					for (auto& e : patch_table.keys)
+					{
+						//TODO: Use fp comparison with fabsf without hurting performance
+						if (e.hex_key == (u32&)src[i])
+						{
+							dst[i] = e.fp_value;
+							patched = true;
+							break;
+						}
+					}
+
+					if (!patched)
+					{
+						dst[i] = src[i];
+					}
+				}
+
+				offset += 4;
+			}
 		}
 	}
 
