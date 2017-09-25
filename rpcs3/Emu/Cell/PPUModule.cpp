@@ -248,7 +248,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::sceNpTus,
 		&ppu_module_manager::sceNpUtil,
 		&ppu_module_manager::sys_io,
-		&ppu_module_manager::libnet,
+		&ppu_module_manager::sys_net,
 		&ppu_module_manager::sysPrxForUser,
 		&ppu_module_manager::sys_libc,
 		&ppu_module_manager::sys_lv2dbg,

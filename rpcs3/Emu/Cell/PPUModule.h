@@ -243,7 +243,7 @@ public:
 	static const ppu_static_module sceNpTus;
 	static const ppu_static_module sceNpUtil;
 	static const ppu_static_module sys_io;
-	static const ppu_static_module libnet;
+	static const ppu_static_module sys_net;
 	static const ppu_static_module sysPrxForUser;
 	static const ppu_static_module sys_libc;
 	static const ppu_static_module sys_lv2dbg;

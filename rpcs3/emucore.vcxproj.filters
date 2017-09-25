@@ -626,9 +626,6 @@
     <ClCompile Include="Emu\Cell\Modules\sys_mmapper_.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\Modules\sys_net.cpp">
-      <Filter>Emu\Cell\Modules</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\sys_ppu_thread_.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -931,6 +928,12 @@
     </ClCompile>
     <ClCompile Include="..\Utilities\LUrlParser.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\sys_net_.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\lv2\sys_net.cpp">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1447,9 +1450,6 @@
     <ClInclude Include="Emu\Cell\Modules\sys_lv2dbg.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Cell\Modules\sys_net.h">
-      <Filter>Emu\Cell\Modules</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\sysPrxForUser.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
@@ -1800,6 +1800,12 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\texture_cache.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\sys_net_.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\sys_net.h">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

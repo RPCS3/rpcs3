@@ -5,6 +5,7 @@
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "Emu/Cell/lv2/sys_interrupt.h"
 #include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/Cell/lv2/sys_ss.h"
 #include "sysPrxForUser.h"
 
 logs::channel sysPrxForUser("sysPrxForUser");
@@ -71,7 +72,7 @@ s32 sys_process_get_paramsfo(vm::ptr<char> buffer)
 	return _sys_process_get_paramsfo(buffer);
 }
 
-s32 sys_get_random_number(vm::ptr<u8> addr, u64 size)
+s32 sys_get_random_number(vm::ptr<void> addr, u64 size)
 {
 	sysPrxForUser.warning("sys_get_random_number(addr=*0x%x, size=%d)", addr, size);
 
@@ -80,9 +81,12 @@ s32 sys_get_random_number(vm::ptr<u8> addr, u64 size)
 		return CELL_EINVAL;
 	}
 
-	for (u32 i = 0; i < (u32)size; i++)
+	switch (u32 rs = sys_ss_random_number_generator(2, addr, size))
 	{
-		addr[i] = rand() & 0xff;
+	case 0x80010501: return CELL_ENOMEM;
+	case 0x80010503: return CELL_EAGAIN;
+	case 0x80010509: return CELL_EINVAL;
+	default: if (rs) return CELL_EABORT;
 	}
 
 	return CELL_OK;

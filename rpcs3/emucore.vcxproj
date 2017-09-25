@@ -115,6 +115,7 @@
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="..\Utilities\version.cpp" />
     <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_net.cpp" />
     <ClCompile Include="Emu\Cell\PPUAnalyser.cpp" />
     <ClCompile Include="Emu\Cell\PPUTranslator.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -262,7 +263,7 @@
     <ClCompile Include="Emu\Cell\Modules\sys_lwmutex_.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_mempool.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_mmapper_.cpp" />
-    <ClCompile Include="Emu\Cell\Modules\sys_net.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_net_.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_ppu_thread_.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_prx_.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_rsxaudio_.cpp" />
@@ -454,6 +455,7 @@
     <ClInclude Include="Crypto\unself.h" />
     <ClInclude Include="Crypto\utils.h" />
     <ClInclude Include="define_new_memleakdetect.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_net.h" />
     <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h" />
     <ClInclude Include="Emu\Cell\PPUAnalyser.h" />
     <ClInclude Include="Emu\Cell\PPUTranslator.h" />
@@ -626,7 +628,7 @@
     <ClInclude Include="Emu\Cell\Modules\sceNpUtil.h" />
     <ClInclude Include="Emu\Cell\Modules\sysPrxForUser.h" />
     <ClInclude Include="Emu\Cell\Modules\sys_lv2dbg.h" />
-    <ClInclude Include="Emu\Cell\Modules\sys_net.h" />
+    <ClInclude Include="Emu\Cell\Modules\sys_net_.h" />
     <ClInclude Include="Emu\Cell\PPCDisAsm.h" />
     <ClInclude Include="Emu\Cell\PPUCallback.h" />
     <ClInclude Include="Emu\Cell\PPUDisAsm.h" />
