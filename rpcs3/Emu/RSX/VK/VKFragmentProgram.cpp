@@ -166,8 +166,8 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	float alpha_ref;\n";
 	OS << "	uint alpha_func;\n";
 	OS << "	uint fog_mode;\n";
-	OS << "	uint window_origin;\n";
-	OS << "	uint window_height;\n";
+	OS << "	float wpos_scale;\n";
+	OS << "	float wpos_bias;\n";
 	OS << "	vec4 texture_parameters[16];\n";
 	OS << "};\n";
 
@@ -253,8 +253,7 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	}
 
 	OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
-	OS << "	vec4 wpos = gl_FragCoord;\n";
-	OS << "	if (window_origin != 0) wpos.y = window_height - wpos.y;\n";
+	OS << "	vec4 wpos = get_wpos();\n";
 
 	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
 
