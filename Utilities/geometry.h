@@ -731,9 +731,9 @@ struct area_base
 	{
 		return{ x1 * size.width, y1 * size.height, x2 * size.width, y2 * size.height };
 	}
-	constexpr area_base operator * (const T& value) const
+	constexpr area_base operator * (const f32& value) const
 	{
-		return{ x1 * value, y1 * value, x2 * value, y2 * value };
+		return{ (T)(x1 * value), (T)(y1 * value), (T)(x2 * value), (T)(y2 * value) };
 	}
 
 	template<typename NT>

@@ -8,11 +8,13 @@
 
 #include "Common/BufferUtils.h"
 #include "rsx_methods.h"
+#include "rsx_utils.h"
 
 #include "Utilities/GSL.h"
 #include "Utilities/StrUtil.h"
 
 #include <thread>
+#include <fenv.h>
 
 class GSRender;
 
@@ -390,6 +392,9 @@ namespace rsx
 
 		// Raise priority above other threads
 		thread_ctrl::set_native_priority(1);
+
+		// Round to nearest to deal with forward/reverse scaling
+		fesetround(FE_TONEAREST);
 
 		// Deferred calls are used to batch draws together
 		u32 deferred_primitive_type = 0;
@@ -790,24 +795,33 @@ namespace rsx
 	void thread::fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program)
 	{
 		const u32 is_alpha_tested = rsx::method_registers.alpha_test_enabled();
-		const float alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
+		const f32 alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
 		const f32 fog0 = rsx::method_registers.fog_params_0();
 		const f32 fog1 = rsx::method_registers.fog_params_1();
 		const u32 alpha_func = static_cast<u32>(rsx::method_registers.alpha_func());
 		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
-		const u32 window_origin = static_cast<u32>(rsx::method_registers.shader_window_origin());
+
+		// Generate wpos coeffecients
+		// wpos equation is now as follows:
+		// wpos.y = (frag_coord / resolution_scale) * ((window_origin!=top)?-1.: 1.) + ((window_origin!=top)? window_height : 0)
+		// wpos.x = (frag_coord / resolution_scale)
+		// wpos.zw = frag_coord.zw
+
+		const auto window_origin = rsx::method_registers.shader_window_origin();
 		const u32 window_height = rsx::method_registers.shader_window_height();
-		const float one = 1.f;
+		const f32 resolution_scale = rsx::get_resolution_scale();
+		const f32 wpos_scale = (window_origin == rsx::window_origin::top) ? (1.f / resolution_scale) : (-1.f / resolution_scale);
+		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
 
 		u32 *dst = static_cast<u32*>(buffer);
 
 		stream_vector(dst, (u32&)fog0, (u32&)fog1, is_alpha_tested, (u32&)alpha_ref);
-		stream_vector(dst + 4, alpha_func, fog_mode, window_origin, window_height);
+		stream_vector(dst + 4, alpha_func, fog_mode, (u32&)wpos_scale, (u32&)wpos_bias);
 
 		size_t offset = 8;
 		for (int index = 0; index < 16; ++index)
 		{
-			stream_vector(&dst[offset], (u32&)fragment_program.texture_pitch_scale[index], (u32&)one, 0U, 0U);
+			stream_vector(&dst[offset], (u32&)fragment_program.texture_scale[index][0], (u32&)fragment_program.texture_scale[index][1], 0U, 0U);
 			offset += 4;
 		}
 	}
@@ -1305,10 +1319,13 @@ namespace rsx
 		result.shadow_textures = 0;
 
 		std::array<texture_dimension_extended, 16> texture_dimensions;
+		const auto resolution_scale = rsx::get_resolution_scale();
+
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			auto &tex = rsx::method_registers.fragment_textures[i];
-			result.texture_pitch_scale[i] = 1.f;
+			result.texture_scale[i][0] = 1.f;
+			result.texture_scale[i][1] = 1.f;
 			result.textures_alpha_kill[i] = 0;
 			result.textures_zfunc[i] = 0;
 
@@ -1345,14 +1362,23 @@ namespace rsx
 				if (surface_exists && surface_pitch)
 				{
 					if (raw_format & CELL_GCM_TEXTURE_UN)
-						result.texture_pitch_scale[i] = (float)surface_pitch / tex.pitch();
+					{
+						result.texture_scale[i][0] = (resolution_scale * (float)surface_pitch) / tex.pitch();
+						result.texture_scale[i][1] = resolution_scale;
+					}
 				}
 				else
 				{
 					std::tie(surface_exists, surface_pitch) = get_surface_info(texaddr, tex, true);
 					if (surface_exists)
 					{
-						u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+						if (raw_format & CELL_GCM_TEXTURE_UN)
+						{
+							result.texture_scale[i][0] = (resolution_scale * (float)surface_pitch) / tex.pitch();
+							result.texture_scale[i][1] = resolution_scale;
+						}
+
+						const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 						switch (format)
 						{
 						case CELL_GCM_TEXTURE_A8R8G8B8:

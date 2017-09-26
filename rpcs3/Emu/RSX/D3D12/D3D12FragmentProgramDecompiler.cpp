@@ -46,8 +46,8 @@ void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 	OS << "	float alpha_ref;\n";
 	OS << "	uint alpha_func;\n";
 	OS << "	uint fog_mode;\n";
-	OS << "	uint window_origin;\n";
-	OS << "	uint window_height;\n";
+	OS << "	float wpos_scale;\n";
+	OS << "	float wpos_bias;\n";
 	OS << "	float4 texture_parameters[16];\n";
 	OS << "};\n";
 }
@@ -224,8 +224,10 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 		}
 	}
 
+	//NOTE: Framebuffer scaling not actually supported. wpos_scale is used to reconstruct the true window height
 	OS << "	float4 wpos = In.Position;\n";
-	OS << "	if (window_origin != 0) wpos.y = window_height - wpos.y;\n";
+	OS << " float4 res_scale = abs(1.f / wpos_scale);\n";
+	OS << "	if (wpos_scale < 0) wpos.y = (wpos_bias * res_scale) - wpos.y;\n";
 	OS << "	float4 ssa = is_front_face ? float4(1., 1., 1., 1.) : float4(-1., -1., -1., -1.);\n";
 
 	// Declare output

@@ -207,4 +207,30 @@ namespace rsx
 
 		return std::make_tuple(x, y, width, height);
 	}
+
+	static inline f32 get_resolution_scale()
+	{
+		return g_cfg.video.strict_rendering_mode? 1.f : ((f32)g_cfg.video.resolution_scale_percent / 100.f);
+	}
+
+	static inline int get_resolution_scale_percent()
+	{
+		return g_cfg.video.strict_rendering_mode ? 100 : g_cfg.video.resolution_scale_percent;
+	}
+
+	static inline const u16 apply_resolution_scale(u16 value, bool clamp)
+	{
+		if (clamp)
+			return (u16)std::max((get_resolution_scale_percent() * value) / 100, 1);
+		else
+			return (get_resolution_scale_percent() * value) / 100;
+	}
+
+	static inline const u16 apply_inverse_resolution_scale(u16 value, bool clamp)
+	{
+		if (clamp)
+			return (u16)std::max((value * 100) / get_resolution_scale_percent(), 1);
+		else
+			return (value * 100) / get_resolution_scale_percent();
+	}
 }

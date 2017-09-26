@@ -6,6 +6,7 @@
 #include "../Common/surface_store.h"
 #include "../Common/TextureUtils.h"
 #include "VKFormats.h"
+#include "../rsx_utils.h"
 
 struct ref_counted
 {
@@ -59,12 +60,12 @@ namespace vk
 
 		u16 get_surface_width() const override
 		{
-			return width();
+			return rsx::apply_inverse_resolution_scale(width(), true);
 		}
 
 		u16 get_surface_height() const override
 		{
-			return height();
+			return rsx::apply_inverse_resolution_scale(height(), true);
 		}
 
 		u16 get_rsx_pitch() const override
@@ -75,6 +76,12 @@ namespace vk
 		u16 get_native_pitch() const override
 		{
 			return native_pitch;
+		}
+
+		bool matches_dimensions(u16 _width, u16 _height) const
+		{
+			//Use foward scaling to account for rounding and clamping errors
+			return (rsx::apply_resolution_scale(_width, true) == width()) && (rsx::apply_resolution_scale(_height, true) == height());
 		}
 	};
 
@@ -114,7 +121,7 @@ namespace rsx
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
-				static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1, 1, 1,
+				static_cast<uint32_t>(rsx::apply_resolution_scale((u16)width, true)), static_cast<uint32_t>(rsx::apply_resolution_scale((u16)height, true)), 1, 1, 1,
 				VK_SAMPLE_COUNT_1_BIT,
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
@@ -158,12 +165,14 @@ namespace rsx
 			if (requested_format != VK_FORMAT_D16_UNORM)
 				range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
+			const auto scale = rsx::get_resolution_scale();
+
 			std::unique_ptr<vk::render_target> ds;
 			ds.reset(new vk::render_target(device, mem_mapping.device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
-				static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1, 1, 1,
+				static_cast<uint32_t>(rsx::apply_resolution_scale((u16)width, true)), static_cast<uint32_t>(rsx::apply_resolution_scale((u16)height, true)), 1, 1, 1,
 				VK_SAMPLE_COUNT_1_BIT,
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
@@ -202,8 +211,8 @@ namespace rsx
 		{
 			info->rsx_pitch = surface->rsx_pitch;
 			info->native_pitch = surface->native_pitch;
-			info->surface_width = surface->info.extent.width;
-			info->surface_height = surface->info.extent.height;
+			info->surface_width = surface->get_surface_width();
+			info->surface_height = surface->get_surface_height();
 			info->bpp = static_cast<u8>(info->native_pitch / info->surface_width);
 		}
 
@@ -260,8 +269,7 @@ namespace rsx
 			VkFormat fmt = vk::get_compatible_surface_format(format).first;
 
 			if (rtt->info.format == fmt &&
-				rtt->info.extent.width == width &&
-				rtt->info.extent.height == height)
+				rtt->matches_dimensions((u16)width, (u16)height))
 				return true;
 
 			return false;
@@ -272,8 +280,7 @@ namespace rsx
 			if (check_refs && ds->deref_count == 0) //Surface may still have read refs from data 'copy'
 				return false;
 
-			if (ds->info.extent.width == width &&
-				ds->info.extent.height == height)
+			if (ds->matches_dimensions((u16)width, (u16)height))
 			{
 				//Check format
 				switch (ds->info.format)

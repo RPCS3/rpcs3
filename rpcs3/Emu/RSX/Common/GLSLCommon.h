@@ -338,6 +338,12 @@ namespace glsl
 		OS << "{\n";
 		OS << "	return decodeLinearDepth(texture(tex, coord.xy).r);\n";
 		OS << "}\n\n";
+
+		OS << "vec4 get_wpos()\n";
+		OS << "{\n";
+		OS << "	float abs_scale = abs(wpos_scale);\n";
+		OS << "	return (gl_FragCoord * vec4(abs_scale, wpos_scale, 1., 1.)) + vec4(0., wpos_bias, 0., 0.);\n";
+		OS << "}\n\n";
 	}
 
 	static void insert_fog_declaration(std::ostream& OS)

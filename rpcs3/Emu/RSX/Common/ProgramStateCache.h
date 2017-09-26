@@ -167,6 +167,9 @@ public:
 			f32 fp_value;
 		};
 
+		program_buffer_patch_entry()
+		{}
+
 		program_buffer_patch_entry(f32& key, f32& value)
 		{
 			fp_key = key;
@@ -178,25 +181,43 @@ public:
 			hex_key = key;
 			hex_value = value;
 		}
+
+		bool test_and_set(f32 value, f32* dst) const
+		{
+			u32 hex = (u32&)value;
+			if ((hex & 0x7FFFFFFF) == (hex_key & 0x7FFFFFFF))
+			{
+				hex = (hex & ~0x7FFFFFF) | hex_value;
+				*dst = (f32&)hex;
+				return true;
+			}
+
+			return false;
+		}
 	};
 
 	struct
 	{
-		std::vector<program_buffer_patch_entry> keys;
+		std::unordered_map<f32, program_buffer_patch_entry> db;
 
 		void add(program_buffer_patch_entry& e)
 		{
-			keys.push_back(e);
+			db[e.fp_key] = e;
+		}
+
+		void add(f32& key, f32& value)
+		{
+			db[key] = { key, value };
 		}
 
 		void clear()
 		{
-			keys.resize(0);
+			db.clear();
 		}
 
 		bool is_empty() const
 		{
-			return keys.size() == 0;
+			return db.size() == 0;
 		}
 	}
 	patch_table;
@@ -287,49 +308,43 @@ public:
 
 		verify(HERE), (dst_buffer.size_bytes() >= ::narrow<int>(I->second.FragmentConstantOffsetCache.size()) * 16);
 
-		size_t offset = 0;
-		if (patch_table.is_empty())
+		f32* dst = dst_buffer.data();
+		f32 tmp[4];
+		for (size_t offset_in_fragment_program : I->second.FragmentConstantOffsetCache)
 		{
-			for (size_t offset_in_fragment_program : I->second.FragmentConstantOffsetCache)
+			void *data = (char*)fragment_program.addr + (u32)offset_in_fragment_program;
+			const __m128i &vector = _mm_loadu_si128((__m128i*)data);
+			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
+
+			if (!patch_table.is_empty())
 			{
-				void *data = (char*)fragment_program.addr + (u32)offset_in_fragment_program;
-				const __m128i &vector = _mm_loadu_si128((__m128i*)data);
-				const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
-				_mm_stream_si128((__m128i*)dst_buffer.subspan(offset, 4).data(), shuffled_vector);
-				offset += 4;
-			}
-		}
-		else
-		{
-			for (size_t offset_in_fragment_program : I->second.FragmentConstantOffsetCache)
-			{
-				void *data = (char*)fragment_program.addr + (u32)offset_in_fragment_program;
-				f32* src = (f32*)data;
-				f32* dst = dst_buffer.subspan(offset, 4).data();
+				_mm_storeu_ps(tmp, (__m128&)shuffled_vector);
 				bool patched;
 
 				for (int i = 0; i < 4; ++i)
 				{
 					patched = false;
-					for (auto& e : patch_table.keys)
+					for (auto& e : patch_table.db)
 					{
 						//TODO: Use fp comparison with fabsf without hurting performance
-						if (e.hex_key == (u32&)src[i])
+						if (patched = e.second.test_and_set(tmp[i], &dst[i]))
 						{
-							dst[i] = e.fp_value;
-							patched = true;
 							break;
 						}
 					}
 
 					if (!patched)
 					{
-						dst[i] = src[i];
+						dst[i] = tmp[i];
 					}
 				}
-
-				offset += 4;
 			}
+			else
+			{
+				_mm_stream_si128((__m128i*)dst, shuffled_vector);
+			}
+
+			dst += 4;
 		}
 	}
 

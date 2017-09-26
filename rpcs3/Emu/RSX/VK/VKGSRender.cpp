@@ -1266,17 +1266,19 @@ void VKGSRender::end()
 
 void VKGSRender::set_viewport()
 {
-	u16 scissor_x = rsx::method_registers.scissor_origin_x();
-	u16 scissor_w = rsx::method_registers.scissor_width();
-	u16 scissor_y = rsx::method_registers.scissor_origin_y();
-	u16 scissor_h = rsx::method_registers.scissor_height();
+	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
+	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
+	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
+	u16 scissor_w = rsx::apply_resolution_scale(rsx::method_registers.scissor_width(), true);
+	u16 scissor_y = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_y(), false);
+	u16 scissor_h = rsx::apply_resolution_scale(rsx::method_registers.scissor_height(), true);
 
 	//NOTE: The scale_offset matrix already has viewport matrix factored in
 	VkViewport viewport = {};
 	viewport.x = 0;
 	viewport.y = 0;
-	viewport.width = rsx::method_registers.surface_clip_width();
-	viewport.height = rsx::method_registers.surface_clip_height();
+	viewport.width = clip_width;
+	viewport.height = clip_height;
 	viewport.minDepth = 0.f;
 	viewport.maxDepth = 1.f;
 
@@ -1341,13 +1343,14 @@ void VKGSRender::clear_surface(u32 mask)
 	std::vector<VkClearAttachment> clear_descriptors;
 	VkClearValue depth_stencil_clear_values, color_clear_values;
 
-	u16 scissor_x = rsx::method_registers.scissor_origin_x();
-	u16 scissor_w = rsx::method_registers.scissor_width();
-	u16 scissor_y = rsx::method_registers.scissor_origin_y();
-	u16 scissor_h = rsx::method_registers.scissor_height();
+	const auto scale = rsx::get_resolution_scale();
+	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
+	u16 scissor_w = rsx::apply_resolution_scale(rsx::method_registers.scissor_width(), true);
+	u16 scissor_y = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_y(), false);
+	u16 scissor_h = rsx::apply_resolution_scale(rsx::method_registers.scissor_height(), true);
 
-	const u32 fb_width = m_draw_fbo->width();
-	const u32 fb_height = m_draw_fbo->height();
+	const u16 fb_width = m_draw_fbo->width();
+	const u16 fb_height = m_draw_fbo->height();
 
 	//clip region
 	std::tie(scissor_x, scissor_y, scissor_w, scissor_h) = rsx::clip_region<u16>(fb_width, fb_height, scissor_x, scissor_y, scissor_w, scissor_h, true);
@@ -2086,14 +2089,14 @@ void VKGSRender::prepare_rtts()
 	const u32 surface_pitchs[] = { rsx::method_registers.surface_a_pitch(), rsx::method_registers.surface_b_pitch(),
 			rsx::method_registers.surface_c_pitch(), rsx::method_registers.surface_d_pitch() };
 
+	const auto fbo_width = rsx::apply_resolution_scale(clip_width, true);
+	const auto fbo_height = rsx::apply_resolution_scale(clip_height, true);
+
 	if (m_draw_fbo)
 	{
-		const u32 fb_width = m_draw_fbo->width();
-		const u32 fb_height = m_draw_fbo->height();
-
 		bool really_changed = false;
 
-		if (fb_width == clip_width && fb_height == clip_height)
+		if (m_draw_fbo->width() == fbo_width && m_draw_fbo->height() == clip_height)
 		{
 			for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 			{
@@ -2215,7 +2218,7 @@ void VKGSRender::prepare_rtts()
 
 	for (auto &fbo : m_framebuffers_to_clean)
 	{
-		if (fbo->matches(bound_images, clip_width, clip_height))
+		if (fbo->matches(bound_images, fbo_width, fbo_height))
 		{
 			m_draw_fbo.swap(fbo);
 			m_draw_fbo->reset_refs();
@@ -2263,7 +2266,7 @@ void VKGSRender::prepare_rtts()
 		if (m_draw_fbo)
 			m_framebuffers_to_clean.push_back(std::move(m_draw_fbo));
 
-		m_draw_fbo.reset(new vk::framebuffer_holder(*m_device, current_render_pass, clip_width, clip_height, std::move(fbo_images)));
+		m_draw_fbo.reset(new vk::framebuffer_holder(*m_device, current_render_pass, fbo_width, fbo_height, std::move(fbo_images)));
 	}
 }
 
