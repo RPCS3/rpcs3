@@ -10,6 +10,7 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
+		case patch_type::load: return "load";
 		case patch_type::byte: return "byte";
 		case patch_type::le16: return "le16";
 		case patch_type::le32: return "le32";
@@ -45,10 +46,33 @@ void patch_engine::append(const std::string& patch)
 
 				struct patch info{};
 				info.type   = static_cast<patch_type>(type64);
-				info.offset = patch[1].as<u32>();
+				info.offset = patch[1].as<u32>(0);
 
 				switch (info.type)
 				{
+				case patch_type::load:
+				{
+					// Special syntax: copy named sequence (must be loaded before)
+					const auto found = m_map.find(patch[1].Scalar());
+
+					if (found != m_map.end())
+					{
+						// Address modifier (optional)
+						const u32 mod = patch[2].as<u32>(0);
+
+						for (const auto& rd : found->second)
+						{
+							info = rd;
+							info.offset += mod;
+							data.emplace_back(info);
+						}
+
+						continue;
+					}
+
+					// TODO: error
+					break;
+				}
 				case patch_type::bef32:
 				case patch_type::lef32:
 				{
@@ -90,6 +114,11 @@ std::size_t patch_engine::apply(const std::string& name, u8* dst) const
 
 		switch (p.type)
 		{
+		case patch_type::load:
+		{
+			// Invalid in this context
+			break;
+		}
 		case patch_type::byte:
 		{
 			*ptr = static_cast<u8>(p.value);

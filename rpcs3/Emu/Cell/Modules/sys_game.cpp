@@ -2,148 +2,153 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "Emu/Cell/lv2/sys_mutex.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "sysPrxForUser.h"
 
 extern logs::channel sysPrxForUser;
+extern vm::gvar<u32> g_ppu_exit_mutex;
+extern vm::gvar<vm::ptr<void()>> g_ppu_atexitspawn;
+extern vm::gvar<vm::ptr<void()>> g_ppu_at_Exitspawn;
 
-void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+static u32 get_string_array_size(vm::cpptr<char> list, u32& out_count)
 {
-	std::string _path = path.get_ptr();
-	const std::string& from = "//";
-	const std::string& to = "/";
+	//out_count = 0;
+	u32 result = 8;
 
-	size_t start_pos = 0;
-	while ((start_pos = _path.find(from, start_pos)) != std::string::npos) {
-		_path.replace(start_pos, from.length(), to);
-		start_pos += to.length();
+	for (u32 i = 0; list; i++)
+	{
+		if (const vm::cptr<char> str = list[i])
+		{
+			out_count++;
+			result += (((u32)std::strlen(str.get_ptr()) + 0x10) & -0x10) + 8;
+			continue;
+		}
+		break;		
 	}
 
-	sysPrxForUser.todo("sys_game_process_exitspawn()");
-	sysPrxForUser.warning("path: %s", _path.c_str());
-	sysPrxForUser.warning("argv: 0x%x", argv_addr);
-	sysPrxForUser.warning("envp: 0x%x", envp_addr);
-	sysPrxForUser.warning("data: 0x%x", data_addr);
-	sysPrxForUser.warning("data_size: 0x%x", data_size);
-	sysPrxForUser.warning("prio: %d", prio);
-	sysPrxForUser.warning("flags: %d", flags);
-
-	std::vector<std::string> argv;
-	std::vector<std::string> env;
-
-	if (argv_addr)
-	{
-		auto argvp = vm::cpptr<char>::make(argv_addr);
-		while (argvp && *argvp)
-		{
-			argv.push_back(argvp[0].get_ptr());
-			argvp++;
-		}
-
-		for (auto &arg : argv)
-		{
-			sysPrxForUser.trace("argument: %s", arg.c_str());
-		}
-	}
-
-	if (envp_addr)
-	{
-		auto envp = vm::cpptr<char>::make(envp_addr);
-		while (envp && *envp)
-		{
-			env.push_back(envp[0].get_ptr());
-			envp++;
-		}
-
-		for (auto &en : env)
-		{
-			sysPrxForUser.trace("env_argument: %s", en.c_str());
-		}
-	}
-
-	// TODO: execute the file in <path> with the args in argv
-	// and the environment parameters in envp and copy the data
-	// from data_addr into the adress space of the new process
-	// then kill the current process
-
-	Emu.Pause();
-	sysPrxForUser.success("Process finished");
-
-	Emu.CallAfter([=, path = vfs::get(_path)]()
-	{
-		Emu.Stop();
-		Emu.BootGame(path, true);
-	});
+	return result;
 }
 
-void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+static u32 get_exitspawn_size(vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32& arg_count, u32& env_count)
 {
-	std::string _path = path.get_ptr();
-	const std::string& from = "//";
-	const std::string& to = "/";
+	arg_count = 1;
+	env_count = 0;
 
-	size_t start_pos = 0;
-	while ((start_pos = _path.find(from, start_pos)) != std::string::npos) {
-		_path.replace(start_pos, from.length(), to);
-		start_pos += to.length();
+	u32 result = (((u32)std::strlen(path.get_ptr()) + 0x10) & -0x10) + 8;
+	result += get_string_array_size(argv, arg_count);
+	result += get_string_array_size(envp, env_count);
+
+	if ((arg_count + env_count) % 2)
+	{
+		result += 8;
+	}
+	
+	return result;
+}
+
+static void put_string_array(vm::pptr<char, u32, u64> pstr, vm::ptr<char>& str, u32 count, vm::cpptr<char> list)
+{
+	for (u32 i = 0; i < count; i++)
+	{
+		const u32 len = (u32)std::strlen(list[i].get_ptr());
+		std::memcpy(str.get_ptr(), list[i].get_ptr(), len + 1);
+		pstr[i] = str;
+		str += (len + 0x10) & -0x10;
 	}
 
-	sysPrxForUser.warning("sys_game_process_exitspawn2()");
-	sysPrxForUser.warning("path: %s", _path.c_str());
-	sysPrxForUser.warning("argv: 0x%x", argv_addr);
-	sysPrxForUser.warning("envp: 0x%x", envp_addr);
-	sysPrxForUser.warning("data: 0x%x", data_addr);
-	sysPrxForUser.warning("data_size: 0x%x", data_size);
-	sysPrxForUser.warning("prio: %d", prio);
-	sysPrxForUser.warning("flags: %d", flags);
+	pstr[count] = vm::null;
+}
 
-	std::vector<std::string> argv;
-	std::vector<std::string> env;
+static void put_exitspawn(vm::ptr<void> out, vm::cptr<char> path, u32 argc, vm::cpptr<char> argv, u32 envc, vm::cpptr<char> envp)
+{
+	vm::pptr<char, u32, u64> pstr = vm::cast(out.addr());
+	vm::ptr<char> str = vm::static_ptr_cast<char>(out) + (argc + envc + (argc + envc) % 2) * 8 + 0x10;
 
-	if (argv_addr)
+	const u32 len = (u32)std::strlen(path.get_ptr());
+	std::memcpy(str.get_ptr(), path.get_ptr(), len + 1);
+	*pstr++ = str;
+	str += (len + 0x10) & -0x10;
+
+	put_string_array(pstr, str, argc - 1, argv);
+	put_string_array(pstr + argc, str, envc, envp);
+}
+
+static void exitspawn(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 _flags)
+{
+	sys_mutex_lock(ppu, *g_ppu_exit_mutex, 0);
+
+	u32 arg_count = 0;
+	u32 env_count = 0;
+	u32 alloc_size = get_exitspawn_size(path, argv, envp, arg_count, env_count);
+
+	if (alloc_size > 0x1000)
 	{
-		auto argvp = vm::cpptr<char>::make(argv_addr);
-		while (argvp && *argvp)
-		{
-			argv.push_back(argvp[0].get_ptr());
-			argvp++;
-		}
-
-		for (auto &arg : argv)
-		{
-			sysPrxForUser.trace("argument: %s", arg.c_str());
-		}
+		argv = vm::null;
+		envp = vm::null;
+		arg_count = 0;
+		env_count = 0;
+		alloc_size = get_exitspawn_size(path, vm::null, vm::null, arg_count, env_count);
 	}
 
-	if (envp_addr)
-	{
-		auto envp = vm::cpptr<char>::make(envp_addr);
-		while (envp && *envp)
-		{
-			env.push_back(envp[0].get_ptr());
-			envp++;
-		}
+	alloc_size += 0x30;
 
-		for (auto &en : env)
-		{
-			sysPrxForUser.trace("env_argument: %s", en.c_str());
-		}
+	if (data_size > 0)
+	{
+		alloc_size += 0x1030;
 	}
 
-	// TODO: execute the file in <path> with the args in argv
-	// and the environment parameters in envp and copy the data
-	// from data_addr into the adress space of the new process
-	// then kill the current process
+	u32 alloc_addr = vm::alloc(alloc_size, vm::main);
 
-	Emu.Pause();
-	sysPrxForUser.success("Process finished");
-
-	Emu.CallAfter([=, path = vfs::get(_path)]()
+	if (!alloc_addr)
 	{
-		Emu.Stop();
-		Emu.BootGame(path, true);
-	});
+		// TODO (process atexit)
+		return _sys_process_exit(ppu, CELL_ENOMEM, 0, 0);
+	}
 
-	return;
+	put_exitspawn(vm::cast(alloc_addr + 0x30), path, arg_count, argv, env_count, envp);
+
+	if (data_size)
+	{
+		std::memcpy(vm::base(alloc_addr + alloc_size - 0x1000), vm::base(data), std::min<u32>(data_size, 0x1000));
+	}
+
+	vm::ptr<sys_exit2_param> arg = vm::cast(alloc_addr);
+	arg->x0        = 0x85;
+	arg->this_size = 0x30;
+	arg->next_size = alloc_size - 0x30;
+	arg->prio      = prio;
+	arg->flags     = _flags;
+	arg->args      = vm::cast(alloc_addr + 0x30);
+
+	if ((_flags >> 62) == 0 && *g_ppu_atexitspawn)
+	{
+		// Execute atexitspawn
+		g_ppu_atexitspawn->operator()(ppu);
+	}
+
+	if ((_flags >> 62) == 1 && *g_ppu_at_Exitspawn)
+	{
+		// Execute at_Exitspawn
+		g_ppu_at_Exitspawn->operator()(ppu);
+	}
+
+	// TODO (process atexit)
+	return _sys_process_exit2(ppu, 0, arg, alloc_size, 0x10000000);	
+}
+
+void sys_game_process_exitspawn(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 flags)
+{
+	sysPrxForUser.warning("sys_game_process_exitspawn(path=%s, argv=**0x%x, envp=**0x%x, data=*0x%x, data_size=0x%x, prio=%d, flags=0x%x)", path, argv, envp, data, data_size, prio, flags);
+
+	return exitspawn(ppu, path, argv, envp, data, data_size, prio, (flags & 0xf0) | (1ull << 63));
+}
+
+void sys_game_process_exitspawn2(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 flags)
+{
+	sysPrxForUser.warning("sys_game_process_exitspawn2(path=%s, argv=**0x%x, envp=**0x%x, data=*0x%x, data_size=0x%x, prio=%d, flags=0x%x)", path, argv, envp, data, data_size, prio, flags);
+
+	return exitspawn(ppu, path, argv, envp, data, data_size, prio, (flags >> 62) >= 2 ? flags & 0xf0 : flags & 0xc0000000000000f0ull);
 }
 
 s32 sys_game_board_storage_read()
