@@ -330,7 +330,7 @@ void ds4_pad_handler::UpdateRumble()
 		std::shared_ptr<DS4Device> device = bind.first;
 		auto thepad = bind.second;
 
-		device->newVibrateData = device->largeVibrate != thepad->m_vibrateMotors[0].m_value || device->smallVibrate != (thepad->m_vibrateMotors[1].m_value ? 255 : 0);
+		device->newVibrateData = device->newVibrateData || device->largeVibrate != thepad->m_vibrateMotors[0].m_value || device->smallVibrate != (thepad->m_vibrateMotors[1].m_value ? 255 : 0);
 		device->largeVibrate = thepad->m_vibrateMotors[0].m_value;
 		device->smallVibrate = (thepad->m_vibrateMotors[1].m_value ? 255 : 0);
 	}
@@ -361,7 +361,10 @@ bool ds4_pad_handler::GetCalibrationData(std::shared_ptr<DS4Device> ds4Dev)
 	{
 		buf[0] = 0x02;
 		if (hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x02_SIZE) <= 0)
+		{
+			LOG_ERROR(HLE, "[DS4] Failed getting calibration data report!");
 			return false;
+		}
 	}
 
 	ds4Dev->calibData[DS4CalibIndex::PITCH].bias = GetS16LEData(&buf[1]);
@@ -421,6 +424,14 @@ bool ds4_pad_handler::GetCalibrationData(std::shared_ptr<DS4Device> ds4Dev)
 	ds4Dev->calibData[DS4CalibIndex::Z].sensNumer = 2 * DS4_ACC_RES_PER_G;
 	ds4Dev->calibData[DS4CalibIndex::Z].sensDenom = accelZRange;
 
+	// Make sure data 'looks' valid, dongle will report invalid calibration data with no controller connected
+
+	for (const auto& data : ds4Dev->calibData)
+	{
+		if (data.sensDenom == 0)
+			return false;
+	}
+
 	return true;
 }
 
@@ -446,11 +457,11 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hid
 
 	if (!GetCalibrationData(ds4Dev))
 	{
-		LOG_ERROR(HLE, "[DS4] Failed getting calibration data, ignoring controller!");
 		hid_close(hidDevice);
 		return;
 	}
 
+	ds4Dev->hasCalibData = true;
 	ds4Dev->path = hidDevInfo->path;
 
 	hid_set_nonblocking(hidDevice, 1);
@@ -525,7 +536,10 @@ bool ds4_pad_handler::Init()
 			if (controllers.size() >= MAX_GAMEPADS)	break;
 
 			hid_device* dev = hid_open_path(devInfo->path);
-			if (dev) CheckAddDevice(dev, devInfo);
+			if (dev)
+				CheckAddDevice(dev, devInfo);
+			else
+				LOG_ERROR(HLE, "[DS4] hid_open_path failed! Reason: %S", hid_error(dev));
 			devInfo = devInfo->next;
 		}
 		hid_free_enumeration(head);
@@ -576,7 +590,7 @@ bool ds4_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::strin
 	if (device_id == nullptr) return false;
 
 	pad->Init(
-		CELL_PAD_STATUS_CONNECTED,
+		CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES,
 		CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
 		CELL_PAD_DEV_TYPE_STANDARD
@@ -645,6 +659,8 @@ void ds4_pad_handler::ThreadProc()
 				hid_set_nonblocking(dev, 1);
 				device->hidDevice = dev;
 				thepad->m_port_status = CELL_PAD_STATUS_CONNECTED|CELL_PAD_STATUS_ASSIGN_CHANGES;
+				if (!device->hasCalibData)
+					device->hasCalibData = GetCalibrationData(device);
 			}
 			else
 			{
@@ -700,19 +716,28 @@ void ds4_pad_handler::ThreadProc()
 
 		}
 		else if (!device->btCon && buf[0] == 0x01 && res == 64)
+		{
+			// Ds4 Dongle uses this bit to actually report whether a controller is connected
+			bool connected = (buf[31] & 0x04) ? false : true;
+			if (connected && !device->hasCalibData)
+				device->hasCalibData = GetCalibrationData(device);
+
 			offset = 0;
+		}
 		else
 			continue;
 
-		int calibOffset = offset + DS4_INPUT_REPORT_GYRO_X_OFFSET;
-		for (int i = 0; i < DS4CalibIndex::COUNT; ++i)
+		if (device->hasCalibData)
 		{
-			const s16 rawValue = GetS16LEData(&buf[calibOffset]);
-			const s16 calValue = ApplyCalibration(rawValue, device->calibData[i]);
-			buf[calibOffset++] = ((u16)calValue >> 0) & 0xFF;
-			buf[calibOffset++] = ((u16)calValue >> 8) & 0xFF;
+			int calibOffset = offset + DS4_INPUT_REPORT_GYRO_X_OFFSET;
+			for (int i = 0; i < DS4CalibIndex::COUNT; ++i)
+			{
+				const s16 rawValue = GetS16LEData(&buf[calibOffset]);
+				const s16 calValue = ApplyCalibration(rawValue, device->calibData[i]);
+				buf[calibOffset++] = ((u16)calValue >> 0) & 0xFF;
+				buf[calibOffset++] = ((u16)calValue >> 8) & 0xFF;
+			}
 		}
-
 		memcpy(device->padData.data(), &buf[offset], 64);
 	}
 
