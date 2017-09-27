@@ -11,6 +11,8 @@ logs::channel cellSsl("cellSsl");
 
 namespace vm { using namespace ps3; }
 
+enum SpecialCerts { BaltimoreCert = 6, Class3G2V2Cert = 13, ClassSSV4Cert = 15, EntrustNetCert = 18, GTECyberTrustGlobalCert = 23 };
+
 s32 cellSslInit(vm::ptr<void> pool, u32 poolSize)
 {
 	cellSsl.todo("cellSslInit(pool=0x%x, poolSize=%d)", pool, poolSize);
@@ -23,14 +25,22 @@ s32 cellSslEnd()
 	return CELL_OK;
 }
 
-std::string getCert(const std::string certPath, const int certID)
+std::string getCert(const std::string certPath, const int certID, const bool isNormalCert)
 {
-	//Stupid cellssl
 	int newID = certID;
-	if (certID == 6)
-		newID = 23;
-	if (certID > 6 && certID < 23)
-		newID = certID - 1;
+
+	// The 'normal' certs have some special rules for loading.
+	if (isNormalCert && certID >= BaltimoreCert && certID <= GTECyberTrustGlobalCert)
+	{
+		if (certID == BaltimoreCert)
+			newID = GTECyberTrustGlobalCert;
+		else if (certID == Class3G2V2Cert)
+			newID = BaltimoreCert;
+		else if (certID == EntrustNetCert)
+			newID = ClassSSV4Cert;
+		else
+			newID = certID - 1;
+	}
 
 	std::string filePath = fmt::format("%sCA%02d.cer", certPath, newID);
 
@@ -51,27 +61,28 @@ s32 cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm::ptr<u
 
 	if (required)
 	{
-		*required = (u32)flagBits.count();
-		for (int i = 1; i < flagBits.size(); i++)
+		*required = 0;
+		for (int i = 1; i <= flagBits.size(); i++)
 		{
 			if (!flagBits[i-1])
 				continue;
-			*required += (u32)(getCert(certPath, i).size() - 1);
+			// If we're loading cert 6 (the baltimore cert), then we need set that we're loading the 'normal' set of certs.
+			*required += (u32)(getCert(certPath, i, flagBits[BaltimoreCert-1]).size());
 		}
 	}
 	else
 	{
 		std::string final;
-		for (int i = 1; i < flagBits.size(); i++)
+		for (int i = 1; i <= flagBits.size(); i++)
 		{
 			if (!flagBits[i-1])
 				continue;
-			final.append(getCert(certPath, i));
+			// If we're loading cert 6 (the baltimore cert), then we need set that we're loading the 'normal' set of certs.
+			final.append(getCert(certPath, i, flagBits[BaltimoreCert-1]));
 		}
 
-		memset(buffer.get_ptr(), 0, size);
-		strncpy(buffer.get_ptr(), final.c_str(), size);
-		buffer.get_ptr()[size] = '\0';
+		memset(buffer.get_ptr(), '\0', size - 1);
+		memcpy(buffer.get_ptr(), final.c_str(), final.size());
 	}
 
 	return CELL_OK;

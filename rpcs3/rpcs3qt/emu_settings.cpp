@@ -12,7 +12,7 @@
 #include <dxgi1_4.h>
 #endif
 
-#if defined(_WIN32) || defined(__linux__)
+#if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKHelpers.h"
 #endif
 
@@ -143,7 +143,7 @@ Render_Creator::Render_Creator()
 	}
 #endif
 
-#if defined(WIN32) || defined(__linux__)
+#if defined(WIN32) || defined(HAVE_VULKAN)
 	// check for vulkan adapters
 	vk::context device_enum_context;
 	u32 instance_handle = device_enum_context.createInstance("RPCS3", true);

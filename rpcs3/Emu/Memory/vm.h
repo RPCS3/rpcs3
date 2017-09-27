@@ -148,13 +148,13 @@ namespace vm
 		const u64 flags; // Currently unused
 
 		// Search and map memory (don't pass alignment smaller than 4096)
-		u32 alloc(u32 size, u32 align = 4096, u32 sup = 0);
+		u32 alloc(u32 size, u32 align = 4096, const uchar* data = nullptr, u32 sup = 0);
 
 		// Try to map memory at fixed location
-		u32 falloc(u32 addr, u32 size, u32 sup = 0);
+		u32 falloc(u32 addr, u32 size, const uchar* data = nullptr, u32 sup = 0);
 
 		// Unmap memory at specified location previously returned by alloc(), return size
-		u32 dealloc(u32 addr, u32* sup_out = nullptr);
+		u32 dealloc(u32 addr, uchar* data_out = nullptr, u32* sup_out = nullptr);
 
 		// Internal
 		u32 imp_used(const vm::writer_lock&);
