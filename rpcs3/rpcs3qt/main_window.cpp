@@ -98,18 +98,14 @@ void main_window::Init()
 
 	CreateActions();
 	CreateDockWindows();
-
-	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
-
 	CreateConnects();
 
+	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
 	!m_appIcon.isNull() ? setWindowIcon(m_appIcon) : LOG_WARNING(GENERAL, "AppImage could not be loaded!");
 
 	Q_EMIT RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
-	RepaintToolBarIcons();
-	m_gameListFrame->RepaintToolBarIcons();
 	
 	if (!utils::has_ssse3())
 	{
@@ -150,11 +146,6 @@ void main_window::Init()
 void main_window::CreateThumbnailToolbar()
 {
 #ifdef _WIN32
-	m_icon_thumb_play = QIcon(":/Icons/play_blue.png");
-	m_icon_thumb_pause = QIcon(":/Icons/pause_blue.png");
-	m_icon_thumb_stop = QIcon(":/Icons/stop_blue.png");
-	m_icon_thumb_restart = QIcon(":/Icons/restart_blue.png");
-
 	m_thumb_bar = new QWinThumbnailToolBar(this);
 	m_thumb_bar->setWindow(windowHandle());
 
@@ -176,6 +167,8 @@ void main_window::CreateThumbnailToolbar()
 	m_thumb_bar->addButton(m_thumb_playPause);
 	m_thumb_bar->addButton(m_thumb_stop);
 	m_thumb_bar->addButton(m_thumb_restart);
+
+	RepaintThumbnailIcons();
 
 	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop(); });
 	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop();	Emu.Load();	});
@@ -706,6 +699,29 @@ void main_window::SaveWindowState()
 	m_debuggerFrame->SaveSettings();
 }
 
+void main_window::RepaintThumbnailIcons()
+{
+	QColor newColor = GUI::get_Label_Color("thumbnail_icon_color");
+	
+	auto icon = [&newColor](const QString& path)
+	{
+		return gui_settings::colorizedIcon(QPixmap::fromImage(gui_settings::GetOpaqueImageArea(path)), GUI::mw_tool_icon_color, newColor);
+	};
+
+#ifdef _WIN32
+	if (!m_thumb_bar) return;
+
+	m_icon_thumb_play = icon(":/Icons/play.png");
+	m_icon_thumb_pause = icon(":/Icons/pause.png");
+	m_icon_thumb_stop = icon(":/Icons/stop.png");
+	m_icon_thumb_restart = icon(":/Icons/restart.png");
+
+	m_thumb_playPause->setIcon(Emu.IsRunning() ? m_icon_thumb_pause : m_icon_thumb_play);
+	m_thumb_stop->setIcon(m_icon_thumb_stop);
+	m_thumb_restart->setIcon(m_icon_thumb_restart);
+#endif
+}
+
 void main_window::RepaintToolBarIcons()
 {
 	QColor newColor;
@@ -740,7 +756,7 @@ void main_window::RepaintToolBarIcons()
 	ui->toolbar_snap    ->setIcon(icon(":/Icons/screenshot.png"));
 	ui->toolbar_sort    ->setIcon(icon(":/Icons/sort.png"));
 	ui->toolbar_stop    ->setIcon(icon(":/Icons/stop.png"));
-	
+
 	if (Emu.IsRunning())
 	{
 		ui->toolbar_start->setIcon(m_icon_pause);
@@ -753,7 +769,7 @@ void main_window::RepaintToolBarIcons()
 	{
 		ui->toolbar_start->setIcon(m_icon_play);
 	}
-	
+
 	if (isFullScreen())
 	{
 		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
@@ -1054,10 +1070,20 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 
 void main_window::RepaintGui()
 {
-	m_gameListFrame->RepaintIcons(true);
-	m_gameListFrame->RepaintToolBarIcons();
+	if (m_gameListFrame)
+	{
+		m_gameListFrame->RepaintIcons(true);
+		m_gameListFrame->RepaintToolBarIcons();
+	}
+
+	if (m_logFrame)
+	{
+		m_logFrame->RepaintTextColors();
+	}
+
 	RepaintToolbar();
 	RepaintToolBarIcons();
+	RepaintThumbnailIcons();
 }
 
 void main_window::RepaintToolbar()
