@@ -26,7 +26,7 @@ git:
 
 before_install:
   - if [ "$CC" = "clang" ]; then
-      export CXX="clang++-4.0" CC="clang-4.0";
+      export CXX="clang++-5.0" CC="clang-5.0";
     fi;    
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
@@ -47,7 +47,7 @@ before_install:
       sudo dpkg -i libglew1.13_1.13.0-2_amd64.deb libglew-dev_1.13.0-2_amd64.deb libvulkan1_1.0.42.0+dfsg1-1ubuntu1~16.04.1_amd64.deb libvulkan-dev_1.0.42.0+dfsg1-1ubuntu1~16.04.1_amd64.deb;
     else
       brew update;
-      brew install ccache glew llvm40;
+      brew install ccache glew llvm50;
     fi;
 
 before_script:
@@ -63,7 +63,7 @@ before_script:
   - cmake .. -DCMAKE_INSTALL_PREFIX=/usr;
   - make -j 3
   - # AppImage generation
-  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang-4.0" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
+  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang-5.0" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
       export LD_LIBRARY_PATH=~/Qt/5.9.1/gcc_64/lib;
       make DESTDIR=appdir install ; find appdir/ ;
       find ../bin ;
@@ -94,7 +94,7 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-      - llvm-toolchain-trusty-4.0
+      - llvm-toolchain-trusty-5.0
       - sourceline: 'ppa:jonathonf/binutils' # We need to update binutils to a newer version to link against the ffmpeg libs on.
     packages:
       - binutils
@@ -106,9 +106,9 @@ addons:
       #- libvulkan1
       #- libvulkan-dev
       - libc6-dev
-      - llvm-4.0
-      - llvm-4.0-dev
-      - clang-4.0
+      - llvm-5.0
+      - llvm-5.0-dev
+      - clang-5.0
       - libedit-dev
       - g++-5
       - gcc-5

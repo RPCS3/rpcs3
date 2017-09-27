@@ -16,7 +16,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 	, m_module(module)
 	, m_is_be(false)
 	, m_info(info)
-	, m_pure_attr(AttributeSet::get(m_context, AttributeSet::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadNone}))
+	, m_pure_attr(AttributeList::get(m_context,AttributeList::FunctionIndex, AttrBuilder().addAttribute(Attribute::NoUnwind).addAttribute(Attribute::ReadNone)))
 {
 	// There is no weak linkage on JIT, so let's create variables with different names for each module part
 	const u32 gsuffix = m_info.name.empty() ? info.funcs[0].addr : info.funcs[0].addr - m_info.segs[0].addr;
@@ -133,7 +133,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	const u64 base = m_reloc ? m_reloc->addr : 0;
 	m_addr = info.addr - base;
 
-	m_thread = &*m_function->getArgumentList().begin();
+	m_thread = &*m_function->arg_begin();
 	m_base_loaded = m_ir->CreateLoad(m_base);
 
 	m_body = BasicBlock::Create(m_context, "__body", m_function);
