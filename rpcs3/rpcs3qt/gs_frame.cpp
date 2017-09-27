@@ -11,7 +11,6 @@
 #include <string>
 
 #include "rpcs3_version.h"
-#include "git-version.h"
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -23,7 +22,7 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 	version = version.substr(0 , version.find_last_of("-"));
 
 	//Add branch to version on frame , unless it's master.
-	if (rpcs3::get_branch() != "master")
+	if (rpcs3::get_branch() != "master" || rpcs3::get_branch() != "HEAD")
 	{
 		version = version + "-" + rpcs3::get_branch();
 	}
@@ -84,7 +83,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.IsStopped())) { Emu.Stop(); return; }
 			break;
 		case Qt::Key_R:
-			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.GetPath().empty())) { Emu.Stop(); Emu.Load(); return; }
+			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.GetBoot().empty())) { Emu.Stop(); Emu.Load(); return; }
 			break;
 		case Qt::Key_E:
 			if (keyEvent->modifiers() == Qt::ControlModifier)
@@ -134,7 +133,7 @@ void gs_frame::show()
 {
 	Emu.CallAfter([=]()
 	{
-		QWindow::show(); 
+		QWindow::show();
 		if (g_cfg.misc.start_fullscreen)
 		{
 			setVisibility(FullScreen);

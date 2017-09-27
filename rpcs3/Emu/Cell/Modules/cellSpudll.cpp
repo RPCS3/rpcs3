@@ -66,5 +66,5 @@ error_code cellSpudllHandleConfigSetDefaultValues(vm::ptr<CellSpudllHandleConfig
 DECLARE(ppu_module_manager::cellSpudll)("cellSpudll", []()
 {
 	REG_FUNC(cellSpudll, cellSpudllGetImageSize);
-	REG_FUNC(cellSpudll, cellSpudllHandleConfigSetDefaultValues).flags = MFF_PERFECT;
+	REG_FUNC(cellSpudll, cellSpudllHandleConfigSetDefaultValues).flag(MFF_PERFECT);
 });

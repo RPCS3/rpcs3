@@ -7,6 +7,7 @@
 #include "GLCommonDecompiler.h"
 #include "../GCM.h"
 
+
 std::string GLFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 {
 	return glsl::getFloatTypeNameImpl(elementCount);
@@ -14,7 +15,7 @@ std::string GLFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 
 std::string GLFragmentDecompilerThread::getFunction(FUNCTION f)
 {
-	return getFunctionImpl(f);
+	return gl::getFunctionImpl(f);
 }
 
 std::string GLFragmentDecompilerThread::saturate(const std::string & code)
@@ -29,12 +30,13 @@ std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 
 void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
-	OS << "#version 420\n";
+	OS << "#version 430\n";
 }
 
 void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 {
 	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
+	std::vector<std::string> inputs_to_declare;
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
@@ -57,7 +59,7 @@ void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 			if (var_name == "fogc")
 				var_name = "fog_c";
 
-			OS << "in " << PT.type << " " << var_name << ";\n";
+			inputs_to_declare.push_back(var_name);
 		}
 	}
 
@@ -65,13 +67,18 @@ void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 	{
 		if (m_prog.front_color_diffuse_output && m_prog.back_color_diffuse_output)
 		{
-			OS << "in vec4 front_diff_color;\n";
+			inputs_to_declare.push_back("front_diff_color");
 		}
 
 		if (m_prog.front_color_specular_output && m_prog.back_color_specular_output)
 		{
-			OS << "in vec4 front_spec_color;\n";
+			inputs_to_declare.push_back("front_spec_color");
 		}
+	}
+
+	for (auto &name: inputs_to_declare)
+	{
+		OS << "layout(location=" << gl::get_varying_register_location(name) << ") in vec4 " << name << ";\n";
 	}
 }
 
@@ -88,7 +95,7 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
-			OS << "out vec4 " << table[i].first << ";\n";
+			OS << "layout(location=" << i << ") out vec4 " << table[i].first << ";\n";
 	}
 }
 
@@ -225,7 +232,6 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		}
 	}
 
-	OS << "//FP_HASH=" << fmt::format("%llX", program_hash_util::fragment_program_hash()(m_prog)) << "\n";
 	OS << "void fs_main(" << parameters << ")\n";
 	OS << "{\n";
 

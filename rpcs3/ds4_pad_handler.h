@@ -37,6 +37,7 @@ class ds4_pad_handler final : public PadHandlerBase
 		hid_device* hidDevice{ nullptr };
 		std::string path{ "" };
 		bool btCon{ false };
+		bool hasCalibData{ false };
 		std::array<DS4CalibData, DS4CalibIndex::COUNT> calibData;
 		bool newVibrateData{ true };
 		u8 largeVibrate{ 0 };
