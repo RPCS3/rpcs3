@@ -187,7 +187,7 @@ void Emulator::Init()
 	{
 		g_tty.open(fs::get_config_dir() + "TTY.log", fs::rewrite + fs::append);
 	}
-
+   
 	idm::init();
 	fxm::init();
 
@@ -220,7 +220,7 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd1 + "game/");
 	fs::create_path(dev_hdd1);
 	fs::create_path(dev_usb);
-
+   	
 #ifdef WITH_GDB_DEBUGGER
 	fxm::make<GDBDebugServer>();
 #endif
@@ -287,7 +287,7 @@ void Emulator::Load(bool add_only)
 		Init();
 
 		// Load game list (maps ABCD12345 IDs to /dev_bdvd/ locations) 
-		YAML::Node games = YAML::Load(fs::file{ fs::get_config_dir() + "/games.yml", fs::read + fs::create }.to_string());
+		YAML::Node games = YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string());
 
 		if (!games.IsMap())
 		{
@@ -301,7 +301,7 @@ void Emulator::Load(bool add_only)
 		// Load PARAM.SFO (TODO)
 		const auto _psf = psf::load_object([&]
 		{
-			if (fs::file sfov{ elf_dir + "/sce_sys/param.sfo" })
+			if (fs::file sfov{elf_dir + "/sce_sys/param.sfo"})
 			{
 				return sfov;
 			}
@@ -322,21 +322,21 @@ void Emulator::Load(bool add_only)
 		LOG_NOTICE(LOADER, "Cache: %s", GetCachePath());
 
 		// Load custom config-0
-		if (fs::file cfg_file{ m_cache_path + "/config.yml" })
+		if (fs::file cfg_file{m_cache_path + "/config.yml"})
 		{
 			LOG_NOTICE(LOADER, "Applying custom config: %s/config.yml", m_cache_path);
 			g_cfg.from_string(cfg_file.to_string());
 		}
 
 		// Load custom config-1
-		if (fs::file cfg_file{ fs::get_config_dir() + "data/" + m_title_id + "/config.yml" })
+		if (fs::file cfg_file{fs::get_config_dir() + "data/" + m_title_id + "/config.yml"})
 		{
 			LOG_NOTICE(LOADER, "Applying custom config: data/%s/config.yml", m_title_id);
 			g_cfg.from_string(cfg_file.to_string());
 		}
 
 		// Load custom config-2
-		if (fs::file cfg_file{ m_path + ".yml" })
+		if (fs::file cfg_file{m_path + ".yml"})
 		{
 			LOG_NOTICE(LOADER, "Applying custom config: %s.yml", m_path);
 			g_cfg.from_string(cfg_file.to_string());
@@ -423,7 +423,7 @@ void Emulator::Load(bool add_only)
 				return;
 			}
 
-			const std::string bdvd_title_id = psf::get_string(psf::load_object(fs::file{ vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO") }), "TITLE_ID");
+			const std::string bdvd_title_id = psf::get_string(psf::load_object(fs::file{vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")}), "TITLE_ID");
 
 			if (bdvd_title_id != m_title_id)
 			{
@@ -492,7 +492,7 @@ void Emulator::Load(bool add_only)
 				// Decrypt SELF
 				elf_file = decrypt_self(std::move(elf_file));
 
-				if (fs::file elf_out{ decrypted_path, fs::rewrite })
+				if (fs::file elf_out{decrypted_path, fs::rewrite})
 				{
 					elf_out.write(elf_file.to_vector<u8>());
 					elf_out.close();
@@ -616,7 +616,7 @@ void Emulator::Run()
 	if (!IsReady())
 	{
 		Load();
-		if (!IsReady()) return;
+		if(!IsReady()) return;
 	}
 
 	if (IsRunning()) Stop();
@@ -627,7 +627,7 @@ void Emulator::Run()
 		return;
 	}
 
-
+   
 	GetCallbacks().on_run();
 
 	m_pause_start_time = 0;
