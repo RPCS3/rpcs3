@@ -246,19 +246,6 @@ void main_window::InstallDiscExtra(const std::string path)
 			}
 		}
 
-		//Tropdir check
-		const std::string tropdir_disk_dir = path + "/PS3_GAME/TROPDIR";
-		if (fs::is_dir(tropdir_disk_dir))
-		{
-			// Documentation: http://www.psdevwiki.com/ps3/Trophy_files
-			// Install any files to home/userid/trophy/
-			// It NPCOMMID already on disc , rename to _BU_ + NPCOMMID. Old backups are deleted if they exist (Only 2 can exist at one time)
-			// Copy folder inside tropdir to dev_hdd0/home/<user_id>/trohpy/NPCOMMID (It says install so not 100% sure)
-			// Update TROPSYS.dat (Don't know how , might have to read it , or check if there's a function)
-
-			// Trophy.prp is easily readable and has attrbutes. XML? Could maybe write if it exists.
-		}
-
 		//Pkgdir check
 		const std::string pkgdir_disk_dir = path + "/PS3_GAME/PKGDIR";
 		if (fs::is_dir(pkgdir_disk_dir))
