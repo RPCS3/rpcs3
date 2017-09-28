@@ -1078,7 +1078,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QGroupBox" name="groupBox_3">
+             <widget class="QGroupBox" name="gb_viewport">
               <property name="title">
                <string>Viewport</string>
               </property>
