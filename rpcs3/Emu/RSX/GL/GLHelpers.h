@@ -54,6 +54,7 @@ namespace gl
 #endif
 
 	class capabilities;
+	class blitter;
 
 	void enable_debugging();
 	capabilities& get_driver_caps();

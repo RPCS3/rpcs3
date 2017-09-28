@@ -23,7 +23,61 @@ class GLGSRender;
 
 namespace gl
 {
+	class blitter;
+
 	extern GLenum get_sized_internal_format(u32);
+	extern blitter *g_hw_blitter;
+
+	class blitter
+	{
+		fbo blit_src;
+		fbo blit_dst;
+
+	public:
+
+		void init()
+		{
+			blit_src.create();
+			blit_dst.create();
+		}
+
+		void destroy()
+		{
+			blit_dst.remove();
+			blit_src.remove();
+		}
+
+		u32 scale_image(u32 src, u32 dst, const areai src_rect, const areai dst_rect, bool linear_interpolation, bool is_depth_copy)
+		{
+			s32 old_fbo = 0;
+			glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
+
+			u32 dst_tex = dst;
+			filter interp = linear_interpolation ? filter::linear : filter::nearest;
+
+			GLenum attachment = is_depth_copy ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0;
+
+			blit_src.bind();
+			glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, src, 0);
+			blit_src.check();
+
+			blit_dst.bind();
+			glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, dst_tex, 0);
+			blit_dst.check();
+
+			GLboolean scissor_test_enabled = glIsEnabled(GL_SCISSOR_TEST);
+			if (scissor_test_enabled)
+				glDisable(GL_SCISSOR_TEST);
+
+			blit_src.blit(blit_dst, src_rect, dst_rect, is_depth_copy ? buffers::depth : buffers::color, interp);
+
+			if (scissor_test_enabled)
+				glEnable(GL_SCISSOR_TEST);
+
+			glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
+			return dst_tex;
+		}
+	};
 
 	class cached_texture_section : public rsx::cached_texture_section
 	{
@@ -33,6 +87,7 @@ namespace gl
 		u32 pbo_size = 0;
 
 		u32 vram_texture = 0;
+		u32 scaled_texture = 0;
 
 		bool copied = false;
 		bool flushed = false;
@@ -211,13 +266,40 @@ namespace gl
 				return;
 			}
 
+			if (real_pitch != rsx_pitch || rsx::get_resolution_scale_percent() != 100)
+			{
+				const u32 real_width = (rsx_pitch * width) / real_pitch;
+				if (scaled_texture == 0)
+				{
+					GLenum ifmt = 0;
+					glBindTexture(GL_TEXTURE_2D, vram_texture);
+					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, (GLint*)&ifmt);
+
+					//Get expected texture dimensions..
+					glGenTextures(1, &scaled_texture);
+					glBindTexture(GL_TEXTURE_2D, scaled_texture);
+					glTexStorage2D(GL_TEXTURE_2D, 1, ifmt, real_width, height);
+				}
+
+				areai src_area = { 0, 0, 0, 0 };
+				const areai dst_area = {0, 0, static_cast<s32>(real_width), height};
+
+				glBindTexture(GL_TEXTURE_2D, vram_texture);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &src_area.x2);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &src_area.y2);
+
+				g_hw_blitter->scale_image(vram_texture, scaled_texture, src_area, dst_area, true, is_depth);
+			}
+
 			glPixelStorei(GL_PACK_SWAP_BYTES, pack_unpack_swap_bytes);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 
+			const GLuint target_texture = (scaled_texture == 0) ? vram_texture : scaled_texture;
+
 			if (get_driver_caps().EXT_dsa_supported)
-				glGetTextureImageEXT(vram_texture, GL_TEXTURE_2D, 0, (GLenum)format, (GLenum)type, nullptr);
+				glGetTextureImageEXT(target_texture, GL_TEXTURE_2D, 0, (GLenum)format, (GLenum)type, nullptr);
 			else
-				glGetTextureImage(vram_texture, 0, (GLenum)format, (GLenum)type, pbo_size, nullptr);
+				glGetTextureImage(target_texture, 0, (GLenum)format, (GLenum)type, pbo_size, nullptr);
 
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
@@ -269,7 +351,7 @@ namespace gl
 			//throw if map failed since we'll segfault anyway
 			verify(HERE), data != nullptr;
 
-			if (real_pitch >= rsx_pitch)
+			if (real_pitch >= rsx_pitch || scaled_texture != 0)
 			{
 				memcpy(dst, data, cpu_address_range);
 			}
@@ -310,6 +392,12 @@ namespace gl
 				glDeleteBuffers(1, &pbo_id);
 				pbo_id = 0;
 				pbo_size = 0;
+
+				if (scaled_texture)
+				{
+					glDeleteTextures(1, &scaled_texture);
+					scaled_texture = 0;
+				}
 			}
 
 			if (!m_fence.is_empty())
@@ -383,59 +471,6 @@ namespace gl
 		
 	class texture_cache : public rsx::texture_cache<void*, cached_texture_section, u32, u32, gl::texture, gl::texture::format>
 	{
-	private:
-	
-		class blitter
-		{
-			fbo blit_src;
-			fbo blit_dst;
-
-		public:
-
-			void init()
-			{
-				blit_src.create();
-				blit_dst.create();
-			}
-
-			void destroy()
-			{
-				blit_dst.remove();
-				blit_src.remove();
-			}
-
-			u32 scale_image(u32 src, u32 dst, const areai src_rect, const areai dst_rect, bool linear_interpolation, bool is_depth_copy)
-			{
-				s32 old_fbo = 0;
-				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
-				
-				u32 dst_tex = dst;
-				filter interp = linear_interpolation ? filter::linear : filter::nearest;
-
-				GLenum attachment = is_depth_copy ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0;
-
-				blit_src.bind();
-				glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, src, 0);
-				blit_src.check();
-
-				blit_dst.bind();
-				glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, dst_tex, 0);
-				blit_dst.check();
-
-				GLboolean scissor_test_enabled = glIsEnabled(GL_SCISSOR_TEST);
-				if (scissor_test_enabled)
-					glDisable(GL_SCISSOR_TEST);
-
-				blit_src.blit(blit_dst, src_rect, dst_rect, is_depth_copy ? buffers::depth : buffers::color, interp);
-
-				if (scissor_test_enabled)
-					glEnable(GL_SCISSOR_TEST);
-
-				glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
-				return dst_tex;
-			}
-		};
-
 	private:
 
 		blitter m_hw_blitter;
@@ -633,14 +668,16 @@ namespace gl
 		void initialize()
 		{
 			m_hw_blitter.init();
+			g_hw_blitter = &m_hw_blitter;
 		}
 
 		void destroy() override
 		{
 			clear();
+			g_hw_blitter = nullptr;
 			m_hw_blitter.destroy();
 		}
-		
+
 		bool is_depth_texture(const u32 rsx_address, const u32 rsx_size) override
 		{
 			reader_lock lock(m_cache_mutex);
