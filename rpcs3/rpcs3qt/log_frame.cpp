@@ -110,7 +110,7 @@ log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
 	m_log->setContextMenuPolicy(Qt::CustomContextMenu);
 
 	m_tty = new QTextEdit(tabWidget);
-	m_log->setObjectName("tty_frame");
+	m_tty->setObjectName("tty_frame");
 	m_tty->setReadOnly(true);
 
 	tabWidget->addTab(m_log, tr("Log"));
@@ -259,6 +259,7 @@ void log_frame::LoadSettings()
 	m_stackAct->setChecked(m_stack_log);
 }
 
+//TODO: repaint old text with new colors
 void log_frame::RepaintTextColors()
 {
 	// Get text color. Do this once to prevent possible slowdown
@@ -271,7 +272,10 @@ void log_frame::RepaintTextColors()
 	m_color.append(GUI::get_Label_Color("log_level_warning"));
 	m_color.append(GUI::get_Label_Color("log_level_notice"));
 	m_color.append(GUI::get_Label_Color("log_level_trace"));
+
 	m_color_stack = GUI::get_Label_Color("log_stack");
+
+	m_tty->setTextColor(GUI::get_Label_Color("tty_text"));
 }
 
 void log_frame::UpdateUI()
@@ -325,8 +329,6 @@ void log_frame::UpdateUI()
 		// Confirm log level
 		if (packet->sev <= s_gui_listener.enabled)
 		{
-			// Get text color
-			QColor color;
 			QString text;
 			switch (packet->sev)
 			{
