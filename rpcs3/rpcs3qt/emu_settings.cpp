@@ -191,6 +191,7 @@ void emu_settings::LoadSettings(const std::string& path)
 	fs::create_path(fs::get_config_dir() + path);
 
 	// Load default config
+	m_defaultSettings = YAML::Load(g_cfg_defaults);
 	m_currentSettings = YAML::Load(g_cfg_defaults);
 
 	// Add global config
@@ -259,9 +260,6 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 
 void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 {
-	cfg_location loc = SettingsLoc[type];
-	std::string name = loc[loc.size() - 1];
-
 	std::string currSet = GetSetting(type);
 	if (currSet == "true")
 	{
@@ -279,6 +277,39 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 	});
 }
 
+void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type, bool is_ranged)
+{
+	QString selected = qstr(GetSetting(type));
+
+	if (is_ranged)
+	{
+		QStringList range = GetSettingOptions(type);
+		int min = range.first().toInt();
+		int max = range.last().toInt();
+		int val = selected.toInt();
+
+		if (val < min || val > max)
+		{
+			LOG_ERROR(GENERAL, "Passed in an invalid setting for creating enhanced slider");
+			val = min;
+		}
+
+		slider->setMinimum(min);
+		slider->setMaximum(max);
+		slider->setValue(val);
+	}
+	else
+	{
+		//TODO ?
+		LOG_ERROR(GENERAL, "TODO: implement unranged enhanced slider");
+	}
+
+	connect(slider, &QSlider::valueChanged, [=](int value)
+	{
+		SetSetting(type, sstr(slider->value()));
+	});
+}
+
 std::vector<std::string> emu_settings::GetLoadedLibraries()
 {
 	return m_currentSettings["Core"]["Load libraries"].as<std::vector<std::string>, std::initializer_list<std::string>>({});
@@ -292,6 +323,17 @@ void emu_settings::SaveSelectedLibraries(const std::vector<std::string>& libs)
 QStringList emu_settings::GetSettingOptions(SettingsType type) const
 {
 	return getOptions(const_cast<cfg_location&&>(SettingsLoc[type]));
+}
+
+std::string emu_settings::GetSettingName(SettingsType type) const
+{
+	cfg_location loc = SettingsLoc[type];
+	return loc[loc.size() - 1];
+}
+
+std::string emu_settings::GetSettingDefault(SettingsType type) const
+{
+	return cfg_adapter::get_node(m_defaultSettings, SettingsLoc[type]).Scalar();
 }
 
 std::string emu_settings::GetSetting(SettingsType type) const
