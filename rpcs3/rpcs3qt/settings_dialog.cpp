@@ -57,6 +57,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	QJsonObject json_gpu_cbo  = json_gpu.value("comboboxes").toObject();
 	QJsonObject json_gpu_main = json_gpu.value("main").toObject();
 	QJsonObject json_gpu_deb  = json_gpu.value("debug").toObject();
+	QJsonObject json_gpu_slid = json_gpu.value("sliders").toObject();
 
 	QJsonObject json_audio = json_obj.value("audio").toObject();
 	QJsonObject json_input = json_obj.value("input").toObject();
@@ -365,12 +366,38 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
 	ui->resBox->setToolTip(json_gpu_cbo["resBox"].toString());
+	ui->resBox->setItemText(ui->resBox->findData("1280x720"), "1280x720 (Recommended)");
 
 	xemu_settings->EnhanceComboBox(ui->aspectBox, emu_settings::AspectRatio);
 	ui->aspectBox->setToolTip(json_gpu_cbo["aspectBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->frameLimitBox, emu_settings::FrameLimit);
 	ui->frameLimitBox->setToolTip(json_gpu_cbo["frameLimitBox"].toString());
+
+	xemu_settings->EnhanceComboBox(ui->anisotropicFilterOverride, emu_settings::AnisotropicFilterOverride, true);
+	ui->anisotropicFilterOverride->setToolTip(json_gpu_cbo["anisotropicFilterOverride"].toString());
+	// only allow values 0,2,4,8,16
+	for (int i = ui->anisotropicFilterOverride->count() - 1; i >= 0; i--)
+	{
+		switch (int val = ui->anisotropicFilterOverride->itemData(i).toInt())
+		{
+		case 0:
+			ui->anisotropicFilterOverride->setItemText(i, tr("Automatic"));
+			break;
+		case 1:
+			ui->anisotropicFilterOverride->setItemText(i, tr("Disabled"));
+			break;
+		case 2:
+		case 4:
+		case 8:
+		case 16:
+			ui->anisotropicFilterOverride->setItemText(i, tr("%1x").arg(val));
+			break;
+		default:
+			ui->anisotropicFilterOverride->removeItem(i);
+			break;
+		}
+	}
 
 	// Checkboxes: main options
 	xemu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings::WriteColorBuffers);
@@ -390,6 +417,60 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
 	ui->scrictModeRendering->setToolTip(json_gpu_main["scrictModeRendering"].toString());
+
+	// Sliders
+	static const auto& minmaxLabelWidth = [](const QString& sizer)
+	{
+		return QLabel(sizer).sizeHint().width();
+	};
+
+	xemu_settings->EnhanceSlider(ui->resolutionScale, emu_settings::ResolutionScale, true);
+	ui->gb_resolutionScale->setToolTip(json_gpu_slid["resolutionScale"].toString());
+	// rename label texts to fit current state of Resolution Scale
+	int resolutionScaleDef = stoi(xemu_settings->GetSettingDefault(emu_settings::ResolutionScale));
+	auto ScaledResolution = [resolutionScaleDef](int percentage)
+	{
+		if (percentage == resolutionScaleDef) return QString("100% (Automatic)");
+		return QString("%1% (%2x%3)").arg(percentage).arg(1280 * percentage / 100).arg(720 * percentage / 100);
+	};
+	ui->resolutionScale->setPageStep(50);
+	ui->resolutionScaleMin->setText(QString::number(ui->resolutionScale->minimum()));
+	ui->resolutionScaleMin->setFixedWidth(minmaxLabelWidth("00"));
+	ui->resolutionScaleMax->setText(QString::number(ui->resolutionScale->maximum()));
+	ui->resolutionScaleMax->setFixedWidth(minmaxLabelWidth("0000"));
+	ui->resolutionScaleVal->setText(ScaledResolution(ui->resolutionScale->value()));
+	connect(ui->resolutionScale, &QSlider::valueChanged, [=](int value)
+	{
+		ui->resolutionScaleVal->setText(ScaledResolution(value));
+	});
+	connect(ui->resolutionScaleReset, &QAbstractButton::clicked, [=]()
+	{
+		ui->resolutionScale->setValue(resolutionScaleDef);
+	});
+
+	xemu_settings->EnhanceSlider(ui->minimumScalableDimension, emu_settings::MinimumScalableDimension, true);
+	ui->gb_minimumScalableDimension->setToolTip(json_gpu_slid["minimumScalableDimension"].toString());
+	// rename label texts to fit current state of Minimum Scalable Dimension
+	int minimumScalableDimensionDef = stoi(xemu_settings->GetSettingDefault(emu_settings::MinimumScalableDimension));
+	auto MinScalableDimension = [minimumScalableDimensionDef](int dim)
+	{
+		if (dim == minimumScalableDimensionDef) return QString("%1x%1 (Default)").arg(dim);
+		return QString("%1x%1").arg(dim);
+	};
+	ui->minimumScalableDimension->setPageStep(64);
+	ui->minimumScalableDimensionMin->setText(QString::number(ui->minimumScalableDimension->minimum()));
+	ui->minimumScalableDimensionMin->setFixedWidth(minmaxLabelWidth("00"));
+	ui->minimumScalableDimensionMax->setText(QString::number(ui->minimumScalableDimension->maximum()));
+	ui->minimumScalableDimensionMax->setFixedWidth(minmaxLabelWidth("0000"));
+	ui->minimumScalableDimensionVal->setText(MinScalableDimension(ui->minimumScalableDimension->value()));
+	connect(ui->minimumScalableDimension, &QSlider::valueChanged, [=](int value)
+	{
+		ui->minimumScalableDimensionVal->setText(MinScalableDimension(value));
+	});
+	connect(ui->minimumScalableDimensionReset, &QAbstractButton::clicked, [=]()
+	{
+		ui->minimumScalableDimension->setValue(minimumScalableDimensionDef);
+	});
 
 	// Remove renderers from the renderer Combobox if not supported
 	for (const auto& renderer : render_creator.renderers)
