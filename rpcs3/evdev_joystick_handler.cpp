@@ -210,7 +210,7 @@ int evdev_joystick_handler::scale_axis(int axis, int value)
     }
     else
     {
-        return value;
+        return (static_cast<float>(Deadzone((float)value)));
     }
 }
 
