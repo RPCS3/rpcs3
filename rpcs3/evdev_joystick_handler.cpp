@@ -168,6 +168,30 @@ void evdev_joystick_handler::Close()
     }
 }
 
+inline int Deadzone(f32 input)
+{
+	int	deadzone=g_evdev_joystick_config.deadzone;
+	float deadzone_a=128.0/(128.0-float(deadzone));
+	float deadzone_b=255.0*(1.0-deadzone_a);
+	if (input>=128-deadzone&&input<=128+deadzone)
+	{
+		input=128;
+	}
+	else
+	{
+		if (input>128+deadzone)
+		{
+			input=deadzone_a*(float)input+deadzone_b;
+		}
+		if (input<128-deadzone)
+		{
+			input=(128.0/(128.0-(float)deadzone))*input;
+		}
+	}
+    return static_cast<int>(input);
+}
+
+
 int evdev_joystick_handler::scale_axis(int axis, int value)
 {
     auto range = axis_ranges[axis];
@@ -182,7 +206,7 @@ int evdev_joystick_handler::scale_axis(int axis, int value)
             range.first = 0;
         }
 
-        return (static_cast<float>(value - range.first) / range.second) * 255;
+		return (static_cast<float>(Deadzone((((float)value - (float)range.first) / (float)range.second) * 255)));
     }
     else
     {
