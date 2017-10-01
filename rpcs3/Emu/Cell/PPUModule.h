@@ -42,6 +42,7 @@ struct ppu_static_function
 	u32 flags;
 	const char* type;
 	std::vector<const char*> args; // Arg names
+	const u32* export_addr;
 
 	ppu_static_function& flag(ppu_static_module_flags value)
 	{
@@ -61,6 +62,7 @@ struct ppu_static_variable
 	const char* type;
 	u32 flags;
 	u32 addr;
+	const u32* export_addr;
 
 	ppu_static_variable& flag(ppu_static_module_flags value)
 	{
@@ -109,10 +111,17 @@ class ppu_module_manager final
 
 	static ppu_static_variable& access_static_variable(const char* module, u32 vnid);
 
+	// Global variable for each registered function
+	template <typename T, T Func>
+	struct registered
+	{
+		static ppu_static_function* info;
+	};
+
 public:
 	static const ppu_static_module* get_module(const std::string& name);
 
-	template<typename T, T Func>
+	template <typename T, T Func>
 	static auto& register_static_function(const char* module, const char* name, ppu_function_t func, u32 fnid)
 	{
 		auto& info = access_static_function(module, fnid);
@@ -122,10 +131,18 @@ public:
 		info.flags = 0;
 		info.type  = typeid(T).name();
 
+		registered<T, Func>::info = &info;
+
 		return info;
 	}
 
-	template<typename T, T* Var>
+	template <typename T, T Func>
+	static auto& find_static_function()
+	{
+		return *registered<T, Func>::info;
+	}
+
+	template <typename T, T* Var>
 	static auto& register_static_variable(const char* module, const char* name, u32 vnid)
 	{
 		static_assert(std::is_same<u32, std::decay_t<typename T::addr_type>>::value, "Static variable registration: vm::gvar<T> expected");
@@ -249,14 +266,18 @@ public:
 	static const ppu_static_module sys_lv2dbg;
 };
 
+template<typename T, T Func>
+ppu_static_function* ppu_module_manager::registered<T, Func>::info = nullptr;
+
 // Call specified function directly if LLE is not available, call LLE equivalent in callback style otherwise
 template<typename T, T Func, typename... Args, typename RT = std::result_of_t<T(Args...)>>
-inline RT ppu_execute_function_or_callback(const char* name, ppu_thread& ppu, Args&&... args)
+inline RT ppu_execute_function_or_callback(ppu_thread& ppu, Args&&... args)
 {
-	return Func(std::forward<Args>(args)...);
+	vm::ps3::ptr<RT(Args...)> func = vm::cast(*ppu_module_manager::find_static_function<T, Func>().export_addr);
+	return func(ppu, std::forward<Args>(args)...);
 }
 
-#define CALL_FUNC(ppu, func, ...) ppu_execute_function_or_callback<decltype(&func), &func>(#func, ppu, __VA_ARGS__)
+#define CALL_FUNC(ppu, func, ...) ppu_execute_function_or_callback<decltype(&func), &func>(ppu, __VA_ARGS__)
 
 #define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<decltype(&func), &func>(#module, ppu_select_name(#func, nid), BIND_FUNC(func, ppu.cia = (u32)ppu.lr & ~3), ppu_generate_id(nid))
 
