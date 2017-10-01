@@ -3,6 +3,8 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Cell/lv2/sys_ppu_thread.h"
+#include "sysPrxForUser.h"
 
 extern "C"
 {
@@ -74,10 +76,13 @@ struct vdec_thread : ppu_thread
 	u32 frc_set{}; // Frame Rate Override
 	u64 next_pts{};
 	u64 next_dts{};
+	u64 ppu_tid{};
 
 	std::mutex mutex;
 	std::queue<vdec_frame> out;
 	u32 max_frames = 60;
+
+	atomic_t<u32> au_count{0};
 
 	vdec_thread(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg, u32 prio, u32 stack)
 		: ppu_thread("HLE Video Decoder", prio, stack)
@@ -351,6 +356,11 @@ struct vdec_thread : ppu_thread
 					cb_func(*this, id, vcmd == vdec_cmd::decode ? CELL_VDEC_MSG_TYPE_AUDONE : CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, cb_arg);
 					lv2_obj::sleep(*this);
 				}
+
+				if (vcmd == vdec_cmd::decode)
+				{
+					au_count--;
+				}
 				
 				while (std::lock_guard<std::mutex>{mutex}, max_frames && out.size() > max_frames)
 				{
@@ -397,7 +407,7 @@ u32 vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0 */, vm::ptr<C
 	attr->decoderVerLower = 0x280000; // from dmux
 	attr->decoderVerUpper = 0x260000;
 	attr->memSize = 4 * 1024 * 1024; // 4 MB
-	attr->cmdDepth = 16;
+	attr->cmdDepth = 4;
 	return CELL_OK;
 }
 
@@ -415,7 +425,7 @@ s32 cellVdecQueryAttrEx(vm::cptr<CellVdecTypeEx> type, vm::ptr<CellVdecAttr> att
 	return vdecQueryAttr(type->codecType, type->profileLevel, type->codecSpecificInfo_addr, attr);
 }
 
-s32 cellVdecOpen(vm::cptr<CellVdecType> type, vm::cptr<CellVdecResource> res, vm::cptr<CellVdecCb> cb, vm::ptr<u32> handle)
+s32 cellVdecOpen(ppu_thread& ppu, vm::cptr<CellVdecType> type, vm::cptr<CellVdecResource> res, vm::cptr<CellVdecCb> cb, vm::ptr<u32> handle)
 {
 	cellVdec.warning("cellVdecOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
@@ -425,12 +435,17 @@ s32 cellVdecOpen(vm::cptr<CellVdecType> type, vm::cptr<CellVdecResource> res, vm
 	// Hack: store thread id (normally it should be pointer)
 	*handle = vdec->id;
 
+	vm::var<u64> _tid;
+	CALL_FUNC(ppu, sys_ppu_thread_create, ppu, +_tid, 1148, 0, 900, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, vm::null);
+	vdec->gpr[13] = idm::get<ppu_thread>(*_tid)->gpr[13];
+	vdec->ppu_tid = *_tid;
+
 	vdec->run();
 
 	return CELL_OK;
 }
 
-s32 cellVdecOpenEx(vm::cptr<CellVdecTypeEx> type, vm::cptr<CellVdecResourceEx> res, vm::cptr<CellVdecCb> cb, vm::ptr<u32> handle)
+s32 cellVdecOpenEx(ppu_thread& ppu, vm::cptr<CellVdecTypeEx> type, vm::cptr<CellVdecResourceEx> res, vm::cptr<CellVdecCb> cb, vm::ptr<u32> handle)
 {
 	cellVdec.warning("cellVdecOpenEx(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
@@ -439,6 +454,11 @@ s32 cellVdecOpenEx(vm::cptr<CellVdecTypeEx> type, vm::cptr<CellVdecResourceEx> r
 
 	// Hack: store thread id (normally it should be pointer)
 	*handle = vdec->id;
+
+	vm::var<u64> _tid;
+	CALL_FUNC(ppu, sys_ppu_thread_create, ppu, +_tid, 1148, 0, 900, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, vm::null);
+	vdec->gpr[13] = idm::get<ppu_thread>(*_tid)->gpr[13];
+	vdec->ppu_tid = *_tid;
 
 	vdec->run();
 
@@ -467,6 +487,8 @@ s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 	vdec->notify();
 	vdec->join();
 	idm::remove<ppu_thread>(handle);
+
+	CALL_FUNC(ppu, sys_interrupt_thread_disestablish, ppu, vdec->ppu_tid);
 	return CELL_OK;
 }
 
@@ -511,6 +533,11 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInf
 	if (mode > CELL_VDEC_DEC_MODE_PB_SKIP || !vdec)
 	{
 		return CELL_VDEC_ERROR_ARG;
+	}
+
+	if (vdec->au_count.fetch_op([](u32& c) { if (c < 4) c++; }) >= 4)
+	{
+		return CELL_VDEC_ERROR_BUSY;
 	}
 
 	// TODO: check info
