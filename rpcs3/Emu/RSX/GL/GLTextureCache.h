@@ -71,6 +71,12 @@ namespace gl
 
 			blit_src.blit(blit_dst, src_rect, dst_rect, is_depth_copy ? buffers::depth : buffers::color, interp);
 
+			blit_src.bind();
+			glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
+
+			blit_dst.bind();
+			glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
+
 			if (scissor_test_enabled)
 				glEnable(GL_SCISSOR_TEST);
 
@@ -173,7 +179,8 @@ namespace gl
 
 			glGenBuffers(1, &pbo_id);
 
-			const u32 buffer_size = align(cpu_address_range, 4096);
+			const u32 real_buffer_size = (u32)(rsx::get_resolution_scale() * rsx::get_resolution_scale() * cpu_address_range);
+			const u32 buffer_size = align(real_buffer_size, 4096);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 			glBufferStorage(GL_PIXEL_PACK_BUFFER, buffer_size, nullptr, GL_MAP_READ_BIT);
 
@@ -195,6 +202,7 @@ namespace gl
 			is_depth = false;
 
 			vram_texture = 0;
+			scaled_texture = 0;
 		}
 		
 		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, void*,
@@ -266,35 +274,60 @@ namespace gl
 				return;
 			}
 
-			if (real_pitch != rsx_pitch || rsx::get_resolution_scale_percent() != 100)
+			u32 target_texture = vram_texture;
+			if (0)//real_pitch != rsx_pitch || rsx::get_resolution_scale_percent() != 100)
 			{
+				//Disabled - doesnt work properly yet
 				const u32 real_width = (rsx_pitch * width) / real_pitch;
-				if (scaled_texture == 0)
-				{
-					GLenum ifmt = 0;
-					glBindTexture(GL_TEXTURE_2D, vram_texture);
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, (GLint*)&ifmt);
-
-					//Get expected texture dimensions..
-					glGenTextures(1, &scaled_texture);
-					glBindTexture(GL_TEXTURE_2D, scaled_texture);
-					glTexStorage2D(GL_TEXTURE_2D, 1, ifmt, real_width, height);
-				}
+				const u32 real_height = cpu_address_range / rsx_pitch;
 
 				areai src_area = { 0, 0, 0, 0 };
-				const areai dst_area = {0, 0, static_cast<s32>(real_width), height};
+				const areai dst_area = { 0, 0, (s32)real_width, (s32)real_height };
 
+				GLenum ifmt = 0;
 				glBindTexture(GL_TEXTURE_2D, vram_texture);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, (GLint*)&ifmt);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &src_area.x2);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &src_area.y2);
 
-				g_hw_blitter->scale_image(vram_texture, scaled_texture, src_area, dst_area, true, is_depth);
+				if (src_area.x2 != dst_area.x2 || src_area.y2 != dst_area.y2)
+				{
+					if (scaled_texture != 0)
+					{
+						int sw, sh, fmt;
+						glBindTexture(GL_TEXTURE_2D, scaled_texture);
+						glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sw);
+						glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sh);
+						glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &fmt);
+
+						if ((u32)sw != real_width || (u32)sh != real_height || (GLenum)fmt != ifmt)
+						{
+							LOG_ERROR(RSX, "Incompatible scaling texture found. Deleting...");
+							glDeleteTextures(1, &scaled_texture);
+							scaled_texture = 0;
+						}
+					}
+
+					if (scaled_texture == 0)
+					{
+						glGenTextures(1, &scaled_texture);
+						glBindTexture(GL_TEXTURE_2D, scaled_texture);
+						glTexStorage2D(GL_TEXTURE_2D, 1, ifmt, real_width, real_height);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+					}
+
+					bool linear_interp = false; //TODO: Make optional or detect full sized sources
+					g_hw_blitter->scale_image(vram_texture, scaled_texture, src_area, dst_area, linear_interp, is_depth);
+					target_texture = scaled_texture;
+				}
 			}
 
 			glPixelStorei(GL_PACK_SWAP_BYTES, pack_unpack_swap_bytes);
+			glPixelStorei(GL_PACK_ALIGNMENT, 1);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
-
-			const GLuint target_texture = (scaled_texture == 0) ? vram_texture : scaled_texture;
 
 			if (get_driver_caps().EXT_dsa_supported)
 				glGetTextureImageEXT(target_texture, GL_TEXTURE_2D, 0, (GLenum)format, (GLenum)type, nullptr);
@@ -535,6 +568,8 @@ namespace gl
 			glTexStorage2D(GL_TEXTURE_2D, 1, sized_internal_fmt, width, height);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
 			//Empty GL_ERROR
 			glGetError();

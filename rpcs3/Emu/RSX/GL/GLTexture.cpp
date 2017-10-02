@@ -350,7 +350,6 @@ namespace gl
 
 		if (dim == rsx::texture_dimension_extended::texture_dimension_1d)
 		{
-			glTexStorage1D(GL_TEXTURE_1D, mipmap_count, get_sized_internal_format(format), width);
 			if (!is_compressed_format(format))
 			{
 				for (const rsx_subresource_layout &layout : input_layouts)
