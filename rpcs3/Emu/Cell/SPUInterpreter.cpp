@@ -772,7 +772,32 @@ void spu_interpreter_fast::FS(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter_fast::FM(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vf = _mm_mul_ps(spu.gpr[op.ra].vf, spu.gpr[op.rb].vf);
+	const auto zero = _mm_set1_ps(0.f);
+	const auto sign_bits = _mm_castsi128_ps(_mm_set1_epi32(0x80000000));
+	const auto all_exp_bits = _mm_castsi128_ps(_mm_set1_epi32(0x7f800000));
+	const auto all_mag_bits = _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff));
+
+	//check denormals
+	const auto denorm_check_a = _mm_cmpeq_ps(zero, _mm_and_ps(all_exp_bits, spu.gpr[op.ra].vf));
+	const auto denorm_check_b = _mm_cmpeq_ps(zero, _mm_and_ps(all_exp_bits, spu.gpr[op.rb].vf));
+	const auto denorm_operand_mask = _mm_or_ps(denorm_check_a, denorm_check_b);
+
+	//compute result with flushed denormal inputs
+	const auto primary_result = _mm_mul_ps(spu.gpr[op.ra].vf, spu.gpr[op.rb].vf);
+	const auto denom_result_mask = _mm_cmpeq_ps(zero, _mm_and_ps(all_exp_bits, primary_result));
+	const auto flushed_result = _mm_andnot_ps(_mm_or_ps(denom_result_mask, denorm_operand_mask), primary_result);
+
+	//check for extended
+	const auto nan_check = _mm_cmpunord_ps(primary_result, zero);
+	const auto sign_mask = _mm_xor_ps(_mm_and_ps((__m128&)sign_bits, spu.gpr[op.ra].vf), _mm_and_ps((__m128&)sign_bits, spu.gpr[op.rb].vf));
+	const auto extended_result = _mm_or_ps(sign_mask, all_mag_bits);
+	const auto final_extended = _mm_andnot_ps(denorm_operand_mask, extended_result);
+
+	//if nan, result = ext, else result = flushed
+	const auto set1 = _mm_andnot_ps(nan_check, flushed_result);
+	const auto set2 = _mm_and_ps(nan_check, final_extended);
+
+	spu.gpr[op.rt].vf = _mm_or_ps(set1, set2);
 }
 
 void spu_interpreter::CLGTH(SPUThread& spu, spu_opcode_t op)
