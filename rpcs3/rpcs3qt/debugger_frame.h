@@ -68,6 +68,7 @@ public:
 public:
 	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = 0);
 	void SaveSettings();
+	void ChangeColors();
 
 	void UpdateUI();
 	void UpdateUnitList();
@@ -108,6 +109,10 @@ public:
 	u32 m_pc;
 	u32 m_item_count;
 	bool m_no_thread_selected;
+	QColor m_color_bp;
+	QColor m_color_pc;
+	QColor m_text_color_bp;
+	QColor m_text_color_pc;
 
 public:
 	debugger_list(debugger_frame* parent);
