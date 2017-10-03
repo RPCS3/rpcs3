@@ -205,11 +205,11 @@ int evdev_joystick_handler::scale_axis(int axis, int value)
             range.second += -range.first;
             range.first = 0;
         }
-        return (deadzone((((float)value - range.first) / range.second) * 255));
+        return (deadzone(((static_cast<float>(value) - range.first) / range.second) * 255));
     }
     else
     {
-        return (deadzone((float)value));
+        return (deadzone(static_cast<float>(value)));
     }
 }
 
