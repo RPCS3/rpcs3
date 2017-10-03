@@ -168,29 +168,29 @@ void evdev_joystick_handler::Close()
     }
 }
 
-inline int Deadzone(f32 input)
+inline float deadzone(f32 input)
 {
-	int	deadzone=g_evdev_joystick_config.deadzone;
-	float deadzone_a=128.0/(128.0-float(deadzone));
-	float deadzone_b=255.0*(1.0-deadzone_a);
-	if (input>=128-deadzone&&input<=128+deadzone)
-	{
-		input=128;
-	}
-	else
-	{
-		if (input>128+deadzone)
-		{
-			input=deadzone_a*(float)input+deadzone_b;
-		}
-		if (input<128-deadzone)
-		{
-			input=(128.0/(128.0-(float)deadzone))*input;
-		}
-	}
-    return static_cast<int>(input);
+    //when we're just above the deadzone, the output should be 128, not 128+deadzone
+    //otherwise, there'll be a jump. So, we need to recalculate the output with a linear function
+    float deadzone_slope, deadzone_origin;
+    if (input >= 127.5 - g_evdev_joystick_config.deadzone && input <= 127.5 + g_evdev_joystick_config.deadzone)
+    {
+        return 127.5;
+    }
+    else
+    {
+        if (input > 127.5 + g_evdev_joystick_config.deadzone)
+        {
+            deadzone_slope = 127.5 / (127.5 - g_evdev_joystick_config.deadzone);
+            deadzone_origin = 255.0 * (1.0 - deadzone_slope);
+            return (deadzone_slope * input + deadzone_origin);
+        }
+        if (input < 127.5 - g_evdev_joystick_config.deadzone)
+        {
+            return (127.5 / (127.5 - g_evdev_joystick_config.deadzone)) * input;
+        }
+    }
 }
-
 
 int evdev_joystick_handler::scale_axis(int axis, int value)
 {
@@ -205,12 +205,11 @@ int evdev_joystick_handler::scale_axis(int axis, int value)
             range.second += -range.first;
             range.first = 0;
         }
-
-		return (static_cast<float>(Deadzone((((float)value - (float)range.first) / (float)range.second) * 255)));
+        return (deadzone((((float)value - range.first) / range.second) * 255));
     }
     else
     {
-        return (static_cast<float>(Deadzone((float)value)));
+        return (deadzone((float)value));
     }
 }
 
