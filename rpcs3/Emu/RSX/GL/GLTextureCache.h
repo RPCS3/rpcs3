@@ -179,8 +179,10 @@ namespace gl
 
 			glGenBuffers(1, &pbo_id);
 
-			const u32 real_buffer_size = (u32)(rsx::get_resolution_scale() * rsx::get_resolution_scale() * cpu_address_range);
+			const f32 resolution_scale = rsx::get_resolution_scale();
+			const u32 real_buffer_size = (resolution_scale < 1.f)? cpu_address_range: (u32)(resolution_scale * resolution_scale * cpu_address_range);
 			const u32 buffer_size = align(real_buffer_size, 4096);
+
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 			glBufferStorage(GL_PIXEL_PACK_BUFFER, buffer_size, nullptr, GL_MAP_READ_BIT);
 
@@ -202,7 +204,6 @@ namespace gl
 			is_depth = false;
 
 			vram_texture = 0;
-			scaled_texture = 0;
 		}
 		
 		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, void*,
@@ -275,7 +276,7 @@ namespace gl
 			}
 
 			u32 target_texture = vram_texture;
-			if (0)//real_pitch != rsx_pitch || rsx::get_resolution_scale_percent() != 100)
+			if (real_pitch != rsx_pitch || rsx::get_resolution_scale_percent() != 100)
 			{
 				//Disabled - doesnt work properly yet
 				const u32 real_width = (rsx_pitch * width) / real_pitch;
@@ -302,7 +303,6 @@ namespace gl
 
 						if ((u32)sw != real_width || (u32)sh != real_height || (GLenum)fmt != ifmt)
 						{
-							LOG_ERROR(RSX, "Incompatible scaling texture found. Deleting...");
 							glDeleteTextures(1, &scaled_texture);
 							scaled_texture = 0;
 						}
@@ -329,10 +329,36 @@ namespace gl
 			glPixelStorei(GL_PACK_ALIGNMENT, 1);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 
+			glGetError();
+
 			if (get_driver_caps().EXT_dsa_supported)
 				glGetTextureImageEXT(target_texture, GL_TEXTURE_2D, 0, (GLenum)format, (GLenum)type, nullptr);
 			else
 				glGetTextureImage(target_texture, 0, (GLenum)format, (GLenum)type, pbo_size, nullptr);
+
+			if (GLenum err = glGetError())
+			{
+				bool recovered = false;
+				if (target_texture == scaled_texture)
+				{
+					if (get_driver_caps().EXT_dsa_supported)
+						glGetTextureImageEXT(vram_texture, GL_TEXTURE_2D, 0, (GLenum)format, (GLenum)type, nullptr);
+					else
+						glGetTextureImage(vram_texture, 0, (GLenum)format, (GLenum)type, pbo_size, nullptr);
+
+					if (!glGetError())
+					{
+						recovered = true;
+						const u32 min_dimension = cpu_address_range / rsx_pitch;
+						LOG_WARNING(RSX, "Failed to read back a scaled image, but the original texture can be read back. Consider setting min scalable dimension below or equal to %d", min_dimension);
+					}
+				}
+
+				if (!recovered && rsx::get_resolution_scale_percent() != 100)
+				{
+					LOG_ERROR(RSX, "Texture readback failed. Disable resolution scaling to get the 'Write Color Buffers' option to work properly");
+				}
+			}
 
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
