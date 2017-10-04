@@ -718,11 +718,29 @@ s32 sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optname, vm::
 				native_opt = SO_BROADCAST;
 				break;
 			}
+#ifdef _WIN32
+			case SYS_NET_SO_REUSEADDR:
+			{
+				*(be_t<s32>*)optval.get_ptr() = sock.so_reuseaddr;
+				return 0;
+			}
+			case SYS_NET_SO_REUSEPORT:
+			{
+				*(be_t<s32>*)optval.get_ptr() = sock.so_reuseport;
+				return 0;
+			}
+#else
 			case SYS_NET_SO_REUSEADDR:
 			{
 				native_opt = SO_REUSEADDR;
 				break;
 			}
+			case SYS_NET_SO_REUSEPORT:
+			{
+				native_opt = SO_REUSEPORT;
+				break;
+			}
+#endif
 			case SYS_NET_SO_SNDTIMEO:
 			case SYS_NET_SO_RCVTIMEO:
 			{
@@ -1166,11 +1184,33 @@ s32 sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optname, vm::
 				native_opt = SO_BROADCAST;
 				break;
 			}
+#ifdef _WIN32
+			case SYS_NET_SO_REUSEADDR:
+			{
+				native_opt = SO_REUSEADDR;
+				sock.so_reuseaddr = native_int;
+				native_int = sock.so_reuseaddr || sock.so_reuseport ? 1 : 0;
+				break;
+			}
+			case SYS_NET_SO_REUSEPORT:
+			{
+				native_opt = SO_REUSEADDR;
+				sock.so_reuseport = native_int;
+				native_int = sock.so_reuseaddr || sock.so_reuseport ? 1 : 0;
+				break;
+			}
+#else
 			case SYS_NET_SO_REUSEADDR:
 			{
 				native_opt = SO_REUSEADDR;
 				break;
 			}
+			case SYS_NET_SO_REUSEPORT:
+			{
+				native_opt = SO_REUSEPORT;
+				break;
+			}
+#endif
 			case SYS_NET_SO_SNDTIMEO:
 			case SYS_NET_SO_RCVTIMEO:
 			{

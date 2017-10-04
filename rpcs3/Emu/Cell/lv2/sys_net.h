@@ -346,6 +346,12 @@ struct lv2_socket final
 	// Unsupported option
 	s32 so_tcp_maxseg = 1500;
 
+	// Value keepers
+#ifdef _WIN32
+	s32 so_reuseaddr = 0;
+	s32 so_reuseport = 0;
+#endif
+
 	// Event processing workload (pair of thread id and the processing function)
 	std::vector<std::pair<u32, std::function<bool(bs_t<lv2_socket::poll>)>>> queue;
 };
