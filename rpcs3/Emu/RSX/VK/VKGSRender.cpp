@@ -878,14 +878,41 @@ void VKGSRender::begin()
 	{
 		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
 
-		flush_command_queue(true);
-		m_vertex_cache->purge();
+		frame_context_t *target_frame = nullptr;
+		u64 earliest_sync_time = UINT64_MAX;
+		for (s32 i = 0; i < VK_MAX_ASYNC_FRAMES; ++i)
+		{
+			auto ctx = &frame_context_storage[i];
+			if (ctx->swap_command_buffer)
+			{
+				if (ctx->last_frame_sync_time > m_last_heap_sync_time &&
+					ctx->last_frame_sync_time < earliest_sync_time)
+					target_frame = ctx;
+			}
+		}
 
-		m_index_buffer_ring_info.reset_allocation_stats();
-		m_uniform_buffer_ring_info.reset_allocation_stats();
-		m_attrib_ring_info.reset_allocation_stats();
-		m_texture_upload_buffer_ring_info.reset_allocation_stats();
-		m_current_frame->reset_heap_ptrs();
+		if (target_frame == nullptr)
+		{
+			flush_command_queue(true);
+			m_vertex_cache->purge();
+
+			m_index_buffer_ring_info.reset_allocation_stats();
+			m_uniform_buffer_ring_info.reset_allocation_stats();
+			m_attrib_ring_info.reset_allocation_stats();
+			m_texture_upload_buffer_ring_info.reset_allocation_stats();
+			m_current_frame->reset_heap_ptrs();
+		}
+		else
+		{
+			target_frame->swap_command_buffer->poke();
+			while (target_frame->swap_command_buffer->pending)
+			{
+				if (!target_frame->swap_command_buffer->poke())
+					std::this_thread::yield();
+			}
+
+			process_swap_request(target_frame, true);
+		}
 
 		std::chrono::time_point<steady_clock> submit_end = steady_clock::now();
 		m_flip_time += std::chrono::duration_cast<std::chrono::microseconds>(submit_end - submit_start).count();
@@ -1051,7 +1078,7 @@ void VKGSRender::end()
 		{
 			if (!rsx::method_registers.fragment_textures[i].enabled())
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
 				continue;
 			}
 
@@ -1060,7 +1087,7 @@ void VKGSRender::end()
 			if (!texture0)
 			{
 				LOG_ERROR(RSX, "Texture upload failed to texture index %d. Binding null sampler.", i);
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
 				continue;
 			}
 
@@ -1105,7 +1132,7 @@ void VKGSRender::end()
 		{
 			if (!rsx::method_registers.vertex_textures[i].enabled())
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
 				continue;
 			}
 
@@ -1114,7 +1141,7 @@ void VKGSRender::end()
 			if (!texture0)
 			{
 				LOG_ERROR(RSX, "Texture upload failed to vtexture index %d. Binding null sampler.", i);
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
 				continue;
 			}
 
@@ -1233,24 +1260,6 @@ void VKGSRender::end()
 
 	copy_render_targets_to_dma_location();
 	m_draw_calls++;
-
-	if (g_cfg.video.overlay)
-	{
-		const auto vertex_count = std::get<1>(upload_info);
-
-		if (vertex_count < 1024)
-			m_uploads_small++;
-		else if (vertex_count < 2048)
-			m_uploads_1k++;
-		else if (vertex_count < 4096)
-			m_uploads_2k++;
-		else if (vertex_count < 8192)
-			m_uploads_4k++;
-		else if (vertex_count < 16384)
-			m_uploads_8k++;
-		else
-			m_uploads_16k++;
-	}
 
 	rsx::thread::end();
 }
@@ -1562,6 +1571,8 @@ void VKGSRender::advance_queued_frames()
 
 	m_current_queue_index = (m_current_queue_index + 1) % VK_MAX_ASYNC_FRAMES;
 	m_current_frame = &frame_context_storage[m_current_queue_index];
+
+	vk::advance_frame_counter();
 }
 
 void VKGSRender::present(frame_context_t *ctx)
@@ -1579,6 +1590,8 @@ void VKGSRender::present(frame_context_t *ctx)
 
 	//Presentation image released; reset value
 	ctx->present_image = UINT32_MAX;
+
+	vk::advance_completed_frame_counter();
 }
 
 void VKGSRender::queue_swap_request()
@@ -1641,6 +1654,11 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 			m_uniform_buffer_ring_info.m_get_pos = ctx->ubo_heap_ptr;
 			m_index_buffer_ring_info.m_get_pos = ctx->index_heap_ptr;
 			m_texture_upload_buffer_ring_info.m_get_pos = ctx->texture_upload_heap_ptr;
+
+			m_attrib_ring_info.notify();
+			m_uniform_buffer_ring_info.notify();
+			m_index_buffer_ring_info.notify();
+			m_texture_upload_buffer_ring_info.notify();
 		}
 	}
 
@@ -2260,18 +2278,10 @@ void VKGSRender::flip(int buffer)
 		if (!skip_frame)
 		{
 			m_draw_calls = 0;
-			m_instanced_draws = 0;
 			m_draw_time = 0;
 			m_setup_time = 0;
 			m_vertex_upload_time = 0;
 			m_textures_upload_time = 0;
-
-			m_uploads_small = 0;
-			m_uploads_1k = 0;
-			m_uploads_2k = 0;
-			m_uploads_4k = 0;
-			m_uploads_8k = 0;
-			m_uploads_16k = 0;
 		}
 
 		return;
@@ -2454,31 +2464,15 @@ void VKGSRender::flip(int buffer)
 				direct_fbo.reset(new vk::framebuffer_holder(*m_device, single_target_pass, m_client_width, m_client_height, std::move(swap_image_view)));
 			}
 
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 0, direct_fbo->width(), direct_fbo->height(), "draw calls: " + std::to_string(m_draw_calls) + ", instanced repeats: " + std::to_string(m_instanced_draws));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 0, direct_fbo->width(), direct_fbo->height(), "draw calls: " + std::to_string(m_draw_calls));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 18, direct_fbo->width(), direct_fbo->height(), "draw call setup: " + std::to_string(m_setup_time) + "us");
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 36, direct_fbo->width(), direct_fbo->height(), "vertex upload time: " + std::to_string(m_vertex_upload_time) + "us");
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 54, direct_fbo->width(), direct_fbo->height(), "texture upload time: " + std::to_string(m_textures_upload_time) + "us");
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 72, direct_fbo->width(), direct_fbo->height(), "draw call execution: " + std::to_string(m_draw_time) + "us");
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 90, direct_fbo->width(), direct_fbo->height(), "submit and flip: " + std::to_string(m_flip_time) + "us");
-			
-			//Vertex upload statistics
-			u32 _small, _1k, _2k, _4k, _8k, _16k;
-			if (m_draw_calls > 0)
-			{
-				_small = m_uploads_small * 100 / m_draw_calls;
-				_1k = m_uploads_1k * 100 / m_draw_calls;
-				_2k = m_uploads_2k * 100 / m_draw_calls;
-				_4k = m_uploads_4k * 100 / m_draw_calls;
-				_8k = m_uploads_8k * 100 / m_draw_calls;
-				_16k = m_uploads_16k * 100 / m_draw_calls;
-			}
-			else
-			{
-				_small = _1k = _2k = _4k = _8k = _16k = 0;
-			}
 
-			std::string message = fmt::format("Vertex sizes: < 1k: %d%%, 1k+: %d%%, 2k+: %d%%, 4k+: %d%%, 8k+: %d%%, 16k+: %d%%", _small, _1k, _2k, _4k, _8k, _16k);
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 108, direct_fbo->width(), direct_fbo->height(), message);
+			auto num_dirty_textures = m_texture_cache.get_unreleased_textures_count();
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 126, direct_fbo->width(), direct_fbo->height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
 
 			vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, subres);
 			m_framebuffers_to_clean.push_back(std::move(direct_fbo));
@@ -2565,18 +2559,10 @@ void VKGSRender::flip(int buffer)
 	if (skip_frame) return;
 
 	m_draw_calls = 0;
-	m_instanced_draws = 0;
 	m_draw_time = 0;
 	m_setup_time = 0;
 	m_vertex_upload_time = 0;
 	m_textures_upload_time = 0;
-
-	m_uploads_small = 0;
-	m_uploads_1k = 0;
-	m_uploads_2k = 0;
-	m_uploads_4k = 0;
-	m_uploads_8k = 0;
-	m_uploads_16k = 0;
 }
 
 bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)

@@ -616,6 +616,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		ui->gb_configs->setEnabled(false);
 		ui->gb_settings->setEnabled(false);
 		ui->gb_colors->setEnabled(false);
+		ui->gb_viewport->setEnabled(false);
 	}
 	else
 	{

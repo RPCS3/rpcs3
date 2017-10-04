@@ -473,9 +473,16 @@ void evdev_joystick_handler::ThreadProc()
                     break;
                 }
 
+                int value = evt.value;
+                if (revaxis[axis])
+                {
+                    // Reverse the value in the range.
+                    value = (axis_ranges[evt.code].second + axis_ranges[evt.code].first) - value;
+                }
+
                 if (g_evdev_joystick_config.squirclejoysticks)
                 {
-                    joy_axis[i][axis] = evt.value;
+                    joy_axis[i][axis] = value;
                     if (evt.code == ABS_X || evt.code == ABS_Y)
                     {
                         int Xaxis = joy_axis_maps[i][ABS_X];
@@ -498,7 +505,7 @@ void evdev_joystick_handler::ThreadProc()
                     }
                 }
                 else
-                    pad->m_sticks[axis].m_value = scale_axis(evt.code, evt.value);
+                    pad->m_sticks[axis].m_value = scale_axis(evt.code, value);
             }
             break;
         default:

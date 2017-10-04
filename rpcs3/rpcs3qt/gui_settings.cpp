@@ -141,6 +141,45 @@ QPixmap gui_settings::colorizedPixmap(const QPixmap& old_pixmap, const QColor& o
 	return pixmap;
 }
 
+QImage gui_settings::GetOpaqueImageArea(const QString& path)
+{
+	QImage image = QImage(path);
+
+	int w_min = 0;
+	int w_max = image.width();
+	int h_min = 0;
+	int h_max = image.height();
+
+	for (int y = 0; y < image.height(); ++y)
+	{
+		QRgb *row = (QRgb*)image.scanLine(y);
+		bool rowFilled = false;
+
+		for (int x = 0; x < image.width(); ++x)
+		{
+			if (qAlpha(row[x]))
+			{
+				rowFilled = true;
+				w_min = std::max(w_min, x);
+
+				if (w_max > x)
+				{
+					w_max = x;
+					x = w_min;
+				}
+			}
+		}
+
+		if (rowFilled)
+		{
+			h_max = std::min(h_max, y);
+			h_min = y;
+		}
+	}
+
+	return image.copy(QRect(QPoint(w_max, h_max), QPoint(w_min, h_min)));
+}
+
 void gui_settings::SetValue(const GUI_SAVE& entry, const QVariant& value)
 {
 	m_settings.beginGroup(entry.key);

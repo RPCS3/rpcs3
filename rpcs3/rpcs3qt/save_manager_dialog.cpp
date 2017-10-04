@@ -17,7 +17,7 @@
 namespace
 {
 	// Helper converters
-	inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+	constexpr auto qstr = QString::fromStdString;
 	inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
 	/**
@@ -147,7 +147,7 @@ void save_manager_dialog::UpdateList()
 	m_save_entries = GetSaveEntries(m_dir);
 
 	m_list->clearContents();
-	m_list->setRowCount(m_save_entries.size());
+	m_list->setRowCount(static_cast<int>(m_save_entries.size()));
 	gui_settings settings(this);
 
 	int row = 0;

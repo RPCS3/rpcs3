@@ -80,13 +80,15 @@ struct command_buffer_chunk: public vk::command_buffer
 		vkResetCommandBuffer(commands, 0);
 	}
 
-	void poke()
+	bool poke()
 	{
 		if (vkGetFenceStatus(m_device, submit_fence) == VK_SUCCESS)
 		{
 			vkResetFences(m_device, 1, &submit_fence);
 			pending = false;
 		}
+
+		return !pending;
 	}
 
 	void wait()
@@ -236,15 +238,6 @@ private:
 
 	// Draw call stats
 	u32 m_draw_calls = 0;
-	u32 m_instanced_draws = 0;
-
-	// Vertex buffer usage stats
-	u32 m_uploads_small = 0;
-	u32 m_uploads_1k = 0;
-	u32 m_uploads_2k = 0;
-	u32 m_uploads_4k = 0;
-	u32 m_uploads_8k = 0;
-	u32 m_uploads_16k = 0;
 
 	// Timers
 	s64 m_setup_time = 0;

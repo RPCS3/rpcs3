@@ -47,10 +47,10 @@ class main_window : public QMainWindow
 	QIcon m_icon_thumb_pause;
 	QIcon m_icon_thumb_stop;
 	QIcon m_icon_thumb_restart;
-	QWinThumbnailToolBar *m_thumb_bar;
-	QWinThumbnailToolButton *m_thumb_playPause;
-	QWinThumbnailToolButton *m_thumb_stop;
-	QWinThumbnailToolButton *m_thumb_restart;
+	QWinThumbnailToolBar *m_thumb_bar = nullptr;
+	QWinThumbnailToolButton *m_thumb_playPause = nullptr;
+	QWinThumbnailToolButton *m_thumb_stop = nullptr;
+	QWinThumbnailToolButton *m_thumb_restart = nullptr;
 	QStringList m_vulkan_adapters;
 #endif
 #ifdef _MSC_VER
@@ -82,7 +82,6 @@ private Q_SLOTS:
 	void DecryptSPRXLibraries();
 
 	void SaveWindowState();
-	void RepaintToolBarIcons();
 
 protected:
 	void closeEvent(QCloseEvent *event) override;
@@ -91,6 +90,8 @@ protected:
 	void SetAppIconFromPath(const std::string path);
 private:
 	void RepaintToolbar();
+	void RepaintToolBarIcons();
+	void RepaintThumbnailIcons();
 	void CreateActions();
 	void CreateConnects();
 	void CreateDockWindows();
