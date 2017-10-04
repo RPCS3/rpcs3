@@ -52,7 +52,7 @@ error_code sys_ss_random_number_generator(u32 arg1, vm::ptr<void> buf, u64 size)
 		return CELL_EABORT;
 	}
 #else
-	fs::file rnd{"/dev/random/"};
+	fs::file rnd{"/dev/urandom"};
 
 	if (!rnd || rnd.read(buf.get_ptr(), size) != size)
 	{
