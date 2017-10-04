@@ -1744,9 +1744,55 @@ void spu_recompiler::FS(spu_opcode_t op)
 
 void spu_recompiler::FM(spu_opcode_t op)
 {
-	const XmmLink& va = XmmGet(op.ra, XmmType::Float);
-	c->mulps(va, SPU_OFF_128(gpr, op.rb));
-	c->movaps(SPU_OFF_128(gpr, op.rt), va);
+	const auto sign_bits = XmmConst(_mm_set1_epi32(0x80000000));
+	const auto all_exp_bits = XmmConst(_mm_set1_epi32(0x7f800000));
+
+	const XmmLink& tmp0 = XmmAlloc();
+	const XmmLink& tmp1 = XmmAlloc();
+	const XmmLink& tmp2 = XmmAlloc();
+	const XmmLink& tmp3 = XmmAlloc();
+	const XmmLink& tmp4 = XmmGet(op.ra, XmmType::Float);
+	const XmmLink& tmp5 = XmmGet(op.rb, XmmType::Float);
+
+	//check denormals
+	c->pxor(tmp0, tmp0);
+	c->movaps(tmp1, all_exp_bits);
+	c->movaps(tmp2, all_exp_bits);
+	c->andps(tmp1, tmp4);
+	c->andps(tmp2, tmp5);
+	c->cmpps(tmp1, tmp0, 0);
+	c->cmpps(tmp2, tmp0, 0);
+	c->orps(tmp1, tmp2);  //denormal operand mask
+
+	//compute result with flushed denormal inputs
+	c->movaps(tmp2, tmp4);
+	c->mulps(tmp2, tmp5); //primary result
+	c->movaps(tmp3, tmp2);
+	c->andps(tmp3, all_exp_bits);
+	c->cmpps(tmp3, tmp0, 0); //denom mask from result
+	c->orps(tmp3, tmp1);
+	c->andnps(tmp3, tmp2); //flushed result
+
+	//compute results for the extended path
+	c->andps(tmp2, all_exp_bits);
+	c->cmpps(tmp2, all_exp_bits, 0); //extended mask
+	c->movaps(tmp4, sign_bits);
+	c->movaps(tmp5, sign_bits);
+	c->movaps(tmp0, sign_bits);
+	c->andps(tmp4, SPU_OFF_128(gpr, op.ra));
+	c->andps(tmp5, SPU_OFF_128(gpr, op.rb));
+	c->xorps(tmp4, tmp5); //sign mask
+	c->pandn(tmp0, tmp2);
+	c->orps(tmp4, tmp0); //add result sign back to original extended value
+	c->movaps(tmp5, tmp1); //denormal mask (operands)
+	c->andnps(tmp5, tmp4); //max_float with sign bit (nan/-nan) where not denormal or zero
+
+	//select result
+	c->movaps(tmp0, tmp2);
+	c->andnps(tmp0, tmp3);
+	c->andps(tmp2, tmp5);
+	c->orps(tmp0, tmp2);
+	c->movaps(SPU_OFF_128(gpr, op.rt), tmp0);
 }
 
 void spu_recompiler::CLGTH(spu_opcode_t op)
@@ -2788,18 +2834,19 @@ void spu_recompiler::MPYA(spu_opcode_t op)
 void spu_recompiler::FNMS(spu_opcode_t op)
 {
 	const XmmLink& vc = XmmGet(op.rc, XmmType::Float);
-
 	const auto mask = XmmConst(_mm_set1_epi32(0x7f800000));
 	const XmmLink& tmp_a = XmmAlloc();
 	const XmmLink& tmp_b = XmmAlloc();
 
-	c->pxor(tmp_a, tmp_a);                       //tmp_a = 0
-	c->cmpps(tmp_a, SPU_OFF_128(gpr, op.ra), 3); //tmp_a = ra == extended
-	c->pandn(tmp_a, SPU_OFF_128(gpr, op.ra));    //tmp_a = mask_a & ~ra_extended
+	c->movaps(tmp_a, SPU_OFF_128(gpr, op.ra));
+	c->andps(tmp_a, mask);
+	c->cmpps(tmp_a, mask, 4);                 //tmp_a = ra == extended
+	c->andps(tmp_a, SPU_OFF_128(gpr, op.ra)); //tmp_a = mask_a & ~ra_extended
 
-	c->pxor(tmp_b, tmp_b);                       //tmp_b = 0
-	c->cmpps(tmp_b, SPU_OFF_128(gpr, op.rb), 3); //tmp_b = rb == extended
-	c->pandn(tmp_b, SPU_OFF_128(gpr, op.rb));    //tmp_b = mask_b & ~rb_extended
+	c->movaps(tmp_b, SPU_OFF_128(gpr, op.rb));
+	c->andps(tmp_b, mask);
+	c->cmpps(tmp_b, mask, 4);                 //tmp_b = rb == extended
+	c->andps(tmp_b, SPU_OFF_128(gpr, op.rb)); //tmp_b = mask_b & ~rb_extended
 
 	c->mulps(tmp_a, tmp_b);
 	c->subps(vc, tmp_a);
@@ -2808,18 +2855,19 @@ void spu_recompiler::FNMS(spu_opcode_t op)
 
 void spu_recompiler::FMA(spu_opcode_t op)
 {
-	const XmmLink& vc = XmmGet(op.rc, XmmType::Float);
-
+	const auto mask = XmmConst(_mm_set1_epi32(0x7f800000));
 	const XmmLink& tmp_a = XmmAlloc();
 	const XmmLink& tmp_b = XmmAlloc();
 
-	c->pxor(tmp_a, tmp_a);                       //tmp_a = 0
-	c->cmpps(tmp_a, SPU_OFF_128(gpr, op.ra), 3); //tmp_a = ra == extended
-	c->pandn(tmp_a, SPU_OFF_128(gpr, op.ra));    //tmp_a = mask_a & ~ra_extended
+	c->movaps(tmp_a, SPU_OFF_128(gpr, op.ra));
+	c->andps(tmp_a, mask);
+	c->cmpps(tmp_a, mask, 4);                 //tmp_a = ra == extended
+	c->andps(tmp_a, SPU_OFF_128(gpr, op.ra)); //tmp_a = mask_a & ~ra_extended
 
-	c->pxor(tmp_b, tmp_b);                       //tmp_b = 0
-	c->cmpps(tmp_b, SPU_OFF_128(gpr, op.rb), 3); //tmp_b = rb == extended
-	c->pandn(tmp_b, SPU_OFF_128(gpr, op.rb));    //tmp_b = mask_b & ~rb_extended
+	c->movaps(tmp_b, SPU_OFF_128(gpr, op.rb));
+	c->andps(tmp_b, mask);
+	c->cmpps(tmp_b, mask, 4);                 //tmp_b = rb == extended
+	c->andps(tmp_b, SPU_OFF_128(gpr, op.rb)); //tmp_b = mask_b & ~rb_extended
 
 	c->mulps(tmp_a, tmp_b);
 	c->addps(tmp_a, SPU_OFF_128(gpr, op.rc));
@@ -2828,19 +2876,19 @@ void spu_recompiler::FMA(spu_opcode_t op)
 
 void spu_recompiler::FMS(spu_opcode_t op)
 {
-	const XmmLink& vc = XmmGet(op.rc, XmmType::Float);
-
 	const auto mask = XmmConst(_mm_set1_epi32(0x7f800000));
 	const XmmLink& tmp_a = XmmAlloc();
 	const XmmLink& tmp_b = XmmAlloc();
 
-	c->pxor(tmp_a, tmp_a);                       //tmp_a = 0
-	c->cmpps(tmp_a, SPU_OFF_128(gpr, op.ra), 3); //tmp_a = ra == extended
-	c->pandn(tmp_a, SPU_OFF_128(gpr, op.ra));    //tmp_a = mask_a & ~ra_extended
+	c->movaps(tmp_a, SPU_OFF_128(gpr, op.ra));
+	c->andps(tmp_a, mask);
+	c->cmpps(tmp_a, mask, 4);                 //tmp_a = ra == extended
+	c->andps(tmp_a, SPU_OFF_128(gpr, op.ra)); //tmp_a = mask_a & ~ra_extended
 
-	c->pxor(tmp_b, tmp_b);                       //tmp_b = 0
-	c->cmpps(tmp_b, SPU_OFF_128(gpr, op.rb), 3); //tmp_b = rb == extended
-	c->pandn(tmp_b, SPU_OFF_128(gpr, op.rb));    //tmp_b = mask_b & ~rb_extended
+	c->movaps(tmp_b, SPU_OFF_128(gpr, op.rb));
+	c->andps(tmp_b, mask);
+	c->cmpps(tmp_b, mask, 4);                 //tmp_b = rb == extended
+	c->andps(tmp_b, SPU_OFF_128(gpr, op.rb)); //tmp_b = mask_b & ~rb_extended
 
 	c->mulps(tmp_a, tmp_b);
 	c->subps(tmp_a, SPU_OFF_128(gpr, op.rc));
