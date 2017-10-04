@@ -775,7 +775,6 @@ void spu_interpreter_fast::FM(SPUThread& spu, spu_opcode_t op)
 	const auto zero = _mm_set1_ps(0.f);
 	const auto sign_bits = _mm_castsi128_ps(_mm_set1_epi32(0x80000000));
 	const auto all_exp_bits = _mm_castsi128_ps(_mm_set1_epi32(0x7f800000));
-	const auto all_mag_bits = _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff));
 
 	//check denormals
 	const auto denorm_check_a = _mm_cmpeq_ps(zero, _mm_and_ps(all_exp_bits, spu.gpr[op.ra].vf));
@@ -790,7 +789,7 @@ void spu_interpreter_fast::FM(SPUThread& spu, spu_opcode_t op)
 	//check for extended
 	const auto nan_check = _mm_cmpeq_ps(_mm_and_ps(primary_result, all_exp_bits), all_exp_bits);
 	const auto sign_mask = _mm_xor_ps(_mm_and_ps((__m128&)sign_bits, spu.gpr[op.ra].vf), _mm_and_ps((__m128&)sign_bits, spu.gpr[op.rb].vf));
-	const auto extended_result = _mm_or_ps(sign_mask, all_mag_bits);
+	const auto extended_result = _mm_or_ps(sign_mask, _mm_andnot_ps((__m128&)sign_bits, primary_result));
 	const auto final_extended = _mm_andnot_ps(denorm_operand_mask, extended_result);
 
 	//if nan, result = ext, else result = flushed

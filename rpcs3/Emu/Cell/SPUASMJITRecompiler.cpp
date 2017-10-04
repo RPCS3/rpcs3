@@ -1746,7 +1746,6 @@ void spu_recompiler::FM(spu_opcode_t op)
 {
 	const auto sign_bits = XmmConst(_mm_set1_epi32(0x80000000));
 	const auto all_exp_bits = XmmConst(_mm_set1_epi32(0x7f800000));
-	const auto all_mag_bits = XmmConst(_mm_set1_epi32(0x7fffffff));
 
 	const XmmLink& tmp0 = XmmAlloc();
 	const XmmLink& tmp1 = XmmAlloc();
@@ -1779,10 +1778,12 @@ void spu_recompiler::FM(spu_opcode_t op)
 	c->cmpps(tmp2, all_exp_bits, 0); //extended mask
 	c->movaps(tmp4, sign_bits);
 	c->movaps(tmp5, sign_bits);
+	c->movaps(tmp0, sign_bits);
 	c->andps(tmp4, SPU_OFF_128(gpr, op.ra));
 	c->andps(tmp5, SPU_OFF_128(gpr, op.rb));
-	c->xorps(tmp4, tmp5);
-	c->orps(tmp4, all_mag_bits);
+	c->xorps(tmp4, tmp5); //sign mask
+	c->pandn(tmp0, tmp2);
+	c->orps(tmp4, tmp0); //add result sign back to original extended value
 	c->movaps(tmp5, tmp1); //denormal mask (operands)
 	c->andnps(tmp5, tmp4); //max_float with sign bit (nan/-nan) where not denormal or zero
 
