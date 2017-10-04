@@ -18,10 +18,10 @@
 			"LLVM": "This doesn't exist (yet)"
 		},
 		"libraries": {
-			"auto": "Automatically selects the LLE libraries to load.\nIf unsure, leave this option checked.",
+			"auto": "Automatically selects the LLE libraries to load.\nWhile this option works fine in most cases, liblv2 is the preferred option.",
 			"manual": "Allows the user to manually choose the LLE libraries to load.\nIf unsure, don't use this option. Nothing will work if you use this.",
 			"both": "Automatically selects the LLE libraries to load and allows the user to choose additional libraries manually.\nIf unsure, don't use this option.",
-			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this. Usually safe to use, but if unsure, use auto instead."
+			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this.\nThis is the preferred option."
 		},
 		"checkboxes": {
 			"hookStFunc": "Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.",
