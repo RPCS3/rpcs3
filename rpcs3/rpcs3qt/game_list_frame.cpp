@@ -1082,10 +1082,7 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 		{
 			continue;
 		}
-
-		QString category = qstr(m_game_data[i].info.category);
-
-		if (category == category::hdd_Game || category == category::disc_Game)
+		if (category::CategoryInMap(m_game_data[i].info.category, category::cat_boot))
 		{
 			QString title = GUI::get_Single_Line(qstr(m_game_data[i].info.name));
 
