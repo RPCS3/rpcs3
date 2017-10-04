@@ -53,6 +53,7 @@ namespace rsx
 	enum protection_policy
 	{
 		protect_policy_one_page,	//Only guard one page, preferrably one where this section 'wholly' fits
+		protect_policy_conservative, //Guards as much memory as possible that is guaranteed to only be covered by the defined range without sharing
 		protect_policy_full_range	//Guard the full memory range. Shared pages may be invalidated by access outside the object we're guarding
 	};
 
@@ -90,18 +91,23 @@ namespace rsx
 
 			locked_address_base = (base & ~4095);
 
-			if (protect_policy == protect_policy_one_page)
+			if ((protect_policy != protect_policy_full_range) && (length >= 4096))
 			{
+				const u32 limit = base + length;
+				const u32 block_end = (limit & ~4095);
+				const u32 block_start = (locked_address_base < base) ? (locked_address_base + 4096) : locked_address_base;
+
 				locked_address_range = 4096;
-				if (locked_address_base < base)
+
+				if (block_start < block_end)
 				{
-					//Try the next page if we can
-					//TODO: If an object spans a boundary without filling either side, guard the larger page occupancy
-					const u32 next_page = locked_address_base + 4096;
-					if ((base + length) >= (next_page + 4096))
+					//Page boundaries cover at least one unique page
+					locked_address_base = block_start;
+
+					if (protect_policy == protect_policy_conservative)
 					{
-						//The object spans the entire page. Guard this instead
-						locked_address_base = next_page;
+						//Protect full unique range
+						locked_address_range = (block_end - block_start);
 					}
 				}
 			}
