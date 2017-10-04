@@ -1775,7 +1775,8 @@ void spu_recompiler::FM(spu_opcode_t op)
 	c->andnps(tmp3, tmp2); //flushed result
 
 	//compute results for the extended path
-	c->cmpps(tmp2, tmp0, 3); //nan mask
+	c->andps(tmp2, all_exp_bits);
+	c->cmpps(tmp2, all_exp_bits, 0); //extended mask
 	c->movaps(tmp4, sign_bits);
 	c->movaps(tmp5, sign_bits);
 	c->andps(tmp4, SPU_OFF_128(gpr, op.ra));

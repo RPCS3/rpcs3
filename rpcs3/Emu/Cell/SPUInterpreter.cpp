@@ -788,7 +788,7 @@ void spu_interpreter_fast::FM(SPUThread& spu, spu_opcode_t op)
 	const auto flushed_result = _mm_andnot_ps(_mm_or_ps(denom_result_mask, denorm_operand_mask), primary_result);
 
 	//check for extended
-	const auto nan_check = _mm_cmpunord_ps(primary_result, zero);
+	const auto nan_check = _mm_cmpeq_ps(_mm_and_ps(primary_result, all_exp_bits), all_exp_bits);
 	const auto sign_mask = _mm_xor_ps(_mm_and_ps((__m128&)sign_bits, spu.gpr[op.ra].vf), _mm_and_ps((__m128&)sign_bits, spu.gpr[op.rb].vf));
 	const auto extended_result = _mm_or_ps(sign_mask, all_mag_bits);
 	const auto final_extended = _mm_andnot_ps(denorm_operand_mask, extended_result);
