@@ -51,7 +51,7 @@ before_install:
     fi;
 
 before_script:
-  - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
+  - git submodule update --init 3rdparty/asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
   - mkdir build
   - cd build
   - export CMAKE_PREFIX_PATH=~/Qt/5.9.1/gcc_64/lib/cmake
