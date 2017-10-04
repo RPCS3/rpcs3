@@ -153,6 +153,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	m_gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_gameList->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_gameList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_gameList->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_gameList->verticalScrollBar()->setSingleStep(20);
+	m_gameList->horizontalScrollBar()->setSingleStep(20);
 	m_gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);	
 	m_gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
 	m_gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
@@ -951,7 +954,7 @@ void game_list_frame::resizeEvent(QResizeEvent *event)
 {
 	if (!m_isListLayout)
 	{
-		Refresh();
+		Refresh(false, m_xgrid->selectedItems().count());
 	}
 	QDockWidget::resizeEvent(event);
 }
