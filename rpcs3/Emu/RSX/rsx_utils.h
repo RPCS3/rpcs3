@@ -3,6 +3,18 @@
 #include "gcm_enums.h"
 #include <atomic>
 
+#if __cplusplus > 201402L
+	#include <optional>
+#else
+	// TODO: remove me when C++17 or newer will be used
+	#include <experimental/optional>
+	namespace std
+	{
+		template<class T>
+		using optional = experimental::optional<T>;
+	}
+#endif
+
 extern "C"
 {
 #include <libavutil/pixfmt.h>
