@@ -132,9 +132,20 @@ void main_window::Init()
 		msg.setWindowIcon(m_appIcon);
 		msg.setIcon(QMessageBox::Critical);
 		msg.setTextFormat(Qt::RichText);
-		msg.setText("Please understand that this build is not an official RPCS3 release.<br>This build contains changes that may break games, or even <b>damage</b> your data.<br>It's recommended to download and use the official build from <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>Build origin: " STRINGIZE(BRANCH) "<br>Do you wish to use this build anyway?");
 		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 		msg.setDefaultButton(QMessageBox::No);
+		msg.setText(QString(
+			R"(
+				<p style="white-space: nowrap;">
+					Please understand that this build is not an official RPCS3 release.<br>
+					This build contains changes that may break games, or even <b>damage</b> your data.<br>
+					We recommend to download and use the official build from the <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>
+					Build origin: %1<br>
+					Do you wish to use this build anyway?
+				</p>
+			)"
+		).arg(STRINGIZE(BRANCH)));
+		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 		if (msg.exec() == QMessageBox::No)
 		{

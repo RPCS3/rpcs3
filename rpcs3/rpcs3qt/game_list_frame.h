@@ -100,6 +100,16 @@ namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 	const QStringList media = { app_Photo, app_Video, bc_Video, app_Music, app_TV, web_TV };
 	const QStringList data = { ps3_Data, ps2_Data, ps3_Save, psp_Save };
 	const QStringList others = { network, store_FE, trophy, other };
+
+	inline bool CategoryInMap(const std::string& cat, const q_from_char& map)
+	{
+		auto map_contains_category = [cat](std::pair<std::string, const QString> p)
+		{
+			return p.second == qstr(cat);
+		};
+
+		return std::find_if(map.begin(), map.end(), map_contains_category) != map.end();
+	}
 }
 
 namespace parental

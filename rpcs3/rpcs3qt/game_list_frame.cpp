@@ -153,6 +153,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	m_gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_gameList->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_gameList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_gameList->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_gameList->verticalScrollBar()->setSingleStep(20);
+	m_gameList->horizontalScrollBar()->setSingleStep(20);
 	m_gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);	
 	m_gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
 	m_gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
@@ -951,7 +954,7 @@ void game_list_frame::resizeEvent(QResizeEvent *event)
 {
 	if (!m_isListLayout)
 	{
-		Refresh();
+		Refresh(false, m_xgrid->selectedItems().count());
 	}
 	QDockWidget::resizeEvent(event);
 }
@@ -1079,10 +1082,7 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 		{
 			continue;
 		}
-
-		QString category = qstr(m_game_data[i].info.category);
-
-		if (category == category::hdd_Game || category == category::disc_Game)
+		if (category::CategoryInMap(m_game_data[i].info.category, category::cat_boot))
 		{
 			QString title = GUI::get_Single_Line(qstr(m_game_data[i].info.name));
 
