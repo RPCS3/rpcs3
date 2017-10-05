@@ -7,6 +7,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/PPUOpcodes.h"
+#include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -693,6 +694,37 @@ void Emulator::Resume()
 	if (time)
 	{
 		m_pause_amend_time += get_system_time() - time;
+	}
+
+	// Print and reset debug data collected
+	if (m_state == system_state::paused && g_cfg.core.ppu_debug && g_system == system_type::ps3)
+	{
+		PPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
+		dis_asm.offset = vm::g_base_addr;
+
+		std::string dump;
+
+		for (u32 i = 0x10000; i < 0x40000000;)
+		{
+			if (vm::check_addr(i))
+			{
+				if (auto& data = *(be_t<u32>*)(vm::g_stat_addr + i))
+				{
+					dis_asm.dump_pc = i;
+					dis_asm.disasm(i);
+					fmt::append(dump, "\n\t'%08X' %s", data, dis_asm.last_opcode);
+					data = 0;
+				}
+
+				i += sizeof(u32);
+			}
+			else
+			{
+				i += 4096;
+			}
+		}
+
+		LOG_NOTICE(PPU, "[RESUME] Dumping instruction stats:%s", dump);
 	}
 
 	// Try to resume
