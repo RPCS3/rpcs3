@@ -46,6 +46,7 @@ struct evdev_joystick_config final : cfg::node
     cfg::_bool axistrigger{this, "Z axis triggers", true};
     cfg::_bool squirclejoysticks{this, "Squircle Joysticks", true};
     cfg::int32 squirclefactor{this, "Squircle Factor", 5000};
+	cfg::int32 deadzone{this, "Deadzone", 10};
 
     bool load()
     {
