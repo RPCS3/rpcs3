@@ -177,6 +177,9 @@ error_code cellKbSetCodeType(u32 port_no, u32 type)
 
 	if (!handler)
 		return CELL_KB_ERROR_UNINITIALIZED;
+
+	if (port_no >= handler->GetKeyboards().size())
+		return CELL_KB_ERROR_INVALID_PARAMETER;
 	
 	KbConfig& current_config = handler->GetConfig(port_no);
 	current_config.code_type = type;
@@ -197,6 +200,9 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 
 	if (!handler)
 		return CELL_KB_ERROR_UNINITIALIZED;
+
+	if (port_no >= handler->GetKeyboards().size())
+		return CELL_KB_ERROR_INVALID_PARAMETER;
 	
 	KbConfig& current_config = handler->GetConfig(port_no);
 	current_config.read_mode = rmode;
@@ -212,6 +218,9 @@ error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 
 	if (!handler)
 		return CELL_KB_ERROR_UNINITIALIZED;
+
+	if (port_no >= handler->GetKeyboards().size())
+		return CELL_KB_ERROR_INVALID_PARAMETER;
 
 	const KbConfig& current_config = handler->GetConfig(port_no);
 	config->arrange = current_config.arrange;

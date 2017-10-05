@@ -238,6 +238,20 @@ struct ppu_gpr_cast_impl<vm::_ref_base<T, AT>, void>
 	}
 };
 
+template <>
+struct ppu_gpr_cast_impl<vm::null_t, void>
+{
+	static inline u64 to(const vm::null_t& value)
+	{
+		return 0;
+	}
+
+	static inline vm::null_t from(const u64 reg)
+	{
+		return vm::null;
+	}
+};
+
 template<typename To = u64, typename From>
 inline To ppu_gpr_cast(const From& value)
 {

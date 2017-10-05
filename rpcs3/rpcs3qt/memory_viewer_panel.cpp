@@ -9,6 +9,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	: QDialog(parent)
 {
 	setWindowTitle(tr("Memory Viewer"));
+	setObjectName("memory_viewer");
 	setAttribute(Qt::WA_DeleteOnClose);
 	exit = false;
 	m_addr = 0;
@@ -16,13 +17,10 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	m_rowcount = 16;
 	int pSize = 10;
 
-	//Font and Colors
+	//Font
 	QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 	mono.setPointSize(pSize);
 	m_fontMetrics = new QFontMetrics(mono);
-	QPalette pal_bg;
-	pal_bg.setColor(QPalette::Background, QColor(240, 240, 240));
-	setPalette(pal_bg);
 
 	//Layout:
 	QVBoxLayout* vbox_panel = new QVBoxLayout();
@@ -138,33 +136,27 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 
 	//Memory Panel: Address Panel
 	m_mem_addr = new QLabel("");
+	m_mem_addr->setObjectName("memory_viewer_address_panel");
 	m_mem_addr->setFont(mono);
 	m_mem_addr->setAutoFillBackground(true);
 	m_mem_addr->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
-	QPalette palette_addr = m_mem_addr->palette();
-	palette_addr.setColor(m_mem_addr->backgroundRole(), QColor(240, 240, 240));
-	palette_addr.setColor(m_mem_addr->foregroundRole(), QColor(75, 135, 150));
-	m_mem_addr->setPalette(palette_addr);
+	m_mem_addr->ensurePolished();
 
 	//Memory Panel: Hex Panel
 	m_mem_hex = new QLabel("");
+	m_mem_hex->setObjectName("memory_viewer_hex_panel");
 	m_mem_hex->setFont(mono);
 	m_mem_hex->setAutoFillBackground(true);
 	m_mem_hex->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
-	QPalette palette_hex = m_mem_hex->palette();
-	palette_hex.setColor(m_mem_hex->backgroundRole(), QColor(240, 240, 240));
-	palette_hex.setColor(m_mem_hex->foregroundRole(), Qt::black);
-	m_mem_hex->setPalette(palette_hex);
+	m_mem_hex->ensurePolished();
 
 	//Memory Panel: ASCII Panel
 	m_mem_ascii = new QLabel("");
+	m_mem_ascii->setObjectName("memory_viewer_ascii_panel");
 	m_mem_ascii->setFont(mono);
 	m_mem_ascii->setAutoFillBackground(true);
 	m_mem_ascii->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
-	QPalette palette_ascii = m_mem_ascii->palette();
-	palette_ascii.setColor(m_mem_ascii->backgroundRole(), QColor(240, 240, 240));
-	palette_ascii.setColor(m_mem_ascii->foregroundRole(), Qt::black);
-	m_mem_ascii->setPalette(palette_ascii);
+	m_mem_ascii->ensurePolished();
 
 	//Merge Memory Panel:
 	hbox_mem_panel->setAlignment(Qt::AlignLeft);

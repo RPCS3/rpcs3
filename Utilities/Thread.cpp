@@ -6,6 +6,7 @@
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Thread.h"
+#include <typeinfo>
 
 #ifdef _WIN32
 #include <Windows.h>

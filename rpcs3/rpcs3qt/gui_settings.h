@@ -63,6 +63,14 @@ namespace GUI
 		return dummy_color.palette().color(colorRole);
 	};
 
+	inline QFont get_Label_Font(const QString& objectName)
+	{
+		QLabel dummy_font;
+		dummy_font.setObjectName(objectName);
+		dummy_font.ensurePolished();
+		return dummy_font.font();
+	};
+
 	inline QString get_Single_Line(const QString& multi_line_string)
 	{
 		QString single_line_string = multi_line_string;
@@ -84,10 +92,11 @@ namespace GUI
 	const QString fs          = "FileSystem";
 	const QString gs_frame    = "GSFrame";
 
-	const QColor mw_tool_bar_color  = QColor(227, 227, 227, 255);
-	const QColor mw_tool_icon_color = QColor(64, 64, 64, 255);
-	const QColor gl_icon_color      = QColor(209, 209, 209, 255);
-	const QColor gl_tool_icon_color = QColor(0, 100, 231, 255);
+	const QColor mw_tool_bar_color   = QColor(227, 227, 227, 255);
+	const QColor mw_tool_icon_color  = QColor(64, 64, 64, 255);
+	const QColor mw_thumb_icon_color = QColor(0, 100, 231, 255);
+	const QColor gl_icon_color       = QColor(209, 209, 209, 255);
+	const QColor gl_tool_icon_color  = QColor(0, 100, 231, 255);
 
 	const GUI_SAVE rg_freeze  = GUI_SAVE(main_window, "recentGamesFrozen", false);
 	const GUI_SAVE rg_entries = GUI_SAVE(main_window, "recentGamesNames", QVariant::fromValue(q_pair_list()));
@@ -195,6 +204,7 @@ public:
 	*/
 	static QIcon colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks = false, bool colorizeAll = false);
 	static QPixmap colorizedPixmap(const QPixmap& old_pixmap, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks = false, bool colorizeAll = false);
+	static QImage GetOpaqueImageArea(const QString& path);
 
 public Q_SLOTS:
 	void Reset(bool removeMeta = false);

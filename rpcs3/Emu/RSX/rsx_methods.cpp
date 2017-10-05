@@ -300,7 +300,7 @@ namespace rsx
 		{
 			if (arg)
 			{
-				rsx::method_registers.current_draw_clause.first_count_commands.clear();
+				rsx::method_registers.current_draw_clause.first_count_commands.resize(0);
 				rsx::method_registers.current_draw_clause.command = draw_command::none;
 				rsx::method_registers.current_draw_clause.primitive = rsx::method_registers.primitive_mode();
 				rsxthr->begin();
@@ -539,10 +539,16 @@ namespace rsx
 
 			u16 in_pitch = method_registers.blit_engine_input_pitch();
 
+			if (in_w == 0 || in_h == 0 || out_w == 0 || out_h == 0)
+			{
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: Invalid blit dimensions passed");
+				return;
+			}
+
 			if (in_origin != blit_engine::transfer_origin::corner)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", (u8)in_origin);
-				return;
+				// Probably refers to texel geometry which would affect clipping algorithm slightly when rounding texel addresses
+				LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", (u8)in_origin);
 			}
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
@@ -580,37 +586,6 @@ namespace rsx
 				return;
 			}
 
-			if (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER)
-			{
-				//HACK: it's extension of the flip-hack. remove this when textures cache would be properly implemented
-				for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
-				{
-					u32 begin = rsx->display_buffers[i].offset;
-
-					if (dst_offset < begin || !begin)
-					{
-						continue;
-					}
-
-					if (rsx->display_buffers[i].width < 720 || rsx->display_buffers[i].height < 480)
-					{
-						continue;
-					}
-
-					if (begin == dst_offset)
-					{
-						return;
-					}
-
-					u32 end = begin + rsx->display_buffers[i].height * rsx->display_buffers[i].pitch;
-
-					if (dst_offset < end)
-					{
-						return;
-					}
-				}
-			}
-
 			const u32 in_bpp = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
 			const u32 out_bpp = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? 2 : 4;
 
@@ -618,6 +593,7 @@ namespace rsx
 			const s32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
 			const tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);
+			const tiled_region dst_region = rsx->get_tiled_address(dst_offset + out_offset, dst_dma & 0xf);
 
 			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
 			u8* pixels_dst = vm::ps3::_ptr<u8>(get_address(dst_offset + out_offset, dst_dma));
@@ -644,32 +620,26 @@ namespace rsx
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", (u8)src_color_format);
 			}
 
-			std::unique_ptr<u8[]> temp1, temp2, sw_temp;
-
-			AVPixelFormat in_format = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
-			AVPixelFormat out_format = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
-
 			f32 scale_x = 1048576.f / method_registers.blit_engine_ds_dx();
 			f32 scale_y = 1048576.f / method_registers.blit_engine_dt_dy();
 
 			u32 convert_w = (u32)(scale_x * in_w);
 			u32 convert_h = (u32)(scale_y * in_h);
 
-			bool need_clip =
-				clip_w != in_w ||
-				clip_h != in_h ||
-				clip_x > 0 || clip_y > 0 ||
-				convert_w != out_w || convert_h != out_h;
-
-			bool need_convert = out_format != in_format || scale_x != 1.0 || scale_y != 1.0;
-
 			u32 slice_h = clip_h;
+			blit_src_info src_info = {};
+			blit_dst_info dst_info = {};
 
 			if (src_region.tile)
 			{
-				if (src_region.tile->comp == CELL_GCM_COMPMODE_C32_2X2)
+				switch(src_region.tile->comp)
 				{
+				case CELL_GCM_COMPMODE_C32_2X2:
 					slice_h *= 2;
+					src_info.compressed_y = true;
+				case CELL_GCM_COMPMODE_C32_2X1:
+					src_info.compressed_x = true;
+					break;
 				}
 
 				u32 size = slice_h * in_pitch;
@@ -681,15 +651,27 @@ namespace rsx
 				}
 			}
 
-			if (g_cfg.video.use_gpu_texture_scaling && dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER)
+			if (dst_region.tile)
+			{
+				switch (dst_region.tile->comp)
+				{
+				case CELL_GCM_COMPMODE_C32_2X2:
+					dst_info.compressed_y = true;
+				case CELL_GCM_COMPMODE_C32_2X1:
+					dst_info.compressed_x = true;
+					break;
+				}
+
+				dst_info.max_tile_h = static_cast<u16>((dst_region.tile->size - dst_region.base) / out_pitch);
+			}
+
+			if (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER)
 			{
 				//For now, only use this for actual scaled images, there are use cases that should not go through 3d engine, e.g program ucode transfer
 				//TODO: Figure out more instances where we can use this without problems
-
-				blit_src_info src_info;
-				blit_dst_info dst_info;
-
+				//NOTE: In cases where slice_h is modified due to compression (read from tiled memory), the new value (clip_h * 2) does not matter if memory is on the GPU
 				src_info.format = src_color_format;
+				src_info.origin = in_origin;
 				src_info.width = in_w;
 				src_info.height = in_h;
 				src_info.pitch = in_pitch;
@@ -709,6 +691,8 @@ namespace rsx
 				dst_info.offset_x = out_x;
 				dst_info.offset_y = out_y;
 				dst_info.pitch = out_pitch;
+				dst_info.scale_x = scale_x;
+				dst_info.scale_y = scale_y;
 				dst_info.pixels = pixels_dst;
 				dst_info.rsx_address = get_address(dst_offset, dst_dma);
 				dst_info.swizzled = (method_registers.blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);
@@ -716,6 +700,19 @@ namespace rsx
 				if (rsx->scaled_image_from_memory(src_info, dst_info, in_inter == blit_engine::transfer_interpolator::foh))
 					return;
 			}
+
+			std::unique_ptr<u8[]> temp1, temp2, sw_temp;
+
+			const AVPixelFormat in_format = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
+			const AVPixelFormat out_format = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
+
+			const bool need_clip =
+				clip_w != in_w ||
+				clip_h != in_h ||
+				clip_x > 0 || clip_y > 0 ||
+				convert_w != out_w || convert_h != out_h;
+
+			const bool need_convert = out_format != in_format || scale_x != 1.0 || scale_y != 1.0;
 
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{
@@ -1489,6 +1486,7 @@ namespace rsx
 		bind_array<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nullptr>();
 		bind_array<NV4097_SET_COLOR_KEY_COLOR, 1, 16, nullptr>();
+		bind_array<(0xac00 >> 2), 1, 16, nullptr>();  // Unknown texture control register
 
 		// NV406E
 		bind<NV406E_SET_REFERENCE, nv406e::set_reference>();

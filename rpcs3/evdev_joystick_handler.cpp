@@ -120,7 +120,7 @@ bool evdev_joystick_handler::try_open_dev(u32 index)
     pads[index]->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 
     int buttons=0;
-    for (int i=BTN_JOYSTICK; i<KEY_MAX; i++)
+    for (u32 i=BTN_JOYSTICK; i<KEY_MAX; i++)
         if (libevdev_has_event_code(dev, EV_KEY, i))
         {
             LOG_NOTICE(GENERAL, "Joystick #%d has button %d as %d", index, i, buttons);
@@ -128,7 +128,7 @@ bool evdev_joystick_handler::try_open_dev(u32 index)
         }
 
     int axes=0;
-    for (int i=ABS_X; i<=ABS_RZ; i++)
+    for (u32 i=ABS_X; i<=ABS_RZ; i++)
     {
 
         if (libevdev_has_event_code(dev, EV_ABS, i))
@@ -144,7 +144,7 @@ bool evdev_joystick_handler::try_open_dev(u32 index)
         }
     }
 
-    for (int i=ABS_HAT0X; i<=ABS_HAT3Y; i+=2)
+    for (u32 i=ABS_HAT0X; i<=ABS_HAT3Y; i+=2)
         if (libevdev_has_event_code(dev, EV_ABS, i) ||
             libevdev_has_event_code(dev, EV_ABS, i+1))
         {
@@ -168,6 +168,30 @@ void evdev_joystick_handler::Close()
     }
 }
 
+inline float deadzone(f32 input)
+{
+    //when we're just above the deadzone, the output should be 128, not 128+deadzone
+    //otherwise, there'll be a jump. So, we need to recalculate the output with a linear function
+    float deadzone_slope, deadzone_origin;
+    if (input >= 127.5 - g_evdev_joystick_config.deadzone && input <= 127.5 + g_evdev_joystick_config.deadzone)
+    {
+        return 127.5;
+    }
+    else
+    {
+        if (input > 127.5 + g_evdev_joystick_config.deadzone)
+        {
+            deadzone_slope = 127.5 / (127.5 - g_evdev_joystick_config.deadzone);
+            deadzone_origin = 255.0 * (1.0 - deadzone_slope);
+            return (deadzone_slope * input + deadzone_origin);
+        }
+        if (input < 127.5 - g_evdev_joystick_config.deadzone)
+        {
+            return (127.5 / (127.5 - g_evdev_joystick_config.deadzone)) * input;
+        }
+    }
+}
+
 int evdev_joystick_handler::scale_axis(int axis, int value)
 {
     auto range = axis_ranges[axis];
@@ -181,12 +205,11 @@ int evdev_joystick_handler::scale_axis(int axis, int value)
             range.second += -range.first;
             range.first = 0;
         }
-
-        return (static_cast<float>(value - range.first) / range.second) * 255;
+        return (deadzone(((static_cast<float>(value) - range.first) / range.second) * 255));
     }
     else
     {
-        return value;
+        return (deadzone(static_cast<float>(value)));
     }
 }
 
@@ -204,8 +227,7 @@ std::vector<std::string> evdev_joystick_handler::ListDevices()
         {
             int fd = open(("/dev/input/" + et.name).c_str(), O_RDONLY|O_NONBLOCK);
             struct libevdev *dev = NULL;
-            int rc = 1;
-            rc = libevdev_new_from_fd(fd, &dev);
+            int rc = libevdev_new_from_fd(fd, &dev);
             if (rc < 0)
             {
                 // If it's just a bad file descriptor, don't bother logging, but otherwise, log it.
@@ -243,8 +265,7 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
             {
                 int fd = open(("/dev/input/" + et.name).c_str(), O_RDONLY|O_NONBLOCK);
                 struct libevdev *dev = NULL;
-                int rc = 1;
-                rc = libevdev_new_from_fd(fd, &dev);
+                int rc = libevdev_new_from_fd(fd, &dev);
                 if (rc < 0)
                 {
                     // If it's just a bad file descriptor, don't bother logging, but otherwise, log it.
@@ -415,7 +436,7 @@ void evdev_joystick_handler::ThreadProc()
                     }
                     else
                     {
-                        int code = -1;
+                        int code;
                         if (source_axis == EVDEV_DPAD_HAT_AXIS_X)
                         {
                             code = evt.value > 0 ? CELL_PAD_CTRL_RIGHT : CELL_PAD_CTRL_LEFT;
@@ -475,9 +496,16 @@ void evdev_joystick_handler::ThreadProc()
                     break;
                 }
 
+                int value = evt.value;
+                if (revaxis[axis])
+                {
+                    // Reverse the value in the range.
+                    value = (axis_ranges[evt.code].second + axis_ranges[evt.code].first) - value;
+                }
+
                 if (g_evdev_joystick_config.squirclejoysticks)
                 {
-                    joy_axis[i][axis] = evt.value;
+                    joy_axis[i][axis] = value;
                     if (evt.code == ABS_X || evt.code == ABS_Y)
                     {
                         int Xaxis = joy_axis_maps[i][ABS_X];
@@ -500,7 +528,7 @@ void evdev_joystick_handler::ThreadProc()
                     }
                 }
                 else
-                    pad->m_sticks[axis].m_value = scale_axis(evt.code, evt.value);
+                    pad->m_sticks[axis].m_value = scale_axis(evt.code, value);
             }
             break;
         default:

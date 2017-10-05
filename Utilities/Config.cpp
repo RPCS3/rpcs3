@@ -3,6 +3,8 @@
 
 #include "yaml-cpp/yaml.h"
 
+#include <typeinfo>
+
 namespace cfg
 {
 	logs::channel cfg("CFG");

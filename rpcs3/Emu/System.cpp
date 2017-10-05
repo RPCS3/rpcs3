@@ -24,6 +24,7 @@
 #include "yaml-cpp/yaml.h"
 
 #include <thread>
+#include <typeinfo>
 
 #include "Utilities/GDBDebugServer.h"
 
@@ -41,6 +42,8 @@ extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void arm_load_exec(const arm_exec_object&);
 extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
+
+extern void network_thread_init();
 
 fs::file g_tty;
 
@@ -227,12 +230,6 @@ void Emulator::Init()
 	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
 }
 
-void Emulator::SetPath(const std::string& path, const std::string& elf_path)
-{
-	m_path = path;
-	m_elf_path = elf_path;
-}
-
 bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 {
 	static const char* boot_list[] =
@@ -245,7 +242,7 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 
 	if (direct && fs::is_file(path))
 	{
-		SetPath(path);
+		m_path = path;
 		Load(add_only);
 
 		return true;
@@ -257,7 +254,7 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 
 		if (fs::is_file(elf))
 		{
-			SetPath(elf);
+			m_path = elf;
 			Load(add_only);
 
 			return true;
@@ -359,6 +356,8 @@ void Emulator::Load(bool add_only)
 		const std::string home_dir = g_cfg.vfs.app_home;
 		std::string bdvd_dir = g_cfg.vfs.dev_bdvd;
 
+		// Mount default relative path to non-existent directory
+		vfs::mount("", fs::get_config_dir() + "delete_this_dir/");
 		vfs::mount("dev_hdd0", fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir));
 		vfs::mount("dev_hdd1", fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir));
 		vfs::mount("dev_flash", fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir));
@@ -379,7 +378,7 @@ void Emulator::Load(bool add_only)
 			if (fs::rename(elf_dir + "/../../", hdd0_disc + elf_dir.substr(hdd0_game.size()) + "/../../", false))
 			{
 				LOG_SUCCESS(LOADER, "Disc game %s moved to special location /dev_hdd0/disc/", m_title_id);
-				return SetPath(hdd0_disc + m_path.substr(hdd0_game.size())), Load();
+				return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load();
 			}
 			else
 			{
@@ -459,7 +458,7 @@ void Emulator::Load(bool add_only)
 		{
 			// Booting game update
 			LOG_SUCCESS(LOADER, "Updates found at /dev_hdd0/game/%s/!", m_title_id);
-			return SetPath(hdd0_boot), Load();
+			return m_path = hdd0_boot, Load();
 		}
 
 		// Mount /host_root/ if necessary
@@ -527,30 +526,31 @@ void Emulator::Load(bool add_only)
 
 			vm::ps3::init();
 
-			if (m_elf_path.empty())
+			if (argv.empty())
 			{
 				if (m_path.find(hdd0_game) != -1)
 				{
-					m_elf_path = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size());
+					argv.emplace_back("/dev_hdd0/game/" + m_path.substr(hdd0_game.size()));
 				}
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
-					//Disc games are on /dev_bdvd/
-					size_t pos = m_path.rfind("PS3_GAME");
-					m_elf_path = "/dev_bdvd/" + m_path.substr(pos);
+					// Disc games are on /dev_bdvd/
+					const std::size_t pos = m_path.rfind("PS3_GAME");
+					argv.emplace_back("/dev_bdvd/" + m_path.substr(pos));
 				}
 				else
 				{
-					//For homebrew
-					m_elf_path = "/host_root/" + m_path;
+					// For homebrew
+					argv.emplace_back("/host_root/" + m_path);
 				}
 
-				LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
+				LOG_NOTICE(LOADER, "Elf path: %s", argv[0]);
 			}
 
 			ppu_load_exec(ppu_exec);
 
 			fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render); // TODO: must be created in appropriate sys_rsx syscall
+			network_thread_init();
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{
@@ -578,10 +578,10 @@ void Emulator::Load(bool add_only)
 			GetCallbacks().on_ready();
 			vm::psv::init();
 
-			if (m_elf_path.empty())
+			if (argv.empty())
 			{
-				m_elf_path = "host_root:" + m_path;
-				LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
+				argv.emplace_back("host_root:" + m_path);
+				LOG_NOTICE(LOADER, "Elf path: %s", argv[0]);
 			}
 
 			arm_load_exec(arm_exec);
@@ -793,6 +793,10 @@ void Emulator::Stop()
 	extern void jit_finalize();
 	jit_finalize();
 #endif
+
+	argv.clear();
+	envp.clear();
+	data.clear();
 }
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)

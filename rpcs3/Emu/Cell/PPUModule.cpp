@@ -124,7 +124,8 @@ struct ppu_linkage_info
 	{
 		struct info
 		{
-			bool hle = false;
+			ppu_static_function* static_func = nullptr;
+			ppu_static_variable* static_var = nullptr;
 			u32 export_addr = 0;
 			std::set<u32> imports;
 			std::set<u32> frefss;
@@ -248,7 +249,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::sceNpTus,
 		&ppu_module_manager::sceNpUtil,
 		&ppu_module_manager::sys_io,
-		&ppu_module_manager::libnet,
+		&ppu_module_manager::sys_net,
 		&ppu_module_manager::sysPrxForUser,
 		&ppu_module_manager::sys_libc,
 		&ppu_module_manager::sys_lv2dbg,
@@ -315,8 +316,9 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 			{
 				auto& flink = linkage.functions[function.first];
 
-				flink.hle = true;
+				flink.static_func = &function.second;
 				flink.export_addr = ppu_function_manager::addr + 8 * function.second.index;
+				function.second.export_addr = &flink.export_addr;
 			}
 		}
 
@@ -327,7 +329,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 			// Allocate HLE variable
 			if (variable.second.size >= 4096 || variable.second.align >= 4096)
 			{
-				variable.second.var->set(vm::alloc(variable.second.size, vm::main, std::max<u32>(variable.second.align, 4096)));
+				variable.second.addr = vm::alloc(variable.second.size, vm::main, std::max<u32>(variable.second.align, 4096));
 			}
 			else
 			{
@@ -343,8 +345,13 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 					alloc_addr = next;
 				}
 
-				variable.second.var->set(alloc_addr);
+				variable.second.addr = alloc_addr;
 				alloc_addr += variable.second.size;
+			}
+
+			if (variable.second.var)
+			{
+				variable.second.var->set(variable.second.addr);
 			}
 
 			LOG_TRACE(LOADER, "Allocated HLE variable %s.%s at 0x%x", module->name, variable.second.name, variable.second.var->addr());
@@ -355,10 +362,14 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 				variable.second.init();
 			}
 
-			auto& vlink = linkage.variables[variable.first];
-			
-			vlink.hle = true;
-			vlink.export_addr = variable.second.var->addr();
+			if ((variable.second.flags & MFF_HIDDEN) == 0)
+			{
+				auto& vlink = linkage.variables[variable.first];
+
+				vlink.static_var = &variable.second;
+				vlink.export_addr = variable.second.addr;
+				variable.second.export_addr = &vlink.export_addr;
+			}
 		}
 	}
 }
@@ -510,7 +521,12 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 			// Function linkage info
 			auto& flink = mlink.functions[fnid];
 
-			if (flink.export_addr && !flink.hle)
+			if (flink.static_func && flink.export_addr == ppu_function_manager::addr + 8 * flink.static_func->index)
+			{
+				flink.export_addr = 0;
+			}
+
+			if (flink.export_addr)
 			{
 				LOG_ERROR(LOADER, "Already linked function '%s' in module '%s'", ppu_get_function_name(module_name, fnid), module_name);
 			}
@@ -544,7 +560,6 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 				{
 					// Set exported function
 					flink.export_addr = faddr;
-					flink.hle = false;
 
 					// Fix imports
 					for (const u32 addr : flink.imports)
@@ -574,7 +589,12 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 			// Variable linkage info
 			auto& vlink = mlink.variables[vnid];
 
-			if (vlink.export_addr && !vlink.hle)
+			if (vlink.static_var && vlink.export_addr == vlink.static_var->addr)
+			{
+				vlink.export_addr = 0;
+			}
+
+			if (vlink.export_addr)
 			{
 				LOG_ERROR(LOADER, "Already linked variable '%s' in module '%s'", ppu_get_variable_name(module_name, vnid), module_name);
 			}
@@ -582,7 +602,6 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 			{
 				// Set exported variable
 				vlink.export_addr = vaddr;
-				vlink.hle = false;
 
 				// Fix imports
 				for (const auto vref : vlink.imports)
@@ -946,6 +965,23 @@ void ppu_unload_prx(const lv2_prx& prx)
 		pinfo->imports.erase(imp.first);
 	}
 
+	//for (auto& exp : prx.exports)
+	//{
+	//	auto pinfo = static_cast<ppu_linkage_info::module::info*>(exp.second);
+	//	if (pinfo->static_func)
+	//	{
+	//		pinfo->export_addr = ppu_function_manager::addr + 8 * pinfo->static_func->index;
+	//	}
+	//	else if (pinfo->static_var)
+	//	{
+	//		pinfo->export_addr = pinfo->static_var->addr;
+	//	}
+	//	else
+	//	{
+	//		pinfo->export_addr = 0;
+	//	}
+	//}
+
 	for (auto& seg : prx.segs)
 	{
 		vm::dealloc(seg.addr, vm::main);
@@ -1170,9 +1206,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Get LLE module list
 	std::set<std::string> load_libs;
 
-	if (g_cfg.core.lib_loading == lib_loading_type::manual || g_cfg.core.lib_loading == lib_loading_type::both)
+	if (g_cfg.core.lib_loading == lib_loading_type::manual)
 	{
-		// Load required set of modules
+		// Load required set of modules (lib_loading_type::both processed in sys_prx.cpp)
 		load_libs = g_cfg.core.load_libraries.get_set();
 	}
 	else if (g_cfg.core.lib_loading == lib_loading_type::liblv2only)
@@ -1352,7 +1388,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	// Set path (TODO)
 	_main->name = "";
-	_main->path = vfs::get(Emu.GetPath());
+	_main->path = vfs::get(Emu.argv[0]);
 
 	// Analyse executable (TODO)
 	_main->analyse(0, static_cast<u32>(elf.header.e_entry));
@@ -1364,26 +1400,41 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	g_ps3_sdk_version = sdk_version;
 
 	// Initialize process arguments
-	std::initializer_list<std::string> args = { Emu.GetPath()/*, "-emu"s*/ };
+	auto args = vm::ptr<u64>::make(vm::alloc(SIZE_32(u64) * (::size32(Emu.argv) + ::size32(Emu.envp) + 2), vm::main));
+	auto argv = args;
 
-	auto argv = vm::ptr<u64>::make(vm::alloc(SIZE_32(u64) * ::size32(args), vm::main));
-	auto envp = vm::ptr<u64>::make(vm::alloc(::align(SIZE_32(u64), 0x10), vm::main));
-	*envp = 0;
-
-	for (const auto& arg : args)
+	for (const auto& arg : Emu.argv)
 	{
 		const u32 arg_size = ::align(::size32(arg) + 1, 0x10);
 		const u32 arg_addr = vm::alloc(arg_size, vm::main);
 
 		std::memcpy(vm::base(arg_addr), arg.data(), arg_size);
 
-		*argv++ = arg_addr;
+		*args++ = arg_addr;
 	}
 
-	argv -= ::size32(args);
+	*args++ = 0;
+	auto envp = args;
+
+	for (const auto& arg : Emu.envp)
+	{
+		const u32 arg_size = ::align(::size32(arg) + 1, 0x10);
+		const u32 arg_addr = vm::alloc(arg_size, vm::main);
+
+		std::memcpy(vm::base(arg_addr), arg.data(), arg_size);
+
+		*args++ = arg_addr;
+	}
 
 	// Initialize main thread
 	auto ppu = idm::make_ptr<ppu_thread>("main_thread", primary_prio, primary_stacksize);
+
+	// Write initial data (exitspawn)
+	if (Emu.data.size())
+	{
+		std::memcpy(vm::base(ppu->stack_addr + ppu->stack_size - ::size32(Emu.data)), Emu.data.data(), Emu.data.size());
+		ppu->gpr[1] -= Emu.data.size();
+	}
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 
@@ -1426,7 +1477,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Set command line arguments, run entry function
 	ppu->cmd_list
 	({
-		{ ppu_cmd::set_args, 8 }, u64{args.size()}, u64{argv.addr()}, u64{envp.addr()}, u64{0}, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
+		{ ppu_cmd::set_args, 8 }, u64{Emu.argv.size()}, u64{argv.addr()}, u64{envp.addr()}, u64{0}, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
 		{ ppu_cmd::set_gpr, 11 }, u64{elf.header.e_entry},
 		{ ppu_cmd::set_gpr, 12 }, u64{malloc_pagesize},
 		{ ppu_cmd::lle_call, entry },

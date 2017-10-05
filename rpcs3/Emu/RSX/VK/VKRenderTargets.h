@@ -16,10 +16,11 @@ struct ref_counted
 
 namespace vk
 {
-	struct render_target : public image, public ref_counted
+	struct render_target : public image, public ref_counted, public rsx::render_target_descriptor<vk::image*>
 	{
 		bool dirty = false;
 		u16 native_pitch = 0;
+		u16 rsx_pitch = 0;
 		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
 		std::unique_ptr<vk::image_view> view;
 
@@ -49,6 +50,31 @@ namespace vk
 						native_component_map, vk::get_image_subresource_range(0, 0, 1, 1, attachment_aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT)));
 
 			return view.get();
+		}
+
+		vk::image* get_surface() const override
+		{
+			return (vk::image*)this;
+		}
+
+		u16 get_surface_width() const override
+		{
+			return width();
+		}
+
+		u16 get_surface_height() const override
+		{
+			return height();
+		}
+
+		u16 get_rsx_pitch() const override
+		{
+			return rsx_pitch;
+		}
+
+		u16 get_native_pitch() const override
+		{
+			return native_pitch;
 		}
 	};
 
@@ -169,6 +195,16 @@ namespace rsx
 			}
 
 			return ds;
+		}
+
+		static
+		void get_surface_info(vk::render_target *surface, rsx::surface_format_info *info)
+		{
+			info->rsx_pitch = surface->rsx_pitch;
+			info->native_pitch = surface->native_pitch;
+			info->surface_width = surface->info.extent.width;
+			info->surface_height = surface->info.extent.height;
+			info->bpp = static_cast<u8>(info->native_pitch / info->surface_width);
 		}
 
 		static void prepare_rtt_for_drawing(vk::command_buffer* pcmd, vk::render_target *surface)
