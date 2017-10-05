@@ -153,6 +153,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> settings, const R
 	m_gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_gameList->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_gameList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_gameList->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_gameList->verticalScrollBar()->setSingleStep(20);
+	m_gameList->horizontalScrollBar()->setSingleStep(20);
 	m_gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);	
 	m_gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
 	m_gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
@@ -951,7 +954,7 @@ void game_list_frame::resizeEvent(QResizeEvent *event)
 {
 	if (!m_isListLayout)
 	{
-		Refresh();
+		Refresh(false, m_xgrid->selectedItems().count());
 	}
 	QDockWidget::resizeEvent(event);
 }
@@ -1040,19 +1043,18 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 		m_xgrid = new game_list_grid(image_size, image_color, m_Margin_Factor, m_Text_Factor, showText);
 	}
 
-	// Get number of things that'll be in grid and precompute grid size.
-	uint entries = 0;
-	for (const GUI_GameInfo& game : m_game_data)
+	// Get list of matching apps and their index
+	QList<QPair<GUI_GameInfo*, int>> matching_apps;
+
+	for (uint i = 0; i < m_game_data.size(); i++)
 	{
-		if (qstr(game.info.category) == category::disc_Game || qstr(game.info.category) == category::hdd_Game)
+		if (category::CategoryInMap(m_game_data[i].info.category, category::cat_boot) && SearchMatchesApp(m_game_data[i].info.name, m_game_data[i].info.serial))
 		{
-			if (SearchMatchesApp(game.info.name, game.info.serial) == false)
-			{
-				continue;
-			}
-			++entries;
+			matching_apps.append(QPair<GUI_GameInfo*, int>(&m_game_data[i], i));
 		}
 	}
+
+	int entries = matching_apps.count();
 
 	// Edge cases!
 	if (entries == 0)
@@ -1073,31 +1075,21 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 	m_xgrid->setRowCount(maxRows);
 	m_xgrid->setColumnCount(maxCols);
 
-	for (uint i = 0; i < m_game_data.size(); i++)
+	for (const auto& app : matching_apps)
 	{
-		if (SearchMatchesApp(m_game_data[i].info.name, m_game_data[i].info.serial) == false)
+		QString title = GUI::get_Single_Line(qstr(app.first->info.name));
+
+		m_xgrid->addItem(app.first->pxmap, title, app.second, r, c);
+
+		if (selected_item == app.first->info.icon_path)
 		{
-			continue;
+			m_xgrid->setCurrentItem(m_xgrid->item(r, c));
 		}
 
-		QString category = qstr(m_game_data[i].info.category);
-
-		if (category == category::hdd_Game || category == category::disc_Game)
+		if (++c >= maxCols)
 		{
-			QString title = GUI::get_Single_Line(qstr(m_game_data[i].info.name));
-
-			m_xgrid->addItem(m_game_data[i].pxmap, title, i, r, c);
-
-			if (selected_item == m_game_data[i].info.icon_path)
-			{
-				m_xgrid->setCurrentItem(m_xgrid->item(r, c));
-			}
-
-			if (++c >= maxCols)
-			{
-				c = 0;
-				r++;
-			}
+			c = 0;
+			r++;
 		}
 	}
 

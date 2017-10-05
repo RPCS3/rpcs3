@@ -12,6 +12,7 @@
 
 #include "memory_viewer_panel.h"
 #include "table_item_delegate.h"
+#include "gui_settings.h"
 
 #include <QDialog>
 #include <QLabel>
@@ -22,7 +23,6 @@
 #include <QListWidget>
 #include <QTableWidget>
 #include <QHeaderView>
-#include <QPalette>
 #include <QFont>
 #include <QSignalMapper>
 #include <QPixmap>

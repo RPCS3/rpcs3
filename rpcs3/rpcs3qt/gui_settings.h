@@ -63,6 +63,14 @@ namespace GUI
 		return dummy_color.palette().color(colorRole);
 	};
 
+	inline QFont get_Label_Font(const QString& objectName)
+	{
+		QLabel dummy_font;
+		dummy_font.setObjectName(objectName);
+		dummy_font.ensurePolished();
+		return dummy_font.font();
+	};
+
 	inline QString get_Single_Line(const QString& multi_line_string)
 	{
 		QString single_line_string = multi_line_string;

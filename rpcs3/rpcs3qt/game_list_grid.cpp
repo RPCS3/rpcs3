@@ -1,8 +1,10 @@
 #include "game_list_grid.h"
 #include "game_list_grid_delegate.h"
+#include "gui_settings.h"
 
 #include <QHeaderView>
 #include <QLabel>
+#include <QScrollBar>
 
 game_list_grid::game_list_grid(const QSize& icon_size, const QColor& icon_color, const qreal& margin_factor, const qreal& text_factor, const bool& showText)
 	: game_list(), m_icon_size(icon_size), m_icon_color(icon_color), m_margin_factor(margin_factor), m_text_factor(text_factor), m_text_enabled(showText)
@@ -18,11 +20,8 @@ game_list_grid::game_list_grid(const QSize& icon_size, const QColor& icon_color,
 	}
 
 	// font by stylesheet
-	QLabel font_dummy;
-	font_dummy.setObjectName("gamegrid_font");
-	font_dummy.ensurePolished();
-	QFont font = font_dummy.font();
-	QColor font_color = font_dummy.palette().color(QPalette::Foreground);
+	QFont font = GUI::get_Label_Font("gamegrid_font");
+	QColor font_color = GUI::get_Label_Color("gamegrid_font");
 
 	grid_item_delegate = new game_list_grid_delegate(item_size, m_margin_factor, m_text_factor, font, font_color, this);
 	setItemDelegate(grid_item_delegate);
@@ -30,6 +29,8 @@ game_list_grid::game_list_grid(const QSize& icon_size, const QColor& icon_color,
 	setSelectionMode(QAbstractItemView::SingleSelection);
 	setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 	setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+	verticalScrollBar()->setSingleStep(20);
+	horizontalScrollBar()->setSingleStep(20);
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	verticalHeader()->setVisible(false);
 	horizontalHeader()->setVisible(false);
