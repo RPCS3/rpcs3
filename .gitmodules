@@ -1,10 +1,6 @@
 [submodule "rpcs3-ffmpeg"]
 	path = 3rdparty/ffmpeg
 	url = https://github.com/hrydgard/ppsspp-ffmpeg
-[submodule "asmjit"]
-	path = asmjit
-	url = https://github.com/kobalicek/asmjit
-	ignore = dirty
 [submodule "llvm"]
 	path = llvm
 	url = https://github.com/llvm-mirror/llvm
@@ -44,3 +40,6 @@
 	path = 3rdparty/hidapi
 	url = https://github.com/RPCS3/hidapi
 	branch = master
+[submodule "3rdparty/asmjit"]
+	path = 3rdparty/asmjit
+	url = https://github.com/asmjit/asmjit

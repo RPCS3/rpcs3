@@ -249,7 +249,7 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/Crypto"
 "${RPCS3_SRC_DIR}/.."
 "${RPCS3_SRC_DIR}/../Utilities/yaml-cpp/include"
-"${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
+"${RPCS3_SRC_DIR}/../3rdparty/asmjit/src/asmjit"
 "${RPCS3_SRC_DIR}/../3rdparty/GSL/include"
 "${RPCS3_SRC_DIR}/../Vulkan/Vulkan-LoaderAndValidationLayers/include"
 "${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/Public"
@@ -313,7 +313,7 @@ GLOB_RECURSE
 RPCS3_SRC
 "${RPCS3_SRC_DIR}/*.cpp"
 "${RPCS3_SRC_DIR}/../Utilities/*.cpp"
-"${RPCS3_SRC_DIR}/../asmjit/src/asmjit/*.cpp"
+"${RPCS3_SRC_DIR}/../3rdparty/asmjit/src/asmjit/*.cpp"
 )
 
 if (NOT WIN32 AND VULKAN_FOUND)
