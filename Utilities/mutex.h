@@ -95,6 +95,11 @@ public:
 			imp_lock_degrade();
 		}
 	}
+
+	bool is_reading() const
+	{
+		return (m_value.load() % c_one) != 0;
+	}
 };
 
 // Simplified shared (reader) lock implementation.
@@ -170,4 +175,57 @@ public:
 	{
 		unlock();
 	}
+};
+
+// Safe reader lock. Can be recursive above other safe locks (reader or writer).
+class safe_reader_lock final
+{
+	shared_mutex& m_mutex;
+	bool m_is_owned;
+
+	void lock()
+	{
+		m_mutex.lock_shared();
+	}
+
+	void unlock()
+	{
+		m_mutex.unlock_shared();
+	}
+
+	friend class cond_variable;
+
+public:
+	safe_reader_lock(const safe_reader_lock&) = delete;
+
+	explicit safe_reader_lock(shared_mutex& mutex);
+
+	~safe_reader_lock();
+};
+
+// Safe writer lock. Can be recursive above other safe locks. Performs upgrade and degrade operations above existing reader lock if necessary.
+class safe_writer_lock final
+{
+	shared_mutex& m_mutex;
+	bool m_is_owned;
+	bool m_is_upgraded;
+
+	void lock()
+	{
+		m_mutex.lock();
+	}
+
+	void unlock()
+	{
+		m_mutex.unlock();
+	}
+
+	friend class cond_variable;
+
+public:
+	safe_writer_lock(const safe_writer_lock&) = delete;
+
+	explicit safe_writer_lock(shared_mutex& mutex);
+
+	~safe_writer_lock();
 };
