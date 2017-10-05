@@ -34,6 +34,8 @@
 		}
 	},
 	"debug": {
+		"ppuDebug": "Never use this.",
+		"spuDebug": "Never use this.",
 		"readColor": "Never use this.",
 		"dumpDepth": "Never use this.",
 		"readDepth": "Never use this.",
