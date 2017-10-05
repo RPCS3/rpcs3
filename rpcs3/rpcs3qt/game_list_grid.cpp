@@ -1,5 +1,6 @@
 #include "game_list_grid.h"
 #include "game_list_grid_delegate.h"
+#include "gui_settings.h"
 
 #include <QHeaderView>
 #include <QLabel>
@@ -18,11 +19,8 @@ game_list_grid::game_list_grid(const QSize& icon_size, const QColor& icon_color,
 	}
 
 	// font by stylesheet
-	QLabel font_dummy;
-	font_dummy.setObjectName("gamegrid_font");
-	font_dummy.ensurePolished();
-	QFont font = font_dummy.font();
-	QColor font_color = font_dummy.palette().color(QPalette::Foreground);
+	QFont font = GUI::get_Label_Font("gamegrid_font");
+	QColor font_color = GUI::get_Label_Color("gamegrid_font");
 
 	grid_item_delegate = new game_list_grid_delegate(item_size, m_margin_factor, m_text_factor, font, font_color, this);
 	setItemDelegate(grid_item_delegate);

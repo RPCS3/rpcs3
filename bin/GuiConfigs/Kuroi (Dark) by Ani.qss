@@ -291,3 +291,40 @@ QTextEdit#tty_frame {
 QLabel#tty_text {
 	color: #ffffff; /* White */
 }
+
+/* RSX Debugger */
+QLabel#rsx_debugger_display_buffer {
+	background-color: #323232;
+}
+
+/* Kernel Explorer */
+QDialog#kernel_explorer {
+	background-color: #323232;
+}
+
+/* Memory Viewer */
+QDialog#memory_viewer {
+	background-color: #323232;
+}
+QLabel#memory_viewer_address_panel {
+	color: #00cbff; /* Font Color: Blue */
+	background-color: #323232;
+}
+QLabel#memory_viewer_hex_panel {
+	color: #bdc3c7; /* Font Color: Grey */
+	background-color: #323232;
+}
+QLabel#memory_viewer_ascii_panel {
+	color: #bdc3c7; /* Font Color: Grey */
+	background-color: #323232;
+}
+
+/* Debugger colors */
+QLabel#debugger_frame_breakpoint {
+	color: #000000; /* Font Color: Black */
+	background-color: #ffff00; /* Yellow */
+}
+QLabel#debugger_frame_pc {
+	color: #000000; /* Font Color: Black */
+	background-color: #00ff00; /* Green */
+}

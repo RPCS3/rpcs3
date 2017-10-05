@@ -1081,6 +1081,11 @@ void main_window::RepaintGui()
 		m_logFrame->RepaintTextColors();
 	}
 
+	if (m_debuggerFrame)
+	{
+		m_debuggerFrame->ChangeColors();
+	}
+
 	RepaintToolbar();
 	RepaintToolBarIcons();
 	RepaintThumbnailIcons();
