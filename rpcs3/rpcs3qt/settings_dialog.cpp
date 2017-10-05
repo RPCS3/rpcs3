@@ -781,7 +781,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	//                             __/ |                   
 	//                            |___/                    
 
-	// Checkboxes: debug options
+	// Checkboxes: gpu debug options
 	xemu_settings->EnhanceCheckBox(ui->glLegacyBuffers, emu_settings::LegacyBuffers);
 	ui->glLegacyBuffers->setToolTip(json_debug["glLegacyBuffers"].toString());
 
@@ -811,6 +811,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->disableHwOcclusionQueries, emu_settings::DisableOcclusionQueries);
 	ui->disableHwOcclusionQueries->setToolTip(json_debug["disableOcclusionQueries"].toString());
+
+	// Checkboxes: core debug options
+	xemu_settings->EnhanceCheckBox(ui->ppuDebug, emu_settings::PPUDebug);
+	ui->ppuDebug->setToolTip(json_debug["ppuDebug"].toString());
+	//TODO: Subscribe
+
+	xemu_settings->EnhanceCheckBox(ui->spuDebug, emu_settings::SPUDebug);
+	ui->spuDebug->setToolTip(json_debug["spuDebug"].toString());
+	//TODO: Subscribe
 
 	//
 	// Layout fix for High Dpi

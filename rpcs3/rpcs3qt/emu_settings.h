@@ -34,6 +34,8 @@ public:
 		LowerSPUThreadPrio,
 		SPULoopDetection,
 		PreferredSPUThreads,
+		PPUDebug,
+		SPUDebug,
 
 		// Graphics
 		Renderer,
@@ -174,6 +176,8 @@ private:
 		{ LowerSPUThreadPrio, { "Core", "Lower SPU thread priority"}},
 		{ SPULoopDetection, { "Core", "SPU loop detection"}},
 		{ PreferredSPUThreads, { "Core", "Preferred SPU Threads"}},
+		{ PPUDebug,            { "Core", "PPU Debug"}},
+		{ SPUDebug,            { "Core", "SPU Debug"}},
 
 		// Graphics Tab
 		{ Renderer,			{ "Video", "Renderer"}},
