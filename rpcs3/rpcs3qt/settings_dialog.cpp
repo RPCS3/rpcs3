@@ -46,25 +46,25 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	QJsonObject json_obj = QJsonDocument::fromJson(json_file.readAll()).object();
 	json_file.close();
 
-	QJsonObject json_cpu = json_obj.value("cpu").toObject();
+	QJsonObject json_cpu     = json_obj.value("cpu").toObject();
 	QJsonObject json_cpu_ppu = json_cpu.value("PPU").toObject();
 	QJsonObject json_cpu_spu = json_cpu.value("SPU").toObject();
 	QJsonObject json_cpu_cbs = json_cpu.value("checkboxes").toObject();
 	QJsonObject json_cpu_cbo = json_cpu.value("comboboxes").toObject();
 	QJsonObject json_cpu_lib = json_cpu.value("libraries").toObject();
 
-	QJsonObject json_gpu = json_obj.value("gpu").toObject();
-	QJsonObject json_gpu_cbo = json_gpu.value("comboboxes").toObject();
+	QJsonObject json_gpu      = json_obj.value("gpu").toObject();
+	QJsonObject json_gpu_cbo  = json_gpu.value("comboboxes").toObject();
 	QJsonObject json_gpu_main = json_gpu.value("main").toObject();
-	QJsonObject json_gpu_deb = json_gpu.value("debug").toObject();
+	QJsonObject json_gpu_deb  = json_gpu.value("debug").toObject();
 
 	QJsonObject json_audio = json_obj.value("audio").toObject();
 	QJsonObject json_input = json_obj.value("input").toObject();
-	QJsonObject json_sys = json_obj.value("system").toObject();
-	QJsonObject json_net = json_obj.value("network").toObject();
+	QJsonObject json_sys   = json_obj.value("system").toObject();
+	QJsonObject json_net   = json_obj.value("network").toObject();
 
-	QJsonObject json_emu = json_obj.value("emulator").toObject();
-	QJsonObject json_emu_gui = json_emu.value("gui").toObject();
+	QJsonObject json_emu      = json_obj.value("emulator").toObject();
+	QJsonObject json_emu_gui  = json_emu.value("gui").toObject();
 	QJsonObject json_emu_misc = json_emu.value("misc").toObject();
 
 	QJsonObject json_debug = json_obj.value("debug").toObject();
@@ -97,8 +97,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		xemu_settings->SaveSettings();
 		accept();
 	});
+
 	connect(ui->cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
-	connect(ui->tabWidget, &QTabWidget::currentChanged, [=]() {ui->cancelButton->setFocus(); });
+
+	connect(ui->tabWidget, &QTabWidget::currentChanged, [=]()
+	{
+		ui->cancelButton->setFocus();
+	});
 
 	//     _____ _____  _    _   _______    _     
 	//    / ____|  __ \| |  | | |__   __|  | |    
@@ -157,7 +162,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			}
 #endif
 
-			connect(ppuBG->button(i), &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::PPUDecoder, sstr(ppu_list[i])); });
+			connect(ppuBG->button(i), &QAbstractButton::pressed, [=]()
+			{
+				xemu_settings->SetSetting(emu_settings::PPUDecoder, sstr(ppu_list[i]));
+			});
 		}
 	}
 
@@ -186,7 +194,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				spuBG->button(i)->setChecked(true);
 			}
 
-			connect(spuBG->button(i), &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::SPUDecoder, sstr(spu_list[i])); });
+			connect(spuBG->button(i), &QAbstractButton::pressed, [=]()
+			{
+				xemu_settings->SetSetting(emu_settings::SPUDecoder, sstr(spu_list[i]));
+			});
 		}
 	}
 
@@ -216,7 +227,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				libModeBG->button(i)->setChecked(true);
 			}
 
-			connect(libModeBG->button(i), &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(libmode_list[i])); });
+			connect(libModeBG->button(i), &QAbstractButton::pressed, [=]()
+			{
+				xemu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(libmode_list[i]));
+			});
 		}
 	}
 
@@ -677,6 +691,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		};
 
 		connect(ui->okButton, &QAbstractButton::clicked, [=]() { ApplyGuiOptions(); });
+
 		connect(ui->pb_reset_default, &QAbstractButton::clicked, [=]
 		{
 			if (QMessageBox::question(this, tr("Reset GUI to default?"), tr("This will include your stylesheet as well. Do you wish to proceed?"),
@@ -691,11 +706,21 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				AddColoredIcons();
 			}
 		});
+
 		connect(ui->pb_backup_config, &QAbstractButton::clicked, this, &settings_dialog::OnBackupCurrentConfig);
 		connect(ui->pb_apply_config, &QAbstractButton::clicked, this, &settings_dialog::OnApplyConfig);
 		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
-		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=]() {QDesktopServices::openUrl(xgui_settings->GetSettingsDir()); });
-		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val) {xgui_settings->SetValue(GUI::ib_show_welcome, val); });
+
+		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=]()
+		{
+			QDesktopServices::openUrl(xgui_settings->GetSettingsDir());
+		});
+
+		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(GUI::ib_show_welcome, val);
+		});
+
 		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=](bool val)
 		{
 			xgui_settings->SetValue(GUI::m_enableUIColors, val);
@@ -726,13 +751,32 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				Q_EMIT GuiRepaintRequest();
 			}
 		};
-		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color); });
-		connect(ui->pb_gl_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_toolIconColor, tr("Choose gamelist tool icon color"), ui->pb_gl_tool_icon_color); });
-		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolBarColor, tr("Choose tool bar color"), ui->pb_tool_bar_color); });
-		connect(ui->pb_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolIconColor, tr("Choose tool icon color"), ui->pb_tool_icon_color); });
+
+		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]()
+		{
+			colorDialog(GUI::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color);
+		});
+
+		connect(ui->pb_gl_tool_icon_color, &QAbstractButton::clicked, [=]()
+		{
+			colorDialog(GUI::gl_toolIconColor, tr("Choose gamelist tool icon color"), ui->pb_gl_tool_icon_color);
+		});
+
+		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]()
+		{
+			colorDialog(GUI::mw_toolBarColor, tr("Choose tool bar color"), ui->pb_tool_bar_color);
+		});
+
+		connect(ui->pb_tool_icon_color, &QAbstractButton::clicked, [=]()
+		{
+			colorDialog(GUI::mw_toolIconColor, tr("Choose tool icon color"), ui->pb_tool_icon_color);
+		});
 
 		ui->gs_disableMouse->setChecked(xgui_settings->GetValue(GUI::gs_disableMouse).toBool());
-		connect(ui->gs_disableMouse, &QCheckBox::clicked, [=](bool val) { xgui_settings->SetValue(GUI::gs_disableMouse, val); });
+		connect(ui->gs_disableMouse, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(GUI::gs_disableMouse, val);
+		});
 
 		bool enableButtons = xgui_settings->GetValue(GUI::gs_resize).toBool();
 		ui->gs_resizeOnBoot->setChecked(enableButtons);
