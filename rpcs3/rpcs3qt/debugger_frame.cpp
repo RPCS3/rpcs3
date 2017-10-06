@@ -586,14 +586,12 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 		{
 			instruction_editor_dialog* dlg = new instruction_editor_dialog(this, pc, cpu, m_debugFrame->m_disasm.get());
 			dlg->show();
-			m_debugFrame->DoUpdate();
 			return;
 		}
 		case Qt::Key_R:
 		{
 			register_editor_dialog* dlg = new register_editor_dialog(this, pc, cpu, m_debugFrame->m_disasm.get());
 			dlg->show();
-			m_debugFrame->DoUpdate();
 			return;
 		}
 		}
