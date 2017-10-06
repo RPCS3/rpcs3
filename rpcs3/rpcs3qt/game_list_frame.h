@@ -217,6 +217,7 @@ public:
 	/** Repaint Gamelist Icons with new background color */
 	void RepaintIcons(const bool& fromSettings = false);
 
+	/** Return current icon size slider value */
 	int GetSliderValue();
 
 public Q_SLOTS:
@@ -269,15 +270,18 @@ private:
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_Game_Dock;
 	QStackedWidget* m_Central_Widget;
-	QToolBar* m_Tool_Bar;
-	QLineEdit* m_Search_Bar;
-	QSlider* m_Slider_Size;
-	game_list* m_gameList;
+
+	// Game Grid
 	game_list_grid* m_xgrid;
 
+	// Game List
+	game_list* m_gameList;
 	QList<QAction*> m_columnActs;
+	Qt::SortOrder m_colSortOrder;
+	int m_sortColumn;
 
-	// Actions regarding showing/hiding categories
+	// Categories
+	QStringList m_categoryFilters;
 	Tool_Bar_Button m_catActHDD;
 	Tool_Bar_Button m_catActDisc;
 	Tool_Bar_Button m_catActHome;
@@ -285,34 +289,36 @@ private:
 	Tool_Bar_Button m_catActAudioVideo;
 	Tool_Bar_Button m_catActUnknown;
 	Tool_Bar_Button m_catActOther;
-
 	QList<Tool_Bar_Button*> m_categoryButtons;
-
 	QActionGroup* m_categoryActs;
 
-	// Actions regarding switching list modes
+	// List Mode
 	Tool_Bar_Button m_modeActList;
 	Tool_Bar_Button m_modeActGrid;
-
 	QActionGroup* m_modeActs;
-
-	// TODO: Reorganize this into a sensible order for private variables.
-	std::shared_ptr<gui_settings> xgui_settings;
-	std::shared_ptr<emu_settings> xemu_settings;
-
-	int m_sortColumn;
-	Qt::SortOrder m_colSortOrder;
 	bool m_isListLayout = true;
 	bool m_oldLayoutIsList = true;
-	bool m_showToolBar = true;
+
+	// Data
+	std::shared_ptr<gui_settings> xgui_settings;
+	std::shared_ptr<emu_settings> xemu_settings;
 	std::vector<GUI_GameInfo> m_game_data;
-	QSize m_Icon_Size;
-	int m_icon_size_index;
-	QColor m_Icon_Color;
-	qreal m_Margin_Factor;
-	qreal m_Text_Factor;
-	QStringList m_categoryFilters;
+
+	// Toolbar
+	QToolBar* m_Tool_Bar;
+	bool m_showToolBar = true;
+
+	// Search Bar
+	QLineEdit* m_Search_Bar;
 	QString m_searchText;
 
-	uint m_games_per_row = 0;
+	// Icon Size Slider
+	QSlider* m_Slider_Size;
+	int m_icon_size_index;
+
+	// Icons
+	QColor m_Icon_Color;
+	QSize m_Icon_Size;
+	qreal m_Margin_Factor;
+	qreal m_Text_Factor;
 };

@@ -300,7 +300,7 @@ logs::level gui_settings::GetLogLevel()
 bool gui_settings::GetGamelistColVisibility(int col)
 {
 	// hide sound format and parental level
-	bool show = col != 8 && col != 9;
+	bool show = col != GUI::COLUMN_SOUND && col != GUI::COLUMN_PARENTAL;
 	return GetValue(GUI_SAVE(GUI::game_list, "Col" + QString::number(col) + "visible", show)).toBool();
 }
 
