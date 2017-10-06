@@ -178,16 +178,6 @@ struct Tool_Bar_Button
 	bool isActive;
 };
 
-enum
-{
-	DROP_ERROR,
-	DROP_PKG,
-	DROP_PUP,
-	DROP_RAP,
-	DROP_DIR,
-	DROP_GAME
-};
-
 class game_list_frame : public QDockWidget
 {
 	Q_OBJECT
@@ -242,16 +232,10 @@ Q_SIGNALS:
 	void RequestListModeActSet(const bool& isList);
 	void RequestCategoryActSet(const int& id);
 	void RequestSaveSliderPos(const bool& save);
-	void RequestPackageInstall(const QStringList& paths);
-	void RequestFirmwareInstall(const QString& path);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
 	void resizeEvent(QResizeEvent *event) override;
-	void dropEvent(QDropEvent* event) override;
-	void dragEnterEvent(QDragEnterEvent* event) override;
-	void dragMoveEvent(QDragMoveEvent* event) override;
-	void dragLeaveEvent(QDragLeaveEvent* event) override;
 private:
 	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
 	bool Boot(const GameInfo& info);
@@ -261,8 +245,6 @@ private:
 
 	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
-	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
-	void AddGamesFromDir(const QString& path);
 
 	std::string CurrentSelectionIconPath();
 	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);

@@ -55,6 +55,16 @@ class main_window : public QMainWindow
 	QStringList m_d3d12_adapters;
 #endif
 
+	enum
+	{
+		DROP_ERROR,
+		DROP_PKG,
+		DROP_PUP,
+		DROP_RAP,
+		DROP_DIR,
+		DROP_GAME
+	};
+
 public:
 	explicit main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent = 0);
 	void Init();
@@ -85,6 +95,10 @@ protected:
 	void closeEvent(QCloseEvent *event) override;
 	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void mouseDoubleClickEvent(QMouseEvent *event) override;
+	void dropEvent(QDropEvent* event) override;
+	void dragEnterEvent(QDragEnterEvent* event) override;
+	void dragMoveEvent(QDragMoveEvent* event) override;
+	void dragLeaveEvent(QDragLeaveEvent* event) override;
 	void SetAppIconFromPath(const std::string path);
 private:
 	void RepaintToolbar();
@@ -97,6 +111,9 @@ private:
 	void EnableMenus(bool enabled);
 	void InstallPkg(const QString& dropPath = "");
 	void InstallPup(const QString& dropPath = "");
+
+	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
+	void AddGamesFromDir(const QString& path);
 
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
 	void BootRecentAction(const QAction* act);
