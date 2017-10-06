@@ -64,6 +64,7 @@ struct page_fault_event
 struct page_fault_event_entries
 {
 	std::list<page_fault_event> events;
+	semaphore<> pf_mutex;
 };
 
 // SysCalls

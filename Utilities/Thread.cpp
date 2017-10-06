@@ -1276,9 +1276,13 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				{
 					// Place the page fault event onto table so that other functions [sys_mmapper_free_address and ppu pagefault funcs] 
 					// know that this thread is page faulted and where.
+
 					auto pf_entries = fxm::get_always<page_fault_event_entries>();
-					page_fault_event pf_event{ cpu->id, addr };
-					pf_entries->events.emplace_back(pf_event);
+					{
+						semaphore_lock pf_lock(pf_entries->pf_mutex);
+						page_fault_event pf_event{ cpu->id, addr };
+						pf_entries->events.emplace_back(pf_event);
+					}
 
 					// Now, we notify the game that a page fault occurred so it can rectify it.
 					// Note, for data3, were the memory readable AND we got a page fault, it must be due to a write violation since reads are allowed.
@@ -1286,10 +1290,24 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 					be_t<u64> data2 = (SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD << 32) + cpu->id; // TODO: fix hack for now that assumes PPU thread always.
 					be_t<u64> data3 = vm::check_addr(addr, a_size, vm::page_readable) ? SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY : SYS_MEMORY_PAGE_FAULT_CAUSE_NON_MAPPED;
 
-					LOG_ERROR(MEMORY, "Page fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading", 
-						addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only": "using unmapped");
+					LOG_ERROR(MEMORY, "Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
+						addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only" : "using unmapped");
 
-					sys_event_port_send(entry.port_id, data1, data2, data3);
+					error_code sending_error = sys_event_port_send(entry.port_id, data1, data2, data3);
+					
+					// If we fail due to being busy, wait a bit and try again.
+					while (sending_error == CELL_EBUSY)
+					{
+						lv2_obj::sleep(*cpu, 1000);
+						thread_ctrl::wait_for(1000);
+						sending_error = sys_event_port_send(entry.port_id, data1, data2, data3);
+					}
+					
+					if (sending_error)
+					{
+						fmt::throw_exception("Unknown error %x while trying to pass page fault.", sending_error.value);
+					}
+
 					lv2_obj::sleep(*cpu);
 					thread_ctrl::wait();
 					return true;
