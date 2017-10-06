@@ -412,8 +412,7 @@ error_code sys_ppu_thread_recover_page_fault(u32 thread_id)
 
 	pf_events->events.erase(pf_event_ind);
 
-	// TODO: Wake this thing correctly.
-	thread->notify();
+	lv2_obj::awake(*thread);
 	return CELL_OK;
 }
 

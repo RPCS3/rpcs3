@@ -1290,7 +1290,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 						addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only": "using unmapped");
 
 					sys_event_port_send(entry.port_id, data1, data2, data3);
-					vm::temporary_unlock(*cpu);
+					lv2_obj::sleep(*cpu);
 					thread_ctrl::wait();
 					return true;
 				}
