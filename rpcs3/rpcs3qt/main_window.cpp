@@ -7,6 +7,7 @@
 #include <QDockWidget>
 #include <QProgressDialog>
 #include <QDesktopWidget>
+#include <QMimeData>
 
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
@@ -71,6 +72,8 @@ auto Pause = []()
 void main_window::Init()
 {
 	ui->setupUi(this);
+
+	setAcceptDrops(true);
 
 	m_appIcon = QIcon(":/rpcs3.ico");
 
@@ -1488,16 +1491,6 @@ void main_window::CreateDockWindows()
 
 	connect(m_gameListFrame, &game_list_frame::RequestIconPathSet, this, &main_window::SetAppIconFromPath);
 	connect(m_gameListFrame, &game_list_frame::RequestAddRecentGame, this, &main_window::AddRecentAction);
-
-	connect(m_gameListFrame, &game_list_frame::RequestPackageInstall, [this](const QStringList& paths)
-	{
-		for (const auto& path : paths)
-		{
-			InstallPkg(path);
-		}
-	});
-
-	connect(m_gameListFrame, &game_list_frame::RequestFirmwareInstall, this, &main_window::InstallPup);
 }
 
 void main_window::ConfigureGuiFromSettings(bool configureAll)
@@ -1641,4 +1634,183 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 
 	// It's possible to have other windows open, like games.  So, force the application to die.
 	QApplication::quit();
+}
+
+/**
+Add valid disc games to gamelist (games.yml)
+@param path = dir path to scan for game
+*/
+void main_window::AddGamesFromDir(const QString& path)
+{
+	if (!QFileInfo(path).isDir()) return;
+
+	const std::string s_path = sstr(path);
+
+	// search dropped path first or else the direct parent to an elf is wrongly skipped
+	if (Emu.BootGame(s_path, false, true))
+	{
+		LOG_NOTICE(GENERAL, "Returned from game addition by drag and drop: %s", s_path);
+	}
+
+	// search direct subdirectories, that way we can drop one folder containing all games
+	for (const auto& entry : fs::dir(s_path))
+	{
+		if (entry.name == "." || entry.name == "..") continue;
+
+		const std::string pth = s_path + "/" + entry.name;
+
+		if (!QFileInfo(qstr(pth)).isDir()) continue;
+
+		if (Emu.BootGame(pth, false, true))
+		{
+			LOG_NOTICE(GENERAL, "Returned from game addition by drag and drop: %s", pth);
+		}
+	}
+}
+
+/**
+Check data for valid file types and cache their paths if necessary
+@param md = data containing file urls
+@param savePaths = flag for path caching
+@returns validity of file type
+*/
+int main_window::IsValidFile(const QMimeData& md, QStringList* dropPaths)
+{
+	int dropType = DROP_ERROR;
+
+	const QList<QUrl> list = md.urls(); // get list of all the dropped file urls
+
+	for (auto&& url : list) // check each file in url list for valid type
+	{
+		const QString path = url.toLocalFile(); // convert url to filepath
+
+		const QFileInfo info = path;
+
+		// check for directories first, only valid if all other paths led to directories until now.
+		if (info.isDir())
+		{
+			if (dropType != DROP_DIR && dropType != DROP_ERROR)
+			{
+				return DROP_ERROR;
+			}
+
+			dropType = DROP_DIR;
+		}
+		else if (info.fileName() == "PS3UPDAT.PUP")
+		{
+			if (list.size() != 1)
+			{
+				return DROP_ERROR;
+			}
+
+			dropType = DROP_PUP;
+		}
+		else if (info.suffix().toLower() == "pkg")
+		{
+			if (dropType != DROP_PKG && dropType != DROP_ERROR)
+			{
+				return DROP_ERROR;
+			}
+
+			dropType = DROP_PKG;
+		}
+		else if (info.suffix() == "rap")
+		{
+			if (dropType != DROP_RAP && dropType != DROP_ERROR)
+			{
+				return DROP_ERROR;
+			}
+
+			dropType = DROP_RAP;
+		}
+		else if (list.size() == 1)
+		{
+			dropType = DROP_GAME;
+		}
+		else
+		{
+			return DROP_ERROR;
+		}
+
+		if (dropPaths) // we only need to know the paths on drop
+		{
+			dropPaths->append(path);
+		}
+	}
+
+	return dropType;
+}
+
+void main_window::dropEvent(QDropEvent* event)
+{
+	QStringList dropPaths;
+
+	switch (IsValidFile(*event->mimeData(), &dropPaths)) // get valid file paths and drop type
+	{
+	case DROP_ERROR:
+		break;
+	case DROP_PKG: // install the packages
+		for (const auto& path : dropPaths)
+		{
+			InstallPkg(path);
+		}
+		break;
+	case DROP_PUP: // install the firmware
+		InstallPup(dropPaths.first());
+		break;
+	case DROP_RAP: // import rap files to exdata dir
+		for (const auto& rap : dropPaths)
+		{
+			const std::string rapname = sstr(QFileInfo(rap).fileName());
+
+			// TODO: use correct user ID once User Manager is implemented
+			if (!fs::copy_file(sstr(rap), fmt::format("%s/home/%s/exdata/%s", Emu.GetHddDir(), "00000001", rapname), false))
+			{
+				LOG_WARNING(GENERAL, "Could not copy rap file by drop: %s", rapname);
+			}
+			else
+			{
+				LOG_SUCCESS(GENERAL, "Successfully copied rap file by drop: %s", rapname);
+			}
+		}
+		break;
+	case DROP_DIR: // import valid games to gamelist (games.yaml)
+		for (const auto& path : dropPaths)
+		{
+			AddGamesFromDir(path);
+		}
+		m_gameListFrame->Refresh(true);
+		break;
+	case DROP_GAME: // import valid games to gamelist (games.yaml)
+		if (Emu.BootGame(sstr(dropPaths.first()), true))
+		{
+			LOG_SUCCESS(GENERAL, "Elf Boot from drag and drop done: %s", sstr(dropPaths.first()));
+		}
+		m_gameListFrame->Refresh(true);
+		break;
+	default:
+		LOG_WARNING(GENERAL, "Invalid dropType in gamelist dropEvent");
+		break;
+	}
+}
+
+void main_window::dragEnterEvent(QDragEnterEvent* event)
+{
+	if (IsValidFile(*event->mimeData()))
+	{
+		event->accept();
+	}
+}
+
+void main_window::dragMoveEvent(QDragMoveEvent* event)
+{
+	if (IsValidFile(*event->mimeData()))
+	{
+		event->accept();
+	}
+}
+
+void main_window::dragLeaveEvent(QDragLeaveEvent* event)
+{
+	event->accept();
 }
