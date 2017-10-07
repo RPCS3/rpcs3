@@ -24,7 +24,7 @@ public:
 	~settings_dialog();
 	int exec();
 Q_SIGNALS:
-	void GuiSettingsSyncRequest();
+	void GuiSettingsSyncRequest(bool configure_all);
 	void GuiStylesheetRequest(const QString& path);
 	void GuiSettingsSaveRequest();
 	void GuiRepaintRequest();
