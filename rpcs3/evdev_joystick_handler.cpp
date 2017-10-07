@@ -526,7 +526,6 @@ void evdev_joystick_handler::ThreadProc()
                 which_button->m_pressed = value > 0;
                 which_button->m_value = value;
             }
-//            else if (evt.code >= ABS_X && evt.code <= ABS_RZ)
             if (evt.code >= ABS_X && evt.code <= ABS_RZ)
             {
                 int axis = joy_axis_maps[i][evt.code - ABS_X];
