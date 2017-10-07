@@ -700,7 +700,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				ApplyGuiOptions(true);
 				xgui_settings->Reset(true);
 				xgui_settings->ChangeToConfig(GUI::Default);
-				Q_EMIT GuiSettingsSyncRequest();
+				Q_EMIT GuiSettingsSyncRequest(true);
 				AddConfigs();
 				AddStylesheets();
 				AddColoredIcons();
@@ -969,7 +969,7 @@ void settings_dialog::OnApplyConfig()
 	m_currentConfig = ui->combo_configs->currentText();
 	xgui_settings->SetValue(GUI::m_currentConfig, m_currentConfig);
 	xgui_settings->ChangeToConfig(m_currentConfig);
-	Q_EMIT GuiSettingsSyncRequest();
+	Q_EMIT GuiSettingsSyncRequest(true);
 }
 
 void settings_dialog::OnApplyStylesheet()

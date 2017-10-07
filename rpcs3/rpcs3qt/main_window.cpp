@@ -787,11 +787,11 @@ void main_window::RepaintToolBarIcons()
 
 	if (isFullScreen())
 	{
-		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
+		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_off);
 	}
 	else
 	{
-		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_off);
+		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
 	}
 
 	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
@@ -1213,7 +1213,7 @@ void main_window::CreateConnects()
 	{
 		settings_dialog dlg(guiSettings, emuSettings,  tabIndex, this);
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
-		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
+		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, this, &main_window::ConfigureGuiFromSettings);
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
 		connect(&dlg, &settings_dialog::GuiRepaintRequest, this, &main_window::RepaintGui);
 		dlg.exec();
@@ -1493,7 +1493,7 @@ void main_window::CreateDockWindows()
 	connect(m_gameListFrame, &game_list_frame::RequestAddRecentGame, this, &main_window::AddRecentAction);
 }
 
-void main_window::ConfigureGuiFromSettings(bool configureAll)
+void main_window::ConfigureGuiFromSettings(bool configure_all)
 {
 	// Restore GUI state if needed. We need to if they exist.
 	QByteArray geometry = guiSettings->GetValue(GUI::mw_geometry).toByteArray();
@@ -1576,7 +1576,7 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	else ui->setlistModeGridAct->setChecked(true);
 	m_categoryVisibleActGroup->setEnabled(isListMode);
 
-	if (configureAll)
+	if (configure_all)
 	{
 		// Handle log settings
 		m_logFrame->LoadSettings();

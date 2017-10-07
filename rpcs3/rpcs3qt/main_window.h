@@ -90,6 +90,7 @@ private Q_SLOTS:
 	void DecryptSPRXLibraries();
 
 	void SaveWindowState();
+	void ConfigureGuiFromSettings(bool configure_all = false);
 
 protected:
 	void closeEvent(QCloseEvent *event) override;
@@ -107,7 +108,6 @@ private:
 	void CreateActions();
 	void CreateConnects();
 	void CreateDockWindows();
-	void ConfigureGuiFromSettings(bool configureAll = false);
 	void EnableMenus(bool enabled);
 	void InstallPkg(const QString& dropPath = "");
 	void InstallPup(const QString& dropPath = "");
