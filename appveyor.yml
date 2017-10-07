@@ -39,7 +39,7 @@ install:
 platform: x64
 
 # build Configuration, i.e. Debug, Release, etc.
-configuration: Release - LLVM
+configuration: Release LLVM
 
 build:
   parallel: true                  # enable MSBuild parallel builds
