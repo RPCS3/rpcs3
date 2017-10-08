@@ -16,6 +16,7 @@
 #include "rpcs3qt/msg_dialog_frame.h"
 #include "rpcs3qt/main_window.h"
 #include "rpcs3qt/gui_settings.h"
+#include "rpcs3qt/emu_settings.h"
 
 #include <QApplication>
 
@@ -48,5 +49,6 @@ private:
 	main_window* RPCS3MainWin;
 
 	std::shared_ptr<gui_settings> guiSettings;
+	std::shared_ptr<emu_settings> emuSettings;
 	QWindow* gameWindow = nullptr; //! (Currently) only needed so that pad handlers have a valid target for event filtering.
 };
