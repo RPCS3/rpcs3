@@ -41,6 +41,22 @@ namespace GUI
 {
 	static QString stylesheet;
 
+	enum game_list_columns
+	{
+		COLUMN_ICON,
+		COLUMN_NAME,
+		COLUMN_SERIAL,
+		COLUMN_FIRMWARE,
+		COLUMN_VERSION,
+		COLUMN_CATEGORY,
+		COLUMN_PATH,
+		COLUMN_RESOLUTION,
+		COLUMN_SOUND,
+		COLUMN_PARENTAL,
+
+		COLUMN_COUNT
+	};
+
 	const QSize gl_icon_size_min    = QSize(40, 22);
 	const QSize gl_icon_size_small  = QSize(80, 44);
 	const QSize gl_icon_size_medium = QSize(160, 88);
@@ -92,14 +108,14 @@ namespace GUI
 	const QString fs          = "FileSystem";
 	const QString gs_frame    = "GSFrame";
 
-	const QColor mw_tool_bar_color   = QColor(227, 227, 227, 255);
-	const QColor mw_tool_icon_color  = QColor(64, 64, 64, 255);
-	const QColor mw_thumb_icon_color = QColor(0, 100, 231, 255);
 	const QColor gl_icon_color       = QColor(209, 209, 209, 255);
-	const QColor gl_tool_icon_color  = QColor(0, 100, 231, 255);
+	const QColor gl_tool_icon_color  = QColor(  0, 100, 231, 255);
+	const QColor mw_tool_icon_color  = QColor( 64,  64,  64, 255);
+	const QColor mw_tool_bar_color   = QColor(227, 227, 227, 255);
+	const QColor mw_thumb_icon_color = QColor(  0, 100, 231, 255);
 
-	const GUI_SAVE rg_freeze  = GUI_SAVE(main_window, "recentGamesFrozen", false);
-	const GUI_SAVE rg_entries = GUI_SAVE(main_window, "recentGamesNames", QVariant::fromValue(q_pair_list()));
+	const GUI_SAVE rg_freeze  = GUI_SAVE( main_window, "recentGamesFrozen", false);
+	const GUI_SAVE rg_entries = GUI_SAVE( main_window, "recentGamesNames",  QVariant::fromValue(q_pair_list()));
 
 	const GUI_SAVE ib_pkg_success  = GUI_SAVE( main_window, "infoBoxEnabledInstallPKG", true );
 	const GUI_SAVE ib_pup_success  = GUI_SAVE( main_window, "infoBoxEnabledInstallPUP", true );
@@ -141,11 +157,11 @@ namespace GUI
 	const GUI_SAVE gl_toolBarVisible = GUI_SAVE( game_list, "toolBarVisible", false);
 	const GUI_SAVE gl_toolIconColor  = GUI_SAVE( game_list, "toolIconColor",  gl_tool_icon_color);
 
-	const GUI_SAVE fs_emulator_dir_list = GUI_SAVE(fs, "emulator_dir_list", QStringList());
-	const GUI_SAVE fs_dev_hdd0_list     = GUI_SAVE(fs, "dev_hdd0_list",     QStringList());
-	const GUI_SAVE fs_dev_hdd1_list     = GUI_SAVE(fs, "dev_hdd1_list",     QStringList());
-	const GUI_SAVE fs_dev_flash_list    = GUI_SAVE(fs, "dev_flash_list",    QStringList());
-	const GUI_SAVE fs_dev_usb000_list   = GUI_SAVE(fs, "dev_usb000_list",   QStringList());
+	const GUI_SAVE fs_emulator_dir_list = GUI_SAVE( fs, "emulator_dir_list", QStringList());
+	const GUI_SAVE fs_dev_hdd0_list     = GUI_SAVE( fs, "dev_hdd0_list",     QStringList());
+	const GUI_SAVE fs_dev_hdd1_list     = GUI_SAVE( fs, "dev_hdd1_list",     QStringList());
+	const GUI_SAVE fs_dev_flash_list    = GUI_SAVE( fs, "dev_flash_list",    QStringList());
+	const GUI_SAVE fs_dev_usb000_list   = GUI_SAVE( fs, "dev_usb000_list",   QStringList());
 
 	const GUI_SAVE l_tty   = GUI_SAVE( logger, "TTY",   true );
 	const GUI_SAVE l_level = GUI_SAVE( logger, "level", (uint)(logs::level::success) );
@@ -153,16 +169,16 @@ namespace GUI
 
 	const GUI_SAVE d_splitterState = GUI_SAVE( debugger, "splitterState", QByteArray());
 
-	const GUI_SAVE m_currentConfig     = GUI_SAVE(meta, "currentConfig",     QObject::tr("CurrentSettings"));
-	const GUI_SAVE m_currentStylesheet = GUI_SAVE(meta, "currentStylesheet", Default);
-	const GUI_SAVE m_saveNotes         = GUI_SAVE(meta, "saveNotes",         QVariantMap());
-	const GUI_SAVE m_showDebugTab      = GUI_SAVE(meta, "showDebugTab",      false);
-	const GUI_SAVE m_enableUIColors    = GUI_SAVE(meta, "enableUIColors",    false);
+	const GUI_SAVE m_currentConfig     = GUI_SAVE( meta, "currentConfig",     QObject::tr("CurrentSettings"));
+	const GUI_SAVE m_currentStylesheet = GUI_SAVE( meta, "currentStylesheet", Default);
+	const GUI_SAVE m_saveNotes         = GUI_SAVE( meta, "saveNotes",         QVariantMap());
+	const GUI_SAVE m_showDebugTab      = GUI_SAVE( meta, "showDebugTab",      false);
+	const GUI_SAVE m_enableUIColors    = GUI_SAVE( meta, "enableUIColors",    false);
 
-	const GUI_SAVE gs_disableMouse = GUI_SAVE(gs_frame, "disableMouse", false);
-	const GUI_SAVE gs_resize       = GUI_SAVE(gs_frame, "resize",       false);
-	const GUI_SAVE gs_width        = GUI_SAVE(gs_frame, "width",        1280);
-	const GUI_SAVE gs_height       = GUI_SAVE(gs_frame, "height",       720);
+	const GUI_SAVE gs_disableMouse = GUI_SAVE( gs_frame, "disableMouse", false);
+	const GUI_SAVE gs_resize       = GUI_SAVE( gs_frame, "resize",       false);
+	const GUI_SAVE gs_width        = GUI_SAVE( gs_frame, "width",        1280);
+	const GUI_SAVE gs_height       = GUI_SAVE( gs_frame, "height",       720);
 }
 
 /** Class for GUI settings..

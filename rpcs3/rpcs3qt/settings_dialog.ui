@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>550</width>
-    <height>604</height>
+    <width>729</width>
+    <height>821</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -1277,7 +1277,7 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_53">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_21">
+        <layout class="QHBoxLayout" name="horizontalLayout_21" stretch="1,1">
          <item>
           <widget class="QGroupBox" name="groupBox_48">
            <property name="enabled">
@@ -1367,7 +1367,40 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="widget_7" native="true"/>
+          <widget class="QGroupBox" name="groupBox_7">
+           <property name="title">
+            <string>Core</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_29">
+            <item>
+             <widget class="QCheckBox" name="ppuDebug">
+              <property name="text">
+               <string>PPU Debug</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="spuDebug">
+              <property name="text">
+               <string>SPU Debug</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
          </item>
         </layout>
        </item>

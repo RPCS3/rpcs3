@@ -13,20 +13,6 @@
 
 constexpr auto qstr = QString::fromStdString;
 
-struct Render_Creator
-{
-	bool supportsD3D12 = false;
-	bool supportsVulkan = false;
-	QStringList D3D12Adapters;
-	QStringList vulkanAdapters;
-	QString render_Null = QObject::tr("Null");
-	QString render_Vulkan = QObject::tr("Vulkan");
-	QString render_D3D12 = QObject::tr("D3D12[DO NOT USE]");
-	QString render_OpenGL = QObject::tr("OpenGL");
-
-	Render_Creator();
-};
-
 // Node location
 using cfg_location = std::vector<const char*>;
 
@@ -48,6 +34,8 @@ public:
 		LowerSPUThreadPrio,
 		SPULoopDetection,
 		PreferredSPUThreads,
+		PPUDebug,
+		SPUDebug,
 
 		// Graphics
 		Renderer,
@@ -108,10 +96,44 @@ public:
 		dev_usb000Location,
 	};
 
+	struct Render_Info
+	{
+		QString name;
+		QString old_adapter;
+		QStringList adapters;
+		SettingsType type;
+		bool supported = true;
+		bool has_adapters = true;
+
+		Render_Info() {};
+		Render_Info(const QString& name) : name(name), has_adapters(false) {};
+		Render_Info(const QString& name, const QStringList& adapters, bool supported, SettingsType type)
+			: name(name), adapters(adapters), supported(supported), type(type) {};
+	};
+
+	struct Render_Creator
+	{
+		bool supportsD3D12 = false;
+		bool supportsVulkan = false;
+		QStringList D3D12Adapters;
+		QStringList vulkanAdapters;
+		QString name_Null = tr("Null");
+		QString name_Vulkan = tr("Vulkan");
+		QString name_D3D12 = tr("D3D12[DO NOT USE]");
+		QString name_OpenGL = tr("OpenGL");
+		Render_Info D3D12;
+		Render_Info Vulkan;
+		Render_Info OpenGL;
+		Render_Info NullRender;
+		std::vector<Render_Info*> renderers;
+
+		Render_Creator();
+	};
+
 	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml 
 	* Settings are only written when SaveSettings is called.
 	*/
-	emu_settings(const std::string& path);
+	emu_settings();
 	~emu_settings();
 
 	/** Connects a combo box with the target settings type*/
@@ -131,8 +153,15 @@ public:
 
 	/** Sets the setting type to a given value.*/
 	void SetSetting(SettingsType type, const std::string& val);
+
+	/** Gets all the renderer info for gpu settings.*/
+	Render_Creator m_render_creator;
+
+	/** Loads the settings from path.*/
+	void LoadSettings(const std::string& path = "");
+
 public Q_SLOTS:
-/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
+	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
 private:
 	/** A helper map that keeps track of where a given setting type is located*/
@@ -147,6 +176,8 @@ private:
 		{ LowerSPUThreadPrio, { "Core", "Lower SPU thread priority"}},
 		{ SPULoopDetection, { "Core", "SPU loop detection"}},
 		{ PreferredSPUThreads, { "Core", "Preferred SPU Threads"}},
+		{ PPUDebug,            { "Core", "PPU Debug"}},
+		{ SPUDebug,            { "Core", "SPU Debug"}},
 
 		// Graphics Tab
 		{ Renderer,			{ "Video", "Renderer"}},
