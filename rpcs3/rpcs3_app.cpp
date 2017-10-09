@@ -63,9 +63,10 @@ void rpcs3_app::Init()
 	Emu.Init();
 
 	guiSettings.reset(new gui_settings());
+	emuSettings.reset(new emu_settings());
 
 	// Create the main window
-	RPCS3MainWin = new main_window(guiSettings, nullptr);
+	RPCS3MainWin = new main_window(guiSettings, emuSettings, nullptr);
 
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
@@ -336,6 +337,14 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 		QString style_rest = QString
 		(
 			"QWidget#header_section { background-color: #ffffff; }"
+			"QDialog#kernel_explorer { background-color: rgba(240, 240, 240, 255); }"
+			"QDialog#memory_viewer { background-color: rgba(240, 240, 240, 255); }"
+			"QLabel#memory_viewer_address_panel { color: rgba(75, 135, 150, 255); background-color: rgba(240, 240, 240, 255); }"
+			"QLabel#memory_viewer_hex_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
+			"QLabel#memory_viewer_ascii_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
+			"QLabel#debugger_frame_breakpoint { color: #000000; background-color: #ffff00; }"
+			"QLabel#debugger_frame_pc { color: #000000; background-color: #00ff00; }"
+			"QLabel#rsx_debugger_display_buffer { background-color: rgba(240, 240, 240, 255); }"
 			"QLabel#l_controller { color: #434343; }"
 			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
 		);

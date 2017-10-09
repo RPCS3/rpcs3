@@ -834,20 +834,33 @@ namespace vk
 			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, present_modes.data()));
 
 			VkPresentModeKHR swapchain_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+			VkPresentModeKHR preferred_mode = (g_cfg.video.vsync) ? VK_PRESENT_MODE_FIFO_RELAXED_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR;
+			bool mailbox_exists = false;
 
 			for (VkPresentModeKHR mode : present_modes)
 			{
 				if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
 				{
-					//If we can get a mailbox mode, use it
+					mailbox_exists = true;
+					continue;
+				}
+
+				if (mode == preferred_mode)
+				{
 					swapchain_present_mode = mode;
 					break;
 				}
+			}
 
-				//If we can get out of using the FIFO mode, take it. Fifo is very high latency (generic vsync)
-				if (swapchain_present_mode == VK_PRESENT_MODE_FIFO_KHR &&
-					(mode == VK_PRESENT_MODE_IMMEDIATE_KHR || mode == VK_PRESENT_MODE_FIFO_RELAXED_KHR))
-					swapchain_present_mode = mode;
+			if (preferred_mode != swapchain_present_mode)
+			{
+				//Preferred video mode was not found. Fall back to mailbox if it exists
+				LOG_WARNING(RSX, "Swapchain: Could not set the preferred present mode 0x%X. Falling back to mailbox if supported (supported=%d)", (u32)preferred_mode, mailbox_exists);
+
+				if (mailbox_exists)
+				{
+					swapchain_present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
+				}
 			}
 
 			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;

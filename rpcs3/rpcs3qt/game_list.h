@@ -12,7 +12,7 @@ class game_list : public QTableWidget
 private:
 	void mousePressEvent(QMouseEvent *event)
 	{
-		if (!indexAt(event->pos()).isValid())
+		if (!indexAt(event->pos()).isValid() || itemAt(event->pos())->data(Qt::UserRole) < 0)
 		{
 			clearSelection();
 		}

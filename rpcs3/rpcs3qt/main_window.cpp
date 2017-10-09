@@ -7,6 +7,7 @@
 #include <QDockWidget>
 #include <QProgressDialog>
 #include <QDesktopWidget>
+#include <QMimeData>
 
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
@@ -47,7 +48,8 @@
 
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-main_window::main_window(std::shared_ptr<gui_settings> guiSettings, QWidget *parent) : QMainWindow(parent), guiSettings(guiSettings), m_sys_menu_opened(false), ui(new Ui::main_window)
+main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
+	: QMainWindow(parent), guiSettings(guiSettings), emuSettings(emuSettings), m_sys_menu_opened(false), ui(new Ui::main_window)
 {
 }
 
@@ -70,6 +72,8 @@ auto Pause = []()
 void main_window::Init()
 {
 	ui->setupUi(this);
+
+	setAcceptDrops(true);
 
 	m_appIcon = QIcon(":/rpcs3.ico");
 
@@ -132,9 +136,20 @@ void main_window::Init()
 		msg.setWindowIcon(m_appIcon);
 		msg.setIcon(QMessageBox::Critical);
 		msg.setTextFormat(Qt::RichText);
-		msg.setText("Please understand that this build is not an official RPCS3 release.<br>This build contains changes that may break games, or even <b>damage</b> your data.<br>It's recommended to download and use the official build from <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>Build origin: " STRINGIZE(BRANCH) "<br>Do you wish to use this build anyway?");
 		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 		msg.setDefaultButton(QMessageBox::No);
+		msg.setText(QString(
+			R"(
+				<p style="white-space: nowrap;">
+					Please understand that this build is not an official RPCS3 release.<br>
+					This build contains changes that may break games, or even <b>damage</b> your data.<br>
+					We recommend to download and use the official build from the <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>
+					Build origin: %1<br>
+					Do you wish to use this build anyway?
+				</p>
+			)"
+		).arg(STRINGIZE(BRANCH)));
+		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 		if (msg.exec() == QMessageBox::No)
 		{
@@ -772,11 +787,11 @@ void main_window::RepaintToolBarIcons()
 
 	if (isFullScreen())
 	{
-		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
+		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_off);
 	}
 	else
 	{
-		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_off);
+		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
 	}
 
 	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
@@ -1081,6 +1096,11 @@ void main_window::RepaintGui()
 		m_logFrame->RepaintTextColors();
 	}
 
+	if (m_debuggerFrame)
+	{
+		m_debuggerFrame->ChangeColors();
+	}
+
 	RepaintToolbar();
 	RepaintToolBarIcons();
 	RepaintThumbnailIcons();
@@ -1191,9 +1211,9 @@ void main_window::CreateConnects()
 
 	auto openSettings = [=](int tabIndex)
 	{
-		settings_dialog dlg(guiSettings, m_Render_Creator, tabIndex, this);
+		settings_dialog dlg(guiSettings, emuSettings,  tabIndex, this);
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
-		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, [=]() {ConfigureGuiFromSettings(true); });
+		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, this, &main_window::ConfigureGuiFromSettings);
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
 		connect(&dlg, &settings_dialog::GuiRepaintRequest, this, &main_window::RepaintGui);
 		dlg.exec();
@@ -1219,7 +1239,7 @@ void main_window::CreateConnects()
 
 	connect(ui->confVFSDialogAct, &QAction::triggered, [=]
 	{
-		vfs_dialog dlg(this);
+		vfs_dialog dlg(guiSettings, emuSettings, this);
 		dlg.exec();
 		m_gameListFrame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
 	});
@@ -1429,7 +1449,7 @@ void main_window::CreateDockWindows()
 	// new mainwindow widget because existing seems to be bugged for now
 	m_mw = new QMainWindow();
 
-	m_gameListFrame = new game_list_frame(guiSettings, m_Render_Creator, m_mw);
+	m_gameListFrame = new game_list_frame(guiSettings, emuSettings, m_mw);
 	m_gameListFrame->setObjectName("gamelist");
 	m_debuggerFrame = new debugger_frame(guiSettings, m_mw);
 	m_debuggerFrame->setObjectName("debugger");
@@ -1471,19 +1491,9 @@ void main_window::CreateDockWindows()
 
 	connect(m_gameListFrame, &game_list_frame::RequestIconPathSet, this, &main_window::SetAppIconFromPath);
 	connect(m_gameListFrame, &game_list_frame::RequestAddRecentGame, this, &main_window::AddRecentAction);
-
-	connect(m_gameListFrame, &game_list_frame::RequestPackageInstall, [this](const QStringList& paths)
-	{
-		for (const auto& path : paths)
-		{
-			InstallPkg(path);
-		}
-	});
-
-	connect(m_gameListFrame, &game_list_frame::RequestFirmwareInstall, this, &main_window::InstallPup);
 }
 
-void main_window::ConfigureGuiFromSettings(bool configureAll)
+void main_window::ConfigureGuiFromSettings(bool configure_all)
 {
 	// Restore GUI state if needed. We need to if they exist.
 	QByteArray geometry = guiSettings->GetValue(GUI::mw_geometry).toByteArray();
@@ -1566,7 +1576,7 @@ void main_window::ConfigureGuiFromSettings(bool configureAll)
 	else ui->setlistModeGridAct->setChecked(true);
 	m_categoryVisibleActGroup->setEnabled(isListMode);
 
-	if (configureAll)
+	if (configure_all)
 	{
 		// Handle log settings
 		m_logFrame->LoadSettings();
@@ -1624,4 +1634,183 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 
 	// It's possible to have other windows open, like games.  So, force the application to die.
 	QApplication::quit();
+}
+
+/**
+Add valid disc games to gamelist (games.yml)
+@param path = dir path to scan for game
+*/
+void main_window::AddGamesFromDir(const QString& path)
+{
+	if (!QFileInfo(path).isDir()) return;
+
+	const std::string s_path = sstr(path);
+
+	// search dropped path first or else the direct parent to an elf is wrongly skipped
+	if (Emu.BootGame(s_path, false, true))
+	{
+		LOG_NOTICE(GENERAL, "Returned from game addition by drag and drop: %s", s_path);
+	}
+
+	// search direct subdirectories, that way we can drop one folder containing all games
+	for (const auto& entry : fs::dir(s_path))
+	{
+		if (entry.name == "." || entry.name == "..") continue;
+
+		const std::string pth = s_path + "/" + entry.name;
+
+		if (!QFileInfo(qstr(pth)).isDir()) continue;
+
+		if (Emu.BootGame(pth, false, true))
+		{
+			LOG_NOTICE(GENERAL, "Returned from game addition by drag and drop: %s", pth);
+		}
+	}
+}
+
+/**
+Check data for valid file types and cache their paths if necessary
+@param md = data containing file urls
+@param savePaths = flag for path caching
+@returns validity of file type
+*/
+int main_window::IsValidFile(const QMimeData& md, QStringList* dropPaths)
+{
+	int dropType = DROP_ERROR;
+
+	const QList<QUrl> list = md.urls(); // get list of all the dropped file urls
+
+	for (auto&& url : list) // check each file in url list for valid type
+	{
+		const QString path = url.toLocalFile(); // convert url to filepath
+
+		const QFileInfo info = path;
+
+		// check for directories first, only valid if all other paths led to directories until now.
+		if (info.isDir())
+		{
+			if (dropType != DROP_DIR && dropType != DROP_ERROR)
+			{
+				return DROP_ERROR;
+			}
+
+			dropType = DROP_DIR;
+		}
+		else if (info.fileName() == "PS3UPDAT.PUP")
+		{
+			if (list.size() != 1)
+			{
+				return DROP_ERROR;
+			}
+
+			dropType = DROP_PUP;
+		}
+		else if (info.suffix().toLower() == "pkg")
+		{
+			if (dropType != DROP_PKG && dropType != DROP_ERROR)
+			{
+				return DROP_ERROR;
+			}
+
+			dropType = DROP_PKG;
+		}
+		else if (info.suffix() == "rap")
+		{
+			if (dropType != DROP_RAP && dropType != DROP_ERROR)
+			{
+				return DROP_ERROR;
+			}
+
+			dropType = DROP_RAP;
+		}
+		else if (list.size() == 1)
+		{
+			dropType = DROP_GAME;
+		}
+		else
+		{
+			return DROP_ERROR;
+		}
+
+		if (dropPaths) // we only need to know the paths on drop
+		{
+			dropPaths->append(path);
+		}
+	}
+
+	return dropType;
+}
+
+void main_window::dropEvent(QDropEvent* event)
+{
+	QStringList dropPaths;
+
+	switch (IsValidFile(*event->mimeData(), &dropPaths)) // get valid file paths and drop type
+	{
+	case DROP_ERROR:
+		break;
+	case DROP_PKG: // install the packages
+		for (const auto& path : dropPaths)
+		{
+			InstallPkg(path);
+		}
+		break;
+	case DROP_PUP: // install the firmware
+		InstallPup(dropPaths.first());
+		break;
+	case DROP_RAP: // import rap files to exdata dir
+		for (const auto& rap : dropPaths)
+		{
+			const std::string rapname = sstr(QFileInfo(rap).fileName());
+
+			// TODO: use correct user ID once User Manager is implemented
+			if (!fs::copy_file(sstr(rap), fmt::format("%s/home/%s/exdata/%s", Emu.GetHddDir(), "00000001", rapname), false))
+			{
+				LOG_WARNING(GENERAL, "Could not copy rap file by drop: %s", rapname);
+			}
+			else
+			{
+				LOG_SUCCESS(GENERAL, "Successfully copied rap file by drop: %s", rapname);
+			}
+		}
+		break;
+	case DROP_DIR: // import valid games to gamelist (games.yaml)
+		for (const auto& path : dropPaths)
+		{
+			AddGamesFromDir(path);
+		}
+		m_gameListFrame->Refresh(true);
+		break;
+	case DROP_GAME: // import valid games to gamelist (games.yaml)
+		if (Emu.BootGame(sstr(dropPaths.first()), true))
+		{
+			LOG_SUCCESS(GENERAL, "Elf Boot from drag and drop done: %s", sstr(dropPaths.first()));
+		}
+		m_gameListFrame->Refresh(true);
+		break;
+	default:
+		LOG_WARNING(GENERAL, "Invalid dropType in gamelist dropEvent");
+		break;
+	}
+}
+
+void main_window::dragEnterEvent(QDragEnterEvent* event)
+{
+	if (IsValidFile(*event->mimeData()))
+	{
+		event->accept();
+	}
+}
+
+void main_window::dragMoveEvent(QDragMoveEvent* event)
+{
+	if (IsValidFile(*event->mimeData()))
+	{
+		event->accept();
+	}
+}
+
+void main_window::dragLeaveEvent(QDragLeaveEvent* event)
+{
+	event->accept();
 }

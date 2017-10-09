@@ -146,13 +146,16 @@ namespace vk
 				cmd.begin();
 			}
 
+			const u16 internal_width = std::min(width, rsx::apply_resolution_scale(width, true));
+			const u16 internal_height = std::min(height, rsx::apply_resolution_scale(height, true));
+
 			VkBufferImageCopy copyRegion = {};
 			copyRegion.bufferOffset = 0;
-			copyRegion.bufferRowLength = width;
-			copyRegion.bufferImageHeight = height;
+			copyRegion.bufferRowLength = internal_width;
+			copyRegion.bufferImageHeight = internal_height;
 			copyRegion.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
 			copyRegion.imageOffset = {};
-			copyRegion.imageExtent = {width, height, 1};
+			copyRegion.imageExtent = {internal_width, internal_height, 1};
 
 			VkImageSubresourceRange subresource_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 			

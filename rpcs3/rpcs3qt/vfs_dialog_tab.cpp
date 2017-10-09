@@ -7,8 +7,8 @@
 
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
-vfs_dialog_tab::vfs_dialog_tab(const vfs_settings_info& settingsInfo, gui_settings* guiSettings, emu_settings* emuSettings, QWidget* parent) : QWidget(parent),
-m_info(settingsInfo), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
+vfs_dialog_tab::vfs_dialog_tab(const vfs_settings_info& settingsInfo, std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent)
+	: QWidget(parent), m_info(settingsInfo), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
 {
 	m_dirList = new QListWidget(this);
 
@@ -19,7 +19,7 @@ m_info(settingsInfo), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
 	{
 		new QListWidgetItem(EmuConfigDir(), m_dirList);
 	}
-	for (QString dir : alldirs)
+	for (const QString& dir : alldirs)
 	{
 		new QListWidgetItem(dir, m_dirList);
 	}

@@ -40,6 +40,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	m_btn_run = new QPushButton(Run, this);
 
 	EnableButtons(!Emu.IsStopped());
+	ChangeColors();
 
 	hbox_b_main->addWidget(m_go_to_addr);
 	hbox_b_main->addWidget(m_go_to_pc);
@@ -123,6 +124,17 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 void debugger_frame::SaveSettings()
 {
 	xgui_settings->SetValue(GUI::d_splitterState, m_splitter->saveState());
+}
+
+void debugger_frame::ChangeColors()
+{
+	if (m_list)
+	{
+		m_list->m_color_bp = GUI::get_Label_Color("debugger_frame_breakpoint", QPalette::Background);
+		m_list->m_color_pc = GUI::get_Label_Color("debugger_frame_pc", QPalette::Background);
+		m_list->m_text_color_bp = GUI::get_Label_Color("debugger_frame_breakpoint");;
+		m_list->m_text_color_pc = GUI::get_Label_Color("debugger_frame_pc");;
+	}
 }
 
 void debugger_frame::closeEvent(QCloseEvent *event)
@@ -501,18 +513,21 @@ void debugger_list::ShowAddr(u32 addr)
 
 			item(i)->setText((IsBreakPoint(m_pc) ? ">>> " : "    ") + qstr(m_debugFrame->m_disasm->last_opcode));
 
-			QColor colour;
-			
 			if (test(cpu->state & cpu_state_pause) && m_pc == m_debugFrame->GetPc())
 			{
-				colour = QColor(Qt::green);
+				item(i)->setTextColor(m_text_color_pc);
+				item(i)->setBackgroundColor(m_color_pc);
+			}
+			else if (IsBreakPoint(m_pc))
+			{
+				item(i)->setTextColor(m_text_color_bp);
+				item(i)->setBackgroundColor(m_color_bp);
 			}
 			else
 			{
-				colour = QColor(IsBreakPoint(m_pc) ? Qt::yellow : Qt::white);
+				item(i)->setTextColor(palette().color(foregroundRole()));
+				item(i)->setBackgroundColor(palette().color(backgroundRole()));
 			}
-			
-			item(i)->setBackgroundColor(colour);
 		}
 	}
 

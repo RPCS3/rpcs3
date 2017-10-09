@@ -29,14 +29,11 @@ int main(int argc, char** argv)
 	//QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 	SetProcessDPIAware();
 
-	WSADATA wsa_data;
-	WSAStartup(MAKEWORD(2, 2), &wsa_data);
 	timeBeginPeriod(1);
 
 	atexit([]
 	{
 		timeEndPeriod(1);
-		WSACleanup();
 	});
 #else
 	qputenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1");

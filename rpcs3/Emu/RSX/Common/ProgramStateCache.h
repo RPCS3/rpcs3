@@ -152,6 +152,77 @@ protected:
 	}
 
 public:
+
+	struct program_buffer_patch_entry
+	{
+		union
+		{
+			u32 hex_key;
+			f32 fp_key;
+		};
+
+		union
+		{
+			u32 hex_value;
+			f32 fp_value;
+		};
+
+		program_buffer_patch_entry()
+		{}
+
+		program_buffer_patch_entry(f32& key, f32& value)
+		{
+			fp_key = key;
+			fp_value = value;
+		}
+
+		program_buffer_patch_entry(u32& key, u32& value)
+		{
+			hex_key = key;
+			hex_value = value;
+		}
+
+		bool test_and_set(f32 value, f32* dst) const
+		{
+			u32 hex = (u32&)value;
+			if ((hex & 0x7FFFFFFF) == (hex_key & 0x7FFFFFFF))
+			{
+				hex = (hex & ~0x7FFFFFF) | hex_value;
+				*dst = (f32&)hex;
+				return true;
+			}
+
+			return false;
+		}
+	};
+
+	struct
+	{
+		std::unordered_map<f32, program_buffer_patch_entry> db;
+
+		void add(program_buffer_patch_entry& e)
+		{
+			db[e.fp_key] = e;
+		}
+
+		void add(f32& key, f32& value)
+		{
+			db[key] = { key, value };
+		}
+
+		void clear()
+		{
+			db.clear();
+		}
+
+		bool is_empty() const
+		{
+			return db.size() == 0;
+		}
+	}
+	patch_table;
+
+public:
 	program_state_cache() = default;
 	~program_state_cache()
 	{
@@ -237,14 +308,43 @@ public:
 
 		verify(HERE), (dst_buffer.size_bytes() >= ::narrow<int>(I->second.FragmentConstantOffsetCache.size()) * 16);
 
-		size_t offset = 0;
+		f32* dst = dst_buffer.data();
+		f32 tmp[4];
 		for (size_t offset_in_fragment_program : I->second.FragmentConstantOffsetCache)
 		{
 			void *data = (char*)fragment_program.addr + (u32)offset_in_fragment_program;
 			const __m128i &vector = _mm_loadu_si128((__m128i*)data);
 			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
-			_mm_stream_si128((__m128i*)dst_buffer.subspan(offset, 4).data(), shuffled_vector);
-			offset += sizeof(f32);
+
+			if (!patch_table.is_empty())
+			{
+				_mm_storeu_ps(tmp, (__m128&)shuffled_vector);
+				bool patched;
+
+				for (int i = 0; i < 4; ++i)
+				{
+					patched = false;
+					for (auto& e : patch_table.db)
+					{
+						//TODO: Use fp comparison with fabsf without hurting performance
+						if (patched = e.second.test_and_set(tmp[i], &dst[i]))
+						{
+							break;
+						}
+					}
+
+					if (!patched)
+					{
+						dst[i] = tmp[i];
+					}
+				}
+			}
+			else
+			{
+				_mm_stream_si128((__m128i*)dst, shuffled_vector);
+			}
+
+			dst += 4;
 		}
 	}
 

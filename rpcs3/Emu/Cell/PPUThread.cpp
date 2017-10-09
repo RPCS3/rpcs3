@@ -1164,9 +1164,9 @@ extern void ppu_initialize(const ppu_module& info)
 				sha1_update(&ctx, vm::ps3::_ptr<const u8>(func.addr), func.size);
 			}
 
-			if (info.name == "liblv2.sprx")
+			if (info.name == "liblv2.sprx" || info.name == "libsysmodule.sprx" || info.name == "libnet.sprx")
 			{
-				const be_t<u64> forced_upd = 2;
+				const be_t<u64> forced_upd = 3;
 				sha1_update(&ctx, reinterpret_cast<const u8*>(&forced_upd), sizeof(forced_upd));
 			}
 
