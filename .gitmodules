@@ -38,3 +38,6 @@
 	path = 3rdparty/hidapi
 	url = https://github.com/RPCS3/hidapi
 	branch = master
+[submodule "3rdparty/Optional"]
+	path = 3rdparty/Optional
+	url = https://github.com/akrzemi1/Optional.git
