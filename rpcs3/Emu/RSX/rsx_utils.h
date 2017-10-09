@@ -4,6 +4,14 @@
 #include "gcm_enums.h"
 #include <atomic>
 
+// TODO: replace the code below by #include <optional> when C++17 or newer will be used
+#include <optional.hpp>
+namespace std
+{
+	template<class T>
+	using optional = experimental::optional<T>;
+}
+
 extern "C"
 {
 #include <libavutil/pixfmt.h>
