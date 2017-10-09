@@ -289,6 +289,7 @@ private:
 	void process_swap_request(frame_context_t *ctx, bool free_resources = false);
 	void advance_queued_frames();
 	void present(frame_context_t *ctx);
+	void reinitialize_swapchain();
 
 	void begin_render_pass();
 	void close_render_pass();
