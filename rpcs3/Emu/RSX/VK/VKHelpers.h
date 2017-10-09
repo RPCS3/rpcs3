@@ -36,7 +36,7 @@ namespace rsx
 
 namespace vk
 {
-#define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) fmt::throw_exception("Assertion failed! Result is %Xh" HERE, (s32)_res); }
+#define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) vk::die_with_error(HERE, _res); }
 
 	VKAPI_ATTR void *VKAPI_CALL mem_realloc(void *pUserData, void *pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
 	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
@@ -93,6 +93,8 @@ namespace vk
 	void advance_frame_counter();
 	const u64 get_current_frame_id();
 	const u64 get_last_completed_frame_id();
+
+	void die_with_error(std::string faulting_addr, VkResult error_code);
 
 	struct memory_type_mapping
 	{
