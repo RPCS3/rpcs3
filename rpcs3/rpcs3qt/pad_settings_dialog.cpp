@@ -14,8 +14,6 @@
 // TODO: rewrite with std::chrono or QTimer
 #include <time.h>
 
-static const int PadButtonWidth = 60;
-
 extern keyboard_pad_config g_kbpad_config;
 
 pad_settings_dialog::pad_settings_dialog(QWidget *parent) : QDialog(parent), ui(new Ui::pad_settings_dialog)

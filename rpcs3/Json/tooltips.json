@@ -1,6 +1,7 @@
 ﻿{
 	"audio": {
-		"audioOutBox": "Windows: Always use XAudio, no exceptions.\n\nLinux: ALSA uses the native Linux sound system to output sound.\nThis option has good compatibility and sound quality.\nOpenAL uses a cross-platform approach but will have poor audio quality and stuttering sound in most games.\nIf unsure, use ALSA.",
+		"audioOutBox": "Always use XAudio, no exceptions.\nOpenAL uses a cross-platform approach but will have poor audio quality and stuttering sound in most games.",
+		"audioOutBox_Linux": "ALSA uses the native Linux sound system to output sound. (Recommended)\nThis option has good compatibility and sound quality.\nOpenAL uses a cross-platform approach but will have poor audio quality and stuttering sound in most games.",
 		"audioDump": "Saves all audio as a raw wave file. If unsure, leave this unchecked.",
 		"convert": "Uses 16-bit audio samples instead of default 32-bit floating point.\nUse with buggy audio drivers if you have no sound or completely broken sound.",
 		"downmix": "Uses stereo audio output instead of default 7.1 surround sound.\nUse with stereo audio devices. Disable it only if you are using a surround sound audio system."
@@ -30,7 +31,7 @@
 			"spuLoopDetection": "Try to detect loop conditions in SPU kernels and use them as scheduling hints.\nImproves performance and reduces CPU usage.\nMay cause severe audio stuttering in rare cases."
 		},
 		"comboboxes": {
-			"preferredSPUThreads": "Preferred number of threads allowed to enter some sensitive SPU stages.\nSome SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value."
+			"preferredSPUThreads": "Some SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value."
 		}
 	},
 	"debug": {
@@ -50,7 +51,7 @@
 	"emulator": {
 		"gui": {
 			"configs": "Only useful to developers.\nIf unsure, don't use this option.",
-			"stylesheets": "Only useful to developers.\nIf unsure, don't use this option.",
+			"stylesheets": "Changes the overall look of RPCS3.\nChoose a stylesheet and click Apply to change between styles.",
 			"show_welcome": "Shows the initial welcome screen upon starting RPCS3.",
 			"custom_colors": "Prioritize custom user interface colors over properties set in stylesheet."
 		},
@@ -66,9 +67,10 @@
 	"gpu": {
 		"comboboxes": {
 			"renderBox": "Vulkan is the fastest renderer. OpenGL is the most accurate renderer.\nIf unsure, use Vulkan. Should you have any compatibility issues, fall back to OpenGL.\nDirectX 12 is deprecated and should never be used.",
-			"resBox": "This setting will be ignored if the Resolution Scale is set to anything other than 100%!\nLeave this on 1280x720, every PS3 game is compatible with this resolution.\nSet it to 1920x1080 only if supported by the game. Lower resolutions may work but are not practical.\nHowever rarely due to emulation bugs some games will only render at low resolutions like 480p.",
+			"renderBox_Linux": "Vulkan is the fastest renderer. OpenGL is the most accurate renderer.\nIf unsure, use Vulkan. Should you have any compatibility issues, fall back to OpenGL.",
+			"resBox": "This setting will be ignored if the Resolution Scale is set to anything other than 100%!\nLeave this on 1280x720, every PS3 game is compatible with this resolution.\nOnly use 1920x1080 if the game supports it.\nRarely due to emulation bugs some games will only render at low resolutions like 480p.",
 			"graphicsAdapterBox": "On multi GPU systems select which GPU to use in RPCS3 when using Vulkan or DirectX 12.\nThis is not needed when using OpenGL.",
-			"aspectBox": "Leave this on 16:9 unless you have a 4:3 monitor.\nAuto also works well especially if you use a resolution that is not 720p.",
+			"aspectBox": "Leave this on 16:9 unless you have a 4:3 monitor.\nAuto also works well, especially if you use a resolution that is not 720p.",
 			"frameLimitBox": "Off is the best option as it performs faster.\nUsing the frame limiter will add extra overhead and slow down the game.\nHowever, some games will crash if the framerate is too high.\nIf that happens, set value to anything other than Off.",
 			"anisotropicFilterOverride": "Higher values increase sharpness of textures on sloped surfaces at the cost of GPU resources.\nModern GPUs can handle this setting just fine even at 16x.\nKeep this on Automatic if you want to use the original setting used by a real PS3."
 		},
@@ -86,7 +88,8 @@
 		}
 	},
 	"input": {
-		"padHandlerBox": "If you want to use the keyboard to control, select the Keyboard option.\nYou can change the button mappings in Configuration --> Controls.\nIf you have a DualShock 4, select DualShock 4.\nWindows: If you have an Xbox controller, or another compatible device, use XInput.\nOlder controllers such as PS2 controllers with an adapter usually work fine with MMJoystick.\nCheck button mappings in the Windows control panel.\n\nLinux: evdev input is WIP.",
+		"padHandlerBox": "If you want to use the keyboard to control, select the Keyboard option.\nIf you have a DualShock 4, select DualShock 4.\nIf you have an Xbox controller, or another compatible device, use XInput.\nOlder controllers such as PS2 controllers with an adapter usually work fine with MMJoystick.\nCheck button mappings in the Windows control panel.",
+		"padHandlerBox_Linux": "If you want to use the keyboard to control, select the Keyboard option.\nIf you have a DualShock 4, select DualShock 4.\nevdev input is WIP.",
 		"keyboardHandlerBox": "Some games support native keyboard input.\nBasic will work in these cases.",
 		"mouseHandlerBox": "Some games support native mouse input.\nBasic will work in these cases.",
 		"cameraBox": "Camera support is not implemented, leave this on null.",

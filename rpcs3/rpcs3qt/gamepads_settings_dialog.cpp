@@ -11,6 +11,9 @@
 #include "../Emu/Io/Null/NullPadHandler.h"
 #include "../Emu/System.h"
 
+#include <QJsonObject>
+#include <QJsonDocument>
+
 input_config input_cfg;
 
 // taken from https://stackoverflow.com/a/30818424/8353754
@@ -37,6 +40,12 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 	: QDialog(parent)
 {
 	setWindowTitle(tr("Gamepads Settings"));
+
+	// read tooltips from json
+	QFile json_file(":/Json/tooltips.json");
+	json_file.open(QIODevice::ReadOnly | QIODevice::Text);
+	QJsonObject json_input = QJsonDocument::fromJson(json_file.readAll()).object().value("input").toObject();
+	json_file.close();
 
 	QVBoxLayout *dialog_layout = new QVBoxLayout();
 	QHBoxLayout *all_players = new QHBoxLayout();
@@ -90,6 +99,11 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 		co_inputtype[i] = new QComboBox();
 		co_inputtype[i]->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
 		co_inputtype[i]->view()->setTextElideMode(Qt::ElideNone);
+#ifdef WIN32
+		co_inputtype[i]->setToolTip(json_input["padHandlerBox"].toString());
+#else
+		co_inputtype[i]->setToolTip(json_input["padHandlerBox_Linux"].toString());
+#endif
 		ppad_layout->addWidget(co_inputtype[i]);
 
 		co_deviceID[i] = new QComboBox();

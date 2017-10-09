@@ -314,7 +314,7 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_5">
           <item>
-           <widget class="QLabel" name="label_2">
+           <widget class="QLabel" name="description_cpu">
             <property name="text">
              <string>CPU settings allow you to change both the PPU (Power Processing Element) and SPU (Synergistic Processing Unit) decoder modes. You can also adjust firmware settings for the emulated console. These settings allow you to load firmware libraries automatically, manually or both at the same time as well as on-the-fly.</string>
             </property>
@@ -712,7 +712,7 @@
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_5">
           <item>
-           <widget class="QLabel" name="label_3">
+           <widget class="QLabel" name="description_gpu">
             <property name="text">
              <string>GPU settings allow you to change the rendering backend of the emulated console. You can also choose your preferred graphics device for GPU specific rendering APIs as well as adjust the output resolution, aspect ratio and framelimit of the emulated console. Additional enhancement settings will be added in the future.</string>
             </property>
@@ -816,7 +816,7 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_20">
           <item>
-           <widget class="QLabel" name="label_4">
+           <widget class="QLabel" name="description_audio">
             <property name="text">
              <string>Audio settings allow you to change the way audio is encoded and handled by the emulator. More detailed settings will be added in the future.
 
@@ -929,7 +929,7 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_33">
           <item>
-           <widget class="QLabel" name="label_5">
+           <widget class="QLabel" name="description_io">
             <property name="text">
              <string>I/O settings allow you to change controller, keyboard and mouse handlers as well as PlayStation camera inputs. More detailed settings will be added in the future.
 
@@ -1033,7 +1033,7 @@
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_13">
           <item>
-           <widget class="QLabel" name="label_7">
+           <widget class="QLabel" name="description_system">
             <property name="text">
              <string>System settings allow you to change basic system settings found within a real PlayStation 3 system. Depending on the application in use, the console language setting will change the language of the application accordingly. More detailed settings will be added in the future.
 </string>
@@ -1101,7 +1101,7 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_39">
           <item>
-           <widget class="QLabel" name="label_6">
+           <widget class="QLabel" name="description_network">
             <property name="text">
              <string>Network settings allow you to change basic network settings found within a real PlayStation 3 system. More detailed settings may or may not be added in the future.
 
@@ -1442,7 +1442,7 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_45">
           <item>
-           <widget class="QLabel" name="label_8">
+           <widget class="QLabel" name="description_emulator">
             <property name="text">
              <string>Emulator settings allow you to set personal preferences within the emulator such as automatic exit when a process is finished, starting games after boot and allowing games to automatically boot into fullscreen mode. You can also create your own stylesheets which can be used as themes for a more personal experience. </string>
             </property>
@@ -1615,7 +1615,7 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_52">
           <item>
-           <widget class="QLabel" name="label_9">
+           <widget class="QLabel" name="description_debug">
             <property name="text">
              <string>These options are only needed for development.
 
