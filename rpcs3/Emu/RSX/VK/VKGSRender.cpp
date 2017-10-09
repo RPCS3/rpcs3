@@ -2293,10 +2293,13 @@ void VKGSRender::flip(int buffer)
 
 	bool resize_screen = false;
 
-	if (m_client_height != m_frame->client_height() ||
-		m_client_width != m_frame->client_width())
+	const auto frame_width = m_frame->client_width();
+	const auto frame_height = m_frame->client_height();
+
+	if (m_client_height != frame_height ||
+		m_client_width != frame_width)
 	{
-		if (!!m_frame->client_height() && !!m_frame->client_width())
+		if (!!frame_width && !!frame_height)
 			resize_screen = true;
 	}
 
@@ -2340,7 +2343,7 @@ void VKGSRender::flip(int buffer)
 
 		coordi aspect_ratio;
 
-		sizei csize = { m_frame->client_width(), m_frame->client_height() };
+		sizei csize = { frame_width, frame_height };
 		sizei new_size = csize;
 
 		if (!g_cfg.video.stretch_to_display_area)
