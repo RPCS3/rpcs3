@@ -31,7 +31,7 @@
 *.wav
 
 /build
-/bin
+/bin/
 /lib
 /tmp
 /ipch
@@ -45,16 +45,6 @@
 !/bin/GuiConfigs/
 /bin/GuiConfigs/*.ini
 
-/bin/rpcs3.ini
-/bin/rpcs3.ipdb
-/bin/rpcs3.iobj
-/bin/FragmentProgram.txt
-/bin/VertexProgram.txt
-/bin/*.hlsl
-/bin/BreakPoints.dat
-/bin/textures
-/bin/*.lib
-/bin/*.exp
 rpcs3/git-version.h
 
 # Visual Studio Files
@@ -63,12 +53,6 @@ rpcs3/git-version.h
 *.psess
 *.VC.*
 *.vcxproj.user
-
-# Copyrighted files
-/bin/data/
-/bin/dev_flash/data/font
-/bin/dev_flash/sys
-/bin/dev_flash/vsh
 
 # Ignore installed games except test homebrews
 !/bin/dev_hdd0/game/
