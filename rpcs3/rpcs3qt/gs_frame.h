@@ -14,8 +14,14 @@ class gs_frame : public QWindow, public GSFrameBase
 	bool m_show_fps;
 	bool m_disable_mouse;
 
+	bool m_in_sizing_event = false; //a signal that the window is about to be resized was received
+	bool m_user_interaction_active = false; //a signal indicating the window is being manually moved/resized was received
+	bool m_interactive_resize = false; //resize signal received while dragging window
+
 public:
 	gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse);
+
+	wm_event get_default_wm_event() const override;
 protected:
 	virtual void paintEvent(QPaintEvent *event);
 
@@ -37,6 +43,8 @@ protected:
 	void flip(draw_context_t context, bool skip_frame=false) override;
 	int client_width() override;
 	int client_height() override;
+
+	bool nativeEvent(const QByteArray &eventType, void *message, long *result) override;
 
 	bool event(QEvent* ev) override;
 private Q_SLOTS:

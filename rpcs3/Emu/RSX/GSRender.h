@@ -18,6 +18,15 @@ struct RSXDebuggerProgram
 	}
 };
 
+enum wm_event
+{
+	none, //nothing
+	geometry_change_notice, //about to start resizing and/or moving the window
+	geometry_change_in_progress, //window being resized and/or moved
+	window_resized, //window was resized
+	window_moved //window moved without resize
+};
+
 using RSXDebuggerPrograms = std::vector<RSXDebuggerProgram>;
 
 using draw_context_t = std::shared_ptr<void>;
@@ -45,6 +54,35 @@ public:
 protected:
 	virtual void delete_context(void* ctx) = 0;
 	virtual void* make_context() = 0;
+
+	//window manager event management
+	wm_event m_raised_event;
+	std::atomic_bool wm_event_raised = {};
+
+public:
+	//synchronize native window access
+	std::mutex wm_event_lock;
+
+	virtual wm_event get_default_wm_event() const = 0;
+
+	void clear_wm_events()
+	{
+		m_raised_event = wm_event::none;
+		wm_event_raised.store(false);
+	}
+
+	wm_event get_wm_event()
+	{
+		if (wm_event_raised.load(std::memory_order_consume))
+		{
+			auto result = m_raised_event;
+			m_raised_event = wm_event::none;
+			wm_event_raised.store(false);
+			return result;
+		}
+
+		return get_default_wm_event();
+	}
 };
 
 class GSRender : public rsx::thread
