@@ -111,7 +111,7 @@ static QStringList getOptions(cfg_location location)
 	return values;
 }
 
-Render_Creator::Render_Creator()
+emu_settings::Render_Creator::Render_Creator()
 {
 	// check for dx12 adapters
 #ifdef _MSC_VER
@@ -165,9 +165,25 @@ Render_Creator::Render_Creator()
 		}
 	}
 #endif
+
+	// Graphics Adapter
+	D3D12 = Render_Info(name_D3D12, D3D12Adapters, supportsD3D12, emu_settings::D3D12Adapter);
+	Vulkan = Render_Info(name_Vulkan, vulkanAdapters, supportsVulkan, emu_settings::VulkanAdapter);
+	OpenGL = Render_Info(name_OpenGL);
+	NullRender = Render_Info(name_Null);
+
+	renderers = { &D3D12, &Vulkan, &OpenGL, &NullRender };
 }
 
-emu_settings::emu_settings(const std::string& path) : QObject()
+emu_settings::emu_settings() : QObject()
+{
+}
+
+emu_settings::~emu_settings()
+{
+}
+
+void emu_settings::LoadSettings(const std::string& path)
 {
 	m_path = path;
 
@@ -175,6 +191,7 @@ emu_settings::emu_settings(const std::string& path) : QObject()
 	fs::create_path(fs::get_config_dir() + path);
 
 	// Load default config
+	m_defaultSettings = YAML::Load(g_cfg_defaults);
 	m_currentSettings = YAML::Load(g_cfg_defaults);
 
 	// Add global config
@@ -187,10 +204,6 @@ emu_settings::emu_settings(const std::string& path) : QObject()
 		m_config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write);
 		m_currentSettings += YAML::Load(m_config.to_string());
 	}
-}
-
-emu_settings::~emu_settings()
-{
 }
 
 void emu_settings::SaveSettings()
@@ -247,9 +260,6 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 
 void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 {
-	cfg_location loc = SettingsLoc[type];
-	std::string name = loc[loc.size() - 1];
-
 	std::string currSet = GetSetting(type);
 	if (currSet == "true")
 	{
@@ -267,6 +277,39 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 	});
 }
 
+void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type, bool is_ranged)
+{
+	QString selected = qstr(GetSetting(type));
+
+	if (is_ranged)
+	{
+		QStringList range = GetSettingOptions(type);
+		int min = range.first().toInt();
+		int max = range.last().toInt();
+		int val = selected.toInt();
+
+		if (val < min || val > max)
+		{
+			LOG_ERROR(GENERAL, "Passed in an invalid setting for creating enhanced slider");
+			val = min;
+		}
+
+		slider->setMinimum(min);
+		slider->setMaximum(max);
+		slider->setValue(val);
+	}
+	else
+	{
+		//TODO ?
+		LOG_ERROR(GENERAL, "TODO: implement unranged enhanced slider");
+	}
+
+	connect(slider, &QSlider::valueChanged, [=](int value)
+	{
+		SetSetting(type, sstr(slider->value()));
+	});
+}
+
 std::vector<std::string> emu_settings::GetLoadedLibraries()
 {
 	return m_currentSettings["Core"]["Load libraries"].as<std::vector<std::string>, std::initializer_list<std::string>>({});
@@ -280,6 +323,17 @@ void emu_settings::SaveSelectedLibraries(const std::vector<std::string>& libs)
 QStringList emu_settings::GetSettingOptions(SettingsType type) const
 {
 	return getOptions(const_cast<cfg_location&&>(SettingsLoc[type]));
+}
+
+std::string emu_settings::GetSettingName(SettingsType type) const
+{
+	cfg_location loc = SettingsLoc[type];
+	return loc[loc.size() - 1];
+}
+
+std::string emu_settings::GetSettingDefault(SettingsType type) const
+{
+	return cfg_adapter::get_node(m_defaultSettings, SettingsLoc[type]).Scalar();
 }
 
 std::string emu_settings::GetSetting(SettingsType type) const

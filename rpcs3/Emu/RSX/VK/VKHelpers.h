@@ -36,7 +36,7 @@ namespace rsx
 
 namespace vk
 {
-#define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) fmt::throw_exception("Assertion failed! Result is %Xh" HERE, (s32)_res); }
+#define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) vk::die_with_error(HERE, _res); }
 
 	VKAPI_ATTR void *VKAPI_CALL mem_realloc(void *pUserData, void *pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
 	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
@@ -93,6 +93,8 @@ namespace vk
 	void advance_frame_counter();
 	const u64 get_current_frame_id();
 	const u64 get_last_completed_frame_id();
+
+	void die_with_error(std::string faulting_addr, VkResult error_code);
 
 	struct memory_type_mapping
 	{
@@ -834,20 +836,33 @@ namespace vk
 			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, present_modes.data()));
 
 			VkPresentModeKHR swapchain_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+			VkPresentModeKHR preferred_mode = (g_cfg.video.vsync) ? VK_PRESENT_MODE_FIFO_RELAXED_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR;
+			bool mailbox_exists = false;
 
 			for (VkPresentModeKHR mode : present_modes)
 			{
 				if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
 				{
-					//If we can get a mailbox mode, use it
+					mailbox_exists = true;
+					continue;
+				}
+
+				if (mode == preferred_mode)
+				{
 					swapchain_present_mode = mode;
 					break;
 				}
+			}
 
-				//If we can get out of using the FIFO mode, take it. Fifo is very high latency (generic vsync)
-				if (swapchain_present_mode == VK_PRESENT_MODE_FIFO_KHR &&
-					(mode == VK_PRESENT_MODE_IMMEDIATE_KHR || mode == VK_PRESENT_MODE_FIFO_RELAXED_KHR))
-					swapchain_present_mode = mode;
+			if (preferred_mode != swapchain_present_mode)
+			{
+				//Preferred video mode was not found. Fall back to mailbox if it exists
+				LOG_WARNING(RSX, "Swapchain: Could not set the preferred present mode 0x%X. Falling back to mailbox if supported (supported=%d)", (u32)preferred_mode, mailbox_exists);
+
+				if (mailbox_exists)
+				{
+					swapchain_present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
+				}
 			}
 
 			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;

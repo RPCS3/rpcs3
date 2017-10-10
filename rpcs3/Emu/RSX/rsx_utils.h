@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../System.h"
 #include "gcm_enums.h"
 #include <atomic>
 
@@ -206,5 +207,40 @@ namespace rsx
 		}
 
 		return std::make_tuple(x, y, width, height);
+	}
+
+	static inline const f32 get_resolution_scale()
+	{
+		return g_cfg.video.strict_rendering_mode? 1.f : ((f32)g_cfg.video.resolution_scale_percent / 100.f);
+	}
+
+	static inline const int get_resolution_scale_percent()
+	{
+		return g_cfg.video.strict_rendering_mode ? 100 : g_cfg.video.resolution_scale_percent;
+	}
+
+	static inline const u16 apply_resolution_scale(u16 value, bool clamp)
+	{
+		if (value <= g_cfg.video.min_scalable_dimension)
+			return value;
+		else if (clamp)
+			return (u16)std::max((get_resolution_scale_percent() * value) / 100, 1);
+		else
+			return (get_resolution_scale_percent() * value) / 100;
+	}
+
+	static inline const u16 apply_inverse_resolution_scale(u16 value, bool clamp)
+	{
+		u16 result = value;
+
+		if (clamp)
+			result = (u16)std::max((value * 100) / get_resolution_scale_percent(), 1);
+		else
+			result = (value * 100) / get_resolution_scale_percent();
+
+		if (result <= g_cfg.video.min_scalable_dimension)
+			return value;
+
+		return result;
 	}
 }

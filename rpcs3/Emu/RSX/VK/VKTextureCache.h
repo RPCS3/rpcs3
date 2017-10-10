@@ -35,7 +35,7 @@ namespace vk
 			if (length > cpu_address_range)
 				release_dma_resources();
 
-			rsx::protection_policy policy = g_cfg.video.strict_rendering_mode ? rsx::protection_policy::protect_policy_full_range : rsx::protection_policy::protect_policy_one_page;
+			rsx::protection_policy policy = g_cfg.video.strict_rendering_mode ? rsx::protection_policy::protect_policy_full_range : rsx::protection_policy::protect_policy_conservative;
 			rsx::buffered_section::reset(base, length, policy);
 		}
 
@@ -146,13 +146,16 @@ namespace vk
 				cmd.begin();
 			}
 
+			const u16 internal_width = std::min(width, rsx::apply_resolution_scale(width, true));
+			const u16 internal_height = std::min(height, rsx::apply_resolution_scale(height, true));
+
 			VkBufferImageCopy copyRegion = {};
 			copyRegion.bufferOffset = 0;
-			copyRegion.bufferRowLength = width;
-			copyRegion.bufferImageHeight = height;
+			copyRegion.bufferRowLength = internal_width;
+			copyRegion.bufferImageHeight = internal_height;
 			copyRegion.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
 			copyRegion.imageOffset = {};
-			copyRegion.imageExtent = {width, height, 1};
+			copyRegion.imageExtent = {internal_width, internal_height, 1};
 
 			VkImageSubresourceRange subresource_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 			
