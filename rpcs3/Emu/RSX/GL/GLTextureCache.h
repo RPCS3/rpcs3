@@ -193,7 +193,7 @@ namespace gl
 
 		void reset(const u32 base, const u32 size, const bool flushable=false)
 		{
-			rsx::protection_policy policy = g_cfg.video.strict_rendering_mode ? rsx::protection_policy::protect_policy_full_range : rsx::protection_policy::protect_policy_one_page;
+			rsx::protection_policy policy = g_cfg.video.strict_rendering_mode ? rsx::protection_policy::protect_policy_full_range : rsx::protection_policy::protect_policy_conservative;
 			rsx::buffered_section::reset(base, size, policy);
 
 			if (flushable)
