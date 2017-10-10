@@ -119,16 +119,16 @@ bool evdev_joystick_handler::try_open_dev(u32 index)
         pads[index]->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
     pads[index]->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 
-    int buttons=0;
-    for (u32 i=BTN_JOYSTICK; i<KEY_MAX; i++)
+    int buttons = 0;
+    for (u32 i = BTN_JOYSTICK; i < KEY_MAX; i++)
         if (libevdev_has_event_code(dev, EV_KEY, i))
         {
             LOG_NOTICE(GENERAL, "Joystick #%d has button %d as %d", index, i, buttons);
             joy_button_maps[index][i - BTN_MISC] = buttons++;
         }
 
-    int axes=0;
-    for (u32 i=ABS_X; i<=ABS_RZ; i++)
+    int axes = 0;
+    for (u32 i = ABS_X; i <= ABS_RZ; i++)
     {
 
         if (libevdev_has_event_code(dev, EV_ABS, i))
@@ -144,7 +144,7 @@ bool evdev_joystick_handler::try_open_dev(u32 index)
         }
     }
 
-    for (u32 i=ABS_HAT0X; i<=ABS_HAT3Y; i+=2)
+    for (u32 i = ABS_HAT0X; i <= ABS_HAT3Y; i += 2)
         if (libevdev_has_event_code(dev, EV_ABS, i) ||
             libevdev_has_event_code(dev, EV_ABS, i+1))
         {
@@ -351,7 +351,7 @@ void evdev_joystick_handler::ThreadProc()
 {
     update_devs();
 
-    for (int i=0; i<joy_devs.size(); i++)
+    for (int i = 0; i<joy_devs.size(); i++)
     {
         auto pad = pads[i];
         auto& dev = joy_devs[i];
@@ -418,41 +418,37 @@ void evdev_joystick_handler::ThreadProc()
             LOG_NOTICE(GENERAL, "Joystick #%d EV_ABS: %d %d", i, evt.code, evt.value);
             //duplicate the evt.code and evt.value, so that they're still available
             //for the analog input
-            int code2=evt.code;
-            int value2=evt.value;
+            int code2 = evt.code;
+            int value2 = evt.value;
             if (g_evdev_joystick_config.left_analog_to_dpad)
             {
                 //some gamepad have a -32767 to +32767 range; others have a 0 to 255
-                float center2=(axis_ranges[evt.code].second+axis_ranges[evt.code].first)/2;
+                float center2 = (axis_ranges[evt.code].second + axis_ranges[evt.code].first) / 2;
                 //arbitrary decision: when the value is higher than a 1/3 of the range, we simulate a dpad press
-                float threshold2=(axis_ranges[evt.code].second-center2)/3;
-                if (code2 == 0)
+                float threshold2 = (axis_ranges[evt.code].second-center2)/3;
+                if (code2 == 0 || code2 == 1)
                 {
                     value2 = 0;
-                    if (evt.value > center2+threshold2)
-                        value2=1;
-                    else if (evt.value < center2-threshold2)
-                        value2=-1;
+                    if (evt.value > center2 + threshold2)
+                        value2 = 1;
+                    else if (evt.value < center2 - threshold2)
+                        value2 = -1;
                     if (revaxis[code2])
-                        value2=-value2;
-                    if (g_evdev_joystick_config.lxstick<g_evdev_joystick_config.lystick)
-                        code2=ABS_HAT0X;
+                        value2 = -value2;
+                    if (g_evdev_joystick_config.lxstick < g_evdev_joystick_config.lystick)
+                    {
+                        if (code2 == 0)
+                            code2 = ABS_HAT0X;
+                        else
+                            code2 = ABS_HAT0Y;
+                    }
                     else
-                        code2=ABS_HAT0Y;
-                }
-                else if (code2 == 1)
-                {
-                    value2 = 0;
-                    if (evt.value > center2+threshold2)
-                        value2=1;
-                    else if (evt.value < center2-threshold2)
-                        value2=-1;
-                    if (revaxis[code2])
-                        value2=-value2;
-                    if (g_evdev_joystick_config.lxstick<g_evdev_joystick_config.lystick)
-                        code2=ABS_HAT0Y;
-                    else
-                        code2=ABS_HAT0X;
+                    {
+                        if (code2 == 0)
+                            code2 = ABS_HAT0Y;
+                        else
+                            code2 = ABS_HAT0X;
+                    }
                 }
             }
             if (code2 >= ABS_HAT0X && code2 <= ABS_HAT3Y)
@@ -497,7 +493,7 @@ void evdev_joystick_handler::ThreadProc()
             else if (axistrigger && (evt.code == ABS_Z || evt.code == ABS_RZ))
             {
                 // For Xbox controllers, a third axis represent the left/right triggers.
-                int which_trigger=0;
+                int which_trigger = 0;
 
                 if (evt.code == ABS_Z)
                 {
