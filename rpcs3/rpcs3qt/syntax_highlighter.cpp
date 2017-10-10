@@ -6,7 +6,9 @@ syntax_highlighter::syntax_highlighter(QTextDocument *parent) : QSyntaxHighlight
 
 void syntax_highlighter::AddSimpleRule(SimpleRule rule)
 {
-	rule.expressions.erase(std::remove_if(rule.expressions.begin(), rule.expressions.end(), IsInvalidExpression), rule.expressions.end());
+	rule.expressions.erase(std::remove_if(rule.expressions.begin(), rule.expressions.end(), [&](const auto &e){
+		return IsInvalidExpression(e) || e.captureCount() > 1;
+	}), rule.expressions.end());
 
 	if (rule.expressions.isEmpty())
 	{
@@ -41,11 +43,11 @@ void syntax_highlighter::AddWordRule(const QStringList& words, const QColor& col
 
 void syntax_highlighter::AddMultiRule(const MultiRule& rule)
 {
-	// By definition of captureCount the group 0 (full match) is NOT counted. Therefore <= instead of <
 	if (IsInvalidExpression(rule.expression) || rule.formats.length() <= rule.expression.captureCount())
 	{
 		return;
 	}
+
 	m_multi_rules.append(rule);
 }
 void syntax_highlighter::AddMultiRule(const QString& expression, const QVector<QColor>& colors)
@@ -80,23 +82,6 @@ void syntax_highlighter::highlightBlock(const QString &text)
 {
 	m_current_block = text;
 
-	for (const auto& rule : m_rules)
-	{
-		for (const auto& expression : rule.expressions)
-		{
-			// Search for all the matching strings
-			QRegularExpressionMatchIterator iter = expression.globalMatch(m_current_block);
-
-			// Iterate through the matching strings
-			while (iter.hasNext())
-			{
-				// Apply format to the matching string
-				QRegularExpressionMatch match = iter.next();
-				setFormat(match.capturedStart(), match.capturedLength(), rule.format);
-			}
-		}
-	}
-
 	for (const auto& rule : m_multi_rules)
 	{
 		// Search for all the matching strings
@@ -107,9 +92,35 @@ void syntax_highlighter::highlightBlock(const QString &text)
 		{
 			// Apply formats to their respective found groups
 			QRegularExpressionMatch match = iter.next();
+
 			for (int i = 0; i <= match.lastCapturedIndex(); i++)
 			{
 				setFormat(match.capturedStart(i), match.capturedLength(i), rule.formats[i]);
+			}
+		}
+	}
+
+	for (const auto& rule : m_rules)
+	{
+		for (const auto& expression : rule.expressions)
+		{
+			// Search for all the matching strings
+			QRegularExpressionMatchIterator iter = expression.globalMatch(m_current_block);
+			bool contains_group = expression.captureCount() > 0;
+
+			// Iterate through the matching strings
+			while (iter.hasNext())
+			{
+				// Apply format to the matching string
+				QRegularExpressionMatch match = iter.next();
+				if (contains_group)
+				{
+					setFormat(match.capturedStart(1), match.capturedLength(1), rule.format);
+				}
+				else
+				{
+					setFormat(match.capturedStart(), match.capturedLength(), rule.format);
+				}
 			}
 		}
 	}

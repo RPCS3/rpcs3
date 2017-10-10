@@ -43,10 +43,13 @@ public:
 			: start_expression(start), end_expression(end), format(format), multi_line(multi_line) {}
 	};
 
-	/** Add a simple highlighting rule that applies the given format to all given expressions */
+	/**
+		Add a simple highlighting rule that applies the given format to all given expressions.
+		You can add up to one Group to the expression. The full match group will be ignored
+	*/
 	void AddSimpleRule(SimpleRule rule);
 	void AddSimpleRule(const QStringList& expressions, const QColor& color);
-	/** Add a simple highlighting rule for words */
+	/** Add a simple highlighting rule for words. Not supposed to be used with any other expression */
 	void AddWordRule(const QStringList& words, const QColor& color);
 
 	/**
