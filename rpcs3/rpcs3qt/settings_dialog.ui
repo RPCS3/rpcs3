@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>729</width>
-    <height>821</height>
+    <width>550</width>
+    <height>604</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>7</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -468,7 +468,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_29">
            <property name="title">
-            <string>Resolution</string>
+            <string>Default Resolution</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_22">
             <item>
@@ -552,30 +552,9 @@
            <item>
             <widget class="QGroupBox" name="gb_resolutionScale">
              <property name="title">
-              <string>Resolution Scale</string>
+              <string>Resolution Scale (Disable Strict Mode)</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_29">
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_25" stretch="1,0">
-                <item>
-                 <widget class="QLabel" name="resolutionScaleVal">
-                  <property name="text">
-                   <string>0</string>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignCenter</set>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="resolutionScaleReset">
-                  <property name="text">
-                   <string>Reset</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
               <item>
                <widget class="QWidget" name="widget_9" native="true">
                 <layout class="QHBoxLayout" name="horizontalLayout_23" stretch="0,1,0">
@@ -621,6 +600,27 @@
                 </layout>
                </widget>
               </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_25" stretch="1,0">
+                <item>
+                 <widget class="QLabel" name="resolutionScaleVal">
+                  <property name="text">
+                   <string>0</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="resolutionScaleReset">
+                  <property name="text">
+                   <string>Reset</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
              </layout>
             </widget>
            </item>
@@ -630,27 +630,6 @@
               <string>Resolution Scale Threshold</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_57">
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_26" stretch="1,0">
-                <item>
-                 <widget class="QLabel" name="minimumScalableDimensionVal">
-                  <property name="text">
-                   <string>1x1</string>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignCenter</set>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="minimumScalableDimensionReset">
-                  <property name="text">
-                   <string>Reset</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
               <item>
                <layout class="QHBoxLayout" name="horizontalLayout_24" stretch="0,1,0">
                 <property name="spacing">
@@ -677,6 +656,27 @@
                  <widget class="QLabel" name="minimumScalableDimensionMax">
                   <property name="text">
                    <string>1024</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_26" stretch="1,0">
+                <item>
+                 <widget class="QLabel" name="minimumScalableDimensionVal">
+                  <property name="text">
+                   <string>1x1</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="minimumScalableDimensionReset">
+                  <property name="text">
+                   <string>Reset</string>
                   </property>
                  </widget>
                 </item>
@@ -1647,12 +1647,18 @@
        <property name="text">
         <string>Save</string>
        </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
       </widget>
      </item>
      <item alignment="Qt::AlignLeft">
       <widget class="QPushButton" name="cancelButton">
        <property name="text">
         <string>Close</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
        </property>
       </widget>
      </item>

@@ -30,7 +30,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	: QDialog(parent), xgui_settings(guiSettings), xemu_settings(emuSettings), ui(new Ui::settings_dialog), m_tab_Index(tabIndex)
 {
 	ui->setupUi(this);
-	ui->cancelButton->setDefault(true);
+	ui->cancelButton->setFocus();
 	ui->tabWidget->setUsesScrollButtons(false);
 
 	bool showDebugTab = xgui_settings->GetValue(GUI::m_showDebugTab).toBool();
@@ -398,7 +398,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
 	ui->resBox->setToolTip(json_gpu_cbo["resBox"].toString());
-	ui->resBox->setItemText(ui->resBox->findData("1280x720"), "1280x720 (Recommended)");
+	ui->resBox->setItemText(ui->resBox->findData("1280x720"), tr("1280x720 (Recommended)"));
 	SubscribeTooltip(ui->resBox, ui->resBox->toolTip());
 
 	xemu_settings->EnhanceComboBox(ui->aspectBox, emu_settings::AspectRatio);
@@ -459,6 +459,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
 	ui->scrictModeRendering->setToolTip(json_gpu_main["scrictModeRendering"].toString());
 	SubscribeTooltip(ui->scrictModeRendering, ui->scrictModeRendering->toolTip());
+	connect(ui->scrictModeRendering, &QCheckBox::clicked, [=](bool checked)
+	{
+		ui->gb_resolutionScale->setEnabled(!checked);
+		ui->gb_minimumScalableDimension->setEnabled(!checked);
+	});
 
 	// Sliders
 	static const auto& minmaxLabelWidth = [](const QString& sizer)
@@ -469,11 +474,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceSlider(ui->resolutionScale, emu_settings::ResolutionScale, true);
 	ui->gb_resolutionScale->setToolTip(json_gpu_slid["resolutionScale"].toString());
 	SubscribeTooltip(ui->gb_resolutionScale, ui->gb_resolutionScale->toolTip());
+	ui->gb_resolutionScale->setEnabled(!ui->scrictModeRendering->isChecked());
 	// rename label texts to fit current state of Resolution Scale
 	int resolutionScaleDef = stoi(xemu_settings->GetSettingDefault(emu_settings::ResolutionScale));
 	auto ScaledResolution = [resolutionScaleDef](int percentage)
 	{
-		if (percentage == resolutionScaleDef) return QString("100% (Automatic)");
+		if (percentage == resolutionScaleDef) return QString(tr("100% (Default)"));
 		return QString("%1% (%2x%3)").arg(percentage).arg(1280 * percentage / 100).arg(720 * percentage / 100);
 	};
 	ui->resolutionScale->setPageStep(50);
@@ -494,11 +500,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceSlider(ui->minimumScalableDimension, emu_settings::MinimumScalableDimension, true);
 	ui->gb_minimumScalableDimension->setToolTip(json_gpu_slid["minimumScalableDimension"].toString());
 	SubscribeTooltip(ui->gb_minimumScalableDimension, ui->gb_minimumScalableDimension->toolTip());
+	ui->gb_minimumScalableDimension->setEnabled(!ui->scrictModeRendering->isChecked());
 	// rename label texts to fit current state of Minimum Scalable Dimension
 	int minimumScalableDimensionDef = stoi(xemu_settings->GetSettingDefault(emu_settings::MinimumScalableDimension));
 	auto MinScalableDimension = [minimumScalableDimensionDef](int dim)
 	{
-		if (dim == minimumScalableDimensionDef) return QString("%1x%1 (Default)").arg(dim);
+		if (dim == minimumScalableDimensionDef) return tr("%1x%1 (Default)").arg(dim);
 		return QString("%1x%1").arg(dim);
 	};
 	ui->minimumScalableDimension->setPageStep(64);
@@ -934,13 +941,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->gs_width->setEnabled(enableButtons);
 		ui->gs_height->setEnabled(enableButtons);
 
-		QRect rec = QApplication::desktop()->screenGeometry();
+		QRect screen = QApplication::desktop()->screenGeometry();
 		int width = xgui_settings->GetValue(GUI::gs_width).toInt();
 		int height = xgui_settings->GetValue(GUI::gs_height).toInt();
-		const int max_width = rec.width();
-		const int max_height = rec.height();
-		ui->gs_width->setValue(width < max_width ? width : max_width);
-		ui->gs_height->setValue(height < max_height ? height : max_height);
+		ui->gs_width->setValue(std::min(width, screen.width()));
+		ui->gs_height->setValue(std::min(height, screen.height()));
 
 		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=](bool val)
 		{
@@ -948,19 +953,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			ui->gs_width->setEnabled(val);
 			ui->gs_height->setEnabled(val);
 		});
-		connect(ui->gs_width, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int w)
+		connect(ui->gs_width, &QSpinBox::editingFinished, [=]()
 		{
-			int width = QApplication::desktop()->screenGeometry().width();
-			w = w > width ? width : w;
-			ui->gs_width->setValue(w);
-			xgui_settings->SetValue(GUI::gs_width, w);
+			ui->gs_width->setValue(std::min(ui->gs_width->value(), QApplication::desktop()->screenGeometry().width()));
+			xgui_settings->SetValue(GUI::gs_width, ui->gs_width->value());
 		});
-		connect(ui->gs_height, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](int h)
+		connect(ui->gs_height, &QSpinBox::editingFinished, [=]()
 		{
-			int height = QApplication::desktop()->screenGeometry().height();
-			h = h > height ? height : h;
-			ui->gs_height->setValue(h);
-			xgui_settings->SetValue(GUI::gs_height, h);
+			ui->gs_height->setValue(std::min(ui->gs_height->value(), QApplication::desktop()->screenGeometry().height()));
+			xgui_settings->SetValue(GUI::gs_height, ui->gs_height->value());
 		});
 
 		AddConfigs();

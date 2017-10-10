@@ -1,7 +1,7 @@
 ﻿{
 	"audio": {
 		"audioOutBox": "Always use XAudio, no exceptions.\nOpenAL uses a cross-platform approach but will have poor audio quality and stuttering sound in most games.",
-		"audioOutBox_Linux": "ALSA uses the native Linux sound system to output sound. (Recommended)\nThis option has good compatibility and sound quality.\nOpenAL uses a cross-platform approach but will have poor audio quality and stuttering sound in most games.",
+		"audioOutBox_Linux": "PulseAudio uses the recommended native Linux sound system and has good compatibility and sound quality. If it is unavailable on your system, ALSA is the next best alternative. \nOpenAL uses a cross-platform approach but will have poor audio quality and stuttering sound in most games.",
 		"audioDump": "Saves all audio as a raw wave file. If unsure, leave this unchecked.",
 		"convert": "Uses 16-bit audio samples instead of default 32-bit floating point.\nUse with buggy audio drivers if you have no sound or completely broken sound.",
 		"downmix": "Uses stereo audio output instead of default 7.1 surround sound.\nUse with stereo audio devices. Disable it only if you are using a surround sound audio system."
