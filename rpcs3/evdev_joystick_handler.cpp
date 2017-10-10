@@ -437,17 +437,11 @@ void evdev_joystick_handler::ThreadProc()
                         value2 = -value2;
                     if (g_evdev_joystick_config.lxstick < g_evdev_joystick_config.lystick)
                     {
-                        if (code2 == 0)
-                            code2 = ABS_HAT0X;
-                        else
-                            code2 = ABS_HAT0Y;
+                        code2 = (code2 == 0) ? ABS_HAT0X : ABS_HAT0Y;
                     }
                     else
                     {
-                        if (code2 == 0)
-                            code2 = ABS_HAT0Y;
-                        else
-                            code2 = ABS_HAT0X;
+                        code2 = (code2 == 0) ? ABS_HAT0Y : ABS_HAT0X;
                     }
                 }
             }
