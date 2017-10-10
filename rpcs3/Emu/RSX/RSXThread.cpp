@@ -495,7 +495,6 @@ namespace rsx
 				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", get, put);
 
 				invalid_command_interrupt_raised = true;
-				ctrl->get = put;
 				continue;
 			}
 
@@ -546,7 +545,6 @@ namespace rsx
 				LOG_ERROR(RSX, "Invalid FIFO queue args ptr found, get=0x%X, cmd=0x%X, count=%d", get, cmd, count);
 
 				invalid_command_interrupt_raised = true;
-				ctrl->get = put;
 				continue;
 			}
 
