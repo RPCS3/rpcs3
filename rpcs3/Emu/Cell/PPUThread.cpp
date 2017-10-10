@@ -1115,8 +1115,8 @@ extern void ppu_initialize(const ppu_module& info)
 		const auto fstart = fpos;
 
 		// Copy module information (TODO: optimize)
-		ppu_module part = info;
-		part.funcs.clear();
+		ppu_module part;
+		part.copy_part(info);
 		part.funcs.reserve(16000);
 
 		// Unique suffix for each module part
