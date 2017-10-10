@@ -1231,6 +1231,8 @@ void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 
 void GLGSRender::do_local_task()
 {
+	m_frame->clear_wm_events();
+
 	std::lock_guard<std::mutex> lock(queue_guard);
 
 	work_queue.remove_if([](work_item &q) { return q.received; });
