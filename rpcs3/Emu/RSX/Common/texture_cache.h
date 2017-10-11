@@ -856,13 +856,14 @@ namespace rsx
 
 							return rsc.surface->get_view();
 						}
-						else
-							return create_temporary_subresource_view(cmd, rsc.surface, format, rsc.x, rsc.y, rsc.w, rsc.h);
+						else return create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
+								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true));
 					}
 					else
 					{
 						LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
-						return create_temporary_subresource_view(cmd, rsc.surface, format, rsc.x, rsc.y, rsc.w, rsc.h);
+						return create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
+								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true));
 					}
 				}
 			}
@@ -1197,6 +1198,13 @@ namespace rsx
 					dst.swizzled? rsx::texture_create_flags::swapped_native_component_order : rsx::texture_create_flags::native_component_order,
 					default_remap_vector)->get_raw_texture();
 			}
+
+			const f32 scale = rsx::get_resolution_scale();
+			if (src_is_render_target)
+				src_area = src_area * scale;
+
+			if (dst_is_render_target)
+				dst_area = dst_area * scale;
 
 			blitter.scale_image(vram_texture, dest_texture, src_area, dst_area, interpolate, is_depth_blit);
 			return true;

@@ -193,17 +193,12 @@ void GLGSRender::begin()
 		float range_near = rsx::method_registers.clip_min();
 		float range_far = rsx::method_registers.clip_max();
 
-		if (g_cfg.video.strict_rendering_mode)
-			gl_state.depth_range(range_near, range_far);
+		//Workaround to preserve depth precision but respect z direction
+		//Ni no Kuni sets a very restricted z range (0.9x - 1.) and depth reads / tests are broken
+		if (range_near <= range_far)
+			gl_state.depth_range(0.f, 1.f);
 		else
-		{
-			//Workaround to preserve depth precision but respect z direction
-			//Ni no Kuni sets a very restricted z range (0.9x - 1.) and depth reads / tests are broken
-			if (range_near <= range_far)
-				gl_state.depth_range(0.f, 1.f);
-			else
-				gl_state.depth_range(1.f, 0.f);
-		}
+			gl_state.depth_range(1.f, 0.f);
 	}
 
 	if (glDepthBoundsEXT && (gl_state.enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
@@ -589,14 +584,14 @@ void GLGSRender::end()
 void GLGSRender::set_viewport()
 {
 	//NOTE: scale offset matrix already contains the viewport transformation
-	const auto clip_width = rsx::method_registers.surface_clip_width();
-	const auto clip_height = rsx::method_registers.surface_clip_height();
+	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
+	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
 	glViewport(0, 0, clip_width, clip_height);
 
-	u16 scissor_x = rsx::method_registers.scissor_origin_x();
-	u16 scissor_w = rsx::method_registers.scissor_width();
-	u16 scissor_y = rsx::method_registers.scissor_origin_y();
-	u16 scissor_h = rsx::method_registers.scissor_height();
+	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
+	u16 scissor_w = rsx::apply_resolution_scale(rsx::method_registers.scissor_width(), true);
+	u16 scissor_y = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_y(), false);
+	u16 scissor_h = rsx::apply_resolution_scale(rsx::method_registers.scissor_height(), true);
 
 	//Do not bother drawing anything if output is zero sized
 	//TODO: Clip scissor region

@@ -248,6 +248,14 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	for (auto &i : reg_table)
 	{
+		std::string name = i.name;
+
+		if (front_back_diffuse && name == "diff_color")
+			name = "back_diff_color";
+
+		if (front_back_specular && name == "spec_color")
+			name = "back_spec_color";
+
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg))
 		{
 			if (i.check_mask && (rsx_vertex_program.output_mask & i.check_mask_value) == 0)
@@ -259,15 +267,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 			if (i.name == "front_spec_color")
 				insert_front_specular = false;
 
-			std::string name = i.name;
 			std::string condition = (!i.cond.empty()) ? "(" + i.cond + ") " : "";
-
-			if (front_back_diffuse && name == "diff_color")
-				name = "back_diff_color";
-
-			if (front_back_specular && name == "spec_color")
-				name = "back_spec_color";
-
 			if (condition.empty() || i.default_val.empty())
 			{
 				if (!condition.empty()) condition = "if " + condition;
@@ -283,7 +283,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 		{
 			//An output was declared but nothing was written to it
 			//Set it to all ones (Atelier Escha)
-			OS << "	" << i.name << " = vec4(1.);\n";
+			OS << "	" << name << " = vec4(1.);\n";
 		}
 	}
 

@@ -3,6 +3,7 @@
 #include "GLHelpers.h"
 #include "stdafx.h"
 #include "../RSXThread.h"
+#include "../rsx_utils.h"
 
 struct color_swizzle
 {
@@ -52,12 +53,14 @@ namespace gl
 	{
 		bool is_cleared = false;
 
-		u32  rsx_pitch = 0;
-		u16  native_pitch = 0;
+		u32 rsx_pitch = 0;
+		u16 native_pitch = 0;
 
-		u16  surface_height = 0;
-		u16  surface_width = 0;
-		u16  surface_pixel_size = 0;
+		u16 internal_width = 0;
+		u16 internal_height = 0;
+		u16 surface_height = 0;
+		u16 surface_width = 0;
+		u16 surface_pixel_size = 0;
 
 		texture::internal_format compatible_internal_format = texture::internal_format::rgba8;
 
@@ -130,8 +133,16 @@ namespace gl
 
 		void update_surface()
 		{
-			surface_width = width();
-			surface_height = height();
+			internal_width = width();
+			internal_height = height();
+			surface_width = rsx::apply_inverse_resolution_scale(internal_width, true);
+			surface_height = rsx::apply_inverse_resolution_scale(internal_height, true);
+		}
+
+		bool matches_dimensions(u16 _width, u16 _height) const
+		{
+			//Use foward scaling to account for rounding and clamping errors
+			return (rsx::apply_resolution_scale(_width, true) == internal_width) && (rsx::apply_resolution_scale(_height, true) == internal_height);
 		}
 	};
 }
@@ -162,7 +173,7 @@ struct gl_render_target_traits
 		result->set_compatible_format(internal_fmt);
 
 		__glcheck result->config()
-			.size({ (int)width, (int)height })
+			.size({ (int)rsx::apply_resolution_scale((u16)width, true), (int)rsx::apply_resolution_scale((u16)height, true) })
 			.type(format.type)
 			.format(format.format)
 			.internal_format(internal_fmt)
@@ -195,8 +206,10 @@ struct gl_render_target_traits
 		auto format = rsx::internals::surface_depth_format_to_gl(surface_depth_format);
 		result->recreate(gl::texture::target::texture2D);
 
+		const auto scale = rsx::get_resolution_scale();
+
 		__glcheck result->config()
-			.size({ (int)width, (int)height })
+			.size({ (int)rsx::apply_resolution_scale((u16)width, true), (int)rsx::apply_resolution_scale((u16)height, true) })
 			.type(format.type)
 			.format(format.format)
 			.internal_format(format.internal_format)
@@ -247,7 +260,7 @@ struct gl_render_target_traits
 			return false;
 
 		auto internal_fmt = rsx::internals::sized_internal_format(format);
-		return rtt->get_compatible_internal_format() == internal_fmt && rtt->width() == width && rtt->height() == height;
+		return rtt->get_compatible_internal_format() == internal_fmt && rtt->matches_dimensions((u16)width, (u16)height);
 	}
 
 	static
@@ -257,7 +270,7 @@ struct gl_render_target_traits
 			return false;
 
 		// TODO: check format
-		return rtt->width() == width && rtt->height() == height;
+		return rtt->matches_dimensions((u16)width, (u16)height);
 	}
 
 	// Note : pbo breaks fbo here so use classic texture copy
