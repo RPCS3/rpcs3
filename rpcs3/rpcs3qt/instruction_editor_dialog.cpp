@@ -12,6 +12,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 {
 	setWindowTitle(tr("Edit instruction"));
 	setAttribute(Qt::WA_DeleteOnClose);
+	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setMinimumSize(300, sizeHint().height());
 
 	const auto cpu = _cpu.get();

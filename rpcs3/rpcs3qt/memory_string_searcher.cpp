@@ -1,19 +1,20 @@
 
 #include "memory_string_searcher.h"
 
+#include <QLabel>
+
 memory_string_searcher::memory_string_searcher(QWidget* parent)
 	: QDialog(parent)
 {
 	setWindowTitle(tr("String Searcher"));
 	setAttribute(Qt::WA_DeleteOnClose);
-	setFixedSize(QSize(545, 64));
+	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
 	m_addr_line = new QLineEdit(this);
-	m_addr_line->setFixedWidth(460);
+	m_addr_line->setFixedWidth(QLabel("This is the very length of the lineedit due to hidpi reasons.").sizeHint().width());
 	m_addr_line->setPlaceholderText(tr("Search..."));
 
 	QPushButton* button_search = new QPushButton(tr("&Search"), this);
-	button_search->setFixedWidth(60);
 
 	QHBoxLayout* hbox_panel = new QHBoxLayout();
 	hbox_panel->addWidget(m_addr_line);
@@ -22,6 +23,8 @@ memory_string_searcher::memory_string_searcher(QWidget* parent)
 	setLayout(hbox_panel);
 
 	connect(button_search, &QAbstractButton::clicked, this, &memory_string_searcher::OnSearch);
+
+	layout()->setSizeConstraint(QLayout::SetFixedSize);
 };
 
 void memory_string_searcher::OnSearch()
