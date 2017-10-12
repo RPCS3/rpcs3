@@ -9,9 +9,6 @@
 	path = llvm
 	url = https://github.com/llvm-mirror/llvm
 	branch = release_40
-[submodule "rsx_program_decompiler"]
-	path = rsx_program_decompiler
-	url = https://github.com/RPCS3/rsx_program_decompiler
 [submodule "GSL"]
 	path = 3rdparty/GSL
 	url = https://github.com/Microsoft/GSL.git
@@ -34,9 +31,6 @@
 [submodule "3rdparty/cereal"]
 	path = 3rdparty/cereal
 	url = https://github.com/USCiLab/cereal.git
-[submodule "rsx-debugger"]
-	path = rsx-debugger
-	url = https://github.com/RPCS3/rsx-debugger.git
 [submodule "3rdparty/zlib"]
 	path = 3rdparty/zlib
 	url = https://github.com/madler/zlib

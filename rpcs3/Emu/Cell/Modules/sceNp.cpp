@@ -909,16 +909,6 @@ s32 sceNpManagerRegisterCallback(vm::ptr<SceNpManagerCallback> callback, vm::ptr
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
 
-	sysutil_register_cb([=](ppu_thread& ppu)->s32
-	{
-		callback(ppu, SCE_NP_MANAGER_STATUS_OFFLINE, CELL_OK, arg.addr());
-		return CELL_OK;
-	});
-
-	// TODO:
-	// * Save the callback somewhere for future updates once network is implemented
-	// * If register is called again, created cb needs to be canceled
-
 	return CELL_OK;
 }
 
