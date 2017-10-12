@@ -94,7 +94,7 @@ namespace vk
 	const u64 get_current_frame_id();
 	const u64 get_last_completed_frame_id();
 
-	void die_with_error(std::string faulting_addr, VkResult error_code);
+	void die_with_error(const char* faulting_addr, VkResult error_code);
 
 	struct memory_type_mapping
 	{
@@ -836,34 +836,33 @@ namespace vk
 			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, present_modes.data()));
 
 			VkPresentModeKHR swapchain_present_mode = VK_PRESENT_MODE_FIFO_KHR;
-			VkPresentModeKHR preferred_mode = (g_cfg.video.vsync) ? VK_PRESENT_MODE_FIFO_RELAXED_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR;
-			bool mailbox_exists = false;
+			std::vector<VkPresentModeKHR> preferred_modes;
 
-			for (VkPresentModeKHR mode : present_modes)
+			//List of preferred modes in decreasing desirability
+			if (g_cfg.video.vsync)
+				preferred_modes = { VK_PRESENT_MODE_MAILBOX_KHR };
+			else
+				preferred_modes = { VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR, VK_PRESENT_MODE_MAILBOX_KHR };
+
+			bool mode_found = false;
+			for (VkPresentModeKHR preferred_mode : preferred_modes)
 			{
-				if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
+				//Search for this mode in supported modes
+				for (VkPresentModeKHR mode : present_modes)
 				{
-					mailbox_exists = true;
-					continue;
+					if (mode == preferred_mode)
+					{
+						swapchain_present_mode = mode;
+						mode_found = true;
+						break;
+					}
 				}
 
-				if (mode == preferred_mode)
-				{
-					swapchain_present_mode = mode;
+				if (mode_found)
 					break;
-				}
 			}
 
-			if (preferred_mode != swapchain_present_mode)
-			{
-				//Preferred video mode was not found. Fall back to mailbox if it exists
-				LOG_WARNING(RSX, "Swapchain: Could not set the preferred present mode 0x%X. Falling back to mailbox if supported (supported=%d)", (u32)preferred_mode, mailbox_exists);
-
-				if (mailbox_exists)
-				{
-					swapchain_present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
-				}
-			}
+			LOG_NOTICE(RSX, "Swapchain: present mode %d in use.", (s32&)swapchain_present_mode);
 
 			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
 			if (surface_descriptors.maxImageCount > 0)

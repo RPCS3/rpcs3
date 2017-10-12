@@ -373,7 +373,7 @@ namespace vk
 		return (g_num_processed_frames > 0)? g_num_processed_frames - 1: 0;
 	}
 
-	void die_with_error(std::string faulting_addr, VkResult error_code)
+	void die_with_error(const char* faulting_addr, VkResult error_code)
 	{
 		std::string error_message;
 		int severity = 0; //0 - die, 1 - warn, 2 - nothing
@@ -457,16 +457,16 @@ namespace vk
 			error_message = "Invalid external handle (VK_ERROR_INVALID_EXTERNAL_HANDLE_KHX)";
 			break;
 		default:
-			error_message = fmt::format("Unknown Code (%Xh, %d)", (s32)error_code, (s32&)error_code);
+			error_message = fmt::format("Unknown Code (%Xh, %d)%s", (s32)error_code, (s32&)error_code, faulting_addr);
 			break;
 		}
 
 		switch (severity)
 		{
 		case 0:
-			fmt::throw_exception("Assertion Failed! Vulkan API call failed with unrecoverable error: %s", (error_message + faulting_addr).c_str());
+			fmt::throw_exception("Assertion Failed! Vulkan API call failed with unrecoverable error: %s%s", error_message.c_str(), faulting_addr);
 		case 1:
-			LOG_ERROR(RSX, "Vulkan API call has failed with an error but will continue: %s", (error_message + faulting_addr).c_str());
+			LOG_ERROR(RSX, "Vulkan API call has failed with an error but will continue: %s%s", error_message.c_str(), faulting_addr);
 			break;
 		}
 	}

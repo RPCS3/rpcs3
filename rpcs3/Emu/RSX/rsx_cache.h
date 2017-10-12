@@ -312,7 +312,7 @@ namespace rsx
 			});
 
 			u32 processed = 0;
-			while (root.read(tmp))
+			while (root.read(tmp) && !Emu.IsStopped())
 			{
 				if (tmp.name == "." || tmp.name == "..")
 					continue;
