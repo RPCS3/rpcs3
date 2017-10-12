@@ -70,7 +70,7 @@ namespace utils
 	void memory_decommit(void* pointer, std::size_t size)
 	{
 #ifdef _WIN32
-		verify(HERE), ::VirtualFree(pointer, 0, MEM_DECOMMIT);
+		verify(HERE), ::VirtualFree(pointer, size, MEM_DECOMMIT);
 #else
 		verify(HERE), ::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
 #endif
