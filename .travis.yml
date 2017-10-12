@@ -63,7 +63,7 @@ before_script:
   - cmake .. -DCMAKE_INSTALL_PREFIX=/usr;
   - make -j 3
   - # AppImage generation
-  - if [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang-4.0" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
+  - if [ -n "$UPLOAD_URL" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang-4.0" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
       export LD_LIBRARY_PATH=~/Qt/5.9.1/gcc_64/lib;
       make DESTDIR=appdir install ; find appdir/ ;
       find ../bin ;
