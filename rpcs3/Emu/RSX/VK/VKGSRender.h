@@ -158,6 +158,8 @@ private:
 
 	std::unique_ptr<vk::framebuffer_holder> m_draw_fbo;
 
+	bool present_surface_dirty_flag = false;
+
 	u64 m_last_heap_sync_time = 0;
 	vk::vk_data_heap m_attrib_ring_info;
 	vk::vk_data_heap m_uniform_buffer_ring_info;

@@ -94,7 +94,7 @@ namespace vk
 	const u64 get_current_frame_id();
 	const u64 get_last_completed_frame_id();
 
-	void die_with_error(std::string faulting_addr, VkResult error_code);
+	void die_with_error(const char* faulting_addr, VkResult error_code);
 
 	struct memory_type_mapping
 	{
