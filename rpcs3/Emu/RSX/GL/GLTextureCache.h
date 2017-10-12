@@ -240,7 +240,7 @@ namespace gl
 			real_pitch = 0;
 		}
 
-		void set_dimensions(u32 width, u32 height, u32 depth, u32 pitch)
+		void set_dimensions(u32 width, u32 height, u32 /*depth*/, u32 pitch)
 		{
 			this->width = width;
 			this->height = height;
@@ -643,7 +643,7 @@ namespace gl
 
 		cached_texture_section* create_new_texture(void*&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, const u32 gcm_format,
 				const rsx::texture_upload_context context, const rsx::texture_dimension_extended type, const rsx::texture_create_flags flags,
-				std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+				std::pair<std::array<u8, 4>, std::array<u8, 4>>& /*remap_vector*/) override
 		{
 			u32 vram_texture = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
 			bool depth_flag = false;
