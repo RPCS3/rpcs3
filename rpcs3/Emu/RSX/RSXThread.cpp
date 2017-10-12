@@ -835,7 +835,7 @@ namespace rsx
 
 		const auto window_origin = rsx::method_registers.shader_window_origin();
 		const u32 window_height = rsx::method_registers.shader_window_height();
-		const f32 resolution_scale = (window_height <= g_cfg.video.min_scalable_dimension)? 1.f : rsx::get_resolution_scale();
+		const f32 resolution_scale = (window_height <= (u32)g_cfg.video.min_scalable_dimension)? 1.f : rsx::get_resolution_scale();
 		const f32 wpos_scale = (window_origin == rsx::window_origin::top) ? (1.f / resolution_scale) : (-1.f / resolution_scale);
 		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
 
