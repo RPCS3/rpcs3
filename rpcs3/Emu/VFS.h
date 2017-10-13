@@ -16,4 +16,10 @@ namespace vfs
 
 	// Convert VFS path to fs path
 	std::string get(const std::string& vpath, type _type = type::ps3);
+
+	// Escape VFS path by replacing non-portable characters with surrogates
+	std::string escape(const std::string& path);
+
+	// Invert escape operation
+	std::string unescape(const std::string& path);
 }

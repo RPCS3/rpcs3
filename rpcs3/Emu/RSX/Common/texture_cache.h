@@ -897,6 +897,21 @@ namespace rsx
 
 			u32 framebuffer_src_address = src_address;
 
+			float scale_x = dst.scale_x;
+			float scale_y = dst.scale_y;
+
+			//TODO: Investigate effects of compression in X axis
+			if (dst.compressed_y)
+				scale_y *= 0.5f;
+
+			if (src.compressed_y)
+				scale_y *= 2.f;
+
+			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
+			//Reproject final clip onto source...
+			const u16 src_w = (const u16)((f32)dst.clip_width / scale_x);
+			const u16 src_h = (const u16)((f32)dst.clip_height / scale_y);
+
 			//Correct for tile compression
 			//TODO: Investigate whether DST compression also affects alignment
 			if (src.compressed_x || src.compressed_y)
@@ -908,75 +923,67 @@ namespace rsx
 					framebuffer_src_address -= (x_bytes + y_bytes);
 			}
 
-			u16 max_dst_width = dst.width;
-			u16 max_dst_height = dst.height;
-
-			float scale_x = dst.scale_x;
-			float scale_y = dst.scale_y;
-
-			//TODO: Investigate effects of compression in X axis
-			if (dst.compressed_y)
-			{
-				scale_y *= 0.5f;
-			}
-
-			if (src.compressed_y)
-			{
-				scale_y *= 2.f;
-			}
-
-			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
-			//Reproject final clip onto source...
-			const u16 src_w = (const u16)((f32)dst.clip_width / scale_x);
-			const u16 src_h = (const u16)((f32)dst.clip_height / scale_y);
-
-			areai src_area = { 0, 0, src_w, src_h };
-			areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
-
 			//Check if src/dst are parts of render targets
 			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, false, dst.compressed_y);
 			dst_is_render_target = dst_subres.surface != nullptr;
+
+			if (dst_is_render_target && dst_subres.surface->get_native_pitch() != dst.pitch)
+			{
+				//Surface pitch is invalid if it is less that the rsx pitch (usually set to 64 in such a case)
+				if (dst_subres.surface->get_rsx_pitch() != dst.pitch ||
+					dst.pitch < dst_subres.surface->get_native_pitch())
+					dst_is_render_target = false;
+			}
 
 			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
 			auto src_subres = m_rtts.get_surface_subresource_if_applicable(framebuffer_src_address, src_w, src_h, src.pitch, true, true, false, src.compressed_y);
 			src_is_render_target = src_subres.surface != nullptr;
 
+			if (src_is_render_target && src_subres.surface->get_native_pitch() != src.pitch)
+			{
+				//Surface pitch is invalid if it is less that the rsx pitch (usually set to 64 in such a case)
+				if (src_subres.surface->get_rsx_pitch() != src.pitch ||
+					src.pitch < src_subres.surface->get_native_pitch())
+					src_is_render_target = false;
+			}
+
 			//Always use GPU blit if src or dst is in the surface store
 			if (!g_cfg.video.use_gpu_texture_scaling && !(src_is_render_target || dst_is_render_target))
 				return false;
 
-			//1024 height is a hack (for ~720p buffers)
-			//It is possible to have a large buffer that goes up to around 4kx4k but anything above 1280x720 is rare
-			//RSX only handles 512x512 tiles so texture 'stitching' will eventually be needed to be completely accurate
-			//Sections will be submitted as (512x512 + 512x512 + 256x512 + 512x208 + 512x208 + 256x208) to blit a 720p surface to the backbuffer for example
-			int practical_height;
-			if (dst.max_tile_h < dst.height || !src_is_render_target)
-				practical_height = (s32)dst.height;
-			else
-			{
-				//Hack
-				practical_height = std::min((s32)dst.max_tile_h, 1024);
-			}
-
-			size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), practical_height };
+			reader_lock lock(m_cache_mutex);
 
 			//Check if trivial memcpy can perform the same task
 			//Used to copy programs to the GPU in some cases
-			bool is_memcpy = false;
-			u32 memcpy_bytes_length = 0;
-
 			if (!src_is_render_target && !dst_is_render_target && dst_is_argb8 == src_is_argb8 && !dst.swizzled)
 			{
 				if ((src.slice_h == 1 && dst.clip_height == 1) ||
 					(dst.clip_width == src.width && dst.clip_height == src.slice_h && src.pitch == dst.pitch))
 				{
 					const u8 bpp = dst_is_argb8 ? 4 : 2;
-					is_memcpy = true;
-					memcpy_bytes_length = dst.clip_width * bpp * dst.clip_height;
+					const u32 memcpy_bytes_length = dst.clip_width * bpp * dst.clip_height;
+
+					lock.upgrade();
+					flush_address_impl(src_address, std::forward<Args>(extras)...);
+					invalidate_range_impl(dst_address, memcpy_bytes_length, true);
+					memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
+					return true;
 				}
 			}
 
-			reader_lock lock(m_cache_mutex);
+			u16 max_dst_width = dst.width;
+			u16 max_dst_height = dst.height;
+			areai src_area = { 0, 0, src_w, src_h };
+			areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
+
+			//1024 height is a hack (for ~720p buffers)
+			//It is possible to have a large buffer that goes up to around 4kx4k but anything above 1280x720 is rare
+			//RSX only handles 512x512 tiles so texture 'stitching' will eventually be needed to be completely accurate
+			//Sections will be submitted as (512x512 + 512x512 + 256x512 + 512x208 + 512x208 + 256x208) to blit a 720p surface to the backbuffer for example
+			size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), dst.height };
+			if (dst.max_tile_h > dst.height && src_is_render_target)
+				dst_dimensions.height = std::min((s32)dst.max_tile_h, 1024);
+
 			section_storage_type* cached_dest = nullptr;
 			bool invalidate_dst_range = false;
 
@@ -1027,14 +1034,6 @@ namespace rsx
 					//Prep surface
 					enforce_surface_creation_type(*cached_dest, dst.swizzled ? rsx::texture_create_flags::swapped_native_component_order : rsx::texture_create_flags::native_component_order);
 				}
-				else if (is_memcpy)
-				{
-					lock.upgrade();
-					flush_address_impl(src_address, std::forward<Args>(extras)...);
-					invalidate_range_impl(dst_address, memcpy_bytes_length, true);
-					memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
-					return true;
-				}
 				else if (overlapping_surfaces.size() > 0)
 				{
 					invalidate_dst_range = true;
@@ -1053,23 +1052,6 @@ namespace rsx
 
 				max_dst_width = dst_subres.surface->get_surface_width();
 				max_dst_height = dst_subres.surface->get_surface_height();
-
-				if (is_memcpy)
-				{
-					//Some render target descriptions are actually invalid
-					//Confirm this is a flushable RTT
-					const auto rsx_pitch = dst_subres.surface->get_rsx_pitch();
-					const auto native_pitch = dst_subres.surface->get_native_pitch();
-
-					if (rsx_pitch <= 64 && native_pitch != rsx_pitch)
-					{
-						lock.upgrade();
-						flush_address_impl(src_address, std::forward<Args>(extras)...);
-						invalidate_range_impl(dst_address, memcpy_bytes_length, true);
-						memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
-						return true;
-					}
-				}
 			}
 
 			//Create source texture if does not exist

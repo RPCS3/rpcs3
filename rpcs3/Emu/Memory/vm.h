@@ -11,6 +11,7 @@ namespace vm
 {
 	extern u8* const g_base_addr;
 	extern u8* const g_exec_addr;
+	extern u8* const g_stat_addr;
 
 	enum memory_location_t : uint
 	{

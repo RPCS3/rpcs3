@@ -403,6 +403,9 @@ namespace rsx
 		std::vector<u32> deferred_stack;
 		bool has_deferred_call = false;
 
+		// Track register address faults
+		u32 mem_faults_count = 0;
+
 		auto flush_command_queue = [&]()
 		{
 			const auto num_draws = (u32)method_registers.current_draw_clause.first_count_commands.size();
@@ -494,8 +497,18 @@ namespace rsx
 			{
 				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", get, put);
 
+				if (mem_faults_count >= 3)
+				{
+					LOG_ERROR(RSX, "Application has failed to recover, discarding FIFO queue");
+					ctrl->get = put;
+				}
+				else
+				{
+					mem_faults_count++;
+					std::this_thread::sleep_for(1ms);
+				}
+
 				invalid_command_interrupt_raised = true;
-				ctrl->get = put;
 				continue;
 			}
 
@@ -545,10 +558,23 @@ namespace rsx
 			{
 				LOG_ERROR(RSX, "Invalid FIFO queue args ptr found, get=0x%X, cmd=0x%X, count=%d", get, cmd, count);
 
+				if (mem_faults_count >= 3)
+				{
+					LOG_ERROR(RSX, "Application has failed to recover, discarding FIFO queue");
+					ctrl->get = put;
+				}
+				else
+				{
+					mem_faults_count++;
+					std::this_thread::sleep_for(1ms);
+				}
+
 				invalid_command_interrupt_raised = true;
-				ctrl->get = put;
 				continue;
 			}
+
+			// All good on valid memory ptrs
+			mem_faults_count = 0;
 
 			auto args = vm::ptr<u32>::make(args_address);
 			invalid_command_interrupt_raised = false;
