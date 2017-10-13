@@ -127,37 +127,27 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Checkboxes
 
 	xemu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings::HookStaticFuncs);
-	ui->hookStFunc->setToolTip(json_cpu_cbs["hookStFunc"].toString());
-	SubscribeTooltip(ui->hookStFunc, ui->hookStFunc->toolTip());
+	SubscribeTooltip(ui->hookStFunc, json_cpu_cbs["hookStFunc"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->bindSPUThreads, emu_settings::BindSPUThreads);
-	ui->bindSPUThreads->setToolTip(json_cpu_cbs["bindSPUThreads"].toString());
-	SubscribeTooltip(ui->bindSPUThreads, ui->bindSPUThreads->toolTip());
+	SubscribeTooltip(ui->bindSPUThreads, json_cpu_cbs["bindSPUThreads"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->lowerSPUThrPrio, emu_settings::LowerSPUThreadPrio);
-	ui->lowerSPUThrPrio->setToolTip(json_cpu_cbs["lowerSPUThrPrio"].toString());
-	SubscribeTooltip(ui->lowerSPUThrPrio, ui->lowerSPUThrPrio->toolTip());
+	SubscribeTooltip(ui->lowerSPUThrPrio, json_cpu_cbs["lowerSPUThrPrio"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->spuLoopDetection, emu_settings::SPULoopDetection);
-	ui->spuLoopDetection->setToolTip(json_cpu_cbs["spuLoopDetection"].toString());
-	SubscribeTooltip(ui->spuLoopDetection, ui->spuLoopDetection->toolTip());
+	SubscribeTooltip(ui->spuLoopDetection, json_cpu_cbs["spuLoopDetection"].toString());
 
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->preferredSPUThreads, emu_settings::PreferredSPUThreads, true);
-	ui->preferredSPUThreads->setToolTip(json_cpu_cbo["preferredSPUThreads"].toString());
-	SubscribeTooltip(ui->preferredSPUThreads, ui->preferredSPUThreads->toolTip());
+	SubscribeTooltip(ui->preferredSPUThreads, json_cpu_cbo["preferredSPUThreads"].toString());
 	ui->preferredSPUThreads->setItemText(ui->preferredSPUThreads->findData("0"), tr("Auto"));
 
 	// PPU tool tips
-	ui->ppu_precise->setToolTip(json_cpu_ppu["precise"].toString());
-	SubscribeTooltip(ui->ppu_precise, ui->ppu_precise->toolTip());
-
-	ui->ppu_fast->setToolTip(json_cpu_ppu["fast"].toString());
-	SubscribeTooltip(ui->ppu_fast, ui->ppu_fast->toolTip());
-
-	ui->ppu_llvm->setToolTip(json_cpu_ppu["LLVM"].toString());
-	SubscribeTooltip(ui->ppu_llvm, ui->ppu_llvm->toolTip());
+	SubscribeTooltip(ui->ppu_precise, json_cpu_ppu["precise"].toString());
+	SubscribeTooltip(ui->ppu_fast, json_cpu_ppu["fast"].toString());
+	SubscribeTooltip(ui->ppu_llvm, json_cpu_ppu["LLVM"].toString());
 
 	QButtonGroup *ppuBG = new QButtonGroup(this);
 	ppuBG->addButton(ui->ppu_precise, (int)ppu_decoder_type::precise);
@@ -192,17 +182,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	}
 
 	// SPU tool tips
-	ui->spu_precise->setToolTip(json_cpu_spu["precise"].toString());
-	SubscribeTooltip(ui->spu_precise, ui->spu_precise->toolTip());
-
-	ui->spu_fast->setToolTip(json_cpu_spu["fast"].toString());
-	SubscribeTooltip(ui->spu_fast, ui->spu_fast->toolTip());
-
-	ui->spu_asmjit->setToolTip(json_cpu_spu["ASMJIT"].toString());
-	SubscribeTooltip(ui->spu_asmjit, ui->spu_asmjit->toolTip());
-
-	ui->spu_llvm->setToolTip(json_cpu_spu["LLVM"].toString());
-	SubscribeTooltip(ui->spu_llvm, ui->spu_llvm->toolTip());
+	SubscribeTooltip(ui->spu_precise, json_cpu_spu["precise"].toString());
+	SubscribeTooltip(ui->spu_fast,    json_cpu_spu["fast"].toString());
+	SubscribeTooltip(ui->spu_asmjit,  json_cpu_spu["ASMJIT"].toString());
+	SubscribeTooltip(ui->spu_llvm,    json_cpu_spu["LLVM"].toString());
 
 	QButtonGroup *spuBG = new QButtonGroup(this);
 	spuBG->addButton(ui->spu_precise, (int)spu_decoder_type::precise);
@@ -231,17 +214,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	}
 
 	// lib options tool tips
-	ui->lib_auto->setToolTip(json_cpu_lib["auto"].toString());
-	SubscribeTooltip(ui->lib_auto, ui->lib_auto->toolTip());
-
-	ui->lib_manu->setToolTip(json_cpu_lib["manual"].toString());
-	SubscribeTooltip(ui->lib_manu, ui->lib_manu->toolTip());
-
-	ui->lib_both->setToolTip(json_cpu_lib["both"].toString());
-	SubscribeTooltip(ui->lib_both, ui->lib_both->toolTip());
-
-	ui->lib_lv2->setToolTip(json_cpu_lib["liblv2"].toString());
-	SubscribeTooltip(ui->lib_lv2, ui->lib_lv2->toolTip());
+	SubscribeTooltip(ui->lib_auto, json_cpu_lib["auto"].toString());
+	SubscribeTooltip(ui->lib_manu, json_cpu_lib["manual"].toString());
+	SubscribeTooltip(ui->lib_both, json_cpu_lib["both"].toString());
+	SubscribeTooltip(ui->lib_lv2,  json_cpu_lib["liblv2"].toString());
 
 	// creating this in ui file keeps scrambling the order...
 	QButtonGroup *libModeBG = new QButtonGroup(this);
@@ -385,35 +361,29 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	emu_settings::Render_Creator render_creator = xemu_settings.get()->m_render_creator;
 
 	// Comboboxes
-	ui->graphicsAdapterBox->setToolTip(json_gpu_cbo["graphicsAdapterBox"].toString());
-	SubscribeTooltip(ui->graphicsAdapterBox, ui->graphicsAdapterBox->toolTip());
+	SubscribeTooltip(ui->graphicsAdapterBox, json_gpu_cbo["graphicsAdapterBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->renderBox, emu_settings::Renderer);
 #ifdef WIN32
-	ui->renderBox->setToolTip(json_gpu_cbo["renderBox"].toString());
+	SubscribeTooltip(ui->renderBox, json_gpu_cbo["renderBox"].toString());
 #else
-	ui->renderBox->setToolTip(json_gpu_cbo["renderBox_Linux"].toString());
+	SubscribeTooltip(ui->renderBox, json_gpu_cbo["renderBox_Linux"].toString());
 #endif
-	SubscribeTooltip(ui->renderBox, ui->renderBox->toolTip());
 	//Change D3D12 to D3D12[DO NOT USE]
 	ui->renderBox->setItemText(ui->renderBox->findData("D3D12"), render_creator.name_D3D12);
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
-	ui->resBox->setToolTip(json_gpu_cbo["resBox"].toString());
 	ui->resBox->setItemText(ui->resBox->findData("1280x720"), tr("1280x720 (Recommended)"));
-	SubscribeTooltip(ui->resBox, ui->resBox->toolTip());
+	SubscribeTooltip(ui->resBox, json_gpu_cbo["resBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->aspectBox, emu_settings::AspectRatio);
-	ui->aspectBox->setToolTip(json_gpu_cbo["aspectBox"].toString());
-	SubscribeTooltip(ui->aspectBox, ui->aspectBox->toolTip());
+	SubscribeTooltip(ui->aspectBox, json_gpu_cbo["aspectBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->frameLimitBox, emu_settings::FrameLimit);
-	ui->frameLimitBox->setToolTip(json_gpu_cbo["frameLimitBox"].toString());
-	SubscribeTooltip(ui->frameLimitBox, ui->frameLimitBox->toolTip());
+	SubscribeTooltip(ui->frameLimitBox, json_gpu_cbo["frameLimitBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->anisotropicFilterOverride, emu_settings::AnisotropicFilterOverride, true);
-	ui->anisotropicFilterOverride->setToolTip(json_gpu_cbo["anisotropicFilterOverride"].toString());
-	SubscribeTooltip(ui->anisotropicFilterOverride, ui->anisotropicFilterOverride->toolTip());
+	SubscribeTooltip(ui->anisotropicFilterOverride, json_gpu_cbo["anisotropicFilterOverride"].toString());
 	// only allow values 0,2,4,8,16
 	for (int i = ui->anisotropicFilterOverride->count() - 1; i >= 0; i--)
 	{
@@ -439,28 +409,22 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Checkboxes: main options
 	xemu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings::WriteColorBuffers);
-	ui->dumpColor->setToolTip(json_gpu_main["dumpColor"].toString());
-	SubscribeTooltip(ui->dumpColor, ui->dumpColor->toolTip());
+	SubscribeTooltip(ui->dumpColor, json_gpu_main["dumpColor"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->vsync, emu_settings::VSync);
-	ui->vsync->setToolTip(json_gpu_main["vsync"].toString());
-	SubscribeTooltip(ui->vsync, ui->vsync->toolTip());
+	SubscribeTooltip(ui->vsync, json_gpu_main["vsync"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->autoInvalidateCache, emu_settings::AutoInvalidateCache);
-	ui->autoInvalidateCache->setToolTip(json_gpu_main["autoInvalidateCache"].toString());
-	SubscribeTooltip(ui->autoInvalidateCache, ui->autoInvalidateCache->toolTip());
+	SubscribeTooltip(ui->autoInvalidateCache, json_gpu_main["autoInvalidateCache"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->gpuTextureScaling, emu_settings::GPUTextureScaling);
-	ui->gpuTextureScaling->setToolTip(json_gpu_main["gpuTextureScaling"].toString());
-	SubscribeTooltip(ui->gpuTextureScaling, ui->gpuTextureScaling->toolTip());
+	SubscribeTooltip(ui->gpuTextureScaling, json_gpu_main["gpuTextureScaling"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->stretchToDisplayArea, emu_settings::StretchToDisplayArea);
-	ui->stretchToDisplayArea->setToolTip(json_gpu_main["stretchToDisplayArea"].toString());
-	SubscribeTooltip(ui->stretchToDisplayArea, ui->stretchToDisplayArea->toolTip());
+	SubscribeTooltip(ui->stretchToDisplayArea, json_gpu_main["stretchToDisplayArea"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
-	ui->scrictModeRendering->setToolTip(json_gpu_main["scrictModeRendering"].toString());
-	SubscribeTooltip(ui->scrictModeRendering, ui->scrictModeRendering->toolTip());
+	SubscribeTooltip(ui->scrictModeRendering, json_gpu_main["scrictModeRendering"].toString());
 	connect(ui->scrictModeRendering, &QCheckBox::clicked, [=](bool checked)
 	{
 		ui->gb_resolutionScale->setEnabled(!checked);
@@ -474,8 +438,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	};
 
 	xemu_settings->EnhanceSlider(ui->resolutionScale, emu_settings::ResolutionScale, true);
-	ui->gb_resolutionScale->setToolTip(json_gpu_slid["resolutionScale"].toString());
-	SubscribeTooltip(ui->gb_resolutionScale, ui->gb_resolutionScale->toolTip());
+	SubscribeTooltip(ui->gb_resolutionScale, json_gpu_slid["resolutionScale"].toString());
 	ui->gb_resolutionScale->setEnabled(!ui->scrictModeRendering->isChecked());
 	// rename label texts to fit current state of Resolution Scale
 	int resolutionScaleDef = stoi(xemu_settings->GetSettingDefault(emu_settings::ResolutionScale));
@@ -500,8 +463,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	});
 
 	xemu_settings->EnhanceSlider(ui->minimumScalableDimension, emu_settings::MinimumScalableDimension, true);
-	ui->gb_minimumScalableDimension->setToolTip(json_gpu_slid["minimumScalableDimension"].toString());
-	SubscribeTooltip(ui->gb_minimumScalableDimension, ui->gb_minimumScalableDimension->toolTip());
+	SubscribeTooltip(ui->gb_minimumScalableDimension, json_gpu_slid["minimumScalableDimension"].toString());
 	ui->gb_minimumScalableDimension->setEnabled(!ui->scrictModeRendering->isChecked());
 	// rename label texts to fit current state of Minimum Scalable Dimension
 	int minimumScalableDimensionDef = stoi(xemu_settings->GetSettingDefault(emu_settings::MinimumScalableDimension));
@@ -653,25 +615,21 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceComboBox(ui->audioOutBox, emu_settings::AudioRenderer);
 #ifdef WIN32
-	ui->audioOutBox->setToolTip(json_audio["audioOutBox"].toString());
+	SubscribeTooltip(ui->audioOutBox, json_audio["audioOutBox"].toString());
 #else
-	ui->audioOutBox->setToolTip(json_audio["audioOutBox_Linux"].toString());
+	SubscribeTooltip(ui->audioOutBox, json_audio["audioOutBox_Linux"].toString());
 #endif
-	SubscribeTooltip(ui->audioOutBox, ui->audioOutBox->toolTip());
 
 	// Checkboxes
 
 	xemu_settings->EnhanceCheckBox(ui->audioDump, emu_settings::DumpToFile);
-	ui->audioDump->setToolTip(json_audio["audioDump"].toString());
-	SubscribeTooltip(ui->audioDump, ui->audioDump->toolTip());
+	SubscribeTooltip(ui->audioDump, json_audio["audioDump"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->convert, emu_settings::ConvertTo16Bit);
-	ui->convert->setToolTip(json_audio["convert"].toString());
-	SubscribeTooltip(ui->convert, ui->convert->toolTip());
+	SubscribeTooltip(ui->convert, json_audio["convert"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->downmix, emu_settings::DownmixStereo);
-	ui->downmix->setToolTip(json_audio["downmix"].toString());
-	SubscribeTooltip(ui->downmix, ui->downmix->toolTip());
+	SubscribeTooltip(ui->downmix, json_audio["downmix"].toString());
 
 	//    _____       __   ____    _______    _     
 	//   |_   _|     / /  / __ \  |__   __|  | |    
@@ -683,20 +641,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->keyboardHandlerBox, emu_settings::KeyboardHandler);
-	ui->keyboardHandlerBox->setToolTip(json_input["keyboardHandlerBox"].toString());
-	SubscribeTooltip(ui->keyboardHandlerBox, ui->keyboardHandlerBox->toolTip());
+	SubscribeTooltip(ui->keyboardHandlerBox, json_input["keyboardHandlerBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->mouseHandlerBox, emu_settings::MouseHandler);
-	ui->mouseHandlerBox->setToolTip(json_input["mouseHandlerBox"].toString());
-	SubscribeTooltip(ui->mouseHandlerBox, ui->mouseHandlerBox->toolTip());
+	SubscribeTooltip(ui->mouseHandlerBox, json_input["mouseHandlerBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->cameraTypeBox, emu_settings::CameraType);
-	ui->cameraTypeBox->setToolTip(json_input["cameraTypeBox"].toString());
-	SubscribeTooltip(ui->cameraTypeBox, ui->cameraTypeBox->toolTip());
+	SubscribeTooltip(ui->cameraTypeBox, json_input["cameraTypeBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->cameraBox, emu_settings::Camera);
-	ui->cameraBox->setToolTip(json_input["cameraBox"].toString());
-	SubscribeTooltip(ui->cameraBox, ui->cameraBox->toolTip());
+	SubscribeTooltip(ui->cameraBox, json_input["cameraBox"].toString());
 
 	//     _____           _                   _______    _     
 	//    / ____|         | |                 |__   __|  | |    
@@ -710,14 +664,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->sysLangBox, emu_settings::Language);
-	ui->sysLangBox->setToolTip(json_sys["sysLangBox"].toString());
-	SubscribeTooltip(ui->sysLangBox, ui->sysLangBox->toolTip());
+	SubscribeTooltip(ui->sysLangBox, json_sys["sysLangBox"].toString());
 
 	// Checkboxes
 
 	xemu_settings->EnhanceCheckBox(ui->enableHostRoot, emu_settings::EnableHostRoot);
-	ui->enableHostRoot->setToolTip(json_sys["enableHostRoot"].toString());
-	SubscribeTooltip(ui->enableHostRoot, ui->enableHostRoot->toolTip());
+	SubscribeTooltip(ui->enableHostRoot, json_sys["enableHostRoot"].toString());
 
 	//    _   _      _                      _      _______    _     
 	//   | \ | |    | |                    | |    |__   __|  | |    
@@ -729,8 +681,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->netStatusBox, emu_settings::ConnectionStatus);
-	ui->netStatusBox->setToolTip(json_net["netStatusBox"].toString());
-	SubscribeTooltip(ui->netStatusBox, ui->netStatusBox->toolTip());
+	SubscribeTooltip(ui->netStatusBox, json_net["netStatusBox"].toString());
 
 	//    ______                 _       _               _______    _     
 	//   |  ____|               | |     | |             |__   __|  | |    
@@ -741,41 +692,31 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Comboboxes
 
-	ui->combo_configs->setToolTip(json_emu_gui["configs"].toString());
-	SubscribeTooltip(ui->combo_configs, ui->combo_configs->toolTip());
+	SubscribeTooltip(ui->combo_configs, json_emu_gui["configs"].toString());
 
-	ui->combo_stylesheets->setToolTip(json_emu_gui["stylesheets"].toString());
-	SubscribeTooltip(ui->combo_stylesheets, ui->combo_stylesheets->toolTip());
+	SubscribeTooltip(ui->combo_stylesheets, json_emu_gui["stylesheets"].toString());
 
 	// Checkboxes
-		
-	ui->gs_resizeOnBoot->setToolTip(json_emu_misc["gs_resizeOnBoot"].toString());
-	SubscribeTooltip(ui->gs_resizeOnBoot, ui->gs_resizeOnBoot->toolTip());
-		
-	ui->gs_disableMouse->setToolTip(json_emu_misc["gs_disableMouse"].toString());
-	SubscribeTooltip(ui->gs_disableMouse, ui->gs_disableMouse->toolTip());
 
-	ui->cb_show_welcome->setToolTip(json_emu_gui["show_welcome"].toString());
-	SubscribeTooltip(ui->cb_show_welcome, ui->cb_show_welcome->toolTip());
+	SubscribeTooltip(ui->gs_resizeOnBoot, json_emu_misc["gs_resizeOnBoot"].toString());
 
-	ui->cb_custom_colors->setToolTip(json_emu_gui["custom_colors"].toString());
-	SubscribeTooltip(ui->cb_custom_colors, ui->cb_custom_colors->toolTip());
+	SubscribeTooltip(ui->gs_disableMouse, json_emu_misc["gs_disableMouse"].toString());
+
+	SubscribeTooltip(ui->cb_show_welcome, json_emu_gui["show_welcome"].toString());
+
+	SubscribeTooltip(ui->cb_custom_colors, json_emu_gui["custom_colors"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->exitOnStop, emu_settings::ExitRPCS3OnFinish);
-	ui->exitOnStop->setToolTip(json_emu_misc["exitOnStop"].toString());
-	SubscribeTooltip(ui->exitOnStop, ui->exitOnStop->toolTip());
+	SubscribeTooltip(ui->exitOnStop, json_emu_misc["exitOnStop"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->alwaysStart, emu_settings::StartOnBoot);
-	ui->alwaysStart->setToolTip(json_emu_misc["alwaysStart"].toString());
-	SubscribeTooltip(ui->alwaysStart, ui->alwaysStart->toolTip());
+	SubscribeTooltip(ui->alwaysStart, json_emu_misc["alwaysStart"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->startGameFullscreen, emu_settings::StartGameFullscreen);
-	ui->startGameFullscreen->setToolTip(json_emu_misc["startGameFullscreen"].toString());
-	SubscribeTooltip(ui->startGameFullscreen, ui->startGameFullscreen->toolTip());
+	SubscribeTooltip(ui->startGameFullscreen, json_emu_misc["startGameFullscreen"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->showFPSInTitle, emu_settings::ShowFPSInTitle);
-	ui->showFPSInTitle->setToolTip(json_emu_misc["showFPSInTitle"].toString());
-	SubscribeTooltip(ui->showFPSInTitle, ui->showFPSInTitle->toolTip());
+	SubscribeTooltip(ui->showFPSInTitle, json_emu_misc["showFPSInTitle"].toString());
 
 	if (game)
 	{
@@ -981,53 +922,41 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Checkboxes: gpu debug options
 	xemu_settings->EnhanceCheckBox(ui->glLegacyBuffers, emu_settings::LegacyBuffers);
-	ui->glLegacyBuffers->setToolTip(json_debug["glLegacyBuffers"].toString());
-	SubscribeTooltip(ui->glLegacyBuffers, ui->glLegacyBuffers->toolTip());
+	SubscribeTooltip(ui->glLegacyBuffers, json_debug["glLegacyBuffers"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->forceHighpZ, emu_settings::ForceHighpZ);
-	ui->forceHighpZ->setToolTip(json_debug["forceHighpZ"].toString());
-	SubscribeTooltip(ui->forceHighpZ, ui->forceHighpZ->toolTip());
+	SubscribeTooltip(ui->forceHighpZ, json_debug["forceHighpZ"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->debugOutput, emu_settings::DebugOutput);
-	ui->debugOutput->setToolTip(json_debug["debugOutput"].toString());
-	SubscribeTooltip(ui->debugOutput, ui->debugOutput->toolTip());
+	SubscribeTooltip(ui->debugOutput, json_debug["debugOutput"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->debugOverlay, emu_settings::DebugOverlay);
-	ui->debugOverlay->setToolTip(json_debug["debugOverlay"].toString());
-	SubscribeTooltip(ui->debugOverlay, ui->debugOverlay->toolTip());
+	SubscribeTooltip(ui->debugOverlay, json_debug["debugOverlay"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->logProg, emu_settings::LogShaderPrograms);
-	ui->logProg->setToolTip(json_debug["logProg"].toString());
-	SubscribeTooltip(ui->logProg, ui->logProg->toolTip());
+	SubscribeTooltip(ui->logProg, json_debug["logProg"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->readColor, emu_settings::ReadColorBuffers);
-	ui->readColor->setToolTip(json_debug["readColor"].toString());
-	SubscribeTooltip(ui->readColor, ui->readColor->toolTip());
+	SubscribeTooltip(ui->readColor, json_debug["readColor"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->dumpDepth, emu_settings::WriteDepthBuffer);
-	ui->dumpDepth->setToolTip(json_debug["dumpDepth"].toString());
-	SubscribeTooltip(ui->dumpDepth, ui->dumpDepth->toolTip());
+	SubscribeTooltip(ui->dumpDepth, json_debug["dumpDepth"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->readDepth, emu_settings::ReadDepthBuffer);
-	ui->readDepth->setToolTip(json_debug["readDepth"].toString());
-	SubscribeTooltip(ui->readDepth, ui->readDepth->toolTip());
+	SubscribeTooltip(ui->readDepth, json_debug["readDepth"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings::DisableVertexCache);
-	ui->disableVertexCache->setToolTip(json_debug["disableVertexCache"].toString());
-	SubscribeTooltip(ui->disableVertexCache, ui->disableVertexCache->toolTip());
+	SubscribeTooltip(ui->disableVertexCache, json_debug["disableVertexCache"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->disableHwOcclusionQueries, emu_settings::DisableOcclusionQueries);
-	ui->disableHwOcclusionQueries->setToolTip(json_debug["disableOcclusionQueries"].toString());
-	SubscribeTooltip(ui->disableHwOcclusionQueries, ui->disableHwOcclusionQueries->toolTip());
+	SubscribeTooltip(ui->disableHwOcclusionQueries, json_debug["disableOcclusionQueries"].toString());
 
 	// Checkboxes: core debug options
 	xemu_settings->EnhanceCheckBox(ui->ppuDebug, emu_settings::PPUDebug);
-	ui->ppuDebug->setToolTip(json_debug["ppuDebug"].toString());
-	SubscribeTooltip(ui->ppuDebug, ui->ppuDebug->toolTip());
+	SubscribeTooltip(ui->ppuDebug, json_debug["ppuDebug"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->spuDebug, emu_settings::SPUDebug);
-	ui->spuDebug->setToolTip(json_debug["spuDebug"].toString());
-	SubscribeTooltip(ui->spuDebug, ui->spuDebug->toolTip());
+	SubscribeTooltip(ui->spuDebug, json_debug["spuDebug"].toString());
 
 	//
 	// Layout fix for High Dpi
