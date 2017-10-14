@@ -166,6 +166,29 @@ find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if (NOT WITHOUT_LLVM)
 	find_package(LLVM 4.0 CONFIG)
+  if (NOT LLVM_FOUND)
+    message("System LLVM was not found, LLVM will be built from the submodule.")
+
+    set(LLVM_TARGETS_TO_BUILD "X86" CACHE INTERNAL "")
+    option(LLVM_BUILD_RUNTIME OFF)
+    option(LLVM_BUILD_TOOLS OFF)
+    option(LLVM_INCLUDE_DOCS OFF)
+    option(LLVM_INCLUDE_EXAMPLES OFF)
+    option(LLVM_INCLUDE_TESTS OFF)
+    option(LLVM_INCLUDE_TOOLS OFF)
+    option(LLVM_INCLUDE_UTILS OFF)
+    option(WITH_POLLY OFF)
+
+    # LLVM needs to be built out-of-tree
+    add_subdirectory(../llvm ../llvm_build)
+    set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/../llvm_build/lib/cmake/llvm/")
+
+    # now tries to find LLVM again
+    find_package(LLVM 4.0 CONFIG)
+    if (NOT LLVM_FOUND)
+      message(WARNING "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
+    endif()
+  endif()
 endif()
 
 

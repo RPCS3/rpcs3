@@ -1554,6 +1554,13 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QCheckBox" name="forceCpuBlitEmulation">
+              <property name="text">
+               <string>Force CPU blit emulation</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </item>

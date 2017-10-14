@@ -209,7 +209,7 @@ namespace rsx
 					if (tex.is_dirty()) continue;
 					if (!tex.is_locked()) continue;	//flushable sections can be 'clean' but unlocked. TODO: Handle this better
 
-					auto overlapped = tex.overlaps_page(trampled_range, address);
+					auto overlapped = tex.overlaps_page(trampled_range, address, false);
 					if (std::get<0>(overlapped))
 					{
 						auto &new_range = std::get<1>(overlapped);
@@ -277,9 +277,9 @@ namespace rsx
 					auto &tex = range_data.data[i];
 
 					if (tex.is_dirty()) continue;
-					if (!tex.is_flushable()) continue;
+					if (!tex.is_locked()) continue;
 
-					auto overlapped = tex.overlaps_page(trampled_range, address);
+					auto overlapped = tex.overlaps_page(trampled_range, address, true);
 					if (std::get<0>(overlapped))
 					{
 						auto &new_range = std::get<1>(overlapped);
@@ -292,12 +292,20 @@ namespace rsx
 							range_reset = true;
 						}
 
-						//Defer actual flush operation until all affected regions are cleared to prevent recursion
+						if (tex.is_flushable())
+						{
+							sections_to_flush.push_back(&tex);
+						}
+						else
+						{
+							m_unreleased_texture_objects++;
+							tex.set_dirty(true);
+						}
+
 						tex.unprotect();
-						sections_to_flush.push_back(&tex);
+						range_data.remove_one();
 
 						response = true;
-						range_data.remove_one();
 					}
 				}
 
