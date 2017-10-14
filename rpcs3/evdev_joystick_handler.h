@@ -14,37 +14,37 @@ struct evdev_joystick_config final : cfg::node
 {
     const std::string cfg_name = fs::get_config_dir() + "/config_linuxjoystick.yml";
 
-    cfg::int32 select{this, "Select", 6};
-    cfg::int32 start{this, "Start", 7};
-    cfg::int32 cross{this, "Cross", 0};
-    cfg::int32 circle{this, "Circle", 1};
-    cfg::int32 square{this, "Square", 2};
-    cfg::int32 triangle{this, "Triangle", 3};
+    cfg::int32 select{this, "Select", 0};
+    cfg::int32 start{this, "Start", 3};
+    cfg::int32 cross{this, "Cross", 14};
+    cfg::int32 circle{this, "Circle", 13};
+    cfg::int32 square{this, "Square", 15};
+    cfg::int32 triangle{this, "Triangle", 12};
 
-    cfg::int32 r1{this, "R1", 5};
+    cfg::int32 r1{this, "R1", 9};
     cfg::int32 r2{this, "R2", 11};
-    cfg::int32 r3{this, "R3", 10};
-    cfg::int32 l1{this, "L1", 4};
-    cfg::int32 l2{this, "L2", 12};
-    cfg::int32 l3{this, "L3", 9};
+    cfg::int32 r3{this, "R3", 2};
+    cfg::int32 l1{this, "L1", 8};
+    cfg::int32 l2{this, "L2", 10};
+    cfg::int32 l3{this, "L3", 1};
 
-    cfg::int32 up{this, "Up", EVDEV_DPAD_HAT_AXIS_Y};
-    cfg::int32 down{this, "Down", EVDEV_DPAD_HAT_AXIS_Y};
-    cfg::int32 left{this, "Left", EVDEV_DPAD_HAT_AXIS_X};
-    cfg::int32 right{this, "Right", EVDEV_DPAD_HAT_AXIS_X};
+    cfg::int32 up{this, "Up", 4};
+    cfg::int32 down{this, "Down", 6};
+    cfg::int32 left{this, "Left", 7};
+    cfg::int32 right{this, "Right", 5};
 
-    cfg::int32 rxstick{this, "Right stick X axis",  0};
-    cfg::int32 rystick{this, "Right stick Y axis",  1};
-    cfg::int32 lxstick{this, "Left stick X axis",  2};
-    cfg::int32 lystick{this, "Left stick Y axis",  3};
+    cfg::int32 rxstick{this, "Right stick X axis",  2};
+    cfg::int32 rystick{this, "Right stick Y axis",  3};
+    cfg::int32 lxstick{this, "Left stick X axis",  0};
+    cfg::int32 lystick{this, "Left stick Y axis",  1};
 
     cfg::_bool rxreverse{this, "Reverse right stick X axis", false};
     cfg::_bool ryreverse{this, "Reverse right stick Y axis", false};
     cfg::_bool lxreverse{this, "Reverse left stick X axis", false};
     cfg::_bool lyreverse{this, "Reverse left stick Y axis", false};
 
-    cfg::_bool axistrigger{this, "Z axis triggers", true};
-    cfg::_bool squirclejoysticks{this, "Squircle Joysticks", true};
+    cfg::_bool axistrigger{this, "Z axis triggers", false};
+    cfg::_bool squirclejoysticks{this, "Squircle Joysticks", false};
     cfg::int32 squirclefactor{this, "Squircle Factor", 5000};
 	cfg::int32 deadzone{this, "Deadzone", 10};
 
