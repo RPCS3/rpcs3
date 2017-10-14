@@ -336,10 +336,10 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
         pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_evdev_joystick_config.left, CELL_PAD_CTRL_LEFT);
         pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_evdev_joystick_config.right, CELL_PAD_CTRL_RIGHT);
 
-        pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X+g_evdev_joystick_config.lxstick, 0, 0);
-        pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X+g_evdev_joystick_config.lystick, 0, 0);
-        pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X+g_evdev_joystick_config.rxstick, 0, 0);
-        pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X+g_evdev_joystick_config.rystick, 0, 0);
+        pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X, g_evdev_joystick_config.lxstick, 0);
+        pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, g_evdev_joystick_config.lystick, 0);
+        pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, g_evdev_joystick_config.rxstick, 0);
+        pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, g_evdev_joystick_config.rystick, 0);
         pad->m_vibrateMotors.emplace_back(true, 0);
         pad->m_vibrateMotors.emplace_back(false, 0);
         pads.emplace_back(pad);
