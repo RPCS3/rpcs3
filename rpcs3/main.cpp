@@ -23,19 +23,23 @@ int main(int argc, char** argv)
 	logs::set_init();
 
 #ifdef _WIN32
+	// use this instead of SetProcessDPIAware if Qt ever fully supports this on windows
+	// at the moment it can't display QCombobox frames for example
+	// I think there was an issue with gsframe if I recall correctly, so look out for that
+	//QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 	SetProcessDPIAware();
-	WSADATA wsa_data;
-	WSAStartup(MAKEWORD(2, 2), &wsa_data);
+
 	timeBeginPeriod(1);
 
 	atexit([]
 	{
 		timeEndPeriod(1);
-		WSACleanup();
 	});
 #else
 	qputenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1");
 #endif
+
+	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 
 	rpcs3_app app(argc, argv);
 
@@ -53,8 +57,7 @@ int main(int argc, char** argv)
 		// Ugly workaround
 		QTimer::singleShot(2, [path = sstr(QFileInfo(parser.positionalArguments().at(0)).canonicalFilePath())]
 		{
-			Emu.SetPath(path);
-			Emu.Load();
+			Emu.BootGame(path, true);
 			Emu.Run();
 		});
 	}

@@ -29,6 +29,7 @@ namespace rsx
 		draw_command command;
 
 		bool is_immediate_draw;
+		bool is_disjoint_primitive;
 
 		std::vector<u32> inline_vertex_array;
 

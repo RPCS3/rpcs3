@@ -114,4 +114,17 @@ public:
 		m_largest_allocated_pool = 0;
 		m_get_pos = get_current_put_pos_minus_one();
 	}
+
+	// Updates the current_allocated_size metrics
+	void notify()
+	{
+		if (m_get_pos == UINT64_MAX)
+			m_current_allocated_size = 0;
+		else if (m_get_pos < m_put_pos)
+			m_current_allocated_size = (m_put_pos - m_get_pos - 1);
+		else if (m_get_pos > m_put_pos)
+			m_current_allocated_size = (m_put_pos + (m_size - m_get_pos - 1));
+		else
+			fmt::throw_exception("m_put_pos == m_get_pos!" HERE);
+	}
 };

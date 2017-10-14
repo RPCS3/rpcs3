@@ -4,6 +4,8 @@
 
 constexpr auto qstr = QString::fromStdString;
 
+extern bool ppu_patch(u32 addr, u32 value);
+
 instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm)
 	: QDialog(parent)
 	, m_pc(_pc)
@@ -67,13 +69,26 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	{
 		bool ok;
 		ulong opcode = m_instr->text().toULong(&ok, 16);
-		if (!ok)
+		if (!ok || opcode > UINT32_MAX)
 		{
-			QMessageBox::critical(this, tr("Error"), tr("This instruction could not be parsed.\nNo changes were made."));
+			QMessageBox::critical(this, tr("Error"), tr("Failed to parse PPU instruction."));
+			return;
+		}
+		else if (g_system == system_type::ps3 && cpu->id_type() == 1)
+		{
+			if (!ppu_patch(m_cpu_offset + m_pc, static_cast<u32>(opcode)))
+			{
+				QMessageBox::critical(this, tr("Error"), tr("Failed to patch PPU instruction."));
+				return;
+			}
+		}
+		else if (g_system == system_type::ps3)
+		{
+			vm::ps3::write32(m_cpu_offset + m_pc, static_cast<u32>(opcode));
 		}
 		else
 		{
-			vm::ps3::write32(m_cpu_offset + m_pc, (u32)opcode);
+			vm::psv::write32(m_cpu_offset + m_pc, static_cast<u32>(opcode));
 		}
 		accept();
 	});

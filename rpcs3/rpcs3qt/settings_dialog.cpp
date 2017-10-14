@@ -11,6 +11,7 @@
 #include <QSpinBox>
 #include <QApplication>
 #include <QDesktopWidget>
+#include <QTimer>
 
 #include "settings_dialog.h"
 
@@ -25,8 +26,8 @@
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
-settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const Render_Creator& r_Creator, const int& tabIndex, QWidget *parent, const GameInfo* game)
-	: QDialog(parent), xgui_settings(xSettings), ui(new Ui::settings_dialog), m_tab_Index(tabIndex)
+settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, const int& tabIndex, QWidget *parent, const GameInfo* game)
+	: QDialog(parent), xgui_settings(guiSettings), xemu_settings(emuSettings), ui(new Ui::settings_dialog), m_tab_Index(tabIndex)
 {
 	ui->setupUi(this);
 	ui->cancelButton->setDefault(true);
@@ -45,38 +46,38 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	QJsonObject json_obj = QJsonDocument::fromJson(json_file.readAll()).object();
 	json_file.close();
 
-	QJsonObject json_cpu = json_obj.value("cpu").toObject();
+	QJsonObject json_cpu     = json_obj.value("cpu").toObject();
 	QJsonObject json_cpu_ppu = json_cpu.value("PPU").toObject();
 	QJsonObject json_cpu_spu = json_cpu.value("SPU").toObject();
 	QJsonObject json_cpu_cbs = json_cpu.value("checkboxes").toObject();
 	QJsonObject json_cpu_cbo = json_cpu.value("comboboxes").toObject();
 	QJsonObject json_cpu_lib = json_cpu.value("libraries").toObject();
 
-	QJsonObject json_gpu = json_obj.value("gpu").toObject();
-	QJsonObject json_gpu_cbo = json_gpu.value("comboboxes").toObject();
+	QJsonObject json_gpu      = json_obj.value("gpu").toObject();
+	QJsonObject json_gpu_cbo  = json_gpu.value("comboboxes").toObject();
 	QJsonObject json_gpu_main = json_gpu.value("main").toObject();
-	QJsonObject json_gpu_deb = json_gpu.value("debug").toObject();
+	QJsonObject json_gpu_deb  = json_gpu.value("debug").toObject();
+	QJsonObject json_gpu_slid = json_gpu.value("sliders").toObject();
 
 	QJsonObject json_audio = json_obj.value("audio").toObject();
 	QJsonObject json_input = json_obj.value("input").toObject();
-	QJsonObject json_sys = json_obj.value("system").toObject();
-	QJsonObject json_net = json_obj.value("network").toObject();
+	QJsonObject json_sys   = json_obj.value("system").toObject();
+	QJsonObject json_net   = json_obj.value("network").toObject();
 
-	QJsonObject json_emu = json_obj.value("emulator").toObject();
-	QJsonObject json_emu_gui = json_emu.value("gui").toObject();
+	QJsonObject json_emu      = json_obj.value("emulator").toObject();
+	QJsonObject json_emu_gui  = json_emu.value("gui").toObject();
 	QJsonObject json_emu_misc = json_emu.value("misc").toObject();
 
 	QJsonObject json_debug = json_obj.value("debug").toObject();
 
-	std::shared_ptr<emu_settings> xemu_settings;
 	if (game)
 	{
-		xemu_settings.reset(new emu_settings("data/" + game->serial));
+		xemu_settings->LoadSettings("data/" + game->serial);
 		setWindowTitle(tr("Settings: [") + qstr(game->serial) + "] " + qstr(game->name));
 	}
 	else
 	{
-		xemu_settings.reset(new emu_settings(""));
+		xemu_settings->LoadSettings();
 		setWindowTitle(tr("Settings"));
 	}
 
@@ -95,11 +96,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		std::vector<std::string> selected_ls = std::vector<std::string>(selectedlle.begin(), selectedlle.end());
 		xemu_settings->SaveSelectedLibraries(selected_ls);
 		xemu_settings->SaveSettings();
-		Q_EMIT GuiRepaintRequest();
 		accept();
 	});
+
 	connect(ui->cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
-	connect(ui->tabWidget, &QTabWidget::currentChanged, [=]() {ui->cancelButton->setFocus(); });
+
+	connect(ui->tabWidget, &QTabWidget::currentChanged, [=]()
+	{
+		ui->cancelButton->setFocus();
+	});
 
 	//     _____ _____  _    _   _______    _     
 	//    / ____|  __ \| |  | | |__   __|  | |    
@@ -158,7 +163,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 			}
 #endif
 
-			connect(ppuBG->button(i), &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::PPUDecoder, sstr(ppu_list[i])); });
+			connect(ppuBG->button(i), &QAbstractButton::pressed, [=]()
+			{
+				xemu_settings->SetSetting(emu_settings::PPUDecoder, sstr(ppu_list[i]));
+			});
 		}
 	}
 
@@ -187,7 +195,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 				spuBG->button(i)->setChecked(true);
 			}
 
-			connect(spuBG->button(i), &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::SPUDecoder, sstr(spu_list[i])); });
+			connect(spuBG->button(i), &QAbstractButton::pressed, [=]()
+			{
+				xemu_settings->SetSetting(emu_settings::SPUDecoder, sstr(spu_list[i]));
+			});
 		}
 	}
 
@@ -217,7 +228,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 				libModeBG->button(i)->setChecked(true);
 			}
 
-			connect(libModeBG->button(i), &QAbstractButton::pressed, [=]() {xemu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(libmode_list[i])); });
+			connect(libModeBG->button(i), &QAbstractButton::pressed, [=]()
+			{
+				xemu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(libmode_list[i]));
+			});
 		}
 	}
 
@@ -333,6 +347,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//   | |__| | |    | |__| |    | | (_| | |_) |
 	//    \_____|_|     \____/     |_|\__,_|_.__/ 
 
+	emu_settings::Render_Creator render_creator = xemu_settings.get()->m_render_creator;
+
 	// Comboboxes
 	ui->graphicsAdapterBox->setToolTip(json_gpu_cbo["graphicsAdapterBox"].toString());
 
@@ -343,19 +359,45 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	{
 		if (ui->renderBox->itemText(i) == "D3D12")
 		{
-			ui->renderBox->setItemText(i, r_Creator.render_D3D12);
+			ui->renderBox->setItemText(i, render_creator.name_D3D12);
 			break;
 		}
 	}
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
 	ui->resBox->setToolTip(json_gpu_cbo["resBox"].toString());
+	ui->resBox->setItemText(ui->resBox->findData("1280x720"), "1280x720 (Recommended)");
 
 	xemu_settings->EnhanceComboBox(ui->aspectBox, emu_settings::AspectRatio);
 	ui->aspectBox->setToolTip(json_gpu_cbo["aspectBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->frameLimitBox, emu_settings::FrameLimit);
 	ui->frameLimitBox->setToolTip(json_gpu_cbo["frameLimitBox"].toString());
+
+	xemu_settings->EnhanceComboBox(ui->anisotropicFilterOverride, emu_settings::AnisotropicFilterOverride, true);
+	ui->anisotropicFilterOverride->setToolTip(json_gpu_cbo["anisotropicFilterOverride"].toString());
+	// only allow values 0,2,4,8,16
+	for (int i = ui->anisotropicFilterOverride->count() - 1; i >= 0; i--)
+	{
+		switch (int val = ui->anisotropicFilterOverride->itemData(i).toInt())
+		{
+		case 0:
+			ui->anisotropicFilterOverride->setItemText(i, tr("Automatic"));
+			break;
+		case 1:
+			ui->anisotropicFilterOverride->setItemText(i, tr("Disabled"));
+			break;
+		case 2:
+		case 4:
+		case 8:
+		case 16:
+			ui->anisotropicFilterOverride->setItemText(i, tr("%1x").arg(val));
+			break;
+		default:
+			ui->anisotropicFilterOverride->removeItem(i);
+			break;
+		}
+	}
 
 	// Checkboxes: main options
 	xemu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings::WriteColorBuffers);
@@ -376,27 +418,75 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
 	ui->scrictModeRendering->setToolTip(json_gpu_main["scrictModeRendering"].toString());
 
-	// Graphics Adapter
-	QStringList D3D12Adapters = r_Creator.D3D12Adapters;
-	QStringList vulkanAdapters = r_Creator.vulkanAdapters;
-	bool supportsD3D12 = r_Creator.supportsD3D12;
-	bool supportsVulkan = r_Creator.supportsVulkan;
-	QString r_D3D12 = r_Creator.render_D3D12;
-	QString r_Vulkan = r_Creator.render_Vulkan;
-	QString r_OpenGL = r_Creator.render_OpenGL;
-	QString old_D3D12;
-	QString old_Vulkan;
+	// Sliders
+	static const auto& minmaxLabelWidth = [](const QString& sizer)
+	{
+		return QLabel(sizer).sizeHint().width();
+	};
 
-	if (supportsD3D12)
+	xemu_settings->EnhanceSlider(ui->resolutionScale, emu_settings::ResolutionScale, true);
+	ui->gb_resolutionScale->setToolTip(json_gpu_slid["resolutionScale"].toString());
+	// rename label texts to fit current state of Resolution Scale
+	int resolutionScaleDef = stoi(xemu_settings->GetSettingDefault(emu_settings::ResolutionScale));
+	auto ScaledResolution = [resolutionScaleDef](int percentage)
 	{
-		old_D3D12 = qstr(xemu_settings->GetSetting(emu_settings::D3D12Adapter));
-	}
-	else
+		if (percentage == resolutionScaleDef) return QString("100% (Automatic)");
+		return QString("%1% (%2x%3)").arg(percentage).arg(1280 * percentage / 100).arg(720 * percentage / 100);
+	};
+	ui->resolutionScale->setPageStep(50);
+	ui->resolutionScaleMin->setText(QString::number(ui->resolutionScale->minimum()));
+	ui->resolutionScaleMin->setFixedWidth(minmaxLabelWidth("00"));
+	ui->resolutionScaleMax->setText(QString::number(ui->resolutionScale->maximum()));
+	ui->resolutionScaleMax->setFixedWidth(minmaxLabelWidth("0000"));
+	ui->resolutionScaleVal->setText(ScaledResolution(ui->resolutionScale->value()));
+	connect(ui->resolutionScale, &QSlider::valueChanged, [=](int value)
 	{
-		// Remove D3D12 option from render combobox
+		ui->resolutionScaleVal->setText(ScaledResolution(value));
+	});
+	connect(ui->resolutionScaleReset, &QAbstractButton::clicked, [=]()
+	{
+		ui->resolutionScale->setValue(resolutionScaleDef);
+	});
+
+	xemu_settings->EnhanceSlider(ui->minimumScalableDimension, emu_settings::MinimumScalableDimension, true);
+	ui->gb_minimumScalableDimension->setToolTip(json_gpu_slid["minimumScalableDimension"].toString());
+	// rename label texts to fit current state of Minimum Scalable Dimension
+	int minimumScalableDimensionDef = stoi(xemu_settings->GetSettingDefault(emu_settings::MinimumScalableDimension));
+	auto MinScalableDimension = [minimumScalableDimensionDef](int dim)
+	{
+		if (dim == minimumScalableDimensionDef) return QString("%1x%1 (Default)").arg(dim);
+		return QString("%1x%1").arg(dim);
+	};
+	ui->minimumScalableDimension->setPageStep(64);
+	ui->minimumScalableDimensionMin->setText(QString::number(ui->minimumScalableDimension->minimum()));
+	ui->minimumScalableDimensionMin->setFixedWidth(minmaxLabelWidth("00"));
+	ui->minimumScalableDimensionMax->setText(QString::number(ui->minimumScalableDimension->maximum()));
+	ui->minimumScalableDimensionMax->setFixedWidth(minmaxLabelWidth("0000"));
+	ui->minimumScalableDimensionVal->setText(MinScalableDimension(ui->minimumScalableDimension->value()));
+	connect(ui->minimumScalableDimension, &QSlider::valueChanged, [=](int value)
+	{
+		ui->minimumScalableDimensionVal->setText(MinScalableDimension(value));
+	});
+	connect(ui->minimumScalableDimensionReset, &QAbstractButton::clicked, [=]()
+	{
+		ui->minimumScalableDimension->setValue(minimumScalableDimensionDef);
+	});
+
+	// Remove renderers from the renderer Combobox if not supported
+	for (const auto& renderer : render_creator.renderers)
+	{
+		if (renderer->supported)
+		{
+			if (renderer->has_adapters)
+			{
+				renderer->old_adapter = qstr(xemu_settings->GetSetting(renderer->type));
+			}
+			continue;
+		}
+
 		for (int i = 0; i < ui->renderBox->count(); i++)
 		{
-			if (ui->renderBox->itemText(i) == r_D3D12)
+			if (ui->renderBox->itemText(i) == renderer->name)
 			{
 				ui->renderBox->removeItem(i);
 				break;
@@ -404,112 +494,60 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		}
 	}
 
-	if (supportsVulkan)
-	{
-		old_Vulkan = qstr(xemu_settings->GetSetting(emu_settings::VulkanAdapter));
-	}
-	else
-	{
-		// Remove Vulkan option from render combobox
-		for (int i = 0; i < ui->renderBox->count(); i++)
-		{
-			if (ui->renderBox->itemText(i) == r_Vulkan)
-			{
-				ui->renderBox->removeItem(i);
-				break;
-			}
-		}
-	}
+	m_oldRender = ui->renderBox->currentText();
 
-	QString oldRender = ui->renderBox->itemText(ui->renderBox->currentIndex());
-
-	auto switchGraphicsAdapter = [=](int index)
+	auto setRenderer = [=](QString text)
 	{
-		QString render = ui->renderBox->itemText(index);
-		m_isD3D12 = render == r_D3D12;
-		m_isVulkan = render == r_Vulkan;
-		ui->graphicsAdapterBox->setEnabled(m_isD3D12 || m_isVulkan);
+		if (text.isEmpty()) return;
 
-		// D3D Adapter
-		if (m_isD3D12)
+		auto switchTo = [=](emu_settings::Render_Info renderer)
 		{
 			// Reset other adapters to old config
-			if (supportsVulkan)
+			for (const auto& render : render_creator.renderers)
 			{
-				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
+				if (renderer.name != render->name && render->has_adapters && render->supported)
+				{
+					xemu_settings->SetSetting(render->type, sstr(render->old_adapter));
+				}
+			}
+			// Fill combobox with placeholder if no adapters needed
+			if (!renderer.has_adapters)
+			{
+				ui->graphicsAdapterBox->clear();
+				ui->graphicsAdapterBox->addItem(tr("Not needed for %1 renderer").arg(text));
+				return;
 			}
 			// Fill combobox
 			ui->graphicsAdapterBox->clear();
-			for (const auto& adapter : D3D12Adapters)
+			for (const auto& adapter : renderer.adapters)
 			{
 				ui->graphicsAdapterBox->addItem(adapter);
 			}
 			// Reset Adapter to old config
-			int idx = ui->graphicsAdapterBox->findText(old_D3D12);
+			int idx = ui->graphicsAdapterBox->findText(renderer.old_adapter);
 			if (idx == -1)
 			{
 				idx = 0;
-				if (old_D3D12.isEmpty())
+				if (renderer.old_adapter.isEmpty())
 				{
-					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_D3D12));
+					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(renderer.name));
 				}
 				else
 				{
-					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_D3D12));
+					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(renderer.name));
 				}
 			}
 			ui->graphicsAdapterBox->setCurrentIndex(idx);
-			xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(ui->graphicsAdapterBox->currentText()));
-		}
+			xemu_settings->SetSetting(renderer.type, sstr(ui->graphicsAdapterBox->currentText()));
+		};
 
-		// Vulkan Adapter
-		else if (m_isVulkan)
+		for (const auto& renderer : render_creator.renderers)
 		{
-			// Reset other adapters to old config
-			if (supportsD3D12)
+			if (renderer->name == text)
 			{
-				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
+				switchTo(*renderer);
+				ui->graphicsAdapterBox->setEnabled(renderer->has_adapters);
 			}
-			// Fill combobox
-			ui->graphicsAdapterBox->clear();
-			for (const auto& adapter : vulkanAdapters)
-			{
-				ui->graphicsAdapterBox->addItem(adapter);
-			}
-			// Reset Adapter to old config
-			int idx = ui->graphicsAdapterBox->findText(old_Vulkan);
-			if (idx == -1)
-			{
-				idx = 0;
-				if (old_Vulkan.isEmpty())
-				{
-					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(r_Vulkan));
-				}
-				else
-				{
-					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(r_Vulkan));
-				}
-			}
-			ui->graphicsAdapterBox->setCurrentIndex(idx);
-			xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(ui->graphicsAdapterBox->currentText()));
-		}
-
-		// Other Adapter
-		else
-		{
-			// Reset Adapters to old config
-			if (supportsD3D12)
-			{
-				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(old_D3D12));
-			}
-			if (supportsVulkan)
-			{
-				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(old_Vulkan));
-			}
-
-			// Fill combobox with placeholder
-			ui->graphicsAdapterBox->clear();
-			ui->graphicsAdapterBox->addItem(tr("Not needed for %1 renderer").arg(render));
 		}
 	};
 
@@ -518,35 +556,33 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		if (text.isEmpty()) return;
 
 		// don't set adapter if signal was created by switching render
-		QString newRender = ui->renderBox->itemText(ui->renderBox->currentIndex());
-		if (m_oldRender == newRender)
-		{
-			if (m_isD3D12 && D3D12Adapters.contains(text))
-			{
-				xemu_settings->SetSetting(emu_settings::D3D12Adapter, sstr(text));
-			}
-			else if (m_isVulkan && vulkanAdapters.contains(text))
-			{
-				xemu_settings->SetSetting(emu_settings::VulkanAdapter, sstr(text));
-			}
-		}
-		else
+		QString newRender = ui->renderBox->currentText();
+		if (m_oldRender != newRender)
 		{
 			m_oldRender = newRender;
+			return;
+		}
+		for (const auto& render : render_creator.renderers)
+		{
+			if (render->name == newRender && render->has_adapters && render->adapters.contains(text))
+			{
+				xemu_settings->SetSetting(render->type, sstr(text));
+				break;
+			}
 		}
 	};
 
 	// Init
+	setRenderer(ui->renderBox->currentText());
 	setAdapter(ui->graphicsAdapterBox->currentText());
-	switchGraphicsAdapter(ui->renderBox->currentIndex());
 
 	// Events
 	connect(ui->graphicsAdapterBox, &QComboBox::currentTextChanged, setAdapter);
-	connect(ui->renderBox, static_cast<void (QComboBox::*)(int index)>(&QComboBox::currentIndexChanged), switchGraphicsAdapter);
+	connect(ui->renderBox, &QComboBox::currentTextChanged, setRenderer);
 
 	auto fixGLLegacy = [=](const QString& text)
 	{
-		ui->glLegacyBuffers->setEnabled(text == r_OpenGL);
+		ui->glLegacyBuffers->setEnabled(text == render_creator.name_OpenGL);
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.
@@ -668,6 +704,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		ui->gb_configs->setEnabled(false);
 		ui->gb_settings->setEnabled(false);
 		ui->gb_colors->setEnabled(false);
+		ui->gb_viewport->setEnabled(false);
 	}
 	else
 	{
@@ -735,6 +772,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 		};
 
 		connect(ui->okButton, &QAbstractButton::clicked, [=]() { ApplyGuiOptions(); });
+
 		connect(ui->pb_reset_default, &QAbstractButton::clicked, [=]
 		{
 			if (QMessageBox::question(this, tr("Reset GUI to default?"), tr("This will include your stylesheet as well. Do you wish to proceed?"),
@@ -743,19 +781,27 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 				ApplyGuiOptions(true);
 				xgui_settings->Reset(true);
 				xgui_settings->ChangeToConfig(GUI::Default);
-				Q_EMIT GuiStylesheetRequest(GUI::Default);
-				Q_EMIT GuiSettingsSyncRequest();
-				Q_EMIT GuiRepaintRequest();
+				Q_EMIT GuiSettingsSyncRequest(true);
 				AddConfigs();
 				AddStylesheets();
 				AddColoredIcons();
 			}
 		});
+
 		connect(ui->pb_backup_config, &QAbstractButton::clicked, this, &settings_dialog::OnBackupCurrentConfig);
 		connect(ui->pb_apply_config, &QAbstractButton::clicked, this, &settings_dialog::OnApplyConfig);
 		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
-		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=]() {QDesktopServices::openUrl(xgui_settings->GetSettingsDir()); });
-		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val) {xgui_settings->SetValue(GUI::ib_show_welcome, val); });
+
+		connect(ui->pb_open_folder, &QAbstractButton::clicked, [=]()
+		{
+			QDesktopServices::openUrl(xgui_settings->GetSettingsDir());
+		});
+
+		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(GUI::ib_show_welcome, val);
+		});
+
 		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=](bool val)
 		{
 			xgui_settings->SetValue(GUI::m_enableUIColors, val);
@@ -786,13 +832,32 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 				Q_EMIT GuiRepaintRequest();
 			}
 		};
-		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color); });
-		connect(ui->pb_gl_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::gl_toolIconColor, tr("Choose gamelist tool icon color"), ui->pb_gl_tool_icon_color); });
-		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolBarColor, tr("Choose tool bar color"), ui->pb_tool_bar_color); });
-		connect(ui->pb_tool_icon_color, &QAbstractButton::clicked, [=]() { colorDialog(GUI::mw_toolIconColor, tr("Choose tool icon color"), ui->pb_tool_icon_color); });
+
+		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]()
+		{
+			colorDialog(GUI::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color);
+		});
+
+		connect(ui->pb_gl_tool_icon_color, &QAbstractButton::clicked, [=]()
+		{
+			colorDialog(GUI::gl_toolIconColor, tr("Choose gamelist tool icon color"), ui->pb_gl_tool_icon_color);
+		});
+
+		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]()
+		{
+			colorDialog(GUI::mw_toolBarColor, tr("Choose tool bar color"), ui->pb_tool_bar_color);
+		});
+
+		connect(ui->pb_tool_icon_color, &QAbstractButton::clicked, [=]()
+		{
+			colorDialog(GUI::mw_toolIconColor, tr("Choose tool icon color"), ui->pb_tool_icon_color);
+		});
 
 		ui->gs_disableMouse->setChecked(xgui_settings->GetValue(GUI::gs_disableMouse).toBool());
-		connect(ui->gs_disableMouse, &QCheckBox::clicked, [=](bool val) { xgui_settings->SetValue(GUI::gs_disableMouse, val); });
+		connect(ui->gs_disableMouse, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(GUI::gs_disableMouse, val);
+		});
 
 		bool enableButtons = xgui_settings->GetValue(GUI::gs_resize).toBool();
 		ui->gs_resizeOnBoot->setChecked(enableButtons);
@@ -841,7 +906,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 	//                             __/ |                   
 	//                            |___/                    
 
-	// Checkboxes: debug options
+	// Checkboxes: gpu debug options
 	xemu_settings->EnhanceCheckBox(ui->glLegacyBuffers, emu_settings::LegacyBuffers);
 	ui->glLegacyBuffers->setToolTip(json_debug["glLegacyBuffers"].toString());
 
@@ -871,6 +936,18 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> xSettings, const 
 
 	xemu_settings->EnhanceCheckBox(ui->disableHwOcclusionQueries, emu_settings::DisableOcclusionQueries);
 	ui->disableHwOcclusionQueries->setToolTip(json_debug["disableOcclusionQueries"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->forceCpuBlitEmulation, emu_settings::ForceCPUBlitEmulation);
+	ui->forceCpuBlitEmulation->setToolTip(json_debug["forceCpuBlitEmulation"].toString());
+
+	// Checkboxes: core debug options
+	xemu_settings->EnhanceCheckBox(ui->ppuDebug, emu_settings::PPUDebug);
+	ui->ppuDebug->setToolTip(json_debug["ppuDebug"].toString());
+	//TODO: Subscribe
+
+	xemu_settings->EnhanceCheckBox(ui->spuDebug, emu_settings::SPUDebug);
+	ui->spuDebug->setToolTip(json_debug["spuDebug"].toString());
+	//TODO: Subscribe
 
 	//
 	// Layout fix for High Dpi
@@ -976,7 +1053,7 @@ void settings_dialog::OnApplyConfig()
 	m_currentConfig = ui->combo_configs->currentText();
 	xgui_settings->SetValue(GUI::m_currentConfig, m_currentConfig);
 	xgui_settings->ChangeToConfig(m_currentConfig);
-	Q_EMIT GuiSettingsSyncRequest();
+	Q_EMIT GuiSettingsSyncRequest(true);
 }
 
 void settings_dialog::OnApplyStylesheet()
@@ -988,10 +1065,10 @@ void settings_dialog::OnApplyStylesheet()
 
 int settings_dialog::exec()
 {
-	for (int i = 0; i < ui->tabWidget->count(); i++)
-	{
-		ui->tabWidget->setCurrentIndex(i);
-	}
-	ui->tabWidget->setCurrentIndex(m_tab_Index);
+	// singleShot Hack to fix following bug:
+	// If we use setCurrentIndex now we will miraculously see a resize of the dialog as soon as we
+	// switch to the cpu tab after conjuring the settings_dialog with another tab opened first.
+	// Weirdly enough this won't happen if we change the tab order so that anything else is at index 0.
+	QTimer::singleShot(0, [=]{ ui->tabWidget->setCurrentIndex(m_tab_Index); });
 	return QDialog::exec();
 }

@@ -47,6 +47,7 @@ if errorlevel 1 (
 	echo // This is a generated file. > "%GIT_VERSION_FILE%"
 	echo. >> "%GIT_VERSION_FILE%"
 	echo #define RPCS3_GIT_VERSION "unknown" >> "%GIT_VERSION_FILE%"
+	echo #define RPCS3_GIT_BRANCH "unknown" >> "%GIT_VERSION_FILE%"
 	echo. >> "%GIT_VERSION_FILE%"
 	echo // If you don't want this file to update/recompile, change to 1. >> "%GIT_VERSION_FILE%"
 	echo #define RPCS3_GIT_VERSION_NO_UPDATE 0 >> "%GIT_VERSION_FILE%"
@@ -55,6 +56,7 @@ if errorlevel 1 (
 
 for /F %%I IN ('call %GIT% rev-list HEAD --count') do set GIT_VERSION=%%I
 for /F %%I IN ('call %GIT% rev-parse --short HEAD') do set GIT_VERSION=%GIT_VERSION%-%%I
+for /F %%I IN ('call %GIT% rev-parse --abbrev-ref HEAD') do set GIT_BRANCH=%%I
 
 rem // Don't modify the file if it already has the current version.
 if exist "%GIT_VERSION_FILE%" (
@@ -67,6 +69,7 @@ if exist "%GIT_VERSION_FILE%" (
 echo // This is a generated file. > "%GIT_VERSION_FILE%"
 echo. >> "%GIT_VERSION_FILE%"
 echo #define RPCS3_GIT_VERSION "%GIT_VERSION%" >> "%GIT_VERSION_FILE%"
+echo #define RPCS3_GIT_BRANCH "%GIT_BRANCH%" >> "%GIT_VERSION_FILE%"
 echo. >> "%GIT_VERSION_FILE%"
 echo // If you don't want this file to update/recompile, change to 1. >> "%GIT_VERSION_FILE%"
 echo #define RPCS3_GIT_VERSION_NO_UPDATE 0 >> "%GIT_VERSION_FILE%"

@@ -329,6 +329,43 @@ extern void ppu_remove_breakpoint(u32 addr)
 	}
 }
 
+extern bool ppu_patch(u32 addr, u32 value)
+{
+	// TODO: check executable flag
+	if (vm::check_addr(addr, sizeof(u32)))
+	{
+		if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm && Emu.GetStatus() != system_state::ready)
+		{
+			// TODO
+			return false;
+		}
+
+		if (!vm::check_addr(addr, sizeof(u32), vm::page_writable))
+		{
+			utils::memory_protect(vm::g_base_addr + addr, sizeof(u32), utils::protection::rw);
+		}
+
+		vm::write32(addr, value);
+
+		const u32 _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
+		const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_fallback));
+
+		if (ppu_ref(addr) != _break && ppu_ref(addr) != fallback)
+		{
+			ppu_ref(addr) = ppu_cache(addr);
+		}
+
+		if (!vm::check_addr(addr, sizeof(u32), vm::page_writable))
+		{
+			utils::memory_protect(vm::g_base_addr + addr, sizeof(u32), utils::protection::ro);
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
 std::string ppu_thread::get_name() const
 {
 	return fmt::format("PPU[0x%x] Thread (%s)", id, m_name);
@@ -1078,8 +1115,8 @@ extern void ppu_initialize(const ppu_module& info)
 		const auto fstart = fpos;
 
 		// Copy module information (TODO: optimize)
-		ppu_module part = info;
-		part.funcs.clear();
+		ppu_module part;
+		part.copy_part(info);
 		part.funcs.reserve(16000);
 
 		// Unique suffix for each module part
@@ -1164,9 +1201,9 @@ extern void ppu_initialize(const ppu_module& info)
 				sha1_update(&ctx, vm::ps3::_ptr<const u8>(func.addr), func.size);
 			}
 
-			if (info.name == "liblv2.sprx")
+			if (info.name == "liblv2.sprx" || info.name == "libsysmodule.sprx" || info.name == "libnet.sprx")
 			{
-				const be_t<u64> forced_upd = 1;
+				const be_t<u64> forced_upd = 3;
 				sha1_update(&ctx, reinterpret_cast<const u8*>(&forced_upd), sizeof(forced_upd));
 			}
 
@@ -1239,10 +1276,10 @@ extern void ppu_initialize(const ppu_module& info)
 		return;
 	}
 
-	if (jit_mod.vars.empty())
-	{
+	// Jit can be null if the loop doesn't ever enter.
+	if (jit && jit_mod.vars.empty())
+	{	
 		jit->fin();
-
 		// Get and install function addresses
 		for (const auto& func : info.funcs)
 		{

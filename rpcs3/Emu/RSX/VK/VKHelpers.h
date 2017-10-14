@@ -36,7 +36,7 @@ namespace rsx
 
 namespace vk
 {
-#define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) fmt::throw_exception("Assertion failed! Result is %Xh" HERE, (s32)_res); }
+#define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) vk::die_with_error(HERE, _res); }
 
 	VKAPI_ATTR void *VKAPI_CALL mem_realloc(void *pUserData, void *pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
 	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
@@ -71,7 +71,7 @@ namespace vk
 	VkImageSubresourceRange get_image_subresource_range(uint32_t base_layer, uint32_t base_mip, uint32_t layer_count, uint32_t level_count, VkImageAspectFlags aspect);
 
 	VkSampler null_sampler();
-	VkImageView null_image_view();
+	VkImageView null_image_view(vk::command_buffer&);
 
 	void destroy_global_resources();
 
@@ -81,12 +81,20 @@ namespace vk
 	void copy_scaled_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height, u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height, u32 mipmaps, VkImageAspectFlagBits aspect);
 
 	VkFormat get_compatible_sampler_format(u32 format);
+	u8 get_format_texel_width(const VkFormat format);
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
 
 	void enter_uninterruptible();
 	void leave_uninterruptible();
 	bool is_uninterruptible();
+
+	void advance_completed_frame_counter();
+	void advance_frame_counter();
+	const u64 get_current_frame_id();
+	const u64 get_last_completed_frame_id();
+
+	void die_with_error(const char* faulting_addr, VkResult error_code);
 
 	struct memory_type_mapping
 	{
@@ -458,6 +466,12 @@ namespace vk
 			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
 		}
 
+		image_view(VkDevice dev, VkImageViewCreateInfo create_info)
+			: m_device(dev), info(create_info)
+		{
+			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+		}
+
 		~image_view()
 		{
 			vkDestroyImageView(m_device, value, nullptr);
@@ -467,57 +481,6 @@ namespace vk
 		image_view(image_view&&) = delete;
 	private:
 		VkDevice m_device;
-	};
-
-	class texture
-	{
-		VkImageView m_view = nullptr;
-		VkImage m_image_contents = nullptr;
-		VkMemoryRequirements m_memory_layout;
-		VkFormat m_internal_format;
-		VkImageUsageFlags m_flags;
-		VkImageAspectFlagBits m_image_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-		VkImageLayout m_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		VkImageViewType m_view_type = VK_IMAGE_VIEW_TYPE_2D;
-		VkImageUsageFlags m_usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-		VkImageTiling m_tiling = VK_IMAGE_TILING_LINEAR;
-
-		vk::memory_block_deprecated vram_allocation;
-		vk::render_device *owner = nullptr;
-		
-		u32 m_width;
-		u32 m_height;
-		u32 m_mipmaps;
-
-		vk::texture *staging_texture = nullptr;
-		bool ready = false;
-
-	public:
-		texture(vk::swap_chain_image &img);
-		texture() {}
-		~texture() {}
-
-		void create(vk::render_device &device, VkFormat format, VkImageType image_type, VkImageViewType view_type, VkImageCreateFlags image_flags, VkImageUsageFlags usage, VkImageTiling tiling, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping swizzle);
-		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, VkImageTiling tiling, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping swizzle);
-		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 mipmaps = 1, bool gpu_only = false, VkComponentMapping swizzle = default_component_map());
-		void destroy();
-
-		void init(rsx::fragment_texture &tex, vk::command_buffer &cmd, bool ignore_checks = false);
-		void flush(vk::command_buffer & cmd);
-
-		//Fill with debug color 0xFF
-		void init_debug();
-
-		void change_layout(vk::command_buffer &cmd, VkImageLayout new_layout);
-		VkImageLayout get_layout();
-
-		const u32 width();
-		const u32 height();
-		const u16 mipmaps();
-		const VkFormat get_format();
-
-		operator VkImageView();
-		operator VkImage();
 	};
 
 	struct buffer
@@ -773,11 +736,6 @@ namespace vk
 		{
 			return view;
 		}
-
-		operator vk::texture()
-		{
-			return vk::texture(*this);
-		}
 	};
 
 	class swap_chain
@@ -878,21 +836,33 @@ namespace vk
 			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, present_modes.data()));
 
 			VkPresentModeKHR swapchain_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+			std::vector<VkPresentModeKHR> preferred_modes;
 
-			for (VkPresentModeKHR mode : present_modes)
+			//List of preferred modes in decreasing desirability
+			if (g_cfg.video.vsync)
+				preferred_modes = { VK_PRESENT_MODE_MAILBOX_KHR };
+			else
+				preferred_modes = { VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR, VK_PRESENT_MODE_MAILBOX_KHR };
+
+			bool mode_found = false;
+			for (VkPresentModeKHR preferred_mode : preferred_modes)
 			{
-				if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
+				//Search for this mode in supported modes
+				for (VkPresentModeKHR mode : present_modes)
 				{
-					//If we can get a mailbox mode, use it
-					swapchain_present_mode = mode;
-					break;
+					if (mode == preferred_mode)
+					{
+						swapchain_present_mode = mode;
+						mode_found = true;
+						break;
+					}
 				}
 
-				//If we can get out of using the FIFO mode, take it. Fifo is very high latency (generic vsync)
-				if (swapchain_present_mode == VK_PRESENT_MODE_FIFO_KHR &&
-					(mode == VK_PRESENT_MODE_IMMEDIATE_KHR || mode == VK_PRESENT_MODE_FIFO_RELAXED_KHR))
-					swapchain_present_mode = mode;
+				if (mode_found)
+					break;
 			}
+
+			LOG_NOTICE(RSX, "Swapchain: present mode %d in use.", (s32&)swapchain_present_mode);
 
 			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
 			if (surface_descriptors.maxImageCount > 0)
@@ -1034,6 +1004,9 @@ namespace vk
 
 	class command_buffer
 	{
+	private:
+		bool is_open = false;
+
 	protected:
 		vk::command_pool *pool = nullptr;
 		VkCommandBuffer commands = nullptr;
@@ -1067,6 +1040,53 @@ namespace vk
 		operator VkCommandBuffer()
 		{
 			return commands;
+		}
+
+		void begin()
+		{
+			if (is_open)
+				return;
+
+			VkCommandBufferInheritanceInfo inheritance_info = {};
+			inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+
+			VkCommandBufferBeginInfo begin_infos = {};
+			begin_infos.pInheritanceInfo = &inheritance_info;
+			begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			CHECK_RESULT(vkBeginCommandBuffer(commands, &begin_infos));
+			is_open = true;
+		}
+
+		void end()
+		{
+			if (!is_open)
+			{
+				LOG_ERROR(RSX, "commandbuffer->end was called but commandbuffer is not in a recording state");
+				return;
+			}
+
+			CHECK_RESULT(vkEndCommandBuffer(commands));
+			is_open = false;
+		}
+
+		void submit(VkQueue queue, const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
+		{
+			if (is_open)
+			{
+				LOG_ERROR(RSX, "commandbuffer->submit was called whilst the command buffer is in a recording state");
+				return;
+			}
+
+			VkSubmitInfo infos = {};
+			infos.commandBufferCount = 1;
+			infos.pCommandBuffers = &commands;
+			infos.pWaitDstStageMask = &pipeline_stage_flags;
+			infos.pWaitSemaphores = semaphores.data();
+			infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
+			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
 		}
 	};
 
@@ -1247,7 +1267,7 @@ namespace vk
 
 			VkSurfaceKHR surface;
 			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface));
-#elif __linux__
+#elif HAVE_VULKAN
 		
 		vk::swap_chain* createSwapChain(Display *display, Window window, vk::physical_device &dev)
 		{
@@ -1475,5 +1495,5 @@ namespace vk
 	*/
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
 		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		vk::vk_data_heap &upload_heap, vk::buffer* upload_buffer);
+		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap, vk::buffer* upload_buffer);
 }

@@ -3,6 +3,8 @@
 #include "sys_sync.h"
 #include "sys_memory.h"
 
+#include <list>
+
 struct lv2_memory : lv2_obj
 {
 	static const u32 id_base = 0x08000000;
@@ -14,13 +16,55 @@ struct lv2_memory : lv2_obj
 
 	atomic_t<u32> addr{}; // Actual mapping address
 
+	std::vector<uchar> data;
+
 	lv2_memory(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container>& ct)
 		: size(size)
 		, align(align)
 		, flags(flags)
 		, ct(ct)
 	{
+		data.resize(size);
 	}
+};
+
+enum : u64
+{
+	SYS_MEMORY_PAGE_FAULT_EVENT_KEY	       = 0xfffe000000000000ULL,
+};
+
+enum : u32
+{
+	SYS_MEMORY_PAGE_FAULT_CAUSE_NON_MAPPED = 0x00000002U,
+	SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY  = 0x00000001U,
+	SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD  = 0x00000000U,
+	SYS_MEMORY_PAGE_FAULT_TYPE_SPU_THREAD  = 0x00000001U,
+	SYS_MEMORY_PAGE_FAULT_TYPE_RAW_SPU     = 0x00000002U,
+};
+
+struct page_fault_notification_entry
+{
+	u32 start_addr; // Starting address of region to monitor.
+	u32 event_queue_id; // Queue to be notified.
+	u32 port_id; // Port used to notify the queue.
+};
+
+// Used to hold list of queues to be notified on page fault event.
+struct page_fault_notification_entries
+{
+	std::list<page_fault_notification_entry> entries;
+};
+
+struct page_fault_event
+{
+	u32 thread_id;
+	u32 fault_addr;
+};
+
+struct page_fault_event_entries
+{
+	std::list<page_fault_event> events;
+	semaphore<> pf_mutex;
 };
 
 // SysCalls
@@ -34,4 +78,4 @@ error_code sys_mmapper_free_shared_memory(u32 mem_id);
 error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags);
 error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ps3::ptr<u32> alloc_addr);
 error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ps3::ptr<u32> mem_id);
-error_code sys_mmapper_enable_page_fault_notification(u32 addr, u32 eq);
+error_code sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 event_queue_id);

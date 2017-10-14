@@ -32,8 +32,6 @@ class main_window : public QMainWindow
 	bool m_sys_menu_opened;
 	bool m_save_slider_pos = false;
 
-	Render_Creator m_Render_Creator;
-
 	QIcon m_appIcon;
 	QIcon m_icon_play;
 	QIcon m_icon_pause;
@@ -47,18 +45,28 @@ class main_window : public QMainWindow
 	QIcon m_icon_thumb_pause;
 	QIcon m_icon_thumb_stop;
 	QIcon m_icon_thumb_restart;
-	QWinThumbnailToolBar *m_thumb_bar;
-	QWinThumbnailToolButton *m_thumb_playPause;
-	QWinThumbnailToolButton *m_thumb_stop;
-	QWinThumbnailToolButton *m_thumb_restart;
+	QWinThumbnailToolBar *m_thumb_bar = nullptr;
+	QWinThumbnailToolButton *m_thumb_playPause = nullptr;
+	QWinThumbnailToolButton *m_thumb_stop = nullptr;
+	QWinThumbnailToolButton *m_thumb_restart = nullptr;
 	QStringList m_vulkan_adapters;
 #endif
 #ifdef _MSC_VER
 	QStringList m_d3d12_adapters;
 #endif
 
+	enum
+	{
+		DROP_ERROR,
+		DROP_PKG,
+		DROP_PUP,
+		DROP_RAP,
+		DROP_DIR,
+		DROP_GAME
+	};
+
 public:
-	explicit main_window(std::shared_ptr<gui_settings> guiSettings, QWidget *parent = 0);
+	explicit main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent = 0);
 	void Init();
 	~main_window();
 	void CreateThumbnailToolbar();
@@ -82,22 +90,30 @@ private Q_SLOTS:
 	void DecryptSPRXLibraries();
 
 	void SaveWindowState();
-	void RepaintToolBarIcons();
+	void ConfigureGuiFromSettings(bool configure_all = false);
 
 protected:
 	void closeEvent(QCloseEvent *event) override;
 	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void mouseDoubleClickEvent(QMouseEvent *event) override;
+	void dropEvent(QDropEvent* event) override;
+	void dragEnterEvent(QDragEnterEvent* event) override;
+	void dragMoveEvent(QDragMoveEvent* event) override;
+	void dragLeaveEvent(QDragLeaveEvent* event) override;
 	void SetAppIconFromPath(const std::string path);
 private:
 	void RepaintToolbar();
+	void RepaintToolBarIcons();
+	void RepaintThumbnailIcons();
 	void CreateActions();
 	void CreateConnects();
 	void CreateDockWindows();
-	void ConfigureGuiFromSettings(bool configureAll = false);
 	void EnableMenus(bool enabled);
 	void InstallPkg(const QString& dropPath = "");
 	void InstallPup(const QString& dropPath = "");
+
+	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
+	void AddGamesFromDir(const QString& path);
 
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
 	void BootRecentAction(const QAction* act);
@@ -116,4 +132,5 @@ private:
 	debugger_frame *m_debuggerFrame;
 	game_list_frame *m_gameListFrame;
 	std::shared_ptr<gui_settings> guiSettings;
+	std::shared_ptr<emu_settings> emuSettings;
 };

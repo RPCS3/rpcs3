@@ -6,6 +6,7 @@
 #include "../Common/surface_store.h"
 #include "../Common/TextureUtils.h"
 #include "VKFormats.h"
+#include "../rsx_utils.h"
 
 struct ref_counted
 {
@@ -16,10 +17,11 @@ struct ref_counted
 
 namespace vk
 {
-	struct render_target : public image, public ref_counted
+	struct render_target : public image, public ref_counted, public rsx::render_target_descriptor<vk::image*>
 	{
 		bool dirty = false;
 		u16 native_pitch = 0;
+		u16 rsx_pitch = 0;
 		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
 		std::unique_ptr<vk::image_view> view;
 
@@ -49,6 +51,37 @@ namespace vk
 						native_component_map, vk::get_image_subresource_range(0, 0, 1, 1, attachment_aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT)));
 
 			return view.get();
+		}
+
+		vk::image* get_surface() const override
+		{
+			return (vk::image*)this;
+		}
+
+		u16 get_surface_width() const override
+		{
+			return rsx::apply_inverse_resolution_scale(width(), true);
+		}
+
+		u16 get_surface_height() const override
+		{
+			return rsx::apply_inverse_resolution_scale(height(), true);
+		}
+
+		u16 get_rsx_pitch() const override
+		{
+			return rsx_pitch;
+		}
+
+		u16 get_native_pitch() const override
+		{
+			return native_pitch;
+		}
+
+		bool matches_dimensions(u16 _width, u16 _height) const
+		{
+			//Use foward scaling to account for rounding and clamping errors
+			return (rsx::apply_resolution_scale(_width, true) == width()) && (rsx::apply_resolution_scale(_height, true) == height());
 		}
 	};
 
@@ -88,7 +121,7 @@ namespace rsx
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
-				static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1, 1, 1,
+				static_cast<uint32_t>(rsx::apply_resolution_scale((u16)width, true)), static_cast<uint32_t>(rsx::apply_resolution_scale((u16)height, true)), 1, 1, 1,
 				VK_SAMPLE_COUNT_1_BIT,
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
@@ -132,12 +165,14 @@ namespace rsx
 			if (requested_format != VK_FORMAT_D16_UNORM)
 				range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
+			const auto scale = rsx::get_resolution_scale();
+
 			std::unique_ptr<vk::render_target> ds;
 			ds.reset(new vk::render_target(device, mem_mapping.device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
-				static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1, 1, 1,
+				static_cast<uint32_t>(rsx::apply_resolution_scale((u16)width, true)), static_cast<uint32_t>(rsx::apply_resolution_scale((u16)height, true)), 1, 1, 1,
 				VK_SAMPLE_COUNT_1_BIT,
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
@@ -169,6 +204,16 @@ namespace rsx
 			}
 
 			return ds;
+		}
+
+		static
+		void get_surface_info(vk::render_target *surface, rsx::surface_format_info *info)
+		{
+			info->rsx_pitch = surface->rsx_pitch;
+			info->native_pitch = surface->native_pitch;
+			info->surface_width = surface->get_surface_width();
+			info->surface_height = surface->get_surface_height();
+			info->bpp = static_cast<u8>(info->native_pitch / info->surface_width);
 		}
 
 		static void prepare_rtt_for_drawing(vk::command_buffer* pcmd, vk::render_target *surface)
@@ -224,8 +269,7 @@ namespace rsx
 			VkFormat fmt = vk::get_compatible_surface_format(format).first;
 
 			if (rtt->info.format == fmt &&
-				rtt->info.extent.width == width &&
-				rtt->info.extent.height == height)
+				rtt->matches_dimensions((u16)width, (u16)height))
 				return true;
 
 			return false;
@@ -236,8 +280,7 @@ namespace rsx
 			if (check_refs && ds->deref_count == 0) //Surface may still have read refs from data 'copy'
 				return false;
 
-			if (ds->info.extent.width == width &&
-				ds->info.extent.height == height)
+			if (ds->matches_dimensions((u16)width, (u16)height))
 			{
 				//Check format
 				switch (ds->info.format)

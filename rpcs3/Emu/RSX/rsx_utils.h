@@ -1,7 +1,16 @@
 #pragma once
 
+#include "../System.h"
 #include "gcm_enums.h"
 #include <atomic>
+
+// TODO: replace the code below by #include <optional> when C++17 or newer will be used
+#include <optional.hpp>
+namespace std
+{
+	template<class T>
+	using optional = experimental::optional<T>;
+}
 
 extern "C"
 {
@@ -208,34 +217,38 @@ namespace rsx
 		return std::make_tuple(x, y, width, height);
 	}
 
-	// Conditional mutex lock for shared mutex types
-	// May silently fail to acquire the lock
-	template <typename lock_type>
-	struct conditional_lock
+	static inline const f32 get_resolution_scale()
 	{
-		lock_type& _ref;
-		std::atomic_bool& _flag;
-		bool acquired = false;
+		return g_cfg.video.strict_rendering_mode? 1.f : ((f32)g_cfg.video.resolution_scale_percent / 100.f);
+	}
 
-		conditional_lock(std::atomic_bool& flag, lock_type& mutex):
-			_ref(mutex), _flag(flag)
-		{
-			const bool _false = false;
-			if (flag.compare_exchange_weak(const_cast<bool&>(_false), true))
-			{
-				mutex.lock_shared();
-				acquired = true;
-			}
-		}
+	static inline const int get_resolution_scale_percent()
+	{
+		return g_cfg.video.strict_rendering_mode ? 100 : g_cfg.video.resolution_scale_percent;
+	}
 
-		~conditional_lock()
-		{
-			if (acquired)
-			{
-				_ref.unlock_shared();
-				_flag.store(false);
-				acquired = false;
-			}
-		}
-	};
+	static inline const u16 apply_resolution_scale(u16 value, bool clamp)
+	{
+		if (value <= g_cfg.video.min_scalable_dimension)
+			return value;
+		else if (clamp)
+			return (u16)std::max((get_resolution_scale_percent() * value) / 100, 1);
+		else
+			return (get_resolution_scale_percent() * value) / 100;
+	}
+
+	static inline const u16 apply_inverse_resolution_scale(u16 value, bool clamp)
+	{
+		u16 result = value;
+
+		if (clamp)
+			result = (u16)std::max((value * 100) / get_resolution_scale_percent(), 1);
+		else
+			result = (value * 100) / get_resolution_scale_percent();
+
+		if (result <= g_cfg.video.min_scalable_dimension)
+			return value;
+
+		return result;
+	}
 }

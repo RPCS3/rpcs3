@@ -7,7 +7,6 @@ extern std::string ppu_get_syscall_name(u64 code)
 	{
 	case 1: return "sys_process_getpid";
 	case 2: return "sys_process_wait_for_child";
-	case 3: return "sys_process_exit";
 	case 4: return "sys_process_get_status";
 	case 5: return "sys_process_detach_child";
 	case 12: return "sys_process_get_number_of_object";
@@ -16,10 +15,10 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 18: return "sys_process_getppid";
 	case 19: return "sys_process_kill";
 	case 21: return "_sys_process_spawn";
-	case 22: return "sys_process_exit";
+	case 22: return "_sys_process_exit";
 	case 23: return "sys_process_wait_for_child2";
 	case 25: return "sys_process_get_sdk_version";
-	case 26: return "_sys_process_exit";
+	case 26: return "_sys_process_exit2";
 	case 28: return "_sys_process_get_number_of_object";
 	case 29: return "sys_process_get_id";
 	case 30: return "_sys_process_get_paramsfo";
@@ -414,16 +413,16 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 708: return "sys_net_bnet_recvmsg";
 	case 709: return "sys_net_bnet_sendmsg";
 	case 710: return "sys_net_bnet_sendto";
-	case 711: return "sys_net_bnet_setsockop";
+	case 711: return "sys_net_bnet_setsockopt";
 	case 712: return "sys_net_bnet_shutdown";
 	case 713: return "sys_net_bnet_socket";
 	case 714: return "sys_net_bnet_close";
 	case 715: return "sys_net_bnet_poll";
 	case 716: return "sys_net_bnet_select";
-	case 717: return "sys_net_open_dump";
-	case 718: return "sys_net_read_dump";
-	case 719: return "sys_net_close_dump";
-	case 720: return "sys_net_write_dump";
+	case 717: return "_sys_net_open_dump";
+	case 718: return "_sys_net_read_dump";
+	case 719: return "_sys_net_close_dump";
+	case 720: return "_sys_net_write_dump";
 	case 721: return "sys_net_abort";
 	case 722: return "sys_net_infoctl";
 	case 723: return "sys_net_control";

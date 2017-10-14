@@ -8,21 +8,6 @@
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/RSX/GSRender.h"
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>
-
-/* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
-#ifndef MAP_ANONYMOUS
-#define MAP_ANONYMOUS MAP_ANON
-#endif
-#endif
-
 #include <atomic>
 #include <deque>
 
@@ -47,6 +32,9 @@ namespace vm
 
 	// Auxiliary virtual memory for executable areas
 	u8* const g_exec_addr = memory_reserve_4GiB((std::uintptr_t)g_base_addr);
+
+	// Stats for debugging
+	u8* const g_stat_addr = memory_reserve_4GiB((std::uintptr_t)g_exec_addr);
 
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
@@ -349,16 +337,17 @@ namespace vm
 			}
 		}
 
-		void* real_addr = g_base_addr + addr;
-		void* exec_addr = g_exec_addr + addr;
+		utils::memory_commit(g_base_addr + addr, size);
 
-#ifdef _WIN32
-		auto protection = flags & page_writable ? PAGE_READWRITE : (flags & page_readable ? PAGE_READONLY : PAGE_NOACCESS);
-		verify(__func__), ::VirtualAlloc(real_addr, size, MEM_COMMIT, protection);
-#else
-		auto protection = flags & page_writable ? PROT_WRITE | PROT_READ : (flags & page_readable ? PROT_READ : PROT_NONE);
-		verify(__func__), !::mprotect(real_addr, size, protection), !::madvise(real_addr, size, MADV_WILLNEED);
-#endif
+		if (flags & page_executable)
+		{
+			utils::memory_commit(g_exec_addr + addr, size);
+		}
+
+		if (g_cfg.core.ppu_debug && g_system == system_type::ps3)
+		{
+			utils::memory_commit(g_stat_addr + addr, size);
+		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
@@ -415,15 +404,8 @@ namespace vm
 			{
 				if (u32 page_size = (i - start) * 4096)
 				{
-#ifdef _WIN32
-					DWORD old;
-
-					auto protection = start_value & page_writable ? PAGE_READWRITE : (start_value & page_readable ? PAGE_READONLY : PAGE_NOACCESS);
-					verify(__func__), ::VirtualProtect(vm::base(start * 4096), page_size, protection, &old);
-#else
-					auto protection = start_value & page_writable ? PROT_WRITE | PROT_READ : (start_value & page_readable ? PROT_READ : PROT_NONE);
-					verify(__func__), !::mprotect(vm::base(start * 4096), page_size, protection);
-#endif
+					const auto protection = start_value & page_writable ? utils::protection::rw : (start_value & page_readable ? utils::protection::ro : utils::protection::no);
+					utils::memory_protect(g_base_addr + start * 4096, page_size, protection);
 				}
 
 				start_value = new_val;
@@ -457,16 +439,13 @@ namespace vm
 			}
 		}
 
-		void* real_addr = g_base_addr + addr;
-		void* exec_addr = g_exec_addr + addr;
+		utils::memory_decommit(g_base_addr + addr, size);
+		utils::memory_decommit(g_exec_addr + addr, size);
 
-#ifdef _WIN32
-		verify(__func__), ::VirtualFree(real_addr, size, MEM_DECOMMIT);
-		verify(__func__), ::VirtualFree(exec_addr, size, MEM_DECOMMIT);
-#else
-		verify(__func__), ::mmap(real_addr, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
-		verify(__func__), ::mmap(exec_addr, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
-#endif
+		if (g_cfg.core.ppu_debug && g_system == system_type::ps3)
+		{
+			utils::memory_decommit(g_stat_addr + addr, size);
+		}
 	}
 
 	bool check_addr(u32 addr, u32 size, u8 flags)
@@ -491,7 +470,7 @@ namespace vm
 			fmt::throw_exception("Invalid memory location (%u)" HERE, (uint)location);
 		}
 
-		return block->alloc(size, align, sup);
+		return block->alloc(size, align, nullptr, sup);
 	}
 
 	u32 falloc(u32 addr, u32 size, memory_location_t location, u32 sup)
@@ -503,7 +482,7 @@ namespace vm
 			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, (uint)location, addr);
 		}
 
-		return block->falloc(addr, size, sup);
+		return block->falloc(addr, size, nullptr, sup);
 	}
 
 	u32 dealloc(u32 addr, memory_location_t location, u32* sup_out)
@@ -515,7 +494,7 @@ namespace vm
 			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, (uint)location, addr);
 		}
 
-		return block->dealloc(addr, sup_out);
+		return block->dealloc(addr, nullptr, sup_out);
 	}
 
 	void dealloc_verbose_nothrow(u32 addr, memory_location_t location) noexcept
@@ -576,12 +555,12 @@ namespace vm
 		}
 	}
 
-	u32 block_t::alloc(u32 size, u32 align, u32 sup)
+	u32 block_t::alloc(const u32 orig_size, u32 align, const uchar* data, u32 sup)
 	{
 		writer_lock lock;
 
 		// Align to minimal page size
-		size = ::align(size, 4096);
+		const u32 size = ::align(orig_size, 4096);
 
 		// Check alignment (it's page allocation, so passing small values there is just silly)
 		if (align < 4096 || align != (0x80000000u >> cntlz32(align, true)))
@@ -611,6 +590,11 @@ namespace vm
 		{
 			if (try_alloc(addr, size, pflags, sup))
 			{
+				if (data)
+				{
+					std::memcpy(vm::base(addr), data, orig_size);
+				}
+
 				return addr;
 			}
 		}
@@ -618,19 +602,21 @@ namespace vm
 		return 0;
 	}
 
-	u32 block_t::falloc(u32 addr, u32 size, u32 sup)
+	u32 block_t::falloc(u32 addr, const u32 orig_size, const uchar* data, u32 sup)
 	{
 		writer_lock lock;
 
 		// align to minimal page size
-		size = ::align(size, 4096);
+		const u32 size = ::align(orig_size, 4096);
 
 		// return if addr or size is invalid
 		if (!size || size > this->size || addr < this->addr || addr + size - 1 > this->addr + this->size - 1)
 		{
 			return 0;
 		}
+
 		u8 pflags = page_readable | page_writable;
+
 		if ((flags & SYS_MEMORY_PAGE_SIZE_1M) == SYS_MEMORY_PAGE_SIZE_1M)
 		{
 			pflags |= page_1m_size;
@@ -645,10 +631,15 @@ namespace vm
 			return 0;
 		}
 
+		if (data)
+		{
+			std::memcpy(vm::base(addr), data, orig_size);
+		}
+
 		return addr;
 	}
 
-	u32 block_t::dealloc(u32 addr, u32* sup_out)
+	u32 block_t::dealloc(u32 addr, uchar* data_out, u32* sup_out)
 	{
 		writer_lock lock;
 
@@ -661,6 +652,11 @@ namespace vm
 
 			// Remove entry
 			m_map.erase(found);
+
+			if (data_out)
+			{
+				std::memcpy(data_out, vm::base(addr), size);
+			}
 
 			// Unmap "real" memory pages
 			_page_unmap(addr, size);
@@ -839,6 +835,7 @@ namespace vm
 
 		utils::memory_decommit(g_base_addr, 0x100000000);
 		utils::memory_decommit(g_exec_addr, 0x100000000);
+		utils::memory_decommit(g_stat_addr, 0x100000000);
 	}
 }
 

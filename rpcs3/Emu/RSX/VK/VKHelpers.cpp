@@ -6,12 +6,15 @@ namespace vk
 	context* g_current_vulkan_ctx = nullptr;
 	render_device g_current_renderer;
 
-	texture g_null_texture;
+	std::unique_ptr<image> g_null_texture;
+	std::unique_ptr<image_view> g_null_image_view;
 
 	VkSampler g_null_sampler      = nullptr;
-	VkImageView g_null_image_view = nullptr;
 
 	bool g_cb_no_interrupt_flag = false;
+
+	u64 g_num_processed_frames = 0;
+	u64 g_num_total_frames = 0;
 
 	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
@@ -131,6 +134,47 @@ namespace vk
 		fmt::throw_exception("Invalid or unsupported sampler format for texture format (0x%x)" HERE, format);
 	}
 
+	u8 get_format_texel_width(const VkFormat format)
+	{
+		switch (format)
+		{
+		case VK_FORMAT_R8_UNORM:
+			return 1;
+		case VK_FORMAT_R16_UINT:
+		case VK_FORMAT_R16_SFLOAT:
+		case VK_FORMAT_R16_UNORM:
+		case VK_FORMAT_R8G8_UNORM:
+		case VK_FORMAT_R8G8_SNORM:
+		case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
+		case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
+		case VK_FORMAT_R5G6B5_UNORM_PACK16:
+		case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
+			return 2;
+		case VK_FORMAT_R32_UINT:
+		case VK_FORMAT_R32_SFLOAT:
+		case VK_FORMAT_R16G16_UNORM:
+		case VK_FORMAT_R16G16_SFLOAT:
+		case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
+		case VK_FORMAT_R8G8B8A8_UNORM:
+		case VK_FORMAT_B8G8R8A8_UNORM:
+		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
+		case VK_FORMAT_BC2_UNORM_BLOCK:
+		case VK_FORMAT_BC3_UNORM_BLOCK:
+			return 4;
+		case VK_FORMAT_R16G16B16A16_SFLOAT:
+			return 8;
+		case VK_FORMAT_R32G32B32A32_SFLOAT:
+			return 16;
+		case VK_FORMAT_D16_UNORM:
+			return 2;
+		case VK_FORMAT_D32_SFLOAT_S8_UINT: //TODO: Translate to D24S8
+		case VK_FORMAT_D24_UNORM_S8_UINT:
+			return 4;
+		}
+
+		fmt::throw_exception("Unexpected vkFormat 0x%X", (u32)format);
+	}
+
 	VkAllocationCallbacks default_callbacks()
 	{
 		VkAllocationCallbacks callbacks;
@@ -167,25 +211,32 @@ namespace vk
 		return g_null_sampler;
 	}
 
-	VkImageView null_image_view()
+	VkImageView null_image_view(vk::command_buffer &cmd)
 	{
 		if (g_null_image_view)
-			return g_null_image_view;
+			return g_null_image_view->value;
 
-		g_null_texture.create(g_current_renderer, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, 4, 4);
-		g_null_image_view = g_null_texture;
-		return g_null_image_view;
+		g_null_texture.reset(new image(g_current_renderer, get_memory_mapping(g_current_renderer.gpu()).device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, 4, 4, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT, 0));
+
+		g_null_image_view.reset(new image_view(g_current_renderer, g_null_texture->value, VK_IMAGE_VIEW_TYPE_2D,
+			VK_FORMAT_B8G8R8A8_UNORM, {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A},
+			{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}));
+
+		change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
+		return g_null_image_view->value;
 	}
 
 	void destroy_global_resources()
 	{
-		g_null_texture.destroy();
+		g_null_texture.reset();
+		g_null_image_view .reset();
 
 		if (g_null_sampler)
 			vkDestroySampler(g_current_renderer, g_null_sampler, nullptr);
 
 		g_null_sampler = nullptr;
-		g_null_image_view = nullptr;
 	}
 
 	void set_current_thread_ctx(const vk::context &ctx)
@@ -233,7 +284,7 @@ namespace vk
 			break;
 		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
 		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 			dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 			break;
 		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
@@ -258,7 +309,7 @@ namespace vk
 			break;
 		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
 		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-			barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 			src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 			break;
 		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
@@ -299,6 +350,125 @@ namespace vk
 	bool is_uninterruptible()
 	{
 		return g_cb_no_interrupt_flag;
+	}
+
+	void advance_completed_frame_counter()
+	{
+		g_num_processed_frames++;
+	}
+
+	void advance_frame_counter()
+	{
+		verify(HERE), g_num_processed_frames <= g_num_total_frames;
+		g_num_total_frames++;
+	}
+
+	const u64 get_current_frame_id()
+	{
+		return g_num_total_frames;
+	}
+
+	const u64 get_last_completed_frame_id()
+	{
+		return (g_num_processed_frames > 0)? g_num_processed_frames - 1: 0;
+	}
+
+	void die_with_error(const char* faulting_addr, VkResult error_code)
+	{
+		std::string error_message;
+		int severity = 0; //0 - die, 1 - warn, 2 - nothing
+
+		switch (error_code)
+		{
+		case VK_SUCCESS:
+		case VK_EVENT_SET:
+		case VK_EVENT_RESET:
+		case VK_INCOMPLETE:
+			return;
+		case VK_SUBOPTIMAL_KHR:
+			error_message = "Present surface is suboptimal (VK_SUBOPTIMAL_KHR)";
+			severity = 1;
+			break;
+		case VK_NOT_READY:
+			error_message = "Device or resource busy (VK_NOT_READY)";
+			break;
+		case VK_TIMEOUT:
+			error_message = "Timeout event (VK_TIMEOUT)";
+			break;
+		case VK_ERROR_OUT_OF_HOST_MEMORY:
+			error_message = "Out of host memory (system RAM) (VK_ERROR_OUT_OF_HOST_MEMORY)";
+			break;
+		case VK_ERROR_OUT_OF_DEVICE_MEMORY:
+			error_message = "Out of video memory (VRAM) (VK_ERROR_OUT_OF_DEVICE_MEMORY)";
+			break;
+		case VK_ERROR_INITIALIZATION_FAILED:
+			error_message = "Initialization failed (VK_ERROR_INITIALIZATION_FAILED)";
+			break;
+		case VK_ERROR_DEVICE_LOST:
+			error_message = "Device lost (Driver crashed with unspecified error or stopped responding and recovered) (VK_ERROR_DEVICE_LOST)";
+			break;
+		case VK_ERROR_MEMORY_MAP_FAILED:
+			error_message = "Memory map failed (VK_ERROR_MEMORY_MAP_FAILED)";
+			break;
+		case VK_ERROR_LAYER_NOT_PRESENT:
+			error_message = "Requested layer is not available (Try disabling debug output or install vulkan SDK) (VK_ERROR_LAYER_NOT_PRESENT)";
+			break;
+		case VK_ERROR_EXTENSION_NOT_PRESENT:
+			error_message = "Requested extension not available (VK_ERROR_EXTENSION_NOT_PRESENT)";
+			break;
+		case VK_ERROR_FEATURE_NOT_PRESENT:
+			error_message = "Requested feature not available (VK_ERROR_FEATURE_NOT_PRESENT)";
+			break;
+		case VK_ERROR_INCOMPATIBLE_DRIVER:
+			error_message = "Incompatible driver (VK_ERROR_INCOMPATIBLE_DRIVER)";
+			break;
+		case VK_ERROR_TOO_MANY_OBJECTS:
+			error_message = "Too many objects created (Out of handles) (VK_ERROR_TOO_MANY_OBJECTS)";
+			break;
+		case VK_ERROR_FORMAT_NOT_SUPPORTED:
+			error_message = "Format not supported (VK_ERROR_FORMAT_NOT_SUPPORTED)";
+			break;
+		case VK_ERROR_FRAGMENTED_POOL:
+			error_message = "Fragmented pool (VK_ERROR_FRAGMENTED_POOL)";
+			break;
+		case VK_ERROR_SURFACE_LOST_KHR:
+			error_message = "Surface lost (VK_ERROR_SURFACE_LOST)";
+			break;
+		case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:
+			error_message = "Native window in use (VK_ERROR_NATIVE_WINDOW_IN_USE_KHR)";
+			break;
+		case VK_ERROR_OUT_OF_DATE_KHR:
+			error_message = "Present surface is out of date (VK_ERROR_OUT_OF_DATE_KHR)";
+			severity = 1;
+			break;
+		case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR:
+			error_message = "Incompatible display (VK_ERROR_INCOMPATIBLE_DISPLAY_KHR)";
+			break;
+		case VK_ERROR_VALIDATION_FAILED_EXT:
+			error_message = "Validation failed (VK_ERROR_INCOMPATIBLE_DISPLAY_KHR)";
+			break;
+		case VK_ERROR_INVALID_SHADER_NV:
+			error_message = "Invalid shader code (VK_ERROR_INVALID_SHADER_NV)";
+			break;
+		case VK_ERROR_OUT_OF_POOL_MEMORY_KHR:
+			error_message = "Out of pool memory (VK_ERROR_OUT_OF_POOL_MEMORY_KHR)";
+			break;
+		case VK_ERROR_INVALID_EXTERNAL_HANDLE_KHX:
+			error_message = "Invalid external handle (VK_ERROR_INVALID_EXTERNAL_HANDLE_KHX)";
+			break;
+		default:
+			error_message = fmt::format("Unknown Code (%Xh, %d)%s", (s32)error_code, (s32&)error_code, faulting_addr);
+			break;
+		}
+
+		switch (severity)
+		{
+		case 0:
+			fmt::throw_exception("Assertion Failed! Vulkan API call failed with unrecoverable error: %s%s", error_message.c_str(), faulting_addr);
+		case 1:
+			LOG_ERROR(RSX, "Vulkan API call has failed with an error but will continue: %s%s", error_message.c_str(), faulting_addr);
+			break;
+		}
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,

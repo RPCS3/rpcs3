@@ -100,6 +100,16 @@ namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 	const QStringList media = { app_Photo, app_Video, bc_Video, app_Music, app_TV, web_TV };
 	const QStringList data = { ps3_Data, ps2_Data, ps3_Save, psp_Save };
 	const QStringList others = { network, store_FE, trophy, other };
+
+	inline bool CategoryInMap(const std::string& cat, const q_from_char& map)
+	{
+		auto map_contains_category = [cat](std::pair<std::string, const QString> p)
+		{
+			return p.second == qstr(cat);
+		};
+
+		return std::find_if(map.begin(), map.end(), map_contains_category) != map.end();
+	}
 }
 
 namespace parental
@@ -168,22 +178,12 @@ struct Tool_Bar_Button
 	bool isActive;
 };
 
-enum
-{
-	DROP_ERROR,
-	DROP_PKG,
-	DROP_PUP,
-	DROP_RAP,
-	DROP_DIR,
-	DROP_GAME
-};
-
 class game_list_frame : public QDockWidget
 {
 	Q_OBJECT
 
 public:
-	explicit game_list_frame(std::shared_ptr<gui_settings> settings, const Render_Creator& r_Creator, QWidget *parent = nullptr);
+	explicit game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent = nullptr);
 	~game_list_frame();
 
 	/** Refresh the gamelist with/without loading game data from files. Public so that main frame can refresh after vfs or install */
@@ -207,6 +207,7 @@ public:
 	/** Repaint Gamelist Icons with new background color */
 	void RepaintIcons(const bool& fromSettings = false);
 
+	/** Return current icon size slider value */
 	int GetSliderValue();
 
 public Q_SLOTS:
@@ -231,16 +232,10 @@ Q_SIGNALS:
 	void RequestListModeActSet(const bool& isList);
 	void RequestCategoryActSet(const int& id);
 	void RequestSaveSliderPos(const bool& save);
-	void RequestPackageInstall(const QStringList& paths);
-	void RequestFirmwareInstall(const QString& path);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
 	void resizeEvent(QResizeEvent *event) override;
-	void dropEvent(QDropEvent* event) override;
-	void dragEnterEvent(QDragEnterEvent* event) override;
-	void dragMoveEvent(QDragMoveEvent* event) override;
-	void dragLeaveEvent(QDragLeaveEvent* event) override;
 private:
 	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
 	bool Boot(const GameInfo& info);
@@ -250,8 +245,6 @@ private:
 
 	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
-	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
-	void AddGamesFromDir(const QString& path);
 
 	std::string CurrentSelectionIconPath();
 	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
@@ -259,15 +252,18 @@ private:
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_Game_Dock;
 	QStackedWidget* m_Central_Widget;
-	QToolBar* m_Tool_Bar;
-	QLineEdit* m_Search_Bar;
-	QSlider* m_Slider_Size;
-	game_list* m_gameList;
+
+	// Game Grid
 	game_list_grid* m_xgrid;
 
+	// Game List
+	game_list* m_gameList;
 	QList<QAction*> m_columnActs;
+	Qt::SortOrder m_colSortOrder;
+	int m_sortColumn;
 
-	// Actions regarding showing/hiding categories
+	// Categories
+	QStringList m_categoryFilters;
 	Tool_Bar_Button m_catActHDD;
 	Tool_Bar_Button m_catActDisc;
 	Tool_Bar_Button m_catActHome;
@@ -275,34 +271,36 @@ private:
 	Tool_Bar_Button m_catActAudioVideo;
 	Tool_Bar_Button m_catActUnknown;
 	Tool_Bar_Button m_catActOther;
-
 	QList<Tool_Bar_Button*> m_categoryButtons;
-
 	QActionGroup* m_categoryActs;
 
-	// Actions regarding switching list modes
+	// List Mode
 	Tool_Bar_Button m_modeActList;
 	Tool_Bar_Button m_modeActGrid;
-
 	QActionGroup* m_modeActs;
-
-	// TODO: Reorganize this into a sensible order for private variables.
-	std::shared_ptr<gui_settings> xgui_settings;
-
-	int m_sortColumn;
-	Qt::SortOrder m_colSortOrder;
 	bool m_isListLayout = true;
 	bool m_oldLayoutIsList = true;
-	bool m_showToolBar = true;
+
+	// Data
+	std::shared_ptr<gui_settings> xgui_settings;
+	std::shared_ptr<emu_settings> xemu_settings;
 	std::vector<GUI_GameInfo> m_game_data;
-	QSize m_Icon_Size;
+
+	// Toolbar
+	QToolBar* m_Tool_Bar;
+	bool m_showToolBar = true;
+
+	// Search Bar
+	QLineEdit* m_Search_Bar;
+	QString m_searchText;
+
+	// Icon Size Slider
+	QSlider* m_Slider_Size;
 	int m_icon_size_index;
+
+	// Icons
 	QColor m_Icon_Color;
+	QSize m_Icon_Size;
 	qreal m_Margin_Factor;
 	qreal m_Text_Factor;
-	QStringList m_categoryFilters;
-	QString m_searchText;
-	Render_Creator m_Render_Creator;
-
-	uint m_games_per_row = 0;
 };

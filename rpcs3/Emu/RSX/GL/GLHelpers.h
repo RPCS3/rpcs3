@@ -54,6 +54,7 @@ namespace gl
 #endif
 
 	class capabilities;
+	class blitter;
 
 	void enable_debugging();
 	capabilities& get_driver_caps();
@@ -1512,6 +1513,11 @@ namespace gl
 			return (texture::format)result;
 		}
 
+		virtual texture::internal_format get_compatible_internal_format() const
+		{
+			return (texture::internal_format)get_internal_format();
+		}
+
 		texture::channel_type get_channel_type(texture::channel_name channel) const
 		{
 			save_binding_state save(*this);
@@ -1916,7 +1922,7 @@ namespace gl
 			};
 
 		protected:
-			GLuint m_id;
+			GLuint m_id = GL_NONE;
 			fbo &m_parent;
 
 		public:
@@ -1952,6 +1958,12 @@ namespace gl
 				case texture::target::texture2D: glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs.id(), rhs.level()); break;
 				case texture::target::texture3D: glFramebufferTexture3D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_3D, rhs.id(), rhs.level(), 0); break;
 				}
+			}
+
+			void operator = (const GLuint rhs)
+			{
+				save_binding_state save(m_parent);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs, 0);
 			}
 		};
 

@@ -20,17 +20,12 @@ logs::channel sys_prx("sys_prx");
 static const std::unordered_map<std::string, int> s_prx_ignore
 {
 	{ "/dev_flash/sys/external/libaudio.sprx", 0 },
-	{ "/dev_flash/sys/external/libbeisobmf.sprx", 0 },
 	{ "/dev_flash/sys/external/libcamera.sprx", 0 },
 	{ "/dev_flash/sys/external/libgem.sprx", 0 },
-	{ "/dev_flash/sys/external/libhttp.sprx", 0 },
 	{ "/dev_flash/sys/external/libio.sprx", 0 },
 	{ "/dev_flash/sys/external/libmedi.sprx", 0 },
 	{ "/dev_flash/sys/external/libmic.sprx", 0 },
-	{ "/dev_flash/sys/external/libnet.sprx", 0 },
 	{ "/dev_flash/sys/external/libnetctl.sprx", 0 },
-	{ "/dev_flash/sys/external/librudp.sprx", 0 },
-	{ "/dev_flash/sys/external/libssl.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_ap.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_authdialog.sprx", 0 },
@@ -87,9 +82,10 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 	{ "/dev_flash/sys/external/libvoice.sprx", 0 },
 };
 
-error_code prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
+error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
-	const auto name = path.substr(path.find_last_of('/') + 1);
+	std::string name = vpath.substr(vpath.find_last_of('/') + 1);
+	std::string path = vfs::get(vpath);
 
 	const auto existing = idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& prx)
 	{
@@ -106,26 +102,37 @@ error_code prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_mod
 		return CELL_PRX_ERROR_LIBRARY_FOUND;
 	}
 
-	if (s_prx_ignore.count(path))
+	bool ignore = s_prx_ignore.count(vpath) != 0;
+
+	if (ignore && g_cfg.core.lib_loading == lib_loading_type::both)
 	{
-		sys_prx.warning("Ignored module: %s", path);
+		// Ignore ignore list if the library is selected in 'both' mode
+		if (g_cfg.core.load_libraries.get_set().count(name) != 0)
+		{
+			ignore = false;
+		}
+	}
+
+	if (ignore)
+	{
+		sys_prx.warning("Ignored module: %s", vpath);
 
 		const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
 
-		prx->name = name;
-		prx->path = path;
+		prx->name = std::move(name);
+		prx->path = std::move(path);
 
 		return not_an_error(idm::last_id());
 	}
 
-	const ppu_prx_object obj = decrypt_self(fs::file(vfs::get(path)), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
+	const ppu_prx_object obj = decrypt_self(fs::file(path), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
 
 	if (obj != elf_error::ok)
 	{
 		return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
 	}
 
-	const auto prx = ppu_load_prx(obj, vfs::get(path));
+	const auto prx = ppu_load_prx(obj, path);
 
 	if (!prx)
 	{
@@ -134,7 +141,7 @@ error_code prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_mod
 
 	ppu_initialize(*prx);
 
-	sys_prx.success("Loaded module: %s", path);
+	sys_prx.success("Loaded module: %s", vpath);
 
 	return not_an_error(idm::last_id());
 }
@@ -163,9 +170,7 @@ error_code _sys_prx_load_module_list(s32 count, vm::cpptr<char, u32, u64> path_l
 
 	for (s32 i = 0; i < count; ++i)
 	{
-		auto path = path_list[i];
-		std::string name = path.get_ptr();
-		error_code result = prx_load_module(name, flags, pOpt);
+		error_code result = prx_load_module(path_list[i].get_ptr(), flags, pOpt);
 
 		if (result < 0)
 			return result;
@@ -178,15 +183,26 @@ error_code _sys_prx_load_module_list(s32 count, vm::cpptr<char, u32, u64> path_l
 
 error_code _sys_prx_load_module_list_on_memcontainer(s32 count, vm::cpptr<char, u32, u64> path_list, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
 {
-	sys_prx.todo("_sys_prx_load_module_list_on_memcontainer(count=%d, path_list=**0x%x, mem_ct=0x%x, flags=0x%x, pOpt=*0x%x, id_list=*0x%x)", count, path_list, mem_ct, flags, pOpt, id_list);
+	sys_prx.warning("_sys_prx_load_module_list_on_memcontainer(count=%d, path_list=**0x%x, mem_ct=0x%x, flags=0x%x, pOpt=*0x%x, id_list=*0x%x)", count, path_list, mem_ct, flags, pOpt, id_list);
+
+	for (s32 i = 0; i < count; ++i)
+	{
+		error_code result = prx_load_module(path_list[i].get_ptr(), flags, pOpt);
+
+		if (result < 0)
+			return result;
+
+		id_list[i] = result;
+	}
 
 	return CELL_OK;
 }
 
 error_code _sys_prx_load_module_on_memcontainer(vm::cptr<char> path, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
-	sys_prx.todo("_sys_prx_load_module_on_memcontainer(path=%s, mem_ct=0x%x, flags=0x%x, pOpt=*0x%x)", path, mem_ct, flags, pOpt);
-	return CELL_OK;
+	sys_prx.warning("_sys_prx_load_module_on_memcontainer(path=%s, mem_ct=0x%x, flags=0x%x, pOpt=*0x%x)", path, mem_ct, flags, pOpt);
+
+	return prx_load_module(path.get_ptr(), flags, pOpt);
 }
 
 error_code _sys_prx_load_module(vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)

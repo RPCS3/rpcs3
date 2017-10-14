@@ -103,12 +103,14 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		const auto prefix_list = fmt::split(setList->dirNamePrefix.get_ptr(), { "|" });
 
 		// get the saves matching the supplied prefix
-		for (const auto& entry : fs::dir(base_dir))
+		for (auto&& entry : fs::dir(base_dir))
 		{
 			if (!entry.is_directory)
 			{
 				continue;
 			}
+
+			entry.name = vfs::unescape(entry.name);
 
 			for (const auto& prefix : prefix_list)
 			{
@@ -453,8 +455,10 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 
 		auto file_list = statGet->fileList.get_ptr();
 
-		for (const auto& entry : fs::dir(dir_path))
+		for (auto&& entry : fs::dir(dir_path))
 		{
+			entry.name = vfs::unescape(entry.name);
+
 			// only files, system files ignored, fileNum is limited by setBuf->fileListMax
 			if (!entry.is_directory && entry.name != "PARAM.SFO" && statGet->fileListNum++ < setBuf->fileListMax)
 			{
@@ -1083,7 +1087,7 @@ s32 cellSaveDataUserGetListItem(u32 userId, vm::cptr<char> dirName, vm::ptr<Cell
 
 void cellSysutil_SaveData_init()
 {
-	REG_VNID(cellSysutil, 0x00000000u, g_savedata_context);
+	REG_VAR(cellSysutil, g_savedata_context).flag(MFF_HIDDEN);
 
 	// libsysutil functions:
 	REG_FUNC(cellSysutil, cellSaveDataEnableOverlay);

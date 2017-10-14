@@ -63,6 +63,16 @@ struct ppu_module
 	std::vector<ppu_segment> secs;
 	std::vector<ppu_function> funcs;
 
+	// Copy info without functions
+	void copy_part(const ppu_module& info)
+	{
+		name = info.name;
+		path = info.path;
+		relocs = info.relocs;
+		segs = info.segs;
+		secs = info.secs;
+	}
+
 	void analyse(u32 lib_toc, u32 entry);
 	void validate(u32 reloc);
 };

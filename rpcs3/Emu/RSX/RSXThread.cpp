@@ -8,11 +8,13 @@
 
 #include "Common/BufferUtils.h"
 #include "rsx_methods.h"
+#include "rsx_utils.h"
 
 #include "Utilities/GSL.h"
 #include "Utilities/StrUtil.h"
 
 #include <thread>
+#include <fenv.h>
 
 class GSRender;
 
@@ -277,6 +279,21 @@ namespace rsx
 	{
 		rsx::method_registers.current_draw_clause.inline_vertex_array.resize(0);
 		in_begin_end = true;
+
+		switch (rsx::method_registers.current_draw_clause.primitive)
+		{
+		case rsx::primitive_type::line_loop:
+		case rsx::primitive_type::line_strip:
+		case rsx::primitive_type::polygon:
+		case rsx::primitive_type::quad_strip:
+		case rsx::primitive_type::triangle_fan:
+		case rsx::primitive_type::triangle_strip:
+			// Adjacency matters for these types
+			rsx::method_registers.current_draw_clause.is_disjoint_primitive = false;
+			break;
+		default:
+			rsx::method_registers.current_draw_clause.is_disjoint_primitive = true;
+		}
 	}
 
 	void thread::append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value)
@@ -376,6 +393,84 @@ namespace rsx
 		// Raise priority above other threads
 		thread_ctrl::set_native_priority(1);
 
+		// Round to nearest to deal with forward/reverse scaling
+		fesetround(FE_TONEAREST);
+
+		// Deferred calls are used to batch draws together
+		u32 deferred_primitive_type = 0;
+		u32 deferred_call_size = 0;
+		s32 deferred_begin_end = 0;
+		std::vector<u32> deferred_stack;
+		bool has_deferred_call = false;
+
+		// Track register address faults
+		u32 mem_faults_count = 0;
+
+		auto flush_command_queue = [&]()
+		{
+			const auto num_draws = (u32)method_registers.current_draw_clause.first_count_commands.size();
+			bool emit_begin = false;
+			bool emit_end = true;
+
+			if (num_draws > 1)
+			{
+				auto& first_counts = method_registers.current_draw_clause.first_count_commands;
+				deferred_stack.resize(0);
+
+				u32 last = first_counts.front().first;
+				u32 last_index = 0;
+
+				for (u32 draw = 0; draw < num_draws; draw++)
+				{
+					if (first_counts[draw].first != last)
+					{
+						//Disjoint
+						deferred_stack.push_back(draw);
+					}
+
+					last = first_counts[draw].first + first_counts[draw].second;
+				}
+
+				if (deferred_stack.size() > 0)
+				{
+					//TODO: Verify this works correctly
+					LOG_ERROR(RSX, "Disjoint draw range detected");
+
+					deferred_stack.push_back(num_draws - 1); //Append last pair
+					std::vector<std::pair<u32, u32>> temp_range = first_counts;
+
+					u32 last_index = 0;
+
+					for (const u32 draw : deferred_stack)
+					{
+						first_counts.resize(draw - last_index);
+						std::copy(temp_range.begin() + last_index, temp_range.begin() + draw, first_counts.begin());
+
+						if (emit_begin)
+							methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
+						else
+							emit_begin = true;
+
+						methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
+						last_index = draw;
+					}
+
+					emit_end = false;
+				}
+			}
+
+			if (emit_end)
+				methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
+
+			if (deferred_begin_end > 0) //Hanging draw call (useful for immediate rendering where the begin call needs to be noted)
+				methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
+
+			deferred_begin_end = 0;
+			deferred_primitive_type = 0;
+			deferred_call_size = 0;
+			has_deferred_call = false;
+		};
+
 		// TODO: exit condition
 		while (!Emu.IsStopped())
 		{
@@ -387,6 +482,9 @@ namespace rsx
 
 			if (put == get || !Emu.IsRunning())
 			{
+				if (has_deferred_call)
+					flush_command_queue();
+
 				do_internal_task();
 				continue;
 			}
@@ -399,8 +497,18 @@ namespace rsx
 			{
 				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", get, put);
 
+				if (mem_faults_count >= 3)
+				{
+					LOG_ERROR(RSX, "Application has failed to recover, discarding FIFO queue");
+					ctrl->get = put;
+				}
+				else
+				{
+					mem_faults_count++;
+					std::this_thread::sleep_for(1ms);
+				}
+
 				invalid_command_interrupt_raised = true;
-				ctrl->get = put;
 				continue;
 			}
 
@@ -450,19 +558,34 @@ namespace rsx
 			{
 				LOG_ERROR(RSX, "Invalid FIFO queue args ptr found, get=0x%X, cmd=0x%X, count=%d", get, cmd, count);
 
+				if (mem_faults_count >= 3)
+				{
+					LOG_ERROR(RSX, "Application has failed to recover, discarding FIFO queue");
+					ctrl->get = put;
+				}
+				else
+				{
+					mem_faults_count++;
+					std::this_thread::sleep_for(1ms);
+				}
+
 				invalid_command_interrupt_raised = true;
-				ctrl->get = put;
 				continue;
 			}
 
+			// All good on valid memory ptrs
+			mem_faults_count = 0;
+
 			auto args = vm::ptr<u32>::make(args_address);
 			invalid_command_interrupt_raised = false;
+			bool unaligned_command = false;
 
 			u32 first_cmd = (cmd & 0xfffc) >> 2;
 
 			if (cmd & 0x3)
 			{
 				LOG_WARNING(RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
+				unaligned_command = true;
 			}
 
 			for (u32 i = 0; i < count; i++)
@@ -470,7 +593,99 @@ namespace rsx
 				u32 reg = ((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? first_cmd : first_cmd + i;
 				u32 value = args[i];
 
-				//LOG_NOTICE(RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
+				bool execute_method_call = true;
+
+				if (supports_multidraw)
+				{
+					//TODO: Make this cleaner
+					bool flush_commands_flag = has_deferred_call;
+
+					switch (reg)
+					{
+					case NV4097_SET_BEGIN_END:
+					{
+						// Hook; Allows begin to go through, but ignores end
+						if (value)
+							deferred_begin_end++;
+						else
+							deferred_begin_end--;
+
+						if (value && value != deferred_primitive_type)
+							deferred_primitive_type = value;
+						else
+						{
+							has_deferred_call = true;
+							flush_commands_flag = false;
+							execute_method_call = false;
+
+							deferred_call_size++;
+
+							if (!method_registers.current_draw_clause.is_disjoint_primitive)
+							{
+								// Combine all calls since the last one
+								auto &first_count = method_registers.current_draw_clause.first_count_commands;
+								if (first_count.size() > deferred_call_size)
+								{
+									const auto &batch_first_count = first_count[deferred_call_size - 1];
+									u32 count = batch_first_count.second;
+									u32 next = batch_first_count.first + count;
+
+									for (int n = deferred_call_size; n < first_count.size(); n++)
+									{
+										if (first_count[n].first != next)
+										{
+											LOG_ERROR(RSX, "Non-continous first-count range passed as one draw; will be split.");
+
+											first_count[deferred_call_size - 1].second = count;
+											deferred_call_size++;
+
+											count = first_count[deferred_call_size - 1].second;
+											next = first_count[deferred_call_size - 1].first + count;
+											continue;
+										}
+
+										count += first_count[n].second;
+										next += first_count[n].second;
+									}
+
+									first_count[deferred_call_size - 1].second = count;
+									first_count.resize(deferred_call_size);
+								}
+							}
+						}
+
+						break;
+					}
+					// These commands do not alter the pipeline state and deferred calls can still be active
+					// TODO: Add more commands here
+					case NV4097_INVALIDATE_VERTEX_FILE:
+						flush_commands_flag = false;
+						break;
+					case NV4097_DRAW_ARRAYS:
+					{
+						const auto cmd = method_registers.current_draw_clause.command;
+						if (cmd != rsx::draw_command::array && cmd != rsx::draw_command::none)
+							break;
+
+						flush_commands_flag = false;
+						break;
+					}
+					case NV4097_DRAW_INDEX_ARRAY:
+					{
+						const auto cmd = method_registers.current_draw_clause.command;
+						if (cmd != rsx::draw_command::indexed && cmd != rsx::draw_command::none)
+							break;
+
+						flush_commands_flag = false;
+						break;
+					}
+					}
+
+					if (flush_commands_flag)
+					{
+						flush_command_queue();
+					}
+				}
 
 				method_registers.decode(reg, value);
 
@@ -479,21 +694,28 @@ namespace rsx
 					frame_debug.command_queue.push_back(std::make_pair(reg, value));
 				}
 
-				if (auto method = methods[reg])
+				if (execute_method_call)
 				{
-					method(this, reg, value);
+					if (auto method = methods[reg])
+					{
+						method(this, reg, value);
+					}
 				}
 
 				if (invalid_command_interrupt_raised)
 				{
-					//Ignore processing the rest of the chain
-					ctrl->get = put;
+					//Skip the rest of this command
 					break;
 				}
 			}
 
-			if (invalid_command_interrupt_raised)
+			if (unaligned_command && invalid_command_interrupt_raised)
+			{
+				//This is almost guaranteed to be heap corruption at this point
+				//Ignore the rest of the chain
+				ctrl->get = put;
 				continue;
+			}
 
 			ctrl->get = get + (count + 1) * 4;
 		}
@@ -599,24 +821,33 @@ namespace rsx
 	void thread::fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program)
 	{
 		const u32 is_alpha_tested = rsx::method_registers.alpha_test_enabled();
-		const float alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
+		const f32 alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
 		const f32 fog0 = rsx::method_registers.fog_params_0();
 		const f32 fog1 = rsx::method_registers.fog_params_1();
 		const u32 alpha_func = static_cast<u32>(rsx::method_registers.alpha_func());
 		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
-		const u32 window_origin = static_cast<u32>(rsx::method_registers.shader_window_origin());
+
+		// Generate wpos coeffecients
+		// wpos equation is now as follows:
+		// wpos.y = (frag_coord / resolution_scale) * ((window_origin!=top)?-1.: 1.) + ((window_origin!=top)? window_height : 0)
+		// wpos.x = (frag_coord / resolution_scale)
+		// wpos.zw = frag_coord.zw
+
+		const auto window_origin = rsx::method_registers.shader_window_origin();
 		const u32 window_height = rsx::method_registers.shader_window_height();
-		const float one = 1.f;
+		const f32 resolution_scale = (window_height <= (u32)g_cfg.video.min_scalable_dimension)? 1.f : rsx::get_resolution_scale();
+		const f32 wpos_scale = (window_origin == rsx::window_origin::top) ? (1.f / resolution_scale) : (-1.f / resolution_scale);
+		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
 
 		u32 *dst = static_cast<u32*>(buffer);
 
 		stream_vector(dst, (u32&)fog0, (u32&)fog1, is_alpha_tested, (u32&)alpha_ref);
-		stream_vector(dst + 4, alpha_func, fog_mode, window_origin, window_height);
+		stream_vector(dst + 4, alpha_func, fog_mode, (u32&)wpos_scale, (u32&)wpos_bias);
 
 		size_t offset = 8;
 		for (int index = 0; index < 16; ++index)
 		{
-			stream_vector(&dst[offset], (u32&)fragment_program.texture_pitch_scale[index], (u32&)one, 0U, 0U);
+			stream_vector(&dst[offset], (u32&)fragment_program.texture_scale[index][0], (u32&)fragment_program.texture_scale[index][1], 0U, 0U);
 			offset += 4;
 		}
 	}
@@ -879,24 +1110,32 @@ namespace rsx
 
 	void thread::get_current_vertex_program()
 	{
-		auto &result = current_vertex_program = {};
-
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
-		result.data.reserve((512 - transform_program_start) * 4);
-		result.rsx_vertex_inputs.reserve(rsx::limits::vertex_count);
+		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
+		current_vertex_program.skip_vertex_input_check = false;
+
+		current_vertex_program.rsx_vertex_inputs.resize(0);
+		current_vertex_program.data.resize((512 - transform_program_start) * 4);
+
+		u32* ucode_src = rsx::method_registers.transform_program.data() + (transform_program_start * 4);
+		u32* ucode_dst = current_vertex_program.data.data();
+		u32  ucode_size = 0;
+		D3   d3;
 
 		for (int i = transform_program_start; i < 512; ++i)
 		{
-			result.data.resize((i - transform_program_start) * 4 + 4);
-			memcpy(result.data.data() + (i - transform_program_start) * 4, rsx::method_registers.transform_program.data() + i * 4, 4 * sizeof(u32));
+			ucode_size += 4;
+			memcpy(ucode_dst, ucode_src, 4 * sizeof(u32));
 
-			D3 d3;
-			d3.HEX = rsx::method_registers.transform_program[i * 4 + 3];
-
+			d3.HEX = ucode_src[3];
 			if (d3.end)
 				break;
+
+			ucode_src += 4;
+			ucode_dst += 4;
 		}
-		result.output_mask = rsx::method_registers.vertex_attrib_output_mask();
+
+		current_vertex_program.data.resize(ucode_size);
 
 		const u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
 		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
@@ -909,7 +1148,7 @@ namespace rsx
 
 			if (rsx::method_registers.vertex_arrays_info[index].size() > 0)
 			{
-				result.rsx_vertex_inputs.push_back(
+				current_vertex_program.rsx_vertex_inputs.push_back(
 					{index,
 						rsx::method_registers.vertex_arrays_info[index].size(),
 						rsx::method_registers.vertex_arrays_info[index].frequency(),
@@ -919,7 +1158,7 @@ namespace rsx
 			}
 			else if (vertex_push_buffers[index].vertex_count > 1)
 			{
-				result.rsx_vertex_inputs.push_back(
+				current_vertex_program.rsx_vertex_inputs.push_back(
 				{ index,
 					rsx::method_registers.register_vertex_info[index].size,
 					1,
@@ -929,7 +1168,7 @@ namespace rsx
 			}
 			else if (rsx::method_registers.register_vertex_info[index].size > 0)
 			{
-				result.rsx_vertex_inputs.push_back(
+				current_vertex_program.rsx_vertex_inputs.push_back(
 					{index,
 						rsx::method_registers.register_vertex_info[index].size,
 						rsx::method_registers.register_vertex_info[index].frequency,
@@ -1106,10 +1345,13 @@ namespace rsx
 		result.shadow_textures = 0;
 
 		std::array<texture_dimension_extended, 16> texture_dimensions;
+		const auto resolution_scale = rsx::get_resolution_scale();
+
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			auto &tex = rsx::method_registers.fragment_textures[i];
-			result.texture_pitch_scale[i] = 1.f;
+			result.texture_scale[i][0] = 1.f;
+			result.texture_scale[i][1] = 1.f;
 			result.textures_alpha_kill[i] = 0;
 			result.textures_zfunc[i] = 0;
 
@@ -1146,14 +1388,23 @@ namespace rsx
 				if (surface_exists && surface_pitch)
 				{
 					if (raw_format & CELL_GCM_TEXTURE_UN)
-						result.texture_pitch_scale[i] = (float)surface_pitch / tex.pitch();
+					{
+						result.texture_scale[i][0] = (resolution_scale * (float)surface_pitch) / tex.pitch();
+						result.texture_scale[i][1] = resolution_scale;
+					}
 				}
 				else
 				{
 					std::tie(surface_exists, surface_pitch) = get_surface_info(texaddr, tex, true);
 					if (surface_exists)
 					{
-						u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+						if (raw_format & CELL_GCM_TEXTURE_UN)
+						{
+							result.texture_scale[i][0] = (resolution_scale * (float)surface_pitch) / tex.pitch();
+							result.texture_scale[i][1] = resolution_scale;
+						}
+
+						const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 						switch (format)
 						{
 						case CELL_GCM_TEXTURE_A8R8G8B8:
@@ -1165,8 +1416,14 @@ namespace rsx
 						case CELL_GCM_TEXTURE_DEPTH16:
 						case CELL_GCM_TEXTURE_DEPTH24_D8:
 						case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+						{
+							const auto compare_mode = (rsx::comparison_function)tex.zfunc();
+							if (result.textures_alpha_kill[i] == 0 &&
+								compare_mode < rsx::comparison_function::always &&
+								compare_mode > rsx::comparison_function::never)
 								result.shadow_textures |= (1 << i);
-								break;
+							break;
+						}
 						default:
 								LOG_ERROR(RSX, "Depth texture bound to pipeline with unexpected format 0x%X", format);
 						}
@@ -1529,7 +1786,7 @@ namespace rsx
 			for (const auto &block : layout.interleaved_blocks)
 			{
 				u32 unique_verts;
-				u32 vertex_base = first_vertex * block.attribute_stride;
+				u32 vertex_base = 0;
 
 				if (block.single_vertex)
 				{
@@ -1548,6 +1805,7 @@ namespace rsx
 				else
 				{
 					unique_verts = vertex_count;
+					vertex_base = first_vertex * block.attribute_stride;
 				}
 
 				const u32 data_size = block.attribute_stride * unique_verts;
