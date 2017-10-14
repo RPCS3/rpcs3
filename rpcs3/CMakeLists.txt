@@ -282,6 +282,7 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../3rdparty/GL"
 "${RPCS3_SRC_DIR}/../3rdparty/stblib"
 "${RPCS3_SRC_DIR}/../3rdparty/cereal/include"
+"${RPCS3_SRC_DIR}/../3rdparty/Optional"
 )
 
 if(WIN32)
