@@ -342,7 +342,6 @@ if (NOT WIN32 AND VULKAN_FOUND)
 	"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/MachineIndependent/*.cpp"
 	"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/OSDependent/Unix/*.cpp"
 	"${RPCS3_SRC_DIR}/../Vulkan/glslang/OGLCompilersDLL/*.cpp"
-	"${RPCS3_SRC_DIR}/../Vulkan/glslang/hlsl/*.cpp"
 	"${RPCS3_SRC_DIR}/../Vulkan/glslang/SPIRV/*.cpp"
 	)
 	
