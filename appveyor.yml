@@ -51,6 +51,7 @@ build:
 before_build:
  - set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%/#%APPVEYOR_PULL_REQUEST_NUMBER%
  - if "%APPVEYOR_PULL_REQUEST_NUMBER%"=="" (set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%)
+ - set CXXFLAGS=-DBRANCH=%BRANCH%
  - set PATH=%PATH%;%QTDIR%
  - if not exist llvmlibs.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8" -FileName llvmlibs.7z
  - 7z x llvmlibs.7z -aos -o%APPVEYOR_BUILD_FOLDER% > null
