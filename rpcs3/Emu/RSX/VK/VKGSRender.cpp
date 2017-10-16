@@ -1211,7 +1211,8 @@ void VKGSRender::end()
 	}
 
 	std::optional<std::tuple<VkDeviceSize, VkIndexType> > index_info = std::get<4>(upload_info);
-	bool single_draw = rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive;
+	const bool is_emulated_restart = (index_info && rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart() && rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed);
+	const bool single_draw = !is_emulated_restart && (rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive);
 
 	if (!index_info)
 	{
@@ -1244,12 +1245,23 @@ void VKGSRender::end()
 		}
 		else
 		{
-			u32 first_vertex = 0;
-			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+			if (!is_emulated_restart)
 			{
-				const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
-				vkCmdDrawIndexed(*m_current_command_buffer, verts, 1, 0, first_vertex, 0);
-				first_vertex += verts;
+				u32 first_vertex = 0;
+				for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+				{
+					const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
+					vkCmdDrawIndexed(*m_current_command_buffer, verts, 1, first_vertex, 0, 0);
+					first_vertex += verts;
+				}
+			}
+			else
+			{
+				for (const auto &range : rsx::method_registers.current_draw_clause.alternate_first_count_commands)
+				{
+					//Primitive restart splitting happens after the primitive type expansion step
+					vkCmdDrawIndexed(*m_current_command_buffer, range.second, 1, range.first, 0, 0);
+				}
 			}
 		}
 	}
@@ -1839,7 +1851,7 @@ bool VKGSRender::check_program_status()
 	properties.ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	properties.ia.topology = vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, unused);
 
-	if (rsx::method_registers.restart_index_enabled())
+	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed && rsx::method_registers.restart_index_enabled() && !vk::emulate_primitive_restart())
 		properties.ia.primitiveRestartEnable = VK_TRUE;
 	else
 		properties.ia.primitiveRestartEnable = VK_FALSE;

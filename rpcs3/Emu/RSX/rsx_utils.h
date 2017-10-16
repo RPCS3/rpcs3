@@ -251,4 +251,33 @@ namespace rsx
 
 		return result;
 	}
+
+	template <typename T>
+	void split_index_list(T* indices, int index_count, T restart_index, std::vector<std::pair<u32, u32>>& out)
+	{
+		int last_valid_index = -1;
+		int last_start = -1;
+
+		for (int i = 0; i < index_count; ++i)
+		{
+			if (indices[i] == UINT16_MAX)
+			{
+				if (last_start >= 0)
+				{
+					out.push_back(std::make_pair(last_start, i - last_start));
+					last_start = -1;
+				}
+
+				continue;
+			}
+
+			if (last_start < 0)
+				last_start = i;
+
+			last_valid_index = i;
+		}
+
+		if (last_start >= 0)
+			out.push_back(std::make_pair(last_start, last_valid_index - last_start + 1));
+	}
 }
