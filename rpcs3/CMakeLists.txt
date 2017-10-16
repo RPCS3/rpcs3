@@ -166,6 +166,29 @@ find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if (NOT WITHOUT_LLVM)
 	find_package(LLVM 4.0 CONFIG)
+  if (NOT LLVM_FOUND)
+    message("System LLVM was not found, LLVM will be built from the submodule.")
+
+    set(LLVM_TARGETS_TO_BUILD "X86" CACHE INTERNAL "")
+    option(LLVM_BUILD_RUNTIME OFF)
+    option(LLVM_BUILD_TOOLS OFF)
+    option(LLVM_INCLUDE_DOCS OFF)
+    option(LLVM_INCLUDE_EXAMPLES OFF)
+    option(LLVM_INCLUDE_TESTS OFF)
+    option(LLVM_INCLUDE_TOOLS OFF)
+    option(LLVM_INCLUDE_UTILS OFF)
+    option(WITH_POLLY OFF)
+
+    # LLVM needs to be built out-of-tree
+    add_subdirectory(../llvm ../llvm_build)
+    set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/../llvm_build/lib/cmake/llvm/")
+
+    # now tries to find LLVM again
+    find_package(LLVM 4.0 CONFIG)
+    if (NOT LLVM_FOUND)
+      message(WARNING "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
+    endif()
+  endif()
 endif()
 
 
@@ -259,6 +282,7 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../3rdparty/GL"
 "${RPCS3_SRC_DIR}/../3rdparty/stblib"
 "${RPCS3_SRC_DIR}/../3rdparty/cereal/include"
+"${RPCS3_SRC_DIR}/../3rdparty/Optional"
 )
 
 if(WIN32)
@@ -318,7 +342,6 @@ if (NOT WIN32 AND VULKAN_FOUND)
 	"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/MachineIndependent/*.cpp"
 	"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/OSDependent/Unix/*.cpp"
 	"${RPCS3_SRC_DIR}/../Vulkan/glslang/OGLCompilersDLL/*.cpp"
-	"${RPCS3_SRC_DIR}/../Vulkan/glslang/hlsl/*.cpp"
 	"${RPCS3_SRC_DIR}/../Vulkan/glslang/SPIRV/*.cpp"
 	)
 	

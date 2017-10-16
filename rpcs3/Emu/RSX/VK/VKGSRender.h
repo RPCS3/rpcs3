@@ -6,7 +6,6 @@
 #include "VKFormats.h"
 #include "VKTextOut.h"
 #include "restore_new.h"
-#include <Utilities/optional.hpp>
 #include "define_new_memleakdetect.h"
 #include "VKProgramBuffer.h"
 #include "../GCM.h"
@@ -159,6 +158,8 @@ private:
 
 	std::unique_ptr<vk::framebuffer_holder> m_draw_fbo;
 
+	bool present_surface_dirty_flag = false;
+
 	u64 m_last_heap_sync_time = 0;
 	vk::vk_data_heap m_attrib_ring_info;
 	vk::vk_data_heap m_uniform_buffer_ring_info;
@@ -289,6 +290,7 @@ private:
 	void process_swap_request(frame_context_t *ctx, bool free_resources = false);
 	void advance_queued_frames();
 	void present(frame_context_t *ctx);
+	void reinitialize_swapchain();
 
 	void begin_render_pass();
 	void close_render_pass();

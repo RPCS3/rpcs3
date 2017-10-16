@@ -4,6 +4,7 @@
 #include "sha1.h"
 #include "key_vault.h"
 #include "Utilities/StrFmt.h"
+#include "Emu/VFS.h"
 #include "unpkg.h"
 
 bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>& sync, const std::string& pkg_filepath)
@@ -285,7 +286,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 
 		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : dec_key.data());
 
-		const std::string name(reinterpret_cast<char*>(buf.get()), entry.name_size);
+		std::string name{reinterpret_cast<char*>(buf.get()), entry.name_size};
 
 		LOG_NOTICE(LOADER, "Entry 0x%08x: %s", entry.type, name);
 
@@ -303,17 +304,17 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 		case 0x15:
 		case 0x16:
 		{
-			const std::string path = dir + name;
+			const std::string path = dir + vfs::escape(name);
 
 			const bool did_overwrite = fs::is_file(path);
 
-			if (did_overwrite && (entry.type&PKG_FILE_ENTRY_OVERWRITE) == 0)
+			if (did_overwrite && (entry.type & PKG_FILE_ENTRY_OVERWRITE) == 0)
 			{
 				LOG_NOTICE(LOADER, "Didn't overwrite %s", name);
 				break;
 			}
 
-			if (fs::file out{ path, fs::rewrite })
+			if (fs::file out{path, fs::rewrite})
 			{
 				for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
 				{
@@ -358,7 +359,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 		case PKG_FILE_ENTRY_FOLDER:
 		case 0x12:
 		{
-			const std::string path = dir + name;
+			const std::string path = dir + vfs::escape(name);
 
 			if (fs::create_dir(path))
 			{

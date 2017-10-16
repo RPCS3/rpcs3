@@ -403,6 +403,9 @@ namespace rsx
 		std::vector<u32> deferred_stack;
 		bool has_deferred_call = false;
 
+		// Track register address faults
+		u32 mem_faults_count = 0;
+
 		auto flush_command_queue = [&]()
 		{
 			const auto num_draws = (u32)method_registers.current_draw_clause.first_count_commands.size();
@@ -494,8 +497,18 @@ namespace rsx
 			{
 				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", get, put);
 
+				if (mem_faults_count >= 3)
+				{
+					LOG_ERROR(RSX, "Application has failed to recover, discarding FIFO queue");
+					ctrl->get = put;
+				}
+				else
+				{
+					mem_faults_count++;
+					std::this_thread::sleep_for(1ms);
+				}
+
 				invalid_command_interrupt_raised = true;
-				ctrl->get = put;
 				continue;
 			}
 
@@ -545,10 +558,23 @@ namespace rsx
 			{
 				LOG_ERROR(RSX, "Invalid FIFO queue args ptr found, get=0x%X, cmd=0x%X, count=%d", get, cmd, count);
 
+				if (mem_faults_count >= 3)
+				{
+					LOG_ERROR(RSX, "Application has failed to recover, discarding FIFO queue");
+					ctrl->get = put;
+				}
+				else
+				{
+					mem_faults_count++;
+					std::this_thread::sleep_for(1ms);
+				}
+
 				invalid_command_interrupt_raised = true;
-				ctrl->get = put;
 				continue;
 			}
+
+			// All good on valid memory ptrs
+			mem_faults_count = 0;
 
 			auto args = vm::ptr<u32>::make(args_address);
 			invalid_command_interrupt_raised = false;
@@ -809,7 +835,7 @@ namespace rsx
 
 		const auto window_origin = rsx::method_registers.shader_window_origin();
 		const u32 window_height = rsx::method_registers.shader_window_height();
-		const f32 resolution_scale = (window_height <= g_cfg.video.min_scalable_dimension)? 1.f : rsx::get_resolution_scale();
+		const f32 resolution_scale = (window_height <= (u32)g_cfg.video.min_scalable_dimension)? 1.f : rsx::get_resolution_scale();
 		const f32 wpos_scale = (window_origin == rsx::window_origin::top) ? (1.f / resolution_scale) : (-1.f / resolution_scale);
 		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
 

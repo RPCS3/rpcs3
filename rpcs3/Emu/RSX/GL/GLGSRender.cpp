@@ -193,17 +193,12 @@ void GLGSRender::begin()
 		float range_near = rsx::method_registers.clip_min();
 		float range_far = rsx::method_registers.clip_max();
 
-		if (g_cfg.video.strict_rendering_mode)
-			gl_state.depth_range(range_near, range_far);
+		//Workaround to preserve depth precision but respect z direction
+		//Ni no Kuni sets a very restricted z range (0.9x - 1.) and depth reads / tests are broken
+		if (range_near <= range_far)
+			gl_state.depth_range(0.f, 1.f);
 		else
-		{
-			//Workaround to preserve depth precision but respect z direction
-			//Ni no Kuni sets a very restricted z range (0.9x - 1.) and depth reads / tests are broken
-			if (range_near <= range_far)
-				gl_state.depth_range(0.f, 1.f);
-			else
-				gl_state.depth_range(1.f, 0.f);
-		}
+			gl_state.depth_range(1.f, 0.f);
 	}
 
 	if (glDepthBoundsEXT && (gl_state.enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
@@ -1236,6 +1231,8 @@ void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 
 void GLGSRender::do_local_task()
 {
+	m_frame->clear_wm_events();
+
 	std::lock_guard<std::mutex> lock(queue_guard);
 
 	work_queue.remove_if([](work_item &q) { return q.received; });

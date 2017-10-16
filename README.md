@@ -63,7 +63,8 @@ To initialize the repository don't forget to execute `git submodule update --ini
 1) `git clone https://github.com/RPCS3/rpcs3.git` </br>
 2) `cd rpcs3/` </br>
 3) `git submodule update --init` </br>
-4) `cmake CMakeLists.txt && make GitVersion && make` </br>
+4) `cd ../ && mkdir rpcs3_build && cd rpcs3_build`
+4) `cmake ../rpcs3/ && make GitVersion && make` </br>
 5) Run RPCS3 with `./bin/rpcs3` </br>
 
 If you are on MacOS and want to build with brew llvm and qt don't forget to add the following environment variables
