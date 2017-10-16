@@ -453,8 +453,8 @@ namespace vk
 		case VK_ERROR_OUT_OF_POOL_MEMORY_KHR:
 			error_message = "Out of pool memory (VK_ERROR_OUT_OF_POOL_MEMORY_KHR)";
 			break;
-		case VK_ERROR_INVALID_EXTERNAL_HANDLE_KHX:
-			error_message = "Invalid external handle (VK_ERROR_INVALID_EXTERNAL_HANDLE_KHX)";
+		case VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR:
+			error_message = "Invalid external handle (VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR)";
 			break;
 		default:
 			error_message = fmt::format("Unknown Code (%Xh, %d)%s", (s32)error_code, (s32&)error_code, faulting_addr);

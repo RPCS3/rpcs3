@@ -68,6 +68,7 @@ namespace rsx
 		u32 cpu_address_range = 0;
 
 		utils::protection protection = utils::protection::rw;
+		protection_policy guard_policy;
 
 		bool locked = false;
 		bool dirty = false;
@@ -115,6 +116,7 @@ namespace rsx
 				locked_address_range = align(base + length, 4096) - locked_address_base;
 
 			protection = utils::protection::rw;
+			guard_policy = protect_policy;
 			locked = false;
 		}
 
@@ -170,7 +172,7 @@ namespace rsx
 		 * Check if the page containing the address tramples this section. Also compares a former trampled page range to compare
 		 * If true, returns the range <min, max> with updated invalid range 
 		 */
-		std::tuple<bool, std::pair<u32, u32>> overlaps_page(std::pair<u32, u32> old_range, u32 address) const
+		std::tuple<bool, std::pair<u32, u32>> overlaps_page(std::pair<u32, u32> old_range, u32 address, bool full_range_check) const
 		{
 			const u32 page_base = address & ~4095;
 			const u32 page_limit = address + 4096;
@@ -178,10 +180,25 @@ namespace rsx
 			const u32 compare_min = std::min(old_range.first, page_base);
 			const u32 compare_max = std::max(old_range.second, page_limit);
 
-			if (!region_overlaps(locked_address_base, locked_address_base + locked_address_range, compare_min, compare_max))
+			u32 memory_base, memory_range;
+			if (full_range_check && guard_policy != protection_policy::protect_policy_full_range)
+			{
+				//Make sure protection range is full range
+				memory_base = (cpu_address_base & ~4095);
+				memory_range = align(cpu_address_base + cpu_address_range, 4096u) - memory_base;
+			}
+			else
+			{
+				memory_base = locked_address_base;
+				memory_range = locked_address_range;
+			}
+
+			if (!region_overlaps(memory_base, memory_base + memory_range, compare_min, compare_max))
 				return std::make_tuple(false, old_range);
 
-			return std::make_tuple(true, get_min_max(std::make_pair(compare_min, compare_max)));
+			const u32 _min = std::min(memory_base, compare_min);
+			const u32 _max = std::max(memory_base + memory_range, compare_max);
+			return std::make_tuple(true, std::make_pair(_min, _max));
 		}
 
 		bool is_locked() const
