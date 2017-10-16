@@ -952,7 +952,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeTooltip(ui->disableHwOcclusionQueries, json_debug["disableOcclusionQueries"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->forceCpuBlitEmulation, emu_settings::ForceCPUBlitEmulation);
-	ui->forceCpuBlitEmulation->setToolTip(json_debug["forceCpuBlitEmulation"].toString());
+	SubscribeTooltip(ui->forceCpuBlitEmulation, json_debug["forceCpuBlitEmulation"].toString());
 
 	// Checkboxes: core debug options
 	xemu_settings->EnhanceCheckBox(ui->ppuDebug, emu_settings::PPUDebug);
