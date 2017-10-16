@@ -90,6 +90,9 @@
     <Filter Include="Gui\misc dialogs">
       <UniqueIdentifier>{114eef25-61bf-4df5-8867-09156cf51b8a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\syntax highlighter">
+      <UniqueIdentifier>{adb985ae-88db-4274-a6fd-6bcf230451ca}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\rpcs3qt\*.cpp">
@@ -542,6 +545,9 @@
     <ClCompile Include="rpcs3qt\msg_dialog_frame.cpp">
       <Filter>Gui\message dialog</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\syntax_highlighter.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -713,6 +719,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\msg_dialog_frame.h">
       <Filter>Gui\message dialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\syntax_highlighter.h">
+      <Filter>Generated Files</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
