@@ -845,7 +845,6 @@ void GLGSRender::on_exit()
 void GLGSRender::clear_surface(u32 arg)
 {
 	if (skip_frame || !framebuffer_status_valid) return;
-	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
 	if ((arg & 0xf3) == 0) return;
 
 	GLbitfield mask = 0;
@@ -1181,10 +1180,6 @@ void GLGSRender::flip(int buffer)
 		tex->remove();
 
 	m_rtts.invalidated_resources.clear();
-
-	if (g_cfg.video.invalidate_surface_cache_every_frame)
-		m_rtts.invalidate_surface_cache_data(nullptr);
-
 	m_vertex_cache->purge();
 
 	//If we are skipping the next frame, do not reset perf counters
