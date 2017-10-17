@@ -51,7 +51,7 @@ namespace
 		u32 block_sz = vertex_draw_count * type_size;
 
 		gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(ptr), ::narrow<u32>(block_sz) };
-		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, raw_index_buffer,
+		std::tie(min_index, max_index, vertex_draw_count) = write_index_array_data_to_buffer(dst, raw_index_buffer,
 			type, draw_mode, rsx::method_registers.restart_index_enabled(), rsx::method_registers.restart_index(), first_count_commands,
 			[](auto prim) { return !gl::is_primitive_native(prim); });
 

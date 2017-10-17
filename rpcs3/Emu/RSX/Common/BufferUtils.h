@@ -29,10 +29,10 @@ u32 get_index_type_size(rsx::index_array_type type);
 
 /**
  * Write count indexes using (first, first + count) ranges.
- * Returns min/max index found during the process.
+ * Returns min/max index found during the process and the number of valid indices written to the buffer.
  * The function expands index buffer for non native primitive type if expands(draw_mode) return true.
  */
-std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, gsl::span<const gsl::byte> src,
+std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, gsl::span<const gsl::byte> src,
 	rsx::index_array_type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
 	std::function<bool(rsx::primitive_type)> expands);
 
