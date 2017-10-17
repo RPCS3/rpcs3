@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>7</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -500,13 +500,6 @@
              <widget class="QCheckBox" name="dumpColor">
               <property name="text">
                <string>Write Color Buffers</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="autoInvalidateCache">
-              <property name="text">
-               <string>Invalidate Cache Every Frame</string>
               </property>
              </widget>
             </item>

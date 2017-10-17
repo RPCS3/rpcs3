@@ -171,9 +171,9 @@ namespace
 				rsx::method_registers.current_draw_clause.alternate_first_count_commands.resize(0);
 
 				if (index_type == rsx::index_array_type::u16)
-					rsx::split_index_list(reinterpret_cast<u16*>(tmp.data()), index_count, UINT16_MAX, rsx::method_registers.current_draw_clause.alternate_first_count_commands);
+					rsx::split_index_list(reinterpret_cast<u16*>(tmp.data()), index_count, (u16)UINT16_MAX, rsx::method_registers.current_draw_clause.alternate_first_count_commands);
 				else
-					rsx::split_index_list(reinterpret_cast<u32*>(tmp.data()), index_count, UINT32_MAX, rsx::method_registers.current_draw_clause.alternate_first_count_commands);
+					rsx::split_index_list(reinterpret_cast<u32*>(tmp.data()), index_count, (u32)UINT32_MAX, rsx::method_registers.current_draw_clause.alternate_first_count_commands);
 
 				memcpy(buf, tmp.data(), tmp.size());
 			}

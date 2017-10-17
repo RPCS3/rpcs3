@@ -1341,9 +1341,6 @@ void VKGSRender::clear_surface(u32 mask)
 {
 	if (skip_frame) return;
 
-	// Ignore clear if surface target is set to CELL_GCM_SURFACE_TARGET_NONE
-	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
-
 	// Ignore invalid clear flags
 	if (!(mask & 0xF3)) return;
 
@@ -1564,10 +1561,6 @@ void VKGSRender::advance_queued_frames()
 			process_swap_request(&ctx, true);
 		}
 	}
-
-	//Only marks surfaces as dirty without actually deleting them so its safe to use
-	if (g_cfg.video.invalidate_surface_cache_every_frame)
-		m_rtts.invalidate_surface_cache_data(&*m_current_command_buffer);
 
 	//m_rtts storage is double buffered and should be safe to tag on frame boundary
 	m_rtts.free_invalidated();
@@ -2175,17 +2168,31 @@ void VKGSRender::prepare_rtts()
 	u32 clip_x = rsx::method_registers.surface_clip_origin_x();
 	u32 clip_y = rsx::method_registers.surface_clip_origin_y();
 
+	framebuffer_status_valid = false;
+
 	if (clip_width == 0 || clip_height == 0)
 	{
 		LOG_ERROR(RSX, "Invalid framebuffer setup, w=%d, h=%d", clip_width, clip_height);
-		framebuffer_status_valid = false;
 		return;
 	}
 
-	framebuffer_status_valid = true;
-
 	auto surface_addresses = get_color_surface_addresses();
 	auto zeta_address = get_zeta_surface_address();
+
+	for (const auto &addr: surface_addresses)
+	{
+		if (addr)
+		{
+			framebuffer_status_valid = true;
+			break;
+		}
+	}
+
+	if (!framebuffer_status_valid && !zeta_address)
+		return;
+
+	//At least one attachment exists
+	framebuffer_status_valid = true;
 	
 	const u32 surface_pitchs[] = { rsx::method_registers.surface_a_pitch(), rsx::method_registers.surface_b_pitch(),
 			rsx::method_registers.surface_c_pitch(), rsx::method_registers.surface_d_pitch() };

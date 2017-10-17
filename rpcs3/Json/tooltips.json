@@ -80,7 +80,6 @@
 		"main": {
 			"dumpColor": "Enable this option if you get missing graphics or broken lighting ingame.\nMight degrade performance and introduce stuttering in some cases.\nRequired for Demon's Souls.",
 			"vsync": "By having this off you might obtain a higher frame rate at the cost of tearing artifacts in the game.",
-			"autoInvalidateCache": "Enable this option if the game has broken shadows. May slightly degrade performance.",
 			"gpuTextureScaling": "Small to significant performance boost in most games and rarely with side effects.\nMay cause texture corruption in rare cases.",
 			"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
 			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area."
