@@ -456,7 +456,7 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 namespace
 {
 template<typename T>
-std::tuple<T, T> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
+std::tuple<T, T, T> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
 {
 	T min_index = -1;
 	T max_index = 0;
@@ -468,6 +468,10 @@ std::tuple<T, T> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> 
 	{
 		if (is_primitive_restart_enabled && index == primitive_restart_index)
 		{
+			// List types do not need primitive restart. Just skip over this instead
+			if (rsx::method_registers.current_draw_clause.is_disjoint_primitive)
+				continue;
+
 			index = -1;
 		}
 		else
@@ -478,62 +482,68 @@ std::tuple<T, T> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> 
 
 		dst[dst_idx++] = index;
 	}
-	return std::make_tuple(min_index, max_index);
+	return std::make_tuple(min_index, max_index, ::narrow<T>(dst_idx));
 }
 
-// FIXME: expanded primitive type may not support primitive restart correctly
 template<typename T>
-std::tuple<T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
+std::tuple<T, T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
 {
-	T min_index = -1;
+	const T invalid_index = (T)-1;
+
+	T min_index = invalid_index;
 	T max_index = 0;
 
 	verify(HERE), (dst.size() >= 3 * (src.size() - 2));
 
-	const T index0 = src[0];
-	if (!is_primitive_restart_enabled || index0 != -1) // Cut
-	{
-		min_index = std::min(min_index, index0);
-		max_index = std::max(max_index, index0);
-	}
-
 	size_t dst_idx = 0;
-	while (src.size() > 2)
+	size_t src_idx = 0;
+
+	bool needs_anchor = true;
+	T anchor = invalid_index;
+	T last_index = invalid_index;
+
+	for (size_t src_idx = 0; src_idx < src.size(); ++src_idx)
 	{
-		gsl::span<to_be_t<const T>> tri_indexes = src.subspan(0, 2);
-		T index1 = tri_indexes[0];
-		if (is_primitive_restart_enabled && index1 == primitive_restart_index)
+		if (needs_anchor)
 		{
-			index1 = -1;
-		}
-		else
-		{
-			min_index = std::min(min_index, index1);
-			max_index = std::max(max_index, index1);
-		}
-		T index2 = tri_indexes[1];
-		if (is_primitive_restart_enabled && index2 == primitive_restart_index)
-		{
-			index2 = -1;
-		}
-		else
-		{
-			min_index = std::min(min_index, index2);
-			max_index = std::max(max_index, index2);
+			if (is_primitive_restart_enabled && src[src_idx] == primitive_restart_index)
+				continue;
+
+			anchor = src[src_idx];
+			needs_anchor = false;
+			continue;
 		}
 
-		dst[dst_idx++] = index0;
-		dst[dst_idx++] = index1;
-		dst[dst_idx++] = index2;
+		if (is_primitive_restart_enabled && src[src_idx] == primitive_restart_index)
+		{
+			needs_anchor = true;
+			last_index = invalid_index;
+			continue;
+		}
 
-		src = src.subspan(2);
+		T index = src[src_idx];
+		max_index = std::max(max_index, index);
+		min_index = std::min(min_index, index);
+
+		if (last_index == invalid_index)
+		{
+			//Need at least one anchor and one outer index to create a triange
+			last_index = index;
+			continue;
+		}
+
+		dst[dst_idx++] = anchor;
+		dst[dst_idx++] = last_index;
+		dst[dst_idx++] = index;
+
+		last_index = index;
 	}
-	return std::make_tuple(min_index, max_index);
+
+	return std::make_tuple(min_index, max_index, ::narrow<T>(dst_idx));
 }
 
-// FIXME: expanded primitive type may not support primitive restart correctly
 template<typename T>
-std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
+std::tuple<T, T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
 {
 	T min_index = -1;
 	T max_index = 0;
@@ -541,62 +551,39 @@ std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span
 	verify(HERE), (4 * dst.size_bytes() >= 6 * src.size_bytes());
 
 	size_t dst_idx = 0;
-	while (!src.empty())
+	size_t set_size = 0;
+	T tmp_indices[4];
+
+	for (int src_idx = 0; src_idx < src.size(); ++src_idx)
 	{
-		gsl::span<to_be_t<const T>> quad_indexes = src.subspan(0, 4);
-		T index0 = quad_indexes[0];
-		if (is_primitive_restart_enabled && index0 == primitive_restart_index)
+		T index = src[src_idx];
+		if (is_primitive_restart_enabled && index == primitive_restart_index)
 		{
-			index0 = -1;
-		}
-		else
-		{
-			min_index = std::min(min_index, index0);
-			max_index = std::max(max_index, index0);
-		}
-		T index1 = quad_indexes[1];
-		if (is_primitive_restart_enabled && index1 == primitive_restart_index)
-		{
-			index1 = -1;
-		}
-		else
-		{
-			min_index = std::min(min_index, index1);
-			max_index = std::max(max_index, index1);
-		}
-		T index2 = quad_indexes[2];
-		if (is_primitive_restart_enabled && index2 == primitive_restart_index)
-		{
-			index2 = -1;
-		}
-		else
-		{
-			min_index = std::min(min_index, index2);
-			max_index = std::max(max_index, index2);
-		}
-		T index3 = quad_indexes[3];
-		if (is_primitive_restart_enabled &&index3 == primitive_restart_index)
-		{
-			index3 = -1;
-		}
-		else
-		{
-			min_index = std::min(min_index, index3);
-			max_index = std::max(max_index, index3);
+			//empty temp buffer
+			set_size = 0;
+			continue;
 		}
 
-		// First triangle
-		dst[dst_idx++] = index0;
-		dst[dst_idx++] = index1;
-		dst[dst_idx++] = index2;
-		// Second triangle
-		dst[dst_idx++] = index2;
-		dst[dst_idx++] = index3;
-		dst[dst_idx++] = index0;
+		tmp_indices[set_size++] = index;
+		max_index = std::max(max_index, index);
+		min_index = std::min(min_index, index);
 
-		src = src.subspan(4);
+		if (set_size == 4)
+		{
+			// First triangle
+			dst[dst_idx++] = tmp_indices[0];
+			dst[dst_idx++] = tmp_indices[1];
+			dst[dst_idx++] = tmp_indices[2];
+			// Second triangle
+			dst[dst_idx++] = tmp_indices[2];
+			dst[dst_idx++] = tmp_indices[3];
+			dst[dst_idx++] = tmp_indices[0];
+
+			set_size = 0;
+		}
 	}
-	return std::make_tuple(min_index, max_index);
+
+	return std::make_tuple(min_index, max_index, ::narrow<T>(dst_idx));
 }
 }
 
@@ -714,7 +701,7 @@ namespace
 
 	// TODO: Unify indexed and non indexed primitive expansion ?
 	template<typename T>
-	std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T> dst,
+	std::tuple<T, T, T> write_index_array_data_to_buffer_impl(gsl::span<T> dst,
 		gsl::span<const be_t<T>> src,
 		rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
 		std::function<bool(rsx::primitive_type)> expands)
@@ -743,7 +730,7 @@ namespace
 	}
 }
 
-std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst,
+std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst,
 	gsl::span<const gsl::byte> src,
 	rsx::index_array_type type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
 	std::function<bool(rsx::primitive_type)> expands)

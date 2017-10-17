@@ -503,8 +503,9 @@ void GLGSRender::end()
 	{
 		const GLenum index_type = std::get<0>(indexed_draw_info.value());
 		const u32 index_offset = std::get<1>(indexed_draw_info.value());
+		const bool restarts_valid = gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive) && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
 
-		if (gl_state.enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
+		if (gl_state.enable(restarts_valid && rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
 		{
 			glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
 		}

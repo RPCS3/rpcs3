@@ -157,7 +157,7 @@ namespace
 			* Upload index (and expands it if primitive type is not natively supported).
 			*/
 			u32 min_index, max_index;
-			std::tie(min_index, max_index) = write_index_array_data_to_buffer(
+			std::tie(min_index, max_index, index_count) = write_index_array_data_to_buffer(
 				dst,
 				command.raw_index_buffer, index_type,
 				rsx::method_registers.current_draw_clause.primitive,

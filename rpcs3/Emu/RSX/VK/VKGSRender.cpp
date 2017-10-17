@@ -1842,16 +1842,17 @@ bool VKGSRender::check_program_status()
 
 	vk::pipeline_props properties = {};
 
-	bool unused;
+	bool emulated_primitive_type;
 	bool update_blend_constants = false;
 	bool update_stencil_info_back = false;
 	bool update_stencil_info_front = false;
 	bool update_depth_bounds = false;
 
 	properties.ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	properties.ia.topology = vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, unused);
+	properties.ia.topology = vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, emulated_primitive_type);
 
-	if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed && rsx::method_registers.restart_index_enabled() && !vk::emulate_primitive_restart())
+	const bool restarts_valid = rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed && !emulated_primitive_type && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
+	if (rsx::method_registers.restart_index_enabled() && !vk::emulate_primitive_restart() && restarts_valid)
 		properties.ia.primitiveRestartEnable = VK_TRUE;
 	else
 		properties.ia.primitiveRestartEnable = VK_FALSE;
