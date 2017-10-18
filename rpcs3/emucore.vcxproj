@@ -9,8 +9,8 @@
       <Configuration>Debug - MemLeak</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release - LLVM|x64">
-      <Configuration>Release - LLVM</Configuration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
@@ -40,7 +40,7 @@
     <Import Project="..\rpcs3_debug.props" />
     <Import Project="..\rpcs3_llvm.props" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="..\rpcs3_release.props" />
     <Import Project="..\rpcs3_llvm.props" />
   </ImportGroup>
@@ -93,7 +93,7 @@
     </ClCompile>
     <ClCompile Include="..\Utilities\sysinfo.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp" />
