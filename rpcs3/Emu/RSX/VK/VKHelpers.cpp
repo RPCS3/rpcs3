@@ -269,6 +269,7 @@ namespace vk
 			"RX 480",
 			"RX 470",
 			"RX 460",
+			"RX Vega",
 		};
 
 		const auto gpu_name = g_current_renderer.gpu().name();

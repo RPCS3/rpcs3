@@ -456,14 +456,14 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 namespace
 {
 template<typename T>
-std::tuple<T, T, T> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
+std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
 {
 	T min_index = -1;
 	T max_index = 0;
 
 	verify(HERE), (dst.size_bytes() >= src.size_bytes());
 
-	size_t dst_idx = 0;
+	u32 dst_idx = 0;
 	for (T index : src)
 	{
 		if (is_primitive_restart_enabled && index == primitive_restart_index)
@@ -482,11 +482,11 @@ std::tuple<T, T, T> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<
 
 		dst[dst_idx++] = index;
 	}
-	return std::make_tuple(min_index, max_index, ::narrow<T>(dst_idx));
+	return std::make_tuple(min_index, max_index, dst_idx);
 }
 
 template<typename T>
-std::tuple<T, T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
+std::tuple<T, T, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
 {
 	const T invalid_index = (T)-1;
 
@@ -495,8 +495,8 @@ std::tuple<T, T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src,
 
 	verify(HERE), (dst.size() >= 3 * (src.size() - 2));
 
-	size_t dst_idx = 0;
-	size_t src_idx = 0;
+	u32 dst_idx = 0;
+	u32 src_idx = 0;
 
 	bool needs_anchor = true;
 	T anchor = invalid_index;
@@ -539,19 +539,19 @@ std::tuple<T, T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src,
 		last_index = index;
 	}
 
-	return std::make_tuple(min_index, max_index, ::narrow<T>(dst_idx));
+	return std::make_tuple(min_index, max_index, dst_idx);
 }
 
 template<typename T>
-std::tuple<T, T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
+std::tuple<T, T, u32> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
 {
 	T min_index = -1;
 	T max_index = 0;
 
 	verify(HERE), (4 * dst.size_bytes() >= 6 * src.size_bytes());
 
-	size_t dst_idx = 0;
-	size_t set_size = 0;
+	u32 dst_idx = 0;
+	u8 set_size = 0;
 	T tmp_indices[4];
 
 	for (int src_idx = 0; src_idx < src.size(); ++src_idx)
@@ -583,7 +583,7 @@ std::tuple<T, T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::s
 		}
 	}
 
-	return std::make_tuple(min_index, max_index, ::narrow<T>(dst_idx));
+	return std::make_tuple(min_index, max_index, dst_idx);
 }
 }
 
@@ -701,7 +701,7 @@ namespace
 
 	// TODO: Unify indexed and non indexed primitive expansion ?
 	template<typename T>
-	std::tuple<T, T, T> write_index_array_data_to_buffer_impl(gsl::span<T> dst,
+	std::tuple<T, T, u32> write_index_array_data_to_buffer_impl(gsl::span<T> dst,
 		gsl::span<const be_t<T>> src,
 		rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
 		std::function<bool(rsx::primitive_type)> expands)
