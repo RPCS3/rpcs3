@@ -5,10 +5,6 @@
       <Configuration>Debug - LLVM</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug - MemLeak|x64">
-      <Configuration>Debug - MemLeak</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Release - LLVM|x64">
       <Configuration>Release - LLVM</Configuration>
       <Platform>x64</Platform>
@@ -64,10 +60,6 @@
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\rpcs3_default.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'" Label="PropertySheets">
-    <Import Project="..\rpcs3_debug.props" />
-    <Import Project="..\rpcs3_memleak.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'" Label="PropertySheets">
     <Import Project="..\rpcs3_debug.props" />
