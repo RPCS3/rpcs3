@@ -194,7 +194,7 @@ namespace gl
 					EXT_dsa_supported = true;
 			}
 #ifdef _WIN32
-			else if (vendor_string.find("amd") != std::string::npos)
+			else if (vendor_string.find("amd") != std::string::npos || vendor_string.find("ati") != std::string::npos)
 			{
 				vendor_AMD = true;
 			}
