@@ -260,12 +260,13 @@ namespace vk
 		g_current_renderer = device;
 
 #ifdef _WIN32
-		const std::array<std::string, 6> black_listed = 
+		const std::array<std::string, 8> black_listed = 
 		{
 			// Black list all polaris unless its proven they dont have a problem with primitive restart
 			"RX 580",
 			"RX 570",
 			"RX 560",
+			"RX 550",
 			"RX 480",
 			"RX 470",
 			"RX 460",
