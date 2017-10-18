@@ -47,6 +47,11 @@
     <Import Project="..\rpcs3_llvm.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>LLVM_AVAILABLE;MSVC_CRT_MEMLEAK_DETECTION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\D3D12\D3D12Utils.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12CommonDecompiler.h" />
