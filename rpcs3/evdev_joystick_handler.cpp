@@ -119,16 +119,16 @@ bool evdev_joystick_handler::try_open_dev(u32 index)
         pads[index]->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
     pads[index]->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 
-    int buttons=0;
-    for (u32 i=BTN_JOYSTICK; i<KEY_MAX; i++)
+    int buttons = 0;
+    for (u32 i = BTN_JOYSTICK; i < KEY_MAX; i++)
         if (libevdev_has_event_code(dev, EV_KEY, i))
         {
             LOG_NOTICE(GENERAL, "Joystick #%d has button %d as %d", index, i, buttons);
             joy_button_maps[index][i - BTN_MISC] = buttons++;
         }
 
-    int axes=0;
-    for (u32 i=ABS_X; i<=ABS_RZ; i++)
+    int axes = 0;
+    for (u32 i = ABS_X; i <= ABS_RZ; i++)
     {
 
         if (libevdev_has_event_code(dev, EV_ABS, i))
@@ -144,7 +144,7 @@ bool evdev_joystick_handler::try_open_dev(u32 index)
         }
     }
 
-    for (u32 i=ABS_HAT0X; i<=ABS_HAT3Y; i+=2)
+    for (u32 i = ABS_HAT0X; i <= ABS_HAT3Y; i += 2)
         if (libevdev_has_event_code(dev, EV_ABS, i) ||
             libevdev_has_event_code(dev, EV_ABS, i+1))
         {
@@ -351,7 +351,7 @@ void evdev_joystick_handler::ThreadProc()
 {
     update_devs();
 
-    for (int i=0; i<joy_devs.size(); i++)
+    for (int i = 0; i<joy_devs.size(); i++)
     {
         auto pad = pads[i];
         auto& dev = joy_devs[i];
@@ -413,10 +413,41 @@ void evdev_joystick_handler::ThreadProc()
             break;
         }
         case EV_ABS:
-            LOG_NOTICE(GENERAL, "Joystick #%d EV_ABS: %d %d", i, evt.code, evt.value);
+        {
 
-            if (evt.code >= ABS_HAT0X && evt.code <= ABS_HAT3Y) {
-                int hat = evt.code - ABS_HAT0X;
+            LOG_NOTICE(GENERAL, "Joystick #%d EV_ABS: %d %d", i, evt.code, evt.value);
+            //duplicate the evt.code and evt.value, so that they're still available
+            //for the analog input
+            int code2 = evt.code;
+            int value2 = evt.value;
+            if (g_evdev_joystick_config.left_analog_to_dpad)
+            {
+                //some gamepad have a -32767 to +32767 range; others have a 0 to 255
+                float center2 = (axis_ranges[evt.code].second + axis_ranges[evt.code].first) / 2;
+                //arbitrary decision: when the value is higher than a 1/3 of the range, we simulate a dpad press
+                float threshold2 = (axis_ranges[evt.code].second-center2)/3;
+                if (code2 == 0 || code2 == 1)
+                {
+                    value2 = 0;
+                    if (evt.value > center2 + threshold2)
+                        value2 = 1;
+                    else if (evt.value < center2 - threshold2)
+                        value2 = -1;
+                    if (revaxis[code2])
+                        value2 = -value2;
+                    if (g_evdev_joystick_config.lxstick < g_evdev_joystick_config.lystick)
+                    {
+                        code2 = (code2 == 0) ? ABS_HAT0X : ABS_HAT0Y;
+                    }
+                    else
+                    {
+                        code2 = (code2 == 0) ? ABS_HAT0Y : ABS_HAT0X;
+                    }
+                }
+            }
+            if (code2 >= ABS_HAT0X && code2 <= ABS_HAT3Y)
+            {
+                int hat = code2 - ABS_HAT0X;
                 if (hat != joy_hat_ids[i] && hat-1 != joy_hat_ids[i])
                 {
                     LOG_ERROR(GENERAL, "Joystick #%d sent HAT event for invalid hat %d (expected %d)", i, hat, joy_hat_ids[i]);
@@ -429,7 +460,7 @@ void evdev_joystick_handler::ThreadProc()
                 {
                     if (bt.m_keyCode != source_axis) continue;
 
-                    if (evt.value == 0)
+                    if (value2 == 0)
                     {
                         bt.m_pressed = false;
                         bt.m_value = 0;
@@ -439,13 +470,12 @@ void evdev_joystick_handler::ThreadProc()
                         int code;
                         if (source_axis == EVDEV_DPAD_HAT_AXIS_X)
                         {
-                            code = evt.value > 0 ? CELL_PAD_CTRL_RIGHT : CELL_PAD_CTRL_LEFT;
+                            code = value2 > 0 ? CELL_PAD_CTRL_RIGHT : CELL_PAD_CTRL_LEFT;
                         }
                         else
                         {
-                            code = evt.value > 0 ? CELL_PAD_CTRL_DOWN : CELL_PAD_CTRL_UP;
+                            code = value2 > 0 ? CELL_PAD_CTRL_DOWN : CELL_PAD_CTRL_UP;
                         }
-
                         if (bt.m_outKeyCode == code)
                         {
                             bt.m_pressed = true;
@@ -457,7 +487,7 @@ void evdev_joystick_handler::ThreadProc()
             else if (axistrigger && (evt.code == ABS_Z || evt.code == ABS_RZ))
             {
                 // For Xbox controllers, a third axis represent the left/right triggers.
-                int which_trigger=0;
+                int which_trigger = 0;
 
                 if (evt.code == ABS_Z)
                 {
@@ -486,7 +516,7 @@ void evdev_joystick_handler::ThreadProc()
                 which_button->m_pressed = value > 0;
                 which_button->m_value = value;
             }
-            else if (evt.code >= ABS_X && evt.code <= ABS_RZ)
+            if (evt.code >= ABS_X && evt.code <= ABS_RZ)
             {
                 int axis = joy_axis_maps[i][evt.code - ABS_X];
 
@@ -531,6 +561,7 @@ void evdev_joystick_handler::ThreadProc()
                     pad->m_sticks[axis].m_value = scale_axis(evt.code, value);
             }
             break;
+        }
         default:
             LOG_ERROR(GENERAL, "Unknown joystick #%d event %d", i, evt.type);
             break;
