@@ -1,12 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
+    <ProjectConfiguration Include="Debug - LLVM|x64">
+      <Configuration>Debug - LLVM</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
+    <ProjectConfiguration Include="Debug - MemLeak|x64">
+      <Configuration>Debug - MemLeak</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release - LLVM|x64">
+      <Configuration>Release - LLVM</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
@@ -28,11 +32,15 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\rpcs3_default.props" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'" Label="PropertySheets">
     <Import Project="..\rpcs3_debug.props" />
     <Import Project="..\rpcs3_memleak.props" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'" Label="PropertySheets">
+    <Import Project="..\rpcs3_debug.props" />
+    <Import Project="..\rpcs3_llvm.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'" Label="PropertySheets">
     <Import Project="..\rpcs3_release.props" />
     <Import Project="..\rpcs3_llvm.props" />
   </ImportGroup>
@@ -40,16 +48,11 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <AdditionalIncludeDirectories>..\3rdparty\zlib;..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MSVC_CRT_MEMLEAK_DETECTION;LLVM_AVAILABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PreBuildEvent>
       <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
       <Message>Updating git-version.h</Message>
     </PreBuildEvent>
-    <Lib>
-      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">LLVMProfileData.lib;LLVMDebugInfoCodeView.lib;LLVMDebugInfoMSF.lib;LLVMInstrumentation.lib;LLVMMCJIT.lib;LLVMRuntimeDyld.lib;LLVMVectorize.lib;LLVMX86CodeGen.lib;LLVMGlobalISel.lib;LLVMX86Disassembler.lib;LLVMExecutionEngine.lib;LLVMAsmPrinter.lib;LLVMSelectionDAG.lib;LLVMCodeGen.lib;LLVMScalarOpts.lib;LLVMInstCombine.lib;LLVMTransformUtils.lib;LLVMAnalysis.lib;LLVMTarget.lib;LLVMX86Desc.lib;LLVMX86AsmPrinter.lib;LLVMObject.lib;LLVMMCParser.lib;LLVMBitReader.lib;LLVMCore.lib;LLVMX86Utils.lib;LLVMMC.lib;LLVMX86Info.lib;LLVMSupport.lib;LLVMMCDisassembler.lib;LLVMipo.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\llvm_build\Debug\lib</AdditionalLibraryDirectories>
-    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\ps3emu_api\ps3emu_api.cpp">
@@ -89,8 +92,9 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\sysinfo.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="..\Utilities\version.cpp" />
