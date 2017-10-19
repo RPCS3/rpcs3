@@ -14,6 +14,11 @@ inline void ppu_cr_set(ppu_thread& ppu, u32 field, bool le, bool gt, bool eq, bo
 	ppu.cr[field * 4 + 1] = gt;
 	ppu.cr[field * 4 + 2] = eq;
 	ppu.cr[field * 4 + 3] = so;
+
+	if (UNLIKELY(g_cfg.core.ppu_debug))
+	{
+		*(u32*)(vm::g_stat_addr + ppu.cia) |= *(u32*)(u8*)(ppu.cr + field * 4);
+	}
 }
 
 // Write comparison results to CR field

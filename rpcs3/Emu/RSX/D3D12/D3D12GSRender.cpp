@@ -301,6 +301,12 @@ void D3D12GSRender::on_exit()
 	return GSRender::on_exit();
 }
 
+void D3D12GSRender::do_local_task()
+{
+	//TODO
+	m_frame->clear_wm_events();
+}
+
 bool D3D12GSRender::do_method(u32 cmd, u32 arg)
 {
 	switch (cmd)

@@ -63,9 +63,10 @@ void rpcs3_app::Init()
 	Emu.Init();
 
 	guiSettings.reset(new gui_settings());
+	emuSettings.reset(new emu_settings());
 
 	// Create the main window
-	RPCS3MainWin = new main_window(guiSettings, nullptr);
+	RPCS3MainWin = new main_window(guiSettings, emuSettings, nullptr);
 
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();

@@ -54,6 +54,7 @@ namespace gl
 #endif
 
 	class capabilities;
+	class blitter;
 
 	void enable_debugging();
 	capabilities& get_driver_caps();
@@ -83,6 +84,7 @@ namespace gl
 		bool NV_texture_barrier_supported = false;
 		bool initialized = false;
 		bool vendor_INTEL = false;
+		bool vendor_AMD = false;
 
 		void initialize()
 		{
@@ -191,6 +193,12 @@ namespace gl
 				if (!EXT_dsa_supported && glGetTextureImageEXT && glTextureBufferRangeEXT)
 					EXT_dsa_supported = true;
 			}
+#ifdef _WIN32
+			else if (vendor_string.find("amd") != std::string::npos || vendor_string.find("ati") != std::string::npos)
+			{
+				vendor_AMD = true;
+			}
+#endif
 
 			initialized = true;
 		}

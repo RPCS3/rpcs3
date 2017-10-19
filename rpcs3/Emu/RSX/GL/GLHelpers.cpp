@@ -4,6 +4,7 @@
 
 namespace gl
 {
+	blitter *g_hw_blitter = nullptr;
 	capabilities g_driver_caps;
 	const fbo screen{};
 

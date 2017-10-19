@@ -35,7 +35,7 @@ namespace vk
 			if (length > cpu_address_range)
 				release_dma_resources();
 
-			rsx::protection_policy policy = g_cfg.video.strict_rendering_mode ? rsx::protection_policy::protect_policy_full_range : rsx::protection_policy::protect_policy_one_page;
+			rsx::protection_policy policy = g_cfg.video.strict_rendering_mode ? rsx::protection_policy::protect_policy_full_range : rsx::protection_policy::protect_policy_conservative;
 			rsx::buffered_section::reset(base, length, policy);
 		}
 
@@ -146,13 +146,16 @@ namespace vk
 				cmd.begin();
 			}
 
+			const u16 internal_width = std::min(width, rsx::apply_resolution_scale(width, true));
+			const u16 internal_height = std::min(height, rsx::apply_resolution_scale(height, true));
+
 			VkBufferImageCopy copyRegion = {};
 			copyRegion.bufferOffset = 0;
-			copyRegion.bufferRowLength = width;
-			copyRegion.bufferImageHeight = height;
+			copyRegion.bufferRowLength = internal_width;
+			copyRegion.bufferImageHeight = internal_height;
 			copyRegion.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
 			copyRegion.imageOffset = {};
-			copyRegion.imageExtent = {width, height, 1};
+			copyRegion.imageExtent = {internal_width, internal_height, 1};
 
 			VkImageSubresourceRange subresource_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 			
@@ -354,7 +357,7 @@ namespace vk
 			tex.release_dma_resources();
 		}
 
-		vk::image_view* create_temporary_subresource_view(vk::command_buffer& cmd, vk::image* source, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) override
+		vk::image_view* create_temporary_subresource_view(vk::command_buffer& cmd, vk::image* source, u32 /*gcm_format*/, u16 x, u16 y, u16 w, u16 h) override
 		{
 			VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -672,7 +675,7 @@ namespace vk
 			{
 				vk::command_buffer* commands;
 				blit_helper(vk::command_buffer *c) : commands(c) {}
-				void scale_image(vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, bool is_depth)
+				void scale_image(vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool /*interpolate*/, bool is_depth)
 				{
 					VkImageAspectFlagBits aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 					if (is_depth) aspect = (VkImageAspectFlagBits)(src->info.format == VK_FORMAT_D16_UNORM ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);

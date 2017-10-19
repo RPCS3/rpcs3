@@ -193,17 +193,12 @@ void GLGSRender::begin()
 		float range_near = rsx::method_registers.clip_min();
 		float range_far = rsx::method_registers.clip_max();
 
-		if (g_cfg.video.strict_rendering_mode)
-			gl_state.depth_range(range_near, range_far);
+		//Workaround to preserve depth precision but respect z direction
+		//Ni no Kuni sets a very restricted z range (0.9x - 1.) and depth reads / tests are broken
+		if (range_near <= range_far)
+			gl_state.depth_range(0.f, 1.f);
 		else
-		{
-			//Workaround to preserve depth precision but respect z direction
-			//Ni no Kuni sets a very restricted z range (0.9x - 1.) and depth reads / tests are broken
-			if (range_near <= range_far)
-				gl_state.depth_range(0.f, 1.f);
-			else
-				gl_state.depth_range(1.f, 0.f);
-		}
+			gl_state.depth_range(1.f, 0.f);
 	}
 
 	if (glDepthBoundsEXT && (gl_state.enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
@@ -502,14 +497,15 @@ void GLGSRender::end()
 	}
 
 	const GLenum draw_mode = gl::draw_mode(rsx::method_registers.current_draw_clause.primitive);
-	bool single_draw = rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive;
+	bool single_draw = !supports_multidraw || (rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive);
 
 	if (indexed_draw_info)
 	{
 		const GLenum index_type = std::get<0>(indexed_draw_info.value());
 		const u32 index_offset = std::get<1>(indexed_draw_info.value());
+		const bool restarts_valid = gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive) && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
 
-		if (gl_state.enable(rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
+		if (gl_state.enable(restarts_valid && rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
 		{
 			glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
 		}
@@ -550,21 +546,32 @@ void GLGSRender::end()
 		}
 		else
 		{
-			std::vector<GLint> firsts;
-			std::vector<GLsizei> counts;
-			const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
-
-			firsts.reserve(draw_count);
-			counts.reserve(draw_count);
-
 			u32 base_index = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
-			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+			if (gl::get_driver_caps().vendor_AMD == false)
 			{
-				firsts.push_back(range.first - base_index);
-				counts.push_back(range.second);
-			}
+				std::vector<GLint> firsts;
+				std::vector<GLsizei> counts;
+				const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
 
-			glMultiDrawArrays(draw_mode, firsts.data(), counts.data(), (GLsizei)draw_count);
+				firsts.reserve(draw_count);
+				counts.reserve(draw_count);
+
+				for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+				{
+					firsts.push_back(range.first - base_index);
+					counts.push_back(range.second);
+				}
+
+				glMultiDrawArrays(draw_mode, firsts.data(), counts.data(), (GLsizei)draw_count);
+			}
+			else
+			{
+				//MultiDrawArrays is broken on some primitive types using AMD. One known type is GL_TRIANGLE_STRIP but there could be more
+				for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+				{
+					glDrawArrays(draw_mode, range.first - base_index, range.second);
+				}
+			}
 		}
 	}
 
@@ -589,14 +596,14 @@ void GLGSRender::end()
 void GLGSRender::set_viewport()
 {
 	//NOTE: scale offset matrix already contains the viewport transformation
-	const auto clip_width = rsx::method_registers.surface_clip_width();
-	const auto clip_height = rsx::method_registers.surface_clip_height();
+	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
+	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
 	glViewport(0, 0, clip_width, clip_height);
 
-	u16 scissor_x = rsx::method_registers.scissor_origin_x();
-	u16 scissor_w = rsx::method_registers.scissor_width();
-	u16 scissor_y = rsx::method_registers.scissor_origin_y();
-	u16 scissor_h = rsx::method_registers.scissor_height();
+	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
+	u16 scissor_w = rsx::apply_resolution_scale(rsx::method_registers.scissor_width(), true);
+	u16 scissor_y = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_y(), false);
+	u16 scissor_h = rsx::apply_resolution_scale(rsx::method_registers.scissor_height(), true);
 
 	//Do not bother drawing anything if output is zero sized
 	//TODO: Clip scissor region
@@ -838,7 +845,6 @@ void GLGSRender::on_exit()
 void GLGSRender::clear_surface(u32 arg)
 {
 	if (skip_frame || !framebuffer_status_valid) return;
-	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
 	if ((arg & 0xf3) == 0) return;
 
 	GLbitfield mask = 0;
@@ -1174,10 +1180,6 @@ void GLGSRender::flip(int buffer)
 		tex->remove();
 
 	m_rtts.invalidated_resources.clear();
-
-	if (g_cfg.video.invalidate_surface_cache_every_frame)
-		m_rtts.invalidate_surface_cache_data(nullptr);
-
 	m_vertex_cache->purge();
 
 	//If we are skipping the next frame, do not reset perf counters
@@ -1236,6 +1238,8 @@ void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 
 void GLGSRender::do_local_task()
 {
+	m_frame->clear_wm_events();
+
 	std::lock_guard<std::mutex> lock(queue_guard);
 
 	work_queue.remove_if([](work_item &q) { return q.received; });

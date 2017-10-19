@@ -63,7 +63,8 @@ To initialize the repository don't forget to execute `git submodule update --ini
 1) `git clone https://github.com/RPCS3/rpcs3.git` </br>
 2) `cd rpcs3/` </br>
 3) `git submodule update --init` </br>
-4) `cmake CMakeLists.txt && make GitVersion && make` </br>
+4) `cd ../ && mkdir rpcs3_build && cd rpcs3_build`
+4) `cmake ../rpcs3/ && make GitVersion && make` </br>
 5) Run RPCS3 with `./bin/rpcs3` </br>
 
 If you are on MacOS and want to build with brew llvm and qt don't forget to add the following environment variables
@@ -81,9 +82,6 @@ Build against the shared libpng instead of using the builtin one. libpng 1.6+ hi
 
 - ```-DUSE_SYSTEM_FFMPEG=ON/OFF``` (default = *OFF*)  
 Build against the shared ffmpeg libraries instead of using the builtin patched version. Try this if the builtin version breaks the OpenGL renderer for you.
-
-- ```-DUSE_SHARED_LLVM_LIBS=ON/OFF``` (default = *OFF*)  
-This builds against the shared LLVM libs, rather than the static ones. This may interfere with Mesa and render RPCS3 non-functional. Only recommended on gentoo.
 
 - ```-DWITHOUT_LLVM=ON/OFF``` (default = *OFF*)  
 This forces RPCS3 to build without LLVM, not recommended.

@@ -53,6 +53,7 @@ namespace rsx
 	enum protection_policy
 	{
 		protect_policy_one_page,	//Only guard one page, preferrably one where this section 'wholly' fits
+		protect_policy_conservative, //Guards as much memory as possible that is guaranteed to only be covered by the defined range without sharing
 		protect_policy_full_range	//Guard the full memory range. Shared pages may be invalidated by access outside the object we're guarding
 	};
 
@@ -67,6 +68,7 @@ namespace rsx
 		u32 cpu_address_range = 0;
 
 		utils::protection protection = utils::protection::rw;
+		protection_policy guard_policy;
 
 		bool locked = false;
 		bool dirty = false;
@@ -90,18 +92,23 @@ namespace rsx
 
 			locked_address_base = (base & ~4095);
 
-			if (protect_policy == protect_policy_one_page)
+			if ((protect_policy != protect_policy_full_range) && (length >= 4096))
 			{
+				const u32 limit = base + length;
+				const u32 block_end = (limit & ~4095);
+				const u32 block_start = (locked_address_base < base) ? (locked_address_base + 4096) : locked_address_base;
+
 				locked_address_range = 4096;
-				if (locked_address_base < base)
+
+				if (block_start < block_end)
 				{
-					//Try the next page if we can
-					//TODO: If an object spans a boundary without filling either side, guard the larger page occupancy
-					const u32 next_page = locked_address_base + 4096;
-					if ((base + length) >= (next_page + 4096))
+					//Page boundaries cover at least one unique page
+					locked_address_base = block_start;
+
+					if (protect_policy == protect_policy_conservative)
 					{
-						//The object spans the entire page. Guard this instead
-						locked_address_base = next_page;
+						//Protect full unique range
+						locked_address_range = (block_end - block_start);
 					}
 				}
 			}
@@ -109,6 +116,7 @@ namespace rsx
 				locked_address_range = align(base + length, 4096) - locked_address_base;
 
 			protection = utils::protection::rw;
+			guard_policy = protect_policy;
 			locked = false;
 		}
 
@@ -164,7 +172,7 @@ namespace rsx
 		 * Check if the page containing the address tramples this section. Also compares a former trampled page range to compare
 		 * If true, returns the range <min, max> with updated invalid range 
 		 */
-		std::tuple<bool, std::pair<u32, u32>> overlaps_page(std::pair<u32, u32> old_range, u32 address) const
+		std::tuple<bool, std::pair<u32, u32>> overlaps_page(std::pair<u32, u32> old_range, u32 address, bool full_range_check) const
 		{
 			const u32 page_base = address & ~4095;
 			const u32 page_limit = address + 4096;
@@ -172,10 +180,25 @@ namespace rsx
 			const u32 compare_min = std::min(old_range.first, page_base);
 			const u32 compare_max = std::max(old_range.second, page_limit);
 
-			if (!region_overlaps(locked_address_base, locked_address_base + locked_address_range, compare_min, compare_max))
+			u32 memory_base, memory_range;
+			if (full_range_check && guard_policy != protection_policy::protect_policy_full_range)
+			{
+				//Make sure protection range is full range
+				memory_base = (cpu_address_base & ~4095);
+				memory_range = align(cpu_address_base + cpu_address_range, 4096u) - memory_base;
+			}
+			else
+			{
+				memory_base = locked_address_base;
+				memory_range = locked_address_range;
+			}
+
+			if (!region_overlaps(memory_base, memory_base + memory_range, compare_min, compare_max))
 				return std::make_tuple(false, old_range);
 
-			return std::make_tuple(true, get_min_max(std::make_pair(compare_min, compare_max)));
+			const u32 _min = std::min(memory_base, compare_min);
+			const u32 _max = std::max(memory_base + memory_range, compare_max);
+			return std::make_tuple(true, std::make_pair(_min, _max));
 		}
 
 		bool is_locked() const
@@ -306,7 +329,7 @@ namespace rsx
 			});
 
 			u32 processed = 0;
-			while (root.read(tmp))
+			while (root.read(tmp) && !Emu.IsStopped())
 			{
 				if (tmp.name == "." || tmp.name == "..")
 					continue;
