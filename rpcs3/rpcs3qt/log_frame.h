@@ -50,6 +50,7 @@ private:
 	fs::file m_tty_file;
 
 	QAction* m_clearAct;
+	QAction* m_clearTTYAct;
 
 	QActionGroup* m_logLevels;
 	QAction* m_nothingAct;

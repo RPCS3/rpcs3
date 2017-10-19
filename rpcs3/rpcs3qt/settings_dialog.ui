@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>729</width>
-    <height>821</height>
+    <width>550</width>
+    <height>604</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>7</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -314,9 +314,12 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_5">
           <item>
-           <widget class="QLabel" name="label_2">
+           <widget class="QLabel" name="description_cpu">
             <property name="text">
-             <string>CPU settings allow you to change both the PPU (Power Processing Element) and SPU (Synergistic Processing Unit) decoder modes. You can also adjust firmware settings for the emulated console. These settings allow you to load firmware libraries automatically, manually or both at the same time as well as on-the-fly.</string>
+             <string>Point your mouse at an option to display a description in here.
+
+
+</string>
             </property>
             <property name="textFormat">
              <enum>Qt::PlainText</enum>
@@ -468,7 +471,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_29">
            <property name="title">
-            <string>Resolution</string>
+            <string>Default Resolution</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_22">
             <item>
@@ -500,13 +503,6 @@
              <widget class="QCheckBox" name="dumpColor">
               <property name="text">
                <string>Write Color Buffers</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="autoInvalidateCache">
-              <property name="text">
-               <string>Invalidate Cache Every Frame</string>
               </property>
              </widget>
             </item>
@@ -552,30 +548,9 @@
            <item>
             <widget class="QGroupBox" name="gb_resolutionScale">
              <property name="title">
-              <string>Resolution Scale</string>
+              <string>Resolution Scale (Disable Strict Mode)</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_29">
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_25" stretch="1,0">
-                <item>
-                 <widget class="QLabel" name="resolutionScaleVal">
-                  <property name="text">
-                   <string>0</string>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignCenter</set>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="resolutionScaleReset">
-                  <property name="text">
-                   <string>Reset</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
               <item>
                <widget class="QWidget" name="widget_9" native="true">
                 <layout class="QHBoxLayout" name="horizontalLayout_23" stretch="0,1,0">
@@ -621,6 +596,27 @@
                 </layout>
                </widget>
               </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_25" stretch="1,0">
+                <item>
+                 <widget class="QLabel" name="resolutionScaleVal">
+                  <property name="text">
+                   <string>0</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="resolutionScaleReset">
+                  <property name="text">
+                   <string>Reset</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
              </layout>
             </widget>
            </item>
@@ -630,27 +626,6 @@
               <string>Resolution Scale Threshold</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_57">
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_26" stretch="1,0">
-                <item>
-                 <widget class="QLabel" name="minimumScalableDimensionVal">
-                  <property name="text">
-                   <string>1x1</string>
-                  </property>
-                  <property name="alignment">
-                   <set>Qt::AlignCenter</set>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="minimumScalableDimensionReset">
-                  <property name="text">
-                   <string>Reset</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
               <item>
                <layout class="QHBoxLayout" name="horizontalLayout_24" stretch="0,1,0">
                 <property name="spacing">
@@ -677,6 +652,27 @@
                  <widget class="QLabel" name="minimumScalableDimensionMax">
                   <property name="text">
                    <string>1024</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_26" stretch="1,0">
+                <item>
+                 <widget class="QLabel" name="minimumScalableDimensionVal">
+                  <property name="text">
+                   <string>1x1</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="minimumScalableDimensionReset">
+                  <property name="text">
+                   <string>Reset</string>
                   </property>
                  </widget>
                 </item>
@@ -712,9 +708,12 @@
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_5">
           <item>
-           <widget class="QLabel" name="label_3">
+           <widget class="QLabel" name="description_gpu">
             <property name="text">
-             <string>GPU settings allow you to change the rendering backend of the emulated console. You can also choose your preferred graphics device for GPU specific rendering APIs as well as adjust the output resolution, aspect ratio and framelimit of the emulated console. Additional enhancement settings will be added in the future.</string>
+             <string>Point your mouse at an option to display a description in here.
+
+
+</string>
             </property>
             <property name="textFormat">
              <enum>Qt::PlainText</enum>
@@ -816,9 +815,10 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_20">
           <item>
-           <widget class="QLabel" name="label_4">
+           <widget class="QLabel" name="description_audio">
             <property name="text">
-             <string>Audio settings allow you to change the way audio is encoded and handled by the emulator. More detailed settings will be added in the future.
+             <string>Point your mouse at an option to display a description in here.
+
 
 </string>
             </property>
@@ -900,13 +900,6 @@
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_12">
-         <item>
-          <widget class="QWidget" name="widget_3" native="true"/>
-         </item>
-        </layout>
-       </item>
-       <item>
         <spacer name="verticalSpacer_7">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -929,9 +922,10 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_33">
           <item>
-           <widget class="QLabel" name="label_5">
+           <widget class="QLabel" name="description_io">
             <property name="text">
-             <string>I/O settings allow you to change controller, keyboard and mouse handlers as well as PlayStation camera inputs. More detailed settings will be added in the future.
+             <string>Point your mouse at an option to display a description in here.
+
 
 </string>
             </property>
@@ -1033,9 +1027,11 @@
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_13">
           <item>
-           <widget class="QLabel" name="label_7">
+           <widget class="QLabel" name="description_system">
             <property name="text">
-             <string>System settings allow you to change basic system settings found within a real PlayStation 3 system. Depending on the application in use, the console language setting will change the language of the application accordingly. More detailed settings will be added in the future.
+             <string>Point your mouse at an option to display a description in here.
+
+
 </string>
             </property>
             <property name="textFormat">
@@ -1101,9 +1097,10 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_39">
           <item>
-           <widget class="QLabel" name="label_6">
+           <widget class="QLabel" name="description_network">
             <property name="text">
-             <string>Network settings allow you to change basic network settings found within a real PlayStation 3 system. More detailed settings may or may not be added in the future.
+             <string>Point your mouse at an option to display a description in here.
+
 
 </string>
             </property>
@@ -1442,9 +1439,12 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_45">
           <item>
-           <widget class="QLabel" name="label_8">
+           <widget class="QLabel" name="description_emulator">
             <property name="text">
-             <string>Emulator settings allow you to set personal preferences within the emulator such as automatic exit when a process is finished, starting games after boot and allowing games to automatically boot into fullscreen mode. You can also create your own stylesheets which can be used as themes for a more personal experience. </string>
+             <string>Point your mouse at an option to display a description in here.
+
+
+</string>
             </property>
             <property name="textFormat">
              <enum>Qt::PlainText</enum>
@@ -1622,9 +1622,9 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_52">
           <item>
-           <widget class="QLabel" name="label_9">
+           <widget class="QLabel" name="description_debug">
             <property name="text">
-             <string>These options are only needed for development.
+             <string>Point your mouse at an option to display a description in here.
 
 
 </string>
@@ -1654,12 +1654,18 @@
        <property name="text">
         <string>Save</string>
        </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
       </widget>
      </item>
      <item alignment="Qt::AlignLeft">
       <widget class="QPushButton" name="cancelButton">
        <property name="text">
         <string>Close</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
        </property>
       </widget>
      </item>

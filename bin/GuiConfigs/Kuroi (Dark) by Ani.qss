@@ -40,7 +40,7 @@ QWidget {
 
 /* Mouse tooltips */
 QToolTip {
-	border: 1px solid #323232;
+	border: 0.05em solid #323232;
 	background-color: #323232;
 	color: #ecf0f1;
 }
@@ -49,29 +49,29 @@ QToolTip {
 QHeaderView::section {
 	background-color: #323232;
 	color: #ecf0f1;
-	padding-left: 4px;
-	border: 1px solid #323232;
+	padding-left: 0.2em;
+	border: 0.05em solid #323232;
 }
 
 /* Settings Dialog: Tabs */
 QTabBar::tab {
 	color: #ecf0f1;
-	border: 1px solid #444;
+	border: 0.05em solid #444;
 	border-bottom-style: none;
 	background-color: #333333;
-	padding-left: 16px;
-	padding-right: 16px;
-	padding-top: 4px;
-	padding-bottom: 4px;
-	margin-right: -2px;
+	padding-left: 0.9em;
+	padding-right: 0.9em;
+	padding-top: 0.2em;
+	padding-bottom: 0.2em;
+	margin-right: -0.2em;
 }
 QTabBar::tab:last {
-	margin-right: 0px;
+	margin-right: 0em;
 }
 QTabBar::tab:!selected {
 	color: #b1b1b1;
 	border-bottom-style: solid;
-	margin-top: 3px;
+	margin-top: 0.15em;
 	background-color: #292929;
 }
 QTabBar::tab:hover {
@@ -81,11 +81,11 @@ QTabBar::tab:hover {
 
 /* Checkboxes */
 QCheckBox::indicator {
-	border-radius: 2px;
-	border: 1px solid #ecf0f1;
-	width: 10px;
-	height: 10px;
-	margin-top: 1px;
+	border-radius: 0.1em;
+	border: 0.05em solid #ecf0f1;
+	margin-top: 0.05em;
+	width: 0.8em;
+	height: 0.8em;
 }
 QCheckBox::indicator:checked {
 	background-color: #2ecc71; /* Green */
@@ -99,11 +99,11 @@ QCheckBox::indicator::disabled {
 
 /* Radio Buttons */
 QRadioButton::indicator {
-	border-radius: 6px;
-	border: 1px solid #ecf0f1;
-	width: 10px;
-	height: 10px;
-	margin-top: 1px;
+  border-radius: 0.4em; 
+  border: 0.05em solid;  
+  border-color: white; 
+  width: 0.8em; 
+  height: 0.8em; 
 }
 QRadioButton::indicator:checked {
 	background-color: #2ecc71; /* Green */
@@ -119,10 +119,10 @@ QRadioButton::indicator::disabled {
 QComboBox {
 	background-color: #404040;
 	color: #fff;
-	border: 1px solid #1e1e1e;
-	border-radius: 3px;
-	padding-bottom: 2px;
-	padding-left: 4px;
+	border: 0.05em solid #1e1e1e;
+	border-radius: 0.15em;
+	padding-bottom: 0.2em;
+	padding-left: 0.4em;
 }
 QComboBox::disabled {
 	background-color: #828790;
@@ -131,15 +131,15 @@ QComboBox::disabled {
 
 /* Group Boxes (Settings Dialog) */
 QGroupBox {
-	margin-top: 17px;
-	font-size: 13px;
-	border: 1px solid #bdc3c7;
-	border-radius: 4px;
+	margin-top: 1em;
+	font-size: 8pt;
+	border: 0.05em solid #bdc3c7;
+	border-radius: 0.3em;
 }
 QGroupBox::title {
 	subcontrol-origin: margin;
-	subcontrol-position: top center;
-	padding: 5px 10px 5px 10px;
+	subcontrol-position: top;
+	padding: 0.3em 0.5em 0.3em 0.5em;
 	color: #fff;
 }
 
@@ -154,19 +154,19 @@ QPushButton::disabled {
 
 /* Log and Debugger borders */
 QTextEdit {
-	border: 1px solid #828790;
+	border: 0.05em solid #828790;
 }
 
 /* For dock buttons to be visible */
 QDockWidget::close-button, QDockWidget::float-button {
 	background-color: #bdc3c7;
-	border: 1px solid #000;
-	border-radius: 4px;
+	border: 0.05em solid #000;
+	border-radius: 0.3em;
 }
 
 /* Disable ugly borders */
 QTabWidget::pane {
-	border: 0px solid #828790;
+	border: 0em solid #828790;
 }
 
 /* Top menu bar */
@@ -174,14 +174,14 @@ QMenuBar::item:selected {
 	background: #444444;
 }
 QMenu::item {
-	padding-left: 20px;
-	padding-right: 15px;
-	padding-top: 4px;
-	padding-bottom: 4px;
+	padding-left: 1em;
+	padding-right: 0.75em;
+	padding-top: 0.2em;
+	padding-bottom: 0.2em;
 }
 QMenu::item:selected {
 	background: #444444;
-	border: 1px solid #bdc3c7;
+	border: 0.05em solid #bdc3c7;
 }
 QMenu::item:disabled {
 	background-color: #444444;
@@ -223,7 +223,7 @@ QLabel#color_button {
 
 /* Seachbar on main toolbar */
 QLineEdit#mw_searchbar { 
-	margin-left:14px; 
+	margin-left: 0.7em; 
 	color: #ecf0f1;
 }
 

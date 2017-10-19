@@ -595,6 +595,7 @@ namespace rsx
 
 				bool execute_method_call = true;
 
+				//TODO: Flatten draw calls when multidraw is not supported to simplify checking in the end() methods
 				if (supports_multidraw)
 				{
 					//TODO: Make this cleaner
