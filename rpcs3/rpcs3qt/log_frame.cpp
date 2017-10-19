@@ -112,6 +112,7 @@ log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
 	m_tty = new QTextEdit(tabWidget);
 	m_tty->setObjectName("tty_frame");
 	m_tty->setReadOnly(true);
+	m_tty->setContextMenuPolicy(Qt::CustomContextMenu);
 
 	tabWidget->addTab(m_log, tr("Log"));
 	tabWidget->addTab(m_tty, tr("TTY"));
@@ -199,6 +200,9 @@ void log_frame::CreateAndConnectActions()
 	m_clearAct = new QAction(tr("Clear"), this);
 	connect(m_clearAct, &QAction::triggered, m_log, &QTextEdit::clear);
 
+	m_clearTTYAct = new QAction(tr("Clear"), this);
+	connect(m_clearTTYAct, &QAction::triggered, m_tty, &QTextEdit::clear);
+
 	// Action groups make these actions mutually exclusive.
 	m_logLevels = new QActionGroup(this);
 	m_nothingAct = new QAction(tr("Nothing"), m_logLevels);
@@ -245,6 +249,13 @@ void log_frame::CreateAndConnectActions()
 		menu->addAction(m_stackAct);
 		menu->addSeparator();
 		menu->addAction(m_TTYAct);
+		menu->exec(mapToGlobal(pos));
+	});
+
+	connect(m_tty, &QWidget::customContextMenuRequested, [=](const QPoint& pos)
+	{
+		QMenu* menu = m_tty->createStandardContextMenu();
+		menu->addAction(m_clearTTYAct);
 		menu->exec(mapToGlobal(pos));
 	});
 
