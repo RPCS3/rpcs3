@@ -39,7 +39,7 @@ install:
 platform: x64
 
 # build Configuration, i.e. Debug, Release, etc.
-configuration: Debug - LLVM
+configuration: Debug - MemLeak
 
 build:
   parallel: true                  # enable MSBuild parallel builds
