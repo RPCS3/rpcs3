@@ -79,6 +79,7 @@ namespace
 save_manager_dialog::save_manager_dialog(std::string dir, QWidget* parent) : QDialog(parent),
 	m_save_entries(), m_dir(dir), m_sort_column(1), m_sort_ascending(true)
 {
+	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setWindowTitle(tr("Save Manager"));
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 	setMinimumSize(QSize(400, 400));

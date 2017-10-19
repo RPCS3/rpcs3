@@ -45,4 +45,11 @@ private:
 	Ui::settings_dialog *ui;
 	std::shared_ptr<gui_settings> xgui_settings;
 	std::shared_ptr<emu_settings> xemu_settings;
+
+	// descriptions
+	QList<QPair<QLabel*, QString>> m_description_labels;
+	QHash<QObject*, QString> m_descriptions;
+	void SubscribeDescription(QLabel* description);
+	void SubscribeTooltip(QObject* object, const QString& tooltip);
+	bool eventFilter(QObject* object, QEvent* event);
 };
