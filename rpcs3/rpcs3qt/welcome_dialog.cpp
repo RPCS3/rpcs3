@@ -15,7 +15,7 @@ welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::we
 {
 	ui->setupUi(this);
 
-	setWindowFlags(Qt::WindowTitleHint);
+	setWindowFlags(windowFlags() & Qt::WindowTitleHint & ~Qt::WindowContextHelpButtonHint);
 
 	gui_settings* settings = new gui_settings(this);
 

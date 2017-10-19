@@ -144,6 +144,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_gameList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 	m_gameList->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_gameList->verticalScrollBar()->installEventFilter(this);
 	m_gameList->verticalScrollBar()->setSingleStep(20);
 	m_gameList->horizontalScrollBar()->setSingleStep(20);
 	m_gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);	
@@ -157,6 +158,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->horizontalHeader()->setDefaultSectionSize(150);
 	m_gameList->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_gameList->setAlternatingRowColors(true);
+	m_gameList->installEventFilter(this);
 
 	m_gameList->setColumnCount(GUI::COLUMN_COUNT);
 	m_gameList->setHorizontalHeaderItem( GUI::COLUMN_ICON,       new QTableWidgetItem(tr("Icon")));
@@ -950,6 +952,42 @@ void game_list_frame::resizeEvent(QResizeEvent *event)
 	QDockWidget::resizeEvent(event);
 }
 
+bool game_list_frame::eventFilter(QObject *object, QEvent *event)
+{
+	// Zoom gamelist/gamegrid
+	if (event->type() == QEvent::Wheel && (object == m_gameList->verticalScrollBar() || object == m_xgrid->verticalScrollBar()))
+	{
+		QWheelEvent *wheelEvent = static_cast<QWheelEvent *>(event);
+
+		if (wheelEvent->modifiers() & Qt::ControlModifier)
+		{
+			QPoint numSteps = wheelEvent->angleDelta() / 8 / 15;	// http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
+			const int value = numSteps.y();
+			m_Slider_Size->setValue(m_Slider_Size->value() + value);
+			return true;
+		}
+	}
+	else if (event->type() == QEvent::KeyPress && (object == m_gameList || object == m_xgrid))
+	{
+		QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+
+		if (keyEvent->modifiers() & Qt::ControlModifier)
+		{
+			if (keyEvent->key() == Qt::Key_Plus)
+			{
+				m_Slider_Size->setValue(m_Slider_Size->value() + 1);
+				return true;
+			}
+			else if (keyEvent->key() == Qt::Key_Minus)
+			{
+				m_Slider_Size->setValue(m_Slider_Size->value() - 1);
+				return true;
+			}
+		}
+	}
+	return QDockWidget::eventFilter(object, event);
+}
+
 /**
  Cleans and readds entries to table widget in UI.
 */
@@ -1099,6 +1137,8 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 
 	m_xgrid->resizeColumnsToContents();
 	m_xgrid->resizeRowsToContents();
+	m_xgrid->installEventFilter(this);
+	m_xgrid->verticalScrollBar()->installEventFilter(this);
 }
 
 /**

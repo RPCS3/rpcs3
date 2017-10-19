@@ -1211,7 +1211,12 @@ void VKGSRender::end()
 	}
 
 	std::optional<std::tuple<VkDeviceSize, VkIndexType> > index_info = std::get<4>(upload_info);
-	bool single_draw = rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive;
+
+	bool primitive_emulated = false;
+	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
+
+	const bool is_emulated_restart = (!primitive_emulated && rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart() && rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed);
+	const bool single_draw = !supports_multidraw || (!is_emulated_restart && (rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive));
 
 	if (!index_info)
 	{
@@ -1244,12 +1249,23 @@ void VKGSRender::end()
 		}
 		else
 		{
-			u32 first_vertex = 0;
-			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+			if (!is_emulated_restart)
 			{
-				const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
-				vkCmdDrawIndexed(*m_current_command_buffer, verts, 1, 0, first_vertex, 0);
-				first_vertex += verts;
+				u32 first_vertex = 0;
+				for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+				{
+					const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
+					vkCmdDrawIndexed(*m_current_command_buffer, verts, 1, first_vertex, 0, 0);
+					first_vertex += verts;
+				}
+			}
+			else
+			{
+				for (const auto &range : rsx::method_registers.current_draw_clause.alternate_first_count_commands)
+				{
+					//Primitive restart splitting happens after the primitive type expansion step
+					vkCmdDrawIndexed(*m_current_command_buffer, range.second, 1, range.first, 0, 0);
+				}
 			}
 		}
 	}
@@ -1324,9 +1340,6 @@ void VKGSRender::on_exit()
 void VKGSRender::clear_surface(u32 mask)
 {
 	if (skip_frame) return;
-
-	// Ignore clear if surface target is set to CELL_GCM_SURFACE_TARGET_NONE
-	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
 
 	// Ignore invalid clear flags
 	if (!(mask & 0xF3)) return;
@@ -1548,10 +1561,6 @@ void VKGSRender::advance_queued_frames()
 			process_swap_request(&ctx, true);
 		}
 	}
-
-	//Only marks surfaces as dirty without actually deleting them so its safe to use
-	if (g_cfg.video.invalidate_surface_cache_every_frame)
-		m_rtts.invalidate_surface_cache_data(&*m_current_command_buffer);
 
 	//m_rtts storage is double buffered and should be safe to tag on frame boundary
 	m_rtts.free_invalidated();
@@ -1830,16 +1839,17 @@ bool VKGSRender::check_program_status()
 
 	vk::pipeline_props properties = {};
 
-	bool unused;
+	bool emulated_primitive_type;
 	bool update_blend_constants = false;
 	bool update_stencil_info_back = false;
 	bool update_stencil_info_front = false;
 	bool update_depth_bounds = false;
 
 	properties.ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	properties.ia.topology = vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, unused);
+	properties.ia.topology = vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, emulated_primitive_type);
 
-	if (rsx::method_registers.restart_index_enabled())
+	const bool restarts_valid = rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed && !emulated_primitive_type && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
+	if (rsx::method_registers.restart_index_enabled() && !vk::emulate_primitive_restart() && restarts_valid)
 		properties.ia.primitiveRestartEnable = VK_TRUE;
 	else
 		properties.ia.primitiveRestartEnable = VK_FALSE;
@@ -2158,17 +2168,31 @@ void VKGSRender::prepare_rtts()
 	u32 clip_x = rsx::method_registers.surface_clip_origin_x();
 	u32 clip_y = rsx::method_registers.surface_clip_origin_y();
 
+	framebuffer_status_valid = false;
+
 	if (clip_width == 0 || clip_height == 0)
 	{
 		LOG_ERROR(RSX, "Invalid framebuffer setup, w=%d, h=%d", clip_width, clip_height);
-		framebuffer_status_valid = false;
 		return;
 	}
 
-	framebuffer_status_valid = true;
-
 	auto surface_addresses = get_color_surface_addresses();
 	auto zeta_address = get_zeta_surface_address();
+
+	for (const auto &addr: surface_addresses)
+	{
+		if (addr)
+		{
+			framebuffer_status_valid = true;
+			break;
+		}
+	}
+
+	if (!framebuffer_status_valid && !zeta_address)
+		return;
+
+	//At least one attachment exists
+	framebuffer_status_valid = true;
 	
 	const u32 surface_pitchs[] = { rsx::method_registers.surface_a_pitch(), rsx::method_registers.surface_b_pitch(),
 			rsx::method_registers.surface_c_pitch(), rsx::method_registers.surface_d_pitch() };

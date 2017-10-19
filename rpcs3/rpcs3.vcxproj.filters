@@ -90,6 +90,9 @@
     <Filter Include="Gui\misc dialogs">
       <UniqueIdentifier>{114eef25-61bf-4df5-8867-09156cf51b8a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\syntax highlighter">
+      <UniqueIdentifier>{adb985ae-88db-4274-a6fd-6bcf230451ca}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\rpcs3qt\*.cpp">
@@ -488,6 +491,21 @@
     <ClCompile Include="rpcs3qt\main_window.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_syntax_highlighter.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_syntax_highlighter.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_syntax_highlighter.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_syntax_highlighter.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\syntax_highlighter.cpp">
+      <Filter>Gui\syntax highlighter</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\kernel_explorer.cpp">
       <Filter>Gui\dev tools</Filter>
     </ClCompile>
@@ -526,6 +544,9 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\msg_dialog_frame.cpp">
       <Filter>Gui\message dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\syntax_highlighter.cpp">
+      <Filter>Generated Files\Debug</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -636,6 +657,9 @@
     <CustomBuild Include="rpcs3qt\save_manager_dialog.h">
       <Filter>Gui\saves</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\syntax_highlighter.h">
+      <Filter>Gui\syntax highlighter</Filter>
+    </CustomBuild>
     <CustomBuild Include="rpcs3qt\about_dialog.h">
       <Filter>Gui\misc dialogs</Filter>
     </CustomBuild>
@@ -695,6 +719,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\msg_dialog_frame.h">
       <Filter>Gui\message dialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\syntax_highlighter.h">
+      <Filter>Generated Files</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

@@ -66,6 +66,8 @@ namespace vk
 	vk::render_device *get_current_renderer();
 	void set_current_renderer(const vk::render_device &device);
 
+	bool emulate_primitive_restart();
+
 	VkComponentMapping default_component_map();
 	VkImageSubresource default_image_subresource();
 	VkImageSubresourceRange get_image_subresource_range(uint32_t base_layer, uint32_t base_mip, uint32_t layer_count, uint32_t level_count, VkImageAspectFlags aspect);
