@@ -141,17 +141,42 @@ namespace
 			VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
 			void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
 
+			gsl::span<gsl::byte> dst;
+			std::vector<gsl::byte> tmp;
+			if (rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart())
+			{
+				tmp.resize(upload_size);
+				dst = tmp;
+			}
+			else
+			{
+				dst = gsl::span<gsl::byte>(static_cast<gsl::byte*>(buf), upload_size);
+			}
+
 			/**
 			* Upload index (and expands it if primitive type is not natively supported).
 			*/
 			u32 min_index, max_index;
-			std::tie(min_index, max_index) = write_index_array_data_to_buffer(
-				gsl::span<gsl::byte>(static_cast<gsl::byte*>(buf), index_count * type_size),
+			std::tie(min_index, max_index, index_count) = write_index_array_data_to_buffer(
+				dst,
 				command.raw_index_buffer, index_type,
 				rsx::method_registers.current_draw_clause.primitive,
 				rsx::method_registers.restart_index_enabled(),
 				rsx::method_registers.restart_index(), command.ranges_to_fetch_in_index_buffer,
 				[](auto prim) { return !vk::is_primitive_native(prim); });
+
+			if (rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart())
+			{
+				//Emulate primitive restart by breaking up the draw calls
+				rsx::method_registers.current_draw_clause.alternate_first_count_commands.resize(0);
+
+				if (index_type == rsx::index_array_type::u16)
+					rsx::split_index_list(reinterpret_cast<u16*>(tmp.data()), index_count, (u16)UINT16_MAX, rsx::method_registers.current_draw_clause.alternate_first_count_commands);
+				else
+					rsx::split_index_list(reinterpret_cast<u32*>(tmp.data()), index_count, (u32)UINT32_MAX, rsx::method_registers.current_draw_clause.alternate_first_count_commands);
+
+				memcpy(buf, tmp.data(), tmp.size());
+			}
 
 			m_index_buffer_ring_info.unmap();
 

@@ -39,6 +39,11 @@ namespace rsx
 		std::vector<std::pair<u32, u32> > first_count_commands;
 
 		/**
+		 * Optionally split first-count pairs for disjoint range rendering. Valid when emulating primitive restart
+		 */
+		std::vector<std::pair<u32, u32> > alternate_first_count_commands;
+
+		/**
 		 * Returns how many vertex or index will be consumed by the draw clause.
 		 */
 		u32 get_elements_count() const
