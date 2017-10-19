@@ -507,13 +507,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="autoInvalidateCache">
-              <property name="text">
-               <string>Invalidate Cache Every Frame</string>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="QCheckBox" name="gpuTextureScaling">
               <property name="text">
                <string>Use GPU Texture Scaling</string>

@@ -414,9 +414,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->vsync, emu_settings::VSync);
 	SubscribeTooltip(ui->vsync, json_gpu_main["vsync"].toString());
 
-	xemu_settings->EnhanceCheckBox(ui->autoInvalidateCache, emu_settings::AutoInvalidateCache);
-	SubscribeTooltip(ui->autoInvalidateCache, json_gpu_main["autoInvalidateCache"].toString());
-
 	xemu_settings->EnhanceCheckBox(ui->gpuTextureScaling, emu_settings::GPUTextureScaling);
 	SubscribeTooltip(ui->gpuTextureScaling, json_gpu_main["gpuTextureScaling"].toString());
 

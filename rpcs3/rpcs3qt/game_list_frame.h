@@ -103,9 +103,9 @@ namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 
 	inline bool CategoryInMap(const std::string& cat, const q_from_char& map)
 	{
-		auto map_contains_category = [cat](std::pair<std::string, const QString> p)
+		auto map_contains_category = [s = qstr(cat)](const auto& p)
 		{
-			return p.second == qstr(cat);
+			return p.second == s;
 		};
 
 		return std::find_if(map.begin(), map.end(), map_contains_category) != map.end();

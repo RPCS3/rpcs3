@@ -166,19 +166,32 @@ void GLGSRender::init_buffers(bool skip_reading)
 	const u16 clip_horizontal = rsx::method_registers.surface_clip_width();
 	const u16 clip_vertical = rsx::method_registers.surface_clip_height();
 
+	framebuffer_status_valid = false;
+
 	if (clip_horizontal == 0 || clip_vertical == 0)
 	{
 		LOG_ERROR(RSX, "Invalid framebuffer setup, w=%d, h=%d", clip_horizontal, clip_vertical);
-		framebuffer_status_valid = false;
 		return;
 	}
+
+	const auto surface_addresses = get_color_surface_addresses();
+	const auto depth_address = get_zeta_surface_address();
+
+	for (const auto &addr: surface_addresses)
+	{
+		if (addr)
+		{
+			framebuffer_status_valid = true;
+			break;
+		}
+	}
+
+	if (!framebuffer_status_valid && !depth_address)
+		return;
 
 	const auto pitchs = get_pitchs();
 	const auto surface_format = rsx::method_registers.surface_color();
 	const auto depth_format = rsx::method_registers.surface_depth_fmt();
-
-	const auto surface_addresses = get_color_surface_addresses();
-	const auto depth_address = get_zeta_surface_address();
 
 	m_rtts.prepare_render_target(nullptr, surface_format, depth_format,  clip_horizontal, clip_vertical,
 		rsx::method_registers.surface_color_target(),

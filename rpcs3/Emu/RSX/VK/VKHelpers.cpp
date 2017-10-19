@@ -12,6 +12,7 @@ namespace vk
 	VkSampler g_null_sampler      = nullptr;
 
 	bool g_cb_no_interrupt_flag = false;
+	bool g_drv_no_primitive_restart_flag = false;
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
@@ -257,6 +258,36 @@ namespace vk
 	void set_current_renderer(const vk::render_device &device)
 	{
 		g_current_renderer = device;
+
+#ifdef _WIN32
+		const std::array<std::string, 8> black_listed = 
+		{
+			// Black list all polaris unless its proven they dont have a problem with primitive restart
+			"RX 580",
+			"RX 570",
+			"RX 560",
+			"RX 550",
+			"RX 480",
+			"RX 470",
+			"RX 460",
+			"RX Vega",
+		};
+
+		const auto gpu_name = g_current_renderer.gpu().name();
+		for (const auto& test : black_listed)
+		{
+			if (gpu_name.find(test) != std::string::npos)
+			{
+				g_drv_no_primitive_restart_flag = true;
+				break;
+			}
+		}
+#endif
+	}
+
+	bool emulate_primitive_restart()
+	{
+		return g_drv_no_primitive_restart_flag;
 	}
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)
