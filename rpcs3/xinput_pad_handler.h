@@ -55,13 +55,6 @@ namespace XINPUT_INFO
 
 class xinput_pad_handler final : public PadHandlerBase
 {
-	struct PAD_INFO
-	{
-		u32 device_number;
-		std::shared_ptr<Pad> pad;
-		std::vector<int> mapping;
-	};
-
 public:
 	xinput_pad_handler();
 	~xinput_pad_handler();
@@ -93,7 +86,7 @@ private:
 	PFN_XINPUTSETSTATE xinputSetState;
 	PFN_XINPUTENABLE xinputEnable;
 
-	std::vector<PAD_INFO> bindings;
+	std::vector<std::pair<u32, std::shared_ptr<Pad>>> bindings;
 	std::array<bool, 7> last_connection_status = {};
 
 	// holds internal controller state change

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "ds4_pad_handler.h"
+#include "rpcs3qt/pad_settings_dialog.h"
 
 #include <thread>
 #include <cmath>
@@ -127,216 +128,254 @@ namespace
 }
 ds4_pad_handler::ds4_pad_handler() : is_init(false)
 {
+	m_pad_config.cfg_type = "ds4";
+	m_pad_config.cfg_name = fs::get_config_dir() + "/config_ds4.yml";
 
+	m_pad_config.left_stick_left.def = DS4KeyCodes::LSXNeg;
+	m_pad_config.left_stick_down.def = DS4KeyCodes::LSYNeg;
+	m_pad_config.left_stick_right.def = DS4KeyCodes::LSXPos;
+	m_pad_config.left_stick_up.def = DS4KeyCodes::LSYPos;
+	m_pad_config.right_stick_left.def = DS4KeyCodes::RSXNeg;
+	m_pad_config.right_stick_down.def = DS4KeyCodes::RSYNeg;
+	m_pad_config.right_stick_right.def = DS4KeyCodes::RSXPos;
+	m_pad_config.right_stick_up.def = DS4KeyCodes::RSXPos;
+	m_pad_config.start.def = DS4KeyCodes::Options;
+	m_pad_config.select.def = DS4KeyCodes::Share;
+	m_pad_config.square.def = DS4KeyCodes::Square;
+	m_pad_config.cross.def = DS4KeyCodes::Cross;
+	m_pad_config.circle.def = DS4KeyCodes::Circle;
+	m_pad_config.triangle.def = DS4KeyCodes::Triangle;
+	m_pad_config.left.def = DS4KeyCodes::Left;
+	m_pad_config.down.def = DS4KeyCodes::Down;
+	m_pad_config.right.def = DS4KeyCodes::Right;
+	m_pad_config.up.def = DS4KeyCodes::Up;
+	m_pad_config.r1.def = DS4KeyCodes::R1;
+	m_pad_config.r2.def = DS4KeyCodes::R2;
+	m_pad_config.r3.def = DS4KeyCodes::R3;
+	m_pad_config.l1.def = DS4KeyCodes::L1;
+	m_pad_config.l2.def = DS4KeyCodes::L2;
+	m_pad_config.l3.def = DS4KeyCodes::L3;
+
+	m_pad_config.lstickdeadzone.def = 0;  // between 0 and 255
+	m_pad_config.rstickdeadzone.def = 0; // between 0 and 255
+	m_pad_config.ltriggerthreshold.def = 0; // between 0 and 255
+	m_pad_config.rtriggerthreshold.def = 0; // between 0 and 255
+	m_pad_config.padsquircling.def = 8000;
+
+	m_pad_config.from_default();
+
+	b_has_config = true;
 }
 
-void ds4_pad_handler::ProcessData()
-{
-	for (auto &bind : bindings)
+void ds4_pad_handler::ConfigController(const std::string& device) {
+	pad_settings_dialog dlg(&m_pad_config, device, *this);
+	dlg.exec();
+}
+
+std::string ds4_pad_handler::GetButtonName(u32 btn) {
+	const auto check = button_list.find(btn);
+	if (check == button_list.end())
 	{
-		std::shared_ptr<DS4Device> device = bind.first;
-		auto pad = bind.second;
-		auto buf = device->padData;
+		return "FAIL";
+	}
+	return check->second;
+}
 
-		// these are added with previous value and divided to 'smooth' out the readings
-		// the ds4 seems to rapidly flicker sometimes between two values and this seems to stop that
+void ds4_pad_handler::GetNextButtonPress(const std::string& padid, const std::function<void(u32, std::string)>& callback) {
+	if (!Init())
+	{
+		return;
+	}
 
-		u16 lx, ly;
-		//std::tie(lx, ly) = ConvertToSquarePoint(buf[1], buf[2]);
-		std::tie(lx, ly) = ConvertToSquirclePoint(buf[1], buf[2]);
-		pad->m_sticks[0].m_value = (lx + pad->m_sticks[0].m_value) / 2; // LX
-		pad->m_sticks[1].m_value = (ly + pad->m_sticks[1].m_value) / 2; // LY
+	size_t pos = padid.find("Ds4 Pad #");
 
-		u16 rx, ry;
-		//std::tie(rx, ry) = ConvertToSquarePoint(buf[3], buf[4]);
-		std::tie(rx, ry) = ConvertToSquirclePoint(buf[3], buf[4]);
-		pad->m_sticks[2].m_value = (rx + pad->m_sticks[2].m_value) / 2; // RX
-		pad->m_sticks[3].m_value = (ry + pad->m_sticks[3].m_value) / 2; // RY
+	if (pos == std::string::npos) return;
 
-																		// l2 r2
-		pad->m_buttons[0].m_pressed = buf[8] > 0;
-		pad->m_buttons[0].m_value = buf[8];
-		pad->m_buttons[1].m_pressed = buf[9] > 0;
-		pad->m_buttons[1].m_value = buf[9];
+	std::string pad_serial = padid.substr(pos + 9);
 
-		// bleh, dpad in buffer is stored in a different state
-		u8 dpadState = buf[5] & 0xf;
-		switch (dpadState)
+	std::shared_ptr<DS4Device> device = nullptr;
+
+	for (auto& cur_control : controllers)
+	{
+		if (pad_serial == cur_control.first)
 		{
-		case 0x08: // none pressed
-			pad->m_buttons[2].m_pressed = false;
-			pad->m_buttons[2].m_value = 0;
-			pad->m_buttons[3].m_pressed = false;
-			pad->m_buttons[3].m_value = 0;
-			pad->m_buttons[4].m_pressed = false;
-			pad->m_buttons[4].m_value = 0;
-			pad->m_buttons[5].m_pressed = false;
-			pad->m_buttons[5].m_value = 0;
+			device = cur_control.second;
 			break;
-		case 0x07: // NW...left and up
-			pad->m_buttons[2].m_pressed = true;
-			pad->m_buttons[2].m_value = 255;
-			pad->m_buttons[3].m_pressed = false;
-			pad->m_buttons[3].m_value = 0;
-			pad->m_buttons[4].m_pressed = true;
-			pad->m_buttons[4].m_value = 255;
-			pad->m_buttons[5].m_pressed = false;
-			pad->m_buttons[5].m_value = 0;
-			break;
-		case 0x06: // W..left
-			pad->m_buttons[2].m_pressed = false;
-			pad->m_buttons[2].m_value = 0;
-			pad->m_buttons[3].m_pressed = false;
-			pad->m_buttons[3].m_value = 0;
-			pad->m_buttons[4].m_pressed = true;
-			pad->m_buttons[4].m_value = 255;
-			pad->m_buttons[5].m_pressed = false;
-			pad->m_buttons[5].m_value = 0;
-			break;
-		case 0x05: // SW..left down
-			pad->m_buttons[2].m_pressed = false;
-			pad->m_buttons[2].m_value = 0;
-			pad->m_buttons[3].m_pressed = true;
-			pad->m_buttons[3].m_value = 255;
-			pad->m_buttons[4].m_pressed = true;
-			pad->m_buttons[4].m_value = 255;
-			pad->m_buttons[5].m_pressed = false;
-			pad->m_buttons[5].m_value = 0;
-			break;
-		case 0x04: // S..down
-			pad->m_buttons[2].m_pressed = false;
-			pad->m_buttons[2].m_value = 0;
-			pad->m_buttons[3].m_pressed = true;
-			pad->m_buttons[3].m_value = 255;
-			pad->m_buttons[4].m_pressed = false;
-			pad->m_buttons[4].m_value = 0;
-			pad->m_buttons[5].m_pressed = false;
-			pad->m_buttons[5].m_value = 0;
-			break;
-		case 0x03: // SE..down and right
-			pad->m_buttons[2].m_pressed = false;
-			pad->m_buttons[2].m_value = 0;
-			pad->m_buttons[3].m_pressed = true;
-			pad->m_buttons[3].m_value = 255;
-			pad->m_buttons[4].m_pressed = false;
-			pad->m_buttons[4].m_value = 0;
-			pad->m_buttons[5].m_pressed = true;
-			pad->m_buttons[5].m_value = 255;
-			break;
-		case 0x02: // E... right
-			pad->m_buttons[2].m_pressed = false;
-			pad->m_buttons[2].m_value = 0;
-			pad->m_buttons[3].m_pressed = false;
-			pad->m_buttons[3].m_value = 0;
-			pad->m_buttons[4].m_pressed = false;
-			pad->m_buttons[4].m_value = 0;
-			pad->m_buttons[5].m_pressed = true;
-			pad->m_buttons[5].m_value = 255;
-			break;
-		case 0x01: // NE.. up right
-			pad->m_buttons[2].m_pressed = true;
-			pad->m_buttons[2].m_value = 255;
-			pad->m_buttons[3].m_pressed = false;
-			pad->m_buttons[3].m_value = 0;
-			pad->m_buttons[4].m_pressed = false;
-			pad->m_buttons[4].m_value = 0;
-			pad->m_buttons[5].m_pressed = true;
-			pad->m_buttons[5].m_value = 255;
-			break;
-		case 0x00: // n.. up
-			pad->m_buttons[2].m_pressed = true;
-			pad->m_buttons[2].m_value = 255;
-			pad->m_buttons[3].m_pressed = false;
-			pad->m_buttons[3].m_value = 0;
-			pad->m_buttons[4].m_pressed = false;
-			pad->m_buttons[4].m_value = 0;
-			pad->m_buttons[5].m_pressed = false;
-			pad->m_buttons[5].m_value = 0;
-			break;
-		default:
-			fmt::throw_exception("ds4 dpad state encountered unexpected input");
 		}
+	}
 
-		// square, cross, circle, triangle
-		for (int i = 4; i < 8; ++i)
-		{
-			const bool pressed = ((buf[5] & (1 << i)) != 0);
-			pad->m_buttons[6 + i - 4].m_pressed = pressed;
-			pad->m_buttons[6 + i - 4].m_value = pressed ? 255 : 0;
+	if (device == nullptr || device->hidDevice == nullptr) return;
+
+	DS4DataStatus status = GetRawData(device);
+
+	if (status != DS4DataStatus::NewData) return;
+
+	auto data = GetParsedBuffer(device);
+	for (const auto& button : button_list)
+	{
+		if (button.first < DS4KeyCodes::LSXNeg && (data[button.first] > 0))
+			return callback(button.first, button.second);
+	}
+}
+
+std::array<u16, ds4_pad_handler::DS4KeyCodes::KEYCODECOUNT> ds4_pad_handler::GetParsedBuffer(const std::shared_ptr<DS4Device>& device) {
+	std::array<u16, DS4KeyCodes::KEYCODECOUNT> keyBuffer;
+	auto buf = device->padData;
+	// l2 r2
+	keyBuffer[DS4KeyCodes::L2] = buf[8];
+	keyBuffer[DS4KeyCodes::R2] = buf[9];
+
+	// bleh, dpad in buffer is stored in a different state
+	u8 dpadState = buf[5] & 0xf;
+	switch (dpadState)
+	{
+	case 0x08: // none pressed
+		keyBuffer[DS4KeyCodes::Up] = 0;
+		keyBuffer[DS4KeyCodes::Down] = 0;
+		keyBuffer[DS4KeyCodes::Left] = 0;
+		keyBuffer[DS4KeyCodes::Right] = 0;
+		break;
+	case 0x07: // NW...left and up
+		keyBuffer[DS4KeyCodes::Up] = 255;
+		keyBuffer[DS4KeyCodes::Down] = 0;
+		keyBuffer[DS4KeyCodes::Left] = 255;
+		keyBuffer[DS4KeyCodes::Right] = 0;
+		break;
+	case 0x06: // W..left
+		keyBuffer[DS4KeyCodes::Up] = 0;
+		keyBuffer[DS4KeyCodes::Down] = 0;
+		keyBuffer[DS4KeyCodes::Left] = 255;
+		keyBuffer[DS4KeyCodes::Right] = 0;
+		break;
+	case 0x05: // SW..left down
+		keyBuffer[DS4KeyCodes::Up] = 0;
+		keyBuffer[DS4KeyCodes::Down] = 255;
+		keyBuffer[DS4KeyCodes::Left] = 255;
+		keyBuffer[DS4KeyCodes::Right] = 0;
+		break;
+	case 0x04: // S..down
+		keyBuffer[DS4KeyCodes::Up] = 0;
+		keyBuffer[DS4KeyCodes::Down] = 255;
+		keyBuffer[DS4KeyCodes::Left] = 0;
+		keyBuffer[DS4KeyCodes::Right] = 0;
+		break;
+	case 0x03: // SE..down and right
+		keyBuffer[DS4KeyCodes::Up] = 0;
+		keyBuffer[DS4KeyCodes::Down] = 255;
+		keyBuffer[DS4KeyCodes::Left] = 0;
+		keyBuffer[DS4KeyCodes::Right] = 255;
+		break;
+	case 0x02: // E... right
+		keyBuffer[DS4KeyCodes::Up] = 0;
+		keyBuffer[DS4KeyCodes::Down] = 0;
+		keyBuffer[DS4KeyCodes::Left] = 0;
+		keyBuffer[DS4KeyCodes::Right] = 255;
+		break;
+	case 0x01: // NE.. up right
+		keyBuffer[DS4KeyCodes::Up] = 255;
+		keyBuffer[DS4KeyCodes::Down] = 0;
+		keyBuffer[DS4KeyCodes::Left] = 0;
+		keyBuffer[DS4KeyCodes::Right] = 255;
+		break;
+	case 0x00: // n.. up
+		keyBuffer[DS4KeyCodes::Up] = 255;
+		keyBuffer[DS4KeyCodes::Down] = 0;
+		keyBuffer[DS4KeyCodes::Left] = 0;
+		keyBuffer[DS4KeyCodes::Right] = 0;
+		break;
+	default:
+		fmt::throw_exception("ds4 dpad state encountered unexpected input");
+	}
+
+	// square, cross, circle, triangle
+	keyBuffer[DS4KeyCodes::Square] = ((buf[5] & (1 << 4)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::Cross] = ((buf[5] & (1 << 5)) != 0) ? 255 : 0;;
+	keyBuffer[DS4KeyCodes::Circle] = ((buf[5] & (1 << 6)) != 0) ? 255 : 0;;
+	keyBuffer[DS4KeyCodes::Triangle] = ((buf[5] & (1 << 7)) != 0) ? 255 : 0;;
+
+	// L1, R1
+	keyBuffer[DS4KeyCodes::L1] = ((buf[6] & (1 << 0)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::R1] = ((buf[6] & (1 << 1)) != 0) ? 255 : 0;
+
+	// select, start, l3, r3
+	keyBuffer[DS4KeyCodes::Share] = ((buf[6] & (1 << 4)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::Options] = ((buf[6] & (1 << 5)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::L3] = ((buf[6] & (1 << 6)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::R3] = ((buf[6] & (1 << 7)) != 0) ? 255 : 0;
+
+	return keyBuffer;
+}
+
+void ds4_pad_handler::ProcessDataToPad(const std::shared_ptr<DS4Device>& device, const std::shared_ptr<Pad>& pad)
+{
+	auto buf = device->padData;
+
+	// these are added with previous value and divided to 'smooth' out the readings
+	// the ds4 seems to rapidly flicker sometimes between two values and this seems to stop that
+
+	u16 lx, ly;
+	//std::tie(lx, ly) = ConvertToSquarePoint(buf[1], buf[2]);
+	std::tie(lx, ly) = ConvertToSquirclePoint(buf[1], buf[2]);
+	pad->m_sticks[0].m_value = (lx + pad->m_sticks[0].m_value) / 2; // LX
+	pad->m_sticks[1].m_value = (ly + pad->m_sticks[1].m_value) / 2; // LY
+
+	u16 rx, ry;
+	//std::tie(rx, ry) = ConvertToSquarePoint(buf[3], buf[4]);
+	std::tie(rx, ry) = ConvertToSquirclePoint(buf[3], buf[4]);
+	pad->m_sticks[2].m_value = (rx + pad->m_sticks[2].m_value) / 2; // RX
+	pad->m_sticks[3].m_value = (ry + pad->m_sticks[3].m_value) / 2; // RY
+
+	auto parsedBuffer = GetParsedBuffer(device);
+
+	// Now set these to pad buttons
+	for (auto & btn : pad->m_buttons) {
+		if (btn.m_keyCode < DS4KeyCodes::KEYCODECOUNT) {
+			const u8 val = parsedBuffer[btn.m_keyCode];
+			btn.m_pressed = val > 0;
+			btn.m_value = val;
 		}
-
-		// L1, R1
-		const bool l1press = ((buf[6] & (1 << 0)) != 0);
-		pad->m_buttons[10].m_pressed = l1press;
-		pad->m_buttons[10].m_value = l1press ? 255 : 0;
-
-		const bool l2press = ((buf[6] & (1 << 1)) != 0);
-		pad->m_buttons[11].m_pressed = l2press;
-		pad->m_buttons[11].m_value = l2press ? 255 : 0;
-
-		// select, start, l3, r3
-		for (int i = 4; i < 8; ++i)
-		{
-			const bool pressed = ((buf[6] & (1 << i)) != 0);
-			pad->m_buttons[12 + i - 4].m_pressed = pressed;
-			pad->m_buttons[12 + i - 4].m_value = pressed ? 255 : 0;
-		}
+	}
 
 #ifdef _WIN32
-		for (int i = 6; i < 16; i++)
+	for (int i = 6; i < 16; i++)
+	{
+		if (pad->m_buttons[i].m_pressed)
 		{
-			if (pad->m_buttons[i].m_pressed)
-			{
-				SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
-				break;
-			}
+			SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
+			break;
 		}
+	}
 #endif
 
-		// these values come already calibrated from our ds4Thread,
-		// all we need to do is convert to ds3 range
+	// these values come already calibrated from our ds4Thread,
+	// all we need to do is convert to ds3 range
 
-		// accel
-		f32 accelX = (((s16)((u16)(buf[20] << 8) | buf[19])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
-		f32 accelY = (((s16)((u16)(buf[22] << 8) | buf[21])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
-		f32 accelZ = (((s16)((u16)(buf[24] << 8) | buf[23])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
+	// accel
+	f32 accelX = (((s16)((u16)(buf[20] << 8) | buf[19])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
+	f32 accelY = (((s16)((u16)(buf[22] << 8) | buf[21])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
+	f32 accelZ = (((s16)((u16)(buf[24] << 8) | buf[23])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
 
-		// now just use formula from ds3
-		accelX = accelX * 113 + 512;
-		accelY = accelY * 113 + 512;
-		accelZ = accelZ * 113 + 512;
+	// now just use formula from ds3
+	accelX = accelX * 113 + 512;
+	accelY = accelY * 113 + 512;
+	accelZ = accelZ * 113 + 512;
 
-		pad->m_sensors[0].m_value = Clamp0To1023(accelX);
-		pad->m_sensors[1].m_value = Clamp0To1023(accelY);
-		pad->m_sensors[2].m_value = Clamp0To1023(accelZ);
+	pad->m_sensors[0].m_value = Clamp0To1023(accelX);
+	pad->m_sensors[1].m_value = Clamp0To1023(accelY);
+	pad->m_sensors[2].m_value = Clamp0To1023(accelZ);
 
-		// gyroX is yaw, which is all that we need
-		f32 gyroX = (((s16)((u16)(buf[16] << 8) | buf[15])) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S)) * -1;
-		//const int gyroY = ((u16)(buf[14] << 8) | buf[13]) / 256;
-		//const int gyroZ = ((u16)(buf[18] << 8) | buf[17]) / 256;
+	// gyroX is yaw, which is all that we need
+	f32 gyroX = (((s16)((u16)(buf[16] << 8) | buf[15])) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S)) * -1;
+	//const int gyroY = ((u16)(buf[14] << 8) | buf[13]) / 256;
+	//const int gyroZ = ((u16)(buf[18] << 8) | buf[17]) / 256;
 
-		// convert to ds3
-		gyroX = gyroX * (123.f / 90.f) + 512;
+	// convert to ds3
+	gyroX = gyroX * (123.f / 90.f) + 512;
 
-		pad->m_sensors[3].m_value = Clamp0To1023(gyroX);
-	}
+	pad->m_sensors[3].m_value = Clamp0To1023(gyroX);
 }
 
-void ds4_pad_handler::UpdateRumble()
-{
-	// todo: give unique identifier to this instead of port
-	for (auto &bind : bindings)
-	{
-		std::shared_ptr<DS4Device> device = bind.first;
-		auto thepad = bind.second;
-
-		device->newVibrateData = device->newVibrateData || device->largeVibrate != thepad->m_vibrateMotors[0].m_value || device->smallVibrate != (thepad->m_vibrateMotors[1].m_value ? 255 : 0);
-		device->largeVibrate = thepad->m_vibrateMotors[0].m_value;
-		device->smallVibrate = (thepad->m_vibrateMotors[1].m_value ? 255 : 0);
-	}
-}
-
-bool ds4_pad_handler::GetCalibrationData(std::shared_ptr<DS4Device> ds4Dev)
+bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4Dev)
 {
 	std::array<u8, 64> buf;
 	if (ds4Dev->btCon)
@@ -478,7 +517,7 @@ ds4_pad_handler::~ds4_pad_handler()
 	hid_exit();
 }
 
-void ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device> device)
+void ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
 {
 	std::array<u8, 78> outputBuf{0};
 	// write rumble state
@@ -550,6 +589,9 @@ bool ds4_pad_handler::Init()
 	else
 		LOG_SUCCESS(HLE, "[DS4] Controllers found: %d", controllers.size());
 
+	m_pad_config.load();
+	if (!m_pad_config.exist()) m_pad_config.save();
+
 	is_init = true;
 	return true;
 }
@@ -589,6 +631,8 @@ bool ds4_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::strin
 
 	if (device_id == nullptr) return false;
 
+	m_pad_config.load();
+
 	pad->Init(
 		CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES,
 		CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
@@ -597,26 +641,26 @@ bool ds4_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::strin
 	);
 
 	// 'keycode' here is just 0 as we have to manually calculate this
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, CELL_PAD_CTRL_L2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.l2, CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.r2, CELL_PAD_CTRL_R2);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, 0, CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, 0, CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, 0, CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, 0, CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.up, CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.down, CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.left, CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.right, CELL_PAD_CTRL_RIGHT);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, CELL_PAD_CTRL_SQUARE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.square, CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.cross, CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.circle, CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.triangle, CELL_PAD_CTRL_TRIANGLE);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.l1, CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.r1, CELL_PAD_CTRL_R1);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, 0, CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, 0, CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, 0, CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, 0, CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.select, CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.start, CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.l3, CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.r3, CELL_PAD_CTRL_R3);
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
@@ -641,10 +685,6 @@ bool ds4_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::strin
 
 void ds4_pad_handler::ThreadProc()
 {
-	UpdateRumble();
-
-	std::array<u8, 78> buf{};
-
 	for (auto &bind : bindings)
 	{
 		std::shared_ptr<DS4Device> device = bind.first;
@@ -670,14 +710,19 @@ void ds4_pad_handler::ThreadProc()
 			}
 		}
 
-		const int res = hid_read(device->hidDevice, buf.data(), device->btCon ? 78 : 64);
-		if (res == -1)
-		{
-			// looks like controller disconnected or read error, deal with it on next loop
+		DS4DataStatus status = GetRawData(device);
+
+		if (status == DS4DataStatus::ReadError) {
+			// this also can mean disconnected, either way deal with it on next loop and reconnect
 			hid_close(device->hidDevice);
 			device->hidDevice = nullptr;
 			continue;
 		}
+
+		// Attempt to send rumble no matter what 
+		device->newVibrateData = device->newVibrateData || device->largeVibrate != thepad->m_vibrateMotors[0].m_value || device->smallVibrate != (thepad->m_vibrateMotors[1].m_value ? 255 : 0);
+		device->largeVibrate = thepad->m_vibrateMotors[0].m_value;
+		device->smallVibrate = (thepad->m_vibrateMotors[1].m_value ? 255 : 0);
 
 		if (device->newVibrateData)
 		{
@@ -686,60 +731,79 @@ void ds4_pad_handler::ThreadProc()
 		}
 
 		// no data? keep going
-		if (res == 0)
+		if (status == DS4DataStatus::NoNewData)
 			continue;
 
-		// bt controller sends this until 0x02 feature report is sent back (happens on controller init/restart)
-		if (device->btCon && buf[0] == 0x1)
-		{
-			// tells controller to send 0x11 reports
-			std::array<u8, 64> buf_error{};
-			buf_error[0] = 0x2;
-			hid_get_feature_report(device->hidDevice, buf_error.data(), buf_error.size());
-			continue;
-		}
+		else if (status == DS4DataStatus::NewData)
+			ProcessDataToPad(device, thepad); // todo: change this to not loop
+	}
+}
 
-		int offset = 0;
-		// check report and set offset
-		if (device->btCon && buf[0] == 0x11 && res == 78)
-		{
-			offset = 2;
+ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr<DS4Device>& device) {
 
-			const u8 btHdr = 0xA1;
-			const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
-			const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), (DS4_INPUT_REPORT_0x11_SIZE - 4), crcTable, crcHdr);
-			const u32 crcReported = GetU32LEData(&buf[DS4_INPUT_REPORT_0x11_SIZE - 4]);
-			if (crcCalc != crcReported) {
-				LOG_WARNING(HLE, "[DS4] Data packet CRC check failed, ignoring! Received 0x%x, Expected 0x%x", crcReported, crcCalc);
-				continue;
-			}
+	std::array<u8, 78> buf{};
 
-		}
-		else if (!device->btCon && buf[0] == 0x01 && res == 64)
-		{
-			// Ds4 Dongle uses this bit to actually report whether a controller is connected
-			bool connected = (buf[31] & 0x04) ? false : true;
-			if (connected && !device->hasCalibData)
-				device->hasCalibData = GetCalibrationData(device);
-
-			offset = 0;
-		}
-		else
-			continue;
-
-		if (device->hasCalibData)
-		{
-			int calibOffset = offset + DS4_INPUT_REPORT_GYRO_X_OFFSET;
-			for (int i = 0; i < DS4CalibIndex::COUNT; ++i)
-			{
-				const s16 rawValue = GetS16LEData(&buf[calibOffset]);
-				const s16 calValue = ApplyCalibration(rawValue, device->calibData[i]);
-				buf[calibOffset++] = ((u16)calValue >> 0) & 0xFF;
-				buf[calibOffset++] = ((u16)calValue >> 8) & 0xFF;
-			}
-		}
-		memcpy(device->padData.data(), &buf[offset], 64);
+	const int res = hid_read(device->hidDevice, buf.data(), device->btCon ? 78 : 64);
+	if (res == -1)
+	{
+		// looks like controller disconnected or read error
+		return DS4DataStatus::ReadError;
 	}
 
-	ProcessData();
+	// no data? keep going
+	if (res == 0)
+		return DS4DataStatus::NoNewData;
+
+	// bt controller sends this until 0x02 feature report is sent back (happens on controller init/restart)
+	if (device->btCon && buf[0] == 0x1)
+	{
+		// tells controller to send 0x11 reports
+		std::array<u8, 64> buf_error{};
+		buf_error[0] = 0x2;
+		hid_get_feature_report(device->hidDevice, buf_error.data(), buf_error.size());
+		return DS4DataStatus::NoNewData;
+	}
+
+	int offset = 0;
+	// check report and set offset
+	if (device->btCon && buf[0] == 0x11 && res == 78)
+	{
+		offset = 2;
+
+		const u8 btHdr = 0xA1;
+		const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
+		const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), (DS4_INPUT_REPORT_0x11_SIZE - 4), crcTable, crcHdr);
+		const u32 crcReported = GetU32LEData(&buf[DS4_INPUT_REPORT_0x11_SIZE - 4]);
+		if (crcCalc != crcReported) {
+			LOG_WARNING(HLE, "[DS4] Data packet CRC check failed, ignoring! Received 0x%x, Expected 0x%x", crcReported, crcCalc);
+			return DS4DataStatus::NoNewData;
+		}
+
+	}
+	else if (!device->btCon && buf[0] == 0x01 && res == 64)
+	{
+		// Ds4 Dongle uses this bit to actually report whether a controller is connected
+		bool connected = (buf[31] & 0x04) ? false : true;
+		if (connected && !device->hasCalibData)
+			device->hasCalibData = GetCalibrationData(device);
+
+		offset = 0;
+	}
+	else
+		return DS4DataStatus::NoNewData;
+
+	if (device->hasCalibData)
+	{
+		int calibOffset = offset + DS4_INPUT_REPORT_GYRO_X_OFFSET;
+		for (int i = 0; i < DS4CalibIndex::COUNT; ++i)
+		{
+			const s16 rawValue = GetS16LEData(&buf[calibOffset]);
+			const s16 calValue = ApplyCalibration(rawValue, device->calibData[i]);
+			buf[calibOffset++] = ((u16)calValue >> 0) & 0xFF;
+			buf[calibOffset++] = ((u16)calValue >> 8) & 0xFF;
+		}
+	}
+	memcpy(device->padData.data(), &buf[offset], 64);
+
+	return DS4DataStatus::NewData;
 }

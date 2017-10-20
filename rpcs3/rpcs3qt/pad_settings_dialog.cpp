@@ -69,6 +69,35 @@ pad_settings_dialog::pad_settings_dialog(pad_config* pad_cfg, const std::string&
 	{
 		setWindowTitle(tr("Configure DS4"));
 		m_handler_type = HANDLER_TYPE_DS4;
+
+		// Ignore TriggersNSticks for now
+		ui->b_left_lstick->setEnabled(false);
+		ui->b_down_lstick->setEnabled(false);
+		ui->b_right_lstick->setEnabled(false);
+		ui->b_up_lstick->setEnabled(false);
+		ui->b_left_rstick->setEnabled(false);
+		ui->b_down_rstick->setEnabled(false);
+		ui->b_right_rstick->setEnabled(false);
+		ui->b_up_rstick->setEnabled(false);
+		ui->b_shift_l2->setEnabled(false);
+		ui->b_shift_r2->setEnabled(false);
+
+		// Use timer to get button input
+		const auto& callback = [=](u32 button, std::string name)
+		{
+			LOG_NOTICE(GENERAL, "Pad Settings: XInput button %s pressed (0x%x)", name, button);
+			m_cfg_entries[m_button_id].key = std::to_string(button);
+			m_cfg_entries[m_button_id].text = qstr(name);
+			ReactivateButtons();
+		};
+		connect(&m_timer_xinput, &QTimer::timeout, [=]()
+		{
+			if (m_button_id > id_pad_begin && m_button_id < id_pad_end)
+			{
+				m_handler->GetNextButtonPress(m_device_name, callback);
+			}
+		});
+		m_timer_xinput.start(10);
 	}
 	else if (m_handler_cfg->cfg_type == "mmjoystick")
 	{
@@ -87,10 +116,10 @@ pad_settings_dialog::pad_settings_dialog(pad_config* pad_cfg, const std::string&
 		case HANDLER_TYPE_KEYBOARD:
 			name = GetKeyName(*cfg_id);
 			break;
+		case HANDLER_TYPE_DS4:
 		case HANDLER_TYPE_XINPUT:
 			name = qstr(m_handler->GetButtonName(*cfg_id));
 			break;
-		case HANDLER_TYPE_DS4:
 		case HANDLER_TYPE_MMJOYSTICK:
 		default:
 			break;

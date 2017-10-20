@@ -3,7 +3,7 @@
 #include "xinput_pad_handler.h"
 #include "rpcs3qt/pad_settings_dialog.h"
 
-static std::map<u32, std::string> button_list =
+static std::unordered_map<u32, std::string> button_list =
 {
 	{ XINPUT_GAMEPAD_A, "A" },
 	{ XINPUT_GAMEPAD_B, "B" },
@@ -33,11 +33,12 @@ static std::map<u32, std::string> button_list =
 
 std::string xinput_pad_handler::GetButtonName(u32 button)
 {
-	if (button_list.find(button) == button_list.end())
+	const auto check = button_list.find(button);
+	if (check == button_list.end())
 	{
 		return "FAIL";
 	}
-	return button_list[button];
+	return check->second;
 }
 
 void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u32 btn, std::string)>& callback)
@@ -71,7 +72,7 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 	{
 		for (const auto& button : button_list)
 		{
-			if (button.first < XINPUT_INFO::TRIGGER_LEFT && state.Gamepad.wButtons & button.first)
+			if (button.first < XINPUT_INFO::TRIGGER_LEFT && (state.Gamepad.wButtons & button.first))
 			{
 				return callback(button.first, button.second);
 			}
@@ -212,9 +213,8 @@ void xinput_pad_handler::ThreadProc()
 {
 	for (u32 index = 0; index != bindings.size(); index++)
 	{
-		auto padnum = bindings[index].device_number;
-		auto pad = bindings[index].pad;
-		auto mapping = bindings[index].mapping;
+		auto padnum = bindings[index].first;
+		auto pad = bindings[index].second;
 
 		result = (*xinputGetState)(padnum, &state);
 		switch (result)
@@ -233,27 +233,29 @@ void xinput_pad_handler::ThreadProc()
 			last_connection_status[padnum] = true;
 			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 
-			for (DWORD j = 0; j != XINPUT_INFO::XINPUT_GAMEPAD_BUTTONS; ++j)
-			{
-				bool pressed = state.Gamepad.wButtons & (1 << j);
-				int idx = mapping[j];
-				pad->m_buttons[idx].m_pressed = pressed;
-				pad->m_buttons[idx].m_value = pressed ? 255 : 0;
+			for (auto& btn : pad->m_buttons) {
+				if (btn.m_keyCode == XINPUT_INFO::TRIGGER_LEFT) {
+					btn.m_pressed = state.Gamepad.bLeftTrigger > m_pad_config.ltriggerthreshold;
+					btn.m_value = state.Gamepad.bLeftTrigger;
+				}
+				else if (btn.m_keyCode == XINPUT_INFO::TRIGGER_RIGHT) {
+					btn.m_pressed = state.Gamepad.bRightTrigger > m_pad_config.rtriggerthreshold;
+					btn.m_value = state.Gamepad.bRightTrigger;
+				}
+				else {
+					bool pressed = state.Gamepad.wButtons & (1 << btn.m_keyCode);
+					btn.m_pressed = pressed;
+					btn.m_value = pressed ? 255 : 0;
+				}
 			}
 
-			for (int i = 6; i < 16; i++)
-			{
-				if (pad->m_buttons[i].m_pressed)
+			for (const auto& btn : pad->m_buttons) {
+				if (btn.m_pressed)
 				{
 					SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
 					break;
 				}
 			}
-
-			pad->m_buttons[XINPUT_INFO::XINPUT_GAMEPAD_BUTTONS].m_pressed = state.Gamepad.bLeftTrigger > m_pad_config.ltriggerthreshold;
-			pad->m_buttons[XINPUT_INFO::XINPUT_GAMEPAD_BUTTONS].m_value = state.Gamepad.bLeftTrigger;
-			pad->m_buttons[XINPUT_INFO::XINPUT_GAMEPAD_BUTTONS + 1].m_pressed = state.Gamepad.bRightTrigger > m_pad_config.rtriggerthreshold;
-			pad->m_buttons[XINPUT_INFO::XINPUT_GAMEPAD_BUTTONS + 1].m_value = state.Gamepad.bRightTrigger;
 
 			float LX, LY, RX, RY;
 
@@ -377,47 +379,7 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 	pad->m_vibrateMotors.emplace_back(true, 0);
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
-	auto getButton = [](u32 val)
-	{
-		switch (val)
-		{
-		case XINPUT_GAMEPAD_DPAD_UP:        return 0;
-		case XINPUT_GAMEPAD_DPAD_DOWN:      return 1;
-		case XINPUT_GAMEPAD_DPAD_LEFT:      return 2;
-		case XINPUT_GAMEPAD_DPAD_RIGHT:     return 3;
-		case XINPUT_GAMEPAD_START:          return 4;
-		case XINPUT_GAMEPAD_BACK:           return 5;
-		case XINPUT_GAMEPAD_LEFT_THUMB:     return 6;
-		case XINPUT_GAMEPAD_RIGHT_THUMB:    return 7;
-		case XINPUT_GAMEPAD_LEFT_SHOULDER:  return 8;
-		case XINPUT_GAMEPAD_RIGHT_SHOULDER: return 9;
-		case XINPUT_GAMEPAD_A:              return 12;
-		case XINPUT_GAMEPAD_B:              return 13;
-		case XINPUT_GAMEPAD_X:              return 14;
-		case XINPUT_GAMEPAD_Y:              return 15;
-		default:                            return -1;
-		}
-	};
-
-	std::vector<int> mapping;
-	mapping.push_back(getButton(m_pad_config.up));
-	mapping.push_back(getButton(m_pad_config.down));
-	mapping.push_back(getButton(m_pad_config.left));
-	mapping.push_back(getButton(m_pad_config.right));
-	mapping.push_back(getButton(m_pad_config.start));
-	mapping.push_back(getButton(m_pad_config.select));
-	mapping.push_back(getButton(m_pad_config.l3));
-	mapping.push_back(getButton(m_pad_config.r3));
-	mapping.push_back(getButton(m_pad_config.l1));
-	mapping.push_back(getButton(m_pad_config.r1));
-	mapping.push_back(10);
-	mapping.push_back(11);
-	mapping.push_back(getButton(m_pad_config.cross));
-	mapping.push_back(getButton(m_pad_config.circle));
-	mapping.push_back(getButton(m_pad_config.square));
-	mapping.push_back(getButton(m_pad_config.triangle));
-
-	bindings.emplace_back(PAD_INFO{device_number, pad, mapping});
+	bindings.emplace_back(device_number, pad);
 
 	return true;
 }
