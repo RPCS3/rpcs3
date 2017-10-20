@@ -259,7 +259,6 @@ namespace vk
 	{
 		g_current_renderer = device;
 
-#ifdef _WIN32
 		const std::array<std::string, 8> black_listed = 
 		{
 			// Black list all polaris unless its proven they dont have a problem with primitive restart
@@ -282,7 +281,6 @@ namespace vk
 				break;
 			}
 		}
-#endif
 	}
 
 	bool emulate_primitive_restart()
