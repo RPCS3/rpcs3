@@ -36,6 +36,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_Text_Factor     = xgui_settings->GetValue(GUI::gl_textFactor).toReal();
 	m_showToolBar     = xgui_settings->GetValue(GUI::gl_toolBarVisible).toBool();
 	m_Icon_Color      = xgui_settings->GetValue(GUI::gl_iconColor).value<QColor>();
+	m_colSortOrder    = xgui_settings->GetValue(GUI::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
+	m_sortColumn      = xgui_settings->GetValue(GUI::gl_sortCol).toInt();
 
 	m_oldLayoutIsList = m_isListLayout;
 
