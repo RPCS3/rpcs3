@@ -347,6 +347,7 @@ namespace vk
 
 			m_discardable_storage.clear();
 			m_unreleased_texture_objects = 0;
+			m_texture_memory_in_use = 0;
 		}
 		
 	protected:
@@ -707,12 +708,13 @@ namespace vk
 			}
 			helper(&cmd);
 
-			return upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, *m_device, cmd, m_memory_types, m_submit_queue);
+			const VkQueue& queue = m_submit_queue;
+			return upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, *m_device, cmd, m_memory_types, queue);
 		}
 
 		const u32 get_unreleased_textures_count() const override
 		{
-			return std::max(m_unreleased_texture_objects, 0) + (u32)m_discardable_storage.size();
+			return m_unreleased_texture_objects + (u32)m_discardable_storage.size();
 		}
 	};
 }

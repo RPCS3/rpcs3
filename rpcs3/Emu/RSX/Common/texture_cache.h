@@ -31,6 +31,8 @@ namespace rsx
 		u16 real_pitch;
 		u16 rsx_pitch;
 
+		u64 cache_tag;
+
 		rsx::texture_create_flags view_flags = rsx::texture_create_flags::default_component_order;
 		rsx::texture_upload_context context = rsx::texture_upload_context::shader_read;
 
@@ -162,7 +164,8 @@ namespace rsx
 		
 		//Memory usage
 		const s32 m_max_zombie_objects = 128; //Limit on how many texture objects to keep around for reuse after they are invalidated
-		s32 m_unreleased_texture_objects = 0; //Number of invalidated objects not yet freed from memory
+		std::atomic<s32> m_unreleased_texture_objects = { 0 }; //Number of invalidated objects not yet freed from memory
+		std::atomic<u32> m_texture_memory_in_use = { 0 };
 		
 		/* Helpers */
 		virtual void free_texture_section(section_storage_type&) = 0;
@@ -179,10 +182,14 @@ namespace rsx
 		inline u32 get_block_address(u32 address) const { return (address & ~0xFFFFFF); }
 
 	private:
-		//Internal implementation methods
-		bool invalidate_range_impl(u32 address, u32 range, bool unprotect)
+		//Internal implementation methods and helpers
+
+		//Get intersecting set - Returns all objects intersecting a given range and their owning blocks
+		std::vector<std::pair<section_storage_type*, ranged_storage*>> get_intersecting_set(u32 address, u32 range, bool check_whole_size)
 		{
+			std::vector<std::pair<section_storage_type*, ranged_storage*>> result;
 			bool response = false;
+			u64 cache_tag = get_system_time();
 			u32 last_dirty_block = UINT32_MAX;
 			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
 
@@ -195,7 +202,7 @@ namespace rsx
 				if (base == last_dirty_block && range_data.valid_count == 0)
 					continue;
 
-				if (trampled_range.first < trampled_range.second)
+				if (trampled_range.first <= trampled_range.second)
 				{
 					//Only if a valid range, ignore empty sets
 					if (trampled_range.first >= (range_data.max_addr + range_data.max_range) || range_data.min_addr >= trampled_range.second)
@@ -205,11 +212,10 @@ namespace rsx
 				for (int i = 0; i < range_data.data.size(); i++)
 				{
 					auto &tex = range_data.data[i];
-
-					if (tex.is_dirty()) continue;
+					if (tex.cache_tag == cache_tag) continue; //already processed
 					if (!tex.is_locked()) continue;	//flushable sections can be 'clean' but unlocked. TODO: Handle this better
 
-					auto overlapped = tex.overlaps_page(trampled_range, address, false);
+					auto overlapped = tex.overlaps_page(trampled_range, address, check_whole_size);
 					if (std::get<0>(overlapped))
 					{
 						auto &new_range = std::get<1>(overlapped);
@@ -222,19 +228,8 @@ namespace rsx
 							range_reset = true;
 						}
 
-						if (unprotect)
-						{
-							tex.set_dirty(true);
-							tex.unprotect();
-						}
-						else
-						{
-							tex.discard();
-						}
-
-						m_unreleased_texture_objects++;
-						range_data.remove_one();
-						response = true;
+						tex.cache_tag = cache_tag;
+						result.push_back({&tex, &range_data});
 					}
 				}
 
@@ -245,87 +240,92 @@ namespace rsx
 				}
 			}
 
-			return response;
+			return result;
+		}
+
+		//Invalidate range base implementation
+		//Returns a pair:
+		//1. A boolean - true if the memory range was truly locked and has been dealt with, false otherwise
+		//2. A vector of all sections that should be flushed if the caller did not set the allow_flush method. That way the caller can make preparations on how to deal with sections that require flushing
+		//   Note that the sections will be unlocked regardless of the allow_flush flag
+		template <typename ...Args>
+		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl_base(u32 address, u32 range, bool discard_only, bool rebuild_cache, bool allow_flush, Args&... extras)
+		{
+			auto trampled_set = get_intersecting_set(address, range, allow_flush);
+
+			if (trampled_set.size() > 0)
+			{
+				// Rebuild the cache by only destroying ranges that need to be destroyed to unlock this page
+				const auto to_reprotect = std::remove_if(trampled_set.begin(), trampled_set.end(),
+				[&](const std::pair<section_storage_type*, ranged_storage*>& obj)
+				{
+					if (!rebuild_cache && !obj.first->is_flushable())
+						return false;
+
+					const std::pair<u32, u32> null_check = std::make_pair(UINT32_MAX, 0);
+					return !std::get<0>(obj.first->overlaps_page(null_check, address, true));
+				});
+
+				std::vector<section_storage_type*> sections_to_flush;
+				for (auto It = trampled_set.begin(); It != to_reprotect; ++It)
+				{
+					auto obj = *It;
+
+					if (discard_only)
+						obj.first->discard();
+					else
+						obj.first->unprotect();
+
+					if (obj.first->is_flushable() && allow_flush)
+					{
+						sections_to_flush.push_back(obj.first);
+					}
+					else
+					{
+						obj.first->set_dirty(true);
+						m_unreleased_texture_objects++;
+					}
+
+					obj.second->remove_one();
+				}
+
+				for (auto It = to_reprotect; It != trampled_set.end(); It++)
+				{
+					auto obj = *It;
+
+					auto old_prot = obj.first->get_protection();
+					obj.first->discard();
+					obj.first->protect(old_prot);
+					obj.first->set_dirty(false);
+				}
+
+				trampled_set.erase(to_reprotect, trampled_set.end());
+
+				if (allow_flush)
+				{
+					for (const auto &tex : sections_to_flush)
+					{
+						if (!tex->flush(std::forward<Args>(extras)...))
+						{
+							//Missed address, note this
+							//TODO: Lower severity when successful to keep the cache from overworking
+							record_cache_miss(*tex);
+						}
+					}
+
+					return{ true, {} };
+				}
+
+				return std::make_pair(true, sections_to_flush);
+			}
+
+			return{ false, {} };
 		}
 
 		template <typename ...Args>
-		bool flush_address_impl(u32 address, Args&&... extras)
+		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl(u32 address, u32 range, bool discard, bool allow_flush, Args&... extras)
 		{
-			bool response = false;
-			u32 last_dirty_block = UINT32_MAX;
-			std::pair<u32, u32> trampled_range = std::make_pair(0xffffffff, 0x0);
-			std::vector<section_storage_type*> sections_to_flush;
-
-			for (auto It = m_cache.begin(); It != m_cache.end(); It++)
-			{
-				auto &range_data = It->second;
-				const u32 base = It->first;
-				bool range_reset = false;
-
-				if (base == last_dirty_block && range_data.valid_count == 0)
-					continue;
-
-				if (trampled_range.first < trampled_range.second)
-				{
-					//Only if a valid range, ignore empty sets
-					if (trampled_range.first >= (range_data.max_addr + range_data.max_range) || range_data.min_addr >= trampled_range.second)
-						continue;
-				}
-
-				for (int i = 0; i < range_data.data.size(); i++)
-				{
-					auto &tex = range_data.data[i];
-
-					if (tex.is_dirty()) continue;
-					if (!tex.is_locked()) continue;
-
-					auto overlapped = tex.overlaps_page(trampled_range, address, true);
-					if (std::get<0>(overlapped))
-					{
-						auto &new_range = std::get<1>(overlapped);
-
-						if (new_range.first != trampled_range.first ||
-							new_range.second != trampled_range.second)
-						{
-							i = 0;
-							trampled_range = new_range;
-							range_reset = true;
-						}
-
-						if (tex.is_flushable())
-						{
-							sections_to_flush.push_back(&tex);
-						}
-						else
-						{
-							m_unreleased_texture_objects++;
-							tex.set_dirty(true);
-						}
-
-						tex.unprotect();
-						range_data.remove_one();
-
-						response = true;
-					}
-				}
-
-				if (range_reset)
-				{
-					It = m_cache.begin();
-				}
-			}
-
-			for (auto tex : sections_to_flush)
-			{
-				if (!tex->flush(std::forward<Args>(extras)...))
-				{
-					//Missed address, note this
-					//TODO: Lower severity when successful to keep the cache from overworking
-					record_cache_miss(*tex);
-				}
-			}
-
-			return response;
+			return invalidate_range_impl_base(address, range, discard, true, allow_flush, std::forward<Args>(extras)...);
 		}
 
 		bool is_hw_blit_engine_compatible(const u32 format) const
@@ -427,6 +427,7 @@ namespace rsx
 						{
 							m_unreleased_texture_objects--;
 							free_texture_section(tex);
+							m_texture_memory_in_use -= tex.get_section_size();
 						}
 
 						range_data.notify(rsx_address, rsx_size);
@@ -562,22 +563,19 @@ namespace rsx
 		}
 
 		template <typename ...Args>
-		bool flush_address(u32 address, Args&&... extras)
+		std::pair<bool, std::vector<section_storage_type*>> invalidate_address(u32 address, bool allow_flush, Args&... extras)
 		{
-			if (address < no_access_range.first ||
-				address > no_access_range.second)
-				return false;
-
-			writer_lock lock(m_cache_mutex);
-			return flush_address_impl(address, std::forward<Args>(extras)...);
+			return invalidate_range(address, 4096 - (address & 4095), false, allow_flush, std::forward<Args>(extras)...);
 		}
 
-		bool invalidate_address(u32 address)
+		template <typename ...Args>
+		std::pair<bool, std::vector<section_storage_type*>> flush_address(u32 address, Args&... extras)
 		{
-			return invalidate_range(address, 4096 - (address & 4095));
+			return invalidate_range(address, 4096 - (address & 4095), false, true, std::forward<Args>(extras)...);
 		}
 
-		bool invalidate_range(u32 address, u32 range, bool unprotect = true)
+		template <typename ...Args>
+		std::pair<bool, std::vector<section_storage_type*>> invalidate_range(u32 address, u32 range, bool discard, bool allow_flush, Args&... extras)
 		{
 			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
 
@@ -587,11 +585,31 @@ namespace rsx
 				//Doesnt fall in the read_only textures range; check render targets
 				if (trampled_range.second < no_access_range.first ||
 					trampled_range.first > no_access_range.second)
-					return false;
+					return{ false, {} };
 			}
 
 			writer_lock lock(m_cache_mutex);
-			return invalidate_range_impl(address, range, unprotect);
+			return invalidate_range_impl(address, range, discard, allow_flush, std::forward<Args>(extras)...);
+		}
+
+		template <typename ...Args>
+		bool flush_all(std::vector<section_storage_type*>& sections_to_flush, Args&... extras)
+		{
+			reader_lock lock(m_cache_mutex);
+			for (const auto &tex: sections_to_flush)
+			{
+				if (tex->is_flushed())
+					continue;
+
+				if (!tex->flush(std::forward<Args>(extras)...))
+				{
+					//Missed address, note this
+					//TODO: Lower severity when successful to keep the cache from overworking
+					record_cache_miss(*tex);
+				}
+			}
+
+			return true;
 		}
 
 		void record_cache_miss(section_storage_type &tex)
@@ -670,6 +688,7 @@ namespace rsx
 						continue;
 
 					free_texture_section(tex);
+					m_texture_memory_in_use -= tex.get_section_size();
 				}
 			}
 
@@ -882,6 +901,7 @@ namespace rsx
 			auto subresources_layout = get_subresources_layout(tex);
 			auto remap_vector = tex.decoded_remap();
 
+			m_texture_memory_in_use += (tex_pitch * tex_height);
 			return upload_image_from_cpu(cmd, texaddr, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
 				texture_upload_context::shader_read, subresources_layout, extended_dimension, is_swizzled, remap_vector)->get_raw_view();
 		}
@@ -972,8 +992,8 @@ namespace rsx
 					const u32 memcpy_bytes_length = dst.clip_width * bpp * dst.clip_height;
 
 					lock.upgrade();
-					flush_address_impl(src_address, std::forward<Args>(extras)...);
-					invalidate_range_impl(dst_address, memcpy_bytes_length, true);
+					invalidate_range_impl(src_address, memcpy_bytes_length, false, true, std::forward<Args>(extras)...);
+					invalidate_range_impl(dst_address, memcpy_bytes_length, false, true, std::forward<Args>(extras)...);
 					memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
 					return true;
 				}
@@ -1075,7 +1095,7 @@ namespace rsx
 				{
 					lock.upgrade();
 
-					flush_address_impl(src_address, std::forward<Args>(extras)...);
+					invalidate_range_impl(src_address, src.pitch * src.slice_h, false, true, std::forward<Args>(extras)...);
 
 					const u16 pitch_in_block = src_is_argb8 ? src.pitch >> 2 : src.pitch >> 1;
 					std::vector<rsx_subresource_layout> subresource_layout;
@@ -1090,6 +1110,8 @@ namespace rsx
 					const u32 gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 					vram_texture = upload_image_from_cpu(cmd, src_address, src.width, src.slice_h, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
 						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled, default_remap_vector)->get_raw_texture();
+
+					m_texture_memory_in_use += src.pitch * src.slice_h;
 				}
 			}
 			else
@@ -1145,7 +1167,7 @@ namespace rsx
 			if (format_mismatch)
 			{
 				lock.upgrade();
-				invalidate_range_impl(cached_dest->get_section_base(), cached_dest->get_section_size(), true);
+				invalidate_range_impl(cached_dest->get_section_base(), cached_dest->get_section_size(), false, true, std::forward<Args>(extras)...);
 
 				dest_texture = 0;
 				cached_dest = nullptr;
@@ -1153,7 +1175,7 @@ namespace rsx
 			else if (invalidate_dst_range)
 			{
 				lock.upgrade();
-				invalidate_range_impl(dst_address, dst.pitch * dst.height, true);
+				invalidate_range_impl(dst_address, dst.pitch * dst.height, false, true, std::forward<Args>(extras)...);
 			}
 
 			//Validate clipping region
@@ -1187,6 +1209,8 @@ namespace rsx
 					gcm_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
 					dst.swizzled? rsx::texture_create_flags::swapped_native_component_order : rsx::texture_create_flags::native_component_order,
 					default_remap_vector)->get_raw_texture();
+
+				m_texture_memory_in_use += dst.pitch * dst_dimensions.height;
 			}
 
 			const f32 scale = rsx::get_resolution_scale();
@@ -1203,6 +1227,11 @@ namespace rsx
 		virtual const u32 get_unreleased_textures_count() const
 		{
 			return m_unreleased_texture_objects;
+		}
+
+		const u32 get_texture_memory_in_use() const
+		{
+			return m_texture_memory_in_use;
 		}
 	};
 }

@@ -403,7 +403,7 @@ void GLGSRender::read_buffers()
 					}
 					else
 					{
-						m_gl_texture_cache.invalidate_range(texaddr, range);
+						m_gl_texture_cache.invalidate_range(texaddr, range, false, true);
 
 						std::unique_ptr<u8[]> buffer(new u8[pitch * height]);
 						color_buffer.read(buffer.get(), width, height, pitch);
