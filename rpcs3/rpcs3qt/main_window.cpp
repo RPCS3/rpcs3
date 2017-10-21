@@ -121,10 +121,7 @@ void main_window::Init()
 	}
 
 #ifdef BRANCH
-	if ("RPCS3/rpcs3/master"s != STRINGIZE(BRANCH))
-#elif _MSC_VER
-	fs::stat_t st;
-	if (!fs::stat(fs::get_config_dir() + "rpcs3.pdb", st) || st.is_directory || st.size < 1024 * 1024 * 100)
+	if ("RPCS3/rpcs3/master"s != STRINGIZE(BRANCH) && ""s != STRINGIZE(BRANCH))
 #else
 	if (false)
 #endif
