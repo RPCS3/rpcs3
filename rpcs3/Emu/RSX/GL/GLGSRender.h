@@ -28,7 +28,7 @@ struct work_item
 	std::mutex guard_mutex;
 
 	u32  address_to_flush = 0;
-	gl::cached_texture_section *section_to_flush = nullptr;
+	std::vector<gl::cached_texture_section*> sections_to_flush;
 
 	volatile bool processed = false;
 	volatile bool result = false;
@@ -428,7 +428,7 @@ public:
 	void set_viewport();
 
 	void synchronize_buffers();
-	work_item& post_flush_request(u32 address, gl::cached_texture_section *section);
+	work_item& post_flush_request(u32 address, std::vector<gl::cached_texture_section*>& sections);
 
 	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;
 	
