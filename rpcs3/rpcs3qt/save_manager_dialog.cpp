@@ -99,17 +99,21 @@ void save_manager_dialog::Init(std::string dir)
 	m_list = new QTableWidget(this);
 
 	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of cell selection rectangles include "table_item_delegate.h"
-	m_list->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
+	m_list->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_list->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_list->setColumnCount(4);
 	m_list->setHorizontalHeaderLabels(QStringList() << tr("Title") << tr("Subtitle") << tr("Save ID") << tr("Entry Notes"));
 
-	// Button Layout
-	QHBoxLayout* hbox_buttons = new QHBoxLayout();
+	QPushButton* push_remove_entries = new QPushButton(tr("Delete Selection"), this);
 
 	QPushButton* push_close = new QPushButton(tr("&Close"), this);
 	push_close->setAutoDefault(true);
+
+
+	// Button Layout
+	QHBoxLayout* hbox_buttons = new QHBoxLayout();
+	hbox_buttons->addWidget(push_remove_entries);
 	hbox_buttons->addStretch();
 	hbox_buttons->addWidget(push_close);
 
@@ -118,14 +122,13 @@ void save_manager_dialog::Init(std::string dir)
 	vbox_main->setAlignment(Qt::AlignCenter);
 	vbox_main->addWidget(m_list);
 	vbox_main->addLayout(hbox_buttons);
-
 	setLayout(vbox_main);
 
 	UpdateList();
 
 	// Connects and events
 	connect(push_close, &QAbstractButton::clicked, this, &save_manager_dialog::close);
-
+	connect(push_remove_entries, &QAbstractButton::clicked, this, &save_manager_dialog::OnEntriesRemove);
 	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &save_manager_dialog::OnSort);
 	connect(m_list, &QTableWidget::itemDoubleClicked, this, &save_manager_dialog::OnEntryInfo);
 	connect(m_list, &QTableWidget::customContextMenuRequested, this, &save_manager_dialog::ShowContextMenu);
@@ -252,9 +255,66 @@ void save_manager_dialog::OnEntryRemove()
 	}
 }
 
+void save_manager_dialog::OnEntriesRemove()
+{
+	auto& items = m_list->selectedItems();
+	if (items.size() == 0)
+	{
+		return;
+	}
+
+	// Small hack. Divide by four because of columns.
+	if (items.size()/4 == 1)
+	{
+		OnEntryRemove();
+		return;
+	}
+
+	if (QMessageBox::question(this, "Delete Confirmation", QString("Are you sure you want to delete these %1 items?").arg(items.size() / 4)
+		, QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+	{
+		QItemSelection selection(m_list->selectionModel()->selection());
+
+		// I could make a QPair, and remove both simultaneously, slightly more efficiently.  
+		// However, the code becomes messier to read IMO with a custom sort comparator and accessing the qpair.
+		QList<int> rows;
+		QSet<int> save_entries;
+		for (const QModelIndex& index : selection.indexes())
+		{
+			rows.append(index.row());
+			int idx_real = m_list->item(index.row(), 0)->data(Qt::UserRole).toInt();
+			save_entries.insert(idx_real);
+		}
+
+		// Remove from UI
+		qSort(rows);
+
+		int prev = -1;
+		for (int i = rows.count() - 1; i >= 0; i -= 1)
+		{
+			int curr = rows[i];
+
+			// Duplicates exist because of the columns also being selected.
+			if (curr != prev)
+			{
+				m_list->removeRow(curr);
+				prev = curr;
+			}
+		}
+
+		// Remove from file system
+		for (int idx_real : save_entries)
+		{
+			fs::remove_all(m_dir + m_save_entries[idx_real].dirName + "/");
+		}
+	}
+}
+
 //Pop-up a small context-menu, being a replacement for save_data_manage_dialog
 void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 {
+	bool selectedItems = m_list->selectedItems().size() > 0;
+
 	QPoint globalPos = m_list->mapToGlobal(pos);
 	QMenu* menu = new QMenu();
 	int idx = m_list->currentRow();
@@ -262,10 +322,12 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 	QAction* saveIDAct = new QAction(tr("SaveID"), this);
 	QAction* titleAct = new QAction(tr("Title"), this);
 	QAction* subtitleAct = new QAction(tr("Subtitle"), this);
+
 	QAction* removeAct = new QAction(tr("&Remove"), this);
 	QAction* infoAct = new QAction(tr("&Info"), this);
 
-	//This is also a stub for the sort setting. Ids is set according to their sort-type integer.
+	//This is also a stub for the sort setting. Ids are set accordingly to their sort-type integer.
+	// TODO: add more sorting types.
 	m_sort_options = new QMenu(tr("&Sort"));
 	m_sort_options->addAction(titleAct);
 	m_sort_options->addAction(subtitleAct);
@@ -277,10 +339,11 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 	menu->addSeparator();
 	menu->addAction(infoAct);
 
+	infoAct->setEnabled(!selectedItems);
 	removeAct->setEnabled(idx != -1);
 
-	//Events
-	connect(removeAct, &QAction::triggered, this, &save_manager_dialog::OnEntryRemove);
+	// Events
+	connect(removeAct, &QAction::triggered, this, &save_manager_dialog::OnEntriesRemove); // entriesremove handles case of one as well
 	connect(infoAct, &QAction::triggered, this, &save_manager_dialog::OnEntryInfo);
 
 	connect(titleAct, &QAction::triggered, this, [=] {OnSort(0); });
