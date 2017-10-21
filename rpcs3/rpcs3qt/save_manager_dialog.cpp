@@ -15,6 +15,8 @@
 #include <QMessageBox>
 #include <QDesktopWidget>
 #include <QApplication>
+#include <QUrl>
+#include <QDesktopServices>
 
 namespace
 {
@@ -257,7 +259,7 @@ void save_manager_dialog::OnEntryRemove()
 
 void save_manager_dialog::OnEntriesRemove()
 {
-	auto& items = m_list->selectedItems();
+	QList<QTableWidgetItem*> items = m_list->selectedItems();
 	if (items.size() == 0)
 	{
 		return;
@@ -313,11 +315,15 @@ void save_manager_dialog::OnEntriesRemove()
 //Pop-up a small context-menu, being a replacement for save_data_manage_dialog
 void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 {
-	bool selectedItems = m_list->selectedItems().size() > 0;
+	bool selectedItems = m_list->selectedItems().size() > 4; // > 4 is slight hack due to four columns-- more than one row selected.
 
 	QPoint globalPos = m_list->mapToGlobal(pos);
 	QMenu* menu = new QMenu();
 	int idx = m_list->currentRow();
+	if (idx == -1)
+	{
+		return;
+	}
 
 	QAction* saveIDAct = new QAction(tr("SaveID"), this);
 	QAction* titleAct = new QAction(tr("Title"), this);
@@ -325,10 +331,11 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 
 	QAction* removeAct = new QAction(tr("&Remove"), this);
 	QAction* infoAct = new QAction(tr("&Info"), this);
+	QAction* showDirAct = new QAction(tr("&Open Save Directory"), this);
 
 	//This is also a stub for the sort setting. Ids are set accordingly to their sort-type integer.
 	// TODO: add more sorting types.
-	m_sort_options = new QMenu(tr("&Sort"));
+	m_sort_options = new QMenu(tr("&Sort By"));
 	m_sort_options->addAction(titleAct);
 	m_sort_options->addAction(subtitleAct);
 	m_sort_options->addAction(saveIDAct);
@@ -336,15 +343,21 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 	menu->addMenu(m_sort_options);
 	menu->addSeparator();
 	menu->addAction(removeAct);
-	menu->addSeparator();
 	menu->addAction(infoAct);
+	menu->addAction(showDirAct);
 
 	infoAct->setEnabled(!selectedItems);
+	showDirAct->setEnabled(!selectedItems);
 	removeAct->setEnabled(idx != -1);
 
 	// Events
 	connect(removeAct, &QAction::triggered, this, &save_manager_dialog::OnEntriesRemove); // entriesremove handles case of one as well
 	connect(infoAct, &QAction::triggered, this, &save_manager_dialog::OnEntryInfo);
+	connect(showDirAct, &QAction::triggered, [=]() {
+		int idx_real = m_list->item(idx, 0)->data(Qt::UserRole).toInt();
+		QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
+		QDesktopServices::openUrl(QUrl("file:///" + path));
+	});
 
 	connect(titleAct, &QAction::triggered, this, [=] {OnSort(0); });
 	connect(subtitleAct, &QAction::triggered, this, [=] {OnSort(1); });
