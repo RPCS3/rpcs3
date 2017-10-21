@@ -40,7 +40,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	m_addr_line->setPlaceholderText("00000000");
 	m_addr_line->setFont(mono);
 	m_addr_line->setMaxLength(8);
-	m_addr_line->setFixedWidth(75);
+	m_addr_line->setFixedWidth(90);
 	m_addr_line->setFocus();
 	hbox_tools_mem_addr->addWidget(m_addr_line);
 	tools_mem_addr->setLayout(hbox_tools_mem_addr);
@@ -133,7 +133,15 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	hbox_tools->addSpacing(10);
 
 	//Memory Panel:
+	QVBoxLayout* vbox_mem_panel = new QVBoxLayout();
 	QHBoxLayout* hbox_mem_panel = new QHBoxLayout();
+
+	//Memory Panel: Hex addr label thingy
+	m_mem_hex_lab = new QLabel("");
+	m_mem_hex_lab->setObjectName("memory_viewer_hex_label_panel");
+	m_mem_hex_lab->setFont(mono);
+	m_mem_hex_lab->setAutoFillBackground(true);
+	m_mem_hex_lab->ensurePolished();
 
 	//Memory Panel: Address Panel
 	m_mem_addr = new QLabel("");
@@ -169,6 +177,9 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	hbox_mem_panel->addWidget(m_mem_ascii);
 	hbox_mem_panel->addSpacing(10);
 
+	vbox_mem_panel->addWidget(m_mem_hex_lab);
+	vbox_mem_panel->addLayout(hbox_mem_panel);
+
 	//Memory Panel: Set size of the QTextEdits
 	m_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
 	m_mem_ascii->setFixedSize(QSize(pSize * m_colcount + 6, 228));
@@ -190,7 +201,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	vbox_panel->addSpacing(10);
 	vbox_panel->addLayout(hbox_tools);
 	vbox_panel->addSpacing(10);
-	vbox_panel->addLayout(hbox_mem_panel);
+	vbox_panel->addLayout(vbox_mem_panel);
 	vbox_panel->addSpacing(10);
 	setLayout(vbox_panel);
 
@@ -249,8 +260,22 @@ void memory_viewer_panel::wheelEvent(QWheelEvent *event)
 void memory_viewer_panel::ShowMemory()
 {
 	QString t_mem_addr_str;
+	QString t_mem_hex_label_str = "             "; // Space that is required before label string.
 	QString t_mem_hex_str;
 	QString t_mem_ascii_str;
+
+	// It only makes sense to display the labels if the memory is aligned.
+	if (m_colcount == 16 || m_colcount == 8)
+	{
+		for (int i = 0; i < m_colcount; ++i)
+		{
+			t_mem_hex_label_str += qstr(fmt::format("%01x", (i+m_addr)%16) + "  ");
+		}
+	}
+	else
+	{
+		t_mem_hex_label_str = "";
+	}
 
 	for(u32 addr = m_addr; addr != m_addr + m_rowcount * m_colcount; addr += m_colcount)
 	{
@@ -286,6 +311,7 @@ void memory_viewer_panel::ShowMemory()
 	}
 
 	m_mem_addr->setText(t_mem_addr_str);
+	m_mem_hex_lab->setText(t_mem_hex_label_str);
 	m_mem_hex->setText(t_mem_hex_str);
 	m_mem_ascii->setText(t_mem_ascii_str);
 
