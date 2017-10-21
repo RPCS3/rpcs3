@@ -13,6 +13,8 @@
 #include <QHeaderView>
 #include <QMenu>
 #include <QMessageBox>
+#include <QDesktopWidget>
+#include <QApplication>
 
 namespace
 {
@@ -85,6 +87,7 @@ save_manager_dialog::save_manager_dialog(std::string dir, QWidget* parent) : QDi
 	setMinimumSize(QSize(400, 400));
 
 	Init(dir);
+	resize(width(), std::min(height(), static_cast<int>(QApplication::desktop()->screenGeometry().height()*.6)));
 }
 
 /*
