@@ -36,11 +36,13 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	//Tools: Memory Viewer Options: Address
 	QGroupBox* tools_mem_addr = new QGroupBox(tr("Address"));
 	QHBoxLayout* hbox_tools_mem_addr = new QHBoxLayout();
+	QLabel width_helper("000000000");
+	width_helper.setFont(mono);
 	m_addr_line = new QLineEdit(this);
 	m_addr_line->setPlaceholderText("00000000");
 	m_addr_line->setFont(mono);
 	m_addr_line->setMaxLength(8);
-	m_addr_line->setFixedWidth(90);
+	m_addr_line->setFixedWidth(width_helper.sizeHint().width());
 	m_addr_line->setFocus();
 	hbox_tools_mem_addr->addWidget(m_addr_line);
 	tools_mem_addr->setLayout(hbox_tools_mem_addr);
@@ -133,7 +135,6 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	hbox_tools->addSpacing(10);
 
 	//Memory Panel:
-	QVBoxLayout* vbox_mem_panel = new QVBoxLayout();
 	QHBoxLayout* hbox_mem_panel = new QHBoxLayout();
 
 	//Memory Panel: Hex addr label thingy
@@ -167,18 +168,27 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	m_mem_ascii->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 	m_mem_ascii->ensurePolished();
 
+	QVBoxLayout* vbox_mem_addr = new QVBoxLayout();
+	vbox_mem_addr->addWidget(new QWidget);
+	vbox_mem_addr->addWidget(m_mem_addr);
+
+	QVBoxLayout* vbox_mem_hex = new QVBoxLayout();
+	vbox_mem_hex->addWidget(m_mem_hex_lab);
+	vbox_mem_hex->addWidget(m_mem_hex);
+
+	QVBoxLayout* vbox_mem_ascii = new QVBoxLayout();
+	vbox_mem_ascii->addWidget(new QWidget);
+	vbox_mem_ascii->addWidget(m_mem_ascii);
+
 	//Merge Memory Panel:
 	hbox_mem_panel->setAlignment(Qt::AlignLeft);
 	hbox_mem_panel->addSpacing(20);
-	hbox_mem_panel->addWidget(m_mem_addr);
+	hbox_mem_panel->addLayout(vbox_mem_addr);
 	hbox_mem_panel->addSpacing(10);
-	hbox_mem_panel->addWidget(m_mem_hex);
+	hbox_mem_panel->addLayout(vbox_mem_hex);
 	hbox_mem_panel->addSpacing(10);
-	hbox_mem_panel->addWidget(m_mem_ascii);
+	hbox_mem_panel->addLayout(vbox_mem_ascii);
 	hbox_mem_panel->addSpacing(10);
-
-	vbox_mem_panel->addWidget(m_mem_hex_lab);
-	vbox_mem_panel->addLayout(hbox_mem_panel);
 
 	//Memory Panel: Set size of the QTextEdits
 	m_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
@@ -201,7 +211,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	vbox_panel->addSpacing(10);
 	vbox_panel->addLayout(hbox_tools);
 	vbox_panel->addSpacing(10);
-	vbox_panel->addLayout(vbox_mem_panel);
+	vbox_panel->addLayout(hbox_mem_panel);
 	vbox_panel->addSpacing(10);
 	setLayout(vbox_panel);
 
@@ -260,7 +270,7 @@ void memory_viewer_panel::wheelEvent(QWheelEvent *event)
 void memory_viewer_panel::ShowMemory()
 {
 	QString t_mem_addr_str;
-	QString t_mem_hex_label_str = "             "; // Space that is required before label string.
+	QString t_mem_hex_label_str = " "; // Space that is required before label string.
 	QString t_mem_hex_str;
 	QString t_mem_ascii_str;
 
