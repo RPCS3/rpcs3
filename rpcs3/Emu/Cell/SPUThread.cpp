@@ -134,8 +134,8 @@ namespace spu
 			{
 				if (timeout_ms > 0)
 				{
-					const auto timeout = timeout_ms * 1000u; //convert to microseconds
-					const auto start = get_system_time();
+					const u64 timeout = timeout_ms * 1000u; //convert to microseconds
+					const u64 start = get_system_time();
 					auto remaining = timeout;
 
 					while (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
@@ -143,7 +143,7 @@ namespace spu
 						if (remaining >= native_jiffy_duration_us)
 							std::this_thread::sleep_for(1ms);
 						else
-							std::this_thread::yield();
+							busy_wait(remaining);
 
 						const auto now = get_system_time();
 						const auto elapsed = now - start;
@@ -155,7 +155,8 @@ namespace spu
 				else
 				{
 					//Slight pause if function is overburdened
-					thread_ctrl::wait_for(100);
+					const auto count = atomic_instruction_table[pc_offset].load(std::memory_order_consume) * 100ull;
+					busy_wait(count);
 				}
 			}
 
@@ -278,25 +279,15 @@ spu_imm_table_t::spu_imm_table_t()
 
 void SPUThread::on_spawn()
 {
-	if (g_cfg.core.bind_spu_cores)
+	if (g_cfg.core.thread_scheduler_enabled)
 	{
-		//Get next secondary core number
-		auto core_count = std::thread::hardware_concurrency();
-		if (core_count > 0 && core_count <= 16)
-		{
-			auto half_count = core_count / 2;
-			auto assigned_secondary_core = ((g_num_spu_threads % half_count) * 2) + 1;
-
-			thread_ctrl::set_ideal_processor_core((s32)assigned_secondary_core);
-		}
+		thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::spu));
 	}
 
 	if (g_cfg.core.lower_spu_priority)
 	{
 		thread_ctrl::set_native_priority(-1);
 	}
-
-	g_num_spu_threads++;
 }
 
 void SPUThread::on_init(const std::shared_ptr<void>& _this)

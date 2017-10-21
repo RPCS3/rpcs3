@@ -398,7 +398,11 @@ namespace rsx
 
 		// Raise priority above other threads
 		thread_ctrl::set_native_priority(1);
-		thread_ctrl::set_ideal_processor_core(0);
+
+		if (g_cfg.core.thread_scheduler_enabled)
+		{
+			thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
+		}
 
 		// Round to nearest to deal with forward/reverse scaling
 		fesetround(FE_TONEAREST);

@@ -207,9 +207,9 @@
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_4">
               <item>
-               <widget class="QCheckBox" name="bindSPUThreads">
+               <widget class="QCheckBox" name="enableScheduler">
                 <property name="text">
-                 <string>Bind SPU threads to secondary cores</string>
+                 <string>Enable thread scheduler</string>
                 </property>
                </widget>
               </item>
