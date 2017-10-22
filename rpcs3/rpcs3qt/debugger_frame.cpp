@@ -194,7 +194,7 @@ u32 debugger_frame::GetPc() const
 
 u32 debugger_frame::CentrePc(u32 pc) const
 {
-	return pc/* - ((m_item_count / 2) * 4)*/;
+	return pc - ((m_list->m_item_count / 2) * 4);
 }
 
 void debugger_frame::UpdateUI()
