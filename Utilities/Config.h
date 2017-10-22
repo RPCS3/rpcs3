@@ -118,7 +118,7 @@ namespace cfg
 		bool m_value;
 
 	public:
-		const bool def;
+		bool def;
 
 		_bool(node* owner, const std::string& name, bool def = false)
 			: _base(type::_bool, owner, name)
@@ -281,7 +281,7 @@ namespace cfg
 		std::string m_value;
 
 	public:
-		const std::string def;
+		std::string def;
 
 		string(node* owner, const std::string& name, const std::string& def = {})
 			: _base(type::string, owner, name)

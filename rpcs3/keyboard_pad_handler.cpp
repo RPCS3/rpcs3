@@ -6,6 +6,9 @@
 
 #include "rpcs3qt/pad_settings_dialog.h"
 
+inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+constexpr auto qstr = QString::fromStdString;
+
 bool keyboard_pad_handler::Init()
 {
 	return true;
@@ -13,36 +16,41 @@ bool keyboard_pad_handler::Init()
 
 keyboard_pad_handler::keyboard_pad_handler() : QObject()
 {
+	// Set this handler's type and save location
 	m_pad_config.cfg_type = "keyboard";
 	m_pad_config.cfg_name = fs::get_config_dir() + "/config_kbpad_qt.yml";
 
-	m_pad_config.left_stick_left.def = Qt::Key_A;
-	m_pad_config.left_stick_down.def = Qt::Key_S;
-	m_pad_config.left_stick_right.def = Qt::Key_D;
-	m_pad_config.left_stick_up.def = Qt::Key_W;
-	m_pad_config.right_stick_left.def = Qt::Key_Home;
-	m_pad_config.right_stick_down.def = Qt::Key_PageDown;
-	m_pad_config.right_stick_right.def = Qt::Key_End;
-	m_pad_config.right_stick_up.def = Qt::Key_PageUp;
-	m_pad_config.start.def = Qt::Key_Return;
-	m_pad_config.select.def = Qt::Key_Space;
-	m_pad_config.square.def = Qt::Key_Z;
-	m_pad_config.cross.def = Qt::Key_X;
-	m_pad_config.circle.def = Qt::Key_C;
-	m_pad_config.triangle.def = Qt::Key_V;
-	m_pad_config.left.def = Qt::Key_Left;
-	m_pad_config.down.def = Qt::Key_Down;
-	m_pad_config.right.def = Qt::Key_Right;
-	m_pad_config.up.def = Qt::Key_Up;
-	m_pad_config.r1.def = Qt::Key_E;
-	m_pad_config.r2.def = Qt::Key_T;
-	m_pad_config.r3.def = Qt::Key_G;
-	m_pad_config.l1.def = Qt::Key_Q;
-	m_pad_config.l2.def = Qt::Key_R;
-	m_pad_config.l3.def = Qt::Key_F;
+	// Set default button mapping
+	m_pad_config.ls_left.def  = GetKeyName(Qt::Key_A);
+	m_pad_config.ls_down.def  = GetKeyName(Qt::Key_S);
+	m_pad_config.ls_right.def = GetKeyName(Qt::Key_D);
+	m_pad_config.ls_up.def    = GetKeyName(Qt::Key_W);
+	m_pad_config.rs_left.def  = GetKeyName(Qt::Key_Home);
+	m_pad_config.rs_down.def  = GetKeyName(Qt::Key_PageDown);
+	m_pad_config.rs_right.def = GetKeyName(Qt::Key_End);
+	m_pad_config.rs_up.def    = GetKeyName(Qt::Key_PageUp);
+	m_pad_config.start.def    = GetKeyName(Qt::Key_Return);
+	m_pad_config.select.def   = GetKeyName(Qt::Key_Space);
+	m_pad_config.ps.def       = GetKeyName(Qt::Key_Backspace);
+	m_pad_config.square.def   = GetKeyName(Qt::Key_Z);
+	m_pad_config.cross.def    = GetKeyName(Qt::Key_X);
+	m_pad_config.circle.def   = GetKeyName(Qt::Key_C);
+	m_pad_config.triangle.def = GetKeyName(Qt::Key_V);
+	m_pad_config.left.def     = GetKeyName(Qt::Key_Left);
+	m_pad_config.down.def     = GetKeyName(Qt::Key_Down);
+	m_pad_config.right.def    = GetKeyName(Qt::Key_Right);
+	m_pad_config.up.def       = GetKeyName(Qt::Key_Up);
+	m_pad_config.r1.def       = GetKeyName(Qt::Key_E);
+	m_pad_config.r2.def       = GetKeyName(Qt::Key_T);
+	m_pad_config.r3.def       = GetKeyName(Qt::Key_G);
+	m_pad_config.l1.def       = GetKeyName(Qt::Key_Q);
+	m_pad_config.l2.def       = GetKeyName(Qt::Key_R);
+	m_pad_config.l3.def       = GetKeyName(Qt::Key_F);
 
+	// apply defaults
 	m_pad_config.from_default();
 
+	// set capabilities
 	b_has_config = true;
 }
 
@@ -202,6 +210,73 @@ std::vector<std::string> keyboard_pad_handler::ListDevices()
 	return list_devices;
 }
 
+const std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
+{
+	//TODO what about numpad?
+	// Fix some unknown button names
+	switch (keyEvent->key())
+	{
+	case Qt::Key_Alt:
+		return "Alt";
+	case Qt::Key_AltGr:
+		return "AltGr";
+	case Qt::Key_Shift:
+		return "Shift";
+	case Qt::Key_Control:
+		return "Ctrl";
+	case Qt::Key_NumLock:
+		return sstr(QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText));
+	default:
+		break;
+	}
+	return sstr(QKeySequence(keyEvent->key() | keyEvent->modifiers()).toString(QKeySequence::NativeText));
+}
+
+const std::string keyboard_pad_handler::GetKeyName(const u32& keyCode)
+{
+	//TODO what about numpad?
+	return sstr(QKeySequence(keyCode).toString(QKeySequence::NativeText));
+}
+
+const u32 keyboard_pad_handler::GetKeyCode(const std::string& keyName)
+{
+	if (keyName == "Alt")
+		return Qt::Key_Alt;
+	else if (keyName == "AltGr")
+		return Qt::Key_AltGr;
+	else if (keyName == "Shift")
+		return Qt::Key_Shift;
+	else if (keyName == "Ctrl")
+		return Qt::Key_Control;
+
+	QString key = qstr(keyName);
+	QKeySequence seq(key);
+	u32 keyCode;
+	// We should only working with a single key here
+	if (seq.count() == 1)
+	{
+		keyCode = seq[0];
+	}
+	else
+	{
+		// Should be here only if a modifier key (e.g. Ctrl, Alt) is pressed.
+		if (seq.count() != 0)
+		{
+			return 0;
+		}
+		// Add a non-modifier key "A" to the picture because QKeySequence
+		// seems to need that to acknowledge the modifier. We know that A has
+		// a keyCode of 65 (or 0x41 in hex)
+		seq = QKeySequence(key + "+A");
+		if (seq.count() != 0 || seq[0] <= 65)
+		{
+			return 0;
+		}
+		keyCode = seq[0] - 65;
+	}
+	return keyCode;
+}
+
 bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
 {
 	if (device != "Keyboard") return false;
@@ -216,28 +291,28 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 		CELL_PAD_DEV_TYPE_STANDARD
 	);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.left,   CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.down,   CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.right,  CELL_PAD_CTRL_RIGHT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.up,     CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.start,  CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.r3,     CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.l3,     CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.select, CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.left),     CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.down),     CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.right),    CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.up),       CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.start),    CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.r3),       CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.l3),       CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.select),   CELL_PAD_CTRL_SELECT);
+	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.ps),       CELL_PAD_CTRL_PS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.square),   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.cross),    CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.circle),   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.triangle), CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.r1),       CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.l1),       CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.r2),       CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.l2),       CELL_PAD_CTRL_L2);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.square,   CELL_PAD_CTRL_SQUARE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.cross,    CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.circle,   CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.triangle, CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.r1,       CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.l1,       CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.r2,       CELL_PAD_CTRL_R2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.l2,       CELL_PAD_CTRL_L2);
-
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  m_pad_config.left_stick_left,  m_pad_config.left_stick_right);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  m_pad_config.left_stick_up,    m_pad_config.left_stick_down);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, m_pad_config.right_stick_left, m_pad_config.right_stick_right);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, m_pad_config.right_stick_up,   m_pad_config.right_stick_down);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  GetKeyCode(m_pad_config.ls_left), GetKeyCode(m_pad_config.ls_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  GetKeyCode(m_pad_config.ls_up),   GetKeyCode(m_pad_config.ls_down));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, GetKeyCode(m_pad_config.rs_left), GetKeyCode(m_pad_config.rs_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, GetKeyCode(m_pad_config.rs_up),   GetKeyCode(m_pad_config.rs_down));
 
 	bindings.push_back(pad);
 

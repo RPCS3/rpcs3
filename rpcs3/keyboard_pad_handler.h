@@ -26,6 +26,10 @@ public:
 	void ThreadProc() override;
 	void ConfigController(const std::string& device) override;
 
+	const std::string GetKeyName(const QKeyEvent* keyEvent);
+	const std::string GetKeyName(const u32& keyCode);
+	const u32 GetKeyCode(const std::string& keyName);
+
 protected:
 	void Key(const u32 code, bool pressed, u16 value = 255);
 

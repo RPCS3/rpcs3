@@ -9,6 +9,8 @@
 
 class ds4_pad_handler final : public PadHandlerBase
 {
+	// These are all the possible buttons on a standard DS4 controller
+	// The touchpad is restricted to its button for now (or forever?)
 	enum DS4KeyCodes
 	{
 		Triangle = 0,
@@ -21,14 +23,16 @@ class ds4_pad_handler final : public PadHandlerBase
 		Down,
 		R1,
 		R2,
-		R3,
 		L1,
 		L2,
-		L3,
 		Share,
 		Options,
 		PSButton,
-		TouchButton,
+		TouchPad,
+
+		L3,
+		R3,
+
 		LSXNeg,
 		LSXPos,
 		LSYNeg,
@@ -41,35 +45,35 @@ class ds4_pad_handler final : public PadHandlerBase
 		KEYCODECOUNT
 	};
 
+	// Unique names for the config files and our pad settings dialog
 	const std::unordered_map<u32, std::string> button_list =
 	{
 		{ DS4KeyCodes::Triangle, "Triangle" },
-		{ DS4KeyCodes::Circle, "Circle" },
-		{ DS4KeyCodes::Cross, "Cross" },
-		{ DS4KeyCodes::Square, "Square" },
-
-		{ DS4KeyCodes::Left, "Left" },
-		{ DS4KeyCodes::Right, "Right" },
-		{ DS4KeyCodes::Up, "Up" },
-		{ DS4KeyCodes::Down, "Down" },
-		{ DS4KeyCodes::R1, "R1" },
-		{ DS4KeyCodes::R2, "R2" },
-		{ DS4KeyCodes::R3, "R3" },
-		{ DS4KeyCodes::Options, "Options" },
-		{ DS4KeyCodes::Share, "Share" },
+		{ DS4KeyCodes::Circle,   "Circle" },
+		{ DS4KeyCodes::Cross,    "Cross" },
+		{ DS4KeyCodes::Square,   "Square" },
+		{ DS4KeyCodes::Left,     "Left" },
+		{ DS4KeyCodes::Right,    "Right" },
+		{ DS4KeyCodes::Up,       "Up" },
+		{ DS4KeyCodes::Down,     "Down" },
+		{ DS4KeyCodes::R1,       "R1" },
+		{ DS4KeyCodes::R2,       "R2" },
+		{ DS4KeyCodes::R3,       "R3" },
+		{ DS4KeyCodes::Options,  "Options" },
+		{ DS4KeyCodes::Share,    "Share" },
 		{ DS4KeyCodes::PSButton, "PS Button" },
-		{ DS4KeyCodes::TouchButton, "Touch Pad" },
-		{ DS4KeyCodes::L1, "L1" },
-		{ DS4KeyCodes::L2, "L2" },
-		{ DS4KeyCodes::L3, "L3" },
-		{ DS4KeyCodes::LSXNeg, "LS X-" },
-		{ DS4KeyCodes::LSXPos, "LS X+" },
-		{ DS4KeyCodes::LSYPos, "LS Y+" },
-		{ DS4KeyCodes::LSYNeg, "LS Y-" },
-		{ DS4KeyCodes::RSXNeg, "RS X-" },
-		{ DS4KeyCodes::RSXPos, "RS X+" },
-		{ DS4KeyCodes::RSYPos, "RS Y+" },
-		{ DS4KeyCodes::RSYNeg, "RS Y-" }
+		{ DS4KeyCodes::TouchPad, "Touch Pad" },
+		{ DS4KeyCodes::L1,       "L1" },
+		{ DS4KeyCodes::L2,       "L2" },
+		{ DS4KeyCodes::L3,       "L3" },
+		{ DS4KeyCodes::LSXNeg,   "LS X-" },
+		{ DS4KeyCodes::LSXPos,   "LS X+" },
+		{ DS4KeyCodes::LSYPos,   "LS Y+" },
+		{ DS4KeyCodes::LSYNeg,   "LS Y-" },
+		{ DS4KeyCodes::RSXNeg,   "RS X-" },
+		{ DS4KeyCodes::RSXPos,   "RS X+" },
+		{ DS4KeyCodes::RSYPos,   "RS Y+" },
+		{ DS4KeyCodes::RSYNeg,   "RS Y-" }
 	};
 
 	enum DS4CalibIndex
@@ -132,8 +136,7 @@ public:
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
 	void ConfigController(const std::string& device) override;
-	std::string GetButtonName(u32 btn) override;
-	void GetNextButtonPress(const std::string& padid, const std::function<void(u32, std::string)>& buttonCallback) override;
+	void GetNextButtonPress(const std::string& padid, const std::function<void(std::string)>& buttonCallback) override;
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
 	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 
@@ -144,7 +147,7 @@ private:
 	std::array<bool, MAX_GAMEPADS> last_connection_status = {};
 
 	std::vector<std::pair<std::shared_ptr<DS4Device>, std::shared_ptr<Pad>>> bindings;
-	std::array<u16, ds4_pad_handler::DS4KeyCodes::KEYCODECOUNT> parsedBuffer;
+	std::array<u16, ds4_pad_handler::DS4KeyCodes::KEYCODECOUNT> button_values;
 
 private:
 	void ProcessDataToPad(const std::shared_ptr<DS4Device>& ds4Device, const std::shared_ptr<Pad>& pad);
@@ -152,7 +155,7 @@ private:
 	DS4DataStatus GetRawData(const std::shared_ptr<DS4Device>& ds4Device);
 	// This function gets us usuable buffer from the rawbuffer of padData
 	// Todo: this currently only handles 'buttons' and not axis or sensors for the time being
-	std::array<u16, DS4KeyCodes::KEYCODECOUNT> GetParsedBuffer(const std::shared_ptr<DS4Device>& ds4Device);
+	std::array<u16, DS4KeyCodes::KEYCODECOUNT> GetButtonValues(const std::shared_ptr<DS4Device>& ds4Device);
 	bool GetCalibrationData(const std::shared_ptr<DS4Device>& ds4Device);
 	void CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo);
 	void SendVibrateData(const std::shared_ptr<DS4Device>& device);

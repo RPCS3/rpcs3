@@ -81,7 +81,7 @@ class pad_settings_dialog : public QDialog
 
 	struct PAD_BUTTON
 	{
-		cfg::int32* cfg_id;
+		cfg::string* cfg_name;
 		std::string key;
 		QString text;
 	};
@@ -117,8 +117,6 @@ private:
 	/** Resets the view to default. Resets the Remap Timer */
 	void ReactivateButtons();
 
-	QString GetButtonName(const u32& keyCode);
-
 public:
 	explicit pad_settings_dialog(pad_config* pad_cfg, const std::string& device, PadHandlerBase& handler, QWidget *parent = nullptr);
 	~pad_settings_dialog();
@@ -134,7 +132,4 @@ public:
 
 	/** Save the Pad Configuration to the current Pad Handler Config File */
 	void SaveConfig();
-
-	/** Get the name of a Qt Key Sequence. Only for keyboard handler */
-	const QString GetKeyName(const u32& keyCode);
 };

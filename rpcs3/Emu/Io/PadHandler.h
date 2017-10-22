@@ -246,30 +246,31 @@ struct pad_config : cfg::node
 	std::string cfg_type = "";
 	std::string cfg_name = "";
 
-	cfg::int32 left_stick_left{ this, "Left Analog Stick Left", 0 };
-	cfg::int32 left_stick_down{ this, "Left Analog Stick Down", 0 };
-	cfg::int32 left_stick_right{ this, "Left Analog Stick Right", 0 };
-	cfg::int32 left_stick_up{ this, "Left Analog Stick Up", 0 };
-	cfg::int32 right_stick_left{ this, "Right Analog Stick Left", 0 };
-	cfg::int32 right_stick_down{ this, "Right Analog Stick Down", 0 };
-	cfg::int32 right_stick_right{ this, "Right Analog Stick Right", 0 };
-	cfg::int32 right_stick_up{ this, "Right Analog Stick Up", 0 };
-	cfg::int32 start{ this, "Start", 0 };
-	cfg::int32 select{ this, "Select", 0 };
-	cfg::int32 square{ this, "Square", 0 };
-	cfg::int32 cross{ this, "Cross", 0 };
-	cfg::int32 circle{ this, "Circle", 0 };
-	cfg::int32 triangle{ this, "Triangle", 0 };
-	cfg::int32 left{ this, "Left", 0 };
-	cfg::int32 down{ this, "Down", 0 };
-	cfg::int32 right{ this, "Right", 0 };
-	cfg::int32 up{ this, "Up", 0 };
-	cfg::int32 r1{ this, "R1", 0 };
-	cfg::int32 r2{ this, "R2", 0 };
-	cfg::int32 r3{ this, "R3", 0 };
-	cfg::int32 l1{ this, "L1", 0 };
-	cfg::int32 l2{ this, "L2", 0 };
-	cfg::int32 l3{ this, "L3", 0 };
+	cfg::string ls_left { this, "Left Stick Left", "" };
+	cfg::string ls_down { this, "Left Stick Down", "" };
+	cfg::string ls_right{ this, "Left Stick Right", "" };
+	cfg::string ls_up   { this, "Left Stick Up", "" };
+	cfg::string rs_left { this, "Right Stick Left", "" };
+	cfg::string rs_down { this, "Right Stick Down", "" };
+	cfg::string rs_right{ this, "Right Stick Right", "" };
+	cfg::string rs_up   { this, "Right Stick Up", "" };
+	cfg::string start   { this, "Start", "" };
+	cfg::string select  { this, "Select", "" };
+	cfg::string ps      { this, "PS Button", "" };
+	cfg::string square  { this, "Square", "" };
+	cfg::string cross   { this, "Cross", "" };
+	cfg::string circle  { this, "Circle", "" };
+	cfg::string triangle{ this, "Triangle", "" };
+	cfg::string left    { this, "Left", "" };
+	cfg::string down    { this, "Down", "" };
+	cfg::string right   { this, "Right", "" };
+	cfg::string up      { this, "Up", "" };
+	cfg::string r1      { this, "R1", "" };
+	cfg::string r2      { this, "R2", "" };
+	cfg::string r3      { this, "R3", "" };
+	cfg::string l1      { this, "L1", "" };
+	cfg::string l2      { this, "L2", "" };
+	cfg::string l3      { this, "L3", "" };
 
 	cfg::_int<0, 1000000> lstickdeadzone{ this, "Left Stick Deadzone", 0 };
 	cfg::_int<0, 1000000> rstickdeadzone{ this, "Right Stick Deadzone", 0 };
@@ -280,7 +281,6 @@ struct pad_config : cfg::node
 	cfg::_bool enable_vibration_motor_large{ this, "Enable Large Vibration Motor", true };
 	cfg::_bool enable_vibration_motor_small{ this, "Enable Small Vibration Motor", true };
 	cfg::_bool switch_vibration_motors{ this, "Switch Vibration Motors", false };
-	cfg::_bool has_axis_triggers{ this, "Has Axis Triggers", true };
 
 	bool load()
 	{
@@ -313,6 +313,17 @@ protected:
 	bool b_has_config = false;
 	pad_config m_pad_config;
 
+	// Search an unordered map for a string value and return found keycode
+	int FindKeyCode(std::unordered_map<u32, std::string> map, const std::string& name)
+	{
+		for (std::unordered_map<u32, std::string>::const_iterator it = map.begin(); it != map.end(); ++it)
+		{
+			if (it->second == name) return it->first;
+		}
+		return -1;
+	};
+
+	// Get normalized trigger value based on the range defined by a threshold
 	u16 NormalizeTriggerInput(u16 value, int threshold)
 	{
 		if (value <= threshold || threshold >= TRIGGER_MAX)
@@ -329,6 +340,9 @@ protected:
 		}
 	};
 
+	// Stick variant of function above!
+	// Get new normalized value between 0 and 255 based on defined stick minimum and maximum if it is bigger than threshold.
+	// Also scale the new value down based on the capped range if threshold is not ignored.
 	u16 NormalizeStickInput(s16 raw_value, int threshold, bool ignore_threshold = false)
 	{
 		u16 value = abs(raw_value);
@@ -350,6 +364,32 @@ protected:
 		}
 	};
 
+	// Alternative variant of sick function above!
+	// Get new normalized value between 0 and 255 based on its minimum and maximum if it is bigger than threshold.
+	// Also scale the new value down based on the capped range if threshold is not ignored.
+	u16 NormalizeStickInput(s16 raw_value, int threshold, int minimum, int maximum, bool ignore_threshold = false)
+	{
+		float max = abs(maximum) + abs(minimum);
+		u16 value = raw_value - minimum;
+		float val = value / max;
+
+		if (ignore_threshold || threshold <= minimum)
+		{
+			return static_cast<u16>(255.0f * val);
+		}
+		else if (value <= threshold || threshold >= 255)
+		{
+			return static_cast<u16>(0);
+		}
+		else
+		{
+			float thresh = threshold / 255.0f;
+			return static_cast<u16>(255.0f * std::min(1.0f, (val - thresh) / (1.0f - thresh)));
+		}
+	};
+
+	// Yet another stick variant!
+	// This one is used in order to normalize two values at once with regard to 2 dimensions this time
 	void NormalizeRawStickInput(float& X, float& Y, float deadzone)
 	{
 		X /= 255.0f;
@@ -373,6 +413,7 @@ protected:
 		}
 	};
 
+	// get clamped value between 0 and 255
 	u16 Clamp0To255(f32 input)
 	{
 		if (input > 255.f)
@@ -396,8 +437,8 @@ protected:
 	std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY, float squircle_factor)
 	{
 		// convert inX and Y to a (-1, 1) vector;
-		const f32 x = (inX - 127) / 127.f;
-		const f32 y = (inY - 127) / 127.f;
+		const f32 x = ((f32)inX - 127.5f) / 127.5f;
+		const f32 y = ((f32)inY - 127.5f) / 127.5f;
 
 		// compute angle and len of given point to be used for squircle radius
 		const f32 angle = std::atan2(y, x);
@@ -408,8 +449,8 @@ protected:
 		const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / (squircle_factor / 1000.f)) * r;
 
 		// we now have len and angle, convert to cartisian
-		const int newX = Clamp0To255(((newLen * std::cos(angle)) + 1) * 127);
-		const int newY = Clamp0To255(((newLen * std::sin(angle)) + 1) * 127);
+		const int newX = Clamp0To255(((newLen * std::cos(angle)) + 1) * 127.5f);
+		const int newY = Clamp0To255(((newLen * std::sin(angle)) + 1) * 127.5f);
 		return std::tuple<u16, u16>(newX, newY);
 	}
 
@@ -430,8 +471,7 @@ public:
 	bool has_deadzones() { return b_has_deadzones; };
 	//Sets window to config the controller(optional)
 	virtual void ConfigController(const std::string& device) {};
-	virtual void GetNextButtonPress(const std::string& padId, const std::function<void(u32, std::string)>& callback) {};
-	virtual std::string GetButtonName(u32 btn) { return ""; };
+	virtual void GetNextButtonPress(const std::string& padId, const std::function<void(std::string)>& callback) {};
 	virtual void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) {};
 	virtual void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) {};
 	//Return list of devices for that handler

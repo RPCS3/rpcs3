@@ -101,6 +101,7 @@ namespace
 
 ds4_pad_handler::ds4_pad_handler() : is_init(false)
 {
+	// Define border values
 	THUMB_MIN = 0;
 	THUMB_MAX = 255;
 	TRIGGER_MIN = 0;
@@ -108,42 +109,48 @@ ds4_pad_handler::ds4_pad_handler() : is_init(false)
 	VIBRATION_MIN = 0;
 	VIBRATION_MAX = 255;
 
+	// Set this handler's type and save location
 	m_pad_config.cfg_type = "ds4";
 	m_pad_config.cfg_name = fs::get_config_dir() + "/config_ds4.yml";
 
-	m_pad_config.left_stick_left.def = DS4KeyCodes::LSXNeg;
-	m_pad_config.left_stick_down.def = DS4KeyCodes::LSYNeg;
-	m_pad_config.left_stick_right.def = DS4KeyCodes::LSXPos;
-	m_pad_config.left_stick_up.def = DS4KeyCodes::LSYPos;
-	m_pad_config.right_stick_left.def = DS4KeyCodes::RSXNeg;
-	m_pad_config.right_stick_down.def = DS4KeyCodes::RSYNeg;
-	m_pad_config.right_stick_right.def = DS4KeyCodes::RSXPos;
-	m_pad_config.right_stick_up.def = DS4KeyCodes::RSYPos;
-	m_pad_config.start.def = DS4KeyCodes::Options;
-	m_pad_config.select.def = DS4KeyCodes::Share;
-	m_pad_config.square.def = DS4KeyCodes::Square;
-	m_pad_config.cross.def = DS4KeyCodes::Cross;
-	m_pad_config.circle.def = DS4KeyCodes::Circle;
-	m_pad_config.triangle.def = DS4KeyCodes::Triangle;
-	m_pad_config.left.def = DS4KeyCodes::Left;
-	m_pad_config.down.def = DS4KeyCodes::Down;
-	m_pad_config.right.def = DS4KeyCodes::Right;
-	m_pad_config.up.def = DS4KeyCodes::Up;
-	m_pad_config.r1.def = DS4KeyCodes::R1;
-	m_pad_config.r2.def = DS4KeyCodes::R2;
-	m_pad_config.r3.def = DS4KeyCodes::R3;
-	m_pad_config.l1.def = DS4KeyCodes::L1;
-	m_pad_config.l2.def = DS4KeyCodes::L2;
-	m_pad_config.l3.def = DS4KeyCodes::L3;
+	// Set default button mapping
+	m_pad_config.ls_left.def  = button_list.at(DS4KeyCodes::LSXNeg);
+	m_pad_config.ls_down.def  = button_list.at(DS4KeyCodes::LSYNeg);
+	m_pad_config.ls_right.def = button_list.at(DS4KeyCodes::LSXPos);
+	m_pad_config.ls_up.def    = button_list.at(DS4KeyCodes::LSYPos);
+	m_pad_config.rs_left.def  = button_list.at(DS4KeyCodes::RSXNeg);
+	m_pad_config.rs_down.def  = button_list.at(DS4KeyCodes::RSYNeg);
+	m_pad_config.rs_right.def = button_list.at(DS4KeyCodes::RSXPos);
+	m_pad_config.rs_up.def    = button_list.at(DS4KeyCodes::RSYPos);
+	m_pad_config.start.def    = button_list.at(DS4KeyCodes::Options);
+	m_pad_config.select.def   = button_list.at(DS4KeyCodes::Share);
+	m_pad_config.ps.def       = button_list.at(DS4KeyCodes::PSButton);
+	m_pad_config.square.def   = button_list.at(DS4KeyCodes::Square);
+	m_pad_config.cross.def    = button_list.at(DS4KeyCodes::Cross);
+	m_pad_config.circle.def   = button_list.at(DS4KeyCodes::Circle);
+	m_pad_config.triangle.def = button_list.at(DS4KeyCodes::Triangle);
+	m_pad_config.left.def     = button_list.at(DS4KeyCodes::Left);
+	m_pad_config.down.def     = button_list.at(DS4KeyCodes::Down);
+	m_pad_config.right.def    = button_list.at(DS4KeyCodes::Right);
+	m_pad_config.up.def       = button_list.at(DS4KeyCodes::Up);
+	m_pad_config.r1.def       = button_list.at(DS4KeyCodes::R1);
+	m_pad_config.r2.def       = button_list.at(DS4KeyCodes::R2);
+	m_pad_config.r3.def       = button_list.at(DS4KeyCodes::R3);
+	m_pad_config.l1.def       = button_list.at(DS4KeyCodes::L1);
+	m_pad_config.l2.def       = button_list.at(DS4KeyCodes::L2);
+	m_pad_config.l3.def       = button_list.at(DS4KeyCodes::L3);
 
+	// Set default misc variables
 	m_pad_config.lstickdeadzone.def = 40;   // between 0 and 255
 	m_pad_config.rstickdeadzone.def = 40;   // between 0 and 255
 	m_pad_config.ltriggerthreshold.def = 0; // between 0 and 255
 	m_pad_config.rtriggerthreshold.def = 0; // between 0 and 255
 	m_pad_config.padsquircling.def = 8000;
 
+	// apply defaults
 	m_pad_config.from_default();
 
+	// set capabilities
 	b_has_config = true;
 	b_has_rumble = true;
 	b_has_deadzones = true;
@@ -155,23 +162,14 @@ void ds4_pad_handler::ConfigController(const std::string& device)
 	dlg.exec();
 }
 
-std::string ds4_pad_handler::GetButtonName(u32 btn)
-{
-	const auto check = button_list.find(btn);
-	if (check == button_list.end())
-	{
-		return "FAIL";
-	}
-	return check->second;
-}
-
-void ds4_pad_handler::GetNextButtonPress(const std::string& padid, const std::function<void(u32, std::string)>& callback)
+void ds4_pad_handler::GetNextButtonPress(const std::string& padid, const std::function<void(std::string)>& callback)
 {
 	if (!Init())
 	{
 		return;
 	}
 
+	// Get the DS4 Device or return if none found
 	size_t pos = padid.find("Ds4 Pad #");
 
 	if (pos == std::string::npos) return;
@@ -191,23 +189,36 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padid, const std::fu
 
 	if (device == nullptr || device->hidDevice == nullptr) return;
 
+	// Now that we have found a device, get its status
 	DS4DataStatus status = GetRawData(device);
+
+	if (status == DS4DataStatus::ReadError)
+	{
+		// this also can mean disconnected, either way deal with it on next loop and reconnect
+		hid_close(device->hidDevice);
+		device->hidDevice = nullptr;
+		return;
+	}
 
 	if (status != DS4DataStatus::NewData) return;
 
-	auto data = GetParsedBuffer(device);
+	// Get the current button values
+	auto data = GetButtonValues(device);
+
+	// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
+	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
 	for (const auto& button : button_list)
 	{
 		u32 keycode = button.first;
 		u16 value = data[keycode];
 
-		if (((keycode < DS4KeyCodes::LSXNeg) && (keycode != DS4KeyCodes::L2) && (keycode != DS4KeyCodes::R2)) && (value > 0)
-		 || (keycode == DS4KeyCodes::L2) && (value > m_pad_config.ltriggerthreshold)
-		 || (keycode == DS4KeyCodes::R2) && (value > m_pad_config.rtriggerthreshold)
-		 || (keycode >= DS4KeyCodes::LSXNeg || keycode <= DS4KeyCodes::LSYPos) && (value > m_pad_config.lstickdeadzone)
-		 || (keycode >= DS4KeyCodes::RSXNeg || keycode <= DS4KeyCodes::RSYPos) && (value > m_pad_config.rstickdeadzone))
+		if (((keycode < DS4KeyCodes::L2) && (value > 0))
+		 || ((keycode == DS4KeyCodes::L2) && (value > m_pad_config.ltriggerthreshold))
+		 || ((keycode == DS4KeyCodes::R2) && (value > m_pad_config.rtriggerthreshold))
+		 || ((keycode >= DS4KeyCodes::LSXNeg && keycode <= DS4KeyCodes::LSYPos) && (value > m_pad_config.lstickdeadzone))
+		 || ((keycode >= DS4KeyCodes::RSXNeg && keycode <= DS4KeyCodes::RSYPos) && (value > m_pad_config.rstickdeadzone)))
 		{
-			return callback(button.first, button.second);
+			return callback(button.second);
 		}
 	}
 }
@@ -236,15 +247,23 @@ void ds4_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u3
 		}
 	}
 
-	device->largeVibrate = largeMotor;
-	device->smallVibrate = (smallMotor ? 255 : 0);
+	if (device == nullptr || device->hidDevice == nullptr) return;
 
+	// Set the device's motor speeds to our requested values
+	device->largeVibrate = largeMotor;
+	device->smallVibrate = (smallMotor ? 255 : 0); // only on or off possible
+
+	// Start/Stop the engines :)
 	SendVibrateData(device);
 }
 
 void ds4_pad_handler::TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold)
 {
-	const u8 val = parsedBuffer[keyCode];
+	// Get the requested button value from a previously filled buffer
+	const u16 val = button_values[keyCode];
+
+	// Update the pad button values based on their type and thresholds.
+	// With this you can use axis or triggers as buttons or vice versa
 	switch (keyCode)
 	{
 	case DS4KeyCodes::L2:
@@ -259,43 +278,43 @@ void ds4_pad_handler::TranslateButtonPress(u32 keyCode, bool& pressed, u16& valu
 	case DS4KeyCodes::LSXPos:
 	case DS4KeyCodes::LSYNeg:
 	case DS4KeyCodes::LSYPos:
-		pressed = val > m_pad_config.lstickdeadzone;
+		pressed = val > (ignore_threshold ? 0 : m_pad_config.lstickdeadzone);
 		value = pressed ? NormalizeStickInput(val, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
 		break;
 	case DS4KeyCodes::RSXNeg:
 	case DS4KeyCodes::RSXPos:
 	case DS4KeyCodes::RSYNeg:
 	case DS4KeyCodes::RSYPos:
-		pressed = val > m_pad_config.rstickdeadzone;
+		pressed = val > (ignore_threshold ? 0 : m_pad_config.rstickdeadzone);
 		value = pressed ? NormalizeStickInput(val, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
 		break;
-	default:
+	default: // normal button (should in theory also support sensitive buttons)
 		pressed = val > 0;
 		value = pressed ? val : 0;
 		break;
 	}
 }
 
-std::array<u16, ds4_pad_handler::DS4KeyCodes::KEYCODECOUNT> ds4_pad_handler::GetParsedBuffer(const std::shared_ptr<DS4Device>& device)
+std::array<u16, ds4_pad_handler::DS4KeyCodes::KEYCODECOUNT> ds4_pad_handler::GetButtonValues(const std::shared_ptr<DS4Device>& device)
 {
 	std::array<u16, DS4KeyCodes::KEYCODECOUNT> keyBuffer;
 	auto buf = device->padData;
 
 	// Left Stick X Axis
-	keyBuffer[DS4KeyCodes::LSXNeg] = Clamp0To255(std::max(0, (127 - buf[1]) * 2));
-	keyBuffer[DS4KeyCodes::LSXPos] = Clamp0To255(std::max(0, (buf[1] - 127) * 2));
+	keyBuffer[DS4KeyCodes::LSXNeg] = Clamp0To255((127.5f - buf[1]) * 2.0f);
+	keyBuffer[DS4KeyCodes::LSXPos] = Clamp0To255((buf[1] - 127.5f) * 2.0f);
 
-	// Left Stick Y Axis
-	keyBuffer[DS4KeyCodes::LSYNeg] = Clamp0To255(std::max(0, (buf[2] - 127) * 2));
-	keyBuffer[DS4KeyCodes::LSYPos] = Clamp0To255(std::max(0, (127 - buf[2]) * 2));
+	// Left Stick Y Axis (Up is the negative for some reason)
+	keyBuffer[DS4KeyCodes::LSYNeg] = Clamp0To255((buf[2] - 127.5f) * 2.0f);
+	keyBuffer[DS4KeyCodes::LSYPos] = Clamp0To255((127.5f - buf[2]) * 2.0f);
 
 	// Right Stick X Axis
-	keyBuffer[DS4KeyCodes::RSXNeg] = Clamp0To255(std::max(0, (127 - buf[3]) * 2));
-	keyBuffer[DS4KeyCodes::RSXPos] = Clamp0To255(std::max(0, (buf[3] - 127) * 2));
+	keyBuffer[DS4KeyCodes::RSXNeg] = Clamp0To255((127.5f - buf[3]) * 2.0f);
+	keyBuffer[DS4KeyCodes::RSXPos] = Clamp0To255((buf[3] - 127.5f) * 2.0f);
 
-	// Right Stick Y Axis
-	keyBuffer[DS4KeyCodes::RSYNeg] = Clamp0To255(std::max(0, (buf[4] - 127) * 2));
-	keyBuffer[DS4KeyCodes::RSYPos] = Clamp0To255(std::max(0, (127 - buf[4]) * 2));
+	// Right Stick Y Axis (Up is the negative for some reason)
+	keyBuffer[DS4KeyCodes::RSYNeg] = Clamp0To255((buf[4] - 127.5f) * 2.0f);
+	keyBuffer[DS4KeyCodes::RSYPos] = Clamp0To255((127.5f - buf[4]) * 2.0f);
 
 	// bleh, dpad in buffer is stored in a different state
 	u8 dpadState = buf[5] & 0xf;
@@ -360,24 +379,24 @@ std::array<u16, ds4_pad_handler::DS4KeyCodes::KEYCODECOUNT> ds4_pad_handler::Get
 	}
 
 	// square, cross, circle, triangle
-	keyBuffer[DS4KeyCodes::Square] = ((buf[5] & (1 << 4)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::Cross] = ((buf[5] & (1 << 5)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::Circle] = ((buf[5] & (1 << 6)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::Square] =   ((buf[5] & (1 << 4)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::Cross] =    ((buf[5] & (1 << 5)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::Circle] =   ((buf[5] & (1 << 6)) != 0) ? 255 : 0;
 	keyBuffer[DS4KeyCodes::Triangle] = ((buf[5] & (1 << 7)) != 0) ? 255 : 0;
-	
+
 	// L1, R1
 	keyBuffer[DS4KeyCodes::L1] = ((buf[6] & (1 << 0)) != 0) ? 255 : 0;
 	keyBuffer[DS4KeyCodes::R1] = ((buf[6] & (1 << 1)) != 0) ? 255 : 0;
-	
+
 	// select, start, l3, r3
-	keyBuffer[DS4KeyCodes::Share] = ((buf[6] & (1 << 4)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::Share] =   ((buf[6] & (1 << 4)) != 0) ? 255 : 0;
 	keyBuffer[DS4KeyCodes::Options] = ((buf[6] & (1 << 5)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::L3] = ((buf[6] & (1 << 6)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::R3] = ((buf[6] & (1 << 7)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::L3] =      ((buf[6] & (1 << 6)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::R3] =      ((buf[6] & (1 << 7)) != 0) ? 255 : 0;
 
 	// PS Button, Touch Button
 	keyBuffer[DS4KeyCodes::PSButton] = ((buf[7] & (1 << 0)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::TouchButton] = ((buf[7] & (1 << 1)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::TouchPad] = ((buf[7] & (1 << 1)) != 0) ? 255 : 0;
 
 	// L2, R2
 	keyBuffer[DS4KeyCodes::L2] = buf[8];
@@ -390,9 +409,9 @@ void ds4_pad_handler::ProcessDataToPad(const std::shared_ptr<DS4Device>& device,
 {
 	auto buf = device->padData;
 
-	parsedBuffer = GetParsedBuffer(device);
+	button_values = GetButtonValues(device);
 
-	// Now set these to pad buttons
+	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (auto & btn : pad->m_buttons)
 	{
 		TranslateButtonPress(btn.m_keyCode, btn.m_pressed, btn.m_value);
@@ -409,20 +428,29 @@ void ds4_pad_handler::ProcessDataToPad(const std::shared_ptr<DS4Device>& device,
 	}
 #endif
 
+	// used to get the absolute value of an axis
 	float stick_val[4];
 
+	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
 	for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
 	{
 		bool pressed;
 		u16 val_min, val_max;
+
+		// m_keyCodeMin is the mapped key for left or down
+		// m_keyCodeMax is the mapped key for right or up
 		TranslateButtonPress(pad->m_sticks[i].m_keyCodeMin, pressed, val_min, true);
 		TranslateButtonPress(pad->m_sticks[i].m_keyCodeMax, pressed, val_max, true);
+
+		// cancel out opposing values and get the resulting difference
 		stick_val[i] = val_max - val_min;
 	}
 
+	// Normalize our two stick's axis based on the thresholds
 	NormalizeRawStickInput(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
 	NormalizeRawStickInput(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
 
+	// Convert the axis to use the 0-127-255 range
 	stick_val[0] = ConvertAxis(stick_val[0]);
 	stick_val[1] = 255 - ConvertAxis(stick_val[1]);
 	stick_val[2] = ConvertAxis(stick_val[2]);
@@ -742,27 +770,23 @@ bool ds4_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::strin
 	);
 
 	// 'keycode' here is just 0 as we have to manually calculate this
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.l2, CELL_PAD_CTRL_L2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.r2, CELL_PAD_CTRL_R2);
-
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.up, CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.down, CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.left, CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.right, CELL_PAD_CTRL_RIGHT);
-
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.square, CELL_PAD_CTRL_SQUARE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.cross, CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.circle, CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.triangle, CELL_PAD_CTRL_TRIANGLE);
-
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.l1, CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.r1, CELL_PAD_CTRL_R1);
-
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.select, CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.start, CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.l3, CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.r3, CELL_PAD_CTRL_R3);
-
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.l2),       CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.r2),       CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.up),       CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.down),     CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.left),     CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.right),    CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.square),   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.cross),    CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.circle),   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.triangle), CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.l1),       CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.r1),       CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.select),   CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.start),    CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.l3),       CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.r3),       CELL_PAD_CTRL_R3);
+	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.ps),       CELL_PAD_CTRL_PS);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
 
@@ -771,10 +795,10 @@ bool ds4_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::strin
 	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Z, 512);
 	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_G, 512);
 
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X, m_pad_config.left_stick_left, m_pad_config.left_stick_right);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, m_pad_config.left_stick_down, m_pad_config.left_stick_up);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, m_pad_config.right_stick_left, m_pad_config.right_stick_right);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, m_pad_config.right_stick_down, m_pad_config.right_stick_up);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  FindKeyCode(button_list, m_pad_config.ls_left), FindKeyCode(button_list, m_pad_config.ls_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  FindKeyCode(button_list, m_pad_config.ls_down), FindKeyCode(button_list, m_pad_config.ls_up));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, FindKeyCode(button_list, m_pad_config.rs_left), FindKeyCode(button_list, m_pad_config.rs_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, FindKeyCode(button_list, m_pad_config.rs_down), FindKeyCode(button_list, m_pad_config.rs_up));
 
 	pad->m_vibrateMotors.emplace_back(true, 0);
 	pad->m_vibrateMotors.emplace_back(false, 0);

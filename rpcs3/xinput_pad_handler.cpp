@@ -3,17 +3,69 @@
 #include "xinput_pad_handler.h"
 #include "rpcs3qt/pad_settings_dialog.h"
 
-std::string xinput_pad_handler::GetButtonName(u32 button)
+xinput_pad_handler::xinput_pad_handler() : library(nullptr), xinputGetState(nullptr), xinputEnable(nullptr), xinputSetState(nullptr), is_init(false)
 {
-	const auto check = button_list.find(button);
-	if (check == button_list.end())
-	{
-		return "FAIL";
-	}
-	return check->second;
+	// Define border values
+	THUMB_MIN = 0;
+	THUMB_MAX = 32767;
+	TRIGGER_MIN = 0;
+	TRIGGER_MAX = 255;
+	VIBRATION_MIN = 0;
+	VIBRATION_MAX = 65535;
+
+	// Set this handler's type and save location
+	m_pad_config.cfg_type = "xinput";
+	m_pad_config.cfg_name = fs::get_config_dir() + "/config_xinput.yml";
+
+	// Set default button mapping
+	m_pad_config.ls_left.def  = button_list.at(XInputKeyCodes::LSXNeg);
+	m_pad_config.ls_down.def  = button_list.at(XInputKeyCodes::LSYNeg);
+	m_pad_config.ls_right.def = button_list.at(XInputKeyCodes::LSXPos);
+	m_pad_config.ls_up.def    = button_list.at(XInputKeyCodes::LSYPos);
+	m_pad_config.rs_left.def  = button_list.at(XInputKeyCodes::RSXNeg);
+	m_pad_config.rs_down.def  = button_list.at(XInputKeyCodes::RSYNeg);
+	m_pad_config.rs_right.def = button_list.at(XInputKeyCodes::RSXPos);
+	m_pad_config.rs_up.def    = button_list.at(XInputKeyCodes::RSYPos);
+	m_pad_config.start.def    = button_list.at(XInputKeyCodes::Start);
+	m_pad_config.select.def   = button_list.at(XInputKeyCodes::Back);
+	m_pad_config.ps.def       = button_list.at(XInputKeyCodes::Guide);
+	m_pad_config.square.def   = button_list.at(XInputKeyCodes::X);
+	m_pad_config.cross.def    = button_list.at(XInputKeyCodes::A);
+	m_pad_config.circle.def   = button_list.at(XInputKeyCodes::B);
+	m_pad_config.triangle.def = button_list.at(XInputKeyCodes::Y);
+	m_pad_config.left.def     = button_list.at(XInputKeyCodes::Left);
+	m_pad_config.down.def     = button_list.at(XInputKeyCodes::Down);
+	m_pad_config.right.def    = button_list.at(XInputKeyCodes::Right);
+	m_pad_config.up.def       = button_list.at(XInputKeyCodes::Up);
+	m_pad_config.r1.def       = button_list.at(XInputKeyCodes::RB);
+	m_pad_config.r2.def       = button_list.at(XInputKeyCodes::RT);
+	m_pad_config.r3.def       = button_list.at(XInputKeyCodes::RS);
+	m_pad_config.l1.def       = button_list.at(XInputKeyCodes::RB);
+	m_pad_config.l2.def       = button_list.at(XInputKeyCodes::LT);
+	m_pad_config.l3.def       = button_list.at(XInputKeyCodes::LS);
+
+	// Set default misc variables
+	m_pad_config.lstickdeadzone.def = XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE;  // between 0 and 32767
+	m_pad_config.rstickdeadzone.def = XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE; // between 0 and 32767
+	m_pad_config.ltriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD; // between 0 and 255
+	m_pad_config.rtriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD; // between 0 and 255
+	m_pad_config.padsquircling.def = 8000;
+
+	// apply defaults
+	m_pad_config.from_default();
+
+	// set capabilities
+	b_has_config = true;
+	b_has_rumble = true;
+	b_has_deadzones = true;
 }
 
-void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u32 btn, std::string)>& callback)
+xinput_pad_handler::~xinput_pad_handler()
+{
+	Close();
+}
+
+void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(std::string)>& callback)
 {
 	if (!Init())
 	{
@@ -40,26 +92,26 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 	// Simply get the state of the controller from XInput.
 	dwResult = (*xinputGetState)(device_number, &state);
 
-	if (dwResult == ERROR_SUCCESS)
+	if (dwResult != ERROR_SUCCESS)
 	{
-		for (const auto& button : button_list)
-		{
-			u32 keycode = button.first;
+		return;
+	}
 
-			if ((keycode < TriggersNSticks::TRIGGER_LEFT)   && (state.Gamepad.wButtons & keycode)
-			 || (keycode == TriggersNSticks::TRIGGER_LEFT)  && (state.Gamepad.bLeftTrigger > m_pad_config.ltriggerthreshold)
-			 || (keycode == TriggersNSticks::TRIGGER_RIGHT) && (state.Gamepad.bRightTrigger > m_pad_config.rtriggerthreshold)
-			 || (keycode == TriggersNSticks::STICK_L_LEFT)  && (state.Gamepad.sThumbLX < -m_pad_config.lstickdeadzone)
-			 || (keycode == TriggersNSticks::STICK_L_RIGHT) && (state.Gamepad.sThumbLX > m_pad_config.lstickdeadzone)
-			 || (keycode == TriggersNSticks::STICK_L_DOWN)  && (state.Gamepad.sThumbLY < -m_pad_config.lstickdeadzone)
-			 || (keycode == TriggersNSticks::STICK_L_UP)    && (state.Gamepad.sThumbLY > m_pad_config.lstickdeadzone)
-			 || (keycode == TriggersNSticks::STICK_R_LEFT)  && (state.Gamepad.sThumbRX < -m_pad_config.rstickdeadzone)
-			 || (keycode == TriggersNSticks::STICK_R_RIGHT) && (state.Gamepad.sThumbRX > m_pad_config.rstickdeadzone)
-			 || (keycode == TriggersNSticks::STICK_R_DOWN)  && (state.Gamepad.sThumbRY < -m_pad_config.rstickdeadzone)
-			 || (keycode == TriggersNSticks::STICK_R_UP)    && (state.Gamepad.sThumbRY > m_pad_config.rstickdeadzone))
-			{
-				return callback(button.first, button.second);
-			}
+	// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
+	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
+	auto data = GetButtonValues(state);
+	for (const auto& button : button_list)
+	{
+		u32 keycode = button.first;
+		u16 value = data[keycode];
+
+		if (((keycode < XInputKeyCodes::LT) && (value > 0))
+		 || ((keycode == XInputKeyCodes::LT) && (value > m_pad_config.ltriggerthreshold))
+		 || ((keycode == XInputKeyCodes::RT) && (value > m_pad_config.rtriggerthreshold))
+		 || ((keycode >= XInputKeyCodes::LSXNeg && keycode <= XInputKeyCodes::LSYPos) && (value > m_pad_config.lstickdeadzone))
+		 || ((keycode >= XInputKeyCodes::RSXNeg && keycode <= XInputKeyCodes::RSYPos) && (value > m_pad_config.rstickdeadzone)))
+		{
+			return callback(button.second);
 		}
 	}
 }
@@ -96,108 +148,99 @@ void xinput_pad_handler::TestVibration(const std::string& padId, u32 largeMotor,
 
 void xinput_pad_handler::TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold)
 {
+	// Get the requested button value from a previously filled buffer
+	const u16 val = button_values[keyCode];
+
+	// Update the pad button values based on their type and thresholds.
+	// With this you can use axis or triggers as buttons or vice versa
 	switch (keyCode)
 	{
-	case TriggersNSticks::TRIGGER_LEFT:
-		pressed = state.Gamepad.bLeftTrigger > m_pad_config.ltriggerthreshold;
-		value = pressed ? NormalizeTriggerInput(state.Gamepad.bLeftTrigger, m_pad_config.ltriggerthreshold) : 0;
+	case XInputKeyCodes::LT:
+		pressed = val > m_pad_config.ltriggerthreshold;
+		value = pressed ? NormalizeTriggerInput(val, m_pad_config.ltriggerthreshold) : 0;
 		break;
-	case TriggersNSticks::TRIGGER_RIGHT:
-		pressed = state.Gamepad.bRightTrigger > m_pad_config.rtriggerthreshold;
-		value = pressed ? NormalizeTriggerInput(state.Gamepad.bRightTrigger, m_pad_config.rtriggerthreshold) : 0;
+	case XInputKeyCodes::RT:
+		pressed = val > m_pad_config.rtriggerthreshold;
+		value = pressed ? NormalizeTriggerInput(val, m_pad_config.rtriggerthreshold) : 0;
 		break;
-	case TriggersNSticks::STICK_L_LEFT:
-		pressed = state.Gamepad.sThumbLX < (ignore_threshold ? 0 : -m_pad_config.lstickdeadzone);
-		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbLX, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
+	case XInputKeyCodes::LSXNeg:
+	case XInputKeyCodes::LSXPos:
+	case XInputKeyCodes::LSYPos:
+	case XInputKeyCodes::LSYNeg:
+		pressed = val > (ignore_threshold ? 0 : m_pad_config.lstickdeadzone);
+		value = pressed ? NormalizeStickInput(val, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
 		break;
-	case TriggersNSticks::STICK_L_RIGHT:
-		pressed = state.Gamepad.sThumbLX >(ignore_threshold ? 0 : m_pad_config.lstickdeadzone);
-		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbLX, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
+	case XInputKeyCodes::RSXNeg:
+	case XInputKeyCodes::RSXPos:
+	case XInputKeyCodes::RSYPos:
+	case XInputKeyCodes::RSYNeg:
+		pressed = val > (ignore_threshold ? 0 : m_pad_config.rstickdeadzone);
+		value = pressed ? NormalizeStickInput(val, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
 		break;
-	case TriggersNSticks::STICK_L_UP:
-		pressed = state.Gamepad.sThumbLY > (ignore_threshold ? 0 : m_pad_config.lstickdeadzone);
-		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbLY, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
-		break;
-	case TriggersNSticks::STICK_L_DOWN:
-		pressed = state.Gamepad.sThumbLY < (ignore_threshold ? 0 : -m_pad_config.lstickdeadzone);
-		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbLY, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
-		break;
-	case TriggersNSticks::STICK_R_LEFT:
-		pressed = state.Gamepad.sThumbRX < (ignore_threshold ? 0 : -m_pad_config.rstickdeadzone);
-		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbRX, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
-		break;
-	case TriggersNSticks::STICK_R_RIGHT:
-		pressed = state.Gamepad.sThumbRX >(ignore_threshold ? 0 : m_pad_config.rstickdeadzone);
-		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbRX, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
-		break;
-	case TriggersNSticks::STICK_R_UP:
-		pressed = state.Gamepad.sThumbRY > (ignore_threshold ? 0 : m_pad_config.rstickdeadzone);
-		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbRY, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
-		break;
-	case TriggersNSticks::STICK_R_DOWN:
-		pressed = state.Gamepad.sThumbRY < (ignore_threshold ? 0 : -m_pad_config.rstickdeadzone);
-		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbRY, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
-		break;
-	default:
-		pressed = state.Gamepad.wButtons & keyCode;
-		value = pressed ? 255 : 0;
+	default: // normal button (should in theory also support sensitive buttons)
+		pressed = val > 0;
+		value = pressed ? val : 0;
 		break;
 	}
 }
 
-xinput_pad_handler::xinput_pad_handler() : library(nullptr), xinputGetState(nullptr), xinputEnable(nullptr), xinputSetState(nullptr), is_init(false)
+std::array<u16, xinput_pad_handler::XInputKeyCodes::KEYCODECOUNT> xinput_pad_handler::GetButtonValues(const XINPUT_STATE& state)
 {
-	THUMB_MIN = 0;
-	THUMB_MAX = 32767;
-	TRIGGER_MIN = 0;
-	TRIGGER_MAX = 255;
-	VIBRATION_MIN = 0;
-	VIBRATION_MAX = 65535;
+	std::array<u16, xinput_pad_handler::XInputKeyCodes::KEYCODECOUNT> values;
 
-	m_pad_config.cfg_type = "xinput";
-	m_pad_config.cfg_name = fs::get_config_dir() + "/config_xinput.yml";
+	// Triggers
+	values[XInputKeyCodes::LT] = state.Gamepad.bLeftTrigger;
+	values[XInputKeyCodes::RT] = state.Gamepad.bRightTrigger;
 
-	m_pad_config.left_stick_left.def = TriggersNSticks::STICK_L_LEFT;
-	m_pad_config.left_stick_down.def = TriggersNSticks::STICK_L_DOWN;
-	m_pad_config.left_stick_right.def = TriggersNSticks::STICK_L_RIGHT;
-	m_pad_config.left_stick_up.def = TriggersNSticks::STICK_L_UP;
-	m_pad_config.right_stick_left.def = TriggersNSticks::STICK_R_LEFT;
-	m_pad_config.right_stick_down.def = TriggersNSticks::STICK_R_DOWN;
-	m_pad_config.right_stick_right.def = TriggersNSticks::STICK_R_RIGHT;
-	m_pad_config.right_stick_up.def = TriggersNSticks::STICK_R_UP;
-	m_pad_config.start.def = XINPUT_GAMEPAD_START;
-	m_pad_config.select.def = XINPUT_GAMEPAD_BACK;
-	m_pad_config.square.def = XINPUT_GAMEPAD_X;
-	m_pad_config.cross.def = XINPUT_GAMEPAD_A;
-	m_pad_config.circle.def = XINPUT_GAMEPAD_B;
-	m_pad_config.triangle.def = XINPUT_GAMEPAD_Y;
-	m_pad_config.left.def = XINPUT_GAMEPAD_DPAD_LEFT;
-	m_pad_config.down.def = XINPUT_GAMEPAD_DPAD_DOWN;
-	m_pad_config.right.def = XINPUT_GAMEPAD_DPAD_RIGHT;
-	m_pad_config.up.def = XINPUT_GAMEPAD_DPAD_UP;
-	m_pad_config.r1.def = XINPUT_GAMEPAD_RIGHT_SHOULDER;
-	m_pad_config.r2.def = TriggersNSticks::TRIGGER_RIGHT;
-	m_pad_config.r3.def = XINPUT_GAMEPAD_RIGHT_THUMB;
-	m_pad_config.l1.def = XINPUT_GAMEPAD_LEFT_SHOULDER;
-	m_pad_config.l2.def = TriggersNSticks::TRIGGER_LEFT;
-	m_pad_config.l3.def = XINPUT_GAMEPAD_LEFT_THUMB;
+	// Sticks
+	int lx = state.Gamepad.sThumbLX;
+	int ly = state.Gamepad.sThumbLY;
+	int rx = state.Gamepad.sThumbRX;
+	int ry = state.Gamepad.sThumbRY;
 
-	m_pad_config.lstickdeadzone.def = XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE;  // between 0 and 32767
-	m_pad_config.rstickdeadzone.def = XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE; // between 0 and 32767
-	m_pad_config.ltriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD; // between 0 and 255
-	m_pad_config.rtriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD; // between 0 and 255
-	m_pad_config.padsquircling.def = 8000;
+	// Left Stick X Axis
+	values[XInputKeyCodes::LSXNeg] = lx < 0 ? abs(lx) : 0;
+	values[XInputKeyCodes::LSXPos] = lx > 0 ? lx : 0;
 
-	m_pad_config.from_default();
+	// Left Stick Y Axis
+	values[XInputKeyCodes::LSYNeg] = ly < 0 ? abs(ly) : 0;
+	values[XInputKeyCodes::LSYPos] = ly > 0 ? ly : 0;
 
-	b_has_config = true;
-	b_has_rumble = true;
-	b_has_deadzones = true;
-}
+	// Right Stick X Axis
+	values[XInputKeyCodes::RSXNeg] = rx < 0 ? abs(rx) : 0;
+	values[XInputKeyCodes::RSXPos] = rx > 0 ? rx : 0;
 
-xinput_pad_handler::~xinput_pad_handler()
-{
-	Close();
+	// Right Stick Y Axis
+	values[XInputKeyCodes::RSYNeg] = ry < 0 ? abs(ry) : 0;
+	values[XInputKeyCodes::RSYPos] = ry > 0 ? ry : 0;
+
+	// Buttons
+	WORD buttons = state.Gamepad.wButtons;
+
+	// A, B, X, Y
+	values[XInputKeyCodes::A] = buttons & XINPUT_GAMEPAD_A ? 255 : 0;
+	values[XInputKeyCodes::B] = buttons & XINPUT_GAMEPAD_B ? 255 : 0;
+	values[XInputKeyCodes::X] = buttons & XINPUT_GAMEPAD_X ? 255 : 0;
+	values[XInputKeyCodes::Y] = buttons & XINPUT_GAMEPAD_Y ? 255 : 0;
+
+	// D-Pad
+	values[XInputKeyCodes::Left]  = buttons & XINPUT_GAMEPAD_DPAD_LEFT ? 255 : 0;
+	values[XInputKeyCodes::Right] = buttons & XINPUT_GAMEPAD_DPAD_RIGHT ? 255 : 0;
+	values[XInputKeyCodes::Up]    = buttons & XINPUT_GAMEPAD_DPAD_UP ? 255 : 0;
+	values[XInputKeyCodes::Down]  = buttons & XINPUT_GAMEPAD_DPAD_DOWN ? 255 : 0;
+
+	// LB, RB, LS, RS
+	values[XInputKeyCodes::LB] = buttons & XINPUT_GAMEPAD_LEFT_SHOULDER ? 255 : 0;
+	values[XInputKeyCodes::RB] = buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER ? 255 : 0;
+	values[XInputKeyCodes::LS] = buttons & XINPUT_GAMEPAD_LEFT_THUMB ? 255 : 0;
+	values[XInputKeyCodes::RS] = buttons & XINPUT_GAMEPAD_RIGHT_THUMB ? 255 : 0;
+
+	// Start, Back, Guide
+	values[XInputKeyCodes::Start] = buttons & XINPUT_GAMEPAD_START ? 255 : 0;
+	values[XInputKeyCodes::Back]  = buttons & XINPUT_GAMEPAD_BACK ? 255 : 0;
+	values[XInputKeyCodes::Guide] = buttons & XINPUT_INFO::GUIDE_BUTTON ? 255 : 0;
+
+	return values;
 }
 
 void xinput_pad_handler::ConfigController(const std::string& device)
@@ -280,6 +323,9 @@ void xinput_pad_handler::ThreadProc()
 			last_connection_status[padnum] = true;
 			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 
+			button_values = GetButtonValues(state);
+
+			// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 			for (auto& btn : pad->m_buttons)
 			{
 				TranslateButtonPress(btn.m_keyCode, btn.m_pressed, btn.m_value);
@@ -294,20 +340,29 @@ void xinput_pad_handler::ThreadProc()
 				}
 			}
 
+			// used to get the absolute value of an axis
 			float stick_val[4];
 
+			// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
 			for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
 			{
 				bool pressed;
 				u16 val_min, val_max;
+
+				// m_keyCodeMin is the mapped key for left or down
+				// m_keyCodeMax is the mapped key for right or up
 				TranslateButtonPress(pad->m_sticks[i].m_keyCodeMin, pressed, val_min, true);
 				TranslateButtonPress(pad->m_sticks[i].m_keyCodeMax, pressed, val_max, true);
+
+				// cancel out opposing values and get the resulting difference
 				stick_val[i] = val_max - val_min;
 			}
 
+			// Normalize our two stick's axis based on the thresholds
 			NormalizeRawStickInput(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
 			NormalizeRawStickInput(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
 
+			// Convert the axis to use the 0-127-255 range
 			pad->m_sticks[0].m_value = ConvertAxis(stick_val[0]);
 			pad->m_sticks[1].m_value = 255 - ConvertAxis(stick_val[1]);
 			pad->m_sticks[2].m_value = ConvertAxis(stick_val[2]);
@@ -376,29 +431,30 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 		CELL_PAD_DEV_TYPE_STANDARD
 	);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.up,     CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.down,   CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.left,   CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.right,  CELL_PAD_CTRL_RIGHT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.start,  CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.select, CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.l3,     CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.r3,     CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.l1,     CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.r1,     CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, XINPUT_INFO::GUIDE_BUTTON, 0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.up),       CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.down),     CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.left),     CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.right),    CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.start),    CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.select),   CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.l3),       CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.r3),       CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.l1),       CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.r1),       CELL_PAD_CTRL_R1);
+	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.ps),       CELL_PAD_CTRL_PS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.cross,    CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.circle,   CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.square,   CELL_PAD_CTRL_SQUARE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.triangle, CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.l2,       CELL_PAD_CTRL_L2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.r2,       CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.cross),    CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.circle),   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.square),   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.triangle), CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.l2),       CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.r2),       CELL_PAD_CTRL_R2);
 
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  m_pad_config.left_stick_left,  m_pad_config.left_stick_right);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  m_pad_config.left_stick_down,    m_pad_config.left_stick_up);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, m_pad_config.right_stick_left, m_pad_config.right_stick_right);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, m_pad_config.right_stick_down,   m_pad_config.right_stick_up);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  FindKeyCode(button_list, m_pad_config.ls_left), FindKeyCode(button_list, m_pad_config.ls_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  FindKeyCode(button_list, m_pad_config.ls_down), FindKeyCode(button_list, m_pad_config.ls_up));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, FindKeyCode(button_list, m_pad_config.rs_left), FindKeyCode(button_list, m_pad_config.rs_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, FindKeyCode(button_list, m_pad_config.rs_down), FindKeyCode(button_list, m_pad_config.rs_up));
 
 	pad->m_vibrateMotors.emplace_back(true, 0);
 	pad->m_vibrateMotors.emplace_back(false, 0);

@@ -15,7 +15,6 @@ namespace XINPUT_INFO
 	const DWORD THREAD_SLEEP = 10;
 	const DWORD THREAD_SLEEP_INACTIVE = 100;
 	const DWORD GUIDE_BUTTON = 0x0400;
-	const DWORD GAMEPAD_BUTTONS = 16;
 	const LPCWSTR LIBRARY_FILENAMES[] = {
 		L"xinput1_4.dll",
 		L"xinput1_3.dll",
@@ -26,47 +25,68 @@ namespace XINPUT_INFO
 
 class xinput_pad_handler final : public PadHandlerBase
 {
-	enum TriggersNSticks
+	// These are all the possible buttons on a standard xbox 360 or xbox one controller
+	enum XInputKeyCodes
 	{
-		TRIGGER_LEFT = 0x9001,
-		TRIGGER_RIGHT,
-		STICK_L_LEFT,
-		STICK_L_RIGHT,
-		STICK_L_UP,
-		STICK_L_DOWN,
-		STICK_R_LEFT,
-		STICK_R_RIGHT,
-		STICK_R_UP,
-		STICK_R_DOWN,
+		A,
+		B,
+		X,
+		Y,
+		Left,
+		Right,
+		Up,
+		Down,
+		LB,
+		RB,
+		LS,
+		RS,
+		Start,
+		Back,
+		Guide,
+
+		LT,
+		RT,
+
+		LSXNeg,
+		LSXPos,
+		LSYNeg,
+		LSYPos,
+		RSXNeg,
+		RSXPos,
+		RSYNeg,
+		RSYPos,
+
+		KEYCODECOUNT
 	};
 
+	// Unique names for the config files and our pad settings dialog
 	const std::unordered_map<u32, std::string> button_list =
 	{
-		{ XINPUT_GAMEPAD_A, "A" },
-		{ XINPUT_GAMEPAD_B, "B" },
-		{ XINPUT_GAMEPAD_X, "X" },
-		{ XINPUT_GAMEPAD_Y, "Y" },
-		{ XINPUT_GAMEPAD_DPAD_LEFT, "Left" },
-		{ XINPUT_GAMEPAD_DPAD_RIGHT, "Right" },
-		{ XINPUT_GAMEPAD_DPAD_UP, "Up" },
-		{ XINPUT_GAMEPAD_DPAD_DOWN, "Down" },
-		{ XINPUT_GAMEPAD_LEFT_SHOULDER, "LB" },
-		{ XINPUT_GAMEPAD_RIGHT_SHOULDER, "RB" },
-		{ XINPUT_GAMEPAD_BACK, "Back" },
-		{ XINPUT_GAMEPAD_START, "Start" },
-		{ XINPUT_GAMEPAD_LEFT_THUMB, "LS" },
-		{ XINPUT_GAMEPAD_RIGHT_THUMB, "RS" },
-		{ XINPUT_INFO::GUIDE_BUTTON, "Guide" },
-		{ TRIGGER_LEFT, "LT" },
-		{ TRIGGER_RIGHT, "RT" },
-		{ STICK_L_LEFT, "LS X-" },
-		{ STICK_L_RIGHT, "LS X+" },
-		{ STICK_L_UP, "LS Y+" },
-		{ STICK_L_DOWN, "LS Y-" },
-		{ STICK_R_LEFT, "RS X-" },
-		{ STICK_R_RIGHT, "RS X+" },
-		{ STICK_R_UP, "RS Y+" },
-		{ STICK_R_DOWN, "RS Y-" }
+		{ XInputKeyCodes::A,      "A" },
+		{ XInputKeyCodes::B,      "B" },
+		{ XInputKeyCodes::X,      "X" },
+		{ XInputKeyCodes::Y,      "Y" },
+		{ XInputKeyCodes::Left,   "Left" },
+		{ XInputKeyCodes::Right,  "Right" },
+		{ XInputKeyCodes::Up,     "Up" },
+		{ XInputKeyCodes::Down,   "Down" },
+		{ XInputKeyCodes::LB,     "LB" },
+		{ XInputKeyCodes::RB,     "RB" },
+		{ XInputKeyCodes::Back,   "Back" },
+		{ XInputKeyCodes::Start,  "Start" },
+		{ XInputKeyCodes::LS,     "LS" },
+		{ XInputKeyCodes::RS,     "RS" },
+		{ XInputKeyCodes::Guide,  "Guide" },
+		{ XInputKeyCodes::LT,     "LT" },
+		{ XInputKeyCodes::RT,     "RT" },
+		{ XInputKeyCodes::LSXNeg, "LS X-" },
+		{ XInputKeyCodes::LSXPos, "LS X+" },
+		{ XInputKeyCodes::LSYPos, "LS Y+" },
+		{ XInputKeyCodes::LSYNeg, "LS Y-" },
+		{ XInputKeyCodes::RSXNeg, "RS X-" },
+		{ XInputKeyCodes::RSXPos, "RS X+" },
+		{ XInputKeyCodes::RSYPos, "RS Y+" },
+		{ XInputKeyCodes::RSYNeg, "RS Y-" }
 	};
 
 public:
@@ -80,8 +100,7 @@ public:
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
 	void ConfigController(const std::string& device) override;
-	std::string GetButtonName(u32 btn) override;
-	void GetNextButtonPress(const std::string& padid, const std::function<void(u32, std::string)>& callback) override;
+	void GetNextButtonPress(const std::string& padid, const std::function<void(std::string)>& callback) override;
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
 	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 
@@ -91,12 +110,15 @@ private:
 	typedef DWORD (WINAPI * PFN_XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION *);
 
 private:
+	std::array<u16, XInputKeyCodes::KEYCODECOUNT> GetButtonValues(const XINPUT_STATE& state);
+
 	bool is_init;
 	HMODULE library;
 	PFN_XINPUTGETSTATE xinputGetState;
 	PFN_XINPUTSETSTATE xinputSetState;
 	PFN_XINPUTENABLE xinputEnable;
 
+	std::array<u16, XInputKeyCodes::KEYCODECOUNT> button_values;
 	std::vector<std::pair<u32, std::shared_ptr<Pad>>> bindings;
 	std::array<bool, 7> last_connection_status = {};
 

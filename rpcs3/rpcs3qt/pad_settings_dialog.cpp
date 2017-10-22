@@ -62,10 +62,10 @@ pad_settings_dialog::pad_settings_dialog(pad_config* pad_cfg, const std::string&
 	if (m_handler->has_config())
 	{
 		// Use timer to get button input
-		const auto& callback = [=](u32 button, std::string name)
+		const auto& callback = [=](std::string name)
 		{
-			LOG_NOTICE(GENERAL, "Pad Settings: %s button %s pressed (0x%x)", m_handler_cfg->cfg_type, name, button);
-			m_cfg_entries[m_button_id].key = std::to_string(button);
+			LOG_NOTICE(GENERAL, "Pad Settings: %s button %s pressed (0x%x)", m_handler_cfg->cfg_type, name);
+			m_cfg_entries[m_button_id].key = name;
 			m_cfg_entries[m_button_id].text = qstr(name);
 			ReactivateButtons();
 		};
@@ -154,18 +154,18 @@ pad_settings_dialog::pad_settings_dialog(pad_config* pad_cfg, const std::string&
 		initSlider(ui->slider_stick_right, m_handler_cfg->rstickdeadzone, m_handler->THUMB_MIN, m_handler->THUMB_MAX);
 	}
 
-	auto insertButton = [this](int id, QPushButton* button, cfg::int32* cfg_id)
+	auto insertButton = [this](int id, QPushButton* button, cfg::string* cfg_name)
 	{
-		QString name = GetButtonName(*cfg_id);
-		m_cfg_entries.insert(std::make_pair(id, PAD_BUTTON{ cfg_id, std::to_string(*cfg_id), name }));
+		QString name = qstr(*cfg_name);
+		m_cfg_entries.insert(std::make_pair(id, PAD_BUTTON{ cfg_name, *cfg_name, name }));
 		m_padButtons->addButton(button, id);
 		button->setText(name);
 	};
 
-	insertButton(id_pad_lstick_left,  ui->b_lstick_left,  &m_handler_cfg->left_stick_left);  
-	insertButton(id_pad_lstick_down,  ui->b_lstick_down,  &m_handler_cfg->left_stick_down);
-	insertButton(id_pad_lstick_right, ui->b_lstick_right, &m_handler_cfg->left_stick_right);
-	insertButton(id_pad_lstick_up,    ui->b_lstick_up,    &m_handler_cfg->left_stick_up);
+	insertButton(id_pad_lstick_left,  ui->b_lstick_left,  &m_handler_cfg->ls_left);  
+	insertButton(id_pad_lstick_down,  ui->b_lstick_down,  &m_handler_cfg->ls_down);
+	insertButton(id_pad_lstick_right, ui->b_lstick_right, &m_handler_cfg->ls_right);
+	insertButton(id_pad_lstick_up,    ui->b_lstick_up,    &m_handler_cfg->ls_up);
 
 	insertButton(id_pad_left,  ui->b_left,  &m_handler_cfg->left);
 	insertButton(id_pad_down,  ui->b_down,  &m_handler_cfg->down);
@@ -188,10 +188,10 @@ pad_settings_dialog::pad_settings_dialog(pad_config* pad_cfg, const std::string&
 	insertButton(id_pad_circle,   ui->b_circle,   &m_handler_cfg->circle);
 	insertButton(id_pad_triangle, ui->b_triangle, &m_handler_cfg->triangle);
 
-	insertButton(id_pad_rstick_left,  ui->b_rstick_left,  &m_handler_cfg->right_stick_left);
-	insertButton(id_pad_rstick_down,  ui->b_rstick_down,  &m_handler_cfg->right_stick_down);
-	insertButton(id_pad_rstick_right, ui->b_rstick_right, &m_handler_cfg->right_stick_right);
-	insertButton(id_pad_rstick_up,    ui->b_rstick_up,    &m_handler_cfg->right_stick_up);
+	insertButton(id_pad_rstick_left,  ui->b_rstick_left,  &m_handler_cfg->rs_left);
+	insertButton(id_pad_rstick_down,  ui->b_rstick_down,  &m_handler_cfg->rs_down);
+	insertButton(id_pad_rstick_right, ui->b_rstick_right, &m_handler_cfg->rs_right);
+	insertButton(id_pad_rstick_up,    ui->b_rstick_up,    &m_handler_cfg->rs_up);
 
 	m_padButtons->addButton(ui->b_reset, id_reset_parameters);
 	m_padButtons->addButton(ui->b_ok, id_ok);
@@ -240,23 +240,6 @@ void pad_settings_dialog::ReactivateButtons()
 	SwitchButtons(true);
 }
 
-QString pad_settings_dialog::GetButtonName(const u32& code)
-{
-	switch (m_handler_type)
-	{
-	case HANDLER_TYPE_KEYBOARD:
-		return GetKeyName(code);
-	case HANDLER_TYPE_DS4:
-	case HANDLER_TYPE_XINPUT:
-	case HANDLER_TYPE_EVDEV:
-		return qstr(m_handler->GetButtonName(code));
-	case HANDLER_TYPE_MMJOYSTICK:
-	default:
-		LOG_ERROR(HLE, "Pad Settings: Handler Type: %d, Unknown button code: %d", static_cast<int>(m_handler_type), code);
-		return "FAIL";
-	}
-}
-
 void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 {
 	if (m_handler_type != HANDLER_TYPE_KEYBOARD)
@@ -275,8 +258,8 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 	}
 	else
 	{
-		m_cfg_entries[m_button_id].key = std::to_string(keyEvent->key());
-		m_cfg_entries[m_button_id].text = GetKeyName(keyEvent->key());
+		m_cfg_entries[m_button_id].key = ((keyboard_pad_handler*)m_handler)->GetKeyName(keyEvent);
+		m_cfg_entries[m_button_id].text = qstr(m_cfg_entries[m_button_id].key);
 	}
 
 	ReactivateButtons();
@@ -300,8 +283,8 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 	{
 		if (is_reset)
 		{
-			entry.second.text = GetButtonName(*entry.second.cfg_id);
-			entry.second.key = std::to_string(*entry.second.cfg_id);
+			entry.second.key = *entry.second.cfg_name;
+			entry.second.text = qstr(entry.second.key);
 		}
 
 		m_padButtons->button(entry.first)->setText(entry.second.text);
@@ -320,7 +303,7 @@ void pad_settings_dialog::SaveConfig()
 {
 	for (const auto& entry : m_cfg_entries)
 	{
-		entry.second.cfg_id->from_string(entry.second.key);
+		entry.second.cfg_name->from_string(entry.second.key);
 	}
 	m_handler_cfg->enable_vibration_motor_large.set(ui->chb_vibration_large->isChecked());
 	m_handler_cfg->enable_vibration_motor_small.set(ui->chb_vibration_small->isChecked());
@@ -330,12 +313,6 @@ void pad_settings_dialog::SaveConfig()
 	m_handler_cfg->lstickdeadzone.set(ui->slider_stick_left->value());
 	m_handler_cfg->rstickdeadzone.set(ui->slider_stick_right->value());
 	m_handler_cfg->save();
-}
-
-const QString pad_settings_dialog::GetKeyName(const u32& keyCode)
-{
-	//TODO what about numpad?
-	return QKeySequence(keyCode).toString();
 }
 
 void pad_settings_dialog::OnPadButtonClicked(int id)
