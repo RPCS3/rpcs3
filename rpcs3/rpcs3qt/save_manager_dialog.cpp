@@ -259,55 +259,27 @@ void save_manager_dialog::OnEntryRemove()
 
 void save_manager_dialog::OnEntriesRemove()
 {
-	QList<QTableWidgetItem*> items = m_list->selectedItems();
-	if (items.size() == 0)
+	QModelIndexList selection(m_list->selectionModel()->selectedRows());
+	if (selection.size() == 0)
 	{
 		return;
 	}
 
-	// Small hack. Divide by four because of columns.
-	if (items.size()/4 == 1)
+	if (selection.size() == 1)
 	{
 		OnEntryRemove();
 		return;
 	}
 
-	if (QMessageBox::question(this, "Delete Confirmation", QString("Are you sure you want to delete these %1 items?").arg(items.size() / 4)
+	if (QMessageBox::question(this, "Delete Confirmation", QString("Are you sure you want to delete these %1 items?").arg(selection.size())
 		, QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
-		QItemSelection selection(m_list->selectionModel()->selection());
-
-		// I could make a QPair, and remove both simultaneously, slightly more efficiently.  
-		// However, the code becomes messier to read IMO with a custom sort comparator and accessing the qpair.
-		QList<int> rows;
-		QSet<int> save_entries;
-		for (const QModelIndex& index : selection.indexes())
+		qSort(selection.begin(), selection.end(), qGreater<QModelIndex>());
+		for (QModelIndex index : selection)
 		{
-			rows.append(index.row());
 			int idx_real = m_list->item(index.row(), 0)->data(Qt::UserRole).toInt();
-			save_entries.insert(idx_real);
-		}
-
-		// Remove from UI
-		qSort(rows);
-
-		int prev = -1;
-		for (int i = rows.count() - 1; i >= 0; i -= 1)
-		{
-			int curr = rows[i];
-
-			// Duplicates exist because of the columns also being selected.
-			if (curr != prev)
-			{
-				m_list->removeRow(curr);
-				prev = curr;
-			}
-		}
-
-		// Remove from file system
-		for (int idx_real : save_entries)
-		{
 			fs::remove_all(m_dir + m_save_entries[idx_real].dirName + "/");
+			m_list->removeRow(index.row());
 		}
 	}
 }
@@ -315,7 +287,7 @@ void save_manager_dialog::OnEntriesRemove()
 //Pop-up a small context-menu, being a replacement for save_data_manage_dialog
 void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 {
-	bool selectedItems = m_list->selectedItems().size() > 4; // > 4 is slight hack due to four columns-- more than one row selected.
+	bool selectedItems = m_list->selectionModel()->selectedRows().size() > 0;
 
 	QPoint globalPos = m_list->mapToGlobal(pos);
 	QMenu* menu = new QMenu();
