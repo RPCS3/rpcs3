@@ -6,8 +6,6 @@
 
 #include "rpcs3qt/pad_settings_dialog.h"
 
-keyboard_pad_config g_kbpad_config;
-
 bool keyboard_pad_handler::Init()
 {
 	return true;
@@ -15,12 +13,42 @@ bool keyboard_pad_handler::Init()
 
 keyboard_pad_handler::keyboard_pad_handler() : QObject()
 {
+	m_pad_config.cfg_type = "keyboard";
+	m_pad_config.cfg_name = fs::get_config_dir() + "/config_kbpad_qt.yml";
+
+	m_pad_config.left_stick_left.def = Qt::Key_A;
+	m_pad_config.left_stick_down.def = Qt::Key_S;
+	m_pad_config.left_stick_right.def = Qt::Key_D;
+	m_pad_config.left_stick_up.def = Qt::Key_W;
+	m_pad_config.right_stick_left.def = Qt::Key_Home;
+	m_pad_config.right_stick_down.def = Qt::Key_PageDown;
+	m_pad_config.right_stick_right.def = Qt::Key_End;
+	m_pad_config.right_stick_up.def = Qt::Key_PageUp;
+	m_pad_config.start.def = Qt::Key_Return;
+	m_pad_config.select.def = Qt::Key_Space;
+	m_pad_config.square.def = Qt::Key_Z;
+	m_pad_config.cross.def = Qt::Key_X;
+	m_pad_config.circle.def = Qt::Key_C;
+	m_pad_config.triangle.def = Qt::Key_V;
+	m_pad_config.left.def = Qt::Key_Left;
+	m_pad_config.down.def = Qt::Key_Down;
+	m_pad_config.right.def = Qt::Key_Right;
+	m_pad_config.up.def = Qt::Key_Up;
+	m_pad_config.r1.def = Qt::Key_E;
+	m_pad_config.r2.def = Qt::Key_T;
+	m_pad_config.r3.def = Qt::Key_G;
+	m_pad_config.l1.def = Qt::Key_Q;
+	m_pad_config.l2.def = Qt::Key_R;
+	m_pad_config.l3.def = Qt::Key_F;
+
+	m_pad_config.from_default();
+
 	b_has_config = true;
 }
 
-void keyboard_pad_handler::ConfigController(std::string device)
+void keyboard_pad_handler::ConfigController(const std::string& device)
 {
-	pad_settings_dialog dlg;
+	pad_settings_dialog dlg(&m_pad_config, device, *this);
 	dlg.exec();
 }
 
@@ -178,7 +206,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 {
 	if (device != "Keyboard") return false;
 
-	g_kbpad_config.load();
+	m_pad_config.load();
 
 	//Fixed assign change, default is both sensor and press off
 	pad->Init(
@@ -188,28 +216,28 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 		CELL_PAD_DEV_TYPE_STANDARD
 	);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_kbpad_config.left, CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_kbpad_config.down, CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_kbpad_config.right, CELL_PAD_CTRL_RIGHT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_kbpad_config.up, CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_kbpad_config.start, CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_kbpad_config.r3, CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_kbpad_config.l3, CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, g_kbpad_config.select, CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.left,   CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.down,   CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.right,  CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.up,     CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.start,  CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.r3,     CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.l3,     CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.select, CELL_PAD_CTRL_SELECT);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_kbpad_config.square, CELL_PAD_CTRL_SQUARE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_kbpad_config.cross, CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_kbpad_config.circle, CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_kbpad_config.triangle, CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_kbpad_config.r1, CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_kbpad_config.l1, CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_kbpad_config.r2, CELL_PAD_CTRL_R2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, g_kbpad_config.l2, CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.square,   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.cross,    CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.circle,   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.triangle, CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.r1,       CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.l1,       CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.r2,       CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.l2,       CELL_PAD_CTRL_L2);
 
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X, g_kbpad_config.left_stick_left, g_kbpad_config.left_stick_right);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, g_kbpad_config.left_stick_up, g_kbpad_config.left_stick_down);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, g_kbpad_config.right_stick_left, g_kbpad_config.right_stick_right);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, g_kbpad_config.right_stick_up, g_kbpad_config.right_stick_down);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  m_pad_config.left_stick_left,  m_pad_config.left_stick_right);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  m_pad_config.left_stick_up,    m_pad_config.left_stick_down);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, m_pad_config.right_stick_left, m_pad_config.right_stick_right);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, m_pad_config.right_stick_up,   m_pad_config.right_stick_down);
 
 	bindings.push_back(pad);
 

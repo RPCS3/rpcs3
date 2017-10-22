@@ -5,18 +5,15 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QAction>
-#include <QButtonGroup>
 
-#include "stdafx.h"
 #include "pad_settings_dialog.h"
 #include "ui_pad_settings_dialog.h"
 
-// TODO: rewrite with std::chrono or QTimer
-#include <time.h>
+inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+constexpr auto qstr = QString::fromStdString;
 
-extern keyboard_pad_config g_kbpad_config;
-
-pad_settings_dialog::pad_settings_dialog(QWidget *parent) : QDialog(parent), ui(new Ui::pad_settings_dialog)
+pad_settings_dialog::pad_settings_dialog(pad_config* pad_cfg, const std::string& device, PadHandlerBase& handler, QWidget *parent)
+	: QDialog(parent), ui(new Ui::pad_settings_dialog), m_handler_cfg(pad_cfg), m_device_name(device), m_handler(&handler)
 {
 	ui->setupUi(this);
 
@@ -25,46 +22,132 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent) : QDialog(parent), ui(
 	ui->b_cancel->setDefault(true);
 	connect(ui->b_cancel, &QAbstractButton::clicked, this, &QWidget::close);
 
-	// Handling
-	QButtonGroup *padButtons = new QButtonGroup(this);
-	padButtons->addButton(ui->b_left_lstick, 1);
-	padButtons->addButton(ui->b_down_lstick, 2);
-	padButtons->addButton(ui->b_right_lstick, 3);
-	padButtons->addButton(ui->b_up_lstick, 4);
-	
-	padButtons->addButton(ui->b_left, 5);
-	padButtons->addButton(ui->b_down, 6);
-	padButtons->addButton(ui->b_right, 7);
-	padButtons->addButton(ui->b_up, 8);
-	
-	padButtons->addButton(ui->b_shift_l1, 9);
-	padButtons->addButton(ui->b_shift_l2, 10);
-	padButtons->addButton(ui->b_shift_l3, 11);
-	
-	padButtons->addButton(ui->b_start, 12);
-	padButtons->addButton(ui->b_select, 13);
-	
-	padButtons->addButton(ui->b_shift_r1, 14);
-	padButtons->addButton(ui->b_shift_r2, 15);
-	padButtons->addButton(ui->b_shift_r3, 16);
-	
-	padButtons->addButton(ui->b_square, 17);
-	padButtons->addButton(ui->b_cross, 18);
-	padButtons->addButton(ui->b_circle, 19);
-	padButtons->addButton(ui->b_triangle, 20);
-	
-	padButtons->addButton(ui->b_left_rstick, 21);
-	padButtons->addButton(ui->b_down_rstick, 22);
-	padButtons->addButton(ui->b_right_rstick, 23);
-	padButtons->addButton(ui->b_up_rstick, 24);
-	
-	padButtons->addButton(ui->b_reset, 25);
-	padButtons->addButton(ui->b_ok, 26);
-	padButtons->addButton(ui->b_cancel, 27);
+	m_padButtons = new QButtonGroup(this);
+	m_palette = ui->b_left->palette(); // save normal palette
 
-	connect(padButtons, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), this, &pad_settings_dialog::OnPadButtonClicked);
+	// Adjust to the different pad handlers
+	if (m_handler_cfg->cfg_type == "keyboard")
+	{
+		setWindowTitle(tr("Configure Keyboard"));
+		m_handler_type = HANDLER_TYPE_KEYBOARD;
+	}
+	else if (m_handler_cfg->cfg_type == "xinput")
+	{
+		setWindowTitle(tr("Configure XInput"));
+		m_handler_type = HANDLER_TYPE_XINPUT;
 
-	g_kbpad_config.load();
+		// Ignore TriggersNSticks for now
+		ui->b_left_lstick->setEnabled(false);
+		ui->b_down_lstick->setEnabled(false);
+		ui->b_right_lstick->setEnabled(false);
+		ui->b_up_lstick->setEnabled(false);
+		ui->b_left_rstick->setEnabled(false);
+		ui->b_down_rstick->setEnabled(false);
+		ui->b_right_rstick->setEnabled(false);
+		ui->b_up_rstick->setEnabled(false);
+		ui->b_shift_l2->setEnabled(false);
+		ui->b_shift_r2->setEnabled(false);
+
+		// Use timer to get button input
+		const auto& callback = [=](u32 button, std::string name)
+		{
+			LOG_NOTICE(GENERAL, "Pad Settings: XInput button %s pressed (0x%x)", name, button);
+			m_cfg_entries[m_button_id].key = std::to_string(button);
+			m_cfg_entries[m_button_id].text = qstr(name);
+			ReactivateButtons();
+		};
+		connect(&m_timer_xinput, &QTimer::timeout, [=]()
+		{
+			if (m_button_id > id_pad_begin && m_button_id < id_pad_end)
+			{
+				m_handler->GetNextButtonPress(m_device_name, callback);
+			}
+		});
+		m_timer_xinput.start(10);
+	}
+	else if (m_handler_cfg->cfg_type == "ds4")
+	{
+		setWindowTitle(tr("Configure DS4"));
+		m_handler_type = HANDLER_TYPE_DS4;
+	}
+	else if (m_handler_cfg->cfg_type == "mmjoystick")
+	{
+		setWindowTitle(tr("Configure MMJoystick"));
+		m_handler_type = HANDLER_TYPE_MMJOYSTICK;
+	}
+
+	m_handler_cfg->load();
+
+	auto insertButton = [this](int id, QPushButton* button, cfg::int32* cfg_id)
+	{
+		QString name;
+
+		switch (m_handler_type)
+		{
+		case HANDLER_TYPE_KEYBOARD:
+			name = GetKeyName(*cfg_id);
+			break;
+		case HANDLER_TYPE_XINPUT:
+			name = qstr(m_handler->GetButtonName(*cfg_id));
+			break;
+		case HANDLER_TYPE_DS4:
+		case HANDLER_TYPE_MMJOYSTICK:
+		default:
+			break;
+		}
+
+		m_cfg_entries.insert(std::make_pair(id, PAD_BUTTON{ cfg_id, std::to_string(*cfg_id), name }));
+		m_padButtons->addButton(button, id);
+		button->setText(name);
+	};
+
+	insertButton(id_pad_lstick_left,  ui->b_left_lstick,  &m_handler_cfg->left_stick_left);  
+	insertButton(id_pad_lstick_down,  ui->b_down_lstick,  &m_handler_cfg->left_stick_down);
+	insertButton(id_pad_lstick_right, ui->b_right_lstick, &m_handler_cfg->left_stick_right);
+	insertButton(id_pad_lstick_up,    ui->b_up_lstick,    &m_handler_cfg->left_stick_up);
+
+	insertButton(id_pad_left,  ui->b_left,  &m_handler_cfg->left);
+	insertButton(id_pad_down,  ui->b_down,  &m_handler_cfg->down);
+	insertButton(id_pad_right, ui->b_right, &m_handler_cfg->right);
+	insertButton(id_pad_up,    ui->b_up,    &m_handler_cfg->up);
+
+	insertButton(id_pad_l1, ui->b_shift_l1, &m_handler_cfg->l1);
+	insertButton(id_pad_l2, ui->b_shift_l2, &m_handler_cfg->l2);
+	insertButton(id_pad_l3, ui->b_shift_l3, &m_handler_cfg->l3);
+
+	insertButton(id_pad_start,  ui->b_start,  &m_handler_cfg->start);
+	insertButton(id_pad_select, ui->b_select, &m_handler_cfg->select);
+
+	insertButton(id_pad_r1, ui->b_shift_r1, &m_handler_cfg->r1);
+	insertButton(id_pad_r2, ui->b_shift_r2, &m_handler_cfg->r2);
+	insertButton(id_pad_r3, ui->b_shift_r3, &m_handler_cfg->r3);
+
+	insertButton(id_pad_square,   ui->b_square,   &m_handler_cfg->square);
+	insertButton(id_pad_cross,    ui->b_cross,    &m_handler_cfg->cross);
+	insertButton(id_pad_circle,   ui->b_circle,   &m_handler_cfg->circle);
+	insertButton(id_pad_triangle, ui->b_triangle, &m_handler_cfg->triangle);
+
+	insertButton(id_pad_rstick_left,  ui->b_left_rstick,  &m_handler_cfg->right_stick_left);
+	insertButton(id_pad_rstick_down,  ui->b_down_rstick,  &m_handler_cfg->right_stick_down);
+	insertButton(id_pad_rstick_right, ui->b_right_rstick, &m_handler_cfg->right_stick_right);
+	insertButton(id_pad_rstick_up,    ui->b_up_rstick,    &m_handler_cfg->right_stick_up);
+
+	m_padButtons->addButton(ui->b_reset, id_reset_parameters);
+	m_padButtons->addButton(ui->b_ok, id_ok);
+	m_padButtons->addButton(ui->b_cancel, id_cancel);
+
+	connect(m_padButtons, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), this, &pad_settings_dialog::OnPadButtonClicked);
+
+	connect(&m_timer, &QTimer::timeout, [&]()
+	{
+		if (--m_seconds <= 0)
+		{
+			ReactivateButtons();
+			return;
+		}
+		m_padButtons->button(m_button_id)->setText(tr("[ Waiting %1 ]").arg(m_seconds));
+	});
+
 	UpdateLabel();
 
 	gui_settings settings(this);
@@ -81,198 +164,85 @@ pad_settings_dialog::~pad_settings_dialog()
 	delete ui;
 }
 
+void pad_settings_dialog::ReactivateButtons()
+{
+	m_timer.stop();
+	m_seconds = MAX_SECONDS;
+
+	if (m_padButtons->button(m_button_id))
+	{
+		m_padButtons->button(m_button_id)->setPalette(m_palette);
+	}
+
+	m_button_id = id_pad_begin;
+	UpdateLabel();
+	SwitchButtons(true);
+}
+
 void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 {
-	m_key_pressed = true;
-
-	cfg::int32* entry = nullptr;
-
-	switch (m_button_id)
+	if (m_handler_type != HANDLER_TYPE_KEYBOARD)
 	{
-	case id_pad_lstick_left: entry = &g_kbpad_config.left_stick_left; break;
-	case id_pad_lstick_down: entry = &g_kbpad_config.left_stick_down; break;
-	case id_pad_lstick_right: entry = &g_kbpad_config.left_stick_right; break;
-	case id_pad_lstick_up: entry = &g_kbpad_config.left_stick_up; break;
-	
-	case id_pad_left: entry = &g_kbpad_config.left; break;
-	case id_pad_down: entry = &g_kbpad_config.down; break;
-	case id_pad_right: entry = &g_kbpad_config.right; break;
-	case id_pad_up: entry = &g_kbpad_config.up; break;
-	
-	case id_pad_l1: entry = &g_kbpad_config.l1; break;
-	case id_pad_l2: entry = &g_kbpad_config.l2; break;
-	case id_pad_l3: entry = &g_kbpad_config.l3; break;
-	
-	case id_pad_start: entry = &g_kbpad_config.start; break;
-	case id_pad_select: entry = &g_kbpad_config.select; break;
-	
-	case id_pad_r1: entry = &g_kbpad_config.r1; break;
-	case id_pad_r2: entry = &g_kbpad_config.r2; break;
-	case id_pad_r3: entry = &g_kbpad_config.r3; break;
-	
-	case id_pad_square: entry = &g_kbpad_config.square; break;
-	case id_pad_cross: entry = &g_kbpad_config.cross; break;
-	case id_pad_circle: entry = &g_kbpad_config.circle; break;
-	case id_pad_triangle: entry = &g_kbpad_config.triangle; break;
-	case id_pad_rstick_left: entry = &g_kbpad_config.right_stick_left; break;
-	case id_pad_rstick_down: entry = &g_kbpad_config.right_stick_down; break;
-	case id_pad_rstick_right: entry = &g_kbpad_config.right_stick_right; break;
-	case id_pad_rstick_up: entry = &g_kbpad_config.right_stick_up; break;
-
-	case 0: break;
-	default: LOG_ERROR(HLE, "Unknown button ID: %d", m_button_id); break;
+		return;
 	}
 
-	if (entry)
+	if (m_button_id == id_pad_begin)
 	{
-		// TODO: do not modify config
-		entry->from_string(std::to_string(keyEvent->key()));
+		return;
 	}
 
-	SwitchButtons(true);  // enable all buttons
-	m_button_id = 0; // reset current button id
-	m_key_pressed = false;
-	UpdateLabel();
-}
-
-void pad_settings_dialog::UpdateLabel()
-{
-	// Get button labels from .ini
-	ui->b_up_lstick->setText(GetKeyName(g_kbpad_config.left_stick_up));
-	ui->b_down_lstick->setText(GetKeyName(g_kbpad_config.left_stick_down));
-	ui->b_left_lstick->setText(GetKeyName(g_kbpad_config.left_stick_left));
-	ui->b_right_lstick->setText(GetKeyName(g_kbpad_config.left_stick_right));
-	
-	ui->b_up->setText(GetKeyName(g_kbpad_config.up));
-	ui->b_down->setText(GetKeyName(g_kbpad_config.down));
-	ui->b_left->setText(GetKeyName(g_kbpad_config.left));
-	ui->b_right->setText(GetKeyName(g_kbpad_config.right));
-	
-	ui->b_shift_l1->setText(GetKeyName(g_kbpad_config.l1));
-	ui->b_shift_l2->setText(GetKeyName(g_kbpad_config.l2));
-	ui->b_shift_l3->setText(GetKeyName(g_kbpad_config.l3));
-	
-	ui->b_start->setText(GetKeyName(g_kbpad_config.start));
-	ui->b_select->setText(GetKeyName(g_kbpad_config.select));
-	
-	ui->b_shift_r1->setText(GetKeyName(g_kbpad_config.r1));
-	ui->b_shift_r2->setText(GetKeyName(g_kbpad_config.r2));
-	ui->b_shift_r3->setText(GetKeyName(g_kbpad_config.r3));
-	
-	ui->b_square->setText(GetKeyName(g_kbpad_config.square));
-	ui->b_cross->setText(GetKeyName(g_kbpad_config.cross));
-	ui->b_circle->setText(GetKeyName(g_kbpad_config.circle));
-	ui->b_triangle->setText(GetKeyName(g_kbpad_config.triangle));
-	
-	ui->b_up_rstick->setText(GetKeyName(g_kbpad_config.right_stick_up));
-	ui->b_down_rstick->setText(GetKeyName(g_kbpad_config.right_stick_down));
-	ui->b_left_rstick->setText(GetKeyName(g_kbpad_config.right_stick_left));
-	ui->b_right_rstick->setText(GetKeyName(g_kbpad_config.right_stick_right));
-}
-
-void pad_settings_dialog::UpdateTimerLabel(const u32 id)
-{
-	// Lambda used to update label. The 47 is magical.
-	auto UpdateLabel = [=](QPushButton* target)
+	if (m_button_id <= id_pad_begin || m_button_id >= id_pad_end)
 	{
-		target->setText(QString::number(m_seconds + 47));
-	};
-
-	switch (id)
-	{
-	case id_pad_lstick_left: UpdateLabel(ui->b_left_lstick); break;
-	case id_pad_lstick_down: UpdateLabel(ui->b_down_lstick); break;
-	case id_pad_lstick_right: UpdateLabel(ui->b_right_lstick); break;
-	case id_pad_lstick_up: UpdateLabel(ui->b_up_lstick); break;
-
-	case id_pad_left: UpdateLabel(ui->b_left); break;
-	case id_pad_down: UpdateLabel(ui->b_down); break;
-	case id_pad_right: UpdateLabel(ui->b_right); break;
-	case id_pad_up: UpdateLabel(ui->b_up); break;
-
-	case id_pad_l1: UpdateLabel(ui->b_shift_l1); break;
-	case id_pad_l2: UpdateLabel(ui->b_shift_l2); break;
-	case id_pad_l3: UpdateLabel(ui->b_shift_l3); break;
-
-	case id_pad_start: UpdateLabel(ui->b_start); break;
-	case id_pad_select: UpdateLabel(ui->b_select); break;
-
-	case id_pad_r1: UpdateLabel(ui->b_shift_r1); break;
-	case id_pad_r2: UpdateLabel(ui->b_shift_r2); break;
-	case id_pad_r3: UpdateLabel(ui->b_shift_r3); break;
-
-	case id_pad_square: UpdateLabel(ui->b_square); break;
-	case id_pad_cross: UpdateLabel(ui->b_cross); break;
-	case id_pad_circle: UpdateLabel(ui->b_circle); break;
-	case id_pad_triangle: UpdateLabel(ui->b_triangle); break;
-
-	case id_pad_rstick_left: UpdateLabel(ui->b_left_rstick); break;
-	case id_pad_rstick_down: UpdateLabel(ui->b_down_rstick); break;
-	case id_pad_rstick_right: UpdateLabel(ui->b_right_rstick); break;
-	case id_pad_rstick_up: UpdateLabel(ui->b_up_rstick); break;
-
-	default: LOG_ERROR(HLE, "Unknown button ID: %d", id); break;
+		LOG_ERROR(HLE, "Unknown button ID: %d", m_button_id);
 	}
-}
-
-void pad_settings_dialog::SwitchButtons(const bool IsEnabled)
-{
-	ui->b_up_lstick->setEnabled(IsEnabled);
-	ui->b_down_lstick->setEnabled(IsEnabled);
-	ui->b_left_lstick->setEnabled(IsEnabled);
-	ui->b_right_lstick->setEnabled(IsEnabled);
-
-	ui->b_up->setEnabled(IsEnabled);
-	ui->b_down->setEnabled(IsEnabled);
-	ui->b_left->setEnabled(IsEnabled);
-	ui->b_right->setEnabled(IsEnabled);
-
-	ui->b_shift_l1->setEnabled(IsEnabled);
-	ui->b_shift_l2->setEnabled(IsEnabled);
-	ui->b_shift_l3->setEnabled(IsEnabled);
-
-	ui->b_start->setEnabled(IsEnabled);
-	ui->b_select->setEnabled(IsEnabled);
-
-	ui->b_shift_r1->setEnabled(IsEnabled);
-	ui->b_shift_r2->setEnabled(IsEnabled);
-	ui->b_shift_r3->setEnabled(IsEnabled);
-
-	ui->b_square->setEnabled(IsEnabled);
-	ui->b_cross->setEnabled(IsEnabled);
-	ui->b_circle->setEnabled(IsEnabled);
-	ui->b_triangle->setEnabled(IsEnabled);
-
-	ui->b_up_rstick->setEnabled(IsEnabled);
-	ui->b_down_rstick->setEnabled(IsEnabled);
-	ui->b_left_rstick->setEnabled(IsEnabled);
-	ui->b_right_rstick->setEnabled(IsEnabled);
-
-	ui->b_ok->setEnabled(IsEnabled);
-	ui->b_cancel->setEnabled(IsEnabled);
-	ui->b_reset->setEnabled(IsEnabled);
-}
-
-void pad_settings_dialog::RunTimer(const u32 seconds, const u32 id)
-{
-	m_seconds = seconds;
-	clock_t t1, t2;
-	t1 = t2 = clock() / CLOCKS_PER_SEC;
-	while (m_seconds)
+	else
 	{
-		if (t1 / CLOCKS_PER_SEC + 1 <= (t2 = clock()) / CLOCKS_PER_SEC)
+		m_cfg_entries[m_button_id].key = std::to_string(keyEvent->key());
+		m_cfg_entries[m_button_id].text = GetKeyName(keyEvent->key());
+	}
+
+	ReactivateButtons();
+}
+
+void pad_settings_dialog::UpdateLabel(bool is_reset)
+{
+	for (auto& entry : m_cfg_entries)
+	{
+		if (is_reset)
 		{
-			UpdateTimerLabel(id);
-			m_seconds--;
-			t1 = t2;
+			entry.second.text = GetKeyName(*entry.second.cfg_id);
+			entry.second.key = std::to_string(*entry.second.cfg_id);
 		}
 
-		if (m_key_pressed)
-		{
-			m_seconds = 0;
-			break;
-		}
+		m_padButtons->button(entry.first)->setText(entry.second.text);
 	}
+}
+
+void pad_settings_dialog::SwitchButtons(bool is_enabled)
+{
+	for (const auto& button : m_padButtons->buttons())
+	{
+		if (m_handler_type == HANDLER_TYPE_XINPUT)
+		{
+			// Ignore TriggersNSticks for now
+			if ( button == ui->b_left_lstick || button == ui->b_down_lstick || button == ui->b_right_lstick || button == ui->b_up_lstick
+				|| button == ui->b_left_rstick || button == ui->b_down_rstick || button == ui->b_right_rstick || button == ui->b_up_rstick
+				|| button == ui->b_shift_l2    || button == ui->b_shift_r2 )
+			{
+				continue;
+			}
+		}
+		button->setEnabled(is_enabled);
+	}
+}
+
+void pad_settings_dialog::SaveButtons()
+{
+	for (const auto& entry : m_cfg_entries)
+	{
+		entry.second.cfg_id->from_string(entry.second.key);
+	}
+	m_handler_cfg->save();
 }
 
 const QString pad_settings_dialog::GetKeyName(const u32 keyCode)
@@ -283,22 +253,19 @@ const QString pad_settings_dialog::GetKeyName(const u32 keyCode)
 
 void pad_settings_dialog::OnPadButtonClicked(int id)
 {
-	if (id != id_reset_parameters && id != id_ok)
+	switch (id)
 	{
-		m_button_id = id;
-		SwitchButtons(false); // disable all buttons, needed for using Space, Enter and other specific buttons
-		//RunTimer(3, event.GetId()); // TODO: Currently, timer disabled. Use by later, have some strange problems
-		//SwitchButtons(true); // needed, if timer enabled
-		UpdateLabel();
+	case id_pad_begin:
+	case id_pad_end:
+	case id_cancel: return;
+	case id_reset_parameters: m_handler_cfg->from_default(); UpdateLabel(); return;
+	case id_ok: SaveButtons(); QDialog::accept(); return;
+	default: break;
 	}
 
-	else
-	{
-		switch (id)
-		{
-		case id_reset_parameters: g_kbpad_config.from_default(); UpdateLabel(); break;
-		case id_ok: g_kbpad_config.save(); QDialog::accept(); break;
-		case id_cancel: break;
-		}
-	}
+	m_button_id = id;
+	m_padButtons->button(m_button_id)->setText(tr("[ Waiting %1 ]").arg(MAX_SECONDS));
+	m_padButtons->button(m_button_id)->setPalette(QPalette(Qt::blue));
+	SwitchButtons(false); // disable all buttons, needed for using Space, Enter and other specific buttons
+	m_timer.start(1000);
 }

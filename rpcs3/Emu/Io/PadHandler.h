@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <memory>
+#include "stdafx.h"
+#include "../../Utilities/Config.h"
 #include "../../Utilities/types.h"
 
 // TODO: HLE info (constants, structs, etc.) should not be available here
@@ -238,10 +240,68 @@ struct Pad
 	}
 };
 
+struct pad_config : cfg::node
+{
+	std::string cfg_type = "";
+	std::string cfg_name = "";
+
+	cfg::int32 left_stick_left{ this, "Left Analog Stick Left", 0 };
+	cfg::int32 left_stick_down{ this, "Left Analog Stick Down", 0 };
+	cfg::int32 left_stick_right{ this, "Left Analog Stick Right", 0 };
+	cfg::int32 left_stick_up{ this, "Left Analog Stick Up", 0 };
+	cfg::int32 right_stick_left{ this, "Right Analog Stick Left", 0 };
+	cfg::int32 right_stick_down{ this, "Right Analog Stick Down", 0 };
+	cfg::int32 right_stick_right{ this, "Right Analog Stick Right", 0 };
+	cfg::int32 right_stick_up{ this, "Right Analog Stick Up", 0 };
+	cfg::int32 start{ this, "Start", 0 };
+	cfg::int32 select{ this, "Select", 0 };
+	cfg::int32 square{ this, "Square", 0 };
+	cfg::int32 cross{ this, "Cross", 0 };
+	cfg::int32 circle{ this, "Circle", 0 };
+	cfg::int32 triangle{ this, "Triangle", 0 };
+	cfg::int32 left{ this, "Left", 0 };
+	cfg::int32 down{ this, "Down", 0 };
+	cfg::int32 right{ this, "Right", 0 };
+	cfg::int32 up{ this, "Up", 0 };
+	cfg::int32 r1{ this, "R1", 0 };
+	cfg::int32 r2{ this, "R2", 0 };
+	cfg::int32 r3{ this, "R3", 0 };
+	cfg::int32 l1{ this, "L1", 0 };
+	cfg::int32 l2{ this, "L2", 0 };
+	cfg::int32 l3{ this, "L3", 0 };
+
+	cfg::_int<0, 1000000> lstickdeadzone{ this, "Left Stick Deadzone", 0 };
+	cfg::_int<0, 1000000> rstickdeadzone{ this, "Right Stick Deadzone", 0 };
+	cfg::_int<0, 1000000> ltriggerthreshold{ this, "Left Trigger Threshold", 0 };
+	cfg::_int<0, 1000000> rtriggerthreshold{ this, "Right Trigger Threshold", 0 };
+	cfg::_int<0, 1000000> padsquircling{ this, "Pad Squircling Factor", 0 };
+
+	bool load()
+	{
+		if (fs::file cfg_file{ cfg_name, fs::read })
+		{
+			return from_string(cfg_file.to_string());
+		}
+
+		return false;
+	}
+
+	void save()
+	{
+		fs::file(cfg_name, fs::rewrite).write(to_string());
+	}
+
+	bool exist()
+	{
+		return fs::is_file(cfg_name);
+	}
+};
+
 class PadHandlerBase
 {
 protected:
 	bool b_has_config = false;
+	pad_config m_pad_config;
 
 public:
 	virtual bool Init() { return true; };
@@ -250,7 +310,9 @@ public:
 	//Does it have GUI Config?
 	bool has_config() { return b_has_config; };
 	//Sets window to config the controller(optional)
-	virtual void ConfigController(std::string device) {};
+	virtual void ConfigController(const std::string& device) {};
+	virtual void GetNextButtonPress(const std::string& padId, const std::function<void(u32, std::string)>& buttonCallback) {};
+	virtual std::string GetButtonName(u32 btn) { return ""; };
 	//Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;
 	//Callback called during pad_thread::ThreadFunc

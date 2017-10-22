@@ -217,7 +217,7 @@ namespace cfg
 		int_type m_value;
 
 	public:
-		const int_type def;
+		int_type def;
 
 		_int(node* owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)))
 			: _base(type::_int, owner, name)
