@@ -679,8 +679,7 @@ namespace vk
 		template<typename RsxTextureType>
 		image_view* _upload_texture(vk::command_buffer& cmd, RsxTextureType& tex, rsx::vk_render_targets& m_rtts)
 		{
-			const VkQueue& queue = m_submit_queue;
-			return upload_texture(cmd, tex, m_rtts, *m_device, cmd, m_memory_types, queue);
+			return upload_texture(cmd, tex, m_rtts, *m_device, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 		}
 
 		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)
@@ -721,8 +720,7 @@ namespace vk
 			}
 			helper(&cmd);
 
-			const VkQueue& queue = m_submit_queue;
-			return upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, *m_device, cmd, m_memory_types, queue);
+			return upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, *m_device, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 		}
 
 		const u32 get_unreleased_textures_count() const override
