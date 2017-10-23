@@ -18,7 +18,8 @@ namespace rsx
 	{
 		shader_read = 0,
 		blit_engine_src = 1,
-		blit_engine_dst = 2
+		blit_engine_dst = 2,
+		framebuffer_storage = 3
 	};
 
 	struct cached_texture_section : public rsx::buffered_section
@@ -271,12 +272,7 @@ namespace rsx
 				{
 					auto obj = *It;
 
-					if (discard_only)
-						obj.first->discard();
-					else
-						obj.first->unprotect();
-
-					if (obj.first->is_flushable() && allow_flush)
+					if (obj.first->is_flushable())
 					{
 						sections_to_flush.push_back(obj.first);
 					}
@@ -285,6 +281,11 @@ namespace rsx
 						obj.first->set_dirty(true);
 						m_unreleased_texture_objects++;
 					}
+
+					if (discard_only)
+						obj.first->discard();
+					else
+						obj.first->unprotect();
 
 					obj.second->remove_one();
 				}
@@ -325,7 +326,7 @@ namespace rsx
 		template <typename ...Args>
 		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl(u32 address, u32 range, bool discard, bool allow_flush, Args&... extras)
 		{
-			return invalidate_range_impl_base(address, range, discard, true, allow_flush, std::forward<Args>(extras)...);
+			return invalidate_range_impl_base(address, range, discard, false, allow_flush, std::forward<Args>(extras)...);
 		}
 
 		bool is_hw_blit_engine_compatible(const u32 format) const
@@ -406,7 +407,7 @@ namespace rsx
 					{
 						if (!confirm_dimensions || tex.matches(rsx_address, width, height, depth, mipmaps))
 						{
-							if (!tex.is_locked())
+							if (!tex.is_locked() && tex.get_context() == texture_upload_context::framebuffer_storage)
 								range_data.notify(rsx_address, rsx_size);
 
 							return tex;
@@ -475,6 +476,7 @@ namespace rsx
 
 			region.protect(utils::protection::no);
 			region.create(width, height, 1, 1, nullptr, image, pitch, false, std::forward<Args>(extras)...);
+			region.set_context(texture_upload_context::framebuffer_storage);
 		}
 
 		template <typename ...Args>
@@ -598,9 +600,6 @@ namespace rsx
 			reader_lock lock(m_cache_mutex);
 			for (const auto &tex: sections_to_flush)
 			{
-				if (tex->is_flushed())
-					continue;
-
 				if (!tex->flush(std::forward<Args>(extras)...))
 				{
 					//Missed address, note this

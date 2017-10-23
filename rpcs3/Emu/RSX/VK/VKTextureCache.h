@@ -80,6 +80,12 @@ namespace vk
 			}
 		}
 
+		void destroy()
+		{
+			vram_texture = nullptr;
+			release_dma_resources();
+		}
+
 		bool exists() const
 		{
 			return (vram_texture != nullptr);
@@ -355,7 +361,7 @@ namespace vk
 		void free_texture_section(cached_texture_section& tex) override
 		{
 			m_discardable_storage.push_back(tex);
-			tex.release_dma_resources();
+			tex.destroy();
 		}
 
 		vk::image_view* create_temporary_subresource_view(vk::command_buffer& cmd, vk::image* source, u32 /*gcm_format*/, u16 x, u16 y, u16 w, u16 h) override
@@ -394,7 +400,7 @@ namespace vk
 
 			VkImageCopy copy_rgn;
 			copy_rgn.srcOffset = { (s32)x, (s32)y, 0 };
-			copy_rgn.dstOffset = { (s32)x, (s32)y, 0 };
+			copy_rgn.dstOffset = { (s32)0, (s32)0, 0 };
 			copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
 			copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
 			copy_rgn.extent = { w, h, 1 };

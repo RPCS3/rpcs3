@@ -443,21 +443,20 @@ namespace gl
 			{
 				//Read-only texture, destroy texture memory
 				glDeleteTextures(1, &vram_texture);
-				vram_texture = 0;
 			}
 			else
 			{
 				//Destroy pbo cache since vram texture is managed elsewhere
 				glDeleteBuffers(1, &pbo_id);
-				pbo_id = 0;
-				pbo_size = 0;
 
 				if (scaled_texture)
-				{
 					glDeleteTextures(1, &scaled_texture);
-					scaled_texture = 0;
-				}
 			}
+
+			vram_texture = 0;
+			scaled_texture = 0;
+			pbo_id = 0;
+			pbo_size = 0;
 
 			if (!m_fence.is_empty())
 				m_fence.destroy();
