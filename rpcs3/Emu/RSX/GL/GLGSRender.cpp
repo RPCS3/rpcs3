@@ -365,16 +365,21 @@ void GLGSRender::end()
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
 	auto copy_rtt_contents = [](gl::render_target *surface)
 	{
-		//Copy data from old contents onto this one
-		//1. Clip a rectangular region defning the data
-		//2. Perform a GPU blit
-		u16 parent_w = surface->old_contents->width();
-		u16 parent_h = surface->old_contents->height();
-		u16 copy_w, copy_h;
+		if (surface->get_compatible_internal_format() == surface->old_contents->get_compatible_internal_format())
+		{
+			//Copy data from old contents onto this one
+			//1. Clip a rectangular region defning the data
+			//2. Perform a GPU blit
+			u16 parent_w = surface->old_contents->width();
+			u16 parent_h = surface->old_contents->height();
+			u16 copy_w, copy_h;
 
-		std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
-		glCopyImageSubData(surface->old_contents->id(), GL_TEXTURE_2D, 0, 0, 0, 0, surface->id(), GL_TEXTURE_2D, 0, 0, 0, 0, copy_w, copy_h, 1);
-		surface->set_cleared();
+			std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
+			glCopyImageSubData(surface->old_contents->id(), GL_TEXTURE_2D, 0, 0, 0, 0, surface->id(), GL_TEXTURE_2D, 0, 0, 0, 0, copy_w, copy_h, 1);
+			surface->set_cleared();
+		}
+		//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
+
 		surface->old_contents = nullptr;
 	};
 

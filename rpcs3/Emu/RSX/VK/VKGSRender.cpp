@@ -1012,31 +1012,36 @@ void VKGSRender::end()
 	{
 		auto copy_rtt_contents = [&](vk::render_target* surface)
 		{
-			const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
+			if (surface->info.format == surface->old_contents->info.format)
+			{
+				const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
 
-			const u16 parent_w = surface->old_contents->width();
-			const u16 parent_h = surface->old_contents->height();
-			u16 copy_w, copy_h;
+				const u16 parent_w = surface->old_contents->width();
+				const u16 parent_h = surface->old_contents->height();
+				u16 copy_w, copy_h;
 
-			std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
+				std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
 
-			VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
-			VkImageLayout old_layout = surface->current_layout;
+				VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
+				VkImageLayout old_layout = surface->current_layout;
 
-			vk::change_image_layout(*m_current_command_buffer, surface, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-			vk::change_image_layout(*m_current_command_buffer, surface->old_contents, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+				vk::change_image_layout(*m_current_command_buffer, surface, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+				vk::change_image_layout(*m_current_command_buffer, surface->old_contents, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
 
-			VkImageCopy copy_rgn;
-			copy_rgn.srcOffset = { 0, 0, 0 };
-			copy_rgn.dstOffset = { 0, 0, 0 };
-			copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
-			copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
-			copy_rgn.extent = { copy_w, copy_h, 1 };
+				VkImageCopy copy_rgn;
+				copy_rgn.srcOffset = { 0, 0, 0 };
+				copy_rgn.dstOffset = { 0, 0, 0 };
+				copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
+				copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
+				copy_rgn.extent = { copy_w, copy_h, 1 };
 
-			vkCmdCopyImage(*m_current_command_buffer, surface->old_contents->value, surface->old_contents->current_layout, surface->value, surface->current_layout, 1, &copy_rgn);
-			vk::change_image_layout(*m_current_command_buffer, surface, old_layout, subresource_range);
+				vkCmdCopyImage(*m_current_command_buffer, surface->old_contents->value, surface->old_contents->current_layout, surface->value, surface->current_layout, 1, &copy_rgn);
+				vk::change_image_layout(*m_current_command_buffer, surface, old_layout, subresource_range);
 
-			surface->dirty = false;
+				surface->dirty = false;
+			}
+			//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
+
 			surface->old_contents = nullptr;
 		};
 
