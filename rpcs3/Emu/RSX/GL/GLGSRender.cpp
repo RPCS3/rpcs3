@@ -1204,7 +1204,7 @@ u64 GLGSRender::timestamp() const
 
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	bool can_flush = (std::this_thread::get_id() != m_thread_id);
+	bool can_flush = (std::this_thread::get_id() == m_thread_id);
 	auto result = m_gl_texture_cache.invalidate_address(address, can_flush);
 
 	if (!result.first)
@@ -1224,7 +1224,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 		return true;
 	}
 
-	return false;
+	return true;
 }
 
 void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
