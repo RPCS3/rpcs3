@@ -250,7 +250,7 @@ namespace rsx
 		//2. A vector of all sections that should be flushed if the caller did not set the allow_flush method. That way the caller can make preparations on how to deal with sections that require flushing
 		//   Note that the sections will be unlocked regardless of the allow_flush flag
 		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl_base(u32 address, u32 range, bool discard_only, bool rebuild_cache, bool allow_flush, Args&... extras)
+		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl_base(u32 address, u32 range, bool discard_only, bool rebuild_cache, bool allow_flush, Args&&... extras)
 		{
 			auto trampled_set = get_intersecting_set(address, range, allow_flush);
 
@@ -324,7 +324,7 @@ namespace rsx
 		}
 
 		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl(u32 address, u32 range, bool discard, bool allow_flush, Args&... extras)
+		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl(u32 address, u32 range, bool discard, bool allow_flush, Args&&... extras)
 		{
 			return invalidate_range_impl_base(address, range, discard, false, allow_flush, std::forward<Args>(extras)...);
 		}
@@ -565,19 +565,19 @@ namespace rsx
 		}
 
 		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> invalidate_address(u32 address, bool allow_flush, Args&... extras)
+		std::pair<bool, std::vector<section_storage_type*>> invalidate_address(u32 address, bool allow_flush, Args&&... extras)
 		{
 			return invalidate_range(address, 4096 - (address & 4095), false, allow_flush, std::forward<Args>(extras)...);
 		}
 
 		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> flush_address(u32 address, Args&... extras)
+		std::pair<bool, std::vector<section_storage_type*>> flush_address(u32 address, Args&&... extras)
 		{
 			return invalidate_range(address, 4096 - (address & 4095), false, true, std::forward<Args>(extras)...);
 		}
 
 		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> invalidate_range(u32 address, u32 range, bool discard, bool allow_flush, Args&... extras)
+		std::pair<bool, std::vector<section_storage_type*>> invalidate_range(u32 address, u32 range, bool discard, bool allow_flush, Args&&... extras)
 		{
 			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
 
@@ -595,7 +595,7 @@ namespace rsx
 		}
 
 		template <typename ...Args>
-		bool flush_all(std::vector<section_storage_type*>& sections_to_flush, Args&... extras)
+		bool flush_all(std::vector<section_storage_type*>& sections_to_flush, Args&&... extras)
 		{
 			reader_lock lock(m_cache_mutex);
 			for (const auto &tex: sections_to_flush)
@@ -701,7 +701,7 @@ namespace rsx
 		}
 
 		template <typename RsxTextureType, typename surface_store_type, typename ...Args>
-		image_view_type upload_texture(commandbuffer_type& cmd, RsxTextureType& tex, surface_store_type& m_rtts, Args&... extras)
+		image_view_type upload_texture(commandbuffer_type& cmd, RsxTextureType& tex, surface_store_type& m_rtts, Args&&... extras)
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 tex_size = (u32)get_texture_size(tex);
