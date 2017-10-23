@@ -700,12 +700,13 @@ namespace rsx
 			m_unreleased_texture_objects = 0;
 		}
 
-		template <typename RsxTextureType, typename surface_store_type>
-		image_view_type upload_texture(commandbuffer_type& cmd, RsxTextureType& tex, surface_store_type& m_rtts)
+		template <typename RsxTextureType, typename surface_store_type, typename ...Args>
+		image_view_type upload_texture(commandbuffer_type& cmd, RsxTextureType& tex, surface_store_type& m_rtts, Args&... extras)
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 tex_size = (u32)get_texture_size(tex);
 			const u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+			const bool is_compressed_format = (format == CELL_GCM_TEXTURE_COMPRESSED_DXT1 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT23 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT45);
 
 			if (!texaddr || !tex_size)
 			{
@@ -715,59 +716,63 @@ namespace rsx
 
 			const auto extended_dimension = tex.get_extended_texture_dimension();
 
-			//Check for sampleable rtts from previous render passes
-			if (auto texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
+			if (!is_compressed_format)
 			{
-				if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
-					LOG_ERROR(RSX, "Texture resides in render target memory, but requested type is not 2D (%d)", (u32)extended_dimension);
-
-				for (const auto& tex : m_rtts.m_bound_render_targets)
+				//Check for sampleable rtts from previous render passes
+				//TODO: When framebuffer Y compression is properly handled, this section can be removed. A more accurate framebuffer storage check exists below this block
+				if (auto texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 				{
-					if (std::get<0>(tex) == texaddr)
+					if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
+						LOG_ERROR(RSX, "Texture resides in render target memory, but requested type is not 2D (%d)", (u32)extended_dimension);
+
+					for (const auto& tex : m_rtts.m_bound_render_targets)
+					{
+						if (std::get<0>(tex) == texaddr)
+						{
+							if (g_cfg.video.strict_rendering_mode)
+							{
+								LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
+								return create_temporary_subresource_view(cmd, texptr, format, 0, 0, texptr->width(), texptr->height());
+							}
+							else
+							{
+								//issue a texture barrier to ensure previous writes are visible
+								insert_texture_barrier();
+								break;
+							}
+						}
+					}
+
+					return texptr->get_view();
+				}
+
+				if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
+				{
+					if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
+						LOG_ERROR(RSX, "Texture resides in depth buffer memory, but requested type is not 2D (%d)", (u32)extended_dimension);
+
+					if (texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
 					{
 						if (g_cfg.video.strict_rendering_mode)
 						{
-							LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
+							LOG_WARNING(RSX, "Attempting to sample a currently bound depth surface @ 0x%x", texaddr);
 							return create_temporary_subresource_view(cmd, texptr, format, 0, 0, texptr->width(), texptr->height());
 						}
 						else
 						{
 							//issue a texture barrier to ensure previous writes are visible
 							insert_texture_barrier();
-							break;
 						}
 					}
+
+					return texptr->get_view();
 				}
-
-				return texptr->get_view();
-			}
-
-			if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
-			{
-				if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
-					LOG_ERROR(RSX, "Texture resides in depth buffer memory, but requested type is not 2D (%d)", (u32)extended_dimension);
-
-				if (texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
-				{
-					if (g_cfg.video.strict_rendering_mode)
-					{
-						LOG_WARNING(RSX, "Attempting to sample a currently bound depth surface @ 0x%x", texaddr);
-						return create_temporary_subresource_view(cmd, texptr, format, 0, 0, texptr->width(), texptr->height());
-					}
-					else
-					{
-						//issue a texture barrier to ensure previous writes are visible
-						insert_texture_barrier();
-					}
-				}
-
-				return texptr->get_view();
 			}
 
 			u16 depth = 0;
 			u16 tex_height = (u16)tex.height();
 			const u16 tex_width = tex.width();
-			const u16 tex_pitch = (tex_size / tex_height); //NOTE: Compressed textures dont have a real pitch (tex_size = (w*h)/6)
+			const u16 tex_pitch = is_compressed_format? (tex_size / tex_height) : tex.pitch(); //NOTE: Compressed textures dont have a real pitch (tex_size = (w*h)/6)
 
 			switch (extended_dimension)
 			{
@@ -784,6 +789,56 @@ namespace rsx
 			case rsx::texture_dimension_extended::texture_dimension_3d:
 				depth = tex.depth();
 				break;
+			}
+
+			if (!is_compressed_format)
+			{
+				/* Check if we are re-sampling a subresource of an RTV/DSV texture, bound or otherwise
+				 * This check is much stricter than the one above
+				 * (Turbo: Super Stunt Squad does this; bypassing the need for a sync object)
+				 * The engine does not read back the texture resource through cell, but specifies a texture location that is
+				 * a bound render target. We can bypass the expensive download in this case
+				 */
+
+				//TODO: Take framebuffer Y compression into account
+				const u32 native_pitch = tex_width * get_format_block_size_in_bytes(format);
+				const f32 internal_scale = (f32)tex_pitch / native_pitch;
+				const u32 internal_width = (const u32)(tex_width * internal_scale);
+
+				const auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, internal_width, tex_height, tex_pitch, true);
+				if (rsc.surface)
+				{
+					//TODO: Check that this region is not cpu-dirty before doing a copy
+					if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
+					{
+						LOG_ERROR(RSX, "Sampling of RTT region as non-2D texture! addr=0x%x, Type=%d, dims=%dx%d",
+							texaddr, (u8)tex.get_extended_texture_dimension(), tex.width(), tex.height());
+					}
+					else
+					{
+						if (!rsc.is_bound || !g_cfg.video.strict_rendering_mode)
+						{
+							if (rsc.w == tex_width && rsc.h == tex_height)
+							{
+								if (rsc.is_bound)
+								{
+									LOG_WARNING(RSX, "Sampling from a currently bound render target @ 0x%x", texaddr);
+									insert_texture_barrier();
+								}
+
+								return rsc.surface->get_view();
+							}
+							else return create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
+								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true));
+						}
+						else
+						{
+							LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
+							return create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
+								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true));
+						}
+					}
+				}
 			}
 
 			{
@@ -829,7 +884,7 @@ namespace rsx
 									if (!blit_engine_incompatibility_warning_raised && !is_hw_blit_engine_compatible(format))
 									{
 										LOG_ERROR(RSX, "Format 0x%X is not compatible with the hardware blit acceleration."
-												" Consider turning off GPU texture scaling in the options to partially handle textures on your CPU.", format);
+											" Consider turning off GPU texture scaling in the options to partially handle textures on your CPU.", format);
 										blit_engine_incompatibility_warning_raised = true;
 										break;
 									}
@@ -844,61 +899,13 @@ namespace rsx
 				}
 			}
 
-			/* Check if we are re-sampling a subresource of an RTV/DSV texture, bound or otherwise
-			 * (Turbo: Super Stunt Squad does this; bypassing the need for a sync object)
-			 * The engine does not read back the texture resource through cell, but specifies a texture location that is
-			 * a bound render target. We can bypass the expensive download in this case
-			 */
-
-			const u32 native_pitch = tex_width * get_format_block_size_in_bytes(format);
-			const f32 internal_scale = (f32)tex_pitch / native_pitch;
-			const u32 internal_width = (const u32)(tex_width * internal_scale);
-
-			const auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, internal_width, tex_height, tex_pitch, true);
-			if (rsc.surface)
-			{
-				//TODO: Check that this region is not cpu-dirty before doing a copy
-				if (tex.get_extended_texture_dimension() != rsx::texture_dimension_extended::texture_dimension_2d)
-				{
-					LOG_ERROR(RSX, "Sampling of RTT region as non-2D texture! addr=0x%x, Type=%d, dims=%dx%d",
-						texaddr, (u8)tex.get_extended_texture_dimension(), tex.width(), tex.height());
-				}
-				else
-				{
-					if (format == CELL_GCM_TEXTURE_COMPRESSED_DXT1 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT23 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT45)
-					{
-						LOG_WARNING(RSX, "Performing an RTT blit but request is for a compressed texture");
-					}
-
-					if (!rsc.is_bound || !g_cfg.video.strict_rendering_mode)
-					{
-						if (rsc.w == tex_width && rsc.h == tex_height)
-						{
-							if (rsc.is_bound)
-							{
-								LOG_WARNING(RSX, "Sampling from a currently bound render target @ 0x%x", texaddr);
-								insert_texture_barrier();
-							}
-
-							return rsc.surface->get_view();
-						}
-						else return create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
-								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true));
-					}
-					else
-					{
-						LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
-						return create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
-								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true));
-					}
-				}
-			}
-
 			//Do direct upload from CPU as the last resort
 			writer_lock lock(m_cache_mutex);
 			const bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
 			auto subresources_layout = get_subresources_layout(tex);
 			auto remap_vector = tex.decoded_remap();
+
+			invalidate_range_impl(texaddr, tex_size, false, true, std::forward<Args>(extras)...);
 
 			m_texture_memory_in_use += (tex_pitch * tex_height);
 			return upload_image_from_cpu(cmd, texaddr, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,

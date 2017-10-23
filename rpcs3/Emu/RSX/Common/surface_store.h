@@ -616,6 +616,9 @@ namespace rsx
 					if (info.rsx_pitch != requested_pitch)
 						return false;
 
+					if (requested_width == 0 || requested_height == 0)
+						return true;
+
 					u16 real_width = requested_width;
 
 					if (scale_to_fit)
@@ -646,7 +649,7 @@ namespace rsx
 							return true;
 						}
 
-						if (info.surface_width >= requested_width && info.surface_height >= requested_height)
+						if (info.surface_width >= real_width && info.surface_height >= requested_height)
 						{
 							LOG_WARNING(RSX, "Overlapping surface exceeds bounds; returning full surface region");
 							w = real_width;
