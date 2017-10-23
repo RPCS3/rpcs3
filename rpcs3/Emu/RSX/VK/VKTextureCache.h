@@ -676,6 +676,13 @@ namespace vk
 			m_discardable_storage.remove_if([&](const discarded_storage& o) {return o.test(last_complete_frame);});
 		}
 
+		template<typename RsxTextureType>
+		image_view* _upload_texture(vk::command_buffer& cmd, RsxTextureType& tex, rsx::vk_render_targets& m_rtts)
+		{
+			const VkQueue& queue = m_submit_queue;
+			return upload_texture(cmd, tex, m_rtts, *m_device, cmd, m_memory_types, queue);
+		}
+
 		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)
 		{
 			struct blit_helper
