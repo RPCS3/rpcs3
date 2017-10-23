@@ -2,6 +2,7 @@
 
 #include "../rsx_cache.h"
 #include "../rsx_utils.h"
+#include "TextureUtils.h"
 
 #include <atomic>
 
@@ -189,7 +190,6 @@ namespace rsx
 		std::vector<std::pair<section_storage_type*, ranged_storage*>> get_intersecting_set(u32 address, u32 range, bool check_whole_size)
 		{
 			std::vector<std::pair<section_storage_type*, ranged_storage*>> result;
-			bool response = false;
 			u64 cache_tag = get_system_time();
 			u32 last_dirty_block = UINT32_MAX;
 			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
@@ -771,8 +771,11 @@ namespace rsx
 
 			u16 depth = 0;
 			u16 tex_height = (u16)tex.height();
+			u16 tex_pitch = tex.pitch();
 			const u16 tex_width = tex.width();
-			const u16 tex_pitch = is_compressed_format? (tex_size / tex_height) : tex.pitch(); //NOTE: Compressed textures dont have a real pitch (tex_size = (w*h)/6)
+
+			tex_pitch = is_compressed_format? (tex_size / tex_height) : tex_pitch; //NOTE: Compressed textures dont have a real pitch (tex_size = (w*h)/6)
+			if (tex_pitch == 0) tex_pitch = tex_width * get_format_block_size_in_bytes(format);
 
 			switch (extended_dimension)
 			{
