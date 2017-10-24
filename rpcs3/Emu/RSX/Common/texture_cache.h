@@ -165,7 +165,7 @@ namespace rsx
 		bool blit_engine_incompatibility_warning_raised = false;
 		
 		//Memory usage
-		const s32 m_max_zombie_objects = 128; //Limit on how many texture objects to keep around for reuse after they are invalidated
+		const s32 m_max_zombie_objects = 64; //Limit on how many texture objects to keep around for reuse after they are invalidated
 		std::atomic<s32> m_unreleased_texture_objects = { 0 }; //Number of invalidated objects not yet freed from memory
 		std::atomic<u32> m_texture_memory_in_use = { 0 };
 		
@@ -1239,7 +1239,7 @@ namespace rsx
 			return m_unreleased_texture_objects;
 		}
 
-		const u32 get_texture_memory_in_use() const
+		virtual const u32 get_texture_memory_in_use() const
 		{
 			return m_texture_memory_in_use;
 		}
