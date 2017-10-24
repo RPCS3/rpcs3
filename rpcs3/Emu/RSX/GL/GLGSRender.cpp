@@ -1210,7 +1210,7 @@ u64 GLGSRender::timestamp() const
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
 	bool can_flush = (std::this_thread::get_id() == m_thread_id);
-	auto result = m_gl_texture_cache.invalidate_address(address, can_flush);
+	auto result = m_gl_texture_cache.invalidate_address(address, is_writing, can_flush);
 
 	if (!result.first)
 		return false;
@@ -1235,7 +1235,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 {
 	//Discard all memory in that range without bothering with writeback (Force it for strict?)
-	if (std::get<0>(m_gl_texture_cache.invalidate_range(address_base, size, true, false)))
+	if (std::get<0>(m_gl_texture_cache.invalidate_range(address_base, size, true, true, false)))
 		m_gl_texture_cache.purge_dirty();
 }
 
