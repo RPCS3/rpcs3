@@ -286,6 +286,9 @@ namespace vk
 		std::unique_ptr<vk::image_view> view;
 		std::unique_ptr<vk::image> img;
 
+		//Memory held by this temp storage object
+		u32 block_size = 0;
+
 		const u64 frame_tag = vk::get_current_frame_id();
 
 		discarded_storage(std::unique_ptr<vk::image_view>& _view)
@@ -308,6 +311,7 @@ namespace vk
 		{
 			view = std::move(tex.get_view());
 			img = std::move(tex.get_texture());
+			block_size = tex.get_section_size();
 		}
 
 		const bool test(u64 ref_frame) const
@@ -329,6 +333,7 @@ namespace vk
 
 		//Stuff that has been dereferenced goes into these
 		std::list<discarded_storage> m_discardable_storage;
+		std::atomic<u32> m_discarded_memory_size = { 0 };
 		
 		void purge_cache()
 		{
@@ -354,12 +359,14 @@ namespace vk
 			m_discardable_storage.clear();
 			m_unreleased_texture_objects = 0;
 			m_texture_memory_in_use = 0;
+			m_discarded_memory_size = 0;
 		}
 		
 	protected:
 
 		void free_texture_section(cached_texture_section& tex) override
 		{
+			m_discarded_memory_size += tex.get_section_size();
 			m_discardable_storage.push_back(tex);
 			tex.destroy();
 		}
@@ -667,13 +674,22 @@ namespace vk
 
 		void on_frame_end() override
 		{
-			if (m_unreleased_texture_objects >= m_max_zombie_objects)
+			if (m_unreleased_texture_objects >= m_max_zombie_objects ||
+				m_discarded_memory_size > 0x4000000) //If already holding over 64M in discardable memory, be frugal with memory resources
 			{
 				purge_dirty();
 			}
 
 			const u64 last_complete_frame = vk::get_last_completed_frame_id();
-			m_discardable_storage.remove_if([&](const discarded_storage& o) {return o.test(last_complete_frame);});
+			m_discardable_storage.remove_if([&](const discarded_storage& o)
+			{
+				if (o.test(last_complete_frame))
+				{
+					m_discarded_memory_size -= o.block_size;
+					return true;
+				}
+				return false;
+			});
 		}
 
 		template<typename RsxTextureType>
@@ -726,6 +742,11 @@ namespace vk
 		const u32 get_unreleased_textures_count() const override
 		{
 			return m_unreleased_texture_objects + (u32)m_discardable_storage.size();
+		}
+
+		const u32 get_texture_memory_in_use() const override
+		{
+			return m_texture_memory_in_use + m_discarded_memory_size;
 		}
 	};
 }
