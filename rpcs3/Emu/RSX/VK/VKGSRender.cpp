@@ -739,8 +739,11 @@ VKGSRender::~VKGSRender()
 
 bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
-	auto result = m_texture_cache.invalidate_address(address, is_writing, false, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+	std::pair<bool, std::vector<vk::cached_texture_section*>> result;
+	{
+		std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
+		result = std::move(m_texture_cache.invalidate_address(address, is_writing, false, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()));
+	}
 
 	if (!result.first)
 		return false;
