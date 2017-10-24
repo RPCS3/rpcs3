@@ -1,6 +1,3 @@
-#include "stdafx.h"
-#include "Emu/Memory/Memory.h"
-
 #include "save_data_dialog.h"
 #include "save_data_list_dialog.h"
 
