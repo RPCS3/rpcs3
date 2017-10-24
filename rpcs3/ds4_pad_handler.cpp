@@ -156,25 +156,24 @@ ds4_pad_handler::ds4_pad_handler() : is_init(false)
 	b_has_deadzones = true;
 }
 
-void ds4_pad_handler::ConfigController(const std::string& device)
-{
-	pad_settings_dialog dlg(&m_pad_config, device, *this);
-	dlg.exec();
-}
-
-void ds4_pad_handler::GetNextButtonPress(const std::string& padid, const std::function<void(std::string)>& callback)
+void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(std::string)>& callback)
 {
 	if (!Init())
 	{
 		return;
 	}
 
+	int ltriggerthreshold = deadzones[0];
+	int rtriggerthreshold = deadzones[1];
+	int lstickdeadzone = deadzones[2];
+	int rstickdeadzone = deadzones[3];
+
 	// Get the DS4 Device or return if none found
-	size_t pos = padid.find("Ds4 Pad #");
+	size_t pos = padId.find("Ds4 Pad #");
 
 	if (pos == std::string::npos) return;
 
-	std::string pad_serial = padid.substr(pos + 9);
+	std::string pad_serial = padId.substr(pos + 9);
 
 	std::shared_ptr<DS4Device> device = nullptr;
 
@@ -207,19 +206,29 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padid, const std::fu
 
 	// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
 	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
+	// Use a pair to get all the legally pressed buttons and use the one with highest value (prioritize first)
+	std::pair<u16, std::string> pressed_button = { 0, "" };
 	for (const auto& button : button_list)
 	{
 		u32 keycode = button.first;
 		u16 value = data[keycode];
 
 		if (((keycode < DS4KeyCodes::L2) && (value > 0))
-		 || ((keycode == DS4KeyCodes::L2) && (value > m_pad_config.ltriggerthreshold))
-		 || ((keycode == DS4KeyCodes::R2) && (value > m_pad_config.rtriggerthreshold))
-		 || ((keycode >= DS4KeyCodes::LSXNeg && keycode <= DS4KeyCodes::LSYPos) && (value > m_pad_config.lstickdeadzone))
-		 || ((keycode >= DS4KeyCodes::RSXNeg && keycode <= DS4KeyCodes::RSYPos) && (value > m_pad_config.rstickdeadzone)))
+		 || ((keycode == DS4KeyCodes::L2) && (value > ltriggerthreshold))
+		 || ((keycode == DS4KeyCodes::R2) && (value > rtriggerthreshold))
+		 || ((keycode >= DS4KeyCodes::LSXNeg && keycode <= DS4KeyCodes::LSYPos) && (value > lstickdeadzone))
+		 || ((keycode >= DS4KeyCodes::RSXNeg && keycode <= DS4KeyCodes::RSYPos) && (value > rstickdeadzone)))
 		{
-			return callback(button.second);
+			if (value > pressed_button.first)
+			{
+				pressed_button = { value, button.second};
+			}
 		}
+	}
+	if (pressed_button.first > 0)
+	{
+		LOG_NOTICE(HLE, "GetNextButtonPress: %s button %s pressed with value %d", m_pad_config.cfg_type, pressed_button.second, pressed_button.first);
+		return callback(pressed_button.second);
 	}
 }
 

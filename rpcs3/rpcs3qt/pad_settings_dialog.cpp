@@ -12,8 +12,8 @@
 inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 constexpr auto qstr = QString::fromStdString;
 
-pad_settings_dialog::pad_settings_dialog(pad_config* pad_cfg, const std::string& device, PadHandlerBase& handler, QWidget *parent)
-	: QDialog(parent), ui(new Ui::pad_settings_dialog), m_handler_cfg(pad_cfg), m_device_name(device), m_handler(&handler)
+pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_ptr<PadHandlerBase> handler, QWidget *parent)
+	: QDialog(parent), ui(new Ui::pad_settings_dialog), m_handler_cfg(handler->GetConfig()), m_device_name(device), m_handler(handler)
 {
 	m_handler_cfg->load();
 
@@ -64,7 +64,6 @@ pad_settings_dialog::pad_settings_dialog(pad_config* pad_cfg, const std::string&
 		// Use timer to get button input
 		const auto& callback = [=](std::string name)
 		{
-			LOG_NOTICE(GENERAL, "Pad Settings: %s button %s pressed (0x%x)", m_handler_cfg->cfg_type, name);
 			m_cfg_entries[m_button_id].key = name;
 			m_cfg_entries[m_button_id].text = qstr(name);
 			ReactivateButtons();
@@ -74,11 +73,18 @@ pad_settings_dialog::pad_settings_dialog(pad_config* pad_cfg, const std::string&
 		{
 			if (m_button_id > id_pad_begin && m_button_id < id_pad_end)
 			{
-				m_handler->GetNextButtonPress(m_device_name, callback);
+				std::vector<int> deadzones =
+				{
+					ui->slider_trigger_left->value(),
+					ui->slider_trigger_right->value(),
+					ui->slider_stick_left->value(),
+					ui->slider_stick_right->value()
+				};
+				m_handler->GetNextButtonPress(m_device_name, deadzones, callback);
 			}
 		});
 
-		m_timer_input.start(10);
+		m_timer_input.start(2);
 	};
 
 	// Enable Vibration Checkboxes
@@ -178,6 +184,7 @@ pad_settings_dialog::pad_settings_dialog(pad_config* pad_cfg, const std::string&
 
 	insertButton(id_pad_start,  ui->b_start,  &m_handler_cfg->start);
 	insertButton(id_pad_select, ui->b_select, &m_handler_cfg->select);
+	insertButton(id_pad_ps,     ui->b_ps,     &m_handler_cfg->ps);
 
 	insertButton(id_pad_r1, ui->b_shift_r1, &m_handler_cfg->r1);
 	insertButton(id_pad_r2, ui->b_shift_r2, &m_handler_cfg->r2);
@@ -258,7 +265,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 	}
 	else
 	{
-		m_cfg_entries[m_button_id].key = ((keyboard_pad_handler*)m_handler)->GetKeyName(keyEvent);
+		m_cfg_entries[m_button_id].key = ((keyboard_pad_handler*)m_handler.get())->GetKeyName(keyEvent);
 		m_cfg_entries[m_button_id].text = qstr(m_cfg_entries[m_button_id].key);
 	}
 
@@ -293,9 +300,9 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 
 void pad_settings_dialog::SwitchButtons(bool is_enabled)
 {
-	for (const auto& button : m_padButtons->buttons())
+	for (int i = id_pad_begin + 1; i < id_pad_end; i++)
 	{
-		button->setEnabled(is_enabled);
+		m_padButtons->button(i)->setEnabled(is_enabled);
 	}
 }
 
@@ -324,6 +331,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	case id_cancel:
 		return;
 	case id_reset_parameters:
+		ReactivateButtons();
 		m_handler_cfg->from_default();
 		UpdateLabel(true);
 		return;

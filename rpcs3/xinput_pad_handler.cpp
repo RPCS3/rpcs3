@@ -65,15 +65,20 @@ xinput_pad_handler::~xinput_pad_handler()
 	Close();
 }
 
-void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(std::string)>& callback)
+void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(std::string)>& callback)
 {
 	if (!Init())
 	{
 		return;
 	}
 
-	u32 device_number = 0;
+	int ltriggerthreshold = deadzones[0];
+	int rtriggerthreshold = deadzones[1];
+	int lstickdeadzone = deadzones[2];
+	int rstickdeadzone = deadzones[3];
+
 	size_t pos = padId.find("Xinput Pad #");
+	int device_number;
 
 	if (pos != std::string::npos)
 	{
@@ -84,7 +89,7 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 	{
 		return;
 	}
-	
+
 	DWORD dwResult;
 	XINPUT_STATE state;
 	ZeroMemory(&state, sizeof(XINPUT_STATE));
@@ -99,6 +104,8 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 
 	// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
 	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
+	// Use a pair to get all the legally pressed buttons and use the one with highest value (prioritize first)
+	std::pair<u16, std::string> pressed_button = { 0, "" };
 	auto data = GetButtonValues(state);
 	for (const auto& button : button_list)
 	{
@@ -106,13 +113,21 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 		u16 value = data[keycode];
 
 		if (((keycode < XInputKeyCodes::LT) && (value > 0))
-		 || ((keycode == XInputKeyCodes::LT) && (value > m_pad_config.ltriggerthreshold))
-		 || ((keycode == XInputKeyCodes::RT) && (value > m_pad_config.rtriggerthreshold))
-		 || ((keycode >= XInputKeyCodes::LSXNeg && keycode <= XInputKeyCodes::LSYPos) && (value > m_pad_config.lstickdeadzone))
-		 || ((keycode >= XInputKeyCodes::RSXNeg && keycode <= XInputKeyCodes::RSYPos) && (value > m_pad_config.rstickdeadzone)))
+		 || ((keycode == XInputKeyCodes::LT) && (value > ltriggerthreshold))
+		 || ((keycode == XInputKeyCodes::RT) && (value > rtriggerthreshold))
+		 || ((keycode >= XInputKeyCodes::LSXNeg && keycode <= XInputKeyCodes::LSYPos) && (value > lstickdeadzone))
+		 || ((keycode >= XInputKeyCodes::RSXNeg && keycode <= XInputKeyCodes::RSYPos) && (value > rstickdeadzone)))
 		{
-			return callback(button.second);
+			if (value > pressed_button.first)
+			{
+				pressed_button = { value, button.second };
+			}
 		}
+	}
+	if (pressed_button.first > 0)
+	{
+		LOG_NOTICE(HLE, "GetNextButtonPress: %s button %s pressed with value %d", m_pad_config.cfg_type, pressed_button.second, pressed_button.first);
+		return callback(pressed_button.second);
 	}
 }
 
@@ -241,12 +256,6 @@ std::array<u16, xinput_pad_handler::XInputKeyCodes::KEYCODECOUNT> xinput_pad_han
 	values[XInputKeyCodes::Guide] = buttons & XINPUT_INFO::GUIDE_BUTTON ? 255 : 0;
 
 	return values;
-}
-
-void xinput_pad_handler::ConfigController(const std::string& device)
-{
-	pad_settings_dialog dlg(&m_pad_config, device, *this);
-	dlg.exec();
 }
 
 bool xinput_pad_handler::Init()

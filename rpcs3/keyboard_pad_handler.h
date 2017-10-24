@@ -24,7 +24,6 @@ public:
 	std::vector<std::string> ListDevices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
-	void ConfigController(const std::string& device) override;
 
 	const std::string GetKeyName(const QKeyEvent* keyEvent);
 	const std::string GetKeyName(const u32& keyCode);

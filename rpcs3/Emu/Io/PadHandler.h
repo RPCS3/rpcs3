@@ -469,9 +469,9 @@ public:
 	bool has_config() { return b_has_config; };
 	bool has_rumble() { return b_has_rumble; };
 	bool has_deadzones() { return b_has_deadzones; };
+	pad_config* GetConfig() { return &m_pad_config; };
 	//Sets window to config the controller(optional)
-	virtual void ConfigController(const std::string& device) {};
-	virtual void GetNextButtonPress(const std::string& padId, const std::function<void(std::string)>& callback) {};
+	virtual void GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(std::string)>& callback) {};
 	virtual void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) {};
 	virtual void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) {};
 	//Return list of devices for that handler

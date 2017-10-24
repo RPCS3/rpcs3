@@ -844,11 +844,8 @@
                </property>
                <item>
                 <widget class="QPushButton" name="b_ps">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
                  <property name="text">
-                  <string>Null</string>
+                  <string>Backspace</string>
                  </property>
                  <property name="autoDefault">
                   <bool>false</bool>

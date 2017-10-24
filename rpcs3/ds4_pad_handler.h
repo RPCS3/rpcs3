@@ -22,16 +22,16 @@ class ds4_pad_handler final : public PadHandlerBase
 		Up,
 		Down,
 		R1,
-		R2,
+		R3,
 		L1,
-		L2,
+		L3,
 		Share,
 		Options,
 		PSButton,
 		TouchPad,
 
-		L3,
-		R3,
+		L2,
+		R2,
 
 		LSXNeg,
 		LSXPos,
@@ -135,8 +135,7 @@ public:
 	std::vector<std::string> ListDevices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
-	void ConfigController(const std::string& device) override;
-	void GetNextButtonPress(const std::string& padid, const std::function<void(std::string)>& buttonCallback) override;
+	void GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(std::string)>& buttonCallback) override;
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
 	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 

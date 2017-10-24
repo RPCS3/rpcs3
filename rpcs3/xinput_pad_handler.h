@@ -99,8 +99,7 @@ public:
 	std::vector<std::string> ListDevices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
-	void ConfigController(const std::string& device) override;
-	void GetNextButtonPress(const std::string& padid, const std::function<void(std::string)>& callback) override;
+	void GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(std::string)>& callback) override;
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
 	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 

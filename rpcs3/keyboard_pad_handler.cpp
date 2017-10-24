@@ -54,12 +54,6 @@ keyboard_pad_handler::keyboard_pad_handler() : QObject()
 	b_has_config = true;
 }
 
-void keyboard_pad_handler::ConfigController(const std::string& device)
-{
-	pad_settings_dialog dlg(&m_pad_config, device, *this);
-	dlg.exec();
-}
-
 void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 {
 	for (auto pad : bindings)

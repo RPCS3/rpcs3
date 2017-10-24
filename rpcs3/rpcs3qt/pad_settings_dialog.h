@@ -39,6 +39,7 @@ enum button_ids
 
 	id_pad_start,
 	id_pad_select,
+	id_pad_ps,
 
 	id_pad_r1,
 	id_pad_r2,
@@ -101,7 +102,7 @@ private:
 	QPalette m_palette;
 
 	// Pad Handlers 
-	PadHandlerBase* m_handler;
+	std::shared_ptr<PadHandlerBase> m_handler;
 	handler_type m_handler_type;
 	pad_config* m_handler_cfg;
 	std::string m_device_name;
@@ -118,7 +119,7 @@ private:
 	void ReactivateButtons();
 
 public:
-	explicit pad_settings_dialog(pad_config* pad_cfg, const std::string& device, PadHandlerBase& handler, QWidget *parent = nullptr);
+	explicit pad_settings_dialog(const std::string& device, std::shared_ptr<PadHandlerBase> handler, QWidget *parent = nullptr);
 	~pad_settings_dialog();
 
 	/** Handle keyboard handler input */
