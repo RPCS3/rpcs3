@@ -23,6 +23,7 @@ class memory_viewer_panel : public QDialog
 
 	QLineEdit* m_addr_line;
 
+	QLabel* m_mem_hex_lab;
 	QLabel* m_mem_addr;
 	QLabel* m_mem_hex;
 	QLabel* m_mem_ascii;

@@ -347,6 +347,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 			"QWidget#header_section { background-color: #ffffff; }"
 			"QDialog#kernel_explorer { background-color: rgba(240, 240, 240, 255); }"
 			"QDialog#memory_viewer { background-color: rgba(240, 240, 240, 255); }"
+			"QLabel#memory_viewer_hex_label_panel { color: rgba(75, 135, 150, 255); background-color: rgba(240, 240, 240, 255); }"
 			"QLabel#memory_viewer_address_panel { color: rgba(75, 135, 150, 255); background-color: rgba(240, 240, 240, 255); }"
 			"QLabel#memory_viewer_hex_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
 			"QLabel#memory_viewer_ascii_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
