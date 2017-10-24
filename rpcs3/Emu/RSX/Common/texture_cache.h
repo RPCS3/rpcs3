@@ -192,6 +192,7 @@ namespace rsx
 			std::vector<std::pair<section_storage_type*, ranged_storage*>> result;
 			u64 cache_tag = get_system_time();
 			u32 last_dirty_block = UINT32_MAX;
+
 			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
 
 			for (auto It = m_cache.begin(); It != m_cache.end(); It++)
@@ -250,7 +251,7 @@ namespace rsx
 		//2. A vector of all sections that should be flushed if the caller did not set the allow_flush method. That way the caller can make preparations on how to deal with sections that require flushing
 		//   Note that the sections will be unlocked regardless of the allow_flush flag
 		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl_base(u32 address, u32 range, bool discard_only, bool rebuild_cache, bool allow_flush, Args&&... extras)
+		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl_base(u32 address, u32 range, bool is_writing, bool discard_only, bool rebuild_cache, bool allow_flush, Args&&... extras)
 		{
 			auto trampled_set = get_intersecting_set(address, range, allow_flush);
 
@@ -260,6 +261,9 @@ namespace rsx
 				const auto to_reprotect = std::remove_if(trampled_set.begin(), trampled_set.end(),
 				[&](const std::pair<section_storage_type*, ranged_storage*>& obj)
 				{
+					if (!is_writing && obj.first->get_protection() != utils::protection::no)
+						return true;
+
 					if (!rebuild_cache && !obj.first->is_flushable())
 						return false;
 
@@ -300,7 +304,10 @@ namespace rsx
 					obj.first->set_dirty(false);
 				}
 
-				trampled_set.erase(to_reprotect, trampled_set.end());
+				if (discard_only)
+					return{ true, {} };
+
+				//trampled_set.erase(to_reprotect, trampled_set.end());
 
 				if (allow_flush)
 				{
@@ -324,9 +331,9 @@ namespace rsx
 		}
 
 		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl(u32 address, u32 range, bool discard, bool allow_flush, Args&&... extras)
+		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl(u32 address, u32 range, bool is_writing, bool discard, bool allow_flush, Args&&... extras)
 		{
-			return invalidate_range_impl_base(address, range, discard, false, allow_flush, std::forward<Args>(extras)...);
+			return invalidate_range_impl_base(address, range, is_writing, discard, false, allow_flush, std::forward<Args>(extras)...);
 		}
 
 		bool is_hw_blit_engine_compatible(const u32 format) const
@@ -565,19 +572,13 @@ namespace rsx
 		}
 
 		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> invalidate_address(u32 address, bool allow_flush, Args&&... extras)
+		std::pair<bool, std::vector<section_storage_type*>> invalidate_address(u32 address, bool is_writing, bool allow_flush, Args&&... extras)
 		{
-			return invalidate_range(address, 4096 - (address & 4095), false, allow_flush, std::forward<Args>(extras)...);
+			return invalidate_range(address, 4096 - (address & 4095), is_writing, false, allow_flush, std::forward<Args>(extras)...);
 		}
 
 		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> flush_address(u32 address, Args&&... extras)
-		{
-			return invalidate_range(address, 4096 - (address & 4095), false, true, std::forward<Args>(extras)...);
-		}
-
-		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> invalidate_range(u32 address, u32 range, bool discard, bool allow_flush, Args&&... extras)
+		std::pair<bool, std::vector<section_storage_type*>> invalidate_range(u32 address, u32 range, bool is_writing, bool discard, bool allow_flush, Args&&... extras)
 		{
 			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
 
@@ -591,7 +592,7 @@ namespace rsx
 			}
 
 			writer_lock lock(m_cache_mutex);
-			return invalidate_range_impl(address, range, discard, allow_flush, std::forward<Args>(extras)...);
+			return invalidate_range_impl(address, range, is_writing, discard, allow_flush, std::forward<Args>(extras)...);
 		}
 
 		template <typename ...Args>
@@ -908,7 +909,7 @@ namespace rsx
 			auto subresources_layout = get_subresources_layout(tex);
 			auto remap_vector = tex.decoded_remap();
 
-			invalidate_range_impl(texaddr, tex_size, false, true, std::forward<Args>(extras)...);
+			invalidate_range_impl(texaddr, tex_size, false, false, true, std::forward<Args>(extras)...);
 
 			m_texture_memory_in_use += (tex_pitch * tex_height);
 			return upload_image_from_cpu(cmd, texaddr, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
@@ -1001,8 +1002,8 @@ namespace rsx
 					const u32 memcpy_bytes_length = dst.clip_width * bpp * dst.clip_height;
 
 					lock.upgrade();
-					invalidate_range_impl(src_address, memcpy_bytes_length, false, true, std::forward<Args>(extras)...);
-					invalidate_range_impl(dst_address, memcpy_bytes_length, false, true, std::forward<Args>(extras)...);
+					invalidate_range_impl(src_address, memcpy_bytes_length, false, false, true, std::forward<Args>(extras)...);
+					invalidate_range_impl(dst_address, memcpy_bytes_length, true, false, true, std::forward<Args>(extras)...);
 					memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
 					return true;
 				}
@@ -1104,7 +1105,7 @@ namespace rsx
 				{
 					lock.upgrade();
 
-					invalidate_range_impl(src_address, src.pitch * src.slice_h, false, true, std::forward<Args>(extras)...);
+					invalidate_range_impl(src_address, src.pitch * src.slice_h, false, false, true, std::forward<Args>(extras)...);
 
 					const u16 pitch_in_block = src_is_argb8 ? src.pitch >> 2 : src.pitch >> 1;
 					std::vector<rsx_subresource_layout> subresource_layout;
@@ -1176,7 +1177,7 @@ namespace rsx
 			if (format_mismatch)
 			{
 				lock.upgrade();
-				invalidate_range_impl(cached_dest->get_section_base(), cached_dest->get_section_size(), false, true, std::forward<Args>(extras)...);
+				invalidate_range_impl(cached_dest->get_section_base(), cached_dest->get_section_size(), true, false, true, std::forward<Args>(extras)...);
 
 				dest_texture = 0;
 				cached_dest = nullptr;
@@ -1184,7 +1185,7 @@ namespace rsx
 			else if (invalidate_dst_range)
 			{
 				lock.upgrade();
-				invalidate_range_impl(dst_address, dst.pitch * dst.height, false, true, std::forward<Args>(extras)...);
+				invalidate_range_impl(dst_address, dst.pitch * dst.height, true, false, true, std::forward<Args>(extras)...);
 			}
 
 			//Validate clipping region

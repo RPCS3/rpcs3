@@ -740,7 +740,7 @@ VKGSRender::~VKGSRender()
 bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 {
 	std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
-	auto result = m_texture_cache.invalidate_address(address, false, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+	auto result = m_texture_cache.invalidate_address(address, is_writing, false, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 
 	if (!result.first)
 		return false;
@@ -831,7 +831,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 void VKGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 {
 	std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
-	if (std::get<0>(m_texture_cache.invalidate_range(address_base, size, false, false,
+	if (std::get<0>(m_texture_cache.invalidate_range(address_base, size, true, true, false,
 		*m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue())))
 	{
 		m_texture_cache.purge_dirty();
