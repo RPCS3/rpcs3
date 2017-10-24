@@ -1019,8 +1019,13 @@ namespace rsx
 			//RSX only handles 512x512 tiles so texture 'stitching' will eventually be needed to be completely accurate
 			//Sections will be submitted as (512x512 + 512x512 + 256x512 + 512x208 + 512x208 + 256x208) to blit a 720p surface to the backbuffer for example
 			size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), dst.height };
-			if (dst.max_tile_h > dst.height && src_is_render_target)
-				dst_dimensions.height = std::min((s32)dst.max_tile_h, 1024);
+			if (src_is_render_target)
+			{
+				if (dst_dimensions.width == src_subres.surface->get_surface_width())
+					dst_dimensions.height = std::max(src_subres.surface->get_surface_height(), dst.height);
+				else if (dst.max_tile_h > dst.height)
+					dst_dimensions.height = std::min((s32)dst.max_tile_h, 1024);
+			}
 
 			section_storage_type* cached_dest = nullptr;
 			bool invalidate_dst_range = false;
