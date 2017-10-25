@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <vector>
 #include <memory>
 #include "stdafx.h"
@@ -276,6 +277,11 @@ struct pad_config : cfg::node
 	cfg::_int<0, 1000000> rtriggerthreshold{ this, "Right Trigger Threshold", 0 };
 	cfg::_int<0, 1000000> padsquircling{ this, "Pad Squircling Factor", 0 };
 
+	cfg::_bool enable_vibration_motor_large{ this, "Enable Large Vibration Motor", true };
+	cfg::_bool enable_vibration_motor_small{ this, "Enable Small Vibration Motor", true };
+	cfg::_bool switch_vibration_motors{ this, "Switch Vibration Motors", false };
+	cfg::_bool has_axis_triggers{ this, "Has Axis Triggers", true };
+
 	bool load()
 	{
 		if (fs::file cfg_file{ cfg_name, fs::read })
@@ -300,19 +306,134 @@ struct pad_config : cfg::node
 class PadHandlerBase
 {
 protected:
+	static const u32 MAX_GAMEPADS = 7;
+
+	bool b_has_deadzones = false;
+	bool b_has_rumble = false;
 	bool b_has_config = false;
 	pad_config m_pad_config;
 
+	u16 NormalizeTriggerInput(u16 value, int threshold)
+	{
+		if (value <= threshold || threshold >= TRIGGER_MAX)
+		{
+			return static_cast<u16>(0);
+		}
+		else if (threshold <= TRIGGER_MIN)
+		{
+			return value;
+		}
+		else
+		{
+			return (u16)(float(TRIGGER_MAX) * float(value - threshold) / float(TRIGGER_MAX - threshold));
+		}
+	};
+
+	u16 NormalizeStickInput(s16 raw_value, int threshold, bool ignore_threshold = false)
+	{
+		u16 value = abs(raw_value);
+		float max = float(THUMB_MAX);
+		float val = value / max;
+
+		if (ignore_threshold || threshold <= THUMB_MIN)
+		{
+			return static_cast<u16>(255.0f * val);
+		}
+		else if (value <= threshold || threshold >= THUMB_MAX)
+		{
+			return static_cast<u16>(0);
+		}
+		else
+		{
+			float thresh = threshold / max;
+			return static_cast<u16>(255.0f * std::min(1.0f, (val - thresh) / (1.0f - thresh)));
+		}
+	};
+
+	void NormalizeRawStickInput(float& X, float& Y, float deadzone)
+	{
+		X /= 255.0f;
+		Y /= 255.0f;
+		deadzone /= float(THUMB_MAX);
+
+		float mag = sqrtf(X*X + Y*Y);
+
+		if (mag > deadzone)
+		{
+			float legalRange = 1.0f - deadzone;
+			float normalizedMag = std::min(1.0f, (mag - deadzone) / legalRange);
+			float scale = normalizedMag / mag;
+			X = X * scale;
+			Y = Y * scale;
+		}
+		else
+		{
+			X = 0;
+			Y = 0;
+		}
+	};
+
+	u16 Clamp0To255(f32 input)
+	{
+		if (input > 255.f)
+			return 255;
+		else if (input < 0.f)
+			return 0;
+		else return static_cast<u16>(input);
+	};
+
+	u16 ConvertAxis(float value)
+	{
+		return static_cast<u16>((value + 1.0)*(255.0 / 2.0));
+	};
+
+	// we get back values from 0 - 255 for x and y from the ds4 packets,
+	// and they end up giving us basically a perfect circle, which is how the ds4 sticks are setup
+	// however,the ds3, (and i think xbox controllers) give instead a more 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
+	// using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
+
+	// this might be the best for now, in practice it seems to push the corners to max of 20x20
+	std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY, float squircle_factor)
+	{
+		// convert inX and Y to a (-1, 1) vector;
+		const f32 x = (inX - 127) / 127.f;
+		const f32 y = (inY - 127) / 127.f;
+
+		// compute angle and len of given point to be used for squircle radius
+		const f32 angle = std::atan2(y, x);
+		const f32 r = std::sqrt(std::pow(x, 2.f) + std::pow(y, 2.f));
+
+		// now find len/point on the given squircle from our current angle and radius in polar coords
+		// https://thatsmaths.com/2016/07/14/squircles/
+		const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / (squircle_factor / 1000.f)) * r;
+
+		// we now have len and angle, convert to cartisian
+		const int newX = Clamp0To255(((newLen * std::cos(angle)) + 1) * 127);
+		const int newY = Clamp0To255(((newLen * std::sin(angle)) + 1) * 127);
+		return std::tuple<u16, u16>(newX, newY);
+	}
+
 public:
+	s32 THUMB_MIN;
+	s32 THUMB_MAX;
+	s32 TRIGGER_MIN;
+	s32 TRIGGER_MAX;
+	s32 VIBRATION_MIN;
+	s32 VIBRATION_MAX;
+
 	virtual bool Init() { return true; };
 	virtual ~PadHandlerBase() = default;
 
 	//Does it have GUI Config?
 	bool has_config() { return b_has_config; };
+	bool has_rumble() { return b_has_rumble; };
+	bool has_deadzones() { return b_has_deadzones; };
 	//Sets window to config the controller(optional)
 	virtual void ConfigController(const std::string& device) {};
-	virtual void GetNextButtonPress(const std::string& padId, const std::function<void(u32, std::string)>& buttonCallback) {};
+	virtual void GetNextButtonPress(const std::string& padId, const std::function<void(u32, std::string)>& callback) {};
 	virtual std::string GetButtonName(u32 btn) { return ""; };
+	virtual void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) {};
+	virtual void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) {};
 	//Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;
 	//Callback called during pad_thread::ThreadFunc

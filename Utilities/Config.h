@@ -150,6 +150,11 @@ namespace cfg
 
 			return true;
 		}
+
+		void set(const bool& value)
+		{
+			m_value = value;
+		}
 	};
 
 	// Value node with fixed set of possible values, each maps to an enum value of type T.
@@ -251,6 +256,11 @@ namespace cfg
 			}
 
 			return false;
+		}
+
+		void set(const s64& value)
+		{
+			m_value = static_cast<int_type>(value);
 		}
 
 		std::vector<std::string> to_list() const override

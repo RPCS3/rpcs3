@@ -14,9 +14,10 @@
 #include "Emu/System.h"
 #include "gui_settings.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #include "xinput_pad_handler.h"
 #endif
+#include "ds4_pad_handler.h"
 
 enum button_ids
 {
@@ -74,7 +75,8 @@ class pad_settings_dialog : public QDialog
 		HANDLER_TYPE_KEYBOARD,
 		HANDLER_TYPE_XINPUT,
 		HANDLER_TYPE_DS4,
-		HANDLER_TYPE_MMJOYSTICK
+		HANDLER_TYPE_MMJOYSTICK,
+		HANDLER_TYPE_EVDEV
 	};
 
 	struct PAD_BUTTON
@@ -109,11 +111,13 @@ private:
 	int m_seconds = MAX_SECONDS;
 	QTimer m_timer;
 
-	// XInput timer. Its Callback handles XInput input
-	QTimer m_timer_xinput;
+	// Input timer. Its Callback handles the input
+	QTimer m_timer_input;
 
 	/** Resets the view to default. Resets the Remap Timer */
 	void ReactivateButtons();
+
+	QString GetButtonName(const u32& keyCode);
 
 public:
 	explicit pad_settings_dialog(pad_config* pad_cfg, const std::string& device, PadHandlerBase& handler, QWidget *parent = nullptr);
@@ -128,9 +132,9 @@ public:
 	/** Enable/Disable Buttons while trying to remap an other */
 	void SwitchButtons(bool is_enabled);
 
-	/** Save the current Button Mapping to the current Pad Handler Config File */
-	void SaveButtons();
+	/** Save the Pad Configuration to the current Pad Handler Config File */
+	void SaveConfig();
 
 	/** Get the name of a Qt Key Sequence. Only for keyboard handler */
-	const QString GetKeyName(const u32 keyCode);
+	const QString GetKeyName(const u32& keyCode);
 };

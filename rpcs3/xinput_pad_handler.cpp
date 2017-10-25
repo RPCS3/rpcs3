@@ -3,34 +3,6 @@
 #include "xinput_pad_handler.h"
 #include "rpcs3qt/pad_settings_dialog.h"
 
-static std::unordered_map<u32, std::string> button_list =
-{
-	{ XINPUT_GAMEPAD_A, "A" },
-	{ XINPUT_GAMEPAD_B, "B" },
-	{ XINPUT_GAMEPAD_X, "X" },
-	{ XINPUT_GAMEPAD_Y, "Y" },
-	{ XINPUT_GAMEPAD_DPAD_LEFT, "Left" },
-	{ XINPUT_GAMEPAD_DPAD_RIGHT, "Right" },
-	{ XINPUT_GAMEPAD_DPAD_UP, "Up" },
-	{ XINPUT_GAMEPAD_DPAD_DOWN, "Down" },
-	{ XINPUT_GAMEPAD_LEFT_SHOULDER, "LB" },
-	{ XINPUT_GAMEPAD_RIGHT_SHOULDER, "RB" },
-	{ XINPUT_GAMEPAD_BACK, "Back" },
-	{ XINPUT_GAMEPAD_START, "Start" },
-	{ XINPUT_GAMEPAD_LEFT_THUMB, "LS" },
-	{ XINPUT_GAMEPAD_RIGHT_THUMB, "RS" },
-	{ XINPUT_INFO::TRIGGER_LEFT, "LT" },
-	{ XINPUT_INFO::TRIGGER_RIGHT, "RT" },
-	{ XINPUT_INFO::STICK_L_LEFT, "LS X-" },
-	{ XINPUT_INFO::STICK_L_RIGHT, "LS X+" },
-	{ XINPUT_INFO::STICK_L_UP, "LS Y+" },
-	{ XINPUT_INFO::STICK_L_DOWN, "LS Y-" },
-	{ XINPUT_INFO::STICK_R_LEFT, "RS X-" },
-	{ XINPUT_INFO::STICK_R_RIGHT, "RS X+" },
-	{ XINPUT_INFO::STICK_R_UP, "RS Y+" },
-	{ XINPUT_INFO::STICK_R_DOWN, "RS Y-" }
-};
-
 std::string xinput_pad_handler::GetButtonName(u32 button)
 {
 	const auto check = button_list.find(button);
@@ -56,7 +28,7 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 		device_number = std::stoul(padId.substr(pos + 12));
 	}
 
-	if (pos == std::string::npos || device_number >= XINPUT_INFO::MAX_GAMEPADS)
+	if (pos == std::string::npos || device_number >= XUSER_MAX_COUNT)
 	{
 		return;
 	}
@@ -72,7 +44,19 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 	{
 		for (const auto& button : button_list)
 		{
-			if (button.first < XINPUT_INFO::TRIGGER_LEFT && (state.Gamepad.wButtons & button.first))
+			u32 keycode = button.first;
+
+			if ((keycode < TriggersNSticks::TRIGGER_LEFT)   && (state.Gamepad.wButtons & keycode)
+			 || (keycode == TriggersNSticks::TRIGGER_LEFT)  && (state.Gamepad.bLeftTrigger > m_pad_config.ltriggerthreshold)
+			 || (keycode == TriggersNSticks::TRIGGER_RIGHT) && (state.Gamepad.bRightTrigger > m_pad_config.rtriggerthreshold)
+			 || (keycode == TriggersNSticks::STICK_L_LEFT)  && (state.Gamepad.sThumbLX < -m_pad_config.lstickdeadzone)
+			 || (keycode == TriggersNSticks::STICK_L_RIGHT) && (state.Gamepad.sThumbLX > m_pad_config.lstickdeadzone)
+			 || (keycode == TriggersNSticks::STICK_L_DOWN)  && (state.Gamepad.sThumbLY < -m_pad_config.lstickdeadzone)
+			 || (keycode == TriggersNSticks::STICK_L_UP)    && (state.Gamepad.sThumbLY > m_pad_config.lstickdeadzone)
+			 || (keycode == TriggersNSticks::STICK_R_LEFT)  && (state.Gamepad.sThumbRX < -m_pad_config.rstickdeadzone)
+			 || (keycode == TriggersNSticks::STICK_R_RIGHT) && (state.Gamepad.sThumbRX > m_pad_config.rstickdeadzone)
+			 || (keycode == TriggersNSticks::STICK_R_DOWN)  && (state.Gamepad.sThumbRY < -m_pad_config.rstickdeadzone)
+			 || (keycode == TriggersNSticks::STICK_R_UP)    && (state.Gamepad.sThumbRY > m_pad_config.rstickdeadzone))
 			{
 				return callback(button.first, button.second);
 			}
@@ -80,19 +64,107 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 	}
 }
 
+void xinput_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)
+{
+	if (!Init())
+	{
+		return;
+	}
+
+	u32 device_number = 0;
+	size_t pos = padId.find("Xinput Pad #");
+
+	if (pos != std::string::npos)
+	{
+		device_number = std::stoul(padId.substr(pos + 12));
+	}
+
+	if (pos == std::string::npos || device_number >= XUSER_MAX_COUNT)
+	{
+		return;
+	}
+
+	// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
+	// The two motors are not the same, and they create different vibration effects.
+	XINPUT_VIBRATION vibrate;
+
+	vibrate.wLeftMotorSpeed = largeMotor;  // between 0 to 65535
+	vibrate.wRightMotorSpeed = smallMotor; // between 0 to 65535
+
+	(*xinputSetState)(device_number, &vibrate);
+}
+
+void xinput_pad_handler::TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold)
+{
+	switch (keyCode)
+	{
+	case TriggersNSticks::TRIGGER_LEFT:
+		pressed = state.Gamepad.bLeftTrigger > m_pad_config.ltriggerthreshold;
+		value = pressed ? NormalizeTriggerInput(state.Gamepad.bLeftTrigger, m_pad_config.ltriggerthreshold) : 0;
+		break;
+	case TriggersNSticks::TRIGGER_RIGHT:
+		pressed = state.Gamepad.bRightTrigger > m_pad_config.rtriggerthreshold;
+		value = pressed ? NormalizeTriggerInput(state.Gamepad.bRightTrigger, m_pad_config.rtriggerthreshold) : 0;
+		break;
+	case TriggersNSticks::STICK_L_LEFT:
+		pressed = state.Gamepad.sThumbLX < (ignore_threshold ? 0 : -m_pad_config.lstickdeadzone);
+		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbLX, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
+		break;
+	case TriggersNSticks::STICK_L_RIGHT:
+		pressed = state.Gamepad.sThumbLX >(ignore_threshold ? 0 : m_pad_config.lstickdeadzone);
+		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbLX, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
+		break;
+	case TriggersNSticks::STICK_L_UP:
+		pressed = state.Gamepad.sThumbLY > (ignore_threshold ? 0 : m_pad_config.lstickdeadzone);
+		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbLY, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
+		break;
+	case TriggersNSticks::STICK_L_DOWN:
+		pressed = state.Gamepad.sThumbLY < (ignore_threshold ? 0 : -m_pad_config.lstickdeadzone);
+		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbLY, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
+		break;
+	case TriggersNSticks::STICK_R_LEFT:
+		pressed = state.Gamepad.sThumbRX < (ignore_threshold ? 0 : -m_pad_config.rstickdeadzone);
+		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbRX, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
+		break;
+	case TriggersNSticks::STICK_R_RIGHT:
+		pressed = state.Gamepad.sThumbRX >(ignore_threshold ? 0 : m_pad_config.rstickdeadzone);
+		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbRX, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
+		break;
+	case TriggersNSticks::STICK_R_UP:
+		pressed = state.Gamepad.sThumbRY > (ignore_threshold ? 0 : m_pad_config.rstickdeadzone);
+		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbRY, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
+		break;
+	case TriggersNSticks::STICK_R_DOWN:
+		pressed = state.Gamepad.sThumbRY < (ignore_threshold ? 0 : -m_pad_config.rstickdeadzone);
+		value = pressed ? NormalizeStickInput(state.Gamepad.sThumbRY, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
+		break;
+	default:
+		pressed = state.Gamepad.wButtons & keyCode;
+		value = pressed ? 255 : 0;
+		break;
+	}
+}
+
 xinput_pad_handler::xinput_pad_handler() : library(nullptr), xinputGetState(nullptr), xinputEnable(nullptr), xinputSetState(nullptr), is_init(false)
 {
+	THUMB_MIN = 0;
+	THUMB_MAX = 32767;
+	TRIGGER_MIN = 0;
+	TRIGGER_MAX = 255;
+	VIBRATION_MIN = 0;
+	VIBRATION_MAX = 65535;
+
 	m_pad_config.cfg_type = "xinput";
 	m_pad_config.cfg_name = fs::get_config_dir() + "/config_xinput.yml";
 
-	m_pad_config.left_stick_left.def = XINPUT_INFO::STICK_L_LEFT;
-	m_pad_config.left_stick_down.def = XINPUT_INFO::STICK_L_DOWN;
-	m_pad_config.left_stick_right.def = XINPUT_INFO::STICK_L_RIGHT;
-	m_pad_config.left_stick_up.def = XINPUT_INFO::STICK_L_UP;
-	m_pad_config.right_stick_left.def = XINPUT_INFO::STICK_R_LEFT;
-	m_pad_config.right_stick_down.def = XINPUT_INFO::STICK_R_DOWN;
-	m_pad_config.right_stick_right.def = XINPUT_INFO::STICK_R_RIGHT;
-	m_pad_config.right_stick_up.def = XINPUT_INFO::STICK_R_UP;
+	m_pad_config.left_stick_left.def = TriggersNSticks::STICK_L_LEFT;
+	m_pad_config.left_stick_down.def = TriggersNSticks::STICK_L_DOWN;
+	m_pad_config.left_stick_right.def = TriggersNSticks::STICK_L_RIGHT;
+	m_pad_config.left_stick_up.def = TriggersNSticks::STICK_L_UP;
+	m_pad_config.right_stick_left.def = TriggersNSticks::STICK_R_LEFT;
+	m_pad_config.right_stick_down.def = TriggersNSticks::STICK_R_DOWN;
+	m_pad_config.right_stick_right.def = TriggersNSticks::STICK_R_RIGHT;
+	m_pad_config.right_stick_up.def = TriggersNSticks::STICK_R_UP;
 	m_pad_config.start.def = XINPUT_GAMEPAD_START;
 	m_pad_config.select.def = XINPUT_GAMEPAD_BACK;
 	m_pad_config.square.def = XINPUT_GAMEPAD_X;
@@ -104,21 +176,23 @@ xinput_pad_handler::xinput_pad_handler() : library(nullptr), xinputGetState(null
 	m_pad_config.right.def = XINPUT_GAMEPAD_DPAD_RIGHT;
 	m_pad_config.up.def = XINPUT_GAMEPAD_DPAD_UP;
 	m_pad_config.r1.def = XINPUT_GAMEPAD_RIGHT_SHOULDER;
-	m_pad_config.r2.def = XINPUT_INFO::TRIGGER_RIGHT;
+	m_pad_config.r2.def = TriggersNSticks::TRIGGER_RIGHT;
 	m_pad_config.r3.def = XINPUT_GAMEPAD_RIGHT_THUMB;
 	m_pad_config.l1.def = XINPUT_GAMEPAD_LEFT_SHOULDER;
-	m_pad_config.l2.def = XINPUT_INFO::TRIGGER_LEFT;
+	m_pad_config.l2.def = TriggersNSticks::TRIGGER_LEFT;
 	m_pad_config.l3.def = XINPUT_GAMEPAD_LEFT_THUMB;
 
-	m_pad_config.lstickdeadzone.def = XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE;  // between -32768 and 32767
-	m_pad_config.rstickdeadzone.def = XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE; // between -32768 and 32767
-	m_pad_config.ltriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD; // between      0 and 255
-	m_pad_config.rtriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD; // between      0 and 255
+	m_pad_config.lstickdeadzone.def = XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE;  // between 0 and 32767
+	m_pad_config.rstickdeadzone.def = XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE; // between 0 and 32767
+	m_pad_config.ltriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD; // between 0 and 255
+	m_pad_config.rtriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD; // between 0 and 255
 	m_pad_config.padsquircling.def = 8000;
 
 	m_pad_config.from_default();
 
 	b_has_config = true;
+	b_has_rumble = true;
+	b_has_deadzones = true;
 }
 
 xinput_pad_handler::~xinput_pad_handler()
@@ -168,12 +242,6 @@ bool xinput_pad_handler::Init()
 	m_pad_config.load();
 	if (!m_pad_config.exist()) m_pad_config.save();
 
-	squircle_factor = m_pad_config.padsquircling / 1000.f;
-	left_stick_deadzone = m_pad_config.lstickdeadzone;
-	right_stick_deadzone = m_pad_config.rstickdeadzone;
-	left_trigger_threshold = m_pad_config.ltriggerthreshold;
-	right_trigger_threshold = m_pad_config.rtriggerthreshold;
-
 	return true;
 }
 
@@ -186,27 +254,6 @@ void xinput_pad_handler::Close()
 		xinputGetState = nullptr;
 		xinputEnable = nullptr;
 	}
-}
-
-std::tuple<u16, u16> xinput_pad_handler::ConvertToSquirclePoint(u16 inX, u16 inY)
-{
-	// convert inX and Y to a (-1, 1) vector;
-	const f32 x = (inX - 127) / 127.f;
-	const f32 y = ((inY - 127) / 127.f);
-
-	// compute angle and len of given point to be used for squircle radius
-	const f32 angle = std::atan2(y, x);
-	const f32 r = std::sqrt(std::pow(x, 2.f) + std::pow(y, 2.f));
-
-	// now find len/point on the given squircle from our current angle and radius in polar coords
-	// https://thatsmaths.com/2016/07/14/squircles/
-	const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / squircle_factor) * r;
-
-	// we now have len and angle, convert to cartisian
-
-	const int newX = XINPUT_INFO::Clamp0To255(((newLen * std::cos(angle)) + 1) * 127);
-	const int newY = XINPUT_INFO::Clamp0To255(((newLen * std::sin(angle)) + 1) * 127);
-	return std::tuple<u16, u16>(newX, newY);
 }
 
 void xinput_pad_handler::ThreadProc()
@@ -233,23 +280,13 @@ void xinput_pad_handler::ThreadProc()
 			last_connection_status[padnum] = true;
 			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 
-			for (auto& btn : pad->m_buttons) {
-				if (btn.m_keyCode == XINPUT_INFO::TRIGGER_LEFT) {
-					btn.m_pressed = state.Gamepad.bLeftTrigger > m_pad_config.ltriggerthreshold;
-					btn.m_value = state.Gamepad.bLeftTrigger;
-				}
-				else if (btn.m_keyCode == XINPUT_INFO::TRIGGER_RIGHT) {
-					btn.m_pressed = state.Gamepad.bRightTrigger > m_pad_config.rtriggerthreshold;
-					btn.m_value = state.Gamepad.bRightTrigger;
-				}
-				else {
-					bool pressed = state.Gamepad.wButtons & (1 << btn.m_keyCode);
-					btn.m_pressed = pressed;
-					btn.m_value = pressed ? 255 : 0;
-				}
+			for (auto& btn : pad->m_buttons)
+			{
+				TranslateButtonPress(btn.m_keyCode, btn.m_pressed, btn.m_value);
 			}
 
-			for (const auto& btn : pad->m_buttons) {
+			for (const auto& btn : pad->m_buttons)
+			{
 				if (btn.m_pressed)
 				{
 					SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
@@ -257,56 +294,43 @@ void xinput_pad_handler::ThreadProc()
 				}
 			}
 
-			float LX, LY, RX, RY;
+			float stick_val[4];
 
-			LX = state.Gamepad.sThumbLX;
-			LY = state.Gamepad.sThumbLY;
-			RX = state.Gamepad.sThumbRX;
-			RY = state.Gamepad.sThumbRY;
-
-			auto normalize_input = [](float& X, float& Y, float deadzone)
+			for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
 			{
-				X /= 32767.0f;
-				Y /= 32767.0f;
-				deadzone /= 32767.0f;
+				bool pressed;
+				u16 val_min, val_max;
+				TranslateButtonPress(pad->m_sticks[i].m_keyCodeMin, pressed, val_min, true);
+				TranslateButtonPress(pad->m_sticks[i].m_keyCodeMax, pressed, val_max, true);
+				stick_val[i] = val_max - val_min;
+			}
 
-				float mag = sqrtf(X*X + Y*Y);
+			NormalizeRawStickInput(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
+			NormalizeRawStickInput(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
 
-				if (mag > deadzone)
-				{
-					float legalRange = 1.0f - deadzone;
-					float normalizedMag = std::min(1.0f, (mag - deadzone) / legalRange);
-					float scale = normalizedMag / mag;
-					X = X * scale;
-					Y = Y * scale;
-				}
-				else
-				{
-					X = 0;
-					Y = 0;
-				}
-			};
+			pad->m_sticks[0].m_value = ConvertAxis(stick_val[0]);
+			pad->m_sticks[1].m_value = 255 - ConvertAxis(stick_val[1]);
+			pad->m_sticks[2].m_value = ConvertAxis(stick_val[2]);
+			pad->m_sticks[3].m_value = 255 - ConvertAxis(stick_val[3]);
 
-			normalize_input(LX, LY, left_stick_deadzone);
-			normalize_input(RX, RY, right_stick_deadzone);
-
-			pad->m_sticks[0].m_value = XINPUT_INFO::ConvertAxis(LX);
-			pad->m_sticks[1].m_value = 255 - XINPUT_INFO::ConvertAxis(LY);
-			pad->m_sticks[2].m_value = XINPUT_INFO::ConvertAxis(RX);
-			pad->m_sticks[3].m_value = 255 - XINPUT_INFO::ConvertAxis(RY);
-
-			if (squircle_factor != 0.f)
+			if (m_pad_config.padsquircling != 0)
 			{
-				std::tie(pad->m_sticks[0].m_value, pad->m_sticks[1].m_value) = ConvertToSquirclePoint(pad->m_sticks[0].m_value, pad->m_sticks[1].m_value);
-				std::tie(pad->m_sticks[2].m_value, pad->m_sticks[3].m_value) = ConvertToSquirclePoint(pad->m_sticks[2].m_value, pad->m_sticks[3].m_value);
+				std::tie(pad->m_sticks[0].m_value, pad->m_sticks[1].m_value) = ConvertToSquirclePoint(pad->m_sticks[0].m_value, pad->m_sticks[1].m_value, m_pad_config.padsquircling);
+				std::tie(pad->m_sticks[2].m_value, pad->m_sticks[3].m_value) = ConvertToSquirclePoint(pad->m_sticks[2].m_value, pad->m_sticks[3].m_value, m_pad_config.padsquircling);
 			}
 
 			// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
-			// The two motors are not the same, and they create different vibration effects.
+			// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
 			XINPUT_VIBRATION vibrate;
 
-			vibrate.wLeftMotorSpeed = pad->m_vibrateMotors[0].m_value * 257;  // between 0 to 65535
-			vibrate.wRightMotorSpeed = pad->m_vibrateMotors[1].m_value * 257; // between 0 to 65535
+			int idx_l = m_pad_config.switch_vibration_motors ? 1 : 0;
+			int idx_s = m_pad_config.switch_vibration_motors ? 0 : 1;
+
+			int speed_large = m_pad_config.enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : VIBRATION_MIN;
+			int speed_small = m_pad_config.enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : VIBRATION_MIN;
+
+			vibrate.wLeftMotorSpeed = speed_large;
+			vibrate.wRightMotorSpeed = speed_small;
 
 			(*xinputSetState)(padnum, &vibrate);
 
@@ -321,7 +345,7 @@ std::vector<std::string> xinput_pad_handler::ListDevices()
 
 	if (!Init()) return xinput_pads_list;
 
-	for (DWORD i = 0; i < XINPUT_INFO::MAX_GAMEPADS; i++)
+	for (DWORD i = 0; i < XUSER_MAX_COUNT; i++)
 	{
 		XINPUT_STATE state;
 		DWORD result = (*xinputGetState)(i, &state);
@@ -341,7 +365,7 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 
 	if (pos != std::string::npos) device_number = std::stoul(device.substr(pos + 12));
 
-	if (pos == std::string::npos || device_number >= XINPUT_INFO::MAX_GAMEPADS) return false;
+	if (pos == std::string::npos || device_number >= XUSER_MAX_COUNT) return false;
 
 	m_pad_config.load();
 
@@ -362,7 +386,7 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, m_pad_config.r3,     CELL_PAD_CTRL_R3);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.l1,     CELL_PAD_CTRL_L1);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.r1,     CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, XINPUT_INFO::XINPUT_GAMEPAD_GUIDE, 0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, XINPUT_INFO::GUIDE_BUTTON, 0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.cross,    CELL_PAD_CTRL_CROSS);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.circle,   CELL_PAD_CTRL_CIRCLE);
@@ -371,10 +395,10 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.l2,       CELL_PAD_CTRL_L2);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_pad_config.r2,       CELL_PAD_CTRL_R2);
 
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  0, 0);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  0, 0);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, 0, 0);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, 0, 0);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  m_pad_config.left_stick_left,  m_pad_config.left_stick_right);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  m_pad_config.left_stick_down,    m_pad_config.left_stick_up);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, m_pad_config.right_stick_left, m_pad_config.right_stick_right);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, m_pad_config.right_stick_down,   m_pad_config.right_stick_up);
 
 	pad->m_vibrateMotors.emplace_back(true, 0);
 	pad->m_vibrateMotors.emplace_back(false, 0);

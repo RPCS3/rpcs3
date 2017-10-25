@@ -96,6 +96,9 @@
     <Filter Include="Gui\syntax highlighter">
       <UniqueIdentifier>{adb985ae-88db-4274-a6fd-6bcf230451ca}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\evdev">
+      <UniqueIdentifier>{6992629a-48f1-43ec-8070-d1dba81bcbf9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\rpcs3qt\*.cpp">
@@ -554,6 +557,9 @@
     <ClCompile Include="rpcs3qt\syntax_highlighter.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="evdev_joystick_handler.cpp">
+      <Filter>Io\evdev</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\save_manager_dialog.cpp">
       <Filter>Gui\save</Filter>
     </ClCompile>
@@ -633,6 +639,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\trophy_tree_widget_item.h">
       <Filter>Gui\trophy</Filter>
+    </ClInclude>
+    <ClInclude Include="evdev_joystick_handler.h">
+      <Filter>Io\evdev</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

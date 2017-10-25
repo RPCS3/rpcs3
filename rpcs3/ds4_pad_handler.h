@@ -7,12 +7,10 @@
 #include <limits>
 #include <unordered_map>
 
-const u32 MAX_GAMEPADS = 7;
-
 class ds4_pad_handler final : public PadHandlerBase
 {
-
-	enum DS4KeyCodes {
+	enum DS4KeyCodes
+	{
 		Triangle = 0,
 		Circle,
 		Cross,
@@ -29,6 +27,8 @@ class ds4_pad_handler final : public PadHandlerBase
 		L3,
 		Share,
 		Options,
+		PSButton,
+		TouchButton,
 		LSXNeg,
 		LSXPos,
 		LSYNeg,
@@ -57,6 +57,8 @@ class ds4_pad_handler final : public PadHandlerBase
 		{ DS4KeyCodes::R3, "R3" },
 		{ DS4KeyCodes::Options, "Options" },
 		{ DS4KeyCodes::Share, "Share" },
+		{ DS4KeyCodes::PSButton, "PS Button" },
+		{ DS4KeyCodes::TouchButton, "Touch Pad" },
 		{ DS4KeyCodes::L1, "L1" },
 		{ DS4KeyCodes::L2, "L2" },
 		{ DS4KeyCodes::L3, "L3" },
@@ -91,7 +93,8 @@ class ds4_pad_handler final : public PadHandlerBase
 		s32 sensDenom;
 	};
 
-	enum class DS4DataStatus {
+	enum class DS4DataStatus
+	{
 		NewData,
 		NoNewData,
 		ReadError,
@@ -131,6 +134,8 @@ public:
 	void ConfigController(const std::string& device) override;
 	std::string GetButtonName(u32 btn) override;
 	void GetNextButtonPress(const std::string& padid, const std::function<void(u32, std::string)>& buttonCallback) override;
+	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
+	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 
 private:
 	bool is_init;
@@ -139,6 +144,7 @@ private:
 	std::array<bool, MAX_GAMEPADS> last_connection_status = {};
 
 	std::vector<std::pair<std::shared_ptr<DS4Device>, std::shared_ptr<Pad>>> bindings;
+	std::array<u16, ds4_pad_handler::DS4KeyCodes::KEYCODECOUNT> parsedBuffer;
 
 private:
 	void ProcessDataToPad(const std::shared_ptr<DS4Device>& ds4Device, const std::shared_ptr<Pad>& pad);

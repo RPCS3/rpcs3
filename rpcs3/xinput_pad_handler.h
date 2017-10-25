@@ -11,6 +11,21 @@
 
 namespace XINPUT_INFO
 {
+	const DWORD THREAD_TIMEOUT = 1000;
+	const DWORD THREAD_SLEEP = 10;
+	const DWORD THREAD_SLEEP_INACTIVE = 100;
+	const DWORD GUIDE_BUTTON = 0x0400;
+	const DWORD GAMEPAD_BUTTONS = 16;
+	const LPCWSTR LIBRARY_FILENAMES[] = {
+		L"xinput1_4.dll",
+		L"xinput1_3.dll",
+		L"xinput1_2.dll",
+		L"xinput9_1_0.dll"
+	};
+}
+
+class xinput_pad_handler final : public PadHandlerBase
+{
 	enum TriggersNSticks
 	{
 		TRIGGER_LEFT = 0x9001,
@@ -25,36 +40,35 @@ namespace XINPUT_INFO
 		STICK_R_DOWN,
 	};
 
-	const DWORD THREAD_TIMEOUT = 1000;
-	const DWORD THREAD_SLEEP = 10;
-	const DWORD THREAD_SLEEP_INACTIVE = 100;
-	const DWORD MAX_GAMEPADS = XUSER_MAX_COUNT;
-	const DWORD XINPUT_GAMEPAD_GUIDE = 0x0400;
-	const DWORD XINPUT_GAMEPAD_BUTTONS = 16;
-	const LPCWSTR LIBRARY_FILENAMES[] = {
-		L"xinput1_4.dll",
-		L"xinput1_3.dll",
-		L"xinput1_2.dll",
-		L"xinput9_1_0.dll"
+	const std::unordered_map<u32, std::string> button_list =
+	{
+		{ XINPUT_GAMEPAD_A, "A" },
+		{ XINPUT_GAMEPAD_B, "B" },
+		{ XINPUT_GAMEPAD_X, "X" },
+		{ XINPUT_GAMEPAD_Y, "Y" },
+		{ XINPUT_GAMEPAD_DPAD_LEFT, "Left" },
+		{ XINPUT_GAMEPAD_DPAD_RIGHT, "Right" },
+		{ XINPUT_GAMEPAD_DPAD_UP, "Up" },
+		{ XINPUT_GAMEPAD_DPAD_DOWN, "Down" },
+		{ XINPUT_GAMEPAD_LEFT_SHOULDER, "LB" },
+		{ XINPUT_GAMEPAD_RIGHT_SHOULDER, "RB" },
+		{ XINPUT_GAMEPAD_BACK, "Back" },
+		{ XINPUT_GAMEPAD_START, "Start" },
+		{ XINPUT_GAMEPAD_LEFT_THUMB, "LS" },
+		{ XINPUT_GAMEPAD_RIGHT_THUMB, "RS" },
+		{ XINPUT_INFO::GUIDE_BUTTON, "Guide" },
+		{ TRIGGER_LEFT, "LT" },
+		{ TRIGGER_RIGHT, "RT" },
+		{ STICK_L_LEFT, "LS X-" },
+		{ STICK_L_RIGHT, "LS X+" },
+		{ STICK_L_UP, "LS Y+" },
+		{ STICK_L_DOWN, "LS Y-" },
+		{ STICK_R_LEFT, "RS X-" },
+		{ STICK_R_RIGHT, "RS X+" },
+		{ STICK_R_UP, "RS Y+" },
+		{ STICK_R_DOWN, "RS Y-" }
 	};
 
-	inline u16 Clamp0To255(f32 input)
-	{
-		if (input > 255.f)
-			return 255;
-		else if (input < 0.f)
-			return 0;
-		else return static_cast<u16>(input);
-	}
-
-	inline u16 ConvertAxis(float value)
-	{
-		return static_cast<u16>((value + 1.0)*(255.0 / 2.0));
-	}
-}
-
-class xinput_pad_handler final : public PadHandlerBase
-{
 public:
 	xinput_pad_handler();
 	~xinput_pad_handler();
@@ -67,7 +81,9 @@ public:
 	void ThreadProc() override;
 	void ConfigController(const std::string& device) override;
 	std::string GetButtonName(u32 btn) override;
-	void GetNextButtonPress(const std::string& padid, const std::function<void(u32, std::string)>& buttonCallback) override;
+	void GetNextButtonPress(const std::string& padid, const std::function<void(u32, std::string)>& callback) override;
+	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
+	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 
 private:
 	typedef void (WINAPI * PFN_XINPUTENABLE)(BOOL);
@@ -75,12 +91,7 @@ private:
 	typedef DWORD (WINAPI * PFN_XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION *);
 
 private:
-	std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY);
-
-private:
 	bool is_init;
-	float squircle_factor;
-	u32 left_stick_deadzone, right_stick_deadzone, left_trigger_threshold, right_trigger_threshold;
 	HMODULE library;
 	PFN_XINPUTGETSTATE xinputGetState;
 	PFN_XINPUTSETSTATE xinputSetState;
