@@ -11,7 +11,7 @@
 #include <windows.h>
 #endif
 
-inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 namespace logs
 {

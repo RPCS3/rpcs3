@@ -17,7 +17,7 @@
 
 input_config input_cfg;
 
-inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;
 
 // taken from https://stackoverflow.com/a/30818424/8353754

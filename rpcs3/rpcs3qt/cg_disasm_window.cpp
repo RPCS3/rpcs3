@@ -18,7 +18,7 @@
 #include "Emu/RSX/CgBinaryProgram.h"
 
 constexpr auto qstr = QString::fromStdString;
-inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings): xgui_settings(xSettings)
 {

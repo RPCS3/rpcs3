@@ -99,7 +99,7 @@ public:
 	std::vector<std::string> ListDevices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
-	void GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(std::string)>& callback) override;
+	void GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(u16, std::string)>& callback) override;
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
 
 private:
@@ -109,7 +109,7 @@ private:
 
 private:
 	std::array<u16, XInputKeyCodes::KEYCODECOUNT> GetButtonValues(const XINPUT_STATE& state);
-	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false);
+	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
 
 	bool is_init;
 	HMODULE library;
@@ -117,7 +117,6 @@ private:
 	PFN_XINPUTSETSTATE xinputSetState;
 	PFN_XINPUTENABLE xinputEnable;
 
-	std::array<u16, XInputKeyCodes::KEYCODECOUNT> button_values;
 	std::vector<std::pair<u32, std::shared_ptr<Pad>>> bindings;
 	std::array<bool, 7> last_connection_status = {};
 

@@ -143,7 +143,7 @@ ds4_pad_handler::ds4_pad_handler() : is_init(false)
 	b_has_deadzones = true;
 }
 
-void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(std::string)>& callback)
+void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(u16, std::string)>& callback)
 {
 	if (!Init())
 	{
@@ -214,8 +214,7 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::ve
 	}
 	if (pressed_button.first > 0)
 	{
-		LOG_NOTICE(HLE, "GetNextButtonPress: %s button %s pressed with value %d", m_pad_config.cfg_type, pressed_button.second, pressed_button.first);
-		return callback(pressed_button.second);
+		return callback(pressed_button.first, pressed_button.second);
 	}
 }
 
@@ -253,40 +252,37 @@ void ds4_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u3
 	SendVibrateData(device);
 }
 
-void ds4_pad_handler::TranslateButtonPress(const std::array<u16, DS4KeyCodes::KEYCODECOUNT>& button_values, u32 keyCode, bool& pressed, u16& value, bool ignore_threshold)
+void ds4_pad_handler::TranslateButtonPress(u32 keyCode, bool& pressed, u16& val, bool ignore_threshold)
 {
-	// Get the requested button value from a previously filled buffer
-	const u16 val = button_values[keyCode];
-
 	// Update the pad button values based on their type and thresholds.
 	// With this you can use axis or triggers as buttons or vice versa
 	switch (keyCode)
 	{
 	case DS4KeyCodes::L2:
 		pressed = val > m_pad_config.ltriggerthreshold;
-		value = pressed ? NormalizeTriggerInput(val, m_pad_config.ltriggerthreshold) : 0;
+		val = pressed ? NormalizeTriggerInput(val, m_pad_config.ltriggerthreshold) : 0;
 		break;
 	case DS4KeyCodes::R2:
 		pressed = val > m_pad_config.rtriggerthreshold;
-		value = pressed ? NormalizeTriggerInput(val, m_pad_config.rtriggerthreshold) : 0;
+		val = pressed ? NormalizeTriggerInput(val, m_pad_config.rtriggerthreshold) : 0;
 		break;
 	case DS4KeyCodes::LSXNeg:
 	case DS4KeyCodes::LSXPos:
 	case DS4KeyCodes::LSYNeg:
 	case DS4KeyCodes::LSYPos:
 		pressed = val > (ignore_threshold ? 0 : m_pad_config.lstickdeadzone);
-		value = pressed ? NormalizeStickInput(val, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
 		break;
 	case DS4KeyCodes::RSXNeg:
 	case DS4KeyCodes::RSXPos:
 	case DS4KeyCodes::RSYNeg:
 	case DS4KeyCodes::RSYPos:
 		pressed = val > (ignore_threshold ? 0 : m_pad_config.rstickdeadzone);
-		value = pressed ? NormalizeStickInput(val, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
 		break;
 	default: // normal button (should in theory also support sensitive buttons)
 		pressed = val > 0;
-		value = pressed ? val : 0;
+		val = pressed ? val : 0;
 		break;
 	}
 }
@@ -410,7 +406,8 @@ void ds4_pad_handler::ProcessDataToPad(const std::shared_ptr<DS4Device>& device,
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (auto & btn : pad->m_buttons)
 	{
-		TranslateButtonPress(button_values, btn.m_keyCode, btn.m_pressed, btn.m_value);
+		btn.m_value = button_values[btn.m_keyCode];
+		TranslateButtonPress(btn.m_keyCode, btn.m_pressed, btn.m_value);
 	}
 
 #ifdef _WIN32
@@ -431,12 +428,16 @@ void ds4_pad_handler::ProcessDataToPad(const std::shared_ptr<DS4Device>& device,
 	for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
 	{
 		bool pressed;
-		u16 val_min, val_max;
 
 		// m_keyCodeMin is the mapped key for left or down
+		u32 key_min = pad->m_sticks[i].m_keyCodeMin;
+		u16 val_min = button_values[key_min];
+		TranslateButtonPress(key_min, pressed, val_min, true);
+
 		// m_keyCodeMax is the mapped key for right or up
-		TranslateButtonPress(button_values, pad->m_sticks[i].m_keyCodeMin, pressed, val_min, true);
-		TranslateButtonPress(button_values, pad->m_sticks[i].m_keyCodeMax, pressed, val_max, true);
+		u32 key_max = pad->m_sticks[i].m_keyCodeMax;
+		u16 val_max = button_values[key_max];
+		TranslateButtonPress(key_max, pressed, val_max, true);
 
 		// cancel out opposing values and get the resulting difference
 		stick_val[i] = val_max - val_min;
@@ -453,6 +454,9 @@ void ds4_pad_handler::ProcessDataToPad(const std::shared_ptr<DS4Device>& device,
 		std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, m_pad_config.padsquircling);
 		std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, m_pad_config.padsquircling);
 	}
+
+	ly = 255 - ly;
+	ry = 255 - ry;
 
 	// these are added with previous value and divided to 'smooth' out the readings
 	// the ds4 seems to rapidly flicker sometimes between two values and this seems to stop that

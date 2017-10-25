@@ -164,7 +164,7 @@ void evdev_joystick_handler::Close()
 	}
 }
 
-void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(std::string)>& callback)
+void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(u16, std::string)>& callback)
 {
 	// Add device if not yet present
 	int index = add_device(padId);
@@ -207,7 +207,7 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 			return;
 
 		if (value > 0)
-			return callback(button->second);
+			return callback(button->first, button->second);
 
 		return;
 	}
@@ -233,25 +233,25 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 		{
 		case ABS_Z:
 			if (value > ltriggerthreshold)
-				return callback(button->second);
+				return callback(button->first, button->second);
 			return;
 		case ABS_RZ:
 			if (value > rtriggerthreshold)
-				return callback(button->second);
+				return callback(button->first, button->second);
 			return;
 		case ABS_X:
 		case ABS_Y:
 			if (value > lstickdeadzone)
-				return callback(button->second);
+				return callback(button->first, button->second);
 			return;
 		case ABS_RX:
 		case ABS_RY:
 			if (value > rstickdeadzone)
-				return callback(button->second);
+				return callback(button->first, button->second);
 			return;
 		default:
 			if (value > 0)
-				return callback(button->second);
+				return callback(button->first, button->second);
 			return;
 		}
 	}
@@ -313,7 +313,7 @@ int evdev_joystick_handler::GetButtonInfo(const input_event& evt, libevdev* dev,
 	}
 	case EV_ABS:
 	{
-		value = NormalizeStickInput(val, 0, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code), true);
+		value = ScaleStickInput(val, 0, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code));
 		is_negative = value <= 127;
 
 		if (is_negative)

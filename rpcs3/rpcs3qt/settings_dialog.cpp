@@ -23,7 +23,7 @@
 
 #include <unordered_set>
 
-inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
 settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, const int& tabIndex, QWidget *parent, const GameInfo* game)

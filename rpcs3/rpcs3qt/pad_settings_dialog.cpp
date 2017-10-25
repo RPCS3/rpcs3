@@ -9,7 +9,7 @@
 #include "pad_settings_dialog.h"
 #include "ui_pad_settings_dialog.h"
 
-inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;
 
 pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_ptr<PadHandlerBase> handler, QWidget *parent)
@@ -62,29 +62,30 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 	if (m_handler->has_config())
 	{
 		// Use timer to get button input
-		const auto& callback = [=](std::string name)
+		const auto& callback = [=](u16 val, std::string name)
 		{
-			m_cfg_entries[m_button_id].key = name;
-			m_cfg_entries[m_button_id].text = qstr(name);
-			ReactivateButtons();
+			LOG_NOTICE(HLE, "GetNextButtonPress: %s button %s pressed with value %d", m_handler_cfg->cfg_type, name, val);
+			if (m_button_id > id_pad_begin && m_button_id < id_pad_end)
+			{
+				m_cfg_entries[m_button_id].key = name;
+				m_cfg_entries[m_button_id].text = qstr(name);
+				ReactivateButtons();
+			}
 		};
 
 		connect(&m_timer_input, &QTimer::timeout, [=]()
 		{
-			if (m_button_id > id_pad_begin && m_button_id < id_pad_end)
+			std::vector<int> deadzones =
 			{
-				std::vector<int> deadzones =
-				{
-					ui->slider_trigger_left->value(),
-					ui->slider_trigger_right->value(),
-					ui->slider_stick_left->value(),
-					ui->slider_stick_right->value()
-				};
-				m_handler->GetNextButtonPress(m_device_name, deadzones, callback);
-			}
+				ui->slider_trigger_left->value(),
+				ui->slider_trigger_right->value(),
+				ui->slider_stick_left->value(),
+				ui->slider_stick_right->value()
+			};
+			m_handler->GetNextButtonPress(m_device_name, deadzones, callback);
 		});
 
-		m_timer_input.start(2);
+		m_timer_input.start(1);
 	};
 
 	// Enable Vibration Checkboxes

@@ -6,7 +6,7 @@
 #include <QDir>
 #include <QMessageBox>
 
-inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 gui_settings::gui_settings(QObject* parent) : QObject(parent), m_settings(ComputeSettingsDir() + tr("CurrentSettings") + ".ini", QSettings::Format::IniFormat, parent),
 	m_settingsDir(ComputeSettingsDir())

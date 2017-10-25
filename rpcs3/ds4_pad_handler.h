@@ -135,7 +135,7 @@ public:
 	std::vector<std::string> ListDevices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
-	void GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(std::string)>& buttonCallback) override;
+	void GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(u16, std::string)>& buttonCallback) override;
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
 
 private:
@@ -147,6 +147,7 @@ private:
 	std::vector<std::pair<std::shared_ptr<DS4Device>, std::shared_ptr<Pad>>> bindings;
 
 private:
+	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
 	void ProcessDataToPad(const std::shared_ptr<DS4Device>& ds4Device, const std::shared_ptr<Pad>& pad);
 	// Copies data into padData if status is NewData, otherwise buffer is untouched
 	DS4DataStatus GetRawData(const std::shared_ptr<DS4Device>& ds4Device);
@@ -156,7 +157,6 @@ private:
 	bool GetCalibrationData(const std::shared_ptr<DS4Device>& ds4Device);
 	void CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo);
 	void SendVibrateData(const std::shared_ptr<DS4Device>& device);
-	void TranslateButtonPress(const std::array<u16, DS4KeyCodes::KEYCODECOUNT>& buttons, u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false);
 	inline s16 ApplyCalibration(s32 rawValue, const DS4CalibData& calibData)
 	{
 		const s32 biased = rawValue - calibData.bias;

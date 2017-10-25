@@ -7,7 +7,7 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 
-inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent)
 	: QDialog(parent), m_gui_settings(guiSettings), m_emu_settings(emuSettings)

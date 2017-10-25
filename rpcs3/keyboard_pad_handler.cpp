@@ -6,7 +6,7 @@
 
 #include "rpcs3qt/pad_settings_dialog.h"
 
-inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;
 
 bool keyboard_pad_handler::Init()

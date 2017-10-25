@@ -349,38 +349,52 @@ protected:
 		}
 	};
 
-	// Alternative variant of sick function above!
-	// Get new normalized value between 0 and 255 based on its minimum and maximum if it is bigger than threshold.
-	// Also scale the new value down based on the capped range if threshold is not ignored.
-	u16 NormalizeStickInput(s16 raw_value, int threshold, int minimum, int maximum, bool ignore_threshold = false)
+	// Get new scaled value between 0 and 255 based on its minimum and maximum
+	u16 ScaleStickInput(s32 raw_value, int threshold, int minimum, int maximum)
 	{
-		float max = abs(maximum) + abs(minimum);
-		float val = std::min(std::abs(raw_value / max), 1.f);;
+		// value based on max range converted to [0, 1]
+		float val = float(Clamp(raw_value, minimum, maximum) - minimum) / float(abs(maximum) + abs(minimum));
+		return static_cast<u16>(255.0f * val);
+	};
 
-		if (ignore_threshold || threshold <= minimum)
-		{
-			return static_cast<u16>(255.0f * val);
-		}
-		else if (threshold <= minimum)
+	// normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
+	// the input values must lie in 0+
+	u16 NormalizeDirectedInput(u16 raw_value, float threshold, float maximum)
+	{
+		if (threshold >= maximum || maximum <= 0)
 		{
 			return static_cast<u16>(0);
 		}
+
+		float val = float(Clamp(raw_value, 0, maximum)) / maximum; // value based on max range converted to [0, 1]
+
+		if (threshold <= 0)
+		{
+			return static_cast<u16>(255.0f * val);
+		}
 		else
 		{
-			float thresh = threshold / (max / 2);
+			float thresh = threshold / maximum; // threshold converted to [0, 1]
 			return static_cast<u16>(255.0f * std::min(1.0f, (val - thresh) / (1.0f - thresh)));
 		}
 	};
 
-	u16 NormalizeStickInput(s16 raw_value, int threshold, bool ignore_threshold = false)
+	u16 NormalizeStickInput(s32 raw_value, int threshold, bool ignore_threshold = false)
 	{
-		return NormalizeStickInput(raw_value, threshold, THUMB_MIN, THUMB_MAX, ignore_threshold);
-	};
+		if (ignore_threshold)
+		{
+			return ScaleStickInput(raw_value, threshold, 0, THUMB_MAX);
+		}
+		else
+		{
+			return NormalizeDirectedInput(raw_value, threshold, THUMB_MAX);
+		}
+	}
 
 	// This function normalizes stick deadzone based on the DS3's deadzone, which is ~13%
 	// X and Y is expected to be in (-255) to 255 range, deadzone should be in terms of thumb stick range
 	// return is new x and y values in 0-255 range
-	std::tuple<u16, u16> NormalizeStickDeadzone(s16 inX, s16 inY, u32 deadzone)
+	std::tuple<u16, u16> NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone)
 	{
 		const float dzRange = deadzone / float((std::abs(THUMB_MAX) + std::abs(THUMB_MIN)));
 
@@ -390,6 +404,11 @@ protected:
 		if (dzRange > 0.f)
 		{
 			const float mag = std::min(sqrtf(X*X + Y*Y), 1.f);
+
+			if (mag <= 0)
+			{
+				return std::tuple<u16, u16>(ConvertAxis(X), ConvertAxis(Y));
+			}
 
 			if (mag > dzRange) {
 				float pos = lerp(0.13f, 1.f, (mag - dzRange) / (1 - dzRange));
@@ -404,26 +423,29 @@ protected:
 				Y = Y * scale;
 			}
 		}
-		return{ ConvertAxis(X), ConvertAxis(Y) };
+		return std::tuple<u16, u16>( ConvertAxis(X), ConvertAxis(Y) );
+	};
+
+	// get clamped value between min and max
+	u16 Clamp(f32 input, s16 min, s16 max)
+	{
+		if (input > max)
+			return max;
+		else if (input < min)
+			return min;
+		else return static_cast<s16>(input);
 	};
 
 	// get clamped value between 0 and 255
 	u16 Clamp0To255(f32 input)
 	{
-		if (input > 255.f)
-			return 255;
-		else if (input < 0.f)
-			return 0;
-		else return static_cast<u16>(input);
+		return static_cast<u16>(Clamp(input, 0, 255));
 	};
 
+	// get clamped value between 0 and 1023
 	u16 Clamp0To1023(f32 input)
 	{
-		if (input > 1023.f)
-			return 1023;
-		else if (input < 0.f)
-			return 0;
-		else return static_cast<u16>(input);
+		return static_cast<u16>(Clamp(input, 0, 1023));
 	}
 
 	u16 ConvertAxis(float value)
@@ -472,7 +494,7 @@ public:
 	bool has_deadzones() { return b_has_deadzones; };
 	pad_config* GetConfig() { return &m_pad_config; };
 	//Sets window to config the controller(optional)
-	virtual void GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(std::string)>& callback) {};
+	virtual void GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(u16, std::string)>& callback) {};
 	virtual void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) {};
 	//Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;
@@ -480,4 +502,7 @@ public:
 	virtual void ThreadProc() = 0;
 	//Binds a Pad to a device
 	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) = 0;
+
+private:
+	virtual void TranslateButtonPress(u32 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) {};
 };

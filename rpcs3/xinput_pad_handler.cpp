@@ -6,7 +6,7 @@
 xinput_pad_handler::xinput_pad_handler() : library(nullptr), xinputGetState(nullptr), xinputEnable(nullptr), xinputSetState(nullptr), is_init(false)
 {
 	// Define border values
-	THUMB_MIN = 0;
+	THUMB_MIN = -32768;
 	THUMB_MAX = 32767;
 	TRIGGER_MIN = 0;
 	TRIGGER_MAX = 255;
@@ -65,7 +65,7 @@ xinput_pad_handler::~xinput_pad_handler()
 	Close();
 }
 
-void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(std::string)>& callback)
+void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(u16, std::string)>& callback)
 {
 	if (!Init())
 	{
@@ -126,8 +126,7 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 	}
 	if (pressed_button.first > 0)
 	{
-		LOG_NOTICE(HLE, "GetNextButtonPress: %s button %s pressed with value %d", m_pad_config.cfg_type, pressed_button.second, pressed_button.first);
-		return callback(pressed_button.second);
+		return callback(pressed_button.first, pressed_button.second);
 	}
 }
 
@@ -161,40 +160,37 @@ void xinput_pad_handler::TestVibration(const std::string& padId, u32 largeMotor,
 	(*xinputSetState)(device_number, &vibrate);
 }
 
-void xinput_pad_handler::TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold)
+void xinput_pad_handler::TranslateButtonPress(u32 keyCode, bool& pressed, u16& val, bool ignore_threshold)
 {
-	// Get the requested button value from a previously filled buffer
-	const u16 val = button_values[keyCode];
-
 	// Update the pad button values based on their type and thresholds.
 	// With this you can use axis or triggers as buttons or vice versa
 	switch (keyCode)
 	{
 	case XInputKeyCodes::LT:
 		pressed = val > m_pad_config.ltriggerthreshold;
-		value = pressed ? NormalizeTriggerInput(val, m_pad_config.ltriggerthreshold) : 0;
+		val = pressed ? NormalizeTriggerInput(val, m_pad_config.ltriggerthreshold) : 0;
 		break;
 	case XInputKeyCodes::RT:
 		pressed = val > m_pad_config.rtriggerthreshold;
-		value = pressed ? NormalizeTriggerInput(val, m_pad_config.rtriggerthreshold) : 0;
+		val = pressed ? NormalizeTriggerInput(val, m_pad_config.rtriggerthreshold) : 0;
 		break;
 	case XInputKeyCodes::LSXNeg:
 	case XInputKeyCodes::LSXPos:
 	case XInputKeyCodes::LSYPos:
 	case XInputKeyCodes::LSYNeg:
 		pressed = val > (ignore_threshold ? 0 : m_pad_config.lstickdeadzone);
-		value = pressed ? NormalizeStickInput(val, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
 		break;
 	case XInputKeyCodes::RSXNeg:
 	case XInputKeyCodes::RSXPos:
 	case XInputKeyCodes::RSYPos:
 	case XInputKeyCodes::RSYNeg:
 		pressed = val > (ignore_threshold ? 0 : m_pad_config.rstickdeadzone);
-		value = pressed ? NormalizeStickInput(val, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
 		break;
 	default: // normal button (should in theory also support sensitive buttons)
 		pressed = val > 0;
-		value = pressed ? val : 0;
+		val = pressed ? val : 0;
 		break;
 	}
 }
@@ -214,19 +210,19 @@ std::array<u16, xinput_pad_handler::XInputKeyCodes::KEYCODECOUNT> xinput_pad_han
 	int ry = state.Gamepad.sThumbRY;
 
 	// Left Stick X Axis
-	values[XInputKeyCodes::LSXNeg] = lx < 0 ? abs(lx) : 0;
+	values[XInputKeyCodes::LSXNeg] = lx < 0 ? abs(lx) - 1 : 0;
 	values[XInputKeyCodes::LSXPos] = lx > 0 ? lx : 0;
 
 	// Left Stick Y Axis
-	values[XInputKeyCodes::LSYNeg] = ly < 0 ? abs(ly) : 0;
+	values[XInputKeyCodes::LSYNeg] = ly < 0 ? abs(ly) - 1 : 0;
 	values[XInputKeyCodes::LSYPos] = ly > 0 ? ly : 0;
 
 	// Right Stick X Axis
-	values[XInputKeyCodes::RSXNeg] = rx < 0 ? abs(rx) : 0;
+	values[XInputKeyCodes::RSXNeg] = rx < 0 ? abs(rx) - 1 : 0;
 	values[XInputKeyCodes::RSXPos] = rx > 0 ? rx : 0;
 
 	// Right Stick Y Axis
-	values[XInputKeyCodes::RSYNeg] = ry < 0 ? abs(ry) : 0;
+	values[XInputKeyCodes::RSYNeg] = ry < 0 ? abs(ry) - 1 : 0;
 	values[XInputKeyCodes::RSYPos] = ry > 0 ? ry : 0;
 
 	// Buttons
@@ -332,11 +328,12 @@ void xinput_pad_handler::ThreadProc()
 			last_connection_status[padnum] = true;
 			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 
-			button_values = GetButtonValues(state);
+			std::array<u16, XInputKeyCodes::KEYCODECOUNT> button_values = GetButtonValues(state);
 
 			// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 			for (auto& btn : pad->m_buttons)
 			{
+				btn.m_value = button_values[btn.m_keyCode];
 				TranslateButtonPress(btn.m_keyCode, btn.m_pressed, btn.m_value);
 			}
 
@@ -356,12 +353,16 @@ void xinput_pad_handler::ThreadProc()
 			for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
 			{
 				bool pressed;
-				u16 val_min, val_max;
 
 				// m_keyCodeMin is the mapped key for left or down
+				u32 key_min = pad->m_sticks[i].m_keyCodeMin;
+				u16 val_min = button_values[key_min];
+				TranslateButtonPress(key_min, pressed, val_min, true);
+
 				// m_keyCodeMax is the mapped key for right or up
-				TranslateButtonPress(pad->m_sticks[i].m_keyCodeMin, pressed, val_min, true);
-				TranslateButtonPress(pad->m_sticks[i].m_keyCodeMax, pressed, val_max, true);
+				u32 key_max = pad->m_sticks[i].m_keyCodeMax;
+				u16 val_max = button_values[key_max];
+				TranslateButtonPress(key_max, pressed, val_max, true);
 
 				// cancel out opposing values and get the resulting difference
 				stick_val[i] = val_max - val_min;
