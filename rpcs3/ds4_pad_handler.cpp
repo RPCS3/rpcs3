@@ -147,6 +147,11 @@ ds4_pad_handler::ds4_pad_handler() : is_init(false)
 	m_pad_config.rtriggerthreshold.def = 0; // between 0 and 255
 	m_pad_config.padsquircling.def = 8000;
 
+	// Set color value
+	m_pad_config.colorR.def = 0;
+	m_pad_config.colorG.def = 0;
+	m_pad_config.colorB.def = 20;
+
 	// apply defaults
 	m_pad_config.from_default();
 
@@ -665,9 +670,9 @@ void ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
 		outputBuf[3] = 0x07;
 		outputBuf[6] = device->smallVibrate;
 		outputBuf[7] = device->largeVibrate;
-		outputBuf[8] = 0x00; // red
-		outputBuf[9] = 0x00; // green
-		outputBuf[10] = 0xff; // blue
+		outputBuf[8] = m_pad_config.colorR; // red
+		outputBuf[9] = m_pad_config.colorG; // green
+		outputBuf[10] = m_pad_config.colorB; // blue
 
 		const u8 btHdr = 0xA2;
 		const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
@@ -686,9 +691,9 @@ void ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
 		outputBuf[1] = 0x07;
 		outputBuf[4] = device->smallVibrate;
 		outputBuf[5] = device->largeVibrate;
-		outputBuf[6] = 0x00; // red
-		outputBuf[7] = 0x00; // green
-		outputBuf[8] = 0xff; // blue
+		outputBuf[6] = m_pad_config.colorR; // red
+		outputBuf[7] = m_pad_config.colorG; // green
+		outputBuf[8] = m_pad_config.colorB; // blue
 
 		hid_write(device->hidDevice, outputBuf.data(), DS4_OUTPUT_REPORT_0x05_SIZE);
 	}

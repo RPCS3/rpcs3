@@ -278,6 +278,10 @@ struct pad_config : cfg::node
 	cfg::_int<0, 1000000> rtriggerthreshold{ this, "Right Trigger Threshold", 0 };
 	cfg::_int<0, 1000000> padsquircling{ this, "Pad Squircling Factor", 0 };
 
+	cfg::_int<0, 255> colorR{ this, "Color Value R", 0 };
+	cfg::_int<0, 255> colorG{ this, "Color Value G", 0 };
+	cfg::_int<0, 255> colorB{ this, "Color Value B", 0 };
+
 	cfg::_bool enable_vibration_motor_large{ this, "Enable Large Vibration Motor", true };
 	cfg::_bool enable_vibration_motor_small{ this, "Enable Small Vibration Motor", true };
 	cfg::_bool switch_vibration_motors{ this, "Switch Vibration Motors", false };
