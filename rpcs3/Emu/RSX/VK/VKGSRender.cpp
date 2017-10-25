@@ -641,7 +641,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_texture_cache.initialize((*m_device), m_memory_type_mapping, m_optimal_tiling_supported_formats, m_swap_chain->get_present_queue(),
 			m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
 
-	supports_multidraw = true;
+	supports_multidraw = !g_cfg.video.strict_rendering_mode;
 }
 
 VKGSRender::~VKGSRender()
