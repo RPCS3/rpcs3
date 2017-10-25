@@ -367,21 +367,22 @@ void xinput_pad_handler::ThreadProc()
 				stick_val[i] = val_max - val_min;
 			}
 
-			// Normalize our two stick's axis based on the thresholds
-			NormalizeRawStickInput(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
-			NormalizeRawStickInput(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
+			u16 lx, ly, rx, ry;
 
-			// Convert the axis to use the 0-127-255 range
-			pad->m_sticks[0].m_value = ConvertAxis(stick_val[0]);
-			pad->m_sticks[1].m_value = 255 - ConvertAxis(stick_val[1]);
-			pad->m_sticks[2].m_value = ConvertAxis(stick_val[2]);
-			pad->m_sticks[3].m_value = 255 - ConvertAxis(stick_val[3]);
+			// Normalize our two stick's axis based on the thresholds
+			std::tie(lx, ly) = NormalizeStickDeadzone(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
+			std::tie(rx, ry) = NormalizeStickDeadzone(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
 
 			if (m_pad_config.padsquircling != 0)
 			{
-				std::tie(pad->m_sticks[0].m_value, pad->m_sticks[1].m_value) = ConvertToSquirclePoint(pad->m_sticks[0].m_value, pad->m_sticks[1].m_value, m_pad_config.padsquircling);
-				std::tie(pad->m_sticks[2].m_value, pad->m_sticks[3].m_value) = ConvertToSquirclePoint(pad->m_sticks[2].m_value, pad->m_sticks[3].m_value, m_pad_config.padsquircling);
+				std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, m_pad_config.padsquircling);
+				std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, m_pad_config.padsquircling);
 			}
+
+			pad->m_sticks[0].m_value = lx;
+			pad->m_sticks[1].m_value = 255 - ly;
+			pad->m_sticks[2].m_value = rx;
+			pad->m_sticks[3].m_value = 255 - ry;
 
 			// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 			// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.

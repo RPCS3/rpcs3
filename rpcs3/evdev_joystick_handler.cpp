@@ -557,22 +557,21 @@ void evdev_joystick_handler::ThreadProc()
 				}
 
 				// Normalize our two stick's axis based on the thresholds
-				NormalizeRawStickInput(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
-				NormalizeRawStickInput(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
-
-				// Convert the axis to use the 0-127-255 range
-				stick_val[0] = ConvertAxis(stick_val[0]);
-				stick_val[1] = 255 - ConvertAxis(stick_val[1]);
-				stick_val[2] = ConvertAxis(stick_val[2]);
-				stick_val[3] = 255 - ConvertAxis(stick_val[3]);
-
-				// these are added with previous value and divided to 'smooth' out the readings
 				u16 lx, ly, rx, ry;
+
+				// Normalize our two stick's axis based on the thresholds
+				std::tie(lx, ly) = NormalizeStickDeadzone(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
+				std::tie(rx, ry) = NormalizeStickDeadzone(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
+
+				ly = 255 - ly;
+				ry = 255 - ry;
+				
+				// these are added with previous value and divided to 'smooth' out the readings
 
 				if (m_pad_config.padsquircling != 0)
 				{
-					std::tie(lx, ly) = ConvertToSquirclePoint(stick_val[0], stick_val[1], m_pad_config.padsquircling);
-					std::tie(rx, ry) = ConvertToSquirclePoint(stick_val[2], stick_val[3], m_pad_config.padsquircling);
+					std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, m_pad_config.padsquircling);
+					std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, m_pad_config.padsquircling);
 				}
 
 				pad->m_sticks[0].m_value = (lx + pad->m_sticks[0].m_value) / 2; // LX

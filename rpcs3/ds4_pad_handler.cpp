@@ -24,24 +24,6 @@ namespace
 	const u32 DS4_OUTPUT_REPORT_0x11_SIZE = 78;
 	const u32 DS4_INPUT_REPORT_GYRO_X_OFFSET = 13;
 
-	inline u16 Clamp0To255(f32 input)
-	{
-		if (input > 255.f)
-			return 255;
-		else if (input < 0.f)
-			return 0;
-		else return static_cast<u16>(input);
-	}
-
-	inline u16 Clamp0To1023(f32 input)
-	{
-		if (input > 1023.f)
-			return 1023;
-		else if (input < 0.f)
-			return 0;
-		else return static_cast<u16>(input);
-	}
-
 	// This tries to convert axis to give us the max even in the corners,
 	// this actually might work 'too' well, we end up actually getting diagonals of actual max/min, we need the corners still a bit rounded to match ds3
 	// im leaving it here for now, and future reference as it probably can be used later
@@ -271,7 +253,7 @@ void ds4_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u3
 	SendVibrateData(device);
 }
 
-void ds4_pad_handler::TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold)
+void ds4_pad_handler::TranslateButtonPress(const std::array<u16, DS4KeyCodes::KEYCODECOUNT>& button_values, u32 keyCode, bool& pressed, u16& value, bool ignore_threshold)
 {
 	// Get the requested button value from a previously filled buffer
 	const u16 val = button_values[keyCode];
@@ -423,12 +405,12 @@ void ds4_pad_handler::ProcessDataToPad(const std::shared_ptr<DS4Device>& device,
 {
 	auto buf = device->padData;
 
-	button_values = GetButtonValues(device);
+	auto button_values = GetButtonValues(device);
 
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (auto & btn : pad->m_buttons)
 	{
-		TranslateButtonPress(btn.m_keyCode, btn.m_pressed, btn.m_value);
+		TranslateButtonPress(button_values, btn.m_keyCode, btn.m_pressed, btn.m_value);
 	}
 
 #ifdef _WIN32
@@ -453,36 +435,28 @@ void ds4_pad_handler::ProcessDataToPad(const std::shared_ptr<DS4Device>& device,
 
 		// m_keyCodeMin is the mapped key for left or down
 		// m_keyCodeMax is the mapped key for right or up
-		TranslateButtonPress(pad->m_sticks[i].m_keyCodeMin, pressed, val_min, true);
-		TranslateButtonPress(pad->m_sticks[i].m_keyCodeMax, pressed, val_max, true);
+		TranslateButtonPress(button_values, pad->m_sticks[i].m_keyCodeMin, pressed, val_min, true);
+		TranslateButtonPress(button_values, pad->m_sticks[i].m_keyCodeMax, pressed, val_max, true);
 
 		// cancel out opposing values and get the resulting difference
 		stick_val[i] = val_max - val_min;
 	}
 
-	// Normalize our two stick's axis based on the thresholds
-	NormalizeRawStickInput(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
-	NormalizeRawStickInput(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
+	u16 lx, ly, rx, ry;
 
-	// Convert the axis to use the 0-127-255 range
-	stick_val[0] = ConvertAxis(stick_val[0]);
-	stick_val[1] = 255 - ConvertAxis(stick_val[1]);
-	stick_val[2] = ConvertAxis(stick_val[2]);
-	stick_val[3] = 255 - ConvertAxis(stick_val[3]);
+	// Normalize our two stick's axis based on the thresholds
+	std::tie(lx, ly) = NormalizeStickDeadzone(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
+	std::tie(rx, ry) = NormalizeStickDeadzone(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
+
+	if (m_pad_config.padsquircling != 0)
+	{
+		std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, m_pad_config.padsquircling);
+		std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, m_pad_config.padsquircling);
+	}
 
 	// these are added with previous value and divided to 'smooth' out the readings
 	// the ds4 seems to rapidly flicker sometimes between two values and this seems to stop that
 
-	u16 lx, ly, rx, ry;
-
-	if (m_pad_config.padsquircling != 0)
-	{
-		//std::tie(lx, ly) = ConvertToSquarePoint(stick_val[0], stick_val[1]);
-		//std::tie(rx, ry) = ConvertToSquarePoint(stick_val[2], stick_val[3]);
-		std::tie(lx, ly) = ConvertToSquirclePoint(stick_val[0], stick_val[1], m_pad_config.padsquircling);
-		std::tie(rx, ry) = ConvertToSquirclePoint(stick_val[2], stick_val[3], m_pad_config.padsquircling);
-	}
-	
 	pad->m_sticks[0].m_value = (lx + pad->m_sticks[0].m_value) / 2; // LX
 	pad->m_sticks[1].m_value = (ly + pad->m_sticks[1].m_value) / 2; // LY
 	pad->m_sticks[2].m_value = (rx + pad->m_sticks[2].m_value) / 2; // RX
@@ -860,16 +834,16 @@ void ds4_pad_handler::ThreadProc()
 		}
 
 		// Attempt to send rumble no matter what 
-		device->newVibrateData = device->newVibrateData || device->largeVibrate != thepad->m_vibrateMotors[0].m_value || device->smallVibrate != (thepad->m_vibrateMotors[1].m_value ? 255 : 0);
-
 		int idx_l = m_pad_config.switch_vibration_motors ? 1 : 0;
 		int idx_s = m_pad_config.switch_vibration_motors ? 0 : 1;
 
 		int speed_large = m_pad_config.enable_vibration_motor_large ? thepad->m_vibrateMotors[idx_l].m_value : VIBRATION_MIN;
 		int speed_small = m_pad_config.enable_vibration_motor_small ? thepad->m_vibrateMotors[idx_s].m_value : VIBRATION_MIN;
 
+		device->newVibrateData = device->newVibrateData || device->largeVibrate != speed_large || device->smallVibrate != speed_small;
+
 		device->largeVibrate = speed_large;
-		device->smallVibrate = (speed_small ? speed_small : 0);
+		device->smallVibrate = speed_small;
 
 		if (device->newVibrateData)
 		{
@@ -882,7 +856,7 @@ void ds4_pad_handler::ThreadProc()
 			continue;
 
 		else if (status == DS4DataStatus::NewData)
-			ProcessDataToPad(device, thepad); // todo: change this to not loop
+			ProcessDataToPad(device, thepad);
 	}
 }
 

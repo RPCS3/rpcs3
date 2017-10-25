@@ -317,6 +317,11 @@ protected:
 	bool b_has_config = false;
 	pad_config m_pad_config;
 
+	template <typename T>
+	T lerp(T v0, T v1, T t) {
+		return std::fma(t, v1, std::fma(-t, v0, v0));
+	}
+
 	// Search an unordered map for a string value and return found keycode
 	int FindKeyCode(std::unordered_map<u32, std::string> map, const std::string& name)
 	{
@@ -344,77 +349,62 @@ protected:
 		}
 	};
 
-	// Stick variant of function above!
-	// Get new normalized value between 0 and 255 based on defined stick minimum and maximum if it is bigger than threshold.
-	// Also scale the new value down based on the capped range if threshold is not ignored.
-	u16 NormalizeStickInput(s16 raw_value, int threshold, bool ignore_threshold = false)
-	{
-		u16 value = abs(raw_value);
-		float max = float(THUMB_MAX);
-		float val = value / max;
-
-		if (ignore_threshold || threshold <= THUMB_MIN)
-		{
-			return static_cast<u16>(255.0f * val);
-		}
-		else if (value <= threshold || threshold >= THUMB_MAX)
-		{
-			return static_cast<u16>(0);
-		}
-		else
-		{
-			float thresh = threshold / max;
-			return static_cast<u16>(255.0f * std::min(1.0f, (val - thresh) / (1.0f - thresh)));
-		}
-	};
-
 	// Alternative variant of sick function above!
 	// Get new normalized value between 0 and 255 based on its minimum and maximum if it is bigger than threshold.
 	// Also scale the new value down based on the capped range if threshold is not ignored.
 	u16 NormalizeStickInput(s16 raw_value, int threshold, int minimum, int maximum, bool ignore_threshold = false)
 	{
 		float max = abs(maximum) + abs(minimum);
-		u16 value = raw_value - minimum;
-		float val = value / max;
+		float val = std::min(std::abs(raw_value / max), 1.f);;
 
 		if (ignore_threshold || threshold <= minimum)
 		{
 			return static_cast<u16>(255.0f * val);
 		}
-		else if (value <= threshold || threshold >= 255)
+		else if (threshold <= minimum)
 		{
 			return static_cast<u16>(0);
 		}
 		else
 		{
-			float thresh = threshold / 255.0f;
+			float thresh = threshold / (max / 2);
 			return static_cast<u16>(255.0f * std::min(1.0f, (val - thresh) / (1.0f - thresh)));
 		}
 	};
 
-	// Yet another stick variant!
-	// This one is used in order to normalize two values at once with regard to 2 dimensions this time
-	void NormalizeRawStickInput(float& X, float& Y, float deadzone)
+	u16 NormalizeStickInput(s16 raw_value, int threshold, bool ignore_threshold = false)
 	{
-		X /= 255.0f;
-		Y /= 255.0f;
-		deadzone /= float(THUMB_MAX);
+		return NormalizeStickInput(raw_value, threshold, THUMB_MIN, THUMB_MAX, ignore_threshold);
+	};
 
-		float mag = sqrtf(X*X + Y*Y);
+	// This function normalizes stick deadzone based on the DS3's deadzone, which is ~13%
+	// X and Y is expected to be in (-255) to 255 range, deadzone should be in terms of thumb stick range
+	// return is new x and y values in 0-255 range
+	std::tuple<u16, u16> NormalizeStickDeadzone(s16 inX, s16 inY, u32 deadzone)
+	{
+		const float dzRange = deadzone / float((std::abs(THUMB_MAX) + std::abs(THUMB_MIN)));
 
-		if (mag > deadzone)
+		float X = inX / 255.0f;
+		float Y = inY / 255.0f;
+
+		if (dzRange > 0.f)
 		{
-			float legalRange = 1.0f - deadzone;
-			float normalizedMag = std::min(1.0f, (mag - deadzone) / legalRange);
-			float scale = normalizedMag / mag;
-			X = X * scale;
-			Y = Y * scale;
+			const float mag = std::min(sqrtf(X*X + Y*Y), 1.f);
+
+			if (mag > dzRange) {
+				float pos = lerp(0.13f, 1.f, (mag - dzRange) / (1 - dzRange));
+				float scale = pos / mag;
+				X = X * scale;
+				Y = Y * scale;
+			}
+			else {
+				float pos = lerp(0.f, 0.13f, mag / dzRange);
+				float scale = pos / mag;
+				X = X * scale;
+				Y = Y * scale;
+			}
 		}
-		else
-		{
-			X = 0;
-			Y = 0;
-		}
+		return{ ConvertAxis(X), ConvertAxis(Y) };
 	};
 
 	// get clamped value between 0 and 255
@@ -427,17 +417,24 @@ protected:
 		else return static_cast<u16>(input);
 	};
 
+	u16 Clamp0To1023(f32 input)
+	{
+		if (input > 1023.f)
+			return 1023;
+		else if (input < 0.f)
+			return 0;
+		else return static_cast<u16>(input);
+	}
+
 	u16 ConvertAxis(float value)
 	{
 		return static_cast<u16>((value + 1.0)*(255.0 / 2.0));
 	};
 
-	// we get back values from 0 - 255 for x and y from the ds4 packets,
-	// and they end up giving us basically a perfect circle, which is how the ds4 sticks are setup
-	// however,the ds3, (and i think xbox controllers) give instead a more 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
+	// The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
 	// using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
-
-	// this might be the best for now, in practice it seems to push the corners to max of 20x20
+	// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of 8000
+	// This function assumes inX and inY is already in 0-255 
 	std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY, float squircle_factor)
 	{
 		// convert inX and Y to a (-1, 1) vector;
@@ -476,7 +473,6 @@ public:
 	pad_config* GetConfig() { return &m_pad_config; };
 	//Sets window to config the controller(optional)
 	virtual void GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(std::string)>& callback) {};
-	virtual void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) {};
 	virtual void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) {};
 	//Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;

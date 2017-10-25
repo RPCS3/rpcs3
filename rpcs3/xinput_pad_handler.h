@@ -101,7 +101,6 @@ public:
 	void ThreadProc() override;
 	void GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(std::string)>& callback) override;
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
-	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 
 private:
 	typedef void (WINAPI * PFN_XINPUTENABLE)(BOOL);
@@ -110,6 +109,7 @@ private:
 
 private:
 	std::array<u16, XInputKeyCodes::KEYCODECOUNT> GetButtonValues(const XINPUT_STATE& state);
+	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false);
 
 	bool is_init;
 	HMODULE library;
