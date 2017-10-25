@@ -21,6 +21,7 @@ public:
 private Q_SLOTS:
 	void OnEntryInfo();
 	void OnEntryRemove();
+	void OnEntriesRemove();
 	void OnSort(int logicalIndex);
 private:
 	void Init(std::string dir);

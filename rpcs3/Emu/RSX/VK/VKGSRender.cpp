@@ -583,13 +583,13 @@ VKGSRender::VKGSRender() : GSRender()
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
 	//VRAM allocation
-	m_attrib_ring_info.init(VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, 0x400000);
+	m_attrib_ring_info.init(VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, "attrib buffer", 0x400000);
 	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
-	m_uniform_buffer_ring_info.init(VK_UBO_RING_BUFFER_SIZE_M * 0x100000);
+	m_uniform_buffer_ring_info.init(VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "uniform buffer");
 	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
-	m_index_buffer_ring_info.init(VK_INDEX_RING_BUFFER_SIZE_M * 0x100000);
+	m_index_buffer_ring_info.init(VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
 	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
-	m_texture_upload_buffer_ring_info.init(VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000);
+	m_texture_upload_buffer_ring_info.init(VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 0x400000);
 	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
 
 	for (auto &ctx : frame_context_storage)
@@ -641,7 +641,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_texture_cache.initialize((*m_device), m_memory_type_mapping, m_optimal_tiling_supported_formats, m_swap_chain->get_present_queue(),
 			m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
 
-	supports_multidraw = true;
+	supports_multidraw = !g_cfg.video.strict_rendering_mode;
 }
 
 VKGSRender::~VKGSRender()
@@ -739,105 +739,93 @@ VKGSRender::~VKGSRender()
 
 bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	if (is_writing)
-		return m_texture_cache.invalidate_address(address);
-	else
+	std::pair<bool, std::vector<vk::cached_texture_section*>> result;
 	{
-		if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
+		std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
+		result = std::move(m_texture_cache.invalidate_address(address, is_writing, false, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()));
+	}
+
+	if (!result.first)
+		return false;
+
+	if (result.second.size() > 0)
+	{
+		const bool is_rsxthr = std::this_thread::get_id() == rsx_thread;
+		bool has_queue_ref = false;
+
+		u64 sync_timestamp = 0ull;
+		for (const auto& tex : result.second)
+			sync_timestamp = std::max(sync_timestamp, tex->get_sync_timestamp());
+
+		if (!is_rsxthr)
 		{
-			bool flushable;
-			vk::cached_texture_section* section;
+			vm::temporary_unlock();
+		}
 
-			std::tie(flushable, section) = m_texture_cache.address_is_flushable(address);
-			
-			if (!flushable)
-				return false;
-				
-			const u64 sync_timestamp = section->get_sync_timestamp();
-			const bool is_rsxthr = std::this_thread::get_id() == rsx_thread;
-
-			if (section->is_synchronized())
+		if (sync_timestamp > 0)
+		{
+			//Wait for any cb submitted after the sync timestamp to finish
+			while (true)
 			{
-				//Wait for any cb submitted after the sync timestamp to finish
-				while (true)
-				{
-					u32 pending = 0;
+				u32 pending = 0;
 
-					if (m_last_flushable_cb < 0)
+				if (m_last_flushable_cb < 0)
+					break;
+
+				for (auto &cb : m_primary_cb_list)
+				{
+					if (!cb.pending && cb.last_sync >= sync_timestamp)
+					{
+						pending = 0;
 						break;
-
-					for (auto &cb : m_primary_cb_list)
-					{
-						if (!cb.pending && cb.last_sync >= sync_timestamp)
-						{
-							pending = 0;
-							break;
-						}
-
-						if (cb.pending)
-						{
-							pending++;
-
-							if (is_rsxthr)
-								cb.poke();
-						}
 					}
 
-					if (!pending)
-						break;
+					if (cb.pending)
+					{
+						pending++;
 
-					std::this_thread::yield();
+						if (is_rsxthr)
+							cb.poke();
+					}
 				}
 
-				if (is_rsxthr)
-					m_last_flushable_cb = -1;
+				if (!pending)
+					break;
+
+				std::this_thread::yield();
 			}
-			else
-			{
-				//This region is buffered, but no previous sync point has been put in place to start sync efforts
-				//Just stall and get what we have at this point
-				if (!is_rsxthr)
-				{
-					{
-						std::lock_guard<std::mutex> lock(m_flush_queue_mutex);
 
-						m_flush_commands = true;
-						m_queued_threads++;
-					}
-
-					//Wait for the RSX thread to process
-					while (m_flush_commands)
-					{
-						_mm_lfence();
-						_mm_pause();
-					}
-
-					std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
-					bool status = m_texture_cache.flush_address(address, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
-
-					m_queued_threads--;
-					_mm_sfence();
-
-					return status;
-				}
-				else
-				{
-					//NOTE: If the rsx::thread is trampling its own data, we have an operation that should be moved to the GPU
-					//We should never interrupt our own cb recording since some operations are not interruptible
-					if (!vk::is_uninterruptible())
-						//TODO: Investigate driver behaviour to determine if we need a hard sync or a soft flush
-						flush_command_queue();
-				}
-			}
+			if (is_rsxthr)
+				m_last_flushable_cb = -1;
 		}
 		else
 		{
-			//If we aren't managing buffer sync, dont bother checking the cache
-			return false;
+			if (!is_rsxthr)
+			{
+				{
+					std::lock_guard<std::mutex> lock(m_flush_queue_mutex);
+
+					m_flush_commands = true;
+					m_queued_threads++;
+				}
+
+				//Wait for the RSX thread to process
+				while (m_flush_commands)
+				{
+					_mm_lfence();
+					_mm_pause();
+				}
+
+				has_queue_ref = true;
+			}
 		}
 
-		std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
-		return m_texture_cache.flush_address(address, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+		m_texture_cache.flush_all(result.second, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+
+		if (has_queue_ref)
+		{
+			m_queued_threads--;
+		}
 	}
 
 	return false;
@@ -845,8 +833,12 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 void VKGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 {
-	if (m_texture_cache.invalidate_range(address_base, size, false))
+	std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
+	if (std::get<0>(m_texture_cache.invalidate_range(address_base, size, true, true, false,
+		*m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue())))
+	{
 		m_texture_cache.purge_dirty();
+	}
 }
 
 void VKGSRender::begin()
@@ -1023,31 +1015,36 @@ void VKGSRender::end()
 	{
 		auto copy_rtt_contents = [&](vk::render_target* surface)
 		{
-			const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
+			if (surface->info.format == surface->old_contents->info.format)
+			{
+				const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
 
-			const u16 parent_w = surface->old_contents->width();
-			const u16 parent_h = surface->old_contents->height();
-			u16 copy_w, copy_h;
+				const u16 parent_w = surface->old_contents->width();
+				const u16 parent_h = surface->old_contents->height();
+				u16 copy_w, copy_h;
 
-			std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
+				std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
 
-			VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
-			VkImageLayout old_layout = surface->current_layout;
+				VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
+				VkImageLayout old_layout = surface->current_layout;
 
-			vk::change_image_layout(*m_current_command_buffer, surface, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-			vk::change_image_layout(*m_current_command_buffer, surface->old_contents, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+				vk::change_image_layout(*m_current_command_buffer, surface, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+				vk::change_image_layout(*m_current_command_buffer, surface->old_contents, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
 
-			VkImageCopy copy_rgn;
-			copy_rgn.srcOffset = { 0, 0, 0 };
-			copy_rgn.dstOffset = { 0, 0, 0 };
-			copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
-			copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
-			copy_rgn.extent = { copy_w, copy_h, 1 };
+				VkImageCopy copy_rgn;
+				copy_rgn.srcOffset = { 0, 0, 0 };
+				copy_rgn.dstOffset = { 0, 0, 0 };
+				copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
+				copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
+				copy_rgn.extent = { copy_w, copy_h, 1 };
 
-			vkCmdCopyImage(*m_current_command_buffer, surface->old_contents->value, surface->old_contents->current_layout, surface->value, surface->current_layout, 1, &copy_rgn);
-			vk::change_image_layout(*m_current_command_buffer, surface, old_layout, subresource_range);
+				vkCmdCopyImage(*m_current_command_buffer, surface->old_contents->value, surface->old_contents->current_layout, surface->value, surface->current_layout, 1, &copy_rgn);
+				vk::change_image_layout(*m_current_command_buffer, surface, old_layout, subresource_range);
 
-			surface->dirty = false;
+				surface->dirty = false;
+			}
+			//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
+
 			surface->old_contents = nullptr;
 		};
 
@@ -1082,7 +1079,7 @@ void VKGSRender::end()
 				continue;
 			}
 
-			vk::image_view *texture0 = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts);
+			vk::image_view *texture0 = m_texture_cache._upload_texture(*m_current_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts);
 
 			if (!texture0)
 			{
@@ -1137,7 +1134,7 @@ void VKGSRender::end()
 				continue;
 			}
 
-			vk::image_view *texture0 = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.vertex_textures[i], m_rtts);
+			vk::image_view *texture0 = m_texture_cache._upload_texture(*m_current_command_buffer, rsx::method_registers.vertex_textures[i], m_rtts);
 
 			if (!texture0)
 			{
@@ -2651,7 +2648,9 @@ void VKGSRender::flip(int buffer)
 		m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 90, direct_fbo->width(), direct_fbo->height(), "submit and flip: " + std::to_string(m_flip_time) + "us");
 
 		auto num_dirty_textures = m_texture_cache.get_unreleased_textures_count();
+		auto texture_memory_size = m_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
 		m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 126, direct_fbo->width(), direct_fbo->height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
+		m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 144, direct_fbo->width(), direct_fbo->height(), "Texture memory: " + std::to_string(texture_memory_size) + "M");
 
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, subres);
 		m_framebuffers_to_clean.push_back(std::move(direct_fbo));

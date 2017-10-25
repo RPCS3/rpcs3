@@ -80,6 +80,12 @@ namespace vk
 			}
 		}
 
+		void destroy()
+		{
+			vram_texture = nullptr;
+			release_dma_resources();
+		}
+
 		bool exists() const
 		{
 			return (vram_texture != nullptr);
@@ -280,6 +286,9 @@ namespace vk
 		std::unique_ptr<vk::image_view> view;
 		std::unique_ptr<vk::image> img;
 
+		//Memory held by this temp storage object
+		u32 block_size = 0;
+
 		const u64 frame_tag = vk::get_current_frame_id();
 
 		discarded_storage(std::unique_ptr<vk::image_view>& _view)
@@ -302,6 +311,7 @@ namespace vk
 		{
 			view = std::move(tex.get_view());
 			img = std::move(tex.get_texture());
+			block_size = tex.get_section_size();
 		}
 
 		const bool test(u64 ref_frame) const
@@ -323,6 +333,7 @@ namespace vk
 
 		//Stuff that has been dereferenced goes into these
 		std::list<discarded_storage> m_discardable_storage;
+		std::atomic<u32> m_discarded_memory_size = { 0 };
 		
 		void purge_cache()
 		{
@@ -347,14 +358,17 @@ namespace vk
 
 			m_discardable_storage.clear();
 			m_unreleased_texture_objects = 0;
+			m_texture_memory_in_use = 0;
+			m_discarded_memory_size = 0;
 		}
 		
 	protected:
 
 		void free_texture_section(cached_texture_section& tex) override
 		{
+			m_discarded_memory_size += tex.get_section_size();
 			m_discardable_storage.push_back(tex);
-			tex.release_dma_resources();
+			tex.destroy();
 		}
 
 		vk::image_view* create_temporary_subresource_view(vk::command_buffer& cmd, vk::image* source, u32 /*gcm_format*/, u16 x, u16 y, u16 w, u16 h) override
@@ -393,7 +407,7 @@ namespace vk
 
 			VkImageCopy copy_rgn;
 			copy_rgn.srcOffset = { (s32)x, (s32)y, 0 };
-			copy_rgn.dstOffset = { (s32)x, (s32)y, 0 };
+			copy_rgn.dstOffset = { (s32)0, (s32)0, 0 };
 			copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
 			copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
 			copy_rgn.extent = { w, h, 1 };
@@ -660,13 +674,28 @@ namespace vk
 
 		void on_frame_end() override
 		{
-			if (m_unreleased_texture_objects >= m_max_zombie_objects)
+			if (m_unreleased_texture_objects >= m_max_zombie_objects ||
+				m_discarded_memory_size > 0x4000000) //If already holding over 64M in discardable memory, be frugal with memory resources
 			{
 				purge_dirty();
 			}
 
 			const u64 last_complete_frame = vk::get_last_completed_frame_id();
-			m_discardable_storage.remove_if([&](const discarded_storage& o) {return o.test(last_complete_frame);});
+			m_discardable_storage.remove_if([&](const discarded_storage& o)
+			{
+				if (o.test(last_complete_frame))
+				{
+					m_discarded_memory_size -= o.block_size;
+					return true;
+				}
+				return false;
+			});
+		}
+
+		template<typename RsxTextureType>
+		image_view* _upload_texture(vk::command_buffer& cmd, RsxTextureType& tex, rsx::vk_render_targets& m_rtts)
+		{
+			return upload_texture(cmd, tex, m_rtts, *m_device, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 		}
 
 		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)
@@ -707,12 +736,17 @@ namespace vk
 			}
 			helper(&cmd);
 
-			return upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, *m_device, cmd, m_memory_types, m_submit_queue);
+			return upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, *m_device, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 		}
 
 		const u32 get_unreleased_textures_count() const override
 		{
-			return std::max(m_unreleased_texture_objects, 0) + (u32)m_discardable_storage.size();
+			return m_unreleased_texture_objects + (u32)m_discardable_storage.size();
+		}
+
+		const u32 get_texture_memory_in_use() const override
+		{
+			return m_texture_memory_in_use + m_discarded_memory_size;
 		}
 	};
 }

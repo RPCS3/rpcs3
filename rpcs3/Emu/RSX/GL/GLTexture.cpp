@@ -473,6 +473,7 @@ namespace gl
 
 		glBindTexture(target, id);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 		glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
 		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, mipmaps - 1);
 

@@ -1571,6 +1571,7 @@ namespace rsx
 		u32 volatile_offset = 0;
 		u32 persistent_offset = 0;
 
+		//NOTE: Order is important! Transient ayout is always push_buffers followed by register data
 		if (rsx::method_registers.current_draw_clause.is_immediate_draw)
 		{
 			for (const auto &info : layout.volatile_blocks)
@@ -1765,12 +1766,7 @@ namespace rsx
 				return;
 			}
 
-			for (const u8 index : layout.referenced_registers)
-			{
-				memcpy(transient, rsx::method_registers.register_vertex_info[index].data.data(), 16);
-				transient += 16;
-			}
-
+			//NOTE: Order is important! Transient ayout is always push_buffers followed by register data
 			if (draw_call.is_immediate_draw)
 			{
 				//NOTE: It is possible for immediate draw to only contain index data, so vertex data can be in persistent memory
@@ -1779,6 +1775,12 @@ namespace rsx
 					memcpy(transient, vertex_push_buffers[info.first].data.data(), info.second);
 					transient += info.second;
 				}
+			}
+
+			for (const u8 index : layout.referenced_registers)
+			{
+				memcpy(transient, rsx::method_registers.register_vertex_info[index].data.data(), 16);
+				transient += 16;
 			}
 		}
 

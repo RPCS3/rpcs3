@@ -9,14 +9,12 @@ bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configp
 {
 	const std::string& path = vfs::get(filepath);
 
-	if (!Generate(filepath, configpath))
-	{
-		return false;
-	}
-
 	if (!m_file.open(path, fs::read))
 	{
-		return false;
+		if (!Generate(filepath, configpath))
+		{
+			return false;
+		}
 	}
 
 	if (!LoadHeader() || !LoadTableHeaders() || !LoadTables())

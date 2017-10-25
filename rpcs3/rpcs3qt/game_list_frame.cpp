@@ -19,7 +19,6 @@
 #include <QListView>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QProcess>
 #include <QTimer>
 #include <QUrl>
 #include <QLabel>
@@ -549,17 +548,7 @@ static void open_dir(const std::string& spath)
 {
 	fs::create_dir(spath);
 	QString path = qstr(spath);
-	QProcess* process = new QProcess();
-
-#ifdef _WIN32
-	std::string command = "explorer";
-	std::replace(path.begin(), path.end(), '/', '\\');
-	process->start("explorer", QStringList() << path);
-#elif __APPLE__
-	process->start("open", QStringList() << path);
-#else
-	process->start("xdg-open", QStringList() << path);
-#endif
+	QDesktopServices::openUrl(QUrl("file:///" + path));
 }
 
 void game_list_frame::doubleClickedSlot(const QModelIndex& index)
