@@ -31,7 +31,7 @@ GLGSRender::GLGSRender() : GSRender()
 	else
 		m_vertex_cache.reset(new gl::weak_vertex_cache());
 
-	supports_multidraw = true;
+	supports_multidraw = !g_cfg.video.strict_rendering_mode;
 }
 
 extern CellGcmContextData current_context;
