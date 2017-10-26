@@ -106,6 +106,7 @@ private:
 	typedef void (WINAPI * PFN_XINPUTENABLE)(BOOL);
 	typedef DWORD (WINAPI * PFN_XINPUTGETSTATE)(DWORD, XINPUT_STATE *);
 	typedef DWORD (WINAPI * PFN_XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION *);
+	typedef DWORD (WINAPI * PFN_XINPUTGETBATTERYINFORMATION)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION *);
 
 private:
 	std::array<u16, XInputKeyCodes::KEYCODECOUNT> GetButtonValues(const XINPUT_STATE& state);
@@ -116,6 +117,7 @@ private:
 	PFN_XINPUTGETSTATE xinputGetState;
 	PFN_XINPUTSETSTATE xinputSetState;
 	PFN_XINPUTENABLE xinputEnable;
+	PFN_XINPUTGETBATTERYINFORMATION xinputGetBatteryInformation;
 
 	std::vector<std::pair<u32, std::shared_ptr<Pad>>> bindings;
 	std::array<bool, 7> last_connection_status = {};

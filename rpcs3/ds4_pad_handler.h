@@ -22,8 +22,10 @@ class ds4_pad_handler final : public PadHandlerBase
 		Up,
 		Down,
 		R1,
+		R2But,
 		R3,
 		L1,
+		L2But,
 		L3,
 		Share,
 		Options,
@@ -115,6 +117,10 @@ class ds4_pad_handler final : public PadHandlerBase
 		u8 largeVibrate{ 0 };
 		u8 smallVibrate{ 0 };
 		std::array<u8, 64> padData;
+		u8 batteryLevel{ 0 };
+		u8 cableState{ 0 };
+		u8 led_delay_on{ 0 };
+		u8 led_delay_off{ 0 };
 	};
 
 	const u16 DS4_VID = 0x054C;

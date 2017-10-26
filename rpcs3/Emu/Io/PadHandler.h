@@ -162,6 +162,13 @@ struct Pad
 	u32 m_device_capability;
 	u32 m_device_type;
 
+	// Cable State:   0 - 1  plugged in ?
+	u8 m_cable_state;
+
+	// DS4: 0 - 9  while unplugged, 0 - 10 while plugged in, 11 charge complete
+	// XInput: 0 = Empty, 1 = Low, 2 = Medium, 3 = Full
+	u8 m_battery_level;
+
 	std::vector<Button> m_buttons;
 	std::vector<AnalogStick> m_sticks;
 	std::vector<AnalogSensor> m_sensors;

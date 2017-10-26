@@ -3,7 +3,9 @@
 #include "xinput_pad_handler.h"
 #include "rpcs3qt/pad_settings_dialog.h"
 
-xinput_pad_handler::xinput_pad_handler() : library(nullptr), xinputGetState(nullptr), xinputEnable(nullptr), xinputSetState(nullptr), is_init(false)
+xinput_pad_handler::xinput_pad_handler() :
+	library(nullptr), xinputGetState(nullptr), xinputEnable(nullptr),
+	xinputSetState(nullptr), xinputGetBatteryInformation(nullptr), is_init(false)
 {
 	// Define border values
 	THUMB_MIN = -32768;
@@ -271,8 +273,9 @@ bool xinput_pad_handler::Init()
 			}
 
 			xinputSetState = reinterpret_cast<PFN_XINPUTSETSTATE>(GetProcAddress(library, "XInputSetState"));
+			xinputGetBatteryInformation = reinterpret_cast<PFN_XINPUTGETBATTERYINFORMATION>(GetProcAddress(library, "XInputGetBatteryInformation"));
 
-			if (xinputEnable && xinputGetState && xinputSetState)
+			if (xinputEnable && xinputGetState && xinputSetState && xinputGetBatteryInformation)
 			{
 				is_init = true;
 				break;
@@ -282,6 +285,7 @@ bool xinput_pad_handler::Init()
 			library = nullptr;
 			xinputEnable = nullptr;
 			xinputGetState = nullptr;
+			xinputGetBatteryInformation = nullptr;
 		}
 	}
 
@@ -301,6 +305,7 @@ void xinput_pad_handler::Close()
 		library = nullptr;
 		xinputGetState = nullptr;
 		xinputEnable = nullptr;
+		xinputGetBatteryInformation = nullptr;
 	}
 }
 
@@ -384,6 +389,12 @@ void xinput_pad_handler::ThreadProc()
 			pad->m_sticks[1].m_value = 255 - ly;
 			pad->m_sticks[2].m_value = rx;
 			pad->m_sticks[3].m_value = 255 - ry;
+
+			// Receive Battery Info. If device is not on cable, get battery level, else assume full
+			XINPUT_BATTERY_INFORMATION battery_info;
+			(*xinputGetBatteryInformation)(padnum, BATTERY_DEVTYPE_GAMEPAD, &battery_info);
+			pad->m_cable_state = battery_info.BatteryType == BATTERY_TYPE_WIRED ? 1 : 0;
+			pad->m_battery_level = pad->m_cable_state ? BATTERY_LEVEL_FULL : battery_info.BatteryLevel;
 
 			// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 			// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.

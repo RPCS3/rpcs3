@@ -23,6 +23,7 @@ namespace
 	const u32 DS4_OUTPUT_REPORT_0x05_SIZE = 32;
 	const u32 DS4_OUTPUT_REPORT_0x11_SIZE = 78;
 	const u32 DS4_INPUT_REPORT_GYRO_X_OFFSET = 13;
+	const u32 DS4_INPUT_REPORT_BATTERY_OFFSET = 30;
 
 	// This tries to convert axis to give us the max even in the corners,
 	// this actually might work 'too' well, we end up actually getting diagonals of actual max/min, we need the corners still a bit rounded to match ds3
@@ -376,15 +377,15 @@ std::array<u16, ds4_pad_handler::DS4KeyCodes::KEYCODECOUNT> ds4_pad_handler::Get
 	keyBuffer[DS4KeyCodes::Circle] =   ((buf[5] & (1 << 6)) != 0) ? 255 : 0;
 	keyBuffer[DS4KeyCodes::Triangle] = ((buf[5] & (1 << 7)) != 0) ? 255 : 0;
 
-	// L1, R1
-	keyBuffer[DS4KeyCodes::L1] = ((buf[6] & (1 << 0)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::R1] = ((buf[6] & (1 << 1)) != 0) ? 255 : 0;
-
-	// select, start, l3, r3
-	keyBuffer[DS4KeyCodes::Share] =   ((buf[6] & (1 << 4)) != 0) ? 255 : 0;
+	// L1, R1, L2, L3, select, start, L3, L3
+	keyBuffer[DS4KeyCodes::L1]      = ((buf[6] & (1 << 0)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::R1]      = ((buf[6] & (1 << 1)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::L2But]   = ((buf[6] & (1 << 2)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::R2But]   = ((buf[6] & (1 << 3)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::Share]   = ((buf[6] & (1 << 4)) != 0) ? 255 : 0;
 	keyBuffer[DS4KeyCodes::Options] = ((buf[6] & (1 << 5)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::L3] =      ((buf[6] & (1 << 6)) != 0) ? 255 : 0;
-	keyBuffer[DS4KeyCodes::R3] =      ((buf[6] & (1 << 7)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::L3]      = ((buf[6] & (1 << 6)) != 0) ? 255 : 0;
+	keyBuffer[DS4KeyCodes::R3]      = ((buf[6] & (1 << 7)) != 0) ? 255 : 0;
 
 	// PS Button, Touch Button
 	keyBuffer[DS4KeyCodes::PSButton] = ((buf[7] & (1 << 0)) != 0) ? 255 : 0;
@@ -399,6 +400,9 @@ std::array<u16, ds4_pad_handler::DS4KeyCodes::KEYCODECOUNT> ds4_pad_handler::Get
 
 void ds4_pad_handler::ProcessDataToPad(const std::shared_ptr<DS4Device>& device, const std::shared_ptr<Pad>& pad)
 {
+	pad->m_battery_level = device->batteryLevel;
+	pad->m_cable_state = device->cableState;
+
 	auto buf = device->padData;
 
 	auto button_values = GetButtonValues(device);
@@ -632,7 +636,16 @@ ds4_pad_handler::~ds4_pad_handler()
 	for (auto& controller : controllers)
 	{
 		if (controller.second->hidDevice)
+		{
+			// Disable blinking and vibration
+			controller.second->smallVibrate = 0;
+			controller.second->largeVibrate = 0;
+			controller.second->led_delay_on = 0;
+			controller.second->led_delay_off = 0;
+			SendVibrateData(controller.second);
+
 			hid_close(controller.second->hidDevice);
+		}
 	}
 	hid_exit();
 }
@@ -651,6 +664,12 @@ void ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
 		outputBuf[8] = m_pad_config.colorR; // red
 		outputBuf[9] = m_pad_config.colorG; // green
 		outputBuf[10] = m_pad_config.colorB; // blue
+
+		// alternating blink states with values 0-255: only setting both to zero disables blinking
+		// 255 is roughly 2 seconds, so setting both values to 255 results in a 4 second interval
+		// using something like (0,10) will heavily blink, while using (0, 255) will be slow. you catch the drift
+		outputBuf[9] = device->led_delay_on;
+		outputBuf[10] = device->led_delay_off;
 
 		const u8 btHdr = 0xA2;
 		const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
@@ -672,6 +691,8 @@ void ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
 		outputBuf[6] = m_pad_config.colorR; // red
 		outputBuf[7] = m_pad_config.colorG; // green
 		outputBuf[8] = m_pad_config.colorB; // blue
+		outputBuf[9] = device->led_delay_on;
+		outputBuf[10] = device->led_delay_off;
 
 		hid_write(device->hidDevice, outputBuf.data(), DS4_OUTPUT_REPORT_0x05_SIZE);
 	}
@@ -844,7 +865,27 @@ void ds4_pad_handler::ThreadProc()
 		int speed_large = m_pad_config.enable_vibration_motor_large ? thepad->m_vibrateMotors[idx_l].m_value : VIBRATION_MIN;
 		int speed_small = m_pad_config.enable_vibration_motor_small ? thepad->m_vibrateMotors[idx_s].m_value : VIBRATION_MIN;
 
-		device->newVibrateData = device->newVibrateData || device->largeVibrate != speed_large || device->smallVibrate != speed_small;
+		bool wireless = device->cableState < 1;
+		bool lowBattery = device->batteryLevel < 2;
+		bool isBlinking = device->led_delay_on > 0 || device->led_delay_off > 0;
+		bool newBlinkData = false;
+
+		// we are now wired or have okay battery level -> stop blinking
+		if (isBlinking && !(wireless && lowBattery))
+		{
+			device->led_delay_on = 0;
+			device->led_delay_off = 0;
+			newBlinkData = true;
+		}
+		// we are now wireless and low on battery -> blink
+		if (!isBlinking && wireless && lowBattery)
+		{
+			device->led_delay_on = 100;
+			device->led_delay_off = 100;
+			newBlinkData = true;
+		}
+
+		device->newVibrateData = device->newVibrateData || device->largeVibrate != speed_large || device->smallVibrate != speed_small || newBlinkData;
 
 		device->largeVibrate = speed_large;
 		device->smallVibrate = speed_small;
@@ -918,6 +959,10 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 	}
 	else
 		return DS4DataStatus::NoNewData;
+
+	int battery_offset = offset + DS4_INPUT_REPORT_BATTERY_OFFSET;
+	device->cableState = (buf[battery_offset] >> 4) & 0x01;
+	device->batteryLevel = buf[battery_offset] & 0x0F;
 
 	if (device->hasCalibData)
 	{
