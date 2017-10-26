@@ -935,6 +935,9 @@
     <ClCompile Include="Emu\Cell\lv2\sys_net.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\SPULLVMRecompiler.cpp">
+      <Filter>Emu\Cell</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1806,6 +1809,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\lv2\sys_net.h">
       <Filter>Emu\Cell\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\SPULLVMRecompiler.h">
+      <Filter>Emu\Cell</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

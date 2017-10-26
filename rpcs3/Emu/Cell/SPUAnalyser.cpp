@@ -1,7 +1,8 @@
 #include "stdafx.h"
+#include "Crypto/sha1.h"
 #include "SPUAnalyser.h"
-#include "SPURecompiler.h"
 #include "SPUOpcodes.h"
+#include "SPURecompiler.h"
 
 const spu_decoder<spu_itype> s_spu_itype;
 
@@ -33,7 +34,7 @@ SPUDatabase::~SPUDatabase()
 	// TODO: serialize database
 }
 
-spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_limit)
+spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_limit, bool find_adjacents)
 {
 	// Check arguments (bounds and alignment)
 	if (max_limit > 0x40000 || entry >= max_limit || entry % 4 || max_limit % 4)
@@ -87,6 +88,12 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 		const spu_opcode_t op{ ls[pos / 4] };
 
 		const auto type = s_spu_itype.decode(op.opcode);
+
+		if (pos == entry && !type)
+		{
+			//immediately stop if we run into an invalid instr at start pos, function is invalid
+			return nullptr;
+		}
 
 		{
 			reader_lock lock(m_mutex);
@@ -163,6 +170,17 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 			// Restore pos value
 			pos = start;
 		}
+
+#if 0
+		const spu_opcode_t next_op{ ls[(pos + 4) / 4] };
+		const auto next_type = s_spu_itype.decode(next_op.opcode);
+
+		if (type == BI && !next_type) //some functions end with BI followed by some garbage data
+		{
+			limit = pos;
+			break;
+		}
+#endif
 
 		if (!type || (start == pos && start > *blocks.rbegin())) // Invalid instruction or "unrelated" block started
 		{
@@ -351,6 +369,11 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 		// Add function to the database
 		m_db.emplace(key, func);
 	}
+
+	sha1_context sha;
+	sha1_starts(&sha);
+	sha1_update(&sha, (u8*) func->data.data(), func->size);
+	sha1_finish(&sha, func->hash.data());
 
 	LOG_NOTICE(SPU, "Function detected [0x%05x-0x%05x] (size=0x%x)", func->addr, func->addr + func->size, func->size);
 

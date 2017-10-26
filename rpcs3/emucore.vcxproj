@@ -120,6 +120,7 @@
     <ClCompile Include="Emu\Cell\PPUTranslator.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\SPULLVMRecompiler.cpp" />
     <ClCompile Include="Emu\CPU\CPUTranslator.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -459,6 +460,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h" />
     <ClInclude Include="Emu\Cell\PPUAnalyser.h" />
     <ClInclude Include="Emu\Cell\PPUTranslator.h" />
+    <ClInclude Include="Emu\Cell\SPULLVMRecompiler.h" />
     <ClInclude Include="Emu\CPU\CPUTranslator.h" />
     <ClInclude Include="Emu\IPC.h" />
     <ClInclude Include="Emu\PSP2\ARMv7Callback.h" />

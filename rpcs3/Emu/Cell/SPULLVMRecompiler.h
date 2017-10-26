@@ -2,85 +2,108 @@
 
 #include "SPURecompiler.h"
 
-namespace asmjit
-{
-	struct JitRuntime;
-	struct CodeHolder;
-	struct X86Compiler;
-	struct X86Gp;
-	struct X86Xmm;
-	struct X86Mem;
-	struct Label;
-}
+#include "Utilities/JIT.h"
 
-// SPU ASMJIT Recompiler
-class spu_recompiler : public spu_recompiler_base
-{
-	const std::shared_ptr<asmjit::JitRuntime> m_jit;
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 
+class spu_llvm_recompiler : public spu_recompiler_base
+{
 public:
-	spu_recompiler(SPUThread &thread);
+	spu_llvm_recompiler(SPUThread &thread);
 
 	virtual void compile(spu_function_t& f) override;
-
+	
 private:
-	// emitter:
-	asmjit::X86Compiler* c;
-	asmjit::CodeHolder* codeHolder;
+	void compile_llvm(spu_function_t & f);
+	llvm::Function* compile_function(spu_function_t& f);
 
-	// input:
-	asmjit::X86Gp* cpu;
-	asmjit::X86Gp* ls;
+	llvm::Value* GetInt128(__m128i n);
+	llvm::Value* GetFloat128(__m128 n);
+	llvm::Value* GetInt128(__m128i n, llvm::Type* type);
+	llvm::Value* GetVec2(__m128i n);
+	llvm::Value* GetVec2Double(__m128i n);
+	llvm::Value* GetVec2Double(__m128d n);
+	llvm::Value* GetVec4(__m128i n);
+	llvm::Value* GetVec4Float(__m128i n);
+	llvm::Value* GetVec4Float(__m128 n);
+	llvm::Value* GetVec8(__m128i n);
+	llvm::Value* GetVec16(__m128i n);
+	llvm::Value* PtrPC();
+	llvm::Value* PtrGPR8(u8 reg, llvm::Value* offset);
+	llvm::Value* PtrGPR8(u8 reg, s32 offset);
+	llvm::Value* PtrGPR16(u8 reg, llvm::Value* offset);
+	llvm::Value* PtrGPR16(u8 reg, s32 offset);
+	llvm::Value* PtrGPR32(u8 reg, llvm::Value* offset);
+	llvm::Value* PtrGPR32(u8 reg, s32 offset);
+	llvm::Value* PtrGPR64(u8 reg, llvm::Value* offset);
+	llvm::Value* PtrGPR128(u8 reg);
+	llvm::Value* PtrGPR32(u8 reg);
+	llvm::Value* PtrLS(llvm::Value* ls_addr);
+	llvm::Value* LoadLS(llvm::Value* ls_addr, llvm::Type* type);
+	void StoreLS(llvm::Value* ls_addr, llvm::Value* value);
+	llvm::Value* LoadGPR8(u8 reg, u32 offset = 0);
+	llvm::Value* LoadGPR16(u8 reg, u32 offset = 0);
+	llvm::Value* LoadGPR32(u8 reg, u32 offset = 0);
+	llvm::Value* LoadGPR128(u8 reg);
+	llvm::Value* LoadGPR128(u8 reg, llvm::Type* type);
+	llvm::Value* LoadGPRVec2(u8 reg);
+	llvm::Value* LoadGPRVec2Double(u8 reg);
+	llvm::Value* LoadGPRVec4(u8 reg);
+	llvm::Value* LoadGPRVec4Float(u8 reg);
+	llvm::Value* LoadGPRVec8(u8 reg);
+	llvm::Value* LoadGPRVec16(u8 reg);
+	void Store128(llvm::Value* ptr, llvm::Value* value, int invariant_group = -1);
+	void StoreGPR128(u8 reg, __m128i data);
+	void StoreGPR128(u8 reg, llvm::Value* value);
+	void StoreGPR64(u8 reg, llvm::Value* data, llvm::Value* offset);
+	void StoreGPR64(u8 reg, llvm::Value* data, u32 offset);
+	void StoreGPR64(u8 reg, u64 data, llvm::Value * offset);
+	void StoreGPR64(u8 reg, u64 data, u32 offset);
+	void StoreGPR32(u8 reg, llvm::Value* value, llvm::Value* offset);
+	void StoreGPR32(u8 reg, llvm::Value* value, u32 offset);
+	void StoreGPR32(u8 reg, u32 data, llvm::Value* offset);
+	void StoreGPR16(u8 reg, llvm::Value* data, llvm::Value* offset);
+	void StoreGPR16(u8 reg, u16 data, llvm::Value* offset);
+	void StoreGPR8(u8 reg, llvm::Value* data, llvm::Value* offset);
+	void StoreGPR32(u8 reg, u32 data, u32 offset);
+	llvm::Value* Intrinsic_minnum(llvm::Value* v0, llvm::Value* v1);
+	llvm::Value* Intrinsic_maxnum(llvm::Value* v0, llvm::Value* v1);
+	llvm::Value* Intrinsic_sqrt(llvm::Value* v0);
+	llvm::Value* Intrinsic_pshufb(llvm::Value* v0, llvm::Value* mask);
+	llvm::Value* Intrinsic_pshufb(llvm::Value* v0, std::vector<u32> mask);
+	llvm::Value* Intrinsic_rcpps(llvm::Value* v0);
+	llvm::Value* ZExt128(llvm::Value* va);
 
-	// temporary:
-	asmjit::X86Gp* addr;
-	asmjit::X86Gp* qw0;
-	asmjit::X86Gp* qw1;
-	asmjit::X86Gp* qw2;
-	std::array<asmjit::X86Xmm*, 6> vec;
+	void CreateJumpTableSwitch(llvm::Value* _addr);
+	void FunctionCall();
+	void InterpreterCall(spu_opcode_t op);
 
-	// labels:
-	asmjit::Label* labels; // array[0x10000]
-	asmjit::Label* jt; // jump table resolver (uses *addr)
-	asmjit::Label* end; // function end (return *addr)
+	std::unique_ptr<spu_recompiler> m_asmjit_recompiler;
 
-	class XmmLink
-	{
-		asmjit::X86Xmm* m_var;
+	std::string m_cache_path;
+	std::unique_ptr<jit_compiler> m_jit;
+	
+	llvm::LLVMContext m_context;
+	std::unique_ptr<llvm::Module> m_module;
 
-	public:
-		XmmLink(asmjit::X86Xmm*& xmm_var)
-			: m_var(xmm_var)
-		{
-			xmm_var = nullptr;
-		}
+	llvm::Function* m_spufunccall;
+	llvm::Function* m_spuintcall;
+	llvm::Function* m_llvm_func;
 
-		XmmLink(XmmLink&&) = default; // MoveConstructible + delete copy constructor and copy/move operators
+	llvm::IRBuilder<>* m_ir;
+	llvm::BasicBlock* m_body;
+	llvm::BasicBlock* m_end;
 
-		operator asmjit::X86Xmm&() const
-		{
-			return *m_var;
-		}
-	};
+	llvm::Argument* m_cpu;
+	llvm::Argument* m_ls;
+	llvm::Value* m_addr;
 
-	enum class XmmType
-	{
-		Int,
-		Float,
-		Double,
-	};
-
-	XmmLink XmmAlloc();
-	XmmLink XmmGet(s8 reg, XmmType type);
-
-	asmjit::X86Mem XmmConst(v128 data);
-	asmjit::X86Mem XmmConst(__m128 data);
-	asmjit::X86Mem XmmConst(__m128i data);
+	llvm::BasicBlock** m_blocks;
 
 public:
-    void CheckInterruptStatus(spu_opcode_t op);
-	void InterpreterCall(spu_opcode_t op);
-	void FunctionCall();
 
 	void STOP(spu_opcode_t op);
 	void LNOP(spu_opcode_t op);
@@ -93,7 +116,7 @@ public:
 	void OR(spu_opcode_t op);
 	void BG(spu_opcode_t op);
 	void SFH(spu_opcode_t op);
-	void NOR(spu_opcode_t op);
+	void NOR(spu_opcode_t op);		
 	void ABSDB(spu_opcode_t op);
 	void ROT(spu_opcode_t op);
 	void ROTM(spu_opcode_t op);

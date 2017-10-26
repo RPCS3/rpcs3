@@ -315,7 +315,7 @@ void SPUThread::cpu_task()
 {
 	std::fesetround(FE_TOWARDZERO);
 	
-	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
+	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		if (!spu_db) spu_db = fxm::get_always<SPUDatabase>();
 		return spu_recompiler_base::enter(*this);

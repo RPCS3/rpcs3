@@ -40,7 +40,7 @@ class jit_compiler final
 	std::string m_cpu;
 
 public:
-	jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string _cpu);
+	jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string _cpu, llvm::CodeGenOpt::Level optlevel = llvm::CodeGenOpt::Aggressive);
 	~jit_compiler();
 
 	// Get LLVM context
@@ -49,8 +49,15 @@ public:
 		return m_context;
 	}
 
+	auto& engine()
+	{
+		return m_engine;
+	}
+
 	// Add module (path to obj cache dir)
-	void add(std::unique_ptr<llvm::Module> module, const std::string& path);
+	void add(std::unique_ptr<llvm::Module> module, const std::string& path, bool delete_ir = true);
+
+	void add(std::unique_ptr<llvm::Module> module);
 
 	// Add object (path to obj file)
 	void add(const std::string& path);
