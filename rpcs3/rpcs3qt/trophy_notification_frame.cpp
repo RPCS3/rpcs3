@@ -10,7 +10,7 @@ inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(
 
 trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& imgBuffer, const SceNpTrophyDetails& trophy, int height) : QWidget()
 {
-	setWindowFlags(Qt::FramelessWindowHint);
+	setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
 	setAttribute(Qt::WA_ShowWithoutActivating);
 
 	// Fill the background with black
