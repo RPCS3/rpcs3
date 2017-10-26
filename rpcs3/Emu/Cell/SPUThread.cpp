@@ -1435,8 +1435,9 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	case MFC_Cmd:
 	{
 		ch_mfc_cmd.cmd = MFC(value & 0xff);
+		auto cmd = ch_mfc_cmd; // save and restore previous command arguments
 		process_mfc_cmd();
-		ch_mfc_cmd = {}; // clear non-persistent data
+		ch_mfc_cmd = cmd;
 		return true;
 	}
 
