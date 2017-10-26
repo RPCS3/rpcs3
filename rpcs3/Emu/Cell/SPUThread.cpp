@@ -999,6 +999,7 @@ u32 SPUThread::get_ch_count(u32 ch)
 	case SPU_RdSigNotify2:    return ch_snr2.get_count();
 	case MFC_RdAtomicStat:    return ch_atomic_stat.get_count();
 	case SPU_RdEventStat:     return get_events() != 0;
+	case MFC_Cmd:             return std::max(16 - mfc_queue.size(), (u32)0);
 	}
 
 	fmt::throw_exception("Unknown/illegal channel (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
