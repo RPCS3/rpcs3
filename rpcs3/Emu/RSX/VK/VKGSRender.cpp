@@ -2685,3 +2685,9 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 
 	return result;
 }
+
+void VKGSRender::notify_tile_unbound(u32 tile)
+{
+	u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
+	m_rtts.invalidate_surface_address(addr, false);
+}
