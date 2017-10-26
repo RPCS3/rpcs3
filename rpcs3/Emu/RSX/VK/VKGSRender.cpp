@@ -761,6 +761,11 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		{
 			vm::temporary_unlock();
 		}
+		else
+		{
+			//Flush primary cb queue to sync pending changes (e.g image transitions!)
+			flush_command_queue();
+		}
 
 		if (sync_timestamp > 0)
 		{
