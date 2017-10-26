@@ -224,7 +224,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 			//Verify pitch given is correct if pitch <= 64 (especially 64)
 			if (pitchs[i] <= 64)
-			{	
+			{
 				const u16 native_pitch = std::get<1>(m_rtts.m_bound_render_targets[i])->get_native_pitch();
 				if (native_pitch > pitchs[i])
 				{
@@ -236,6 +236,8 @@ void GLGSRender::init_buffers(bool skip_reading)
 					surface_info[i].pitch = 0;
 				}
 			}
+
+			m_gl_texture_cache.tag_framebuffer(surface_addresses[i]);
 		}
 		else
 			surface_info[i] = {};
@@ -266,6 +268,8 @@ void GLGSRender::init_buffers(bool skip_reading)
 				depth_surface_info.pitch = 0;
 			}
 		}
+
+		m_gl_texture_cache.tag_framebuffer(depth_address);
 	}
 	else
 		depth_surface_info = {};

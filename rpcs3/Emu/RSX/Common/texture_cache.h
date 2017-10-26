@@ -186,6 +186,21 @@ namespace rsx
 	private:
 		//Internal implementation methods and helpers
 
+		utils::protection get_memory_protection(u32 address)
+		{
+			auto found = m_cache.find(get_block_address(address));
+			if (found != m_cache.end())
+			{
+				for (const auto &tex : found->second.data)
+				{
+					if (tex.is_locked() && tex.overlaps(address, false))
+						return tex.get_protection();
+				}
+			}
+
+			return utils::protection::rw;
+		}
+
 		//Get intersecting set - Returns all objects intersecting a given range and their owning blocks
 		std::vector<std::pair<section_storage_type*, ranged_storage*>> get_intersecting_set(u32 address, u32 range, bool check_whole_size)
 		{
@@ -723,50 +738,56 @@ namespace rsx
 				//TODO: When framebuffer Y compression is properly handled, this section can be removed. A more accurate framebuffer storage check exists below this block
 				if (auto texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 				{
-					if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
-						LOG_ERROR(RSX, "Texture resides in render target memory, but requested type is not 2D (%d)", (u32)extended_dimension);
-
-					for (const auto& tex : m_rtts.m_bound_render_targets)
+					if (test_framebuffer(texaddr))
 					{
-						if (std::get<0>(tex) == texaddr)
+						if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
+							LOG_ERROR(RSX, "Texture resides in render target memory, but requested type is not 2D (%d)", (u32)extended_dimension);
+
+						for (const auto& tex : m_rtts.m_bound_render_targets)
+						{
+							if (std::get<0>(tex) == texaddr)
+							{
+								if (g_cfg.video.strict_rendering_mode)
+								{
+									LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
+									return create_temporary_subresource_view(cmd, texptr, format, 0, 0, texptr->width(), texptr->height());
+								}
+								else
+								{
+									//issue a texture barrier to ensure previous writes are visible
+									insert_texture_barrier();
+									break;
+								}
+							}
+						}
+
+						return texptr->get_view();
+					}
+				}
+
+				if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
+				{
+					if (test_framebuffer(texaddr))
+					{
+						if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
+							LOG_ERROR(RSX, "Texture resides in depth buffer memory, but requested type is not 2D (%d)", (u32)extended_dimension);
+
+						if (texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
 						{
 							if (g_cfg.video.strict_rendering_mode)
 							{
-								LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
+								LOG_WARNING(RSX, "Attempting to sample a currently bound depth surface @ 0x%x", texaddr);
 								return create_temporary_subresource_view(cmd, texptr, format, 0, 0, texptr->width(), texptr->height());
 							}
 							else
 							{
 								//issue a texture barrier to ensure previous writes are visible
 								insert_texture_barrier();
-								break;
 							}
 						}
+
+						return texptr->get_view();
 					}
-
-					return texptr->get_view();
-				}
-
-				if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
-				{
-					if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
-						LOG_ERROR(RSX, "Texture resides in depth buffer memory, but requested type is not 2D (%d)", (u32)extended_dimension);
-
-					if (texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
-					{
-						if (g_cfg.video.strict_rendering_mode)
-						{
-							LOG_WARNING(RSX, "Attempting to sample a currently bound depth surface @ 0x%x", texaddr);
-							return create_temporary_subresource_view(cmd, texptr, format, 0, 0, texptr->width(), texptr->height());
-						}
-						else
-						{
-							//issue a texture barrier to ensure previous writes are visible
-							insert_texture_barrier();
-						}
-					}
-
-					return texptr->get_view();
 				}
 			}
 
@@ -810,7 +831,7 @@ namespace rsx
 				const u32 internal_width = (const u32)(tex_width * internal_scale);
 
 				const auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, internal_width, tex_height, tex_pitch, true);
-				if (rsc.surface)
+				if (rsc.surface && test_framebuffer(texaddr))
 				{
 					//TODO: Check that this region is not cpu-dirty before doing a copy
 					if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
@@ -1247,6 +1268,37 @@ namespace rsx
 		virtual const u32 get_texture_memory_in_use() const
 		{
 			return m_texture_memory_in_use;
+		}
+
+		void tag_framebuffer(u32 texaddr)
+		{
+			if (!g_cfg.video.strict_rendering_mode)
+				return;
+
+			switch (get_memory_protection(texaddr))
+			{
+			case utils::protection::no:
+				return;
+			case utils::protection::ro:
+				LOG_ERROR(RSX, "Framebuffer memory occupied by regular texture!");
+				return;
+			}
+
+			vm::ps3::write32(texaddr, texaddr);
+		}
+
+		bool test_framebuffer(u32 texaddr)
+		{
+			if (!g_cfg.video.strict_rendering_mode)
+				return true;
+
+			if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
+			{
+				if (get_memory_protection(texaddr) == utils::protection::no)
+					return true;
+			}
+
+			return vm::ps3::read32(texaddr) == texaddr;
 		}
 	};
 }
