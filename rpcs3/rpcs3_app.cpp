@@ -249,6 +249,24 @@ void rpcs3_app::InitializeCallbacks()
 		return std::make_unique<trophy_notification_helper>(gameWindow);
 	};
 
+	callbacks.register_trophy_commid_to_ui = [=](const std::string& name)
+	{
+		// This callback writes a mapping between the trophy folder and the game itself.  This is used by the trophy manager.
+		YAML::Node trophy_map = YAML::Load(fs::file{ fs::get_config_dir() + "/trophy_mapping.yml", fs::read + fs::create }.to_string());
+
+		if (!trophy_map.IsMap())
+		{
+			trophy_map.reset();
+		}
+		if (!trophy_map[name])
+		{
+			trophy_map[name] = Emu.GetTitle();
+			YAML::Emitter out;
+			out << trophy_map;
+			fs::file(fs::get_config_dir() + "/trophy_mapping.yml", fs::rewrite).write(out.c_str(), out.size());
+		}
+	};
+
 	callbacks.on_run = [=]() { OnEmulatorRun(); };
 	callbacks.on_pause = [=]() { OnEmulatorPause(); };
 	callbacks.on_resume = [=]() { OnEmulatorResume(); };
