@@ -706,7 +706,6 @@ namespace rsx
 				if (invalid_command_interrupt_raised)
 				{
 					//Skip the rest of this command
-					internal_get = put;
 					break;
 				}
 			}

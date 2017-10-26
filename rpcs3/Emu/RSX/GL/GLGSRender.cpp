@@ -1286,6 +1286,12 @@ bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 	return m_gl_texture_cache.blit(src, dst, interpolate, m_rtts);
 }
 
+void GLGSRender::notify_tile_unbound(u32 tile)
+{
+	u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
+	m_rtts.invalidate_surface_address(addr, false);
+}
+
 void GLGSRender::check_zcull_status(bool framebuffer_swap, bool force_read)
 {
 	if (g_cfg.video.disable_zcull_queries)
