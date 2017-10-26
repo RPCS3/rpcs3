@@ -162,7 +162,7 @@ void xinput_pad_handler::TestVibration(const std::string& padId, u32 largeMotor,
 	(*xinputSetState)(device_number, &vibrate);
 }
 
-void xinput_pad_handler::TranslateButtonPress(u32 keyCode, bool& pressed, u16& val, bool ignore_threshold)
+void xinput_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold)
 {
 	// Update the pad button values based on their type and thresholds.
 	// With this you can use axis or triggers as buttons or vice versa

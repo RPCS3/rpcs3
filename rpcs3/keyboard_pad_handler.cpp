@@ -56,6 +56,8 @@ keyboard_pad_handler::keyboard_pad_handler() : QObject()
 
 void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 {
+	value = Clamp0To255(value);
+
 	for (auto pad : bindings)
 	{
 		for (Button& button : pad->m_buttons)
@@ -63,13 +65,10 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			if (button.m_keyCode != code)
 				continue;
 
-			if (value >= 256) { value = 255; }
-
 			//Todo: Is this flush necessary once games hit decent speeds?
 			if (button.m_pressed && !pressed)
 			{
 				button.m_flush = true;
-
 			}
 			else
 			{
@@ -105,7 +104,6 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 		}
 	}
 }
-
 
 bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 {
@@ -153,36 +151,29 @@ void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
 	{
 		case Qt::Key_L:
 			if (!(event->modifiers() == Qt::AltModifier)) { Key(event->key(), 1); }
-			event->ignore();
 			break;
 		case Qt::Key_Return:
 			if (!(event->modifiers() == Qt::AltModifier)) { Key(event->key(), 1); }
-			event->ignore();
 			break;
 		case Qt::Key_Escape:
-			event->ignore();
 			break;
 		case Qt::Key_P:
 			if (!(event->modifiers() == Qt::ControlModifier)) { Key(event->key(), 1); }
-			event->ignore();
 			break;
 		case Qt::Key_S:
 			if (!(event->modifiers() == Qt::ControlModifier)) { Key(event->key(), 1); }
-			event->ignore();
 			break;
 		case Qt::Key_R:
 			if (!(event->modifiers() == Qt::ControlModifier)) { Key(event->key(), 1); }
-			event->ignore();
 			break;
 		case Qt::Key_E:
 			if (!(event->modifiers() == Qt::ControlModifier)) { Key(event->key(), 1); }
-			event->ignore();
 			break;
 		default:
 			Key(event->key(), 1);
-			event->ignore();
 			break;
 	}
+	event->ignore();
 }
 
 void keyboard_pad_handler::keyReleaseEvent(QKeyEvent* event)

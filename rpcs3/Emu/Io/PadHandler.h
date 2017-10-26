@@ -332,7 +332,15 @@ protected:
 	// Search an unordered map for a string value and return found keycode
 	int FindKeyCode(std::unordered_map<u32, std::string> map, const std::string& name)
 	{
-		for (std::unordered_map<u32, std::string>::const_iterator it = map.begin(); it != map.end(); ++it)
+		for (auto it = map.begin(); it != map.end(); ++it)
+		{
+			if (it->second == name) return it->first;
+		}
+		return -1;
+	};
+	int FindKeyCode(std::unordered_map<u64, std::string> map, const std::string& name)
+	{
+		for (auto it = map.begin(); it != map.end(); ++it)
 		{
 			if (it->second == name) return it->first;
 		}
@@ -357,7 +365,7 @@ protected:
 	};
 
 	// Get new scaled value between 0 and 255 based on its minimum and maximum
-	u16 ScaleStickInput(s32 raw_value, int threshold, int minimum, int maximum)
+	u16 ScaleStickInput(s32 raw_value, int minimum, int maximum)
 	{
 		// value based on max range converted to [0, 1]
 		float val = float(Clamp(raw_value, minimum, maximum) - minimum) / float(abs(maximum) + abs(minimum));
@@ -390,7 +398,7 @@ protected:
 	{
 		if (ignore_threshold)
 		{
-			return ScaleStickInput(raw_value, threshold, 0, THUMB_MAX);
+			return ScaleStickInput(raw_value, 0, THUMB_MAX);
 		}
 		else
 		{
@@ -434,7 +442,7 @@ protected:
 	};
 
 	// get clamped value between min and max
-	u16 Clamp(f32 input, s16 min, s16 max)
+	u16 Clamp(f32 input, s32 min, s32 max)
 	{
 		if (input > max)
 			return max;
@@ -455,6 +463,7 @@ protected:
 		return static_cast<u16>(Clamp(input, 0, 1023));
 	}
 
+	// input has to be [-1,1]. result will be [0,255]
 	u16 ConvertAxis(float value)
 	{
 		return static_cast<u16>((value + 1.0)*(255.0 / 2.0));
@@ -485,12 +494,12 @@ protected:
 	}
 
 public:
-	s32 THUMB_MIN;
-	s32 THUMB_MAX;
-	s32 TRIGGER_MIN;
-	s32 TRIGGER_MAX;
-	s32 VIBRATION_MIN;
-	s32 VIBRATION_MAX;
+	s32 THUMB_MIN = 0;
+	s32 THUMB_MAX = 255;
+	s32 TRIGGER_MIN = 0;
+	s32 TRIGGER_MAX = 255;
+	s32 VIBRATION_MIN = 0;
+	s32 VIBRATION_MAX = 255;
 
 	virtual bool Init() { return true; };
 	virtual ~PadHandlerBase() = default;
@@ -511,5 +520,5 @@ public:
 	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) = 0;
 
 private:
-	virtual void TranslateButtonPress(u32 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) {};
+	virtual void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) {};
 };

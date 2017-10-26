@@ -264,7 +264,7 @@ void evdev_joystick_handler::TestVibration(const std::string& padId, u32 largeMo
 {
 }
 
-void evdev_joystick_handler::TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold)
+void evdev_joystick_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& value, bool ignore_threshold)
 {
 	// Update the pad button values based on their type and thresholds.
 	// With this you can use axis or triggers as buttons or vice versa
@@ -313,7 +313,7 @@ int evdev_joystick_handler::GetButtonInfo(const input_event& evt, libevdev* dev,
 	}
 	case EV_ABS:
 	{
-		value = ScaleStickInput(val, 0, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code));
+		value = ScaleStickInput(val, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code));
 		is_negative = value <= 127;
 
 		if (is_negative)
@@ -431,11 +431,11 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 				auto find_key = [=](const std::string& name)
 				{
 					int key = FindKeyCode(button_list, name);
-					if (key < 1)
+					if (key < 0)
 						key = FindKeyCode(axis_list, name);
-					if (key < 1)
+					if (key < 0)
 						key = FindKeyCode(rev_axis_list, name);
-					if (key < 1)
+					if (key < 0)
 						key = std::stoi(name);
 					return key;
 				};

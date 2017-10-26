@@ -245,7 +245,7 @@ public:
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
 
 private:
-	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
+	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 	bool update_device(EvdevDevice device, bool use_cell = true);
 	void update_devs(bool use_cell = true);
 	int add_device(const std::string& device, std::shared_ptr<Pad> pad = nullptr);

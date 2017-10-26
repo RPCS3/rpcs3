@@ -22,10 +22,10 @@ class ds4_pad_handler final : public PadHandlerBase
 		Up,
 		Down,
 		R1,
-		R2But,
+		//R2But,
 		R3,
 		L1,
-		L2But,
+		//L2But,
 		L3,
 		Share,
 		Options,
@@ -153,7 +153,7 @@ private:
 	std::vector<std::pair<std::shared_ptr<DS4Device>, std::shared_ptr<Pad>>> bindings;
 
 private:
-	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
+	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
 	void ProcessDataToPad(const std::shared_ptr<DS4Device>& ds4Device, const std::shared_ptr<Pad>& pad);
 	// Copies data into padData if status is NewData, otherwise buffer is untouched
 	DS4DataStatus GetRawData(const std::shared_ptr<DS4Device>& ds4Device);

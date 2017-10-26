@@ -7,8 +7,6 @@
 #include <Windows.h>
 #include <Xinput.h>
 
-#include <QString>
-
 namespace XINPUT_INFO
 {
 	const DWORD THREAD_TIMEOUT = 1000;
@@ -110,7 +108,7 @@ private:
 
 private:
 	std::array<u16, XInputKeyCodes::KEYCODECOUNT> GetButtonValues(const XINPUT_STATE& state);
-	void TranslateButtonPress(u32 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
+	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
 
 	bool is_init;
 	HMODULE library;

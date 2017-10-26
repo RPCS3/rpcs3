@@ -19,49 +19,6 @@
 #endif
 #include "ds4_pad_handler.h"
 
-enum button_ids
-{
-	id_pad_begin, // begin
-
-	id_pad_lstick_left,
-	id_pad_lstick_down,
-	id_pad_lstick_right,
-	id_pad_lstick_up,
-
-	id_pad_left,
-	id_pad_down,
-	id_pad_right,
-	id_pad_up,
-
-	id_pad_l1,
-	id_pad_l2,
-	id_pad_l3,
-
-	id_pad_start,
-	id_pad_select,
-	id_pad_ps,
-
-	id_pad_r1,
-	id_pad_r2,
-	id_pad_r3,
-
-	id_pad_square,
-	id_pad_cross,
-	id_pad_circle,
-	id_pad_triangle,
-
-	id_pad_rstick_left,
-	id_pad_rstick_down,
-	id_pad_rstick_right,
-	id_pad_rstick_up,
-
-	id_pad_end, // end
-
-	id_reset_parameters,
-	id_ok,
-	id_cancel
-};
-
 namespace Ui
 {
 	class pad_settings_dialog;
@@ -70,6 +27,49 @@ namespace Ui
 class pad_settings_dialog : public QDialog
 {
 	Q_OBJECT
+
+	enum button_ids
+	{
+		id_pad_begin, // begin
+
+		id_pad_lstick_left,
+		id_pad_lstick_down,
+		id_pad_lstick_right,
+		id_pad_lstick_up,
+
+		id_pad_left,
+		id_pad_down,
+		id_pad_right,
+		id_pad_up,
+
+		id_pad_l1,
+		id_pad_l2,
+		id_pad_l3,
+
+		id_pad_start,
+		id_pad_select,
+		id_pad_ps,
+
+		id_pad_r1,
+		id_pad_r2,
+		id_pad_r3,
+
+		id_pad_square,
+		id_pad_cross,
+		id_pad_circle,
+		id_pad_triangle,
+
+		id_pad_rstick_left,
+		id_pad_rstick_down,
+		id_pad_rstick_right,
+		id_pad_rstick_up,
+
+		id_pad_end, // end
+
+		id_reset_parameters,
+		id_ok,
+		id_cancel
+	};
 
 	enum handler_type
 	{
@@ -95,7 +95,7 @@ private:
 
 	// Button Mapping
 	QButtonGroup* m_padButtons;
-	u32 m_button_id;
+	u32 m_button_id = id_pad_begin;
 	std::map<int /*id*/, PAD_BUTTON /*info*/> m_cfg_entries;
 
 	// Backup for standard button palette

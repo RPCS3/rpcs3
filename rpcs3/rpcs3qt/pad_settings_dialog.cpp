@@ -238,6 +238,11 @@ void pad_settings_dialog::ReactivateButtons()
 	m_timer.stop();
 	m_seconds = MAX_SECONDS;
 
+	if (m_button_id == id_pad_begin)
+	{
+		return;
+	}
+
 	if (m_padButtons->button(m_button_id))
 	{
 		m_padButtons->button(m_button_id)->setPalette(m_palette);
@@ -262,7 +267,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 
 	if (m_button_id <= id_pad_begin || m_button_id >= id_pad_end)
 	{
-		LOG_ERROR(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler_type), m_button_id);
+		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler_type), m_button_id);
 	}
 	else
 	{
