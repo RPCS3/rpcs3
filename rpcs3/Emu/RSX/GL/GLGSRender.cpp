@@ -947,15 +947,17 @@ bool GLGSRender::check_program_state()
 		if (!is_depth)
 			surface = m_rtts.get_texture_from_render_target_if_applicable(texaddr);
 		else
-		{
 			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
 
-			if (!surface && m_gl_texture_cache.is_depth_texture(texaddr, (u32)get_texture_size(tex)))
-				return std::make_tuple(true, 0);
-		}
-
-		if (!surface)
+		const bool dirty_framebuffer = (surface != nullptr && !m_gl_texture_cache.test_framebuffer(texaddr));
+		if (dirty_framebuffer || !surface)
 		{
+			if (is_depth && m_gl_texture_cache.is_depth_texture(texaddr, (u32)get_texture_size(tex)))
+				return std::make_tuple(true, 0);
+
+			if (dirty_framebuffer)
+				return std::make_tuple(false, 0);
+
 			auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, 0, 0, tex.pitch());
 			if (!rsc.surface || rsc.is_depth_surface != is_depth)
 				return std::make_tuple(false, 0);

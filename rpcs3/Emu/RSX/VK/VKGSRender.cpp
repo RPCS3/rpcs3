@@ -1819,14 +1819,23 @@ bool VKGSRender::check_program_status()
 		if (!is_depth)
 			surface = m_rtts.get_texture_from_render_target_if_applicable(texaddr);
 		else
-		{
 			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
 
-			if (!surface && m_texture_cache.is_depth_texture(texaddr, (u32)get_texture_size(tex)))
+		const bool dirty_framebuffer = (surface != nullptr && !m_texture_cache.test_framebuffer(texaddr));
+		if (dirty_framebuffer || !surface)
+		{
+			if (is_depth && m_texture_cache.is_depth_texture(texaddr, (u32)get_texture_size(tex)))
 				return std::make_tuple(true, 0);
-		}
 
-		if (!surface) return std::make_tuple(false, 0);
+			if (dirty_framebuffer)
+				return std::make_tuple(false, 0);
+
+			auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, 0, 0, tex.pitch());
+			if (!rsc.surface || rsc.is_depth_surface != is_depth)
+				return std::make_tuple(false, 0);
+
+			surface = rsc.surface;
+		}
 
 		return std::make_tuple(true, surface->native_pitch);
 	};
@@ -2284,6 +2293,8 @@ void VKGSRender::prepare_rtts()
 				//Ignore this buffer (usually set to 64)
 				m_surface_info[index].pitch = 0;
 		}
+
+		m_texture_cache.tag_framebuffer(surface_addresses[index]);
 	}
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
@@ -2297,6 +2308,8 @@ void VKGSRender::prepare_rtts()
 
 		if (m_depth_surface_info.pitch <= 64 && clip_width > m_depth_surface_info.pitch)
 			m_depth_surface_info.pitch = 0;
+
+		m_texture_cache.tag_framebuffer(zeta_address);
 	}
 
 	m_draw_buffers_count = static_cast<u32>(draw_buffers.size());

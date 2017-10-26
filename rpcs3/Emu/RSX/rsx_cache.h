@@ -239,7 +239,7 @@ namespace rsx
 			return std::make_pair(min, max);
 		}
 
-		utils::protection get_protection()
+		utils::protection get_protection() const
 		{
 			return protection;
 		}
