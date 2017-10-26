@@ -11,6 +11,7 @@
 
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
+#include "trophy_manager_dialog.h"
 #include "kernel_explorer.h"
 #include "game_list_frame.h"
 #include "debugger_frame.h"
@@ -1244,6 +1245,12 @@ void main_window::CreateConnects()
 	{
 		save_manager_dialog* sdid = new save_manager_dialog();
 		sdid->show();
+	});
+
+	connect(ui->actionManage_Trophy_Data, &QAction::triggered, [=]
+	{
+		trophy_manager_dialog* trop_manager = new trophy_manager_dialog();
+		trop_manager->show();
 	});
 
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=]

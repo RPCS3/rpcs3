@@ -195,6 +195,9 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 		name = fmt::format("%s_%02d", commId->data, commId->num);
 	}
 
+	// Let the UI know about this commid for the trophy manager.
+	Emu.GetCallbacks().register_trophy_commid_to_ui(name);
+
 	// open trophy pack file
 	fs::file stream(vfs::get("/app_home/../TROPDIR/" + name + "/TROPHY.TRP"));
 
