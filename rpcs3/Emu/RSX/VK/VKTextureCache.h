@@ -20,6 +20,7 @@ namespace vk
 		//DMA relevant data
 		VkFence dma_fence = VK_NULL_HANDLE;
 		bool synchronized = false;
+		bool flushed = false;
 		u64 sync_timestamp = 0;
 		u64 last_use_timestamp = 0;
 		vk::render_device* m_device = nullptr;
@@ -62,6 +63,7 @@ namespace vk
 			//Even if we are managing the same vram section, we cannot guarantee contents are static
 			//The create method is only invoked when a new mangaged session is required
 			synchronized = false;
+			flushed = false;
 			sync_timestamp = 0ull;
 			last_use_timestamp = get_system_time();
 		}
@@ -179,6 +181,9 @@ namespace vk
 				CHECK_RESULT(vkWaitForFences(*m_device, 1, &dma_fence, VK_TRUE, UINT64_MAX));
 				CHECK_RESULT(vkResetCommandBuffer(cmd, 0));
 				CHECK_RESULT(vkResetFences(*m_device, 1, &dma_fence));
+
+				if (cmd.access_hint != vk::command_buffer::access_type_hint::all)
+					cmd.begin();
 			}
 
 			synchronized = true;
@@ -204,6 +209,8 @@ namespace vk
 
 		bool flush(vk::render_device& dev, vk::command_buffer& cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
 		{
+			if (flushed) return true;
+
 			if (m_device == nullptr)
 				m_device = &dev;
 
@@ -217,7 +224,7 @@ namespace vk
 				result = false;
 			}
 
-			protect(utils::protection::rw);
+			flushed = true;
 
 			void* pixels_src = dma_buffer->map(0, cpu_address_range);
 			void* pixels_dst = vm::base(cpu_address_base);

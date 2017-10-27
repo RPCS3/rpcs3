@@ -567,6 +567,7 @@ VKGSRender::VKGSRender() : GSRender()
 	//Create secondary command_buffer for parallel operations
 	m_secondary_command_buffer_pool.create((*m_device));
 	m_secondary_command_buffer.create(m_secondary_command_buffer_pool);
+	m_secondary_command_buffer.access_hint = vk::command_buffer::access_type_hint::all;
 	
 	//Precalculated stuff
 	m_render_passes = get_precomputed_render_passes(*m_device, m_optimal_tiling_supported_formats);
