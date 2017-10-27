@@ -183,6 +183,15 @@ namespace rsx
 		constexpr u32 get_block_size() const { return 0x1000000; }
 		inline u32 get_block_address(u32 address) const { return (address & ~0xFFFFFF); }
 
+	public:
+		//Struct to hold data on sections to be paged back onto cpu memory
+		struct thrashed_set
+		{
+			bool violation_handled = false;
+			std::vector<section_storage_type*> affected_sections; //Always laid out with flushable sections first then other affected sections last
+			int num_flushable = 0;
+		};
+
 	private:
 		//Internal implementation methods and helpers
 
@@ -261,12 +270,8 @@ namespace rsx
 		}
 
 		//Invalidate range base implementation
-		//Returns a pair:
-		//1. A boolean - true if the memory range was truly locked and has been dealt with, false otherwise
-		//2. A vector of all sections that should be flushed if the caller did not set the allow_flush method. That way the caller can make preparations on how to deal with sections that require flushing
-		//   Note that the sections will be unlocked regardless of the allow_flush flag
 		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl_base(u32 address, u32 range, bool is_writing, bool discard_only, bool rebuild_cache, bool allow_flush, Args&&... extras)
+		thrashed_set invalidate_range_impl_base(u32 address, u32 range, bool is_writing, bool discard_only, bool rebuild_cache, bool allow_flush, Args&&... extras)
 		{
 			auto trampled_set = get_intersecting_set(address, range, allow_flush);
 
@@ -310,6 +315,9 @@ namespace rsx
 					obj.second->remove_one();
 				}
 
+				thrashed_set result = {};
+				result.violation_handled = true;
+
 				if (allow_flush)
 				{
 					// Flush here before 'reprotecting' since flushing will write the whole span
@@ -323,6 +331,11 @@ namespace rsx
 						}
 					}
 				}
+				else if (sections_to_flush.size() > 0)
+				{
+					result.num_flushable = static_cast<int>(sections_to_flush.size());
+					result.affected_sections = std::move(sections_to_flush);
+				}
 
 				for (auto It = to_reprotect; It != trampled_set.end(); It++)
 				{
@@ -332,19 +345,22 @@ namespace rsx
 					obj.first->discard();
 					obj.first->protect(old_prot);
 					obj.first->set_dirty(false);
+
+					if (result.affected_sections.size() > 0)
+					{
+						//Append to affected set. Not counted as part of num_flushable
+						result.affected_sections.push_back(obj.first);
+					}
 				}
 
-				if (discard_only || allow_flush)
-					return{ true, {} };
-
-				return std::make_pair(true, sections_to_flush);
+				return result;
 			}
 
-			return{ false, {} };
+			return {};
 		}
 
 		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl(u32 address, u32 range, bool is_writing, bool discard, bool allow_flush, Args&&... extras)
+		thrashed_set invalidate_range_impl(u32 address, u32 range, bool is_writing, bool discard, bool allow_flush, Args&&... extras)
 		{
 			return invalidate_range_impl_base(address, range, is_writing, discard, true, allow_flush, std::forward<Args>(extras)...);
 		}
@@ -585,13 +601,13 @@ namespace rsx
 		}
 
 		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> invalidate_address(u32 address, bool is_writing, bool allow_flush, Args&&... extras)
+		thrashed_set invalidate_address(u32 address, bool is_writing, bool allow_flush, Args&&... extras)
 		{
 			return invalidate_range(address, 4096 - (address & 4095), is_writing, false, allow_flush, std::forward<Args>(extras)...);
 		}
 
 		template <typename ...Args>
-		std::pair<bool, std::vector<section_storage_type*>> invalidate_range(u32 address, u32 range, bool is_writing, bool discard, bool allow_flush, Args&&... extras)
+		thrashed_set invalidate_range(u32 address, u32 range, bool is_writing, bool discard, bool allow_flush, Args&&... extras)
 		{
 			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
 
@@ -601,7 +617,7 @@ namespace rsx
 				//Doesnt fall in the read_only textures range; check render targets
 				if (trampled_range.second < no_access_range.first ||
 					trampled_range.first > no_access_range.second)
-					return{ false, {} };
+					return {};
 			}
 
 			writer_lock lock(m_cache_mutex);
@@ -609,16 +625,32 @@ namespace rsx
 		}
 
 		template <typename ...Args>
-		bool flush_all(std::vector<section_storage_type*>& sections_to_flush, Args&&... extras)
+		bool flush_all(thrashed_set& data, Args&&... extras)
 		{
-			reader_lock lock(m_cache_mutex);
-			for (const auto &tex: sections_to_flush)
+			writer_lock lock(m_cache_mutex);
+
+			std::vector<utils::protection> old_protections;
+			for (int n = data.num_flushable; n < data.affected_sections.size(); ++n)
 			{
-				if (!tex->flush(std::forward<Args>(extras)...))
+				old_protections.push_back(data.affected_sections[n]->get_protection());
+				data.affected_sections[n]->unprotect();
+			}
+
+			for (int n = 0, i = 0; n < data.affected_sections.size(); ++n)
+			{
+				if (n < data.num_flushable)
 				{
-					//Missed address, note this
-					//TODO: Lower severity when successful to keep the cache from overworking
-					record_cache_miss(*tex);
+					if (!data.affected_sections[n]->flush(std::forward<Args>(extras)...))
+					{
+						//Missed address, note this
+						//TODO: Lower severity when successful to keep the cache from overworking
+						record_cache_miss(*data.affected_sections[n]);
+					}
+				}
+				else
+				{
+					//Restore protection on the remaining sections
+					data.affected_sections[n]->protect(old_protections[i++]);
 				}
 			}
 
