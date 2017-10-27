@@ -386,6 +386,8 @@ namespace gl
 
 		bool flush()
 		{
+			if (flushed) return true; //Already written, ignore
+
 			if (!copied)
 			{
 				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", cpu_address_base);
@@ -399,7 +401,6 @@ namespace gl
 				}
 			}
 
-			protect(utils::protection::rw);
 			m_fence.wait_for_signal();
 			flushed = true;
 

@@ -273,13 +273,14 @@ namespace rsx
 			if (trampled_set.size() > 0)
 			{
 				// Rebuild the cache by only destroying ranges that need to be destroyed to unlock this page
-				const auto to_reprotect = std::remove_if(trampled_set.begin(), trampled_set.end(),
+				const auto to_reprotect = !rebuild_cache? trampled_set.end() :
+				std::remove_if(trampled_set.begin(), trampled_set.end(),
 				[&](const std::pair<section_storage_type*, ranged_storage*>& obj)
 				{
 					if (!is_writing && obj.first->get_protection() != utils::protection::no)
 						return true;
 
-					if (!rebuild_cache && !obj.first->is_flushable())
+					if (!obj.first->is_flushable())
 						return false;
 
 					const std::pair<u32, u32> null_check = std::make_pair(UINT32_MAX, 0);
@@ -309,6 +310,20 @@ namespace rsx
 					obj.second->remove_one();
 				}
 
+				if (allow_flush)
+				{
+					// Flush here before 'reprotecting' since flushing will write the whole span
+					for (const auto &tex : sections_to_flush)
+					{
+						if (!tex->flush(std::forward<Args>(extras)...))
+						{
+							//Missed address, note this
+							//TODO: Lower severity when successful to keep the cache from overworking
+							record_cache_miss(*tex);
+						}
+					}
+				}
+
 				for (auto It = to_reprotect; It != trampled_set.end(); It++)
 				{
 					auto obj = *It;
@@ -319,25 +334,8 @@ namespace rsx
 					obj.first->set_dirty(false);
 				}
 
-				if (discard_only)
+				if (discard_only || allow_flush)
 					return{ true, {} };
-
-				//trampled_set.erase(to_reprotect, trampled_set.end());
-
-				if (allow_flush)
-				{
-					for (const auto &tex : sections_to_flush)
-					{
-						if (!tex->flush(std::forward<Args>(extras)...))
-						{
-							//Missed address, note this
-							//TODO: Lower severity when successful to keep the cache from overworking
-							record_cache_miss(*tex);
-						}
-					}
-
-					return{ true, {} };
-				}
 
 				return std::make_pair(true, sections_to_flush);
 			}
@@ -348,7 +346,7 @@ namespace rsx
 		template <typename ...Args>
 		std::pair<bool, std::vector<section_storage_type*>> invalidate_range_impl(u32 address, u32 range, bool is_writing, bool discard, bool allow_flush, Args&&... extras)
 		{
-			return invalidate_range_impl_base(address, range, is_writing, discard, false, allow_flush, std::forward<Args>(extras)...);
+			return invalidate_range_impl_base(address, range, is_writing, discard, true, allow_flush, std::forward<Args>(extras)...);
 		}
 
 		bool is_hw_blit_engine_compatible(const u32 format) const
@@ -930,7 +928,8 @@ namespace rsx
 			auto subresources_layout = get_subresources_layout(tex);
 			auto remap_vector = tex.decoded_remap();
 
-			invalidate_range_impl(texaddr, tex_size, false, false, true, std::forward<Args>(extras)...);
+			//Invalidate with writing=false, discard=false, rebuild=false, native_flush=true
+			invalidate_range_impl_base(texaddr, tex_size, false, false, false, true, std::forward<Args>(extras)...);
 
 			m_texture_memory_in_use += (tex_pitch * tex_height);
 			return upload_image_from_cpu(cmd, texaddr, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,

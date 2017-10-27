@@ -1014,6 +1014,14 @@ namespace vk
 		VkCommandBuffer commands = nullptr;
 
 	public:
+		enum access_type_hint
+		{
+			flush_only, //Only to be submitted/opened/closed via command flush
+			all         //Auxilliary, can be sumitted/opened/closed at any time
+		}
+		access_hint = flush_only;
+
+	public:
 		command_buffer() {}
 		~command_buffer() {}
 
