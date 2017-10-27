@@ -268,7 +268,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	const size_t kTargetBufferLength = 31;
 	char target[kTargetBufferLength + 1];
 	target[kTargetBufferLength] = 0;
-	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", /*rpcs3::config.system.language.value()*/0));
+	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", static_cast<s32>(g_cfg.sys.language)));
 
 	if (trp.ContainsEntry(target))
 	{
@@ -290,7 +290,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	for (s32 i = 0; i <= 18; i++)
 	{
 		strcpy_trunc(target, fmt::format("TROP_%02d.SFM", i));
-		if (i != /*rpcs3::config.system.language.value()*/0)
+		if (i != g_cfg.sys.language)
 		{
 			trp.RemoveEntry(target);
 		}

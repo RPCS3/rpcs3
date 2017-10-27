@@ -287,7 +287,7 @@ void save_manager_dialog::OnEntriesRemove()
 //Pop-up a small context-menu, being a replacement for save_data_manage_dialog
 void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 {
-	bool selectedItems = m_list->selectionModel()->selectedRows().size() > 0;
+	bool selectedItems = m_list->selectionModel()->selectedRows().size() > 1;
 
 	QPoint globalPos = m_list->mapToGlobal(pos);
 	QMenu* menu = new QMenu();
