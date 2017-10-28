@@ -2354,7 +2354,7 @@ void ppu_acontext::RLDIC(ppu_opcode_t op)
 	else if (mb <= 63 - sh)
 	{
 		// CLRLSLDI
-		gpr[op.ra] = (gpr[op.rs] & spec_gpr::fixed(ppu_rotate_mask(0, sh + mb))) << spec_gpr::fixed(sh);
+		//gpr[op.ra] = (gpr[op.rs] & spec_gpr::fixed(ppu_rotate_mask(0, sh + mb))) << spec_gpr::fixed(sh);
 		return;
 	}
 
