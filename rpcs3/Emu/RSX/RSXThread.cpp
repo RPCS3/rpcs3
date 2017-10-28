@@ -477,10 +477,10 @@ namespace rsx
 			//Execute backend-local tasks first
 			do_local_task();
 
-			const u32 get = ctrl->get;
+			ctrl->get.store(internal_get.load());
 			const u32 put = ctrl->put;
 
-			if (put == get || !Emu.IsRunning())
+			if (put == internal_get || !Emu.IsRunning())
 			{
 				if (has_deferred_call)
 					flush_command_queue();
@@ -491,16 +491,16 @@ namespace rsx
 
 			//Validate put and get registers
 			//TODO: Who should handle graphics exceptions??
-			const u32 get_address = RSXIOMem.RealAddr(get);
+			const u32 get_address = RSXIOMem.RealAddr(internal_get);
 			
 			if (!get_address)
 			{
-				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", get, put);
+				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", internal_get.load(), put);
 
 				if (mem_faults_count >= 3)
 				{
 					LOG_ERROR(RSX, "Application has failed to recover, discarding FIFO queue");
-					ctrl->get = put;
+					internal_get = put;
 				}
 				else
 				{
@@ -512,29 +512,29 @@ namespace rsx
 				continue;
 			}
 
-			const u32 cmd = ReadIO32(get);
+			const u32 cmd = ReadIO32(internal_get);
 			const u32 count = (cmd >> 18) & 0x7ff;
 
 			if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 			{
 				u32 offs = cmd & 0x1ffffffc;
 				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				ctrl->get = offs;
+				internal_get = offs;
 				continue;
 			}
 			if ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
 			{
 				u32 offs = cmd & 0xfffffffc;
 				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				ctrl->get = offs;
+				internal_get = offs;
 				continue;
 			}
 			if ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
 			{
-				m_call_stack.push(get + 4);
+				m_call_stack.push(internal_get + 4);
 				u32 offs = cmd & ~3;
 				//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-				ctrl->get = offs;
+				internal_get = offs;
 				continue;
 			}
 			if (cmd == RSX_METHOD_RETURN_CMD)
@@ -542,26 +542,26 @@ namespace rsx
 				u32 get = m_call_stack.top();
 				m_call_stack.pop();
 				//LOG_WARNING(RSX, "rsx return(0x%x)", get);
-				ctrl->get = get;
+				internal_get = get;
 				continue;
 			}
 			if (cmd == 0) //nop
 			{
-				ctrl->get = get + 4;
+				internal_get += 4;
 				continue;
 			}
 
 			//Validate the args ptr if the command attempts to read from it
-			const u32 args_address = RSXIOMem.RealAddr(get + 4);
+			const u32 args_address = RSXIOMem.RealAddr(internal_get + 4);
 
 			if (!args_address && count)
 			{
-				LOG_ERROR(RSX, "Invalid FIFO queue args ptr found, get=0x%X, cmd=0x%X, count=%d", get, cmd, count);
+				LOG_ERROR(RSX, "Invalid FIFO queue args ptr found, get=0x%X, cmd=0x%X, count=%d", internal_get.load(), cmd, count);
 
 				if (mem_faults_count >= 3)
 				{
 					LOG_ERROR(RSX, "Application has failed to recover, discarding FIFO queue");
-					ctrl->get = put;
+					internal_get = put;
 				}
 				else
 				{
@@ -714,11 +714,11 @@ namespace rsx
 			{
 				//This is almost guaranteed to be heap corruption at this point
 				//Ignore the rest of the chain
-				ctrl->get = put;
+				internal_get = put;
 				continue;
 			}
 
-			ctrl->get = get + (count + 1) * 4;
+			internal_get += (count + 1) * 4;
 		}
 	}
 

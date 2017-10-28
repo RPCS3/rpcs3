@@ -28,7 +28,7 @@ struct work_item
 	std::mutex guard_mutex;
 
 	u32  address_to_flush = 0;
-	std::vector<gl::cached_texture_section*> sections_to_flush;
+	gl::texture_cache::thrashed_set section_data;
 
 	volatile bool processed = false;
 	volatile bool result = false;
@@ -428,7 +428,7 @@ public:
 	void set_viewport();
 
 	void synchronize_buffers();
-	work_item& post_flush_request(u32 address, std::vector<gl::cached_texture_section*>& sections);
+	work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
 
 	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;
 	
@@ -453,6 +453,7 @@ protected:
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_notify_memory_unmapped(u32 address_base, u32 size) override;
+	void notify_tile_unbound(u32 tile) override;
 
 	virtual std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
 	virtual std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;

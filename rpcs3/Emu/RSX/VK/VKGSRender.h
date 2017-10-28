@@ -316,6 +316,7 @@ protected:
 
 	void do_local_task() override;
 	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;
+	void notify_tile_unbound(u32 tile) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_notify_memory_unmapped(u32 address_base, u32 size) override;

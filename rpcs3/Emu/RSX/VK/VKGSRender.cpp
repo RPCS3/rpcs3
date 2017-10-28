@@ -567,6 +567,7 @@ VKGSRender::VKGSRender() : GSRender()
 	//Create secondary command_buffer for parallel operations
 	m_secondary_command_buffer_pool.create((*m_device));
 	m_secondary_command_buffer.create(m_secondary_command_buffer_pool);
+	m_secondary_command_buffer.access_hint = vk::command_buffer::access_type_hint::all;
 	
 	//Precalculated stuff
 	m_render_passes = get_precomputed_render_passes(*m_device, m_optimal_tiling_supported_formats);
@@ -739,27 +740,32 @@ VKGSRender::~VKGSRender()
 
 bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	std::pair<bool, std::vector<vk::cached_texture_section*>> result;
+	vk::texture_cache::thrashed_set result;
 	{
 		std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
 		result = std::move(m_texture_cache.invalidate_address(address, is_writing, false, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()));
 	}
 
-	if (!result.first)
+	if (!result.violation_handled)
 		return false;
 
-	if (result.second.size() > 0)
+	if (result.num_flushable > 0)
 	{
 		const bool is_rsxthr = std::this_thread::get_id() == rsx_thread;
 		bool has_queue_ref = false;
 
 		u64 sync_timestamp = 0ull;
-		for (const auto& tex : result.second)
+		for (const auto& tex : result.affected_sections)
 			sync_timestamp = std::max(sync_timestamp, tex->get_sync_timestamp());
 
 		if (!is_rsxthr)
 		{
 			vm::temporary_unlock();
+		}
+		else
+		{
+			//Flush primary cb queue to sync pending changes (e.g image transitions!)
+			flush_command_queue();
 		}
 
 		if (sync_timestamp > 0)
@@ -820,7 +826,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			}
 		}
 
-		m_texture_cache.flush_all(result.second, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+		m_texture_cache.flush_all(result, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 
 		if (has_queue_ref)
 		{
@@ -834,8 +840,8 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 void VKGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 {
 	std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
-	if (std::get<0>(m_texture_cache.invalidate_range(address_base, size, true, true, false,
-		*m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue())))
+	if (m_texture_cache.invalidate_range(address_base, size, true, true, false,
+		*m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()).violation_handled)
 	{
 		m_texture_cache.purge_dirty();
 	}
@@ -1814,14 +1820,23 @@ bool VKGSRender::check_program_status()
 		if (!is_depth)
 			surface = m_rtts.get_texture_from_render_target_if_applicable(texaddr);
 		else
-		{
 			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
 
-			if (!surface && m_texture_cache.is_depth_texture(texaddr, (u32)get_texture_size(tex)))
+		const bool dirty_framebuffer = (surface != nullptr && !m_texture_cache.test_framebuffer(texaddr));
+		if (dirty_framebuffer || !surface)
+		{
+			if (is_depth && m_texture_cache.is_depth_texture(texaddr, (u32)get_texture_size(tex)))
 				return std::make_tuple(true, 0);
-		}
 
-		if (!surface) return std::make_tuple(false, 0);
+			if (dirty_framebuffer)
+				return std::make_tuple(false, 0);
+
+			auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, 0, 0, tex.pitch());
+			if (!rsc.surface || rsc.is_depth_surface != is_depth)
+				return std::make_tuple(false, 0);
+
+			surface = rsc.surface;
+		}
 
 		return std::make_tuple(true, surface->native_pitch);
 	};
@@ -2279,6 +2294,8 @@ void VKGSRender::prepare_rtts()
 				//Ignore this buffer (usually set to 64)
 				m_surface_info[index].pitch = 0;
 		}
+
+		m_texture_cache.tag_framebuffer(surface_addresses[index]);
 	}
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
@@ -2292,6 +2309,8 @@ void VKGSRender::prepare_rtts()
 
 		if (m_depth_surface_info.pitch <= 64 && clip_width > m_depth_surface_info.pitch)
 			m_depth_surface_info.pitch = 0;
+
+		m_texture_cache.tag_framebuffer(zeta_address);
 	}
 
 	m_draw_buffers_count = static_cast<u32>(draw_buffers.size());
@@ -2684,4 +2703,10 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 	m_current_command_buffer->begin();
 
 	return result;
+}
+
+void VKGSRender::notify_tile_unbound(u32 tile)
+{
+	u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
+	m_rtts.invalidate_surface_address(addr, false);
 }

@@ -151,6 +151,7 @@ namespace rsx
 
 	public:
 		RsxDmaControl* ctrl = nullptr;
+		atomic_t<u32> internal_get{ 0 };
 
 		Timer timer_sync;
 
@@ -257,6 +258,7 @@ namespace rsx
 		virtual u64 timestamp() const;
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
 		virtual void on_notify_memory_unmapped(u32 /*address_base*/, u32 /*size*/) {}
+		virtual void notify_tile_unbound(u32 tile) {}
 
 		//zcull
 		virtual void notify_zcull_info_changed() {}

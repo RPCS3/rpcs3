@@ -242,6 +242,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 	case 0x001: // FIFO
 		render->ctrl->get = a3;
 		render->ctrl->put = a4;
+		render->internal_get = a3;
 		break;
 
 	case 0x100: // Display mode set
@@ -322,6 +323,12 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		//a5 low bits = ret.format = base | ((base + ((size - 1) / 0x10000)) << 13) | (comp << 26) | (1 << 30);
 
 		auto& tile = render->tiles[a3];
+		
+		// When tile is going to be unbinded, we can use it as a hint that the address will no longer be used as a surface and can be removed/invalidated 
+		// Todo: There may be more checks such as format/size/width can could be done
+		if (tile.binded && a5 == 0)
+			render->notify_tile_unbound(a3);
+
 		tile.location = ((a4 >> 32) & 0xF) - 1;
 		tile.offset = ((((a4 >> 32) & 0xFFFFFFFF) >> 16) * 0x10000);
 		tile.size = ((((a4 & 0x7FFFFFFF) >> 16) + 1) * 0x10000) - tile.offset;

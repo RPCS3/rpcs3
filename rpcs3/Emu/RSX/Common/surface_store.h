@@ -518,6 +518,31 @@ namespace rsx
 		}
 
 		/**
+		 * Invalidates surface that exists at an address
+		 */
+		void invalidate_surface_address(u32 addr, bool depth)
+		{
+			if (!depth)
+			{
+				auto It = m_render_targets_storage.find(addr);
+				if (It != m_render_targets_storage.end())
+				{
+					invalidated_resources.push_back(std::move(It->second));
+					m_render_targets_storage.erase(It);
+				}
+			}
+			else
+			{
+				auto It = m_depth_stencil_storage.find(addr);
+				if (It != m_depth_stencil_storage.end())
+				{
+					invalidated_resources.push_back(std::move(It->second));
+					m_depth_stencil_storage.erase(It);
+				}
+			}
+		}
+
+		/**
 		 * Clipping and fitting lookup funcrions
 		 * surface_overlaps - returns true if surface overlaps a given surface address and returns the relative x and y position of the surface address within the surface
 		 * address_is_bound - returns true if the surface at a given address is actively bound

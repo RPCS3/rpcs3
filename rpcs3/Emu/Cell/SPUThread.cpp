@@ -999,6 +999,7 @@ u32 SPUThread::get_ch_count(u32 ch)
 	case SPU_RdSigNotify2:    return ch_snr2.get_count();
 	case MFC_RdAtomicStat:    return ch_atomic_stat.get_count();
 	case SPU_RdEventStat:     return get_events() != 0;
+	case MFC_Cmd:             return std::max(16 - mfc_queue.size(), (u32)0);
 	}
 
 	fmt::throw_exception("Unknown/illegal channel (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
@@ -1434,8 +1435,9 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	case MFC_Cmd:
 	{
 		ch_mfc_cmd.cmd = MFC(value & 0xff);
+		auto cmd = ch_mfc_cmd; // save and restore previous command arguments
 		process_mfc_cmd();
-		ch_mfc_cmd = {}; // clear non-persistent data
+		ch_mfc_cmd = cmd;
 		return true;
 	}
 
