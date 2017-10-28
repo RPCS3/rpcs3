@@ -529,20 +529,25 @@ void Emulator::Load(bool add_only)
 
 			if (argv.empty())
 			{
+				argv.resize(1);
+			}
+
+			if (argv[0].empty())
+			{
 				if (m_path.find(hdd0_game) != -1)
 				{
-					argv.emplace_back("/dev_hdd0/game/" + m_path.substr(hdd0_game.size()));
+					argv[0] = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size());
 				}
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
 					// Disc games are on /dev_bdvd/
 					const std::size_t pos = m_path.rfind("PS3_GAME");
-					argv.emplace_back("/dev_bdvd/" + m_path.substr(pos));
+					argv[0] = "/dev_bdvd/" + m_path.substr(pos);
 				}
 				else
 				{
 					// For homebrew
-					argv.emplace_back("/host_root/" + m_path);
+					argv[0] = "/host_root/" + m_path;
 				}
 
 				LOG_NOTICE(LOADER, "Elf path: %s", argv[0]);
@@ -581,7 +586,12 @@ void Emulator::Load(bool add_only)
 
 			if (argv.empty())
 			{
-				argv.emplace_back("host_root:" + m_path);
+				argv.resize(1);
+			}
+
+			if (argv[0].empty())
+			{
+				argv[0] = "host_root:" + m_path;
 				LOG_NOTICE(LOADER, "Elf path: %s", argv[0]);
 			}
 

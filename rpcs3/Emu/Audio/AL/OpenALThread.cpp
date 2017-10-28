@@ -50,6 +50,8 @@ OpenALThread::OpenALThread()
 	{
 		m_format = g_cfg.audio.convert_to_u16 ? AL_FORMAT_71CHN16 : AL_FORMAT_71CHN32;
 	}
+
+	m_buffers = std::make_unique<ALuint[]>(g_cfg.audio.frames);
 }
 
 OpenALThread::~OpenALThread()
@@ -83,7 +85,7 @@ void OpenALThread::Close()
 	if (alIsSource(m_source))
 		alDeleteSources(1, &m_source);
 
-	alDeleteBuffers(g_al_buffers_count, m_buffers);
+	alDeleteBuffers(g_cfg.audio.frames, m_buffers.get());
 	checkForAlError("alDeleteBuffers");
 }
 
@@ -98,7 +100,7 @@ void OpenALThread::Open(const void* src, int size)
 	alGenSources(1, &m_source);
 	checkForAlError("alGenSources");
 
-	alGenBuffers(g_al_buffers_count, m_buffers);
+	alGenBuffers(g_cfg.audio.frames, m_buffers.get());
 	checkForAlError("alGenBuffers");
 
 	alSourcei(m_source, AL_LOOPING, AL_FALSE);
@@ -106,13 +108,13 @@ void OpenALThread::Open(const void* src, int size)
 
 	m_buffer_size = size;
 
-	for (uint i = 0; i<g_al_buffers_count; ++i)
+	for (int i = 0; i < g_cfg.audio.frames; ++i)
 	{
 		alBufferData(m_buffers[i], m_format, src, m_buffer_size, 48000);
 		checkForAlError("alBufferData");
 	}
 
-	alSourceQueueBuffers(m_source, g_al_buffers_count, m_buffers);
+	alSourceQueueBuffers(m_source, g_cfg.audio.frames, m_buffers.get());
 	checkForAlError("alSourceQueueBuffers");
 	Play();
 }

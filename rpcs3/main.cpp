@@ -47,16 +47,33 @@ int main(int argc, char** argv)
 	QCommandLineParser parser;
 	parser.setApplicationDescription("Welcome to RPCS3 command line.");
 	parser.addPositionalArgument("(S)ELF", "Path for directly executing a (S)ELF");
+	parser.addPositionalArgument("[Args...]", "Optional args for the executable");
 	parser.addHelpOption();
 	parser.process(app);
 
 	app.Init();
 
-	if (parser.positionalArguments().length() > 0)
+	QStringList args = parser.positionalArguments();
+
+	if (args.length() > 0)
 	{
-		// Ugly workaround
-		QTimer::singleShot(2, [path = sstr(QFileInfo(parser.positionalArguments().at(0)).canonicalFilePath())]
+		// Propagate command line arguments
+		std::vector<std::string> argv;
+
+		if (args.length() > 1)
 		{
+			argv.emplace_back();
+
+			for (std::size_t i = 1; i < args.length(); i++)
+			{
+				argv.emplace_back(args[i].toStdString());
+			}
+		}
+
+		// Ugly workaround
+		QTimer::singleShot(2, [path = sstr(QFileInfo(args.at(0)).canonicalFilePath()), argv = std::move(argv)]() mutable
+		{
+			Emu.argv = std::move(argv);
 			Emu.BootGame(path, true);
 			Emu.Run();
 		});
