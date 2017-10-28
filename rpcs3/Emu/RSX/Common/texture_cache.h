@@ -210,6 +210,31 @@ namespace rsx
 			return utils::protection::rw;
 		}
 
+		inline bool region_intersects_cache(u32 address, u32 range, bool is_writing) const
+		{
+			std::pair<u32, u32> test_range = std::make_pair(address, address + range);
+			if (!is_writing)
+			{
+				if (no_access_range.first > no_access_range.second ||
+					test_range.second < no_access_range.first ||
+					test_range.first > no_access_range.second)
+					return false;
+			}
+			else
+			{
+				if (test_range.second < read_only_range.first ||
+					test_range.first > read_only_range.second)
+				{
+					//Doesnt fall in the read_only textures range; check render targets
+					if (test_range.second < no_access_range.first ||
+						test_range.first > no_access_range.second)
+						return false;
+				}
+			}
+
+			return true;
+		}
+
 		//Get intersecting set - Returns all objects intersecting a given range and their owning blocks
 		std::vector<std::pair<section_storage_type*, ranged_storage*>> get_intersecting_set(u32 address, u32 range, bool check_whole_size)
 		{
@@ -273,17 +298,22 @@ namespace rsx
 		template <typename ...Args>
 		thrashed_set invalidate_range_impl_base(u32 address, u32 range, bool is_writing, bool discard_only, bool rebuild_cache, bool allow_flush, Args&&... extras)
 		{
+			if (!region_intersects_cache(address, range, is_writing))
+				return {};
+
 			auto trampled_set = get_intersecting_set(address, range, allow_flush);
 
 			if (trampled_set.size() > 0)
 			{
 				// Rebuild the cache by only destroying ranges that need to be destroyed to unlock this page
-				const auto to_reprotect = !rebuild_cache? trampled_set.end() :
-				std::remove_if(trampled_set.begin(), trampled_set.end(),
+				const auto to_reprotect = std::remove_if(trampled_set.begin(), trampled_set.end(),
 				[&](const std::pair<section_storage_type*, ranged_storage*>& obj)
 				{
 					if (!is_writing && obj.first->get_protection() != utils::protection::no)
 						return true;
+
+					if (!rebuild_cache)
+						return false;
 
 					if (!obj.first->is_flushable())
 						return false;
@@ -291,6 +321,9 @@ namespace rsx
 					const std::pair<u32, u32> null_check = std::make_pair(UINT32_MAX, 0);
 					return !std::get<0>(obj.first->overlaps_page(null_check, address, true));
 				});
+
+				if (to_reprotect == trampled_set.begin())
+					return {};
 
 				std::vector<section_storage_type*> sections_to_flush;
 				for (auto It = trampled_set.begin(); It != to_reprotect; ++It)
@@ -609,16 +642,9 @@ namespace rsx
 		template <typename ...Args>
 		thrashed_set invalidate_range(u32 address, u32 range, bool is_writing, bool discard, bool allow_flush, Args&&... extras)
 		{
-			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
-
-			if (trampled_range.second < read_only_range.first ||
-				trampled_range.first > read_only_range.second)
-			{
-				//Doesnt fall in the read_only textures range; check render targets
-				if (trampled_range.second < no_access_range.first ||
-					trampled_range.first > no_access_range.second)
-					return {};
-			}
+			//Test before trying to acquire the lock
+			if (!region_intersects_cache(address, range, is_writing))
+				return {};
 
 			writer_lock lock(m_cache_mutex);
 			return invalidate_range_impl(address, range, is_writing, discard, allow_flush, std::forward<Args>(extras)...);
