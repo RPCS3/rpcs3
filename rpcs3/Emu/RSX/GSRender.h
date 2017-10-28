@@ -24,7 +24,10 @@ enum wm_event
 	geometry_change_notice, //about to start resizing and/or moving the window
 	geometry_change_in_progress, //window being resized and/or moved
 	window_resized, //window was resized
-	window_moved //window moved without resize
+	window_minimized, //window was minimized
+	window_restored, //window was restored from a minimized state
+	window_moved, //window moved without resize
+	window_visibility_changed
 };
 
 using RSXDebuggerPrograms = std::vector<RSXDebuggerProgram>;
@@ -58,6 +61,7 @@ protected:
 	//window manager event management
 	wm_event m_raised_event;
 	std::atomic_bool wm_event_raised = {};
+	std::atomic_bool wm_event_queue_enabled = {};
 
 public:
 	//synchronize native window access
@@ -82,6 +86,16 @@ public:
 		}
 
 		return get_default_wm_event();
+	}
+
+	void disable_wm_event_queue()
+	{
+		wm_event_queue_enabled.store(false);
+	}
+
+	void enable_wm_event_queue()
+	{
+		wm_event_queue_enabled.store(true);
 	}
 };
 

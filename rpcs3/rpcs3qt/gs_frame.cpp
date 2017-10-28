@@ -246,77 +246,99 @@ bool gs_frame::event(QEvent* ev)
 bool gs_frame::nativeEvent(const QByteArray &eventType, void *message, long *result)
 {
 #ifdef _WIN32
-	//Wait for consumer to clear notification pending flag
-	while (wm_event_raised.load(std::memory_order_consume));
-
+	if (wm_event_queue_enabled.load(std::memory_order_consume))
 	{
-		std::lock_guard<std::mutex> lock(wm_event_lock);
-		MSG* msg = static_cast<MSG*>(message);
-		switch (msg->message)
-		{
-		case WM_WINDOWPOSCHANGING:
-		{
-			const auto flags = reinterpret_cast<LPWINDOWPOS>(msg->lParam)->flags & SWP_NOSIZE;
-			if (m_in_sizing_event || flags != 0)
-				break;
+		//Wait for consumer to clear notification pending flag
+		while (wm_event_raised.load(std::memory_order_consume));
 
-			//About to resize
-			m_in_sizing_event = true;
-			m_interactive_resize = false;
-			m_raised_event = wm_event::geometry_change_notice;
-			wm_event_raised.store(true);
-			break;
-		}
-		case WM_WINDOWPOSCHANGED:
 		{
-			const auto flags = reinterpret_cast<LPWINDOWPOS>(msg->lParam)->flags & (SWP_NOSIZE | SWP_NOMOVE);
-			if (!m_in_sizing_event || m_user_interaction_active || flags == (SWP_NOSIZE | SWP_NOMOVE))
-				break;
-
-			if (flags & SWP_NOSIZE)
-				m_raised_event = wm_event::window_moved;
-			else
-				m_raised_event = wm_event::window_resized;
-
-			//Just finished resizing using maximize or SWP
-			m_in_sizing_event = false;
-			wm_event_raised.store(true);
-			break;
-		}
-		case WM_ENTERSIZEMOVE:
-			m_user_interaction_active = true;
-			break;
-		case WM_EXITSIZEMOVE:
-			m_user_interaction_active = false;
-			if (m_in_sizing_event && !m_user_interaction_active)
+			std::lock_guard<std::mutex> lock(wm_event_lock);
+			MSG* msg = static_cast<MSG*>(message);
+			switch (msg->message)
 			{
-				//Just finished resizing using manual interaction. The corresponding WM_SIZE is consumed before this event fires
-				m_raised_event = m_interactive_resize ? wm_event::window_resized : wm_event::window_moved;
+			case WM_WINDOWPOSCHANGING:
+			{
+				const auto flags = reinterpret_cast<LPWINDOWPOS>(msg->lParam)->flags & SWP_NOSIZE;
+				if (m_in_sizing_event || flags != 0)
+					break;
+
+				//About to resize
+				m_in_sizing_event = true;
+				m_interactive_resize = false;
+				m_raised_event = wm_event::geometry_change_notice;
+				wm_event_raised.store(true);
+				break;
+			}
+			case WM_WINDOWPOSCHANGED:
+			{
+				const auto flags = reinterpret_cast<LPWINDOWPOS>(msg->lParam)->flags & (SWP_NOSIZE | SWP_NOMOVE);
+				if (!m_in_sizing_event || m_user_interaction_active || flags == (SWP_NOSIZE | SWP_NOMOVE))
+					break;
+
+				if (flags & SWP_NOSIZE)
+				{
+					m_raised_event = wm_event::window_moved;
+				}
+				else
+				{
+					LPWINDOWPOS wpos = reinterpret_cast<LPWINDOWPOS>(msg->lParam);
+					if (wpos->cx <= GetSystemMetrics(SM_CXMINIMIZED) || wpos->cy <= GetSystemMetrics(SM_CYMINIMIZED))
+					{
+						//Minimize event
+						m_minimized = true;
+						m_raised_event = wm_event::window_minimized;
+					}
+					else if (m_minimized)
+					{
+						m_minimized = false;
+						m_raised_event = wm_event::window_restored;
+					}
+					else
+					{
+						m_raised_event = wm_event::window_resized;
+					}
+				}
+
+				//Just finished resizing using maximize or SWP
 				m_in_sizing_event = false;
 				wm_event_raised.store(true);
+				break;
 			}
-			break;
-		case WM_SIZE:
-		{
-			if (m_user_interaction_active)
+			case WM_ENTERSIZEMOVE:
+				m_user_interaction_active = true;
+				break;
+			case WM_EXITSIZEMOVE:
+				m_user_interaction_active = false;
+				if (m_in_sizing_event && !m_user_interaction_active)
+				{
+					//Just finished resizing using manual interaction. The corresponding WM_SIZE is consumed before this event fires
+					m_raised_event = m_interactive_resize ? wm_event::window_resized : wm_event::window_moved;
+					m_in_sizing_event = false;
+					wm_event_raised.store(true);
+				}
+				break;
+			case WM_SIZE:
 			{
-				//Interaction is a resize not a move
-				m_interactive_resize = true;
+				if (m_user_interaction_active)
+				{
+					//Interaction is a resize not a move
+					m_interactive_resize = true;
+				}
+				else if (m_in_sizing_event)
+				{
+					//Any other unexpected resize mode will give an unconsumed WM_SIZE event
+					m_raised_event = wm_event::window_resized;
+					m_in_sizing_event = false;
+					wm_event_raised.store(true);
+				}
+				break;
 			}
-			else if (m_in_sizing_event)
-			{
-				//Any other unexpected resize mode will give an unconsumed WM_SIZE event
-				m_raised_event = wm_event::window_resized;
-				m_in_sizing_event = false;
-				wm_event_raised.store(true);
 			}
-			break;
 		}
-		}
+
+		//Do not enter DefWndProc until the consumer has consumed the message
+		while (wm_event_raised.load(std::memory_order_consume));
 	}
-
-	//Do not enter DefWndProc until the consumer has consumed the message
-	while (wm_event_raised.load(std::memory_order_consume));
 #endif
 
 	//Let the default handler deal with this. Only the notification is required
