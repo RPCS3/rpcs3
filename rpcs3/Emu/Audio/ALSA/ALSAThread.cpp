@@ -59,7 +59,7 @@ ALSAThread::ALSAThread()
 	if (!check(snd_pcm_hw_params_set_channels(s_tls_handle, hw_params, g_cfg.audio.downmix_to_2ch ? 2 : 8), "snd_pcm_hw_params_set_channels"))
 		return;
 
-	if (!check(snd_pcm_hw_params_set_buffer_size(s_tls_handle, hw_params, 8 * 256), "snd_pcm_hw_params_set_buffer_size"))
+	if (!check(snd_pcm_hw_params_set_buffer_size(s_tls_handle, hw_params, g_cfg.audio.frames * 256), "snd_pcm_hw_params_set_buffer_size"))
 		return;
 
 	if (!check(snd_pcm_hw_params_set_period_size(s_tls_handle, hw_params, 256, 0), "snd_pcm_hw_params_set_period_size"))
