@@ -89,7 +89,6 @@ save_manager_dialog::save_manager_dialog(std::string dir, QWidget* parent) : QDi
 	setMinimumSize(QSize(400, 400));
 
 	Init(dir);
-	resize(width(), std::min(height(), static_cast<int>(QApplication::desktop()->screenGeometry().height()*.6)));
 }
 
 /*
@@ -202,8 +201,11 @@ void save_manager_dialog::UpdateList()
 		m_list->verticalHeader()->width() + m_list->horizontalHeader()->length() + m_list->frameWidth() * 2,
 		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2);
 
-	resize(minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize));
+	QSize preferredSize = minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize);
 
+	QSize maxSize = QSize(preferredSize.width(), static_cast<int>(QApplication::desktop()->screenGeometry().height()*.6));
+
+	resize(preferredSize.boundedTo(maxSize));
 }
 
 /**

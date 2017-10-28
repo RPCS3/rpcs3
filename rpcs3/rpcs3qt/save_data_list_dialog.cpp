@@ -7,6 +7,8 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QMenu>
+#include <QDesktopWidget>
+#include <QApplication>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -214,6 +216,9 @@ void save_data_list_dialog::UpdateList()
 		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2
 	);
 
-	resize(minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize));
+	QSize preferredSize = minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize);
 
+	QSize maxSize = QSize(preferredSize.width(), static_cast<int>(QApplication::desktop()->screenGeometry().height()*.6));
+
+	resize(preferredSize.boundedTo(maxSize));
 }
