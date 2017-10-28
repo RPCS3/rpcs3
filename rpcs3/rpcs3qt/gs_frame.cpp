@@ -246,10 +246,10 @@ bool gs_frame::event(QEvent* ev)
 bool gs_frame::nativeEvent(const QByteArray &eventType, void *message, long *result)
 {
 #ifdef _WIN32
-	if (wm_event_queue_enabled.load(std::memory_order_consume))
+	if (wm_event_queue_enabled.load(std::memory_order_consume) && !Emu.IsStopped())
 	{
 		//Wait for consumer to clear notification pending flag
-		while (wm_event_raised.load(std::memory_order_consume));
+		while (wm_event_raised.load(std::memory_order_consume) && !Emu.IsStopped());
 
 		{
 			std::lock_guard<std::mutex> lock(wm_event_lock);
@@ -337,7 +337,7 @@ bool gs_frame::nativeEvent(const QByteArray &eventType, void *message, long *res
 		}
 
 		//Do not enter DefWndProc until the consumer has consumed the message
-		while (wm_event_raised.load(std::memory_order_consume));
+		while (wm_event_raised.load(std::memory_order_consume) && !Emu.IsStopped());
 	}
 #endif
 
