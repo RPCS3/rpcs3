@@ -2405,6 +2405,12 @@ void VKGSRender::prepare_rtts()
 
 void VKGSRender::reinitialize_swapchain()
 {
+	//Reject requests to acquire new swapchain if the window is minimized
+	//The NVIDIA driver will spam VK_ERROR_OUT_OF_DATE_KHR if you try to acquire an image from the swapchain and the window is minimized
+	//However, any attempt to actually renew the swapchain will crash the driver with VK_ERROR_DEVICE_LOST while the window is in this state
+	if (m_frame->client_width() == 0 || m_frame->client_height() == 0)
+		return;
+
 	/**
 	* Waiting for the commands to process does not work reliably as the fence can be signaled before swap images are released
 	* and there are no explicit methods to ensure that the presentation engine is not using the images at all.
@@ -2592,7 +2598,7 @@ void VKGSRender::flip(int buffer)
 			continue;
 		}
 		case VK_ERROR_OUT_OF_DATE_KHR:
-			LOG_ERROR(RSX, "vkAcquireNextImageKHR failed with VK_ERROR_OUT_OF_DATE_KHR. Flip request ignored until surface is recreated.");
+			LOG_WARNING(RSX, "vkAcquireNextImageKHR failed with VK_ERROR_OUT_OF_DATE_KHR. Flip request ignored until surface is recreated.");
 			present_surface_dirty_flag = true;
 			reinitialize_swapchain();
 			return;
