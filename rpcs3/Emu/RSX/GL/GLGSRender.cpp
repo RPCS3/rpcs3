@@ -631,6 +631,9 @@ void GLGSRender::on_init_thread()
 {
 	GSRender::on_init_thread();
 
+	m_frame->disable_wm_event_queue();
+	m_frame->hide();
+
 	gl::init();
 
 	//Enable adaptive vsync if vsync is requested
@@ -771,6 +774,9 @@ void GLGSRender::on_init_thread()
 	m_thread_id = std::this_thread::get_id();
 
 	m_shaders_cache->load();
+
+	m_frame->enable_wm_event_queue();
+	m_frame->show();
 }
 
 void GLGSRender::on_exit()

@@ -1332,7 +1332,13 @@ void VKGSRender::on_init_thread()
 	GSRender::on_init_thread();
 	rsx_thread = std::this_thread::get_id();
 
+	m_frame->disable_wm_event_queue();
+	m_frame->hide();
+
 	m_shaders_cache->load(*m_device, pipeline_layout);
+
+	m_frame->enable_wm_event_queue();
+	m_frame->show();
 }
 
 void VKGSRender::on_exit()
@@ -1747,11 +1753,14 @@ void VKGSRender::do_local_task()
 				handled = true;
 				present_surface_dirty_flag = true;
 				break;
-			case wm_event::window_moved:
-				handled = true;
-				break;
 			case wm_event::geometry_change_in_progress:
 				timeout += 10; //extend timeout to wait for user to finish resizing
+				break;
+			case wm_event::window_visibility_changed:
+			case wm_event::window_minimized:
+			case wm_event::window_restored:
+			case wm_event::window_moved:
+				handled = true; //ignore these events as they do not alter client area
 				break;
 			}
 
