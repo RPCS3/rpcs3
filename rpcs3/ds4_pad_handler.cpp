@@ -245,9 +245,9 @@ void ds4_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u3
 
 	if (device == nullptr || device->hidDevice == nullptr) return;
 
-	// Set the device's motor speeds to our requested values
+	// Set the device's motor speeds to our requested values 0-255
 	device->largeVibrate = largeMotor;
-	device->smallVibrate = (smallMotor ? 255 : 0); // only on or off possible
+	device->smallVibrate = smallMotor;
 
 	// Start/Stop the engines :)
 	SendVibrateData(device);
@@ -650,7 +650,7 @@ ds4_pad_handler::~ds4_pad_handler()
 	hid_exit();
 }
 
-void ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
+int ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
 {
 	std::array<u8, 78> outputBuf{0};
 	// write rumble state
@@ -680,7 +680,7 @@ void ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
 		outputBuf[76] = (crcCalc >> 16) & 0xFF;
 		outputBuf[77] = (crcCalc >> 24) & 0xFF;
 
-		hid_write_control(device->hidDevice, outputBuf.data(), DS4_OUTPUT_REPORT_0x11_SIZE);
+		return hid_write_control(device->hidDevice, outputBuf.data(), DS4_OUTPUT_REPORT_0x11_SIZE);
 	}
 	else
 	{
@@ -694,7 +694,7 @@ void ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
 		outputBuf[9] = device->led_delay_on;
 		outputBuf[10] = device->led_delay_off;
 
-		hid_write(device->hidDevice, outputBuf.data(), DS4_OUTPUT_REPORT_0x05_SIZE);
+		return hid_write(device->hidDevice, outputBuf.data(), DS4_OUTPUT_REPORT_0x05_SIZE);
 	}
 }
 
@@ -892,8 +892,10 @@ void ds4_pad_handler::ThreadProc()
 
 		if (device->newVibrateData)
 		{
-			SendVibrateData(device);
-			device->newVibrateData = false;
+			if (SendVibrateData(device) >= 0);
+			{
+				device->newVibrateData = false;
+			}
 		}
 
 		// no data? keep going
@@ -907,7 +909,6 @@ void ds4_pad_handler::ThreadProc()
 
 ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr<DS4Device>& device)
 {
-
 	std::array<u8, 78> buf{};
 
 	const int res = hid_read(device->hidDevice, buf.data(), device->btCon ? 78 : 64);

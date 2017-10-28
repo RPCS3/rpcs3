@@ -311,10 +311,11 @@ void xinput_pad_handler::Close()
 
 void xinput_pad_handler::ThreadProc()
 {
-	for (u32 index = 0; index != bindings.size(); index++)
+	for (auto &bind : bindings)
 	{
-		auto padnum = bindings[index].first;
-		auto pad = bindings[index].second;
+		auto device = bind.first;
+		auto padnum = device->deviceNumber;
+		auto pad = bind.second;
 
 		result = (*xinputGetState)(padnum, &state);
 		switch (result)
@@ -398,18 +399,30 @@ void xinput_pad_handler::ThreadProc()
 
 			// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 			// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
-			XINPUT_VIBRATION vibrate;
-
 			int idx_l = m_pad_config.switch_vibration_motors ? 1 : 0;
 			int idx_s = m_pad_config.switch_vibration_motors ? 0 : 1;
 
 			int speed_large = m_pad_config.enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : VIBRATION_MIN;
 			int speed_small = m_pad_config.enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : VIBRATION_MIN;
 
-			vibrate.wLeftMotorSpeed = speed_large;
-			vibrate.wRightMotorSpeed = speed_small;
+			device->newVibrateData = device->newVibrateData || device->largeVibrate != speed_large || device->smallVibrate != speed_small;
 
-			(*xinputSetState)(padnum, &vibrate);
+			device->largeVibrate = speed_large;
+			device->smallVibrate = speed_small;
+
+			// XBox One Controller can't handle faster vibration updates than ~10ms. I'll use 12ms to be on the safe side. No lag was noticable.
+			if (device->newVibrateData && (clock() - device->last_vibration > 12))
+			{
+				XINPUT_VIBRATION vibrate;
+				vibrate.wLeftMotorSpeed = speed_large;
+				vibrate.wRightMotorSpeed = speed_small;
+
+				if ((*xinputSetState)(padnum, &vibrate) == ERROR_SUCCESS)
+				{
+					device->newVibrateData = false;
+					device->last_vibration = clock();
+				}
+			}
 
 			break;
 		}
@@ -443,6 +456,9 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 	if (pos != std::string::npos) device_number = std::stoul(device.substr(pos + 12));
 
 	if (pos == std::string::npos || device_number >= XUSER_MAX_COUNT) return false;
+
+	std::shared_ptr<XInputDevice> device_id = std::make_shared<XInputDevice>();
+	device_id->deviceNumber = device_number;
 
 	m_pad_config.load();
 
@@ -481,7 +497,7 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 	pad->m_vibrateMotors.emplace_back(true, 0);
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
-	bindings.emplace_back(device_number, pad);
+	bindings.emplace_back(device_id, pad);
 
 	return true;
 }

@@ -6,6 +6,7 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <Xinput.h>
+#include <ctime>
 
 namespace XINPUT_INFO
 {
@@ -87,6 +88,15 @@ class xinput_pad_handler final : public PadHandlerBase
 		{ XInputKeyCodes::RSYNeg, "RS Y-" }
 	};
 
+	struct XInputDevice
+	{
+		u32 deviceNumber{ 0 };
+		bool newVibrateData{ true };
+		u8 largeVibrate{ 0 };
+		u8 smallVibrate{ 0 };
+		clock_t last_vibration{ 0 };
+	};
+
 public:
 	xinput_pad_handler();
 	~xinput_pad_handler();
@@ -117,7 +127,7 @@ private:
 	PFN_XINPUTENABLE xinputEnable;
 	PFN_XINPUTGETBATTERYINFORMATION xinputGetBatteryInformation;
 
-	std::vector<std::pair<u32, std::shared_ptr<Pad>>> bindings;
+	std::vector<std::pair<std::shared_ptr<XInputDevice>, std::shared_ptr<Pad>>> bindings;
 	std::array<bool, 7> last_connection_status = {};
 
 	// holds internal controller state change

@@ -85,7 +85,7 @@ bool evdev_joystick_handler::Init()
 	return true;
 }
 
-bool evdev_joystick_handler::update_device(EvdevDevice device, bool use_cell)
+bool evdev_joystick_handler::update_device(EvdevDevice& device, bool use_cell)
 {
 	std::shared_ptr<Pad> pad = device.pad;
 	const auto& path = device.path;
