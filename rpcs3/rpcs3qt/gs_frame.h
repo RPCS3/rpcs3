@@ -17,6 +17,7 @@ class gs_frame : public QWindow, public GSFrameBase
 	bool m_in_sizing_event = false; //a signal that the window is about to be resized was received
 	bool m_user_interaction_active = false; //a signal indicating the window is being manually moved/resized was received
 	bool m_interactive_resize = false; //resize signal received while dragging window
+	bool m_minimized = false;
 
 public:
 	gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse);

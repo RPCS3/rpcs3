@@ -547,7 +547,10 @@ namespace vk
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
 			if (context != rsx::texture_upload_context::blit_engine_dst || g_cfg.video.strict_rendering_mode)
+			{
 				region.protect(utils::protection::ro);
+				update_cache_tag();
+			}
 
 			read_only_range = region.get_min_max(read_only_range);
 			return &region;

@@ -551,7 +551,8 @@ VKGSRender::VKGSRender() : GSRender()
 
 	m_client_width = m_frame->client_width();
 	m_client_height = m_frame->client_height();
-	m_swap_chain->init_swapchain(m_client_width, m_client_height);
+	if (!m_swap_chain->init_swapchain(m_client_width, m_client_height))
+		present_surface_dirty_flag = true;
 
 	//create command buffer...
 	m_command_buffer_pool.create((*m_device));
@@ -1332,7 +1333,13 @@ void VKGSRender::on_init_thread()
 	GSRender::on_init_thread();
 	rsx_thread = std::this_thread::get_id();
 
+	m_frame->disable_wm_event_queue();
+	m_frame->hide();
+
 	m_shaders_cache->load(*m_device, pipeline_layout);
+
+	m_frame->enable_wm_event_queue();
+	m_frame->show();
 }
 
 void VKGSRender::on_exit()
@@ -1747,11 +1754,14 @@ void VKGSRender::do_local_task()
 				handled = true;
 				present_surface_dirty_flag = true;
 				break;
-			case wm_event::window_moved:
-				handled = true;
-				break;
 			case wm_event::geometry_change_in_progress:
 				timeout += 10; //extend timeout to wait for user to finish resizing
+				break;
+			case wm_event::window_visibility_changed:
+			case wm_event::window_minimized:
+			case wm_event::window_restored:
+			case wm_event::window_moved:
+				handled = true; //ignore these events as they do not alter client area
 				break;
 			}
 
@@ -2396,6 +2406,15 @@ void VKGSRender::prepare_rtts()
 
 void VKGSRender::reinitialize_swapchain()
 {
+	const auto new_width = m_frame->client_width();
+	const auto new_height = m_frame->client_height();
+
+	//Reject requests to acquire new swapchain if the window is minimized
+	//The NVIDIA driver will spam VK_ERROR_OUT_OF_DATE_KHR if you try to acquire an image from the swapchain and the window is minimized
+	//However, any attempt to actually renew the swapchain will crash the driver with VK_ERROR_DEVICE_LOST while the window is in this state
+	if (new_width == 0 || new_height == 0)
+		return;
+
 	/**
 	* Waiting for the commands to process does not work reliably as the fence can be signaled before swap images are released
 	* and there are no explicit methods to ensure that the presentation engine is not using the images at all.
@@ -2405,13 +2424,6 @@ void VKGSRender::reinitialize_swapchain()
 	close_and_submit_command_buffer({}, m_current_command_buffer->submit_fence);
 	m_current_command_buffer->pending = true;
 	m_current_command_buffer->reset();
-
-	//Will have to block until rendering is completed
-	VkFence resize_fence = VK_NULL_HANDLE;
-	VkFenceCreateInfo infos = {};
-	infos.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-
-	vkCreateFence((*m_device), &infos, nullptr, &resize_fence);
 
 	for (auto &ctx : frame_context_storage)
 	{
@@ -2431,9 +2443,16 @@ void VKGSRender::reinitialize_swapchain()
 	m_framebuffers_to_clean.clear();
 
 	//Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
-	m_client_width = m_frame->client_width();
-	m_client_height = m_frame->client_height();
-	m_swap_chain->init_swapchain(m_client_width, m_client_height);
+	if (!m_swap_chain->init_swapchain(new_width, new_height))
+	{
+		LOG_WARNING(RSX, "Swapchain initialization failed. Request ignored [%dx%d]", new_width, new_height);
+		present_surface_dirty_flag = false;
+		open_command_buffer();
+		return;
+	}
+
+	m_client_width = new_width;
+	m_client_height = new_height;
 
 	//Prepare new swapchain images for use
 	open_command_buffer();
@@ -2451,6 +2470,13 @@ void VKGSRender::reinitialize_swapchain()
 			VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 			vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 	}
+
+	//Will have to block until rendering is completed
+	VkFence resize_fence = VK_NULL_HANDLE;
+	VkFenceCreateInfo infos = {};
+	infos.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+	vkCreateFence((*m_device), &infos, nullptr, &resize_fence);
 
 	//Flush the command buffer
 	close_and_submit_command_buffer({}, resize_fence);
@@ -2583,7 +2609,7 @@ void VKGSRender::flip(int buffer)
 			continue;
 		}
 		case VK_ERROR_OUT_OF_DATE_KHR:
-			LOG_ERROR(RSX, "vkAcquireNextImageKHR failed with VK_ERROR_OUT_OF_DATE_KHR. Flip request ignored until surface is recreated.");
+			LOG_WARNING(RSX, "vkAcquireNextImageKHR failed with VK_ERROR_OUT_OF_DATE_KHR. Flip request ignored until surface is recreated.");
 			present_surface_dirty_flag = true;
 			reinitialize_swapchain();
 			return;
@@ -2707,6 +2733,8 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 
 void VKGSRender::notify_tile_unbound(u32 tile)
 {
-	u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
-	m_rtts.invalidate_surface_address(addr, false);
+	//TODO: Handle texture writeback
+	//u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
+	//on_notify_memory_unmapped(addr, tiles[tile].size);
+	//m_rtts.invalidate_surface_address(addr, false);
 }
