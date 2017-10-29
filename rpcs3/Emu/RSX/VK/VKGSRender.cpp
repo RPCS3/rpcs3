@@ -995,6 +995,8 @@ void VKGSRender::end()
 		return;
 	}
 
+	std::chrono::time_point<steady_clock> state_check_start = steady_clock::now();
+
 	//Load program here since it is dependent on vertex state
 	if (!check_program_status())
 	{
@@ -1003,14 +1005,17 @@ void VKGSRender::end()
 		return;
 	}
 
+	std::chrono::time_point<steady_clock> state_check_end = steady_clock::now();
+	m_setup_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(state_check_end - state_check_start).count();
+
 	//Programs data is dependent on vertex state
-	std::chrono::time_point<steady_clock> vertex_start = steady_clock::now();
+	std::chrono::time_point<steady_clock> vertex_start = state_check_end;
 	auto upload_info = upload_vertex_data();
 	std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - vertex_start).count();
 
 	//Load program
-	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
+	std::chrono::time_point<steady_clock> program_start = vertex_end;
 	load_program(std::get<2>(upload_info), std::get<3>(upload_info));
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
@@ -1841,7 +1846,7 @@ bool VKGSRender::check_program_status()
 			if (dirty_framebuffer)
 				return std::make_tuple(false, 0);
 
-			auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, 0, 0, tex.pitch());
+			auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, 0, 0, tex.pitch(), false, false, !is_depth, is_depth);
 			if (!rsc.surface || rsc.is_depth_surface != is_depth)
 				return std::make_tuple(false, 0);
 
