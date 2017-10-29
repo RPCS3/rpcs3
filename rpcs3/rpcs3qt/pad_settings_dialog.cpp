@@ -153,12 +153,12 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 		};
 
 		// Enable Trigger Thresholds
-		initSlider(ui->slider_trigger_left, m_handler_cfg->ltriggerthreshold, m_handler->TRIGGER_MIN, m_handler->TRIGGER_MAX);
-		initSlider(ui->slider_trigger_right, m_handler_cfg->rtriggerthreshold, m_handler->TRIGGER_MIN, m_handler->TRIGGER_MAX);
+		initSlider(ui->slider_trigger_left, m_handler_cfg->ltriggerthreshold, 0, m_handler->TRIGGER_MAX);
+		initSlider(ui->slider_trigger_right, m_handler_cfg->rtriggerthreshold, 0, m_handler->TRIGGER_MAX);
 
 		// Enable Stick Deadzones
-		initSlider(ui->slider_stick_left, m_handler_cfg->lstickdeadzone, m_handler->THUMB_MIN, m_handler->THUMB_MAX);
-		initSlider(ui->slider_stick_right, m_handler_cfg->rstickdeadzone, m_handler->THUMB_MIN, m_handler->THUMB_MAX);
+		initSlider(ui->slider_stick_left, m_handler_cfg->lstickdeadzone, 0, m_handler->THUMB_MAX);
+		initSlider(ui->slider_stick_right, m_handler_cfg->rstickdeadzone, 0, m_handler->THUMB_MAX);
 	}
 
 	auto insertButton = [this](int id, QPushButton* button, cfg::string* cfg_name)
