@@ -551,7 +551,8 @@ VKGSRender::VKGSRender() : GSRender()
 
 	m_client_width = m_frame->client_width();
 	m_client_height = m_frame->client_height();
-	m_swap_chain->init_swapchain(m_client_width, m_client_height);
+	if (!m_swap_chain->init_swapchain(m_client_width, m_client_height))
+		present_surface_dirty_flag = true;
 
 	//create command buffer...
 	m_command_buffer_pool.create((*m_device));
@@ -2405,10 +2406,13 @@ void VKGSRender::prepare_rtts()
 
 void VKGSRender::reinitialize_swapchain()
 {
+	const auto new_width = m_frame->client_width();
+	const auto new_height = m_frame->client_height();
+
 	//Reject requests to acquire new swapchain if the window is minimized
 	//The NVIDIA driver will spam VK_ERROR_OUT_OF_DATE_KHR if you try to acquire an image from the swapchain and the window is minimized
 	//However, any attempt to actually renew the swapchain will crash the driver with VK_ERROR_DEVICE_LOST while the window is in this state
-	if (m_frame->client_width() == 0 || m_frame->client_height() == 0)
+	if (new_width == 0 || new_height == 0)
 		return;
 
 	/**
@@ -2420,13 +2424,6 @@ void VKGSRender::reinitialize_swapchain()
 	close_and_submit_command_buffer({}, m_current_command_buffer->submit_fence);
 	m_current_command_buffer->pending = true;
 	m_current_command_buffer->reset();
-
-	//Will have to block until rendering is completed
-	VkFence resize_fence = VK_NULL_HANDLE;
-	VkFenceCreateInfo infos = {};
-	infos.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-
-	vkCreateFence((*m_device), &infos, nullptr, &resize_fence);
 
 	for (auto &ctx : frame_context_storage)
 	{
@@ -2446,9 +2443,16 @@ void VKGSRender::reinitialize_swapchain()
 	m_framebuffers_to_clean.clear();
 
 	//Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
-	m_client_width = m_frame->client_width();
-	m_client_height = m_frame->client_height();
-	m_swap_chain->init_swapchain(m_client_width, m_client_height);
+	if (!m_swap_chain->init_swapchain(new_width, new_height))
+	{
+		LOG_WARNING(RSX, "Swapchain initialization failed. Request ignored [%dx%d]", new_width, new_height);
+		present_surface_dirty_flag = false;
+		open_command_buffer();
+		return;
+	}
+
+	m_client_width = new_width;
+	m_client_height = new_height;
 
 	//Prepare new swapchain images for use
 	open_command_buffer();
@@ -2466,6 +2470,13 @@ void VKGSRender::reinitialize_swapchain()
 			VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 			vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 	}
+
+	//Will have to block until rendering is completed
+	VkFence resize_fence = VK_NULL_HANDLE;
+	VkFenceCreateInfo infos = {};
+	infos.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+	vkCreateFence((*m_device), &infos, nullptr, &resize_fence);
 
 	//Flush the command buffer
 	close_and_submit_command_buffer({}, resize_fence);
