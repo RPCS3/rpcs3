@@ -673,7 +673,10 @@ namespace gl
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
 			if (context != rsx::texture_upload_context::blit_engine_dst || g_cfg.video.strict_rendering_mode)
+			{
 				cached.protect(utils::protection::ro);
+				update_cache_tag();
+			}
 
 			return &cached;
 		}
