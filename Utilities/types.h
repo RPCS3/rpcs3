@@ -534,6 +534,26 @@ inline u64 cntlz64(u64 arg, bool nonzero = false)
 #endif
 }
 
+inline u32 cnttz32(u32 arg, bool nonzero = false)
+{
+#ifdef _MSC_VER
+	ulong res;
+	return _BitScanForward(&res, arg) || nonzero ? res : 32;
+#else
+	return arg || nonzero ? __builtin_ctzll(arg) : 32;
+#endif
+}
+
+inline u64 cnttz64(u64 arg, bool nonzero = false)
+{
+#ifdef _MSC_VER
+	ulong res;
+	return _BitScanForward64(&res, arg) || nonzero ? res : 64;
+#else
+	return arg || nonzero ? __builtin_ctzll(arg) : 64;
+#endif
+}
+
 // Helper function, used by ""_u16, ""_u32, ""_u64
 constexpr u8 to_u8(char c)
 {
