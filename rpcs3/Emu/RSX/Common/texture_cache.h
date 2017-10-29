@@ -248,7 +248,7 @@ namespace rsx
 		}
 
 		//Get intersecting set - Returns all objects intersecting a given range and their owning blocks
-		std::vector<std::pair<section_storage_type*, ranged_storage*>> get_intersecting_set(u32 address, u32 range, bool check_whole_size)
+		std::vector<std::pair<section_storage_type*, ranged_storage*>> get_intersecting_set(u32 address, u32 range)
 		{
 			std::vector<std::pair<section_storage_type*, ranged_storage*>> result;
 			u64 cache_tag = get_system_time();
@@ -278,7 +278,7 @@ namespace rsx
 					if (tex.cache_tag == cache_tag) continue; //already processed
 					if (!tex.is_locked()) continue;	//flushable sections can be 'clean' but unlocked. TODO: Handle this better
 
-					auto overlapped = tex.overlaps_page(trampled_range, address, check_whole_size);
+					auto overlapped = tex.overlaps_page(trampled_range, address, tex.is_flushable());
 					if (std::get<0>(overlapped))
 					{
 						auto &new_range = std::get<1>(overlapped);
@@ -313,36 +313,41 @@ namespace rsx
 			if (!region_intersects_cache(address, range, is_writing))
 				return {};
 
-			auto trampled_set = get_intersecting_set(address, range, allow_flush);
+			auto trampled_set = get_intersecting_set(address, range);
 
 			if (trampled_set.size() > 0)
 			{
-				// Rebuild the cache by only destroying ranges that need to be destroyed to unlock this page
-				const auto to_reprotect = std::remove_if(trampled_set.begin(), trampled_set.end(),
-				[&](const std::pair<section_storage_type*, ranged_storage*>& obj)
+				auto to_reprotect = trampled_set.end();
+
+				if (!discard_only)
 				{
-					if (!is_writing && obj.first->get_protection() != utils::protection::no)
-						return true;
+					// Rebuild the cache by only destroying ranges that need to be destroyed to unlock this page
+					to_reprotect = std::remove_if(trampled_set.begin(), trampled_set.end(),
+						[&](const std::pair<section_storage_type*, ranged_storage*>& obj)
+					{
+						if (!is_writing && obj.first->get_protection() != utils::protection::no)
+							return true;
 
-					if (!rebuild_cache)
-						return false;
+						if (!rebuild_cache)
+							return false;
 
-					if (!obj.first->is_flushable())
-						return false;
+						if (!obj.first->is_flushable())
+							return false;
 
-					const std::pair<u32, u32> null_check = std::make_pair(UINT32_MAX, 0);
-					return !std::get<0>(obj.first->overlaps_page(null_check, address, true));
-				});
+						const std::pair<u32, u32> null_check = std::make_pair(UINT32_MAX, 0);
+						return !std::get<0>(obj.first->overlaps_page(null_check, address, true));
+					});
 
-				if (to_reprotect == trampled_set.begin())
-					return {};
+					if (to_reprotect == trampled_set.begin())
+						return{};
+				}
 
 				std::vector<section_storage_type*> sections_to_flush;
-				for (auto It = trampled_set.begin(); It != to_reprotect; ++It)
+				for (auto It = trampled_set.begin(); It != trampled_set.end(); ++It)
 				{
-					auto obj = *It;
+					auto &obj = *It;
 
-					if (obj.first->is_flushable())
+					if (obj.first->is_flushable() && It < to_reprotect)
 					{
 						sections_to_flush.push_back(obj.first);
 					}
@@ -387,7 +392,7 @@ namespace rsx
 
 				for (auto It = to_reprotect; It != trampled_set.end(); It++)
 				{
-					auto obj = *It;
+					auto &obj = *It;
 
 					auto old_prot = obj.first->get_protection();
 					obj.first->discard();
