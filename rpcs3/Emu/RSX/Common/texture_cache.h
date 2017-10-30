@@ -35,7 +35,7 @@ namespace rsx
 		u16 real_pitch;
 		u16 rsx_pitch;
 
-		u64 cache_tag;
+		u64 cache_tag = 0;
 
 		rsx::texture_create_flags view_flags = rsx::texture_create_flags::default_component_order;
 		rsx::texture_upload_context context = rsx::texture_upload_context::shader_read;
