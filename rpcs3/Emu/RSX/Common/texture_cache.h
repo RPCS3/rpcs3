@@ -25,6 +25,14 @@ namespace rsx
 		framebuffer_storage = 3
 	};
 
+	//Sampled image descriptor
+	struct sampled_image_descriptor_base
+	{
+		texture_upload_context upload_context = texture_upload_context::shader_read;
+		bool is_depth_texture = false;
+		f32 internal_scale = 1.f;
+	};
+
 	struct cached_texture_section : public rsx::buffered_section
 	{
 		u16 width;
@@ -202,6 +210,22 @@ namespace rsx
 			u64 cache_tag = 0;
 			u32 address_base = 0;
 			u32 address_range = 0;
+		};
+
+		struct sampled_image_descriptor : public sampled_image_descriptor_base
+		{
+			image_view_type image_handle = 0;
+
+			sampled_image_descriptor()
+			{}
+
+			sampled_image_descriptor(image_view_type handle, const texture_upload_context ctx, const bool is_depth, const f32 scale)
+			{
+				image_handle = handle;
+				upload_context = ctx;
+				is_depth_texture = is_depth;
+				internal_scale = scale;
+			}
 		};
 
 	private:
@@ -567,6 +591,15 @@ namespace rsx
 				region.set_dirty(false);
 				no_access_range = region.get_min_max(no_access_range);
 			}
+			else
+			{
+				if (region.get_context() != texture_upload_context::framebuffer_storage)
+				{
+					//This space was being used for other purposes other than framebuffer storage
+					//Delete used resources before attaching it to framebuffer memory
+					free_texture_section(region);
+				}
+			}
 
 			region.protect(utils::protection::no);
 			region.create(width, height, 1, 1, nullptr, image, pitch, false, std::forward<Args>(extras)...);
@@ -831,7 +864,7 @@ namespace rsx
 		}
 
 		template <typename RsxTextureType, typename surface_store_type, typename ...Args>
-		image_view_type upload_texture(commandbuffer_type& cmd, RsxTextureType& tex, surface_store_type& m_rtts, Args&&... extras)
+		sampled_image_descriptor upload_texture(commandbuffer_type& cmd, RsxTextureType& tex, surface_store_type& m_rtts, Args&&... extras)
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 tex_size = (u32)get_texture_size(tex);
@@ -841,7 +874,7 @@ namespace rsx
 			if (!texaddr || !tex_size)
 			{
 				LOG_ERROR(RSX, "Texture upload requested but texture not found, (address=0x%X, size=0x%X)", texaddr, tex_size);
-				return 0;
+				return {};
 			}
 
 			const auto extended_dimension = tex.get_extended_texture_dimension();
@@ -857,6 +890,7 @@ namespace rsx
 						if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
 							LOG_ERROR(RSX, "Texture resides in render target memory, but requested type is not 2D (%d)", (u32)extended_dimension);
 
+						f32 internal_scale = (f32)texptr->get_native_pitch() / tex.pitch();
 						for (const auto& tex : m_rtts.m_bound_render_targets)
 						{
 							if (std::get<0>(tex) == texaddr)
@@ -864,7 +898,7 @@ namespace rsx
 								if (g_cfg.video.strict_rendering_mode)
 								{
 									LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
-									return create_temporary_subresource_view(cmd, texptr, format, 0, 0, texptr->width(), texptr->height());
+									return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, texptr->width(), texptr->height()), texture_upload_context::framebuffer_storage, false, internal_scale };
 								}
 								else
 								{
@@ -875,8 +909,10 @@ namespace rsx
 							}
 						}
 
-						return texptr->get_view();
+						return{ texptr->get_view(), texture_upload_context::framebuffer_storage, false, internal_scale };
 					}
+					else
+						m_rtts.invalidate_surface_address(texaddr, false);
 				}
 
 				if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
@@ -886,12 +922,13 @@ namespace rsx
 						if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
 							LOG_ERROR(RSX, "Texture resides in depth buffer memory, but requested type is not 2D (%d)", (u32)extended_dimension);
 
+						f32 internal_scale = (f32)texptr->get_native_pitch() / tex.pitch();
 						if (texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
 						{
 							if (g_cfg.video.strict_rendering_mode)
 							{
 								LOG_WARNING(RSX, "Attempting to sample a currently bound depth surface @ 0x%x", texaddr);
-								return create_temporary_subresource_view(cmd, texptr, format, 0, 0, texptr->width(), texptr->height());
+								return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, texptr->width(), texptr->height()), texture_upload_context::framebuffer_storage, true, internal_scale };
 							}
 							else
 							{
@@ -900,8 +937,10 @@ namespace rsx
 							}
 						}
 
-						return texptr->get_view();
+						return{ texptr->get_view(), texture_upload_context::framebuffer_storage, true, internal_scale };
 					}
+					else
+						m_rtts.invalidate_surface_address(texaddr, true);
 				}
 			}
 
@@ -945,10 +984,14 @@ namespace rsx
 				const u32 internal_width = (const u32)(tex_width * internal_scale);
 
 				const auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, internal_width, tex_height, tex_pitch, true);
-				if (rsc.surface/* && test_framebuffer(texaddr)*/)
+				if (rsc.surface)
 				{
 					//TODO: Check that this region is not cpu-dirty before doing a copy
-					if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
+					if (!test_framebuffer(texaddr))
+					{
+						m_rtts.invalidate_surface_address(texaddr, rsc.is_depth_surface);
+					}
+					else if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
 					{
 						LOG_ERROR(RSX, "Sampling of RTT region as non-2D texture! addr=0x%x, Type=%d, dims=%dx%d",
 							texaddr, (u8)tex.get_extended_texture_dimension(), tex.width(), tex.height());
@@ -965,16 +1008,16 @@ namespace rsx
 									insert_texture_barrier();
 								}
 
-								return rsc.surface->get_view();
+								return{ rsc.surface->get_view(), texture_upload_context::framebuffer_storage, rsc.is_depth_surface, 1.f };
 							}
-							else return create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
-								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true));
+							else return{ create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
+								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true)), texture_upload_context::framebuffer_storage, rsc.is_depth_surface, 1.f };
 						}
 						else
 						{
 							LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
-							return create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
-								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true));
+							return{ create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
+								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true)), texture_upload_context::framebuffer_storage, rsc.is_depth_surface, 1.f };
 						}
 					}
 				}
@@ -987,7 +1030,7 @@ namespace rsx
 				auto cached_texture = find_texture_from_dimensions(texaddr, tex_width, tex_height, depth);
 				if (cached_texture)
 				{
-					return cached_texture->get_raw_view();
+					return{ cached_texture->get_raw_view(), cached_texture->get_context(), cached_texture->is_depth_texture(), 1.f };
 				}
 
 				if ((!blit_engine_incompatibility_warning_raised && g_cfg.video.use_gpu_texture_scaling) || is_hw_blit_engine_compatible(format))
@@ -1030,7 +1073,7 @@ namespace rsx
 
 									auto src_image = surface->get_raw_texture();
 									if (auto result = create_temporary_subresource_view(cmd, &src_image, format, offset_x, offset_y, tex_width, tex_height))
-										return result;
+										return{ result, texture_upload_context::blit_engine_dst, surface->is_depth_texture(), 1.f };
 								}
 							}
 						}
@@ -1048,8 +1091,9 @@ namespace rsx
 			invalidate_range_impl_base(texaddr, tex_size, false, false, false, true, std::forward<Args>(extras)...);
 
 			m_texture_memory_in_use += (tex_pitch * tex_height);
-			return upload_image_from_cpu(cmd, texaddr, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
-				texture_upload_context::shader_read, subresources_layout, extended_dimension, is_swizzled, remap_vector)->get_raw_view();
+			return{ upload_image_from_cpu(cmd, texaddr, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
+				texture_upload_context::shader_read, subresources_layout, extended_dimension, is_swizzled, remap_vector)->get_raw_view(),
+				texture_upload_context::shader_read, false, 1.f };
 		}
 
 		template <typename surface_store_type, typename blitter_type, typename ...Args>

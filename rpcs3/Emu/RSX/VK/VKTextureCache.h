@@ -47,10 +47,17 @@ namespace vk
 			this->depth = depth;
 			this->mipmaps = mipmaps;
 
-			uploaded_image_view.reset(view);
-			vram_texture = image;
+			if (managed)
+			{
+				managed_texture.reset(image);
+				uploaded_image_view.reset(view);
+			}
+			else
+			{
+				verify(HERE), uploaded_image_view.get() == nullptr;
+			}
 
-			if (managed) managed_texture.reset(image);
+			vram_texture = image;
 
 			//TODO: Properly compute these values
 			if (rsx_pitch > 0)
@@ -157,15 +164,27 @@ namespace vk
 			const u16 internal_width = std::min(width, rsx::apply_resolution_scale(width, true));
 			const u16 internal_height = std::min(height, rsx::apply_resolution_scale(height, true));
 
+			VkImageAspectFlags aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
+			switch (vram_texture->info.format)
+			{
+			case VK_FORMAT_D16_UNORM:
+				aspect_flag = VK_IMAGE_ASPECT_DEPTH_BIT;
+				break;
+			case VK_FORMAT_D24_UNORM_S8_UINT:
+			case VK_FORMAT_D32_SFLOAT_S8_UINT:
+				aspect_flag = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+				break;
+			}
+
 			VkBufferImageCopy copyRegion = {};
 			copyRegion.bufferOffset = 0;
 			copyRegion.bufferRowLength = internal_width;
 			copyRegion.bufferImageHeight = internal_height;
-			copyRegion.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+			copyRegion.imageSubresource = {aspect_flag, 0, 0, 1};
 			copyRegion.imageOffset = {};
 			copyRegion.imageExtent = {internal_width, internal_height, 1};
 
-			VkImageSubresourceRange subresource_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+			VkImageSubresourceRange subresource_range = { aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 1 };
 			
 			VkImageLayout layout = vram_texture->current_layout;
 			change_image_layout(cmd, vram_texture, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
@@ -246,6 +265,10 @@ namespace vk
 			bool swap_bytes = false;
 			switch (vram_texture->info.format)
 			{
+			case VK_FORMAT_D32_SFLOAT_S8_UINT:
+			case VK_FORMAT_D24_UNORM_S8_UINT:
+				//TODO: Hardware tests to determine correct memory layout
+			case VK_FORMAT_D16_UNORM:
 			case VK_FORMAT_R16G16B16A16_SFLOAT:
 			case VK_FORMAT_R32G32B32A32_SFLOAT:
 			case VK_FORMAT_R32_SFLOAT:
@@ -310,6 +333,19 @@ namespace vk
 		bool has_compatible_format(vk::image* tex) const
 		{
 			return vram_texture->info.format == tex->info.format;
+		}
+
+		bool is_depth_texture() const
+		{
+			switch (vram_texture->info.format)
+			{
+			case VK_FORMAT_D16_UNORM:
+			case VK_FORMAT_D32_SFLOAT_S8_UINT:
+			case VK_FORMAT_D24_UNORM_S8_UINT:
+				return true;
+			default:
+				return false;
+			}
 		}
 
 		u64 get_sync_timestamp() const
@@ -453,7 +489,11 @@ namespace vk
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
 			vk::change_image_layout(cmd, source, old_src_layout, subresource_range);
 
+			const u32 resource_memory = w * h * 4; //Rough approximate
 			m_discardable_storage.push_back({ image, view });
+			m_discardable_storage.back().block_size = resource_memory;
+			m_discarded_memory_size += resource_memory;
+
 			return m_discardable_storage.back().view.get();
 		}
 
@@ -733,7 +773,7 @@ namespace vk
 		}
 
 		template<typename RsxTextureType>
-		image_view* _upload_texture(vk::command_buffer& cmd, RsxTextureType& tex, rsx::vk_render_targets& m_rtts)
+		sampled_image_descriptor _upload_texture(vk::command_buffer& cmd, RsxTextureType& tex, rsx::vk_render_targets& m_rtts)
 		{
 			return upload_texture(cmd, tex, m_rtts, *m_device, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 		}

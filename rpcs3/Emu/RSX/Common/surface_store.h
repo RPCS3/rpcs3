@@ -522,6 +522,12 @@ namespace rsx
 		 */
 		void invalidate_surface_address(u32 addr, bool depth)
 		{
+			if (address_is_bound(addr, depth))
+			{
+				LOG_ERROR(RSX, "Cannot invalidate a currently bound render target!");
+				return;
+			}
+
 			if (!depth)
 			{
 				auto It = m_render_targets_storage.find(addr);
