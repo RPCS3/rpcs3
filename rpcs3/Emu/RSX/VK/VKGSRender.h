@@ -129,6 +129,16 @@ private:
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
 
+	std::mutex m_sampler_mutex;
+	std::atomic_bool m_samplers_dirty = { true };
+	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
+	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
+	std::array<std::unique_ptr<vk::sampler>, rsx::limits::fragment_textures_count> fs_sampler_handles;
+	std::array<std::unique_ptr<vk::sampler>, rsx::limits::vertex_textures_count> vs_sampler_handles;
+
+	VkBufferView m_persistent_attribute_storage;
+	VkBufferView m_volatile_attribute_storage;
+
 public:
 	//vk::fbo draw_fbo;
 	std::unique_ptr<vk::vertex_cache> m_vertex_cache;

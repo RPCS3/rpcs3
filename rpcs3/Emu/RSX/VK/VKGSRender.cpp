@@ -712,6 +712,14 @@ VKGSRender::~VKGSRender()
 	m_rtts.destroy();
 	m_texture_cache.destroy();
 
+	//Sampler handles
+	for (auto& handle : fs_sampler_handles)
+		handle.reset();
+
+	for (auto& handle : vs_sampler_handles)
+		handle.reset();
+
+	//Overlay text handler
 	m_text_writer.reset();
 
 	//Pipeline descriptors
@@ -749,6 +757,11 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (!result.violation_handled)
 		return false;
+
+	{
+		std::lock_guard<std::mutex> lock(m_sampler_mutex);
+		m_samplers_dirty.store(true);
+	}
 
 	if (result.num_flushable > 0)
 	{
@@ -845,6 +858,23 @@ void VKGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 		*m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()).violation_handled)
 	{
 		m_texture_cache.purge_dirty();
+		{
+			std::lock_guard<std::mutex> lock(m_sampler_mutex);
+			m_samplers_dirty.store(true);
+		}
+	}
+}
+
+void VKGSRender::notify_tile_unbound(u32 tile)
+{
+	//TODO: Handle texture writeback
+	//u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
+	//on_notify_memory_unmapped(addr, tiles[tile].size);
+	//m_rtts.invalidate_surface_address(addr, false);
+
+	{
+		std::lock_guard<std::mutex> lock(m_sampler_mutex);
+		m_samplers_dirty.store(true);
 	}
 }
 
@@ -995,8 +1025,6 @@ void VKGSRender::end()
 		return;
 	}
 
-	std::chrono::time_point<steady_clock> state_check_start = steady_clock::now();
-
 	//Load program here since it is dependent on vertex state
 	if (!check_program_status())
 	{
@@ -1005,23 +1033,151 @@ void VKGSRender::end()
 		return;
 	}
 
-	std::chrono::time_point<steady_clock> state_check_end = steady_clock::now();
-	m_setup_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(state_check_end - state_check_start).count();
+	//Close current pass to avoid conflict with texture functions
+	close_render_pass();
 
 	//Programs data is dependent on vertex state
-	std::chrono::time_point<steady_clock> vertex_start = state_check_end;
+	std::chrono::time_point<steady_clock> vertex_start = steady_clock::now();
 	auto upload_info = upload_vertex_data();
 	std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - vertex_start).count();
 
+	std::chrono::time_point<steady_clock> textures_start = vertex_end;
+	//Load textures
+	{
+		std::lock_guard<std::mutex> lock(m_sampler_mutex);
+
+		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+		{
+			if (m_samplers_dirty || m_textures_dirty[i])
+			{
+				if (!fs_sampler_state[i])
+					fs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
+
+				auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+
+				if (rsx::method_registers.fragment_textures[i].enabled())
+				{
+					*sampler_state = m_texture_cache._upload_texture(*m_current_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts);
+
+					const u32 texture_format = rsx::method_registers.fragment_textures[i].format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
+					VkCompareOp depth_compare = fs_sampler_state[i]->is_depth_texture ? vk::get_compare_func((rsx::comparison_function)rsx::method_registers.fragment_textures[i].zfunc(), true) : VK_COMPARE_OP_NEVER;
+
+					bool replace = !fs_sampler_handles[i];
+					VkFilter min_filter;
+					VkSamplerMipmapMode mip_mode;
+					f32 min_lod = 0.f, max_lod = 0.f;
+					f32 lod_bias = 0.f;
+
+					const f32 af_level = g_cfg.video.anisotropic_level_override > 0 ? g_cfg.video.anisotropic_level_override : vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso());
+					const auto wrap_s = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s());
+					const auto wrap_t = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t());
+					const auto wrap_r = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r());
+					const auto unnormalized_coords = !!(rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN);
+					const auto mag_filter = vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter());
+					const auto border_color = vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color());
+
+					std::tie(min_filter, mip_mode) = vk::get_min_filter_and_mip(rsx::method_registers.fragment_textures[i].min_filter());
+
+					if (rsx::method_registers.fragment_textures[i].get_exact_mipmap_count() > 1)
+					{
+						min_lod = (float)(rsx::method_registers.fragment_textures[i].min_lod() >> 8);
+						max_lod = (float)(rsx::method_registers.fragment_textures[i].max_lod() >> 8);
+						lod_bias = rsx::method_registers.fragment_textures[i].bias();
+					}
+					else
+					{
+						mip_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+					}
+
+					if (fs_sampler_handles[i])
+					{
+						if (!fs_sampler_handles[i]->matches(wrap_s, wrap_t, wrap_r, unnormalized_coords, lod_bias, af_level, min_lod, max_lod,
+							min_filter, mag_filter, mip_mode, border_color, fs_sampler_state[i]->is_depth_texture, depth_compare))
+						{
+							m_current_frame->samplers_to_clean.push_back(std::move(fs_sampler_handles[i]));
+							replace = true;
+						}
+					}
+
+					if (replace)
+					{
+						fs_sampler_handles[i] = std::make_unique<vk::sampler>(*m_device, wrap_s, wrap_t, wrap_r, unnormalized_coords, lod_bias, af_level, min_lod, max_lod,
+							min_filter, mag_filter, mip_mode, border_color, fs_sampler_state[i]->is_depth_texture, depth_compare);
+					}
+				}
+				else
+				{
+					*sampler_state = {};
+				}
+
+				m_textures_dirty[i] = false;
+			}
+		}
+
+		for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+		{
+			int texture_index = i + rsx::limits::fragment_textures_count;
+
+			if (m_samplers_dirty || m_vertex_textures_dirty[i])
+			{
+				if (!vs_sampler_state[i])
+					vs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
+
+				auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+
+				if (rsx::method_registers.vertex_textures[i].enabled())
+				{
+					*sampler_state = m_texture_cache._upload_texture(*m_current_command_buffer, rsx::method_registers.vertex_textures[i], m_rtts);
+
+					bool replace = !vs_sampler_handles[i];
+					const VkBool32 unnormalized_coords = !!(rsx::method_registers.vertex_textures[i].format() & CELL_GCM_TEXTURE_UN);
+					const auto min_lod = (f32)rsx::method_registers.vertex_textures[i].min_lod();
+					const auto max_lod = (f32)rsx::method_registers.vertex_textures[i].max_lod();
+					const auto border_color = vk::get_border_color(rsx::method_registers.vertex_textures[i].border_color());
+
+					if (vs_sampler_handles[i])
+					{
+						if (!vs_sampler_handles[i]->matches(VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+							unnormalized_coords, 0.f, 1.f, min_lod, max_lod, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, border_color))
+						{
+							m_current_frame->samplers_to_clean.push_back(std::move(vs_sampler_handles[i]));
+							replace = true;
+						}
+					}
+
+					if (replace)
+					{
+						vs_sampler_handles[i] = std::make_unique<vk::sampler>(
+							*m_device,
+							VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+							unnormalized_coords,
+							0.f, 1.f, min_lod, max_lod,
+							VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, border_color);
+					}
+				}
+				else
+					*sampler_state = {};
+
+				m_vertex_textures_dirty[i] = false;
+			}
+		}
+
+		m_samplers_dirty.store(false);
+	}
+
+	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
+	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
+
 	//Load program
-	std::chrono::time_point<steady_clock> program_start = vertex_end;
+	std::chrono::time_point<steady_clock> program_start = textures_end;
 	load_program(std::get<2>(upload_info), std::get<3>(upload_info));
+
+	m_program->bind_uniform(m_persistent_attribute_storage, "persistent_input_stream", m_current_frame->descriptor_set);
+	m_program->bind_uniform(m_volatile_attribute_storage, "volatile_input_stream", m_current_frame->descriptor_set);
+
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
-
-	//Close current pass to avoid conflict with texture functions
-	close_render_pass();
 
 	if (g_cfg.video.strict_rendering_mode)
 	{
@@ -1079,7 +1235,7 @@ void VKGSRender::end()
 		}
 	}
 
-	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
+	textures_start = steady_clock::now();
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
@@ -1091,48 +1247,15 @@ void VKGSRender::end()
 				continue;
 			}
 
-			vk::image_view *texture0 = m_texture_cache._upload_texture(*m_current_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts);
-
-			if (!texture0)
+			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+			if (!sampler_state->image_handle)
 			{
 				LOG_ERROR(RSX, "Texture upload failed to texture index %d. Binding null sampler.", i);
 				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
 				continue;
 			}
 
-			const u32 texture_format = rsx::method_registers.fragment_textures[i].format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
-
-			VkBool32 is_depth_texture = (texture_format == CELL_GCM_TEXTURE_DEPTH16 || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8);
-			VkCompareOp depth_compare = is_depth_texture? vk::get_compare_func((rsx::comparison_function)rsx::method_registers.fragment_textures[i].zfunc(), true): VK_COMPARE_OP_NEVER;
-
-			VkFilter min_filter;
-			VkSamplerMipmapMode mip_mode;
-			float min_lod = 0.f, max_lod = 0.f;
-			float lod_bias = 0.f;
-
-			std::tie(min_filter, mip_mode) = vk::get_min_filter_and_mip(rsx::method_registers.fragment_textures[i].min_filter());
-			
-			if (rsx::method_registers.fragment_textures[i].get_exact_mipmap_count() > 1)
-			{
-				min_lod = (float)(rsx::method_registers.fragment_textures[i].min_lod() >> 8);
-				max_lod = (float)(rsx::method_registers.fragment_textures[i].max_lod() >> 8);
-				lod_bias = rsx::method_registers.fragment_textures[i].bias();
-			}
-			else
-			{
-				mip_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-			}
-			
-			f32 af_level = g_cfg.video.anisotropic_level_override > 0 ? g_cfg.video.anisotropic_level_override : vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso());
-			m_current_frame->samplers_to_clean.push_back(std::make_unique<vk::sampler>(
-				*m_device,
-				vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t()), vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r()),
-				!!(rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN),
-				lod_bias, af_level, min_lod, max_lod,
-				min_filter, vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter()), mip_mode, vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color()),
-				is_depth_texture, depth_compare));
-
-			m_program->bind_uniform({ m_current_frame->samplers_to_clean.back()->value, texture0->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
+			m_program->bind_uniform({ fs_sampler_handles[i]->value, sampler_state->image_handle->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
 		}
 	}
 	
@@ -1146,28 +1269,19 @@ void VKGSRender::end()
 				continue;
 			}
 
-			vk::image_view *texture0 = m_texture_cache._upload_texture(*m_current_command_buffer, rsx::method_registers.vertex_textures[i], m_rtts);
-
-			if (!texture0)
+			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+			if (!sampler_state->image_handle)
 			{
 				LOG_ERROR(RSX, "Texture upload failed to vtexture index %d. Binding null sampler.", i);
 				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
 				continue;
 			}
 
-			m_current_frame->samplers_to_clean.push_back(std::make_unique<vk::sampler>(
-				*m_device,
-				VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
-				!!(rsx::method_registers.vertex_textures[i].format() & CELL_GCM_TEXTURE_UN),
-				0.f, 1.f, (f32)rsx::method_registers.vertex_textures[i].min_lod(), (f32)rsx::method_registers.vertex_textures[i].max_lod(),
-				VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, vk::get_border_color(rsx::method_registers.vertex_textures[i].border_color())
-				));
-
-			m_program->bind_uniform({ m_current_frame->samplers_to_clean.back()->value, texture0->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
+			m_program->bind_uniform({ vs_sampler_handles[i]->value, sampler_state->image_handle->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
 		}
 	}
 
-	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
+	textures_end = steady_clock::now();
 	m_textures_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
 	//While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
@@ -1828,36 +1942,13 @@ bool VKGSRender::do_method(u32 cmd, u32 arg)
 
 bool VKGSRender::check_program_status()
 {
-	auto rtt_lookup_func = [this](u32 texaddr, rsx::fragment_texture &tex, bool is_depth) -> std::tuple<bool, u16>
-	{
-		vk::render_target *surface = nullptr;
+	return (rsx::method_registers.shader_program_address() != 0);
+}
 
-		if (!is_depth)
-			surface = m_rtts.get_texture_from_render_target_if_applicable(texaddr);
-		else
-			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
-
-		const bool dirty_framebuffer = (surface != nullptr && !m_texture_cache.test_framebuffer(texaddr));
-		if (dirty_framebuffer || !surface)
-		{
-			if (is_depth && m_texture_cache.is_depth_texture(texaddr, (u32)get_texture_size(tex)))
-				return std::make_tuple(true, 0);
-
-			if (dirty_framebuffer)
-				return std::make_tuple(false, 0);
-
-			auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, 0, 0, tex.pitch(), false, false, !is_depth, is_depth);
-			if (!rsc.surface || rsc.is_depth_surface != is_depth)
-				return std::make_tuple(false, 0);
-
-			surface = rsc.surface;
-		}
-
-		return std::make_tuple(true, surface->native_pitch);
-	};
-
-	get_current_fragment_program(rtt_lookup_func);
-	if (!current_fragment_program.valid) return false;
+void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
+{
+	get_current_fragment_program(fs_sampler_state);
+	verify(HERE), current_fragment_program.valid;
 
 	get_current_vertex_program();
 
@@ -2033,7 +2124,7 @@ bool VKGSRender::check_program_status()
 
 	if (update_stencil_info_front)
 	{
-		VkStencilFaceFlags face_flag = (update_stencil_info_back)? VK_STENCIL_FACE_FRONT_BIT: VK_STENCIL_FRONT_AND_BACK;
+		VkStencilFaceFlags face_flag = (update_stencil_info_back) ? VK_STENCIL_FACE_FRONT_BIT : VK_STENCIL_FRONT_AND_BACK;
 
 		vkCmdSetStencilWriteMask(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_mask());
 		vkCmdSetStencilCompareMask(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_func_mask());
@@ -2052,14 +2143,6 @@ bool VKGSRender::check_program_status()
 		//Update depth bounds min/max
 		vkCmdSetDepthBounds(*m_current_command_buffer, rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
 	}
-
-	return true;
-}
-
-void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
-{
-	auto &vertex_program = current_vertex_program;
-	auto &fragment_program = current_fragment_program;
 
 	const size_t fragment_constants_sz = m_prog_buffer->get_fragment_constants_buffer_size(fragment_program);
 	const size_t fragment_buffer_sz = fragment_constants_sz + (18 * 4 * sizeof(float));
@@ -2733,13 +2816,7 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 	auto result = m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer);
 	m_current_command_buffer->begin();
 
-	return result;
-}
+	m_samplers_dirty.store(true);
 
-void VKGSRender::notify_tile_unbound(u32 tile)
-{
-	//TODO: Handle texture writeback
-	//u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
-	//on_notify_memory_unmapped(addr, tiles[tile].size);
-	//m_rtts.invalidate_surface_address(addr, false);
+	return result;
 }

@@ -783,15 +783,5 @@ namespace gl
 			void* unused = nullptr;
 			return upload_scaled_image(src, dst, linear_interpolate, unused, m_rtts, m_hw_blitter);
 		}
-
-		template<typename RsxTextureType>
-		void upload_and_bind_texture(int index, GLenum target, RsxTextureType &tex, gl_render_targets &m_rtts)
-		{
-			glActiveTexture(GL_TEXTURE0 + index);
-			void* unused = nullptr;
-
-			auto id = upload_texture(unused, tex, m_rtts);
-			glBindTexture(target, id);
-		}
 	};
 }

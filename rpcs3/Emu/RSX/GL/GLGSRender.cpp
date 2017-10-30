@@ -347,6 +347,72 @@ void GLGSRender::end()
 	std::optional<std::tuple<GLenum, u32> > indexed_draw_info;
 	std::tie(vertex_draw_count, actual_vertex_count, vertex_base, indexed_draw_info) = set_vertex_buffer();
 
+	//Load textures
+	{
+		std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
+
+		std::lock_guard<std::mutex> lock(m_sampler_mutex);
+		void* unused = nullptr;
+
+		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+		{
+			if (m_samplers_dirty || m_textures_dirty[i])
+			{
+				if (!fs_sampler_state[i])
+					fs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
+
+				auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+
+				if (rsx::method_registers.fragment_textures[i].enabled())
+				{
+					glActiveTexture(GL_TEXTURE0 + i);
+
+					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.fragment_textures[i], m_rtts);
+					m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i]);
+
+					GLenum target = get_gl_target_for_texture(rsx::method_registers.fragment_textures[i]);
+					glBindTexture(target, sampler_state->image_handle);
+				}
+				else
+				{
+					*sampler_state = {};
+				}
+
+				m_textures_dirty[i] = false;
+			}
+		}
+
+		for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+		{
+			int texture_index = i + rsx::limits::fragment_textures_count;
+
+			if (m_samplers_dirty || m_vertex_textures_dirty[i])
+			{
+				if (!vs_sampler_state[i])
+					vs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
+
+				auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+
+				if (rsx::method_registers.vertex_textures[i].enabled())
+				{
+					glActiveTexture(GL_TEXTURE0 + texture_index);
+
+					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.vertex_textures[i], m_rtts);
+					glBindTexture(GL_TEXTURE_2D, static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get())->image_handle);
+				}
+				else
+					*sampler_state = {};
+
+				m_vertex_textures_dirty[i] = false;
+			}
+		}
+
+		m_samplers_dirty.store(false);
+
+		std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
+		m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
+	}
+
 	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
 	//Load program here since it is dependent on vertex state
 
@@ -461,43 +527,6 @@ void GLGSRender::end()
 	}
 
 	glEnable(GL_SCISSOR_TEST);
-
-	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
-
-	//Setup textures
-	//Setting unused texture to 0 is not needed, but makes program validation happy if we choose to enforce it
-	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
-	{
-		int location;
-		if (rsx::method_registers.fragment_textures[i].enabled() && m_program->uniforms.has_location("tex" + std::to_string(i), &location))
-		{
-			m_gl_texture_cache.upload_and_bind_texture(i, get_gl_target_for_texture(rsx::method_registers.fragment_textures[i]), rsx::method_registers.fragment_textures[i], m_rtts);
-
-			if (m_textures_dirty[i])
-			{
-				m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i]);
-				m_textures_dirty[i] = false;
-			}
-		}
-	}
-
-	//Vertex textures
-	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
-	{
-		int texture_index = i + rsx::limits::fragment_textures_count;
-		int location;
-
-		if (!rsx::method_registers.vertex_textures[i].enabled())
-			continue;
-
-		if (m_program->uniforms.has_location("vtex" + std::to_string(i), &location))
-		{
-			m_gl_texture_cache.upload_and_bind_texture(texture_index, GL_TEXTURE_2D, rsx::method_registers.vertex_textures[i], m_rtts);
-		}
-	}
-
-	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
-	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
 	std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
 
@@ -952,44 +981,16 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 
 bool GLGSRender::check_program_state()
 {
-	auto rtt_lookup_func = [this](u32 texaddr, rsx::fragment_texture &tex, bool is_depth) -> std::tuple<bool, u16>
-	{
-		gl::render_target *surface = nullptr;
-		if (!is_depth)
-			surface = m_rtts.get_texture_from_render_target_if_applicable(texaddr);
-		else
-			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
-
-		const bool dirty_framebuffer = (surface != nullptr && !m_gl_texture_cache.test_framebuffer(texaddr));
-		if (dirty_framebuffer || !surface)
-		{
-			if (is_depth && m_gl_texture_cache.is_depth_texture(texaddr, (u32)get_texture_size(tex)))
-				return std::make_tuple(true, 0);
-
-			if (dirty_framebuffer)
-				return std::make_tuple(false, 0);
-
-			auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, 0, 0, tex.pitch(), false, false, !is_depth, is_depth);
-			if (!rsc.surface || rsc.is_depth_surface != is_depth)
-				return std::make_tuple(false, 0);
-
-			surface = rsc.surface;
-		}
-
-		return std::make_tuple(true, surface->get_native_pitch());
-	};
-
-	get_current_fragment_program(rtt_lookup_func);
-
-	if (current_fragment_program.valid == false)
-		return false;
-
-	get_current_vertex_program();
-	return true;
+	return (rsx::method_registers.shader_program_address() != 0);
 }
 
 void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 {
+	get_current_fragment_program(fs_sampler_state);
+	verify(HERE), current_fragment_program.valid;
+
+	get_current_vertex_program();
+
 	auto &fragment_program = current_fragment_program;
 	auto &vertex_program = current_vertex_program;
 
@@ -1228,6 +1229,11 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 	if (!result.violation_handled)
 		return false;
 
+	{
+		std::lock_guard<std::mutex> lock(m_sampler_mutex);
+		m_samplers_dirty.store(true);
+	}
+
 	if (result.num_flushable > 0)
 	{
 		work_item &task = post_flush_request(address, result);
@@ -1249,7 +1255,13 @@ void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 {
 	//Discard all memory in that range without bothering with writeback (Force it for strict?)
 	if (m_gl_texture_cache.invalidate_range(address_base, size, true, true, false).violation_handled)
+	{
 		m_gl_texture_cache.purge_dirty();
+		{
+			std::lock_guard<std::mutex> lock(m_sampler_mutex);
+			m_samplers_dirty.store(true);
+		}
+	}
 }
 
 void GLGSRender::do_local_task()
@@ -1296,6 +1308,7 @@ void GLGSRender::synchronize_buffers()
 
 bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 {
+	m_samplers_dirty.store(true);
 	return m_gl_texture_cache.blit(src, dst, interpolate, m_rtts);
 }
 

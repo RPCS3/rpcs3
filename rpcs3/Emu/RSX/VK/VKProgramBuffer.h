@@ -23,7 +23,7 @@ namespace vk
 			if (memcmp(&att_state[0], &other.att_state[0], sizeof(VkPipelineColorBlendAttachmentState)))
 				return false;
 
-			if (render_pass != other.render_pass)
+			if (render_pass_location != other.render_pass_location)
 				return false;
 
 			if (memcmp(&rs, &other.rs, sizeof(VkPipelineRasterizationStateCreateInfo)))
