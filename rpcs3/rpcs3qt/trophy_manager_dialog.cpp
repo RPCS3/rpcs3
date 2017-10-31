@@ -72,6 +72,7 @@ trophy_manager_dialog::trophy_manager_dialog() : QWidget(), m_sort_column(0), m_
 			continue;
 		}
 		std::string dirName = sstr(dir_iter.fileName());
+		LOG_TRACE(GENERAL, "Loading trophy dir: %s", dirName);
 		LoadTrophyFolderToDB(dirName);
 		dir_iter.next();
 	}
@@ -163,6 +164,12 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 	if (!success || !config)
 	{
 		LOG_ERROR(GENERAL, "Failed to load trophy database for %s", trop_name);
+		return false;
+	}
+
+	if (game_trophy_data->trop_usr->GetTrophiesCount() == 0)
+	{
+		LOG_ERROR(GENERAL, "Warning game %s in trophy folder %s usr file reports zero trophies.  Cannot load in trophy manager.", game_trophy_data->game_name, game_trophy_data->path);
 		return false;
 	}
 
@@ -324,6 +331,7 @@ void trophy_manager_dialog::PopulateUI()
 	{
 		auto& data = m_trophies_db[i];
 
+		LOG_TRACE(GENERAL, "Populating Trophy Manager UI with %s %s", data->game_name, data->path);
 		std::shared_ptr<rXmlNode> trophy_base = data->trop_config.GetRoot();
 		if (trophy_base->GetChildren()->GetName() == "trophyconf")
 		{
