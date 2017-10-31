@@ -215,6 +215,7 @@ public:
 	std::vector<std::string> argv;
 	std::vector<std::string> envp;
 	std::vector<u8> data;
+	std::string disc;
 
 	const std::string& GetBoot() const
 	{

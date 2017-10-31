@@ -190,7 +190,7 @@ void Emulator::Init()
 	{
 		g_tty.open(fs::get_config_dir() + "TTY.log", fs::rewrite + fs::append);
 	}
-	
+
 	idm::init();
 	fxm::init();
 
@@ -308,10 +308,13 @@ void Emulator::Load(bool add_only)
 			{
 				return sfov;
 			}
-			else
+
+			if (Emu.disc.size())
 			{
-				return fs::file(elf_dir + "/../PARAM.SFO");
+				return fs::file{Emu.disc + "/PS3_GAME/PARAM.SFO"};
 			}
+
+			return fs::file(elf_dir + "/../PARAM.SFO");
 		}());
 		m_title = psf::get_string(_psf, "TITLE", m_path);
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
@@ -370,7 +373,7 @@ void Emulator::Load(bool add_only)
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
 
-		if (_cat == "DG" && m_path.find(hdd0_game) != -1)
+		if (_cat == "DG" && m_path.find(hdd0_game) != -1 && Emu.disc.empty())
 		{
 			// Booting disc game from wrong location
 			LOG_ERROR(LOADER, "Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
@@ -389,7 +392,7 @@ void Emulator::Load(bool add_only)
 		}
 
 		// Booting disc game
-		if (_cat == "DG" && bdvd_dir.empty())
+		if (_cat == "DG" && bdvd_dir.empty() && Emu.disc.empty())
 		{
 			// Mount /dev_bdvd/ if necessary
 			if (auto pos = elf_dir.rfind("/PS3_GAME/") + 1)
@@ -399,7 +402,7 @@ void Emulator::Load(bool add_only)
 		}
 
 		// Booting patch data
-		if (_cat == "GD" && bdvd_dir.empty())
+		if (_cat == "GD" && bdvd_dir.empty() && Emu.disc.empty())
 		{
 			// Load /dev_bdvd/ from game list if available
 			if (auto node = games[m_title_id])
@@ -413,7 +416,7 @@ void Emulator::Load(bool add_only)
 		}
 
 		// Check /dev_bdvd/
-		if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
+		if (Emu.disc.empty() && !bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 		{
 			fs::file sfb_file;
 
@@ -439,6 +442,11 @@ void Emulator::Load(bool add_only)
 			YAML::Emitter out;
 			out << games;
 			fs::file(fs::get_config_dir() + "/games.yml", fs::rewrite).write(out.c_str(), out.size());
+		}
+		else if (!Emu.disc.empty())
+		{
+			vfs::mount("dev_bdvd", Emu.disc);
+			LOG_NOTICE(LOADER, "Disk: %s", vfs::get("/dev_bdvd"));
 		}
 		else if (_cat == "DG" || _cat == "GD")
 		{
@@ -641,7 +649,6 @@ void Emulator::Run()
 		return;
 	}
 
-	
 	GetCallbacks().on_run();
 
 	m_pause_start_time = 0;
@@ -839,6 +846,7 @@ void Emulator::Stop()
 	argv.clear();
 	envp.clear();
 	data.clear();
+	disc.clear();
 }
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)

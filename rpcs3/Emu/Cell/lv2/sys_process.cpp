@@ -288,13 +288,14 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 	vm::temporary_unlock(ppu);
 
-	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data)]()
+	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = vfs::get("/dev_bdvd/")]() mutable
 	{
 		sys_process.success("Process finished -> %s", argv[0]);
 		Emu.Stop();
 		Emu.argv = std::move(argv);
 		Emu.envp = std::move(envp);
 		Emu.data = std::move(data);
+		Emu.disc = std::move(disc);
 		Emu.BootGame(path, true);
 
 		if (Emu.IsReady() && !g_cfg.misc.autostart)
