@@ -57,6 +57,8 @@ void audio_config::on_init(const std::shared_ptr<void>& _this)
 
 void audio_config::on_task()
 {
+	thread_ctrl::set_native_priority(1);
+
 	AudioDumper m_dump(g_cfg.audio.dump_to_file ? 2 : 0); // Init AudioDumper for 2 channels if enabled
 
 	float buf2ch[2 * BUFFER_SIZE]{}; // intermediate buffer for 2 channels
@@ -337,8 +339,8 @@ void audio_config::on_task()
 		case 8: m_dump.WriteData(&buf8ch, sizeof(buf8ch)); break; // write file data (8 ch)
 		}
 
-		cellAudio.trace("Audio perf: start=%d (access=%d, AddData=%d, events=%d, dump=%d)",
-			time_pos, stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
+		cellAudio.trace("Audio perf: (access=%d, AddData=%d, events=%d, dump=%d)",
+			stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
 	}
 }
 
