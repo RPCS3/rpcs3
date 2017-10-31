@@ -254,6 +254,10 @@ struct gl_render_target_traits
 	static void invalidate_depth_surface_contents(void *, gl::render_target *ds, gl::render_target* /*old*/, bool) { ds->set_cleared(false);  }
 
 	static
+	void notify_surface_invalidated(const std::unique_ptr<gl::render_target>&)
+	{}
+
+	static
 	bool rtt_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_color_format format, size_t width, size_t height, bool check_refs=false)
 	{
 		if (check_refs) //TODO
