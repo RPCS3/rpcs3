@@ -314,6 +314,11 @@ int evdev_joystick_handler::GetButtonInfo(const input_event& evt, libevdev* dev,
 	case EV_ABS:
 	{
 		value = ScaleStickInput(val, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code));
+
+		// Triggers should be ABS_Z and ABS_RZ and do not need handling of negative values
+		if (code == ABS_Z || code == ABS_RZ)
+			return code;
+
 		is_negative = value <= 127;
 
 		if (is_negative)
@@ -337,43 +342,43 @@ int evdev_joystick_handler::GetButtonInfo(const input_event& evt, libevdev* dev,
 
 std::vector<std::string> evdev_joystick_handler::ListDevices()
 {
-    Init();
-    std::vector<std::string> evdev_joystick_list;
-    fs::dir devdir{"/dev/input/"};
-    fs::dir_entry et;
+	Init();
+	std::vector<std::string> evdev_joystick_list;
+	fs::dir devdir{"/dev/input/"};
+	fs::dir_entry et;
 
-    while (devdir.read(et))
-    {
-        // Check if the entry starts with event (a 5-letter word)
-        if (et.name.size() > 5 && et.name.compare(0, 5,"event") == 0)
-        {
-            int fd = open(("/dev/input/" + et.name).c_str(), O_RDONLY|O_NONBLOCK);
-            struct libevdev *dev = NULL;
-            int rc = libevdev_new_from_fd(fd, &dev);
-            if (rc < 0)
-            {
-                // If it's just a bad file descriptor, don't bother logging, but otherwise, log it.
-                if (rc != -9)
-                    LOG_WARNING(GENERAL, "Failed to connect to device at %s, the error was: %s", "/dev/input/" + et.name, strerror(-rc));
-                libevdev_free(dev);
-                close(fd);
-                continue;
-            }
-            if (libevdev_has_event_type(dev, EV_KEY) &&
-                libevdev_has_event_code(dev, EV_ABS, ABS_X) &&
-                libevdev_has_event_code(dev, EV_ABS, ABS_Y))
-            {
-                // It's a joystick.
-                evdev_joystick_list.push_back(libevdev_get_name(dev));
-            }
-            libevdev_free(dev);
-            close(fd);
-        }
-    }
-    return evdev_joystick_list;
+	while (devdir.read(et))
+	{
+		// Check if the entry starts with event (a 5-letter word)
+		if (et.name.size() > 5 && et.name.compare(0, 5,"event") == 0)
+		{
+			int fd = open(("/dev/input/" + et.name).c_str(), O_RDONLY|O_NONBLOCK);
+			struct libevdev *dev = NULL;
+			int rc = libevdev_new_from_fd(fd, &dev);
+			if (rc < 0)
+			{
+				// If it's just a bad file descriptor, don't bother logging, but otherwise, log it.
+				if (rc != -9)
+					LOG_WARNING(GENERAL, "Failed to connect to device at %s, the error was: %s", "/dev/input/" + et.name, strerror(-rc));
+				libevdev_free(dev);
+				close(fd);
+				continue;
+			}
+			if (libevdev_has_event_type(dev, EV_KEY) &&
+				libevdev_has_event_code(dev, EV_ABS, ABS_X) &&
+				libevdev_has_event_code(dev, EV_ABS, ABS_Y))
+			{
+				// It's a joystick.
+				evdev_joystick_list.push_back(libevdev_get_name(dev));
+			}
+			libevdev_free(dev);
+			close(fd);
+		}
+	}
+	return evdev_joystick_list;
 }
 
-int evdev_joystick_handler::add_device(const std::string& device, std::shared_ptr<Pad> pad)
+int evdev_joystick_handler::add_device(const std::string& device, std::shared_ptr<Pad> pad, const std::unordered_map<u64, bool>& axis_map)
 {
 	// Now we need to find the device with the same name, and make sure not to grab any duplicates.
 	fs::dir devdir{ "/dev/input/" };
@@ -383,15 +388,15 @@ int evdev_joystick_handler::add_device(const std::string& device, std::shared_pt
 		// Check if the entry starts with event (a 5-letter word)
 		if (et.name.size() > 5 && et.name.compare(0, 5, "event") == 0)
 		{
-			std::string path = "";
-			int fd = open(("/dev/input/" + et.name).c_str(), O_RDONLY | O_NONBLOCK);
+			std::string path = "/dev/input/" + et.name;
+			int fd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
 			struct libevdev *dev = NULL;
 			int rc = libevdev_new_from_fd(fd, &dev);
 			if (rc < 0)
 			{
 				// If it's just a bad file descriptor, don't bother logging, but otherwise, log it.
 				if (rc != -9)
-					LOG_WARNING(GENERAL, "Failed to connect to device at %s, the error was: %s", "/dev/input/" + et.name, strerror(-rc));
+					LOG_WARNING(GENERAL, "Failed to connect to device at %s, the error was: %s", path, strerror(-rc));
 				libevdev_free(dev);
 				close(fd);
 				continue;
@@ -405,7 +410,7 @@ int evdev_joystick_handler::add_device(const std::string& device, std::shared_pt
 				// It's a joystick.
 
 				// Now let's make sure we don't already have this one.
-				auto it = std::find_if(devices.begin(), devices.end(), [path](EvdevDevice device) { return path == device.path; });
+				auto it = std::find_if(devices.begin(), devices.end(), [&path](const EvdevDevice &device) { return path == device.path; });
 				if (it != devices.end())
 				{
 					libevdev_free(dev);
@@ -414,7 +419,7 @@ int evdev_joystick_handler::add_device(const std::string& device, std::shared_pt
 				}
 
 				// Alright, now that we've confirmed we haven't added this joystick yet, les do dis.
-				devices.push_back({nullptr, fmt::format("/dev/input/%s", et.name), pad });
+				devices.push_back({nullptr, path, pad, axis_map});
 				return devices.size() - 1;
 			}
 			libevdev_free(dev);
@@ -426,167 +431,195 @@ int evdev_joystick_handler::add_device(const std::string& device, std::shared_pt
 
 bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
 {
-        Init();
+	Init();
 
-				auto find_key = [=](const std::string& name)
-				{
-					int key = FindKeyCode(button_list, name);
-					if (key < 0)
-						key = FindKeyCode(axis_list, name);
-					if (key < 0)
-						key = FindKeyCode(rev_axis_list, name);
-					if (key < 0)
-						key = std::stoi(name);
-					return key;
-				};
+	std::unordered_map<u64, bool> axis_orientations;
 
-				pad->Init
-				(
-					CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES,
-					CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
-					CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
-					CELL_PAD_DEV_TYPE_STANDARD
-				);
+	auto find_key = [&](const std::string& name)
+	{
+		int key = FindKeyCode(button_list, name);
+		if (key < 0)
+		{
+			key = FindKeyCode(axis_list, name);
+			if (key >= 0)
+			{
+				axis_orientations.emplace(key, false);
+			}
+		}
+		if (key < 0)
+		{
+			key = FindKeyCode(rev_axis_list, name);
+			if (key >= 0)
+			{
+				axis_orientations.emplace(key, true);
+			}
+		}
+		if (key < 0)
+			key = std::stoi(name);
+		return key;
+	};
 
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.triangle), CELL_PAD_CTRL_TRIANGLE);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.circle),   CELL_PAD_CTRL_CIRCLE);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.cross),    CELL_PAD_CTRL_CROSS);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.square),   CELL_PAD_CTRL_SQUARE);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.l2),       CELL_PAD_CTRL_L2);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.r2),       CELL_PAD_CTRL_R2);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.l1),       CELL_PAD_CTRL_L1);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.r1),       CELL_PAD_CTRL_R1);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.start),    CELL_PAD_CTRL_START);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.select),   CELL_PAD_CTRL_SELECT);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.l3),       CELL_PAD_CTRL_L3);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.r3),       CELL_PAD_CTRL_R3);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.ps),       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
-				pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.up),       CELL_PAD_CTRL_UP);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.down),     CELL_PAD_CTRL_DOWN);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.left),     CELL_PAD_CTRL_LEFT);
-        pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.right),    CELL_PAD_CTRL_RIGHT);
+	pad->Init
+	(
+		CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES,
+		CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
+		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
+		CELL_PAD_DEV_TYPE_STANDARD
+	);
 
-				pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  find_key(m_pad_config.ls_left), find_key(m_pad_config.ls_right));
-				pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  find_key(m_pad_config.ls_down), find_key(m_pad_config.ls_up));
-				pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, find_key(m_pad_config.rs_left), find_key(m_pad_config.rs_right));
-				pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, find_key(m_pad_config.rs_down), find_key(m_pad_config.rs_up));
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.triangle), CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.circle),   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.cross),    CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.square),   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.l2),       CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.r2),       CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.l1),       CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.r1),       CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.start),    CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.select),   CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.l3),       CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.r3),       CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.ps),       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.up),       CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.down),     CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.left),     CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.right),    CELL_PAD_CTRL_RIGHT);
 
-				pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 512);
-				pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 399);
-				pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Z, 512);
-				pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_G, 512);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  find_key(m_pad_config.ls_left), find_key(m_pad_config.ls_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  find_key(m_pad_config.ls_down), find_key(m_pad_config.ls_up));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, find_key(m_pad_config.rs_left), find_key(m_pad_config.rs_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, find_key(m_pad_config.rs_down), find_key(m_pad_config.rs_up));
 
-        pad->m_vibrateMotors.emplace_back(true, 0);
-        pad->m_vibrateMotors.emplace_back(false, 0);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 512);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 399);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Z, 512);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_G, 512);
 
-				if (!add_device(device, pad))
-				{
-					//return;
-				}
-        update_devs();
-        return true;
+	pad->m_vibrateMotors.emplace_back(true, 0);
+	pad->m_vibrateMotors.emplace_back(false, 0);
+
+	if (!add_device(device, pad, axis_orientations))
+	{
+		//return;
+	}
+	update_devs();
+	return true;
 }
 
 void evdev_joystick_handler::ThreadProc()
 {
-    update_devs();
+	update_devs();
 
-    for (auto& device : devices)
-    {
-        auto pad = device.pad;
-        auto& dev = device.device;
-        if (dev == nullptr) continue;
+	for (auto& device : devices)
+	{
+		auto pad = device.pad;
+		auto axis_orientations = device.axis_orientations;
+		auto& dev = device.device;
+		if (dev == nullptr) continue;
 
-        // Try to query the latest event from the joystick.
-        input_event evt;
-        int ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL, &evt);
+		// Try to query the latest event from the joystick.
+		input_event evt;
+		int ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL, &evt);
 
-        // Grab any pending sync event.
-        if (ret == LIBEVDEV_READ_STATUS_SYNC)
-        {
-            LOG_NOTICE(GENERAL, "Captured sync event");
-            ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_SYNC, &evt);
-        }
+		// Grab any pending sync event.
+		if (ret == LIBEVDEV_READ_STATUS_SYNC)
+		{
+			LOG_NOTICE(GENERAL, "Captured sync event");
+			ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_SYNC, &evt);
+		}
 
-        if (ret < 0)
-        {
-            // -EAGAIN signifies no available events, not an actual *error*.
-            if (ret != -EAGAIN)
-                LOG_ERROR(GENERAL, "Failed to read latest event from joystick: %s [errno %d]", strerror(-ret), -ret);
-            continue;
-        }
+		if (ret < 0)
+		{
+			// -EAGAIN signifies no available events, not an actual *error*.
+			if (ret != -EAGAIN)
+				LOG_ERROR(GENERAL, "Failed to read latest event from joystick: %s [errno %d]", strerror(-ret), -ret);
+			continue;
+		}
 
-				bool is_negative;
-				int value;
-				int button_code = GetButtonInfo(evt, dev, value, is_negative);
-				if (button_code < 0 || value <= 0)
-					continue;
+		bool is_negative;
+		int value;
+		int button_code = GetButtonInfo(evt, dev, value, is_negative);
+		if (button_code < 0 || value < 0)
+			continue;
 
-				// Translate any corresponding keycodes to our normal DS3 buttons and triggers
-				for (auto & btn : pad->m_buttons)
-				{
-					if (btn.m_keyCode != button_code)
-						continue;
+		// Translate any corresponding keycodes to our normal DS3 buttons and triggers
+		for (auto & btn : pad->m_buttons)
+		{
+			if (btn.m_keyCode != button_code)
+				continue;
 
-					btn.m_value = static_cast<u16>(value);
-					TranslateButtonPress(button_code, btn.m_pressed, btn.m_value);
-				}
+			btn.m_value = static_cast<u16>(value);
+			TranslateButtonPress(button_code, btn.m_pressed, btn.m_value);
+		}
 
-				// used to get the absolute value of an axis
-				float stick_val[4];
+		// used to get the absolute value of an axis
+		float stick_val[4];
 
-				// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
-				for (int idx = 0; idx < static_cast<int>(pad->m_sticks.size()); idx++)
-				{
-					bool pressed_min, pressed_max;
-					u16 val_min = 0, val_max = 0;
+		// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
+		for (int idx = 0; idx < static_cast<int>(pad->m_sticks.size()); idx++)
+		{
+			bool is_not_stick_axis = evt.type == EV_KEY || button_code == ABS_Z || button_code == ABS_RZ;
+			bool pressed_min = false, pressed_max = false, min_axis_is_negative = false, max_axis_is_negative = false;
+			u16 val_min = 0, val_max = 0;
 
-					// m_keyCodeMin is the mapped key for left or down
-					if (pad->m_sticks[idx].m_keyCodeMin == button_code)
-					{
-						val_min = value;
-						TranslateButtonPress(button_code, pressed_min, val_min, true);
-					}
+			// differentiate between negative and positive axis without neglecting normal mappings
+			auto min_search = axis_orientations.find(pad->m_sticks[idx].m_keyCodeMin);
+			if (min_search != axis_orientations.end())
+				min_axis_is_negative = min_search->second;
 
-					// m_keyCodeMax is the mapped key for right or up
-					if (pad->m_sticks[idx].m_keyCodeMax == button_code)
-					{
-						val_max = value;
-						TranslateButtonPress(button_code, pressed_max, val_max, true);
-					}
+			auto max_search = axis_orientations.find(pad->m_sticks[idx].m_keyCodeMax);
+			if (max_search != axis_orientations.end())
+				max_axis_is_negative = max_search->second;
 
-					// cancel out opposing values and get the resulting difference
-					// if there was no change, use the old value
-					if (pressed_min || pressed_max)
-						stick_val[idx] = val_max - val_min;
-					else
-						stick_val[idx] = pad->m_sticks[idx].m_value;
-				}
+			bool is_allowed_min = is_not_stick_axis || (evt.type == EV_ABS && is_negative == min_axis_is_negative);
+			bool is_allowed_max = is_not_stick_axis || (evt.type == EV_ABS && is_negative == max_axis_is_negative);
 
-				// Normalize our two stick's axis based on the thresholds
-				u16 lx, ly, rx, ry;
+			// m_keyCodeMin is the mapped key for left or down
+			if (pad->m_sticks[idx].m_keyCodeMin == button_code && is_allowed_min)
+			{
+				val_min = value;
+				TranslateButtonPress(button_code, pressed_min, val_min, true);
+			}
 
-				// Normalize our two stick's axis based on the thresholds
-				std::tie(lx, ly) = NormalizeStickDeadzone(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
-				std::tie(rx, ry) = NormalizeStickDeadzone(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
+			// m_keyCodeMax is the mapped key for right or up
+			if (pad->m_sticks[idx].m_keyCodeMax == button_code && is_allowed_max)
+			{
+				val_max = value;
+				TranslateButtonPress(button_code, pressed_max, val_max, true);
+			}
 
-				ly = 255 - ly;
-				ry = 255 - ry;
-				
-				// these are added with previous value and divided to 'smooth' out the readings
+			// cancel out opposing values and get the resulting difference
+			// if there was no change, use the old value
+			if (pressed_min || pressed_max)
+				stick_val[idx] = val_max - val_min;
+			else
+				stick_val[idx] = pad->m_sticks[idx].m_value;
+		}
 
-				if (m_pad_config.padsquircling != 0)
-				{
-					std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, m_pad_config.padsquircling);
-					std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, m_pad_config.padsquircling);
-				}
+		// Normalize our two stick's axis based on the thresholds
+		u16 lx, ly, rx, ry;
 
-				pad->m_sticks[0].m_value = (lx + pad->m_sticks[0].m_value) / 2; // LX
-				pad->m_sticks[1].m_value = (ly + pad->m_sticks[1].m_value) / 2; // LY
-				pad->m_sticks[2].m_value = (rx + pad->m_sticks[2].m_value) / 2; // RX
-				pad->m_sticks[3].m_value = (ry + pad->m_sticks[3].m_value) / 2; // RY
-    }
+		// Normalize our two stick's axis based on the thresholds
+		std::tie(lx, ly) = NormalizeStickDeadzone(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
+		std::tie(rx, ry) = NormalizeStickDeadzone(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
+
+		ly = 255 - ly;
+		ry = 255 - ry;
+
+		// these are added with previous value and divided to 'smooth' out the readings
+
+		if (m_pad_config.padsquircling != 0)
+		{
+			std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, m_pad_config.padsquircling);
+			std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, m_pad_config.padsquircling);
+		}
+
+		pad->m_sticks[0].m_value = (lx + pad->m_sticks[0].m_value) / 2; // LX
+		pad->m_sticks[1].m_value = (ly + pad->m_sticks[1].m_value) / 2; // LY
+		pad->m_sticks[2].m_value = (rx + pad->m_sticks[2].m_value) / 2; // RX
+		pad->m_sticks[3].m_value = (ry + pad->m_sticks[3].m_value) / 2; // RY
+	}
 }
 
 #endif

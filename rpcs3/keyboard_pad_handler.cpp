@@ -195,7 +195,7 @@ std::vector<std::string> keyboard_pad_handler::ListDevices()
 	return list_devices;
 }
 
-const std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
+std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
 {
 	//TODO what about numpad?
 	// Fix some unknown button names
@@ -217,13 +217,13 @@ const std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
 	return sstr(QKeySequence(keyEvent->key() | keyEvent->modifiers()).toString(QKeySequence::NativeText));
 }
 
-const std::string keyboard_pad_handler::GetKeyName(const u32& keyCode)
+std::string keyboard_pad_handler::GetKeyName(const u32& keyCode)
 {
 	//TODO what about numpad?
 	return sstr(QKeySequence(keyCode).toString(QKeySequence::NativeText));
 }
 
-const u32 keyboard_pad_handler::GetKeyCode(const std::string& keyName)
+u32 keyboard_pad_handler::GetKeyCode(const std::string& keyName)
 {
 	if (keyName == "Alt")
 		return Qt::Key_Alt;

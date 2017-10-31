@@ -25,9 +25,9 @@ public:
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
 
-	const std::string GetKeyName(const QKeyEvent* keyEvent);
-	const std::string GetKeyName(const u32& keyCode);
-	const u32 GetKeyCode(const std::string& keyName);
+	std::string GetKeyName(const QKeyEvent* keyEvent);
+	std::string GetKeyName(const u32& keyCode);
+	u32 GetKeyCode(const std::string& keyName);
 
 protected:
 	void Key(const u32 code, bool pressed, u16 value = 255);
