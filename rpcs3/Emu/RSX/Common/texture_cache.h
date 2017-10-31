@@ -878,6 +878,10 @@ namespace rsx
 			}
 
 			const auto extended_dimension = tex.get_extended_texture_dimension();
+			u16 depth = 0;
+			u16 tex_height = (u16)tex.height();
+			u16 tex_pitch = tex.pitch();
+			const u16 tex_width = tex.width();
 
 			if (!is_compressed_format)
 			{
@@ -891,28 +895,44 @@ namespace rsx
 							LOG_ERROR(RSX, "Texture resides in render target memory, but requested type is not 2D (%d)", (u32)extended_dimension);
 
 						f32 internal_scale = (f32)texptr->get_native_pitch() / tex.pitch();
-						for (const auto& tex : m_rtts.m_bound_render_targets)
+						bool requires_processing = texptr->get_surface_width() != tex_width || texptr->get_surface_height() != tex_height;
+
+						if (!requires_processing)
 						{
-							if (std::get<0>(tex) == texaddr)
+							for (const auto& tex : m_rtts.m_bound_render_targets)
 							{
-								if (g_cfg.video.strict_rendering_mode)
+								if (std::get<0>(tex) == texaddr)
 								{
-									LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
-									return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, texptr->width(), texptr->height()), texture_upload_context::framebuffer_storage, false, internal_scale };
-								}
-								else
-								{
-									//issue a texture barrier to ensure previous writes are visible
-									insert_texture_barrier();
-									break;
+									if (g_cfg.video.strict_rendering_mode)
+									{
+										LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
+										requires_processing = true;
+										break;
+									}
+									else
+									{
+										//issue a texture barrier to ensure previous writes are visible
+										insert_texture_barrier();
+										break;
+									}
 								}
 							}
+						}
+
+						if (requires_processing)
+						{
+							const auto w = rsx::apply_resolution_scale(tex_width, true);
+							const auto h = rsx::apply_resolution_scale(tex_height, true);
+							return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, w, h), texture_upload_context::framebuffer_storage, false, internal_scale };
 						}
 
 						return{ texptr->get_view(), texture_upload_context::framebuffer_storage, false, internal_scale };
 					}
 					else
+					{
 						m_rtts.invalidate_surface_address(texaddr, false);
+						invalidate_address(texaddr, false, true, std::forward<Args>(extras)...);
+					}
 				}
 
 				if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
@@ -923,12 +943,14 @@ namespace rsx
 							LOG_ERROR(RSX, "Texture resides in depth buffer memory, but requested type is not 2D (%d)", (u32)extended_dimension);
 
 						f32 internal_scale = (f32)texptr->get_native_pitch() / tex.pitch();
-						if (texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
+						bool requires_processing = texptr->get_surface_width() != tex_width || texptr->get_surface_height() != tex_height;
+
+						if (!requires_processing && texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
 						{
 							if (g_cfg.video.strict_rendering_mode)
 							{
 								LOG_WARNING(RSX, "Attempting to sample a currently bound depth surface @ 0x%x", texaddr);
-								return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, texptr->width(), texptr->height()), texture_upload_context::framebuffer_storage, true, internal_scale };
+								requires_processing = true;
 							}
 							else
 							{
@@ -937,17 +959,22 @@ namespace rsx
 							}
 						}
 
+						if (requires_processing)
+						{
+							const auto w = rsx::apply_resolution_scale(tex_width, true);
+							const auto h = rsx::apply_resolution_scale(tex_height, true);
+							return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, w, h), texture_upload_context::framebuffer_storage, true, internal_scale };
+						}
+
 						return{ texptr->get_view(), texture_upload_context::framebuffer_storage, true, internal_scale };
 					}
 					else
+					{
 						m_rtts.invalidate_surface_address(texaddr, true);
+						invalidate_address(texaddr, false, true, std::forward<Args>(extras)...);
+					}
 				}
 			}
-
-			u16 depth = 0;
-			u16 tex_height = (u16)tex.height();
-			u16 tex_pitch = tex.pitch();
-			const u16 tex_width = tex.width();
 
 			tex_pitch = is_compressed_format? (tex_size / tex_height) : tex_pitch; //NOTE: Compressed textures dont have a real pitch (tex_size = (w*h)/6)
 			if (tex_pitch == 0) tex_pitch = tex_width * get_format_block_size_in_bytes(format);
@@ -987,9 +1014,10 @@ namespace rsx
 				if (rsc.surface)
 				{
 					//TODO: Check that this region is not cpu-dirty before doing a copy
-					if (!test_framebuffer(texaddr))
+					if (!test_framebuffer(rsc.base_address))
 					{
-						m_rtts.invalidate_surface_address(texaddr, rsc.is_depth_surface);
+						m_rtts.invalidate_surface_address(rsc.base_address, rsc.is_depth_surface);
+						invalidate_address(rsc.base_address, false, true, std::forward<Args>(extras)...);
 					}
 					else if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
 					{
@@ -1163,6 +1191,20 @@ namespace rsx
 				if (src_subres.surface->get_rsx_pitch() != src.pitch ||
 					src.pitch < src_subres.surface->get_native_pitch())
 					src_is_render_target = false;
+			}
+
+			if (src_is_render_target && !test_framebuffer(src_subres.base_address))
+			{
+				m_rtts.invalidate_surface_address(src_subres.base_address, src_subres.is_depth_surface);
+				invalidate_address(src_subres.base_address, false, true, std::forward<Args>(extras)...);
+				src_is_render_target = false;
+			}
+
+			if (dst_is_render_target && !test_framebuffer(dst_subres.base_address))
+			{
+				m_rtts.invalidate_surface_address(dst_subres.base_address, dst_subres.is_depth_surface);
+				invalidate_address(dst_subres.base_address, false, true, std::forward<Args>(extras)...);
+				dst_is_render_target = false;
 			}
 
 			//Always use GPU blit if src or dst is in the surface store

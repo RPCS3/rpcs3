@@ -130,6 +130,7 @@ private:
 	std::unique_ptr<vk::text_writer> m_text_writer;
 
 	std::mutex m_sampler_mutex;
+	u64 surface_store_tag = 0;
 	std::atomic_bool m_samplers_dirty = { true };
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};

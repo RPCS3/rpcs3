@@ -17,6 +17,7 @@ namespace rsx
 	struct surface_subresource_storage
 	{
 		surface_type surface = nullptr;
+		u32 base_address = 0;
 
 		u16 x = 0;
 		u16 y = 0;
@@ -29,8 +30,8 @@ namespace rsx
 
 		surface_subresource_storage() {}
 
-		surface_subresource_storage(surface_type src, u16 X, u16 Y, u16 W, u16 H, bool _Bound, bool _Depth, bool _Clipped = false)
-			: surface(src), x(X), y(Y), w(W), h(H), is_bound(_Bound), is_depth_surface(_Depth), is_clipped(_Clipped)
+		surface_subresource_storage(u32 addr, surface_type src, u16 X, u16 Y, u16 W, u16 H, bool _Bound, bool _Depth, bool _Clipped = false)
+			: base_address(addr), surface(src), x(X), y(Y), w(W), h(H), is_bound(_Bound), is_depth_surface(_Depth), is_clipped(_Clipped)
 		{}
 	};
 
@@ -114,6 +115,7 @@ namespace rsx
 		std::tuple<u32, surface_type> m_bound_depth_stencil = {};
 
 		std::list<surface_storage_type> invalidated_resources;
+		u64 cache_tag = 0ull;
 
 		surface_store() = default;
 		~surface_store() = default;
@@ -271,6 +273,8 @@ namespace rsx
 			u32 clip_height = clip_vertical_reg;
 //			u32 clip_x = clip_horizontal_reg;
 //			u32 clip_y = clip_vertical_reg;
+
+			cache_tag++;
 
 			// Make previous RTTs sampleable
 			for (std::tuple<u32, surface_type> &rtt : m_bound_render_targets)
@@ -496,6 +500,8 @@ namespace rsx
 					{
 						invalidated_resources.push_back(std::move(It->second));
 						m_render_targets_storage.erase(It);
+
+						cache_tag++;
 						return;
 					}
 				}
@@ -511,6 +517,8 @@ namespace rsx
 					{
 						invalidated_resources.push_back(std::move(It->second));
 						m_depth_stencil_storage.erase(It);
+
+						cache_tag++;
 						return;
 					}
 				}
@@ -535,6 +543,9 @@ namespace rsx
 				{
 					invalidated_resources.push_back(std::move(It->second));
 					m_render_targets_storage.erase(It);
+
+					cache_tag++;
+					return;
 				}
 			}
 			else
@@ -544,6 +555,9 @@ namespace rsx
 				{
 					invalidated_resources.push_back(std::move(It->second));
 					m_depth_stencil_storage.erase(It);
+
+					cache_tag++;
+					return;
 				}
 			}
 		}
@@ -725,11 +739,11 @@ namespace rsx
 						if (!surface_overlaps_address_fast(surface, this_address, texaddr))
 							continue;
 						else
-							return{ surface, 0, 0, 0, 0, false, false, false };
+							return{ this_address, surface, 0, 0, 0, 0, false, false, false };
 					}
 
 					if (test_surface(surface, this_address, x_offset, y_offset, w, h, clipped))
-						return{ surface, x_offset, y_offset, w, h, address_is_bound(this_address, false), false, clipped };
+						return{ this_address, surface, x_offset, y_offset, w, h, address_is_bound(this_address, false), false, clipped };
 				}
 			}
 
@@ -751,11 +765,11 @@ namespace rsx
 						if (!surface_overlaps_address_fast(surface, this_address, texaddr))
 							continue;
 						else
-							return{ surface, 0, 0, 0, 0, false, true, false };
+							return{ this_address, surface, 0, 0, 0, 0, false, true, false };
 					}
 
 					if (test_surface(surface, this_address, x_offset, y_offset, w, h, clipped))
-						return{ surface, x_offset, y_offset, w, h, address_is_bound(this_address, true), true, clipped };
+						return{ this_address, surface, x_offset, y_offset, w, h, address_is_bound(this_address, true), true, clipped };
 				}
 			}
 

@@ -1051,6 +1051,12 @@ void VKGSRender::end()
 	{
 		std::lock_guard<std::mutex> lock(m_sampler_mutex);
 
+		if (surface_store_tag != m_rtts.cache_tag)
+		{
+			m_samplers_dirty.store(true);
+			surface_store_tag = m_rtts.cache_tag;
+		}
+
 		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			if (m_samplers_dirty || m_textures_dirty[i])

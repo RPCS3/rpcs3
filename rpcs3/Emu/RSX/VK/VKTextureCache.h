@@ -112,7 +112,10 @@ namespace vk
 
 		vk::image_view* get_raw_view()
 		{
-			return uploaded_image_view.get();
+			if (context != rsx::texture_upload_context::framebuffer_storage)
+				return uploaded_image_view.get();
+			else
+				return static_cast<vk::render_target*>(vram_texture)->get_view();
 		}
 
 		vk::image* get_raw_texture()
