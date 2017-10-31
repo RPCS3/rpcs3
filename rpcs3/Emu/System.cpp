@@ -501,7 +501,7 @@ void Emulator::Load(bool add_only)
 			else
 			{
 				// Decrypt SELF
-				elf_file = decrypt_self(std::move(elf_file));
+				elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data());
 
 				if (fs::file elf_out{decrypted_path, fs::rewrite})
 				{
@@ -847,6 +847,7 @@ void Emulator::Stop()
 	envp.clear();
 	data.clear();
 	disc.clear();
+	klic.clear();
 }
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)
