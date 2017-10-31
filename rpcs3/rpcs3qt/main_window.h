@@ -72,6 +72,8 @@ public:
 	void CreateThumbnailToolbar();
 	QIcon GetAppIcon();
 
+	void InstallDiscExtra(const std::string path);
+
 Q_SIGNALS:
 	void RequestGlobalStylesheetChange(const QString& sheetFilePath);
 

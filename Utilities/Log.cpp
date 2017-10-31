@@ -1,4 +1,4 @@
-﻿#include "Log.h"
+#include "Log.h"
 #include "File.h"
 #include "StrFmt.h"
 #include "sema.h"

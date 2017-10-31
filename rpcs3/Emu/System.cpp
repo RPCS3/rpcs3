@@ -190,7 +190,7 @@ void Emulator::Init()
 	{
 		g_tty.open(fs::get_config_dir() + "TTY.log", fs::rewrite + fs::append);
 	}
-	
+   
 	idm::init();
 	fxm::init();
 
@@ -223,7 +223,7 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd1 + "game/");
 	fs::create_path(dev_hdd1);
 	fs::create_path(dev_usb);
-  
+   	
 #ifdef WITH_GDB_DEBUGGER
 	fxm::make<GDBDebugServer>();
 #endif
@@ -641,7 +641,7 @@ void Emulator::Run()
 		return;
 	}
 
-	
+   
 	GetCallbacks().on_run();
 
 	m_pause_start_time = 0;
