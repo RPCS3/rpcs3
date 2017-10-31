@@ -51,7 +51,7 @@ namespace
 		case rsx::comparison_function::greater_or_equal: return GL_GEQUAL;
 		case rsx::comparison_function::always: return GL_ALWAYS;
 		}
-		throw;
+		fmt::throw_exception("Unsupported comparison op 0x%X" HERE, (u32)op);;
 	}
 
 	GLenum stencil_op(rsx::stencil_op op)
@@ -67,7 +67,7 @@ namespace
 		case rsx::stencil_op::incr_wrap: return GL_INCR_WRAP;
 		case rsx::stencil_op::decr_wrap: return GL_DECR_WRAP;
 		}
-		throw;
+		fmt::throw_exception("Unsupported stencil op 0x%X" HERE, (u32)op);
 	}
 
 	GLenum blend_equation(rsx::blend_equation op)
@@ -75,16 +75,20 @@ namespace
 		switch (op)
 		{
 			// Note : maybe add is signed on gl
+		case rsx::blend_equation::add_signed:
+			LOG_TRACE(RSX, "blend equation add_signed used. Emulating using FUNC_ADD");
 		case rsx::blend_equation::add: return GL_FUNC_ADD;
 		case rsx::blend_equation::min: return GL_MIN;
 		case rsx::blend_equation::max: return GL_MAX;
 		case rsx::blend_equation::substract: return GL_FUNC_SUBTRACT;
+		case rsx::blend_equation::reverse_substract_signed:
+			LOG_TRACE(RSX, "blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
 		case rsx::blend_equation::reverse_substract: return GL_FUNC_REVERSE_SUBTRACT;
-		case rsx::blend_equation::reverse_substract_signed: throw "unsupported";
-		case rsx::blend_equation::add_signed: throw "unsupported";
-		case rsx::blend_equation::reverse_add_signed: throw "unsupported";
+		case rsx::blend_equation::reverse_add_signed:
+		default:
+			LOG_ERROR(RSX, "Blend equation 0x%X is unimplemented!", (u32)op);
+			return GL_FUNC_ADD;
 		}
-		throw;
 	}
 
 	GLenum blend_factor(rsx::blend_factor op)
@@ -107,7 +111,7 @@ namespace
 		case rsx::blend_factor::constant_alpha: return GL_CONSTANT_ALPHA;
 		case rsx::blend_factor::one_minus_constant_alpha: return GL_ONE_MINUS_CONSTANT_ALPHA;
 		}
-		throw;
+		fmt::throw_exception("Unsupported blend factor 0x%X" HERE, (u32)op);
 	}
 
 	GLenum logic_op(rsx::logic_op op)
@@ -131,7 +135,7 @@ namespace
 		case rsx::logic_op::logic_nand: return GL_NAND;
 		case rsx::logic_op::logic_set: return GL_SET;
 		}
-		throw;
+		fmt::throw_exception("Unsupported logic op 0x%X" HERE, (u32)op);
 	}
 
 	GLenum front_face(rsx::front_face op)
@@ -143,7 +147,7 @@ namespace
 		case rsx::front_face::cw: return (invert ? GL_CCW : GL_CW);
 		case rsx::front_face::ccw: return (invert ? GL_CW : GL_CCW);
 		}
-		throw;
+		fmt::throw_exception("Unsupported front face 0x%X" HERE, (u32)op);
 	}
 
 	GLenum cull_face(rsx::cull_face op)
@@ -156,7 +160,7 @@ namespace
 		case rsx::cull_face::back: return (invert ? GL_FRONT : GL_BACK);
 		case rsx::cull_face::front_and_back: return GL_FRONT_AND_BACK;
 		}
-		throw;
+		fmt::throw_exception("Unsupported cull face 0x%X" HERE, (u32)op);
 	}
 }
 
