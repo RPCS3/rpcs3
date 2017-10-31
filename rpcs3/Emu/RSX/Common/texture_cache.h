@@ -894,9 +894,10 @@ namespace rsx
 						if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
 							LOG_ERROR(RSX, "Texture resides in render target memory, but requested type is not 2D (%d)", (u32)extended_dimension);
 
-						f32 internal_scale = (f32)texptr->get_native_pitch() / tex.pitch();
-						bool requires_processing = texptr->get_surface_width() != tex_width || texptr->get_surface_height() != tex_height;
+						const f32 internal_scale = (f32)texptr->get_native_pitch() / tex.pitch();
+						const u32 internal_width = tex_width * texptr->get_native_pitch() / tex.pitch();
 
+						bool requires_processing = texptr->get_surface_width() != internal_width || texptr->get_surface_height() != tex_height;
 						if (!requires_processing)
 						{
 							for (const auto& tex : m_rtts.m_bound_render_targets)
@@ -921,7 +922,7 @@ namespace rsx
 
 						if (requires_processing)
 						{
-							const auto w = rsx::apply_resolution_scale(tex_width, true);
+							const auto w = rsx::apply_resolution_scale(internal_width, true);
 							const auto h = rsx::apply_resolution_scale(tex_height, true);
 							return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, w, h), texture_upload_context::framebuffer_storage, false, internal_scale };
 						}
@@ -942,9 +943,10 @@ namespace rsx
 						if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
 							LOG_ERROR(RSX, "Texture resides in depth buffer memory, but requested type is not 2D (%d)", (u32)extended_dimension);
 
-						f32 internal_scale = (f32)texptr->get_native_pitch() / tex.pitch();
-						bool requires_processing = texptr->get_surface_width() != tex_width || texptr->get_surface_height() != tex_height;
+						const f32 internal_scale = (f32)texptr->get_native_pitch() / tex.pitch();
+						const u32 internal_width = tex_width * texptr->get_native_pitch() / tex.pitch();
 
+						bool requires_processing = texptr->get_surface_width() != internal_width || texptr->get_surface_height() != tex_height;
 						if (!requires_processing && texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
 						{
 							if (g_cfg.video.strict_rendering_mode)
@@ -961,7 +963,7 @@ namespace rsx
 
 						if (requires_processing)
 						{
-							const auto w = rsx::apply_resolution_scale(tex_width, true);
+							const auto w = rsx::apply_resolution_scale(internal_width, true);
 							const auto h = rsx::apply_resolution_scale(tex_height, true);
 							return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, w, h), texture_upload_context::framebuffer_storage, true, internal_scale };
 						}
