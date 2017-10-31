@@ -30,7 +30,8 @@ namespace rsx
 	{
 		texture_upload_context upload_context = texture_upload_context::shader_read;
 		bool is_depth_texture = false;
-		f32 internal_scale = 1.f;
+		f32 scale_x = 1.f;
+		f32 scale_y = 1.f;
 	};
 
 	struct cached_texture_section : public rsx::buffered_section
@@ -219,12 +220,13 @@ namespace rsx
 			sampled_image_descriptor()
 			{}
 
-			sampled_image_descriptor(image_view_type handle, const texture_upload_context ctx, const bool is_depth, const f32 scale)
+			sampled_image_descriptor(image_view_type handle, const texture_upload_context ctx, const bool is_depth, const f32 x_scale, const f32 y_scale)
 			{
 				image_handle = handle;
 				upload_context = ctx;
 				is_depth_texture = is_depth;
-				internal_scale = scale;
+				scale_x = x_scale;
+				scale_y = y_scale;
 			}
 		};
 
@@ -447,7 +449,7 @@ namespace rsx
 			return {};
 		}
 
-		bool is_hw_blit_engine_compatible(const u32 format) const
+		inline bool is_hw_blit_engine_compatible(const u32 format) const
 		{
 			switch (format)
 			{
@@ -458,6 +460,80 @@ namespace rsx
 				return true;
 			default:
 				return false;
+			}
+		}
+
+		/**
+		 * Scaling helpers
+		 * - get_native_dimensions() returns w and h for the native texture given rsx dimensions
+		 *   on rsx a 512x512 texture with 4x AA is treated as a 1024x1024 texture for example
+		 * - get_rsx_dimensions() inverse, return rsx w and h given a real texture w and h
+		 * - get_internal_scaling_x/y() returns a scaling factor to be multiplied by 1/size
+		 *   when sampling with unnormalized coordinates. tcoords passed to rsx will be in rsx dimensions
+		 */
+		template <typename T, typename U>
+		inline void get_native_dimensions(T &width, T &height, T rsx_pitch, U surface)
+		{
+			switch (surface->aa_mode)
+			{
+			case rsx::surface_antialiasing::center_1_sample:
+				return;
+			case rsx::surface_antialiasing::diagonal_centered_2_samples:
+				width /= 2;
+				return;
+			case rsx::surface_antialiasing::square_centered_4_samples:
+			case rsx::surface_antialiasing::square_rotated_4_samples:
+				width /= 2;
+				height /= 2;
+				return;
+			}
+		}
+
+		template <typename T, typename U>
+		inline void get_rsx_dimensions(T &width, T &height, T rsx_pitch, U surface)
+		{
+			switch (surface->aa_mode)
+			{
+			case rsx::surface_antialiasing::center_1_sample:
+				return;
+			case rsx::surface_antialiasing::diagonal_centered_2_samples:
+				width *= 2;
+				return;
+			case rsx::surface_antialiasing::square_centered_4_samples:
+			case rsx::surface_antialiasing::square_rotated_4_samples:
+				width *= 2;
+				height *= 2;
+				return;
+			}
+		}
+
+		template <typename T>
+		inline f32 get_internal_scaling_x(T surface)
+		{
+			switch (surface->aa_mode)
+			{
+			default:
+			case rsx::surface_antialiasing::center_1_sample:
+				return 1.f;
+			case rsx::surface_antialiasing::diagonal_centered_2_samples:
+			case rsx::surface_antialiasing::square_centered_4_samples:
+			case rsx::surface_antialiasing::square_rotated_4_samples:
+				return 0.5f;
+			}
+		}
+
+		template <typename T>
+		inline f32 get_internal_scaling_y(T surface)
+		{
+			switch (surface->aa_mode)
+			{
+			default:
+			case rsx::surface_antialiasing::center_1_sample:
+			case rsx::surface_antialiasing::diagonal_centered_2_samples:
+				return 1.f;
+			case rsx::surface_antialiasing::square_centered_4_samples:
+			case rsx::surface_antialiasing::square_rotated_4_samples:
+				return 0.5f;
 			}
 		}
 
@@ -894,10 +970,11 @@ namespace rsx
 						if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
 							LOG_ERROR(RSX, "Texture resides in render target memory, but requested type is not 2D (%d)", (u32)extended_dimension);
 
-						const f32 internal_scale = (f32)texptr->get_native_pitch() / tex.pitch();
-						const u32 internal_width = tex_width * texptr->get_native_pitch() / tex.pitch();
+						u32 internal_width = tex_width;
+						u32 internal_height = tex_height;
+						get_native_dimensions(internal_width, internal_height, (u32)tex_pitch, texptr);
 
-						bool requires_processing = texptr->get_surface_width() != internal_width || texptr->get_surface_height() != tex_height;
+						bool requires_processing = texptr->get_surface_width() != internal_width || texptr->get_surface_height() != internal_height;
 						if (!requires_processing)
 						{
 							for (const auto& tex : m_rtts.m_bound_render_targets)
@@ -923,11 +1000,12 @@ namespace rsx
 						if (requires_processing)
 						{
 							const auto w = rsx::apply_resolution_scale(internal_width, true);
-							const auto h = rsx::apply_resolution_scale(tex_height, true);
-							return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, w, h), texture_upload_context::framebuffer_storage, false, internal_scale };
+							const auto h = rsx::apply_resolution_scale(internal_height, true);
+							return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, w, h), texture_upload_context::framebuffer_storage,
+									false, get_internal_scaling_x(texptr), get_internal_scaling_y(texptr) };
 						}
 
-						return{ texptr->get_view(), texture_upload_context::framebuffer_storage, false, internal_scale };
+						return{ texptr->get_view(), texture_upload_context::framebuffer_storage, false, get_internal_scaling_x(texptr), get_internal_scaling_y(texptr) };
 					}
 					else
 					{
@@ -943,10 +1021,11 @@ namespace rsx
 						if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
 							LOG_ERROR(RSX, "Texture resides in depth buffer memory, but requested type is not 2D (%d)", (u32)extended_dimension);
 
-						const f32 internal_scale = (f32)texptr->get_native_pitch() / tex.pitch();
-						const u32 internal_width = tex_width * texptr->get_native_pitch() / tex.pitch();
+						u32 internal_width = tex_width;
+						u32 internal_height = tex_height;
+						get_native_dimensions(internal_width, internal_height, (u32)tex_pitch, texptr);
 
-						bool requires_processing = texptr->get_surface_width() != internal_width || texptr->get_surface_height() != tex_height;
+						bool requires_processing = texptr->get_surface_width() != internal_width || texptr->get_surface_height() != internal_height;
 						if (!requires_processing && texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
 						{
 							if (g_cfg.video.strict_rendering_mode)
@@ -964,11 +1043,12 @@ namespace rsx
 						if (requires_processing)
 						{
 							const auto w = rsx::apply_resolution_scale(internal_width, true);
-							const auto h = rsx::apply_resolution_scale(tex_height, true);
-							return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, w, h), texture_upload_context::framebuffer_storage, true, internal_scale };
+							const auto h = rsx::apply_resolution_scale(internal_height, true);
+							return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, w, h), texture_upload_context::framebuffer_storage,
+									true, get_internal_scaling_x(texptr), get_internal_scaling_y(texptr) };
 						}
 
-						return{ texptr->get_view(), texture_upload_context::framebuffer_storage, true, internal_scale };
+						return{ texptr->get_view(), texture_upload_context::framebuffer_storage, true, get_internal_scaling_x(texptr), get_internal_scaling_y(texptr) };
 					}
 					else
 					{
@@ -1008,11 +1088,7 @@ namespace rsx
 				 */
 
 				//TODO: Take framebuffer Y compression into account
-				const u32 native_pitch = tex_width * get_format_block_size_in_bytes(format);
-				const f32 internal_scale = (f32)tex_pitch / native_pitch;
-				const u32 internal_width = (const u32)(tex_width * internal_scale);
-
-				const auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, internal_width, tex_height, tex_pitch, true);
+				const auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, tex_width, tex_height, tex_pitch);
 				if (rsc.surface)
 				{
 					//TODO: Check that this region is not cpu-dirty before doing a copy
@@ -1038,16 +1114,18 @@ namespace rsx
 									insert_texture_barrier();
 								}
 
-								return{ rsc.surface->get_view(), texture_upload_context::framebuffer_storage, rsc.is_depth_surface, 1.f };
+								return{ rsc.surface->get_view(), texture_upload_context::framebuffer_storage, rsc.is_depth_surface, get_internal_scaling_x(rsc.surface), get_internal_scaling_y(rsc.surface) };
 							}
 							else return{ create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
-								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true)), texture_upload_context::framebuffer_storage, rsc.is_depth_surface, 1.f };
+								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true)), texture_upload_context::framebuffer_storage,
+								rsc.is_depth_surface, get_internal_scaling_x(rsc.surface), get_internal_scaling_y(rsc.surface) };
 						}
 						else
 						{
 							LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
 							return{ create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
-								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true)), texture_upload_context::framebuffer_storage, rsc.is_depth_surface, 1.f };
+								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true)), texture_upload_context::framebuffer_storage,
+								rsc.is_depth_surface, get_internal_scaling_x(rsc.surface), get_internal_scaling_y(rsc.surface) };
 						}
 					}
 				}
@@ -1060,7 +1138,7 @@ namespace rsx
 				auto cached_texture = find_texture_from_dimensions(texaddr, tex_width, tex_height, depth);
 				if (cached_texture)
 				{
-					return{ cached_texture->get_raw_view(), cached_texture->get_context(), cached_texture->is_depth_texture(), 1.f };
+					return{ cached_texture->get_raw_view(), cached_texture->get_context(), cached_texture->is_depth_texture(), 1.f, 1.f };
 				}
 
 				if ((!blit_engine_incompatibility_warning_raised && g_cfg.video.use_gpu_texture_scaling) || is_hw_blit_engine_compatible(format))
@@ -1103,7 +1181,7 @@ namespace rsx
 
 									auto src_image = surface->get_raw_texture();
 									if (auto result = create_temporary_subresource_view(cmd, &src_image, format, offset_x, offset_y, tex_width, tex_height))
-										return{ result, texture_upload_context::blit_engine_dst, surface->is_depth_texture(), 1.f };
+										return{ result, texture_upload_context::blit_engine_dst, surface->is_depth_texture(), 1.f, 1.f };
 								}
 							}
 						}
@@ -1123,7 +1201,7 @@ namespace rsx
 			m_texture_memory_in_use += (tex_pitch * tex_height);
 			return{ upload_image_from_cpu(cmd, texaddr, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
 				texture_upload_context::shader_read, subresources_layout, extended_dimension, is_swizzled, remap_vector)->get_raw_view(),
-				texture_upload_context::shader_read, false, 1.f };
+				texture_upload_context::shader_read, false, 1.f, 1.f };
 		}
 
 		template <typename surface_store_type, typename blitter_type, typename ...Args>
@@ -1148,13 +1226,6 @@ namespace rsx
 			float scale_x = dst.scale_x;
 			float scale_y = dst.scale_y;
 
-			//TODO: Investigate effects of compression in X axis
-			if (dst.compressed_y)
-				scale_y *= 0.5f;
-
-			if (src.compressed_y)
-				scale_y *= 2.f;
-
 			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			//Reproject final clip onto source...
 			const u16 src_w = (const u16)((f32)dst.clip_width / scale_x);
@@ -1172,7 +1243,7 @@ namespace rsx
 			}
 
 			//Check if src/dst are parts of render targets
-			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, false, false, dst.compressed_y);
+			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, false, false);
 			dst_is_render_target = dst_subres.surface != nullptr;
 
 			if (dst_is_render_target && dst_subres.surface->get_native_pitch() != dst.pitch)
@@ -1184,7 +1255,7 @@ namespace rsx
 			}
 
 			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = m_rtts.get_surface_subresource_if_applicable(framebuffer_src_address, src_w, src_h, src.pitch, true, true, false, false, src.compressed_y);
+			auto src_subres = m_rtts.get_surface_subresource_if_applicable(framebuffer_src_address, src_w, src_h, src.pitch, true, false, false);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			if (src_is_render_target && src_subres.surface->get_native_pitch() != src.pitch)
@@ -1358,9 +1429,7 @@ namespace rsx
 				if (src_subres.w != dst.clip_width ||
 					src_subres.h != dst.clip_height)
 				{
-					f32 subres_scaling_x = (f32)src.pitch / src_subres.surface->get_native_pitch();
-
-					const int dst_width = (int)(src_subres.w * scale_x * subres_scaling_x);
+					const int dst_width = (int)(src_subres.w * scale_x);
 					const int dst_height = (int)(src_subres.h * scale_y);
 
 					dst_area.x2 = dst_area.x1 + dst_width;

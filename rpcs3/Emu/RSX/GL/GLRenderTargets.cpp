@@ -202,6 +202,10 @@ void GLGSRender::init_buffers(bool skip_reading)
 	bool old_format_found = false;
 	gl::texture::format old_format;
 
+	const auto color_offsets = get_offsets();
+	const auto color_locations = get_locations();
+	const auto aa_mode = rsx::method_registers.surface_antialias();
+
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
 		if (surface_info[i].pitch && g_cfg.video.write_color_buffers)
@@ -217,9 +221,10 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 		if (std::get<0>(m_rtts.m_bound_render_targets[i]))
 		{
-			__glcheck draw_fbo.color[i] = *std::get<1>(m_rtts.m_bound_render_targets[i]);
+			auto rtt = std::get<1>(m_rtts.m_bound_render_targets[i]);
+			draw_fbo.color[i] = *rtt;
 
-			std::get<1>(m_rtts.m_bound_render_targets[i])->set_rsx_pitch(pitchs[i]);
+			rtt->set_rsx_pitch(pitchs[i]);
 			surface_info[i] = { surface_addresses[i], pitchs[i], false, surface_format, depth_format, clip_horizontal, clip_vertical };
 
 			//Verify pitch given is correct if pitch <= 64 (especially 64)
@@ -237,6 +242,8 @@ void GLGSRender::init_buffers(bool skip_reading)
 				}
 			}
 
+			rtt->tile = find_tile(color_offsets[i], color_locations[i]);
+			rtt->aa_mode = aa_mode;
 			m_gl_texture_cache.tag_framebuffer(surface_addresses[i]);
 		}
 		else
@@ -245,10 +252,11 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil))
 	{
+		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		if (depth_format == rsx::surface_depth_format::z24s8)
-			__glcheck draw_fbo.depth_stencil = *std::get<1>(m_rtts.m_bound_depth_stencil);
+			draw_fbo.depth_stencil = *ds;
 		else
-			__glcheck draw_fbo.depth = *std::get<1>(m_rtts.m_bound_depth_stencil);
+			draw_fbo.depth = *ds;
 
 		const u32 depth_surface_pitch = rsx::method_registers.surface_z_pitch();
 		std::get<1>(m_rtts.m_bound_depth_stencil)->set_rsx_pitch(rsx::method_registers.surface_z_pitch());
@@ -269,6 +277,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 			}
 		}
 
+		ds->aa_mode = aa_mode;
 		m_gl_texture_cache.tag_framebuffer(depth_address);
 	}
 	else

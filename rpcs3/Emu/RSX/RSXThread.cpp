@@ -1387,8 +1387,8 @@ namespace rsx
 				{
 					if (raw_format & CELL_GCM_TEXTURE_UN)
 					{
-						result.texture_scale[i][0] = (resolution_scale * sampler_descriptors[i]->internal_scale);
-						result.texture_scale[i][1] = resolution_scale;
+						result.texture_scale[i][0] = (resolution_scale * sampler_descriptors[i]->scale_x);
+						result.texture_scale[i][1] = (resolution_scale * sampler_descriptors[i]->scale_y);
 					}
 				}
 
@@ -1562,7 +1562,7 @@ namespace rsx
 	{
 		for (GcmTileInfo &tile : tiles)
 		{
-			if (!tile.binded || tile.location != location)
+			if (!tile.binded || (tile.location & 1) != (location & 1))
 			{
 				continue;
 			}

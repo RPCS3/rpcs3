@@ -47,6 +47,9 @@ namespace rsx
 	template <typename image_storage_type>
 	struct render_target_descriptor
 	{
+		GcmTileInfo *tile = nullptr;
+		rsx::surface_antialiasing aa_mode = rsx::surface_antialiasing::center_1_sample;
+
 		virtual image_storage_type get_surface() const = 0;
 		virtual u16 get_surface_width() const = 0;
 		virtual u16 get_surface_height() const = 0;
@@ -584,7 +587,7 @@ namespace rsx
 		 * address_is_bound - returns true if the surface at a given address is actively bound
 		 * get_surface_subresource_if_available - returns a sectiion descriptor that allows to crop surfaces stored in memory
 		 */
-		bool surface_overlaps_address(surface_type surface, u32 surface_address, u32 texaddr, u16 *x, u16 *y, bool scale_to_fit, bool double_height)
+		bool surface_overlaps_address(surface_type surface, u32 surface_address, u32 texaddr, u16 *x, u16 *y)
 		{
 			bool is_subslice = false;
 			u16  x_offset = 0;
@@ -605,24 +608,31 @@ namespace rsx
 				surface_format_info info;
 				Traits::get_surface_info(surface, &info);
 
+				bool doubled_x = false;
+				bool doubled_y = false;
+
+				switch (surface->aa_mode)
+				{
+				case rsx::surface_antialiasing::square_rotated_4_samples:
+				case rsx::surface_antialiasing::square_centered_4_samples:
+					doubled_y = true;
+					//fall through
+				case rsx::surface_antialiasing::diagonal_centered_2_samples:
+					doubled_x = true;
+					break;
+				}
+
 				u32 range = info.rsx_pitch * info.surface_height;
-				if (double_height) range <<= 1;
+				if (doubled_y) range <<= 1;
 
 				if (offset < range)
 				{
-					const u32 y = (offset / info.rsx_pitch);
-					u32 x = (offset % info.rsx_pitch) / info.bpp;
+					y_offset = (offset / info.rsx_pitch);
+					x_offset = (offset % info.rsx_pitch) / info.bpp;
 
-					if (scale_to_fit)
-					{
-						const f32 x_scale = (f32)info.rsx_pitch / info.native_pitch;
-						x = (u32)((f32)x / x_scale);
-					}
+					if (doubled_x) x_offset /= 2;
+					if (doubled_y) y_offset /= 2;
 
-					x_offset = x;
-					y_offset = y;
-
-					if (double_height) y_offset /= 2;
 					is_subslice = true;
 				}
 			}
@@ -677,27 +687,34 @@ namespace rsx
 		}
 
 		surface_subresource get_surface_subresource_if_applicable(u32 texaddr, u16 requested_width, u16 requested_height, u16 requested_pitch,
-				bool scale_to_fit = false, bool crop = false, bool ignore_depth_formats = false, bool ignore_color_formats = false, bool double_height = false)
+			bool crop = false, bool ignore_depth_formats = false, bool ignore_color_formats = false)
 		{
 			auto test_surface = [&](surface_type surface, u32 this_address, u16 &x_offset, u16 &y_offset, u16 &w, u16 &h, bool &clipped)
 			{
-				if (surface_overlaps_address(surface, this_address, texaddr, &x_offset, &y_offset, scale_to_fit, double_height))
+				if (surface_overlaps_address(surface, this_address, texaddr, &x_offset, &y_offset))
 				{
 					surface_format_info info;
 					Traits::get_surface_info(surface, &info);
 
 					u16 real_width = requested_width;
+					u16 real_height = requested_height;
 
-					if (scale_to_fit)
+					switch (surface->aa_mode)
 					{
-						f32 pitch_scaling = (f32)requested_pitch / info.native_pitch;
-						real_width = (u16)((f32)requested_width / pitch_scaling);
+					case rsx::surface_antialiasing::diagonal_centered_2_samples:
+						real_width /= 2;
+						break;
+					case rsx::surface_antialiasing::square_centered_4_samples:
+					case rsx::surface_antialiasing::square_rotated_4_samples:
+						real_width /= 2;
+						real_height /= 2;
+						break;
 					}
 
-					if (region_fits(info.surface_width, info.surface_height, x_offset, y_offset, real_width, requested_height))
+					if (region_fits(info.surface_width, info.surface_height, x_offset, y_offset, real_width, real_height))
 					{
 						w = real_width;
-						h = requested_height;
+						h = real_height;
 						clipped = false;
 
 						return true;
@@ -710,17 +727,17 @@ namespace rsx
 							u16 remaining_height = info.surface_height - y_offset;
 
 							w = std::min(real_width, remaining_width);
-							h = std::min(requested_height, remaining_height);
+							h = std::min(real_height, remaining_height);
 							clipped = true;
 
 							return true;
 						}
 
-						if (info.surface_width >= real_width && info.surface_height >= requested_height)
+						if (info.surface_width >= real_width && info.surface_height >= real_height)
 						{
 							LOG_WARNING(RSX, "Overlapping surface exceeds bounds; returning full surface region");
 							w = real_width;
-							h = requested_height;
+							h = real_height;
 							clipped = true;
 
 							return true;
