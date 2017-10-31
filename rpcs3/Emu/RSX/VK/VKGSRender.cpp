@@ -230,9 +230,13 @@ namespace vk
 	{
 		switch (op)
 		{
+		case rsx::blend_equation::add_signed:
+			LOG_TRACE(RSX, "blend equation add_signed used. Emulating using FUNC_ADD");
 		case rsx::blend_equation::add:
-		case rsx::blend_equation::add_signed: return VK_BLEND_OP_ADD;
+			return VK_BLEND_OP_ADD;
 		case rsx::blend_equation::substract: return VK_BLEND_OP_SUBTRACT;
+		case rsx::blend_equation::reverse_substract_signed:
+			LOG_TRACE(RSX, "blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
 		case rsx::blend_equation::reverse_substract: return VK_BLEND_OP_REVERSE_SUBTRACT;
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
 		case rsx::blend_equation::max: return VK_BLEND_OP_MAX;
