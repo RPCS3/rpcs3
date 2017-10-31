@@ -2320,6 +2320,7 @@ void VKGSRender::prepare_rtts()
 
 	const auto fbo_width = rsx::apply_resolution_scale(clip_width, true);
 	const auto fbo_height = rsx::apply_resolution_scale(clip_height, true);
+	const auto aa_mode = rsx::method_registers.surface_antialias();
 
 	if (m_draw_fbo)
 	{
@@ -2404,6 +2405,7 @@ void VKGSRender::prepare_rtts()
 				m_surface_info[index].pitch = 0;
 		}
 
+		surface->aa_mode = aa_mode;
 		m_texture_cache.tag_framebuffer(surface_addresses[index]);
 	}
 
@@ -2419,6 +2421,7 @@ void VKGSRender::prepare_rtts()
 		if (m_depth_surface_info.pitch <= 64 && clip_width > m_depth_surface_info.pitch)
 			m_depth_surface_info.pitch = 0;
 
+		ds->aa_mode = aa_mode;
 		m_texture_cache.tag_framebuffer(zeta_address);
 	}
 

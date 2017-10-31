@@ -268,6 +268,7 @@ namespace rsx
 		void notify_surface_invalidated(const std::unique_ptr<vk::render_target> &surface)
 		{
 			surface->frame_tag = vk::get_current_frame_id();
+			if (!surface->frame_tag) surface->frame_tag = 1;
 		}
 
 		static bool rtt_has_format_width_height(const std::unique_ptr<vk::render_target> &rtt, surface_color_format format, size_t width, size_t height, bool check_refs=false)
