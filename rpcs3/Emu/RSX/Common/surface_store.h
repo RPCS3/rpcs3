@@ -165,8 +165,11 @@ namespace rsx
 					new_surface_storage = std::move(rtt);
 
 					if (old_surface)
+					{
 						//Exchange this surface with the invalidated one
+						Traits::notify_surface_invalidated(old_surface_storage);
 						rtt = std::move(old_surface_storage);
+					}
 					else
 						//rtt is now empty - erase it
 						invalidated_resources.erase(It);
@@ -179,8 +182,11 @@ namespace rsx
 			}
 
 			if (old_surface != nullptr && new_surface == nullptr)
+			{
 				//This was already determined to be invalid and is excluded from testing above
+				Traits::notify_surface_invalidated(old_surface_storage);
 				invalidated_resources.push_back(std::move(old_surface_storage));
+			}
 
 			if (new_surface != nullptr)
 			{
@@ -229,8 +235,11 @@ namespace rsx
 					new_surface_storage = std::move(ds);
 
 					if (old_surface)
+					{
 						//Exchange this surface with the invalidated one
+						Traits::notify_surface_invalidated(old_surface_storage);
 						ds = std::move(old_surface_storage);
+					}
 					else
 						invalidated_resources.erase(It);
 
@@ -242,8 +251,11 @@ namespace rsx
 			}
 
 			if (old_surface != nullptr && new_surface == nullptr)
+			{
 				//This was already determined to be invalid and is excluded from testing above
+				Traits::notify_surface_invalidated(old_surface_storage);
 				invalidated_resources.push_back(std::move(old_surface_storage));
+			}
 
 			if (new_surface != nullptr)
 			{
@@ -498,6 +510,7 @@ namespace rsx
 
 					if (surface == ref)
 					{
+						Traits::notify_surface_invalidated(It->second);
 						invalidated_resources.push_back(std::move(It->second));
 						m_render_targets_storage.erase(It);
 
@@ -515,6 +528,7 @@ namespace rsx
 
 					if (surface == ref)
 					{
+						Traits::notify_surface_invalidated(It->second);
 						invalidated_resources.push_back(std::move(It->second));
 						m_depth_stencil_storage.erase(It);
 
@@ -541,6 +555,7 @@ namespace rsx
 				auto It = m_render_targets_storage.find(addr);
 				if (It != m_render_targets_storage.end())
 				{
+					Traits::notify_surface_invalidated(It->second);
 					invalidated_resources.push_back(std::move(It->second));
 					m_render_targets_storage.erase(It);
 
@@ -553,6 +568,7 @@ namespace rsx
 				auto It = m_depth_stencil_storage.find(addr);
 				if (It != m_depth_stencil_storage.end())
 				{
+					Traits::notify_surface_invalidated(It->second);
 					invalidated_resources.push_back(std::move(It->second));
 					m_depth_stencil_storage.erase(It);
 

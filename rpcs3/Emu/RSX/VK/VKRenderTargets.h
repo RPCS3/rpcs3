@@ -26,6 +26,7 @@ namespace vk
 		std::unique_ptr<vk::image_view> view;
 
 		render_target *old_contents = nullptr; //Data occupying the memory location that this surface is replacing
+		u64 frame_tag = 0; //frame id when invalidated, 0 if not invalid
 
 		render_target(vk::render_device &dev,
 			uint32_t memory_type_index,
@@ -223,6 +224,7 @@ namespace rsx
 
 			//Reset deref count
 			surface->deref_count = 0;
+			surface->frame_tag = 0;
 		}
 
 		static void prepare_rtt_for_sampling(vk::command_buffer* pcmd, vk::render_target *surface)
@@ -238,6 +240,7 @@ namespace rsx
 
 			//Reset deref count
 			surface->deref_count = 0;
+			surface->frame_tag = 0;
 		}
 
 		static void prepare_ds_for_sampling(vk::command_buffer* pcmd, vk::render_target *surface)
@@ -259,6 +262,12 @@ namespace rsx
 		{
 			ds->dirty = true;
 			ds->old_contents = old_surface;
+		}
+
+		static
+		void notify_surface_invalidated(const std::unique_ptr<vk::render_target> &surface)
+		{
+			surface->frame_tag = vk::get_current_frame_id();
 		}
 
 		static bool rtt_has_format_width_height(const std::unique_ptr<vk::render_target> &rtt, surface_color_format format, size_t width, size_t height, bool check_refs=false)
@@ -337,9 +346,13 @@ namespace rsx
 
 		void free_invalidated()
 		{
-			invalidated_resources.remove_if([](std::unique_ptr<vk::render_target> &rtt)
+			const u64 last_finished_frame = vk::get_last_completed_frame_id();
+			invalidated_resources.remove_if([&](std::unique_ptr<vk::render_target> &rtt)
 			{
-				if (rtt->deref_count >= 2) return true;
+				verify(HERE), rtt->frame_tag != 0;
+
+				if (rtt->deref_count >= 2 && rtt->frame_tag < last_finished_frame)
+					return true;
 
 				rtt->deref_count++;
 				return false;
