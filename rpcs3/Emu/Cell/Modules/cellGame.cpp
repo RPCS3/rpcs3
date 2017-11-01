@@ -661,7 +661,7 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 
 	if (!buf || bufsize == 0)
 	{
-		return 0x8002CB07;
+		return CELL_GAME_ERROR_PARAM;
 	}
 
 	const auto prm = fxm::get<content_permission>();
@@ -692,7 +692,7 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 
 	if (!buf)
 	{
-		return 0x8002CB07;
+		return CELL_GAME_ERROR_PARAM;
 	}
 
 	const auto prm = fxm::get<content_permission>();
