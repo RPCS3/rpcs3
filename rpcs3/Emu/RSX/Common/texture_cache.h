@@ -934,7 +934,7 @@ namespace rsx
 				const u32 internal_width = (const u32)(tex_width * internal_scale);
 
 				const auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, internal_width, tex_height, tex_pitch, true);
-				if (rsc.surface && test_framebuffer(texaddr))
+				if (rsc.surface/* && test_framebuffer(texaddr)*/)
 				{
 					//TODO: Check that this region is not cpu-dirty before doing a copy
 					if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
