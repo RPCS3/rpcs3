@@ -213,9 +213,28 @@ namespace rsx
 			u32 address_range = 0;
 		};
 
+		struct deferred_subresource
+		{
+			image_resource_type external_handle = 0;
+			u32 gcm_format = 0;
+			u16 x = 0;
+			u16 y = 0;
+			u16 width = 0;
+			u16 height = 0;
+
+			deferred_subresource()
+			{}
+
+			deferred_subresource(image_resource_type _res, u32 _fmt, u16 _x, u16 _y, u16 _w, u16 _h):
+				external_handle(_res), gcm_format(_fmt), x(_x), y(_y), width(_w), height(_h)
+			{}
+		};
+
 		struct sampled_image_descriptor : public sampled_image_descriptor_base
 		{
 			image_view_type image_handle = 0;
+			deferred_subresource external_subresource_desc;
+			bool flag = false;
 
 			sampled_image_descriptor()
 			{}
@@ -223,6 +242,18 @@ namespace rsx
 			sampled_image_descriptor(image_view_type handle, const texture_upload_context ctx, const bool is_depth, const f32 x_scale, const f32 y_scale)
 			{
 				image_handle = handle;
+				upload_context = ctx;
+				is_depth_texture = is_depth;
+				scale_x = x_scale;
+				scale_y = y_scale;
+			}
+
+			sampled_image_descriptor(image_resource_type external_handle, u32 gcm_format, u16 x_offset, u16 y_offset, u16 width, u16 height,
+					const texture_upload_context ctx, const bool is_depth, const f32 x_scale, const f32 y_scale)
+			{
+				external_subresource_desc = {external_handle, gcm_format, x_offset, y_offset, width, height};
+
+				image_handle = 0;
 				upload_context = ctx;
 				is_depth_texture = is_depth;
 				scale_x = x_scale;
@@ -1001,7 +1032,7 @@ namespace rsx
 						{
 							const auto w = rsx::apply_resolution_scale(internal_width, true);
 							const auto h = rsx::apply_resolution_scale(internal_height, true);
-							return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, w, h), texture_upload_context::framebuffer_storage,
+							return{ texptr->get_surface(), format, 0, 0, w, h, texture_upload_context::framebuffer_storage,
 									false, get_internal_scaling_x(texptr), get_internal_scaling_y(texptr) };
 						}
 
@@ -1044,7 +1075,7 @@ namespace rsx
 						{
 							const auto w = rsx::apply_resolution_scale(internal_width, true);
 							const auto h = rsx::apply_resolution_scale(internal_height, true);
-							return{ create_temporary_subresource_view(cmd, texptr, format, 0, 0, w, h), texture_upload_context::framebuffer_storage,
+							return{ texptr->get_surface(), format, 0, 0, w, h, texture_upload_context::framebuffer_storage,
 									true, get_internal_scaling_x(texptr), get_internal_scaling_y(texptr) };
 						}
 
@@ -1116,15 +1147,15 @@ namespace rsx
 
 								return{ rsc.surface->get_view(), texture_upload_context::framebuffer_storage, rsc.is_depth_surface, get_internal_scaling_x(rsc.surface), get_internal_scaling_y(rsc.surface) };
 							}
-							else return{ create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
-								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true)), texture_upload_context::framebuffer_storage,
+							else return{ rsc.surface->get_surface(), format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
+								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true), texture_upload_context::framebuffer_storage,
 								rsc.is_depth_surface, get_internal_scaling_x(rsc.surface), get_internal_scaling_y(rsc.surface) };
 						}
 						else
 						{
 							LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
-							return{ create_temporary_subresource_view(cmd, rsc.surface, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
-								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true)), texture_upload_context::framebuffer_storage,
+							return{ rsc.surface->get_surface(), format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
+								rsx::apply_resolution_scale(rsc.w, true), rsx::apply_resolution_scale(rsc.h, true), texture_upload_context::framebuffer_storage,
 								rsc.is_depth_surface, get_internal_scaling_x(rsc.surface), get_internal_scaling_y(rsc.surface) };
 						}
 					}
@@ -1180,8 +1211,7 @@ namespace rsx
 									}
 
 									auto src_image = surface->get_raw_texture();
-									if (auto result = create_temporary_subresource_view(cmd, &src_image, format, offset_x, offset_y, tex_width, tex_height))
-										return{ result, texture_upload_context::blit_engine_dst, surface->is_depth_texture(), 1.f, 1.f };
+									return{ src_image, format, offset_x, offset_y, tex_width, tex_height, texture_upload_context::blit_engine_dst, surface->is_depth_texture(), 1.f, 1.f };
 								}
 							}
 						}

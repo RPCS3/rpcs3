@@ -377,13 +377,8 @@ void GLGSRender::end()
 
 				if (rsx::method_registers.fragment_textures[i].enabled())
 				{
-					glActiveTexture(GL_TEXTURE0 + i);
-
 					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.fragment_textures[i], m_rtts);
 					m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i]);
-
-					GLenum target = get_gl_target_for_texture(rsx::method_registers.fragment_textures[i]);
-					glBindTexture(target, sampler_state->image_handle);
 				}
 				else
 				{
@@ -406,11 +401,7 @@ void GLGSRender::end()
 
 				if (rsx::method_registers.vertex_textures[i].enabled())
 				{
-					const int texture_index = i + rsx::limits::fragment_textures_count;
-					glActiveTexture(GL_TEXTURE0 + texture_index);
-
 					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.vertex_textures[i], m_rtts);
-					glBindTexture(GL_TEXTURE_2D, static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get())->image_handle);
 				}
 				else
 					*sampler_state = {};
@@ -443,6 +434,72 @@ void GLGSRender::end()
 		//DMA push; not needed with MAP_COHERENT
 		//glMemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
 	}
+
+	//Bind textures and resolve external copy operations
+	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
+	int unused_location;
+
+	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+	{
+		if (m_program->uniforms.has_location("tex" + std::to_string(i), &unused_location))
+		{
+			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+
+			if (sampler_state->flag)
+				continue;
+
+			sampler_state->flag = true;
+			auto &tex = rsx::method_registers.fragment_textures[i];
+
+			glActiveTexture(GL_TEXTURE0 + i);
+			GLenum target = get_gl_target_for_texture(tex);
+
+			if (sampler_state->image_handle)
+			{
+				glBindTexture(target, sampler_state->image_handle);
+			}
+			else if (sampler_state->external_subresource_desc.external_handle)
+			{
+				glBindTexture(target, m_gl_texture_cache.create_temporary_subresource(sampler_state->external_subresource_desc));
+				m_textures_dirty[i] = true;
+			}
+			else
+			{
+				glBindTexture(target, GL_NONE);
+			}
+		}
+	}
+
+	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+	{
+		if (m_program->uniforms.has_location("vtex" + std::to_string(i), &unused_location))
+		{
+			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+
+			if (sampler_state->flag)
+				continue;
+
+			sampler_state->flag = true;
+			glActiveTexture(GL_TEXTURE0 + rsx::limits::fragment_textures_count + i);
+
+			if (sampler_state->image_handle)
+			{
+				glBindTexture(GL_TEXTURE_2D, sampler_state->image_handle);
+			}
+			else if (sampler_state->external_subresource_desc.external_handle)
+			{
+				glBindTexture(GL_TEXTURE_2D, m_gl_texture_cache.create_temporary_subresource(sampler_state->external_subresource_desc));
+				m_vertex_textures_dirty[i] = true;
+			}
+			else
+			{
+				glBindTexture(GL_TEXTURE_2D, GL_NONE);
+			}
+		}
+	}
+
+	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
+	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
@@ -1208,6 +1265,7 @@ void GLGSRender::flip(int buffer)
 
 	// Cleanup
 	m_gl_texture_cache.on_frame_end();
+	m_samplers_dirty.store(true);
 
 	for (auto &tex : m_rtts.invalidated_resources)
 		tex->remove();

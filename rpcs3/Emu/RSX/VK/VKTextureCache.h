@@ -365,6 +365,7 @@ namespace vk
 		//Memory held by this temp storage object
 		u32 block_size = 0;
 
+		//Frame id tag
 		const u64 frame_tag = vk::get_current_frame_id();
 
 		discarded_storage(std::unique_ptr<vk::image_view>& _view)
@@ -718,6 +719,11 @@ namespace vk
 			purge_cache();
 		}
 
+		inline vk::image_view* create_temporary_subresource(vk::command_buffer &cmd, deferred_subresource& desc)
+		{
+			return create_temporary_subresource_view(cmd, desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height);
+		}
+
 		bool is_depth_texture(const u32 rsx_address, const u32 rsx_size) override
 		{
 			reader_lock lock(m_cache_mutex);
@@ -829,7 +835,12 @@ namespace vk
 
 		const u32 get_texture_memory_in_use() const override
 		{
-			return m_texture_memory_in_use + m_discarded_memory_size;
+			return m_texture_memory_in_use;
+		}
+
+		const u32 get_temporary_memory_in_use()
+		{
+			return m_discarded_memory_size;
 		}
 	};
 }

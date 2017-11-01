@@ -742,6 +742,12 @@ namespace gl
 			m_hw_blitter.destroy();
 		}
 
+		inline u32 create_temporary_subresource(deferred_subresource& desc)
+		{
+			void* unused = nullptr;
+			return create_temporary_subresource_view(unused, &desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height);
+		}
+
 		bool is_depth_texture(const u32 rsx_address, const u32 rsx_size) override
 		{
 			reader_lock lock(m_cache_mutex);
