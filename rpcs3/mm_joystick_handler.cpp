@@ -145,11 +145,11 @@ bool mm_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::s
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.l3),       CELL_PAD_CTRL_L3);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.r3),       CELL_PAD_CTRL_R3);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.ps),       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.up),	     CELL_PAD_CTRL_UP);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.down),	   CELL_PAD_CTRL_DOWN);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.left),	   CELL_PAD_CTRL_LEFT);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.right),    CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
 
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  find_key(m_pad_config.ls_left), find_key(m_pad_config.ls_right));
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  find_key(m_pad_config.ls_down), find_key(m_pad_config.ls_up));
@@ -360,18 +360,19 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues()
 
 	auto add_axis_value = [&](DWORD axis, u64 pos, u64 neg)
 	{
-		u16 value = ScaleStickInput(axis, 0, 65535);
-		bool is_negative = value <= 127;
+		u16 value = 0;
+		float fvalue = ScaleStickInput(axis, 0, 65535);
+		bool is_negative = fvalue <= 127.5;
 
 		if (is_negative)
 		{
-			value = Clamp0To255((127.5f - value) * 2.0f);
+			value = Clamp0To255((127.5f - fvalue) * 2.0f);
 			button_values.emplace(pos, 0);
 			button_values.emplace(neg, value);
 		}
 		else
 		{
-			value = Clamp0To255((value - 127.5f) * 2.0f);
+			value = Clamp0To255((fvalue - 127.5f) * 2.0f);
 			button_values.emplace(pos, value);
 			button_values.emplace(neg, 0);
 		}

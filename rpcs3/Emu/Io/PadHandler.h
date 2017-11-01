@@ -365,11 +365,11 @@ protected:
 	};
 
 	// Get new scaled value between 0 and 255 based on its minimum and maximum
-	u16 ScaleStickInput(s32 raw_value, int minimum, int maximum)
+	float ScaleStickInput(s32 raw_value, int minimum, int maximum)
 	{
 		// value based on max range converted to [0, 1]
 		float val = float(Clamp(raw_value, minimum, maximum) - minimum) / float(abs(maximum) + abs(minimum));
-		return static_cast<u16>(255.0f * val);
+		return 255.0f * val;
 	};
 
 	// normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
@@ -398,7 +398,7 @@ protected:
 	{
 		if (ignore_threshold)
 		{
-			return ScaleStickInput(raw_value, 0, THUMB_MAX);
+			return static_cast<u16>(ScaleStickInput(raw_value, 0, THUMB_MAX));
 		}
 		else
 		{

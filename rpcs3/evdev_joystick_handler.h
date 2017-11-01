@@ -230,8 +230,11 @@ class evdev_joystick_handler final : public PadHandlerBase
 		libevdev* device;
 		std::string path;
 		std::shared_ptr<Pad> pad;
-		std::unordered_map<u64, bool> axis_orientations; // value is true if key was found in rev_axis_list
+		std::unordered_map<int, bool> axis_orientations; // value is true if key was found in rev_axis_list
+		float stick_val[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	};
+
+	const int BUTTON_COUNT = 17;
 
 public:
 	evdev_joystick_handler();
@@ -249,8 +252,11 @@ private:
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 	bool update_device(EvdevDevice& device, bool use_cell = true);
 	void update_devs(bool use_cell = true);
-	int add_device(const std::string& device, std::shared_ptr<Pad> pad = nullptr, const std::unordered_map<u64, bool>& axis_map = std::unordered_map<u64, bool>());
+	int add_device(const std::string& device, std::shared_ptr<Pad> pad = nullptr, const std::unordered_map<int, bool>& axis_map = std::unordered_map<int, bool>());
 	int GetButtonInfo(const input_event& evt, libevdev* dev, int& button_code, bool& is_negative);
+
+	// Search axis_orientations map for the direction by index, returns -1 if not found, 0 for positive and 1 for negative
+	int FindAxisDirection(std::unordered_map<int, bool> map, int index);
 
 	std::vector<EvdevDevice> devices;
 };

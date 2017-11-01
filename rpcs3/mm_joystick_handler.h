@@ -108,5 +108,4 @@ private:
 
 	std::vector<std::shared_ptr<Pad>> bindings;
 	std::array<bool, 7> last_connection_status = {};
-
 };
