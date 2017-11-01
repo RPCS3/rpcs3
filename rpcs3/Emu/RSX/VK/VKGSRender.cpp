@@ -1259,14 +1259,22 @@ void VKGSRender::end()
 			}
 
 			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-			if (!sampler_state->image_handle)
+			auto image_ptr = sampler_state->image_handle;
+
+			if (!image_ptr && sampler_state->external_subresource_desc.external_handle)
+			{
+				image_ptr = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
+				m_textures_dirty[i] = true;
+			}
+
+			if (!image_ptr)
 			{
 				LOG_ERROR(RSX, "Texture upload failed to texture index %d. Binding null sampler.", i);
 				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
 				continue;
 			}
 
-			m_program->bind_uniform({ fs_sampler_handles[i]->value, sampler_state->image_handle->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
+			m_program->bind_uniform({ fs_sampler_handles[i]->value, image_ptr->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
 		}
 	}
 	
@@ -1281,14 +1289,22 @@ void VKGSRender::end()
 			}
 
 			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
-			if (!sampler_state->image_handle)
+			auto image_ptr = sampler_state->image_handle;
+
+			if (!image_ptr && sampler_state->external_subresource_desc.external_handle)
+			{
+				image_ptr = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
+				m_vertex_textures_dirty[i] = true;
+			}
+
+			if (!image_ptr)
 			{
 				LOG_ERROR(RSX, "Texture upload failed to vtexture index %d. Binding null sampler.", i);
 				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
 				continue;
 			}
 
-			m_program->bind_uniform({ vs_sampler_handles[i]->value, sampler_state->image_handle->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
+			m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
 		}
 	}
 
@@ -1707,6 +1723,7 @@ void VKGSRender::advance_queued_frames()
 
 	//texture cache is also double buffered to prevent use-after-free
 	m_texture_cache.on_frame_end();
+	m_samplers_dirty.store(true);
 
 	//Remove stale framebuffers. Ref counted to prevent use-after-free
 	m_framebuffers_to_clean.remove_if([](std::unique_ptr<vk::framebuffer_holder>& fbo)
@@ -2796,8 +2813,10 @@ void VKGSRender::flip(int buffer)
 
 		auto num_dirty_textures = m_texture_cache.get_unreleased_textures_count();
 		auto texture_memory_size = m_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
+		auto tmp_texture_memory_size = m_texture_cache.get_temporary_memory_in_use() / (1024 * 1024);
 		m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 126, direct_fbo->width(), direct_fbo->height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
-		m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 144, direct_fbo->width(), direct_fbo->height(), "Texture memory: " + std::to_string(texture_memory_size) + "M");
+		m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 144, direct_fbo->width(), direct_fbo->height(), "Texture cache memory: " + std::to_string(texture_memory_size) + "M");
+		m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 162, direct_fbo->width(), direct_fbo->height(), "Temporary texture memory: " + std::to_string(tmp_texture_memory_size) + "M");
 
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, subres);
 		m_framebuffers_to_clean.push_back(std::move(direct_fbo));
