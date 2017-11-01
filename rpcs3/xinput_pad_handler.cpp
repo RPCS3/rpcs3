@@ -410,8 +410,8 @@ void xinput_pad_handler::ThreadProc()
 			device->largeVibrate = speed_large;
 			device->smallVibrate = speed_small;
 
-			// XBox One Controller can't handle faster vibration updates than ~10ms. I'll use 12ms to be on the safe side. No lag was noticable.
-			if (device->newVibrateData && (clock() - device->last_vibration > 12))
+			// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse. So I'll use 20ms to be on the safe side. No lag was noticable.
+			if (device->newVibrateData && (clock() - device->last_vibration > 20))
 			{
 				XINPUT_VIBRATION vibrate;
 				vibrate.wLeftMotorSpeed = speed_large;
