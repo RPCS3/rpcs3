@@ -175,122 +175,6 @@ void GLGSRender::begin()
 		return;
 
 	init_buffers();
-
-	if (!framebuffer_status_valid)
-		return;
-
-	std::chrono::time_point<steady_clock> then = steady_clock::now();
-
-	bool color_mask_b = rsx::method_registers.color_mask_b();
-	bool color_mask_g = rsx::method_registers.color_mask_g();
-	bool color_mask_r = rsx::method_registers.color_mask_r();
-	bool color_mask_a = rsx::method_registers.color_mask_a();
-
-	gl_state.color_mask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
-	gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
-	gl_state.stencil_mask(rsx::method_registers.stencil_mask());
-
-	if (gl_state.enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
-	{
-		gl_state.depth_func(comparison_op(rsx::method_registers.depth_func()));
-
-		float range_near = rsx::method_registers.clip_min();
-		float range_far = rsx::method_registers.clip_max();
-
-		//Workaround to preserve depth precision but respect z direction
-		//Ni no Kuni sets a very restricted z range (0.9x - 1.) and depth reads / tests are broken
-		if (range_near <= range_far)
-			gl_state.depth_range(0.f, 1.f);
-		else
-			gl_state.depth_range(1.f, 0.f);
-	}
-
-	if (glDepthBoundsEXT && (gl_state.enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
-	{
-		gl_state.depth_bounds(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
-	}
-
-	gl_state.enable(rsx::method_registers.dither_enabled(), GL_DITHER);
-
-	if (gl_state.enable(rsx::method_registers.blend_enabled(), GL_BLEND))
-	{
-		glBlendFuncSeparate(blend_factor(rsx::method_registers.blend_func_sfactor_rgb()),
-			blend_factor(rsx::method_registers.blend_func_dfactor_rgb()),
-			blend_factor(rsx::method_registers.blend_func_sfactor_a()),
-			blend_factor(rsx::method_registers.blend_func_dfactor_a()));
-
-		auto blend_colors = rsx::get_constant_blend_colors();
-		glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
-
-		glBlendEquationSeparate(blend_equation(rsx::method_registers.blend_equation_rgb()),
-			blend_equation(rsx::method_registers.blend_equation_a()));
-	}
-
-	if (gl_state.enable(rsx::method_registers.stencil_test_enabled(), GL_STENCIL_TEST))
-	{
-		glStencilFunc(comparison_op(rsx::method_registers.stencil_func()),
-			rsx::method_registers.stencil_func_ref(),
-			rsx::method_registers.stencil_func_mask());
-
-		glStencilOp(stencil_op(rsx::method_registers.stencil_op_fail()), stencil_op(rsx::method_registers.stencil_op_zfail()),
-			stencil_op(rsx::method_registers.stencil_op_zpass()));
-
-		if (rsx::method_registers.two_sided_stencil_test_enabled())
-		{
-			glStencilMaskSeparate(GL_BACK, rsx::method_registers.back_stencil_mask());
-
-			glStencilFuncSeparate(GL_BACK, comparison_op(rsx::method_registers.back_stencil_func()),
-				rsx::method_registers.back_stencil_func_ref(), rsx::method_registers.back_stencil_func_mask());
-
-			glStencilOpSeparate(GL_BACK, stencil_op(rsx::method_registers.back_stencil_op_fail()),
-				stencil_op(rsx::method_registers.back_stencil_op_zfail()), stencil_op(rsx::method_registers.back_stencil_op_zpass()));
-		}
-	}
-
-	gl_state.enablei(rsx::method_registers.blend_enabled_surface_1(), GL_BLEND, 1);
-	gl_state.enablei(rsx::method_registers.blend_enabled_surface_2(), GL_BLEND, 2);
-	gl_state.enablei(rsx::method_registers.blend_enabled_surface_3(), GL_BLEND, 3);
-
-	if (gl_state.enable(rsx::method_registers.logic_op_enabled(), GL_COLOR_LOGIC_OP))
-	{
-		gl_state.logic_op(logic_op(rsx::method_registers.logic_operation()));
-	}
-
-	gl_state.line_width(rsx::method_registers.line_width());
-	gl_state.enable(rsx::method_registers.line_smooth_enabled(), GL_LINE_SMOOTH);
-
-	gl_state.enable(rsx::method_registers.poly_offset_point_enabled(), GL_POLYGON_OFFSET_POINT);
-	gl_state.enable(rsx::method_registers.poly_offset_line_enabled(), GL_POLYGON_OFFSET_LINE);
-	gl_state.enable(rsx::method_registers.poly_offset_fill_enabled(), GL_POLYGON_OFFSET_FILL);
-
-	//offset_bias is the constant factor, multiplied by the implementation factor R
-	//offst_scale is the slope factor, multiplied by the triangle slope factor M
-	gl_state.polygon_offset(rsx::method_registers.poly_offset_scale(), rsx::method_registers.poly_offset_bias());
-
-	if (gl_state.enable(rsx::method_registers.cull_face_enabled(), GL_CULL_FACE))
-	{
-		gl_state.cull_face(cull_face(rsx::method_registers.cull_face_mode()));
-	}
-
-	gl_state.front_face(front_face(rsx::method_registers.front_face_mode()));
-
-	//TODO
-	//NV4097_SET_ANISO_SPREAD
-	//NV4097_SET_SPECULAR_ENABLE
-	//NV4097_SET_TWO_SIDE_LIGHT_EN
-	//NV4097_SET_FLAT_SHADE_OP
-	//NV4097_SET_EDGE_FLAG
-
-
-
-	//NV4097_SET_COLOR_KEY_COLOR
-	//NV4097_SET_SHADER_CONTROL
-	//NV4097_SET_ZMIN_MAX_CONTROL
-	//NV4097_SET_ANTI_ALIASING_CONTROL
-	//NV4097_SET_CLIP_ID_TEST_ENABLE
-
-	std::chrono::time_point<steady_clock> now = steady_clock::now();
-	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
 }
 
 namespace
@@ -452,20 +336,27 @@ void GLGSRender::end()
 			auto &tex = rsx::method_registers.fragment_textures[i];
 
 			glActiveTexture(GL_TEXTURE0 + i);
-			GLenum target = get_gl_target_for_texture(tex);
 
-			if (sampler_state->image_handle)
+			if (tex.enabled())
 			{
-				glBindTexture(target, sampler_state->image_handle);
-			}
-			else if (sampler_state->external_subresource_desc.external_handle)
-			{
-				glBindTexture(target, m_gl_texture_cache.create_temporary_subresource(sampler_state->external_subresource_desc));
-				m_textures_dirty[i] = true;
+				GLenum target = get_gl_target_for_texture(tex);
+				if (sampler_state->image_handle)
+				{
+					glBindTexture(target, sampler_state->image_handle);
+				}
+				else if (sampler_state->external_subresource_desc.external_handle)
+				{
+					glBindTexture(target, m_gl_texture_cache.create_temporary_subresource(sampler_state->external_subresource_desc));
+					sampler_state->flag = false;
+				}
+				else
+				{
+					glBindTexture(target, GL_NONE);
+				}
 			}
 			else
 			{
-				glBindTexture(target, GL_NONE);
+				glBindTexture(GL_TEXTURE_2D, GL_NONE);
 			}
 		}
 	}
@@ -489,7 +380,7 @@ void GLGSRender::end()
 			else if (sampler_state->external_subresource_desc.external_handle)
 			{
 				glBindTexture(GL_TEXTURE_2D, m_gl_texture_cache.create_temporary_subresource(sampler_state->external_subresource_desc));
-				m_vertex_textures_dirty[i] = true;
+				sampler_state->flag = false;
 			}
 			else
 			{
@@ -500,6 +391,8 @@ void GLGSRender::end()
 
 	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
 	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
+
+	update_draw_state();
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
@@ -1066,13 +959,6 @@ void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 	vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
 	void* pipeline_properties = nullptr;
 
-	auto old_program = m_program;
-	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, pipeline_properties);
-	m_program->use();
-
-	if (m_prog_buffer.check_cache_missed())
-		m_shaders_cache->store(pipeline_properties, vertex_program, fragment_program);
-
 	u8 *buf;
 	u32 vertex_state_offset;
 	u32 vertex_constants_offset;
@@ -1131,6 +1017,129 @@ void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 	}
 
 	m_transform_constants_dirty = false;
+
+	//Search/compile program after transfer operations
+	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, pipeline_properties);
+	m_program->use();
+
+	if (m_prog_buffer.check_cache_missed())
+		m_shaders_cache->store(pipeline_properties, vertex_program, fragment_program);
+}
+
+void GLGSRender::update_draw_state()
+{
+	std::chrono::time_point<steady_clock> then = steady_clock::now();
+
+	bool color_mask_b = rsx::method_registers.color_mask_b();
+	bool color_mask_g = rsx::method_registers.color_mask_g();
+	bool color_mask_r = rsx::method_registers.color_mask_r();
+	bool color_mask_a = rsx::method_registers.color_mask_a();
+
+	gl_state.color_mask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+	gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
+	gl_state.stencil_mask(rsx::method_registers.stencil_mask());
+
+	if (gl_state.enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
+	{
+		gl_state.depth_func(comparison_op(rsx::method_registers.depth_func()));
+
+		float range_near = rsx::method_registers.clip_min();
+		float range_far = rsx::method_registers.clip_max();
+
+		//Workaround to preserve depth precision but respect z direction
+		//Ni no Kuni sets a very restricted z range (0.9x - 1.) and depth reads / tests are broken
+		if (range_near <= range_far)
+			gl_state.depth_range(0.f, 1.f);
+		else
+			gl_state.depth_range(1.f, 0.f);
+	}
+
+	if (glDepthBoundsEXT && (gl_state.enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
+	{
+		gl_state.depth_bounds(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
+	}
+
+	gl_state.enable(rsx::method_registers.dither_enabled(), GL_DITHER);
+
+	if (gl_state.enable(rsx::method_registers.blend_enabled(), GL_BLEND))
+	{
+		glBlendFuncSeparate(blend_factor(rsx::method_registers.blend_func_sfactor_rgb()),
+			blend_factor(rsx::method_registers.blend_func_dfactor_rgb()),
+			blend_factor(rsx::method_registers.blend_func_sfactor_a()),
+			blend_factor(rsx::method_registers.blend_func_dfactor_a()));
+
+		auto blend_colors = rsx::get_constant_blend_colors();
+		glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
+
+		glBlendEquationSeparate(blend_equation(rsx::method_registers.blend_equation_rgb()),
+			blend_equation(rsx::method_registers.blend_equation_a()));
+	}
+
+	if (gl_state.enable(rsx::method_registers.stencil_test_enabled(), GL_STENCIL_TEST))
+	{
+		glStencilFunc(comparison_op(rsx::method_registers.stencil_func()),
+			rsx::method_registers.stencil_func_ref(),
+			rsx::method_registers.stencil_func_mask());
+
+		glStencilOp(stencil_op(rsx::method_registers.stencil_op_fail()), stencil_op(rsx::method_registers.stencil_op_zfail()),
+			stencil_op(rsx::method_registers.stencil_op_zpass()));
+
+		if (rsx::method_registers.two_sided_stencil_test_enabled())
+		{
+			glStencilMaskSeparate(GL_BACK, rsx::method_registers.back_stencil_mask());
+
+			glStencilFuncSeparate(GL_BACK, comparison_op(rsx::method_registers.back_stencil_func()),
+				rsx::method_registers.back_stencil_func_ref(), rsx::method_registers.back_stencil_func_mask());
+
+			glStencilOpSeparate(GL_BACK, stencil_op(rsx::method_registers.back_stencil_op_fail()),
+				stencil_op(rsx::method_registers.back_stencil_op_zfail()), stencil_op(rsx::method_registers.back_stencil_op_zpass()));
+		}
+	}
+
+	gl_state.enablei(rsx::method_registers.blend_enabled_surface_1(), GL_BLEND, 1);
+	gl_state.enablei(rsx::method_registers.blend_enabled_surface_2(), GL_BLEND, 2);
+	gl_state.enablei(rsx::method_registers.blend_enabled_surface_3(), GL_BLEND, 3);
+
+	if (gl_state.enable(rsx::method_registers.logic_op_enabled(), GL_COLOR_LOGIC_OP))
+	{
+		gl_state.logic_op(logic_op(rsx::method_registers.logic_operation()));
+	}
+
+	gl_state.line_width(rsx::method_registers.line_width());
+	gl_state.enable(rsx::method_registers.line_smooth_enabled(), GL_LINE_SMOOTH);
+
+	gl_state.enable(rsx::method_registers.poly_offset_point_enabled(), GL_POLYGON_OFFSET_POINT);
+	gl_state.enable(rsx::method_registers.poly_offset_line_enabled(), GL_POLYGON_OFFSET_LINE);
+	gl_state.enable(rsx::method_registers.poly_offset_fill_enabled(), GL_POLYGON_OFFSET_FILL);
+
+	//offset_bias is the constant factor, multiplied by the implementation factor R
+	//offst_scale is the slope factor, multiplied by the triangle slope factor M
+	gl_state.polygon_offset(rsx::method_registers.poly_offset_scale(), rsx::method_registers.poly_offset_bias());
+
+	if (gl_state.enable(rsx::method_registers.cull_face_enabled(), GL_CULL_FACE))
+	{
+		gl_state.cull_face(cull_face(rsx::method_registers.cull_face_mode()));
+	}
+
+	gl_state.front_face(front_face(rsx::method_registers.front_face_mode()));
+
+	//TODO
+	//NV4097_SET_ANISO_SPREAD
+	//NV4097_SET_SPECULAR_ENABLE
+	//NV4097_SET_TWO_SIDE_LIGHT_EN
+	//NV4097_SET_FLAT_SHADE_OP
+	//NV4097_SET_EDGE_FLAG
+
+
+
+	//NV4097_SET_COLOR_KEY_COLOR
+	//NV4097_SET_SHADER_CONTROL
+	//NV4097_SET_ZMIN_MAX_CONTROL
+	//NV4097_SET_ANTI_ALIASING_CONTROL
+	//NV4097_SET_CLIP_ID_TEST_ENABLE
+
+	std::chrono::time_point<steady_clock> now = steady_clock::now();
+	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
 }
 
 void GLGSRender::flip(int buffer)
@@ -1265,7 +1274,6 @@ void GLGSRender::flip(int buffer)
 
 	// Cleanup
 	m_gl_texture_cache.on_frame_end();
-	m_samplers_dirty.store(true);
 
 	for (auto &tex : m_rtts.invalidated_resources)
 		tex->remove();

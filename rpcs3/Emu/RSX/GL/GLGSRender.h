@@ -401,6 +401,8 @@ private:
 	bool check_program_state();
 	void load_program(u32 vertex_base, u32 vertex_count);
 
+	void update_draw_state();
+
 public:
 	void read_buffers();
 	void write_buffers();
