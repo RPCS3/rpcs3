@@ -659,6 +659,11 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 {
 	cellGame.warning("cellGameGetParamString(id=%d, buf=*0x%x, bufsize=%d)", id, buf, bufsize);
 
+	if (!buf || bufsize == 0)
+	{
+		return 0x8002CB07;
+	}
+
 	const auto prm = fxm::get<content_permission>();
 
 	if (!prm)
@@ -674,7 +679,7 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 	}
 
 	std::string value = psf::get_string(prm->sfo, key);
-	value.resize(bufsize - 1);
+	value.resize(bufsize);
 
 	std::memcpy(buf.get_ptr(), value.c_str(), bufsize);
 
@@ -684,6 +689,11 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 {
 	cellGame.warning("cellGameSetParamString(id=%d, buf=*0x%x)", id, buf);
+
+	if (!buf)
+	{
+		return 0x8002CB07;
+	}
 
 	const auto prm = fxm::get<content_permission>();
 
