@@ -74,8 +74,8 @@ int main(int argc, char** argv)
 		QTimer::singleShot(2, [path = sstr(QFileInfo(args.at(0)).canonicalFilePath()), argv = std::move(argv)]() mutable
 		{
 			Emu.argv = std::move(argv);
+			Emu.SetForceBoot(true);
 			Emu.BootGame(path, true);
-			Emu.Run();
 		});
 	}
 

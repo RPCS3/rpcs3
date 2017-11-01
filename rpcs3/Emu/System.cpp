@@ -281,9 +281,17 @@ std::string Emulator::GetLibDir()
 	return fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
 }
 
+void Emulator::SetForceBoot(bool force_boot)
+{
+	m_force_boot = force_boot;
+}
+
 void Emulator::Load(bool add_only)
 {
-	Stop();
+	if (!IsStopped())
+	{
+		Stop();
+	}
 
 	try
 	{
@@ -616,9 +624,10 @@ void Emulator::Load(bool add_only)
 			return;
 		}
 
-		if (g_cfg.misc.autostart && IsReady())
+		if ((m_force_boot || g_cfg.misc.autostart) && IsReady())
 		{
 			Run();
+			m_force_boot = false;
 		}
 		else if (IsPaused())
 		{
