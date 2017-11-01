@@ -442,13 +442,13 @@ protected:
 	};
 
 	// get clamped value between min and max
-	u16 Clamp(f32 input, s32 min, s32 max)
+	s32 Clamp(f32 input, s32 min, s32 max)
 	{
 		if (input > max)
 			return max;
 		else if (input < min)
 			return min;
-		else return static_cast<s16>(input);
+		else return static_cast<s32>(input);
 	};
 
 	// get clamped value between 0 and 255
