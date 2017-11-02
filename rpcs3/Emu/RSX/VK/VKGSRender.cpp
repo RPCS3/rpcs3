@@ -1085,7 +1085,6 @@ void VKGSRender::end()
 					const auto wrap_s = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s());
 					const auto wrap_t = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t());
 					const auto wrap_r = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r());
-					const auto unnormalized_coords = !!(rsx::method_registers.fragment_textures[i].format() & CELL_GCM_TEXTURE_UN);
 					const auto mag_filter = vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter());
 					const auto border_color = vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color());
 
@@ -1104,7 +1103,7 @@ void VKGSRender::end()
 
 					if (fs_sampler_handles[i])
 					{
-						if (!fs_sampler_handles[i]->matches(wrap_s, wrap_t, wrap_r, unnormalized_coords, lod_bias, af_level, min_lod, max_lod,
+						if (!fs_sampler_handles[i]->matches(wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
 							min_filter, mag_filter, mip_mode, border_color, fs_sampler_state[i]->is_depth_texture, depth_compare))
 						{
 							m_current_frame->samplers_to_clean.push_back(std::move(fs_sampler_handles[i]));
@@ -1114,7 +1113,7 @@ void VKGSRender::end()
 
 					if (replace)
 					{
-						fs_sampler_handles[i] = std::make_unique<vk::sampler>(*m_device, wrap_s, wrap_t, wrap_r, unnormalized_coords, lod_bias, af_level, min_lod, max_lod,
+						fs_sampler_handles[i] = std::make_unique<vk::sampler>(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
 							min_filter, mag_filter, mip_mode, border_color, fs_sampler_state[i]->is_depth_texture, depth_compare);
 					}
 				}
@@ -2135,6 +2134,7 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 
 	//Load current program from buffer
 	vertex_program.skip_vertex_input_check = true;
+	fragment_program.unnormalized_coords = 0;
 	m_program = m_prog_buffer->getGraphicPipelineState(vertex_program, fragment_program, properties, *m_device, pipeline_layout).get();
 
 	if (m_prog_buffer->check_cache_missed())

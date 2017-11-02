@@ -118,11 +118,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			const auto mask = (1 << index);
 
-			if (m_prog.unnormalized_coords & mask)
-			{
-				samplerType = "sampler2DRect";
-			}
-			else if (m_prog.shadow_textures & mask)
+			if (m_prog.shadow_textures & mask)
 			{
 				if (m_shadow_sampled_textures & mask)
 				{

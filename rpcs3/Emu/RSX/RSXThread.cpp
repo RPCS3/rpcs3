@@ -1353,8 +1353,8 @@ namespace rsx
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			auto &tex = rsx::method_registers.fragment_textures[i];
-			result.texture_scale[i][0] = 1.f;
-			result.texture_scale[i][1] = 1.f;
+			result.texture_scale[i][0] = sampler_descriptors[i]->scale_x;
+			result.texture_scale[i][1] = sampler_descriptors[i]->scale_y;
 			result.textures_alpha_kill[i] = 0;
 			result.textures_zfunc[i] = 0;
 
@@ -1382,18 +1382,6 @@ namespace rsx
 
 				if (raw_format & CELL_GCM_TEXTURE_UN)
 					result.unnormalized_coords |= (1 << i);
-
-				if (sampler_descriptors[i]->upload_context == rsx::texture_upload_context::framebuffer_storage &&
-					raw_format & CELL_GCM_TEXTURE_UN)
-				{
-					result.texture_scale[i][0] = (resolution_scale * sampler_descriptors[i]->scale_x);
-					result.texture_scale[i][1] = (resolution_scale * sampler_descriptors[i]->scale_y);
-				}
-				else
-				{
-					result.texture_scale[i][0] = sampler_descriptors[i]->scale_x;
-					result.texture_scale[i][1] = sampler_descriptors[i]->scale_y;
-				}
 
 				if (sampler_descriptors[i]->is_depth_texture)
 				{

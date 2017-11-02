@@ -945,6 +945,7 @@ void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 	auto &vertex_program = current_vertex_program;
 
 	vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
+	fragment_program.unnormalized_coords = 0; //unused
 	void* pipeline_properties = nullptr;
 
 	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, pipeline_properties);

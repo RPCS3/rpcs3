@@ -645,9 +645,38 @@ namespace gl
 			}
 		}
 
-		u32 generate_cubemap_from_images(void*&, std::array<u32, 6>& sources) override
+		u32 generate_cubemap_from_images(void*&, const u32 gcm_format, u16 size, std::array<u32, 6>& sources) override
 		{
-			return 0;
+			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
+			GLuint dst_id = 0;
+
+			glGenTextures(1, &dst_id);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, dst_id);
+			glTexStorage2D(GL_TEXTURE_CUBE_MAP, 1, ifmt, size, size);
+
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, 0);
+
+			//Empty GL_ERROR
+			glGetError();
+
+			for (int i = 0; i < 6; ++i)
+			{
+				glCopyImageSubData(sources[i], GL_TEXTURE_2D, 0, 0, 0, 0,
+					dst_id, GL_TEXTURE_CUBE_MAP, 0, 0, 0, i, size, size, 1);
+			}
+
+			m_temporary_surfaces.push_back(dst_id);
+
+			if (GLenum err = glGetError())
+			{
+				LOG_WARNING(RSX, "Failed to copy image subresource with GL error 0x%X", err);
+				return 0;
+			}
+
+			return dst_id;
 		}
 
 		cached_texture_section* create_new_texture(void*&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, const u32 gcm_format,
@@ -755,7 +784,10 @@ namespace gl
 		inline u32 create_temporary_subresource(deferred_subresource& desc)
 		{
 			void* unused = nullptr;
-			return create_temporary_subresource_view(unused, &desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height);
+			if (!desc.is_cubemap)
+				return create_temporary_subresource_view(unused, &desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height);
+			else
+				return generate_cubemap_from_images(unused, desc.gcm_format, desc.width, desc.external_cubemap_sources);
 		}
 
 		bool is_depth_texture(const u32 rsx_address, const u32 rsx_size) override
