@@ -243,13 +243,10 @@ struct RSXFragmentProgram
 
 	void set_texture_dimension(const std::array<rsx::texture_dimension_extended, 16> &dimensions)
 	{
-		size_t id = 0;
-		for (const rsx::texture_dimension_extended &dim : dimensions)
+		texture_dimensions = 0;
+		for (u32 i = 0, offset = 0; i < 16; ++i, offset += 2)
 		{
-			texture_dimensions &= ~(0x3 << (id * 2));
-			u8 d = (u8)dim;
-			texture_dimensions |= ((d & 0x3) << (id * 2));
-			id++;
+			texture_dimensions |= (u32)dimensions[i] << offset;
 		}
 	}
 

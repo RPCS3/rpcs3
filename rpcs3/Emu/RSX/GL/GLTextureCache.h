@@ -571,7 +571,7 @@ namespace gl
 			m_temporary_surfaces.resize(0);
 		}
 
-		u32 create_temporary_subresource(u32 src_id, GLenum sized_internal_fmt, u16 x, u16 y, u16 width, u16 height)
+		u32 create_temporary_subresource_impl(u32 src_id, GLenum sized_internal_fmt, const GLenum dst_type, u16 x, u16 y, u16 width, u16 height)
 		{
 			u32 dst_id = 0;
 
@@ -589,19 +589,23 @@ namespace gl
 			}
 
 			glGenTextures(1, &dst_id);
-			glBindTexture(GL_TEXTURE_2D, dst_id);
+			glBindTexture(dst_type, dst_id);
 
-			glTexStorage2D(GL_TEXTURE_2D, 1, sized_internal_fmt, width, height);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+			if (dst_type == GL_TEXTURE_2D)
+				glTexStorage2D(GL_TEXTURE_2D, 1, sized_internal_fmt, width, height);
+			else if (dst_type == GL_TEXTURE_1D)
+				glTexStorage1D(GL_TEXTURE_1D, 1, sized_internal_fmt, width);
+
+			glTexParameteri(dst_type, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(dst_type, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(dst_type, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(dst_type, GL_TEXTURE_MAX_LEVEL, 0);
 
 			//Empty GL_ERROR
 			glGetError();
 
 			glCopyImageSubData(src_id, GL_TEXTURE_2D, 0, x, y, 0,
-				dst_id, GL_TEXTURE_2D, 0, 0, 0, 0, width, height, 1);
+				dst_id, dst_type, 0, 0, 0, 0, width, height, 1);
 
 			m_temporary_surfaces.push_back(dst_id);
 
@@ -625,20 +629,25 @@ namespace gl
 		u32 create_temporary_subresource_view(void*&, u32* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) override
 		{
 			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
-			return create_temporary_subresource(*src, ifmt, x, y, w, h);
+			return create_temporary_subresource_impl(*src, ifmt, GL_TEXTURE_2D, x, y, w, h);
 		}
 
 		u32 create_temporary_subresource_view(void*&, gl::texture* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) override
 		{
 			if (auto as_rtt = dynamic_cast<gl::render_target*>(src))
 			{
-				return create_temporary_subresource(src->id(), (GLenum)as_rtt->get_compatible_internal_format(), x, y, w, h);
+				return create_temporary_subresource_impl(src->id(), (GLenum)as_rtt->get_compatible_internal_format(), GL_TEXTURE_2D, x, y, w, h);
 			}
 			else
 			{
 				const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
-				return create_temporary_subresource(src->id(), ifmt, x, y, w, h);
+				return create_temporary_subresource_impl(src->id(), ifmt, GL_TEXTURE_2D, x, y, w, h);
 			}
+		}
+
+		u32 generate_cubemap_from_images(void*&, std::array<u32, 6>& sources) override
+		{
+			return 0;
 		}
 
 		cached_texture_section* create_new_texture(void*&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, const u32 gcm_format,
@@ -670,6 +679,7 @@ namespace gl
 			cached.set_depth_flag(depth_flag);
 			cached.set_view_flags(flags);
 			cached.set_context(context);
+			cached.set_image_type(type);
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
 			if (context != rsx::texture_upload_context::blit_engine_dst || g_cfg.video.strict_rendering_mode)
