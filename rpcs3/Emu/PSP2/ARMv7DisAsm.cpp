@@ -258,6 +258,9 @@ void ARMv7DisAsm::Write(const std::string& value)
 	case CPUDisAsm_InterpreterMode:
 		last_opcode += fmt::format(": %s", str);
 		break;
+	case CPUDisAsm_CompilerElfMode:
+		write("ERROR: Trying to load unimplemented CPU DisAsm mode, CompilerElfMode.");
+		break;
 	}
 }
 

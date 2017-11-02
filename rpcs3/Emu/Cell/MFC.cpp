@@ -50,6 +50,13 @@ void fmt_class_string<MFC>::format(std::string& out, u64 arg)
 		case MFC_BARRIER_CMD: return "BARRIER";
 		case MFC_EIEIO_CMD: return "EIEIO";
 		case MFC_SYNC_CMD: return "SYNC";
+
+		case MFC_BARRIER_MASK:
+		case MFC_FENCE_MASK:
+		case MFC_LIST_MASK:
+		case MFC_START_MASK:
+		case MFC_RESULT_MASK:
+			break;
 		}
 
 		return unknown;
