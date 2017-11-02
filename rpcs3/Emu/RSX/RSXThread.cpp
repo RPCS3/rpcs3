@@ -1364,7 +1364,7 @@ namespace rsx
 			}
 			else
 			{
-				texture_dimensions[i] = tex.get_extended_texture_dimension();
+				texture_dimensions[i] = sampler_descriptors[i]->image_type;
 
 				if (tex.alpha_kill_enabled())
 				{
@@ -1383,13 +1383,16 @@ namespace rsx
 				if (raw_format & CELL_GCM_TEXTURE_UN)
 					result.unnormalized_coords |= (1 << i);
 
-				if (sampler_descriptors[i]->upload_context == rsx::texture_upload_context::framebuffer_storage)
+				if (sampler_descriptors[i]->upload_context == rsx::texture_upload_context::framebuffer_storage &&
+					raw_format & CELL_GCM_TEXTURE_UN)
 				{
-					if (raw_format & CELL_GCM_TEXTURE_UN)
-					{
-						result.texture_scale[i][0] = (resolution_scale * sampler_descriptors[i]->scale_x);
-						result.texture_scale[i][1] = (resolution_scale * sampler_descriptors[i]->scale_y);
-					}
+					result.texture_scale[i][0] = (resolution_scale * sampler_descriptors[i]->scale_x);
+					result.texture_scale[i][1] = (resolution_scale * sampler_descriptors[i]->scale_y);
+				}
+				else
+				{
+					result.texture_scale[i][0] = sampler_descriptors[i]->scale_x;
+					result.texture_scale[i][1] = sampler_descriptors[i]->scale_y;
 				}
 
 				if (sampler_descriptors[i]->is_depth_texture)

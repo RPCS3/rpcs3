@@ -179,21 +179,9 @@ void GLGSRender::begin()
 
 namespace
 {
-	GLenum get_gl_target_for_texture(const rsx::fragment_texture& tex)
+	GLenum get_gl_target_for_texture(const rsx::texture_dimension_extended type)
 	{
-		switch (tex.get_extended_texture_dimension())
-		{
-		case rsx::texture_dimension_extended::texture_dimension_1d: return GL_TEXTURE_1D;
-		case rsx::texture_dimension_extended::texture_dimension_2d: return GL_TEXTURE_2D;
-		case rsx::texture_dimension_extended::texture_dimension_cubemap: return GL_TEXTURE_CUBE_MAP;
-		case rsx::texture_dimension_extended::texture_dimension_3d: return GL_TEXTURE_3D;
-		}
-		fmt::throw_exception("Unknown texture target" HERE);
-	}
-
-	GLenum get_gl_target_for_texture(const rsx::vertex_texture& tex)
-	{
-		switch (tex.get_extended_texture_dimension())
+		switch (type)
 		{
 		case rsx::texture_dimension_extended::texture_dimension_1d: return GL_TEXTURE_1D;
 		case rsx::texture_dimension_extended::texture_dimension_2d: return GL_TEXTURE_2D;
@@ -339,7 +327,7 @@ void GLGSRender::end()
 
 			if (tex.enabled())
 			{
-				GLenum target = get_gl_target_for_texture(tex);
+				GLenum target = get_gl_target_for_texture(sampler_state->image_type);
 				if (sampler_state->image_handle)
 				{
 					glBindTexture(target, sampler_state->image_handle);
@@ -959,6 +947,12 @@ void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 	vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
 	void* pipeline_properties = nullptr;
 
+	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, pipeline_properties);
+	m_program->use();
+
+	if (m_prog_buffer.check_cache_missed())
+		m_shaders_cache->store(pipeline_properties, vertex_program, fragment_program);
+
 	u8 *buf;
 	u32 vertex_state_offset;
 	u32 vertex_constants_offset;
@@ -1017,13 +1011,6 @@ void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 	}
 
 	m_transform_constants_dirty = false;
-
-	//Search/compile program after transfer operations
-	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, pipeline_properties);
-	m_program->use();
-
-	if (m_prog_buffer.check_cache_missed())
-		m_shaders_cache->store(pipeline_properties, vertex_program, fragment_program);
 }
 
 void GLGSRender::update_draw_state()
