@@ -50,9 +50,8 @@ void fmt_class_string<MFC>::format(std::string& out, u64 arg)
 		case MFC_BARRIER_CMD: return "BARRIER";
 		case MFC_EIEIO_CMD: return "EIEIO";
 		case MFC_SYNC_CMD: return "SYNC";
+		default: return unknown;
 		}
-
-		return unknown;
 	});
 }
 
