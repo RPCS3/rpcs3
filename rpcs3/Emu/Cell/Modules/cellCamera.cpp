@@ -164,6 +164,8 @@ s32 cellCameraInit()
 		camera->attr[CELL_CAMERA_AGCHIGH] = { 64 };
 		break;
 	}
+	default:
+		cellCamera.todo("Trying to init cellCamera with un-researched camera type.");
 	}
 
 	// TODO: Some other default attributes? Need to check the actual behaviour on a real PS3.
