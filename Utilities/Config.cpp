@@ -202,6 +202,7 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 		out << YAML::EndMap;
 		return;
 	}
+	default: LOG_ERROR(GENERAL, "Attempting to cfg encode an unimplemented type.");
 	}
 
 	out << rhs.to_string();

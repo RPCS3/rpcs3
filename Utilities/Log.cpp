@@ -41,6 +41,7 @@ void fmt_class_string<logs::level>::format(std::string& out, u64 arg)
 		case logs::level::warning: return "Warning";
 		case logs::level::notice: return "Notice";
 		case logs::level::trace: return "Trace";
+		case logs::level::_uninit: return unknown;
 		}
 
 		return unknown;
@@ -417,6 +418,7 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	case level::warning: text = u8"·W "; break;
 	case level::notice:  text = u8"·! "; break;
 	case level::trace:   text = u8"·T "; break;
+	case level::_uninit: text = u8"·  "; break;
 	}
 
 	// Print miscosecond timestamp
