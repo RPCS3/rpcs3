@@ -115,7 +115,7 @@ s32 cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 e
 
 	if (dir.size() != 9)
 	{
-		return CELL_HDDGAME_ERROR_PARAM;
+		return (s32)CELL_HDDGAME_ERROR_PARAM;
 	}
 
 	vm::var<CellHddGameCBResult> result;
@@ -165,7 +165,7 @@ s32 cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 e
 
 	if (result->result != CELL_HDDGAME_CBRESULT_OK && result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL)
 	{
-		return CELL_HDDGAME_ERROR_CBRESULT;
+		return (s32)CELL_HDDGAME_ERROR_CBRESULT;
 	}
 
 	// TODO ?
@@ -186,7 +186,7 @@ s32 cellHddGameGetSizeKB(vm::ptr<u32> size)
 
 	if (!fs::is_dir(local_dir))
 	{
-		return CELL_HDDGAME_ERROR_FAILURE;
+		return (s32)CELL_HDDGAME_ERROR_FAILURE;
 	}
 
 	*size = ::narrow<u32>(fs::get_dir_size(local_dir) / 1024);
