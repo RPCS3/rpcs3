@@ -1884,20 +1884,30 @@ void thread_ctrl::set_native_priority(int priority)
 	HANDLE _this_thread = GetCurrentThread();
 	INT native_priority = THREAD_PRIORITY_NORMAL;
 
-	switch (priority)
-	{
-	default:
-	case 0:
-		break;
-	case 1:
+	if (priority > 0)
 		native_priority = THREAD_PRIORITY_ABOVE_NORMAL;
-		break;
-	case -1:
+	if (priority < 0)
 		native_priority = THREAD_PRIORITY_BELOW_NORMAL;
-		break;
-	}
 
-	SetThreadPriority(_this_thread, native_priority);
+	if (!SetThreadPriority(_this_thread, native_priority))
+	{
+		LOG_ERROR(GENERAL, "SetThreadPriority() failed: 0x%x", GetLastError());
+	}
+#else
+	int policy;
+	struct sched_param param;
+
+	pthread_getschedparam(pthread_self(), &policy, &param);
+
+	if (priority > 0)
+		param.sched_priority = sched_get_priority_max(policy);
+	if (priority < 0)
+		param.sched_priority = sched_get_priority_min(policy);
+
+	if (int err = pthread_setschedparam(pthread_self(), policy, &param))
+	{
+		LOG_ERROR(GENERAL, "pthraed_setschedparam() failed: %d", err);
+	}
 #endif
 }
 
