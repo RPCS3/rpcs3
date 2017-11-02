@@ -511,9 +511,65 @@ namespace vk
 			return create_temporary_subresource_view(cmd, *source, gcm_format, x, y, w, h);
 		}
 
-		vk::image_view* generate_cubemap_from_images(vk::command_buffer&, std::array<vk::image*, 6>& sources) override
+		vk::image_view* generate_cubemap_from_images(vk::command_buffer& cmd, const u32 gcm_format, u16 size, std::array<vk::image*, 6>& sources) override
 		{
-			return nullptr;
+			std::unique_ptr<vk::image> image;
+			std::unique_ptr<vk::image_view> view;
+
+			image.reset(new vk::image(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				VK_IMAGE_TYPE_2D,
+				vk::get_compatible_sampler_format(gcm_format),
+				size, size, 1, 1, 6, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT));
+
+			VkImageSubresourceRange subresource_range = {};
+			VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+
+			for (u32 n = 0; n < 6; ++n)
+			{
+				if (!view)
+				{
+					switch (sources[0]->info.format)
+					{
+					case VK_FORMAT_D16_UNORM:
+						aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+						break;
+					case VK_FORMAT_D24_UNORM_S8_UINT:
+					case VK_FORMAT_D32_SFLOAT_S8_UINT:
+						aspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+						break;
+					}
+
+					VkImageSubresourceRange view_range = { aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 6 };
+					view.reset(new vk::image_view(*vk::get_current_renderer(), image->value, VK_IMAGE_VIEW_TYPE_CUBE, image->info.format, image->native_component_map, view_range));
+					subresource_range = view_range;
+					vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+					subresource_range.layerCount = 1;
+				}
+
+				VkImageLayout old_src_layout = sources[n]->current_layout;
+				vk::change_image_layout(cmd, sources[n], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+
+				VkImageCopy copy_rgn;
+				copy_rgn.srcOffset = { 0, 0, 0 };
+				copy_rgn.dstOffset = { 0, 0, 0 };
+				copy_rgn.dstSubresource = { aspect, 0, n, 1 };
+				copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
+				copy_rgn.extent = { size, size, 1 };
+
+				vkCmdCopyImage(cmd, sources[n]->value, sources[n]->current_layout, image->value, image->current_layout, 1, &copy_rgn);
+				vk::change_image_layout(cmd, sources[n], old_src_layout, subresource_range);
+			}
+
+			subresource_range.layerCount = 6;
+			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
+
+			const u32 resource_memory = size * size * 6 * 4; //Rough approximate
+			m_discardable_storage.push_back({ image, view });
+			m_discardable_storage.back().block_size = resource_memory;
+			m_discarded_memory_size += resource_memory;
+
+			return m_discardable_storage.back().view.get();
 		}
 
 		cached_texture_section* create_new_texture(vk::command_buffer& cmd, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, const u32 gcm_format,
@@ -732,7 +788,10 @@ namespace vk
 
 		inline vk::image_view* create_temporary_subresource(vk::command_buffer &cmd, deferred_subresource& desc)
 		{
-			return create_temporary_subresource_view(cmd, desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height);
+			if (!desc.is_cubemap)
+				return create_temporary_subresource_view(cmd, desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height);
+			else
+				return generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, desc.external_cubemap_sources);
 		}
 
 		bool is_depth_texture(const u32 rsx_address, const u32 rsx_size) override

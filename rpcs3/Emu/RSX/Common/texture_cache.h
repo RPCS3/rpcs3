@@ -204,7 +204,7 @@ namespace rsx
 				std::vector<rsx_subresource_layout>& subresource_layout, const rsx::texture_dimension_extended type, const bool swizzled, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
 		virtual void enforce_surface_creation_type(section_storage_type& section, const texture_create_flags expected) = 0;
 		virtual void insert_texture_barrier() = 0;
-		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, std::array<image_resource_type, 6>& sources) = 0;
+		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, const u32 gcm_format, u16 size, std::array<image_resource_type, 6>& sources) = 0;
 
 		constexpr u32 get_block_size() const { return 0x1000000; }
 		inline u32 get_block_address(u32 address) const { return (address & ~0xFFFFFF); }
@@ -229,11 +229,13 @@ namespace rsx
 		struct deferred_subresource
 		{
 			image_resource_type external_handle = 0;
+			std::array<image_resource_type, 6> external_cubemap_sources;
 			u32 gcm_format = 0;
 			u16 x = 0;
 			u16 y = 0;
 			u16 width = 0;
 			u16 height = 0;
+			bool is_cubemap = false;
 
 			deferred_subresource()
 			{}
@@ -246,7 +248,7 @@ namespace rsx
 		struct sampled_image_descriptor : public sampled_image_descriptor_base
 		{
 			image_view_type image_handle = 0;
-			deferred_subresource external_subresource_desc;
+			deferred_subresource external_subresource_desc = {};
 			bool flag = false;
 
 			sampled_image_descriptor()
@@ -273,6 +275,12 @@ namespace rsx
 				scale_x = x_scale;
 				scale_y = y_scale;
 				image_type = type;
+			}
+
+			void set_external_cubemap_resources(std::array<image_resource_type, 6> images)
+			{
+				external_subresource_desc.external_cubemap_sources = images;
+				external_subresource_desc.is_cubemap = true;
 			}
 		};
 
@@ -990,14 +998,64 @@ namespace rsx
 		sampled_image_descriptor process_framebuffer_resource(render_target_type texptr, const u32 texaddr, const u32 gcm_format, surface_store_type& m_rtts,
 				const u16 tex_width, const u16 tex_height, const rsx::texture_dimension_extended extended_dimension, const bool is_depth)
 		{
+			const u32 format = gcm_format & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
+			const auto surface_width = texptr->get_surface_width();
+			const auto surface_height = texptr->get_surface_height();
+
 			if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d &&
 				extended_dimension != rsx::texture_dimension_extended::texture_dimension_1d)
 			{
+				if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap)
+				{
+					if (surface_height == (surface_width * 6))
+					{
+						//TODO: Unwrap long RTT block into 6 images and generate cubemap from them
+						LOG_ERROR(RSX, "Unwrapping block rtt to cubemap is unimplemented!");
+						return{};
+					}
+
+					std::array<image_resource_type, 6> image_array;
+					image_array[0] = texptr->get_surface();
+					bool can_cast = true;
+
+					u32 image_size = texptr->get_rsx_pitch() * texptr->get_surface_height();
+					u32 image_address = texaddr + image_size;
+
+					for (int n = 1; n < 6; ++n)
+					{
+						render_target_type img = nullptr;
+						if (!!(img = m_rtts.get_texture_from_render_target_if_applicable(image_address)) ||
+							!!(img = m_rtts.get_texture_from_depth_stencil_if_applicable(image_address)))
+						{
+							if (img->get_surface_width() != surface_width ||
+								img->get_surface_width() != img->get_surface_height())
+							{
+								can_cast = false;
+								break;
+							}
+
+							image_address += image_size;
+							image_array[n] = img->get_surface();
+						}
+						else
+						{
+							can_cast = false;
+							break;
+						}
+					}
+
+					if (can_cast)
+					{
+						sampled_image_descriptor desc = { texptr->get_surface(), format, 0, 0, surface_width, surface_height, texture_upload_context::framebuffer_storage,
+								is_depth, 1.f, 1.f, rsx::texture_dimension_extended::texture_dimension_cubemap };
+
+						desc.set_external_cubemap_resources(image_array);
+						return desc;
+					}
+				}
+
 				LOG_ERROR(RSX, "Texture resides in render target memory, but requested type is not 2D (%d)", (u32)extended_dimension);
 			}
-
-			const auto surface_width = texptr->get_surface_width();
-			const auto surface_height = texptr->get_surface_height();
 
 			u32 internal_width = tex_width;
 			u32 internal_height = tex_height;
@@ -1025,10 +1083,9 @@ namespace rsx
 				texptr->aa_mode = aa_mode;
 			}
 
-			const u32 format = gcm_format & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
 			const bool unnormalized = (gcm_format & CELL_GCM_TEXTURE_UN) != 0;
-			f32 scale_x = (unnormalized)? get_internal_scaling_x(texptr) : 1.f;
-			f32 scale_y = (unnormalized)? get_internal_scaling_y(texptr) : 1.f;
+			f32 scale_x = (unnormalized)? (1.f / tex_width) : 1.f;
+			f32 scale_y = (unnormalized)? (1.f / tex_height) : 1.f;
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
 			{
@@ -1188,8 +1245,8 @@ namespace rsx
 					else
 					{
 						const bool unnormalized = (tex.format() & CELL_GCM_TEXTURE_UN) != 0;
-						f32 scale_x = (unnormalized)? get_internal_scaling_x(rsc.surface) : 1.f;
-						f32 scale_y = (unnormalized)? get_internal_scaling_x(rsc.surface) : 1.f;
+						f32 scale_x = (unnormalized)? (1.f / tex_width) : 1.f;
+						f32 scale_y = (unnormalized)? (1.f / tex_height) : 1.f;
 						u16 internal_height = rsx::apply_resolution_scale(rsc.h, true);
 
 						if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)

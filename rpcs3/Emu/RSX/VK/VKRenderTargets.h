@@ -22,6 +22,10 @@ namespace vk
 		bool dirty = false;
 		u16 native_pitch = 0;
 		u16 rsx_pitch = 0;
+
+		u16 surface_width = 0;
+		u16 surface_height = 0;
+
 		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
 		std::unique_ptr<vk::image_view> view;
 
@@ -61,12 +65,12 @@ namespace vk
 
 		u16 get_surface_width() const override
 		{
-			return rsx::apply_inverse_resolution_scale(width(), true);
+			return surface_width;
 		}
 
 		u16 get_surface_height() const override
 		{
-			return rsx::apply_inverse_resolution_scale(height(), true);
+			return surface_height;
 		}
 
 		u16 get_rsx_pitch() const override
@@ -143,6 +147,8 @@ namespace rsx
 
 			rtt->native_component_map = fmt.second;
 			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format);
+			rtt->surface_width = (u16)width;
+			rtt->surface_height = (u16)height;
 
 			if (old_surface != nullptr && old_surface->info.format == requested_format)
 			{
@@ -197,6 +203,8 @@ namespace rsx
 				ds->native_pitch *= 2;
 
 			ds->attachment_aspect_flag = range.aspectMask;
+			ds->surface_width = (u16)width;
+			ds->surface_height = (u16)height;
 
 			if (old_surface != nullptr && old_surface->info.format == requested_format)
 			{
