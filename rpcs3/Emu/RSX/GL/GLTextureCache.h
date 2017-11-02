@@ -134,6 +134,8 @@ namespace gl
 			case texture::type::uint:
 				size = 4;
 				break;
+			default:
+				LOG_ERROR(RSX, "Unsupported texture type");
 			}
 
 			switch (fmt_)

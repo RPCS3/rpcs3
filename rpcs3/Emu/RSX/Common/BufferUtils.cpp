@@ -38,8 +38,8 @@ namespace
 	{
 		const __m128i mask = _mm_set_epi8(
 			0xC, 0xD, 0xE, 0xF,
-			0x8, 0x9, 0xA, 0xB, 
-			0x4, 0x5, 0x6, 0x7, 
+			0x8, 0x9, 0xA, 0xB,
+			0x4, 0x5, 0x6, 0x7,
 			0x0, 0x1, 0x2, 0x3);
 
 		__m128i* dst_ptr = (__m128i*)dst;
@@ -48,7 +48,7 @@ namespace
 		const u32 dword_count = (vertex_count * (stride >> 2));
 		const u32 iterations = dword_count >> 2;
 		const u32 remaining = dword_count % 4;
-		
+
 		for (u32 i = 0; i < iterations; ++i)
 		{
 			u32 *src_words = (u32*)src_ptr;
@@ -121,7 +121,7 @@ namespace
 
 		//Count vertices to copy
 		const bool is_128_aligned = !((dst_stride | src_stride) & 15);
-		
+
 		u32 min_block_size = std::min(src_stride, dst_stride);
 		if (min_block_size == 0) min_block_size = dst_stride;
 
@@ -382,9 +382,9 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 
 	const u64 src_address = (u64)src_ptr.data();
 	const bool sse_aligned = ((src_address & 15) == 0);
-	
+
 #if !DEBUG_VERTEX_STREAMING
-	
+
 	if (real_count >= count || real_count == 1)
 	{
 		if (attribute_src_stride == dst_stride && src_read_stride == dst_stride)
@@ -604,8 +604,9 @@ bool is_primitive_native(rsx::primitive_type draw_mode)
 	case rsx::primitive_type::triangle_fan:
 	case rsx::primitive_type::quads:
 		return false;
+	default:
+		fmt::throw_exception("Wrong primitive type" HERE);
 	}
-	fmt::throw_exception("Wrong primitive type" HERE);
 }
 
 /** We assume that polygon is convex in polygon mode (constraints in OpenGL)
@@ -682,6 +683,8 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	case rsx::primitive_type::triangles:
 	case rsx::primitive_type::triangle_strip:
 		fmt::throw_exception("Native primitive type doesn't require expansion" HERE);
+	case rsx::primitive_type::invalid:
+		fmt::throw_exception("Tried to load invalid primitive type" HERE);
 	}
 }
 
@@ -725,8 +728,9 @@ namespace
 			return expand_indexed_triangle_fan<T>(src, dst, restart_index_enabled, restart_index);
 		case rsx::primitive_type::quads:
 			return expand_indexed_quads<T>(src, dst, restart_index_enabled, restart_index);
+		default:
+			fmt::throw_exception("Unknown draw mode (0x%x)" HERE, (u32)draw_mode);
 		}
-		fmt::throw_exception("Unknown draw mode (0x%x)" HERE, (u32)draw_mode);
 	}
 }
 

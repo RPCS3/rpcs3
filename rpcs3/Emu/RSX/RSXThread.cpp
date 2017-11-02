@@ -1071,9 +1071,8 @@ namespace rsx
 			case rsx::vertex_base_type::s32k:
 			case rsx::vertex_base_type::ub256:
 				return true;
+			default: return false;
 			}
-
-			return false;
 		}
 	}
 
