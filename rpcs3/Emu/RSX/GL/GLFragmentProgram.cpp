@@ -177,7 +177,7 @@ namespace
 		if (prog.unnormalized_coords & (1 << index))
 			OS << "\t" << vec_type << " tex" << index << "_coord_scale = texture_parameters[" << index << "].xy / textureSize(tex" << index << ", 0);\n";
 		else
-			OS << "\t" << vec_type << " tex" << index << "_coord_scale = " << vec_type << "(1.);\n";
+			OS << "\t" << vec_type << " tex" << index << "_coord_scale = texture_parameters[" << index << "].xy;\n";
 	}
 
 	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)

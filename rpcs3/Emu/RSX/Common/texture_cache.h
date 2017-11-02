@@ -987,7 +987,7 @@ namespace rsx
 		}
 
 		template <typename render_target_type, typename surface_store_type>
-		sampled_image_descriptor process_framebuffer_resource(render_target_type texptr, const u32 texaddr, const u32 format, surface_store_type& m_rtts,
+		sampled_image_descriptor process_framebuffer_resource(render_target_type texptr, const u32 texaddr, const u32 gcm_format, surface_store_type& m_rtts,
 				const u16 tex_width, const u16 tex_height, const rsx::texture_dimension_extended extended_dimension, const bool is_depth)
 		{
 			if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d &&
@@ -1025,8 +1025,10 @@ namespace rsx
 				texptr->aa_mode = aa_mode;
 			}
 
-			f32 scale_x = get_internal_scaling_x(texptr);
-			f32 scale_y = get_internal_scaling_y(texptr);
+			const u32 format = gcm_format & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
+			const bool unnormalized = (gcm_format & CELL_GCM_TEXTURE_UN) != 0;
+			f32 scale_x = (unnormalized)? get_internal_scaling_x(texptr) : 1.f;
+			f32 scale_y = (unnormalized)? get_internal_scaling_y(texptr) : 1.f;
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
 			{
@@ -1132,7 +1134,7 @@ namespace rsx
 				{
 					if (test_framebuffer(texaddr))
 					{
-						return process_framebuffer_resource(texptr, texaddr, format, m_rtts, tex_width, tex_height, extended_dimension, false);
+						return process_framebuffer_resource(texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, extended_dimension, false);
 					}
 					else
 					{
@@ -1145,7 +1147,7 @@ namespace rsx
 				{
 					if (test_framebuffer(texaddr))
 					{
-						return process_framebuffer_resource(texptr, texaddr, format, m_rtts, tex_width, tex_height, extended_dimension, true);
+						return process_framebuffer_resource(texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, extended_dimension, true);
 					}
 					else
 					{
@@ -1185,8 +1187,9 @@ namespace rsx
 					}
 					else
 					{
-						f32 scale_x = get_internal_scaling_x(rsc.surface);
-						f32 scale_y = get_internal_scaling_x(rsc.surface);
+						const bool unnormalized = (tex.format() & CELL_GCM_TEXTURE_UN) != 0;
+						f32 scale_x = (unnormalized)? get_internal_scaling_x(rsc.surface) : 1.f;
+						f32 scale_y = (unnormalized)? get_internal_scaling_x(rsc.surface) : 1.f;
 						u16 internal_height = rsx::apply_resolution_scale(rsc.h, true);
 
 						if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
