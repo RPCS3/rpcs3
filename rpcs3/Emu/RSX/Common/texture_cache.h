@@ -1001,11 +1001,36 @@ namespace rsx
 						if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
 							LOG_ERROR(RSX, "Texture resides in render target memory, but requested type is not 2D (%d)", (u32)extended_dimension);
 
+						const auto surface_width = texptr->get_surface_width();
+						const auto surface_height = texptr->get_surface_height();
+
 						u32 internal_width = tex_width;
 						u32 internal_height = tex_height;
 						get_native_dimensions(internal_width, internal_height, (u32)tex_pitch, texptr);
 
-						bool requires_processing = texptr->get_surface_width() != internal_width || texptr->get_surface_height() != internal_height;
+						if (internal_width > surface_width || internal_height > surface_height)
+						{
+							//An AA flag is likely missing
+							//HACK
+							auto aa_mode = texptr->aa_mode;
+							if ((internal_width >> 1) == surface_width)
+							{
+								if (internal_height > surface_height)
+									texptr->aa_mode = rsx::surface_antialiasing::square_centered_4_samples;
+								else
+									texptr->aa_mode = rsx::surface_antialiasing::diagonal_centered_2_samples;
+
+								internal_width = tex_width;
+								internal_height = tex_height;
+								get_native_dimensions(internal_width, internal_height, (u32)tex_pitch, texptr);
+							}
+
+							internal_width = std::min(internal_width, (u32)surface_width);
+							internal_height = std::min(internal_height, (u32)surface_height);
+							texptr->aa_mode = aa_mode;
+						}
+
+						bool requires_processing = surface_width != internal_width || surface_height != internal_height;
 						if (!requires_processing)
 						{
 							for (const auto& tex : m_rtts.m_bound_render_targets)
@@ -1052,11 +1077,36 @@ namespace rsx
 						if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
 							LOG_ERROR(RSX, "Texture resides in depth buffer memory, but requested type is not 2D (%d)", (u32)extended_dimension);
 
+						const auto surface_width = texptr->get_surface_width();
+						const auto surface_height = texptr->get_surface_height();
+
 						u32 internal_width = tex_width;
 						u32 internal_height = tex_height;
 						get_native_dimensions(internal_width, internal_height, (u32)tex_pitch, texptr);
 
-						bool requires_processing = texptr->get_surface_width() != internal_width || texptr->get_surface_height() != internal_height;
+						if (internal_width > surface_width || internal_height > surface_height)
+						{
+							//An AA flag is likely missing
+							//HACK
+							auto aa_mode = texptr->aa_mode;
+							if ((internal_width >> 1) == surface_width)
+							{
+								if (internal_height > surface_height)
+									texptr->aa_mode = rsx::surface_antialiasing::square_centered_4_samples;
+								else
+									texptr->aa_mode = rsx::surface_antialiasing::diagonal_centered_2_samples;
+
+								internal_width = tex_width;
+								internal_height = tex_height;
+								get_native_dimensions(internal_width, internal_height, (u32)tex_pitch, texptr);
+							}
+
+							internal_width = std::min(internal_width, (u32)surface_width);
+							internal_height = std::min(internal_height, (u32)surface_height);
+							texptr->aa_mode = aa_mode;
+						}
+
+						bool requires_processing = surface_width != internal_width || surface_height != internal_height;
 						if (!requires_processing && texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
 						{
 							if (g_cfg.video.strict_rendering_mode)
