@@ -138,7 +138,7 @@ namespace rsx
 	class texture_cache
 	{
 	private:
-		std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector = 
+		std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector =
 		{
 			{ CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B },
 			{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
@@ -271,12 +271,12 @@ namespace rsx
 
 		//Set when a hw blit engine incompatibility is detected
 		bool blit_engine_incompatibility_warning_raised = false;
-		
+
 		//Memory usage
 		const s32 m_max_zombie_objects = 64; //Limit on how many texture objects to keep around for reuse after they are invalidated
 		std::atomic<s32> m_unreleased_texture_objects = { 0 }; //Number of invalidated objects not yet freed from memory
 		std::atomic<u32> m_texture_memory_in_use = { 0 };
-		
+
 		/* Helpers */
 		virtual void free_texture_section(section_storage_type&) = 0;
 		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_resource_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) = 0;
@@ -606,7 +606,7 @@ namespace rsx
 
 		texture_cache() {}
 		~texture_cache() {}
-		
+
 		virtual void destroy() = 0;
 		virtual bool is_depth_texture(const u32, const u32) = 0;
 		virtual void on_frame_end() = 0;
@@ -768,7 +768,7 @@ namespace rsx
 			region->copy_texture(false, std::forward<Args>(extra)...);
 			return true;
 		}
-		
+
 		template <typename ...Args>
 		bool load_memory_from_cache(const u32 memory_address, const u32 memory_size, Args&&... extras)
 		{
@@ -970,7 +970,7 @@ namespace rsx
 					value.misses--;
 			}
 		}
-		
+
 		void purge_dirty()
 		{
 			writer_lock lock(m_cache_mutex);
@@ -1001,7 +1001,7 @@ namespace rsx
 			{
 				m_cache.erase(address);
 			}
-			
+
 			m_unreleased_texture_objects = 0;
 		}
 

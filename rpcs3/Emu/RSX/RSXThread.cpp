@@ -495,7 +495,7 @@ namespace rsx
 			//Validate put and get registers
 			//TODO: Who should handle graphics exceptions??
 			const u32 get_address = RSXIOMem.RealAddr(internal_get);
-			
+
 			if (!get_address)
 			{
 				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", internal_get.load(), put);
@@ -1074,9 +1074,9 @@ namespace rsx
 			case rsx::vertex_base_type::s32k:
 			case rsx::vertex_base_type::ub256:
 				return true;
+			default:
+				return false;
 			}
-
-			return false;
 		}
 	}
 
@@ -1574,7 +1574,7 @@ namespace rsx
 
 		GcmTileInfo *tile = find_tile(offset, location);
 		u32 base = 0;
-		
+
 		if (tile)
 		{
 			base = offset - tile->offset;
@@ -1587,7 +1587,7 @@ namespace rsx
 	u32 thread::ReadIO32(u32 addr)
 	{
 		u32 value;
-	
+
 		if (!RSXIOMem.Read32(addr, &value))
 		{
 			fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
