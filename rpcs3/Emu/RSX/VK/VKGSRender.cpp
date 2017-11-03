@@ -1101,7 +1101,7 @@ void VKGSRender::end()
 						mip_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 					}
 
-					if (fs_sampler_handles[i])
+					if (fs_sampler_handles[i] && m_textures_dirty[i])
 					{
 						if (!fs_sampler_handles[i]->matches(wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
 							min_filter, mag_filter, mip_mode, border_color, fs_sampler_state[i]->is_depth_texture, depth_compare))
