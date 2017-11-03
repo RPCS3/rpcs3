@@ -664,8 +664,11 @@ namespace gl
 
 			for (int i = 0; i < 6; ++i)
 			{
-				glCopyImageSubData(sources[i], GL_TEXTURE_2D, 0, 0, 0, 0,
-					dst_id, GL_TEXTURE_CUBE_MAP, 0, 0, 0, i, size, size, 1);
+				if (sources[i] != 0)
+				{
+					glCopyImageSubData(sources[i], GL_TEXTURE_2D, 0, 0, 0, 0,
+						dst_id, GL_TEXTURE_CUBE_MAP, 0, 0, 0, i, size, size, 1);
+				}
 			}
 
 			m_temporary_surfaces.push_back(dst_id);

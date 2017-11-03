@@ -547,18 +547,29 @@ namespace vk
 					subresource_range.layerCount = 1;
 				}
 
-				VkImageLayout old_src_layout = sources[n]->current_layout;
-				vk::change_image_layout(cmd, sources[n], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+				if (sources[n])
+				{
+					VkImageLayout old_src_layout = sources[n]->current_layout;
+					vk::change_image_layout(cmd, sources[n], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
 
-				VkImageCopy copy_rgn;
-				copy_rgn.srcOffset = { 0, 0, 0 };
-				copy_rgn.dstOffset = { 0, 0, 0 };
-				copy_rgn.dstSubresource = { aspect, 0, n, 1 };
-				copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
-				copy_rgn.extent = { size, size, 1 };
+					VkImageCopy copy_rgn;
+					copy_rgn.srcOffset = { 0, 0, 0 };
+					copy_rgn.dstOffset = { 0, 0, 0 };
+					copy_rgn.dstSubresource = { aspect, 0, n, 1 };
+					copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
+					copy_rgn.extent = { size, size, 1 };
 
-				vkCmdCopyImage(cmd, sources[n]->value, sources[n]->current_layout, image->value, image->current_layout, 1, &copy_rgn);
-				vk::change_image_layout(cmd, sources[n], old_src_layout, subresource_range);
+					vkCmdCopyImage(cmd, sources[n]->value, sources[n]->current_layout, image->value, image->current_layout, 1, &copy_rgn);
+					vk::change_image_layout(cmd, sources[n], old_src_layout, subresource_range);
+				}
+				else
+				{
+					//Clear to black
+					VkClearColorValue clear_color{};
+					auto range = subresource_range;
+					range.baseArrayLayer = n;
+					vkCmdClearColorImage(cmd, image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+				}
 			}
 
 			subresource_range.layerCount = 6;
