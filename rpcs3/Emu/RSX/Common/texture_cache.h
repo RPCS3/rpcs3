@@ -934,7 +934,7 @@ namespace rsx
 				const u32 internal_width = (const u32)(tex_width * internal_scale);
 
 				const auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, internal_width, tex_height, tex_pitch, true);
-				if (rsc.surface && test_framebuffer(texaddr))
+				if (rsc.surface/* && test_framebuffer(texaddr)*/)
 				{
 					//TODO: Check that this region is not cpu-dirty before doing a copy
 					if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
@@ -1087,7 +1087,7 @@ namespace rsx
 			}
 
 			//Check if src/dst are parts of render targets
-			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, false, dst.compressed_y);
+			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, false, false, dst.compressed_y);
 			dst_is_render_target = dst_subres.surface != nullptr;
 
 			if (dst_is_render_target && dst_subres.surface->get_native_pitch() != dst.pitch)
@@ -1099,7 +1099,7 @@ namespace rsx
 			}
 
 			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = m_rtts.get_surface_subresource_if_applicable(framebuffer_src_address, src_w, src_h, src.pitch, true, true, false, src.compressed_y);
+			auto src_subres = m_rtts.get_surface_subresource_if_applicable(framebuffer_src_address, src_w, src_h, src.pitch, true, true, false, false, src.compressed_y);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			if (src_is_render_target && src_subres.surface->get_native_pitch() != src.pitch)
