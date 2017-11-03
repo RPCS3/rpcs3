@@ -781,15 +781,6 @@ namespace gl
 			m_hw_blitter.destroy();
 		}
 
-		inline u32 create_temporary_subresource(deferred_subresource& desc)
-		{
-			void* unused = nullptr;
-			if (!desc.is_cubemap)
-				return create_temporary_subresource_view(unused, &desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height);
-			else
-				return generate_cubemap_from_images(unused, desc.gcm_format, desc.width, desc.external_cubemap_sources);
-		}
-
 		bool is_depth_texture(const u32 rsx_address, const u32 rsx_size) override
 		{
 			reader_lock lock(m_cache_mutex);
@@ -824,6 +815,7 @@ namespace gl
 			}
 			
 			clear_temporary_subresources();
+			m_temporary_subresource_cache.clear();
 		}
 
 		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool linear_interpolate, gl_render_targets& m_rtts)
