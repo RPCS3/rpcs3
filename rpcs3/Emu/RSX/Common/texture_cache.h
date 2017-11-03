@@ -1261,6 +1261,13 @@ namespace rsx
 			tex_pitch = is_compressed_format? (tex_size / tex_height) : tex_pitch; //NOTE: Compressed textures dont have a real pitch (tex_size = (w*h)/6)
 			if (tex_pitch == 0) tex_pitch = tex_width * get_format_block_size_in_bytes(format);
 
+			const bool unnormalized = (tex.format() & CELL_GCM_TEXTURE_UN) != 0;
+			f32 scale_x = (unnormalized) ? (1.f / tex_width) : 1.f;
+			f32 scale_y = (unnormalized) ? (1.f / tex_height) : 1.f;
+
+			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
+				scale_y = 0.f;
+
 			if (!is_compressed_format)
 			{
 				/* Check if we are re-sampling a subresource of an RTV/DSV texture, bound or otherwise
@@ -1288,16 +1295,9 @@ namespace rsx
 					}
 					else
 					{
-						const bool unnormalized = (tex.format() & CELL_GCM_TEXTURE_UN) != 0;
-						f32 scale_x = (unnormalized)? (1.f / tex_width) : 1.f;
-						f32 scale_y = (unnormalized)? (1.f / tex_height) : 1.f;
 						u16 internal_height = rsx::apply_resolution_scale(rsc.h, true);
-
 						if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
-						{
 							internal_height = 1;
-							scale_y = 0.f;
-						}
 
 						if (!rsc.is_bound || !g_cfg.video.strict_rendering_mode)
 						{
@@ -1332,12 +1332,10 @@ namespace rsx
 				auto cached_texture = find_texture_from_dimensions(texaddr, tex_width, tex_height, depth);
 				if (cached_texture)
 				{
-					f32 scale_y = 1.f;
-					if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d ||
-						cached_texture->get_image_type() == rsx::texture_dimension_extended::texture_dimension_1d)
+					if (cached_texture->get_image_type() == rsx::texture_dimension_extended::texture_dimension_1d)
 						scale_y = 0.f;
 
-					return{ cached_texture->get_raw_view(), cached_texture->get_context(), cached_texture->is_depth_texture(), 1.f, scale_y, cached_texture->get_image_type() };
+					return{ cached_texture->get_raw_view(), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
 				}
 
 				if ((!blit_engine_incompatibility_warning_raised && g_cfg.video.use_gpu_texture_scaling) || is_hw_blit_engine_compatible(format))
@@ -1380,9 +1378,8 @@ namespace rsx
 									}
 
 									auto src_image = surface->get_raw_texture();
-									f32 scale_y = (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d) ? 0.f : 1.f;
 									return{ src_image, surface->get_section_base(), format, offset_x, offset_y, tex_width, tex_height, texture_upload_context::blit_engine_dst,
-											surface->is_depth_texture(), 1.f, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
+											surface->is_depth_texture(), scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
 								}
 							}
 						}
@@ -1402,7 +1399,7 @@ namespace rsx
 			m_texture_memory_in_use += (tex_pitch * tex_height);
 			return{ upload_image_from_cpu(cmd, texaddr, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
 				texture_upload_context::shader_read, subresources_layout, extended_dimension, is_swizzled, remap_vector)->get_raw_view(),
-				texture_upload_context::shader_read, false, 1.f, 1.f, extended_dimension };
+				texture_upload_context::shader_read, false, scale_x, scale_y, extended_dimension };
 		}
 
 		template <typename surface_store_type, typename blitter_type, typename ...Args>
