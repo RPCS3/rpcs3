@@ -74,7 +74,7 @@ s32 cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 	for (u32 i=0; i<CELL_MAX_MICE; i++)	info->vendor_id[i] = current_info.vendor_id[i];
 	for (u32 i=0; i<CELL_MAX_MICE; i++)	info->product_id[i] = current_info.product_id[i];
 	for (u32 i=0; i<CELL_MAX_MICE; i++)	info->status[i] = current_info.status[i];
-	
+
 	return CELL_OK;
 }
 
@@ -96,7 +96,7 @@ s32 cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> info)
 
 	info->is_supported = 0; // Unimplemented: (0=Tablet mode is not supported)
 	info->mode = 1; // Unimplemented: (1=Mouse mode)
-	
+
 	return CELL_OK;
 }
 
@@ -115,7 +115,7 @@ s32 cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 	{
 		return CELL_MOUSE_ERROR_NO_DEVICE;
 	}
-	
+
 	MouseData& current_data = handler->GetData(port_no);
 	data->update = current_data.update;
 	data->buttons = current_data.buttons;
@@ -134,22 +134,27 @@ s32 cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 
 s32 cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 {
-	UNIMPLEMENTED_FUNC(sys_io);
-	
-	return CELL_OK;
+	sys_io.todo("cellMouseGetDataList(port_no=%d, data=0x%x", port_no, data);
+	if (g_cfg.io.mouse == mouse_handler::null)
+		return CELL_MOUSE_ERROR_NO_DEVICE;
+	else
+	{
+		data->list_num = 0;
+		return CELL_OK;
+	}
 }
 
 s32 cellMouseSetTabletMode(u32 port_no, u32 mode)
 {
 	UNIMPLEMENTED_FUNC(sys_io);
-	
+
 	return CELL_OK;
 }
 
 s32 cellMouseGetTabletDataList(u32 port_no, u32 data_addr)
 {
 	UNIMPLEMENTED_FUNC(sys_io);
-	
+
 	return CELL_OK;
 }
 
