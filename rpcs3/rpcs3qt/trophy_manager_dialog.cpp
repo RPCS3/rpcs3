@@ -63,19 +63,18 @@ trophy_manager_dialog::trophy_manager_dialog() : QWidget(), m_sort_column(0), m_
 	m_trophy_tree->setContextMenuPolicy(Qt::CustomContextMenu);
 
 	// Populate the trophy database
-	YAML::Node trophy_map = YAML::Load(fs::file{ fs::get_config_dir() + "/trophy_mapping.yml", fs::read + fs::create }.to_string());
-	if (trophy_map.IsMap())
+	QDirIterator dir_iter(qstr(vfs::get(m_TROPHY_DIR)));
+	while (dir_iter.hasNext()) 
 	{
-		QDirIterator dir_iter(qstr(vfs::get(m_TROPHY_DIR)));
-		while (dir_iter.hasNext()) 
+		if (dir_iter.fileName() == "" || dir_iter.fileName() == "." || dir_iter.fileName() == ".." || dir_iter.fileName() == ".gitignore")
 		{
-			std::string dirName = sstr(dir_iter.fileName());
-			if (auto game = trophy_map[dirName])
-			{
-				LoadTrophyFolderToDB(dirName, game.Scalar());
-			}
 			dir_iter.next();
+			continue;
 		}
+		std::string dirName = sstr(dir_iter.fileName());
+		LOG_TRACE(GENERAL, "Loading trophy dir: %s", dirName);
+		LoadTrophyFolderToDB(dirName);
+		dir_iter.next();
 	}
 
 	PopulateUI();
@@ -115,15 +114,8 @@ trophy_manager_dialog::trophy_manager_dialog() : QWidget(), m_sort_column(0), m_
 	settings_layout->addStretch(0);
 	settings->setLayout(settings_layout);
 
-	QVBoxLayout* side_layout = new QVBoxLayout();
-	side_layout->addWidget(settings);
-	QLabel* disclaimer_label = new QLabel(tr("Please note the game must first be played to be displayed."));
-	disclaimer_label->setWordWrap(true);
-	disclaimer_label->setAlignment(Qt::AlignCenter);
-	side_layout->addWidget(disclaimer_label);
-
 	QHBoxLayout* all_layout = new QHBoxLayout(this);
-	all_layout->addLayout(side_layout);
+	all_layout->addWidget(settings);
 	all_layout->addWidget(m_trophy_tree);
 	setLayout(all_layout);
 
@@ -154,14 +146,13 @@ trophy_manager_dialog::trophy_manager_dialog() : QWidget(), m_sort_column(0), m_
 	connect(m_trophy_tree, &QTableWidget::customContextMenuRequested, this, &trophy_manager_dialog::ShowContextMenu);
 }
 
-bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name, const std::string& game_name)
+bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 {
 	std::string trophyPath = m_TROPHY_DIR + trop_name;
 
 	// Populate GameTrophiesData
 	std::unique_ptr<GameTrophiesData> game_trophy_data = std::make_unique<GameTrophiesData>();
 
-	game_trophy_data->game_name = game_name;
 	game_trophy_data->path = vfs::get(trophyPath + "/");
 	game_trophy_data->trop_usr.reset(new TROPUSRLoader());
 	std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
@@ -173,6 +164,12 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name, c
 	if (!success || !config)
 	{
 		LOG_ERROR(GENERAL, "Failed to load trophy database for %s", trop_name);
+		return false;
+	}
+
+	if (game_trophy_data->trop_usr->GetTrophiesCount() == 0)
+	{
+		LOG_ERROR(GENERAL, "Warning game %s in trophy folder %s usr file reports zero trophies.  Cannot load in trophy manager.", game_trophy_data->game_name, game_trophy_data->path);
 		return false;
 	}
 
@@ -198,8 +195,24 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name, c
 		game_trophy_data->trophy_images.emplace_back(std::move(trophy_icon));
 	}
 
+	// Get game name
 	game_trophy_data->trop_config.Read(config.to_string());
+	std::shared_ptr<rXmlNode> trophy_base = game_trophy_data->trop_config.GetRoot();
+	if (trophy_base->GetChildren()->GetName() == "trophyconf")
+	{
+		trophy_base = trophy_base->GetChildren();
+	}
+	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
+	{
+		if (n->GetName() == "title-name")
+		{
+			game_trophy_data->game_name = n->GetNodeContent();
+			break;
+		}
+	}
+
 	m_trophies_db.push_back(std::move(game_trophy_data));
+
 	config.release();
 	return true;
 }
@@ -318,6 +331,7 @@ void trophy_manager_dialog::PopulateUI()
 	{
 		auto& data = m_trophies_db[i];
 
+		LOG_TRACE(GENERAL, "Populating Trophy Manager UI with %s %s", data->game_name, data->path);
 		std::shared_ptr<rXmlNode> trophy_base = data->trop_config.GetRoot();
 		if (trophy_base->GetChildren()->GetName() == "trophyconf")
 		{

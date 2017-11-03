@@ -43,7 +43,7 @@ private:
 	/** Loads a trophy folder. 
 	Returns true if successful.  Does not attempt to install if failure occurs, like sceNpTrophy.
 	*/
-	bool LoadTrophyFolderToDB(const std::string& trop_name, const std::string& game_name);
+	bool LoadTrophyFolderToDB(const std::string& trop_name);
 
 	/** Fills UI with information.
 	Takes results from LoadTrophyFolderToDB and puts it into the UI.
