@@ -347,6 +347,7 @@ namespace rsx
 			u32 last_dirty_block = UINT32_MAX;
 
 			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
+			const bool strict_range_check = g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer;
 
 			for (auto It = m_cache.begin(); It != m_cache.end(); It++)
 			{
@@ -370,7 +371,7 @@ namespace rsx
 					if (tex.cache_tag == cache_tag) continue; //already processed
 					if (!tex.is_locked()) continue;	//flushable sections can be 'clean' but unlocked. TODO: Handle this better
 
-					auto overlapped = tex.overlaps_page(trampled_range, address, tex.is_flushable());
+					auto overlapped = tex.overlaps_page(trampled_range, address, strict_range_check);
 					if (std::get<0>(overlapped))
 					{
 						auto &new_range = std::get<1>(overlapped);
@@ -1051,7 +1052,7 @@ namespace rsx
 
 					std::array<image_resource_type, 6> image_array;
 					image_array[0] = texptr->get_surface();
-					bool can_cast = true;
+					bool safe_cast = true;
 
 					u32 image_size = texptr->get_rsx_pitch() * texptr->get_surface_height();
 					u32 image_address = texaddr + image_size;
@@ -1059,34 +1060,42 @@ namespace rsx
 					for (int n = 1; n < 6; ++n)
 					{
 						render_target_type img = nullptr;
+						image_array[n] = 0;
+
 						if (!!(img = m_rtts.get_texture_from_render_target_if_applicable(image_address)) ||
 							!!(img = m_rtts.get_texture_from_depth_stencil_if_applicable(image_address)))
 						{
 							if (img->get_surface_width() != surface_width ||
 								img->get_surface_width() != img->get_surface_height())
 							{
-								can_cast = false;
-								break;
+								safe_cast = false;
 							}
-
-							image_address += image_size;
-							image_array[n] = img->get_surface();
+							else
+							{
+								image_array[n] = img->get_surface();
+							}
 						}
 						else
 						{
-							can_cast = false;
-							break;
+							safe_cast = false;
 						}
+
+						image_address += image_size;
 					}
 
-					if (can_cast)
+					if (!safe_cast)
 					{
-						sampled_image_descriptor desc = { texptr->get_surface(), texaddr, format, 0, 0, surface_width, surface_height, texture_upload_context::framebuffer_storage,
-								is_depth, 1.f, 1.f, rsx::texture_dimension_extended::texture_dimension_cubemap };
-
-						desc.set_external_cubemap_resources(image_array);
-						return desc;
+						//TODO: Lower to warning
+						//TODO: Gather remaining sides from the texture cache or upload from cpu (too slow?)
+						LOG_ERROR(RSX, "Could not gather all required surfaces for cubemap generation");
 					}
+
+					sampled_image_descriptor desc = { texptr->get_surface(), texaddr, format, 0, 0, rsx::apply_resolution_scale(surface_width, true),
+							rsx::apply_resolution_scale(surface_height, true), texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
+							rsx::texture_dimension_extended::texture_dimension_cubemap };
+
+					desc.set_external_cubemap_resources(image_array);
+					return desc;
 				}
 
 				LOG_ERROR(RSX, "Texture resides in render target memory, but requested type is not 2D (%d)", (u32)extended_dimension);
