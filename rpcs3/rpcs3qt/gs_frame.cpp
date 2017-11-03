@@ -154,7 +154,7 @@ void* gs_frame::handle() const
 #endif
 }
 
-void* gs_frame::make_context()
+draw_context_t gs_frame::make_context()
 {
 	return nullptr;
 }
@@ -164,7 +164,7 @@ void gs_frame::set_current(draw_context_t ctx)
 	Q_UNUSED(ctx);
 }
 
-void gs_frame::delete_context(void* ctx)
+void gs_frame::delete_context(draw_context_t ctx)
 {
 	Q_UNUSED(ctx);
 }

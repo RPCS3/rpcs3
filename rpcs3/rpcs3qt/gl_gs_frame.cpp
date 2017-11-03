@@ -22,7 +22,7 @@ gl_gs_frame::gl_gs_frame(int w, int h, QIcon appIcon, bool disableMouse)
 	setFormat(m_format);
 }
 
-void* gl_gs_frame::make_context()
+draw_context_t gl_gs_frame::make_context()
 {
 	auto context = new QOpenGLContext();
 	context->setFormat(m_format);
@@ -33,16 +33,18 @@ void* gl_gs_frame::make_context()
 
 void gl_gs_frame::set_current(draw_context_t ctx)
 {
-	if (!((QOpenGLContext*)ctx.get())->makeCurrent(this))
+	if (!((QOpenGLContext*)ctx)->makeCurrent(this))
 	{
 		create();
-		((QOpenGLContext*)ctx.get())->makeCurrent(this);
+		((QOpenGLContext*)ctx)->makeCurrent(this);
 	}
 }
 
-void gl_gs_frame::delete_context(void* ctx)
+void gl_gs_frame::delete_context(draw_context_t ctx)
 {
-	((QOpenGLContext*)ctx)->deleteLater();
+	auto gl_ctx = (QOpenGLContext*)ctx;
+	gl_ctx->doneCurrent();
+	delete gl_ctx;
 }
 
 void gl_gs_frame::flip(draw_context_t context, bool skip_frame)
@@ -52,6 +54,6 @@ void gl_gs_frame::flip(draw_context_t context, bool skip_frame)
 	//Do not swap buffers if frame skip is active
 	if (skip_frame) return;
 
-	((QOpenGLContext*)context.get())->makeCurrent(this);
-	((QOpenGLContext*)context.get())->swapBuffers(this);
+	((QOpenGLContext*)context)->makeCurrent(this);
+	((QOpenGLContext*)context)->swapBuffers(this);
 }
