@@ -2424,6 +2424,7 @@ void VKGSRender::prepare_rtts()
 
 		surface->aa_mode = aa_mode;
 		m_texture_cache.tag_framebuffer(surface_addresses[index]);
+		m_texture_cache.notify_surface_changed(surface_addresses[index]);
 	}
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
@@ -2440,6 +2441,7 @@ void VKGSRender::prepare_rtts()
 
 		ds->aa_mode = aa_mode;
 		m_texture_cache.tag_framebuffer(zeta_address);
+		m_texture_cache.notify_surface_changed(zeta_address);
 	}
 
 	m_draw_buffers_count = static_cast<u32>(draw_buffers.size());

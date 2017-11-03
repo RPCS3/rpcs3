@@ -334,7 +334,8 @@ void GLGSRender::end()
 				}
 				else if (sampler_state->external_subresource_desc.external_handle)
 				{
-					glBindTexture(target, m_gl_texture_cache.create_temporary_subresource(sampler_state->external_subresource_desc));
+					void *unused = nullptr;
+					glBindTexture(target, m_gl_texture_cache.create_temporary_subresource(unused, sampler_state->external_subresource_desc));
 					sampler_state->flag = false;
 				}
 				else
@@ -367,7 +368,8 @@ void GLGSRender::end()
 			}
 			else if (sampler_state->external_subresource_desc.external_handle)
 			{
-				glBindTexture(GL_TEXTURE_2D, m_gl_texture_cache.create_temporary_subresource(sampler_state->external_subresource_desc));
+				void *unused = nullptr;
+				glBindTexture(GL_TEXTURE_2D, m_gl_texture_cache.create_temporary_subresource(unused, sampler_state->external_subresource_desc));
 				sampler_state->flag = false;
 			}
 			else

@@ -411,7 +411,7 @@ namespace vk
 		//Stuff that has been dereferenced goes into these
 		std::list<discarded_storage> m_discardable_storage;
 		std::atomic<u32> m_discarded_memory_size = { 0 };
-		
+
 		void purge_cache()
 		{
 			for (auto &address_range : m_cache)
@@ -786,14 +786,6 @@ namespace vk
 			purge_cache();
 		}
 
-		inline vk::image_view* create_temporary_subresource(vk::command_buffer &cmd, deferred_subresource& desc)
-		{
-			if (!desc.is_cubemap)
-				return create_temporary_subresource_view(cmd, desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height);
-			else
-				return generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, desc.external_cubemap_sources);
-		}
-
 		bool is_depth_texture(const u32 rsx_address, const u32 rsx_size) override
 		{
 			reader_lock lock(m_cache_mutex);
@@ -849,6 +841,8 @@ namespace vk
 				}
 				return false;
 			});
+
+			m_temporary_subresource_cache.clear();
 		}
 
 		template<typename RsxTextureType>

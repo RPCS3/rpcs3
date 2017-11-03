@@ -132,8 +132,78 @@ namespace rsx
 			{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
 		};
 
-	protected:
+	public:
+		//Struct to hold data on sections to be paged back onto cpu memory
+		struct thrashed_set
+		{
+			bool violation_handled = false;
+			std::vector<section_storage_type*> affected_sections; //Always laid out with flushable sections first then other affected sections last
+			int num_flushable = 0;
+			u64 cache_tag = 0;
+			u32 address_base = 0;
+			u32 address_range = 0;
+		};
 
+		struct deferred_subresource
+		{
+			image_resource_type external_handle = 0;
+			std::array<image_resource_type, 6> external_cubemap_sources;
+			u32 base_address = 0;
+			u32 gcm_format = 0;
+			u16 x = 0;
+			u16 y = 0;
+			u16 width = 0;
+			u16 height = 0;
+			bool is_cubemap = false;
+
+			deferred_subresource()
+			{}
+
+			deferred_subresource(image_resource_type _res, u32 _addr, u32 _fmt, u16 _x, u16 _y, u16 _w, u16 _h) :
+				external_handle(_res), base_address(_addr), gcm_format(_fmt), x(_x), y(_y), width(_w), height(_h)
+			{}
+		};
+
+		struct sampled_image_descriptor : public sampled_image_descriptor_base
+		{
+			image_view_type image_handle = 0;
+			deferred_subresource external_subresource_desc = {};
+			bool flag = false;
+
+			sampled_image_descriptor()
+			{}
+
+			sampled_image_descriptor(image_view_type handle, const texture_upload_context ctx, const bool is_depth, const f32 x_scale, const f32 y_scale, const rsx::texture_dimension_extended type)
+			{
+				image_handle = handle;
+				upload_context = ctx;
+				is_depth_texture = is_depth;
+				scale_x = x_scale;
+				scale_y = y_scale;
+				image_type = type;
+			}
+
+			sampled_image_descriptor(image_resource_type external_handle, u32 base_address, u32 gcm_format, u16 x_offset, u16 y_offset, u16 width, u16 height,
+				const texture_upload_context ctx, const bool is_depth, const f32 x_scale, const f32 y_scale, const rsx::texture_dimension_extended type)
+			{
+				external_subresource_desc = { external_handle, base_address, gcm_format, x_offset, y_offset, width, height };
+
+				image_handle = 0;
+				upload_context = ctx;
+				is_depth_texture = is_depth;
+				scale_x = x_scale;
+				scale_y = y_scale;
+				image_type = type;
+			}
+
+			void set_external_cubemap_resources(std::array<image_resource_type, 6> images)
+			{
+				external_subresource_desc.external_cubemap_sources = images;
+				external_subresource_desc.is_cubemap = true;
+			}
+		};
+
+	protected:
 		struct ranged_storage
 		{
 			std::vector<section_storage_type> data;  //Stored data
@@ -178,6 +248,7 @@ namespace rsx
 
 		shared_mutex m_cache_mutex;
 		std::unordered_map<u32, ranged_storage> m_cache;
+		std::unordered_multimap<u32, std::pair<deferred_subresource, image_view_type>> m_temporary_subresource_cache;
 
 		std::atomic<u64> m_cache_update_tag = {};
 
@@ -213,76 +284,6 @@ namespace rsx
 		{
 			m_cache_update_tag = get_system_time();
 		}
-
-	public:
-		//Struct to hold data on sections to be paged back onto cpu memory
-		struct thrashed_set
-		{
-			bool violation_handled = false;
-			std::vector<section_storage_type*> affected_sections; //Always laid out with flushable sections first then other affected sections last
-			int num_flushable = 0;
-			u64 cache_tag = 0;
-			u32 address_base = 0;
-			u32 address_range = 0;
-		};
-
-		struct deferred_subresource
-		{
-			image_resource_type external_handle = 0;
-			std::array<image_resource_type, 6> external_cubemap_sources;
-			u32 gcm_format = 0;
-			u16 x = 0;
-			u16 y = 0;
-			u16 width = 0;
-			u16 height = 0;
-			bool is_cubemap = false;
-
-			deferred_subresource()
-			{}
-
-			deferred_subresource(image_resource_type _res, u32 _fmt, u16 _x, u16 _y, u16 _w, u16 _h):
-				external_handle(_res), gcm_format(_fmt), x(_x), y(_y), width(_w), height(_h)
-			{}
-		};
-
-		struct sampled_image_descriptor : public sampled_image_descriptor_base
-		{
-			image_view_type image_handle = 0;
-			deferred_subresource external_subresource_desc = {};
-			bool flag = false;
-
-			sampled_image_descriptor()
-			{}
-
-			sampled_image_descriptor(image_view_type handle, const texture_upload_context ctx, const bool is_depth, const f32 x_scale, const f32 y_scale, const rsx::texture_dimension_extended type)
-			{
-				image_handle = handle;
-				upload_context = ctx;
-				is_depth_texture = is_depth;
-				scale_x = x_scale;
-				scale_y = y_scale;
-				image_type = type;
-			}
-
-			sampled_image_descriptor(image_resource_type external_handle, u32 gcm_format, u16 x_offset, u16 y_offset, u16 width, u16 height,
-					const texture_upload_context ctx, const bool is_depth, const f32 x_scale, const f32 y_scale, const rsx::texture_dimension_extended type)
-			{
-				external_subresource_desc = {external_handle, gcm_format, x_offset, y_offset, width, height};
-
-				image_handle = 0;
-				upload_context = ctx;
-				is_depth_texture = is_depth;
-				scale_x = x_scale;
-				scale_y = y_scale;
-				image_type = type;
-			}
-
-			void set_external_cubemap_resources(std::array<image_resource_type, 6> images)
-			{
-				external_subresource_desc.external_cubemap_sources = images;
-				external_subresource_desc.is_cubemap = true;
-			}
-		};
 
 	private:
 		//Internal implementation methods and helpers
@@ -994,6 +995,40 @@ namespace rsx
 			m_unreleased_texture_objects = 0;
 		}
 
+		image_view_type create_temporary_subresource(commandbuffer_type &cmd, deferred_subresource& desc)
+		{
+			const auto found = m_temporary_subresource_cache.equal_range(desc.base_address);
+			for (auto It = found.first; It != found.second; ++It)
+			{
+				const auto& found_desc = It->second.first;
+				if (found_desc.external_handle != desc.external_handle ||
+					found_desc.is_cubemap != desc.is_cubemap ||
+					found_desc.x != desc.x || found_desc.y != desc.y ||
+					found_desc.width != desc.width || found_desc.height != desc.height)
+					continue;
+
+				return It->second.second;
+			}
+
+			image_view_type result = 0;
+			if (!desc.is_cubemap)
+				result = create_temporary_subresource_view(cmd, &desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height);
+			else
+				result = generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, desc.external_cubemap_sources);
+
+			if (result)
+			{
+				m_temporary_subresource_cache.insert({ desc.base_address,{ desc, result } });
+			}
+
+			return result;
+		}
+
+		void notify_surface_changed(u32 base_address)
+		{
+			m_temporary_subresource_cache.erase(base_address);
+		}
+
 		template <typename render_target_type, typename surface_store_type>
 		sampled_image_descriptor process_framebuffer_resource(render_target_type texptr, const u32 texaddr, const u32 gcm_format, surface_store_type& m_rtts,
 				const u16 tex_width, const u16 tex_height, const rsx::texture_dimension_extended extended_dimension, const bool is_depth)
@@ -1046,7 +1081,7 @@ namespace rsx
 
 					if (can_cast)
 					{
-						sampled_image_descriptor desc = { texptr->get_surface(), format, 0, 0, surface_width, surface_height, texture_upload_context::framebuffer_storage,
+						sampled_image_descriptor desc = { texptr->get_surface(), texaddr, format, 0, 0, surface_width, surface_height, texture_upload_context::framebuffer_storage,
 								is_depth, 1.f, 1.f, rsx::texture_dimension_extended::texture_dimension_cubemap };
 
 						desc.set_external_cubemap_resources(image_array);
@@ -1139,7 +1174,7 @@ namespace rsx
 			{
 				const auto w = rsx::apply_resolution_scale(internal_width, true);
 				const auto h = rsx::apply_resolution_scale(internal_height, true);
-				return{ texptr->get_surface(), format, 0, 0, w, h, texture_upload_context::framebuffer_storage,
+				return{ texptr->get_surface(), texaddr, format, 0, 0, w, h, texture_upload_context::framebuffer_storage,
 					is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
 			}
 
@@ -1274,7 +1309,7 @@ namespace rsx
 							LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
 						}
 
-						return{ rsc.surface->get_surface(), format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
+						return{ rsc.surface->get_surface(), rsc.base_address, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
 							rsx::apply_resolution_scale(rsc.w, true), internal_height, texture_upload_context::framebuffer_storage,
 							rsc.is_depth_surface, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
 					}
@@ -1337,7 +1372,7 @@ namespace rsx
 
 									auto src_image = surface->get_raw_texture();
 									f32 scale_y = (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d) ? 0.f : 1.f;
-									return{ src_image, format, offset_x, offset_y, tex_width, tex_height, texture_upload_context::blit_engine_dst,
+									return{ src_image, surface->get_section_base(), format, offset_x, offset_y, tex_width, tex_height, texture_upload_context::blit_engine_dst,
 											surface->is_depth_texture(), 1.f, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
 								}
 							}
@@ -1686,6 +1721,7 @@ namespace rsx
 				dst_area = dst_area * scale;
 
 			blitter.scale_image(vram_texture, dest_texture, src_area, dst_area, interpolate, is_depth_blit);
+			notify_surface_changed(dst.rsx_address);
 			return true;
 		}
 
