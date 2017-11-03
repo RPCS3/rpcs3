@@ -679,7 +679,7 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 	}
 
 	std::string value = psf::get_string(prm->sfo, key);
-	value.resize(bufsize);
+	value.resize(bufsize - 1);
 
 	std::memcpy(buf.get_ptr(), value.c_str(), bufsize);
 
