@@ -318,11 +318,16 @@ namespace
 
 void GLGSRender::end()
 {
+	std::chrono::time_point<steady_clock> state_check_start = steady_clock::now();
+
 	if (skip_frame || !framebuffer_status_valid || (conditional_render_enabled && conditional_render_test_failed) || !check_program_state())
 	{
 		rsx::thread::end();
 		return;
 	}
+
+	std::chrono::time_point<steady_clock> state_check_end = steady_clock::now();
+	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(state_check_end - state_check_start).count();
 
 	if (manually_flush_ring_buffers)
 	{
@@ -964,7 +969,7 @@ bool GLGSRender::check_program_state()
 			if (dirty_framebuffer)
 				return std::make_tuple(false, 0);
 
-			auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, 0, 0, tex.pitch());
+			auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, 0, 0, tex.pitch(), false, false, !is_depth, is_depth);
 			if (!rsc.surface || rsc.is_depth_surface != is_depth)
 				return std::make_tuple(false, 0);
 

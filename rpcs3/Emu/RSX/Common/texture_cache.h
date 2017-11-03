@@ -207,19 +207,30 @@ namespace rsx
 	private:
 		//Internal implementation methods and helpers
 
-		utils::protection get_memory_protection(u32 address)
+		std::pair<utils::protection, section_storage_type*> get_memory_protection(u32 address)
 		{
 			auto found = m_cache.find(get_block_address(address));
 			if (found != m_cache.end())
 			{
-				for (const auto &tex : found->second.data)
+				for (auto &tex : found->second.data)
 				{
 					if (tex.is_locked() && tex.overlaps(address, false))
-						return tex.get_protection();
+						return{ tex.get_protection(), &tex };
 				}
 			}
 
-			return utils::protection::rw;
+			//Get the preceding block and check if any hits are found
+			found = m_cache.find(get_block_address(address) - get_block_size());
+			if (found != m_cache.end())
+			{
+				for (auto &tex : found->second.data)
+				{
+					if (tex.is_locked() && tex.overlaps(address, false))
+						return{ tex.get_protection(), &tex };
+				}
+			}
+
+			return{ utils::protection::rw, nullptr };
 		}
 
 		inline bool region_intersects_cache(u32 address, u32 range, bool is_writing) const
@@ -934,7 +945,7 @@ namespace rsx
 				const u32 internal_width = (const u32)(tex_width * internal_scale);
 
 				const auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, internal_width, tex_height, tex_pitch, true);
-				if (rsc.surface && test_framebuffer(texaddr))
+				if (rsc.surface/* && test_framebuffer(texaddr)*/)
 				{
 					//TODO: Check that this region is not cpu-dirty before doing a copy
 					if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d)
@@ -1087,7 +1098,7 @@ namespace rsx
 			}
 
 			//Check if src/dst are parts of render targets
-			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, false, dst.compressed_y);
+			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, true, false, false, dst.compressed_y);
 			dst_is_render_target = dst_subres.surface != nullptr;
 
 			if (dst_is_render_target && dst_subres.surface->get_native_pitch() != dst.pitch)
@@ -1099,7 +1110,7 @@ namespace rsx
 			}
 
 			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = m_rtts.get_surface_subresource_if_applicable(framebuffer_src_address, src_w, src_h, src.pitch, true, true, false, src.compressed_y);
+			auto src_subres = m_rtts.get_surface_subresource_if_applicable(framebuffer_src_address, src_w, src_h, src.pitch, true, true, false, false, src.compressed_y);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			if (src_is_render_target && src_subres.surface->get_native_pitch() != src.pitch)
@@ -1379,12 +1390,26 @@ namespace rsx
 			if (!g_cfg.video.strict_rendering_mode)
 				return;
 
-			switch (get_memory_protection(texaddr))
+			writer_lock lock(m_cache_mutex);
+
+			const auto protect_info = get_memory_protection(texaddr);
+			if (protect_info.first != utils::protection::rw)
 			{
-			case utils::protection::no:
-				return;
-			case utils::protection::ro:
-				LOG_ERROR(RSX, "Framebuffer memory occupied by regular texture!");
+				if (protect_info.second->overlaps(texaddr, true))
+				{
+					if (protect_info.first == utils::protection::no)
+						return;
+
+					if (protect_info.second->get_context() != texture_upload_context::blit_engine_dst)
+					{
+						//TODO: Invalidate this section
+						LOG_TRACE(RSX, "Framebuffer memory occupied by regular texture!");
+					}
+				}
+
+				protect_info.second->unprotect();
+				vm::ps3::write32(texaddr, texaddr);
+				protect_info.second->protect(protect_info.first);
 				return;
 			}
 
@@ -1398,8 +1423,19 @@ namespace rsx
 
 			if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
 			{
-				if (get_memory_protection(texaddr) == utils::protection::no)
-					return true;
+				writer_lock lock(m_cache_mutex);
+				auto protect_info = get_memory_protection(texaddr);
+				if (protect_info.first == utils::protection::no)
+				{
+					if (protect_info.second->overlaps(texaddr, true))
+						return true;
+
+					//Address isnt actually covered by the region, it only shares a page with it
+					protect_info.second->unprotect();
+					bool result = (vm::ps3::read32(texaddr) == texaddr);
+					protect_info.second->protect(utils::protection::no);
+					return result;
+				}
 			}
 
 			return vm::ps3::read32(texaddr) == texaddr;

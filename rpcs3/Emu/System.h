@@ -166,7 +166,6 @@ struct EmuCallbacks
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
 	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
 	std::function<std::unique_ptr<class TrophyNotificationBase>()> get_trophy_notification_dialog;
-	std::function<void(const std::string&)> register_trophy_commid_to_ui;
 };
 
 class Emulator final
@@ -215,6 +214,8 @@ public:
 	std::vector<std::string> argv;
 	std::vector<std::string> envp;
 	std::vector<u8> data;
+	std::vector<u8> klic;
+	std::string disc;
 
 	const std::string& GetBoot() const
 	{

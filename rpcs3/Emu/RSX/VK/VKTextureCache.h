@@ -190,7 +190,7 @@ namespace vk
 			sync_timestamp = get_system_time();
 		}
 
-		template<typename T>
+		template<typename T, bool swapped>
 		void do_memory_transfer(void *pixels_dst, const void *pixels_src)
 		{
 			if (sizeof(T) == 1)
@@ -198,12 +198,23 @@ namespace vk
 			else
 			{
 				const u32 block_size = width * height;
-					
-				auto typed_dst = (be_t<T> *)pixels_dst;
-				auto typed_src = (T *)pixels_src;
 
-				for (u32 px = 0; px < block_size; ++px)
-					typed_dst[px] = typed_src[px];
+				if (swapped)
+				{
+					auto typed_dst = (be_t<T> *)pixels_dst;
+					auto typed_src = (T *)pixels_src;
+
+					for (u32 px = 0; px < block_size; ++px)
+						typed_dst[px] = typed_src[px];
+				}
+				else
+				{
+					auto typed_dst = (T *)pixels_dst;
+					auto typed_src = (T *)pixels_src;
+
+					for (u32 px = 0; px < block_size; ++px)
+						typed_dst[px] = typed_src[px];
+				}
 			}
 		}
 
@@ -231,24 +242,43 @@ namespace vk
 
 			const u8 bpp = real_pitch / width;
 
+			//We have to do our own byte swapping since the driver doesnt do it for us
+			bool swap_bytes = false;
+			switch (vram_texture->info.format)
+			{
+			case VK_FORMAT_R16G16B16A16_SFLOAT:
+			case VK_FORMAT_R32G32B32A32_SFLOAT:
+			case VK_FORMAT_R32_SFLOAT:
+				swap_bytes = true;
+				break;
+			}
+
 			if (real_pitch == rsx_pitch)
 			{
-				//We have to do our own byte swapping since the driver doesnt do it for us
 				switch (bpp)
 				{
 				default:
 					LOG_ERROR(RSX, "Invalid bpp %d", bpp);
 				case 1:
-					do_memory_transfer<u8>(pixels_dst, pixels_src);
+					do_memory_transfer<u8, false>(pixels_dst, pixels_src);
 					break;
 				case 2:
-					do_memory_transfer<u16>(pixels_dst, pixels_src);
+					if (swap_bytes)
+						do_memory_transfer<u16, true>(pixels_dst, pixels_src);
+					else
+						do_memory_transfer<u16, false>(pixels_dst, pixels_src);
 					break;
 				case 4:
-					do_memory_transfer<u32>(pixels_dst, pixels_src);
+					if (swap_bytes)
+						do_memory_transfer<u32, true>(pixels_dst, pixels_src);
+					else
+						do_memory_transfer<u32, false>(pixels_dst, pixels_src);
 					break;
 				case 8:
-					do_memory_transfer<u64>(pixels_dst, pixels_src);
+					if (swap_bytes)
+						do_memory_transfer<u64, true>(pixels_dst, pixels_src);
+					else
+						do_memory_transfer<u64, false>(pixels_dst, pixels_src);
 					break;
 				}
 			}
@@ -258,7 +288,7 @@ namespace vk
 				//usually we can just get away with nearest filtering
 				const u8 samples = rsx_pitch / real_pitch;
 
-				rsx::scale_image_nearest(pixels_dst, pixels_src, width, height, rsx_pitch, real_pitch, bpp, samples, true);
+				rsx::scale_image_nearest(pixels_dst, pixels_src, width, height, rsx_pitch, real_pitch, bpp, samples, swap_bytes);
 			}
 
 			dma_buffer->unmap();
