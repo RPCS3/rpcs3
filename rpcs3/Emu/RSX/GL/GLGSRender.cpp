@@ -836,7 +836,7 @@ void GLGSRender::on_exit()
 		glDeleteQueries(1, &query.handle);
 	}
 
-	return GSRender::on_exit();
+	GSRender::on_exit();
 }
 
 void GLGSRender::clear_surface(u32 arg)

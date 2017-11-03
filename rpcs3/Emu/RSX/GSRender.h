@@ -32,7 +32,7 @@ enum wm_event
 
 using RSXDebuggerPrograms = std::vector<RSXDebuggerProgram>;
 
-using draw_context_t = std::shared_ptr<void>;
+using draw_context_t = void*;
 
 class GSFrameBase
 {
@@ -45,8 +45,8 @@ public:
 	virtual void hide() = 0;
 	virtual void show() = 0;
 
-	draw_context_t new_context();
-
+	virtual void delete_context(draw_context_t ctx) = 0;
+	virtual draw_context_t make_context() = 0;
 	virtual void set_current(draw_context_t ctx) = 0;
 	virtual void flip(draw_context_t ctx, bool skip_frame=false) = 0;
 	virtual int client_width() = 0;
@@ -55,8 +55,6 @@ public:
 	virtual void* handle() const = 0;
 
 protected:
-	virtual void delete_context(void* ctx) = 0;
-	virtual void* make_context() = 0;
 
 	//window manager event management
 	wm_event m_raised_event;
@@ -111,6 +109,7 @@ public:
 
 	void on_init_rsx() override;
 	void on_init_thread() override;
+	void on_exit() override;
 
 	void flip(int buffer) override;
 };

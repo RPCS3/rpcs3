@@ -22,6 +22,10 @@ class gs_frame : public QWindow, public GSFrameBase
 public:
 	gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse);
 
+	draw_context_t make_context() override;
+	void set_current(draw_context_t context) override;
+	void delete_context(draw_context_t context) override;
+
 	wm_event get_default_wm_event() const override;
 protected:
 	virtual void paintEvent(QPaintEvent *event);
@@ -38,9 +42,6 @@ protected:
 
 	void* handle() const override;
 
-	void* make_context() override;
-	void set_current(draw_context_t context) override;
-	void delete_context(void* context) override;
 	void flip(draw_context_t context, bool skip_frame=false) override;
 	int client_width() override;
 	int client_height() override;
