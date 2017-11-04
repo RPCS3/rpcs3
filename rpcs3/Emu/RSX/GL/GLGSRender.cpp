@@ -31,7 +31,7 @@ GLGSRender::GLGSRender() : GSRender()
 	else
 		m_vertex_cache.reset(new gl::weak_vertex_cache());
 
-	supports_multidraw = true;
+	supports_multidraw = !g_cfg.video.strict_rendering_mode;
 }
 
 extern CellGcmContextData current_context;
@@ -318,11 +318,16 @@ namespace
 
 void GLGSRender::end()
 {
+	std::chrono::time_point<steady_clock> state_check_start = steady_clock::now();
+
 	if (skip_frame || !framebuffer_status_valid || (conditional_render_enabled && conditional_render_test_failed) || !check_program_state())
 	{
 		rsx::thread::end();
 		return;
 	}
+
+	std::chrono::time_point<steady_clock> state_check_end = steady_clock::now();
+	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(state_check_end - state_check_start).count();
 
 	if (manually_flush_ring_buffers)
 	{
@@ -365,16 +370,21 @@ void GLGSRender::end()
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
 	auto copy_rtt_contents = [](gl::render_target *surface)
 	{
-		//Copy data from old contents onto this one
-		//1. Clip a rectangular region defning the data
-		//2. Perform a GPU blit
-		u16 parent_w = surface->old_contents->width();
-		u16 parent_h = surface->old_contents->height();
-		u16 copy_w, copy_h;
+		if (surface->get_compatible_internal_format() == surface->old_contents->get_compatible_internal_format())
+		{
+			//Copy data from old contents onto this one
+			//1. Clip a rectangular region defning the data
+			//2. Perform a GPU blit
+			u16 parent_w = surface->old_contents->width();
+			u16 parent_h = surface->old_contents->height();
+			u16 copy_w, copy_h;
 
-		std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
-		glCopyImageSubData(surface->old_contents->id(), GL_TEXTURE_2D, 0, 0, 0, 0, surface->id(), GL_TEXTURE_2D, 0, 0, 0, 0, copy_w, copy_h, 1);
-		surface->set_cleared();
+			std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
+			glCopyImageSubData(surface->old_contents->id(), GL_TEXTURE_2D, 0, 0, 0, 0, surface->id(), GL_TEXTURE_2D, 0, 0, 0, 0, copy_w, copy_h, 1);
+			surface->set_cleared();
+		}
+		//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
+
 		surface->old_contents = nullptr;
 	};
 
@@ -626,6 +636,9 @@ void GLGSRender::on_init_thread()
 {
 	GSRender::on_init_thread();
 
+	m_frame->disable_wm_event_queue();
+	m_frame->hide();
+
 	gl::init();
 
 	//Enable adaptive vsync if vsync is requested
@@ -766,6 +779,9 @@ void GLGSRender::on_init_thread()
 	m_thread_id = std::this_thread::get_id();
 
 	m_shaders_cache->load();
+
+	m_frame->enable_wm_event_queue();
+	m_frame->show();
 }
 
 void GLGSRender::on_exit()
@@ -942,16 +958,18 @@ bool GLGSRender::check_program_state()
 		if (!is_depth)
 			surface = m_rtts.get_texture_from_render_target_if_applicable(texaddr);
 		else
-		{
 			surface = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
 
-			if (!surface && m_gl_texture_cache.is_depth_texture(texaddr, (u32)get_texture_size(tex)))
-				return std::make_tuple(true, 0);
-		}
-
-		if (!surface)
+		const bool dirty_framebuffer = (surface != nullptr && !m_gl_texture_cache.test_framebuffer(texaddr));
+		if (dirty_framebuffer || !surface)
 		{
-			auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, 0, 0, tex.pitch());
+			if (is_depth && m_gl_texture_cache.is_depth_texture(texaddr, (u32)get_texture_size(tex)))
+				return std::make_tuple(true, 0);
+
+			if (dirty_framebuffer)
+				return std::make_tuple(false, 0);
+
+			auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, 0, 0, tex.pitch(), false, false, !is_depth, is_depth);
 			if (!rsc.surface || rsc.is_depth_surface != is_depth)
 				return std::make_tuple(false, 0);
 
@@ -1167,7 +1185,9 @@ void GLGSRender::flip(int buffer)
 		m_text_printer.print_text(0, 72, m_frame->client_width(), m_frame->client_height(), "draw call execution: " + std::to_string(m_draw_time) + "us");
 
 		auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
+		auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
 		m_text_printer.print_text(0, 108, m_frame->client_width(), m_frame->client_height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
+		m_text_printer.print_text(0, 126, m_frame->client_width(), m_frame->client_height(), "Texture memory: " + std::to_string(texture_memory_size) + "M");
 	}
 
 	m_frame->flip(m_context);
@@ -1202,37 +1222,33 @@ u64 GLGSRender::timestamp() const
 
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	if (is_writing)
-		return m_gl_texture_cache.invalidate_address(address);
-	else
+	bool can_flush = (std::this_thread::get_id() == m_thread_id);
+	auto result = m_gl_texture_cache.invalidate_address(address, is_writing, can_flush);
+
+	if (!result.violation_handled)
+		return false;
+
+	if (result.num_flushable > 0)
 	{
-		if (std::this_thread::get_id() != m_thread_id)
+		work_item &task = post_flush_request(address, result);
+
+		vm::temporary_unlock();
 		{
-			bool flushable;
-			gl::cached_texture_section* section_to_post;
-			
-			std::tie(flushable, section_to_post) = m_gl_texture_cache.address_is_flushable(address);
-			if (!flushable) return false;
-			
-			work_item &task = post_flush_request(address, section_to_post);
-
-			vm::temporary_unlock();
-			{
-				std::unique_lock<std::mutex> lock(task.guard_mutex);
-				task.cv.wait(lock, [&task] { return task.processed; });
-			}
-
-			task.received = true;
-			return task.result;
+			std::unique_lock<std::mutex> lock(task.guard_mutex);
+			task.cv.wait(lock, [&task] { return task.processed; });
 		}
-					
-		return m_gl_texture_cache.flush_address(address);
+
+		task.received = true;
+		return true;
 	}
+
+	return true;
 }
 
 void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 {
-	if (m_gl_texture_cache.invalidate_range(address_base, size, false))
+	//Discard all memory in that range without bothering with writeback (Force it for strict?)
+	if (m_gl_texture_cache.invalidate_range(address_base, size, true, true, false).violation_handled)
 		m_gl_texture_cache.purge_dirty();
 }
 
@@ -1249,20 +1265,7 @@ void GLGSRender::do_local_task()
 		if (q.processed) continue;
 
 		std::unique_lock<std::mutex> lock(q.guard_mutex);
-
-		//Check if the suggested section is valid
-		if (!q.section_to_flush->is_flushed())
-		{
-			m_gl_texture_cache.flush_address(q.address_to_flush);
-			q.result = true;
-		}
-		else
-		{
-			//Another thread has unlocked this memory region already
-			//Return success
-			q.result = true;
-		}
-
+		q.result = m_gl_texture_cache.flush_all(q.section_data);
 		q.processed = true;
 
 		//Notify thread waiting on this
@@ -1271,14 +1274,14 @@ void GLGSRender::do_local_task()
 	}
 }
 
-work_item& GLGSRender::post_flush_request(u32 address, gl::cached_texture_section *section)
+work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data)
 {
 	std::lock_guard<std::mutex> lock(queue_guard);
 
 	work_queue.emplace_back();
 	work_item &result = work_queue.back();
 	result.address_to_flush = address;
-	result.section_to_flush = section;
+	result.section_data = std::move(flush_data);
 	return result;
 }
 
@@ -1294,6 +1297,14 @@ void GLGSRender::synchronize_buffers()
 bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 {
 	return m_gl_texture_cache.blit(src, dst, interpolate, m_rtts);
+}
+
+void GLGSRender::notify_tile_unbound(u32 tile)
+{
+	//TODO: Handle texture writeback
+	//u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
+	//on_notify_memory_unmapped(addr, tiles[tile].size);
+	//m_rtts.invalidate_surface_address(addr, false);
 }
 
 void GLGSRender::check_zcull_status(bool framebuffer_swap, bool force_read)

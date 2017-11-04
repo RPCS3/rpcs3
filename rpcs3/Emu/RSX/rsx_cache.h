@@ -238,6 +238,11 @@ namespace rsx
 
 			return std::make_pair(min, max);
 		}
+
+		utils::protection get_protection() const
+		{
+			return protection;
+		}
 	};
 
 	template <typename pipeline_storage_type, typename backend_storage>

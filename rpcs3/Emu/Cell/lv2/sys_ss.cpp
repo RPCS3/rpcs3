@@ -11,7 +11,7 @@ const HCRYPTPROV s_crypto_provider = []() -> HCRYPTPROV
 {
 	HCRYPTPROV result;
 
-	if (!CryptAcquireContextW(&result, nullptr, nullptr, PROV_RSA_FULL, 0))
+	if (!CryptAcquireContextW(&result, nullptr, nullptr, PROV_RSA_FULL, 0) && !CryptAcquireContextW(&result, nullptr, nullptr, PROV_RSA_FULL, CRYPT_NEWKEYSET))
 	{
 		return 0;
 	}

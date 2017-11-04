@@ -386,6 +386,8 @@ namespace gl
 
 		bool flush()
 		{
+			if (flushed) return true; //Already written, ignore
+
 			if (!copied)
 			{
 				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", cpu_address_base);
@@ -399,7 +401,6 @@ namespace gl
 				}
 			}
 
-			protect(utils::protection::rw);
 			m_fence.wait_for_signal();
 			flushed = true;
 
@@ -443,21 +444,20 @@ namespace gl
 			{
 				//Read-only texture, destroy texture memory
 				glDeleteTextures(1, &vram_texture);
-				vram_texture = 0;
 			}
 			else
 			{
 				//Destroy pbo cache since vram texture is managed elsewhere
 				glDeleteBuffers(1, &pbo_id);
-				pbo_id = 0;
-				pbo_size = 0;
 
 				if (scaled_texture)
-				{
 					glDeleteTextures(1, &scaled_texture);
-					scaled_texture = 0;
-				}
 			}
+
+			vram_texture = 0;
+			scaled_texture = 0;
+			pbo_id = 0;
+			pbo_size = 0;
 
 			if (!m_fence.is_empty())
 				m_fence.destroy();
@@ -673,7 +673,10 @@ namespace gl
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
 			if (context != rsx::texture_upload_context::blit_engine_dst || g_cfg.video.strict_rendering_mode)
+			{
 				cached.protect(utils::protection::ro);
+				update_cache_tag();
+			}
 
 			return &cached;
 		}

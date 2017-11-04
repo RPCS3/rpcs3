@@ -20,6 +20,7 @@ namespace vk
 		//DMA relevant data
 		VkFence dma_fence = VK_NULL_HANDLE;
 		bool synchronized = false;
+		bool flushed = false;
 		u64 sync_timestamp = 0;
 		u64 last_use_timestamp = 0;
 		vk::render_device* m_device = nullptr;
@@ -62,6 +63,7 @@ namespace vk
 			//Even if we are managing the same vram section, we cannot guarantee contents are static
 			//The create method is only invoked when a new mangaged session is required
 			synchronized = false;
+			flushed = false;
 			sync_timestamp = 0ull;
 			last_use_timestamp = get_system_time();
 		}
@@ -78,6 +80,12 @@ namespace vk
 					dma_fence = VK_NULL_HANDLE;
 				}
 			}
+		}
+
+		void destroy()
+		{
+			vram_texture = nullptr;
+			release_dma_resources();
 		}
 
 		bool exists() const
@@ -173,13 +181,16 @@ namespace vk
 				CHECK_RESULT(vkWaitForFences(*m_device, 1, &dma_fence, VK_TRUE, UINT64_MAX));
 				CHECK_RESULT(vkResetCommandBuffer(cmd, 0));
 				CHECK_RESULT(vkResetFences(*m_device, 1, &dma_fence));
+
+				if (cmd.access_hint != vk::command_buffer::access_type_hint::all)
+					cmd.begin();
 			}
 
 			synchronized = true;
 			sync_timestamp = get_system_time();
 		}
 
-		template<typename T>
+		template<typename T, bool swapped>
 		void do_memory_transfer(void *pixels_dst, const void *pixels_src)
 		{
 			if (sizeof(T) == 1)
@@ -187,17 +198,30 @@ namespace vk
 			else
 			{
 				const u32 block_size = width * height;
-					
-				auto typed_dst = (be_t<T> *)pixels_dst;
-				auto typed_src = (T *)pixels_src;
 
-				for (u32 px = 0; px < block_size; ++px)
-					typed_dst[px] = typed_src[px];
+				if (swapped)
+				{
+					auto typed_dst = (be_t<T> *)pixels_dst;
+					auto typed_src = (T *)pixels_src;
+
+					for (u32 px = 0; px < block_size; ++px)
+						typed_dst[px] = typed_src[px];
+				}
+				else
+				{
+					auto typed_dst = (T *)pixels_dst;
+					auto typed_src = (T *)pixels_src;
+
+					for (u32 px = 0; px < block_size; ++px)
+						typed_dst[px] = typed_src[px];
+				}
 			}
 		}
 
 		bool flush(vk::render_device& dev, vk::command_buffer& cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
 		{
+			if (flushed) return true;
+
 			if (m_device == nullptr)
 				m_device = &dev;
 
@@ -211,31 +235,50 @@ namespace vk
 				result = false;
 			}
 
-			protect(utils::protection::rw);
+			flushed = true;
 
 			void* pixels_src = dma_buffer->map(0, cpu_address_range);
 			void* pixels_dst = vm::base(cpu_address_base);
 
 			const u8 bpp = real_pitch / width;
 
+			//We have to do our own byte swapping since the driver doesnt do it for us
+			bool swap_bytes = false;
+			switch (vram_texture->info.format)
+			{
+			case VK_FORMAT_R16G16B16A16_SFLOAT:
+			case VK_FORMAT_R32G32B32A32_SFLOAT:
+			case VK_FORMAT_R32_SFLOAT:
+				swap_bytes = true;
+				break;
+			}
+
 			if (real_pitch == rsx_pitch)
 			{
-				//We have to do our own byte swapping since the driver doesnt do it for us
 				switch (bpp)
 				{
 				default:
 					LOG_ERROR(RSX, "Invalid bpp %d", bpp);
 				case 1:
-					do_memory_transfer<u8>(pixels_dst, pixels_src);
+					do_memory_transfer<u8, false>(pixels_dst, pixels_src);
 					break;
 				case 2:
-					do_memory_transfer<u16>(pixels_dst, pixels_src);
+					if (swap_bytes)
+						do_memory_transfer<u16, true>(pixels_dst, pixels_src);
+					else
+						do_memory_transfer<u16, false>(pixels_dst, pixels_src);
 					break;
 				case 4:
-					do_memory_transfer<u32>(pixels_dst, pixels_src);
+					if (swap_bytes)
+						do_memory_transfer<u32, true>(pixels_dst, pixels_src);
+					else
+						do_memory_transfer<u32, false>(pixels_dst, pixels_src);
 					break;
 				case 8:
-					do_memory_transfer<u64>(pixels_dst, pixels_src);
+					if (swap_bytes)
+						do_memory_transfer<u64, true>(pixels_dst, pixels_src);
+					else
+						do_memory_transfer<u64, false>(pixels_dst, pixels_src);
 					break;
 				}
 			}
@@ -245,7 +288,7 @@ namespace vk
 				//usually we can just get away with nearest filtering
 				const u8 samples = rsx_pitch / real_pitch;
 
-				rsx::scale_image_nearest(pixels_dst, pixels_src, width, height, rsx_pitch, real_pitch, bpp, samples, true);
+				rsx::scale_image_nearest(pixels_dst, pixels_src, width, height, rsx_pitch, real_pitch, bpp, samples, swap_bytes);
 			}
 
 			dma_buffer->unmap();
@@ -280,6 +323,9 @@ namespace vk
 		std::unique_ptr<vk::image_view> view;
 		std::unique_ptr<vk::image> img;
 
+		//Memory held by this temp storage object
+		u32 block_size = 0;
+
 		const u64 frame_tag = vk::get_current_frame_id();
 
 		discarded_storage(std::unique_ptr<vk::image_view>& _view)
@@ -302,6 +348,7 @@ namespace vk
 		{
 			view = std::move(tex.get_view());
 			img = std::move(tex.get_texture());
+			block_size = tex.get_section_size();
 		}
 
 		const bool test(u64 ref_frame) const
@@ -323,6 +370,7 @@ namespace vk
 
 		//Stuff that has been dereferenced goes into these
 		std::list<discarded_storage> m_discardable_storage;
+		std::atomic<u32> m_discarded_memory_size = { 0 };
 		
 		void purge_cache()
 		{
@@ -347,14 +395,17 @@ namespace vk
 
 			m_discardable_storage.clear();
 			m_unreleased_texture_objects = 0;
+			m_texture_memory_in_use = 0;
+			m_discarded_memory_size = 0;
 		}
 		
 	protected:
 
 		void free_texture_section(cached_texture_section& tex) override
 		{
+			m_discarded_memory_size += tex.get_section_size();
 			m_discardable_storage.push_back(tex);
-			tex.release_dma_resources();
+			tex.destroy();
 		}
 
 		vk::image_view* create_temporary_subresource_view(vk::command_buffer& cmd, vk::image* source, u32 /*gcm_format*/, u16 x, u16 y, u16 w, u16 h) override
@@ -393,7 +444,7 @@ namespace vk
 
 			VkImageCopy copy_rgn;
 			copy_rgn.srcOffset = { (s32)x, (s32)y, 0 };
-			copy_rgn.dstOffset = { (s32)x, (s32)y, 0 };
+			copy_rgn.dstOffset = { (s32)0, (s32)0, 0 };
 			copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
 			copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
 			copy_rgn.extent = { w, h, 1 };
@@ -526,7 +577,10 @@ namespace vk
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
 			if (context != rsx::texture_upload_context::blit_engine_dst || g_cfg.video.strict_rendering_mode)
+			{
 				region.protect(utils::protection::ro);
+				update_cache_tag();
+			}
 
 			read_only_range = region.get_min_max(read_only_range);
 			return &region;
@@ -660,13 +714,28 @@ namespace vk
 
 		void on_frame_end() override
 		{
-			if (m_unreleased_texture_objects >= m_max_zombie_objects)
+			if (m_unreleased_texture_objects >= m_max_zombie_objects ||
+				m_discarded_memory_size > 0x4000000) //If already holding over 64M in discardable memory, be frugal with memory resources
 			{
 				purge_dirty();
 			}
 
 			const u64 last_complete_frame = vk::get_last_completed_frame_id();
-			m_discardable_storage.remove_if([&](const discarded_storage& o) {return o.test(last_complete_frame);});
+			m_discardable_storage.remove_if([&](const discarded_storage& o)
+			{
+				if (o.test(last_complete_frame))
+				{
+					m_discarded_memory_size -= o.block_size;
+					return true;
+				}
+				return false;
+			});
+		}
+
+		template<typename RsxTextureType>
+		image_view* _upload_texture(vk::command_buffer& cmd, RsxTextureType& tex, rsx::vk_render_targets& m_rtts)
+		{
+			return upload_texture(cmd, tex, m_rtts, *m_device, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 		}
 
 		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)
@@ -707,12 +776,17 @@ namespace vk
 			}
 			helper(&cmd);
 
-			return upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, *m_device, cmd, m_memory_types, m_submit_queue);
+			return upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, *m_device, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 		}
 
 		const u32 get_unreleased_textures_count() const override
 		{
-			return std::max(m_unreleased_texture_objects, 0) + (u32)m_discardable_storage.size();
+			return m_unreleased_texture_objects + (u32)m_discardable_storage.size();
+		}
+
+		const u32 get_texture_memory_in_use() const override
+		{
+			return m_texture_memory_in_use + m_discarded_memory_size;
 		}
 	};
 }

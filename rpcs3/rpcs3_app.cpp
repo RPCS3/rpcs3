@@ -6,6 +6,9 @@
 #include "rpcs3qt/gs_frame.h"
 #include "rpcs3qt/gl_gs_frame.h"
 
+#include "Emu/Cell/Modules/sceNpTrophy.h"
+#include "rpcs3qt/trophy_notification_helper.h"
+
 #include "Emu/Cell/Modules/cellSaveData.h"
 #include "rpcs3qt/save_data_dialog.h"
 
@@ -239,6 +242,11 @@ void rpcs3_app::InitializeCallbacks()
 	callbacks.get_save_dialog = [=]() -> std::unique_ptr<SaveDialogBase>
 	{
 		return std::make_unique<save_data_dialog>();
+	};
+
+	callbacks.get_trophy_notification_dialog = [=]() -> std::unique_ptr<TrophyNotificationBase>
+	{
+		return std::make_unique<trophy_notification_helper>(gameWindow);
 	};
 
 	callbacks.on_run = [=]() { OnEmulatorRun(); };

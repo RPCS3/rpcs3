@@ -518,6 +518,31 @@ namespace rsx
 		}
 
 		/**
+		 * Invalidates surface that exists at an address
+		 */
+		void invalidate_surface_address(u32 addr, bool depth)
+		{
+			if (!depth)
+			{
+				auto It = m_render_targets_storage.find(addr);
+				if (It != m_render_targets_storage.end())
+				{
+					invalidated_resources.push_back(std::move(It->second));
+					m_render_targets_storage.erase(It);
+				}
+			}
+			else
+			{
+				auto It = m_depth_stencil_storage.find(addr);
+				if (It != m_depth_stencil_storage.end())
+				{
+					invalidated_resources.push_back(std::move(It->second));
+					m_depth_stencil_storage.erase(It);
+				}
+			}
+		}
+
+		/**
 		 * Clipping and fitting lookup funcrions
 		 * surface_overlaps - returns true if surface overlaps a given surface address and returns the relative x and y position of the surface address within the surface
 		 * address_is_bound - returns true if the surface at a given address is actively bound
@@ -532,50 +557,61 @@ namespace rsx
 			if (surface_address > texaddr)
 				return false;
 
-			u32 offset = texaddr - surface_address;
-			if (texaddr >= surface_address)
+			const u32 offset = texaddr - surface_address;
+			if (offset == 0)
 			{
-				if (offset == 0)
-				{
-					is_subslice = true;
-				}
-				else
-				{
-					surface_format_info info;
-					Traits::get_surface_info(surface, &info);
+				*x = 0;
+				*y = 0;
+				return true;
+			}
+			else
+			{
+				surface_format_info info;
+				Traits::get_surface_info(surface, &info);
 
-					u32 range = info.rsx_pitch * info.surface_height;
-					if (double_height) range *= 2;
+				u32 range = info.rsx_pitch * info.surface_height;
+				if (double_height) range <<= 1;
 
-					if (offset < range)
+				if (offset < range)
+				{
+					const u32 y = (offset / info.rsx_pitch);
+					u32 x = (offset % info.rsx_pitch) / info.bpp;
+
+					if (scale_to_fit)
 					{
-						const u32 y = (offset / info.rsx_pitch);
-						u32 x = (offset % info.rsx_pitch) / info.bpp;
-
-						if (scale_to_fit)
-						{
-							const f32 x_scale = (f32)info.rsx_pitch / info.native_pitch;
-							x = (u32)((f32)x / x_scale);
-						}
-
-						x_offset = x;
-						y_offset = y;
-
-						if (double_height) y_offset /= 2;
-						is_subslice = true;
+						const f32 x_scale = (f32)info.rsx_pitch / info.native_pitch;
+						x = (u32)((f32)x / x_scale);
 					}
-				}
 
-				if (is_subslice)
-				{
-					*x = x_offset;
-					*y = y_offset;
+					x_offset = x;
+					y_offset = y;
 
-					return true;
+					if (double_height) y_offset /= 2;
+					is_subslice = true;
 				}
 			}
 
+			if (is_subslice)
+			{
+				*x = x_offset;
+				*y = y_offset;
+
+				return true;
+			}
+
 			return false;
+		}
+
+		//Fast hit test
+		inline bool surface_overlaps_address_fast(surface_type surface, u32 surface_address, u32 texaddr)
+		{
+			if (surface_address > texaddr)
+				return false;
+
+			const u32 offset = texaddr - surface_address;
+			const u32 range = surface->get_rsx_pitch() * surface->get_surface_height();
+
+			return (offset < range);
 		}
 
 		bool address_is_bound(u32 address, bool is_depth) const
@@ -604,7 +640,8 @@ namespace rsx
 			return true;
 		}
 
-		surface_subresource get_surface_subresource_if_applicable(u32 texaddr, u16 requested_width, u16 requested_height, u16 requested_pitch, bool scale_to_fit = false, bool crop = false, bool ignore_depth_formats = false, bool double_height = false)
+		surface_subresource get_surface_subresource_if_applicable(u32 texaddr, u16 requested_width, u16 requested_height, u16 requested_pitch,
+				bool scale_to_fit = false, bool crop = false, bool ignore_depth_formats = false, bool ignore_color_formats = false, bool double_height = false)
 		{
 			auto test_surface = [&](surface_type surface, u32 this_address, u16 &x_offset, u16 &y_offset, u16 &w, u16 &h, bool &clipped)
 			{
@@ -612,9 +649,6 @@ namespace rsx
 				{
 					surface_format_info info;
 					Traits::get_surface_info(surface, &info);
-
-					if (info.rsx_pitch != requested_pitch)
-						return false;
 
 					u16 real_width = requested_width;
 
@@ -646,7 +680,7 @@ namespace rsx
 							return true;
 						}
 
-						if (info.surface_width >= requested_width && info.surface_height >= requested_height)
+						if (info.surface_width >= real_width && info.surface_height >= requested_height)
 						{
 							LOG_WARNING(RSX, "Overlapping surface exceeds bounds; returning full surface region");
 							w = real_width;
@@ -668,26 +702,55 @@ namespace rsx
 			u16  w;
 			u16  h;
 
-			for (auto &tex_info : m_render_targets_storage)
+			if (!ignore_color_formats)
 			{
-				u32 this_address = std::get<0>(tex_info);
-				surface = std::get<1>(tex_info).get();
+				for (auto &tex_info : m_render_targets_storage)
+				{
+					const u32 this_address = std::get<0>(tex_info);
+					if (texaddr < this_address)
+						continue;
 
-				if (test_surface(surface, this_address, x_offset, y_offset, w, h, clipped))
-					return { surface, x_offset, y_offset, w, h, address_is_bound(this_address, false), false, clipped };
+					surface = std::get<1>(tex_info).get();
+					if (surface->get_rsx_pitch() != requested_pitch)
+						continue;
+
+					if (requested_width == 0 || requested_height == 0)
+					{
+						if (!surface_overlaps_address_fast(surface, this_address, texaddr))
+							continue;
+						else
+							return{ surface, 0, 0, 0, 0, false, false, false };
+					}
+
+					if (test_surface(surface, this_address, x_offset, y_offset, w, h, clipped))
+						return{ surface, x_offset, y_offset, w, h, address_is_bound(this_address, false), false, clipped };
+				}
 			}
 
-			if (ignore_depth_formats)
-				return{};
-
-			//Check depth surfaces for overlap
-			for (auto &tex_info : m_depth_stencil_storage)
+			if (!ignore_depth_formats)
 			{
-				u32 this_address = std::get<0>(tex_info);
-				surface = std::get<1>(tex_info).get();
+				//Check depth surfaces for overlap
+				for (auto &tex_info : m_depth_stencil_storage)
+				{
+					const u32 this_address = std::get<0>(tex_info);
+					if (texaddr < this_address)
+						continue;
 
-				if (test_surface(surface, this_address, x_offset, y_offset, w, h, clipped))
-					return { surface, x_offset, y_offset, w, h, address_is_bound(this_address, true), true, clipped };
+					surface = std::get<1>(tex_info).get();
+					if (surface->get_rsx_pitch() != requested_pitch)
+						continue;
+
+					if (requested_width == 0 || requested_height == 0)
+					{
+						if (!surface_overlaps_address_fast(surface, this_address, texaddr))
+							continue;
+						else
+							return{ surface, 0, 0, 0, 0, false, true, false };
+					}
+
+					if (test_surface(surface, this_address, x_offset, y_offset, w, h, clipped))
+						return{ surface, x_offset, y_offset, w, h, address_is_bound(this_address, true), true, clipped };
+				}
 			}
 
 			return{};

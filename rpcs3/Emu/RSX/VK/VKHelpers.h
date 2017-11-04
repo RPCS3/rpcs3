@@ -809,7 +809,7 @@ namespace vk
 			}
 		}
 
-		void init_swapchain(u32 width, u32 height)
+		bool init_swapchain(u32 width, u32 height)
 		{
 			VkSwapchainKHR old_swapchain = m_vk_swapchain;
 			vk::physical_device& gpu = const_cast<vk::physical_device&>(dev.gpu());
@@ -817,8 +817,16 @@ namespace vk
 			VkSurfaceCapabilitiesKHR surface_descriptors = {};
 			CHECK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, m_surface, &surface_descriptors));
 
-			VkExtent2D swapchainExtent;
+			if (surface_descriptors.maxImageExtent.width < width ||
+				surface_descriptors.maxImageExtent.height < height)
+			{
+				LOG_ERROR(RSX, "Swapchain: Swapchain creation failed because dimensions cannot fit. Max = %d, %d, Requested = %d, %d",
+					surface_descriptors.maxImageExtent.width, surface_descriptors.maxImageExtent.height, width, height);
 
+				return false;
+			}
+
+			VkExtent2D swapchainExtent;
 			if (surface_descriptors.currentExtent.width == (uint32_t)-1)
 			{
 				swapchainExtent.width = width;
@@ -826,6 +834,12 @@ namespace vk
 			}
 			else
 			{
+				if (surface_descriptors.currentExtent.width == 0 || surface_descriptors.currentExtent.height == 0)
+				{
+					LOG_WARNING(RSX, "Swapchain: Current surface extent is a null region. Is the window minimized?");
+					return false;
+				}
+
 				swapchainExtent = surface_descriptors.currentExtent;
 				width = surface_descriptors.currentExtent.width;
 				height = surface_descriptors.currentExtent.height;
@@ -932,6 +946,8 @@ namespace vk
 			{
 				m_swap_images[i].create(dev, swap_images[i], m_surface_format);
 			}
+
+			return true;
 		}
 
 		u32 get_swap_image_count()
@@ -1012,6 +1028,14 @@ namespace vk
 	protected:
 		vk::command_pool *pool = nullptr;
 		VkCommandBuffer commands = nullptr;
+
+	public:
+		enum access_type_hint
+		{
+			flush_only, //Only to be submitted/opened/closed via command flush
+			all         //Auxilliary, can be sumitted/opened/closed at any time
+		}
+		access_hint = flush_only;
 
 	public:
 		command_buffer() {}

@@ -9,14 +9,12 @@ bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configp
 {
 	const std::string& path = vfs::get(filepath);
 
-	if (!Generate(filepath, configpath))
-	{
-		return false;
-	}
-
 	if (!m_file.open(path, fs::read))
 	{
-		return false;
+		if (!Generate(filepath, configpath))
+		{
+			return false;
+		}
 	}
 
 	if (!LoadHeader() || !LoadTableHeaders() || !LoadTables())
@@ -209,6 +207,7 @@ u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 	if (id >= m_table6.size())
 	{
 		LOG_WARNING(LOADER, "TROPUSRLoader::GetUnlockState: Invalid id=%d", id);
+		return 0;
 	}
 
 	return m_table6[id].trophy_state; // Let's assume the trophies are stored ordered
@@ -219,6 +218,7 @@ u64 TROPUSRLoader::GetTrophyTimestamp(u32 id)
 	if (id >= m_table6.size())
 	{
 		LOG_WARNING(LOADER, "TROPUSRLoader::GetTrophyTimestamp: Invalid id=%d", id);
+		return 0;
 	}
 
 	// TODO: What timestamp does sceNpTrophyGetTrophyInfo want, timestamp1 or timestamp2? 

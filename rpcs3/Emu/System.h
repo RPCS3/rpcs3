@@ -165,6 +165,7 @@ struct EmuCallbacks
 	std::function<std::shared_ptr<class AudioThread>()> get_audio;
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
 	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
+	std::function<std::unique_ptr<class TrophyNotificationBase>()> get_trophy_notification_dialog;
 };
 
 class Emulator final
@@ -213,6 +214,8 @@ public:
 	std::vector<std::string> argv;
 	std::vector<std::string> envp;
 	std::vector<u8> data;
+	std::vector<u8> klic;
+	std::string disc;
 
 	const std::string& GetBoot() const
 	{
@@ -362,6 +365,7 @@ struct cfg_root : cfg::node
 		cfg::_bool dump_to_file{this, "Dump to file"};
 		cfg::_bool convert_to_u16{this, "Convert to 16 bit"};
 		cfg::_bool downmix_to_2ch{this, "Downmix to Stereo", true};
+		cfg::_int<2, 128> frames{this, "Buffer Count", 32};
 
 	} audio{this};
 	
@@ -402,6 +406,7 @@ struct cfg_root : cfg::node
 		cfg::_bool autoexit{this, "Exit RPCS3 when process finishes"};
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
 		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true};
+		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true};
 		cfg::_int<1, 65535> gdb_server_port{this, "Port", 2345};
 
 	} misc{this};
