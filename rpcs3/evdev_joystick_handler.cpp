@@ -164,6 +164,53 @@ void evdev_joystick_handler::Close()
 	}
 }
 
+std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonValues(libevdev* dev)
+{
+	std::unordered_map<u64, std::pair<u16, bool>> button_values;
+
+	for (auto entry : button_list)
+	{
+		int code = entry.first;
+		int val = 0;
+		if (libevdev_fetch_event_value(dev, EV_KEY, code, &val) == 0)
+			continue;
+
+		button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(val > 0 ? 255 : 0), false));
+	}
+
+	for (auto entry : axis_list)
+	{
+		int code = entry.first;
+		int val = 0;
+		if (libevdev_fetch_event_value(dev, EV_ABS, code, &val) == 0)
+			continue;
+
+		float fvalue = ScaleStickInput(val, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code));
+
+		// Triggers should be ABS_Z and ABS_RZ and do not need handling of negative values
+		if (code == ABS_Z || code == ABS_RZ)
+		{
+			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(fvalue), false));
+			continue;
+		}
+
+		bool is_negative = fvalue <= 127.5;
+
+		if (is_negative)
+		{
+			u16 value = Clamp0To255((127.5f - fvalue) * 2.0f);
+			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(value), true));
+		}
+		else
+		{
+			u16 value = Clamp0To255((fvalue - 127.5f) * 2.0f);
+			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(value), false));
+		}
+	}
+
+	return button_values;
+}
+
 void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(u16, std::string)>& callback)
 {
 	// Add device if not yet present
@@ -186,78 +233,134 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 	}
 	if (ret < 0) return;
 
-	// Get the button info corresponding to our current event
-	bool is_negative = false;
-	int value;
-	int button_code = GetButtonInfo(evt, dev, value, is_negative);
-	if (button_code == -1) return;
+	auto button_values = GetButtonValues(dev);
 
 	int ltriggerthreshold = deadzones[0];
 	int rtriggerthreshold = deadzones[1];
 	int lstickdeadzone = deadzones[2];
 	int rstickdeadzone = deadzones[3];
 
-	switch (evt.type)
+	std::pair<u16, std::string> pressed_button = { 0, "" };
+	for (const auto& button : button_list)
 	{
-	case EV_KEY:
+		u16 value = button_values[button.first].first;
+		if (value > 0 && value > pressed_button.first)
+			pressed_button = { value, button.second };
+	}
+
+	for (const auto& button : axis_list)
 	{
-		// handle normal button presses
-		auto button = button_list.find(button_code);
-		if (button == button_list.end())
-			return;
+		int code = button.first;
+		if (button_values[code].second)
+			continue;
 
-		if (value > 0)
-			return callback(button->first, button->second);
+		u16 value = button_values[code].first;
 
-		return;
+		if (((code == ABS_X || code == ABS_Y) && value < lstickdeadzone)
+		 || ((code == ABS_RX || code == ABS_RY) && value < rstickdeadzone)
+		 || (code == ABS_Z && value < ltriggerthreshold)
+		 || (code == ABS_RZ && value < rtriggerthreshold))
+			continue;
+
+		if (value > 0 && value > pressed_button.first)
+			pressed_button = { value, button.second };
 	}
-	case EV_ABS:
+
+	for (const auto& button : rev_axis_list)
 	{
-		// handle positive and negative axis movement
-		std::unordered_map<u32, std::string>::const_iterator button;
-		if (is_negative)
-		{
-			button = rev_axis_list.find(button_code);
-			if (button == rev_axis_list.end())
-				return;
-		}
-		else
-		{
-			button = axis_list.find(button_code);
-			if (button == axis_list.end())
-				return;
-		}
+		int code = button.first;
+		if (!button_values[code].second)
+			continue;
 
-		// handle specific axis and their thresholds
-		switch (button_code)
-		{
-		case ABS_Z:
-			if (value > ltriggerthreshold)
-				return callback(button->first, button->second);
-			return;
-		case ABS_RZ:
-			if (value > rtriggerthreshold)
-				return callback(button->first, button->second);
-			return;
-		case ABS_X:
-		case ABS_Y:
-			if (value > lstickdeadzone)
-				return callback(button->first, button->second);
-			return;
-		case ABS_RX:
-		case ABS_RY:
-			if (value > rstickdeadzone)
-				return callback(button->first, button->second);
-			return;
-		default:
-			if (value > 0)
-				return callback(button->first, button->second);
-			return;
-		}
+		u16 value = button_values[code].first;
+
+		if (((code == ABS_X || code == ABS_Y) && value < lstickdeadzone)
+		 || ((code == ABS_RX || code == ABS_RY) && value < rstickdeadzone)
+		 || (code == ABS_Z && value < ltriggerthreshold)
+		 || (code == ABS_RZ && value < rtriggerthreshold))
+			continue;
+
+		if (value > 0 && value > pressed_button.first)
+			pressed_button = { value, button.second };
 	}
-	default:
-		return;
+
+	if (pressed_button.first > 0)
+	{
+		return callback(pressed_button.first, pressed_button.second);
 	}
+
+	//// Get the button info corresponding to our current event
+	//bool is_negative = false;
+	//int value;
+	//int button_code = GetButtonInfo(evt, dev, value, is_negative);
+	//if (button_code == -1) return;
+	//
+	//int ltriggerthreshold = deadzones[0];
+	//int rtriggerthreshold = deadzones[1];
+	//int lstickdeadzone = deadzones[2];
+	//int rstickdeadzone = deadzones[3];
+	//
+	//switch (evt.type)
+	//{
+	//case EV_KEY:
+	//{
+	//	// handle normal button presses
+	//	auto button = button_list.find(button_code);
+	//	if (button == button_list.end())
+	//		return;
+	//
+	//	if (value > 0)
+	//		return callback(button->first, button->second);
+	//
+	//	return;
+	//}
+	//case EV_ABS:
+	//{
+	//	// handle positive and negative axis movement
+	//	std::unordered_map<u32, std::string>::const_iterator button;
+	//	if (is_negative)
+	//	{
+	//		button = rev_axis_list.find(button_code);
+	//		if (button == rev_axis_list.end())
+	//			return;
+	//	}
+	//	else
+	//	{
+	//		button = axis_list.find(button_code);
+	//		if (button == axis_list.end())
+	//			return;
+	//	}
+	//
+	//	// handle specific axis and their thresholds
+	//	switch (button_code)
+	//	{
+	//	case ABS_Z:
+	//		if (value > ltriggerthreshold)
+	//			return callback(button->first, button->second);
+	//		return;
+	//	case ABS_RZ:
+	//		if (value > rtriggerthreshold)
+	//			return callback(button->first, button->second);
+	//		return;
+	//	case ABS_X:
+	//	case ABS_Y:
+	//		if (value > lstickdeadzone)
+	//			return callback(button->first, button->second);
+	//		return;
+	//	case ABS_RX:
+	//	case ABS_RY:
+	//		if (value > rstickdeadzone)
+	//			return callback(button->first, button->second);
+	//		return;
+	//	default:
+	//		if (value > 0)
+	//			return callback(button->first, button->second);
+	//		return;
+	//	}
+	//}
+	//default:
+	//	return;
+	//}
 }
 
 void evdev_joystick_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)

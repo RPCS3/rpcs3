@@ -254,6 +254,7 @@ private:
 	void update_devs(bool use_cell = true);
 	int add_device(const std::string& device, std::shared_ptr<Pad> pad = nullptr, const std::unordered_map<int, bool>& axis_map = std::unordered_map<int, bool>());
 	int GetButtonInfo(const input_event& evt, libevdev* dev, int& button_code, bool& is_negative);
+	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(libevdev* dev);
 
 	// Search axis_orientations map for the direction by index, returns -1 if not found, 0 for positive and 1 for negative
 	int FindAxisDirection(std::unordered_map<int, bool> map, int index);
