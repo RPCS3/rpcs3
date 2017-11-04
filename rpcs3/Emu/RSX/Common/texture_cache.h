@@ -250,7 +250,7 @@ namespace rsx
 		std::unordered_map<u32, ranged_storage> m_cache;
 		std::unordered_multimap<u32, std::pair<deferred_subresource, image_view_type>> m_temporary_subresource_cache;
 
-		std::atomic<u64> m_cache_update_tag = {};
+		std::atomic<u64> m_cache_update_tag = {0};
 
 		std::pair<u32, u32> read_only_range = std::make_pair(0xFFFFFFFF, 0);
 		std::pair<u32, u32> no_access_range = std::make_pair(0xFFFFFFFF, 0);
@@ -282,7 +282,7 @@ namespace rsx
 
 		inline void update_cache_tag()
 		{
-			m_cache_update_tag = get_system_time();
+			m_cache_update_tag++;
 		}
 
 	private:
@@ -343,8 +343,8 @@ namespace rsx
 		std::vector<std::pair<section_storage_type*, ranged_storage*>> get_intersecting_set(u32 address, u32 range)
 		{
 			std::vector<std::pair<section_storage_type*, ranged_storage*>> result;
-			u64 cache_tag = get_system_time();
 			u32 last_dirty_block = UINT32_MAX;
+			const u64 cache_tag = get_system_time();
 
 			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
 			const bool strict_range_check = g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer;
@@ -410,37 +410,34 @@ namespace rsx
 
 			if (trampled_set.size() > 0)
 			{
-				auto to_reprotect = trampled_set.end();
-
-				if (!discard_only)
+				std::vector<section_storage_type*> sections_to_flush;
+				std::vector<std::pair<utils::protection, section_storage_type*>> sections_to_reprotect;
+				for (int n = 0; n < trampled_set.size(); ++n)
 				{
-					// Rebuild the cache by only destroying ranges that need to be destroyed to unlock this page
-					to_reprotect = std::remove_if(trampled_set.begin(), trampled_set.end(),
-						[&](const std::pair<section_storage_type*, ranged_storage*>& obj)
+					auto &obj = trampled_set[n];
+					bool to_reprotect = false;
+
+					if (!discard_only)
 					{
 						if (!is_writing && obj.first->get_protection() != utils::protection::no)
-							return true;
+						{
+							to_reprotect = true;
+						}
+						else
+						{
+							if (rebuild_cache && obj.first->is_flushable())
+							{
+								const std::pair<u32, u32> null_check = std::make_pair(UINT32_MAX, 0);
+								to_reprotect = !std::get<0>(obj.first->overlaps_page(null_check, address, true));
+							}
+						}
+					}
 
-						if (!rebuild_cache)
-							return false;
-
-						if (!obj.first->is_flushable())
-							return false;
-
-						const std::pair<u32, u32> null_check = std::make_pair(UINT32_MAX, 0);
-						return !std::get<0>(obj.first->overlaps_page(null_check, address, true));
-					});
-
-					if (to_reprotect == trampled_set.begin())
-						return{};
-				}
-
-				std::vector<section_storage_type*> sections_to_flush;
-				for (auto It = trampled_set.begin(); It != trampled_set.end(); ++It)
-				{
-					auto &obj = *It;
-
-					if (obj.first->is_flushable() && It < to_reprotect)
+					if (to_reprotect)
+					{
+						sections_to_reprotect.push_back({ obj.first->get_protection(), obj.first });
+					}
+					else if (obj.first->is_flushable())
 					{
 						sections_to_flush.push_back(obj.first);
 					}
@@ -455,7 +452,10 @@ namespace rsx
 					else
 						obj.first->unprotect();
 
-					obj.second->remove_one();
+					if (!to_reprotect)
+					{
+						obj.second->remove_one();
+					}
 				}
 
 				thrashed_set result = {};
@@ -483,19 +483,16 @@ namespace rsx
 					result.cache_tag = m_cache_update_tag.load(std::memory_order_consume);
 				}
 
-				for (auto It = to_reprotect; It != trampled_set.end(); It++)
+				for (auto &obj: sections_to_reprotect)
 				{
-					auto &obj = *It;
-
-					auto old_prot = obj.first->get_protection();
-					obj.first->discard();
-					obj.first->protect(old_prot);
-					obj.first->set_dirty(false);
+					obj.second->discard();
+					obj.second->protect(obj.first);
+					obj.second->set_dirty(false);
 
 					if (result.affected_sections.size() > 0)
 					{
 						//Append to affected set. Not counted as part of num_flushable
-						result.affected_sections.push_back(obj.first);
+						result.affected_sections.push_back(obj.second);
 					}
 				}
 
