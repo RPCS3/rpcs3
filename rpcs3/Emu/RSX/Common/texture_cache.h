@@ -35,7 +35,7 @@ namespace rsx
 		u16 real_pitch;
 		u16 rsx_pitch;
 
-		u64 cache_tag;
+		u64 cache_tag = 0;
 
 		rsx::texture_create_flags view_flags = rsx::texture_create_flags::default_component_order;
 		rsx::texture_upload_context context = rsx::texture_upload_context::shader_read;
@@ -207,19 +207,30 @@ namespace rsx
 	private:
 		//Internal implementation methods and helpers
 
-		utils::protection get_memory_protection(u32 address)
+		std::pair<utils::protection, section_storage_type*> get_memory_protection(u32 address)
 		{
 			auto found = m_cache.find(get_block_address(address));
 			if (found != m_cache.end())
 			{
-				for (const auto &tex : found->second.data)
+				for (auto &tex : found->second.data)
 				{
 					if (tex.is_locked() && tex.overlaps(address, false))
-						return tex.get_protection();
+						return{ tex.get_protection(), &tex };
 				}
 			}
 
-			return utils::protection::rw;
+			//Get the preceding block and check if any hits are found
+			found = m_cache.find(get_block_address(address) - get_block_size());
+			if (found != m_cache.end())
+			{
+				for (auto &tex : found->second.data)
+				{
+					if (tex.is_locked() && tex.overlaps(address, false))
+						return{ tex.get_protection(), &tex };
+				}
+			}
+
+			return{ utils::protection::rw, nullptr };
 		}
 
 		inline bool region_intersects_cache(u32 address, u32 range, bool is_writing) const
@@ -1379,12 +1390,26 @@ namespace rsx
 			if (!g_cfg.video.strict_rendering_mode)
 				return;
 
-			switch (get_memory_protection(texaddr))
+			writer_lock lock(m_cache_mutex);
+
+			const auto protect_info = get_memory_protection(texaddr);
+			if (protect_info.first != utils::protection::rw)
 			{
-			case utils::protection::no:
-				return;
-			case utils::protection::ro:
-				LOG_ERROR(RSX, "Framebuffer memory occupied by regular texture!");
+				if (protect_info.second->overlaps(texaddr, true))
+				{
+					if (protect_info.first == utils::protection::no)
+						return;
+
+					if (protect_info.second->get_context() != texture_upload_context::blit_engine_dst)
+					{
+						//TODO: Invalidate this section
+						LOG_TRACE(RSX, "Framebuffer memory occupied by regular texture!");
+					}
+				}
+
+				protect_info.second->unprotect();
+				vm::ps3::write32(texaddr, texaddr);
+				protect_info.second->protect(protect_info.first);
 				return;
 			}
 
@@ -1398,8 +1423,19 @@ namespace rsx
 
 			if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
 			{
-				if (get_memory_protection(texaddr) == utils::protection::no)
-					return true;
+				writer_lock lock(m_cache_mutex);
+				auto protect_info = get_memory_protection(texaddr);
+				if (protect_info.first == utils::protection::no)
+				{
+					if (protect_info.second->overlaps(texaddr, true))
+						return true;
+
+					//Address isnt actually covered by the region, it only shares a page with it
+					protect_info.second->unprotect();
+					bool result = (vm::ps3::read32(texaddr) == texaddr);
+					protect_info.second->protect(utils::protection::no);
+					return result;
+				}
 			}
 
 			return vm::ps3::read32(texaddr) == texaddr;
