@@ -50,11 +50,22 @@ namespace rsx
 		GcmTileInfo *tile = nullptr;
 		rsx::surface_antialiasing aa_mode = rsx::surface_antialiasing::center_1_sample;
 
+		u16 raster_offset_x = 0;
+		u16 raster_offset_y = 0;
+		u32 raster_address_offset = 0;
+
 		virtual image_storage_type get_surface() const = 0;
 		virtual u16 get_surface_width() const = 0;
 		virtual u16 get_surface_height() const = 0;
 		virtual u16 get_rsx_pitch() const = 0;
 		virtual u16 get_native_pitch() const = 0;
+
+		void set_raster_offset(u16 x, u16 y, u8 bpp)
+		{
+			raster_offset_x = x;
+			raster_offset_y = y;
+			raster_address_offset = (y * get_rsx_pitch()) + (x * bpp);
+		}
 	};
 
 	/**

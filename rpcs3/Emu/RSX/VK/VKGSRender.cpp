@@ -2406,6 +2406,8 @@ void VKGSRender::prepare_rtts()
 	std::vector<vk::image*> bound_images;
 	bound_images.reserve(5);
 
+	const auto bpp = get_format_block_size_in_bytes(rsx::method_registers.surface_color());
+
 	for (u8 index : draw_buffers)
 	{
 		auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]);
@@ -2423,8 +2425,11 @@ void VKGSRender::prepare_rtts()
 		}
 
 		surface->aa_mode = aa_mode;
-		m_texture_cache.tag_framebuffer(surface_addresses[index]);
+		surface->set_raster_offset(clip_x, clip_y, bpp);
 		m_texture_cache.notify_surface_changed(surface_addresses[index]);
+
+		if (m_surface_info[index].pitch)
+			m_texture_cache.tag_framebuffer(surface_addresses[index] + surface->raster_address_offset);
 	}
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
@@ -2440,8 +2445,11 @@ void VKGSRender::prepare_rtts()
 			m_depth_surface_info.pitch = 0;
 
 		ds->aa_mode = aa_mode;
-		m_texture_cache.tag_framebuffer(zeta_address);
+		ds->set_raster_offset(clip_x, clip_y, get_pixel_size(rsx::method_registers.surface_depth_fmt()));
 		m_texture_cache.notify_surface_changed(zeta_address);
+
+		if (m_depth_surface_info.pitch)
+			m_texture_cache.tag_framebuffer(zeta_address + ds->raster_address_offset);
 	}
 
 	m_draw_buffers_count = static_cast<u32>(draw_buffers.size());

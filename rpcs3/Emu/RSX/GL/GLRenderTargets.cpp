@@ -165,6 +165,8 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 	const u16 clip_horizontal = rsx::method_registers.surface_clip_width();
 	const u16 clip_vertical = rsx::method_registers.surface_clip_height();
+	const u16 clip_x = rsx::method_registers.surface_clip_origin_x();
+	const u16 clip_y = rsx::method_registers.surface_clip_origin_y();
 
 	framebuffer_status_valid = false;
 
@@ -205,6 +207,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 	const auto color_offsets = get_offsets();
 	const auto color_locations = get_locations();
 	const auto aa_mode = rsx::method_registers.surface_antialias();
+	const auto bpp = get_format_block_size_in_bytes(surface_format);
 
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
@@ -244,7 +247,11 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 			rtt->tile = find_tile(color_offsets[i], color_locations[i]);
 			rtt->aa_mode = aa_mode;
-			m_gl_texture_cache.tag_framebuffer(surface_addresses[i]);
+			rtt->set_raster_offset(clip_x, clip_y, bpp);
+			m_gl_texture_cache.notify_surface_changed(surface_addresses[i]);
+
+			if (surface_info[i].pitch)
+				m_gl_texture_cache.tag_framebuffer(surface_addresses[i] + rtt->raster_address_offset);
 		}
 		else
 			surface_info[i] = {};
@@ -253,8 +260,13 @@ void GLGSRender::init_buffers(bool skip_reading)
 	if (std::get<0>(m_rtts.m_bound_depth_stencil))
 	{
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+		u8 texel_size = 2;
+
 		if (depth_format == rsx::surface_depth_format::z24s8)
+		{
 			draw_fbo.depth_stencil = *ds;
+			texel_size = 4;
+		}
 		else
 			draw_fbo.depth = *ds;
 
@@ -278,7 +290,11 @@ void GLGSRender::init_buffers(bool skip_reading)
 		}
 
 		ds->aa_mode = aa_mode;
-		m_gl_texture_cache.tag_framebuffer(depth_address);
+		ds->set_raster_offset(clip_x, clip_y, texel_size);
+		m_gl_texture_cache.notify_surface_changed(depth_address);
+
+		if (depth_surface_info.pitch)
+			m_gl_texture_cache.tag_framebuffer(depth_address + ds->raster_address_offset);
 	}
 	else
 		depth_surface_info = {};
