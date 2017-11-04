@@ -42,9 +42,24 @@ void gl_gs_frame::set_current(draw_context_t ctx)
 
 void gl_gs_frame::delete_context(draw_context_t ctx)
 {
+
 	auto gl_ctx = (QOpenGLContext*)ctx;
 	gl_ctx->doneCurrent();
+
+#ifndef _WIN32
 	delete gl_ctx;
+#else
+	//AMD driver crashes when executing wglDeleteContext
+	//Catch with SEH
+	__try
+	{
+		delete gl_ctx;
+	}
+	__except(GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+	{
+		LOG_FATAL(RSX, "Your graphics driver just crashed whilst cleaning up. All consumed VRAM should have been released, but you may want to restart the emulator just in case");
+	}
+#endif
 }
 
 void gl_gs_frame::flip(draw_context_t context, bool skip_frame)
