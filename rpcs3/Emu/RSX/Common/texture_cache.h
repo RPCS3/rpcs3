@@ -1233,7 +1233,7 @@ namespace rsx
 				//TODO: When framebuffer Y compression is properly handled, this section can be removed. A more accurate framebuffer storage check exists below this block
 				if (auto texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 				{
-					if (test_framebuffer(texaddr))
+					if (test_framebuffer(texaddr + texptr->raster_address_offset))
 					{
 						return process_framebuffer_resource(texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, extended_dimension, false);
 					}
@@ -1246,7 +1246,7 @@ namespace rsx
 
 				if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 				{
-					if (test_framebuffer(texaddr))
+					if (test_framebuffer(texaddr + texptr->raster_address_offset))
 					{
 						return process_framebuffer_resource(texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, extended_dimension, true);
 					}
@@ -1282,7 +1282,7 @@ namespace rsx
 				if (rsc.surface)
 				{
 					//TODO: Check that this region is not cpu-dirty before doing a copy
-					if (!test_framebuffer(rsc.base_address))
+					if (!test_framebuffer(rsc.base_address + rsc.surface->raster_address_offset))
 					{
 						m_rtts.invalidate_surface_address(rsc.base_address, rsc.is_depth_surface);
 						invalidate_address(rsc.base_address, false, true, std::forward<Args>(extras)...);
@@ -1464,14 +1464,14 @@ namespace rsx
 					src_is_render_target = false;
 			}
 
-			if (src_is_render_target && !test_framebuffer(src_subres.base_address))
+			if (src_is_render_target && !test_framebuffer(src_subres.base_address + src_subres.surface->raster_address_offset))
 			{
 				m_rtts.invalidate_surface_address(src_subres.base_address, src_subres.is_depth_surface);
 				invalidate_address(src_subres.base_address, false, true, std::forward<Args>(extras)...);
 				src_is_render_target = false;
 			}
 
-			if (dst_is_render_target && !test_framebuffer(dst_subres.base_address))
+			if (dst_is_render_target && !test_framebuffer(dst_subres.base_address + dst_subres.surface->raster_address_offset))
 			{
 				m_rtts.invalidate_surface_address(dst_subres.base_address, dst_subres.is_depth_surface);
 				invalidate_address(dst_subres.base_address, false, true, std::forward<Args>(extras)...);
