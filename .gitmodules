@@ -8,7 +8,7 @@
 [submodule "llvm"]
 	path = llvm
 	url = https://github.com/llvm-mirror/llvm
-	branch = release_40
+	branch = release_60
 [submodule "GSL"]
 	path = 3rdparty/GSL
 	url = https://github.com/Microsoft/GSL.git
@@ -41,3 +41,7 @@
 [submodule "3rdparty/pugixml"]
 	path = 3rdparty/pugixml
 	url = https://github.com/zeux/pugixml
+[submodule "polly"]
+	path = polly
+	url = https://github.com/llvm-mirror/polly
+	branch = release_60

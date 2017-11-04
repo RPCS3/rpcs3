@@ -62,6 +62,9 @@ vcxproj_files = ["lib\Analysis\LLVMAnalysis.vcxproj",
                 "lib\Transforms\Utils\LLVMTransformUtils.vcxproj",
                 "lib\Transforms\Vectorize\LLVMVectorize.vcxproj",
                 "include\llvm\IR\intrinsics_gen.vcxproj",
+                "tools\polly\lib\Polly.vcxproj",
+                "tools\polly\lib\External\PollyISL.vcxproj",
+                "tools\polly\lib\External\PollyPPCG.vcxproj",
                 "utils\TableGen\llvm-tblgen.vcxproj",
                  ]
 

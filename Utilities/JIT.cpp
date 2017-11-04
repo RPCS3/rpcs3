@@ -376,11 +376,11 @@ public:
 		LOG_SUCCESS(GENERAL, "LLVM: Created module: %s", module->getName().data());
 	}
 
-	static std::unique_ptr<llvm::MemoryBuffer> load(const std::string& path)
+	static std::unique_ptr<llvm::WritableMemoryBuffer> load(const std::string& path)
 	{
 		if (fs::file cached{path, fs::read})
 		{
-			auto buf = llvm::MemoryBuffer::getNewUninitMemBuffer(cached.size());
+			auto buf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(cached.size());
 			cached.read(const_cast<char*>(buf->getBufferStart()), buf->getBufferSize());
 			return buf;
 		}
