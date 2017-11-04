@@ -769,8 +769,6 @@ void GLGSRender::on_init_thread()
 
 void GLGSRender::on_exit()
 {
-	glFinish();
-
 	m_prog_buffer.clear();
 
 	if (draw_fbo)
@@ -837,6 +835,9 @@ void GLGSRender::on_exit()
 
 		glDeleteQueries(1, &query.handle);
 	}
+
+	glFlush();
+	glFinish();
 
 	GSRender::on_exit();
 }
