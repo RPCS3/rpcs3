@@ -67,7 +67,7 @@ namespace vk
 		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D:
 			return "textureLod($t, $0.xy, 0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
-			return "texture2DReconstruct($t, $0.xy)";
+			return "texture2DReconstruct($t, $0.xy * texture_parameters[$_i].xy)";
 		}
 	}
 
