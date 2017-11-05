@@ -15,7 +15,7 @@ std::string GLFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 
 std::string GLFragmentDecompilerThread::getFunction(FUNCTION f)
 {
-	return gl::getFunctionImpl(f);
+	return glsl::getFunctionImpl(f);
 }
 
 std::string GLFragmentDecompilerThread::saturate(const std::string & code)
