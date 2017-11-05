@@ -1071,9 +1071,6 @@ void VKGSRender::end()
 		return;
 	}
 
-	//Close current pass to avoid conflict with texture functions
-	close_render_pass();
-
 	//Programs data is dependent on vertex state
 	std::chrono::time_point<steady_clock> vertex_start = steady_clock::now();
 	auto upload_info = upload_vertex_data();
@@ -1296,8 +1293,8 @@ void VKGSRender::end()
 
 			if (!image_ptr && sampler_state->external_subresource_desc.external_handle)
 			{
+				//Requires update, copy subresource
 				image_ptr = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
-				m_textures_dirty[i] = true;
 			}
 
 			if (!image_ptr)
@@ -1453,6 +1450,7 @@ void VKGSRender::end()
 		}
 	}
 
+	close_render_pass();
 	vk::leave_uninterruptible();
 
 	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
@@ -1544,7 +1542,7 @@ void VKGSRender::clear_surface(u32 mask)
 	u32   depth_stencil_mask = 0;
 
 	std::vector<VkClearAttachment> clear_descriptors;
-	VkClearValue depth_stencil_clear_values, color_clear_values;
+	VkClearValue depth_stencil_clear_values = {}, color_clear_values = {};
 
 	const auto scale = rsx::get_resolution_scale();
 	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
@@ -1618,6 +1616,7 @@ void VKGSRender::clear_surface(u32 mask)
 	if (mask & 0x3)
 		clear_descriptors.push_back({ (VkImageAspectFlags)depth_stencil_mask, 0, depth_stencil_clear_values });
 
+	vk::enter_uninterruptible();
 	begin_render_pass();
 	vkCmdClearAttachments(*m_current_command_buffer, (u32)clear_descriptors.size(), clear_descriptors.data(), 1, &region);
 
@@ -1629,6 +1628,9 @@ void VKGSRender::clear_surface(u32 mask)
 			std::get<1>(m_rtts.m_bound_depth_stencil)->old_contents = nullptr;
 		}
 	}
+
+	close_render_pass();
+	vk::leave_uninterruptible();
 }
 
 void VKGSRender::sync_at_semaphore_release()
@@ -1652,8 +1654,6 @@ void VKGSRender::copy_render_targets_to_dma_location()
 
 	if (g_cfg.video.write_color_buffers)
 	{
-		close_render_pass();
-
 		for (u8 index = 0; index < rsx::limits::color_buffers_count; index++)
 		{
 			if (!m_surface_info[index].pitch)
@@ -1666,8 +1666,6 @@ void VKGSRender::copy_render_targets_to_dma_location()
 
 	if (g_cfg.video.write_depth_buffer)
 	{
-		close_render_pass();
-
 		if (m_depth_surface_info.pitch)
 		{
 			m_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, true,
@@ -1685,7 +1683,6 @@ void VKGSRender::copy_render_targets_to_dma_location()
 
 void VKGSRender::flush_command_queue(bool hard_sync)
 {
-	close_render_pass();
 	close_and_submit_command_buffer({}, m_current_command_buffer->submit_fence);
 
 	if (hard_sync)
@@ -1890,7 +1887,6 @@ void VKGSRender::do_local_task()
 
 		//TODO: Determine if a hard sync is necessary
 		//Pipeline barriers later may do a better job synchronizing than wholly stalling the pipeline
-		close_render_pass();
 		flush_command_queue();
 
 		m_flush_commands = false;
@@ -2289,7 +2285,6 @@ void VKGSRender::prepare_rtts()
 	if (m_draw_fbo && !m_rtts_dirty)
 		return;
 
-	close_render_pass();
 	copy_render_targets_to_dma_location();
 
 	m_rtts_dirty = false;
@@ -2632,8 +2627,6 @@ void VKGSRender::flip(int buffer)
 
 	std::chrono::time_point<steady_clock> flip_start = steady_clock::now();
 
-	close_render_pass();
-
 	if (m_current_frame == &m_aux_frame_context)
 	{
 		m_current_frame = &frame_context_storage[m_current_queue_index];
@@ -2847,8 +2840,6 @@ void VKGSRender::flip(int buffer)
 
 bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 {
-	close_render_pass();
-
 	auto result = m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer);
 	m_current_command_buffer->begin();
 
