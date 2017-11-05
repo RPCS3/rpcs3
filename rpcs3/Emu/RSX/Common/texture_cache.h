@@ -1292,13 +1292,13 @@ namespace rsx
 					}
 					else
 					{
-						u16 internal_height = rsx::apply_resolution_scale(rsc.h, true);
-						if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
-							internal_height = 1;
+						u16 internal_width = tex_width;
+						u16 internal_height = tex_height;
 
+						get_native_dimensions(internal_width, internal_height, rsc.surface);
 						if (!rsc.is_bound || !g_cfg.video.strict_rendering_mode)
 						{
-							if (rsc.w == tex_width && rsc.h == tex_height)
+							if (rsc.w == internal_width && rsc.h == internal_height)
 							{
 								if (rsc.is_bound)
 								{
@@ -1315,9 +1315,12 @@ namespace rsx
 							LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
 						}
 
+						internal_width = rsx::apply_resolution_scale(internal_width, true);
+						internal_height = (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)? 1: rsx::apply_resolution_scale(internal_height, true);
+
 						return{ rsc.surface->get_surface(), rsc.base_address, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
-							rsx::apply_resolution_scale(rsc.w, true), internal_height, texture_upload_context::framebuffer_storage,
-							rsc.is_depth_surface, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
+							internal_width, internal_height, texture_upload_context::framebuffer_storage, rsc.is_depth_surface, scale_x, scale_y,
+							rsx::texture_dimension_extended::texture_dimension_2d };
 					}
 				}
 			}

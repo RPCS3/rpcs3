@@ -306,6 +306,8 @@ private:
 	void begin_render_pass();
 	void close_render_pass();
 
+	void update_draw_state();
+
 	/// returns primitive topology, index_count, allocated_verts, vertex_base_index, (offset in index buffer, index type)
 	std::tuple<VkPrimitiveTopology, u32, u32, u32, std::optional<std::tuple<VkDeviceSize, VkIndexType> > > upload_vertex_data();
 public:

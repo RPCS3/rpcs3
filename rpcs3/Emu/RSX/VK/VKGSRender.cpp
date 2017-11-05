@@ -962,11 +962,13 @@ void VKGSRender::begin()
 
 	m_current_frame->descriptor_set = new_descriptor_set;
 	m_current_frame->used_descriptors++;
+}
 
+void VKGSRender::update_draw_state()
+{
 	std::chrono::time_point<steady_clock> start = steady_clock::now();
 
 	float actual_line_width = rsx::method_registers.line_width();
-
 	vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
 
 	if (rsx::method_registers.poly_offset_fill_enabled())
@@ -981,12 +983,44 @@ void VKGSRender::begin()
 		vkCmdSetDepthBias(*m_current_command_buffer, 0.f, 0.f, 0.f);
 	}
 
+	//Update dynamic state
+	if (rsx::method_registers.blend_enabled())
+	{
+		//Update blend constants
+		auto blend_colors = rsx::get_constant_blend_colors();
+		vkCmdSetBlendConstants(*m_current_command_buffer, blend_colors.data());
+	}
+
+	if (rsx::method_registers.stencil_test_enabled())
+	{
+		const bool two_sided_stencil = rsx::method_registers.two_sided_stencil_test_enabled();
+		VkStencilFaceFlags face_flag = (two_sided_stencil) ? VK_STENCIL_FACE_FRONT_BIT : VK_STENCIL_FRONT_AND_BACK;
+
+		vkCmdSetStencilWriteMask(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_mask());
+		vkCmdSetStencilCompareMask(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_func_mask());
+		vkCmdSetStencilReference(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_func_ref());
+
+		if (two_sided_stencil)
+		{
+			vkCmdSetStencilWriteMask(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_mask());
+			vkCmdSetStencilCompareMask(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_func_mask());
+			vkCmdSetStencilReference(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_func_ref());
+		}
+	}
+
+	if (rsx::method_registers.depth_bounds_test_enabled())
+	{
+		//Update depth bounds min/max
+		vkCmdSetDepthBounds(*m_current_command_buffer, rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
+	}
+
+	set_viewport();
+
 	//TODO: Set up other render-state parameters into the program pipeline
 
 	std::chrono::time_point<steady_clock> stop = steady_clock::now();
 	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
 }
-
 
 void VKGSRender::begin_render_pass()
 {
@@ -1314,7 +1348,7 @@ void VKGSRender::end()
 	//Only textures are synchronized tightly with the GPU and they have been read back above
 	vk::enter_uninterruptible();
 
-	set_viewport();
+	update_draw_state();
 
 	begin_render_pass();
 
@@ -1985,10 +2019,6 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 	vk::pipeline_props properties = {};
 
 	bool emulated_primitive_type;
-	bool update_blend_constants = false;
-	bool update_stencil_info_back = false;
-	bool update_stencil_info_front = false;
-	bool update_depth_bounds = false;
 
 	properties.ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	properties.ia.topology = vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, emulated_primitive_type);
@@ -2040,9 +2070,6 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 			properties.att_state[render_targets[idx]].colorBlendOp = equation_rgb;
 			properties.att_state[render_targets[idx]].alphaBlendOp = equation_a;
 		}
-
-		//Blend constants are dynamic
-		update_blend_constants = true;
 	}
 	else
 	{
@@ -2068,7 +2095,6 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 	if (rsx::method_registers.depth_bounds_test_enabled())
 	{
 		properties.ds.depthBoundsTestEnable = VK_TRUE;
-		update_depth_bounds = true;
 	}
 	else
 		properties.ds.depthBoundsTestEnable = VK_FALSE;
@@ -2087,12 +2113,9 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 			properties.ds.back.passOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zpass());
 			properties.ds.back.depthFailOp = vk::get_stencil_op(rsx::method_registers.back_stencil_op_zfail());
 			properties.ds.back.compareOp = vk::get_compare_func(rsx::method_registers.back_stencil_func());
-			update_stencil_info_back = true;
 		}
 		else
 			properties.ds.back = properties.ds.front;
-
-		update_stencil_info_front = true;
 	}
 	else
 		properties.ds.stencilTestEnable = VK_FALSE;
@@ -2141,36 +2164,6 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 		m_shaders_cache->store(properties, vertex_program, fragment_program);
 
 	vk::leave_uninterruptible();
-
-	//Update dynamic state
-	if (update_blend_constants)
-	{
-		//Update blend constants
-		auto blend_colors = rsx::get_constant_blend_colors();
-		vkCmdSetBlendConstants(*m_current_command_buffer, blend_colors.data());
-	}
-
-	if (update_stencil_info_front)
-	{
-		VkStencilFaceFlags face_flag = (update_stencil_info_back) ? VK_STENCIL_FACE_FRONT_BIT : VK_STENCIL_FRONT_AND_BACK;
-
-		vkCmdSetStencilWriteMask(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_mask());
-		vkCmdSetStencilCompareMask(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_func_mask());
-		vkCmdSetStencilReference(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_func_ref());
-
-		if (update_stencil_info_back)
-		{
-			vkCmdSetStencilWriteMask(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_mask());
-			vkCmdSetStencilCompareMask(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_func_mask());
-			vkCmdSetStencilReference(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_func_ref());
-		}
-	}
-
-	if (update_depth_bounds)
-	{
-		//Update depth bounds min/max
-		vkCmdSetDepthBounds(*m_current_command_buffer, rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
-	}
 
 	const size_t fragment_constants_sz = m_prog_buffer->get_fragment_constants_buffer_size(fragment_program);
 	const size_t fragment_buffer_sz = fragment_constants_sz + (18 * 4 * sizeof(float));
