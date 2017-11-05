@@ -83,16 +83,16 @@ struct VKTraits
 	void recompile_fragment_program(const RSXFragmentProgram &RSXFP, fragment_program_type& fragmentProgramData, size_t ID)
 	{
 		fragmentProgramData.Decompile(RSXFP);
-		fragmentProgramData.Compile();
 		fragmentProgramData.id = static_cast<u32>(ID);
+		fragmentProgramData.Compile();
 	}
 
 	static
 	void recompile_vertex_program(const RSXVertexProgram &RSXVP, vertex_program_type& vertexProgramData, size_t ID)
 	{
 		vertexProgramData.Decompile(RSXVP);
-		vertexProgramData.Compile();
 		vertexProgramData.id = static_cast<u32>(ID);
+		vertexProgramData.Compile();
 	}
 
 	static
