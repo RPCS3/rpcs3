@@ -14,7 +14,7 @@ std::string VKFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 
 std::string VKFragmentDecompilerThread::getFunction(FUNCTION f)
 {
-	return vk::getFunctionImpl(f);
+	return glsl::getFunctionImpl(f);
 }
 
 std::string VKFragmentDecompilerThread::saturate(const std::string & code)

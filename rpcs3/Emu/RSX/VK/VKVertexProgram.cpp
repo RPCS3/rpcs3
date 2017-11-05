@@ -15,10 +15,9 @@ std::string VKVertexDecompilerThread::getIntTypeName(size_t elementCount)
 	return "ivec4";
 }
 
-
 std::string VKVertexDecompilerThread::getFunction(FUNCTION f)
 {
-	return vk::getFunctionImpl(f);
+	return glsl::getFunctionImpl(f);
 }
 
 std::string VKVertexDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
