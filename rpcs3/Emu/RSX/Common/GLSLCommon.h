@@ -278,6 +278,8 @@ namespace glsl
 		OS << "vec4 read_location(int location)\n";
 		OS << "{\n";
 		OS << "	attribute_desc desc = fetch_desc(location);\n";
+		OS << "	//if attribute is disabled return 1 (makes all operations with it nop except add/sub - TODO)\n";
+		OS << "	if (desc.attribute_size == 0) return vec4(1.);\n";
 		OS << "\n";
 		OS << "	int vertex_id = " << vertex_id_name << " - int(vertex_base_index);\n";
 		OS << "	if (desc.frequency == 0)\n";
