@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -1237,6 +1237,18 @@ s32 sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optname, vm::
 				native_linger.l_linger = ((const sys_net_linger*)optval.get_ptr())->l_linger;
 				break;
 			}
+			case SYS_NET_SO_USECRYPTO:
+			{
+				//TODO
+				sys_net.error("sys_net_bnet_setsockopt(s=%d, SOL_SOCKET): Stubbed option (0x%x) (SYS_NET_SO_USECRYPTO)", s, optname);
+				return 0;
+			}
+			case SYS_NET_SO_USESIGNATURE:
+			{
+				//TODO
+				sys_net.error("sys_net_bnet_setsockopt(s=%d, SOL_SOCKET): Stubbed option (0x%x) (SYS_NET_SO_USESIGNATURE)", s, optname);
+				return 0;
+			}
 			default:
 			{
 				sys_net.error("sys_net_bnet_setsockopt(s=%d, SOL_SOCKET): unknown option (0x%x)", s, optname);
@@ -1338,7 +1350,7 @@ s32 sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protocol)
 		sys_net.error("sys_net_bnet_socket(): unknown family (%d)", family);
 	}
 
-	if (type != SYS_NET_SOCK_STREAM && type != SYS_NET_SOCK_DGRAM)
+	if (type != SYS_NET_SOCK_STREAM && type != SYS_NET_SOCK_DGRAM && type != SYS_NET_SOCK_DGRAM_P2P)
 	{
 		sys_net.error("sys_net_bnet_socket(): unsupported type (%d)", type);
 		return -SYS_NET_EPROTONOSUPPORT;
@@ -1347,10 +1359,12 @@ s32 sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protocol)
 	const int native_domain = AF_INET;
 	const int native_type =
 		type == SYS_NET_SOCK_STREAM ? SOCK_STREAM :
-		type == SYS_NET_SOCK_DGRAM ? SOCK_DGRAM : SOCK_RAW;
+		type == SYS_NET_SOCK_DGRAM ? SOCK_DGRAM :
+		type == SYS_NET_SOCK_DGRAM_P2P ? SOCK_DGRAM : SOCK_RAW;
 	const int native_proto =
 		type == SYS_NET_SOCK_STREAM ? 0 :
-		type == SYS_NET_SOCK_DGRAM ? 0 : 0;
+		type == SYS_NET_SOCK_DGRAM ? 0 :
+		type == SYS_NET_SOCK_DGRAM_P2P ? 0 : 0;
 
 	const auto native_socket = ::socket(native_domain, native_type, native_proto);
 
