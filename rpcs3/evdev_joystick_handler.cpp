@@ -133,9 +133,8 @@ bool evdev_joystick_handler::update_device(EvdevDevice& device, bool use_cell)
 
 	if (use_cell)
 	{
-		if (!was_connected)
-			// Connection status changed from disconnected to connected.
-			pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+		// Connection status changed from disconnected to connected.
+		pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 		pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 	}
 
@@ -170,7 +169,7 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 
 	for (auto entry : button_list)
 	{
-		int code = entry.first;
+		auto code = entry.first;
 		int val = 0;
 		if (libevdev_fetch_event_value(dev, EV_KEY, code, &val) == 0)
 			continue;
@@ -180,7 +179,7 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 
 	for (auto entry : axis_list)
 	{
-		int code = entry.first;
+		auto code = entry.first;
 		int val = 0;
 		if (libevdev_fetch_event_value(dev, EV_ABS, code, &val) == 0)
 			continue;
@@ -760,13 +759,13 @@ void evdev_joystick_handler::ThreadProc()
 }
 
 // Search axis_orientations map for the direction by index, returns -1 if not found, 0 for positive and 1 for negative
-int evdev_joystick_handler::FindAxisDirection(std::unordered_map<int, bool> map, int index)
+int evdev_joystick_handler::FindAxisDirection(const std::unordered_map<int, bool>& map, int index)
 {
-	for (auto it = map.begin(); it != map.end(); ++it)
-	{
-		if (it->first == index) return it->second;
-	}
-	return -1;
+	auto it = map.find(index);
+	if (it == map.end())
+		return -1;
+	else
+		return it->second;
 };
 
 #endif

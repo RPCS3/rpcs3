@@ -257,7 +257,7 @@ private:
 	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(libevdev* dev);
 
 	// Search axis_orientations map for the direction by index, returns -1 if not found, 0 for positive and 1 for negative
-	int FindAxisDirection(std::unordered_map<int, bool> map, int index);
+	int FindAxisDirection(const std::unordered_map<int, bool>& map, int index);
 
 	std::vector<EvdevDevice> devices;
 };
