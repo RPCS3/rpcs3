@@ -1345,7 +1345,7 @@ s32 sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protocol)
 {
 	sys_net.warning("sys_net_bnet_socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
 
-	if (family != SYS_NET_AF_INET)
+	if (family != SYS_NET_AF_INET && family != SYS_NET_AF_UNSPEC)
 	{
 		sys_net.error("sys_net_bnet_socket(): unknown family (%d)", family);
 	}
@@ -1356,15 +1356,27 @@ s32 sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protocol)
 		return -SYS_NET_EPROTONOSUPPORT;
 	}
 
-	const int native_domain = AF_INET;
+	const int native_domain = family == SYS_NET_AF_INET ? AF_INET :
+		family == SYS_NET_AF_UNSPEC ? AF_UNSPEC : AF_INET;
+
 	const int native_type =
 		type == SYS_NET_SOCK_STREAM ? SOCK_STREAM :
 		type == SYS_NET_SOCK_DGRAM ? SOCK_DGRAM :
 		type == SYS_NET_SOCK_DGRAM_P2P ? SOCK_DGRAM : SOCK_RAW;
-	const int native_proto =
-		type == SYS_NET_SOCK_STREAM ? 0 :
-		type == SYS_NET_SOCK_DGRAM ? 0 :
-		type == SYS_NET_SOCK_DGRAM_P2P ? 0 : 0;
+
+	int native_proto =
+		protocol == SYS_NET_IPPROTO_IP ? IPPROTO_IP :
+		protocol == SYS_NET_IPPROTO_ICMP ? IPPROTO_ICMP :
+		protocol == SYS_NET_IPPROTO_IGMP ? IPPROTO_IGMP :
+		protocol == SYS_NET_IPPROTO_TCP ? IPPROTO_TCP :
+		protocol == SYS_NET_IPPROTO_UDP ? IPPROTO_UDP :
+		protocol == SYS_NET_IPPROTO_ICMPV6 ? IPPROTO_ICMPV6 : 0;
+
+	if (native_domain == AF_UNSPEC && type == SYS_NET_SOCK_DGRAM)
+	{
+		//Windows gets all errory if you try a unspec socket with protocol 0
+		native_proto = IPPROTO_UDP;
+	}
 
 	const auto native_socket = ::socket(native_domain, native_type, native_proto);
 
