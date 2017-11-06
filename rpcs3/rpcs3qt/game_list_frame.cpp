@@ -980,6 +980,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 		{
 			QPoint numSteps = wheelEvent->angleDelta() / 8 / 15;	// http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
 			const int value = numSteps.y();
+			Q_EMIT RequestSaveSliderPos(true);
 			m_Slider_Size->setValue(m_Slider_Size->value() + value);
 			return true;
 		}
@@ -992,11 +993,13 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 		{
 			if (keyEvent->key() == Qt::Key_Plus)
 			{
+				Q_EMIT RequestSaveSliderPos(true);
 				m_Slider_Size->setValue(m_Slider_Size->value() + 1);
 				return true;
 			}
 			else if (keyEvent->key() == Qt::Key_Minus)
 			{
+				Q_EMIT RequestSaveSliderPos(true);
 				m_Slider_Size->setValue(m_Slider_Size->value() - 1);
 				return true;
 			}
