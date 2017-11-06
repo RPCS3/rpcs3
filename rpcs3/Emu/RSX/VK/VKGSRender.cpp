@@ -1104,7 +1104,8 @@ void VKGSRender::end()
 					*sampler_state = m_texture_cache._upload_texture(*m_current_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts);
 
 					const u32 texture_format = rsx::method_registers.fragment_textures[i].format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
-					VkCompareOp depth_compare = fs_sampler_state[i]->is_depth_texture ? vk::get_compare_func((rsx::comparison_function)rsx::method_registers.fragment_textures[i].zfunc(), true) : VK_COMPARE_OP_NEVER;
+					const VkBool32 compare_enabled = (texture_format == CELL_GCM_TEXTURE_DEPTH16 || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8);
+					VkCompareOp depth_compare_mode = compare_enabled ? vk::get_compare_func((rsx::comparison_function)rsx::method_registers.fragment_textures[i].zfunc(), true) : VK_COMPARE_OP_NEVER;
 
 					bool replace = !fs_sampler_handles[i];
 					VkFilter min_filter;
@@ -1135,7 +1136,7 @@ void VKGSRender::end()
 					if (fs_sampler_handles[i] && m_textures_dirty[i])
 					{
 						if (!fs_sampler_handles[i]->matches(wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
-							min_filter, mag_filter, mip_mode, border_color, fs_sampler_state[i]->is_depth_texture, depth_compare))
+							min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode))
 						{
 							m_current_frame->samplers_to_clean.push_back(std::move(fs_sampler_handles[i]));
 							replace = true;
@@ -1145,7 +1146,7 @@ void VKGSRender::end()
 					if (replace)
 					{
 						fs_sampler_handles[i] = std::make_unique<vk::sampler>(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
-							min_filter, mag_filter, mip_mode, border_color, fs_sampler_state[i]->is_depth_texture, depth_compare);
+							min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode);
 					}
 				}
 				else
