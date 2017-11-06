@@ -1624,11 +1624,14 @@ namespace rsx
 			}
 			else
 			{
-				if (src_subres.w != dst.clip_width ||
-					src_subres.h != dst.clip_height)
+				if (!dst_is_render_target)
 				{
-					const int dst_width = (int)(src_subres.w * scale_x);
-					const int dst_height = (int)(src_subres.h * scale_y);
+					u16 src_subres_w = src_subres.w;
+					u16 src_subres_h = src_subres.h;
+					get_rsx_dimensions(src_subres_w, src_subres_h, src_subres.surface);
+
+					const int dst_width = (int)(src_subres_w * scale_x);
+					const int dst_height = (int)(src_subres_h * scale_y);
 
 					dst_area.x2 = dst_area.x1 + dst_width;
 					dst_area.y2 = dst_area.y1 + dst_height;
