@@ -12,6 +12,15 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 	verify(HERE), _old != -1; // Very unlikely: it requires 2^32 distinct threads to wait simultaneously
 
 #ifdef _WIN32
+	if (_timeout > INTMAX_MAX / 10) // If it overflows, make it endless
+	{
+		_timeout = -1; // Won't ever finish anyway
+	}
+	else
+	{
+		_timeout *= -10;
+	}
+
 	LARGE_INTEGER timeout;
 	timeout.QuadPart = _timeout * -10;
 
