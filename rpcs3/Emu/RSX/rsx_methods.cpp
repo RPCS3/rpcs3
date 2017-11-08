@@ -636,6 +636,12 @@ namespace rsx
 			u32 convert_w = (u32)(scale_x * in_w);
 			u32 convert_h = (u32)(scale_y * in_h);
 
+			if (convert_w == 0 || convert_h == 0)
+			{
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored");
+				return;
+			}
+
 			u32 slice_h = clip_h;
 			blit_src_info src_info = {};
 			blit_dst_info dst_info = {};
