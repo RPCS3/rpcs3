@@ -576,7 +576,7 @@ namespace vk
 		VkSamplerCreateInfo info = {};
 
 		sampler(VkDevice dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
-			bool unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
+			VkBool32 unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
 			VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, VkBorderColor border_color,
 			VkBool32 depth_compare = false, VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER)
 			: m_device(dev)
@@ -605,6 +605,21 @@ namespace vk
 		~sampler()
 		{
 			vkDestroySampler(m_device, value, nullptr);
+		}
+
+		bool matches(VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
+			VkBool32 unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
+			VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, VkBorderColor border_color,
+			VkBool32 depth_compare = false, VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER)
+		{
+			if (info.magFilter != mag_filter || info.minFilter != min_filter || info.mipmapMode != mipmap_mode ||
+				info.addressModeU != clamp_u || info.addressModeV != clamp_v || info.addressModeW != clamp_w ||
+				info.compareEnable != depth_compare || info.unnormalizedCoordinates != unnormalized_coordinates ||
+				info.mipLodBias != mipLodBias || info.maxAnisotropy != max_anisotropy || info.maxLod != max_lod ||
+				info.minLod != min_lod || info.compareOp != depth_compare_mode || info.borderColor != border_color)
+				return false;
+
+			return true;
 		}
 
 		sampler(const sampler&) = delete;

@@ -6,6 +6,5 @@
 
 namespace gl
 {
-	std::string getFunctionImpl(FUNCTION f);
 	int get_varying_register_location(const std::string &var_name);
 }

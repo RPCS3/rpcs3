@@ -12,9 +12,6 @@ namespace vk
 		int reg_location;
 	};
 
-	//Decompiler function lookup
-	std::string getFunctionImpl(FUNCTION f);
-
 	const varying_register_t& get_varying_register(const std::string& name);
 	bool compile_glsl_to_spv(std::string& shader, program_domain domain, std::vector<u32> &spv);
 

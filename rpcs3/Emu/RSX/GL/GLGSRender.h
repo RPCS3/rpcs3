@@ -310,33 +310,6 @@ struct driver_state
 	}
 };
 
-struct sw_ring_buffer
-{
-	std::vector<u8> data;
-	u32 ring_pos = 0;
-	u32 ring_length = 0;
-
-	sw_ring_buffer(u32 size)
-	{
-		data.resize(size);
-		ring_length = size;
-	}
-
-	void* get(u32 dwords)
-	{
-		const u32 required = (dwords << 2);
-		if ((ring_pos + required) > ring_length)
-		{
-			ring_pos = 0;
-			return data.data();
-		}
-
-		void *result = data.data() + ring_pos;
-		ring_pos += required;
-		return result;
-	}
-};
-
 class GLGSRender : public GSRender
 {
 private:
@@ -405,6 +378,12 @@ private:
 	const u32 occlusion_query_count = 128;
 	std::array<occlusion_query_info, 128> occlusion_query_data = {};
 
+	std::mutex m_sampler_mutex;
+	u64 surface_store_tag = 0;
+	std::atomic_bool m_samplers_dirty = {true};
+	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
+	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
+
 public:
 	GLGSRender();
 
@@ -421,6 +400,8 @@ private:
 
 	bool check_program_state();
 	void load_program(u32 vertex_base, u32 vertex_count);
+
+	void update_draw_state();
 
 public:
 	void read_buffers();

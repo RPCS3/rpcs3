@@ -1171,6 +1171,26 @@ namespace rsx
 		{
 			return registers[NV4097_SET_TRANSFORM_BRANCH_BITS];
 		}
+
+		u16 msaa_sample_mask()
+		{
+			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_sample_mask();
+		}
+
+		bool msaa_enabled()
+		{
+			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_enabled();
+		}
+
+		bool msaa_alpha_to_coverage_enabled()
+		{
+			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_alpha_to_coverage();
+		}
+
+		bool msaa_alpha_to_one_enabled()
+		{
+			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_alpha_to_one();
+		}
 	};
 
 	extern rsx_state method_registers;

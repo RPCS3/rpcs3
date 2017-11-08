@@ -47,10 +47,17 @@ namespace vk
 			this->depth = depth;
 			this->mipmaps = mipmaps;
 
-			uploaded_image_view.reset(view);
-			vram_texture = image;
+			if (managed)
+			{
+				managed_texture.reset(image);
+				uploaded_image_view.reset(view);
+			}
+			else
+			{
+				verify(HERE), uploaded_image_view.get() == nullptr;
+			}
 
-			if (managed) managed_texture.reset(image);
+			vram_texture = image;
 
 			//TODO: Properly compute these values
 			if (rsx_pitch > 0)
@@ -105,7 +112,10 @@ namespace vk
 
 		vk::image_view* get_raw_view()
 		{
-			return uploaded_image_view.get();
+			if (context != rsx::texture_upload_context::framebuffer_storage)
+				return uploaded_image_view.get();
+			else
+				return static_cast<vk::render_target*>(vram_texture)->get_view();
 		}
 
 		vk::image* get_raw_texture()
@@ -157,15 +167,27 @@ namespace vk
 			const u16 internal_width = std::min(width, rsx::apply_resolution_scale(width, true));
 			const u16 internal_height = std::min(height, rsx::apply_resolution_scale(height, true));
 
+			VkImageAspectFlags aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
+			switch (vram_texture->info.format)
+			{
+			case VK_FORMAT_D16_UNORM:
+				aspect_flag = VK_IMAGE_ASPECT_DEPTH_BIT;
+				break;
+			case VK_FORMAT_D24_UNORM_S8_UINT:
+			case VK_FORMAT_D32_SFLOAT_S8_UINT:
+				aspect_flag = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+				break;
+			}
+
 			VkBufferImageCopy copyRegion = {};
 			copyRegion.bufferOffset = 0;
 			copyRegion.bufferRowLength = internal_width;
 			copyRegion.bufferImageHeight = internal_height;
-			copyRegion.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+			copyRegion.imageSubresource = {aspect_flag, 0, 0, 1};
 			copyRegion.imageOffset = {};
 			copyRegion.imageExtent = {internal_width, internal_height, 1};
 
-			VkImageSubresourceRange subresource_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+			VkImageSubresourceRange subresource_range = { aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 1 };
 			
 			VkImageLayout layout = vram_texture->current_layout;
 			change_image_layout(cmd, vram_texture, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
@@ -246,6 +268,10 @@ namespace vk
 			bool swap_bytes = false;
 			switch (vram_texture->info.format)
 			{
+			case VK_FORMAT_D32_SFLOAT_S8_UINT:
+			case VK_FORMAT_D24_UNORM_S8_UINT:
+				//TODO: Hardware tests to determine correct memory layout
+			case VK_FORMAT_D16_UNORM:
 			case VK_FORMAT_R16G16B16A16_SFLOAT:
 			case VK_FORMAT_R32G32B32A32_SFLOAT:
 			case VK_FORMAT_R32_SFLOAT:
@@ -312,6 +338,19 @@ namespace vk
 			return vram_texture->info.format == tex->info.format;
 		}
 
+		bool is_depth_texture() const
+		{
+			switch (vram_texture->info.format)
+			{
+			case VK_FORMAT_D16_UNORM:
+			case VK_FORMAT_D32_SFLOAT_S8_UINT:
+			case VK_FORMAT_D24_UNORM_S8_UINT:
+				return true;
+			default:
+				return false;
+			}
+		}
+
 		u64 get_sync_timestamp() const
 		{
 			return sync_timestamp;
@@ -326,6 +365,7 @@ namespace vk
 		//Memory held by this temp storage object
 		u32 block_size = 0;
 
+		//Frame id tag
 		const u64 frame_tag = vk::get_current_frame_id();
 
 		discarded_storage(std::unique_ptr<vk::image_view>& _view)
@@ -371,7 +411,7 @@ namespace vk
 		//Stuff that has been dereferenced goes into these
 		std::list<discarded_storage> m_discardable_storage;
 		std::atomic<u32> m_discarded_memory_size = { 0 };
-		
+
 		void purge_cache()
 		{
 			for (auto &address_range : m_cache)
@@ -408,7 +448,7 @@ namespace vk
 			tex.destroy();
 		}
 
-		vk::image_view* create_temporary_subresource_view(vk::command_buffer& cmd, vk::image* source, u32 /*gcm_format*/, u16 x, u16 y, u16 w, u16 h) override
+		vk::image_view* create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type, u16 x, u16 y, u16 w, u16 h)
 		{
 			VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -429,13 +469,13 @@ namespace vk
 			std::unique_ptr<vk::image_view> view;
 
 			image.reset(new vk::image(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				source->info.imageType,
+				image_type,
 				source->info.format,
 				w, h, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, source->info.flags));
 
 			VkImageSubresourceRange view_range = { aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 1 };
-			view.reset(new vk::image_view(*vk::get_current_renderer(), image->value, VK_IMAGE_VIEW_TYPE_2D, source->info.format, source->native_component_map, view_range));
+			view.reset(new vk::image_view(*vk::get_current_renderer(), image->value, view_type, source->info.format, source->native_component_map, view_range));
 
 			VkImageLayout old_src_layout = source->current_layout;
 
@@ -453,13 +493,94 @@ namespace vk
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
 			vk::change_image_layout(cmd, source, old_src_layout, subresource_range);
 
+			const u32 resource_memory = w * h * 4; //Rough approximate
 			m_discardable_storage.push_back({ image, view });
+			m_discardable_storage.back().block_size = resource_memory;
+			m_discarded_memory_size += resource_memory;
+
 			return m_discardable_storage.back().view.get();
+		}
+
+		vk::image_view* create_temporary_subresource_view(vk::command_buffer& cmd, vk::image* source, u32 /*gcm_format*/, u16 x, u16 y, u16 w, u16 h) override
+		{
+			return create_temporary_subresource_view_impl(cmd, source, source->info.imageType, VK_IMAGE_VIEW_TYPE_2D, x, y, w, h);
 		}
 
 		vk::image_view* create_temporary_subresource_view(vk::command_buffer& cmd, vk::image** source, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) override
 		{
 			return create_temporary_subresource_view(cmd, *source, gcm_format, x, y, w, h);
+		}
+
+		vk::image_view* generate_cubemap_from_images(vk::command_buffer& cmd, const u32 gcm_format, u16 size, std::array<vk::image*, 6>& sources) override
+		{
+			std::unique_ptr<vk::image> image;
+			std::unique_ptr<vk::image_view> view;
+
+			image.reset(new vk::image(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				VK_IMAGE_TYPE_2D,
+				vk::get_compatible_sampler_format(gcm_format),
+				size, size, 1, 1, 6, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT));
+
+			VkImageSubresourceRange subresource_range = {};
+			VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+
+			for (u32 n = 0; n < 6; ++n)
+			{
+				if (!view)
+				{
+					switch (sources[0]->info.format)
+					{
+					case VK_FORMAT_D16_UNORM:
+						aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+						break;
+					case VK_FORMAT_D24_UNORM_S8_UINT:
+					case VK_FORMAT_D32_SFLOAT_S8_UINT:
+						aspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+						break;
+					}
+
+					VkImageSubresourceRange view_range = { aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 6 };
+					view.reset(new vk::image_view(*vk::get_current_renderer(), image->value, VK_IMAGE_VIEW_TYPE_CUBE, image->info.format, image->native_component_map, view_range));
+					subresource_range = view_range;
+					vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+					subresource_range.layerCount = 1;
+				}
+
+				if (sources[n])
+				{
+					VkImageLayout old_src_layout = sources[n]->current_layout;
+					vk::change_image_layout(cmd, sources[n], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+
+					VkImageCopy copy_rgn;
+					copy_rgn.srcOffset = { 0, 0, 0 };
+					copy_rgn.dstOffset = { 0, 0, 0 };
+					copy_rgn.dstSubresource = { aspect, 0, n, 1 };
+					copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
+					copy_rgn.extent = { size, size, 1 };
+
+					vkCmdCopyImage(cmd, sources[n]->value, sources[n]->current_layout, image->value, image->current_layout, 1, &copy_rgn);
+					vk::change_image_layout(cmd, sources[n], old_src_layout, subresource_range);
+				}
+				else
+				{
+					//Clear to black
+					VkClearColorValue clear_color{};
+					auto range = subresource_range;
+					range.baseArrayLayer = n;
+					vkCmdClearColorImage(cmd, image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+				}
+			}
+
+			subresource_range.layerCount = 6;
+			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
+
+			const u32 resource_memory = size * size * 6 * 4; //Rough approximate
+			m_discardable_storage.push_back({ image, view });
+			m_discardable_storage.back().block_size = resource_memory;
+			m_discarded_memory_size += resource_memory;
+
+			return m_discardable_storage.back().view.get();
 		}
 
 		cached_texture_section* create_new_texture(vk::command_buffer& cmd, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, const u32 gcm_format,
@@ -574,6 +695,7 @@ namespace vk
 			region.create(width, height, section_depth, mipmaps, view, image);
 			region.set_dirty(false);
 			region.set_context(context);
+			region.set_image_type(type);
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
 			if (context != rsx::texture_upload_context::blit_engine_dst || g_cfg.video.strict_rendering_mode)
@@ -730,10 +852,12 @@ namespace vk
 				}
 				return false;
 			});
+
+			m_temporary_subresource_cache.clear();
 		}
 
 		template<typename RsxTextureType>
-		image_view* _upload_texture(vk::command_buffer& cmd, RsxTextureType& tex, rsx::vk_render_targets& m_rtts)
+		sampled_image_descriptor _upload_texture(vk::command_buffer& cmd, RsxTextureType& tex, rsx::vk_render_targets& m_rtts)
 		{
 			return upload_texture(cmd, tex, m_rtts, *m_device, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 		}
@@ -786,7 +910,12 @@ namespace vk
 
 		const u32 get_texture_memory_in_use() const override
 		{
-			return m_texture_memory_in_use + m_discarded_memory_size;
+			return m_texture_memory_in_use;
+		}
+
+		const u32 get_temporary_memory_in_use()
+		{
+			return m_discarded_memory_size;
 		}
 	};
 }
