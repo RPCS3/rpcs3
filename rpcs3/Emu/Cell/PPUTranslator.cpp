@@ -133,7 +133,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	const u64 base = m_reloc ? m_reloc->addr : 0;
 	m_addr = info.addr - base;
 
-	m_thread = &*m_function->getArgumentList().begin();
+	m_thread = &*m_function->arg_begin();
 	m_base_loaded = m_ir->CreateLoad(m_base);
 
 	m_body = BasicBlock::Create(m_context, "__body", m_function);
@@ -290,7 +290,7 @@ Value* PPUTranslator::RegInit(Value*& local)
 
 Value* PPUTranslator::RegLoad(Value*& local)
 {
-	const uint index = ::narrow<uint>(&local - m_locals);
+	const auto index = ::narrow<uint>(&local - m_locals);
 
 	if (local)
 	{
@@ -315,7 +315,7 @@ void PPUTranslator::FlushRegisters()
 
 	for (auto& local : m_locals)
 	{
-		const uint index = static_cast<uint>(&local - m_locals);
+		const auto index = ::narrow<uint>(&local - m_locals);
 
 		// Store value if necessary
 		if (local && m_globals[index])
