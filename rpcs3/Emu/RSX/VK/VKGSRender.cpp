@@ -98,6 +98,51 @@ namespace vk
 		}
 	}
 
+	std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format color_format)
+	{
+		switch (color_format)
+		{
+		case rsx::surface_color_format::r5g6b5:
+			return{ CELL_GCM_TEXTURE_R5G6B5, false };
+
+		case rsx::surface_color_format::a8r8g8b8:
+			return{ CELL_GCM_TEXTURE_A8R8G8B8, true }; //verified
+
+		case rsx::surface_color_format::a8b8g8r8:
+			return{ CELL_GCM_TEXTURE_A8R8G8B8, false };
+
+		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
+			return{ CELL_GCM_TEXTURE_A8R8G8B8, true };
+
+		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
+		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
+			return{ CELL_GCM_TEXTURE_A8R8G8B8, false };
+
+		case rsx::surface_color_format::w16z16y16x16:
+			return{ CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT, true };
+
+		case rsx::surface_color_format::w32z32y32x32:
+			return{ CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT, true };
+
+		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+			return{ CELL_GCM_TEXTURE_A1R5G5B5, false };
+
+		case rsx::surface_color_format::b8:
+			return{ CELL_GCM_TEXTURE_B8, false };
+
+		case rsx::surface_color_format::g8b8:
+			return{ CELL_GCM_TEXTURE_G8B8, true };
+
+		case rsx::surface_color_format::x32:
+			return{ CELL_GCM_TEXTURE_X32_FLOAT, true }; //verified
+
+		default:
+			return{ CELL_GCM_TEXTURE_A8R8G8B8, false };
+		}
+	}
+
 	/** Maps color_format, depth_stencil_format and color count to an int as below :
 	 * idx = color_count + 5 * depth_stencil_idx + 15 * color_format_idx
 	 * This should perform a 1:1 mapping
@@ -2354,8 +2399,11 @@ void VKGSRender::prepare_rtts()
 		}
 	}
 
+	const auto color_fmt = rsx::method_registers.surface_color();
+	const auto depth_fmt = rsx::method_registers.surface_depth_fmt();
+
 	m_rtts.prepare_render_target(&*m_current_command_buffer,
-		rsx::method_registers.surface_color(), rsx::method_registers.surface_depth_fmt(),
+		color_fmt, depth_fmt,
 		clip_width, clip_height,
 		rsx::method_registers.surface_color_target(),
 		surface_addresses, zeta_address,
@@ -2378,13 +2426,13 @@ void VKGSRender::prepare_rtts()
 		m_surface_info[i].address = m_surface_info[i].pitch = 0;
 		m_surface_info[i].width = clip_width;
 		m_surface_info[i].height = clip_height;
-		m_surface_info[i].color_format = rsx::method_registers.surface_color();
+		m_surface_info[i].color_format = color_fmt;
 	}
 
 	m_depth_surface_info.address = m_depth_surface_info.pitch = 0;
 	m_depth_surface_info.width = clip_width;
 	m_depth_surface_info.height = clip_height;
-	m_depth_surface_info.depth_format = rsx::method_registers.surface_depth_fmt();
+	m_depth_surface_info.depth_format = depth_fmt;
 
 	//Bind created rtts as current fbo...
 	std::vector<u8> draw_buffers = vk::get_draw_buffers(rsx::method_registers.surface_color_target());
@@ -2395,7 +2443,7 @@ void VKGSRender::prepare_rtts()
 	std::vector<vk::image*> bound_images;
 	bound_images.reserve(5);
 
-	const auto bpp = get_format_block_size_in_bytes(rsx::method_registers.surface_color());
+	const auto bpp = get_format_block_size_in_bytes(color_fmt);
 
 	for (u8 index : draw_buffers)
 	{
@@ -2445,13 +2493,14 @@ void VKGSRender::prepare_rtts()
 
 	if (g_cfg.video.write_color_buffers)
 	{
+		const auto color_fmt_info = vk::get_compatible_gcm_format(color_fmt);
 		for (u8 index : draw_buffers)
 		{
 			if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
 			const u32 range = m_surface_info[index].pitch * m_surface_info[index].height;
 
 			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[index]), m_surface_info[index].address, range,
-				m_surface_info[index].width, m_surface_info[index].height, m_surface_info[index].pitch);
+				m_surface_info[index].width, m_surface_info[index].height, m_surface_info[index].pitch, color_fmt_info.first, color_fmt_info.second);
 		}
 	}
 
@@ -2460,11 +2509,17 @@ void VKGSRender::prepare_rtts()
 		if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 		{
 			u32 pitch = m_depth_surface_info.width * 2;
-			if (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) pitch *= 2;
+			u32 gcm_format = CELL_GCM_TEXTURE_DEPTH16;
+
+			if (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16)
+			{
+				gcm_format = CELL_GCM_TEXTURE_DEPTH24_D8;
+				pitch *= 2;
+			}
 
 			const u32 range = pitch * m_depth_surface_info.height;
 			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range,
-				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch);
+				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch, gcm_format, true);
 		}
 	}
 
@@ -2512,7 +2567,7 @@ void VKGSRender::prepare_rtts()
 			fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
 		}
 
-		size_t idx = vk::get_render_pass_location(vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first, vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()), (u8)draw_buffers.size());
+		size_t idx = vk::get_render_pass_location(vk::get_compatible_surface_format(color_fmt).first, vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()), (u8)draw_buffers.size());
 		VkRenderPass current_render_pass = m_render_passes[idx];
 
 		if (m_draw_fbo)

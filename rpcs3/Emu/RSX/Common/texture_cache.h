@@ -45,6 +45,8 @@ namespace rsx
 		u16 real_pitch;
 		u16 rsx_pitch;
 
+		u32 gcm_format = 0;
+
 		u64 cache_tag = 0;
 
 		rsx::texture_create_flags view_flags = rsx::texture_create_flags::default_component_order;
@@ -96,6 +98,11 @@ namespace rsx
 			image_type = type;
 		}
 
+		void set_gcm_format(u32 format)
+		{
+			gcm_format = format;
+		}
+
 		u16 get_width() const
 		{
 			return width;
@@ -119,6 +126,11 @@ namespace rsx
 		rsx::texture_dimension_extended get_image_type() const
 		{
 			return image_type;
+		}
+
+		u32 get_gcm_format() const
+		{
+			return gcm_format;
 		}
 	};
 
