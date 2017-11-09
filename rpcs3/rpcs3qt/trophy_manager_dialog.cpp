@@ -66,15 +66,14 @@ trophy_manager_dialog::trophy_manager_dialog() : QWidget(), m_sort_column(0), m_
 	QDirIterator dir_iter(qstr(vfs::get(m_TROPHY_DIR)));
 	while (dir_iter.hasNext()) 
 	{
-		if (dir_iter.fileName() == "" || dir_iter.fileName() == "." || dir_iter.fileName() == ".." || dir_iter.fileName() == ".gitignore")
+		dir_iter.next();
+		if (dir_iter.fileName() == "." || dir_iter.fileName() == ".." || dir_iter.fileName() == ".gitignore")
 		{
-			dir_iter.next();
 			continue;
 		}
 		std::string dirName = sstr(dir_iter.fileName());
 		LOG_TRACE(GENERAL, "Loading trophy dir: %s", dirName);
 		LoadTrophyFolderToDB(dirName);
-		dir_iter.next();
 	}
 
 	PopulateUI();
