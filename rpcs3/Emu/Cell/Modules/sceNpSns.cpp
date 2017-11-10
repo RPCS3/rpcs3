@@ -147,7 +147,7 @@ s32 sceNpSnsFbCheckThrottle()
 
 s32 sceNpSnsFbCheckConfig()
 {
-	sceNpSns.warning("sceNpSnsFbCheckConfig()");
+	sceNpSns.todo("sceNpSnsFbCheckConfig()");
 	return CELL_OK;
 }
 
