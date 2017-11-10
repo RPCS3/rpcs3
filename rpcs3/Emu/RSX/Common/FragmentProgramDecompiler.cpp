@@ -735,21 +735,12 @@ std::string FragmentProgramDecompiler::Decompile()
 			if (SIP()) break;
 			if (handle_tex_srb(opcode)) break;
 
-			if (forced_unit == FORCE_NONE)
-			{
-				if (handle_sct(opcode)) break;
-				if (handle_scb(opcode)) break;
-			}
-			else if (forced_unit == FORCE_SCT)
-			{
-				forced_unit = FORCE_NONE;
-				if (handle_sct(opcode)) break;
-			}
-			else if (forced_unit == FORCE_SCB)
-			{
-				forced_unit = FORCE_NONE;
-				if (handle_scb(opcode)) break;
-			}
+			//FENCT/FENCB do not actually reject instructions if they dont match the forced unit
+			//Tested with Dark Souls II where the repecting FENCX instruction will result in empty luminance averaging shaders
+			//TODO: More reasearch is needed to determine what real HW does
+			if (handle_sct(opcode)) break;
+			if (handle_scb(opcode)) break;
+			forced_unit = FORCE_NONE;
 
 			LOG_ERROR(RSX, "Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, prev_force_unit);
 			break;
