@@ -931,7 +931,7 @@ void VKGSRender::begin()
 {
 	rsx::thread::begin();
 
-	if (skip_frame)
+	if (skip_frame || renderer_unavailable)
 		return;
 
 	init_buffers();
@@ -1102,7 +1102,7 @@ void VKGSRender::close_render_pass()
 
 void VKGSRender::end()
 {
-	if (skip_frame || !framebuffer_status_valid)
+	if (skip_frame || !framebuffer_status_valid || renderer_unavailable)
 	{
 		rsx::thread::end();
 		return;
@@ -1572,7 +1572,7 @@ void VKGSRender::on_exit()
 
 void VKGSRender::clear_surface(u32 mask)
 {
-	if (skip_frame) return;
+	if (skip_frame || renderer_unavailable) return;
 
 	// Ignore invalid clear flags
 	if (!(mask & 0xF3)) return;
@@ -1979,9 +1979,12 @@ void VKGSRender::do_local_task()
 			case wm_event::geometry_change_in_progress:
 				timeout += 10; //extend timeout to wait for user to finish resizing
 				break;
+			case wm_event::window_restored:
+				if (renderer_unavailable)
+					renderer_unavailable = false;
+				//fall through
 			case wm_event::window_visibility_changed:
 			case wm_event::window_minimized:
-			case wm_event::window_restored:
 			case wm_event::window_moved:
 				handled = true; //ignore these events as they do not alter client area
 				break;
@@ -2021,7 +2024,11 @@ void VKGSRender::do_local_task()
 		m_client_width != frame_width)
 	{
 		if (!!frame_width && !!frame_height)
+		{
 			present_surface_dirty_flag = true;
+			if (renderer_unavailable)
+				renderer_unavailable = false;
+		}
 	}
 
 #endif
@@ -2619,7 +2626,8 @@ void VKGSRender::reinitialize_swapchain()
 	if (!m_swap_chain->init_swapchain(new_width, new_height))
 	{
 		LOG_WARNING(RSX, "Swapchain initialization failed. Request ignored [%dx%d]", new_width, new_height);
-		present_surface_dirty_flag = false;
+		present_surface_dirty_flag = true;
+		renderer_unavailable = true;
 		open_command_buffer();
 		return;
 	}
@@ -2660,11 +2668,12 @@ void VKGSRender::reinitialize_swapchain()
 	open_command_buffer();
 
 	present_surface_dirty_flag = false;
+	renderer_unavailable = false;
 }
 
 void VKGSRender::flip(int buffer)
 {
-	if (skip_frame)
+	if (skip_frame || renderer_unavailable)
 	{
 		m_frame->flip(m_context);
 		rsx::thread::flip(buffer);
@@ -2714,6 +2723,9 @@ void VKGSRender::flip(int buffer)
 		//Recreate swapchain and continue as usual
 		reinitialize_swapchain();
 	}
+
+	if (renderer_unavailable)
+		return;
 
 	u32 buffer_width = display_buffers[buffer].width;
 	u32 buffer_height = display_buffers[buffer].height;
@@ -2896,6 +2908,9 @@ void VKGSRender::flip(int buffer)
 
 bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 {
+	if (renderer_unavailable)
+		return false;
+
 	auto result = m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer);
 	m_current_command_buffer->begin();
 
