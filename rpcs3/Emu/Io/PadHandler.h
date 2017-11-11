@@ -338,7 +338,7 @@ protected:
 		}
 		return -1;
 	};
-	int FindKeyCode(std::unordered_map<u64, std::string> map, const std::string& name)
+	long FindKeyCode(std::unordered_map<u64, std::string> map, const std::string& name)
 	{
 		for (auto it = map.begin(); it != map.end(); ++it)
 		{

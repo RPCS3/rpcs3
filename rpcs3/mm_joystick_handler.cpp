@@ -2,7 +2,8 @@
 #ifdef _WIN32
 #include "mm_joystick_handler.h"
 
-namespace {
+namespace
+{
 	const DWORD THREAD_SLEEP = 10;
 	const DWORD THREAD_SLEEP_INACTIVE = 100;
 	const DWORD THREAD_TIMEOUT = 1000;
@@ -114,13 +115,16 @@ bool mm_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::s
 
 	auto find_key = [=](const std::string& name)
 	{
-		int key = FindKeyCode(button_list, name);
+		long key = FindKeyCode(button_list, name);
 		if (key < 0)
 			key = FindKeyCode(pov_list, name);
 		if (key < 0)
 			key = FindKeyCode(axis_list, name);
 		if (key < 0)
+		{
+			LOG_ERROR(HLE, "mmjoystick FindKey(%s) returned value %d", name, key);
 			key = -1;
+		}
 		return key;
 	};
 
