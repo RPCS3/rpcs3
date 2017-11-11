@@ -252,7 +252,7 @@ private:
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 	bool update_device(EvdevDevice& device, bool use_cell = true);
 	void update_devs(bool use_cell = true);
-	int add_device(const std::string& device, std::shared_ptr<Pad> pad = nullptr, const std::unordered_map<int, bool>& axis_map = std::unordered_map<int, bool>());
+	int add_device(const std::string& device, bool in_settings = false, std::shared_ptr<Pad> pad = nullptr, const std::unordered_map<int, bool>& axis_map = std::unordered_map<int, bool>());
 	int GetButtonInfo(const input_event& evt, libevdev* dev, int& button_code, bool& is_negative);
 	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(libevdev* dev);
 
@@ -260,4 +260,5 @@ private:
 	int FindAxisDirection(const std::unordered_map<int, bool>& map, int index);
 
 	std::vector<EvdevDevice> devices;
+	int m_pad_index = -1;
 };

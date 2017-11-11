@@ -213,13 +213,16 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(u16, std::string)>& callback)
 {
 	// Add device if not yet present
-	int index = add_device(padId);
-	if (index < 0) return;
+	m_pad_index = add_device(padId, true);
+
+	if (m_pad_index < 0) return;
+
+	EvdevDevice& device = devices[m_pad_index];
 
 	// Check if our device is connected
-	if (!update_device(devices[index], false)) return;
+	if (!update_device(device, false)) return;
 
-	auto& dev = devices[index].device;
+	auto& dev = device.device;
 
 	// Try to query the latest event from the joystick.
 	input_event evt;
@@ -476,8 +479,10 @@ std::vector<std::string> evdev_joystick_handler::ListDevices()
 	return evdev_joystick_list;
 }
 
-int evdev_joystick_handler::add_device(const std::string& device, std::shared_ptr<Pad> pad, const std::unordered_map<int, bool>& axis_map)
+int evdev_joystick_handler::add_device(const std::string& device, bool in_settings, std::shared_ptr<Pad> pad, const std::unordered_map<int, bool>& axis_map)
 {
+	if (in_settings && m_pad_index >= 0) return m_pad_index;
+
 	// Now we need to find the device with the same name, and make sure not to grab any duplicates.
 	fs::dir devdir{ "/dev/input/" };
 	fs::dir_entry et;
@@ -770,7 +775,7 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 	pad->m_vibrateMotors.emplace_back(true, 0);
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
-	if (!add_device(device, pad, axis_orientations))
+	if (!add_device(device, false, pad, axis_orientations))
 	{
 		//return;
 	}
