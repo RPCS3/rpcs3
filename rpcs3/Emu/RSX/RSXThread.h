@@ -135,6 +135,8 @@ namespace rsx
 		std::array<attribute_buffer_placement, 16> attribute_placement;
 	};
 
+	struct sampled_image_descriptor_base;
+
 	class thread : public named_thread
 	{
 		std::shared_ptr<thread_ctrl> m_vblank_thread;
@@ -188,6 +190,7 @@ namespace rsx
 		bool m_rtts_dirty;
 		bool m_transform_constants_dirty;
 		bool m_textures_dirty[16];
+		bool m_vertex_textures_dirty[4];
 
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
@@ -208,7 +211,9 @@ namespace rsx
 		 * get_surface_info is a helper takes 2 parameters: rsx_texture_address and surface_is_depth
 		 * returns whether surface is a render target and surface pitch in native format
 		 */
-		void get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info);
+		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
+		void get_current_fragment_program_legacy(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info);
+
 	public:
 		double fps_limit = 59.94;
 
@@ -258,7 +263,7 @@ namespace rsx
 		virtual u64 timestamp() const;
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
 		virtual void on_notify_memory_unmapped(u32 /*address_base*/, u32 /*size*/) {}
-		virtual void notify_tile_unbound(u32 tile) {}
+		virtual void notify_tile_unbound(u32 /*tile*/) {}
 
 		//zcull
 		virtual void notify_zcull_info_changed() {}

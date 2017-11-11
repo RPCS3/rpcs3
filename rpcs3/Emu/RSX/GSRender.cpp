@@ -4,16 +4,6 @@
 
 #include "GSRender.h"
 
-draw_context_t GSFrameBase::new_context()
-{
-	if (void* context = make_context())
-	{
-		return std::shared_ptr<void>(context, [this](void* ctxt) { delete_context(ctxt); });
-	}
-
-	return nullptr;
-}
-
 GSRender::GSRender()
 {
 	m_frame = Emu.GetCallbacks().get_gs_frame().release();
@@ -42,9 +32,20 @@ void GSRender::on_init_thread()
 {
 	if (m_frame)
 	{
-		m_context = m_frame->new_context();
+		m_context = m_frame->make_context();
 		m_frame->set_current(m_context);
 	}
+}
+
+void GSRender::on_exit()
+{
+	if (m_frame)
+	{
+		m_frame->delete_context(m_context);
+		m_context = nullptr;
+	}
+
+	rsx::thread::on_exit();
 }
 
 void GSRender::flip(int buffer)

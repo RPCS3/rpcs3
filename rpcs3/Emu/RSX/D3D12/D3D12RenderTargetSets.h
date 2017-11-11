@@ -142,6 +142,9 @@ struct render_target_traits
 		//TODO
 	}
 
+	static
+	void notify_surface_invalidated(const ComPtr<ID3D12Resource>&)
+	{}
 
 	static
 	bool rtt_has_format_width_height(const ComPtr<ID3D12Resource> &rtt, surface_color_format surface_color_format, size_t width, size_t height, bool=false)

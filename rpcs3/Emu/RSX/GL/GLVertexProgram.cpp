@@ -18,10 +18,9 @@ std::string GLVertexDecompilerThread::getIntTypeName(size_t elementCount)
 	return "ivec4";
 }
 
-
 std::string GLVertexDecompilerThread::getFunction(FUNCTION f)
 {
-	return gl::getFunctionImpl(f);
+	return glsl::getFunctionImpl(f);
 }
 
 std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)

@@ -1,6 +1,7 @@
 #pragma once
 #include "Utilities/types.h"
 #include "Utilities/BitField.h"
+#include "Utilities/StrFmt.h"
 #include <tuple>
 #include "gcm_enums.h"
 #pragma warning(disable:4503)
@@ -27,7 +28,7 @@ namespace
 		case rsx::vertex_base_type::cmp: return "CMP";
 		case rsx::vertex_base_type::ub256: return "Unsigned byte unormalized";
 		}
-		throw;
+		fmt::throw_exception("Unexpected enum found" HERE);
 	}
 }
 

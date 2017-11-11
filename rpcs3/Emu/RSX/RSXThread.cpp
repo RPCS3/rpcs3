@@ -7,6 +7,7 @@
 #include "Emu/Cell/PPUCallback.h"
 
 #include "Common/BufferUtils.h"
+#include "Common/texture_cache.h"
 #include "rsx_methods.h"
 #include "rsx_utils.h"
 
@@ -243,6 +244,7 @@ namespace rsx
 		};
 		m_rtts_dirty = true;
 		memset(m_textures_dirty, -1, sizeof(m_textures_dirty));
+		memset(m_vertex_textures_dirty, -1, sizeof(m_vertex_textures_dirty));
 		m_transform_constants_dirty = true;
 	}
 
@@ -1321,7 +1323,99 @@ namespace rsx
 		return result;
 	}
 
-	void thread::get_current_fragment_program(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info)
+	void thread::get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors)
+	{
+		auto &result = current_fragment_program = {};
+
+		const u32 shader_program = rsx::method_registers.shader_program_address();
+		if (shader_program == 0)
+			return;
+
+		const u32 program_location = (shader_program & 0x3) - 1;
+		const u32 program_offset = (shader_program & ~0x3);
+
+		result.offset = program_offset;
+		result.addr = vm::base(rsx::get_address(program_offset, program_location));
+		result.valid = true;
+		result.ctrl = rsx::method_registers.shader_control();
+		result.unnormalized_coords = 0;
+		result.front_back_color_enabled = !rsx::method_registers.two_side_light_en();
+		result.back_color_diffuse_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE);
+		result.back_color_specular_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR);
+		result.front_color_diffuse_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE);
+		result.front_color_specular_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR);
+		result.redirected_textures = 0;
+		result.shadow_textures = 0;
+
+		std::array<texture_dimension_extended, 16> texture_dimensions;
+		const auto resolution_scale = rsx::get_resolution_scale();
+
+		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
+		{
+			auto &tex = rsx::method_registers.fragment_textures[i];
+			result.texture_scale[i][0] = sampler_descriptors[i]->scale_x;
+			result.texture_scale[i][1] = sampler_descriptors[i]->scale_y;
+			result.textures_alpha_kill[i] = 0;
+			result.textures_zfunc[i] = 0;
+
+			if (!tex.enabled())
+			{
+				texture_dimensions[i] = texture_dimension_extended::texture_dimension_2d;
+			}
+			else
+			{
+				texture_dimensions[i] = sampler_descriptors[i]->image_type;
+
+				if (tex.alpha_kill_enabled())
+				{
+					//alphakill can be ignored unless a valid comparison function is set
+					const rsx::comparison_function func = (rsx::comparison_function)tex.zfunc();
+					if (func < rsx::comparison_function::always && func > rsx::comparison_function::never)
+					{
+						result.textures_alpha_kill[i] = 1;
+						result.textures_zfunc[i] = (u8)func;
+					}
+				}
+
+				const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
+				const u32 raw_format = tex.format();
+
+				if (raw_format & CELL_GCM_TEXTURE_UN)
+					result.unnormalized_coords |= (1 << i);
+
+				if (sampler_descriptors[i]->is_depth_texture)
+				{
+					const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+					switch (format)
+					{
+					case CELL_GCM_TEXTURE_A8R8G8B8:
+					case CELL_GCM_TEXTURE_D8R8G8B8:
+					case CELL_GCM_TEXTURE_A4R4G4B4:
+					case CELL_GCM_TEXTURE_R5G6B5:
+						result.redirected_textures |= (1 << i);
+						break;
+					case CELL_GCM_TEXTURE_DEPTH16:
+					case CELL_GCM_TEXTURE_DEPTH24_D8:
+					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+					{
+						const auto compare_mode = (rsx::comparison_function)tex.zfunc();
+						if (result.textures_alpha_kill[i] == 0 &&
+							compare_mode < rsx::comparison_function::always &&
+							compare_mode > rsx::comparison_function::never)
+							result.shadow_textures |= (1 << i);
+						break;
+					}
+					default:
+						LOG_ERROR(RSX, "Depth texture bound to pipeline with unexpected format 0x%X", format);
+					}
+				}
+			}
+		}
+
+		result.set_texture_dimension(texture_dimensions);
+	}
+
+	void thread::get_current_fragment_program_legacy(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info)
 	{
 		auto &result = current_fragment_program = {};
 
@@ -1412,8 +1506,8 @@ namespace rsx
 						case CELL_GCM_TEXTURE_D8R8G8B8:
 						case CELL_GCM_TEXTURE_A4R4G4B4:
 						case CELL_GCM_TEXTURE_R5G6B5:
-								result.redirected_textures |= (1 << i);
-								break;
+							result.redirected_textures |= (1 << i);
+							break;
 						case CELL_GCM_TEXTURE_DEPTH16:
 						case CELL_GCM_TEXTURE_DEPTH24_D8:
 						case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
@@ -1426,7 +1520,7 @@ namespace rsx
 							break;
 						}
 						default:
-								LOG_ERROR(RSX, "Depth texture bound to pipeline with unexpected format 0x%X", format);
+							LOG_ERROR(RSX, "Depth texture bound to pipeline with unexpected format 0x%X", format);
 						}
 					}
 				}
@@ -1459,7 +1553,7 @@ namespace rsx
 	{
 		for (GcmTileInfo &tile : tiles)
 		{
-			if (!tile.binded || tile.location != location)
+			if (!tile.binded || (tile.location & 1) != (location & 1))
 			{
 				continue;
 			}

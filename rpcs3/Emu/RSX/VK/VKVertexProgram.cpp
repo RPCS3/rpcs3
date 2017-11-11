@@ -15,10 +15,9 @@ std::string VKVertexDecompilerThread::getIntTypeName(size_t elementCount)
 	return "ivec4";
 }
 
-
 std::string VKVertexDecompilerThread::getFunction(FUNCTION f)
 {
-	return vk::getFunctionImpl(f);
+	return glsl::getFunctionImpl(f);
 }
 
 std::string VKVertexDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
@@ -339,7 +338,7 @@ void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 void VKVertexProgram::Compile()
 {
 	fs::create_path(fs::get_config_dir() + "/shaderlog");
-	fs::file(fs::get_config_dir() + "shaderlog/VertexProgram.spirv", fs::rewrite).write(shader);
+	fs::file(fs::get_config_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader);
 
 	std::vector<u32> spir_v;
 	if (!vk::compile_glsl_to_spv(shader, glsl::glsl_vertex_program, spir_v))
@@ -354,8 +353,6 @@ void VKVertexProgram::Compile()
 
 	VkDevice dev = (VkDevice)*vk::get_current_renderer();
 	vkCreateShaderModule(dev, &vs_info, nullptr, &handle);
-
-	id = UINT32_MAX;
 }
 
 void VKVertexProgram::Delete()
