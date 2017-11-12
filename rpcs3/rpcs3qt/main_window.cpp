@@ -1243,7 +1243,7 @@ void main_window::CreateConnects()
 
 	connect(ui->confSavedataManagerAct, &QAction::triggered, [=]
 	{
-		save_manager_dialog* sdid = new save_manager_dialog();
+		save_manager_dialog* sdid = new save_manager_dialog(guiSettings);
 		sdid->show();
 	});
 
