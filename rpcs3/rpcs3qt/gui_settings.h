@@ -107,6 +107,7 @@ namespace GUI
 	const QString meta        = "Meta";
 	const QString fs          = "FileSystem";
 	const QString gs_frame    = "GSFrame";
+	const QString trophy      = "Trophy";
 
 	const QColor gl_icon_color       = QColor(209, 209, 209, 255);
 	const QColor gl_tool_icon_color  = QColor(  0, 100, 231, 255);
@@ -179,6 +180,16 @@ namespace GUI
 	const GUI_SAVE gs_resize       = GUI_SAVE( gs_frame, "resize",       false);
 	const GUI_SAVE gs_width        = GUI_SAVE( gs_frame, "width",        1280);
 	const GUI_SAVE gs_height       = GUI_SAVE( gs_frame, "height",       720);
+
+	const GUI_SAVE tr_icon_height   = GUI_SAVE( trophy, "icon_height",   75);
+	const GUI_SAVE tr_show_locked   = GUI_SAVE( trophy, "show_locked",   true);
+	const GUI_SAVE tr_show_unlocked = GUI_SAVE( trophy, "show_unlocked", true);
+	const GUI_SAVE tr_show_hidden   = GUI_SAVE( trophy, "show_hidden",   false);
+	const GUI_SAVE tr_show_bronze   = GUI_SAVE( trophy, "show_bronze",   true);
+	const GUI_SAVE tr_show_silver   = GUI_SAVE( trophy, "show_silver",   true);
+	const GUI_SAVE tr_show_gold     = GUI_SAVE( trophy, "show_gold",     true);
+	const GUI_SAVE tr_show_platinum = GUI_SAVE( trophy, "show_platinum", true);
+	const GUI_SAVE tr_geometry      = GUI_SAVE( trophy, "geometry",      QByteArray());
 }
 
 /** Class for GUI settings..

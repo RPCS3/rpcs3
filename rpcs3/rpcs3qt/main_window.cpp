@@ -1249,7 +1249,7 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Trophy_Data, &QAction::triggered, [=]
 	{
-		trophy_manager_dialog* trop_manager = new trophy_manager_dialog();
+		trophy_manager_dialog* trop_manager = new trophy_manager_dialog(guiSettings);
 		trop_manager->show();
 	});
 
