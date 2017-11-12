@@ -3,7 +3,7 @@
 #---------------------------------#
 
 # version format
-version: '0.0.3-{build}'
+version: '0.0.4-{build}'
 
 #---------------------------------#
 #    environment configuration    #
@@ -79,4 +79,4 @@ test: off
 # pushing entire folder as a zip archive
 artifacts:
  - path: bin
-   name: 'rpcs3-v0.0.3-$(COMMIT_DATE)-$(COMMIT_SHA)_win64'
+   name: 'rpcs3-v0.0.4-$(COMMIT_DATE)-$(COMMIT_SHA)_win64'
