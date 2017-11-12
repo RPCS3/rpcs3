@@ -5,6 +5,7 @@
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
+#include "gui_settings.h"
 
 #include <QTableWidget>
 #include <QDialog>
@@ -15,6 +16,12 @@
 class save_data_list_dialog : public QDialog
 {
 	Q_OBJECT
+
+	enum Selection_Code
+	{
+		SELECTION_NEW_SAVE = -1,
+		SELECTION_CANCELED = -2
+	};
 
 public:
 	explicit save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, bool is_saving, QWidget* parent = nullptr);
@@ -32,6 +39,8 @@ private:
 
 	QTableWidget* m_list;
 	std::vector<SaveDataEntry> m_save_entries;
+
+	std::shared_ptr<gui_settings> m_gui_settings;
 
 	int m_sort_column;
 	bool m_sort_ascending;

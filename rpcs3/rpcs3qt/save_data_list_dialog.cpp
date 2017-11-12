@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "save_data_list_dialog.h"
 #include "save_data_info_dialog.h"
-#include "gui_settings.h"
 
 #include <QPushButton>
 #include <QHBoxLayout>
@@ -15,12 +14,14 @@ constexpr auto qstr = QString::fromStdString;
 //Show up the savedata list, either to choose one to save/load or to manage saves.
 //I suggest to use function callbacks to give save data list or get save data entry. (Not implemented or stubbed)
 save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, bool is_saving, QWidget* parent)
-	: QDialog(parent), m_save_entries(entries), m_entry(-1), m_entry_label(nullptr)
+	: QDialog(parent), m_save_entries(entries), m_entry(SELECTION_NEW_SAVE), m_entry_label(nullptr)
 {
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setWindowTitle(tr("Save Data Interface"));
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 	setMinimumSize(QSize(400, 400));
+
+	m_gui_settings.reset(new gui_settings());
 
 	// Table
 	m_list = new QTableWidget(this);
@@ -52,7 +53,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 		QPushButton *saveNewEntry = new QPushButton(tr("Save New Entry"), this);
 		connect(saveNewEntry, &QAbstractButton::clicked, this, [&]()
 		{
-			m_entry = -1; // Set the return properly.
+			m_entry = SELECTION_NEW_SAVE;
 			accept();
 		});
 		hbox_action->addWidget(saveNewEntry);
@@ -94,10 +95,9 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 		int originalIndex = m_list->item(row, 0)->data(Qt::UserRole).toInt();
 		SaveDataEntry originalEntry = m_save_entries[originalIndex];
 		QString originalDirName = qstr(originalEntry.dirName);
-		gui_settings settings(this);
-		QVariantMap currNotes = settings.GetValue(GUI::m_saveNotes).toMap();
+		QVariantMap currNotes = m_gui_settings->GetValue(GUI::m_saveNotes).toMap();
 		currNotes[originalDirName] = m_list->item(row, col)->text();
-		settings.SetValue(GUI::m_saveNotes, currNotes);
+		m_gui_settings->SetValue(GUI::m_saveNotes, currNotes);
 	});
 
 	m_list->setCurrentCell(focusedEntry, 0);
@@ -124,15 +124,15 @@ s32 save_data_list_dialog::GetSelection()
 	int res = result();
 	if (res == QDialog::Accepted)
 	{
-		if (m_entry == -1)
+		if (m_entry == SELECTION_NEW_SAVE)
 		{ // Save new entry
-			return -1;
+			return SELECTION_NEW_SAVE;
 		}
 		return m_list->item(m_entry, 0)->data(Qt::UserRole).toInt();
 	}
 
 	// Cancel is pressed. May promote to enum or figure out proper cellsavedata code to use later.
-	return -2;
+	return SELECTION_CANCELED;
 }
 
 void save_data_list_dialog::OnSort(int logicalIndex)
@@ -169,7 +169,8 @@ void save_data_list_dialog::UpdateList()
 {
 	m_list->clearContents();
 	m_list->setRowCount((int)m_save_entries.size());
-	gui_settings settings(this);
+
+	QVariantMap currNotes = m_gui_settings->GetValue(GUI::m_saveNotes).toMap();
 
 	int row = 0;
 	for (SaveDataEntry entry: m_save_entries)
@@ -191,7 +192,6 @@ void save_data_list_dialog::UpdateList()
 		dirNameItem->setFlags(dirNameItem->flags() & ~Qt::ItemIsEditable);
 		m_list->setItem(row, 2, dirNameItem);
 
-		QVariantMap currNotes = settings.GetValue(GUI::m_saveNotes).toMap();
 		QTableWidgetItem* noteItem = new QTableWidgetItem();
 		noteItem->setFlags(noteItem->flags() | Qt::ItemIsEditable);
 		if (currNotes.contains(dirName))
@@ -201,11 +201,12 @@ void save_data_list_dialog::UpdateList()
 		else
 		{
 			currNotes[dirName] = "";
-			settings.SetValue(GUI::m_saveNotes, currNotes);
 		}
 		m_list->setItem(row, 3, noteItem);
 		++row;
 	}
+
+	m_gui_settings->SetValue(GUI::m_saveNotes, currNotes);
 
 	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
 	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
