@@ -147,7 +147,8 @@ s32 sceNpSnsFbCheckThrottle()
 
 s32 sceNpSnsFbCheckConfig()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sceNpSns.todo("sceNpSnsFbCheckConfig()");
+	return CELL_OK;
 }
 
 s32 sceNpSnsFbLoadThrottle()
