@@ -33,13 +33,13 @@ evdev_joystick_handler::evdev_joystick_handler()
 
 	// Set default button mapping
 	m_pad_config.ls_left.def  = rev_axis_list.at(ABS_X);
-	m_pad_config.ls_down.def  = rev_axis_list.at(ABS_Y);
+	m_pad_config.ls_down.def  = axis_list.at(ABS_Y);
 	m_pad_config.ls_right.def = axis_list.at(ABS_X);
-	m_pad_config.ls_up.def    = axis_list.at(ABS_Y);
+	m_pad_config.ls_up.def    = rev_axis_list.at(ABS_Y);
 	m_pad_config.rs_left.def  = rev_axis_list.at(ABS_RX);
-	m_pad_config.rs_down.def  = rev_axis_list.at(ABS_RY);
+	m_pad_config.rs_down.def  = axis_list.at(ABS_RY);
 	m_pad_config.rs_right.def = axis_list.at(ABS_RX);
-	m_pad_config.rs_up.def    = axis_list.at(ABS_RY);
+	m_pad_config.rs_up.def    = rev_axis_list.at(ABS_RY);
 	m_pad_config.start.def    = button_list.at(BTN_START);
 	m_pad_config.select.def   = button_list.at(BTN_SELECT);
 	m_pad_config.ps.def       = button_list.at(BTN_MODE);
@@ -530,7 +530,6 @@ void evdev_joystick_handler::ThreadProc()
 		for (int idx = 0; idx < static_cast<int>(pad->m_sticks.size()); idx++)
 		{
 			bool pressed_min = false, pressed_max = false;
-			u16 val_min = 0, val_max = 0;
 
 			// m_keyCodeMin is the mapped key for left or down
 			if (pad->m_sticks[idx].m_keyCodeMin == button_code)
@@ -539,7 +538,7 @@ void evdev_joystick_handler::ThreadProc()
 
 				if (!is_button_or_trigger && evt.type == EV_ABS)
 				{
-					int index = BUTTON_COUNT + (idx * 2);
+					int index = BUTTON_COUNT + (idx * 2) + 1;
 					int min_direction = FindAxisDirection(axis_orientations, index);
 					if (min_direction < 0)
 					{
@@ -553,11 +552,11 @@ void evdev_joystick_handler::ThreadProc()
 
 				if (is_button_or_trigger || is_direction_min)
 				{
-					val_min = value;
-					TranslateButtonPress(button_code, pressed_min, val_min, true);
+					device.val_min[idx] = value;
+					TranslateButtonPress(button_code, pressed_min, device.val_min[idx], true);
 				}
 				else // set to 0 to avoid remnant counter axis values
-					val_min = 0;
+					device.val_min[idx] = 0;
 			}
 
 			// m_keyCodeMax is the mapped key for right or up
@@ -567,7 +566,7 @@ void evdev_joystick_handler::ThreadProc()
 
 				if (!is_button_or_trigger && evt.type == EV_ABS)
 				{
-					int index = BUTTON_COUNT + (idx * 2) + 1;
+					int index = BUTTON_COUNT + (idx * 2);
 					int max_direction = FindAxisDirection(axis_orientations, index);
 					if (max_direction < 0)
 					{
@@ -581,17 +580,15 @@ void evdev_joystick_handler::ThreadProc()
 
 				if (is_button_or_trigger || is_direction_max)
 				{
-					val_max = value;
-					TranslateButtonPress(button_code, pressed_max, val_max, true);
+					device.val_max[idx] = value;
+					TranslateButtonPress(button_code, pressed_max, device.val_max[idx], true);
 				}
 				else // set to 0 to avoid remnant counter axis values
-					val_max = 0;
+					device.val_max[idx] = 0;
 			}
 
-			// cancel out opposing values and get the resulting difference
-			// if there was no change, use the old value. Also handle key = 0
-			if (pressed_min || pressed_max || evt.type == EV_KEY)
-				device.stick_val[idx] = val_max - val_min;
+			// cancel out opposing values and get the resulting difference. if there was no change, use the old value.
+			device.stick_val[idx] = device.val_max[idx] - device.val_min[idx];
 		}
 
 		// Normalize our two stick's axis based on the thresholds
@@ -601,9 +598,6 @@ void evdev_joystick_handler::ThreadProc()
 		std::tie(lx, ly) = NormalizeStickDeadzone(device.stick_val[0], device.stick_val[1], m_pad_config.lstickdeadzone);
 		std::tie(rx, ry) = NormalizeStickDeadzone(device.stick_val[2], device.stick_val[3], m_pad_config.rstickdeadzone);
 
-		ly = 255 - ly;
-		ry = 255 - ry;
-
 		// these are added with previous value and divided to 'smooth' out the readings
 
 		if (m_pad_config.padsquircling != 0)
@@ -612,10 +606,10 @@ void evdev_joystick_handler::ThreadProc()
 			std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, m_pad_config.padsquircling);
 		}
 
-		pad->m_sticks[0].m_value = (lx + pad->m_sticks[0].m_value) / 2; // LX
-		pad->m_sticks[1].m_value = (ly + pad->m_sticks[1].m_value) / 2; // LY
-		pad->m_sticks[2].m_value = (rx + pad->m_sticks[2].m_value) / 2; // RX
-		pad->m_sticks[3].m_value = (ry + pad->m_sticks[3].m_value) / 2; // RY
+		pad->m_sticks[0].m_value = lx;
+		pad->m_sticks[1].m_value = 255 - ly;
+		pad->m_sticks[2].m_value = rx;
+		pad->m_sticks[3].m_value = 255 - ry;
 	}
 }
 

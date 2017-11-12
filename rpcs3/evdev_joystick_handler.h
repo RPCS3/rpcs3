@@ -232,6 +232,8 @@ class evdev_joystick_handler final : public PadHandlerBase
 		std::shared_ptr<Pad> pad;
 		std::unordered_map<int, bool> axis_orientations; // value is true if key was found in rev_axis_list
 		float stick_val[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		u16 val_min[4] = { 0, 0, 0, 0 };
+		u16 val_max[4] = { 0, 0, 0, 0 };
 	};
 
 	const int BUTTON_COUNT = 17;
