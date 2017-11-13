@@ -245,6 +245,11 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 	std::pair<u16, std::string> pressed_button = { 0, "" };
 	for (const auto& button : button_list)
 	{
+		if (padId.find("Xbox 360") != std::string::npos && button.first >= BTN_TRIGGER_HAPPY)
+			continue;
+		if (padId.find("Sony") != std::string::npos && (button.first == BTN_TL2 || button.first == BTN_TR2))
+			continue;
+
 		u16 value = button_values[button.first].first;
 		if (value > 0 && value > pressed_button.first)
 			pressed_button = { value, button.second };
@@ -546,7 +551,7 @@ void evdev_joystick_handler::ThreadProc()
 					}
 					else
 					{
-						is_direction_min = is_negative == (min_direction == 1 ? true : false);
+						is_direction_min = is_negative == (min_direction == 1);
 					}
 				}
 
@@ -574,7 +579,7 @@ void evdev_joystick_handler::ThreadProc()
 					}
 					else
 					{
-						is_direction_max = is_negative == (max_direction == 1 ? true : false);
+						is_direction_max = is_negative == (max_direction == 1);
 					}
 				}
 
