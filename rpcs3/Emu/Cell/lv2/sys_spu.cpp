@@ -296,7 +296,7 @@ error_code sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::p
 
 	// TODO: max num value should be affected by sys_spu_initialize() settings
 
-	if (!num || num > 6 || prio < 16 || prio > 255)
+	if (!num || num > 6 || ((prio < 16 || prio > 255) && attr->type != SYS_SPU_THREAD_GROUP_TYPE_NON_CONTEXT))
 	{
 		return CELL_EINVAL;
 	}
