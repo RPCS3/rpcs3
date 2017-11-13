@@ -147,15 +147,23 @@ namespace rsx
 			surface_color_format color_format, size_t width, size_t height,
 			Args&&... extra_params)
 		{
-			auto It = m_render_targets_storage.find(address);
 			// TODO: Fix corner cases
 			// This doesn't take overlapping surface(s) into account.
-
 			surface_storage_type old_surface_storage;
 			surface_storage_type new_surface_storage;
 			surface_type old_surface = nullptr;
 			surface_type new_surface = nullptr;
 
+			// Remove any depth surfaces occupying this memory address (TODO: Discard all overlapping range)
+			auto aliased_depth_surface = m_depth_stencil_storage.find(address);
+			if (aliased_depth_surface != m_depth_stencil_storage.end())
+			{
+				Traits::notify_surface_invalidated(aliased_depth_surface->second);
+				invalidated_resources.push_back(std::move(aliased_depth_surface->second));
+				m_depth_stencil_storage.erase(aliased_depth_surface);
+			}
+
+			auto It = m_render_targets_storage.find(address);
 			if (It != m_render_targets_storage.end())
 			{
 				surface_storage_type &rtt = It->second;
@@ -224,6 +232,15 @@ namespace rsx
 			surface_storage_type new_surface_storage;
 			surface_type old_surface = nullptr;
 			surface_type new_surface = nullptr;
+
+			// Remove any color surfaces occupying this memory range (TODO: Discard all overlapping surfaces)
+			auto aliased_rtt_surface = m_render_targets_storage.find(address);
+			if (aliased_rtt_surface != m_render_targets_storage.end())
+			{
+				Traits::notify_surface_invalidated(aliased_rtt_surface->second);
+				invalidated_resources.push_back(std::move(aliased_rtt_surface->second));
+				m_render_targets_storage.erase(aliased_rtt_surface);
+			}
 
 			auto It = m_depth_stencil_storage.find(address);
 			if (It != m_depth_stencil_storage.end())
