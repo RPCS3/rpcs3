@@ -98,6 +98,12 @@ private:
 	u32 m_button_id = id_pad_begin;
 	std::map<int /*id*/, PAD_BUTTON /*info*/> m_cfg_entries;
 
+	// Real time stick values
+	int lx = 0;
+	int ly = 0;
+	int rx = 0;
+	int ry = 0;
+
 	// Backup for standard button palette
 	QPalette m_palette;
 
@@ -117,6 +123,9 @@ private:
 
 	/** Resets the view to default. Resets the Remap Timer */
 	void ReactivateButtons();
+
+	/** Repaints a stick deadzone preview label */
+	void RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y);
 
 public:
 	explicit pad_settings_dialog(const std::string& device, std::shared_ptr<PadHandlerBase> handler, QWidget *parent = nullptr);

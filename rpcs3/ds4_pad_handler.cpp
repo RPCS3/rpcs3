@@ -142,19 +142,17 @@ ds4_pad_handler::ds4_pad_handler() : is_init(false)
 	b_has_config = true;
 	b_has_rumble = true;
 	b_has_deadzones = true;
+
+	m_trigger_threshold = TRIGGER_MAX / 2;
+	m_thumb_threshold = THUMB_MAX / 2;
 }
 
-void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(u16, std::string)>& callback)
+void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback)
 {
 	if (!Init())
 	{
 		return;
 	}
-
-	int ltriggerthreshold = deadzones[0];
-	int rtriggerthreshold = deadzones[1];
-	int lstickdeadzone = deadzones[2];
-	int rstickdeadzone = deadzones[3];
 
 	// Get the DS4 Device or return if none found
 	size_t pos = padId.find("Ds4 Pad #");
@@ -202,10 +200,10 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::ve
 		u16 value = data[keycode];
 
 		if (((keycode < DS4KeyCodes::L2) && (value > 0))
-		 || ((keycode == DS4KeyCodes::L2) && (value > ltriggerthreshold))
-		 || ((keycode == DS4KeyCodes::R2) && (value > rtriggerthreshold))
-		 || ((keycode >= DS4KeyCodes::LSXNeg && keycode <= DS4KeyCodes::LSYPos) && (value > lstickdeadzone))
-		 || ((keycode >= DS4KeyCodes::RSXNeg && keycode <= DS4KeyCodes::RSYPos) && (value > rstickdeadzone)))
+		 || ((keycode == DS4KeyCodes::L2) && (value > m_trigger_threshold))
+		 || ((keycode == DS4KeyCodes::R2) && (value > m_trigger_threshold))
+		 || ((keycode >= DS4KeyCodes::LSXNeg && keycode <= DS4KeyCodes::LSYPos) && (value > m_thumb_threshold))
+		 || ((keycode >= DS4KeyCodes::RSXNeg && keycode <= DS4KeyCodes::RSYPos) && (value > m_thumb_threshold)))
 		{
 			if (value > pressed_button.first)
 			{
@@ -213,10 +211,13 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::ve
 			}
 		}
 	}
+
+	int preview_values[6] = { data[L2], data[R2], data[LSXPos] - data[LSXNeg], data[LSYPos] - data[LSYNeg], data[RSXPos] - data[RSXNeg], data[RSYPos] - data[RSYNeg] };
+
 	if (pressed_button.first > 0)
-	{
-		return callback(pressed_button.first, pressed_button.second);
-	}
+		return callback(pressed_button.first, pressed_button.second, preview_values);
+	else
+		return callback(0, "", preview_values);
 }
 
 void ds4_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)

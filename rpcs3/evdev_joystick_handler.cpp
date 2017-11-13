@@ -72,6 +72,9 @@ evdev_joystick_handler::evdev_joystick_handler()
 	b_has_config = true;
 	b_has_rumble = false;
 	b_has_deadzones = true;
+
+	m_trigger_threshold = TRIGGER_MAX / 2;
+	m_thumb_threshold = THUMB_MAX / 2;
 }
 
 evdev_joystick_handler::~evdev_joystick_handler()
@@ -210,7 +213,7 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 	return button_values;
 }
 
-void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(u16, std::string)>& callback)
+void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback)
 {
 	// Add device if not yet present
 	m_pad_index = add_device(padId, true);
@@ -235,12 +238,7 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 	}
 	if (ret < 0) return;
 
-	auto button_values = GetButtonValues(dev);
-
-	int ltriggerthreshold = deadzones[0];
-	int rtriggerthreshold = deadzones[1];
-	int lstickdeadzone = deadzones[2];
-	int rstickdeadzone = deadzones[3];
+	auto data = GetButtonValues(dev);
 
 	std::pair<u16, std::string> pressed_button = { 0, "" };
 	for (const auto& button : button_list)
@@ -250,7 +248,7 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 		if (padId.find("Sony") != std::string::npos && (button.first == BTN_TL2 || button.first == BTN_TR2))
 			continue;
 
-		u16 value = button_values[button.first].first;
+		u16 value = data[button.first].first;
 		if (value > 0 && value > pressed_button.first)
 			pressed_button = { value, button.second };
 	}
@@ -258,15 +256,15 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 	for (const auto& button : axis_list)
 	{
 		int code = button.first;
-		if (button_values[code].second)
+		if (data[code].second)
 			continue;
 
-		u16 value = button_values[code].first;
+		u16 value = data[code].first;
 
-		if (((code == ABS_X || code == ABS_Y) && value < lstickdeadzone)
-		 || ((code == ABS_RX || code == ABS_RY) && value < rstickdeadzone)
-		 || (code == ABS_Z && value < ltriggerthreshold)
-		 || (code == ABS_RZ && value < rtriggerthreshold))
+		if (((code == ABS_X || code == ABS_Y) && value < m_thumb_threshold)
+		 || ((code == ABS_RX || code == ABS_RY) && value < m_thumb_threshold)
+		 || (code == ABS_Z && value < m_trigger_threshold)
+		 || (code == ABS_RZ && value < m_trigger_threshold))
 			continue;
 
 		if (value > 0 && value > pressed_button.first)
@@ -276,25 +274,42 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 	for (const auto& button : rev_axis_list)
 	{
 		int code = button.first;
-		if (!button_values[code].second)
+		if (!data[code].second)
 			continue;
 
-		u16 value = button_values[code].first;
+		u16 value = data[code].first;
 
-		if (((code == ABS_X || code == ABS_Y) && value < lstickdeadzone)
-		 || ((code == ABS_RX || code == ABS_RY) && value < rstickdeadzone)
-		 || (code == ABS_Z && value < ltriggerthreshold)
-		 || (code == ABS_RZ && value < rtriggerthreshold))
+		if (((code == ABS_X || code == ABS_Y) && value < m_thumb_threshold)
+		 || ((code == ABS_RX || code == ABS_RY) && value < m_thumb_threshold)
+		 || (code == ABS_Z && value < m_trigger_threshold)
+		 || (code == ABS_RZ && value < m_trigger_threshold))
 			continue;
 
 		if (value > 0 && value > pressed_button.first)
 			pressed_button = { value, button.second };
 	}
 
+	// get stick values
+	int lxp = 0, lxn = 0, lyp = 0, lyn = 0, rxp = 0, rxn = 0, ryp = 0, ryn = 0;
+
+	if (libevdev_has_event_code(dev, EV_ABS, ABS_X))
+		data[ABS_X].second ? lxn = data[ABS_X].first : lxp = data[ABS_X].first;
+
+	if (libevdev_has_event_code(dev, EV_ABS, ABS_Y))
+		data[ABS_Y].second ? lyp = data[ABS_Y].first : lyn = data[ABS_Y].first;
+
+	if (libevdev_has_event_code(dev, EV_ABS, ABS_RX))
+		data[ABS_RX].second ? rxn = data[ABS_RX].first : rxp = data[ABS_RX].first;
+
+	if (libevdev_has_event_code(dev, EV_ABS, ABS_RY))
+		data[ABS_RY].second ? ryp = data[ABS_RY].first : ryn = data[ABS_RY].first;
+
+	int preview_values[6] = { data[ABS_Z].first, data[ABS_RZ].first, lxp - lxn, lyp - lyn, rxp - rxn, ryp - ryn };
+
 	if (pressed_button.first > 0)
-	{
-		return callback(pressed_button.first, pressed_button.second);
-	}
+		return callback(pressed_button.first, pressed_button.second, preview_values);
+	else
+		return callback(0, "", preview_values);
 }
 
 void evdev_joystick_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)

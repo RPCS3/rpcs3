@@ -5,6 +5,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QAction>
+#include <QPainter>
 
 #include "pad_settings_dialog.h"
 #include "ui_pad_settings_dialog.h"
@@ -62,8 +63,27 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 	if (m_handler->has_config())
 	{
 		// Use timer to get button input
-		const auto& callback = [=](u16 val, std::string name)
+		const auto& callback = [=](u16 val, std::string name, int preview_values[6])
 		{
+			if (m_handler->has_deadzones())
+			{
+				ui->preview_trigger_left->setValue(preview_values[0]);
+				ui->preview_trigger_right->setValue(preview_values[1]);
+
+				if (lx != preview_values[2] || ly != preview_values[3])
+				{
+					lx = preview_values[2], ly = preview_values[3];
+					RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->sizeHint().width(), lx, ly);
+				}
+				if (rx != preview_values[4] || ry != preview_values[5])
+				{
+					rx = preview_values[4], ry = preview_values[5];
+					RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->sizeHint().width(), rx, ry);
+				}
+			}
+
+			if (val <= 0) return;
+
 			LOG_NOTICE(HLE, "GetNextButtonPress: %s button %s pressed with value %d", m_handler_cfg->cfg_type, name, val);
 			if (m_button_id > id_pad_begin && m_button_id < id_pad_end)
 			{
@@ -75,14 +95,7 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 
 		connect(&m_timer_input, &QTimer::timeout, [=]()
 		{
-			std::vector<int> deadzones =
-			{
-				ui->slider_trigger_left->value(),
-				ui->slider_trigger_right->value(),
-				ui->slider_stick_left->value(),
-				ui->slider_stick_right->value()
-			};
-			m_handler->GetNextButtonPress(m_device_name, deadzones, callback);
+			m_handler->GetNextButtonPress(m_device_name, callback);
 		});
 
 		m_timer_input.start(1);
@@ -155,10 +168,24 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 		// Enable Trigger Thresholds
 		initSlider(ui->slider_trigger_left, m_handler_cfg->ltriggerthreshold, 0, m_handler->TRIGGER_MAX);
 		initSlider(ui->slider_trigger_right, m_handler_cfg->rtriggerthreshold, 0, m_handler->TRIGGER_MAX);
+		ui->preview_trigger_left->setRange(0, m_handler->TRIGGER_MAX);
+		ui->preview_trigger_right->setRange(0, m_handler->TRIGGER_MAX);
 
 		// Enable Stick Deadzones
 		initSlider(ui->slider_stick_left, m_handler_cfg->lstickdeadzone, 0, m_handler->THUMB_MAX);
 		initSlider(ui->slider_stick_right, m_handler_cfg->rstickdeadzone, 0, m_handler->THUMB_MAX);
+
+		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->sizeHint().width(), lx, ly);
+		connect(ui->slider_stick_left, &QSlider::valueChanged, [&](int value)
+		{
+			RepaintPreviewLabel(ui->preview_stick_left, value, ui->slider_stick_left->sizeHint().width(), lx, ly);
+		});
+
+		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->sizeHint().width(), rx, ry);
+		connect(ui->slider_stick_right, &QSlider::valueChanged, [&](int value)
+		{
+			RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->sizeHint().width(), rx, ry);
+		});
 	}
 
 	auto insertButton = [this](int id, QPushButton* button, cfg::string* cfg_name)
@@ -251,6 +278,35 @@ void pad_settings_dialog::ReactivateButtons()
 	m_button_id = id_pad_begin;
 	UpdateLabel();
 	SwitchButtons(true);
+}
+
+void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y)
+{
+	int max = m_handler->THUMB_MAX;
+	int origin = w * 0.1;
+	int width = w * 0.8;
+	int dz_width = width * dz / max;
+	int dz_origin = (w - dz_width) / 2;
+
+	x = (w + (x * width / max)) / 2;
+	y = (w + (y * -1 * width / max)) / 2;
+
+	QPixmap pm(w, w);
+	pm.fill(Qt::transparent);
+	QPainter p(&pm);
+	p.setRenderHint(QPainter::Antialiasing, true);
+	QPen pen(Qt::black, 2);
+	p.setPen(pen);
+	QBrush brush(Qt::white);
+	p.setBrush(brush);
+	p.drawEllipse(origin, origin, width, width);
+	pen = QPen(Qt::red, 2);
+	p.setPen(pen);
+	p.drawEllipse(dz_origin, dz_origin, dz_width, dz_width);
+	pen = QPen(Qt::blue, 2);
+	p.setPen(pen);
+	p.drawEllipse(x, y, 1, 1);
+	l->setPixmap(pm);
 }
 
 void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)

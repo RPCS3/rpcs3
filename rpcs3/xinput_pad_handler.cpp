@@ -60,6 +60,9 @@ xinput_pad_handler::xinput_pad_handler() :
 	b_has_config = true;
 	b_has_rumble = true;
 	b_has_deadzones = true;
+
+	m_trigger_threshold = TRIGGER_MAX / 2;
+	m_thumb_threshold = THUMB_MAX / 2;
 }
 
 xinput_pad_handler::~xinput_pad_handler()
@@ -67,17 +70,12 @@ xinput_pad_handler::~xinput_pad_handler()
 	Close();
 }
 
-void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(u16, std::string)>& callback)
+void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback)
 {
 	if (!Init())
 	{
 		return;
 	}
-
-	int ltriggerthreshold = deadzones[0];
-	int rtriggerthreshold = deadzones[1];
-	int lstickdeadzone = deadzones[2];
-	int rstickdeadzone = deadzones[3];
 
 	size_t pos = padId.find("Xinput Pad #");
 	int device_number;
@@ -115,10 +113,10 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 		u16 value = data[keycode];
 
 		if (((keycode < XInputKeyCodes::LT) && (value > 0))
-		 || ((keycode == XInputKeyCodes::LT) && (value > ltriggerthreshold))
-		 || ((keycode == XInputKeyCodes::RT) && (value > rtriggerthreshold))
-		 || ((keycode >= XInputKeyCodes::LSXNeg && keycode <= XInputKeyCodes::LSYPos) && (value > lstickdeadzone))
-		 || ((keycode >= XInputKeyCodes::RSXNeg && keycode <= XInputKeyCodes::RSYPos) && (value > rstickdeadzone)))
+		 || ((keycode == XInputKeyCodes::LT) && (value > m_trigger_threshold))
+		 || ((keycode == XInputKeyCodes::RT) && (value > m_trigger_threshold))
+		 || ((keycode >= XInputKeyCodes::LSXNeg && keycode <= XInputKeyCodes::LSYPos) && (value > m_thumb_threshold))
+		 || ((keycode >= XInputKeyCodes::RSXNeg && keycode <= XInputKeyCodes::RSYPos) && (value > m_thumb_threshold)))
 		{
 			if (value > pressed_button.first)
 			{
@@ -126,10 +124,13 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 			}
 		}
 	}
+
+	int preview_values[6] = { data[LT], data[RT], data[LSXPos] - data[LSXNeg], data[LSYPos] - data[LSYNeg], data[RSXPos] - data[RSXNeg], data[RSYPos] - data[RSYNeg] };
+
 	if (pressed_button.first > 0)
-	{
-		return callback(pressed_button.first, pressed_button.second);
-	}
+		return callback(pressed_button.first, pressed_button.second, preview_values);
+	else
+		return callback(0, "", preview_values);
 }
 
 void xinput_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)

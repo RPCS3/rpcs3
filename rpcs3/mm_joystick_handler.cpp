@@ -61,6 +61,9 @@ mm_joystick_handler::mm_joystick_handler() : is_init(false)
 	b_has_config = true;
 	b_has_rumble = true;
 	b_has_deadzones = true;
+
+	m_trigger_threshold = TRIGGER_MAX / 2;
+	m_thumb_threshold = THUMB_MAX / 2;
 }
 
 mm_joystick_handler::~mm_joystick_handler()
@@ -251,17 +254,12 @@ void mm_joystick_handler::ThreadProc()
 	}
 }
 
-void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std::vector<int>& deadzones, const std::function<void(u16, std::string)>& callback)
+void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback)
 {
 	if (!Init())
 	{
 		return;
 	}
-
-	int ltriggerthreshold = deadzones[0];
-	int rtriggerthreshold = deadzones[1];
-	int lstickdeadzone = deadzones[2];
-	int rstickdeadzone = deadzones[3];
 
 	MMRESULT status = joyGetPosEx(JOYSTICKID1, &js_info);
 
@@ -271,7 +269,7 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 		break;
 
 	case JOYERR_NOERROR:
-		auto button_values = GetButtonValues();
+		auto data = GetButtonValues();
 
 		// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
 		// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
@@ -279,25 +277,25 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 		std::pair<u16, std::string> pressed_button = { 0, "" };
 		for (const auto& button : button_list)
 		{
-			u16 value = button_values[button.first];
+			u16 value = data[button.first];
 			if (value > 0 && value > pressed_button.first)
 				pressed_button = { value, button.second };
 		}
 		for (const auto& button : pov_list)
 		{
-			u16 value = button_values[button.first];
+			u16 value = data[button.first];
 			if (value > 0 && value > pressed_button.first)
 				pressed_button = { value, button.second };
 		}
 		for (const auto& button : axis_list)
 		{
 			u32 keycode = button.first;
-			u16 value = button_values[keycode];
+			u16 value = data[keycode];
 
-			if (((keycode == mmjoy_axis::JOY_ZNEG) && (value > ltriggerthreshold))
-			 || ((keycode == mmjoy_axis::JOY_ZPOS) && (value > rtriggerthreshold))
-			 || ((keycode <= mmjoy_axis::JOY_YNEG) && (value > lstickdeadzone))
-			 || ((keycode <= mmjoy_axis::JOY_UNEG && keycode > mmjoy_axis::JOY_ZNEG) && (value > rstickdeadzone)))
+			if (((keycode == mmjoy_axis::JOY_ZNEG) && (value > m_trigger_threshold))
+			 || ((keycode == mmjoy_axis::JOY_ZPOS) && (value > m_trigger_threshold))
+			 || ((keycode <= mmjoy_axis::JOY_YNEG) && (value > m_thumb_threshold))
+			 || ((keycode <= mmjoy_axis::JOY_UNEG && keycode > mmjoy_axis::JOY_ZNEG) && (value > m_thumb_threshold)))
 			{
 				if (value > pressed_button.first)
 				{
@@ -305,10 +303,14 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 				}
 			}
 		}
+
+		int preview_values[6] = { data[JOY_ZNEG], data[JOY_ZPOS], data[JOY_XPOS] - data[JOY_XNEG], data[JOY_YPOS] - data[JOY_YNEG], data[JOY_UPOS] - data[JOY_UNEG], data[JOY_RPOS] - data[JOY_RNEG] };
+
 		if (pressed_button.first > 0)
-		{
-			return callback(pressed_button.first, pressed_button.second);
-		}
+			return callback(pressed_button.first, pressed_button.second, preview_values);
+		else
+			return callback(0, "", preview_values);
+
 		break;
 	}
 }
