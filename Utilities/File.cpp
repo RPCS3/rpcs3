@@ -811,6 +811,8 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
+	constexpr static uint io_chunk_size = 1024 * 1024 * 8;  // 8 MiB
+
 	class windows_file final : public file_base, public get_native_handle
 	{
 		const HANDLE m_handle;
@@ -863,24 +865,50 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 		u64 read(void* buffer, u64 count) override
 		{
-			// TODO (call ReadFile multiple times if count is too big)
-			const int size = narrow<int>(count, "file::read" HERE);
+			u8* buf = static_cast<u8*>(buffer);
+			u64 offset = 0;
+			u64 total_bytes_read = 0;
 
-			DWORD nread;
-			verify("file::read" HERE), ReadFile(m_handle, buffer, size, &nread, NULL);
+			const uint total_size = narrow<uint>(count, "file::read" HERE);
 
-			return nread;
+			while (offset < total_size)
+			{
+				DWORD bytes_read;
+				const auto bytes_to_read = min(io_chunk_size, total_size - total_bytes_read);
+
+				verify("file::read" HERE),
+					ReadFile(m_handle, buf, bytes_to_read, &bytes_read, NULL);
+
+				buf += bytes_read;
+				offset += bytes_read;
+				total_bytes_read += bytes_read;
+			}
+
+			return total_bytes_read;
 		}
 
 		u64 write(const void* buffer, u64 count) override
 		{
-			// TODO (call WriteFile multiple times if count is too big)
-			const int size = narrow<int>(count, "file::write" HERE);
+			u8* buf = static_cast<u8*>(const_cast<void*>(buffer));
+			u64 offset = 0;
+			u64 total_bytes_written = 0;
 
-			DWORD nwritten;
-			verify("file::write" HERE), WriteFile(m_handle, buffer, size, &nwritten, NULL);
+			const uint total_size = narrow<uint>(count, "file::write" HERE);
 
-			return nwritten;
+			while (offset < total_size)
+			{
+				DWORD bytes_written;
+				const auto bytes_to_write = min(io_chunk_size, total_size - total_bytes_written);
+
+				verify("file::write" HERE),
+					WriteFile(m_handle, buf, bytes_to_write, &bytes_written, NULL);
+
+				buf += bytes_written;
+				offset += bytes_written;
+				total_bytes_written += bytes_written;
+			}
+
+			return total_bytes_written;
 		}
 
 		u64 seek(s64 offset, seek_mode whence) override
@@ -1010,7 +1038,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
 
 			const auto result = ::lseek(m_fd, offset, mode);
-			
+
 			if (result == -1)
 			{
 				g_tls_error = to_error(errno);
@@ -1334,7 +1362,7 @@ std::string fs::get_data_dir(const std::string& prefix, const std::string& locat
 
 			continue;
 		}
-		
+
 		buf.push_back(c);
 	}
 
