@@ -277,6 +277,7 @@ private:
 	std::atomic<u64> m_last_sync_event = { 0 };
 
 	bool render_pass_open = false;
+	size_t m_current_renderpass_id = 0;
 
 	//Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
