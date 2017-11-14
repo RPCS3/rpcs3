@@ -176,10 +176,21 @@ void GLGSRender::init_buffers(bool skip_reading)
 		return;
 	}
 
-	const auto surface_addresses = get_color_surface_addresses();
-	const auto depth_address = get_zeta_surface_address();
+	auto surface_addresses = get_color_surface_addresses();
+	auto depth_address = get_zeta_surface_address();
 
-	for (const auto &addr: surface_addresses)
+	const auto pitchs = get_pitchs();
+	const auto zeta_pitch = rsx::method_registers.surface_z_pitch();
+	const auto surface_format = rsx::method_registers.surface_color();
+	const auto depth_format = rsx::method_registers.surface_depth_fmt();
+
+	const auto required_color_pitch = rsx::utility::get_packed_pitch(surface_format, clip_horizontal);
+	const auto required_z_pitch = depth_format == rsx::surface_depth_format::z16 ? clip_horizontal * 2 : clip_horizontal * 4;
+
+	if (depth_address && zeta_pitch < required_z_pitch)
+		depth_address = 0;
+
+	for (const auto &addr : surface_addresses)
 	{
 		if (addr)
 		{
@@ -188,12 +199,22 @@ void GLGSRender::init_buffers(bool skip_reading)
 		}
 	}
 
+	for (const auto &index : rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target()))
+	{
+		if (pitchs[index] < 64)
+			surface_addresses[index] = 0;
+
+		if (surface_addresses[index] == depth_address &&
+			zeta_pitch >= required_z_pitch)
+		{
+			LOG_ERROR(RSX, "Some game dev set up the MRT to write to the same address as depth and color attachment. Not sure how to deal with that so the draw is discarded.");
+			framebuffer_status_valid = false;
+			break;
+		}
+	}
+
 	if (!framebuffer_status_valid && !depth_address)
 		return;
-
-	const auto pitchs = get_pitchs();
-	const auto surface_format = rsx::method_registers.surface_color();
-	const auto depth_format = rsx::method_registers.surface_depth_fmt();
 
 	m_rtts.prepare_render_target(nullptr, surface_format, depth_format,  clip_horizontal, clip_vertical,
 		rsx::method_registers.surface_color_target(),
@@ -230,28 +251,12 @@ void GLGSRender::init_buffers(bool skip_reading)
 			rtt->set_rsx_pitch(pitchs[i]);
 			surface_info[i] = { surface_addresses[i], pitchs[i], false, surface_format, depth_format, clip_horizontal, clip_vertical };
 
-			//Verify pitch given is correct if pitch <= 64 (especially 64)
-			if (pitchs[i] <= 64)
-			{
-				const u16 native_pitch = std::get<1>(m_rtts.m_bound_render_targets[i])->get_native_pitch();
-				if (native_pitch > pitchs[i])
-				{
-					LOG_TRACE(RSX, "Bad color surface pitch given: surface_width=%d, format=%d, pitch=%d, native_pitch=%d",
-						clip_horizontal, (u32)surface_format, pitchs[i], native_pitch);
-
-					//Will not transfer this surface between cell and rsx due to misalignment
-					//TODO: Verify correct behaviour
-					surface_info[i].pitch = 0;
-				}
-			}
-
 			rtt->tile = find_tile(color_offsets[i], color_locations[i]);
 			rtt->aa_mode = aa_mode;
 			rtt->set_raster_offset(clip_x, clip_y, bpp);
 			m_gl_texture_cache.notify_surface_changed(surface_addresses[i]);
 
-			if (surface_info[i].pitch)
-				m_gl_texture_cache.tag_framebuffer(surface_addresses[i] + rtt->raster_address_offset);
+			m_gl_texture_cache.tag_framebuffer(surface_addresses[i] + rtt->raster_address_offset);
 		}
 		else
 			surface_info[i] = {};
@@ -274,27 +279,11 @@ void GLGSRender::init_buffers(bool skip_reading)
 		std::get<1>(m_rtts.m_bound_depth_stencil)->set_rsx_pitch(rsx::method_registers.surface_z_pitch());
 		depth_surface_info = { depth_address, depth_surface_pitch, true, surface_format, depth_format, clip_horizontal, clip_vertical };
 
-		//Verify pitch given is correct if pitch <= 64 (especially 64)
-		if (depth_surface_pitch <= 64)
-		{
-			const u16 native_pitch = std::get<1>(m_rtts.m_bound_depth_stencil)->get_native_pitch();
-			if (native_pitch > depth_surface_pitch)
-			{
-				LOG_TRACE(RSX, "Bad depth surface pitch given: surface_width=%d, format=%d, pitch=%d, native_pitch=%d",
-					clip_horizontal, (u32)depth_format, depth_surface_pitch, native_pitch);
-
-				//Will not transfer this surface between cell and rsx due to misalignment
-				//TODO: Verify correct behaviour
-				depth_surface_info.pitch = 0;
-			}
-		}
-
 		ds->aa_mode = aa_mode;
 		ds->set_raster_offset(clip_x, clip_y, texel_size);
 		m_gl_texture_cache.notify_surface_changed(depth_address);
 
-		if (depth_surface_info.pitch)
-			m_gl_texture_cache.tag_framebuffer(depth_address + ds->raster_address_offset);
+		m_gl_texture_cache.tag_framebuffer(depth_address + ds->raster_address_offset);
 	}
 	else
 		depth_surface_info = {};

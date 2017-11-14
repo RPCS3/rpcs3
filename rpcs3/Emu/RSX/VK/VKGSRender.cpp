@@ -200,28 +200,6 @@ namespace vk
 		return color_count + 5 * depth_format_idx + 5 * 3 * color_format_idx;
 	}
 
-	std::vector<u8> get_draw_buffers(rsx::surface_target fmt)
-	{
-		switch (fmt)
-		{
-		case rsx::surface_target::none:
-			return{};
-		case rsx::surface_target::surface_a:
-			return{ 0 };
-		case rsx::surface_target::surface_b:
-			return{ 1 };
-		case rsx::surface_target::surfaces_a_b:
-			return{ 0, 1 };
-		case rsx::surface_target::surfaces_a_b_c:
-			return{ 0, 1, 2 };
-		case rsx::surface_target::surfaces_a_b_c_d:
-			return{ 0, 1, 2, 3 };
-		default:
-			LOG_ERROR(RSX, "Bad surface color target: %d", (u32)fmt);
-			return{};
-		}
-	}
-
 	VkLogicOp get_logic_op(rsx::logic_op op)
 	{
 		switch (op)
@@ -1072,15 +1050,9 @@ void VKGSRender::begin_render_pass()
 	if (render_pass_open)
 		return;
 
-	size_t idx = vk::get_render_pass_location(
-		vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first,
-		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()),
-		(u8)m_draw_buffers_count);
-	VkRenderPass current_render_pass = m_render_passes[idx];
-
 	VkRenderPassBeginInfo rp_begin = {};
 	rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	rp_begin.renderPass = current_render_pass;
+	rp_begin.renderPass = m_draw_fbo->info.renderPass;
 	rp_begin.framebuffer = m_draw_fbo->value;
 	rp_begin.renderArea.offset.x = 0;
 	rp_begin.renderArea.offset.y = 0;
@@ -1401,7 +1373,7 @@ void VKGSRender::end()
 	//Clear any 'dirty' surfaces - possible is a recycled cache surface is used
 	std::vector<VkClearAttachment> buffers_to_clear;
 	buffers_to_clear.reserve(4);
-	const auto targets = vk::get_draw_buffers(rsx::method_registers.surface_color_target());
+	const auto targets = rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target());
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
 	{
@@ -1603,7 +1575,7 @@ void VKGSRender::clear_surface(u32 mask)
 	std::tie(scissor_x, scissor_y, scissor_w, scissor_h) = rsx::clip_region<u16>(fb_width, fb_height, scissor_x, scissor_y, scissor_w, scissor_h, true);
 	VkClearRect region = { { { scissor_x, scissor_y },{ scissor_w, scissor_h } }, 0, 1 };
 
-	auto targets = vk::get_draw_buffers(rsx::method_registers.surface_color_target());
+	auto targets = rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target());
 	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (mask & 0x1)
@@ -2192,13 +2164,8 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 
 	properties.rs.frontFace = vk::get_front_face(rsx::method_registers.front_face_mode());
 
-	size_t idx = vk::get_render_pass_location(
-		vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first,
-		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()),
-		(u8)m_draw_buffers_count);
-
-	properties.render_pass = m_render_passes[idx];
-	properties.render_pass_location = (int)idx;
+	properties.render_pass = m_render_passes[m_current_renderpass_id];
+	properties.render_pass_location = (int)m_current_renderpass_id;
 
 	properties.num_targets = m_draw_buffers_count;
 
@@ -2358,6 +2325,18 @@ void VKGSRender::prepare_rtts()
 	auto surface_addresses = get_color_surface_addresses();
 	auto zeta_address = get_zeta_surface_address();
 
+	const auto zeta_pitch = rsx::method_registers.surface_z_pitch();
+	const u32 surface_pitchs[] = { rsx::method_registers.surface_a_pitch(), rsx::method_registers.surface_b_pitch(),
+		rsx::method_registers.surface_c_pitch(), rsx::method_registers.surface_d_pitch() };
+
+	const auto color_fmt = rsx::method_registers.surface_color();
+	const auto depth_fmt = rsx::method_registers.surface_depth_fmt();
+
+	const auto required_z_pitch = depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4;
+
+	if (zeta_address && zeta_pitch < required_z_pitch)
+		zeta_address = 0;
+
 	for (const auto &addr: surface_addresses)
 	{
 		if (addr)
@@ -2367,14 +2346,25 @@ void VKGSRender::prepare_rtts()
 		}
 	}
 
+	for (const auto &index : rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target()))
+	{
+		if (surface_pitchs[index] < 64)
+			surface_addresses[index] = 0;
+
+		if (surface_addresses[index] == zeta_address &&
+			zeta_pitch >= required_z_pitch)
+		{
+			LOG_ERROR(RSX, "Some game dev set up the MRT to write to the same address as depth and color attachment. Not sure how to deal with that so the draw is discarded.");
+			framebuffer_status_valid = false;
+			break;
+		}
+	}
+
 	if (!framebuffer_status_valid && !zeta_address)
 		return;
 
 	//At least one attachment exists
 	framebuffer_status_valid = true;
-	
-	const u32 surface_pitchs[] = { rsx::method_registers.surface_a_pitch(), rsx::method_registers.surface_b_pitch(),
-			rsx::method_registers.surface_c_pitch(), rsx::method_registers.surface_d_pitch() };
 
 	const auto fbo_width = rsx::apply_resolution_scale(clip_width, true);
 	const auto fbo_height = rsx::apply_resolution_scale(clip_height, true);
@@ -2405,9 +2395,6 @@ void VKGSRender::prepare_rtts()
 			}
 		}
 	}
-
-	const auto color_fmt = rsx::method_registers.surface_color();
-	const auto depth_fmt = rsx::method_registers.surface_depth_fmt();
 
 	m_rtts.prepare_render_target(&*m_current_command_buffer,
 		color_fmt, depth_fmt,
@@ -2442,10 +2429,8 @@ void VKGSRender::prepare_rtts()
 	m_depth_surface_info.depth_format = depth_fmt;
 
 	//Bind created rtts as current fbo...
-	std::vector<u8> draw_buffers = vk::get_draw_buffers(rsx::method_registers.surface_color_target());
-
-	//Search old framebuffers for this same configuration
-	bool framebuffer_found = false;
+	std::vector<u8> draw_buffers = rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target());
+	m_draw_buffers_count = 0;
 
 	std::vector<vk::image*> bound_images;
 	bound_images.reserve(5);
@@ -2454,26 +2439,21 @@ void VKGSRender::prepare_rtts()
 
 	for (u8 index : draw_buffers)
 	{
-		auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]);
-		bound_images.push_back(surface);
-
-		m_surface_info[index].address = surface_addresses[index];
-		m_surface_info[index].pitch = surface_pitchs[index];
-		surface->rsx_pitch = surface_pitchs[index];
-
-		if (surface_pitchs[index] <= 64)
+		if (auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]))
 		{
-			if (clip_width > surface_pitchs[index])
-				//Ignore this buffer (usually set to 64)
-				m_surface_info[index].pitch = 0;
-		}
+			bound_images.push_back(surface);
 
-		surface->aa_mode = aa_mode;
-		surface->set_raster_offset(clip_x, clip_y, bpp);
-		m_texture_cache.notify_surface_changed(surface_addresses[index]);
+			m_surface_info[index].address = surface_addresses[index];
+			m_surface_info[index].pitch = surface_pitchs[index];
+			surface->rsx_pitch = surface_pitchs[index];
 
-		if (m_surface_info[index].pitch)
+			surface->aa_mode = aa_mode;
+			surface->set_raster_offset(clip_x, clip_y, bpp);
+			m_texture_cache.notify_surface_changed(surface_addresses[index]);
+
 			m_texture_cache.tag_framebuffer(surface_addresses[index] + surface->raster_address_offset);
+			m_draw_buffers_count++;
+		}
 	}
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
@@ -2485,18 +2465,12 @@ void VKGSRender::prepare_rtts()
 		m_depth_surface_info.pitch = rsx::method_registers.surface_z_pitch();
 		ds->rsx_pitch = m_depth_surface_info.pitch;
 
-		if (m_depth_surface_info.pitch <= 64 && clip_width > m_depth_surface_info.pitch)
-			m_depth_surface_info.pitch = 0;
-
 		ds->aa_mode = aa_mode;
 		ds->set_raster_offset(clip_x, clip_y, get_pixel_size(rsx::method_registers.surface_depth_fmt()));
 		m_texture_cache.notify_surface_changed(zeta_address);
 
-		if (m_depth_surface_info.pitch)
-			m_texture_cache.tag_framebuffer(zeta_address + ds->raster_address_offset);
+		m_texture_cache.tag_framebuffer(zeta_address + ds->raster_address_offset);
 	}
-
-	m_draw_buffers_count = static_cast<u32>(draw_buffers.size());
 
 	if (g_cfg.video.write_color_buffers)
 	{
@@ -2529,6 +2503,12 @@ void VKGSRender::prepare_rtts()
 				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch, gcm_format, true);
 		}
 	}
+
+	auto vk_depth_format = (zeta_address == 0) ? VK_FORMAT_UNDEFINED : vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, depth_fmt);
+	m_current_renderpass_id = vk::get_render_pass_location(vk::get_compatible_surface_format(color_fmt).first, vk_depth_format, m_draw_buffers_count);
+
+	//Search old framebuffers for this same configuration
+	bool framebuffer_found = false;
 
 	for (auto &fbo : m_framebuffers_to_clean)
 	{
@@ -2574,8 +2554,7 @@ void VKGSRender::prepare_rtts()
 			fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
 		}
 
-		size_t idx = vk::get_render_pass_location(vk::get_compatible_surface_format(color_fmt).first, vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, rsx::method_registers.surface_depth_fmt()), (u8)draw_buffers.size());
-		VkRenderPass current_render_pass = m_render_passes[idx];
+		VkRenderPass current_render_pass = m_render_passes[m_current_renderpass_id];
 
 		if (m_draw_fbo)
 			m_framebuffers_to_clean.push_back(std::move(m_draw_fbo));
