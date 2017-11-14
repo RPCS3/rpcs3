@@ -1338,7 +1338,7 @@ namespace rsx
 		result.offset = program_offset;
 		result.addr = vm::base(rsx::get_address(program_offset, program_location));
 		result.valid = true;
-		result.ctrl = rsx::method_registers.shader_control();
+		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;
 		result.front_back_color_enabled = !rsx::method_registers.two_side_light_en();
 		result.back_color_diffuse_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE);
@@ -1430,7 +1430,7 @@ namespace rsx
 		result.offset = program_offset;
 		result.addr = vm::base(rsx::get_address(program_offset, program_location));
 		result.valid = true;
-		result.ctrl = rsx::method_registers.shader_control();
+		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;
 		result.front_back_color_enabled = !rsx::method_registers.two_side_light_en();
 		result.back_color_diffuse_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE);
