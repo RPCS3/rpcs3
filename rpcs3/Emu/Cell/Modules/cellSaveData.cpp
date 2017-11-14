@@ -37,7 +37,7 @@ enum : u32
 	SAVEDATA_OP_FIXED_SAVE     = 6,
 	SAVEDATA_OP_FIXED_LOAD     = 7,
 
-	SAVEDATA_OP_FIXED_DELETE = 14,
+	SAVEDATA_OP_FIXED_DELETE   = 14,
 };
 
 namespace
@@ -85,7 +85,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	//TODO: get current user ID
 	// userId(0) = CELL_SYSUTIL_USERID_CURRENT
 	// path of the specified user (00000001 by default)
-	const std::string& base_dir = vfs::get(fmt::format("/dev_hdd0/home/%08u/savedata/", userId ? userId : 1u));
+	const std::string base_dir = vfs::get(fmt::format("/dev_hdd0/home/%08u/savedata/", userId ? userId : 1u));
 
 	result->userdata = userdata; // probably should be assigned only once (allows the callback to change it)
 
@@ -98,9 +98,9 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		listGet->dirNum = 0;
 		listGet->dirListNum = 0;
 		listGet->dirList.set(setBuf->buf.addr());
-		memset(listGet->reserved, 0, sizeof(listGet->reserved));
+		std::memset(listGet->reserved, 0, sizeof(listGet->reserved));
 
-		const auto prefix_list = fmt::split(setList->dirNamePrefix.get_ptr(), { "|" });
+		const auto prefix_list = fmt::split(setList->dirNamePrefix.get_ptr(), {"|"});
 
 		// get the saves matching the supplied prefix
 		for (auto&& entry : fs::dir(base_dir))
@@ -204,7 +204,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			auto& dir = *dir_list++;
 			strcpy_trunc(dir.dirName, entry.dirName);
 			strcpy_trunc(dir.listParam, entry.listParam);
-			memset(dir.reserved, 0, sizeof(dir.reserved));
+			std::memset(dir.reserved, 0, sizeof(dir.reserved));
 		}
 
 		s32 selected = -1;
@@ -217,14 +217,14 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			if (result->result < 0)
 			{
 				//TODO: display dialog
-				cellSaveData.warning("savedata_op(): funcList returned < 0.");
+				cellSaveData.warning("savedata_op(): funcList returned result=%d.", result->result);
 				return CELL_SAVEDATA_ERROR_CBRESULT;
 			}
 
 			// if the callback has returned ok, lets return OK.
 			// typically used at game launch when no list is actually required.
 			// CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM is only valid for funcFile and funcDone
-			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
+			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
 			{
 				return CELL_OK;
 			}
@@ -242,16 +242,6 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 
 				return true;
 			}), save_entries.end());
-
-			// Add any new data (not currently supported by the UI)
-			//if (listSet->newData)
-			//{
-			//	SaveDataEntry *_saveDataEntry = new SaveDataEntry();
-			//	_saveDataEntry->dirName = listSet->newData->dirName.get_ptr();
-
-			//	save_entry.dirName = listSet->newData->dirName.get_ptr();
-			//	save_entries.emplace_back(*_saveDataEntry);
-			//}
 
 			// Focus save data
 			s32 focused = -1;
@@ -324,13 +314,12 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			}
 			}
 
-			// Display Save Data List but do so asynchronously in the GUI thread.
-			bool hasNewData = (bool)listSet->newData; // newData
+			// Display Save Data List asynchronously in the GUI thread.
 			atomic_t<bool> dlg_result(false);
 
 			Emu.CallAfter([&]()
 			{
-				selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, hasNewData, listSet);
+				selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, operation, listSet);
 				dlg_result = true;
 			});
 
@@ -359,7 +348,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			funcFixed(ppu, result, listGet, fixedSet);
 
 			// skip all following steps if OK_LAST
-			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
+			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
 			{
 				return CELL_OK;
 			}
@@ -371,7 +360,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				// 0 = none
 				// 1 = skip confirmation dialog
 				
-				cellSaveData.warning("savedata_op(): funcFixed returned < 0.");
+				cellSaveData.warning("savedata_op(): funcFixed returned result=%d.", result->result);
 				return CELL_SAVEDATA_ERROR_CBRESULT;
 			}
 
@@ -504,11 +493,11 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 
 		if (result->result < 0)
 		{
-			cellSaveData.warning("savedata_op(): funcStat returned 0x%x", result->result);
+			cellSaveData.warning("savedata_op(): funcStat returned result=%d.", result->result);
 			return CELL_SAVEDATA_ERROR_CBRESULT;
 		}
 
-		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
+		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
 		{
 			return CELL_OK;
 		}
@@ -607,7 +596,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 
 		if (result->result < 0)
 		{
-			cellSaveData.warning("savedata_op(): funcFile returned < 0.");
+			cellSaveData.warning("savedata_op(): funcFile returned result=%d.", result->result);
 			return CELL_SAVEDATA_ERROR_CBRESULT;
 		}
 
