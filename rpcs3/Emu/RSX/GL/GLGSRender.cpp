@@ -174,7 +174,7 @@ void GLGSRender::begin()
 	if (conditional_render_enabled && conditional_render_test_failed)
 		return;
 
-	init_buffers();
+	init_buffers(rsx::framebuffer_creation_context::context_draw);
 }
 
 namespace
@@ -927,7 +927,11 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 		if (arg & 0xF3)
 		{
 			//Only do all this if we have actual work to do
-			init_buffers(true);
+			u8 ctx = rsx::framebuffer_creation_context::context_draw;
+			if (arg & 0xF0) ctx |= rsx::framebuffer_creation_context::context_clear_color;
+			if (arg & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
+
+			init_buffers((rsx::framebuffer_creation_context)ctx, true);
 			synchronize_buffers();
 			clear_surface(arg);
 		}

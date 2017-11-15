@@ -44,6 +44,14 @@ namespace rsx
 		};
 	}
 
+	enum framebuffer_creation_context : u8
+	{
+		context_draw = 0,
+		context_clear_color = 1,
+		context_clear_depth = 2,
+		context_clear_all = context_clear_color | context_clear_depth
+	};
+
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
 	u32 get_address(u32 offset, u32 location);
