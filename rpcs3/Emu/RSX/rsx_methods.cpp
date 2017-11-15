@@ -471,6 +471,12 @@ namespace rsx
 			rsx->m_rtts_dirty = true;
 		}
 
+		void set_surface_options_dirty_bit(thread* rsx, u32, u32)
+		{
+			if (rsx->m_framebuffer_state_contested)
+				rsx->m_rtts_dirty = true;
+		}
+
 		template<u32 index>
 		struct set_texture_dirty_bit
 		{
@@ -1598,6 +1604,9 @@ namespace rsx
 		bind<NV4097_SET_ZCULL_STATS_ENABLE, nv4097::set_zcull_stats_enable>();
 		bind<NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE, nv4097::set_zcull_pixel_count_enable>();
 		bind<NV4097_CLEAR_ZCULL_SURFACE, nv4097::clear_zcull>();
+		bind<NV4097_SET_DEPTH_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();

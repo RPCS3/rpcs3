@@ -3196,6 +3196,11 @@ struct registers_decoder<NV4097_SET_COLOR_MASK>
 		{
 			return bool(m_data.color_a);
 		}
+
+		bool color_write_enabled() const
+		{
+			return m_data.raw_data != 0;
+		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)

@@ -345,6 +345,11 @@ namespace rsx
 			return decode<NV4097_SET_COLOR_MASK>().color_a();
 		}
 
+		bool color_write_enabled() const
+		{
+			return decode<NV4097_SET_COLOR_MASK>().color_write_enabled();
+		}
+
 		u8 clear_color_b() const
 		{
 			return decode<NV4097_SET_COLOR_CLEAR_VALUE>().blue();
