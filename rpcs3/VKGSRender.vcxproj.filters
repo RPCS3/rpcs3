@@ -40,6 +40,9 @@
     <ClInclude Include="Emu\RSX\VK\VKTextOut.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\VKOverlays.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Emu\RSX\VK\VKGSRender.cpp">

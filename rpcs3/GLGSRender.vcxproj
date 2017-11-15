@@ -63,6 +63,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
     <ClCompile />
+    <ClCompile />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="emucore.vcxproj">
@@ -70,6 +71,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
     <ClInclude Include="Emu\RSX\GL\GLTextOut.h" />
     <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h" />
     <ClInclude Include="Emu\RSX\GL\GLFragmentProgram.h" />
