@@ -1,9 +1,9 @@
 /* 
-Darker Style for RPCS3 
-Based on Kuroi (Dark) by Ani
-by themitosan @ https://github.com/themitosan
+TheMitoSan Dark-Theme for RPCS3 
+Based on Kuroi Dark Theme
+by themitosan @ twitter.com/themitosan
 Ani @ https://github.com/AniLeo
-(2017.11.14)
+(2017.11.15)
 */
 
 /* 
@@ -165,10 +165,12 @@ QPushButton {
 QPushButton::disabled {
 	background-color: #353535;
 	color: #FFFFFF;
-	border-radius: 6px;
-	border-top-left-radius: 4px;
-	border-top-right-radius: 4px;
 	padding: 6px;
+	margin-left: 2px;
+	margin-right: 2px;
+	border-radius: 6px;
+	border-top-right-radius: 2px;
+	border-bottom-left-radius: 2px;
 }
 
 /* Log and Debugger borders */
@@ -260,7 +262,8 @@ QToolButton {
 	border-radius: 2px;
 	padding: 1.5px;
 	margin-left: 2px;
-	margin-top: 3px;
+	margin-top: 2px;
+	margin-bottom: 2px;
 }
 QToolButton::disabled {
 	background-color: #353535;
