@@ -422,7 +422,7 @@ namespace fs
 
 		class iterator
 		{
-			dir* m_parent;
+			const dir* m_parent;
 			dir_entry m_entry;
 
 		public:
@@ -432,7 +432,7 @@ namespace fs
 				from_current
 			};
 
-			iterator(dir* parent, mode mode_ = mode::from_first)
+			iterator(const dir* parent, mode mode_ = mode::from_first)
 				: m_parent(parent)
 			{
 				if (!m_parent)
@@ -458,7 +458,7 @@ namespace fs
 
 			iterator& operator++()
 			{
-				*this = { m_parent, mode::from_current };
+				*this = {m_parent, mode::from_current};
 				return *this;
 			}
 
@@ -468,14 +468,14 @@ namespace fs
 			}
 		};
 
-		iterator begin()
+		iterator begin() const
 		{
-			return{ m_dir ? this : nullptr };
+			return {m_dir ? this : nullptr};
 		}
 
-		iterator end()
+		iterator end() const
 		{
-			return{ nullptr };
+			return {nullptr};
 		}
 	};
 
