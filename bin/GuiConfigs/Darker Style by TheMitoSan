@@ -1,0 +1,369 @@
+/* 
+Darker Style for RPCS3 
+Based on Kuroi (Dark) by Ani
+by themitosan @ https://github.com/themitosan
+Ani @ https://github.com/AniLeo
+(2017.11.14)
+*/
+
+/* 
+Color Scheme
+(Darker to Lighter)
+  
+  Black 
+   > 292929
+   > 323232
+   > 333333
+   > 3d3d3d
+   > 404040
+   > 444444
+   
+  Light Grey
+   > 828790
+   > bdc3c7
+   > ecf0f1
+   
+   > b1b1b1
+   > 7f8c8d
+   
+  Green
+   > 2ecc71
+   
+  Red
+   > e74c3c
+*/
+
+/* Every widget */
+QWidget {
+	background-color: #111111;
+	color: #EEEEEE;
+	alternate-background-color: #070707;
+}
+
+/* Mouse tooltips */
+QToolTip {
+	padding: 2px;
+	border: 1px #444444;
+	background-color: #222222;
+	color: #FFFFFF;
+}
+
+/* Table headers */
+QHeaderView::section {
+	background-color: #323232;
+	color: #ecf0f1;
+	padding-left: 4px;
+	border: 1px solid #323232;
+}
+
+/* Settings Dialog: Tabs */
+QTabBar::tab {
+	color: #ecf0f1;
+	border: 1px solid #444;
+	border-bottom-style: none;
+	background-color: #333333;
+	padding-left: 16px;
+	padding-right: 16px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+	margin-right: -2px;
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+}
+QTabBar::tab:last {
+	margin-right: 0em;
+}
+QTabBar::tab:!selected {
+	color: #b1b1b1;
+	border-bottom-style: solid;
+	margin-top: 3px;
+	background-color: #292929;
+}
+QTabBar::tab:hover {
+	background-color: #333333;
+	color: #ecf0f1;
+}
+
+/* Checkboxes */
+QCheckBox::indicator {
+	border-radius: 2px;
+	border-top-right-radius: 0px;
+	border-bottom-left-radius: 0px;
+	border: 1px solid #DDDDDD;
+	width: 10px;
+	height: 10px;
+	margin-top: 1px;
+}
+QCheckBox::indicator:checked {
+	background-color: #AAAAAA; /* Green */
+}
+QCheckBox::indicator:unchecked {
+	background-color: #444444; /* Red */
+}
+QCheckBox::indicator::disabled {
+	background-color: #111111; /* Gray */
+}
+
+/* Radio Buttons */
+QRadioButton::indicator {
+	border-radius: 4px;
+	border-top-right-radius: 2px;
+	border-bottom-left-radius: 2px;
+	border: 1px solid #ecf0f1;
+	width: 10px;
+	height: 10px;
+	margin-top: 1px;
+}
+QRadioButton::indicator:checked {
+	background-color: #999999; /* Green */
+}
+QRadioButton::indicator:unchecked {
+	background-color: #333333; /* Red */
+}
+QRadioButton::indicator::disabled {
+	background-color: #111111; /* Gray */
+}
+
+/* Combo Boxes */
+QComboBox {
+	background-color: #404040;
+	color: #fff;
+	border: 1px solid #1e1e1e;
+	border-radius: 4px;
+	padding-bottom: 2px;
+	padding-left: 4px;
+}
+QComboBox::disabled {
+	background-color: #353535;
+	color: #fff;
+}
+
+/* Group Boxes (Settings Dialog) */
+QGroupBox {
+	margin-top: 17px;
+	font-size: 13px;
+	border: 1px solid #bdc3c7;
+	border-radius: 4px;
+}
+QGroupBox::title {
+	subcontrol-origin: margin;
+	subcontrol-position: top center;
+	padding: 5px 10px 5px 10px;
+	color: #fff;
+}
+
+/* Buttons */
+QPushButton {
+	background-color: #404040;
+	border-radius: 6px;
+	border-top-right-radius: 2px;
+	border-bottom-left-radius: 2px;
+	padding: 6px;
+	margin-left: 2px;
+	margin-right: 2px;
+}
+QPushButton::disabled {
+	background-color: #353535;
+	color: #FFFFFF;
+	border-radius: 6px;
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	padding: 6px;
+}
+
+/* Log and Debugger borders */
+QTextEdit {
+	border: 0.05em solid #353535;
+}
+
+/* For dock buttons to be visible */
+QDockWidget::close-button, QDockWidget::float-button {
+	background-color: #bdc3c7;
+	border: 0.05em solid #000;
+	border-radius: 4px;
+}
+
+/* Disable ugly borders */
+QTabWidget::pane {
+	border: 0em solid #353535;
+}
+
+/* Top menu bar */
+QMenuBar::item:selected {
+	background: #444444;
+	border-radius: 4px;
+}
+QMenu::item {
+	padding-left: 20px;
+	padding-right: 15px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+	border-radius: 4px;
+	margin-bottom: 2px;
+}
+QMenu::item:selected {
+	background: #444444;
+	border: 0.05em solid #bdc3c7;
+	border-radius: 4px;
+}
+QMenu::item:disabled {
+	background-color: #212121;
+	color: #888888;
+	border-radius: 4px;
+}
+
+/* Libraries list */
+QListWidget::item:selected {
+	background-color: #3d3d3d;
+	color: #ecf0f1;
+	border-radius: 2px;
+}
+QListWidget::item:hover {
+	background-color: #4c4b4b;
+	color: #ecf0f1;
+	border-radius: 4px;
+}
+
+/* Pad Settings: Controller Image */
+QLabel#l_controller { 
+	color: #FFFFFF;
+}
+
+/* Game Grid Font */
+QLabel#gamegrid_font {
+	font-weight: 600;
+	font-size: 8pt;
+	font-family: Lucida Grande;
+	color: #FFFFFF;
+}
+
+/* Slider on toolbar */
+QWidget#sizeSliderContainer {
+	background: transparent;
+}
+
+/* Debug UI Settings buttons */
+QLabel#color_button {
+	background: transparent;
+}
+
+/* Seachbar on main toolbar */
+QLineEdit#mw_searchbar { 
+	margin-left: 0.7em; 
+	color: #ecf0f1;
+}
+
+/* Uniform colors in Toolbar */
+QToolButton {
+	background: transparent;
+	color: transparent;
+	border-radius: 2px;
+	padding: 1.5px;
+	margin-left: 2px;
+	margin-top: 3px;
+}
+QToolButton::disabled {
+	background-color: #353535;
+}
+QToolButton::hover {
+	background-color: #444444;
+}
+
+/* Set Theme UI colors */
+QLabel#gamelist_icon_background_color {
+	background-color: #262626;
+}
+QLabel#gamelist_toolbar_icon_color {
+	background-color: #262626;
+}
+
+/* Set Windows Taskbar Thumbnail colors */
+QLabel#thumbnail_icon_color {
+	color: #262626;
+}
+
+/* Set Log colors */
+QTextEdit#log_frame {
+	background-color: #010101; /* Black */
+}
+QLabel#log_level_always {
+	color: #00ffff; /* Cyan */
+	text-shadow: 0 0 6px #050505;
+}
+QLabel#log_level_fatal {
+	color: #ff00ff; /* Fuchsia */
+	text-shadow: 0 0 6px #050505;
+}
+QLabel#log_level_error {
+	color: #ff0000; /* Red */
+	text-shadow: 0 0 6px #050505;
+}
+QLabel#log_level_todo {
+	color: #ff6000; /* Orange */
+	text-shadow: 0 0 6px #050505;
+}
+QLabel#log_level_success {
+	color: #00ff00; /* Green */
+	text-shadow: 0 0 6px #050505;
+}
+QLabel#log_level_warning {
+	color: #ffff00; /* Yellow */
+	text-shadow: 0 0 6px #050505;
+}
+QLabel#log_level_notice {
+	color: #ffffff; /* White */
+	text-shadow: 0 0 6px #050505;
+}
+QLabel#log_level_trace {
+	color: #808080; /* Gray */
+	text-shadow: 0 0 6px #050505;
+}
+QLabel#log_stack {
+	color: #ffffff; /* White */
+	text-shadow: 0 0 6px #030303;
+}
+
+/* Set TTY colors */
+QTextEdit#tty_frame {
+	background-color: #000000; /* Black */
+}
+QLabel#tty_text {
+	color: #fefefe; /* White */
+}
+
+/* RSX Debugger */
+QLabel#rsx_debugger_display_buffer {
+	background-color: #323232;
+}
+
+/* Kernel Explorer */
+QDialog#kernel_explorer {
+	background-color: #323232;
+}
+
+/* Memory Viewer */
+QDialog#memory_viewer {
+	background-color: #323232;
+}
+QLabel#memory_viewer_address_panel {
+	color: #00cbff; /* Font Color: Blue */
+	background-color: #323232;
+}
+QLabel#memory_viewer_hex_panel {
+	color: #bdc3c7; /* Font Color: Grey */
+	background-color: #323232;
+}
+QLabel#memory_viewer_ascii_panel {
+	color: #bdc3c7; /* Font Color: Grey */
+	background-color: #323232;
+}
+
+/* Debugger colors */
+QLabel#debugger_frame_breakpoint {
+	color: #000000; /* Font Color: Black */
+	background-color: #ffff00; /* Yellow */
+}
+QLabel#debugger_frame_pc {
+	color: #000000; /* Font Color: Black */
+	background-color: #00ff00; /* Green */
+}
