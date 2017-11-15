@@ -169,6 +169,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 	const u16 clip_y = rsx::method_registers.surface_clip_origin_y();
 
 	framebuffer_status_valid = false;
+	m_framebuffer_state_contested = false;
 
 	if (clip_horizontal == 0 || clip_vertical == 0)
 	{
@@ -207,10 +208,22 @@ void GLGSRender::init_buffers(bool skip_reading)
 		if (surface_addresses[index] == depth_address &&
 			zeta_pitch >= required_z_pitch)
 		{
-			//LOG_ERROR(RSX, "Some game dev set up the MRT to write to the same address as depth and color attachment. Not sure how to deal with that so the draw is discarded.");
-			//framebuffer_status_valid = false;
-			depth_address = 0;
-			break;
+			LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, zeta_pitch = %d, color_pitch=%d", depth_address, zeta_pitch, pitchs[index]);
+			m_framebuffer_state_contested = true;
+
+			if (rsx::method_registers.depth_test_enabled() ||
+				(!rsx::method_registers.color_write_enabled() && rsx::method_registers.depth_write_enabled()) ||
+				!!(rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT))
+			{
+				// Use address for depth data
+				surface_addresses[index] = 0;
+			}
+			else
+			{
+				// Use address for color data
+				depth_address = 0;
+				break;
+			}
 		}
 	}
 

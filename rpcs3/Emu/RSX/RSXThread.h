@@ -188,6 +188,7 @@ namespace rsx
 		bool m_transform_constants_dirty;
 		bool m_textures_dirty[16];
 		bool m_vertex_textures_dirty[4];
+		bool m_framebuffer_state_contested = false;
 
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
