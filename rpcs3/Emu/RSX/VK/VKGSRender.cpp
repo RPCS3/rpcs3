@@ -2354,8 +2354,9 @@ void VKGSRender::prepare_rtts()
 		if (surface_addresses[index] == zeta_address &&
 			zeta_pitch >= required_z_pitch)
 		{
-			LOG_ERROR(RSX, "Some game dev set up the MRT to write to the same address as depth and color attachment. Not sure how to deal with that so the draw is discarded.");
-			framebuffer_status_valid = false;
+			//LOG_ERROR(RSX, "Some game dev set up the MRT to write to the same address as depth and color attachment. Not sure how to deal with that so the draw is discarded.");
+			//framebuffer_status_valid = false;
+			zeta_address = 0;
 			break;
 		}
 	}

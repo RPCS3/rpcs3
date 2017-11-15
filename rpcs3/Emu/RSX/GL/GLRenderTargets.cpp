@@ -185,7 +185,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 	const auto depth_format = rsx::method_registers.surface_depth_fmt();
 
 	const auto required_color_pitch = rsx::utility::get_packed_pitch(surface_format, clip_horizontal);
-	const auto required_z_pitch = depth_format == rsx::surface_depth_format::z16 ? clip_horizontal * 2 : clip_horizontal * 4;
+	const u32 required_z_pitch = depth_format == rsx::surface_depth_format::z16 ? clip_horizontal * 2 : clip_horizontal * 4;
 
 	if (depth_address && zeta_pitch < required_z_pitch)
 		depth_address = 0;
@@ -207,8 +207,9 @@ void GLGSRender::init_buffers(bool skip_reading)
 		if (surface_addresses[index] == depth_address &&
 			zeta_pitch >= required_z_pitch)
 		{
-			LOG_ERROR(RSX, "Some game dev set up the MRT to write to the same address as depth and color attachment. Not sure how to deal with that so the draw is discarded.");
-			framebuffer_status_valid = false;
+			//LOG_ERROR(RSX, "Some game dev set up the MRT to write to the same address as depth and color attachment. Not sure how to deal with that so the draw is discarded.");
+			//framebuffer_status_valid = false;
+			depth_address = 0;
 			break;
 		}
 	}

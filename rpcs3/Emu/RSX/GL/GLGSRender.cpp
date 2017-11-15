@@ -464,6 +464,13 @@ void GLGSRender::end()
 		ds->set_cleared();
 	}
 
+	if (ds && ds->old_contents != nullptr && ds->get_rsx_pitch() == ds->old_contents->get_rsx_pitch() &&
+		ds->old_contents->get_compatible_internal_format() == gl::texture::internal_format::rgba8)
+	{
+		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
+		ds->old_contents = nullptr;
+	}
+
 	if (g_cfg.video.strict_rendering_mode)
 	{
 		if (ds->old_contents != nullptr)
@@ -478,6 +485,11 @@ void GLGSRender::end()
 					copy_rtt_contents(surface);
 			}
 		}
+	}
+	else
+	{
+		// Old contents are one use only. Keep the depth conversion check from firing over and over
+		if (ds) ds->old_contents = nullptr;
 	}
 
 	glEnable(GL_SCISSOR_TEST);
@@ -758,6 +770,8 @@ void GLGSRender::on_init_thread()
 	glEnable(GL_CLIP_DISTANCE0 + 4);
 	glEnable(GL_CLIP_DISTANCE0 + 5);
 
+	m_depth_converter.create();
+
 	m_gl_texture_cache.initialize();
 	m_thread_id = std::this_thread::get_id();
 
@@ -826,6 +840,7 @@ void GLGSRender::on_exit()
 
 	m_text_printer.close();
 	m_gl_texture_cache.destroy();
+	m_depth_converter.destroy();
 
 	for (u32 i = 0; i < occlusion_query_count; ++i)
 	{

@@ -8,6 +8,7 @@
 #include "define_new_memleakdetect.h"
 #include "GLProgramBuffer.h"
 #include "GLTextOut.h"
+#include "GLOverlays.h"
 #include "../rsx_utils.h"
 #include "../rsx_cache.h"
 
@@ -348,6 +349,7 @@ private:
 	bool manually_flush_ring_buffers = false;
 
 	gl::text_writer m_text_printer;
+	gl::depth_convert_pass m_depth_converter;
 
 	std::mutex queue_guard;
 	std::list<work_item> work_queue;
