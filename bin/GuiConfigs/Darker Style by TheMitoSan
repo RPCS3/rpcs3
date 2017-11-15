@@ -6,33 +6,6 @@ Ani @ https://github.com/AniLeo
 (2017.11.15)
 */
 
-/* 
-Color Scheme
-(Darker to Lighter)
-  
-  Black 
-   > 292929
-   > 323232
-   > 333333
-   > 3d3d3d
-   > 404040
-   > 444444
-   
-  Light Grey
-   > 828790
-   > bdc3c7
-   > ecf0f1
-   
-   > b1b1b1
-   > 7f8c8d
-   
-  Green
-   > 2ecc71
-   
-  Red
-   > e74c3c
-*/
-
 /* Every widget */
 QWidget {
 	background-color: #111111;
