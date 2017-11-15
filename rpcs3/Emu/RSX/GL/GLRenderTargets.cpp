@@ -149,7 +149,7 @@ namespace
 	}
 }
 
-void GLGSRender::init_buffers(bool skip_reading)
+void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
 {
 	if (draw_fbo && !m_rtts_dirty)
 	{
@@ -209,9 +209,10 @@ void GLGSRender::init_buffers(bool skip_reading)
 			zeta_pitch >= required_z_pitch)
 		{
 			LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, zeta_pitch = %d, color_pitch=%d", depth_address, zeta_pitch, pitchs[index]);
-			m_framebuffer_state_contested = true;
-
-			if (rsx::method_registers.depth_test_enabled() ||
+			//TODO: Research clearing both depth AND color
+			//TODO: If context is creation_draw, deal with possibility of a lost buffer clear
+			if (context == rsx::framebuffer_creation_context::context_clear_depth ||
+				rsx::method_registers.depth_test_enabled() ||
 				(!rsx::method_registers.color_write_enabled() && rsx::method_registers.depth_write_enabled()) ||
 				!!(rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT))
 			{
@@ -222,6 +223,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 			{
 				// Use address for color data
 				depth_address = 0;
+				m_framebuffer_state_contested = true;
 				break;
 			}
 		}

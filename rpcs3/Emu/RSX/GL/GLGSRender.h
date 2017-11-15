@@ -398,7 +398,7 @@ private:
 	rsx::vertex_input_layout m_vertex_layout = {};
 
 	void clear_surface(u32 arg);
-	void init_buffers(bool skip_reading = false);
+	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 
 	bool check_program_state();
 	void load_program(u32 vertex_base, u32 vertex_count);

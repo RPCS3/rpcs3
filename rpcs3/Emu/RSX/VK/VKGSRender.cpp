@@ -912,7 +912,7 @@ void VKGSRender::begin()
 	if (skip_frame || renderer_unavailable)
 		return;
 
-	init_buffers();
+	init_buffers(rsx::framebuffer_creation_context::context_draw);
 
 	if (!framebuffer_status_valid)
 		return;
@@ -1549,7 +1549,10 @@ void VKGSRender::clear_surface(u32 mask)
 	// Ignore invalid clear flags
 	if (!(mask & 0xF3)) return;
 
-	init_buffers();
+	u8 ctx = rsx::framebuffer_creation_context::context_draw;
+	if (mask & 0xF0) ctx |= rsx::framebuffer_creation_context::context_clear_color;
+	if (mask & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
+	init_buffers((rsx::framebuffer_creation_context)ctx);
 
 	if (!framebuffer_status_valid) return;
 
@@ -2242,7 +2245,7 @@ static const u32 mr_color_pitch[rsx::limits::color_buffers_count] =
 	NV4097_SET_SURFACE_PITCH_D
 };
 
-void VKGSRender::init_buffers(bool skip_reading)
+void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
 {
 	//Clear any pending swap requests
 	//TODO: Decide on what to do if we circle back to a new frame before the previous frame waiting on it is still pending
@@ -2271,7 +2274,7 @@ void VKGSRender::init_buffers(bool skip_reading)
 		}
 	}
 
-	prepare_rtts();
+	prepare_rtts(context);
 
 	if (!skip_reading)
 	{
@@ -2300,7 +2303,7 @@ void VKGSRender::open_command_buffer()
 }
 
 
-void VKGSRender::prepare_rtts()
+void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 {
 	if (m_draw_fbo && !m_rtts_dirty)
 		return;
@@ -2356,21 +2359,21 @@ void VKGSRender::prepare_rtts()
 			zeta_pitch >= required_z_pitch)
 		{
 			LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, zeta_pitch = %d, color_pitch=%d", zeta_address, zeta_pitch, surface_pitchs[index]);
-			m_framebuffer_state_contested = true;
-
-			if (rsx::method_registers.depth_test_enabled() ||
+			if (context == rsx::framebuffer_creation_context::context_clear_depth ||
+				rsx::method_registers.depth_test_enabled() ||
 				(!rsx::method_registers.color_write_enabled() && rsx::method_registers.depth_write_enabled()) ||
 				!!(rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT))
-			{
-				// Use address for color data
-				zeta_address = 0;
-				break;
-			}
-			else
 			{
 				// Use address for depth data
 				// TODO: create a temporary render buffer for this to keep MRT outputs aligned
 				surface_addresses[index] = 0;
+			}
+			else
+			{
+				// Use address for color data
+				zeta_address = 0;
+				m_framebuffer_state_contested = true;
+				break;
 			}
 		}
 	}

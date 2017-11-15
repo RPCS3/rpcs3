@@ -295,7 +295,7 @@ private:
 	void close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	void open_command_buffer();
 	void sync_at_semaphore_release();
-	void prepare_rtts();
+	void prepare_rtts(rsx::framebuffer_creation_context context);
 	void copy_render_targets_to_dma_location();
 
 	void flush_command_queue(bool hard_sync = false);
@@ -315,7 +315,7 @@ private:
 public:
 	bool check_program_status();
 	void load_program(u32 vertex_count, u32 vertex_base);
-	void init_buffers(bool skip_reading = false);
+	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 	void read_buffers();
 	void write_buffers();
 	void set_viewport();
