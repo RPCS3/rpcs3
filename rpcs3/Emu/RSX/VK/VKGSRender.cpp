@@ -2546,16 +2546,17 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 		for (u8 index : draw_buffers)
 		{
-			vk::image *raw = std::get<1>(m_rtts.m_bound_render_targets[index]);
+			if (vk::image *raw = std::get<1>(m_rtts.m_bound_render_targets[index]))
+			{
+				VkImageSubresourceRange subres = {};
+				subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				subres.baseArrayLayer = 0;
+				subres.baseMipLevel = 0;
+				subres.layerCount = 1;
+				subres.levelCount = 1;
 
-			VkImageSubresourceRange subres = {};
-			subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			subres.baseArrayLayer = 0;
-			subres.baseMipLevel = 0;
-			subres.layerCount = 1;
-			subres.levelCount = 1;
-
-			fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
+				fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
+			}
 		}
 
 		if (std::get<1>(m_rtts.m_bound_depth_stencil) != nullptr)
