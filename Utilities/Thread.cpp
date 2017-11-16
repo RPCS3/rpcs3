@@ -1916,6 +1916,11 @@ void thread_ctrl::set_ideal_processor_core(int core)
 #ifdef _WIN32
 	HANDLE _this_thread = GetCurrentThread();
 	SetThreadIdealProcessor(_this_thread, core);
+#else
+	cpu_set_t cs;
+	CPU_ZERO(&cs);
+	CPU_SET(core, &cs);
+	pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cs);
 #endif
 }
 
