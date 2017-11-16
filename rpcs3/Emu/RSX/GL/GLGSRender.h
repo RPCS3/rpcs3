@@ -36,62 +36,6 @@ struct work_item
 	volatile bool received = false;
 };
 
-struct occlusion_query_info
-{
-	GLuint handle;
-	GLint result;
-	GLint num_draws;
-	bool pending;
-	bool active;
-};
-
-struct zcull_statistics
-{
-	u32 zpass_pixel_cnt;
-	u32 zcull_stats;
-	u32 zcull_stats1;
-	u32 zcull_stats2;
-	u32 zcull_stats3;
-
-	void clear()
-	{
-		zpass_pixel_cnt = zcull_stats = zcull_stats1 = zcull_stats2 = zcull_stats3 = 0;
-	}
-};
-
-struct occlusion_task
-{
-	std::vector<occlusion_query_info*> task_stack;
-	occlusion_query_info* active_query = nullptr;
-	u32 pending = 0;
-
-	//Add one query to the task
-	void add(occlusion_query_info* query)
-	{
-		active_query = query;
-
-		if (task_stack.size() > 0 && pending == 0)
-			task_stack.resize(0);
-
-		const auto empty_slots = task_stack.size() - pending;
-		if (empty_slots >= 4)
-		{
-			for (auto &_query : task_stack)
-			{
-				if (_query == nullptr)
-				{
-					_query = query;
-					pending++;
-					return;
-				}
-			}
-		}
-
-		task_stack.push_back(query);
-		pending++;
-	}
-};
-
 struct driver_state
 {
 	const u32 DEPTH_BOUNDS_MIN = 0xFFFF0001;
@@ -354,11 +298,6 @@ private:
 	std::mutex queue_guard;
 	std::list<work_item> work_queue;
 
-	bool framebuffer_status_valid = false;
-
-	rsx::gcm_framebuffer_info surface_info[rsx::limits::color_buffers_count];
-	rsx::gcm_framebuffer_info depth_surface_info;
-
 	bool flush_draw_buffers = false;
 	std::thread::id m_thread_id;
 
@@ -371,14 +310,6 @@ private:
 
 	//vaos are mandatory for core profile
 	gl::vao m_vao;
-
-	//occlusion query
-	bool zcull_surface_active = false;
-	zcull_statistics current_zcull_stats;
-	occlusion_task zcull_task_queue = {};
-
-	const u32 occlusion_query_count = 128;
-	std::array<occlusion_query_info, 128> occlusion_query_data = {};
 
 	std::mutex m_sampler_mutex;
 	u64 surface_store_tag = 0;
@@ -414,9 +345,11 @@ public:
 	work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
 
 	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;
-	
-	void check_zcull_status(bool framebuffer_swap, bool force_read);
-	u32 synchronize_zcull_stats(bool hard_sync = false);
+
+	void begin_occlusion_query(rsx::occlusion_query_info* query) override;
+	void end_occlusion_query(rsx::occlusion_query_info* query) override;
+	bool check_occlusion_query_status(rsx::occlusion_query_info* query) override;
+	void get_occlusion_query_result(rsx::occlusion_query_info* query) override;
 
 protected:
 	void begin() override;
@@ -429,10 +362,6 @@ protected:
 	u64 timestamp() const override;
 
 	void do_local_task() override;
-
-	void notify_zcull_info_changed() override;
-	void clear_zcull_stats(u32 type) override;
-	u32 get_zcull_stats(u32 type) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_notify_memory_unmapped(u32 address_base, u32 size) override;

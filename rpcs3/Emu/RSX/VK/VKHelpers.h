@@ -1450,6 +1450,113 @@ namespace vk
 		}
 	};
 
+	class occlusion_query_pool
+	{
+		VkQueryPool query_pool = VK_NULL_HANDLE;
+		vk::render_device* owner = nullptr;
+
+		std::vector<bool> query_active_status;
+
+	public:
+
+		void create(vk::render_device &dev, u32 num_entries)
+		{
+			VkQueryPoolCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+			info.queryType = VK_QUERY_TYPE_OCCLUSION;
+			info.queryCount = num_entries;
+
+			CHECK_RESULT(vkCreateQueryPool(dev, &info, nullptr, &query_pool));
+			owner = &dev;
+
+			query_active_status.resize(num_entries, false);
+		}
+
+		void destroy()
+		{
+			if (query_pool)
+			{
+				vkDestroyQueryPool(*owner, query_pool, nullptr);
+
+				owner = nullptr;
+				query_pool = VK_NULL_HANDLE;
+			}
+		}
+
+		void begin_query(vk::command_buffer &cmd, u32 index)
+		{
+			if (query_active_status[index])
+			{
+				//Synchronization must be done externally
+				vkCmdResetQueryPool(cmd, query_pool, index, 1);
+			}
+
+			vkCmdBeginQuery(cmd, query_pool, index, 0);//VK_QUERY_CONTROL_PRECISE_BIT);
+			query_active_status[index] = true;
+		}
+
+		void end_query(vk::command_buffer &cmd, u32 index)
+		{
+			vkCmdEndQuery(cmd, query_pool, index);
+		}
+
+		bool check_query_status(u32 index)
+		{
+			u32 result[2] = {0, 0};
+			switch (VkResult status = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
+			{
+			case VK_SUCCESS:
+				break;
+			case VK_NOT_READY:
+				return false;
+			default:
+				vk::die_with_error(HERE, status);
+			}
+
+			return result[1] != 0;
+		}
+
+		u32 get_query_result(u32 index)
+		{
+			u32 result = 0;
+			CHECK_RESULT(vkGetQueryPoolResults(*owner, query_pool, index, 1, 4, &result, 4, VK_QUERY_RESULT_WAIT_BIT));
+
+			return result == 0u? 0u: 1u;
+		}
+
+		void reset_query(vk::command_buffer &cmd, u32 index)
+		{
+			vkCmdResetQueryPool(cmd, query_pool, index, 1);
+			query_active_status[index] = false;
+		}
+
+		void reset_queries(vk::command_buffer &cmd, std::vector<u32> &list)
+		{
+			for (const auto index : list)
+				reset_query(cmd, index);
+		}
+
+		void reset_all(vk::command_buffer &cmd)
+		{
+			for (u32 n = 0; n < query_active_status.size(); n++)
+			{
+				if (query_active_status[n])
+					reset_query(cmd, n);
+			}
+		}
+
+		u32 find_free_slot()
+		{
+			for (u32 n = 0; n < query_active_status.size(); n++)
+			{
+				if (query_active_status[n] == false)
+					return n;
+			}
+
+			return UINT32_MAX;
+		}
+	};
+
 	namespace glsl
 	{
 		enum program_input_type

@@ -596,10 +596,15 @@ VKGSRender::VKGSRender() : GSRender()
 	m_secondary_command_buffer_pool.create((*m_device));
 	m_secondary_command_buffer.create(m_secondary_command_buffer_pool);
 	m_secondary_command_buffer.access_hint = vk::command_buffer::access_type_hint::all;
-	
+
 	//Precalculated stuff
 	m_render_passes = get_precomputed_render_passes(*m_device, m_optimal_tiling_supported_formats);
 	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
+
+	//Occlusion
+	m_occlusion_query_pool.create((*m_device), 1024); //Enough for 1k draw calls per pass
+	for (int n = 0; n < 128; ++n)
+		occlusion_query_data[n].driver_handle = n;
 
 	//Generate frame contexts
 	VkDescriptorPoolSize uniform_buffer_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 3 * DESCRIPTOR_MAX_DRAW_CALLS };
@@ -752,6 +757,9 @@ VKGSRender::~VKGSRender()
 	//Pipeline descriptors
 	vkDestroyPipelineLayout(*m_device, pipeline_layout, nullptr);
 	vkDestroyDescriptorSetLayout(*m_device, descriptor_layouts, nullptr);
+
+	//Queries
+	m_occlusion_query_pool.destroy();
 
 	//Command buffer
 	for (auto &cb : m_primary_cb_list)
@@ -1416,6 +1424,54 @@ void VKGSRender::end()
 	const bool is_emulated_restart = (!primitive_emulated && rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart() && rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed);
 	const bool single_draw = !supports_multidraw || (!is_emulated_restart && (rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive));
 
+	u32 occlusion_id = 0;
+	if (m_occlusion_query_active)
+	{
+		//Begin query
+		occlusion_id = m_occlusion_query_pool.find_free_slot();
+		if (occlusion_id == UINT32_MAX)
+		{
+			bool free_slot_found = false;
+			u32 index_to_free = UINT32_MAX;
+			u64 earliest_timestamp = UINT64_MAX;
+
+			//flush occlusion queries
+			for (auto It : m_occlusion_map)
+			{
+				u32 index = It.first;
+				auto query = &occlusion_query_data[index];
+				if (check_occlusion_query_status(query))
+				{
+					free_slot_found = true;
+					get_occlusion_query_result(query);
+					break;
+				}
+
+				if (query->sync_timestamp < earliest_timestamp)
+				{
+					index_to_free = index;
+					earliest_timestamp = query->sync_timestamp;
+				}
+			}
+
+			if (free_slot_found)
+			{
+				occlusion_id = m_occlusion_query_pool.find_free_slot();
+			}
+			else
+			{
+				get_occlusion_query_result(&occlusion_query_data[index_to_free]);
+				occlusion_id = m_occlusion_query_pool.find_free_slot();
+			}
+
+			verify(HERE), occlusion_id != UINT32_MAX;
+		}
+
+		m_occlusion_query_pool.begin_query(*m_current_command_buffer, occlusion_id);
+		m_occlusion_map[m_active_query_info->driver_handle].indices.push_back(occlusion_id);
+		m_occlusion_map[m_active_query_info->driver_handle].command_buffer_to_wait = m_current_command_buffer;
+	}
+
 	if (!index_info)
 	{
 		if (single_draw)
@@ -1466,6 +1522,12 @@ void VKGSRender::end()
 				}
 			}
 		}
+	}
+
+	if (m_occlusion_query_active)
+	{
+		//End query
+		m_occlusion_query_pool.end_query(*m_current_command_buffer, occlusion_id);
 	}
 
 	close_render_pass();
@@ -2309,7 +2371,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		return;
 
 	copy_render_targets_to_dma_location();
-
 	m_rtts_dirty = false;
 
 	u32 clip_width = rsx::method_registers.surface_clip_width();
@@ -2580,6 +2641,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 		m_draw_fbo.reset(new vk::framebuffer_holder(*m_device, current_render_pass, fbo_width, fbo_height, std::move(fbo_images)));
 	}
+
+	check_zcull_status(true, false);
 }
 
 void VKGSRender::reinitialize_swapchain()
@@ -2913,6 +2976,79 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 	m_current_command_buffer->begin();
 
 	m_samplers_dirty.store(true);
-
 	return result;
+}
+
+void VKGSRender::clear_zcull_stats(u32 type)
+{
+	rsx::thread::clear_zcull_stats(type);
+	m_occlusion_map.clear();
+	m_occlusion_query_pool.reset_all(*m_current_command_buffer);
+}
+
+void VKGSRender::begin_occlusion_query(rsx::occlusion_query_info* query)
+{
+	query->result = 0;
+	query->sync_timestamp = get_system_time();
+	m_active_query_info = query;
+	m_occlusion_query_active = true;
+}
+
+void VKGSRender::end_occlusion_query(rsx::occlusion_query_info* query)
+{
+	m_occlusion_query_active = false;
+	m_active_query_info = nullptr;
+
+	flush_command_queue();
+}
+
+bool VKGSRender::check_occlusion_query_status(rsx::occlusion_query_info* query)
+{
+	auto found = m_occlusion_map.find(query->driver_handle);
+	if (found == m_occlusion_map.end())
+		return true;
+
+	auto &data = found->second;
+	if (data.indices.size() == 0)
+		return true;
+
+	if (data.command_buffer_to_wait == m_current_command_buffer)
+		return false;
+
+	if (data.command_buffer_to_wait->pending)
+		return false;
+
+	u32 oldest = data.indices.front();
+	return m_occlusion_query_pool.check_query_status(oldest);
+}
+
+void VKGSRender::get_occlusion_query_result(rsx::occlusion_query_info* query)
+{
+	auto found = m_occlusion_map.find(query->driver_handle);
+	if (found == m_occlusion_map.end())
+		return;
+
+	auto &data = found->second;
+	if (data.indices.size() == 0)
+		return;
+
+	if (data.command_buffer_to_wait == m_current_command_buffer)
+		flush_command_queue(); //Should hard sync, but this should almost never ever happen
+
+	if (data.command_buffer_to_wait->pending)
+		data.command_buffer_to_wait->wait();
+
+	//Gather data
+	for (const auto occlusion_id : data.indices)
+	{
+		//We only need one hit
+		if (auto value = m_occlusion_query_pool.get_query_result(occlusion_id))
+		{
+			query->result = 1;
+			break;
+		}
+	}
+
+	m_occlusion_query_pool.reset_queries(*m_current_command_buffer, data.indices);
+	m_occlusion_map.erase(query->driver_handle);
 }
