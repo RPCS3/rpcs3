@@ -109,6 +109,12 @@ struct command_buffer_chunk: public vk::command_buffer
 	}
 };
 
+struct occlusion_data
+{
+	std::vector<u32> indices;
+	command_buffer_chunk* command_buffer_to_wait = nullptr;
+};
+
 class VKGSRender : public GSRender
 {
 private:
@@ -153,10 +159,14 @@ private:
 
 	//Vulkan internals
 	vk::command_pool m_command_buffer_pool;
+	vk::occlusion_query_pool m_occlusion_query_pool;
+	bool m_occlusion_query_active = false;
+	rsx::occlusion_query_info *m_active_query_info = nullptr;
+	std::unordered_map<u32, occlusion_data> m_occlusion_map;
 
 	std::mutex m_secondary_cb_guard;
 	vk::command_pool m_secondary_command_buffer_pool;
-	vk::command_buffer m_secondary_command_buffer;
+	vk::command_buffer m_secondary_command_buffer;  //command buffer used for setup operations
 
 	u32 m_current_cb_index = 0;
 	std::array<command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
@@ -260,12 +270,6 @@ private:
 	s64 m_flip_time = 0;
 
 	u8 m_draw_buffers_count = 0;
-
-	bool framebuffer_status_valid = false;
-
-	rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
-	rsx::gcm_framebuffer_info m_depth_surface_info;
-
 	bool m_flush_draw_buffers = false;
 	std::atomic<int> m_last_flushable_cb = {-1 };
 	
@@ -319,6 +323,12 @@ public:
 	void read_buffers();
 	void write_buffers();
 	void set_viewport();
+
+	void clear_zcull_stats(u32 type) override;
+	void begin_occlusion_query(rsx::occlusion_query_info* query) override;
+	void end_occlusion_query(rsx::occlusion_query_info* query) override;
+	bool check_occlusion_query_status(rsx::occlusion_query_info* query) override;
+	void get_occlusion_query_result(rsx::occlusion_query_info* query) override;
 
 protected:
 	void begin() override;

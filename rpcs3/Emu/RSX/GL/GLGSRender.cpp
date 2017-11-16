@@ -590,10 +590,6 @@ void GLGSRender::end()
 	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
 	m_draw_calls++;
 
-	if (zcull_task_queue.active_query &&
-		zcull_task_queue.active_query->active)
-		zcull_task_queue.active_query->num_draws++;
-
 	synchronize_buffers();
 	rsx::thread::end();
 }
@@ -754,9 +750,11 @@ void GLGSRender::on_init_thread()
 	//Occlusion query
 	for (u32 i = 0; i < occlusion_query_count; ++i)
 	{
+		GLuint handle = 0;
 		auto &query = occlusion_query_data[i];
-		glGenQueries(1, &query.handle);
+		glGenQueries(1, &handle);
 		
+		query.driver_handle = (u64)handle;
 		query.pending = false;
 		query.active = false;
 		query.result = 0;
@@ -848,7 +846,9 @@ void GLGSRender::on_exit()
 		query.active = false;
 		query.pending = false;
 
-		glDeleteQueries(1, &query.handle);
+		GLuint handle = (GLuint)query.driver_handle;
+		glDeleteQueries(1, &handle);
+		query.driver_handle = 0;
 	}
 
 	glFlush();
@@ -1410,179 +1410,29 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	//m_rtts.invalidate_surface_address(addr, false);
 }
 
-void GLGSRender::check_zcull_status(bool framebuffer_swap, bool force_read)
+void GLGSRender::begin_occlusion_query(rsx::occlusion_query_info* query)
 {
-	if (g_cfg.video.disable_zcull_queries)
-		return;
-
-	bool testing_enabled = zcull_pixel_cnt_enabled || zcull_stats_enabled;
-
-	if (framebuffer_swap)
-	{
-		zcull_surface_active = false;
-		const u32 zeta_address = depth_surface_info.address;
-
-		if (zeta_address)
-		{
-			//Find zeta address in bound zculls
-			for (int i = 0; i < rsx::limits::zculls_count; i++)
-			{
-				if (zculls[i].binded)
-				{
-					const u32 rsx_address = rsx::get_address(zculls[i].offset, CELL_GCM_LOCATION_LOCAL);
-					if (rsx_address == zeta_address)
-					{
-						zcull_surface_active = true;
-						break;
-					}
-				}
-			}
-		}
-	}
-
-	occlusion_query_info* query = nullptr;
-
-	if (zcull_task_queue.task_stack.size() > 0)
-		query = zcull_task_queue.active_query;
-
-	if (query && query->active)
-	{
-		if (force_read || (!zcull_rendering_enabled || !testing_enabled || !zcull_surface_active))
-		{
-			glEndQuery(GL_ANY_SAMPLES_PASSED);
-			query->active = false;
-			query->pending = true;
-		}
-	}
-	else
-	{
-		if (zcull_rendering_enabled && testing_enabled && zcull_surface_active)
-		{
-			//Find query
-			u32 free_index = synchronize_zcull_stats();
-			query = &occlusion_query_data[free_index];
-			zcull_task_queue.add(query);
-
-			glBeginQuery(GL_ANY_SAMPLES_PASSED, query->handle);
-			query->active = true;
-			query->result = 0;
-			query->num_draws = 0;
-		}
-	}
+	query->result = 0;
+	glBeginQuery(GL_ANY_SAMPLES_PASSED, (GLuint)query->driver_handle);
 }
 
-void GLGSRender::clear_zcull_stats(u32 type)
+void GLGSRender::end_occlusion_query(rsx::occlusion_query_info* query)
 {
-	if (g_cfg.video.disable_zcull_queries)
-		return;
-
-	if (type == CELL_GCM_ZPASS_PIXEL_CNT)
-	{
-		if (zcull_task_queue.active_query &&
-			zcull_task_queue.active_query->active &&
-			zcull_task_queue.active_query->num_draws > 0)
-		{
-			//discard active query results
-			check_zcull_status(false, true);
-			zcull_task_queue.active_query->pending = false;
-
-			//re-enable cull stats if stats are enabled
-			check_zcull_status(false, false);
-			zcull_task_queue.active_query->num_draws = 0;
-		}
-
-		current_zcull_stats.clear();
-	}
+	glEndQuery(GL_ANY_SAMPLES_PASSED);
 }
 
-u32 GLGSRender::get_zcull_stats(u32 type)
+bool GLGSRender::check_occlusion_query_status(rsx::occlusion_query_info* query)
 {
-	if (g_cfg.video.disable_zcull_queries)
-		return 0u;
+	GLint status = GL_TRUE;
+	glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT_AVAILABLE, &status);
 
-	if (zcull_task_queue.active_query &&
-		zcull_task_queue.active_query->active &&
-		current_zcull_stats.zpass_pixel_cnt == 0 &&
-		type == CELL_GCM_ZPASS_PIXEL_CNT)
-	{
-		//The zcull unit is still bound as the read is happening and there are no results ready
-		check_zcull_status(false, true);  //close current query
-		check_zcull_status(false, false); //start new query since stat counting is still active
-	}
-
-	switch (type)
-	{
-	case CELL_GCM_ZPASS_PIXEL_CNT:
-	{
-		if (current_zcull_stats.zpass_pixel_cnt > 0)
-			return UINT16_MAX;
-
-		synchronize_zcull_stats(true);
-		return (current_zcull_stats.zpass_pixel_cnt > 0)? UINT16_MAX : 0;
-	}
-	case CELL_GCM_ZCULL_STATS:
-	case CELL_GCM_ZCULL_STATS1:
-	case CELL_GCM_ZCULL_STATS2:
-		//TODO
-		return UINT16_MAX;
-	case CELL_GCM_ZCULL_STATS3:
-	{
-		//Some kind of inverse value
-		if (current_zcull_stats.zpass_pixel_cnt > 0)
-			return 0;
-		
-		synchronize_zcull_stats(true);
-		return (current_zcull_stats.zpass_pixel_cnt > 0) ? 0 : UINT16_MAX;
-	}
-	default:
-		LOG_ERROR(RSX, "Unknown zcull stat type %d", type);
-		return 0;
-	}
+	return status != GL_FALSE;
 }
 
-u32 GLGSRender::synchronize_zcull_stats(bool hard_sync)
+void GLGSRender::get_occlusion_query_result(rsx::occlusion_query_info* query)
 {
-	if (!zcull_rendering_enabled || zcull_task_queue.pending == 0)
-		return 0;
+	GLint result;
+	glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT, &result);
 
-	u32 result = UINT16_MAX;
-	GLint count, status;
-
-	for (auto &query : zcull_task_queue.task_stack)
-	{
-		if (query == nullptr || query->active)
-			continue;
-
-		glGetQueryObjectiv(query->handle, GL_QUERY_RESULT_AVAILABLE, &status);
-
-		if (status == GL_FALSE && !hard_sync)
-			continue;
-
-		glGetQueryObjectiv(query->handle, GL_QUERY_RESULT, &count);
-		query->pending = false;
-		query = nullptr;
-
-		current_zcull_stats.zpass_pixel_cnt += count;
-		zcull_task_queue.pending--;
-	}
-
-	for (u32 i = 0; i < occlusion_query_count; ++i)
-	{
-		auto &query = occlusion_query_data[i];
-		if (!query.pending && !query.active)
-		{
-			result = i;
-			break;
-		}
-	}
-
-	if (result == UINT16_MAX && !hard_sync)
-		return synchronize_zcull_stats(true);
-
-	return result;
-}
-
-void GLGSRender::notify_zcull_info_changed()
-{
-	check_zcull_status(false, false);
+	query->result += result;
 }
