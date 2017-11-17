@@ -22,7 +22,7 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 	}
 
 	LARGE_INTEGER timeout;
-	timeout.QuadPart = _timeout * -10;
+	timeout.QuadPart = _timeout;
 
 	if (HRESULT rc = NtWaitForKeyedEvent(nullptr, &m_value, false, _timeout == -1 ? nullptr : &timeout))
 	{
