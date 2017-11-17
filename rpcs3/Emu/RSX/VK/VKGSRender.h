@@ -5,6 +5,7 @@
 #include "VKRenderTargets.h"
 #include "VKFormats.h"
 #include "VKTextOut.h"
+#include "VKOverlays.h"
 #include "restore_new.h"
 #include "define_new_memleakdetect.h"
 #include "VKProgramBuffer.h"
@@ -134,6 +135,7 @@ private:
 	std::unique_ptr<vk::buffer_view> null_buffer_view;
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
+	std::unique_ptr<vk::depth_convert_pass> m_depth_converter;
 
 	std::mutex m_sampler_mutex;
 	u64 surface_store_tag = 0;

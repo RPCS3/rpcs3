@@ -1417,6 +1417,16 @@ namespace rsx
 		}
 
 		result.set_texture_dimension(texture_dimensions);
+
+		//Sanity checks
+		if (result.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+		{
+			//Check that the depth stage is not disabled
+			if (!rsx::method_registers.depth_test_enabled())
+			{
+				LOG_ERROR(RSX, "FS exports depth component but depth test is disabled (INVALID_OPERATION)");
+			}
+		}
 	}
 
 	void thread::get_current_fragment_program_legacy(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info)

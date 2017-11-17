@@ -644,6 +644,9 @@ VKGSRender::VKGSRender() : GSRender()
 		m_text_writer->init(*m_device, m_memory_type_mapping, m_render_passes[idx]);
 	}
 
+	m_depth_converter.reset(new vk::depth_convert_pass());
+	m_depth_converter->create(*m_device);
+
 	m_prog_buffer.reset(new VKProgramBuffer(m_render_passes.data()));
 
 	if (g_cfg.video.disable_vertex_cache)
@@ -753,6 +756,10 @@ VKGSRender::~VKGSRender()
 
 	//Overlay text handler
 	m_text_writer.reset();
+
+	//RGBA->depth cast helper
+	m_depth_converter->destroy();
+	m_depth_converter.reset();
 
 	//Pipeline descriptors
 	vkDestroyPipelineLayout(*m_device, pipeline_layout, nullptr);
@@ -1246,6 +1253,96 @@ void VKGSRender::end()
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
 
+	textures_start = program_stop;
+
+	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+	{
+		if (m_program->has_uniform("tex" + std::to_string(i)))
+		{
+			if (!rsx::method_registers.fragment_textures[i].enabled())
+			{
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
+				continue;
+			}
+
+			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+			auto image_ptr = sampler_state->image_handle;
+
+			if (!image_ptr && sampler_state->external_subresource_desc.external_handle)
+			{
+				//Requires update, copy subresource
+				image_ptr = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
+			}
+
+			if (!image_ptr)
+			{
+				LOG_ERROR(RSX, "Texture upload failed to texture index %d. Binding null sampler.", i);
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
+				continue;
+			}
+
+			m_program->bind_uniform({ fs_sampler_handles[i]->value, image_ptr->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
+		}
+	}
+
+	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+	{
+		if (m_program->has_uniform("vtex" + std::to_string(i)))
+		{
+			if (!rsx::method_registers.vertex_textures[i].enabled())
+			{
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
+				continue;
+			}
+
+			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+			auto image_ptr = sampler_state->image_handle;
+
+			if (!image_ptr && sampler_state->external_subresource_desc.external_handle)
+			{
+				image_ptr = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
+				m_vertex_textures_dirty[i] = true;
+			}
+
+			if (!image_ptr)
+			{
+				LOG_ERROR(RSX, "Texture upload failed to vtexture index %d. Binding null sampler.", i);
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
+				continue;
+			}
+
+			m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
+		}
+	}
+
+	textures_end = steady_clock::now();
+	m_textures_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
+
+	//While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
+	//Only textures are synchronized tightly with the GPU and they have been read back above
+	vk::enter_uninterruptible();
+
+	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+
+	//Check for data casts
+	if (ds && ds->old_contents)
+	{
+		if (ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM)
+		{
+			auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
+			auto render_pass = m_render_passes[rp];
+			m_depth_converter->run(*m_current_command_buffer, ds->width(), ds->height(), ds, ds->old_contents->get_view(), render_pass, m_framebuffers_to_clean);
+
+			ds->old_contents = nullptr;
+			ds->dirty = false;
+		}
+		else if (!g_cfg.video.strict_rendering_mode)
+		{
+			//Clear this to avoid dereferencing stale ptr
+			ds->old_contents = nullptr;
+		}
+	}
+
 	if (g_cfg.video.strict_rendering_mode)
 	{
 		auto copy_rtt_contents = [&](vk::render_target* surface)
@@ -1295,81 +1392,11 @@ void VKGSRender::end()
 			}
 		}
 
-		if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+		if (ds && ds->old_contents)
 		{
-			if (ds->old_contents != nullptr)
-				copy_rtt_contents(ds);
+			copy_rtt_contents(ds);
 		}
 	}
-
-	textures_start = steady_clock::now();
-
-	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
-	{
-		if (m_program->has_uniform("tex" + std::to_string(i)))
-		{
-			if (!rsx::method_registers.fragment_textures[i].enabled())
-			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
-				continue;
-			}
-
-			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-			auto image_ptr = sampler_state->image_handle;
-
-			if (!image_ptr && sampler_state->external_subresource_desc.external_handle)
-			{
-				//Requires update, copy subresource
-				image_ptr = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
-			}
-
-			if (!image_ptr)
-			{
-				LOG_ERROR(RSX, "Texture upload failed to texture index %d. Binding null sampler.", i);
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
-				continue;
-			}
-
-			m_program->bind_uniform({ fs_sampler_handles[i]->value, image_ptr->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), m_current_frame->descriptor_set);
-		}
-	}
-	
-	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
-	{
-		if (m_program->has_uniform("vtex" + std::to_string(i)))
-		{
-			if (!rsx::method_registers.vertex_textures[i].enabled())
-			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
-				continue;
-			}
-
-			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
-			auto image_ptr = sampler_state->image_handle;
-
-			if (!image_ptr && sampler_state->external_subresource_desc.external_handle)
-			{
-				image_ptr = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
-				m_vertex_textures_dirty[i] = true;
-			}
-
-			if (!image_ptr)
-			{
-				LOG_ERROR(RSX, "Texture upload failed to vtexture index %d. Binding null sampler.", i);
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
-				continue;
-			}
-
-			m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "vtex" + std::to_string(i), m_current_frame->descriptor_set);
-		}
-	}
-
-	textures_end = steady_clock::now();
-	m_textures_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
-
-	//While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
-	//Only textures are synchronized tightly with the GPU and they have been read back above
-	vk::enter_uninterruptible();
 
 	update_draw_state();
 
@@ -1383,20 +1410,17 @@ void VKGSRender::end()
 	buffers_to_clear.reserve(4);
 	const auto targets = rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target());
 
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+	if (ds && ds->dirty)
 	{
-		if (ds->dirty)
-		{
-			//Clear this surface before drawing on it
-			VkClearValue depth_clear_value;
-			depth_clear_value.depthStencil.depth = 1.f;
-			depth_clear_value.depthStencil.stencil = 255;
+		//Clear this surface before drawing on it
+		VkClearValue depth_clear_value;
+		depth_clear_value.depthStencil.depth = 1.f;
+		depth_clear_value.depthStencil.stencil = 255;
 
-			VkClearAttachment clear_desc = { ds->attachment_aspect_flag, 0, depth_clear_value };
-			buffers_to_clear.push_back(clear_desc);
+		VkClearAttachment clear_desc = { ds->attachment_aspect_flag, 0, depth_clear_value };
+		buffers_to_clear.push_back(clear_desc);
 
-			ds->dirty = false;
-		}
+		ds->dirty = false;
 	}
 
 	for (int index = 0; index < targets.size(); ++index)
@@ -1938,6 +1962,8 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 		{
 			m_text_writer->reset_descriptors();
 		}
+
+		m_depth_converter->free_resources();
 
 		ctx->buffer_views_to_clean.clear();
 		ctx->samplers_to_clean.clear();
