@@ -116,7 +116,7 @@ namespace gl
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 				glDepthMask(depth_target ? GL_TRUE : GL_FALSE);
 
-				// AMD driver bug, disabling depth test doesnt work when doing depth replace (gl_FragDepth writes still go through the depth test)
+				// Disabling depth test will also disable depth writes which is not desired
 				glDepthFunc(GL_ALWAYS);
 				glEnable(GL_DEPTH_TEST);
 
