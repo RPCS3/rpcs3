@@ -398,9 +398,10 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	if (strncmp(swizzle.c_str(), f, 4) != 0) ret += "." + swizzle;
 
+	//Warning: Modifier order matters. e.g neg should be applied after precision clamping (tested with Naruto UNS)
+	if (src1.input_prec_mod) ret = ClampValue(ret, src1.input_prec_mod);
 	if (src.abs) ret = "abs(" + ret + ")";
 	if (src.neg) ret = "-" + ret;
-	if (src1.input_prec_mod) ret = ClampValue(ret, src1.input_prec_mod);
 
 	return ret;
 }
