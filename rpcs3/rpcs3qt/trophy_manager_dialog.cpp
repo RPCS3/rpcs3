@@ -43,7 +43,6 @@ trophy_manager_dialog::trophy_manager_dialog() : QWidget(), m_sort_column(0), m_
 	// Nonspecific widget settings
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setWindowTitle(tr("Trophy Manager"));
-	setWindowIcon(QIcon(":/rpcs3.ico"));
 
 	// HACK: dev_hdd0 must be mounted for vfs to work for loading trophies.
 	const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
