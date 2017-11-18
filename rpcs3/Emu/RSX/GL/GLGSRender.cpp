@@ -140,24 +140,24 @@ namespace
 
 	GLenum front_face(rsx::front_face op)
 	{
-		bool invert = (rsx::method_registers.shader_window_origin() == rsx::window_origin::bottom);
-
+		//NOTE: RSX face winding is always based off of upper-left corner like vulkan, but GL is bottom left
+		//shader_window_origin register does not affect this
+		//verified with Outrun Online Arcade (window_origin::top) and DS2 (window_origin::bottom)
+		//correctness of face winding checked using stencil test (GOW collection shadows)
 		switch (op)
 		{
-		case rsx::front_face::cw: return (invert ? GL_CCW : GL_CW);
-		case rsx::front_face::ccw: return (invert ? GL_CW : GL_CCW);
+		case rsx::front_face::cw: return GL_CCW;
+		case rsx::front_face::ccw: return GL_CW;
 		}
 		fmt::throw_exception("Unsupported front face 0x%X" HERE, (u32)op);
 	}
 
 	GLenum cull_face(rsx::cull_face op)
 	{
-		bool invert = (rsx::method_registers.shader_window_origin() == rsx::window_origin::top);
-
 		switch (op)
 		{
-		case rsx::cull_face::front: return (invert ? GL_BACK : GL_FRONT);
-		case rsx::cull_face::back: return (invert ? GL_FRONT : GL_BACK);
+		case rsx::cull_face::front: return GL_FRONT;
+		case rsx::cull_face::back: return GL_BACK;
 		case rsx::cull_face::front_and_back: return GL_FRONT_AND_BACK;
 		}
 		fmt::throw_exception("Unsupported cull face 0x%X" HERE, (u32)op);
