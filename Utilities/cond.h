@@ -47,4 +47,6 @@ public:
 			imp_wake(-1);
 		}
 	}
+
+	static constexpr u64 max_timeout = u64{UINT32_MAX} / 1000 * 1000000;
 };
