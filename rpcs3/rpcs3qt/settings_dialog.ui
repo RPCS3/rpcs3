@@ -534,6 +534,13 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QCheckBox" name="disableVertexCache">
+              <property name="text">
+               <string>Disable Vertex Cache</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </item>
@@ -1544,13 +1551,6 @@
              <widget class="QCheckBox" name="readColor">
               <property name="text">
                <string>Read Color Buffers</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="disableVertexCache">
-              <property name="text">
-               <string>Disable Vertex Cache</string>
               </property>
              </widget>
             </item>
