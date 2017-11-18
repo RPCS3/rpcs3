@@ -207,19 +207,15 @@ void save_data_list_dialog::UpdateList()
 
 		QTableWidgetItem* noteItem = new QTableWidgetItem();
 		noteItem->setFlags(noteItem->flags() | Qt::ItemIsEditable);
+
 		if (currNotes.contains(dirName))
 		{
 			noteItem->setText(currNotes[dirName].toString());
 		}
-		else
-		{
-			currNotes[dirName] = "";
-		}
+
 		m_list->setItem(row, 3, noteItem);
 		++row;
 	}
-
-	m_gui_settings->SetValue(GUI::m_saveNotes, currNotes);
 
 	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
 	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);

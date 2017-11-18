@@ -151,7 +151,6 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	QHBoxLayout* all_layout = new QHBoxLayout(this);
 	all_layout->addLayout(options_layout);
 	all_layout->addWidget(m_trophy_tree);
-	all_layout->setStretch(0, 0);
 	all_layout->setStretch(1, 1);
 	setLayout(all_layout);
 
