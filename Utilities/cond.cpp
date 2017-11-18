@@ -13,8 +13,17 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 	const bool is_inf = _timeout > max_timeout;
 
 #ifdef _WIN32
+	if (_timeout > INT64_MAX / 10) // If it overflows, make it endless
+	{
+		_timeout = -1; // Won't ever finish anyway
+	}
+	else
+	{
+		_timeout *= -10;
+	}
+
 	LARGE_INTEGER timeout;
-	timeout.QuadPart = _timeout * -10;
+	timeout.QuadPart = _timeout;
 
 	if (HRESULT rc = NtWaitForKeyedEvent(nullptr, &m_value, false, is_inf ? nullptr : &timeout))
 	{
