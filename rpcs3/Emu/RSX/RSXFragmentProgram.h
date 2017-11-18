@@ -230,7 +230,7 @@ struct RSXFragmentProgram
 	bool front_color_specular_output : 1;
 	u32 texture_dimensions;
 
-	std::array<float, 2> texture_scale[16];
+	std::array<float, 4> texture_scale[16];
 	u8 textures_alpha_kill[16];
 	u8 textures_zfunc[16];
 

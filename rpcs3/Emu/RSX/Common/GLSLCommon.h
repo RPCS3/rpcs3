@@ -320,20 +320,43 @@ namespace glsl
 
 		program_common::insert_compare_op(OS);
 
-		//NOTE: After testing with GOW, the w component is either the original depth or wraps around to the x component
-		//Since component.r == depth_value with some precision loss, just use the precise depth value for now (further testing needed)
+		//NOTE: Memory layout is fetched as byteswapped BGRA [GBAR] (GOW collection, DS2, DeS)
+		//The A component (Z) is useless (should contain stencil8 or just 1)
 		OS << "vec4 decodeLinearDepth(float depth_value)\n";
 		OS << "{\n";
 		OS << "	uint value = uint(depth_value * 16777215);\n";
 		OS << "	uint b = (value & 0xff);\n";
 		OS << "	uint g = (value >> 8) & 0xff;\n";
 		OS << "	uint r = (value >> 16) & 0xff;\n";
-		OS << "	return vec4(float(r)/255., float(g)/255., float(b)/255., depth_value);\n";
+		OS << "	return vec4(float(g)/255., float(b)/255., 1., float(r)/255.);\n";
 		OS << "}\n\n";
 
-		OS << "vec4 texture2DReconstruct(sampler2D tex, vec2 coord)\n";
+		OS << "float read_value(vec4 src, uint remap_index)\n";
 		OS << "{\n";
-		OS << "	return decodeLinearDepth(texture(tex, coord.xy).r);\n";
+		OS << "	switch (remap_index)\n";
+		OS << "	{\n";
+		OS << "		case 0: return src.a;\n";
+		OS << "		case 1: return src.r;\n";
+		OS << "		case 2: return src.g;\n";
+		OS << "		case 3: return src.b;\n";
+		OS << "	}\n";
+		OS << "}\n\n";
+
+		OS << "vec4 texture2DReconstruct(sampler2D tex, vec2 coord, float remap)\n";
+		OS << "{\n";
+		OS << "	vec4 result = decodeLinearDepth(texture(tex, coord.xy).r);\n";
+		OS << "	uint remap_vector = floatBitsToUint(remap) & 0xFF;\n";
+		OS << "	if (remap_vector == 0xE4) return result;\n\n";
+		OS << "	vec4 tmp;\n";
+		OS << "	uint remap_a = remap_vector & 0x3;\n";
+		OS << "	uint remap_r = (remap_vector >> 2) & 0x3;\n";
+		OS << "	uint remap_g = (remap_vector >> 4) & 0x3;\n";
+		OS << "	uint remap_b = (remap_vector >> 6) & 0x3;\n";
+		OS << "	tmp.a = read_value(result, remap_a);\n";
+		OS << "	tmp.r = read_value(result, remap_r);\n";
+		OS << "	tmp.g = read_value(result, remap_g);\n";
+		OS << "	tmp.b = read_value(result, remap_b);\n";
+		OS << "	return tmp;\n";
 		OS << "}\n\n";
 
 		OS << "vec4 get_wpos()\n";
@@ -415,7 +438,7 @@ namespace glsl
 		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D:
 			return "textureLod($t, $0.xy, 0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
-			return "texture2DReconstruct($t, $0.xy * texture_parameters[$_i].xy)";
+			return "texture2DReconstruct($t, $0.xy * texture_parameters[$_i].xy, texture_parameters[$_i].z)";
 		}
 	}
 }
