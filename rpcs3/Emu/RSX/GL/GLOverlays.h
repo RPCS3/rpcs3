@@ -185,9 +185,7 @@ namespace gl
 				"void main()\n"
 				"{\n"
 				"	vec4 rgba_in = texture(fs0, tc0);\n"
-				"	uint raw_value = uint(rgba_in.b * 255.) | (uint(rgba_in.g * 255.) << 8) | (uint(rgba_in.r * 255.) << 16);\n"
-				"	gl_FragDepth = float(raw_value) / 16777215.;\n"
-				"	//gl_FragDepth = rgba_in.r * 0.99609 + rgba_in.g * 0.00389 + rgba_in.b * 0.00002;\n"
+				"	gl_FragDepth = rgba_in.w * 0.99609 + rgba_in.x * 0.00389 + rgba_in.y * 0.00002;\n"
 				"}\n"
 			};
 		}

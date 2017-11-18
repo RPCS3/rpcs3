@@ -854,7 +854,10 @@ namespace rsx
 		size_t offset = 8;
 		for (int index = 0; index < 16; ++index)
 		{
-			stream_vector(&dst[offset], (u32&)fragment_program.texture_scale[index][0], (u32&)fragment_program.texture_scale[index][1], 0U, 0U);
+			stream_vector(&dst[offset],
+				(u32&)fragment_program.texture_scale[index][0], (u32&)fragment_program.texture_scale[index][1],
+				(u32&)fragment_program.texture_scale[index][2], (u32&)fragment_program.texture_scale[index][3]);
+
 			offset += 4;
 		}
 	}
@@ -1396,8 +1399,12 @@ namespace rsx
 					case CELL_GCM_TEXTURE_D8R8G8B8:
 					case CELL_GCM_TEXTURE_A4R4G4B4:
 					case CELL_GCM_TEXTURE_R5G6B5:
+					{
+						u32 remap = tex.remap();
 						result.redirected_textures |= (1 << i);
+						result.texture_scale[i][2] = (f32&)remap;
 						break;
+					}
 					case CELL_GCM_TEXTURE_DEPTH16:
 					case CELL_GCM_TEXTURE_DEPTH24_D8:
 					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
@@ -1520,8 +1527,12 @@ namespace rsx
 						case CELL_GCM_TEXTURE_D8R8G8B8:
 						case CELL_GCM_TEXTURE_A4R4G4B4:
 						case CELL_GCM_TEXTURE_R5G6B5:
+						{
+							u32 remap = tex.remap();
 							result.redirected_textures |= (1 << i);
+							result.texture_scale[i][2] = (f32&)remap;
 							break;
+						}
 						case CELL_GCM_TEXTURE_DEPTH16:
 						case CELL_GCM_TEXTURE_DEPTH24_D8:
 						case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
