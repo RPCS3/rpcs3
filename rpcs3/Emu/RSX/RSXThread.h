@@ -15,7 +15,6 @@
 #include <Utilities/GSL.h>
 
 #include "Utilities/Thread.h"
-#include "Utilities/Timer.h"
 #include "Utilities/geometry.h"
 #include "rsx_trace.h"
 #include "restore_new.h"
@@ -155,8 +154,6 @@ namespace rsx
 		RsxDmaControl* ctrl = nullptr;
 		atomic_t<u32> internal_get{ 0 };
 
-		Timer timer_sync;
-
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
 
@@ -218,6 +215,8 @@ namespace rsx
 		double fps_limit = 59.94;
 
 	public:
+		u64 start_rsx_time = 0;
+		u64 int_flip_index = 0;
 		u64 last_flip_time;
 		vm::ps3::ptr<void(u32)> flip_handler = vm::null;
 		vm::ps3::ptr<void(u32)> user_handler = vm::null;

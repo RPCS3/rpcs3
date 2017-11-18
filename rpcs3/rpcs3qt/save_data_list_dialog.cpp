@@ -13,11 +13,24 @@ constexpr auto qstr = QString::fromStdString;
 
 //Show up the savedata list, either to choose one to save/load or to manage saves.
 //I suggest to use function callbacks to give save data list or get save data entry. (Not implemented or stubbed)
-save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, bool is_saving, QWidget* parent)
+save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, u32 op, vm::ptr<CellSaveDataListSet> listSet, QWidget* parent)
 	: QDialog(parent), m_save_entries(entries), m_entry(SELECTION_NEW_SAVE), m_entry_label(nullptr)
 {
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
-	setWindowTitle(tr("Save Data Interface"));
+
+	if (op >= 8)
+	{
+		setWindowTitle(tr("Save Data Interface (Delete)"));
+	}
+	else if (op & 1)
+	{
+		setWindowTitle(tr("Save Data Interface (Load)"));
+	}
+	else
+	{
+		setWindowTitle(tr("Save Data Interface (Save)"));
+	}
+
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 	setMinimumSize(QSize(400, 400));
 
@@ -48,7 +61,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 		UpdateSelectionLabel();
 	}
 
-	if (is_saving)
+	if (listSet->newData)
 	{
 		QPushButton *saveNewEntry = new QPushButton(tr("Save New Entry"), this);
 		connect(saveNewEntry, &QAbstractButton::clicked, this, [&]()
