@@ -306,12 +306,14 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	//It is therefore critical that this step is done post-transform and the result re-scaled by w
 	//SEE Naruto: UNS
 	
-	OS << "	float ndc_z = gl_Position.z / gl_Position.w;\n";
-	OS << "	ndc_z = (ndc_z * 2.) - 1.;\n";
-	OS << "	gl_Position.z = ndc_z * gl_Position.w;\n";
+	//NOTE: On GPUs, poor fp32 precision means dividing z by w, then multiplying by w again gives slightly incorrect results
+	//This equation is simplified algebraically to an addition and subreaction which gives more accurate results (Fixes flickering skybox in Dark Souls 2)
+	//OS << "	float ndc_z = gl_Position.z / gl_Position.w;\n";
+	//OS << "	ndc_z = (ndc_z * 2.) - 1.;\n";
+	//OS << "	gl_Position.z = ndc_z * gl_Position.w;\n";
+	OS << "	gl_Position.z = (gl_Position.z + gl_Position.z) - gl_Position.w;\n";
 	OS << "}\n";
 }
-
 
 void GLVertexDecompilerThread::Task()
 {
