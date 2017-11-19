@@ -1768,7 +1768,7 @@ bool thread_ctrl::_wait_for(u64 usec)
 			}
 		}
 	}
-	while (_this->m_cond.wait(_lock, std::exchange(usec, usec == -1 ? -1 : 0)));
+	while (_this->m_cond.wait(_lock, std::exchange(usec, usec > cond_variable::max_timeout ? -1 : 0)));
 
 	// Timeout
 	return false;
