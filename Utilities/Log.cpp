@@ -62,6 +62,7 @@ namespace logs
 		std::string m_name;
 		std::thread m_writer;
 		fs::file m_fout;
+		fs::file m_fout2;
 		u64 m_max_size;
 
 #ifdef _WIN32
@@ -352,6 +353,9 @@ logs::file_writer::file_writer(const std::string& name)
 
 		// Actual log file (allowed to fail)
 		m_fout.open(log_name, fs::rewrite);
+
+		// Compressed log
+		m_fout2.open(log_name + ".gz", fs::rewrite);
 	}
 	catch (...)
 	{
@@ -361,6 +365,15 @@ logs::file_writer::file_writer(const std::string& name)
 	m_writer = std::thread([this]()
 	{
 		thread_ctrl::set_native_priority(-1);
+
+		z_stream zs{};
+		uchar out[65536];
+		bool zs_init = true;
+		if (!m_fout2 || deflateInit2(&zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) != Z_OK)
+		{
+			zs_init = false;
+			m_fout2.close();
+		}
 
 		while (true)
 		{
@@ -385,6 +398,25 @@ logs::file_writer::file_writer(const std::string& name)
 					m_fout.close();
 				}
 
+				if (m_fout2)
+				{
+					zs.avail_in = size;
+					zs.next_in = m_fptr + st % s_log_size;
+
+					do
+					{
+						zs.avail_out = sizeof(out);
+						zs.next_out = out;
+
+						if (deflate(&zs, Z_NO_FLUSH) == Z_STREAM_ERROR || m_fout2.write(out, sizeof(out) - zs.avail_out) != sizeof(out) - zs.avail_out)
+						{
+							m_fout2.close();
+							break;
+						}
+					}
+					while (zs.avail_out == 0);
+				}
+
 				m_out += end - st;
 			}
 			else
@@ -396,6 +428,29 @@ logs::file_writer::file_writer(const std::string& name)
 
 				std::this_thread::sleep_for(10ms);
 			}
+		}
+
+		if (zs_init)
+		{
+			if (m_fout2)
+			{
+				zs.avail_in = 0;
+				zs.next_in = nullptr;
+
+				do
+				{
+					zs.avail_out = sizeof(out);
+					zs.next_out = out;
+
+					if (deflate(&zs, Z_FINISH) == Z_STREAM_ERROR || m_fout2.write(out, sizeof(out) - zs.avail_out) != sizeof(out) - zs.avail_out)
+					{
+						break;
+					}
+				}
+				while (zs.avail_out == 0);
+			}
+
+			deflateEnd(&zs);
 		}
 	});
 }
