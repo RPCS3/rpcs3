@@ -1916,7 +1916,7 @@ void thread_ctrl::set_ideal_processor_core(int core)
 #ifdef _WIN32
 	HANDLE _this_thread = GetCurrentThread();
 	SetThreadIdealProcessor(_this_thread, core);
-#else
+#elif __linux__
 	cpu_set_t cs;
 	CPU_ZERO(&cs);
 	CPU_SET(core, &cs);
