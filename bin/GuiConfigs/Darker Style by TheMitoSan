@@ -134,6 +134,10 @@ QPushButton::disabled {
 	color: #FFF;
 }
 
+QPushButton::pressed {
+	background-color: #333; 
+}
+
 /* Log and Debugger borders */
 QTextEdit {
 	border: 0.05em solid #353535;
