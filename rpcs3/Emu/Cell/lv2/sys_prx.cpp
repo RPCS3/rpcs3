@@ -77,8 +77,6 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 	{ "/dev_flash/sys/external/libsysutil_video_export.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_video_player.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_video_upload.sprx", 0 },
-	{ "/dev_flash/sys/external/libusbd.sprx", 0 },
-	{ "/dev_flash/sys/external/libusbpspcm.sprx", 0 },
 	{ "/dev_flash/sys/external/libvdec.sprx", 0 },
 	{ "/dev_flash/sys/external/libvoice.sprx", 0 },
 };
@@ -283,7 +281,7 @@ error_code _sys_prx_unload_module(u32 id, u64 flags, vm::ptr<sys_prx_unload_modu
 	ppu_unload_prx(*prx);
 
 	//s32 result = prx->exit ? prx->exit() : CELL_OK;
-	
+
 	return CELL_OK;
 }
 
