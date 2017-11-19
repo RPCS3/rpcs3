@@ -16,21 +16,11 @@ namespace utils
 		return {0u+regs[0], 0u+regs[1], 0u+regs[2], 0u+regs[3]};
 	}
 
-	inline bool has_ssse3()
-	{
-		return get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x200;
-	}
+	bool has_ssse3();
 
-	inline bool has_avx()
-	{
-		return get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x10000000;
-	}
+	bool has_avx();
 
-	inline bool has_rtm()
-	{
-		// Check RTM and MPX extensions in order to filter out TSX on Haswell CPUs
-		return get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x4800) == 0x4800;
-	}
+	bool has_rtm();
 
 	inline bool transaction_enter()
 	{

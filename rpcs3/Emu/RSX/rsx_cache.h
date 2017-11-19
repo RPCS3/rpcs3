@@ -333,10 +333,14 @@ namespace rsx
 				dlg->Create("Preloading cached shaders from disk.\nPlease wait...");
 			});
 
+			const auto prefix_length = version_prefix.length();
 			u32 processed = 0;
 			while (root.read(tmp) && !Emu.IsStopped())
 			{
 				if (tmp.name == "." || tmp.name == "..")
+					continue;
+
+				if (tmp.name.compare(0, prefix_length, version_prefix) != 0)
 					continue;
 
 				std::vector<u8> bytes;
