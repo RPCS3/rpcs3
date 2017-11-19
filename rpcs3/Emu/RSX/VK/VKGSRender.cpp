@@ -1980,9 +1980,6 @@ void VKGSRender::do_local_task()
 				timeout += 10; //extend timeout to wait for user to finish resizing
 				break;
 			case wm_event::window_restored:
-				if (renderer_unavailable)
-					renderer_unavailable = false;
-				//fall through
 			case wm_event::window_visibility_changed:
 			case wm_event::window_minimized:
 			case wm_event::window_moved:
@@ -1998,6 +1995,9 @@ void VKGSRender::do_local_task()
 				std::this_thread::sleep_for(10ms);
 				timeout -= 10;
 			}
+
+			//reset renderer availability if something has changed about the window
+			renderer_unavailable = false;
 		}
 
 		if (!timeout)
@@ -2011,6 +2011,7 @@ void VKGSRender::do_local_task()
 	{
 		LOG_ERROR(RSX, "wm_event::window_resized received without corresponding wm_event::geometry_change_notice!");
 		std::this_thread::sleep_for(100ms);
+		renderer_unavailable = false;
 		break;
 	}
 	}
@@ -2026,8 +2027,7 @@ void VKGSRender::do_local_task()
 		if (!!frame_width && !!frame_height)
 		{
 			present_surface_dirty_flag = true;
-			if (renderer_unavailable)
-				renderer_unavailable = false;
+			renderer_unavailable = false;
 		}
 	}
 
