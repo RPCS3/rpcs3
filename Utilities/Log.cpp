@@ -119,7 +119,7 @@ namespace logs
 	static file_listener* get_logger()
 	{
 		// Use magic static
-		static file_listener logger("RPCS3.log");
+		static file_listener logger("RPCS3");
 		return &logger;
 	}
 
@@ -291,11 +291,32 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 logs::file_writer::file_writer(const std::string& name)
 	: m_name(name)
 {
+	const std::string log_name = fs::get_config_dir() + name + ".log";
+	const std::string buf_name = fs::get_config_dir() + name + ".buf";
+
 	try
 	{
-		if (!m_file.open(fs::get_config_dir() + name, fs::read + fs::write + fs::create + fs::trunc + fs::unshare))
+		if (!m_file.open(buf_name, fs::read + fs::write + fs::create + fs::trunc + fs::unshare))
 		{
-			fmt::throw_exception("Can't create file %s (error %s)", name, fs::g_tls_error);
+			if (fs::g_tls_error == fs::error::acces)
+			{
+				if (fs::exists(buf_name))
+				{
+					fmt::throw_exception("Another instance of %s is running. Close it or kill its process, if necessary.", name);
+				}
+				else
+				{
+					fmt::throw_exception("Cannot create %s.log (access denied)."
+#ifdef _WIN32
+						"\nNote that %s cannot be installed in Program Files or similar directory with limited permissions."
+#else
+						"\nPlease, check %s permissions in '~/.config/'."
+#endif
+						, name, name);
+				}
+			}
+
+			fmt::throw_exception("Cannot create %s.log (error %s)", name, fs::g_tls_error);
 		}
 
 #ifdef _WIN32
@@ -310,9 +331,9 @@ logs::file_writer::file_writer(const std::string& name)
 		std::memset(m_fptr, '\n', s_log_size);
 
 		// Rotate backups (TODO)
-		fs::remove_file(fs::get_config_dir() + name + "1.gz");
+		fs::remove_file(fs::get_config_dir() + name + "1.log.gz");
 		fs::create_dir(fs::get_config_dir() + "old_logs");
-		fs::rename(fs::get_config_dir() + m_name + ".gz", fs::get_config_dir() + "old_logs/" + m_name + ".gz", true);
+		fs::rename(fs::get_config_dir() + m_name + ".log.gz", fs::get_config_dir() + "old_logs/" + m_name + ".log.gz", true);
 	}
 	catch (...)
 	{
@@ -339,7 +360,7 @@ logs::file_writer::~file_writer()
 
 		if (deflate(&zs, Z_FINISH) != Z_STREAM_ERROR)
 		{
-			fs::file(fs::get_config_dir() + m_name + ".gz", fs::rewrite).write(buf.get(), zs.total_out);
+			fs::file(fs::get_config_dir() + m_name + ".log.gz", fs::rewrite).write(buf.get(), zs.total_out);
 		}
 
 		if (deflateEnd(&zs) != Z_OK)
