@@ -108,6 +108,7 @@ static fs::error to_error(DWORD e)
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/statvfs.h>
+#include <sys/file.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -936,6 +937,13 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	if (fd == -1)
 	{
 		g_tls_error = to_error(errno);
+		return;
+	}
+
+	if (test(mode & fs::unshare) && ::flock(fd, LOCK_EX | LOCK_NB) != 0)
+	{
+		g_tls_error = errno == EWOULDBLOCK ? fs::error::acces : to_error(errno);
+		::close(fd);
 		return;
 	}
 
