@@ -185,11 +185,27 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	const auto surface_format = rsx::method_registers.surface_color();
 	const auto depth_format = rsx::method_registers.surface_depth_fmt();
 
-	const auto required_color_pitch = rsx::utility::get_packed_pitch(surface_format, clip_horizontal);
-	const u32 required_z_pitch = depth_format == rsx::surface_depth_format::z16 ? clip_horizontal * 2 : clip_horizontal * 4;
+	//TODO: Verify that buffers <= 16 pixels in X (pitch=64) cannot have a depth buffer
+	const auto required_z_pitch = 64;//depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4;
+	const auto required_color_pitch = std::max<u32>(rsx::utility::get_packed_pitch(surface_format, clip_horizontal), 64u);
 
-	if (depth_address && zeta_pitch < required_z_pitch)
-		depth_address = 0;
+	if (depth_address)
+	{
+		if (zeta_pitch < required_z_pitch)
+		{
+			depth_address = 0;
+		}
+		else if (!rsx::method_registers.depth_test_enabled())
+		{
+			//Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
+			const bool is_depth_clear = rsx::method_registers.depth_write_enabled() && !!(context & rsx::framebuffer_creation_context::context_clear_depth);
+			if (!is_depth_clear)
+			{
+				depth_address = 0;
+				m_framebuffer_state_contested = true;
+			}
+		}
+	}
 
 	for (const auto &addr : surface_addresses)
 	{
@@ -202,7 +218,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	for (const auto &index : rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target()))
 	{
-		if (pitchs[index] < 64)
+		if (pitchs[index] < required_color_pitch)
 			surface_addresses[index] = 0;
 
 		if (surface_addresses[index] == depth_address &&
