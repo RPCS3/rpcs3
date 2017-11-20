@@ -45,6 +45,8 @@ namespace rsx
 		u16 real_pitch;
 		u16 rsx_pitch;
 
+		u32 gcm_format = 0;
+
 		u64 cache_tag = 0;
 
 		rsx::texture_create_flags view_flags = rsx::texture_create_flags::default_component_order;
@@ -96,6 +98,11 @@ namespace rsx
 			image_type = type;
 		}
 
+		void set_gcm_format(u32 format)
+		{
+			gcm_format = format;
+		}
+
 		u16 get_width() const
 		{
 			return width;
@@ -119,6 +126,11 @@ namespace rsx
 		rsx::texture_dimension_extended get_image_type() const
 		{
 			return image_type;
+		}
+
+		u32 get_gcm_format() const
+		{
+			return gcm_format;
 		}
 	};
 
@@ -1593,13 +1605,40 @@ namespace rsx
 			//Create source texture if does not exist
 			if (!src_is_render_target)
 			{
-				auto preloaded_texture = find_texture_from_dimensions(src_address, src.width, src.slice_h);
+				auto overlapping_surfaces = find_texture_from_range(src_address, src.pitch * src.height);
 
-				if (preloaded_texture != nullptr)
+				auto old_src_area = src_area;
+				for (auto &surface : overlapping_surfaces)
 				{
-					vram_texture = preloaded_texture->get_raw_texture();
+					//look for any that will fit, unless its a shader read surface or framebuffer_storage
+					if (surface->get_context() == rsx::texture_upload_context::shader_read ||
+						surface->get_context() == rsx::texture_upload_context::framebuffer_storage)
+						continue;
+
+					if (const u32 address_offset = src_address - surface->get_section_base())
+					{
+						const u16 bpp = dst_is_argb8 ? 4 : 2;
+						const u16 offset_y = address_offset / src.pitch;
+						const u16 offset_x = address_offset % src.pitch;
+						const u16 offset_x_in_block = offset_x / bpp;
+
+						src_area.x1 += offset_x_in_block;
+						src_area.x2 += offset_x_in_block;
+						src_area.y1 += offset_y;
+						src_area.y2 += offset_y;
+					}
+
+					if (src_area.x2 <= surface->get_width() &&
+						src_area.y2 <= surface->get_height())
+					{
+						vram_texture = surface->get_raw_texture();
+						break;
+					}
+
+					src_area = old_src_area;
 				}
-				else
+
+				if (!vram_texture)
 				{
 					lock.upgrade();
 
