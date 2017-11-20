@@ -47,7 +47,7 @@
 		"logProg": "Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option.",
 		"disableOcclusionQueries": "Disables running occlusion queries. Minor to moderate performance boost.\nMight introduce issues with broken occlusion e.g missing geometry and extreme pop-in.",
 		"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.",
-		"forceCpuBlitEmulation": "Forces emulation of all blit and image manipulation operations on the cpu.\nRequires 'Write Color Buffers' option to also be enabled in most cases to avoid missing graphics.\nSignificatly degrades performance but is more accurate in some cases.\nThis setting overrides the 'GPU texture scaling' option."
+		"forceCpuBlitEmulation": "Forces emulation of all blit and image manipulation operations on the CPU.\nRequires 'Write Color Buffers' option to also be enabled in most cases to avoid missing graphics.\nSignificantly degrades performance but is more accurate in some cases.\nThis setting overrides the 'GPU texture scaling' option."
 	},
 	"emulator": {
 		"gui": {

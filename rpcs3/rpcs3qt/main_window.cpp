@@ -76,8 +76,6 @@ void main_window::Init()
 
 	setAcceptDrops(true);
 
-	m_appIcon = QIcon(":/rpcs3.ico");
-
 	// hide utilities from the average user
 	ui->menuUtilities->menuAction()->setVisible(guiSettings->GetValue(GUI::m_showDebugTab).toBool());
 
@@ -107,7 +105,6 @@ void main_window::Init()
 
 	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
 	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
-	!m_appIcon.isNull() ? setWindowIcon(m_appIcon) : LOG_WARNING(GENERAL, "AppImage could not be loaded!");
 
 	Q_EMIT RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
@@ -131,7 +128,6 @@ void main_window::Init()
 
 		QMessageBox msg;
 		msg.setWindowTitle("Experimental Build Warning");
-		msg.setWindowIcon(m_appIcon);
 		msg.setIcon(QMessageBox::Critical);
 		msg.setTextFormat(Qt::RichText);
 		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
@@ -196,7 +192,7 @@ QIcon main_window::GetAppIcon()
 }
 
 // loads the appIcon from path and embeds it centered into an empty square icon
-void main_window::SetAppIconFromPath(const std::string path)
+void main_window::SetAppIconFromPath(const std::string& path)
 {
 	// get Icon for the gs_frame from path. this handles presumably all possible use cases
 	QString qpath = qstr(path);
@@ -214,7 +210,7 @@ void main_window::SetAppIconFromPath(const std::string path)
 				// load the image from path. It will most likely be a rectangle
 				QImage source = QImage(qstr(ico));
 				int edgeMax = std::max(source.width(), source.height());
-				
+
 				// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
 				QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
 				QImage dest = QImage(edgeMax, edgeMax, format);
@@ -236,7 +232,7 @@ void main_window::SetAppIconFromPath(const std::string path)
 		}
 	}
 	// if nothing was found reset the icon to default
-	m_appIcon = QIcon(":/rpcs3.ico");
+	m_appIcon = QApplication::windowIcon();
 }
 
 void main_window::BootElf()
