@@ -36,4 +36,6 @@ public:
 	bool ContainsEntry(const char *filename);
 	void RemoveEntry(const char *filename);
 	void RenameEntry(const char *oldname, const char *newname);
+	// Returns false if there's something wrong with the entries
+	bool TrimEntries();
 };

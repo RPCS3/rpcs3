@@ -2,9 +2,11 @@
 #include "Emu/System.h"
 #include "TRP.h"
 #include "Crypto/sha1.h"
+#include "Utilities/StrUtil.h"
 
 TRPLoader::TRPLoader(const fs::file& f)
 	: trp_f(f)
+	, m_header{ 0 }
 {
 }
 
@@ -140,4 +142,38 @@ void TRPLoader::RenameEntry(const char *oldname, const char *newname)
 			memcpy((void*)entry.name, newname, 32);
 		}
 	}
+}
+
+bool TRPLoader::TrimEntries()
+{
+	// Rename or discard certain entries based on the files found
+	const size_t kTargetBufferLength = 31;
+	char target[kTargetBufferLength + 1];
+	target[kTargetBufferLength] = 0;
+	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", static_cast<s32>(g_cfg.sys.language)));
+
+	if (ContainsEntry(target))
+	{
+		RemoveEntry("TROPCONF.SFM");
+		RemoveEntry("TROP.SFM");
+		RenameEntry(target, "TROPCONF.SFM");
+	}
+	else if (ContainsEntry("TROP.SFM"))
+	{
+		RemoveEntry("TROPCONF.SFM");
+		RenameEntry("TROP.SFM", "TROPCONF.SFM");
+	}
+	else if (!ContainsEntry("TROPCONF.SFM"))
+		return false;
+
+	// Discard unnecessary TROP_XX.SFM files
+	for (s32 i = 0; i <= 18; i++)
+	{
+		strcpy_trunc(target, fmt::format("TROP_%02d.SFM", i));
+		if (i != g_cfg.sys.language)
+		{
+			RemoveEntry(target);
+		}
+	}
+	return true;
 }

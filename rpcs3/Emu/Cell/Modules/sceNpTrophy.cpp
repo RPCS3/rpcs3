@@ -12,8 +12,6 @@
 #include "sceNp.h"
 #include "sceNpTrophy.h"
 
-#include "Utilities/StrUtil.h"
-
 logs::channel sceNpTrophy("sceNpTrophy");
 
 TrophyNotificationBase::~TrophyNotificationBase()
@@ -258,41 +256,17 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	}
 
 	TRPLoader trp(ctxt->trp_stream);
-	if (!trp.LoadHeader())
+	if (!trp.LoadHeader() || !trp.TrimEntries())
 	{
 		sceNpTrophy.error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE");
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
-	// Rename or discard certain entries based on the files found
-	const size_t kTargetBufferLength = 31;
-	char target[kTargetBufferLength + 1];
-	target[kTargetBufferLength] = 0;
-	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", static_cast<s32>(g_cfg.sys.language)));
-
-	if (trp.ContainsEntry(target))
 	{
-		trp.RemoveEntry("TROPCONF.SFM");
-		trp.RemoveEntry("TROP.SFM");
-		trp.RenameEntry(target, "TROPCONF.SFM");
-	}
-	else if (trp.ContainsEntry("TROP.SFM"))
-	{
-		trp.RemoveEntry("TROPCONF.SFM");
-		trp.RenameEntry("TROP.SFM", "TROPCONF.SFM");
-	}
-	else if (!trp.ContainsEntry("TROPCONF.SFM"))
-	{
-		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
-	}
-
-	// Discard unnecessary TROP_XX.SFM files
-	for (s32 i = 0; i <= 18; i++)
-	{
-		strcpy_trunc(target, fmt::format("TROP_%02d.SFM", i));
-		if (i != g_cfg.sys.language)
+		if (!trp.Install(trophyCtxName))
 		{
-			trp.RemoveEntry(target);
+			sceNpTrophy.error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE");
+			return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 		}
 	}
 
