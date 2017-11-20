@@ -123,7 +123,7 @@ void save_manager_dialog::Init(std::string dir)
 
 	UpdateList();
 
-	QByteArray geometry = m_gui_settings->GetValue(GUI::sd_geometry).toByteArray();
+	QByteArray geometry = m_gui_settings->GetValue(gui::sd_geometry).toByteArray();
 	if (geometry.isEmpty() == false)
 	{
 		restoreGeometry(geometry);
@@ -140,9 +140,9 @@ void save_manager_dialog::Init(std::string dir)
 		int originalIndex = m_list->item(row, 0)->data(Qt::UserRole).toInt();
 		SaveDataEntry originalEntry = m_save_entries[originalIndex];
 		QString originalDirName = qstr(originalEntry.dirName);
-		QVariantMap currNotes = m_gui_settings->GetValue(GUI::m_saveNotes).toMap();
+		QVariantMap currNotes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
 		currNotes[originalDirName] = m_list->item(row, col)->text();
-		m_gui_settings->SetValue(GUI::m_saveNotes, currNotes);
+		m_gui_settings->SetValue(gui::m_saveNotes, currNotes);
 	});
 }
 
@@ -158,7 +158,7 @@ void save_manager_dialog::UpdateList()
 	m_list->clearContents();
 	m_list->setRowCount(static_cast<int>(m_save_entries.size()));
 
-	QVariantMap currNotes = m_gui_settings->GetValue(GUI::m_saveNotes).toMap();
+	QVariantMap currNotes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
 
 	int row = 0;
 	for (SaveDataEntry entry : m_save_entries)
@@ -340,5 +340,5 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 
 void save_manager_dialog::closeEvent(QCloseEvent * event)
 {
-	m_gui_settings->SetValue(GUI::sd_geometry, saveGeometry());
+	m_gui_settings->SetValue(gui::sd_geometry, saveGeometry());
 }

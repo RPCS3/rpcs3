@@ -17,10 +17,10 @@ class save_data_list_dialog : public QDialog
 {
 	Q_OBJECT
 
-	enum Selection_Code
+	enum selection_code
 	{
-		SELECTION_NEW_SAVE = -1,
-		SELECTION_CANCELED = -2
+		new_save = -1,
+		canceled = -2
 	};
 
 public:

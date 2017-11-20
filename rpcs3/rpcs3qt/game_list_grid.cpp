@@ -20,8 +20,8 @@ game_list_grid::game_list_grid(const QSize& icon_size, const QColor& icon_color,
 	}
 
 	// font by stylesheet
-	QFont font = GUI::get_Label_Font("gamegrid_font");
-	QColor font_color = GUI::get_Label_Color("gamegrid_font");
+	QFont font = gui::get_Label_Font("gamegrid_font");
+	QColor font_color = gui::get_Label_Color("gamegrid_font");
 
 	grid_item_delegate = new game_list_grid_delegate(item_size, m_margin_factor, m_text_factor, font, font_color, this);
 	setItemDelegate(grid_item_delegate);

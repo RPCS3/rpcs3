@@ -55,14 +55,14 @@ class main_window : public QMainWindow
 	QStringList m_d3d12_adapters;
 #endif
 
-	enum
+	enum drop_type
 	{
-		DROP_ERROR,
-		DROP_PKG,
-		DROP_PUP,
-		DROP_RAP,
-		DROP_DIR,
-		DROP_GAME
+		drop_error,
+		drop_pkg,
+		drop_pup,
+		drop_rap,
+		drop_dir,
+		drop_game
 	};
 
 public:

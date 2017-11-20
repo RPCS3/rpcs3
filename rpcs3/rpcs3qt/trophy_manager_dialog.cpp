@@ -43,14 +43,14 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setWindowTitle(tr("Trophy Manager"));
 
-	m_icon_height            = m_gui_settings->GetValue(GUI::tr_icon_height).toInt();
-	m_show_locked_trophies   = m_gui_settings->GetValue(GUI::tr_show_locked).toBool();
-	m_show_unlocked_trophies = m_gui_settings->GetValue(GUI::tr_show_unlocked).toBool();
-	m_show_hidden_trophies   = m_gui_settings->GetValue(GUI::tr_show_hidden).toBool();
-	m_show_bronze_trophies   = m_gui_settings->GetValue(GUI::tr_show_bronze).toBool();
-	m_show_silver_trophies   = m_gui_settings->GetValue(GUI::tr_show_silver).toBool();
-	m_show_gold_trophies     = m_gui_settings->GetValue(GUI::tr_show_gold).toBool();
-	m_show_platinum_trophies = m_gui_settings->GetValue(GUI::tr_show_platinum).toBool();
+	m_icon_height            = m_gui_settings->GetValue(gui::tr_icon_height).toInt();
+	m_show_locked_trophies   = m_gui_settings->GetValue(gui::tr_show_locked).toBool();
+	m_show_unlocked_trophies = m_gui_settings->GetValue(gui::tr_show_unlocked).toBool();
+	m_show_hidden_trophies   = m_gui_settings->GetValue(gui::tr_show_hidden).toBool();
+	m_show_bronze_trophies   = m_gui_settings->GetValue(gui::tr_show_bronze).toBool();
+	m_show_silver_trophies   = m_gui_settings->GetValue(gui::tr_show_silver).toBool();
+	m_show_gold_trophies     = m_gui_settings->GetValue(gui::tr_show_gold).toBool();
+	m_show_platinum_trophies = m_gui_settings->GetValue(gui::tr_show_platinum).toBool();
 
 	// HACK: dev_hdd0 must be mounted for vfs to work for loading trophies.
 	const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
@@ -153,7 +153,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	all_layout->setStretch(1, 1);
 	setLayout(all_layout);
 
-	QByteArray geometry = m_gui_settings->GetValue(GUI::tr_geometry).toByteArray();
+	QByteArray geometry = m_gui_settings->GetValue(gui::tr_geometry).toByteArray();
 	if (geometry.isEmpty() == false)
 	{
 		restoreGeometry(geometry);
@@ -171,13 +171,13 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		if (m_save_icon_height)
 		{
 			m_save_icon_height = false;
-			m_gui_settings->SetValue(GUI::tr_icon_height, val);
+			m_gui_settings->SetValue(gui::tr_icon_height, val);
 		}
 	});
 
 	connect(m_icon_slider, &QSlider::sliderReleased, this, [&]()
 	{
-		m_gui_settings->SetValue(GUI::tr_icon_height, m_icon_slider->value());
+		m_gui_settings->SetValue(gui::tr_icon_height, m_icon_slider->value());
 	});
 
 	connect(m_icon_slider, &QSlider::actionTriggered, [&](int action)
@@ -192,49 +192,49 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	{
 		m_show_locked_trophies = checked;
 		ApplyFilter();
-		m_gui_settings->SetValue(GUI::tr_show_locked, checked);
+		m_gui_settings->SetValue(gui::tr_show_locked, checked);
 	});
 
 	connect(check_unlock_trophy, &QCheckBox::clicked, [this](bool checked)
 	{
 		m_show_unlocked_trophies = checked;
 		ApplyFilter();
-		m_gui_settings->SetValue(GUI::tr_show_unlocked, checked);
+		m_gui_settings->SetValue(gui::tr_show_unlocked, checked);
 	});
 
 	connect(check_hidden_trophy, &QCheckBox::clicked, [this](bool checked)
 	{
 		m_show_hidden_trophies = checked;
 		ApplyFilter();
-		m_gui_settings->SetValue(GUI::tr_show_hidden, checked);
+		m_gui_settings->SetValue(gui::tr_show_hidden, checked);
 	});
 
 	connect(check_bronze_trophy, &QCheckBox::clicked, [this](bool checked)
 	{
 		m_show_bronze_trophies = checked;
 		ApplyFilter();
-		m_gui_settings->SetValue(GUI::tr_show_bronze, checked);
+		m_gui_settings->SetValue(gui::tr_show_bronze, checked);
 	});
 
 	connect(check_silver_trophy, &QCheckBox::clicked, [this](bool checked)
 	{
 		m_show_silver_trophies = checked;
 		ApplyFilter();
-		m_gui_settings->SetValue(GUI::tr_show_silver, checked);
+		m_gui_settings->SetValue(gui::tr_show_silver, checked);
 	});
 
 	connect(check_gold_trophy, &QCheckBox::clicked, [this](bool checked)
 	{
 		m_show_gold_trophies = checked;
 		ApplyFilter();
-		m_gui_settings->SetValue(GUI::tr_show_gold, checked);
+		m_gui_settings->SetValue(gui::tr_show_gold, checked);
 	});
 
 	connect(check_platinum_trophy, &QCheckBox::clicked, [this](bool checked)
 	{
 		m_show_platinum_trophies = checked;
 		ApplyFilter();
-		m_gui_settings->SetValue(GUI::tr_show_platinum, checked);
+		m_gui_settings->SetValue(gui::tr_show_platinum, checked);
 	});
 
 	connect(m_trophy_tree->header(), &QHeaderView::sectionClicked, this, &trophy_manager_dialog::OnColClicked);
@@ -529,5 +529,5 @@ void trophy_manager_dialog::PopulateUI()
 void trophy_manager_dialog::closeEvent(QCloseEvent * event)
 {
 	// Save gui settings
-	m_gui_settings->SetValue(GUI::tr_geometry, saveGeometry());
+	m_gui_settings->SetValue(gui::tr_geometry, saveGeometry());
 }

@@ -14,7 +14,7 @@ struct vfs_settings_info
 {
 	QString name; // name of tab
 	emu_settings::SettingsType settingLoc; // Where the setting is saved in emu_settings
-	GUI_SAVE listLocation; // Where the list of dir options are saved
+	gui_save listLocation; // Where the list of dir options are saved
 	cfg::string* cfg_node; // Needed since emu_settings overrides settings file and doesn't touch g_cfg currently.
 };
 
