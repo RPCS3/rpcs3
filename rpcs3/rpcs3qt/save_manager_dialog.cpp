@@ -83,7 +83,6 @@ save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_setti
 {
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setWindowTitle(tr("Save Manager"));
-	setWindowIcon(QIcon(":/rpcs3.ico"));
 	setMinimumSize(QSize(400, 400));
 
 	Init(dir);

@@ -42,7 +42,6 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	// Nonspecific widget settings
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setWindowTitle(tr("Trophy Manager"));
-	setWindowIcon(QIcon(":/rpcs3.ico"));
 
 	m_icon_height            = m_gui_settings->GetValue(GUI::tr_icon_height).toInt();
 	m_show_locked_trophies   = m_gui_settings->GetValue(GUI::tr_show_locked).toBool();

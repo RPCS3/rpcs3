@@ -31,7 +31,6 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 		setWindowTitle(tr("Save Data Interface (Save)"));
 	}
 
-	setWindowIcon(QIcon(":/rpcs3.ico"));
 	setMinimumSize(QSize(400, 400));
 
 	m_gui_settings.reset(new gui_settings());
