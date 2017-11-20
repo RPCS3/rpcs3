@@ -681,7 +681,7 @@ namespace rsx
 				dst_info.max_tile_h = static_cast<u16>((dst_region.tile->size - dst_region.base) / out_pitch);
 			}
 
-			if (!g_cfg.video.force_cpu_blit_processing && dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER)
+			if (!g_cfg.video.force_cpu_blit_processing && (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER))
 			{
 				//For now, only use this for actual scaled images, there are use cases that should not go through 3d engine, e.g program ucode transfer
 				//TODO: Figure out more instances where we can use this without problems
@@ -940,12 +940,33 @@ namespace rsx
 		case frame_limit_type::_30: limit = 30.; break;
 		case frame_limit_type::_auto: limit = rsx->fps_limit; break; // TODO
 		}
+
 		if (limit)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - rsx->timer_sync.GetElapsedTimeInMilliSec())));
-			rsx->timer_sync.Start();
+			const u64 time = get_system_time() - Emu.GetPauseTime() - rsx->start_rsx_time;
+
+			if (rsx->int_flip_index == 0)
+			{
+				rsx->start_rsx_time = time;
+			}
+			else
+			{
+				// Convert limit to expected time value
+				double expected = rsx->int_flip_index * 1000000. / limit;
+
+				while (time >= expected + 1000000. / limit)
+				{
+					expected = rsx->int_flip_index++ * 1000000. / limit;
+				}
+
+				if (expected > time + 1000)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds{static_cast<s64>(expected - time) / 1000});
+				}
+			}
 		}
 		
+		rsx->int_flip_index++;
 		rsx->current_display_buffer = arg;
 		rsx->flip(arg);
 		// After each flip PS3 system is executing a routine that changes registers value to some default.

@@ -49,7 +49,7 @@ int main(int argc, char** argv)
 	parser.addPositionalArgument("(S)ELF", "Path for directly executing a (S)ELF");
 	parser.addPositionalArgument("[Args...]", "Optional args for the executable");
 	parser.addHelpOption();
-	parser.process(app);
+	parser.parse(QCoreApplication::arguments());
 
 	app.Init();
 

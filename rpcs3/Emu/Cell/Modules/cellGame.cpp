@@ -94,7 +94,7 @@ struct content_permission final
 	{
 		try
 		{
-			if (!temp.empty())
+			if (temp.size() > 1)
 			{
 				fs::remove_all(temp);
 			}

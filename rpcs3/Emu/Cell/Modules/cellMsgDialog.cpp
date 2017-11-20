@@ -23,7 +23,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	const MsgDialogType _type = { type };
+	const MsgDialogType _type = {type ^ CELL_MSGDIALOG_TYPE_BG_INVISIBLE};
 
 	switch (_type.button_type.unshifted())
 	{
