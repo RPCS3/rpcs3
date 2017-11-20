@@ -25,9 +25,6 @@
 [submodule "Utilities/yaml-cpp"]
 	path = Utilities/yaml-cpp
 	url = https://github.com/RPCS3/yaml-cpp
-[submodule "3rdparty/pugixml"]
-	path = 3rdparty/pugixml
-	url = https://github.com/RPCS3/pugixml
 [submodule "3rdparty/cereal"]
 	path = 3rdparty/cereal
 	url = https://github.com/USCiLab/cereal.git
@@ -41,3 +38,6 @@
 [submodule "3rdparty/Optional"]
 	path = 3rdparty/Optional
 	url = https://github.com/akrzemi1/Optional.git
+[submodule "3rdparty/pugixml"]
+	path = 3rdparty/pugixml
+	url = https://github.com/zeux/pugixml

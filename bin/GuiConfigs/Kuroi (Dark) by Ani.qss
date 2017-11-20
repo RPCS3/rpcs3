@@ -174,10 +174,10 @@ QMenuBar::item:selected {
 	background: #444444;
 }
 QMenu::item {
-	padding-left: 1em;
+	padding-left: 1.5em;
 	padding-right: 0.75em;
-	padding-top: 0.2em;
-	padding-bottom: 0.2em;
+	padding-top: 0.25em;
+	padding-bottom: 0.25em;
 }
 QMenu::item:selected {
 	background: #444444;

@@ -43,7 +43,6 @@ trophy_manager_dialog::trophy_manager_dialog() : QWidget(), m_sort_column(0), m_
 	// Nonspecific widget settings
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setWindowTitle(tr("Trophy Manager"));
-	setWindowIcon(QIcon(":/rpcs3.ico"));
 
 	// HACK: dev_hdd0 must be mounted for vfs to work for loading trophies.
 	const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
@@ -66,15 +65,14 @@ trophy_manager_dialog::trophy_manager_dialog() : QWidget(), m_sort_column(0), m_
 	QDirIterator dir_iter(qstr(vfs::get(m_TROPHY_DIR)));
 	while (dir_iter.hasNext()) 
 	{
-		if (dir_iter.fileName() == "" || dir_iter.fileName() == "." || dir_iter.fileName() == ".." || dir_iter.fileName() == ".gitignore")
+		dir_iter.next();
+		if (dir_iter.fileName() == "." || dir_iter.fileName() == ".." || dir_iter.fileName() == ".gitignore")
 		{
-			dir_iter.next();
 			continue;
 		}
 		std::string dirName = sstr(dir_iter.fileName());
 		LOG_TRACE(GENERAL, "Loading trophy dir: %s", dirName);
 		LoadTrophyFolderToDB(dirName);
-		dir_iter.next();
 	}
 
 	PopulateUI();

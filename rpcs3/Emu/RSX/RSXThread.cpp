@@ -394,6 +394,7 @@ namespace rsx
 
 		// Raise priority above other threads
 		thread_ctrl::set_native_priority(1);
+		thread_ctrl::set_ideal_processor_core(0);
 
 		// Round to nearest to deal with forward/reverse scaling
 		fesetround(FE_TONEAREST);
