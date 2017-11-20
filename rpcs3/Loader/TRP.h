@@ -30,6 +30,7 @@ class TRPLoader final
 public:
 	TRPLoader(const fs::file& f);
 
+	static bool IsInstalled(const std::string& dest);
 	bool Install(const std::string& dest, bool show = false);
 	bool LoadHeader(bool show = false);
 
@@ -38,4 +39,7 @@ public:
 	void RenameEntry(const char *oldname, const char *newname);
 	// Returns false if there's something wrong with the entries
 	bool TrimEntries();
+	u64 GetFileSize();
+
+	static const std::string& GetBaseTrophyPath();
 };

@@ -17,7 +17,7 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 		return false;
 	}
 
-	const std::string& local_path = vfs::get(dest);
+	const std::string& local_path = vfs::get(GetBaseTrophyPath() + dest);
 
 	if (!fs::create_dir(local_path) && fs::g_tls_error != fs::error::exist)
 	{
@@ -35,6 +35,14 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 	}
 
 	return true;
+}
+
+bool TRPLoader::IsInstalled(const std::string& dest)
+{
+	// Just check if the directory exists
+	// TODO: Ideally we'd check the files/entries too
+	const std::string& local_path = vfs::get(GetBaseTrophyPath() + dest);
+	return fs::is_dir(local_path);
 }
 
 bool TRPLoader::LoadHeader(bool show)
@@ -176,4 +184,25 @@ bool TRPLoader::TrimEntries()
 		}
 	}
 	return true;
+}
+
+u64 TRPLoader::GetFileSize()
+{
+	if (!m_header.trp_file_size)
+	{
+		LoadHeader();
+	}
+
+	const auto file_size = m_header.trp_file_size;
+	const auto header_size = sizeof(m_header);
+	const auto file_element_size = m_header.trp_files_count * m_header.trp_element_size;
+
+	return file_size - header_size - file_element_size;
+}
+
+const std::string& TRPLoader::GetBaseTrophyPath()
+{
+	// TODO: Get the path of the current user
+	static const std::string& base_trophy_path = "/dev_hdd0/home/00000001/trophy/";
+	return base_trophy_path;
 }
