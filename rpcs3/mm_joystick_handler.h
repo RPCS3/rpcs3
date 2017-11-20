@@ -55,35 +55,35 @@ class mm_joystick_handler final : public PadHandlerBase
 
 	enum mmjoy_axis
 	{
-		JOY_XPOS = 9700,
-		JOY_XNEG,
-		JOY_YPOS,
-		JOY_YNEG,
-		JOY_ZPOS,
-		JOY_ZNEG,
-		JOY_RPOS,
-		JOY_RNEG,
-		JOY_UPOS,
-		JOY_UNEG,
-		JOY_VPOS,
-		JOY_VNEG,
+		joy_x_pos = 9700,
+		joy_x_neg,
+		joy_y_pos,
+		joy_y_neg,
+		joy_z_pos,
+		joy_z_neg,
+		joy_r_pos,
+		joy_r_neg,
+		joy_u_pos,
+		joy_u_neg,
+		joy_v_pos,
+		joy_v_neg,
 	};
 
 	// Unique names for the config files and our pad settings dialog
 	const std::unordered_map<u64, std::string> axis_list =
 	{
-		{ JOY_XPOS, "X+" },
-		{ JOY_XNEG, "X-" },
-		{ JOY_YPOS, "Y+" },
-		{ JOY_YNEG, "Y-" },
-		{ JOY_ZPOS, "Z+" },
-		{ JOY_ZNEG, "Z-" },
-		{ JOY_RPOS, "R+" },
-		{ JOY_RNEG, "R-" },
-		{ JOY_UPOS, "U+" },
-		{ JOY_UNEG, "U-" },
-		{ JOY_VPOS, "V+" },
-		{ JOY_VNEG, "V-" },
+		{ joy_x_pos, "X+" },
+		{ joy_x_neg, "X-" },
+		{ joy_y_pos, "Y+" },
+		{ joy_y_neg, "Y-" },
+		{ joy_z_pos, "Z+" },
+		{ joy_z_neg, "Z-" },
+		{ joy_r_pos, "R+" },
+		{ joy_r_neg, "R-" },
+		{ joy_u_pos, "U+" },
+		{ joy_u_neg, "U-" },
+		{ joy_v_pos, "V+" },
+		{ joy_v_neg, "V-" },
 	};
 
 public:

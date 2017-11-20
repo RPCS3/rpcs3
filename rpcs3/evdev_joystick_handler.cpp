@@ -20,12 +20,12 @@
 evdev_joystick_handler::evdev_joystick_handler()
 {
 	// Define border values
-	THUMB_MIN = 0;
-	THUMB_MAX = 255;
-	TRIGGER_MIN = 0;
-	TRIGGER_MAX = 255;
-	VIBRATION_MIN = 0;
-	VIBRATION_MAX = 65535;
+	thumb_min = 0;
+	thumb_max = 255;
+	trigger_min = 0;
+	trigger_max = 255;
+	vibration_min = 0;
+	vibration_max = 65535;
 
 	// Set this handler's type and save location
 	m_pad_config.cfg_type = "evdev";
@@ -73,8 +73,8 @@ evdev_joystick_handler::evdev_joystick_handler()
 	b_has_rumble = false;
 	b_has_deadzones = true;
 
-	m_trigger_threshold = TRIGGER_MAX / 2;
-	m_thumb_threshold = THUMB_MAX / 2;
+	m_trigger_threshold = trigger_max / 2;
+	m_thumb_threshold = thumb_max / 2;
 }
 
 evdev_joystick_handler::~evdev_joystick_handler()

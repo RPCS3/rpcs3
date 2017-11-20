@@ -8,12 +8,12 @@ xinput_pad_handler::xinput_pad_handler() :
 	xinputSetState(nullptr), xinputGetBatteryInformation(nullptr), is_init(false)
 {
 	// Define border values
-	THUMB_MIN = -32768;
-	THUMB_MAX = 32767;
-	TRIGGER_MIN = 0;
-	TRIGGER_MAX = 255;
-	VIBRATION_MIN = 0;
-	VIBRATION_MAX = 65535;
+	thumb_min = -32768;
+	thumb_max = 32767;
+	trigger_min = 0;
+	trigger_max = 255;
+	vibration_min = 0;
+	vibration_max = 65535;
 
 	// Set this handler's type and save location
 	m_pad_config.cfg_type = "xinput";
@@ -61,8 +61,8 @@ xinput_pad_handler::xinput_pad_handler() :
 	b_has_rumble = true;
 	b_has_deadzones = true;
 
-	m_trigger_threshold = TRIGGER_MAX / 2;
-	m_thumb_threshold = THUMB_MAX / 2;
+	m_trigger_threshold = trigger_max / 2;
+	m_thumb_threshold = thumb_max / 2;
 }
 
 xinput_pad_handler::~xinput_pad_handler()
@@ -198,9 +198,9 @@ void xinput_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& v
 	}
 }
 
-std::array<u16, xinput_pad_handler::XInputKeyCodes::KEYCODECOUNT> xinput_pad_handler::GetButtonValues(const XINPUT_STATE& state)
+std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> xinput_pad_handler::GetButtonValues(const XINPUT_STATE& state)
 {
-	std::array<u16, xinput_pad_handler::XInputKeyCodes::KEYCODECOUNT> values;
+	std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> values;
 
 	// Triggers
 	values[XInputKeyCodes::LT] = state.Gamepad.bLeftTrigger;
@@ -335,7 +335,7 @@ void xinput_pad_handler::ThreadProc()
 			last_connection_status[padnum] = true;
 			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 
-			std::array<u16, XInputKeyCodes::KEYCODECOUNT> button_values = GetButtonValues(state);
+			std::array<u16, XInputKeyCodes::KeyCodeCount> button_values = GetButtonValues(state);
 
 			// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 			for (auto& btn : pad->m_buttons)
@@ -403,8 +403,8 @@ void xinput_pad_handler::ThreadProc()
 			int idx_l = m_pad_config.switch_vibration_motors ? 1 : 0;
 			int idx_s = m_pad_config.switch_vibration_motors ? 0 : 1;
 
-			int speed_large = m_pad_config.enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : VIBRATION_MIN;
-			int speed_small = m_pad_config.enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : VIBRATION_MIN;
+			int speed_large = m_pad_config.enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : vibration_min;
+			int speed_small = m_pad_config.enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : vibration_min;
 
 			device->newVibrateData = device->newVibrateData || device->largeVibrate != speed_large || device->smallVibrate != speed_small;
 

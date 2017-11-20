@@ -85,12 +85,12 @@ namespace
 ds4_pad_handler::ds4_pad_handler() : is_init(false)
 {
 	// Define border values
-	THUMB_MIN = 0;
-	THUMB_MAX = 255;
-	TRIGGER_MIN = 0;
-	TRIGGER_MAX = 255;
-	VIBRATION_MIN = 0;
-	VIBRATION_MAX = 255;
+	thumb_min = 0;
+	thumb_max = 255;
+	trigger_min = 0;
+	trigger_max = 255;
+	vibration_min = 0;
+	vibration_max = 255;
 
 	// Set this handler's type and save location
 	m_pad_config.cfg_type = "ds4";
@@ -143,8 +143,8 @@ ds4_pad_handler::ds4_pad_handler() : is_init(false)
 	b_has_rumble = true;
 	b_has_deadzones = true;
 
-	m_trigger_threshold = TRIGGER_MAX / 2;
-	m_thumb_threshold = THUMB_MAX / 2;
+	m_trigger_threshold = trigger_max / 2;
+	m_thumb_threshold = thumb_max / 2;
 }
 
 void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback)
@@ -289,9 +289,9 @@ void ds4_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& val,
 	}
 }
 
-std::array<u16, ds4_pad_handler::DS4KeyCodes::KEYCODECOUNT> ds4_pad_handler::GetButtonValues(const std::shared_ptr<DS4Device>& device)
+std::array<u16, ds4_pad_handler::DS4KeyCodes::KeyCodeCount> ds4_pad_handler::GetButtonValues(const std::shared_ptr<DS4Device>& device)
 {
-	std::array<u16, DS4KeyCodes::KEYCODECOUNT> keyBuffer;
+	std::array<u16, DS4KeyCodes::KeyCodeCount> keyBuffer;
 	auto buf = device->padData;
 
 	// Left Stick X Axis
@@ -862,8 +862,8 @@ void ds4_pad_handler::ThreadProc()
 		int idx_l = m_pad_config.switch_vibration_motors ? 1 : 0;
 		int idx_s = m_pad_config.switch_vibration_motors ? 0 : 1;
 
-		int speed_large = m_pad_config.enable_vibration_motor_large ? thepad->m_vibrateMotors[idx_l].m_value : VIBRATION_MIN;
-		int speed_small = m_pad_config.enable_vibration_motor_small ? thepad->m_vibrateMotors[idx_s].m_value : VIBRATION_MIN;
+		int speed_large = m_pad_config.enable_vibration_motor_large ? thepad->m_vibrateMotors[idx_l].m_value : vibration_min;
+		int speed_small = m_pad_config.enable_vibration_motor_small ? thepad->m_vibrateMotors[idx_s].m_value : vibration_min;
 
 		bool wireless = device->cableState < 1;
 		bool lowBattery = device->batteryLevel < 2;
@@ -892,7 +892,7 @@ void ds4_pad_handler::ThreadProc()
 
 		if (device->newVibrateData)
 		{
-			if (SendVibrateData(device) >= 0);
+			if (SendVibrateData(device) >= 0)
 			{
 				device->newVibrateData = false;
 			}

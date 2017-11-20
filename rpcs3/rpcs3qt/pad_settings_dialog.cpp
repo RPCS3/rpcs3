@@ -36,27 +36,27 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 	if (m_handler_cfg->cfg_type == "keyboard")
 	{
 		setWindowTitle(tr("Configure Keyboard"));
-		m_handler_type = HANDLER_TYPE_KEYBOARD;
+		m_handler_type = handler_type::handler_type_keyboard;
 	}
 	else if (m_handler_cfg->cfg_type == "xinput")
 	{
 		setWindowTitle(tr("Configure XInput"));
-		m_handler_type = HANDLER_TYPE_XINPUT;
+		m_handler_type = handler_type::handler_type_xinput;
 	}
 	else if (m_handler_cfg->cfg_type == "ds4")
 	{
 		setWindowTitle(tr("Configure DS4"));
-		m_handler_type = HANDLER_TYPE_DS4;
+		m_handler_type = handler_type::handler_type_ds4;
 	}
 	else if (m_handler_cfg->cfg_type == "mmjoystick")
 	{
 		setWindowTitle(tr("Configure MMJoystick"));
-		m_handler_type = HANDLER_TYPE_MMJOYSTICK;
+		m_handler_type = handler_type::handler_type_mmjoy;
 	}
 	else if (m_handler_cfg->cfg_type == "evdev")
 	{
 		setWindowTitle(tr("Configure evdev"));
-		m_handler_type = HANDLER_TYPE_EVDEV;
+		m_handler_type = handler_type::handler_type_evdev;
 	}
 
 	// Enable Button Remapping
@@ -85,7 +85,7 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 			if (val <= 0) return;
 
 			LOG_NOTICE(HLE, "GetNextButtonPress: %s button %s pressed with value %d", m_handler_cfg->cfg_type, name, val);
-			if (m_button_id > id_pad_begin && m_button_id < id_pad_end)
+			if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end)
 			{
 				m_cfg_entries[m_button_id].key = name;
 				m_cfg_entries[m_button_id].text = qstr(name);
@@ -104,8 +104,8 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 	// Enable Vibration Checkboxes
 	if (m_handler->has_rumble())
 	{
-		const s32 min_force = m_handler->VIBRATION_MIN;
-		const s32 max_force = m_handler->VIBRATION_MAX;
+		const s32 min_force = m_handler->vibration_min;
+		const s32 max_force = m_handler->vibration_max;
 
 		ui->chb_vibration_large->setEnabled(true);
 		ui->chb_vibration_small->setEnabled(true);
@@ -166,14 +166,14 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 		};
 
 		// Enable Trigger Thresholds
-		initSlider(ui->slider_trigger_left, m_handler_cfg->ltriggerthreshold, 0, m_handler->TRIGGER_MAX);
-		initSlider(ui->slider_trigger_right, m_handler_cfg->rtriggerthreshold, 0, m_handler->TRIGGER_MAX);
-		ui->preview_trigger_left->setRange(0, m_handler->TRIGGER_MAX);
-		ui->preview_trigger_right->setRange(0, m_handler->TRIGGER_MAX);
+		initSlider(ui->slider_trigger_left, m_handler_cfg->ltriggerthreshold, 0, m_handler->trigger_max);
+		initSlider(ui->slider_trigger_right, m_handler_cfg->rtriggerthreshold, 0, m_handler->trigger_max);
+		ui->preview_trigger_left->setRange(0, m_handler->trigger_max);
+		ui->preview_trigger_right->setRange(0, m_handler->trigger_max);
 
 		// Enable Stick Deadzones
-		initSlider(ui->slider_stick_left, m_handler_cfg->lstickdeadzone, 0, m_handler->THUMB_MAX);
-		initSlider(ui->slider_stick_right, m_handler_cfg->rstickdeadzone, 0, m_handler->THUMB_MAX);
+		initSlider(ui->slider_stick_left, m_handler_cfg->lstickdeadzone, 0, m_handler->thumb_max);
+		initSlider(ui->slider_stick_right, m_handler_cfg->rstickdeadzone, 0, m_handler->thumb_max);
 
 		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->sizeHint().width(), lx, ly);
 		connect(ui->slider_stick_left, &QSlider::valueChanged, [&](int value)
@@ -191,46 +191,46 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 	auto insertButton = [this](int id, QPushButton* button, cfg::string* cfg_name)
 	{
 		QString name = qstr(*cfg_name);
-		m_cfg_entries.insert(std::make_pair(id, PAD_BUTTON{ cfg_name, *cfg_name, name }));
+		m_cfg_entries.insert(std::make_pair(id, pad_button{ cfg_name, *cfg_name, name }));
 		m_padButtons->addButton(button, id);
 		button->setText(name);
 	};
 
-	insertButton(id_pad_lstick_left,  ui->b_lstick_left,  &m_handler_cfg->ls_left);  
-	insertButton(id_pad_lstick_down,  ui->b_lstick_down,  &m_handler_cfg->ls_down);
-	insertButton(id_pad_lstick_right, ui->b_lstick_right, &m_handler_cfg->ls_right);
-	insertButton(id_pad_lstick_up,    ui->b_lstick_up,    &m_handler_cfg->ls_up);
+	insertButton(button_ids::id_pad_lstick_left,  ui->b_lstick_left,  &m_handler_cfg->ls_left);  
+	insertButton(button_ids::id_pad_lstick_down,  ui->b_lstick_down,  &m_handler_cfg->ls_down);
+	insertButton(button_ids::id_pad_lstick_right, ui->b_lstick_right, &m_handler_cfg->ls_right);
+	insertButton(button_ids::id_pad_lstick_up,    ui->b_lstick_up,    &m_handler_cfg->ls_up);
 
-	insertButton(id_pad_left,  ui->b_left,  &m_handler_cfg->left);
-	insertButton(id_pad_down,  ui->b_down,  &m_handler_cfg->down);
-	insertButton(id_pad_right, ui->b_right, &m_handler_cfg->right);
-	insertButton(id_pad_up,    ui->b_up,    &m_handler_cfg->up);
+	insertButton(button_ids::id_pad_left,  ui->b_left,  &m_handler_cfg->left);
+	insertButton(button_ids::id_pad_down,  ui->b_down,  &m_handler_cfg->down);
+	insertButton(button_ids::id_pad_right, ui->b_right, &m_handler_cfg->right);
+	insertButton(button_ids::id_pad_up,    ui->b_up,    &m_handler_cfg->up);
 
-	insertButton(id_pad_l1, ui->b_shift_l1, &m_handler_cfg->l1);
-	insertButton(id_pad_l2, ui->b_shift_l2, &m_handler_cfg->l2);
-	insertButton(id_pad_l3, ui->b_shift_l3, &m_handler_cfg->l3);
+	insertButton(button_ids::id_pad_l1, ui->b_shift_l1, &m_handler_cfg->l1);
+	insertButton(button_ids::id_pad_l2, ui->b_shift_l2, &m_handler_cfg->l2);
+	insertButton(button_ids::id_pad_l3, ui->b_shift_l3, &m_handler_cfg->l3);
 
-	insertButton(id_pad_start,  ui->b_start,  &m_handler_cfg->start);
-	insertButton(id_pad_select, ui->b_select, &m_handler_cfg->select);
-	insertButton(id_pad_ps,     ui->b_ps,     &m_handler_cfg->ps);
+	insertButton(button_ids::id_pad_start,  ui->b_start,  &m_handler_cfg->start);
+	insertButton(button_ids::id_pad_select, ui->b_select, &m_handler_cfg->select);
+	insertButton(button_ids::id_pad_ps,     ui->b_ps,     &m_handler_cfg->ps);
 
-	insertButton(id_pad_r1, ui->b_shift_r1, &m_handler_cfg->r1);
-	insertButton(id_pad_r2, ui->b_shift_r2, &m_handler_cfg->r2);
-	insertButton(id_pad_r3, ui->b_shift_r3, &m_handler_cfg->r3);
+	insertButton(button_ids::id_pad_r1, ui->b_shift_r1, &m_handler_cfg->r1);
+	insertButton(button_ids::id_pad_r2, ui->b_shift_r2, &m_handler_cfg->r2);
+	insertButton(button_ids::id_pad_r3, ui->b_shift_r3, &m_handler_cfg->r3);
 
-	insertButton(id_pad_square,   ui->b_square,   &m_handler_cfg->square);
-	insertButton(id_pad_cross,    ui->b_cross,    &m_handler_cfg->cross);
-	insertButton(id_pad_circle,   ui->b_circle,   &m_handler_cfg->circle);
-	insertButton(id_pad_triangle, ui->b_triangle, &m_handler_cfg->triangle);
+	insertButton(button_ids::id_pad_square,   ui->b_square,   &m_handler_cfg->square);
+	insertButton(button_ids::id_pad_cross,    ui->b_cross,    &m_handler_cfg->cross);
+	insertButton(button_ids::id_pad_circle,   ui->b_circle,   &m_handler_cfg->circle);
+	insertButton(button_ids::id_pad_triangle, ui->b_triangle, &m_handler_cfg->triangle);
 
-	insertButton(id_pad_rstick_left,  ui->b_rstick_left,  &m_handler_cfg->rs_left);
-	insertButton(id_pad_rstick_down,  ui->b_rstick_down,  &m_handler_cfg->rs_down);
-	insertButton(id_pad_rstick_right, ui->b_rstick_right, &m_handler_cfg->rs_right);
-	insertButton(id_pad_rstick_up,    ui->b_rstick_up,    &m_handler_cfg->rs_up);
+	insertButton(button_ids::id_pad_rstick_left,  ui->b_rstick_left,  &m_handler_cfg->rs_left);
+	insertButton(button_ids::id_pad_rstick_down,  ui->b_rstick_down,  &m_handler_cfg->rs_down);
+	insertButton(button_ids::id_pad_rstick_right, ui->b_rstick_right, &m_handler_cfg->rs_right);
+	insertButton(button_ids::id_pad_rstick_up,    ui->b_rstick_up,    &m_handler_cfg->rs_up);
 
-	m_padButtons->addButton(ui->b_reset, id_reset_parameters);
-	m_padButtons->addButton(ui->b_ok, id_ok);
-	m_padButtons->addButton(ui->b_cancel, id_cancel);
+	m_padButtons->addButton(ui->b_reset,  button_ids::id_reset_parameters);
+	m_padButtons->addButton(ui->b_ok,     button_ids::id_ok);
+	m_padButtons->addButton(ui->b_cancel, button_ids::id_cancel);
 
 	connect(m_padButtons, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), this, &pad_settings_dialog::OnPadButtonClicked);
 
@@ -265,7 +265,7 @@ void pad_settings_dialog::ReactivateButtons()
 	m_timer.stop();
 	m_seconds = MAX_SECONDS;
 
-	if (m_button_id == id_pad_begin)
+	if (m_button_id == button_ids::id_pad_begin)
 	{
 		return;
 	}
@@ -275,14 +275,14 @@ void pad_settings_dialog::ReactivateButtons()
 		m_padButtons->button(m_button_id)->setPalette(m_palette);
 	}
 
-	m_button_id = id_pad_begin;
+	m_button_id = button_ids::id_pad_begin;
 	UpdateLabel();
 	SwitchButtons(true);
 }
 
 void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y)
 {
-	int max = m_handler->THUMB_MAX;
+	int max = m_handler->thumb_max;
 	int origin = w * 0.1;
 	int width = w * 0.8;
 	int dz_width = width * dz / max;
@@ -311,17 +311,17 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int dz, int w, int x, i
 
 void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 {
-	if (m_handler_type != HANDLER_TYPE_KEYBOARD)
+	if (m_handler_type != handler_type::handler_type_keyboard)
 	{
 		return;
 	}
 
-	if (m_button_id == id_pad_begin)
+	if (m_button_id == button_ids::id_pad_begin)
 	{
 		return;
 	}
 
-	if (m_button_id <= id_pad_begin || m_button_id >= id_pad_end)
+	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
 		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler_type), m_button_id);
 	}
@@ -362,7 +362,7 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 
 void pad_settings_dialog::SwitchButtons(bool is_enabled)
 {
-	for (int i = id_pad_begin + 1; i < id_pad_end; i++)
+	for (int i = button_ids::id_pad_begin + 1; i < button_ids::id_pad_end; i++)
 	{
 		m_padButtons->button(i)->setEnabled(is_enabled);
 	}
@@ -388,16 +388,16 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 {
 	switch (id)
 	{
-	case id_pad_begin:
-	case id_pad_end:
-	case id_cancel:
+	case button_ids::id_pad_begin:
+	case button_ids::id_pad_end:
+	case button_ids::id_cancel:
 		return;
-	case id_reset_parameters:
+	case button_ids::id_reset_parameters:
 		ReactivateButtons();
 		m_handler_cfg->from_default();
 		UpdateLabel(true);
 		return;
-	case id_ok:
+	case button_ids::id_ok:
 		SaveConfig();
 		QDialog::accept();
 		return;

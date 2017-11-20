@@ -55,7 +55,7 @@ class xinput_pad_handler final : public PadHandlerBase
 		RSYNeg,
 		RSYPos,
 
-		KEYCODECOUNT
+		KeyCodeCount
 	};
 
 	// Unique names for the config files and our pad settings dialog
@@ -117,7 +117,7 @@ private:
 	typedef DWORD (WINAPI * PFN_XINPUTGETBATTERYINFORMATION)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION *);
 
 private:
-	std::array<u16, XInputKeyCodes::KEYCODECOUNT> GetButtonValues(const XINPUT_STATE& state);
+	std::array<u16, XInputKeyCodes::KeyCodeCount> GetButtonValues(const XINPUT_STATE& state);
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
 
 	bool is_init;

@@ -73,14 +73,14 @@ class pad_settings_dialog : public QDialog
 
 	enum handler_type
 	{
-		HANDLER_TYPE_KEYBOARD,
-		HANDLER_TYPE_XINPUT,
-		HANDLER_TYPE_DS4,
-		HANDLER_TYPE_MMJOYSTICK,
-		HANDLER_TYPE_EVDEV
+		handler_type_keyboard,
+		handler_type_xinput,
+		handler_type_ds4,
+		handler_type_mmjoy,
+		handler_type_evdev
 	};
 
-	struct PAD_BUTTON
+	struct pad_button
 	{
 		cfg::string* cfg_name;
 		std::string key;
@@ -96,7 +96,7 @@ private:
 	// Button Mapping
 	QButtonGroup* m_padButtons;
 	u32 m_button_id = id_pad_begin;
-	std::map<int /*id*/, PAD_BUTTON /*info*/> m_cfg_entries;
+	std::map<int /*id*/, pad_button /*info*/> m_cfg_entries;
 
 	// Real time stick values
 	int lx = 0;

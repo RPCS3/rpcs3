@@ -44,7 +44,7 @@ class ds4_pad_handler final : public PadHandlerBase
 		RSYNeg,
 		RSYPos,
 
-		KEYCODECOUNT
+		KeyCodeCount
 	};
 
 	// Unique names for the config files and our pad settings dialog
@@ -159,7 +159,7 @@ private:
 	DS4DataStatus GetRawData(const std::shared_ptr<DS4Device>& ds4Device);
 	// This function gets us usuable buffer from the rawbuffer of padData
 	// Todo: this currently only handles 'buttons' and not axis or sensors for the time being
-	std::array<u16, DS4KeyCodes::KEYCODECOUNT> GetButtonValues(const std::shared_ptr<DS4Device>& ds4Device);
+	std::array<u16, DS4KeyCodes::KeyCodeCount> GetButtonValues(const std::shared_ptr<DS4Device>& ds4Device);
 	bool GetCalibrationData(const std::shared_ptr<DS4Device>& ds4Device);
 	void CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo);
 	int SendVibrateData(const std::shared_ptr<DS4Device>& device);

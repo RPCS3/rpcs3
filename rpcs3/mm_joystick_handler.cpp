@@ -21,14 +21,14 @@ mm_joystick_handler::mm_joystick_handler() : is_init(false)
 	m_pad_config.cfg_name = fs::get_config_dir() + "/config_mmjoystick.yml";
 
 	// Set default button mapping
-	m_pad_config.ls_left.def  = axis_list.at(mmjoy_axis::JOY_XNEG);
-	m_pad_config.ls_down.def  = axis_list.at(mmjoy_axis::JOY_YNEG);
-	m_pad_config.ls_right.def = axis_list.at(mmjoy_axis::JOY_XPOS);
-	m_pad_config.ls_up.def    = axis_list.at(mmjoy_axis::JOY_YPOS);
-	m_pad_config.rs_left.def  = axis_list.at(mmjoy_axis::JOY_UNEG);
-	m_pad_config.rs_down.def  = axis_list.at(mmjoy_axis::JOY_RNEG);
-	m_pad_config.rs_right.def = axis_list.at(mmjoy_axis::JOY_UPOS);
-	m_pad_config.rs_up.def    = axis_list.at(mmjoy_axis::JOY_RPOS);
+	m_pad_config.ls_left.def  = axis_list.at(mmjoy_axis::joy_x_neg);
+	m_pad_config.ls_down.def  = axis_list.at(mmjoy_axis::joy_y_neg);
+	m_pad_config.ls_right.def = axis_list.at(mmjoy_axis::joy_x_pos);
+	m_pad_config.ls_up.def    = axis_list.at(mmjoy_axis::joy_y_pos);
+	m_pad_config.rs_left.def  = axis_list.at(mmjoy_axis::joy_u_neg);
+	m_pad_config.rs_down.def  = axis_list.at(mmjoy_axis::joy_r_neg);
+	m_pad_config.rs_right.def = axis_list.at(mmjoy_axis::joy_u_pos);
+	m_pad_config.rs_up.def    = axis_list.at(mmjoy_axis::joy_r_pos);
 	m_pad_config.start.def    = button_list.at(JOY_BUTTON8);
 	m_pad_config.select.def   = button_list.at(JOY_BUTTON7);
 	m_pad_config.ps.def       = button_list.at(JOY_BUTTON17);
@@ -41,10 +41,10 @@ mm_joystick_handler::mm_joystick_handler() : is_init(false)
 	m_pad_config.right.def    = pov_list.at(JOY_POVRIGHT);
 	m_pad_config.up.def       = pov_list.at(JOY_POVFORWARD);
 	m_pad_config.r1.def       = button_list.at(JOY_BUTTON6);
-	m_pad_config.r2.def       = axis_list.at(mmjoy_axis::JOY_ZPOS);
+	m_pad_config.r2.def       = axis_list.at(mmjoy_axis::joy_z_pos);
 	m_pad_config.r3.def       = button_list.at(JOY_BUTTON10);
 	m_pad_config.l1.def       = button_list.at(JOY_BUTTON5);
-	m_pad_config.l2.def       = axis_list.at(mmjoy_axis::JOY_ZNEG);
+	m_pad_config.l2.def       = axis_list.at(mmjoy_axis::joy_z_neg);
 	m_pad_config.l3.def       = button_list.at(JOY_BUTTON9);
 
 	// Set default misc variables
@@ -62,8 +62,8 @@ mm_joystick_handler::mm_joystick_handler() : is_init(false)
 	b_has_rumble = true;
 	b_has_deadzones = true;
 
-	m_trigger_threshold = TRIGGER_MAX / 2;
-	m_thumb_threshold = THUMB_MAX / 2;
+	m_trigger_threshold = trigger_max / 2;
+	m_thumb_threshold = thumb_max / 2;
 }
 
 mm_joystick_handler::~mm_joystick_handler()
@@ -292,10 +292,10 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 			u32 keycode = button.first;
 			u16 value = data[keycode];
 
-			if (((keycode == mmjoy_axis::JOY_ZNEG) && (value > m_trigger_threshold))
-			 || ((keycode == mmjoy_axis::JOY_ZPOS) && (value > m_trigger_threshold))
-			 || ((keycode <= mmjoy_axis::JOY_YNEG) && (value > m_thumb_threshold))
-			 || ((keycode <= mmjoy_axis::JOY_UNEG && keycode > mmjoy_axis::JOY_ZNEG) && (value > m_thumb_threshold)))
+			if (((keycode == mmjoy_axis::joy_z_neg) && (value > m_trigger_threshold))
+			 || ((keycode == mmjoy_axis::joy_z_pos) && (value > m_trigger_threshold))
+			 || ((keycode <= mmjoy_axis::joy_y_neg) && (value > m_thumb_threshold))
+			 || ((keycode <= mmjoy_axis::joy_u_neg && keycode > mmjoy_axis::joy_z_neg) && (value > m_thumb_threshold)))
 			{
 				if (value > pressed_button.first)
 				{
@@ -304,7 +304,15 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 			}
 		}
 
-		int preview_values[6] = { data[JOY_ZNEG], data[JOY_ZPOS], data[JOY_XPOS] - data[JOY_XNEG], data[JOY_YPOS] - data[JOY_YNEG], data[JOY_UPOS] - data[JOY_UNEG], data[JOY_RPOS] - data[JOY_RNEG] };
+		int preview_values[6] = 
+		{
+			data[mmjoy_axis::joy_z_neg],
+			data[mmjoy_axis::joy_z_pos],
+			data[mmjoy_axis::joy_x_pos] - data[mmjoy_axis::joy_x_neg],
+			data[mmjoy_axis::joy_y_pos] - data[mmjoy_axis::joy_y_neg],
+			data[mmjoy_axis::joy_u_pos] - data[mmjoy_axis::joy_u_neg],
+			data[mmjoy_axis::joy_r_pos] - data[mmjoy_axis::joy_r_neg]
+		};
 
 		if (pressed_button.first > 0)
 			return callback(pressed_button.first, pressed_button.second, preview_values);
@@ -321,25 +329,25 @@ void mm_joystick_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& 
 	// With this you can use axis or triggers as buttons or vice versa
 	switch (keyCode)
 	{
-	case mmjoy_axis::JOY_ZNEG:
+	case mmjoy_axis::joy_z_neg:
 		pressed = val > m_pad_config.ltriggerthreshold;
 		val = pressed ? NormalizeTriggerInput(val, m_pad_config.ltriggerthreshold) : 0;
 		break;
-	case mmjoy_axis::JOY_ZPOS:
+	case mmjoy_axis::joy_z_pos:
 		pressed = val > m_pad_config.rtriggerthreshold;
 		val = pressed ? NormalizeTriggerInput(val, m_pad_config.rtriggerthreshold) : 0;
 		break;
-	case mmjoy_axis::JOY_XPOS:
-	case mmjoy_axis::JOY_XNEG:
-	case mmjoy_axis::JOY_YPOS:
-	case mmjoy_axis::JOY_YNEG:
+	case mmjoy_axis::joy_x_pos:
+	case mmjoy_axis::joy_x_neg:
+	case mmjoy_axis::joy_y_pos:
+	case mmjoy_axis::joy_y_neg:
 		pressed = val > (ignore_threshold ? 0 : m_pad_config.lstickdeadzone);
 		val = pressed ? NormalizeStickInput(val, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
 		break;
-	case mmjoy_axis::JOY_RPOS:
-	case mmjoy_axis::JOY_RNEG:
-	case mmjoy_axis::JOY_UPOS:
-	case mmjoy_axis::JOY_UNEG:
+	case mmjoy_axis::joy_r_pos:
+	case mmjoy_axis::joy_r_neg:
+	case mmjoy_axis::joy_u_pos:
+	case mmjoy_axis::joy_u_neg:
 		pressed = val > (ignore_threshold ? 0 : m_pad_config.rstickdeadzone);
 		val = pressed ? NormalizeStickInput(val, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
 		break;
@@ -384,12 +392,12 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues()
 		}
 	};
 
-	add_axis_value(js_info.dwXpos, mmjoy_axis::JOY_XPOS, mmjoy_axis::JOY_XNEG);
-	add_axis_value(js_info.dwYpos, mmjoy_axis::JOY_YNEG, mmjoy_axis::JOY_YPOS);
-	add_axis_value(js_info.dwZpos, mmjoy_axis::JOY_ZNEG, mmjoy_axis::JOY_ZPOS);
-	add_axis_value(js_info.dwRpos, mmjoy_axis::JOY_RNEG, mmjoy_axis::JOY_RPOS);
-	add_axis_value(js_info.dwUpos, mmjoy_axis::JOY_UPOS, mmjoy_axis::JOY_UNEG);
-	add_axis_value(js_info.dwVpos, mmjoy_axis::JOY_VPOS, mmjoy_axis::JOY_VNEG);
+	add_axis_value(js_info.dwXpos, mmjoy_axis::joy_x_pos, mmjoy_axis::joy_x_neg);
+	add_axis_value(js_info.dwYpos, mmjoy_axis::joy_y_neg, mmjoy_axis::joy_y_pos);
+	add_axis_value(js_info.dwZpos, mmjoy_axis::joy_z_neg, mmjoy_axis::joy_z_pos);
+	add_axis_value(js_info.dwRpos, mmjoy_axis::joy_r_neg, mmjoy_axis::joy_r_pos);
+	add_axis_value(js_info.dwUpos, mmjoy_axis::joy_u_pos, mmjoy_axis::joy_u_neg);
+	add_axis_value(js_info.dwVpos, mmjoy_axis::joy_v_pos, mmjoy_axis::joy_v_neg);
 
 	return button_values;
 }

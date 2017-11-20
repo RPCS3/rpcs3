@@ -353,17 +353,17 @@ protected:
 	// Get normalized trigger value based on the range defined by a threshold
 	u16 NormalizeTriggerInput(u16 value, int threshold)
 	{
-		if (value <= threshold || threshold >= TRIGGER_MAX)
+		if (value <= threshold || threshold >= trigger_max)
 		{
 			return static_cast<u16>(0);
 		}
-		else if (threshold <= TRIGGER_MIN)
+		else if (threshold <= trigger_min)
 		{
 			return value;
 		}
 		else
 		{
-			return (u16)(float(TRIGGER_MAX) * float(value - threshold) / float(TRIGGER_MAX - threshold));
+			return (u16)(float(trigger_max) * float(value - threshold) / float(trigger_max - threshold));
 		}
 	};
 
@@ -401,11 +401,11 @@ protected:
 	{
 		if (ignore_threshold)
 		{
-			return static_cast<u16>(ScaleStickInput(raw_value, 0, THUMB_MAX));
+			return static_cast<u16>(ScaleStickInput(raw_value, 0, thumb_max));
 		}
 		else
 		{
-			return NormalizeDirectedInput(raw_value, threshold, THUMB_MAX);
+			return NormalizeDirectedInput(raw_value, threshold, thumb_max);
 		}
 	}
 
@@ -414,7 +414,7 @@ protected:
 	// return is new x and y values in 0-255 range
 	std::tuple<u16, u16> NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone)
 	{
-		const float dzRange = deadzone / float((std::abs(THUMB_MAX) + std::abs(THUMB_MIN)));
+		const float dzRange = deadzone / float((std::abs(thumb_max) + std::abs(thumb_min)));
 
 		float X = inX / 255.0f;
 		float Y = inY / 255.0f;
@@ -497,12 +497,12 @@ protected:
 	}
 
 public:
-	s32 THUMB_MIN = 0;
-	s32 THUMB_MAX = 255;
-	s32 TRIGGER_MIN = 0;
-	s32 TRIGGER_MAX = 255;
-	s32 VIBRATION_MIN = 0;
-	s32 VIBRATION_MAX = 255;
+	s32 thumb_min = 0;
+	s32 thumb_max = 255;
+	s32 trigger_min = 0;
+	s32 trigger_max = 255;
+	s32 vibration_min = 0;
+	s32 vibration_max = 255;
 
 	virtual bool Init() { return true; };
 	virtual ~PadHandlerBase() = default;
