@@ -10,12 +10,13 @@
 bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 {
 	verify(HERE), _old != -1; // Very unlikely: it requires 2^32 distinct threads to wait simultaneously
+	const bool is_inf = _timeout > max_timeout;
 
 #ifdef _WIN32
 	LARGE_INTEGER timeout;
 	timeout.QuadPart = _timeout * -10;
 
-	if (HRESULT rc = NtWaitForKeyedEvent(nullptr, &m_value, false, _timeout == -1 ? nullptr : &timeout))
+	if (HRESULT rc = NtWaitForKeyedEvent(nullptr, &m_value, false, is_inf ? nullptr : &timeout))
 	{
 		verify(HERE), rc == WAIT_TIMEOUT;
 
@@ -37,12 +38,12 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 
 	for (u32 value = _old + 1;; value = m_value)
 	{
-		const int err = futex((int*)&m_value.raw(), FUTEX_WAIT_PRIVATE, value, _timeout == -1 ? nullptr : &timeout, nullptr, 0) == 0
+		const int err = futex((int*)&m_value.raw(), FUTEX_WAIT_PRIVATE, value, is_inf ? nullptr : &timeout, nullptr, 0) == 0
 			? 0
 			: errno;
 
 		// Normal or timeout wakeup
-		if (!err || (_timeout != -1 && err == ETIMEDOUT))
+		if (!err || (!is_inf && err == ETIMEDOUT))
 		{
 			// Cleanup (remove waiter)
 			verify(HERE), m_value--;
