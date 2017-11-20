@@ -21,6 +21,7 @@ namespace vk
 		VkFence dma_fence = VK_NULL_HANDLE;
 		bool synchronized = false;
 		bool flushed = false;
+		bool pack_unpack_swap_bytes = false;
 		u64 sync_timestamp = 0;
 		u64 last_use_timestamp = 0;
 		vk::render_device* m_device = nullptr;
@@ -40,12 +41,15 @@ namespace vk
 			rsx::buffered_section::reset(base, length, policy);
 		}
 
-		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, vk::image_view *view, vk::image *image, const u32 rsx_pitch=0, bool managed=true)
+		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, vk::image_view *view, vk::image *image, const u32 rsx_pitch, bool managed, const u32 gcm_format, bool pack_swap_bytes = false)
 		{
 			width = w;
 			height = h;
 			this->depth = depth;
 			this->mipmaps = mipmaps;
+
+			this->gcm_format = gcm_format;
+			this->pack_unpack_swap_bytes = pack_swap_bytes;
 
 			if (managed)
 			{
@@ -265,20 +269,6 @@ namespace vk
 			const u8 bpp = real_pitch / width;
 
 			//We have to do our own byte swapping since the driver doesnt do it for us
-			bool swap_bytes = false;
-			switch (vram_texture->info.format)
-			{
-			case VK_FORMAT_D32_SFLOAT_S8_UINT:
-			case VK_FORMAT_D24_UNORM_S8_UINT:
-				//TODO: Hardware tests to determine correct memory layout
-			case VK_FORMAT_D16_UNORM:
-			case VK_FORMAT_R16G16B16A16_SFLOAT:
-			case VK_FORMAT_R32G32B32A32_SFLOAT:
-			case VK_FORMAT_R32_SFLOAT:
-				swap_bytes = true;
-				break;
-			}
-
 			if (real_pitch == rsx_pitch)
 			{
 				switch (bpp)
@@ -289,22 +279,28 @@ namespace vk
 					do_memory_transfer<u8, false>(pixels_dst, pixels_src);
 					break;
 				case 2:
-					if (swap_bytes)
+					if (pack_unpack_swap_bytes)
 						do_memory_transfer<u16, true>(pixels_dst, pixels_src);
 					else
 						do_memory_transfer<u16, false>(pixels_dst, pixels_src);
 					break;
 				case 4:
-					if (swap_bytes)
+					if (pack_unpack_swap_bytes)
 						do_memory_transfer<u32, true>(pixels_dst, pixels_src);
 					else
 						do_memory_transfer<u32, false>(pixels_dst, pixels_src);
 					break;
 				case 8:
-					if (swap_bytes)
+					if (pack_unpack_swap_bytes)
 						do_memory_transfer<u64, true>(pixels_dst, pixels_src);
 					else
 						do_memory_transfer<u64, false>(pixels_dst, pixels_src);
+					break;
+				case 16:
+					if (pack_unpack_swap_bytes)
+						do_memory_transfer<u128, true>(pixels_dst, pixels_src);
+					else
+						do_memory_transfer<u128, false>(pixels_dst, pixels_src);
 					break;
 				}
 			}
@@ -314,11 +310,21 @@ namespace vk
 				//usually we can just get away with nearest filtering
 				const u8 samples = rsx_pitch / real_pitch;
 
-				rsx::scale_image_nearest(pixels_dst, pixels_src, width, height, rsx_pitch, real_pitch, bpp, samples, swap_bytes);
+				rsx::scale_image_nearest(pixels_dst, pixels_src, width, height, rsx_pitch, real_pitch, bpp, samples, pack_unpack_swap_bytes);
 			}
 
 			dma_buffer->unmap();
 			//Its highly likely that this surface will be reused, so we just leave resources in place
+
+			switch (gcm_format)
+			{
+			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+				rsx::shuffle_texel_data_wzyx<u16>(pixels_dst, rsx_pitch, width, height);
+				break;
+			case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+				rsx::shuffle_texel_data_wzyx<u32>(pixels_dst, rsx_pitch, width, height);
+				break;
+			}
 
 			return result;
 		}
@@ -692,7 +698,7 @@ namespace vk
 
 			cached_texture_section& region = find_cached_texture(rsx_address, rsx_size, true, width, height, section_depth);
 			region.reset(rsx_address, rsx_size);
-			region.create(width, height, section_depth, mipmaps, view, image);
+			region.create(width, height, section_depth, mipmaps, view, image, 0, true, gcm_format);
 			region.set_dirty(false);
 			region.set_context(context);
 			region.set_image_type(type);
