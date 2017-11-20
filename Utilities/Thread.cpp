@@ -19,6 +19,10 @@
 #include <mach/thread_act.h>
 #include <mach/thread_policy.h>
 #endif
+#if defined(__DragonFly__) || defined(__FreeBSD__)
+#include <pthread_np.h>
+#define cpu_set_t cpuset_t
+#endif
 #include <errno.h>
 #include <signal.h>
 #include <ucontext.h>
@@ -1922,7 +1926,7 @@ void thread_ctrl::set_ideal_processor_core(int core)
 	thread_affinity_policy_data_t policy = { static_cast<integer_t>(core) };
 	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
 	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
-#else
+#elif defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__)
 	cpu_set_t cs;
 	CPU_ZERO(&cs);
 	CPU_SET(core, &cs);
