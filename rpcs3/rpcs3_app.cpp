@@ -63,6 +63,9 @@ rpcs3_app::rpcs3_app(int& argc, char** argv) : QApplication(argc, argv)
 
 void rpcs3_app::Init()
 {
+	setApplicationName("RPCS3");
+	setWindowIcon(QIcon(":/rpcs3.ico"));
+
 	Emu.Init();
 
 	guiSettings.reset(new gui_settings());
@@ -79,7 +82,6 @@ void rpcs3_app::Init()
 
 	RPCS3MainWin->Init();
 
-	setApplicationName("RPCS3");
 	RPCS3MainWin->show();
 
 	// Create the thumbnail toolbar after the main_window is created
