@@ -46,8 +46,7 @@
 		"debugOverlay": "Provides a graphical overlay of various debugging information.\nIf unsure, don't use this option.",
 		"logProg": "Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option.",
 		"disableOcclusionQueries": "Disables running occlusion queries. Minor to moderate performance boost.\nMight introduce issues with broken occlusion e.g missing geometry and extreme pop-in.",
-		"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.",
-		"forceCpuBlitEmulation": "Forces emulation of all blit and image manipulation operations on the cpu.\nRequires 'Write Color Buffers' option to also be enabled in most cases to avoid missing graphics.\nSignificatly degrades performance but is more accurate in some cases.\nThis setting overrides the 'GPU texture scaling' option."
+		"forceCpuBlitEmulation": "Forces emulation of all blit and image manipulation operations on the CPU.\nRequires 'Write Color Buffers' option to also be enabled in most cases to avoid missing graphics.\nSignificantly degrades performance but is more accurate in some cases.\nThis setting overrides the 'GPU texture scaling' option."
 	},
 	"emulator": {
 		"gui": {
@@ -85,6 +84,7 @@
 			"vsync": "By having this off you might obtain a higher frame rate at the cost of tearing artifacts in the game.",
 			"gpuTextureScaling": "Small to significant performance boost in most games and rarely with side effects.\nMay cause texture corruption in rare cases.",
 			"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
+			"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.",
 			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area."
 		}
 	},

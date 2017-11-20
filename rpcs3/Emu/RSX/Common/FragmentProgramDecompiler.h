@@ -55,8 +55,8 @@ class FragmentProgramDecompiler
 	std::string NotZero(const std::string& code);
 	std::string NotZeroPositive(const std::string& code);
 	
-	//Prevents operations from overflowing the max range (tested with fp_dynamic3 autotest sample)
-	std::string NoOverflow(const std::string& code);
+	//Prevents operations from overflowing the desired range (tested with fp_dynamic3 autotest sample, DS2 for src1.input_prec_mod)
+	std::string ClampValue(const std::string& code, u32 precision);
 
 	/**
 	* Returns true if the dst set is not a vector (i.e only a single component)

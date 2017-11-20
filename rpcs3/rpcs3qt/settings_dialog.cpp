@@ -420,6 +420,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->stretchToDisplayArea, emu_settings::StretchToDisplayArea);
 	SubscribeTooltip(ui->stretchToDisplayArea, json_gpu_main["stretchToDisplayArea"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings::DisableVertexCache);
+	SubscribeTooltip(ui->disableVertexCache, json_gpu_main["disableVertexCache"].toString());
+
 	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
 	SubscribeTooltip(ui->scrictModeRendering, json_gpu_main["scrictModeRendering"].toString());
 	connect(ui->scrictModeRendering, &QCheckBox::clicked, [=](bool checked)
@@ -944,9 +947,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->readDepth, emu_settings::ReadDepthBuffer);
 	SubscribeTooltip(ui->readDepth, json_debug["readDepth"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings::DisableVertexCache);
-	SubscribeTooltip(ui->disableVertexCache, json_debug["disableVertexCache"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->disableHwOcclusionQueries, emu_settings::DisableOcclusionQueries);
 	SubscribeTooltip(ui->disableHwOcclusionQueries, json_debug["disableOcclusionQueries"].toString());

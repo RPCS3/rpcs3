@@ -38,10 +38,17 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 
 	if (!dst.no_dest)
 	{
-		code = NoOverflow(code);
+		if (dst.exp_tex)
+		{
+			//If dst.exp_tex really is _bx2 postfix, we need to unpack dynamic range
+			AddCode("//exp tex flag is set");
+			code = "((" + code + "- 0.5) * 2.)";
+		}
 
 		if (dst.saturate)
 			code = saturate(code);
+		else
+			code = ClampValue(code, dst.prec);
 	}
 
 	code += (append_mask ? "$m" : "");
@@ -188,20 +195,13 @@ std::string FragmentProgramDecompiler::NotZeroPositive(const std::string& code)
 	return "max(abs(" + code + "), 1.E-10)";
 }
 
-std::string FragmentProgramDecompiler::NoOverflow(const std::string& code)
+std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 precision)
 {
 	//FP16 is expected to overflow alot easier at 0+-65504
 	//FP32 can still work upto 0+-3.4E38
 	//See http://http.download.nvidia.com/developer/Papers/2005/FP_Specials/FP_Specials.pdf
 
-	if (dst.exp_tex)
-	{
-		//If dst.exp_tex really is _bx2 postfix, we need to unpack dynamic range
-		AddCode("//exp tex flag is set");
-		return "((" + code + "- 0.5) * 2.)";
-	}
-
-	switch (dst.prec)
+	switch (precision)
 	{
 	case 0:
 		break;
@@ -209,6 +209,10 @@ std::string FragmentProgramDecompiler::NoOverflow(const std::string& code)
 		return "clamp(" + code + ", -65504., 65504.)";
 	case 2:
 		return "clamp(" + code + ", -2., 2.)";
+	case 3:
+		return "clamp(" + code + ", -1., 1.)";
+	case 4:
+		return "clamp(" + code + ", 0., 1.)";
 	}
 
 	return code;
@@ -394,7 +398,9 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	if (strncmp(swizzle.c_str(), f, 4) != 0) ret += "." + swizzle;
 
+	//Warning: Modifier order matters. e.g neg should be applied after precision clamping (tested with Naruto UNS)
 	if (src.abs) ret = "abs(" + ret + ")";
+	if (src1.input_prec_mod) ret = ClampValue(ret, src1.input_prec_mod);
 	if (src.neg) ret = "-" + ret;
 
 	return ret;
@@ -735,21 +741,12 @@ std::string FragmentProgramDecompiler::Decompile()
 			if (SIP()) break;
 			if (handle_tex_srb(opcode)) break;
 
-			if (forced_unit == FORCE_NONE)
-			{
-				if (handle_sct(opcode)) break;
-				if (handle_scb(opcode)) break;
-			}
-			else if (forced_unit == FORCE_SCT)
-			{
-				forced_unit = FORCE_NONE;
-				if (handle_sct(opcode)) break;
-			}
-			else if (forced_unit == FORCE_SCB)
-			{
-				forced_unit = FORCE_NONE;
-				if (handle_scb(opcode)) break;
-			}
+			//FENCT/FENCB do not actually reject instructions if they dont match the forced unit
+			//Tested with Dark Souls II where the repecting FENCX instruction will result in empty luminance averaging shaders
+			//TODO: More reasearch is needed to determine what real HW does
+			if (handle_sct(opcode)) break;
+			if (handle_scb(opcode)) break;
+			forced_unit = FORCE_NONE;
 
 			LOG_ERROR(RSX, "Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, prev_force_unit);
 			break;

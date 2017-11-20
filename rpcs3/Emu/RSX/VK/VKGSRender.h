@@ -129,6 +129,17 @@ private:
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
 
+	std::mutex m_sampler_mutex;
+	u64 surface_store_tag = 0;
+	std::atomic_bool m_samplers_dirty = { true };
+	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
+	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
+	std::array<std::unique_ptr<vk::sampler>, rsx::limits::fragment_textures_count> fs_sampler_handles;
+	std::array<std::unique_ptr<vk::sampler>, rsx::limits::vertex_textures_count> vs_sampler_handles;
+
+	VkBufferView m_persistent_attribute_storage;
+	VkBufferView m_volatile_attribute_storage;
+
 public:
 	//vk::fbo draw_fbo;
 	std::unique_ptr<vk::vertex_cache> m_vertex_cache;
@@ -159,6 +170,7 @@ private:
 	std::unique_ptr<vk::framebuffer_holder> m_draw_fbo;
 
 	bool present_surface_dirty_flag = false;
+	bool renderer_unavailable = false;
 
 	u64 m_last_heap_sync_time = 0;
 	vk::vk_data_heap m_attrib_ring_info;
@@ -294,6 +306,8 @@ private:
 
 	void begin_render_pass();
 	void close_render_pass();
+
+	void update_draw_state();
 
 	/// returns primitive topology, index_count, allocated_verts, vertex_base_index, (offset in index buffer, index type)
 	std::tuple<VkPrimitiveTopology, u32, u32, u32, std::optional<std::tuple<VkDeviceSize, VkIndexType> > > upload_vertex_data();

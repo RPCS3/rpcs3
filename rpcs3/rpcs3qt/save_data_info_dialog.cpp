@@ -11,7 +11,6 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 {
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setWindowTitle(tr("Save Data Information"));
-	setWindowIcon(QIcon(":/rpcs3.ico"));
 
 	// Table
 	m_list = new QTableWidget(this);

@@ -17,6 +17,7 @@ namespace rsx
 	struct surface_subresource_storage
 	{
 		surface_type surface = nullptr;
+		u32 base_address = 0;
 
 		u16 x = 0;
 		u16 y = 0;
@@ -29,8 +30,8 @@ namespace rsx
 
 		surface_subresource_storage() {}
 
-		surface_subresource_storage(surface_type src, u16 X, u16 Y, u16 W, u16 H, bool _Bound, bool _Depth, bool _Clipped = false)
-			: surface(src), x(X), y(Y), w(W), h(H), is_bound(_Bound), is_depth_surface(_Depth), is_clipped(_Clipped)
+		surface_subresource_storage(u32 addr, surface_type src, u16 X, u16 Y, u16 W, u16 H, bool _Bound, bool _Depth, bool _Clipped = false)
+			: base_address(addr), surface(src), x(X), y(Y), w(W), h(H), is_bound(_Bound), is_depth_surface(_Depth), is_clipped(_Clipped)
 		{}
 	};
 
@@ -46,11 +47,25 @@ namespace rsx
 	template <typename image_storage_type>
 	struct render_target_descriptor
 	{
+		GcmTileInfo *tile = nullptr;
+		rsx::surface_antialiasing aa_mode = rsx::surface_antialiasing::center_1_sample;
+
+		u16 raster_offset_x = 0;
+		u16 raster_offset_y = 0;
+		u32 raster_address_offset = 0;
+
 		virtual image_storage_type get_surface() const = 0;
 		virtual u16 get_surface_width() const = 0;
 		virtual u16 get_surface_height() const = 0;
 		virtual u16 get_rsx_pitch() const = 0;
 		virtual u16 get_native_pitch() const = 0;
+
+		void set_raster_offset(u16 x, u16 y, u8 bpp)
+		{
+			raster_offset_x = x;
+			raster_offset_y = y;
+			raster_address_offset = (y * get_rsx_pitch()) + (x * bpp);
+		}
 	};
 
 	/**
@@ -114,6 +129,7 @@ namespace rsx
 		std::tuple<u32, surface_type> m_bound_depth_stencil = {};
 
 		std::list<surface_storage_type> invalidated_resources;
+		u64 cache_tag = 0ull;
 
 		surface_store() = default;
 		~surface_store() = default;
@@ -163,8 +179,11 @@ namespace rsx
 					new_surface_storage = std::move(rtt);
 
 					if (old_surface)
+					{
 						//Exchange this surface with the invalidated one
+						Traits::notify_surface_invalidated(old_surface_storage);
 						rtt = std::move(old_surface_storage);
+					}
 					else
 						//rtt is now empty - erase it
 						invalidated_resources.erase(It);
@@ -177,8 +196,11 @@ namespace rsx
 			}
 
 			if (old_surface != nullptr && new_surface == nullptr)
+			{
 				//This was already determined to be invalid and is excluded from testing above
+				Traits::notify_surface_invalidated(old_surface_storage);
 				invalidated_resources.push_back(std::move(old_surface_storage));
+			}
 
 			if (new_surface != nullptr)
 			{
@@ -227,8 +249,11 @@ namespace rsx
 					new_surface_storage = std::move(ds);
 
 					if (old_surface)
+					{
 						//Exchange this surface with the invalidated one
+						Traits::notify_surface_invalidated(old_surface_storage);
 						ds = std::move(old_surface_storage);
+					}
 					else
 						invalidated_resources.erase(It);
 
@@ -240,8 +265,11 @@ namespace rsx
 			}
 
 			if (old_surface != nullptr && new_surface == nullptr)
+			{
 				//This was already determined to be invalid and is excluded from testing above
+				Traits::notify_surface_invalidated(old_surface_storage);
 				invalidated_resources.push_back(std::move(old_surface_storage));
+			}
 
 			if (new_surface != nullptr)
 			{
@@ -271,6 +299,8 @@ namespace rsx
 			u32 clip_height = clip_vertical_reg;
 //			u32 clip_x = clip_horizontal_reg;
 //			u32 clip_y = clip_vertical_reg;
+
+			cache_tag++;
 
 			// Make previous RTTs sampleable
 			for (std::tuple<u32, surface_type> &rtt : m_bound_render_targets)
@@ -494,8 +524,11 @@ namespace rsx
 
 					if (surface == ref)
 					{
+						Traits::notify_surface_invalidated(It->second);
 						invalidated_resources.push_back(std::move(It->second));
 						m_render_targets_storage.erase(It);
+
+						cache_tag++;
 						return;
 					}
 				}
@@ -509,8 +542,11 @@ namespace rsx
 
 					if (surface == ref)
 					{
+						Traits::notify_surface_invalidated(It->second);
 						invalidated_resources.push_back(std::move(It->second));
 						m_depth_stencil_storage.erase(It);
+
+						cache_tag++;
 						return;
 					}
 				}
@@ -522,13 +558,23 @@ namespace rsx
 		 */
 		void invalidate_surface_address(u32 addr, bool depth)
 		{
+			if (address_is_bound(addr, depth))
+			{
+				LOG_ERROR(RSX, "Cannot invalidate a currently bound render target!");
+				return;
+			}
+
 			if (!depth)
 			{
 				auto It = m_render_targets_storage.find(addr);
 				if (It != m_render_targets_storage.end())
 				{
+					Traits::notify_surface_invalidated(It->second);
 					invalidated_resources.push_back(std::move(It->second));
 					m_render_targets_storage.erase(It);
+
+					cache_tag++;
+					return;
 				}
 			}
 			else
@@ -536,8 +582,12 @@ namespace rsx
 				auto It = m_depth_stencil_storage.find(addr);
 				if (It != m_depth_stencil_storage.end())
 				{
+					Traits::notify_surface_invalidated(It->second);
 					invalidated_resources.push_back(std::move(It->second));
 					m_depth_stencil_storage.erase(It);
+
+					cache_tag++;
+					return;
 				}
 			}
 		}
@@ -548,7 +598,7 @@ namespace rsx
 		 * address_is_bound - returns true if the surface at a given address is actively bound
 		 * get_surface_subresource_if_available - returns a sectiion descriptor that allows to crop surfaces stored in memory
 		 */
-		bool surface_overlaps_address(surface_type surface, u32 surface_address, u32 texaddr, u16 *x, u16 *y, bool scale_to_fit, bool double_height)
+		bool surface_overlaps_address(surface_type surface, u32 surface_address, u32 texaddr, u16 *x, u16 *y)
 		{
 			bool is_subslice = false;
 			u16  x_offset = 0;
@@ -569,24 +619,31 @@ namespace rsx
 				surface_format_info info;
 				Traits::get_surface_info(surface, &info);
 
+				bool doubled_x = false;
+				bool doubled_y = false;
+
+				switch (surface->aa_mode)
+				{
+				case rsx::surface_antialiasing::square_rotated_4_samples:
+				case rsx::surface_antialiasing::square_centered_4_samples:
+					doubled_y = true;
+					//fall through
+				case rsx::surface_antialiasing::diagonal_centered_2_samples:
+					doubled_x = true;
+					break;
+				}
+
 				u32 range = info.rsx_pitch * info.surface_height;
-				if (double_height) range <<= 1;
+				if (doubled_y) range <<= 1;
 
 				if (offset < range)
 				{
-					const u32 y = (offset / info.rsx_pitch);
-					u32 x = (offset % info.rsx_pitch) / info.bpp;
+					y_offset = (offset / info.rsx_pitch);
+					x_offset = (offset % info.rsx_pitch) / info.bpp;
 
-					if (scale_to_fit)
-					{
-						const f32 x_scale = (f32)info.rsx_pitch / info.native_pitch;
-						x = (u32)((f32)x / x_scale);
-					}
+					if (doubled_x) x_offset /= 2;
+					if (doubled_y) y_offset /= 2;
 
-					x_offset = x;
-					y_offset = y;
-
-					if (double_height) y_offset /= 2;
 					is_subslice = true;
 				}
 			}
@@ -641,27 +698,34 @@ namespace rsx
 		}
 
 		surface_subresource get_surface_subresource_if_applicable(u32 texaddr, u16 requested_width, u16 requested_height, u16 requested_pitch,
-				bool scale_to_fit = false, bool crop = false, bool ignore_depth_formats = false, bool ignore_color_formats = false, bool double_height = false)
+			bool crop = false, bool ignore_depth_formats = false, bool ignore_color_formats = false)
 		{
 			auto test_surface = [&](surface_type surface, u32 this_address, u16 &x_offset, u16 &y_offset, u16 &w, u16 &h, bool &clipped)
 			{
-				if (surface_overlaps_address(surface, this_address, texaddr, &x_offset, &y_offset, scale_to_fit, double_height))
+				if (surface_overlaps_address(surface, this_address, texaddr, &x_offset, &y_offset))
 				{
 					surface_format_info info;
 					Traits::get_surface_info(surface, &info);
 
 					u16 real_width = requested_width;
+					u16 real_height = requested_height;
 
-					if (scale_to_fit)
+					switch (surface->aa_mode)
 					{
-						f32 pitch_scaling = (f32)requested_pitch / info.native_pitch;
-						real_width = (u16)((f32)requested_width / pitch_scaling);
+					case rsx::surface_antialiasing::diagonal_centered_2_samples:
+						real_width /= 2;
+						break;
+					case rsx::surface_antialiasing::square_centered_4_samples:
+					case rsx::surface_antialiasing::square_rotated_4_samples:
+						real_width /= 2;
+						real_height /= 2;
+						break;
 					}
 
-					if (region_fits(info.surface_width, info.surface_height, x_offset, y_offset, real_width, requested_height))
+					if (region_fits(info.surface_width, info.surface_height, x_offset, y_offset, real_width, real_height))
 					{
 						w = real_width;
-						h = requested_height;
+						h = real_height;
 						clipped = false;
 
 						return true;
@@ -674,17 +738,17 @@ namespace rsx
 							u16 remaining_height = info.surface_height - y_offset;
 
 							w = std::min(real_width, remaining_width);
-							h = std::min(requested_height, remaining_height);
+							h = std::min(real_height, remaining_height);
 							clipped = true;
 
 							return true;
 						}
 
-						if (info.surface_width >= real_width && info.surface_height >= requested_height)
+						if (info.surface_width >= real_width && info.surface_height >= real_height)
 						{
 							LOG_WARNING(RSX, "Overlapping surface exceeds bounds; returning full surface region");
 							w = real_width;
-							h = requested_height;
+							h = real_height;
 							clipped = true;
 
 							return true;
@@ -719,11 +783,11 @@ namespace rsx
 						if (!surface_overlaps_address_fast(surface, this_address, texaddr))
 							continue;
 						else
-							return{ surface, 0, 0, 0, 0, false, false, false };
+							return{ this_address, surface, 0, 0, 0, 0, false, false, false };
 					}
 
 					if (test_surface(surface, this_address, x_offset, y_offset, w, h, clipped))
-						return{ surface, x_offset, y_offset, w, h, address_is_bound(this_address, false), false, clipped };
+						return{ this_address, surface, x_offset, y_offset, w, h, address_is_bound(this_address, false), false, clipped };
 				}
 			}
 
@@ -745,11 +809,11 @@ namespace rsx
 						if (!surface_overlaps_address_fast(surface, this_address, texaddr))
 							continue;
 						else
-							return{ surface, 0, 0, 0, 0, false, true, false };
+							return{ this_address, surface, 0, 0, 0, 0, false, true, false };
 					}
 
 					if (test_surface(surface, this_address, x_offset, y_offset, w, h, clipped))
-						return{ surface, x_offset, y_offset, w, h, address_is_bound(this_address, true), true, clipped };
+						return{ this_address, surface, x_offset, y_offset, w, h, address_is_bound(this_address, true), true, clipped };
 				}
 			}
 
