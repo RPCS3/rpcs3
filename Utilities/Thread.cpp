@@ -16,6 +16,8 @@
 #ifdef __APPLE__
 #define _XOPEN_SOURCE
 #define __USE_GNU
+#include <mach/thread_act.h>
+#include <mach/thread_policy.h>
 #endif
 #include <errno.h>
 #include <signal.h>
@@ -1916,6 +1918,10 @@ void thread_ctrl::set_ideal_processor_core(int core)
 #ifdef _WIN32
 	HANDLE _this_thread = GetCurrentThread();
 	SetThreadIdealProcessor(_this_thread, core);
+#elif __APPLE__
+	thread_affinity_policy_data_t policy = { static_cast<integer_t>(core) };
+	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
+	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
 #else
 	cpu_set_t cs;
 	CPU_ZERO(&cs);
