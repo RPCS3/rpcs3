@@ -361,13 +361,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	emu_settings::Render_Creator render_creator = xemu_settings.get()->m_render_creator;
 
 	// Comboboxes
-	SubscribeTooltip(ui->graphicsAdapterBox, json_gpu_cbo["graphicsAdapterBox"].toString());
-
 	xemu_settings->EnhanceComboBox(ui->renderBox, emu_settings::Renderer);
 #ifdef WIN32
 	SubscribeTooltip(ui->renderBox, json_gpu_cbo["renderBox"].toString());
+	SubscribeTooltip(ui->graphicsAdapterBox, json_gpu_cbo["graphicsAdapterBox"].toString());
 #else
 	SubscribeTooltip(ui->renderBox, json_gpu_cbo["renderBox_Linux"].toString());
+	SubscribeTooltip(ui->graphicsAdapterBox, json_gpu_cbo["graphicsAdapterBox_Linux"].toString());
 #endif
 	//Change D3D12 to D3D12[DO NOT USE]
 	ui->renderBox->setItemText(ui->renderBox->findData("D3D12"), render_creator.name_D3D12);
