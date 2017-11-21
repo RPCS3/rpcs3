@@ -182,6 +182,8 @@ class Emulator final
 	std::string m_title_id;
 	std::string m_title;
 
+	bool m_force_boot = false;
+
 public:
 	Emulator() = default;
 
@@ -246,6 +248,8 @@ public:
 
 	static std::string GetHddDir();
 	static std::string GetLibDir();
+
+	void SetForceBoot(bool force_boot);
 
 	void Load(bool add_only = false);
 	void Run();
