@@ -1447,6 +1447,7 @@ void main_window::CreateDockWindows()
 {
 	// new mainwindow widget because existing seems to be bugged for now
 	m_mw = new QMainWindow();
+	m_mw->setContextMenuPolicy(Qt::PreventContextMenu);
 
 	m_gameListFrame = new game_list_frame(guiSettings, emuSettings, m_mw);
 	m_gameListFrame->setObjectName("gamelist");
