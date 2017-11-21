@@ -3,6 +3,7 @@
 #include "stdafx.h"
 #include "rpcs3_version.h"
 #include "Utilities/sysinfo.h"
+#include "Emu/System.h"
 
 #include <QMenu>
 #include <QActionGroup>
@@ -282,6 +283,7 @@ void log_frame::CreateAndConnectActions()
 		if (m_tty_input->text().isEmpty()) return;
 		std::string text = sstr(m_tty_input->text());
 		m_tty_input->clear();
+		Emu.SetTTYInput(text);
 		LOG_NOTICE(GENERAL, "TTY Input entered: %s", text);
 	});
 

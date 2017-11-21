@@ -47,6 +47,7 @@ extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const
 extern void network_thread_init();
 
 fs::file g_tty;
+std::string tty_input;
 
 template <>
 void fmt_class_string<mouse_handler>::format(std::string& out, u64 arg)
@@ -186,6 +187,8 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 
 void Emulator::Init()
 {
+	tty_input = "";
+
 	if (!g_tty)
 	{
 		g_tty.open(fs::get_config_dir() + "TTY.log", fs::rewrite + fs::append);
@@ -229,6 +232,11 @@ void Emulator::Init()
 #endif
 	// Initialize patch engine
 	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
+}
+
+void Emulator::SetTTYInput(const std::string& input)
+{
+	tty_input = input;
 }
 
 bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)

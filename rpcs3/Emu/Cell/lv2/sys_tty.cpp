@@ -6,11 +6,15 @@ namespace vm { using namespace ps3; }
 logs::channel sys_tty("sys_tty");
 
 extern fs::file g_tty;
+extern std::string tty_input;
 
 error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadlen)
 {
 	sys_tty.todo("sys_tty_read(ch=%d, buf=*0x%x, len=%d, preadlen=*0x%x)", ch, buf, len, preadlen);
-	std::string input = "insert string here";
+
+	std::string input = tty_input;
+	tty_input = "";
+
 	if (input.length() > len)
 	{
 		*preadlen = len;

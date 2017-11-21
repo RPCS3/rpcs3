@@ -244,6 +244,8 @@ public:
 		return m_pause_amend_time;
 	}
 
+	void SetTTYInput(const std::string& input);
+
 	bool BootGame(const std::string& path, bool direct = false, bool add_only = false);
 
 	static std::string GetHddDir();
