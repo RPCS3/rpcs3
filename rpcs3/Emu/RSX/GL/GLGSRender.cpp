@@ -473,14 +473,13 @@ void GLGSRender::end()
 
 	if (g_cfg.video.strict_rendering_mode)
 	{
-		if (ds->old_contents != nullptr)
+		if (ds && ds->old_contents != nullptr)
 			copy_rtt_contents(ds);
 
 		for (auto &rtt : m_rtts.m_bound_render_targets)
 		{
-			if (std::get<0>(rtt) != 0)
+			if (auto surface = std::get<1>(rtt))
 			{
-				auto surface = std::get<1>(rtt);
 				if (surface->old_contents != nullptr)
 					copy_rtt_contents(surface);
 			}
