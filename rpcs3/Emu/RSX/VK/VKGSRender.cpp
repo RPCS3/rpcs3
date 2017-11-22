@@ -2423,20 +2423,20 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	const auto color_fmt = rsx::method_registers.surface_color();
 	const auto depth_fmt = rsx::method_registers.surface_depth_fmt();
 
-	//TODO: Verify that buffers <= 16 pixels in X (pitch=64) cannot have a depth buffer
-	const auto required_z_pitch = 64;//depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4;
+	const auto required_z_pitch = depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4;
 	const auto required_color_pitch = std::max<u32>(rsx::utility::get_packed_pitch(color_fmt, clip_width), 64u);
 
 	if (zeta_address)
 	{
-		if (zeta_pitch < required_z_pitch)
+		//TODO: Verify that buffers <= 16 pixels in X (pitch=64) cannot have a depth buffer
+		if (zeta_pitch < required_z_pitch || zeta_pitch <= 64)
 		{
 			zeta_address = 0;
 		}
 		else if (!rsx::method_registers.depth_test_enabled())
 		{
 			//Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
-			const bool is_depth_clear = rsx::method_registers.depth_write_enabled() && !!(context & rsx::framebuffer_creation_context::context_clear_depth);
+			const bool is_depth_clear = !!(context & rsx::framebuffer_creation_context::context_clear_depth);
 			if (!is_depth_clear)
 			{
 				zeta_address = 0;
@@ -2465,8 +2465,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, zeta_pitch = %d, color_pitch=%d", zeta_address, zeta_pitch, surface_pitchs[index]);
 			if (context == rsx::framebuffer_creation_context::context_clear_depth ||
 				rsx::method_registers.depth_test_enabled() ||
-				(!rsx::method_registers.color_write_enabled() && rsx::method_registers.depth_write_enabled()) ||
-				!!(rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT))
+				(!rsx::method_registers.color_write_enabled() && rsx::method_registers.depth_write_enabled()))
 			{
 				// Use address for depth data
 				// TODO: create a temporary render buffer for this to keep MRT outputs aligned
