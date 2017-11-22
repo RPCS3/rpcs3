@@ -306,7 +306,7 @@ error_code sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::p
 		sys_spu.todo("Unsupported SPU Thread Group type (0x%x)", attr->type);
 	}
 
-	*id = idm::make<lv2_spu_group>(std::string(attr->name.get_ptr(), std::max((s32)attr->nsize, 1) - 1), num, prio, attr->type, attr->ct);
+	*id = idm::make<lv2_spu_group>(std::string(attr->name.get_ptr(), std::max<u32>(attr->nsize, 1) - 1), num, prio, attr->type, attr->ct);
 
 	return CELL_OK;
 }

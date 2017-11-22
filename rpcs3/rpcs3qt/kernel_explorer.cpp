@@ -282,7 +282,7 @@ void kernel_explorer::Update()
 	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)
 	{
 		lv2_types.back().count++;
-		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("SPU Thread Group: ID = 0x%08x '%s'", id, tg.name.empty() ? "(unnamed)" : tg.name)));
+		l_addTreeChild(lv2_types.back().node, qstr(fmt::format("SPU Thread Group: ID = 0x%08x '%s'", id, tg.name)));
 	});
 
 	lv2_types.emplace_back(l_addTreeChild(root, "File Descriptors"));
