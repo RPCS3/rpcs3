@@ -7,10 +7,10 @@ class syntax_highlighter : public QSyntaxHighlighter
 {
 	Q_OBJECT
 
-	enum BlockState
+	enum block_state
 	{
-		ENDED_OUTSIDE_COMMENT,
-		ENDED_INSIDE_COMMENT
+		ended_outside_comment,
+		ended_inside_comment
 	};
 
 public:

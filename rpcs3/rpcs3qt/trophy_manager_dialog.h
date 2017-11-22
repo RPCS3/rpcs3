@@ -3,12 +3,14 @@
 
 #include "stdafx.h"
 #include "rpcs3/Loader/TROPUSR.h"
+#include "gui_settings.h"
 
 #include "Utilities/rXml.h"
 
 #include <QWidget>
 #include <QPixmap>
 #include <QTreeWidget>
+#include <QSlider>
 
 struct GameTrophiesData
 {
@@ -32,8 +34,13 @@ enum TrophyColumns
 
 class trophy_manager_dialog : public QWidget
 {
+	const QString Bronze   = "Bronze";
+	const QString Silver   = "Silver";
+	const QString Gold     = "Gold";
+	const QString Platinum = "Platinum";
+
 public:
-	explicit trophy_manager_dialog();
+	explicit trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings);
 private Q_SLOTS:
 	void OnColClicked(int col);
 	void ResizeTrophyIcons(int val);
@@ -50,6 +57,10 @@ private:
 	*/
 	void PopulateUI();
 
+	void closeEvent(QCloseEvent* event) override;
+
+	std::shared_ptr<gui_settings> m_gui_settings;
+
 	std::vector<std::unique_ptr<GameTrophiesData>> m_trophies_db; //! Holds all the trophy information.
 	QTreeWidget* m_trophy_tree; //! UI element to display trophy stuff.
 
@@ -59,6 +70,14 @@ private:
 	bool m_show_hidden_trophies = false;
 	bool m_show_unlocked_trophies = true;
 	bool m_show_locked_trophies = true;
+	bool m_show_bronze_trophies = true;
+	bool m_show_silver_trophies = true;
+	bool m_show_gold_trophies = true;
+	bool m_show_platinum_trophies = true;
+
+	int m_icon_height = 75;
+	bool m_save_icon_height = false;
+	QSlider* m_icon_slider = nullptr;
 };
 
 #endif

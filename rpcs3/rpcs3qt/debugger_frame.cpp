@@ -143,17 +143,17 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 
 void debugger_frame::SaveSettings()
 {
-	xgui_settings->SetValue(GUI::d_splitterState, m_splitter->saveState());
+	xgui_settings->SetValue(gui::d_splitterState, m_splitter->saveState());
 }
 
 void debugger_frame::ChangeColors()
 {
 	if (m_list)
 	{
-		m_list->m_color_bp = GUI::get_Label_Color("debugger_frame_breakpoint", QPalette::Background);
-		m_list->m_color_pc = GUI::get_Label_Color("debugger_frame_pc", QPalette::Background);
-		m_list->m_text_color_bp = GUI::get_Label_Color("debugger_frame_breakpoint");;
-		m_list->m_text_color_pc = GUI::get_Label_Color("debugger_frame_pc");;
+		m_list->m_color_bp = gui::get_Label_Color("debugger_frame_breakpoint", QPalette::Background);
+		m_list->m_color_pc = gui::get_Label_Color("debugger_frame_pc", QPalette::Background);
+		m_list->m_text_color_bp = gui::get_Label_Color("debugger_frame_breakpoint");;
+		m_list->m_text_color_pc = gui::get_Label_Color("debugger_frame_pc");;
 	}
 }
 
@@ -166,7 +166,7 @@ void debugger_frame::closeEvent(QCloseEvent *event)
 void debugger_frame::showEvent(QShowEvent * event)
 {
 	// resize splitter widgets
-	QByteArray state = xgui_settings->GetValue(GUI::d_splitterState).toByteArray();
+	QByteArray state = xgui_settings->GetValue(gui::d_splitterState).toByteArray();
 
 	if (state.isEmpty()) // resize 2:1
 	{
@@ -184,7 +184,7 @@ void debugger_frame::showEvent(QShowEvent * event)
 void debugger_frame::hideEvent(QHideEvent * event)
 {
 	// save splitter state or it will resume its initial state on next show
-	xgui_settings->SetValue(GUI::d_splitterState, m_splitter->saveState());
+	xgui_settings->SetValue(gui::d_splitterState, m_splitter->saveState());
 	QDockWidget::hideEvent(event);
 }
 
