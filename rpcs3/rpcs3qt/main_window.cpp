@@ -342,61 +342,16 @@ void main_window::InstallPkg(const QString& dropPath)
 		}
 	}
 
-	if (filePath == NULL)
+	if (filePath.isEmpty())
 	{
 		return;
 	}
+
 	Emu.Stop();
 
 	guiSettings->SetValue(gui::fd_install_pkg, QFileInfo(filePath).path());
 	const std::string fileName = sstr(QFileInfo(filePath).fileName());
 	const std::string path = sstr(filePath);
-
-	// Open PKG file
-	fs::file pkg_f(path);
-
-	if (!pkg_f || pkg_f.size() < 64)
-	{
-		LOG_ERROR(LOADER, "PKG: Failed to open %s", path);
-		return;
-	}
-
-	//Check header
-	u32 pkg_signature;
-	pkg_f.seek(0);
-	pkg_f.read(pkg_signature);
-	if (pkg_signature != "\x7FPKG"_u32)
-	{
-		LOG_ERROR(LOADER, "PKG: %s is not a pkg file", fileName);
-		return;
-	}
-
-	// Get title ID
-	std::vector<char> title_id(9);
-	pkg_f.seek(55);
-	pkg_f.read(title_id);
-	pkg_f.seek(0);
-
-	// Get full path
-	const auto& local_path = Emu.GetHddDir() + "game/" + std::string(std::begin(title_id), std::end(title_id));
-
-	if (!fs::create_dir(local_path))
-	{
-		if (fs::is_dir(local_path))
-		{
-			if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Another installation found. Do you want to overwrite it?"),	
-				QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
-			{
-				LOG_ERROR(LOADER, "PKG: Cancelled installation to existing directory %s", local_path);
-				return;
-			}
-		}
-		else
-		{
-			LOG_ERROR(LOADER, "PKG: Could not create the installation directory %s", local_path);
-			return;
-		}
-	}
 
 	QProgressDialog pdlg(tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
 	pdlg.setWindowTitle(tr("RPCS3 Package Installer"));
@@ -405,12 +360,11 @@ void main_window::InstallPkg(const QString& dropPath)
 	pdlg.show();
 
 #ifdef _WIN32
-	QWinTaskbarButton *taskbar_button = new QWinTaskbarButton();
+	std::unique_ptr<QWinTaskbarButton> taskbar_button = std::make_unique<QWinTaskbarButton>();
 	taskbar_button->setWindow(windowHandle());
-	QWinTaskbarProgress *taskbar_progress = taskbar_button->progress();
+	QWinTaskbarProgress* taskbar_progress = taskbar_button->progress();
 	taskbar_progress->setRange(0, 1000);
 	taskbar_progress->setVisible(true);
-
 #endif
 
 	// Synchronization variable
@@ -419,39 +373,29 @@ void main_window::InstallPkg(const QString& dropPath)
 		// Run PKG unpacking asynchronously
 		scope_thread worker("PKG Installer", [&]
 		{
-			if (pkg_install(pkg_f, local_path + '/', progress, path))
+			if (pkg_install(path, progress))
 			{
 				progress = 1.;
 				return;
 			}
 
-			// TODO: Ask user to delete files on cancellation/failure?
 			progress = -1.;
 		});
+
 		// Wait for the completion
 		while (std::this_thread::sleep_for(5ms), std::abs(progress) < 1.)
 		{
 			if (pdlg.wasCanceled())
 			{
 				progress -= 1.;
-#ifdef _WIN32
-				taskbar_progress->hide();
-				taskbar_button->~QWinTaskbarButton();
-#endif
-				if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Remove incomplete folder?"),
-					QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
-				{
-					fs::remove_all(local_path);
-					m_gameListFrame->Refresh(true);
-					LOG_SUCCESS(LOADER, "PKG: removed incomplete installation in %s", local_path);
-					return;
-				}
-				break;
 			}
+
 			// Update progress window
-			pdlg.setValue(static_cast<int>(progress * pdlg.maximum()));
+			double pval = progress;
+			pval < 0 ? pval += 1. : pval;
+			pdlg.setValue(static_cast<int>(pval * pdlg.maximum()));
 #ifdef _WIN32
-			taskbar_progress->setValue(static_cast<int>(progress * taskbar_progress->maximum()));
+			taskbar_progress->setValue(static_cast<int>(pval * taskbar_progress->maximum()));
 #endif
 			QCoreApplication::processEvents();
 		}
@@ -471,11 +415,6 @@ void main_window::InstallPkg(const QString& dropPath)
 		m_gameListFrame->Refresh(true);
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
 		guiSettings->ShowInfoBox(gui::ib_pkg_success, tr("Success!"), tr("Successfully installed software from package!"), this);
-
-#ifdef _WIN32
-		taskbar_progress->hide();
-		taskbar_button->~QWinTaskbarButton();
-#endif
 	}
 }
 
