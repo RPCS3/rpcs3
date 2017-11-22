@@ -28,7 +28,7 @@ cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings): xgu
 	setMinimumSize(QSize(200, 150)); // seems fine on win 10
 	resize(QSize(620, 395));
 
-	m_path_last = xgui_settings->GetValue(GUI::fd_cg_disasm).toString();
+	m_path_last = xgui_settings->GetValue(gui::fd_cg_disasm).toString();
 	
 	m_disasm_text = new QTextEdit(this);
 	m_disasm_text->setReadOnly(true);
@@ -205,7 +205,7 @@ void cg_disasm_window::ShowDisasm()
 		disasm.BuildShaderBody();
 		m_disasm_text->setText(qstr(disasm.GetArbShader()));
 		m_glsl_text->setText(qstr(disasm.GetGlslShader()));
-		xgui_settings->SetValue(GUI::fd_cg_disasm, m_path_last);
+		xgui_settings->SetValue(gui::fd_cg_disasm, m_path_last);
 	}
 	else if (!m_path_last.isEmpty())
 	{

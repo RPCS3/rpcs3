@@ -1,7 +1,6 @@
 #include "save_manager_dialog.h"
 
 #include "save_data_info_dialog.h"
-#include "gui_settings.h"
 
 #include "Emu/System.h"
 #include "Emu/VFS.h"
@@ -29,7 +28,6 @@ namespace
 	*/
 	std::vector<SaveDataEntry> GetSaveEntries(const std::string& base_dir)
 	{
-
 		std::vector<SaveDataEntry> save_entries;
 
 		// get the saves matching the supplied prefix
@@ -80,8 +78,8 @@ namespace
 	}
 }
 
-save_manager_dialog::save_manager_dialog(std::string dir, QWidget* parent) : QDialog(parent),
-	m_save_entries(), m_dir(dir), m_sort_column(1), m_sort_ascending(true)
+save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::string dir, QWidget* parent)
+	: QDialog(parent), m_save_entries(), m_dir(dir), m_sort_column(1), m_sort_ascending(true), m_gui_settings(gui_settings)
 {
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setWindowTitle(tr("Save Manager"));
@@ -110,7 +108,6 @@ void save_manager_dialog::Init(std::string dir)
 	QPushButton* push_close = new QPushButton(tr("&Close"), this);
 	push_close->setAutoDefault(true);
 
-
 	// Button Layout
 	QHBoxLayout* hbox_buttons = new QHBoxLayout();
 	hbox_buttons->addWidget(push_remove_entries);
@@ -126,6 +123,12 @@ void save_manager_dialog::Init(std::string dir)
 
 	UpdateList();
 
+	QByteArray geometry = m_gui_settings->GetValue(gui::sd_geometry).toByteArray();
+	if (geometry.isEmpty() == false)
+	{
+		restoreGeometry(geometry);
+	}
+
 	// Connects and events
 	connect(push_close, &QAbstractButton::clicked, this, &save_manager_dialog::close);
 	connect(push_remove_entries, &QAbstractButton::clicked, this, &save_manager_dialog::OnEntriesRemove);
@@ -137,10 +140,9 @@ void save_manager_dialog::Init(std::string dir)
 		int originalIndex = m_list->item(row, 0)->data(Qt::UserRole).toInt();
 		SaveDataEntry originalEntry = m_save_entries[originalIndex];
 		QString originalDirName = qstr(originalEntry.dirName);
-		gui_settings settings(this);
-		QVariantMap currNotes = settings.GetValue(GUI::m_saveNotes).toMap();
+		QVariantMap currNotes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
 		currNotes[originalDirName] = m_list->item(row, col)->text();
-		settings.SetValue(GUI::m_saveNotes, currNotes);
+		m_gui_settings->SetValue(gui::m_saveNotes, currNotes);
 	});
 }
 
@@ -155,7 +157,8 @@ void save_manager_dialog::UpdateList()
 
 	m_list->clearContents();
 	m_list->setRowCount(static_cast<int>(m_save_entries.size()));
-	gui_settings settings(this);
+
+	QVariantMap currNotes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
 
 	int row = 0;
 	for (SaveDataEntry entry : m_save_entries)
@@ -177,18 +180,14 @@ void save_manager_dialog::UpdateList()
 		dirNameItem->setFlags(dirNameItem->flags() & ~Qt::ItemIsEditable);
 		m_list->setItem(row, 2, dirNameItem);
 
-		QVariantMap currNotes = settings.GetValue(GUI::m_saveNotes).toMap();
 		QTableWidgetItem* noteItem = new QTableWidgetItem();
 		noteItem->setFlags(noteItem->flags() | Qt::ItemIsEditable);
+
 		if (currNotes.contains(dirName))
 		{
 			noteItem->setText(currNotes[dirName].toString());
 		}
-		else
-		{
-			currNotes[dirName] = "";
-			settings.SetValue(GUI::m_saveNotes, currNotes);
-		}
+
 		m_list->setItem(row, 3, noteItem);
 		++row;
 	}
@@ -337,4 +336,9 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 	connect(saveIDAct, &QAction::triggered, this, [=] {OnSort(2); });
 
 	menu->exec(globalPos);
+}
+
+void save_manager_dialog::closeEvent(QCloseEvent * event)
+{
+	m_gui_settings->SetValue(gui::sd_geometry, saveGeometry());
 }

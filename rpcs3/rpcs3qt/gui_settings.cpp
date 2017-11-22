@@ -53,13 +53,13 @@ void gui_settings::Reset(bool removeMeta)
 	}
 	else
 	{
-		m_settings.remove(GUI::logger);
-		m_settings.remove(GUI::main_window);
-		m_settings.remove(GUI::game_list);
+		m_settings.remove(gui::logger);
+		m_settings.remove(gui::main_window);
+		m_settings.remove(gui::game_list);
 	}
 }
 
-QVariant gui_settings::GetValue(const GUI_SAVE& entry)
+QVariant gui_settings::GetValue(const gui_save& entry)
 {
 	return m_settings.value(entry.key + "/" + entry.name, entry.def);
 }
@@ -180,7 +180,7 @@ QImage gui_settings::GetOpaqueImageArea(const QString& path)
 	return image.copy(QRect(QPoint(w_max, h_max), QPoint(w_min, h_min)));
 }
 
-void gui_settings::SetValue(const GUI_SAVE& entry, const QVariant& value)
+void gui_settings::SetValue(const gui_save& entry, const QVariant& value)
 {
 	m_settings.beginGroup(entry.key);
 	m_settings.setValue(entry.name, value);
@@ -202,24 +202,24 @@ QStringList gui_settings::GetGameListCategoryFilters()
 
 bool gui_settings::GetCategoryVisibility(int cat)
 {
-	GUI_SAVE value;
+	gui_save value;
 
 	switch (cat)
 	{
 	case Category::Non_Disc_Game:
-		value = GUI::cat_hdd_game; break;
+		value = gui::cat_hdd_game; break;
 	case Category::Disc_Game:
-		value = GUI::cat_disc_game; break;
+		value = gui::cat_disc_game; break;
 	case Category::Home:
-		value = GUI::cat_home; break;
+		value = gui::cat_home; break;
 	case Category::Media:
-		value = GUI::cat_audio_video; break;
+		value = gui::cat_audio_video; break;
 	case Category::Data:
-		value = GUI::cat_game_data; break;
+		value = gui::cat_game_data; break;
 	case Category::Unknown_Cat:
-		value = GUI::cat_unknown; break;
+		value = gui::cat_unknown; break;
 	case Category::Others:
-		value = GUI::cat_other; break;
+		value = gui::cat_other; break;
 	default:
 		LOG_WARNING(GENERAL, "GetCategoryVisibility: wrong cat <%d>", cat);
 		break;
@@ -230,24 +230,24 @@ bool gui_settings::GetCategoryVisibility(int cat)
 
 void gui_settings::SetCategoryVisibility(int cat, const bool& val)
 {
-	GUI_SAVE value;
+	gui_save value;
 
 	switch (cat)
 	{
 	case Category::Non_Disc_Game:
-		value = GUI::cat_hdd_game; break;
+		value = gui::cat_hdd_game; break;
 	case Category::Disc_Game:
-		value = GUI::cat_disc_game; break;
+		value = gui::cat_disc_game; break;
 	case Category::Home:
-		value = GUI::cat_home; break;
+		value = gui::cat_home; break;
 	case Category::Media:
-		value = GUI::cat_audio_video; break;
+		value = gui::cat_audio_video; break;
 	case Category::Data:
-		value = GUI::cat_game_data; break;
+		value = gui::cat_game_data; break;
 	case Category::Unknown_Cat:
-		value = GUI::cat_unknown; break;
+		value = gui::cat_unknown; break;
 	case Category::Others:
-		value = GUI::cat_other; break;
+		value = gui::cat_other; break;
 	default:
 		LOG_WARNING(GENERAL, "SetCategoryVisibility: wrong cat <%d>", cat);
 		break;
@@ -256,7 +256,7 @@ void gui_settings::SetCategoryVisibility(int cat, const bool& val)
 	SetValue(value, val);
 }
 
-void gui_settings::ShowInfoBox(const GUI_SAVE& entry, const QString& title, const QString& text, QWidget* parent)
+void gui_settings::ShowInfoBox(const gui_save& entry, const QString& title, const QString& text, QWidget* parent)
 {
 	if (GetValue(entry).toBool())
 	{
@@ -278,35 +278,35 @@ void gui_settings::SetGamelistColVisibility(int col, bool val)
 {
 	// hide sound format and parental level
 	bool show = col != 8 && col != 9;
-	SetValue(GUI_SAVE(GUI::game_list, "Col" + QString::number(col) + "visible", show), val);
+	SetValue(gui_save(gui::game_list, "Col" + QString::number(col) + "visible", show), val);
 }
 
 void gui_settings::SetCustomColor(int col, const QColor& val)
 {
-	SetValue(GUI_SAVE(GUI::meta, "CustomColor" + QString::number(col), GUI::mw_tool_bar_color), val);
+	SetValue(gui_save(gui::meta, "CustomColor" + QString::number(col), gui::mw_tool_bar_color), val);
 }
 
 void gui_settings::SaveCurrentConfig(const QString& friendlyName)
 {
-	SetValue(GUI::m_currentConfig, friendlyName);
+	SetValue(gui::m_currentConfig, friendlyName);
 	BackupSettingsToTarget(friendlyName);
 }
 
 logs::level gui_settings::GetLogLevel()
 {
-	return (logs::level) GetValue(GUI::l_level).toUInt();
+	return (logs::level) GetValue(gui::l_level).toUInt();
 }
 
 bool gui_settings::GetGamelistColVisibility(int col)
 {
 	// hide sound format and parental level
-	bool show = col != GUI::COLUMN_SOUND && col != GUI::COLUMN_PARENTAL;
-	return GetValue(GUI_SAVE(GUI::game_list, "Col" + QString::number(col) + "visible", show)).toBool();
+	bool show = col != gui::column_sound && col != gui::column_parental;
+	return GetValue(gui_save(gui::game_list, "Col" + QString::number(col) + "visible", show)).toBool();
 }
 
 QColor gui_settings::GetCustomColor(int col)
 {
-	return GetValue(GUI_SAVE(GUI::meta, "CustomColor" + QString::number(col), GUI::mw_tool_bar_color)).value<QColor>();
+	return GetValue(gui_save(gui::meta, "CustomColor" + QString::number(col), gui::mw_tool_bar_color)).value<QColor>();
 }
 
 QStringList gui_settings::GetConfigEntries()
@@ -329,7 +329,7 @@ void gui_settings::BackupSettingsToTarget(const QString& friendlyName)
 	QStringList keys = m_settings.allKeys();
 	for (QStringList::iterator i = keys.begin(); i != keys.end(); i++)
 	{
-		if (!i->startsWith(GUI::meta))
+		if (!i->startsWith(gui::meta))
 		{
 			target.setValue(*i, m_settings.value(*i));
 		}
@@ -354,9 +354,9 @@ QStringList gui_settings::GetStylesheetEntries()
 
 QString gui_settings::GetCurrentStylesheetPath()
 {
-	QString stylesheet = GetValue(GUI::m_currentStylesheet).toString();
+	QString stylesheet = GetValue(gui::m_currentStylesheet).toString();
 
-	if (stylesheet == GUI::Default)
+	if (stylesheet == gui::Default)
 	{
 		return "";
 	}

@@ -70,7 +70,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent) : QDialog(parent), ui(
 	gui_settings settings(this);
 
 	// repaint and resize controller image
-	ui->l_controller->setPixmap(settings.colorizedPixmap(*ui->l_controller->pixmap(), QColor(), GUI::get_Label_Color("l_controller"), false, true));
+	ui->l_controller->setPixmap(settings.colorizedPixmap(*ui->l_controller->pixmap(), QColor(), gui::get_Label_Color("l_controller"), false, true));
 	ui->l_controller->setMaximumSize(ui->gb_description->sizeHint().width(), ui->l_controller->maximumHeight() * ui->gb_description->sizeHint().width() / ui->l_controller->maximumWidth());
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
