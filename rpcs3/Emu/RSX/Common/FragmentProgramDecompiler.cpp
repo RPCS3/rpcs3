@@ -334,6 +334,7 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 {
 	std::string ret;
+	bool apply_precision_modifier = !!src1.input_prec_mod;
 
 	switch (src.reg_type)
 	{
@@ -351,6 +352,8 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7", "tc8", "tc9",
 			"ssa"
 		};
+
+		//TODO: Investigate effect of input modifier on this type
 
 		switch (dst.src_attr_reg_num)
 		{
@@ -373,6 +376,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	case RSX_FP_REGISTER_TYPE_CONSTANT:
 		ret += AddConst();
+		apply_precision_modifier = false;
 		break;
 
 	case RSX_FP_REGISTER_TYPE_UNKNOWN: // ??? Used by a few games, what is it?
@@ -380,6 +384,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				dst.opcode, dst.HEX, src0.HEX, src1.HEX, src2.HEX);
 
 		ret += AddType3();
+		apply_precision_modifier = false;
 		break;
 
 	default:
@@ -400,7 +405,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	//Warning: Modifier order matters. e.g neg should be applied after precision clamping (tested with Naruto UNS)
 	if (src.abs) ret = "abs(" + ret + ")";
-	if (src1.input_prec_mod) ret = ClampValue(ret, src1.input_prec_mod);
+	if (apply_precision_modifier) ret = ClampValue(ret, src1.input_prec_mod);
 	if (src.neg) ret = "-" + ret;
 
 	return ret;
