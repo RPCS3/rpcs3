@@ -10,6 +10,7 @@
 #include <QDockWidget>
 #include <QTabWidget>
 #include <QTextEdit>
+#include <QLineEdit>
 #include <QActionGroup>
 #include <QTimer>
 
@@ -35,7 +36,6 @@ private Q_SLOTS:
 	void UpdateUI();
 private:
 	void SetLogLevel(logs::level lev);
-	void SetTTYLogging(bool val);
 
 	void CreateAndConnectActions();
 
@@ -43,9 +43,12 @@ private:
 	QColor m_color_stack;
 	QTextEdit *m_log;
 	QTextEdit *m_tty;
+	QLineEdit *m_tty_input;
 	QString m_old_text;
 	ullong m_log_counter;
 	bool m_stack_log;
+	bool m_log_tty;
+	bool m_show_tty_in_log;
 
 	fs::file m_tty_file;
 
@@ -65,6 +68,8 @@ private:
 	QAction* m_stackAct;
 
 	QAction* m_TTYAct;
+
+	QAction* m_TTYLogAct;
 
 	std::shared_ptr<gui_settings> xgui_settings;
 };
