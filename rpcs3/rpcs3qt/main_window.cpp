@@ -127,12 +127,12 @@ void main_window::Init()
 		LOG_WARNING(GENERAL, "Experimental Build Warning! Build origin: " STRINGIZE(BRANCH));
 
 		QMessageBox msg;
-		msg.setWindowTitle("Experimental Build Warning");
+		msg.setWindowTitle(tr("Experimental Build Warning"));
 		msg.setIcon(QMessageBox::Critical);
 		msg.setTextFormat(Qt::RichText);
 		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 		msg.setDefaultButton(QMessageBox::No);
-		msg.setText(QString(
+		msg.setText(QString(tr(
 			R"(
 				<p style="white-space: nowrap;">
 					Please understand that this build is not an official RPCS3 release.<br>
@@ -142,7 +142,7 @@ void main_window::Init()
 					Do you wish to use this build anyway?
 				</p>
 			)"
-		).arg(STRINGIZE(BRANCH)));
+		)).arg(Qt::convertFromPlainText(STRINGIZE(BRANCH))));
 		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 		if (msg.exec() == QMessageBox::No)
@@ -416,6 +416,10 @@ void main_window::InstallPkg(const QString& dropPath)
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
 		guiSettings->ShowInfoBox(gui::ib_pkg_success, tr("Success!"), tr("Successfully installed software from package!"), this);
 	}
+
+#ifdef _WIN32
+	taskbar_progress->hide();
+#endif
 }
 
 void main_window::InstallPup(const QString& dropPath)

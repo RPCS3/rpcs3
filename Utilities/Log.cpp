@@ -367,9 +367,15 @@ logs::file_writer::file_writer(const std::string& name)
 			m_fout2.close();
 		}
 	}
+	catch (const std::exception& e)
+	{
+		std::thread([text = std::string{e.what()}]{ report_fatal_error(text); }).detach();
+		return;
+	}
 	catch (...)
 	{
-		catch_all_exceptions();
+		std::thread([]{ report_fatal_error("Unknown error" HERE); }).detach();
+		return;
 	}
 
 	m_writer = std::thread([this]()
@@ -402,6 +408,11 @@ logs::file_writer::file_writer(const std::string& name)
 
 logs::file_writer::~file_writer()
 {
+	if (!m_fptr)
+	{
+		return;
+	}
+
 	// Stop writer thread
 	while (m_out << 24 < m_buf)
 	{
@@ -487,6 +498,11 @@ bool logs::file_writer::flush(u64 bufv)
 
 void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)
 {
+	if (!m_fptr)
+	{
+		return;
+	}
+
 	// TODO: write bigger fragment directly in blocking manner
 	while (size && size <= 0xffffff)
 	{
