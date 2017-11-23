@@ -97,7 +97,7 @@ static fs::error to_error(DWORD e)
 	case ERROR_SHARING_VIOLATION: return fs::error::acces;
 	case ERROR_DIR_NOT_EMPTY: return fs::error::notempty;
 	case ERROR_NOT_READY: return fs::error::noent;
-	case ERROR_INVALID_PARAMETER: return fs::error::inval;
+	//case ERROR_INVALID_PARAMETER: return fs::error::inval;
 	default: fmt::throw_exception("Unknown Win32 error: %u.", e);
 	}
 }
@@ -108,6 +108,7 @@ static fs::error to_error(DWORD e)
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/statvfs.h>
+#include <sys/file.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -936,6 +937,13 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	if (fd == -1)
 	{
 		g_tls_error = to_error(errno);
+		return;
+	}
+
+	if (test(mode & fs::unshare) && ::flock(fd, LOCK_EX | LOCK_NB) != 0)
+	{
+		g_tls_error = errno == EWOULDBLOCK ? fs::error::acces : to_error(errno);
+		::close(fd);
 		return;
 	}
 

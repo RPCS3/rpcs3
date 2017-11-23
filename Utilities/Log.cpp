@@ -4,15 +4,19 @@
 #include "sema.h"
 
 #include "Utilities/sysinfo.h"
+#include "Utilities/Thread.h"
 #include "rpcs3_version.h"
 #include <string>
 #include <unordered_map>
+#include <thread>
+#include <chrono>
+
+using namespace std::literals::chrono_literals;
 
 #ifdef _WIN32
 #define NOMINMAX
 #include <Windows.h>
 #else
-#include <chrono>
 #include <sys/mman.h>
 #endif
 
@@ -49,23 +53,32 @@ void fmt_class_string<logs::level>::format(std::string& out, u64 arg)
 
 namespace logs
 {
-	constexpr std::size_t s_log_size = 128 * 1024 * 1024;
-	constexpr std::size_t s_log_size_s = s_log_size / 2;
-	constexpr std::size_t s_log_size_t = s_log_size / 4 + s_log_size_s;
-	constexpr std::size_t s_log_size_e = s_log_size / 8 + s_log_size_t;
-	constexpr std::size_t s_log_size_f = s_log_size / 16 + s_log_size_e;
+	// Memory-mapped buffer size
+	constexpr u64 s_log_size = 32 * 1024 * 1024;
 
 	class file_writer
 	{
 		fs::file m_file;
 		std::string m_name;
+		std::thread m_writer;
+		fs::file m_fout;
+		fs::file m_fout2;
+		u64 m_max_size;
 
 #ifdef _WIN32
 		::HANDLE m_fmap;
 #endif
-		atomic_t<std::size_t> m_pos{0};
-		std::size_t m_size{0};
 		uchar* m_fptr{};
+		z_stream m_zs{};
+		semaphore<> m_m;
+
+		alignas(128) atomic_t<u64> m_buf{0}; // MSB (40 bit): push begin, LSB (24 bis): push size
+		alignas(128) atomic_t<u64> m_out{0}; // Amount of bytes written to file
+
+		uchar m_zout[65536];
+
+		// Write buffered logs immediately
+		bool flush(u64 bufv);
 
 	public:
 		file_writer(const std::string& name);
@@ -119,7 +132,7 @@ namespace logs
 	static file_listener* get_logger()
 	{
 		// Use magic static
-		static file_listener logger("RPCS3.log");
+		static file_listener logger("RPCS3");
 		return &logger;
 	}
 
@@ -291,13 +304,45 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u
 logs::file_writer::file_writer(const std::string& name)
 	: m_name(name)
 {
+	const std::string log_name = fs::get_config_dir() + name + ".log";
+	const std::string buf_name = fs::get_config_dir() + name + ".buf";
+
 	try
 	{
-		if (!m_file.open(fs::get_config_dir() + name, fs::read + fs::write + fs::create + fs::trunc + fs::unshare))
+		if (!m_file.open(buf_name, fs::read + fs::write + fs::create + fs::trunc + fs::unshare))
 		{
-			fmt::throw_exception("Can't create file %s (error %s)", name, fs::g_tls_error);
+			if (fs::g_tls_error == fs::error::acces)
+			{
+				if (fs::exists(buf_name))
+				{
+					fmt::throw_exception("Another instance of %s is running. Close it or kill its process, if necessary.", name);
+				}
+				else
+				{
+					fmt::throw_exception("Cannot create %s.log (access denied)."
+#ifdef _WIN32
+						"\nNote that %s cannot be installed in Program Files or similar directory with limited permissions."
+#else
+						"\nPlease, check %s permissions in '~/.config/'."
+#endif
+						, name, name);
+				}
+			}
+
+			fmt::throw_exception("Cannot create %s.log (error %s)", name, fs::g_tls_error);
 		}
 
+		// Check free space
+		fs::device_stat stats{};
+		if (!fs::statfs(fs::get_config_dir(), stats) || stats.avail_free < s_log_size * 8)
+		{
+			fmt::throw_exception("Not enough free space (%f KB)", stats.avail_free / 1000000.);
+		}
+
+		// Limit log size to ~25% of free space
+		m_max_size = stats.avail_free / 4;
+
+		// Initialize memory mapped file
 #ifdef _WIN32
 		m_fmap = CreateFileMappingW(m_file.get_handle(), 0, PAGE_READWRITE, s_log_size >> 32, s_log_size & 0xffffffff, 0);
 		m_fptr = m_fmap ? (uchar*)MapViewOfFile(m_fmap, FILE_MAP_WRITE, 0, 0, 0) : nullptr;
@@ -307,44 +352,94 @@ logs::file_writer::file_writer(const std::string& name)
 #endif
 
 		verify(name.c_str()), m_fptr;
-		std::memset(m_fptr, '\n', s_log_size);
 
 		// Rotate backups (TODO)
-		fs::remove_file(fs::get_config_dir() + name + "1.gz");
+		fs::remove_file(fs::get_config_dir() + name + "1.log.gz");
 		fs::create_dir(fs::get_config_dir() + "old_logs");
-		fs::rename(fs::get_config_dir() + m_name + ".gz", fs::get_config_dir() + "old_logs/" + m_name + ".gz", true);
+		fs::rename(fs::get_config_dir() + m_name + ".log.gz", fs::get_config_dir() + "old_logs/" + m_name + ".log.gz", true);
+
+		// Actual log file (allowed to fail)
+		m_fout.open(log_name, fs::rewrite);
+
+		// Compressed log
+		if (!m_fout2.open(log_name + ".gz", fs::rewrite) || deflateInit2(&m_zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) != Z_OK)
+		{
+			m_fout2.close();
+		}
+	}
+	catch (const std::exception& e)
+	{
+		std::thread([text = std::string{e.what()}]{ report_fatal_error(text); }).detach();
+		return;
 	}
 	catch (...)
 	{
-		catch_all_exceptions();
+		std::thread([]{ report_fatal_error("Unknown error" HERE); }).detach();
+		return;
 	}
+
+	m_writer = std::thread([this]()
+	{
+		thread_ctrl::set_native_priority(-1);
+
+		while (true)
+		{
+			const u64 bufv = m_buf;
+
+			if (bufv & 0xffffff)
+			{
+				// Wait if threads are writing logs
+				std::this_thread::yield();
+				continue;
+			}
+
+			if (!flush(bufv))
+			{
+				if (m_out == -1)
+				{
+					break;
+				}
+
+				std::this_thread::sleep_for(10ms);
+			}
+		}
+	});
 }
 
 logs::file_writer::~file_writer()
 {
-	if (m_size == 0)
+	if (!m_fptr)
 	{
-		m_size = std::min<std::size_t>(+m_pos, s_log_size);
+		return;
 	}
 
-	// Compress
-	z_stream zs{};
-	if (deflateInit2(&zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) == Z_OK)
+	// Stop writer thread
+	while (m_out << 24 < m_buf)
 	{
-		auto buf = std::make_unique<uchar[]>(s_log_size);
-		zs.avail_in  = ::narrow<u32>(m_size);
-		zs.avail_out = s_log_size;
-		zs.next_in   = m_fptr;
-		zs.next_out  = buf.get();
+		std::this_thread::yield();
+	}
 
-		if (deflate(&zs, Z_FINISH) != Z_STREAM_ERROR)
-		{
-			fs::file(fs::get_config_dir() + m_name + ".gz", fs::rewrite).write(buf.get(), zs.total_out);
-		}
+	m_out = -1;
+	m_writer.join();
 
-		if (deflateEnd(&zs) != Z_OK)
+	if (m_fout2)
+	{
+		m_zs.avail_in = 0;
+		m_zs.next_in  = nullptr;
+
+		do
 		{
+			m_zs.avail_out = sizeof(m_zout);
+			m_zs.next_out  = m_zout;
+
+			if (deflate(&m_zs, Z_FINISH) == Z_STREAM_ERROR || m_fout2.write(m_zout, sizeof(m_zout) - m_zs.avail_out) != sizeof(m_zout) - m_zs.avail_out)
+			{
+				break;
+			}
 		}
+		while (m_zs.avail_out == 0);
+
+		deflateEnd(&m_zs);
 	}
 
 #ifdef _WIN32
@@ -353,33 +448,109 @@ logs::file_writer::~file_writer()
 #else
 	::munmap(m_fptr, s_log_size);
 #endif
-	m_file.trunc(m_size);
+}
+
+bool logs::file_writer::flush(u64 bufv)
+{
+	semaphore_lock lock(m_m);
+
+	const u64 st  = +m_out;
+	const u64 end = std::min<u64>((st + s_log_size) & ~(s_log_size - 1), bufv >> 24);
+
+	if (end > st)
+	{
+		// Avoid writing too big fragments
+		const u64 size = std::min<u64>(end - st, sizeof(m_zout) / 2);
+
+		// Write uncompressed
+		if (m_fout && m_fout.write(m_fptr + st % s_log_size, size) != size)
+		{
+			m_fout.close();
+		}
+
+		// Write compressed
+		if (m_fout2)
+		{
+			m_zs.avail_in = size;
+			m_zs.next_in  = m_fptr + st % s_log_size;
+
+			do
+			{
+				m_zs.avail_out = sizeof(m_zout);
+				m_zs.next_out  = m_zout;
+
+				if (deflate(&m_zs, Z_NO_FLUSH) == Z_STREAM_ERROR || m_fout2.write(m_zout, sizeof(m_zout) - m_zs.avail_out) != sizeof(m_zout) - m_zs.avail_out)
+				{
+					deflateEnd(&m_zs);
+					m_fout2.close();
+					break;
+				}
+			}
+			while (m_zs.avail_out == 0);
+		}
+
+		m_out += size;
+		return true;
+	}
+
+	return false;
 }
 
 void logs::file_writer::log(logs::level sev, const char* text, std::size_t size)
 {
-	// Adaptive log limit
-	const auto lim =
-		sev >= logs::level::success ? s_log_size_s :
-		sev == logs::level::todo ? s_log_size_t :
-		sev == logs::level::error ? s_log_size_e : s_log_size_f;
-
-	if (m_pos >= lim)
+	if (!m_fptr)
 	{
 		return;
 	}
 
-	// Acquire memory
-	const auto pos = m_pos.fetch_add(size);
+	// TODO: write bigger fragment directly in blocking manner
+	while (size && size <= 0xffffff)
+	{
+		u64 bufv;
 
-	// Write if possible
-	if (pos + size <= s_log_size)
-	{
-		std::memcpy(m_fptr + pos, text, size);
-	}
-	else if (pos <= s_log_size)
-	{
-		m_size = pos;
+		const auto pos = m_buf.atomic_op([&](u64& v) -> uchar*
+		{
+			const u64 v1 = v >> 24;
+			const u64 v2 = v & 0xffffff;
+
+			if (UNLIKELY(v2 + size > 0xffffff || v1 + v2 + size >= m_out + s_log_size))
+			{
+				bufv = v;
+				return nullptr;
+			}
+
+			v += size;
+			return m_fptr + (v1 + v2) % s_log_size;
+		});
+
+		if (UNLIKELY(!pos))
+		{
+			if ((bufv & 0xffffff) + size > 0xffffff || bufv & 0xffffff)
+			{
+				// Concurrency limit reached
+				std::this_thread::yield();
+			}
+			else
+			{
+				// Queue is full, need to write out
+				flush(bufv);
+			}
+			continue;
+		}
+
+		if (pos + size > m_fptr + s_log_size)
+		{
+			const auto frag = m_fptr + s_log_size - pos;
+			std::memcpy(pos, text, frag);
+			std::memcpy(m_fptr, text + frag, size - frag);
+		}
+		else
+		{
+			std::memcpy(pos, text, size);
+		}
+
+		m_buf += (u64{size} << 24) - size;
+		break;
 	}
 }
 
