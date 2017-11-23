@@ -334,7 +334,7 @@ logs::file_writer::file_writer(const std::string& name)
 
 		// Check free space
 		fs::device_stat stats{};
-		if (!fs::statfs(log_name, stats) || stats.avail_free < s_log_size * 8)
+		if (!fs::statfs(fs::get_config_dir(), stats) || stats.avail_free < s_log_size * 8)
 		{
 			fmt::throw_exception("Not enough free space (%f KB)", stats.avail_free / 1000000.);
 		}
