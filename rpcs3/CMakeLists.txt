@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.1)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
 set(RES_FILES "")
 set(CMAKE_CXX_STANDARD 14)
-include(CheckCCompilerFlag)
+include(CheckCXXCompilerFlag)
 
 # Qt section
 find_package(Qt5 5.7 COMPONENTS Widgets)
@@ -121,8 +121,8 @@ if(NOT MSVC)
 	if(APPLE)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-no_pie")
 	else()
-		CHECK_C_COMPILER_FLAG("-no-pie" HAS_NO_PIE)
-		CHECK_C_COMPILER_FLAG("-nopie" HAS_NOPIE)
+		CHECK_CXX_COMPILER_FLAG("-no-pie" HAS_NO_PIE)
+		CHECK_CXX_COMPILER_FLAG("-nopie" HAS_NOPIE)
 
 		if(HAS_NO_PIE)
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -no-pie")
@@ -419,7 +419,7 @@ else()
 endif()
 
 # For some reason GCC 7 requires manually linking with -latomic
-if (CMAKE_COMPILER_IS_GNUCC AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 7))
+if (CMAKE_COMPILER_IS_GNUCXX AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 7))
 	target_link_libraries(rpcs3 -latomic)
 endif()
 
