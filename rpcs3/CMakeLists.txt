@@ -7,12 +7,12 @@ include(CheckCXXCompilerFlag)
 
 # Qt section
 find_package(Qt5 5.7 COMPONENTS Widgets)
-if (WIN32)
+if(WIN32)
 	find_package(Qt5 5.7 COMPONENTS WinExtras REQUIRED)
 	set(RPCS3_QT_LIBS Qt5::Widgets Qt5::WinExtras)
 else()
 	find_package(Qt5 5.7 COMPONENTS DBus)
-	if (Qt5DBus_FOUND)
+	if(Qt5DBus_FOUND)
 		set(RPCS3_QT_LIBS Qt5::Widgets Qt5::DBus)
 		add_definitions(-DHAVE_QTDBUS)
 	else()
@@ -21,10 +21,10 @@ else()
 endif()
 
 # Let's make sure we have Qt before we continue
-if (NOT Qt5Widgets_FOUND)
-	if (Qt5Widgets_VERSION VERSION_LESS 5.7.0)
+if(NOT Qt5Widgets_FOUND)
+	if(Qt5Widgets_VERSION VERSION_LESS 5.7.0)
 		message("Minimum supported Qt5 version is 5.7! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
-		if ("${CMAKE_SYSTEM}" MATCHES "Linux")
+		if("${CMAKE_SYSTEM}" MATCHES "Linux")
 			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.
 If you're on Ubuntu or Linux Mint, there are PPAs you can use to install an up-to-date qt5 version.
         https://launchpad.net/~beineri/+archive/ubuntu/opt-qt592-xenial
@@ -32,16 +32,15 @@ If you're on Ubuntu or Linux Mint, there are PPAs you can use to install an up-t
 just make sure to run
     source /opt/qt59/bin/qt59-env.sh
 before re-running cmake")
-        elseif(WIN32)
+		elseif(WIN32)
 			message(FATAL_ERROR "You can download the latest version of Qt5 here: https://www.qt.io/download-open-source/")
 		else()
 			message(FATAL_ERROR "Look online for instructions on installing an up-to-date Qt5 on ${CMAKE_SYSTEM}.")
 		endif()
-        
-    endif()
-    
-    message("CMake was unable to find Qt5!")
-    if (WIN32)
+	endif()
+
+	message("CMake was unable to find Qt5!")
+	if(WIN32)
 		message(FATAL_ERROR "Make sure the QTDIR env variable has been set properly. (for example C:\\Qt\\5.8\\msvc2017_64\\)")
 	elseif("${CMAKE_SYSTEM}" MATCHES "Linux")
 		message(FATAL_ERROR "Make sure to install your distro's qt5 package!")
@@ -57,12 +56,12 @@ set(CMAKE_AUTOUIC ON)
 # To make UI files on cmake 3.7 or less work
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-if (Qt5_POSITION_INDEPENDENT_CODE)
-    SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
-    if(UNIX)
-        # Cotire needs this set for some reason
-        SET(CMAKE_CXX_COMPILE_OPTIONS_PIE -fPIC)
-    endif()
+if(Qt5_POSITION_INDEPENDENT_CODE)
+	set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+	if(UNIX)
+		# Cotire needs this set for some reason
+		set(CMAKE_CXX_COMPILE_OPTIONS_PIE -fPIC)
+	endif()
 endif()
 
 include(cotire)
@@ -106,7 +105,7 @@ if(NOT MSVC)
 	
 	add_compile_options(-msse -msse2 -mcx16 -mssse3 -mrtm)
 	
-	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 		# This fixes 'some' of the st11range issues. See issue #2516
 		if(APPLE)
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-image_base,0x10000 -Wl,-pagezero_size,0x10000")
@@ -151,41 +150,41 @@ if(UNIX AND NOT APPLE)
 endif()
 
 if(NOT RPCS3_SRC_DIR)
-  SET(RPCS3_SRC_DIR ${CMAKE_CURRENT_LIST_DIR})
-  Message("-- Initializing RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
+	set(RPCS3_SRC_DIR ${CMAKE_CURRENT_LIST_DIR})
+	message("-- Initializing RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
 else()
-  Message("-- Using Custom RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
+	message("-- Using Custom RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
 endif()
 
 set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
 
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
-if (NOT WITHOUT_LLVM)
+if(NOT WITHOUT_LLVM)
 	find_package(LLVM 4.0 CONFIG)
-  if (NOT LLVM_FOUND)
-    message("System LLVM was not found, LLVM will be built from the submodule.")
+	if(NOT LLVM_FOUND)
+		message("System LLVM was not found, LLVM will be built from the submodule.")
 
-    set(LLVM_TARGETS_TO_BUILD "X86" CACHE INTERNAL "")
-    option(LLVM_BUILD_RUNTIME OFF)
-    option(LLVM_BUILD_TOOLS OFF)
-    option(LLVM_INCLUDE_DOCS OFF)
-    option(LLVM_INCLUDE_EXAMPLES OFF)
-    option(LLVM_INCLUDE_TESTS OFF)
-    option(LLVM_INCLUDE_TOOLS OFF)
-    option(LLVM_INCLUDE_UTILS OFF)
-    option(WITH_POLLY OFF)
+		set(LLVM_TARGETS_TO_BUILD "X86" CACHE INTERNAL "")
+		option(LLVM_BUILD_RUNTIME OFF)
+		option(LLVM_BUILD_TOOLS OFF)
+		option(LLVM_INCLUDE_DOCS OFF)
+		option(LLVM_INCLUDE_EXAMPLES OFF)
+		option(LLVM_INCLUDE_TESTS OFF)
+		option(LLVM_INCLUDE_TOOLS OFF)
+		option(LLVM_INCLUDE_UTILS OFF)
+		option(WITH_POLLY OFF)
 
-    # LLVM needs to be built out-of-tree
-    add_subdirectory(../llvm ../llvm_build)
-    set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/../llvm_build/lib/cmake/llvm/")
+		# LLVM needs to be built out-of-tree
+		add_subdirectory(../llvm ../llvm_build)
+		set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/../llvm_build/lib/cmake/llvm/")
 
-    # now tries to find LLVM again
-    find_package(LLVM 4.0 CONFIG)
-    if (NOT LLVM_FOUND)
-      message(WARNING "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
-    endif()
-  endif()
+		# now tries to find LLVM again
+		find_package(LLVM 4.0 CONFIG)
+		if(NOT LLVM_FOUND)
+			message(WARNING "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
+		endif()
+	endif()
 endif()
 
 
@@ -196,7 +195,7 @@ elseif(WIN32)
 else()
 	set(PLATFORM_ARCH "linux/x86_64")
 	option(USE_ALSA "ALSA audio backend" ON)
-  option(USE_PULSE "PulseAudio audio backend" ON)
+	option(USE_PULSE "PulseAudio audio backend" ON)
 	option(USE_LIBEVDEV "libevdev-based joystick support" ON)
 	option(USE_VULKAN "Vulkan render backend" ON)
 endif()
@@ -289,17 +288,17 @@ if(WIN32)
 endif()
 
 if(NOT LLVM_FOUND)
-	Message("LLVM 4.0 not found. RPCS3 will be compiled without LLVM support.")
+	message("LLVM 4.0 not found. RPCS3 will be compiled without LLVM support.")
 else()
 	add_definitions(${LLVM_DEFINITIONS})
 	add_definitions(-DLLVM_AVAILABLE)
-	if (CMAKE_BUILD_TYPE STREQUAL "Release")
+	if(CMAKE_BUILD_TYPE STREQUAL "Release")
 		llvm_map_components_to_libnames(LLVM_LIBS core support executionengine object runtimedyld x86desc x86info scalaropts mcjit vectorize ipo x86codegen x86disassembler)
 	else()
 		llvm_map_components_to_libnames(LLVM_LIBS core support executionengine object runtimedyld x86desc x86info scalaropts mcjit vectorize ipo x86codegen x86disassembler mcdisassembler)
 	endif()
 
-	if (NOT MSVC)
+	if(NOT MSVC)
 		set_source_files_properties(${RPCS3_SRC_DIR}/../Utilities/JIT.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
 		set_source_files_properties(${RPCS3_SRC_DIR}/Emu/Cell/PPUTranslator.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
 	endif()
@@ -318,7 +317,7 @@ if(NOT USE_SYSTEM_FFMPEG)
 endif()
 
 get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-foreach(dir ${dirs})
+foreach (dir ${dirs})
 	message(STATUS "dir='${dir}'")
 endforeach()
 
@@ -330,7 +329,7 @@ RPCS3_SRC
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit/*.cpp"
 )
 
-if (NOT WIN32 AND VULKAN_FOUND)
+if(NOT WIN32 AND VULKAN_FOUND)
 # Compile glslang and SPIRV modules needed for glsl compilation
 	file(
 	GLOB_RECURSE
@@ -342,25 +341,25 @@ if (NOT WIN32 AND VULKAN_FOUND)
 	"${RPCS3_SRC_DIR}/../Vulkan/glslang/SPIRV/*.cpp"
 	)
 	
-	set (RPCS3_SRC ${RPCS3_SRC} ${UNIX_GLSLANG})
+	set(RPCS3_SRC ${RPCS3_SRC} ${UNIX_GLSLANG})
 endif()
 
 #File exclusion section
 
 if(NOT WIN32 AND NOT VULKAN_FOUND)
-	set (EXCLUDE_FILES "/RSX/VK/")
+	set(EXCLUDE_FILES "/RSX/VK/")
 endif()
 
 # Ignore autogenerated moc_* files if present
-set (EXCLUDE_FILES ${EXCLUDE_FILES} "moc_")
-set (EXCLUDE_FILES ${EXCLUDE_FILES} "rpcs3_automoc")
-set (EXCLUDE_FILES ${EXCLUDE_FILES} "qrc_resources.cpp")
+set(EXCLUDE_FILES ${EXCLUDE_FILES} "moc_")
+set(EXCLUDE_FILES ${EXCLUDE_FILES} "rpcs3_automoc")
+set(EXCLUDE_FILES ${EXCLUDE_FILES} "qrc_resources.cpp")
 
 foreach (TMP_PATH ${RPCS3_SRC})
 	foreach (EXCLUDE_PATH ${EXCLUDE_FILES})
-		string (FIND ${TMP_PATH} ${EXCLUDE_PATH} EXCLUDE_FILE_FOUND)
-		if (NOT ${EXCLUDE_FILE_FOUND} EQUAL -1)
-			list (REMOVE_ITEM RPCS3_SRC ${TMP_PATH})
+		string(FIND ${TMP_PATH} ${EXCLUDE_PATH} EXCLUDE_FILE_FOUND)
+		if(NOT ${EXCLUDE_FILE_FOUND} EQUAL -1)
+			list(REMOVE_ITEM RPCS3_SRC ${TMP_PATH})
 		endif ()
 	endforeach(EXCLUDE_PATH)
 endforeach(TMP_PATH)
@@ -369,10 +368,10 @@ endforeach(TMP_PATH)
 file(GLOB_RECURSE TMP_MOC "${RPCS3_SRC_DIR}/moc_*.cpp" "${RPCS3_SRC_DIR}/rpcs3_automoc.cpp" "${RPCS3_SRC_DIR}/qrc_resources.cpp")
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${TMP_MOC}")
 
-if (WIN32)
-    add_executable(rpcs3 WIN32 ${RPCS3_SRC} ${RES_FILES} resources.qrc)
+if(WIN32)
+	add_executable(rpcs3 WIN32 ${RPCS3_SRC} ${RES_FILES} resources.qrc)
 else()
-    add_executable(rpcs3 ${RPCS3_SRC} ${RES_FILES} resources.qrc)
+	add_executable(rpcs3 ${RPCS3_SRC} ${RES_FILES} resources.qrc)
 endif()
 
 add_dependencies(rpcs3 GitVersion)
@@ -385,11 +384,11 @@ endif()
 if(WIN32)
 	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
 	if(NOT MSVC)
-		target_link_libraries(rpcs3  ${OPENGL_LIBRARIES} opengl32.lib glu32.lib libpthread)
+		target_link_libraries(rpcs3 ${OPENGL_LIBRARIES} opengl32.lib glu32.lib libpthread)
 	else()
-		target_link_libraries(rpcs3  dxgi.lib d2d1.lib dwrite.lib)
+		target_link_libraries(rpcs3 dxgi.lib d2d1.lib dwrite.lib)
 	endif()
-	target_link_libraries(rpcs3  avformat.lib avcodec.lib avutil.lib swscale.lib png16_static ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3 avformat.lib avcodec.lib avutil.lib swscale.lib png16_static ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
 else()
 	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
 	if(APPLE)
@@ -403,45 +402,45 @@ else()
 		target_link_libraries(rpcs3 ${VULKAN_LIBRARIES})
 	endif()
 	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} -lpthread ZLIB::ZLIB ${ADDITIONAL_LIBS})
-	if (USE_SYSTEM_FFMPEG)
+	if(USE_SYSTEM_FFMPEG)
 		link_libraries(${FFMPEG_LIBRARY_DIR})
-		target_link_libraries(rpcs3  libavformat.so libavcodec.so libavutil.so libswscale.so)
+		target_link_libraries(rpcs3 libavformat.so libavcodec.so libavutil.so libswscale.so)
 	else()
-		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswscale.a)
+		target_link_libraries(rpcs3 libavformat.a libavcodec.a libavutil.a libswscale.a)
 	endif()
-	if (USE_SYSTEM_LIBPNG)
-		target_link_libraries(rpcs3  ${PNG_LIBRARIES})
+	if(USE_SYSTEM_LIBPNG)
+		target_link_libraries(rpcs3 ${PNG_LIBRARIES})
 	else()
-		target_link_libraries(rpcs3  png16_static)
+		target_link_libraries(rpcs3 png16_static)
 	endif()
 endif()
 
 # For some reason GCC 7 requires manually linking with -latomic
-if (CMAKE_COMPILER_IS_GNUCXX AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 7))
+if(CMAKE_COMPILER_IS_GNUCXX AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 7))
 	target_link_libraries(rpcs3 -latomic)
 endif()
 
 if(LLVM_FOUND)
-	target_link_libraries(rpcs3  ${LLVM_LIBS})
+	target_link_libraries(rpcs3 ${LLVM_LIBS})
 endif()
 
 target_link_libraries(rpcs3 ${RPCS3_QT_LIBS})
 
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 
-if (MSVC)
-  # Under Windows, some QT DLLs need to be in the same directory of the compiled
-  # RPCS3 binary, so call the windeployqt tool that will take care of copying
-  # them from the local QT installation at the end of the build.
-  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_custom_command(TARGET rpcs3 POST_BUILD
-      COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --debug ${CMAKE_BINARY_DIR}/bin
-      )
-  else()
-    add_custom_command(TARGET rpcs3 POST_BUILD
-      COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations ${CMAKE_BINARY_DIR}/bin
-      )
-  endif()
+if(MSVC)
+	# Under Windows, some QT DLLs need to be in the same directory of the compiled
+	# RPCS3 binary, so call the windeployqt tool that will take care of copying
+	# them from the local QT installation at the end of the build.
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+		add_custom_command(TARGET rpcs3 POST_BUILD
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --debug ${CMAKE_BINARY_DIR}/bin
+		)
+	else()
+		add_custom_command(TARGET rpcs3 POST_BUILD
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations ${CMAKE_BINARY_DIR}/bin
+		)
+	endif()
 endif()
 
 cotire(rpcs3)
