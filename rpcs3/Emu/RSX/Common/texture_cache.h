@@ -1209,7 +1209,7 @@ namespace rsx
 
 			if (!texaddr || !tex_size)
 			{
-				LOG_ERROR(RSX, "Texture upload requested but texture not found, (address=0x%X, size=0x%X)", texaddr, tex_size);
+				LOG_ERROR(RSX, "Texture upload requested but texture not found, (address=0x%X, size=0x%X, w=%d, h=%d, p=%d, format=0x%X)", texaddr, tex_size, tex.width(), tex.height(), tex.pitch(), tex.format());
 				return {};
 			}
 
@@ -1310,7 +1310,7 @@ namespace rsx
 						get_native_dimensions(internal_width, internal_height, rsc.surface);
 						if (!rsc.is_bound || !g_cfg.video.strict_rendering_mode)
 						{
-							if (rsc.w == internal_width && rsc.h == internal_height)
+							if (!rsc.x && !rsc.y && rsc.w == internal_width && rsc.h == internal_height)
 							{
 								if (rsc.is_bound)
 								{
