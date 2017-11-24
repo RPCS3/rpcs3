@@ -130,8 +130,7 @@ if(NOT MSVC)
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -nopie")
 		endif()
 	endif()
-	
-	find_package(GLEW REQUIRED)
+
 	find_package(ZLIB REQUIRED)
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:throwingNew /D _CRT_SECURE_NO_DEPRECATE=1 /D _CRT_NON_CONFORMING_SWPRINTFS=1 /D _SCL_SECURE_NO_WARNINGS=1")
@@ -265,7 +264,6 @@ else()
 endif()
 
 include_directories(
-${GLEW_INCLUDE_DIR}
 ${ZLIB_INCLUDE_DIR}
 ${OPENAL_INCLUDE_DIR}
 ${LLVM_INCLUDE_DIRS}
@@ -383,16 +381,21 @@ endif()
 
 add_dependencies(rpcs3 GitVersion)
 
+if(NOT MSVC)
+	find_package(GLEW 1.13.0 REQUIRED)
+	target_link_libraries(rpcs3 GLEW::GLEW)
+endif()
+
 if(WIN32)
 	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
 	if(NOT MSVC)
-		target_link_libraries(rpcs3  ${OPENGL_LIBRARIES} ${GLEW_LIBRARY} opengl32.lib glu32.lib libpthread)
+		target_link_libraries(rpcs3  ${OPENGL_LIBRARIES} opengl32.lib glu32.lib libpthread)
 	else()
 		target_link_libraries(rpcs3  dxgi.lib d2d1.lib dwrite.lib)
 	endif()
 	target_link_libraries(rpcs3  avformat.lib avcodec.lib avutil.lib swscale.lib png16_static ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
 else()
-	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES})
+	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
 	if(APPLE)
 		target_link_libraries(rpcs3 hidapi-mac "-framework CoreFoundation" "-framework IOKit")
 	elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
