@@ -659,24 +659,46 @@ namespace rsx
 			if (found != m_cache.end())
 			{
 				auto &range_data = found->second;
+				std::pair<section_storage_type*, ranged_storage*> best_fit = {};
 
 				for (auto &tex : range_data.data)
 				{
-					if (tex.matches(rsx_address, rsx_size) && !tex.is_dirty())
+					if (tex.matches(rsx_address, rsx_size))
 					{
-						if (!confirm_dimensions || tex.matches(rsx_address, width, height, depth, mipmaps))
+						if (!tex.is_dirty())
 						{
-							if (!tex.is_locked() && tex.get_context() == texture_upload_context::framebuffer_storage)
-								range_data.notify(rsx_address, rsx_size);
+							if (!confirm_dimensions || tex.matches(rsx_address, width, height, depth, mipmaps))
+							{
+								if (!tex.is_locked() && tex.get_context() == texture_upload_context::framebuffer_storage)
+									range_data.notify(rsx_address, rsx_size);
 
-							return tex;
+								return tex;
+							}
+							else
+							{
+								LOG_ERROR(RSX, "Cached object for address 0x%X was found, but it does not match stored parameters.", rsx_address);
+								LOG_ERROR(RSX, "%d x %d vs %d x %d", width, height, tex.get_width(), tex.get_height());
+							}
 						}
-						else
+						else if (!best_fit.first)
 						{
-							LOG_ERROR(RSX, "Cached object for address 0x%X was found, but it does not match stored parameters.", rsx_address);
-							LOG_ERROR(RSX, "%d x %d vs %d x %d", width, height, tex.get_width(), tex.get_height());
+							//By grabbing a ref to a matching entry, duplicates are avoided
+							best_fit = { &tex, &range_data };
 						}
 					}
+				}
+
+				if (best_fit.first)
+				{
+					if (best_fit.first->exists())
+					{
+						m_unreleased_texture_objects--;
+						free_texture_section(*best_fit.first);
+						m_texture_memory_in_use -= best_fit.first->get_section_size();
+					}
+
+					best_fit.second->notify(rsx_address, rsx_size);
+					return *best_fit.first;
 				}
 
 				for (auto &tex : range_data.data)
@@ -1344,10 +1366,22 @@ namespace rsx
 				auto cached_texture = find_texture_from_dimensions(texaddr, tex_width, tex_height, depth);
 				if (cached_texture)
 				{
-					if (cached_texture->get_image_type() == rsx::texture_dimension_extended::texture_dimension_1d)
-						scale_y = 0.f;
+					//TODO: Handle invalidated framebuffer textures better. This is awful
+					if (cached_texture->get_context() == rsx::texture_upload_context::framebuffer_storage)
+					{
+						if (!cached_texture->is_locked())
+						{
+							cached_texture->set_dirty(true);
+							m_unreleased_texture_objects++;
+						}
+					}
+					else
+					{
+						if (cached_texture->get_image_type() == rsx::texture_dimension_extended::texture_dimension_1d)
+							scale_y = 0.f;
 
-					return{ cached_texture->get_raw_view(), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
+						return{ cached_texture->get_raw_view(), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
+					}
 				}
 
 				if ((!blit_engine_incompatibility_warning_raised && g_cfg.video.use_gpu_texture_scaling) || is_hw_blit_engine_compatible(format))

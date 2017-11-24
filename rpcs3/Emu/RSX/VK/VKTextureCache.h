@@ -899,7 +899,7 @@ namespace vk
 					}
 
 					copy_scaled_image(*commands, src->value, dst->value, src->current_layout, dst->current_layout, src_area.x1, src_area.y1, src_area.x2 - src_area.x1, src_area.y2 - src_area.y1,
-						dst_area.x1, dst_area.y1, dst_area.x2 - dst_area.x1, dst_area.y2 - dst_area.y1, 1, aspect);
+						dst_area.x1, dst_area.y1, dst_area.x2 - dst_area.x1, dst_area.y2 - dst_area.y1, 1, aspect, src->info.format == dst->info.format);
 
 					change_image_layout(*commands, dst, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, {(VkImageAspectFlags)aspect, 0, dst->info.mipLevels, 0, dst->info.arrayLayers});
 				}

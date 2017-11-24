@@ -86,7 +86,7 @@ namespace vk
 			VkImageLayout srcLayout, VkImageLayout dstLayout,
 			u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height,
 			u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height,
-			u32 mipmaps, VkImageAspectFlagBits aspect)
+			u32 mipmaps, VkImageAspectFlagBits aspect, bool compatible_formats)
 	{
 		VkImageSubresourceLayers a_src = {}, a_dst = {};
 		a_src.aspectMask = aspect;
@@ -103,7 +103,7 @@ namespace vk
 		if (dstLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 			change_image_layout(cmd, dst, dstLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 
-		if (src_width != dst_width || src_height != dst_height || mipmaps > 1)
+		if (src_width != dst_width || src_height != dst_height || mipmaps > 1 || !compatible_formats)
 		{
 			if ((aspect & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != 0)
 			{
