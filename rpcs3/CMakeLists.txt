@@ -264,7 +264,6 @@ else()
 endif()
 
 include_directories(
-${ZLIB_INCLUDE_DIR}
 ${OPENAL_INCLUDE_DIR}
 ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../3rdparty/pugixml/src"
@@ -406,7 +405,7 @@ else()
 	if(VULKAN_FOUND)
 		target_link_libraries(rpcs3 ${VULKAN_LIBRARIES})
 	endif()
-	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} -lpthread ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} -lpthread ZLIB::ZLIB ${ADDITIONAL_LIBS})
 	if (USE_SYSTEM_FFMPEG)
 		link_libraries(${FFMPEG_LIBRARY_DIR})
 		target_link_libraries(rpcs3  libavformat.so libavcodec.so libavutil.so libswscale.so)
