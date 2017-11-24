@@ -1,5 +1,10 @@
 #pragma once
 
+extern "C"
+{
+#include "libswscale/swscale.h"
+}
+
 namespace vm { using namespace ps3; }
 
 // Error Codes
@@ -327,8 +332,15 @@ public:
 
 	const bool to_rgba;
 
+	SwsContext* sws{};
+
 	VpostInstance(bool rgba)
 		: to_rgba(rgba)
 	{
+	}
+
+	~VpostInstance()
+	{
+		sws_freeContext(sws);
 	}
 };
