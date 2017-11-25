@@ -184,9 +184,10 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	const auto zeta_pitch = rsx::method_registers.surface_z_pitch();
 	const auto surface_format = rsx::method_registers.surface_color();
 	const auto depth_format = rsx::method_registers.surface_depth_fmt();
+	const auto target = rsx::method_registers.surface_color_target();
 
-	const auto required_z_pitch = depth_format == rsx::surface_depth_format::z16 ? clip_horizontal * 2 : clip_horizontal * 4;
-	const auto required_color_pitch = std::max<u32>(rsx::utility::get_packed_pitch(surface_format, clip_horizontal), 64u);
+	const auto required_z_pitch = depth_format == rsx::surface_depth_format::z16 ? clip_horizontal * 2u : clip_horizontal * 4u;
+	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(surface_format, clip_horizontal), 64u);
 
 	if (depth_address)
 	{
@@ -195,7 +196,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		{
 			depth_address = 0;
 		}
-		else if (!rsx::method_registers.depth_test_enabled())
+		else if (!rsx::method_registers.depth_test_enabled() && target != rsx::surface_target::none)
 		{
 			//Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
 			const bool is_depth_clear = !!(context & rsx::framebuffer_creation_context::context_clear_depth);
@@ -207,16 +208,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		}
 	}
 
-	for (const auto &addr : surface_addresses)
-	{
-		if (addr)
-		{
-			framebuffer_status_valid = true;
-			break;
-		}
-	}
-
-	for (const auto &index : rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target()))
+	for (const auto &index : rsx::utility::get_rtt_indexes(target))
 	{
 		if (pitchs[index] < required_color_pitch)
 			surface_addresses[index] = 0;
@@ -242,14 +234,16 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 				break;
 			}
 		}
+
+		if (surface_addresses[index])
+			framebuffer_status_valid = true;
 	}
 
 	if (!framebuffer_status_valid && !depth_address)
 		return;
 
 	m_rtts.prepare_render_target(nullptr, surface_format, depth_format,  clip_horizontal, clip_vertical,
-		rsx::method_registers.surface_color_target(),
-		surface_addresses, depth_address);
+		target, surface_addresses, depth_address);
 
 	draw_fbo.recreate();
 
