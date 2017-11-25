@@ -2420,9 +2420,10 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	const auto color_fmt = rsx::method_registers.surface_color();
 	const auto depth_fmt = rsx::method_registers.surface_depth_fmt();
+	const auto target = rsx::method_registers.surface_color_target();
 
 	const auto required_z_pitch = depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4;
-	const auto required_color_pitch = std::max<u32>(rsx::utility::get_packed_pitch(color_fmt, clip_width), 64u);
+	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(color_fmt, clip_width), 64u);
 
 	if (zeta_address)
 	{
@@ -2431,7 +2432,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			zeta_address = 0;
 		}
-		else if (!rsx::method_registers.depth_test_enabled())
+		else if (!rsx::method_registers.depth_test_enabled() && target != rsx::surface_target::none)
 		{
 			//Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
 			const bool is_depth_clear = !!(context & rsx::framebuffer_creation_context::context_clear_depth);
@@ -2443,16 +2444,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		}
 	}
 
-	for (const auto &addr: surface_addresses)
-	{
-		if (addr)
-		{
-			framebuffer_status_valid = true;
-			break;
-		}
-	}
-
-	for (const auto &index : rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target()))
+	for (const auto &index : rsx::utility::get_rtt_indexes(target))
 	{
 		if (surface_pitchs[index] < required_color_pitch)
 			surface_addresses[index] = 0;
@@ -2477,6 +2469,9 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 				break;
 			}
 		}
+
+		if (surface_addresses[index])
+			framebuffer_status_valid = true;
 	}
 
 	if (!framebuffer_status_valid && !zeta_address)
@@ -2519,7 +2514,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_rtts.prepare_render_target(&*m_current_command_buffer,
 		color_fmt, depth_fmt,
 		clip_width, clip_height,
-		rsx::method_registers.surface_color_target(),
+		target,
 		surface_addresses, zeta_address,
 		(*m_device), &*m_current_command_buffer, m_optimal_tiling_supported_formats, m_memory_type_mapping);
 
@@ -2549,7 +2544,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_depth_surface_info.depth_format = depth_fmt;
 
 	//Bind created rtts as current fbo...
-	std::vector<u8> draw_buffers = rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target());
+	std::vector<u8> draw_buffers = rsx::utility::get_rtt_indexes(target);
 	m_draw_buffers_count = 0;
 
 	std::vector<vk::image*> bound_images;
