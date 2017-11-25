@@ -5,7 +5,6 @@
 #include <QFileDialog>
 #include <QVBoxLayout>
 #include <QDockWidget>
-#include <QProgressDialog>
 #include <QDesktopWidget>
 #include <QMimeData>
 
@@ -26,6 +25,7 @@
 #include "emu_settings.h"
 #include "about_dialog.h"
 #include "gamepads_settings_dialog.h"
+#include "progress_dialog.h"
 
 #include <thread>
 
@@ -353,19 +353,13 @@ void main_window::InstallPkg(const QString& dropPath)
 	const std::string fileName = sstr(QFileInfo(filePath).fileName());
 	const std::string path = sstr(filePath);
 
-	QProgressDialog pdlg(tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
+	progress_dialog pdlg(0, 1000, this);
 	pdlg.setWindowTitle(tr("RPCS3 Package Installer"));
+	pdlg.setLabelText(tr("Installing package ... please wait ..."));
+	pdlg.setCancelButtonText(tr("Cancel"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
-
-#ifdef _WIN32
-	std::unique_ptr<QWinTaskbarButton> taskbar_button = std::make_unique<QWinTaskbarButton>();
-	taskbar_button->setWindow(windowHandle());
-	QWinTaskbarProgress* taskbar_progress = taskbar_button->progress();
-	taskbar_progress->setRange(0, 1000);
-	taskbar_progress->setVisible(true);
-#endif
 
 	// Synchronization variable
 	atomic_t<double> progress(0.);
@@ -393,19 +387,13 @@ void main_window::InstallPkg(const QString& dropPath)
 			// Update progress window
 			double pval = progress;
 			pval < 0 ? pval += 1. : pval;
-			pdlg.setValue(static_cast<int>(pval * pdlg.maximum()));
-#ifdef _WIN32
-			taskbar_progress->setValue(static_cast<int>(pval * taskbar_progress->maximum()));
-#endif
+			pdlg.SetValue(static_cast<int>(pval * pdlg.maximum()));
 			QCoreApplication::processEvents();
 		}
 
 		if (progress > 0.)
 		{
-			pdlg.setValue(pdlg.maximum());
-#ifdef _WIN32
-			taskbar_progress->setValue(taskbar_progress->maximum());
-#endif
+			pdlg.SetValue(pdlg.maximum());
 			std::this_thread::sleep_for(100ms);
 		}
 	}
@@ -416,10 +404,6 @@ void main_window::InstallPkg(const QString& dropPath)
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
 		guiSettings->ShowInfoBox(gui::ib_pkg_success, tr("Success!"), tr("Successfully installed software from package!"), this);
 	}
-
-#ifdef _WIN32
-	taskbar_progress->hide();
-#endif
 }
 
 void main_window::InstallPup(const QString& dropPath)
@@ -480,19 +464,13 @@ void main_window::InstallPup(const QString& dropPath)
 		return;
 	}
 
-	QProgressDialog pdlg(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
+	progress_dialog pdlg(0, static_cast<int>(updatefilenames.size()), this);
 	pdlg.setWindowTitle(tr("RPCS3 Firmware Installer"));
+	pdlg.setLabelText(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)));
+	pdlg.setCancelButtonText(tr("Cancel"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
-
-#ifdef _WIN32
-	QWinTaskbarButton *taskbar_button = new QWinTaskbarButton();
-	taskbar_button->setWindow(windowHandle());
-	QWinTaskbarProgress *taskbar_progress = taskbar_button->progress();
-	taskbar_progress->setRange(0, static_cast<int>(updatefilenames.size()));
-	taskbar_progress->setVisible(true);
-#endif
 
 	// Synchronization variable
 	atomic_t<int> progress(0);
@@ -538,17 +516,10 @@ void main_window::InstallPup(const QString& dropPath)
 			if (pdlg.wasCanceled())
 			{
 				progress = -1;
-#ifdef _WIN32
-				taskbar_progress->hide();
-				taskbar_button->~QWinTaskbarButton();
-#endif				
 				break;
 			}
 			// Update progress window
-			pdlg.setValue(static_cast<int>(progress));
-#ifdef _WIN32
-			taskbar_progress->setValue(static_cast<int>(progress));
-#endif
+			pdlg.SetValue(static_cast<int>(progress));
 			QCoreApplication::processEvents();
 		}
 
@@ -557,10 +528,7 @@ void main_window::InstallPup(const QString& dropPath)
 
 		if (progress > 0)
 		{
-			pdlg.setValue(pdlg.maximum());
-#ifdef _WIN32
-			taskbar_progress->setValue(taskbar_progress->maximum());
-#endif
+			pdlg.SetValue(pdlg.maximum());
 			std::this_thread::sleep_for(100ms);
 		}
 	}
@@ -569,11 +537,6 @@ void main_window::InstallPup(const QString& dropPath)
 	{
 		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware version %s.", version_string);
 		guiSettings->ShowInfoBox(gui::ib_pup_success, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), this);
-
-#ifdef _WIN32
-		taskbar_progress->hide();
-		taskbar_button->~QWinTaskbarButton();
-#endif
 	}
 }
 
