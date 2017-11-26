@@ -2425,17 +2425,12 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	const auto depth_fmt = rsx::method_registers.surface_depth_fmt();
 	const auto target = rsx::method_registers.surface_color_target();
 
-	const auto required_z_pitch = depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4;
+	//NOTE: Z buffers with pitch = 64 are valid even if they would not fit (GT HD Concept)
 	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(color_fmt, clip_width), 64u);
 
 	if (zeta_address)
 	{
-		//TODO: Verify that buffers <= 16 pixels in X (pitch=64) cannot have a depth buffer
-		if (zeta_pitch < required_z_pitch || zeta_pitch <= 64)
-		{
-			zeta_address = 0;
-		}
-		else if (!rsx::method_registers.depth_test_enabled() && target != rsx::surface_target::none)
+		if (!rsx::method_registers.depth_test_enabled() && target != rsx::surface_target::none)
 		{
 			//Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
 			const bool is_depth_clear = !!(context & rsx::framebuffer_creation_context::context_clear_depth);
@@ -2452,8 +2447,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		if (surface_pitchs[index] < required_color_pitch)
 			surface_addresses[index] = 0;
 
-		if (surface_addresses[index] == zeta_address &&
-			zeta_pitch >= required_z_pitch)
+		if (surface_addresses[index] == zeta_address)
 		{
 			LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, zeta_pitch = %d, color_pitch=%d", zeta_address, zeta_pitch, surface_pitchs[index]);
 			if (context == rsx::framebuffer_creation_context::context_clear_depth ||
