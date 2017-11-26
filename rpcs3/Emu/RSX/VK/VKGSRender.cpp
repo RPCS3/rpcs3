@@ -602,7 +602,7 @@ VKGSRender::VKGSRender() : GSRender()
 	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
 
 	//Occlusion
-	m_occlusion_query_pool.create((*m_device), 1024); //Enough for 1k draw calls per pass
+	m_occlusion_query_pool.create((*m_device), DESCRIPTOR_MAX_DRAW_CALLS); //Enough for 4k draw calls per pass
 	for (int n = 0; n < 128; ++n)
 		occlusion_query_data[n].driver_handle = n;
 
@@ -1396,12 +1396,55 @@ void VKGSRender::end()
 		}
 	}
 
-	update_draw_state();
+	u32 occlusion_id = 0;
+	if (m_occlusion_query_active)
+	{
+		occlusion_id = m_occlusion_query_pool.find_free_slot();
+		if (occlusion_id == UINT32_MAX)
+		{
+			bool free_slot_found = false;
+			u32 index_to_free = UINT32_MAX;
+			u64 earliest_timestamp = UINT64_MAX;
 
-	begin_render_pass();
+			//flush occlusion queries
+			for (auto It : m_occlusion_map)
+			{
+				u32 index = It.first;
+				auto query = &occlusion_query_data[index];
+				if (check_occlusion_query_status(query))
+				{
+					free_slot_found = true;
+					get_occlusion_query_result(query);
+					break;
+				}
+
+				if (query->sync_timestamp < earliest_timestamp)
+				{
+					index_to_free = index;
+					earliest_timestamp = query->sync_timestamp;
+				}
+			}
+
+			if (free_slot_found)
+			{
+				occlusion_id = m_occlusion_query_pool.find_free_slot();
+			}
+			else
+			{
+				get_occlusion_query_result(&occlusion_query_data[index_to_free]);
+				occlusion_id = m_occlusion_query_pool.find_free_slot();
+			}
+
+			verify(HERE), occlusion_id != UINT32_MAX;
+		}
+	}
 
 	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 	vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &m_current_frame->descriptor_set, 0, nullptr);
+
+	update_draw_state();
+
+	begin_render_pass();
 
 	//Clear any 'dirty' surfaces - possible is a recycled cache surface is used
 	std::vector<VkClearAttachment> buffers_to_clear;
@@ -1446,49 +1489,9 @@ void VKGSRender::end()
 	const bool is_emulated_restart = (!primitive_emulated && rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart() && rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed);
 	const bool single_draw = !supports_multidraw || (!is_emulated_restart && (rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive));
 
-	u32 occlusion_id = 0;
 	if (m_occlusion_query_active)
 	{
 		//Begin query
-		occlusion_id = m_occlusion_query_pool.find_free_slot();
-		if (occlusion_id == UINT32_MAX)
-		{
-			bool free_slot_found = false;
-			u32 index_to_free = UINT32_MAX;
-			u64 earliest_timestamp = UINT64_MAX;
-
-			//flush occlusion queries
-			for (auto It : m_occlusion_map)
-			{
-				u32 index = It.first;
-				auto query = &occlusion_query_data[index];
-				if (check_occlusion_query_status(query))
-				{
-					free_slot_found = true;
-					get_occlusion_query_result(query);
-					break;
-				}
-
-				if (query->sync_timestamp < earliest_timestamp)
-				{
-					index_to_free = index;
-					earliest_timestamp = query->sync_timestamp;
-				}
-			}
-
-			if (free_slot_found)
-			{
-				occlusion_id = m_occlusion_query_pool.find_free_slot();
-			}
-			else
-			{
-				get_occlusion_query_result(&occlusion_query_data[index_to_free]);
-				occlusion_id = m_occlusion_query_pool.find_free_slot();
-			}
-
-			verify(HERE), occlusion_id != UINT32_MAX;
-		}
-
 		m_occlusion_query_pool.begin_query(*m_current_command_buffer, occlusion_id);
 		m_occlusion_map[m_active_query_info->driver_handle].indices.push_back(occlusion_id);
 		m_occlusion_map[m_active_query_info->driver_handle].command_buffer_to_wait = m_current_command_buffer;
