@@ -742,6 +742,7 @@ bool game_list_frame::Boot(const GameInfo& game)
 {
 	Q_EMIT RequestIconPathSet(game.path);
 
+	Emu.SetForceBoot(true);
 	Emu.Stop();
 
 	if (!Emu.BootGame(game.path))

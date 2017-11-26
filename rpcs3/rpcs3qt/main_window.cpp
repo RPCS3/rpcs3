@@ -180,7 +180,7 @@ void main_window::CreateThumbnailToolbar()
 	RepaintThumbnailIcons();
 
 	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop(); });
-	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop();	Emu.Load();	});
+	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.SetForceBoot(true); Emu.Stop(); Emu.Load(); });
 	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, Pause);
 #endif
 }
@@ -270,6 +270,7 @@ void main_window::BootElf()
 	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
 
 	SetAppIconFromPath(path);
+	Emu.SetForceBoot(true);
 	Emu.Stop();
 
 	if (!Emu.BootGame(path, true))
@@ -304,6 +305,8 @@ void main_window::BootGame()
 		if (stopped) Emu.Resume();
 		return;
 	}
+
+	Emu.SetForceBoot(true);
 	Emu.Stop();
 	guiSettings->SetValue(gui::fd_boot_game, QFileInfo(dirPath).path());
 	const std::string path = sstr(dirPath);
@@ -347,6 +350,7 @@ void main_window::InstallPkg(const QString& dropPath)
 		return;
 	}
 
+	Emu.SetForceBoot(true);
 	Emu.Stop();
 
 	guiSettings->SetValue(gui::fd_install_pkg, QFileInfo(filePath).path());
@@ -446,6 +450,7 @@ void main_window::InstallPup(const QString& dropPath)
 		return;
 	}
 
+	Emu.SetForceBoot(true);
 	Emu.Stop();
 
 	guiSettings->SetValue(gui::fd_install_pup, QFileInfo(filePath).path());
@@ -590,6 +595,7 @@ void main_window::DecryptSPRXLibraries()
 		return;
 	}
 
+	Emu.SetForceBoot(true);
 	Emu.Stop();
 
 	guiSettings->SetValue(gui::fd_decrypt_sprx, QFileInfo(modules.first()).path());
@@ -905,6 +911,7 @@ void main_window::BootRecentAction(const QAction* act)
 
 	SetAppIconFromPath(sstr(pth));
 
+	Emu.SetForceBoot(true);
 	Emu.Stop();
 
 	if (!Emu.BootGame(sstr(pth), true))
@@ -1131,7 +1138,7 @@ void main_window::CreateConnects()
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 	connect(ui->sysPauseAct, &QAction::triggered, Pause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
-	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.Stop();	Emu.Load();	});
+	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.SetForceBoot(true); Emu.Stop(); Emu.Load(); });
 
 	connect(ui->sysSendOpenMenuAct, &QAction::triggered, [=]
 	{
@@ -1543,7 +1550,7 @@ void main_window::keyPressEvent(QKeyEvent *keyEvent)
 		case Qt::Key_E: if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(); return;
 		case Qt::Key_P: if (Emu.IsRunning()) Emu.Pause(); return;
 		case Qt::Key_S: if (!Emu.IsStopped()) Emu.Stop(); return;
-		case Qt::Key_R: if (!Emu.GetBoot().empty()) { Emu.Stop(); Emu.Run(); } return;
+		case Qt::Key_R: if (!Emu.GetBoot().empty()) { Emu.SetForceBoot(true); Emu.Stop(); Emu.Run(); } return;
 		}
 	}
 }
