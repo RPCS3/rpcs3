@@ -193,7 +193,7 @@ s32 sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1, vm::p
 {
 	sys_usbd.todo("sys_usbd_receive_event(handle=%u, arg1=0x%x, arg2=0x%x, arg3=0x%x)", handle, arg1, arg2, arg3);
 
-	if (!has_register_extra_ldd) {_sys_ppu_thread_exit(ppu, CELL_OK);}
+	_sys_ppu_thread_exit(ppu, CELL_OK);
 
 	// TODO
 	/*if (receive_event_called_count == 0)
