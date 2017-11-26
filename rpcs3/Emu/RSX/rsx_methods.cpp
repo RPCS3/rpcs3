@@ -1581,6 +1581,11 @@ namespace rsx
 		bind<NV4097_SET_CONTEXT_DMA_COLOR_D, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_CONTEXT_DMA_ZETA, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_SURFACE_FORMAT, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_PITCH_A, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_PITCH_B, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_PITCH_C, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_PITCH_D, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_PITCH_Z, nv4097::set_surface_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_OFFSET, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_FORMAT, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_ADDRESS, 8, 16, nv4097::set_texture_dirty_bit>();

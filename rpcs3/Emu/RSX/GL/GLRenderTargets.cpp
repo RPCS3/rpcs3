@@ -186,17 +186,12 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	const auto depth_format = rsx::method_registers.surface_depth_fmt();
 	const auto target = rsx::method_registers.surface_color_target();
 
-	const auto required_z_pitch = depth_format == rsx::surface_depth_format::z16 ? clip_horizontal * 2u : clip_horizontal * 4u;
+	//NOTE: Z buffers with pitch = 64 are valid even if they would not fit (GT HD Concept)
 	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(surface_format, clip_horizontal), 64u);
 
 	if (depth_address)
 	{
-		//TODO: Verify that buffers <= 16 pixels in X (pitch=64) cannot have a depth buffer
-		if (zeta_pitch < required_z_pitch || zeta_pitch <= 64)
-		{
-			depth_address = 0;
-		}
-		else if (!rsx::method_registers.depth_test_enabled() && target != rsx::surface_target::none)
+		if (!rsx::method_registers.depth_test_enabled() && target != rsx::surface_target::none)
 		{
 			//Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
 			const bool is_depth_clear = !!(context & rsx::framebuffer_creation_context::context_clear_depth);
@@ -213,8 +208,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		if (pitchs[index] < required_color_pitch)
 			surface_addresses[index] = 0;
 
-		if (surface_addresses[index] == depth_address &&
-			zeta_pitch >= required_z_pitch)
+		if (surface_addresses[index] == depth_address)
 		{
 			LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, zeta_pitch = %d, color_pitch=%d", depth_address, zeta_pitch, pitchs[index]);
 			//TODO: Research clearing both depth AND color
@@ -376,11 +370,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			if (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) pitch *= 2;
 
 			const u32 range = pitch * m_depth_surface_info.height;
-
-			//TODO: Verify that depth surface pitch variance affects results
-			if (pitch != m_depth_surface_info.pitch)
-				LOG_WARNING(RSX, "Depth surface pitch does not match computed pitch, %d vs %d", m_depth_surface_info.pitch, pitch);
-
 			m_gl_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range, m_depth_surface_info.width, m_depth_surface_info.height, pitch,
 				depth_format_gl.format, depth_format_gl.type, true);
 		}
