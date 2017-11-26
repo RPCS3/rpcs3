@@ -463,13 +463,13 @@ bool logs::file_writer::flush(u64 bufv)
 		const u64 size = std::min<u64>(end - st, sizeof(m_zout) / 2);
 
 		// Write uncompressed
-		if (m_fout && m_fout.write(m_fptr + st % s_log_size, size) != size)
+		if (m_fout && st < m_max_size && m_fout.write(m_fptr + st % s_log_size, size) != size)
 		{
 			m_fout.close();
 		}
 
 		// Write compressed
-		if (m_fout2)
+		if (m_fout2 && st < m_max_size)
 		{
 			m_zs.avail_in = size;
 			m_zs.next_in  = m_fptr + st % s_log_size;
