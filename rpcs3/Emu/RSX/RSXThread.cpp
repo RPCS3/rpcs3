@@ -545,6 +545,13 @@ namespace rsx
 			}
 			if (cmd == RSX_METHOD_RETURN_CMD)
 			{
+				if (m_call_stack.size() == 0)
+				{
+					LOG_ERROR(RSX, "FIFO: RET found without corresponding CALL. Discarding queue");
+					internal_get = put;
+					continue;
+				}
+
 				u32 get = m_call_stack.top();
 				m_call_stack.pop();
 				//LOG_WARNING(RSX, "rsx return(0x%x)", get);
