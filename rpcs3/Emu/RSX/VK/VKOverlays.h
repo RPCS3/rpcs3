@@ -278,6 +278,8 @@ namespace vk
 		{
 			vk::framebuffer *fbo = get_framebuffer(target, render_pass, framebuffer_resources);
 
+			load_program(cmd, render_pass, src);
+
 			VkViewport vp{};
 			vp.width = (f32)w;
 			vp.height = (f32)h;
@@ -287,8 +289,6 @@ namespace vk
 
 			VkRect2D vs = { { 0, 0 },{ 0u + w, 0u + h } };
 			vkCmdSetScissor(cmd, 0, 1, &vs);
-
-			load_program(cmd, render_pass, src);
 
 			VkRenderPassBeginInfo rp_begin = {};
 			rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
