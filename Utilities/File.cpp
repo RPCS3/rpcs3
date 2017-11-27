@@ -75,10 +75,25 @@ static time_t to_time(const FILETIME& ft)
 
 static FILETIME from_time(s64 _time)
 {
-	const ullong wtime = (_time + 11644473600ULL) * 10000000ULL;
 	FILETIME result;
-	result.dwLowDateTime = static_cast<DWORD>(wtime);
-	result.dwHighDateTime = static_cast<DWORD>(wtime >> 32);
+
+	if (_time <= -11644473600ll)
+	{
+		result.dwLowDateTime = 0;
+		result.dwHighDateTime = 0;
+	}
+	else if (_time > INT64_MAX / 10000000ll - 11644473600ll)
+	{
+		result.dwLowDateTime = 0xffffffff;
+		result.dwHighDateTime = 0x7fffffff;
+	}
+	else
+	{
+		const ullong wtime = (_time + 11644473600ull) * 10000000ull;
+		result.dwLowDateTime = static_cast<DWORD>(wtime);
+		result.dwHighDateTime = static_cast<DWORD>(wtime >> 32);
+	}
+
 	return result;
 }
 

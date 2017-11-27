@@ -78,7 +78,9 @@ namespace rsx
 		void semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
+			vm::reader_lock lock;
 			vm::ps3::write32(addr, arg);
+			vm::notify(addr, 4);
 		}
 	}
 
