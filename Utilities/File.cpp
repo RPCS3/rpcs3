@@ -75,10 +75,25 @@ static time_t to_time(const FILETIME& ft)
 
 static FILETIME from_time(s64 _time)
 {
-	const ullong wtime = (_time + 11644473600ULL) * 10000000ULL;
 	FILETIME result;
-	result.dwLowDateTime = static_cast<DWORD>(wtime);
-	result.dwHighDateTime = static_cast<DWORD>(wtime >> 32);
+
+	if (_time <= -11644473600ll)
+	{
+		result.dwLowDateTime = 0;
+		result.dwHighDateTime = 0;
+	}
+	else if (_time > INT64_MAX / 10000000ll - 11644473600ll)
+	{
+		result.dwLowDateTime = 0xffffffff;
+		result.dwHighDateTime = 0x7fffffff;
+	}
+	else
+	{
+		const ullong wtime = (_time + 11644473600ull) * 10000000ull;
+		result.dwLowDateTime = static_cast<DWORD>(wtime);
+		result.dwHighDateTime = static_cast<DWORD>(wtime >> 32);
+	}
+
 	return result;
 }
 
@@ -97,7 +112,7 @@ static fs::error to_error(DWORD e)
 	case ERROR_SHARING_VIOLATION: return fs::error::acces;
 	case ERROR_DIR_NOT_EMPTY: return fs::error::notempty;
 	case ERROR_NOT_READY: return fs::error::noent;
-	case ERROR_INVALID_PARAMETER: return fs::error::inval;
+	//case ERROR_INVALID_PARAMETER: return fs::error::inval;
 	default: fmt::throw_exception("Unknown Win32 error: %u.", e);
 	}
 }
@@ -108,6 +123,7 @@ static fs::error to_error(DWORD e)
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/statvfs.h>
+#include <sys/file.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -936,6 +952,13 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	if (fd == -1)
 	{
 		g_tls_error = to_error(errno);
+		return;
+	}
+
+	if (test(mode & fs::unshare) && ::flock(fd, LOCK_EX | LOCK_NB) != 0)
+	{
+		g_tls_error = errno == EWOULDBLOCK ? fs::error::acces : to_error(errno);
+		::close(fd);
 		return;
 	}
 

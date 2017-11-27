@@ -1326,6 +1326,7 @@ error_code sys_fs_disk_free(vm::ps3::cptr<char> path, vm::ptr<u64> total_free, v
 error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> timep)
 {
 	sys_fs.warning("sys_fs_utime(path=%s, timep=*0x%x)", path, timep);
+	sys_fs.warning("** actime=%u, modtime=%u", timep->actime, timep->modtime);
 
 	const std::string local_path = vfs::get(path.get_ptr());
 

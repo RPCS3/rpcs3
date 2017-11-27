@@ -30,9 +30,9 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 ### Linux
 * [Qt 5.7+](https://www.qt.io/download-open-source/)
 * GCC 5.1+ or Clang 3.5.0+ ([not GCC 6.1](https://github.com/RPCS3/rpcs3/issues/1691))
-* Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git qt5-default`
+* Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git qt5-default`
 * Arch: `sudo pacman -S glew openal cmake llvm qt5-base`
-* Fedora: `sudo dnf install cmake qt5-devel vulkan-devel glew glew-devel`
+* Fedora: `sudo dnf install cmake glew glew-devel libatomic libudev-devel openal-devel qt5-devel vulkan-devel`
 **If you have a NVIDIA GPU, you may need to install the libglvnd package.**
 
 ### MacOS

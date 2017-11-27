@@ -566,6 +566,9 @@
     <ClCompile Include="rpcs3qt\trophy_manager_dialog.cpp">
       <Filter>Gui\trophy</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\progress_dialog.cpp">
+      <Filter>Gui\misc dialogs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -755,6 +758,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\save_manager_dialog.h">
       <Filter>Gui\save</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\progress_dialog.h">
+      <Filter>Gui\misc dialogs</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

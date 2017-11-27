@@ -5,7 +5,6 @@
 #include <QFileDialog>
 #include <QVBoxLayout>
 #include <QDockWidget>
-#include <QProgressDialog>
 #include <QDesktopWidget>
 #include <QMimeData>
 
@@ -26,6 +25,7 @@
 #include "emu_settings.h"
 #include "about_dialog.h"
 #include "gamepads_settings_dialog.h"
+#include "progress_dialog.h"
 
 #include <thread>
 
@@ -127,12 +127,12 @@ void main_window::Init()
 		LOG_WARNING(GENERAL, "Experimental Build Warning! Build origin: " STRINGIZE(BRANCH));
 
 		QMessageBox msg;
-		msg.setWindowTitle("Experimental Build Warning");
+		msg.setWindowTitle(tr("Experimental Build Warning"));
 		msg.setIcon(QMessageBox::Critical);
 		msg.setTextFormat(Qt::RichText);
 		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 		msg.setDefaultButton(QMessageBox::No);
-		msg.setText(QString(
+		msg.setText(QString(tr(
 			R"(
 				<p style="white-space: nowrap;">
 					Please understand that this build is not an official RPCS3 release.<br>
@@ -142,7 +142,7 @@ void main_window::Init()
 					Do you wish to use this build anyway?
 				</p>
 			)"
-		).arg(STRINGIZE(BRANCH)));
+		)).arg(Qt::convertFromPlainText(STRINGIZE(BRANCH))));
 		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 		if (msg.exec() == QMessageBox::No)
@@ -180,7 +180,7 @@ void main_window::CreateThumbnailToolbar()
 	RepaintThumbnailIcons();
 
 	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop(); });
-	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop();	Emu.Load();	});
+	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.SetForceBoot(true); Emu.Stop(); Emu.Load(); });
 	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, Pause);
 #endif
 }
@@ -270,6 +270,7 @@ void main_window::BootElf()
 	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
 
 	SetAppIconFromPath(path);
+	Emu.SetForceBoot(true);
 	Emu.Stop();
 
 	if (!Emu.BootGame(path, true))
@@ -304,6 +305,8 @@ void main_window::BootGame()
 		if (stopped) Emu.Resume();
 		return;
 	}
+
+	Emu.SetForceBoot(true);
 	Emu.Stop();
 	guiSettings->SetValue(gui::fd_boot_game, QFileInfo(dirPath).path());
 	const std::string path = sstr(dirPath);
@@ -342,76 +345,25 @@ void main_window::InstallPkg(const QString& dropPath)
 		}
 	}
 
-	if (filePath == NULL)
+	if (filePath.isEmpty())
 	{
 		return;
 	}
+
+	Emu.SetForceBoot(true);
 	Emu.Stop();
 
 	guiSettings->SetValue(gui::fd_install_pkg, QFileInfo(filePath).path());
 	const std::string fileName = sstr(QFileInfo(filePath).fileName());
 	const std::string path = sstr(filePath);
 
-	// Open PKG file
-	fs::file pkg_f(path);
-
-	if (!pkg_f || pkg_f.size() < 64)
-	{
-		LOG_ERROR(LOADER, "PKG: Failed to open %s", path);
-		return;
-	}
-
-	//Check header
-	u32 pkg_signature;
-	pkg_f.seek(0);
-	pkg_f.read(pkg_signature);
-	if (pkg_signature != "\x7FPKG"_u32)
-	{
-		LOG_ERROR(LOADER, "PKG: %s is not a pkg file", fileName);
-		return;
-	}
-
-	// Get title ID
-	std::vector<char> title_id(9);
-	pkg_f.seek(55);
-	pkg_f.read(title_id);
-	pkg_f.seek(0);
-
-	// Get full path
-	const auto& local_path = Emu.GetHddDir() + "game/" + std::string(std::begin(title_id), std::end(title_id));
-
-	if (!fs::create_dir(local_path))
-	{
-		if (fs::is_dir(local_path))
-		{
-			if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Another installation found. Do you want to overwrite it?"),	
-				QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
-			{
-				LOG_ERROR(LOADER, "PKG: Cancelled installation to existing directory %s", local_path);
-				return;
-			}
-		}
-		else
-		{
-			LOG_ERROR(LOADER, "PKG: Could not create the installation directory %s", local_path);
-			return;
-		}
-	}
-
-	QProgressDialog pdlg(tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
+	progress_dialog pdlg(0, 1000, this);
 	pdlg.setWindowTitle(tr("RPCS3 Package Installer"));
+	pdlg.setLabelText(tr("Installing package ... please wait ..."));
+	pdlg.setCancelButtonText(tr("Cancel"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
-
-#ifdef _WIN32
-	QWinTaskbarButton *taskbar_button = new QWinTaskbarButton();
-	taskbar_button->setWindow(windowHandle());
-	QWinTaskbarProgress *taskbar_progress = taskbar_button->progress();
-	taskbar_progress->setRange(0, 1000);
-	taskbar_progress->setVisible(true);
-
-#endif
 
 	// Synchronization variable
 	atomic_t<double> progress(0.);
@@ -419,49 +371,33 @@ void main_window::InstallPkg(const QString& dropPath)
 		// Run PKG unpacking asynchronously
 		scope_thread worker("PKG Installer", [&]
 		{
-			if (pkg_install(pkg_f, local_path + '/', progress, path))
+			if (pkg_install(path, progress))
 			{
 				progress = 1.;
 				return;
 			}
 
-			// TODO: Ask user to delete files on cancellation/failure?
 			progress = -1.;
 		});
+
 		// Wait for the completion
 		while (std::this_thread::sleep_for(5ms), std::abs(progress) < 1.)
 		{
 			if (pdlg.wasCanceled())
 			{
 				progress -= 1.;
-#ifdef _WIN32
-				taskbar_progress->hide();
-				taskbar_button->~QWinTaskbarButton();
-#endif
-				if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Remove incomplete folder?"),
-					QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
-				{
-					fs::remove_all(local_path);
-					m_gameListFrame->Refresh(true);
-					LOG_SUCCESS(LOADER, "PKG: removed incomplete installation in %s", local_path);
-					return;
-				}
-				break;
 			}
+
 			// Update progress window
-			pdlg.setValue(static_cast<int>(progress * pdlg.maximum()));
-#ifdef _WIN32
-			taskbar_progress->setValue(static_cast<int>(progress * taskbar_progress->maximum()));
-#endif
+			double pval = progress;
+			pval < 0 ? pval += 1. : pval;
+			pdlg.SetValue(static_cast<int>(pval * pdlg.maximum()));
 			QCoreApplication::processEvents();
 		}
 
 		if (progress > 0.)
 		{
-			pdlg.setValue(pdlg.maximum());
-#ifdef _WIN32
-			taskbar_progress->setValue(taskbar_progress->maximum());
-#endif
+			pdlg.SetValue(pdlg.maximum());
 			std::this_thread::sleep_for(100ms);
 		}
 	}
@@ -471,11 +407,6 @@ void main_window::InstallPkg(const QString& dropPath)
 		m_gameListFrame->Refresh(true);
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
 		guiSettings->ShowInfoBox(gui::ib_pkg_success, tr("Success!"), tr("Successfully installed software from package!"), this);
-
-#ifdef _WIN32
-		taskbar_progress->hide();
-		taskbar_button->~QWinTaskbarButton();
-#endif
 	}
 }
 
@@ -503,6 +434,7 @@ void main_window::InstallPup(const QString& dropPath)
 		return;
 	}
 
+	Emu.SetForceBoot(true);
 	Emu.Stop();
 
 	guiSettings->SetValue(gui::fd_install_pup, QFileInfo(filePath).path());
@@ -537,19 +469,13 @@ void main_window::InstallPup(const QString& dropPath)
 		return;
 	}
 
-	QProgressDialog pdlg(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
+	progress_dialog pdlg(0, static_cast<int>(updatefilenames.size()), this);
 	pdlg.setWindowTitle(tr("RPCS3 Firmware Installer"));
+	pdlg.setLabelText(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)));
+	pdlg.setCancelButtonText(tr("Cancel"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
-
-#ifdef _WIN32
-	QWinTaskbarButton *taskbar_button = new QWinTaskbarButton();
-	taskbar_button->setWindow(windowHandle());
-	QWinTaskbarProgress *taskbar_progress = taskbar_button->progress();
-	taskbar_progress->setRange(0, static_cast<int>(updatefilenames.size()));
-	taskbar_progress->setVisible(true);
-#endif
 
 	// Synchronization variable
 	atomic_t<int> progress(0);
@@ -595,17 +521,10 @@ void main_window::InstallPup(const QString& dropPath)
 			if (pdlg.wasCanceled())
 			{
 				progress = -1;
-#ifdef _WIN32
-				taskbar_progress->hide();
-				taskbar_button->~QWinTaskbarButton();
-#endif				
 				break;
 			}
 			// Update progress window
-			pdlg.setValue(static_cast<int>(progress));
-#ifdef _WIN32
-			taskbar_progress->setValue(static_cast<int>(progress));
-#endif
+			pdlg.SetValue(static_cast<int>(progress));
 			QCoreApplication::processEvents();
 		}
 
@@ -614,10 +533,7 @@ void main_window::InstallPup(const QString& dropPath)
 
 		if (progress > 0)
 		{
-			pdlg.setValue(pdlg.maximum());
-#ifdef _WIN32
-			taskbar_progress->setValue(taskbar_progress->maximum());
-#endif
+			pdlg.SetValue(pdlg.maximum());
 			std::this_thread::sleep_for(100ms);
 		}
 	}
@@ -626,11 +542,6 @@ void main_window::InstallPup(const QString& dropPath)
 	{
 		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware version %s.", version_string);
 		guiSettings->ShowInfoBox(gui::ib_pup_success, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), this);
-
-#ifdef _WIN32
-		taskbar_progress->hide();
-		taskbar_button->~QWinTaskbarButton();
-#endif
 	}
 }
 
@@ -647,6 +558,7 @@ void main_window::DecryptSPRXLibraries()
 		return;
 	}
 
+	Emu.SetForceBoot(true);
 	Emu.Stop();
 
 	guiSettings->SetValue(gui::fd_decrypt_sprx, QFileInfo(modules.first()).path());
@@ -962,6 +874,7 @@ void main_window::BootRecentAction(const QAction* act)
 
 	SetAppIconFromPath(sstr(pth));
 
+	Emu.SetForceBoot(true);
 	Emu.Stop();
 
 	if (!Emu.BootGame(sstr(pth), true))
@@ -1188,7 +1101,7 @@ void main_window::CreateConnects()
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 	connect(ui->sysPauseAct, &QAction::triggered, Pause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
-	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.Stop();	Emu.Load();	});
+	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.SetForceBoot(true); Emu.Stop(); Emu.Load(); });
 
 	connect(ui->sysSendOpenMenuAct, &QAction::triggered, [=]
 	{
@@ -1600,7 +1513,7 @@ void main_window::keyPressEvent(QKeyEvent *keyEvent)
 		case Qt::Key_E: if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(); return;
 		case Qt::Key_P: if (Emu.IsRunning()) Emu.Pause(); return;
 		case Qt::Key_S: if (!Emu.IsStopped()) Emu.Stop(); return;
-		case Qt::Key_R: if (!Emu.GetBoot().empty()) { Emu.Stop(); Emu.Run(); } return;
+		case Qt::Key_R: if (!Emu.GetBoot().empty()) { Emu.SetForceBoot(true); Emu.Stop(); Emu.Run(); } return;
 		}
 	}
 }

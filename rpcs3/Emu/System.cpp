@@ -787,8 +787,11 @@ void Emulator::Stop()
 {
 	if (m_state.exchange(system_state::stopped) == system_state::stopped)
 	{
+		m_force_boot = false;
 		return;
 	}
+
+	const bool do_exit = !m_force_boot && g_cfg.misc.autoexit;
 
 	LOG_NOTICE(GENERAL, "Stopping emulator...");
 
@@ -838,7 +841,7 @@ void Emulator::Stop()
 	RSXIOMem.Clear();
 	vm::close();
 
-	if (g_cfg.misc.autoexit)
+	if (do_exit)
 	{
 		GetCallbacks().exit();
 	}
@@ -857,6 +860,8 @@ void Emulator::Stop()
 	data.clear();
 	disc.clear();
 	klic.clear();
+
+	m_force_boot = false;
 }
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)
