@@ -21,7 +21,7 @@ namespace
 {
 	// Helper converters
 	constexpr auto qstr = QString::fromStdString;
-	inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+	inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 	/**
 	* This certainly isn't ideal for this code, as it essentially copies cellSaveData.  But, I have no other choice without adding public methods to cellSaveData.
