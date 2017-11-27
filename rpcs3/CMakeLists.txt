@@ -27,8 +27,8 @@ if(NOT Qt5Widgets_FOUND)
 		if("${CMAKE_SYSTEM}" MATCHES "Linux")
 			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.
 If you're on Ubuntu or Linux Mint, there are PPAs you can use to install an up-to-date qt5 version.
-        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt592-xenial
-        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt592-trusty
+        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt593-xenial
+        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt593-trusty
 just make sure to run
     source /opt/qt59/bin/qt59-env.sh
 before re-running cmake")
