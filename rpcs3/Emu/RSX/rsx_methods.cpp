@@ -50,7 +50,7 @@ namespace rsx
 	template<> struct vertex_data_type_from_element_type<float> { static const vertex_base_type type = vertex_base_type::f; };
 	template<> struct vertex_data_type_from_element_type<f16> { static const vertex_base_type type = vertex_base_type::sf; };
 	template<> struct vertex_data_type_from_element_type<u8> { static const vertex_base_type type = vertex_base_type::ub; };
-	template<> struct vertex_data_type_from_element_type<u16> { static const vertex_base_type type = vertex_base_type::s1; };
+	template<> struct vertex_data_type_from_element_type<u16> { static const vertex_base_type type = vertex_base_type::s32k; };
 
 	namespace nv406e
 	{
@@ -203,7 +203,8 @@ namespace rsx
 		{
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
-				set_vertex_data_impl<NV4097_SET_VERTEX_DATA3F_M, index, 3, f32>(rsx, arg);
+				//NOTE: attributes are 16-byte aligned (Rachet & Clank 2)
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA3F_M, index, 4, f32>(rsx, arg);
 			}
 		};
 
@@ -1527,7 +1528,7 @@ namespace rsx
 		bind_array<NV4097_SET_TEX_COORD_CONTROL, 1, 10, nullptr>();
 		bind_array<NV4097_SET_TRANSFORM_PROGRAM, 1, 32, nullptr>();
 		bind_array<NV4097_SET_POLYGON_STIPPLE_PATTERN, 1, 32, nullptr>();
-		bind_array<NV4097_SET_VERTEX_DATA3F_M, 1, 48, nullptr>();
+		bind_array<NV4097_SET_VERTEX_DATA3F_M, 1, 64, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 1, 16, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 1, 16, nullptr>();
 		bind_array<NV4097_SET_TEXTURE_CONTROL3, 1, 16, nullptr>();
@@ -1560,7 +1561,7 @@ namespace rsx
 		bind_range<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
 		bind_range<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nv4097::set_vertex_data1f_m>();
 		bind_range<NV4097_SET_VERTEX_DATA2F_M, 1, 32, nv4097::set_vertex_data2f_m>();
-		bind_range<NV4097_SET_VERTEX_DATA3F_M, 1, 48, nv4097::set_vertex_data3f_m>();
+		bind_range<NV4097_SET_VERTEX_DATA3F_M, 1, 64, nv4097::set_vertex_data3f_m>();
 		bind_range<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nv4097::set_vertex_data4f_m>();
 		bind_range<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nv4097::set_vertex_data2s_m>();
 		bind_range<NV4097_SET_VERTEX_DATA4S_M, 1, 32, nv4097::set_vertex_data4s_m>();
