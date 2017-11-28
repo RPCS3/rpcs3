@@ -143,18 +143,13 @@ bool mm_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::s
 	joy_device->device_name = device;
 	joy_device->device_id = id;
 
-	auto find_key = [=](const std::string& name)
+	auto find_key = [=](const cfg::string& name)
 	{
-		long key = FindKeyCode(button_list, name);
+		long key = FindKeyCode(button_list, name, false);
 		if (key < 0)
-			key = FindKeyCode(pov_list, name);
+			key = FindKeyCode(pov_list, name, false);
 		if (key < 0)
 			key = FindKeyCode(axis_list, name);
-		if (key < 0)
-		{
-			LOG_ERROR(HLE, "mmjoystick FindKey(%s) returned value %d", name, key);
-			key = -1;
-		}
 		return key;
 	};
 

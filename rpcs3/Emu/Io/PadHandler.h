@@ -333,21 +333,54 @@ protected:
 	}
 
 	// Search an unordered map for a string value and return found keycode
-	int FindKeyCode(std::unordered_map<u32, std::string> map, const std::string& name)
+	int FindKeyCode(std::unordered_map<u32, std::string> map, const cfg::string& name, bool fallback = true)
 	{
+		std::string def = name.def;
+		std::string nam = name.to_string();
+		int def_code = -1;
+
 		for (auto it = map.begin(); it != map.end(); ++it)
 		{
-			if (it->second == name) return it->first;
+			if (it->second == nam)
+				return it->first;
+
+			if (fallback && it->second == def)
+				def_code = it->first;
 		}
-		return -1;
+
+		if (fallback)
+		{
+			LOG_ERROR(HLE, "int FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
+			if (def_code < 0)
+				def_code = 0;
+		}
+
+		return def_code;
 	};
-	long FindKeyCode(std::unordered_map<u64, std::string> map, const std::string& name)
+
+	long FindKeyCode(std::unordered_map<u64, std::string> map, const cfg::string& name, bool fallback = true)
 	{
+		std::string def = name.def;
+		std::string nam = name.to_string();
+		int def_code = -1;
+
 		for (auto it = map.begin(); it != map.end(); ++it)
 		{
-			if (it->second == name) return it->first;
+			if (it->second == nam)
+				return it->first;
+
+			if (fallback && it->second == def)
+				def_code = it->first;
 		}
-		return -1;
+
+		if (fallback)
+		{
+			LOG_ERROR(HLE, "long FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
+			if (def_code < 0)
+				def_code = 0;
+		}
+
+		return def_code;
 	};
 
 	// Get normalized trigger value based on the range defined by a threshold
