@@ -74,7 +74,9 @@ bool mm_joystick_handler::Init()
 {
 	if (is_init) return true;
 
+	m_devices.clear();
 	supportedJoysticks = joyGetNumDevs();
+
 	if (supportedJoysticks > 0)
 	{
 		LOG_NOTICE(GENERAL, "Driver supports %u joysticks", supportedJoysticks);
@@ -82,18 +84,30 @@ bool mm_joystick_handler::Init()
 	else
 	{
 		LOG_ERROR(GENERAL, "Driver doesn't support Joysticks");
+		return false;
 	}
 
-	js_info.dwSize = sizeof(js_info);
-	js_info.dwFlags = JOY_RETURNALL;
-	joyGetDevCaps(JOYSTICKID1, &js_caps, sizeof(js_caps));
-
-
-	bool JoyPresent = (joyGetPosEx(JOYSTICKID1, &js_info) == JOYERR_NOERROR);
-	if (!JoyPresent)
+	for (u32 i = 0; i < supportedJoysticks; i++)
 	{
-		LOG_ERROR(GENERAL, "Joystick not found");
-		return false;
+		js_info.dwSize = sizeof(js_info);
+		js_info.dwFlags = JOY_RETURNALL;
+		joyGetDevCaps(i, &js_caps, sizeof(js_caps));
+
+		bool JoyPresent = (joyGetPosEx(i, &js_info) == JOYERR_NOERROR);
+		if (!JoyPresent)
+		{
+			continue;
+		}
+
+		char drv[32];
+		wcstombs(drv, js_caps.szPname, 31);
+
+		LOG_NOTICE(GENERAL, "Joystick nr.%d found. Driver: %s", i, drv);
+
+		MMJOYDevice dev;
+		dev.device_id = i;
+		dev.device_name = fmt::format("Joystick #%d", i);
+		m_devices.emplace_back(dev);
 	}
 
 	m_pad_config.load();
@@ -103,18 +117,31 @@ bool mm_joystick_handler::Init()
 
 std::vector<std::string> mm_joystick_handler::ListDevices()
 {
-	std::vector<std::string> mm_pad_list;
+	std::vector<std::string> devices;
 
-	if (!Init()) return mm_pad_list;
+	if (!Init()) return devices;
 
-	mm_pad_list.push_back("MMJoy Pad");
+	for (auto dev : m_devices)
+	{
+		devices.emplace_back(dev.device_name);
+	}
 
-	return mm_pad_list;
+	return devices;
 }
 
 bool mm_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
 {
 	if (!Init()) return false;
+
+	int id = GetIDByName(device);
+	if (id < 0)
+	{
+		return false;
+	}
+
+	std::shared_ptr<MMJOYDevice> joy_device = std::make_shared<MMJOYDevice>();
+	joy_device->device_name = device;
+	joy_device->device_id = id;
 
 	auto find_key = [=](const std::string& name)
 	{
@@ -171,7 +198,7 @@ bool mm_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::s
 	pad->m_vibrateMotors.emplace_back(true, 0);
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
-	bindings.push_back(pad);
+	bindings.emplace_back(joy_device, pad);
 
 	return true;
 }
@@ -183,8 +210,9 @@ void mm_joystick_handler::ThreadProc()
 
 	for (u32 i = 0; i != bindings.size(); ++i)
 	{
-		auto pad = bindings[i];
-		status = joyGetPosEx(JOYSTICKID1, &js_info);
+		auto pad = bindings[i].second;
+		auto id = bindings[i].first->device_id;
+		status = joyGetPosEx(id, &js_info);
 
 		switch (status)
 		{
@@ -261,7 +289,21 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 		return;
 	}
 
-	MMRESULT status = joyGetPosEx(JOYSTICKID1, &js_info);
+	static std::string cur_pad = "";
+	static int id = -1;
+
+	if (cur_pad != padId)
+	{
+		cur_pad == padId;
+		id = GetIDByName(padId);
+		if (id < 0)
+		{
+			LOG_ERROR(GENERAL, "MMJOY GetNextButtonPress for device [%s] failed with id = %d", padId, id);
+			return;
+		}
+	}
+
+	MMRESULT status = joyGetPosEx(id, &js_info);
 
 	switch (status)
 	{
@@ -400,6 +442,18 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues()
 	add_axis_value(js_info.dwVpos, mmjoy_axis::joy_v_pos, mmjoy_axis::joy_v_neg);
 
 	return button_values;
+}
+
+int mm_joystick_handler::GetIDByName(const std::string& name)
+{
+	for (auto dev : m_devices)
+	{
+		if (dev.device_name == name)
+		{
+			return dev.device_id;
+		}
+	}
+	return -1;
 }
 
 #endif
