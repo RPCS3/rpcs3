@@ -86,6 +86,12 @@ class mm_joystick_handler final : public PadHandlerBase
 		{ joy_v_neg, "V-" },
 	};
 
+	struct MMJOYDevice
+	{
+		u32 device_id{ 0 };
+		std::string device_name{ "" };
+	};
+
 public:
 	mm_joystick_handler();
 	~mm_joystick_handler();
@@ -100,12 +106,14 @@ public:
 private:
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
 	std::unordered_map<u64, u16> GetButtonValues();
+	int GetIDByName(const std::string& name);
 
-	bool is_init;
-	u32 supportedJoysticks;
+	bool is_init = false;
+	u32 supportedJoysticks = 0;
 	JOYINFOEX js_info;
 	JOYCAPS js_caps;
 
-	std::vector<std::shared_ptr<Pad>> bindings;
+	std::vector<MMJOYDevice> m_devices;
+	std::vector<std::pair<std::shared_ptr<MMJOYDevice>, std::shared_ptr<Pad>>> bindings;
 	std::array<bool, 7> last_connection_status = {};
 };
