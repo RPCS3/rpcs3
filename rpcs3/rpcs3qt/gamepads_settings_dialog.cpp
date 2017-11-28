@@ -223,13 +223,14 @@ std::shared_ptr<PadHandlerBase> gamepads_settings_dialog::GetHandler(pad_handler
 
 void gamepads_settings_dialog::ChangeInputType(int player)
 {
-	std::string device = sstr(co_inputtype[player]->currentText());
+	std::string handler = sstr(co_inputtype[player]->currentText());
+	std::string device = input_cfg.player_device[player]->to_string();
 
 	// Change this player's current handler
-	if (!input_cfg.player_input[player].from_string(device))
+	if (!input_cfg.player_input[player].from_string(handler))
 	{
 		//Something went wrong
-		LOG_ERROR(GENERAL, "Failed to convert input string:%s", device);
+		LOG_ERROR(GENERAL, "Failed to convert input string:%s", handler);
 		return;
 	}
 

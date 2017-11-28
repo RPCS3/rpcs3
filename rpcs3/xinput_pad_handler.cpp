@@ -42,7 +42,7 @@ xinput_pad_handler::xinput_pad_handler() :
 	m_pad_config.r1.def       = button_list.at(XInputKeyCodes::RB);
 	m_pad_config.r2.def       = button_list.at(XInputKeyCodes::RT);
 	m_pad_config.r3.def       = button_list.at(XInputKeyCodes::RS);
-	m_pad_config.l1.def       = button_list.at(XInputKeyCodes::RB);
+	m_pad_config.l1.def       = button_list.at(XInputKeyCodes::LB);
 	m_pad_config.l2.def       = button_list.at(XInputKeyCodes::LT);
 	m_pad_config.l3.def       = button_list.at(XInputKeyCodes::LS);
 
