@@ -692,9 +692,11 @@ namespace rsx
 				{
 					if (best_fit.first->exists())
 					{
+						if (best_fit.first->get_context() != rsx::texture_upload_context::framebuffer_storage)
+							m_texture_memory_in_use -= best_fit.first->get_section_size();
+
 						m_unreleased_texture_objects--;
 						free_texture_section(*best_fit.first);
-						m_texture_memory_in_use -= best_fit.first->get_section_size();
 					}
 
 					best_fit.second->notify(rsx_address, rsx_size);
@@ -707,9 +709,11 @@ namespace rsx
 					{
 						if (tex.exists())
 						{
+							if (tex.get_context() != rsx::texture_upload_context::framebuffer_storage)
+								m_texture_memory_in_use -= tex.get_section_size();
+
 							m_unreleased_texture_objects--;
 							free_texture_section(tex);
-							m_texture_memory_in_use -= tex.get_section_size();
 						}
 
 						range_data.notify(rsx_address, rsx_size);
@@ -748,20 +752,20 @@ namespace rsx
 			writer_lock lock(m_cache_mutex);
 			section_storage_type& region = find_cached_texture(memory_address, memory_size, false);
 
+			if (region.get_context() != texture_upload_context::framebuffer_storage &&
+				region.exists())
+			{
+				//This space was being used for other purposes other than framebuffer storage
+				//Delete used resources before attaching it to framebuffer memory
+				free_texture_section(region);
+				m_texture_memory_in_use -= region.get_section_size();
+			}
+
 			if (!region.is_locked())
 			{
 				region.reset(memory_address, memory_size);
 				region.set_dirty(false);
 				no_access_range = region.get_min_max(no_access_range);
-			}
-			else
-			{
-				if (region.get_context() != texture_upload_context::framebuffer_storage)
-				{
-					//This space was being used for other purposes other than framebuffer storage
-					//Delete used resources before attaching it to framebuffer memory
-					free_texture_section(region);
-				}
 			}
 
 			region.protect(utils::protection::no);
@@ -1013,8 +1017,12 @@ namespace rsx
 					if (!tex.is_dirty())
 						continue;
 
-					free_texture_section(tex);
-					m_texture_memory_in_use -= tex.get_section_size();
+					if (tex.exists() &&
+						tex.get_context() != rsx::texture_upload_context::framebuffer_storage)
+					{
+						free_texture_section(tex);
+						m_texture_memory_in_use -= tex.get_section_size();
+					}
 				}
 			}
 
