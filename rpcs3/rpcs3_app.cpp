@@ -105,7 +105,7 @@ void rpcs3_app::InitializeCallbacks()
 		quit();
 	};
 	callbacks.call_after = [=](std::function<void()> func)
-	{	
+	{
 		RequestCallAfter(std::move(func));
 	};
 
@@ -176,7 +176,7 @@ void rpcs3_app::InitializeCallbacks()
 			gameWindow = ret;
 			return std::unique_ptr<gs_frame>(ret);
 		}
-		case video_renderer::opengl: 
+		case video_renderer::opengl:
 		{
 			gl_gs_frame* ret = new gl_gs_frame(w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
 			gameWindow = ret;

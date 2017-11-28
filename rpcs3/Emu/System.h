@@ -245,6 +245,7 @@ public:
 	}
 
 	bool BootGame(const std::string& path, bool direct = false, bool add_only = false);
+	bool InstallPkg(const std::string& path);
 
 	static std::string GetHddDir();
 	static std::string GetLibDir();
@@ -372,7 +373,7 @@ struct cfg_root : cfg::node
 		cfg::_int<2, 128> frames{this, "Buffer Count", 32};
 
 	} audio{this};
-	
+
 	struct node_io : cfg::node
 	{
 		node_io(cfg::node* _this) : cfg::node(_this, "Input/Output") {}
@@ -384,7 +385,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<fake_camera_type> camera_type{this, "Camera type", fake_camera_type::unknown};
 
 	} io{this};
-	
+
 	struct node_sys : cfg::node
 	{
 		node_sys(cfg::node* _this) : cfg::node(_this, "System") {}
@@ -392,7 +393,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<CellSysutilLang> language{this, "Language"};
 
 	} sys{this};
-	
+
 	struct node_net : cfg::node
 	{
 		node_net(cfg::node* _this) : cfg::node(_this, "Net") {}
@@ -405,7 +406,7 @@ struct cfg_root : cfg::node
 	struct node_misc : cfg::node
 	{
 		node_misc(cfg::node* _this) : cfg::node(_this, "Miscellaneous") {}
-		
+
 		cfg::_bool autostart{this, "Automatically start games after boot", true};
 		cfg::_bool autoexit{this, "Exit RPCS3 when process finishes"};
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
