@@ -32,7 +32,7 @@ before_install:
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
     fi;
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      wget http://download.qt.io/official_releases/online_installers/qt-unified-linux-x64-online.run ;
+      wget -O qt-unified-linux-x64-online.run http://mirrors.ocf.berkeley.edu/qt/archive/online_installers/3.0/qt-unified-linux-x64-3.0.1-online.run ;
       chmod a+x ./qt-unified-linux-x64-online.run ;
       export QT_QPA_PLATFORM=minimal ;
       travis_wait 30 ./qt-unified-linux-x64-online.run --script qt-installer-noninteractive.qs --no-force-installations ;
