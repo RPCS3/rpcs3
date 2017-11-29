@@ -2481,6 +2481,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	const auto fbo_height = rsx::apply_resolution_scale(clip_height, true);
 	const auto aa_mode = rsx::method_registers.surface_antialias();
 	const auto bpp = get_format_block_size_in_bytes(color_fmt);
+	const u32 aa_factor = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
 
 	if (m_draw_fbo)
 	{
@@ -2588,8 +2589,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		for (u8 index : draw_buffers)
 		{
 			if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
-			const u32 range = m_surface_info[index].pitch * m_surface_info[index].height;
 
+			const u32 range = m_surface_info[index].pitch * m_surface_info[index].height * aa_factor;
 			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[index]), m_surface_info[index].address, range,
 				m_surface_info[index].width, m_surface_info[index].height, m_surface_info[index].pitch, color_fmt_info.first, color_fmt_info.second);
 		}
@@ -2608,7 +2609,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 				pitch *= 2;
 			}
 
-			const u32 range = pitch * m_depth_surface_info.height;
+			const u32 range = pitch * m_depth_surface_info.height * aa_factor;
 			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range,
 				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch, gcm_format, true);
 		}

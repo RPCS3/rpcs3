@@ -442,12 +442,10 @@ namespace gl
 			}
 			else
 			{
-				//TODO: Use compression hint from the gcm tile information
-				//TODO: Fall back to bilinear filtering if samples > 2
-
 				const u8 pixel_size = get_pixel_size(format, type);
-				const u8 samples = rsx_pitch / real_pitch;
-				rsx::scale_image_nearest(dst, const_cast<const void*>(data), width, height, rsx_pitch, real_pitch, pixel_size, samples);
+				const u8 samples_u = (aa_mode == rsx::surface_antialiasing::center_1_sample) ? 1 : 2;
+				const u8 samples_v = (aa_mode == rsx::surface_antialiasing::square_centered_4_samples || aa_mode == rsx::surface_antialiasing::square_rotated_4_samples) ? 2 : 1;
+				rsx::scale_image_nearest(dst, const_cast<const void*>(data), width, height, rsx_pitch, real_pitch, pixel_size, samples_u, samples_v);
 			}
 
 /*			switch (gcm_format)

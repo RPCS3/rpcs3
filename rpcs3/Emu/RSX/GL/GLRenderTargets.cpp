@@ -248,6 +248,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	const auto color_locations = get_locations();
 	const auto aa_mode = rsx::method_registers.surface_antialias();
 	const auto bpp = get_format_block_size_in_bytes(surface_format);
+	const u32 aa_factor = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
 
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
@@ -354,7 +355,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		{
 			if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
 
-			const u32 aa_factor = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
 			const u32 range = m_surface_info[i].pitch * m_surface_info[i].height * aa_factor;
 			m_gl_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[i]), m_surface_info[i].address, range, m_surface_info[i].width, m_surface_info[i].height, m_surface_info[i].pitch,
 			color_format.format, color_format.type, color_format.swap_bytes);
@@ -370,7 +370,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			u32 pitch = m_depth_surface_info.width * 2;
 			if (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) pitch *= 2;
 
-			const u32 aa_factor = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
 			const u32 range = pitch * m_depth_surface_info.height * aa_factor;
 			m_gl_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range, m_depth_surface_info.width, m_depth_surface_info.height, pitch,
 				depth_format_gl.format, depth_format_gl.type, true);
