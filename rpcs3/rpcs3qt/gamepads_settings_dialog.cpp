@@ -246,20 +246,21 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 	}
 
 	// Handle empty device list
-	if (list_devices.size() == 0)
+	bool device_found = list_devices.size() > 0;
+	co_deviceID[player]->setEnabled(device_found);
+
+	if (device_found)
 	{
-		co_deviceID[player]->addItem(tr("No Device Detected"), -1);
-		co_deviceID[player]->setEnabled(false);
+		co_deviceID[player]->setCurrentText(qstr(device));
 	}
 	else
 	{
-		co_deviceID[player]->setEnabled(true);
-		co_deviceID[player]->setCurrentText(qstr(device));
+		co_deviceID[player]->addItem(tr("No Device Detected"), -1);
 	}
 
 	// Update view and enable configuration if possible
 	resizeComboBoxView(co_deviceID[player]);
-	bu_config[player]->setEnabled(cur_pad_handler->has_config());
+	bu_config[player]->setEnabled(device_found && cur_pad_handler->has_config());
 }
 
 void gamepads_settings_dialog::ClickConfigButton(int player)
