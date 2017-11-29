@@ -147,45 +147,15 @@ ds4_pad_handler::ds4_pad_handler() : is_init(false)
 	m_thumb_threshold = thumb_max / 2;
 }
 
-void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback)
+void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist)
 {
-	if (!Init())
-	{
+	if (get_blacklist)
+		blacklist.clear();
+
+	std::shared_ptr<DS4Device> device = GetDevice(padId);
+
+	if (CheckDeviceState(device) == false)
 		return;
-	}
-
-	// Get the DS4 Device or return if none found
-	size_t pos = padId.find("Ds4 Pad #");
-
-	if (pos == std::string::npos) return;
-
-	std::string pad_serial = padId.substr(pos + 9);
-
-	std::shared_ptr<DS4Device> device = nullptr;
-
-	for (auto& cur_control : controllers)
-	{
-		if (pad_serial == cur_control.first)
-		{
-			device = cur_control.second;
-			break;
-		}
-	}
-
-	if (device == nullptr || device->hidDevice == nullptr) return;
-
-	// Now that we have found a device, get its status
-	DS4DataStatus status = GetRawData(device);
-
-	if (status == DS4DataStatus::ReadError)
-	{
-		// this also can mean disconnected, either way deal with it on next loop and reconnect
-		hid_close(device->hidDevice);
-		device->hidDevice = nullptr;
-		return;
-	}
-
-	if (status != DS4DataStatus::NewData) return;
 
 	// Get the current button values
 	auto data = GetButtonValues(device);
@@ -199,17 +169,30 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 		u32 keycode = button.first;
 		u16 value = data[keycode];
 
+		if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), keycode) != blacklist.end())
+			continue;
+
 		if (((keycode < DS4KeyCodes::L2) && (value > 0))
 		 || ((keycode == DS4KeyCodes::L2) && (value > m_trigger_threshold))
 		 || ((keycode == DS4KeyCodes::R2) && (value > m_trigger_threshold))
 		 || ((keycode >= DS4KeyCodes::LSXNeg && keycode <= DS4KeyCodes::LSYPos) && (value > m_thumb_threshold))
 		 || ((keycode >= DS4KeyCodes::RSXNeg && keycode <= DS4KeyCodes::RSYPos) && (value > m_thumb_threshold)))
 		{
-			if (value > pressed_button.first)
+			if (get_blacklist)
 			{
-				pressed_button = { value, button.second};
+				blacklist.emplace_back(keycode);
+				LOG_ERROR(HLE, "DS4 Calibration: Added key [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
 			}
+			else if (value > pressed_button.first)
+				pressed_button = { value, button.second };
 		}
+	}
+
+	if (get_blacklist)
+	{
+		if (blacklist.size() <= 0)
+			LOG_SUCCESS(HLE, "DS4 Calibration: Blacklist is clear. No input spam detected");
+		return;
 	}
 
 	int preview_values[6] = { data[L2], data[R2], data[LSXPos] - data[LSXNeg], data[LSYPos] - data[LSYNeg], data[RSXPos] - data[RSXNeg], data[RSYPos] - data[RSYNeg] };
@@ -222,17 +205,28 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 
 void ds4_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)
 {
-	if (!Init())
-	{
+	std::shared_ptr<DS4Device> device = GetDevice(padId);
+	if (device == nullptr || device->hidDevice == nullptr)
 		return;
-	}
+
+	// Set the device's motor speeds to our requested values 0-255
+	device->largeVibrate = largeMotor;
+	device->smallVibrate = smallMotor;
+
+	// Start/Stop the engines :)
+	SendVibrateData(device);
+}
+
+std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDevice(const std::string& padId)
+{
+	if (!Init())
+		return nullptr;
 
 	size_t pos = padId.find("Ds4 Pad #");
-
-	if (pos == std::string::npos) return;
+	if (pos == std::string::npos)
+		return nullptr;
 
 	std::string pad_serial = padId.substr(pos + 9);
-
 	std::shared_ptr<DS4Device> device = nullptr;
 
 	for (auto& cur_control : controllers)
@@ -244,14 +238,29 @@ void ds4_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u3
 		}
 	}
 
-	if (device == nullptr || device->hidDevice == nullptr) return;
+	return device;
+}
 
-	// Set the device's motor speeds to our requested values 0-255
-	device->largeVibrate = largeMotor;
-	device->smallVibrate = smallMotor;
+bool ds4_pad_handler::CheckDeviceState(std::shared_ptr<DS4Device> device)
+{
+	if (device == nullptr || device->hidDevice == nullptr)
+		return false;
 
-	// Start/Stop the engines :)
-	SendVibrateData(device);
+	// Now that we have found a device, get its status
+	DS4DataStatus status = GetRawData(device);
+
+	if (status == DS4DataStatus::ReadError)
+	{
+		// this also can mean disconnected, either way deal with it on next loop and reconnect
+		hid_close(device->hidDevice);
+		device->hidDevice = nullptr;
+		return false;
+	}
+
+	if (status != DS4DataStatus::NewData)
+		return false;
+
+	return true;
 }
 
 void ds4_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold)
@@ -754,24 +763,9 @@ std::vector<std::string> ds4_pad_handler::ListDevices()
 
 bool ds4_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
 {
-	size_t pos = device.find("Ds4 Pad #");
-
-	if (pos == std::string::npos) return false;
-
-	std::string pad_serial = device.substr(pos + 9);
-
-	std::shared_ptr<DS4Device> device_id = nullptr;
-
-	for (auto& cur_control : controllers)
-	{
-		if (pad_serial == cur_control.first)
-		{
-			device_id = cur_control.second;
-			break;
-		}
-	}
-
-	if (device_id == nullptr) return false;
+	std::shared_ptr<DS4Device> ds4device = GetDevice(device);
+	if (ds4device == nullptr || ds4device->hidDevice == nullptr)
+		return false;
 
 	m_pad_config.load();
 
@@ -816,7 +810,7 @@ bool ds4_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::strin
 	pad->m_vibrateMotors.emplace_back(true, 0);
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
-	bindings.emplace_back(device_id, pad);
+	bindings.emplace_back(ds4device, pad);
 
 	return true;
 }

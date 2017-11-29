@@ -546,7 +546,7 @@ public:
 	bool has_deadzones() { return b_has_deadzones; };
 	pad_config* GetConfig() { return &m_pad_config; };
 	//Sets window to config the controller(optional)
-	virtual void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback) {};
+	virtual void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist = false) {};
 	virtual void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) {};
 	//Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;

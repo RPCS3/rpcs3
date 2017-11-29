@@ -37,6 +37,7 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 	{
 		setWindowTitle(tr("Configure Keyboard"));
 		m_handler_type = handler_type::handler_type_keyboard;
+		ui->b_blacklist->setEnabled(false);
 	}
 	else if (m_handler_cfg->cfg_type == "xinput")
 	{
@@ -241,9 +242,10 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 	insertButton(button_ids::id_pad_rstick_right, ui->b_rstick_right, &m_handler_cfg->rs_right);
 	insertButton(button_ids::id_pad_rstick_up,    ui->b_rstick_up,    &m_handler_cfg->rs_up);
 
-	m_padButtons->addButton(ui->b_reset,  button_ids::id_reset_parameters);
-	m_padButtons->addButton(ui->b_ok,     button_ids::id_ok);
-	m_padButtons->addButton(ui->b_cancel, button_ids::id_cancel);
+	m_padButtons->addButton(ui->b_reset,     button_ids::id_reset_parameters);
+	m_padButtons->addButton(ui->b_blacklist, button_ids::id_blacklist);
+	m_padButtons->addButton(ui->b_ok,        button_ids::id_ok);
+	m_padButtons->addButton(ui->b_cancel,    button_ids::id_cancel);
 
 	connect(m_padButtons, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), this, &pad_settings_dialog::OnPadButtonClicked);
 
@@ -414,6 +416,9 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 		ReactivateButtons();
 		m_handler_cfg->from_default();
 		UpdateLabel(true);
+		return;
+	case button_ids::id_blacklist:
+		m_handler->GetNextButtonPress(m_device_name, nullptr, true);
 		return;
 	case button_ids::id_ok:
 		SaveConfig();

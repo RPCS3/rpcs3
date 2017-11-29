@@ -213,8 +213,11 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 	return button_values;
 }
 
-void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback)
+void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist)
 {
+	if (get_blacklist)
+		blacklist.clear();
+
 	// Add device if not yet present
 	m_pad_index = add_device(padId, true);
 
@@ -243,20 +246,39 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 	std::pair<u16, std::string> pressed_button = { 0, "" };
 	for (const auto& button : button_list)
 	{
-		if (padId.find("Xbox 360") != std::string::npos && button.first >= BTN_TRIGGER_HAPPY)
+		int code = button.first;
+		std::string name = button.second;
+
+		if (padId.find("Xbox 360") != std::string::npos && code >= BTN_TRIGGER_HAPPY)
 			continue;
-		if (padId.find("Sony") != std::string::npos && (button.first == BTN_TL2 || button.first == BTN_TR2))
+		if (padId.find("Sony") != std::string::npos && (code == BTN_TL2 || code == BTN_TR2))
 			continue;
 
-		u16 value = data[button.first].first;
-		if (value > 0 && value > pressed_button.first)
-			pressed_button = { value, button.second };
+		if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), name) != blacklist.end())
+			continue;
+
+		u16 value = data[code].first;
+		if (value > 0)
+		{
+			if (get_blacklist)
+			{
+				blacklist.emplace_back(name);
+				LOG_ERROR(HLE, "Evdev Calibration: Added button [ %d = %s ] to blacklist. Value = %d", code, name, value);
+			}
+			else if (value > pressed_button.first)
+				pressed_button = { value, name };
+		}
 	}
 
 	for (const auto& button : axis_list)
 	{
 		int code = button.first;
+		std::string name = button.second;
+
 		if (data[code].second)
+			continue;
+
+		if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), name) != blacklist.end())
 			continue;
 
 		u16 value = data[code].first;
@@ -267,14 +289,27 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 		 || (code == ABS_RZ && value < m_trigger_threshold))
 			continue;
 
-		if (value > 0 && value > pressed_button.first)
-			pressed_button = { value, button.second };
+		if (value > 0)
+		{
+			if (get_blacklist)
+			{
+				blacklist.emplace_back(name);
+				LOG_ERROR(HLE, "Evdev Calibration: Added axis [ %d = %s ] to blacklist. Value = %d", code, name, value);
+			}
+			else if (value > pressed_button.first)
+				pressed_button = { value, name };
+		}
 	}
 
 	for (const auto& button : rev_axis_list)
 	{
 		int code = button.first;
+		std::string name = button.second;
+
 		if (!data[code].second)
+			continue;
+
+		if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), name) != blacklist.end())
 			continue;
 
 		u16 value = data[code].first;
@@ -285,8 +320,23 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 		 || (code == ABS_RZ && value < m_trigger_threshold))
 			continue;
 
-		if (value > 0 && value > pressed_button.first)
-			pressed_button = { value, button.second };
+		if (value > 0)
+		{
+			if (get_blacklist)
+			{
+				blacklist.emplace_back(name);
+				LOG_ERROR(HLE, "Evdev Calibration: Added rev axis [ %d = %s ] to blacklist. Value = %d", code, name, value);
+			}
+			else if (value > pressed_button.first)
+				pressed_button = { value, name };
+		}
+	}
+
+	if (get_blacklist)
+	{
+		if (blacklist.size() <= 0)
+			LOG_SUCCESS(HLE, "Evdev Calibration: Blacklist is clear. No input spam detected");
+		return;
 	}
 
 	// get stick values

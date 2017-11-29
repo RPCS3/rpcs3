@@ -70,37 +70,23 @@ xinput_pad_handler::~xinput_pad_handler()
 	Close();
 }
 
-void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback)
+void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist)
 {
-	if (!Init())
-	{
+	if (get_blacklist)
+		blacklist.clear();
+
+	int device_number = GetDeviceNumber(padId);
+	if (device_number < 0)
 		return;
-	}
-
-	size_t pos = padId.find("Xinput Pad #");
-	int device_number;
-
-	if (pos != std::string::npos)
-	{
-		device_number = std::stoul(padId.substr(pos + 12));
-	}
-
-	if (pos == std::string::npos || device_number >= XUSER_MAX_COUNT)
-	{
-		return;
-	}
 
 	DWORD dwResult;
 	XINPUT_STATE state;
 	ZeroMemory(&state, sizeof(XINPUT_STATE));
 
 	// Simply get the state of the controller from XInput.
-	dwResult = (*xinputGetState)(device_number, &state);
-
+	dwResult = (*xinputGetState)(static_cast<u32>(device_number), &state);
 	if (dwResult != ERROR_SUCCESS)
-	{
 		return;
-	}
 
 	// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
 	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
@@ -112,17 +98,30 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 		u32 keycode = button.first;
 		u16 value = data[keycode];
 
+		if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), keycode) != blacklist.end())
+			continue;
+
 		if (((keycode < XInputKeyCodes::LT) && (value > 0))
 		 || ((keycode == XInputKeyCodes::LT) && (value > m_trigger_threshold))
 		 || ((keycode == XInputKeyCodes::RT) && (value > m_trigger_threshold))
 		 || ((keycode >= XInputKeyCodes::LSXNeg && keycode <= XInputKeyCodes::LSYPos) && (value > m_thumb_threshold))
 		 || ((keycode >= XInputKeyCodes::RSXNeg && keycode <= XInputKeyCodes::RSYPos) && (value > m_thumb_threshold)))
 		{
-			if (value > pressed_button.first)
+			if (get_blacklist)
 			{
-				pressed_button = { value, button.second };
+				blacklist.emplace_back(keycode);
+				LOG_ERROR(HLE, "XInput Calibration: Added key [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
 			}
+			else if (value > pressed_button.first)
+				pressed_button = { value, button.second };
 		}
+	}
+
+	if (get_blacklist)
+	{
+		if (blacklist.size() <= 0)
+			LOG_SUCCESS(HLE, "XInput Calibration: Blacklist is clear. No input spam detected");
+		return;
 	}
 
 	int preview_values[6] = { data[LT], data[RT], data[LSXPos] - data[LSXNeg], data[LSYPos] - data[LSYNeg], data[RSXPos] - data[RSXNeg], data[RSYPos] - data[RSYNeg] };
@@ -135,23 +134,9 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 
 void xinput_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)
 {
-	if (!Init())
-	{
+	int device_number = GetDeviceNumber(padId);
+	if (device_number < 0)
 		return;
-	}
-
-	u32 device_number = 0;
-	size_t pos = padId.find("Xinput Pad #");
-
-	if (pos != std::string::npos)
-	{
-		device_number = std::stoul(padId.substr(pos + 12));
-	}
-
-	if (pos == std::string::npos || device_number >= XUSER_MAX_COUNT)
-	{
-		return;
-	}
 
 	// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 	// The two motors are not the same, and they create different vibration effects.
@@ -160,7 +145,7 @@ void xinput_pad_handler::TestVibration(const std::string& padId, u32 largeMotor,
 	vibrate.wLeftMotorSpeed = largeMotor;  // between 0 to 65535
 	vibrate.wRightMotorSpeed = smallMotor; // between 0 to 65535
 
-	(*xinputSetState)(device_number, &vibrate);
+	(*xinputSetState)(static_cast<u32>(device_number), &vibrate);
 }
 
 void xinput_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold)
@@ -196,6 +181,22 @@ void xinput_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& v
 		val = pressed ? val : 0;
 		break;
 	}
+}
+
+int xinput_pad_handler::GetDeviceNumber(const std::string& padId)
+{
+	if (!Init())
+		return -1;
+
+	size_t pos = padId.find("Xinput Pad #");
+	if (pos == std::string::npos)
+		return -1;
+
+	int device_number = std::stoul(padId.substr(pos + 12));
+	if (device_number >= XUSER_MAX_COUNT)
+		return -1;
+
+	return device_number;
 }
 
 std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> xinput_pad_handler::GetButtonValues(const XINPUT_STATE& state)
@@ -451,15 +452,12 @@ std::vector<std::string> xinput_pad_handler::ListDevices()
 bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
 {
 	//Convert device string to u32 representing xinput device number
-	u32 device_number = 0;
-	size_t pos = device.find("Xinput Pad #");
-
-	if (pos != std::string::npos) device_number = std::stoul(device.substr(pos + 12));
-
-	if (pos == std::string::npos || device_number >= XUSER_MAX_COUNT) return false;
+	int device_number = GetDeviceNumber(device);
+	if (device_number < 0)
+		return false;
 
 	std::shared_ptr<XInputDevice> device_id = std::make_shared<XInputDevice>();
-	device_id->deviceNumber = device_number;
+	device_id->deviceNumber = static_cast<u32>(device_number);
 
 	m_pad_config.load();
 
