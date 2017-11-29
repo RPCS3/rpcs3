@@ -21,7 +21,6 @@
 #include <QPixmap>
 #include <QTableWidget>
 #include <QDesktopWidget>
-#include <QSlider>
 #include <QLabel>
 #include <QDir>
 #include <QMenu>
@@ -29,7 +28,6 @@
 #include <QDesktopServices>
 #include <QUrl>
 
-static const int m_TROPHY_ICON_HEIGHT = 75;
 static const char* m_TROPHY_DIR = "/dev_hdd0/home/00000001/trophy/";
 
 namespace
@@ -38,12 +36,21 @@ namespace
 	inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 }
 
-trophy_manager_dialog::trophy_manager_dialog() : QWidget(), m_sort_column(0), m_col_sort_order(Qt::AscendingOrder) 
+trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings)
+	: QWidget(), m_sort_column(0), m_col_sort_order(Qt::AscendingOrder), m_gui_settings(gui_settings)
 {
 	// Nonspecific widget settings
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setWindowTitle(tr("Trophy Manager"));
-	setWindowIcon(QIcon(":/rpcs3.ico"));
+
+	m_icon_height            = m_gui_settings->GetValue(gui::tr_icon_height).toInt();
+	m_show_locked_trophies   = m_gui_settings->GetValue(gui::tr_show_locked).toBool();
+	m_show_unlocked_trophies = m_gui_settings->GetValue(gui::tr_show_unlocked).toBool();
+	m_show_hidden_trophies   = m_gui_settings->GetValue(gui::tr_show_hidden).toBool();
+	m_show_bronze_trophies   = m_gui_settings->GetValue(gui::tr_show_bronze).toBool();
+	m_show_silver_trophies   = m_gui_settings->GetValue(gui::tr_show_silver).toBool();
+	m_show_gold_trophies     = m_gui_settings->GetValue(gui::tr_show_gold).toBool();
+	m_show_platinum_trophies = m_gui_settings->GetValue(gui::tr_show_platinum).toBool();
 
 	// HACK: dev_hdd0 must be mounted for vfs to work for loading trophies.
 	const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
@@ -66,15 +73,14 @@ trophy_manager_dialog::trophy_manager_dialog() : QWidget(), m_sort_column(0), m_
 	QDirIterator dir_iter(qstr(vfs::get(m_TROPHY_DIR)));
 	while (dir_iter.hasNext()) 
 	{
-		if (dir_iter.fileName() == "" || dir_iter.fileName() == "." || dir_iter.fileName() == ".." || dir_iter.fileName() == ".gitignore")
+		dir_iter.next();
+		if (dir_iter.fileName() == "." || dir_iter.fileName() == ".." || dir_iter.fileName() == ".gitignore")
 		{
-			dir_iter.next();
 			continue;
 		}
 		std::string dirName = sstr(dir_iter.fileName());
 		LOG_TRACE(GENERAL, "Loading trophy dir: %s", dirName);
 		LoadTrophyFolderToDB(dirName);
-		dir_iter.next();
 	}
 
 	PopulateUI();
@@ -83,65 +89,155 @@ trophy_manager_dialog::trophy_manager_dialog() : QWidget(), m_sort_column(0), m_
 	// Checkboxes to control dialog
 	QCheckBox* check_lock_trophy = new QCheckBox(tr("Show Locked Trophies"));
 	check_lock_trophy->setCheckable(true);
-	check_lock_trophy->setChecked(true);
+	check_lock_trophy->setChecked(m_show_locked_trophies);
 
 	QCheckBox* check_unlock_trophy = new QCheckBox(tr("Show Unlocked Trophies"));
 	check_unlock_trophy->setCheckable(true);
-	check_unlock_trophy->setChecked(true);
+	check_unlock_trophy->setChecked(m_show_unlocked_trophies);
 
 	QCheckBox* check_hidden_trophy = new QCheckBox(tr("Show Hidden Trophies"));
-	check_unlock_trophy->setCheckable(true);
-	check_unlock_trophy->setChecked(true);
+	check_hidden_trophy->setCheckable(true);
+	check_hidden_trophy->setChecked(m_show_hidden_trophies);
+
+	QCheckBox* check_bronze_trophy = new QCheckBox(tr("Show Bronze Trophies"));
+	check_bronze_trophy->setCheckable(true);
+	check_bronze_trophy->setChecked(m_show_bronze_trophies);
+
+	QCheckBox* check_silver_trophy = new QCheckBox(tr("Show Silver Trophies"));
+	check_silver_trophy->setCheckable(true);
+	check_silver_trophy->setChecked(m_show_silver_trophies);
+
+	QCheckBox* check_gold_trophy = new QCheckBox(tr("Show Gold Trophies"));
+	check_gold_trophy->setCheckable(true);
+	check_gold_trophy->setChecked(m_show_gold_trophies);
+
+	QCheckBox* check_platinum_trophy = new QCheckBox(tr("Show Platinum Trophies"));
+	check_platinum_trophy->setCheckable(true);
+	check_platinum_trophy->setChecked(m_show_platinum_trophies);
 
 	QLabel* slider_label = new QLabel();
-	slider_label->setText(QString("Icon Size: %0").arg(m_TROPHY_ICON_HEIGHT));
+	slider_label->setText(tr("Icon Size: %0").arg(m_icon_height));
 
-	QSlider* icon_slider = new QSlider(Qt::Horizontal);
-	icon_slider->setRange(25, 225);
-	icon_slider->setValue(m_TROPHY_ICON_HEIGHT);
+	m_icon_slider = new QSlider(Qt::Horizontal);
+	m_icon_slider->setRange(25, 225);
+	m_icon_slider->setValue(m_icon_height);
 
 	// LAYOUTS
-	QGroupBox* settings = new QGroupBox(tr("Trophy View Options"));
-	settings->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+	QGroupBox* show_settings = new QGroupBox(tr("Trophy View Options"));
+	show_settings->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 	QVBoxLayout* settings_layout = new QVBoxLayout();
 	settings_layout->addWidget(check_lock_trophy);
 	settings_layout->addWidget(check_unlock_trophy);
 	settings_layout->addWidget(check_hidden_trophy);
-	QHBoxLayout* slider_layout = new QHBoxLayout();
+	settings_layout->addWidget(check_bronze_trophy);
+	settings_layout->addWidget(check_silver_trophy);
+	settings_layout->addWidget(check_gold_trophy);
+	settings_layout->addWidget(check_platinum_trophy);
+	show_settings->setLayout(settings_layout);
+
+	QGroupBox* icon_settings = new QGroupBox(tr("Trophy Icon Options"));
+	QVBoxLayout* slider_layout = new QVBoxLayout();
 	slider_layout->addWidget(slider_label);
-	slider_layout->addWidget(icon_slider);
-	settings_layout->addLayout(slider_layout);
-	settings_layout->addStretch(0);
-	settings->setLayout(settings_layout);
+	slider_layout->addWidget(m_icon_slider);
+	icon_settings->setLayout(slider_layout);
+
+	QVBoxLayout* options_layout = new QVBoxLayout();
+	options_layout->addStretch();
+	options_layout->addWidget(show_settings);
+	options_layout->addWidget(icon_settings);
+	options_layout->addStretch();
 
 	QHBoxLayout* all_layout = new QHBoxLayout(this);
-	all_layout->addWidget(settings);
+	all_layout->addLayout(options_layout);
 	all_layout->addWidget(m_trophy_tree);
+	all_layout->setStretch(1, 1);
 	setLayout(all_layout);
 
-	QSize defaultSize = QDesktopWidget().availableGeometry().size() * 0.7;
-	resize(defaultSize);
+	QByteArray geometry = m_gui_settings->GetValue(gui::tr_geometry).toByteArray();
+	if (geometry.isEmpty() == false)
+	{
+		restoreGeometry(geometry);
+	}
+	else
+	{
+		resize(QDesktopWidget().availableGeometry().size() * 0.7);
+	}
 
 	// Make connects
-	connect(m_trophy_tree->header(), &QHeaderView::sectionClicked, this, &trophy_manager_dialog::OnColClicked);
-	connect(icon_slider, &QSlider::valueChanged, this, [=](int val) {
-		slider_label->setText(QString("Icon Size: %0").arg(val));
+	connect(m_icon_slider, &QSlider::valueChanged, this, [=](int val)
+	{
+		slider_label->setText(tr("Icon Size: %0").arg(val));
 		ResizeTrophyIcons(val);
-	});
-	connect(check_lock_trophy, &QCheckBox::clicked, [this](bool val) {
-		m_show_locked_trophies = val;
-		ApplyFilter();
-	});
-
-	connect(check_unlock_trophy, &QCheckBox::clicked, [this](bool val) {
-		m_show_unlocked_trophies = val;
-		ApplyFilter();
+		if (m_save_icon_height)
+		{
+			m_save_icon_height = false;
+			m_gui_settings->SetValue(gui::tr_icon_height, val);
+		}
 	});
 
-	connect(check_hidden_trophy, &QCheckBox::clicked, [this](bool val) {
-		m_show_hidden_trophies = val;
-		ApplyFilter();
+	connect(m_icon_slider, &QSlider::sliderReleased, this, [&]()
+	{
+		m_gui_settings->SetValue(gui::tr_icon_height, m_icon_slider->value());
 	});
+
+	connect(m_icon_slider, &QSlider::actionTriggered, [&](int action)
+	{
+		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
+		{	// we only want to save on mouseclicks or slider release (the other connect handles this)
+			m_save_icon_height = true; // actionTriggered happens before the value was changed
+		}
+	});
+
+	connect(check_lock_trophy, &QCheckBox::clicked, [this](bool checked)
+	{
+		m_show_locked_trophies = checked;
+		ApplyFilter();
+		m_gui_settings->SetValue(gui::tr_show_locked, checked);
+	});
+
+	connect(check_unlock_trophy, &QCheckBox::clicked, [this](bool checked)
+	{
+		m_show_unlocked_trophies = checked;
+		ApplyFilter();
+		m_gui_settings->SetValue(gui::tr_show_unlocked, checked);
+	});
+
+	connect(check_hidden_trophy, &QCheckBox::clicked, [this](bool checked)
+	{
+		m_show_hidden_trophies = checked;
+		ApplyFilter();
+		m_gui_settings->SetValue(gui::tr_show_hidden, checked);
+	});
+
+	connect(check_bronze_trophy, &QCheckBox::clicked, [this](bool checked)
+	{
+		m_show_bronze_trophies = checked;
+		ApplyFilter();
+		m_gui_settings->SetValue(gui::tr_show_bronze, checked);
+	});
+
+	connect(check_silver_trophy, &QCheckBox::clicked, [this](bool checked)
+	{
+		m_show_silver_trophies = checked;
+		ApplyFilter();
+		m_gui_settings->SetValue(gui::tr_show_silver, checked);
+	});
+
+	connect(check_gold_trophy, &QCheckBox::clicked, [this](bool checked)
+	{
+		m_show_gold_trophies = checked;
+		ApplyFilter();
+		m_gui_settings->SetValue(gui::tr_show_gold, checked);
+	});
+
+	connect(check_platinum_trophy, &QCheckBox::clicked, [this](bool checked)
+	{
+		m_show_platinum_trophies = checked;
+		ApplyFilter();
+		m_gui_settings->SetValue(gui::tr_show_platinum, checked);
+	});
+
+	connect(m_trophy_tree->header(), &QHeaderView::sectionClicked, this, &trophy_manager_dialog::OnColClicked);
 
 	connect(m_trophy_tree, &QTableWidget::customContextMenuRequested, this, &trophy_manager_dialog::ShowContextMenu);
 }
@@ -262,6 +358,7 @@ void trophy_manager_dialog::ApplyFilter()
 		{
 			auto* node = game->child(j);
 			int trophy_id = node->text(TrophyColumns::Id).toInt();
+			QString trophy_type = node->text(TrophyColumns::Type);
 
 			// I could use boolean logic and reduce this to something much shorter and also much more confusing...
 			bool hidden = node->data(TrophyColumns::Hidden, Qt::UserRole).toBool();
@@ -277,6 +374,13 @@ void trophy_manager_dialog::ApplyFilter()
 				hide = true;
 			}
 			if (hidden && !trophy_unlocked && !m_show_hidden_trophies)
+			{
+				hide = true;
+			}
+			if ((trophy_type == Bronze   && !m_show_bronze_trophies)
+			 || (trophy_type == Silver   && !m_show_silver_trophies)
+			 || (trophy_type == Gold     && !m_show_gold_trophies)
+			 || (trophy_type == Platinum && !m_show_platinum_trophies))
 			{
 				hide = true;
 			}
@@ -302,7 +406,7 @@ void trophy_manager_dialog::ShowContextMenu(const QPoint& loc)
 		return;
 	}
 
-	QAction* show_trophy_dir = new QAction("Open Trophy Dir", menu);
+	QAction* show_trophy_dir = new QAction(tr("Open Trophy Dir"), menu);
 
 	// Only two levels in this tree (ignoring root). So getting the index as such works.
 	int db_ind;
@@ -316,7 +420,8 @@ void trophy_manager_dialog::ShowContextMenu(const QPoint& loc)
 		db_ind = item->parent()->data(1, Qt::UserRole).toInt();
 	}
 
-	connect(show_trophy_dir, &QAction::triggered, [=]() {
+	connect(show_trophy_dir, &QAction::triggered, [=]()
+	{
 		QString path = qstr(m_trophies_db[db_ind]->path);
 		QDesktopServices::openUrl(QUrl("file:///" + path));
 	});
@@ -367,14 +472,17 @@ void trophy_manager_dialog::PopulateUI()
 			SceNpTrophyDetails details;
 			details.trophyId = trophy_id;
 			QString trophy_type = "";
-			switch (n->GetAttribute("ttype")[0]) {
-			case 'B': details.trophyGrade = SCE_NP_TROPHY_GRADE_BRONZE;   trophy_type = "Bronze";   break;
-			case 'S': details.trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   trophy_type = "Silver";   break;
-			case 'G': details.trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     trophy_type = "Gold";     break;
-			case 'P': details.trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; trophy_type = "Platinum"; break;
+
+			switch (n->GetAttribute("ttype")[0])
+			{
+			case 'B': details.trophyGrade = SCE_NP_TROPHY_GRADE_BRONZE;   trophy_type = Bronze;   break;
+			case 'S': details.trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   trophy_type = Silver;   break;
+			case 'G': details.trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     trophy_type = Gold;     break;
+			case 'P': details.trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; trophy_type = Platinum; break;
 			}
 
-			switch (n->GetAttribute("hidden")[0]) {
+			switch (n->GetAttribute("hidden")[0])
+			{
 			case 'y': details.hidden = true;  break;
 			case 'n': details.hidden = false; break;
 			}
@@ -400,8 +508,8 @@ void trophy_manager_dialog::PopulateUI()
 			}
 
 			trophy_tree_widget_item* trophy_item = new trophy_tree_widget_item(game_root);
-			trophy_item->setData(TrophyColumns::Icon, Qt::DecorationRole, data->trophy_images[trophy_id].scaledToHeight(m_TROPHY_ICON_HEIGHT, Qt::SmoothTransformation));
-			trophy_item->setSizeHint(TrophyColumns::Icon, QSize(-1, m_TROPHY_ICON_HEIGHT));
+			trophy_item->setData(TrophyColumns::Icon, Qt::DecorationRole, data->trophy_images[trophy_id].scaledToHeight(m_icon_height, Qt::SmoothTransformation));
+			trophy_item->setSizeHint(TrophyColumns::Icon, QSize(-1, m_icon_height));
 			trophy_item->setText(TrophyColumns::Name, qstr(details.name));
 			trophy_item->setText(TrophyColumns::Description, qstr(details.description));
 			trophy_item->setText(TrophyColumns::Type, trophy_type);
@@ -412,6 +520,14 @@ void trophy_manager_dialog::PopulateUI()
 			game_root->addChild(trophy_item);
 		}
 
-		game_root->setText(0, qstr(data->game_name) + " : " + QString::number(unlocked_trophies) + "| " + QString::number(data->trop_usr->GetTrophiesCount()));
+		int all_trophies = data->trop_usr->GetTrophiesCount();
+		int percentage = 100 * unlocked_trophies / all_trophies;
+		game_root->setText(0, qstr(data->game_name) + QString(" : %1% (%2/%3)").arg(percentage).arg(unlocked_trophies).arg(all_trophies));
 	}
+}
+
+void trophy_manager_dialog::closeEvent(QCloseEvent * event)
+{
+	// Save gui settings
+	m_gui_settings->SetValue(gui::tr_geometry, saveGeometry());
 }

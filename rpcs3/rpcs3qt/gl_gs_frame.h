@@ -11,8 +11,8 @@ private:
 public:
 	gl_gs_frame(int w, int h, QIcon appIcon, bool disableMouse);
 
-	void* make_context() override;
+	draw_context_t make_context() override;
 	void set_current(draw_context_t context) override;
-	void delete_context(void* context) override;
+	void delete_context(draw_context_t context) override;
 	void flip(draw_context_t context, bool skip_frame=false) override;
 };

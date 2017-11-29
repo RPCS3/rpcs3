@@ -54,7 +54,7 @@ void D3D12GSRender::load_program()
 	};
 
 	get_current_vertex_program();
-	get_current_fragment_program(rtt_lookup_func);
+	get_current_fragment_program_legacy(rtt_lookup_func);
 
 	if (!current_fragment_program.valid)
 		return;

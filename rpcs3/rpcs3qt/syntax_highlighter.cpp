@@ -132,10 +132,10 @@ void syntax_highlighter::highlightBlock(const QString &text)
 		int comment_length = 0; // Current comment length
 
 		// We assume we end outside a comment until we know better
-		setCurrentBlockState(ENDED_OUTSIDE_COMMENT);
+		setCurrentBlockState(block_state::ended_outside_comment);
 
 		// Search for the first comment in this block if we start outside or don't want to search for multiline comments
-		if (!rule.multi_line || previousBlockState() != ENDED_INSIDE_COMMENT)
+		if (!rule.multi_line || previousBlockState() != block_state::ended_inside_comment)
 		{
 			comment_start = m_current_block.indexOf(rule.start_expression);
 		}
@@ -159,7 +159,7 @@ void syntax_highlighter::highlightBlock(const QString &text)
 			if (comment_end == -1)
 			{
 				// We end inside a comment and want to format the entire remaining text
-				setCurrentBlockState(ENDED_INSIDE_COMMENT);
+				setCurrentBlockState(block_state::ended_inside_comment);
 				comment_length = m_current_block.length() - comment_start;
 			}
 			else

@@ -193,7 +193,7 @@ void log_frame::CreateAndConnectActions()
 		connect(act, &QAction::triggered, [this, logLevel]()
 		{
 			s_gui_listener.enabled = std::max(logLevel, logs::level::fatal);
-			xgui_settings->SetValue(GUI::l_level, static_cast<uint>(logLevel));
+			xgui_settings->SetValue(gui::l_level, static_cast<uint>(logLevel));
 		});
 	};
 
@@ -219,7 +219,7 @@ void log_frame::CreateAndConnectActions()
 	m_stackAct->setCheckable(true);
 	connect(m_stackAct, &QAction::toggled, xgui_settings.get(), [=](bool checked)
 	{
-		xgui_settings->SetValue(GUI::l_stack, checked);
+		xgui_settings->SetValue(gui::l_stack, checked);
 		m_stack_log = checked;
 	});
 
@@ -227,7 +227,7 @@ void log_frame::CreateAndConnectActions()
 	m_TTYAct->setCheckable(true);
 	connect(m_TTYAct, &QAction::triggered, xgui_settings.get(), [=](bool checked)
 	{
-		xgui_settings->SetValue(GUI::l_tty, checked);
+		xgui_settings->SetValue(gui::l_tty, checked);
 	});
 
 	l_initAct(m_nothingAct, logs::level::fatal);
@@ -265,8 +265,8 @@ void log_frame::CreateAndConnectActions()
 void log_frame::LoadSettings()
 {
 	SetLogLevel(xgui_settings->GetLogLevel());
-	SetTTYLogging(xgui_settings->GetValue(GUI::l_tty).toBool());
-	m_stack_log = xgui_settings->GetValue(GUI::l_stack).toBool();
+	SetTTYLogging(xgui_settings->GetValue(gui::l_tty).toBool());
+	m_stack_log = xgui_settings->GetValue(gui::l_stack).toBool();
 	m_stackAct->setChecked(m_stack_log);
 }
 
@@ -275,18 +275,18 @@ void log_frame::RepaintTextColors()
 {
 	// Get text color. Do this once to prevent possible slowdown
 	m_color.clear();
-	m_color.append(GUI::get_Label_Color("log_level_always"));
-	m_color.append(GUI::get_Label_Color("log_level_fatal"));
-	m_color.append(GUI::get_Label_Color("log_level_error"));
-	m_color.append(GUI::get_Label_Color("log_level_todo"));
-	m_color.append(GUI::get_Label_Color("log_level_success"));
-	m_color.append(GUI::get_Label_Color("log_level_warning"));
-	m_color.append(GUI::get_Label_Color("log_level_notice"));
-	m_color.append(GUI::get_Label_Color("log_level_trace"));
+	m_color.append(gui::get_Label_Color("log_level_always"));
+	m_color.append(gui::get_Label_Color("log_level_fatal"));
+	m_color.append(gui::get_Label_Color("log_level_error"));
+	m_color.append(gui::get_Label_Color("log_level_todo"));
+	m_color.append(gui::get_Label_Color("log_level_success"));
+	m_color.append(gui::get_Label_Color("log_level_warning"));
+	m_color.append(gui::get_Label_Color("log_level_notice"));
+	m_color.append(gui::get_Label_Color("log_level_trace"));
 
-	m_color_stack = GUI::get_Label_Color("log_stack");
+	m_color_stack = gui::get_Label_Color("log_stack");
 
-	m_tty->setTextColor(GUI::get_Label_Color("tty_text"));
+	m_tty->setTextColor(gui::get_Label_Color("tty_text"));
 }
 
 void log_frame::UpdateUI()

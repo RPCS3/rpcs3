@@ -78,7 +78,17 @@ namespace rsx
 		void semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
+
+			if (addr >> 28 == 0x4)
+			{
+				// TODO: check no reservation area instead
+				vm::ps3::write32(addr, arg);
+				return;
+			}
+
+			vm::reader_lock lock;
 			vm::ps3::write32(addr, arg);
+			vm::notify(addr, 4);
 		}
 	}
 
@@ -469,6 +479,15 @@ namespace rsx
 				rsx->m_textures_dirty[index] = true;
 			}
 		};
+
+		template<u32 index>
+		struct set_vertex_texture_dirty_bit
+		{
+			static void impl(thread* rsx, u32 _reg, u32 arg)
+			{
+				rsx->m_vertex_textures_dirty[index] = true;
+			}
+		};
 	}
 
 	namespace nv308a
@@ -627,6 +646,12 @@ namespace rsx
 			u32 convert_w = (u32)(scale_x * in_w);
 			u32 convert_h = (u32)(scale_y * in_h);
 
+			if (convert_w == 0 || convert_h == 0)
+			{
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored");
+				return;
+			}
+
 			u32 slice_h = clip_h;
 			blit_src_info src_info = {};
 			blit_dst_info dst_info = {};
@@ -666,7 +691,7 @@ namespace rsx
 				dst_info.max_tile_h = static_cast<u16>((dst_region.tile->size - dst_region.base) / out_pitch);
 			}
 
-			if (!g_cfg.video.force_cpu_blit_processing && dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER)
+			if (!g_cfg.video.force_cpu_blit_processing && (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER))
 			{
 				//For now, only use this for actual scaled images, there are use cases that should not go through 3d engine, e.g program ucode transfer
 				//TODO: Figure out more instances where we can use this without problems
@@ -925,12 +950,33 @@ namespace rsx
 		case frame_limit_type::_30: limit = 30.; break;
 		case frame_limit_type::_auto: limit = rsx->fps_limit; break; // TODO
 		}
+
 		if (limit)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - rsx->timer_sync.GetElapsedTimeInMilliSec())));
-			rsx->timer_sync.Start();
+			const u64 time = get_system_time() - Emu.GetPauseTime() - rsx->start_rsx_time;
+
+			if (rsx->int_flip_index == 0)
+			{
+				rsx->start_rsx_time = time;
+			}
+			else
+			{
+				// Convert limit to expected time value
+				double expected = rsx->int_flip_index * 1000000. / limit;
+
+				while (time >= expected + 1000000. / limit)
+				{
+					expected = rsx->int_flip_index++ * 1000000. / limit;
+				}
+
+				if (expected > time + 1000)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds{static_cast<s64>(expected - time) / 1000});
+				}
+			}
 		}
 		
+		rsx->int_flip_index++;
 		rsx->current_display_buffer = arg;
 		rsx->flip(arg);
 		// After each flip PS3 system is executing a routine that changes registers value to some default.
@@ -1539,6 +1585,14 @@ namespace rsx
 		bind_range<NV4097_SET_TEXTURE_FILTER, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_IMAGE_RECT, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_BORDER_COLOR, 8, 16, nv4097::set_texture_dirty_bit>();
+		bind_range<NV4097_SET_VERTEX_TEXTURE_OFFSET, 8, 4, nv4097::set_vertex_texture_dirty_bit>();
+		bind_range<NV4097_SET_VERTEX_TEXTURE_FORMAT, 8, 4, nv4097::set_vertex_texture_dirty_bit>();
+		bind_range<NV4097_SET_VERTEX_TEXTURE_ADDRESS, 8, 4, nv4097::set_vertex_texture_dirty_bit>();
+		bind_range<NV4097_SET_VERTEX_TEXTURE_CONTROL0, 8, 4, nv4097::set_vertex_texture_dirty_bit>();
+		bind_range<NV4097_SET_VERTEX_TEXTURE_CONTROL3, 8, 4, nv4097::set_vertex_texture_dirty_bit>();
+		bind_range<NV4097_SET_VERTEX_TEXTURE_FILTER, 8, 4, nv4097::set_vertex_texture_dirty_bit>();
+		bind_range<NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT, 8, 4, nv4097::set_vertex_texture_dirty_bit>();
+		bind_range<NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR, 8, 4, nv4097::set_vertex_texture_dirty_bit>();
 		bind<NV4097_SET_RENDER_ENABLE, nv4097::set_render_mode>();
 		bind<NV4097_SET_ZCULL_EN, nv4097::set_zcull_render_enable>();
 		bind<NV4097_SET_ZCULL_STATS_ENABLE, nv4097::set_zcull_stats_enable>();

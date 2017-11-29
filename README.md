@@ -30,9 +30,9 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 ### Linux
 * [Qt 5.7+](https://www.qt.io/download-open-source/)
 * GCC 5.1+ or Clang 3.5.0+ ([not GCC 6.1](https://github.com/RPCS3/rpcs3/issues/1691))
-* Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git qt5-default`
+* Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git qt5-default`
 * Arch: `sudo pacman -S glew openal cmake llvm qt5-base`
-* Fedora: `sudo dnf install cmake qt5-devel vulkan-devel glew glew-devel`
+* Fedora: `sudo dnf install cmake glew glew-devel libatomic libudev-devel openal-devel qt5-devel vulkan-devel`
 **If you have a NVIDIA GPU, you may need to install the libglvnd package.**
 
 ### MacOS
@@ -49,13 +49,21 @@ To initialize the repository don't forget to execute `git submodule update --ini
 *If you're using Visual Studio 2017 without Qt plugin support (or simply dont want to use it):* 
 1) Add `QTDIR` environment variable and set it to `<QtInstallFolder>\5.8\msvc2015_64\` </br>
 
+
+Open `rpcs3.sln`
+
+
 *If you wish to use the Visual Studio plugin for Qt:* </br>
 1) Go to the Qt5 menu and edit Qt5 options. Add the path to your Qt installation with compiler e.g. `C:\Qt\5.8\msvc2015_64`. </br>
 2) While selecting the rpcs3qt project, go to Qt5->Project Setting and select the version you added. 
 
 ### Building the projects
-1) Build the projects in *__BUILD_BEFORE* folder: right-click on every project > *Build*. </br>
-2) Press *BUILD* > *Build Solution* or *Rebuild Solution*. </br>
+You may want to download precompiled [LLVM lib](https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8) and extract to root rpcs3 folder (which contains `rpcs3.sln`), as well as download and extract [additional libs](https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRaHYxV3VOS2d0a0U) to `lib\%CONFIGURATION%-x64\` to speed up compilation time (unoptimised/debug libs are currently not available precompiled).
+
+If you're not using precompiled libs, build the projects in *__BUILD_BEFORE* folder: right-click on every project > *Build*. </br></br>
+
+`Build > Build Solution`</br>
+
 
 
 ## Building on Linux & Mac OS:

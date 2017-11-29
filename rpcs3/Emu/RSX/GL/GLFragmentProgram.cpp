@@ -15,7 +15,7 @@ std::string GLFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 
 std::string GLFragmentDecompilerThread::getFunction(FUNCTION f)
 {
-	return gl::getFunctionImpl(f);
+	return glsl::getFunctionImpl(f);
 }
 
 std::string GLFragmentDecompilerThread::saturate(const std::string & code)
@@ -173,11 +173,6 @@ namespace
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 		case rsx::texture_dimension_extended::texture_dimension_cubemap: vec_type = "vec3";
 		}
-
-		if (prog.unnormalized_coords & (1 << index))
-			OS << "\t" << vec_type << " tex" << index << "_coord_scale = texture_parameters[" << index << "].xy / textureSize(tex" << index << ", 0);\n";
-		else
-			OS << "\t" << vec_type << " tex" << index << "_coord_scale = " << vec_type << "(1.);\n";
 	}
 
 	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)

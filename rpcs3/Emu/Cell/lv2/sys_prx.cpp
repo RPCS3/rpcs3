@@ -7,6 +7,7 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Crypto/unedat.h"
+#include "sys_fs.h"
 #include "sys_prx.h"
 
 namespace vm { using namespace ps3; }
@@ -76,13 +77,11 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 	{ "/dev_flash/sys/external/libsysutil_video_export.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_video_player.sprx", 0 },
 	{ "/dev_flash/sys/external/libsysutil_video_upload.sprx", 0 },
-	{ "/dev_flash/sys/external/libusbd.sprx", 0 },
-	{ "/dev_flash/sys/external/libusbpspcm.sprx", 0 },
 	{ "/dev_flash/sys/external/libvdec.sprx", 0 },
 	{ "/dev_flash/sys/external/libvoice.sprx", 0 },
 };
 
-error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
+static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, fs::file src = {})
 {
 	std::string name = vpath.substr(vpath.find_last_of('/') + 1);
 	std::string path = vfs::get(vpath);
@@ -125,7 +124,12 @@ error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_
 		return not_an_error(idm::last_id());
 	}
 
-	const ppu_prx_object obj = decrypt_self(fs::file(path), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
+	if (!src)
+	{
+		src.open(path);
+	}
+
+	const ppu_prx_object obj = decrypt_self(std::move(src), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
 
 	if (obj != elf_error::ok)
 	{
@@ -154,14 +158,23 @@ error_code sys_prx_get_ppu_guid()
 
 error_code _sys_prx_load_module_by_fd(s32 fd, u64 offset, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
-	sys_prx.todo("_sys_prx_load_module_by_fd(fd=%d, offset=0x%x, flags=0x%x, pOpt=*0x%x)", fd, offset, flags, pOpt);
-	return CELL_OK;
+	sys_prx.warning("_sys_prx_load_module_by_fd(fd=%d, offset=0x%x, flags=0x%x, pOpt=*0x%x)", fd, offset, flags, pOpt);
+
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	return prx_load_module(fmt::format("%s_x%x", file->name.data(), offset), flags, pOpt, lv2_file::make_view(file, offset));
 }
 
 error_code _sys_prx_load_module_on_memcontainer_by_fd(s32 fd, u64 offset, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
-	sys_prx.todo("_sys_prx_load_module_on_memcontainer_by_fd(fd=%d, offset=0x%x, mem_ct=0x%x, flags=0x%x, pOpt=*0x%x)", fd, offset, mem_ct, flags, pOpt);
-	return CELL_OK;
+	sys_prx.warning("_sys_prx_load_module_on_memcontainer_by_fd(fd=%d, offset=0x%x, mem_ct=0x%x, flags=0x%x, pOpt=*0x%x)", fd, offset, mem_ct, flags, pOpt);
+
+	return _sys_prx_load_module_by_fd(fd, offset, flags, pOpt);
 }
 
 error_code _sys_prx_load_module_list(s32 count, vm::cpptr<char, u32, u64> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
@@ -268,7 +281,7 @@ error_code _sys_prx_unload_module(u32 id, u64 flags, vm::ptr<sys_prx_unload_modu
 	ppu_unload_prx(*prx);
 
 	//s32 result = prx->exit ? prx->exit() : CELL_OK;
-	
+
 	return CELL_OK;
 }
 

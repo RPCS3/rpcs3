@@ -22,6 +22,7 @@
 #include "Utilities/StrUtil.h"
 
 #include "../Crypto/unself.h"
+#include "../Crypto/unpkg.h"
 #include "yaml-cpp/yaml.h"
 
 #include <thread>
@@ -212,6 +213,7 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd0 + "game/");
 	fs::create_dir(dev_hdd0 + "game/TEST12345/");
 	fs::create_dir(dev_hdd0 + "game/TEST12345/USRDIR/");
+	fs::create_dir(dev_hdd0 + "game/.locks/");
 	fs::create_dir(dev_hdd0 + "home/");
 	fs::create_dir(dev_hdd0 + "home/00000001/");
 	fs::create_dir(dev_hdd0 + "home/00000001/exdata/");
@@ -223,7 +225,7 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd1 + "game/");
 	fs::create_path(dev_hdd1);
 	fs::create_path(dev_usb);
-  
+
 #ifdef WITH_GDB_DEBUGGER
 	fxm::make<GDBDebugServer>();
 #endif
@@ -265,6 +267,51 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 	return false;
 }
 
+bool Emulator::InstallPkg(const std::string& path)
+{
+	LOG_SUCCESS(GENERAL, "Installing package: %s", path);
+
+	atomic_t<double> progress(0.);
+	int int_progress = 0;
+	{
+		// Run PKG unpacking asynchronously
+		scope_thread worker("PKG Installer", [&]
+		{
+			if (pkg_install(path, progress))
+			{
+				progress = 1.;
+				return;
+			}
+
+			progress = -1.;
+		});
+
+		// Wait for the completion
+		while (std::this_thread::sleep_for(5ms), std::abs(progress) < 1.)
+		{
+			// TODO: update unified progress dialog
+			double pval = progress;
+			pval < 0 ? pval += 1. : pval;
+			pval *= 100.;
+
+			if (static_cast<int>(pval) > int_progress)
+			{
+				int_progress = static_cast<int>(pval);
+				LOG_SUCCESS(GENERAL, "... %u%%", int_progress);
+			}
+
+			m_cb.process_events();
+		}
+	}
+
+	if (progress >= 1.)
+	{
+		return true;
+	}
+
+	return false;
+}
+
 std::string Emulator::GetHddDir()
 {
 	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
@@ -281,15 +328,23 @@ std::string Emulator::GetLibDir()
 	return fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
 }
 
+void Emulator::SetForceBoot(bool force_boot)
+{
+	m_force_boot = force_boot;
+}
+
 void Emulator::Load(bool add_only)
 {
-	Stop();
+	if (!IsStopped())
+	{
+		Stop();
+	}
 
 	try
 	{
 		Init();
 
-		// Load game list (maps ABCD12345 IDs to /dev_bdvd/ locations) 
+		// Load game list (maps ABCD12345 IDs to /dev_bdvd/ locations)
 		YAML::Node games = YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string());
 
 		if (!games.IsMap())
@@ -445,7 +500,8 @@ void Emulator::Load(bool add_only)
 		}
 		else if (!Emu.disc.empty())
 		{
-			vfs::mount("dev_bdvd", Emu.disc);
+			bdvd_dir = Emu.disc;
+			vfs::mount("dev_bdvd", bdvd_dir);
 			LOG_NOTICE(LOADER, "Disk: %s", vfs::get("/dev_bdvd"));
 		}
 		else if (_cat == "DG" || _cat == "GD")
@@ -458,6 +514,73 @@ void Emulator::Load(bool add_only)
 		{
 			LOG_NOTICE(LOADER, "Finished to add data to games.yml by boot for: %s", m_path);
 			return;
+		}
+
+		// Install PKGDIR, INSDIR, PS3_EXTRA
+		if (!bdvd_dir.empty())
+		{
+			const std::string ins_dir = vfs::get("/dev_bdvd/PS3_GAME/INSDIR/");
+			const std::string pkg_dir = vfs::get("/dev_bdvd/PS3_GAME/PKGDIR/");
+			const std::string extra_dir = vfs::get("/dev_bdvd/PS3_GAME/PS3_EXTRA/");
+			fs::file lock_file;
+
+			if (fs::is_dir(ins_dir) || fs::is_dir(pkg_dir) || fs::is_dir(extra_dir))
+			{
+				// Create lock file to prevent double installation
+				lock_file.open(hdd0_game + ".locks/" + m_title_id, fs::read + fs::create + fs::excl);
+			}
+
+			if (lock_file && fs::is_dir(ins_dir))
+			{
+				LOG_NOTICE(LOADER, "Found INSDIR: %s", ins_dir);
+
+				for (auto&& entry : fs::dir{ins_dir})
+				{
+					if (!entry.is_directory && ends_with(entry.name, ".PKG") && !InstallPkg(ins_dir + entry.name))
+					{
+						LOG_ERROR(LOADER, "Failed to install /dev_bdvd/PS3_GAME/INSDIR/%s", entry.name);
+						return;
+					}
+				}
+			}
+
+			if (lock_file && fs::is_dir(pkg_dir))
+			{
+				LOG_NOTICE(LOADER, "Found PKGDIR: %s", pkg_dir);
+
+				for (auto&& entry : fs::dir{pkg_dir})
+				{
+					if (entry.is_directory && entry.name.compare(0, 3, "PKG", 3) == 0)
+					{
+						const std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
+
+						if (fs::is_file(pkg_file) && !InstallPkg(pkg_file))
+						{
+							LOG_ERROR(LOADER, "Failed to install /dev_bdvd/PS3_GAME/PKGDIR/%s/INSTALL.PKG", entry.name);
+							return;
+						}
+					}
+				}
+			}
+
+			if (lock_file && fs::is_dir(extra_dir))
+			{
+				LOG_NOTICE(LOADER, "Found PS3_EXTRA: %s", extra_dir);
+
+				for (auto&& entry : fs::dir{extra_dir})
+				{
+					if (entry.is_directory && entry.name[0] == 'D')
+					{
+						const std::string pkg_file = extra_dir + entry.name + "/DATA000.PKG";
+
+						if (fs::is_file(pkg_file) && !InstallPkg(pkg_file))
+						{
+							LOG_ERROR(LOADER, "Failed to install /dev_bdvd/PS3_GAME/PKGDIR/%s/DATA000.PKG", entry.name);
+							return;
+						}
+					}
+				}
+			}
 		}
 
 		// Check game updates
@@ -616,9 +739,10 @@ void Emulator::Load(bool add_only)
 			return;
 		}
 
-		if (g_cfg.misc.autostart && IsReady())
+		if ((m_force_boot || g_cfg.misc.autostart) && IsReady())
 		{
 			Run();
+			m_force_boot = false;
 		}
 		else if (IsPaused())
 		{
@@ -778,8 +902,11 @@ void Emulator::Stop()
 {
 	if (m_state.exchange(system_state::stopped) == system_state::stopped)
 	{
+		m_force_boot = false;
 		return;
 	}
+
+	const bool do_exit = !m_force_boot && g_cfg.misc.autoexit;
 
 	LOG_NOTICE(GENERAL, "Stopping emulator...");
 
@@ -829,7 +956,7 @@ void Emulator::Stop()
 	RSXIOMem.Clear();
 	vm::close();
 
-	if (g_cfg.misc.autoexit)
+	if (do_exit)
 	{
 		GetCallbacks().exit();
 	}
@@ -848,6 +975,8 @@ void Emulator::Stop()
 	data.clear();
 	disc.clear();
 	klic.clear();
+
+	m_force_boot = false;
 }
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)

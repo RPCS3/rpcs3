@@ -26,7 +26,7 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 	version = version.substr(0 , version.find_last_of("-"));
 
 	//Add branch to version on frame , unless it's master.
-	if (rpcs3::get_branch() != "master" || rpcs3::get_branch() != "HEAD")
+	if (rpcs3::get_branch().compare("master") != 0 && rpcs3::get_branch().compare("HEAD") != 0)
 	{
 		version = version + "-" + rpcs3::get_branch();
 	}
@@ -87,7 +87,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.IsStopped())) { Emu.Stop(); return; }
 			break;
 		case Qt::Key_R:
-			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.GetBoot().empty())) { Emu.Stop(); Emu.Load(); return; }
+			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.GetBoot().empty())) { Emu.SetForceBoot(true); Emu.Stop(); Emu.Load(); return; }
 			break;
 		case Qt::Key_E:
 			if (keyEvent->modifiers() == Qt::ControlModifier)
@@ -154,7 +154,7 @@ void* gs_frame::handle() const
 #endif
 }
 
-void* gs_frame::make_context()
+draw_context_t gs_frame::make_context()
 {
 	return nullptr;
 }
@@ -164,7 +164,7 @@ void gs_frame::set_current(draw_context_t ctx)
 	Q_UNUSED(ctx);
 }
 
-void gs_frame::delete_context(void* ctx)
+void gs_frame::delete_context(draw_context_t ctx)
 {
 	Q_UNUSED(ctx);
 }

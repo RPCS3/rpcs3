@@ -94,7 +94,7 @@ struct content_permission final
 	{
 		try
 		{
-			if (!temp.empty())
+			if (temp.size() > 1)
 			{
 				fs::remove_all(temp);
 			}
@@ -255,7 +255,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	{
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = 0; // TODO
-		if (dirName) strcpy_trunc(*dirName, ""); // ???
+		// TODO: dirName might be a read only string when BootCheck is called on a disc game. (e.g. Ben 10 Ultimate Alien: Cosmic Destruction)
 
 		if (!fxm::make<content_permission>("", std::move(sfo)))
 		{
@@ -659,6 +659,11 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 {
 	cellGame.warning("cellGameGetParamString(id=%d, buf=*0x%x, bufsize=%d)", id, buf, bufsize);
 
+	if (!buf || bufsize == 0)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
+
 	const auto prm = fxm::get<content_permission>();
 
 	if (!prm)
@@ -684,6 +689,11 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 {
 	cellGame.warning("cellGameSetParamString(id=%d, buf=*0x%x)", id, buf);
+
+	if (!buf)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
 
 	const auto prm = fxm::get<content_permission>();
 

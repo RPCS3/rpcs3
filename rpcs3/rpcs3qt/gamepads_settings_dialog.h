@@ -65,7 +65,6 @@ class gamepads_settings_dialog : public QDialog
 protected:
 	std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
 	void ChangeInputType(int player);
-	void ChangeDevice(int player);
 	void ClickConfigButton(int player);
 	void SaveExit();
 	void CancelExit();

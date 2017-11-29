@@ -3,14 +3,22 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellSearch.h"
+#include "cellSysutil.h"
 
 logs::channel cellSearch("cellSearch");
 
-s32 cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<u32> userData)
+s32 cellSearchInitialize(ppu_thread& ppu, CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<u32> userData)
 {
 	cellSearch.warning("cellSearchInitialize()");
 
 	// TODO: Store the arguments somewhere so we can use them later.
+	
+	//inform callback that search is alive
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		func(ppu, CELL_SEARCH_EVENT_INITIALIZE_RESULT, CELL_OK, vm::null, userData);
+		return CELL_OK;
+	});
 
 	return CELL_OK;
 }

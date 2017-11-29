@@ -147,7 +147,7 @@ union SRC1
 		u32 swizzle_w        : 2;
 		u32 neg              : 1;
 		u32 abs              : 1;
-		u32 input_mod_src0   : 3;
+		u32 input_prec_mod   : 3; // Looks to be a precision clamping modifier affecting all inputs (tested with Dark Souls II)
 		u32                  : 6;
 		u32 scale            : 3;
 		u32 opcode_is_branch : 1;
@@ -243,13 +243,10 @@ struct RSXFragmentProgram
 
 	void set_texture_dimension(const std::array<rsx::texture_dimension_extended, 16> &dimensions)
 	{
-		size_t id = 0;
-		for (const rsx::texture_dimension_extended &dim : dimensions)
+		texture_dimensions = 0;
+		for (u32 i = 0, offset = 0; i < 16; ++i, offset += 2)
 		{
-			texture_dimensions &= ~(0x3 << (id * 2));
-			u8 d = (u8)dim;
-			texture_dimensions |= ((d & 0x3) << (id * 2));
-			id++;
+			texture_dimensions |= (u32)dimensions[i] << offset;
 		}
 	}
 

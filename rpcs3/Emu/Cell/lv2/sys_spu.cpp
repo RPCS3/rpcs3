@@ -296,7 +296,7 @@ error_code sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::p
 
 	// TODO: max num value should be affected by sys_spu_initialize() settings
 
-	if (!num || num > 6 || prio < 16 || prio > 255)
+	if (attr->nsize > 0x80 || !num || num > 6 || ((prio < 16 || prio > 255) && attr->type != SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT))
 	{
 		return CELL_EINVAL;
 	}
@@ -306,7 +306,7 @@ error_code sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::p
 		sys_spu.todo("Unsupported SPU Thread Group type (0x%x)", attr->type);
 	}
 
-	*id = idm::make<lv2_spu_group>(std::string(attr->name.get_ptr(), attr->nsize - 1), num, prio, attr->type, attr->ct);
+	*id = idm::make<lv2_spu_group>(std::string(attr->name.get_ptr(), std::max<u32>(attr->nsize, 1) - 1), num, prio, attr->type, attr->ct);
 
 	return CELL_OK;
 }

@@ -237,7 +237,8 @@ VKGSRender::upload_vertex_data()
 	auto required = calculate_memory_requirements(m_vertex_layout, vertex_count);
 	size_t persistent_offset = UINT64_MAX, volatile_offset = UINT64_MAX;
 
-	VkBufferView persistent_view = VK_NULL_HANDLE, volatile_view = VK_NULL_HANDLE;
+	m_persistent_attribute_storage = VK_NULL_HANDLE;
+	m_volatile_attribute_storage = VK_NULL_HANDLE;
 
 	if (required.first > 0)
 	{
@@ -277,11 +278,11 @@ VKGSRender::upload_vertex_data()
 			}
 		}
 
-		persistent_view = m_current_frame->buffer_views_to_clean.back()->value;
+		m_persistent_attribute_storage = m_current_frame->buffer_views_to_clean.back()->value;
 	}
 	else
 	{
-		persistent_view = null_buffer_view->value;
+		m_persistent_attribute_storage = null_buffer_view->value;
 	}
 
 	if (required.second > 0)
@@ -290,15 +291,12 @@ VKGSRender::upload_vertex_data()
 		m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device,
 			m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, volatile_offset, required.second));
 
-		volatile_view = m_current_frame->buffer_views_to_clean.back()->value;
+		m_volatile_attribute_storage = m_current_frame->buffer_views_to_clean.back()->value;
 	}
 	else
 	{
-		volatile_view = null_buffer_view->value;
+		m_volatile_attribute_storage = null_buffer_view->value;
 	}
-
-	m_program->bind_uniform(persistent_view, "persistent_input_stream", m_current_frame->descriptor_set);
-	m_program->bind_uniform(volatile_view, "volatile_input_stream", m_current_frame->descriptor_set);
 
 	//Write all the data once if possible
 	if (required.first && required.second && volatile_offset > persistent_offset)

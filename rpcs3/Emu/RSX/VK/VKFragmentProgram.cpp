@@ -14,7 +14,7 @@ std::string VKFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 
 std::string VKFragmentDecompilerThread::getFunction(FUNCTION f)
 {
-	return vk::getFunctionImpl(f);
+	return glsl::getFunctionImpl(f);
 }
 
 std::string VKFragmentDecompilerThread::saturate(const std::string & code)
@@ -118,11 +118,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			const auto mask = (1 << index);
 
-			if (m_prog.unnormalized_coords & mask)
-			{
-				samplerType = "sampler2DRect";
-			}
-			else if (m_prog.shadow_textures & mask)
+			if (m_prog.shadow_textures & mask)
 			{
 				if (m_shadow_sampled_textures & mask)
 				{
@@ -458,7 +454,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 void VKFragmentProgram::Compile()
 {
 	fs::create_path(fs::get_config_dir() + "/shaderlog");
-	fs::file(fs::get_config_dir() + "shaderlog/FragmentProgram.spirv", fs::rewrite).write(shader);
+	fs::file(fs::get_config_dir() + "shaderlog/FragmentProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader);
 
 	std::vector<u32> spir_v;
 	if (!vk::compile_glsl_to_spv(shader, glsl::glsl_fragment_program, spir_v))
@@ -474,8 +470,6 @@ void VKFragmentProgram::Compile()
 
 	VkDevice dev = (VkDevice)*vk::get_current_renderer();
 	vkCreateShaderModule(dev, &fs_info, nullptr, &handle);
-
-	id = UINT32_MAX;
 }
 
 void VKFragmentProgram::Delete()

@@ -23,7 +23,7 @@
 
 #include <unordered_set>
 
-inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
 settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, const int& tabIndex, QWidget *parent, const GameInfo* game)
@@ -35,8 +35,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	ui->cancelButton->setFocus();
 	ui->tabWidget->setUsesScrollButtons(false);
 
-	bool showDebugTab = xgui_settings->GetValue(GUI::m_showDebugTab).toBool();
-	xgui_settings->SetValue(GUI::m_showDebugTab, showDebugTab);
+	bool showDebugTab = xgui_settings->GetValue(gui::m_showDebugTab).toBool();
+	xgui_settings->SetValue(gui::m_showDebugTab, showDebugTab);
 	if (!showDebugTab)
 	{
 		ui->tabWidget->removeTab(7);
@@ -361,13 +361,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	emu_settings::Render_Creator render_creator = xemu_settings.get()->m_render_creator;
 
 	// Comboboxes
-	SubscribeTooltip(ui->graphicsAdapterBox, json_gpu_cbo["graphicsAdapterBox"].toString());
-
 	xemu_settings->EnhanceComboBox(ui->renderBox, emu_settings::Renderer);
 #ifdef WIN32
 	SubscribeTooltip(ui->renderBox, json_gpu_cbo["renderBox"].toString());
+	SubscribeTooltip(ui->graphicsAdapterBox, json_gpu_cbo["graphicsAdapterBox"].toString());
 #else
 	SubscribeTooltip(ui->renderBox, json_gpu_cbo["renderBox_Linux"].toString());
+	SubscribeTooltip(ui->graphicsAdapterBox, json_gpu_cbo["graphicsAdapterBox_Linux"].toString());
 #endif
 	//Change D3D12 to D3D12[DO NOT USE]
 	ui->renderBox->setItemText(ui->renderBox->findData("D3D12"), render_creator.name_D3D12);
@@ -419,6 +419,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->stretchToDisplayArea, emu_settings::StretchToDisplayArea);
 	SubscribeTooltip(ui->stretchToDisplayArea, json_gpu_main["stretchToDisplayArea"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings::DisableVertexCache);
+	SubscribeTooltip(ui->disableVertexCache, json_gpu_main["disableVertexCache"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
 	SubscribeTooltip(ui->scrictModeRendering, json_gpu_main["scrictModeRendering"].toString());
@@ -755,16 +758,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 		auto AddColoredIcons = [=]()
 		{
-			addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(GUI::gl_iconColor).value<QColor>());
-			addColoredIcon(ui->pb_tool_bar_color, xgui_settings->GetValue(GUI::mw_toolBarColor).value<QColor>());
-			addColoredIcon(ui->pb_gl_tool_icon_color, xgui_settings->GetValue(GUI::gl_toolIconColor).value<QColor>(), QIcon(":/Icons/home_blue.png"), GUI::gl_tool_icon_color);
-			addColoredIcon(ui->pb_tool_icon_color, xgui_settings->GetValue(GUI::mw_toolIconColor).value<QColor>(), QIcon(":/Icons/stop.png"), GUI::mw_tool_icon_color);
+			addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(gui::gl_iconColor).value<QColor>());
+			addColoredIcon(ui->pb_tool_bar_color, xgui_settings->GetValue(gui::mw_toolBarColor).value<QColor>());
+			addColoredIcon(ui->pb_gl_tool_icon_color, xgui_settings->GetValue(gui::gl_toolIconColor).value<QColor>(), QIcon(":/Icons/home_blue.png"), gui::gl_tool_icon_color);
+			addColoredIcon(ui->pb_tool_icon_color, xgui_settings->GetValue(gui::mw_toolIconColor).value<QColor>(), QIcon(":/Icons/stop.png"), gui::mw_tool_icon_color);
 		};
 		AddColoredIcons();
 
-		ui->cb_show_welcome->setChecked(xgui_settings->GetValue(GUI::ib_show_welcome).toBool());
+		ui->cb_show_welcome->setChecked(xgui_settings->GetValue(gui::ib_show_welcome).toBool());
 
-		bool enableUIColors = xgui_settings->GetValue(GUI::m_enableUIColors).toBool();
+		bool enableUIColors = xgui_settings->GetValue(gui::m_enableUIColors).toBool();
 		ui->cb_custom_colors->setChecked(enableUIColors);
 		ui->pb_gl_icon_color->setEnabled(enableUIColors);
 		ui->pb_gl_tool_icon_color->setEnabled(enableUIColors);
@@ -775,17 +778,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		{
 			if (reset)
 			{
-				m_currentConfig = GUI::Default;
-				m_currentStylesheet = GUI::Default;
+				m_currentConfig = gui::Default;
+				m_currentStylesheet = gui::Default;
 				ui->combo_configs->setCurrentIndex(0);
 				ui->combo_stylesheets->setCurrentIndex(0);
 			}
 			// Only attempt to load a config if changes occurred.
-			if (m_currentConfig != xgui_settings->GetValue(GUI::m_currentConfig).toString())
+			if (m_currentConfig != xgui_settings->GetValue(gui::m_currentConfig).toString())
 			{
 				OnApplyConfig();
 			}
-			if (m_currentStylesheet != xgui_settings->GetValue(GUI::m_currentStylesheet).toString())
+			if (m_currentStylesheet != xgui_settings->GetValue(gui::m_currentStylesheet).toString())
 			{
 				OnApplyStylesheet();
 			}
@@ -800,7 +803,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			{
 				ApplyGuiOptions(true);
 				xgui_settings->Reset(true);
-				xgui_settings->ChangeToConfig(GUI::Default);
+				xgui_settings->ChangeToConfig(gui::Default);
 				Q_EMIT GuiSettingsSyncRequest(true);
 				AddConfigs();
 				AddStylesheets();
@@ -819,19 +822,19 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val)
 		{
-			xgui_settings->SetValue(GUI::ib_show_welcome, val);
+			xgui_settings->SetValue(gui::ib_show_welcome, val);
 		});
 
 		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=](bool val)
 		{
-			xgui_settings->SetValue(GUI::m_enableUIColors, val);
+			xgui_settings->SetValue(gui::m_enableUIColors, val);
 			ui->pb_gl_icon_color->setEnabled(val);
 			ui->pb_gl_tool_icon_color->setEnabled(val);
 			ui->pb_tool_bar_color->setEnabled(val);
 			ui->pb_tool_icon_color->setEnabled(val);
 			Q_EMIT GuiRepaintRequest();
 		});
-		auto colorDialog = [&](const GUI_SAVE& color, const QString& title, QPushButton *button)
+		auto colorDialog = [&](const gui_save& color, const QString& title, QPushButton *button)
 		{
 			QColor oldColor = xgui_settings->GetValue(color).value<QColor>();
 			QColorDialog dlg(oldColor, this);
@@ -855,56 +858,56 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]()
 		{
-			colorDialog(GUI::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color);
+			colorDialog(gui::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color);
 		});
 
 		connect(ui->pb_gl_tool_icon_color, &QAbstractButton::clicked, [=]()
 		{
-			colorDialog(GUI::gl_toolIconColor, tr("Choose gamelist tool icon color"), ui->pb_gl_tool_icon_color);
+			colorDialog(gui::gl_toolIconColor, tr("Choose gamelist tool icon color"), ui->pb_gl_tool_icon_color);
 		});
 
 		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]()
 		{
-			colorDialog(GUI::mw_toolBarColor, tr("Choose tool bar color"), ui->pb_tool_bar_color);
+			colorDialog(gui::mw_toolBarColor, tr("Choose tool bar color"), ui->pb_tool_bar_color);
 		});
 
 		connect(ui->pb_tool_icon_color, &QAbstractButton::clicked, [=]()
 		{
-			colorDialog(GUI::mw_toolIconColor, tr("Choose tool icon color"), ui->pb_tool_icon_color);
+			colorDialog(gui::mw_toolIconColor, tr("Choose tool icon color"), ui->pb_tool_icon_color);
 		});
 
-		ui->gs_disableMouse->setChecked(xgui_settings->GetValue(GUI::gs_disableMouse).toBool());
+		ui->gs_disableMouse->setChecked(xgui_settings->GetValue(gui::gs_disableMouse).toBool());
 		connect(ui->gs_disableMouse, &QCheckBox::clicked, [=](bool val)
 		{
-			xgui_settings->SetValue(GUI::gs_disableMouse, val);
+			xgui_settings->SetValue(gui::gs_disableMouse, val);
 		});
 
-		bool enableButtons = xgui_settings->GetValue(GUI::gs_resize).toBool();
+		bool enableButtons = xgui_settings->GetValue(gui::gs_resize).toBool();
 		ui->gs_resizeOnBoot->setChecked(enableButtons);
 		ui->gs_width->setEnabled(enableButtons);
 		ui->gs_height->setEnabled(enableButtons);
 
 		QRect screen = QApplication::desktop()->screenGeometry();
-		int width = xgui_settings->GetValue(GUI::gs_width).toInt();
-		int height = xgui_settings->GetValue(GUI::gs_height).toInt();
+		int width = xgui_settings->GetValue(gui::gs_width).toInt();
+		int height = xgui_settings->GetValue(gui::gs_height).toInt();
 		ui->gs_width->setValue(std::min(width, screen.width()));
 		ui->gs_height->setValue(std::min(height, screen.height()));
 
 		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=](bool val)
 		{
-			xgui_settings->SetValue(GUI::gs_resize, val);
+			xgui_settings->SetValue(gui::gs_resize, val);
 			ui->gs_width->setEnabled(val);
 			ui->gs_height->setEnabled(val);
 		});
 		connect(ui->gs_width, &QSpinBox::editingFinished, [=]()
 		{
 			ui->gs_width->setValue(std::min(ui->gs_width->value(), QApplication::desktop()->screenGeometry().width()));
-			xgui_settings->SetValue(GUI::gs_width, ui->gs_width->value());
+			xgui_settings->SetValue(gui::gs_width, ui->gs_width->value());
 		});
 		connect(ui->gs_height, &QSpinBox::editingFinished, [=]()
 		{
 			ui->gs_height->setValue(std::min(ui->gs_height->value(), QApplication::desktop()->screenGeometry().height()));
-			xgui_settings->SetValue(GUI::gs_height, ui->gs_height->value());
+			xgui_settings->SetValue(gui::gs_height, ui->gs_height->value());
 		});
 
 		AddConfigs();
@@ -945,9 +948,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->readDepth, emu_settings::ReadDepthBuffer);
 	SubscribeTooltip(ui->readDepth, json_debug["readDepth"].toString());
 
-	xemu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings::DisableVertexCache);
-	SubscribeTooltip(ui->disableVertexCache, json_debug["disableVertexCache"].toString());
-
 	xemu_settings->EnhanceCheckBox(ui->disableHwOcclusionQueries, emu_settings::DisableOcclusionQueries);
 	SubscribeTooltip(ui->disableHwOcclusionQueries, json_debug["disableOcclusionQueries"].toString());
 
@@ -976,11 +976,11 @@ void settings_dialog::AddConfigs()
 {
 	ui->combo_configs->clear();
 
-	ui->combo_configs->addItem(GUI::Default);
+	ui->combo_configs->addItem(gui::Default);
 
 	for (QString entry : xgui_settings->GetConfigEntries())
 	{
-		if (entry != GUI::Default)
+		if (entry != gui::Default)
 		{
 			ui->combo_configs->addItem(entry);
 		}
@@ -1003,17 +1003,17 @@ void settings_dialog::AddStylesheets()
 {
 	ui->combo_stylesheets->clear();
 
-	ui->combo_stylesheets->addItem("Default (Bright)", GUI::Default);
+	ui->combo_stylesheets->addItem("Default (Bright)", gui::Default);
 
 	for (const QString& entry : xgui_settings->GetStylesheetEntries())
 	{
-		if (entry != GUI::Default)
+		if (entry != gui::Default)
 		{
 			ui->combo_stylesheets->addItem(entry, entry);
 		}
 	}
 
-	m_currentStylesheet = xgui_settings->GetValue(GUI::m_currentStylesheet).toString();
+	m_currentStylesheet = xgui_settings->GetValue(gui::m_currentStylesheet).toString();
 
 	int index = ui->combo_stylesheets->findData(m_currentStylesheet);
 	if (index != -1)
@@ -1063,7 +1063,7 @@ void settings_dialog::OnBackupCurrentConfig()
 void settings_dialog::OnApplyConfig()
 {
 	m_currentConfig = ui->combo_configs->currentText();
-	xgui_settings->SetValue(GUI::m_currentConfig, m_currentConfig);
+	xgui_settings->SetValue(gui::m_currentConfig, m_currentConfig);
 	xgui_settings->ChangeToConfig(m_currentConfig);
 	Q_EMIT GuiSettingsSyncRequest(true);
 }
@@ -1071,7 +1071,7 @@ void settings_dialog::OnApplyConfig()
 void settings_dialog::OnApplyStylesheet()
 {
 	m_currentStylesheet = ui->combo_stylesheets->currentData().toString();
-	xgui_settings->SetValue(GUI::m_currentStylesheet, m_currentStylesheet);
+	xgui_settings->SetValue(gui::m_currentStylesheet, m_currentStylesheet);
 	Q_EMIT GuiStylesheetRequest(xgui_settings->GetCurrentStylesheetPath());
 }
 

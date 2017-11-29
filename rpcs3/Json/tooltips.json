@@ -46,8 +46,7 @@
 		"debugOverlay": "Provides a graphical overlay of various debugging information.\nIf unsure, don't use this option.",
 		"logProg": "Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option.",
 		"disableOcclusionQueries": "Disables running occlusion queries. Minor to moderate performance boost.\nMight introduce issues with broken occlusion e.g missing geometry and extreme pop-in.",
-		"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.",
-		"forceCpuBlitEmulation": "Forces emulation of all blit and image manipulation operations on the cpu.\nRequires 'Write Color Buffers' option to also be enabled in most cases to avoid missing graphics.\nSignificatly degrades performance but is more accurate in some cases.\nThis setting overrides the 'GPU texture scaling' option."
+		"forceCpuBlitEmulation": "Forces emulation of all blit and image manipulation operations on the CPU.\nRequires 'Write Color Buffers' option to also be enabled in most cases to avoid missing graphics.\nSignificantly degrades performance but is more accurate in some cases.\nThis setting overrides the 'GPU texture scaling' option."
 	},
 	"emulator": {
 		"gui": {
@@ -72,6 +71,7 @@
 			"renderBox_Linux": "Vulkan is the fastest renderer. OpenGL is the most accurate renderer.\nIf unsure, use Vulkan. Should you have any compatibility issues, fall back to OpenGL.",
 			"resBox": "This setting will be ignored if the Resolution Scale is set to anything other than 100%!\nLeave this on 1280x720, every PS3 game is compatible with this resolution.\nOnly use 1920x1080 if the game supports it.\nRarely due to emulation bugs some games will only render at low resolutions like 480p.",
 			"graphicsAdapterBox": "On multi GPU systems select which GPU to use in RPCS3 when using Vulkan or DirectX 12.\nThis is not needed when using OpenGL.",
+			"graphicsAdapterBox_Linux": "On multi GPU systems select which GPU to use in RPCS3 when using Vulkan.\nThis is not needed when using OpenGL.",
 			"aspectBox": "Leave this on 16:9 unless you have a 4:3 monitor.\nAuto also works well, especially if you use a resolution that is not 720p.",
 			"frameLimitBox": "Off is the best option as it performs faster.\nUsing the frame limiter will add extra overhead and slow down the game.\nHowever, some games will crash if the framerate is too high.\nIf that happens, set value to anything other than Off.",
 			"anisotropicFilterOverride": "Higher values increase sharpness of textures on sloped surfaces at the cost of GPU resources.\nModern GPUs can handle this setting just fine even at 16x.\nKeep this on Automatic if you want to use the original setting used by a real PS3."
@@ -85,6 +85,7 @@
 			"vsync": "By having this off you might obtain a higher frame rate at the cost of tearing artifacts in the game.",
 			"gpuTextureScaling": "Small to significant performance boost in most games and rarely with side effects.\nMay cause texture corruption in rare cases.",
 			"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
+			"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.",
 			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area."
 		}
 	},
