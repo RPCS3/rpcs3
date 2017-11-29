@@ -154,6 +154,11 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 			});
 		});
 	}
+	else
+	{
+		ui->verticalLayout_left->removeWidget(ui->gb_vibration);
+		delete ui->gb_vibration;
+	}
 
 	// Enable Deadzone Settings
 	if (m_handler->has_deadzones())
@@ -186,6 +191,14 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 		{
 			RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->sizeHint().width(), rx, ry);
 		});
+	}
+	else
+	{
+		ui->verticalLayout_right->removeWidget(ui->gb_sticks);
+		ui->verticalLayout_left->removeWidget(ui->gb_triggers);
+
+		delete ui->gb_sticks;
+		delete ui->gb_triggers;
 	}
 
 	auto insertButton = [this](int id, QPushButton* button, cfg::string* cfg_name)

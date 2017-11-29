@@ -17,9 +17,9 @@
    <iconset resource="../resources.qrc">
     <normaloff>:/rpcs3.ico</normaloff>:/rpcs3.ico</iconset>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout_20">
+  <layout class="QHBoxLayout" name="horizontalLayout_23">
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_26">
+    <layout class="QVBoxLayout" name="verticalLayout_left">
      <property name="spacing">
       <number>5</number>
      </property>
@@ -672,7 +672,7 @@
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_39">
+    <layout class="QVBoxLayout" name="verticalLayout_middle">
      <property name="spacing">
       <number>0</number>
      </property>
@@ -1155,7 +1155,7 @@
         <item>
          <widget class="QLabel" name="l_description">
           <property name="text">
-           <string>We currently support keyboard and mouse input devices as well as native DualShock 4, XInput and MMjoy controllers through software thanks to our core developers and contributors. Unfortunately, we currently do not natively support DualShock 3 controllers. You can however use third party tools like SCP Driver Package to allow your DualShock 3 controller to function like an XInput controller. We plan to add additional input methods in the future.</string>
+           <string>Unfortunately, we currently do not natively support DualShock 3 controllers. You can however use third party tools like SCP Driver Package to allow your DualShock 3 controller to function like an XInput controller. We plan to add additional input methods in the future.</string>
           </property>
           <property name="textFormat">
            <enum>Qt::PlainText</enum>
@@ -1174,7 +1174,7 @@
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_14">
+    <layout class="QVBoxLayout" name="verticalLayout_right">
      <property name="spacing">
       <number>5</number>
      </property>
