@@ -1695,38 +1695,33 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (mask & 0xF0)
 	{
-		u8 clear_a = rsx::method_registers.clear_color_a();
-		u8 clear_r = rsx::method_registers.clear_color_r();
-		u8 clear_g = rsx::method_registers.clear_color_g();
-		u8 clear_b = rsx::method_registers.clear_color_b();
-
-		color_clear_values.color.float32[0] = (float)clear_r / 255;
-		color_clear_values.color.float32[1] = (float)clear_g / 255;
-		color_clear_values.color.float32[2] = (float)clear_b / 255;
-		color_clear_values.color.float32[3] = (float)clear_a / 255;
-
-		for (int index = 0; index < targets.size(); ++index)
+		if (m_draw_buffers_count > 0)
 		{
-			const u32 real_index = (index == 1 && targets.size() == 1) ? 0 : static_cast<u32>(index);
-			clear_descriptors.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, real_index, color_clear_values });
-		}
+			u8 clear_a = rsx::method_registers.clear_color_a();
+			u8 clear_r = rsx::method_registers.clear_color_r();
+			u8 clear_g = rsx::method_registers.clear_color_g();
+			u8 clear_b = rsx::method_registers.clear_color_b();
 
-		for (auto &rtt : m_rtts.m_bound_render_targets)
-		{
-			if (std::get<0>(rtt) != 0)
+			color_clear_values.color.float32[0] = (float)clear_r / 255;
+			color_clear_values.color.float32[1] = (float)clear_g / 255;
+			color_clear_values.color.float32[2] = (float)clear_b / 255;
+			color_clear_values.color.float32[3] = (float)clear_a / 255;
+
+			for (u32 index = 0; index < m_draw_buffers_count; ++index)
 			{
-				std::get<1>(rtt)->dirty = false;
-				std::get<1>(rtt)->old_contents = nullptr;
+				clear_descriptors.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, index, color_clear_values });
+			}
+
+			for (auto &rtt : m_rtts.m_bound_render_targets)
+			{
+				if (std::get<0>(rtt) != 0)
+				{
+					std::get<1>(rtt)->dirty = false;
+					std::get<1>(rtt)->old_contents = nullptr;
+				}
 			}
 		}
 	}
-
-	if (mask & 0x3)
-		clear_descriptors.push_back({ (VkImageAspectFlags)depth_stencil_mask, 0, depth_stencil_clear_values });
-
-	vk::enter_uninterruptible();
-	begin_render_pass();
-	vkCmdClearAttachments(*m_current_command_buffer, (u32)clear_descriptors.size(), clear_descriptors.data(), 1, &region);
 
 	if (mask & 0x3)
 	{
@@ -1734,11 +1729,20 @@ void VKGSRender::clear_surface(u32 mask)
 		{
 			std::get<1>(m_rtts.m_bound_depth_stencil)->dirty = false;
 			std::get<1>(m_rtts.m_bound_depth_stencil)->old_contents = nullptr;
+
+			clear_descriptors.push_back({ (VkImageAspectFlags)depth_stencil_mask, 0, depth_stencil_clear_values });
 		}
 	}
 
-	close_render_pass();
-	vk::leave_uninterruptible();
+	if (clear_descriptors.size() > 0)
+	{
+		vk::enter_uninterruptible();
+		begin_render_pass();
+		vkCmdClearAttachments(*m_current_command_buffer, (u32)clear_descriptors.size(), clear_descriptors.data(), 1, &region);
+
+		close_render_pass();
+		vk::leave_uninterruptible();
+	}
 }
 
 void VKGSRender::sync_at_semaphore_release()
