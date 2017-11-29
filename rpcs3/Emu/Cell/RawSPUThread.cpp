@@ -141,8 +141,8 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 
 	case MFC_Size_Tag_offs:
 	{
-		g_tls_mfc[index].tag = value & 0xff;
-		g_tls_mfc[index].size = value >> 16;
+		g_tls_mfc[index].tag = value & 0x1f;
+		g_tls_mfc[index].size = (value >> 16) & 0x7fff;
 		return true;
 	}
 
