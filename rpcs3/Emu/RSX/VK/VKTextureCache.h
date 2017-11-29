@@ -308,9 +308,20 @@ namespace vk
 			{
 				//Scale image to fit
 				//usually we can just get away with nearest filtering
-				const u8 samples = rsx_pitch / real_pitch;
+				u8 samples_u = 1, samples_v = 1;
+				switch (static_cast<vk::render_target*>(vram_texture)->aa_mode)
+				{
+				case rsx::surface_antialiasing::diagonal_centered_2_samples:
+					samples_u = 2;
+					break;
+				case rsx::surface_antialiasing::square_centered_4_samples:
+				case rsx::surface_antialiasing::square_rotated_4_samples:
+					samples_u = 2;
+					samples_v = 2;
+					break;
+				}
 
-				rsx::scale_image_nearest(pixels_dst, pixels_src, width, height, rsx_pitch, real_pitch, bpp, samples, pack_unpack_swap_bytes);
+				rsx::scale_image_nearest(pixels_dst, pixels_src, width, height, rsx_pitch, real_pitch, bpp, samples_u, samples_v, pack_unpack_swap_bytes);
 			}
 
 			dma_buffer->unmap();
