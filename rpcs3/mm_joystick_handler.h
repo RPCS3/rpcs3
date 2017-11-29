@@ -103,7 +103,7 @@ public:
 	std::vector<std::string> ListDevices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
-	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback) override;
+	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist = false) override;
 
 private:
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
@@ -113,6 +113,7 @@ private:
 	bool is_init = false;
 	u32 supportedJoysticks = 0;
 
+	std::vector<u64> blacklist;
 	std::unordered_map<int, MMJOYDevice> m_devices;
 	std::vector<std::pair<std::shared_ptr<MMJOYDevice>, std::shared_ptr<Pad>>> bindings;
 	std::array<bool, 7> last_connection_status = {};

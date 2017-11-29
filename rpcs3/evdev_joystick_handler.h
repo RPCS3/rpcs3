@@ -247,7 +247,7 @@ public:
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
 	void Close();
-	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback) override;
+	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist = false) override;
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
 
 private:
@@ -261,6 +261,7 @@ private:
 	// Search axis_orientations map for the direction by index, returns -1 if not found, 0 for positive and 1 for negative
 	int FindAxisDirection(const std::unordered_map<int, bool>& map, int index);
 
+	std::vector<std::string> blacklist;
 	std::vector<EvdevDevice> devices;
 	int m_pad_index = -1;
 };

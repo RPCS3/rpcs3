@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>892</width>
-    <height>568</height>
+    <width>1044</width>
+    <height>640</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1729,14 +1729,25 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="b_reset">
-       <property name="text">
-        <string>Restore Defaults</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="horizontalLayout_20" stretch="1,1">
+       <item>
+        <widget class="QPushButton" name="b_blacklist">
+         <property name="text">
+          <string>Filter Noise</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="b_reset">
+         <property name="text">
+          <string>Restore Defaults</string>
+         </property>
+         <property name="autoDefault">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>

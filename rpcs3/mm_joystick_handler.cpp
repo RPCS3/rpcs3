@@ -284,12 +284,13 @@ void mm_joystick_handler::ThreadProc()
 	}
 }
 
-void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback)
+void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist)
 {
+	if (get_blacklist)
+		blacklist.clear();
+
 	if (!Init())
-	{
 		return;
-	}
 
 	static std::string cur_pad = "";
 	static int id = -1;
@@ -328,33 +329,72 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 
 		for (const auto& button : axis_list)
 		{
-			u32 keycode = button.first;
+			u64 keycode = button.first;
 			u16 value = data[keycode];
+
+			if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), keycode) != blacklist.end())
+				continue;
 
 			if (((keycode == mmjoy_axis::joy_z_neg) && (value > m_trigger_threshold))
 			 || ((keycode == mmjoy_axis::joy_z_pos) && (value > m_trigger_threshold))
 			 || ((keycode <= mmjoy_axis::joy_y_neg) && (value > m_thumb_threshold))
 			 || ((keycode <= mmjoy_axis::joy_u_neg && keycode > mmjoy_axis::joy_z_neg) && (value > m_thumb_threshold)))
 			{
-				if (value > pressed_button.first)
+				if (get_blacklist)
 				{
-					pressed_button = { value, button.second };
+					blacklist.emplace_back(keycode);
+					LOG_ERROR(HLE, "MMJOY Calibration: Added axis [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
 				}
+				else if (value > pressed_button.first)
+					pressed_button = { value, button.second };
 			}
 		}
 
 		for (const auto& button : pov_list)
 		{
-			u16 value = data[button.first];
-			if (value > 0 && value > pressed_button.first)
-				pressed_button = { value, button.second };
+			u64 keycode = button.first;
+			u16 value = data[keycode];
+
+			if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), keycode) != blacklist.end())
+				continue;
+
+			if (value > 0)
+			{
+				if (get_blacklist)
+				{
+					blacklist.emplace_back(keycode);
+					LOG_ERROR(HLE, "MMJOY Calibration: Added pov [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
+				}
+				else if (value > pressed_button.first)
+					pressed_button = { value, button.second };
+			}
 		}
 
 		for (const auto& button : button_list)
 		{
-			u16 value = data[button.first];
-			if (value > 0 && value > pressed_button.first)
-				pressed_button = { value, button.second };
+			u64 keycode = button.first;
+			u16 value = data[keycode];
+
+			if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), keycode) != blacklist.end())
+				continue;
+
+			if (value > 0)
+			{
+				if (get_blacklist)
+				{
+					blacklist.emplace_back(keycode);
+					LOG_ERROR(HLE, "MMJOY Calibration: Added button [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
+				}
+				else if (value > pressed_button.first)
+					pressed_button = { value, button.second };
+			}
+		}
+
+		if (get_blacklist)
+		{
+			if (blacklist.size() <= 0)
+				LOG_SUCCESS(HLE, "MMJOY Calibration: Blacklist is clear. No input spam detected");
+			return;
 		}
 
 		int preview_values[6] = 

@@ -141,7 +141,7 @@ public:
 	std::vector<std::string> ListDevices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
-	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& buttonCallback) override;
+	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& buttonCallback, bool get_blacklist = false) override;
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
 
 private:
@@ -149,10 +149,12 @@ private:
 
 	// holds internal controller state change
 	std::array<bool, MAX_GAMEPADS> last_connection_status = {};
-
+	std::vector<u32> blacklist;
 	std::vector<std::pair<std::shared_ptr<DS4Device>, std::shared_ptr<Pad>>> bindings;
 
 private:
+	std::shared_ptr<DS4Device> GetDevice(const std::string& padId);
+	bool CheckDeviceState(std::shared_ptr<DS4Device> device);
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
 	void ProcessDataToPad(const std::shared_ptr<DS4Device>& ds4Device, const std::shared_ptr<Pad>& pad);
 	// Copies data into padData if status is NewData, otherwise buffer is untouched
