@@ -312,18 +312,7 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 		// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
 		// Use a pair to get all the legally pressed buttons and use the one with highest value (prioritize first)
 		std::pair<u16, std::string> pressed_button = { 0, "" };
-		for (const auto& button : button_list)
-		{
-			u16 value = data[button.first];
-			if (value > 0 && value > pressed_button.first)
-				pressed_button = { value, button.second };
-		}
-		for (const auto& button : pov_list)
-		{
-			u16 value = data[button.first];
-			if (value > 0 && value > pressed_button.first)
-				pressed_button = { value, button.second };
-		}
+
 		for (const auto& button : axis_list)
 		{
 			u32 keycode = button.first;
@@ -339,6 +328,20 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 					pressed_button = { value, button.second };
 				}
 			}
+		}
+
+		for (const auto& button : pov_list)
+		{
+			u16 value = data[button.first];
+			if (value > 0 && value > pressed_button.first)
+				pressed_button = { value, button.second };
+		}
+
+		for (const auto& button : button_list)
+		{
+			u16 value = data[button.first];
+			if (value > 0 && value > pressed_button.first)
+				pressed_button = { value, button.second };
 		}
 
 		int preview_values[6] = 
