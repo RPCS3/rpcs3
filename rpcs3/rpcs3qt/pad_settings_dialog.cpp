@@ -278,6 +278,11 @@ void pad_settings_dialog::ReactivateButtons()
 	m_button_id = button_ids::id_pad_begin;
 	UpdateLabel();
 	SwitchButtons(true);
+
+	for (auto but : m_padButtons->buttons())
+	{
+		but->setFocusPolicy(Qt::StrongFocus);
+	}
 }
 
 void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y)
@@ -403,6 +408,11 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 		return;
 	default:
 		break;
+	}
+
+	for (auto but : m_padButtons->buttons())
+	{
+		but->setFocusPolicy(Qt::ClickFocus);
 	}
 
 	m_button_id = id;

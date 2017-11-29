@@ -105,6 +105,35 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 	}
 }
 
+int keyboard_pad_handler::GetModifierCode(QKeyEvent* e)
+{
+	switch (e->key())
+	{
+	case Qt::Key_Control:
+	case Qt::Key_Alt:
+	case Qt::Key_AltGr:
+	case Qt::Key_Shift:
+	case Qt::Key_Meta:
+	case Qt::Key_NumLock:
+		return 0;
+	default:
+		break;
+	}
+
+	if (e->modifiers() == Qt::ControlModifier)
+		return Qt::ControlModifier;
+	else if (e->modifiers() == Qt::AltModifier)
+		return Qt::AltModifier;
+	else if (e->modifiers() == Qt::MetaModifier)
+		return Qt::MetaModifier;
+	else if (e->modifiers() == Qt::ShiftModifier)
+		return Qt::ShiftModifier;
+	else if (e->modifiers() == Qt::KeypadModifier)
+		return Qt::KeypadModifier;
+
+	return 0;
+}
+
 bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 {
 	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
@@ -170,7 +199,7 @@ void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
 			if (!(event->modifiers() == Qt::ControlModifier)) { Key(event->key(), 1); }
 			break;
 		default:
-			Key(event->key(), 1);
+			Key(event->key() + GetModifierCode(event), 1);
 			break;
 	}
 	event->ignore();
@@ -184,7 +213,7 @@ void keyboard_pad_handler::keyReleaseEvent(QKeyEvent* event)
 		return;
 	}
 
-	Key(event->key(), 0);
+	Key(event->key() + GetModifierCode(event), 0);
 	event->ignore();
 }
 
@@ -209,6 +238,8 @@ std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
 		return "Shift";
 	case Qt::Key_Control:
 		return "Ctrl";
+	case Qt::Key_Meta:
+		return "Meta";
 	case Qt::Key_NumLock:
 		return sstr(QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText));
 	default:
@@ -219,7 +250,6 @@ std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
 
 std::string keyboard_pad_handler::GetKeyName(const u32& keyCode)
 {
-	//TODO what about numpad?
 	return sstr(QKeySequence(keyCode).toString(QKeySequence::NativeText));
 }
 
@@ -233,6 +263,8 @@ u32 keyboard_pad_handler::GetKeyCode(const std::string& keyName)
 		return Qt::Key_Shift;
 	else if (keyName == "Ctrl")
 		return Qt::Key_Control;
+	else if (keyName == "Meta")
+		return Qt::Key_Meta;
 
 	QString key = qstr(keyName);
 	QKeySequence seq(key);
@@ -244,9 +276,11 @@ u32 keyboard_pad_handler::GetKeyCode(const std::string& keyName)
 	}
 	else
 	{
+		// TODO: Maybe ditch this code
 		// Should be here only if a modifier key (e.g. Ctrl, Alt) is pressed.
 		if (seq.count() != 0)
 		{
+			LOG_ERROR(GENERAL, "GetKeyCode(%s): seq.count() != 0 . seq.count() = %d", keyName, seq.count());
 			return 0;
 		}
 		// Add a non-modifier key "A" to the picture because QKeySequence
@@ -255,6 +289,7 @@ u32 keyboard_pad_handler::GetKeyCode(const std::string& keyName)
 		seq = QKeySequence(key + "+A");
 		if (seq.count() != 0 || seq[0] <= 65)
 		{
+			LOG_ERROR(GENERAL, "GetKeyCode(%s): seq.count() != 0 || seq[0] <= 65 . seq[0] = %d . seq.count() = %d", keyName, seq[0], seq.count());
 			return 0;
 		}
 		keyCode = seq[0] - 65;
