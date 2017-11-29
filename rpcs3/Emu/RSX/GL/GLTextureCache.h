@@ -102,6 +102,7 @@ namespace gl
 		texture::format format = texture::format::rgba;
 		texture::type type = texture::type::ubyte;
 		bool pack_unpack_swap_bytes = false;
+		rsx::surface_antialiasing aa_mode = rsx::surface_antialiasing::center_1_sample;
 
 		u8 get_pixel_size(texture::format fmt_, texture::type type_)
 		{
@@ -212,8 +213,17 @@ namespace gl
 				gl::texture* image, const u32 rsx_pitch, bool read_only,
 				gl::texture::format gl_format, gl::texture::type gl_type, bool swap_bytes)
 		{
-			if (!read_only && pbo_id == 0)
-				init_buffer();
+			if (read_only)
+			{
+				aa_mode = rsx::surface_antialiasing::center_1_sample;
+			}
+			else
+			{
+				if (pbo_id == 0)
+					init_buffer();
+
+				aa_mode = static_cast<gl::render_target*>(image)->aa_mode;
+			}
 
 			flushed = false;
 			copied = false;
@@ -280,9 +290,21 @@ namespace gl
 			u32 target_texture = vram_texture;
 			if (real_pitch != rsx_pitch || rsx::get_resolution_scale_percent() != 100)
 			{
-				//Disabled - doesnt work properly yet
-				const u32 real_width = (rsx_pitch * width) / real_pitch;
-				const u32 real_height = cpu_address_range / rsx_pitch;
+				u32 real_width = width;
+				u32 real_height = height;
+
+				switch (aa_mode)
+				{
+				case rsx::surface_antialiasing::center_1_sample:
+					break;
+				case rsx::surface_antialiasing::diagonal_centered_2_samples:
+					real_width *= 2;
+					break;
+				default:
+					real_width *= 2;
+					real_height *= 2;
+					break;
+				}
 
 				areai src_area = { 0, 0, 0, 0 };
 				const areai dst_area = { 0, 0, (s32)real_width, (s32)real_height };
@@ -329,6 +351,7 @@ namespace gl
 
 			glPixelStorei(GL_PACK_SWAP_BYTES, pack_unpack_swap_bytes);
 			glPixelStorei(GL_PACK_ALIGNMENT, 1);
+			glPixelStorei(GL_PACK_ROW_LENGTH, 0);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 
 			glGetError();
@@ -439,7 +462,7 @@ namespace gl
 
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-			
+
 			return true;
 		}
 
