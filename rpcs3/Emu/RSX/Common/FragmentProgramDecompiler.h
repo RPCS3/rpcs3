@@ -19,6 +19,85 @@
  */
 class FragmentProgramDecompiler
 {
+	struct temp_register
+	{
+		bool aliased_r0 = false;
+		bool aliased_h0 = false;
+		bool aliased_h1 = false;
+		bool last_write_half = false;
+
+		u32 real_index = UINT32_MAX;
+
+		void tag(u32 index, bool half_register)
+		{
+			if (half_register)
+			{
+				last_write_half = true;
+
+				if (index & 1)
+					aliased_h1 = true;
+				else
+					aliased_h0 = true;
+			}
+			else
+			{
+				aliased_r0 = true;
+				last_write_half = false;
+			}
+
+			if (real_index == UINT32_MAX)
+			{
+				if (half_register)
+					real_index = index >> 1;
+				else
+					real_index = index;
+			}
+		}
+
+		bool requires_gather(bool xy, bool zw) const
+		{
+			//Data fetched from the single precision register requires merging of the two half registers
+			//TODO: Check individual swizzle channels
+			if (aliased_h0 && xy || aliased_h1 && zw)
+				return last_write_half;
+
+			return false;
+		}
+
+		bool requires_split(u32 /*index*/) const
+		{
+			//Data fetched from any of the two half registers requires sync with the full register
+			if (!last_write_half && aliased_r0)
+			{
+				//r0 has been written to
+				//TODO: Check for specific elements in real32 register
+				return true;
+			}
+
+			return false;
+		}
+
+		std::string gather_r()
+		{
+			std::string h0 = "h" + std::to_string(real_index << 1);
+			std::string h1 = "h" + std::to_string(real_index << 1 | 1);
+			std::string reg = "r" + std::to_string(real_index);
+			std::string ret = "//Invalid gather";
+
+			if (aliased_h0 && aliased_h1)
+				ret = reg + " = gather(" + h0 + ", " + h1 + ");";
+			else if (aliased_h0)
+				ret = reg + ".xy = gather(" + h0 + ");";
+			else if (aliased_h1)
+				ret = reg + ".zw = gather(" + h1 + ");";
+
+			last_write_half = false;
+			aliased_h0 = false;
+			aliased_h1 = false;
+			return ret;
+		}
+	};
+
 	OPDEST dst;
 	SRC0 src0;
 	SRC1 src1;
@@ -34,6 +113,8 @@ class FragmentProgramDecompiler
 	int m_code_level;
 	std::vector<u32> m_end_offsets;
 	std::vector<u32> m_else_offsets;
+
+	std::array<temp_register, 24> temp_registers;
 
 	std::string GetMask();
 
