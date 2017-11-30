@@ -221,12 +221,14 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 	// Add device if not yet present
 	m_pad_index = add_device(padId, true);
 
-	if (m_pad_index < 0) return;
+	if (m_pad_index < 0)
+		return;
 
 	EvdevDevice& device = devices[m_pad_index];
 
 	// Check if our device is connected
-	if (!update_device(device, false)) return;
+	if (!update_device(device, false))
+		return;
 
 	auto& dev = device.device;
 
@@ -236,10 +238,11 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 
 	// Grab any pending sync event.
 	if (ret == LIBEVDEV_READ_STATUS_SYNC)
-	{
 		ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_SYNC, &evt);
-	}
-	if (ret < 0) return;
+
+	// return if nothing new has happened. ignore this to get the current state for blacklist
+	if (!get_blacklist && ret < 0)
+		return;
 
 	auto data = GetButtonValues(dev);
 

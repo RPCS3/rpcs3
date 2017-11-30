@@ -153,8 +153,22 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 		blacklist.clear();
 
 	std::shared_ptr<DS4Device> device = GetDevice(padId);
+	if (device == nullptr || device->hidDevice == nullptr)
+		return;
 
-	if (CheckDeviceState(device) == false)
+	// Now that we have found a device, get its status
+	DS4DataStatus status = GetRawData(device);
+
+	if (status == DS4DataStatus::ReadError)
+	{
+		// this also can mean disconnected, either way deal with it on next loop and reconnect
+		hid_close(device->hidDevice);
+		device->hidDevice = nullptr;
+		return;
+	}
+
+	// return if nothing new has happened. ignore this to get the current state for blacklist
+	if (!get_blacklist && status != DS4DataStatus::NewData)
 		return;
 
 	// Get the current button values
@@ -239,28 +253,6 @@ std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDevice(const std
 	}
 
 	return device;
-}
-
-bool ds4_pad_handler::CheckDeviceState(std::shared_ptr<DS4Device> device)
-{
-	if (device == nullptr || device->hidDevice == nullptr)
-		return false;
-
-	// Now that we have found a device, get its status
-	DS4DataStatus status = GetRawData(device);
-
-	if (status == DS4DataStatus::ReadError)
-	{
-		// this also can mean disconnected, either way deal with it on next loop and reconnect
-		hid_close(device->hidDevice);
-		device->hidDevice = nullptr;
-		return false;
-	}
-
-	if (status != DS4DataStatus::NewData)
-		return false;
-
-	return true;
 }
 
 void ds4_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold)
