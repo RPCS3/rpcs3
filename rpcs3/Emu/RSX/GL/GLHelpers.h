@@ -1379,9 +1379,8 @@ namespace gl
 			case internal_format::compressed_rgba_s3tc_dxt3:
 			case internal_format::compressed_rgba_s3tc_dxt5:
 				return true;
+			default: return false;
 			}
-
-			return false;
 		}
 
 		uint id() const noexcept
@@ -1964,6 +1963,8 @@ namespace gl
 				case texture::target::texture1D: glFramebufferTexture1D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_1D, rhs.id(), rhs.level()); break;
 				case texture::target::texture2D: glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs.id(), rhs.level()); break;
 				case texture::target::texture3D: glFramebufferTexture3D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_3D, rhs.id(), rhs.level(), 0); break;
+				case texture::target::textureBuffer:
+					fmt::throw_exception("Tried to assign unsupported texture of type textureBuffer to fbo." HERE); break;
 				}
 			}
 
@@ -2162,9 +2163,12 @@ namespace gl
 				const GLint length = (GLint)src.length();
 
 				{
-					std::string base_name = "shaderlog/VertexProgram";
+					std::string base_name;
 					switch (shader_type)
 					{
+					case type::vertex:
+						base_name = "shaderlog/VertexProgram";
+						break;
 					case type::fragment:
 						base_name = "shaderlog/FragmentProgram";
 						break;

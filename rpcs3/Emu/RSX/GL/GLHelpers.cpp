@@ -22,8 +22,9 @@ namespace gl
 		case rsx::primitive_type::quads: return GL_TRIANGLES;
 		case rsx::primitive_type::quad_strip: return GL_TRIANGLE_STRIP;
 		case rsx::primitive_type::polygon: return GL_TRIANGLES;
+		default:
+			fmt::throw_exception("unknown primitive type" HERE);
 		}
-		fmt::throw_exception("unknow primitive type" HERE);
 	}
 
 #ifdef WIN32
@@ -320,6 +321,9 @@ namespace gl
 				case texture::internal_format::compressed_rgba_s3tc_dxt5:
 					compressed_image_size = ((m_width + 3) / 4) * ((m_height + 3) / 4) * 16;
 					break;
+				default:
+					fmt::throw_exception("Tried to load unimplemented internal_format type." HERE);
+					break;
 				}
 			}
 
@@ -549,7 +553,8 @@ namespace gl
 		case rsx::primitive_type::quads:
 		case rsx::primitive_type::polygon:
 			return false;
+		default:
+			fmt::throw_exception("unknown primitive type" HERE);
 		}
-		fmt::throw_exception("unknown primitive type" HERE);
 	}
 }

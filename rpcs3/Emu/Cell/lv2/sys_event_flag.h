@@ -87,8 +87,8 @@ struct lv2_event_flag final : lv2_obj
 		}
 
 		// Check pattern
-		if ((mode & 0xf) == SYS_EVENT_FLAG_WAIT_AND && (pattern & bitptn) != bitptn ||
-			(mode & 0xf) == SYS_EVENT_FLAG_WAIT_OR && (pattern & bitptn) == 0)
+		if (((mode & 0xf) == SYS_EVENT_FLAG_WAIT_AND && (pattern & bitptn) != bitptn) ||
+			((mode & 0xf) == SYS_EVENT_FLAG_WAIT_OR && (pattern & bitptn) == 0))
 		{
 			return false;
 		}

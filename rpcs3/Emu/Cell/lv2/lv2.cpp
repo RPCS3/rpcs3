@@ -72,7 +72,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_process_is_spu_lock_line_reservation_address), //14  (0x00E)
 
 	null_func, null_func, null_func,                        //15-17  UNS
-	
+
 	BIND_FUNC(sys_process_getppid),                         //18  (0x012)
 	BIND_FUNC(sys_process_kill),                            //19  (0x013)
 	null_func,                                              //20  (0x014)  UNS
@@ -87,7 +87,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_process_get_id),                          //29  (0x01D)  ROOT
 	BIND_FUNC(_sys_process_get_paramsfo),                   //30  (0x01E)
 	null_func,//BIND_FUNC(sys_process_get_ppu_guid),        //31  (0x01F)
-	
+
 	null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, //32-40  UNS
 
 	BIND_FUNC(_sys_ppu_thread_exit),                        //41  (0x029)
@@ -292,7 +292,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func, null_func, null_func, null_func, null_func,  //255-259  UNS
 
 	null_func,//BIND_FUNC(sys_spu_image_open_by_fd)         //260 (0x104)
-	
+
 	null_func, null_func, null_func, null_func,             //264  UNS
 	null_func, null_func, null_func, null_func, null_func,  //269  UNS
 	null_func, null_func, null_func, null_func, null_func,  //274  UNS
@@ -315,10 +315,10 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_vm_sync),                                 //310 (0x136)
 	BIND_FUNC(sys_vm_test),                                 //311 (0x137)
 	BIND_FUNC(sys_vm_get_statistics),                       //312 (0x138)
-	BIND_FUNC(sys_vm_memory_map_different),				    //313 (0x139) //BIND_FUNC(sys_vm_memory_map (different)) 
+	BIND_FUNC(sys_vm_memory_map_different),				    //313 (0x139) //BIND_FUNC(sys_vm_memory_map (different))
 	null_func,//BIND_FUNC(sys_...)                          //314 (0x13A)
 	null_func,//BIND_FUNC(sys_...)                          //315 (0x13B)
-	
+
 	null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, //316-323  UNS
 
 	BIND_FUNC(sys_memory_container_create),                 //324 (0x144)  DBG
@@ -449,7 +449,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_...)                          //474 (0x1DA)
 	null_func,//BIND_FUNC(sys_...)                          //475 (0x1DB)  ROOT
 	null_func,//BIND_FUNC(sys_...)                          //476 (0x1DC)  ROOT
-	
+
 	null_func, null_func, null_func,                        //477-479  UNS
 
 	BIND_FUNC(_sys_prx_load_module),                        //480 (0x1E0)
@@ -756,11 +756,11 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_fs_mapped_allocate),                      //845 (0x34D)
 	BIND_FUNC(sys_fs_mapped_free),                          //846 (0x34E)
 	BIND_FUNC(sys_fs_truncate2),                            //847 (0x34F)
-	
+
 	null_func, null_func,                                   //849  UNS
 	null_func, null_func, null_func, null_func, null_func,  //854  UNS
 	null_func, null_func, null_func, null_func, null_func,  //859  UNS
-	
+
 	null_func,//BIND_FUNC(syscall_sys_ss_get_cache_of_analog_sunset_flag), //860 (0x35C)  AUTHID
 	null_func,//BIND_FUNC(syscall_...)                      //861  ROOT
 	null_func,//BIND_FUNC(syscall_...)                      //862  ROOT

@@ -327,7 +327,8 @@ public:
 					for (auto& e : patch_table.db)
 					{
 						//TODO: Use fp comparison with fabsf without hurting performance
-						if (patched = e.second.test_and_set(tmp[i], &dst[i]))
+						patched = e.second.test_and_set(tmp[i], &dst[i]);
+						if (patched)
 						{
 							break;
 						}

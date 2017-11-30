@@ -1809,6 +1809,8 @@ namespace rsx
 				vm::ps3::write32(texaddr, texaddr);
 				protect_info.second->protect(protect_info.first);
 				return;
+			default:
+				LOG_ERROR(RSX, "Attempted to use unsupported memory protection");
 			}
 
 			vm::ps3::write32(texaddr, texaddr);
