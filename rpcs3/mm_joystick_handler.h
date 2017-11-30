@@ -50,7 +50,7 @@ class mm_joystick_handler final : public PadHandlerBase
 		{ JOY_POVFORWARD,  "POV Up"    },
 		{ JOY_POVRIGHT,    "POV Right" },
 		{ JOY_POVBACKWARD, "POV Down"  },
-		{ JOY_POVLEFT,     "POV Left"  },
+		{ JOY_POVLEFT,     "POV Left"  }
 	};
 
 	enum mmjoy_axis
