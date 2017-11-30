@@ -35,11 +35,9 @@ void gui_settings::ChangeToConfig(const QString& name)
 		Reset(false);
 
 		QSettings other(m_settingsDir.absoluteFilePath(name + ".ini"), QSettings::IniFormat);
-
-		QStringList keys = other.allKeys();
-		for (QStringList::iterator i = keys.begin(); i != keys.end(); i++)
+		for (const QString& key : other.allKeys())
 		{
-			m_settings.setValue(*i, other.value(*i));
+			m_settings.setValue(key, other.value(key));
 		}
 		m_settings.sync();
 	}
@@ -315,7 +313,7 @@ QStringList gui_settings::GetConfigEntries()
 	nameFilter << "*.ini";
 	QFileInfoList entries = m_settingsDir.entryInfoList(nameFilter, QDir::Files);
 	QStringList res;
-	for (QFileInfo entry : entries)
+	for (const QFileInfo &entry : entries)
 	{
 		res.append(entry.baseName());
 	}
@@ -326,12 +324,11 @@ QStringList gui_settings::GetConfigEntries()
 void gui_settings::BackupSettingsToTarget(const QString& friendlyName)
 {	
 	QSettings target(ComputeSettingsDir() + friendlyName + ".ini", QSettings::Format::IniFormat);
-	QStringList keys = m_settings.allKeys();
-	for (QStringList::iterator i = keys.begin(); i != keys.end(); i++)
+	for (const QString& key : m_settings.allKeys())
 	{
-		if (!i->startsWith(gui::meta))
+		if (!key.startsWith(gui::meta))
 		{
-			target.setValue(*i, m_settings.value(*i));
+			target.setValue(key, m_settings.value(key));
 		}
 	}
 	target.sync();
@@ -341,10 +338,9 @@ QStringList gui_settings::GetStylesheetEntries()
 {
 	QStringList nameFilter;
 	nameFilter << "*.qss";
-	QString path = m_settingsDir.absolutePath();
 	QFileInfoList entries = m_settingsDir.entryInfoList(nameFilter, QDir::Files);
 	QStringList res;
-	for (QFileInfo entry : entries)
+	for (const QFileInfo &entry : entries)
 	{
 		res.append(entry.baseName());
 	}
