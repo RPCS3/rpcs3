@@ -198,4 +198,47 @@ namespace gl
 			overlay_pass::run(w, h, target, true);
 		}
 	};
+
+	struct rgba8_rg16_convert_pass : public overlay_pass
+	{
+		rgba8_rg16_convert_pass()
+		{
+			vs_src =
+			{
+				"#version 420\n\n"
+				"\n"
+				"void main()\n"
+				"{\n"
+				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
+				"	gl_Position = vec4(positions[gl_VertexID % 4], 0., 1.);\n"
+				"}\n"
+			};
+
+			fs_src =
+			{
+				"#version 420\n\n"
+				"layout(binding=31) uniform sampler2D fs0;\n"
+				"layout(location=0) out vec4 ocol;\n"
+				"\n"
+				"void main()\n"
+				"{\n"
+				"	uvec4 rgba_in = uvec4(texelFetch(fs0, ivec2(gl_FragCoord.xy), 0) * 255. + vec4(0.5)).wyzx;\n"
+				"	uint value = rgba_in.x | rgba_in.y << 8 | rgba_in.z << 16 | rgba_in.w << 24;\n"
+				"	ocol.xy = unpackHalf2x16(value);\n"
+				"	if (isnan(ocol.x)) ocol.x = 1.;\n"
+				"	if (isnan(ocol.y)) ocol.y = 1.;\n"
+				"	if (isinf(ocol.x)) ocol.x = 65504.;\n"
+				"	if (isinf(ocol.y)) ocol.y = 65504.;\n"
+				"}\n"
+			};
+		}
+
+		void run(u16 w, u16 h, GLuint target, GLuint source)
+		{
+			glActiveTexture(GL_TEXTURE31);
+			glBindTexture(GL_TEXTURE_2D, source);
+
+			overlay_pass::run(w, h, target, false);
+		}
+	};
 }
