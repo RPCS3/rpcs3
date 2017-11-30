@@ -358,14 +358,20 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 {
 	if (is_reset)
 	{
-		ui->chb_vibration_large->setChecked((bool)m_handler_cfg->enable_vibration_motor_large);
-		ui->chb_vibration_small->setChecked((bool)m_handler_cfg->enable_vibration_motor_small);
-		ui->chb_vibration_switch->setChecked((bool)m_handler_cfg->switch_vibration_motors);
+		if (m_handler->has_rumble())
+		{
+			ui->chb_vibration_large->setChecked((bool)m_handler_cfg->enable_vibration_motor_large);
+			ui->chb_vibration_small->setChecked((bool)m_handler_cfg->enable_vibration_motor_small);
+			ui->chb_vibration_switch->setChecked((bool)m_handler_cfg->switch_vibration_motors);
+		}
 
-		ui->slider_trigger_left->setValue(m_handler_cfg->ltriggerthreshold);
-		ui->slider_trigger_right->setValue(m_handler_cfg->rtriggerthreshold);
-		ui->slider_stick_left->setValue(m_handler_cfg->lstickdeadzone);
-		ui->slider_stick_right->setValue(m_handler_cfg->rstickdeadzone);
+		if (m_handler->has_deadzones())
+		{
+			ui->slider_trigger_left->setValue(m_handler_cfg->ltriggerthreshold);
+			ui->slider_trigger_right->setValue(m_handler_cfg->rtriggerthreshold);
+			ui->slider_stick_left->setValue(m_handler_cfg->lstickdeadzone);
+			ui->slider_stick_right->setValue(m_handler_cfg->rstickdeadzone);
+		}
 	}
 
 	for (auto& entry : m_cfg_entries)
@@ -394,13 +400,22 @@ void pad_settings_dialog::SaveConfig()
 	{
 		entry.second.cfg_name->from_string(entry.second.key);
 	}
-	m_handler_cfg->enable_vibration_motor_large.set(ui->chb_vibration_large->isChecked());
-	m_handler_cfg->enable_vibration_motor_small.set(ui->chb_vibration_small->isChecked());
-	m_handler_cfg->switch_vibration_motors.set(ui->chb_vibration_switch->isChecked());
-	m_handler_cfg->ltriggerthreshold.set(ui->slider_trigger_left->value());
-	m_handler_cfg->rtriggerthreshold.set(ui->slider_trigger_right->value());
-	m_handler_cfg->lstickdeadzone.set(ui->slider_stick_left->value());
-	m_handler_cfg->rstickdeadzone.set(ui->slider_stick_right->value());
+
+	if (m_handler->has_rumble())
+	{
+		m_handler_cfg->enable_vibration_motor_large.set(ui->chb_vibration_large->isChecked());
+		m_handler_cfg->enable_vibration_motor_small.set(ui->chb_vibration_small->isChecked());
+		m_handler_cfg->switch_vibration_motors.set(ui->chb_vibration_switch->isChecked());
+	}
+
+	if (m_handler->has_deadzones())
+	{
+		m_handler_cfg->ltriggerthreshold.set(ui->slider_trigger_left->value());
+		m_handler_cfg->rtriggerthreshold.set(ui->slider_trigger_right->value());
+		m_handler_cfg->lstickdeadzone.set(ui->slider_stick_left->value());
+		m_handler_cfg->rstickdeadzone.set(ui->slider_stick_right->value());
+	}
+
 	m_handler_cfg->save();
 }
 
