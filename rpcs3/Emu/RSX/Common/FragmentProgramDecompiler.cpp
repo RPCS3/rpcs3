@@ -76,6 +76,9 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	{
 		AddCode(m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = " + dest + ";");
 	}
+
+	u32 reg_index = dst.fp16 ? dst.dest_reg >> 1 : dst.dest_reg;
+	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16);
 }
 
 void FragmentProgramDecompiler::AddFlowOp(std::string code)
@@ -339,6 +342,30 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 	switch (src.reg_type)
 	{
 	case RSX_FP_REGISTER_TYPE_TEMP:
+
+		if (!src.fp16)
+		{
+			if (dst.opcode == RSX_FP_OPCODE_UP16 ||
+				dst.opcode == RSX_FP_OPCODE_UP2 ||
+				dst.opcode == RSX_FP_OPCODE_UP4 ||
+				dst.opcode == RSX_FP_OPCODE_UPB ||
+				dst.opcode == RSX_FP_OPCODE_UPG)
+			{
+				//TODO: Implement aliased gather for half floats
+				bool xy_read = false;
+				bool zw_read = false;
+
+				if (src.swizzle_x < 2 || src.swizzle_y < 2 || src.swizzle_z < 2 || src.swizzle_w < 2)
+					xy_read = true;
+				if (src.swizzle_x > 1 || src.swizzle_y > 1 || src.swizzle_z > 1 || src.swizzle_w > 1)
+					zw_read = true;
+
+				auto &reg = temp_registers[src.tmp_reg_index];
+				if (reg.requires_gather(xy_read, zw_read))
+					AddCode(reg.gather_r());
+			}
+		}
+
 		ret += AddReg(src.tmp_reg_index, src.fp16);
 		break;
 
@@ -424,6 +451,27 @@ std::string FragmentProgramDecompiler::BuildCode()
 	OS << std::endl;
 	insertOutputs(OS);
 	OS << std::endl;
+
+	//TODO: Better organization for this
+	std::string float2 = getFloatTypeName(2);
+	std::string float4 = getFloatTypeName(4);
+
+	OS << float4 << " gather(" << float4 << " _h0, " << float4 << " _h1)\n";
+	OS << "{\n";
+	OS << "	float x = uintBitsToFloat(packHalf2x16(_h0.xy));\n";
+	OS << "	float y = uintBitsToFloat(packHalf2x16(_h0.zw));\n";
+	OS << "	float z = uintBitsToFloat(packHalf2x16(_h1.xy));\n";
+	OS << "	float w = uintBitsToFloat(packHalf2x16(_h1.zw));\n";
+	OS << "	return " << float4 << "(x, y, z, w);\n";
+	OS << "}\n\n";
+
+	OS << float2 << " gather(" << float4 << " _h)\n";
+	OS << "{\n";
+	OS << "	float x = uintBitsToFloat(packHalf2x16(_h.xy));\n";
+	OS << "	float y = uintBitsToFloat(packHalf2x16(_h.zw));\n";
+	OS << "	return " << float2 << "(x, y);\n";
+	OS << "}\n\n";
+
 	insertMainStart(OS);
 	OS << main << std::endl;
 	insertMainEnd(OS);

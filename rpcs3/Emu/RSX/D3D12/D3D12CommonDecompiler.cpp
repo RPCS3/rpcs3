@@ -184,12 +184,12 @@ void insert_d3d12_legacy_function(std::ostream& OS, bool is_fragment_program)
 	**/
 	OS << "uint packHalf2x16(float2 val)";
 	OS << "{\n";
-	OS << "	return packSnorm2x16(val / 6.1E+5);\n";
+	OS << "	return packSnorm2x16(val / 65504.);\n";
 	OS << "}\n\n";
 
 	OS << "float2 unpackHalf2x16(uint val)";
 	OS << "{\n";
-	OS << "	return unpackSnorm2x16(val) * 6.1E+5;\n";
+	OS << "	return unpackSnorm2x16(val) * 65504.;\n";
 	OS << "}\n\n";
 
 	OS << "float read_value(float4 src, uint remap_index)\n";
