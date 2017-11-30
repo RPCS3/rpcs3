@@ -14,6 +14,7 @@
 #include "Utilities/mutex.h"
 #include "Emu/System.h"
 #include "GLRenderTargets.h"
+#include "GLOverlays.h"
 #include "../Common/TextureUtils.h"
 #include "../Common/texture_cache.h"
 #include "../../Memory/vm.h"
@@ -266,6 +267,19 @@ namespace gl
 			type = gl_type;
 			pack_unpack_swap_bytes = swap_bytes;
 
+			if (format == gl::texture::format::rgba)
+			{
+				switch (type)
+				{
+				case gl::texture::type::f16:
+					gcm_format = CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT;
+					break;
+				case gl::texture::type::f32:
+					gcm_format = CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT;
+					break;
+				}
+			}
+
 			real_pitch = width * get_pixel_size(format, type);
 		}
 
@@ -448,7 +462,7 @@ namespace gl
 				rsx::scale_image_nearest(dst, const_cast<const void*>(data), width, height, rsx_pitch, real_pitch, pixel_size, samples_u, samples_v);
 			}
 
-/*			switch (gcm_format)
+			switch (gcm_format)
 			{
 			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 				rsx::shuffle_texel_data_wzyx<u16>(dst, rsx_pitch, width, height);
@@ -456,7 +470,7 @@ namespace gl
 			case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 				rsx::shuffle_texel_data_wzyx<u32>(dst, rsx_pitch, width, height);
 				break;
-			}*/
+			}
 
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
@@ -566,6 +580,7 @@ namespace gl
 	private:
 
 		blitter m_hw_blitter;
+		gl::rgba8_rg16_convert_pass m_rgba8_rg16_converter;
 		std::vector<u32> m_temporary_surfaces;
 
 		cached_texture_section& create_texture(u32 id, u32 texaddr, u32 texsize, u32 w, u32 h, u32 depth, u32 mipmaps)
@@ -634,13 +649,23 @@ namespace gl
 			glTexParameteri(dst_type, GL_TEXTURE_BASE_LEVEL, 0);
 			glTexParameteri(dst_type, GL_TEXTURE_MAX_LEVEL, 0);
 
+			m_temporary_surfaces.push_back(dst_id);
+
 			//Empty GL_ERROR
 			glGetError();
 
+			if (ifmt != sized_internal_fmt)
+			{
+				if (sized_internal_fmt == GL_RG16F && ifmt == GL_RGBA8_EXT)
+				{
+					//TODO: Better sized internal format detection
+					m_rgba8_rg16_converter.run(width, height, dst_id, src_id);
+					return dst_id;
+				}
+			}
+
 			glCopyImageSubData(src_id, GL_TEXTURE_2D, 0, x, y, 0,
 				dst_id, dst_type, 0, 0, 0, 0, width, height, 1);
-
-			m_temporary_surfaces.push_back(dst_id);
 
 			//Check for error
 			if (GLenum err = glGetError())
@@ -808,6 +833,8 @@ namespace gl
 		{
 			m_hw_blitter.init();
 			g_hw_blitter = &m_hw_blitter;
+
+			m_rgba8_rg16_converter.create();
 		}
 
 		void destroy() override
@@ -815,6 +842,8 @@ namespace gl
 			clear();
 			g_hw_blitter = nullptr;
 			m_hw_blitter.destroy();
+
+			m_rgba8_rg16_converter.destroy();
 		}
 
 		bool is_depth_texture(const u32 rsx_address, const u32 rsx_size) override
