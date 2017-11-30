@@ -154,7 +154,6 @@ private:
 
 private:
 	std::shared_ptr<DS4Device> GetDevice(const std::string& padId);
-	bool CheckDeviceState(std::shared_ptr<DS4Device> device);
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
 	void ProcessDataToPad(const std::shared_ptr<DS4Device>& ds4Device, const std::shared_ptr<Pad>& pad);
 	// Copies data into padData if status is NewData, otherwise buffer is untouched
