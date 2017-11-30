@@ -505,6 +505,12 @@ protected:
 		return static_cast<u16>((value + 1.0)*(255.0 / 2.0));
 	};
 
+	// input has to be [-1,1]. result will be [0,255]
+	float ConvertAxisF(float value)
+	{
+		return (value + 1.0f) * (255.0f / 2.0f);
+	};
+
 	// The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
 	// using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
 	// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of 8000

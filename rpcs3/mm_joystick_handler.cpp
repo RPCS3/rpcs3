@@ -460,9 +460,56 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 		button_values.emplace(entry.first, js_info.dwButtons & entry.first ? 255 : 0);
 	}
 
-	for (auto entry : pov_list)
+	if (js_caps.wCaps & JOYCAPS_HASPOV)
 	{
-		button_values.emplace(entry.first, js_info.dwPOV == entry.first ? 255 : 0);
+		if (js_caps.wCaps & JOYCAPS_POVCTS)
+		{
+			if (js_info.dwPOV == JOY_POVCENTERED)
+			{
+				button_values.emplace(JOY_POVFORWARD,  0);
+				button_values.emplace(JOY_POVRIGHT,    0);
+				button_values.emplace(JOY_POVBACKWARD, 0);
+				button_values.emplace(JOY_POVLEFT,     0);
+			}
+			else
+			{
+				auto emplacePOVs = [&](float val, u64 pov_neg, u64 pov_pos)
+				{
+					if (val <= 127.5)
+					{
+						val = Clamp0To255((127.5f - val) * 2.0f);
+						button_values.emplace(pov_neg, val);
+						button_values.emplace(pov_pos, 0);
+					}
+					else
+					{
+						val = Clamp0To255((val - 127.5f) * 2.0f);
+						button_values.emplace(pov_neg, 0);
+						button_values.emplace(pov_pos, val);
+					}
+				};
+
+				float rad = static_cast<float>(js_info.dwPOV / 100 * acos(-1) / 180);
+				emplacePOVs(ConvertAxisF(std::cosf(rad)), JOY_POVBACKWARD, JOY_POVFORWARD);
+				emplacePOVs(ConvertAxisF(std::sinf(rad)), JOY_POVLEFT, JOY_POVRIGHT);
+			}
+		}
+		else if (js_caps.wCaps & JOYCAPS_POV4DIR)
+		{
+			u64 val = js_info.dwPOV;
+
+			auto emplacePOV = [&button_values, &val](u64 pov)
+			{
+				int cw = pov + 4500, ccw = pov - 4500;
+				bool pressed = (val == pov) || (val == cw) || (ccw < 0 ? val == 36000 - std::abs(ccw) : val == ccw);
+				button_values.emplace(pov, pressed ? 255 : 0);
+			};
+
+			emplacePOV(JOY_POVFORWARD);
+			emplacePOV(JOY_POVRIGHT);
+			emplacePOV(JOY_POVBACKWARD);
+			emplacePOV(JOY_POVLEFT);
+		}
 	}
 
 	auto add_axis_value = [&](DWORD axis, UINT min, UINT max, u64 pos, u64 neg)
@@ -487,10 +534,18 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 
 	add_axis_value(js_info.dwXpos, js_caps.wXmin, js_caps.wXmax, mmjoy_axis::joy_x_pos, mmjoy_axis::joy_x_neg);
 	add_axis_value(js_info.dwYpos, js_caps.wYmin, js_caps.wYmax, mmjoy_axis::joy_y_neg, mmjoy_axis::joy_y_pos);
-	add_axis_value(js_info.dwZpos, js_caps.wZmin, js_caps.wZmax, mmjoy_axis::joy_z_neg, mmjoy_axis::joy_z_pos);
-	add_axis_value(js_info.dwRpos, js_caps.wRmin, js_caps.wRmax, mmjoy_axis::joy_r_neg, mmjoy_axis::joy_r_pos);
-	add_axis_value(js_info.dwUpos, js_caps.wUmin, js_caps.wUmax, mmjoy_axis::joy_u_pos, mmjoy_axis::joy_u_neg);
-	add_axis_value(js_info.dwVpos, js_caps.wVmin, js_caps.wVmax, mmjoy_axis::joy_v_pos, mmjoy_axis::joy_v_neg);
+
+	if (js_caps.wCaps & JOYCAPS_HASZ)
+		add_axis_value(js_info.dwZpos, js_caps.wZmin, js_caps.wZmax, mmjoy_axis::joy_z_neg, mmjoy_axis::joy_z_pos);
+
+	if (js_caps.wCaps & JOYCAPS_HASR)
+		add_axis_value(js_info.dwRpos, js_caps.wRmin, js_caps.wRmax, mmjoy_axis::joy_r_neg, mmjoy_axis::joy_r_pos);
+
+	if (js_caps.wCaps & JOYCAPS_HASU)
+		add_axis_value(js_info.dwUpos, js_caps.wUmin, js_caps.wUmax, mmjoy_axis::joy_u_pos, mmjoy_axis::joy_u_neg);
+
+	if (js_caps.wCaps & JOYCAPS_HASV)
+		add_axis_value(js_info.dwVpos, js_caps.wVmin, js_caps.wVmax, mmjoy_axis::joy_v_pos, mmjoy_axis::joy_v_neg);
 
 	return button_values;
 }
