@@ -380,7 +380,7 @@ public:
 };
 
 jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string _cpu)
-	: m_link(std::move(_link))
+	: m_link(_link)
 	, m_cpu(std::move(_cpu))
 {
 	if (m_cpu.empty())
