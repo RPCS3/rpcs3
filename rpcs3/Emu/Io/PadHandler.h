@@ -408,6 +408,14 @@ protected:
 		return 255.0f * val;
 	};
 
+	// Get new scaled value between -255 and 255 based on its minimum and maximum
+	float ScaleStickInput2(s32 raw_value, int minimum, int maximum)
+	{
+		// value based on max range converted to [0, 1]
+		float val = float(Clamp(raw_value, minimum, maximum) - minimum) / float(abs(maximum) + abs(minimum));
+		return (510.0f * val) - 255.0f;
+	};
+
 	// normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
 	// the input values must lie in 0+
 	u16 NormalizeDirectedInput(u16 raw_value, float threshold, float maximum)
@@ -503,12 +511,6 @@ protected:
 	u16 ConvertAxis(float value)
 	{
 		return static_cast<u16>((value + 1.0)*(255.0 / 2.0));
-	};
-
-	// input has to be [-1,1]. result will be [0,255]
-	float ConvertAxisF(float value)
-	{
-		return (value + 1.0f) * (255.0f / 2.0f);
 	};
 
 	// The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
