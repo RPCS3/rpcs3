@@ -86,9 +86,9 @@ void spu_recompiler_base::enter(SPUThread& spu)
 
 	spu.pc = res & 0x3fffc;
 
-	if ((spu.ch_event_stat & SPU_EVENT_INTR_TEST & spu.ch_event_mask) > SPU_EVENT_INTR_ENABLED)
+	if (spu.interrupts_enabled && (spu.ch_event_mask & spu.ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
 	{
-		spu.ch_event_stat &= ~SPU_EVENT_INTR_ENABLED;
+        spu.interrupts_enabled = false;
 		spu.srr0 = std::exchange(spu.pc, 0);
 	}
 }

@@ -21,7 +21,7 @@ void RawSPUThread::cpu_task()
 	SPUThread::cpu_task();
 
 	// save next PC and current SPU Interrupt status
-	npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
+    npc = pc | (interrupts_enabled);
 }
 
 void RawSPUThread::on_init(const std::shared_ptr<void>& _this)
