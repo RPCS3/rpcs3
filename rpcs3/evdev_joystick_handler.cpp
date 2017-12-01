@@ -187,27 +187,20 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 		if (libevdev_fetch_event_value(dev, EV_ABS, code, &val) == 0)
 			continue;
 
-		float fvalue = ScaleStickInput(val, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code));
-
 		// Triggers should be ABS_Z and ABS_RZ and do not need handling of negative values
 		if (code == ABS_Z || code == ABS_RZ)
 		{
+			float fvalue = ScaleStickInput(val, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code));
 			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(fvalue), false));
 			continue;
 		}
 
-		bool is_negative = fvalue <= 127.5;
+		float fvalue = ScaleStickInput2(val, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code));
 
-		if (is_negative)
-		{
-			u16 value = Clamp0To255((127.5f - fvalue) * 2.0f);
-			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(value), true));
-		}
+		if (fvalue < 0)
+			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(std::abs(fvalue)), true));
 		else
-		{
-			u16 value = Clamp0To255((fvalue - 127.5f) * 2.0f);
-			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(value), false));
-		}
+			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(fvalue), false));
 	}
 
 	return button_values;
@@ -418,21 +411,16 @@ int evdev_joystick_handler::GetButtonInfo(const input_event& evt, libevdev* dev,
 	}
 	case EV_ABS:
 	{
-		float fvalue = ScaleStickInput(val, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code));
-
 		// Triggers should be ABS_Z and ABS_RZ and do not need handling of negative values
 		if (code == ABS_Z || code == ABS_RZ)
 		{
-			value = static_cast<u16>(fvalue);
+			value = static_cast<u16>(ScaleStickInput(val, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code)));
 			return code;
 		}
 
-		is_negative = fvalue <= 127.5;
-
-		if (is_negative)
-			value = Clamp0To255((127.5f - fvalue) * 2.0f);
-		else
-			value = Clamp0To255((fvalue - 127.5f) * 2.0f);
+		float fvalue = ScaleStickInput2(val, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code));
+		is_negative = fvalue < 0;
+		value = static_cast<u16>(std::abs(fvalue));
 
 		return code;
 	}

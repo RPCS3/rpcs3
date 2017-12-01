@@ -2,18 +2,6 @@
 #ifdef _WIN32
 #include "mm_joystick_handler.h"
 
-namespace
-{
-	const DWORD THREAD_SLEEP = 10;
-	const DWORD THREAD_SLEEP_INACTIVE = 100;
-	const DWORD THREAD_TIMEOUT = 1000;
-
-	inline u16 ConvertAxis(DWORD value)
-	{
-		return static_cast<u16>((value) >> 8);
-	}
-}
-
 mm_joystick_handler::mm_joystick_handler() : is_init(false)
 {
 	// Define border values
@@ -475,23 +463,21 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 			{
 				auto emplacePOVs = [&](float val, u64 pov_neg, u64 pov_pos)
 				{
-					if (val <= 127.5)
+					if (val < 0)
 					{
-						val = Clamp0To255((127.5f - val) * 2.0f);
-						button_values.emplace(pov_neg, val);
+						button_values.emplace(pov_neg, static_cast<u16>(std::abs(val)));
 						button_values.emplace(pov_pos, 0);
 					}
 					else
 					{
-						val = Clamp0To255((val - 127.5f) * 2.0f);
 						button_values.emplace(pov_neg, 0);
-						button_values.emplace(pov_pos, val);
+						button_values.emplace(pov_pos, static_cast<u16>(val));
 					}
 				};
 
 				float rad = static_cast<float>(js_info.dwPOV / 100 * acos(-1) / 180);
-				emplacePOVs(ConvertAxisF(std::cosf(rad)), JOY_POVBACKWARD, JOY_POVFORWARD);
-				emplacePOVs(ConvertAxisF(std::sinf(rad)), JOY_POVLEFT, JOY_POVRIGHT);
+				emplacePOVs(std::cosf(rad) * 255.0f, JOY_POVBACKWARD, JOY_POVFORWARD);
+				emplacePOVs(std::sinf(rad) * 255.0f, JOY_POVLEFT, JOY_POVRIGHT);
 			}
 		}
 		else if (js_caps.wCaps & JOYCAPS_POV4DIR)
@@ -514,20 +500,15 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 
 	auto add_axis_value = [&](DWORD axis, UINT min, UINT max, u64 pos, u64 neg)
 	{
-		u16 value = 0;
-		float fvalue = ScaleStickInput(axis, min, max);
-		bool is_negative = fvalue <= 127.5;
-
-		if (is_negative)
+		float val = ScaleStickInput2(axis, min, max);
+		if (val < 0)
 		{
-			value = Clamp0To255((127.5f - fvalue) * 2.0f);
 			button_values.emplace(pos, 0);
-			button_values.emplace(neg, value);
+			button_values.emplace(neg, static_cast<u16>(std::abs(val)));
 		}
 		else
 		{
-			value = Clamp0To255((fvalue - 127.5f) * 2.0f);
-			button_values.emplace(pos, value);
+			button_values.emplace(pos, static_cast<u16>(val));
 			button_values.emplace(neg, 0);
 		}
 	};
