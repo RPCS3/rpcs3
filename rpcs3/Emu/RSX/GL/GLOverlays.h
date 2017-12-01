@@ -199,9 +199,10 @@ namespace gl
 		}
 	};
 
-	struct rgba8_rg16_convert_pass : public overlay_pass
+	struct rgba8_unorm_rg16_sfloat_convert_pass : public overlay_pass
 	{
-		rgba8_rg16_convert_pass()
+		//Not really needed since directly copying data via ARB_copy_image works out fine
+		rgba8_unorm_rg16_sfloat_convert_pass()
 		{
 			vs_src =
 			{
@@ -222,13 +223,8 @@ namespace gl
 				"\n"
 				"void main()\n"
 				"{\n"
-				"	uvec4 rgba_in = uvec4(texelFetch(fs0, ivec2(gl_FragCoord.xy), 0) * 255. + vec4(0.5)).wyzx;\n"
-				"	uint value = rgba_in.x | rgba_in.y << 8 | rgba_in.z << 16 | rgba_in.w << 24;\n"
+				"	uint value = packUnorm4x8(texelFetch(fs0, ivec2(gl_FragCoord.xy), 0).zyxw);\n"
 				"	ocol.xy = unpackHalf2x16(value);\n"
-				"	if (isnan(ocol.x)) ocol.x = 1.;\n"
-				"	if (isnan(ocol.y)) ocol.y = 1.;\n"
-				"	if (isinf(ocol.x)) ocol.x = 65504.;\n"
-				"	if (isinf(ocol.y)) ocol.y = 65504.;\n"
 				"}\n"
 			};
 		}

@@ -580,7 +580,6 @@ namespace gl
 	private:
 
 		blitter m_hw_blitter;
-		gl::rgba8_rg16_convert_pass m_rgba8_rg16_converter;
 		std::vector<u32> m_temporary_surfaces;
 
 		cached_texture_section& create_texture(u32 id, u32 texaddr, u32 texsize, u32 w, u32 h, u32 depth, u32 mipmaps)
@@ -653,16 +652,6 @@ namespace gl
 
 			//Empty GL_ERROR
 			glGetError();
-
-			if (ifmt != sized_internal_fmt)
-			{
-				if (sized_internal_fmt == GL_RG16F && ifmt == GL_RGBA8_EXT)
-				{
-					//TODO: Better sized internal format detection
-					m_rgba8_rg16_converter.run(width, height, dst_id, src_id);
-					return dst_id;
-				}
-			}
 
 			glCopyImageSubData(src_id, GL_TEXTURE_2D, 0, x, y, 0,
 				dst_id, dst_type, 0, 0, 0, 0, width, height, 1);
@@ -833,8 +822,6 @@ namespace gl
 		{
 			m_hw_blitter.init();
 			g_hw_blitter = &m_hw_blitter;
-
-			m_rgba8_rg16_converter.create();
 		}
 
 		void destroy() override
@@ -842,8 +829,6 @@ namespace gl
 			clear();
 			g_hw_blitter = nullptr;
 			m_hw_blitter.destroy();
-
-			m_rgba8_rg16_converter.destroy();
 		}
 
 		bool is_depth_texture(const u32 rsx_address, const u32 rsx_size) override
