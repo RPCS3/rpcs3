@@ -1862,7 +1862,14 @@ void spu_recompiler::FCMGT(spu_opcode_t op)
 
 void spu_recompiler::DFCMGT(spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+	const auto mask = XmmConst(_mm_set1_epi64x(0x7fffffffffffffff));
+	const XmmLink& va = XmmGet(op.ra, XmmType::Double);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Double);
+
+	c->andpd(va, mask);
+	c->andpd(vb, mask);
+	c->cmppd(vb, va, 1);
+	c->movaps(SPU_OFF_128(gpr, op.rt), vb);
 }
 
 void spu_recompiler::DFA(spu_opcode_t op)
