@@ -109,6 +109,7 @@ private:
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
 	std::unordered_map<u64, u16> GetButtonValues(const JOYINFOEX& js_info, const JOYCAPS& js_caps);
 	int GetIDByName(const std::string& name);
+	bool GetMMJOYDevice(int index, MMJOYDevice& dev);
 
 	bool is_init = false;
 	u32 supportedJoysticks = 0;

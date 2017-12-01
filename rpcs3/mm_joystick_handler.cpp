@@ -85,25 +85,11 @@ bool mm_joystick_handler::Init()
 
 	for (u32 i = 0; i < supportedJoysticks; i++)
 	{
-		JOYINFOEX js_info;
-		JOYCAPS js_caps;
-		js_info.dwSize = sizeof(js_info);
-		js_info.dwFlags = JOY_RETURNALL;
-		joyGetDevCaps(i, &js_caps, sizeof(js_caps));
+		MMJOYDevice dev;
 
-		if (joyGetPosEx(i, &js_info) != JOYERR_NOERROR)
+		if (GetMMJOYDevice(i, dev) == false)
 			continue;
 
-		char drv[32];
-		wcstombs(drv, js_caps.szPname, 31);
-
-		LOG_NOTICE(GENERAL, "Joystick nr.%d found. Driver: %s", i, drv);
-
-		MMJOYDevice dev;
-		dev.device_id = i;
-		dev.device_name = fmt::format("Joystick #%d", i);
-		dev.device_info = js_info;
-		dev.device_caps = js_caps;
 		m_devices.emplace(i, dev);
 	}
 
@@ -128,13 +114,12 @@ std::vector<std::string> mm_joystick_handler::ListDevices()
 
 bool mm_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
 {
-	if (!Init()) return false;
+	if (!Init())
+		return false;
 
 	int id = GetIDByName(device);
 	if (id < 0)
-	{
 		return false;
-	}
 
 	std::shared_ptr<MMJOYDevice> joy_device = std::make_shared<MMJOYDevice>(m_devices.at(id));
 
@@ -216,7 +201,11 @@ void mm_joystick_handler::ThreadProc()
 		case JOYERR_NOERROR:
 			++online;
 			if (last_connection_status[i] == false)
+			{
+				if (GetMMJOYDevice(dev->device_id, *dev) == false)
+				 continue;
 				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+			}
 			last_connection_status[i] = true;
 			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 
@@ -541,6 +530,30 @@ int mm_joystick_handler::GetIDByName(const std::string& name)
 		}
 	}
 	return -1;
+}
+
+bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice& dev)
+{
+	JOYINFOEX js_info;
+	JOYCAPS js_caps;
+	js_info.dwSize = sizeof(js_info);
+	js_info.dwFlags = JOY_RETURNALL;
+	joyGetDevCaps(index, &js_caps, sizeof(js_caps));
+
+	if (joyGetPosEx(index, &js_info) != JOYERR_NOERROR)
+		return false;
+
+	char drv[32];
+	wcstombs(drv, js_caps.szPname, 31);
+
+	LOG_NOTICE(GENERAL, "Joystick nr.%d found. Driver: %s", index, drv);
+
+	dev.device_id = index;
+	dev.device_name = fmt::format("Joystick #%d", index);
+	dev.device_info = js_info;
+	dev.device_caps = js_caps;
+
+	return true;
 }
 
 #endif
