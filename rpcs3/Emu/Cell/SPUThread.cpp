@@ -815,7 +815,7 @@ void SPUThread::process_mfc_cmd()
 	case MFC_GETLB_CMD:
 	case MFC_GETLF_CMD:
 	{
-		if (ch_mfc_cmd.size <= max_imm_dma_size && mfc_queue.size() == 0 && (ch_stall_mask & (1u << ch_mfc_cmd.tag)) == 0)
+		if (ch_mfc_cmd.size <= max_imm_dma_size && mfc_queue.size() == 0)
 		{
 			vm::reader_lock lock(vm::try_to_lock);
 
@@ -890,7 +890,7 @@ void SPUThread::process_mfc_cmd()
 	case MFC_EIEIO_CMD:
 	case MFC_SYNC_CMD:
 	{
-		ch_mfc_cmd.size = 0;
+		ch_mfc_cmd.size = 1;
 
 		if (mfc_queue.size() == 0)
 		{
