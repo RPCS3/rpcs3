@@ -225,15 +225,28 @@ class evdev_joystick_handler final : public PadHandlerBase
 		{ ABS_MT_TOOL_Y      , "MT Tool Y-"   },
 	};
 
+	struct EvdevButton
+	{
+		u32 code;
+		int dir;
+		int type;
+	};
+
 	struct EvdevDevice
 	{
-		libevdev* device;
+		libevdev* device = nullptr;
 		std::string path;
 		std::shared_ptr<Pad> pad;
 		std::unordered_map<int, bool> axis_orientations; // value is true if key was found in rev_axis_list
 		float stick_val[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		u16 val_min[4] = { 0, 0, 0, 0 };
 		u16 val_max[4] = { 0, 0, 0, 0 };
+		EvdevButton trigger_left  = { 0, 0, 0 };
+		EvdevButton trigger_right = { 0, 0, 0 };
+		std::vector<EvdevButton> axis_left  = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
+		std::vector<EvdevButton> axis_right = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
+		int cur_dir = 0;
+		int cur_type = 0;
 	};
 
 	const int BUTTON_COUNT = 17;
@@ -254,7 +267,7 @@ private:
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 	bool update_device(EvdevDevice& device, bool use_cell = true);
 	void update_devs(bool use_cell = true);
-	int add_device(const std::string& device, bool in_settings = false, std::shared_ptr<Pad> pad = nullptr, const std::unordered_map<int, bool>& axis_map = std::unordered_map<int, bool>());
+	int add_device(const std::string& device, bool in_settings = false);
 	int GetButtonInfo(const input_event& evt, libevdev* dev, int& button_code, bool& is_negative);
 	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(libevdev* dev);
 
@@ -264,4 +277,5 @@ private:
 	std::vector<std::string> blacklist;
 	std::vector<EvdevDevice> devices;
 	int m_pad_index = -1;
+	EvdevDevice m_dev;
 };
