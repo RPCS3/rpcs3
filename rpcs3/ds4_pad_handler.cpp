@@ -147,7 +147,7 @@ ds4_pad_handler::ds4_pad_handler() : is_init(false)
 	m_thumb_threshold = thumb_max / 2;
 }
 
-void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist)
+void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist, std::vector<std::string> buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
