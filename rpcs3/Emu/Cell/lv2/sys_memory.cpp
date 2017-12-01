@@ -264,7 +264,11 @@ error_code sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u3
 	}
 
 	mem_info->total_user_memory = ct->size; // Total container memory
-	mem_info->available_user_memory = ct->size - ct->used; // Available container memory
+	// Available container memory, minus a hidden 'buffer' 
+	// This buffer seems to be used by the PS3 OS for c style 'mallocs'
+	// Todo: Research this more, even though we dont use this buffer, it helps out games when calculating 
+	//	     expected memory they can use allowing them to boot
+	mem_info->available_user_memory = ct->size - ct->used - 0x1000000; 
 
 	return CELL_OK;
 }
