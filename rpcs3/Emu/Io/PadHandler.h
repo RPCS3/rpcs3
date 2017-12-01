@@ -384,6 +384,24 @@ protected:
 	};
 
 	// Search an unordered map for a string value and return found keycode
+	int FindKeyCodeByString(std::unordered_map<u32, std::string> map, const std::string& name, bool fallback = true)
+	{
+		for (auto it = map.begin(); it != map.end(); ++it)
+		{
+			if (it->second == name)
+				return it->first;
+		}
+
+		if (fallback)
+		{
+			LOG_ERROR(HLE, "long FindKeyCodeByString fohr [name = %s] returned with 0", name);
+			return 0;
+		}
+
+		return -1;
+	};
+
+	// Search an unordered map for a string value and return found keycode
 	long FindKeyCodeByString(std::unordered_map<u64, std::string> map, const std::string& name, bool fallback = true)
 	{
 		for (auto it = map.begin(); it != map.end(); ++it)
