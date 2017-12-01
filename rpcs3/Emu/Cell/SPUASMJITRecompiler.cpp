@@ -376,12 +376,12 @@ void spu_recompiler::FunctionCall()
 					fmt::throw_exception("Undefined behaviour" HERE);
 				}
 
-				_spu->set_interrupt_status(true);
+				_spu->interrupts_enabled = true;
 				_spu->pc &= ~0x4000000;
 			}
 			else if (_spu->pc & 0x8000000)
 			{
-				_spu->set_interrupt_status(false);
+				_spu->interrupts_enabled = false;
 				_spu->pc &= ~0x8000000;
 			}
 
