@@ -80,27 +80,15 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			}
 		}
 
-		for (AnalogStick& stick : pad->m_sticks)
+		for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
 		{
-			if (stick.m_keyCodeMax != code && stick.m_keyCodeMin != code)
-				continue;
+			if (pad->m_sticks[i].m_keyCodeMax == code)
+				m_stick_max[i] = pressed ? 255 : 128;
 
-			//slightly less hack job for key based analog stick
-			//	should also fix/make transitions when using keys smoother
-			//	the logic here is that when a key is released,
-			//	if we are at the opposite end of the axis, dont reset to middle
-			if (stick.m_keyCodeMax == code)
-			{
-				if (pressed) stick.m_value = 255;
-				else if (stick.m_value == 0) stick.m_value = 0;
-				else stick.m_value = 128;
-			}
-			if (stick.m_keyCodeMin == code)
-			{
-				if (pressed) stick.m_value = 0;
-				else if (stick.m_value == 255) stick.m_value = 255;
-				else stick.m_value = 128;
-			}
+			if (pad->m_sticks[i].m_keyCodeMin == code)
+				m_stick_min[i] = pressed ? 128 : 0;
+
+			pad->m_sticks[i].m_value = m_stick_max[i] - m_stick_min[i];
 		}
 	}
 }
@@ -140,13 +128,22 @@ bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 	// !m_target->isVisible() is a hack since currently a guiless application will STILL inititialize a gsrender (providing a valid target)
 	if (!m_target || !m_target->isVisible()|| target == m_target)
 	{
-		if (ev->type() == QEvent::KeyPress)
+		switch (ev->type())
 		{
+		case QEvent::KeyPress:
 			keyPressEvent(static_cast<QKeyEvent*>(ev));
-		}
-		else if (ev->type() == QEvent::KeyRelease)
-		{
+			break;
+		case QEvent::KeyRelease:
 			keyReleaseEvent(static_cast<QKeyEvent*>(ev));
+			break;
+		case QEvent::MouseButtonPress:
+			mousePressEvent(static_cast<QMouseEvent*>(ev));
+			break;
+		case QEvent::MouseButtonRelease:
+			mouseReleaseEvent(static_cast<QMouseEvent*>(ev));
+			break;
+		default:
+			break;
 		}
 	}
 	return false;
@@ -169,51 +166,61 @@ void keyboard_pad_handler::SetTargetWindow(QWindow* target)
 	}
 }
 
-void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
+void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 {
 	if (event->isAutoRepeat())
 	{
 		event->ignore();
 		return;
 	}
-	switch (event->key())
+
+	int key = event->key();
+	switch (key)
 	{
-		case Qt::Key_L:
-			if (!(event->modifiers() == Qt::AltModifier)) { Key(event->key(), 1); }
-			break;
-		case Qt::Key_Return:
-			if (!(event->modifiers() == Qt::AltModifier)) { Key(event->key(), 1); }
-			break;
-		case Qt::Key_Escape:
-			break;
-		case Qt::Key_P:
-			if (!(event->modifiers() == Qt::ControlModifier)) { Key(event->key(), 1); }
-			break;
-		case Qt::Key_S:
-			if (!(event->modifiers() == Qt::ControlModifier)) { Key(event->key(), 1); }
-			break;
-		case Qt::Key_R:
-			if (!(event->modifiers() == Qt::ControlModifier)) { Key(event->key(), 1); }
-			break;
-		case Qt::Key_E:
-			if (!(event->modifiers() == Qt::ControlModifier)) { Key(event->key(), 1); }
-			break;
-		default:
-			Key(event->key() + GetModifierCode(event), 1);
-			break;
+	case Qt::Key_L:
+	case Qt::Key_Return:
+		if (!(event->modifiers() == Qt::AltModifier))
+			Key(key, pressed);
+		break;
+	case Qt::Key_Escape:
+		break;
+	case Qt::Key_P:
+	case Qt::Key_S:
+	case Qt::Key_R:
+	case Qt::Key_E:
+		if (!(event->modifiers() == Qt::ControlModifier))
+			Key(key, pressed);
+		break;
+	default:
+		int keymod = key + GetModifierCode(event);
+		if (keymod == key)
+			Key(keymod, pressed);
+		else
+			Key(key, pressed);
+		break;
 	}
 	event->ignore();
 }
 
+void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
+{
+	processKeyEvent(event, 1);
+}
+
 void keyboard_pad_handler::keyReleaseEvent(QKeyEvent* event)
 {
-	if (event->isAutoRepeat())
-	{
-		event->ignore();
-		return;
-	}
+	processKeyEvent(event, 0);
+}
 
-	Key(event->key() + GetModifierCode(event), 0);
+void keyboard_pad_handler::mousePressEvent(QMouseEvent* event)
+{
+	Key(event->button(), 1);
+	event->ignore();
+}
+
+void keyboard_pad_handler::mouseReleaseEvent(QMouseEvent* event)
+{
+	Key(event->button(), 0, 0);
 	event->ignore();
 }
 
@@ -224,10 +231,21 @@ std::vector<std::string> keyboard_pad_handler::ListDevices()
 	return list_devices;
 }
 
+std::string keyboard_pad_handler::GetMouseName(const QMouseEvent* event)
+{
+	return GetMouseName(event->button());
+}
+
+std::string keyboard_pad_handler::GetMouseName(u32 button)
+{
+	auto it = mouse_list.find(button);
+	if (it != mouse_list.end())
+		return it->second;
+	return "FAIL";
+}
+
 std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
 {
-	//TODO what about numpad?
-	// Fix some unknown button names
 	switch (keyEvent->key())
 	{
 	case Qt::Key_Alt:
@@ -303,6 +321,16 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 
 	m_pad_config.load();
 
+	auto find_key = [&](const cfg::string& name)
+	{
+		int key = FindKeyCode(mouse_list, name, false);
+		if (key < 0)
+			key = GetKeyCode(name);
+		if (key < 0)
+			key = 0;
+		return key;
+	};
+
 	//Fixed assign change, default is both sensor and press off
 	pad->Init
 	(
@@ -312,29 +340,29 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 		CELL_PAD_DEV_TYPE_STANDARD
 	);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.left),     CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.down),     CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.right),    CELL_PAD_CTRL_RIGHT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.up),       CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.start),    CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.r3),       CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.l3),       CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, GetKeyCode(m_pad_config.select),   CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.ps),       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.square),   CELL_PAD_CTRL_SQUARE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.cross),    CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.circle),   CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.triangle), CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.r1),       CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.l1),       CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.r2),       CELL_PAD_CTRL_R2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, GetKeyCode(m_pad_config.l2),       CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.left),     CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.down),     CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.right),    CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.up),       CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.start),    CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.r3),       CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.l3),       CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.select),   CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.ps),       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0,                               0x0); // Reserved
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.square),   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.cross),    CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.circle),   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.triangle), CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.r1),       CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.l1),       CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.r2),       CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(m_pad_config.l2),       CELL_PAD_CTRL_L2);
 
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  GetKeyCode(m_pad_config.ls_left), GetKeyCode(m_pad_config.ls_right));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  GetKeyCode(m_pad_config.ls_up),   GetKeyCode(m_pad_config.ls_down));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, GetKeyCode(m_pad_config.rs_left), GetKeyCode(m_pad_config.rs_right));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, GetKeyCode(m_pad_config.rs_up),   GetKeyCode(m_pad_config.rs_down));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  find_key(m_pad_config.ls_left), find_key(m_pad_config.ls_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  find_key(m_pad_config.ls_up),   find_key(m_pad_config.ls_down));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, find_key(m_pad_config.rs_left), find_key(m_pad_config.rs_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, find_key(m_pad_config.rs_up),   find_key(m_pad_config.rs_down));
 
 	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 512);
 	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 399);
@@ -351,5 +379,4 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 
 void keyboard_pad_handler::ThreadProc()
 {
-
 }
