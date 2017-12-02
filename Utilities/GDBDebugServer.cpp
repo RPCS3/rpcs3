@@ -453,9 +453,9 @@ bool GDBDebugServer::cmd_thread_info(gdb_cmd & cmd)
 		result += u64_to_padded_hex(static_cast<u64>(cpu.id));
 	};
 	idm::select<ppu_thread>(on_select);
-	idm::select<ARMv7Thread>(on_select);
-	idm::select<RawSPUThread>(on_select);
-	idm::select<SPUThread>(on_select);
+	//idm::select<ARMv7Thread>(on_select);
+	//idm::select<RawSPUThread>(on_select);
+	//idm::select<SPUThread>(on_select);
 
 	//todo: this may exceed max command length
 	result = "m" + result + "l";
@@ -465,12 +465,14 @@ bool GDBDebugServer::cmd_thread_info(gdb_cmd & cmd)
 
 bool GDBDebugServer::cmd_current_thread(gdb_cmd & cmd)
 {
-	return send_cmd_ack(selected_thread.expired() ? "" : u64_to_padded_hex(selected_thread.lock()->id));
+	return send_cmd_ack(selected_thread.expired() ? "" : ("QC" + u64_to_padded_hex(selected_thread.lock()->id)));
 }
 
 bool GDBDebugServer::cmd_read_register(gdb_cmd & cmd)
 {
-	select_thread(general_ops_thread_id);
+	if (!select_thread(general_ops_thread_id)) {
+		return send_cmd_ack("E02");
+	}
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
 		auto ppu = std::static_pointer_cast<ppu_thread>(th);
@@ -488,7 +490,9 @@ bool GDBDebugServer::cmd_read_register(gdb_cmd & cmd)
 
 bool GDBDebugServer::cmd_write_register(gdb_cmd & cmd)
 {
-	select_thread(general_ops_thread_id);
+	if (!select_thread(general_ops_thread_id)) {
+		return send_cmd_ack("E02");
+	}
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
 		auto ppu = std::static_pointer_cast<ppu_thread>(th);

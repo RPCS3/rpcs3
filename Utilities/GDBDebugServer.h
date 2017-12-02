@@ -115,10 +115,6 @@ protected:
 	void on_exit() override final;
 
 public:
-	static const u32 id_base = 1;
-	static const u32 id_step = 1;
-	static const u32 id_count = 0x100000;
-
 	bool from_breakpoint = true;
 	bool stop = false;
 
@@ -127,5 +123,13 @@ public:
 };
 
 extern u32 g_gdb_debugger_id;
+
+template <>
+struct id_manager::on_stop<GDBDebugServer> {
+	static inline void func(GDBDebugServer* ptr)
+	{
+		if (ptr) ptr->on_stop();
+	}
+};
 
 #endif
