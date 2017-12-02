@@ -82,12 +82,12 @@ public:
 
 	u64 get_hash(RSXVertexProgram &prog)
 	{
-		return program_hash_util::vertex_program_hash()(prog);
+		return program_hash_util::vertex_program_utils::get_vertex_program_ucode_hash(prog);
 	}
 
 	u64 get_hash(RSXFragmentProgram &prog)
 	{
-		return program_hash_util::fragment_program_hash()(prog);
+		return program_hash_util::fragment_program_utils::get_fragment_program_ucode_hash(prog);
 	}
 
 	template <typename... Args>
