@@ -924,7 +924,8 @@ void VKGSRender::begin()
 {
 	rsx::thread::begin();
 
-	if (skip_frame || renderer_unavailable)
+	if (skip_frame || renderer_unavailable ||
+		(conditional_render_enabled && conditional_render_test_failed))
 		return;
 
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
@@ -1089,16 +1090,10 @@ void VKGSRender::close_render_pass()
 
 void VKGSRender::end()
 {
-	if (skip_frame || !framebuffer_status_valid || renderer_unavailable)
+	if (skip_frame || !framebuffer_status_valid || renderer_unavailable ||
+		(conditional_render_enabled && conditional_render_test_failed) ||
+		!check_program_status())
 	{
-		rsx::thread::end();
-		return;
-	}
-
-	//Load program here since it is dependent on vertex state
-	if (!check_program_status())
-	{
-		LOG_ERROR(RSX, "No valid program bound to pipeline. Skipping draw");
 		rsx::thread::end();
 		return;
 	}
@@ -2434,7 +2429,9 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	if (zeta_address)
 	{
-		if (!rsx::method_registers.depth_test_enabled() && target != rsx::surface_target::none)
+		if (!rsx::method_registers.depth_test_enabled() &&
+			!rsx::method_registers.stencil_test_enabled() &&
+			target != rsx::surface_target::none)
 		{
 			//Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
 			const bool is_depth_clear = !!(context & rsx::framebuffer_creation_context::context_clear_depth);
@@ -2455,7 +2452,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, zeta_pitch = %d, color_pitch=%d", zeta_address, zeta_pitch, surface_pitchs[index]);
 			if (context == rsx::framebuffer_creation_context::context_clear_depth ||
-				rsx::method_registers.depth_test_enabled() ||
+				rsx::method_registers.depth_test_enabled() || rsx::method_registers.stencil_test_enabled() ||
 				(!rsx::method_registers.color_write_enabled() && rsx::method_registers.depth_write_enabled()))
 			{
 				// Use address for depth data

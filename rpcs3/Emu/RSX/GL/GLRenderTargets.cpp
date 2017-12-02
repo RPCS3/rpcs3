@@ -191,7 +191,9 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	if (depth_address)
 	{
-		if (!rsx::method_registers.depth_test_enabled() && target != rsx::surface_target::none)
+		if (!rsx::method_registers.depth_test_enabled() &&
+			!rsx::method_registers.stencil_test_enabled() &&
+			target != rsx::surface_target::none)
 		{
 			//Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
 			const bool is_depth_clear = !!(context & rsx::framebuffer_creation_context::context_clear_depth);
@@ -214,7 +216,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			//TODO: Research clearing both depth AND color
 			//TODO: If context is creation_draw, deal with possibility of a lost buffer clear
 			if (context == rsx::framebuffer_creation_context::context_clear_depth ||
-				rsx::method_registers.depth_test_enabled() ||
+				rsx::method_registers.depth_test_enabled() || rsx::method_registers.stencil_test_enabled() ||
 				(!rsx::method_registers.color_write_enabled() && rsx::method_registers.depth_write_enabled()))
 			{
 				// Use address for depth data
