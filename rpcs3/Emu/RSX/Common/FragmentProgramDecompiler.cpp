@@ -444,15 +444,17 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 	std::stringstream OS;
 	insertHeader(OS);
-	OS << std::endl;
+	OS << "\n";
 	insertConstants(OS);
-	OS << std::endl;
+	OS << "\n";
 	insertIntputs(OS);
-	OS << std::endl;
+	OS << "\n";
 	insertOutputs(OS);
-	OS << std::endl;
+	OS << "\n";
 
-	//TODO: Better organization for this
+	//Insert global function definitions
+	insertGlobalFunctions(OS);
+
 	std::string float2 = getFloatTypeName(2);
 	std::string float4 = getFloatTypeName(4);
 
