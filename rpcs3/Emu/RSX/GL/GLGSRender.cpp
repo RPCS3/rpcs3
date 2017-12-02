@@ -168,10 +168,8 @@ void GLGSRender::begin()
 {
 	rsx::thread::begin();
 
-	if (skip_frame)
-		return;
-
-	if (conditional_render_enabled && conditional_render_test_failed)
+	if (skip_frame ||
+		(conditional_render_enabled && conditional_render_test_failed))
 		return;
 
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
@@ -196,7 +194,9 @@ void GLGSRender::end()
 {
 	std::chrono::time_point<steady_clock> state_check_start = steady_clock::now();
 
-	if (skip_frame || !framebuffer_status_valid || (conditional_render_enabled && conditional_render_test_failed) || !check_program_state())
+	if (skip_frame || !framebuffer_status_valid ||
+		(conditional_render_enabled && conditional_render_test_failed) ||
+		!check_program_state())
 	{
 		rsx::thread::end();
 		return;
