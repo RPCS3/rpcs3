@@ -176,10 +176,13 @@ namespace
 	}
 }
 
-void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
+void D3D12FragmentDecompiler::insertGlobalFunctions(std::stringstream &OS)
 {
 	insert_d3d12_legacy_function(OS, true);
+}
 
+void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
+{
 	for (const ParamType &PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem &PI : PT.items)
