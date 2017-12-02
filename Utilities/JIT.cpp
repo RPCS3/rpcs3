@@ -379,7 +379,7 @@ public:
 	}
 };
 
-jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string _cpu)
+jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string _cpu, llvm::CodeGenOpt::Level optlevel)
 	: m_link(std::move(_link))
 	, m_cpu(std::move(_cpu))
 {
@@ -409,7 +409,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, st
 		// Auxiliary JIT (does not use custom memory manager, only writes the objects)
 		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null_", m_context))
 			.setErrorStr(&result)
-			.setOptLevel(llvm::CodeGenOpt::Aggressive)
+			.setOptLevel(optlevel)
 			.setCodeModel(llvm::CodeModel::Small)
 			.setMCPU(m_cpu)
 			.create());
@@ -423,7 +423,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, st
 		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null", m_context))
 			.setErrorStr(&result)
 			.setMCJITMemoryManager(std::move(mem))
-			.setOptLevel(llvm::CodeGenOpt::Aggressive)
+			.setOptLevel(optlevel)
 			.setCodeModel(llvm::CodeModel::Small)
 			.setMCPU(m_cpu)
 			.create());
@@ -444,21 +444,36 @@ jit_compiler::~jit_compiler()
 {
 }
 
-void jit_compiler::add(std::unique_ptr<llvm::Module> module, const std::string& path)
+void jit_compiler::add(std::unique_ptr<llvm::Module> module, const std::string& path, bool delete_ir)
 {
-	ObjectCache cache{path};
-	m_engine->setObjectCache(&cache);
+	if (!path.empty())
+	{
+		ObjectCache cache{ path };
+		m_engine->setObjectCache(&cache);
+	}
 
 	const auto ptr = module.get();
 	m_engine->addModule(std::move(module));
 	m_engine->generateCodeForModule(ptr);
-	m_engine->setObjectCache(nullptr);
 
-	for (auto& func : ptr->functions())
+	if (!path.empty())
 	{
-		// Delete IR to lower memory consumption
-		func.deleteBody();
+		m_engine->setObjectCache(nullptr);
 	}
+
+	if (delete_ir)
+	{
+		for (auto& func : ptr->functions())
+		{
+			// Delete IR to lower memory consumption
+			func.deleteBody();
+		}
+	}
+}
+
+void jit_compiler::add(std::unique_ptr<llvm::Module> module)
+{
+	add(std::move(module), "");
 }
 
 void jit_compiler::add(const std::string& path)

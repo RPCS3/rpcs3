@@ -273,6 +273,9 @@ struct spu_function_t
 	// Pointer to the compiled function
 	u32(*compiled)(SPUThread* _spu, be_t<u32>* _ls) = nullptr;
 
+	//sha1 hash of function body
+	std::array<u8, 20> hash;
+
 	spu_function_t(u32 addr, u32 size)
 		: addr(addr)
 		, size(size)
@@ -296,5 +299,5 @@ public:
 	~SPUDatabase();
 
 	// Try to retrieve SPU function information
-	spu_function_t* analyse(const be_t<u32>* ls, u32 entry, u32 limit = 0x40000);
+	spu_function_t* analyse(const be_t<u32>* ls, u32 entry, u32 limit = 0x40000, bool find_adjacents = true);
 };

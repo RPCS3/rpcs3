@@ -1,10 +1,12 @@
 #include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Memory/Memory.h"
 
 #include "SPUThread.h"
 #include "SPURecompiler.h"
 #include "SPUASMJITRecompiler.h"
+#include "SPULLVMRecompiler.h"
 #include <algorithm>
 
 extern u64 get_system_time();
@@ -45,7 +47,14 @@ void spu_recompiler_base::enter(SPUThread& spu)
 	{
 		if (!spu.spu_rec)
 		{
-			spu.spu_rec = fxm::get_always<spu_recompiler>();
+			if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
+			{
+				spu.spu_rec = fxm::get_always<spu_recompiler>(spu);
+			}
+			else if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+			{
+				spu.spu_rec = fxm::get_always<spu_llvm_recompiler>(spu);
+			}
 		}
 
 		spu.spu_rec->compile(*func);
@@ -90,5 +99,98 @@ void spu_recompiler_base::enter(SPUThread& spu)
 	{
         spu.interrupts_enabled = false;
 		spu.srr0 = std::exchange(spu.pc, 0);
+	}
+}
+
+u32 spu_recompiler_base::SPUFunctionCall(SPUThread *spu, u32 link) noexcept
+{
+	spu->recursion_level++;
+
+	try
+	{
+		// TODO: check correctness
+
+		if (spu->pc & 0x4000000)
+		{
+			if (spu->pc & 0x8000000)
+			{
+				fmt::throw_exception("Undefined behaviour" HERE);
+			}
+
+			spu->set_interrupt_status(true);
+			spu->pc &= ~0x4000000;
+		}
+		else if (spu->pc & 0x8000000)
+		{
+			spu->set_interrupt_status(false);
+			spu->pc &= ~0x8000000;
+		}
+
+		if (spu->pc == link)
+		{
+			LOG_ERROR(SPU, "Branch-to-next");
+		}
+		else if (spu->pc == link - 4)
+		{
+			LOG_ERROR(SPU, "Branch-to-self");
+		}
+
+		while (!test(spu->state) || !spu->check_state())
+		{
+			// Proceed recursively
+			spu_recompiler_base::enter(*spu);
+
+			if (test(spu->state & cpu_flag::ret))
+			{
+				break;
+			}
+
+			if (spu->pc == link)
+			{
+				spu->recursion_level--;
+				return 0; // Successfully returned 
+			}
+		}
+
+		spu->recursion_level--;
+		return 0x2000000 | spu->pc;
+	}
+	catch (...)
+	{
+		spu->pending_exception = std::current_exception();
+
+		spu->recursion_level--;
+		return 0x1000000 | spu->pc;
+	}
+}
+
+u32 spu_recompiler_base::SPUInterpreterCall(SPUThread* spu, u32 opcode, spu_inter_func_t func) noexcept
+{
+	try
+	{
+		// TODO: check correctness
+
+		const u32 old_pc = spu->pc;
+
+		if (test(spu->state) && spu->check_state())
+		{
+			return 0x2000000 | spu->pc;
+		}
+
+		func(*spu, { opcode });
+
+		if (old_pc != spu->pc)
+		{
+			spu->pc += 4;
+			return 0x2000000 | spu->pc;
+		}
+
+		spu->pc += 4;
+		return 0;
+	}
+	catch (...)
+	{
+		spu->pending_exception = std::current_exception();
+		return 0x1000000 | spu->pc;
 	}
 }

@@ -23,8 +23,8 @@
 const spu_decoder<spu_interpreter_fast> s_spu_interpreter; // TODO: remove
 const spu_decoder<spu_recompiler> s_spu_decoder;
 
-spu_recompiler::spu_recompiler()
-	: m_jit(std::make_shared<asmjit::JitRuntime>())
+spu_recompiler::spu_recompiler(SPUThread &thread)
+	: spu_recompiler_base(thread), m_jit(std::make_shared<asmjit::JitRuntime>())
 {
 	LOG_SUCCESS(SPU, "SPU Recompiler (ASMJIT) created...");
 
@@ -344,10 +344,8 @@ void spu_recompiler::InterpreterCall(spu_opcode_t op)
 			_spu->pending_exception = std::current_exception();
 			return 0x1000000 | _spu->pc;
 		}
-	};
-
-	c->mov(SPU_OFF_32(pc), m_pos);
-	asmjit::CCFuncCall* call = c->call(asmjit::imm_ptr(asmjit::Internal::ptr_cast<void*, u32(SPUThread*, u32, spu_inter_func_t)>(gate)), asmjit::FuncSignature3<u32, void*, u32, void*>(asmjit::CallConv::kIdHost));
+	};	c->mov(SPU_OFF_32(pc), m_pos);
+	asmjit::CCFuncCall* call = c->call(asmjit::imm_ptr(asmjit::Internal::ptr_cast<void*, u32(SPUThread*, u32, spu_inter_func_t)>(spu_recompiler_base::SPUInterpreterCall)), asmjit::FuncSignature3<u32, void*, u32, void*>(asmjit::CallConv::kIdHost));
 	call->setArg(0, *cpu);
 	call->setArg(1, asmjit::imm_u(op.opcode));
 	call->setArg(2, asmjit::imm_ptr(asmjit::Internal::ptr_cast<void*>(s_spu_interpreter.decode(op.opcode))));
@@ -361,69 +359,7 @@ void spu_recompiler::InterpreterCall(spu_opcode_t op)
 
 void spu_recompiler::FunctionCall()
 {
-	auto gate = [](SPUThread* _spu, u32 link) noexcept -> u32
-	{
-		_spu->recursion_level++;
-
-		try
-		{
-			// TODO: check correctness
-
-			if (_spu->pc & 0x4000000)
-			{
-				if (_spu->pc & 0x8000000)
-				{
-					fmt::throw_exception("Undefined behaviour" HERE);
-				}
-
-				_spu->interrupts_enabled = true;
-				_spu->pc &= ~0x4000000;
-			}
-			else if (_spu->pc & 0x8000000)
-			{
-				_spu->interrupts_enabled = false;
-				_spu->pc &= ~0x8000000;
-			}
-
-			if (_spu->pc == link)
-			{
-				LOG_ERROR(SPU, "Branch-to-next");
-			}
-			else if (_spu->pc == link - 4)
-			{
-				LOG_ERROR(SPU, "Branch-to-self");
-			}
-
-			while (!test(_spu->state) || !_spu->check_state())
-			{
-				// Proceed recursively
-				spu_recompiler_base::enter(*_spu);
-
-				if (test(_spu->state & cpu_flag::ret))
-				{
-					break;
-				}
-
-				if (_spu->pc == link)
-				{
-					_spu->recursion_level--;
-					return 0; // Successfully returned 
-				}
-			}
-
-			_spu->recursion_level--;
-			return 0x2000000 | _spu->pc;
-		}
-		catch (...)
-		{
-			_spu->pending_exception = std::current_exception();
-
-			_spu->recursion_level--;
-			return 0x1000000 | _spu->pc;
-		}
-	};
-
-	asmjit::CCFuncCall* call = c->call(asmjit::imm_ptr(asmjit::Internal::ptr_cast<void*, u32(SPUThread*, u32)>(gate)), asmjit::FuncSignature2<u32, SPUThread*, u32>(asmjit::CallConv::kIdHost));
+	asmjit::CCFuncCall* call = c->call(asmjit::imm_ptr(asmjit::Internal::ptr_cast<void*, u32(SPUThread*, u32)>(spu_recompiler_base::SPUFunctionCall)), asmjit::FuncSignature2<u32, SPUThread*, u32>(asmjit::CallConv::kIdHost));
 	call->setArg(0, *cpu);
 	call->setArg(1, asmjit::imm_u(spu_branch_target(m_pos + 4)));
 	call->setRet(0, *addr);
@@ -1038,7 +974,7 @@ void spu_recompiler::BI(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
 	c->and_(*addr, 0x3fffc);
-    CheckInterruptStatus(op);
+	if (op.d || op.e) c->or_(*addr, op.e << 26 | op.d << 27); // interrupt flags neutralize jump table
 	c->jmp(*jt);
 }
 
@@ -1062,7 +998,7 @@ void spu_recompiler::IRET(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(srr0));
 	c->and_(*addr, 0x3fffc);
-    CheckInterruptStatus(op);
+	if (op.d || op.e) c->or_(*addr, op.e << 26 | op.d << 27); // interrupt flags neutralize jump table
 	c->jmp(*jt);
 }
 
@@ -1887,14 +1823,7 @@ void spu_recompiler::FCMGT(spu_opcode_t op)
 
 void spu_recompiler::DFCMGT(spu_opcode_t op)
 {
-	const auto mask = XmmConst(_mm_set1_epi64x(0x7fffffffffffffff));
-	const XmmLink& va = XmmGet(op.ra, XmmType::Double);
-	const XmmLink& vb = XmmGet(op.rb, XmmType::Double);
-
-	c->andpd(va, mask);
-	c->andpd(vb, mask);
-	c->cmppd(vb, va, 1);
-	c->movaps(SPU_OFF_128(gpr, op.rt), vb);
+	fmt::throw_exception("Unexpected instruction" HERE);
 }
 
 void spu_recompiler::DFA(spu_opcode_t op)
