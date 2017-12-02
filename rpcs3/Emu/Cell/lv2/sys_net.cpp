@@ -155,7 +155,7 @@ extern void network_thread_init()
 						events += lv2_socket::poll::read;
 					if (sock.ev_set & (FD_WRITE | FD_CONNECT) && sock.events.test_and_reset(lv2_socket::poll::write))
 						events += lv2_socket::poll::write;
-					
+
 					if ((nwe.lNetworkEvents & FD_READ && nwe.iErrorCode[FD_READ_BIT]) ||
 						(nwe.lNetworkEvents & FD_ACCEPT && nwe.iErrorCode[FD_ACCEPT_BIT]) ||
 						(nwe.lNetworkEvents & FD_CLOSE && nwe.iErrorCode[FD_CLOSE_BIT]) ||
@@ -203,7 +203,7 @@ extern void network_thread_init()
 			}
 
 			s_to_awake.erase(std::unique(s_to_awake.begin(), s_to_awake.end()), s_to_awake.end());
-			
+
 			for (ppu_thread* ppu : s_to_awake)
 			{
 				network_clear_queue(*ppu);
@@ -378,7 +378,7 @@ s32 sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, 
 		paddr->sin_addr   = ntohl(((::sockaddr_in*)&native_addr)->sin_addr.s_addr);
 		paddr->sin_zero   = 0;
 	}
-	
+
 	// Socket id
 	return result;
 }
@@ -672,7 +672,7 @@ s32 sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optname, vm::
 
 		if (level == SYS_NET_SOL_SOCKET)
 		{
-			native_level = SOL_SOCKET;			
+			native_level = SOL_SOCKET;
 
 			switch (optname)
 			{
@@ -1026,7 +1026,7 @@ s32 sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 len, s32
 		name.sin_port        = htons(((sys_net_sockaddr_in*)addr.get_ptr())->sin_port);
 		name.sin_addr.s_addr = htonl(((sys_net_sockaddr_in*)addr.get_ptr())->sin_addr);
 	}
-	
+
 	::socklen_t namelen = sizeof(name);
 	s32 result = 0;
 
@@ -1144,7 +1144,7 @@ s32 sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optname, vm::
 
 		if (level == SYS_NET_SOL_SOCKET)
 		{
-			native_level = SOL_SOCKET;			
+			native_level = SOL_SOCKET;
 
 			switch (optname)
 			{
@@ -1356,8 +1356,7 @@ s32 sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protocol)
 		return -SYS_NET_EPROTONOSUPPORT;
 	}
 
-	const int native_domain = family == SYS_NET_AF_INET ? AF_INET :
-		family == SYS_NET_AF_UNSPEC ? AF_UNSPEC : AF_INET;
+	const int native_domain = AF_INET;
 
 	const int native_type =
 		type == SYS_NET_SOCK_STREAM ? SOCK_STREAM :
@@ -1507,7 +1506,7 @@ s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s3
 				semaphore_lock lock(sock->mutex);
 
 				bs_t<lv2_socket::poll> selected = +lv2_socket::poll::error;
-				
+
 				if (fds[i].events & SYS_NET_POLLIN)
 					selected += lv2_socket::poll::read;
 				if (fds[i].events & SYS_NET_POLLOUT)
@@ -1738,7 +1737,7 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 	{
 		return -SYS_NET_EINVAL;
 	}
-	
+
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		if (timeout)
