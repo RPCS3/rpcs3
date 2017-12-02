@@ -176,7 +176,7 @@ void GDBDebugServer::try_read_cmd(gdb_cmd & out_cmd)
 	char c = read_char();
 	//interrupt
 	if (UNLIKELY(c == 0x03)) {
-		out_cmd.cmd = "\0x03";
+		out_cmd.cmd = '\x03';
 		out_cmd.data = "";
 		out_cmd.checksum = 0;
 		return;
@@ -223,7 +223,7 @@ void GDBDebugServer::try_read_cmd(gdb_cmd & out_cmd)
 	}
 	out_cmd.checksum = read_hexbyte();
 	if (out_cmd.checksum != checksum) {
-		throw new wrong_checksum_exception("Wrong checksum for packet" HERE);
+		throw wrong_checksum_exception("Wrong checksum for packet" HERE);
 	}
 }
 
@@ -425,6 +425,25 @@ u32 GDBDebugServer::get_reg_size(std::shared_ptr<ppu_thread> thread, u32 rid)
 bool GDBDebugServer::send_reason()
 {
 	return send_cmd_ack("S05");
+}
+
+void GDBDebugServer::wait_with_interrupts() {
+	char c;
+	while (!paused) {
+		int result = recv(client_socket, &c, 1, 0);
+
+		if (result == SOCKET_ERROR) {
+			if (check_errno_again()) {
+				thread_ctrl::wait_for(50);
+				continue;
+			}
+
+			gdbDebugServer.error("Error during socket read");
+			fmt::throw_exception("Error during socket read" HERE);
+		} else if (c == 0x03) {
+			paused = true;
+		}
+	}
 }
 
 bool GDBDebugServer::cmd_extended_mode(gdb_cmd & cmd)
@@ -641,17 +660,21 @@ bool GDBDebugServer::cmd_vcont(gdb_cmd & cmd)
 	if (cmd.data[1] == 'c') {
 		select_thread(continue_ops_thread_id);
 		auto ppu = std::static_pointer_cast<ppu_thread>(selected_thread.lock());
+		paused = false;
 		ppu->state -= cpu_flag::dbg_pause;
 		if (Emu.IsPaused()) {
 			Emu.Resume();
+		} else {
+			ppu->notify();
 		}
-		thread_ctrl::wait();
+		wait_with_interrupts();
 		//we are in all-stop mode
 		Emu.Pause();
 		return send_reason();
 	} else if (cmd.data[1] == 's') {
 		select_thread(continue_ops_thread_id);
 		auto ppu = std::static_pointer_cast<ppu_thread>(selected_thread.lock());
+		paused = false;
 		ppu->state += cpu_flag::dbg_step;
 		ppu->state -= cpu_flag::dbg_pause;
 		if (Emu.IsPaused()) {
@@ -659,7 +682,7 @@ bool GDBDebugServer::cmd_vcont(gdb_cmd & cmd)
 		} else {
 			ppu->notify();
 		}
-		thread_ctrl::wait();
+		wait_with_interrupts();
 		//we are in all-stop mode
 		Emu.Pause();
 		return send_reason();
