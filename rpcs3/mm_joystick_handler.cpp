@@ -217,7 +217,7 @@ void mm_joystick_handler::ThreadProc()
 			if (last_connection_status[i] == false)
 			{
 				if (GetMMJOYDevice(m_dev->device_id, *m_dev) == false)
-				 continue;
+					continue;
 				LOG_SUCCESS(HLE, "MMJOY Device %d reconnected.", m_dev->device_id);
 				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 			}

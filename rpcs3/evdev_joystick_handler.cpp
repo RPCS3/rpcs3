@@ -101,7 +101,8 @@ bool evdev_joystick_handler::update_device(EvdevDevice& device, bool use_cell)
 		if (was_connected)
 		{
 			// It was disconnected.
-			if (use_cell) pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+			if (use_cell)
+				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 
 			int fd = libevdev_get_fd(dev);
 			libevdev_free(dev);
@@ -109,9 +110,10 @@ bool evdev_joystick_handler::update_device(EvdevDevice& device, bool use_cell)
 			dev = nullptr;
 		}
 
-		if (use_cell) pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
-		LOG_ERROR(GENERAL, "Joystick %s is not present or accessible [previous status: %d]", path.c_str(),
-			was_connected ? 1 : 0);
+		if (use_cell)
+			pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
+
+		LOG_ERROR(GENERAL, "Joystick %s is not present or accessible [previous status: %d]", path.c_str(), was_connected ? 1 : 0);
 		return false;
 	}
 
@@ -296,8 +298,10 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 		{
 			if (get_blacklist)
 			{
+				int min = libevdev_get_abs_minimum(dev, code);
+				int max = libevdev_get_abs_maximum(dev, code);
 				blacklist.emplace_back(name);
-				LOG_ERROR(HLE, "Evdev Calibration: Added axis [ %d = %s ] to blacklist. Value = %d", code, name, value);
+				LOG_ERROR(HLE, "Evdev Calibration: Added axis [ %d = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, name, value, min, max);
 			}
 			else if (value > pressed_button.first)
 				pressed_button = { value, name };
@@ -320,8 +324,10 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 		{
 			if (get_blacklist)
 			{
+				int min = libevdev_get_abs_minimum(dev, code);
+				int max = libevdev_get_abs_maximum(dev, code);
 				blacklist.emplace_back(name);
-				LOG_ERROR(HLE, "Evdev Calibration: Added rev axis [ %d = %s ] to blacklist. Value = %d", code, name, value);
+				LOG_ERROR(HLE, "Evdev Calibration: Added rev axis [ %d = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, name, value, min, max);
 			}
 			else if (value > pressed_button.first)
 				pressed_button = { value, name };
@@ -378,6 +384,13 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small
 	if (large == device->force_large && small == device->force_small)
 		return;
 
+	// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse.
+	// So I'll use 20ms to be on the safe side. No lag was noticable.
+	if (clock() - device->last_vibration < 20)
+		return;
+
+	device->last_vibration = clock();
+
 	// delete the previous effect (which also stops it)
 	if (device->effect_id != -1)
 	{
@@ -388,7 +401,7 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small
 	if (large == 0 && small == 0)
 	{
 		device->force_large = large;
-		device->force_large = small;
+		device->force_small = small;
 		return;
 	}
 
@@ -433,7 +446,7 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small
 	}
 
 	device->force_large = large;
-	device->force_large = small;
+	device->force_small = small;
 }
 
 void evdev_joystick_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)
@@ -496,15 +509,18 @@ void evdev_joystick_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u1
 	}
 }
 
-int evdev_joystick_handler::GetButtonInfo(const input_event& evt, const EvdevDevice& device, int& value, bool& is_negative)
+int evdev_joystick_handler::GetButtonInfo(const input_event& evt, const EvdevDevice& device, int& value)
 {
 	int code = evt.code;
 	int val = evt.value;
+	m_is_button_or_trigger = false;
 
 	switch (evt.type)
 	{
 	case EV_KEY:
 	{
+		m_is_button_or_trigger = true;
+
 		// get the button value and return its code
 		if (code < BTN_MISC)
 			return -1;
@@ -515,18 +531,21 @@ int evdev_joystick_handler::GetButtonInfo(const input_event& evt, const EvdevDev
 	case EV_ABS:
 	{
 		auto& dev = device.device;
+		int min = libevdev_get_abs_minimum(dev, code);
+		int max = libevdev_get_abs_maximum(dev, code);
 
-		// Triggers should be ABS_Z and ABS_RZ and do not need handling of negative values
-		if (code == device.trigger_left.code || code == device.trigger_right.code)
+		// Triggers do not need handling of negative values
+		if (min >= 0)
 		{
-			value = static_cast<u16>(ScaleStickInput(val, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code)));
+			m_is_negative = false;
+			m_is_button_or_trigger = true;
+			value = static_cast<u16>(ScaleStickInput(val, min, max));
 			return code;
 		}
 
-		float fvalue = ScaleStickInput2(val, libevdev_get_abs_minimum(dev, code), libevdev_get_abs_maximum(dev, code));
-		is_negative = fvalue < 0;
+		float fvalue = ScaleStickInput2(val, min, max);
+		m_is_negative = fvalue < 0;
 		value = static_cast<u16>(std::abs(fvalue));
-
 		return code;
 	}
 	default:
@@ -668,20 +687,12 @@ void evdev_joystick_handler::ThreadProc()
 			continue;
 		}
 
-		bool is_negative = false;
-		int value;
-		int button_code = GetButtonInfo(evt, device, value, is_negative);
-		if (button_code < 0 || value < 0)
-			continue;
-
 		m_dev.cur_type = evt.type;
 
-		auto checkButton = [&](const EvdevButton& b)
-		{
-			return b.code == button_code && b.type == m_dev.cur_type && b.dir == m_dev.cur_dir;
-		};
-
-		bool is_button_or_trigger = evt.type == EV_KEY || checkButton(device.trigger_left) || checkButton(device.trigger_right);
+		int value;
+		int button_code = GetButtonInfo(evt, device, value);
+		if (button_code < 0 || value < 0)
+			continue;
 
 		// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 		for (int i = 0; i < static_cast<int>(pad->m_buttons.size() - 1); i++) // skip reserved button
@@ -702,7 +713,7 @@ void evdev_joystick_handler::ThreadProc()
 					LOG_ERROR(HLE, "FindAxisDirection = %d, Button Nr.%d, value = %d", direction, i, value);
 					continue;
 				}
-				else if (direction != (is_negative ? 1 : 0))
+				else if (direction != (m_is_negative ? 1 : 0))
 				{
 					pad->m_buttons[i].m_value = 0;
 					pad->m_buttons[i].m_pressed = 0;
@@ -724,7 +735,7 @@ void evdev_joystick_handler::ThreadProc()
 			{
 				bool is_direction_min = false;
 
-				if (!is_button_or_trigger && evt.type == EV_ABS)
+				if (!m_is_button_or_trigger && evt.type == EV_ABS)
 				{
 					int index = BUTTON_COUNT + (idx * 2) + 1;
 					int min_direction = FindAxisDirection(axis_orientations, index);
@@ -733,10 +744,10 @@ void evdev_joystick_handler::ThreadProc()
 					if (min_direction < 0)
 						LOG_ERROR(HLE, "keyCodeMin FindAxisDirection = %d, Axis Nr.%d, Button Nr.%d, value = %d", min_direction, idx, index, value);
 					else
-						is_direction_min = is_negative == (min_direction == 1);
+						is_direction_min = m_is_negative == (min_direction == 1);
 				}
 
-				if (is_button_or_trigger || is_direction_min)
+				if (m_is_button_or_trigger || is_direction_min)
 				{
 					device.val_min[idx] = value;
 					TranslateButtonPress(button_code, pressed_min, device.val_min[idx], true);
@@ -750,7 +761,7 @@ void evdev_joystick_handler::ThreadProc()
 			{
 				bool is_direction_max = false;
 
-				if (!is_button_or_trigger && evt.type == EV_ABS)
+				if (!m_is_button_or_trigger && evt.type == EV_ABS)
 				{
 					int index = BUTTON_COUNT + (idx * 2);
 					int max_direction = FindAxisDirection(axis_orientations, index);
@@ -759,10 +770,10 @@ void evdev_joystick_handler::ThreadProc()
 					if (max_direction < 0)
 						LOG_ERROR(HLE, "keyCodeMax FindAxisDirection = %d, Axis Nr.%d, Button Nr.%d, value = %d", max_direction, idx, index, value);
 					else
-						is_direction_max = is_negative == (max_direction == 1);
+						is_direction_max = m_is_negative == (max_direction == 1);
 				}
 
-				if (is_button_or_trigger || is_direction_max)
+				if (m_is_button_or_trigger || is_direction_max)
 				{
 					device.val_max[idx] = value;
 					TranslateButtonPress(button_code, pressed_max, device.val_max[idx], true);
@@ -782,8 +793,6 @@ void evdev_joystick_handler::ThreadProc()
 		std::tie(lx, ly) = NormalizeStickDeadzone(device.stick_val[0], device.stick_val[1], m_pad_config.lstickdeadzone);
 		std::tie(rx, ry) = NormalizeStickDeadzone(device.stick_val[2], device.stick_val[3], m_pad_config.rstickdeadzone);
 
-		// these are added with previous value and divided to 'smooth' out the readings
-
 		if (m_pad_config.padsquircling != 0)
 		{
 			std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, m_pad_config.padsquircling);
@@ -791,9 +800,9 @@ void evdev_joystick_handler::ThreadProc()
 		}
 
 		pad->m_sticks[0].m_value = lx;
-		pad->m_sticks[1].m_value = ly;
+		pad->m_sticks[1].m_value = 255 - ly;
 		pad->m_sticks[2].m_value = rx;
-		pad->m_sticks[3].m_value = ry;
+		pad->m_sticks[3].m_value = 255 - ry;
 	}
 }
 
@@ -882,19 +891,19 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(m_pad_config.right),    CELL_PAD_CTRL_RIGHT);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
 
-	m_dev.axis_left[0]  = evdevbutton(m_pad_config.ls_left);
-	m_dev.axis_left[1]  = evdevbutton(m_pad_config.ls_right);
-	m_dev.axis_left[2]  = evdevbutton(m_pad_config.ls_down);
-	m_dev.axis_left[3]  = evdevbutton(m_pad_config.ls_up);
-	m_dev.axis_right[0] = evdevbutton(m_pad_config.rs_left);
-	m_dev.axis_right[1] = evdevbutton(m_pad_config.rs_right);
-	m_dev.axis_right[2] = evdevbutton(m_pad_config.rs_down);
-	m_dev.axis_right[3] = evdevbutton(m_pad_config.rs_up);
+	m_dev.axis_left[0]  = evdevbutton(m_pad_config.ls_right);
+	m_dev.axis_left[1]  = evdevbutton(m_pad_config.ls_left);
+	m_dev.axis_left[2]  = evdevbutton(m_pad_config.ls_up);
+	m_dev.axis_left[3]  = evdevbutton(m_pad_config.ls_down);
+	m_dev.axis_right[0] = evdevbutton(m_pad_config.rs_right);
+	m_dev.axis_right[1] = evdevbutton(m_pad_config.rs_left);
+	m_dev.axis_right[2] = evdevbutton(m_pad_config.rs_up);
+	m_dev.axis_right[3] = evdevbutton(m_pad_config.rs_down);
 
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  m_dev.axis_left[0].code,  m_dev.axis_left[1].code);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  m_dev.axis_left[2].code,  m_dev.axis_left[3].code);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, m_dev.axis_right[0].code, m_dev.axis_right[1].code);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, m_dev.axis_right[2].code, m_dev.axis_right[3].code);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  m_dev.axis_left[1].code,  m_dev.axis_left[0].code);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  m_dev.axis_left[3].code,  m_dev.axis_left[2].code);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, m_dev.axis_right[1].code, m_dev.axis_right[0].code);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, m_dev.axis_right[3].code, m_dev.axis_right[2].code);
 
 	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 512);
 	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 399);
