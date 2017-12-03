@@ -1109,7 +1109,7 @@ void main_window::CreateConnects()
 
 	auto openSettings = [=](int tabIndex)
 	{
-		settings_dialog dlg(guiSettings, emuSettings,  tabIndex, this);
+		settings_dialog dlg(guiSettings, emuSettings, tabIndex, this);
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, this, &main_window::ConfigureGuiFromSettings);
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
@@ -1270,21 +1270,22 @@ void main_window::CreateConnects()
 	{
 		int index;
 
-		if (act == ui->setIconSizeTinyAct) index = 0;
-		else if (act == ui->setIconSizeSmallAct) index = gui::get_Index(gui::gl_icon_size_small);
-		else if (act == ui->setIconSizeMediumAct) index = gui::get_Index(gui::gl_icon_size_medium);
-		else index = gui::gl_max_slider_pos;
+		if (act == ui->setIconSizeTinyAct)
+			index = 0;
+		else if (act == ui->setIconSizeSmallAct)
+			index = gui::get_Index(gui::gl_icon_size_small);
+		else if (act == ui->setIconSizeMediumAct)
+			index = gui::get_Index(gui::gl_icon_size_medium);
+		else
+			index = gui::gl_max_slider_pos;
 
+		m_save_slider_pos = true;
 		resizeIcons(index);
 	});
 
 	connect (m_gameListFrame, &game_list_frame::RequestIconSizeActSet, [=](const int& idx)
 	{
-		if (idx < gui::get_Index((gui::gl_icon_size_small + gui::gl_icon_size_min) / 2)) ui->setIconSizeTinyAct->setChecked(true);
-		else if (idx < gui::get_Index((gui::gl_icon_size_medium + gui::gl_icon_size_small) / 2)) ui->setIconSizeSmallAct->setChecked(true);
-		else if (idx < gui::get_Index((gui::gl_icon_size_max + gui::gl_icon_size_medium) / 2)) ui->setIconSizeMediumAct->setChecked(true);
-		else ui->setIconSizeLargeAct->setChecked(true);
-
+		SetIconSizeActions(idx);
 		resizeIcons(idx);
 	});
 
@@ -1469,16 +1470,13 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	ui->showCatUnknownAct->setChecked(guiSettings->GetCategoryVisibility(Category::Unknown_Cat));
 	ui->showCatOtherAct->setChecked(guiSettings->GetCategoryVisibility(Category::Others));
 
-	int idx = guiSettings->GetValue(gui::gl_iconSize).toInt();
-	int index = gui::gl_max_slider_pos / 4;
-	if (idx < index) ui->setIconSizeTinyAct->setChecked(true);
-	else if (idx < index * 2) ui->setIconSizeSmallAct->setChecked(true);
-	else if (idx < index * 3) ui->setIconSizeMediumAct->setChecked(true);
-	else ui->setIconSizeLargeAct->setChecked(true);
+	SetIconSizeActions(guiSettings->GetValue(gui::gl_iconSize).toInt());
 
 	bool isListMode = guiSettings->GetValue(gui::gl_listMode).toBool();
-	if (isListMode) ui->setlistModeListAct->setChecked(true);
-	else ui->setlistModeGridAct->setChecked(true);
+	if (isListMode)
+		ui->setlistModeListAct->setChecked(true);
+	else
+		ui->setlistModeGridAct->setChecked(true);
 	m_categoryVisibleActGroup->setEnabled(isListMode);
 
 	if (configure_all)
@@ -1489,6 +1487,18 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 		// Gamelist
 		m_gameListFrame->LoadSettings();
 	}
+}
+
+void main_window::SetIconSizeActions(int idx)
+{
+	if (idx < gui::get_Index((gui::gl_icon_size_small + gui::gl_icon_size_min) / 2))
+		ui->setIconSizeTinyAct->setChecked(true);
+	else if (idx < gui::get_Index((gui::gl_icon_size_medium + gui::gl_icon_size_small) / 2))
+		ui->setIconSizeSmallAct->setChecked(true);
+	else if (idx < gui::get_Index((gui::gl_icon_size_max + gui::gl_icon_size_medium) / 2))
+		ui->setIconSizeMediumAct->setChecked(true);
+	else
+		ui->setIconSizeLargeAct->setChecked(true);
 }
 
 void main_window::keyPressEvent(QKeyEvent *keyEvent)
