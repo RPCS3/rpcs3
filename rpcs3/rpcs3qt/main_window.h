@@ -91,6 +91,7 @@ private Q_SLOTS:
 
 	void SaveWindowState();
 	void ConfigureGuiFromSettings(bool configure_all = false);
+	void SetIconSizeActions(int idx);
 
 protected:
 	void closeEvent(QCloseEvent *event) override;
