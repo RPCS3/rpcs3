@@ -90,6 +90,19 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 		value = npc;
 		return true;
 	}
+	
+	case SPU_RdSigNotify1_offs:
+	{
+		get_ch_value(SPU_RdSigNotify1, value);
+		return true;
+	}
+
+	case SPU_RdSigNotify2_offs:
+	{
+		get_ch_value(SPU_RdSigNotify2, value);
+		return true;
+	}
+
 
 	case SPU_RunCntl_offs:
 	{

@@ -394,6 +394,7 @@ void SPUThread::push_snr(u32 number, u32 value)
 	{
 		channel->push(*this, value);
 	}
+	set_events(SPU_EVENT_S1 >> number);
 }
 
 void SPUThread::do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc)
