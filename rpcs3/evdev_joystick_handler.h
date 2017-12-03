@@ -7,6 +7,7 @@
 #include <libevdev/libevdev.h>
 #include <vector>
 #include <thread>
+#include <ctime>
 
 class evdev_joystick_handler final : public PadHandlerBase
 {
@@ -251,6 +252,7 @@ class evdev_joystick_handler final : public PadHandlerBase
 		bool has_rumble = false;
 		u16 force_large = 0;
 		u16 force_small = 0;
+		clock_t last_vibration = 0;
 	};
 
 	const int BUTTON_COUNT = 17;
@@ -273,7 +275,7 @@ private:
 	bool update_device(EvdevDevice& device, bool use_cell = true);
 	void update_devs(bool use_cell = true);
 	int add_device(const std::string& device, bool in_settings = false);
-	int GetButtonInfo(const input_event& evt, const EvdevDevice& device, int& button_code, bool& is_negative);
+	int GetButtonInfo(const input_event& evt, const EvdevDevice& device, int& button_code);
 	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(const EvdevDevice& device);
 	void SetRumble(EvdevDevice* device, u16 large, u16 small);
 
@@ -284,4 +286,6 @@ private:
 	std::vector<EvdevDevice> devices;
 	int m_pad_index = -1;
 	EvdevDevice m_dev;
+	bool m_is_button_or_trigger;
+	bool m_is_negative;
 };
