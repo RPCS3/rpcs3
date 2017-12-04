@@ -2129,7 +2129,11 @@ void spu_recompiler::FCEQ(spu_opcode_t op)
 
 void spu_recompiler::DFCEQ(spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+  	const XmmLink& va = XmmGet(op.ra, XmmType::Double);
+  	const XmmLink& vb = XmmGet(op.rb, XmmType::Double);
+
+  	c->cmppd(vb, va, 0);
+  	c->movaps(SPU_OFF_128(gpr, op.rt), vb);
 }
 
 void spu_recompiler::MPY(spu_opcode_t op)

@@ -976,7 +976,7 @@ void spu_interpreter_fast::FCEQ(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::DFCEQ(SPUThread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+  	spu.gpr[op.rt].vd = _mm_cmpeq_pd(spu.gpr[op.ra].vd, spu.gpr[op.rb].vd);
 }
 
 void spu_interpreter::MPY(SPUThread& spu, spu_opcode_t op)
