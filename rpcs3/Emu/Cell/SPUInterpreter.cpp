@@ -1013,7 +1013,10 @@ void spu_interpreter_fast::FCMEQ(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::DFCMEQ(SPUThread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+	const auto mask = _mm_castsi128_pd(_mm_set1_epi64x(0x7fffffffffffffff));
+	const auto ra = _mm_and_pd(spu.gpr[op.ra].vd, mask);
+	const auto rb = _mm_and_pd(spu.gpr[op.rb].vd, mask);
+	spu.gpr[op.rt].vd = _mm_cmpeq_pd(ra, rb);
 }
 
 void spu_interpreter::MPYU(SPUThread& spu, spu_opcode_t op)
