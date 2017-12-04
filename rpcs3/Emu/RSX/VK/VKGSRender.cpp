@@ -2426,11 +2426,12 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	//NOTE: Z buffers with pitch = 64 are valid even if they would not fit (GT HD Concept)
 	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(color_fmt, clip_width), 64u);
+	const bool stencil_test_enabled = depth_fmt == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
 
 	if (zeta_address)
 	{
 		if (!rsx::method_registers.depth_test_enabled() &&
-			!rsx::method_registers.stencil_test_enabled() &&
+			!stencil_test_enabled &&
 			target != rsx::surface_target::none)
 		{
 			//Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
@@ -2452,7 +2453,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, zeta_pitch = %d, color_pitch=%d", zeta_address, zeta_pitch, surface_pitchs[index]);
 			if (context == rsx::framebuffer_creation_context::context_clear_depth ||
-				rsx::method_registers.depth_test_enabled() || rsx::method_registers.stencil_test_enabled() ||
+				rsx::method_registers.depth_test_enabled() || stencil_test_enabled ||
 				(!rsx::method_registers.color_write_enabled() && rsx::method_registers.depth_write_enabled()))
 			{
 				// Use address for depth data
