@@ -120,9 +120,11 @@ public:
 	bool from_breakpoint = true;
 	bool stop = false;
 	bool paused = false;
+	u64 pausedBy;
 
 	virtual std::string get_name() const;
 	virtual void on_stop() override final;
+	void pause_from(cpu_thread* t);
 };
 
 extern u32 g_gdb_debugger_id;

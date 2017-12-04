@@ -166,9 +166,10 @@ char GDBDebugServer::read_char()
 
 u8 GDBDebugServer::read_hexbyte()
 {
-	char buf[2];
-	read(buf, 2);
-	return static_cast<u8>(strtol(buf, nullptr, 16));
+	std::string s = "";
+	s += read_char();
+	s += read_char();
+	return hex_to_u8(s);
 }
 
 void GDBDebugServer::try_read_cmd(gdb_cmd & out_cmd)
@@ -540,7 +541,7 @@ bool GDBDebugServer::cmd_read_memory(gdb_cmd & cmd)
 	std::string result;
 	result.reserve(len * 2);
 	for (u32 i = 0; i < len; ++i) {
-		if (vm::check_addr(addr + i)) {
+		if (vm::check_addr(addr, 1, vm::page_info_t::page_readable)) {
 			result += to_hexbyte(vm::read8(addr + i));
 		} else {
 			break;
@@ -566,7 +567,7 @@ bool GDBDebugServer::cmd_write_memory(gdb_cmd & cmd)
 	u32 len = hex_to_u32(cmd.data.substr(s + 1, s2 - s - 1));
 	const char* data_ptr = (cmd.data.c_str()) + s2 + 1;
 	for (u32 i = 0; i < len; ++i) {
-		if (vm::check_addr(addr + i)) {
+		if (vm::check_addr(addr + i, 1, vm::page_info_t::page_writable)) {
 			u8 val;
 			int res = sscanf_s(data_ptr, "%02hhX", &val);
 			if (!res) {
@@ -657,10 +658,13 @@ bool GDBDebugServer::cmd_vcont(gdb_cmd & cmd)
 {
 	//todo: handle multiple actions and thread ids
 	this->from_breakpoint = false;
-	if (cmd.data[1] == 'c') {
+	if (cmd.data[1] == 'c' || cmd.data[1] == 's') {
 		select_thread(continue_ops_thread_id);
 		auto ppu = std::static_pointer_cast<ppu_thread>(selected_thread.lock());
 		paused = false;
+		if (cmd.data[1] == 's') {
+			ppu->state += cpu_flag::dbg_step;
+		}
 		ppu->state -= cpu_flag::dbg_pause;
 		if (Emu.IsPaused()) {
 			Emu.Resume();
@@ -670,21 +674,11 @@ bool GDBDebugServer::cmd_vcont(gdb_cmd & cmd)
 		wait_with_interrupts();
 		//we are in all-stop mode
 		Emu.Pause();
-		return send_reason();
-	} else if (cmd.data[1] == 's') {
-		select_thread(continue_ops_thread_id);
-		auto ppu = std::static_pointer_cast<ppu_thread>(selected_thread.lock());
-		paused = false;
-		ppu->state += cpu_flag::dbg_step;
+		select_thread(pausedBy);
+		// we have to remove dbg_pause from thread that paused execution, otherwise
+		// it will be paused forever (Emu.Resume only removes dbg_global_pause)
+		ppu = std::static_pointer_cast<ppu_thread>(selected_thread.lock());
 		ppu->state -= cpu_flag::dbg_pause;
-		if (Emu.IsPaused()) {
-			Emu.Resume();
-		} else {
-			ppu->notify();
-		}
-		wait_with_interrupts();
-		//we are in all-stop mode
-		Emu.Pause();
 		return send_reason();
 	}
 	return send_cmd_ack("");
@@ -830,6 +824,15 @@ void GDBDebugServer::on_stop()
 	//just in case we are waiting for breakpoint
 	this->notify();
 	named_thread::on_stop();
+}
+
+void GDBDebugServer::pause_from(cpu_thread* t) {
+	if (paused) {
+		return;
+	}
+	paused = true;
+	pausedBy = t->id;
+	notify();
 }
 
 u32 g_gdb_debugger_id = 0;
