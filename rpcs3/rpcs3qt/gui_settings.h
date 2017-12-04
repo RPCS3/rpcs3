@@ -10,6 +10,14 @@
 #include <QBitmap>
 #include <QLabel>
 
+struct Compat_Status
+{
+	QString date;
+	QString color;
+	QString text;
+	QString tooltip;
+};
+
 struct gui_save
 {
 	QString key;
@@ -53,6 +61,7 @@ namespace gui
 		column_resolution,
 		column_sound,
 		column_parental,
+		column_compat,
 
 		column_count
 	};
