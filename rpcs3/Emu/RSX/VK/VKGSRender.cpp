@@ -811,7 +811,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		bool has_queue_ref = false;
 
 		u64 sync_timestamp = 0ull;
-		for (const auto& tex : result.affected_sections)
+		for (const auto& tex : result.sections_to_flush)
 			sync_timestamp = std::max(sync_timestamp, tex->get_sync_timestamp());
 
 		if (!is_rsxthr)
