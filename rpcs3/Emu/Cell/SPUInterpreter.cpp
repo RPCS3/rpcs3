@@ -757,7 +757,7 @@ void spu_interpreter_fast::FCGT(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::DFCGT(SPUThread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+	spu.gpr[op.rt].vd = _mm_cmpgt_pd(spu.gpr[op.ra].vd, spu.gpr[op.rb].vd);
 }
 
 void spu_interpreter_fast::FA(SPUThread& spu, spu_opcode_t op)

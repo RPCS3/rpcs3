@@ -1750,7 +1750,11 @@ void spu_recompiler::FCGT(spu_opcode_t op)
 
 void spu_recompiler::DFCGT(spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+  	const XmmLink& va = XmmGet(op.ra, XmmType::Double);
+  	const XmmLink& vb = XmmGet(op.rb, XmmType::Double);
+	
+  	c->cmppd(vb, va, 1);
+  	c->movaps(SPU_OFF_128(gpr, op.rt), vb);
 }
 
 void spu_recompiler::FA(spu_opcode_t op)
