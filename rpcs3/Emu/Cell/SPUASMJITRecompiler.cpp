@@ -2120,7 +2120,7 @@ void spu_recompiler::FSCRWR(spu_opcode_t op)
 
 void spu_recompiler::DFTSV(spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+	InterpreterCall(op); //TODO
 }
 
 void spu_recompiler::FCEQ(spu_opcode_t op)

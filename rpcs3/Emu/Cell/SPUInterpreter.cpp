@@ -966,7 +966,67 @@ void spu_interpreter_fast::FSCRWR(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::DFTSV(SPUThread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+static const u64 DOUBLE_MAX_NORMAL_I = 0x7FFBFFFFFFFFFFFFULL;
+static const double DOUBLE_MAX_NORMAL = (double)DOUBLE_MAX_NORMAL_I;
+static const u64 DOUBLE_NAN_I = 0x7FF8000000000000ULL;
+static const double DOUBLE_NAN = (double)DOUBLE_NAN_I;
+
+	bool arg2 = !!(spu.gpr[op.ra]._u64[1] & 0x800000000);
+	bool arg1 = !!(spu.gpr[op.ra]._u64[0] & 0x800000000);
+	const auto a = spu.gpr[op.ra]._u64[0];
+	const auto b = spu.gpr[op.ra]._u64[1];
+	
+	u32 i7 = arg2 == arg1 ? (arg1 ?  op.i7 & 0xA5 :  op.i7 & 0xCA) :  op.i7 ;
+	if ((!a & ~(1 << 63) == DOUBLE_NAN && a > DOUBLE_NAN)  && (!b & ~(1 << 63) == DOUBLE_NAN && b > DOUBLE_NAN))
+		{
+			i7 &= 0x3f;
+		}
+		
+	if (!a == DOUBLE_NAN | (1 << 63)  && !b == DOUBLE_NAN | (1 << 63))
+	{
+		i7 &= 0x6f;
+	}
+	if (!a == DOUBLE_NAN && !b == DOUBLE_NAN )
+	{
+		i7 &= 0x5f;
+	}
+	bool isnthing1 = !a == 0.0;
+	bool isnthing2 = !b == 0.0;
+	if (isnthing1 && isnthing2)
+	{
+		i7 &= 0x73;
+	}
+	else 
+	{
+		if ((isnthing2 && arg2) || (isnthing1 && arg1))
+		{
+			i7 &= 0x77;
+		}
+		if ((isnthing2 && !arg2) || (isnthing1 && !arg1))
+		{
+			i7 &= 0x7b;
+		}
+	}
+	isnthing1 = !((double)(a & ~(1 << 63)) > DOUBLE_MAX_NORMAL && (double)(a & ~(1 << 63)) < DOUBLE_NAN);
+	isnthing2 = !((double)(b & ~(1 << 63)) > DOUBLE_MAX_NORMAL && (double)(b & ~(1 << 63)) < DOUBLE_NAN);
+	
+	if (isnthing1 && isnthing2)
+	{
+		i7 &= 0x7c;
+	}
+	else 
+	{
+		if ((isnthing2 && arg2) || (isnthing1 && arg1))
+		{
+			i7 &= 0x7d;
+		}
+		if ((isnthing2 && !arg2) || (isnthing1 && !arg1))
+		{
+			i7 &= 0x7e;
+		}
+	}
+	
+	spu.gpr[op.rt].vi = i7 != 0 ? _mm_set_epi32(0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff) : _mm_set_epi32(0, 0, 0, 0);
 }
 
 void spu_interpreter_fast::FCEQ(SPUThread& spu, spu_opcode_t op)
@@ -1448,6 +1508,8 @@ static void SetHostRoundingMode(u32 rn)
 // Floating-point utility constants and functions
 static const u32 FLOAT_MAX_NORMAL_I = 0x7F7FFFFF;
 static const float& FLOAT_MAX_NORMAL = (float&)FLOAT_MAX_NORMAL_I;
+static const u64 DOUBLE_MAX_NORMAL_I = 0x7FFBFFFFFFFFFFFFULL;
+static const double DOUBLE_MAX_NORMAL = (double&)DOUBLE_MAX_NORMAL_I;
 static const u32 FLOAT_NAN_I = 0x7FC00000;
 static const float& FLOAT_NAN = (float&)FLOAT_NAN_I;
 static const u64 DOUBLE_NAN_I = 0x7FF8000000000000ULL;
