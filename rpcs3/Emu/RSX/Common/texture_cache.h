@@ -939,25 +939,30 @@ namespace rsx
 				}
 
 				//TODO: This bit can cause race conditions if other threads are accessing this memory
-				//1. Unprotect all memory in case of overlapping pages
+				//1. Force readback if surface is not synchronized yet to make unlocked part finish quickly
 				for (auto &tex : data.sections_to_flush)
 				{
 					if (tex->is_locked())
 					{
-						tex->unprotect();
+						if (!tex->is_synchronized())
+							tex->copy_texture(true, std::forward<Args>(extras)...);
+
 						m_cache[get_block_address(tex->get_section_base())].remove_one();
 					}
 				}
 
-				//2. Write all the memory
+				//TODO: Acquire global io lock here
+
+				//2. Unprotect all the memory
 				for (auto &tex : data.sections_to_flush)
 				{
-					if (!tex->flush(std::forward<Args>(extras)...))
-					{
-						//Missed address, note this
-						//TODO: Lower severity when successful to keep the cache from overworking
-						record_cache_miss(*tex);
-					}
+					tex->unprotect();
+				}
+
+				//3. Write all the memory
+				for (auto &tex : data.sections_to_flush)
+				{
+					tex->flush(std::forward<Args>(extras)...);
 				}
 
 				//Restore protection on the sections to reprotect
