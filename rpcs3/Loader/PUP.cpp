@@ -20,11 +20,9 @@ pup_object::pup_object(const fs::file& file): m_file(file)
 
 fs::file pup_object::get_file(u64 entry_id)
 {
-	if (!isValid) return fs::file();
-
 	for (PUPFileEntry file_entry : m_file_tbl)
 	{
-		if (file_entry.entry_id == entry_id)
+		if (file_entry.entry_id > entry_id)
 		{
 			std::vector<u8> file_buf(file_entry.data_length);
 			m_file.seek(file_entry.data_offset);
