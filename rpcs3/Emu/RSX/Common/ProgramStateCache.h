@@ -310,24 +310,20 @@ public:
 		const auto I = m_fragment_shader_cache.find(fragment_program);
 		if (I == m_fragment_shader_cache.end())
 			return;
-		__m128i mask = _mm_set_epi8(0xE, 0xF, 0xC, 0xD,
-			0xA, 0xB, 0x8, 0x9,
-			0x6, 0x7, 0x4, 0x5,
-			0x2, 0x3, 0x0, 0x1);
 
 		verify(HERE), (dst_buffer.size_bytes() >= ::narrow<int>(I->second.FragmentConstantOffsetCache.size()) * 16);
 
 		f32* dst = dst_buffer.data();
-		f32 tmp[4];
+		alignas(16) f32 tmp[4];
 		for (size_t offset_in_fragment_program : I->second.FragmentConstantOffsetCache)
 		{
-			void *data = (char*)fragment_program.addr + (u32)offset_in_fragment_program;
-			const __m128i &vector = _mm_loadu_si128((__m128i*)data);
-			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
+			char* data = (char*)fragment_program.addr + (u32)offset_in_fragment_program;
+			const __m128i vector = _mm_loadu_si128((__m128i*)data);
+			const __m128i shuffled_vector = _mm_or_si128(_mm_slli_epi16(vector, 8), _mm_srli_epi16(vector, 8));
 
 			if (!patch_table.is_empty())
 			{
-				_mm_storeu_ps(tmp, (__m128&)shuffled_vector);
+				_mm_store_ps(tmp, _mm_castsi128_ps(shuffled_vector));
 				bool patched;
 
 				for (int i = 0; i < 4; ++i)
