@@ -1750,7 +1750,11 @@ void spu_recompiler::FCGT(spu_opcode_t op)
 
 void spu_recompiler::DFCGT(spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+  	const XmmLink& va = XmmGet(op.ra, XmmType::Double);
+  	const XmmLink& vb = XmmGet(op.rb, XmmType::Double);
+	
+  	c->cmppd(vb, va, 1);
+  	c->movaps(SPU_OFF_128(gpr, op.rt), vb);
 }
 
 void spu_recompiler::FA(spu_opcode_t op)
@@ -2116,7 +2120,7 @@ void spu_recompiler::FSCRWR(spu_opcode_t op)
 
 void spu_recompiler::DFTSV(spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+	InterpreterCall(op); //TODO
 }
 
 void spu_recompiler::FCEQ(spu_opcode_t op)
@@ -2129,7 +2133,11 @@ void spu_recompiler::FCEQ(spu_opcode_t op)
 
 void spu_recompiler::DFCEQ(spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+  	const XmmLink& va = XmmGet(op.ra, XmmType::Double);
+  	const XmmLink& vb = XmmGet(op.rb, XmmType::Double);
+
+  	c->cmppd(vb, va, 0);
+  	c->movaps(SPU_OFF_128(gpr, op.rt), vb);
 }
 
 void spu_recompiler::MPY(spu_opcode_t op)
@@ -2194,7 +2202,14 @@ void spu_recompiler::FCMEQ(spu_opcode_t op)
 
 void spu_recompiler::DFCMEQ(spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+	const auto mask = XmmConst(_mm_set1_epi64x(0x7fffffffffffffff));
+	const XmmLink& va = XmmGet(op.ra, XmmType::Double);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Double);
+
+	c->andpd(va, mask);
+	c->andpd(vb, mask);
+	c->cmppd(vb, va, 0);
+	c->movaps(SPU_OFF_128(gpr, op.rt), vb);
 }
 
 void spu_recompiler::MPYU(spu_opcode_t op)
