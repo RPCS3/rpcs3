@@ -663,7 +663,7 @@ namespace vk
 
 		cached_texture_section* create_new_texture(vk::command_buffer& cmd, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, const u32 gcm_format,
 				const rsx::texture_upload_context context, const rsx::texture_dimension_extended type, const rsx::texture_create_flags flags,
-				std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+				const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			const u16 section_depth = depth;
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
@@ -753,7 +753,7 @@ namespace vk
 
 		cached_texture_section* upload_image_from_cpu(vk::command_buffer& cmd, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, const u32 gcm_format,
 			const rsx::texture_upload_context context, std::vector<rsx_subresource_layout>& subresource_layout, const rsx::texture_dimension_extended type, const bool swizzled,
-			std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+			const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			auto section = create_new_texture(cmd, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
 					rsx::texture_create_flags::default_component_order, remap_vector);
@@ -822,7 +822,7 @@ namespace vk
 			section.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 		}
 
-		void set_up_remap_vector(cached_texture_section& section, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+		void set_up_remap_vector(cached_texture_section& section, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			auto& view = section.get_view();
 			auto& original_remap = view->info.components;
