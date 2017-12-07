@@ -63,6 +63,9 @@ namespace rsx
 		void semaphore_acquire(thread* rsx, u32 _reg, u32 arg)
 		{
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
+			if (vm::ps3::read32(addr) == arg) return;
+
+			const u64 start = get_system_time();
 			while (vm::ps3::read32(addr) != arg)
 			{
 				// todo: LLE: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
@@ -71,6 +74,13 @@ namespace rsx
 
 				if (Emu.IsStopped())
 					break;
+
+				if ((get_system_time() - start) > 33000)
+				{
+					//If longer than 33ms force exit (1 frame)
+					LOG_ERROR(RSX, "nv406e::semaphore_acquire has timed out. semaphore_address=0x%X", addr);
+					break;
+				}
 
 				std::this_thread::yield();
 			}
