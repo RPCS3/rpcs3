@@ -14,6 +14,7 @@ namespace gl
 	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format);
 	GLenum wrap_mode(rsx::texture_wrap_mode wrap);
 	float max_aniso(rsx::texture_max_anisotropy aniso);
+	std::array<GLenum, 4> get_swizzle_remap(u32 texture_format);
 
 	GLuint create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, rsx::texture_dimension_extended type);
 

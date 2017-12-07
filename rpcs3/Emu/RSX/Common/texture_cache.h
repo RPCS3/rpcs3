@@ -155,11 +155,6 @@ namespace rsx
 	class texture_cache
 	{
 	private:
-		std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector =
-		{
-			{ CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B },
-			{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
-		};
 
 		struct ranged_storage
 		{
@@ -277,6 +272,12 @@ namespace rsx
 		};
 
 	protected:
+		std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector =
+		{
+			{ CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B },
+			{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
+		};
+
 		shared_mutex m_cache_mutex;
 		std::unordered_map<u32, ranged_storage> m_cache;
 		std::unordered_multimap<u32, std::pair<deferred_subresource, image_view_type>> m_temporary_subresource_cache;
@@ -304,7 +305,7 @@ namespace rsx
 				const rsx::texture_upload_context context, const rsx::texture_dimension_extended type, const texture_create_flags flags, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
 		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, const u32 gcm_format, const texture_upload_context context,
 				std::vector<rsx_subresource_layout>& subresource_layout, const rsx::texture_dimension_extended type, const bool swizzled, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
-		virtual void enforce_surface_creation_type(section_storage_type& section, const texture_create_flags expected) = 0;
+		virtual void enforce_surface_creation_type(section_storage_type& section, const u32 gcm_format, const texture_create_flags expected) = 0;
 		virtual void set_up_remap_vector(section_storage_type& section, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
 		virtual void insert_texture_barrier() = 0;
 		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, const u32 gcm_format, u16 size, std::array<image_resource_type, 6>& sources) = 0;
@@ -1689,9 +1690,6 @@ namespace rsx
 
 					max_dst_width = cached_dest->get_width();
 					max_dst_height = cached_dest->get_height();
-
-					//Prep surface
-					enforce_surface_creation_type(*cached_dest, dst.swizzled ? rsx::texture_create_flags::swapped_native_component_order : rsx::texture_create_flags::native_component_order);
 				}
 				else if (overlapping_surfaces.size() > 0)
 				{
@@ -1837,6 +1835,19 @@ namespace rsx
 				invalidate_range_impl_base(dst_address, dst.pitch * dst.height, true, false, false, true, std::forward<Args>(extras)...);
 			}
 
+			u32 gcm_format;
+			if (is_depth_blit)
+				gcm_format = (dst_is_argb8) ? CELL_GCM_TEXTURE_DEPTH24_D8 : CELL_GCM_TEXTURE_DEPTH16;
+			else
+				gcm_format = (dst_is_argb8) ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
+
+			if (cached_dest)
+			{
+				//Prep surface
+				auto channel_order = src_is_render_target ? rsx::texture_create_flags::native_component_order : rsx::texture_create_flags::default_component_order;
+				enforce_surface_creation_type(*cached_dest, gcm_format, channel_order);
+			}
+
 			//Validate clipping region
 			if ((dst.offset_x + dst.clip_x + dst.clip_width) > max_dst_width) dst.clip_x = 0;
 			if ((dst.offset_y + dst.clip_y + dst.clip_height) > max_dst_height) dst.clip_y = 0;
@@ -1855,18 +1866,12 @@ namespace rsx
 
 			if (dest_texture == 0)
 			{
-				u32 gcm_format;
-				if (is_depth_blit)
-					gcm_format = (dst_is_argb8) ? CELL_GCM_TEXTURE_DEPTH24_D8 : CELL_GCM_TEXTURE_DEPTH16;
-				else
-					gcm_format = (dst_is_argb8) ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
-
 				lock.upgrade();
 
 				dest_texture = create_new_texture(cmd, dst.rsx_address, dst.pitch * dst_dimensions.height,
 					dst_dimensions.width, dst_dimensions.height, 1, 1,
 					gcm_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
-					dst.swizzled? rsx::texture_create_flags::swapped_native_component_order : rsx::texture_create_flags::native_component_order,
+					rsx::texture_create_flags::default_component_order,
 					default_remap_vector)->get_raw_texture();
 
 				m_texture_memory_in_use += dst.pitch * dst_dimensions.height;
