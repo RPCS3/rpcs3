@@ -442,6 +442,41 @@ namespace gl
 		}
 	}
 
+	void apply_swizzle_remap(const GLenum target, const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap)
+	{
+		//Remapping tables; format is A-R-G-B
+		//Remap input table. Contains channel index to read color from
+		const auto remap_inputs = decoded_remap.first;
+
+		//Remap control table. Controls whether the remap value is used, or force either 0 or 1
+		const auto remap_lookup = decoded_remap.second;
+
+		GLenum remap_values[4];
+
+		for (u8 channel = 0; channel < 4; ++channel)
+		{
+			switch (remap_lookup[channel])
+			{
+			default:
+				LOG_ERROR(RSX, "Unknown remap function 0x%X", remap_lookup[channel]);
+			case CELL_GCM_TEXTURE_REMAP_REMAP:
+				remap_values[channel] = swizzle_remap[remap_inputs[channel]];
+				break;
+			case CELL_GCM_TEXTURE_REMAP_ZERO:
+				remap_values[channel] = GL_ZERO;
+				break;
+			case CELL_GCM_TEXTURE_REMAP_ONE:
+				remap_values[channel] = GL_ONE;
+				break;
+			}
+		}
+
+		glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, remap_values[0]);
+		glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, remap_values[1]);
+		glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, remap_values[2]);
+		glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, remap_values[3]);
+	}
+
 	void upload_texture(const GLuint id, const u32 texaddr, const u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
 			std::vector<rsx_subresource_layout>& subresources_layout, std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap, bool static_state)
 	{
@@ -453,7 +488,6 @@ namespace gl
 		const std::array<GLenum, 4>& glRemap = get_swizzle_remap(gcm_format);
 
 		GLenum target;
-		GLenum remap_values[4];
 
 		switch (type)
 		{
@@ -496,35 +530,7 @@ namespace gl
 		}
 		else
 		{
-			//Remapping tables; format is A-R-G-B
-			//Remap input table. Contains channel index to read color from 
-			const auto remap_inputs = decoded_remap.first;
-
-			//Remap control table. Controls whether the remap value is used, or force either 0 or 1
-			const auto remap_lookup = decoded_remap.second;
-
-			for (u8 channel = 0; channel < 4; ++channel)
-			{
-				switch (remap_lookup[channel])
-				{
-				default:
-					LOG_ERROR(RSX, "Unknown remap function 0x%X", remap_lookup[channel]);
-				case CELL_GCM_TEXTURE_REMAP_REMAP:
-					remap_values[channel] = glRemap[remap_inputs[channel]];
-					break;
-				case CELL_GCM_TEXTURE_REMAP_ZERO:
-					remap_values[channel] = GL_ZERO;
-					break;
-				case CELL_GCM_TEXTURE_REMAP_ONE:
-					remap_values[channel] = GL_ONE;
-					break;
-				}
-			}
-
-			glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, remap_values[0]);
-			glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, remap_values[1]);
-			glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, remap_values[2]);
-			glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, remap_values[3]);
+			apply_swizzle_remap(target, glRemap, decoded_remap);
 		}
 
 		//The rest of sampler state is now handled by sampler state objects

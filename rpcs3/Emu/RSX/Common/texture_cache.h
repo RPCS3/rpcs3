@@ -25,6 +25,12 @@ namespace rsx
 		framebuffer_storage = 3
 	};
 
+	enum texture_sampler_status
+	{
+		status_uninitialized = 0,
+		status_ready = 1
+	};
+
 	//Sampled image descriptor
 	struct sampled_image_descriptor_base
 	{
@@ -52,6 +58,7 @@ namespace rsx
 		rsx::texture_create_flags view_flags = rsx::texture_create_flags::default_component_order;
 		rsx::texture_upload_context context = rsx::texture_upload_context::shader_read;
 		rsx::texture_dimension_extended image_type = rsx::texture_dimension_extended::texture_dimension_2d;
+		rsx::texture_sampler_status sampler_status = rsx::texture_sampler_status::status_uninitialized;
 
 		bool matches(const u32 rsx_address, const u32 rsx_size)
 		{
@@ -98,6 +105,11 @@ namespace rsx
 			image_type = type;
 		}
 
+		void set_sampler_status(const rsx::texture_sampler_status status)
+		{
+			sampler_status = status;
+		}
+
 		void set_gcm_format(u32 format)
 		{
 			gcm_format = format;
@@ -131,6 +143,11 @@ namespace rsx
 		u32 get_gcm_format() const
 		{
 			return gcm_format;
+		}
+
+		rsx::texture_sampler_status get_sampler_status() const
+		{
+			return sampler_status;
 		}
 	};
 
@@ -288,6 +305,7 @@ namespace rsx
 		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, const u32 gcm_format, const texture_upload_context context,
 				std::vector<rsx_subresource_layout>& subresource_layout, const rsx::texture_dimension_extended type, const bool swizzled, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
 		virtual void enforce_surface_creation_type(section_storage_type& section, const texture_create_flags expected) = 0;
+		virtual void set_up_remap_vector(section_storage_type& section, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
 		virtual void insert_texture_barrier() = 0;
 		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, const u32 gcm_format, u16 size, std::array<image_resource_type, 6>& sources) = 0;
 
@@ -795,6 +813,7 @@ namespace rsx
 			region.protect(utils::protection::no);
 			region.create(width, height, 1, 1, nullptr, image, pitch, false, std::forward<Args>(extras)...);
 			region.set_context(texture_upload_context::framebuffer_storage);
+			region.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 			region.set_image_type(rsx::texture_dimension_extended::texture_dimension_2d);
 			update_cache_tag();
 		}
@@ -1432,6 +1451,9 @@ namespace rsx
 						if (cached_texture->get_image_type() == rsx::texture_dimension_extended::texture_dimension_1d)
 							scale_y = 0.f;
 
+						if (cached_texture->get_sampler_status() != rsx::texture_sampler_status::status_ready)
+							set_up_remap_vector(*cached_texture, tex.decoded_remap());
+
 						return{ cached_texture->get_raw_view(), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
 					}
 				}
@@ -1474,6 +1496,9 @@ namespace rsx
 										blit_engine_incompatibility_warning_raised = true;
 										break;
 									}
+
+									if (surface->get_sampler_status() != rsx::texture_sampler_status::status_ready)
+										set_up_remap_vector(*surface, tex.decoded_remap());
 
 									auto src_image = surface->get_raw_texture();
 									return{ src_image, surface->get_section_base(), format, offset_x, offset_y, tex_width, tex_height, texture_upload_context::blit_engine_dst,

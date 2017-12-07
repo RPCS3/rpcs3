@@ -758,6 +758,7 @@ namespace gl
 			cached.set_depth_flag(depth_flag);
 			cached.set_view_flags(flags);
 			cached.set_context(context);
+			cached.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 			cached.set_image_type(type);
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
@@ -778,8 +779,18 @@ namespace gl
 			auto section = create_new_texture(unused, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
 				rsx::texture_create_flags::default_component_order, remap_vector);
 
-			//Swizzling is ignored for blit engine copy and emulated using remapping
-			bool input_swizzled = (context == rsx::texture_upload_context::blit_engine_src)? false : swizzled;
+			bool input_swizzled = swizzled;
+			if (context == rsx::texture_upload_context::blit_engine_src)
+			{
+				//Swizzling is ignored for blit engine copy and emulated using remapping
+				input_swizzled = false;
+				section->set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
+			}
+			else
+			{
+				//Generic upload - sampler status will be set on upload
+				section->set_sampler_status(rsx::texture_sampler_status::status_ready);
+			}
 
 			gl::upload_texture(section->get_raw_texture(), rsx_address, gcm_format, width, height, depth, mipmaps, input_swizzled, type, subresource_layout, remap_vector, false);
 			return section;
@@ -800,6 +811,19 @@ namespace gl
 			}
 
 			section.set_view_flags(flags);
+		}
+
+		void set_up_remap_vector(cached_texture_section& section, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+		{
+			std::array<GLenum, 4> swizzle_remap;
+			glBindTexture(GL_TEXTURE_2D, section.get_raw_texture());
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, (GLint*)&swizzle_remap[0]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, (GLint*)&swizzle_remap[1]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, (GLint*)&swizzle_remap[2]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, (GLint*)&swizzle_remap[3]);
+
+			apply_swizzle_remap(GL_TEXTURE_2D, swizzle_remap, remap_vector);
+			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 
 		void insert_texture_barrier() override
