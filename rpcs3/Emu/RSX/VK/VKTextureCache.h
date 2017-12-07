@@ -482,6 +482,33 @@ namespace vk
 
 			return { final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
 		}
+
+		VkComponentMapping apply_component_mapping_flags(const u32 gcm_format, const rsx::texture_create_flags flags, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector)
+		{
+			VkComponentMapping mapping = {};
+			switch (flags)
+			{
+			case rsx::texture_create_flags::default_component_order:
+			{
+				mapping = apply_swizzle_remap(vk::get_component_mapping(gcm_format), remap_vector);
+				break;
+			}
+			case rsx::texture_create_flags::native_component_order:
+			{
+				mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+				break;
+			}
+			case rsx::texture_create_flags::swapped_native_component_order:
+			{
+				mapping = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A };
+				break;
+			}
+			default:
+				break;
+			}
+
+			return mapping;
+		}
 		
 	protected:
 
@@ -698,22 +725,7 @@ namespace vk
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 				is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0);
 
-			switch (flags)
-			{
-			case rsx::texture_create_flags::default_component_order:
-			{
-				mapping = apply_swizzle_remap(vk::get_component_mapping(gcm_format), remap_vector);
-				break;
-			}
-			case rsx::texture_create_flags::native_component_order:
-				mapping = image->native_component_map;
-				break;
-			case rsx::texture_create_flags::swapped_native_component_order:
-				mapping = {VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A};
-				break;
-			default:
-				fmt::throw_exception("Unknown create flags 0x%X", (u32)flags);
-			}
+			mapping = apply_component_mapping_flags(gcm_format, flags, remap_vector);
 
 			vk::image_view *view = new vk::image_view(*m_device, image->value, image_view_type, vk_format,
 				mapping, { (aspect_flags & ~VK_IMAGE_ASPECT_STENCIL_BIT), 0, mipmaps, 0, layer});
@@ -784,23 +796,15 @@ namespace vk
 			return section;
 		}
 
-		void enforce_surface_creation_type(cached_texture_section& section, const rsx::texture_create_flags expected_flags) override
+		void enforce_surface_creation_type(cached_texture_section& section, const u32 gcm_format, const rsx::texture_create_flags expected_flags) override
 		{
-			VkComponentMapping mapping;
+			if (expected_flags == section.get_view_flags())
+				return;
+
 			vk::image* image = section.get_raw_texture();
 			auto& view = section.get_view();
 
-			switch (expected_flags)
-			{
-			case rsx::texture_create_flags::native_component_order:
-				mapping = image->native_component_map;
-				break;
-			case rsx::texture_create_flags::swapped_native_component_order:
-				mapping = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A };
-				break;
-			default:
-				return;
-			}
+			VkComponentMapping mapping = apply_component_mapping_flags(gcm_format, expected_flags, default_remap_vector);
 
 			if (mapping.a != view->info.components.a ||
 				mapping.b != view->info.components.b ||
@@ -815,19 +819,26 @@ namespace vk
 			}
 
 			section.set_view_flags(expected_flags);
+			section.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 		}
 
 		void set_up_remap_vector(cached_texture_section& section, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			auto& view = section.get_view();
-			auto& original_remap = section.get_view()->info.components;
+			auto& original_remap = view->info.components;
 			std::array<VkComponentSwizzle, 4> base_remap = {original_remap.a, original_remap.r, original_remap.g, original_remap.b};
 
 			auto final_remap = apply_swizzle_remap(base_remap, remap_vector);
-			vk::image_view *new_view = new vk::image_view(*m_device, view->info.image, view->info.viewType, view->info.format,
-				final_remap, view->info.subresourceRange);
+			if (final_remap.a != original_remap.a ||
+				final_remap.r != original_remap.r ||
+				final_remap.g != original_remap.g ||
+				final_remap.b != original_remap.b)
+			{
+				vk::image_view *new_view = new vk::image_view(*m_device, view->info.image, view->info.viewType, view->info.format,
+					final_remap, view->info.subresourceRange);
 
-			view.reset(new_view);
+				view.reset(new_view);
+			}
 			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 

@@ -665,6 +665,38 @@ namespace gl
 
 			return dst_id;
 		}
+
+		void apply_component_mapping_flags(const GLenum target, const u32 gcm_format, const rsx::texture_create_flags flags)
+		{
+			switch (flags)
+			{
+			case rsx::texture_create_flags::default_component_order:
+			{
+				auto remap = gl::get_swizzle_remap(gcm_format);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, remap[1]);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, remap[2]);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, remap[3]);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, remap[0]);
+				break;
+			}
+			case rsx::texture_create_flags::native_component_order:
+			{
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_RED);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_BLUE);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
+				break;
+			}
+			case rsx::texture_create_flags::swapped_native_component_order:
+			{
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_ALPHA);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_RED);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_GREEN);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
+				break;
+			}
+			}
+		}
 		
 	protected:
 		
@@ -744,14 +776,8 @@ namespace gl
 				break;
 			}
 
-			if (flags == rsx::texture_create_flags::swapped_native_component_order)
-			{
-				glBindTexture(GL_TEXTURE_2D, vram_texture);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ALPHA);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_GREEN);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
-			}
+			glBindTexture(GL_TEXTURE_2D, vram_texture);
+			apply_component_mapping_flags(GL_TEXTURE_2D, gcm_format, flags);
 
 			auto& cached = create_texture(vram_texture, rsx_address, rsx_size, width, height, depth, mipmaps);
 			cached.set_dirty(false);
@@ -796,21 +822,16 @@ namespace gl
 			return section;
 		}
 
-		void enforce_surface_creation_type(cached_texture_section& section, const rsx::texture_create_flags flags) override
+		void enforce_surface_creation_type(cached_texture_section& section, const u32 gcm_format, const rsx::texture_create_flags flags) override
 		{
 			if (flags == section.get_view_flags())
 				return;
 
-			if (flags == rsx::texture_create_flags::swapped_native_component_order)
-			{
-				glBindTexture(GL_TEXTURE_2D, section.get_raw_texture());
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ALPHA);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_GREEN);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
-			}
+			glBindTexture(GL_TEXTURE_2D, section.get_raw_texture());
+			apply_component_mapping_flags(GL_TEXTURE_2D, gcm_format, flags);
 
 			section.set_view_flags(flags);
+			section.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 		}
 
 		void set_up_remap_vector(cached_texture_section& section, std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
