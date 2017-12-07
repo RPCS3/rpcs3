@@ -28,6 +28,8 @@ namespace gl
 	void upload_texture(const GLuint id, const u32 texaddr, const u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
 		std::vector<rsx_subresource_layout>& subresources_layout, std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap, bool static_state);
 
+	void apply_swizzle_remap(const GLenum target, const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap);
+
 	class sampler_state
 	{
 		GLuint samplerHandle = 0;
