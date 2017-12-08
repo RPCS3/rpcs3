@@ -55,6 +55,9 @@ if errorlevel 1 (
 	goto done
 )
 
+rem // Get commit count from (unshallowed) HEAD
+for /F %%I IN ('call %GIT% rev-list HEAD --count') do set COMMIT_COUNT=%%I
+
 rem // If we're in AppVeyor, building a non-master, pull request artifact
 if defined APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH (
 
@@ -71,10 +74,8 @@ if defined APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH (
 	for /F %%I IN ('call %GIT% rev-parse --short HEAD') do set GIT_VERSION=%%I
 	
 ) else (
-	rem // Get commit count from (unshallowed) HEAD
-	for /F %%I IN ('call %GIT% rev-list HEAD --count') do set GIT_VERSION=%%I
 	rem // Get last commit (shortened) and concat after commit count in GIT_VERSION
-	for /F %%I IN ('call %GIT% rev-parse --short HEAD') do set GIT_VERSION=%GIT_VERSION%-%%I
+	for /F %%I IN ('call %GIT% rev-parse --short HEAD') do set GIT_VERSION=%COMMIT_COUNT%-%%I
 	
 	for /F %%I IN ('call %GIT% rev-parse --abbrev-ref HEAD') do set GIT_BRANCH=%%I
 )
