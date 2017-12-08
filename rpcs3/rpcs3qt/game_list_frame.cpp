@@ -172,12 +172,15 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->setHorizontalHeaderItem(gui::column_resolution, new QTableWidgetItem(tr("Supported Resolutions")));
 	m_gameList->setHorizontalHeaderItem(gui::column_sound,      new QTableWidgetItem(tr("Sound Formats")));
 	m_gameList->setHorizontalHeaderItem(gui::column_parental,   new QTableWidgetItem(tr("Parental Level")));
+	m_gameList->setHorizontalHeaderItem(gui::column_compat,     new QTableWidgetItem(tr("Compatibility")));
 
 	// since this won't work somehow: gameList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);	
 	for (int i = 0; i < m_gameList->horizontalHeader()->count(); i++)
 	{
 		m_gameList->horizontalHeaderItem(i)->setTextAlignment(Qt::AlignLeft);
 	}
+
+	m_game_compat = std::make_unique<game_compatibility>(xgui_settings);
 
 	m_Central_Widget = new QStackedWidget(this);
 	m_Central_Widget->addWidget(m_gameList);
@@ -197,9 +200,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	QAction* showResolutionColAct    = new QAction(tr("Show Supported Resolutions"), this);
 	QAction* showSoundFormatColAct   = new QAction(tr("Show Sound Formats"), this);
 	QAction* showParentalLevelColAct = new QAction(tr("Show Parental Levels"), this);
+	QAction* showCompatibilityAct    = new QAction(tr("Show Compatibilities"), this);
 
 	m_columnActs = { showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct,
-		showResolutionColAct, showSoundFormatColAct, showParentalLevelColAct };
+		showResolutionColAct, showSoundFormatColAct, showParentalLevelColAct, showCompatibilityAct };
 
 	// Events
 	connect(m_gameList, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
@@ -216,10 +220,39 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	connect(m_xgrid, &QTableWidget::doubleClicked, this, &game_list_frame::doubleClickedSlot);
 	connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 
+	connect(m_game_compat.get(), &game_compatibility::DownloadStarted, [=]()
+	{
+		for (auto& game : m_game_data)
+		{
+			game.compat = m_game_compat->GetStatusData("Download");
+		}
+		Refresh();
+	});
+	connect(m_game_compat.get(), &game_compatibility::DownloadFinished, [=]()
+	{
+		for (auto& game : m_game_data)
+		{
+			game.compat = m_game_compat->GetCompatibility(game.info.serial);
+		}
+		Refresh();
+	});
+	connect(m_game_compat.get(), &game_compatibility::DownloadError, [=](const QString& error)
+	{
+		for (auto& game : m_game_data)
+		{
+			game.compat = m_game_compat->GetCompatibility(game.info.serial);
+		}
+		Refresh();
+		QMessageBox::warning(this, tr("Warning!"), tr("Failed to retrieve the online compatibility database!\nFalling back to local database.\n\n") + tr(qPrintable(error)));
+	});
+
 	connect(m_Search_Bar, &QLineEdit::textChanged, this, &game_list_frame::SetSearchText);
 
 	connect(m_Slider_Size, &QSlider::valueChanged, this, &game_list_frame::RequestIconSizeActSet);
-	connect(m_Slider_Size, &QSlider::sliderReleased, this, [&]{ xgui_settings->SetValue(gui::gl_iconSize, m_Slider_Size->value()); });
+	connect(m_Slider_Size, &QSlider::sliderReleased, this, [&]
+	{
+		xgui_settings->SetValue(gui::gl_iconSize, m_Slider_Size->value());
+	});
 	connect(m_Slider_Size, &QSlider::actionTriggered, [&](int action)
 	{
 		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
@@ -457,7 +490,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 			QPixmap pxmap = PaintedPixmap(img, hasCustomConfig);
 
-			m_game_data.push_back({ game, img, pxmap, true, bootable, hasCustomConfig });
+			m_game_data.push_back({ game, m_game_compat->GetCompatibility(game.serial), img, pxmap, true, bootable, hasCustomConfig });
 		}
 
 		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2)
@@ -638,6 +671,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	QAction* openConfig = myMenu.addAction(tr("&Open Config Folder"));
 	myMenu.addSeparator();
 	QAction* checkCompat = myMenu.addAction(tr("&Check Game Compatibility"));
+	QAction* downloadCompat = myMenu.addAction(tr("&Download Compatibility Database"));
 
 	connect(boot, &QAction::triggered, [=]
 	{
@@ -710,6 +744,10 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	{
 		QString link = "https://rpcs3.net/compatibility?g=" + qstr(currGame.serial);
 		QDesktopServices::openUrl(QUrl(link));
+	});
+	connect(downloadCompat, &QAction::triggered, [=]
+	{
+		m_game_compat->RequestCompatibility(true);
 	});
 
 	//Disable options depending on software category
@@ -1054,6 +1092,15 @@ int game_list_frame::PopulateGameList()
 			title_item->setIcon(QIcon(":/Icons/cog_black.png"));
 		}
 
+		// Compatibility
+		QTableWidgetItem* compat_item = new QTableWidgetItem;
+		compat_item->setFlags(compat_item->flags() & ~Qt::ItemIsEditable);
+		compat_item->setText(game.compat.text + (game.compat.date.isEmpty() ? "" : " (" + game.compat.date + ")"));
+		compat_item->setToolTip(game.compat.tooltip);
+		if (!game.compat.color.isEmpty())
+		{
+			compat_item->setData(Qt::DecorationRole, compat_pixmap(game.compat.color));
+		}
 		m_gameList->setItem(row, gui::column_icon,       icon_item);
 		m_gameList->setItem(row, gui::column_name,       title_item);
 		m_gameList->setItem(row, gui::column_serial,     l_GetItem(game.info.serial));
@@ -1064,8 +1111,12 @@ int game_list_frame::PopulateGameList()
 		m_gameList->setItem(row, gui::column_resolution, l_GetItem(GetStringFromU32(game.info.resolution, resolution::mode, true)));
 		m_gameList->setItem(row, gui::column_sound,      l_GetItem(GetStringFromU32(game.info.sound_format, sound::format, true)));
 		m_gameList->setItem(row, gui::column_parental,   l_GetItem(GetStringFromU32(game.info.parental_lvl, parental::level)));
+		m_gameList->setItem(row, gui::column_compat,     compat_item);
 
-		if (selected_item == game.info.icon_path) result = row;
+		if (selected_item == game.info.icon_path)
+		{
+			result = row;
+		}
 
 		row++;
 	}
