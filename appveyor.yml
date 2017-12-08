@@ -15,9 +15,6 @@ image: Visual Studio 2015
 # clone directory
 clone_folder: c:\projects\rpcs3
 
-# set clone depth
-clone_depth: 3                    # clone entire repository history if not defined
-
 # environment variables
 environment:
   QTDIR: C:\Qt\5.9\msvc2015_64
