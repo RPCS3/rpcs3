@@ -2424,7 +2424,10 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	const auto depth_fmt = rsx::method_registers.surface_depth_fmt();
 	const auto target = rsx::method_registers.surface_color_target();
 
-	//NOTE: Z buffers with pitch = 64 are valid even if they would not fit (GT HD Concept)
+	//NOTE: Its is possible that some renders are done on a swizzled context. Pitch is meaningless in that case
+	//Seen in Nier (color) and GT HD concept (z buffer)
+	//Restriction is that the RTT is always a square region for that dimensions are powers of 2
+	const auto required_zeta_pitch = std::max<u32>((u32)(depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4), 64u);
 	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(color_fmt, clip_width), 64u);
 	const bool stencil_test_enabled = depth_fmt == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
 
@@ -2442,12 +2445,21 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 				m_framebuffer_state_contested = true;
 			}
 		}
+
+		if (zeta_address && zeta_pitch < required_zeta_pitch)
+		{
+			if (zeta_pitch < 64 || clip_width != clip_height)
+				zeta_address = 0;
+		}
 	}
 
 	for (const auto &index : rsx::utility::get_rtt_indexes(target))
 	{
 		if (surface_pitchs[index] < required_color_pitch)
-			surface_addresses[index] = 0;
+		{
+			if (surface_pitchs[index] < 64 || clip_width != clip_height)
+				surface_addresses[index] = 0;
+		}
 
 		if (surface_addresses[index] == zeta_address)
 		{
@@ -2474,7 +2486,10 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	}
 
 	if (!framebuffer_status_valid && !zeta_address)
+	{
+		LOG_WARNING(RSX, "Framebuffer setup failed. Draw calls may have been lost");
 		return;
+	}
 
 	//At least one attachment exists
 	framebuffer_status_valid = true;
