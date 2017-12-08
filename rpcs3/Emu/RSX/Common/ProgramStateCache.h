@@ -24,7 +24,12 @@ namespace program_hash_util
 		u32 word[4];
 	};
 
-	struct vertex_program_hash
+	struct vertex_program_utils
+	{
+		static size_t get_vertex_program_ucode_hash(const RSXVertexProgram &program);
+	};
+
+	struct vertex_program_storage_hash
 	{
 		size_t operator()(const RSXVertexProgram &program) const;
 	};
@@ -42,9 +47,13 @@ namespace program_hash_util
 		static bool is_constant(u32 sourceOperand);
 
 		static size_t get_fragment_program_ucode_size(void *ptr);
+
+		static u32 get_fragment_program_start(void *ptr);
+
+		static size_t get_fragment_program_ucode_hash(const RSXFragmentProgram &program);
 	};
 
-	struct fragment_program_hash
+	struct fragment_program_storage_hash
 	{
 		size_t operator()(const RSXFragmentProgram &program) const;
 	};
@@ -78,8 +87,8 @@ class program_state_cache
 	using vertex_program_type = typename backend_traits::vertex_program_type;
 	using fragment_program_type = typename backend_traits::fragment_program_type;
 
-	using binary_to_vertex_program = std::unordered_map<RSXVertexProgram, vertex_program_type, program_hash_util::vertex_program_hash, program_hash_util::vertex_program_compare> ;
-	using binary_to_fragment_program = std::unordered_map<RSXFragmentProgram, fragment_program_type, program_hash_util::fragment_program_hash, program_hash_util::fragment_program_compare>;
+	using binary_to_vertex_program = std::unordered_map<RSXVertexProgram, vertex_program_type, program_hash_util::vertex_program_storage_hash, program_hash_util::vertex_program_compare> ;
+	using binary_to_fragment_program = std::unordered_map<RSXFragmentProgram, fragment_program_type, program_hash_util::fragment_program_storage_hash, program_hash_util::fragment_program_compare>;
 
 
 	struct pipeline_key

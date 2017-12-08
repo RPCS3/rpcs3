@@ -28,6 +28,7 @@ protected:
 	virtual void insertIntputs(std::stringstream &OS) override;
 	virtual void insertOutputs(std::stringstream &OS) override;
 	virtual void insertConstants(std::stringstream &OS) override;
+	virtual void insertGlobalFunctions(std::stringstream &OS) override;
 	virtual void insertMainStart(std::stringstream &OS) override;
 	virtual void insertMainEnd(std::stringstream &OS) override;
 };
