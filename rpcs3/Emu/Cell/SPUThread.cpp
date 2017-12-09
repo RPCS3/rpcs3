@@ -1005,6 +1005,17 @@ u32 SPUThread::get_ch_count(u32 ch)
 	case MFC_RdAtomicStat:    return ch_atomic_stat.get_count();
 	case SPU_RdEventStat:     return get_events() != 0;
 	case MFC_Cmd:             return std::max(16 - mfc_queue.size(), (u32)0);
+	case MFC_WrTagMask: 	
+	case MFC_RdTagMask: 	
+	case MFC_WrListStallAck: 
+	case SPU_WrDec:		    
+	case SPU_RdDec:	    
+	case SPU_RdMachStat:    
+	case SPU_WrSRR0: 
+	case SPU_RdSRR0: 
+	case SPU_WrEventMask:
+	case SPU_RdEventMask: 
+	case SPU_WrEventAck:      return 0x1;
 	default : 				  return 0;
 	}
 }
