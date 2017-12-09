@@ -133,7 +133,7 @@ namespace gl
 	}
 
 	//Apply sampler state settings
-	void sampler_state::apply(rsx::fragment_texture& tex)
+	void sampler_state::apply(rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image)
 	{
 		const f32 border_color = (f32)tex.border_color() / 255;
 		const f32 border_color_array[] = { border_color, border_color, border_color, border_color };
@@ -143,7 +143,8 @@ namespace gl
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_R, wrap_mode(tex.wrap_r()));
 		glSamplerParameterfv(samplerHandle, GL_TEXTURE_BORDER_COLOR, border_color_array);
 
-		if (tex.get_exact_mipmap_count() <= 1)
+		if (sampled_image->upload_context != rsx::texture_upload_context::shader_read ||
+			tex.get_exact_mipmap_count() <= 1)
 		{
 			GLint min_filter = tex_min_filter(tex.min_filter());
 

@@ -17,28 +17,10 @@ namespace rsx
 		swapped_native_component_order = 2,
 	};
 
-	enum texture_upload_context
-	{
-		shader_read = 0,
-		blit_engine_src = 1,
-		blit_engine_dst = 2,
-		framebuffer_storage = 3
-	};
-
 	enum texture_sampler_status
 	{
 		status_uninitialized = 0,
 		status_ready = 1
-	};
-
-	//Sampled image descriptor
-	struct sampled_image_descriptor_base
-	{
-		texture_upload_context upload_context = texture_upload_context::shader_read;
-		rsx::texture_dimension_extended image_type = texture_dimension_extended::texture_dimension_2d;
-		bool is_depth_texture = false;
-		f32 scale_x = 1.f;
-		f32 scale_y = 1.f;
 	};
 
 	struct cached_texture_section : public rsx::buffered_section

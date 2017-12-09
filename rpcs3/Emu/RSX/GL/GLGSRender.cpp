@@ -252,7 +252,7 @@ void GLGSRender::end()
 					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.fragment_textures[i], m_rtts);
 
 					if (m_textures_dirty[i])
-						m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i]);
+						m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i], fs_sampler_state[i].get());
 				}
 				else
 				{
