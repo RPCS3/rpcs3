@@ -1149,7 +1149,8 @@ void VKGSRender::end()
 
 					std::tie(min_filter, mip_mode) = vk::get_min_filter_and_mip(rsx::method_registers.fragment_textures[i].min_filter());
 
-					if (rsx::method_registers.fragment_textures[i].get_exact_mipmap_count() > 1)
+					if (sampler_state->upload_context == rsx::texture_upload_context::shader_read &&
+						rsx::method_registers.fragment_textures[i].get_exact_mipmap_count() > 1)
 					{
 						min_lod = (float)(rsx::method_registers.fragment_textures[i].min_lod() >> 8);
 						max_lod = (float)(rsx::method_registers.fragment_textures[i].max_lod() >> 8);

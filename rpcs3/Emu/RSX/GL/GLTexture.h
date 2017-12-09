@@ -52,6 +52,6 @@ namespace gl
 			glBindSampler(index, samplerHandle);
 		}
 
-		void apply(rsx::fragment_texture& tex);
+		void apply(rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image);
 	};
 }
