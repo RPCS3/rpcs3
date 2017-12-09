@@ -2289,6 +2289,7 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 	fill_user_clip_data(buf + 64);
 	*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
 	*(reinterpret_cast<u32*>(buf + 132)) = vertex_base;
+	*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
 	fill_vertex_layout_state(m_vertex_layout, vertex_count, reinterpret_cast<s32*>(buf + 144));
 
 	//Vertex constants
