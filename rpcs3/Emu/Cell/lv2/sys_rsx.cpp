@@ -240,9 +240,11 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 	switch (package_id)
 	{
 	case 0x001: // FIFO
+		render->pause();
 		render->ctrl->get = a3;
 		render->ctrl->put = a4;
 		render->internal_get = a3;
+		render->unpause();
 		break;
 
 	case 0x100: // Display mode set
