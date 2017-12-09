@@ -483,6 +483,14 @@ namespace rsx
 			//Execute backend-local tasks first
 			do_local_task();
 
+			//Wait for external pause events
+			if (external_interrupt_lock.load())
+			{
+				external_interrupt_ack.store(true);
+				while (external_interrupt_lock.load()) _mm_pause();
+			}
+
+			//Now load the FIFO ctrl registers
 			ctrl->get.store(internal_get.load());
 			const u32 put = ctrl->put;
 
@@ -2136,5 +2144,18 @@ namespace rsx
 	void thread::notify_zcull_info_changed()
 	{
 		check_zcull_status(false, false);
+	}
+
+	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!
+	void thread::pause()
+	{
+		external_interrupt_lock.store(true);
+		while (!external_interrupt_ack.load()) _mm_pause();
+		external_interrupt_ack.store(false);
+	}
+
+	void thread::unpause()
+	{
+		external_interrupt_lock.store(false);
 	}
 }

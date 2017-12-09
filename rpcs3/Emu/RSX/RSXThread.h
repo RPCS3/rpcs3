@@ -233,6 +233,8 @@ namespace rsx
 	public:
 		RsxDmaControl* ctrl = nullptr;
 		atomic_t<u32> internal_get{ 0 };
+		atomic_t<bool> external_interrupt_lock{ false };
+		atomic_t<bool> external_interrupt_ack{ false };
 
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
@@ -477,5 +479,8 @@ namespace rsx
 
 		u32 ReadIO32(u32 addr);
 		void WriteIO32(u32 addr, u32 value);
+
+		void pause();
+		void unpause();
 	};
 }
