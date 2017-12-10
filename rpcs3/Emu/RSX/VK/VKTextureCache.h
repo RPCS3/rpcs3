@@ -244,12 +244,14 @@ namespace vk
 			}
 		}
 
-		bool flush(vk::render_device& dev, vk::command_buffer& cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
+		bool flush(vk::command_buffer& cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
 		{
 			if (flushed) return true;
 
 			if (m_device == nullptr)
-				m_device = &dev;
+			{
+				m_device = &cmd.get_command_pool().get_owner();
+			}
 
 			// Return false if a flush occured 'late', i.e we had a miss
 			bool result = true;
@@ -883,7 +885,7 @@ namespace vk
 		template<typename RsxTextureType>
 		sampled_image_descriptor _upload_texture(vk::command_buffer& cmd, RsxTextureType& tex, rsx::vk_render_targets& m_rtts)
 		{
-			return upload_texture(cmd, tex, m_rtts, *m_device, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
+			return upload_texture(cmd, tex, m_rtts, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 		}
 
 		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)
@@ -924,7 +926,7 @@ namespace vk
 			}
 			helper(&cmd);
 
-			return upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, *m_device, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
+			return upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 		}
 
 		const u32 get_unreleased_textures_count() const override

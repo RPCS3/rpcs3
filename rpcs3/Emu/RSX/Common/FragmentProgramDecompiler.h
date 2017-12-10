@@ -207,6 +207,9 @@ protected:
 	/** insert declaration of shader constants.
 	*/
 	virtual void insertConstants(std::stringstream &OS) = 0;
+	/** insert helper functin definitions.
+	*/
+	virtual void insertGlobalFunctions(std::stringstream &OS) = 0;
 	/** insert beginning of main (signature, temporary declaration...)
 	*/
 	virtual void insertMainStart(std::stringstream &OS) = 0;
