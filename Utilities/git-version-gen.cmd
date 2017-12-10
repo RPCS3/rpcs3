@@ -13,7 +13,7 @@ rem // A copy of the GPL 2.0 should have been included with the program.
 rem // If not, see http://www.gnu.org/licenses/
 
 rem // Official git repository and contact information can be found at
-rem // https://github.com/RPCS3/rpcs3 and http://rpcs3.net/.
+rem // https://github.com/RPCS3/rpcs3 and https://rpcs3.net/.
 
 setlocal ENABLEDELAYEDEXPANSION
 setlocal ENABLEEXTENSIONS
@@ -55,32 +55,30 @@ if errorlevel 1 (
 	goto done
 )
 
-rem // Get commit count from HEAD by default
-for /F %%I IN ('call %GIT% rev-list HEAD --count') do set GIT_VERSION=%%I
+rem // Get commit count from (unshallowed) HEAD
+for /F %%I IN ('call %GIT% rev-list HEAD --count') do set COMMIT_COUNT=%%I
 
-rem // If we're in AppVeyor and we're building for master: Get commit count from unshallowed upstream
-if defined APPVEYOR (
-	if not defined APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH (
-		call %GIT% remote add upstream https://github.com/RPCS3/RPCS3.git
-		call %GIT% fetch --unshallow upstream
-		for /F %%I IN ('call %GIT% rev-list --count upstream/master') do set GIT_VERSION=%%I
-	)
-)
-
+rem // If we're in AppVeyor, building a non-master, pull request artifact
 if defined APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH (
+
 	if "%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%"=="master" (
+		rem // If pull request comes from a master branch, GIT_BRANCH = username/branch in order to distinguish from upstream/master
 		for /f "tokens=1* delims=/" %%a in ("%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%") do set user=%%a
 		set "GIT_BRANCH=!user!/%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%"
 	) else (
+		rem // Otherwise, GIT_BRANCH=branch
 		set GIT_BRANCH=%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%
 	)
 	
+	rem // Make GIT_VERSION the last commit (shortened); Don't include commit count on non-master builds
+	for /F %%I IN ('call %GIT% rev-parse --short HEAD') do set GIT_VERSION=%%I
+	
 ) else (
+	rem // Get last commit (shortened) and concat after commit count in GIT_VERSION
+	for /F %%I IN ('call %GIT% rev-parse --short HEAD') do set GIT_VERSION=%COMMIT_COUNT%-%%I
+	
 	for /F %%I IN ('call %GIT% rev-parse --abbrev-ref HEAD') do set GIT_BRANCH=%%I
 )
-
-rem // Get last commit (shortened) and concat after commit count in GIT_VERSION
-for /F %%I IN ('call %GIT% rev-parse --short HEAD') do set GIT_VERSION=%GIT_VERSION%-%%I
 
 rem // Echo obtained GIT_VERSION for debug purposes if needed
 echo %GIT_VERSION%
