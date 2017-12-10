@@ -317,7 +317,8 @@ u32 keyboard_pad_handler::GetKeyCode(const std::string& keyName)
 
 bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
 {
-	if (device != "Keyboard") return false;
+	if (device != "Keyboard")
+		return false;
 
 	m_pad_config.load();
 
@@ -373,6 +374,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
 	bindings.push_back(pad);
+	connected++;
 
 	return true;
 }

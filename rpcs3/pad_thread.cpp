@@ -93,8 +93,6 @@ void pad_thread::Init(const u32 max_connect)
 			LOG_ERROR(GENERAL, "Failed to bind device %s to handler %s", input_cfg.player_device[i]->to_string(), handler_type.to_string());
 			nullpad->bindPadToDevice(m_pads.back(), input_cfg.player_device[i]->to_string());
 		}
-		else if (handler_type != pad_handler::null)
-			m_info.now_connect++;
 	}
 
 	thread = std::make_shared<std::thread>(&pad_thread::ThreadFunc, this);
@@ -117,10 +115,13 @@ void pad_thread::ThreadFunc()
 	active = true;
 	while (active)
 	{
+		u32 connected = 0;
 		for (auto& cur_pad_handler : handlers)
 		{
 			cur_pad_handler.second->ThreadProc();
+			connected += cur_pad_handler.second->connected;
 		}
+		m_info.now_connect = connected;
 		std::this_thread::sleep_for(1ms);
 	}
 }

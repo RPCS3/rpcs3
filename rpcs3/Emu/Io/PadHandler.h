@@ -319,6 +319,8 @@ class PadHandlerBase
 protected:
 	static const u32 MAX_GAMEPADS = 7;
 
+	std::array<bool, MAX_GAMEPADS> last_connection_status{{ false, false, false, false, false, false, false }};
+
 	int m_trigger_threshold = 0;
 	int m_thumb_threshold = 0;
 
@@ -580,6 +582,7 @@ public:
 	s32 trigger_max = 255;
 	s32 vibration_min = 0;
 	s32 vibration_max = 255;
+	u32 connected = 0;
 
 	virtual bool Init() { return true; };
 	virtual ~PadHandlerBase() = default;

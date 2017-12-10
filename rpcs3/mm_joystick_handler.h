@@ -121,6 +121,5 @@ private:
 	std::vector<u64> blacklist;
 	std::unordered_map<int, MMJOYDevice> m_devices;
 	std::vector<std::pair<std::shared_ptr<MMJOYDevice>, std::shared_ptr<Pad>>> bindings;
-	std::array<bool, 7> last_connection_status = {};
 	std::shared_ptr<MMJOYDevice> m_dev;
 };

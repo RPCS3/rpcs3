@@ -130,10 +130,8 @@ private:
 
 	std::vector<u32> blacklist;
 	std::vector<std::pair<std::shared_ptr<XInputDevice>, std::shared_ptr<Pad>>> bindings;
-	std::array<bool, 7> last_connection_status = {};
 
 	// holds internal controller state change
 	XINPUT_STATE state;
 	DWORD result;
-	DWORD online = 0;
 };

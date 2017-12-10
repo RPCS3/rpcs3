@@ -254,13 +254,14 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 		return;
 
 	auto data = GetButtonValues(*device);
-
 	std::pair<u16, std::string> pressed_button = { 0, "" };
+
 	for (const auto& button : button_list)
 	{
 		int code = button.first;
 		std::string name = button.second;
 
+		// Handle annoying useless buttons
 		if (padId.find("Xbox 360") != std::string::npos && code >= BTN_TRIGGER_HAPPY)
 			continue;
 		if (padId.find("Sony") != std::string::npos && (code == BTN_TL2 || code == BTN_TR2))
@@ -355,12 +356,12 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 
 	int preview_values[6] =
 	{
-		find_value(buttons[0]),
-		find_value(buttons[1]),
-		find_value(buttons[3]) - find_value(buttons[2]),
-		find_value(buttons[5]) - find_value(buttons[4]),
-		find_value(buttons[7]) - find_value(buttons[6]),
-		find_value(buttons[9]) - find_value(buttons[8]),
+		find_value(buttons[0]),                          // Left Trigger
+		find_value(buttons[1]),                          // Right Trigger
+		find_value(buttons[3]) - find_value(buttons[2]), // Left Stick X
+		find_value(buttons[5]) - find_value(buttons[4]), // Left Stick Y
+		find_value(buttons[7]) - find_value(buttons[6]), // Right Stick X
+		find_value(buttons[9]) - find_value(buttons[8]), // Right Stick Y
 	};
 
 	if (pressed_button.first > 0)
@@ -623,15 +624,13 @@ int evdev_joystick_handler::add_device(const std::string& device, bool in_settin
 				libevdev_has_event_code(dev, EV_ABS, ABS_Y) &&
 				name == device)
 			{
-				// It's a joystick.
-
-				// Now let's make sure we don't already have this one.
+				// It's a joystick. Now let's make sure we don't already have this one.
 				auto it = std::find_if(devices.begin(), devices.end(), [&path](const EvdevDevice &device) { return path == device.path; });
 				if (it != devices.end())
 				{
 					libevdev_free(dev);
 					close(fd);
-					return std::distance(devices.begin(), it);
+					continue;
 				}
 
 				// Alright, now that we've confirmed we haven't added this joystick yet, les do dis.
@@ -652,6 +651,7 @@ void evdev_joystick_handler::ThreadProc()
 {
 	update_devs();
 
+	int padnum = 0;
 	for (auto& device : devices)
 	{
 		m_dev = device;
@@ -659,7 +659,24 @@ void evdev_joystick_handler::ThreadProc()
 		auto axis_orientations = device.axis_orientations;
 		auto& dev = device.device;
 		if (dev == nullptr)
+		{
+			if (last_connection_status[padnum] == true)
+			{
+				LOG_ERROR(HLE, "evdev device %d disconnected", padnum);
+				last_connection_status[padnum] = false;
+				connected--;
+			}
+			padnum++;
 			continue;
+		}
+
+		if (last_connection_status[padnum] == false)
+		{
+			LOG_ERROR(HLE, "evdev device %d reconnected", padnum);
+			last_connection_status[padnum] = true;
+			connected++;
+		}
+		padnum++;
 
 		// Handle vibration
 		int idx_l = m_pad_config.switch_vibration_motors ? 1 : 0;
