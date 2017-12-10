@@ -538,7 +538,7 @@ bool FragmentProgramDecompiler::handle_scb(u32 opcode)
 	case RSX_FP_OPCODE_LIT: SetDst("lit_legacy($0)"); return true;
 	case RSX_FP_OPCODE_LIF: SetDst(getFloatTypeName(4) + "(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); return true;
 	case RSX_FP_OPCODE_LRP: SetDst(getFloatTypeName(4) + "($2 * (1 - $0) + $1 * $0)"); return true;
-	case RSX_FP_OPCODE_LG2: SetDst("log2($0.xxxx)"); return true;
+	case RSX_FP_OPCODE_LG2: SetDst("log2(" + NotZeroPositive("$0.x") + ").xxxx"); return true;
 	case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); return true;
 	case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); return true;
 	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); return true;
@@ -571,7 +571,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_DDX: SetDst(getFunction(FUNCTION::FUNCTION_DFDX)); return true;
 	case RSX_FP_OPCODE_DDY: SetDst(getFunction(FUNCTION::FUNCTION_DFDY)); return true;
 	case RSX_FP_OPCODE_NRM: SetDst("normalize($0.xyz)"); return true;
-	case RSX_FP_OPCODE_BEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: BEM"); return true;
+	case RSX_FP_OPCODE_BEM: SetDst("$0.xyxy + $1.xxxx * $2.xzxz + $1.yyyy * $2.ywyw"); return true;
 	case RSX_FP_OPCODE_TEXBEM:
 		//treat as TEX for now
 		LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TEXBEM");
