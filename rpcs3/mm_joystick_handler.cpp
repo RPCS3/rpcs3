@@ -192,7 +192,6 @@ bool mm_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::s
 void mm_joystick_handler::ThreadProc()
 {
 	MMRESULT status;
-	DWORD online = 0;
 
 	for (u32 i = 0; i != bindings.size(); ++i)
 	{
@@ -200,79 +199,76 @@ void mm_joystick_handler::ThreadProc()
 		auto pad = bindings[i].second;
 		status = joyGetPosEx(m_dev->device_id, &m_dev->device_info);
 
-		switch (status)
+		if (status != JOYERR_NOERROR)
 		{
-		case JOYERR_UNPLUGGED:
 			if (last_connection_status[i] == true)
 			{
 				LOG_ERROR(HLE, "MMJOY Device %d disconnected.", m_dev->device_id);
+				pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
 				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+				last_connection_status[i] = false;
+				connected--;
 			}
-			last_connection_status[i] = false;
-			pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
-			break;
-
-		case JOYERR_NOERROR:
-			++online;
-			if (last_connection_status[i] == false)
-			{
-				if (GetMMJOYDevice(m_dev->device_id, *m_dev) == false)
-					continue;
-				LOG_SUCCESS(HLE, "MMJOY Device %d reconnected.", m_dev->device_id);
-				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
-			}
-			last_connection_status[i] = true;
-			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
-
-			auto button_values = GetButtonValues(m_dev->device_info, m_dev->device_caps);
-
-			// Translate any corresponding keycodes to our normal DS3 buttons and triggers
-			for (auto& btn : pad->m_buttons)
-			{
-				btn.m_value = button_values[btn.m_keyCode];
-				TranslateButtonPress(btn.m_keyCode, btn.m_pressed, btn.m_value);
-			}
-
-			float stick_val[4];
-
-			// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
-			for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
-			{
-				bool pressed;
-			
-				// m_keyCodeMin is the mapped key for left or down
-				u32 key_min = pad->m_sticks[i].m_keyCodeMin;
-				u16 val_min = button_values[key_min];
-				TranslateButtonPress(key_min, pressed, val_min, true);
-			
-				// m_keyCodeMax is the mapped key for right or up
-				u32 key_max = pad->m_sticks[i].m_keyCodeMax;
-				u16 val_max = button_values[key_max];
-				TranslateButtonPress(key_max, pressed, val_max, true);
-
-				// cancel out opposing values and get the resulting difference
-				stick_val[i] = val_max - val_min;
-			}
-
-			u16 lx, ly, rx, ry;
-
-			// Normalize our two stick's axis based on the thresholds
-			std::tie(lx, ly) = NormalizeStickDeadzone(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
-			std::tie(rx, ry) = NormalizeStickDeadzone(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
-
-			if (m_pad_config.padsquircling != 0)
-			{
-				std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, m_pad_config.padsquircling);
-				std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, m_pad_config.padsquircling);
-			}
-
-			pad->m_sticks[0].m_value = lx;
-			pad->m_sticks[1].m_value = 255 - ly;
-			pad->m_sticks[2].m_value = rx;
-			pad->m_sticks[3].m_value = 255 - ry;
-
-			break;
+			continue;
 		}
+
+		if (last_connection_status[i] == false)
+		{
+			if (GetMMJOYDevice(m_dev->device_id, *m_dev) == false)
+				continue;
+			LOG_SUCCESS(HLE, "MMJOY Device %d reconnected.", m_dev->device_id);
+			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
+			pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+			last_connection_status[i] = true;
+			connected++;
+		}
+
+		auto button_values = GetButtonValues(m_dev->device_info, m_dev->device_caps);
+
+		// Translate any corresponding keycodes to our normal DS3 buttons and triggers
+		for (auto& btn : pad->m_buttons)
+		{
+			btn.m_value = button_values[btn.m_keyCode];
+			TranslateButtonPress(btn.m_keyCode, btn.m_pressed, btn.m_value);
+		}
+
+		float stick_val[4];
+
+		// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
+		for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
+		{
+			bool pressed;
+
+			// m_keyCodeMin is the mapped key for left or down
+			u32 key_min = pad->m_sticks[i].m_keyCodeMin;
+			u16 val_min = button_values[key_min];
+			TranslateButtonPress(key_min, pressed, val_min, true);
+
+			// m_keyCodeMax is the mapped key for right or up
+			u32 key_max = pad->m_sticks[i].m_keyCodeMax;
+			u16 val_max = button_values[key_max];
+			TranslateButtonPress(key_max, pressed, val_max, true);
+
+			// cancel out opposing values and get the resulting difference
+			stick_val[i] = val_max - val_min;
+		}
+
+		u16 lx, ly, rx, ry;
+
+		// Normalize our two stick's axis based on the thresholds
+		std::tie(lx, ly) = NormalizeStickDeadzone(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
+		std::tie(rx, ry) = NormalizeStickDeadzone(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
+
+		if (m_pad_config.padsquircling != 0)
+		{
+			std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, m_pad_config.padsquircling);
+			std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, m_pad_config.padsquircling);
+		}
+
+		pad->m_sticks[0].m_value = lx;
+		pad->m_sticks[1].m_value = 255 - ly;
+		pad->m_sticks[2].m_value = rx;
+		pad->m_sticks[3].m_value = 255 - ry;
 	}
 }
 

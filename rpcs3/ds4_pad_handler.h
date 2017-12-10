@@ -147,8 +147,6 @@ public:
 private:
 	bool is_init;
 
-	// holds internal controller state change
-	std::array<bool, MAX_GAMEPADS> last_connection_status = {};
 	std::vector<u32> blacklist;
 	std::vector<std::pair<std::shared_ptr<DS4Device>, std::shared_ptr<Pad>>> bindings;
 

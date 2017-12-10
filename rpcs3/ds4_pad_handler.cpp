@@ -809,10 +809,10 @@ bool ds4_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::strin
 
 void ds4_pad_handler::ThreadProc()
 {
-	for (auto &bind : bindings)
+	for (int i = 0; i < static_cast<int>(bindings.size()); i++)
 	{
-		std::shared_ptr<DS4Device> device = bind.first;
-		auto thepad = bind.second;
+		std::shared_ptr<DS4Device> device = bindings[i].first;
+		auto thepad = bindings[i].second;
 
 		if (device->hidDevice == nullptr)
 		{
@@ -820,6 +820,12 @@ void ds4_pad_handler::ThreadProc()
 			hid_device* dev = hid_open_path(device->path.c_str());
 			if (dev)
 			{
+				if (last_connection_status[i] == false)
+				{
+					LOG_ERROR(HLE, "DS4 device %d reconnected", i);
+					last_connection_status[i] = true;
+					connected++;
+				}
 				hid_set_nonblocking(dev, 1);
 				device->hidDevice = dev;
 				thepad->m_port_status = CELL_PAD_STATUS_CONNECTED|CELL_PAD_STATUS_ASSIGN_CHANGES;
@@ -829,6 +835,12 @@ void ds4_pad_handler::ThreadProc()
 			else
 			{
 				// nope, not there
+				if (last_connection_status[i] == true)
+				{
+					LOG_ERROR(HLE, "DS4 device %d disconnected", i);
+					last_connection_status[i] = false;
+					connected--;
+				}
 				thepad->m_port_status = CELL_PAD_STATUS_DISCONNECTED|CELL_PAD_STATUS_ASSIGN_CHANGES;
 				continue;
 			}
