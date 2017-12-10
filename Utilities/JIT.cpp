@@ -171,7 +171,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		return {addr, llvm::JITSymbolFlags::Exported};
 	}
 
-	virtual u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
+	u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
 	{
 		// Lock memory manager
 		writer_lock lock(s_mutex);
@@ -192,7 +192,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		return (u8*)std::exchange(s_next, (void*)next);
 	}
 
-	virtual u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
+	u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
 	{
 		// Lock memory manager
 		writer_lock lock(s_mutex);
@@ -217,7 +217,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		return (u8*)std::exchange(s_next, (void*)next);
 	}
 
-	virtual bool finalizeMemory(std::string* = nullptr) override
+	bool finalizeMemory(std::string* = nullptr) override
 	{
 		// Lock memory manager
 		writer_lock lock(s_mutex);
@@ -234,7 +234,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		return false;
 	}
 
-	virtual void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
 	{
 #ifdef _WIN32
 		// Lock memory manager
@@ -266,7 +266,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		return RTDyldMemoryManager::registerEHFrames(addr, load_addr, size);
 	}
 
-	virtual void deregisterEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	void deregisterEHFrames(u8* addr, u64 load_addr, std::size_t size) override
 	{
 		LOG_ERROR(GENERAL, "deregisterEHFrames() called"); // Not expected
 
@@ -284,7 +284,7 @@ struct EventListener : llvm::JITEventListener
 	{
 	}
 
-	virtual void NotifyObjectEmitted(const llvm::object::ObjectFile& obj, const llvm::RuntimeDyld::LoadedObjectInfo& inf) override
+	void NotifyObjectEmitted(const llvm::object::ObjectFile& obj, const llvm::RuntimeDyld::LoadedObjectInfo& inf) override
 	{
 #ifdef _WIN32
 		for (auto it = obj.section_begin(), end = obj.section_end(); it != end; ++it)
@@ -380,7 +380,7 @@ public:
 };
 
 jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string _cpu)
-	: m_link(std::move(_link))
+	: m_link(_link)
 	, m_cpu(std::move(_cpu))
 {
 	if (m_cpu.empty())

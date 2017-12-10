@@ -837,21 +837,25 @@ namespace rsx
 				u8* linear_pixels = pixels_src;
 				u8* swizzled_pixels = temp2.get();
 
+				// restrict output to size of swizzle
+				const u16 sw_in_w = std::min(out_w, sw_width);
+				const u16 sw_in_h = std::min(out_h, sw_height);
+
 				// Check and pad texture out if we are given non square texture for swizzle to be correct
-				if (sw_width != out_w || sw_height != out_h)
+				if (sw_width != sw_in_w || sw_height != sw_in_h)
 				{
 					sw_temp.reset(new u8[out_bpp * sw_width * sw_height]);
 
 					switch (out_bpp)
 					{
 					case 1:
-						pad_texture<u8>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						pad_texture<u8>(linear_pixels, sw_temp.get(), sw_in_w, sw_in_h, sw_width, sw_height);
 						break;
 					case 2:
-						pad_texture<u16>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						pad_texture<u16>(linear_pixels, sw_temp.get(), sw_in_w, sw_in_h, sw_width, sw_height);
 						break;
 					case 4:
-						pad_texture<u32>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						pad_texture<u32>(linear_pixels, sw_temp.get(), sw_in_w, sw_in_h, sw_width, sw_height);
 						break;
 					}
 

@@ -256,7 +256,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	sort_string_vector(loadedLibs);
 
-	for (auto lib : loadedLibs)
+	for (const auto& lib : loadedLibs)
 	{
 		QListWidgetItem* item = new QListWidgetItem(qstr(lib), ui->lleList);
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
@@ -281,7 +281,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	sort_string_vector(lle_module_list_unselected);
 
-	for (auto lib : lle_module_list_unselected)
+	for (const auto& lib : lle_module_list_unselected)
 	{
 		QListWidgetItem* item = new QListWidgetItem(qstr(lib), ui->lleList);
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
@@ -978,7 +978,7 @@ void settings_dialog::AddConfigs()
 
 	ui->combo_configs->addItem(gui::Default);
 
-	for (QString entry : xgui_settings->GetConfigEntries())
+	for (const QString& entry : xgui_settings->GetConfigEntries())
 	{
 		if (entry != gui::Default)
 		{
