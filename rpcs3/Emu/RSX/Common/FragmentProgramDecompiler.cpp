@@ -263,7 +263,10 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 	if (!ignore_redirects)
 	{
 		//Special processing redirects
-		if (dst.opcode == RSX_FP_OPCODE_TEXBEM)
+		switch (dst.opcode)
+		{
+		case RSX_FP_OPCODE_TEXBEM:
+		case RSX_FP_OPCODE_TXPBEM:
 		{
 			//Redirect parameter 0 to the x2d temp register for TEXBEM
 			//TODO: Organize this a little better
@@ -271,6 +274,7 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 			std::string result = fmt::replace_all(code, repl);
 
 			return fmt::replace_all(code, repl_list);
+		}
 		}
 	}
 
@@ -623,8 +627,9 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		}
 		return false;
 	case RSX_FP_OPCODE_TXPBEM:
-		//Treat as TXP for now
-		LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXPBEM");
+		//Untested, should be x2d followed by TXP
+		AddX2d();
+		AddCode(Format("x2d = $0.xyxy + $1.xxxx * $2.xzxz + $1.yyyy * $2.ywyw", true));
 	case RSX_FP_OPCODE_TXP:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
