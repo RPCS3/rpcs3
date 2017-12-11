@@ -40,6 +40,9 @@ error_code cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 		id = 1;
 	}
 
+	if (!stat)
+		return CELL_USERINFO_ERROR_PARAM;
+
 	const std::string& path = vfs::get(fmt::format("/dev_hdd0/home/%08d/", id));
 
 	if (!fs::is_dir(path))
@@ -104,7 +107,7 @@ error_code cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserLis
 		// TODO: Properly set the current user ID here, once implemented
 		*currentUserId = 1;
 	}
-	
+
 	return CELL_OK;
 }
 
