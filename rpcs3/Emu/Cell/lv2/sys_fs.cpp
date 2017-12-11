@@ -514,6 +514,9 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 {
 	sys_fs.warning("sys_fs_stat(path=%s, sb=*0x%x)", path, sb);
 
+	if (!path)
+		return CELL_EFAULT;
+
 	const std::string local_path = vfs::get(path.get_ptr());
 
 	if (local_path.empty())
