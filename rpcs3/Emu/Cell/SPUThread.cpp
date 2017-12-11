@@ -297,6 +297,7 @@ void SPUThread::cpu_init()
 
 	ch_dec_start_timestamp = get_timebased_time(); // ???
 	ch_dec_value = 0;
+	dec_state = 0;
 
 	run_ctrl = 0;
 	status = 0;
@@ -927,15 +928,6 @@ u32 SPUThread::get_events(bool waiting)
 		raddr = 0;
 	}
 
-	// SPU Decrementer Event
-	if (!ch_dec_value || (ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 31)
-	{
-		if ((ch_event_stat & SPU_EVENT_TM) == 0)
-		{
-			ch_event_stat |= SPU_EVENT_TM;
-		}
-	}
-
 	// Simple polling or polling with atomically set/removed SPU_EVENT_WAITING flag
 	return !waiting ? ch_event_stat & ch_event_mask : ch_event_stat.atomic_op([&](u32& stat) -> u32
 	{
@@ -1089,8 +1081,8 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case SPU_RdDec:
 	{
-		out = ch_dec_value - (u32)(get_timebased_time() - ch_dec_start_timestamp);
-
+		out = dec_state & dec_run ? (ch_dec_value - (u32)(get_timebased_time() - ch_dec_start_timestamp)) : ch_dec_value;
+		
 		//Polling: We might as well hint to the scheduler to slot in another thread since this one is counting down
 		if (g_cfg.core.spu_loop_detection && out > spu::scheduler::native_jiffy_duration_us)
 			std::this_thread::yield();
@@ -1440,6 +1432,16 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	{
 		ch_dec_start_timestamp = get_timebased_time();
 		ch_dec_value = value;
+		if ((dec_state & dec_msb) < (value >> 31))
+		{
+			set_events(SPU_EVENT_TM);
+		}
+		dec_state = dec_run | (ch_dec_value >> 31);
+		auto mfc = fxm::check_unlocked<mfc_thread>();
+		//if (test(mfc->state, cpu_flag::is_waiting))
+		{
+			mfc->notify();
+		}
 		return true;
 	}
 
@@ -1451,7 +1453,16 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrEventAck:
 	{
-
+		if ((value & SPU_EVENT_TM) > (ch_event_mask & SPU_EVENT_TM) && dec_state & dec_run) 
+		{
+			ch_dec_value -= (u32)(get_timebased_time() - ch_dec_start_timestamp);
+			dec_state = (ch_dec_value >> 31); //save the value of msb and stop the decrementer.
+			auto mfc = fxm::check_unlocked<mfc_thread>();
+			//if (test(mfc->state, cpu_flag::is_waiting))
+			{
+				mfc->notify();
+			}
+		}
 		ch_event_stat &= ~value;
 		return true;
 	}

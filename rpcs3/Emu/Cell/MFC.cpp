@@ -6,6 +6,7 @@
 #include "MFC.h"
 
 const bool s_use_rtm = utils::has_rtm();
+extern u64 get_timebased_time();
 
 template <>
 void fmt_class_string<MFC>::format(std::string& out, u64 arg)
@@ -122,6 +123,26 @@ void mfc_thread::cpu_task()
 
 			const auto proxy_size = spu.mfc_proxy.size();
 			const auto queue_size = spu.mfc_queue.size();
+			
+			// SPU Decrementer Event
+			if (spu.dec_state & dec_run)
+			{
+				if ((spu.ch_dec_value - (get_timebased_time() - spu.ch_dec_start_timestamp)) >> 31)
+				{
+					if ((spu.dec_state & dec_msb) == 0)
+					{
+						spu.set_events(SPU_EVENT_TM);
+					}
+					spu.dec_state |= dec_msb;
+				}
+				else 
+				{
+					spu.dec_state &= ~dec_msb;
+				}
+			}
+			else no_updates = 0;
+			
+			test_state();
 
 			if (proxy_size)
 			{
@@ -340,7 +361,7 @@ void mfc_thread::cpu_task()
 						}
 					}
 
-					if (spu.ch_tag_upd)
+					if (spu.ch_tag_upd || (spu.dec_state & dec_run))
 					{
 						no_updates = 0;
 						break;
