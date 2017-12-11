@@ -62,7 +62,9 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 
 	case SPU_Out_MBox_offs:
 	{
+		bool is_written = ch_out_mbox.get_count();
 		value = ch_out_mbox.pop(*this);
+		if (is_written) set_events(SPU_EVENT_LE);
 		return true;
 	}
 
@@ -234,7 +236,9 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 
 	case SPU_In_MBox_offs:
 	{
+		bool is_written = ch_in_mbox.get_count();
 		ch_in_mbox.push(*this, value);
+		if (!is_written) set_events(SPU_EVENT_MB);
 		return true;
 	}
 

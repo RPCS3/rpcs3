@@ -59,7 +59,7 @@ enum : u32
 	SPU_EVENT_ME = 0x40,   // SPU Outbound Interrupt Mailbox available
 	SPU_EVENT_TM = 0x20,   // SPU Decrementer became negative (?)
 	SPU_EVENT_MB = 0x10,   // SPU Inbound mailbox available
-	SPU_EVENT_QV = 0x4,    // MFC SPU Command Queue available
+	SPU_EVENT_QV = 0x8,    // MFC SPU Command Queue available
 	SPU_EVENT_SN = 0x2,    // MFC List Command stall-and-notify event
 	SPU_EVENT_TG = 0x1,    // MFC Tag Group status update event
 
@@ -113,6 +113,7 @@ enum : u32
 
 enum
 {
+	MFC_MSSync_offs = 0x0000,
 	MFC_LSA_offs = 0x3004,
 	MFC_EAH_offs = 0x3008,
 	MFC_EAL_offs = 0x300C,

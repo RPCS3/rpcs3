@@ -1174,7 +1174,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 			int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT);
 			return true;
 		}
-		
+
 		const u32 code = value >> 24;
 		{
 			if (code < 64)

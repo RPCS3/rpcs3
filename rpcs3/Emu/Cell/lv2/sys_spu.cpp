@@ -834,9 +834,9 @@ error_code sys_spu_thread_write_spu_mb(u32 id, u32 value)
 	{
 		return CELL_ESTAT;
 	}
-
+	bool is_written = thread->ch_in_mbox.get_count();
 	thread->ch_in_mbox.push(*thread, value);
-
+	if (!is_written) thread->set_events(SPU_EVENT_MB);
 	return CELL_OK;
 }
 
@@ -1473,7 +1473,9 @@ error_code sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
 		return CELL_ESRCH;
 	}
 
+	bool is_written = thread->ch_out_intr_mbox.get_count();
 	*value = thread->ch_out_intr_mbox.pop(*thread);
+	if (is_written) thread->set_events(SPU_EVENT_ME);
 
 	return CELL_OK;
 }
