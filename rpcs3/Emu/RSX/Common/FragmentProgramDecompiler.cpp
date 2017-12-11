@@ -273,7 +273,7 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 			std::pair<std::string, std::string> repl[] = { { "$0", "x2d" } };
 			std::string result = fmt::replace_all(code, repl);
 
-			return fmt::replace_all(code, repl_list);
+			return fmt::replace_all(result, repl_list);
 		}
 		}
 	}
