@@ -144,12 +144,56 @@ namespace rsx
 			{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
 		};
 
+		struct ranged_storage
+		{
+			std::vector<section_storage_type> data;  //Stored data
+			std::atomic_int valid_count = { 0 };  //Number of usable (non-dirty) blocks
+			u32 max_range = 0;  //Largest stored block
+			u32 max_addr = 0;
+			u32 min_addr = UINT32_MAX;
+
+			void notify(u32 addr, u32 data_size)
+			{
+				verify(HERE), valid_count >= 0;
+
+				const u32 addr_base = addr & ~0xfff;
+				const u32 block_sz = align(addr + data_size, 4096u) - addr_base;
+
+				max_range = std::max(max_range, block_sz);
+				max_addr = std::max(max_addr, addr);
+				min_addr = std::min(min_addr, addr_base);
+				valid_count++;
+			}
+
+			void add(section_storage_type& section, u32 addr, u32 data_size)
+			{
+				data.push_back(std::move(section));
+				notify(addr, data_size);
+			}
+
+			void remove_one()
+			{
+				verify(HERE), valid_count > 0;
+				valid_count--;
+			}
+		};
+
+		// Keep track of cache misses to pre-emptively flush some addresses
+		struct framebuffer_memory_characteristics
+		{
+			u32 misses;
+			u32 block_size;
+			texture_format format;
+		};
+
 	public:
 		//Struct to hold data on sections to be paged back onto cpu memory
 		struct thrashed_set
 		{
 			bool violation_handled = false;
-			std::vector<section_storage_type*> affected_sections; //Always laid out with flushable sections first then other affected sections last
+			std::vector<section_storage_type*> sections_to_flush; //Sections to be flushed
+			std::vector<section_storage_type*> sections_to_reprotect; //Sections to be protected after flushing
+			std::vector<section_storage_type*> sections_to_unprotect; //These sections are to be unpotected and discarded by caller
 			int num_flushable = 0;
 			u64 cache_tag = 0;
 			u32 address_base = 0;
@@ -216,48 +260,6 @@ namespace rsx
 		};
 
 	protected:
-		struct ranged_storage
-		{
-			std::vector<section_storage_type> data;  //Stored data
-			std::atomic_int valid_count = { 0 };  //Number of usable (non-dirty) blocks
-			u32 max_range = 0;  //Largest stored block
-			u32 max_addr = 0;
-			u32 min_addr = UINT32_MAX;
-
-			void notify(u32 addr, u32 data_size)
-			{
-				verify(HERE), valid_count >= 0;
-
-				const u32 addr_base = addr & ~0xfff;
-				const u32 block_sz = align(addr + data_size, 4096u) - addr_base;
-
-				max_range = std::max(max_range, block_sz);
-				max_addr = std::max(max_addr, addr);
-				min_addr = std::min(min_addr, addr_base);
-				valid_count++;
-			}
-
-			void add(section_storage_type& section, u32 addr, u32 data_size)
-			{
-				data.push_back(std::move(section));
-				notify(addr, data_size);
-			}
-
-			void remove_one()
-			{
-				verify(HERE), valid_count > 0;
-				valid_count--;
-			}
-		};
-
-		// Keep track of cache misses to pre-emptively flush some addresses
-		struct framebuffer_memory_characteristics
-		{
-			u32 misses;
-			u32 block_size;
-			texture_format format;
-		};
-
 		shared_mutex m_cache_mutex;
 		std::unordered_map<u32, ranged_storage> m_cache;
 		std::unordered_multimap<u32, std::pair<deferred_subresource, image_view_type>> m_temporary_subresource_cache;
@@ -422,14 +424,30 @@ namespace rsx
 
 			if (trampled_set.size() > 0)
 			{
-				std::vector<section_storage_type*> sections_to_flush;
-				std::vector<std::pair<utils::protection, section_storage_type*>> sections_to_reprotect;
-				for (int n = 0; n < trampled_set.size(); ++n)
+				update_cache_tag();
+				bool deferred_flush = false;
+
+				thrashed_set result = {};
+				result.violation_handled = true;
+
+				if (!discard_only && !allow_flush)
 				{
-					auto &obj = trampled_set[n];
+					for (auto &obj : trampled_set)
+					{
+						if (obj.first->is_flushable())
+						{
+							deferred_flush = true;
+							break;
+						}
+					}
+				}
+
+				std::vector<utils::protection> reprotections;
+				for (auto &obj : trampled_set)
+				{
 					bool to_reprotect = false;
 
-					if (!discard_only)
+					if (!deferred_flush && !discard_only)
 					{
 						if (!is_writing && obj.first->get_protection() != utils::protection::no)
 						{
@@ -437,7 +455,7 @@ namespace rsx
 						}
 						else
 						{
-							if (rebuild_cache && obj.first->is_flushable())
+							if (rebuild_cache && allow_flush && obj.first->is_flushable())
 							{
 								const std::pair<u32, u32> null_check = std::make_pair(UINT32_MAX, 0);
 								to_reprotect = !std::get<0>(obj.first->overlaps_page(null_check, address, true));
@@ -447,17 +465,25 @@ namespace rsx
 
 					if (to_reprotect)
 					{
-						sections_to_reprotect.push_back({ obj.first->get_protection(), obj.first });
+						result.sections_to_reprotect.push_back(obj.first);
+						reprotections.push_back(obj.first->get_protection());
 					}
 					else if (obj.first->is_flushable())
 					{
-						sections_to_flush.push_back(obj.first);
+						result.sections_to_flush.push_back(obj.first);
 					}
-					else
+					else if (!deferred_flush)
 					{
 						obj.first->set_dirty(true);
 						m_unreleased_texture_objects++;
 					}
+					else
+					{
+						result.sections_to_unprotect.push_back(obj.first);
+					}
+
+					if (deferred_flush)
+						continue;
 
 					if (discard_only)
 						obj.first->discard();
@@ -470,13 +496,21 @@ namespace rsx
 					}
 				}
 
-				thrashed_set result = {};
-				result.violation_handled = true;
-
-				if (allow_flush)
+				if (deferred_flush)
 				{
+					result.num_flushable = static_cast<int>(result.sections_to_flush.size());
+					result.address_base = address;
+					result.address_range = range;
+					result.cache_tag = m_cache_update_tag.load(std::memory_order_consume);
+					return result;
+				}
+
+				if (result.sections_to_flush.size() > 0)
+				{
+					verify(HERE), allow_flush;
+
 					// Flush here before 'reprotecting' since flushing will write the whole span
-					for (const auto &tex : sections_to_flush)
+					for (const auto &tex : result.sections_to_flush)
 					{
 						if (!tex->flush(std::forward<Args>(extras)...))
 						{
@@ -486,28 +520,18 @@ namespace rsx
 						}
 					}
 				}
-				else if (sections_to_flush.size() > 0)
+
+				int n = 0;
+				for (auto &tex: result.sections_to_reprotect)
 				{
-					result.num_flushable = static_cast<int>(sections_to_flush.size());
-					result.affected_sections = std::move(sections_to_flush);
-					result.address_base = address;
-					result.address_range = range;
-					result.cache_tag = m_cache_update_tag.load(std::memory_order_consume);
+					tex->discard();
+					tex->protect(reprotections[n++]);
+					tex->set_dirty(false);
 				}
 
-				for (auto &obj: sections_to_reprotect)
-				{
-					obj.second->discard();
-					obj.second->protect(obj.first);
-					obj.second->set_dirty(false);
-
-					if (result.affected_sections.size() > 0)
-					{
-						//Append to affected set. Not counted as part of num_flushable
-						result.affected_sections.push_back(obj.second);
-					}
-				}
-
+				//Everything has been handled
+				result = {};
+				result.violation_handled = true;
 				return result;
 			}
 
@@ -888,53 +912,73 @@ namespace rsx
 		{
 			writer_lock lock(m_cache_mutex);
 
-			if (data.cache_tag == m_cache_update_tag.load(std::memory_order_consume))
+			if (m_cache_update_tag.load(std::memory_order_consume) == data.cache_tag)
 			{
 				std::vector<utils::protection> old_protections;
-				for (int n = data.num_flushable; n < data.affected_sections.size(); ++n)
+				for (auto &tex : data.sections_to_reprotect)
 				{
-					old_protections.push_back(data.affected_sections[n]->get_protection());
-					data.affected_sections[n]->unprotect();
-				}
-
-				for (int n = 0, i = 0; n < data.affected_sections.size(); ++n)
-				{
-					if (n < data.num_flushable)
+					if (tex->is_locked())
 					{
-						if (!data.affected_sections[n]->flush(std::forward<Args>(extras)...))
-						{
-							//Missed address, note this
-							//TODO: Lower severity when successful to keep the cache from overworking
-							record_cache_miss(*data.affected_sections[n]);
-						}
+						old_protections.push_back(tex->get_protection());
+						tex->unprotect();
 					}
 					else
 					{
-						//Restore protection on the remaining sections
-						data.affected_sections[n]->protect(old_protections[i++]);
+						old_protections.push_back(utils::protection::rw);
+					}
+				}
+
+				for (auto &tex : data.sections_to_unprotect)
+				{
+					if (tex->is_locked())
+					{
+						tex->set_dirty(true);
+						tex->unprotect();
+						m_cache[get_block_address(tex->get_section_base())].remove_one();
+					}
+				}
+
+				//TODO: This bit can cause race conditions if other threads are accessing this memory
+				//1. Force readback if surface is not synchronized yet to make unlocked part finish quickly
+				for (auto &tex : data.sections_to_flush)
+				{
+					if (tex->is_locked())
+					{
+						if (!tex->is_synchronized())
+							tex->copy_texture(true, std::forward<Args>(extras)...);
+
+						m_cache[get_block_address(tex->get_section_base())].remove_one();
+					}
+				}
+
+				//TODO: Acquire global io lock here
+
+				//2. Unprotect all the memory
+				for (auto &tex : data.sections_to_flush)
+				{
+					tex->unprotect();
+				}
+
+				//3. Write all the memory
+				for (auto &tex : data.sections_to_flush)
+				{
+					tex->flush(std::forward<Args>(extras)...);
+				}
+
+				//Restore protection on the sections to reprotect
+				int n = 0;
+				for (auto &tex : data.sections_to_reprotect)
+				{
+					if (old_protections[n] != utils::protection::rw)
+					{
+						tex->discard();
+						tex->protect(old_protections[n++]);
 					}
 				}
 			}
 			else
 			{
 				//The cache contents have changed between the two readings. This means the data held is useless
-				//Restore memory protection for the scan to work properly
-				for (int n = 0; n < data.num_flushable; n++)
-				{
-					if (data.affected_sections[n]->get_protection() == utils::protection::rw)
-					{
-						const u32 address = data.affected_sections[n]->get_section_base();
-						const u32 size = data.affected_sections[n]->get_section_size();
-
-						data.affected_sections[n]->protect(utils::protection::no);
-						m_cache[get_block_address(address)].notify(address, size);
-					}
-					else
-					{
-						LOG_WARNING(RSX, "Texture Cache: Section at address 0x%X was lost", data.affected_sections[n]->get_section_base());
-					}
-				}
-
 				update_cache_tag();
 				invalidate_range_impl_base(data.address_base, data.address_range, true, false, true, true, std::forward<Args>(extras)...);
 			}

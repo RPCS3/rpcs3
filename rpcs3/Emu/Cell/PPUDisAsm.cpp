@@ -1548,7 +1548,14 @@ void PPUDisAsm::OR(ppu_opcode_t op)
 {
 	if (op.rs == op.rb)
 	{
-		DisAsm_R2_RC("mr", op.ra, op.rb, op.rc);
+		switch (op.opcode)
+		{	
+		case 0x7f9ce378: return Write("db8cyc");
+		case 0x7fbdeb78: return Write("db10cyc");
+		case 0x7fdef378: return Write("db12cyc");
+		case 0x7ffffb78: return Write("db16cyc");
+		default : DisAsm_R2_RC("mr", op.ra, op.rb, op.rc);
+		}
 	}
 	else
 	{

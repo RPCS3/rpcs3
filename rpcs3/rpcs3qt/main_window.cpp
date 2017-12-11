@@ -484,7 +484,7 @@ void main_window::InstallPup(const QString& dropPath)
 		// Run asynchronously
 		scope_thread worker("Firmware Installer", [&]
 		{
-			for (auto updatefilename : updatefilenames)
+			for (const auto& updatefilename : updatefilenames)
 			{
 				if (progress == -1) break;
 
@@ -566,7 +566,7 @@ void main_window::DecryptSPRXLibraries()
 
 	LOG_NOTICE(GENERAL, "Decrypting SPRX libraries...");
 
-	for (QString& module : modules)
+	for (const QString& module : modules)
 	{
 		std::string prx_path = sstr(module);
 		const std::string& prx_dir = fs::get_parent_dir(prx_path);
