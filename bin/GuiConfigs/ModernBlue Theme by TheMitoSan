@@ -1,14 +1,14 @@
 /* 
-ModernBlue Theme By TheMitoSan for RPCS3 
+ModernBlue Theme for RPCS3 
 by themitosan @ twitter.com/themitosan
-(2017.11.18)
+(2017.12.12)
 */
 
 /* Every widget */
 QWidget {
-	background-color: #2d343c;
-	color: #FFF;
-	alternate-background-color: #222930;
+	background-color: #232e3a;
+	color: #fff;
+	alternate-background-color: #141e28;
 }
 
 /* Mouse tooltips */
@@ -16,15 +16,15 @@ QToolTip {
 	padding: 0.125em;
 	border: 0.0625em #444;
 	background-color: #181d24;
-	color: #FFF;
+	color: #fff;
 }
 
 /* Table headers */
 QHeaderView::section {
-	background-color: #2d343c;
+	background-color: #333b44;
 	color: #ecf0f1;
 	padding-left: 0.25em;
-	border: 0.0425em solid #FFF;
+	border: 0.0425em solid #fff;
 }
 
 /* Settings Dialog: Tabs */
@@ -32,7 +32,7 @@ QTabBar::tab {
 	color: #ecf0f1;
 	border: 0.0625em solid #feffff;
 	border-bottom-style: none;
-	background-color: #2d343c;
+	background-color: #232e3a;
 	padding-left: 1em;
 	padding-right: 1em;
 	padding-top: 0.25em;
@@ -48,11 +48,11 @@ QTabBar::tab:!selected {
 	color: #666;
 	border-bottom-style: solid;
 	margin-top: 0.1875em;
-	background-color: #212633;
+	background-color: #1b242f;
 }
 QTabBar::tab:hover {
-	background-color: #2d343c;
-	color: #FFF;
+	background-color: #232e3a;
+	color: #fff;
 }
 
 /* Checkboxes */
@@ -60,7 +60,7 @@ QCheckBox::indicator {
 	border-radius: 0.125em;
 	border-top-right-radius: 0em;
 	border-bottom-left-radius: 0em;
-	border: 0.0625em solid #FFF;
+	border: 0.0625em solid #fff;
 	width: 0.8em;
 	height: 0.8em;
 	margin-top: 0.0625em;
@@ -69,7 +69,7 @@ QCheckBox::indicator:checked {
 	background-color: #849ad2; /* Green */
 }
 QCheckBox::indicator:unchecked {
-	background-color: #2d343c; /* Red */
+	background-color: #203042; /* Red */
 }
 QCheckBox::indicator::disabled {
 	background-color: red; /* Gray */
@@ -77,7 +77,7 @@ QCheckBox::indicator::disabled {
 
 /* Radio Buttons */
 QRadioButton::indicator {
-	border: 0.0625em solid #FFF;
+	border: 0.0625em solid #fff;
 	width: 0.8em;
 	height: 0.8em;
 	margin-top: 0.0625em;
@@ -87,7 +87,7 @@ QRadioButton::indicator:checked {
 	background-color: #849ad2; /* Green */
 }
 QRadioButton::indicator:unchecked {
-	background-color: #2d343c; /* Red */
+	background-color: #203042; /* Red */
 }
 QRadioButton::indicator::disabled {
 	background-color: red; /* Gray */
@@ -123,17 +123,17 @@ QGroupBox::title {
 
 /* Buttons */
 QPushButton {
-	background-color: #657ab1;
-	color: #FFF; 
+	background-color: #46598b;
+	color: #fff; 
 }
 
 QPushButton::disabled {
 	background-color: #20283c;
-	color: #FFF;
+	color: #fff;
 }
 
 QPushButton::pressed {
-	background-color: #50669f; 
+	background-color: #172038; 
 }
 
 /* Log and Debugger borders */
@@ -150,7 +150,7 @@ QDockWidget::close-button, QDockWidget::float-button {
 
 /* Disable ugly borders */
 QTabWidget::pane {
-	border: 0em solid #2d343c;
+	border: 0em solid #333b44;
 }
 
 /* Top menu bar */
@@ -173,7 +173,7 @@ QMenu::item:selected {
 }
 QMenu::item:disabled {
 	background-color: #181d24;
-	color: #FFF;
+	color: #fff;
 	border-radius: 0.25em;
 }
 
@@ -191,7 +191,7 @@ QListWidget::item:hover {
 
 /* Pad Settings: Controller Image */
 QLabel#l_controller { 
-	color: #FFF;
+	color: #fff;
 }
 
 /* Game Grid Font */
@@ -199,7 +199,7 @@ QLabel#gamegrid_font {
 	font-weight: 600;
 	font-size: 8pt;
 	font-family: Lucida Grande;
-	color: #FFF;
+	color: #fff;
 }
 
 /* Slider on toolbar */
@@ -255,31 +255,31 @@ QTextEdit#log_frame {
 	background-color: #181d24; /* Black */
 }
 QLabel#log_level_always {
-	color: #00ffff; /* Cyan */
+	color: #74ffda; /* Cyan */
 }
 QLabel#log_level_fatal {
-	color: #ff00ff; /* Fuchsia */
+	color: #ff35ff; /* Fuchsia */
 }
 QLabel#log_level_error {
-	color: #ff0000; /* Red */
+	color: #ff2424; /* Red */
 }
 QLabel#log_level_todo {
-	color: #ff6000; /* Orange */
+	color: #ff8c46; /* Orange */
 }
 QLabel#log_level_success {
-	color: #00ff00; /* Green */
+	color: #7aff7a; /* Green */
 }
 QLabel#log_level_warning {
-	color: #ffff00; /* Yellow */
+	color: #f7ff74; /* Yellow */
 }
 QLabel#log_level_notice {
-	color: #ffffff; /* White */
+	color: #fff; /* White */
 }
 QLabel#log_level_trace {
 	color: #808080; /* Gray */
 }
 QLabel#log_stack {
-	color: #ffffff; /* White */
+	color: #fff; /* White */
 }
 
 /* Set TTY colors */
@@ -297,33 +297,33 @@ QLabel#rsx_debugger_display_buffer {
 
 /* Kernel Explorer */
 QDialog#kernel_explorer {
-	background-color: #2d343c;
+	background-color: #333b44;
 }
 
 /* Memory Viewer */
 QDialog#memory_viewer {
-	background-color: #2d343c;
-	color: #FFF;
+	background-color: #333b44;
+	color: #fff;
 }
 QLabel#memory_viewer_address_panel {
 	color: #00cbff; /* Font Color: Blue */
-	background-color: #2d343c;
+	background-color: #333b44;
 }
 QLabel#memory_viewer_hex_panel {
-	color: #FFF; /* Font Color: Grey */
-	background-color: #2d343c;
+	color: #fff; /* Font Color: Grey */
+	background-color: #333b44;
 }
 QLabel#memory_viewer_ascii_panel {
-	color: #FFF; /* Font Color: Grey */
-	background-color: #2d343c;
+	color: #fff; /* Font Color: Grey */
+	background-color: #333b44;
 }
 
 /* Debugger colors */
 QLabel#debugger_frame_breakpoint {
 	color: #000; /* Font Color: Black */
-	background-color: #2d343c; /* Yellow */
+	background-color: #333b44; /* Yellow */
 }
 QLabel#debugger_frame_pc {
 	color: #000; /* Font Color: Black */
-	background-color: #2d343c; /* Green */
+	background-color: #333b44; /* Green */
 }
