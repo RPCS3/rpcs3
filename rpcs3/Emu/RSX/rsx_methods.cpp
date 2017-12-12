@@ -75,9 +75,9 @@ namespace rsx
 				if (Emu.IsStopped())
 					break;
 
-				if ((get_system_time() - start) > 33000)
+				if ((get_system_time() - start) > 1000000)
 				{
-					//If longer than 33ms force exit (1 frame)
+					//If longer than 1s force exit
 					LOG_ERROR(RSX, "nv406e::semaphore_acquire has timed out. semaphore_address=0x%X", addr);
 					break;
 				}
