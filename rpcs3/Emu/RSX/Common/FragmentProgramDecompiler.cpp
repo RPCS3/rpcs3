@@ -694,7 +694,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	//Unpack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 	case RSX_FP_OPCODE_UP2: SetDst("unpackHalf2x16(floatBitsToUint($0.x)).xyxy"); return true;
 	case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8(floatBitsToUint($0.x))"); return true;
-	case RSX_FP_OPCODE_UP16: SetDst("unpackSnormx16(floatBitsToUint($0.x)).xyxy"); return true;
+	case RSX_FP_OPCODE_UP16: SetDst("unpackSnorm2x16(floatBitsToUint($0.x)).xyxy"); return true;
 	case RSX_FP_OPCODE_UPG:
 	//Same as UPB with gamma correction
 	case RSX_FP_OPCODE_UPB: SetDst("(unpackUnorm4x8(floatBitsToUint($0.x)))"); return true;
