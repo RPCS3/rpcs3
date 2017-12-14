@@ -565,7 +565,8 @@ public:
 
 	atomic_t<u32> ch_event_mask;
 	atomic_t<u32> ch_event_stat;
-    atomic_t<bool> interrupts_enabled;
+	atomic_t<bool> interrupts_enabled;
+	atomic_t<u32> temp_event;
 
 	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
 	u32 ch_dec_value; // written decrementer value and the decrementer value when it stops.

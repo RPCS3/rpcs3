@@ -276,6 +276,7 @@ void SPUThread::cpu_init()
 	ch_tag_mask = 0;
 	mfc_prxy_mask = 0;
 	Prxy_QueryType = 0;
+	temp_event = 0;
 	ch_tag_stat.data.store({});
 	ch_stall_mask = 0;
 	ch_stall_stat.data.store({});
@@ -932,7 +933,7 @@ u32 SPUThread::get_events(bool waiting)
 	// Simple polling or polling with atomically set/removed SPU_EVENT_WAITING flag
 	return !waiting ? ch_event_stat & ch_event_mask : ch_event_stat.atomic_op([&](u32& stat) -> u32
 	{
-		if (u32 res = stat & ch_event_mask)
+		if (u32 res = (stat | temp_event) & ch_event_mask)
 		{
 			stat &= ~SPU_EVENT_WAITING;
 			return res;
@@ -945,13 +946,18 @@ u32 SPUThread::get_events(bool waiting)
 
 void SPUThread::set_events(u32 mask)
 {
-	// Set new events, get old event mask
-	const u32 old_stat = ch_event_stat.fetch_or(mask);
-
-	// Notify if some events were set
-	if (~old_stat & mask && old_stat & SPU_EVENT_WAITING && ch_event_stat & SPU_EVENT_WAITING)
+	temp_event |= mask;
+	
+	///avoid triggering an interrupt if the event is masked
+	if (ch_event_mask & mask)
 	{
-		notify();
+		const u32 old_stat = ch_event_stat.fetch_or(temp_event);
+		
+		// Notify if some events were set
+		if (ch_event_stat & SPU_EVENT_WAITING && mask & ~old_stat)
+		{
+			notify();
+		}
 	}
 }
 

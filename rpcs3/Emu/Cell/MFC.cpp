@@ -249,13 +249,7 @@ void mfc_thread::cpu_task()
 								{
 									spu.ch_stall_mask |= (1 << cmd.tag);
 									spu.ch_stall_stat.push_or(spu, 1 << cmd.tag);
-
-									const u32 evt = spu.ch_event_stat.fetch_or(SPU_EVENT_SN);
-
-									if (evt & SPU_EVENT_WAITING)
-									{
-										spu.notify();
-									}
+									spu.set_events(SPU_EVENT_SN);
 									break;
 								}
 							}
