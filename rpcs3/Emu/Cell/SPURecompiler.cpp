@@ -15,7 +15,7 @@ spu_recompiler_base::~spu_recompiler_base()
 
 void spu_recompiler_base::enter(SPUThread& spu)
 {
-	if (spu.pc >= 0x40000 || spu.pc % 4)
+	if (spu.pc & ~0x3fffc)
 	{
 		fmt::throw_exception("Invalid PC: 0x%05x", spu.pc);
 	}
@@ -77,16 +77,16 @@ void spu_recompiler_base::enter(SPUThread& spu)
 			fmt::throw_exception("Invalid interrupt status set (0x%x)" HERE, res);
 		}
 
-		spu.set_interrupt_status(true);
+		spu.interrupts_enabled = true;
 	}
 	else if (res & 0x8000000)
 	{
-		spu.set_interrupt_status(false);
+		spu.interrupts_enabled = false;
 	}
 
 	spu.pc = res & 0x3fffc;
 
-	if (spu.interrupts_enabled && (spu.ch_event_mask & spu.ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
+	if (spu.interrupts_enabled && (spu.ch_event_mask & spu.ch_event_stat) > 0)
 	{
         spu.interrupts_enabled = false;
 		spu.srr0 = std::exchange(spu.pc, 0);

@@ -14,7 +14,7 @@ void RawSPUThread::cpu_task()
 	// get next PC and SPU Interrupt status
 	pc = npc.exchange(0);
 
-	set_interrupt_status((pc & 1) != 0);
+	interrupts_enabled = (pc & 1) != 0;
 
 	pc &= 0x3fffc;
 

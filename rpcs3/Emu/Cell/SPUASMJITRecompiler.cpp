@@ -290,27 +290,27 @@ inline asmjit::X86Mem spu_recompiler::XmmConst(__m128i data)
 
 void spu_recompiler::CheckInterruptStatus(spu_opcode_t op)
 {
-    if (op.d)
-        c->lock().btr(SPU_OFF_8(interrupts_enabled), 0);
-    else if (op.e) {
-        c->lock().bts(SPU_OFF_8(interrupts_enabled), 0);
-        c->mov(*qw0, SPU_OFF_32(ch_event_stat));
-        c->and_(*qw0, SPU_OFF_32(ch_event_mask));
-        c->and_(*qw0, SPU_EVENT_INTR_TEST);
-        c->cmp(*qw0, 0);
-        
-        asmjit::Label noInterrupt = c->newLabel();
-        c->je(noInterrupt);
-        c->lock().btr(SPU_OFF_8(interrupts_enabled), 0);
-        c->mov(SPU_OFF_32(srr0), *addr);
-        c->mov(SPU_OFF_32(pc), 0);
+	if (op.d)
+		c->lock().btr(SPU_OFF_8(interrupts_enabled), 0);
+	else if (op.e)
+	{
+		c->lock().bts(SPU_OFF_8(interrupts_enabled), 0);
+		c->mov(*qw0, SPU_OFF_32(ch_event_stat));
+		c->and_(*qw0, SPU_OFF_32(ch_event_mask));
+		c->cmp(*qw0, 0);
 
-        FunctionCall();
+		asmjit::Label noInterrupt = c->newLabel();
+		c->je(noInterrupt);
+		c->lock().btr(SPU_OFF_8(interrupts_enabled), 0);
+		c->mov(SPU_OFF_32(srr0), *addr);
+		c->mov(SPU_OFF_32(pc), 0);
 
-        c->mov(*addr, SPU_OFF_32(srr0));
-        c->bind(noInterrupt);
-        c->unuse(*qw0);
-    }
+		FunctionCall();
+
+		c->mov(*addr, SPU_OFF_32(srr0));
+		c->bind(noInterrupt);
+		c->unuse(*qw0);
+	}
 }
 
 void spu_recompiler::InterpreterCall(spu_opcode_t op)

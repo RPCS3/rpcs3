@@ -43,14 +43,14 @@ void spu_interpreter::set_interrupt_status(SPUThread& spu, spu_opcode_t op)
 			fmt::throw_exception("Undefined behaviour" HERE);
 		}
 
-		spu.set_interrupt_status(true);
+		spu.interrupts_enabled = true;
 	}
 	else if (op.d)
 	{
-		spu.set_interrupt_status(false);
+		spu.interrupts_enabled = false;
 	}
 
-	if (spu.interrupts_enabled && (spu.ch_event_mask & spu.ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
+	if (spu.interrupts_enabled && (spu.ch_event_mask & spu.ch_event_stat) > 0)
 	{
         spu.interrupts_enabled = false;
 		spu.srr0 = std::exchange(spu.pc, -4) + 4;

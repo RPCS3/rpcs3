@@ -952,11 +952,6 @@ u32 SPUThread::get_events(bool waiting)
 
 void SPUThread::set_events(u32 mask)
 {
-	if (u32 unimpl = mask & ~SPU_EVENT_IMPLEMENTED)
-	{
-		fmt::throw_exception("Unimplemented events (0x%x)" HERE, unimpl);
-	}
-
 	// Set new events, get old event mask
 	const u32 old_stat = ch_event_stat.fetch_or(mask);
 
@@ -964,23 +959,6 @@ void SPUThread::set_events(u32 mask)
 	if (~old_stat & mask && old_stat & SPU_EVENT_WAITING && ch_event_stat & SPU_EVENT_WAITING)
 	{
 		notify();
-	}
-}
-
-void SPUThread::set_interrupt_status(bool enable)
-{
-	if (enable)
-	{
-		// detect enabling interrupts with events masked
-		if (u32 mask = ch_event_mask & ~SPU_EVENT_INTR_IMPLEMENTED)
-		{
-			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, mask);
-		}
-        interrupts_enabled = true;
-	}
-	else
-	{
-        interrupts_enabled = false;
 	}
 }
 
@@ -1467,28 +1445,12 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrEventMask:
 	{
-		// detect masking events with enabled interrupt status
-		if (value & ~SPU_EVENT_INTR_IMPLEMENTED && interrupts_enabled)
-		{
-			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, value);
-		}
-
-		// detect masking unimplemented events
-		if (value & ~SPU_EVENT_IMPLEMENTED)
-		{
-			break;
-		}
-
 		ch_event_mask = value;
 		return true;
 	}
 
 	case SPU_WrEventAck:
 	{
-		if (value & ~SPU_EVENT_IMPLEMENTED)
-		{
-			break;
-		}
 
 		ch_event_stat &= ~value;
 		return true;

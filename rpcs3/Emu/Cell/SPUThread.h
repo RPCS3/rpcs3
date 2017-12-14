@@ -52,7 +52,7 @@ enum : u32
 {
 	SPU_EVENT_MS = 0x1000, // Multisource Synchronization event
 	SPU_EVENT_A  = 0x800,  // Privileged Attention event
-	SPU_EVENT_LR = 0x400,  // Lock Line Reservation Lost event
+	SPU_EVENT_LR = 0x400,  // Lock Line Reservation Lost event ~ TODO: check if an immediate update needed
 	SPU_EVENT_S1 = 0x200,  // Signal Notification Register 1 available
 	SPU_EVENT_S2 = 0x100,  // Signal Notification Register 2 available
 	SPU_EVENT_LE = 0x80,   // SPU Outbound Mailbox available
@@ -63,14 +63,9 @@ enum : u32
 	SPU_EVENT_SN = 0x2,    // MFC List Command stall-and-notify event
 	SPU_EVENT_TG = 0x1,    // MFC Tag Group status update event
 
-	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN, // Mask of implemented events
-	SPU_EVENT_INTR_IMPLEMENTED = SPU_EVENT_SN,
-
 	SPU_EVENT_WAITING      = 0x80000000, // Originally unused, set when SPU thread starts waiting on ch_event_stat
 	//SPU_EVENT_AVAILABLE  = 0x40000000, // Originally unused, channel count of the SPU_RdEventStat channel
 	//SPU_EVENT_INTR_ENABLED = 0x20000000, // Originally unused, represents "SPU Interrupts Enabled" status
-
-	SPU_EVENT_INTR_TEST = SPU_EVENT_INTR_IMPLEMENTED
 };
 
 // SPU Class 0 Interrupts
@@ -596,7 +591,6 @@ public:
 	void process_mfc_cmd();
 	u32 get_events(bool waiting = false);
 	void set_events(u32 mask);
-	void set_interrupt_status(bool enable);
 	u32 get_ch_count(u32 ch);
 	bool get_ch_value(u32 ch, u32& out);
 	bool set_ch_value(u32 ch, u32 value);
