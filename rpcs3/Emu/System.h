@@ -182,6 +182,8 @@ class Emulator final
 	std::string m_title_id;
 	std::string m_title;
 
+	bool m_force_boot = false;
+
 public:
 	Emulator() = default;
 
@@ -243,9 +245,12 @@ public:
 	}
 
 	bool BootGame(const std::string& path, bool direct = false, bool add_only = false);
+	bool InstallPkg(const std::string& path);
 
 	static std::string GetHddDir();
 	static std::string GetLibDir();
+
+	void SetForceBoot(bool force_boot);
 
 	void Load(bool add_only = false);
 	void Run();
@@ -278,7 +283,7 @@ struct cfg_root : cfg::node
 		cfg::_bool bind_spu_cores{this, "Bind SPU threads to secondary cores"};
 		cfg::_bool lower_spu_priority{this, "Lower SPU thread priority"};
 		cfg::_bool spu_debug{this, "SPU Debug"};
-		cfg::_int<32, 16384> max_spu_immediate_write_size{this, "Maximum immediate DMA write size", 16384}; // Maximum size that an SPU thread can write directly without posting to MFC
+		cfg::_int<0, 16384> max_spu_immediate_write_size{this, "Maximum immediate DMA write size", 16384}; // Maximum size that an SPU thread can write directly without posting to MFC
 		cfg::_int<0, 6> preferred_spu_threads{this, "Preferred SPU Threads", 0}; //Numnber of hardware threads dedicated to heavy simultaneous spu tasks
 		cfg::_int<0, 16> spu_delay_penalty{this, "SPU delay penalty", 3}; //Number of milliseconds to block a thread if a virtual 'core' isn't free
 		cfg::_bool spu_loop_detection{this, "SPU loop detection", true}; //Try to detect wait loops and trigger thread yield
@@ -368,7 +373,7 @@ struct cfg_root : cfg::node
 		cfg::_int<2, 128> frames{this, "Buffer Count", 32};
 
 	} audio{this};
-	
+
 	struct node_io : cfg::node
 	{
 		node_io(cfg::node* _this) : cfg::node(_this, "Input/Output") {}
@@ -380,7 +385,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<fake_camera_type> camera_type{this, "Camera type", fake_camera_type::unknown};
 
 	} io{this};
-	
+
 	struct node_sys : cfg::node
 	{
 		node_sys(cfg::node* _this) : cfg::node(_this, "System") {}
@@ -388,7 +393,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<CellSysutilLang> language{this, "Language"};
 
 	} sys{this};
-	
+
 	struct node_net : cfg::node
 	{
 		node_net(cfg::node* _this) : cfg::node(_this, "Net") {}
@@ -401,7 +406,7 @@ struct cfg_root : cfg::node
 	struct node_misc : cfg::node
 	{
 		node_misc(cfg::node* _this) : cfg::node(_this, "Miscellaneous") {}
-		
+
 		cfg::_bool autostart{this, "Automatically start games after boot", true};
 		cfg::_bool autoexit{this, "Exit RPCS3 when process finishes"};
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };

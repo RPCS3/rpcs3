@@ -288,6 +288,32 @@ inline asmjit::X86Mem spu_recompiler::XmmConst(__m128i data)
 	return XmmConst(v128::fromV(data));
 }
 
+void spu_recompiler::CheckInterruptStatus(spu_opcode_t op)
+{
+	if (op.d)
+		c->lock().btr(SPU_OFF_8(interrupts_enabled), 0);
+	else if (op.e)
+	{
+		c->lock().bts(SPU_OFF_8(interrupts_enabled), 0);
+		c->mov(*qw0, SPU_OFF_32(ch_event_stat));
+		c->and_(*qw0, SPU_OFF_32(ch_event_mask));
+		c->and_(*qw0, SPU_EVENT_INTR_TEST);
+		c->cmp(*qw0, 0);
+
+		asmjit::Label noInterrupt = c->newLabel();
+		c->je(noInterrupt);
+		c->lock().btr(SPU_OFF_8(interrupts_enabled), 0);
+		c->mov(SPU_OFF_32(srr0), *addr);
+		c->mov(SPU_OFF_32(pc), 0);
+
+		FunctionCall();
+
+		c->mov(*addr, SPU_OFF_32(srr0));
+		c->bind(noInterrupt);
+		c->unuse(*qw0);
+	}
+}
+
 void spu_recompiler::InterpreterCall(spu_opcode_t op)
 {
 	auto gate = [](SPUThread* _spu, u32 opcode, spu_inter_func_t _func) noexcept -> u32
@@ -351,12 +377,12 @@ void spu_recompiler::FunctionCall()
 					fmt::throw_exception("Undefined behaviour" HERE);
 				}
 
-				_spu->set_interrupt_status(true);
+				_spu->interrupts_enabled = true;
 				_spu->pc &= ~0x4000000;
 			}
 			else if (_spu->pc & 0x8000000)
 			{
-				_spu->set_interrupt_status(false);
+				_spu->interrupts_enabled = false;
 				_spu->pc &= ~0x8000000;
 			}
 
@@ -1013,7 +1039,7 @@ void spu_recompiler::BI(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
 	c->and_(*addr, 0x3fffc);
-	if (op.d || op.e) c->or_(*addr, op.e << 26 | op.d << 27); // interrupt flags neutralize jump table
+	CheckInterruptStatus(op);
 	c->jmp(*jt);
 }
 
@@ -1037,7 +1063,7 @@ void spu_recompiler::IRET(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(srr0));
 	c->and_(*addr, 0x3fffc);
-	if (op.d || op.e) c->or_(*addr, op.e << 26 | op.d << 27); // interrupt flags neutralize jump table
+	CheckInterruptStatus(op);
 	c->jmp(*jt);
 }
 
@@ -1862,7 +1888,14 @@ void spu_recompiler::FCMGT(spu_opcode_t op)
 
 void spu_recompiler::DFCMGT(spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+	const auto mask = XmmConst(_mm_set1_epi64x(0x7fffffffffffffff));
+	const XmmLink& va = XmmGet(op.ra, XmmType::Double);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Double);
+
+	c->andpd(va, mask);
+	c->andpd(vb, mask);
+	c->cmppd(vb, va, 1);
+	c->movaps(SPU_OFF_128(gpr, op.rt), vb);
 }
 
 void spu_recompiler::DFA(spu_opcode_t op)

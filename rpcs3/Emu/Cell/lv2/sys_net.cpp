@@ -155,7 +155,7 @@ extern void network_thread_init()
 						events += lv2_socket::poll::read;
 					if (sock.ev_set & (FD_WRITE | FD_CONNECT) && sock.events.test_and_reset(lv2_socket::poll::write))
 						events += lv2_socket::poll::write;
-					
+
 					if ((nwe.lNetworkEvents & FD_READ && nwe.iErrorCode[FD_READ_BIT]) ||
 						(nwe.lNetworkEvents & FD_ACCEPT && nwe.iErrorCode[FD_ACCEPT_BIT]) ||
 						(nwe.lNetworkEvents & FD_CLOSE && nwe.iErrorCode[FD_CLOSE_BIT]) ||
@@ -203,7 +203,7 @@ extern void network_thread_init()
 			}
 
 			s_to_awake.erase(std::unique(s_to_awake.begin(), s_to_awake.end()), s_to_awake.end());
-			
+
 			for (ppu_thread* ppu : s_to_awake)
 			{
 				network_clear_queue(*ppu);
@@ -378,7 +378,7 @@ s32 sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, 
 		paddr->sin_addr   = ntohl(((::sockaddr_in*)&native_addr)->sin_addr.s_addr);
 		paddr->sin_zero   = 0;
 	}
-	
+
 	// Socket id
 	return result;
 }
@@ -672,7 +672,7 @@ s32 sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optname, vm::
 
 		if (level == SYS_NET_SOL_SOCKET)
 		{
-			native_level = SOL_SOCKET;			
+			native_level = SOL_SOCKET;
 
 			switch (optname)
 			{
@@ -1026,7 +1026,7 @@ s32 sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 len, s32
 		name.sin_port        = htons(((sys_net_sockaddr_in*)addr.get_ptr())->sin_port);
 		name.sin_addr.s_addr = htonl(((sys_net_sockaddr_in*)addr.get_ptr())->sin_addr);
 	}
-	
+
 	::socklen_t namelen = sizeof(name);
 	s32 result = 0;
 
@@ -1144,7 +1144,7 @@ s32 sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optname, vm::
 
 		if (level == SYS_NET_SOL_SOCKET)
 		{
-			native_level = SOL_SOCKET;			
+			native_level = SOL_SOCKET;
 
 			switch (optname)
 			{
@@ -1236,6 +1236,18 @@ s32 sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optname, vm::
 				native_linger.l_onoff = ((const sys_net_linger*)optval.get_ptr())->l_onoff;
 				native_linger.l_linger = ((const sys_net_linger*)optval.get_ptr())->l_linger;
 				break;
+			}
+			case SYS_NET_SO_USECRYPTO:
+			{
+				//TODO
+				sys_net.error("sys_net_bnet_setsockopt(s=%d, SOL_SOCKET): Stubbed option (0x%x) (SYS_NET_SO_USECRYPTO)", s, optname);
+				return 0;
+			}
+			case SYS_NET_SO_USESIGNATURE:
+			{
+				//TODO
+				sys_net.error("sys_net_bnet_setsockopt(s=%d, SOL_SOCKET): Stubbed option (0x%x) (SYS_NET_SO_USESIGNATURE)", s, optname);
+				return 0;
 			}
 			default:
 			{
@@ -1333,24 +1345,37 @@ s32 sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protocol)
 {
 	sys_net.warning("sys_net_bnet_socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
 
-	if (family != SYS_NET_AF_INET)
+	if (family != SYS_NET_AF_INET && family != SYS_NET_AF_UNSPEC)
 	{
 		sys_net.error("sys_net_bnet_socket(): unknown family (%d)", family);
 	}
 
-	if (type != SYS_NET_SOCK_STREAM && type != SYS_NET_SOCK_DGRAM)
+	if (type != SYS_NET_SOCK_STREAM && type != SYS_NET_SOCK_DGRAM && type != SYS_NET_SOCK_DGRAM_P2P)
 	{
 		sys_net.error("sys_net_bnet_socket(): unsupported type (%d)", type);
 		return -SYS_NET_EPROTONOSUPPORT;
 	}
 
 	const int native_domain = AF_INET;
+
 	const int native_type =
 		type == SYS_NET_SOCK_STREAM ? SOCK_STREAM :
-		type == SYS_NET_SOCK_DGRAM ? SOCK_DGRAM : SOCK_RAW;
-	const int native_proto =
-		type == SYS_NET_SOCK_STREAM ? 0 :
-		type == SYS_NET_SOCK_DGRAM ? 0 : 0;
+		type == SYS_NET_SOCK_DGRAM ? SOCK_DGRAM :
+		type == SYS_NET_SOCK_DGRAM_P2P ? SOCK_DGRAM : SOCK_RAW;
+
+	int native_proto =
+		protocol == SYS_NET_IPPROTO_IP ? IPPROTO_IP :
+		protocol == SYS_NET_IPPROTO_ICMP ? IPPROTO_ICMP :
+		protocol == SYS_NET_IPPROTO_IGMP ? IPPROTO_IGMP :
+		protocol == SYS_NET_IPPROTO_TCP ? IPPROTO_TCP :
+		protocol == SYS_NET_IPPROTO_UDP ? IPPROTO_UDP :
+		protocol == SYS_NET_IPPROTO_ICMPV6 ? IPPROTO_ICMPV6 : 0;
+
+	if (native_domain == AF_UNSPEC && type == SYS_NET_SOCK_DGRAM)
+	{
+		//Windows gets all errory if you try a unspec socket with protocol 0
+		native_proto = IPPROTO_UDP;
+	}
 
 	const auto native_socket = ::socket(native_domain, native_type, native_proto);
 
@@ -1481,7 +1506,7 @@ s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s3
 				semaphore_lock lock(sock->mutex);
 
 				bs_t<lv2_socket::poll> selected = +lv2_socket::poll::error;
-				
+
 				if (fds[i].events & SYS_NET_POLLIN)
 					selected += lv2_socket::poll::read;
 				if (fds[i].events & SYS_NET_POLLOUT)
@@ -1712,7 +1737,7 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 	{
 		return -SYS_NET_EINVAL;
 	}
-	
+
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
 		if (timeout)

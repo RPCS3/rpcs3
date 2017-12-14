@@ -18,7 +18,7 @@
 
 extern std::string g_cfg_defaults; //! Default settings grabbed from Utilities/Config.h
 
-inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
 // Emit sorted YAML

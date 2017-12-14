@@ -140,24 +140,24 @@ namespace
 
 	GLenum front_face(rsx::front_face op)
 	{
-		bool invert = (rsx::method_registers.shader_window_origin() == rsx::window_origin::bottom);
-
+		//NOTE: RSX face winding is always based off of upper-left corner like vulkan, but GL is bottom left
+		//shader_window_origin register does not affect this
+		//verified with Outrun Online Arcade (window_origin::top) and DS2 (window_origin::bottom)
+		//correctness of face winding checked using stencil test (GOW collection shadows)
 		switch (op)
 		{
-		case rsx::front_face::cw: return (invert ? GL_CCW : GL_CW);
-		case rsx::front_face::ccw: return (invert ? GL_CW : GL_CCW);
+		case rsx::front_face::cw: return GL_CCW;
+		case rsx::front_face::ccw: return GL_CW;
 		}
 		fmt::throw_exception("Unsupported front face 0x%X" HERE, (u32)op);
 	}
 
 	GLenum cull_face(rsx::cull_face op)
 	{
-		bool invert = (rsx::method_registers.shader_window_origin() == rsx::window_origin::top);
-
 		switch (op)
 		{
-		case rsx::cull_face::front: return (invert ? GL_BACK : GL_FRONT);
-		case rsx::cull_face::back: return (invert ? GL_FRONT : GL_BACK);
+		case rsx::cull_face::front: return GL_FRONT;
+		case rsx::cull_face::back: return GL_BACK;
 		case rsx::cull_face::front_and_back: return GL_FRONT_AND_BACK;
 		}
 		fmt::throw_exception("Unsupported cull face 0x%X" HERE, (u32)op);
@@ -168,13 +168,11 @@ void GLGSRender::begin()
 {
 	rsx::thread::begin();
 
-	if (skip_frame)
+	if (skip_frame ||
+		(conditional_render_enabled && conditional_render_test_failed))
 		return;
 
-	if (conditional_render_enabled && conditional_render_test_failed)
-		return;
-
-	init_buffers();
+	init_buffers(rsx::framebuffer_creation_context::context_draw);
 }
 
 namespace
@@ -196,7 +194,9 @@ void GLGSRender::end()
 {
 	std::chrono::time_point<steady_clock> state_check_start = steady_clock::now();
 
-	if (skip_frame || !framebuffer_status_valid || (conditional_render_enabled && conditional_render_test_failed) || !check_program_state())
+	if (skip_frame || !framebuffer_status_valid ||
+		(conditional_render_enabled && conditional_render_test_failed) ||
+		!check_program_state())
 	{
 		rsx::thread::end();
 		return;
@@ -464,20 +464,31 @@ void GLGSRender::end()
 		ds->set_cleared();
 	}
 
+	if (ds && ds->old_contents != nullptr && ds->get_rsx_pitch() == ds->old_contents->get_rsx_pitch() &&
+		ds->old_contents->get_compatible_internal_format() == gl::texture::internal_format::rgba8)
+	{
+		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
+		ds->old_contents = nullptr;
+	}
+
 	if (g_cfg.video.strict_rendering_mode)
 	{
-		if (ds->old_contents != nullptr)
+		if (ds && ds->old_contents != nullptr)
 			copy_rtt_contents(ds);
 
 		for (auto &rtt : m_rtts.m_bound_render_targets)
 		{
-			if (std::get<0>(rtt) != 0)
+			if (auto surface = std::get<1>(rtt))
 			{
-				auto surface = std::get<1>(rtt);
 				if (surface->old_contents != nullptr)
 					copy_rtt_contents(surface);
 			}
 		}
+	}
+	else
+	{
+		// Old contents are one use only. Keep the depth conversion check from firing over and over
+		if (ds) ds->old_contents = nullptr;
 	}
 
 	glEnable(GL_SCISSOR_TEST);
@@ -577,10 +588,6 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
 	m_draw_calls++;
-
-	if (zcull_task_queue.active_query &&
-		zcull_task_queue.active_query->active)
-		zcull_task_queue.active_query->num_draws++;
 
 	synchronize_buffers();
 	rsx::thread::end();
@@ -742,9 +749,11 @@ void GLGSRender::on_init_thread()
 	//Occlusion query
 	for (u32 i = 0; i < occlusion_query_count; ++i)
 	{
+		GLuint handle = 0;
 		auto &query = occlusion_query_data[i];
-		glGenQueries(1, &query.handle);
+		glGenQueries(1, &handle);
 		
+		query.driver_handle = (u64)handle;
 		query.pending = false;
 		query.active = false;
 		query.result = 0;
@@ -757,6 +766,8 @@ void GLGSRender::on_init_thread()
 	glEnable(GL_CLIP_DISTANCE0 + 3);
 	glEnable(GL_CLIP_DISTANCE0 + 4);
 	glEnable(GL_CLIP_DISTANCE0 + 5);
+
+	m_depth_converter.create();
 
 	m_gl_texture_cache.initialize();
 	m_thread_id = std::this_thread::get_id();
@@ -826,6 +837,7 @@ void GLGSRender::on_exit()
 
 	m_text_printer.close();
 	m_gl_texture_cache.destroy();
+	m_depth_converter.destroy();
 
 	for (u32 i = 0; i < occlusion_query_count; ++i)
 	{
@@ -833,7 +845,9 @@ void GLGSRender::on_exit()
 		query.active = false;
 		query.pending = false;
 
-		glDeleteQueries(1, &query.handle);
+		GLuint handle = (GLuint)query.driver_handle;
+		glDeleteQueries(1, &handle);
+		query.driver_handle = 0;
 	}
 
 	glFlush();
@@ -912,7 +926,11 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 		if (arg & 0xF3)
 		{
 			//Only do all this if we have actual work to do
-			init_buffers(true);
+			u8 ctx = rsx::framebuffer_creation_context::context_draw;
+			if (arg & 0xF0) ctx |= rsx::framebuffer_creation_context::context_clear_color;
+			if (arg & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
+
+			init_buffers((rsx::framebuffer_creation_context)ctx, true);
 			synchronize_buffers();
 			clear_surface(arg);
 		}
@@ -1391,179 +1409,29 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	//m_rtts.invalidate_surface_address(addr, false);
 }
 
-void GLGSRender::check_zcull_status(bool framebuffer_swap, bool force_read)
+void GLGSRender::begin_occlusion_query(rsx::occlusion_query_info* query)
 {
-	if (g_cfg.video.disable_zcull_queries)
-		return;
-
-	bool testing_enabled = zcull_pixel_cnt_enabled || zcull_stats_enabled;
-
-	if (framebuffer_swap)
-	{
-		zcull_surface_active = false;
-		const u32 zeta_address = depth_surface_info.address;
-
-		if (zeta_address)
-		{
-			//Find zeta address in bound zculls
-			for (int i = 0; i < rsx::limits::zculls_count; i++)
-			{
-				if (zculls[i].binded)
-				{
-					const u32 rsx_address = rsx::get_address(zculls[i].offset, CELL_GCM_LOCATION_LOCAL);
-					if (rsx_address == zeta_address)
-					{
-						zcull_surface_active = true;
-						break;
-					}
-				}
-			}
-		}
-	}
-
-	occlusion_query_info* query = nullptr;
-
-	if (zcull_task_queue.task_stack.size() > 0)
-		query = zcull_task_queue.active_query;
-
-	if (query && query->active)
-	{
-		if (force_read || (!zcull_rendering_enabled || !testing_enabled || !zcull_surface_active))
-		{
-			glEndQuery(GL_ANY_SAMPLES_PASSED);
-			query->active = false;
-			query->pending = true;
-		}
-	}
-	else
-	{
-		if (zcull_rendering_enabled && testing_enabled && zcull_surface_active)
-		{
-			//Find query
-			u32 free_index = synchronize_zcull_stats();
-			query = &occlusion_query_data[free_index];
-			zcull_task_queue.add(query);
-
-			glBeginQuery(GL_ANY_SAMPLES_PASSED, query->handle);
-			query->active = true;
-			query->result = 0;
-			query->num_draws = 0;
-		}
-	}
+	query->result = 0;
+	glBeginQuery(GL_ANY_SAMPLES_PASSED, (GLuint)query->driver_handle);
 }
 
-void GLGSRender::clear_zcull_stats(u32 type)
+void GLGSRender::end_occlusion_query(rsx::occlusion_query_info* query)
 {
-	if (g_cfg.video.disable_zcull_queries)
-		return;
-
-	if (type == CELL_GCM_ZPASS_PIXEL_CNT)
-	{
-		if (zcull_task_queue.active_query &&
-			zcull_task_queue.active_query->active &&
-			zcull_task_queue.active_query->num_draws > 0)
-		{
-			//discard active query results
-			check_zcull_status(false, true);
-			zcull_task_queue.active_query->pending = false;
-
-			//re-enable cull stats if stats are enabled
-			check_zcull_status(false, false);
-			zcull_task_queue.active_query->num_draws = 0;
-		}
-
-		current_zcull_stats.clear();
-	}
+	glEndQuery(GL_ANY_SAMPLES_PASSED);
 }
 
-u32 GLGSRender::get_zcull_stats(u32 type)
+bool GLGSRender::check_occlusion_query_status(rsx::occlusion_query_info* query)
 {
-	if (g_cfg.video.disable_zcull_queries)
-		return 0u;
+	GLint status = GL_TRUE;
+	glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT_AVAILABLE, &status);
 
-	if (zcull_task_queue.active_query &&
-		zcull_task_queue.active_query->active &&
-		current_zcull_stats.zpass_pixel_cnt == 0 &&
-		type == CELL_GCM_ZPASS_PIXEL_CNT)
-	{
-		//The zcull unit is still bound as the read is happening and there are no results ready
-		check_zcull_status(false, true);  //close current query
-		check_zcull_status(false, false); //start new query since stat counting is still active
-	}
-
-	switch (type)
-	{
-	case CELL_GCM_ZPASS_PIXEL_CNT:
-	{
-		if (current_zcull_stats.zpass_pixel_cnt > 0)
-			return UINT16_MAX;
-
-		synchronize_zcull_stats(true);
-		return (current_zcull_stats.zpass_pixel_cnt > 0)? UINT16_MAX : 0;
-	}
-	case CELL_GCM_ZCULL_STATS:
-	case CELL_GCM_ZCULL_STATS1:
-	case CELL_GCM_ZCULL_STATS2:
-		//TODO
-		return UINT16_MAX;
-	case CELL_GCM_ZCULL_STATS3:
-	{
-		//Some kind of inverse value
-		if (current_zcull_stats.zpass_pixel_cnt > 0)
-			return 0;
-		
-		synchronize_zcull_stats(true);
-		return (current_zcull_stats.zpass_pixel_cnt > 0) ? 0 : UINT16_MAX;
-	}
-	default:
-		LOG_ERROR(RSX, "Unknown zcull stat type %d", type);
-		return 0;
-	}
+	return status != GL_FALSE;
 }
 
-u32 GLGSRender::synchronize_zcull_stats(bool hard_sync)
+void GLGSRender::get_occlusion_query_result(rsx::occlusion_query_info* query)
 {
-	if (!zcull_rendering_enabled || zcull_task_queue.pending == 0)
-		return 0;
+	GLint result;
+	glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT, &result);
 
-	u32 result = UINT16_MAX;
-	GLint count, status;
-
-	for (auto &query : zcull_task_queue.task_stack)
-	{
-		if (query == nullptr || query->active)
-			continue;
-
-		glGetQueryObjectiv(query->handle, GL_QUERY_RESULT_AVAILABLE, &status);
-
-		if (status == GL_FALSE && !hard_sync)
-			continue;
-
-		glGetQueryObjectiv(query->handle, GL_QUERY_RESULT, &count);
-		query->pending = false;
-		query = nullptr;
-
-		current_zcull_stats.zpass_pixel_cnt += count;
-		zcull_task_queue.pending--;
-	}
-
-	for (u32 i = 0; i < occlusion_query_count; ++i)
-	{
-		auto &query = occlusion_query_data[i];
-		if (!query.pending && !query.active)
-		{
-			result = i;
-			break;
-		}
-	}
-
-	if (result == UINT16_MAX && !hard_sync)
-		return synchronize_zcull_stats(true);
-
-	return result;
-}
-
-void GLGSRender::notify_zcull_info_changed()
-{
-	check_zcull_status(false, false);
+	query->result += result;
 }

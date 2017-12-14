@@ -63,6 +63,9 @@ rpcs3_app::rpcs3_app(int& argc, char** argv) : QApplication(argc, argv)
 
 void rpcs3_app::Init()
 {
+	setApplicationName("RPCS3");
+	setWindowIcon(QIcon(":/rpcs3.ico"));
+
 	Emu.Init();
 
 	guiSettings.reset(new gui_settings());
@@ -79,13 +82,12 @@ void rpcs3_app::Init()
 
 	RPCS3MainWin->Init();
 
-	setApplicationName("RPCS3");
 	RPCS3MainWin->show();
 
 	// Create the thumbnail toolbar after the main_window is created
 	RPCS3MainWin->CreateThumbnailToolbar();
 
-	if (guiSettings->GetValue(GUI::ib_show_welcome).toBool())
+	if (guiSettings->GetValue(gui::ib_show_welcome).toBool())
 	{
 		welcome_dialog* welcome = new welcome_dialog();
 		welcome->exec();
@@ -103,7 +105,7 @@ void rpcs3_app::InitializeCallbacks()
 		quit();
 	};
 	callbacks.call_after = [=](std::function<void()> func)
-	{	
+	{
 		RequestCallAfter(std::move(func));
 	};
 
@@ -158,13 +160,13 @@ void rpcs3_app::InitializeCallbacks()
 		int w = size.first;
 		int h = size.second;
 
-		if (guiSettings->GetValue(GUI::gs_resize).toBool())
+		if (guiSettings->GetValue(gui::gs_resize).toBool())
 		{
-			w = guiSettings->GetValue(GUI::gs_width).toInt();
-			h = guiSettings->GetValue(GUI::gs_height).toInt();
+			w = guiSettings->GetValue(gui::gs_width).toInt();
+			h = guiSettings->GetValue(gui::gs_height).toInt();
 		}
 
-		bool disableMouse = guiSettings->GetValue(GUI::gs_disableMouse).toBool();
+		bool disableMouse = guiSettings->GetValue(gui::gs_disableMouse).toBool();
 
 		switch (video_renderer type = g_cfg.video.renderer)
 		{
@@ -174,7 +176,7 @@ void rpcs3_app::InitializeCallbacks()
 			gameWindow = ret;
 			return std::unique_ptr<gs_frame>(ret);
 		}
-		case video_renderer::opengl: 
+		case video_renderer::opengl:
 		{
 			gl_gs_frame* ret = new gl_gs_frame(w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
 			gameWindow = ret;
@@ -290,38 +292,38 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 		};
 
 		// toolbar color stylesheet
-		QString rgba_tool_bar = rgba(GUI::mw_tool_bar_color);
+		QString rgba_tool_bar = rgba(gui::mw_tool_bar_color);
 		QString style_toolbar = QString
 		(
 			"QLineEdit#mw_searchbar { margin-left:14px; background-color: " + rgba_tool_bar + " }"
 			"QToolBar#mw_toolbar { background-color: " + rgba_tool_bar + " }"
 			"QToolBar#mw_toolbar QSlider { background-color: " + rgba_tool_bar + " }"
-			"QToolBar#mw_toolbar::separator { background-color: " + rgba(GUI::mw_tool_bar_color, -20) + " width: 1px; margin-top: 2px; margin-bottom: 2px; }"
+			"QToolBar#mw_toolbar::separator { background-color: " + rgba(gui::mw_tool_bar_color, -20) + " width: 1px; margin-top: 2px; margin-bottom: 2px; }"
 		);
 
 		// toolbar icon color stylesheet
 		QString style_toolbar_icons = QString
 		(
-			"QLabel#toolbar_icon_color { color: " + rgba(GUI::mw_tool_icon_color) + " }"
+			"QLabel#toolbar_icon_color { color: " + rgba(gui::mw_tool_icon_color) + " }"
 		);
 
 		// thumbnail icon color stylesheet
 		QString style_thumbnail_icons = QString
 		(
-			"QLabel#thumbnail_icon_color { color: " + rgba(GUI::mw_thumb_icon_color) + " }"
+			"QLabel#thumbnail_icon_color { color: " + rgba(gui::mw_thumb_icon_color) + " }"
 		);
 
 		// gamelist toolbar stylesheet
 		QString style_gamelist_toolbar = QString
 		(
 			"QLineEdit#tb_searchbar { background: transparent; }"
-			"QLabel#gamelist_toolbar_icon_color { color: " + rgba(GUI::gl_tool_icon_color) + " }"
+			"QLabel#gamelist_toolbar_icon_color { color: " + rgba(gui::gl_tool_icon_color) + " }"
 		);
 
 		// gamelist icon color stylesheet
 		QString style_gamelist_icons = QString
 		(
-			"QLabel#gamelist_icon_background_color { color: " + rgba(GUI::gl_icon_color) + " }"
+			"QLabel#gamelist_icon_background_color { color: " + rgba(gui::gl_icon_color) + " }"
 		);
 
 		// log stylesheet
@@ -364,7 +366,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 		setStyleSheet(file.readAll());
 		file.close();
 	}
-	GUI::stylesheet = styleSheet();
+	gui::stylesheet = styleSheet();
 	RPCS3MainWin->RepaintGui();
 }
 

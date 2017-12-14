@@ -147,15 +147,25 @@ namespace rsx
 			surface_color_format color_format, size_t width, size_t height,
 			Args&&... extra_params)
 		{
-			auto It = m_render_targets_storage.find(address);
 			// TODO: Fix corner cases
 			// This doesn't take overlapping surface(s) into account.
-
 			surface_storage_type old_surface_storage;
 			surface_storage_type new_surface_storage;
 			surface_type old_surface = nullptr;
 			surface_type new_surface = nullptr;
+			surface_type convert_surface = nullptr;
 
+			// Remove any depth surfaces occupying this memory address (TODO: Discard all overlapping range)
+			auto aliased_depth_surface = m_depth_stencil_storage.find(address);
+			if (aliased_depth_surface != m_depth_stencil_storage.end())
+			{
+				Traits::notify_surface_invalidated(aliased_depth_surface->second);
+				convert_surface = Traits::get(aliased_depth_surface->second);
+				invalidated_resources.push_back(std::move(aliased_depth_surface->second));
+				m_depth_stencil_storage.erase(aliased_depth_surface);
+			}
+
+			auto It = m_render_targets_storage.find(address);
 			if (It != m_render_targets_storage.end())
 			{
 				surface_storage_type &rtt = It->second;
@@ -170,7 +180,10 @@ namespace rsx
 				m_render_targets_storage.erase(address);
 			}
 
-			//Search invalidated resources for a suitable surface
+			// Select source of original data if any
+			auto contents_to_copy = old_surface == nullptr ? convert_surface : old_surface;
+
+			// Search invalidated resources for a suitable surface
 			for (auto It = invalidated_resources.begin(); It != invalidated_resources.end(); It++)
 			{
 				auto &rtt = *It;
@@ -189,7 +202,7 @@ namespace rsx
 						invalidated_resources.erase(It);
 
 					new_surface = Traits::get(new_surface_storage);
-					Traits::invalidate_rtt_surface_contents(command_list, new_surface, old_surface, true);
+					Traits::invalidate_rtt_surface_contents(command_list, new_surface, contents_to_copy, true);
 					Traits::prepare_rtt_for_drawing(command_list, new_surface);
 					break;
 				}
@@ -209,7 +222,7 @@ namespace rsx
 				return new_surface;
 			}
 
-			m_render_targets_storage[address] = Traits::create_new_surface(address, color_format, width, height, old_surface, std::forward<Args>(extra_params)...);
+			m_render_targets_storage[address] = Traits::create_new_surface(address, color_format, width, height, contents_to_copy, std::forward<Args>(extra_params)...);
 			return Traits::get(m_render_targets_storage[address]);
 		}
 
@@ -224,6 +237,17 @@ namespace rsx
 			surface_storage_type new_surface_storage;
 			surface_type old_surface = nullptr;
 			surface_type new_surface = nullptr;
+			surface_type convert_surface = nullptr;
+
+			// Remove any color surfaces occupying this memory range (TODO: Discard all overlapping surfaces)
+			auto aliased_rtt_surface = m_render_targets_storage.find(address);
+			if (aliased_rtt_surface != m_render_targets_storage.end())
+			{
+				Traits::notify_surface_invalidated(aliased_rtt_surface->second);
+				convert_surface = Traits::get(aliased_rtt_surface->second);
+				invalidated_resources.push_back(std::move(aliased_rtt_surface->second));
+				m_render_targets_storage.erase(aliased_rtt_surface);
+			}
 
 			auto It = m_depth_stencil_storage.find(address);
 			if (It != m_depth_stencil_storage.end())
@@ -239,6 +263,9 @@ namespace rsx
 				old_surface_storage = std::move(ds);
 				m_depth_stencil_storage.erase(address);
 			}
+
+			// Select source of original data if any
+			auto contents_to_copy = old_surface == nullptr ? convert_surface : old_surface;
 
 			//Search invalidated resources for a suitable surface
 			for (auto It = invalidated_resources.begin(); It != invalidated_resources.end(); It++)
@@ -259,7 +286,7 @@ namespace rsx
 
 					new_surface = Traits::get(new_surface_storage);
 					Traits::prepare_ds_for_drawing(command_list, new_surface);
-					Traits::invalidate_depth_surface_contents(command_list, new_surface, old_surface, true);
+					Traits::invalidate_depth_surface_contents(command_list, new_surface, contents_to_copy, true);
 					break;
 				}
 			}
@@ -278,7 +305,7 @@ namespace rsx
 				return new_surface;
 			}
 
-			m_depth_stencil_storage[address] = Traits::create_new_surface(address, depth_format, width, height, old_surface, std::forward<Args>(extra_params)...);
+			m_depth_stencil_storage[address] = Traits::create_new_surface(address, depth_format, width, height, contents_to_copy, std::forward<Args>(extra_params)...);
 			return Traits::get(m_depth_stencil_storage[address]);
 		}
 	public:

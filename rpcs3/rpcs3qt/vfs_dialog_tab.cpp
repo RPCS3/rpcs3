@@ -5,7 +5,7 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
-inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 vfs_dialog_tab::vfs_dialog_tab(const vfs_settings_info& settingsInfo, std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent)
 	: QWidget(parent), m_info(settingsInfo), m_gui_settings(guiSettings), m_emu_settings(emuSettings)

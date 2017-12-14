@@ -202,9 +202,12 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 		out << YAML::EndMap;
 		return;
 	}
+	default:
+	{
+		out << rhs.to_string();
+		return;
 	}
-
-	out << rhs.to_string();
+	}
 }
 
 void cfg::decode(const YAML::Node& data, cfg::_base& rhs)

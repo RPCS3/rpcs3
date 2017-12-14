@@ -38,10 +38,17 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 
 	if (!dst.no_dest)
 	{
-		code = NoOverflow(code);
+		if (dst.exp_tex)
+		{
+			//If dst.exp_tex really is _bx2 postfix, we need to unpack dynamic range
+			AddCode("//exp tex flag is set");
+			code = "((" + code + "- 0.5) * 2.)";
+		}
 
 		if (dst.saturate)
 			code = saturate(code);
+		else
+			code = ClampValue(code, dst.prec);
 	}
 
 	code += (append_mask ? "$m" : "");
@@ -69,6 +76,9 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	{
 		AddCode(m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = " + dest + ";");
 	}
+
+	u32 reg_index = dst.fp16 ? dst.dest_reg >> 1 : dst.dest_reg;
+	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16);
 }
 
 void FragmentProgramDecompiler::AddFlowOp(std::string code)
@@ -188,20 +198,13 @@ std::string FragmentProgramDecompiler::NotZeroPositive(const std::string& code)
 	return "max(abs(" + code + "), 1.E-10)";
 }
 
-std::string FragmentProgramDecompiler::NoOverflow(const std::string& code)
+std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 precision)
 {
 	//FP16 is expected to overflow alot easier at 0+-65504
 	//FP32 can still work upto 0+-3.4E38
 	//See http://http.download.nvidia.com/developer/Papers/2005/FP_Specials/FP_Specials.pdf
 
-	if (dst.exp_tex)
-	{
-		//If dst.exp_tex really is _bx2 postfix, we need to unpack dynamic range
-		AddCode("//exp tex flag is set");
-		return "((" + code + "- 0.5) * 2.)";
-	}
-
-	switch (dst.prec)
+	switch (precision)
 	{
 	case 0:
 		break;
@@ -209,6 +212,10 @@ std::string FragmentProgramDecompiler::NoOverflow(const std::string& code)
 		return "clamp(" + code + ", -65504., 65504.)";
 	case 2:
 		return "clamp(" + code + ", -2., 2.)";
+	case 3:
+		return "clamp(" + code + ", -1., 1.)";
+	case 4:
+		return "clamp(" + code + ", 0., 1.)";
 	}
 
 	return code;
@@ -330,10 +337,35 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 {
 	std::string ret;
+	bool apply_precision_modifier = !!src1.input_prec_mod;
 
 	switch (src.reg_type)
 	{
 	case RSX_FP_REGISTER_TYPE_TEMP:
+
+		if (!src.fp16)
+		{
+			if (dst.opcode == RSX_FP_OPCODE_UP16 ||
+				dst.opcode == RSX_FP_OPCODE_UP2 ||
+				dst.opcode == RSX_FP_OPCODE_UP4 ||
+				dst.opcode == RSX_FP_OPCODE_UPB ||
+				dst.opcode == RSX_FP_OPCODE_UPG)
+			{
+				//TODO: Implement aliased gather for half floats
+				bool xy_read = false;
+				bool zw_read = false;
+
+				if (src.swizzle_x < 2 || src.swizzle_y < 2 || src.swizzle_z < 2 || src.swizzle_w < 2)
+					xy_read = true;
+				if (src.swizzle_x > 1 || src.swizzle_y > 1 || src.swizzle_z > 1 || src.swizzle_w > 1)
+					zw_read = true;
+
+				auto &reg = temp_registers[src.tmp_reg_index];
+				if (reg.requires_gather(xy_read, zw_read))
+					AddCode(reg.gather_r());
+			}
+		}
+
 		ret += AddReg(src.tmp_reg_index, src.fp16);
 		break;
 
@@ -347,6 +379,8 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7", "tc8", "tc9",
 			"ssa"
 		};
+
+		//TODO: Investigate effect of input modifier on this type
 
 		switch (dst.src_attr_reg_num)
 		{
@@ -369,6 +403,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	case RSX_FP_REGISTER_TYPE_CONSTANT:
 		ret += AddConst();
+		apply_precision_modifier = false;
 		break;
 
 	case RSX_FP_REGISTER_TYPE_UNKNOWN: // ??? Used by a few games, what is it?
@@ -376,6 +411,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				dst.opcode, dst.HEX, src0.HEX, src1.HEX, src2.HEX);
 
 		ret += AddType3();
+		apply_precision_modifier = false;
 		break;
 
 	default:
@@ -394,7 +430,9 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	if (strncmp(swizzle.c_str(), f, 4) != 0) ret += "." + swizzle;
 
+	//Warning: Modifier order matters. e.g neg should be applied after precision clamping (tested with Naruto UNS)
 	if (src.abs) ret = "abs(" + ret + ")";
+	if (apply_precision_modifier) ret = ClampValue(ret, src1.input_prec_mod);
 	if (src.neg) ret = "-" + ret;
 
 	return ret;
@@ -406,13 +444,36 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 	std::stringstream OS;
 	insertHeader(OS);
-	OS << std::endl;
+	OS << "\n";
 	insertConstants(OS);
-	OS << std::endl;
+	OS << "\n";
 	insertIntputs(OS);
-	OS << std::endl;
+	OS << "\n";
 	insertOutputs(OS);
-	OS << std::endl;
+	OS << "\n";
+
+	//Insert global function definitions
+	insertGlobalFunctions(OS);
+
+	std::string float2 = getFloatTypeName(2);
+	std::string float4 = getFloatTypeName(4);
+
+	OS << float4 << " gather(" << float4 << " _h0, " << float4 << " _h1)\n";
+	OS << "{\n";
+	OS << "	float x = uintBitsToFloat(packHalf2x16(_h0.xy));\n";
+	OS << "	float y = uintBitsToFloat(packHalf2x16(_h0.zw));\n";
+	OS << "	float z = uintBitsToFloat(packHalf2x16(_h1.xy));\n";
+	OS << "	float w = uintBitsToFloat(packHalf2x16(_h1.zw));\n";
+	OS << "	return " << float4 << "(x, y, z, w);\n";
+	OS << "}\n\n";
+
+	OS << float2 << " gather(" << float4 << " _h)\n";
+	OS << "{\n";
+	OS << "	float x = uintBitsToFloat(packHalf2x16(_h.xy));\n";
+	OS << "	float y = uintBitsToFloat(packHalf2x16(_h.zw));\n";
+	OS << "	return " << float2 << "(x, y);\n";
+	OS << "}\n\n";
+
 	insertMainStart(OS);
 	OS << main << std::endl;
 	insertMainEnd(OS);
@@ -483,11 +544,13 @@ bool FragmentProgramDecompiler::handle_scb(u32 opcode)
 	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); return true;
 	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
 	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
-	case RSX_FP_OPCODE_PK2: SetDst(getFloatTypeName(4) + "(packSnorm2x16($0.xy))"); return true;
-	case RSX_FP_OPCODE_PK4: SetDst(getFloatTypeName(4) + "(packSnorm4x8($0))"); return true;
-	case RSX_FP_OPCODE_PK16: SetDst(getFloatTypeName(4) + "(packHalf2x16($0.xy))"); return true;
-	case RSX_FP_OPCODE_PKB: SetDst(getFloatTypeName(4) + "(packUnorm4x8($0 / 255.))"); return true;
-	case RSX_FP_OPCODE_PKG: LOG_ERROR(RSX, "Unimplemented SCB instruction: PKG"); return true;
+	//Pack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
+	case RSX_FP_OPCODE_PK2: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packHalf2x16($0.xy)))"); return true;
+	case RSX_FP_OPCODE_PK4: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packSnorm4x8($0)))"); return true;
+	case RSX_FP_OPCODE_PK16: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packSnorm2x16($0.xy)))"); return true;
+	case RSX_FP_OPCODE_PKG:
+	//Should be similar to PKB but with gamma correction, see description of PK4UBG in khronos page
+	case RSX_FP_OPCODE_PKB: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packUnorm4x8($0)))"); return true;
 	case RSX_FP_OPCODE_SEQ: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); return true;
 	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL)); return true;
 	case RSX_FP_OPCODE_SGE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); return true;
@@ -603,11 +666,13 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		}
 		return false;
-	case RSX_FP_OPCODE_UP2: SetDst("unpackSnorm2x16(uint($0.x)).xyxy"); return true; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
-	case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8(uint($0.x))"); return true; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
-	case RSX_FP_OPCODE_UP16: SetDst("unpackHalf2x16(uint($0.x)).xyxy"); return true;
-	case RSX_FP_OPCODE_UPB: SetDst("(unpackUnorm4x8(uint($0.x)) * 255.)"); return true;
-	case RSX_FP_OPCODE_UPG: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UPG"); return true;
+	//Unpack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
+	case RSX_FP_OPCODE_UP2: SetDst("unpackHalf2x16(floatBitsToUint($0.x)).xyxy"); return true;
+	case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8(floatBitsToUint($0.x))"); return true;
+	case RSX_FP_OPCODE_UP16: SetDst("unpackSnormx16(floatBitsToUint($0.x)).xyxy"); return true;
+	case RSX_FP_OPCODE_UPG:
+	//Same as UPB with gamma correction
+	case RSX_FP_OPCODE_UPB: SetDst("(unpackUnorm4x8(floatBitsToUint($0.x)))"); return true;
 	}
 	return false;
 };

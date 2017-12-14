@@ -50,9 +50,9 @@ void spu_interpreter::set_interrupt_status(SPUThread& spu, spu_opcode_t op)
 		spu.set_interrupt_status(false);
 	}
 
-	if ((spu.ch_event_stat & SPU_EVENT_INTR_TEST & spu.ch_event_mask) > SPU_EVENT_INTR_ENABLED)
+	if (spu.interrupts_enabled && (spu.ch_event_mask & spu.ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
 	{
-		spu.ch_event_stat &= ~SPU_EVENT_INTR_ENABLED;
+		spu.interrupts_enabled = false;
 		spu.srr0 = std::exchange(spu.pc, -4) + 4;
 	}
 }
@@ -837,7 +837,10 @@ void spu_interpreter_fast::FCMGT(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::DFCMGT(SPUThread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+	const auto mask = _mm_castsi128_pd(_mm_set1_epi64x(0x7fffffffffffffff));
+	const auto ra = _mm_and_pd(spu.gpr[op.ra].vd, mask);
+	const auto rb = _mm_and_pd(spu.gpr[op.rb].vd, mask);
+	spu.gpr[op.rt].vd = _mm_cmpgt_pd(ra, rb);
 }
 
 void spu_interpreter_fast::DFA(SPUThread& spu, spu_opcode_t op)

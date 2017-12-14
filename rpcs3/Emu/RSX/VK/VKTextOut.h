@@ -103,9 +103,11 @@ namespace vk
 			};
 
 			m_vertex_shader.shader = vs;
+			m_vertex_shader.id = 100000;
 			m_vertex_shader.Compile();
 
 			m_fragment_shader.shader = fs;
+			m_fragment_shader.id = 100001;
 			m_fragment_shader.Compile();
 
 			VkPipelineShaderStageCreateInfo shader_stages[2] = {};

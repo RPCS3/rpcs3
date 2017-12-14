@@ -292,6 +292,7 @@ void SPUThread::cpu_init()
 
 	ch_event_mask = 0;
 	ch_event_stat = 0;
+	interrupts_enabled = false;
 	raddr = 0;
 
 	ch_dec_start_timestamp = get_timebased_time(); // ???
@@ -815,7 +816,7 @@ void SPUThread::process_mfc_cmd()
 	case MFC_GETLB_CMD:
 	case MFC_GETLF_CMD:
 	{
-		if (ch_mfc_cmd.size <= max_imm_dma_size && mfc_queue.size() == 0 && (ch_stall_mask & (1u << ch_mfc_cmd.tag)) == 0)
+		if (ch_mfc_cmd.size <= max_imm_dma_size && mfc_queue.size() == 0)
 		{
 			vm::reader_lock lock(vm::try_to_lock);
 
@@ -890,7 +891,7 @@ void SPUThread::process_mfc_cmd()
 	case MFC_EIEIO_CMD:
 	case MFC_SYNC_CMD:
 	{
-		ch_mfc_cmd.size = 0;
+		ch_mfc_cmd.size = 1;
 
 		if (mfc_queue.size() == 0)
 		{
@@ -974,12 +975,11 @@ void SPUThread::set_interrupt_status(bool enable)
 		{
 			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, mask);
 		}
-
-		ch_event_stat |= SPU_EVENT_INTR_ENABLED;
+		interrupts_enabled = true;
 	}
 	else
 	{
-		ch_event_stat &= ~SPU_EVENT_INTR_ENABLED;
+		interrupts_enabled = false;
 	}
 }
 
@@ -1165,7 +1165,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	{
 		// HACK: "Not isolated" status
 		// Return SPU Interrupt status in LSB
-		out = (ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0;
+		out = interrupts_enabled == true;
 		return true;
 	}
 	}
@@ -1422,13 +1422,13 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case MFC_Size:
 	{
-		ch_mfc_cmd.size = value & 0xffff;
+		ch_mfc_cmd.size = value & 0x7fff;
 		return true;
 	}
 
 	case MFC_TagID:
 	{
-		ch_mfc_cmd.tag = value & 0xff;
+		ch_mfc_cmd.tag = value & 0x1f;
 		return true;
 	}
 
@@ -1467,7 +1467,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	case SPU_WrEventMask:
 	{
 		// detect masking events with enabled interrupt status
-		if (value & ~SPU_EVENT_INTR_IMPLEMENTED && ch_event_stat & SPU_EVENT_INTR_ENABLED)
+		if (value & ~SPU_EVENT_INTR_IMPLEMENTED && interrupts_enabled)
 		{
 			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, value);
 		}

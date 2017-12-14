@@ -64,6 +64,7 @@ struct vdec_thread : ppu_thread
 {
 	AVCodec* codec{};
 	AVCodecContext* ctx{};
+	SwsContext* sws{};
 
 	const s32 type;
 	const u32 profile;
@@ -147,6 +148,7 @@ struct vdec_thread : ppu_thread
 	{
 		avcodec_close(ctx);
 		avcodec_free_context(&ctx);
+		sws_freeContext(sws);
 	}
 
 	virtual std::string dump() const override
@@ -361,7 +363,7 @@ struct vdec_thread : ppu_thread
 				{
 					au_count--;
 				}
-				
+
 				while (std::lock_guard<std::mutex>{mutex}, max_frames && out.size() > max_frames)
 				{
 					thread_ctrl::wait();
@@ -483,7 +485,7 @@ s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 		vdec->cmd_push({vdec_cmd::close, 0});
 		vdec->max_frames = 0;
 	}
-	
+
 	vdec->notify();
 	vdec->join();
 	idm::remove<ppu_thread>(handle);
@@ -586,7 +588,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 	}
 
 	vdec->notify();
-	
+
 	if (outBuff)
 	{
 		const int w = frame->width;
@@ -632,7 +634,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 		}
 		}
 
-		std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(w, h, in_f, w, h, out_f, SWS_POINT, NULL, NULL, NULL), sws_freeContext);
+		vdec->sws = sws_getCachedContext(vdec->sws, w, h, in_f, w, h, out_f, SWS_POINT, NULL, NULL, NULL);
 
 		u8* in_data[4] = { frame->data[0], frame->data[1], frame->data[2], alpha_plane.get() };
 		int in_line[4] = { frame->linesize[0], frame->linesize[1], frame->linesize[2], w * 1 };
@@ -648,7 +650,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 			out_line[2] = w / 2;
 		}
 
-		sws_scale(sws.get(), in_data, in_line, 0, h, out_data, out_line);
+		sws_scale(vdec->sws, in_data, in_line, 0, h, out_data, out_line);
 
 		//const u32 buf_size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
 
@@ -771,7 +773,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 		avc->transfer_characteristics = CELL_VDEC_AVC_TC_ITU_R_BT_709_5;
 		avc->matrix_coefficients = CELL_VDEC_AVC_MXC_ITU_R_BT_709_5; // important
 		avc->timing_info_present_flag = true;
-		
+
 		switch (frc)
 		{
 		case CELL_VDEC_FRC_24000DIV1001: avc->frameRateCode = CELL_VDEC_AVC_FRC_24000DIV1001; break;
@@ -838,7 +840,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 		mp2->horizontal_size = frame->width;
 		mp2->vertical_size = frame->height;
 		mp2->aspect_ratio_information = CELL_VDEC_MPEG2_ARI_SAR_1_1; // ???
-		
+
 		switch (frc)
 		{
 		case CELL_VDEC_FRC_24000DIV1001: mp2->frame_rate_code = CELL_VDEC_MPEG2_FRC_24000DIV1001; break;

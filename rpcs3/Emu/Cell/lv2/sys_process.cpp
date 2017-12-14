@@ -292,6 +292,7 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = vfs::get("/dev_bdvd/"), klic = fxm::get_always<LoadedNpdrmKeys_t>()->devKlic]() mutable
 	{
 		sys_process.success("Process finished -> %s", argv[0]);
+		Emu.SetForceBoot(true);
 		Emu.Stop();
 		Emu.argv = std::move(argv);
 		Emu.envp = std::move(envp);
@@ -303,12 +304,8 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 			Emu.klic.assign(klic.begin(), klic.end());
 		}
 
+		Emu.SetForceBoot(true);
 		Emu.BootGame(path, true);
-
-		if (Emu.IsReady() && !g_cfg.misc.autostart)
-		{
-			Emu.Run();
-		}
 	});
 
 	thread_ctrl::eternalize();

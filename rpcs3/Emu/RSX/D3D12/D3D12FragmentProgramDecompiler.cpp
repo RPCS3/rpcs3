@@ -35,6 +35,9 @@ std::string D3D12FragmentDecompiler::compareFunction(COMPARE f, const std::strin
 
 void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 {
+	OS << "#define floatBitsToUint asuint\n";
+	OS << "#define uintBitsToFloat asfloat\n\n";
+
 	OS << "cbuffer SCALE_OFFSET : register(b0)\n";
 	OS << "{\n";
 	OS << "	float4x4 scaleOffsetMat;\n";
@@ -173,10 +176,13 @@ namespace
 	}
 }
 
-void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
+void D3D12FragmentDecompiler::insertGlobalFunctions(std::stringstream &OS)
 {
 	insert_d3d12_legacy_function(OS, true);
+}
 
+void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
+{
 	for (const ParamType &PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem &PI : PT.items)

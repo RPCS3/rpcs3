@@ -55,6 +55,8 @@ bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 		case QEvent::Wheel:
 			MouseScroll(static_cast<QWheelEvent*>(ev));
 			break;
+		default:
+			return false;
 		}
 	}
 	return false;

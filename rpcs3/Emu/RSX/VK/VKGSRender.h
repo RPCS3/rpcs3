@@ -5,6 +5,7 @@
 #include "VKRenderTargets.h"
 #include "VKFormats.h"
 #include "VKTextOut.h"
+#include "VKOverlays.h"
 #include "restore_new.h"
 #include "define_new_memleakdetect.h"
 #include "VKProgramBuffer.h"
@@ -109,6 +110,12 @@ struct command_buffer_chunk: public vk::command_buffer
 	}
 };
 
+struct occlusion_data
+{
+	std::vector<u32> indices;
+	command_buffer_chunk* command_buffer_to_wait = nullptr;
+};
+
 class VKGSRender : public GSRender
 {
 private:
@@ -128,6 +135,7 @@ private:
 	std::unique_ptr<vk::buffer_view> null_buffer_view;
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
+	std::unique_ptr<vk::depth_convert_pass> m_depth_converter;
 
 	std::mutex m_sampler_mutex;
 	u64 surface_store_tag = 0;
@@ -153,10 +161,14 @@ private:
 
 	//Vulkan internals
 	vk::command_pool m_command_buffer_pool;
+	vk::occlusion_query_pool m_occlusion_query_pool;
+	bool m_occlusion_query_active = false;
+	rsx::occlusion_query_info *m_active_query_info = nullptr;
+	std::unordered_map<u32, occlusion_data> m_occlusion_map;
 
 	std::mutex m_secondary_cb_guard;
 	vk::command_pool m_secondary_command_buffer_pool;
-	vk::command_buffer m_secondary_command_buffer;
+	vk::command_buffer m_secondary_command_buffer;  //command buffer used for setup operations
 
 	u32 m_current_cb_index = 0;
 	std::array<command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
@@ -170,6 +182,7 @@ private:
 	std::unique_ptr<vk::framebuffer_holder> m_draw_fbo;
 
 	bool present_surface_dirty_flag = false;
+	bool renderer_unavailable = false;
 
 	u64 m_last_heap_sync_time = 0;
 	vk::vk_data_heap m_attrib_ring_info;
@@ -259,12 +272,6 @@ private:
 	s64 m_flip_time = 0;
 
 	u8 m_draw_buffers_count = 0;
-
-	bool framebuffer_status_valid = false;
-
-	rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
-	rsx::gcm_framebuffer_info m_depth_surface_info;
-
 	bool m_flush_draw_buffers = false;
 	std::atomic<int> m_last_flushable_cb = {-1 };
 	
@@ -276,6 +283,7 @@ private:
 	std::atomic<u64> m_last_sync_event = { 0 };
 
 	bool render_pass_open = false;
+	size_t m_current_renderpass_id = 0;
 
 	//Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
@@ -293,7 +301,7 @@ private:
 	void close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	void open_command_buffer();
 	void sync_at_semaphore_release();
-	void prepare_rtts();
+	void prepare_rtts(rsx::framebuffer_creation_context context);
 	void copy_render_targets_to_dma_location();
 
 	void flush_command_queue(bool hard_sync = false);
@@ -313,10 +321,16 @@ private:
 public:
 	bool check_program_status();
 	void load_program(u32 vertex_count, u32 vertex_base);
-	void init_buffers(bool skip_reading = false);
+	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 	void read_buffers();
 	void write_buffers();
 	void set_viewport();
+
+	void clear_zcull_stats(u32 type) override;
+	void begin_occlusion_query(rsx::occlusion_query_info* query) override;
+	void end_occlusion_query(rsx::occlusion_query_info* query) override;
+	bool check_occlusion_query_status(rsx::occlusion_query_info* query) override;
+	void get_occlusion_query_result(rsx::occlusion_query_info* query) override;
 
 protected:
 	void begin() override;

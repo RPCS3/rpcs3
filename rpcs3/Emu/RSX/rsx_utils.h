@@ -143,7 +143,7 @@ namespace rsx
 		}
 	}
 
-	void scale_image_nearest(void* dst, const void* src, u16 src_width, u16 src_height, u16 dst_pitch, u16 src_pitch, u8 pixel_size, u8 samples, bool swap_bytes = false);
+	void scale_image_nearest(void* dst, const void* src, u16 src_width, u16 src_height, u16 dst_pitch, u16 src_pitch, u8 pixel_size, u8 samples_u, u8 samples_v, bool swap_bytes = false);
 
 	void convert_scale_image(u8 *dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
 		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear);
@@ -161,6 +161,38 @@ namespace rsx
 	void fill_viewport_matrix(void *buffer, bool transpose);
 
 	std::array<float, 4> get_constant_blend_colors();
+
+	/**
+	 * Shuffle texel layout from xyzw to wzyx
+	 * TODO: Variable src/dst and optional se conversion
+	 */
+	template <typename T>
+	void shuffle_texel_data_wzyx(void *data, u16 row_pitch_in_bytes, u16 row_length_in_texels, u16 num_rows)
+	{
+		char *raw_src = (char*)data;
+		T tmp[4];
+
+		for (u16 n = 0; n < num_rows; ++n)
+		{
+			T* src = (T*)raw_src;
+			raw_src += row_pitch_in_bytes;
+
+			for (u16 m = 0; m < row_length_in_texels; ++m)
+			{
+				tmp[0] = src[3];
+				tmp[1] = src[2];
+				tmp[2] = src[1];
+				tmp[3] = src[0];
+
+				src[0] = tmp[0];
+				src[1] = tmp[1];
+				src[2] = tmp[2];
+				src[3] = tmp[3];
+
+				src += 4;
+			}
+		}
+	}
 
 	/**
 	 * Clips a rect so that it never falls outside the parent region

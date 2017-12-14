@@ -55,7 +55,7 @@ s32 cellVpostClose(u32 handle)
 		return CELL_VPOST_ERROR_C_ARG_HDL_INVALID;
 	}
 
-	idm::remove<VpostInstance>(handle);	
+	idm::remove<VpostInstance>(handle);
 	return CELL_OK;
 }
 
@@ -120,7 +120,7 @@ s32 cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostCtrlPara
 
 	//u64 stamp1 = get_system_time();
 
-	std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(w, h, AV_PIX_FMT_YUVA420P, ow, oh, AV_PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL), sws_freeContext);
+	vpost->sws = sws_getCachedContext(vpost->sws, w, h, AV_PIX_FMT_YUVA420P, ow, oh, AV_PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
 
 	//u64 stamp2 = get_system_time();
 
@@ -129,7 +129,7 @@ s32 cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostCtrlPara
 	u8* out_data[4] = { outPicBuff.get_ptr(), NULL, NULL, NULL };
 	int out_line[4] = { static_cast<int>(ow*4), 0, 0, 0 };
 
-	sws_scale(sws.get(), in_data, in_line, 0, h, out_data, out_line);
+	sws_scale(vpost->sws, in_data, in_line, 0, h, out_data, out_line);
 
 	//ConLog.Write("cellVpostExec() perf (access=%d, getContext=%d, scale=%d, finalize=%d)",
 		//stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);

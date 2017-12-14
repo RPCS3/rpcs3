@@ -1,4 +1,5 @@
 #include "gamepads_settings_dialog.h"
+#include "pad_settings_dialog.h"
 #include "../Emu/Io/PadHandler.h"
 #include "../ds4_pad_handler.h"
 #ifdef _WIN32
@@ -15,6 +16,9 @@
 #include <QJsonDocument>
 
 input_config input_cfg;
+
+inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+constexpr auto qstr = QString::fromStdString;
 
 // taken from https://stackoverflow.com/a/30818424/8353754
 // because size policies won't work as expected (see similar bugs in Qt bugtracker)
@@ -54,43 +58,6 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 	input_cfg.from_default();
 	input_cfg.load();
 
-	auto fill_device_combo = [](QComboBox *combo)
-	{
-		std::vector<std::string> str_inputs = input_cfg.player_input[0].to_list();
-		for (int index = 0; index < str_inputs.size(); index++)
-		{
-			combo->addItem(str_inputs[index].c_str());
-		}
-		resizeComboBoxView(combo);
-	};
-
-	auto configure_combos = [=]
-	{
-		//Set the values from config
-		for (int i = 0; i < MAX_PLAYERS; i++)
-		{
-			for (int j = 0; j < co_inputtype[i]->count(); j++)
-			{
-				if (co_inputtype[i]->itemText(j).toStdString() == input_cfg.player_input[i].to_string())
-				{
-					co_inputtype[i]->setCurrentIndex(j);
-					ChangeInputType(i);
-					break;
-				}
-			}
-
-			for (int j = 0; j < co_deviceID[i]->count(); j++)
-			{
-				if (co_deviceID[i]->itemText(j).toStdString() == input_cfg.player_device[i]->to_string())
-				{
-					co_deviceID[i]->setCurrentIndex(j);
-					ChangeDevice(i);
-					break;
-				}
-			}
-		}
-	};
-
 	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
 		QGroupBox *grp_player = new QGroupBox(QString(tr("Player %1").arg(i+1)));
@@ -126,7 +93,12 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 		grp_player->setFixedSize(grp_player->sizeHint());
 
 		// fill comboboxes after setting the groupbox's size to prevent stretch
-		fill_device_combo(co_inputtype[i]);
+		std::vector<std::string> str_inputs = input_cfg.player_input[0].to_list();
+		for (int index = 0; index < str_inputs.size(); index++)
+		{
+			co_inputtype[i]->addItem(qstr(str_inputs[index]));
+		}
+		resizeComboBoxView(co_inputtype[i]);
 
 		all_players->addWidget(grp_player);
 
@@ -154,17 +126,38 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 	setLayout(dialog_layout);
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 
-	configure_combos();
+	auto configure_combos = [=]
+	{
+		//Set the values from config
+		for (int i = 0; i < MAX_PLAYERS; i++)
+		{
+			// No extra loops are necessary because setCurrentText does it for us
+			co_inputtype[i]->setCurrentText(qstr(input_cfg.player_input[i].to_string()));
+			// Device will be empty on some rare occasions, so fill them by force
+			ChangeInputType(i);
+		}
+	};
 
 	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
 		connect(co_inputtype[i], &QComboBox::currentTextChanged, [=] { ChangeInputType(i); });
-		connect(co_deviceID[i], &QComboBox::currentTextChanged, [=] { ChangeDevice(i); });
+		connect(co_deviceID[i], &QComboBox::currentTextChanged, [=](const QString& dev)
+		{
+			std::string device = sstr(dev);
+			if (!input_cfg.player_device[i]->from_string(device))
+			{
+				//Something went wrong
+				LOG_ERROR(GENERAL, "Failed to convert device string: %s", device);
+				return;
+			}
+		});
 		connect(bu_config[i], &QAbstractButton::clicked, [=] { ClickConfigButton(i); });
 	}
 	connect(ok_button, &QPushButton::pressed, this, &gamepads_settings_dialog::SaveExit);
 	connect(cancel_button, &QPushButton::pressed, this, &gamepads_settings_dialog::CancelExit);
 	connect(refresh_button, &QPushButton::pressed, [=] { configure_combos(); });
+
+	configure_combos();
 }
 
 void gamepads_settings_dialog::SaveExit()
@@ -191,20 +184,6 @@ void gamepads_settings_dialog::CancelExit()
 	input_cfg.load();
 
 	QDialog::accept();
-}
-
-void gamepads_settings_dialog::ChangeDevice(int player)
-{
-	bool success;
-
-	success = input_cfg.player_device[player]->from_string(co_deviceID[player]->currentText().toStdString());
-
-	if (!success)
-	{
-		//Something went wrong
-		LOG_ERROR(GENERAL, "Failed to convert device string:%s", co_deviceID[player]->currentText().toStdString().c_str());
-		return;
-	}
 }
 
 std::shared_ptr<PadHandlerBase> gamepads_settings_dialog::GetHandler(pad_handler type)
@@ -244,40 +223,54 @@ std::shared_ptr<PadHandlerBase> gamepads_settings_dialog::GetHandler(pad_handler
 
 void gamepads_settings_dialog::ChangeInputType(int player)
 {
-	bool success;
+	std::string handler = sstr(co_inputtype[player]->currentText());
+	std::string device = input_cfg.player_device[player]->to_string();
 
-	success = input_cfg.player_input[player].from_string(co_inputtype[player]->currentText().toStdString());
-
-	if (!success)
+	// Change this player's current handler
+	if (!input_cfg.player_input[player].from_string(handler))
 	{
 		//Something went wrong
-		LOG_ERROR(GENERAL, "Failed to convert input string:%s", co_inputtype[player]->currentText().toStdString().c_str());
+		LOG_ERROR(GENERAL, "Failed to convert input string:%s", handler);
 		return;
 	}
 
+	// Get this player's current handler and it's currently available devices
 	std::shared_ptr<PadHandlerBase> cur_pad_handler = GetHandler(input_cfg.player_input[player]);
-
 	std::vector<std::string> list_devices = cur_pad_handler->ListDevices();
 
+	// Refill the device combobox with currently available devices
 	co_deviceID[player]->clear();
-	for (int i = 0; i < list_devices.size(); i++) co_deviceID[player]->addItem(list_devices[i].c_str(), i);
-
-	if (list_devices.size() == 0)
+	for (int i = 0; i < list_devices.size(); i++)
 	{
-		co_deviceID[player]->addItem(tr("No Device Detected"), -1);
-		co_deviceID[player]->setEnabled(false);
+		co_deviceID[player]->addItem(qstr(list_devices[i]), i);
+	}
+
+	// Handle empty device list
+	bool device_found = list_devices.size() > 0;
+	co_deviceID[player]->setEnabled(device_found);
+
+	if (device_found)
+	{
+		co_deviceID[player]->setCurrentText(qstr(device));
 	}
 	else
 	{
-		co_deviceID[player]->setEnabled(true);
+		co_deviceID[player]->addItem(tr("No Device Detected"), -1);
 	}
 
+	// Update view and enable configuration if possible
 	resizeComboBoxView(co_deviceID[player]);
-	bu_config[player]->setEnabled(cur_pad_handler->has_config());
+	bu_config[player]->setEnabled(device_found && cur_pad_handler->has_config());
 }
 
 void gamepads_settings_dialog::ClickConfigButton(int player)
 {
+	// Get this player's current handler and open its pad settings dialog
 	std::shared_ptr<PadHandlerBase> cur_pad_handler = GetHandler(input_cfg.player_input[player]);
-	if (cur_pad_handler->has_config()) cur_pad_handler->ConfigController(*input_cfg.player_device[player]);
+	if (cur_pad_handler->has_config())
+	{
+		std::string device = sstr(co_deviceID[player]->currentText());
+		pad_settings_dialog dlg(device, cur_pad_handler);
+		dlg.exec();
+	}
 }

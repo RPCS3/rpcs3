@@ -27,8 +27,8 @@ pad_thread::~pad_thread()
 void pad_thread::Init(const u32 max_connect)
 {
 	std::memset(&m_info, 0, sizeof(m_info));
-	m_info.max_connect = max_connect;
-	m_info.now_connect = std::min(max_connect, (u32)7); // max 7 pads
+	m_info.max_connect = std::min(max_connect, (u32)7); // max 7 pads
+	m_info.now_connect = 0;
 
 	input_cfg.load();
 
@@ -38,17 +38,19 @@ void pad_thread::Init(const u32 max_connect)
 	std::shared_ptr<NullPadHandler> nullpad = std::make_shared<NullPadHandler>();
 	handlers.emplace(pad_handler::null, nullpad);
 
-	for (u32 i = 0; i < m_info.now_connect; i++)
+	for (u32 i = 0; i < m_info.max_connect; i++)
 	{
 		std::shared_ptr<PadHandlerBase> cur_pad_handler;
 
-		if (handlers.count(input_cfg.player_input[i]) != 0)
+		const auto &handler_type = input_cfg.player_input[i];
+		
+		if (handlers.count(handler_type) != 0)
 		{
-			cur_pad_handler = handlers[input_cfg.player_input[i]];
+			cur_pad_handler = handlers[handler_type];
 		}
 		else
 		{
-			switch (input_cfg.player_input[i])
+			switch (handler_type)
 			{
 			case pad_handler::keyboard:
 				keyptr = std::make_shared<keyboard_pad_handler>();
@@ -75,7 +77,7 @@ void pad_thread::Init(const u32 max_connect)
 				break;
 #endif
 			}
-			handlers.emplace(input_cfg.player_input[i], cur_pad_handler);
+			handlers.emplace(handler_type, cur_pad_handler);
 		}
 		cur_pad_handler->Init();
 
@@ -88,9 +90,11 @@ void pad_thread::Init(const u32 max_connect)
 		if (cur_pad_handler->bindPadToDevice(m_pads.back(), input_cfg.player_device[i]->to_string()) == false)
 		{
 			//Failed to bind the device to cur_pad_handler so binds to NullPadHandler
-			LOG_ERROR(GENERAL, "Failed to bind device %s to handler %s", input_cfg.player_device[i]->to_string(), input_cfg.player_input[i].to_string());
+			LOG_ERROR(GENERAL, "Failed to bind device %s to handler %s", input_cfg.player_device[i]->to_string(), handler_type.to_string());
 			nullpad->bindPadToDevice(m_pads.back(), input_cfg.player_device[i]->to_string());
 		}
+		else if (handler_type != pad_handler::null)
+			m_info.now_connect++;
 	}
 
 	thread = std::make_shared<std::thread>(&pad_thread::ThreadFunc, this);

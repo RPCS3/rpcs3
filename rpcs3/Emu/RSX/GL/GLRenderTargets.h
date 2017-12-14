@@ -184,8 +184,7 @@ struct gl_render_target_traits
 		__glcheck result->pixel_pack_settings().swap_bytes(format.swap_bytes).aligment(1);
 		__glcheck result->pixel_unpack_settings().swap_bytes(format.swap_bytes).aligment(1);
 
-		if (old_surface != nullptr && old_surface->get_compatible_internal_format() == internal_fmt)
-			result->old_contents = old_surface;
+		result->old_contents = old_surface;
 
 		result->set_cleared();
 		result->update_surface();
@@ -227,8 +226,7 @@ struct gl_render_target_traits
 		result->set_native_pitch(native_pitch);
 		result->set_compatible_format(format.internal_format);
 
-		if (old_surface != nullptr && old_surface->get_compatible_internal_format() == format.internal_format)
-			result->old_contents = old_surface;
+		result->old_contents = old_surface;
 
 		result->update_surface();
 		return result;

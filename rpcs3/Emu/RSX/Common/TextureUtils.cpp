@@ -459,10 +459,16 @@ static size_t get_texture_size(u32 w, u32 h, u8 format)
 	case CELL_GCM_TEXTURE_R5G6B5:
 		return w * h * 2;
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+		w = align(w, 4);
+		h = align(h, 4);
 		return w * h / 6;
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+		w = align(w, 4);
+		h = align(h, 4);
 		return w * h / 4;
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+		w = align(w, 4);
+		h = align(h, 4);
 		return w * h / 4;
 	case CELL_GCM_TEXTURE_DEPTH16:
 		return w * h * 2;

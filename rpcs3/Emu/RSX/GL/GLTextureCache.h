@@ -14,6 +14,7 @@
 #include "Utilities/mutex.h"
 #include "Emu/System.h"
 #include "GLRenderTargets.h"
+#include "GLOverlays.h"
 #include "../Common/TextureUtils.h"
 #include "../Common/texture_cache.h"
 #include "../../Memory/vm.h"
@@ -102,6 +103,7 @@ namespace gl
 		texture::format format = texture::format::rgba;
 		texture::type type = texture::type::ubyte;
 		bool pack_unpack_swap_bytes = false;
+		rsx::surface_antialiasing aa_mode = rsx::surface_antialiasing::center_1_sample;
 
 		u8 get_pixel_size(texture::format fmt_, texture::type type_)
 		{
@@ -134,6 +136,8 @@ namespace gl
 			case texture::type::uint:
 				size = 4;
 				break;
+			default:
+				LOG_ERROR(RSX, "Unsupported texture type");
 			}
 
 			switch (fmt_)
@@ -210,8 +214,17 @@ namespace gl
 				gl::texture* image, const u32 rsx_pitch, bool read_only,
 				gl::texture::format gl_format, gl::texture::type gl_type, bool swap_bytes)
 		{
-			if (!read_only && pbo_id == 0)
-				init_buffer();
+			if (read_only)
+			{
+				aa_mode = rsx::surface_antialiasing::center_1_sample;
+			}
+			else
+			{
+				if (pbo_id == 0)
+					init_buffer();
+
+				aa_mode = static_cast<gl::render_target*>(image)->aa_mode;
+			}
 
 			flushed = false;
 			copied = false;
@@ -254,6 +267,19 @@ namespace gl
 			type = gl_type;
 			pack_unpack_swap_bytes = swap_bytes;
 
+			if (format == gl::texture::format::rgba)
+			{
+				switch (type)
+				{
+				case gl::texture::type::f16:
+					gcm_format = CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT;
+					break;
+				case gl::texture::type::f32:
+					gcm_format = CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT;
+					break;
+				}
+			}
+
 			real_pitch = width * get_pixel_size(format, type);
 		}
 
@@ -278,9 +304,21 @@ namespace gl
 			u32 target_texture = vram_texture;
 			if (real_pitch != rsx_pitch || rsx::get_resolution_scale_percent() != 100)
 			{
-				//Disabled - doesnt work properly yet
-				const u32 real_width = (rsx_pitch * width) / real_pitch;
-				const u32 real_height = cpu_address_range / rsx_pitch;
+				u32 real_width = width;
+				u32 real_height = height;
+
+				switch (aa_mode)
+				{
+				case rsx::surface_antialiasing::center_1_sample:
+					break;
+				case rsx::surface_antialiasing::diagonal_centered_2_samples:
+					real_width *= 2;
+					break;
+				default:
+					real_width *= 2;
+					real_height *= 2;
+					break;
+				}
 
 				areai src_area = { 0, 0, 0, 0 };
 				const areai dst_area = { 0, 0, (s32)real_width, (s32)real_height };
@@ -327,6 +365,7 @@ namespace gl
 
 			glPixelStorei(GL_PACK_SWAP_BYTES, pack_unpack_swap_bytes);
 			glPixelStorei(GL_PACK_ALIGNMENT, 1);
+			glPixelStorei(GL_PACK_ROW_LENGTH, 0);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 
 			glGetError();
@@ -417,17 +456,25 @@ namespace gl
 			}
 			else
 			{
-				//TODO: Use compression hint from the gcm tile information
-				//TODO: Fall back to bilinear filtering if samples > 2
-
 				const u8 pixel_size = get_pixel_size(format, type);
-				const u8 samples = rsx_pitch / real_pitch;
-				rsx::scale_image_nearest(dst, const_cast<const void*>(data), width, height, rsx_pitch, real_pitch, pixel_size, samples);
+				const u8 samples_u = (aa_mode == rsx::surface_antialiasing::center_1_sample) ? 1 : 2;
+				const u8 samples_v = (aa_mode == rsx::surface_antialiasing::square_centered_4_samples || aa_mode == rsx::surface_antialiasing::square_rotated_4_samples) ? 2 : 1;
+				rsx::scale_image_nearest(dst, const_cast<const void*>(data), width, height, rsx_pitch, real_pitch, pixel_size, samples_u, samples_v);
+			}
+
+			switch (gcm_format)
+			{
+			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+				rsx::shuffle_texel_data_wzyx<u16>(dst, rsx_pitch, width, height);
+				break;
+			case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+				rsx::shuffle_texel_data_wzyx<u32>(dst, rsx_pitch, width, height);
+				break;
 			}
 
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-			
+
 			return true;
 		}
 
@@ -601,13 +648,13 @@ namespace gl
 			glTexParameteri(dst_type, GL_TEXTURE_BASE_LEVEL, 0);
 			glTexParameteri(dst_type, GL_TEXTURE_MAX_LEVEL, 0);
 
+			m_temporary_surfaces.push_back(dst_id);
+
 			//Empty GL_ERROR
 			glGetError();
 
 			glCopyImageSubData(src_id, GL_TEXTURE_2D, 0, x, y, 0,
 				dst_id, dst_type, 0, 0, 0, 0, width, height, 1);
-
-			m_temporary_surfaces.push_back(dst_id);
 
 			//Check for error
 			if (GLenum err = glGetError())

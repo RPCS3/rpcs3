@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>892</width>
-    <height>554</height>
+    <width>1044</width>
+    <height>640</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,70 +17,12 @@
    <iconset resource="../resources.qrc">
     <normaloff>:/rpcs3.ico</normaloff>:/rpcs3.ico</iconset>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout_20">
+  <layout class="QHBoxLayout" name="horizontalLayout_23">
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_26">
+    <layout class="QVBoxLayout" name="verticalLayout_left">
      <property name="spacing">
       <number>5</number>
      </property>
-     <item>
-      <widget class="QGroupBox" name="groupBox">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="title">
-        <string>Controller to Configure</string>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout">
-        <property name="leftMargin">
-         <number>5</number>
-        </property>
-        <property name="topMargin">
-         <number>5</number>
-        </property>
-        <property name="rightMargin">
-         <number>5</number>
-        </property>
-        <property name="bottomMargin">
-         <number>5</number>
-        </property>
-        <item>
-         <widget class="QComboBox" name="cb_controller"/>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item>
-      <widget class="QGroupBox" name="groupBox_3">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="title">
-        <string>Profiles</string>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
-        <property name="leftMargin">
-         <number>5</number>
-        </property>
-        <property name="topMargin">
-         <number>5</number>
-        </property>
-        <property name="rightMargin">
-         <number>5</number>
-        </property>
-        <property name="bottomMargin">
-         <number>5</number>
-        </property>
-        <item>
-         <widget class="QPushButton" name="b_profile">
-          <property name="text">
-           <string>Manage Profiles</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
      <item>
       <widget class="QGroupBox" name="groupBox_15">
        <property name="title">
@@ -389,7 +331,7 @@
                <number>5</number>
               </property>
               <item>
-               <widget class="QPushButton" name="b_up_lstick">
+               <widget class="QPushButton" name="b_lstick_up">
                 <property name="text">
                  <string>Up</string>
                 </property>
@@ -438,7 +380,7 @@
               <number>5</number>
              </property>
              <item>
-              <widget class="QPushButton" name="b_left_lstick">
+              <widget class="QPushButton" name="b_lstick_left">
                <property name="text">
                 <string>Left</string>
                </property>
@@ -469,7 +411,7 @@
               <number>5</number>
              </property>
              <item>
-              <widget class="QPushButton" name="b_right_lstick">
+              <widget class="QPushButton" name="b_lstick_right">
                <property name="text">
                 <string>Right</string>
                </property>
@@ -530,7 +472,7 @@
                <number>5</number>
               </property>
               <item>
-               <widget class="QPushButton" name="b_down_lstick">
+               <widget class="QPushButton" name="b_lstick_down">
                 <property name="text">
                  <string>Down</string>
                 </property>
@@ -556,6 +498,138 @@
             </spacer>
            </item>
           </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="gb_triggers">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>80</height>
+        </size>
+       </property>
+       <property name="title">
+        <string>Trigger Thresholds</string>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_21">
+        <property name="leftMargin">
+         <number>5</number>
+        </property>
+        <property name="topMargin">
+         <number>5</number>
+        </property>
+        <property name="rightMargin">
+         <number>5</number>
+        </property>
+        <property name="bottomMargin">
+         <number>5</number>
+        </property>
+        <item>
+         <layout class="QVBoxLayout" name="gb_trigger_left">
+          <item>
+           <widget class="QSlider" name="slider_trigger_left">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSlider" name="preview_trigger_left">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="gb_trigger_right">
+          <item>
+           <widget class="QSlider" name="slider_trigger_right">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSlider" name="preview_trigger_right">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="gb_vibration">
+       <property name="title">
+        <string>Enable Vibration</string>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <property name="leftMargin">
+         <number>5</number>
+        </property>
+        <property name="topMargin">
+         <number>9</number>
+        </property>
+        <property name="rightMargin">
+         <number>5</number>
+        </property>
+        <property name="bottomMargin">
+         <number>9</number>
+        </property>
+        <item>
+         <widget class="QCheckBox" name="chb_vibration_large">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Large</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="chb_vibration_small">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Small</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="chb_vibration_switch">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Switch</string>
+          </property>
          </widget>
         </item>
        </layout>
@@ -598,7 +672,7 @@
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_39">
+    <layout class="QVBoxLayout" name="verticalLayout_middle">
      <property name="spacing">
       <number>0</number>
      </property>
@@ -818,11 +892,8 @@
                </property>
                <item>
                 <widget class="QPushButton" name="b_ps">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
                  <property name="text">
-                  <string>Null</string>
+                  <string>Backspace</string>
                  </property>
                  <property name="autoDefault">
                   <bool>false</bool>
@@ -1084,7 +1155,7 @@
         <item>
          <widget class="QLabel" name="l_description">
           <property name="text">
-           <string>We currently support keyboard and mouse input devices as well as native DualShock 4, XInput and MMjoy controllers through software thanks to our core developers and contributors. Unfortunately, we currently do not natively support DualShock 3 controllers. You can however use third party tools like SCP Driver Package to allow your DualShock 3 controller to function like an XInput controller. We plan to add additional input methods in the future.</string>
+           <string>Unfortunately, we currently do not natively support DualShock 3 controllers. You can however use third party tools like SCP Driver Package to allow your DualShock 3 controller to function like an XInput controller. We plan to add additional input methods in the future.</string>
           </property>
           <property name="textFormat">
            <enum>Qt::PlainText</enum>
@@ -1103,90 +1174,10 @@
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_14">
+    <layout class="QVBoxLayout" name="verticalLayout_right">
      <property name="spacing">
       <number>5</number>
      </property>
-     <item>
-      <widget class="QGroupBox" name="groupBox_4">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="title">
-        <string>Controller Status</string>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
-        <property name="leftMargin">
-         <number>5</number>
-        </property>
-        <property name="topMargin">
-         <number>5</number>
-        </property>
-        <property name="rightMargin">
-         <number>5</number>
-        </property>
-        <property name="bottomMargin">
-         <number>5</number>
-        </property>
-        <item>
-         <widget class="QComboBox" name="cb_status"/>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item>
-      <widget class="QGroupBox" name="groupBox_5">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="title">
-        <string>Features</string>
-       </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
-        <property name="leftMargin">
-         <number>5</number>
-        </property>
-        <property name="topMargin">
-         <number>9</number>
-        </property>
-        <property name="rightMargin">
-         <number>5</number>
-        </property>
-        <property name="bottomMargin">
-         <number>9</number>
-        </property>
-        <item>
-         <widget class="QCheckBox" name="chb_sixaxis">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Sixaxis</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-          <property name="checked">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QCheckBox" name="chb_vibration">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Vibration</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
      <item>
       <widget class="QGroupBox" name="groupBox_20">
        <property name="title">
@@ -1489,7 +1480,7 @@
                <number>5</number>
               </property>
               <item>
-               <widget class="QPushButton" name="b_up_rstick">
+               <widget class="QPushButton" name="b_rstick_up">
                 <property name="text">
                  <string>PgUp</string>
                 </property>
@@ -1538,7 +1529,7 @@
               <number>5</number>
              </property>
              <item>
-              <widget class="QPushButton" name="b_left_rstick">
+              <widget class="QPushButton" name="b_rstick_left">
                <property name="text">
                 <string>Home</string>
                </property>
@@ -1569,7 +1560,7 @@
               <number>5</number>
              </property>
              <item>
-              <widget class="QPushButton" name="b_right_rstick">
+              <widget class="QPushButton" name="b_rstick_right">
                <property name="text">
                 <string>End</string>
                </property>
@@ -1630,7 +1621,7 @@
                <number>5</number>
               </property>
               <item>
-               <widget class="QPushButton" name="b_down_rstick">
+               <widget class="QPushButton" name="b_rstick_down">
                 <property name="text">
                  <string>PgDown</string>
                 </property>
@@ -1662,6 +1653,69 @@
       </widget>
      </item>
      <item>
+      <widget class="QGroupBox" name="gb_sticks">
+       <property name="title">
+        <string>Analog Deadzones</string>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_22">
+        <property name="leftMargin">
+         <number>5</number>
+        </property>
+        <property name="topMargin">
+         <number>5</number>
+        </property>
+        <property name="rightMargin">
+         <number>5</number>
+        </property>
+        <property name="bottomMargin">
+         <number>5</number>
+        </property>
+        <item>
+         <layout class="QVBoxLayout" name="gb_stick_left">
+          <item>
+           <widget class="QSlider" name="slider_stick_left">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="preview_stick_left">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="gb_stick_right">
+          <item>
+           <widget class="QSlider" name="slider_stick_right">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="preview_stick_right">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
       <spacer name="verticalSpacer_3">
        <property name="orientation">
         <enum>Qt::Vertical</enum>
@@ -1675,14 +1729,25 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="b_reset">
-       <property name="text">
-        <string>Restore Defaults</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="horizontalLayout_20" stretch="1,1">
+       <item>
+        <widget class="QPushButton" name="b_blacklist">
+         <property name="text">
+          <string>Filter Noise</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="b_reset">
+         <property name="text">
+          <string>Restore Defaults</string>
+         </property>
+         <property name="autoDefault">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>
