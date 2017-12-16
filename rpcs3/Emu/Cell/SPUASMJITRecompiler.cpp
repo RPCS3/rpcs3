@@ -113,6 +113,13 @@ void spu_recompiler::compile(spu_function_t& f)
 		vec.at(i) = vec_vars.data() + i;
 	}
 
+	compiler.alloc(vec_vars[0], asmjit::x86::xmm0);
+	compiler.alloc(vec_vars[1], asmjit::x86::xmm1);
+	compiler.alloc(vec_vars[2], asmjit::x86::xmm2);
+	compiler.alloc(vec_vars[3], asmjit::x86::xmm3);
+	compiler.alloc(vec_vars[4], asmjit::x86::xmm4);
+	compiler.alloc(vec_vars[5], asmjit::x86::xmm5);
+
 	// Initialize labels
 	std::vector<Label> pos_labels{ 0x10000 };
 	this->labels = pos_labels.data();
@@ -562,6 +569,16 @@ void spu_recompiler::ABSDB(spu_opcode_t op)
 
 void spu_recompiler::ROT(spu_opcode_t op)
 {
+	if (utils::has_512())
+	{
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+		const XmmLink& vt = XmmAlloc();
+		c->vprolvd(vt, va, vb);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
+		return;
+	}
+
 	auto body = [](u32* t, const u32* a, const s32* b) noexcept
 	{
 		for (u32 i = 0; i < 4; i++)
@@ -589,6 +606,18 @@ void spu_recompiler::ROT(spu_opcode_t op)
 
 void spu_recompiler::ROTM(spu_opcode_t op)
 {
+	if (utils::has_512())
+	{
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+		const XmmLink& vt = XmmAlloc();
+		c->psubd(vb, XmmConst(_mm_set1_epi32(1)));
+		c->pandn(vb, XmmConst(_mm_set1_epi32(0x3f)));
+		c->vpsrlvd(vt, va, vb);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
+		return;
+	}
+
 	auto body = [](u32* t, const u32* a, const u32* b) noexcept
 	{
 		for (u32 i = 0; i < 4; i++)
@@ -617,6 +646,18 @@ void spu_recompiler::ROTM(spu_opcode_t op)
 
 void spu_recompiler::ROTMA(spu_opcode_t op)
 {
+	if (utils::has_512())
+	{
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+		const XmmLink& vt = XmmAlloc();
+		c->psubd(vb, XmmConst(_mm_set1_epi32(1)));
+		c->pandn(vb, XmmConst(_mm_set1_epi32(0x3f)));
+		c->vpsravd(vt, va, vb);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
+		return;
+	}
+
 	auto body = [](s32* t, const s32* a, const u32* b) noexcept
 	{
 		for (u32 i = 0; i < 4; i++)
@@ -645,6 +686,17 @@ void spu_recompiler::ROTMA(spu_opcode_t op)
 
 void spu_recompiler::SHL(spu_opcode_t op)
 {
+	if (utils::has_512())
+	{
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+		const XmmLink& vt = XmmAlloc();
+		c->pand(vb, XmmConst(_mm_set1_epi32(0x3f)));
+		c->vpsllvd(vt, va, vb);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
+		return;
+	}
+
 	auto body = [](u32* t, const u32* a, const u32* b) noexcept
 	{
 		for (u32 i = 0; i < 4; i++)
@@ -672,6 +724,28 @@ void spu_recompiler::SHL(spu_opcode_t op)
 
 void spu_recompiler::ROTH(spu_opcode_t op) //nf
 {
+	if (utils::has_512())
+	{
+		// Trying to implement 16-bit rotates using 32-bit rotates and only XMM registers.
+		// 1) Cannot use YMM/ZMM: transition penalty in mixed code, CPU frequency penalty.
+		// 2) Cross-lane instructions like VPMOVZX are expensive.
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+		const XmmLink& v1 = XmmAlloc();
+		const XmmLink& v2 = XmmAlloc();
+		c->vpunpckhwd(v1, va, va);
+		c->vpunpcklwd(v2, va, va);
+		c->vpunpckhwd(va, vb, vb);
+		c->vpunpcklwd(vb, vb, vb);
+		c->vprolvd(va, v1, va);
+		c->vprolvd(vb, v2, vb);
+		c->psrad(va, 16);
+		c->psrad(vb, 16);
+		c->packssdw(vb, va);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vb);
+		return;
+	}
+
 	auto body = [](u16* t, const u16* a, const s16* b) noexcept
 	{
 		for (u32 i = 0; i < 8; i++)
@@ -699,6 +773,18 @@ void spu_recompiler::ROTH(spu_opcode_t op) //nf
 
 void spu_recompiler::ROTHM(spu_opcode_t op)
 {
+	if (utils::has_512())
+	{
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+		const XmmLink& vt = XmmAlloc();
+		c->psubw(vb, XmmConst(_mm_set1_epi16(1)));
+		c->pandn(vb, XmmConst(_mm_set1_epi16(0x1f)));
+		c->vpsrlvw(vt, va, vb);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
+		return;
+	}
+
 	auto body = [](u16* t, const u16* a, const u16* b) noexcept
 	{
 		for (u32 i = 0; i < 8; i++)
@@ -727,6 +813,18 @@ void spu_recompiler::ROTHM(spu_opcode_t op)
 
 void spu_recompiler::ROTMAH(spu_opcode_t op)
 {
+	if (utils::has_512())
+	{
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+		const XmmLink& vt = XmmAlloc();
+		c->psubw(vb, XmmConst(_mm_set1_epi16(1)));
+		c->pandn(vb, XmmConst(_mm_set1_epi16(0x1f)));
+		c->vpsravw(vt, va, vb);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
+		return;
+	}
+
 	auto body = [](s16* t, const s16* a, const u16* b) noexcept
 	{
 		for (u32 i = 0; i < 8; i++)
@@ -755,6 +853,17 @@ void spu_recompiler::ROTMAH(spu_opcode_t op)
 
 void spu_recompiler::SHLH(spu_opcode_t op)
 {
+	if (utils::has_512())
+	{
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+		const XmmLink& vt = XmmAlloc();
+		c->pand(vb, XmmConst(_mm_set1_epi16(0x1f)));
+		c->vpsllvw(vt, va, vb);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
+		return;
+	}
+
 	auto body = [](u16* t, const u16* a, const u16* b) noexcept
 	{
 		for (u32 i = 0; i < 8; i++)
@@ -1783,6 +1892,15 @@ void spu_recompiler::HGT(spu_opcode_t op)
 
 void spu_recompiler::CLZ(spu_opcode_t op)
 {
+	if (utils::has_512())
+	{
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		const XmmLink& vt = XmmAlloc();
+		c->vplzcntd(vt, va);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
+		return;
+	}
+
 	auto body = [](u32* t, const u32* a) noexcept
 	{
 		for (u32 i = 0; i < 4; i++)
@@ -3073,6 +3191,14 @@ void spu_recompiler::SELB(spu_opcode_t op)
 {
 	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 	const XmmLink& vc = XmmGet(op.rc, XmmType::Int);
+
+	if (utils::has_512())
+	{
+		c->vpternlogd(vc, vb, SPU_OFF_128(gpr, op.ra), 0xca /* A?B:C */);
+		c->movdqa(SPU_OFF_128(gpr, op.rt4), vc);
+		return;
+	}
+
 	c->pand(vb, vc);
 	c->pandn(vc, SPU_OFF_128(gpr, op.ra));
 	c->por(vb, vc);
@@ -3081,6 +3207,30 @@ void spu_recompiler::SELB(spu_opcode_t op)
 
 void spu_recompiler::SHUFB(spu_opcode_t op)
 {
+	if (0 && utils::has_512())
+	{
+		// Deactivated due to poor performance of mask merge ops.
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+		const XmmLink& vc = XmmGet(op.rc, XmmType::Int);
+		const XmmLink& vt = XmmAlloc();
+		const XmmLink& vm = XmmAlloc();
+		c->vpcmpub(asmjit::x86::k1, vc, XmmConst(_mm_set1_epi8(-0x40)), 5 /* GE */);
+		c->vpxor(vm, vc, XmmConst(_mm_set1_epi8(0xf)));
+		c->setExtraReg(asmjit::x86::k1);
+		c->z().vblendmb(vc, vc, XmmConst(_mm_set1_epi8(-1))); // {k1}
+		c->vpcmpub(asmjit::x86::k2, vm, XmmConst(_mm_set1_epi8(-0x20)), 5 /* GE */);
+		c->vptestmb(asmjit::x86::k1, vm, XmmConst(_mm_set1_epi8(0x10)));
+		c->vpshufb(vt, va, vm);
+		c->setExtraReg(asmjit::x86::k2);
+		c->z().vblendmb(va, va, XmmConst(_mm_set1_epi8(0x7f))); // {k2}
+		c->setExtraReg(asmjit::x86::k1);
+		c->vpshufb(vt, vb, vm); // {k1}
+		c->vpternlogd(vt, va, vc, 0xf6 /* orAxorBC */);
+		c->movdqa(SPU_OFF_128(gpr, op.rt4), vt);
+		return;
+	}
+
 	alignas(16) static thread_local u8 s_lut[256]
 	{
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -3136,41 +3286,52 @@ void spu_recompiler::SHUFB(spu_opcode_t op)
 		return;
 	}
 
-	const XmmLink& v0 = XmmGet(op.rc, XmmType::Int); // v0 = mask
-	const XmmLink& v1 = XmmAlloc();
-	const XmmLink& v2 = XmmAlloc();
-	const XmmLink& v3 = XmmAlloc();
-	const XmmLink& v4 = XmmAlloc();
-	const XmmLink& vFF = XmmAlloc();
-	c->movdqa(v2, v0); // v2 = mask
-	// generate specific values:
-	c->movdqa(v1, XmmConst(_mm_set1_epi8(-0x20))); // v1 = 11100000
-	c->movdqa(v3, XmmConst(_mm_set1_epi8(-0x80))); // v3 = 10000000
-	c->pand(v2, v1); // filter mask      v2 = mask & 11100000
-	c->movdqa(vFF, v2); // and copy      vFF = mask & 11100000
-	c->movdqa(v4, XmmConst(_mm_set1_epi8(-0x40))); // v4 = 11000000
-	c->pcmpeqb(vFF, v4); // gen 0xff     vFF = (mask & 11100000 == 11000000) ? 0xff : 0
-	c->movdqa(v4, v2); // copy again     v4 = mask & 11100000
-	c->pand(v4, v3); // filter mask      v4 = mask & 10000000
-	c->pcmpeqb(v2, v1); //               v2 = (mask & 11100000 == 11100000) ? 0xff : 0
-	c->pcmpeqb(v4, v3); //               v4 = (mask & 10000000 == 10000000) ? 0xff : 0
-	c->pand(v2, v3); // generate 0x80    v2 = (mask & 11100000 == 11100000) ? 0x80 : 0
-	c->por(vFF, v2); // merge 0xff, 0x80 vFF = (mask & 11100000 == 11000000) ? 0xff : (mask & 11100000 == 11100000) ? 0x80 : 0
-	c->pandn(v1, v0); // filter mask     v1 = mask & 00011111
-	// select bytes from [op.rb]:
-	c->movdqa(v2, XmmConst(_mm_set1_epi8(0x0f))); //   v2 = 00001111
-	c->pxor(v1, XmmConst(_mm_set1_epi8(0x10))); //   v1 = (mask & 00011111) ^ 00010000
-	c->psubb(v2, v1); //                 v2 = 00001111 - ((mask & 00011111) ^ 00010000)
-	c->movdqa(v1, SPU_OFF_128(gpr, op.rb)); //        v1 = op.rb
-	c->pshufb(v1, v2); //                v1 = select(op.rb, 00001111 - ((mask & 00011111) ^ 00010000))
-	// select bytes from [op.ra]:
-	c->pxor(v2, XmmConst(_mm_set1_epi8(-0x10))); //   v2 = (00001111 - ((mask & 00011111) ^ 00010000)) ^ 11110000
-	c->movdqa(v3, SPU_OFF_128(gpr, op.ra)); //        v3 = op.ra
-	c->pshufb(v3, v2); //                v3 = select(op.ra, (00001111 - ((mask & 00011111) ^ 00010000)) ^ 11110000)
-	c->por(v1, v3); //                   v1 = select(op.rb, 00001111 - ((mask & 00011111) ^ 00010000)) | (v3)
-	c->pandn(v4, v1); // filter result   v4 = v1 & ((mask & 10000000 == 10000000) ? 0 : 0xff)
-	c->por(vFF, v4); // final merge      vFF = (mask & 10000000 == 10000000) ? ((mask & 11100000 == 11000000) ? 0xff : (mask & 11100000 == 11100000) ? 0x80 : 0) : (v1)
-	c->movdqa(SPU_OFF_128(gpr, op.rt4), vFF);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+	const XmmLink& vc = XmmGet(op.rc, XmmType::Int);
+	const XmmLink& vt = XmmAlloc();
+	const XmmLink& vm = XmmAlloc();
+	const XmmLink& v5 = XmmAlloc();
+	c->movdqa(vm, XmmConst(_mm_set1_epi8(0xc0)));
+
+	// Test for (110xxxxx) and (11xxxxxx) bit values
+	if (utils::has_avx())
+	{
+		c->vpand(v5, vc, XmmConst(_mm_set1_epi8(0xe0)));
+		c->vpand(vt, vc, vm);
+	}
+	else
+	{
+		c->movdqa(v5, vc);
+		c->pand(v5, XmmConst(_mm_set1_epi8(0xe0)));
+		c->movdqa(vt, vc);
+		c->pand(vt, vm);
+	}
+
+	c->pxor(vc, XmmConst(_mm_set1_epi8(0xf)));
+	c->pshufb(va, vc);
+	c->pshufb(vb, vc);
+	c->pand(vc, XmmConst(_mm_set1_epi8(0x10)));
+	c->pcmpeqb(v5, vm); // If true, result should become 0xFF
+	c->pcmpeqb(vt, vm); // If true, result should become either 0xFF or 0x80
+	c->pavgb(vt, v5); // Generate result constant: AVG(0xff, 0x00) == 0x80
+	c->pxor(vm, vm);
+	c->pcmpeqb(vc, vm);
+
+	// Select result value from va or vb
+	if (utils::has_512())
+	{
+		c->vpternlogd(vc, va, vb, 0xca /* A?B:C */);
+	}
+	else
+	{
+		c->pand(va, vc);
+		c->pandn(vc, vb);
+		c->por(vc, va);
+	}
+
+	c->por(vt, vc);
+	c->movdqa(SPU_OFF_128(gpr, op.rt4), vt);
 }
 
 void spu_recompiler::MPYA(spu_opcode_t op)
