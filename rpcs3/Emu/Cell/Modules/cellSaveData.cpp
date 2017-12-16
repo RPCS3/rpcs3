@@ -120,9 +120,10 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				if (entry.name.substr(0, prefix.size()) == prefix)
 				{
 					// Count the amount of matches and the amount of listed directories
-					if (listGet->dirListNum++ < setBuf->dirListMax)
+					listGet->dirNum++; // total number of directories
+					if (listGet->dirListNum < setBuf->dirListMax)
 					{
-						listGet->dirNum++;
+						listGet->dirListNum++; // number of directories in list
 
 						// PSF parameters
 						const auto& psf = psf::load_object(fs::file(base_dir + entry.name + "/PARAM.SFO"));
