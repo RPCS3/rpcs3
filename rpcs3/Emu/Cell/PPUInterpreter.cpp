@@ -928,9 +928,16 @@ bool ppu_interpreter_fast::VMHRADDSHS(ppu_thread& ppu, ppu_opcode_t op)
 	const auto a = ppu.vr[op.va].vi;
 	const auto b = ppu.vr[op.vb].vi;
 	const auto c = ppu.vr[op.vc].vi;
-	const auto m = _mm_mulhrs_epi16(a, b);
-	const auto s = _mm_cmpeq_epi16(m, _mm_set1_epi16(-0x8000)); // detect special case (positive 0x8000)
-	ppu.vr[op.vd].vi = _mm_adds_epi16(_mm_adds_epi16(_mm_xor_si128(m, s), c), _mm_srli_epi16(s, 15));
+	const auto x80 = _mm_set1_epi16(0x80); // 0x80 * 0x80 = 0x4000, add this to the product
+	const auto al = _mm_unpacklo_epi16(a, x80);
+	const auto ah = _mm_unpackhi_epi16(a, x80);
+	const auto bl = _mm_unpacklo_epi16(b, x80);
+	const auto bh = _mm_unpackhi_epi16(b, x80);
+	const auto ml = _mm_srai_epi32(_mm_madd_epi16(al, bl), 15);
+	const auto mh = _mm_srai_epi32(_mm_madd_epi16(ah, bh), 15);
+	const auto cl = _mm_srai_epi32(_mm_unpacklo_epi16(_mm_setzero_si128(), c), 16);
+	const auto ch = _mm_srai_epi32(_mm_unpackhi_epi16(_mm_setzero_si128(), c), 16);
+	ppu.vr[op.vd].vi = _mm_packs_epi32(_mm_add_epi32(ml, cl), _mm_add_epi32(mh, ch));
 	return true;
 }
 
