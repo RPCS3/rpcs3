@@ -670,8 +670,8 @@ int ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
 		// alternating blink states with values 0-255: only setting both to zero disables blinking
 		// 255 is roughly 2 seconds, so setting both values to 255 results in a 4 second interval
 		// using something like (0,10) will heavily blink, while using (0, 255) will be slow. you catch the drift
-		outputBuf[9] = device->led_delay_on;
-		outputBuf[10] = device->led_delay_off;
+		outputBuf[11] = device->led_delay_on;
+		outputBuf[12] = device->led_delay_off;
 
 		const u8 btHdr = 0xA2;
 		const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);

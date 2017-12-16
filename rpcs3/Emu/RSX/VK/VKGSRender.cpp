@@ -794,7 +794,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	vk::texture_cache::thrashed_set result;
 	{
 		std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
-		result = std::move(m_texture_cache.invalidate_address(address, is_writing, false, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()));
+		result = std::move(m_texture_cache.invalidate_address(address, is_writing, false, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()));
 	}
 
 	if (!result.violation_handled)
@@ -811,7 +811,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		bool has_queue_ref = false;
 
 		u64 sync_timestamp = 0ull;
-		for (const auto& tex : result.affected_sections)
+		for (const auto& tex : result.sections_to_flush)
 			sync_timestamp = std::max(sync_timestamp, tex->get_sync_timestamp());
 
 		if (!is_rsxthr)
@@ -882,7 +882,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			}
 		}
 
-		m_texture_cache.flush_all(result, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+		m_texture_cache.flush_all(result, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 
 		if (has_queue_ref)
 		{
@@ -897,7 +897,7 @@ void VKGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 {
 	std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
 	if (m_texture_cache.invalidate_range(address_base, size, true, true, false,
-		*m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()).violation_handled)
+		m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()).violation_handled)
 	{
 		m_texture_cache.purge_dirty();
 		{
@@ -924,7 +924,8 @@ void VKGSRender::begin()
 {
 	rsx::thread::begin();
 
-	if (skip_frame || renderer_unavailable)
+	if (skip_frame || renderer_unavailable ||
+		(conditional_render_enabled && conditional_render_test_failed))
 		return;
 
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
@@ -1089,16 +1090,10 @@ void VKGSRender::close_render_pass()
 
 void VKGSRender::end()
 {
-	if (skip_frame || !framebuffer_status_valid || renderer_unavailable)
+	if (skip_frame || !framebuffer_status_valid || renderer_unavailable ||
+		(conditional_render_enabled && conditional_render_test_failed) ||
+		!check_program_status())
 	{
-		rsx::thread::end();
-		return;
-	}
-
-	//Load program here since it is dependent on vertex state
-	if (!check_program_status())
-	{
-		LOG_ERROR(RSX, "No valid program bound to pipeline. Skipping draw");
 		rsx::thread::end();
 		return;
 	}
@@ -2431,10 +2426,13 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	//NOTE: Z buffers with pitch = 64 are valid even if they would not fit (GT HD Concept)
 	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(color_fmt, clip_width), 64u);
+	const bool stencil_test_enabled = depth_fmt == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
 
 	if (zeta_address)
 	{
-		if (!rsx::method_registers.depth_test_enabled() && target != rsx::surface_target::none)
+		if (!rsx::method_registers.depth_test_enabled() &&
+			!stencil_test_enabled &&
+			target != rsx::surface_target::none)
 		{
 			//Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
 			const bool is_depth_clear = !!(context & rsx::framebuffer_creation_context::context_clear_depth);
@@ -2455,7 +2453,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, zeta_pitch = %d, color_pitch=%d", zeta_address, zeta_pitch, surface_pitchs[index]);
 			if (context == rsx::framebuffer_creation_context::context_clear_depth ||
-				rsx::method_registers.depth_test_enabled() ||
+				rsx::method_registers.depth_test_enabled() || stencil_test_enabled ||
 				(!rsx::method_registers.color_write_enabled() && rsx::method_registers.depth_write_enabled()))
 			{
 				// Use address for depth data

@@ -78,7 +78,7 @@ private:
 	asmjit::X86Mem XmmConst(__m128i data);
 
 public:
-    void CheckInterruptStatus(spu_opcode_t op);
+	void CheckInterruptStatus(spu_opcode_t op);
 	void InterpreterCall(spu_opcode_t op);
 	void FunctionCall();
 

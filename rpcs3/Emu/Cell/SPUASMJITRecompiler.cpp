@@ -1038,7 +1038,7 @@ void spu_recompiler::BI(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
 	c->and_(*addr, 0x3fffc);
-    CheckInterruptStatus(op);
+	CheckInterruptStatus(op);
 	c->jmp(*jt);
 }
 
@@ -1062,7 +1062,7 @@ void spu_recompiler::IRET(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(srr0));
 	c->and_(*addr, 0x3fffc);
-    CheckInterruptStatus(op);
+	CheckInterruptStatus(op);
 	c->jmp(*jt);
 }
 

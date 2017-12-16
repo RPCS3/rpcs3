@@ -195,10 +195,13 @@ namespace vk
 	}
 }
 
-void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
+void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 {
 	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program);
+}
 
+void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
+{
 	//TODO: Generate input mask during parse stage to avoid this
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
