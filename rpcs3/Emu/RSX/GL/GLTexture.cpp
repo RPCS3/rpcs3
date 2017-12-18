@@ -338,7 +338,7 @@ namespace gl
 	}
 
 	void fill_texture(rsx::texture_dimension_extended dim, u16 mipmap_count, int format, u16 width, u16 height, u16 depth,
-			const std::vector<rsx_subresource_layout> &input_layouts, bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<gsl::byte> staging_buffer)
+			const std::vector<rsx_subresource_layout> &input_layouts, bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<gsl::byte>& staging_buffer)
 	{
 		int mip_level = 0;
 		if (is_compressed_format(format))
@@ -443,7 +443,7 @@ namespace gl
 		}
 	}
 
-	void apply_swizzle_remap(const GLenum target, const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap)
+	void apply_swizzle_remap(GLenum target, const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap)
 	{
 		//Remapping tables; format is A-R-G-B
 		//Remap input table. Contains channel index to read color from
@@ -478,8 +478,8 @@ namespace gl
 		glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, remap_values[3]);
 	}
 
-	void upload_texture(const GLuint id, const u32 texaddr, const u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
-			std::vector<rsx_subresource_layout>& subresources_layout, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap, bool static_state)
+	void upload_texture(GLuint id, u32 texaddr, u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
+			const std::vector<rsx_subresource_layout>& subresources_layout, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap, bool static_state)
 	{
 		const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
 		
