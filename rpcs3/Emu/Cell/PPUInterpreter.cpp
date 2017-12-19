@@ -5,6 +5,10 @@
 
 #include <cmath>
 
+#if !defined(_MSC_VER) && !defined(__SSSE3__)
+#define _mm_shuffle_epi8
+#endif
+
 inline u64 dup32(u32 x) { return x | static_cast<u64>(x) << 32; }
 
 // Write values to CR field
@@ -83,6 +87,20 @@ extern __m128 sse_log2_ps(__m128 A)
 	return _mm_add_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(x5, x6), x7), x4), _c), _mm_add_ps(_mm_mul_ps(x4, _c), x8));
 }
 
+extern __m128i sse_pshufb(__m128i data, __m128i index)
+{
+	v128 m = v128::fromV(_mm_and_si128(index, _mm_set1_epi8(0xf)));
+	v128 a = v128::fromV(data);
+	v128 r;
+
+	for (int i = 0; i < 16; i++)
+	{
+		r._u8[i] = a._u8[m._u8[i]];
+	}
+
+	return _mm_and_si128(r.vi, _mm_cmpgt_epi8(index, _mm_set1_epi8(-1)));
+}
+
 extern __m128i sse_altivec_vperm(__m128i A, __m128i B, __m128i C)
 {
 	const auto index = _mm_andnot_si128(C, _mm_set1_epi8(0x1f));
@@ -90,6 +108,20 @@ extern __m128i sse_altivec_vperm(__m128i A, __m128i B, __m128i C)
 	const auto sa = _mm_shuffle_epi8(A, index);
 	const auto sb = _mm_shuffle_epi8(B, index);
 	return _mm_or_si128(_mm_and_si128(mask, sa), _mm_andnot_si128(mask, sb));
+}
+
+extern __m128i sse_altivec_vperm_v0(__m128i A, __m128i B, __m128i C)
+{
+	__m128i ab[2]{B, A};
+	v128 index = v128::fromV(_mm_andnot_si128(C, _mm_set1_epi8(0x1f)));
+	v128 res;
+
+	for (int i = 0; i < 16; i++)
+	{
+		res._u8[i] = ((u8*)+ab)[index._u8[i]];
+	}
+
+	return res.vi;
 }
 
 extern __m128i sse_altivec_lvsl(u64 addr)
@@ -200,6 +232,26 @@ extern __m128i sse_cellbe_lvrx(u64 addr)
 extern void sse_cellbe_stvrx(u64 addr, __m128i a)
 {
 	_mm_maskmoveu_si128(_mm_shuffle_epi8(a, lvrx_masks[addr & 0xf]), lvlx_masks[addr & 0xf], (char*)vm::base(addr & ~0xf));
+}
+
+extern __m128i sse_cellbe_lvlx_v0(u64 addr)
+{
+	return sse_pshufb(_mm_load_si128((__m128i*)vm::base(addr & ~0xf)), lvlx_masks[addr & 0xf]);
+}
+
+extern void sse_cellbe_stvlx_v0(u64 addr, __m128i a)
+{
+	_mm_maskmoveu_si128(sse_pshufb(a, lvlx_masks[addr & 0xf]), lvrx_masks[addr & 0xf], (char*)vm::base(addr & ~0xf));
+}
+
+extern __m128i sse_cellbe_lvrx_v0(u64 addr)
+{
+	return sse_pshufb(_mm_load_si128((__m128i*)vm::base(addr & ~0xf)), lvrx_masks[addr & 0xf]);
+}
+
+extern void sse_cellbe_stvrx_v0(u64 addr, __m128i a)
+{
+	_mm_maskmoveu_si128(sse_pshufb(a, lvrx_masks[addr & 0xf]), lvlx_masks[addr & 0xf], (char*)vm::base(addr & ~0xf));
 }
 
 template<typename T>
@@ -1327,7 +1379,13 @@ bool ppu_interpreter::VOR(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VPERM(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::VPERM(ppu_thread& ppu, ppu_opcode_t op)
+{
+	ppu.vr[op.vd].vi = sse_altivec_vperm_v0(ppu.vr[op.va].vi, ppu.vr[op.vb].vi, ppu.vr[op.vc].vi);
+	return true;
+}
+
+bool ppu_interpreter_fast::VPERM(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.vr[op.vd].vi = sse_altivec_vperm(ppu.vr[op.va].vi, ppu.vr[op.vb].vi, ppu.vr[op.vc].vi);
 	return true;
@@ -3881,7 +3939,14 @@ bool ppu_interpreter::DIVW(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::LVLX(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::LVLX(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+	ppu.vr[op.vd].vi = sse_cellbe_lvlx_v0(addr);
+	return true;
+}
+
+bool ppu_interpreter_fast::LVLX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
 	ppu.vr[op.vd].vi = sse_cellbe_lvlx(addr);
@@ -3945,7 +4010,14 @@ bool ppu_interpreter::SRD(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::LVRX(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::LVRX(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+	ppu.vr[op.vd].vi = sse_cellbe_lvrx_v0(addr);
+	return true;
+}
+
+bool ppu_interpreter_fast::LVRX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
 	ppu.vr[op.vd].vi = sse_cellbe_lvrx(addr);
@@ -4013,7 +4085,14 @@ bool ppu_interpreter::LFDUX(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::STVLX(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::STVLX(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+	sse_cellbe_stvlx_v0(addr, ppu.vr[op.vs].vi);
+	return true;
+}
+
+bool ppu_interpreter_fast::STVLX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
 	sse_cellbe_stvlx(addr, ppu.vr[op.vs].vi);
@@ -4061,7 +4140,14 @@ bool ppu_interpreter::STFSX(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::STVRX(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::STVRX(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+	sse_cellbe_stvrx_v0(addr, ppu.vr[op.vs].vi);
+	return true;
+}
+
+bool ppu_interpreter_fast::STVRX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
 	sse_cellbe_stvrx(addr, ppu.vr[op.vs].vi);
@@ -4121,7 +4207,12 @@ bool ppu_interpreter::STFDUX(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::LVLXL(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::LVLXL(ppu_thread& ppu, ppu_opcode_t op)
+{
+	return LVLX(ppu, op);
+}
+
+bool ppu_interpreter_fast::LVLXL(ppu_thread& ppu, ppu_opcode_t op)
 {
 	return LVLX(ppu, op);
 }
@@ -4171,7 +4262,12 @@ bool ppu_interpreter::SRAD(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::LVRXL(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::LVRXL(ppu_thread& ppu, ppu_opcode_t op)
+{
+	return LVRX(ppu, op);
+}
+
+bool ppu_interpreter_fast::LVRXL(ppu_thread& ppu, ppu_opcode_t op)
 {
 	return LVRX(ppu, op);
 }
@@ -4208,7 +4304,12 @@ bool ppu_interpreter::EIEIO(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::STVLXL(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::STVLXL(ppu_thread& ppu, ppu_opcode_t op)
+{
+	return STVLX(ppu, op);
+}
+
+bool ppu_interpreter_fast::STVLXL(ppu_thread& ppu, ppu_opcode_t op)
 {
 	return STVLX(ppu, op);
 }
@@ -4227,7 +4328,12 @@ bool ppu_interpreter::EXTSH(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::STVRXL(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::STVRXL(ppu_thread& ppu, ppu_opcode_t op)
+{
+	return STVRX(ppu, op);
+}
+
+bool ppu_interpreter_fast::STVRXL(ppu_thread& ppu, ppu_opcode_t op)
 {
 	return STVRX(ppu, op);
 }

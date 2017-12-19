@@ -56,6 +56,16 @@
 
 const bool s_use_rtm = utils::has_rtm();
 
+const bool s_use_ssse3 =
+#ifdef _MSC_VER
+	utils::has_ssse3();
+#elif __SSSE3__
+	true;
+#else
+	false;
+#define _mm_shuffle_epi8
+#endif
+
 extern u64 get_system_time();
 
 namespace vm { using namespace ps3; }
@@ -101,8 +111,57 @@ void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 	});
 }
 
-const ppu_decoder<ppu_interpreter_precise> s_ppu_interpreter_precise;
-const ppu_decoder<ppu_interpreter_fast> s_ppu_interpreter_fast;
+// Table of identical interpreter functions when precise contains SSE2 version, and fast contains SSSE3 functions
+const std::pair<ppu_inter_func_t, ppu_inter_func_t> s_ppu_dispatch_table[]
+{
+#define FUNC(x) {&ppu_interpreter_precise::x, &ppu_interpreter_fast::x}
+	FUNC(VPERM),
+	FUNC(LVLX),
+	FUNC(LVLXL),
+	FUNC(LVRX),
+	FUNC(LVRXL),
+	FUNC(STVLX),
+	FUNC(STVLXL),
+	FUNC(STVRX),
+	FUNC(STVRXL),
+#undef FUNC
+};
+
+extern const ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise([](auto& table)
+{
+	if (s_use_ssse3)
+	{
+		for (auto& func : table)
+		{
+			for (const auto& pair : s_ppu_dispatch_table)
+			{
+				if (pair.first == func)
+				{
+					func = pair.second;
+					break;
+				}
+			}
+		}
+	}
+});
+
+extern const ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast([](auto& table)
+{
+	if (!s_use_ssse3)
+	{
+		for (auto& func : table)
+		{
+			for (const auto& pair : s_ppu_dispatch_table)
+			{
+				if (pair.second == func)
+				{
+					func = pair.first;
+					break;
+				}
+			}
+		}
+	}
+});
 
 extern void ppu_initialize();
 extern void ppu_initialize(const ppu_module& info);
@@ -120,8 +179,8 @@ static u32 ppu_cache(u32 addr)
 {
 	// Select opcode table
 	const auto& table = *(
-		g_cfg.core.ppu_decoder == ppu_decoder_type::precise ? &s_ppu_interpreter_precise.get_table() :
-		g_cfg.core.ppu_decoder == ppu_decoder_type::fast ? &s_ppu_interpreter_fast.get_table() :
+		g_cfg.core.ppu_decoder == ppu_decoder_type::precise ? &g_ppu_interpreter_precise.get_table() :
+		g_cfg.core.ppu_decoder == ppu_decoder_type::fast ? &g_ppu_interpreter_fast.get_table() :
 		(fmt::throw_exception<std::logic_error>("Invalid PPU decoder"), nullptr));
 
 	return ::narrow<u32>(reinterpret_cast<std::uintptr_t>(table[ppu_decode(vm::read32(addr))]));
@@ -154,7 +213,7 @@ static bool ppu_check_toc(ppu_thread& ppu, ppu_opcode_t op)
 	if (ppu.gpr[2] != found->second)
 	{
 		LOG_ERROR(PPU, "Unexpected TOC (0x%x, expected 0x%x)", ppu.gpr[2], found->second);
-		
+
 		if (!ppu.state.test_and_set(cpu_flag::dbg_pause) && ppu.check_state())
 		{
 			return false;
@@ -207,8 +266,8 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 		{
 			LOG_ERROR(PPU, "ppu_register_function_at(0x%x): empty range", addr);
 		}
-		
-		return;	
+
+		return;
 	}
 
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
@@ -401,7 +460,7 @@ std::string ppu_thread::dump() const
 	{
 		ret += '\n';
 	}
-	
+
 	ret += "\nRegisters:\n=========\n";
 	for (uint i = 0; i < 32; ++i) fmt::append(ret, "GPR[%d] = 0x%llx\n", i, gpr[i]);
 	for (uint i = 0; i < 32; ++i) fmt::append(ret, "FPR[%d] = %.6G\n", i, fpr[i]);
@@ -455,7 +514,9 @@ void ppu_thread::cpu_task()
 		{
 		case ppu_cmd::opcode:
 		{
-			cmd_pop(), s_ppu_interpreter_fast.decode(arg)(*this, {arg});
+			cmd_pop(), g_cfg.core.ppu_decoder == ppu_decoder_type::precise
+				? g_ppu_interpreter_precise.decode(arg)(*this, {arg})
+				: g_ppu_interpreter_fast.decode(arg)(*this, {arg});
 			break;
 		}
 		case ppu_cmd::set_gpr:
@@ -521,7 +582,7 @@ void ppu_thread::exec_task()
 		{
 			reinterpret_cast<ppu_function_t>(static_cast<std::uintptr_t>(ppu_ref(cia)))(*this);
 		}
-		
+
 		return;
 	}
 
@@ -545,7 +606,7 @@ void ppu_thread::exec_task()
 			continue;
 		}
 
-		if (cia % 16)
+		if (cia % 16 || !s_use_ssse3)
 		{
 			// Unaligned
 			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + cia);
@@ -808,12 +869,17 @@ extern ppu_function_t ppu_get_syscall(u64 code);
 extern __m128 sse_exp2_ps(__m128 A);
 extern __m128 sse_log2_ps(__m128 A);
 extern __m128i sse_altivec_vperm(__m128i A, __m128i B, __m128i C);
+extern __m128i sse_altivec_vperm_v0(__m128i A, __m128i B, __m128i C);
 extern __m128i sse_altivec_lvsl(u64 addr);
 extern __m128i sse_altivec_lvsr(u64 addr);
 extern __m128i sse_cellbe_lvlx(u64 addr);
 extern __m128i sse_cellbe_lvrx(u64 addr);
 extern void sse_cellbe_stvlx(u64 addr, __m128i a);
 extern void sse_cellbe_stvrx(u64 addr, __m128i a);
+extern __m128i sse_cellbe_lvlx_v0(u64 addr);
+extern __m128i sse_cellbe_lvrx_v0(u64 addr);
+extern void sse_cellbe_stvlx_v0(u64 addr, __m128i a);
+extern void sse_cellbe_stvrx_v0(u64 addr, __m128i a);
 
 [[noreturn]] static void ppu_trap(ppu_thread& ppu, u64 addr)
 {
@@ -889,7 +955,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 	vm::writer_lock lock(0);
 
 	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
-	
+
 	if (result)
 	{
 		vm::reservation_update(addr, sizeof(u32));
@@ -1024,13 +1090,13 @@ extern void ppu_initialize(const ppu_module& info)
 			{ "__stdcx", (u64)&ppu_stdcx },
 			{ "__vexptefp", (u64)&sse_exp2_ps },
 			{ "__vlogefp", (u64)&sse_log2_ps },
-			{ "__vperm", (u64)&sse_altivec_vperm },
+			{ "__vperm", s_use_ssse3 ? (u64)&sse_altivec_vperm : (u64)&sse_altivec_vperm_v0 },
 			{ "__lvsl", (u64)&sse_altivec_lvsl },
 			{ "__lvsr", (u64)&sse_altivec_lvsr },
-			{ "__lvlx", (u64)&sse_cellbe_lvlx },
-			{ "__lvrx", (u64)&sse_cellbe_lvrx },
-			{ "__stvlx", (u64)&sse_cellbe_stvlx },
-			{ "__stvrx", (u64)&sse_cellbe_stvrx },
+			{ "__lvlx", s_use_ssse3 ? (u64)&sse_cellbe_lvlx : (u64)&sse_cellbe_lvlx_v0 },
+			{ "__lvrx", s_use_ssse3 ? (u64)&sse_cellbe_lvrx : (u64)&sse_cellbe_lvrx_v0 },
+			{ "__stvlx", s_use_ssse3 ? (u64)&sse_cellbe_stvlx : (u64)&sse_cellbe_stvlx_v0 },
+			{ "__stvrx", s_use_ssse3 ? (u64)&sse_cellbe_stvrx : (u64)&sse_cellbe_stvrx_v0 },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
@@ -1075,7 +1141,7 @@ extern void ppu_initialize(const ppu_module& info)
 		std::vector<u64*> vars;
 		std::vector<ppu_function_t> funcs;
 	};
-	
+
 	// Permanently loaded compiled PPU modules (name -> data)
 	jit_module& jit_mod = fxm::get_always<std::unordered_map<std::string, jit_module>>()->emplace(cache_path + info.name, jit_module{}).first->second;
 
@@ -1239,7 +1305,7 @@ extern void ppu_initialize(const ppu_module& info)
 		{
 			// Set low priority
 			thread_ctrl::set_native_priority(-1);
-			
+
 			// Allocate "core"
 			{
 				semaphore_lock jlock(jcores);
@@ -1259,7 +1325,7 @@ extern void ppu_initialize(const ppu_module& info)
 				return;
 			}
 
-			// Proceed with original JIT instance		
+			// Proceed with original JIT instance
 			semaphore_lock lock(jmutex);
 			jit->add(cache_path + obj_name);
 		});
@@ -1278,7 +1344,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 	// Jit can be null if the loop doesn't ever enter.
 	if (jit && jit_mod.vars.empty())
-	{	
+	{
 		jit->fin();
 		// Get and install function addresses
 		for (const auto& func : info.funcs)
@@ -1356,7 +1422,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 	// Initialize target
 	module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
-	
+
 	// Initialize translator
 	PPUTranslator translator(jit.get_context(), module.get(), module_part);
 
@@ -1429,7 +1495,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 			if (module_part.funcs[fi].size)
 			{
-				// Update dialog		
+				// Update dialog
 				Emu.CallAfter([=, max = module_part.funcs.size()]()
 				{
 					dlg->ProgressBarSetMsg(0, fmt::format("Compiling %u of %u", fi + 1, fmax));
@@ -1448,7 +1514,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 				{
 					Emu.Pause();
 					return;
-				}				
+				}
 			}
 		}
 
