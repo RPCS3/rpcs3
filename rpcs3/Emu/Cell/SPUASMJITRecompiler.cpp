@@ -622,7 +622,7 @@ void spu_recompiler::ROTM(spu_opcode_t op)
 	{
 		for (u32 i = 0; i < 4; i++)
 		{
-			t[i] = static_cast<u32>(static_cast<u64>(a[i]) >> (0 - b[i]));
+			t[i] = static_cast<u32>(static_cast<u64>(a[i]) >> ((0 - b[i]) & 0x3f));
 		}
 	};
 
@@ -662,7 +662,7 @@ void spu_recompiler::ROTMA(spu_opcode_t op)
 	{
 		for (u32 i = 0; i < 4; i++)
 		{
-			t[i] = static_cast<s32>(static_cast<s64>(a[i]) >> (0 - b[i]));
+			t[i] = static_cast<s32>(static_cast<s64>(a[i]) >> ((0 - b[i]) & 0x3f));
 		}
 	};
 
@@ -701,7 +701,7 @@ void spu_recompiler::SHL(spu_opcode_t op)
 	{
 		for (u32 i = 0; i < 4; i++)
 		{
-			t[i] = static_cast<u32>(static_cast<u64>(a[i]) << b[i]);
+			t[i] = static_cast<u32>(static_cast<u64>(a[i]) << (b[i] & 0x3f));
 		}
 	};
 
@@ -746,7 +746,7 @@ void spu_recompiler::ROTH(spu_opcode_t op) //nf
 		return;
 	}
 
-	auto body = [](u16* t, const u16* a, const s16* b) noexcept
+	auto body = [](u16* t, const u16* a, const u16* b) noexcept
 	{
 		for (u32 i = 0; i < 8; i++)
 		{
@@ -757,7 +757,7 @@ void spu_recompiler::ROTH(spu_opcode_t op) //nf
 	c->lea(*qw0, SPU_OFF_128(gpr, op.rt));
 	c->lea(*qw1, SPU_OFF_128(gpr, op.ra));
 	c->lea(*qw2, SPU_OFF_128(gpr, op.rb));
-	asmjit::CCFuncCall* call = c->call(asmjit::imm_ptr(asmjit::Internal::ptr_cast<void*, void(u16*, const u16*, const s16*)>(body)), asmjit::FuncSignature3<void, void*, void*, void*>(asmjit::CallConv::kIdHost));
+	asmjit::CCFuncCall* call = c->call(asmjit::imm_ptr(asmjit::Internal::ptr_cast<void*, void(u16*, const u16*, const u16*)>(body)), asmjit::FuncSignature3<void, void*, void*, void*>(asmjit::CallConv::kIdHost));
 	call->setArg(0, *qw0);
 	call->setArg(1, *qw1);
 	call->setArg(2, *qw2);
@@ -789,7 +789,7 @@ void spu_recompiler::ROTHM(spu_opcode_t op)
 	{
 		for (u32 i = 0; i < 8; i++)
 		{
-			t[i] = static_cast<u16>(static_cast<u32>(a[i]) >> (0 - b[i]));
+			t[i] = static_cast<u16>(static_cast<u32>(a[i]) >> ((0 - b[i]) & 0x1f));
 		}
 	};
 
@@ -829,7 +829,7 @@ void spu_recompiler::ROTMAH(spu_opcode_t op)
 	{
 		for (u32 i = 0; i < 8; i++)
 		{
-			t[i] = static_cast<s16>(static_cast<s32>(a[i]) >> (0 - b[i]));
+			t[i] = static_cast<s16>(static_cast<s32>(a[i]) >> ((0 - b[i]) & 0x1f));
 		}
 	};
 
@@ -868,7 +868,7 @@ void spu_recompiler::SHLH(spu_opcode_t op)
 	{
 		for (u32 i = 0; i < 8; i++)
 		{
-			t[i] = static_cast<u16>(static_cast<u32>(a[i]) << b[i]);
+			t[i] = static_cast<u16>(static_cast<u32>(a[i]) << (b[i] & 0x1f));
 		}
 	};
 
@@ -1356,7 +1356,7 @@ void spu_recompiler::ROTQMBYBI(spu_opcode_t op)
 	{
 		const auto a = *(__m128i*)_a;
 		alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
-		*(__m128i*)t = _mm_loadu_si128((__m128i*)((u8*)buf + (v >> 3 & 0x1f)));
+		*(__m128i*)t = _mm_loadu_si128((__m128i*)((u8*)buf + ((0 - (v >> 3)) & 0x1f)));
 	};
 
 	if (!utils::has_ssse3())
@@ -1556,7 +1556,7 @@ void spu_recompiler::ROTQMBY(spu_opcode_t op)
 	{
 		const auto a = *(__m128i*)_a;
 		alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
-		*(__m128i*)t = _mm_loadu_si128((__m128i*)((u8*)buf + (v & 0x1f)));
+		*(__m128i*)t = _mm_loadu_si128((__m128i*)((u8*)buf + ((0 - v) & 0x1f)));
 	};
 
 	if (!utils::has_ssse3())

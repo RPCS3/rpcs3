@@ -161,7 +161,7 @@ void spu_interpreter::ROTM(SPUThread& spu, spu_opcode_t op)
 	for (u32 i = 0; i < 4; i++)
 	{
 		const u64 value = a._u32[i];
-		spu.gpr[op.rt]._u32[i] = static_cast<u32>(value >> (0 - b._u32[i]));
+		spu.gpr[op.rt]._u32[i] = static_cast<u32>(value >> ((0 - b._u32[i]) & 0x3f));
 	}
 }
 
@@ -173,7 +173,7 @@ void spu_interpreter::ROTMA(SPUThread& spu, spu_opcode_t op)
 	for (u32 i = 0; i < 4; i++)
 	{
 		const s64 value = a._s32[i];
-		spu.gpr[op.rt]._s32[i] = static_cast<s32>(value >> (0 - b._u32[i]));
+		spu.gpr[op.rt]._s32[i] = static_cast<s32>(value >> ((0 - b._u32[i]) & 0x3f));
 	}
 }
 
@@ -185,7 +185,7 @@ void spu_interpreter::SHL(SPUThread& spu, spu_opcode_t op)
 	for (u32 i = 0; i < 4; i++)
 	{
 		const u64 value = a._u32[i];
-		spu.gpr[op.rt]._u32[i] = static_cast<u32>(value << b._u32[i]);
+		spu.gpr[op.rt]._u32[i] = static_cast<u32>(value << (b._u32[i] & 0x3f));
 	}
 }
 
@@ -196,7 +196,7 @@ void spu_interpreter::ROTH(SPUThread& spu, spu_opcode_t op)
 
 	for (u32 i = 0; i < 8; i++)
 	{
-		spu.gpr[op.rt]._u16[i] = rol16(a._u16[i], b._s16[i]);
+		spu.gpr[op.rt]._u16[i] = rol16(a._u16[i], b._u16[i]);
 	}
 }
 
@@ -208,7 +208,7 @@ void spu_interpreter::ROTHM(SPUThread& spu, spu_opcode_t op)
 	for (u32 i = 0; i < 8; i++)
 	{
 		const u32 value = a._u16[i];
-		spu.gpr[op.rt]._u16[i] = static_cast<u16>(value >> (0 - b._u16[i]));
+		spu.gpr[op.rt]._u16[i] = static_cast<u16>(value >> ((0 - b._u16[i]) & 0x1f));
 	}
 }
 
@@ -220,7 +220,7 @@ void spu_interpreter::ROTMAH(SPUThread& spu, spu_opcode_t op)
 	for (u32 i = 0; i < 8; i++)
 	{
 		const s32 value = a._s16[i];
-		spu.gpr[op.rt]._s16[i] = static_cast<s16>(value >> (0 - b._u16[i]));
+		spu.gpr[op.rt]._s16[i] = static_cast<s16>(value >> ((0 - b._u16[i]) & 0x1f));
 	}
 }
 
@@ -232,7 +232,7 @@ void spu_interpreter::SHLH(SPUThread& spu, spu_opcode_t op)
 	for (u32 i = 0; i < 8; i++)
 	{
 		const u32 value = a._u16[i];
-		spu.gpr[op.rt]._u16[i] = static_cast<u16>(value << b._u16[i]);
+		spu.gpr[op.rt]._u16[i] = static_cast<u16>(value << (b._u16[i] & 0x1f));
 	}
 }
 
@@ -462,7 +462,7 @@ void spu_interpreter_precise::ROTQMBYBI(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (spu.gpr[op.rb]._u32[3] >> 3 & 0x1f)));
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + ((0 - (spu.gpr[op.rb]._u32[3] >> 3)) & 0x1f)));
 }
 
 void spu_interpreter_fast::ROTQMBYBI(SPUThread& spu, spu_opcode_t op)
@@ -567,7 +567,7 @@ void spu_interpreter_precise::ROTQMBY(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (spu.gpr[op.rb]._u32[3] & 0x1f)));
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (0 - spu.gpr[op.rb]._u32[3] & 0x1f)));
 }
 
 void spu_interpreter_fast::ROTQMBY(SPUThread& spu, spu_opcode_t op)
@@ -677,7 +677,7 @@ void spu_interpreter_precise::ROTQMBYI(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (op.i7 & 0x1f)));
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (0 - op.i7 & 0x1f)));
 }
 
 void spu_interpreter_fast::ROTQMBYI(SPUThread& spu, spu_opcode_t op)
