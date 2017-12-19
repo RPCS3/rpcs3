@@ -1853,11 +1853,15 @@ namespace rsx
 			{
 				lock.upgrade();
 
+				//render target data is already in correct swizzle layout
+				auto channel_order = src_is_render_target ? rsx::texture_create_flags::native_component_order :
+					dst_is_argb8 ? rsx::texture_create_flags::default_component_order :
+					rsx::texture_create_flags::swapped_native_component_order;
+
 				dest_texture = create_new_texture(cmd, dst.rsx_address, dst.pitch * dst_dimensions.height,
 					dst_dimensions.width, dst_dimensions.height, 1, 1,
 					gcm_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
-					dst_is_argb8? rsx::texture_create_flags::default_component_order : rsx::texture_create_flags::swapped_native_component_order,
-					default_remap_vector)->get_raw_texture();
+					channel_order, default_remap_vector)->get_raw_texture();
 
 				m_texture_memory_in_use += dst.pitch * dst_dimensions.height;
 			}
