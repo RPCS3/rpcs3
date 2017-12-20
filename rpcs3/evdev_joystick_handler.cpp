@@ -506,7 +506,7 @@ int evdev_joystick_handler::add_device(const std::string& device, bool in_settin
 				{
 					libevdev_free(dev);
 					close(fd);
-					return std::distance(devices.begin(), it);
+					continue;
 				}
 
 				// Alright, now that we've confirmed we haven't added this joystick yet, les do dis.
