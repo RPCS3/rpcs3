@@ -342,6 +342,7 @@ struct cfg_root : cfg::node
 		cfg::_int<50, 800> resolution_scale_percent{this, "Resolution Scale", 100};
 		cfg::_int<0, 16> anisotropic_level_override{this, "Anisotropic Filter Override", 0};
 		cfg::_int<1, 1024> min_scalable_dimension{this, "Minimum Scalable Dimension", 16};
+		cfg::_int<0, 30000000> driver_recovery_timeout{this, "Driver Recovery Timeout", 1000000};
 
 		struct node_d3d12 : cfg::node
 		{
