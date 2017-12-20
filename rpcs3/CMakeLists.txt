@@ -107,7 +107,7 @@ if(NOT MSVC)
 
 	add_compile_options(-msse -msse2 -mcx16 -mrtm)
 
-	if(NOT TRAVIS)
+	if(NOT DEFINED ENV{TRAVIS})
 		add_compile_options(-march=native)
 	endif()
 
