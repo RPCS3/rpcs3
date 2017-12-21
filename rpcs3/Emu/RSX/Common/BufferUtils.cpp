@@ -1,8 +1,19 @@
 #include "stdafx.h"
 #include "BufferUtils.h"
 #include "../rsx_methods.h"
+#include "Utilities/sysinfo.h"
 
 #define DEBUG_VERTEX_STREAMING 0
+
+const bool s_use_ssse3 =
+#ifdef _MSC_VER
+	utils::has_ssse3();
+#elif __SSSE3__
+	true;
+#else
+	false;
+#define _mm_shuffle_epi8
+#endif
 
 namespace
 {
@@ -49,16 +60,30 @@ namespace
 		const u32 iterations = dword_count >> 2;
 		const u32 remaining = dword_count % 4;
 
-		for (u32 i = 0; i < iterations; ++i)
+		if (LIKELY(s_use_ssse3))
 		{
-			u32 *src_words = (u32*)src_ptr;
-			u32 *dst_words = (u32*)dst_ptr;
-			const __m128i &vector = _mm_loadu_si128(src_ptr);
-			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
-			_mm_stream_si128(dst_ptr, shuffled_vector);
+			for (u32 i = 0; i < iterations; ++i)
+			{
+				const __m128i vector = _mm_loadu_si128(src_ptr);
+				const __m128i shuffled_vector = _mm_shuffle_epi8(vector, mask);
+				_mm_stream_si128(dst_ptr, shuffled_vector);
 
-			src_ptr++;
-			dst_ptr++;
+				src_ptr++;
+				dst_ptr++;
+			}
+		}
+		else
+		{
+			for (u32 i = 0; i < iterations; ++i)
+			{
+				const __m128i vec0 = _mm_loadu_si128(src_ptr);
+				const __m128i vec1 = _mm_or_si128(_mm_slli_epi16(vec0, 8), _mm_srli_epi16(vec0, 8));
+				const __m128i vec2 = _mm_or_si128(_mm_slli_epi32(vec1, 16), _mm_srli_epi32(vec1, 16));
+				_mm_stream_si128(dst_ptr, vec2);
+
+				src_ptr++;
+				dst_ptr++;
+			}
 		}
 
 		if (remaining)
@@ -86,16 +111,29 @@ namespace
 		const u32 iterations = word_count >> 3;
 		const u32 remaining = word_count % 8;
 
-		for (u32 i = 0; i < iterations; ++i)
+		if (LIKELY(s_use_ssse3))
 		{
-			u32 *src_words = (u32*)src_ptr;
-			u32 *dst_words = (u32*)dst_ptr;
-			const __m128i &vector = _mm_loadu_si128(src_ptr);
-			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
-			_mm_stream_si128(dst_ptr, shuffled_vector);
+			for (u32 i = 0; i < iterations; ++i)
+			{
+				const __m128i vector = _mm_loadu_si128(src_ptr);
+				const __m128i shuffled_vector = _mm_shuffle_epi8(vector, mask);
+				_mm_stream_si128(dst_ptr, shuffled_vector);
 
-			src_ptr++;
-			dst_ptr++;
+				src_ptr++;
+				dst_ptr++;
+			}
+		}
+		else
+		{
+			for (u32 i = 0; i < iterations; ++i)
+			{
+				const __m128i vec0 = _mm_loadu_si128(src_ptr);
+				const __m128i vec1 = _mm_or_si128(_mm_slli_epi16(vec0, 8), _mm_srli_epi16(vec0, 8));
+				_mm_stream_si128(dst_ptr, vec1);
+
+				src_ptr++;
+				dst_ptr++;
+			}
 		}
 
 		if (remaining)
@@ -133,14 +171,30 @@ namespace
 		else
 			remainder = vertex_count;
 
-		for (u32 i = 0; i < iterations; ++i)
+		if (LIKELY(s_use_ssse3))
 		{
-			const __m128i &vector = _mm_loadu_si128((__m128i*)src_ptr);
-			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
-			_mm_storeu_si128((__m128i*)dst_ptr, shuffled_vector);
+			for (u32 i = 0; i < iterations; ++i)
+			{
+				const __m128i vector = _mm_loadu_si128((__m128i*)src_ptr);
+				const __m128i shuffled_vector = _mm_shuffle_epi8(vector, mask);
+				_mm_storeu_si128((__m128i*)dst_ptr, shuffled_vector);
 
-			src_ptr += src_stride;
-			dst_ptr += dst_stride;
+				src_ptr += src_stride;
+				dst_ptr += dst_stride;
+			}
+		}
+		else
+		{
+			for (u32 i = 0; i < iterations; ++i)
+			{
+				const __m128i vec0 = _mm_loadu_si128((__m128i*)src_ptr);
+				const __m128i vec1 = _mm_or_si128(_mm_slli_epi16(vec0, 8), _mm_srli_epi16(vec0, 8));
+				const __m128i vec2 = _mm_or_si128(_mm_slli_epi32(vec1, 16), _mm_srli_epi32(vec1, 16));
+				_mm_storeu_si128((__m128i*)dst_ptr, vec2);
+
+				src_ptr += src_stride;
+				dst_ptr += dst_stride;
+			}
 		}
 
 		if (remainder)
@@ -181,14 +235,29 @@ namespace
 		else
 			remainder = vertex_count;
 
-		for (u32 i = 0; i < iterations; ++i)
+		if (LIKELY(s_use_ssse3))
 		{
-			const __m128i &vector = _mm_loadu_si128((__m128i*)src_ptr);
-			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
-			_mm_storeu_si128((__m128i*)dst_ptr, shuffled_vector);
+			for (u32 i = 0; i < iterations; ++i)
+			{
+				const __m128i vector = _mm_loadu_si128((__m128i*)src_ptr);
+				const __m128i shuffled_vector = _mm_shuffle_epi8(vector, mask);
+				_mm_storeu_si128((__m128i*)dst_ptr, shuffled_vector);
 
-			src_ptr += src_stride;
-			dst_ptr += dst_stride;
+				src_ptr += src_stride;
+				dst_ptr += dst_stride;
+			}
+		}
+		else
+		{
+			for (u32 i = 0; i < iterations; ++i)
+			{
+				const __m128i vec0 = _mm_loadu_si128((__m128i*)src_ptr);
+				const __m128i vec1 = _mm_or_si128(_mm_slli_epi16(vec0, 8), _mm_srli_epi16(vec0, 8));
+				_mm_storeu_si128((__m128i*)dst_ptr, vec1);
+
+				src_ptr += src_stride;
+				dst_ptr += dst_stride;
+			}
 		}
 
 		if (remainder)

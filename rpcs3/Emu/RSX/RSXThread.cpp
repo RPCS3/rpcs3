@@ -483,6 +483,14 @@ namespace rsx
 			//Execute backend-local tasks first
 			do_local_task();
 
+			//Wait for external pause events
+			if (external_interrupt_lock.load())
+			{
+				external_interrupt_ack.store(true);
+				while (external_interrupt_lock.load()) _mm_pause();
+			}
+
+			//Now load the FIFO ctrl registers
 			ctrl->get.store(internal_get.load());
 			const u32 put = ctrl->put;
 
@@ -1348,8 +1356,11 @@ namespace rsx
 		const u32 program_location = (shader_program & 0x3) - 1;
 		const u32 program_offset = (shader_program & ~0x3);
 
-		result.offset = program_offset;
 		result.addr = vm::base(rsx::get_address(program_offset, program_location));
+		auto program_start = program_hash_util::fragment_program_utils::get_fragment_program_start(result.addr);
+
+		result.addr = ((u8*)result.addr + program_start);
+		result.offset = program_offset + program_start;
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;
@@ -1454,8 +1465,11 @@ namespace rsx
 		const u32 program_location = (shader_program & 0x3) - 1;
 		const u32 program_offset = (shader_program & ~0x3);
 
-		result.offset = program_offset;
 		result.addr = vm::base(rsx::get_address(program_offset, program_location));
+		auto program_start = program_hash_util::fragment_program_utils::get_fragment_program_start(result.addr);
+
+		result.addr = ((u8*)result.addr + program_start);
+		result.offset = program_offset + program_start;
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;
@@ -2130,5 +2144,18 @@ namespace rsx
 	void thread::notify_zcull_info_changed()
 	{
 		check_zcull_status(false, false);
+	}
+
+	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!
+	void thread::pause()
+	{
+		external_interrupt_lock.store(true);
+		while (!external_interrupt_ack.load()) _mm_pause();
+		external_interrupt_ack.store(false);
+	}
+
+	void thread::unpause()
+	{
+		external_interrupt_lock.store(false);
 	}
 }

@@ -110,15 +110,6 @@ void main_window::Init()
 	Q_EMIT RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
 
-	if (!utils::has_ssse3())
-	{
-		QMessageBox::critical(this, "SSSE3 Error (with three S, not two)",
-			"Your system does not meet the minimum requirements needed to run RPCS3.\n"
-			"Your CPU does not support SSSE3 (with three S, not two).\n");
-
-		std::exit(EXIT_FAILURE);
-	}
-
 #ifdef BRANCH
 	if ("RPCS3/rpcs3/master"s != STRINGIZE(BRANCH) && ""s != STRINGIZE(BRANCH))
 #else
@@ -484,7 +475,7 @@ void main_window::InstallPup(const QString& dropPath)
 		// Run asynchronously
 		scope_thread worker("Firmware Installer", [&]
 		{
-			for (auto updatefilename : updatefilenames)
+			for (const auto& updatefilename : updatefilenames)
 			{
 				if (progress == -1) break;
 
@@ -566,7 +557,7 @@ void main_window::DecryptSPRXLibraries()
 
 	LOG_NOTICE(GENERAL, "Decrypting SPRX libraries...");
 
-	for (QString& module : modules)
+	for (const QString& module : modules)
 	{
 		std::string prx_path = sstr(module);
 		const std::string& prx_dir = fs::get_parent_dir(prx_path);

@@ -8,6 +8,10 @@
 #include <cmath>
 #include <cfenv>
 
+#if !defined(_MSC_VER) && !defined(__SSSE3__)
+#define _mm_shuffle_epi8
+#endif
+
 // Compare 16 packed unsigned bytes (greater than)
 inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
 {
@@ -52,7 +56,7 @@ void spu_interpreter::set_interrupt_status(SPUThread& spu, spu_opcode_t op)
 
 	if (spu.interrupts_enabled && (spu.ch_event_mask & spu.ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
 	{
-        spu.interrupts_enabled = false;
+		spu.interrupts_enabled = false;
 		spu.srr0 = std::exchange(spu.pc, -4) + 4;
 	}
 }
@@ -73,7 +77,7 @@ void spu_interpreter::LNOP(SPUThread& spu, spu_opcode_t op)
 // This instruction must be used following a store instruction that modifies the instruction stream.
 void spu_interpreter::SYNC(SPUThread& spu, spu_opcode_t op)
 {
-	_mm_mfence(); 
+	_mm_mfence();
 }
 
 // This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
@@ -157,7 +161,7 @@ void spu_interpreter::ROTM(SPUThread& spu, spu_opcode_t op)
 	for (u32 i = 0; i < 4; i++)
 	{
 		const u64 value = a._u32[i];
-		spu.gpr[op.rt]._u32[i] = static_cast<u32>(value >> (0 - b._u32[i]));
+		spu.gpr[op.rt]._u32[i] = static_cast<u32>(value >> ((0 - b._u32[i]) & 0x3f));
 	}
 }
 
@@ -169,7 +173,7 @@ void spu_interpreter::ROTMA(SPUThread& spu, spu_opcode_t op)
 	for (u32 i = 0; i < 4; i++)
 	{
 		const s64 value = a._s32[i];
-		spu.gpr[op.rt]._s32[i] = static_cast<s32>(value >> (0 - b._u32[i]));
+		spu.gpr[op.rt]._s32[i] = static_cast<s32>(value >> ((0 - b._u32[i]) & 0x3f));
 	}
 }
 
@@ -181,7 +185,7 @@ void spu_interpreter::SHL(SPUThread& spu, spu_opcode_t op)
 	for (u32 i = 0; i < 4; i++)
 	{
 		const u64 value = a._u32[i];
-		spu.gpr[op.rt]._u32[i] = static_cast<u32>(value << b._u32[i]);
+		spu.gpr[op.rt]._u32[i] = static_cast<u32>(value << (b._u32[i] & 0x3f));
 	}
 }
 
@@ -192,7 +196,7 @@ void spu_interpreter::ROTH(SPUThread& spu, spu_opcode_t op)
 
 	for (u32 i = 0; i < 8; i++)
 	{
-		spu.gpr[op.rt]._u16[i] = rol16(a._u16[i], b._s16[i]);
+		spu.gpr[op.rt]._u16[i] = rol16(a._u16[i], b._u16[i]);
 	}
 }
 
@@ -204,7 +208,7 @@ void spu_interpreter::ROTHM(SPUThread& spu, spu_opcode_t op)
 	for (u32 i = 0; i < 8; i++)
 	{
 		const u32 value = a._u16[i];
-		spu.gpr[op.rt]._u16[i] = static_cast<u16>(value >> (0 - b._u16[i]));
+		spu.gpr[op.rt]._u16[i] = static_cast<u16>(value >> ((0 - b._u16[i]) & 0x1f));
 	}
 }
 
@@ -216,7 +220,7 @@ void spu_interpreter::ROTMAH(SPUThread& spu, spu_opcode_t op)
 	for (u32 i = 0; i < 8; i++)
 	{
 		const s32 value = a._s16[i];
-		spu.gpr[op.rt]._s16[i] = static_cast<s16>(value >> (0 - b._u16[i]));
+		spu.gpr[op.rt]._s16[i] = static_cast<s16>(value >> ((0 - b._u16[i]) & 0x1f));
 	}
 }
 
@@ -228,7 +232,7 @@ void spu_interpreter::SHLH(SPUThread& spu, spu_opcode_t op)
 	for (u32 i = 0; i < 8; i++)
 	{
 		const u32 value = a._u16[i];
-		spu.gpr[op.rt]._u16[i] = static_cast<u16>(value << b._u16[i]);
+		spu.gpr[op.rt]._u16[i] = static_cast<u16>(value << (b._u16[i] & 0x1f));
 	}
 }
 
@@ -398,12 +402,12 @@ void spu_interpreter::HBR(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::GB(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = v128::from32r(_mm_movemask_epi8(_mm_slli_epi64(_mm_shuffle_epi8(spu.gpr[op.ra].vi, _mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 12, 8, 4, 0)), 7)));
+	spu.gpr[op.rt] = v128::from32r(_mm_movemask_ps(_mm_castsi128_ps(_mm_slli_epi32(spu.gpr[op.ra].vi, 31))));
 }
 
 void spu_interpreter::GBH(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = v128::from32r(_mm_movemask_epi8(_mm_slli_epi64(_mm_shuffle_epi8(spu.gpr[op.ra].vi, _mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, 14, 12, 10, 8, 6, 4, 2, 0)), 7)));
+	spu.gpr[op.rt] = v128::from32r(_mm_movemask_epi8(_mm_packs_epi16(_mm_slli_epi16(spu.gpr[op.ra].vi, 15), _mm_setzero_si128())));
 }
 
 void spu_interpreter::GBB(SPUThread& spu, spu_opcode_t op)
@@ -442,17 +446,38 @@ void spu_interpreter::LQX(SPUThread& spu, spu_opcode_t op)
 	spu.gpr[op.rt] = spu._ref<v128>((spu.gpr[op.ra]._u32[3] + spu.gpr[op.rb]._u32[3]) & 0x3fff0);
 }
 
-void spu_interpreter::ROTQBYBI(SPUThread& spu, spu_opcode_t op)
+void spu_interpreter_precise::ROTQBYBI(SPUThread& spu, spu_opcode_t op)
+{
+	const auto a = spu.gpr[op.ra].vi;
+	alignas(32) const __m128i buf[2]{a, a};
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (16 - (spu.gpr[op.rb]._u32[3] >> 3 & 0xf))));
+}
+
+void spu_interpreter_fast::ROTQBYBI(SPUThread& spu, spu_opcode_t op)
 {
 	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.rldq_pshufb[spu.gpr[op.rb]._u32[3] >> 3 & 0xf].vi);
 }
 
-void spu_interpreter::ROTQMBYBI(SPUThread& spu, spu_opcode_t op)
+void spu_interpreter_precise::ROTQMBYBI(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.srdq_pshufb[-(spu.gpr[op.rb]._s32[3] >> 3) & 0x1f].vi);
+	const auto a = spu.gpr[op.ra].vi;
+	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + ((0 - (spu.gpr[op.rb]._u32[3] >> 3)) & 0x1f)));
 }
 
-void spu_interpreter::SHLQBYBI(SPUThread& spu, spu_opcode_t op)
+void spu_interpreter_fast::ROTQMBYBI(SPUThread& spu, spu_opcode_t op)
+{
+	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.srdq_pshufb[spu.gpr[op.rb]._s32[3] >> 3 & 0x1f].vi);
+}
+
+void spu_interpreter_precise::SHLQBYBI(SPUThread& spu, spu_opcode_t op)
+{
+	const auto a = spu.gpr[op.ra].vi;
+	alignas(64) const __m128i buf[3]{_mm_setzero_si128(), _mm_setzero_si128(), a};
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (32 - (spu.gpr[op.rb]._u32[3] >> 3 & 0x1f))));
+}
+
+void spu_interpreter_fast::SHLQBYBI(SPUThread& spu, spu_opcode_t op)
 {
 	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.sldq_pshufb[spu.gpr[op.rb]._u32[3] >> 3 & 0x1f].vi);
 }
@@ -509,7 +534,7 @@ void spu_interpreter::ROTQBI(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	const s32 n = spu.gpr[op.rb]._s32[3] & 0x7;
-	spu.gpr[op.rt].vi = _mm_or_si128(_mm_slli_epi64(a, n), _mm_srli_epi64(_mm_alignr_epi8(a, a, 8), 64 - n));
+	spu.gpr[op.rt].vi = _mm_or_si128(_mm_slli_epi64(a, n), _mm_srli_epi64(_mm_shuffle_epi32(a, 0x4E), 64 - n));
 }
 
 void spu_interpreter::ROTQMBI(SPUThread& spu, spu_opcode_t op)
@@ -526,17 +551,38 @@ void spu_interpreter::SHLQBI(SPUThread& spu, spu_opcode_t op)
 	spu.gpr[op.rt].vi = _mm_or_si128(_mm_slli_epi64(a, n), _mm_srli_epi64(_mm_slli_si128(a, 8), 64 - n));
 }
 
-void spu_interpreter::ROTQBY(SPUThread& spu, spu_opcode_t op)
+void spu_interpreter_precise::ROTQBY(SPUThread& spu, spu_opcode_t op)
+{
+	const auto a = spu.gpr[op.ra].vi;
+	alignas(32) const __m128i buf[2]{a, a};
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (16 - (spu.gpr[op.rb]._u32[3] & 0xf))));
+}
+
+void spu_interpreter_fast::ROTQBY(SPUThread& spu, spu_opcode_t op)
 {
 	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.rldq_pshufb[spu.gpr[op.rb]._u32[3] & 0xf].vi);
 }
 
-void spu_interpreter::ROTQMBY(SPUThread& spu, spu_opcode_t op)
+void spu_interpreter_precise::ROTQMBY(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.srdq_pshufb[-spu.gpr[op.rb]._s32[3] & 0x1f].vi);
+	const auto a = spu.gpr[op.ra].vi;
+	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (0 - spu.gpr[op.rb]._u32[3] & 0x1f)));
 }
 
-void spu_interpreter::SHLQBY(SPUThread& spu, spu_opcode_t op)
+void spu_interpreter_fast::ROTQMBY(SPUThread& spu, spu_opcode_t op)
+{
+	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.srdq_pshufb[spu.gpr[op.rb]._s32[3] & 0x1f].vi);
+}
+
+void spu_interpreter_precise::SHLQBY(SPUThread& spu, spu_opcode_t op)
+{
+	const auto a = spu.gpr[op.ra].vi;
+	alignas(64) const __m128i buf[3]{_mm_setzero_si128(), _mm_setzero_si128(), a};
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (32 - (spu.gpr[op.rb]._u32[3] & 0x1f))));
+}
+
+void spu_interpreter_fast::SHLQBY(SPUThread& spu, spu_opcode_t op)
 {
 	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.sldq_pshufb[spu.gpr[op.rb]._u32[3] & 0x1f].vi);
 }
@@ -598,7 +644,7 @@ void spu_interpreter::ROTQBII(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	const s32 n = op.i7 & 0x7;
-	spu.gpr[op.rt].vi = _mm_or_si128(_mm_slli_epi64(a, n), _mm_srli_epi64(_mm_alignr_epi8(a, a, 8), 64 - n));
+	spu.gpr[op.rt].vi = _mm_or_si128(_mm_slli_epi64(a, n), _mm_srli_epi64(_mm_shuffle_epi32(a, 0x4E), 64 - n));
 }
 
 void spu_interpreter::ROTQMBII(SPUThread& spu, spu_opcode_t op)
@@ -615,17 +661,38 @@ void spu_interpreter::SHLQBII(SPUThread& spu, spu_opcode_t op)
 	spu.gpr[op.rt].vi = _mm_or_si128(_mm_slli_epi64(a, n), _mm_srli_epi64(_mm_slli_si128(a, 8), 64 - n));
 }
 
-void spu_interpreter::ROTQBYI(SPUThread& spu, spu_opcode_t op)
+void spu_interpreter_precise::ROTQBYI(SPUThread& spu, spu_opcode_t op)
+{
+	const auto a = spu.gpr[op.ra].vi;
+	alignas(32) const __m128i buf[2]{a, a};
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (16 - (op.i7 & 0xf))));
+}
+
+void spu_interpreter_fast::ROTQBYI(SPUThread& spu, spu_opcode_t op)
 {
 	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.rldq_pshufb[op.i7 & 0xf].vi);
 }
 
-void spu_interpreter::ROTQMBYI(SPUThread& spu, spu_opcode_t op)
+void spu_interpreter_precise::ROTQMBYI(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.srdq_pshufb[0-op.i7 & 0x1f].vi);
+	const auto a = spu.gpr[op.ra].vi;
+	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (0 - op.i7 & 0x1f)));
 }
 
-void spu_interpreter::SHLQBYI(SPUThread& spu, spu_opcode_t op)
+void spu_interpreter_fast::ROTQMBYI(SPUThread& spu, spu_opcode_t op)
+{
+	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.srdq_pshufb[op.i7 & 0x1f].vi);
+}
+
+void spu_interpreter_precise::SHLQBYI(SPUThread& spu, spu_opcode_t op)
+{
+	const auto a = spu.gpr[op.ra].vi;
+	alignas(64) const __m128i buf[3]{_mm_setzero_si128(), _mm_setzero_si128(), a};
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (32 - (op.i7 & 0x1f))));
+}
+
+void spu_interpreter_fast::SHLQBYI(SPUThread& spu, spu_opcode_t op)
 {
 	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.sldq_pshufb[op.i7 & 0x1f].vi);
 }
@@ -661,10 +728,21 @@ void spu_interpreter::CGTB(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::SUMB(SPUThread& spu, spu_opcode_t op)
 {
-	const auto ones = _mm_set1_epi8(1);
-	const auto a = _mm_maddubs_epi16(spu.gpr[op.ra].vi, ones);
-	const auto b = _mm_maddubs_epi16(spu.gpr[op.rb].vi, ones);
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(_mm_hadd_epi16(a, b), _mm_set_epi8(15, 14, 7, 6, 13, 12, 5, 4, 11, 10, 3, 2, 9, 8, 1, 0));
+	const auto m1 = _mm_set1_epi16(0xff);
+	const auto m2 = _mm_set1_epi32(0xffff);
+	const auto a = spu.gpr[op.ra].vi;
+	const auto b = spu.gpr[op.rb].vi;
+	const auto a1 = _mm_srli_epi16(a, 8);
+	const auto a2 = _mm_and_si128(a, m1);
+	const auto b1 = _mm_srli_epi16(b, 8);
+	const auto b2 = _mm_and_si128(b, m1);
+	const auto sa = _mm_add_epi16(a1, a2);
+	const auto sb = _mm_add_epi16(b1, b2);
+	const auto s2 = _mm_and_si128(sa, m2);
+	const auto s1 = _mm_srli_epi32(sa, 16);
+	const auto s4 = _mm_andnot_si128(m2, sb);
+	const auto s3 = _mm_slli_epi32(sb, 16);
+	spu.gpr[op.rt].vi = _mm_or_si128(_mm_add_epi16(s1, s2), _mm_add_epi16(s3, s4));
 }
 
 void spu_interpreter::HGT(SPUThread& spu, spu_opcode_t op)
@@ -696,10 +774,14 @@ void spu_interpreter::XSHW(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::CNTB(SPUThread& spu, spu_opcode_t op)
 {
-	const auto counts = _mm_set_epi8(4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0);
-	const auto mask = _mm_set1_epi8(0xf);
 	const auto a = spu.gpr[op.ra].vi;
-	spu.gpr[op.rt].vi = _mm_add_epi8(_mm_shuffle_epi8(counts, _mm_and_si128(a, mask)), _mm_shuffle_epi8(counts, _mm_and_si128(_mm_srli_epi64(a, 4), mask)));
+	const auto mask1 = _mm_set1_epi8(0x55);
+	const auto sum1 = _mm_add_epi8(_mm_and_si128(_mm_srli_epi64(a, 1), mask1), _mm_and_si128(a, mask1));
+	const auto mask2 = _mm_set1_epi8(0x33);
+	const auto sum2 = _mm_add_epi8(_mm_and_si128(_mm_srli_epi64(sum1, 2), mask2), _mm_and_si128(sum1, mask2));
+	const auto mask3 = _mm_set1_epi8(0x0f);
+	const auto sum3 = _mm_add_epi8(_mm_and_si128(_mm_srli_epi64(sum2, 4), mask3), _mm_and_si128(sum2, mask3));
+	spu.gpr[op.rt].vi = sum3;
 }
 
 void spu_interpreter::XSBH(SPUThread& spu, spu_opcode_t op)
@@ -1354,7 +1436,49 @@ void spu_interpreter::SELB(SPUThread& spu, spu_opcode_t op)
 	spu.gpr[op.rt4] = (spu.gpr[op.rc] & spu.gpr[op.rb]) | v128::andnot(spu.gpr[op.rc], spu.gpr[op.ra]);
 }
 
-void spu_interpreter::SHUFB(SPUThread& spu, spu_opcode_t op)
+void spu_interpreter_precise::SHUFB(SPUThread& spu, spu_opcode_t op)
+{
+	alignas(16) static thread_local u8 s_lut[256]
+	{
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+		0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+	};
+
+	const auto _a = spu.gpr[op.ra].vi;
+	const auto _b = spu.gpr[op.rb].vi;
+	_mm_store_si128((__m128i*)(s_lut + 0x00), _a);
+	_mm_store_si128((__m128i*)(s_lut + 0x10), _b);
+	_mm_store_si128((__m128i*)(s_lut + 0x20), _a);
+	_mm_store_si128((__m128i*)(s_lut + 0x30), _b);
+	_mm_store_si128((__m128i*)(s_lut + 0x40), _a);
+	_mm_store_si128((__m128i*)(s_lut + 0x50), _b);
+	_mm_store_si128((__m128i*)(s_lut + 0x60), _a);
+	_mm_store_si128((__m128i*)(s_lut + 0x70), _b);
+	v128 mask = v128::fromV(_mm_xor_si128(spu.gpr[op.rc].vi, _mm_set1_epi8(0xf)));
+	auto& t = spu.gpr[op.rt4];
+
+	for (int i = 0; i < 16; i++)
+	{
+		t._u8[i] = s_lut[mask._u8[i]];
+	}
+}
+
+void spu_interpreter_fast::SHUFB(SPUThread& spu, spu_opcode_t op)
 {
 	const auto index = _mm_xor_si128(spu.gpr[op.rc].vi, _mm_set1_epi32(0x0f0f0f0f));
 	const auto res1 = _mm_shuffle_epi8(spu.gpr[op.ra].vi, index);

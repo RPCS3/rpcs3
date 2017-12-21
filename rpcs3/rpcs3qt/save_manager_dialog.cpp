@@ -55,7 +55,7 @@ namespace
 
 			save_entry2.size = 0;
 
-			for (const auto entry2 : fs::dir(base_dir + entry.name))
+			for (const auto& entry2 : fs::dir(base_dir + entry.name))
 			{
 				save_entry2.size += entry2.size;
 			}
@@ -161,7 +161,7 @@ void save_manager_dialog::UpdateList()
 	QVariantMap currNotes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
 
 	int row = 0;
-	for (SaveDataEntry entry : m_save_entries)
+	for (const SaveDataEntry& entry : m_save_entries)
 	{
 		QString title = qstr(entry.title);
 		QString subtitle = qstr(entry.subtitle);

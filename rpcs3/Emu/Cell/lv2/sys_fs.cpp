@@ -297,7 +297,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 
 	if (size == 8)
 	{
-		// check for sdata 
+		// check for sdata
 		if (*casted_arg == 0x18000000010)
 		{
 			// check if the file has the NPD header, or else assume its not encrypted
@@ -315,7 +315,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 				file.reset(std::move(sdata_file));
 			}
 		}
-		// edata 
+		// edata
 		else if (*casted_arg == 0x2)
 		{
 			// check if the file has the NPD header, or else assume its not encrypted
@@ -514,6 +514,9 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 {
 	sys_fs.warning("sys_fs_stat(path=%s, sb=*0x%x)", path, sb);
 
+	if (!path)
+		return CELL_EFAULT;
+
 	const std::string local_path = vfs::get(path.get_ptr());
 
 	if (local_path.empty())
@@ -629,7 +632,7 @@ error_code sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to)
 	{
 		return CELL_ENOTMOUNTED;
 	}
-	
+
 	if (local_to == "/" || local_from == "/")
 	{
 		return CELL_EPERM;
@@ -686,6 +689,12 @@ error_code sys_fs_rmdir(vm::cptr<char> path)
 error_code sys_fs_unlink(vm::cptr<char> path)
 {
 	sys_fs.warning("sys_fs_unlink(path=%s)", path);
+
+	// If path is just an empty string
+	if (!*path.get_ptr())
+	{
+		return CELL_ENOENT;
+	}
 
 	const std::string local_path = vfs::get(path.get_ptr());
 

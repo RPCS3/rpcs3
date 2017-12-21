@@ -71,7 +71,7 @@ inline u32 ppu_decode(u32 inst)
 }
 
 // PPU decoder object. D provides functions. T is function pointer type returned.
-template<typename D, typename T = decltype(&D::UNK)>
+template <typename D, typename T = decltype(&D::UNK)>
 class ppu_decoder
 {
 	// Fast lookup table
@@ -553,6 +553,12 @@ public:
 			{ 0x32f, &D::FCTIDZ },
 			{ 0x34e, &D::FCFID },
 		});
+	}
+
+	template <typename F>
+	ppu_decoder(F&& init) : ppu_decoder()
+	{
+		init(m_table);
 	}
 
 	const std::array<T, 0x20000>& get_table() const

@@ -144,7 +144,7 @@ s32 cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 e
 		// TODO: Is cellHddGameCheck really responsible for writing the information in get->getParam ? (If not, delete this else)
 		const auto& psf = psf::load_object(fs::file(local_dir +"/PARAM.SFO"));
 
-		// Some following fields may be zero in old FW 1.00 version PARAM.SFO 
+		// Some following fields may be zero in old FW 1.00 version PARAM.SFO
 		if (psf.count("PARENTAL_LEVEL") != 0) get->getParam.parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
 		if (psf.count("ATTRIBUTE") != 0) get->getParam.attribute = psf.at("ATTRIBUTE").as_integer();
 		if (psf.count("RESOLUTION") != 0) get->getParam.resolution = psf.at("RESOLUTION").as_integer();
@@ -246,6 +246,8 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		size->sysSizeKB = 0;
 	}
 
+	if (!type)
+		return CELL_GAME_ERROR_PARAM;
 	// According to testing (in debug mode) cellGameBootCheck doesn't return an error code, when PARAM.SFO doesn't exist.
 	psf::registry sfo = psf::load_object(fs::file(vfs::get("/app_home/../PARAM.SFO")));
 
@@ -266,7 +268,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	{
 		*type = CELL_GAME_GAMETYPE_HDD;
 		*attributes = 0; // TODO
-		if (dirName) strcpy_trunc(*dirName, Emu.GetTitleID()); 
+		if (dirName) strcpy_trunc(*dirName, Emu.GetTitleID());
 
 		if (!fxm::make<content_permission>(Emu.GetTitleID(), std::move(sfo)))
 		{
@@ -321,7 +323,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 	{
 		return CELL_GAME_ERROR_BUSY;
 	}
-	
+
 	return CELL_OK;
 }
 
@@ -375,7 +377,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 	}
 
 	const auto prm = fxm::get<content_permission>();
-	
+
 	if (!prm)
 	{
 		return CELL_GAME_ERROR_FAILURE;
@@ -412,7 +414,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 	strcpy_trunc(*contentInfoPath, dir);
 	strcpy_trunc(*usrdirPath, dir + "/USRDIR");
 	verify(HERE), fxm::remove<content_permission>();
-	
+
 	return CELL_OK;
 }
 
@@ -420,7 +422,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 {
 	cellGame.error("cellGameDataCheckCreate2(version=0x%x, dirName=%s, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
-	//older sdk. it might not care about game type.	
+	//older sdk. it might not care about game type.
 
 	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1)
 	{
@@ -439,7 +441,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	cbGet->hddFreeSizeKB = 40000000; //40 GB
 
-	
+
 	strcpy_trunc(cbGet->contentInfoPath, dir);
 	strcpy_trunc(cbGet->gameDataPath, dir + "/USRDIR");
 
@@ -466,7 +468,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
-	
+
 
 	switch ((s32)cbResult->result)
 	{
@@ -475,8 +477,8 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		cellGame.warning("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_OK_CANCEL");
 		return CELL_OK;
 
-		
-	case CELL_GAMEDATA_CBRESULT_OK:	
+
+	case CELL_GAMEDATA_CBRESULT_OK:
 		//game confirmed that it wants to create directory
 		if (!fs::is_dir(vfs::get(dir + "/USRDIR")) && !fs::create_path(vfs::get(dir + "/USRDIR")))
 			{

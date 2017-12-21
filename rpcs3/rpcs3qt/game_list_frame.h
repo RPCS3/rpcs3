@@ -5,8 +5,8 @@
 
 #include "game_list.h"
 #include "game_list_grid.h"
-#include "gui_settings.h"
 #include "emu_settings.h"
+#include "game_compatibility.h"
 
 #include <QDockWidget>
 #include <QMainWindow>
@@ -163,6 +163,7 @@ namespace sound
 struct GUI_GameInfo
 {
 	GameInfo info;
+	Compat_Status compat;
 	QImage icon;
 	QPixmap pxmap;
 	bool isVisible;
@@ -259,6 +260,7 @@ private:
 
 	// Game List
 	game_list* m_gameList;
+	std::unique_ptr<game_compatibility> m_game_compat;
 	QList<QAction*> m_columnActs;
 	Qt::SortOrder m_colSortOrder;
 	int m_sortColumn;

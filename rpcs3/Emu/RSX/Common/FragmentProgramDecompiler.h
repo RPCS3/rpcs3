@@ -126,10 +126,13 @@ class FragmentProgramDecompiler
 	std::string AddConst();
 	std::string AddTex();
 	void AddFlowOp(std::string code);
-	std::string Format(const std::string& code);
+	std::string Format(const std::string& code, bool ignore_redirects = false);
 
 	//Technically a temporary workaround until we know what type3 is
 	std::string AddType3();
+
+	//Support the transform-2d temp result for use with TEXBEM
+	std::string AddX2d();
 
 	//Prevent division by zero by catching denormals
 	//Simpler variant where input and output are expected to be positive
@@ -207,6 +210,9 @@ protected:
 	/** insert declaration of shader constants.
 	*/
 	virtual void insertConstants(std::stringstream &OS) = 0;
+	/** insert helper functin definitions.
+	*/
+	virtual void insertGlobalFunctions(std::stringstream &OS) = 0;
 	/** insert beginning of main (signature, temporary declaration...)
 	*/
 	virtual void insertMainStart(std::stringstream &OS) = 0;

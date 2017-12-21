@@ -598,7 +598,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		}
 		//else if (psf.empty())
 		//{
-		//	// setParam is specified if something required updating. 
+		//	// setParam is specified if something required updating.
 		//	// Do not exit. Recreate mode will handle the rest
 		//	//return CELL_OK;
 		//}
@@ -735,11 +735,16 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			fs::file file(dir_path + file_path, fs::read);
 			if (!file)
 			{
-				cellSaveData.error("savedata file not found");
+				cellSaveData.error("Failed to open file %s%s", dir_path, file_path);
 				return CELL_SAVEDATA_ERROR_FAILURE;
 			}
+
 			file.seek(fileSet->fileOffset);
-			fileGet->excSize = static_cast<u32>(file.read(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
+			std::vector<uchar> buf;
+			buf.resize(std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
+			buf.resize(file.read(buf.data(), buf.size()));
+			std::memcpy(fileSet->fileBuf.get_ptr(), buf.data(), buf.size());
+			fileGet->excSize = ::size32(buf);
 			break;
 		}
 
@@ -747,7 +752,9 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		{
 			fs::file file(dir_path + file_path, fs::write + fs::create);
 			file.seek(fileSet->fileOffset);
-			fileGet->excSize = static_cast<u32>(file.write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
+			const auto start = static_cast<uchar*>(fileSet->fileBuf.get_ptr());
+			std::vector<uchar> buf(start, start + std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
+			fileGet->excSize = ::narrow<u32>(file.write(buf.data(), buf.size()));
 			file.trunc(file.pos()); // truncate
 			break;
 		}
@@ -763,7 +770,9 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		{
 			fs::file file(dir_path + file_path, fs::write + fs::create);
 			file.seek(fileSet->fileOffset);
-			fileGet->excSize = static_cast<u32>(file.write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
+			const auto start = static_cast<uchar*>(fileSet->fileBuf.get_ptr());
+			std::vector<uchar> buf(start, start + std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
+			fileGet->excSize = ::narrow<u32>(file.write(buf.data(), buf.size()));
 			break;
 		}
 
@@ -889,7 +898,7 @@ s32 cellSaveDataFixedLoad2(ppu_thread& ppu, u32 version, PSetList setList, PSetB
 	return savedata_op(ppu, SAVEDATA_OP_FIXED_LOAD, version, vm::null, 1, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 2, userdata, 0, vm::null);
 }
 
-s32 cellSaveDataFixedSave(ppu_thread& ppu, u32 version, PSetList setList, PSetBuf setBuf, PFuncFixed funcFixed, 
+s32 cellSaveDataFixedSave(ppu_thread& ppu, u32 version, PSetList setList, PSetBuf setBuf, PFuncFixed funcFixed,
 	PFuncStat funcStat, PFuncFile funcFile, u32 container)
 {
 	cellSaveData.warning("cellSaveDataFixedSave(version=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x)",
@@ -1059,7 +1068,7 @@ void cellSaveDataEnableOverlay(s32 enable)
 }
 
 
-// Functions (Extensions) 
+// Functions (Extensions)
 s32 cellSaveDataListDelete(ppu_thread& ppu, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
 	cellSaveData.warning("cellSaveDataListDelete(setList=*0x%x, setBuf=*0x%x, funcList=*0x%x, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", setList, setBuf, funcList, funcDone, container, userdata);
