@@ -677,6 +677,11 @@ namespace rsx
 			return decode<NV4097_SET_LINE_WIDTH>().line_width();
 		}
 
+		f32 point_size() const
+		{
+			return decode<NV4097_SET_POINT_SIZE>().point_size();
+		}
+
 		u8 alpha_ref() const
 		{
 			return decode<NV4097_SET_ALPHA_REF>().alpha_ref();

@@ -70,7 +70,7 @@ xinput_pad_handler::~xinput_pad_handler()
 	Close();
 }
 
-void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist)
+void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist, std::vector<std::string> buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
@@ -260,7 +260,8 @@ std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> xinput_pad_han
 
 bool xinput_pad_handler::Init()
 {
-	if (is_init) return true;
+	if (is_init)
+		return true;
 
 	for (auto it : XINPUT_INFO::LIBRARY_FILENAMES)
 	{
@@ -270,9 +271,7 @@ bool xinput_pad_handler::Init()
 			xinputEnable = reinterpret_cast<PFN_XINPUTENABLE>(GetProcAddress(library, "XInputEnable"));
 			xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, reinterpret_cast<LPCSTR>(100)));
 			if (!xinputGetState)
-			{
 				xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, "XInputGetState"));
-			}
 
 			xinputSetState = reinterpret_cast<PFN_XINPUTSETSTATE>(GetProcAddress(library, "XInputSetState"));
 			xinputGetBatteryInformation = reinterpret_cast<PFN_XINPUTGETBATTERYINFORMATION>(GetProcAddress(library, "XInputGetBatteryInformation"));
@@ -291,10 +290,12 @@ bool xinput_pad_handler::Init()
 		}
 	}
 
-	if (!is_init) return false;
+	if (!is_init)
+		return false;
 
 	m_pad_config.load();
-	if (!m_pad_config.exist()) m_pad_config.save();
+	if (!m_pad_config.exist())
+		m_pad_config.save();
 
 	return true;
 }
@@ -320,21 +321,29 @@ void xinput_pad_handler::ThreadProc()
 		auto pad = bind.second;
 
 		result = (*xinputGetState)(padnum, &state);
+
 		switch (result)
 		{
 		case ERROR_DEVICE_NOT_CONNECTED:
 			if (last_connection_status[padnum] == true)
+			{
+				LOG_ERROR(HLE, "XInput device %d disconnected", padnum);
+				pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
 				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
-			last_connection_status[padnum] = false;
-			pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
-			break;
+				last_connection_status[padnum] = false;
+				connected--;
+			}
+			return;
 
 		case ERROR_SUCCESS:
-			++online;
 			if (last_connection_status[padnum] == false)
+			{
+				LOG_SUCCESS(HLE, "XInput device %d reconnected", padnum);
+				pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
-			last_connection_status[padnum] = true;
-			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
+				last_connection_status[padnum] = true;
+				connected++;
+			}
 
 			std::array<u16, XInputKeyCodes::KeyCodeCount> button_values = GetButtonValues(state);
 
@@ -435,16 +444,15 @@ std::vector<std::string> xinput_pad_handler::ListDevices()
 {
 	std::vector<std::string> xinput_pads_list;
 
-	if (!Init()) return xinput_pads_list;
+	if (!Init())
+		return xinput_pads_list;
 
 	for (DWORD i = 0; i < XUSER_MAX_COUNT; i++)
 	{
 		XINPUT_STATE state;
 		DWORD result = (*xinputGetState)(i, &state);
 		if (result == ERROR_SUCCESS)
-		{
 			xinput_pads_list.push_back(fmt::format("Xinput Pad #%d", i));
-		}
 	}
 	return xinput_pads_list;
 }

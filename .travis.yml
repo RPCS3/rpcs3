@@ -23,7 +23,7 @@ matrix:
 
 git:
   submodules: false
-  # Unshallow clone to obtain proper GIT_VERSION 
+  # Unshallow clone to obtain proper GIT_VERSION
   # There's no variable to disable depth, so we just have to set it to a huge number
   # https://docs.travis-ci.com/user/customizing-the-build/#Git-Clone-Depth
   depth: 100000
@@ -31,7 +31,7 @@ git:
 before_install:
   - if [ "$CC" = "clang" ]; then
       export CXX="clang++-4.0" CC="clang-4.0";
-    fi;    
+    fi;
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
     fi;
@@ -59,6 +59,7 @@ before_script:
   - mkdir build
   - cd build
   - export CMAKE_PREFIX_PATH=~/Qt/5.10.0/gcc_64/lib/cmake
+  - export CXXFLAGS="$CXXFLAGS -DTRAVIS=true";
   - if [ "$TRAVIS_PULL_REQUEST" = false ]; then
       export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH";
     else
@@ -71,12 +72,12 @@ before_script:
       export LD_LIBRARY_PATH=~/Qt/5.10.0/gcc_64/lib;
       DESTDIR=appdir ninja install ; find appdir/ ;
       find ../bin ;
-      wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" ; 
+      wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" ;
       chmod a+x linuxdeployqt*.AppImage ;
       export PATH=~/Qt/5.10.0/gcc_64/bin/:${PATH} ;
       ./linuxdeployqt*.AppImage --appimage-extract ;
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
-      mkdir ./appdir/usr/plugins/xcbglintegrations/ ; 
+      mkdir ./appdir/usr/plugins/xcbglintegrations/ ;
       mkdir ./appdir/usr/plugins/imageformats/ ;
       cp ~/Qt/5.10.0/gcc_64/lib/libQt5Svg.so.5 ./appdir/usr/lib/ ;
       cp ~/Qt/5.10.0/gcc_64/plugins/xcbglintegrations/* ./appdir/usr/plugins/xcbglintegrations/ ;

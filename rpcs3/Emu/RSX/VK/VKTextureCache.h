@@ -457,6 +457,58 @@ namespace vk
 			m_texture_memory_in_use = 0;
 			m_discarded_memory_size = 0;
 		}
+
+		VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector)
+		{
+			VkComponentSwizzle final_mapping[4] = {};
+
+			for (u8 channel = 0; channel < 4; ++channel)
+			{
+				switch (remap_vector.second[channel])
+				{
+				case CELL_GCM_TEXTURE_REMAP_ONE:
+					final_mapping[channel] = VK_COMPONENT_SWIZZLE_ONE;
+					break;
+				case CELL_GCM_TEXTURE_REMAP_ZERO:
+					final_mapping[channel] = VK_COMPONENT_SWIZZLE_ZERO;
+					break;
+				case CELL_GCM_TEXTURE_REMAP_REMAP:
+					final_mapping[channel] = base_remap[remap_vector.first[channel]];
+					break;
+				default:
+					LOG_ERROR(RSX, "Unknown remap lookup value %d", remap_vector.second[channel]);
+				}
+			}
+
+			return { final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
+		}
+
+		VkComponentMapping apply_component_mapping_flags(const u32 gcm_format, const rsx::texture_create_flags flags, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector)
+		{
+			VkComponentMapping mapping = {};
+			switch (flags)
+			{
+			case rsx::texture_create_flags::default_component_order:
+			{
+				mapping = apply_swizzle_remap(vk::get_component_mapping(gcm_format), remap_vector);
+				break;
+			}
+			case rsx::texture_create_flags::native_component_order:
+			{
+				mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+				break;
+			}
+			case rsx::texture_create_flags::swapped_native_component_order:
+			{
+				mapping = { VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B };
+				break;
+			}
+			default:
+				break;
+			}
+
+			return mapping;
+		}
 		
 	protected:
 
@@ -611,7 +663,7 @@ namespace vk
 
 		cached_texture_section* create_new_texture(vk::command_buffer& cmd, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, const u32 gcm_format,
 				const rsx::texture_upload_context context, const rsx::texture_dimension_extended type, const rsx::texture_create_flags flags,
-				std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+				const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			const u16 section_depth = depth;
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
@@ -673,43 +725,7 @@ namespace vk
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 				is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0);
 
-			switch (flags)
-			{
-			case rsx::texture_create_flags::default_component_order:
-			{
-				auto native_mapping = vk::get_component_mapping(gcm_format);
-				VkComponentSwizzle final_mapping[4] = {};
-
-				for (u8 channel = 0; channel < 4; ++channel)
-				{
-					switch (remap_vector.second[channel])
-					{
-					case CELL_GCM_TEXTURE_REMAP_ONE:
-						final_mapping[channel] = VK_COMPONENT_SWIZZLE_ONE;
-						break;
-					case CELL_GCM_TEXTURE_REMAP_ZERO:
-						final_mapping[channel] = VK_COMPONENT_SWIZZLE_ZERO;
-						break;
-					case CELL_GCM_TEXTURE_REMAP_REMAP:
-						final_mapping[channel] = native_mapping[remap_vector.first[channel]];
-						break;
-					default:
-						LOG_ERROR(RSX, "Unknown remap lookup value %d", remap_vector.second[channel]);
-					}
-				}
-
-				mapping = { final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
-				break;
-			}
-			case rsx::texture_create_flags::native_component_order:
-				mapping = image->native_component_map;
-				break;
-			case rsx::texture_create_flags::swapped_native_component_order:
-				mapping = {VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A};
-				break;
-			default:
-				fmt::throw_exception("Unknown create flags 0x%X", (u32)flags);
-			}
+			mapping = apply_component_mapping_flags(gcm_format, flags, remap_vector);
 
 			vk::image_view *view = new vk::image_view(*m_device, image->value, image_view_type, vk_format,
 				mapping, { (aspect_flags & ~VK_IMAGE_ASPECT_STENCIL_BIT), 0, mipmaps, 0, layer});
@@ -721,6 +737,7 @@ namespace vk
 			region.create(width, height, section_depth, mipmaps, view, image, 0, true, gcm_format);
 			region.set_dirty(false);
 			region.set_context(context);
+			region.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 			region.set_image_type(type);
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
@@ -736,7 +753,7 @@ namespace vk
 
 		cached_texture_section* upload_image_from_cpu(vk::command_buffer& cmd, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, const u32 gcm_format,
 			const rsx::texture_upload_context context, std::vector<rsx_subresource_layout>& subresource_layout, const rsx::texture_dimension_extended type, const bool swizzled,
-			std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+			const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			auto section = create_new_texture(cmd, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
 					rsx::texture_create_flags::default_component_order, remap_vector);
@@ -756,8 +773,18 @@ namespace vk
 
 			vk::enter_uninterruptible();
 
-			//Swizzling is ignored for blit engine copy and emulated using a swapped order image view
-			bool input_swizzled = (context == rsx::texture_upload_context::blit_engine_src) ? false : swizzled;
+			bool input_swizzled = swizzled;
+			if (context == rsx::texture_upload_context::blit_engine_src)
+			{
+				//Swizzling is ignored for blit engine copy and emulated using remapping
+				input_swizzled = false;
+				section->set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
+			}
+			else
+			{
+				//Generic upload - sampler status will be set on upload
+				section->set_sampler_status(rsx::texture_sampler_status::status_ready);
+			}
 
 			vk::copy_mipmaped_image_using_buffer(cmd, image->value, subresource_layout, gcm_format, input_swizzled, mipmaps, subres_range.aspectMask,
 				*m_texture_upload_heap, m_texture_upload_buffer);
@@ -769,23 +796,15 @@ namespace vk
 			return section;
 		}
 
-		void enforce_surface_creation_type(cached_texture_section& section, const rsx::texture_create_flags expected_flags) override
+		void enforce_surface_creation_type(cached_texture_section& section, const u32 gcm_format, const rsx::texture_create_flags expected_flags) override
 		{
-			VkComponentMapping mapping;
+			if (expected_flags == section.get_view_flags())
+				return;
+
 			vk::image* image = section.get_raw_texture();
 			auto& view = section.get_view();
 
-			switch (expected_flags)
-			{
-			case rsx::texture_create_flags::native_component_order:
-				mapping = image->native_component_map;
-				break;
-			case rsx::texture_create_flags::swapped_native_component_order:
-				mapping = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A };
-				break;
-			default:
-				return;
-			}
+			VkComponentMapping mapping = apply_component_mapping_flags(gcm_format, expected_flags, default_remap_vector);
 
 			if (mapping.a != view->info.components.a ||
 				mapping.b != view->info.components.b ||
@@ -800,6 +819,27 @@ namespace vk
 			}
 
 			section.set_view_flags(expected_flags);
+			section.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
+		}
+
+		void set_up_remap_vector(cached_texture_section& section, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+		{
+			auto& view = section.get_view();
+			auto& original_remap = view->info.components;
+			std::array<VkComponentSwizzle, 4> base_remap = {original_remap.a, original_remap.r, original_remap.g, original_remap.b};
+
+			auto final_remap = apply_swizzle_remap(base_remap, remap_vector);
+			if (final_remap.a != original_remap.a ||
+				final_remap.r != original_remap.r ||
+				final_remap.g != original_remap.g ||
+				final_remap.b != original_remap.b)
+			{
+				vk::image_view *new_view = new vk::image_view(*m_device, view->info.image, view->info.viewType, view->info.format,
+					final_remap, view->info.subresourceRange);
+
+				view.reset(new_view);
+			}
+			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 
 		void insert_texture_barrier() override

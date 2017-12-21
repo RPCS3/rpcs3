@@ -37,6 +37,7 @@ private:
 	asmjit::X86Gp* qw0;
 	asmjit::X86Gp* qw1;
 	asmjit::X86Gp* qw2;
+	asmjit::X86Gp* qw3;
 	std::array<asmjit::X86Xmm*, 6> vec;
 
 	// labels:

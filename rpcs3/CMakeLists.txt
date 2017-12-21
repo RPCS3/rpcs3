@@ -100,13 +100,17 @@ if(NOT MSVC)
 		set(CMAKE_RC_COMPILER_INIT windres)
 		enable_language(RC)
 		set(CMAKE_RC_COMPILE_OBJECT "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
-		
+
 		# Workaround for mingw64 (MSYS2)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--allow-multiple-definition")
 	endif()
-	
-	add_compile_options(-msse -msse2 -mcx16 -mssse3 -mrtm)
-	
+
+	add_compile_options(-msse -msse2 -mcx16 -mrtm)
+
+	if(NOT DEFINED ENV{TRAVIS})
+		add_compile_options(-march=native)
+	endif()
+
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 		# This fixes 'some' of the st11range issues. See issue #2516
 		if(APPLE)
@@ -115,7 +119,7 @@ if(NOT MSVC)
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -image-base=0x10000")
 		endif()
 	endif()
-	
+
 	# Some distros have the compilers set to use PIE by default, but RPCS3 doesn't work with PIE, so we need to disable it.
 	if(APPLE)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-no_pie")
@@ -133,7 +137,7 @@ if(NOT MSVC)
 	find_package(ZLIB REQUIRED)
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:throwingNew /D _CRT_SECURE_NO_DEPRECATE=1 /D _CRT_NON_CONFORMING_SWPRINTFS=1 /D _SCL_SECURE_NO_WARNINGS=1")
-	
+
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrtd.lib")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /DYNAMICBASE:NO /BASE:0x10000 /FIXED")
 endif()
@@ -342,7 +346,7 @@ if(NOT WIN32 AND VULKAN_FOUND)
 	"${RPCS3_SRC_DIR}/../Vulkan/glslang/OGLCompilersDLL/*.cpp"
 	"${RPCS3_SRC_DIR}/../Vulkan/glslang/SPIRV/*.cpp"
 	)
-	
+
 	set(RPCS3_SRC ${RPCS3_SRC} ${UNIX_GLSLANG})
 endif()
 

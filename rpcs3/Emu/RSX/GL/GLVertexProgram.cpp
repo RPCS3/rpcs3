@@ -38,6 +38,7 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "	vec4 user_clip_factor[2];\n";
 	OS << "	uint transform_branch_bits;\n";
 	OS << "	uint vertex_base_index;\n";
+	OS << "	float point_size;\n";
 	OS << "	ivec4 input_attributes[16];\n";
 	OS << "};\n\n";
 }
@@ -294,6 +295,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "dst_reg2"))
 			OS << "	front_spec_color = dst_reg2;\n";
 
+	OS << "	gl_PointSize = point_size;\n";
 	OS << "	gl_Position = gl_Position * scale_offset_mat;\n";
 
 	//Since our clip_space is symetrical [-1, 1] we map it to linear space using the eqn:

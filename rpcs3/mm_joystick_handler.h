@@ -92,6 +92,10 @@ class mm_joystick_handler final : public PadHandlerBase
 		std::string device_name{ "" };
 		JOYINFOEX device_info;
 		JOYCAPS device_caps;
+		u64 trigger_left = 0;
+		u64 trigger_right = 0;
+		std::vector<u64> axis_left  = { 0,0,0,0 };
+		std::vector<u64> axis_right = { 0,0,0,0 };
 	};
 
 public:
@@ -103,7 +107,7 @@ public:
 	std::vector<std::string> ListDevices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
-	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist = false) override;
+	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist = false, std::vector<std::string> buttons = {}) override;
 
 private:
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
@@ -117,5 +121,5 @@ private:
 	std::vector<u64> blacklist;
 	std::unordered_map<int, MMJOYDevice> m_devices;
 	std::vector<std::pair<std::shared_ptr<MMJOYDevice>, std::shared_ptr<Pad>>> bindings;
-	std::array<bool, 7> last_connection_status = {};
+	std::shared_ptr<MMJOYDevice> m_dev;
 };

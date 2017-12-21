@@ -66,9 +66,6 @@ struct spu_interpreter
 	static void FSMH(SPUThread&, spu_opcode_t);
 	static void FSMB(SPUThread&, spu_opcode_t);
 	static void LQX(SPUThread&, spu_opcode_t);
-	static void ROTQBYBI(SPUThread&, spu_opcode_t);
-	static void ROTQMBYBI(SPUThread&, spu_opcode_t);
-	static void SHLQBYBI(SPUThread&, spu_opcode_t);
 	static void CBX(SPUThread&, spu_opcode_t);
 	static void CHX(SPUThread&, spu_opcode_t);
 	static void CWX(SPUThread&, spu_opcode_t);
@@ -76,9 +73,6 @@ struct spu_interpreter
 	static void ROTQBI(SPUThread&, spu_opcode_t);
 	static void ROTQMBI(SPUThread&, spu_opcode_t);
 	static void SHLQBI(SPUThread&, spu_opcode_t);
-	static void ROTQBY(SPUThread&, spu_opcode_t);
-	static void ROTQMBY(SPUThread&, spu_opcode_t);
-	static void SHLQBY(SPUThread&, spu_opcode_t);
 	static void ORX(SPUThread&, spu_opcode_t);
 	static void CBD(SPUThread&, spu_opcode_t);
 	static void CHD(SPUThread&, spu_opcode_t);
@@ -87,9 +81,6 @@ struct spu_interpreter
 	static void ROTQBII(SPUThread&, spu_opcode_t);
 	static void ROTQMBII(SPUThread&, spu_opcode_t);
 	static void SHLQBII(SPUThread&, spu_opcode_t);
-	static void ROTQBYI(SPUThread&, spu_opcode_t);
-	static void ROTQMBYI(SPUThread&, spu_opcode_t);
-	static void SHLQBYI(SPUThread&, spu_opcode_t);
 	static void NOP(SPUThread&, spu_opcode_t);
 	static void CGT(SPUThread&, spu_opcode_t);
 	static void XOR(SPUThread&, spu_opcode_t);
@@ -175,7 +166,6 @@ struct spu_interpreter
 	static void HBRR(SPUThread&, spu_opcode_t);
 	static void ILA(SPUThread&, spu_opcode_t);
 	static void SELB(SPUThread&, spu_opcode_t);
-	static void SHUFB(SPUThread&, spu_opcode_t);
 	static void MPYA(SPUThread&, spu_opcode_t);
 	static void DFCGT(SPUThread&, spu_opcode_t);
 	static void DFCMGT(SPUThread&, spu_opcode_t);
@@ -186,6 +176,17 @@ struct spu_interpreter
 
 struct spu_interpreter_fast final : spu_interpreter
 {
+	static void ROTQBYBI(SPUThread&, spu_opcode_t);
+	static void ROTQMBYBI(SPUThread&, spu_opcode_t);
+	static void SHLQBYBI(SPUThread&, spu_opcode_t);
+	static void ROTQBY(SPUThread&, spu_opcode_t);
+	static void ROTQMBY(SPUThread&, spu_opcode_t);
+	static void SHLQBY(SPUThread&, spu_opcode_t);
+	static void ROTQBYI(SPUThread&, spu_opcode_t);
+	static void ROTQMBYI(SPUThread&, spu_opcode_t);
+	static void SHLQBYI(SPUThread&, spu_opcode_t);
+	static void SHUFB(SPUThread&, spu_opcode_t);
+
 	static void FREST(SPUThread&, spu_opcode_t);
 	static void FRSQEST(SPUThread&, spu_opcode_t);
 	static void FCGT(SPUThread&, spu_opcode_t);
@@ -218,6 +219,17 @@ struct spu_interpreter_fast final : spu_interpreter
 
 struct spu_interpreter_precise final : spu_interpreter
 {
+	static void ROTQBYBI(SPUThread&, spu_opcode_t);
+	static void ROTQMBYBI(SPUThread&, spu_opcode_t);
+	static void SHLQBYBI(SPUThread&, spu_opcode_t);
+	static void ROTQBY(SPUThread&, spu_opcode_t);
+	static void ROTQMBY(SPUThread&, spu_opcode_t);
+	static void SHLQBY(SPUThread&, spu_opcode_t);
+	static void ROTQBYI(SPUThread&, spu_opcode_t);
+	static void ROTQMBYI(SPUThread&, spu_opcode_t);
+	static void SHLQBYI(SPUThread&, spu_opcode_t);
+	static void SHUFB(SPUThread&, spu_opcode_t);
+
 	static void FREST(SPUThread&, spu_opcode_t);
 	static void FRSQEST(SPUThread&, spu_opcode_t);
 	static void FCGT(SPUThread&, spu_opcode_t);

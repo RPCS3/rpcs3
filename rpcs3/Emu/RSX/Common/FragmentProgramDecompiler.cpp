@@ -186,6 +186,11 @@ std::string FragmentProgramDecompiler::AddType3()
 	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "src3", getFloatTypeName(4) + "(1., 1., 1., 1.)");
 }
 
+std::string FragmentProgramDecompiler::AddX2d()
+{
+	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "x2d", getFloatTypeName(4) + "(0., 0., 0., 0.)");
+}
+
 //Both of these were tested with a trace SoulCalibur IV title screen
 //Failure to catch causes infinite values since theres alot of rcp(0)
 std::string FragmentProgramDecompiler::NotZero(const std::string& code)
@@ -233,7 +238,7 @@ bool FragmentProgramDecompiler::DstExpectsSca()
 	return (writes == 1);
 }
 
-std::string FragmentProgramDecompiler::Format(const std::string& code)
+std::string FragmentProgramDecompiler::Format(const std::string& code, bool ignore_redirects)
 {
 	const std::pair<std::string, std::function<std::string()>> repl_list[] =
 	{
@@ -254,6 +259,24 @@ std::string FragmentProgramDecompiler::Format(const std::string& code)
 		{ "$cond", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetCond), this) },
 		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) }
 	};
+
+	if (!ignore_redirects)
+	{
+		//Special processing redirects
+		switch (dst.opcode)
+		{
+		case RSX_FP_OPCODE_TEXBEM:
+		case RSX_FP_OPCODE_TXPBEM:
+		{
+			//Redirect parameter 0 to the x2d temp register for TEXBEM
+			//TODO: Organize this a little better
+			std::pair<std::string, std::string> repl[] = { { "$0", "x2d" } };
+			std::string result = fmt::replace_all(code, repl);
+
+			return fmt::replace_all(result, repl_list);
+		}
+		}
+	}
 
 	return fmt::replace_all(code, repl_list);
 }
@@ -538,7 +561,7 @@ bool FragmentProgramDecompiler::handle_scb(u32 opcode)
 	case RSX_FP_OPCODE_LIT: SetDst("lit_legacy($0)"); return true;
 	case RSX_FP_OPCODE_LIF: SetDst(getFloatTypeName(4) + "(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); return true;
 	case RSX_FP_OPCODE_LRP: SetDst(getFloatTypeName(4) + "($2 * (1 - $0) + $1 * $0)"); return true;
-	case RSX_FP_OPCODE_LG2: SetDst("log2($0.xxxx)"); return true;
+	case RSX_FP_OPCODE_LG2: SetDst("log2(" + NotZeroPositive("$0.x") + ").xxxx"); return true;
 	case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); return true;
 	case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); return true;
 	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); return true;
@@ -571,10 +594,11 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_DDX: SetDst(getFunction(FUNCTION::FUNCTION_DFDX)); return true;
 	case RSX_FP_OPCODE_DDY: SetDst(getFunction(FUNCTION::FUNCTION_DFDY)); return true;
 	case RSX_FP_OPCODE_NRM: SetDst("normalize($0.xyz)"); return true;
-	case RSX_FP_OPCODE_BEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: BEM"); return true;
+	case RSX_FP_OPCODE_BEM: SetDst("$0.xyxy + $1.xxxx * $2.xzxz + $1.yyyy * $2.ywyw"); return true;
 	case RSX_FP_OPCODE_TEXBEM:
-		//treat as TEX for now
-		LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TEXBEM");
+		//Untested, should be x2d followed by TEX
+		AddX2d();
+		AddCode(Format("x2d = $0.xyxy + $1.xxxx * $2.xzxz + $1.yyyy * $2.ywyw;", true));
 	case RSX_FP_OPCODE_TEX:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
@@ -603,8 +627,9 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		}
 		return false;
 	case RSX_FP_OPCODE_TXPBEM:
-		//Treat as TXP for now
-		LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXPBEM");
+		//Untested, should be x2d followed by TXP
+		AddX2d();
+		AddCode(Format("x2d = $0.xyxy + $1.xxxx * $2.xzxz + $1.yyyy * $2.ywyw;", true));
 	case RSX_FP_OPCODE_TXP:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
@@ -669,7 +694,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	//Unpack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 	case RSX_FP_OPCODE_UP2: SetDst("unpackHalf2x16(floatBitsToUint($0.x)).xyxy"); return true;
 	case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8(floatBitsToUint($0.x))"); return true;
-	case RSX_FP_OPCODE_UP16: SetDst("unpackSnormx16(floatBitsToUint($0.x)).xyxy"); return true;
+	case RSX_FP_OPCODE_UP16: SetDst("unpackSnorm2x16(floatBitsToUint($0.x)).xyxy"); return true;
 	case RSX_FP_OPCODE_UPG:
 	//Same as UPB with gamma correction
 	case RSX_FP_OPCODE_UPB: SetDst("(unpackUnorm4x8(floatBitsToUint($0.x)))"); return true;

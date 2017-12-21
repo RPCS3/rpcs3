@@ -665,6 +665,38 @@ namespace gl
 
 			return dst_id;
 		}
+
+		void apply_component_mapping_flags(const GLenum target, const u32 gcm_format, const rsx::texture_create_flags flags)
+		{
+			switch (flags)
+			{
+			case rsx::texture_create_flags::default_component_order:
+			{
+				auto remap = gl::get_swizzle_remap(gcm_format);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, remap[1]);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, remap[2]);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, remap[3]);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, remap[0]);
+				break;
+			}
+			case rsx::texture_create_flags::native_component_order:
+			{
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_RED);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_BLUE);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
+				break;
+			}
+			case rsx::texture_create_flags::swapped_native_component_order:
+			{
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_ALPHA);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_RED);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_GREEN);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
+				break;
+			}
+			}
+		}
 		
 	protected:
 		
@@ -731,7 +763,7 @@ namespace gl
 
 		cached_texture_section* create_new_texture(void*&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, const u32 gcm_format,
 				const rsx::texture_upload_context context, const rsx::texture_dimension_extended type, const rsx::texture_create_flags flags,
-				std::pair<std::array<u8, 4>, std::array<u8, 4>>& /*remap_vector*/) override
+				const std::pair<std::array<u8, 4>, std::array<u8, 4>>& /*remap_vector*/) override
 		{
 			u32 vram_texture = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
 			bool depth_flag = false;
@@ -744,20 +776,15 @@ namespace gl
 				break;
 			}
 
-			if (flags == rsx::texture_create_flags::swapped_native_component_order)
-			{
-				glBindTexture(GL_TEXTURE_2D, vram_texture);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ALPHA);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_GREEN);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
-			}
+			glBindTexture(GL_TEXTURE_2D, vram_texture);
+			apply_component_mapping_flags(GL_TEXTURE_2D, gcm_format, flags);
 
 			auto& cached = create_texture(vram_texture, rsx_address, rsx_size, width, height, depth, mipmaps);
 			cached.set_dirty(false);
 			cached.set_depth_flag(depth_flag);
 			cached.set_view_flags(flags);
 			cached.set_context(context);
+			cached.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 			cached.set_image_type(type);
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
@@ -772,34 +799,52 @@ namespace gl
 
 		cached_texture_section* upload_image_from_cpu(void*&, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, const u32 gcm_format,
 			const rsx::texture_upload_context context, std::vector<rsx_subresource_layout>& subresource_layout, const rsx::texture_dimension_extended type, const bool swizzled,
-			std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+			const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			void* unused = nullptr;
 			auto section = create_new_texture(unused, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
 				rsx::texture_create_flags::default_component_order, remap_vector);
 
-			//Swizzling is ignored for blit engine copy and emulated using remapping
-			bool input_swizzled = (context == rsx::texture_upload_context::blit_engine_src)? false : swizzled;
+			bool input_swizzled = swizzled;
+			if (context == rsx::texture_upload_context::blit_engine_src)
+			{
+				//Swizzling is ignored for blit engine copy and emulated using remapping
+				input_swizzled = false;
+				section->set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
+			}
+			else
+			{
+				//Generic upload - sampler status will be set on upload
+				section->set_sampler_status(rsx::texture_sampler_status::status_ready);
+			}
 
 			gl::upload_texture(section->get_raw_texture(), rsx_address, gcm_format, width, height, depth, mipmaps, input_swizzled, type, subresource_layout, remap_vector, false);
 			return section;
 		}
 
-		void enforce_surface_creation_type(cached_texture_section& section, const rsx::texture_create_flags flags) override
+		void enforce_surface_creation_type(cached_texture_section& section, const u32 gcm_format, const rsx::texture_create_flags flags) override
 		{
 			if (flags == section.get_view_flags())
 				return;
 
-			if (flags == rsx::texture_create_flags::swapped_native_component_order)
-			{
-				glBindTexture(GL_TEXTURE_2D, section.get_raw_texture());
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ALPHA);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_GREEN);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
-			}
+			glBindTexture(GL_TEXTURE_2D, section.get_raw_texture());
+			apply_component_mapping_flags(GL_TEXTURE_2D, gcm_format, flags);
 
 			section.set_view_flags(flags);
+			section.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
+		}
+
+		void set_up_remap_vector(cached_texture_section& section, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+		{
+			std::array<GLenum, 4> swizzle_remap;
+			glBindTexture(GL_TEXTURE_2D, section.get_raw_texture());
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, (GLint*)&swizzle_remap[0]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, (GLint*)&swizzle_remap[1]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, (GLint*)&swizzle_remap[2]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, (GLint*)&swizzle_remap[3]);
+
+			apply_swizzle_remap(GL_TEXTURE_2D, swizzle_remap, remap_vector);
+			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 
 		void insert_texture_barrier() override

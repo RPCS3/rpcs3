@@ -3380,6 +3380,31 @@ struct registers_decoder<NV4097_SET_LINE_WIDTH>
 };
 
 template<>
+struct registers_decoder<NV4097_SET_POINT_SIZE>
+{
+	struct decoded_type
+	{
+	private:
+		union
+		{
+			u32 raw_data;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_data = raw_value; }
+
+		f32 point_size() const
+		{
+			return (f32&)m_data.raw_data;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Point size: " + std::to_string(decoded_values.point_size());
+	}
+};
+
+template<>
 struct registers_decoder<NV4097_SET_SURFACE_FORMAT>
 {
 	struct decoded_type
