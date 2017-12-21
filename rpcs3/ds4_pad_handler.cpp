@@ -702,7 +702,8 @@ int ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
 
 bool ds4_pad_handler::Init()
 {
-	if (is_init) return true;
+	if (is_init)
+		return true;
 
 	const int res = hid_init();
 	if (res != 0)
@@ -715,7 +716,8 @@ bool ds4_pad_handler::Init()
 		hid_device_info* head = devInfo;
 		while (devInfo)
 		{
-			if (controllers.size() >= MAX_GAMEPADS)	break;
+			if (controllers.size() >= MAX_GAMEPADS)
+				break;
 
 			hid_device* dev = hid_open_path(devInfo->path);
 			if (dev)
@@ -733,7 +735,8 @@ bool ds4_pad_handler::Init()
 		LOG_SUCCESS(HLE, "[DS4] Controllers found: %d", controllers.size());
 
 	m_pad_config.load();
-	if (!m_pad_config.exist()) m_pad_config.save();
+	if (!m_pad_config.exist())
+		m_pad_config.save();
 
 	is_init = true;
 	return true;
@@ -743,7 +746,8 @@ std::vector<std::string> ds4_pad_handler::ListDevices()
 {
 	std::vector<std::string> ds4_pads_list;
 
-	if (!Init()) return ds4_pads_list;
+	if (!Init())
+		return ds4_pads_list;
 
 	for (auto& pad : controllers)
 	{
@@ -822,7 +826,7 @@ void ds4_pad_handler::ThreadProc()
 			{
 				if (last_connection_status[i] == false)
 				{
-					LOG_ERROR(HLE, "DS4 device %d reconnected", i);
+					LOG_SUCCESS(HLE, "DS4 device %d reconnected", i);
 					last_connection_status[i] = true;
 					connected++;
 				}
@@ -844,6 +848,12 @@ void ds4_pad_handler::ThreadProc()
 				thepad->m_port_status = CELL_PAD_STATUS_DISCONNECTED|CELL_PAD_STATUS_ASSIGN_CHANGES;
 				continue;
 			}
+		}
+		else if (last_connection_status[i] == false)
+		{
+			LOG_NOTICE(HLE, "DS4 device %d connected", i);
+			last_connection_status[i] = true;
+			connected++;
 		}
 
 		DS4DataStatus status = GetRawData(device);
