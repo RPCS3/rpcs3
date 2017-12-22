@@ -178,14 +178,14 @@ namespace
 	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)
 	{
 		std::string tex_name = "tex" + std::to_string(index);
-		std::string coord_name = "tc" + std::to_string(index);
+		std::string coord_name = "(tc" + std::to_string(index) + " * texture_parameters[" + std::to_string(index) + "])";
 
 		switch (prog.get_texture_dimension(index))
 		{
-		case rsx::texture_dimension_extended::texture_dimension_1d: return "texture(" + tex_name + ", (" + coord_name + ".x * " + tex_name + "_coord_scale))";
-		case rsx::texture_dimension_extended::texture_dimension_2d: return "texture(" + tex_name + ", (" + coord_name + ".xy * " + tex_name + "_coord_scale))";
+		case rsx::texture_dimension_extended::texture_dimension_1d: return "texture(" + tex_name + ", " + coord_name + ".x)";
+		case rsx::texture_dimension_extended::texture_dimension_2d: return "texture(" + tex_name + ", " + coord_name + ".xy)";
 		case rsx::texture_dimension_extended::texture_dimension_3d:
-		case rsx::texture_dimension_extended::texture_dimension_cubemap: return "texture(" + tex_name + ", (" + coord_name + ".xyz * " + tex_name + "_coord_scale))";
+		case rsx::texture_dimension_extended::texture_dimension_cubemap: return "texture(" + tex_name + ", " + coord_name + ".xyz)";
 		}
 
 		fmt::throw_exception("Invalid texture dimension %d" HERE, (u32)prog.get_texture_dimension(index));

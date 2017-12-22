@@ -41,7 +41,7 @@ namespace vk
 			rsx::buffered_section::reset(base, length, policy);
 		}
 
-		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, vk::image_view *view, vk::image *image, const u32 rsx_pitch, bool managed, const u32 gcm_format, bool pack_swap_bytes = false)
+		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image_view *view, vk::image *image, u32 rsx_pitch, bool managed, u32 gcm_format, bool pack_swap_bytes = false)
 		{
 			width = w;
 			height = h;
@@ -483,7 +483,7 @@ namespace vk
 			return { final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
 		}
 
-		VkComponentMapping apply_component_mapping_flags(const u32 gcm_format, const rsx::texture_create_flags flags, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector)
+		VkComponentMapping apply_component_mapping_flags(u32 gcm_format, rsx::texture_create_flags flags, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector)
 		{
 			VkComponentMapping mapping = {};
 			switch (flags)
@@ -589,7 +589,7 @@ namespace vk
 			return create_temporary_subresource_view(cmd, *source, gcm_format, x, y, w, h);
 		}
 
-		vk::image_view* generate_cubemap_from_images(vk::command_buffer& cmd, const u32 gcm_format, u16 size, std::array<vk::image*, 6>& sources) override
+		vk::image_view* generate_cubemap_from_images(vk::command_buffer& cmd, u32 gcm_format, u16 size, const std::array<vk::image*, 6>& sources) override
 		{
 			std::unique_ptr<vk::image> image;
 			std::unique_ptr<vk::image_view> view;
@@ -661,8 +661,8 @@ namespace vk
 			return m_discardable_storage.back().view.get();
 		}
 
-		cached_texture_section* create_new_texture(vk::command_buffer& cmd, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, const u32 gcm_format,
-				const rsx::texture_upload_context context, const rsx::texture_dimension_extended type, const rsx::texture_create_flags flags,
+		cached_texture_section* create_new_texture(vk::command_buffer& cmd, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
+				rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags,
 				const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			const u16 section_depth = depth;
@@ -751,8 +751,8 @@ namespace vk
 			return &region;
 		}
 
-		cached_texture_section* upload_image_from_cpu(vk::command_buffer& cmd, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, const u32 gcm_format,
-			const rsx::texture_upload_context context, std::vector<rsx_subresource_layout>& subresource_layout, const rsx::texture_dimension_extended type, const bool swizzled,
+		cached_texture_section* upload_image_from_cpu(vk::command_buffer& cmd, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
+			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled,
 			const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			auto section = create_new_texture(cmd, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
@@ -796,7 +796,7 @@ namespace vk
 			return section;
 		}
 
-		void enforce_surface_creation_type(cached_texture_section& section, const u32 gcm_format, const rsx::texture_create_flags expected_flags) override
+		void enforce_surface_creation_type(cached_texture_section& section, u32 gcm_format, rsx::texture_create_flags expected_flags) override
 		{
 			if (expected_flags == section.get_view_flags())
 				return;
@@ -863,7 +863,7 @@ namespace vk
 			purge_cache();
 		}
 
-		bool is_depth_texture(const u32 rsx_address, const u32 rsx_size) override
+		bool is_depth_texture(u32 rsx_address, u32 rsx_size) override
 		{
 			reader_lock lock(m_cache_mutex);
 

@@ -181,7 +181,7 @@ namespace vk
 	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)
 	{
 		std::string tex_name = "tex" + std::to_string(index);
-		std::string coord_name = "tc" + std::to_string(index);
+		std::string coord_name = "(tc" + std::to_string(index) + " * texture_parameters[" + std::to_string(index) + "])";
 
 		switch (prog.get_texture_dimension(index))
 		{
