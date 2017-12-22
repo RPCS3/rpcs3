@@ -63,9 +63,11 @@ public:
 
 	std::string GetMouseName(const QMouseEvent* event);
 	std::string GetMouseName(u32 button);
+	QStringList GetKeyNames(const QKeyEvent* keyEvent);
 	std::string GetKeyName(const QKeyEvent* keyEvent);
 	std::string GetKeyName(const u32& keyCode);
 	u32 GetKeyCode(const std::string& keyName);
+	u32 GetKeyCode(const QString& keyName);
 
 protected:
 	void Key(const u32 code, bool pressed, u16 value = 255);
