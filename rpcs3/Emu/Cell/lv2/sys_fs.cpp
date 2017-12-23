@@ -53,6 +53,8 @@ bool verify_mself(u32 fd, fs::file const& mself_file)
 		return false;
 	}
 
+	mself_file.seek(0);
+
 	return true;
 }
 
