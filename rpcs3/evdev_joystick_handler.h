@@ -9,6 +9,73 @@
 #include <thread>
 #include <ctime>
 
+struct positive_axis : cfg::node
+{
+	const std::string cfg_name = fs::get_config_dir() + "/evdev_positive_axis.yml";
+
+	cfg::_bool abs_x{ this, "ABS_X", false };
+	cfg::_bool abs_y{ this, "ABS_Y", false };
+	cfg::_bool abs_z{ this, "ABS_Z", false };
+	cfg::_bool abs_rx{ this, "ABS_RX", false };
+	cfg::_bool abs_ry{ this, "ABS_RY", false };
+	cfg::_bool abs_rz{ this, "ABS_RZ", false };
+	cfg::_bool abs_throttle{ this, "ABS_THROTTLE", false };
+	cfg::_bool abs_rudder{ this, "ABS_RUDDER", false };
+	cfg::_bool abs_wheel{ this, "ABS_WHEEL", false };
+	cfg::_bool abs_gas{ this, "ABS_GAS", false };
+	cfg::_bool abs_brake{ this, "ABS_BRAKE", false };
+	cfg::_bool abs_hat0x{ this, "ABS_HAT0X", false };
+	cfg::_bool abs_hat0y{ this, "ABS_HAT0Y", false };
+	cfg::_bool abs_hat1x{ this, "ABS_HAT1X", false };
+	cfg::_bool abs_hat1y{ this, "ABS_HAT1Y", false };
+	cfg::_bool abs_hat2x{ this, "ABS_HAT2X", false };
+	cfg::_bool abs_hat2y{ this, "ABS_HAT2Y", false };
+	cfg::_bool abs_hat3x{ this, "ABS_HAT3X", false };
+	cfg::_bool abs_hat3y{ this, "ABS_HAT3Y", false };
+	cfg::_bool abs_pressure{ this, "ABS_PRESSURE", false };
+	cfg::_bool abs_distance{ this, "ABS_DISTANCE", false };
+	cfg::_bool abs_tilt_x{ this, "ABS_TILT_X", false };
+	cfg::_bool abs_tilt_y{ this, "ABS_TILT_Y", false };
+	cfg::_bool abs_tool_width{ this, "ABS_TOOL_WIDTH", false };
+	cfg::_bool abs_volume{ this, "ABS_VOLUME", false };
+	cfg::_bool abs_misc{ this, "ABS_MISC", false };
+	cfg::_bool abs_mt_slot{ this, "ABS_MT_SLOT", false };
+	cfg::_bool abs_mt_touch_major{ this, "ABS_MT_TOUCH_MAJOR", false };
+	cfg::_bool abs_mt_touch_minor{ this, "ABS_MT_TOUCH_MINOR", false };
+	cfg::_bool abs_mt_width_major{ this, "ABS_MT_WIDTH_MAJOR", false };
+	cfg::_bool abs_mt_width_minor{ this, "ABS_MT_WIDTH_MINOR", false };
+	cfg::_bool abs_mt_orientation{ this, "ABS_MT_ORIENTATION", false };
+	cfg::_bool abs_mt_position_x{ this, "ABS_MT_POSITION_X", false };
+	cfg::_bool abs_mt_position_y{ this, "ABS_MT_POSITION_Y", false };
+	cfg::_bool abs_mt_tool_type{ this, "ABS_MT_TOOL_TYPE", false };
+	cfg::_bool abs_mt_blob_id{ this, "ABS_MT_BLOB_ID", false };
+	cfg::_bool abs_mt_tracking_id{ this, "ABS_MT_TRACKING_ID", false };
+	cfg::_bool abs_mt_pressure{ this, "ABS_MT_PRESSURE", false };
+	cfg::_bool abs_mt_distance{ this, "ABS_MT_DISTANCE", false };
+	cfg::_bool abs_mt_tool_x{ this, "ABS_MT_TOOL_X", false };
+	cfg::_bool abs_mt_tool_y{ this, "ABS_MT_TOOL_Y", false };
+
+	bool load()
+	{
+		if (fs::file cfg_file{ cfg_name, fs::read })
+		{
+			return from_string(cfg_file.to_string());
+		}
+
+		return false;
+	}
+
+	void save()
+	{
+		fs::file(cfg_name, fs::rewrite).write(to_string());
+	}
+
+	bool exist()
+	{
+		return fs::is_file(cfg_name);
+	}
+};
+
 class evdev_joystick_handler final : public PadHandlerBase
 {
 	// Unique button names for the config files and our pad settings dialog
@@ -282,10 +349,13 @@ private:
 	// Search axis_orientations map for the direction by index, returns -1 if not found, 0 for positive and 1 for negative
 	int FindAxisDirection(const std::unordered_map<int, bool>& map, int index);
 
+	positive_axis m_pos_axis_config;
+	std::vector<u32> m_positive_axis;
 	std::vector<std::string> blacklist;
 	std::vector<EvdevDevice> devices;
 	int m_pad_index = -1;
 	EvdevDevice m_dev;
 	bool m_is_button_or_trigger;
 	bool m_is_negative;
+	bool m_is_init = false;
 };
