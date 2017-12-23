@@ -84,7 +84,29 @@ evdev_joystick_handler::~evdev_joystick_handler()
 
 bool evdev_joystick_handler::Init()
 {
+	if (m_is_init)
+		return true;
+
 	m_pad_config.load();
+	m_pos_axis_config.load();
+
+	if (!m_pos_axis_config.exist())
+		m_pos_axis_config.save();
+
+	for (const auto& node : m_pos_axis_config.get_nodes())
+	{
+		if (*static_cast<cfg::_bool*>(node.second))
+		{
+			std::string name = node.first;
+			int code = libevdev_event_code_from_name(EV_ABS, name.c_str());
+			if (code < 0)
+				LOG_ERROR(HLE, "Failed to read axis name from %s. [code = %d] [name = %s]", m_pos_axis_config.cfg_name, code, name);
+			else
+				m_positive_axis.emplace_back(code);
+		}
+	}
+
+	m_is_init = true;
 	return true;
 }
 
@@ -176,6 +198,9 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 	std::unordered_map<u64, std::pair<u16, bool>> button_values;
 	auto& dev = device.device;
 
+	if (!Init())
+		return button_values;
+
 	for (auto entry : button_list)
 	{
 		auto code = entry.first;
@@ -197,7 +222,7 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 		int max = libevdev_get_abs_maximum(dev, code);
 
 		// Triggers do not need handling of negative values
-		if (min >= 0)
+		if (min >= 0 && std::find(m_positive_axis.begin(), m_positive_axis.end(), code) == m_positive_axis.end())
 		{
 			float fvalue = ScaleStickInput(val, min, max);
 			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(fvalue), false));
@@ -276,7 +301,7 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 			if (get_blacklist)
 			{
 				blacklist.emplace_back(name);
-				LOG_ERROR(HLE, "Evdev Calibration: Added button [ %d = %s ] to blacklist. Value = %d", code, name, value);
+				LOG_ERROR(HLE, "Evdev Calibration: Added button [ %d = %s = %s ] to blacklist. Value = %d", code, libevdev_event_code_get_name(EV_KEY, code), name, value);
 			}
 			else if (value > pressed_button.first)
 				pressed_button = { value, name };
@@ -302,7 +327,7 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 				int min = libevdev_get_abs_minimum(dev, code);
 				int max = libevdev_get_abs_maximum(dev, code);
 				blacklist.emplace_back(name);
-				LOG_ERROR(HLE, "Evdev Calibration: Added axis [ %d = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, name, value, min, max);
+				LOG_ERROR(HLE, "Evdev Calibration: Added axis [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, libevdev_event_code_get_name(EV_ABS, code), name, value, min, max);
 			}
 			else if (value > pressed_button.first)
 				pressed_button = { value, name };
@@ -328,7 +353,7 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 				int min = libevdev_get_abs_minimum(dev, code);
 				int max = libevdev_get_abs_maximum(dev, code);
 				blacklist.emplace_back(name);
-				LOG_ERROR(HLE, "Evdev Calibration: Added rev axis [ %d = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, name, value, min, max);
+				LOG_ERROR(HLE, "Evdev Calibration: Added rev axis [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, libevdev_event_code_get_name(EV_ABS, code), name, value, min, max);
 			}
 			else if (value > pressed_button.first)
 				pressed_button = { value, name };
@@ -536,7 +561,7 @@ int evdev_joystick_handler::GetButtonInfo(const input_event& evt, const EvdevDev
 		int max = libevdev_get_abs_maximum(dev, code);
 
 		// Triggers do not need handling of negative values
-		if (min >= 0)
+		if (min >= 0 && std::find(m_positive_axis.begin(), m_positive_axis.end(), code) == m_positive_axis.end())
 		{
 			m_is_negative = false;
 			m_is_button_or_trigger = true;
