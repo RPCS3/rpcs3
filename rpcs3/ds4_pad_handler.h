@@ -109,6 +109,7 @@ class ds4_pad_handler final : public PadHandlerBase
 	struct DS4Device
 	{
 		hid_device* hidDevice{ nullptr };
+		pad_config* config{ nullptr };
 		std::string path{ "" };
 		bool btCon{ false };
 		bool hasCalibData{ false };
@@ -143,12 +144,14 @@ public:
 	void ThreadProc() override;
 	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& buttonCallback, bool get_blacklist = false, std::vector<std::string> buttons = {}) override;
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
+	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
-	bool is_init;
+	bool is_init = false;
 
 	std::vector<u32> blacklist;
 	std::vector<std::pair<std::shared_ptr<DS4Device>, std::shared_ptr<Pad>>> bindings;
+	std::shared_ptr<DS4Device> m_dev;
 
 private:
 	std::shared_ptr<DS4Device> GetDevice(const std::string& padId);

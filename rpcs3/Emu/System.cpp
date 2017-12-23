@@ -145,7 +145,6 @@ void fmt_class_string<video_aspect>::format(std::string& out, u64 arg)
 	});
 }
 
-
 template <>
 void fmt_class_string<keyboard_handler>::format(std::string& out, u64 arg)
 {

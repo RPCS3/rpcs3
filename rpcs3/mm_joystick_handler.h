@@ -90,6 +90,7 @@ class mm_joystick_handler final : public PadHandlerBase
 	{
 		u32 device_id{ 0 };
 		std::string device_name{ "" };
+		pad_config* config{ nullptr };
 		JOYINFOEX device_info;
 		JOYCAPS device_caps;
 		u64 trigger_left = 0;
@@ -108,6 +109,7 @@ public:
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
 	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist = false, std::vector<std::string> buttons = {}) override;
+	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
@@ -116,7 +118,7 @@ private:
 	bool GetMMJOYDevice(int index, MMJOYDevice& dev);
 
 	bool is_init = false;
-	u32 supportedJoysticks = 0;
+	u32 m_supported_joysticks = 0;
 
 	std::vector<u64> blacklist;
 	std::unordered_map<int, MMJOYDevice> m_devices;

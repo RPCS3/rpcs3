@@ -1,6 +1,5 @@
 #pragma once
 
-#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "Emu/Io/PadHandler.h"
 #define NOMINMAX
@@ -95,6 +94,7 @@ class xinput_pad_handler final : public PadHandlerBase
 		u8 largeVibrate{ 0 };
 		u8 smallVibrate{ 0 };
 		clock_t last_vibration{ 0 };
+		pad_config* config{ nullptr };
 	};
 
 public:
@@ -109,6 +109,7 @@ public:
 	void ThreadProc() override;
 	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist = false, std::vector<std::string> buttons = {}) override;
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
+	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
 	typedef void (WINAPI * PFN_XINPUTENABLE)(BOOL);
@@ -121,15 +122,16 @@ private:
 	std::array<u16, XInputKeyCodes::KeyCodeCount> GetButtonValues(const XINPUT_STATE& state);
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
 
-	bool is_init;
-	HMODULE library;
-	PFN_XINPUTGETSTATE xinputGetState;
-	PFN_XINPUTSETSTATE xinputSetState;
-	PFN_XINPUTENABLE xinputEnable;
-	PFN_XINPUTGETBATTERYINFORMATION xinputGetBatteryInformation;
+	bool is_init{ false };
+	HMODULE library{ nullptr };
+	PFN_XINPUTGETSTATE xinputGetState{ nullptr };
+	PFN_XINPUTSETSTATE xinputSetState{ nullptr };
+	PFN_XINPUTENABLE xinputEnable{ nullptr };
+	PFN_XINPUTGETBATTERYINFORMATION xinputGetBatteryInformation{ nullptr };
 
 	std::vector<u32> blacklist;
 	std::vector<std::pair<std::shared_ptr<XInputDevice>, std::shared_ptr<Pad>>> bindings;
+	std::shared_ptr<XInputDevice> m_dev;
 
 	// holds internal controller state change
 	XINPUT_STATE state;
