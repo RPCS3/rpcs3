@@ -321,6 +321,17 @@ QStringList gui_settings::GetConfigEntries()
 	return res;
 }
 
+QStringList gui_settings::GetDirEntries(const QDir& dir, const QStringList& nameFilters)
+{
+	QFileInfoList entries = dir.entryInfoList(nameFilters, QDir::Files);
+	QStringList res;
+	for (const QFileInfo &entry : entries)
+	{
+		res.append(entry.baseName());
+	}
+	return res;
+}
+
 void gui_settings::BackupSettingsToTarget(const QString& friendlyName)
 {	
 	QSettings target(ComputeSettingsDir() + friendlyName + ".ini", QSettings::Format::IniFormat);

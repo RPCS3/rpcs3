@@ -10,6 +10,10 @@ public:
 		return true;
 	}
 
+	void init_config(pad_config* /*cfg*/, const std::string& /*name*/) override
+	{
+	}
+
 	std::vector<std::string> ListDevices() override
 	{
 		std::vector<std::string> nulllist;
@@ -17,7 +21,7 @@ public:
 		return nulllist;
 	}
 
-	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override
+	bool bindPadToDevice(std::shared_ptr<Pad> /*pad*/, const std::string& /*device*/) override
 	{
 		return true;
 	}
@@ -25,5 +29,4 @@ public:
 	void ThreadProc() override
 	{
 	}
-
 };

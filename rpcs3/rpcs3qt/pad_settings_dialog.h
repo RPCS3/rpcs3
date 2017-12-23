@@ -17,6 +17,12 @@
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
 #endif
+#ifdef _MSC_VER
+#include "mm_joystick_handler.h"
+#endif
+#ifdef HAVE_LIBEVDEV
+#include "evdev_joystick_handler.h"
+#endif
 #include "ds4_pad_handler.h"
 
 namespace Ui
@@ -72,15 +78,6 @@ class pad_settings_dialog : public QDialog
 		id_cancel
 	};
 
-	enum handler_type
-	{
-		handler_type_keyboard,
-		handler_type_xinput,
-		handler_type_ds4,
-		handler_type_mmjoy,
-		handler_type_evdev
-	};
-
 	struct pad_button
 	{
 		cfg::string* cfg_name;
@@ -109,9 +106,9 @@ private:
 	QPalette m_palette;
 
 	// Pad Handlers 
+	pad_handler m_handler_type;
 	std::shared_ptr<PadHandlerBase> m_handler;
-	handler_type m_handler_type;
-	pad_config* m_handler_cfg;
+	pad_config m_handler_cfg;
 	std::string m_device_name;
 
 	// Remap Timer
@@ -129,7 +126,7 @@ private:
 	void RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y);
 
 public:
-	explicit pad_settings_dialog(const std::string& device, std::shared_ptr<PadHandlerBase> handler, QWidget *parent = nullptr);
+	explicit pad_settings_dialog(const std::string& device, const std::string& profile, std::shared_ptr<PadHandlerBase> handler, QWidget *parent = nullptr);
 	~pad_settings_dialog();
 
 	/** Handle keyboard handler input */
