@@ -283,6 +283,7 @@ struct pad_config : cfg::node
 	cfg::_int<0, 1000000> rstickdeadzone{ this, "Right Stick Deadzone", 0 };
 	cfg::_int<0, 1000000> ltriggerthreshold{ this, "Left Trigger Threshold", 0 };
 	cfg::_int<0, 1000000> rtriggerthreshold{ this, "Right Trigger Threshold", 0 };
+	cfg::_bool axis_positive_only{ this, "Axis Sends Only Positive Values", false };
 	cfg::_int<0, 1000000> padsquircling{ this, "Pad Squircling Factor", 0 };
 
 	cfg::_int<0, 255> colorR{ this, "Color Value R", 0 };
@@ -554,7 +555,7 @@ protected:
 	// The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
 	// using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
 	// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of 8000
-	// This function assumes inX and inY is already in 0-255 
+	// This function assumes inX and inY is already in 0-255
 	std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY, float squircle_factor)
 	{
 		// convert inX and Y to a (-1, 1) vector;

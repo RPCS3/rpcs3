@@ -64,6 +64,7 @@ evdev_joystick_handler::evdev_joystick_handler()
 	m_pad_config.ltriggerthreshold.def = 0; // between 0 and 255
 	m_pad_config.rtriggerthreshold.def = 0; // between 0 and 255
 	m_pad_config.padsquircling.def = 5000;
+	m_pad_config.axis_positive_only.def = false; //xbox360 gamepads send values from -32767 to +32768, but some gamepads send values from 0 to 255
 
 	// apply defaults
 	m_pad_config.from_default();
@@ -197,7 +198,9 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 		int max = libevdev_get_abs_maximum(dev, code);
 
 		// Triggers do not need handling of negative values
-		if (min >= 0)
+		// but some custom stick axis only have a positive range
+		// (0 to 255) instead of (-32767 to +32768)
+		if (min >= 0 && !m_pad_config.axis_positive_only)
 		{
 			float fvalue = ScaleStickInput(val, min, max);
 			button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(fvalue), false));
@@ -536,7 +539,9 @@ int evdev_joystick_handler::GetButtonInfo(const input_event& evt, const EvdevDev
 		int max = libevdev_get_abs_maximum(dev, code);
 
 		// Triggers do not need handling of negative values
-		if (min >= 0)
+		// but some custom stick axis only have a positive range
+		// (0 to 255) instead of (-32767 to +32768)
+		if (min >= 0 && !m_pad_config.axis_positive_only)
 		{
 			m_is_negative = false;
 			m_is_button_or_trigger = true;
