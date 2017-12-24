@@ -723,7 +723,7 @@ bool ds4_pad_handler::Init()
 			if (dev)
 				CheckAddDevice(dev, devInfo);
 			else
-				LOG_ERROR(HLE, "[DS4] hid_open_path failed! Reason: %S", hid_error(dev));
+				LOG_ERROR(HLE, "[DS4] hid_open_path failed! Reason: %s", hid_error(dev));
 			devInfo = devInfo->next;
 		}
 		hid_free_enumeration(head);
