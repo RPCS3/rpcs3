@@ -307,7 +307,7 @@ struct lv2_socket final
 	using socket_type = int;
 #endif
 
-	static const u32 id_base = 0;
+	static const u32 id_base = 0x40000000;
 	static const u32 id_step = 1;
 	static const u32 id_count = 1024;
 
