@@ -357,26 +357,38 @@ void Emulator::Load(bool add_only)
 		const std::string elf_dir = fs::get_parent_dir(m_path);
 
 		// Load PARAM.SFO (TODO)
-		const auto _psf = psf::load_object([&]
+		const auto _psf = psf::load_object([&]() -> fs::file
 		{
 			if (fs::file sfov{elf_dir + "/sce_sys/param.sfo"})
 			{
 				return sfov;
 			}
 
-			if (Emu.disc.size())
+			if (disc.size())
 			{
-				return fs::file{Emu.disc + "/PS3_GAME/PARAM.SFO"};
+				// Check previously used category before it's overwritten
+				if (m_cat == "DG")
+				{
+					return fs::file{disc + "/PS3_GAME/PARAM.SFO"};
+				}
+
+				if (m_cat == "GD")
+				{
+					return fs::file{GetHddDir() + "game/" + m_title_id + "/PARAM.SFO"};
+				}
+
+				return fs::file{disc + "/PARAM.SFO"};
 			}
 
-			return fs::file(elf_dir + "/../PARAM.SFO");
+			return fs::file{elf_dir + "/../PARAM.SFO"};
 		}());
 		m_title = psf::get_string(_psf, "TITLE", m_path);
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
-		const auto _cat = psf::get_string(_psf, "CATEGORY");
+		m_cat = psf::get_string(_psf, "CATEGORY");
 
 		LOG_NOTICE(LOADER, "Title: %s", GetTitle());
 		LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
+		LOG_NOTICE(LOADER, "Category: %s", GetCat());
 
 		// Initialize data/cache directory
 		m_cache_path = fs::get_data_dir(m_title_id, m_path);
@@ -428,7 +440,7 @@ void Emulator::Load(bool add_only)
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
 
-		if (_cat == "DG" && m_path.find(hdd0_game) != -1 && Emu.disc.empty())
+		if (m_cat == "DG" && m_path.find(hdd0_game) != -1 && disc.empty())
 		{
 			// Booting disc game from wrong location
 			LOG_ERROR(LOADER, "Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
@@ -447,7 +459,7 @@ void Emulator::Load(bool add_only)
 		}
 
 		// Booting disc game
-		if (_cat == "DG" && bdvd_dir.empty() && Emu.disc.empty())
+		if (m_cat == "DG" && bdvd_dir.empty() && disc.empty())
 		{
 			// Mount /dev_bdvd/ if necessary
 			if (auto pos = elf_dir.rfind("/PS3_GAME/") + 1)
@@ -457,7 +469,7 @@ void Emulator::Load(bool add_only)
 		}
 
 		// Booting patch data
-		if (_cat == "GD" && bdvd_dir.empty() && Emu.disc.empty())
+		if (m_cat == "GD" && bdvd_dir.empty() && disc.empty())
 		{
 			// Load /dev_bdvd/ from game list if available
 			if (auto node = games[m_title_id])
@@ -471,7 +483,7 @@ void Emulator::Load(bool add_only)
 		}
 
 		// Check /dev_bdvd/
-		if (Emu.disc.empty() && !bdvd_dir.empty() && fs::is_dir(bdvd_dir))
+		if (disc.empty() && !bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 		{
 			fs::file sfb_file;
 
@@ -498,16 +510,20 @@ void Emulator::Load(bool add_only)
 			out << games;
 			fs::file(fs::get_config_dir() + "/games.yml", fs::rewrite).write(out.c_str(), out.size());
 		}
-		else if (!Emu.disc.empty())
+		else if (m_cat != "DG" && m_cat != "GD")
 		{
-			bdvd_dir = Emu.disc;
-			vfs::mount("dev_bdvd", bdvd_dir);
-			LOG_NOTICE(LOADER, "Disk: %s", vfs::get("/dev_bdvd"));
+			// Don't need /dev_bdvd
 		}
-		else if (_cat == "DG" || _cat == "GD")
+		else if (disc.empty())
 		{
 			LOG_ERROR(LOADER, "Failed to mount disc directory for the disc game %s", m_title_id);
 			return;
+		}
+		else
+		{
+			bdvd_dir = disc;
+			vfs::mount("dev_bdvd", bdvd_dir);
+			LOG_NOTICE(LOADER, "Disk: %s", vfs::get("/dev_bdvd"));
 		}
 
 		if (add_only)
@@ -586,7 +602,7 @@ void Emulator::Load(bool add_only)
 		// Check game updates
 		const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN";
 
-		if (_cat == "DG" && fs::is_file(hdd0_boot))
+		if (disc.empty() && m_cat == "DG" && fs::is_file(hdd0_boot))
 		{
 			// Booting game update
 			LOG_SUCCESS(LOADER, "Updates found at /dev_hdd0/game/%s/!", m_title_id);

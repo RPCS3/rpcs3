@@ -181,6 +181,7 @@ class Emulator final
 	std::string m_cache_path;
 	std::string m_title_id;
 	std::string m_title;
+	std::string m_cat;
 
 	bool m_force_boot = false;
 
@@ -232,6 +233,11 @@ public:
 	const std::string& GetTitle() const
 	{
 		return m_title;
+	}
+
+	const std::string& GetCat() const
+	{
+		return m_cat;
 	}
 
 	const std::string& GetCachePath() const

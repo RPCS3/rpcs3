@@ -196,7 +196,7 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	}
 
 	// open trophy pack file
-	fs::file stream(vfs::get("/app_home/../TROPDIR/" + name + "/TROPHY.TRP"));
+	fs::file stream(vfs::get((Emu.GetCat() == "DG" ? "/dev_bdvd/PS3_GAME/TROPDIR/"s : "/dev_hdd0/game/" + Emu.GetTitleID() + "/TROPDIR/") + name + "/TROPHY.TRP"));
 
 	// check if exists and opened
 	if (!stream)

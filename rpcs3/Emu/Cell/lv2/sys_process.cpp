@@ -286,10 +286,16 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 	// TODO: set prio, flags
 
 	std::string path = vfs::get(argv[0]);
+	std::string disc;
+
+	if (Emu.GetCat() == "DG" || Emu.GetCat() == "GD")
+		disc = vfs::get("/dev_bdvd/");
+	else if (Emu.GetTitleID().size())
+		disc = vfs::get("/dev_hdd0/game/" + Emu.GetTitleID() + "/");
 
 	vm::temporary_unlock(ppu);
 
-	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = vfs::get("/dev_bdvd/"), klic = fxm::get_always<LoadedNpdrmKeys_t>()->devKlic]() mutable
+	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc), klic = fxm::get_always<LoadedNpdrmKeys_t>()->devKlic]() mutable
 	{
 		sys_process.success("Process finished -> %s", argv[0]);
 		Emu.SetForceBoot(true);
