@@ -1046,7 +1046,12 @@ void SPUThread::set_interrupt_status(bool enable)
 
 u32 SPUThread::get_ch_count(u32 ch)
 {
-	LOG_TRACE(SPU, "get_ch_count(ch=%d [%s])", ch, ch < 128 ? spu_ch_name[ch] : "???");
+	if (ch > 127)
+	{
+		fmt::throw_exception("illegal channel (ch=%d ???)" HERE, ch);
+	}
+	
+	LOG_TRACE(SPU, "get_ch_count(ch=%d [%s])", ch, spu_ch_name[ch]);
 
 	switch (ch)
 	{
@@ -1061,9 +1066,19 @@ u32 SPUThread::get_ch_count(u32 ch)
 	case MFC_RdAtomicStat:    return ch_atomic_stat.get_count();
 	case SPU_RdEventStat:     return get_events() != 0;
 	case MFC_Cmd:             return std::max(16 - mfc_queue.size(), (u32)0);
+	case MFC_WrTagMask: 	
+	case MFC_RdTagMask: 	
+	case MFC_WrListStallAck: 
+	case SPU_WrDec:		    
+	case SPU_RdDec:	    
+	case SPU_RdMachStat:    
+	case SPU_WrSRR0: 
+	case SPU_RdSRR0: 
+	case SPU_WrEventMask:
+	case SPU_RdEventMask: 
+	case SPU_WrEventAck:      return 0x1;
+	default : 				  return 0;
 	}
-
-	fmt::throw_exception("Unknown/illegal channel (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
 }
 
 bool SPUThread::get_ch_value(u32 ch, u32& out)
