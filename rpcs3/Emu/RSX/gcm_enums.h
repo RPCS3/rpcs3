@@ -1,20 +1,29 @@
 ﻿#pragma once
 #include "Utilities/types.h"
 
+enum
+{
+	CELL_GCM_VERTEX_S1 = 1,
+	CELL_GCM_VERTEX_F = 2,
+	CELL_GCM_VERTEX_SF = 3,
+	CELL_GCM_VERTEX_UB = 4,
+	CELL_GCM_VERTEX_S32K = 5,
+	CELL_GCM_VERTEX_CMP = 6,
+	CELL_GCM_VERTEX_UB256 = 7,
+};
+
 namespace rsx
 {
-	enum class vertex_base_type : u8
+	enum class vertex_base_type : u32
 	{
-		s1, ///< signed normalized 16-bit int
-		f, ///< float
-		sf, ///< half float
-		ub, ///< unsigned byte interpreted as 0.f and 1.f
-		s32k, ///< signed 16bits int
-		cmp, ///< compressed aka X11G11Z10 and always 1. W.
-		ub256, ///< unsigned byte interpreted as between 0 and 255.
+		s1 = CELL_GCM_VERTEX_S1, ///< signed normalized 16-bit int
+		f = CELL_GCM_VERTEX_F, ///< float
+		sf = CELL_GCM_VERTEX_SF, ///< half float
+		ub = CELL_GCM_VERTEX_UB, ///< unsigned byte interpreted as 0.f and 1.f
+		s32k = CELL_GCM_VERTEX_S32K, ///< signed 16bits int
+		cmp = CELL_GCM_VERTEX_CMP, ///< compressed aka X11G11Z10 and always 1. W.
+		ub256 = CELL_GCM_VERTEX_UB256, ///< unsigned byte interpreted as between 0 and 255.
 	};
-
-	vertex_base_type to_vertex_base_type(u8 in);
 
 	enum class index_array_type : u8
 	{
