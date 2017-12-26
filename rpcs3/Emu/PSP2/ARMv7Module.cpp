@@ -201,25 +201,35 @@ struct psv_moduleinfo_t
 struct psv_libent_t
 {
 	le_t<u16> size; // ???
-	le_t<u16> unk0;
-	le_t<u16> unk1;
+	le_t<u16> version;
+	le_t<u16> flags;
 	le_t<u16> fcount;
-	le_t<u16> vcount;
-	le_t<u16> unk2;
-	le_t<u32> unk3;
-	le_t<u32> data[1]; // ...
+	le_t<u32> vcount;
+	le_t<u32> unk2;
+	le_t<u32> module_nid;
+	le_t<u32> module_name;	/* Pointer to name of this module */
+	le_t<u32> nid_table;		/* Pointer to array of 32-bit NIDs to export */
+	le_t<u32> entry_table;	/* Pointer to array of data pointers for each NID */
 };
 
 struct psv_libstub_t
 {
 	le_t<u16> size; // 0x2C, 0x34
-	le_t<u16> unk0; // (usually 1, 5 for sceLibKernel)
-	le_t<u16> unk1; // (usually 0)
+	le_t<u16> version; // (usually 1, 5 for sceLibKernel)
+	le_t<u16> flags; // (usually 0)
 	le_t<u16> fcount;
 	le_t<u16> vcount;
 	le_t<u16> unk2;
 	le_t<u32> unk3;
-	le_t<u32> data[1]; // ...
+	le_t<u32> module_nid;			/* NID of module to import */
+	le_t<u32> module_name;	/* Pointer to name of imported module, for debugging */
+	le_t<u32> reserved2;
+	le_t<u32> func_nid_table;	/* Pointer to array of function NIDs to import */
+	le_t<u32> func_entry_table;/* Pointer to array of stub functions to fill */
+	le_t<u32> var_nid_table;	/* Pointer to array of variable NIDs to import */
+	le_t<u32> var_entry_table;	/* Pointer to array of data pointers to write to */
+	le_t<u32> unk_nid_table;
+	le_t<u32> unk_entry_table;
 };
 
 struct psv_libcparam_t
@@ -256,6 +266,48 @@ struct psv_process_param_t
 
 	vm::lcptr<psv_libcparam_t> sce_libcparam;
 };
+
+struct psv_reloc
+{
+	u32 addr;
+	u32 type;
+	u64 data;
+};
+
+/** \name Macros to get SCE reloc values
+*  @{
+*/
+#define SCE_RELOC_SHORT_OFFSET(x) (((x).r_opt1 >> 20) | ((x).r_opt2 & 0xFFFFF) << 12)
+#define SCE_RELOC_SHORT_ADDEND(x) ((x).r_opt2 >> 20)
+#define SCE_RELOC_LONG_OFFSET(x) ((x).r_offset)
+#define SCE_RELOC_LONG_ADDEND(x) ((x).r_addend)
+#define SCE_RELOC_LONG_CODE2(x) (((x).r_type >> 20) & 0xFF)
+#define SCE_RELOC_LONG_DIST2(x) (((x).r_type >> 28) & 0xF)
+#define SCE_RELOC_IS_SHORT(x) (((x).r_type) & 0xF)
+#define SCE_RELOC_CODE(x) (((x).r_type >> 8) & 0xFF)
+#define SCE_RELOC_SYMSEG(x) (((x).r_type >> 4) & 0xF)
+#define SCE_RELOC_DATSEG(x) (((x).r_type >> 16) & 0xF)
+/** @}*/
+
+/** \name Vita supported relocations
+*  @{
+*/
+#define R_ARM_NONE              0
+#define R_ARM_ABS32             2
+#define R_ARM_REL32             3
+#define R_ARM_THM_CALL          10
+#define R_ARM_CALL              28
+#define R_ARM_JUMP24            29
+#define R_ARM_TARGET1           38
+#define R_ARM_V4BX              40
+#define R_ARM_TARGET2           41
+#define R_ARM_PREL31            42
+#define R_ARM_MOVW_ABS_NC       43
+#define R_ARM_MOVT_ABS          44
+#define R_ARM_THM_MOVW_ABS_NC   47
+#define R_ARM_THM_MOVT_ABS      48
+/** @}*/
+
 
 static void arm_patch_refs(u32 refs, u32 addr)
 {
@@ -314,27 +366,243 @@ void arm_load_exec(const arm_exec_object& elf)
 	u32 tls_fsize{};
 	u32 tls_vsize{};
 
-	for (const auto& prog : elf.progs)
+	std::unique_ptr<u32[]> p_vaddr = std::make_unique<u32[]>(elf.progs.size());
+
+	for (int i = 0; i < elf.progs.size(); i++)
 	{
+		const auto& prog = elf.progs[i];
+		const u32 addr = vm::cast(prog.p_vaddr, HERE);
+		const u32 size = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
+		const u32 type = prog.p_type;
+		const u32 flag = prog.p_flags;
+
 		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz)
 		{
-			if (!vm::falloc(prog.p_vaddr & ~0xfff, prog.p_memsz + (prog.p_vaddr & 0xfff), vm::main))
+			if (!(p_vaddr[i] = vm::alloc(size, vm::main)))
 			{
-				fmt::throw_exception("vm::falloc() failed (addr=0x%x, size=0x%x)", prog.p_vaddr, prog.p_memsz);
+				fmt::throw_exception("vm::alloc() failed (size=0x%x)", size);
 			}
 
-			if (prog.p_paddr)
+			if (elf.header.e_type == elf_type::psv1 && prog.p_paddr)
 			{
-				module_info.set(prog.p_vaddr + (prog.p_paddr - prog.p_offset));
+				module_info.set(start_addr + (prog.p_paddr - prog.p_offset));
 				LOG_NOTICE(LOADER, "Found program with p_paddr=0x%x", prog.p_paddr);
 			}
 
 			if (!start_addr)
 			{
-				start_addr = prog.p_vaddr;
+				start_addr = p_vaddr[i];
 			}
 
-			std::memcpy(vm::base(prog.p_vaddr), prog.bin.data(), prog.p_filesz);
+			std::memcpy(vm::base(p_vaddr[i]), prog.bin.data(), prog.p_filesz);
+		}
+		else if (prog.p_type == 0x60000000) {
+			// Relocation code taken from
+			// https://github.com/yifanlu/UVLoader/blob/master/relocate.c
+			// Relocation information of the SCE_PPURELA segment
+			typedef union sce_reloc
+			{
+				u32       r_type;
+				struct
+				{
+					u32   r_opt1;
+					u32   r_opt2;
+				} r_short;
+				struct
+				{
+					u32   r_type;
+					u32   r_addend;
+					u32   r_offset;
+				} r_long;
+			} sce_reloc_t;
+
+			for (uint i = 0; i < prog.p_filesz; )
+			{
+				const auto& rel = reinterpret_cast<const sce_reloc_t&>(prog.bin[i]);
+				u32 r_offset;
+				u32 r_addend;
+				u8 r_symseg;
+				u8 r_datseg;
+				s32 offset;
+				u32 symval, addend, loc;
+				u32 upper, lower, sign, j1, j2;
+				u32 value;
+
+				if (SCE_RELOC_IS_SHORT(rel))
+				{
+					r_offset = SCE_RELOC_SHORT_OFFSET(rel.r_short);
+					r_addend = SCE_RELOC_SHORT_ADDEND(rel.r_short);
+					LOG_NOTICE(LOADER, "SHORT RELOC %X %X %X", r_offset, r_addend, SCE_RELOC_CODE(rel));
+					i += 8;
+				}
+				else
+				{
+					r_offset = SCE_RELOC_LONG_OFFSET(rel.r_long);
+					r_addend = SCE_RELOC_LONG_ADDEND(rel.r_long);
+					if (SCE_RELOC_LONG_CODE2(rel.r_long))
+					{
+						LOG_NOTICE(LOADER, "Code2 ignored for relocation at %X.", i);
+					}
+					LOG_NOTICE(LOADER, "LONG RELOC %X %X %X", r_offset, r_addend, SCE_RELOC_CODE(rel));
+					i += 12;
+				}
+
+				// get values
+				r_symseg = SCE_RELOC_SYMSEG(rel);
+				r_datseg = SCE_RELOC_DATSEG(rel);
+				symval = r_symseg == 15 ? 0 : p_vaddr[r_symseg];
+				loc = p_vaddr[r_datseg] + r_offset;
+
+				// perform relocation
+				// taken from linux/arch/arm/kernel/module.c of Linux Kernel 4.0
+				switch (SCE_RELOC_CODE(rel))
+				{
+				case R_ARM_V4BX:
+				{
+					/* Preserve Rm and the condition code. Alter
+					* other bits to re-code instruction as
+					* MOV PC,Rm.
+					*/
+					value = vm::_ref<u32>(loc & 0xf000000f) | 0x01a0f000;
+				}
+				break;
+				case R_ARM_ABS32:
+				case R_ARM_TARGET1:
+				{
+					value = r_addend + symval;
+				}
+				break;
+				case R_ARM_REL32:
+				case R_ARM_TARGET2:
+				{
+					value = r_addend + symval - loc;
+				}
+				break;
+				case R_ARM_THM_CALL:
+				{
+					upper = vm::_ref<u16>(loc);
+					lower = vm::_ref<u16>(loc + 2);
+
+					/*
+					* 25 bit signed address range (Thumb-2 BL and B.W
+					* instructions):
+					*   S:I1:I2:imm10:imm11:0
+					* where:
+					*   S     = upper[10]   = offset[24]
+					*   I1    = ~(J1 ^ S)   = offset[23]
+					*   I2    = ~(J2 ^ S)   = offset[22]
+					*   imm10 = upper[9:0]  = offset[21:12]
+					*   imm11 = lower[10:0] = offset[11:1]
+					*   J1    = lower[13]
+					*   J2    = lower[11]
+					*/
+					sign = (upper >> 10) & 1;
+					j1 = (lower >> 13) & 1;
+					j2 = (lower >> 11) & 1;
+					offset = r_addend + symval - loc;
+
+					if (offset <= (s32)0xff000000 ||
+						offset >= (s32)0x01000000) {
+						LOG_NOTICE(LOADER, "reloc %x out of range: 0x%08X", i, symval);
+						break;
+					}
+
+					sign = (offset >> 24) & 1;
+					j1 = sign ^ (~(offset >> 23) & 1);
+					j2 = sign ^ (~(offset >> 22) & 1);
+					upper = (u16)((upper & 0xf800) | (sign << 10) |
+						((offset >> 12) & 0x03ff));
+					lower = (u16)((lower & 0xd000) |
+						(j1 << 13) | (j2 << 11) |
+						((offset >> 1) & 0x07ff));
+
+					value = ((u32)lower << 16) | upper;
+				}
+				break;
+				case R_ARM_CALL:
+				case R_ARM_JUMP24:
+				{
+					offset = r_addend + symval - loc;
+					if (offset <= (s32)0xfe000000 ||
+						offset >= (s32)0x02000000) {
+						LOG_NOTICE(LOADER, "reloc %x out of range: 0x%08X", i, symval);
+						break;
+					}
+
+					offset >>= 2;
+					offset &= 0x00ffffff;
+
+					value = vm::_ref<u32>(loc & 0xff000000) | offset;
+				}
+				break;
+				case R_ARM_PREL31:
+				{
+					offset = r_addend + symval - loc;
+					value = offset & 0x7fffffff;
+				}
+				break;
+				case R_ARM_MOVW_ABS_NC:
+				case R_ARM_MOVT_ABS:
+				{
+					offset = symval + r_addend;
+					if (SCE_RELOC_CODE(rel) == R_ARM_MOVT_ABS)
+						offset >>= 16;
+
+					value = vm::_ref<u32>(loc);
+					value &= 0xfff0f000;
+					value |= ((offset & 0xf000) << 4) |
+						(offset & 0x0fff);
+				}
+				break;
+				case R_ARM_THM_MOVW_ABS_NC:
+				case R_ARM_THM_MOVT_ABS:
+				{
+					upper = vm::_ref<u16>(loc);
+					lower = vm::_ref<u16>(loc + 2);
+
+					/*
+					* MOVT/MOVW instructions encoding in Thumb-2:
+					*
+					* i    = upper[10]
+					* imm4 = upper[3:0]
+					* imm3 = lower[14:12]
+					* imm8 = lower[7:0]
+					*
+					* imm16 = imm4:i:imm3:imm8
+					*/
+					offset = r_addend + symval;
+
+					if (SCE_RELOC_CODE(rel) == R_ARM_THM_MOVT_ABS)
+						offset >>= 16;
+
+					upper = (u16)((upper & 0xfbf0) |
+						((offset & 0xf000) >> 12) |
+						((offset & 0x0800) >> 1));
+					lower = (u16)((lower & 0x8f00) |
+						((offset & 0x0700) << 4) |
+						(offset & 0x00ff));
+
+					value = ((u32)lower << 16) | upper;
+				}
+				break;
+				case R_ARM_NONE:
+					continue;
+				
+				default:
+				{
+					LOG_NOTICE(LOADER, "Unknown relocation code %u at %x", SCE_RELOC_CODE(rel), i);
+					continue;
+				}
+			}
+
+				LOG_NOTICE(LOADER, "Writing at  %X[%d], %X, %X, %d", p_vaddr[r_datseg], r_datseg, r_offset, value, sizeof(value));
+				if ((r_offset + sizeof(value)) > elf.progs[r_datseg].p_filesz)
+				{
+					LOG_NOTICE(LOADER, "Relocation overflows segment");
+					continue;
+				}
+				vm::_ref<u32>(p_vaddr[r_datseg]+r_offset) = value;
+			}
 		}
 	}
 
@@ -352,7 +620,7 @@ void arm_load_exec(const arm_exec_object& elf)
 		tls_fsize = module_info->data[6];
 		tls_vsize = module_info->data[7];
 	}
-	else if (module_info->data[5] == 0xffffffff)
+	else if (module_info->data[5] == 0xffffffff || module_info->data[5] == 0)
 	{
 		tls_faddr = module_info->data[1]; // Guess
 		tls_fsize = module_info->data[2];
@@ -384,14 +652,16 @@ void arm_load_exec(const arm_exec_object& elf)
 		else
 		{
 			LOG_NOTICE(LOADER, "Loading libent at *0x%x", libent);
-			LOG_NOTICE(LOADER, "** 0x%x, 0x%x", libent->unk0, libent->unk1);
+			LOG_NOTICE(LOADER, "** 0x%x, 0x%x", libent->version, libent->flags);
 			LOG_NOTICE(LOADER, "** Functions: %u", libent->fcount);
 			LOG_NOTICE(LOADER, "** Variables: %u", libent->vcount);
-			LOG_NOTICE(LOADER, "** 0x%x, 0x%08x", libent->unk2, libent->unk3);
+			LOG_NOTICE(LOADER, "** 0x%x, 0x%08x", libent->unk2, libent->module_nid);
 
-			const auto export_nids = vm::cptr<u32>::make(libent->data[size == 0x20 ? 2 : 1]);
-			const auto export_data = vm::cptr<u32>::make(libent->data[size == 0x20 ? 3 : 2]);
+			const auto export_nids = vm::cptr<u32>::make(libent->nid_table);
+			const auto export_data = vm::cptr<u32>::make(libent->entry_table);
 
+			LOG_NOTICE(LOADER, "** 0x%x, 0x%08x", export_data, export_nids);
+			
 			for (u32 i = 0, count = export_data - export_nids; i < count; i++)
 			{
 				const u32 nid = export_nids[i];
@@ -442,7 +712,7 @@ void arm_load_exec(const arm_exec_object& elf)
 		}
 		else
 		{
-			const std::string module_name(vm::_ptr<char>(libstub->data[size == 0x34 ? 1 : 0]));
+			const std::string module_name(vm::_ptr<char>(libstub->module_name));
 
 			LOG_NOTICE(LOADER, "Loading libstub at 0x%x: %s", libstub, module_name);
 
@@ -468,13 +738,13 @@ void arm_load_exec(const arm_exec_object& elf)
 				}
 			}
 
-			LOG_NOTICE(LOADER, "** 0x%x, 0x%x", libstub->unk0, libstub->unk1);
+			LOG_NOTICE(LOADER, "** 0x%x, 0x%x", libstub->version, libstub->flags);
 			LOG_NOTICE(LOADER, "** Functions: %u", libstub->fcount);
 			LOG_NOTICE(LOADER, "** Variables: %u", libstub->vcount);
 			LOG_NOTICE(LOADER, "** 0x%x, 0x%08x", libstub->unk2, libstub->unk3);
 
-			const auto fnids = vm::cptr<u32>::make(libstub->data[size == 0x34 ? 3 : 1]);
-			const auto fstubs = vm::cptr<u32>::make(libstub->data[size == 0x34 ? 4 : 2]);
+			const auto fnids = vm::cptr<u32>::make(libstub->func_nid_table);
+			const auto fstubs = vm::cptr<u32>::make(libstub->func_entry_table);
 
 			for (u32 j = 0; j < libstub->fcount; j++)
 			{
@@ -517,8 +787,8 @@ void arm_load_exec(const arm_exec_object& elf)
 				fstub[0] = 0xe0700090 | arm_code::hack<arm_encoding::A1>::index::insert(index);
 			}
 
-			const auto vnids = vm::cptr<u32>::make(libstub->data[size == 0x34 ? 5 : 3]);
-			const auto vstub = vm::cptr<u32>::make(libstub->data[size == 0x34 ? 6 : 4]);
+			const auto vnids = vm::cptr<u32>::make(libstub->var_nid_table);
+			const auto vstub = vm::cptr<u32>::make(libstub->var_entry_table);
 
 			for (u32 j = 0; j < libstub->vcount; j++)
 			{
@@ -559,6 +829,8 @@ void arm_load_exec(const arm_exec_object& elf)
 
 	const auto libc_param = proc_param->sce_libcparam;
 
+	if (libc_param) {
+
 	LOG_NOTICE(LOADER, "__sce_libcparam(*0x%x) analysis...", libc_param);
 
 	verify(HERE), libc_param->size >= 0x1c;
@@ -569,6 +841,8 @@ void arm_load_exec(const arm_exec_object& elf)
 	LOG_NOTICE(LOADER, "*** &sceLibcHeapSizeDefault           = 0x%x", libc_param->sceLibcHeapSizeDefault);
 	LOG_NOTICE(LOADER, "*** &sceLibcHeapExtendedAlloc         = 0x%x", libc_param->sceLibcHeapExtendedAlloc);
 	LOG_NOTICE(LOADER, "*** &sceLibcHeapDelayedAlloc          = 0x%x", libc_param->sceLibcHeapDelayedAlloc);
+
+	}
 
 	const auto stop_code = vm::ptr<u32>::make(vm::alloc(3 * 4, vm::main));
 	stop_code[0] = 0xf870; // HACK instruction (Thumb)
