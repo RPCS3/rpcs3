@@ -75,6 +75,10 @@ namespace vk
 	VkSampler null_sampler();
 	VkImageView null_image_view(vk::command_buffer&);
 
+	//Sync helpers around vkQueueSubmit
+	void acquire_global_submit_lock();
+	void release_global_submit_lock();
+
 	void destroy_global_resources();
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
@@ -1127,7 +1131,9 @@ namespace vk
 			infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
 			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
+			acquire_global_submit_lock();
 			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
+			release_global_submit_lock();
 		}
 	};
 
