@@ -2629,7 +2629,19 @@ void spu_recompiler::CFLTU(spu_opcode_t op)
 	const XmmLink& vs2 = XmmAlloc();
 	const XmmLink& vs3 = XmmAlloc();
 	if (op.i8 != 173) c->mulps(va, XmmConst(_mm_set1_ps(std::exp2(static_cast<float>(static_cast<s16>(173 - op.i8)))))); // scale
-	c->maxps(va, XmmConst(_mm_set1_ps(0.0f))); // saturate
+
+	if (utils::has_512())
+	{
+		c->vcvttps2udq(vs, va);
+		c->psrad(va, 31);
+		c->pandn(va, vs);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), va);
+		return;
+	}
+
+	c->movdqa(vs, va);
+	c->psrad(va, 31);
+	c->andnps(va, vs);
 	c->movaps(vs, va); // copy scaled value
 	c->movaps(vs2, va);
 	c->movaps(vs3, XmmConst(_mm_set1_ps(std::exp2(31.f))));
@@ -2656,12 +2668,21 @@ void spu_recompiler::CUFLT(spu_opcode_t op)
 {
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 	const XmmLink& v1 = XmmAlloc();
-	c->movdqa(v1, va);
-	c->pand(va, XmmConst(_mm_set1_epi32(0x7fffffff)));
-	c->cvtdq2ps(va, va); // convert to floats
-	c->psrad(v1, 31); // generate mask from sign bit
-	c->andps(v1, XmmConst(_mm_set1_ps(std::exp2(31.f)))); // generate correction component
-	c->addps(va, v1); // add correction component
+
+	if (utils::has_512())
+	{
+		c->vcvtudq2ps(va, va);
+	}
+	else
+	{
+		c->movdqa(v1, va);
+		c->pand(va, XmmConst(_mm_set1_epi32(0x7fffffff)));
+		c->cvtdq2ps(va, va); // convert to floats
+		c->psrad(v1, 31); // generate mask from sign bit
+		c->andps(v1, XmmConst(_mm_set1_ps(std::exp2(31.f)))); // generate correction component
+		c->addps(va, v1); // add correction component
+	}
+
 	if (op.i8 != 155) c->mulps(va, XmmConst(_mm_set1_ps(std::exp2(static_cast<float>(static_cast<s16>(op.i8 - 155)))))); // scale
 	c->movaps(SPU_OFF_128(gpr, op.rt), va);
 }
