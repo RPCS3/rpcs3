@@ -419,7 +419,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	// TODO: output errors (errDialog)
 
-	const std::string& dir = "/dev_hdd0/game/"s + dirName.get_ptr();
+	const std::string dir = "/dev_hdd0/game/"s + dirName.get_ptr();
 
 	vm::var<CellGameDataCBResult> cbResult;
 	vm::var<CellGameDataStatGet>  cbGet;
@@ -454,52 +454,53 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		strcpy_trunc(cbGet->getParam.titleLang[i], psf::get_string(sfo, fmt::format("TITLE_%02d", i)));
 	}
 
-
 	funcStat(ppu, cbResult, cbGet, cbSet);
-
 
 	switch ((s32)cbResult->result)
 	{
 	case CELL_GAMEDATA_CBRESULT_OK_CANCEL:
+	{
 		// TODO: do not process game data(directory)
 		cellGame.warning("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_OK_CANCEL");
 		return CELL_OK;
-
+	}
 
 	case CELL_GAMEDATA_CBRESULT_OK:
-		//game confirmed that it wants to create directory
-		if (!fs::is_dir(vfs::get(dir + "/USRDIR")) && !fs::create_path(vfs::get(dir + "/USRDIR")))
-			{
-				cellGame.error("cellGameDataCheckCreate2(): folder creation failed");
-				return CELL_GAME_ERROR_NOSPACE;	//don't know which error. picked one at random
-			}
+	{
+		// Game confirmed that it wants to create directory
+		const std::string usrdir = dir + "/USRDIR";
+		const std::string vusrdir = vfs::get(usrdir);
+
+		if (!fs::is_dir(vusrdir) && !fs::create_path(vusrdir))
+		{
+			return {CELL_GAME_ERROR_ACCESS_ERROR, usrdir};
+		}
+
 		if (cbSet->setParam)
 		{
-			const auto vdir = vfs::get(dir);
+			psf::assign(sfo, "CATEGORY", psf::string(3, "GD"));
+			psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, cbSet->setParam->titleId));
+			psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->title));
+			psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, cbSet->setParam->dataVersion));
+			psf::assign(sfo, "PARENTAL_LEVEL", cbSet->setParam->parentalLevel.value());
 
-			//older SDK does not define not settable values, hopefully it doesn't just change some values(overwrite)
-			psf::registry sfo_write =
-			{
-				{ "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, cbSet->setParam->titleId) },
-				{ "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->title) },
-				{ "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, cbSet->setParam->dataVersion) },
-				{ "PARENTAL_LEVEL", cbSet->setParam->parentalLevel.value()							}
-			};
-			//sfo_write.emplace("PARENTAL_LEVEL", cbSet->setParam->parentalLevel.value()); // I don't care about age restrictions.
 			for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 			{
-				sfo_write.emplace(fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->titleLang[i]));
+				psf::assign(sfo, fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, cbSet->setParam->titleLang[i]));
 			}
+
+			const auto vdir = vfs::get(dir);
+
 			if (!fs::is_dir(vdir))
 			{
-				cellGame.fatal("directory where param.sfo is to be created does not exist");
-				return CELL_GAME_ERROR_INTERNAL;
+				return {CELL_GAME_ERROR_INTERNAL, dir};
 			}
-			psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::rewrite), sfo_write);
 
+			psf::save_object(fs::file(vdir + "/PARAM.SFO", fs::rewrite), sfo);
 		}
-		return CELL_OK;
 
+		return CELL_OK;
+	}
 	case CELL_GAMEDATA_CBRESULT_ERR_NOSPACE: // TODO: process errors, error message and needSizeKB result
 		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NOSPACE");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
@@ -709,7 +710,7 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 	case CELL_GAME_PARAMID_APP_VER:        max_size = CELL_GAME_SYSP_APP_VER_SIZE; break;
 	}
 
-	prm->sfo.emplace(key, psf::string(max_size, buf.get_ptr()));
+	psf::assign(prm->sfo, key, psf::string(max_size, buf.get_ptr()));
 
 	return CELL_OK;
 }
