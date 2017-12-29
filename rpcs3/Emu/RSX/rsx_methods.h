@@ -1201,6 +1201,11 @@ namespace rsx
 		{
 			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_alpha_to_one();
 		}
+
+		bool depth_clamp_enabled()
+		{
+			return decode<NV4097_SET_ZMIN_MAX_CONTROL>().depth_clamp_enabled();
+		}
 	};
 
 	extern rsx_state method_registers;

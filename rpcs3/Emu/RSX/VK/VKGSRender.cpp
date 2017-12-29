@@ -2243,7 +2243,7 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 
 	properties.rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 	properties.rs.polygonMode = VK_POLYGON_MODE_FILL;
-	properties.rs.depthClampEnable = VK_FALSE;
+	properties.rs.depthClampEnable = rsx::method_registers.depth_clamp_enabled();
 	properties.rs.rasterizerDiscardEnable = VK_FALSE;
 
 	//Disabled by setting factors to 0 as needed
