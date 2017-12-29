@@ -1039,6 +1039,8 @@ void GLGSRender::update_draw_state()
 	gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
 	gl_state.stencil_mask(rsx::method_registers.stencil_mask());
 
+	gl_state.enable(rsx::method_registers.depth_clamp_enabled(), GL_DEPTH_CLAMP);
+
 	if (gl_state.enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
 	{
 		gl_state.depth_func(comparison_op(rsx::method_registers.depth_func()));
