@@ -40,7 +40,7 @@ protected:
 	void show() override;
 	void mouseDoubleClickEvent(QMouseEvent* ev) override;
 
-	void* handle() const override;
+	display_handle_t handle() const override;
 
 	void flip(draw_context_t context, bool skip_frame=false) override;
 	int client_width() override;

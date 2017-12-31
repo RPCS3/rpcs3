@@ -8,6 +8,13 @@
 #include <QTimer>
 #include <QThread>
 
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#include <QGuiApplication>
+#include <qpa/qplatformnativeinterface.h>
+#endif
+
+#include <X11/Xlib.h>
+
 #include <string>
 
 #include "rpcs3_version.h"
@@ -145,12 +152,28 @@ void gs_frame::show()
 	});
 }
 
-void* gs_frame::handle() const
+display_handle_t gs_frame::handle() const
 {
 #ifdef _WIN32
 	return (HWND) this->winId();
 #else
-	return (void *)this->winId();
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+	QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
+	struct wl_display *wl_dpy = static_cast<struct wl_display *>(
+		native->nativeResourceForWindow("display", NULL));
+	struct wl_surface *wl_surf = static_cast<struct wl_surface *>(
+		native->nativeResourceForWindow("surface", (QWindow *)this));
+	if (wl_dpy != nullptr && wl_surf != nullptr)
+	{
+		return std::make_pair(wl_dpy, wl_surf);
+	}
+	else
+	{
+#endif
+		return std::make_pair(XOpenDisplay(0), (unsigned long)(this->winId()));
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+	}
+#endif
 #endif
 }
 
