@@ -1146,10 +1146,10 @@ extern void ppu_initialize(const ppu_module& info)
 	jit_module& jit_mod = fxm::get_always<std::unordered_map<std::string, jit_module>>()->emplace(cache_path + info.name, jit_module{}).first->second;
 
 	// Compiler instance (deferred initialization)
-	std::unique_ptr<jit_compiler> jit;
+	std::shared_ptr<jit_compiler> jit;
 
-	// Compiler mutex
-	semaphore<> jmutex;
+	// Compiler mutex (global)
+	static semaphore<> jmutex;
 
 	// Initialize semaphore with the max number of threads
 	semaphore<INT32_MAX> jcores(std::thread::hardware_concurrency());
@@ -1175,7 +1175,10 @@ extern void ppu_initialize(const ppu_module& info)
 	while (jit_mod.vars.empty() && fpos < info.funcs.size())
 	{
 		// Initialize compiler instance
-		if (!jit) jit = std::make_unique<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu);
+		if (!jit)
+		{
+			jit = fxm::get_always<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu);
+		}
 
 		// First function in current module part
 		const auto fstart = fpos;
@@ -1301,7 +1304,7 @@ extern void ppu_initialize(const ppu_module& info)
 		}
 
 		// Create worker thread for compilation
-		jthreads.emplace_back([&jit, &jmutex, &jcores, obj_name = obj_name, part = std::move(part), &cache_path]()
+		jthreads.emplace_back([&jit, &jcores, obj_name = obj_name, part = std::move(part), &cache_path]()
 		{
 			// Set low priority
 			thread_ctrl::set_native_priority(-1);
@@ -1345,7 +1348,9 @@ extern void ppu_initialize(const ppu_module& info)
 	// Jit can be null if the loop doesn't ever enter.
 	if (jit && jit_mod.vars.empty())
 	{
+		semaphore_lock lock(jmutex);
 		jit->fin();
+
 		// Get and install function addresses
 		for (const auto& func : info.funcs)
 		{

@@ -268,8 +268,6 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 	void deregisterEHFrames(u8* addr, u64 load_addr, std::size_t size) override
 	{
-		LOG_ERROR(GENERAL, "deregisterEHFrames() called"); // Not expected
-
 		return RTDyldMemoryManager::deregisterEHFrames(addr, load_addr, size);
 	}
 };
