@@ -2,9 +2,11 @@
 #include "Emu/System.h"
 #include "TRP.h"
 #include "Crypto/sha1.h"
+#include "Utilities/StrUtil.h"
 
 TRPLoader::TRPLoader(const fs::file& f)
 	: trp_f(f)
+	, m_header{ 0 }
 {
 }
 
@@ -15,7 +17,7 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 		return false;
 	}
 
-	const std::string& local_path = vfs::get(dest);
+	const std::string& local_path = vfs::get(GetBaseTrophyPath() + dest);
 
 	if (!fs::create_dir(local_path) && fs::g_tls_error != fs::error::exist)
 	{
@@ -33,6 +35,14 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 	}
 
 	return true;
+}
+
+bool TRPLoader::IsInstalled(const std::string& dest)
+{
+	// Just check if the directory exists
+	// TODO: Ideally we'd check the files/entries too
+	const std::string& local_path = vfs::get(GetBaseTrophyPath() + dest);
+	return fs::is_dir(local_path);
 }
 
 bool TRPLoader::LoadHeader(bool show)
@@ -140,4 +150,59 @@ void TRPLoader::RenameEntry(const char *oldname, const char *newname)
 			memcpy((void*)entry.name, newname, 32);
 		}
 	}
+}
+
+bool TRPLoader::TrimEntries()
+{
+	// Rename or discard certain entries based on the files found
+	const size_t kTargetBufferLength = 31;
+	char target[kTargetBufferLength + 1];
+	target[kTargetBufferLength] = 0;
+	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", static_cast<s32>(g_cfg.sys.language)));
+
+	if (ContainsEntry(target))
+	{
+		RemoveEntry("TROPCONF.SFM");
+		RemoveEntry("TROP.SFM");
+		RenameEntry(target, "TROPCONF.SFM");
+	}
+	else if (ContainsEntry("TROP.SFM"))
+	{
+		RemoveEntry("TROPCONF.SFM");
+		RenameEntry("TROP.SFM", "TROPCONF.SFM");
+	}
+	else if (!ContainsEntry("TROPCONF.SFM"))
+		return false;
+
+	// Discard unnecessary TROP_XX.SFM files
+	for (s32 i = 0; i <= 18; i++)
+	{
+		strcpy_trunc(target, fmt::format("TROP_%02d.SFM", i));
+		if (i != g_cfg.sys.language)
+		{
+			RemoveEntry(target);
+		}
+	}
+	return true;
+}
+
+u64 TRPLoader::GetFileSize()
+{
+	if (!m_header.trp_file_size)
+	{
+		LoadHeader();
+	}
+
+	const auto file_size = m_header.trp_file_size;
+	const auto header_size = sizeof(m_header);
+	const auto file_element_size = m_header.trp_files_count * m_header.trp_element_size;
+
+	return file_size - header_size - file_element_size;
+}
+
+const std::string& TRPLoader::GetBaseTrophyPath()
+{
+	// TODO: Get the path of the current user
+	static const std::string& base_trophy_path = "/dev_hdd0/home/00000001/trophy/";
+	return base_trophy_path;
 }

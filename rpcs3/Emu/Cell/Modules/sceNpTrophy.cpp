@@ -12,8 +12,6 @@
 #include "sceNp.h"
 #include "sceNpTrophy.h"
 
-#include "Utilities/StrUtil.h"
-
 logs::channel sceNpTrophy("sceNpTrophy");
 
 TrophyNotificationBase::~TrophyNotificationBase()
@@ -262,56 +260,25 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	TRPLoader trp(ctxt->trp_stream);
-	if (!trp.LoadHeader())
+	auto trp = fxm::get_always<TRPLoader>(ctxt->trp_stream);
+	if (!trp->LoadHeader() || !trp->TrimEntries())
 	{
 		sceNpTrophy.error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE");
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
-	// Rename or discard certain entries based on the files found
-	const size_t kTargetBufferLength = 31;
-	char target[kTargetBufferLength + 1];
-	target[kTargetBufferLength] = 0;
-	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", static_cast<s32>(g_cfg.sys.language)));
-
-	if (trp.ContainsEntry(target))
+	std::string trophyCtxName = ctxt->trp_name;
+	if (!trp->IsInstalled(trophyCtxName))
 	{
-		trp.RemoveEntry("TROPCONF.SFM");
-		trp.RemoveEntry("TROP.SFM");
-		trp.RenameEntry(target, "TROPCONF.SFM");
-	}
-	else if (trp.ContainsEntry("TROP.SFM"))
-	{
-		trp.RemoveEntry("TROPCONF.SFM");
-		trp.RenameEntry("TROP.SFM", "TROPCONF.SFM");
-	}
-	else if (!trp.ContainsEntry("TROPCONF.SFM"))
-	{
-		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
-	}
-
-	// Discard unnecessary TROP_XX.SFM files
-	for (s32 i = 0; i <= 18; i++)
-	{
-		strcpy_trunc(target, fmt::format("TROP_%02d.SFM", i));
-		if (i != g_cfg.sys.language)
+		if (!trp->Install(trophyCtxName))
 		{
-			trp.RemoveEntry(target);
+			sceNpTrophy.error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE");
+			return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 		}
 	}
-
-	// TODO: Get the path of the current user
-	std::string trophyPath = "/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name;
-	if (!trp.Install(trophyPath))
-	{
-		sceNpTrophy.error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE");
-		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
-	}
-
 	TROPUSRLoader* tropusr = new TROPUSRLoader();
-	std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
-	std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
+	std::string trophyUsrPath = trp->GetBaseTrophyPath() + trophyCtxName + "/TROPUSR.DAT";
+	std::string trophyConfPath = trp->GetBaseTrophyPath() + trophyCtxName + "/TROPCONF.SFM";
 	tropusr->Load(trophyUsrPath, trophyConfPath);
 	ctxt->tropusr.reset(tropusr);
 
@@ -331,7 +298,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 
 error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspace, u64 options)
 {
-	sceNpTrophy.todo("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace=*0x%x, options=0x%llx)", context, handle, reqspace, options);
+	sceNpTrophy.warning("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace=*0x%x, options=0x%llx)", context, handle, reqspace, options);
 
 	if (!reqspace)
 	{
@@ -352,11 +319,16 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	// TODO: This is not accurate. It's just an approximation of the real value
-	//       The real value can be obtained in TRP.cpp:
-	//		 m_headers.trp_file_size - sizeof(m_headers) - (m_headers.trp_files_count * m_headers.trp_element_size);
-	// TODO: eventually this should be set to 0 when trophys are detected as already installed, setting to 0 now causes some games to not call registerContext, which leads to trophys never getting installed
-	*reqspace = ctxt->trp_stream.size();
+	std::string trophyCtxName = ctxt->trp_name;
+	u64 requiredSpace = 0;
+
+	if (!TRPLoader::IsInstalled(trophyCtxName))
+	{
+		auto trp = fxm::get_always<TRPLoader>(ctxt->trp_stream);
+		requiredSpace = trp->GetFileSize();
+	}
+
+	*reqspace = requiredSpace;
 
 	return CELL_OK;
 }
