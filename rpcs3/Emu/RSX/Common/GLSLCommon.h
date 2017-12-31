@@ -337,7 +337,7 @@ namespace glsl
 		OS << "	result.x = 1.;\n";
 		OS << "	result.w = 1.;\n";
 		OS << "	result.y = clamped_val.x;\n";
-		OS << "	result.z = clamped_val.x > 0. ? exp(clamped_val.w * log(max(clamped_val.y, 1.E-10))) : 0.;\n";
+		OS << "	result.z = clamped_val.x > 0. ? exp(clamped_val.w * log(max(clamped_val.y, 0.000001))) : 0.;\n";
 		OS << "	return result;\n";
 		OS << "}\n\n";
 

@@ -195,12 +195,12 @@ std::string FragmentProgramDecompiler::AddX2d()
 //Failure to catch causes infinite values since theres alot of rcp(0)
 std::string FragmentProgramDecompiler::NotZero(const std::string& code)
 {
-	return "(max(abs(" + code + "), 1.E-10) * sign(" + code + "))";
+	return "(max(abs(" + code + "), 0.000001) * sign(" + code + "))";
 }
 
 std::string FragmentProgramDecompiler::NotZeroPositive(const std::string& code)
 {
-	return "max(abs(" + code + "), 1.E-10)";
+	return "max(abs(" + code + "), 0.000001)";
 }
 
 std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 precision)
