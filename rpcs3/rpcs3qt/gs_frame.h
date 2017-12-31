@@ -31,6 +31,7 @@ protected:
 	virtual void paintEvent(QPaintEvent *event);
 
 	void keyPressEvent(QKeyEvent *keyEvent) override;
+	void MakeScreenshot();
 	void OnFullScreen();
 
 	void close() override;
