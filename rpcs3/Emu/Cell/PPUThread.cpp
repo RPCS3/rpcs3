@@ -165,7 +165,7 @@ extern const ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast([](auto& t
 
 extern void ppu_initialize();
 extern void ppu_initialize(const ppu_module& info);
-static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name);
+static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name, const size_t fragment_index = 0, const std::atomic<size_t>& fragment_count = { 1 });
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 
 // Get pointer to executable cache
@@ -1172,6 +1172,8 @@ extern void ppu_initialize(const ppu_module& info)
 	// Difference between function name and current location
 	const u32 reloc = info.name.empty() ? 0 : info.segs.at(0).addr;
 
+	std::atomic<size_t> fragment_count(0);
+
 	while (jit_mod.vars.empty() && fpos < info.funcs.size())
 	{
 		// Initialize compiler instance
@@ -1296,12 +1298,13 @@ extern void ppu_initialize(const ppu_module& info)
 		{
 			semaphore_lock lock(jmutex);
 			jit->add(cache_path + obj_name);
+
 			LOG_SUCCESS(PPU, "LLVM: Loaded module %s", obj_name);
 			continue;
 		}
 
 		// Create worker thread for compilation
-		jthreads.emplace_back([&jit, &jmutex, &jcores, obj_name = obj_name, part = std::move(part), &cache_path]()
+		jthreads.emplace_back([&jit, &jmutex, &jcores, obj_name = obj_name, part = std::move(part), &cache_path, &fragment_count, frag_idx = fragment_count.load()]()
 		{
 			// Set low priority
 			thread_ctrl::set_native_priority(-1);
@@ -1317,7 +1320,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 				// Use another JIT instance
 				jit_compiler jit2({}, g_cfg.core.llvm_cpu);
-				ppu_initialize2(jit2, part, cache_path, obj_name);
+				ppu_initialize2(jit2, part, cache_path, obj_name, frag_idx, fragment_count);
 			}
 
 			if (Emu.IsStopped() || !fs::is_file(cache_path + obj_name))
@@ -1329,6 +1332,8 @@ extern void ppu_initialize(const ppu_module& info)
 			semaphore_lock lock(jmutex);
 			jit->add(cache_path + obj_name);
 		});
+
+		++fragment_count;
 	}
 
 	// Join worker threads
@@ -1412,7 +1417,7 @@ extern void ppu_initialize(const ppu_module& info)
 #endif
 }
 
-static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name)
+static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name, const size_t fragment_index, const std::atomic<size_t>& fragment_count)
 {
 #ifdef LLVM_AVAILABLE
 	using namespace llvm;
@@ -1439,6 +1444,8 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 			f->addAttribute(1, Attribute::NoAlias);
 		}
 	}
+
+	static constexpr auto compiling_module_msg = "Compiling PPU module (%u of %u):\n%s\nPlease wait...";
 
 	std::shared_ptr<MsgDialogBase> dlg;
 
@@ -1479,9 +1486,9 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 			});
 		};
 
-		Emu.CallAfter([=]()
+		Emu.CallAfter([=, &fragment_count]()
 		{
-			dlg->Create("Compiling PPU module:\n" + obj_name + "\nPlease wait...");
+			dlg->Create(fmt::format(compiling_module_msg, fragment_index + 1, fragment_count.load(), obj_name));
 		});
 
 		// Translate functions
@@ -1527,10 +1534,13 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		//mpm.run(*module);
 
 		// Update dialog
-		Emu.CallAfter([=]()
+		Emu.CallAfter([=, &fragment_count]()
 		{
 			dlg->ProgressBarSetMsg(0, "Generating code, this may take a long time...");
 			dlg->ProgressBarInc(0, 100);
+
+			// HACKY: fragment_count wil hold the correct total amount by now, as all the threads will have probably finished spawing
+			dlg->SetMsg(fmt::format(compiling_module_msg, fragment_index + 1, fragment_count.load(), obj_name));
 		});
 
 		std::string result;
