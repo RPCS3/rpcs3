@@ -7,6 +7,8 @@
 #include <QKeyEvent>
 #include <QTimer>
 #include <QThread>
+#include <QDir>
+#include <QDateTime>
 
 #include <string>
 
@@ -82,6 +84,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			break;
 		case Qt::Key_P:
 			if (keyEvent->modifiers() == Qt::ControlModifier && Emu.IsRunning()) { Emu.Pause(); return; }
+			else if (keyEvent->modifiers() == Qt::ShiftModifier) { MakeScreenshot(); return; }
 			break;
 		case Qt::Key_S:
 			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.IsStopped())) { Emu.Stop(); return; }
@@ -99,6 +102,33 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		}
 	};
 	Emu.CallAfter(l_handleKeyEvent);
+}
+
+void gs_frame::MakeScreenshot()
+{
+	QPixmap screenshot = QPixmap::grabWindow(winId());
+	const std::string s_screenshot_dir = fs::get_config_dir() + "screenshots/";
+	const std::string time = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmssz").toStdString();
+	const std::string filename = Emu.GetTitleID() + "_" + time + ".png";
+	const std::string filepath = s_screenshot_dir + filename;
+	const QString screenshot_dir = qstr(s_screenshot_dir);
+
+	if (screenshot.isNull())
+	{
+		LOG_ERROR(GENERAL, "gs_frame::MakeScreenshot(): QPixmap::grabWindow(%d) failed", winId());
+		return;
+	}
+
+	if (!QDir().mkdir(screenshot_dir) && !QDir().exists(screenshot_dir))
+	{
+		LOG_ERROR(GENERAL, "gs_frame::MakeScreenshot(): Failed to create dir %s", s_screenshot_dir);
+		return;
+	}
+
+	if (!screenshot.save(qstr(filepath)))
+		LOG_ERROR(GENERAL, "gs_frame::MakeScreenshot(): Failed to save %s", filepath);
+	else
+		LOG_SUCCESS(GENERAL, "gs_frame::MakeScreenshot(): Saved %s", filepath);
 }
 
 void gs_frame::OnFullScreen()
