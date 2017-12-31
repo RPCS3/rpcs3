@@ -661,6 +661,9 @@
     <ClInclude Include="evdev_joystick_handler.h">
       <Filter>Io\evdev</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\custom_table_widget_item.h">
+      <Filter>Gui\game list</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="debug\moc_predefs.h.cbt">

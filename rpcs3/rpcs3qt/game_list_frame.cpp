@@ -2,6 +2,7 @@
 
 #include "settings_dialog.h"
 #include "table_item_delegate.h"
+#include "custom_table_widget_item.h"
 
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -1093,9 +1094,10 @@ int game_list_frame::PopulateGameList()
 		}
 
 		// Compatibility
-		QTableWidgetItem* compat_item = new QTableWidgetItem;
+		custom_table_widget_item* compat_item = new custom_table_widget_item;
 		compat_item->setFlags(compat_item->flags() & ~Qt::ItemIsEditable);
 		compat_item->setText(game.compat.text + (game.compat.date.isEmpty() ? "" : " (" + game.compat.date + ")"));
+		compat_item->setData(Qt::UserRole, game.compat.index);
 		compat_item->setToolTip(game.compat.tooltip);
 		if (!game.compat.color.isEmpty())
 		{

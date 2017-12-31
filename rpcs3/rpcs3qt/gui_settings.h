@@ -12,6 +12,7 @@
 
 struct Compat_Status
 {
+	int index;
 	QString date;
 	QString color;
 	QString text;
