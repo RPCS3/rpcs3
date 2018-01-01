@@ -1181,7 +1181,7 @@ extern void ppu_initialize(const ppu_module& info)
 		// Initialize compiler instance
 		if (!jit)
 		{
-			jit = fxm::get_always<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu);
+			jit = std::make_shared<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu);
 		}
 
 		// First function in current module part
