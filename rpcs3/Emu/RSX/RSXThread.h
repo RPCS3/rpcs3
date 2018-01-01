@@ -233,6 +233,7 @@ namespace rsx
 	public:
 		RsxDmaControl* ctrl = nullptr;
 		atomic_t<u32> internal_get{ 0 };
+		atomic_t<u32> restore_point{ 0 };
 		atomic_t<bool> external_interrupt_lock{ false };
 		atomic_t<bool> external_interrupt_ack{ false };
 
@@ -309,6 +310,7 @@ namespace rsx
 	public:
 		std::set<u32> m_used_gcm_commands;
 		bool invalid_command_interrupt_raised = false;
+		bool sync_point_request = false;
 		bool in_begin_end = false;
 
 		bool conditional_render_test_failed = false;

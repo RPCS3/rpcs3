@@ -62,6 +62,7 @@ namespace rsx
 
 		void semaphore_acquire(thread* rsx, u32 _reg, u32 arg)
 		{
+			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 			if (vm::ps3::read32(addr) == arg) return;
 
@@ -109,6 +110,7 @@ namespace rsx
 
 		void semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
+			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 
 			if (addr >> 28 == 0x4)
