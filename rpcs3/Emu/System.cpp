@@ -920,7 +920,7 @@ void Emulator::Resume()
 	GetCallbacks().on_resume();
 }
 
-void Emulator::Stop()
+void Emulator::Stop(bool restart)
 {
 	if (m_state.exchange(system_state::stopped) == system_state::stopped)
 	{
@@ -928,7 +928,7 @@ void Emulator::Stop()
 		return;
 	}
 
-	const bool do_exit = !m_force_boot && g_cfg.misc.autoexit;
+	const bool do_exit = !restart && !m_force_boot && g_cfg.misc.autoexit;
 
 	LOG_NOTICE(GENERAL, "Stopping emulator...");
 
@@ -992,6 +992,12 @@ void Emulator::Stop()
 	jit_finalize();
 #endif
 
+	if (restart)
+	{
+		return Load();
+	}
+
+	// Boot arg cleanup (preserved in the case restarting)
 	argv.clear();
 	envp.clear();
 	data.clear();

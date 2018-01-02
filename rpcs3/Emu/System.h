@@ -262,7 +262,8 @@ public:
 	void Run();
 	bool Pause();
 	void Resume();
-	void Stop();
+	void Stop(bool restart = false);
+	void Restart() { Stop(true); }
 
 	bool IsRunning() const { return m_state == system_state::running; }
 	bool IsPaused()  const { return m_state == system_state::paused; }
