@@ -762,23 +762,18 @@ void spu_recompiler::ROTH(spu_opcode_t op) //nf
 {
 	if (utils::has_512())
 	{
-		// Trying to implement 16-bit rotates using 32-bit rotates and only XMM registers.
-		// 1) Cannot use YMM/ZMM: transition penalty in mixed code, CPU frequency penalty.
-		// 2) Cross-lane instructions like VPMOVZX are expensive.
 		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
-		const XmmLink& v1 = XmmAlloc();
-		const XmmLink& v2 = XmmAlloc();
-		c->vpunpckhwd(v1, va, va);
-		c->vpunpcklwd(v2, va, va);
-		c->vpunpckhwd(va, vb, vb);
-		c->vpunpcklwd(vb, vb, vb);
-		c->vprolvd(va, v1, va);
-		c->vprolvd(vb, v2, vb);
-		c->psrad(va, 16);
-		c->psrad(vb, 16);
-		c->packssdw(vb, va);
-		c->movdqa(SPU_OFF_128(gpr, op.rt), vb);
+		const XmmLink& vt = XmmAlloc();
+		const XmmLink& v4 = XmmAlloc();
+		c->movdqa(v4, XmmConst(_mm_set1_epi16(0xf)));
+		c->pand(vb, v4);
+		c->vpsllvw(vt, va, vb);
+		c->psubw(vb, XmmConst(_mm_set1_epi16(1)));
+		c->pandn(vb, v4);
+		c->vpsrlvw(va, va, vb);
+		c->por(vt, va);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
 		return;
 	}
 
