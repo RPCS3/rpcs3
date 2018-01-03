@@ -356,7 +356,8 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 			while (!idm::select<lv2_obj, lv2_event_queue>([](u32, lv2_event_queue& eq)
 			{
-				return eq.name == "_mxr000\0"_u64;
+				//some games do not set event queue name, though key seems constant for them
+				return (eq.name == "_mxr000\0"_u64) || (eq.key == 0x8000cafe02460300);
 			}))
 			{
 				thread_ctrl::wait_for(50000);
