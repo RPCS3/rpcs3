@@ -175,9 +175,10 @@ namespace gui
 	const gui_save fs_dev_flash_list    = gui_save(fs, "dev_flash_list",    QStringList());
 	const gui_save fs_dev_usb000_list   = gui_save(fs, "dev_usb000_list",   QStringList());
 
-	const gui_save l_tty   = gui_save(logger, "TTY",   true );
-	const gui_save l_level = gui_save(logger, "level", (uint)(logs::level::success) );
-	const gui_save l_stack = gui_save(logger, "stack", false );
+	const gui_save l_tty     = gui_save(logger, "TTY",             true );
+	const gui_save l_tty_log = gui_save(logger, "Show TTY in Log", true );
+	const gui_save l_level   = gui_save(logger, "level",           (uint)(logs::level::success) );
+	const gui_save l_stack   = gui_save(logger, "stack",           false );
 
 	const gui_save d_splitterState = gui_save(debugger, "splitterState", QByteArray());
 

@@ -3,12 +3,15 @@
 #include "stdafx.h"
 #include "rpcs3_version.h"
 #include "Utilities/sysinfo.h"
+#include "Emu/System.h"
 
 #include <QMenu>
 #include <QActionGroup>
 #include <QScrollBar>
+#include <QVBoxLayout>
 
 constexpr auto qstr = QString::fromStdString;
+inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 
 struct gui_listener : logs::listener
 {
@@ -114,8 +117,19 @@ log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
 	m_tty->setReadOnly(true);
 	m_tty->setContextMenuPolicy(Qt::CustomContextMenu);
 
+	m_tty_input = new QLineEdit(tabWidget);
+	m_tty_input->setObjectName("tty_input");
+
+	QVBoxLayout* tty_layout = new QVBoxLayout;
+	tty_layout->setContentsMargins(0,0,0,0);
+	tty_layout->addWidget(m_tty);
+	tty_layout->addWidget(m_tty_input);
+
+	QWidget* tty = new QWidget(tabWidget);
+	tty->setLayout(tty_layout);
+
 	tabWidget->addTab(m_log, tr("Log"));
-	tabWidget->addTab(m_tty, tr("TTY"));
+	tabWidget->addTab(tty, tr("TTY"));
 
 	setWidget(tabWidget);
 
@@ -175,11 +189,6 @@ void log_frame::SetLogLevel(logs::level lev)
 	}
 }
 
-void log_frame::SetTTYLogging(bool val)
-{
-	m_TTYAct->setChecked(val);
-}
-
 void log_frame::CreateAndConnectActions()
 {
 	// I, for one, welcome our lambda overlord
@@ -228,6 +237,15 @@ void log_frame::CreateAndConnectActions()
 	connect(m_TTYAct, &QAction::triggered, xgui_settings.get(), [=](bool checked)
 	{
 		xgui_settings->SetValue(gui::l_tty, checked);
+		m_log_tty = checked;
+	});
+
+	m_TTYLogAct = new QAction(tr("Show TTY in Log"), this);
+	m_TTYLogAct->setCheckable(true);
+	connect(m_TTYLogAct, &QAction::triggered, xgui_settings.get(), [=](bool checked)
+	{
+		xgui_settings->SetValue(gui::l_tty_log, checked);
+		m_show_tty_in_log = checked;
 	});
 
 	l_initAct(m_nothingAct, logs::level::fatal);
@@ -249,6 +267,7 @@ void log_frame::CreateAndConnectActions()
 		menu->addAction(m_stackAct);
 		menu->addSeparator();
 		menu->addAction(m_TTYAct);
+		menu->addAction(m_TTYLogAct);
 		menu->exec(mapToGlobal(pos));
 	});
 
@@ -259,13 +278,28 @@ void log_frame::CreateAndConnectActions()
 		menu->exec(mapToGlobal(pos));
 	});
 
+	connect(m_tty_input, &QLineEdit::editingFinished, [&]()
+	{
+		if (m_tty_input->text().isEmpty()) return;
+		std::string text = sstr(m_tty_input->text());
+		m_tty_input->clear();
+		Emu.SetTTYInput(text);
+		LOG_NOTICE(GENERAL, "TTY Input entered: %s", text);
+	});
+
 	LoadSettings();
 }
 
 void log_frame::LoadSettings()
 {
 	SetLogLevel(xgui_settings->GetLogLevel());
-	SetTTYLogging(xgui_settings->GetValue(gui::l_tty).toBool());
+
+	m_log_tty = xgui_settings->GetValue(gui::l_tty).toBool();
+	m_TTYAct->setChecked(m_log_tty);
+
+	m_show_tty_in_log = xgui_settings->GetValue(gui::l_tty_log).toBool();
+	m_TTYLogAct->setChecked(m_show_tty_in_log);
+
 	m_stack_log = xgui_settings->GetValue(gui::l_stack).toBool();
 	m_stackAct->setChecked(m_stack_log);
 }
@@ -316,22 +350,106 @@ void log_frame::UpdateUI()
 		return QString(buf.data());
 	};
 
+	auto write_to_log = [&](const QString& text, const QColor& color)
+	{
+		// save old log state
+		QScrollBar *sb = m_log->verticalScrollBar();
+		bool isMax = sb->value() == sb->maximum();
+		int sb_pos = sb->value();
+		int sel_pos = m_log->textCursor().position();
+		int sel_start = m_log->textCursor().selectionStart();
+		int sel_end = m_log->textCursor().selectionEnd();
+
+		// clear selection or else it will get colorized as well
+		QTextCursor c = m_log->textCursor();
+		c.clearSelection();
+		m_log->setTextCursor(c);
+
+		QString suffix;
+		bool isSame = text == m_old_text;
+
+		// create counter suffix and remove recurring line if needed
+		if (m_stack_log)
+		{
+			if (isSame)
+			{
+				m_log_counter++;
+				suffix = QString(" x%1").arg(m_log_counter);
+				m_log->moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+				m_log->moveCursor(QTextCursor::StartOfBlock, QTextCursor::MoveAnchor);
+				m_log->moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
+				m_log->textCursor().removeSelectedText();
+				m_log->textCursor().deletePreviousChar();
+			}
+			else
+			{
+				m_log_counter = 1;
+				m_old_text = text;
+			}
+		}
+
+		// add actual log message
+		m_log->setTextColor(color);
+		m_log->append(text);
+
+		// add counter suffix if needed
+		if (m_stack_log && isSame)
+		{
+			m_log->setTextColor(m_color_stack);
+			m_log->insertPlainText(suffix);
+		}
+
+		// if we mark text from right to left we need to swap sides (start is always smaller than end)
+		if (sel_pos < sel_end)
+		{
+			std::swap(sel_start, sel_end);
+		}
+
+		// reset old text cursor and selection
+		c.setPosition(sel_start);
+		c.setPosition(sel_end, QTextCursor::KeepAnchor);
+		m_log->setTextCursor(c);
+
+		// set scrollbar to max means auto-scroll
+		sb->setValue(isMax ? sb->maximum() : sb_pos);
+	};
+
 	const auto start = steady_clock::now();
 
 	// Check TTY logs
+
+	int tty_count = -1;
+	static QColor tty_col = m_color[static_cast<int>(logs::level::notice)];
 
 	while (const u64 size = std::min<u64>(buf.size(), m_tty_file.size() - m_tty_file.pos()))
 	{
 		QString text = get_utf8(m_tty_file, size);
 
-		// Hackily used the state of the check..  be better if I actually stored this value.
-		if (m_TTYAct->isChecked())
+		if (m_log_tty)
 		{
-			text.chop(1); // remove newline since Qt automatically adds a newline.
+			if (m_show_tty_in_log && ++tty_count == 0)
+			{
+				m_log->setTextColor(tty_col);
+				m_log->append("--- TTY begin ---");
+			}
+
+			// remove the new line because Qt's append adds a new line already.
+			text.chop(1);
 			m_tty->append(text);
+
+			if (m_show_tty_in_log && logs::level::notice <= s_gui_listener.enabled)
+			{
+				write_to_log(text, tty_col);
+			}
 		}
 		// Limit processing time
 		if (steady_clock::now() >= start + 4ms || text.isEmpty()) break;
+	}
+
+	if (m_show_tty_in_log && tty_count >= 0)
+	{
+		m_log->setTextColor(tty_col);
+		m_log->append("--- TTY end ---");
 	}
 
 	// Check main logs
@@ -357,69 +475,10 @@ void log_frame::UpdateUI()
 			// Print UTF-8 text.
 			text += qstr(packet->msg);
 
-			// save old log state
-			QScrollBar *sb = m_log->verticalScrollBar();
-			bool isMax = sb->value() == sb->maximum();
-			int sb_pos = sb->value();
-			int sel_pos = m_log->textCursor().position();
-			int sel_start = m_log->textCursor().selectionStart();
-			int sel_end = m_log->textCursor().selectionEnd();
-
-			// clear selection or else it will get colorized as well
-			QTextCursor c = m_log->textCursor();
-			c.clearSelection();
-			m_log->setTextCursor(c);
-
 			// remove the new line because Qt's append adds a new line already.
 			text.chop(1);
 
-			QString suffix;
-			bool isSame = text == m_old_text;
-
-			// create counter suffix and remove recurring line if needed
-			if (m_stack_log)
-			{
-				if (isSame)
-				{
-					m_log_counter++;
-					suffix = QString(" x%1").arg(m_log_counter);
-					m_log->moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
-					m_log->moveCursor(QTextCursor::StartOfBlock, QTextCursor::MoveAnchor);
-					m_log->moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
-					m_log->textCursor().removeSelectedText();
-					m_log->textCursor().deletePreviousChar();
-				}
-				else
-				{
-					m_log_counter = 1;
-					m_old_text = text;
-				}
-			}
-
-			// add actual log message
-			m_log->setTextColor(m_color[static_cast<int>(packet->sev)]);
-			m_log->append(text);
-
-			// add counter suffix if needed
-			if (m_stack_log && isSame)
-			{
-				m_log->setTextColor(m_color_stack);
-				m_log->insertPlainText(suffix);
-			}
-
-			// if we mark text from right to left we need to swap sides (start is always smaller than end)
-			if (sel_pos < sel_end)
-			{
-				std::swap(sel_start, sel_end);
-			}
-
-			// reset old text cursor and selection
-			c.setPosition(sel_start);
-			c.setPosition(sel_end, QTextCursor::KeepAnchor);
-			m_log->setTextCursor(c);
-
-			// set scrollbar to max means auto-scroll
-			sb->setValue(isMax ? sb->maximum() : sb_pos);
+			write_to_log(text, m_color[static_cast<int>(packet->sev)]);
 		}
 
 		// Drop packet
