@@ -702,6 +702,32 @@ struct registers_decoder<NV4097_SET_DEPTH_MASK>
 };
 
 template<>
+struct registers_decoder<NV4097_SET_ZMIN_MAX_CONTROL>
+{
+	struct decoded_type
+	{
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<4, 4> depth_clamp_enabled;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		bool depth_clamp_enabled() const
+		{
+			return bool(m_data.depth_clamp_enabled);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Depth: clamp " + print_boolean(decoded_values.depth_clamp_enabled());
+	}
+};
+
+template<>
 struct registers_decoder<NV4097_SET_ALPHA_TEST_ENABLE>
 {
 	struct decoded_type

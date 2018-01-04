@@ -8,7 +8,7 @@
 #include <functional>
 
 // Error codes
-enum 
+enum
 {
 	SYS_NET_ENOENT          = 2,
 	SYS_NET_EINTR           = 4,
@@ -172,7 +172,7 @@ using sys_net_socklen_t    = u32;
 struct sys_net_fd_set
 {
 	be_t<u32> fds_bits[32];
-	
+
 	u32 bit(s32 s)
 	{
 		return (fds_bits[(s >> 5) & 31] >> (s & 31)) & 1u;
@@ -307,9 +307,9 @@ struct lv2_socket final
 	using socket_type = int;
 #endif
 
-	static const u32 id_base = 0x40000000;
+	static const u32 id_base = 24;
 	static const u32 id_step = 1;
-	static const u32 id_count = 1024;
+	static const u32 id_count = 1000;
 
 	// Poll events
 	enum class poll

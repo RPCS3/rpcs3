@@ -84,6 +84,7 @@ public:
 	virtual ~MsgDialogBase();
 	virtual void Create(const std::string& msg) = 0;
 	virtual void CreateOsk(const std::string& msg, char16_t* osk_text, u32 charlimit) = 0;
+	virtual void SetMsg(const std::string& msg) = 0;
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) = 0;
 	virtual void ProgressBarReset(u32 progressBarIndex) = 0;
 	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) = 0;

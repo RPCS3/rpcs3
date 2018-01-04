@@ -1345,7 +1345,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			}
 		}
 	}
-	
+
 	if (!load_libs.empty())
 	{
 		const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
@@ -1424,6 +1424,18 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		std::memcpy(vm::base(arg_addr), arg.data(), arg_size);
 
 		*args++ = arg_addr;
+	}
+
+	// Fix primary stack size
+	switch (primary_stacksize)
+	{
+	case 0x10: primary_stacksize = 32 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_32K
+	case 0x20: primary_stacksize = 64 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_64K
+	case 0x30: primary_stacksize = 96 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_96K
+	case 0x40: primary_stacksize = 128 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_128K
+	case 0x50: primary_stacksize = 256 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_256K
+	case 0x60: primary_stacksize = 512 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_512K
+	case 0x70: primary_stacksize = 1024 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_1M
 	}
 
 	// Initialize main thread

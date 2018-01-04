@@ -88,7 +88,7 @@ static s32 get_last_error(bool is_blocking, int native_error = 0)
 
 static void network_clear_queue(ppu_thread& ppu)
 {
-	idm::select<lv2_socket>([&](u32 id, lv2_socket& sock)
+	idm::select<lv2_socket>([&](u32, lv2_socket& sock)
 	{
 		semaphore_lock lock(sock.mutex);
 
@@ -356,7 +356,7 @@ s32 sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, 
 
 	result = idm::import_existing<lv2_socket>(newsock);
 
-	if (result == -1)
+	if (result == id_manager::id_traits<lv2_socket>::invalid)
 	{
 		return -SYS_NET_EMFILE;
 	}
@@ -1386,7 +1386,7 @@ s32 sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protocol)
 
 	const s32 s = idm::import_existing<lv2_socket>(std::make_shared<lv2_socket>(native_socket));
 
-	if (s == -1)
+	if (s == id_manager::id_traits<lv2_socket>::invalid)
 	{
 		return -SYS_NET_EMFILE;
 	}
@@ -1624,7 +1624,7 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 				continue;
 			}
 
-			if (auto sock = idm::check_unlocked<lv2_socket>(i))
+			if (auto sock = idm::check_unlocked<lv2_socket>((lv2_socket::id_base & -1024) + i))
 			{
 #ifdef _WIN32
 				bool sig = false;
@@ -1700,7 +1700,7 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 				continue;
 			}
 
-			if (auto sock = idm::check_unlocked<lv2_socket>(i))
+			if (auto sock = idm::check_unlocked<lv2_socket>((lv2_socket::id_base & -1024) + i))
 			{
 				semaphore_lock lock(sock->mutex);
 

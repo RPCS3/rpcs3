@@ -21,14 +21,14 @@ class game_compatibility : public QObject
 
 	const std::map<QString, Compat_Status> Status_Data =
 	{
-		{ "Playable", { "", "#2ecc71", QObject::tr("Playable"),         QObject::tr("Games that can be properly played from start to finish") } },
-		{ "Ingame",   { "", "#f1c40f", QObject::tr("Ingame"),           QObject::tr("Games that go somewhere but not far enough to be considered playable") } },
-		{ "Intro",    { "", "#f39c12", QObject::tr("Intro"),            QObject::tr("Games that only display some screens") } },
-		{ "Loadable", { "", "#e74c3c", QObject::tr("Loadable"),         QObject::tr("Games that display a black screen with an active framerate") } },
-		{ "Nothing",  { "", "#2c3e50", QObject::tr("Nothing"),          QObject::tr("Games that show nothing") } },
-		{ "NoResult", { "", "",        QObject::tr("No results found"), QObject::tr("There is no entry for this game or application in the compatibility database yet.") } },
-		{ "NoData",   { "", "",        QObject::tr("Database missing"), QObject::tr("Right click here and download the current database.\nMake sure you are connected to the internet.") } },
-		{ "Download", { "", "",        QObject::tr("Retrieving..."),    QObject::tr("Downloading the compatibility database. Please wait...") } }
+		{ "Playable", { 0, "", "#2ecc71", QObject::tr("Playable"),         QObject::tr("Games that can be properly played from start to finish") } },
+		{ "Ingame",   { 1, "", "#f1c40f", QObject::tr("Ingame"),           QObject::tr("Games that either can't be finished, have serious glitches or have insufficient performance") } },
+		{ "Intro",    { 2, "", "#f39c12", QObject::tr("Intro"),            QObject::tr("Games that display image but don't make it past the menus") } },
+		{ "Loadable", { 3, "", "#e74c3c", QObject::tr("Loadable"),         QObject::tr("Games that display a black screen with a framerate on the window's title") } },
+		{ "Nothing",  { 4, "", "#2c3e50", QObject::tr("Nothing"),          QObject::tr("Games that don't initialize properly, not loading at all and/or crashing the emulator") } },
+		{ "NoResult", { 5, "", "",        QObject::tr("No results found"), QObject::tr("There is no entry for this game or application in the compatibility database yet.") } },
+		{ "NoData",   { 6, "", "",        QObject::tr("Database missing"), QObject::tr("Right click here and download the current database.\nMake sure you are connected to the internet.") } },
+		{ "Download", { 7, "", "",        QObject::tr("Retrieving..."),    QObject::tr("Downloading the compatibility database. Please wait...") } }
 	};
 	int m_timer_count = 0;
 	QString m_filepath;
