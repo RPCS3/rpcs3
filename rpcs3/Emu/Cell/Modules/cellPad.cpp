@@ -524,11 +524,12 @@ s32 cellPadSetPortSetting(u32 port_no, u32 port_setting)
 
 	if (port_no >= rinfo.max_connect)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
-	if (port_no >= rinfo.now_connect)
-		return CELL_PAD_ERROR_NO_DEVICE;
 
 	auto& pads = handler->GetPads();
 	pads[port_no]->m_port_setting = port_setting;
+
+	if (port_no >= rinfo.now_connect)
+		return CELL_PAD_ERROR_NO_DEVICE;
 
 	return CELL_OK;
 }

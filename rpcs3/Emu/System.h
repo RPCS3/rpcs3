@@ -181,6 +181,7 @@ class Emulator final
 	std::string m_cache_path;
 	std::string m_title_id;
 	std::string m_title;
+	std::string m_cat;
 
 	bool m_force_boot = false;
 
@@ -234,6 +235,11 @@ public:
 		return m_title;
 	}
 
+	const std::string& GetCat() const
+	{
+		return m_cat;
+	}
+
 	const std::string& GetCachePath() const
 	{
 		return m_cache_path;
@@ -256,7 +262,8 @@ public:
 	void Run();
 	bool Pause();
 	void Resume();
-	void Stop();
+	void Stop(bool restart = false);
+	void Restart() { Stop(true); }
 
 	bool IsRunning() const { return m_state == system_state::running; }
 	bool IsPaused()  const { return m_state == system_state::paused; }
@@ -341,7 +348,8 @@ struct cfg_root : cfg::node
 		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames To Skip", 1};
 		cfg::_int<50, 800> resolution_scale_percent{this, "Resolution Scale", 100};
 		cfg::_int<0, 16> anisotropic_level_override{this, "Anisotropic Filter Override", 0};
-		cfg::_int<1, 1024> min_scalable_dimension{this, "Minimum Scalable Dimension", 128};
+		cfg::_int<1, 1024> min_scalable_dimension{this, "Minimum Scalable Dimension", 16};
+		cfg::_int<0, 30000000> driver_recovery_timeout{this, "Driver Recovery Timeout", 1000000};
 
 		struct node_d3d12 : cfg::node
 		{
@@ -371,6 +379,7 @@ struct cfg_root : cfg::node
 		cfg::_bool convert_to_u16{this, "Convert to 16 bit"};
 		cfg::_bool downmix_to_2ch{this, "Downmix to Stereo", true};
 		cfg::_int<2, 128> frames{this, "Buffer Count", 32};
+		cfg::_int<1, 128> startt{this, "Start Threshold", 1};
 
 	} audio{this};
 

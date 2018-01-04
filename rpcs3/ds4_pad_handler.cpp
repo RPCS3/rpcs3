@@ -147,7 +147,7 @@ ds4_pad_handler::ds4_pad_handler() : is_init(false)
 	m_thumb_threshold = thumb_max / 2;
 }
 
-void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist)
+void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist, std::vector<std::string> buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
@@ -670,8 +670,8 @@ int ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
 		// alternating blink states with values 0-255: only setting both to zero disables blinking
 		// 255 is roughly 2 seconds, so setting both values to 255 results in a 4 second interval
 		// using something like (0,10) will heavily blink, while using (0, 255) will be slow. you catch the drift
-		outputBuf[9] = device->led_delay_on;
-		outputBuf[10] = device->led_delay_off;
+		outputBuf[11] = device->led_delay_on;
+		outputBuf[12] = device->led_delay_off;
 
 		const u8 btHdr = 0xA2;
 		const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
@@ -702,7 +702,8 @@ int ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
 
 bool ds4_pad_handler::Init()
 {
-	if (is_init) return true;
+	if (is_init)
+		return true;
 
 	const int res = hid_init();
 	if (res != 0)
@@ -715,13 +716,14 @@ bool ds4_pad_handler::Init()
 		hid_device_info* head = devInfo;
 		while (devInfo)
 		{
-			if (controllers.size() >= MAX_GAMEPADS)	break;
+			if (controllers.size() >= MAX_GAMEPADS)
+				break;
 
 			hid_device* dev = hid_open_path(devInfo->path);
 			if (dev)
 				CheckAddDevice(dev, devInfo);
 			else
-				LOG_ERROR(HLE, "[DS4] hid_open_path failed! Reason: %S", hid_error(dev));
+				LOG_ERROR(HLE, "[DS4] hid_open_path failed! Reason: %s", hid_error(dev));
 			devInfo = devInfo->next;
 		}
 		hid_free_enumeration(head);
@@ -733,7 +735,8 @@ bool ds4_pad_handler::Init()
 		LOG_SUCCESS(HLE, "[DS4] Controllers found: %d", controllers.size());
 
 	m_pad_config.load();
-	if (!m_pad_config.exist()) m_pad_config.save();
+	if (!m_pad_config.exist())
+		m_pad_config.save();
 
 	is_init = true;
 	return true;
@@ -743,7 +746,8 @@ std::vector<std::string> ds4_pad_handler::ListDevices()
 {
 	std::vector<std::string> ds4_pads_list;
 
-	if (!Init()) return ds4_pads_list;
+	if (!Init())
+		return ds4_pads_list;
 
 	for (auto& pad : controllers)
 	{
@@ -809,10 +813,10 @@ bool ds4_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::strin
 
 void ds4_pad_handler::ThreadProc()
 {
-	for (auto &bind : bindings)
+	for (int i = 0; i < static_cast<int>(bindings.size()); i++)
 	{
-		std::shared_ptr<DS4Device> device = bind.first;
-		auto thepad = bind.second;
+		std::shared_ptr<DS4Device> device = bindings[i].first;
+		auto thepad = bindings[i].second;
 
 		if (device->hidDevice == nullptr)
 		{
@@ -820,6 +824,12 @@ void ds4_pad_handler::ThreadProc()
 			hid_device* dev = hid_open_path(device->path.c_str());
 			if (dev)
 			{
+				if (last_connection_status[i] == false)
+				{
+					LOG_SUCCESS(HLE, "DS4 device %d reconnected", i);
+					last_connection_status[i] = true;
+					connected++;
+				}
 				hid_set_nonblocking(dev, 1);
 				device->hidDevice = dev;
 				thepad->m_port_status = CELL_PAD_STATUS_CONNECTED|CELL_PAD_STATUS_ASSIGN_CHANGES;
@@ -829,9 +839,21 @@ void ds4_pad_handler::ThreadProc()
 			else
 			{
 				// nope, not there
+				if (last_connection_status[i] == true)
+				{
+					LOG_ERROR(HLE, "DS4 device %d disconnected", i);
+					last_connection_status[i] = false;
+					connected--;
+				}
 				thepad->m_port_status = CELL_PAD_STATUS_DISCONNECTED|CELL_PAD_STATUS_ASSIGN_CHANGES;
 				continue;
 			}
+		}
+		else if (last_connection_status[i] == false)
+		{
+			LOG_NOTICE(HLE, "DS4 device %d connected", i);
+			last_connection_status[i] = true;
+			connected++;
 		}
 
 		DS4DataStatus status = GetRawData(device);

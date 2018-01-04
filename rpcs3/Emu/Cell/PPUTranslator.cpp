@@ -122,7 +122,7 @@ Type* PPUTranslator::GetContextType()
 Function* PPUTranslator::Translate(const ppu_function& info)
 {
 	m_function = m_module->getFunction(info.name);
-	
+
 	std::fill(std::begin(m_globals), std::end(m_globals), nullptr);
 	std::fill(std::begin(m_locals), std::end(m_locals), nullptr);
 
@@ -207,7 +207,7 @@ Value* PPUTranslator::GetAddr(u64 _add)
 		// Load segment address from global variable, compute actual instruction address
 		return m_ir->CreateAdd(m_ir->getInt64(m_addr + _add), m_ir->CreateLoad(m_segs[m_reloc - m_info.segs.data()]));
 	}
-	
+
 	return m_ir->getInt64(m_addr + _add);
 }
 
@@ -342,7 +342,7 @@ Value* PPUTranslator::Solid(Value* value)
 	const u32 size = value->getType()->getPrimitiveSizeInBits();
 
 	/* Workarounds (casting bool vectors directly may produce invalid code) */
-	
+
 	if (value->getType() == GetType<bool[4]>())
 	{
 		return m_ir->CreateBitCast(SExt(value, GetType<u32[4]>()), m_ir->getIntNTy(128));
@@ -1759,7 +1759,7 @@ void PPUTranslator::B(ppu_opcode_t op)
 	{
 		RegStore(GetAddr(+4), m_lr);
 	}
-	
+
 	FlushRegisters();
 	CallFunction(target);
 }
@@ -1972,7 +1972,7 @@ void PPUTranslator::RLWNM(ppu_opcode_t op)
 			// Generic op
 			result = m_ir->CreateAnd(RotateLeft(GetGpr(op.rs, 32), GetGpr(op.rb, 32)), mask);
 		}
-		
+
 		// Extend 32-bit op result
 		result = ZExt(result);
 	}
@@ -2064,7 +2064,7 @@ void PPUTranslator::RLDICL(ppu_opcode_t op)
 		// Generic op, including CLRLDI mnemonic
 		result = m_ir->CreateAnd(RotateLeft(GetGpr(op.rs), sh), mask);
 	}
-	
+
 	SetGpr(op.ra, result);
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
@@ -2196,6 +2196,9 @@ void PPUTranslator::TW(ppu_opcode_t op)
 void PPUTranslator::LVSL(ppu_opcode_t op)
 {
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
+	//const auto _add = m_ir->CreateInsertElement(ConstantVector::getSplat(16, m_ir->getInt8(0)), Trunc(m_ir->CreateAnd(addr, 0xf), GetType<u8>()), m_ir->getInt32(0));
+	//const auto base = ConstantDataVector::get(m_context, std::vector<u8>{15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
+	//SetVr(op.vd, m_ir->CreateAdd(base, Shuffle(_add, nullptr, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})));
 	SetVr(op.vd, Call(GetType<u8[16]>(), m_pure_attr, "__lvsl", addr));
 }
 
@@ -2351,6 +2354,9 @@ void PPUTranslator::CMPL(ppu_opcode_t op)
 void PPUTranslator::LVSR(ppu_opcode_t op)
 {
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
+	//const auto _add = m_ir->CreateInsertElement(ConstantVector::getSplat(16, m_ir->getInt8(0)), Trunc(m_ir->CreateAnd(addr, 0xf), GetType<u8>()), m_ir->getInt32(0));
+	//const auto base = ConstantDataVector::get(m_context, std::vector<u8>{31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16});
+	//SetVr(op.vd, m_ir->CreateSub(base, Shuffle(_add, nullptr, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})));
 	SetVr(op.vd, Call(GetType<u8[16]>(), m_pure_attr, "__lvsr", addr));
 }
 

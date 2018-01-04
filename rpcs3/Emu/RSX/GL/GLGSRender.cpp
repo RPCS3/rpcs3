@@ -168,10 +168,8 @@ void GLGSRender::begin()
 {
 	rsx::thread::begin();
 
-	if (skip_frame)
-		return;
-
-	if (conditional_render_enabled && conditional_render_test_failed)
+	if (skip_frame ||
+		(conditional_render_enabled && conditional_render_test_failed))
 		return;
 
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
@@ -196,7 +194,9 @@ void GLGSRender::end()
 {
 	std::chrono::time_point<steady_clock> state_check_start = steady_clock::now();
 
-	if (skip_frame || !framebuffer_status_valid || (conditional_render_enabled && conditional_render_test_failed) || !check_program_state())
+	if (skip_frame || !framebuffer_status_valid ||
+		(conditional_render_enabled && conditional_render_test_failed) ||
+		!check_program_state())
 	{
 		rsx::thread::end();
 		return;
@@ -252,7 +252,7 @@ void GLGSRender::end()
 					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.fragment_textures[i], m_rtts);
 
 					if (m_textures_dirty[i])
-						m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i]);
+						m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i], fs_sampler_state[i].get());
 				}
 				else
 				{
@@ -318,11 +318,6 @@ void GLGSRender::end()
 		if (m_program->uniforms.has_location("tex" + std::to_string(i), &unused_location))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-
-			if (sampler_state->flag)
-				continue;
-
-			sampler_state->flag = true;
 			auto &tex = rsx::method_registers.fragment_textures[i];
 
 			glActiveTexture(GL_TEXTURE0 + i);
@@ -338,7 +333,6 @@ void GLGSRender::end()
 				{
 					void *unused = nullptr;
 					glBindTexture(target, m_gl_texture_cache.create_temporary_subresource(unused, sampler_state->external_subresource_desc));
-					sampler_state->flag = false;
 				}
 				else
 				{
@@ -357,11 +351,6 @@ void GLGSRender::end()
 		if (m_program->uniforms.has_location("vtex" + std::to_string(i), &unused_location))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
-
-			if (sampler_state->flag)
-				continue;
-
-			sampler_state->flag = true;
 			glActiveTexture(GL_TEXTURE0 + rsx::limits::fragment_textures_count + i);
 
 			if (sampler_state->image_handle)
@@ -372,7 +361,6 @@ void GLGSRender::end()
 			{
 				void *unused = nullptr;
 				glBindTexture(GL_TEXTURE_2D, m_gl_texture_cache.create_temporary_subresource(unused, sampler_state->external_subresource_desc));
-				sampler_state->flag = false;
 			}
 			else
 			{
@@ -1000,6 +988,7 @@ void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 	fill_user_clip_data(buf + 64);
 	*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
 	*(reinterpret_cast<u32*>(buf + 132)) = vertex_base;
+	*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
 	fill_vertex_layout_state(m_vertex_layout, vertex_count, reinterpret_cast<s32*>(buf + 144));
 
 	if (m_transform_constants_dirty)
@@ -1049,6 +1038,8 @@ void GLGSRender::update_draw_state()
 	gl_state.color_mask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 	gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
 	gl_state.stencil_mask(rsx::method_registers.stencil_mask());
+
+	gl_state.enable(rsx::method_registers.depth_clamp_enabled(), GL_DEPTH_CLAMP);
 
 	if (gl_state.enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
 	{

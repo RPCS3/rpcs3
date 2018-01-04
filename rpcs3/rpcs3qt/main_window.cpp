@@ -110,15 +110,6 @@ void main_window::Init()
 	Q_EMIT RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
 
-	if (!utils::has_ssse3())
-	{
-		QMessageBox::critical(this, "SSSE3 Error (with three S, not two)",
-			"Your system does not meet the minimum requirements needed to run RPCS3.\n"
-			"Your CPU does not support SSSE3 (with three S, not two).\n");
-
-		std::exit(EXIT_FAILURE);
-	}
-
 #ifdef BRANCH
 	if ("RPCS3/rpcs3/master"s != STRINGIZE(BRANCH) && ""s != STRINGIZE(BRANCH))
 #else
@@ -181,7 +172,7 @@ void main_window::CreateThumbnailToolbar()
 	RepaintThumbnailIcons();
 
 	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop(); });
-	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.SetForceBoot(true); Emu.Stop(); Emu.Load(); });
+	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.Restart(); });
 	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, Pause);
 #endif
 }
@@ -484,7 +475,7 @@ void main_window::InstallPup(const QString& dropPath)
 		// Run asynchronously
 		scope_thread worker("Firmware Installer", [&]
 		{
-			for (auto updatefilename : updatefilenames)
+			for (const auto& updatefilename : updatefilenames)
 			{
 				if (progress == -1) break;
 
@@ -566,7 +557,7 @@ void main_window::DecryptSPRXLibraries()
 
 	LOG_NOTICE(GENERAL, "Decrypting SPRX libraries...");
 
-	for (QString& module : modules)
+	for (const QString& module : modules)
 	{
 		std::string prx_path = sstr(module);
 		const std::string& prx_dir = fs::get_parent_dir(prx_path);
@@ -1102,7 +1093,7 @@ void main_window::CreateConnects()
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 	connect(ui->sysPauseAct, &QAction::triggered, Pause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
-	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.SetForceBoot(true); Emu.Stop(); Emu.Load(); });
+	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.Restart(); });
 
 	connect(ui->sysSendOpenMenuAct, &QAction::triggered, [=]
 	{
@@ -1118,7 +1109,7 @@ void main_window::CreateConnects()
 
 	auto openSettings = [=](int tabIndex)
 	{
-		settings_dialog dlg(guiSettings, emuSettings,  tabIndex, this);
+		settings_dialog dlg(guiSettings, emuSettings, tabIndex, this);
 		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
 		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, this, &main_window::ConfigureGuiFromSettings);
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
@@ -1279,21 +1270,22 @@ void main_window::CreateConnects()
 	{
 		int index;
 
-		if (act == ui->setIconSizeTinyAct) index = 0;
-		else if (act == ui->setIconSizeSmallAct) index = gui::get_Index(gui::gl_icon_size_small);
-		else if (act == ui->setIconSizeMediumAct) index = gui::get_Index(gui::gl_icon_size_medium);
-		else index = gui::gl_max_slider_pos;
+		if (act == ui->setIconSizeTinyAct)
+			index = 0;
+		else if (act == ui->setIconSizeSmallAct)
+			index = gui::get_Index(gui::gl_icon_size_small);
+		else if (act == ui->setIconSizeMediumAct)
+			index = gui::get_Index(gui::gl_icon_size_medium);
+		else
+			index = gui::gl_max_slider_pos;
 
+		m_save_slider_pos = true;
 		resizeIcons(index);
 	});
 
 	connect (m_gameListFrame, &game_list_frame::RequestIconSizeActSet, [=](const int& idx)
 	{
-		if (idx < gui::get_Index((gui::gl_icon_size_small + gui::gl_icon_size_min) / 2)) ui->setIconSizeTinyAct->setChecked(true);
-		else if (idx < gui::get_Index((gui::gl_icon_size_medium + gui::gl_icon_size_small) / 2)) ui->setIconSizeSmallAct->setChecked(true);
-		else if (idx < gui::get_Index((gui::gl_icon_size_max + gui::gl_icon_size_medium) / 2)) ui->setIconSizeMediumAct->setChecked(true);
-		else ui->setIconSizeLargeAct->setChecked(true);
-
+		SetIconSizeActions(idx);
 		resizeIcons(idx);
 	});
 
@@ -1478,16 +1470,13 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	ui->showCatUnknownAct->setChecked(guiSettings->GetCategoryVisibility(Category::Unknown_Cat));
 	ui->showCatOtherAct->setChecked(guiSettings->GetCategoryVisibility(Category::Others));
 
-	int idx = guiSettings->GetValue(gui::gl_iconSize).toInt();
-	int index = gui::gl_max_slider_pos / 4;
-	if (idx < index) ui->setIconSizeTinyAct->setChecked(true);
-	else if (idx < index * 2) ui->setIconSizeSmallAct->setChecked(true);
-	else if (idx < index * 3) ui->setIconSizeMediumAct->setChecked(true);
-	else ui->setIconSizeLargeAct->setChecked(true);
+	SetIconSizeActions(guiSettings->GetValue(gui::gl_iconSize).toInt());
 
 	bool isListMode = guiSettings->GetValue(gui::gl_listMode).toBool();
-	if (isListMode) ui->setlistModeListAct->setChecked(true);
-	else ui->setlistModeGridAct->setChecked(true);
+	if (isListMode)
+		ui->setlistModeListAct->setChecked(true);
+	else
+		ui->setlistModeGridAct->setChecked(true);
 	m_categoryVisibleActGroup->setEnabled(isListMode);
 
 	if (configure_all)
@@ -1498,6 +1487,18 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 		// Gamelist
 		m_gameListFrame->LoadSettings();
 	}
+}
+
+void main_window::SetIconSizeActions(int idx)
+{
+	if (idx < gui::get_Index((gui::gl_icon_size_small + gui::gl_icon_size_min) / 2))
+		ui->setIconSizeTinyAct->setChecked(true);
+	else if (idx < gui::get_Index((gui::gl_icon_size_medium + gui::gl_icon_size_small) / 2))
+		ui->setIconSizeSmallAct->setChecked(true);
+	else if (idx < gui::get_Index((gui::gl_icon_size_max + gui::gl_icon_size_medium) / 2))
+		ui->setIconSizeMediumAct->setChecked(true);
+	else
+		ui->setIconSizeLargeAct->setChecked(true);
 }
 
 void main_window::keyPressEvent(QKeyEvent *keyEvent)
@@ -1514,7 +1515,7 @@ void main_window::keyPressEvent(QKeyEvent *keyEvent)
 		case Qt::Key_E: if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(); return;
 		case Qt::Key_P: if (Emu.IsRunning()) Emu.Pause(); return;
 		case Qt::Key_S: if (!Emu.IsStopped()) Emu.Stop(); return;
-		case Qt::Key_R: if (!Emu.GetBoot().empty()) { Emu.SetForceBoot(true); Emu.Stop(); Emu.Run(); } return;
+		case Qt::Key_R: if (!Emu.GetBoot().empty()) Emu.Restart(); return;
 		}
 	}
 }

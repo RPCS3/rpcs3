@@ -19,17 +19,12 @@ if(GIT_FOUND AND EXISTS "${SOURCE_DIR}/../.git/")
 	if(NOT ${exit_code} EQUAL 0)
 		message(WARNING "git rev-parse failed, unable to include version.")
 	endif()
-        # Hack fix for AppVeyor (Pull Requests don't generate a branch name)
-        if(NOT DEFINED ENV{APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH})
-		execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
-		  WORKING_DIRECTORY ${SOURCE_DIR}
-		  RESULT_VARIABLE exit_code
-		  OUTPUT_VARIABLE GIT_BRANCH)
-		if(NOT ${exit_code} EQUAL 0)
-			message(WARNING "git rev-parse failed, unable to include git branch.")
-		endif()
-	else()
-		set(GIT_BRANCH $ENV{APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH})
+	execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+		WORKING_DIRECTORY ${SOURCE_DIR}
+		RESULT_VARIABLE exit_code
+		OUTPUT_VARIABLE GIT_BRANCH)
+	if(NOT ${exit_code} EQUAL 0)
+		message(WARNING "git rev-parse failed, unable to include git branch.")
 	endif()
 	string(STRIP ${GIT_VERSION} GIT_VERSION)
 	string(STRIP ${GIT_VERSION_} GIT_VERSION_)

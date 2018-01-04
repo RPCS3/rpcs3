@@ -181,7 +181,7 @@ namespace vk
 	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)
 	{
 		std::string tex_name = "tex" + std::to_string(index);
-		std::string coord_name = "tc" + std::to_string(index);
+		std::string coord_name = "(tc" + std::to_string(index) + " * texture_parameters[" + std::to_string(index) + "])";
 
 		switch (prog.get_texture_dimension(index))
 		{
@@ -195,10 +195,13 @@ namespace vk
 	}
 }
 
-void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
+void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 {
 	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program);
+}
 
+void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
+{
 	//TODO: Generate input mask during parse stage to avoid this
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{

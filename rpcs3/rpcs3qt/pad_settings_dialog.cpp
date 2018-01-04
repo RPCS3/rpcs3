@@ -96,7 +96,20 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 
 		connect(&m_timer_input, &QTimer::timeout, [=]()
 		{
-			m_handler->GetNextButtonPress(m_device_name, callback);
+			std::vector<std::string> buttons =
+			{
+				m_cfg_entries[button_ids::id_pad_l2].key,
+				m_cfg_entries[button_ids::id_pad_r2].key,
+				m_cfg_entries[button_ids::id_pad_lstick_left].key,
+				m_cfg_entries[button_ids::id_pad_lstick_right].key,
+				m_cfg_entries[button_ids::id_pad_lstick_down].key,
+				m_cfg_entries[button_ids::id_pad_lstick_up].key,
+				m_cfg_entries[button_ids::id_pad_rstick_left].key,
+				m_cfg_entries[button_ids::id_pad_rstick_right].key,
+				m_cfg_entries[button_ids::id_pad_rstick_down].key,
+				m_cfg_entries[button_ids::id_pad_rstick_up].key
+			};
+			m_handler->GetNextButtonPress(m_device_name, callback, false, buttons);
 		});
 
 		m_timer_input.start(1);
@@ -208,6 +221,7 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 		m_cfg_entries.insert(std::make_pair(id, pad_button{ cfg_name, *cfg_name, name }));
 		m_padButtons->addButton(button, id);
 		button->setText(name);
+		button->installEventFilter(this);
 	};
 
 	insertButton(button_ids::id_pad_lstick_left,  ui->b_lstick_left,  &m_handler_cfg->ls_left);  
@@ -352,6 +366,39 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 	}
 
 	ReactivateButtons();
+}
+
+void pad_settings_dialog::mousePressEvent(QMouseEvent* event)
+{
+	if (m_handler_type != handler_type::handler_type_keyboard)
+	{
+		return;
+	}
+
+	if (m_button_id == button_ids::id_pad_begin)
+	{
+		return;
+	}
+
+	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
+	{
+		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler_type), m_button_id);
+	}
+	else
+	{
+		m_cfg_entries[m_button_id].key = ((keyboard_pad_handler*)m_handler.get())->GetMouseName(event);
+		m_cfg_entries[m_button_id].text = qstr(m_cfg_entries[m_button_id].key);
+	}
+
+	ReactivateButtons();
+}
+
+bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
+{
+	// Disabled buttons should not absorb mouseclicks
+	if (event->type() == QEvent::MouseButtonPress)
+		event->ignore();
+	return QDialog::eventFilter(object, event);
 }
 
 void pad_settings_dialog::UpdateLabel(bool is_reset)

@@ -25,6 +25,15 @@
 
 const bool s_use_rtm = utils::has_rtm();
 
+const bool s_use_ssse3 =
+#ifdef _MSC_VER
+	utils::has_ssse3();
+#elif __SSSE3__
+	true;
+#else
+	false;
+#endif
+
 #ifdef _MSC_VER
 bool operator ==(const u128& lhs, const u128& rhs)
 {
@@ -37,10 +46,60 @@ extern u64 get_system_time();
 
 extern thread_local u64 g_tls_fault_spu;
 
-const spu_decoder<spu_interpreter_precise> s_spu_interpreter_precise;
-const spu_decoder<spu_interpreter_fast> s_spu_interpreter_fast;
+// Table of identical interpreter functions when precise contains SSE2 version, and fast contains SSSE3 functions
+const std::pair<spu_inter_func_t, spu_inter_func_t> s_spu_dispatch_table[]
+{
+#define FUNC(x) {&spu_interpreter_precise::x, &spu_interpreter_fast::x}
+	FUNC(ROTQBYBI),
+	FUNC(ROTQMBYBI),
+	FUNC(SHLQBYBI),
+	FUNC(ROTQBY),
+	FUNC(ROTQMBY),
+	FUNC(SHLQBY),
+	FUNC(ROTQBYI),
+	FUNC(ROTQMBYI),
+	FUNC(SHLQBYI),
+	FUNC(SHUFB),
+#undef FUNC
+};
 
-std::atomic<u64> g_num_spu_threads = { 0ull };
+extern const spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise([](auto& table)
+{
+	if (s_use_ssse3)
+	{
+		for (auto& func : table)
+		{
+			for (const auto& pair : s_spu_dispatch_table)
+			{
+				if (pair.first == func)
+				{
+					func = pair.second;
+					break;
+				}
+			}
+		}
+	}
+});
+
+extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast([](auto& table)
+{
+	if (!s_use_ssse3)
+	{
+		for (auto& func : table)
+		{
+			for (const auto& pair : s_spu_dispatch_table)
+			{
+				if (pair.second == func)
+				{
+					func = pair.first;
+					break;
+				}
+			}
+		}
+	}
+});
+
+std::atomic<u64> g_num_spu_threads{0ull};
 
 template <>
 void fmt_class_string<spu_decoder_type>::format(std::string& out, u64 arg)
@@ -200,9 +259,11 @@ spu_imm_table_t::spu_imm_table_t()
 
 	for (u32 i = 0; i < sizeof(srdq_pshufb) / sizeof(srdq_pshufb[0]); i++)
 	{
+		const u32 im = (0u - i) & 0x1f;
+
 		for (u32 j = 0; j < 16; j++)
 		{
-			srdq_pshufb[i]._u8[j] = (j + i > 15) ? 0xff : static_cast<u8>(j + i);
+			srdq_pshufb[i]._u8[j] = (j + im > 15) ? 0xff : static_cast<u8>(j + im);
 		}
 	}
 
@@ -292,7 +353,7 @@ void SPUThread::cpu_init()
 
 	ch_event_mask = 0;
 	ch_event_stat = 0;
-    interrupts_enabled = false;
+	interrupts_enabled = false;
 	raddr = 0;
 
 	ch_dec_start_timestamp = get_timebased_time(); // ???
@@ -314,7 +375,7 @@ extern thread_local std::string(*g_tls_log_prefix)();
 void SPUThread::cpu_task()
 {
 	std::fesetround(FE_TOWARDZERO);
-	
+
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
 	{
 		if (!spu_db) spu_db = fxm::get_always<SPUDatabase>();
@@ -330,8 +391,8 @@ void SPUThread::cpu_task()
 
 	// Select opcode table
 	const auto& table = *(
-		g_cfg.core.spu_decoder == spu_decoder_type::precise ? &s_spu_interpreter_precise.get_table() :
-		g_cfg.core.spu_decoder == spu_decoder_type::fast ? &s_spu_interpreter_fast.get_table() :
+		g_cfg.core.spu_decoder == spu_decoder_type::precise ? &g_spu_interpreter_precise.get_table() :
+		g_cfg.core.spu_decoder == spu_decoder_type::fast ? &g_spu_interpreter_fast.get_table() :
 		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
 
 	// LS base address
@@ -803,7 +864,7 @@ void SPUThread::process_mfc_cmd()
 			do_dma_transfer(ch_mfc_cmd, false);
 			return;
 		}
-		
+
 		break;
 	}
 	case MFC_PUTL_CMD:
@@ -831,7 +892,7 @@ void SPUThread::process_mfc_cmd()
 				be_t<u16> ts;
 				be_t<u32> ea;
 			};
-			
+
 			u32 total_size = 0;
 
 			while (ch_mfc_cmd.size && total_size <= max_imm_dma_size)
@@ -975,11 +1036,11 @@ void SPUThread::set_interrupt_status(bool enable)
 		{
 			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, mask);
 		}
-        interrupts_enabled = true;
+		interrupts_enabled = true;
 	}
 	else
 	{
-        interrupts_enabled = false;
+		interrupts_enabled = false;
 	}
 }
 
@@ -1156,7 +1217,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 			thread_ctrl::wait_for(100);
 		}
-		
+
 		out = res;
 		return true;
 	}
@@ -1165,7 +1226,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	{
 		// HACK: "Not isolated" status
 		// Return SPU Interrupt status in LSB
-        out = interrupts_enabled == true;
+		out = interrupts_enabled == true;
 		return true;
 	}
 	}
@@ -1184,7 +1245,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 		srr0 = value;
 		break;
 	}
-		
+
 	case SPU_WrOutIntrMbox:
 	{
 		if (offset >= RAW_SPU_BASE_ADDR)
@@ -1202,7 +1263,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 			int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT);
 			return true;
 		}
-		
+
 		const u32 code = value >> 24;
 		{
 			if (code < 64)
@@ -1392,7 +1453,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 		else
 		{
 			auto mfc = fxm::check_unlocked<mfc_thread>();
-			
+
 			//if (test(mfc->state, cpu_flag::is_waiting))
 			{
 				mfc->notify();
@@ -1447,7 +1508,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 		if (atomic_storage<u32>::btr(ch_stall_mask.raw(), value))
 		{
 			auto mfc = fxm::check_unlocked<mfc_thread>();
-			
+
 			//if (test(mfc->state, cpu_flag::is_waiting))
 			{
 				mfc->notify();
@@ -1687,7 +1748,7 @@ bool SPUThread::stop_and_signal(u32 code)
 		}
 
 		semaphore_lock lock(group->mutex);
-		
+
 		if (group->run_state == SPU_THREAD_GROUP_STATUS_WAITING)
 		{
 			group->run_state = SPU_THREAD_GROUP_STATUS_RUNNING;

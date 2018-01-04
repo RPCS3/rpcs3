@@ -388,6 +388,7 @@ namespace rsx
 
 					continue;
 				}
+
 				while (Emu.IsPaused())
 					std::this_thread::sleep_for(10ms);
 
@@ -483,6 +484,30 @@ namespace rsx
 			//Execute backend-local tasks first
 			do_local_task();
 
+			//Wait for external pause events
+			if (external_interrupt_lock.load())
+			{
+				external_interrupt_ack.store(true);
+				while (external_interrupt_lock.load()) _mm_pause();
+			}
+
+			//Set up restore state if needed
+			if (sync_point_request)
+			{
+				if (RSXIOMem.RealAddr(internal_get))
+				{
+					//New internal get is valid, use it
+					restore_point = internal_get.load();
+				}
+				else
+				{
+					LOG_ERROR(RSX, "Could not update FIFO restore point");
+				}
+
+				sync_point_request = false;
+			}
+
+			//Now load the FIFO ctrl registers
 			ctrl->get.store(internal_get.load());
 			const u32 put = ctrl->put;
 
@@ -505,13 +530,13 @@ namespace rsx
 
 				if (mem_faults_count >= 3)
 				{
-					LOG_ERROR(RSX, "Application has failed to recover, discarding FIFO queue");
-					internal_get = put;
+					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
+					internal_get = restore_point.load();;
 				}
 				else
 				{
 					mem_faults_count++;
-					std::this_thread::sleep_for(1ms);
+					std::this_thread::sleep_for(10ms);
 				}
 
 				invalid_command_interrupt_raised = true;
@@ -573,13 +598,13 @@ namespace rsx
 
 				if (mem_faults_count >= 3)
 				{
-					LOG_ERROR(RSX, "Application has failed to recover, discarding FIFO queue");
-					internal_get = put;
+					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
+					internal_get = restore_point.load();
 				}
 				else
 				{
 					mem_faults_count++;
-					std::this_thread::sleep_for(1ms);
+					std::this_thread::sleep_for(10ms);
 				}
 
 				invalid_command_interrupt_raised = true;
@@ -727,7 +752,8 @@ namespace rsx
 			{
 				//This is almost guaranteed to be heap corruption at this point
 				//Ignore the rest of the chain
-				internal_get = put;
+				LOG_ERROR(RSX, "FIFO contents may be corrupted. Resetting...");
+				internal_get = restore_point.load();
 				continue;
 			}
 
@@ -1348,8 +1374,11 @@ namespace rsx
 		const u32 program_location = (shader_program & 0x3) - 1;
 		const u32 program_offset = (shader_program & ~0x3);
 
-		result.offset = program_offset;
 		result.addr = vm::base(rsx::get_address(program_offset, program_location));
+		auto program_start = program_hash_util::fragment_program_utils::get_fragment_program_start(result.addr);
+
+		result.addr = ((u8*)result.addr + program_start);
+		result.offset = program_offset + program_start;
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;
@@ -1454,8 +1483,11 @@ namespace rsx
 		const u32 program_location = (shader_program & 0x3) - 1;
 		const u32 program_offset = (shader_program & ~0x3);
 
-		result.offset = program_offset;
 		result.addr = vm::base(rsx::get_address(program_offset, program_location));
+		auto program_start = program_hash_util::fragment_program_utils::get_fragment_program_start(result.addr);
+
+		result.addr = ((u8*)result.addr + program_start);
+		result.offset = program_offset + program_start;
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;
@@ -2130,5 +2162,18 @@ namespace rsx
 	void thread::notify_zcull_info_changed()
 	{
 		check_zcull_status(false, false);
+	}
+
+	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!
+	void thread::pause()
+	{
+		external_interrupt_lock.store(true);
+		while (!external_interrupt_ack.load()) _mm_pause();
+		external_interrupt_ack.store(false);
+	}
+
+	void thread::unpause()
+	{
+		external_interrupt_lock.store(false);
 	}
 }
