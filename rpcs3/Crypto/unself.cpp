@@ -101,10 +101,7 @@ void WriteEhdr(const fs::file& f, Elf64_Ehdr& ehdr)
 	Write8(f, ehdr.e_os_abi);
 	Write64(f, ehdr.e_abi_ver);
 	Write16(f, ehdr.e_type);
-	if(ehdr.e_data==1)
-		Write16LE(f, ehdr.e_machine);
-	else
-		Write16(f, ehdr.e_machine);
+	Write16(f, ehdr.e_machine);
 	Write32(f, ehdr.e_version);
 	Write64(f, ehdr.e_entry);
 	Write64(f, ehdr.e_phoff);
@@ -423,7 +420,6 @@ void ControlInfo::LoadLE(const fs::file& f)
 	{
 		f.read(type7.unk, 0x40);
 	}
-
 }
 
 void ControlInfo::Show()
@@ -1039,14 +1035,19 @@ SELFDecrypter::SELFDecrypter(const fs::file& s)
 {
 }
 
+static bool isVita(const SceHeader hdr)
+{
+	return (hdr.se_hver == 3);
+}
+
 bool SELFDecrypter::LoadHeaders(bool isElf32)
 {
 	// Read SCE header.
 	self_f.seek(0);
 	sce_hdr.LoadLE(self_f);
-	const bool isVita = sce_hdr.se_hver == 3;
 
-	if (!isVita) {
+	if (!isVita(sce_hdr)) 
+	{
 		self_f.seek(0);
 		sce_hdr.Load(self_f);
 	}
@@ -1059,18 +1060,26 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	}
 
 	// Read SELF header.
-	if(!isVita)
+	if (!isVita(sce_hdr))
+	{
 		self_hdr.Load(self_f);
-	else 
+	}
+	else
+	{
 		self_hdr.LoadLE(self_f);
+	}
 
 	// Read the APP INFO.
 	self_f.seek(self_hdr.se_appinfooff);
 	
-	if(!isVita)
+	if (!isVita(sce_hdr))
+	{
 		app_info.Load(self_f);
+	}
 	else
+	{
 		app_info.LoadLE(self_f);
+	}
 
 	// Read ELF header.
 	self_f.seek(self_hdr.se_elfoff);
@@ -1093,10 +1102,14 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		for(u32 i = 0; i < elf32_hdr.e_phnum; ++i)
 		{
 			phdr32_arr.emplace_back();
-			if(!isVita)
+			if (!isVita(sce_hdr))
+			{
 				phdr32_arr.back().Load(self_f);
+			}
 			else
+			{
 				phdr32_arr.back().LoadLE(self_f);
+			}
 		}
 	}
 	else
@@ -1126,18 +1139,27 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	for(u32 i = 0; i < ((isElf32) ? elf32_hdr.e_phnum : elf64_hdr.e_phnum); ++i)
 	{
 		secinfo_arr.emplace_back();
-		if(!isVita)
+		if (!isVita(sce_hdr))
+		{
 			secinfo_arr.back().Load(self_f);
+		}
 		else
+		{
 			secinfo_arr.back().LoadLE(self_f);
+		}
 	}
 
 	// Read SCE version info.
 	self_f.seek(self_hdr.se_sceveroff);
-	if(!isVita)
+	if (!isVita(sce_hdr))
+	{
 		scev_info.Load(self_f);
+	}
 	else
+	{
 		scev_info.LoadLE(self_f);
+	}
+
 	// Read control info.
 	ctrlinfo_arr.clear();
 	self_f.seek(self_hdr.se_controloff);
@@ -1147,10 +1169,14 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	{
 		ctrlinfo_arr.emplace_back();
 		ControlInfo &cinfo = ctrlinfo_arr.back();
-		if(!isVita)
+		if (!isVita(sce_hdr))
+		{
 			cinfo.Load(self_f);
+		}
 		else
+		{
 			cinfo.LoadLE(self_f);
+		}
 		i += cinfo.size;
 	}
 
@@ -1170,10 +1196,14 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		for(u32 i = 0; i < elf32_hdr.e_shnum; ++i)
 		{
 			shdr32_arr.emplace_back();
-			if (!isVita)
+			if (!isVita(sce_hdr))
+			{
 				shdr32_arr.back().Load(self_f);
+			}
 			else
+			{
 				shdr32_arr.back().LoadLE(self_f);
+			}
 		}
 	}
 	else
@@ -1402,7 +1432,8 @@ bool SELFDecrypter::DecryptData()
 		}
 	}
 
-	if (meta_hdr.section_count == 0) {
+	if (meta_hdr.section_count == 0) 
+	{
 		for (unsigned int i = 0; i < secinfo_arr.size(); i++)
 		{
 			data_buf_length += secinfo_arr[i].size;
@@ -1456,7 +1487,8 @@ bool SELFDecrypter::DecryptData()
 		}
 	}
 
-	if (meta_hdr.section_count == 0) {
+	if (meta_hdr.section_count == 0) 
+	{
 		for (unsigned int i = 0; i < secinfo_arr.size(); i++)
 		{
 			self_f.seek(secinfo_arr[i].offset);
@@ -1686,13 +1718,15 @@ static bool IsSelfElf32(const fs::file& f)
 	SelfHeader sh;
 
 	hdr.LoadLE(f);
-	const bool isVita = hdr.se_hver == 3;
 
-	if (!isVita) {
+	if (!isVita(hdr)) 
+	{
 		f.seek(0);
 		hdr.Load(f);
 		sh.Load(f);
-	}else{
+	}
+	else
+	{
 		sh.LoadLE(f);
 	}
 
@@ -1726,7 +1760,9 @@ static bool CheckDebugSelf(fs::file& s)
 		const u16 version = s.read<le_t<u16>>();
 
 		if (version == 3)
+		{
 			return false;
+		}
 
 		LOG_WARNING(LOADER, "Debug SELF detected! Removing fake header...");
 		
