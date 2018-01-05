@@ -277,8 +277,8 @@ struct psv_reloc
 /** \name Macros to get SCE reloc values
 *  @{
 */
-#define SCE_RELOC_SHORT_OFFSET(x) (((x).r_opt1 >> 20) | ((x).r_opt2 & 0xFFFFF) << 12)
-#define SCE_RELOC_SHORT_ADDEND(x) ((x).r_opt2 >> 20)
+#define SCE_RELOC_SHORT_OFFSET(x) (((x).r_opt1 >> 20) | ((x).r_opt2 & 0x3FF) << 12)
+#define SCE_RELOC_SHORT_ADDEND(x) ((x).r_opt2 >> 10)
 #define SCE_RELOC_LONG_OFFSET(x) ((x).r_offset)
 #define SCE_RELOC_LONG_ADDEND(x) ((x).r_addend)
 #define SCE_RELOC_LONG_CODE2(x) (((x).r_type >> 20) & 0xFF)

@@ -101,7 +101,10 @@ void WriteEhdr(const fs::file& f, Elf64_Ehdr& ehdr)
 	Write8(f, ehdr.e_os_abi);
 	Write64(f, ehdr.e_abi_ver);
 	Write16(f, ehdr.e_type);
-	Write16(f, ehdr.e_machine);
+	if(ehdr.e_data==1)
+		Write16LE(f, ehdr.e_machine);
+	else
+		Write16(f, ehdr.e_machine);
 	Write32(f, ehdr.e_version);
 	Write64(f, ehdr.e_entry);
 	Write64(f, ehdr.e_phoff);
@@ -148,20 +151,40 @@ void WriteEhdr(const fs::file& f, Elf32_Ehdr& ehdr)
 	Write8(f, ehdr.e_data);
 	Write8(f, ehdr.e_curver);
 	Write8(f, ehdr.e_os_abi);
-	Write64(f, ehdr.e_abi_ver);
-	Write16(f, ehdr.e_type);
-	Write16(f, ehdr.e_machine);
-	Write32(f, ehdr.e_version);
-	Write32(f, ehdr.e_entry);
-	Write32(f, ehdr.e_phoff);
-	Write32(f, ehdr.e_shoff);
-	Write32(f, ehdr.e_flags);
-	Write16(f, ehdr.e_ehsize);
-	Write16(f, ehdr.e_phentsize);
-	Write16(f, ehdr.e_phnum);
-	Write16(f, ehdr.e_shentsize);
-	Write16(f, ehdr.e_shnum);
-	Write16(f, ehdr.e_shstrndx);
+	if (ehdr.e_data == 1)
+	{
+		Write64LE(f, ehdr.e_abi_ver);
+		Write16LE(f, ehdr.e_type);
+		Write16LE(f, ehdr.e_machine);
+		Write32LE(f, ehdr.e_version);
+		Write32LE(f, ehdr.e_entry);
+		Write32LE(f, ehdr.e_phoff);
+		Write32LE(f, ehdr.e_shoff);
+		Write32LE(f, ehdr.e_flags);
+		Write16LE(f, ehdr.e_ehsize);
+		Write16LE(f, ehdr.e_phentsize);
+		Write16LE(f, ehdr.e_phnum);
+		Write16LE(f, ehdr.e_shentsize);
+		Write16LE(f, ehdr.e_shnum);
+		Write16LE(f, ehdr.e_shstrndx);
+	}
+	else
+	{
+		Write64(f, ehdr.e_abi_ver);
+		Write16(f, ehdr.e_type);
+		Write16(f, ehdr.e_machine);
+		Write32(f, ehdr.e_version);
+		Write32(f, ehdr.e_entry);
+		Write32(f, ehdr.e_phoff);
+		Write32(f, ehdr.e_shoff);
+		Write32(f, ehdr.e_flags);
+		Write16(f, ehdr.e_ehsize);
+		Write16(f, ehdr.e_phentsize);
+		Write16(f, ehdr.e_phnum);
+		Write16(f, ehdr.e_shentsize);
+		Write16(f, ehdr.e_shnum);
+		Write16(f, ehdr.e_shstrndx);
+	}
 }
 
 void WritePhdr(const fs::file& f, Elf32_Phdr& phdr)
@@ -188,6 +211,32 @@ void WriteShdr(const fs::file& f, Elf32_Shdr& shdr)
 	Write32(f, shdr.sh_info);
 	Write32(f, shdr.sh_addralign);
 	Write32(f, shdr.sh_entsize);
+}
+
+void WritePhdrLE(const fs::file& f, Elf32_Phdr& phdr)
+{
+	Write32LE(f, phdr.p_type);
+	Write32LE(f, phdr.p_offset);
+	Write32LE(f, phdr.p_vaddr);
+	Write32LE(f, phdr.p_paddr);
+	Write32LE(f, phdr.p_filesz);
+	Write32LE(f, phdr.p_memsz);
+	Write32LE(f, phdr.p_flags);
+	Write32LE(f, phdr.p_align);
+}
+
+void WriteShdrLE(const fs::file& f, Elf32_Shdr& shdr)
+{
+	Write32LE(f, shdr.sh_name);
+	Write32LE(f, shdr.sh_type);
+	Write32LE(f, shdr.sh_flags);
+	Write32LE(f, shdr.sh_addr);
+	Write32LE(f, shdr.sh_offset);
+	Write32LE(f, shdr.sh_size);
+	Write32LE(f, shdr.sh_link);
+	Write32LE(f, shdr.sh_info);
+	Write32LE(f, shdr.sh_addralign);
+	Write32LE(f, shdr.sh_entsize);
 }
 
 
@@ -1435,7 +1484,14 @@ fs::file SELFDecrypter::MakeElf(bool isElf32)
 		// Write program headers.
 		for (u32 i = 0; i < elf32_hdr.e_phnum; ++i)
 		{
-			WritePhdr(e, phdr32_arr[i]);
+			if (elf32_hdr.e_data == 1)
+			{
+				WritePhdrLE(e, phdr32_arr[i]);
+			}
+			else
+			{
+				WritePhdr(e, phdr32_arr[i]);
+			}
 		}
 
 		if (meta_hdr.section_count != 0)
@@ -1506,7 +1562,14 @@ fs::file SELFDecrypter::MakeElf(bool isElf32)
 
 			for (u32 i = 0; i < elf32_hdr.e_shnum; ++i)
 			{
-				WriteShdr(e, shdr32_arr[i]);
+				if (elf32_hdr.e_data == 1)
+				{
+					WriteShdrLE(e, shdr32_arr[i]);
+				}
+				else
+				{
+					WriteShdr(e, shdr32_arr[i]);
+				}
 			}
 		}
 	}
