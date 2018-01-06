@@ -22,11 +22,8 @@ matrix:
       compiler: gcc
 
 git:
+  depth: false # Unshallow clone to obtain proper GIT_VERSION
   submodules: false
-  # Unshallow clone to obtain proper GIT_VERSION
-  # There's no variable to disable depth, so we just have to set it to a huge number
-  # https://docs.travis-ci.com/user/customizing-the-build/#Git-Clone-Depth
-  depth: 100000
 
 before_install:
   - if [ "$CC" = "clang" ]; then
