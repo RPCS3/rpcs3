@@ -816,6 +816,26 @@ void spu_recompiler::ROTHM(spu_opcode_t op)
 		return;
 	}
 
+	if (utils::has_avx2())
+	{
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+		const XmmLink& vt = XmmAlloc();
+		const XmmLink& v4 = XmmAlloc();
+		const XmmLink& v5 = XmmAlloc();
+		c->psubw(vb, XmmConst(_mm_set1_epi16(1)));
+		c->pandn(vb, XmmConst(_mm_set1_epi16(0x1f)));
+		c->movdqa(vt, XmmConst(_mm_set1_epi32(0xffff0000))); // mask: select high words
+		c->vpsrld(v4, vb, 16);
+		c->vpsubusw(v5, vb, vt); // clear high words (using saturation sub for throughput)
+		c->vpandn(vb, vt, va); // clear high words
+		c->vpsrlvd(va, va, v4);
+		c->vpsrlvd(vb, vb, v5);
+		c->vpblendw(vt, vb, va, 0xaa); // can use vpblendvb with 0xffff0000 mask (vt)
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
+		return;
+	}
+
 	auto body = [](u16* t, const u16* a, const u16* b) noexcept
 	{
 		for (u32 i = 0; i < 8; i++)
@@ -856,6 +876,28 @@ void spu_recompiler::ROTMAH(spu_opcode_t op)
 		return;
 	}
 
+	if (utils::has_avx2())
+	{
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+		const XmmLink& vt = XmmAlloc();
+		const XmmLink& v4 = XmmAlloc();
+		const XmmLink& v5 = XmmAlloc();
+		c->psubw(vb, XmmConst(_mm_set1_epi16(1)));
+		c->movdqa(vt, XmmConst(_mm_set1_epi16(0x1f)));
+		c->vpandn(v4, vb, vt);
+		c->vpand(v5, vb, vt);
+		c->movdqa(vt, XmmConst(_mm_set1_epi32(0x2f)));
+		c->vpsrld(v4, v4, 16);
+		c->vpsubusw(v5, vt, v5); // clear high word and add 16 to low word
+		c->vpslld(vb, va, 16);
+		c->vpsravd(va, va, v4);
+		c->vpsravd(vb, vb, v5);
+		c->vpblendw(vt, vb, va, 0xaa);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
+		return;
+	}
+
 	auto body = [](s16* t, const s16* a, const u16* b) noexcept
 	{
 		for (u32 i = 0; i < 8; i++)
@@ -891,6 +933,25 @@ void spu_recompiler::SHLH(spu_opcode_t op)
 		const XmmLink& vt = XmmAlloc();
 		c->pand(vb, XmmConst(_mm_set1_epi16(0x1f)));
 		c->vpsllvw(vt, va, vb);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
+		return;
+	}
+
+	if (utils::has_avx2())
+	{
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+		const XmmLink& vt = XmmAlloc();
+		const XmmLink& v4 = XmmAlloc();
+		const XmmLink& v5 = XmmAlloc();
+		c->pand(vb, XmmConst(_mm_set1_epi16(0x1f)));
+		c->movdqa(vt, XmmConst(_mm_set1_epi32(0xffff0000))); // mask: select high words
+		c->vpsrld(v4, vb, 16);
+		c->vpsubusw(v5, vb, vt); // clear high words (using saturation sub for throughput)
+		c->vpand(vb, vt, va); // clear low words
+		c->vpsllvd(va, va, v5);
+		c->vpsllvd(vb, vb, v4);
+		c->vpblendw(vt, vb, va, 0x55);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
 		return;
 	}
