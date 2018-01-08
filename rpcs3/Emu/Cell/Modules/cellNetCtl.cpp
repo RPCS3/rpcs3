@@ -301,15 +301,26 @@ error_code cellGameUpdateCheckAbort()
 	return CELL_OK;
 }
 
-error_code cellGameUpdateCheckStartAsyncEx(vm::cptr<CellGameUpdateParam> param, vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
+error_code cellGameUpdateCheckStartAsyncEx(ppu_thread& ppu, vm::cptr<CellGameUpdateParam> param, vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckStartAsyncEx(param=*0x%x, cb_func=*0x%x, userdata=*0x%x)", param, cb_func, userdata);
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		cb_func(ppu, vm::make_var(CellGameUpdateResult{ CELL_OK, CELL_OK, 0x0, 0x0}), userdata);
+		return CELL_OK;
+	});
 	return CELL_OK;
 }
 
-error_code cellGameUpdateCheckFinishAsyncEx(vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
+error_code cellGameUpdateCheckFinishAsyncEx(ppu_thread& ppu, vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckFinishAsyncEx(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
+	const s32 PROCESSING_COMPLETE = 5;
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		cb_func(ppu, vm::make_var(CellGameUpdateResult{ PROCESSING_COMPLETE, CELL_OK, 0x0, 0x0}), userdata);
+		return CELL_OK;
+	});
 	return CELL_OK;
 }
 
