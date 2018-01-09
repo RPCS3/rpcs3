@@ -7,20 +7,18 @@
 #include <QKeyEvent>
 #include <QTimer>
 #include <QThread>
-
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-#include <QGuiApplication>
-#include <qpa/qplatformnativeinterface.h>
-#endif
-
-#include <X11/Xlib.h>
-
 #include <string>
 
 #include "rpcs3_version.h"
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#include <QGuiApplication>
+#include <qpa/qplatformnativeinterface.h>
+#endif
+#include <X11/Xlib.h>
 #endif
 
 constexpr auto qstr = QString::fromStdString;
