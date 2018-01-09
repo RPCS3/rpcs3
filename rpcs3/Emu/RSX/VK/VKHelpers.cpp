@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "VKHelpers.h"
 
+#include <mutex>
+
 namespace vk
 {
 	context* g_current_vulkan_ctx = nullptr;
@@ -9,13 +11,16 @@ namespace vk
 	std::unique_ptr<image> g_null_texture;
 	std::unique_ptr<image_view> g_null_image_view;
 
-	VkSampler g_null_sampler      = nullptr;
+	VkSampler g_null_sampler = nullptr;
 
 	bool g_cb_no_interrupt_flag = false;
 	bool g_drv_no_primitive_restart_flag = false;
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
+
+	//global submit guard to prevent race condition on queue submit
+	std::mutex g_submit_mutex;
 
 	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
@@ -194,9 +199,9 @@ namespace vk
 		VkSamplerCreateInfo sampler_info = {};
 
 		sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-		sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-		sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-		sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+		sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 		sampler_info.anisotropyEnable = VK_FALSE;
 		sampler_info.compareEnable = VK_FALSE;
@@ -219,14 +224,31 @@ namespace vk
 
 		g_null_texture.reset(new image(g_current_renderer, get_memory_mapping(g_current_renderer.gpu()).device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, 4, 4, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT, 0));
+			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0));
 
 		g_null_image_view.reset(new image_view(g_current_renderer, g_null_texture->value, VK_IMAGE_VIEW_TYPE_2D,
 			VK_FORMAT_B8G8R8A8_UNORM, {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A},
 			{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}));
 
-		change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
+		// Initialize memory to transparent black
+		VkClearColorValue clear_color = {};
+		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+		change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
+		vkCmdClearColorImage(cmd, g_null_texture->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+
+		// Prep for shader access
+		change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 		return g_null_image_view->value;
+	}
+
+	void acquire_global_submit_lock()
+	{
+		g_submit_mutex.lock();
+	}
+
+	void release_global_submit_lock()
+	{
+		g_submit_mutex.unlock();
 	}
 
 	void destroy_global_resources()

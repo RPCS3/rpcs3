@@ -134,6 +134,8 @@ public:
 
 	/** Handle keyboard handler input */
 	void keyPressEvent(QKeyEvent *keyEvent) override;
+	void mousePressEvent(QMouseEvent *event) override;
+	bool eventFilter(QObject* object, QEvent* event) override;
 
 	/** Update all the Button Labels with current button mapping */
 	void UpdateLabel(bool is_reset = false);

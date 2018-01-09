@@ -4,6 +4,8 @@
 
 class ppu_thread;
 
+using ppu_inter_func_t = bool(*)(ppu_thread& ppu, ppu_opcode_t op);
+
 struct ppu_interpreter
 {
 	static bool MFVSCR(ppu_thread&, ppu_opcode_t);
@@ -75,7 +77,6 @@ struct ppu_interpreter
 	static bool VNMSUBFP(ppu_thread&, ppu_opcode_t);
 	static bool VNOR(ppu_thread&, ppu_opcode_t);
 	static bool VOR(ppu_thread&, ppu_opcode_t);
-	static bool VPERM(ppu_thread&, ppu_opcode_t);
 	static bool VPKPX(ppu_thread&, ppu_opcode_t);
 	static bool VPKUHUM(ppu_thread&, ppu_opcode_t);
 	static bool VPKUWUM(ppu_thread&, ppu_opcode_t);
@@ -247,42 +248,34 @@ struct ppu_interpreter
 	static bool STVXL(ppu_thread&, ppu_opcode_t);
 	static bool DIVD(ppu_thread&, ppu_opcode_t);
 	static bool DIVW(ppu_thread&, ppu_opcode_t);
-	static bool LVLX(ppu_thread&, ppu_opcode_t);
 	static bool LDBRX(ppu_thread&, ppu_opcode_t);
 	static bool LSWX(ppu_thread&, ppu_opcode_t);
 	static bool LWBRX(ppu_thread&, ppu_opcode_t);
 	static bool LFSX(ppu_thread&, ppu_opcode_t);
 	static bool SRW(ppu_thread&, ppu_opcode_t);
 	static bool SRD(ppu_thread&, ppu_opcode_t);
-	static bool LVRX(ppu_thread&, ppu_opcode_t);
 	static bool LSWI(ppu_thread&, ppu_opcode_t);
 	static bool LFSUX(ppu_thread&, ppu_opcode_t);
 	static bool SYNC(ppu_thread&, ppu_opcode_t);
 	static bool LFDX(ppu_thread&, ppu_opcode_t);
 	static bool LFDUX(ppu_thread&, ppu_opcode_t);
-	static bool STVLX(ppu_thread&, ppu_opcode_t);
 	static bool STDBRX(ppu_thread&, ppu_opcode_t);
 	static bool STSWX(ppu_thread&, ppu_opcode_t);
 	static bool STWBRX(ppu_thread&, ppu_opcode_t);
 	static bool STFSX(ppu_thread&, ppu_opcode_t);
-	static bool STVRX(ppu_thread&, ppu_opcode_t);
 	static bool STFSUX(ppu_thread&, ppu_opcode_t);
 	static bool STSWI(ppu_thread&, ppu_opcode_t);
 	static bool STFDX(ppu_thread&, ppu_opcode_t);
 	static bool STFDUX(ppu_thread&, ppu_opcode_t);
-	static bool LVLXL(ppu_thread&, ppu_opcode_t);
 	static bool LHBRX(ppu_thread&, ppu_opcode_t);
 	static bool SRAW(ppu_thread&, ppu_opcode_t);
 	static bool SRAD(ppu_thread&, ppu_opcode_t);
-	static bool LVRXL(ppu_thread&, ppu_opcode_t);
 	static bool DSS(ppu_thread&, ppu_opcode_t);
 	static bool SRAWI(ppu_thread&, ppu_opcode_t);
 	static bool SRADI(ppu_thread&, ppu_opcode_t);
 	static bool EIEIO(ppu_thread&, ppu_opcode_t);
-	static bool STVLXL(ppu_thread&, ppu_opcode_t);
 	static bool STHBRX(ppu_thread&, ppu_opcode_t);
 	static bool EXTSH(ppu_thread&, ppu_opcode_t);
-	static bool STVRXL(ppu_thread&, ppu_opcode_t);
 	static bool EXTSB(ppu_thread&, ppu_opcode_t);
 	static bool STFIWX(ppu_thread&, ppu_opcode_t);
 	static bool EXTSW(ppu_thread&, ppu_opcode_t);
@@ -362,6 +355,16 @@ struct ppu_interpreter
 
 struct ppu_interpreter_precise final : ppu_interpreter
 {
+	static bool VPERM(ppu_thread&, ppu_opcode_t);
+	static bool LVLX(ppu_thread&, ppu_opcode_t);
+	static bool LVLXL(ppu_thread&, ppu_opcode_t);
+	static bool LVRX(ppu_thread&, ppu_opcode_t);
+	static bool LVRXL(ppu_thread&, ppu_opcode_t);
+	static bool STVLX(ppu_thread&, ppu_opcode_t);
+	static bool STVLXL(ppu_thread&, ppu_opcode_t);
+	static bool STVRX(ppu_thread&, ppu_opcode_t);
+	static bool STVRXL(ppu_thread&, ppu_opcode_t);
+
 	static bool VPKSHSS(ppu_thread&, ppu_opcode_t);
 	static bool VPKSHUS(ppu_thread&, ppu_opcode_t);
 	static bool VPKSWSS(ppu_thread&, ppu_opcode_t);
@@ -395,11 +398,21 @@ struct ppu_interpreter_precise final : ppu_interpreter
 
 struct ppu_interpreter_fast final : ppu_interpreter
 {
+	static bool VPERM(ppu_thread&, ppu_opcode_t);
+	static bool LVLX(ppu_thread&, ppu_opcode_t);
+	static bool LVLXL(ppu_thread&, ppu_opcode_t);
+	static bool LVRX(ppu_thread&, ppu_opcode_t);
+	static bool LVRXL(ppu_thread&, ppu_opcode_t);
+	static bool STVLX(ppu_thread&, ppu_opcode_t);
+	static bool STVLXL(ppu_thread&, ppu_opcode_t);
+	static bool STVRX(ppu_thread&, ppu_opcode_t);
+	static bool STVRXL(ppu_thread&, ppu_opcode_t);
+
 	static bool VPKSHSS(ppu_thread&, ppu_opcode_t);
 	static bool VPKSHUS(ppu_thread&, ppu_opcode_t);
 	static bool VPKSWSS(ppu_thread&, ppu_opcode_t);
 	static bool VPKSWUS(ppu_thread&, ppu_opcode_t);
-	static bool VPKUHUS(ppu_thread&, ppu_opcode_t);	
+	static bool VPKUHUS(ppu_thread&, ppu_opcode_t);
 	static bool VPKUWUS(ppu_thread&, ppu_opcode_t);
 	static bool VADDSBS(ppu_thread&, ppu_opcode_t);
 	static bool VADDSHS(ppu_thread&, ppu_opcode_t);

@@ -376,7 +376,7 @@ void VertexProgramDecompiler::SetDSTSca(const std::string& code)
 
 std::string VertexProgramDecompiler::NotZeroPositive(const std::string& code)
 {
-	return "max(" + code + ", 1.E-10)";
+	return "max(" + code + ", 0.000001)";
 }
 
 std::string VertexProgramDecompiler::BuildFuncBody(const FuncInfo& func)

@@ -5,6 +5,10 @@
 
 #include <cmath>
 
+#if !defined(_MSC_VER) && !defined(__SSSE3__)
+#define _mm_shuffle_epi8
+#endif
+
 inline u64 dup32(u32 x) { return x | static_cast<u64>(x) << 32; }
 
 // Write values to CR field
@@ -83,6 +87,20 @@ extern __m128 sse_log2_ps(__m128 A)
 	return _mm_add_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(x5, x6), x7), x4), _c), _mm_add_ps(_mm_mul_ps(x4, _c), x8));
 }
 
+extern __m128i sse_pshufb(__m128i data, __m128i index)
+{
+	v128 m = v128::fromV(_mm_and_si128(index, _mm_set1_epi8(0xf)));
+	v128 a = v128::fromV(data);
+	v128 r;
+
+	for (int i = 0; i < 16; i++)
+	{
+		r._u8[i] = a._u8[m._u8[i]];
+	}
+
+	return _mm_and_si128(r.vi, _mm_cmpgt_epi8(index, _mm_set1_epi8(-1)));
+}
+
 extern __m128i sse_altivec_vperm(__m128i A, __m128i B, __m128i C)
 {
 	const auto index = _mm_andnot_si128(C, _mm_set1_epi8(0x1f));
@@ -92,26 +110,40 @@ extern __m128i sse_altivec_vperm(__m128i A, __m128i B, __m128i C)
 	return _mm_or_si128(_mm_and_si128(mask, sa), _mm_andnot_si128(mask, sb));
 }
 
+extern __m128i sse_altivec_vperm_v0(__m128i A, __m128i B, __m128i C)
+{
+	__m128i ab[2]{B, A};
+	v128 index = v128::fromV(_mm_andnot_si128(C, _mm_set1_epi8(0x1f)));
+	v128 res;
+
+	for (int i = 0; i < 16; i++)
+	{
+		res._u8[i] = ((u8*)+ab)[index._u8[i]];
+	}
+
+	return res.vi;
+}
+
 extern __m128i sse_altivec_lvsl(u64 addr)
 {
-	alignas(16) static const u64 lvsl_values[0x10][2] =
+	alignas(16) static const u8 lvsl_values[0x10][0x10] =
 	{
-		{ 0x08090A0B0C0D0E0F, 0x0001020304050607 },
-		{ 0x090A0B0C0D0E0F10, 0x0102030405060708 },
-		{ 0x0A0B0C0D0E0F1011, 0x0203040506070809 },
-		{ 0x0B0C0D0E0F101112, 0x030405060708090A },
-		{ 0x0C0D0E0F10111213, 0x0405060708090A0B },
-		{ 0x0D0E0F1011121314, 0x05060708090A0B0C },
-		{ 0x0E0F101112131415, 0x060708090A0B0C0D },
-		{ 0x0F10111213141516, 0x0708090A0B0C0D0E },
-		{ 0x1011121314151617, 0x08090A0B0C0D0E0F },
-		{ 0x1112131415161718, 0x090A0B0C0D0E0F10 },
-		{ 0x1213141516171819, 0x0A0B0C0D0E0F1011 },
-		{ 0x131415161718191A, 0x0B0C0D0E0F101112 },
-		{ 0x1415161718191A1B, 0x0C0D0E0F10111213 },
-		{ 0x15161718191A1B1C, 0x0D0E0F1011121314 },
-		{ 0x161718191A1B1C1D, 0x0E0F101112131415 },
-		{ 0x1718191A1B1C1D1E, 0x0F10111213141516 },
+		{ 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 },
+		{ 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01 },
+		{ 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02 },
+		{ 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03 },
+		{ 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04 },
+		{ 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05 },
+		{ 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06 },
+		{ 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07 },
+		{ 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08 },
+		{ 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09 },
+		{ 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a },
+		{ 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b },
+		{ 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c },
+		{ 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d },
+		{ 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e },
+		{ 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f },
 	};
 
 	return _mm_load_si128((__m128i*)lvsl_values[addr & 0xf]);
@@ -119,24 +151,24 @@ extern __m128i sse_altivec_lvsl(u64 addr)
 
 extern __m128i sse_altivec_lvsr(u64 addr)
 {
-	alignas(16) static const u64 lvsr_values[0x10][2] =
+	alignas(16) static const u8 lvsr_values[0x10][0x10] =
 	{
-		{ 0x18191A1B1C1D1E1F, 0x1011121314151617 },
-		{ 0x1718191A1B1C1D1E, 0x0F10111213141516 },
-		{ 0x161718191A1B1C1D, 0x0E0F101112131415 },
-		{ 0x15161718191A1B1C, 0x0D0E0F1011121314 },
-		{ 0x1415161718191A1B, 0x0C0D0E0F10111213 },
-		{ 0x131415161718191A, 0x0B0C0D0E0F101112 },
-		{ 0x1213141516171819, 0x0A0B0C0D0E0F1011 },
-		{ 0x1112131415161718, 0x090A0B0C0D0E0F10 },
-		{ 0x1011121314151617, 0x08090A0B0C0D0E0F },
-		{ 0x0F10111213141516, 0x0708090A0B0C0D0E },
-		{ 0x0E0F101112131415, 0x060708090A0B0C0D },
-		{ 0x0D0E0F1011121314, 0x05060708090A0B0C },
-		{ 0x0C0D0E0F10111213, 0x0405060708090A0B },
-		{ 0x0B0C0D0E0F101112, 0x030405060708090A },
-		{ 0x0A0B0C0D0E0F1011, 0x0203040506070809 },
-		{ 0x090A0B0C0D0E0F10, 0x0102030405060708 },
+		{ 0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10 },
+		{ 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f },
+		{ 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e },
+		{ 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d },
+		{ 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c },
+		{ 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b },
+		{ 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a },
+		{ 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09 },
+		{ 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08 },
+		{ 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07 },
+		{ 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06 },
+		{ 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05 },
+		{ 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04 },
+		{ 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03 },
+		{ 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02 },
+		{ 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01 },
 	};
 
 	return _mm_load_si128((__m128i*)lvsr_values[addr & 0xf]);
@@ -200,6 +232,26 @@ extern __m128i sse_cellbe_lvrx(u64 addr)
 extern void sse_cellbe_stvrx(u64 addr, __m128i a)
 {
 	_mm_maskmoveu_si128(_mm_shuffle_epi8(a, lvrx_masks[addr & 0xf]), lvlx_masks[addr & 0xf], (char*)vm::base(addr & ~0xf));
+}
+
+extern __m128i sse_cellbe_lvlx_v0(u64 addr)
+{
+	return sse_pshufb(_mm_load_si128((__m128i*)vm::base(addr & ~0xf)), lvlx_masks[addr & 0xf]);
+}
+
+extern void sse_cellbe_stvlx_v0(u64 addr, __m128i a)
+{
+	_mm_maskmoveu_si128(sse_pshufb(a, lvlx_masks[addr & 0xf]), lvrx_masks[addr & 0xf], (char*)vm::base(addr & ~0xf));
+}
+
+extern __m128i sse_cellbe_lvrx_v0(u64 addr)
+{
+	return sse_pshufb(_mm_load_si128((__m128i*)vm::base(addr & ~0xf)), lvrx_masks[addr & 0xf]);
+}
+
+extern void sse_cellbe_stvrx_v0(u64 addr, __m128i a)
+{
+	_mm_maskmoveu_si128(sse_pshufb(a, lvrx_masks[addr & 0xf]), lvlx_masks[addr & 0xf], (char*)vm::base(addr & ~0xf));
 }
 
 template<typename T>
@@ -928,9 +980,16 @@ bool ppu_interpreter_fast::VMHRADDSHS(ppu_thread& ppu, ppu_opcode_t op)
 	const auto a = ppu.vr[op.va].vi;
 	const auto b = ppu.vr[op.vb].vi;
 	const auto c = ppu.vr[op.vc].vi;
-	const auto m = _mm_mulhrs_epi16(a, b);
-	const auto s = _mm_cmpeq_epi16(m, _mm_set1_epi16(-0x8000)); // detect special case (positive 0x8000)
-	ppu.vr[op.vd].vi = _mm_adds_epi16(_mm_adds_epi16(_mm_xor_si128(m, s), c), _mm_srli_epi16(s, 15));
+	const auto x80 = _mm_set1_epi16(0x80); // 0x80 * 0x80 = 0x4000, add this to the product
+	const auto al = _mm_unpacklo_epi16(a, x80);
+	const auto ah = _mm_unpackhi_epi16(a, x80);
+	const auto bl = _mm_unpacklo_epi16(b, x80);
+	const auto bh = _mm_unpackhi_epi16(b, x80);
+	const auto ml = _mm_srai_epi32(_mm_madd_epi16(al, bl), 15);
+	const auto mh = _mm_srai_epi32(_mm_madd_epi16(ah, bh), 15);
+	const auto cl = _mm_srai_epi32(_mm_unpacklo_epi16(_mm_setzero_si128(), c), 16);
+	const auto ch = _mm_srai_epi32(_mm_unpackhi_epi16(_mm_setzero_si128(), c), 16);
+	ppu.vr[op.vd].vi = _mm_packs_epi32(_mm_add_epi32(ml, cl), _mm_add_epi32(mh, ch));
 	return true;
 }
 
@@ -1320,7 +1379,13 @@ bool ppu_interpreter::VOR(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VPERM(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::VPERM(ppu_thread& ppu, ppu_opcode_t op)
+{
+	ppu.vr[op.vd].vi = sse_altivec_vperm_v0(ppu.vr[op.va].vi, ppu.vr[op.vb].vi, ppu.vr[op.vc].vi);
+	return true;
+}
+
+bool ppu_interpreter_fast::VPERM(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.vr[op.vd].vi = sse_altivec_vperm(ppu.vr[op.va].vi, ppu.vr[op.vb].vi, ppu.vr[op.vc].vi);
 	return true;
@@ -2050,7 +2115,7 @@ bool ppu_interpreter::VSRB(ppu_thread& ppu, ppu_opcode_t op)
 	auto& d = ppu.vr[op.vd];
 	const auto& a = ppu.vr[op.va];
 	const auto& b = ppu.vr[op.vb];
-	
+
 	for (uint i = 0; i < 16; i++)
 	{
 		d._u8[i] = a._u8[i] >> (b._u8[i] & 0x7);
@@ -2964,7 +3029,7 @@ bool ppu_interpreter::BCCTR(ppu_thread& ppu, ppu_opcode_t op)
 		if (op.lk) ppu.lr = link;
 		return false;
 	}
-	
+
 	return true;
 }
 
@@ -3163,7 +3228,7 @@ bool ppu_interpreter::MFOCRF(ppu_thread& ppu, ppu_opcode_t op)
 		const u32 n = cntlz32(op.crm) & 7;
 		const u32 p = n * 4;
 		const u32 v = ppu.cr[p + 0] << 3 | ppu.cr[p + 1] << 2 | ppu.cr[p + 2] << 1 | ppu.cr[p + 3] << 0;
-		
+
 		ppu.gpr[op.rd] = v << (p ^ 0x1c);
 	}
 	else
@@ -3874,7 +3939,14 @@ bool ppu_interpreter::DIVW(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::LVLX(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::LVLX(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+	ppu.vr[op.vd].vi = sse_cellbe_lvlx_v0(addr);
+	return true;
+}
+
+bool ppu_interpreter_fast::LVLX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
 	ppu.vr[op.vd].vi = sse_cellbe_lvlx(addr);
@@ -3938,7 +4010,14 @@ bool ppu_interpreter::SRD(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::LVRX(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::LVRX(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+	ppu.vr[op.vd].vi = sse_cellbe_lvrx_v0(addr);
+	return true;
+}
+
+bool ppu_interpreter_fast::LVRX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
 	ppu.vr[op.vd].vi = sse_cellbe_lvrx(addr);
@@ -4006,7 +4085,14 @@ bool ppu_interpreter::LFDUX(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::STVLX(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::STVLX(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+	sse_cellbe_stvlx_v0(addr, ppu.vr[op.vs].vi);
+	return true;
+}
+
+bool ppu_interpreter_fast::STVLX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
 	sse_cellbe_stvlx(addr, ppu.vr[op.vs].vi);
@@ -4054,7 +4140,14 @@ bool ppu_interpreter::STFSX(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::STVRX(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::STVRX(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+	sse_cellbe_stvrx_v0(addr, ppu.vr[op.vs].vi);
+	return true;
+}
+
+bool ppu_interpreter_fast::STVRX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
 	sse_cellbe_stvrx(addr, ppu.vr[op.vs].vi);
@@ -4114,7 +4207,12 @@ bool ppu_interpreter::STFDUX(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::LVLXL(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::LVLXL(ppu_thread& ppu, ppu_opcode_t op)
+{
+	return LVLX(ppu, op);
+}
+
+bool ppu_interpreter_fast::LVLXL(ppu_thread& ppu, ppu_opcode_t op)
 {
 	return LVLX(ppu, op);
 }
@@ -4164,7 +4262,12 @@ bool ppu_interpreter::SRAD(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::LVRXL(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::LVRXL(ppu_thread& ppu, ppu_opcode_t op)
+{
+	return LVRX(ppu, op);
+}
+
+bool ppu_interpreter_fast::LVRXL(ppu_thread& ppu, ppu_opcode_t op)
 {
 	return LVRX(ppu, op);
 }
@@ -4201,7 +4304,12 @@ bool ppu_interpreter::EIEIO(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::STVLXL(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::STVLXL(ppu_thread& ppu, ppu_opcode_t op)
+{
+	return STVLX(ppu, op);
+}
+
+bool ppu_interpreter_fast::STVLXL(ppu_thread& ppu, ppu_opcode_t op)
 {
 	return STVLX(ppu, op);
 }
@@ -4220,7 +4328,12 @@ bool ppu_interpreter::EXTSH(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::STVRXL(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::STVRXL(ppu_thread& ppu, ppu_opcode_t op)
+{
+	return STVRX(ppu, op);
+}
+
+bool ppu_interpreter_fast::STVRXL(ppu_thread& ppu, ppu_opcode_t op)
 {
 	return STVRX(ppu, op);
 }

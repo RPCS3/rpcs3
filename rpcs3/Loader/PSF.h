@@ -53,15 +53,30 @@ namespace psf
 	// Get integer value or default value
 	u32 get_integer(const registry& psf, const std::string& key, u32 def = 0);
 
+	// Assign new entry
+	inline void assign(registry& psf, const std::string& key, entry&& _entry)
+	{
+		const auto found = psf.find(key);
+
+		if (found == psf.end())
+		{
+			psf.emplace(key, std::move(_entry));
+			return;
+		}
+
+		found->second = std::move(_entry);
+		return;
+	}
+
 	// Make string entry
 	inline entry string(u32 max_size, const std::string& value)
 	{
-		return{ format::string, max_size, value };
+		return {format::string, max_size, value};
 	}
 
 	// Make array entry
 	inline entry array(u32 max_size, const std::string& value)
 	{
-		return{ format::array, max_size, value };
+		return {format::array, max_size, value};
 	}
 }

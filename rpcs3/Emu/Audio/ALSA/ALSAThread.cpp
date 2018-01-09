@@ -82,6 +82,8 @@ ALSAThread::ALSAThread()
 	if (!check(snd_pcm_sw_params_current(s_tls_handle, s_tls_sw_params), "snd_pcm_sw_params_current"))
 		return;
 
+	period_frames *= g_cfg.audio.startt;
+
 	if (!check(snd_pcm_sw_params_set_start_threshold(s_tls_handle, s_tls_sw_params, period_frames), "snd_pcm_sw_params_set_start_threshold"))
 		return;
 

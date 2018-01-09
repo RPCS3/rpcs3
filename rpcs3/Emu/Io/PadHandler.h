@@ -319,6 +319,8 @@ class PadHandlerBase
 protected:
 	static const u32 MAX_GAMEPADS = 7;
 
+	std::array<bool, MAX_GAMEPADS> last_connection_status{{ false, false, false, false, false, false, false }};
+
 	int m_trigger_threshold = 0;
 	int m_thumb_threshold = 0;
 
@@ -381,6 +383,42 @@ protected:
 		}
 
 		return def_code;
+	};
+
+	// Search an unordered map for a string value and return found keycode
+	int FindKeyCodeByString(std::unordered_map<u32, std::string> map, const std::string& name, bool fallback = true)
+	{
+		for (auto it = map.begin(); it != map.end(); ++it)
+		{
+			if (it->second == name)
+				return it->first;
+		}
+
+		if (fallback)
+		{
+			LOG_ERROR(HLE, "long FindKeyCodeByString fohr [name = %s] returned with 0", name);
+			return 0;
+		}
+
+		return -1;
+	};
+
+	// Search an unordered map for a string value and return found keycode
+	long FindKeyCodeByString(std::unordered_map<u64, std::string> map, const std::string& name, bool fallback = true)
+	{
+		for (auto it = map.begin(); it != map.end(); ++it)
+		{
+			if (it->second == name)
+				return it->first;
+		}
+
+		if (fallback)
+		{
+			LOG_ERROR(HLE, "long FindKeyCodeByString fohr [name = %s] returned with 0", name);
+			return 0;
+		}
+
+		return -1;
 	};
 
 	// Get normalized trigger value based on the range defined by a threshold
@@ -544,6 +582,7 @@ public:
 	s32 trigger_max = 255;
 	s32 vibration_min = 0;
 	s32 vibration_max = 255;
+	u32 connected = 0;
 
 	virtual bool Init() { return true; };
 	virtual ~PadHandlerBase() = default;
@@ -554,7 +593,7 @@ public:
 	bool has_deadzones() { return b_has_deadzones; };
 	pad_config* GetConfig() { return &m_pad_config; };
 	//Sets window to config the controller(optional)
-	virtual void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist = false) {};
+	virtual void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist = false, std::vector<std::string> buttons = {}) {};
 	virtual void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) {};
 	//Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;

@@ -134,6 +134,12 @@ namespace
 			    command.raw_index_buffer, ptr, type, rsx::method_registers.current_draw_clause.primitive,
 			    rsx::method_registers.current_draw_clause.first_count_commands, vertex_count);
 
+			if (min_index >= max_index)
+			{
+				//empty set, do not draw
+				return{ 0, 0, 0, 0, std::make_tuple(get_index_type(type), offset_in_index_buffer) };
+			}
+
 			//check for vertex arrays with frquency modifiers
 			for (auto &block : m_vertex_layout.interleaved_blocks)
 			{

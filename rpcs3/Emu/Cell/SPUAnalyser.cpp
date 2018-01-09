@@ -78,8 +78,8 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 	// Minimal position of ila $SP,* instruction
 	u32 ila_sp_pos = max_limit;
 
-    // pigeonhole optimization, addr of last ila r2, addr, or 0 if last instruction was not 
-    u32 ila_r2_addr = 0;
+	// pigeonhole optimization, addr of last ila r2, addr, or 0 if last instruction was not
+	u32 ila_r2_addr = 0;
 
 	// Find preliminary set of possible block entries (first pass), `start` is the current block address
 	for (u32 start = entry, pos = entry; pos < limit; pos += 4)
@@ -177,18 +177,18 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 			break;
 		}
 
-        // if upcoming instruction is not BI, reset the pigeonhole optimization
-        // todo: can constant propogation somewhere get rid of this check?
-        if ((type != BI))
-            ila_r2_addr = 0; // reset
+		// if upcoming instruction is not BI, reset the pigeonhole optimization
+		// todo: can constant propogation somewhere get rid of this check?
+		if ((type != BI))
+			ila_r2_addr = 0; // reset
 		
 		if (type == BI || type == IRET) // Branch Indirect
 		{
 			blocks.emplace(start);
 			start = pos + 4;
 
-            if (op.ra == 2 && ila_r2_addr > entry)
-                blocks.emplace(ila_r2_addr);
+			if (op.ra == 2 && ila_r2_addr > entry)
+				blocks.emplace(ila_r2_addr);
 		}
 		else if (type == BR || type == BRA) // Branch Relative/Absolute
 		{
@@ -244,13 +244,13 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 				blocks.emplace(target);
 			}
 		}
-        else if (type == LNOP || type == NOP) {
-            // theres a chance that theres some random lnops/nops after the end of a function
-            // havent found a definite pattern, but, is an easy optimization to check for, just push start down if lnop is tagged as a start
-            // todo: remove the last added start pos as its probly unnecessary
-            if (pos == start)
-                start = pos + 4;
-        }
+		else if (type == LNOP || type == NOP) {
+			// theres a chance that theres some random lnops/nops after the end of a function
+			// havent found a definite pattern, but, is an easy optimization to check for, just push start down if lnop is tagged as a start
+			// todo: remove the last added start pos as its probly unnecessary
+			if (pos == start)
+				start = pos + 4;
+		}
 		else // Other instructions (writing rt reg)
 		{
 			const u32 rt = type & spu_itype::_quadrop ? +op.rt4 : +op.rt;
@@ -268,13 +268,13 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 					ila_sp_pos = pos;
 				}
 			}
-            // pigeonhole optimize 
-            // ila r2, addr
-            // bi r2
-            else if (rt == 2) {
-                if (type == ILA)
-                    ila_r2_addr = spu_branch_target(op.i18);
-            }
+			// pigeonhole optimize
+			// ila r2, addr
+			// bi r2
+			else if (rt == 2) {
+				if (type == ILA)
+					ila_r2_addr = spu_branch_target(op.i18);
+			}
 		}
 	}
 

@@ -48,7 +48,7 @@ namespace gl
 			blit_src.remove();
 		}
 
-		u32 scale_image(u32 src, u32 dst, const areai src_rect, const areai dst_rect, bool linear_interpolation, bool is_depth_copy)
+		u32 scale_image(u32 src, u32 dst, areai src_rect, areai dst_rect, bool linear_interpolation, bool is_depth_copy)
 		{
 			s32 old_fbo = 0;
 			glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
@@ -195,7 +195,7 @@ namespace gl
 
 	public:
 
-		void reset(const u32 base, const u32 size, const bool flushable=false)
+		void reset(u32 base, u32 size, bool flushable=false)
 		{
 			rsx::protection_policy policy = g_cfg.video.strict_rendering_mode ? rsx::protection_policy::protect_policy_full_range : rsx::protection_policy::protect_policy_conservative;
 			rsx::buffered_section::reset(base, size, policy);
@@ -210,8 +210,8 @@ namespace gl
 			vram_texture = 0;
 		}
 		
-		void create(const u16 w, const u16 h, const u16 depth, const u16 mipmaps, void*,
-				gl::texture* image, const u32 rsx_pitch, bool read_only,
+		void create(u16 w, u16 h, u16 depth, u16 mipmaps, void*,
+				gl::texture* image, u32 rsx_pitch, bool read_only,
 				gl::texture::format gl_format, gl::texture::type gl_type, bool swap_bytes)
 		{
 			if (read_only)
@@ -240,7 +240,7 @@ namespace gl
 			set_format(gl_format, gl_type, swap_bytes);
 		}
 
-		void create_read_only(const u32 id, const u32 width, const u32 height, const u32 depth, const u32 mipmaps)
+		void create_read_only(u32 id, u32 width, u32 height, u32 depth, u32 mipmaps)
 		{
 			//Only to be used for ro memory, we dont care about most members, just dimensions and the vram texture handle
 			this->width = width;
@@ -261,7 +261,7 @@ namespace gl
 			real_pitch = width * get_pixel_size(format, type);
 		}
 
-		void set_format(const texture::format gl_format, const texture::type gl_type, const bool swap_bytes)
+		void set_format(texture::format gl_format, texture::type gl_type, bool swap_bytes)
 		{
 			format = gl_format;
 			type = gl_type;
@@ -535,7 +535,7 @@ namespace gl
 			return copied;
 		}
 
-		void set_flushed(const bool state)
+		void set_flushed(bool state)
 		{
 			flushed = state;
 		}
@@ -618,7 +618,7 @@ namespace gl
 			m_temporary_surfaces.resize(0);
 		}
 
-		u32 create_temporary_subresource_impl(u32 src_id, GLenum sized_internal_fmt, const GLenum dst_type, u16 x, u16 y, u16 width, u16 height)
+		u32 create_temporary_subresource_impl(u32 src_id, GLenum sized_internal_fmt, GLenum dst_type, u16 x, u16 y, u16 width, u16 height)
 		{
 			u32 dst_id = 0;
 
@@ -665,6 +665,38 @@ namespace gl
 
 			return dst_id;
 		}
+
+		void apply_component_mapping_flags(GLenum target, u32 gcm_format, rsx::texture_create_flags flags)
+		{
+			switch (flags)
+			{
+			case rsx::texture_create_flags::default_component_order:
+			{
+				auto remap = gl::get_swizzle_remap(gcm_format);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, remap[1]);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, remap[2]);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, remap[3]);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, remap[0]);
+				break;
+			}
+			case rsx::texture_create_flags::native_component_order:
+			{
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_RED);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_BLUE);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
+				break;
+			}
+			case rsx::texture_create_flags::swapped_native_component_order:
+			{
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_ALPHA);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_RED);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_GREEN);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
+				break;
+			}
+			}
+		}
 		
 	protected:
 		
@@ -692,7 +724,7 @@ namespace gl
 			}
 		}
 
-		u32 generate_cubemap_from_images(void*&, const u32 gcm_format, u16 size, std::array<u32, 6>& sources) override
+		u32 generate_cubemap_from_images(void*&, u32 gcm_format, u16 size, const std::array<u32, 6>& sources) override
 		{
 			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
 			GLuint dst_id = 0;
@@ -729,9 +761,9 @@ namespace gl
 			return dst_id;
 		}
 
-		cached_texture_section* create_new_texture(void*&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, const u32 gcm_format,
-				const rsx::texture_upload_context context, const rsx::texture_dimension_extended type, const rsx::texture_create_flags flags,
-				std::pair<std::array<u8, 4>, std::array<u8, 4>>& /*remap_vector*/) override
+		cached_texture_section* create_new_texture(void*&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
+				rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags,
+				const std::pair<std::array<u8, 4>, std::array<u8, 4>>& /*remap_vector*/) override
 		{
 			u32 vram_texture = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
 			bool depth_flag = false;
@@ -744,20 +776,15 @@ namespace gl
 				break;
 			}
 
-			if (flags == rsx::texture_create_flags::swapped_native_component_order)
-			{
-				glBindTexture(GL_TEXTURE_2D, vram_texture);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ALPHA);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_GREEN);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
-			}
+			glBindTexture(GL_TEXTURE_2D, vram_texture);
+			apply_component_mapping_flags(GL_TEXTURE_2D, gcm_format, flags);
 
 			auto& cached = create_texture(vram_texture, rsx_address, rsx_size, width, height, depth, mipmaps);
 			cached.set_dirty(false);
 			cached.set_depth_flag(depth_flag);
 			cached.set_view_flags(flags);
 			cached.set_context(context);
+			cached.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 			cached.set_image_type(type);
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
@@ -770,36 +797,54 @@ namespace gl
 			return &cached;
 		}
 
-		cached_texture_section* upload_image_from_cpu(void*&, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, const u32 gcm_format,
-			const rsx::texture_upload_context context, std::vector<rsx_subresource_layout>& subresource_layout, const rsx::texture_dimension_extended type, const bool swizzled,
-			std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+		cached_texture_section* upload_image_from_cpu(void*&, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
+			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled,
+			const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			void* unused = nullptr;
 			auto section = create_new_texture(unused, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
 				rsx::texture_create_flags::default_component_order, remap_vector);
 
-			//Swizzling is ignored for blit engine copy and emulated using remapping
-			bool input_swizzled = (context == rsx::texture_upload_context::blit_engine_src)? false : swizzled;
+			bool input_swizzled = swizzled;
+			if (context == rsx::texture_upload_context::blit_engine_src)
+			{
+				//Swizzling is ignored for blit engine copy and emulated using remapping
+				input_swizzled = false;
+				section->set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
+			}
+			else
+			{
+				//Generic upload - sampler status will be set on upload
+				section->set_sampler_status(rsx::texture_sampler_status::status_ready);
+			}
 
 			gl::upload_texture(section->get_raw_texture(), rsx_address, gcm_format, width, height, depth, mipmaps, input_swizzled, type, subresource_layout, remap_vector, false);
 			return section;
 		}
 
-		void enforce_surface_creation_type(cached_texture_section& section, const rsx::texture_create_flags flags) override
+		void enforce_surface_creation_type(cached_texture_section& section, u32 gcm_format, rsx::texture_create_flags flags) override
 		{
 			if (flags == section.get_view_flags())
 				return;
 
-			if (flags == rsx::texture_create_flags::swapped_native_component_order)
-			{
-				glBindTexture(GL_TEXTURE_2D, section.get_raw_texture());
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ALPHA);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_GREEN);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
-			}
+			glBindTexture(GL_TEXTURE_2D, section.get_raw_texture());
+			apply_component_mapping_flags(GL_TEXTURE_2D, gcm_format, flags);
 
 			section.set_view_flags(flags);
+			section.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
+		}
+
+		void set_up_remap_vector(cached_texture_section& section, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+		{
+			std::array<GLenum, 4> swizzle_remap;
+			glBindTexture(GL_TEXTURE_2D, section.get_raw_texture());
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, (GLint*)&swizzle_remap[0]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, (GLint*)&swizzle_remap[1]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, (GLint*)&swizzle_remap[2]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, (GLint*)&swizzle_remap[3]);
+
+			apply_swizzle_remap(GL_TEXTURE_2D, swizzle_remap, remap_vector);
+			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 
 		void insert_texture_barrier() override
@@ -831,7 +876,7 @@ namespace gl
 			m_hw_blitter.destroy();
 		}
 
-		bool is_depth_texture(const u32 rsx_address, const u32 rsx_size) override
+		bool is_depth_texture(u32 rsx_address, u32 rsx_size) override
 		{
 			reader_lock lock(m_cache_mutex);
 

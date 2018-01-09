@@ -794,7 +794,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	vk::texture_cache::thrashed_set result;
 	{
 		std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
-		result = std::move(m_texture_cache.invalidate_address(address, is_writing, false, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()));
+		result = std::move(m_texture_cache.invalidate_address(address, is_writing, false, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()));
 	}
 
 	if (!result.violation_handled)
@@ -811,7 +811,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		bool has_queue_ref = false;
 
 		u64 sync_timestamp = 0ull;
-		for (const auto& tex : result.affected_sections)
+		for (const auto& tex : result.sections_to_flush)
 			sync_timestamp = std::max(sync_timestamp, tex->get_sync_timestamp());
 
 		if (!is_rsxthr)
@@ -882,7 +882,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			}
 		}
 
-		m_texture_cache.flush_all(result, *m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+		m_texture_cache.flush_all(result, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 
 		if (has_queue_ref)
 		{
@@ -897,7 +897,7 @@ void VKGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 {
 	std::lock_guard<std::mutex> lock(m_secondary_cb_guard);
 	if (m_texture_cache.invalidate_range(address_base, size, true, true, false,
-		*m_device, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()).violation_handled)
+		m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()).violation_handled)
 	{
 		m_texture_cache.purge_dirty();
 		{
@@ -924,7 +924,8 @@ void VKGSRender::begin()
 {
 	rsx::thread::begin();
 
-	if (skip_frame || renderer_unavailable)
+	if (skip_frame || renderer_unavailable ||
+		(conditional_render_enabled && conditional_render_test_failed))
 		return;
 
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
@@ -1089,16 +1090,10 @@ void VKGSRender::close_render_pass()
 
 void VKGSRender::end()
 {
-	if (skip_frame || !framebuffer_status_valid || renderer_unavailable)
+	if (skip_frame || !framebuffer_status_valid || renderer_unavailable ||
+		(conditional_render_enabled && conditional_render_test_failed) ||
+		!check_program_status())
 	{
-		rsx::thread::end();
-		return;
-	}
-
-	//Load program here since it is dependent on vertex state
-	if (!check_program_status())
-	{
-		LOG_ERROR(RSX, "No valid program bound to pipeline. Skipping draw");
 		rsx::thread::end();
 		return;
 	}
@@ -1154,7 +1149,8 @@ void VKGSRender::end()
 
 					std::tie(min_filter, mip_mode) = vk::get_min_filter_and_mip(rsx::method_registers.fragment_textures[i].min_filter());
 
-					if (rsx::method_registers.fragment_textures[i].get_exact_mipmap_count() > 1)
+					if (sampler_state->upload_context == rsx::texture_upload_context::shader_read &&
+						rsx::method_registers.fragment_textures[i].get_exact_mipmap_count() > 1)
 					{
 						min_lod = (float)(rsx::method_registers.fragment_textures[i].min_lod() >> 8);
 						max_lod = (float)(rsx::method_registers.fragment_textures[i].max_lod() >> 8);
@@ -2247,7 +2243,7 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 
 	properties.rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 	properties.rs.polygonMode = VK_POLYGON_MODE_FILL;
-	properties.rs.depthClampEnable = VK_FALSE;
+	properties.rs.depthClampEnable = rsx::method_registers.depth_clamp_enabled();
 	properties.rs.rasterizerDiscardEnable = VK_FALSE;
 
 	//Disabled by setting factors to 0 as needed
@@ -2293,6 +2289,7 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 	fill_user_clip_data(buf + 64);
 	*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
 	*(reinterpret_cast<u32*>(buf + 132)) = vertex_base;
+	*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
 	fill_vertex_layout_state(m_vertex_layout, vertex_count, reinterpret_cast<s32*>(buf + 144));
 
 	//Vertex constants
@@ -2429,12 +2426,18 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	const auto depth_fmt = rsx::method_registers.surface_depth_fmt();
 	const auto target = rsx::method_registers.surface_color_target();
 
-	//NOTE: Z buffers with pitch = 64 are valid even if they would not fit (GT HD Concept)
+	//NOTE: Its is possible that some renders are done on a swizzled context. Pitch is meaningless in that case
+	//Seen in Nier (color) and GT HD concept (z buffer)
+	//Restriction is that the RTT is always a square region for that dimensions are powers of 2
+	const auto required_zeta_pitch = std::max<u32>((u32)(depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4), 64u);
 	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(color_fmt, clip_width), 64u);
+	const bool stencil_test_enabled = depth_fmt == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
 
 	if (zeta_address)
 	{
-		if (!rsx::method_registers.depth_test_enabled() && target != rsx::surface_target::none)
+		if (!rsx::method_registers.depth_test_enabled() &&
+			!stencil_test_enabled &&
+			target != rsx::surface_target::none)
 		{
 			//Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
 			const bool is_depth_clear = !!(context & rsx::framebuffer_creation_context::context_clear_depth);
@@ -2444,18 +2447,27 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 				m_framebuffer_state_contested = true;
 			}
 		}
+
+		if (zeta_address && zeta_pitch < required_zeta_pitch)
+		{
+			if (zeta_pitch < 64 || clip_width != clip_height)
+				zeta_address = 0;
+		}
 	}
 
 	for (const auto &index : rsx::utility::get_rtt_indexes(target))
 	{
 		if (surface_pitchs[index] < required_color_pitch)
-			surface_addresses[index] = 0;
+		{
+			if (surface_pitchs[index] < 64 || clip_width != clip_height)
+				surface_addresses[index] = 0;
+		}
 
 		if (surface_addresses[index] == zeta_address)
 		{
 			LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, zeta_pitch = %d, color_pitch=%d", zeta_address, zeta_pitch, surface_pitchs[index]);
 			if (context == rsx::framebuffer_creation_context::context_clear_depth ||
-				rsx::method_registers.depth_test_enabled() ||
+				rsx::method_registers.depth_test_enabled() || stencil_test_enabled ||
 				(!rsx::method_registers.color_write_enabled() && rsx::method_registers.depth_write_enabled()))
 			{
 				// Use address for depth data
@@ -2476,7 +2488,10 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	}
 
 	if (!framebuffer_status_valid && !zeta_address)
+	{
+		LOG_WARNING(RSX, "Framebuffer setup failed. Draw calls may have been lost");
 		return;
+	}
 
 	//At least one attachment exists
 	framebuffer_status_valid = true;

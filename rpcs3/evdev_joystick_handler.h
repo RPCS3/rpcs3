@@ -7,6 +7,74 @@
 #include <libevdev/libevdev.h>
 #include <vector>
 #include <thread>
+#include <ctime>
+
+struct positive_axis : cfg::node
+{
+	const std::string cfg_name = fs::get_config_dir() + "/evdev_positive_axis.yml";
+
+	cfg::_bool abs_x{ this, "ABS_X", false };
+	cfg::_bool abs_y{ this, "ABS_Y", false };
+	cfg::_bool abs_z{ this, "ABS_Z", false };
+	cfg::_bool abs_rx{ this, "ABS_RX", false };
+	cfg::_bool abs_ry{ this, "ABS_RY", false };
+	cfg::_bool abs_rz{ this, "ABS_RZ", false };
+	cfg::_bool abs_throttle{ this, "ABS_THROTTLE", false };
+	cfg::_bool abs_rudder{ this, "ABS_RUDDER", false };
+	cfg::_bool abs_wheel{ this, "ABS_WHEEL", false };
+	cfg::_bool abs_gas{ this, "ABS_GAS", false };
+	cfg::_bool abs_brake{ this, "ABS_BRAKE", false };
+	cfg::_bool abs_hat0x{ this, "ABS_HAT0X", false };
+	cfg::_bool abs_hat0y{ this, "ABS_HAT0Y", false };
+	cfg::_bool abs_hat1x{ this, "ABS_HAT1X", false };
+	cfg::_bool abs_hat1y{ this, "ABS_HAT1Y", false };
+	cfg::_bool abs_hat2x{ this, "ABS_HAT2X", false };
+	cfg::_bool abs_hat2y{ this, "ABS_HAT2Y", false };
+	cfg::_bool abs_hat3x{ this, "ABS_HAT3X", false };
+	cfg::_bool abs_hat3y{ this, "ABS_HAT3Y", false };
+	cfg::_bool abs_pressure{ this, "ABS_PRESSURE", false };
+	cfg::_bool abs_distance{ this, "ABS_DISTANCE", false };
+	cfg::_bool abs_tilt_x{ this, "ABS_TILT_X", false };
+	cfg::_bool abs_tilt_y{ this, "ABS_TILT_Y", false };
+	cfg::_bool abs_tool_width{ this, "ABS_TOOL_WIDTH", false };
+	cfg::_bool abs_volume{ this, "ABS_VOLUME", false };
+	cfg::_bool abs_misc{ this, "ABS_MISC", false };
+	cfg::_bool abs_mt_slot{ this, "ABS_MT_SLOT", false };
+	cfg::_bool abs_mt_touch_major{ this, "ABS_MT_TOUCH_MAJOR", false };
+	cfg::_bool abs_mt_touch_minor{ this, "ABS_MT_TOUCH_MINOR", false };
+	cfg::_bool abs_mt_width_major{ this, "ABS_MT_WIDTH_MAJOR", false };
+	cfg::_bool abs_mt_width_minor{ this, "ABS_MT_WIDTH_MINOR", false };
+	cfg::_bool abs_mt_orientation{ this, "ABS_MT_ORIENTATION", false };
+	cfg::_bool abs_mt_position_x{ this, "ABS_MT_POSITION_X", false };
+	cfg::_bool abs_mt_position_y{ this, "ABS_MT_POSITION_Y", false };
+	cfg::_bool abs_mt_tool_type{ this, "ABS_MT_TOOL_TYPE", false };
+	cfg::_bool abs_mt_blob_id{ this, "ABS_MT_BLOB_ID", false };
+	cfg::_bool abs_mt_tracking_id{ this, "ABS_MT_TRACKING_ID", false };
+	cfg::_bool abs_mt_pressure{ this, "ABS_MT_PRESSURE", false };
+	cfg::_bool abs_mt_distance{ this, "ABS_MT_DISTANCE", false };
+	cfg::_bool abs_mt_tool_x{ this, "ABS_MT_TOOL_X", false };
+	cfg::_bool abs_mt_tool_y{ this, "ABS_MT_TOOL_Y", false };
+
+	bool load()
+	{
+		if (fs::file cfg_file{ cfg_name, fs::read })
+		{
+			return from_string(cfg_file.to_string());
+		}
+
+		return false;
+	}
+
+	void save()
+	{
+		fs::file(cfg_name, fs::rewrite).write(to_string());
+	}
+
+	bool exist()
+	{
+		return fs::is_file(cfg_name);
+	}
+};
 
 class evdev_joystick_handler final : public PadHandlerBase
 {
@@ -225,15 +293,33 @@ class evdev_joystick_handler final : public PadHandlerBase
 		{ ABS_MT_TOOL_Y      , "MT Tool Y-"   },
 	};
 
+	struct EvdevButton
+	{
+		u32 code;
+		int dir;
+		int type;
+	};
+
 	struct EvdevDevice
 	{
-		libevdev* device;
+		libevdev* device = nullptr;
 		std::string path;
 		std::shared_ptr<Pad> pad;
 		std::unordered_map<int, bool> axis_orientations; // value is true if key was found in rev_axis_list
 		float stick_val[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		u16 val_min[4] = { 0, 0, 0, 0 };
 		u16 val_max[4] = { 0, 0, 0, 0 };
+		EvdevButton trigger_left  = { 0, 0, 0 };
+		EvdevButton trigger_right = { 0, 0, 0 };
+		std::vector<EvdevButton> axis_left  = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
+		std::vector<EvdevButton> axis_right = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
+		int cur_dir = 0;
+		int cur_type = 0;
+		int effect_id = -1;
+		bool has_rumble = false;
+		u16 force_large = 0;
+		u16 force_small = 0;
+		clock_t last_vibration = 0;
 	};
 
 	const int BUTTON_COUNT = 17;
@@ -247,21 +333,29 @@ public:
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
 	void Close();
-	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist = false) override;
+	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist = false, std::vector<std::string> buttons = {}) override;
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
 
 private:
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
+	EvdevDevice* get_device(const std::string& device);
 	bool update_device(EvdevDevice& device, bool use_cell = true);
 	void update_devs(bool use_cell = true);
-	int add_device(const std::string& device, bool in_settings = false, std::shared_ptr<Pad> pad = nullptr, const std::unordered_map<int, bool>& axis_map = std::unordered_map<int, bool>());
-	int GetButtonInfo(const input_event& evt, libevdev* dev, int& button_code, bool& is_negative);
-	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(libevdev* dev);
+	int add_device(const std::string& device, bool in_settings = false);
+	int GetButtonInfo(const input_event& evt, const EvdevDevice& device, int& button_code);
+	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(const EvdevDevice& device);
+	void SetRumble(EvdevDevice* device, u16 large, u16 small);
 
 	// Search axis_orientations map for the direction by index, returns -1 if not found, 0 for positive and 1 for negative
 	int FindAxisDirection(const std::unordered_map<int, bool>& map, int index);
 
+	positive_axis m_pos_axis_config;
+	std::vector<u32> m_positive_axis;
 	std::vector<std::string> blacklist;
 	std::vector<EvdevDevice> devices;
 	int m_pad_index = -1;
+	EvdevDevice m_dev;
+	bool m_is_button_or_trigger;
+	bool m_is_negative;
+	bool m_is_init = false;
 };

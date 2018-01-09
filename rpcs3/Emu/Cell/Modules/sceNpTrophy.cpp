@@ -196,7 +196,12 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	}
 
 	// open trophy pack file
-	fs::file stream(vfs::get("/app_home/../TROPDIR/" + name + "/TROPHY.TRP"));
+	fs::file stream(vfs::get("/dev_hdd0/game/" + Emu.GetTitleID() + "/TROPDIR/" + name + "/TROPHY.TRP"));
+
+	if (!stream && (Emu.GetCat() == "DG" || Emu.GetCat() == "GD"))
+	{
+		stream.open(vfs::get("/dev_bdvd/PS3_GAME/TROPDIR/" + name + "/TROPHY.TRP"));
+	}
 
 	// check if exists and opened
 	if (!stream)
@@ -326,7 +331,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 
 error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspace, u64 options)
 {
-	sceNpTrophy.todo("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace=*0x%x, options=0x%llx)", context, handle, reqspace, options);
+	sceNpTrophy.warning("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace=*0x%x, options=0x%llx)", context, handle, reqspace, options);
 
 	if (!reqspace)
 	{
@@ -347,12 +352,18 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	// TODO: This is not accurate. It's just an approximation of the real value
-	//       The real value can be obtained in TRP.cpp:
-	//		 m_headers.trp_file_size - sizeof(m_headers) - (m_headers.trp_files_count * m_headers.trp_element_size);
-	// TODO: eventually this should be set to 0 when trophys are detected as already installed, setting to 0 now causes some games to not call registerContext, which leads to trophys never getting installed
-	*reqspace = ctxt->trp_stream.size();
+	if (!fs::is_dir("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name))
+	{
+		TRPLoader trp(ctxt->trp_stream);
 
+		if (trp.LoadHeader())
+		{
+			*reqspace = trp.GetRequiredSpace();
+			return CELL_OK;
+		}
+	}
+
+	*reqspace = 0;
 	return CELL_OK;
 }
 
