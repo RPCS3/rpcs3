@@ -666,6 +666,10 @@ bool GDBDebugServer::cmd_vcont(gdb_cmd & cmd)
 			ppu->state += cpu_flag::dbg_step;
 		}
 		ppu->state -= cpu_flag::dbg_pause;
+		//special case if app didn't start yet (only loaded)
+		if (!Emu.IsPaused() && !Emu.IsRunning()) {
+			Emu.Run();
+		}
 		if (Emu.IsPaused()) {
 			Emu.Resume();
 		} else {
@@ -750,7 +754,9 @@ void GDBDebugServer::on_task()
 			return;
 		}
 		//stop immediately
-		Emu.Pause();
+		if (Emu.IsRunning()) {
+			Emu.Pause();
+		}
 
 		try {
 			char hostbuf[32];
