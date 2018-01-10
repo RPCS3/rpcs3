@@ -262,7 +262,8 @@ public:
 	void Run();
 	bool Pause();
 	void Resume();
-	void Stop();
+	void Stop(bool restart = false);
+	void Restart() { Stop(true); }
 
 	bool IsRunning() const { return m_state == system_state::running; }
 	bool IsPaused()  const { return m_state == system_state::paused; }
@@ -378,6 +379,7 @@ struct cfg_root : cfg::node
 		cfg::_bool convert_to_u16{this, "Convert to 16 bit"};
 		cfg::_bool downmix_to_2ch{this, "Downmix to Stereo", true};
 		cfg::_int<2, 128> frames{this, "Buffer Count", 32};
+		cfg::_int<1, 128> startt{this, "Start Threshold", 1};
 
 	} audio{this};
 

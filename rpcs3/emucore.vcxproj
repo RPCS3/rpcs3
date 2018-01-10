@@ -123,6 +123,7 @@
     <ClCompile Include="Emu\CPU\CPUTranslator.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Emu\Io\PadHandler.cpp" />
     <ClCompile Include="Emu\PSP2\ARMv7Module.cpp" />
     <ClCompile Include="Emu\Cell\lv2\lv2.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_cond.cpp" />

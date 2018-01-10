@@ -71,6 +71,8 @@ static void* s_next = s_memory;
 #ifdef _WIN32
 static std::deque<std::vector<RUNTIME_FUNCTION>> s_unwater;
 static std::vector<std::vector<RUNTIME_FUNCTION>> s_unwind; // .pdata
+#else
+static std::deque<std::tuple<u8*, u64, std::size_t>> s_unfire;
 #endif
 
 // Reset memory manager
@@ -87,7 +89,30 @@ extern void jit_finalize()
 
 	s_unwind.clear();
 #else
-	// TODO: unregister EH frames if necessary
+	struct MemoryManager : llvm::RTDyldMemoryManager
+	{
+		u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
+		{
+			return nullptr;
+		}
+
+		u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
+		{
+			return nullptr;
+		}
+
+		bool finalizeMemory(std::string* = nullptr) override
+		{
+			return false;
+		}
+	} mem;
+
+	for (auto&& t : s_unfire)
+	{
+		mem.deregisterEHFrames(std::get<0>(t), std::get<1>(t), std::get<2>(t));
+	}
+
+	s_unfire.clear();
 #endif
 
 	utils::memory_decommit(s_memory, s_memory_size);
@@ -261,6 +286,8 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		{
 			s_unwind.emplace_back(std::move(pdata));
 		}
+#else
+		s_unfire.push_front(std::make_tuple(addr, load_addr, size));
 #endif
 
 		return RTDyldMemoryManager::registerEHFrames(addr, load_addr, size);
@@ -268,9 +295,6 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 	void deregisterEHFrames(u8* addr, u64 load_addr, std::size_t size) override
 	{
-		LOG_ERROR(GENERAL, "deregisterEHFrames() called"); // Not expected
-
-		return RTDyldMemoryManager::deregisterEHFrames(addr, load_addr, size);
 	}
 };
 

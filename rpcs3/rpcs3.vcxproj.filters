@@ -584,6 +584,9 @@
     <ClCompile Include="rpcs3qt\game_compatibility.cpp">
       <Filter>Gui\game list</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\find_dialog.cpp">
+      <Filter>Gui\misc dialogs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -660,6 +663,9 @@
     </ClInclude>
     <ClInclude Include="evdev_joystick_handler.h">
       <Filter>Io\evdev</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\find_dialog.h">
+      <Filter>Gui\misc dialogs</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\custom_table_widget_item.h">
       <Filter>Gui\game list</Filter>

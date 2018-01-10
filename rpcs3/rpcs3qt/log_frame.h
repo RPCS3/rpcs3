@@ -4,6 +4,7 @@
 #include "Utilities/Log.h"
 
 #include "gui_settings.h"
+#include "find_dialog.h"
 
 #include <memory>
 
@@ -12,6 +13,7 @@
 #include <QTextEdit>
 #include <QActionGroup>
 #include <QTimer>
+#include <QKeyEvent>
 
 class log_frame : public QDockWidget
 {
@@ -31,6 +33,7 @@ Q_SIGNALS:
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event);
+	bool eventFilter(QObject* object, QEvent* event) override;
 private Q_SLOTS:
 	void UpdateUI();
 private:
@@ -38,6 +41,10 @@ private:
 	void SetTTYLogging(bool val);
 
 	void CreateAndConnectActions();
+
+	QTabWidget* m_tabWidget;
+
+	std::unique_ptr<find_dialog> m_find_dialog;
 
 	QList<QColor> m_color;
 	QColor m_color_stack;

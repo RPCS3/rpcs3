@@ -153,6 +153,9 @@ namespace
 				dst = gsl::span<gsl::byte>(static_cast<gsl::byte*>(buf), upload_size);
 			}
 
+			std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info =
+				std::make_tuple(offset_in_index_buffer, vk::get_index_type(index_type));
+
 			/**
 			* Upload index (and expands it if primitive type is not natively supported).
 			*/
@@ -164,6 +167,13 @@ namespace
 				rsx::method_registers.restart_index_enabled(),
 				rsx::method_registers.restart_index(), command.ranges_to_fetch_in_index_buffer,
 				[](auto prim) { return !vk::is_primitive_native(prim); });
+
+			if (min_index >= max_index)
+			{
+				//empty set, do not draw
+				m_index_buffer_ring_info.unmap();
+				return{ prims, 0, 0, 0, 0, index_info };
+			}
 
 			if (rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart())
 			{
@@ -179,9 +189,6 @@ namespace
 			}
 
 			m_index_buffer_ring_info.unmap();
-
-			std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info =
-				std::make_tuple(offset_in_index_buffer, vk::get_index_type(index_type));
 
 			//check for vertex arrays with frquency modifiers
 			for (auto &block : m_vertex_layout.interleaved_blocks)

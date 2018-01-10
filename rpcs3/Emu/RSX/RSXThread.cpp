@@ -388,6 +388,7 @@ namespace rsx
 
 					continue;
 				}
+
 				while (Emu.IsPaused())
 					std::this_thread::sleep_for(10ms);
 
@@ -490,6 +491,22 @@ namespace rsx
 				while (external_interrupt_lock.load()) _mm_pause();
 			}
 
+			//Set up restore state if needed
+			if (sync_point_request)
+			{
+				if (RSXIOMem.RealAddr(internal_get))
+				{
+					//New internal get is valid, use it
+					restore_point = internal_get.load();
+				}
+				else
+				{
+					LOG_ERROR(RSX, "Could not update FIFO restore point");
+				}
+
+				sync_point_request = false;
+			}
+
 			//Now load the FIFO ctrl registers
 			ctrl->get.store(internal_get.load());
 			const u32 put = ctrl->put;
@@ -513,13 +530,13 @@ namespace rsx
 
 				if (mem_faults_count >= 3)
 				{
-					LOG_ERROR(RSX, "Application has failed to recover, discarding FIFO queue");
-					internal_get = put;
+					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
+					internal_get = restore_point.load();;
 				}
 				else
 				{
 					mem_faults_count++;
-					std::this_thread::sleep_for(1ms);
+					std::this_thread::sleep_for(10ms);
 				}
 
 				invalid_command_interrupt_raised = true;
@@ -581,13 +598,13 @@ namespace rsx
 
 				if (mem_faults_count >= 3)
 				{
-					LOG_ERROR(RSX, "Application has failed to recover, discarding FIFO queue");
-					internal_get = put;
+					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
+					internal_get = restore_point.load();
 				}
 				else
 				{
 					mem_faults_count++;
-					std::this_thread::sleep_for(1ms);
+					std::this_thread::sleep_for(10ms);
 				}
 
 				invalid_command_interrupt_raised = true;
@@ -735,7 +752,8 @@ namespace rsx
 			{
 				//This is almost guaranteed to be heap corruption at this point
 				//Ignore the rest of the chain
-				internal_get = put;
+				LOG_ERROR(RSX, "FIFO contents may be corrupted. Resetting...");
+				internal_get = restore_point.load();
 				continue;
 			}
 

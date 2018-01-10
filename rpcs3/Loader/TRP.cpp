@@ -103,6 +103,14 @@ bool TRPLoader::LoadHeader(bool show)
 	return true;
 }
 
+u64 TRPLoader::GetRequiredSpace() const
+{
+	const u64 file_size = m_header.trp_file_size;
+	const u64 file_element_size = u64{1} * m_header.trp_files_count * m_header.trp_element_size;
+
+	return file_size - sizeof(m_header) - file_element_size;
+}
+
 bool TRPLoader::ContainsEntry(const char *filename)
 {
 	for (const TRPEntry& entry : m_entries)
