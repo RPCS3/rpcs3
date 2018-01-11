@@ -710,20 +710,34 @@ struct registers_decoder<NV4097_SET_ZMIN_MAX_CONTROL>
 		union
 		{
 			u32 raw_value;
+			bitfield_decoder_t<0, 4> depth_clip_enabled;
 			bitfield_decoder_t<4, 4> depth_clamp_enabled;
+			bitfield_decoder_t<8, 4> depth_clip_ignore_w;
 		} m_data;
 	public:
 		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		bool depth_clip_enabled() const
+		{
+			return bool(m_data.depth_clip_enabled);
+		}
 
 		bool depth_clamp_enabled() const
 		{
 			return bool(m_data.depth_clamp_enabled);
 		}
+
+		bool depth_clip_ignore_w() const
+		{
+			return bool(m_data.depth_clip_ignore_w);
+		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Depth: clamp " + print_boolean(decoded_values.depth_clamp_enabled());
+		return "Depth: clip_enabled " + print_boolean(decoded_values.depth_clip_enabled()) +
+			" clamp " + print_boolean(decoded_values.depth_clamp_enabled()) +
+			" ignore_w " + print_boolean(decoded_values.depth_clip_ignore_w());
 	}
 };
 
