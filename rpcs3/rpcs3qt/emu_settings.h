@@ -53,7 +53,6 @@ public:
 		LegacyBuffers,
 		GPUTextureScaling,
 		StretchToDisplayArea,
-		D3D12Adapter,
 		VulkanAdapter,
 		ForceHighpZ,
 		StrictRenderingMode,
@@ -117,15 +116,11 @@ public:
 
 	struct Render_Creator
 	{
-		bool supportsD3D12 = false;
 		bool supportsVulkan = false;
-		QStringList D3D12Adapters;
 		QStringList vulkanAdapters;
 		QString name_Null = tr("Null");
 		QString name_Vulkan = tr("Vulkan");
-		QString name_D3D12 = tr("D3D12[DO NOT USE]");
 		QString name_OpenGL = tr("OpenGL");
-		Render_Info D3D12;
 		Render_Info Vulkan;
 		Render_Info OpenGL;
 		Render_Info NullRender;
@@ -216,7 +211,6 @@ private:
 		{ AnisotropicFilterOverride,{ "Video", "Anisotropic Filter Override" }},
 		{ ResolutionScale,          { "Video", "Resolution Scale" }},
 		{ MinimumScalableDimension, { "Video", "Minimum Scalable Dimension" }},
-		{ D3D12Adapter,             { "Video", "D3D12", "Adapter"}},
 		{ VulkanAdapter,            { "Video", "Vulkan", "Adapter"}},
 
 		// Audio
