@@ -8,10 +8,8 @@
 #include <memory>
 #include <unordered_map>
 
-#ifdef __linux__
-#include <X11/Xlib.h>
-#endif
-
+#include "Utilities/variant.hpp"
+#include "Emu/RSX/GSRender.h"
 #include "Emu/System.h"
 #include "VulkanAPI.h"
 #include "../GCM.h"
@@ -199,7 +197,7 @@ namespace vk
 			//Set up instance information
 			const char *requested_extensions[] =
 			{
-				"VK_KHR_swapchain"
+				VK_KHR_SWAPCHAIN_EXTENSION_NAME
 			};
 
 			std::vector<const char *> layers;
@@ -324,7 +322,7 @@ namespace vk
 			VkDevice dev = (VkDevice)(*owner);
 
 			u32 access_mask = 0;
-			
+
 			if (host_visible)
 				access_mask |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
@@ -412,7 +410,7 @@ namespace vk
 
 			VkMemoryRequirements memory_req;
 			vkGetImageMemoryRequirements(m_device, value, &memory_req);
-			
+
 			if (!(memory_req.memoryTypeBits & (1 << memory_type_index)))
 			{
 				//Suggested memory type is incompatible with this memory type.
@@ -953,7 +951,7 @@ namespace vk
 
 			nb_swap_images = 0;
 			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, nullptr);
-			
+
 			if (!nb_swap_images) fmt::throw_exception("Driver returned 0 images for swapchain" HERE);
 
 			std::vector<VkImage> swap_images;
@@ -1185,11 +1183,11 @@ namespace vk
 			m_instance = nullptr;
 			m_vk_instances.resize(0);
 		}
-		
+
 		void enable_debugging()
 		{
 			if (!g_cfg.video.debug_output) return;
-			 
+
 			PFN_vkDebugReportCallbackEXT callback = vk::dbgFunc;
 
 			createDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(m_instance, "vkCreateDebugReportCallbackEXT");
@@ -1220,13 +1218,16 @@ namespace vk
 			//Set up instance information
 			const char *requested_extensions[] =
 			{
-				"VK_KHR_surface",
+				VK_KHR_SURFACE_EXTENSION_NAME,
 #ifdef _WIN32
-				"VK_KHR_win32_surface",
+				VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #else
-				"VK_KHR_xlib_surface",
+				VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
 #endif
-				"VK_EXT_debug_report",
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+				VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
+#endif
+				VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 			};
 
 			std::vector<const char *> layers;
@@ -1239,7 +1240,7 @@ namespace vk
 			instance_info.pApplicationInfo = &app;
 			instance_info.enabledLayerCount = static_cast<uint32_t>(layers.size());
 			instance_info.ppEnabledLayerNames = layers.data();
-			instance_info.enabledExtensionCount = fast? 0: 3;
+			instance_info.enabledExtensionCount = fast? 0: sizeof(requested_extensions)/sizeof(char*);
 			instance_info.ppEnabledExtensionNames = fast? nullptr: requested_extensions;
 
 			VkInstance instance;
@@ -1304,8 +1305,8 @@ namespace vk
 		}
 
 #ifdef _WIN32
-		
-		vk::swap_chain* createSwapChain(HINSTANCE hInstance, HWND hWnd, vk::physical_device &dev)
+
+		vk::swap_chain* createSwapChain(HINSTANCE hInstance, display_handle_t hWnd, vk::physical_device &dev)
 		{
 			VkWin32SurfaceCreateInfoKHR createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -1315,16 +1316,31 @@ namespace vk
 			VkSurfaceKHR surface;
 			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface));
 #elif HAVE_VULKAN
-		
-		vk::swap_chain* createSwapChain(Display *display, Window window, vk::physical_device &dev)
+
+		vk::swap_chain* createSwapChain(display_handle_t ctx, vk::physical_device &dev)
 		{
-			VkXlibSurfaceCreateInfoKHR createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-			createInfo.dpy = display;
-			createInfo.window = window;
-			
 			VkSurfaceKHR surface;
-			CHECK_RESULT(vkCreateXlibSurfaceKHR(m_instance, &createInfo, nullptr, &surface));
+
+			ctx.match(
+				[&](std::pair<Display*, Window> p)
+				{
+					VkXlibSurfaceCreateInfoKHR createInfo = {};
+					createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+					createInfo.dpy = p.first;
+					createInfo.window = p.second;
+					CHECK_RESULT(vkCreateXlibSurfaceKHR(this->m_instance, &createInfo, nullptr, &surface));
+				}
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+				, [&](std::pair<wl_display*, wl_surface*> p)
+				{
+					VkWaylandSurfaceCreateInfoKHR createInfo = {};
+					createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+					createInfo.display = p.first;
+					createInfo.surface = p.second;
+					CHECK_RESULT(vkCreateWaylandSurfaceKHR(this->m_instance, &createInfo, nullptr, &surface));
+				}
+#endif
+			);
 #endif
 
 			uint32_t device_queues = dev.get_queue_count();
@@ -1439,7 +1455,7 @@ namespace vk
 		void destroy()
 		{
 			if (!pool) return;
-			
+
 			vkDestroyDescriptorPool((*owner), pool, nullptr);
 			owner = nullptr;
 			pool = nullptr;
@@ -1591,7 +1607,7 @@ namespace vk
 		{
 			::glsl::program_domain domain;
 			program_input_type type;
-			
+
 			bound_buffer as_buffer;
 			bound_sampler as_sampler;
 

@@ -494,12 +494,8 @@ VKGSRender::VKGSRender() : GSRender()
 		return;
 	}
 
-#ifdef _WIN32
-	HINSTANCE hInstance = NULL;
-	HWND hWnd = (HWND)m_frame->handle();
+	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();
 
-	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();	
-	
 	//Actually confirm  that the loader found at least one compatible device
 	//This should not happen unless something is wrong with the driver setup on the target system
 	if (gpus.size() == 0)
@@ -512,11 +508,18 @@ VKGSRender::VKGSRender() : GSRender()
 
 	bool gpu_found = false;
 	std::string adapter_name = g_cfg.video.vk.adapter;
+
+	display_handle_t display = m_frame->handle();
+
+#ifdef _WIN32
+
+	HINSTANCE hInstance = NULL;
+
 	for (auto &gpu : gpus)
 	{
 		if (gpu.name() == adapter_name)
 		{
-			m_swap_chain = m_thread_context.createSwapChain(hInstance, hWnd, gpu);
+			m_swap_chain = m_thread_context.createSwapChain(hInstance, display, gpu);
 			gpu_found = true;
 			break;
 		}
@@ -524,35 +527,18 @@ VKGSRender::VKGSRender() : GSRender()
 
 	if (!gpu_found || adapter_name.empty())
 	{
-		m_swap_chain = m_thread_context.createSwapChain(hInstance, hWnd, gpus[0]);
+		m_swap_chain = m_thread_context.createSwapChain(hInstance, display, gpus[0]);
 	}
-	
+
 #elif HAVE_VULKAN
 
-	Window window = (Window)m_frame->handle();
-	Display *display = XOpenDisplay(0);
+	display.match([](std::pair<Display*, Window> p) { XFlush(p.first); }, [](auto _) {});
 
-	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();	
-	
-	//Actually confirm  that the loader found at least one compatible device
-	//This should not happen unless something is wrong with the driver setup on the target system
-	if (gpus.size() == 0)
-	{
-		//We can't throw in Emulator::Load, so we show error and return
-		LOG_FATAL(RSX, "No compatible GPU devices found");
-		m_device = VK_NULL_HANDLE;
-		return;
-	}
-
-	XFlush(display);
-
-	bool gpu_found = false;
-	std::string adapter_name = g_cfg.video.vk.adapter;
 	for (auto &gpu : gpus)
 	{
 		if (gpu.name() == adapter_name)
 		{
-			m_swap_chain = m_thread_context.createSwapChain(display, window, gpu);
+			m_swap_chain = m_thread_context.createSwapChain(display, gpu);
 			gpu_found = true;
 			break;
 		}
@@ -560,10 +546,10 @@ VKGSRender::VKGSRender() : GSRender()
 
 	if (!gpu_found || adapter_name.empty())
 	{
-		m_swap_chain = m_thread_context.createSwapChain(display, window, gpus[0]);
+		m_swap_chain = m_thread_context.createSwapChain(display, gpus[0]);
 	}
-	
-	m_display_handle = display;
+
+	display.match([&](std::pair<Display*, Window> p) { m_display_handle = p.first; }, [](auto _) {});
 
 #endif
 

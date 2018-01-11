@@ -231,6 +231,7 @@ public:
 	bool GetGamelistColVisibility(int col);
 	QColor GetCustomColor(int col);
 	QStringList GetConfigEntries();
+	static QStringList GetDirEntries(const QDir& dir, const QStringList& nameFilters);
 	QString GetCurrentStylesheetPath();
 	QStringList GetStylesheetEntries();
 	QStringList GetGameListCategoryFilters();
