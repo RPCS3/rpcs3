@@ -790,8 +790,14 @@ namespace rsx
 		if (flip_y) scale_y *= -1;
 		if (flip_y) offset_y *= -1;
 
-		float scale_z = rsx::method_registers.viewport_scale_z();
-		float offset_z = rsx::method_registers.viewport_offset_z();
+		float clip_min = rsx::method_registers.clip_min();
+		float clip_max = rsx::method_registers.clip_max();
+
+		float z_clip_scale = (clip_max + clip_min) == 0.f ? 1.f : (clip_max + clip_min);
+		float z_offset_scale = (clip_max - clip_min) == 0.f ? 1.f : (clip_max - clip_min);
+
+		float scale_z = rsx::method_registers.viewport_scale_z() / z_clip_scale;
+		float offset_z = rsx::method_registers.viewport_offset_z() / z_offset_scale;
 		float one = 1.f;
 
 		stream_vector(buffer, (u32&)scale_x, 0, 0, (u32&)offset_x);

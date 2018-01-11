@@ -1159,6 +1159,7 @@ namespace rsx
 
 		// Stencil bits init to 00 - Tested with NPEB90184 (never sets the depth_stencil clear values but uses stencil test)
 		registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffff00;
+		registers[NV4097_SET_ZMIN_MAX_CONTROL] = 1;
 
 		// CELL_GCM_SURFACE_A8R8G8B8, CELL_GCM_SURFACE_Z24S8 and CELL_GCM_SURFACE_CENTER_1
 		registers[NV4097_SET_SURFACE_FORMAT] = (8 << 0) | (2 << 5) | (0 << 12) | (1 << 16) | (1 << 24);
