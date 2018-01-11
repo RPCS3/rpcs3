@@ -83,7 +83,7 @@ std::string getFunctionImp(FUNCTION f)
 	case FUNCTION::FUNCTION_DFDY:
 		return "ddy($0)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
-		return "texture2DReconstruct($t.Sample($tsampler, $0.xy * $t_scale, texture_parameters[$_i].z))";
+		return "texture2DReconstruct($t.Sample($tsampler, $0.xy * $t_scale), texture_parameters[$_i].z)";
 	}
 }
 
