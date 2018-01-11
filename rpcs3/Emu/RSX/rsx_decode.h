@@ -4064,21 +4064,23 @@ struct registers_decoder<NV3089_IMAGE_IN>
 	public:
 		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-		u16 x() const
+		// x and y given as 16 bit fixed point
+
+		f32 x() const
 		{
-			return m_data.x;
+			return m_data.x / 16.f;
 		}
 
-		u16 y() const
+		f32 y() const
 		{
-			return m_data.y;
+			return m_data.y / 16.f;
 		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV3089: in x = " + std::to_string(decoded_values.x() / 16.f) +
-			" y = " + std::to_string(decoded_values.y() / 16.f);
+		return "NV3089: in x = " + std::to_string(decoded_values.x()) +
+			" y = " + std::to_string(decoded_values.y());
 	}
 };
 
