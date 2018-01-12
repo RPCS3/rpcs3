@@ -113,7 +113,7 @@ bool evdev_joystick_handler::Init()
 	return true;
 }
 
-bool evdev_joystick_handler::update_device(EvdevDevice& device, bool use_cell)
+bool evdev_joystick_handler::update_device(EvdevDevice& device)
 {
 	std::shared_ptr<Pad> pad = device.pad;
 	const auto& path = device.path;
@@ -125,18 +125,11 @@ bool evdev_joystick_handler::update_device(EvdevDevice& device, bool use_cell)
 	{
 		if (was_connected)
 		{
-			// It was disconnected.
-			if (use_cell)
-				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
-
 			int fd = libevdev_get_fd(dev);
 			libevdev_free(dev);
 			close(fd);
 			dev = nullptr;
 		}
-
-		if (use_cell)
-			pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
 
 		LOG_ERROR(GENERAL, "Joystick %s is not present or accessible [previous status: %d]", path.c_str(), was_connected ? 1 : 0);
 		return false;
@@ -161,22 +154,14 @@ bool evdev_joystick_handler::update_device(EvdevDevice& device, bool use_cell)
 	}
 
 	LOG_NOTICE(GENERAL, "Opened joystick: '%s' at %s (fd %d)", libevdev_get_name(dev), path, fd);
-
-	if (use_cell)
-	{
-		// Connection status changed from disconnected to connected.
-		pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
-		pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
-	}
-
 	return true;
 }
 
-void evdev_joystick_handler::update_devs(bool use_cell)
+void evdev_joystick_handler::update_devs()
 {
 	for (auto& device : devices)
 	{
-		update_device(device, use_cell);
+		update_device(device);
 	}
 }
 
@@ -252,7 +237,7 @@ evdev_joystick_handler::EvdevDevice* evdev_joystick_handler::get_device(const st
 	EvdevDevice& dev = devices[m_pad_index];
 
 	// Check if our device is connected
-	if (!update_device(dev, false))
+	if (!update_device(dev))
 		return nullptr;
 
 	return &dev;
@@ -692,7 +677,10 @@ void evdev_joystick_handler::ThreadProc()
 		{
 			if (last_connection_status[padnum] == true)
 			{
+				// It was disconnected.
 				LOG_ERROR(HLE, "evdev device %d disconnected", padnum);
+				pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
+				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 				last_connection_status[padnum] = false;
 				connected--;
 			}
@@ -702,7 +690,10 @@ void evdev_joystick_handler::ThreadProc()
 
 		if (last_connection_status[padnum] == false)
 		{
+			// Connection status changed from disconnected to connected.
 			LOG_ERROR(HLE, "evdev device %d reconnected", padnum);
+			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
+			pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 			last_connection_status[padnum] = true;
 			connected++;
 		}
@@ -915,7 +906,7 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 
 	pad->Init
 	(
-		CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES,
+		CELL_PAD_STATUS_DISCONNECTED,
 		CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
 		CELL_PAD_DEV_TYPE_STANDARD
