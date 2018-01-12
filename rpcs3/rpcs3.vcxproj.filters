@@ -587,6 +587,18 @@
     <ClCompile Include="rpcs3qt\find_dialog.cpp">
       <Filter>Gui\misc dialogs</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_register_editor_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_register_editor_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_register_editor_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_register_editor_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -648,9 +660,6 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\memory_viewer_panel.h">
       <Filter>Gui\dev tools</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\register_editor_dialog.h">
-      <Filter>Gui\debugger</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\instruction_editor_dialog.h">
       <Filter>Gui\debugger</Filter>
@@ -788,6 +797,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\game_compatibility.h">
       <Filter>Gui\game list</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\register_editor_dialog.h">
+      <Filter>Gui\debugger</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
