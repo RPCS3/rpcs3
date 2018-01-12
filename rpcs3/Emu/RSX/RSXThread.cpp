@@ -626,6 +626,11 @@ namespace rsx
 				unaligned_command = true;
 			}
 
+			// Not sure if this is worth trying to fix, but if it happens, its bad
+			// so logging it until its reported
+			if (internal_get < put && ((internal_get + (count + 1) * 4) > put))
+				LOG_ERROR(RSX, "Get pointer jumping over put pointer! This is bad!");
+
 			for (u32 i = 0; i < count; i++)
 			{
 				u32 reg = ((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? first_cmd : first_cmd + i;
