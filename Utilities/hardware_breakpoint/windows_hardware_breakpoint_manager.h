@@ -11,7 +11,7 @@ struct windows_hardware_breakpoint_context
 	bool m_success;
 };
 
-class windows_hardware_breakpoint_manager : public hardware_breakpoint_manager_impl
+class windows_hardware_breakpoint_manager final : public hardware_breakpoint_manager_impl
 {
 protected:
     std::shared_ptr<hardware_breakpoint> set(const u32 index, const thread_handle thread,

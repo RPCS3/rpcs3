@@ -38,7 +38,7 @@ thread_breakpoints& hardware_breakpoint_manager::lookup_or_create_thread_breakpo
 	}
 }
 
-u32 hardware_breakpoint_manager::get_next_breakpoint_index(thread_breakpoints& breakpoints)
+u32 hardware_breakpoint_manager::get_next_breakpoint_index(const thread_breakpoints& breakpoints)
 {
 	u32 index = 0;
 	while (true)
@@ -68,8 +68,8 @@ u32 hardware_breakpoint_manager::get_next_breakpoint_index(thread_breakpoints& b
 
 extern thread_local bool g_inside_exception_handler;
 
-std::shared_ptr<hardware_breakpoint> hardware_breakpoint_manager::set(const thread_handle thread, const hardware_breakpoint_type type, 
-    const hardware_breakpoint_size size, u64 address, const hardware_breakpoint_handler& handler)
+std::shared_ptr<hardware_breakpoint> hardware_breakpoint_manager::set(thread_handle thread, hardware_breakpoint_type type, 
+    hardware_breakpoint_size size, u64 address, const hardware_breakpoint_handler& handler)
 {
 	if (g_inside_exception_handler)
 	{
@@ -99,7 +99,7 @@ std::shared_ptr<hardware_breakpoint> hardware_breakpoint_manager::set(const thre
 
 bool hardware_breakpoint_manager::remove(hardware_breakpoint& handle)
 {
-	auto& breakpoints = get_breakpoints(handle.get_thread());
+	auto& breakpoints = s_hardware_breakpoints[handle.get_thread()];
 	if (breakpoints.size() > 0)
 	{
 		breakpoints.erase(std::remove_if(breakpoints.begin(), breakpoints.end(), [&](std::shared_ptr<hardware_breakpoint> x) { return x.get()->get_index() == handle.get_index(); }), breakpoints.end());

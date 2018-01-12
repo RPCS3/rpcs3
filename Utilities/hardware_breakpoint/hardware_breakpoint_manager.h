@@ -43,7 +43,6 @@ using thread_handle = int;
 #endif
 
 class hardware_breakpoint;
-//typedef void(*hardware_breakpoint_handler)(hardware_breakpoint&);
 using hardware_breakpoint_handler = std::function<void(hardware_breakpoint&)>;
 
 // Represents a hardware breakpoint, read only.
@@ -69,22 +68,22 @@ protected:
 
 public:
 	// Gets the index of the breakpoint (out of 4)
-	inline const u32 get_index() { return m_index; }
+	inline u32 get_index() const { return m_index; }
 
 	// Gets the thread the breakpoint applies to.
-	inline const thread_handle get_thread() { return m_thread; }
+	inline thread_handle get_thread() const { return m_thread; }
 
     // Gets the type of breakpoint.
-	inline const hardware_breakpoint_type get_type() { return m_type; }
+	inline hardware_breakpoint_type get_type() const { return m_type; }
 
     // Gets the size of the breakpoint.
-	inline const hardware_breakpoint_size get_size() { return m_size; }
+	inline hardware_breakpoint_size get_size() const { return m_size; }
 
     // Gets the address of the breakpoint.
-	inline const u64 get_address() { return m_address; }
+	inline u64 get_address() const { return m_address; }
 
     // Gets the handler of the breakpoint.
-	inline const hardware_breakpoint_handler& get_handler() { return m_handler; }
+	inline const hardware_breakpoint_handler& get_handler() const { return m_handler; }
 };
 
 class hardware_breakpoint_manager_impl;
@@ -101,15 +100,15 @@ private:
 	static thread_breakpoints_lookup s_hardware_breakpoints;
 
 	static thread_breakpoints& lookup_or_create_thread_breakpoints(thread_handle thread);
-	static u32 get_next_breakpoint_index(thread_breakpoints& breakpoints);
+	static u32 get_next_breakpoint_index(const thread_breakpoints& breakpoints);
 
 public:
 
 	// Gets the map containing all of the breakpoints for all threads. Unused entries are null.
-	inline static thread_breakpoints_lookup& get_breakpoints() { return s_hardware_breakpoints; }
+	inline static const thread_breakpoints_lookup& get_breakpoints() { return s_hardware_breakpoints; }
 
 	// Gets the array of breakpoints assigned to the given thread. Unused entries are null.
-	inline static thread_breakpoints& get_breakpoints(thread_handle thread)
+	inline static const thread_breakpoints& get_breakpoints(thread_handle thread) 
 	{
 		return s_hardware_breakpoints[thread];
 	}
@@ -121,5 +120,6 @@ public:
 		const hardware_breakpoint_handler& handler);
 
     // Removes a hardware breakpoint previously set.
-    static bool remove(hardware_breakpoint& handle);
+	// The breakpoint is considered invalid after this function has been called.
+    static bool remove(hardware_breakpoint& breakpoint);
 };

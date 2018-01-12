@@ -8,8 +8,8 @@ class hardware_breakpoint_manager_impl
     friend class hardware_breakpoint_manager;
 
 protected:
-    virtual std::shared_ptr<hardware_breakpoint> set(const u32 index, const thread_handle thread, const hardware_breakpoint_type type, 
-        const hardware_breakpoint_size size, const u64 address, const hardware_breakpoint_handler& handler) = 0;
+    virtual std::shared_ptr<hardware_breakpoint> set(u32 index, thread_handle thread, hardware_breakpoint_type type, 
+        hardware_breakpoint_size size, u64 address, const hardware_breakpoint_handler& handler) = 0;
 
     virtual bool remove(hardware_breakpoint& handle) = 0;
 

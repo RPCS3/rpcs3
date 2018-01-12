@@ -69,8 +69,8 @@ bool linux_hardware_breakpoint_manager::set_debug_register_values(u32 index, pid
 	return false;
 }
 
-std::shared_ptr<hardware_breakpoint> linux_hardware_breakpoint_manager::set(const u32 index, const thread_handle thread,
-	const hardware_breakpoint_type type, const hardware_breakpoint_size size, const u64 address, const hardware_breakpoint_handler& handler)
+std::shared_ptr<hardware_breakpoint> linux_hardware_breakpoint_manager::set(u32 index, thread_handle thread,
+	hardware_breakpoint_type type, hardware_breakpoint_size size, u64 address, const hardware_breakpoint_handler& handler)
 {
 	if (!set_debug_register_values(index, static_cast<pid_t>(thread), type, size, address, true))
 	{
