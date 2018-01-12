@@ -1128,10 +1128,10 @@ int game_list_frame::PopulateGameList()
 	return result;
 }
 
-void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color)
+void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color)
 {
-	uint r = 0;
-	uint c = 0;
+	int r = 0;
+	int c = 0;
 
 	std::string selected_item = CurrentSelectionIconPath();
 
@@ -1200,7 +1200,7 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 
 	if (c != 0)
 	{ // if left over games exist -- if empty entries exist
-		for (uint col = c; col < maxCols; ++col)
+		for (int col = c; col < maxCols; ++col)
 		{
 			QTableWidgetItem* emptyItem = new QTableWidgetItem();
 			emptyItem->setFlags(Qt::NoItemFlags);
