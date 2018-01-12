@@ -32,7 +32,6 @@ enum
 	CELL_SEARCH_TITLE_LEN_MAX           = 384,
 	CELL_SEARCH_TAG_NUM_MAX             = 6,
 	CELL_SEARCH_TAG_LEN_MAX             = 63,
-	CELL_MUSIC_SELECTION_CONTEXT_SIZE   = 2048,
 	CELL_SEARCH_PATH_LEN_MAX            = 63,
 	CELL_SEARCH_MTOPTION_LEN_MAX        = 63,
 	CELL_SEARCH_DEVELOPERDATA_LEN_MAX   = 64,
@@ -337,11 +336,6 @@ struct CellSearchVideoSceneInfo
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
 	char reserved[3];
 	char tags[CELL_SEARCH_TAG_NUM_MAX][CELL_SEARCH_TAG_LEN_MAX];
-};
-
-struct CellMusicSelectionContext
-{
-	char data[CELL_MUSIC_SELECTION_CONTEXT_SIZE];
 };
 
 struct CellSearchContentInfoPath
