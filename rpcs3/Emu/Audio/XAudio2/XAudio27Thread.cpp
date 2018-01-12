@@ -121,7 +121,7 @@ void XAudio2Thread::xa27_open()
 		return;
 	}
 
-	s_tls_source_voice->SetVolume(g_cfg.audio.downmix_to_2ch ? 1.0 : 4.0);
+	s_tls_source_voice->SetVolume(g_cfg.audio.downmix_to_2ch ? 1.0f : 4.0f);
 }
 
 void XAudio2Thread::xa27_add(const void* src, int size)
