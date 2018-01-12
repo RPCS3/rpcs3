@@ -319,7 +319,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 {
 	cellGame.warning("cellGameDataCheck(type=%d, dirName=%s, size=*0x%x)", type, dirName, size);
 
-	if ((type - 1) >= 3)
+	if (((type - 1) >= 3) || (dirName == vm::null))
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
