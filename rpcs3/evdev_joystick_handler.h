@@ -341,8 +341,8 @@ public:
 private:
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 	EvdevDevice* get_device(const std::string& device);
-	bool update_device(EvdevDevice& device, bool use_cell = true);
-	void update_devs(bool use_cell = true);
+	bool update_device(EvdevDevice& device);
+	void update_devs();
 	int add_device(const std::string& device, bool in_settings = false);
 	int GetButtonInfo(const input_event& evt, const EvdevDevice& device, int& button_code);
 	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(const EvdevDevice& device);
