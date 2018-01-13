@@ -31,11 +31,11 @@ class debugger_list;
 
 class debugger_frame : public QDockWidget
 {
-	Q_OBJECT
+	Q_OBJECT;
 
-	const QString NoThreadString = tr( "No Thread" );
-	const QString RunString = tr( "Run" );
-	const QString PauseString = tr( "Pause" );
+	const QString NoThreadString = tr("No Thread");
+	const QString RunString = tr("Run");
+	const QString PauseString = tr("Pause");
 
 	debugger_list* m_list;
 	QSplitter* m_right_splitter;
@@ -51,6 +51,7 @@ class debugger_frame : public QDockWidget
 	QString m_current_choice;
 	QTimer* m_update;
 	QSplitter* m_splitter;
+	QAction* m_breakpoints_list_delete;
 
 	u64 m_threads_created = 0;
 	u64 m_threads_deleted = 0;
@@ -63,15 +64,13 @@ class debugger_frame : public QDockWidget
 
 	std::shared_ptr<gui_settings> xgui_settings;
 
-	QAction* m_breakpoints_list_delete;
-
 public:
 	std::unique_ptr<CPUDisAsm> m_disasm;
 	QListWidget* m_breakpoints_list;
 	std::weak_ptr<cpu_thread> cpu;
 
-public:
 	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = 0);
+
 	void SaveSettings();
 	void ChangeColors();
 
@@ -84,7 +83,7 @@ public:
 	void EnableButtons(bool enable);
 	void ClearBreakpoints();
 	void ShowGotoAddressDialog();
-	u64 EvaluateExpression( const QString& expression );
+	u64 EvaluateExpression(const QString& expression);
 
 	void OnUpdate();
 
@@ -98,7 +97,7 @@ Q_SIGNALS:
 	void DebugFrameClosed();
 
 public Q_SLOTS:
-	void DoStep( bool stepOver = false );
+	void DoStep(bool stepOver = false);
 
 private Q_SLOTS:
 	void OnBreakpointList_doubleClicked();
@@ -111,7 +110,7 @@ private Q_SLOTS:
 
 class debugger_list : public QListWidget
 {
-	Q_OBJECT
+	Q_OBJECT;
 
 	debugger_frame* m_debugFrame;
 
@@ -129,11 +128,11 @@ public:
 	debugger_list(debugger_frame* parent);
 	void ShowAddress(u32 addr);
 	void RemoveBreakPoint(u32 pc, bool eraseFromMap = true);
-	bool IsBreakPoint( u32 pc );
-	void AddBreakPoint( u32 pc );
+	bool IsBreakPoint(u32 pc);
+	void AddBreakPoint(u32 pc);
 
 private:
-	u32 GetCenteredAddress( u32 address );
+	u32 GetCenteredAddress(u32 address);
 
 protected:
 	void keyPressEvent(QKeyEvent* event);
