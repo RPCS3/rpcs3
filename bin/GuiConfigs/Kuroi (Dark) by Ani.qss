@@ -244,7 +244,7 @@ QLabel#gamelist_icon_background_color {
 	color: transparent;
 }
 QLabel#gamelist_toolbar_icon_color {
-	background-color: #e3e3e3;
+	color: #828790;
 }
 
 /* Set Windows Taskbar Thumbnail colors */

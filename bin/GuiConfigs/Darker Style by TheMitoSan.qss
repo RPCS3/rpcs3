@@ -68,13 +68,13 @@ QCheckBox::indicator {
 	margin-top: 0.0625em;
 }
 QCheckBox::indicator:checked {
-	background-color: #FFF; /* Green */
+	background-color: #FFF; /* White */
 }
 QCheckBox::indicator:unchecked {
-	background-color: #000; /* Red */
+	background-color: #000; /* Black */
 }
 QCheckBox::indicator::disabled {
-	background-color: #af4949; /* Gray */
+	background-color: #af4949; /* Red */
 }
 
 /* Radio Buttons */
@@ -245,7 +245,7 @@ QLabel#gamelist_icon_background_color {
 	color: transparent;
 }
 QLabel#gamelist_toolbar_icon_color {
-	background-color: #252525;
+	color: #828790;
 }
 
 /* Set Windows Taskbar Thumbnail colors */
@@ -313,11 +313,11 @@ QLabel#memory_viewer_address_panel {
 	background-color: #131313;
 }
 QLabel#memory_viewer_hex_panel {
-	color: #FFF; /* Font Color: Grey */
+	color: #FFF; /* Font Color: White */
 	background-color: #131313;
 }
 QLabel#memory_viewer_ascii_panel {
-	color: #FFF; /* Font Color: Grey */
+	color: #FFF; /* Font Color: White */
 	background-color: #131313;
 }
 
