@@ -1,6 +1,6 @@
 #include "rpcs3_app.h"
 
-#include "rpcs3qt/utilities.h"
+#include "rpcs3qt/qt_utils.h"
 
 #include "rpcs3qt/welcome_dialog.h"
 
@@ -169,7 +169,7 @@ void rpcs3_app::InitializeCallbacks()
 		}
 
 		bool disableMouse = guiSettings->GetValue(gui::gs_disableMouse).toBool();
-		auto frame_geometry = gui::utilities::create_centered_window_geometry(RPCS3MainWin->geometry(), w, h);
+		auto frame_geometry = gui::utils::create_centered_window_geometry(RPCS3MainWin->geometry(), w, h);
 
 		gs_frame* frame;
 

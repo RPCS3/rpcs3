@@ -1,11 +1,11 @@
 
-#include "utilities.h"
+#include "qt_utils.h"
 #include <QApplication>
 #include <QScreen>
 
 namespace gui
 {
-	namespace utilities
+	namespace utils
 	{
 		QRect create_centered_window_geometry(const QRect& origin, s32 width, s32 height)
 		{
@@ -28,10 +28,10 @@ namespace gui
 			s32 frame_x_raw = origin.left() + ((origin.width() - width) / 2);
 			s32 frame_y_raw = origin.top() + ((origin.height() - height) / 2);
 
-			s32 frame_x = clamp(frame_x_raw, min_screen_x, max_screen_x);
-			s32 frame_y = clamp(frame_y_raw, min_screen_y, max_screen_y);
+			s32 frame_x = std::clamp(frame_x_raw, min_screen_x, max_screen_x);
+			s32 frame_y = std::clamp(frame_y_raw, min_screen_y, max_screen_y);
 
 			return QRect(frame_x, frame_y, width, height);
 		}
-	} // utilities
+	} // utils
 } // gui
