@@ -78,9 +78,6 @@ enum class video_renderer
 	null,
 	opengl,
 	vulkan,
-#ifdef _MSC_VER
-	dx12,
-#endif
 };
 
 enum class audio_renderer
@@ -350,14 +347,6 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 16> anisotropic_level_override{this, "Anisotropic Filter Override", 0};
 		cfg::_int<1, 1024> min_scalable_dimension{this, "Minimum Scalable Dimension", 16};
 		cfg::_int<0, 30000000> driver_recovery_timeout{this, "Driver Recovery Timeout", 1000000};
-
-		struct node_d3d12 : cfg::node
-		{
-			node_d3d12(cfg::node* _this) : cfg::node(_this, "D3D12") {}
-
-			cfg::string adapter{this, "Adapter"};
-
-		} d3d12{this};
 
 		struct node_vk : cfg::node
 		{

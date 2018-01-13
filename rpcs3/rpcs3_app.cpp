@@ -40,9 +40,6 @@
 #include "Emu/RSX/GL/GLGSRender.h"
 #include "Emu/Audio/Null/NullAudioThread.h"
 #include "Emu/Audio/AL/OpenALThread.h"
-#ifdef _MSC_VER
-#include "Emu/RSX/D3D12/D3D12GSRender.h"
-#endif
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
@@ -188,14 +185,6 @@ void rpcs3_app::InitializeCallbacks()
 			gameWindow = ret;
 			return std::unique_ptr<gs_frame>(ret);
 		}
-#ifdef _MSC_VER
-		case video_renderer::dx12:
-		{
-			gs_frame* ret = new gs_frame("DirectX 12", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
-			gameWindow = ret;
-			return std::unique_ptr<gs_frame>(ret);
-		}
-#endif
 		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
 		}
 	};
@@ -208,9 +197,6 @@ void rpcs3_app::InitializeCallbacks()
 		case video_renderer::opengl: return std::make_shared<GLGSRender>();
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 		case video_renderer::vulkan: return std::make_shared<VKGSRender>();
-#endif
-#ifdef _MSC_VER
-		case video_renderer::dx12: return std::make_shared<D3D12GSRender>();
 #endif
 		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
 		}
