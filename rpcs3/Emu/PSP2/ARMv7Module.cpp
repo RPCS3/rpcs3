@@ -396,7 +396,8 @@ void arm_load_exec(const arm_exec_object& elf)
 
 			std::memcpy(vm::base(p_vaddr[i]), prog.bin.data(), prog.p_filesz);
 		}
-		else if (prog.p_type == 0x60000000) {
+		else if (prog.p_type == 0x60000000) 
+		{
 			// Relocation code taken from
 			// https://github.com/yifanlu/UVLoader/blob/master/relocate.c
 			// Relocation information of the SCE_PPURELA segment
@@ -502,7 +503,8 @@ void arm_load_exec(const arm_exec_object& elf)
 					offset = r_addend + symval - loc;
 
 					if (offset <= (s32)0xff000000 ||
-						offset >= (s32)0x01000000) {
+						offset >= (s32)0x01000000) 
+					{
 						LOG_NOTICE(LOADER, "reloc %x out of range: 0x%08X", i, symval);
 						break;
 					}
@@ -524,7 +526,8 @@ void arm_load_exec(const arm_exec_object& elf)
 				{
 					offset = r_addend + symval - loc;
 					if (offset <= (s32)0xfe000000 ||
-						offset >= (s32)0x02000000) {
+						offset >= (s32)0x02000000) 
+					{
 						LOG_NOTICE(LOADER, "reloc %x out of range: 0x%08X", i, symval);
 						break;
 					}
