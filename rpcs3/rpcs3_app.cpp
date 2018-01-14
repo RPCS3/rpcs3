@@ -193,7 +193,7 @@ void rpcs3_app::InitializeCallbacks()
 #ifdef _MSC_VER
 		case video_renderer::dx12:
 		{
-			gs_frame* ret = new gs_frame("DirectX 12", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			frame = new gs_frame("DirectX 12", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
 			break;
 		}
 #endif
