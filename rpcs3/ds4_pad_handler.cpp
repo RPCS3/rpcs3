@@ -789,7 +789,7 @@ bool ds4_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::strin
 
 	pad->Init
 	(
-		CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES,
+		CELL_PAD_STATUS_DISCONNECTED,
 		CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
 		CELL_PAD_DEV_TYPE_STANDARD
@@ -855,7 +855,7 @@ void ds4_pad_handler::ThreadProc()
 				}
 				hid_set_nonblocking(dev, 1);
 				m_dev->hidDevice = dev;
-				thepad->m_port_status = CELL_PAD_STATUS_CONNECTED|CELL_PAD_STATUS_ASSIGN_CHANGES;
+				thepad->m_port_status = CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES;
 				if (!m_dev->hasCalibData)
 					m_dev->hasCalibData = GetCalibrationData(m_dev);
 			}
@@ -868,13 +868,14 @@ void ds4_pad_handler::ThreadProc()
 					last_connection_status[i] = false;
 					connected--;
 				}
-				thepad->m_port_status = CELL_PAD_STATUS_DISCONNECTED|CELL_PAD_STATUS_ASSIGN_CHANGES;
+				thepad->m_port_status = CELL_PAD_STATUS_DISCONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES;
 				continue;
 			}
 		}
 		else if (last_connection_status[i] == false)
 		{
 			LOG_NOTICE(HLE, "DS4 device %d connected", i);
+			thepad->m_port_status = CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES;
 			last_connection_status[i] = true;
 			connected++;
 		}
