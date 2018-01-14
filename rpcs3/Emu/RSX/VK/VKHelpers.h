@@ -1148,6 +1148,7 @@ namespace vk
 			uint32_t count;
 			if (vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr) != VK_SUCCESS)
 				return;
+
 			m_vk_exts.resize(count);
 			vkEnumerateInstanceExtensionProperties(nullptr, &count, m_vk_exts.data());
 		}
@@ -1251,17 +1252,20 @@ namespace vk
 #else
 			supported_extensions support;
 			bool found_surface_ext = false;
-			if (support.is_supported(VK_KHR_XLIB_SURFACE_EXTENSION_NAME)) {
+			if (support.is_supported(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
+			{
 				extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 				found_surface_ext = true;
 			}
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-			if (support.is_supported(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME)) {
+			if (support.is_supported(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
+			{
 				extensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 				found_surface_ext = true;
 			}
 #endif
-			if (!found_surface_ext) {
+			if (!found_surface_ext)
+			{
 				LOG_ERROR(RSX, "Could not find a supported Vulkan surface extension");
 				return 0;
 			}
