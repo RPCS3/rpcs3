@@ -1128,10 +1128,10 @@ int game_list_frame::PopulateGameList()
 	return result;
 }
 
-void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color)
+void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color)
 {
-	uint r = 0;
-	uint c = 0;
+	int r = 0;
+	int c = 0;
 
 	std::string selected_item = CurrentSelectionIconPath();
 
@@ -1200,7 +1200,7 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 
 	if (c != 0)
 	{ // if left over games exist -- if empty entries exist
-		for (uint col = c; col < maxCols; ++col)
+		for (int col = c; col < maxCols; ++col)
 		{
 			QTableWidgetItem* emptyItem = new QTableWidgetItem();
 			emptyItem->setFlags(Qt::NoItemFlags);
@@ -1232,18 +1232,13 @@ std::string game_list_frame::CurrentSelectionIconPath()
 {
 	std::string selection = "";
 
-	// The index can be more than the size of m_game_data if you use the VFS to load a directory which has less games.
-	if (m_oldLayoutIsList && m_gameList->selectedItems().count() && m_gameList->currentRow() < m_game_data.size())
+	if (m_gameList->selectedItems().count())
 	{
-		selection = m_game_data.at(m_gameList->item(m_gameList->currentRow(), 0)->data(Qt::UserRole).toInt()).info.icon_path;
-	}
-	else if (!m_oldLayoutIsList && m_xgrid->selectedItems().count())
-	{
-		int ind = m_xgrid->currentItem()->data(Qt::UserRole).toInt();
+		QTableWidgetItem* item = m_oldLayoutIsList ? m_gameList->item(m_gameList->currentRow(), 0) : m_xgrid->currentItem();
+		int ind = item->data(Qt::UserRole).toInt();
+
 		if (ind < m_game_data.size())
-		{
 			selection = m_game_data.at(ind).info.icon_path;
-		}
 	}
 
 	m_oldLayoutIsList = m_isListLayout;

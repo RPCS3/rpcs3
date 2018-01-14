@@ -306,7 +306,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type, bool is_ran
 
 	connect(slider, &QSlider::valueChanged, [=](int value)
 	{
-		SetSetting(type, sstr(slider->value()));
+		SetSetting(type, sstr(value));
 	});
 }
 
