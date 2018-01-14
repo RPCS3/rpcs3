@@ -319,9 +319,9 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 {
 	cellGame.warning("cellGameDataCheck(type=%d, dirName=%s, size=*0x%x)", type, dirName, size);
 
-	if (((type - 1) >= 3) || (dirName == vm::null))
+	if ((type - 1) >= 3 || (type != CELL_GAME_GAMETYPE_DISC && !dirName))
 	{
-		return CELL_GAME_ERROR_PARAM;
+		return {CELL_GAME_ERROR_PARAM, type};
 	}
 
 	if (size)
