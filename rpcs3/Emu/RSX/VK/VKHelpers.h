@@ -1255,10 +1255,12 @@ namespace vk
 				extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 				found_surface_ext = true;
 			}
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
 			if (support.is_supported(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME)) {
 				extensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 				found_surface_ext = true;
 			}
+#endif
 			if (!found_surface_ext) {
 				LOG_ERROR(RSX, "Could not find a supported Vulkan surface extension");
 				return 0;
