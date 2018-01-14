@@ -1542,7 +1542,8 @@ fs::file SELFDecrypter::MakeElf(bool isElf32)
 				}
 			}
 		}
-		else {
+		else 
+		{
 			for (unsigned int i = 0; i < phdr32_arr.size(); i++)
 			{
 				// Decompress if necessary. 
