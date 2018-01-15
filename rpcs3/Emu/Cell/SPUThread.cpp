@@ -1108,7 +1108,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	case SPU_RdSRR0:
 	{
 		out = srr0;
-		break;
+		return true;
 	}
 	case SPU_RdInMbox:
 	{
