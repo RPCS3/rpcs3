@@ -82,12 +82,12 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, const std::s
 				if (lx != preview_values[2] || ly != preview_values[3])
 				{
 					lx = preview_values[2], ly = preview_values[3];
-					RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->sizeHint().width(), lx, ly);
+					RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), lx, ly);
 				}
 				if (rx != preview_values[4] || ry != preview_values[5])
 				{
 					rx = preview_values[4], ry = preview_values[5];
-					RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->sizeHint().width(), rx, ry);
+					RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), rx, ry);
 				}
 			}
 
@@ -202,16 +202,16 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, const std::s
 		initSlider(ui->slider_stick_left, m_handler_cfg.lstickdeadzone, 0, m_handler->thumb_max);
 		initSlider(ui->slider_stick_right, m_handler_cfg.rstickdeadzone, 0, m_handler->thumb_max);
 
-		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->sizeHint().width(), lx, ly);
+		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), lx, ly);
 		connect(ui->slider_stick_left, &QSlider::valueChanged, [&](int value)
 		{
-			RepaintPreviewLabel(ui->preview_stick_left, value, ui->slider_stick_left->sizeHint().width(), lx, ly);
+			RepaintPreviewLabel(ui->preview_stick_left, value, ui->slider_stick_left->size().width(), lx, ly);
 		});
 
-		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->sizeHint().width(), rx, ry);
+		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), rx, ry);
 		connect(ui->slider_stick_right, &QSlider::valueChanged, [&](int value)
 		{
-			RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->sizeHint().width(), rx, ry);
+			RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->size().width(), rx, ry);
 		});
 	}
 	else
