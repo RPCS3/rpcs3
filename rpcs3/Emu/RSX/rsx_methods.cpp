@@ -576,8 +576,8 @@ namespace rsx
 			const blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
 			const rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
 
-			const f32 in_x = method_registers.blit_engine_in_x();
-			const f32 in_y = method_registers.blit_engine_in_y();
+			const f32 in_x = std::ceil(method_registers.blit_engine_in_x());
+			const f32 in_y = std::ceil(method_registers.blit_engine_in_y());
 
 			//Clipping
 			//Validate that clipping rect will fit onto both src and dst regions
@@ -855,7 +855,9 @@ namespace rsx
 					pixels_src = temp2.get();
 				}
 
-				u8 sw_width_log2 = method_registers.nv309e_sw_width_log2();
+				// It looks like rsx may ignore the requested swizzle size and just always 
+				// round up to nearest power of 2
+				/*u8 sw_width_log2 = method_registers.nv309e_sw_width_log2();
 				u8 sw_height_log2 = method_registers.nv309e_sw_height_log2();
 
 				// 0 indicates height of 1 pixel
@@ -864,31 +866,31 @@ namespace rsx
 				// swizzle based on destination size
 				u16 sw_width = 1 << sw_width_log2;
 				u16 sw_height = 1 << sw_height_log2;
+				*/
+
+				u32 sw_width = next_pow2(out_w);
+				u32 sw_height = next_pow2(out_h);
 
 				temp2.reset(new u8[out_bpp * sw_width * sw_height]);
 
 				u8* linear_pixels = pixels_src;
 				u8* swizzled_pixels = temp2.get();
 
-				// restrict output to size of swizzle
-				const u16 sw_in_w = std::min(out_w, sw_width);
-				const u16 sw_in_h = std::min(out_h, sw_height);
-
-				// Check and pad texture out if we are given non square texture for swizzle to be correct
-				if (sw_width != sw_in_w || sw_height != sw_in_h)
+				// Check and pad texture out if we are given non power of 2 output
+				if (sw_width != out_w || sw_height != out_h)
 				{
 					sw_temp.reset(new u8[out_bpp * sw_width * sw_height]);
 
 					switch (out_bpp)
 					{
 					case 1:
-						pad_texture<u8>(linear_pixels, sw_temp.get(), sw_in_w, sw_in_h, sw_width, sw_height);
+						pad_texture<u8>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
 						break;
 					case 2:
-						pad_texture<u16>(linear_pixels, sw_temp.get(), sw_in_w, sw_in_h, sw_width, sw_height);
+						pad_texture<u16>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
 						break;
 					case 4:
-						pad_texture<u32>(linear_pixels, sw_temp.get(), sw_in_w, sw_in_h, sw_width, sw_height);
+						pad_texture<u32>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
 						break;
 					}
 
@@ -1157,6 +1159,7 @@ namespace rsx
 
 		// Stencil bits init to 00 - Tested with NPEB90184 (never sets the depth_stencil clear values but uses stencil test)
 		registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffff00;
+		registers[NV4097_SET_ZMIN_MAX_CONTROL] = 1;
 
 		// CELL_GCM_SURFACE_A8R8G8B8, CELL_GCM_SURFACE_Z24S8 and CELL_GCM_SURFACE_CENTER_1
 		registers[NV4097_SET_SURFACE_FORMAT] = (8 << 0) | (2 << 5) | (0 << 12) | (1 << 16) | (1 << 24);
