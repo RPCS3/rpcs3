@@ -811,7 +811,13 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 		if (!is_rsxthr)
 		{
+			//Always submit primary cb to ensure state consistency (flush pending changes such as image transitions)
 			vm::temporary_unlock();
+
+			std::lock_guard<std::mutex> lock(m_flush_queue_mutex);
+
+			m_flush_requests.post(sync_timestamp == 0ull);
+			has_queue_ref = true;
 		}
 		else
 		{
@@ -821,67 +827,36 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 		if (sync_timestamp > 0)
 		{
-			//Wait for any cb submitted after the sync timestamp to finish
-			while (true)
+			//Wait for earliest cb submitted after the sync timestamp to finish
+			command_buffer_chunk *target_cb = nullptr;
+			for (auto &cb : m_primary_cb_list)
 			{
-				u32 pending = 0;
-
-				if (m_last_flushable_cb < 0)
-					break;
-
-				for (auto &cb : m_primary_cb_list)
+				if (cb.pending && cb.last_sync >= sync_timestamp)
 				{
-					if (!cb.pending && cb.last_sync >= sync_timestamp)
-					{
-						pending = 0;
-						break;
-					}
-
-					if (cb.pending)
-					{
-						pending++;
-
-						if (is_rsxthr)
-							cb.poke();
-					}
+					if (target_cb == nullptr || target_cb->last_sync > cb.last_sync)
+						target_cb = &cb;
 				}
-
-				if (!pending)
-					break;
-
-				std::this_thread::yield();
 			}
+
+			if (target_cb)
+				target_cb->wait();
 
 			if (is_rsxthr)
 				m_last_flushable_cb = -1;
 		}
-		else
+
+		if (has_queue_ref)
 		{
-			if (!is_rsxthr)
-			{
-				{
-					std::lock_guard<std::mutex> lock(m_flush_queue_mutex);
-
-					m_flush_commands = true;
-					m_queued_threads++;
-				}
-
-				//Wait for the RSX thread to process
-				while (m_flush_commands)
-				{
-					_mm_lfence();
-					_mm_pause();
-				}
-
-				has_queue_ref = true;
-			}
+			//Wait for the RSX thread to process request if it hasn't already
+			m_flush_requests.producer_wait();
 		}
 
 		m_texture_cache.flush_all(result, m_secondary_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 
 		if (has_queue_ref)
 		{
-			m_queued_threads--;
+			//Release RSX thread
+			m_flush_requests.remove_one();
 		}
 	}
 
@@ -1855,7 +1830,7 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 		}
 
 		m_last_flushable_cb = -1;
-		m_flush_commands = false;
+		m_flush_requests.clear_pending_flag();
 	}
 	else
 	{
@@ -2037,15 +2012,7 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 void VKGSRender::do_local_task(bool idle)
 {
-	//TODO: Guard this
-	if (m_overlay_cleanup_requests.size())
-	{
-		flush_command_queue(true);
-		m_ui_renderer->remove_temp_resources();
-		m_overlay_cleanup_requests.clear();
-	}
-
-	if (m_flush_commands)
+	if (m_flush_requests.pending())
 	{
 		std::lock_guard<std::mutex> lock(m_flush_queue_mutex);
 
@@ -2053,12 +2020,8 @@ void VKGSRender::do_local_task(bool idle)
 		//Pipeline barriers later may do a better job synchronizing than wholly stalling the pipeline
 		flush_command_queue();
 
-		m_flush_commands = false;
-		while (m_queued_threads)
-		{
-			_mm_lfence();
-			_mm_pause();
-		}
+		m_flush_requests.clear_pending_flag();
+		m_flush_requests.consumer_wait();
 	}
 
 	if (m_last_flushable_cb > -1)
@@ -2151,7 +2114,14 @@ void VKGSRender::do_local_task(bool idle)
 
 #endif
 
-	if (m_custom_ui)
+	//TODO: Guard this
+	if (m_overlay_cleanup_requests.size())
+	{
+		flush_command_queue(true);
+		m_ui_renderer->remove_temp_resources();
+		m_overlay_cleanup_requests.clear();
+	}
+	else if (m_custom_ui)
 	{
 		if (!in_begin_end && native_ui_flip_request.load())
 		{
