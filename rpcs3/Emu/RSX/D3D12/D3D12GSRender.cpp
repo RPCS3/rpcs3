@@ -301,7 +301,7 @@ void D3D12GSRender::on_exit()
 	return GSRender::on_exit();
 }
 
-void D3D12GSRender::do_local_task()
+void D3D12GSRender::do_local_task(bool)
 {
 	//TODO
 	m_frame->clear_wm_events();

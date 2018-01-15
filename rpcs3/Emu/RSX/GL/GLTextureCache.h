@@ -142,7 +142,6 @@ namespace gl
 
 			switch (fmt_)
 			{
-			case texture::format::red:
 			case texture::format::r:
 				break;
 			case texture::format::rg:

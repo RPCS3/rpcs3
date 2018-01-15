@@ -721,6 +721,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->showTrophyPopups, emu_settings::ShowTrophyPopups);
 	SubscribeTooltip(ui->showTrophyPopups, json_emu_misc["showTrophyPopups"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->useNativeInterface, emu_settings::UseNativeInterface);
+	SubscribeTooltip(ui->useNativeInterface, json_emu_misc["useNativeInterface"].toString());
+
 	if (game)
 	{
 		ui->gb_stylesheets->setEnabled(false);

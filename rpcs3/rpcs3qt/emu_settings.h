@@ -85,6 +85,7 @@ public:
 		ShowFPSInTitle,
 		ShowTrophyPopups,
 		ShowWelcomeScreen,
+		UseNativeInterface,
 
 		// Network
 		ConnectionStatus,
@@ -241,6 +242,7 @@ private:
 		{ShowFPSInTitle,      { "Miscellaneous", "Show FPS counter in window title"}},
 		{ShowTrophyPopups,    { "Miscellaneous", "Show trophy popups"}},
 		{ShowWelcomeScreen,   { "Miscellaneous", "Show Welcome Screen"}},
+		{UseNativeInterface,  { "Miscellaneous", "Use native user interface"}},
 
 		// Networking
 		{ConnectionStatus, { "Net", "Connection status"}},

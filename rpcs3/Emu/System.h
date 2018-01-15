@@ -422,6 +422,7 @@ struct cfg_root : cfg::node
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
 		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true};
 		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true};
+		cfg::_bool use_native_interface{ this, "Use native user interface", true };
 		cfg::_int<1, 65535> gdb_server_port{this, "Port", 2345};
 
 	} misc{this};

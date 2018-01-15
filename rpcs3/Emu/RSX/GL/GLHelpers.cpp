@@ -557,4 +557,9 @@ namespace gl
 			fmt::throw_exception("unknown primitive type" HERE);
 		}
 	}
+
+	attrib_t vao::operator[](u32 index) const noexcept
+	{
+		return attrib_t(index);
+	}
 }

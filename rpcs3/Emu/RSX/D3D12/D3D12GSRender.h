@@ -173,7 +173,7 @@ private:
 protected:
 	virtual void on_init_thread() override;
 	virtual void on_exit() override;
-	virtual void do_local_task() override;
+	virtual void do_local_task(bool idle) override;
 	virtual bool do_method(u32 cmd, u32 arg) override;
 	virtual void end() override;
 	virtual void flip(int buffer) override;

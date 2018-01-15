@@ -279,6 +279,50 @@ namespace rsx
 
 	public:
 
+		struct progress_dialog_helper
+		{
+			std::shared_ptr<MsgDialogBase> dlg;
+
+			virtual void create()
+			{
+				dlg = Emu.GetCallbacks().get_msg_dialog();
+				dlg->type.se_normal = true;
+				dlg->type.bg_invisible = true;
+				dlg->type.progress_bar_count = 1;
+				dlg->on_close = [](s32 status)
+				{
+					Emu.CallAfter([]()
+					{
+						Emu.Stop();
+					});
+				};
+
+				Emu.CallAfter([&]()
+				{
+					dlg->Create("Preloading cached shaders from disk.\nPlease wait...");
+				});
+			}
+
+			virtual void update_msg(u32 processed, u32 entry_count)
+			{
+				Emu.CallAfter([=]()
+				{
+					dlg->ProgressBarSetMsg(0, fmt::format("Loading pipeline object %u of %u", processed, entry_count));
+				});
+			}
+
+			virtual void inc_value(u32 value)
+			{
+				Emu.CallAfter([=]()
+				{
+					dlg->ProgressBarInc(0, value);
+				});
+			}
+
+			virtual void close()
+			{}
+		};
+
 		shaders_cache(backend_storage& storage, std::string pipeline_class, std::string version_prefix_str = "v1")
 			: version_prefix(version_prefix_str)
 			, pipeline_class_name(pipeline_class)
@@ -288,7 +332,7 @@ namespace rsx
 		}
 
 		template <typename... Args>
-		void load(Args&& ...args)
+		void load(progress_dialog_helper* dlg, Args&& ...args)
 		{
 			if (g_cfg.video.disable_on_disk_shader_cache)
 			{
@@ -321,22 +365,14 @@ namespace rsx
 			root.rewind();
 
 			// Progress dialog
-			auto dlg = Emu.GetCallbacks().get_msg_dialog();
-			dlg->type.se_normal = true;
-			dlg->type.bg_invisible = true;
-			dlg->type.progress_bar_count = 1;
-			dlg->on_close = [](s32 status)
+			std::unique_ptr<progress_dialog_helper> fallback_dlg;
+			if (!dlg)
 			{
-				Emu.CallAfter([]()
-				{
-					Emu.Stop();
-				});
-			};
+				fallback_dlg = std::make_unique<progress_dialog_helper>();
+				dlg = fallback_dlg.get();
+			}
 
-			Emu.CallAfter([=]()
-			{
-				dlg->Create("Preloading cached shaders from disk.\nPlease wait...");
-			});
+			dlg->create();
 
 			const auto prefix_length = version_prefix.length();
 			u32 processed = 0;
@@ -352,10 +388,7 @@ namespace rsx
 				fs::file f(directory_path + "/" + tmp.name);
 
 				processed++;
-				Emu.CallAfter([=]()
-				{
-					dlg->ProgressBarSetMsg(0, fmt::format("Loading pipeline object %u of %u", processed, entry_count));
-				});
+				dlg->update_msg(processed, entry_count);
 
 				if (f.size() != sizeof(pipeline_data))
 				{
@@ -371,14 +404,13 @@ namespace rsx
 				if (tally > 1.f)
 				{
 					u32 value = (u32)tally;
-					Emu.CallAfter([=]()
-					{
-						dlg->ProgressBarInc(0, value);
-					});
+					dlg->inc_value(value);
 
 					tally -= (f32)value;
 				}
 			}
+
+			dlg->close();
 		}
 
 		void store(pipeline_storage_type &pipeline, RSXVertexProgram &vp, RSXFragmentProgram &fp)
