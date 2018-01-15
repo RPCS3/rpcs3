@@ -1243,7 +1243,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	case SPU_WrSRR0:
 	{
 		srr0 = value;
-		break;
+		return true;
 	}
 
 	case SPU_WrOutIntrMbox:
