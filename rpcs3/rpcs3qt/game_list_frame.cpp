@@ -144,7 +144,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->verticalScrollBar()->installEventFilter(this);
 	m_gameList->verticalScrollBar()->setSingleStep(20);
 	m_gameList->horizontalScrollBar()->setSingleStep(20);
-	m_gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);	
+	m_gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	m_gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
 	m_gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
 	m_gameList->verticalHeader()->setVisible(false);
@@ -170,7 +170,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->setHorizontalHeaderItem(gui::column_parental,   new QTableWidgetItem(tr("Parental Level")));
 	m_gameList->setHorizontalHeaderItem(gui::column_compat,     new QTableWidgetItem(tr("Compatibility")));
 
-	// since this won't work somehow: gameList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);	
+	// since this won't work somehow: gameList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	for (int i = 0; i < m_gameList->horizontalHeader()->count(); i++)
 	{
 		m_gameList->horizontalHeaderItem(i)->setTextAlignment(Qt::AlignLeft);
@@ -424,7 +424,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		}
 
 		// std::set is used to remove duplicates from the list
-		for (const auto& dir : std::set<std::string>(std::make_move_iterator(path_list.begin()), std::make_move_iterator(path_list.end())))
+		for (const auto& dir : std::set<std::string>(std::make_move_iterator(path_list.begin()), std::make_move_iterator(path_list.end()))) { try
 		{
 			const std::string sfb = dir + "/PS3_DISC.SFB";
 			const std::string sfo = dir + (fs::is_file(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
@@ -435,7 +435,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				continue;
 			}
 
-			const auto& psf = psf::load_object(sfo_file);
+			const auto psf = psf::load_object(sfo_file);
 
 			GameInfo game;
 			game.path         = dir;
@@ -493,6 +493,12 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 			m_game_data.push_back({ game, m_game_compat->GetCompatibility(game.serial), img, pxmap, true, bootable, hasCustomConfig });
 		}
+		catch (const std::exception& e)
+		{
+			LOG_FATAL(GENERAL, "Failed to update game list at %s\n%s thrown: %s", dir, typeid(e).name(), e.what());
+			continue;
+			// Blame MSVC for double }}
+		}}
 
 		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2)
 		{
@@ -597,7 +603,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	{
 		i = m_xgrid->item(index.row(), index.column())->data(Qt::ItemDataRole::UserRole).toInt();
 	}
-	
+
 	if (1)
 	{
 		if (Boot(m_game_data[i].info))
