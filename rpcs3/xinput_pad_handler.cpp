@@ -19,6 +19,8 @@ xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
 	b_has_rumble = true;
 	b_has_deadzones = true;
 
+	m_max_devices = XUSER_MAX_COUNT;
+
 	m_trigger_threshold = trigger_max / 2;
 	m_thumb_threshold = thumb_max / 2;
 }
@@ -451,7 +453,7 @@ std::vector<std::string> xinput_pad_handler::ListDevices()
 		XINPUT_STATE state;
 		DWORD result = (*xinputGetState)(i, &state);
 		if (result == ERROR_SUCCESS)
-			xinput_pads_list.push_back(fmt::format("Xinput Pad #%d", i));
+			xinput_pads_list.push_back(fmt::format("XInput Pad #%d", i));
 	}
 	return xinput_pads_list;
 }

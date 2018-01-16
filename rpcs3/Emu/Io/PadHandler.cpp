@@ -248,6 +248,11 @@ std::tuple<u16, u16> PadHandlerBase::ConvertToSquirclePoint(u16 inX, u16 inY, in
 	return std::tuple<u16, u16>(newX, newY);
 }
 
+int PadHandlerBase::max_devices()
+{
+	return m_max_devices;
+}
+
 bool PadHandlerBase::has_config()
 {
 	return b_has_config;
