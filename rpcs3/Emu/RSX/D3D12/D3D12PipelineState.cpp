@@ -276,6 +276,7 @@ void D3D12GSRender::load_program()
 		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF,
 	};
 	prop.Rasterization = CD3D12_RASTERIZER_DESC;
+	prop.Rasterization.DepthClipEnable = rsx::method_registers.depth_clip_enabled();
 
 	if (rsx::method_registers.cull_face_enabled())
 	{

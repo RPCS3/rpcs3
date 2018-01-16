@@ -241,7 +241,7 @@ protected:
 private:
 	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
 	bool Boot(const GameInfo& info);
-	void PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color);
+	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	void FilterData();
 	void SortGameList();
 

@@ -63,6 +63,7 @@ public:
 		ResolutionScale,
 		MinimumScalableDimension,
 		ForceCPUBlitEmulation,
+		DisableOnDiskShaderCache,
 
 		// Audio
 		AudioRenderer,
@@ -213,6 +214,7 @@ private:
 		{ DisableVertexCache,       { "Video", "Disable Vertex Cache"}},
 		{ DisableOcclusionQueries,  { "Video", "Disable ZCull Occlusion Queries" }},
 		{ ForceCPUBlitEmulation,    { "Video", "Force CPU Blit" }},
+		{ DisableOnDiskShaderCache, { "Video", "Disable On-Disk Shader Cache"}},
 		{ AnisotropicFilterOverride,{ "Video", "Anisotropic Filter Override" }},
 		{ ResolutionScale,          { "Video", "Resolution Scale" }},
 		{ MinimumScalableDimension, { "Video", "Minimum Scalable Dimension" }},
