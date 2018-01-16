@@ -363,6 +363,7 @@ protected:
 
 	std::array<bool, MAX_GAMEPADS> last_connection_status{{ false, false, false, false, false, false, false }};
 
+	int m_max_devices = 0;
 	int m_trigger_threshold = 0;
 	int m_thumb_threshold = 0;
 
@@ -435,6 +436,7 @@ public:
 
 	pad_handler m_type = pad_handler::null;
 
+	int max_devices();
 	bool has_config();
 	bool has_rumble();
 	bool has_deadzones();
