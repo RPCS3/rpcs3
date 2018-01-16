@@ -290,6 +290,11 @@ namespace rsx
 		template <typename... Args>
 		void load(Args&& ...args)
 		{
+			if (g_cfg.video.disable_on_disk_shader_cache)
+			{
+				return;
+			}
+
 			std::string directory_path = root_path + "/pipelines/" + pipeline_class_name;
 
 			if (!fs::is_dir(directory_path))
@@ -378,6 +383,11 @@ namespace rsx
 
 		void store(pipeline_storage_type &pipeline, RSXVertexProgram &vp, RSXFragmentProgram &fp)
 		{
+			if (g_cfg.video.disable_on_disk_shader_cache)
+			{
+				return;
+			}
+
 			pipeline_data data = pack(pipeline, vp, fp);
 			std::string fp_name = root_path + "/raw/" + fmt::format("%llX.fp", data.fragment_program_hash);
 			std::string vp_name = root_path + "/raw/" + fmt::format("%llX.vp", data.vertex_program_hash);
