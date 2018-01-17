@@ -368,7 +368,7 @@ namespace rsx
 			vblank_count = 0;
 
 			// TODO: exit condition
-			while (!Emu.IsStopped())
+			while (!Emu.IsStopped() && !m_rsx_thread_exiting)
 			{
 				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
 				{
@@ -389,7 +389,7 @@ namespace rsx
 					continue;
 				}
 
-				while (Emu.IsPaused())
+				while (Emu.IsPaused() && !m_rsx_thread_exiting)
 					std::this_thread::sleep_for(10ms);
 
 				std::this_thread::sleep_for(1ms); // hack
@@ -772,6 +772,7 @@ namespace rsx
 
 	void thread::on_exit()
 	{
+		m_rsx_thread_exiting = true;
 		if (m_vblank_thread)
 		{
 			m_vblank_thread->join();
@@ -1618,7 +1619,7 @@ namespace rsx
 
 		memset(display_buffers, 0, sizeof(display_buffers));
 
-		m_used_gcm_commands.clear();
+		m_rsx_thread_exiting = false;
 
 		on_init_rsx();
 		start_thread(fxm::get<GSRender>());
