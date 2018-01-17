@@ -209,6 +209,7 @@ namespace rsx
 		std::shared_ptr<thread_ctrl> m_vblank_thread;
 
 	protected:
+		atomic_t<bool> m_rsx_thread_exiting{false};
 		std::stack<u32> m_call_stack;
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
 		std::vector<u32> element_push_buffer;
@@ -316,7 +317,6 @@ namespace rsx
 		u64 vblank_count;
 
 	public:
-		std::set<u32> m_used_gcm_commands;
 		bool invalid_command_interrupt_raised = false;
 		bool sync_point_request = false;
 		bool in_begin_end = false;
