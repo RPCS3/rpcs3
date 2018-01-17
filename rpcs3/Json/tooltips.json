@@ -63,7 +63,8 @@
 			"showFPSInTitle": "Shows the framerate in the game window title. May cause buggy or outdated recording software to not notice RPCS3.",
 			"gs_resizeOnBoot": "Automatically resizes the game window on boot.\nThis does not change the internal game resolution.",
 			"showTrophyPopups": "Show trophy popups when a trophy is unlocked.",
-			"gs_disableMouse": "Disables the activation of fullscreen mode per doubleclick while the game screen is active.\nCheck this if you want to play with mouse and keyboard (for example with UCR)."
+			"gs_disableMouse": "Disables the activation of fullscreen mode per doubleclick while the game screen is active.\nCheck this if you want to play with mouse and keyboard (for example with UCR).",
+			"useNativeInterface": "Enables use of native HUD within the game window that can interacts with the game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nNot all languages are currently supported (English only)"
 		}
 	},
 	"gpu": {

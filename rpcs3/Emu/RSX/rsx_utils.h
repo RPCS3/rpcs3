@@ -71,7 +71,7 @@ namespace rsx
 	{
 		if (x <= 2) return x;
 
-		return (1ULL << 32) >> ::cntlz32(x - 1, true);
+		return static_cast<u32>((1ULL << 32) >> ::cntlz32(x - 1, true));
 	}
 
 	/*   Note: What the ps3 calls swizzling in this case is actually z-ordering / morton ordering of pixels
