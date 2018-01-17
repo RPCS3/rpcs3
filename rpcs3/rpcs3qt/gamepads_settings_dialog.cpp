@@ -331,11 +331,14 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 	{
 #ifdef _MSC_VER
 	case pad_handler::xinput:
+	{
+		QString name_string = qstr(cur_pad_handler->name_string());
 		for (int i = 0; i < cur_pad_handler->max_devices(); i++)
 		{
-			co_deviceID[player]->addItem(QString("XInput Pad #%1").arg(i), i);
+			co_deviceID[player]->addItem(name_string + QString::number(i), i);
 		}
 		break;
+	}
 #endif
 	default:
 		for (int i = 0; i < list_devices.size(); i++)
