@@ -76,6 +76,8 @@ void pad_thread::Init(const u32 max_connect)
 				cur_pad_handler = std::make_shared<evdev_joystick_handler>();
 				break;
 #endif
+			default:
+				break;
 			}
 			handlers.emplace(handler_type, cur_pad_handler);
 		}

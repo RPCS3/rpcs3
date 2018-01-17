@@ -19,6 +19,7 @@ xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
 	b_has_rumble = true;
 	b_has_deadzones = true;
 
+	m_name_string = "XInput Pad #";
 	m_max_devices = XUSER_MAX_COUNT;
 
 	m_trigger_threshold = trigger_max / 2;
@@ -192,7 +193,7 @@ int xinput_pad_handler::GetDeviceNumber(const std::string& padId)
 	if (!Init())
 		return -1;
 
-	size_t pos = padId.find("Xinput Pad #");
+	size_t pos = padId.find(m_name_string);
 	if (pos == std::string::npos)
 		return -1;
 
@@ -453,7 +454,7 @@ std::vector<std::string> xinput_pad_handler::ListDevices()
 		XINPUT_STATE state;
 		DWORD result = (*xinputGetState)(i, &state);
 		if (result == ERROR_SUCCESS)
-			xinput_pads_list.push_back(fmt::format("XInput Pad #%d", i));
+			xinput_pads_list.push_back(m_name_string + std::to_string(i));
 	}
 	return xinput_pads_list;
 }
