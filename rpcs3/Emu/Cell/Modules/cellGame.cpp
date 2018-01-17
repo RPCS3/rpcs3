@@ -196,7 +196,8 @@ s32 cellHddGameGetSizeKB(vm::ptr<u32> size)
 
 s32 cellHddGameSetSystemVer()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 s32 cellHddGameExitBroken()
@@ -223,7 +224,8 @@ s32 cellGameDataGetSizeKB(vm::ptr<u32> size)
 
 s32 cellGameDataSetSystemVer()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 s32 cellGameDataExitBroken()
