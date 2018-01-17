@@ -32,7 +32,7 @@ Q_SIGNALS:
 	void LogFrameClosed();
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
-	void closeEvent(QCloseEvent* event);
+	void closeEvent(QCloseEvent* event) override;
 	bool eventFilter(QObject* object, QEvent* event) override;
 private Q_SLOTS:
 	void UpdateUI();
