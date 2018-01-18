@@ -74,7 +74,7 @@ namespace rsx
 				}
 
 				const PadInfo& rinfo = handler->GetInfo();
-				if (rinfo.max_connect == 0 || !rinfo.now_connect)
+				if (rinfo.max_connect == 0)
 					return selection_code::error;
 
 				std::array<bool, 8> button_state;
@@ -85,7 +85,7 @@ namespace rsx
 					if (Emu.IsStopped())
 						return selection_code::canceled;
 
-					if (Emu.IsPaused())
+					if (Emu.IsPaused() || !rinfo.now_connect)
 					{
 						std::this_thread::sleep_for(10ms);
 						continue;
