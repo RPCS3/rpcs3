@@ -592,6 +592,7 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\qt_utils.cpp">
       <Filter>Gui\utils</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_register_editor_dialog.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
