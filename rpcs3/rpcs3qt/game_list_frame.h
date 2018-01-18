@@ -13,7 +13,6 @@
 #include <QToolBar>
 #include <QLineEdit>
 #include <QStackedWidget>
-#include <QDropEvent>
 
 #include <memory>
 
