@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <libgen.h>
 #endif
 
 // STB_IMAGE_IMPLEMENTATION and STB_TRUETYPE_IMPLEMENTATION defined externally
@@ -470,7 +471,20 @@ namespace rsx
 					{
 						//Resource was not found in config dir, try and grab from relative path (linux)
 						info = std::make_unique<image_info>(("Icons/ui/" + res).c_str());
+#ifndef _WIN32
+						if (info->data == nullptr)
+						{
+							char result[ PATH_MAX ];
+#ifdef __linux__
+							ssize_t count = readlink( "/proc/self/exe", result, PATH_MAX );
+#else
+							ssize_t count = readlink( "/proc/curproc/file", result, PATH_MAX );
+#endif
+							std::string executablePath = dirname(result);
+							info = std::make_unique<image_info>((executablePath + "/../share/rpcs3/Icons/ui/" + res).c_str());
 
+						}
+#endif
 						if (info->data != nullptr)
 						{
 							//Install the image to config dir
@@ -1308,7 +1322,7 @@ namespace rsx
 			u16 m_elements_height = 0;
 			s16 m_selected_entry = -1;
 			u16 m_elements_count = 0;
-		
+
 		public:
 			list_view(u16 width, u16 height)
 			{
