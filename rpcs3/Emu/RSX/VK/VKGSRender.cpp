@@ -2277,7 +2277,7 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 
 	properties.rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 	properties.rs.polygonMode = VK_POLYGON_MODE_FILL;
-	properties.rs.depthClampEnable = rsx::method_registers.depth_clamp_enabled();
+	properties.rs.depthClampEnable = rsx::method_registers.depth_clamp_enabled() || !rsx::method_registers.depth_clip_enabled();
 	properties.rs.rasterizerDiscardEnable = VK_FALSE;
 
 	//Disabled by setting factors to 0 as needed
@@ -2338,7 +2338,9 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 	*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
 	*(reinterpret_cast<u32*>(buf + 132)) = vertex_base;
 	*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
-	fill_vertex_layout_state(m_vertex_layout, vertex_count, reinterpret_cast<s32*>(buf + 144));
+	*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
+	*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
+	fill_vertex_layout_state(m_vertex_layout, vertex_count, reinterpret_cast<s32*>(buf + 160));
 
 	//Vertex constants
 	buf = buf + 512;

@@ -37,6 +37,8 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "	uint transform_branch_bits;\n";
 	OS << "	uint vertex_base_index;\n";
 	OS << "	float point_size;\n";
+	OS << "	float z_near;\n";
+	OS << "	float z_far;\n";
 	OS << "	ivec4 input_attributes[16];\n";
 	OS << "};\n";
 
@@ -312,6 +314,7 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << "	gl_PointSize = point_size;\n";
 	OS << "	gl_Position = gl_Position * scale_offset_mat;\n";
+	OS << "	gl_Position = apply_zclip_xform(gl_Position, z_near, z_far);\n";
 	OS << "}\n";
 }
 
