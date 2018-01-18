@@ -1525,8 +1525,6 @@ namespace rsx
 			const u32 src_address = (u32)((u64)src.pixels - (u64)vm::base(0));
 			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
 
-			u32 framebuffer_src_address = src_address;
-
 			float scale_x = dst.scale_x;
 			float scale_y = dst.scale_y;
 
@@ -1534,17 +1532,6 @@ namespace rsx
 			//Reproject final clip onto source...
 			const u16 src_w = (const u16)((f32)dst.clip_width / scale_x);
 			const u16 src_h = (const u16)((f32)dst.clip_height / scale_y);
-
-			//Correct for tile compression
-			//TODO: Investigate whether DST compression also affects alignment
-			if (src.compressed_x || src.compressed_y)
-			{
-				const u32 x_bytes = src_is_argb8 ? (src.offset_x * 4) : (src.offset_x * 2);
-				const u32 y_bytes = src.pitch * src.offset_y;
-
-				if (src.offset_x <= 16 && src.offset_y <= 16)
-					framebuffer_src_address -= (x_bytes + y_bytes);
-			}
 
 			//Check if src/dst are parts of render targets
 			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, false, false);
@@ -1559,7 +1546,7 @@ namespace rsx
 			}
 
 			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = m_rtts.get_surface_subresource_if_applicable(framebuffer_src_address, src_w, src_h, src.pitch, true, false, false);
+			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src_w, src_h, src.pitch, true, false, false);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			if (src_is_render_target && src_subres.surface->get_native_pitch() != src.pitch)
