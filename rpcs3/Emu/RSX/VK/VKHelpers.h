@@ -455,7 +455,7 @@ namespace vk
 
 	struct image_view
 	{
-		VkImageView value;
+		VkImageView value = VK_NULL_HANDLE;
 		VkImageViewCreateInfo info = {};
 
 		image_view(VkDevice dev, VkImage image, VkImageViewType view_type, VkFormat format, VkComponentMapping mapping, VkImageSubresourceRange range)
@@ -474,6 +474,34 @@ namespace vk
 		image_view(VkDevice dev, VkImageViewCreateInfo create_info)
 			: m_device(dev), info(create_info)
 		{
+			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+		}
+
+		image_view(VkDevice dev, vk::image* resource, VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}, VkComponentMapping mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A })
+			: m_device(dev)
+		{
+			info.format = resource->info.format;
+			info.image = resource->value;
+			info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			info.components = mapping;
+			info.subresourceRange = range;
+
+			switch (resource->info.imageType)
+			{
+			case VK_IMAGE_TYPE_1D:
+				info.viewType = VK_IMAGE_VIEW_TYPE_1D;
+				break;
+			case VK_IMAGE_TYPE_2D:
+				if (resource->info.flags == VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
+					info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+				else
+					info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+				break;
+			case VK_IMAGE_TYPE_3D:
+				info.viewType = VK_IMAGE_VIEW_TYPE_3D;
+				break;
+			}
+
 			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
 		}
 
@@ -1181,7 +1209,7 @@ namespace vk
 			m_instance = nullptr;
 
 			//Check that some critical entry-points have been loaded into memory indicating prescence of a loader
-			loader_exists = (&vkCreateInstance != nullptr);
+			loader_exists = (vkCreateInstance != nullptr);
 		}
 
 		~context()
@@ -1279,8 +1307,8 @@ namespace vk
 			instance_info.pApplicationInfo = &app;
 			instance_info.enabledLayerCount = static_cast<uint32_t>(layers.size());
 			instance_info.ppEnabledLayerNames = layers.data();
-			instance_info.enabledExtensionCount = fast? 0: static_cast<uint32_t>(extensions.size());
-			instance_info.ppEnabledExtensionNames = fast? nullptr: extensions.data();
+			instance_info.enabledExtensionCount = fast ? 0 : static_cast<uint32_t>(extensions.size());
+			instance_info.ppEnabledExtensionNames = fast ? nullptr : extensions.data();
 
 			VkInstance instance;
 			if (vkCreateInstance(&instance_info, nullptr, &instance) != VK_SUCCESS)
@@ -1704,5 +1732,5 @@ namespace vk
 	*/
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
 		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap, vk::buffer* upload_buffer);
+		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap);
 }

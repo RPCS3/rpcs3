@@ -31,13 +31,13 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		return{ ::gl::texture::type::f32, ::gl::texture::format::rgba, true, 4, 4 };
 
 	case rsx::surface_color_format::b8:
-		return{ ::gl::texture::type::ubyte, ::gl::texture::format::red, false, 1, 1 };
+		return{ ::gl::texture::type::ubyte, ::gl::texture::format::r, false, 1, 1 };
 
 	case rsx::surface_color_format::g8b8:
 		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, false, 2, 1 };
 
 	case rsx::surface_color_format::x32:
-		return{ ::gl::texture::type::f32, ::gl::texture::format::red, true, 1, 4 };
+		return{ ::gl::texture::type::f32, ::gl::texture::format::r, true, 1, 4 };
 
 	default:
 		LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", (u32)color_format);

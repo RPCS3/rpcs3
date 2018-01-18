@@ -324,16 +324,36 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 
 	// Refill the device combobox with currently available devices
 	co_deviceID[player]->clear();
-	for (int i = 0; i < list_devices.size(); i++)
+
+	bool force_enable = true; // enable configs even with disconnected devices
+
+	switch (cur_pad_handler->m_type)
 	{
-		co_deviceID[player]->addItem(qstr(list_devices[i]), i);
+#ifdef _MSC_VER
+	case pad_handler::xinput:
+	{
+		QString name_string = qstr(cur_pad_handler->name_string());
+		for (int i = 0; i < cur_pad_handler->max_devices(); i++)
+		{
+			co_deviceID[player]->addItem(name_string + QString::number(i), i);
+		}
+		break;
+	}
+#endif
+	default:
+		for (int i = 0; i < list_devices.size(); i++)
+		{
+			co_deviceID[player]->addItem(qstr(list_devices[i]), i);
+		}
+		force_enable = false;
+		break;
 	}
 
 	// Handle empty device list
 	bool device_found = list_devices.size() > 0;
-	co_deviceID[player]->setEnabled(device_found);
+	co_deviceID[player]->setEnabled(force_enable || device_found);
 
-	if (device_found)
+	if (force_enable || device_found)
 	{
 		co_deviceID[player]->setCurrentText(qstr(device));
 	}
@@ -342,7 +362,7 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 		co_deviceID[player]->addItem(tr("No Device Detected"), -1);
 	}
 
-	bool config_enabled = device_found && cur_pad_handler->has_config();
+	bool config_enabled = force_enable || (device_found && cur_pad_handler->has_config());
 	co_profile[player]->clear();
 
 	// update profile list if possible

@@ -149,7 +149,7 @@ namespace vk
 
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
 		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap, vk::buffer* upload_buffer)
+		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap)
 	{
 		u32 mipmap_level = 0;
 		u32 block_in_pixel = get_format_block_size_in_texel(format);
@@ -160,10 +160,10 @@ namespace vk
 			u32 image_linear_size = row_pitch * layout.height_in_block * layout.depth;
 			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size);
 
-			void *mapped_buffer = upload_buffer->map(offset_in_buffer, image_linear_size);
+			void *mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size);
 			gsl::span<gsl::byte> mapped{ (gsl::byte*)mapped_buffer, ::narrow<int>(image_linear_size) };
 			upload_texture_subresource(mapped, layout, format, is_swizzled, 256);
-			upload_buffer->unmap();
+			upload_heap.unmap();
 
 			VkBufferImageCopy copy_info = {};
 			copy_info.bufferOffset = offset_in_buffer;
@@ -176,7 +176,7 @@ namespace vk
 			copy_info.imageSubresource.mipLevel = mipmap_level % mipmap_count;
 			copy_info.bufferRowLength = block_in_pixel * row_pitch / block_size_in_bytes;
 
-			vkCmdCopyBufferToImage(cmd, upload_buffer->value, dst_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_info);
+			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, dst_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_info);
 			mipmap_level++;
 		}
 	}
