@@ -30,7 +30,7 @@ public:
 		SPUDecoder,
 		LibLoadOptions,
 		HookStaticFuncs,
-		BindSPUThreads,
+		EnableThreadScheduler,
 		LowerSPUThreadPrio,
 		SPULoopDetection,
 		PreferredSPUThreads,
@@ -183,16 +183,16 @@ private:
 	const QMap<SettingsType, cfg_location> SettingsLoc =
 	{
 		// Core Tab
-		{ PPUDecoder,          { "Core", "PPU Decoder"}},
-		{ SPUDecoder,          { "Core", "SPU Decoder"}},
-		{ LibLoadOptions,      { "Core", "Lib Loader"}},
-		{ HookStaticFuncs,     { "Core", "Hook static functions"}},
-		{ BindSPUThreads,      { "Core", "Bind SPU threads to secondary cores"}},
-		{ LowerSPUThreadPrio,  { "Core", "Lower SPU thread priority"}},
-		{ SPULoopDetection,    { "Core", "SPU loop detection"}},
-		{ PreferredSPUThreads, { "Core", "Preferred SPU Threads"}},
-		{ PPUDebug,            { "Core", "PPU Debug"}},
-		{ SPUDebug,            { "Core", "SPU Debug"}},
+		{ PPUDecoder,               { "Core", "PPU Decoder"}},
+		{ SPUDecoder,               { "Core", "SPU Decoder"}},
+		{ LibLoadOptions,           { "Core", "Lib Loader"}},
+		{ HookStaticFuncs,          { "Core", "Hook static functions"}},
+		{ EnableThreadScheduler,    { "Core", "Enable thread scheduler"}},
+		{ LowerSPUThreadPrio,       { "Core", "Lower SPU thread priority"}},
+		{ SPULoopDetection,         { "Core", "SPU loop detection"}},
+		{ PreferredSPUThreads,      { "Core", "Preferred SPU Threads"}},
+		{ PPUDebug,                 { "Core", "PPU Debug"}},
+		{ SPUDebug,                 { "Core", "SPU Debug"}},
 
 		// Graphics Tab
 		{ Renderer,                 { "Video", "Renderer"}},

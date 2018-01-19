@@ -3,6 +3,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/System.h"
 #include "MFC.h"
 
 const bool s_use_rtm = utils::has_rtm();
@@ -374,4 +375,13 @@ void mfc_thread::add_spu(spu_ptr _spu)
 	}
 
 	run();
+}
+
+void mfc_thread::on_spawn()
+{
+	if (g_cfg.core.thread_scheduler_enabled)
+	{
+		// Bind to same set with the SPUs
+		thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::spu));
+	}
 }

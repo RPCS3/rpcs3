@@ -16,6 +16,23 @@
 // Will report exception and call std::abort() if put in catch(...)
 [[noreturn]] void catch_all_exceptions();
 
+// Hardware core layout
+enum class native_core_arrangement : u32
+{
+	undefined,
+	generic,
+	intel_ht,
+	amd_ccx
+};
+
+enum class thread_class : u32
+{
+	general,
+	rsx,
+	spu,
+	ppu
+};
+
 // Simple list of void() functors
 class task_stack
 {
@@ -90,6 +107,9 @@ class thread_ctrl final
 {
 	// Current thread
 	static thread_local thread_ctrl* g_tls_this_thread;
+
+	// Target cpu core layout
+	static atomic_t<native_core_arrangement> g_native_core_layout;
 
 	// Self pointer
 	std::shared_ptr<thread_ctrl> m_self;
@@ -234,8 +254,17 @@ public:
 		thread_ctrl::start(out, std::forward<F>(func));
 	}
 
+	// Detect layout
+	static void detect_cpu_layout();
+
+	// Returns a core affinity mask. Set whether to generate the high priority set or not
+	static u16 get_affinity_mask(thread_class group);
+
+	// Sets the native thread priority
 	static void set_native_priority(int priority);
-	static void set_ideal_processor_core(int core);
+
+	// Sets the preferred affinity mask for this thread
+	static void set_thread_affinity_mask(u16 mask);
 };
 
 class named_thread

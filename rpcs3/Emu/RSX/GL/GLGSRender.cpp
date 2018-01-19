@@ -1057,7 +1057,9 @@ void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 	*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
 	*(reinterpret_cast<u32*>(buf + 132)) = vertex_base;
 	*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
-	fill_vertex_layout_state(m_vertex_layout, vertex_count, reinterpret_cast<s32*>(buf + 144));
+	*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
+	*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
+	fill_vertex_layout_state(m_vertex_layout, vertex_count, reinterpret_cast<s32*>(buf + 160));
 
 	if (m_transform_constants_dirty)
 	{
@@ -1107,7 +1109,7 @@ void GLGSRender::update_draw_state()
 	gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
 	gl_state.stencil_mask(rsx::method_registers.stencil_mask());
 
-	gl_state.enable(rsx::method_registers.depth_clamp_enabled(), GL_DEPTH_CLAMP);
+	gl_state.enable(rsx::method_registers.depth_clamp_enabled() || !rsx::method_registers.depth_clip_enabled(), GL_DEPTH_CLAMP);
 
 	if (gl_state.enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
 	{

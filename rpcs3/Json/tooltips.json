@@ -26,7 +26,7 @@
 		},
 		"checkboxes": {
 			"hookStFunc": "Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.",
-			"bindSPUThreads": "If your CPU has SMT (Hyper-Threading) SPU threads will run on these logical cores instead.\nUsually faster on an i3, possibly slower or no difference on an i7 or Ryzen.",
+			"enableThreadScheduler": "Allows rpcs3 to manually schedule physical cores to run specific tasks on, instead of letting the OS handle it.\nVery useful on windows, especially for AMD Ryzen systems where it can give huge performance gains.",
 			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen.",
 			"spuLoopDetection": "Try to detect loop conditions in SPU kernels and use them as scheduling hints.\nImproves performance and reduces CPU usage.\nMay cause severe audio stuttering in rare cases."
 		},
