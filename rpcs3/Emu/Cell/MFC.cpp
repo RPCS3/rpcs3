@@ -187,7 +187,7 @@ void mfc_thread::cpu_task()
 							vm::notify(cmd.eal, 128);
 						}
 					}
-					else if (cmd.cmd & MFC_LIST_MASK)
+					else if (cmd.cmd & MFC_LIST_MASK && LIKELY(cmd.cmd != MFC_SYNC_CMD))
 					{
 						struct list_element
 						{
