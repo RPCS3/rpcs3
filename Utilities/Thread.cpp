@@ -1890,18 +1890,25 @@ u16 thread_ctrl::get_affinity_mask(thread_class group)
 		}
 		case native_core_arrangement::amd_ccx:
 		{
-			u16 primary_ccx_unit_mask;
+			u16 spu_mask, ppu_mask, rsx_mask;
 			if (thread_count >= 16)
 			{
 				// Threadripper, R7
 				// Assign threads 8-16
 				// It appears some windows code is bound to lower core addresses, binding 8-16 is alot faster than 0-7
-				primary_ccx_unit_mask = 0b1111111100000000;
+				ppu_mask = spu_mask = 0b1111111100000000;
+				rsx_mask = all_cores_mask;
+			}
+			else if (thread_count == 12)
+			{
+				// 1600/2600 (x)
+				ppu_mask = spu_mask = 0b111111000000;
+				rsx_mask = all_cores_mask;
 			}
 			else
 			{
-				// R5 & R3 don't seem to improve performance no matter how these are shuffled (including 1600)
-				primary_ccx_unit_mask = 0b11111111 & all_cores_mask;
+				// R5 & R3 don't seem to improve performance no matter how these are shuffled
+				ppu_mask = spu_mask = rsx_mask = 0b11111111 & all_cores_mask;
 			}
 
 			switch (group)
@@ -1910,9 +1917,11 @@ u16 thread_ctrl::get_affinity_mask(thread_class group)
 			case thread_class::general:
 				return all_cores_mask;
 			case thread_class::rsx:
+				return rsx_mask;
 			case thread_class::ppu:
+				return ppu_mask;
 			case thread_class::spu:
-				return primary_ccx_unit_mask;
+				return spu_mask;
 			}
 		}
 		case native_core_arrangement::intel_ht:
