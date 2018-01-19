@@ -534,9 +534,8 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 			sceNpTrophy.error("Failed to get info for trophy dialog. Error code %x", ret);
 			*details = SceNpTrophyDetails();
 		}
-		Emu.CallAfter([det = *details, trophyIconData]() {
-			Emu.GetCallbacks().get_trophy_notification_dialog()->ShowTrophyNotification(det, trophyIconData);
-		});
+
+		Emu.GetCallbacks().get_trophy_notification_dialog()->ShowTrophyNotification(*details, trophyIconData);
 	}
 
 	return CELL_OK;

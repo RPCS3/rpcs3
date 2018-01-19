@@ -12,6 +12,7 @@
 #include "RSXFragmentProgram.h"
 #include "rsx_methods.h"
 #include "rsx_utils.h"
+#include "overlays.h"
 #include <Utilities/GSL.h>
 
 #include "Utilities/Thread.h"
@@ -216,6 +217,7 @@ namespace rsx
 		bool skip_frame = false;
 
 		bool supports_multidraw = false;
+		bool supports_native_ui = false;
 
 		//occlusion query
 		bool zcull_surface_active = false;
@@ -230,12 +232,18 @@ namespace rsx
 		rsx::gcm_framebuffer_info m_depth_surface_info;
 		bool framebuffer_status_valid = false;
 
+		std::unique_ptr<rsx::overlays::user_interface> m_custom_ui;
+		std::unique_ptr<rsx::overlays::user_interface> m_invalidated_ui;
+
 	public:
 		RsxDmaControl* ctrl = nullptr;
 		atomic_t<u32> internal_get{ 0 };
 		atomic_t<u32> restore_point{ 0 };
 		atomic_t<bool> external_interrupt_lock{ false };
 		atomic_t<bool> external_interrupt_ack{ false };
+
+		//native UI interrupts
+		atomic_t<bool> native_ui_flip_request{ false };
 
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
@@ -328,8 +336,9 @@ namespace rsx
 		
 		/**
 		 * Execute a backend local task queue
+		 * Idle argument checks that the FIFO queue is in an idle state
 		 */
-		virtual void do_local_task() {}
+		virtual void do_local_task(bool idle) {}
 
 	public:
 		virtual std::string get_name() const override;
@@ -419,6 +428,8 @@ namespace rsx
 	public:
 		//std::future<void> add_internal_task(std::function<bool()> callback);
 		//void invoke(std::function<bool()> callback);
+		void add_user_interface(std::shared_ptr<rsx::overlays::user_interface> iface);
+		void remove_user_interface();
 
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.
@@ -484,5 +495,14 @@ namespace rsx
 
 		void pause();
 		void unpause();
+
+		//HLE vsh stuff
+		//TODO: Move into a separate helper
+		virtual rsx::overlays::save_dialog* shell_open_save_dialog();
+		virtual rsx::overlays::message_dialog* shell_open_message_dialog();
+		virtual rsx::overlays::trophy_notification* shell_open_trophy_notification();
+		virtual rsx::overlays::user_interface* shell_get_current_dialog();
+		virtual bool shell_close_dialog();
+		virtual void shell_do_cleanup(){}
 	};
 }

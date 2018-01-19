@@ -67,6 +67,13 @@ namespace rsx
 		return value <= 1 ? 0 : ::cntlz32((value - 1) << 1, true) ^ 31;
 	}
 
+	static inline u32 next_pow2(u32 x)
+	{
+		if (x <= 2) return x;
+
+		return static_cast<u32>((1ULL << 32) >> ::cntlz32(x - 1, true));
+	}
+
 	/*   Note: What the ps3 calls swizzling in this case is actually z-ordering / morton ordering of pixels
 	*       - Input can be swizzled or linear, bool flag handles conversion to and from
 	*       - It will handle any width and height that are a power of 2, square or non square

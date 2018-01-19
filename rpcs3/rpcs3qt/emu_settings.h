@@ -63,6 +63,7 @@ public:
 		ResolutionScale,
 		MinimumScalableDimension,
 		ForceCPUBlitEmulation,
+		DisableOnDiskShaderCache,
 
 		// Audio
 		AudioRenderer,
@@ -84,6 +85,7 @@ public:
 		ShowFPSInTitle,
 		ShowTrophyPopups,
 		ShowWelcomeScreen,
+		UseNativeInterface,
 
 		// Network
 		ConnectionStatus,
@@ -213,6 +215,7 @@ private:
 		{ DisableVertexCache,       { "Video", "Disable Vertex Cache"}},
 		{ DisableOcclusionQueries,  { "Video", "Disable ZCull Occlusion Queries" }},
 		{ ForceCPUBlitEmulation,    { "Video", "Force CPU Blit" }},
+		{ DisableOnDiskShaderCache, { "Video", "Disable On-Disk Shader Cache"}},
 		{ AnisotropicFilterOverride,{ "Video", "Anisotropic Filter Override" }},
 		{ ResolutionScale,          { "Video", "Resolution Scale" }},
 		{ MinimumScalableDimension, { "Video", "Minimum Scalable Dimension" }},
@@ -239,6 +242,7 @@ private:
 		{ShowFPSInTitle,      { "Miscellaneous", "Show FPS counter in window title"}},
 		{ShowTrophyPopups,    { "Miscellaneous", "Show trophy popups"}},
 		{ShowWelcomeScreen,   { "Miscellaneous", "Show Welcome Screen"}},
+		{UseNativeInterface,  { "Miscellaneous", "Use native user interface"}},
 
 		// Networking
 		{ConnectionStatus, { "Net", "Connection status"}},

@@ -18,6 +18,8 @@ mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
 	b_has_rumble = true;
 	b_has_deadzones = true;
 
+	m_name_string = "Joystick #";
+
 	m_trigger_threshold = trigger_max / 2;
 	m_thumb_threshold = thumb_max / 2;
 }
@@ -573,7 +575,7 @@ bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice& dev)
 	LOG_NOTICE(GENERAL, "Joystick nr.%d found. Driver: %s", index, drv);
 
 	dev.device_id = index;
-	dev.device_name = fmt::format("Joystick #%d", index);
+	dev.device_name = m_name_string + std::to_string(index);
 	dev.device_info = js_info;
 	dev.device_caps = js_caps;
 

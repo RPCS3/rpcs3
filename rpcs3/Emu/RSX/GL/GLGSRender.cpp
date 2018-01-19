@@ -32,6 +32,7 @@ GLGSRender::GLGSRender() : GSRender()
 		m_vertex_cache.reset(new gl::weak_vertex_cache());
 
 	supports_multidraw = !g_cfg.video.strict_rendering_mode;
+	supports_native_ui = (bool)g_cfg.misc.use_native_interface;
 }
 
 extern CellGcmContextData current_context;
@@ -614,9 +615,6 @@ void GLGSRender::on_init_thread()
 {
 	GSRender::on_init_thread();
 
-	m_frame->disable_wm_event_queue();
-	m_frame->hide();
-
 	gl::init();
 
 	//Enable adaptive vsync if vsync is requested
@@ -756,15 +754,70 @@ void GLGSRender::on_init_thread()
 	glEnable(GL_CLIP_DISTANCE0 + 5);
 
 	m_depth_converter.create();
+	m_ui_renderer.create();
 
 	m_gl_texture_cache.initialize();
 	m_thread_id = std::this_thread::get_id();
 
-	m_shaders_cache->load();
+	if (!supports_native_ui)
+	{
+		m_frame->disable_wm_event_queue();
+		m_frame->hide();
 
-	m_frame->enable_wm_event_queue();
-	m_frame->show();
+		m_shaders_cache->load(nullptr);
+
+		m_frame->enable_wm_event_queue();
+		m_frame->show();
+	}
+	else
+	{
+		struct native_helper : gl::shader_cache::progress_dialog_helper
+		{
+			rsx::thread *owner = nullptr;
+			rsx::overlays::message_dialog *dlg = nullptr;
+
+			native_helper(GLGSRender *ptr) :
+				owner(ptr) {}
+
+			void create() override
+			{
+				MsgDialogType type = {};
+				type.disable_cancel = true;
+				type.progress_bar_count = 1;
+
+				dlg = owner->shell_open_message_dialog();
+				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
+				{
+					if (status != CELL_OK)
+						Emu.Stop();
+				});
+			}
+
+			void update_msg(u32 processed, u32 entry_count) override
+			{
+				dlg->progress_bar_set_message(0, fmt::format("Loading pipeline object %u of %u", processed, entry_count));
+				owner->flip(0);
+			}
+
+			void inc_value(u32 value) override
+			{
+				dlg->progress_bar_increment(0, (f32)value);
+				owner->flip(0);
+			}
+
+			void close() override
+			{
+				dlg->return_code = CELL_OK;
+				dlg->close();
+			}
+		}
+		helper(this);
+
+		m_frame->enable_wm_event_queue();
+		m_shaders_cache->load(&helper);
+	}
 }
+
 
 void GLGSRender::on_exit()
 {
@@ -826,6 +879,7 @@ void GLGSRender::on_exit()
 	m_text_printer.close();
 	m_gl_texture_cache.destroy();
 	m_depth_converter.destroy();
+	m_ui_renderer.destroy();
 
 	for (u32 i = 0; i < occlusion_query_count; ++i)
 	{
@@ -963,7 +1017,21 @@ void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 	m_program->use();
 
 	if (m_prog_buffer.check_cache_missed())
+	{
 		m_shaders_cache->store(pipeline_properties, vertex_program, fragment_program);
+
+		//Notify the user with HUD notification
+		if (!m_custom_ui)
+		{
+			//Create notification but do not draw it at this time. No need to spam flip requests
+			m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
+		}
+		else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
+		{
+			//Probe the notification
+			casted->touch();
+		}
+	}
 
 	u8 *buf;
 	u32 vertex_state_offset;
@@ -1044,16 +1112,6 @@ void GLGSRender::update_draw_state()
 	if (gl_state.enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
 	{
 		gl_state.depth_func(comparison_op(rsx::method_registers.depth_func()));
-
-		float range_near = rsx::method_registers.clip_min();
-		float range_far = rsx::method_registers.clip_max();
-
-		//Workaround to preserve depth precision but respect z direction
-		//Ni no Kuni sets a very restricted z range (0.9x - 1.) and depth reads / tests are broken
-		if (range_near <= range_far)
-			gl_state.depth_range(0.f, 1.f);
-		else
-			gl_state.depth_range(1.f, 0.f);
 	}
 
 	if (glDepthBoundsEXT && (gl_state.enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
@@ -1254,6 +1312,13 @@ void GLGSRender::flip(int buffer)
 	gl::screen.clear(gl::buffers::color);
 	m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
 
+	if (m_custom_ui)
+	{
+		gl::screen.bind();
+		glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
+		m_ui_renderer.run(m_frame->client_width(), m_frame->client_height(), 0, *m_custom_ui.get());
+	}
+
 	if (g_cfg.video.overlay)
 	{
 		gl::screen.bind();
@@ -1344,7 +1409,7 @@ void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 	}
 }
 
-void GLGSRender::do_local_task()
+void GLGSRender::do_local_task(bool idle)
 {
 	m_frame->clear_wm_events();
 
@@ -1363,6 +1428,15 @@ void GLGSRender::do_local_task()
 		//Notify thread waiting on this
 		lock.unlock();
 		q.cv.notify_one();
+	}
+
+	if (m_custom_ui)
+	{
+		if (!in_begin_end && idle && native_ui_flip_request.load())
+		{
+			native_ui_flip_request.store(false);
+			flip((s32)current_display_buffer);
+		}
 	}
 }
 
@@ -1425,4 +1499,9 @@ void GLGSRender::get_occlusion_query_result(rsx::occlusion_query_info* query)
 	glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT, &result);
 
 	query->result += result;
+}
+
+void GLGSRender::shell_do_cleanup()
+{
+	m_ui_renderer.remove_temp_resources();
 }

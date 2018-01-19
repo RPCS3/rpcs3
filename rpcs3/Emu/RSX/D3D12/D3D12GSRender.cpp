@@ -301,7 +301,7 @@ void D3D12GSRender::on_exit()
 	return GSRender::on_exit();
 }
 
-void D3D12GSRender::do_local_task()
+void D3D12GSRender::do_local_task(bool)
 {
 	//TODO
 	m_frame->clear_wm_events();
@@ -467,8 +467,8 @@ void D3D12GSRender::end()
 		0.f,
 		(float)clip_w,
 		(float)clip_h,
-		rsx::method_registers.clip_min(),
-		rsx::method_registers.clip_max(),
+		0.f,
+		1.f,
 	};
 	get_current_resource_storage().command_list->RSSetViewports(1, &viewport);
 

@@ -355,18 +355,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		while (funcList)
 		{
 			// Display Save Data List asynchronously in the GUI thread.
-			atomic_t<bool> dlg_result(false);
-
-			Emu.CallAfter([&]()
-			{
-				selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, operation, listSet);
-				dlg_result = true;
-			});
-
-			while (!dlg_result)
-			{
-				thread_ctrl::wait_for(1000);
-			}
+			selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, operation, listSet);
 
 			// UI returns -1 for new save games
 			if (selected == -1)

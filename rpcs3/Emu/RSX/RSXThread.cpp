@@ -481,15 +481,15 @@ namespace rsx
 		// TODO: exit condition
 		while (!Emu.IsStopped())
 		{
-			//Execute backend-local tasks first
-			do_local_task();
-
 			//Wait for external pause events
 			if (external_interrupt_lock.load())
 			{
 				external_interrupt_ack.store(true);
 				while (external_interrupt_lock.load()) _mm_pause();
 			}
+
+			//Execute backend-local tasks first
+			do_local_task(ctrl->put.load() == internal_get.load());
 
 			//Set up restore state if needed
 			if (sync_point_request)
@@ -625,6 +625,11 @@ namespace rsx
 				LOG_WARNING(RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
 				unaligned_command = true;
 			}
+
+			// Not sure if this is worth trying to fix, but if it happens, its bad
+			// so logging it until its reported
+			if (internal_get < put && ((internal_get + (count + 1) * 4) > put))
+				LOG_ERROR(RSX, "Get pointer jumping over put pointer! This is bad!");
 
 			for (u32 i = 0; i < count; i++)
 			{
@@ -790,8 +795,14 @@ namespace rsx
 		if (flip_y) scale_y *= -1;
 		if (flip_y) offset_y *= -1;
 
-		float scale_z = rsx::method_registers.viewport_scale_z();
-		float offset_z = rsx::method_registers.viewport_offset_z();
+		float clip_min = rsx::method_registers.clip_min();
+		float clip_max = rsx::method_registers.clip_max();
+
+		float z_clip_scale = (clip_max + clip_min) == 0.f ? 1.f : (clip_max + clip_min);
+		float z_offset_scale = (clip_max - clip_min) == 0.f ? 1.f : (clip_max - clip_min);
+
+		float scale_z = rsx::method_registers.viewport_scale_z() / z_clip_scale;
+		float offset_z = rsx::method_registers.viewport_offset_z() / z_offset_scale;
 		float one = 1.f;
 
 		stream_vector(buffer, (u32&)scale_x, 0, 0, (u32&)offset_x);
@@ -2168,12 +2179,81 @@ namespace rsx
 	void thread::pause()
 	{
 		external_interrupt_lock.store(true);
-		while (!external_interrupt_ack.load()) _mm_pause();
+		while (!external_interrupt_ack.load())
+		{
+			if (Emu.IsStopped())
+				break;
+
+			_mm_pause();
+		}
 		external_interrupt_ack.store(false);
 	}
 
 	void thread::unpause()
 	{
 		external_interrupt_lock.store(false);
+	}
+
+	//TODO: Move these helpers into a better class dedicated to shell interface handling (use idm?)
+	//They are not dependent on rsx at all
+	rsx::overlays::save_dialog* thread::shell_open_save_dialog()
+	{
+		if (supports_native_ui)
+		{
+			auto ptr = new rsx::overlays::save_dialog();
+			m_custom_ui.reset(ptr);
+			return ptr;
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+
+	rsx::overlays::message_dialog* thread::shell_open_message_dialog()
+	{
+		if (supports_native_ui)
+		{
+			auto ptr = new rsx::overlays::message_dialog();
+			m_custom_ui.reset(ptr);
+			return ptr;
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+
+	rsx::overlays::trophy_notification* thread::shell_open_trophy_notification()
+	{
+		if (supports_native_ui)
+		{
+			auto ptr = new rsx::overlays::trophy_notification();
+			m_custom_ui.reset(ptr);
+			return ptr;
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+
+	rsx::overlays::user_interface* thread::shell_get_current_dialog()
+	{
+		//TODO: Only get dialog type interfaces
+		return m_custom_ui.get();
+	}
+
+	bool thread::shell_close_dialog()
+	{
+		//TODO: Only get dialog type interfaces
+		if (m_custom_ui)
+		{
+			m_invalidated_ui = std::move(m_custom_ui);
+			shell_do_cleanup();
+			return true;
+		}
+
+		return false;
 	}
 }

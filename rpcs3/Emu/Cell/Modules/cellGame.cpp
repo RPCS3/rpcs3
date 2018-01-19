@@ -196,7 +196,8 @@ s32 cellHddGameGetSizeKB(vm::ptr<u32> size)
 
 s32 cellHddGameSetSystemVer()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 s32 cellHddGameExitBroken()
@@ -223,7 +224,8 @@ s32 cellGameDataGetSizeKB(vm::ptr<u32> size)
 
 s32 cellGameDataSetSystemVer()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 s32 cellGameDataExitBroken()
@@ -319,9 +321,9 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 {
 	cellGame.warning("cellGameDataCheck(type=%d, dirName=%s, size=*0x%x)", type, dirName, size);
 
-	if ((type - 1) >= 3)
+	if ((type - 1) >= 3 || (type != CELL_GAME_GAMETYPE_DISC && !dirName))
 	{
-		return CELL_GAME_ERROR_PARAM;
+		return {CELL_GAME_ERROR_PARAM, type};
 	}
 
 	if (size)

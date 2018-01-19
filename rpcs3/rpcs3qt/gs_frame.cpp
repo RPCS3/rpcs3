@@ -30,10 +30,10 @@ gs_frame::gs_frame(const QString& title, const QRect& geometry, QIcon appIcon, b
 	std::string version = rpcs3::version.to_string();
 	version = version.substr(0 , version.find_last_of("-"));
 
-	//Add branch to version on frame , unless it's master.
-	if (rpcs3::get_branch().compare("master") != 0 && rpcs3::get_branch().compare("HEAD") != 0)
+	//Add branch and commit hash to version on frame , unless it's master.
+	if ((rpcs3::get_branch().compare("master") != 0) && (rpcs3::get_branch().compare("HEAD") != 0))
 	{
-		version = version + "-" + rpcs3::get_branch();
+		version = version + "-" + rpcs3::version.to_string().substr((rpcs3::version.to_string().find_last_of("-") + 1), 8) + "-" + rpcs3::get_branch();
 	}
 
 	m_windowTitle += qstr(" | " + version);
@@ -45,7 +45,7 @@ gs_frame::gs_frame(const QString& title, const QRect& geometry, QIcon appIcon, b
 
 	if (!Emu.GetTitleID().empty())
 	{
-		m_windowTitle += qstr(" | [" + Emu.GetTitleID() + ']');
+		m_windowTitle += qstr(" [" + Emu.GetTitleID() + ']');
 	}
 
 	if (!appIcon.isNull())

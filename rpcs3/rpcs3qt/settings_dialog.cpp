@@ -721,6 +721,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->showTrophyPopups, emu_settings::ShowTrophyPopups);
 	SubscribeTooltip(ui->showTrophyPopups, json_emu_misc["showTrophyPopups"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->useNativeInterface, emu_settings::UseNativeInterface);
+	SubscribeTooltip(ui->useNativeInterface, json_emu_misc["useNativeInterface"].toString());
+
 	if (game)
 	{
 		ui->gb_stylesheets->setEnabled(false);
@@ -953,6 +956,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->forceCpuBlitEmulation, emu_settings::ForceCPUBlitEmulation);
 	SubscribeTooltip(ui->forceCpuBlitEmulation, json_debug["forceCpuBlitEmulation"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings::DisableOnDiskShaderCache);
+	SubscribeTooltip(ui->disableOnDiskShaderCache, json_debug["disableOnDiskShaderCache"].toString());
 
 	// Checkboxes: core debug options
 	xemu_settings->EnhanceCheckBox(ui->ppuDebug, emu_settings::PPUDebug);

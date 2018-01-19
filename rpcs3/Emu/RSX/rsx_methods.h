@@ -387,24 +387,12 @@ namespace rsx
 
 		f32 clip_min() const
 		{
-			f32 depth_min = decode<NV4097_SET_CLIP_MIN>().clip_min();
-
-			//Clamp to [0, 1]
-			if (depth_min < 0.f) return 0.f;
-			if (depth_min > 1.f) return 1.f;
-
-			return depth_min;
+			return decode<NV4097_SET_CLIP_MIN>().clip_min();
 		}
 
 		f32 clip_max() const
 		{
-			f32 depth_max = decode<NV4097_SET_CLIP_MAX>().clip_max();
-
-			//Clamp to [0, 1]
-			if (depth_max < 0.f) return 0.f;
-			if (depth_max > 1.f) return 1.f;
-
-			return depth_max;
+			return decode<NV4097_SET_CLIP_MAX>().clip_max();
 		}
 
 		bool logic_op_enabled() const
@@ -1205,6 +1193,16 @@ namespace rsx
 		bool depth_clamp_enabled()
 		{
 			return decode<NV4097_SET_ZMIN_MAX_CONTROL>().depth_clamp_enabled();
+		}
+
+		bool depth_clip_enabled()
+		{
+			return decode<NV4097_SET_ZMIN_MAX_CONTROL>().depth_clip_enabled();
+		}
+
+		bool depth_clip_ignore_w()
+		{
+			return decode<NV4097_SET_ZMIN_MAX_CONTROL>().depth_clip_ignore_w();
 		}
 	};
 
