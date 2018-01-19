@@ -345,11 +345,11 @@ namespace glsl
 		OS << "{\n";
 		OS << "	float d = pos.z / pos.w;\n";
 		OS << "	if (d < 0.f && d >= near_plane)\n";
-		OS << "		d = 0.f;\n";
+		OS << "		d = 0.f;\n"; //force clamp negative values
 		OS << "	else if (d > 1.f && d <= far_plane)\n";
-		OS << "		d = 1.f;\n";
+		OS << "		d = min(1., 0.99 + (0.01 * (pos.z - near_plane) / (far_plane - near_plane)));\n";
 		OS << "	else\n";
-		OS << "		return pos;\n";
+		OS << "		return pos; //d = (0.99 * d);\n"; //range compression for normal values is disabled until a solution to ops comparing z is found
 		OS << "\n";
 		OS << "	pos.z = d * pos.w;\n";
 		OS << "	return pos;\n";
