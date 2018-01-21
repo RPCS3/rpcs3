@@ -854,7 +854,15 @@ namespace rsx
 						last_word = text_width;
 					}
 
-					renderer->get_char(c, text_width, unused);
+					if ((u32)c > renderer->char_count)
+					{
+						//Non-existent glyph
+						text_width += renderer->em_size;
+					}
+					else
+					{
+						renderer->get_char(c, text_width, unused);
+					}
 
 					if (!ignore_word_wrap && wrap_text && text_width >= w)
 					{

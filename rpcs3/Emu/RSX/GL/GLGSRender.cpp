@@ -1237,7 +1237,7 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_height = display_buffers[buffer].height;
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
-	if (buffer < display_buffers_count && buffer_width && buffer_height && buffer_pitch)
+	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height && buffer_pitch)
 	{
 		// Calculate blit coordinates
 		coordi aspect_ratio;
@@ -1423,7 +1423,7 @@ void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 	}
 }
 
-void GLGSRender::do_local_task(bool idle)
+void GLGSRender::do_local_task(bool /*idle*/)
 {
 	m_frame->clear_wm_events();
 
@@ -1444,9 +1444,14 @@ void GLGSRender::do_local_task(bool idle)
 		q.cv.notify_one();
 	}
 
-	if (m_custom_ui)
+	if (m_overlay_cleanup_requests.size())
 	{
-		if (!in_begin_end && idle && native_ui_flip_request.load())
+		m_ui_renderer.remove_temp_resources();
+		m_overlay_cleanup_requests.clear();
+	}
+	else if (m_custom_ui)
+	{
+		if (!in_begin_end && native_ui_flip_request.load())
 		{
 			native_ui_flip_request.store(false);
 			flip((s32)current_display_buffer);
@@ -1517,5 +1522,6 @@ void GLGSRender::get_occlusion_query_result(rsx::occlusion_query_info* query)
 
 void GLGSRender::shell_do_cleanup()
 {
-	m_ui_renderer.remove_temp_resources();
+	//TODO: Key cleanup requests with UID to identify resources to remove
+	m_overlay_cleanup_requests.push_back(0);
 }
