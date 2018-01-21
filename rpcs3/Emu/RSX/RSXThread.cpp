@@ -1616,6 +1616,8 @@ namespace rsx
 		local_mem_addr = localAddress;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 
+		memset(display_buffers, 0, sizeof(display_buffers));
+
 		m_used_gcm_commands.clear();
 
 		on_init_rsx();
@@ -1676,7 +1678,7 @@ namespace rsx
 		}
 	}
 
-	std::pair<u32, u32> thread::calculate_memory_requirements(vertex_input_layout& layout, const u32 vertex_count)
+	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 vertex_count)
 	{
 		u32 persistent_memory_size = 0;
 		u32 volatile_memory_size = 0;
@@ -1732,11 +1734,11 @@ namespace rsx
 		return std::make_pair(persistent_memory_size, volatile_memory_size);
 	}
 
-	void thread::fill_vertex_layout_state(vertex_input_layout& layout, const u32 vertex_count, s32* buffer)
+	void thread::fill_vertex_layout_state(const vertex_input_layout& layout, u32 vertex_count, s32* buffer, u32 persistent_offset_base, u32 volatile_offset_base)
 	{
 		std::array<s32, 16> offset_in_block = {};
-		u32 volatile_offset = 0;
-		u32 persistent_offset = 0;
+		u32 volatile_offset = volatile_offset_base;
+		u32 persistent_offset = persistent_offset_base;
 
 		//NOTE: Order is important! Transient ayout is always push_buffers followed by register data
 		if (rsx::method_registers.current_draw_clause.is_immediate_draw)
@@ -1757,12 +1759,13 @@ namespace rsx
 		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			const auto &block = layout.interleaved_blocks[0];
+			u32 inline_data_offset = volatile_offset_base;
 			for (const u8 index : block.locations)
 			{
 				auto &info = rsx::method_registers.vertex_arrays_info[index];
 
-				offset_in_block[index] = persistent_offset; //just because this var is 0 when we enter here; inlined is transient memory
-				persistent_offset += rsx::get_vertex_type_size_on_host(info.type(), info.size());
+				offset_in_block[index] = inline_data_offset;
+				inline_data_offset += rsx::get_vertex_type_size_on_host(info.type(), info.size());
 			}
 		}
 		else
@@ -1917,7 +1920,7 @@ namespace rsx
 		}
 	}
 
-	void thread::write_vertex_data_to_memory(vertex_input_layout &layout, const u32 first_vertex, const u32 vertex_count, void *persistent_data, void *volatile_data)
+	void thread::write_vertex_data_to_memory(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, void *persistent_data, void *volatile_data)
 	{
 		char *transient = (char *)volatile_data;
 		char *persistent = (char *)persistent_data;

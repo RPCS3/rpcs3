@@ -255,6 +255,16 @@ struct driver_state
 	}
 };
 
+struct vertex_upload_info
+{
+	u32 vertex_draw_count;
+	u32 allocated_vertex_count;
+	u32 vertex_index_base;
+	u32 persistent_mapping_offset;
+	u32 volatile_mapping_offset;
+	std::optional<std::tuple<GLenum, u32> > index_info;
+};
+
 class GLGSRender : public GSRender
 {
 private:
@@ -289,6 +299,7 @@ private:
 
 	GLint m_min_texbuffer_alignment = 256;
 	GLint m_uniform_buffer_offset_align = 256;
+	GLint m_max_texbuffer_size = 65536;
 
 	bool manually_flush_ring_buffers = false;
 
@@ -326,14 +337,14 @@ private:
 	driver_state gl_state;
 
 	// Return element to draw and in case of indexed draw index type and offset in index buffer
-	std::tuple<u32, u32, u32, std::optional<std::tuple<GLenum, u32> > > set_vertex_buffer();
+	vertex_upload_info set_vertex_buffer();
 	rsx::vertex_input_layout m_vertex_layout = {};
 
 	void clear_surface(u32 arg);
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 
 	bool check_program_state();
-	void load_program(u32 vertex_base, u32 vertex_count);
+	void load_program(const vertex_upload_info& upload_info);
 
 	void update_draw_state();
 
