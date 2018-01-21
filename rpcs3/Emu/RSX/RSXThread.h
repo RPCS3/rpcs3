@@ -396,18 +396,18 @@ namespace rsx
 		 * result.first contains persistent memory requirements
 		 * result.second contains volatile memory requirements
 		 */
-		std::pair<u32, u32> calculate_memory_requirements(vertex_input_layout& layout, const u32 vertex_count);
+		std::pair<u32, u32> calculate_memory_requirements(const vertex_input_layout& layout, u32 vertex_count);
 
 		/**
 		 * Generates vertex input descriptors as an array of 16x4 s32s
 		 */
-		void fill_vertex_layout_state(vertex_input_layout& layout, const u32 vertex_count, s32* buffer);
+		void fill_vertex_layout_state(const vertex_input_layout& layout, u32 vertex_count, s32* buffer, u32 persistent_offset = 0, u32 volatile_offset = 0);
 
 		/**
 		 * Uploads vertex data described in the layout descriptor
 		 * Copies from local memory to the write-only output buffers provided in a sequential manner
 		 */
-		void write_vertex_data_to_memory(vertex_input_layout &layout, const u32 first_vertex, const u32 vertex_count, void *persistent_data, void *volatile_data);
+		void write_vertex_data_to_memory(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, void *persistent_data, void *volatile_data);
 
 	private:
 		std::mutex m_mtx_task;
