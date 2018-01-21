@@ -6,7 +6,9 @@
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Thread.h"
+#include "sysinfo.h"
 #include <typeinfo>
+#include <thread>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -1547,6 +1549,8 @@ thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
 extern thread_local std::string(*g_tls_log_prefix)();
 
+DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined };
+
 void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack task)
 {
 #ifdef _WIN32
@@ -1853,6 +1857,89 @@ void thread_ctrl::test()
 	}
 }
 
+void thread_ctrl::detect_cpu_layout()
+{
+	if (!g_native_core_layout.compare_and_swap_test(native_core_arrangement::undefined, native_core_arrangement::generic))
+		return;
+
+	const auto system_id = utils::get_system_info();
+	if (system_id.find("Ryzen") != std::string::npos)
+	{
+		g_native_core_layout.store(native_core_arrangement::amd_ccx);
+	}
+	else if (system_id.find("i3") != std::string::npos || system_id.find("i7") != std::string::npos)
+	{
+		g_native_core_layout.store(native_core_arrangement::intel_ht);
+	}
+}
+
+u16 thread_ctrl::get_affinity_mask(thread_class group)
+{
+	detect_cpu_layout();
+
+	if (const auto thread_count = std::thread::hardware_concurrency())
+	{
+		const u16 all_cores_mask = thread_count < 16 ? (u16)(~(UINT16_MAX << thread_count)): UINT16_MAX;
+
+		switch (g_native_core_layout)
+		{
+		default:
+		case native_core_arrangement::generic:
+		{
+			return all_cores_mask;
+		}
+		case native_core_arrangement::amd_ccx:
+		{
+			u16 primary_ccx_unit_mask;
+			if (thread_count >= 16)
+			{
+				// Threadripper, R7
+				// Assign threads 8-16
+				// It appears some windows code is bound to lower core addresses, binding 8-16 is alot faster than 0-7
+				primary_ccx_unit_mask = 0b1111111100000000;
+			}
+			else
+			{
+				// R5 & R3 don't seem to improve performance no matter how these are shuffled (including 1600)
+				primary_ccx_unit_mask = 0b11111111 & all_cores_mask;
+			}
+
+			switch (group)
+			{
+			default:
+			case thread_class::general:
+				return all_cores_mask;
+			case thread_class::rsx:
+			case thread_class::ppu:
+			case thread_class::spu:
+				return primary_ccx_unit_mask;
+			}
+		}
+		case native_core_arrangement::intel_ht:
+		{
+			if (thread_count <= 4)
+			{
+				//i3 or worse
+				switch (group)
+				{
+				case thread_class::rsx:
+				case thread_class::ppu:
+					return (0b0101 & all_cores_mask);
+				case thread_class::spu:
+					return (0b1010 & all_cores_mask);
+				case thread_class::general:
+					return all_cores_mask;
+				}
+			}
+
+			return all_cores_mask;
+		}
+		}
+	}
+
+	return UINT16_MAX;
+}
+
 void thread_ctrl::set_native_priority(int priority)
 {
 #ifdef _WIN32
@@ -1886,23 +1973,30 @@ void thread_ctrl::set_native_priority(int priority)
 #endif
 }
 
-void thread_ctrl::set_ideal_processor_core(int core)
+void thread_ctrl::set_thread_affinity_mask(u16 mask)
 {
 #ifdef _WIN32
 	HANDLE _this_thread = GetCurrentThread();
-	SetThreadIdealProcessor(_this_thread, core);
+	SetThreadAffinityMask(_this_thread, (DWORD_PTR)mask);
 #elif __APPLE__
-	thread_affinity_policy_data_t policy = { static_cast<integer_t>(core) };
+	thread_affinity_policy_data_t policy = { static_cast<integer_t>(mask) };
 	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
 	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
 #elif defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__)
 	cpu_set_t cs;
 	CPU_ZERO(&cs);
-	CPU_SET(core, &cs);
+
+	for (u32 core = 0; core < 16u; ++core)
+	{
+		if ((u32)mask & (1u << core))
+		{
+			CPU_SET(core, &cs);
+		}
+	}
+
 	pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cs);
 #endif
 }
-
 
 named_thread::named_thread()
 {

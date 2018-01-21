@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <libgen.h>
 #endif
 
 // STB_IMAGE_IMPLEMENTATION and STB_TRUETYPE_IMPLEMENTATION defined externally
@@ -117,9 +118,10 @@ namespace rsx
 			{
 				//Init glyph
 				std::vector<u8> bytes;
+				std::vector<std::string> fallback_fonts;
 #ifdef _WIN32
 				std::string font_dir = "C:/Windows/Fonts/";
-				std::string fallback_font = "C:/Windows/Fonts/Arial.ttf";
+				fallback_fonts.push_back("C:/Windows/Fonts/Arial.ttf");
 #else
 				char *home = getenv("HOME");
 				if (home == nullptr)
@@ -131,19 +133,31 @@ namespace rsx
 				else
 					font_dir += "/.fonts/";
 
-				std::string fallback_font = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+				fallback_fonts.push_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //ubuntu
+				fallback_fonts.push_back("/usr/share/fonts/TTF/DejaVuSans.ttf"); //arch
 #endif
+				//Also attempt to load from dev_flash as a last resort
+				fallback_fonts.push_back(fs::get_config_dir() + "dev_flash/data/font/SCE-PS3-VR-R-LATIN.TTF");
+
 				std::string requested_file = font_dir + ttf_name + ".ttf";
 				std::string file_path = requested_file;
 
 				if (!fs::is_file(requested_file))
 				{
-					if (fs::is_file(fallback_font))
+					bool font_found = false;
+					for (auto &fallback_font : fallback_fonts)
 					{
-						//TODO: Multiple fallbacks
-						file_path = fallback_font;
+						if (fs::is_file(fallback_font))
+						{
+							file_path = fallback_font;
+							font_found = true;
+
+							LOG_NOTICE(RSX, "Found font file '%s' as a replacement for '%s'", fallback_font.c_str(), ttf_name);
+							break;
+						}
 					}
-					else
+
+					if (!font_found)
 					{
 						LOG_ERROR(RSX, "Failed to initialize font '%s.ttf'", ttf_name);
 						return;
@@ -457,7 +471,20 @@ namespace rsx
 					{
 						//Resource was not found in config dir, try and grab from relative path (linux)
 						info = std::make_unique<image_info>(("Icons/ui/" + res).c_str());
+#ifndef _WIN32
+						if (info->data == nullptr)
+						{
+							char result[ PATH_MAX ];
+#ifdef __linux__
+							ssize_t count = readlink( "/proc/self/exe", result, PATH_MAX );
+#else
+							ssize_t count = readlink( "/proc/curproc/file", result, PATH_MAX );
+#endif
+							std::string executablePath = dirname(result);
+							info = std::make_unique<image_info>((executablePath + "/../share/rpcs3/Icons/ui/" + res).c_str());
 
+						}
+#endif
 						if (info->data != nullptr)
 						{
 							//Install the image to config dir
@@ -1295,7 +1322,7 @@ namespace rsx
 			u16 m_elements_height = 0;
 			s16 m_selected_entry = -1;
 			u16 m_elements_count = 0;
-		
+
 		public:
 			list_view(u16 width, u16 height)
 			{

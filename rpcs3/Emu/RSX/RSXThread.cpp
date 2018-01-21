@@ -398,7 +398,11 @@ namespace rsx
 
 		// Raise priority above other threads
 		thread_ctrl::set_native_priority(1);
-		thread_ctrl::set_ideal_processor_core(0);
+
+		if (g_cfg.core.thread_scheduler_enabled)
+		{
+			thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
+		}
 
 		// Round to nearest to deal with forward/reverse scaling
 		fesetround(FE_TONEAREST);
@@ -795,14 +799,8 @@ namespace rsx
 		if (flip_y) scale_y *= -1;
 		if (flip_y) offset_y *= -1;
 
-		float clip_min = rsx::method_registers.clip_min();
-		float clip_max = rsx::method_registers.clip_max();
-
-		float z_clip_scale = (clip_max + clip_min) == 0.f ? 1.f : (clip_max + clip_min);
-		float z_offset_scale = (clip_max - clip_min) == 0.f ? 1.f : (clip_max - clip_min);
-
-		float scale_z = rsx::method_registers.viewport_scale_z() / z_clip_scale;
-		float offset_z = rsx::method_registers.viewport_offset_z() / z_offset_scale;
+		float scale_z = rsx::method_registers.viewport_scale_z();
+		float offset_z = rsx::method_registers.viewport_offset_z();
 		float one = 1.f;
 
 		stream_vector(buffer, (u32&)scale_x, 0, 0, (u32&)offset_x);

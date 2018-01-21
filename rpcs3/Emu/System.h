@@ -286,8 +286,13 @@ struct cfg_root : cfg::node
 		cfg::_bool llvm_logs{this, "Save LLVM logs"};
 		cfg::string llvm_cpu{this, "Use LLVM CPU"};
 
+#ifdef _WIN32
+		cfg::_bool thread_scheduler_enabled{ this, "Enable thread scheduler", true };
+#else
+		cfg::_bool thread_scheduler_enabled{ this, "Enable thread scheduler", false };
+#endif
+
 		cfg::_enum<spu_decoder_type> spu_decoder{this, "SPU Decoder", spu_decoder_type::asmjit};
-		cfg::_bool bind_spu_cores{this, "Bind SPU threads to secondary cores"};
 		cfg::_bool lower_spu_priority{this, "Lower SPU thread priority"};
 		cfg::_bool spu_debug{this, "SPU Debug"};
 		cfg::_int<0, 16384> max_spu_immediate_write_size{this, "Maximum immediate DMA write size", 16384}; // Maximum size that an SPU thread can write directly without posting to MFC
