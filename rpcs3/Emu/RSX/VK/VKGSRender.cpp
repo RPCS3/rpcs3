@@ -2010,7 +2010,7 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 	ctx->swap_command_buffer = nullptr;
 }
 
-void VKGSRender::do_local_task(bool idle)
+void VKGSRender::do_local_task(bool /*idle*/)
 {
 	if (m_flush_requests.pending())
 	{
@@ -2857,10 +2857,10 @@ void VKGSRender::flip(int buffer)
 	if (m_current_frame == &m_aux_frame_context)
 	{
 		m_current_frame = &frame_context_storage[m_current_queue_index];
-		if (m_current_frame->swap_command_buffer && m_current_frame->swap_command_buffer->pending)
+		if (m_current_frame->swap_command_buffer)
 		{
-			//No choice but to wait for the last frame on the dst swapchain image to complete
-			m_current_frame->swap_command_buffer->wait();
+			//Always present if pending swap is present.
+			//Its possible this flip request is triggered by overlays and the flip queue is in undefined state
 			process_swap_request(m_current_frame, true);
 		}
 
@@ -2967,7 +2967,7 @@ void VKGSRender::flip(int buffer)
 	//Blit contents to screen..
 	vk::image* image_to_flip = nullptr;
 
-	if (buffer < display_buffers_count && buffer_width && buffer_height && buffer_pitch)
+	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height && buffer_pitch)
 	{
 		rsx::tiled_region buffer_region = get_tiled_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 		u32 absolute_address = buffer_region.address + buffer_region.base;

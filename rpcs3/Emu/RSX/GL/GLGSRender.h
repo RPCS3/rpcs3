@@ -307,6 +307,8 @@ private:
 	gl::depth_convert_pass m_depth_converter;
 	gl::ui_overlay_renderer m_ui_renderer;
 
+	std::vector<u64> m_overlay_cleanup_requests;
+
 	std::mutex queue_guard;
 	std::list<work_item> work_queue;
 
