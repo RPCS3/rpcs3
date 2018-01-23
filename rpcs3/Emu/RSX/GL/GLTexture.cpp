@@ -281,7 +281,7 @@ namespace gl
 			return{ GL_RED, GL_RED, GL_RED, GL_RED };
 
 		case CELL_GCM_TEXTURE_G8B8:
-			return{ GL_RED, GL_GREEN, GL_RED, GL_GREEN };
+			return{ GL_GREEN, GL_RED, GL_GREEN, GL_RED };
 
 		case CELL_GCM_TEXTURE_Y16_X16:
 			return{ GL_RED, GL_GREEN, GL_RED, GL_GREEN };
