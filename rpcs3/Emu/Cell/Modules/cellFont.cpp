@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -554,7 +554,7 @@ s32 cellFontExtend(u32 a1, u32 a2, u32 a3)
 		//Something happens
 	}
 	//Something happens?
-	return CELL_OK;
+	return -1;
 }
 
 s32 cellFontRenderCharGlyphImageVertical()
