@@ -130,7 +130,6 @@ void msg_dialog_frame::Create(const std::string& msg)
 		connect(m_button_ok, &QAbstractButton::clicked, [=]
 		{
 			on_close(CELL_MSGDIALOG_BUTTON_OK);
-			m_dialog->accept();
 		});
 	}
 

@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 
 #include "cellSysutil.h"
 
@@ -44,6 +45,22 @@ extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 	std::lock_guard<std::mutex> lock(cbm->mutex);
 
 	cbm->registered.push(std::move(cb));
+}
+
+extern s32 sysutil_register_cb_wait(ppu_thread& caller, std::function<s32(ppu_thread&)>&& cb) {
+    atomic_t<bool> wait{true};
+    u32 rtn = -1;
+
+    sysutil_register_cb([&](ppu_thread& ppu) -> s32 {
+        rtn = cb(ppu);
+        wait = false;
+        caller.notify();
+        return CELL_OK;
+    });
+
+    lv2_obj::sleep(caller);
+    while (wait && !Emu.IsStopped()) thread_ctrl::wait();
+    return rtn;
 }
 
 extern void sysutil_send_system_cmd(u64 status, u64 param)

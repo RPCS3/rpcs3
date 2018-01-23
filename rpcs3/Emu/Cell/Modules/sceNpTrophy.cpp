@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
 
 #include "restore_new.h"
 #include "Utilities/rXml.h"
@@ -315,16 +316,23 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	tropusr->Load(trophyUsrPath, trophyConfPath);
 	ctxt->tropusr.reset(tropusr);
 
-	// TODO: Callbacks
-	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg) < 0)
-	{
-		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
-	}
+    s32 rtn = sysutil_register_cb_wait(ppu, [=](ppu_thread& ppu) -> s32 {
+        return statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg);
+    });
 
-	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 100, 100, arg) < 0)
-	{
-		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
-	}
+    if (rtn < 0)
+        return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
+
+    rtn = sysutil_register_cb_wait(ppu, [=](ppu_thread& ppu) -> s32 {
+        return statusCb(ppu, context, SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 100, 100, arg);
+    });
+
+    if (rtn < 0)
+        return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
+
+	rtn = sysutil_register_cb_wait(ppu, [=](ppu_thread& ppu) -> s32 {
+		return CELL_OK;
+	});
 
 	return CELL_OK;
 }
