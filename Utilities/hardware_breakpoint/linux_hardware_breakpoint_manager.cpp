@@ -10,9 +10,9 @@
 #include <sys/user.h>
 #include <sys/prctl.h>
 #include <cstddef>
+#include <unistd.h>
 
 // based on https://github.com/whh8b/hwbp_lib/blob/master/hwbp_lib.c
-// untested
 bool linux_hardware_breakpoint_manager::set_debug_register_values(u32 index, pid_t thread, hardware_breakpoint_type type, hardware_breakpoint_size size, u32 address, bool enable)
 {
 	s32 child_status = 0;
@@ -72,6 +72,9 @@ bool linux_hardware_breakpoint_manager::set_debug_register_values(u32 index, pid
 std::shared_ptr<hardware_breakpoint> linux_hardware_breakpoint_manager::set(u32 index, thread_handle thread,
 	hardware_breakpoint_type type, hardware_breakpoint_size size, u64 address, const hardware_breakpoint_handler& handler)
 {
+	// todo: doesn't work properly but don't have a linux debugging environment to fix it
+	return nullptr;
+
 	if (!set_debug_register_values(index, static_cast<pid_t>(thread), type, size, address, true))
 	{
 		return nullptr;
@@ -82,6 +85,9 @@ std::shared_ptr<hardware_breakpoint> linux_hardware_breakpoint_manager::set(u32 
 
 bool linux_hardware_breakpoint_manager::remove(hardware_breakpoint& handle)
 {
+	// todo
+	return false;
+
 	return set_debug_register_values(handle.get_index(), static_cast<pid_t>(handle.get_thread()), static_cast<hardware_breakpoint_type>(0),
 		static_cast<hardware_breakpoint_size>(0), 0, false);
 }

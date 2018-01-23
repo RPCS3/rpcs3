@@ -1,6 +1,7 @@
 #pragma once
 
 #include "stdafx.h"
+#include <mutex>
 
 // Represents the type of hardware breakpoint.
 enum class hardware_breakpoint_type
@@ -98,6 +99,7 @@ private:
 
     static std::unique_ptr<hardware_breakpoint_manager_impl> s_impl;
 	static thread_breakpoints_lookup s_hardware_breakpoints;
+	static std::mutex s_mutex;
 
 	static thread_breakpoints& lookup_or_create_thread_breakpoints(thread_handle thread);
 	static u32 get_next_breakpoint_index(const thread_breakpoints& breakpoints);
@@ -108,7 +110,7 @@ public:
 	inline static const thread_breakpoints_lookup& get_breakpoints() { return s_hardware_breakpoints; }
 
 	// Gets the array of breakpoints assigned to the given thread. Unused entries are null.
-	inline static const thread_breakpoints& get_breakpoints(thread_handle thread) 
+	inline static const thread_breakpoints& get_breakpoints(thread_handle thread)
 	{
 		return s_hardware_breakpoints[thread];
 	}

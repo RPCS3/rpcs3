@@ -22,6 +22,7 @@ std::unique_ptr<hardware_breakpoint_manager_impl> hardware_breakpoint_manager::s
 #endif
 
 thread_breakpoints_lookup hardware_breakpoint_manager::s_hardware_breakpoints{};
+std::mutex hardware_breakpoint_manager::s_mutex{};
 
 thread_breakpoints& hardware_breakpoint_manager::lookup_or_create_thread_breakpoints(thread_handle thread)
 {
@@ -66,17 +67,18 @@ u32 hardware_breakpoint_manager::get_next_breakpoint_index(const thread_breakpoi
 	return index;
 }
 
-extern thread_local bool g_inside_exception_handler;
+extern thread_local bool g_tls_inside_exception_handler;
 
 std::shared_ptr<hardware_breakpoint> hardware_breakpoint_manager::set(thread_handle thread, hardware_breakpoint_type type, 
     hardware_breakpoint_size size, u64 address, const hardware_breakpoint_handler& handler)
 {
-	if (g_inside_exception_handler)
+	if (g_tls_inside_exception_handler)
 	{
 		// Can't set context (registers) inside exception handler
 		return nullptr;
 	}
 
+	std::lock_guard<std::mutex> lock(s_mutex);
 	auto& breakpoints = lookup_or_create_thread_breakpoints(thread);
 
 	// Max amount of hw breakpoints is 4
@@ -99,23 +101,30 @@ std::shared_ptr<hardware_breakpoint> hardware_breakpoint_manager::set(thread_han
 
 bool hardware_breakpoint_manager::remove(hardware_breakpoint& handle)
 {
+	std::lock_guard<std::mutex> lock(s_mutex);
+
 	auto& breakpoints = s_hardware_breakpoints[handle.get_thread()];
 	if (breakpoints.size() > 0)
 	{
-		breakpoints.erase(std::remove_if(breakpoints.begin(), breakpoints.end(), [&](std::shared_ptr<hardware_breakpoint> x) { return x.get()->get_index() == handle.get_index(); }), breakpoints.end());
+		breakpoints.erase(std::remove_if(breakpoints.begin(), breakpoints.end(), [&handle](auto x)
+		{
+			return x.get()->get_index() == handle.get_index();
+		}), breakpoints.end());
 	}
 
-	if (g_inside_exception_handler)
+	if (g_tls_inside_exception_handler)
 	{
+		// Use case: Remove breakpoint while inside breakpoint handler
 		// We're inside an exception handler, so we can't change the debug registers
 		// so just spawn a thread that disables the breakpoint when we've left the exception
 		// handler
-		bool* inside_exception_handler = &g_inside_exception_handler;
+		
+		bool* inside_exception_handler = &g_tls_inside_exception_handler;
 
-		thread_ctrl::spawn("hardware_breakpoint_remover", [&]()
+		thread_ctrl::spawn("hardware_breakpoint_remover", [inside_exception_handler, &handle]
 		{
 			while (*inside_exception_handler)
-				std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+				std::this_thread::sleep_for(5ms);
 
 			s_impl->remove(handle);
 		});

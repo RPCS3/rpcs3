@@ -8,8 +8,8 @@
 
 static DWORD WINAPI thread_proc(LPVOID lpParameter);
 
-std::shared_ptr<hardware_breakpoint> windows_hardware_breakpoint_manager::set(const u32 index,
-	const thread_handle thread, hardware_breakpoint_type type, hardware_breakpoint_size size,
+std::shared_ptr<hardware_breakpoint> windows_hardware_breakpoint_manager::set(u32 index,
+	thread_handle thread, hardware_breakpoint_type type, hardware_breakpoint_size size,
 	u64 address, const hardware_breakpoint_handler& handler)
 {
 	auto handle = new hardware_breakpoint(index, thread, type, size, address, handler);

@@ -1362,16 +1362,16 @@ static bool is_leaf_function(u64 rip)
 
 // Can't alter thread context while it inside an exception handler because
 // once it leaves the handler the context gets flushed
-extern thread_local bool g_inside_exception_handler = false;
+extern thread_local bool g_tls_inside_exception_handler = false;
 
 #ifdef _WIN32
 
 static LONG exception_handler_impl(PEXCEPTION_POINTERS pExp);
 static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 {
-	g_inside_exception_handler = true;
+	g_tls_inside_exception_handler = true;
 	auto result = exception_handler_impl(pExp);
-	g_inside_exception_handler = false;
+	g_tls_inside_exception_handler = false;
 	return result;
 }
 
