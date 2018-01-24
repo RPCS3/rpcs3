@@ -219,7 +219,16 @@ protected:
 	/** insert end of main function (return value, output copy...)
 	 */
 	virtual void insertMainEnd(std::stringstream &OS) = 0;
+
 public:
+	struct
+	{
+		bool has_lit_op = false;
+		bool has_gather_op = false;
+		bool has_wpos_input = false;
+	}
+	properties;
+
 	ParamArray m_parr;
 	FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size);
 	FragmentProgramDecompiler(const FragmentProgramDecompiler&) = delete;
