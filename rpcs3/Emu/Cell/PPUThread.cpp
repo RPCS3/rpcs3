@@ -1161,7 +1161,9 @@ extern void ppu_initialize(const ppu_module& info)
 	static semaphore<> jmutex;
 
 	// Initialize semaphore with the max number of threads
-	semaphore<INT32_MAX> jcores(std::thread::hardware_concurrency());
+	u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
+	s32 thread_count = max_threads > 0 ? std::min(max_threads, std::thread::hardware_concurrency()) : std::thread::hardware_concurrency();
+	semaphore<INT32_MAX> jcores(thread_count);
 
 	if (!jcores.get())
 	{
