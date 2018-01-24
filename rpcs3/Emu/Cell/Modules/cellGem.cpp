@@ -6,6 +6,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "pad_thread.h"
+#include "Emu/Io/MouseHandler.h"
 #include "Utilities/Timer.h"
 
 LOG_CHANNEL(cellGem);
@@ -190,7 +191,7 @@ static bool check_gem_num(const u32 gem_num)
  * \param analog_t Analog value of Move's Trigger. Currently mapped to R2.
  * \return true on success, false if port_no controller is invalid
  */
-static bool map_to_ds3_input(const u32 port_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
+static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
 {
 	std::scoped_lock lock(pad::g_pad_mutex);
 
@@ -278,7 +279,7 @@ static bool map_to_ds3_input(const u32 port_no, be_t<u16>& digital_buttons, be_t
  * \param ext External data to modify
  * \return true on success, false if port_no controller is invalid
  */
-static bool map_ext_to_ds3_input(const u32 port_no, CellGemExtPortData& ext)
+static bool ds3_input_to_ext(const u32 port_no, CellGemExtPortData& ext)
 {
 	std::scoped_lock lock(pad::g_pad_mutex);
 
@@ -300,6 +301,44 @@ static bool map_ext_to_ds3_input(const u32 port_no, CellGemExtPortData& ext)
 	ext.analog_right_y = pad->m_analog_right_y;
 	ext.digital1 = pad->m_digital_1;
 	ext.digital2 = pad->m_digital_2;
+
+	return true;
+}
+
+/**
+* \brief Maps Move controller data (digital buttons, and analog Trigger data) to mouse input.
+*        Move Button: Mouse1
+*        Trigger:     Mouse2
+* \param mouse_no Mouse index number to use
+* \param digital_buttons Bitmask filled with CELL_GEM_CTRL_* values
+* \param analog_t Analog value of Move's Trigger.
+* \return true on success, false if mouse mouse_no is invalid
+*/
+static bool map_to_mouse_input(const u32 mouse_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
+{
+	const auto handler = g_fxo->get<MouseHandlerBase>();
+
+	if (handler->GetInfo().status[mouse_no] != CELL_MOUSE_STATUS_CONNECTED)
+	{
+		return false;
+	}
+
+	MouseDataList& mouse_data_list = handler->GetDataList(mouse_no);
+
+	if (mouse_data_list.size())
+	{
+		const MouseData& mouse_data = mouse_data_list.front();
+
+		if (mouse_data.buttons & CELL_MOUSE_BUTTON_1)
+			digital_buttons |= CELL_GEM_CTRL_T;
+
+		if (mouse_data.buttons & CELL_MOUSE_BUTTON_2)
+			digital_buttons |= CELL_GEM_CTRL_MOVE;
+
+		analog_t = mouse_data.buttons & CELL_MOUSE_BUTTON_1 ? 0xFFFF : 0;
+
+		mouse_data_list.pop_front();
+	}
 
 	return true;
 }
@@ -606,16 +645,30 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> image_st
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (g_cfg.io.move == move_handler::fake)
+	if (g_cfg.io.move == move_handler::fake &&
+		g_cfg.io.mouse == mouse_handler::basic)
 	{
 		auto shared_data = g_fxo->get<gem_camera_shared>();
+
+		const auto handler = fxm::get<MouseHandlerBase>();
+		auto& mouse = handler->GetMice().at(0);
+
+		f32 x_pos = mouse.x_pos;
+		f32 y_pos = mouse.y_pos;
+
+		static constexpr auto aspect_ratio = 1.2;
+
+		static constexpr auto screen_offset_x = 400.0;
+		static constexpr auto screen_offset_y = screen_offset_x * aspect_ratio;
+
+		static constexpr auto screen_scale = 3.0;
 
 		image_state->frame_timestamp = shared_data->frame_timestamp.load();
 		image_state->timestamp = image_state->frame_timestamp + 10;   // arbitrarily define 10 usecs of frame processing
 		image_state->visible = true;
-		image_state->u = 0;
-		image_state->v = 0;
-		image_state->r = 20;
+		image_state->u = screen_offset_x / screen_scale + x_pos / screen_scale;
+		image_state->v = screen_offset_y / screen_scale + y_pos / screen_scale * aspect_ratio;
+		image_state->r = 10;
 		image_state->r_valid = true;
 		image_state->distance = 2 * 1000;   // 2 meters away from camera
 		// TODO
@@ -646,8 +699,13 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 
 	if (g_cfg.io.move == move_handler::fake)
 	{
-		map_to_ds3_input(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
-		map_ext_to_ds3_input(gem_num, inertial_state->ext);
+		ds3_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
+		ds3_input_to_ext(gem_num, inertial_state->ext);
+
+		if (g_cfg.io.mouse == mouse_handler::basic)
+		{
+			map_to_mouse_input(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
+		}
 
 		inertial_state->timestamp = gem->timer.GetElapsedTimeInMicroSec();
 
@@ -720,7 +778,7 @@ error_code cellGemGetRGB(u32 gem_num, vm::ptr<float> r, vm::ptr<float> g, vm::pt
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!check_gem_num(gem_num) | !r || !g || !b )
+	if (!check_gem_num(gem_num) || !r || !g || !b )
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -776,8 +834,13 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 
 	if (g_cfg.io.move == move_handler::fake)
 	{
-		map_to_ds3_input(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
-		map_ext_to_ds3_input(gem_num, gem_state->ext);
+		ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
+		ds3_input_to_ext(gem_num, gem_state->ext);
+
+		if (g_cfg.io.mouse == mouse_handler::basic)
+		{
+			map_to_mouse_input(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
+		}
 
 		gem_state->tracking_flags = CELL_GEM_TRACKING_FLAG_POSITION_TRACKED | CELL_GEM_TRACKING_FLAG_VISIBLE;
 		gem_state->timestamp = gem->timer.GetElapsedTimeInMicroSec();
@@ -890,11 +953,20 @@ error_code cellGemInit(vm::cptr<CellGemAttribute> attribute)
 	{
 		gem->memory_ptr = 0;
 	}
-	
+
 	gem->update_started = false;
 	gem->camera_frame = 0;
 	gem->status_flags = 0;
 	gem->attribute = *attribute;
+
+	if (g_cfg.io.move == move_handler::fake &&
+		g_cfg.io.mouse == mouse_handler::basic)
+	{
+		// init mouse handler
+		const auto handler = g_fxo->get<MouseHandlerBase>();
+
+		handler->Init(std::min(attribute->max_connect.value(), static_cast<u32>(CELL_GEM_MAX_NUM)));
+	}
 
 	for (int gem_num = 0; gem_num < CELL_GEM_MAX_NUM; gem_num++)
 	{

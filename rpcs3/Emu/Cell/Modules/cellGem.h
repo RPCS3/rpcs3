@@ -139,16 +139,16 @@ struct CellGemExtPortData
 
 struct CellGemImageState
 {
-	be_t<u64> frame_timestamp;
-	be_t<u64> timestamp;
-	be_t<f32> u;         // horizontal screen position in pixels
-	be_t<f32> v;         // vertical screen position in pixels
-	be_t<f32> r;         // size of sphere on screen in pixels
+	be_t<u64> frame_timestamp; // time the frame was captured by libCamera (usecs)
+	be_t<u64> timestamp;       // time processing of the frame was finished (usecs)
+	be_t<f32> u;               // horizontal screen position in pixels
+	be_t<f32> v;               // vertical screen position in pixels
+	be_t<f32> r;               // size of sphere on screen in pixels
 	be_t<f32> projectionx;
 	be_t<f32> projectiony;
-	be_t<f32> distance;
-	u8 visible;
-	u8 r_valid;
+	be_t<f32> distance;        // Move sphere distance from camera (probably)
+	u8 visible;	               // whether the sphere is visible in the current frame
+	u8 r_valid;                // whether `r` contains valid size
 };
 
 struct CellGemPadData
