@@ -144,6 +144,10 @@ namespace vk
 
 		glslang::TProgram program;
 		glslang::TShader shader_object(lang);
+
+		shader_object.setEnvInput(glslang::EShSourceGlsl, lang, glslang::EShClientVulkan, 100);
+		shader_object.setEnvClient(glslang::EShClientVulkan, 100);
+		shader_object.setEnvTarget(glslang::EshTargetSpv, 0x00001000);
 		
 		bool success = false;
 		const char *shader_text = shader.data();
@@ -154,11 +158,13 @@ namespace vk
 		if (shader_object.parse(&g_default_config, 400, EProfile::ECoreProfile, false, true, msg))
 		{
 			program.addShader(&shader_object);
-			success = program.link(EShMsgVulkanRules);
+			success = program.link(msg);
 			if (success)
 			{
-				glslang::TIntermediate* bytes = program.getIntermediate(lang);
-				glslang::GlslangToSpv(*bytes, spv);
+				glslang::SpvOptions options;
+				options.disableOptimizer = false;
+				options.optimizeSize = true;
+				glslang::GlslangToSpv(*program.getIntermediate(lang), spv, &options);
 			}
 		}
 		else
