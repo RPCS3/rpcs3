@@ -495,7 +495,7 @@ void main_window::InstallPup(const QString& dropPath)
 				}
 
 				tar_object dev_flash_tar(dev_flash_tar_f[2]);
-				if (!dev_flash_tar.extract(fs::get_config_dir()))
+				if (!dev_flash_tar.extract(Emu.GetEmuDir()))
 				{
 					LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
 					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: TAR contents are invalid."));
