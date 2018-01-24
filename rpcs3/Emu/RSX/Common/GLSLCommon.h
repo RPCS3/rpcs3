@@ -1,6 +1,7 @@
 #pragma once
 #include <sstream>
 
+#include "../gcm_enums.h"
 #include "ShaderParam.h"
 
 namespace program_common
@@ -202,14 +203,14 @@ namespace glsl
 		OS << "\n";
 		OS << "		switch (desc.type)\n";
 		OS << "		{\n";
-		OS << "		case 0:\n";
+		OS << "		case " << static_cast<std::underlying_type<rsx::vertex_base_type>::type>(rsx::vertex_base_type::s1) << ":\n";
 		OS << "			//signed normalized 16-bit\n";
 		OS << "			tmp.x = texelFetch(input_stream, first_byte++).x;\n";
 		OS << "			tmp.y = texelFetch(input_stream, first_byte++).x;\n";
 		OS << "			mov(result, n, get_s16(tmp.xy, desc.swap_bytes));\n";
 		OS << "			mov(scale, n, 32767.);\n";
 		OS << "			break;\n";
-		OS << "		case 1:\n";
+		OS << "		case " << static_cast<std::underlying_type<rsx::vertex_base_type>::type>(rsx::vertex_base_type::f) << ":\n";
 		OS << "			//float\n";
 		OS << "			tmp.x = texelFetch(input_stream, first_byte++).x;\n";
 		OS << "			tmp.y = texelFetch(input_stream, first_byte++).x;\n";
@@ -217,25 +218,25 @@ namespace glsl
 		OS << "			tmp.w = texelFetch(input_stream, first_byte++).x;\n";
 		OS << "			mov(result, n, uintBitsToFloat(get_bits(tmp, desc.swap_bytes)));\n";
 		OS << "			break;\n";
-		OS << "		case 2:\n";
+		OS << "		case " << static_cast<std::underlying_type<rsx::vertex_base_type>::type>(rsx::vertex_base_type::sf) << ":\n";
 		OS << "			//half\n";
 		OS << "			tmp.x = texelFetch(input_stream, first_byte++).x;\n";
 		OS << "			tmp.y = texelFetch(input_stream, first_byte++).x;\n";
 		OS << "			mov(result, n, unpackHalf2x16(uint(get_bits(tmp.xy, desc.swap_bytes))).x);\n";
 		OS << "			break;\n";
-		OS << "		case 3:\n";
+		OS << "		case " << static_cast<std::underlying_type<rsx::vertex_base_type>::type>(rsx::vertex_base_type::ub) << ":\n";
 		OS << "			//unsigned byte\n";
 		OS << "			mov(result, n, texelFetch(input_stream, first_byte++).x);\n";
 		OS << "			mov(scale, n, 255.);\n";
 		OS << "			reverse_order = (desc.swap_bytes != 0);\n";
 		OS << "			break;\n";
-		OS << "		case 4:\n";
+		OS << "		case " << static_cast<std::underlying_type<rsx::vertex_base_type>::type>(rsx::vertex_base_type::s32k) << ":\n";
 		OS << "			//signed word\n";
 		OS << "			tmp.x = texelFetch(input_stream, first_byte++).x;\n";
 		OS << "			tmp.y = texelFetch(input_stream, first_byte++).x;\n";
 		OS << "			mov(result, n, get_s16(tmp.xy, desc.swap_bytes));\n";
 		OS << "			break;\n";
-		OS << "		case 5:\n";
+		OS << "		case " << static_cast<std::underlying_type<rsx::vertex_base_type>::type>(rsx::vertex_base_type::cmp) << ":\n";
 		OS << "			//cmp\n";
 		OS << "			tmp.x = texelFetch(input_stream, first_byte++).x;\n";
 		OS << "			tmp.y = texelFetch(input_stream, first_byte++).x;\n";
@@ -248,7 +249,7 @@ namespace glsl
 		OS << "			result.w = 1.;\n";
 		OS << "			scale = vec4(32767., 32767., 32767., 1.);\n";
 		OS << "			break;\n";
-		OS << "		case 6:\n";
+		OS << "		case " << static_cast<std::underlying_type<rsx::vertex_base_type>::type>(rsx::vertex_base_type::ub256) << ":\n";
 		OS << "			//ub256\n";
 		OS << "			mov(result, n, float(texelFetch(input_stream, first_byte++).x));\n";
 		OS << "			reverse_order = (desc.swap_bytes != 0);\n";

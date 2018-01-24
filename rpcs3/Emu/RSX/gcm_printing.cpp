@@ -758,9 +758,9 @@ namespace
 		return "";
 	}
 
-	std::string get_vertex_attribute_format(u8 type)
+	std::string get_vertex_attribute_format(u32 type)
 	{
-		switch (rsx::to_vertex_base_type(type))
+		switch (static_cast<rsx::vertex_base_type>(type))
 		{
 		case rsx::vertex_base_type::s1: return "Signed short normalized";
 		case rsx::vertex_base_type::f: return "Float";

@@ -4523,7 +4523,7 @@ struct vertex_array_helper
 
 		rsx::vertex_base_type type() const
 		{
-			return rsx::to_vertex_base_type(m_data.type);
+			return static_cast<rsx::vertex_base_type>(static_cast<std::underlying_type<rsx::vertex_base_type>::type>(m_data.type));
 		}
 	};
 
