@@ -253,6 +253,7 @@ public:
 	bool BootGame(const std::string& path, bool direct = false, bool add_only = false);
 	bool InstallPkg(const std::string& path);
 
+	static std::string GetEmuDir();
 	static std::string GetHddDir();
 	static std::string GetLibDir();
 

@@ -53,9 +53,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_show_platinum_trophies = m_gui_settings->GetValue(gui::tr_show_platinum).toBool();
 
 	// HACK: dev_hdd0 must be mounted for vfs to work for loading trophies.
-	const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
-	const std::string emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
-	vfs::mount("dev_hdd0", fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir));
+	vfs::mount("dev_hdd0", Emu.GetHddDir());
 
 	// Trophy Tree
 	m_trophy_tree = new QTreeWidget();
