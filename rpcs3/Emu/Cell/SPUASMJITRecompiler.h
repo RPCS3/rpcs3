@@ -1,17 +1,11 @@
 #pragma once
 
-#include "SPURecompiler.h"
+#define ASMJIT_STATIC
+#define ASMJIT_DEBUG
 
-namespace asmjit
-{
-	struct JitRuntime;
-	struct CodeHolder;
-	struct X86Compiler;
-	struct X86Gp;
-	struct X86Xmm;
-	struct X86Mem;
-	struct Label;
-}
+#include "asmjit.h"
+
+#include "SPURecompiler.h"
 
 // SPU ASMJIT Recompiler
 class spu_recompiler : public spu_recompiler_base
