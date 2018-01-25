@@ -297,6 +297,10 @@ namespace rsx
 				switch (button_press)
 				{
 				case pad_button::cross:
+					if (!m_list->m_items.size())
+					{
+						break;
+					}
 					return_code = m_list->get_selected_index();
 					//Fall through
 				case pad_button::circle:
