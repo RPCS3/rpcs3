@@ -57,4 +57,6 @@ struct PKGEntry
 	be_t<u32> pad;          // Padding (zeros)
 };
 
+bool pkg_read_header(const fs::file& file, /* out */ PKGHeader& header);
+bool pkg_read_header(const std::string& path, /* out */ PKGHeader& header);
 bool pkg_install(const std::string& path, atomic_t<double>&);

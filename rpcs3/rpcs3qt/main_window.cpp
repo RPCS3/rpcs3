@@ -357,6 +357,25 @@ void main_window::InstallPkg(const QString& dropPath)
 	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
 
+	// Read header
+	PKGHeader header;
+
+	// Return if not a proper pkg file
+	if (!pkg_read_header(path, header))
+		return;
+
+	const std::string title_id(header.title_id);
+	const std::string install_id = title_id.substr(7, 9);
+	const std::string dir = Emu.GetHddDir() + "game/" + install_id + '/';
+	if (fs::is_dir(dir))
+	{
+		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"),tr("Title %1 is already installed. Do you want to overwrite the existing installation?").arg(qstr(install_id)),
+			QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+		{
+			return;
+		}
+	}
+
 	// Synchronization variable
 	atomic_t<double> progress(0.);
 	{

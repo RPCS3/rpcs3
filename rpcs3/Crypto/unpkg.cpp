@@ -8,6 +8,52 @@
 #include "Emu/VFS.h"
 #include "unpkg.h"
 
+bool pkg_read_header(const fs::file& file, /* out */ PKGHeader& header)
+{
+	// Get basic PKG information
+	if (file.read(&header, sizeof(header)) != sizeof(header))
+	{
+		LOG_ERROR(LOADER, "PKG file is too short!");
+		return false;
+	}
+
+	if (header.pkg_magic != "\x7FPKG"_u32)
+	{
+		LOG_ERROR(LOADER, "Not a PKG file!");
+		return false;
+	}
+
+	switch (const u16 type = header.pkg_type)
+	{
+	case PKG_RELEASE_TYPE_DEBUG:   break;
+	case PKG_RELEASE_TYPE_RELEASE: break;
+	default:
+	{
+		LOG_ERROR(LOADER, "Unknown PKG type (0x%x)", type);
+		return false;
+	}
+	}
+
+	switch (const u16 platform = header.pkg_platform)
+	{
+	case PKG_PLATFORM_TYPE_PS3: break;
+	case PKG_PLATFORM_TYPE_PSP: break;
+	default:
+	{
+		LOG_ERROR(LOADER, "Unknown PKG platform (0x%x)", platform);
+		return false;
+	}
+	}
+
+	return true;
+}
+
+bool pkg_read_header(const std::string& path, /* out */ PKGHeader& header)
+{
+	fs::file file(path);
+	return pkg_read_header(file, header);
+}
+
 bool pkg_install(const std::string& path, atomic_t<double>& sync)
 {
 	const std::size_t BUF_SIZE = 8192 * 1024; // 8 MB
@@ -65,41 +111,10 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		return num_read;
 	};
 
-	// Get basic PKG information
 	PKGHeader header;
-
-	if (archive_read(&header, sizeof(header)) != sizeof(header))
+	if (!pkg_read_header(filelist[0], header))
 	{
-		LOG_ERROR(LOADER, "PKG file is too short!");
 		return false;
-	}
-
-	if (header.pkg_magic != "\x7FPKG"_u32)
-	{
-		LOG_ERROR(LOADER, "Not a PKG file!");
-		return false;
-	}
-
-	switch (const u16 type = header.pkg_type)
-	{
-	case PKG_RELEASE_TYPE_DEBUG:   break;
-	case PKG_RELEASE_TYPE_RELEASE: break;
-	default:
-	{
-		LOG_ERROR(LOADER, "Unknown PKG type (0x%x)", type);
-		return false;
-	}
-	}
-
-	switch (const u16 platform = header.pkg_platform)
-	{
-	case PKG_PLATFORM_TYPE_PS3: break;
-	case PKG_PLATFORM_TYPE_PSP: break;
-	default:
-	{
-		LOG_ERROR(LOADER, "Unknown PKG platform (0x%x)", platform);
-		return false;
-	}
 	}
 
 	if (header.pkg_size > filelist[0].size())
