@@ -40,9 +40,10 @@ namespace vm
 
 	// Registered waiters
 	std::vector<vm::waiter*> g_waiters;
+	shared_mutex g_waiters_lock;
 
 	// Waiters which will be removed once the lock is freed
-	std::mutex g_waiters_to_remove_lock;
+	shared_mutex g_waiters_to_remove_lock;
 	std::vector<vm::waiter*> g_waiters_to_remove;
 
 	// Memory mutex core
@@ -205,21 +206,6 @@ namespace vm
 	{
 		if (locked)
 		{
-			if (!g_waiters_to_remove.empty())
-			{
-				std::lock_guard<std::mutex> lock(g_waiters_to_remove_lock);
-				for (auto ptr : g_waiters_to_remove)
-				{
-					const auto found = std::find(g_waiters.cbegin(), g_waiters.cend(), ptr);
-					if (found != g_waiters.cend())
-					{
-						g_waiters.erase(found);
-					}
-					delete ptr;
-				}
-				g_waiters_to_remove.clear();
-			}
-
 			g_mutex.unlock();
 
 			locked = false;
@@ -234,8 +220,9 @@ namespace vm
 	void waiter::init()
 	{
 		// Register waiter
-		writer_lock lock(0);
+		g_waiters_lock.lock();
 		g_waiters.emplace_back(this);
+		g_waiters_lock.unlock();
 	}
 
 	void waiter::test() const
@@ -265,37 +252,36 @@ namespace vm
 		owner_copy->notify();
 	}
 
+	void remove_old_waiters()
+	{
+		if (!g_waiters_to_remove.empty())
+		{
+			g_waiters_to_remove_lock.lock();
+			for (auto ptr : g_waiters_to_remove)
+			{
+				const auto found = std::find(g_waiters.cbegin(), g_waiters.cend(), ptr);
+				if (found != g_waiters.cend())
+				{
+					g_waiters.erase(found);
+				}
+				delete ptr;
+			}
+			g_waiters_to_remove.clear();
+			g_waiters_to_remove_lock.unlock();
+		}
+	}
+
 	void waiter::remove()
 	{
-
-		// Unregister waiter
-		const writer_lock lock(try_to_lock);
-
-		if (lock.locked)
-		{
-			// Find waiter
-			const auto found = std::find(g_waiters.cbegin(), g_waiters.cend(), this);
-
-			if (found != g_waiters.cend())
-			{
-				g_waiters.erase(found);
-				delete this;
-			}
-			else
-			{
-				verify("Waiter not found during removal"), false;
-			}
-		}
-		else
-		{
-			this->owner = nullptr; // Iterations of the object will ignore it from now on
-			std::lock_guard<std::mutex> lock(g_waiters_to_remove_lock);
-			g_waiters_to_remove.push_back(this);
-		}
+		this->owner = nullptr; // Iterations of the object will ignore it from now on
+		g_waiters_to_remove_lock.lock();
+		g_waiters_to_remove.push_back(this);
+		g_waiters_to_remove_lock.unlock();
 	}
 
 	void notify(u32 addr, u32 size)
 	{
+		g_waiters_lock.lock_shared();
 		for (const waiter* ptr : g_waiters)
 		{
 			if (ptr->addr / 128 == addr / 128)
@@ -303,13 +289,36 @@ namespace vm
 				ptr->test();
 			}
 		}
+
+		if (g_waiters_to_remove.size() > 10)
+		{
+			g_waiters_lock.lock_upgrade();
+			remove_old_waiters();
+			g_waiters_lock.unlock();
+		}
+		else
+		{
+			g_waiters_lock.unlock_shared();
+		}
 	}
 
 	void notify_all()
 	{
+		g_waiters_lock.lock_shared();
 		for (const waiter* ptr : g_waiters)
 		{
 			ptr->test();
+		}
+
+		if (g_waiters_to_remove.size() > 10)
+		{
+			g_waiters_lock.lock_upgrade();
+			remove_old_waiters();
+			g_waiters_lock.unlock();
+		}
+		else
+		{
+			g_waiters_lock.unlock_shared();
 		}
 	}
 
