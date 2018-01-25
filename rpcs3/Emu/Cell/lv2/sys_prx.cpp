@@ -129,7 +129,14 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		src.open(path);
 	}
 
-	const ppu_prx_object obj = decrypt_self(std::move(src), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
+	fs::file file;
+	
+	if (decrypt_self(std::move(src), file, fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data()) != self_decryptor_result_code::ok)
+	{
+		return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
+	}
+
+	const ppu_prx_object obj = file;
 
 	if (obj != elf_error::ok)
 	{

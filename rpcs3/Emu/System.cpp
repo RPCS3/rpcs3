@@ -232,7 +232,7 @@ void Emulator::Init()
 	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
 }
 
-bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
+emulator_result_code Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 {
 	static const char* boot_list[] =
 	{
@@ -245,9 +245,7 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 	if (direct && fs::is_file(path))
 	{
 		m_path = path;
-		Load(add_only);
-
-		return true;
+		return Load(add_only);
 	}
 
 	for (std::string elf : boot_list)
@@ -257,16 +255,14 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 		if (fs::is_file(elf))
 		{
 			m_path = elf;
-			Load(add_only);
-
-			return true;
+			return Load(add_only);
 		}
 	}
 
-	return false;
+	return emulator_result_code::ok;
 }
 
-bool Emulator::InstallPkg(const std::string& path)
+emulator_result_code Emulator::InstallPkg(const std::string& path)
 {
 	LOG_SUCCESS(GENERAL, "Installing package: %s", path);
 
@@ -305,10 +301,10 @@ bool Emulator::InstallPkg(const std::string& path)
 
 	if (progress >= 1.)
 	{
-		return true;
+		return emulator_result_code::ok;
 	}
 
-	return false;
+	return emulator_result_code::pkg_install_failure;
 }
 
 std::string Emulator::GetHddDir()
@@ -332,7 +328,7 @@ void Emulator::SetForceBoot(bool force_boot)
 	m_force_boot = force_boot;
 }
 
-void Emulator::Load(bool add_only)
+emulator_result_code Emulator::Load(bool add_only)
 {
 	if (!IsStopped())
 	{
@@ -459,7 +455,7 @@ void Emulator::Load(bool add_only)
 			else
 			{
 				LOG_ERROR(LOADER, "Failed to move disc game %s to /dev_hdd0/disc/ (%s)", m_title_id, fs::g_tls_error);
-				return;
+				return emulator_result_code::disc_failed_relocation;
 			}
 		}
 
@@ -484,6 +480,7 @@ void Emulator::Load(bool add_only)
 			else
 			{
 				LOG_FATAL(LOADER, "Disc directory not found. Try to run the game from the actual game disc directory.");
+				return emulator_result_code::disc_mount_failure;
 			}
 		}
 
@@ -498,7 +495,7 @@ void Emulator::Load(bool add_only)
 			if (!sfb_file.open(vfs::get("/dev_bdvd/PS3_DISC.SFB")) || sfb_file.size() < 4 || sfb_file.read<u32>() != ".SFB"_u32)
 			{
 				LOG_ERROR(LOADER, "Invalid disc directory for the disc game %s", m_title_id);
-				return;
+				return emulator_result_code::disc_mount_failure;
 			}
 
 			const std::string bdvd_title_id = psf::get_string(psf::load_object(fs::file{vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")}), "TITLE_ID");
@@ -506,7 +503,7 @@ void Emulator::Load(bool add_only)
 			if (bdvd_title_id != m_title_id)
 			{
 				LOG_ERROR(LOADER, "Unexpected disc directory for the disc game %s (found %s)", m_title_id, bdvd_title_id);
-				return;
+				return emulator_result_code::disc_mount_failure;
 			}
 
 			// Store /dev_bdvd/ location
@@ -522,7 +519,7 @@ void Emulator::Load(bool add_only)
 		else if (disc.empty())
 		{
 			LOG_ERROR(LOADER, "Failed to mount disc directory for the disc game %s", m_title_id);
-			return;
+			return emulator_result_code::disc_mount_failure;
 		}
 		else
 		{
@@ -534,7 +531,7 @@ void Emulator::Load(bool add_only)
 		if (add_only)
 		{
 			LOG_NOTICE(LOADER, "Finished to add data to games.yml by boot for: %s", m_path);
-			return;
+			return emulator_result_code::ok;
 		}
 
 		// Install PKGDIR, INSDIR, PS3_EXTRA
@@ -557,10 +554,10 @@ void Emulator::Load(bool add_only)
 
 				for (auto&& entry : fs::dir{ins_dir})
 				{
-					if (!entry.is_directory && ends_with(entry.name, ".PKG") && !InstallPkg(ins_dir + entry.name))
+					if (!entry.is_directory && ends_with(entry.name, ".PKG") && InstallPkg(ins_dir + entry.name) != emulator_result_code::ok)
 					{
 						LOG_ERROR(LOADER, "Failed to install /dev_bdvd/PS3_GAME/INSDIR/%s", entry.name);
-						return;
+						return emulator_result_code::pkg_install_failure;
 					}
 				}
 			}
@@ -575,10 +572,10 @@ void Emulator::Load(bool add_only)
 					{
 						const std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
 
-						if (fs::is_file(pkg_file) && !InstallPkg(pkg_file))
+						if (fs::is_file(pkg_file) && InstallPkg(pkg_file) != emulator_result_code::ok)
 						{
 							LOG_ERROR(LOADER, "Failed to install /dev_bdvd/PS3_GAME/PKGDIR/%s/INSTALL.PKG", entry.name);
-							return;
+							return emulator_result_code::pkg_install_failure;
 						}
 					}
 				}
@@ -594,10 +591,10 @@ void Emulator::Load(bool add_only)
 					{
 						const std::string pkg_file = extra_dir + entry.name + "/DATA000.PKG";
 
-						if (fs::is_file(pkg_file) && !InstallPkg(pkg_file))
+						if (fs::is_file(pkg_file) && InstallPkg(pkg_file) != emulator_result_code::ok)
 						{
 							LOG_ERROR(LOADER, "Failed to install /dev_bdvd/PS3_GAME/PKGDIR/%s/DATA000.PKG", entry.name);
-							return;
+							return emulator_result_code::pkg_install_failure;
 						}
 					}
 				}
@@ -626,7 +623,7 @@ void Emulator::Load(bool add_only)
 		if (!elf_file)
 		{
 			LOG_ERROR(LOADER, "Failed to open executable: %s", m_path);
-			return;
+			return emulator_result_code::executable_no_access;
 		}
 
 		// Check SELF header
@@ -645,9 +642,21 @@ void Emulator::Load(bool add_only)
 			else
 			{
 				// Decrypt SELF
-				elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data());
+				self_decryptor_result_code decryption_result;
+				if ((decryption_result = decrypt_self(std::move(elf_file), std::move(elf_file), klic.empty() ? nullptr : klic.data())) != self_decryptor_result_code::ok)
+				{
+					switch (decryption_result)
+					{
+					case self_decryptor_result_code::rap_missing:
+						return emulator_result_code::decryption_rap_missing;
 
-				if (fs::file elf_out{decrypted_path, fs::rewrite})
+					default:
+						return emulator_result_code::decryption_failed;
+					}
+				}
+
+				fs::file elf_out{decrypted_path, fs::rewrite};
+				if (elf_file && elf_out)
 				{
 					elf_out.write(elf_file.to_vector<u8>());
 					elf_out.close();
@@ -668,7 +677,7 @@ void Emulator::Load(bool add_only)
 		if (!elf_file)
 		{
 			LOG_ERROR(LOADER, "Failed to decrypt SELF: %s", m_path);
-			return;
+			return emulator_result_code::decryption_failed;
 		}
 		else if (ppu_exec.open(elf_file) == elf_error::ok)
 		{
@@ -757,7 +766,7 @@ void Emulator::Load(bool add_only)
 			LOG_WARNING(LOADER, "** ppu_prx  -> %s", ppu_prx.get_error());
 			LOG_WARNING(LOADER, "** spu_exec -> %s", spu_exec.get_error());
 			LOG_WARNING(LOADER, "** arm_exec -> %s", arm_exec.get_error());
-			return;
+			return emulator_result_code::executable_invalid;
 		}
 
 		if ((m_force_boot || g_cfg.misc.autostart) && IsReady())
@@ -775,23 +784,31 @@ void Emulator::Load(bool add_only)
 	{
 		LOG_FATAL(LOADER, "%s thrown: %s", typeid(e).name(), e.what());
 		Stop();
+		return emulator_result_code::exception_thrown;
 	}
+
+	return emulator_result_code::ok;
 }
 
-void Emulator::Run()
+emulator_result_code Emulator::Run()
 {
 	if (!IsReady())
 	{
-		Load();
-		if(!IsReady()) return;
+		auto result = Load();
+		if (result != emulator_result_code::ok)
+			return result;
+
+		if (!IsReady())
+			return emulator_result_code::system_not_ready;
 	}
 
-	if (IsRunning()) Stop();
+	if (IsRunning())
+		Stop();
 
 	if (IsPaused())
 	{
 		Resume();
-		return;
+		return emulator_result_code::ok;
 	}
 
 	GetCallbacks().on_run();
@@ -809,16 +826,18 @@ void Emulator::Run()
 	idm::select<ARMv7Thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
+
+	return emulator_result_code::ok;
 }
 
-bool Emulator::Pause()
+emulator_result_code Emulator::Pause()
 {
 	const u64 start = get_system_time();
 
 	// Try to pause
 	if (!m_state.compare_and_swap_test(system_state::running, system_state::paused))
 	{
-		return m_state.compare_and_swap_test(system_state::ready, system_state::paused);
+		return m_state.compare_and_swap_test(system_state::ready, system_state::paused) ? emulator_result_code::ok : emulator_result_code::pause_failed;
 	}
 
 	GetCallbacks().on_pause();
@@ -844,7 +863,7 @@ bool Emulator::Pause()
 		on_select(0, *mfc);
 	}
 
-	return true;
+	return emulator_result_code::ok;
 }
 
 void Emulator::Resume()
@@ -993,7 +1012,8 @@ void Emulator::Stop(bool restart)
 
 	if (restart)
 	{
-		return Load();
+		Load();
+		return;
 	}
 
 	// Boot arg cleanup (preserved in the case restarting)

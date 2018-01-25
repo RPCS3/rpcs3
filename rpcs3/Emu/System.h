@@ -141,6 +141,21 @@ enum class frame_limit_type
 	_auto,
 };
 
+enum class emulator_result_code
+{
+	ok,
+	exception_thrown,
+	executable_invalid,
+	executable_no_access,
+	decryption_failed,
+	decryption_rap_missing,
+	disc_failed_relocation,
+	disc_mount_failure,
+	pkg_install_failure,
+	pause_failed,
+	system_not_ready,
+};
+
 enum CellNetCtlState : s32;
 enum CellSysutilLang : s32;
 
@@ -250,17 +265,17 @@ public:
 		return m_pause_amend_time;
 	}
 
-	bool BootGame(const std::string& path, bool direct = false, bool add_only = false);
-	bool InstallPkg(const std::string& path);
+	emulator_result_code BootGame(const std::string& path, bool direct = false, bool add_only = false);
+	emulator_result_code InstallPkg(const std::string& path);
 
 	static std::string GetHddDir();
 	static std::string GetLibDir();
 
 	void SetForceBoot(bool force_boot);
 
-	void Load(bool add_only = false);
-	void Run();
-	bool Pause();
+	emulator_result_code Load(bool add_only = false);
+	emulator_result_code Run();
+	emulator_result_code Pause();
 	void Resume();
 	void Stop(bool restart = false);
 	void Restart() { Stop(true); }

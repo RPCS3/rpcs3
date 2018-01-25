@@ -48,6 +48,8 @@
 
 #include "ui_main_window.h"
 
+#include "error_dialog.h"
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
@@ -265,9 +267,10 @@ void main_window::BootElf()
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
-	if (!Emu.BootGame(path, true))
+	emulator_result_code result;
+	if ((result = Emu.BootGame(path, true)) != emulator_result_code::ok)
 	{
-		LOG_ERROR(GENERAL, "PS3 executable not found at path (%s)", path);
+		show_boot_error_dialog(this, result);
 	}
 	else
 	{
@@ -304,9 +307,10 @@ void main_window::BootGame()
 	const std::string path = sstr(dirPath);
 	SetAppIconFromPath(path);
 
-	if (!Emu.BootGame(path))
+	emulator_result_code result;
+	if ((result = Emu.BootGame(path)) != emulator_result_code::ok)
 	{
-		LOG_ERROR(GENERAL, "PS3 executable not found in selected folder (%s)", path);
+		show_boot_error_dialog(this, result);
 	}
 	else
 	{
@@ -569,11 +573,11 @@ void main_window::DecryptSPRXLibraries()
 			const std::size_t prx_ext_pos = prx_path.find_last_of('.');
 			const std::string& prx_name = prx_path.substr(prx_dir.size());
 
-			elf_file = decrypt_self(std::move(elf_file));
+			auto result = decrypt_self(std::move(elf_file), elf_file);
 
 			prx_path.erase(prx_path.size() - 4, 1); // change *.sprx to *.prx
 
-			if (elf_file)
+			if (result == self_decryptor_result_code::ok && elf_file)
 			{
 				if (fs::file new_file{ prx_path, fs::rewrite })
 				{
@@ -869,9 +873,10 @@ void main_window::BootRecentAction(const QAction* act)
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
-	if (!Emu.BootGame(sstr(pth), true))
+	emulator_result_code result;
+	if ((result = Emu.BootGame(sstr(pth), true)) != emulator_result_code::ok)
 	{
-		LOG_ERROR(LOADER, "Failed to boot %s", sstr(pth));
+		show_boot_error_dialog(this, result);
 	}
 	else
 	{
@@ -1562,7 +1567,7 @@ void main_window::AddGamesFromDir(const QString& path)
 	const std::string s_path = sstr(path);
 
 	// search dropped path first or else the direct parent to an elf is wrongly skipped
-	if (Emu.BootGame(s_path, false, true))
+	if (Emu.BootGame(s_path, false, true) == emulator_result_code::ok)
 	{
 		LOG_NOTICE(GENERAL, "Returned from game addition by drag and drop: %s", s_path);
 	}
@@ -1576,7 +1581,7 @@ void main_window::AddGamesFromDir(const QString& path)
 
 		if (!QFileInfo(qstr(pth)).isDir()) continue;
 
-		if (Emu.BootGame(pth, false, true))
+		if (Emu.BootGame(pth, false, true) == emulator_result_code::ok)
 		{
 			LOG_NOTICE(GENERAL, "Returned from game addition by drag and drop: %s", pth);
 		}
@@ -1697,10 +1702,13 @@ void main_window::dropEvent(QDropEvent* event)
 		m_gameListFrame->Refresh(true);
 		break;
 	case drop_type::drop_game: // import valid games to gamelist (games.yaml)
-		if (Emu.BootGame(sstr(dropPaths.first()), true))
+		emulator_result_code result;
+
+		if ((result = Emu.BootGame(sstr(dropPaths.first()), true)) == emulator_result_code::ok)
 		{
 			LOG_SUCCESS(GENERAL, "Elf Boot from drag and drop done: %s", sstr(dropPaths.first()));
 		}
+
 		m_gameListFrame->Refresh(true);
 		break;
 	default:

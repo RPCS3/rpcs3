@@ -648,6 +648,24 @@ void SelfHeader::Load(const fs::file& f)
 	pad = Read64(f);
 }
 
+template <>
+void fmt_class_string<self_decryptor_result_code>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](self_decryptor_result_code value)
+	{
+		switch (value)
+		{
+		case self_decryptor_result_code::ok: return "OK";
+		case self_decryptor_result_code::unsupported_license: return "Unsupported license";
+		case self_decryptor_result_code::rap_missing: return "RAP file is missing";
+		case self_decryptor_result_code::decryption_error: return "Decryption error";
+		case self_decryptor_result_code::invalid_file: return "The file is invalid";
+		}
+
+		return unknown;
+	});
+}
+
 SCEDecrypter::SCEDecrypter(const fs::file& s)
 	: sce_f(s)
 	, data_buf_length(0)
@@ -885,7 +903,7 @@ SELFDecrypter::SELFDecrypter(const fs::file& s)
 {
 }
 
-bool SELFDecrypter::LoadHeaders(bool isElf32)
+self_decryptor_result_code SELFDecrypter::LoadHeaders(bool isElf32)
 {
 	// Read SCE header.
 	self_f.seek(0);
@@ -895,7 +913,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	if (!sce_hdr.CheckMagic())
 	{
 		LOG_ERROR(LOADER, "SELF: Not a SELF file!");
-		return false;
+		return self_decryptor_result_code::invalid_file;
 	}
 
 	// Read SELF header.
@@ -920,7 +938,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		if(elf32_hdr.e_phoff == 0 && elf32_hdr.e_phnum)
 		{
 			LOG_ERROR(LOADER, "SELF: ELF program header offset is null!");
-			return false;
+			return self_decryptor_result_code::invalid_file;
 		}
 		self_f.seek(self_hdr.se_phdroff);
 		for(u32 i = 0; i < elf32_hdr.e_phnum; ++i)
@@ -936,7 +954,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		if (elf64_hdr.e_phoff == 0 && elf64_hdr.e_phnum)
 		{
 			LOG_ERROR(LOADER, "SELF: ELF program header offset is null!");
-			return false;
+			return self_decryptor_result_code::invalid_file;
 		}
 
 		self_f.seek(self_hdr.se_phdroff);
@@ -984,7 +1002,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		if (elf32_hdr.e_shoff == 0 && elf32_hdr.e_shnum)
 		{
 			LOG_WARNING(LOADER, "SELF: ELF section header offset is null!");
-			return true;
+			return self_decryptor_result_code::ok;
 		}
 
 		self_f.seek(self_hdr.se_shdroff);
@@ -1001,7 +1019,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		if (elf64_hdr.e_shoff == 0 && elf64_hdr.e_shnum)
 		{
 			LOG_WARNING(LOADER, "SELF: ELF section header offset is null!");
-			return true;
+			return self_decryptor_result_code::ok;
 		}
 
 		self_f.seek(self_hdr.se_shdroff);
@@ -1013,7 +1031,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 		}
 	}
 
-	return true;
+	return self_decryptor_result_code::ok;
 }
 
 void SELFDecrypter::ShowHeaders(bool isElf32)
@@ -1060,7 +1078,7 @@ void SELFDecrypter::ShowHeaders(bool isElf32)
 	LOG_NOTICE(LOADER, "----------------------------------------------------");
 }
 
-bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
+self_decryptor_result_code SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 {
 	aes_context aes;
 	ControlInfo *ctrl = NULL;
@@ -1082,21 +1100,22 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	if (!ctrl)
 	{
 		LOG_NOTICE(LOADER, "SELF: No NPDRM control info found!");
-		return true;
+		return self_decryptor_result_code::ok;
 	}
 
 	if (ctrl->npdrm.license == 1)  // Network license.
 	{
 		LOG_ERROR(LOADER, "SELF: Can't decrypt network NPDRM!");
-		return false;
+		return self_decryptor_result_code::unsupported_license;
 	}
 	else if (ctrl->npdrm.license == 2)  // Local license.
 	{
 		// Try to find a RAP file to get the key.
-		if (!GetKeyFromRap(ctrl->npdrm.content_id, npdrm_key))
+		self_decryptor_result_code result;
+		if ((result = GetKeyFromRap(ctrl->npdrm.content_id, npdrm_key)) != self_decryptor_result_code::ok)
 		{
 			LOG_ERROR(LOADER, "SELF: Can't find RAP file for NPDRM decryption!");
-			return false;
+			return result;
 		}
 	}
 	else if (ctrl->npdrm.license == 3)  // Free license.
@@ -1110,7 +1129,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	else
 	{
 		LOG_ERROR(LOADER, "SELF: Invalid NPDRM license type!");
-		return false;
+		return self_decryptor_result_code::unsupported_license;
 	}
 
 	// Decrypt our key with NP_KLIC_KEY.
@@ -1124,10 +1143,10 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	aes_setkey_dec(&aes, npdrm_key, 128);
 	aes_crypt_cbc(&aes, AES_DECRYPT, metadata_size, npdrm_iv, metadata, metadata);
 
-	return true;
+	return self_decryptor_result_code::ok;
 }
 
-bool SELFDecrypter::LoadMetadata(u8* klic_key)
+self_decryptor_result_code SELFDecrypter::LoadMetadata(u8* klic_key)
 {
 	aes_context aes;
 	u32 metadata_info_size = SIZE_32(meta_info);
@@ -1160,8 +1179,9 @@ bool SELFDecrypter::LoadMetadata(u8* klic_key)
 	if ((sce_hdr.se_flags & 0x8000) != 0x8000)
 	{
 		// Decrypt the NPDRM layer.
-		if (!DecryptNPDRM(metadata_info.get(), metadata_info_size))
-			return false;
+		auto result = DecryptNPDRM(metadata_info.get(), metadata_info_size);
+		if (result != self_decryptor_result_code::ok)
+			return result;
 
 		// Decrypt the metadata info.
 		aes_setkey_dec(&aes, metadata_key, 256);  // AES-256
@@ -1177,7 +1197,7 @@ bool SELFDecrypter::LoadMetadata(u8* klic_key)
 		(meta_info.iv_pad[0] != 0x00))
 	{
 		LOG_ERROR(LOADER, "SELF: Failed to decrypt metadata info!");
-		return false;
+		return self_decryptor_result_code::decryption_error;
 	}
 
 	// Perform AES-CTR encryption on the metadata headers.
@@ -1202,10 +1222,10 @@ bool SELFDecrypter::LoadMetadata(u8* klic_key)
 	data_keys = std::make_unique<u8[]>(data_keys_length);
 	memcpy(data_keys.get(), metadata_headers.get() + sizeof(meta_hdr) + meta_hdr.section_count * sizeof(MetadataSectionHeader), data_keys_length);
 
-	return true;
+	return self_decryptor_result_code::ok;
 }
 
-bool SELFDecrypter::DecryptData()
+self_decryptor_result_code SELFDecrypter::DecryptData()
 {
 	aes_context aes;
 
@@ -1266,7 +1286,7 @@ bool SELFDecrypter::DecryptData()
 		}
 	}
 
-	return true;
+	return self_decryptor_result_code::ok;
 }
 
 fs::file SELFDecrypter::MakeElf(bool isElf32)
@@ -1388,7 +1408,7 @@ fs::file SELFDecrypter::MakeElf(bool isElf32)
 	return e;
 }
 
-bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
+self_decryptor_result_code SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 {
 	// Set empty RAP key.
 	u8 rap_key[0x10];
@@ -1396,16 +1416,17 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 
 	// Try to find a matching RAP file under exdata folder.
 	const std::string ci_str = reinterpret_cast<const char*>(content_id);
-	const std::string rap_path = "/dev_hdd0/home/00000001/exdata/" + ci_str + ".rap";
+	const std::string vfs_rap_path = "/dev_hdd0/home/00000001/exdata/" + ci_str + ".rap";
+	const std::string rap_path = vfs::get(vfs_rap_path);
 
-	// Open the RAP file and read the key.
-	const fs::file rap_file(vfs::get(rap_path));
-
-	if (!rap_file)
+	if (!fs::is_file(rap_path))
 	{
 		LOG_FATAL(LOADER, "Failed to load RAP file: %s", rap_path);
-		return false;
+		return self_decryptor_result_code::rap_missing;
 	}
+
+	// Open the RAP file and read the key.
+	const fs::file rap_file(rap_path);
 
 	LOG_NOTICE(LOADER, "Loading RAP file %s.rap", ci_str);
 	rap_file.read(rap_key, 0x10);
@@ -1413,7 +1434,7 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 	// Convert the RAP key.
 	rap_to_rif(rap_key, npdrm_key);
 
-	return true;
+	return self_decryptor_result_code::ok;
 }
 
 static bool IsSelfElf32(const fs::file& f)
@@ -1477,14 +1498,15 @@ static bool CheckDebugSelf(fs::file& s)
 	return false;
 }
 
-extern fs::file decrypt_self(fs::file elf_or_self, u8* klic_key)
+extern self_decryptor_result_code decrypt_self(fs::file elf_or_self, fs::file& decrypted, u8* klic_key)
 {	
 	if (!elf_or_self) 
 	{
-		return fs::file{};
+		return self_decryptor_result_code::invalid_file;
 	}
 	
 	elf_or_self.seek(0);
+	self_decryptor_result_code result;
 
 	// Check SELF header first. Check for a debug SELF.
 	if (elf_or_self.size() >= 4 && elf_or_self.read<u32>() == "SCE\0"_u32 && !CheckDebugSelf(elf_or_self))
@@ -1496,39 +1518,44 @@ extern fs::file decrypt_self(fs::file elf_or_self, u8* klic_key)
 		SELFDecrypter self_dec(elf_or_self);
 
 		// Load the SELF file headers.
-		if (!self_dec.LoadHeaders(isElf32))
+		if ((result = self_dec.LoadHeaders(isElf32)) != self_decryptor_result_code::ok)
 		{
 			LOG_ERROR(LOADER, "SELF: Failed to load SELF file headers!");
-			return fs::file{};
+			return result;
 		}
 		
 		// Load and decrypt the SELF file metadata.
-		if (!self_dec.LoadMetadata(klic_key))
+		if ((result = self_dec.LoadMetadata(klic_key)) != self_decryptor_result_code::ok)
 		{
 			LOG_ERROR(LOADER, "SELF: Failed to load SELF file metadata!");
-			return fs::file{};
+			return result;
 		}
 		
 		// Decrypt the SELF file data.
-		if (!self_dec.DecryptData())
+		if ((result = self_dec.DecryptData()) != self_decryptor_result_code::ok)
 		{
 			LOG_ERROR(LOADER, "SELF: Failed to decrypt SELF file data!");
-			return fs::file{};
+			return result;
 		}
 		
 		// Make a new ELF file from this SELF.
-		return self_dec.MakeElf(isElf32);
+		decrypted = self_dec.MakeElf(isElf32);
+		return self_decryptor_result_code::ok;
 	}
 
-	return elf_or_self;
+
+	decrypted = std::move(elf_or_self);
+	return self_decryptor_result_code::ok;
 }
 
-extern bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
+extern self_decryptor_result_code verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
 {
 	if (!self)
-		return false;
+		return self_decryptor_result_code::invalid_file;
 
 	self.seek(0);
+
+	self_decryptor_result_code result;
 
 	if (self.size() >= 4 && self.read<u32>() == "SCE\0"_u32)
 	{
@@ -1539,20 +1566,20 @@ extern bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
 		SELFDecrypter self_dec(self);
 
 		// Load the SELF file headers.
-		if (!self_dec.LoadHeaders(isElf32))
+		if ((result = self_dec.LoadHeaders(isElf32)) != self_decryptor_result_code::ok)
 		{
 			LOG_ERROR(LOADER, "SELF: Failed to load SELF file headers!");
-			return false;
+			return result;
 		}
 
 		// Load and decrypt the SELF file metadata.
-		if (!self_dec.LoadMetadata(klic_key))
+		if ((result = self_dec.LoadMetadata(klic_key)) != self_decryptor_result_code::ok)
 		{
 			LOG_ERROR(LOADER, "SELF: Failed to load SELF file metadata!");
-			return false;
+			return result;
 		}
 	}
-	return true;
+	return self_decryptor_result_code::ok;
 }
 
 std::array<u8, 0x10> get_default_self_klic()
