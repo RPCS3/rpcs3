@@ -5,16 +5,18 @@
 
 const spu_decoder<spu_itype> s_spu_itype;
 
-spu_function_t* SPUDatabase::find(const be_t<u32>* data, u64 key, u32 max_size)
+std::shared_ptr<spu_function_contents_t> SPUDatabase::find(const be_t<u32>* data, u64 key, u32 max_size, void* ignore)
 {
 	for (auto found = m_db.equal_range(key); found.first != found.second; found.first++)
 	{
-		const auto& func = found.first->second;
+		const auto & func = found.first->second;
+
+		// TODO remove code after a while if it hasn't been touched, else there's a big memory bloat here
 
 		// Compare binary data explicitly (TODO: optimize)
-		if (LIKELY(func->size <= max_size) && std::memcmp(func->data.data(), data, func->size) == 0)
+		if (func.get() != ignore && LIKELY(func->size <= max_size) && memcmp(func->data.data(), data, func->size) == 0)
 		{
-			return func.get();
+			return func;
 		}
 	}
 
@@ -33,8 +35,9 @@ SPUDatabase::~SPUDatabase()
 	// TODO: serialize database
 }
 
-spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_limit)
+std::shared_ptr<spu_function_contents_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, void* ignore /*=nullptr*/)
 {
+	const u32 max_limit = 0x40000;
 	// Check arguments (bounds and alignment)
 	if (max_limit > 0x40000 || entry >= max_limit || entry % 4 || max_limit % 4)
 	{
@@ -42,7 +45,12 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 	}
 
 	// Key for multimap
-	const u64 key = entry | u64{ ls[entry / 4] } << 32;
+	u32 xor_base = 0;
+	for (u32 i = 0; i < 10; i++)
+	{
+		xor_base ^= ls[(entry / 4) + i];
+	}
+	const u64 key = entry | u64{ xor_base } << 32;
 	const be_t<u32>* base = ls + entry / 4;
 	const u32 block_sz = max_limit - entry;
 
@@ -56,7 +64,7 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 		}
 	}
 
-	{
+	/*{
 		writer_lock lock(m_mutex);
 
 		// Double-check
@@ -64,7 +72,7 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 		{
 			return func;
 		}
-	}
+	}*/
 
 	// Initialize block entries with the function entry point
 	std::set<u32> blocks{ entry };
@@ -84,15 +92,21 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 	// Find preliminary set of possible block entries (first pass), `start` is the current block address
 	for (u32 start = entry, pos = entry; pos < limit; pos += 4)
 	{
+		u32 xor_base = 0;
+		for (u32 i = 0; i < 10; i++)
+		{
+			xor_base ^= ls[(pos / 4) + i];
+		}
 		const spu_opcode_t op{ ls[pos / 4] };
 
 		const auto type = s_spu_itype.decode(op.opcode);
 
+		if (pos != entry)
 		{
 			reader_lock lock(m_mutex);
 
 			// Find existing function
-			if (pos != entry && find(ls + pos / 4, pos | u64{ op.opcode } << 32, limit - pos))
+			if (find(ls + pos / 4, pos | u64{ ls[pos / 4] } << 32, limit - pos))
 			{
 				limit = pos;
 				break;
@@ -308,7 +322,7 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 	}
 
 	// Prepare new function (set addr and size)
-	auto func = std::make_shared<spu_function_t>(entry, limit - entry);
+	auto func = std::make_shared<spu_function_contents_t>(entry, limit - entry);
 
 	// Copy function contents
 	func->data = { ls + entry / 4, ls + limit / 4 };
@@ -354,5 +368,5 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 
 	LOG_NOTICE(SPU, "Function detected [0x%05x-0x%05x] (size=0x%x)", func->addr, func->addr + func->size, func->size);
 
-	return func.get();
+	return func;
 }

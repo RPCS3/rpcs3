@@ -2,7 +2,9 @@
 
 #include "Utilities/mutex.h"
 
+#include <map>
 #include <set>
+#include <memory>
 
 // SPU Instruction Type
 struct spu_itype
@@ -246,8 +248,10 @@ struct spu_itype
 
 class SPUThread;
 
+typedef u32(*CompiledFunc)(SPUThread* _spu, be_t<u32>* _ls);
+
 // SPU basic function information structure
-struct spu_function_t
+struct spu_function_contents_t
 {
 	// Entry point (LS address)
 	const u32 addr;
@@ -271,13 +275,31 @@ struct spu_function_t
 	bool does_reset_stack;
 
 	// Pointer to the compiled function
-	u32(*compiled)(SPUThread* _spu, be_t<u32>* _ls) = nullptr;
+	CompiledFunc compiled = nullptr;
 
-	spu_function_t(u32 addr, u32 size)
-		: addr(addr)
-		, size(size)
+	spu_function_contents_t(u32 addr, u32 size)
+		: addr(addr),
+		  size(size)
 	{
 	}
+};
+
+// A single instance of a compiled function, currently in use
+union spu_function_t
+{
+	// The function itself and its data
+	std::shared_ptr<spu_function_contents_t> contents;
+
+	// Whether pages the function is in were written to since its last execution
+	bool dirty_bit : 1;
+
+	operator bool()
+	{
+		return contents != nullptr;
+	}
+
+	spu_function_t() : contents(nullptr) {};
+	~spu_function_t() {dirty_bit = false; contents.reset();};
 };
 
 // SPU Function Database (must be global or PS3 process-local)
@@ -286,15 +308,15 @@ class SPUDatabase final : spu_itype
 	shared_mutex m_mutex;
 
 	// All registered functions (uses addr and first instruction as a key)
-	std::unordered_multimap<u64, std::shared_ptr<spu_function_t>> m_db;
+	std::unordered_multimap<u64, std::shared_ptr<spu_function_contents_t>> m_db;
 
 	// For internal use
-	spu_function_t* find(const be_t<u32>* data, u64 key, u32 max_size);
+	std::shared_ptr<spu_function_contents_t> find(const be_t<u32>* data, u64 key, u32 max_size, void* ignore = nullptr);
 
 public:
 	SPUDatabase();
 	~SPUDatabase();
 
 	// Try to retrieve SPU function information
-	spu_function_t* analyse(const be_t<u32>* ls, u32 entry, u32 limit = 0x40000);
+	std::shared_ptr<spu_function_contents_t> analyse(const be_t<u32>* ls, u32 entry, void * ignore=nullptr);
 };

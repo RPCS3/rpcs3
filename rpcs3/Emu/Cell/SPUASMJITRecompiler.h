@@ -21,7 +21,7 @@ class spu_recompiler : public spu_recompiler_base
 public:
 	spu_recompiler();
 
-	virtual void compile(spu_function_t& f) override;
+	virtual bool compile(std::shared_ptr<spu_function_contents_t> f) override;
 
 private:
 	// emitter:
@@ -41,7 +41,7 @@ private:
 	std::array<asmjit::X86Xmm*, 6> vec;
 
 	// labels:
-	asmjit::Label* labels; // array[0x10000]
+	std::unique_ptr<asmjit::Label[]> labels; // array[0x10000]
 	asmjit::Label* jt; // jump table resolver (uses *addr)
 	asmjit::Label* end; // function end (return *addr)
 
