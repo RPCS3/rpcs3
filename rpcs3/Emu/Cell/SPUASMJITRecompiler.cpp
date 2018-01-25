@@ -10,11 +10,6 @@
 
 #include <cmath>
 
-#define ASMJIT_STATIC
-#define ASMJIT_DEBUG
-
-#include "asmjit.h"
-
 #define SPU_OFF_128(x, ...) asmjit::x86::oword_ptr(*cpu, offset32(&SPUThread::x, ##__VA_ARGS__))
 #define SPU_OFF_64(x, ...) asmjit::x86::qword_ptr(*cpu, offset32(&SPUThread::x, ##__VA_ARGS__))
 #define SPU_OFF_32(x, ...) asmjit::x86::dword_ptr(*cpu, offset32(&SPUThread::x, ##__VA_ARGS__))
