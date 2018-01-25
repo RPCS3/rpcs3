@@ -24,39 +24,48 @@ void spu_recompiler_base::enter(SPUThread& spu)
 	const auto _ls = vm::_ptr<u32>(spu.offset);
 
 	// Search if cached data matches
-	auto func = spu.compiled_cache[spu.pc / 4];
-
-	// Check shared db if we dont have a match
-	if (!func || !std::equal(func->data.begin(), func->data.end(), _ls + spu.pc / 4, [](const be_t<u32>& l, const be_t<u32>& r) { return *(u32*)(u8*)&l == *(u32*)(u8*)&r; }))
+	auto & func = spu.compiled_cache[spu.pc / 4];
+	if (func.dirty_bit)
 	{
-		func = spu.spu_db->analyse(_ls, spu.pc);
-		spu.compiled_cache[spu.pc / 4] = func;
+		func.dirty_bit = false;
+		
+		// This memcmp acts as a fast path instead of finding it again in analyse.
+		if (memcmp(func.contents->data.data(), _ls + (spu.pc / 4), func.contents->size) != 0)
+		{
+			func.contents = spu.spu_db->analyse(_ls, spu.pc, func.contents.get());
+		}
+	}
+	else if (!func)
+	{
+		func.contents = spu.spu_db->analyse(_ls, spu.pc);
+		spu.compiled_functions.push_back(&func);
 	}
 
 	// Reset callstack if necessary
-	if ((func->does_reset_stack && spu.recursion_level) || spu.recursion_level >= 128)
+	if ((func.contents->does_reset_stack && spu.recursion_level) || spu.recursion_level >= 128)
 	{
 		spu.state += cpu_flag::ret;
 		return;
 	}
 
 	// Compile if needed
-	if (!func->compiled)
+	if (!func.contents->compiled)
 	{
 		if (!spu.spu_rec)
 		{
 			spu.spu_rec = fxm::get_always<spu_recompiler>();
 		}
 
-		spu.spu_rec->compile(*func);
+		spu.spu_rec->compile(func.contents);
 
-		if (!func->compiled) fmt::throw_exception("Compilation failed" HERE);
+		if (!func.contents->compiled) fmt::throw_exception("Compilation failed" HERE);
 	}
 
-	const u32 res = func->compiled(&spu, _ls);
+	const u32 res = func.contents->compiled(&spu, _ls);
 
-	if (const auto exception = spu.pending_exception)
+	if (spu.pending_exception)
 	{
+		const auto exception = spu.pending_exception;
 		spu.pending_exception = nullptr;
 		std::rethrow_exception(exception);
 	}

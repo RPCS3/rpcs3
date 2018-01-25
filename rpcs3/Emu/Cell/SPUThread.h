@@ -3,6 +3,7 @@
 #include "Emu/Cell/Common.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/SPUInterpreter.h"
+#include "Emu/Cell/SPURecompiler.h"
 #include "MFC.h"
 
 struct lv2_event_queue;
@@ -212,21 +213,15 @@ public:
 	// returns true on success
 	bool try_pop(u32& out)
 	{
-		const auto old = data.fetch_op([&](sync_var_t& data)
+		const auto old = data.fetch_op([](sync_var_t& data)
 		{
-			if (data.count)
-			{
-				data.wait = false;
-				out = data.value;
-			}
-			else
-			{
-				data.wait = true;
-			}
-
-			data.count = false;
-			data.value = 0; // ???
+			sync_var_t t;
+			*reinterpret_cast<u64*>(&t) = 0;
+			t.wait = !data.count;
+			data = t;
 		});
+
+		out = old.value;
 
 		return old.count;
 	}
@@ -585,7 +580,10 @@ public:
 
 	std::exception_ptr pending_exception;
 
-	std::array<struct spu_function_t*, 65536> compiled_cache{};
+	// No need for shared_ptr in the following two, as whenever something is removed or added to one,
+	// the same goes for the other.
+	std::array<spu_function_t, 65536> compiled_cache{};
+	std::vector<spu_function_t*> compiled_functions{};
 	std::shared_ptr<class SPUDatabase> spu_db;
 	std::shared_ptr<class spu_recompiler_base> spu_rec;
 	u32 recursion_level = 0;

@@ -10,7 +10,7 @@ class spu_recompiler_base
 protected:
 	std::mutex m_mutex; // must be locked in compile()
 
-	const spu_function_t* m_func; // current function
+	std::shared_ptr<const spu_function_contents_t> m_func; // current function
 
 	u32 m_pos; // current position
 
@@ -18,7 +18,7 @@ public:
 	virtual ~spu_recompiler_base();
 
 	// Compile specified function
-	virtual void compile(spu_function_t& f) = 0;
+	virtual bool compile(std::shared_ptr<spu_function_contents_t>) = 0;
 
 	// Run
 	static void enter(class SPUThread&);
