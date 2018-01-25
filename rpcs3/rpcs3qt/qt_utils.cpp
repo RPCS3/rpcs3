@@ -21,7 +21,7 @@ namespace gui
 				auto screen_geometry = screen->availableGeometry();
 				min_screen_x = std::min(min_screen_x, screen_geometry.x());
 				max_screen_x = std::max(max_screen_x, screen_geometry.x() + screen_geometry.width() - width);
-				min_screen_y = std::min(min_screen_y, screen_geometry.y() + ESTIMATED_TITLE_BAR_HEIGHT);
+				min_screen_y = std::min(min_screen_y, screen_geometry.y());
 				max_screen_y = std::max(max_screen_y, screen_geometry.y() + screen_geometry.height() - height);
 			}
 

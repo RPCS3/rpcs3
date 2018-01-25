@@ -9,6 +9,7 @@
 class gs_frame : public QWindow, public GSFrameBase
 {
 	Q_OBJECT
+
 	u64 m_frames = 0;
 	QString m_windowTitle;
 	bool m_show_fps;
@@ -29,6 +30,7 @@ public:
 	wm_event get_default_wm_event() const override;
 protected:
 	virtual void paintEvent(QPaintEvent *event);
+	virtual void showEvent(QShowEvent *event);
 
 	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void OnFullScreen();
