@@ -349,21 +349,6 @@ void debugger_frame::DoUpdate()
 		m_last_step_over_breakpoint = -1;
 	}
 
-	// Check if a spu pause is pending
-	if (m_spu_pause_pending && !m_no_thread_selected && m_current_choice == m_spu_pause_pending_thread_name)
-	{
-		auto thread = cpu.lock();
-		if (+static_cast<SPUThread*>(thread.get())->ch_tag_mask == 0x80000000)
-		{
-			thread->state += cpu_flag::dbg_pause;
-			m_spu_pause_pending = false;
-		}
-	}
-	else
-	{
-		m_spu_pause_pending = false;
-	}
-
 	Show_PC();
 	WriteRegs();
 }

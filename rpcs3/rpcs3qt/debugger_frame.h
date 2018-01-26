@@ -59,8 +59,6 @@ class debugger_frame : public QDockWidget
 	u32 m_last_stat = 0;
 	u32 m_last_step_over_breakpoint = -1;
 	bool m_no_thread_selected = true;
-	bool m_spu_pause_pending;
-	QString m_spu_pause_pending_thread_name;
 
 	std::shared_ptr<gui_settings> xgui_settings;
 
