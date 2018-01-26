@@ -334,6 +334,15 @@ extern void ppu_breakpoint(u32 addr)
 	}
 }
 
+void ppu_thread::on_spawn()
+{
+	if (g_cfg.core.thread_scheduler_enabled)
+	{
+		// Bind to primary set
+		thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::ppu));
+	}
+}
+
 void ppu_thread::on_init(const std::shared_ptr<void>& _this)
 {
 	if (!stack_addr)
@@ -1152,7 +1161,9 @@ extern void ppu_initialize(const ppu_module& info)
 	static semaphore<> jmutex;
 
 	// Initialize semaphore with the max number of threads
-	semaphore<INT32_MAX> jcores(std::thread::hardware_concurrency());
+	u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
+	s32 thread_count = max_threads > 0 ? std::min(max_threads, std::thread::hardware_concurrency()) : std::thread::hardware_concurrency();
+	semaphore<INT32_MAX> jcores(thread_count);
 
 	if (!jcores.get())
 	{

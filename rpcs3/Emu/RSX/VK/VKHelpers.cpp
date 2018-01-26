@@ -13,8 +13,8 @@ namespace vk
 
 	VkSampler g_null_sampler = nullptr;
 
-	bool g_cb_no_interrupt_flag = false;
-	bool g_drv_no_primitive_restart_flag = false;
+	atomic_t<bool> g_cb_no_interrupt_flag { false };
+	atomic_t<bool> g_drv_no_primitive_restart_flag { false };
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;

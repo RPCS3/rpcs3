@@ -368,7 +368,7 @@ namespace rsx
 			vblank_count = 0;
 
 			// TODO: exit condition
-			while (!Emu.IsStopped())
+			while (!Emu.IsStopped() && !m_rsx_thread_exiting)
 			{
 				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
 				{
@@ -389,7 +389,7 @@ namespace rsx
 					continue;
 				}
 
-				while (Emu.IsPaused())
+				while (Emu.IsPaused() && !m_rsx_thread_exiting)
 					std::this_thread::sleep_for(10ms);
 
 				std::this_thread::sleep_for(1ms); // hack
@@ -398,7 +398,11 @@ namespace rsx
 
 		// Raise priority above other threads
 		thread_ctrl::set_native_priority(1);
-		thread_ctrl::set_ideal_processor_core(0);
+
+		if (g_cfg.core.thread_scheduler_enabled)
+		{
+			thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
+		}
 
 		// Round to nearest to deal with forward/reverse scaling
 		fesetround(FE_TONEAREST);
@@ -768,6 +772,7 @@ namespace rsx
 
 	void thread::on_exit()
 	{
+		m_rsx_thread_exiting = true;
 		if (m_vblank_thread)
 		{
 			m_vblank_thread->join();
@@ -795,14 +800,8 @@ namespace rsx
 		if (flip_y) scale_y *= -1;
 		if (flip_y) offset_y *= -1;
 
-		float clip_min = rsx::method_registers.clip_min();
-		float clip_max = rsx::method_registers.clip_max();
-
-		float z_clip_scale = (clip_max + clip_min) == 0.f ? 1.f : (clip_max + clip_min);
-		float z_offset_scale = (clip_max - clip_min) == 0.f ? 1.f : (clip_max - clip_min);
-
-		float scale_z = rsx::method_registers.viewport_scale_z() / z_clip_scale;
-		float offset_z = rsx::method_registers.viewport_offset_z() / z_offset_scale;
+		float scale_z = rsx::method_registers.viewport_scale_z();
+		float offset_z = rsx::method_registers.viewport_offset_z();
 		float one = 1.f;
 
 		stream_vector(buffer, (u32&)scale_x, 0, 0, (u32&)offset_x);
@@ -1618,7 +1617,9 @@ namespace rsx
 		local_mem_addr = localAddress;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 
-		m_used_gcm_commands.clear();
+		memset(display_buffers, 0, sizeof(display_buffers));
+
+		m_rsx_thread_exiting = false;
 
 		on_init_rsx();
 		start_thread(fxm::get<GSRender>());
@@ -1678,7 +1679,7 @@ namespace rsx
 		}
 	}
 
-	std::pair<u32, u32> thread::calculate_memory_requirements(vertex_input_layout& layout, const u32 vertex_count)
+	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 vertex_count)
 	{
 		u32 persistent_memory_size = 0;
 		u32 volatile_memory_size = 0;
@@ -1734,11 +1735,11 @@ namespace rsx
 		return std::make_pair(persistent_memory_size, volatile_memory_size);
 	}
 
-	void thread::fill_vertex_layout_state(vertex_input_layout& layout, const u32 vertex_count, s32* buffer)
+	void thread::fill_vertex_layout_state(const vertex_input_layout& layout, u32 vertex_count, s32* buffer, u32 persistent_offset_base, u32 volatile_offset_base)
 	{
 		std::array<s32, 16> offset_in_block = {};
-		u32 volatile_offset = 0;
-		u32 persistent_offset = 0;
+		u32 volatile_offset = volatile_offset_base;
+		u32 persistent_offset = persistent_offset_base;
 
 		//NOTE: Order is important! Transient ayout is always push_buffers followed by register data
 		if (rsx::method_registers.current_draw_clause.is_immediate_draw)
@@ -1759,12 +1760,13 @@ namespace rsx
 		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			const auto &block = layout.interleaved_blocks[0];
+			u32 inline_data_offset = volatile_offset_base;
 			for (const u8 index : block.locations)
 			{
 				auto &info = rsx::method_registers.vertex_arrays_info[index];
 
-				offset_in_block[index] = persistent_offset; //just because this var is 0 when we enter here; inlined is transient memory
-				persistent_offset += rsx::get_vertex_type_size_on_host(info.type(), info.size());
+				offset_in_block[index] = inline_data_offset;
+				inline_data_offset += rsx::get_vertex_type_size_on_host(info.type(), info.size());
 			}
 		}
 		else
@@ -1919,7 +1921,7 @@ namespace rsx
 		}
 	}
 
-	void thread::write_vertex_data_to_memory(vertex_input_layout &layout, const u32 first_vertex, const u32 vertex_count, void *persistent_data, void *volatile_data)
+	void thread::write_vertex_data_to_memory(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, void *persistent_data, void *volatile_data)
 	{
 		char *transient = (char *)volatile_data;
 		char *persistent = (char *)persistent_data;

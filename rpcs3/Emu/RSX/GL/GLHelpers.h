@@ -259,6 +259,7 @@ namespace gl
 				glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
 				return (status == GL_SIGNALED);
 			}
+			return true;
 		}
 
 		bool wait_for_signal()
@@ -831,7 +832,6 @@ namespace gl
 	protected:
 
 		u32 m_data_loc = 0;
-		u32 m_limit = 0;
 		void *m_memory_mapping = nullptr;
 
 		fence m_fence;
@@ -854,7 +854,7 @@ namespace gl
 
 			verify(HERE), m_memory_mapping != nullptr;
 			m_data_loc = 0;
-			m_limit = ::narrow<u32>(size);
+			m_size = ::narrow<u32>(size);
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -868,7 +868,7 @@ namespace gl
 			u32 offset = m_data_loc;
 			if (m_data_loc) offset = align(offset, alignment);
 
-			if ((offset + alloc_size) > m_limit)
+			if ((offset + alloc_size) > m_size)
 			{
 				if (!m_fence.is_empty())
 					m_fence.wait_for_signal();
@@ -894,7 +894,7 @@ namespace gl
 
 				m_memory_mapping = nullptr;
 				m_data_loc = 0;
-				m_limit = 0;
+				m_size = 0;
 			}
 
 			glDeleteBuffers(1, &m_id);
@@ -936,7 +936,7 @@ namespace gl
 
 			m_memory_mapping = nullptr;
 			m_data_loc = 0;
-			m_limit = ::narrow<u32>(size);
+			m_size = ::narrow<u32>(size);
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -954,9 +954,9 @@ namespace gl
 
 			const u32 block_size = align(alloc_size + 16, 256);	//Overallocate just in case we need to realign base
 
-			if ((offset + block_size) > m_limit)
+			if ((offset + block_size) > m_size)
 			{
-				buffer::data(m_limit, nullptr);
+				buffer::data(m_size, nullptr);
 				m_data_loc = 0;
 			}
 

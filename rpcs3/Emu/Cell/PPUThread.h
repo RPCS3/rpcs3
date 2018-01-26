@@ -30,6 +30,7 @@ public:
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
 
+	virtual void on_spawn() override;
 	virtual void on_init(const std::shared_ptr<void>&) override;
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;

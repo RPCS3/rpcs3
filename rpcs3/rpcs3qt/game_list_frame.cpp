@@ -15,14 +15,9 @@
 #include <set>
 
 #include <QDesktopServices>
-#include <QDir>
 #include <QHeaderView>
-#include <QListView>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QTimer>
-#include <QUrl>
-#include <QLabel>
 #include <QScrollBar>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
@@ -337,8 +332,6 @@ void game_list_frame::LoadSettings()
 	m_colSortOrder = xgui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
 
 	m_sortColumn = xgui_settings->GetValue(gui::gl_sortCol).toInt();
-
-	m_Icon_Color = xgui_settings->GetValue(gui::gl_iconColor).value<QColor>();
 
 	m_categoryFilters = xgui_settings->GetGameListCategoryFilters();
 
@@ -943,6 +936,7 @@ void game_list_frame::SetToolBarVisible(const bool& showToolBar)
 	m_Tool_Bar->setVisible(showToolBar);
 	xgui_settings->SetValue(gui::gl_toolBarVisible, showToolBar);
 }
+
 bool game_list_frame::GetToolBarVisible()
 {
 	return m_showToolBar;

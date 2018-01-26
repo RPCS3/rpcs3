@@ -113,4 +113,6 @@ public:
 	virtual void cpu_task() override;
 
 	virtual void add_spu(spu_ptr _spu);
+
+	virtual void on_spawn() override;
 };

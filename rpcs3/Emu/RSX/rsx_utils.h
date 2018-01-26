@@ -299,7 +299,7 @@ namespace rsx
 
 		for (int i = 0; i < index_count; ++i)
 		{
-			if (indices[i] == UINT16_MAX)
+			if (indices[i] == restart_index)
 			{
 				if (last_start >= 0)
 				{

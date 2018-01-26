@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>787</width>
-    <height>566</height>
+    <width>1011</width>
+    <height>775</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -207,9 +207,9 @@
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_4">
               <item>
-               <widget class="QCheckBox" name="bindSPUThreads">
+               <widget class="QCheckBox" name="enableScheduler">
                 <property name="text">
-                 <string>Bind SPU threads to secondary cores</string>
+                 <string>Enable thread scheduler</string>
                 </property>
                </widget>
               </item>
@@ -1377,20 +1377,13 @@
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_58">
            <item>
-            <widget class="QGroupBox" name="gb_configs">
+            <widget class="QGroupBox" name="groupBox_2">
              <property name="title">
-              <string>UI Configurations</string>
+              <string>Max LLVM Compile Threads</string>
              </property>
-             <layout class="QVBoxLayout" name="verticalLayout_44">
+             <layout class="QVBoxLayout" name="verticalLayout_63">
               <item>
-               <widget class="QComboBox" name="combo_configs"/>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pb_apply_config">
-                <property name="text">
-                 <string>Apply</string>
-                </property>
-               </widget>
+               <widget class="QComboBox" name="maxLLVMThreads"/>
               </item>
              </layout>
             </widget>
@@ -1439,11 +1432,21 @@
                 </property>
                 <property name="sizeHint" stdset="0">
                  <size>
-                  <width>0</width>
+                  <width>20</width>
                   <height>0</height>
                  </size>
                 </property>
                </spacer>
+              </item>
+              <item>
+               <widget class="QComboBox" name="combo_configs"/>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pb_apply_config">
+                <property name="text">
+                 <string>Apply</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </widget>
