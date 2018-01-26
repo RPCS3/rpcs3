@@ -25,7 +25,9 @@ void spu_recompiler_base::enter(SPUThread& spu)
 
 	// Search if cached data matches
 	auto & func = spu.compiled_cache[spu.pc / 4];
-	if (func.dirty_bit)
+
+	// func.contents is there only as a temporary test, to see if SPU codfe not getting invalidated is the reason for the crashes
+	if (func.contents || func.dirty_bit)
 	{
 		func.dirty_bit = false;
 		
