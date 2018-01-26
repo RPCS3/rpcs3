@@ -254,6 +254,7 @@ namespace rsx
 			std::unique_ptr<list_view> m_list;
 			std::unique_ptr<label> m_description;
 			std::unique_ptr<label> m_time_thingy;
+			std::unique_ptr<label> m_no_saves_text;
 
 			std::string current_time()
 			{
@@ -263,6 +264,8 @@ namespace rsx
 
 				return buf;
 			}
+
+			bool m_no_saves = false;
 
 		public:
 			save_dialog()
@@ -297,10 +300,8 @@ namespace rsx
 				switch (button_press)
 				{
 				case pad_button::cross:
-					if (!m_list->m_items.size())
-					{
+					if (m_no_saves)
 						break;
-					}
 					return_code = m_list->get_selected_index();
 					//Fall through
 				case pad_button::circle:
@@ -324,6 +325,8 @@ namespace rsx
 				result.add(m_list->get_compiled());
 				result.add(m_description->get_compiled());
 				result.add(m_time_thingy->get_compiled());
+				if (m_no_saves)
+					result.add(m_no_saves_text->get_compiled());
 				return result;
 			}
 
@@ -351,6 +354,20 @@ namespace rsx
 					m_description->text = "Create Save";
 					std::unique_ptr<overlay_element> new_stub = std::make_unique<save_dialog_entry>("Create New", "Select to create a new entry", resource_config::standard_image_resource::new_entry, null_icon);
 					m_list->add_entry(new_stub);
+				}
+
+				if (!m_list->m_items.size())
+				{
+					m_no_saves_text = std::make_unique<label>();
+					m_no_saves_text->set_font("Arial", 20);
+					m_no_saves_text->align_text(overlay_element::text_align::center);
+					m_no_saves_text->set_pos(m_list->x, m_list->y + m_list->h / 2);
+					m_no_saves_text->set_size(m_list->w, 30);
+					m_no_saves_text->set_text("There is no saved data.");
+					m_no_saves_text->back_color.a = 0;
+					
+					m_no_saves = true;
+					m_list->set_cancel_only(true);
 				}
 
 				static_cast<label*>(m_description.get())->auto_resize();
