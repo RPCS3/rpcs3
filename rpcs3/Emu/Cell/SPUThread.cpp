@@ -470,6 +470,7 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc)
 
 	u32 eal = args.eal;
 	u32 lsa = args.lsa & 0x3ffff;
+	SPUThread * spu = nullptr;
 
 	if (eal >= SYS_SPU_THREAD_BASE_LOW && offset < RAW_SPU_BASE_ADDR) // SPU Thread Group MMIO (LS and SNR)
 	{
@@ -478,15 +479,15 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc)
 
 		if (group && index < group->num && group->threads[index])
 		{
-			auto& spu = static_cast<SPUThread&>(*group->threads[index]);
+			spu = group->threads[index].get();
 
 			if (offset + args.size - 1 < 0x40000) // LS access
 			{
-				eal = spu.offset + offset; // redirect access
+				eal = spu->offset + offset; // redirect access
 			}
 			else if (!is_get && args.size == 4 && (offset == SYS_SPU_THREAD_SNR1 || offset == SYS_SPU_THREAD_SNR2))
 			{
-				spu.push_snr(SYS_SPU_THREAD_SNR2 == offset, _ref<u32>(lsa));
+				spu->push_snr(SYS_SPU_THREAD_SNR2 == offset, _ref<u32>(lsa));
 				return;
 			}
 			else
@@ -552,6 +553,20 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc)
 
 		__movsq(vdst, vsrc, vcnt);
 	}
+	}
+
+	if (spu)
+	{
+		for (auto& func : spu->compiled_functions)
+		{
+			auto faddr = func->contents->addr;
+			auto fsize = func->contents->size;
+
+			if (faddr >= eal && faddr + fsize < eal + args.size)
+			{
+				func->dirty_bit = true;
+			}
+		}
 	}
 
 	if (is_get && from_mfc)
