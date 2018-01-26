@@ -26,9 +26,6 @@ git:
   submodules: false
 
 before_install:
-  - if [ "$CC" = "clang" ]; then
-      export CXX="clang++-5.0" CC="clang-5.0";
-    fi;
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
     fi;
@@ -65,7 +62,7 @@ before_script:
   - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -G Ninja;
   - ninja
   - # AppImage generation
-  - if [ -n "$UPLOAD_URL" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang-5.0" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
+  - if [ -n "$UPLOAD_URL" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
       export LD_LIBRARY_PATH=~/Qt/5.10.0/gcc_64/lib;
       DESTDIR=appdir ninja install ; find appdir/ ;
       find ../bin ;
