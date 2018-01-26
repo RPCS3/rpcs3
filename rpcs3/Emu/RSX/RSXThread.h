@@ -12,6 +12,7 @@
 #include "RSXFragmentProgram.h"
 #include "rsx_methods.h"
 #include "rsx_utils.h"
+#include "overlays.h"
 #include <Utilities/GSL.h>
 
 #include "Utilities/Thread.h"
@@ -208,6 +209,7 @@ namespace rsx
 		std::shared_ptr<thread_ctrl> m_vblank_thread;
 
 	protected:
+		atomic_t<bool> m_rsx_thread_exiting{false};
 		std::stack<u32> m_call_stack;
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
 		std::vector<u32> element_push_buffer;
@@ -216,6 +218,7 @@ namespace rsx
 		bool skip_frame = false;
 
 		bool supports_multidraw = false;
+		bool supports_native_ui = false;
 
 		//occlusion query
 		bool zcull_surface_active = false;
@@ -230,11 +233,18 @@ namespace rsx
 		rsx::gcm_framebuffer_info m_depth_surface_info;
 		bool framebuffer_status_valid = false;
 
+		std::unique_ptr<rsx::overlays::user_interface> m_custom_ui;
+		std::unique_ptr<rsx::overlays::user_interface> m_invalidated_ui;
+
 	public:
 		RsxDmaControl* ctrl = nullptr;
 		atomic_t<u32> internal_get{ 0 };
+		atomic_t<u32> restore_point{ 0 };
 		atomic_t<bool> external_interrupt_lock{ false };
 		atomic_t<bool> external_interrupt_ack{ false };
+
+		//native UI interrupts
+		atomic_t<bool> native_ui_flip_request{ false };
 
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
@@ -307,8 +317,8 @@ namespace rsx
 		u64 vblank_count;
 
 	public:
-		std::set<u32> m_used_gcm_commands;
 		bool invalid_command_interrupt_raised = false;
+		bool sync_point_request = false;
 		bool in_begin_end = false;
 
 		bool conditional_render_test_failed = false;
@@ -326,8 +336,9 @@ namespace rsx
 		
 		/**
 		 * Execute a backend local task queue
+		 * Idle argument checks that the FIFO queue is in an idle state
 		 */
-		virtual void do_local_task() {}
+		virtual void do_local_task(bool idle) {}
 
 	public:
 		virtual std::string get_name() const override;
@@ -385,18 +396,18 @@ namespace rsx
 		 * result.first contains persistent memory requirements
 		 * result.second contains volatile memory requirements
 		 */
-		std::pair<u32, u32> calculate_memory_requirements(vertex_input_layout& layout, const u32 vertex_count);
+		std::pair<u32, u32> calculate_memory_requirements(const vertex_input_layout& layout, u32 vertex_count);
 
 		/**
 		 * Generates vertex input descriptors as an array of 16x4 s32s
 		 */
-		void fill_vertex_layout_state(vertex_input_layout& layout, const u32 vertex_count, s32* buffer);
+		void fill_vertex_layout_state(const vertex_input_layout& layout, u32 vertex_count, s32* buffer, u32 persistent_offset = 0, u32 volatile_offset = 0);
 
 		/**
 		 * Uploads vertex data described in the layout descriptor
 		 * Copies from local memory to the write-only output buffers provided in a sequential manner
 		 */
-		void write_vertex_data_to_memory(vertex_input_layout &layout, const u32 first_vertex, const u32 vertex_count, void *persistent_data, void *volatile_data);
+		void write_vertex_data_to_memory(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, void *persistent_data, void *volatile_data);
 
 	private:
 		std::mutex m_mtx_task;
@@ -417,6 +428,8 @@ namespace rsx
 	public:
 		//std::future<void> add_internal_task(std::function<bool()> callback);
 		//void invoke(std::function<bool()> callback);
+		void add_user_interface(std::shared_ptr<rsx::overlays::user_interface> iface);
+		void remove_user_interface();
 
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.
@@ -482,5 +495,14 @@ namespace rsx
 
 		void pause();
 		void unpause();
+
+		//HLE vsh stuff
+		//TODO: Move into a separate helper
+		virtual rsx::overlays::save_dialog* shell_open_save_dialog();
+		virtual rsx::overlays::message_dialog* shell_open_message_dialog();
+		virtual rsx::overlays::trophy_notification* shell_open_trophy_notification();
+		virtual rsx::overlays::user_interface* shell_get_current_dialog();
+		virtual bool shell_close_dialog();
+		virtual void shell_do_cleanup(){}
 	};
 }

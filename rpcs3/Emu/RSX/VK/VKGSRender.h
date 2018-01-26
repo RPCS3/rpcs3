@@ -43,6 +43,7 @@ struct command_buffer_chunk: public vk::command_buffer
 
 	std::atomic_bool pending = { false };
 	std::atomic<u64> last_sync = { 0 };
+	std::mutex guard_mutex;
 
 	command_buffer_chunk()
 	{}
@@ -84,8 +85,13 @@ struct command_buffer_chunk: public vk::command_buffer
 	{
 		if (vkGetFenceStatus(m_device, submit_fence) == VK_SUCCESS)
 		{
-			vkResetFences(m_device, 1, &submit_fence);
-			pending = false;
+			std::lock_guard<std::mutex> lock(guard_mutex);
+
+			if (pending)
+			{
+				vkResetFences(m_device, 1, &submit_fence);
+				pending = false;
+			}
 		}
 
 		return !pending;
@@ -93,6 +99,8 @@ struct command_buffer_chunk: public vk::command_buffer
 
 	void wait()
 	{
+		std::lock_guard<std::mutex> lock(guard_mutex);
+
 		if (!pending)
 			return;
 
@@ -116,6 +124,114 @@ struct occlusion_data
 	command_buffer_chunk* command_buffer_to_wait = nullptr;
 };
 
+struct frame_context_t
+{
+	VkSemaphore present_semaphore = VK_NULL_HANDLE;
+	VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+	vk::descriptor_pool descriptor_pool;
+	u32 used_descriptors = 0;
+
+	std::vector<std::unique_ptr<vk::buffer_view>> buffer_views_to_clean;
+	std::vector<std::unique_ptr<vk::sampler>> samplers_to_clean;
+
+	u32 present_image = UINT32_MAX;
+	command_buffer_chunk* swap_command_buffer = nullptr;
+
+	//Heap pointers
+	s64 attrib_heap_ptr = 0;
+	s64 ubo_heap_ptr = 0;
+	s64 index_heap_ptr = 0;
+	s64 texture_upload_heap_ptr = 0;
+
+	u64 last_frame_sync_time = 0;
+
+	//Copy shareable information
+	void grab_resources(frame_context_t &other)
+	{
+		present_semaphore = other.present_semaphore;
+		descriptor_set = other.descriptor_set;
+		descriptor_pool = other.descriptor_pool;
+		used_descriptors = other.used_descriptors;
+
+		attrib_heap_ptr = other.attrib_heap_ptr;
+		ubo_heap_ptr = other.attrib_heap_ptr;
+		index_heap_ptr = other.attrib_heap_ptr;
+		texture_upload_heap_ptr = other.texture_upload_heap_ptr;
+	}
+
+	//Exchange storage (non-copyable)
+	void swap_storage(frame_context_t &other)
+	{
+		std::swap(buffer_views_to_clean, other.buffer_views_to_clean);
+		std::swap(samplers_to_clean, other.samplers_to_clean);
+	}
+
+	void tag_frame_end(s64 attrib_loc, s64 ubo_loc, s64 index_loc, s64 texture_loc)
+	{
+		attrib_heap_ptr = attrib_loc;
+		ubo_heap_ptr = ubo_loc;
+		index_heap_ptr = index_loc;
+		texture_upload_heap_ptr = texture_loc;
+
+		last_frame_sync_time = get_system_time();
+	}
+
+	void reset_heap_ptrs()
+	{
+		last_frame_sync_time = 0;
+	}
+};
+
+struct flush_request_task
+{
+	atomic_t<bool> pending_state{ false };  //Flush request status; true if rsx::thread is yet to service this request
+	atomic_t<int> num_waiters{ 0 };  //Number of threads waiting for this request to be serviced
+	bool hard_sync = false;
+
+	flush_request_task(){}
+
+	void post(bool _hard_sync)
+	{
+		hard_sync = (hard_sync || _hard_sync);
+		pending_state = true;
+		num_waiters++;
+	}
+
+	void remove_one()
+	{
+		num_waiters--;
+	}
+
+	void clear_pending_flag()
+	{
+		hard_sync = false;
+		pending_state.store(false);
+	}
+
+	bool pending() const
+	{
+		return pending_state.load();
+	}
+
+	void consumer_wait() const
+	{
+		while (num_waiters.load() != 0)
+		{
+			_mm_lfence();
+			_mm_pause();
+		}
+	}
+
+	void producer_wait() const
+	{
+		while (pending_state.load())
+		{
+			_mm_lfence();
+			_mm_pause();
+		}
+	}
+};
+
 class VKGSRender : public GSRender
 {
 private:
@@ -136,6 +252,7 @@ private:
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
 	std::unique_ptr<vk::depth_convert_pass> m_depth_converter;
+	std::unique_ptr<vk::ui_overlay_renderer> m_ui_renderer;
 
 	std::mutex m_sampler_mutex;
 	u64 surface_store_tag = 0;
@@ -190,64 +307,6 @@ private:
 	vk::vk_data_heap m_index_buffer_ring_info;
 	vk::vk_data_heap m_texture_upload_buffer_ring_info;
 
-	struct frame_context_t
-	{
-		VkSemaphore present_semaphore = VK_NULL_HANDLE;
-		VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
-		vk::descriptor_pool descriptor_pool;
-		u32 used_descriptors = 0;
-
-		std::vector<std::unique_ptr<vk::buffer_view>> buffer_views_to_clean;
-		std::vector<std::unique_ptr<vk::sampler>> samplers_to_clean;
-
-		u32 present_image = UINT32_MAX;
-		command_buffer_chunk* swap_command_buffer = nullptr;
-
-		//Heap pointers
-		s64 attrib_heap_ptr = 0;
-		s64 ubo_heap_ptr = 0;
-		s64 index_heap_ptr = 0;
-		s64 texture_upload_heap_ptr = 0;
-
-		u64 last_frame_sync_time = 0;
-
-		//Copy shareable information
-		void grab_resources(frame_context_t &other)
-		{
-			present_semaphore = other.present_semaphore;
-			descriptor_set = other.descriptor_set;
-			descriptor_pool = other.descriptor_pool;
-			used_descriptors = other.used_descriptors;
-
-			attrib_heap_ptr = other.attrib_heap_ptr;
-			ubo_heap_ptr = other.attrib_heap_ptr;
-			index_heap_ptr = other.attrib_heap_ptr;
-			texture_upload_heap_ptr = other.texture_upload_heap_ptr;
-		}
-
-		//Exchange storage (non-copyable)
-		void swap_storage(frame_context_t &other)
-		{
-			std::swap(buffer_views_to_clean, other.buffer_views_to_clean);
-			std::swap(samplers_to_clean, other.samplers_to_clean);
-		}
-
-		void tag_frame_end(s64 attrib_loc, s64 ubo_loc, s64 index_loc, s64 texture_loc)
-		{
-			attrib_heap_ptr = attrib_loc;
-			ubo_heap_ptr = ubo_loc;
-			index_heap_ptr = index_loc;
-			texture_upload_heap_ptr = texture_loc;
-
-			last_frame_sync_time = get_system_time();
-		}
-
-		void reset_heap_ptrs()
-		{
-			last_frame_sync_time = 0;
-		}
-	};
-
 	std::array<frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
 	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
 	frame_context_t m_aux_frame_context;
@@ -276,8 +335,7 @@ private:
 	std::atomic<int> m_last_flushable_cb = {-1 };
 	
 	std::mutex m_flush_queue_mutex;
-	std::atomic<bool> m_flush_commands = { false };
-	std::atomic<int> m_queued_threads = { 0 };
+	flush_request_task m_flush_requests;
 
 	std::thread::id rsx_thread;
 	std::atomic<u64> m_last_sync_event = { 0 };
@@ -287,6 +345,8 @@ private:
 
 	//Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
+
+	std::vector<u64> m_overlay_cleanup_requests;
 	
 #if !defined(_WIN32) && defined(HAVE_VULKAN)
 	Display *m_display_handle = nullptr;
@@ -341,10 +401,12 @@ protected:
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
 
-	void do_local_task() override;
+	void do_local_task(bool idle) override;
 	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;
 	void notify_tile_unbound(u32 tile) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_notify_memory_unmapped(u32 address_base, u32 size) override;
+
+	void shell_do_cleanup() override;
 };

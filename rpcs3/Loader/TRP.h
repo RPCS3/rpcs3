@@ -32,6 +32,7 @@ public:
 
 	bool Install(const std::string& dest, bool show = false);
 	bool LoadHeader(bool show = false);
+	u64 GetRequiredSpace() const;
 
 	bool ContainsEntry(const char *filename);
 	void RemoveEntry(const char *filename);

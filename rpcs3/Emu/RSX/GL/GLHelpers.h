@@ -58,6 +58,8 @@ namespace gl
 
 	void enable_debugging();
 	capabilities& get_driver_caps();
+	bool is_primitive_native(rsx::primitive_type in);
+	GLenum draw_mode(rsx::primitive_type in);
 
 	class exception : public std::exception
 	{
@@ -257,6 +259,7 @@ namespace gl
 				glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
 				return (status == GL_SIGNALED);
 			}
+			return true;
 		}
 
 		bool wait_for_signal()
@@ -489,6 +492,7 @@ namespace gl
 	};
 
 	class vao;
+	class attrib_t;
 
 	class buffer_pointer
 	{
@@ -828,7 +832,6 @@ namespace gl
 	protected:
 
 		u32 m_data_loc = 0;
-		u32 m_limit = 0;
 		void *m_memory_mapping = nullptr;
 
 		fence m_fence;
@@ -851,7 +854,7 @@ namespace gl
 
 			verify(HERE), m_memory_mapping != nullptr;
 			m_data_loc = 0;
-			m_limit = ::narrow<u32>(size);
+			m_size = ::narrow<u32>(size);
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -865,7 +868,7 @@ namespace gl
 			u32 offset = m_data_loc;
 			if (m_data_loc) offset = align(offset, alignment);
 
-			if ((offset + alloc_size) > m_limit)
+			if ((offset + alloc_size) > m_size)
 			{
 				if (!m_fence.is_empty())
 					m_fence.wait_for_signal();
@@ -891,7 +894,7 @@ namespace gl
 
 				m_memory_mapping = nullptr;
 				m_data_loc = 0;
-				m_limit = 0;
+				m_size = 0;
 			}
 
 			glDeleteBuffers(1, &m_id);
@@ -933,7 +936,7 @@ namespace gl
 
 			m_memory_mapping = nullptr;
 			m_data_loc = 0;
-			m_limit = ::narrow<u32>(size);
+			m_size = ::narrow<u32>(size);
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -951,9 +954,9 @@ namespace gl
 
 			const u32 block_size = align(alloc_size + 16, 256);	//Overallocate just in case we need to realign base
 
-			if ((offset + block_size) > m_limit)
+			if ((offset + block_size) > m_size)
 			{
-				buffer::data(m_limit, nullptr);
+				buffer::data(m_size, nullptr);
 				m_data_loc = 0;
 			}
 
@@ -1167,6 +1170,43 @@ namespace gl
 		{
 			return{ (vao*)this };
 		}
+
+		attrib_t operator [] (u32 index) const noexcept;
+	};
+
+	class attrib_t
+	{
+		GLint m_location;
+
+	public:
+		attrib_t(GLint location)
+			: m_location(location)
+		{
+		}
+
+		GLint location() const
+		{
+			return m_location;
+		}
+
+		void operator = (float rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1f(location(), rhs); }
+		void operator = (double rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1d(location(), rhs); }
+
+		void operator = (const color1f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1f(location(), rhs.r); }
+		void operator = (const color1d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1d(location(), rhs.r); }
+		void operator = (const color2f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib2f(location(), rhs.r, rhs.g); }
+		void operator = (const color2d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib2d(location(), rhs.r, rhs.g); }
+		void operator = (const color3f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib3f(location(), rhs.r, rhs.g, rhs.b); }
+		void operator = (const color3d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib3d(location(), rhs.r, rhs.g, rhs.b); }
+		void operator = (const color4f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4f(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
+		void operator = (const color4d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4d(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
+
+		void operator = (buffer_pointer& pointer) const
+		{
+			pointer.get_vao().enable_for_attribute(m_location);
+			glVertexAttribPointer(location(), pointer.size(), (GLenum)pointer.get_type(), pointer.normalize(),
+				pointer.stride(), (const void*)(size_t)pointer.offset());
+		}
 	};
 
 	class texture_view;
@@ -1221,8 +1261,7 @@ namespace gl
 
 		enum class format
 		{
-			red = GL_RED,
-			r = GL_R,
+			r = GL_RED,
 			rg = GL_RG,
 			rgb = GL_RGB,
 			rgba = GL_RGBA,
@@ -1629,9 +1668,9 @@ namespace gl
 			copy_from(nullptr, format, type, pixel_settings);
 		}
 
-		void copy_from(void* dst, texture::format format, texture::type type)
+		void copy_from(void* src, texture::format format, texture::type type)
 		{
-			copy_from(dst, format, type, pixel_unpack_settings());
+			copy_from(src, format, type, pixel_unpack_settings());
 		}
 
 		void copy_from(const buffer& buf, texture::format format, texture::type type)
@@ -1871,9 +1910,6 @@ namespace gl
 
 		settings& border_color(color4f value);
 	};
-
-	GLenum draw_mode(rsx::primitive_type in);
-	bool   is_primitive_native(rsx::primitive_type in);
 
 	enum class indices_type
 	{
@@ -2270,43 +2306,8 @@ namespace gl
 				void operator = (const color3f& rhs) const { glProgramUniform3f(m_program.id(), location(), rhs.r, rhs.g, rhs.b); }
 				void operator = (const color4i& rhs) const { glProgramUniform4i(m_program.id(), location(), rhs.r, rhs.g, rhs.b, rhs.a); }
 				void operator = (const color4f& rhs) const { glProgramUniform4f(m_program.id(), location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-			};
-
-			class attrib_t
-			{
-				GLuint m_program;
-				GLint m_location;
-
-			public:
-				attrib_t(GLuint program, GLint location)
-					: m_program(program)
-					, m_location(location)
-				{
-				}
-
-				GLint location() const
-				{
-					return m_location;
-				}
-
-				void operator = (float rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1f(location(), rhs); }
-				void operator = (double rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1d(location(), rhs); }
-
-				void operator = (const color1f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1f(location(), rhs.r); }
-				void operator = (const color1d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1d(location(), rhs.r); }
-				void operator = (const color2f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib2f(location(), rhs.r, rhs.g); }
-				void operator = (const color2d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib2d(location(), rhs.r, rhs.g); }
-				void operator = (const color3f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib3f(location(), rhs.r, rhs.g, rhs.b); }
-				void operator = (const color3d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib3d(location(), rhs.r, rhs.g, rhs.b); }
-				void operator = (const color4f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4f(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-				void operator = (const color4d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4d(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-
-				void operator =(buffer_pointer& pointer) const
-				{
-					pointer.get_vao().enable_for_attribute(location());
-					glVertexAttribPointer(location(), pointer.size(), (GLenum)pointer.get_type(), pointer.normalize(),
-						pointer.stride(), (const void*)(size_t)pointer.offset());
-				}
+				void operator = (const areaf& rhs) const { glProgramUniform4f(m_program.id(), location(), rhs.x1, rhs.y1, rhs.x2, rhs.y2); }
+				void operator = (const areai& rhs) const { glProgramUniform4i(m_program.id(), location(), rhs.x1, rhs.y1, rhs.x2, rhs.y2); }
 			};
 
 			class uniforms_t
@@ -2471,12 +2472,12 @@ namespace gl
 
 				attrib_t operator[](GLint location)
 				{
-					return{ m_program.id(), location };
+					return{ location };
 				}
 
 				attrib_t operator[](const std::string &name)
 				{
-					return{ m_program.id(), location(name) };
+					return{ location(name) };
 				}
 
 				void swap(attribs_t& attribs)

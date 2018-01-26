@@ -183,7 +183,23 @@ namespace rsx
 
 	std::pair<std::array<u8, 4>, std::array<u8, 4>> fragment_texture::decoded_remap() const
 	{
-		const u32 remap_ctl = registers[NV4097_SET_TEXTURE_CONTROL1 + (m_index * 8)];
+		u32 remap_ctl = registers[NV4097_SET_TEXTURE_CONTROL1 + (m_index * 8)];
+		u32 remap_override = (remap_ctl >> 16) & 0xFFFF;
+
+		switch (format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN))
+		{
+		case CELL_GCM_TEXTURE_X16:
+		case CELL_GCM_TEXTURE_Y16_X16:
+		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+			//Low bit in remap control affects whether the G component should read from first or second component
+			//Components are usually interleaved R-G-R-G unless flag is set, then its R-R-R-G (Virtua Fighter 5)
+			remap_ctl = (remap_override) ?(0b01010110 | (remap_ctl & 0xFF00)): (0b01100110 | (remap_ctl & 0xFF00));
+			break;
+		default:
+			break;
+		}
 
 		//Remapping tables; format is A-R-G-B
 		//Remap input table. Contains channel index to read color from 

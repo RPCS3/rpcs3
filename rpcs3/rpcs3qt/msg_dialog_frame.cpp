@@ -339,6 +339,14 @@ msg_dialog_frame::~msg_dialog_frame()
 	}
 }
 
+void msg_dialog_frame::SetMsg(const std::string& msg)
+{
+	if (m_dialog)
+	{
+		m_text->setText(qstr(msg));
+	}
+}
+
 void msg_dialog_frame::ProgressBarSetMsg(u32 index, const std::string& msg)
 {
 	if (m_dialog)

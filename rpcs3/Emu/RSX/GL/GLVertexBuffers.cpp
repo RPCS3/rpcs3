@@ -134,6 +134,12 @@ namespace
 			    command.raw_index_buffer, ptr, type, rsx::method_registers.current_draw_clause.primitive,
 			    rsx::method_registers.current_draw_clause.first_count_commands, vertex_count);
 
+			if (min_index >= max_index)
+			{
+				//empty set, do not draw
+				return{ 0, 0, 0, 0, std::make_tuple(get_index_type(type), offset_in_index_buffer) };
+			}
+
 			//check for vertex arrays with frquency modifiers
 			for (auto &block : m_vertex_layout.interleaved_blocks)
 			{
@@ -174,7 +180,7 @@ namespace
 	};
 }
 
-std::tuple<u32, u32, u32, std::optional<std::tuple<GLenum, u32>>> GLGSRender::set_vertex_buffer()
+vertex_upload_info GLGSRender::set_vertex_buffer()
 {
 	std::chrono::time_point<steady_clock> then = steady_clock::now();
 
@@ -190,6 +196,7 @@ std::tuple<u32, u32, u32, std::optional<std::tuple<GLenum, u32>>> GLGSRender::se
 	auto required = calculate_memory_requirements(m_vertex_layout, vertex_count);
 
 	std::pair<void*, u32> persistent_mapping = {}, volatile_mapping = {};
+	vertex_upload_info upload_info = { result.vertex_draw_count, result.allocated_vertex_count, result.vertex_index_base, 0u, 0u, result.index_info };
 
 	if (required.first > 0)
 	{
@@ -207,7 +214,7 @@ std::tuple<u32, u32, u32, std::optional<std::tuple<GLenum, u32>>> GLGSRender::se
 			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, GL_R8UI, required.first))
 			{
 				in_cache = true;
-				m_gl_persistent_stream_buffer.copy_from(*m_attrib_ring_buffer, GL_R8UI, cached->offset_in_heap, required.first);
+				upload_info.persistent_mapping_offset = cached->offset_in_heap;
 			}
 			else
 			{
@@ -218,7 +225,7 @@ std::tuple<u32, u32, u32, std::optional<std::tuple<GLenum, u32>>> GLGSRender::se
 		if (!in_cache)
 		{
 			persistent_mapping = m_attrib_ring_buffer->alloc_from_heap(required.first, m_min_texbuffer_alignment);
-			m_gl_persistent_stream_buffer.copy_from(*m_attrib_ring_buffer, GL_R8UI, persistent_mapping.second, required.first);
+			upload_info.persistent_mapping_offset = persistent_mapping.second;
 
 			if (to_store)
 			{
@@ -231,7 +238,7 @@ std::tuple<u32, u32, u32, std::optional<std::tuple<GLenum, u32>>> GLGSRender::se
 	if (required.second > 0)
 	{
 		volatile_mapping = m_attrib_ring_buffer->alloc_from_heap(required.second, m_min_texbuffer_alignment);
-		m_gl_volatile_stream_buffer.copy_from(*m_attrib_ring_buffer, GL_R8UI, volatile_mapping.second, required.second);
+		upload_info.volatile_mapping_offset = volatile_mapping.second;
 	}
 
 	//Write all the data
@@ -239,7 +246,7 @@ std::tuple<u32, u32, u32, std::optional<std::tuple<GLenum, u32>>> GLGSRender::se
 
 	std::chrono::time_point<steady_clock> now = steady_clock::now();
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
-	return std::make_tuple(result.vertex_draw_count, result.allocated_vertex_count, result.vertex_index_base, result.index_info);
+	return upload_info;
 }
 
 namespace

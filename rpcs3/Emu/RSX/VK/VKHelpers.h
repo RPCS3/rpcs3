@@ -3,15 +3,14 @@
 #include "stdafx.h"
 #include <exception>
 #include <string>
+#include <cstring>
 #include <functional>
 #include <vector>
 #include <memory>
 #include <unordered_map>
 
-#ifdef __linux__
-#include <X11/Xlib.h>
-#endif
-
+#include "Utilities/variant.hpp"
+#include "Emu/RSX/GSRender.h"
 #include "Emu/System.h"
 #include "VulkanAPI.h"
 #include "../GCM.h"
@@ -199,7 +198,7 @@ namespace vk
 			//Set up instance information
 			const char *requested_extensions[] =
 			{
-				"VK_KHR_swapchain"
+				VK_KHR_SWAPCHAIN_EXTENSION_NAME
 			};
 
 			std::vector<const char *> layers;
@@ -324,7 +323,7 @@ namespace vk
 			VkDevice dev = (VkDevice)(*owner);
 
 			u32 access_mask = 0;
-			
+
 			if (host_visible)
 				access_mask |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
@@ -412,7 +411,7 @@ namespace vk
 
 			VkMemoryRequirements memory_req;
 			vkGetImageMemoryRequirements(m_device, value, &memory_req);
-			
+
 			if (!(memory_req.memoryTypeBits & (1 << memory_type_index)))
 			{
 				//Suggested memory type is incompatible with this memory type.
@@ -456,7 +455,7 @@ namespace vk
 
 	struct image_view
 	{
-		VkImageView value;
+		VkImageView value = VK_NULL_HANDLE;
 		VkImageViewCreateInfo info = {};
 
 		image_view(VkDevice dev, VkImage image, VkImageViewType view_type, VkFormat format, VkComponentMapping mapping, VkImageSubresourceRange range)
@@ -475,6 +474,34 @@ namespace vk
 		image_view(VkDevice dev, VkImageViewCreateInfo create_info)
 			: m_device(dev), info(create_info)
 		{
+			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+		}
+
+		image_view(VkDevice dev, vk::image* resource, VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}, VkComponentMapping mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A })
+			: m_device(dev)
+		{
+			info.format = resource->info.format;
+			info.image = resource->value;
+			info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			info.components = mapping;
+			info.subresourceRange = range;
+
+			switch (resource->info.imageType)
+			{
+			case VK_IMAGE_TYPE_1D:
+				info.viewType = VK_IMAGE_VIEW_TYPE_1D;
+				break;
+			case VK_IMAGE_TYPE_2D:
+				if (resource->info.flags == VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
+					info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+				else
+					info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+				break;
+			case VK_IMAGE_TYPE_3D:
+				info.viewType = VK_IMAGE_VIEW_TYPE_3D;
+				break;
+			}
+
 			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
 		}
 
@@ -953,7 +980,7 @@ namespace vk
 
 			nb_swap_images = 0;
 			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, nullptr);
-			
+
 			if (!nb_swap_images) fmt::throw_exception("Driver returned 0 images for swapchain" HERE);
 
 			std::vector<VkImage> swap_images;
@@ -1137,6 +1164,30 @@ namespace vk
 		}
 	};
 
+	class supported_extensions
+	{
+	private:
+		std::vector<VkExtensionProperties> m_vk_exts;
+
+	public:
+
+		supported_extensions()
+		{
+			uint32_t count;
+			if (vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr) != VK_SUCCESS)
+				return;
+
+			m_vk_exts.resize(count);
+			vkEnumerateInstanceExtensionProperties(nullptr, &count, m_vk_exts.data());
+		}
+
+		bool is_supported(const char *ext)
+		{
+			return std::any_of(m_vk_exts.cbegin(), m_vk_exts.cend(),
+				[&](const VkExtensionProperties& p) { return std::strcmp(p.extensionName, ext) == 0; });
+		}
+	};
+
 	class context
 	{
 	private:
@@ -1158,7 +1209,7 @@ namespace vk
 			m_instance = nullptr;
 
 			//Check that some critical entry-points have been loaded into memory indicating prescence of a loader
-			loader_exists = (&vkCreateInstance != nullptr);
+			loader_exists = (vkCreateInstance != nullptr);
 		}
 
 		~context()
@@ -1185,11 +1236,11 @@ namespace vk
 			m_instance = nullptr;
 			m_vk_instances.resize(0);
 		}
-		
+
 		void enable_debugging()
 		{
 			if (!g_cfg.video.debug_output) return;
-			 
+
 			PFN_vkDebugReportCallbackEXT callback = vk::dbgFunc;
 
 			createDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(m_instance, "vkCreateDebugReportCallbackEXT");
@@ -1218,18 +1269,35 @@ namespace vk
 			app.apiVersion = VK_MAKE_VERSION(1, 0, 0);
 
 			//Set up instance information
-			const char *requested_extensions[] =
-			{
-				"VK_KHR_surface",
-#ifdef _WIN32
-				"VK_KHR_win32_surface",
-#else
-				"VK_KHR_xlib_surface",
-#endif
-				"VK_EXT_debug_report",
-			};
 
+			std::vector<const char *> extensions;
 			std::vector<const char *> layers;
+
+			extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+			extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+#ifdef _WIN32
+			extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#else
+			supported_extensions support;
+			bool found_surface_ext = false;
+			if (support.is_supported(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
+			{
+				extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+				found_surface_ext = true;
+			}
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+			if (support.is_supported(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
+			{
+				extensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+				found_surface_ext = true;
+			}
+#endif
+			if (!found_surface_ext)
+			{
+				LOG_ERROR(RSX, "Could not find a supported Vulkan surface extension");
+				return 0;
+			}
+#endif
 
 			if (!fast && g_cfg.video.debug_output)
 				layers.push_back("VK_LAYER_LUNARG_standard_validation");
@@ -1239,8 +1307,8 @@ namespace vk
 			instance_info.pApplicationInfo = &app;
 			instance_info.enabledLayerCount = static_cast<uint32_t>(layers.size());
 			instance_info.ppEnabledLayerNames = layers.data();
-			instance_info.enabledExtensionCount = fast? 0: 3;
-			instance_info.ppEnabledExtensionNames = fast? nullptr: requested_extensions;
+			instance_info.enabledExtensionCount = fast ? 0 : static_cast<uint32_t>(extensions.size());
+			instance_info.ppEnabledExtensionNames = fast ? nullptr : extensions.data();
 
 			VkInstance instance;
 			if (vkCreateInstance(&instance_info, nullptr, &instance) != VK_SUCCESS)
@@ -1304,8 +1372,8 @@ namespace vk
 		}
 
 #ifdef _WIN32
-		
-		vk::swap_chain* createSwapChain(HINSTANCE hInstance, HWND hWnd, vk::physical_device &dev)
+
+		vk::swap_chain* createSwapChain(HINSTANCE hInstance, display_handle_t hWnd, vk::physical_device &dev)
 		{
 			VkWin32SurfaceCreateInfoKHR createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -1315,16 +1383,31 @@ namespace vk
 			VkSurfaceKHR surface;
 			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface));
 #elif HAVE_VULKAN
-		
-		vk::swap_chain* createSwapChain(Display *display, Window window, vk::physical_device &dev)
+
+		vk::swap_chain* createSwapChain(display_handle_t ctx, vk::physical_device &dev)
 		{
-			VkXlibSurfaceCreateInfoKHR createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-			createInfo.dpy = display;
-			createInfo.window = window;
-			
 			VkSurfaceKHR surface;
-			CHECK_RESULT(vkCreateXlibSurfaceKHR(m_instance, &createInfo, nullptr, &surface));
+
+			ctx.match(
+				[&](std::pair<Display*, Window> p)
+				{
+					VkXlibSurfaceCreateInfoKHR createInfo = {};
+					createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+					createInfo.dpy = p.first;
+					createInfo.window = p.second;
+					CHECK_RESULT(vkCreateXlibSurfaceKHR(this->m_instance, &createInfo, nullptr, &surface));
+				}
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+				, [&](std::pair<wl_display*, wl_surface*> p)
+				{
+					VkWaylandSurfaceCreateInfoKHR createInfo = {};
+					createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+					createInfo.display = p.first;
+					createInfo.surface = p.second;
+					CHECK_RESULT(vkCreateWaylandSurfaceKHR(this->m_instance, &createInfo, nullptr, &surface));
+				}
+#endif
+			);
 #endif
 
 			uint32_t device_queues = dev.get_queue_count();
@@ -1439,7 +1522,7 @@ namespace vk
 		void destroy()
 		{
 			if (!pool) return;
-			
+
 			vkDestroyDescriptorPool((*owner), pool, nullptr);
 			owner = nullptr;
 			pool = nullptr;
@@ -1591,7 +1674,7 @@ namespace vk
 		{
 			::glsl::program_domain domain;
 			program_input_type type;
-			
+
 			bound_buffer as_buffer;
 			bound_sampler as_sampler;
 
@@ -1649,5 +1732,5 @@ namespace vk
 	*/
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
 		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap, vk::buffer* upload_buffer);
+		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap);
 }

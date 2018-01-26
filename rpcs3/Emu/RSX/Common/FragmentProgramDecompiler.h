@@ -58,7 +58,7 @@ class FragmentProgramDecompiler
 		{
 			//Data fetched from the single precision register requires merging of the two half registers
 			//TODO: Check individual swizzle channels
-			if (aliased_h0 && xy || aliased_h1 && zw)
+			if ((aliased_h0 && xy) || (aliased_h1 && zw))
 				return last_write_half;
 
 			return false;

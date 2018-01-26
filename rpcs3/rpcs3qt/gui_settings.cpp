@@ -260,6 +260,7 @@ void gui_settings::ShowInfoBox(const gui_save& entry, const QString& title, cons
 	{
 		QCheckBox* cb = new QCheckBox(tr("Don't show again"));
 		QMessageBox* mb = new QMessageBox(QMessageBox::Information, title, text, QMessageBox::Ok, parent);
+		mb->setWindowFlags(mb->windowFlags() & ~Qt::WindowContextHelpButtonHint);
 		mb->setCheckBox(cb);
 		mb->deleteLater();
 		mb->exec();
@@ -318,6 +319,17 @@ QStringList gui_settings::GetConfigEntries()
 		res.append(entry.baseName());
 	}
 
+	return res;
+}
+
+QStringList gui_settings::GetDirEntries(const QDir& dir, const QStringList& nameFilters)
+{
+	QFileInfoList entries = dir.entryInfoList(nameFilters, QDir::Files);
+	QStringList res;
+	for (const QFileInfo &entry : entries)
+	{
+		res.append(entry.baseName());
+	}
 	return res;
 }
 

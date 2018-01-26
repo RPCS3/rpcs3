@@ -105,7 +105,7 @@ void main_window::Init()
 	CreateConnects();
 
 	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
-	setWindowTitle(QString::fromStdString("RPCS3 v" + rpcs3::version.to_string()));
+	setWindowTitle(QString::fromStdString("RPCS3 " + rpcs3::version.to_string()));
 
 	Q_EMIT RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
@@ -172,7 +172,7 @@ void main_window::CreateThumbnailToolbar()
 	RepaintThumbnailIcons();
 
 	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop(); });
-	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.SetForceBoot(true); Emu.Stop(); Emu.Load(); });
+	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.Restart(); });
 	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, Pause);
 #endif
 }
@@ -452,7 +452,7 @@ void main_window::InstallPup(const QString& dropPath)
 	std::string version_string = pup.get_file(0x100).to_string();
 	version_string.erase(version_string.find('\n'));
 
-	const std::string cur_version = "4.81";
+	const std::string cur_version = "4.82";
 
 	if (version_string < cur_version &&
 		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(qstr(cur_version), qstr(version_string)),
@@ -1093,7 +1093,7 @@ void main_window::CreateConnects()
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 	connect(ui->sysPauseAct, &QAction::triggered, Pause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
-	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.SetForceBoot(true); Emu.Stop(); Emu.Load(); });
+	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.Restart(); });
 
 	connect(ui->sysSendOpenMenuAct, &QAction::triggered, [=]
 	{
@@ -1515,7 +1515,7 @@ void main_window::keyPressEvent(QKeyEvent *keyEvent)
 		case Qt::Key_E: if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(); return;
 		case Qt::Key_P: if (Emu.IsRunning()) Emu.Pause(); return;
 		case Qt::Key_S: if (!Emu.IsStopped()) Emu.Stop(); return;
-		case Qt::Key_R: if (!Emu.GetBoot().empty()) { Emu.SetForceBoot(true); Emu.Stop(); Emu.Run(); } return;
+		case Qt::Key_R: if (!Emu.GetBoot().empty()) Emu.Restart(); return;
 		}
 	}
 }

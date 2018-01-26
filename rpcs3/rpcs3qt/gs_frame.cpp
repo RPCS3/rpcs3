@@ -7,13 +7,18 @@
 #include <QKeyEvent>
 #include <QTimer>
 #include <QThread>
-
 #include <string>
 
 #include "rpcs3_version.h"
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#include <QGuiApplication>
+#include <qpa/qplatformnativeinterface.h>
+#endif
+#include <X11/Xlib.h>
 #endif
 
 constexpr auto qstr = QString::fromStdString;
@@ -25,10 +30,10 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 	std::string version = rpcs3::version.to_string();
 	version = version.substr(0 , version.find_last_of("-"));
 
-	//Add branch to version on frame , unless it's master.
-	if (rpcs3::get_branch().compare("master") != 0 && rpcs3::get_branch().compare("HEAD") != 0)
+	//Add branch and commit hash to version on frame , unless it's master.
+	if ((rpcs3::get_branch().compare("master") != 0) && (rpcs3::get_branch().compare("HEAD") != 0))
 	{
-		version = version + "-" + rpcs3::get_branch();
+		version = version + "-" + rpcs3::version.to_string().substr((rpcs3::version.to_string().find_last_of("-") + 1), 8) + "-" + rpcs3::get_branch();
 	}
 
 	m_windowTitle += qstr(" | " + version);
@@ -40,7 +45,7 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 
 	if (!Emu.GetTitleID().empty())
 	{
-		m_windowTitle += qstr(" | [" + Emu.GetTitleID() + ']');
+		m_windowTitle += qstr(" [" + Emu.GetTitleID() + ']');
 	}
 
 	if (!appIcon.isNull())
@@ -87,7 +92,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.IsStopped())) { Emu.Stop(); return; }
 			break;
 		case Qt::Key_R:
-			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.GetBoot().empty())) { Emu.SetForceBoot(true); Emu.Stop(); Emu.Load(); return; }
+			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.GetBoot().empty())) { Emu.Restart(); return; }
 			break;
 		case Qt::Key_E:
 			if (keyEvent->modifiers() == Qt::ControlModifier)
@@ -145,12 +150,28 @@ void gs_frame::show()
 	});
 }
 
-void* gs_frame::handle() const
+display_handle_t gs_frame::handle() const
 {
 #ifdef _WIN32
 	return (HWND) this->winId();
 #else
-	return (void *)this->winId();
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+	QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
+	struct wl_display *wl_dpy = static_cast<struct wl_display *>(
+		native->nativeResourceForWindow("display", NULL));
+	struct wl_surface *wl_surf = static_cast<struct wl_surface *>(
+		native->nativeResourceForWindow("surface", (QWindow *)this));
+	if (wl_dpy != nullptr && wl_surf != nullptr)
+	{
+		return std::make_pair(wl_dpy, wl_surf);
+	}
+	else
+	{
+#endif
+		return std::make_pair(XOpenDisplay(0), (unsigned long)(this->winId()));
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+	}
+#endif
 #endif
 }
 

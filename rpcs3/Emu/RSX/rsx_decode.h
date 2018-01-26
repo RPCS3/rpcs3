@@ -710,20 +710,34 @@ struct registers_decoder<NV4097_SET_ZMIN_MAX_CONTROL>
 		union
 		{
 			u32 raw_value;
+			bitfield_decoder_t<0, 4> depth_clip_enabled;
 			bitfield_decoder_t<4, 4> depth_clamp_enabled;
+			bitfield_decoder_t<8, 4> depth_clip_ignore_w;
 		} m_data;
 	public:
 		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		bool depth_clip_enabled() const
+		{
+			return bool(m_data.depth_clip_enabled);
+		}
 
 		bool depth_clamp_enabled() const
 		{
 			return bool(m_data.depth_clamp_enabled);
 		}
+
+		bool depth_clip_ignore_w() const
+		{
+			return bool(m_data.depth_clip_ignore_w);
+		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Depth: clamp " + print_boolean(decoded_values.depth_clamp_enabled());
+		return "Depth: clip_enabled " + print_boolean(decoded_values.depth_clip_enabled()) +
+			" clamp " + print_boolean(decoded_values.depth_clamp_enabled()) +
+			" ignore_w " + print_boolean(decoded_values.depth_clip_ignore_w());
 	}
 };
 
@@ -4064,21 +4078,23 @@ struct registers_decoder<NV3089_IMAGE_IN>
 	public:
 		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-		u16 x() const
+		// x and y given as 16 bit fixed point
+
+		f32 x() const
 		{
-			return m_data.x;
+			return m_data.x / 16.f;
 		}
 
-		u16 y() const
+		f32 y() const
 		{
-			return m_data.y;
+			return m_data.y / 16.f;
 		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV3089: in x = " + std::to_string(decoded_values.x() / 16.f) +
-			" y = " + std::to_string(decoded_values.y() / 16.f);
+		return "NV3089: in x = " + std::to_string(decoded_values.x()) +
+			" y = " + std::to_string(decoded_values.y());
 	}
 };
 

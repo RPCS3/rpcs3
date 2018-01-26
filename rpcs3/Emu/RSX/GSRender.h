@@ -3,6 +3,19 @@
 #include "Emu/RSX/RSXThread.h"
 #include <memory>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+// Cannot include Xlib.h before Qt5
+// and we don't need all of Xlib anyway
+typedef struct _XDisplay Display;
+typedef unsigned long Window;
+#endif
+
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#include <wayland-client.h>
+#endif
+
 struct RSXDebuggerProgram
 {
 	u32 id;
@@ -34,6 +47,17 @@ using RSXDebuggerPrograms = std::vector<RSXDebuggerProgram>;
 
 using draw_context_t = void*;
 
+#ifdef _WIN32
+	using display_handle_t = HWND;
+#else
+	using display_handle_t = std::variant<
+		std::pair<Display*, Window>
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+		, std::pair<wl_display*, wl_surface*>
+#endif
+	>;
+#endif
+
 class GSFrameBase
 {
 public:
@@ -52,7 +76,7 @@ public:
 	virtual int client_width() = 0;
 	virtual int client_height() = 0;
 
-	virtual void* handle() const = 0;
+	virtual display_handle_t handle() const = 0;
 
 protected:
 

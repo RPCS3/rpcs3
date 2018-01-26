@@ -102,22 +102,24 @@ static gui_listener s_gui_listener;
 
 log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent) : QDockWidget(tr("Log"), parent), xgui_settings(guiSettings)
 {
-	QTabWidget* tabWidget = new QTabWidget;
+	m_tabWidget = new QTabWidget;
 
-	m_log = new QTextEdit(tabWidget);
+	m_log = new QTextEdit(m_tabWidget);
 	m_log->setObjectName("log_frame");
 	m_log->setReadOnly(true);
 	m_log->setContextMenuPolicy(Qt::CustomContextMenu);
+	m_log->installEventFilter(this);
 
-	m_tty = new QTextEdit(tabWidget);
+	m_tty = new QTextEdit(m_tabWidget);
 	m_tty->setObjectName("tty_frame");
 	m_tty->setReadOnly(true);
 	m_tty->setContextMenuPolicy(Qt::CustomContextMenu);
+	m_tty->installEventFilter(this);
 
-	tabWidget->addTab(m_log, tr("Log"));
-	tabWidget->addTab(m_tty, tr("TTY"));
+	m_tabWidget->addTab(m_log, tr("Log"));
+	m_tabWidget->addTab(m_tty, tr("TTY"));
 
-	setWidget(tabWidget);
+	setWidget(m_tabWidget);
 
 	// Open or create TTY.log
 	m_tty_file.open(fs::get_config_dir() + "TTY.log", fs::read + fs::create);
@@ -257,6 +259,12 @@ void log_frame::CreateAndConnectActions()
 		QMenu* menu = m_tty->createStandardContextMenu();
 		menu->addAction(m_clearTTYAct);
 		menu->exec(mapToGlobal(pos));
+	});
+
+	connect(m_tabWidget, &QTabWidget::currentChanged, [this](int index)
+	{
+		if (m_find_dialog)
+			m_find_dialog->close();
 	});
 
 	LoadSettings();
@@ -434,4 +442,26 @@ void log_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
 	Q_EMIT LogFrameClosed();
+}
+
+bool log_frame::eventFilter(QObject* object, QEvent* event)
+{
+	if (object != m_log && object != m_tty)
+	{
+		return QDockWidget::eventFilter(object, event);
+	}
+
+	if (event->type() == QEvent::KeyPress)
+	{
+		QKeyEvent* e = (QKeyEvent*)event;
+		if (e->modifiers() == Qt::ControlModifier && e->key() == Qt::Key_F)
+		{
+			if (m_find_dialog && m_find_dialog->isVisible())
+				m_find_dialog->close();
+
+			m_find_dialog = std::make_unique<find_dialog>((QTextEdit*)object, this);
+		}
+	}
+
+	return QDockWidget::eventFilter(object, event);
 }

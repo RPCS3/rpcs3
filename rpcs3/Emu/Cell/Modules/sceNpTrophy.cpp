@@ -331,7 +331,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 
 error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspace, u64 options)
 {
-	sceNpTrophy.todo("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace=*0x%x, options=0x%llx)", context, handle, reqspace, options);
+	sceNpTrophy.warning("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace=*0x%x, options=0x%llx)", context, handle, reqspace, options);
 
 	if (!reqspace)
 	{
@@ -352,12 +352,18 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	// TODO: This is not accurate. It's just an approximation of the real value
-	//       The real value can be obtained in TRP.cpp:
-	//		 m_headers.trp_file_size - sizeof(m_headers) - (m_headers.trp_files_count * m_headers.trp_element_size);
-	// TODO: eventually this should be set to 0 when trophys are detected as already installed, setting to 0 now causes some games to not call registerContext, which leads to trophys never getting installed
-	*reqspace = ctxt->trp_stream.size();
+	if (!fs::is_dir("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name))
+	{
+		TRPLoader trp(ctxt->trp_stream);
 
+		if (trp.LoadHeader())
+		{
+			*reqspace = trp.GetRequiredSpace();
+			return CELL_OK;
+		}
+	}
+
+	*reqspace = 0;
 	return CELL_OK;
 }
 
@@ -515,7 +521,7 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 		// Get icon for the notification.
 		std::string trophyIconPath = "/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/TROP" + padding + std::to_string(trophyId) + ".PNG";
 		fs::file trophyIconFile = fs::file(vfs::get(trophyIconPath));
-		u32 iconSize = trophyIconFile.size();
+		size_t iconSize = trophyIconFile.size();
 		std::vector<uchar> trophyIconData;
 		trophyIconFile.read(trophyIconData, iconSize);
 
@@ -528,9 +534,8 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 			sceNpTrophy.error("Failed to get info for trophy dialog. Error code %x", ret);
 			*details = SceNpTrophyDetails();
 		}
-		Emu.CallAfter([det = *details, trophyIconData]() {
-			Emu.GetCallbacks().get_trophy_notification_dialog()->ShowTrophyNotification(det, trophyIconData);
-		});
+
+		Emu.GetCallbacks().get_trophy_notification_dialog()->ShowTrophyNotification(*details, trophyIconData);
 	}
 
 	return CELL_OK;

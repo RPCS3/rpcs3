@@ -11,13 +11,14 @@ if(WIN32)
 	find_package(Qt5 5.7 COMPONENTS WinExtras REQUIRED)
 	set(RPCS3_QT_LIBS Qt5::Widgets Qt5::WinExtras Qt5::Network)
 else()
-	find_package(Qt5 5.7 COMPONENTS DBus)
+	find_package(Qt5 5.7 COMPONENTS DBus Gui)
 	if(Qt5DBus_FOUND)
 		set(RPCS3_QT_LIBS Qt5::Widgets Qt5::DBus Qt5::Network)
 		add_definitions(-DHAVE_QTDBUS)
 	else()
 		set(RPCS3_QT_LIBS Qt5::Widgets Qt5::Network)
 	endif()
+	include_directories(${Qt5Gui_PRIVATE_INCLUDE_DIRS})
 endif()
 
 # Let's make sure we have Qt before we continue
@@ -153,6 +154,11 @@ elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
 endif()
 if(UNIX AND NOT APPLE)
 	set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "X11")
+	find_package(Wayland)
+	if (WAYLAND_FOUND)
+		include_directories(${WAYLAND_INCLUDE_DIR})
+		add_definitions(-DVK_USE_PLATFORM_WAYLAND_KHR)
+	endif()
 endif()
 
 if(NOT RPCS3_SRC_DIR)
@@ -462,4 +468,9 @@ if(UNIX AND NOT APPLE)
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps)
 	install(FILES rpcs3.desktop
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
+    # Install other files
+    install(DIRECTORY ../bin/Icons
+		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
+    install(DIRECTORY ../bin/GuiConfigs
+		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
 endif()

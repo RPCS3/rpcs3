@@ -1,6 +1,7 @@
 #pragma once
 
-struct RsxDriverInfo {
+struct RsxDriverInfo
+{
 	be_t<u32> version_driver;     // 0x0
 	be_t<u32> version_gpu;        // 0x4
 	be_t<u32> memory_size;        // 0x8
@@ -15,7 +16,9 @@ struct RsxDriverInfo {
 	be_t<u32> unk3[6];            // 0x38-0x54
 	be_t<u32> systemModeFlags;    // 0x54
 	u8 unk4[0x1064];              // 0x10B8
-	struct Head {
+
+	struct Head
+	{
 		be_t<u64> lastFlipTime;    // 0x0 last flip time
 		be_t<u32> flipFlags;       // 0x8 flags to handle flip/queue
 		be_t<u32> unk1;            // 0xC
@@ -29,6 +32,7 @@ struct RsxDriverInfo {
 		be_t<u32> unk;             // 0x38 possible u32, 'flip field', top/bottom for interlaced
 		be_t<u32> unk5;            // 0x3C possible high bits of time stamp? used in getlastVBlankTime
 	} head[8]; // size = 0x40, 0x200
+
 	be_t<u32> unk7;          // 0x12B8
 	be_t<u32> unk8;          // 0x12BC
 	be_t<u32> handlers;      // 0x12C0 -- flags showing which handlers are set
@@ -46,10 +50,12 @@ struct RsxDriverInfo {
 	be_t<u32> lastError;     // 0x12F4 error param for cellGcmSetGraphicsHandler
 							 // todo: theres more to this 
 };
+
 static_assert(sizeof(RsxDriverInfo) == 0x12F8, "rsxSizeTest");
 static_assert(sizeof(RsxDriverInfo::Head) == 0x40, "rsxHeadSizeTest");
 
-struct RsxDmaControl {
+struct RsxDmaControl
+{
 	u8 resv[0x40];
 	atomic_be_t<u32> put;
 	atomic_be_t<u32> get;
@@ -58,30 +64,35 @@ struct RsxDmaControl {
 	be_t<u32> unk1;
 };
 
-struct RsxSemaphore {
+struct RsxSemaphore
+{
 	be_t<u32> val;
 	be_t<u32> pad;
 	be_t<u64> timestamp;
 };
 
-struct RsxNotify {
+struct RsxNotify
+{
 	be_t<u64> timestamp;
 	be_t<u64> zero;
 };
 
-struct RsxReport {
+struct RsxReport
+{
 	be_t<u64> timestamp;
 	be_t<u32> val;
 	be_t<u32> pad;
 };
 
-struct RsxReports {
+struct RsxReports
+{
 	RsxSemaphore semaphore[0x100];
 	RsxNotify notify[64];
 	RsxReport report[2048];
 };
 
-struct RsxDisplayInfo {
+struct RsxDisplayInfo
+{
 	be_t<u32> offset;
 	be_t<u32> pitch;
 	be_t<u32> width;

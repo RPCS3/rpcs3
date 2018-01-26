@@ -22,6 +22,7 @@
 #include "Crypto/unself.h"
 
 #include <unordered_set>
+#include <thread>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
@@ -129,8 +130,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings::HookStaticFuncs);
 	SubscribeTooltip(ui->hookStFunc, json_cpu_cbs["hookStFunc"].toString());
 
-	xemu_settings->EnhanceCheckBox(ui->bindSPUThreads, emu_settings::BindSPUThreads);
-	SubscribeTooltip(ui->bindSPUThreads, json_cpu_cbs["bindSPUThreads"].toString());
+	xemu_settings->EnhanceCheckBox(ui->enableScheduler, emu_settings::EnableThreadScheduler);
+	SubscribeTooltip(ui->enableScheduler, json_cpu_cbs["enableThreadScheduler"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->lowerSPUThrPrio, emu_settings::LowerSPUThreadPrio);
 	SubscribeTooltip(ui->lowerSPUThrPrio, json_cpu_cbs["lowerSPUThrPrio"].toString());
@@ -692,6 +693,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Comboboxes
 
+	xemu_settings->EnhanceComboBox(ui->maxLLVMThreads, emu_settings::MaxLLVMThreads, true, true, std::thread::hardware_concurrency());
+	SubscribeTooltip(ui->maxLLVMThreads, json_emu_misc["maxLLVMThreads"].toString());
+	ui->maxLLVMThreads->setItemText(ui->maxLLVMThreads->findData("0"), tr("All (%1)").arg(std::thread::hardware_concurrency()));
+
 	SubscribeTooltip(ui->combo_configs, json_emu_gui["configs"].toString());
 
 	SubscribeTooltip(ui->combo_stylesheets, json_emu_gui["stylesheets"].toString());
@@ -721,10 +726,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->showTrophyPopups, emu_settings::ShowTrophyPopups);
 	SubscribeTooltip(ui->showTrophyPopups, json_emu_misc["showTrophyPopups"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->useNativeInterface, emu_settings::UseNativeInterface);
+	SubscribeTooltip(ui->useNativeInterface, json_emu_misc["useNativeInterface"].toString());
+
 	if (game)
 	{
 		ui->gb_stylesheets->setEnabled(false);
-		ui->gb_configs->setEnabled(false);
 		ui->gb_settings->setEnabled(false);
 		ui->gb_colors->setEnabled(false);
 		ui->gb_viewport->setEnabled(false);
@@ -953,6 +960,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->forceCpuBlitEmulation, emu_settings::ForceCPUBlitEmulation);
 	SubscribeTooltip(ui->forceCpuBlitEmulation, json_debug["forceCpuBlitEmulation"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings::DisableOnDiskShaderCache);
+	SubscribeTooltip(ui->disableOnDiskShaderCache, json_debug["disableOnDiskShaderCache"].toString());
 
 	// Checkboxes: core debug options
 	xemu_settings->EnhanceCheckBox(ui->ppuDebug, emu_settings::PPUDebug);

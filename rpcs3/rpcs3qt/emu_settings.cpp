@@ -222,13 +222,15 @@ void emu_settings::SaveSettings()
 	m_config.write(out.c_str(), out.size());
 }
 
-void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged)
+void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged, bool use_max, int max)
 {
 	if (is_ranged)
 	{
 		QStringList range = GetSettingOptions(type);
 
-		for (int i = range.first().toInt(); i <= range.last().toInt(); i++)
+		int max_item = use_max ? max : range.last().toInt();
+
+		for (int i = range.first().toInt(); i <= max_item; i++)
 		{
 			combobox->addItem(QString::number(i), QVariant(QString::number(i)));
 		}
@@ -306,7 +308,7 @@ void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type, bool is_ran
 
 	connect(slider, &QSlider::valueChanged, [=](int value)
 	{
-		SetSetting(type, sstr(slider->value()));
+		SetSetting(type, sstr(value));
 	});
 }
 

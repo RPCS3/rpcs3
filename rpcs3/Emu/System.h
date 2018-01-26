@@ -262,7 +262,8 @@ public:
 	void Run();
 	bool Pause();
 	void Resume();
-	void Stop();
+	void Stop(bool restart = false);
+	void Restart() { Stop(true); }
 
 	bool IsRunning() const { return m_state == system_state::running; }
 	bool IsPaused()  const { return m_state == system_state::paused; }
@@ -284,9 +285,15 @@ struct cfg_root : cfg::node
 		cfg::_bool ppu_debug{this, "PPU Debug"};
 		cfg::_bool llvm_logs{this, "Save LLVM logs"};
 		cfg::string llvm_cpu{this, "Use LLVM CPU"};
+		cfg::_int<0, INT32_MAX> llvm_threads{this, "Max LLVM Compile Threads", 0};
+
+#ifdef _WIN32
+		cfg::_bool thread_scheduler_enabled{ this, "Enable thread scheduler", true };
+#else
+		cfg::_bool thread_scheduler_enabled{ this, "Enable thread scheduler", false };
+#endif
 
 		cfg::_enum<spu_decoder_type> spu_decoder{this, "SPU Decoder", spu_decoder_type::asmjit};
-		cfg::_bool bind_spu_cores{this, "Bind SPU threads to secondary cores"};
 		cfg::_bool lower_spu_priority{this, "Lower SPU thread priority"};
 		cfg::_bool spu_debug{this, "SPU Debug"};
 		cfg::_int<0, 16384> max_spu_immediate_write_size{this, "Maximum immediate DMA write size", 16384}; // Maximum size that an SPU thread can write directly without posting to MFC
@@ -342,7 +349,8 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_zcull_queries{this, "Disable ZCull Occlusion Queries", false};
 		cfg::_bool disable_vertex_cache{this, "Disable Vertex Cache", false};
 		cfg::_bool frame_skip_enabled{this, "Enable Frame Skip", false};
-		cfg::_bool force_cpu_blit_processing{this, "Force CPU Blit", false}; //Debugging option
+		cfg::_bool force_cpu_blit_processing{this, "Force CPU Blit", false}; // Debugging option
+		cfg::_bool disable_on_disk_shader_cache{this, "Disable On-Disk Shader Cache", false};
 		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames To Draw", 1};
 		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames To Skip", 1};
 		cfg::_int<50, 800> resolution_scale_percent{this, "Resolution Scale", 100};
@@ -378,6 +386,7 @@ struct cfg_root : cfg::node
 		cfg::_bool convert_to_u16{this, "Convert to 16 bit"};
 		cfg::_bool downmix_to_2ch{this, "Downmix to Stereo", true};
 		cfg::_int<2, 128> frames{this, "Buffer Count", 32};
+		cfg::_int<1, 128> startt{this, "Start Threshold", 1};
 
 	} audio{this};
 
@@ -419,6 +428,7 @@ struct cfg_root : cfg::node
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
 		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true};
 		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true};
+		cfg::_bool use_native_interface{ this, "Use native user interface", true };
 		cfg::_int<1, 65535> gdb_server_port{this, "Port", 2345};
 
 	} misc{this};
