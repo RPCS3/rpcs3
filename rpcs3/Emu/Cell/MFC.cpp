@@ -176,14 +176,16 @@ void mfc_thread::cpu_task()
 
 							data = to_write;
 							vm::reservation_update(cmd.eal, 128);
-							vm::notify(cmd.eal, 128);
 							_xend();
+							vm::notify(cmd.eal, 128);
 						}
 						else
 						{
-							vm::writer_lock lock(0);
-							data = to_write;
-							vm::reservation_update(cmd.eal, 128);
+							{
+								vm::writer_lock lock(0);
+								data = to_write;
+								vm::reservation_update(cmd.eal, 128);
+							}
 							vm::notify(cmd.eal, 128);
 						}
 					}
@@ -356,7 +358,6 @@ void mfc_thread::cpu_task()
 			}
 			else
 			{
-				vm::reader_lock lock;
 				vm::notify_all();
 			}
 		}

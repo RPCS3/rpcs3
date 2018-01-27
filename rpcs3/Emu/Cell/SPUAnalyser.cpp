@@ -5,16 +5,16 @@
 
 const spu_decoder<spu_itype> s_spu_itype;
 
-std::shared_ptr<spu_function_contents_t> SPUDatabase::find(const be_t<u32>* data, u64 key, u32 max_size, void* ignore)
+spu_function_contents_t* SPUDatabase::find(const be_t<u32>* data, u64 key, u32 max_size, void* ignore)
 {
 	for (auto found = m_db.equal_range(key); found.first != found.second; found.first++)
 	{
 		const auto & func = found.first->second;
 
-		// TODO remove code after a while if it hasn't been touched, else there's a big memory bloat here
+		// TODO remove code after a while if it hasn't been touched, else there's a big memory bloat here and switch memcmp with compare_func
 
 		// Compare binary data explicitly (TODO: optimize)
-		if (func.get() != ignore && LIKELY(func->size <= max_size) && memcmp(func->data.data(), data, func->size) == 0)
+		if (func != ignore && LIKELY(func->size <= max_size) && std::memcmp(func->data.data(), data, func->size) == 0)
 		{
 			return func;
 		}
@@ -35,7 +35,15 @@ SPUDatabase::~SPUDatabase()
 	// TODO: serialize database
 }
 
-std::shared_ptr<spu_function_contents_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, void* ignore /*=nullptr*/)
+bool IsDeterministicBranch(spu_itype::type type)
+{
+	return type == spu_itype::BR || type == spu_itype::BRSL
+		|| type == spu_itype::BRA || type == spu_itype::BRASL
+		|| type == spu_itype::BI || type == spu_itype::BISL
+		|| type == spu_itype::IRET;
+}
+
+spu_function_contents_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, void* ignore /*=nullptr*/)
 {
 	const u32 max_limit = 0x40000;
 	// Check arguments (bounds and alignment)
@@ -76,6 +84,8 @@ std::shared_ptr<spu_function_contents_t> SPUDatabase::analyse(const be_t<u32>* l
 
 	// Initialize block entries with the function entry point
 	std::set<u32> blocks{ entry };
+
+	std::vector<u32> blocks_size;
 
 	// Entries of adjacent functions; jump table entries
 	std::set<u32> adjacent, jt;
@@ -321,8 +331,27 @@ std::shared_ptr<spu_function_contents_t> SPUDatabase::analyse(const be_t<u32>* l
 		return nullptr;
 	}
 
+	blocks_size.reserve(blocks.size());
+	for (u32 block : blocks)
+	{
+		u32 size = 0;
+		for (u32 i = block / 4; i < 0x10000; i++)
+		{
+			if (ls[i] == 0 || IsDeterministicBranch(s_spu_itype.decode(ls[i])))
+			{
+				size = (i * 4) - block + 4;
+				break;
+			}
+		}
+		if (size == 0)
+		{
+			verify("No way out of a block"), size != 0;
+		}
+		blocks_size.push_back(size);
+	}
+
 	// Prepare new function (set addr and size)
-	auto func = std::make_shared<spu_function_contents_t>(entry, limit - entry);
+	auto func = new spu_function_contents_t(entry, limit - entry);
 
 	// Copy function contents
 	func->data = { ls + entry / 4, ls + limit / 4 };
@@ -354,6 +383,8 @@ std::shared_ptr<spu_function_contents_t> SPUDatabase::analyse(const be_t<u32>* l
 		}
 	}
 
+	func->blocks_size = std::move(blocks_size);
+
 	// Set whether the function can reset stack
 	func->does_reset_stack = ila_sp_pos < limit;
 
@@ -366,7 +397,7 @@ std::shared_ptr<spu_function_contents_t> SPUDatabase::analyse(const be_t<u32>* l
 		m_db.emplace(key, func);
 	}
 
-	LOG_NOTICE(SPU, "Function detected [0x%05x-0x%05x] (size=0x%x)", func->addr, func->addr + func->size, func->size);
+	LOG_FATAL(SPU, "Function detected [0x%05x-0x%05x] (size=0x%x)", func->addr, func->addr + func->size, func->size);
 
 	return func;
 }

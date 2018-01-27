@@ -35,7 +35,7 @@ void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
 namespace rsx
 {
 	rsx_state method_registers;
-
+	
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 
 	void invalid_method(thread* rsx, u32 _reg, u32 arg)
@@ -64,10 +64,10 @@ namespace rsx
 		{
 			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
-			if (vm::read32(addr) == arg) return;
+			if (vm::ps3::read32(addr) == arg) return;
 
 			u64 start = get_system_time();
-			while (vm::read32(addr) != arg)
+			while (vm::ps3::read32(addr) != arg)
 			{
 				// todo: LLE: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
 				if (addr == 0x40000030)
@@ -116,12 +116,11 @@ namespace rsx
 			if (addr >> 28 == 0x4)
 			{
 				// TODO: check no reservation area instead
-				vm::write32(addr, arg);
+				vm::ps3::write32(addr, arg);
 				return;
 			}
 
-			vm::reader_lock lock;
-			vm::write32(addr, arg);
+			vm::ps3::write32(addr, arg);
 			vm::notify(addr, 4);
 		}
 	}
@@ -162,7 +161,7 @@ namespace rsx
 			{
 				//
 			}
-			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
+			auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
 			sema.semaphore[index].val = arg;
 			sema.semaphore[index].pad = 0;
 			sema.semaphore[index].timestamp = rsx->timestamp();
@@ -177,7 +176,7 @@ namespace rsx
 			}
 			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
 
-			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
+			auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
 			sema.semaphore[index].val = val;
 			sema.semaphore[index].pad = 0;
 			sema.semaphore[index].timestamp = rsx->timestamp();
@@ -352,7 +351,7 @@ namespace rsx
 			{
 				rsx::method_registers.current_draw_clause.first_count_commands.resize(0);
 				rsx::method_registers.current_draw_clause.command = draw_command::none;
-				rsx::method_registers.current_draw_clause.primitive = to_primitive_type(arg);
+				rsx::method_registers.current_draw_clause.primitive = rsx::method_registers.primitive_mode();
 				rsxthr->begin();
 				return;
 			}
@@ -416,7 +415,7 @@ namespace rsx
 				return;
 			}
 
-			vm::ptr<CellGcmReportData> result = address_ptr;
+			vm::ps3::ptr<CellGcmReportData> result = address_ptr;
 
 			switch (type)
 			{
@@ -484,7 +483,7 @@ namespace rsx
 				return;
 			}
 
-			vm::ptr<CellGcmReportData> result = address_ptr;
+			vm::ps3::ptr<CellGcmReportData> result = address_ptr;
 			rsx->conditional_render_test_failed = (result->value == 0);
 		}
 
@@ -553,7 +552,7 @@ namespace rsx
 
 				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x << 2);
 				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + index * 4, method_registers.blit_engine_output_location_nv3062());
-				vm::write32(address, arg);
+				vm::ps3::write32(address, arg);
 			}
 		};
 	}
@@ -662,7 +661,7 @@ namespace rsx
 			const tiled_region dst_region = rsx->get_tiled_address(dst_offset + out_offset, dst_dma & 0xf);
 
 			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
-			u8* pixels_dst = vm::_ptr<u8>(get_address(dst_offset + out_offset, dst_dma));
+			u8* pixels_dst = vm::ps3::_ptr<u8>(get_address(dst_offset + out_offset, dst_dma));
 
 			if (out_pitch == 0)
 			{
@@ -694,8 +693,7 @@ namespace rsx
 
 			if (convert_w == 0 || convert_h == 0)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored (ds_dx=%d, dt_dy=%d)",
-					method_registers.blit_engine_ds_dx(), method_registers.blit_engine_dt_dy());
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored");
 				return;
 			}
 
@@ -790,7 +788,7 @@ namespace rsx
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{
 				if (need_convert || need_clip)
-				{
+				{					
 					if (need_clip)
 					{
 						if (need_convert)
@@ -856,7 +854,7 @@ namespace rsx
 					pixels_src = temp2.get();
 				}
 
-				// It looks like rsx may ignore the requested swizzle size and just always
+				// It looks like rsx may ignore the requested swizzle size and just always 
 				// round up to nearest power of 2
 				/*u8 sw_width_log2 = method_registers.nv309e_sw_width_log2();
 				u8 sw_height_log2 = method_registers.nv309e_sw_height_log2();
@@ -934,7 +932,7 @@ namespace rsx
 				LOG_ERROR(RSX, "NV0039_OFFSET_IN: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
 			}
 
-			LOG_TRACE(RSX, "NV0039_OFFSET_IN: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
+			LOG_NOTICE(RSX, "NV0039_OFFSET_IN: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
 				in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
 
 			if (!in_pitch)
@@ -1028,7 +1026,7 @@ namespace rsx
 				}
 			}
 		}
-
+		
 		rsx->int_flip_index++;
 		rsx->current_display_buffer = arg;
 		rsx->flip(arg);
@@ -1188,11 +1186,6 @@ namespace rsx
 	void rsx_state::decode(u32 reg, u32 value)
 	{
 		registers[reg] = value;
-	}
-
-	bool rsx_state::test(u32 reg, u32 value) const
-	{
-		return registers[reg] == value;
 	}
 
 	namespace method_detail
@@ -1567,7 +1560,7 @@ namespace rsx
 
 		//Some custom GCM methods
 		methods[GCM_SET_DRIVER_OBJECT]                    = nullptr;
-
+		
 		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
 		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
 
@@ -1684,8 +1677,8 @@ namespace rsx
 
 		// custom methods
 		bind<GCM_FLIP_COMMAND, flip_command>();
+		
 
-
-		return true;
+		return true;	
 	}();
 }

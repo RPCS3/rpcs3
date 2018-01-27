@@ -967,14 +967,18 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		return result;
 	}
 
-	vm::writer_lock lock(0);
-
-	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
-
-	if (result)
+	bool result;
 	{
-		vm::reservation_update(addr, sizeof(u32));
-		vm::notify(addr, sizeof(u32));
+		vm::writer_lock lock(0);
+
+		result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
+
+		if (result)
+		{
+			vm::reservation_update(addr, sizeof(u32));
+			lock.unlock();
+			vm::notify(addr, sizeof(u32));
+		}
 	}
 
 	ppu.raddr = 0;
@@ -1011,14 +1015,18 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return result;
 	}
 
-	vm::writer_lock lock(0);
-
-	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u64)) && data.compare_and_swap_test(ppu.rdata, reg_value);
-
-	if (result)
+	bool result;
 	{
-		vm::reservation_update(addr, sizeof(u64));
-		vm::notify(addr, sizeof(u64));
+		vm::writer_lock lock(0);
+
+		result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u64)) && data.compare_and_swap_test(ppu.rdata, reg_value);
+
+		if (result)
+		{
+			vm::reservation_update(addr, sizeof(u64));
+			lock.unlock();
+			vm::notify(addr, sizeof(u64));
+		}
 	}
 
 	ppu.raddr = 0;

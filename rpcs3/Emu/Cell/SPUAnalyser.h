@@ -265,6 +265,9 @@ struct spu_function_contents_t
 	// Basic blocks (start addresses)
 	std::set<u32> blocks;
 
+	// Basic blocks size
+	std::vector<u32> blocks_size;
+
 	// Functions possibly called by this function (may not be available)
 	std::set<u32> adjacent;
 
@@ -288,7 +291,7 @@ struct spu_function_contents_t
 union spu_function_t
 {
 	// The function itself and its data
-	std::shared_ptr<spu_function_contents_t> contents;
+	spu_function_contents_t * contents;
 
 	// Whether pages the function is in were written to since its last execution
 	bool dirty_bit : 1;
@@ -299,7 +302,7 @@ union spu_function_t
 	}
 
 	spu_function_t() : contents(nullptr) {};
-	~spu_function_t() {dirty_bit = false; contents.reset();};
+	~spu_function_t() {};
 };
 
 // SPU Function Database (must be global or PS3 process-local)
@@ -308,15 +311,15 @@ class SPUDatabase final : spu_itype
 	shared_mutex m_mutex;
 
 	// All registered functions (uses addr and first instruction as a key)
-	std::unordered_multimap<u64, std::shared_ptr<spu_function_contents_t>> m_db;
+	std::unordered_multimap<u64, spu_function_contents_t*> m_db;
 
 	// For internal use
-	std::shared_ptr<spu_function_contents_t> find(const be_t<u32>* data, u64 key, u32 max_size, void* ignore = nullptr);
+	spu_function_contents_t* find(const be_t<u32>* data, u64 key, u32 max_size, void* ignore = nullptr);
 
 public:
 	SPUDatabase();
 	~SPUDatabase();
 
 	// Try to retrieve SPU function information
-	std::shared_ptr<spu_function_contents_t> analyse(const be_t<u32>* ls, u32 entry, void * ignore=nullptr);
+	spu_function_contents_t* analyse(const be_t<u32>* ls, u32 entry, void * ignore=nullptr);
 };

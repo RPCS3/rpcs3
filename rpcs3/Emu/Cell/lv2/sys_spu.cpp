@@ -777,6 +777,12 @@ error_code sys_spu_thread_write_ls(u32 id, u32 lsa, u64 value, u32 type)
 	default: return CELL_EINVAL;
 	}
 
+	auto func = thread->compiled_cache[lsa / 4];
+	if (func)
+	{
+		func->dirty_bit = true;
+	}
+
 	return CELL_OK;
 }
 

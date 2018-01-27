@@ -31,7 +31,7 @@ spu_recompiler::spu_recompiler()
 	}
 }
 
-bool spu_recompiler::compile(std::shared_ptr<spu_function_contents_t> f)
+bool spu_recompiler::compile(spu_function_contents_t* f)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -451,10 +451,12 @@ void spu_recompiler::LNOP(spu_opcode_t op)
 
 void invalidate_jit(SPUThread* _spu)
 {
-	for (auto& func : _spu->compiled_functions)
+	for (u32 i = _spu->first_clean_func_index; i < _spu->last_clean_func_index; i++)
 	{
-		func->dirty_bit = true;
+		_spu->compiled_functions[i].dirty_bit = true;
 	}
+	_spu->first_clean_func_index = -1;
+	_spu->last_clean_func_index = 0;
 }
 
 void spu_recompiler::SYNC(spu_opcode_t op)
@@ -468,6 +470,8 @@ void spu_recompiler::DSYNC(spu_opcode_t op)
 {
 	// This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
 	c->mfence();
+	asmjit::CCFuncCall* call = c->call(asmjit::imm_ptr(asmjit::Internal::ptr_cast<void*, void(SPUThread*)>(invalidate_jit)), asmjit::FuncSignature1<u32, SPUThread*>(asmjit::CallConv::kIdHost));
+	call->setArg(0, *cpu);
 }
 
 void spu_recompiler::MFSPR(spu_opcode_t op)

@@ -15,7 +15,7 @@ class spu_recompiler : public spu_recompiler_base
 public:
 	spu_recompiler();
 
-	virtual bool compile(std::shared_ptr<spu_function_contents_t> f) override;
+	virtual bool compile(spu_function_contents_t* f) override;
 
 private:
 	// emitter:
