@@ -472,6 +472,7 @@ namespace rsx
 						//Resource was not found in config dir, try and grab from relative path (linux)
 						info = std::make_unique<image_info>(("Icons/ui/" + res).c_str());
 #ifndef _WIN32
+						// Check for Icons in ../share/rpcs3 for AppImages and /usr/bin/
 						if (info->data == nullptr)
 						{
 							char result[ PATH_MAX ];
@@ -483,6 +484,11 @@ namespace rsx
 							std::string executablePath = dirname(result);
 							info = std::make_unique<image_info>((executablePath + "/../share/rpcs3/Icons/ui/" + res).c_str());
 
+							// Check if the icons are in the same directory as the executable (local builds)
+							if (info->data == nullptr)
+							{
+								info = std::make_unique<image_info>((executablePath + "/Icons/ui/" + res).c_str());
+							}
 						}
 #endif
 						if (info->data != nullptr)
