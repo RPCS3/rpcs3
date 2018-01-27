@@ -72,16 +72,6 @@ spu_function_contents_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, vo
 		}
 	}
 
-	/*{
-		writer_lock lock(m_mutex);
-
-		// Double-check
-		if (auto func = find(base, key, block_sz))
-		{
-			return func;
-		}
-	}*/
-
 	// Initialize block entries with the function entry point
 	std::set<u32> blocks{ entry };
 
@@ -397,7 +387,7 @@ spu_function_contents_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, vo
 		m_db.emplace(key, func);
 	}
 
-	LOG_FATAL(SPU, "Function detected [0x%05x-0x%05x] (size=0x%x)", func->addr, func->addr + func->size, func->size);
+	LOG_NOTICE(SPU, "Function detected [0x%05x-0x%05x] (size=0x%x)", func->addr, func->addr + func->size, func->size);
 
 	return func;
 }
