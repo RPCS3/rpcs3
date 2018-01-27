@@ -36,6 +36,7 @@ public:
 		PreferredSPUThreads,
 		PPUDebug,
 		SPUDebug,
+		MaxLLVMThreads,
 
 		// Graphics
 		Renderer,
@@ -143,7 +144,7 @@ public:
 	~emu_settings();
 
 	/** Connects a combo box with the target settings type*/
-	void EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged = false);
+	void EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged = false, bool use_max = false, int max = 0);
 
 	/** Connects a check box with the target settings type*/
 	void EnhanceCheckBox(QCheckBox* checkbox, SettingsType type);
@@ -193,6 +194,7 @@ private:
 		{ PreferredSPUThreads,      { "Core", "Preferred SPU Threads"}},
 		{ PPUDebug,                 { "Core", "PPU Debug"}},
 		{ SPUDebug,                 { "Core", "SPU Debug"}},
+		{ MaxLLVMThreads,           { "Core", "Max LLVM Compile Threads"}},
 
 		// Graphics Tab
 		{ Renderer,                 { "Video", "Renderer"}},
