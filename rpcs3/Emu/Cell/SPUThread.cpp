@@ -557,14 +557,15 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc)
 
 	if (spu)
 	{
-		for (auto& func : spu->compiled_functions)
+		for (u32 i = 0; i < spu->next_compiled_func_index; i++)
 		{
-			auto faddr = func->contents->addr;
-			auto fsize = func->contents->size;
+			auto& func = spu->compiled_functions[i];
+			auto faddr = func.contents->addr;
+			auto fsize = func.contents->size;
 
 			if (faddr >= eal && faddr + fsize < eal + args.size)
 			{
-				func->dirty_bit = true;
+				func.dirty_bit = true;
 			}
 		}
 	}
@@ -639,6 +640,7 @@ void SPUThread::process_mfc_cmd()
 			}
 
 			waiter->remove();
+			waiter = nullptr;
 		}
 		else if (s_use_rtm && utils::transaction_enter())
 		{
@@ -820,18 +822,22 @@ void SPUThread::process_mfc_cmd()
 		// Try to process small transfers immediately
 		if (ch_mfc_cmd.size <= max_imm_dma_size && mfc_queue.size() == 0)
 		{
-			vm::reader_lock lock(vm::try_to_lock);
-
-			if (!lock)
+			/* TODO catch the exception (Currently they are ignored and slow things down by grabbing a lock)
 			{
-				break;
-			}
+				vm::reader_lock lock(vm::try_to_lock);
 
-			if (!vm::check_addr(ch_mfc_cmd.eal, ch_mfc_cmd.size, vm::page_readable | (ch_mfc_cmd.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
-			{
-				// TODO
-				break;
+				if (!lock)
+				{
+					break;
+				}
+
+				if (!vm::check_addr(ch_mfc_cmd.eal, ch_mfc_cmd.size, vm::page_readable | (ch_mfc_cmd.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
+				{
+					// TODO
+					break;
+				}
 			}
+			*/
 
 			do_dma_transfer(ch_mfc_cmd, false);
 			return;
@@ -851,13 +857,6 @@ void SPUThread::process_mfc_cmd()
 	{
 		if (ch_mfc_cmd.size <= max_imm_dma_size && mfc_queue.size() == 0)
 		{
-			vm::reader_lock lock(vm::try_to_lock);
-
-			if (!lock)
-			{
-				break;
-			}
-
 			struct list_element
 			{
 				be_t<u16> sb;
@@ -888,11 +887,20 @@ void SPUThread::process_mfc_cmd()
 						break;
 					}
 
-					if (!vm::check_addr(addr, size, vm::page_readable | (ch_mfc_cmd.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
+					/* TODO Catch and handle exceptions here
 					{
-						// TODO
-						break;
-					}
+						vm::reader_lock lock(vm::try_to_lock);
+
+						if (!lock)
+						{
+							break;
+						}
+						if (!vm::check_addr(addr, size, vm::page_readable | (ch_mfc_cmd.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
+						{
+							// TODO
+							break;
+						}
+					}*/
 
 					spu_mfc_cmd transfer;
 					transfer.eal = addr;
@@ -1184,6 +1192,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 			if (test(state & cpu_flag::stop))
 			{
 				waiter->remove();
+				waiter = nullptr;
 				return false;
 			}
 
@@ -1193,6 +1202,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 		if (waiter != nullptr)
 		{
 			waiter->remove();
+			waiter = nullptr;
 		}
 		
 		out = res;
@@ -1813,6 +1823,22 @@ bool SPUThread::stop_and_signal(u32 code)
 	{
 		fmt::throw_exception("Unknown STOP code: 0x%x (Out_MBox=0x%x)" HERE, code, ch_out_mbox.get_value());
 	}
+}
+
+bool SPUThread::same_function(const spu_function_contents_t * func, const void * addr)
+{
+	auto size = func->blocks_size.cbegin();
+	auto dst = reinterpret_cast<const u8 *>(addr);
+	auto src = vm::ps3::_ptr<u8>(offset);
+
+	for (auto block : func->blocks)
+	{
+		u32 offset = block - func->addr;
+		if (memcmp(src + offset, dst + offset, *size) != 0) return false;
+		size++;
+	}
+
+	return true;
 }
 
 void SPUThread::halt()
