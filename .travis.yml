@@ -77,6 +77,7 @@ before_script:
       cp ~/Qt/5.10.0/gcc_64/plugins/xcbglintegrations/* ./appdir/usr/plugins/xcbglintegrations/ ;
       cp ~/Qt/5.10.0/gcc_64/plugins/imageformats/* ./appdir/usr/plugins/imageformats/ ;
       cp ~/Qt/5.10.0/gcc_64/plugins/platforms/* ./appdir/usr/plugins/platforms/ ;
+      rm ./appdir/usr/lib/libfreetype.so.6 ;
       export PATH=${TRAVIS_BUILD_DIR}/build/squashfs-root/usr/bin/:${PATH} ;
       ./squashfs-root/usr/bin/appimagetool ${TRAVIS_BUILD_DIR}/build/appdir ;
       find ./appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq ;
