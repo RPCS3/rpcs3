@@ -84,7 +84,10 @@ namespace vk
 		}
 
 		case rsx::surface_color_format::b8:
-			return std::make_pair(VK_FORMAT_R8_UNORM, vk::default_component_map());
+		{
+			VkComponentMapping no_alpha = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
+			return std::make_pair(VK_FORMAT_R8_UNORM, no_alpha);
+		}
 		
 		case rsx::surface_color_format::g8b8:
 			return std::make_pair(VK_FORMAT_R8G8_UNORM, vk::default_component_map());
