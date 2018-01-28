@@ -924,7 +924,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 				}
 			}
 
-			if (ptr + 0x4 <= fend &&
+			if (ptr + 0x7 <= fend &&
 				ptr[0] == STD(r2, r1, 0x28) &&
 				(ptr[1] & 0xffff0000) == ADDIS(r12, r2, {}) &&
 				(ptr[2] & 0xffff0000) == LWZ(r11, r12, {}) &&
@@ -941,9 +941,9 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 				func.attr += ppu_attr::known_size;
 
 				// Look for another imports to fill gaps (hack)
-				auto p2 = ptr + 8;
+				auto p2 = ptr + 7;
 
-				while (p2 + 0x4 <= fend &&
+				while (p2 + 0x7 <= fend &&
 					p2[0] == STD(r2, r1, 0x28) &&
 					(p2[1] & 0xffff0000) == ADDIS(r12, r2, {}) &&
 					(p2[2] & 0xffff0000) == LWZ(r11, r12, {}) &&
@@ -957,7 +957,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 					next.blocks.emplace(next.addr, next.size);
 					next.attr += ppu_attr::known_addr;
 					next.attr += ppu_attr::known_size;
-					p2 += 8;
+					p2 += 7;
 				}
 
 				continue;
