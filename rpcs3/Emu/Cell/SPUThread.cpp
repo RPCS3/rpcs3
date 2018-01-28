@@ -563,7 +563,7 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc)
 			auto faddr = func.contents->addr;
 			auto fsize = func.contents->size;
 
-			if (faddr >= eal && faddr + fsize < eal + args.size)
+			if (fsize + faddr > eal && eal + args.size > faddr)
 			{
 				func.dirty_bit = true;
 			}
