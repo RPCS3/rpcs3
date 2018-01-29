@@ -672,42 +672,46 @@ void PPUTranslator::VANDC(ppu_opcode_t op)
 	set_vr(op.vd, eval(a & ~b));
 }
 
-#define AVG_OP(a, b) m_ir->CreateLShr(m_ir->CreateSub(a, m_ir->CreateNot(b)), 1) /* (a + b + 1) >> 1 */
-
 void PPUTranslator::VAVGSB(ppu_opcode_t op)
 {
-	const auto ab = SExt(GetVrs(VrType::vi8, op.va, op.vb));
-	SetVr(op.vd, AVG_OP(ab[0], ab[1]));
+	const auto a = get_vr<s8[16]>(op.va);
+	const auto b = get_vr<s8[16]>(op.vb);
+	set_vr(op.vd, eval(avg(a, b)));
 }
 
 void PPUTranslator::VAVGSH(ppu_opcode_t op)
 {
-	const auto ab = SExt(GetVrs(VrType::vi16, op.va, op.vb));
-	SetVr(op.vd, AVG_OP(ab[0], ab[1]));
+	const auto a = get_vr<s16[8]>(op.va);
+	const auto b = get_vr<s16[8]>(op.vb);
+	set_vr(op.vd, eval(avg(a, b)));
 }
 
 void PPUTranslator::VAVGSW(ppu_opcode_t op)
 {
-	const auto ab = SExt(GetVrs(VrType::vi32, op.va, op.vb));
-	SetVr(op.vd, AVG_OP(ab[0], ab[1]));
+	const auto a = get_vr<s32[4]>(op.va);
+	const auto b = get_vr<s32[4]>(op.vb);
+	set_vr(op.vd, eval(avg(a, b)));
 }
 
 void PPUTranslator::VAVGUB(ppu_opcode_t op)
 {
-	const auto ab = ZExt(GetVrs(VrType::vi8, op.va, op.vb));
-	SetVr(op.vd, AVG_OP(ab[0], ab[1]));
+	const auto a = get_vr<u8[16]>(op.va);
+	const auto b = get_vr<u8[16]>(op.vb);
+	set_vr(op.vd, eval(avg(a, b)));
 }
 
 void PPUTranslator::VAVGUH(ppu_opcode_t op)
 {
-	const auto ab = ZExt(GetVrs(VrType::vi16, op.va, op.vb));
-	SetVr(op.vd, AVG_OP(ab[0], ab[1]));
+	const auto a = get_vr<u16[8]>(op.va);
+	const auto b = get_vr<u16[8]>(op.vb);
+	set_vr(op.vd, eval(avg(a, b)));
 }
 
 void PPUTranslator::VAVGUW(ppu_opcode_t op)
 {
-	const auto ab = ZExt(GetVrs(VrType::vi32, op.va, op.vb));
-	SetVr(op.vd, AVG_OP(ab[0], ab[1]));
+	const auto a = get_vr<u32[4]>(op.va);
+	const auto b = get_vr<u32[4]>(op.vb);
+	set_vr(op.vd, eval(avg(a, b)));
 }
 
 void PPUTranslator::VCFSX(ppu_opcode_t op)
