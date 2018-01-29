@@ -12,9 +12,7 @@ using namespace llvm;
 const ppu_decoder<PPUTranslator> s_ppu_decoder;
 
 PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_module& info)
-	: m_context(context)
-	, m_module(module)
-	, m_is_be(false)
+	: cpu_translator(context, module, false)
 	, m_info(info)
 	, m_pure_attr(AttributeSet::get(m_context, AttributeSet::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadNone}))
 {

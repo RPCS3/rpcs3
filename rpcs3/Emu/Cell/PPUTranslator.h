@@ -2,117 +2,12 @@
 
 #ifdef LLVM_AVAILABLE
 
-#include <unordered_map>
-#include <map>
-#include <unordered_set>
-#include <set>
-#include <array>
-#include <vector>
-
+#include "../rpcs3/Emu/CPU/CPUTranslator.h"
 #include "../rpcs3/Emu/Cell/PPUOpcodes.h"
 #include "../rpcs3/Emu/Cell/PPUAnalyser.h"
 
-#include "restore_new.h"
-#ifdef _MSC_VER
-#pragma warning(push, 0)
-#endif
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Module.h"
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-#include "define_new_memleakdetect.h"
-
-#include "../Utilities/types.h"
-#include "../Utilities/StrFmt.h"
-#include "../Utilities/BEType.h"
-
-template<typename T, typename = void>
-struct TypeGen
+class PPUTranslator final : public cpu_translator
 {
-	static_assert(!sizeof(T), "GetType<>() error: unknown type");
-};
-
-template<typename T>
-struct TypeGen<T, std::enable_if_t<std::is_void<T>::value>>
-{
-	static llvm::Type* get(llvm::LLVMContext& context) { return llvm::Type::getVoidTy(context); }
-};
-
-template<typename T>
-struct TypeGen<T, std::enable_if_t<std::is_same<T, s64>::value || std::is_same<T, u64>::value || std::is_same<T, uptr>::value>>
-{
-	static llvm::Type* get(llvm::LLVMContext& context) { return llvm::Type::getInt64Ty(context); }
-};
-
-template<typename T>
-struct TypeGen<T, std::enable_if_t<std::is_same<T, s32>::value || std::is_same<T, u32>::value>>
-{
-	static llvm::Type* get(llvm::LLVMContext& context) { return llvm::Type::getInt32Ty(context); }
-};
-
-template<typename T>
-struct TypeGen<T, std::enable_if_t<std::is_same<T, s16>::value || std::is_same<T, u16>::value>>
-{
-	static llvm::Type* get(llvm::LLVMContext& context) { return llvm::Type::getInt16Ty(context); }
-};
-
-template<typename T>
-struct TypeGen<T, std::enable_if_t<std::is_same<T, s8>::value || std::is_same<T, u8>::value || std::is_same<T, char>::value>>
-{
-	static llvm::Type* get(llvm::LLVMContext& context) { return llvm::Type::getInt8Ty(context); }
-};
-
-template<>
-struct TypeGen<f32, void>
-{
-	static llvm::Type* get(llvm::LLVMContext& context) { return llvm::Type::getFloatTy(context); }
-};
-
-template<>
-struct TypeGen<f64, void>
-{
-	static llvm::Type* get(llvm::LLVMContext& context) { return llvm::Type::getDoubleTy(context); }
-};
-
-template<>
-struct TypeGen<bool, void>
-{
-	static llvm::Type* get(llvm::LLVMContext& context) { return llvm::Type::getInt1Ty(context); }
-};
-
-template<>
-struct TypeGen<u128, void>
-{
-	static llvm::Type* get(llvm::LLVMContext& context) { return llvm::Type::getIntNTy(context, 128); }
-};
-
-// Pointer type
-template<typename T>
-struct TypeGen<T*, void>
-{
-	static llvm::Type* get(llvm::LLVMContext& context) { return TypeGen<T>::get(context)->getPointerTo(); }
-};
-
-// Vector type
-template<typename T, int N>
-struct TypeGen<T[N], void>
-{
-	static llvm::Type* get(llvm::LLVMContext& context) { return llvm::VectorType::get(TypeGen<T>::get(context), N); }
-};
-
-class PPUTranslator final //: public CPUTranslator
-{
-	// LLVM context
-	llvm::LLVMContext& m_context;
-
-	// Module to which all generated code is output to
-	llvm::Module* const m_module;
-
-	// Endianness, affects vector element numbering (TODO)
-	const bool m_is_be;
-
 	// PPU Module
 	const ppu_module& m_info;
 
@@ -190,6 +85,20 @@ class PPUTranslator final //: public CPUTranslator
 
 #undef DEF_VALUE
 public:
+
+	template <typename T>
+	value_t<T> get_vr(u32 vr)
+	{
+		value_t<T> result;
+		result.value = m_ir->CreateBitCast(GetVr(vr, VrType::vi32), value_t<T>::get_type(m_context));
+		return result;
+	}
+
+	template <typename T>
+	void set_vr(u32 vr, value_t<T> v)
+	{
+		return SetVr(vr, v.value);
+	}
 
 	// Get current instruction address
 	llvm::Value* GetAddr(u64 _add = 0);
@@ -381,19 +290,6 @@ public:
 
 	// Write to memory
 	void WriteMemory(llvm::Value* addr, llvm::Value* value, bool is_be = true, u32 align = 1);
-
-	// Convert a C++ type to an LLVM type
-	template<typename T>
-	llvm::Type* GetType()
-	{
-		return TypeGen<T>::get(m_context);
-	}
-
-	template<typename T>
-	llvm::PointerType* GetPtrType()
-	{
-		return TypeGen<T>::get(m_context)->getPointerTo();
-	}
 
 	// Get an undefined value with specified type
 	template<typename T>
