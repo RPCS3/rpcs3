@@ -66,6 +66,7 @@ before_script:
       export LD_LIBRARY_PATH=~/Qt/5.10.0/gcc_64/lib;
       DESTDIR=appdir ninja install ; find appdir/ ;
       find ../bin ;
+      curl -fsS -o appdir/usr/share/rpcs3/GuiConfigs/compat_database.dat "https://rpcs3.net/compatibility?api=v1&export" ;
       wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" ;
       chmod a+x linuxdeployqt*.AppImage ;
       export PATH=~/Qt/5.10.0/gcc_64/bin/:${PATH} ;
