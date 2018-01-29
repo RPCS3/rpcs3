@@ -32,13 +32,23 @@ void patch_engine::append(const std::string& patch)
 {
 	if (fs::file f{patch})
 	{
-		auto root = YAML::Load(f.to_string());
+		YAML::Node root;
+
+		try
+		{
+			root = YAML::Load(f.to_string());
+		}
+		catch (const std::exception& e)
+		{
+			LOG_FATAL(GENERAL, "Failed to load patch file %s\n%s thrown: %s", patch, typeid(e).name(), e.what());
+			return;
+		}
 
 		for (auto pair : root)
 		{
 			auto& name = pair.first.Scalar();
 			auto& data = m_map[name];
-			
+
 			for (auto patch : pair.second)
 			{
 				u64 type64 = 0;
@@ -91,7 +101,7 @@ void patch_engine::append(const std::string& patch)
 					break;
 				}
 				}
-				
+
 				data.emplace_back(info);
 			}
 		}
