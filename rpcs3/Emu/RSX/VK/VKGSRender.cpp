@@ -85,7 +85,7 @@ namespace vk
 
 		case rsx::surface_color_format::b8:
 		{
-			VkComponentMapping no_alpha = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
+			VkComponentMapping no_alpha = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ONE };
 			return std::make_pair(VK_FORMAT_R8_UNORM, no_alpha);
 		}
 		
