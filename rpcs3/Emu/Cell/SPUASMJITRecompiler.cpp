@@ -1859,16 +1859,14 @@ void spu_recompiler::SHLQBY(spu_opcode_t op)
 
 void spu_recompiler::ORX(spu_opcode_t op)
 {
-	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 0));
-	c->or_(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 1));
-	c->or_(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 2));
-	c->or_(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	c->mov(SPU_OFF_32(gpr, op.rt, &v128::_u32, 3), *addr);
-	c->xor_(*addr, *addr);
-	c->mov(SPU_OFF_32(gpr, op.rt, &v128::_u32, 0), *addr);
-	c->mov(SPU_OFF_32(gpr, op.rt, &v128::_u32, 1), *addr);
-	c->mov(SPU_OFF_32(gpr, op.rt, &v128::_u32, 2), *addr);
-	c->unuse(*addr);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& v1 = XmmAlloc();
+	c->pshufd(v1, va, 0xb1);
+	c->por(va, v1);
+	c->pshufd(v1, va, 0x4e);
+	c->por(va, v1);
+	c->pslldq(va, 12);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
 void spu_recompiler::CBD(spu_opcode_t op)
