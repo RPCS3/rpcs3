@@ -157,6 +157,14 @@ void spu_recompiler::compile(spu_function_t& f)
 	// Start compilation
 	m_pos = f.addr;
 
+	if (utils::has_avx())
+	{
+		compiler.vzeroupper();
+		//compiler.pxor(asmjit::x86::xmm0, asmjit::x86::xmm0);
+		//compiler.vptest(asmjit::x86::ymm0, asmjit::x86::ymm0);
+		//compiler.jnz(end_label);
+	}
+
 	for (const u32 op : f.data)
 	{
 		// Bind label if initialized
