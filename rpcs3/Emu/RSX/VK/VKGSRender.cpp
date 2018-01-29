@@ -363,23 +363,14 @@ namespace
 		subpass.pColorAttachments = number_of_color_surface > 0 ? attachment_references.data() : nullptr;
 		subpass.pDepthStencilAttachment = depth_format != VK_FORMAT_UNDEFINED ? &attachment_references.back() : nullptr;
 
-		VkSubpassDependency dependency = {};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstSubpass = 0;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
 		VkRenderPassCreateInfo rp_info = {};
 		rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		rp_info.attachmentCount = static_cast<uint32_t>(attachments.size());
 		rp_info.pAttachments = attachments.data();
 		rp_info.subpassCount = 1;
 		rp_info.pSubpasses = &subpass;
-		rp_info.pDependencies = &dependency;
-		rp_info.dependencyCount = 1;
+		rp_info.pDependencies = nullptr;
+		rp_info.dependencyCount = 0;
 
 		VkRenderPass result;
 		CHECK_RESULT(vkCreateRenderPass(dev, &rp_info, NULL, &result));
@@ -1146,8 +1137,22 @@ void VKGSRender::end()
 
 					if (replace)
 					{
-						fs_sampler_handles[i] = std::make_unique<vk::sampler>(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
-							min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode);
+						for (auto &sampler : m_current_frame->samplers_to_clean)
+						{
+							if (sampler->matches(wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
+								min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode))
+							{
+								fs_sampler_handles[i] = std::move(sampler);
+								replace = false;
+								break;
+							}
+						}
+
+						if (replace)
+						{
+							fs_sampler_handles[i] = std::make_unique<vk::sampler>(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
+								min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode);
+						}
 					}
 				}
 				else
@@ -1191,6 +1196,7 @@ void VKGSRender::end()
 
 					if (replace)
 					{
+						//This is unlikely, there is no need to check the dirty pool
 						vs_sampler_handles[i] = std::make_unique<vk::sampler>(
 							*m_device,
 							VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
