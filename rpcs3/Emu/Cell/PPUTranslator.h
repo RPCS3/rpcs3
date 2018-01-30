@@ -17,9 +17,6 @@ class PPUTranslator final : public cpu_translator
 	// Attributes for function calls which are "pure" and may be optimized away if their results are unused
 	const llvm::AttributeSet m_pure_attr;
 
-	// IR builder
-	llvm::IRBuilder<>* m_ir;
-
 	// LLVM function
 	llvm::Function* m_function;
 
