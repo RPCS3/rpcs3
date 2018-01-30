@@ -1469,6 +1469,7 @@ namespace rsx
 					m_cancel_btn->set_pos(x + 30, y + h + 20);
 				else
 					m_cancel_btn->set_pos(x + 180, y + h + 20);
+
 				m_cancel_only = cancel_only;
 				is_compiled = false;
 			}
