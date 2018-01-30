@@ -325,8 +325,10 @@ namespace rsx
 				result.add(m_list->get_compiled());
 				result.add(m_description->get_compiled());
 				result.add(m_time_thingy->get_compiled());
+
 				if (m_no_saves)
 					result.add(m_no_saves_text->get_compiled());
+
 				return result;
 			}
 
