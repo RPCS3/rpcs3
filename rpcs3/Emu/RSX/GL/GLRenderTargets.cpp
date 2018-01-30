@@ -31,7 +31,8 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		return{ ::gl::texture::type::f32, ::gl::texture::format::rgba, true, 4, 4 };
 
 	case rsx::surface_color_format::b8:
-		return{ ::gl::texture::type::ubyte, ::gl::texture::format::r, false, 1, 1 };
+		return{ ::gl::texture::type::ubyte, ::gl::texture::format::r, false, 1, 1,
+		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::r, ::gl::texture::channel::r } };
 
 	case rsx::surface_color_format::g8b8:
 		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, false, 2, 1 };

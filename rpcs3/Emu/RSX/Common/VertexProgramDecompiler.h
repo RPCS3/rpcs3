@@ -126,7 +126,14 @@ protected:
 	/** insert end of main function (return value, output copy...)
 	*/
 	virtual void insertMainEnd(std::stringstream &OS) = 0;
+
 public:
+	struct
+	{
+		bool has_lit_op = false;
+	}
+	properties;
+
 	VertexProgramDecompiler(const RSXVertexProgram& prog);
 	std::string Decompile();
 };

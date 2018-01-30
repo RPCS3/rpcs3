@@ -40,15 +40,48 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	{
 		if (dst.exp_tex)
 		{
-			//If dst.exp_tex really is _bx2 postfix, we need to unpack dynamic range
+			//Expand [0,1] to [-1, 1]. Confirmed by Castlevania: LOS
 			AddCode("//exp tex flag is set");
 			code = "((" + code + "- 0.5) * 2.)";
 		}
 
 		if (dst.saturate)
+		{
 			code = saturate(code);
-		else
-			code = ClampValue(code, dst.prec);
+		}
+		else if (dst.prec)
+		{
+			switch (dst.opcode)
+			{
+			case RSX_FP_OPCODE_NRM:
+			case RSX_FP_OPCODE_MAX:
+			case RSX_FP_OPCODE_MIN:
+			case RSX_FP_OPCODE_COS:
+			case RSX_FP_OPCODE_SIN:
+			case RSX_FP_OPCODE_REFL:
+			case RSX_FP_OPCODE_EX2:
+			case RSX_FP_OPCODE_FRC:
+			case RSX_FP_OPCODE_LIT:
+			case RSX_FP_OPCODE_LIF:
+			case RSX_FP_OPCODE_LRP:
+			case RSX_FP_OPCODE_LG2:
+				break;
+			case RSX_FP_OPCODE_MOV:
+				//NOTE: Sometimes varying inputs from VS are out of range so do not exempt any input types, unless fp16 (Naruto UNS)
+				if (dst.fp16 && src0.fp16 && src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP)
+					break;
+			default:
+			{
+				//fp16 precsion flag on f32 register; ignore
+				if (dst.prec == 1 && !dst.fp16)
+					break;
+
+				//clamp value to allowed range
+				code = ClampValue(code, dst.prec);
+				break;
+			}
+			}
+		}
 	}
 
 	code += (append_mask ? "$m" : "");
@@ -195,12 +228,12 @@ std::string FragmentProgramDecompiler::AddX2d()
 //Failure to catch causes infinite values since theres alot of rcp(0)
 std::string FragmentProgramDecompiler::NotZero(const std::string& code)
 {
-	return "(max(abs(" + code + "), 0.000001) * sign(" + code + "))";
+	return "(max(abs(" + code + "), 0.0000000001) * sign(" + code + "))";
 }
 
 std::string FragmentProgramDecompiler::NotZeroPositive(const std::string& code)
 {
-	return "max(abs(" + code + "), 0.000001)";
+	return "max(abs(" + code + "), 0.0000000001)";
 }
 
 std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 precision)
@@ -385,7 +418,10 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 				auto &reg = temp_registers[src.tmp_reg_index];
 				if (reg.requires_gather(xy_read, zw_read))
+				{
+					properties.has_gather_op = true;
 					AddCode(reg.gather_r());
+				}
 			}
 		}
 
@@ -407,7 +443,10 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 		switch (dst.src_attr_reg_num)
 		{
-		case 0x00: ret += reg_table[0]; break;
+		case 0x00:
+			ret += reg_table[0];
+			properties.has_wpos_input = true;
+			break;
 		default:
 			if (dst.src_attr_reg_num < sizeof(reg_table) / sizeof(reg_table[0]))
 			{
@@ -478,24 +517,28 @@ std::string FragmentProgramDecompiler::BuildCode()
 	//Insert global function definitions
 	insertGlobalFunctions(OS);
 
-	std::string float2 = getFloatTypeName(2);
-	std::string float4 = getFloatTypeName(4);
+	//Declare register gather/merge if needed
+	if (properties.has_gather_op)
+	{
+		std::string float2 = getFloatTypeName(2);
+		std::string float4 = getFloatTypeName(4);
 
-	OS << float4 << " gather(" << float4 << " _h0, " << float4 << " _h1)\n";
-	OS << "{\n";
-	OS << "	float x = uintBitsToFloat(packHalf2x16(_h0.xy));\n";
-	OS << "	float y = uintBitsToFloat(packHalf2x16(_h0.zw));\n";
-	OS << "	float z = uintBitsToFloat(packHalf2x16(_h1.xy));\n";
-	OS << "	float w = uintBitsToFloat(packHalf2x16(_h1.zw));\n";
-	OS << "	return " << float4 << "(x, y, z, w);\n";
-	OS << "}\n\n";
+		OS << float4 << " gather(" << float4 << " _h0, " << float4 << " _h1)\n";
+		OS << "{\n";
+		OS << "	float x = uintBitsToFloat(packHalf2x16(_h0.xy));\n";
+		OS << "	float y = uintBitsToFloat(packHalf2x16(_h0.zw));\n";
+		OS << "	float z = uintBitsToFloat(packHalf2x16(_h1.xy));\n";
+		OS << "	float w = uintBitsToFloat(packHalf2x16(_h1.zw));\n";
+		OS << "	return " << float4 << "(x, y, z, w);\n";
+		OS << "}\n\n";
 
-	OS << float2 << " gather(" << float4 << " _h)\n";
-	OS << "{\n";
-	OS << "	float x = uintBitsToFloat(packHalf2x16(_h.xy));\n";
-	OS << "	float y = uintBitsToFloat(packHalf2x16(_h.zw));\n";
-	OS << "	return " << float2 << "(x, y);\n";
-	OS << "}\n\n";
+		OS << float2 << " gather(" << float4 << " _h)\n";
+		OS << "{\n";
+		OS << "	float x = uintBitsToFloat(packHalf2x16(_h.xy));\n";
+		OS << "	float y = uintBitsToFloat(packHalf2x16(_h.zw));\n";
+		OS << "	return " << float2 << "(x, y);\n";
+		OS << "}\n\n";
+	}
 
 	insertMainStart(OS);
 	OS << main << std::endl;
@@ -558,7 +601,10 @@ bool FragmentProgramDecompiler::handle_scb(u32 opcode)
 	case RSX_FP_OPCODE_EX2: SetDst("exp2($0.xxxx)"); return true;
 	case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); return true;
 	case RSX_FP_OPCODE_FRC: SetDst(getFunction(FUNCTION::FUNCTION_FRACT)); return true;
-	case RSX_FP_OPCODE_LIT: SetDst("lit_legacy($0)"); return true;
+	case RSX_FP_OPCODE_LIT:
+		SetDst("lit_legacy($0)");
+		properties.has_lit_op = true;
+		return true;
 	case RSX_FP_OPCODE_LIF: SetDst(getFloatTypeName(4) + "(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); return true;
 	case RSX_FP_OPCODE_LRP: SetDst(getFloatTypeName(4) + "($2 * (1 - $0) + $1 * $0)"); return true;
 	case RSX_FP_OPCODE_LG2: SetDst("log2(" + NotZeroPositive("$0.x") + ").xxxx"); return true;

@@ -149,7 +149,7 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	insert_glsl_legacy_function(OS, glsl::glsl_vertex_program);
+	insert_glsl_legacy_function(OS, glsl::glsl_vertex_program, properties.has_lit_op);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, gl::get_driver_caps().vendor_INTEL==false);
 
 	std::string parameters = "";
