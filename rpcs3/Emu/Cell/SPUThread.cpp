@@ -688,31 +688,33 @@ void SPUThread::process_mfc_cmd()
 		bool result = false;
 
 		// Check for fast exit in the beginning as well
-		vm::writer_lock lock(vm::try_to_lock);
-
-		if (lock.locked || memcmp(rdata.data(), data.data(), rdata.size() * sizeof(rdata[0])) == 0) {
-			if (raddr == ch_mfc_cmd.eal && rtime == vm::reservation_acquire(raddr, 128))
+		if (raddr == ch_mfc_cmd.eal && rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
+		{
+			// TODO: vm::check_addr
+			if (s_use_rtm && utils::transaction_enter())
 			{
-				// TODO: vm::check_addr
-				if (s_use_rtm && utils::transaction_enter())
+				if (!vm::reader_lock{ vm::try_to_lock })
 				{
-					if (!lock.locked && !vm::reader_lock{ vm::try_to_lock })
-					{
-						_xabort(0);
-					}
-
-					if (rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
-					{
-						data = to_write;
-						result = true;
-
-						vm::reservation_update(raddr, 128);
-						vm::notify(raddr, 128);
-					}
-
-					_xend();
+					_xabort(0);
 				}
-				else if (lock.locked)
+
+				if (rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
+				{
+					data = to_write;
+					result = true;
+
+					vm::reservation_update(raddr, 128);
+					vm::notify(raddr, 128);
+				}
+
+				_xend();
+			}
+			else
+			{
+				// TODO maybe timeout and check if the lock is still needed in long waits (If rtime changes, no use)
+				vm::writer_lock lock;
+
+				if (rtime == vm::reservation_acquire(raddr, 128))
 				{
 					data = to_write;
 					vm::reservation_update(raddr, 128);
@@ -720,21 +722,6 @@ void SPUThread::process_mfc_cmd()
 
 					result = true;
 					vm::notify(raddr, 128);
-				}
-				else
-				{
-					// TODO maybe timeout and check if the lock is still needed in long waits (If rtime changes, no use)
-					vm::writer_lock lock(0);
-
-					if (rtime == vm::reservation_acquire(raddr, 128))
-					{
-						data = to_write;
-						vm::reservation_update(raddr, 128);
-						lock.unlock();
-
-						result = true;
-						vm::notify(raddr, 128);
-					}
 				}
 			}
 		}

@@ -26,8 +26,8 @@ void spu_recompiler_base::enter(SPUThread& spu)
 	// Search if cached data matches
 	auto func_ptr = spu.compiled_cache[spu.pc / 4];
 
-	// func.contents is there only as a temporary test, to see if SPU code not getting invalidated is the reason for the crashes
-	if (func_ptr && func_ptr->dirty_bit)
+	// Dirty bit check commented out until another code invalidation is found - SYNC, SYNCC, DSYNC and DMAs aren't covering everything
+	if (func_ptr/* && func_ptr->dirty_bit*/)
 	{
 		auto & func = *func_ptr;
 		func.dirty_bit = false;
