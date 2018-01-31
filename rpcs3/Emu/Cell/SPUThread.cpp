@@ -41,6 +41,18 @@ bool operator ==(const u128& lhs, const u128& rhs)
 }
 #endif
 
+#ifndef _MSC_VER
+FORCE_INLINE void __movsq(unsigned long * Destination, const unsigned long * Source, size_t Count)
+{
+	__asm__ __volatile__
+	(
+		"rep; movsq" :
+		[Destination] "=D" (Destination), [Source] "=S" (Source), [Count] "=c" (Count) :
+		"[Destination]" (Destination), "[Source]" (Source), "[Count]" (Count)
+	);
+}
+#endif
+
 extern u64 get_timebased_time();
 extern u64 get_system_time();
 
@@ -134,8 +146,8 @@ namespace spu
 			{
 				if (timeout_ms > 0)
 				{
-					const u64 timeout = timeout_ms * 1000u; //convert to microseconds
-					const u64 start = get_system_time();
+					const auto timeout = timeout_ms * 1000ull; //convert to microseconds
+					const auto start = get_system_time();
 					auto remaining = timeout;
 
 					while (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
@@ -162,14 +174,14 @@ namespace spu
 				}
 			}
 
-			atomic_instruction_table[pc_offset]++;
+			++atomic_instruction_table[pc_offset];
 		}
 
 		void release_pc_address(u32 pc)
 		{
 			const u32 pc_offset = pc >> 2;
 
-			atomic_instruction_table[pc_offset]--;
+			--atomic_instruction_table[pc_offset];
 		}
 
 		struct concurrent_execution_watchdog
@@ -290,6 +302,8 @@ void SPUThread::on_spawn()
 	{
 		thread_ctrl::set_native_priority(-1);
 	}
+
+	++g_num_spu_threads;
 }
 
 void SPUThread::on_init(const std::shared_ptr<void>& _this)
@@ -456,6 +470,7 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc)
 
 	u32 eal = args.eal;
 	u32 lsa = args.lsa & 0x3ffff;
+	SPUThread * spu = nullptr;
 
 	if (eal >= SYS_SPU_THREAD_BASE_LOW && offset < RAW_SPU_BASE_ADDR) // SPU Thread Group MMIO (LS and SNR)
 	{
@@ -464,15 +479,15 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc)
 
 		if (group && index < group->num && group->threads[index])
 		{
-			auto& spu = static_cast<SPUThread&>(*group->threads[index]);
+			spu = group->threads[index].get();
 
 			if (offset + args.size - 1 < 0x40000) // LS access
 			{
-				eal = spu.offset + offset; // redirect access
+				eal = spu->offset + offset; // redirect access
 			}
 			else if (!is_get && args.size == 4 && (offset == SYS_SPU_THREAD_SNR1 || offset == SYS_SPU_THREAD_SNR2))
 			{
-				spu.push_snr(SYS_SPU_THREAD_SNR2 == offset, _ref<u32>(lsa));
+				spu->push_snr(SYS_SPU_THREAD_SNR2 == offset, _ref<u32>(lsa));
 				return;
 			}
 			else
@@ -532,82 +547,27 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc)
 	}
 	default:
 	{
-		auto vdst = static_cast<__m128i*>(dst);
-		auto vsrc = static_cast<const __m128i*>(src);
-		auto vcnt = size / sizeof(__m128i);
+		auto vdst = static_cast<u64*>(dst);
+		auto vsrc = static_cast<const u64*>(src);
+		auto vcnt = size / sizeof(u64);
 
-		//if (is_get && !from_mfc)
-		{
-			while (vcnt >= 8)
-			{
-				const __m128i data[]
-				{
-					_mm_load_si128(vsrc + 0),
-					_mm_load_si128(vsrc + 1),
-					_mm_load_si128(vsrc + 2),
-					_mm_load_si128(vsrc + 3),
-					_mm_load_si128(vsrc + 4),
-					_mm_load_si128(vsrc + 5),
-					_mm_load_si128(vsrc + 6),
-					_mm_load_si128(vsrc + 7),
-				};
-
-				_mm_store_si128(vdst + 0, data[0]);
-				_mm_store_si128(vdst + 1, data[1]);
-				_mm_store_si128(vdst + 2, data[2]);
-				_mm_store_si128(vdst + 3, data[3]);
-				_mm_store_si128(vdst + 4, data[4]);
-				_mm_store_si128(vdst + 5, data[5]);
-				_mm_store_si128(vdst + 6, data[6]);
-				_mm_store_si128(vdst + 7, data[7]);
-
-				vcnt -= 8;
-				vsrc += 8;
-				vdst += 8;
-			}
-
-			while (vcnt--)
-			{
-				_mm_store_si128(vdst++, _mm_load_si128(vsrc++));
-			}
-
-			break;
-		}
-
-		// Disabled
-		while (vcnt >= 8)
-		{
-			const __m128i data[]
-			{
-				_mm_load_si128(vsrc + 0),
-				_mm_load_si128(vsrc + 1),
-				_mm_load_si128(vsrc + 2),
-				_mm_load_si128(vsrc + 3),
-				_mm_load_si128(vsrc + 4),
-				_mm_load_si128(vsrc + 5),
-				_mm_load_si128(vsrc + 6),
-				_mm_load_si128(vsrc + 7),
-			};
-
-			_mm_stream_si128(vdst + 0, data[0]);
-			_mm_stream_si128(vdst + 1, data[1]);
-			_mm_stream_si128(vdst + 2, data[2]);
-			_mm_stream_si128(vdst + 3, data[3]);
-			_mm_stream_si128(vdst + 4, data[4]);
-			_mm_stream_si128(vdst + 5, data[5]);
-			_mm_stream_si128(vdst + 6, data[6]);
-			_mm_stream_si128(vdst + 7, data[7]);
-
-			vcnt -= 8;
-			vsrc += 8;
-			vdst += 8;
-		}
-
-		while (vcnt--)
-		{
-			_mm_stream_si128(vdst++, _mm_load_si128(vsrc++));
-		}
+		__movsq(vdst, vsrc, vcnt);
 	}
+	}
+
+	if (spu)
+	{
+		for (u32 i = 0; i < spu->next_compiled_func_index; i++)
+		{
+			auto& func = spu->compiled_functions[i];
+			auto faddr = func.contents->addr;
+			auto fsize = func.contents->size;
+
+			if (fsize + faddr > eal && eal + args.size > faddr)
+			{
+				func.dirty_bit = true;
+			}
+		}
 	}
 
 	if (is_get && from_mfc)
@@ -662,15 +622,14 @@ void SPUThread::process_mfc_cmd()
 
 		if (is_polling)
 		{
-			vm::waiter waiter;
-			waiter.owner = this;
-			waiter.addr  = raddr;
-			waiter.size  = 128;
-			waiter.stamp = rtime;
-			waiter.data  = rdata.data();
-			waiter.init();
+			vm::waiter* waiter = new vm::waiter();
+			waiter->owner = this;
+			waiter->addr = raddr;
+			waiter->stamp = rtime;
+			waiter->data = rdata.data();
+			waiter->init();
 
-			while (vm::reservation_acquire(raddr, 128) == waiter.stamp && rdata == data)
+			while (vm::reservation_acquire(raddr, 128) == waiter->stamp && rdata == data)
 			{
 				if (test(state, cpu_flag::stop))
 				{
@@ -679,6 +638,9 @@ void SPUThread::process_mfc_cmd()
 
 				thread_ctrl::wait_for(100);
 			}
+
+			waiter->remove();
+			waiter = nullptr;
 		}
 		else if (s_use_rtm && utils::transaction_enter())
 		{
@@ -704,9 +666,11 @@ void SPUThread::process_mfc_cmd()
 		if (is_polling || UNLIKELY(vm::reservation_acquire(raddr, 128) != rtime))
 		{
 			// TODO: vm::check_addr
-			vm::reader_lock lock;
-			rtime = vm::reservation_acquire(raddr, 128);
-			rdata = data;
+			{
+				vm::reader_lock lock;
+				rtime = vm::reservation_acquire(raddr, 128);
+			}
+			memcpy(rdata.data(), data.data(), rdata.size() * sizeof(rdata[0]));
 		}
 
 		// Copy to LS
@@ -723,12 +687,13 @@ void SPUThread::process_mfc_cmd()
 
 		bool result = false;
 
+		// Check for fast exit in the beginning as well
 		if (raddr == ch_mfc_cmd.eal && rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
 		{
 			// TODO: vm::check_addr
 			if (s_use_rtm && utils::transaction_enter())
 			{
-				if (!vm::reader_lock{vm::try_to_lock})
+				if (!vm::reader_lock{ vm::try_to_lock })
 				{
 					_xabort(0);
 				}
@@ -746,14 +711,16 @@ void SPUThread::process_mfc_cmd()
 			}
 			else
 			{
+				// TODO maybe timeout and check if the lock is still needed in long waits (If rtime changes, no use)
 				vm::writer_lock lock;
 
-				if (rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
+				if (rtime == vm::reservation_acquire(raddr, 128))
 				{
 					data = to_write;
-					result = true;
-
 					vm::reservation_update(raddr, 128);
+					lock.unlock();
+
+					result = true;
 					vm::notify(raddr, 128);
 				}
 			}
@@ -766,11 +733,10 @@ void SPUThread::process_mfc_cmd()
 		else
 		{
 			ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
-		}
-
-		if (raddr && !result)
-		{
-			ch_event_stat |= SPU_EVENT_LR;
+			if (raddr)
+			{
+				ch_event_stat |= SPU_EVENT_LR;
+			}
 		}
 
 		raddr = 0;
@@ -808,9 +774,11 @@ void SPUThread::process_mfc_cmd()
 			return;
 		}
 
-		vm::writer_lock lock(0);
 		data = to_write;
-		vm::reservation_update(ch_mfc_cmd.eal, 128);
+		{
+			vm::writer_lock lock(0);
+			vm::reservation_update(ch_mfc_cmd.eal, 128);
+		}
 		vm::notify(ch_mfc_cmd.eal, 128);
 
 		ch_atomic_stat.set_value(MFC_PUTLLUC_SUCCESS);
@@ -841,18 +809,22 @@ void SPUThread::process_mfc_cmd()
 		// Try to process small transfers immediately
 		if (ch_mfc_cmd.size <= max_imm_dma_size && mfc_queue.size() == 0)
 		{
-			vm::reader_lock lock(vm::try_to_lock);
-
-			if (!lock)
+			/* TODO catch the exception (Currently they are ignored and slow things down by grabbing a lock)
 			{
-				break;
-			}
+				vm::reader_lock lock(vm::try_to_lock);
 
-			if (!vm::check_addr(ch_mfc_cmd.eal, ch_mfc_cmd.size, vm::page_readable | (ch_mfc_cmd.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
-			{
-				// TODO
-				break;
+				if (!lock)
+				{
+					break;
+				}
+
+				if (!vm::check_addr(ch_mfc_cmd.eal, ch_mfc_cmd.size, vm::page_readable | (ch_mfc_cmd.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
+				{
+					// TODO
+					break;
+				}
 			}
+			*/
 
 			do_dma_transfer(ch_mfc_cmd, false);
 			return;
@@ -872,13 +844,6 @@ void SPUThread::process_mfc_cmd()
 	{
 		if (ch_mfc_cmd.size <= max_imm_dma_size && mfc_queue.size() == 0)
 		{
-			vm::reader_lock lock(vm::try_to_lock);
-
-			if (!lock)
-			{
-				break;
-			}
-
 			struct list_element
 			{
 				be_t<u16> sb;
@@ -909,11 +874,20 @@ void SPUThread::process_mfc_cmd()
 						break;
 					}
 
-					if (!vm::check_addr(addr, size, vm::page_readable | (ch_mfc_cmd.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
+					/* TODO Catch and handle exceptions here
 					{
-						// TODO
-						break;
-					}
+						vm::reader_lock lock(vm::try_to_lock);
+
+						if (!lock)
+						{
+							break;
+						}
+						if (!vm::check_addr(addr, size, vm::page_readable | (ch_mfc_cmd.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
+						{
+							// TODO
+							break;
+						}
+					}*/
 
 					spu_mfc_cmd transfer;
 					transfer.eal = addr;
@@ -1189,28 +1163,35 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 			return true;
 		}
 
-		vm::waiter waiter;
-
+		vm::waiter* waiter = nullptr;
 		if (ch_event_mask & SPU_EVENT_LR)
 		{
-			waiter.owner = this;
-			waiter.addr = raddr;
-			waiter.size = 128;
-			waiter.stamp = rtime;
-			waiter.data = rdata.data();
-			waiter.init();
+			waiter = new vm::waiter();
+			waiter->owner = this;
+			waiter->addr = raddr;
+			waiter->stamp = rtime;
+			waiter->data = rdata.data();
+			waiter->init();
 		}
 
 		while (!(res = get_events(true)))
 		{
 			if (test(state & cpu_flag::stop))
 			{
+				waiter->remove();
+				waiter = nullptr;
 				return false;
 			}
 
 			thread_ctrl::wait_for(100);
 		}
 
+		if (waiter != nullptr)
+		{
+			waiter->remove();
+			waiter = nullptr;
+		}
+		
 		out = res;
 		return true;
 	}
@@ -1829,6 +1810,22 @@ bool SPUThread::stop_and_signal(u32 code)
 	{
 		fmt::throw_exception("Unknown STOP code: 0x%x (Out_MBox=0x%x)" HERE, code, ch_out_mbox.get_value());
 	}
+}
+
+bool SPUThread::same_function(const spu_function_contents_t * func, const void * addr)
+{
+	auto size = func->blocks_size.cbegin();
+	auto dst = reinterpret_cast<const u8 *>(addr);
+	auto src = vm::ps3::_ptr<u8>(offset);
+
+	for (auto block : func->blocks)
+	{
+		u32 offset = block - func->addr;
+		if (memcmp(src + offset, dst + offset, *size) != 0) return false;
+		size++;
+	}
+
+	return true;
 }
 
 void SPUThread::halt()

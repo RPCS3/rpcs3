@@ -131,25 +131,20 @@ u64 get_timebased_time()
 // Returns some relative time in microseconds, don't change this fact
 u64 get_system_time()
 {
+#ifdef _WIN32
+	// Pull the time directly from Windows shared page (Constant location on all Windows machines)
+	return *reinterpret_cast<u64*>(0x7ffe0014) / 10;
+#else
 	while (true)
 	{
-#ifdef _WIN32
-		LARGE_INTEGER count;
-		verify(HERE), QueryPerformanceCounter(&count);
-
-		const u64 time = count.QuadPart;
-		const u64 freq = s_time_aux_info.perf_freq;
-
-		const u64 result = time / freq * 1000000u + (time % freq) * 1000000u / freq;
-#else
 		struct timespec ts;
 		verify(HERE), ::clock_gettime(CLOCK_MONOTONIC, &ts) == 0;
 
 		const u64 result = static_cast<u64>(ts.tv_sec) * 1000000u + static_cast<u64>(ts.tv_nsec) / 1000u;
-#endif
 
 		if (result) return result;
 	}
+#endif
 }
 
 // Functions

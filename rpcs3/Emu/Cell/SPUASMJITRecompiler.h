@@ -1,17 +1,11 @@
 #pragma once
 
-#include "SPURecompiler.h"
+#define ASMJIT_STATIC
+#define ASMJIT_DEBUG
 
-namespace asmjit
-{
-	struct JitRuntime;
-	struct CodeHolder;
-	struct X86Compiler;
-	struct X86Gp;
-	struct X86Xmm;
-	struct X86Mem;
-	struct Label;
-}
+#include "asmjit.h"
+
+#include "SPURecompiler.h"
 
 // SPU ASMJIT Recompiler
 class spu_recompiler : public spu_recompiler_base
@@ -21,7 +15,7 @@ class spu_recompiler : public spu_recompiler_base
 public:
 	spu_recompiler();
 
-	virtual void compile(spu_function_t& f) override;
+	virtual bool compile(spu_function_contents_t* f) override;
 
 private:
 	// emitter:
@@ -41,7 +35,7 @@ private:
 	std::array<asmjit::X86Xmm*, 6> vec;
 
 	// labels:
-	asmjit::Label* labels; // array[0x10000]
+	std::unique_ptr<asmjit::Label[]> labels; // array[0x10000]
 	asmjit::Label* jt; // jump table resolver (uses *addr)
 	asmjit::Label* end; // function end (return *addr)
 

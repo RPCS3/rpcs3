@@ -101,7 +101,8 @@ void spu_interpreter::RDCH(SPUThread& spu, spu_opcode_t op)
 	}
 	else
 	{
-		spu.gpr[op.rt] = v128::from32r(result);
+		memset(&spu.gpr[op.rt], 0, 3*sizeof(u32));
+		spu.gpr[op.rt]._u32[3] = result;
 	}
 }
 

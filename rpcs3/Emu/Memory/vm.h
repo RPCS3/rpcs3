@@ -1,8 +1,8 @@
 #pragma once
 
 #include <map>
-#include <functional>
 #include <memory>
+#include <atomic>
 
 class named_thread;
 class cpu_thread;
@@ -42,9 +42,9 @@ namespace vm
 	{
 		named_thread* owner;
 		u32 addr;
-		u32 size;
 		u64 stamp;
 		const void* data;
+		static const u32 size = 128; // Always 128 currently
 
 		waiter() = default;
 
@@ -53,7 +53,7 @@ namespace vm
 		void init();
 		void test() const;
 
-		~waiter();
+		void remove();
 	};
 
 	// Address type
@@ -90,21 +90,64 @@ namespace vm
 
 	struct writer_lock final
 	{
-		const bool locked;
+		bool locked;
 
 		writer_lock(const writer_lock&) = delete;
 		writer_lock(int full = 1);
 		writer_lock(const try_to_lock_t&);
+		void unlock();
 		~writer_lock();
 
 		explicit operator bool() const { return locked; }
 	};
 
-	// Get reservation status for further atomic update: last update timestamp
-	u64 reservation_acquire(u32 addr, u32 size);
+	// Reservations (lock lines) in a single memory page
+	using reservation_info = std::array<std::atomic<u64>, 4096 / 128>;
 
-	// End atomic update
-	void reservation_update(u32 addr, u32 size);
+	// Page information
+	struct memory_page
+	{
+		// Reservations
+		atomic_t<reservation_info*> reservations;
+		//atomic_t<u32> waiters;
+		// Memory flags
+		atomic_t<u8> flags;
+
+		// Access reservation info
+		FORCE_INLINE std::atomic<u64>& operator [](const u32 addr)
+		{
+			auto ptr = reservations.load();
+
+			if (!ptr)
+			{
+				ptr = new reservation_info();
+				// Opportunistic memory allocation
+
+				if (const auto old_ptr = reservations.compare_and_swap(nullptr, ptr))
+				{
+					delete ptr;
+					ptr = old_ptr;
+				}
+			}
+
+			return (*ptr)[(addr & 0xfff) >> 7];
+		}
+	};
+
+	// Memory pages
+	extern std::array<memory_page, 0x100000000 / 4096> g_pages;
+
+	FORCE_INLINE u64 reservation_acquire(u32 addr, u32 _size)
+	{
+		// Access reservation info: stamp and the lock bit
+		return g_pages[addr >> 12][addr].load(std::memory_order_acquire);
+	}
+
+	FORCE_INLINE void reservation_update(u32 addr, u32 _size)
+	{
+		// Update reservation info with new timestamp (unsafe, assume allocated)
+		(*g_pages[addr >> 12].reservations)[(addr & 0xfff) >> 7].store(__rdtsc(), std::memory_order_release);
+	}
 
 	// Check and notify memory changes at address
 	void notify(u32 addr, u32 size);

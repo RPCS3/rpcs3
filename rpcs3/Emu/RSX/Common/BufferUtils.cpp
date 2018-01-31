@@ -532,7 +532,7 @@ std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::spa
 
 	verify(HERE), (dst.size_bytes() >= src.size_bytes());
 
-	u32 dst_idx = 0;
+	u32 dst_idx = -1;
 	for (T index : src)
 	{
 		if (is_primitive_restart_enabled && index == primitive_restart_index)
@@ -549,9 +549,9 @@ std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::spa
 			min_index = std::min(min_index, index);
 		}
 
-		dst[dst_idx++] = index;
+		dst[++dst_idx] = index;
 	}
-	return std::make_tuple(min_index, max_index, dst_idx);
+	return std::make_tuple(min_index, max_index, dst_idx + 1);
 }
 
 template<typename T>

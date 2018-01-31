@@ -8,16 +8,15 @@
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/RSX/GSRender.h"
 
-#include <atomic>
-#include <deque>
-
 namespace vm
 {
-	static u8* memory_reserve_4GiB(std::uintptr_t _addr = 0)
+	std::array<memory_page, 0x100000000 / 4096> g_pages{};
+
+	static u8* memory_reserve_4GiB(const std::uintptr_t _addr = 0)
 	{
-		for (u64 addr = _addr + 0x100000000;; addr += 0x100000000)
+		for (auto addr = _addr + 0x100000000;; addr += 0x100000000)
 		{
-			if (auto ptr = utils::memory_reserve(0x100000000, (void*)addr))
+			if (const auto ptr = utils::memory_reserve(0x100000000, reinterpret_cast<void*>(addr)))
 			{
 				return static_cast<u8*>(ptr);
 			}
@@ -39,11 +38,13 @@ namespace vm
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
 
-	// Reservations (lock lines) in a single memory page
-	using reservation_info = std::array<std::atomic<u64>, 4096 / 128>;
-
 	// Registered waiters
-	std::deque<vm::waiter*> g_waiters;
+	std::vector<vm::waiter*> g_waiters;
+	shared_mutex g_waiters_lock;
+
+	// Waiters which will be removed once the lock is freed
+	shared_mutex g_waiters_to_remove_lock;
+	std::vector<vm::waiter*> g_waiters_to_remove;
 
 	// Memory mutex core
 	shared_mutex g_mutex;
@@ -201,78 +202,38 @@ namespace vm
 	{
 	}
 
-	writer_lock::~writer_lock()
+	void writer_lock::unlock()
 	{
 		if (locked)
 		{
 			g_mutex.unlock();
+
+			locked = false;
 		}
 	}
 
-	// Page information
-	struct memory_page
+	writer_lock::~writer_lock()
 	{
-		// Memory flags
-		atomic_t<u8> flags;
-
-		atomic_t<u32> waiters;
-
-		// Reservations
-		atomic_t<reservation_info*> reservations;
-
-		// Access reservation info
-		std::atomic<u64>& operator [](u32 addr)
-		{
-			auto ptr = reservations.load();
-
-			if (!ptr)
-			{
-				// Opportunistic memory allocation
-				ptr = new reservation_info{};
-
-				if (auto old_ptr = reservations.compare_and_swap(nullptr, ptr))
-				{
-					delete ptr;
-					ptr = old_ptr;
-				}
-			}
-
-			return (*ptr)[(addr & 0xfff) >> 7];
-		}
-	};
-
-	// Memory pages
-	std::array<memory_page, 0x100000000 / 4096> g_pages{};
-
-	u64 reservation_acquire(u32 addr, u32 _size)
-	{
-		// Access reservation info: stamp and the lock bit
-		return g_pages[addr >> 12][addr].load(std::memory_order_acquire);
-	}
-
-	void reservation_update(u32 addr, u32 _size)
-	{
-		// Update reservation info with new timestamp (unsafe, assume allocated)
-		(*g_pages[addr >> 12].reservations)[(addr & 0xfff) >> 7].store(__rdtsc(), std::memory_order_release);
+		unlock();
 	}
 
 	void waiter::init()
 	{
 		// Register waiter
-		writer_lock lock(0);
-
+		g_waiters_lock.lock();
 		g_waiters.emplace_back(this);
+		g_waiters_lock.unlock();
 	}
 
 	void waiter::test() const
 	{
-		if (std::memcmp(data, vm::base(addr), size) == 0)
+		const auto owner_copy = owner;
+		if (!owner_copy)
 		{
 			return;
 		}
 
 		memory_page& page = g_pages[addr >> 12];
-
 		if (page.reservations == nullptr)
 		{
 			return;
@@ -283,28 +244,44 @@ namespace vm
 			return;
 		}
 
-		if (owner)
+		if (memcmp(data, vm::base(addr), size) == 0)
 		{
-			owner->notify();
+			return;
+		}
+
+		owner_copy->notify();
+	}
+
+	void remove_old_waiters()
+	{
+		if (!g_waiters_to_remove.empty())
+		{
+			g_waiters_to_remove_lock.lock();
+			for (auto ptr : g_waiters_to_remove)
+			{
+				const auto found = std::find(g_waiters.cbegin(), g_waiters.cend(), ptr);
+				if (found != g_waiters.cend())
+				{
+					g_waiters.erase(found);
+				}
+				delete ptr;
+			}
+			g_waiters_to_remove.clear();
+			g_waiters_to_remove_lock.unlock();
 		}
 	}
 
-	waiter::~waiter()
+	void waiter::remove()
 	{
-		// Unregister waiter
-		writer_lock lock(0);
-
-		// Find waiter
-		const auto found = std::find(g_waiters.cbegin(), g_waiters.cend(), this);
-
-		if (found != g_waiters.cend())
-		{
-			g_waiters.erase(found);
-		}
+		this->owner = nullptr; // Iterations of the object will ignore it from now on
+		g_waiters_to_remove_lock.lock();
+		g_waiters_to_remove.push_back(this);
+		g_waiters_to_remove_lock.unlock();
 	}
 
 	void notify(u32 addr, u32 size)
 	{
+		g_waiters_lock.lock_shared();
 		for (const waiter* ptr : g_waiters)
 		{
 			if (ptr->addr / 128 == addr / 128)
@@ -312,13 +289,36 @@ namespace vm
 				ptr->test();
 			}
 		}
+
+		if (g_waiters_to_remove.size() > 10)
+		{
+			g_waiters_lock.lock_upgrade();
+			remove_old_waiters();
+			g_waiters_lock.unlock();
+		}
+		else
+		{
+			g_waiters_lock.unlock_shared();
+		}
 	}
 
 	void notify_all()
 	{
+		g_waiters_lock.lock_shared();
 		for (const waiter* ptr : g_waiters)
 		{
 			ptr->test();
+		}
+
+		if (g_waiters_to_remove.size() > 10)
+		{
+			g_waiters_lock.lock_upgrade();
+			remove_old_waiters();
+			g_waiters_lock.unlock();
+		}
+		else
+		{
+			g_waiters_lock.unlock_shared();
 		}
 	}
 
@@ -369,8 +369,8 @@ namespace vm
 
 		const u8 flags_both = flags_set & flags_clear;
 
-		flags_test  |= page_allocated;
-		flags_set   &= ~flags_both;
+		flags_test |= page_allocated;
+		flags_set &= ~flags_both;
 		flags_clear &= ~flags_both;
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
@@ -736,7 +736,7 @@ namespace vm
 	{
 		writer_lock lock(0);
 
-		for (auto it = g_locations.begin(); it != g_locations.end(); it++)
+		for (auto it = g_locations.begin(); it != g_locations.end(); ++it)
 		{
 			if (*it && (*it)->addr == addr)
 			{
@@ -866,7 +866,7 @@ void fmt_class_string<vm::_ptr_base<const char>>::format(std::string& out, u64 a
 
 	out += u8"“";
 
-	for (vm::_ptr_base<const volatile char> ptr = vm::cast(arg);; ptr++)
+	for (vm::_ptr_base<const volatile char> ptr = vm::cast(arg);; ++ptr)
 	{
 		if (!vm::check_addr(ptr.addr()))
 		{

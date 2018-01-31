@@ -120,7 +120,6 @@ namespace rsx
 				return;
 			}
 
-			vm::reader_lock lock;
 			vm::ps3::write32(addr, arg);
 			vm::notify(addr, 4);
 		}

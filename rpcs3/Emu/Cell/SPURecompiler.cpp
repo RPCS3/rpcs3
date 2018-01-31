@@ -24,39 +24,57 @@ void spu_recompiler_base::enter(SPUThread& spu)
 	const auto _ls = vm::ps3::_ptr<u32>(spu.offset);
 
 	// Search if cached data matches
-	auto func = spu.compiled_cache[spu.pc / 4];
+	auto func_ptr = spu.compiled_cache[spu.pc / 4];
 
-	// Check shared db if we dont have a match
-	if (!func || !std::equal(func->data.begin(), func->data.end(), _ls + spu.pc / 4, [](const be_t<u32>& l, const be_t<u32>& r) { return *(u32*)(u8*)&l == *(u32*)(u8*)&r; }))
+	// Dirty bit check commented out until another code invalidation is found - SYNC, SYNCC, DSYNC and DMAs aren't covering everything
+	if (func_ptr/* && func_ptr->dirty_bit*/)
 	{
-		func = spu.spu_db->analyse(_ls, spu.pc);
-		spu.compiled_cache[spu.pc / 4] = func;
+		auto & func = *func_ptr;
+		func.dirty_bit = false;
+		u32 index = (reinterpret_cast<size_t>(func_ptr) - reinterpret_cast<size_t>(&spu.compiled_functions[0])) / sizeof(func);
+		spu.first_clean_func_index = std::min<u32>(index, spu.first_clean_func_index);
+		spu.last_clean_func_index = std::max<u32>(index + 1, spu.last_clean_func_index);
+
+		if (!spu.same_function(func.contents, _ls + (spu.pc / 4)))
+		{
+			func.contents = spu.spu_db->analyse(_ls, spu.pc, func.contents);
+		}
+	}
+	else if (!func_ptr)
+	{
+		auto & func = spu.compiled_functions[++spu.next_compiled_func_index];
+		func.contents = spu.spu_db->analyse(_ls, spu.pc);
+		func_ptr = &func;
+		spu.compiled_cache[spu.pc / 4] = func_ptr;
+		spu.last_clean_func_index = spu.next_compiled_func_index + 1;
+		spu.first_clean_func_index = std::min<u32>(spu.first_clean_func_index, spu.next_compiled_func_index);
 	}
 
 	// Reset callstack if necessary
-	if ((func->does_reset_stack && spu.recursion_level) || spu.recursion_level >= 128)
+	if ((func_ptr->contents->does_reset_stack && spu.recursion_level) || spu.recursion_level >= 128)
 	{
 		spu.state += cpu_flag::ret;
 		return;
 	}
 
 	// Compile if needed
-	if (!func->compiled)
+	if (!func_ptr->contents->compiled)
 	{
 		if (!spu.spu_rec)
 		{
 			spu.spu_rec = fxm::get_always<spu_recompiler>();
 		}
 
-		spu.spu_rec->compile(*func);
+		spu.spu_rec->compile(func_ptr->contents);
 
-		if (!func->compiled) fmt::throw_exception("Compilation failed" HERE);
+		if (!func_ptr->contents->compiled) fmt::throw_exception("Compilation failed" HERE);
 	}
 
-	const u32 res = func->compiled(&spu, _ls);
+	const u32 res = func_ptr->contents->compiled(&spu, _ls);
 
-	if (const auto exception = spu.pending_exception)
+	if (spu.pending_exception)
 	{
+		const auto exception = spu.pending_exception;
 		spu.pending_exception = nullptr;
 		std::rethrow_exception(exception);
 	}
