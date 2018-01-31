@@ -365,6 +365,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		break;
 	}
 
+	m_gl_texture_cache.clear_ro_tex_invalidate_intr();
+
 	//Mark buffer regions as NO_ACCESS on Cell visible side
 	if (g_cfg.video.write_color_buffers)
 	{
@@ -393,6 +395,12 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			m_gl_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range, m_depth_surface_info.width, m_depth_surface_info.height, pitch,
 				depth_format_gl.format, depth_format_gl.type, true);
 		}
+	}
+
+	if (m_gl_texture_cache.get_ro_tex_invalidate_intr())
+	{
+		//Invalidate cached sampler state
+		m_samplers_dirty.store(true);
 	}
 }
 
