@@ -828,14 +828,15 @@ void spu_recompiler::ROTH(spu_opcode_t op) //nf
 		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		const XmmLink& v4 = XmmAlloc();
-		c->movdqa(v4, XmmConst(_mm_set1_epi16(0xf)));
-		c->pand(vb, v4);
-		c->vpsllvw(vt, va, vb);
-		c->psubw(vb, XmmConst(_mm_set1_epi16(1)));
-		c->pandn(vb, v4);
-		c->vpsrlvw(va, va, vb);
-		c->por(vt, va);
-		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
+		c->vmovdqa(v4, XmmConst(_mm_set_epi32(0x0d0c0d0c, 0x09080908, 0x05040504, 0x01000100)));
+		c->vpshufb(vt, va, v4); // duplicate low word
+		c->vpsrld(va, va, 16);
+		c->vpshufb(va, va, v4);
+		c->vpsrld(v4, vb, 16);
+		c->vprolvd(va, va, v4);
+		c->vprolvd(vb, vt, vb);
+		c->vpblendw(vt, vb, va, 0xaa);
+		c->vmovdqa(SPU_OFF_128(gpr, op.rt), vt);
 		return;
 	}
 
