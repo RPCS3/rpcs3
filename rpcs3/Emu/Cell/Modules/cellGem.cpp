@@ -1,25 +1,326 @@
 #include "stdafx.h"
-#include "Emu/IdManager.h"
-#include "Emu/Cell/PPUModule.h"
-
 #include "cellGem.h"
+
+#include "cellCamera.h"
+#include "Emu/IdManager.h"
+#include "Emu/System.h"
+#include "Emu/Cell/PPUModule.h"
+#include "pad_thread.h"
+#include "Utilities/Timer.h"
 
 logs::channel cellGem("cellGem");
 
+// **********************
+// * HLE helper structs *
+// **********************
+
 struct gem_t
 {
+	struct gem_color
+	{
+		float r, g, b;
+
+		gem_color() : r(0.0f), g(0.0f), b(0.0f) {}
+		gem_color(float r_, float g_, float b_)
+		{
+			r = clamp(r_);
+			g = clamp(g_);
+			b = clamp(b_);
+		}
+
+		float clamp(float f) const
+		{
+			return std::max(0.0f, std::min(f, 1.0f));
+		}
+	};
+
+	struct gem_controller
+	{
+		u32 status;                     // connection status (CELL_GEM_STATUS_DISCONNECTED or CELL_GEM_STATUS_READY)
+		u32 port;                       // assigned port
+		bool enabled_magnetometer;      // whether the magnetometer is enabled (probably used for additional rotational precision)
+		bool calibrated_magnetometer;   // whether the magnetometer is calibrated
+		bool enabled_filtering;         // whether filtering is enabled
+		u8 rumble;                      // rumble intensity
+		gem_color sphere_rgb;           // RGB color of the sphere LED
+
+		gem_controller() :
+			status(CELL_GEM_STATUS_DISCONNECTED),
+			enabled_filtering(false), rumble(0), sphere_rgb() {}
+	};
+
 	CellGemAttribute attribute;
+	CellGemVideoConvertAttribute vc_attribute;
+	u64 status_flags;
+	bool enable_pitch_correction;
+	u32 inertial_counter;
+
+	std::array<gem_controller, CELL_GEM_MAX_NUM> controllers;
+	u32 connected_controllers;
+
+	Timer timer;
+
+	// helper functions
+	bool is_controller_ready(u32 gem_num) const
+	{
+		return controllers[gem_num].status == CELL_GEM_STATUS_READY;
+	}
+
+	void reset_controller(u32 gem_num)
+	{
+		switch (g_cfg.io.move)
+		{
+		default:
+		case move_handler::null:
+		{
+			connected_controllers = 0;
+
+			controllers[gem_num].status = CELL_GEM_STATUS_DISCONNECTED;
+			controllers[gem_num].port = 0;
+			break;
+		}
+
+		case move_handler::fake:
+		{
+			// fake one connected controller
+			connected_controllers = 1;
+
+			if (gem_num < connected_controllers)
+			{
+				controllers[gem_num].status = CELL_GEM_STATUS_READY;
+				controllers[gem_num].port = 7u - gem_num;
+			}
+			else
+			{
+				controllers[gem_num].status = CELL_GEM_STATUS_DISCONNECTED;
+				controllers[gem_num].port = 0;
+			}
+			break;
+		}
+		}
+	}
 };
 
-s32 cellGemCalibrate()
+// ************************
+// * HLE helper functions *
+// ************************
+
+template <>
+void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case move_handler::null: return "Null";
+		case move_handler::fake: return "Fake";
+		}
+
+		return unknown;
+	});
+}
+
+/**
+ * \brief Verifies that a Move controller id is valid
+ * \param gem_num Move controler ID to verify
+ * \return True if the ID is valid, false otherwise
+ */
+static bool check_gem_num(const u32 gem_num)
+{
+	return gem_num >= 0 && gem_num < CELL_GEM_MAX_NUM;
+}
+
+
+/**
+ * \brief Maps Move controller data (digital buttons, and analog Trigger data) to DS3 pad input.
+ *        Unavoidably buttons conflict with DS3 mappings, which is problematic for some games.
+ * \param port_no DS3 port number to use
+ * \param digital_buttons Bitmask filled with CELL_GEM_CTRL_* values
+ * \param analog_t Analog value of Move's Trigger. Currently mapped to R2.
+ * \return true on success, false if port_no controller is invalid
+ */
+static bool map_to_ds3_input(const u32 port_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
+{
+	const auto handler = fxm::get<pad_thread>();
+
+	if (!handler)
+	{
+		return false;
+	}
+
+	const PadInfo& rinfo = handler->GetInfo();
+
+	if (port_no >= rinfo.max_connect || port_no >= rinfo.now_connect)
+	{
+		return false;
+	}
+
+	auto& pads = handler->GetPads();
+	auto pad = pads[port_no];
+
+	for (Button& button : pad->m_buttons)
+	{
+		//here we check btns, and set pad accordingly,
+		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
+		{
+			if (button.m_pressed) pad->m_digital_2 |= button.m_outKeyCode;
+			else pad->m_digital_2 &= ~button.m_outKeyCode;
+
+			switch (button.m_outKeyCode)
+			{
+			case CELL_PAD_CTRL_SQUARE:
+				pad->m_press_square = button.m_value;
+				break;
+			case CELL_PAD_CTRL_CROSS:
+				pad->m_press_cross = button.m_value;
+				break;
+			case CELL_PAD_CTRL_CIRCLE:
+				pad->m_press_circle = button.m_value;
+				break;
+			case CELL_PAD_CTRL_TRIANGLE:
+				pad->m_press_triangle = button.m_value;
+				break;
+			case CELL_PAD_CTRL_R1:
+				pad->m_press_R1 = button.m_value;
+				break;
+			case CELL_PAD_CTRL_L1:
+				pad->m_press_L1 = button.m_value;
+				break;
+			case CELL_PAD_CTRL_R2:
+				pad->m_press_R2 = button.m_value;
+				break;
+			case CELL_PAD_CTRL_L2:
+				pad->m_press_L2 = button.m_value;
+				break;
+			default: break;
+			}
+		}
+
+		if (button.m_flush)
+		{
+			button.m_pressed = false;
+			button.m_flush = false;
+			button.m_value = 0;
+		}
+	}
+
+	memset(&digital_buttons, 0, sizeof(digital_buttons));
+
+	// map the Move key to R1 and the Trigger to R2
+
+	if (pad->m_press_R1)
+		digital_buttons |= CELL_GEM_CTRL_MOVE;
+	if (pad->m_press_R2)
+		digital_buttons |= CELL_GEM_CTRL_T;
+
+	if (pad->m_press_cross)
+		digital_buttons |= CELL_GEM_CTRL_CROSS;
+	if (pad->m_press_circle)
+		digital_buttons |= CELL_GEM_CTRL_CIRCLE;
+	if (pad->m_press_square)
+		digital_buttons |= CELL_GEM_CTRL_SQUARE;
+	if (pad->m_press_triangle)
+		digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
+	if (pad->m_digital_1)
+		digital_buttons |= CELL_GEM_CTRL_SELECT;
+	if (pad->m_digital_2)
+		digital_buttons |= CELL_GEM_CTRL_START;
+
+	analog_t = pad->m_press_R2;
+
+	return true;
+}
+
+/**
+ * \brief Maps external Move controller data to DS3 input
+ *	      Implementation detail: CellGemExtPortData's digital/analog fields map the same way as
+ *	      libPad, so no translation is needed.
+ * \param port_no DS3 port number to use
+ * \param ext External data to modify
+ * \return true on success, false if port_no controller is invalid
+ */
+static bool map_ext_to_ds3_input(const u32 port_no, CellGemExtPortData& ext)
+{
+	const auto handler = fxm::get<pad_thread>();
+
+	if (!handler)
+	{
+		return false;
+	}
+
+	auto& pads = handler->GetPads();
+
+	const PadInfo& rinfo = handler->GetInfo();
+
+	if (port_no >= rinfo.max_connect)
+	{
+		return false;
+	}
+
+	//We have a choice here of NO_DEVICE or READ_FAILED...lets try no device for now
+	if (port_no >= rinfo.now_connect)
+	{
+		return false;
+	}
+
+	auto pad = pads[port_no];
+
+	ext.status = 0; // CELL_GEM_EXT_CONNECTED | CELL_GEM_EXT_EXT0 | CELL_GEM_EXT_EXT1
+	ext.analog_left_x = pad->m_analog_left_x;
+	ext.analog_left_y = pad->m_analog_left_y;
+	ext.analog_right_x = pad->m_analog_right_x;
+	ext.analog_right_y = pad->m_analog_right_y;
+	ext.digital1 = pad->m_digital_1;
+	ext.digital2 = pad->m_digital_2;
+
+	return true;
+}
+
+// *********************
+// * cellGem functions *
+// *********************
+
+s32 cellGemCalibrate(u32 gem_num)
+{
+	cellGem.todo("cellGemCalibrate(gem_num=%d)", gem_num);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num))
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	if (g_cfg.io.move == move_handler::fake)
+	{
+		gem->controllers[gem_num].calibrated_magnetometer = true;
+		gem->status_flags = CELL_GEM_FLAG_CALIBRATION_OCCURRED | CELL_GEM_FLAG_CALIBRATION_SUCCEEDED;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellGemClearStatusFlags()
+s32 cellGemClearStatusFlags(u32 gem_num, u64 mask)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemClearStatusFlags(gem_num=%d, mask=0x%x)", gem_num, mask);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num))
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	gem->status_flags &= ~mask;
+
 	return CELL_OK;
 }
 
@@ -35,15 +336,38 @@ s32 cellGemConvertVideoStart()
 	return CELL_OK;
 }
 
-s32 cellGemEnableCameraPitchAngleCorrection()
+s32 cellGemEnableCameraPitchAngleCorrection(u32 enable_flag)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemEnableCameraPitchAngleCorrection(enable_flag=%d", enable_flag);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	gem->enable_pitch_correction = !!enable_flag;
+
 	return CELL_OK;
 }
 
-s32 cellGemEnableMagnetometer()
+s32 cellGemEnableMagnetometer(u32 gem_num, u32 enable)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemEnableMagnetometer(gem_num=%d, enable=0x%x)", gem_num, enable);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!gem->is_controller_ready(gem_num))
+	{
+		return CELL_GEM_NOT_CONNECTED;
+	}
+
+	gem->controllers[gem_num].enabled_magnetometer = !!enable;
+
 	return CELL_OK;
 }
 
@@ -59,15 +383,43 @@ s32 cellGemEnd()
 	return CELL_OK;
 }
 
-s32 cellGemFilterState()
+s32 cellGemFilterState(u32 gem_num, u32 enable)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.warning("cellGemFilterState(gem_num=%d, enable=%d)", gem_num, enable);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num))
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	gem->controllers[gem_num].enabled_filtering = !!enable;
+
 	return CELL_OK;
 }
 
-s32 cellGemForceRGB()
+s32 cellGemForceRGB(u32 gem_num, float r, float g, float b)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemForceRGB(gem_num=%d, r=%f, g=%f, b=%f)", gem_num, r, g, b);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num))
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	gem->controllers[gem_num].sphere_rgb = gem_t::gem_color(r, g, b);
+
 	return CELL_OK;
 }
 
@@ -77,15 +429,30 @@ s32 cellGemGetAccelerometerPositionInDevice()
 	return CELL_OK;
 }
 
-s32 cellGemGetAllTrackableHues()
+s32 cellGemGetAllTrackableHues(vm::ptr<u8> hues)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemGetAllTrackableHues(hues=*0x%x)");
 	return CELL_OK;
 }
 
-s32 cellGemGetCameraState()
+s32 cellGemGetCameraState(vm::ptr<CellGemCameraState> camera_state)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemGetCameraState(camera_state=0x%x)", camera_state);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!camera_state)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	camera_state->exposure_time = 1.0f / 60.0f;	// TODO: use correct framerate
+	camera_state->gain = 1.0;
+
 	return CELL_OK;
 }
 
@@ -101,15 +468,68 @@ s32 cellGemGetHuePixels()
 	return CELL_OK;
 }
 
-s32 cellGemGetImageState()
+s32 cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> image_state)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemGetImageState(gem_num=%d, image_state=&0x%x)", gem_num, image_state);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num))
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	if (g_cfg.io.move == move_handler::fake)
+	{
+		auto shared_data = fxm::get_always<gem_camera_shared>();
+
+		image_state->frame_timestamp = shared_data->frame_timestamp.load();
+		image_state->timestamp = image_state->frame_timestamp + 10;   // arbitrarily define 10 usecs of frame processing
+		image_state->visible = true;
+		image_state->u = 0;
+		image_state->v = 0;
+		image_state->r = 20;
+		image_state->r_valid = true;
+		image_state->distance = 2 * 1000;   // 2 meters away from camera
+		// TODO
+		image_state->projectionx = 1;
+		image_state->projectiony = 1;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellGemGetInertialState()
+s32 cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, vm::ptr<CellGemInertialState> inertial_state)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemGetInertialState(gem_num=%d, state_flag=%d, timestamp=0x%x, inertial_state=0x%x)", gem_num, state_flag, timestamp, inertial_state);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num) || !inertial_state || !gem->is_controller_ready(gem_num))
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	if (g_cfg.io.move == move_handler::fake)
+	{
+		map_to_ds3_input(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
+		map_ext_to_ds3_input(gem_num, inertial_state->ext);
+
+		inertial_state->timestamp = gem->timer.GetElapsedTimeInMicroSec();
+
+		inertial_state->counter = gem->inertial_counter++;
+
+		inertial_state->accelerometer[0] = 10;
+	}
+
 	return CELL_OK;
 }
 
@@ -124,14 +544,19 @@ s32 cellGemGetInfo(vm::ptr<CellGemInfo> info)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
+	if (!info)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
 	// TODO: Support connecting PlayStation Move controllers
 	info->max_connect = gem->attribute.max_connect;
-	info->now_connect = 0;
+	info->now_connect = gem->connected_controllers;
 
 	for (int i = 0; i < CELL_GEM_MAX_NUM; i++)
 	{
-		info->status[i] = CELL_GEM_STATUS_DISCONNECTED;
-		info->port[i] = 0;
+		info->status[i] = gem->controllers[i].status;
+		info->port[i] = gem->controllers[i].port;
 	}
 
 	return CELL_OK;
@@ -149,15 +574,46 @@ s32 cellGemGetMemorySize(s32 max_connect)
 	return max_connect <= 2 ? 0x120000 : 0x140000;
 }
 
-s32 cellGemGetRGB()
+s32 cellGemGetRGB(u32 gem_num, vm::ptr<float> r, vm::ptr<float> g, vm::ptr<float> b)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemGetRGB(gem_num=%d, r=*0x%x, g=*0x%x, b=*0x%x)", gem_num, r, g, b);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num) | !r || !g || !b )
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	auto& sphere_color = gem->controllers[gem_num].sphere_rgb;
+	*r = sphere_color.r;
+	*g = sphere_color.g;
+	*b = sphere_color.b;
+
 	return CELL_OK;
 }
 
-s32 cellGemGetRumble()
+s32 cellGemGetRumble(u32 gem_num, vm::ptr<u8> rumble)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemGetRumble(gem_num=%d, rumble=*0x%x)", gem_num, rumble);
+	auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num) || !rumble)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	*rumble = gem->controllers[gem_num].rumble;
+
 	return CELL_OK;
 }
 
@@ -167,17 +623,47 @@ s32 cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<CellGemSt
 	const auto gem = fxm::get<gem_t>();
 
 	if (!gem)
+	{
 		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
 
-	// clear out gem_state so no games get any funny ideas about them being connected...
-	std::memset(gem_state.get_ptr(), 0, sizeof(CellGemState));
+	if (!check_gem_num(gem_num))
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	if (g_cfg.io.move == move_handler::fake)
+	{
+		map_to_ds3_input(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
+		map_ext_to_ds3_input(gem_num, gem_state->ext);
+
+		gem_state->tracking_flags = CELL_GEM_TRACKING_FLAG_POSITION_TRACKED |
+									CELL_GEM_TRACKING_FLAG_VISIBLE;
+		gem_state->timestamp = gem->timer.GetElapsedTimeInMicroSec();
+
+		gem_state->quat[3] = 1.0;
+	}
 
 	return CELL_GEM_NOT_CONNECTED;
 }
 
-s32 cellGemGetStatusFlags()
+s32 cellGemGetStatusFlags(u32 gem_num, vm::ptr<u64> flags)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemGetStatusFlags(gem_num=%d, flags=*0x%x)", gem_num, flags);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num) || !flags)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	*flags = gem->status_flags;
+
 	return CELL_OK;
 }
 
@@ -196,7 +682,6 @@ s32 cellGemHSVtoRGB()
 s32 cellGemInit(vm::cptr<CellGemAttribute> attribute)
 {
 	cellGem.warning("cellGemInit(attribute=*0x%x)", attribute);
-
 	const auto gem = fxm::make<gem_t>();
 
 	if (!gem)
@@ -204,7 +689,20 @@ s32 cellGemInit(vm::cptr<CellGemAttribute> attribute)
 		return CELL_GEM_ERROR_ALREADY_INITIALIZED;
 	}
 
+	if (!attribute || !attribute->spurs_addr || attribute->max_connect > CELL_GEM_MAX_NUM)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
 	gem->attribute = *attribute;
+
+	for (auto gem_num = 0; gem_num < CELL_GEM_MAX_NUM; gem_num++)
+	{
+		gem->reset_controller(gem_num);
+	}
+
+	// TODO: is this correct?
+	gem->timer.Start();
 
 	return CELL_OK;
 }
@@ -215,10 +713,17 @@ s32 cellGemInvalidateCalibration()
 	return CELL_OK;
 }
 
-s32 cellGemIsTrackableHue()
+s32 cellGemIsTrackableHue(u32 hue)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
-	return CELL_OK;
+	cellGem.todo("cellGemIsTrackableHue(hue=%d)", hue);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem || hue > 359)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 s32 cellGemPrepareCamera()
@@ -227,9 +732,36 @@ s32 cellGemPrepareCamera()
 	return CELL_OK;
 }
 
-s32 cellGemPrepareVideoConvert()
+s32 cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_attribute)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemPrepareVideoConvert(vc_attribute=*0x%x)", vc_attribute);
+	auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!vc_attribute)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	const auto vc = *vc_attribute;
+
+	if (!vc_attribute || vc.version == 0 || vc.output_format == 0 ||
+		vc.conversion_flags & CELL_GEM_VIDEO_CONVERT_UNK3 && !vc.buffer_memory)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	if (vc.video_data_out & 0x1f || vc.buffer_memory & 0xff)
+	{
+		return CELL_GEM_ERROR_INVALID_ALIGNMENT;
+	}
+
+	gem->vc_attribute = vc;
+
 	return CELL_OK;
 }
 
@@ -239,15 +771,46 @@ s32 cellGemReadExternalPortDeviceInfo()
 	return CELL_OK;
 }
 
-s32 cellGemReset()
+s32 cellGemReset(u32 gem_num)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemReset(gem_num=%d)", gem_num);
+	auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num))
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	gem->reset_controller(gem_num);
+
+	// TODO: is this correct?
+	gem->timer.Start();
+
 	return CELL_OK;
 }
 
-s32 cellGemSetRumble()
+s32 cellGemSetRumble(u32 gem_num, u8 rumble)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemSetRumble(gem_num=%d, rumble=0x%x)", gem_num, rumble);
+	auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num))
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	gem->controllers[gem_num].rumble = rumble;
+
 	return CELL_OK;
 }
 
@@ -269,9 +832,16 @@ s32 cellGemUpdateFinish()
 	return CELL_OK;
 }
 
-s32 cellGemUpdateStart()
+s32 cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemUpdateStart(camera_frame=*0x%x, timestamp=%d)", camera_frame, timestamp);
+	auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
