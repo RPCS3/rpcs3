@@ -274,6 +274,9 @@ namespace rsx
 		//Set when a hw blit engine incompatibility is detected
 		bool blit_engine_incompatibility_warning_raised = false;
 
+		//Set when a shader read-only texture data suddenly becomes contested, usually by fbo memory
+		bool read_only_tex_invalidate = false;
+
 		//Memory usage
 		const s32 m_max_zombie_objects = 64; //Limit on how many texture objects to keep around for reuse after they are invalidated
 		std::atomic<s32> m_unreleased_texture_objects = { 0 }; //Number of invalidated objects not yet freed from memory
@@ -782,6 +785,7 @@ namespace rsx
 			{
 				//This space was being used for other purposes other than framebuffer storage
 				//Delete used resources before attaching it to framebuffer memory
+				read_only_tex_invalidate = true;
 				free_texture_section(region);
 				m_texture_memory_in_use -= region.get_section_size();
 			}
@@ -1873,6 +1877,20 @@ namespace rsx
 		virtual const u32 get_texture_memory_in_use() const
 		{
 			return m_texture_memory_in_use;
+		}
+
+		/**
+		 * The read only texture invalidate flag is set if a read only texture is trampled by framebuffer memory
+		 * If set, all cached read only textures are considered invalid and should be re-fetched from the texture cache
+		 */
+		virtual void clear_ro_tex_invalidate_intr()
+		{
+			read_only_tex_invalidate = false;
+		}
+
+		virtual bool get_ro_tex_invalidate_intr() const
+		{
+			return read_only_tex_invalidate;
 		}
 
 		void tag_framebuffer(u32 texaddr)

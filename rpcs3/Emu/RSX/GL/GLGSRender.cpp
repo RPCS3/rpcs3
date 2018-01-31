@@ -176,21 +176,6 @@ void GLGSRender::begin()
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
 }
 
-namespace
-{
-	GLenum get_gl_target_for_texture(const rsx::texture_dimension_extended type)
-	{
-		switch (type)
-		{
-		case rsx::texture_dimension_extended::texture_dimension_1d: return GL_TEXTURE_1D;
-		case rsx::texture_dimension_extended::texture_dimension_2d: return GL_TEXTURE_2D;
-		case rsx::texture_dimension_extended::texture_dimension_cubemap: return GL_TEXTURE_CUBE_MAP;
-		case rsx::texture_dimension_extended::texture_dimension_3d: return GL_TEXTURE_3D;
-		}
-		fmt::throw_exception("Unknown texture target" HERE);
-	}
-}
-
 void GLGSRender::end()
 {
 	std::chrono::time_point<steady_clock> state_check_start = steady_clock::now();
@@ -321,7 +306,7 @@ void GLGSRender::end()
 
 			if (tex.enabled())
 			{
-				GLenum target = get_gl_target_for_texture(sampler_state->image_type);
+				GLenum target = gl::get_target(sampler_state->image_type);
 				if (sampler_state->image_handle)
 				{
 					glBindTexture(target, sampler_state->image_handle);
