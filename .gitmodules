@@ -7,8 +7,8 @@
 	ignore = dirty
 [submodule "llvm"]
 	path = llvm
-	url = https://github.com/llvm-mirror/llvm
-	branch = release_40
+	url = https://github.com/RPCS3/llvm
+	branch = release_60
 [submodule "GSL"]
 	path = 3rdparty/GSL
 	url = https://github.com/Microsoft/GSL.git
@@ -35,6 +35,7 @@
 	path = 3rdparty/hidapi
 	url = https://github.com/RPCS3/hidapi
 	branch = master
+	ignore = dirty
 [submodule "3rdparty/Optional"]
 	path = 3rdparty/Optional
 	url = https://github.com/akrzemi1/Optional.git
