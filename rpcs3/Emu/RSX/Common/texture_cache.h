@@ -292,7 +292,7 @@ namespace rsx
 				const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
 		virtual void enforce_surface_creation_type(section_storage_type& section, u32 gcm_format, texture_create_flags expected) = 0;
 		virtual void set_up_remap_vector(section_storage_type& section, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
-		virtual void insert_texture_barrier() = 0;
+		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex) = 0;
 		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::array<image_resource_type, 6>& sources) = 0;
 
 		constexpr u32 get_block_size() const { return 0x1000000; }
@@ -1120,7 +1120,7 @@ namespace rsx
 		}
 
 		template <typename render_target_type, typename surface_store_type>
-		sampled_image_descriptor process_framebuffer_resource(render_target_type texptr, u32 texaddr, u32 gcm_format, surface_store_type& m_rtts,
+		sampled_image_descriptor process_framebuffer_resource(commandbuffer_type& cmd, render_target_type texptr, u32 texaddr, u32 gcm_format, surface_store_type& m_rtts,
 				u16 tex_width, u16 tex_height, rsx::texture_dimension_extended extended_dimension, bool is_depth)
 		{
 			const u32 format = gcm_format & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
@@ -1244,7 +1244,7 @@ namespace rsx
 							else
 							{
 								//issue a texture barrier to ensure previous writes are visible
-								insert_texture_barrier();
+								insert_texture_barrier(cmd, texptr);
 								break;
 							}
 						}
@@ -1262,7 +1262,7 @@ namespace rsx
 						else
 						{
 							//issue a texture barrier to ensure previous writes are visible
-							insert_texture_barrier();
+							insert_texture_barrier(cmd, texptr);
 						}
 					}
 				}
@@ -1324,7 +1324,7 @@ namespace rsx
 				{
 					if (test_framebuffer(texaddr + texptr->raster_address_offset))
 					{
-						return process_framebuffer_resource(texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, extended_dimension, false);
+						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, extended_dimension, false);
 					}
 					else
 					{
@@ -1337,7 +1337,7 @@ namespace rsx
 				{
 					if (test_framebuffer(texaddr + texptr->raster_address_offset))
 					{
-						return process_framebuffer_resource(texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, extended_dimension, true);
+						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, extended_dimension, true);
 					}
 					else
 					{
@@ -1395,7 +1395,7 @@ namespace rsx
 								if (rsc.is_bound)
 								{
 									LOG_WARNING(RSX, "Sampling from a currently bound render target @ 0x%x", texaddr);
-									insert_texture_barrier();
+									insert_texture_barrier(cmd, rsc.surface);
 								}
 
 								return{ rsc.surface->get_view(), texture_upload_context::framebuffer_storage, rsc.is_depth_surface,
