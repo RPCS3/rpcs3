@@ -837,7 +837,7 @@ namespace gl
 			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 
-		void insert_texture_barrier() override
+		void insert_texture_barrier(void*&, gl::texture*) override
 		{
 			auto &caps = gl::get_driver_caps();
 
