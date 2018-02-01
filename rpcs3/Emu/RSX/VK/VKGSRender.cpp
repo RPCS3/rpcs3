@@ -3028,7 +3028,7 @@ void VKGSRender::flip(int buffer)
 		VkImageLayout target_layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
-		if (aspect_ratio.x)
+		if (aspect_ratio.x || aspect_ratio.y)
 		{
 			VkClearColorValue clear_black {};
 			vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
