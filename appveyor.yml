@@ -62,13 +62,11 @@ before_build:
     7z x vulkan.7z -aos -o".\lib\%CONFIGURATION%-%PLATFORM%" > nul
 
 after_build:
+- ps: | # remove unnecessary files
+    rm .\bin\rpcs3.exp, .\bin\rpcs3.lib, .\bin\rpcs3.pdb
+
 - ps: | # package artifacts
     7z a $env:BUILD .\bin\*
-
-before_package:
-  - rm %APPVEYOR_BUILD_FOLDER%\bin\rpcs3.exp
-  - rm %APPVEYOR_BUILD_FOLDER%\bin\rpcs3.lib
-  - rm %APPVEYOR_BUILD_FOLDER%\bin\rpcs3.pdb
 
 test: off
 
