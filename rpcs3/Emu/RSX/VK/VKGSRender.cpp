@@ -2521,7 +2521,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 				if (lg2w > 0 || lg2h > 0)
 				{
 					//Something was actually declared for the swizzle context dimensions
-					LOG_ERROR(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
+					LOG_WARNING(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
 				}
 			}
 			else
@@ -2542,7 +2542,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 				if (lg2w > 0 || lg2h > 0)
 				{
 					//Something was actually declared for the swizzle context dimensions
-					LOG_ERROR(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
+					LOG_WARNING(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
 				}
 			}
 			else
@@ -2594,7 +2594,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		bool really_changed = false;
 
-		if (m_draw_fbo->width() == fbo_width && m_draw_fbo->height() == clip_height)
+		if (m_draw_fbo->width() == fbo_width && m_draw_fbo->height() == fbo_height)
 		{
 			for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 			{

@@ -223,7 +223,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 				if (lg2w > 0 || lg2h > 0)
 				{
 					//Something was actually declared for the swizzle context dimensions
-					LOG_ERROR(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+					LOG_WARNING(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
 				}
 			}
 			else
@@ -244,7 +244,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 				if (lg2w > 0 || lg2h > 0)
 				{
 					//Something was actually declared for the swizzle context dimensions
-					LOG_ERROR(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+					LOG_WARNING(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
 				}
 			}
 			else
@@ -284,10 +284,39 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		return;
 	}
 
+	if (draw_fbo)
+	{
+		bool really_changed = false;
+		auto sz = draw_fbo.get_extents();
+
+		if (sz.width == clip_horizontal && sz.height == clip_vertical)
+		{
+			for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
+			{
+				if (m_surface_info[i].address != surface_addresses[i])
+				{
+					really_changed = true;
+					break;
+				}
+			}
+
+			if (!really_changed)
+			{
+				if (depth_address == m_depth_surface_info.address)
+				{
+					//Nothing has changed, we're still using the same framebuffer
+					return;
+				}
+			}
+		}
+	}
+
 	m_rtts.prepare_render_target(nullptr, surface_format, depth_format,  clip_horizontal, clip_vertical,
 		target, surface_addresses, depth_address);
 
 	draw_fbo.recreate();
+	draw_fbo.bind();
+	draw_fbo.set_extents({ (int)clip_horizontal, (int)clip_vertical });
 
 	bool old_format_found = false;
 	gl::texture::format old_format;
@@ -360,8 +389,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	if (!framebuffer_status_valid) return;
 
 	check_zcull_status(true, false);
-
-	draw_fbo.bind();
 	set_viewport();
 
 	switch (rsx::method_registers.surface_color_target())

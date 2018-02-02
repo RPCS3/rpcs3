@@ -1921,6 +1921,7 @@ namespace gl
 	class fbo
 	{
 		GLuint m_id = GL_NONE;
+		size2i m_size;
 
 	public:
 		fbo() = default;
@@ -1939,17 +1940,23 @@ namespace gl
 		class save_binding_state
 		{
 			GLint m_last_binding;
+			bool reset = true;
 
 		public:
 			save_binding_state(const fbo& new_binding)
 			{
 				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &m_last_binding);
-				new_binding.bind();
+
+				if (m_last_binding != new_binding.id())
+					new_binding.bind();
+				else
+					reset = false;
 			}
 
 			~save_binding_state()
 			{
-				glBindFramebuffer(GL_FRAMEBUFFER, m_last_binding);
+				if (reset)
+					glBindFramebuffer(GL_FRAMEBUFFER, m_last_binding);
 			}
 		};
 
@@ -2092,6 +2099,9 @@ namespace gl
 
 		GLuint id() const;
 		void set_id(GLuint id);
+
+		void set_extents(size2i extents);
+		size2i get_extents() const;
 
 		explicit operator bool() const
 		{
