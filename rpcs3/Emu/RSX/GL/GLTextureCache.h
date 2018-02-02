@@ -765,8 +765,9 @@ namespace gl
 				break;
 			}
 
-			glBindTexture(GL_TEXTURE_2D, vram_texture);
-			apply_component_mapping_flags(GL_TEXTURE_2D, gcm_format, flags);
+			auto target = gl::get_target(type);
+			glBindTexture(target, vram_texture);
+			apply_component_mapping_flags(target, gcm_format, flags);
 
 			auto& cached = create_texture(vram_texture, rsx_address, rsx_size, width, height, depth, mipmaps);
 			cached.set_dirty(false);
@@ -836,7 +837,7 @@ namespace gl
 			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 
-		void insert_texture_barrier() override
+		void insert_texture_barrier(void*&, gl::texture*) override
 		{
 			auto &caps = gl::get_driver_caps();
 
