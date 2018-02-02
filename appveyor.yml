@@ -67,9 +67,12 @@ after_build:
 
 - ps: | # package artifacts
     7z a $env:BUILD .\bin\*
+    7z a openssl_win64.7z C:\OpenSSL-Win64\bin\libeay32.dll C:\OpenSSL-Win64\bin\ssleay32.dll
 
 test: off
 
 artifacts:
 - path: $(BUILD)
   name: rpcs3
+- path: openssl_win64.7z
+  name: openssl
