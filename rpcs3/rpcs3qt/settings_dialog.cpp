@@ -767,7 +767,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		{
 			addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(gui::gl_iconColor).value<QColor>());
 			addColoredIcon(ui->pb_tool_bar_color, xgui_settings->GetValue(gui::mw_toolBarColor).value<QColor>());
-			addColoredIcon(ui->pb_gl_tool_icon_color, xgui_settings->GetValue(gui::gl_toolIconColor).value<QColor>(), QIcon(":/Icons/home_blue.png"), gui::gl_tool_icon_color);
 			addColoredIcon(ui->pb_tool_icon_color, xgui_settings->GetValue(gui::mw_toolIconColor).value<QColor>(), QIcon(":/Icons/stop.png"), gui::mw_tool_icon_color);
 		};
 		AddColoredIcons();
@@ -777,7 +776,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		bool enableUIColors = xgui_settings->GetValue(gui::m_enableUIColors).toBool();
 		ui->cb_custom_colors->setChecked(enableUIColors);
 		ui->pb_gl_icon_color->setEnabled(enableUIColors);
-		ui->pb_gl_tool_icon_color->setEnabled(enableUIColors);
 		ui->pb_tool_bar_color->setEnabled(enableUIColors);
 		ui->pb_tool_icon_color->setEnabled(enableUIColors);
 
@@ -836,7 +834,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		{
 			xgui_settings->SetValue(gui::m_enableUIColors, val);
 			ui->pb_gl_icon_color->setEnabled(val);
-			ui->pb_gl_tool_icon_color->setEnabled(val);
 			ui->pb_tool_bar_color->setEnabled(val);
 			ui->pb_tool_icon_color->setEnabled(val);
 			Q_EMIT GuiRepaintRequest();
@@ -866,11 +863,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]()
 		{
 			colorDialog(gui::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color);
-		});
-
-		connect(ui->pb_gl_tool_icon_color, &QAbstractButton::clicked, [=]()
-		{
-			colorDialog(gui::gl_toolIconColor, tr("Choose gamelist tool icon color"), ui->pb_gl_tool_icon_color);
 		});
 
 		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]()
