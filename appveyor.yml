@@ -1,5 +1,5 @@
 
-version: '0.0.4-{build}'
+version: '{build}'
 
 image: Visual Studio 2015
 
@@ -13,6 +13,16 @@ cache:
  - vulkan.7z -> appveyor.yml
 
 install:
+- ps: | # set version env vars, update appveyor build version accordingly
+    $commDate = $env:APPVEYOR_REPO_COMMIT_TIMESTAMP.Substring(0,10)
+    $commSha = $env:APPVEYOR_REPO_COMMIT.Substring(0,8)
+    $commTag = $(git describe --tags $(git rev-list --tags --max-count=1))
+    
+    $av = "{0}-{1}" -f $commTag.TrimStart("v"), $env:APPVEYOR_BUILD_NUMBER
+    Update-AppveyorBuild -Version $av
+    
+    $env:BUILD = "rpcs3-{0}-{1}-{2}_win64.7z" -f $commTag, $commDate, $commSha
+
 - ps: | # used for experimental build warnings for pr builds
     $env:BRANCH = "{0}/{1}/#{2}" -f $env:APPVEYOR_REPO_NAME, `
       $env:APPVEYOR_REPO_BRANCH, $env:APPVEYOR_PULL_REQUEST_NUMBER
@@ -51,15 +61,17 @@ before_build:
     if not exist vulkan.7z appveyor DownloadFile %VULKAN% -FileName vulkan.7z
     7z x vulkan.7z -aos -o".\lib\%CONFIGURATION%-%PLATFORM%" > nul
 
+after_build:
+- ps: | # package artifacts
+    7z a $env:BUILD .\bin\*
+
 before_package:
   - rm %APPVEYOR_BUILD_FOLDER%\bin\rpcs3.exp
   - rm %APPVEYOR_BUILD_FOLDER%\bin\rpcs3.lib
   - rm %APPVEYOR_BUILD_FOLDER%\bin\rpcs3.pdb
-  - set COMMIT_DATE=%APPVEYOR_REPO_COMMIT_TIMESTAMP:~0,10%
-  - set COMMIT_SHA=%APPVEYOR_REPO_COMMIT:~0,8%
 
 test: off
 
 artifacts:
- - path: bin
-   name: 'rpcs3-v0.0.4-$(COMMIT_DATE)-$(COMMIT_SHA)_win64'
+- path: $(BUILD)
+  name: rpcs3
