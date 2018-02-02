@@ -13,7 +13,27 @@ cache:
  - vulkan.7z -> appveyor.yml
 
 install:
- - git submodule update --init 3rdparty/cereal 3rdparty/ffmpeg 3rdparty/GSL 3rdparty/hidapi 3rdparty/libpng 3rdparty/Optional 3rdparty/pugixml 3rdparty/zlib asmjit Utilities/yaml-cpp Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
+- ps: | # used for experimental build warnings for pr builds
+    $env:BRANCH = "{0}/{1}/#{2}" -f $env:APPVEYOR_REPO_NAME, `
+      $env:APPVEYOR_REPO_BRANCH, $env:APPVEYOR_PULL_REQUEST_NUMBER
+    $env:BRANCH = $env:BRANCH -replace "/#$"
+
+- ps: $env:PATH += $env:QTDIR
+
+- ps: | # update and init submodules
+    git submodule -q update --init `
+      3rdparty/cereal `
+      3rdparty/ffmpeg `
+      3rdparty/GSL `
+      3rdparty/hidapi `
+      3rdparty/libpng `
+      3rdparty/Optional `
+      3rdparty/pugixml `
+      3rdparty/zlib `
+      asmjit `
+      Utilities/yaml-cpp `
+      Vulkan/glslang `
+      Vulkan/Vulkan-LoaderAndValidationLayers
 
 platform: x64
 
@@ -25,9 +45,6 @@ build:
   verbosity: normal
 
 before_build:
-- set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%/#%APPVEYOR_PULL_REQUEST_NUMBER%
-- if "%APPVEYOR_PULL_REQUEST_NUMBER%"=="" (set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%)
-- set PATH=%PATH%;%QTDIR%
 - cmd: | # fetch precompiled build dependencies
     if not exist llvmlibs.7z appveyor DownloadFile %LLVMLIBS% -FileName llvmlibs.7z
     7z x llvmlibs.7z -aos -o"." > nul
