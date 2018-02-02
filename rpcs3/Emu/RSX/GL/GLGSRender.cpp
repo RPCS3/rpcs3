@@ -1341,10 +1341,7 @@ void GLGSRender::flip(int buffer)
 	// Cleanup
 	m_gl_texture_cache.on_frame_end();
 
-	for (auto &tex : m_rtts.invalidated_resources)
-		tex->remove();
-
-	m_rtts.invalidated_resources.clear();
+	m_rtts.free_invalidated();
 	m_vertex_cache->purge();
 
 	//If we are skipping the next frame, do not reset perf counters

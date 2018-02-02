@@ -8,16 +8,9 @@
 #include "VKFormats.h"
 #include "../rsx_utils.h"
 
-struct ref_counted
-{
-	u8 deref_count = 0;
-
-	void reset_refs() { deref_count = 0; }
-};
-
 namespace vk
 {
-	struct render_target : public image, public ref_counted, public rsx::render_target_descriptor<vk::image*>
+	struct render_target : public image, public rsx::ref_counted, public rsx::render_target_descriptor<vk::image*>
 	{
 		bool dirty = false;
 		u16 native_pitch = 0;
@@ -90,7 +83,7 @@ namespace vk
 		}
 	};
 
-	struct framebuffer_holder: public vk::framebuffer, public ref_counted
+	struct framebuffer_holder: public vk::framebuffer, public rsx::ref_counted
 	{
 		framebuffer_holder(VkDevice dev,
 			VkRenderPass pass,
