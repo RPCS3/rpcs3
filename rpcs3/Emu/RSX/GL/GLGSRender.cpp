@@ -318,12 +318,15 @@ void GLGSRender::end()
 				}
 				else
 				{
-					glBindTexture(target, GL_NONE);
+					glBindTexture(target, m_null_textures[target]->id());
 				}
 			}
 			else
 			{
-				glBindTexture(GL_TEXTURE_2D, GL_NONE);
+				glBindTexture(GL_TEXTURE_1D, m_null_textures[GL_TEXTURE_1D]->id());
+				glBindTexture(GL_TEXTURE_2D, m_null_textures[GL_TEXTURE_2D]->id());
+				glBindTexture(GL_TEXTURE_3D, m_null_textures[GL_TEXTURE_3D]->id());
+				glBindTexture(GL_TEXTURE_CUBE_MAP, m_null_textures[GL_TEXTURE_CUBE_MAP]->id());
 			}
 		}
 	}
@@ -672,6 +675,40 @@ void GLGSRender::on_init_thread()
 		tex.bind();
 	}
 
+	//Fallback null texture instead of relying on texture0
+	{
+		std::vector<u32> pixeldata = {0, 0, 0, 0};
+
+		//1D
+		auto tex1D = std::make_unique<gl::texture>();
+		tex1D->create();
+		tex1D->set_target(gl::texture::target::texture1D);
+		tex1D->config().width(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+
+		//2D
+		auto tex2D = std::make_unique<gl::texture>();
+		tex2D->create();
+		tex2D->set_target(gl::texture::target::texture2D);
+		tex2D->config().width(1).height(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+
+		//3D
+		auto tex3D = std::make_unique<gl::texture>();
+		tex3D->create();
+		tex3D->set_target(gl::texture::target::texture3D);
+		tex3D->config().width(1).height(1).depth(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+
+		//CUBE
+		auto texCUBE = std::make_unique<gl::texture>();
+		texCUBE->create();
+		texCUBE->set_target(gl::texture::target::textureCUBE);
+		texCUBE->config().width(1).height(1).depth(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+
+		m_null_textures[GL_TEXTURE_1D] = std::move(tex1D);
+		m_null_textures[GL_TEXTURE_2D] = std::move(tex2D);
+		m_null_textures[GL_TEXTURE_3D] = std::move(tex3D);
+		m_null_textures[GL_TEXTURE_CUBE_MAP] = std::move(texCUBE);
+	}
+
 	if (!gl_caps.ARB_buffer_storage_supported)
 	{
 		LOG_WARNING(RSX, "Forcing use of legacy OpenGL buffers because ARB_buffer_storage is not supported");
@@ -842,6 +879,11 @@ void GLGSRender::on_exit()
 	for (auto &sampler : m_gl_sampler_states)
 	{
 		sampler.remove();
+	}
+
+	for (auto &tex : m_null_textures)
+	{
+		tex.second->remove();
 	}
 
 	if (m_attrib_ring_buffer)
