@@ -5,6 +5,8 @@ image: Visual Studio 2015
 
 environment:
   QTDIR: C:\Qt\5.9\msvc2015_64
+  LLVMLIBS: https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8
+  VULKAN: https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R
 
 cache:
  - llvmlibs.7z -> appveyor.yml
@@ -23,13 +25,14 @@ build:
   verbosity: normal
 
 before_build:
- - set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%/#%APPVEYOR_PULL_REQUEST_NUMBER%
- - if "%APPVEYOR_PULL_REQUEST_NUMBER%"=="" (set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%)
- - set PATH=%PATH%;%QTDIR%
- - if not exist llvmlibs.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8" -FileName llvmlibs.7z
- - 7z x llvmlibs.7z -aos -o%APPVEYOR_BUILD_FOLDER% > null
- - if not exist vulkan.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R" -FileName vulkan.7z
- - 7z x vulkan.7z -aos -o"%APPVEYOR_BUILD_FOLDER%\lib\%CONFIGURATION%-%PLATFORM%" > null
+- set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%/#%APPVEYOR_PULL_REQUEST_NUMBER%
+- if "%APPVEYOR_PULL_REQUEST_NUMBER%"=="" (set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%)
+- set PATH=%PATH%;%QTDIR%
+- cmd: | # fetch precompiled build dependencies
+    if not exist llvmlibs.7z appveyor DownloadFile %LLVMLIBS% -FileName llvmlibs.7z
+    7z x llvmlibs.7z -aos -o"." > nul
+    if not exist vulkan.7z appveyor DownloadFile %VULKAN% -FileName vulkan.7z
+    7z x vulkan.7z -aos -o".\lib\%CONFIGURATION%-%PLATFORM%" > nul
 
 before_package:
   - rm %APPVEYOR_BUILD_FOLDER%\bin\rpcs3.exp
