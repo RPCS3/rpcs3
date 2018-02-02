@@ -19,6 +19,14 @@ extern "C"
 
 namespace rsx
 {
+	//Base for resources with reference counting
+	struct ref_counted
+	{
+		u8 deref_count = 0;
+
+		void reset_refs() { deref_count = 0; }
+	};
+
 	//Holds information about a framebuffer
 	struct gcm_framebuffer_info
 	{
