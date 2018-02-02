@@ -57,11 +57,11 @@ build:
   verbosity: normal
 
 before_build:
-- cmd: | # fetch precompiled build dependencies
-    if not exist llvmlibs.7z appveyor DownloadFile %LLVMLIBS% -FileName llvmlibs.7z
-    7z x llvmlibs.7z -aos -o"." > nul
-    if not exist vulkan.7z appveyor DownloadFile %VULKAN% -FileName vulkan.7z
-    7z x vulkan.7z -aos -o".\lib\%CONFIGURATION%-%PLATFORM%" > nul
+- ps: | # fetch precompiled build dependencies
+    if (!(test-path llvmlibs.7z)) { irm $env:LLVMLIBS -outfile llvmlibs.7z }
+    if (!(test-path vulkan.7z)) { irm $env:VULKAN -outfile vulkan.7z }
+    7z x llvmlibs.7z -aos -o"." | out-null
+    7z x vulkan.7z -aos -o".\lib\$env:CONFIGURATION-$env:PLATFORM" | out-null
 
 after_build:
 - ps: | # remove unnecessary files
