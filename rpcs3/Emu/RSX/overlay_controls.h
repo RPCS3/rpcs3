@@ -472,6 +472,7 @@ namespace rsx
 						//Resource was not found in config dir, try and grab from relative path (linux)
 						info = std::make_unique<image_info>(("Icons/ui/" + res).c_str());
 #ifndef _WIN32
+						// Check for Icons in ../share/rpcs3 for AppImages and /usr/bin/
 						if (info->data == nullptr)
 						{
 							char result[ PATH_MAX ];
@@ -483,6 +484,11 @@ namespace rsx
 							std::string executablePath = dirname(result);
 							info = std::make_unique<image_info>((executablePath + "/../share/rpcs3/Icons/ui/" + res).c_str());
 
+							// Check if the icons are in the same directory as the executable (local builds)
+							if (info->data == nullptr)
+							{
+								info = std::make_unique<image_info>((executablePath + "/Icons/ui/" + res).c_str());
+							}
 						}
 #endif
 						if (info->data != nullptr)
@@ -1331,6 +1337,8 @@ namespace rsx
 			s16 m_selected_entry = -1;
 			u16 m_elements_count = 0;
 
+			bool m_cancel_only = false;
+
 		public:
 			list_view(u16 width, u16 height)
 			{
@@ -1461,6 +1469,17 @@ namespace rsx
 				return m_items[m_selected_entry]->text;
 			}
 
+			void set_cancel_only(bool cancel_only)
+			{
+				if (cancel_only)
+					m_cancel_btn->set_pos(x + 30, y + h + 20);
+				else
+					m_cancel_btn->set_pos(x + 180, y + h + 20);
+
+				m_cancel_only = cancel_only;
+				is_compiled = false;
+			}
+
 			void translate(s16 _x, s16 _y) override
 			{
 				layout_container::translate(_x, _y);
@@ -1478,8 +1497,10 @@ namespace rsx
 					compiled.add(m_highlight_box->get_compiled());
 					compiled.add(m_scroll_indicator_top->get_compiled());
 					compiled.add(m_scroll_indicator_bottom->get_compiled());
-					compiled.add(m_accept_btn->get_compiled());
 					compiled.add(m_cancel_btn->get_compiled());
+
+					if (!m_cancel_only)
+						compiled.add(m_accept_btn->get_compiled());
 
 					compiled_resources = compiled;
 				}

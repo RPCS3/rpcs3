@@ -84,7 +84,10 @@ namespace vk
 		}
 
 		case rsx::surface_color_format::b8:
-			return std::make_pair(VK_FORMAT_R8_UNORM, vk::default_component_map());
+		{
+			VkComponentMapping no_alpha = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ONE };
+			return std::make_pair(VK_FORMAT_R8_UNORM, no_alpha);
+		}
 		
 		case rsx::surface_color_format::g8b8:
 			return std::make_pair(VK_FORMAT_R8G8_UNORM, vk::default_component_map());
@@ -360,23 +363,14 @@ namespace
 		subpass.pColorAttachments = number_of_color_surface > 0 ? attachment_references.data() : nullptr;
 		subpass.pDepthStencilAttachment = depth_format != VK_FORMAT_UNDEFINED ? &attachment_references.back() : nullptr;
 
-		VkSubpassDependency dependency = {};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstSubpass = 0;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
 		VkRenderPassCreateInfo rp_info = {};
 		rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		rp_info.attachmentCount = static_cast<uint32_t>(attachments.size());
 		rp_info.pAttachments = attachments.data();
 		rp_info.subpassCount = 1;
 		rp_info.pSubpasses = &subpass;
-		rp_info.pDependencies = &dependency;
-		rp_info.dependencyCount = 1;
+		rp_info.pDependencies = nullptr;
+		rp_info.dependencyCount = 0;
 
 		VkRenderPass result;
 		CHECK_RESULT(vkCreateRenderPass(dev, &rp_info, NULL, &result));
@@ -1143,8 +1137,22 @@ void VKGSRender::end()
 
 					if (replace)
 					{
-						fs_sampler_handles[i] = std::make_unique<vk::sampler>(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
-							min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode);
+						for (auto &sampler : m_current_frame->samplers_to_clean)
+						{
+							if (sampler->matches(wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
+								min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode))
+							{
+								fs_sampler_handles[i] = std::move(sampler);
+								replace = false;
+								break;
+							}
+						}
+
+						if (replace)
+						{
+							fs_sampler_handles[i] = std::make_unique<vk::sampler>(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
+								min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode);
+						}
 					}
 				}
 				else
@@ -1188,6 +1196,7 @@ void VKGSRender::end()
 
 					if (replace)
 					{
+						//This is unlikely, there is no need to check the dirty pool
 						vs_sampler_handles[i] = std::make_unique<vk::sampler>(
 							*m_device,
 							VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
@@ -2478,10 +2487,14 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	//NOTE: Its is possible that some renders are done on a swizzled context. Pitch is meaningless in that case
 	//Seen in Nier (color) and GT HD concept (z buffer)
-	//Restriction is that the RTT is always a square region for that dimensions are powers of 2
+	//Restriction is that the dimensions are powers of 2. Also, dimensions are passed via log2w and log2h entries
 	const auto required_zeta_pitch = std::max<u32>((u32)(depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4), 64u);
 	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(color_fmt, clip_width), 64u);
 	const bool stencil_test_enabled = depth_fmt == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
+	const auto lg2w = rsx::method_registers.surface_log2_width();
+	const auto lg2h = rsx::method_registers.surface_log2_height();
+	const auto clipw_log2 = (u32)floor(log2(clip_width));
+	const auto cliph_log2 = (u32)floor(log2(clip_height));
 
 	if (zeta_address)
 	{
@@ -2500,8 +2513,21 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 		if (zeta_address && zeta_pitch < required_zeta_pitch)
 		{
-			if (zeta_pitch < 64 || clip_width != clip_height)
+			if (lg2w < clipw_log2 || lg2h < cliph_log2)
+			{
+				//Cannot fit
 				zeta_address = 0;
+
+				if (lg2w > 0 || lg2h > 0)
+				{
+					//Something was actually declared for the swizzle context dimensions
+					LOG_ERROR(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
+				}
+			}
+			else
+			{
+				LOG_TRACE(RSX, "Swizzled context depth surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
+			}
 		}
 	}
 
@@ -2509,8 +2535,20 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		if (surface_pitchs[index] < required_color_pitch)
 		{
-			if (surface_pitchs[index] < 64 || clip_width != clip_height)
+			if (lg2w < clipw_log2 || lg2h < cliph_log2)
+			{
 				surface_addresses[index] = 0;
+
+				if (lg2w > 0 || lg2h > 0)
+				{
+					//Something was actually declared for the swizzle context dimensions
+					LOG_ERROR(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
+				}
+			}
+			else
+			{
+				LOG_TRACE(RSX, "Swizzled context color surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
+			}
 		}
 
 		if (surface_addresses[index] == zeta_address)
@@ -2990,7 +3028,7 @@ void VKGSRender::flip(int buffer)
 		VkImageLayout target_layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
-		if (aspect_ratio.x)
+		if (aspect_ratio.x || aspect_ratio.y)
 		{
 			VkClearColorValue clear_black {};
 			vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);

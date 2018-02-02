@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 struct CellVideoUploadOption
 {
 	be_t<s32> type;
@@ -11,27 +9,27 @@ struct CellVideoUploadOption
 struct CellVideoUploadParam
 {
 	be_t<s32> siteID;
-	vm::bcptr<char> pFilePath;
+	vm::ps3::bcptr<char> pFilePath;
 	union
 	{
 		struct
 		{
-			vm::bcptr<char> pClientId;
-			vm::bcptr<char> pDeveloperKey;
-			vm::bcptr<char> pTitle_UTF8;
-			vm::bcptr<char> pDescription_UTF8;
-			vm::bcptr<char> pKeyword_1_UTF8;
-			vm::bcptr<char> pKeyword_2_UTF8;
-			vm::bcptr<char> pKeyword_3_UTF8;
+			vm::ps3::bcptr<char> pClientId;
+			vm::ps3::bcptr<char> pDeveloperKey;
+			vm::ps3::bcptr<char> pTitle_UTF8;
+			vm::ps3::bcptr<char> pDescription_UTF8;
+			vm::ps3::bcptr<char> pKeyword_1_UTF8;
+			vm::ps3::bcptr<char> pKeyword_2_UTF8;
+			vm::ps3::bcptr<char> pKeyword_3_UTF8;
 			u8 isPrivate;
 			u8 rating;
 		} youtube;
 	} u;
 	be_t<s32> numOfOption;
-	vm::bptr<CellVideoUploadOption> pOption;
+	vm::ps3::bptr<CellVideoUploadOption> pOption;
 };
 
-typedef void(CellVideoUploadCallback)(s32 status, s32 errorCode, vm::cptr<char> pResultURL, vm::ptr<void> userdata);
+using CellVideoUploadCallback = void(s32 status, s32 errorCode, vm::ps3::cptr<char> pResultURL, vm::ps3::ptr<void> userdata);
 
 enum
 {
@@ -58,4 +56,10 @@ enum
 	CELL_VIDEO_UPLOAD_ERROR_INVALID_VALUE       = 0x8002d022,
 	CELL_VIDEO_UPLOAD_ERROR_FILE_OPEN           = 0x8002d023,
 	CELL_VIDEO_UPLOAD_ERROR_INVALID_STATE       = 0x8002d024
+};
+
+enum
+{
+	CELL_VIDEO_UPLOAD_STATUS_INITIALIZED = 1,
+	CELL_VIDEO_UPLOAD_STATUS_FINALIZED = 2
 };

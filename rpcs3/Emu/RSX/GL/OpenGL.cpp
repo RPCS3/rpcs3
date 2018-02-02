@@ -34,6 +34,9 @@ void gl::init()
 #ifdef __unix__
 	glewExperimental = true;
 	glewInit();
+#ifndef __APPLE__
+	glxewInit();
+#endif
 #endif
 }
 
@@ -41,5 +44,19 @@ void gl::set_swapinterval(int interval)
 {
 #ifdef _WIN32
 	wglSwapIntervalEXT(interval);
+#elif !defined(__APPLE__)
+	if (glXSwapIntervalEXT)
+	{
+		if (auto window = glXGetCurrentDrawable())
+		{
+			glXSwapIntervalEXT(glXGetCurrentDisplay(), window, interval);
+			return;
+		}
+	}
+
+	//No existing drawable or missing swap extension, EGL?
+	LOG_ERROR(RSX, "Failed to set swap interval");
+#else
+	LOG_UNIMPLEMENTED(RSX, "Swap control not implemented for this platform. Vsync options not available.");
 #endif
 }

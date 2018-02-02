@@ -90,6 +90,10 @@ namespace vk
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
 
+	//Texture barrier applies to a texture to ensure writes to it are finished before any reads are attempted to avoid RAW hazards
+	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range);
+	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image);
+
 	void enter_uninterruptible();
 	void leave_uninterruptible();
 	bool is_uninterruptible();
