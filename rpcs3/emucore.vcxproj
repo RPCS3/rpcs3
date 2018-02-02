@@ -82,6 +82,9 @@
     <ClCompile Include="..\Utilities\GDBDebugServer.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\Utilities\hardware_breakpoint\hardware_breakpoint_manager.cpp" />
+    <ClCompile Include="..\Utilities\hardware_breakpoint\linux_hardware_breakpoint_manager.cpp" />
+    <ClCompile Include="..\Utilities\hardware_breakpoint\windows_hardware_breakpoint_manager.cpp" />
     <ClCompile Include="..\Utilities\JIT.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -429,6 +432,11 @@
     <ClInclude Include="..\Utilities\GDBDebugServer.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
     <ClInclude Include="..\Utilities\GSL.h" />
+    <ClInclude Include="..\Utilities\hardware_breakpoint\hardware_breakpoint_manager.h" />
+    <ClInclude Include="..\Utilities\hardware_breakpoint\hardware_breakpoint_manager_impl.h" />
+    <ClInclude Include="..\Utilities\hardware_breakpoint\linux_hardware_breakpoint_manager.h" />
+    <ClInclude Include="..\Utilities\hardware_breakpoint\null_hardware_breakpoint_manager.h" />
+    <ClInclude Include="..\Utilities\hardware_breakpoint\windows_hardware_breakpoint_manager.h" />
     <ClInclude Include="..\Utilities\hash.h" />
     <ClInclude Include="..\Utilities\JIT.h" />
     <ClInclude Include="..\Utilities\lockless.h" />
