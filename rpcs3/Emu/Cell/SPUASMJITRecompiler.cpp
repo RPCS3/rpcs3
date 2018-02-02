@@ -1716,50 +1716,57 @@ void spu_recompiler::CDX(spu_opcode_t op)
 
 void spu_recompiler::ROTQBI(spu_opcode_t op)
 {
-	c->mov(*qw0, SPU_OFF_64(gpr, op.ra, &v128::_u64, 0));
-	c->mov(*qw1, SPU_OFF_64(gpr, op.ra, &v128::_u64, 1));
-	c->mov(*qw2, *qw0);
-	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
-	c->and_(*addr, 7);
-	c->shld(*qw0, *qw1, *addr);
-	c->shld(*qw1, *qw2, *addr);
-	c->mov(SPU_OFF_64(gpr, op.rt, &v128::_u64, 0), *qw0);
-	c->mov(SPU_OFF_64(gpr, op.rt, &v128::_u64, 1), *qw1);
-	c->unuse(*addr);
-	c->unuse(*qw0);
-	c->unuse(*qw1);
-	c->unuse(*qw2);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+	const XmmLink& vt = XmmAlloc();
+	const XmmLink& v4 = XmmAlloc();
+	c->psrldq(vb, 12);
+	c->pand(vb, XmmConst(_mm_set_epi64x(0, 7)));
+	c->movdqa(v4, XmmConst(_mm_set_epi64x(0, 64)));
+	c->pshufd(vt, va, 0x4e);
+	c->psubq(v4, vb);
+	c->psllq(va, vb);
+	c->psrlq(vt, v4);
+	c->por(vt, va);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
 }
 
 void spu_recompiler::ROTQMBI(spu_opcode_t op)
 {
-	c->mov(*qw0, SPU_OFF_64(gpr, op.ra, &v128::_u64, 0));
-	c->mov(*qw1, SPU_OFF_64(gpr, op.ra, &v128::_u64, 1));
-	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
-	c->neg(*addr);
-	c->and_(*addr, 7);
-	c->shrd(*qw0, *qw1, *addr);
-	c->shr(*qw1, *addr);
-	c->mov(SPU_OFF_64(gpr, op.rt, &v128::_u64, 0), *qw0);
-	c->mov(SPU_OFF_64(gpr, op.rt, &v128::_u64, 1), *qw1);
-	c->unuse(*addr);
-	c->unuse(*qw0);
-	c->unuse(*qw1);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vb = XmmAlloc();
+	const XmmLink& vt = XmmGet(op.rb, XmmType::Int);
+	const XmmLink& v4 = XmmAlloc();
+	c->psrldq(vt, 12);
+	c->pxor(vb, vb);
+	c->psubq(vb, vt);
+	c->pand(vb, XmmConst(_mm_set_epi64x(0, 7)));
+	c->movdqa(v4, XmmConst(_mm_set_epi64x(0, 64)));
+	c->movdqa(vt, va);
+	c->psrldq(vt, 8);
+	c->psubq(v4, vb);
+	c->psrlq(va, vb);
+	c->psllq(vt, v4);
+	c->por(vt, va);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
 }
 
 void spu_recompiler::SHLQBI(spu_opcode_t op)
 {
-	c->mov(*qw0, SPU_OFF_64(gpr, op.ra, &v128::_u64, 0));
-	c->mov(*qw1, SPU_OFF_64(gpr, op.ra, &v128::_u64, 1));
-	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
-	c->and_(*addr, 7);
-	c->shld(*qw1, *qw0, *addr);
-	c->shl(*qw0, *addr);
-	c->mov(SPU_OFF_64(gpr, op.rt, &v128::_u64, 0), *qw0);
-	c->mov(SPU_OFF_64(gpr, op.rt, &v128::_u64, 1), *qw1);
-	c->unuse(*addr);
-	c->unuse(*qw0);
-	c->unuse(*qw1);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+	const XmmLink& vt = XmmAlloc();
+	const XmmLink& v4 = XmmAlloc();
+	c->psrldq(vb, 12);
+	c->pand(vb, XmmConst(_mm_set_epi64x(0, 7)));
+	c->movdqa(v4, XmmConst(_mm_set_epi64x(0, 64)));
+	c->movdqa(vt, va);
+	c->pslldq(vt, 8);
+	c->psubq(v4, vb);
+	c->psllq(va, vb);
+	c->psrlq(vt, v4);
+	c->por(vt, va);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
 }
 
 void spu_recompiler::ROTQBY(spu_opcode_t op)
@@ -1974,40 +1981,37 @@ void spu_recompiler::CDD(spu_opcode_t op)
 
 void spu_recompiler::ROTQBII(spu_opcode_t op)
 {
-	c->mov(*qw0, SPU_OFF_64(gpr, op.ra, &v128::_u64, 0));
-	c->mov(*qw1, SPU_OFF_64(gpr, op.ra, &v128::_u64, 1));
-	c->mov(*qw2, *qw0);
-	c->shld(*qw0, *qw1, op.i7 & 0x7);
-	c->shld(*qw1, *qw2, op.i7 & 0x7);
-	c->mov(SPU_OFF_64(gpr, op.rt, &v128::_u64, 0), *qw0);
-	c->mov(SPU_OFF_64(gpr, op.rt, &v128::_u64, 1), *qw1);
-	c->unuse(*qw0);
-	c->unuse(*qw1);
-	c->unuse(*qw2);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vt = XmmAlloc();
+	c->pshufd(vt, va, 0x4e); // swap 64-bit parts
+	c->psllq(va, (op.i7 & 0x7));
+	c->psrlq(vt, 64 - (op.i7 & 0x7));
+	c->por(vt, va);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
 }
 
 void spu_recompiler::ROTQMBII(spu_opcode_t op)
 {
-	c->mov(*qw0, SPU_OFF_64(gpr, op.ra, &v128::_u64, 0));
-	c->mov(*qw1, SPU_OFF_64(gpr, op.ra, &v128::_u64, 1));
-	c->shrd(*qw0, *qw1, 0-op.i7 & 0x7);
-	c->shr(*qw1, 0-op.i7 & 0x7);
-	c->mov(SPU_OFF_64(gpr, op.rt, &v128::_u64, 0), *qw0);
-	c->mov(SPU_OFF_64(gpr, op.rt, &v128::_u64, 1), *qw1);
-	c->unuse(*qw0);
-	c->unuse(*qw1);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vt = XmmAlloc();
+	c->movdqa(vt, va);
+	c->psrldq(vt, 8);
+	c->psrlq(va, ((0 - op.i7) & 0x7));
+	c->psllq(vt, 64 - ((0 - op.i7) & 0x7));
+	c->por(vt, va);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
 }
 
 void spu_recompiler::SHLQBII(spu_opcode_t op)
 {
-	c->mov(*qw0, SPU_OFF_64(gpr, op.ra, &v128::_u64, 0));
-	c->mov(*qw1, SPU_OFF_64(gpr, op.ra, &v128::_u64, 1));
-	c->shld(*qw1, *qw0, op.i7 & 0x7);
-	c->shl(*qw0, op.i7 & 0x7);
-	c->mov(SPU_OFF_64(gpr, op.rt, &v128::_u64, 0), *qw0);
-	c->mov(SPU_OFF_64(gpr, op.rt, &v128::_u64, 1), *qw1);
-	c->unuse(*qw0);
-	c->unuse(*qw1);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vt = XmmAlloc();
+	c->movdqa(vt, va);
+	c->pslldq(vt, 8);
+	c->psllq(va, (op.i7 & 0x7));
+	c->psrlq(vt, 64 - (op.i7 & 0x7));
+	c->por(vt, va);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
 }
 
 void spu_recompiler::ROTQBYI(spu_opcode_t op)
