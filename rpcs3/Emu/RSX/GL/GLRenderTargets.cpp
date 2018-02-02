@@ -189,10 +189,14 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	//NOTE: Its is possible that some renders are done on a swizzled context. Pitch is meaningless in that case
 	//Seen in Nier (color) and GT HD concept (z buffer)
-	//Restriction is that the RTT is always a square region for that dimensions are powers of 2
+	//Restriction is that the dimensions are powers of 2. Also, dimensions are passed via log2w and log2h entries
 	const auto required_zeta_pitch = std::max<u32>((u32)(depth_format == rsx::surface_depth_format::z16 ? clip_horizontal * 2 : clip_horizontal * 4), 64u);
 	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(surface_format, clip_horizontal), 64u);
 	const bool stencil_test_enabled = depth_format == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
+	const auto lg2w = rsx::method_registers.surface_log2_width();
+	const auto lg2h = rsx::method_registers.surface_log2_height();
+	const auto clipw_log2 = (u32)floor(log2(clip_horizontal));
+	const auto cliph_log2 = (u32)floor(log2(clip_vertical));
 
 	if (depth_address)
 	{
@@ -211,8 +215,21 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 		if (depth_address && zeta_pitch < required_zeta_pitch)
 		{
-			if (zeta_pitch < 64 || clip_vertical != clip_horizontal)
+			if (lg2w < clipw_log2 || lg2h < cliph_log2)
+			{
+				//Cannot fit
 				depth_address = 0;
+
+				if (lg2w > 0 || lg2h > 0)
+				{
+					//Something was actually declared for the swizzle context dimensions
+					LOG_ERROR(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+				}
+			}
+			else
+			{
+				LOG_TRACE(RSX, "Swizzled context depth surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+			}
 		}
 	}
 
@@ -220,8 +237,20 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	{
 		if (pitchs[index] < required_color_pitch)
 		{
-			if (pitchs[index] < 64 || clip_vertical != clip_horizontal)
+			if (lg2w < clipw_log2 || lg2h < cliph_log2)
+			{
 				surface_addresses[index] = 0;
+
+				if (lg2w > 0 || lg2h > 0)
+				{
+					//Something was actually declared for the swizzle context dimensions
+					LOG_ERROR(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+				}
+			}
+			else
+			{
+				LOG_TRACE(RSX, "Swizzled context color surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+			}
 		}
 
 		if (surface_addresses[index] == depth_address)
@@ -365,6 +394,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		break;
 	}
 
+	m_gl_texture_cache.clear_ro_tex_invalidate_intr();
+
 	//Mark buffer regions as NO_ACCESS on Cell visible side
 	if (g_cfg.video.write_color_buffers)
 	{
@@ -393,6 +424,12 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			m_gl_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range, m_depth_surface_info.width, m_depth_surface_info.height, pitch,
 				depth_format_gl.format, depth_format_gl.type, true);
 		}
+	}
+
+	if (m_gl_texture_cache.get_ro_tex_invalidate_intr())
+	{
+		//Invalidate cached sampler state
+		m_samplers_dirty.store(true);
 	}
 }
 

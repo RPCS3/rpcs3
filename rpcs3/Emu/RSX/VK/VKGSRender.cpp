@@ -2487,10 +2487,14 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	//NOTE: Its is possible that some renders are done on a swizzled context. Pitch is meaningless in that case
 	//Seen in Nier (color) and GT HD concept (z buffer)
-	//Restriction is that the RTT is always a square region for that dimensions are powers of 2
+	//Restriction is that the dimensions are powers of 2. Also, dimensions are passed via log2w and log2h entries
 	const auto required_zeta_pitch = std::max<u32>((u32)(depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4), 64u);
 	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(color_fmt, clip_width), 64u);
 	const bool stencil_test_enabled = depth_fmt == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
+	const auto lg2w = rsx::method_registers.surface_log2_width();
+	const auto lg2h = rsx::method_registers.surface_log2_height();
+	const auto clipw_log2 = (u32)floor(log2(clip_width));
+	const auto cliph_log2 = (u32)floor(log2(clip_height));
 
 	if (zeta_address)
 	{
@@ -2509,8 +2513,21 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 		if (zeta_address && zeta_pitch < required_zeta_pitch)
 		{
-			if (zeta_pitch < 64 || clip_width != clip_height)
+			if (lg2w < clipw_log2 || lg2h < cliph_log2)
+			{
+				//Cannot fit
 				zeta_address = 0;
+
+				if (lg2w > 0 || lg2h > 0)
+				{
+					//Something was actually declared for the swizzle context dimensions
+					LOG_ERROR(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
+				}
+			}
+			else
+			{
+				LOG_TRACE(RSX, "Swizzled context depth surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
+			}
 		}
 	}
 
@@ -2518,8 +2535,20 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		if (surface_pitchs[index] < required_color_pitch)
 		{
-			if (surface_pitchs[index] < 64 || clip_width != clip_height)
+			if (lg2w < clipw_log2 || lg2h < cliph_log2)
+			{
 				surface_addresses[index] = 0;
+
+				if (lg2w > 0 || lg2h > 0)
+				{
+					//Something was actually declared for the swizzle context dimensions
+					LOG_ERROR(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
+				}
+			}
+			else
+			{
+				LOG_TRACE(RSX, "Swizzled context color surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
+			}
 		}
 
 		if (surface_addresses[index] == zeta_address)
@@ -2999,7 +3028,7 @@ void VKGSRender::flip(int buffer)
 		VkImageLayout target_layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
-		if (aspect_ratio.x)
+		if (aspect_ratio.x || aspect_ratio.y)
 		{
 			VkClearColorValue clear_black {};
 			vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
