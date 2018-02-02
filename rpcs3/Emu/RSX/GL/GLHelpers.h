@@ -1342,6 +1342,7 @@ namespace gl
 			texture1D = GL_TEXTURE_1D,
 			texture2D = GL_TEXTURE_2D,
 			texture3D = GL_TEXTURE_3D,
+			textureCUBE = GL_TEXTURE_CUBE_MAP,
 			textureBuffer = GL_TEXTURE_BUFFER
 		};
 
@@ -1841,6 +1842,7 @@ namespace gl
 
 		uint m_width = 0;
 		uint m_height = 0;
+		uint m_depth = 1;
 		int m_level = 0;
 
 		int m_compressed_image_size = 0;
@@ -1887,6 +1889,7 @@ namespace gl
 		settings& filter(min_filter min_filter, filter mag_filter);
 		settings& width(uint width);
 		settings& height(uint height);
+		settings& depth(uint depth);
 		settings& size(sizei size);
 		settings& level(int value);
 		settings& compressed_image_size(int size);
