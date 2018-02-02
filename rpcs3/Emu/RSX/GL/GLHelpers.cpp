@@ -296,6 +296,16 @@ namespace gl
 		m_id = id;
 	}
 
+	void fbo::set_extents(size2i extents)
+	{
+		m_size = extents;
+	}
+
+	size2i fbo::get_extents() const
+	{
+		return m_size;
+	}
+
 	void texture::settings::apply(const texture &texture) const
 	{
 		save_binding_state save(texture);

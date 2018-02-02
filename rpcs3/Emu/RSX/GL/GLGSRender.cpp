@@ -1414,19 +1414,22 @@ void GLGSRender::do_local_task(bool /*idle*/)
 
 	std::lock_guard<std::mutex> lock(queue_guard);
 
-	work_queue.remove_if([](work_item &q) { return q.received; });
-
-	for (work_item& q: work_queue)
+	if (!work_queue.empty())
 	{
-		if (q.processed) continue;
+		work_queue.remove_if([](work_item &q) { return q.received; });
 
-		std::unique_lock<std::mutex> lock(q.guard_mutex);
-		q.result = m_gl_texture_cache.flush_all(q.section_data);
-		q.processed = true;
+		for (work_item& q : work_queue)
+		{
+			if (q.processed) continue;
 
-		//Notify thread waiting on this
-		lock.unlock();
-		q.cv.notify_one();
+			std::unique_lock<std::mutex> lock(q.guard_mutex);
+			q.result = m_gl_texture_cache.flush_all(q.section_data);
+			q.processed = true;
+
+			//Notify thread waiting on this
+			lock.unlock();
+			q.cv.notify_one();
+		}
 	}
 
 	if (m_overlay_cleanup_requests.size())
