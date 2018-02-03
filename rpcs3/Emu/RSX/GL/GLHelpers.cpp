@@ -35,8 +35,10 @@ namespace gl
 		switch (type)
 		{
 		case GL_DEBUG_TYPE_ERROR:
+		{
 			LOG_ERROR(RSX, "%s", message);
 			return;
+		}
 		default:
 			LOG_WARNING(RSX, "%s", message);
 			return;
@@ -372,9 +374,9 @@ namespace gl
 
 		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_MAX_LEVEL, m_max_level);
 
-		if (m_pixels)
+		if (m_pixels && m_generate_mipmap)
 		{
-			glTexParameteri((GLenum)m_parent->get_target(), GL_GENERATE_MIPMAP, m_generate_mipmap ? GL_TRUE : GL_FALSE);
+			glGenerateMipmap((GLenum)m_parent->get_target());
 		}
 
 		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_WRAP_S, (GLint)m_wrap_s);

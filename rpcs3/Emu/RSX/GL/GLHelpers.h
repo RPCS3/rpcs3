@@ -210,6 +210,7 @@ namespace gl
 	{
 		GLsync m_value = nullptr;
 		GLenum flags = GL_SYNC_FLUSH_COMMANDS_BIT;
+		bool signaled = false;
 
 	public:
 
@@ -245,11 +246,16 @@ namespace gl
 		{
 			verify(HERE), m_value != nullptr;
 
+			if (signaled)
+				return true;
+
 			if (flags)
 			{
 				GLenum err = glClientWaitSync(m_value, flags, 0);
 				flags = 0;
-				return (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
+
+				if (!(err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED))
+					return false;
 			}
 			else
 			{
@@ -257,8 +263,12 @@ namespace gl
 				GLint tmp;
 
 				glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
-				return (status == GL_SIGNALED);
+
+				if (status != GL_SIGNALED)
+					return false;
 			}
+
+			signaled = true;
 			return true;
 		}
 
@@ -266,44 +276,49 @@ namespace gl
 		{
 			verify(HERE), m_value != nullptr;
 
-			GLenum err = GL_WAIT_FAILED;
-			bool done = false;
-
-			while (!done)
+			if (signaled == GL_FALSE)
 			{
-				if (flags)
-				{
-					err = glClientWaitSync(m_value, flags, 0);
-					flags = 0;
+				GLenum err = GL_WAIT_FAILED;
+				bool done = false;
 
-					switch (err)
+				while (!done)
+				{
+					if (flags)
 					{
-					default:
-						LOG_ERROR(RSX, "gl::fence sync returned unknown error 0x%X", err);
-					case GL_ALREADY_SIGNALED:
-					case GL_CONDITION_SATISFIED:
-						done = true;
-						break;
-					case GL_TIMEOUT_EXPIRED:
-						continue;
+						err = glClientWaitSync(m_value, flags, 0);
+						flags = 0;
+
+						switch (err)
+						{
+						default:
+							LOG_ERROR(RSX, "gl::fence sync returned unknown error 0x%X", err);
+						case GL_ALREADY_SIGNALED:
+						case GL_CONDITION_SATISFIED:
+							done = true;
+							break;
+						case GL_TIMEOUT_EXPIRED:
+							continue;
+						}
+					}
+					else
+					{
+						GLint status = GL_UNSIGNALED;
+						GLint tmp;
+
+						glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
+
+						if (status == GL_SIGNALED)
+							break;
 					}
 				}
-				else
-				{
-					GLint status = GL_UNSIGNALED;
-					GLint tmp;
 
-					glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
-
-					if (status == GL_SIGNALED)
-						break;
-				}
+				signaled = (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
 			}
 
 			glDeleteSync(m_value);
 			m_value = nullptr;
 
-			return (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
+			return signaled;
 		}
 	};
 

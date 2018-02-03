@@ -2032,6 +2032,12 @@ void VKGSRender::do_local_task(bool /*idle*/)
 		m_flush_requests.clear_pending_flag();
 		m_flush_requests.consumer_wait();
 	}
+	else if (!in_begin_end)
+	{
+		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
+		//Only call when there are no waiters
+		m_texture_cache.do_update();
+	}
 
 	if (m_last_flushable_cb > -1)
 	{
@@ -2633,6 +2639,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			if (old_format == VK_FORMAT_UNDEFINED)
 				old_format = vk::get_compatible_surface_format(m_surface_info[i].color_format).first;
 
+			m_texture_cache.set_memory_read_flags(m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height, rsx::memory_read_flags::flush_once);
 			m_texture_cache.flush_if_cache_miss_likely(old_format, m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height,
 				*m_current_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
 		}
@@ -2643,10 +2650,21 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_surface_info[i].color_format = color_fmt;
 	}
 
-	m_depth_surface_info.address = m_depth_surface_info.pitch = 0;
-	m_depth_surface_info.width = clip_width;
-	m_depth_surface_info.height = clip_height;
-	m_depth_surface_info.depth_format = depth_fmt;
+	//Process depth surface as well
+	{
+		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
+		{
+			auto old_format = vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_depth_surface_info.depth_format);
+			m_texture_cache.set_memory_read_flags(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, rsx::memory_read_flags::flush_once);
+			m_texture_cache.flush_if_cache_miss_likely(old_format, m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height,
+				*m_current_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue());
+		}
+
+		m_depth_surface_info.address = m_depth_surface_info.pitch = 0;
+		m_depth_surface_info.width = clip_width;
+		m_depth_surface_info.height = clip_height;
+		m_depth_surface_info.depth_format = depth_fmt;
+	}
 
 	//Bind created rtts as current fbo...
 	std::vector<u8> draw_buffers = rsx::utility::get_rtt_indexes(target);
