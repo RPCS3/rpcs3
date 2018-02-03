@@ -587,6 +587,9 @@
     <ClCompile Include="Emu\Cell\Modules\sceNpCommerce2.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\sceNpMatchingInt.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\sceNpSns.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -937,7 +940,7 @@
     </ClCompile>
     <ClCompile Include="Emu\Io\PadHandler.cpp">
       <Filter>Emu\Io</Filter>
-	</ClCompile>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\overlays.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
