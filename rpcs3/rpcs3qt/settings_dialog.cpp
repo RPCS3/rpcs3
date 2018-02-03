@@ -274,7 +274,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		// List found unselected modules
 		if (prxf.is_directory || (prxf.name.substr(std::max<size_t>(size_t(3), prxf.name.length()) - 4)) != "sprx")
 			continue;
-		if (verify_npdrm_self_headers(fs::file(lle_dir + prxf.name)) && !set.count(prxf.name))
+		if (verify_npdrm_self_headers(fs::file(lle_dir + prxf.name)) == self_decryptor_result_code::ok && !set.count(prxf.name))
 		{
 			lle_module_list_unselected.push_back(prxf.name);
 		}

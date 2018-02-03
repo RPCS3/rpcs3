@@ -81,7 +81,7 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 		if (k_licensee_addr == vm::null)
 			k_licensee = get_default_self_klic();
 
-		if (verify_npdrm_self_headers(enc_file, k_licensee.data()))
+		if (verify_npdrm_self_headers(enc_file, k_licensee.data()) == self_decryptor_result_code::ok)
 		{
 			npdrmkeys->devKlic = std::move(k_licensee);
 		}

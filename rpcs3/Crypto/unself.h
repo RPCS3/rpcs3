@@ -366,6 +366,15 @@ public:
 	bool DecryptData();
 };
 
+enum class self_decryptor_result_code
+{
+	ok,
+	unsupported_license,
+	rap_missing,
+	decryption_error,
+	invalid_file,
+};
+
 class SELFDecrypter
 {
 	// Main SELF file stream.
@@ -408,14 +417,14 @@ class SELFDecrypter
 public:
 	SELFDecrypter(const fs::file& s);
 	fs::file MakeElf(bool isElf32);
-	bool LoadHeaders(bool isElf32);
+	self_decryptor_result_code LoadHeaders(bool isElf32);
 	void ShowHeaders(bool isElf32);
-	bool LoadMetadata(u8* klic_key);
-	bool DecryptData();
-	bool DecryptNPDRM(u8 *metadata, u32 metadata_size);
-	bool GetKeyFromRap(u8 *content_id, u8 *npdrm_key);
+	self_decryptor_result_code LoadMetadata(u8* klic_key);
+	self_decryptor_result_code DecryptData();
+	self_decryptor_result_code DecryptNPDRM(u8 *metadata, u32 metadata_size);
+	self_decryptor_result_code GetKeyFromRap(u8 *content_id, u8 *npdrm_key);
 };
 
-extern fs::file decrypt_self(fs::file elf_or_self, u8* klic_key = nullptr);
-extern bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key = nullptr);
+extern self_decryptor_result_code decrypt_self(fs::file elf_or_self, fs::file& decrypted, u8* klic_key = nullptr);
+extern self_decryptor_result_code verify_npdrm_self_headers(const fs::file& self, u8* klic_key = nullptr);
 extern std::array<u8, 0x10> get_default_self_klic();

@@ -3,6 +3,7 @@
 #include "settings_dialog.h"
 #include "table_item_delegate.h"
 #include "custom_table_widget_item.h"
+#include "error_dialog.h"
 
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -784,10 +785,10 @@ bool game_list_frame::Boot(const GameInfo& game)
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
-	if (!Emu.BootGame(game.path))
+	emulator_result_code result;
+	if ((result = Emu.BootGame(game.path)) != emulator_result_code::ok)
 	{
-		QMessageBox::warning(this, tr("Warning!"), tr("Failed to boot ") + qstr(game.path));
-		LOG_ERROR(LOADER, "Failed to boot %s", game.path);
+		show_boot_error_dialog(this, result);
 		return false;
 	}
 	else

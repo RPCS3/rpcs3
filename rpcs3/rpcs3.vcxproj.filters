@@ -599,6 +599,9 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_register_editor_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="error_dialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -678,6 +681,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\custom_table_widget_item.h">
       <Filter>Gui\game list</Filter>
+    </ClInclude>
+    <ClInclude Include="error_dialog.h">
+      <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

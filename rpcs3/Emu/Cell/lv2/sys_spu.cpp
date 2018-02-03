@@ -164,9 +164,10 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 {
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
-	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
+	fs::file elf_file;
+	auto result = decrypt_self(fs::file(vfs::get(path.get_ptr())), elf_file, fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
 
-	if (!elf_file)
+	if (result != self_decryptor_result_code::ok || !elf_file)
 	{
 		sys_spu.error("sys_spu_image_open() error: failed to open %s!", path);
 		return CELL_ENOENT;
