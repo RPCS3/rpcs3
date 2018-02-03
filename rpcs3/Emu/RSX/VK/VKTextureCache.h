@@ -168,8 +168,8 @@ namespace vk
 				cmd.begin();
 			}
 
-			const u16 internal_width = std::min(width, rsx::apply_resolution_scale(width, true));
-			const u16 internal_height = std::min(height, rsx::apply_resolution_scale(height, true));
+			const u16 internal_width = (context != rsx::texture_upload_context::framebuffer_storage? width : std::min(width, rsx::apply_resolution_scale(width, true)));
+			const u16 internal_height = (context != rsx::texture_upload_context::framebuffer_storage? height : std::min(height, rsx::apply_resolution_scale(height, true)));
 
 			VkImageAspectFlags aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
 			switch (vram_texture->info.format)
@@ -330,6 +330,21 @@ namespace vk
 
 			//Its highly likely that this surface will be reused, so we just leave resources in place
 			return result;
+		}
+
+		void set_unpack_swap_bytes(bool swap_bytes)
+		{
+			pack_unpack_swap_bytes = swap_bytes;
+		}
+
+		void reprotect(utils::protection prot)
+		{
+			//Reset properties and protect again
+			flushed = false;
+			synchronized = false;
+			sync_timestamp = 0ull;
+
+			protect(prot);
 		}
 
 		bool is_synchronized() const
@@ -730,13 +745,20 @@ namespace vk
 			region.set_image_type(type);
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
-			if (context != rsx::texture_upload_context::blit_engine_dst || g_cfg.video.strict_rendering_mode)
+			if (context != rsx::texture_upload_context::blit_engine_dst)
 			{
 				region.protect(utils::protection::ro);
-				update_cache_tag();
+				read_only_range = region.get_min_max(read_only_range);
+			}
+			else
+			{
+				//TODO: Confirm byte swap patterns
+				region.protect(utils::protection::no);
+				region.set_unpack_swap_bytes(true);
+				no_access_range = region.get_min_max(no_access_range);
 			}
 
-			read_only_range = region.get_min_max(read_only_range);
+			update_cache_tag();
 			return &region;
 		}
 

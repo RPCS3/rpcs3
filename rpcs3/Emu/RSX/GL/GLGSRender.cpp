@@ -1451,10 +1451,10 @@ void GLGSRender::do_local_task(bool /*idle*/)
 {
 	m_frame->clear_wm_events();
 
-	std::lock_guard<std::mutex> lock(queue_guard);
-
 	if (!work_queue.empty())
 	{
+		std::lock_guard<std::mutex> lock(queue_guard);
+
 		work_queue.remove_if([](work_item &q) { return q.received; });
 
 		for (work_item& q : work_queue)
@@ -1469,6 +1469,12 @@ void GLGSRender::do_local_task(bool /*idle*/)
 			lock.unlock();
 			q.cv.notify_one();
 		}
+	}
+	else if (!in_begin_end)
+	{
+		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
+		//Only call when there are no waiters
+		m_gl_texture_cache.do_update();
 	}
 
 	if (m_overlay_cleanup_requests.size())

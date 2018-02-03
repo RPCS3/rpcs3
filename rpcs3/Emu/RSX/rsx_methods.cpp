@@ -694,7 +694,8 @@ namespace rsx
 
 			if (convert_w == 0 || convert_h == 0)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored");
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored (ds_dx=%d, dt_dy=%d)",
+					method_registers.blit_engine_ds_dx(), method_registers.blit_engine_dt_dy());
 				return;
 			}
 

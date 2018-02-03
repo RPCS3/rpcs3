@@ -806,9 +806,17 @@ std::string FragmentProgramDecompiler::Decompile()
 				if (m_loop_count) AddFlowOp("break");
 				else LOG_ERROR(RSX, "BRK opcode found outside of a loop");
 				break;
-			case RSX_FP_OPCODE_CAL: LOG_ERROR(RSX, "Unimplemented SIP instruction: CAL"); break;
-			case RSX_FP_OPCODE_FENCT: forced_unit = FORCE_SCT; break;
-			case RSX_FP_OPCODE_FENCB: forced_unit = FORCE_SCB; break;
+			case RSX_FP_OPCODE_CAL:
+				LOG_ERROR(RSX, "Unimplemented SIP instruction: CAL");
+				break;
+			case RSX_FP_OPCODE_FENCT:
+				AddCode("//FENCT");
+				forced_unit = FORCE_SCT;
+				break;
+			case RSX_FP_OPCODE_FENCB:
+				AddCode("//FENCB");
+				forced_unit = FORCE_SCB;
+				break;
 			case RSX_FP_OPCODE_IFE:
 				AddCode("if($cond)");
 				if (src2.end_offset != src1.else_offset)
@@ -849,7 +857,9 @@ std::string FragmentProgramDecompiler::Decompile()
 					m_code_level++;
 				}
 				break;
-			case RSX_FP_OPCODE_RET: AddFlowOp("return"); break;
+			case RSX_FP_OPCODE_RET:
+				AddFlowOp("return");
+				break;
 
 			default:
 				return false;

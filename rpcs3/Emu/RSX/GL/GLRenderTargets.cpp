@@ -337,6 +337,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 				old_format_found = true;
 			}
 
+			m_gl_texture_cache.set_memory_read_flags(m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height, rsx::memory_read_flags::flush_once);
 			m_gl_texture_cache.flush_if_cache_miss_likely(old_format, m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height);
 		}
 
@@ -361,6 +362,15 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil))
 	{
+		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
+		{
+			auto bpp = m_depth_surface_info.pitch / m_depth_surface_info.width;
+			auto old_format = (bpp == 2) ? gl::texture::format::depth : gl::texture::format::depth_stencil;
+
+			m_gl_texture_cache.set_memory_read_flags(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, rsx::memory_read_flags::flush_once);
+			m_gl_texture_cache.flush_if_cache_miss_likely(old_format, m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height);
+		}
+
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		u8 texel_size = 2;
 
