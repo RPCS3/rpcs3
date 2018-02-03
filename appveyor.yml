@@ -1,79 +1,92 @@
-#---------------------------------#
-#      general configuration      #
-#---------------------------------#
 
-# version format
-version: '0.0.4-{build}'
+version: '{build}'
 
-#---------------------------------#
-#    environment configuration    #
-#---------------------------------#
-
-# Build worker image (VM template)
 image: Visual Studio 2015
 
-# clone directory
-clone_folder: c:\projects\rpcs3
-
-# environment variables
 environment:
-  QTDIR: C:\Qt\5.9\msvc2015_64
+  QTDIR: C:\Qt\5.10.0\msvc2015_64
+  LLVMLIBS: https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8
+  VULKAN: https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R
+  COMPATDB: https://rpcs3.net/compatibility?api=v1&export
 
-# build cache to preserve files/folders between builds
 cache:
- - llvmlibs.7z -> appveyor.yml
- - vulkan.7z -> appveyor.yml
+- llvmlibs.7z -> appveyor.yml
+- vulkan.7z -> appveyor.yml
+- compat_database.dat
 
-# scripts that run after cloning repository
 install:
- - git submodule update --init 3rdparty/cereal 3rdparty/ffmpeg 3rdparty/GSL 3rdparty/hidapi 3rdparty/libpng 3rdparty/Optional 3rdparty/pugixml 3rdparty/zlib asmjit Utilities/yaml-cpp Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
+- ps: | # set env vars for versioning
+    $commDate = $env:APPVEYOR_REPO_COMMIT_TIMESTAMP.Substring(0,10)
+    $commSha = $env:APPVEYOR_REPO_COMMIT.Substring(0,8)
+    $commTag = $(git describe --tags $(git rev-list --tags --max-count=1))
+    
+    $env:AVVER = "{0}-{1}" -f $commTag.TrimStart("v"), $env:APPVEYOR_BUILD_NUMBER
+    $env:BUILD = "rpcs3-{0}-{1}-{2}_win64.7z" -f $commTag, $commDate, $commSha
 
-#---------------------------------#
-#       build configuration       #
-#---------------------------------#
+- ps: | # used for experimental build warnings for pr builds
+    $env:BRANCH = "{0}/{1}/#{2}" -f $env:APPVEYOR_REPO_NAME, `
+      $env:APPVEYOR_REPO_BRANCH, $env:APPVEYOR_PULL_REQUEST_NUMBER
+    $env:BRANCH = $env:BRANCH -replace "/#$"
 
-# build platform, i.e. x86, x64, Any CPU. This setting is optional.
+- ps: | # misc global settings
+    $env:PATH += $env:QTDIR
+    [net.servicepointmanager]::securityprotocol = "tls12, tls11, tls"
+
+- ps: | # update and init submodules
+    git submodule -q update --init `
+      3rdparty/cereal `
+      3rdparty/ffmpeg `
+      3rdparty/GSL `
+      3rdparty/hidapi `
+      3rdparty/libpng `
+      3rdparty/Optional `
+      3rdparty/pugixml `
+      3rdparty/zlib `
+      asmjit `
+      Utilities/yaml-cpp `
+      Vulkan/glslang `
+      Vulkan/Vulkan-LoaderAndValidationLayers
+
 platform: x64
 
-# build Configuration, i.e. Debug, Release, etc.
 configuration: Release - LLVM
 
 build:
-  parallel: true                  # enable MSBuild parallel builds
-  project: rpcs3.sln              # path to Visual Studio solution or project
-  # MSBuild verbosity level
+  parallel: true
+  project: rpcs3.sln
   verbosity: normal
 
-# scripts to run before build
 before_build:
- - set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%/#%APPVEYOR_PULL_REQUEST_NUMBER%
- - if "%APPVEYOR_PULL_REQUEST_NUMBER%"=="" (set BRANCH=%APPVEYOR_REPO_NAME%/%APPVEYOR_REPO_BRANCH%)
- - set PATH=%PATH%;%QTDIR%
- - if not exist llvmlibs.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8" -FileName llvmlibs.7z
- - 7z x llvmlibs.7z -aos -o%APPVEYOR_BUILD_FOLDER% > null
- - if not exist vulkan.7z appveyor DownloadFile "https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R" -FileName vulkan.7z
- - 7z x vulkan.7z -aos -o"%APPVEYOR_BUILD_FOLDER%\lib\%CONFIGURATION%-%PLATFORM%" > null
+- ps: | # fetch precompiled build dependencies
+    if (!(test-path llvmlibs.7z)) { irm $env:LLVMLIBS -outfile llvmlibs.7z }
+    if (!(test-path vulkan.7z)) { irm $env:VULKAN -outfile vulkan.7z }
+    7z x llvmlibs.7z -aos -o"." | out-null
+    7z x vulkan.7z -aos -o".\lib\$env:CONFIGURATION-$env:PLATFORM" | out-null
 
-# scripts to run *after* solution is built and *before* automatic packaging occurs (web apps, NuGet packages, Azure Cloud Services)
-before_package:
-  - rm %APPVEYOR_BUILD_FOLDER%\bin\rpcs3.exp
-  - rm %APPVEYOR_BUILD_FOLDER%\bin\rpcs3.lib
-  - rm %APPVEYOR_BUILD_FOLDER%\bin\rpcs3.pdb
-  - set COMMIT_DATE=%APPVEYOR_REPO_COMMIT_TIMESTAMP:~0,10%
-  - set COMMIT_SHA=%APPVEYOR_REPO_COMMIT:~0,8%
+after_build:
+- ps: | # remove unnecessary files
+    rm .\bin\rpcs3.exp, .\bin\rpcs3.lib, .\bin\rpcs3.pdb
 
-#---------------------------------#
-#       tests configuration       #
-#---------------------------------#
+- ps: | # prepare compatibility database for packaging
+    $db = irm $env:COMPATDB -erroraction silentlycontinue
+    if ($db -and $db.return_code -eq 0) {
+      $db | convertto-json -compress | out-file compat_database.dat -encoding utf8
+    }
+    copy-item compat_database.dat .\bin\GuiConfigs\compat_database.dat
 
-# to disable automatic tests
+- ps: | # package artifacts
+    7z a -m0=LZMA2 -mx9 $env:BUILD .\bin\*
+    7z a -m0=LZMA2 -mx9 openssl_win64.7z C:\OpenSSL-Win64\bin\libeay32.dll `
+      C:\OpenSSL-Win64\bin\ssleay32.dll
+
 test: off
 
-#---------------------------------#
-#      artifacts configuration    #
-#---------------------------------#
-
-# pushing entire folder as a zip archive
 artifacts:
- - path: bin
-   name: 'rpcs3-v0.0.4-$(COMMIT_DATE)-$(COMMIT_SHA)_win64'
+- path: $(BUILD)
+  name: rpcs3
+- path: openssl_win64.7z
+  name: openssl
+
+on_finish: 
+- ps: | # update appveyor build version, done last to prevent webhook breakage
+    update-appveyorbuild -version $env:AVVER

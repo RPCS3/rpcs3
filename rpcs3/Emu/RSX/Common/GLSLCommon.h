@@ -281,31 +281,18 @@ namespace glsl
 		OS << "	if (desc.attribute_size == 0)\n";
 		OS << "	{\n";
 		OS << "		//default values\n";
-		OS << "		switch (location)\n";
-		OS << "		{\n";
-		OS << "		case 0:\n";
-		OS << "			//position\n";
-		OS << "			return vec4(0., 0., 0., 1.);\n";
-		OS << "		case 1:\n";
-		OS << "		case 2:\n";
-		OS << "			//weight, normals\n";
-		OS << "			return vec4(0.);\n";
-		OS << "		case 3:\n";
-		OS << "			//diffuse\n";
-		OS << "			return vec4(1.);\n";
-		OS << "		case 4:\n";
-		OS << "			//specular\n";
-		OS << "			return vec4(0.);\n";
-		OS << "		case 5:\n";
-		OS << "			//fog\n";
-		OS << "			return vec4(0.);\n";
-		OS << "		case 6:\n";
-		OS << "			//point size\n";
-		OS << "			return vec4(1.);\n";
-		OS << "		default:\n";
-		OS << "			//mostly just texture coordinates\n";
-		OS << "			return vec4(0.);\n";
-		OS << "		}\n";
+		OS << "		const vec4 defaults[] = \n";
+		OS << "		{	vec4(0., 0., 0., 1.), //position\n";
+		OS << "			vec4(0.), vec4(0.), //weight, normals\n";
+		OS << "			vec4(1.), //diffuse\n";
+		OS << "			vec4(0.), vec4(0.), //specular, fog\n";
+		OS << "			vec4(1.), //point size\n";
+		OS << "			vec4(0.), //in_7\n";
+		OS << "			//in_tc registers\n";
+		OS << "			vec4(0.), vec4(0.), vec4(0.), vec4(0.),\n";
+		OS << "			vec4(0.), vec4(0.), vec4(0.), vec4(0.)\n";
+		OS << "		};\n";
+		OS << "		return defaults[location];\n";
 		OS << "	}\n\n";
 		OS << "	int vertex_id = " << vertex_id_name << " - int(vertex_base_index);\n";
 		OS << "	if (desc.frequency == 0)\n";
@@ -326,84 +313,95 @@ namespace glsl
 		OS << "}\n\n";
 	}
 
-	static void insert_glsl_legacy_function(std::ostream& OS, glsl::program_domain domain)
+	static void insert_glsl_legacy_function(std::ostream& OS, glsl::program_domain domain, bool require_lit_emulation, bool require_depth_conversion = false, bool require_wpos = false)
 	{
-		OS << "vec4 lit_legacy(vec4 val)";
-		OS << "{\n";
-		OS << "	vec4 clamped_val = val;\n";
-		OS << "	clamped_val.x = max(val.x, 0.);\n";
-		OS << "	clamped_val.y = max(val.y, 0.);\n";
-		OS << "	vec4 result;\n";
-		OS << "	result.x = 1.;\n";
-		OS << "	result.w = 1.;\n";
-		OS << "	result.y = clamped_val.x;\n";
-		OS << "	result.z = clamped_val.x > 0. ? exp(clamped_val.w * log(max(clamped_val.y, 0.000001))) : 0.;\n";
-		OS << "	return result;\n";
-		OS << "}\n\n";
-
-		OS << "vec4 apply_zclip_xform(vec4 pos, float near_plane, float far_plane)\n";
-		OS << "{\n";
-		OS << "	float d = pos.z / pos.w;\n";
-		OS << "	if (d < 0.f && d >= near_plane)\n";
-		OS << "		d = 0.f;\n";
-		OS << "	else if (d > 1.f && d <= far_plane)\n";
-		OS << "		d = 1.f;\n";
-		OS << "	else\n";
-		OS << "		return pos;\n";
-		OS << "\n";
-		OS << "	pos.z = d * pos.w;\n";
-		OS << "	return pos;\n";
-		OS << "}\n\n";
+		if (require_lit_emulation)
+		{
+			OS << "vec4 lit_legacy(vec4 val)";
+			OS << "{\n";
+			OS << "	vec4 clamped_val = val;\n";
+			OS << "	clamped_val.x = max(val.x, 0.);\n";
+			OS << "	clamped_val.y = max(val.y, 0.);\n";
+			OS << "	vec4 result;\n";
+			OS << "	result.x = 1.;\n";
+			OS << "	result.w = 1.;\n";
+			OS << "	result.y = clamped_val.x;\n";
+			OS << "	result.z = clamped_val.x > 0. ? exp(clamped_val.w * log(max(clamped_val.y, 0.0000000001))) : 0.;\n";
+			OS << "	return result;\n";
+			OS << "}\n\n";
+		}
 
 		if (domain == glsl::program_domain::glsl_vertex_program)
+		{
+			OS << "vec4 apply_zclip_xform(vec4 pos, float near_plane, float far_plane)\n";
+			OS << "{\n";
+			OS << "	float d = pos.z / pos.w;\n";
+			OS << "	if (d < 0.f && d >= near_plane)\n";
+			OS << "		d = 0.f;\n"; //force clamp negative values
+			OS << "	else if (d > 1.f && d <= far_plane)\n";
+			OS << "		d = min(1., 0.99 + (0.01 * (pos.z - near_plane) / (far_plane - near_plane)));\n";
+			OS << "	else\n";
+			OS << "		return pos; //d = (0.99 * d);\n"; //range compression for normal values is disabled until a solution to ops comparing z is found
+			OS << "\n";
+			OS << "	pos.z = d * pos.w;\n";
+			OS << "	return pos;\n";
+			OS << "}\n\n";
+
 			return;
+		}
 
 		program_common::insert_compare_op(OS);
 
-		//NOTE: Memory layout is fetched as byteswapped BGRA [GBAR] (GOW collection, DS2, DeS)
-		//The A component (Z) is useless (should contain stencil8 or just 1)
-		OS << "vec4 decodeLinearDepth(float depth_value)\n";
-		OS << "{\n";
-		OS << "	uint value = uint(depth_value * 16777215);\n";
-		OS << "	uint b = (value & 0xff);\n";
-		OS << "	uint g = (value >> 8) & 0xff;\n";
-		OS << "	uint r = (value >> 16) & 0xff;\n";
-		OS << "	return vec4(float(g)/255., float(b)/255., 1., float(r)/255.);\n";
-		OS << "}\n\n";
+		if (require_depth_conversion)
+		{
+			//NOTE: Memory layout is fetched as byteswapped BGRA [GBAR] (GOW collection, DS2, DeS)
+			//The A component (Z) is useless (should contain stencil8 or just 1)
+			OS << "vec4 decodeLinearDepth(float depth_value)\n";
+			OS << "{\n";
+			OS << "	uint value = uint(depth_value * 16777215);\n";
+			OS << "	uint b = (value & 0xff);\n";
+			OS << "	uint g = (value >> 8) & 0xff;\n";
+			OS << "	uint r = (value >> 16) & 0xff;\n";
+			OS << "	return vec4(float(g)/255., float(b)/255., 1., float(r)/255.);\n";
+			OS << "}\n\n";
 
-		OS << "float read_value(vec4 src, uint remap_index)\n";
-		OS << "{\n";
-		OS << "	switch (remap_index)\n";
-		OS << "	{\n";
-		OS << "		case 0: return src.a;\n";
-		OS << "		case 1: return src.r;\n";
-		OS << "		case 2: return src.g;\n";
-		OS << "		case 3: return src.b;\n";
-		OS << "	}\n";
-		OS << "}\n\n";
+			OS << "float read_value(vec4 src, uint remap_index)\n";
+			OS << "{\n";
+			OS << "	switch (remap_index)\n";
+			OS << "	{\n";
+			OS << "		case 0: return src.a;\n";
+			OS << "		case 1: return src.r;\n";
+			OS << "		case 2: return src.g;\n";
+			OS << "		case 3: return src.b;\n";
+			OS << "	}\n";
+			OS << "}\n\n";
 
-		OS << "vec4 texture2DReconstruct(sampler2D tex, vec2 coord, float remap)\n";
-		OS << "{\n";
-		OS << "	vec4 result = decodeLinearDepth(texture(tex, coord.xy).r);\n";
-		OS << "	uint remap_vector = floatBitsToUint(remap) & 0xFF;\n";
-		OS << "	if (remap_vector == 0xE4) return result;\n\n";
-		OS << "	vec4 tmp;\n";
-		OS << "	uint remap_a = remap_vector & 0x3;\n";
-		OS << "	uint remap_r = (remap_vector >> 2) & 0x3;\n";
-		OS << "	uint remap_g = (remap_vector >> 4) & 0x3;\n";
-		OS << "	uint remap_b = (remap_vector >> 6) & 0x3;\n";
-		OS << "	tmp.a = read_value(result, remap_a);\n";
-		OS << "	tmp.r = read_value(result, remap_r);\n";
-		OS << "	tmp.g = read_value(result, remap_g);\n";
-		OS << "	tmp.b = read_value(result, remap_b);\n";
-		OS << "	return tmp;\n";
-		OS << "}\n\n";
+			OS << "vec4 texture2DReconstruct(sampler2D tex, vec2 coord, float remap)\n";
+			OS << "{\n";
+			OS << "	vec4 result = decodeLinearDepth(texture(tex, coord.xy).r);\n";
+			OS << "	uint remap_vector = floatBitsToUint(remap) & 0xFF;\n";
+			OS << "	if (remap_vector == 0xE4) return result;\n\n";
+			OS << "	vec4 tmp;\n";
+			OS << "	uint remap_a = remap_vector & 0x3;\n";
+			OS << "	uint remap_r = (remap_vector >> 2) & 0x3;\n";
+			OS << "	uint remap_g = (remap_vector >> 4) & 0x3;\n";
+			OS << "	uint remap_b = (remap_vector >> 6) & 0x3;\n";
+			OS << "	tmp.a = read_value(result, remap_a);\n";
+			OS << "	tmp.r = read_value(result, remap_r);\n";
+			OS << "	tmp.g = read_value(result, remap_g);\n";
+			OS << "	tmp.b = read_value(result, remap_b);\n";
+			OS << "	return tmp;\n";
+			OS << "}\n\n";
+		}
 
-		OS << "vec4 get_wpos()\n";
-		OS << "{\n";
-		OS << "	float abs_scale = abs(wpos_scale);\n";
-		OS << "	return (gl_FragCoord * vec4(abs_scale, wpos_scale, 1., 1.)) + vec4(0., wpos_bias, 0., 0.);\n";
-		OS << "}\n\n";
+		if (require_wpos)
+		{
+			OS << "vec4 get_wpos()\n";
+			OS << "{\n";
+			OS << "	float abs_scale = abs(wpos_scale);\n";
+			OS << "	return (gl_FragCoord * vec4(abs_scale, wpos_scale, 1., 1.)) + vec4(0., wpos_bias, 0., 0.);\n";
+			OS << "}\n\n";
+		}
 	}
 
 	static void insert_fog_declaration(std::ostream& OS)

@@ -60,11 +60,21 @@ bool basic_keyboard_handler::eventFilter(QObject* target, QEvent* ev)
 
 void basic_keyboard_handler::keyPressEvent(QKeyEvent* keyEvent)
 {
+	if (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat)
+	{
+		keyEvent->ignore();
+		return;
+	}
 	Key(keyEvent->key(), 1);
 }
 
 void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 {
+	if (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat)
+	{
+		keyEvent->ignore();
+		return;
+	}
 	Key(keyEvent->key(), 0);
 }
 

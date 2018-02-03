@@ -457,6 +457,13 @@ endif()
 
 cotire(rpcs3)
 
+if (UNIX)
+# Copy icons to executable directory
+add_custom_command(TARGET rpcs3 POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons)
+endif()
+                       
 # Unix installation
 if(UNIX AND NOT APPLE)
 	# Install the binary

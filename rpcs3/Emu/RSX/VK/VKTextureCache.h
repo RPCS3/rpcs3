@@ -327,18 +327,8 @@ namespace vk
 			}
 
 			dma_buffer->unmap();
+
 			//Its highly likely that this surface will be reused, so we just leave resources in place
-
-			switch (gcm_format)
-			{
-			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-				rsx::shuffle_texel_data_wzyx<u16>(pixels_dst, rsx_pitch, width, height);
-				break;
-			case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-				rsx::shuffle_texel_data_wzyx<u32>(pixels_dst, rsx_pitch, width, height);
-				break;
-			}
-
 			return result;
 		}
 
@@ -841,8 +831,10 @@ namespace vk
 			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 
-		void insert_texture_barrier() override
-		{}
+		void insert_texture_barrier(vk::command_buffer& cmd, vk::image* tex) override
+		{
+			vk::insert_texture_barrier(cmd, tex);
+		}
 
 	public:
 

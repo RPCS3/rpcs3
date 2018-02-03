@@ -2,6 +2,17 @@
 
 #include "cellSysutil.h"
 
+//events
+enum CellWebBrowserEvent : s32
+{
+	CELL_SYSUTIL_WEBBROWSER_INITIALIZING_FINISHED	= 1,
+	CELL_SYSUTIL_WEBBROWSER_SHUTDOWN_FINISHED		= 4,
+	CELL_SYSUTIL_WEBBROWSER_LOADING_FINISHED		= 5,
+	CELL_SYSUTIL_WEBBROWSER_UNLOADING_FINISHED		= 7,
+	CELL_SYSUTIL_WEBBROWSER_RELEASED				= 9,
+	CELL_SYSUTIL_WEBBROWSER_GRABBED					= 11,
+};
+
 using CellWebBrowserCallback = void(s32 cb_type, vm::ptr<void> client_session, vm::ptr<void> usrdata);
 using CellWebComponentCallback = void(s32 web_browser_id, s32 cb_type, vm::ptr<void> client_session, vm::ptr<void> usrdata);
 using CellWebBrowserSystemCallback = void(s32 cb_type, vm::ptr<void> usrdata);

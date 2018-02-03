@@ -461,16 +461,6 @@ namespace gl
 				rsx::scale_image_nearest(dst, const_cast<const void*>(data), width, height, rsx_pitch, real_pitch, pixel_size, samples_u, samples_v);
 			}
 
-			switch (gcm_format)
-			{
-			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-				rsx::shuffle_texel_data_wzyx<u16>(dst, rsx_pitch, width, height);
-				break;
-			case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-				rsx::shuffle_texel_data_wzyx<u32>(dst, rsx_pitch, width, height);
-				break;
-			}
-
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
@@ -775,8 +765,9 @@ namespace gl
 				break;
 			}
 
-			glBindTexture(GL_TEXTURE_2D, vram_texture);
-			apply_component_mapping_flags(GL_TEXTURE_2D, gcm_format, flags);
+			auto target = gl::get_target(type);
+			glBindTexture(target, vram_texture);
+			apply_component_mapping_flags(target, gcm_format, flags);
 
 			auto& cached = create_texture(vram_texture, rsx_address, rsx_size, width, height, depth, mipmaps);
 			cached.set_dirty(false);
@@ -846,7 +837,7 @@ namespace gl
 			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 
-		void insert_texture_barrier() override
+		void insert_texture_barrier(void*&, gl::texture*) override
 		{
 			auto &caps = gl::get_driver_caps();
 

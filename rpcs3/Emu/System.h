@@ -285,6 +285,7 @@ struct cfg_root : cfg::node
 		cfg::_bool ppu_debug{this, "PPU Debug"};
 		cfg::_bool llvm_logs{this, "Save LLVM logs"};
 		cfg::string llvm_cpu{this, "Use LLVM CPU"};
+		cfg::_int<0, INT32_MAX> llvm_threads{this, "Max LLVM Compile Threads", 0};
 
 #ifdef _WIN32
 		cfg::_bool thread_scheduler_enabled{ this, "Enable thread scheduler", true };

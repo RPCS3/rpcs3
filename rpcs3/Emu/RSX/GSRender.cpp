@@ -41,6 +41,8 @@ void GSRender::on_exit()
 {
 	if (m_frame)
 	{
+		m_frame->disable_wm_event_queue();
+		m_frame->clear_wm_events();
 		m_frame->delete_context(m_context);
 		m_context = nullptr;
 	}

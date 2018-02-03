@@ -176,21 +176,6 @@ void GLGSRender::begin()
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
 }
 
-namespace
-{
-	GLenum get_gl_target_for_texture(const rsx::texture_dimension_extended type)
-	{
-		switch (type)
-		{
-		case rsx::texture_dimension_extended::texture_dimension_1d: return GL_TEXTURE_1D;
-		case rsx::texture_dimension_extended::texture_dimension_2d: return GL_TEXTURE_2D;
-		case rsx::texture_dimension_extended::texture_dimension_cubemap: return GL_TEXTURE_CUBE_MAP;
-		case rsx::texture_dimension_extended::texture_dimension_3d: return GL_TEXTURE_3D;
-		}
-		fmt::throw_exception("Unknown texture target" HERE);
-	}
-}
-
 void GLGSRender::end()
 {
 	std::chrono::time_point<steady_clock> state_check_start = steady_clock::now();
@@ -218,11 +203,7 @@ void GLGSRender::end()
 	}
 
 	//Do vertex upload before RTT prep / texture lookups to give the driver time to push data
-	u32 vertex_draw_count;
-	u32 actual_vertex_count;
-	u32 vertex_base;
-	std::optional<std::tuple<GLenum, u32> > indexed_draw_info;
-	std::tie(vertex_draw_count, actual_vertex_count, vertex_base, indexed_draw_info) = set_vertex_buffer();
+	auto upload_info = set_vertex_buffer();
 
 	//Load textures
 	{
@@ -294,7 +275,7 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
 	//Load program here since it is dependent on vertex state
 
-	load_program(vertex_base, actual_vertex_count);
+	load_program(upload_info);
 
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
@@ -325,7 +306,7 @@ void GLGSRender::end()
 
 			if (tex.enabled())
 			{
-				GLenum target = get_gl_target_for_texture(sampler_state->image_type);
+				GLenum target = gl::get_target(sampler_state->image_type);
 				if (sampler_state->image_handle)
 				{
 					glBindTexture(target, sampler_state->image_handle);
@@ -492,10 +473,10 @@ void GLGSRender::end()
 	const GLenum draw_mode = gl::draw_mode(rsx::method_registers.current_draw_clause.primitive);
 	bool single_draw = !supports_multidraw || (rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive);
 
-	if (indexed_draw_info)
+	if (upload_info.index_info)
 	{
-		const GLenum index_type = std::get<0>(indexed_draw_info.value());
-		const u32 index_offset = std::get<1>(indexed_draw_info.value());
+		const GLenum index_type = std::get<0>(upload_info.index_info.value());
+		const u32 index_offset = std::get<1>(upload_info.index_info.value());
 		const bool restarts_valid = gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive) && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
 
 		if (gl_state.enable(restarts_valid && rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
@@ -505,7 +486,7 @@ void GLGSRender::end()
 
 		if (single_draw)
 		{
-			glDrawElements(draw_mode, vertex_draw_count, index_type, (GLvoid *)(uintptr_t)index_offset);
+			glDrawElements(draw_mode, upload_info.vertex_draw_count, index_type, (GLvoid *)(uintptr_t)index_offset);
 		}
 		else
 		{
@@ -535,7 +516,7 @@ void GLGSRender::end()
 	{
 		if (single_draw)
 		{
-			glDrawArrays(draw_mode, 0, vertex_draw_count);
+			glDrawArrays(draw_mode, 0, upload_info.vertex_draw_count);
 		}
 		else
 		{
@@ -652,15 +633,24 @@ void GLGSRender::on_init_thread()
 	//Use industry standard resource alignment values as defaults
 	m_uniform_buffer_offset_align = 256;
 	m_min_texbuffer_alignment = 256;
+	m_max_texbuffer_size = 0;
 
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_uniform_buffer_offset_align);
 	glGetIntegerv(GL_TEXTURE_BUFFER_OFFSET_ALIGNMENT, &m_min_texbuffer_alignment);
+	glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &m_max_texbuffer_size);
 	m_vao.create();
 
 	//Set min alignment to 16-bytes for SSE optimizations with aligned addresses to work
 	m_min_texbuffer_alignment = std::max(m_min_texbuffer_alignment, 16);
 	m_uniform_buffer_offset_align = std::max(m_uniform_buffer_offset_align, 16);
+
+	LOG_NOTICE(RSX, "Supported texel buffer size reported: %d bytes", m_max_texbuffer_size);
+	if (m_max_texbuffer_size < (16 * 0x100000))
+	{
+		LOG_ERROR(RSX, "Max texture buffer size supported is less than 16M which is useless. Expect undefined behaviour.");
+		m_max_texbuffer_size = (16 * 0x100000);
+	}
 
 	const u32 texture_index_offset = rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
 
@@ -709,11 +699,14 @@ void GLGSRender::on_init_thread()
 		m_index_ring_buffer.reset(new gl::ring_buffer());
 	}
 
-	m_attrib_ring_buffer->create(gl::buffer::target::texture, 256 * 0x100000);
-	m_index_ring_buffer->create(gl::buffer::target::element_array, 64 * 0x100000);
-	m_transform_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
-	m_fragment_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
-	m_vertex_state_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_attrib_ring_buffer->create(gl::buffer::target::texture, std::min<GLsizeiptr>(m_max_texbuffer_size, 256 * 0x100000));
+	m_index_ring_buffer->create(gl::buffer::target::element_array, std::min<GLsizeiptr>(m_max_texbuffer_size, 64 * 0x100000));
+	m_transform_constants_buffer->create(gl::buffer::target::uniform, std::min<GLsizeiptr>(m_max_texbuffer_size, 16 * 0x100000));
+	m_fragment_constants_buffer->create(gl::buffer::target::uniform, std::min<GLsizeiptr>(m_max_texbuffer_size, 16 * 0x100000));
+	m_vertex_state_buffer->create(gl::buffer::target::uniform, std::min<GLsizeiptr>(m_max_texbuffer_size, 16 * 0x100000));
+
+	m_gl_persistent_stream_buffer.copy_from(*m_attrib_ring_buffer, GL_R8UI, 0, (u32)m_attrib_ring_buffer->size());
+	m_gl_volatile_stream_buffer.copy_from(*m_attrib_ring_buffer, GL_R8UI, 0, (u32)m_attrib_ring_buffer->size());
 
 	m_vao.element_array_buffer = *m_index_ring_buffer;
 
@@ -999,7 +992,7 @@ bool GLGSRender::check_program_state()
 	return (rsx::method_registers.shader_program_address() != 0);
 }
 
-void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
+void GLGSRender::load_program(const vertex_upload_info& upload_info)
 {
 	get_current_fragment_program(fs_sampler_state);
 	verify(HERE), current_fragment_program.valid;
@@ -1055,11 +1048,11 @@ void GLGSRender::load_program(u32 vertex_base, u32 vertex_count)
 	fill_scale_offset_data(buf, false);
 	fill_user_clip_data(buf + 64);
 	*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
-	*(reinterpret_cast<u32*>(buf + 132)) = vertex_base;
+	*(reinterpret_cast<u32*>(buf + 132)) = upload_info.vertex_index_base;
 	*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
 	*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
 	*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
-	fill_vertex_layout_state(m_vertex_layout, vertex_count, reinterpret_cast<s32*>(buf + 160));
+	fill_vertex_layout_state(m_vertex_layout, upload_info.allocated_vertex_count, reinterpret_cast<s32*>(buf + 160), upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
 
 	if (m_transform_constants_dirty)
 	{
@@ -1223,96 +1216,100 @@ void GLGSRender::flip(int buffer)
 		return;
 	}
 
+	gl::screen.clear(gl::buffers::color);
+
 	u32 buffer_width = display_buffers[buffer].width;
 	u32 buffer_height = display_buffers[buffer].height;
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
-	// Calculate blit coordinates
-	coordi aspect_ratio;
-	sizei csize(m_frame->client_width(), m_frame->client_height());
-	sizei new_size = csize;
-
-	if (!g_cfg.video.stretch_to_display_area)
+	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height && buffer_pitch)
 	{
-		const double aq = (double)buffer_width / buffer_height;
-		const double rq = (double)new_size.width / new_size.height;
-		const double q = aq / rq;
+		// Calculate blit coordinates
+		coordi aspect_ratio;
+		sizei csize(m_frame->client_width(), m_frame->client_height());
+		sizei new_size = csize;
 
-		if (q > 1.0)
+		if (!g_cfg.video.stretch_to_display_area)
 		{
-			new_size.height = int(new_size.height / q);
-			aspect_ratio.y = (csize.height - new_size.height) / 2;
-		}
-		else if (q < 1.0)
-		{
-			new_size.width = int(new_size.width * q);
-			aspect_ratio.x = (csize.width - new_size.width) / 2;
-		}
-	}
+			const double aq = (double)buffer_width / buffer_height;
+			const double rq = (double)new_size.width / new_size.height;
+			const double q = aq / rq;
 
-	aspect_ratio.size = new_size;
-
-	// Find the source image
-	rsx::tiled_region buffer_region = get_tiled_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
-	u32 absolute_address = buffer_region.address + buffer_region.base;
-
-	m_flip_fbo.recreate();
-	m_flip_fbo.bind();
-
-	const u32 size = buffer_pitch * buffer_height;
-	if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
-	{
-		buffer_width = render_target_texture->width();
-		buffer_height = render_target_texture->height();
-
-		m_flip_fbo.color = *render_target_texture;
-		m_flip_fbo.read_buffer(m_flip_fbo.color);
-	}
-	else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address))
-	{
-		//Hack - this should be the first location to check for output
-		//The render might have been done offscreen or in software and a blit used to display
-		m_flip_fbo.color = surface->get_raw_view();
-		m_flip_fbo.read_buffer(m_flip_fbo.color);
-	}
-	else
-	{
-		LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
-
-		if (!m_flip_tex_color || m_flip_tex_color.size() != sizei{ (int)buffer_width, (int)buffer_height })
-		{
-			m_flip_tex_color.recreate(gl::texture::target::texture2D);
-
-			m_flip_tex_color.config()
-				.size({ (int)buffer_width, (int)buffer_height })
-				.type(gl::texture::type::uint_8_8_8_8)
-				.format(gl::texture::format::bgra);
-
-			m_flip_tex_color.pixel_unpack_settings().aligment(1).row_length(buffer_pitch / 4);
+			if (q > 1.0)
+			{
+				new_size.height = int(new_size.height / q);
+				aspect_ratio.y = (csize.height - new_size.height) / 2;
+			}
+			else if (q < 1.0)
+			{
+				new_size.width = int(new_size.width * q);
+				aspect_ratio.x = (csize.width - new_size.width) / 2;
+			}
 		}
 
-		if (buffer_region.tile)
+		aspect_ratio.size = new_size;
+
+		// Find the source image
+		rsx::tiled_region buffer_region = get_tiled_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+		u32 absolute_address = buffer_region.address + buffer_region.base;
+
+		m_flip_fbo.recreate();
+		m_flip_fbo.bind();
+
+		const u32 size = buffer_pitch * buffer_height;
+		if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
 		{
-			std::unique_ptr<u8[]> temp(new u8[buffer_height * buffer_pitch]);
-			buffer_region.read(temp.get(), buffer_width, buffer_height, buffer_pitch);
-			m_flip_tex_color.copy_from(temp.get(), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+			buffer_width = render_target_texture->width();
+			buffer_height = render_target_texture->height();
+
+			m_flip_fbo.color = *render_target_texture;
+			m_flip_fbo.read_buffer(m_flip_fbo.color);
+		}
+		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address))
+		{
+			//Hack - this should be the first location to check for output
+			//The render might have been done offscreen or in software and a blit used to display
+			m_flip_fbo.color = surface->get_raw_view();
+			m_flip_fbo.read_buffer(m_flip_fbo.color);
 		}
 		else
 		{
-			m_flip_tex_color.copy_from(buffer_region.ptr, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+			LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
+
+			if (!m_flip_tex_color || m_flip_tex_color.size() != sizei{ (int)buffer_width, (int)buffer_height })
+			{
+				m_flip_tex_color.recreate(gl::texture::target::texture2D);
+
+				m_flip_tex_color.config()
+					.size({ (int)buffer_width, (int)buffer_height })
+					.type(gl::texture::type::uint_8_8_8_8)
+					.format(gl::texture::format::bgra);
+
+				m_flip_tex_color.pixel_unpack_settings().aligment(1).row_length(buffer_pitch / 4);
+			}
+
+			if (buffer_region.tile)
+			{
+				std::unique_ptr<u8[]> temp(new u8[buffer_height * buffer_pitch]);
+				buffer_region.read(temp.get(), buffer_width, buffer_height, buffer_pitch);
+				m_flip_tex_color.copy_from(temp.get(), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+			}
+			else
+			{
+				m_flip_tex_color.copy_from(buffer_region.ptr, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+			}
+
+			m_flip_fbo.color = m_flip_tex_color;
+			m_flip_fbo.read_buffer(m_flip_fbo.color);
 		}
 
-		m_flip_fbo.color = m_flip_tex_color;
-		m_flip_fbo.read_buffer(m_flip_fbo.color);
+		// Blit source image to the screen
+		// Disable scissor test (affects blit)
+		glDisable(GL_SCISSOR_TEST);
+
+		areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
+		m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
 	}
-
-	// Blit source image to the screen
-	// Disable scissor test (affects blit)
-	glDisable(GL_SCISSOR_TEST);
-
-	areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
-	gl::screen.clear(gl::buffers::color);
-	m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
 
 	if (m_custom_ui)
 	{
@@ -1411,7 +1408,7 @@ void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 	}
 }
 
-void GLGSRender::do_local_task(bool idle)
+void GLGSRender::do_local_task(bool /*idle*/)
 {
 	m_frame->clear_wm_events();
 
@@ -1432,9 +1429,14 @@ void GLGSRender::do_local_task(bool idle)
 		q.cv.notify_one();
 	}
 
-	if (m_custom_ui)
+	if (m_overlay_cleanup_requests.size())
 	{
-		if (!in_begin_end && idle && native_ui_flip_request.load())
+		m_ui_renderer.remove_temp_resources();
+		m_overlay_cleanup_requests.clear();
+	}
+	else if (m_custom_ui)
+	{
+		if (!in_begin_end && native_ui_flip_request.load())
 		{
 			native_ui_flip_request.store(false);
 			flip((s32)current_display_buffer);
@@ -1505,5 +1507,6 @@ void GLGSRender::get_occlusion_query_result(rsx::occlusion_query_info* query)
 
 void GLGSRender::shell_do_cleanup()
 {
-	m_ui_renderer.remove_temp_resources();
+	//TODO: Key cleanup requests with UID to identify resources to remove
+	m_overlay_cleanup_requests.push_back(0);
 }
