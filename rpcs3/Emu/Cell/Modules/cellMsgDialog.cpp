@@ -315,6 +315,11 @@ s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> msgStrin
 {
 	cellSysutil.warning("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString=%s)", progressBarIndex, msgString);
 
+	if (!msgString)
+	{
+		return CELL_MSGDIALOG_ERROR_PARAM;
+	}
+
 	if (auto rsxthr = fxm::get<GSRender>())
 	{
 		if (auto dlg2 = rsxthr->shell_get_current_dialog())
@@ -331,7 +336,7 @@ s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> msgStrin
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= dlg->type.progress_bar_count || !msgString)
+	if (progressBarIndex >= dlg->type.progress_bar_count)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
