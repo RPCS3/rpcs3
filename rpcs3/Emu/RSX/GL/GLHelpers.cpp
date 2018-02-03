@@ -35,10 +35,8 @@ namespace gl
 		switch (type)
 		{
 		case GL_DEBUG_TYPE_ERROR:
-		{
 			LOG_ERROR(RSX, "%s", message);
 			return;
-		}
 		default:
 			LOG_WARNING(RSX, "%s", message);
 			return;
