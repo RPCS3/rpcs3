@@ -1691,7 +1691,7 @@
            <property name="title">
             <string>Core</string>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_29">
+           <layout class="QVBoxLayout" name="verticalLayout_44">
             <item>
              <widget class="QCheckBox" name="ppuDebug">
               <property name="text">
