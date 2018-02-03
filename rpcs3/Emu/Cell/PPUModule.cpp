@@ -244,6 +244,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::sceNp2,
 		&ppu_module_manager::sceNpClans,
 		&ppu_module_manager::sceNpCommerce2,
+		&ppu_module_manager::sceNpMatchingInt,
 		&ppu_module_manager::sceNpSns,
 		&ppu_module_manager::sceNpTrophy,
 		&ppu_module_manager::sceNpTus,
