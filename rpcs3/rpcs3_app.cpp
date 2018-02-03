@@ -8,14 +8,9 @@
 #include "rpcs3qt/gs_frame.h"
 #include "rpcs3qt/gl_gs_frame.h"
 
-#include "Emu/Cell/Modules/sceNpTrophy.h"
 #include "rpcs3qt/trophy_notification_helper.h"
-
-#include "Emu/Cell/Modules/cellSaveData.h"
 #include "rpcs3qt/save_data_dialog.h"
-
 #include "rpcs3qt/msg_dialog_frame.h"
-#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "basic_keyboard_handler.h"
