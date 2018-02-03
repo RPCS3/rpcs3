@@ -1,5 +1,7 @@
 #include "rpcs3_app.h"
 
+#include "rpcs3qt/qt_utils.h"
+
 #include "rpcs3qt/welcome_dialog.h"
 
 #include "Emu/System.h"
@@ -167,37 +169,40 @@ void rpcs3_app::InitializeCallbacks()
 		}
 
 		bool disableMouse = guiSettings->GetValue(gui::gs_disableMouse).toBool();
+		auto frame_geometry = gui::utils::create_centered_window_geometry(RPCS3MainWin->geometry(), w, h);
+
+		gs_frame* frame;
 
 		switch (video_renderer type = g_cfg.video.renderer)
 		{
 		case video_renderer::null:
 		{
-			gs_frame* ret = new gs_frame("Null", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
-			gameWindow = ret;
-			return std::unique_ptr<gs_frame>(ret);
+			frame = new gs_frame("Null", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			break;
 		}
 		case video_renderer::opengl:
 		{
-			gl_gs_frame* ret = new gl_gs_frame(w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
-			gameWindow = ret;
-			return std::unique_ptr<gl_gs_frame>(ret);
+			frame = new gl_gs_frame(frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			break;
 		}
 		case video_renderer::vulkan:
 		{
-			gs_frame* ret = new gs_frame("Vulkan", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
-			gameWindow = ret;
-			return std::unique_ptr<gs_frame>(ret);
+			frame = new gs_frame("Vulkan", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			break;
 		}
 #ifdef _MSC_VER
 		case video_renderer::dx12:
 		{
-			gs_frame* ret = new gs_frame("DirectX 12", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
-			gameWindow = ret;
-			return std::unique_ptr<gs_frame>(ret);
+			frame = new gs_frame("DirectX 12", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			break;
 		}
 #endif
-		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+		default:
+			fmt::throw_exception("Invalid video renderer: %s" HERE, type);
 		}
+
+		gameWindow = frame;
+		return std::unique_ptr<gs_frame>(frame);
 	};
 
 	callbacks.get_gs_render = []() -> std::shared_ptr<GSRender>
