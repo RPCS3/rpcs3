@@ -15,14 +15,12 @@ cache:
 - compat_database.dat
 
 install:
-- ps: | # set version env vars, update appveyor build version accordingly
+- ps: | # set env vars for versioning
     $commDate = $env:APPVEYOR_REPO_COMMIT_TIMESTAMP.Substring(0,10)
     $commSha = $env:APPVEYOR_REPO_COMMIT.Substring(0,8)
     $commTag = $(git describe --tags $(git rev-list --tags --max-count=1))
     
-    $av = "{0}-{1}" -f $commTag.TrimStart("v"), $env:APPVEYOR_BUILD_NUMBER
-    Update-AppveyorBuild -Version $av
-    
+    $env:AVVER = "{0}-{1}" -f $commTag.TrimStart("v"), $env:APPVEYOR_BUILD_NUMBER
     $env:BUILD = "rpcs3-{0}-{1}-{2}_win64.7z" -f $commTag, $commDate, $commSha
 
 - ps: | # used for experimental build warnings for pr builds
@@ -88,3 +86,7 @@ artifacts:
   name: rpcs3
 - path: openssl_win64.7z
   name: openssl
+
+on_finish: 
+- ps: | # update appveyor build version, done last to prevent webhook breakage
+    update-appveyorbuild -version $env:AVVER
