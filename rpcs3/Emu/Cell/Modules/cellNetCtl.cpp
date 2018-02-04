@@ -125,20 +125,25 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
 	cellNetCtl.todo("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 
+	if (code == CELL_NET_CTL_INFO_ETHER_ADDR)
+	{
+		// dummy values set
+		std::memset(info->ether_addr.data, 0xFF, sizeof(info->ether_addr.data));
+		return CELL_OK;
+	}
+
+	if (g_cfg.net.net_status == CELL_NET_CTL_STATE_Disconnected)
+	{
+		return CELL_NET_CTL_ERROR_NOT_CONNECTED;
+	}
+
 	if (code == CELL_NET_CTL_INFO_MTU)
 	{
 		info->mtu = 1500;
 	}
 	else if (code == CELL_NET_CTL_INFO_LINK)
 	{
-		if (g_cfg.net.net_status != CELL_NET_CTL_STATE_Disconnected)
-		{
-			info->link = CELL_NET_CTL_LINK_CONNECTED;
-		}
-		else
-		{
-			info->link = CELL_NET_CTL_LINK_DISCONNECTED;
-		}
+		info->link = CELL_NET_CTL_LINK_CONNECTED;
 	}
 	else if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
 	{
