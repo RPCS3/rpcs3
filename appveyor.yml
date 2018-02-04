@@ -79,13 +79,21 @@ after_build:
     7z a -m0=LZMA2 -mx9 openssl_win64.7z C:\OpenSSL-Win64\bin\libeay32.dll `
       C:\OpenSSL-Win64\bin\ssleay32.dll
 
+- ps: | # generate sha256 hashes
+    (Get-FileHash $env:BUILD -Algorithm SHA256).Hash | Out-File -encoding ASCII "$($env:BUILD).sha256"
+    (Get-FileHash openssl_win64.7z -Algorithm SHA256).Hash | Out-File -encoding ASCII "openssl_win64.7z.sha256"
+
 test: off
 
 artifacts:
 - path: $(BUILD)
   name: rpcs3
+- path: $(BUILD).sha256
+  name: rpcs3 sha256 hash
 - path: openssl_win64.7z
   name: openssl
+- path: openssl_win64.7z.sha256
+  name: openssl sha256 hash
 
 on_finish: 
 - ps: | # update appveyor build version, done last to prevent webhook breakage
