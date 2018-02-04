@@ -302,7 +302,7 @@ void mfc_thread::cpu_task()
 					spu.ch_tag_stat.push(spu, completed);
 					no_updates = 0;
 				}
-				else if (completed && spu.ch_tag_mask == completed && spu.ch_tag_upd.compare_and_swap_test(2, 0))
+				else if (spu.ch_tag_mask == completed && spu.ch_tag_upd.compare_and_swap_test(2, 0))
 				{
 					spu.ch_tag_stat.push(spu, completed);
 					no_updates = 0;
