@@ -80,8 +80,8 @@ after_build:
       C:\OpenSSL-Win64\bin\ssleay32.dll
 
 - ps: | # generate sha256 hashes
-    (Get-FileHash $env:BUILD -Algorithm SHA256).Hash > "$($env:BUILD).sha256"
-    (Get-FileHash openssl_win64.7z -Algorithm SHA256).Hash > "openssl_win64.7z.sha256"
+    (Get-FileHash $env:BUILD -Algorithm SHA256).Hash | Out-File -encoding ASCII "$($env:BUILD).sha256"
+    (Get-FileHash openssl_win64.7z -Algorithm SHA256).Hash | Out-File -encoding ASCII "openssl_win64.7z.sha256"
 
 test: off
 
