@@ -1767,6 +1767,17 @@ bool SPUThread::stop_and_signal(u32 code)
 		return true;
 	}
 
+	case 0x100:
+	{
+		if (ch_out_mbox.get_count())
+		{
+			fmt::throw_exception("STOP code 0x100: Out_MBox is not empty" HERE);
+		}
+
+		_mm_mfence();
+		return true;
+	}
+
 	case 0x101:
 	{
 		/* ===== sys_spu_thread_group_exit ===== */
