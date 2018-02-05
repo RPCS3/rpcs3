@@ -400,8 +400,14 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			// Fixed Callback
 			funcFixed(ppu, result, listGet, fixedSet);
 
+			// check result for validity - CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM is not a valid result for funcFixed
+			if (result->result < CELL_SAVEDATA_CBRESULT_ERR_INVALID || result->result >= CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
+			{
+				return CELL_SAVEDATA_ERROR_PARAM;
+			}
+
 			// skip all following steps if OK_LAST
-			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
+			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
 			{
 				return CELL_OK;
 			}
