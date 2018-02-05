@@ -65,7 +65,9 @@ namespace vk
 	vk::render_device *get_current_renderer();
 	void set_current_renderer(const vk::render_device &device);
 
+	//Compatibility workarounds
 	bool emulate_primitive_restart();
+	bool force_32bit_index_buffer();
 
 	VkComponentMapping default_component_map();
 	VkImageSubresource default_image_subresource();
