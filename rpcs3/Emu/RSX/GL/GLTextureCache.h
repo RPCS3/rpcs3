@@ -689,6 +689,24 @@ namespace gl
 
 		void apply_component_mapping_flags(GLenum target, u32 gcm_format, rsx::texture_create_flags flags)
 		{
+			//NOTE: Depth textures should always read RRRR
+			switch (gcm_format)
+			{
+			case CELL_GCM_TEXTURE_DEPTH24_D8:
+			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+			case CELL_GCM_TEXTURE_DEPTH16:
+			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+			{
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_RED);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_RED);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_RED);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, GL_RED);
+				return;
+			}
+			default:
+				break;
+			}
+
 			switch (flags)
 			{
 			case rsx::texture_create_flags::default_component_order:

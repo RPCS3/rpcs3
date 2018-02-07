@@ -489,6 +489,20 @@ namespace vk
 
 		VkComponentMapping apply_component_mapping_flags(u32 gcm_format, rsx::texture_create_flags flags, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector)
 		{
+			//NOTE: Depth textures should always read RRRR
+			switch (gcm_format)
+			{
+			case CELL_GCM_TEXTURE_DEPTH24_D8:
+			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+			case CELL_GCM_TEXTURE_DEPTH16:
+			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+			{
+				return{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
+			}
+			default:
+				break;
+			}
+
 			VkComponentMapping mapping = {};
 			switch (flags)
 			{
