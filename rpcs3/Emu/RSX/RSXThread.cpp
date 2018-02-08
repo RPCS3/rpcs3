@@ -444,23 +444,25 @@ namespace rsx
 
 				if (deferred_stack.size() > 0)
 				{
-					//TODO: Verify this works correctly
-					LOG_ERROR(RSX, "Disjoint draw range detected");
+					LOG_TRACE(RSX, "Disjoint draw range detected");
 
-					deferred_stack.push_back(num_draws - 1); //Append last pair
+					deferred_stack.push_back(num_draws); //Append last pair
 					std::vector<std::pair<u32, u32>> temp_range = first_counts;
+					auto current_command = rsx::method_registers.current_draw_clause.command;
 
 					u32 last_index = 0;
 
 					for (const u32 draw : deferred_stack)
 					{
-						first_counts.resize(draw - last_index);
-						std::copy(temp_range.begin() + last_index, temp_range.begin() + draw, first_counts.begin());
-
 						if (emit_begin)
 							methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
 						else
 							emit_begin = true;
+
+						//NOTE: These values are reset if begin command is emitted
+						first_counts.resize(draw - last_index);
+						std::copy(temp_range.begin() + last_index, temp_range.begin() + draw, first_counts.begin());
+						rsx::method_registers.current_draw_clause.command = current_command;
 
 						methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
 						last_index = draw;
