@@ -226,8 +226,7 @@ private Q_SLOTS:
 	void doubleClickedSlot(const QModelIndex& index);
 Q_SIGNALS:
 	void GameListFrameClosed();
-	void RequestIconPathSet(const std::string& path);
-	void RequestAddRecentGame(const q_string_pair& entry);
+	void RequestBoot(const std::string& path);
 	void RequestIconSizeActSet(const int& idx);
 	void RequestListModeActSet(const bool& isList);
 	void RequestCategoryActSet(const int& id);
@@ -239,7 +238,6 @@ protected:
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
 	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
-	bool Boot(const GameInfo& info);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	void FilterData();
 	void SortGameList();

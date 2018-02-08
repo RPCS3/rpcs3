@@ -227,6 +227,25 @@ void main_window::SetAppIconFromPath(const std::string& path)
 	m_appIcon = QApplication::windowIcon();
 }
 
+void main_window::Boot(const std::string& path, bool direct, bool add_only, bool force_boot)
+{
+	SetAppIconFromPath(path);
+	Emu.SetForceBoot(force_boot);
+
+	if (Emu.BootGame(path, add_only))
+	{
+		LOG_SUCCESS(LOADER, "Boot successful.");
+		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
+		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+	}
+	else
+	{
+		LOG_ERROR(GENERAL, "Boot failed: path=%s direct=%d add_only=%d force_boot=%d", path, direct, add_only, force_boot);
+	}
+
+	m_gameListFrame->Refresh(true);
+}
+
 void main_window::BootElf()
 {
 	bool stopped = false;
@@ -253,30 +272,14 @@ void main_window::BootElf()
 		return;
 	}
 
-	LOG_NOTICE(LOADER, "(S)ELF: booting...");
-
 	// If we resolved the filepath earlier we would end up setting the last opened dir to the unwanted
 	// game folder in case of having e.g. a Game Folder with collected links to elf files.
 	// Don't set last path earlier in case of cancelled dialog
 	guiSettings->SetValue(gui::fd_boot_elf, filePath);
 	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
 
-	SetAppIconFromPath(path);
-	Emu.SetForceBoot(true);
-	Emu.Stop();
-
-	if (!Emu.BootGame(path, true))
-	{
-		LOG_ERROR(GENERAL, "PS3 executable not found at path (%s)", path);
-	}
-	else
-	{
-		LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
-
-		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
-		m_gameListFrame->Refresh(true);
-	}
+	LOG_NOTICE(LOADER, "Booting from BootElf...");
+	Boot(path, true);
 }
 
 void main_window::BootGame()
@@ -298,24 +301,11 @@ void main_window::BootGame()
 		return;
 	}
 
-	Emu.SetForceBoot(true);
-	Emu.Stop();
 	guiSettings->SetValue(gui::fd_boot_game, QFileInfo(dirPath).path());
 	const std::string path = sstr(dirPath);
-	SetAppIconFromPath(path);
 
-	if (!Emu.BootGame(path))
-	{
-		LOG_ERROR(GENERAL, "PS3 executable not found in selected folder (%s)", path);
-	}
-	else
-	{
-		LOG_SUCCESS(LOADER, "Boot Game: boot done.");
-
-		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
-		m_gameListFrame->Refresh(true);
-	}
+	LOG_NOTICE(LOADER, "Booting from BootGame...");
+	Boot(path);
 }
 
 void main_window::InstallPkg(const QString& dropPath)
@@ -813,6 +803,7 @@ void main_window::BootRecentAction(const QAction* act)
 	}
 
 	const QString pth = act->data().toString();
+	const std::string path = sstr(pth);
 	QString nam;
 	bool containsPath = false;
 
@@ -844,7 +835,7 @@ void main_window::BootRecentAction(const QAction* act)
 
 			guiSettings->SetValue(gui::rg_entries, guiSettings->List2Var(m_rg_entries));
 
-			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", sstr(pth));
+			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", path);
 
 			// refill menu with actions
 			for (int i = 0; i < m_recentGameActs.count(); i++)
@@ -855,30 +846,15 @@ void main_window::BootRecentAction(const QAction* act)
 			}
 
 			LOG_WARNING(GENERAL, "Boot Recent list refreshed");
-
 			return;
 		}
 
-		LOG_ERROR(GENERAL, "Path invalid and not in m_rg_paths: %s", sstr(pth));
-
+		LOG_ERROR(GENERAL, "Path invalid and not in m_rg_paths: %s", path);
 		return;
 	}
 
-	SetAppIconFromPath(sstr(pth));
-
-	Emu.SetForceBoot(true);
-	Emu.Stop();
-
-	if (!Emu.BootGame(sstr(pth), true))
-	{
-		LOG_ERROR(LOADER, "Failed to boot %s", sstr(pth));
-	}
-	else
-	{
-		LOG_SUCCESS(LOADER, "Boot from Recent List: done");
-		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), nam));
-		m_gameListFrame->Refresh(true);
-	}
+	LOG_NOTICE(LOADER, "Booting from recent games list...");
+	Boot(path, true);
 };
 
 QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint& sc_idx)
@@ -1395,8 +1371,7 @@ void main_window::CreateDockWindows()
 		}
 	});
 
-	connect(m_gameListFrame, &game_list_frame::RequestIconPathSet, this, &main_window::SetAppIconFromPath);
-	connect(m_gameListFrame, &game_list_frame::RequestAddRecentGame, this, &main_window::AddRecentAction);
+	connect(m_gameListFrame, &game_list_frame::RequestBoot, [this](const std::string& path){ Boot(path); });
 }
 
 void main_window::ConfigureGuiFromSettings(bool configure_all)
