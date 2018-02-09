@@ -15,7 +15,7 @@
 #include "sys_event.h"
 #include "sys_spu.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_spu("sys_spu");
 

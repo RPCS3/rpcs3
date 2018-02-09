@@ -4,7 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 
-namespace vm { using namespace ps3; }
+
 
 extern logs::channel sysPrxForUser;
 
@@ -37,7 +37,7 @@ struct ps3_fmt_src
 	std::size_t fmt_string(std::string& out, std::size_t extra) const
 	{
 		const std::size_t start = out.size();
-		out += vm::ps3::_ptr<const char>(get<u32>(extra));
+		out += vm::_ptr<const char>(get<u32>(extra));
 		return out.size() - start;
 	}
 
@@ -339,7 +339,7 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dst, vm::cptr<char> src, s32 len)
 s32 _sys_strncasecmp(vm::cptr<char> str1, vm::cptr<char> str2, u32 n)
 {
 	sysPrxForUser.trace("_sys_strncasecmp(str1=%s, str2=%s, n=%d)", str1, str2, n);
-	
+
 	for (u32 i = 0; i < n; i++)
 	{
 		const int ch1 = _sys_tolower(str1[i]), ch2 = _sys_tolower(str2[i]);
@@ -356,7 +356,7 @@ s32 _sys_strncasecmp(vm::cptr<char> str1, vm::cptr<char> str2, u32 n)
 vm::cptr<char> _sys_strrchr(vm::cptr<char> str, char ch)
 {
 	sysPrxForUser.trace("_sys_strrchr(str=%s, ch=%d)", str, ch);
-	
+
 	vm::cptr<char> res = vm::null;
 
 	for (u32 i = 0;; i++)

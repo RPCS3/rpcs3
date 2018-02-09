@@ -120,8 +120,8 @@ enum
 	CELL_MUSIC_SELECTION_CONTEXT_SIZE         = 2048,
 };
 
-using CellMusicCallback = void(u32 event, vm::ps3::ptr<void> param, vm::ps3::ptr<void> userData);
-using CellMusic2Callback = void(u32 event, vm::ps3::ptr<void> param, vm::ps3::ptr<void> userData);
+using CellMusicCallback = void(u32 event, vm::ptr<void> param, vm::ptr<void> userData);
+using CellMusic2Callback = void(u32 event, vm::ptr<void> param, vm::ptr<void> userData);
 
 struct CellMusicSelectionContext
 {

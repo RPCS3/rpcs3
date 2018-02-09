@@ -26,8 +26,8 @@ struct sys_vm_statistics_t
 };
 
 // SysCalls
-error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ps3::ptr<u32> addr);
-error_code sys_vm_memory_map_different(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ps3::ptr<u32> addr);
+error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr);
+error_code sys_vm_memory_map_different(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr);
 error_code sys_vm_unmap(u32 addr);
 error_code sys_vm_append_memory(u32 addr, u32 size);
 error_code sys_vm_return_memory(u32 addr, u32 size);
@@ -38,5 +38,5 @@ error_code sys_vm_flush(u32 addr, u32 size);
 error_code sys_vm_invalidate(u32 addr, u32 size);
 error_code sys_vm_store(u32 addr, u32 size);
 error_code sys_vm_sync(u32 addr, u32 size);
-error_code sys_vm_test(u32 addr, u32 size, vm::ps3::ptr<u64> result);
-error_code sys_vm_get_statistics(u32 addr, vm::ps3::ptr<sys_vm_statistics_t> stat);
+error_code sys_vm_test(u32 addr, u32 size, vm::ptr<u64> result);
+error_code sys_vm_get_statistics(u32 addr, vm::ptr<sys_vm_statistics_t> stat);

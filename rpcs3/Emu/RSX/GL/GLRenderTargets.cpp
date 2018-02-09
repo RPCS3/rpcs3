@@ -475,7 +475,7 @@ void GLGSRender::read_buffers()
 
 				if (!m_surface_info[i].pitch)
 					continue;
-					
+
 				const u32 range = pitch * height;
 
 				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
@@ -560,7 +560,7 @@ void GLGSRender::read_buffers()
 			if (rsx::method_registers.surface_depth_fmt() == rsx::surface_depth_format::z16)
 			{
 				u16 *dst = (u16*)pixels;
-				const be_t<u16>* src = vm::ps3::_ptr<u16>(depth_address);
+				const be_t<u16>* src = vm::_ptr<u16>(depth_address);
 				for (int i = 0, end = std::get<1>(m_rtts.m_bound_depth_stencil)->width() * std::get<1>(m_rtts.m_bound_depth_stencil)->height(); i < end; ++i)
 				{
 					dst[i] = src[i];
@@ -569,7 +569,7 @@ void GLGSRender::read_buffers()
 			else
 			{
 				u32 *dst = (u32*)pixels;
-				const be_t<u32>* src = vm::ps3::_ptr<u32>(depth_address);
+				const be_t<u32>* src = vm::_ptr<u32>(depth_address);
 				for (int i = 0, end = std::get<1>(m_rtts.m_bound_depth_stencil)->width() * std::get<1>(m_rtts.m_bound_depth_stencil)->height(); i < end; ++i)
 				{
 					dst[i] = src[i];

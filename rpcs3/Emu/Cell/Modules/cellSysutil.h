@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-namespace vm { using namespace ps3; }
+
 
 enum
 {
@@ -141,9 +141,9 @@ enum
 enum
 {
 	CELL_SYSCACHE_RET_OK_CLEARED      = 0,
-	CELL_SYSCACHE_RET_OK_RELAYED      = 1, 
+	CELL_SYSCACHE_RET_OK_RELAYED      = 1,
 
-	CELL_SYSCACHE_ID_SIZE             = 32,	
+	CELL_SYSCACHE_ID_SIZE             = 32,
 	CELL_SYSCACHE_PATH_MAX            = 1055,
 
 	CELL_SYSCACHE_ERROR_ACCESS_ERROR  = 0x8002bc01, // I don't think we need this

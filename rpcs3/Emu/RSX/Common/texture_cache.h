@@ -1916,12 +1916,12 @@ namespace rsx
 				}
 
 				protect_info.second->unprotect();
-				vm::ps3::write32(texaddr, texaddr);
+				vm::write32(texaddr, texaddr);
 				protect_info.second->protect(protect_info.first);
 				return;
 			}
 
-			vm::ps3::write32(texaddr, texaddr);
+			vm::write32(texaddr, texaddr);
 		}
 
 		bool test_framebuffer(u32 texaddr)
@@ -1940,13 +1940,13 @@ namespace rsx
 
 					//Address isnt actually covered by the region, it only shares a page with it
 					protect_info.second->unprotect();
-					bool result = (vm::ps3::read32(texaddr) == texaddr);
+					bool result = (vm::read32(texaddr) == texaddr);
 					protect_info.second->protect(utils::protection::no);
 					return result;
 				}
 			}
 
-			return vm::ps3::read32(texaddr) == texaddr;
+			return vm::read32(texaddr) == texaddr;
 		}
 	};
 }

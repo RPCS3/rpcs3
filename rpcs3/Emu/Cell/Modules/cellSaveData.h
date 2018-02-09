@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-namespace vm { using namespace ps3; }
+
 
 // Return codes
 enum
@@ -16,7 +16,7 @@ enum
 	CELL_SAVEDATA_ERROR_NOUSER          = 0x8002b409,
 	CELL_SAVEDATA_ERROR_SIZEOVER        = 0x8002b40a,
 	CELL_SAVEDATA_ERROR_NODATA          = 0x8002b40b,
-	CELL_SAVEDATA_ERROR_NOTSUPPORTED    = 0x8002b40c,	
+	CELL_SAVEDATA_ERROR_NOTSUPPORTED    = 0x8002b40c,
 };
 
 // Callback return codes
@@ -97,7 +97,7 @@ enum
 
 // Datatypes
 struct CellSaveDataSetList
-{ 
+{
 	be_t<u32> sortType;
 	be_t<u32> sortOrder;
 	vm::bptr<char> dirNamePrefix;
@@ -105,7 +105,7 @@ struct CellSaveDataSetList
 };
 
 struct CellSaveDataSetBuf
-{ 
+{
 	be_t<u32> dirListMax;
 	be_t<u32> fileListMax;
 	be_t<u32> reserved[6];
@@ -113,16 +113,16 @@ struct CellSaveDataSetBuf
 	vm::bptr<void> buf;
 };
 
-struct CellSaveDataNewDataIcon 
-{ 
+struct CellSaveDataNewDataIcon
+{
 	vm::bptr<char> title;
 	be_t<u32> iconBufSize;
 	vm::bptr<void> iconBuf;
 	vm::bptr<void> reserved;
 };
 
-struct CellSaveDataListNewData 
-{ 
+struct CellSaveDataListNewData
+{
 	be_t<u32> iconPosition;
 	vm::bptr<char> dirName;
 	vm::bptr<CellSaveDataNewDataIcon> icon;
@@ -130,14 +130,14 @@ struct CellSaveDataListNewData
 };
 
 struct CellSaveDataDirList
-{ 
-	char dirName[CELL_SAVEDATA_DIRNAME_SIZE]; 
+{
+	char dirName[CELL_SAVEDATA_DIRNAME_SIZE];
 	char listParam[CELL_SAVEDATA_SYSP_LPARAM_SIZE];
 	char reserved[8];
 };
 
 struct CellSaveDataListGet
-{ 
+{
 	be_t<u32> dirNum;
 	be_t<u32> dirListNum;
 	vm::bptr<CellSaveDataDirList> dirList;
@@ -145,7 +145,7 @@ struct CellSaveDataListGet
 };
 
 struct CellSaveDataListSet
-{ 
+{
 	be_t<u32> focusPosition;
 	vm::bptr<char> focusDirName;
 	be_t<u32> fixedListNum;
@@ -155,45 +155,45 @@ struct CellSaveDataListSet
 };
 
 struct CellSaveDataFixedSet
-{ 
+{
 	vm::bptr<char> dirName;
 	vm::bptr<CellSaveDataNewDataIcon> newIcon;
 	be_t<u32> option;
 };
 
-struct CellSaveDataSystemFileParam 
-{ 
-	char title[CELL_SAVEDATA_SYSP_TITLE_SIZE]; 
-	char subTitle[CELL_SAVEDATA_SYSP_SUBTITLE_SIZE]; 
-	char detail[CELL_SAVEDATA_SYSP_DETAIL_SIZE]; 
-	be_t<u32> attribute; 
-	char reserved2[4]; 
-	char listParam[CELL_SAVEDATA_SYSP_LPARAM_SIZE]; 
-	char reserved[256]; 
+struct CellSaveDataSystemFileParam
+{
+	char title[CELL_SAVEDATA_SYSP_TITLE_SIZE];
+	char subTitle[CELL_SAVEDATA_SYSP_SUBTITLE_SIZE];
+	char detail[CELL_SAVEDATA_SYSP_DETAIL_SIZE];
+	be_t<u32> attribute;
+	char reserved2[4];
+	char listParam[CELL_SAVEDATA_SYSP_LPARAM_SIZE];
+	char reserved[256];
 };
 
 struct CellSaveDataDirStat
-{ 
+{
 	be_t<s64> atime;
 	be_t<s64> mtime;
 	be_t<s64> ctime;
-	char dirName[CELL_SAVEDATA_DIRNAME_SIZE]; 
+	char dirName[CELL_SAVEDATA_DIRNAME_SIZE];
 };
 
 struct CellSaveDataFileStat
-{ 
+{
 	be_t<u32> fileType;
 	char reserved1[4];
 	be_t<u64> size;
 	be_t<s64> atime;
 	be_t<s64> mtime;
 	be_t<s64> ctime;
-	char fileName[CELL_SAVEDATA_FILENAME_SIZE]; 
+	char fileName[CELL_SAVEDATA_FILENAME_SIZE];
 	char reserved2[3];
 };
 
 struct CellSaveDataStatGet
-{ 
+{
 	be_t<s32> hddFreeSizeKB;
 	be_t<u32> isNewData;
 	CellSaveDataDirStat dir;
@@ -208,7 +208,7 @@ struct CellSaveDataStatGet
 };
 
 struct CellSaveDataAutoIndicator
-{ 
+{
 	be_t<u32> dispPosition;
 	be_t<u32> dispMode;
 	vm::bptr<char> dispMsg;
@@ -217,25 +217,25 @@ struct CellSaveDataAutoIndicator
 	vm::bptr<void> reserved;
 };
 
-struct CellSaveDataStatSet 
-{ 
+struct CellSaveDataStatSet
+{
 	vm::bptr<CellSaveDataSystemFileParam> setParam;
 	be_t<u32> reCreateMode;
 	vm::bptr<CellSaveDataAutoIndicator> indicator;
 };
 
 struct CellSaveDataFileGet
-{ 
+{
 	be_t<u32> excSize;
 	char reserved[64];
-}; 
+};
 
-struct CellSaveDataFileSet 
-{ 
+struct CellSaveDataFileSet
+{
 	be_t<u32> fileOperation;
 	vm::bptr<void> reserved;
 	be_t<u32> fileType;
-	u8 secureFileId[CELL_SAVEDATA_SECUREFILEID_SIZE]; 
+	u8 secureFileId[CELL_SAVEDATA_SECUREFILEID_SIZE];
 	vm::bptr<char> fileName;
 	be_t<u32> fileOffset;
 	be_t<u32> fileSize;
@@ -243,8 +243,8 @@ struct CellSaveDataFileSet
 	vm::bptr<void> fileBuf;
 };
 
-struct CellSaveDataCBResult 
-{ 
+struct CellSaveDataCBResult
+{
 	be_t<s32> result;
 	be_t<u32> progressBarInc;
 	be_t<s32> errNeedSizeKB;
@@ -253,9 +253,9 @@ struct CellSaveDataCBResult
 };
 
 struct CellSaveDataDoneGet
-{ 
+{
 	be_t<s32> excResult;
-	char dirName[CELL_SAVEDATA_DIRNAME_SIZE]; 
+	char dirName[CELL_SAVEDATA_DIRNAME_SIZE];
 	be_t<s32> sizeKB;
 	be_t<s32> hddFreeSizeKB;
 	char reserved[64];

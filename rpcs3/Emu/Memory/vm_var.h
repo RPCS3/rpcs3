@@ -114,7 +114,7 @@ namespace vm
 	// BE variable
 	template<typename T, typename A> using varb = _var_base<to_be_t<T>, A>;
 
-	inline namespace ps3
+	inline namespace ps3_
 	{
 		// BE variable
 		template<typename T, typename A = stack_allocator<ppu_thread>> using var = varb<T, A>;

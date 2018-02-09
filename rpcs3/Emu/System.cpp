@@ -671,7 +671,7 @@ void Emulator::Load(bool add_only)
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 
-			vm::ps3::init();
+			vm::init();
 
 			if (argv.empty())
 			{
@@ -709,7 +709,7 @@ void Emulator::Load(bool add_only)
 			// PPU PRX (experimental)
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
-			vm::ps3::init();
+			vm::init();
 			ppu_load_prx(ppu_prx, m_path);
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
@@ -717,7 +717,7 @@ void Emulator::Load(bool add_only)
 			// SPU executable (experimental)
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
-			vm::ps3::init();
+			vm::init();
 			spu_load_exec(spu_exec);
 		}
 		else

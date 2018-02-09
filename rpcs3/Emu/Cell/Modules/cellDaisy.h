@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 // libDaisy = 0x80410501 - 0x804105ff
 
@@ -35,7 +35,7 @@ enum
 	CELL_DAISY_MIN_ENTRY_SIZE = 16,
 	CELL_DAISY_MAX_ENTRY_SIZE = (16*1024),
 	CELL_DAISY_MAX_DMA_TAG = 31,
-	
+
 	// CELL_DAISY_ENTRY_SIZE(x)
 	// CELL_DAISY_EA_ATOMIC(x)
 	// CELL_DAISY_EA_DMA(x)
@@ -48,35 +48,35 @@ enum
 	// Queue IO
 	DAISY_OUTPUT,
 	DAISY_INPUT,
-	
+
 	// Block Mode
 	DAISY_NOT_STALL = 0,
 	DAISY_STALL = 1,
-	
+
 	// Queue Status
 	DAISY_PTR_UNAVAILABLE = 0x40000001,
 	DAISY_PTR_TERMINATED = 0x40000002,
-	
+
 	// Buffer Mode
 	DAISY_COPY = 0,
 	DAISY_REFERENCE = 1,
-	
+
 	// Constructor Mode
 	DAISY_NO_PARAMETER = 0,
 	DAISY_PARAMETER = 1,
-	
+
 	// Glue Mode
 	DAISY_ONE_PORT = 1,
 	DAISY_TWO_PORT = 2,
-	
+
 	// Queue Mode
 	DAISY_IN_ORDER,
 	DAISY_OUT_OF_ORDER,
-	
+
 	// Buffer Type
 	DAISY_BUFFER_TYPE_REMOTE = 1,
 	DAISY_BUFFER_TYPE_LOCAL = 2,
-	
+
 	// Queue Control Type
 	DAISY_QCTL_TYPE_ATOMIC = 1,
 	DAISY_QCTL_TYPE_LOCAL = 2,

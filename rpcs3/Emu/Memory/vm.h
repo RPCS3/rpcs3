@@ -268,7 +268,7 @@ namespace vm
 		g_base_addr[addr] = value;
 	}
 
-	inline namespace ps3
+	inline namespace ps3_
 	{
 		// Convert specified PS3 address to a pointer of specified (possibly converted to BE) type
 		template<typename T> inline to_be_t<T>* _ptr(u32 addr)

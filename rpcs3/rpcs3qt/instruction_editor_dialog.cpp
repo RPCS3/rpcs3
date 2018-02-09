@@ -19,7 +19,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 
 	const auto cpu = _cpu.get();
 	m_cpu_offset = cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
-	QString instruction = qstr(fmt::format("%08x", vm::ps3::read32(m_cpu_offset + m_pc).value()));
+	QString instruction = qstr(fmt::format("%08x", vm::read32(m_cpu_offset + m_pc).value()));
 
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
 	QHBoxLayout* hbox_panel(new QHBoxLayout());
@@ -85,7 +85,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 		}
 		else
 		{
-			vm::ps3::write32(m_cpu_offset + m_pc, static_cast<u32>(opcode));
+			vm::write32(m_cpu_offset + m_pc, static_cast<u32>(opcode));
 		}
 
 		accept();

@@ -163,7 +163,7 @@ namespace vm
 	// LE reference to BE data
 	template<typename T, typename AT = u32> using lrefb = _ref_base<to_be_t<T>, to_le_t<AT>>;
 
-	inline namespace ps3
+	inline namespace ps3_
 	{
 		// default reference for PS3 HLE functions (Native endianness reference to BE data)
 		template<typename T, typename AT = u32> using ref = refb<T, AT>;

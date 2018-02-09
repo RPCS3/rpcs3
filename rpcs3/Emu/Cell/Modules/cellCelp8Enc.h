@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 // libCelp8Enc = 0x806140a1 - 0x806140bf
 
@@ -19,9 +19,9 @@ enum
 enum
 {
 	CELL_CELP8ENC_FS_8kHz = 1,
-	
+
 	CELL_CELP8ENC_EXCITATION_MODE_MPE = 0,
-	
+
 	CELL_CELP8ENC_MPE_CONFIG_0 = 0,
 	CELL_CELP8ENC_MPE_CONFIG_2 = 2,
 	CELL_CELP8ENC_MPE_CONFIG_6 = 6,
@@ -32,6 +32,6 @@ enum
 	CELL_CELP8ENC_MPE_CONFIG_21 = 21,
 	CELL_CELP8ENC_MPE_CONFIG_24 = 24,
 	CELL_CELP8ENC_MPE_CONFIG_26 = 26,
-	
+
 	CELL_CELP8ENC_WORD_SZ_FLOAT,
 };

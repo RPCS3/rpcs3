@@ -151,7 +151,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	const auto block = std::make_pair(info.addr, info.size);
 	{
 		// Optimize BLR (prefetch LR)
-		if (vm::ps3::read32(vm::cast(block.first + block.second - 4)) == ppu_instructions::BLR())
+		if (vm::read32(vm::cast(block.first + block.second - 4)) == ppu_instructions::BLR())
 		{
 			RegLoad(m_lr);
 		}
@@ -176,7 +176,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 				m_rel = nullptr;
 			}
 
-			const u32 op = vm::ps3::read32(vm::cast(m_addr + base));
+			const u32 op = vm::read32(vm::cast(m_addr + base));
 			(this->*(s_ppu_decoder.decode(op)))({op});
 
 			if (m_rel)

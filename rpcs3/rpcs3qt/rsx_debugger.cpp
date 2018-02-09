@@ -81,7 +81,7 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	b_break_draw->setEnabled(false);
 	b_break_prim->setEnabled(false);
 	b_break_inst->setEnabled(false);
-	
+
 	hbox_controls->addWidget(gb_controls_addr);
 	hbox_controls->addWidget(gb_controls_goto);
 	hbox_controls->addWidget(gb_controls_breaks);
@@ -215,7 +215,7 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	gb_buffers_depth	->setLayout(hbox_buffers_depth);
 	gb_buffers_stencil->setLayout(hbox_buffers_stencil);
 	gb_buffers_text		->setLayout(hbox_buffers_text);
-	
+
 	//Buffers and textures
 	int m_panel_width = 108;
 	int m_panel_height = 108;
@@ -244,7 +244,7 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	hbox_buffers_depth  ->addWidget(m_buffer_depth);
 	hbox_buffers_stencil->addWidget(m_buffer_stencil);
 	hbox_buffers_text   ->addWidget(m_buffer_tex);
-	
+
 	//Merge and display everything
 	vbox_buffers1->addSpacing(10);
 	vbox_buffers1->addWidget(gb_buffers_colorA);
@@ -356,7 +356,7 @@ void rsx_debugger::wheelEvent(QWheelEvent* event)
 			u32 offset;
 			if(vm::check_addr(m_addr, 4))
 			{
-				u32 cmd = vm::ps3::read32(m_addr);
+				u32 cmd = vm::read32(m_addr);
 				u32 count = ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 					|| ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
 					|| ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
@@ -421,7 +421,7 @@ void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
 			return;
 		}
 
-		const auto buffers = render->display_buffers; 
+		const auto buffers = render->display_buffers;
 
 		// TODO: Is there any better way to choose the color buffers
 #define SHOW_BUFFER(id) \
@@ -664,10 +664,10 @@ void rsx_debugger::GetMemory()
 	for(u32 i=0, addr = m_addr; i<m_item_count; i++, addr += 4)
 	{
 		m_list_commands->setItem(i, 0, new QTableWidgetItem(qstr(fmt::format("%08x", addr))));
-	
+
 		if (vm::check_addr(addr))
 		{
-			u32 cmd = vm::ps3::read32(addr);
+			u32 cmd = vm::read32(addr);
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
 			m_list_commands->setItem(i, 3, new QTableWidgetItem(qstr(fmt::format("%d", count))));
@@ -722,8 +722,8 @@ void rsx_debugger::GetBuffers()
 		if(!vm::check_addr(RSXbuffer_addr))
 			continue;
 
-		auto RSXbuffer = vm::ps3::_ptr<u8>(RSXbuffer_addr);
-		
+		auto RSXbuffer = vm::_ptr<u8>(RSXbuffer_addr);
+
 		u32 width  = buffers[bufferId].width;
 		u32 height = buffers[bufferId].height;
 		unsigned char* buffer = (unsigned char*)malloc(width * height * 4);
@@ -771,7 +771,7 @@ void rsx_debugger::GetBuffers()
 	if(!vm::check_addr(TexBuffer_addr))
 		return;
 
-	unsigned char* TexBuffer = vm::ps3::_ptr<u8>(TexBuffer_addr);
+	unsigned char* TexBuffer = vm::_ptr<u8>(TexBuffer_addr);
 
 	u32 width  = render->textures[m_cur_texture].width();
 	u32 height = render->textures[m_cur_texture].height();
@@ -861,7 +861,7 @@ void rsx_debugger::GetTexture()
 			}
 			else
 			{
-				m_list_texture->setItem(i, 1, 
+				m_list_texture->setItem(i, 1,
 					new QTableWidgetItem(qstr(fmt::format("0x%x", rsx::get_address(render->textures[i].offset(), location)))));
 			}
 
@@ -1081,7 +1081,7 @@ const char* rsx_debugger::ParseGCMEnum(u32 value, u32 type)
 		case 9:  return "QUAD_STRIP";
 		case 10: return "POLYGON";
 
-		default: return "Wrong Value!"; 
+		default: return "Wrong Value!";
 		}
 	}
 	default: return "Unknown!";
@@ -1141,7 +1141,7 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		&& (cmd & RSX_METHOD_CALL_CMD_MASK) != RSX_METHOD_CALL_CMD
 		&& cmd != RSX_METHOD_RETURN_CMD)
 	{
-		auto args = vm::ps3::ptr<u32>::make(currentAddr + 4);
+		auto args = vm::ptr<u32>::make(currentAddr + 4);
 
 		u32 index = 0;
 		switch((cmd & 0x3ffff) >> 2)

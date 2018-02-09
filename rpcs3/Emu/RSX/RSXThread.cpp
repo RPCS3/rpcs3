@@ -24,7 +24,7 @@ class GSRender;
 bool user_asked_for_frame_capture = false;
 rsx::frame_capture_data frame_debug;
 
-namespace vm { using namespace ps3; }
+
 
 namespace rsx
 {

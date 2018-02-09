@@ -226,7 +226,7 @@ enum CellSearchSharableType : s32
 };
 
 using CellSearchId = s32;
-using CellSearchSystemCallback = void(CellSearchEvent event, s32 result, vm::ps3::cptr<void> param, vm::ps3::ptr<void> userData);
+using CellSearchSystemCallback = void(CellSearchEvent event, s32 result, vm::cptr<void> param, vm::ptr<void> userData);
 
 struct CellSearchContentId
 {

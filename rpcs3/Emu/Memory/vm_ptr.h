@@ -287,7 +287,7 @@ namespace vm
 	// LE pointer to BE data
 	template<typename T, typename AT = u32> using lptrb = _ptr_base<to_be_t<T>, to_le_t<AT>>;
 
-	inline namespace ps3
+	inline namespace ps3_
 	{
 		// Default pointer type for PS3 HLE functions (Native endianness pointer to BE data)
 		template<typename T, typename AT = u32> using ptr = ptrb<T, AT>;

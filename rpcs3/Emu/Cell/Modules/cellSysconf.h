@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 typedef void(CellSysconfCallback)(s32 result, vm::ptr<void> userdata);
 

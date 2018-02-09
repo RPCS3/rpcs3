@@ -781,7 +781,7 @@ namespace vm
 		return nullptr;
 	}
 
-	inline namespace ps3
+	inline namespace ps3_
 	{
 		void init()
 		{
