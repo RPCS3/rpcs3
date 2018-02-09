@@ -28,7 +28,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 	QPushButton* button_cancel = new QPushButton(tr("&Cancel"));
 	button_ok->setFixedWidth(80);
 	button_cancel->setFixedWidth(80);
-	
+
 	m_register_combo = new QComboBox(this);
 	m_value_line = new QLineEdit(this);
 	m_value_line->setFixedWidth(200);
@@ -44,9 +44,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 	hbox_button_panel->addWidget(button_cancel);
 	hbox_button_panel->setAlignment(Qt::AlignCenter);
 
-	switch (g_system)
-	{
-	case system_type::ps3:
+	if (1)
 	{
 		if (_cpu->id_type() == 1)
 		{
@@ -63,12 +61,6 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 		{
 			for (int i = 0; i < 128; i++) m_register_combo->addItem(qstr(fmt::format("GPR[%d]", i)));
 		}
-
-		break;
-	}
-	default:
-		QMessageBox::critical(this, tr("Error"), tr("Not supported thread."));
-		return;
 	}
 
 	// Main Layout
@@ -102,7 +94,7 @@ void register_editor_dialog::updateRegister(const QString& text)
 	std::string reg = sstr(text);
 	std::string str;
 
-	if (g_system == system_type::ps3 && cpu->id_type() == 1)
+	if (cpu->id_type() == 1)
 	{
 		auto& ppu = *static_cast<ppu_thread*>(cpu.get());
 
@@ -118,7 +110,7 @@ void register_editor_dialog::updateRegister(const QString& text)
 		if (reg == "LR")  str = fmt::format("%016llx", ppu.lr);
 		if (reg == "CTR") str = fmt::format("%016llx", ppu.ctr);
 	}
-	else if (g_system == system_type::ps3 && cpu->id_type() != 1)
+	else
 	{
 		auto& spu = *static_cast<SPUThread*>(cpu.get());
 
@@ -141,7 +133,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 	std::string reg = sstr(m_register_combo->itemData(m_register_combo->currentIndex()));
 	std::string value = sstr(m_value_line->text());
 
-	if (g_system == system_type::ps3 && cpu->id_type() == 1)
+	if (cpu->id_type() == 1)
 	{
 		auto& ppu = *static_cast<ppu_thread*>(cpu);
 
@@ -186,7 +178,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		{
 		}
 	}
-	else if (g_system == system_type::ps3 && cpu->id_type() != 1)
+	else
 	{
 		auto& spu = *static_cast<SPUThread*>(cpu);
 

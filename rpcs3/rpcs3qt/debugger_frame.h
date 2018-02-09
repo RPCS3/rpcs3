@@ -9,10 +9,8 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
-#include "Emu/PSP2/ARMv7Thread.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/SPUDisAsm.h"
-#include "Emu/PSP2/ARMv7DisAsm.h"
 #include "Emu/Cell/PPUInterpreter.h"
 
 #include "instruction_editor_dialog.h"

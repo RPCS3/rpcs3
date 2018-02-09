@@ -87,7 +87,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	QWidget* body = new QWidget(this);
 	body->setLayout(vbox_p_main);
 	setWidget(body);
-	
+
 	m_list->setWindowTitle(tr("ASM"));
 	for (uint i = 0; i < m_list->m_item_count; ++i)
 	{
@@ -203,13 +203,7 @@ u32 debugger_frame::GetPc() const
 		return 0;
 	}
 
-	switch (g_system)
-	{
-	case system_type::ps3: return cpu->id_type() == 1 ? static_cast<ppu_thread*>(cpu.get())->cia : static_cast<SPUThread*>(cpu.get())->pc;
-	case system_type::psv: return static_cast<ARMv7Thread*>(cpu.get())->PC;
-	}
-
-	return 0xabadcafe;
+	return cpu->id_type() == 1 ? static_cast<ppu_thread*>(cpu.get())->cia : static_cast<SPUThread*>(cpu.get())->pc;
 }
 
 u32 debugger_frame::CentrePc(u32 pc) const
@@ -294,7 +288,6 @@ void debugger_frame::UpdateUnitList()
 		const QSignalBlocker blocker(m_choice_units);
 
 		idm::select<ppu_thread>(on_select);
-		idm::select<ARMv7Thread>(on_select);
 		idm::select<RawSPUThread>(on_select);
 		idm::select<SPUThread>(on_select);
 	}
@@ -337,11 +330,6 @@ void debugger_frame::OnSelectUnit()
 		{
 			m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
 			cpu = rspu.ptr;
-		}
-		else if (auto arm = idm::select<ARMv7Thread>(on_select))
-		{
-			m_disasm = std::make_unique<ARMv7DisAsm>(CPUDisAsm_InterpreterMode);
-			cpu = arm.ptr;
 		}
 	}
 
@@ -391,22 +379,22 @@ void debugger_frame::Show_Val()
 	p_pc->setFixedWidth(90);
 	QLabel* addr(new QLabel(diag));
 	addr->setFont(m_mono);
-	
+
 	hbox_text_panel->addWidget(addr);
 	hbox_text_panel->addWidget(p_pc);
 
 	hbox_button_panel->addWidget(button_ok);
 	hbox_button_panel->addWidget(button_cancel);
-	
+
 	vbox_panel->addLayout(hbox_text_panel);
 	vbox_panel->addSpacing(8);
 	vbox_panel->addLayout(hbox_button_panel);
-	
+
 	diag->setLayout(vbox_panel);
 
 	const auto cpu = this->cpu.lock();
 
-	if (cpu) 
+	if (cpu)
 	{
 		unsigned long pc = cpu ? GetPc() : 0x0;
 		addr->setText("Address: " + QString("%1").arg(pc, 8, 16, QChar('0')));	// set address input line to 8 digits
@@ -565,7 +553,7 @@ void debugger_list::ShowAddr(u32 addr)
 	}
 	else
 	{
-		const u32 cpu_offset = g_system == system_type::ps3 && cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
+		const u32 cpu_offset = cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
 		m_debugFrame->m_disasm->offset = (u8*)vm::base(cpu_offset);
 		for (uint i = 0, count = 4; i<m_item_count; ++i, m_pc += count)
 		{
@@ -612,7 +600,7 @@ void debugger_list::AddBreakPoint(u32 pc)
 	ppu_breakpoint(pc);
 
 	const auto cpu = m_debugFrame->cpu.lock();
-	const u32 cpu_offset = g_system == system_type::ps3 && cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
+	const u32 cpu_offset = cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
 	m_debugFrame->m_disasm->offset = (u8*)vm::base(cpu_offset);
 
 	m_debugFrame->m_disasm->disasm(m_debugFrame->m_disasm->dump_pc = pc);
@@ -719,7 +707,7 @@ void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 		{
 			const auto cpu = m_debugFrame->cpu.lock();
 
-			if (g_system == system_type::ps3 && cpu->id_type() == 1 && vm::check_addr(pc))
+			if (cpu->id_type() == 1 && vm::check_addr(pc))
 			{
 				AddBreakPoint(pc);
 			}

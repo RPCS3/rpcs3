@@ -7,13 +7,6 @@
 #include <memory>
 #include <string>
 
-enum class system_type
-{
-	ps3,
-	psv, // Experimental
-	//psp, // Hypothetical
-};
-
 enum class system_state
 {
 	running,
@@ -143,9 +136,6 @@ enum class frame_limit_type
 
 enum CellNetCtlState : s32;
 enum CellSysutilLang : s32;
-
-// Current process type
-extern system_type g_system;
 
 struct EmuCallbacks
 {
