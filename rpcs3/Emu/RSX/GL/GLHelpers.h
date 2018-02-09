@@ -1394,7 +1394,10 @@ namespace gl
 				case target::texture1D: pname = GL_TEXTURE_BINDING_1D; break;
 				case target::texture2D: pname = GL_TEXTURE_BINDING_2D; break;
 				case target::texture3D: pname = GL_TEXTURE_BINDING_3D; break;
+				case target::textureCUBE: pname = GL_TEXTURE_BINDING_CUBE_MAP; break;
 				case target::textureBuffer: pname = GL_TEXTURE_BINDING_BUFFER; break;
+				default:
+					fmt::throw_exception("Unknown target 0x%X" HERE, (u32)new_binding.get_target());
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
