@@ -297,7 +297,7 @@ void GLGSRender::end()
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
-		if (m_program->uniforms.has_location("tex" + std::to_string(i), &unused_location))
+		if (m_program->uniforms.has_location(rsx::constants::fragment_texture_names[i], &unused_location))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 			auto &tex = rsx::method_registers.fragment_textures[i];
@@ -333,7 +333,7 @@ void GLGSRender::end()
 
 	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
 	{
-		if (m_program->uniforms.has_location("vtex" + std::to_string(i), &unused_location))
+		if (m_program->uniforms.has_location(rsx::constants::vertex_texture_names[i], &unused_location))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
 			glActiveTexture(GL_TEXTURE0 + rsx::limits::fragment_textures_count + i);

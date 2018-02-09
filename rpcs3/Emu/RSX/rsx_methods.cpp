@@ -1190,6 +1190,11 @@ namespace rsx
 		registers[reg] = value;
 	}
 
+	bool rsx_state::test(u32 reg, u32 value) const
+	{
+		return registers[reg] == value;
+	}
+
 	namespace method_detail
 	{
 		template<int Id, int Step, int Count, template<u32> class T, int Index = 0>

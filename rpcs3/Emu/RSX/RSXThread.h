@@ -45,6 +45,20 @@ namespace rsx
 		};
 	}
 
+	namespace constants
+	{
+		static std::array<const char*, 16> fragment_texture_names =
+		{
+			"tex0", "tex1", "tex2", "tex3", "tex4", "tex5", "tex6", "tex7",
+			"tex8", "tex9", "tex10", "tex11", "tex12", "tex13", "tex14", "tex15",
+		};
+
+		static std::array<const char*, 4> vertex_texture_names =
+		{
+			"vtex0", "vtex1", "vtex2", "vtex3",
+		};
+	}
+
 	enum framebuffer_creation_context : u8
 	{
 		context_draw = 0,
