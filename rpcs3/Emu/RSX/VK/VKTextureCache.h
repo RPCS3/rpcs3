@@ -831,8 +831,10 @@ namespace vk
 			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 
-		void insert_texture_barrier() override
-		{}
+		void insert_texture_barrier(vk::command_buffer& cmd, vk::image* tex) override
+		{
+			vk::insert_texture_barrier(cmd, tex);
+		}
 
 	public:
 

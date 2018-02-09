@@ -250,6 +250,7 @@
     <ClCompile Include="Emu\Cell\Modules\sceNp2.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sceNpClans.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sceNpCommerce2.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sceNpMatchingInt.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sceNpSns.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sceNpTrophy.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sceNpTus.cpp" />

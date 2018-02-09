@@ -938,6 +938,7 @@
     <ClCompile Include="rpcs3qt\game_list_grid.cpp" />
     <ClCompile Include="rpcs3qt\game_list_grid_delegate.cpp" />
     <ClCompile Include="rpcs3qt\progress_dialog.cpp" />
+    <ClCompile Include="rpcs3qt\qt_utils.cpp" />
     <ClCompile Include="rpcs3qt\syntax_highlighter.cpp" />
     <ClCompile Include="rpcs3qt\save_data_info_dialog.cpp" />
     <ClCompile Include="rpcs3qt\save_manager_dialog.cpp" />
@@ -1432,6 +1433,7 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
       </Command>
     </CustomBuild>
+    <ClInclude Include="rpcs3qt\qt_utils.h" />
     <ClInclude Include="rpcs3qt\save_data_dialog.h" />
     <CustomBuild Include="rpcs3qt\register_editor_dialog.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>

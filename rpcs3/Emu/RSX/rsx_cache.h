@@ -282,6 +282,7 @@ namespace rsx
 		struct progress_dialog_helper
 		{
 			std::shared_ptr<MsgDialogBase> dlg;
+			atomic_t<bool> initialized{ false };
 
 			virtual void create()
 			{
@@ -300,7 +301,13 @@ namespace rsx
 				Emu.CallAfter([&]()
 				{
 					dlg->Create("Preloading cached shaders from disk.\nPlease wait...");
+					initialized.store(true);
 				});
+
+				while (!initialized.load() && !Emu.IsStopped())
+				{
+					_mm_pause();
+				}
 			}
 
 			virtual void update_msg(u32 processed, u32 entry_count)

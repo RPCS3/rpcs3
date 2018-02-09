@@ -99,6 +99,9 @@
     <Filter Include="Io\evdev">
       <UniqueIdentifier>{6992629a-48f1-43ec-8070-d1dba81bcbf9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\utils">
+      <UniqueIdentifier>{77ca7382-c296-43af-adb4-fb32f5ab4571}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\rpcs3qt\*.cpp">
@@ -587,6 +590,9 @@
     <ClCompile Include="rpcs3qt\find_dialog.cpp">
       <Filter>Gui\misc dialogs</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\qt_utils.cpp">
+      <Filter>Gui\utils</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_register_editor_dialog.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -678,6 +684,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\custom_table_widget_item.h">
       <Filter>Gui\game list</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\qt_utils.h">
+      <Filter>Gui\utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

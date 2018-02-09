@@ -278,16 +278,18 @@ error_code sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
 
 	const auto thread = idm::get<SPUThread>(id);
 
-	if (!thread)
+	if (UNLIKELY(!thread))
 	{
 		return CELL_ESRCH;
 	}
 
-	// TODO: check CELL_ESTAT condition
+	if (thread->status & SPU_STATUS_STOPPED_BY_STOP)
+	{
+		*status = thread->ch_out_mbox.get_value();
+		return CELL_OK;
+	}
 
-	*status = thread->ch_out_mbox.pop(*thread);
-
-	return CELL_OK;
+	return CELL_ESTAT;
 }
 
 error_code sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr)

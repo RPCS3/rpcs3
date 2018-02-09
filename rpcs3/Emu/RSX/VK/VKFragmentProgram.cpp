@@ -197,7 +197,7 @@ namespace vk
 
 void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 {
-	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program);
+	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program, properties.has_lit_op, m_prog.redirected_textures != 0, properties.has_wpos_input);
 }
 
 void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
@@ -251,8 +251,11 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		}
 	}
 
-	OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
-	OS << "	vec4 wpos = get_wpos();\n";
+	if (m_parr.HasParam(PF_PARAM_IN, "vec4", "ssa"))
+		OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
+
+	if (properties.has_wpos_input)
+		OS << "	vec4 wpos = get_wpos();\n";
 
 	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
 

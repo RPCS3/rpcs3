@@ -185,7 +185,7 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 
 void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	glsl::insert_glsl_legacy_function(OS, glsl::glsl_vertex_program);
+	glsl::insert_glsl_legacy_function(OS, glsl::glsl_vertex_program, properties.has_lit_op);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_rpirv);
 
 	std::string parameters = "";

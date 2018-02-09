@@ -376,7 +376,7 @@ void VertexProgramDecompiler::SetDSTSca(const std::string& code)
 
 std::string VertexProgramDecompiler::NotZeroPositive(const std::string& code)
 {
-	return "max(" + code + ", 0.000001)";
+	return "max(" + code + ", 0.0000000001)";
 }
 
 std::string VertexProgramDecompiler::BuildFuncBody(const FuncInfo& func)
@@ -638,7 +638,10 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_RSQ: SetDSTSca("1. / sqrt(" + NotZeroPositive("$s.x") +").xxxx"); break;
 		case RSX_SCA_OPCODE_EXP: SetDSTSca("exp($s)"); break;
 		case RSX_SCA_OPCODE_LOG: SetDSTSca("log($s)"); break;
-		case RSX_SCA_OPCODE_LIT: SetDSTSca("lit_legacy($s)"); break;
+		case RSX_SCA_OPCODE_LIT:
+			SetDSTSca("lit_legacy($s)");
+			properties.has_lit_op = true;
+			break;
 		case RSX_SCA_OPCODE_BRA:
 		{
 			AddCode("$if ($cond) //BRA");
