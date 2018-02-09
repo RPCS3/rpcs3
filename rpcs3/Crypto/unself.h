@@ -11,6 +11,7 @@ struct AppInfo
 	u64 padding;
 
 	void Load(const fs::file& f);
+	void LoadLE(const fs::file& f);
 	void Show();
 };
 
@@ -24,6 +25,7 @@ struct SectionInfo
 	u32 encrypted;
 
 	void Load(const fs::file& f);
+	void LoadLE(const fs::file& f);
 	void Show();
 };
 
@@ -35,6 +37,7 @@ struct SCEVersionInfo
 	u32 unknown;
 
 	void Load(const fs::file& f);
+	void LoadLE(const fs::file& f);
 	void Show();
 };
 
@@ -92,9 +95,33 @@ struct ControlInfo
 			u64 unknown3;
 
 		} npdrm;
+
+		// type 5 0x110 bytes
+		struct
+		{
+			u32 pad;
+			u8 unk[0x100];
+		} type5;
+
+		// type 6 0x110 bytes
+		struct
+		{
+			u32 pad;
+			u32 unknown1;
+			u8 unk[0xFC];
+		} type6;
+
+		// type 7 0x50 bytes
+		struct
+		{
+			u32 pad;
+			u8 unk[0x40];
+		} type7;
+
 	};
 
 	void Load(const fs::file& f);
+	void LoadLE(const fs::file& f);
 	void Show();
 };
 
@@ -317,6 +344,7 @@ struct SceHeader
 	u64 se_esize;
 
 	void Load(const fs::file& f);
+	void LoadLE(const fs::file& f);
 	void Show(){}
 	bool CheckMagic() const { return se_magic == 0x53434500; }
 };
@@ -335,6 +363,7 @@ struct SelfHeader
 	u64 pad;
 	
 	void Load(const fs::file& f);
+	void LoadLE(const fs::file& f);
 	void Show(){}
 };
 

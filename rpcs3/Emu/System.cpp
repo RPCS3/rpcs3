@@ -728,7 +728,7 @@ void Emulator::Load(bool add_only)
 			vm::ps3::init();
 			spu_load_exec(spu_exec);
 		}
-		else if (arm_exec.open(elf_file) == elf_error::ok)
+		else if (arm_exec.open(elf_file, 0, + elf_opt::no_sections) == elf_error::ok)
 		{
 			// ARMv7 executable
 			g_system = system_type::psv;
