@@ -729,6 +729,21 @@ namespace rsx
 						flush_commands_flag = false;
 						break;
 					}
+					case NV4097_SET_TEXTURE_OFFSET:
+					case NV4097_SET_TEXTURE_FORMAT:
+					case NV4097_SET_TEXTURE_ADDRESS:
+					case NV4097_SET_TEXTURE_CONTROL0:
+					case NV4097_SET_TEXTURE_CONTROL1:
+					case NV4097_SET_TEXTURE_FILTER:
+					case NV4097_SET_TEXTURE_IMAGE_RECT:
+					case NV4097_SET_TEXTURE_BORDER_COLOR:
+					{
+						//Safe to ignore if value has not changed
+						if (method_registers.test(reg, value))
+							flush_commands_flag = false;
+
+						break;
+					}
 					}
 
 					if (flush_commands_flag)
