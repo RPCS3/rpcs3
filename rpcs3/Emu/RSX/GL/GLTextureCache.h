@@ -90,7 +90,7 @@ namespace gl
 	{
 	private:
 		fence m_fence;
-		//u32 pbo_id = 0;
+		u32 pbo_id = 0;
 		u32 pbo_size = 0;
 
 		u32 vram_texture = 0;
@@ -196,7 +196,7 @@ namespace gl
 		}
 
 	public:
-		u32 pbo_id = 0;
+
 		void reset(u32 base, u32 size, bool flushable=false)
 		{
 			rsx::protection_policy policy = g_cfg.video.strict_rendering_mode ? rsx::protection_policy::protect_policy_full_range : rsx::protection_policy::protect_policy_conservative;
