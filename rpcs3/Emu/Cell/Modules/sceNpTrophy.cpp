@@ -352,7 +352,7 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	if (!fs::is_dir("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name))
+	if (!fs::is_dir(vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name)))
 	{
 		TRPLoader trp(ctxt->trp_stream);
 
