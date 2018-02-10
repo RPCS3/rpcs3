@@ -193,6 +193,15 @@ namespace rsx
 				verify(HERE), valid_count > 0;
 				valid_count--;
 			}
+
+			bool overlaps(u32 addr, u32 range) const
+			{
+				const u32 limit = addr + range;
+				if (limit <= min_addr) return false;
+
+				const u32 this_limit = max_addr + max_range;
+				return (this_limit > addr);
+			}
 		};
 
 		// Keep track of cache misses to pre-emptively flush some addresses
@@ -672,8 +681,8 @@ namespace rsx
 			auto test = std::make_pair(rsx_address, range);
 			for (auto &address_range : m_cache)
 			{
-				if (address_range.second.valid_count == 0) continue;
 				auto &range_data = address_range.second;
+				if (!range_data.overlaps(rsx_address, range)) continue;
 
 				for (auto &tex : range_data.data)
 				{
@@ -1504,7 +1513,7 @@ namespace rsx
 					auto overlapping_surfaces = find_texture_from_range(texaddr, tex_size);
 					if (!overlapping_surfaces.empty())
 					{
-						for (auto surface : overlapping_surfaces)
+						for (const auto &surface : overlapping_surfaces)
 						{
 							if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst)
 								continue;
@@ -1678,7 +1687,7 @@ namespace rsx
 				//Check for any available region that will fit this one
 				auto overlapping_surfaces = find_texture_from_range(dst_address, dst.pitch * dst.clip_height);
 
-				for (auto surface: overlapping_surfaces)
+				for (const auto &surface : overlapping_surfaces)
 				{
 					if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst)
 						continue;
@@ -1743,7 +1752,7 @@ namespace rsx
 				auto overlapping_surfaces = find_texture_from_range(src_address, src.pitch * src.height);
 
 				auto old_src_area = src_area;
-				for (auto &surface : overlapping_surfaces)
+				for (const auto &surface : overlapping_surfaces)
 				{
 					//look for any that will fit, unless its a shader read surface or framebuffer_storage
 					if (surface->get_context() == rsx::texture_upload_context::shader_read ||

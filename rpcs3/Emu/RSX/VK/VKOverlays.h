@@ -84,7 +84,7 @@ namespace vk
 			CHECK_RESULT(vkCreatePipelineLayout(*m_device, &layout_info, nullptr, &m_pipeline_layout));
 		}
 
-		virtual void update_uniforms(vk::glsl::program *program)
+		virtual void update_uniforms(vk::glsl::program* /*program*/)
 		{
 		}
 
