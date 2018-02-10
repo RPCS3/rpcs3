@@ -19,9 +19,6 @@ namespace vk
 
 		//DMA relevant data
 		VkFence dma_fence = VK_NULL_HANDLE;
-		bool synchronized = false;
-		bool flushed = false;
-		bool pack_unpack_swap_bytes = false;
 		u64 sync_timestamp = 0;
 		u64 last_use_timestamp = 0;
 		vk::render_device* m_device = nullptr;
@@ -351,6 +348,7 @@ namespace vk
 			}
 
 			dma_buffer->unmap();
+			reset_write_statistics();
 
 			//Its highly likely that this surface will be reused, so we just leave resources in place
 			return result;
@@ -369,6 +367,11 @@ namespace vk
 			sync_timestamp = 0ull;
 
 			protect(prot);
+		}
+
+		void invalidate_cached()
+		{
+			synchronized = false;
 		}
 
 		bool is_synchronized() const
@@ -900,6 +903,18 @@ namespace vk
 
 	public:
 
+		struct vk_blit_op_result : public blit_op_result
+		{
+			bool deferred = false;
+			vk::image *src_image = nullptr;
+			vk::image *dst_image = nullptr;
+			vk::image_view *src_view = nullptr;
+
+			using blit_op_result::blit_op_result;
+		};
+
+	public:
+
 		void initialize(vk::render_device& device, vk::memory_type_mapping& memory_types, vk::gpu_formats_support& formats_support,
 					VkQueue submit_queue, vk::vk_data_heap& upload_heap)
 		{
@@ -980,13 +995,14 @@ namespace vk
 			return upload_texture(cmd, tex, m_rtts, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 		}
 
-		std::tuple<bool, vk::image*, vk::image*, vk::image_view*> blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)
+		vk_blit_op_result blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)
 		{
 			struct blit_helper
 			{
 				vk::command_buffer* commands;
 				blit_helper(vk::command_buffer *c) : commands(c) {}
 
+				bool deferred = false;
 				vk::image* deferred_op_src = nullptr;
 				vk::image* deferred_op_dst = nullptr;
 
@@ -1019,17 +1035,19 @@ namespace vk
 					const auto dst_width = dst_area.x2 - dst_area.x1;
 					const auto dst_height = dst_area.y2 - dst_area.y1;
 
+					deferred_op_src = src;
+					deferred_op_dst = dst;
+
 					if (aspect & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT))
 					{
 						if (src_width != dst_width || src_height != dst_height || src->info.format != dst->info.format)
 						{
 							//Scaled depth scaling
-							deferred_op_src = src;
-							deferred_op_dst = dst;
+							deferred = true;
 						}
 					}
 
-					if (!deferred_op_src)
+					if (!deferred)
 					{
 						copy_scaled_image(*commands, src->value, dst->value, src->current_layout, dst->current_layout, src_area.x1, src_area.y1, src_width, src_height,
 							dst_area.x1, dst_area.y1, dst_width, dst_height, 1, aspect, src->info.format == dst->info.format);
@@ -1040,18 +1058,26 @@ namespace vk
 			}
 			helper(&cmd);
 
-			bool reply = upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
+			auto reply = upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 
-			if (helper.deferred_op_src == nullptr)
-				return std::make_tuple(reply, nullptr, nullptr, nullptr);
+			vk_blit_op_result result = reply.succeeded;
+			result.real_dst_address = reply.real_dst_address;
+			result.real_dst_size = reply.real_dst_size;
+			result.is_depth = reply.is_depth;
+			result.deferred = helper.deferred;
+			result.dst_image = helper.deferred_op_dst;
+			result.src_image = helper.deferred_op_src;
+
+			if (!helper.deferred)
+				return result;
 
 			VkImageSubresourceRange view_range = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 };
 			auto tmp_view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), helper.deferred_op_src->value, VK_IMAGE_VIEW_TYPE_2D,
 					helper.deferred_op_src->info.format, helper.deferred_op_src->native_component_map, view_range);
 
-			auto src_view = tmp_view.get();
+			result.src_view = tmp_view.get();
 			m_discardable_storage.push_back(tmp_view);
-			return std::make_tuple(reply, helper.deferred_op_dst, helper.deferred_op_src, src_view);
+			return result;
 		}
 
 		const u32 get_unreleased_textures_count() const override

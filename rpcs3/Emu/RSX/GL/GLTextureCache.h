@@ -96,13 +96,10 @@ namespace gl
 		u32 vram_texture = 0;
 		u32 scaled_texture = 0;
 
-		bool copied = false;
-		bool flushed = false;
 		bool is_depth = false;
 
 		texture::format format = texture::format::rgba;
 		texture::type type = texture::type::ubyte;
-		bool pack_unpack_swap_bytes = false;
 		rsx::surface_antialiasing aa_mode = rsx::surface_antialiasing::center_1_sample;
 
 		u8 get_pixel_size(texture::format fmt_, texture::type type_)
@@ -203,7 +200,7 @@ namespace gl
 			rsx::buffered_section::reset(base, size, policy);
 
 			flushed = false;
-			copied = false;
+			synchronized = false;
 			is_depth = false;
 
 			vram_texture = 0;
@@ -226,7 +223,7 @@ namespace gl
 			}
 
 			flushed = false;
-			copied = false;
+			synchronized = false;
 			is_depth = false;
 
 			this->width = w;
@@ -413,12 +410,12 @@ namespace gl
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 			m_fence.reset();
-			copied = true;
+			synchronized = true;
 		}
 
 		void fill_texture(gl::texture* tex)
 		{
-			if (!copied)
+			if (!synchronized)
 			{
 				//LOG_WARNING(RSX, "Request to fill texture rejected because contents were not read");
 				return;
@@ -438,17 +435,20 @@ namespace gl
 		{
 			if (flushed) return true; //Already written, ignore
 
-			if (!copied)
+			bool result = true;
+			if (!synchronized)
 			{
 				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", cpu_address_base);
 				copy_texture();
 
-				if (!copied)
+				if (!synchronized)
 				{
 					LOG_WARNING(RSX, "Nothing to copy; Setting section to readable and moving on...");
 					protect(utils::protection::ro);
 					return false;
 				}
+
+				result = false;
 			}
 
 			m_fence.wait_for_signal();
@@ -489,13 +489,15 @@ namespace gl
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
-			return true;
+			reset_write_statistics();
+
+			return result;
 		}
 
 		void reprotect(utils::protection prot)
 		{
 			flushed = false;
-			copied = false;
+			synchronized = false;
 			protect(prot);
 		}
 
@@ -553,7 +555,7 @@ namespace gl
 
 		bool is_synchronized() const
 		{
-			return copied;
+			return synchronized;
 		}
 
 		void set_flushed(bool state)
@@ -835,14 +837,31 @@ namespace gl
 			{
 				//TODO: More tests on byte order
 				//ARGB8+native+unswizzled is confirmed with Dark Souls II character preview
-				if (gcm_format == CELL_GCM_TEXTURE_A8R8G8B8)
+				switch (gcm_format)
+				{
+				case CELL_GCM_TEXTURE_A8R8G8B8:
 				{
 					bool bgra = (flags == rsx::texture_create_flags::native_component_order);
-					cached.set_format(bgra? gl::texture::format::bgra : gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, false);
+					cached.set_format(bgra ? gl::texture::format::bgra : gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, false);
+					break;
 				}
-				else
+				case CELL_GCM_TEXTURE_R5G6B5:
 				{
 					cached.set_format(gl::texture::format::rgb, gl::texture::type::ushort_5_6_5, true);
+					break;
+				}
+				case CELL_GCM_TEXTURE_DEPTH24_D8:
+				{
+					cached.set_format(gl::texture::format::depth_stencil, gl::texture::type::uint_24_8, true);
+					break;
+				}
+				case CELL_GCM_TEXTURE_DEPTH16:
+				{
+					cached.set_format(gl::texture::format::depth, gl::texture::type::ushort, true);
+					break;
+				}
+				default:
+					fmt::throw_exception("Unexpected gcm format 0x%X" HERE, gcm_format);
 				}
 
 				cached.make_flushable();
@@ -974,7 +993,27 @@ namespace gl
 		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool linear_interpolate, gl_render_targets& m_rtts)
 		{
 			void* unused = nullptr;
-			return upload_scaled_image(src, dst, linear_interpolate, unused, m_rtts, m_hw_blitter);
+			auto result = upload_scaled_image(src, dst, linear_interpolate, unused, m_rtts, m_hw_blitter);
+
+			if (result.succeeded)
+			{
+				gl::texture::format fmt;
+				if (!result.is_depth)
+				{
+					fmt = dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8 ?
+						gl::texture::format::bgra : gl::texture::format::rgba;
+				}
+				else
+				{
+					fmt = dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8 ?
+						gl::texture::format::depth_stencil : gl::texture::format::depth;
+				}
+
+				flush_if_cache_miss_likely(fmt, result.real_dst_address, result.real_dst_size);
+				return true;
+			}
+
+			return false;
 		}
 	};
 }
