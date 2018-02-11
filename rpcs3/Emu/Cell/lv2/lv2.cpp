@@ -32,6 +32,7 @@
 #include "sys_dbg.h"
 #include "sys_gamepad.h"
 #include "sys_ss.h"
+#include "sys_gpio.h"
 
 extern std::string ppu_get_syscall_name(u64 code);
 
@@ -602,8 +603,8 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_io_buffer_free)               //627 (0x273)
 	null_func,                                              //628 (0x274)  UNS
 	null_func,                                              //629 (0x275)  UNS
-	null_func,//BIND_FUNC(sys_gpio_set)                     //630 (0x276)
-	null_func,//BIND_FUNC(sys_gpio_get)                     //631 (0x277)
+	BIND_FUNC(sys_gpio_set),                                //630 (0x276)
+	BIND_FUNC(sys_gpio_get),                                //631 (0x277)
 	null_func,                                              //632 (0x278)  UNS
 	null_func,//BIND_FUNC(sys_fsw_connect_event)            //633 (0x279)
 	null_func,//BIND_FUNC(sys_fsw_disconnect_event)         //634 (0x27A)
