@@ -361,6 +361,8 @@ struct cfg_root : cfg::node
 			node_vk(cfg::node* _this) : cfg::node(_this, "Vulkan") {}
 
 			cfg::string adapter{this, "Adapter"};
+			cfg::_bool force_fifo{this, "Force FIFO present mode"};
+			cfg::_bool force_primitive_restart{this, "Force primitive restart flag"};
 
 		} vk{this};
 

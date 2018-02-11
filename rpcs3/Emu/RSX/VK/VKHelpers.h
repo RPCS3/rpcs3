@@ -907,7 +907,7 @@ namespace vk
 			//List of preferred modes in decreasing desirability
 			if (g_cfg.video.vsync)
 				preferred_modes = { VK_PRESENT_MODE_MAILBOX_KHR };
-			else
+			else if (!g_cfg.video.vk.force_fifo)
 				preferred_modes = { VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR, VK_PRESENT_MODE_MAILBOX_KHR };
 
 			bool mode_found = false;

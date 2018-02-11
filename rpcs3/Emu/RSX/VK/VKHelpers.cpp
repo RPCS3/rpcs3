@@ -299,7 +299,7 @@ namespace vk
 		{
 			if (gpu_name.find(test) != std::string::npos)
 			{
-				g_drv_no_primitive_restart_flag = true;
+				g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
 				break;
 			}
 		}
