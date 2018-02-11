@@ -354,6 +354,10 @@ namespace rsx
 		std::atomic<s32> m_unreleased_texture_objects = { 0 }; //Number of invalidated objects not yet freed from memory
 		std::atomic<u32> m_texture_memory_in_use = { 0 };
 
+		//Other statistics
+		std::atomic<u32> m_num_flush_requests = { 0 };
+		std::atomic<u32> m_num_cache_misses = { 0 };
+
 		/* Helpers */
 		virtual void free_texture_section(section_storage_type&) = 0;
 		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_resource_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) = 0;
@@ -594,6 +598,8 @@ namespace rsx
 							//TODO: Lower severity when successful to keep the cache from overworking
 							record_cache_miss(*tex);
 						}
+
+						m_num_flush_requests++;
 					}
 				}
 
@@ -1073,6 +1079,7 @@ namespace rsx
 				for (auto &tex : data.sections_to_flush)
 				{
 					tex->flush(std::forward<Args>(extras)...);
+					m_num_flush_requests++;
 				}
 
 				//Restore protection on the sections to reprotect
@@ -1098,6 +1105,8 @@ namespace rsx
 
 		void record_cache_miss(section_storage_type &tex)
 		{
+			m_num_cache_misses++;
+
 			const u32 memory_address = tex.get_section_base();
 			const u32 memory_size = tex.get_section_size();
 			const auto fmt = tex.get_format();
@@ -2028,6 +2037,12 @@ namespace rsx
 			}
 		}
 
+		void reset_frame_statistics()
+		{
+			m_num_flush_requests.store(0u);
+			m_num_cache_misses.store(0u);
+		}
+
 		virtual const u32 get_unreleased_textures_count() const
 		{
 			return m_unreleased_texture_objects;
@@ -2036,6 +2051,17 @@ namespace rsx
 		virtual const u32 get_texture_memory_in_use() const
 		{
 			return m_texture_memory_in_use;
+		}
+
+		virtual u32 get_num_flush_requests() const
+		{
+			return m_num_flush_requests;
+		}
+
+		virtual f32 get_cache_miss_ratio() const
+		{
+			const auto num_flushes = m_num_flush_requests.load();
+			return (num_flushes == 0u) ? 0.f : (f32)m_num_cache_misses.load() / num_flushes;
 		}
 
 		/**

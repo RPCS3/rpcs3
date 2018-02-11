@@ -988,6 +988,7 @@ namespace gl
 
 			clear_temporary_subresources();
 			m_temporary_subresource_cache.clear();
+			reset_frame_statistics();
 		}
 
 		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool linear_interpolate, gl_render_targets& m_rtts)
