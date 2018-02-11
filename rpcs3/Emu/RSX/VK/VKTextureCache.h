@@ -987,6 +987,7 @@ namespace vk
 			});
 
 			m_temporary_subresource_cache.clear();
+			reset_frame_statistics();
 		}
 
 		template<typename RsxTextureType>

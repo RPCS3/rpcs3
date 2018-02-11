@@ -1373,8 +1373,11 @@ void GLGSRender::flip(int buffer)
 
 		auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
 		auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
+		auto num_flushes = m_gl_texture_cache.get_num_flush_requests();
+		auto cache_miss_ratio = (u32)ceil(m_gl_texture_cache.get_cache_miss_ratio() * 100);
 		m_text_printer.print_text(0, 108, m_frame->client_width(), m_frame->client_height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
 		m_text_printer.print_text(0, 126, m_frame->client_width(), m_frame->client_height(), "Texture memory: " + std::to_string(texture_memory_size) + "M");
+		m_text_printer.print_text(0, 144, m_frame->client_width(), m_frame->client_height(), "Flush requests: " + std::to_string(num_flushes) + " (" + std::to_string(cache_miss_ratio) + "% hard faults)");
 	}
 
 	m_frame->flip(m_context);
