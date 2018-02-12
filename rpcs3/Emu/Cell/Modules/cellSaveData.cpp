@@ -695,6 +695,13 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		case CELL_SAVEDATA_FILETYPE_SECUREFILE:
 		case CELL_SAVEDATA_FILETYPE_NORMALFILE:
 		{
+			if (!fileSet->fileName)
+			{
+				// ****** sysutil savedata parameter error : 69 ******
+				cellSaveData.error("savedata_op(): fileSet->fileName is NULL");
+				return CELL_SAVEDATA_ERROR_PARAM;
+			}
+
 			file_path = fileSet->fileName.get_ptr();
 			break;
 		}
@@ -725,6 +732,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 
 		default:
 		{
+			// ****** sysutil savedata parameter error : 61 ******
 			cellSaveData.error("savedata_op(): unknown fileSet->fileType (0x%x)", type);
 			return CELL_SAVEDATA_ERROR_PARAM;
 		}
@@ -739,8 +747,23 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			fs::file file(dir_path + file_path, fs::read);
 			if (!file)
 			{
+				// ****** sysutil savedata parameter error : 22 ******
 				cellSaveData.error("Failed to open file %s%s", dir_path, file_path);
-				return CELL_SAVEDATA_ERROR_FAILURE;
+				return CELL_SAVEDATA_ERROR_PARAM;
+			}
+
+			if (fileSet->fileBufSize < fileSet->fileSize)
+			{
+				// ****** sysutil savedata parameter error : 72 ******
+				cellSaveData.error("savedata_op(): fileSet->fileBufSize < fileSet->fileSize");
+				return CELL_SAVEDATA_ERROR_PARAM;
+			}
+
+			if (!fileSet->fileBuf)
+			{
+				// ****** sysutil savedata parameter error : 73 ******
+				cellSaveData.error("savedata_op(): fileSet->fileBuf is NULL");
+				return CELL_SAVEDATA_ERROR_PARAM;
 			}
 
 			file.seek(fileSet->fileOffset);
