@@ -3214,9 +3214,12 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 			require_flush = true;
 		}
 
-		if (m_texture_cache.flush_if_cache_miss_likely(result.dst_image->info.format, result.real_dst_address, result.real_dst_size,
-			*m_current_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()))
-			require_flush = true;
+		if (result.dst_image)
+		{
+			if (m_texture_cache.flush_if_cache_miss_likely(result.dst_image->info.format, result.real_dst_address, result.real_dst_size,
+				*m_current_command_buffer, m_memory_type_mapping, m_swap_chain->get_present_queue()))
+				require_flush = true;
+		}
 
 		if (require_flush)
 			flush_command_queue();
