@@ -32,6 +32,7 @@ struct llvm_value_t
 	static_assert(std::is_same<T, void>::value, "llvm_value_t<> error: unknown type");
 
 	using type = void;
+	using base = llvm_value_t;
 	static constexpr uint esize      = 0;
 	static constexpr bool is_int     = false;
 	static constexpr bool is_sint    = false;
@@ -667,6 +668,117 @@ template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename
 inline llvm_not_t<typename T1::type, T1> operator ~(T1 a1)
 {
 	return {a1};
+}
+
+template <typename T, typename A1, typename A2, llvm::CmpInst::Predicate UPred>
+struct llvm_icmp_t
+{
+	using type = std::conditional_t<llvm_value_t<T>::is_vector, bool[llvm_value_t<T>::is_vector], bool>;
+
+	A1 a1;
+	A2 a2;
+
+	static_assert(llvm_value_t<T>::is_int, "llvm_eq_t<>: invalid type");
+
+	// Convert unsigned comparison predicate to signed if necessary
+	static constexpr llvm::CmpInst::Predicate pred = llvm_value_t<T>::is_uint ? UPred :
+		UPred == llvm::ICmpInst::ICMP_UGT ? llvm::ICmpInst::ICMP_SGT :
+		UPred == llvm::ICmpInst::ICMP_UGE ? llvm::ICmpInst::ICMP_SGE :
+		UPred == llvm::ICmpInst::ICMP_ULT ? llvm::ICmpInst::ICMP_SLT :
+		UPred == llvm::ICmpInst::ICMP_ULE ? llvm::ICmpInst::ICMP_SLE : UPred;
+
+	static inline llvm::Value* icmp(llvm::IRBuilder<>* ir, llvm::Value* lhs, llvm::Value* rhs)
+	{
+		return ir->CreateICmp(pred, lhs, rhs);
+	}
+
+	static inline llvm::Value* icmp(llvm::IRBuilder<>* ir, llvm::Value* lhs, u64 value)
+	{
+		return ir->CreateICmp(pred, lhs, llvm::ConstantInt::get(llvm_value_t<T>::get_type(ir->getContext()), value, llvm_value_t<T>::is_sint));
+	}
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+
+		if (llvm_value_t<T>::is_int)
+		{
+			return icmp(ir, v1, v2);
+		}
+	}
+};
+
+template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
+inline llvm_icmp_t<typename T1::type, T1, T2, llvm::ICmpInst::ICMP_EQ> operator ==(T1 a1, T2 a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
+inline llvm_icmp_t<typename T1::type, T1, llvm_int_t, llvm::ICmpInst::ICMP_EQ> operator ==(T1 a1, u64 a2)
+{
+	return {a1, llvm_int_t{a2}};
+}
+
+template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
+inline llvm_icmp_t<typename T1::type, T1, T2, llvm::ICmpInst::ICMP_NE> operator !=(T1 a1, T2 a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
+inline llvm_icmp_t<typename T1::type, T1, llvm_int_t, llvm::ICmpInst::ICMP_NE> operator !=(T1 a1, u64 a2)
+{
+	return {a1, llvm_int_t{a2}};
+}
+
+template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
+inline llvm_icmp_t<typename T1::type, T1, T2, llvm::ICmpInst::ICMP_UGT> operator >(T1 a1, T2 a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
+inline llvm_icmp_t<typename T1::type, T1, llvm_int_t, llvm::ICmpInst::ICMP_UGT> operator >(T1 a1, u64 a2)
+{
+	return {a1, llvm_int_t{a2}};
+}
+
+template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
+inline llvm_icmp_t<typename T1::type, T1, T2, llvm::ICmpInst::ICMP_UGE> operator >=(T1 a1, T2 a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
+inline llvm_icmp_t<typename T1::type, T1, llvm_int_t, llvm::ICmpInst::ICMP_UGE> operator >=(T1 a1, u64 a2)
+{
+	return {a1, llvm_int_t{a2}};
+}
+
+template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
+inline llvm_icmp_t<typename T1::type, T1, T2, llvm::ICmpInst::ICMP_ULT> operator <(T1 a1, T2 a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
+inline llvm_icmp_t<typename T1::type, T1, llvm_int_t, llvm::ICmpInst::ICMP_ULT> operator <(T1 a1, u64 a2)
+{
+	return {a1, llvm_int_t{a2}};
+}
+
+template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
+inline llvm_icmp_t<typename T1::type, T1, T2, llvm::ICmpInst::ICMP_ULE> operator <=(T1 a1, T2 a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
+inline llvm_icmp_t<typename T1::type, T1, llvm_int_t, llvm::ICmpInst::ICMP_ULE> operator <=(T1 a1, u64 a2)
+{
+	return {a1, llvm_int_t{a2}};
 }
 
 class cpu_translator
