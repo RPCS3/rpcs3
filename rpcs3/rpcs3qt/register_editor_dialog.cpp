@@ -13,7 +13,6 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 {
 	setWindowTitle(tr("Edit registers"));
 	setAttribute(Qt::WA_DeleteOnClose);
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
 	QVBoxLayout* vbox_panel = new QVBoxLayout();
 	QHBoxLayout* hbox_panel = new QHBoxLayout();

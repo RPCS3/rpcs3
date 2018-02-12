@@ -18,8 +18,6 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, const std::s
 {
 	ui->setupUi(this);
 
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
-
 	ui->b_cancel->setDefault(true);
 	connect(ui->b_cancel, &QAbstractButton::clicked, this, &QWidget::close);
 

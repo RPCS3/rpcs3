@@ -11,7 +11,6 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	setWindowTitle(tr("Memory Viewer"));
 	setObjectName("memory_viewer");
 	setAttribute(Qt::WA_DeleteOnClose);
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	exit = false;
 	m_addr = 0;
 	m_colcount = 16;

@@ -24,7 +24,6 @@ void msg_dialog_frame::Create(const std::string& msg)
 
 	m_dialog = new custom_dialog(type.disable_cancel);
 	m_dialog->setWindowTitle(type.se_normal ? "Normal dialog" : "Error dialog");
-	m_dialog->setWindowFlags(m_dialog->windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	m_dialog->setWindowOpacity(type.bg_invisible ? 1. : 0.75);
 
 	m_text = new QLabel(qstr(msg));
@@ -246,7 +245,6 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text, u32
 
 	//Title
 	m_osk_dialog->setWindowTitle(qstr(msg));
-	m_osk_dialog->setWindowFlags(m_osk_dialog->windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
 	//Text Input
 	QLineEdit* input = new QLineEdit(m_osk_dialog);
