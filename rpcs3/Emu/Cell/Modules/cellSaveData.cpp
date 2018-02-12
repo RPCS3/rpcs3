@@ -498,9 +498,6 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		}
 
 		statGet->bind = 0;
-		statGet->sizeKB = save_entry.size / 1024;
-		statGet->sysSizeKB = 0; // This is the size of system files, but PARAM.SFO is very small and PARAM.PDF is not used
-
 		statGet->fileNum = 0;
 		statGet->fileList.set(setBuf->buf.addr());
 		statGet->fileListNum = 0;
@@ -508,16 +505,36 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 
 		auto file_list = statGet->fileList.get_ptr();
 
+		u32 size_kbytes = 0;
+
 		for (auto&& entry : fs::dir(dir_path))
 		{
 			entry.name = vfs::unescape(entry.name);
 
 			// only files, system files ignored, fileNum is limited by setBuf->fileListMax
-			if (!entry.is_directory && entry.name != "PARAM.SFO" && statGet->fileListNum++ < setBuf->fileListMax)
+			if (!entry.is_directory)
 			{
+				if (entry.name == "PARAM.SFO" || entry.name == "PARAM.PFD")
+				{
+					continue; // system files are not included in the file list
+				}
+
 				statGet->fileNum++;
 
+				size_kbytes += (entry.size + 1023) / 1024; // firmware rounds this value up
+
+				if (statGet->fileListNum >= setBuf->fileListMax)
+					continue;
+
+				statGet->fileListNum++;
+
 				auto& file = *file_list++;
+
+				file.size = entry.size;
+				file.atime = entry.atime;
+				file.mtime = entry.mtime;
+				file.ctime = entry.ctime;
+				strcpy_trunc(file.fileName, entry.name);
 
 				if (entry.name == "ICON0.PNG")
 				{
@@ -544,13 +561,11 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 					file.fileType = CELL_SAVEDATA_FILETYPE_NORMALFILE;
 				}
 
-				file.size = entry.size;
-				file.atime = entry.atime;
-				file.mtime = entry.mtime;
-				file.ctime = entry.ctime;
-				strcpy_trunc(file.fileName, entry.name);
 			}
 		}
+
+		statGet->sysSizeKB = 35; // always reported as 35 regardless of actual file sizes
+		statGet->sizeKB = size_kbytes ? size_kbytes + statGet->sysSizeKB : 0;
 
 		// Stat Callback
 		funcStat(ppu, result, statGet, statSet);
@@ -821,6 +836,18 @@ static NEVER_INLINE s32 savedata_get_list_item(vm::cptr<char> dirName, vm::ptr<C
 		dir->atime = dir_info.atime;
 		dir->ctime = dir_info.ctime;
 		dir->mtime = dir_info.mtime;
+	}
+
+	if (sizeKB)
+	{
+		u32 size_kbytes = 0;
+
+		for (const auto& entry : fs::dir(save_path))
+		{
+			size_kbytes += (entry.size + 1023) / 1024; // firmware rounds this value up
+		}
+
+		*sizeKB = size_kbytes;
 	}
 
 	if (bind)
