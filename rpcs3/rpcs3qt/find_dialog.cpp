@@ -5,7 +5,6 @@
 find_dialog::find_dialog(QTextEdit* edit, QWidget *parent, Qt::WindowFlags f) : QDialog(parent, f), m_text_edit(edit)
 {
 	setWindowTitle(tr("Find string"));
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
 	m_find_bar = new QLineEdit();
 	m_find_bar->setPlaceholderText(tr("Search..."));
