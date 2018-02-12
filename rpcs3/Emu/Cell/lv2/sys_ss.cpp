@@ -28,7 +28,7 @@ const HCRYPTPROV s_crypto_provider = []() -> HCRYPTPROV
 }();
 #endif
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_ss("sys_ss");
 
@@ -63,7 +63,7 @@ error_code sys_ss_random_number_generator(u32 arg1, vm::ptr<void> buf, u64 size)
 	return CELL_OK;
 }
 
-s32 sys_ss_get_console_id(vm::ps3::ptr<u8> buf)
+s32 sys_ss_get_console_id(vm::ptr<u8> buf)
 {
 	sys_ss.todo("sys_ss_get_console_id(buf=*0x%x)", buf);
 
@@ -73,7 +73,7 @@ s32 sys_ss_get_console_id(vm::ps3::ptr<u8> buf)
 	return CELL_OK;
 }
 
-s32 sys_ss_get_open_psid(vm::ps3::ptr<CellSsOpenPSID> psid) 
+s32 sys_ss_get_open_psid(vm::ptr<CellSsOpenPSID> psid)
 {
 	sys_ss.warning("sys_ss_get_open_psid(psid=*0x%x)", psid);
 

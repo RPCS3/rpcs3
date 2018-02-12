@@ -84,7 +84,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	{
 		m_entry = cr;
 		UpdateSelectionLabel();
-		Q_UNUSED(cr); Q_UNUSED(pr); Q_UNUSED(pc);
+		Q_UNUSED(cc); Q_UNUSED(pr); Q_UNUSED(pc);
 	});
 
 	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &save_data_list_dialog::OnSort);

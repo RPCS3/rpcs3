@@ -7,13 +7,6 @@
 #include <memory>
 #include <string>
 
-enum class system_type
-{
-	ps3,
-	psv, // Experimental
-	//psp, // Hypothetical
-};
-
 enum class system_state
 {
 	running,
@@ -143,9 +136,6 @@ enum class frame_limit_type
 
 enum CellNetCtlState : s32;
 enum CellSysutilLang : s32;
-
-// Current process type
-extern system_type g_system;
 
 struct EmuCallbacks
 {
@@ -285,9 +275,15 @@ struct cfg_root : cfg::node
 		cfg::_bool ppu_debug{this, "PPU Debug"};
 		cfg::_bool llvm_logs{this, "Save LLVM logs"};
 		cfg::string llvm_cpu{this, "Use LLVM CPU"};
+		cfg::_int<0, INT32_MAX> llvm_threads{this, "Max LLVM Compile Threads", 0};
+
+#ifdef _WIN32
+		cfg::_bool thread_scheduler_enabled{ this, "Enable thread scheduler", true };
+#else
+		cfg::_bool thread_scheduler_enabled{ this, "Enable thread scheduler", false };
+#endif
 
 		cfg::_enum<spu_decoder_type> spu_decoder{this, "SPU Decoder", spu_decoder_type::asmjit};
-		cfg::_bool bind_spu_cores{this, "Bind SPU threads to secondary cores"};
 		cfg::_bool lower_spu_priority{this, "Lower SPU thread priority"};
 		cfg::_bool spu_debug{this, "SPU Debug"};
 		cfg::_int<0, 16384> max_spu_immediate_write_size{this, "Maximum immediate DMA write size", 16384}; // Maximum size that an SPU thread can write directly without posting to MFC
@@ -343,7 +339,8 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_zcull_queries{this, "Disable ZCull Occlusion Queries", false};
 		cfg::_bool disable_vertex_cache{this, "Disable Vertex Cache", false};
 		cfg::_bool frame_skip_enabled{this, "Enable Frame Skip", false};
-		cfg::_bool force_cpu_blit_processing{this, "Force CPU Blit", false}; //Debugging option
+		cfg::_bool force_cpu_blit_processing{this, "Force CPU Blit", false}; // Debugging option
+		cfg::_bool disable_on_disk_shader_cache{this, "Disable On-Disk Shader Cache", false};
 		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames To Draw", 1};
 		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames To Skip", 1};
 		cfg::_int<50, 800> resolution_scale_percent{this, "Resolution Scale", 100};
@@ -364,6 +361,8 @@ struct cfg_root : cfg::node
 			node_vk(cfg::node* _this) : cfg::node(_this, "Vulkan") {}
 
 			cfg::string adapter{this, "Adapter"};
+			cfg::_bool force_fifo{this, "Force FIFO present mode"};
+			cfg::_bool force_primitive_restart{this, "Force primitive restart flag"};
 
 		} vk{this};
 
@@ -421,6 +420,7 @@ struct cfg_root : cfg::node
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
 		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true};
 		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true};
+		cfg::_bool use_native_interface{ this, "Use native user interface", true };
 		cfg::_int<1, 65535> gdb_server_port{this, "Port", 2345};
 
 	} misc{this};

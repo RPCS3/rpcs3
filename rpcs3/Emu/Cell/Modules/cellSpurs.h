@@ -2,7 +2,7 @@
 
 #include "cellSync.h"
 
-namespace vm { using namespace ps3; }
+
 
 struct CellSpurs;
 struct CellSpursTaskset;
@@ -671,7 +671,7 @@ struct alignas(16) CellSpursTaskAttribute2
 	be_t<u64> eaContext;
 	CellSpursTaskLsPattern lsPattern;
 	vm::bcptr<char> name;
-	
+
 	u8 reserved[220];
 };
 

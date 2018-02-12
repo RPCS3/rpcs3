@@ -35,7 +35,7 @@ void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
 namespace rsx
 {
 	rsx_state method_registers;
-	
+
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 
 	void invalid_method(thread* rsx, u32 _reg, u32 arg)
@@ -64,10 +64,10 @@ namespace rsx
 		{
 			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
-			if (vm::ps3::read32(addr) == arg) return;
+			if (vm::read32(addr) == arg) return;
 
 			u64 start = get_system_time();
-			while (vm::ps3::read32(addr) != arg)
+			while (vm::read32(addr) != arg)
 			{
 				// todo: LLE: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
 				if (addr == 0x40000030)
@@ -116,12 +116,12 @@ namespace rsx
 			if (addr >> 28 == 0x4)
 			{
 				// TODO: check no reservation area instead
-				vm::ps3::write32(addr, arg);
+				vm::write32(addr, arg);
 				return;
 			}
 
 			vm::reader_lock lock;
-			vm::ps3::write32(addr, arg);
+			vm::write32(addr, arg);
 			vm::notify(addr, 4);
 		}
 	}
@@ -162,7 +162,7 @@ namespace rsx
 			{
 				//
 			}
-			auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
+			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
 			sema.semaphore[index].val = arg;
 			sema.semaphore[index].pad = 0;
 			sema.semaphore[index].timestamp = rsx->timestamp();
@@ -177,7 +177,7 @@ namespace rsx
 			}
 			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
 
-			auto& sema = vm::ps3::_ref<RsxReports>(rsx->label_addr);
+			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
 			sema.semaphore[index].val = val;
 			sema.semaphore[index].pad = 0;
 			sema.semaphore[index].timestamp = rsx->timestamp();
@@ -416,7 +416,7 @@ namespace rsx
 				return;
 			}
 
-			vm::ps3::ptr<CellGcmReportData> result = address_ptr;
+			vm::ptr<CellGcmReportData> result = address_ptr;
 
 			switch (type)
 			{
@@ -484,7 +484,7 @@ namespace rsx
 				return;
 			}
 
-			vm::ps3::ptr<CellGcmReportData> result = address_ptr;
+			vm::ptr<CellGcmReportData> result = address_ptr;
 			rsx->conditional_render_test_failed = (result->value == 0);
 		}
 
@@ -553,7 +553,7 @@ namespace rsx
 
 				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x << 2);
 				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + index * 4, method_registers.blit_engine_output_location_nv3062());
-				vm::ps3::write32(address, arg);
+				vm::write32(address, arg);
 			}
 		};
 	}
@@ -576,8 +576,8 @@ namespace rsx
 			const blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
 			const rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
 
-			const f32 in_x = method_registers.blit_engine_in_x();
-			const f32 in_y = method_registers.blit_engine_in_y();
+			const f32 in_x = std::ceil(method_registers.blit_engine_in_x());
+			const f32 in_y = std::ceil(method_registers.blit_engine_in_y());
 
 			//Clipping
 			//Validate that clipping rect will fit onto both src and dst regions
@@ -662,7 +662,7 @@ namespace rsx
 			const tiled_region dst_region = rsx->get_tiled_address(dst_offset + out_offset, dst_dma & 0xf);
 
 			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
-			u8* pixels_dst = vm::ps3::_ptr<u8>(get_address(dst_offset + out_offset, dst_dma));
+			u8* pixels_dst = vm::_ptr<u8>(get_address(dst_offset + out_offset, dst_dma));
 
 			if (out_pitch == 0)
 			{
@@ -789,7 +789,7 @@ namespace rsx
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{
 				if (need_convert || need_clip)
-				{					
+				{
 					if (need_clip)
 					{
 						if (need_convert)
@@ -855,7 +855,9 @@ namespace rsx
 					pixels_src = temp2.get();
 				}
 
-				u8 sw_width_log2 = method_registers.nv309e_sw_width_log2();
+				// It looks like rsx may ignore the requested swizzle size and just always
+				// round up to nearest power of 2
+				/*u8 sw_width_log2 = method_registers.nv309e_sw_width_log2();
 				u8 sw_height_log2 = method_registers.nv309e_sw_height_log2();
 
 				// 0 indicates height of 1 pixel
@@ -864,31 +866,31 @@ namespace rsx
 				// swizzle based on destination size
 				u16 sw_width = 1 << sw_width_log2;
 				u16 sw_height = 1 << sw_height_log2;
+				*/
+
+				u32 sw_width = next_pow2(out_w);
+				u32 sw_height = next_pow2(out_h);
 
 				temp2.reset(new u8[out_bpp * sw_width * sw_height]);
 
 				u8* linear_pixels = pixels_src;
 				u8* swizzled_pixels = temp2.get();
 
-				// restrict output to size of swizzle
-				const u16 sw_in_w = std::min(out_w, sw_width);
-				const u16 sw_in_h = std::min(out_h, sw_height);
-
-				// Check and pad texture out if we are given non square texture for swizzle to be correct
-				if (sw_width != sw_in_w || sw_height != sw_in_h)
+				// Check and pad texture out if we are given non power of 2 output
+				if (sw_width != out_w || sw_height != out_h)
 				{
 					sw_temp.reset(new u8[out_bpp * sw_width * sw_height]);
 
 					switch (out_bpp)
 					{
 					case 1:
-						pad_texture<u8>(linear_pixels, sw_temp.get(), sw_in_w, sw_in_h, sw_width, sw_height);
+						pad_texture<u8>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
 						break;
 					case 2:
-						pad_texture<u16>(linear_pixels, sw_temp.get(), sw_in_w, sw_in_h, sw_width, sw_height);
+						pad_texture<u16>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
 						break;
 					case 4:
-						pad_texture<u32>(linear_pixels, sw_temp.get(), sw_in_w, sw_in_h, sw_width, sw_height);
+						pad_texture<u32>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
 						break;
 					}
 
@@ -1025,7 +1027,7 @@ namespace rsx
 				}
 			}
 		}
-		
+
 		rsx->int_flip_index++;
 		rsx->current_display_buffer = arg;
 		rsx->flip(arg);
@@ -1157,6 +1159,7 @@ namespace rsx
 
 		// Stencil bits init to 00 - Tested with NPEB90184 (never sets the depth_stencil clear values but uses stencil test)
 		registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffff00;
+		registers[NV4097_SET_ZMIN_MAX_CONTROL] = 1;
 
 		// CELL_GCM_SURFACE_A8R8G8B8, CELL_GCM_SURFACE_Z24S8 and CELL_GCM_SURFACE_CENTER_1
 		registers[NV4097_SET_SURFACE_FORMAT] = (8 << 0) | (2 << 5) | (0 << 12) | (1 << 16) | (1 << 24);
@@ -1558,7 +1561,7 @@ namespace rsx
 
 		//Some custom GCM methods
 		methods[GCM_SET_DRIVER_OBJECT]                    = nullptr;
-		
+
 		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
 		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
 
@@ -1675,8 +1678,8 @@ namespace rsx
 
 		// custom methods
 		bind<GCM_FLIP_COMMAND, flip_command>();
-		
 
-		return true;	
+
+		return true;
 	}();
 }

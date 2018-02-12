@@ -24,7 +24,7 @@ class GSRender;
 bool user_asked_for_frame_capture = false;
 rsx::frame_capture_data frame_debug;
 
-namespace vm { using namespace ps3; }
+
 
 namespace rsx
 {
@@ -368,7 +368,7 @@ namespace rsx
 			vblank_count = 0;
 
 			// TODO: exit condition
-			while (!Emu.IsStopped())
+			while (!Emu.IsStopped() && !m_rsx_thread_exiting)
 			{
 				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
 				{
@@ -389,7 +389,7 @@ namespace rsx
 					continue;
 				}
 
-				while (Emu.IsPaused())
+				while (Emu.IsPaused() && !m_rsx_thread_exiting)
 					std::this_thread::sleep_for(10ms);
 
 				std::this_thread::sleep_for(1ms); // hack
@@ -398,7 +398,11 @@ namespace rsx
 
 		// Raise priority above other threads
 		thread_ctrl::set_native_priority(1);
-		thread_ctrl::set_ideal_processor_core(0);
+
+		if (g_cfg.core.thread_scheduler_enabled)
+		{
+			thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
+		}
 
 		// Round to nearest to deal with forward/reverse scaling
 		fesetround(FE_TONEAREST);
@@ -481,15 +485,15 @@ namespace rsx
 		// TODO: exit condition
 		while (!Emu.IsStopped())
 		{
-			//Execute backend-local tasks first
-			do_local_task();
-
 			//Wait for external pause events
 			if (external_interrupt_lock.load())
 			{
 				external_interrupt_ack.store(true);
 				while (external_interrupt_lock.load()) _mm_pause();
 			}
+
+			//Execute backend-local tasks first
+			do_local_task(ctrl->put.load() == internal_get.load());
 
 			//Set up restore state if needed
 			if (sync_point_request)
@@ -625,6 +629,11 @@ namespace rsx
 				LOG_WARNING(RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
 				unaligned_command = true;
 			}
+
+			// Not sure if this is worth trying to fix, but if it happens, its bad
+			// so logging it until its reported
+			if (internal_get < put && ((internal_get + (count + 1) * 4) > put))
+				LOG_ERROR(RSX, "Get pointer jumping over put pointer! This is bad!");
 
 			for (u32 i = 0; i < count; i++)
 			{
@@ -763,6 +772,7 @@ namespace rsx
 
 	void thread::on_exit()
 	{
+		m_rsx_thread_exiting = true;
 		if (m_vblank_thread)
 		{
 			m_vblank_thread->join();
@@ -1607,7 +1617,9 @@ namespace rsx
 		local_mem_addr = localAddress;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 
-		m_used_gcm_commands.clear();
+		memset(display_buffers, 0, sizeof(display_buffers));
+
+		m_rsx_thread_exiting = false;
 
 		on_init_rsx();
 		start_thread(fxm::get<GSRender>());
@@ -1667,7 +1679,7 @@ namespace rsx
 		}
 	}
 
-	std::pair<u32, u32> thread::calculate_memory_requirements(vertex_input_layout& layout, const u32 vertex_count)
+	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 vertex_count)
 	{
 		u32 persistent_memory_size = 0;
 		u32 volatile_memory_size = 0;
@@ -1723,11 +1735,11 @@ namespace rsx
 		return std::make_pair(persistent_memory_size, volatile_memory_size);
 	}
 
-	void thread::fill_vertex_layout_state(vertex_input_layout& layout, const u32 vertex_count, s32* buffer)
+	void thread::fill_vertex_layout_state(const vertex_input_layout& layout, u32 vertex_count, s32* buffer, u32 persistent_offset_base, u32 volatile_offset_base)
 	{
 		std::array<s32, 16> offset_in_block = {};
-		u32 volatile_offset = 0;
-		u32 persistent_offset = 0;
+		u32 volatile_offset = volatile_offset_base;
+		u32 persistent_offset = persistent_offset_base;
 
 		//NOTE: Order is important! Transient ayout is always push_buffers followed by register data
 		if (rsx::method_registers.current_draw_clause.is_immediate_draw)
@@ -1748,12 +1760,13 @@ namespace rsx
 		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			const auto &block = layout.interleaved_blocks[0];
+			u32 inline_data_offset = volatile_offset_base;
 			for (const u8 index : block.locations)
 			{
 				auto &info = rsx::method_registers.vertex_arrays_info[index];
 
-				offset_in_block[index] = persistent_offset; //just because this var is 0 when we enter here; inlined is transient memory
-				persistent_offset += rsx::get_vertex_type_size_on_host(info.type(), info.size());
+				offset_in_block[index] = inline_data_offset;
+				inline_data_offset += rsx::get_vertex_type_size_on_host(info.type(), info.size());
 			}
 		}
 		else
@@ -1908,7 +1921,7 @@ namespace rsx
 		}
 	}
 
-	void thread::write_vertex_data_to_memory(vertex_input_layout &layout, const u32 first_vertex, const u32 vertex_count, void *persistent_data, void *volatile_data)
+	void thread::write_vertex_data_to_memory(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, void *persistent_data, void *volatile_data)
 	{
 		char *transient = (char *)volatile_data;
 		char *persistent = (char *)persistent_data;
@@ -2168,12 +2181,81 @@ namespace rsx
 	void thread::pause()
 	{
 		external_interrupt_lock.store(true);
-		while (!external_interrupt_ack.load()) _mm_pause();
+		while (!external_interrupt_ack.load())
+		{
+			if (Emu.IsStopped())
+				break;
+
+			_mm_pause();
+		}
 		external_interrupt_ack.store(false);
 	}
 
 	void thread::unpause()
 	{
 		external_interrupt_lock.store(false);
+	}
+
+	//TODO: Move these helpers into a better class dedicated to shell interface handling (use idm?)
+	//They are not dependent on rsx at all
+	rsx::overlays::save_dialog* thread::shell_open_save_dialog()
+	{
+		if (supports_native_ui)
+		{
+			auto ptr = new rsx::overlays::save_dialog();
+			m_custom_ui.reset(ptr);
+			return ptr;
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+
+	rsx::overlays::message_dialog* thread::shell_open_message_dialog()
+	{
+		if (supports_native_ui)
+		{
+			auto ptr = new rsx::overlays::message_dialog();
+			m_custom_ui.reset(ptr);
+			return ptr;
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+
+	rsx::overlays::trophy_notification* thread::shell_open_trophy_notification()
+	{
+		if (supports_native_ui)
+		{
+			auto ptr = new rsx::overlays::trophy_notification();
+			m_custom_ui.reset(ptr);
+			return ptr;
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+
+	rsx::overlays::user_interface* thread::shell_get_current_dialog()
+	{
+		//TODO: Only get dialog type interfaces
+		return m_custom_ui.get();
+	}
+
+	bool thread::shell_close_dialog()
+	{
+		//TODO: Only get dialog type interfaces
+		if (m_custom_ui)
+		{
+			m_invalidated_ui = std::move(m_custom_ui);
+			shell_do_cleanup();
+			return true;
+		}
+
+		return false;
 	}
 }

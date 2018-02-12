@@ -6,6 +6,6 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_dbg.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_dbg("sys_dbg");

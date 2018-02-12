@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 // Error Codes
 enum
@@ -156,7 +156,7 @@ struct CellDmuxEsMsg
 	be_t<u64> supplementalInfo;
 };
 
-struct CellDmuxType 
+struct CellDmuxType
 {
 	be_t<s32> streamType; // CellDmuxStreamType
 	be_t<u32> reserved[2];
@@ -223,7 +223,7 @@ using CellDmuxCbMsg = u32(u32 demuxerHandle, vm::ptr<CellDmuxMsg> demuxerMsg, u3
 
 struct CellDmuxCb
 {
-	vm::bptr<CellDmuxCbMsg> cbMsgFunc; 
+	vm::bptr<CellDmuxCbMsg> cbMsgFunc;
 	be_t<u32> cbArg;
 };
 

@@ -274,6 +274,9 @@ namespace rsx
 		//Set when a hw blit engine incompatibility is detected
 		bool blit_engine_incompatibility_warning_raised = false;
 
+		//Set when a shader read-only texture data suddenly becomes contested, usually by fbo memory
+		bool read_only_tex_invalidate = false;
+
 		//Memory usage
 		const s32 m_max_zombie_objects = 64; //Limit on how many texture objects to keep around for reuse after they are invalidated
 		std::atomic<s32> m_unreleased_texture_objects = { 0 }; //Number of invalidated objects not yet freed from memory
@@ -289,7 +292,7 @@ namespace rsx
 				const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
 		virtual void enforce_surface_creation_type(section_storage_type& section, u32 gcm_format, texture_create_flags expected) = 0;
 		virtual void set_up_remap_vector(section_storage_type& section, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
-		virtual void insert_texture_barrier() = 0;
+		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex) = 0;
 		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::array<image_resource_type, 6>& sources) = 0;
 
 		constexpr u32 get_block_size() const { return 0x1000000; }
@@ -782,6 +785,7 @@ namespace rsx
 			{
 				//This space was being used for other purposes other than framebuffer storage
 				//Delete used resources before attaching it to framebuffer memory
+				read_only_tex_invalidate = true;
 				free_texture_section(region);
 				m_texture_memory_in_use -= region.get_section_size();
 			}
@@ -1116,7 +1120,7 @@ namespace rsx
 		}
 
 		template <typename render_target_type, typename surface_store_type>
-		sampled_image_descriptor process_framebuffer_resource(render_target_type texptr, u32 texaddr, u32 gcm_format, surface_store_type& m_rtts,
+		sampled_image_descriptor process_framebuffer_resource(commandbuffer_type& cmd, render_target_type texptr, u32 texaddr, u32 gcm_format, surface_store_type& m_rtts,
 				u16 tex_width, u16 tex_height, rsx::texture_dimension_extended extended_dimension, bool is_depth)
 		{
 			const u32 format = gcm_format & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
@@ -1240,7 +1244,7 @@ namespace rsx
 							else
 							{
 								//issue a texture barrier to ensure previous writes are visible
-								insert_texture_barrier();
+								insert_texture_barrier(cmd, texptr);
 								break;
 							}
 						}
@@ -1258,7 +1262,7 @@ namespace rsx
 						else
 						{
 							//issue a texture barrier to ensure previous writes are visible
-							insert_texture_barrier();
+							insert_texture_barrier(cmd, texptr);
 						}
 					}
 				}
@@ -1320,7 +1324,7 @@ namespace rsx
 				{
 					if (test_framebuffer(texaddr + texptr->raster_address_offset))
 					{
-						return process_framebuffer_resource(texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, extended_dimension, false);
+						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, extended_dimension, false);
 					}
 					else
 					{
@@ -1333,7 +1337,7 @@ namespace rsx
 				{
 					if (test_framebuffer(texaddr + texptr->raster_address_offset))
 					{
-						return process_framebuffer_resource(texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, extended_dimension, true);
+						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, extended_dimension, true);
 					}
 					else
 					{
@@ -1391,7 +1395,7 @@ namespace rsx
 								if (rsc.is_bound)
 								{
 									LOG_WARNING(RSX, "Sampling from a currently bound render target @ 0x%x", texaddr);
-									insert_texture_barrier();
+									insert_texture_barrier(cmd, rsc.surface);
 								}
 
 								return{ rsc.surface->get_view(), texture_upload_context::framebuffer_storage, rsc.is_depth_surface,
@@ -1525,8 +1529,6 @@ namespace rsx
 			const u32 src_address = (u32)((u64)src.pixels - (u64)vm::base(0));
 			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
 
-			u32 framebuffer_src_address = src_address;
-
 			float scale_x = dst.scale_x;
 			float scale_y = dst.scale_y;
 
@@ -1534,17 +1536,6 @@ namespace rsx
 			//Reproject final clip onto source...
 			const u16 src_w = (const u16)((f32)dst.clip_width / scale_x);
 			const u16 src_h = (const u16)((f32)dst.clip_height / scale_y);
-
-			//Correct for tile compression
-			//TODO: Investigate whether DST compression also affects alignment
-			if (src.compressed_x || src.compressed_y)
-			{
-				const u32 x_bytes = src_is_argb8 ? (src.offset_x * 4) : (src.offset_x * 2);
-				const u32 y_bytes = src.pitch * src.offset_y;
-
-				if (src.offset_x <= 16 && src.offset_y <= 16)
-					framebuffer_src_address -= (x_bytes + y_bytes);
-			}
 
 			//Check if src/dst are parts of render targets
 			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, false, false);
@@ -1559,7 +1550,7 @@ namespace rsx
 			}
 
 			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = m_rtts.get_surface_subresource_if_applicable(framebuffer_src_address, src_w, src_h, src.pitch, true, false, false);
+			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src_w, src_h, src.pitch, true, false, false);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			if (src_is_render_target && src_subres.surface->get_native_pitch() != src.pitch)
@@ -1888,6 +1879,20 @@ namespace rsx
 			return m_texture_memory_in_use;
 		}
 
+		/**
+		 * The read only texture invalidate flag is set if a read only texture is trampled by framebuffer memory
+		 * If set, all cached read only textures are considered invalid and should be re-fetched from the texture cache
+		 */
+		virtual void clear_ro_tex_invalidate_intr()
+		{
+			read_only_tex_invalidate = false;
+		}
+
+		virtual bool get_ro_tex_invalidate_intr() const
+		{
+			return read_only_tex_invalidate;
+		}
+
 		void tag_framebuffer(u32 texaddr)
 		{
 			if (!g_cfg.video.strict_rendering_mode)
@@ -1911,12 +1916,12 @@ namespace rsx
 				}
 
 				protect_info.second->unprotect();
-				vm::ps3::write32(texaddr, texaddr);
+				vm::write32(texaddr, texaddr);
 				protect_info.second->protect(protect_info.first);
 				return;
 			}
 
-			vm::ps3::write32(texaddr, texaddr);
+			vm::write32(texaddr, texaddr);
 		}
 
 		bool test_framebuffer(u32 texaddr)
@@ -1935,13 +1940,13 @@ namespace rsx
 
 					//Address isnt actually covered by the region, it only shares a page with it
 					protect_info.second->unprotect();
-					bool result = (vm::ps3::read32(texaddr) == texaddr);
+					bool result = (vm::read32(texaddr) == texaddr);
 					protect_info.second->protect(utils::protection::no);
 					return result;
 				}
 			}
 
-			return vm::ps3::read32(texaddr) == texaddr;
+			return vm::read32(texaddr) == texaddr;
 		}
 	};
 }

@@ -2,7 +2,7 @@
 
 #include "cellVpost.h"
 
-namespace vm { using namespace ps3; }
+
 
 // Error Codes
 enum
@@ -157,8 +157,8 @@ enum
 	_CELL_SAIL_PARAMETER_TYPE_NUM_OF_ELEMENTS                 = 36, // Should be never used
 	CELL_SAIL_PARAMETER_SOURCE_PPU_THREAD_PRIORITY            = CELL_SAIL_PARAMETER_IO_PPU_THREAD_PRIORITY,
 	CELL_SAIL_PARAMETER_DMUX_SPURS_TASK_PRIORITY              = CELL_SAIL_PARAMETER_DMUX_SPURS_TASK_PRIORITIES, // Deprecated
-	CELL_SAIL_PARAMETER_VDEC_SPURS_TASK_PRIORITY              = CELL_SAIL_PARAMETER_VDEC_SPURS_TASK_PRIORITIES, // Deprecated 
-	CELL_SAIL_PARAMETER_ADEC_SPURS_TASK_PRIORITY              = CELL_SAIL_PARAMETER_ADEC_SPURS_TASK_PRIORITIES, // Deprecated 
+	CELL_SAIL_PARAMETER_VDEC_SPURS_TASK_PRIORITY              = CELL_SAIL_PARAMETER_VDEC_SPURS_TASK_PRIORITIES, // Deprecated
+	CELL_SAIL_PARAMETER_ADEC_SPURS_TASK_PRIORITY              = CELL_SAIL_PARAMETER_ADEC_SPURS_TASK_PRIORITIES, // Deprecated
 	CELL_SAIL_PARAMETER_VPOST_SPURS_TASK_PRIORITY             = CELL_SAIL_PARAMETER_VPOST_SPURS_TASK_PRIORITIES, // Deprecated
 };
 
@@ -367,7 +367,7 @@ enum
 	// 5. Back Right
 	// 6. Back Center
 	// 7. LFE
-	// (for at3plus) 
+	// (for at3plus)
 	CELL_SAIL_AUDIO_CH_LAYOUT_7CH_LCRxycE  = 10,
 
 	// 1. Front Left
@@ -1035,7 +1035,7 @@ struct CellSailAviMediaType
 	union u {
 		struct audio {
 			be_t<u16> formatTag;
-			be_t<u16> reserved; // Specify 0 
+			be_t<u16> reserved; // Specify 0
 			union u {
 				struct mpeg {
 					be_t<u16> headLayer; // Specify 0

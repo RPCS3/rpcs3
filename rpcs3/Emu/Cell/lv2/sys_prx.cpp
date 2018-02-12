@@ -10,7 +10,7 @@
 #include "sys_fs.h"
 #include "sys_prx.h"
 
-namespace vm { using namespace ps3; }
+
 
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
 extern void ppu_unload_prx(const lv2_prx& prx);

@@ -13,8 +13,8 @@ namespace vk
 
 	VkSampler g_null_sampler = nullptr;
 
-	bool g_cb_no_interrupt_flag = false;
-	bool g_drv_no_primitive_restart_flag = false;
+	atomic_t<bool> g_cb_no_interrupt_flag { false };
+	atomic_t<bool> g_drv_no_primitive_restart_flag { false };
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
@@ -71,7 +71,7 @@ namespace vk
 		for (u32 i = 0; i < memory_properties.memoryTypeCount; i++)
 		{
 			VkMemoryHeap &heap = memory_properties.memoryHeaps[memory_properties.memoryTypes[i].heapIndex];
-			
+
 			bool is_device_local = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			if (is_device_local)
 			{
@@ -85,7 +85,7 @@ namespace vk
 			bool is_host_visible = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 			bool is_host_coherent = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			bool is_cached = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
-			
+
 			if (is_host_coherent && is_host_visible)
 			{
 				if ((is_cached && !host_visible_cached) ||
@@ -281,7 +281,7 @@ namespace vk
 	{
 		g_current_renderer = device;
 
-		const std::array<std::string, 8> black_listed = 
+		const std::array<std::string, 8> black_listed =
 		{
 			// Black list all polaris unless its proven they dont have a problem with primitive restart
 			"RX 580",
@@ -299,7 +299,7 @@ namespace vk
 		{
 			if (gpu_name.find(test) != std::string::npos)
 			{
-				g_drv_no_primitive_restart_flag = true;
+				g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
 				break;
 			}
 		}
@@ -386,6 +386,45 @@ namespace vk
 
 		change_image_layout(cmd, image->value, image->current_layout, new_layout, range);
 		image->current_layout = new_layout;
+	}
+
+	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range)
+	{
+		VkImageMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.newLayout = layout;
+		barrier.oldLayout = layout;
+		barrier.image = image;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.subresourceRange = range;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		VkPipelineStageFlags src_stage;
+		if (range.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
+		{
+			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		}
+		else
+		{
+			barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		}
+
+		vkCmdPipelineBarrier(cmd, src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+	}
+
+	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image)
+	{
+		if (image->info.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+		{
+			insert_texture_barrier(cmd, image->value, image->current_layout, { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 });
+		}
+		else
+		{
+			insert_texture_barrier(cmd, image->value, image->current_layout, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+		}
 	}
 
 	void enter_uninterruptible()

@@ -2,7 +2,7 @@
 
 #include "cellFont.h"
 
-namespace vm { using namespace ps3; }
+
 
 struct CellFontLibraryConfigFT
 {

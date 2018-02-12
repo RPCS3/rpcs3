@@ -8,7 +8,7 @@
 #include "sys_lwmutex.h"
 #include "sys_lwcond.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_lwcond("sys_lwcond");
 
@@ -126,7 +126,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 		return nullptr;
 	});
-	
+
 	if ((lwmutex_id && !mutex) || !cond)
 	{
 		return CELL_ESRCH;

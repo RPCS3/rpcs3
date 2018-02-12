@@ -521,7 +521,7 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 		// Get icon for the notification.
 		std::string trophyIconPath = "/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/TROP" + padding + std::to_string(trophyId) + ".PNG";
 		fs::file trophyIconFile = fs::file(vfs::get(trophyIconPath));
-		u32 iconSize = trophyIconFile.size();
+		size_t iconSize = trophyIconFile.size();
 		std::vector<uchar> trophyIconData;
 		trophyIconFile.read(trophyIconData, iconSize);
 
@@ -534,9 +534,8 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 			sceNpTrophy.error("Failed to get info for trophy dialog. Error code %x", ret);
 			*details = SceNpTrophyDetails();
 		}
-		Emu.CallAfter([det = *details, trophyIconData]() {
-			Emu.GetCallbacks().get_trophy_notification_dialog()->ShowTrophyNotification(det, trophyIconData);
-		});
+
+		Emu.GetCallbacks().get_trophy_notification_dialog()->ShowTrophyNotification(*details, trophyIconData);
 	}
 
 	return CELL_OK;

@@ -26,9 +26,6 @@ git:
   submodules: false
 
 before_install:
-  - if [ "$CC" = "clang" ]; then
-      export CXX="clang++-4.0" CC="clang-4.0";
-    fi;
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
     fi;
@@ -41,11 +38,11 @@ before_install:
 
   # Install updated libglew-dev since the version provided by trusty is outdated
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      wget http://mirrors.kernel.org/ubuntu/pool/main/g/glew/libglew-dev_1.13.0-2_amd64.deb;
-      wget http://mirrors.kernel.org/ubuntu/pool/main/g/glew/libglew1.13_1.13.0-2_amd64.deb;
-      wget http://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan1_1.0.42.0+dfsg1-1ubuntu1~16.04.1_amd64.deb;
-      wget http://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan-dev_1.0.42.0+dfsg1-1ubuntu1~16.04.1_amd64.deb;
-      sudo dpkg -i libglew1.13_1.13.0-2_amd64.deb libglew-dev_1.13.0-2_amd64.deb libvulkan1_1.0.42.0+dfsg1-1ubuntu1~16.04.1_amd64.deb libvulkan-dev_1.0.42.0+dfsg1-1ubuntu1~16.04.1_amd64.deb;
+      wget https://mirrors.kernel.org/ubuntu/pool/universe/g/glew/libglew-dev_2.0.0-5_amd64.deb;
+      wget https://mirrors.kernel.org/ubuntu/pool/universe/g/glew/libglew2.0_2.0.0-5_amd64.deb;
+      wget https://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan1_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
+      wget https://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan-dev_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
+      sudo dpkg -i libglew2.0_2.0.0-5_amd64.deb libglew-dev_2.0.0-5_amd64.deb libvulkan1_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb libvulkan-dev_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
     else
       brew update;
       brew install ccache glew llvm40;
@@ -65,7 +62,7 @@ before_script:
   - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -G Ninja;
   - ninja
   - # AppImage generation
-  - if [ -n "$UPLOAD_URL" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang-4.0" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
+  - if [ -n "$UPLOAD_URL" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
       export LD_LIBRARY_PATH=~/Qt/5.10.0/gcc_64/lib;
       DESTDIR=appdir ninja install ; find appdir/ ;
       find ../bin ;
@@ -80,6 +77,7 @@ before_script:
       cp ~/Qt/5.10.0/gcc_64/plugins/xcbglintegrations/* ./appdir/usr/plugins/xcbglintegrations/ ;
       cp ~/Qt/5.10.0/gcc_64/plugins/imageformats/* ./appdir/usr/plugins/imageformats/ ;
       cp ~/Qt/5.10.0/gcc_64/plugins/platforms/* ./appdir/usr/plugins/platforms/ ;
+      rm ./appdir/usr/lib/libfreetype.so.6 ;
       export PATH=${TRAVIS_BUILD_DIR}/build/squashfs-root/usr/bin/:${PATH} ;
       ./squashfs-root/usr/bin/appimagetool ${TRAVIS_BUILD_DIR}/build/appdir ;
       find ./appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq ;
@@ -111,7 +109,8 @@ addons:
       - libc6-dev
       - llvm-4.0
       - llvm-4.0-dev
-      - clang-4.0
+      # Clang 5.0 is now bundled in travis, so we no longer need the ppa version.
+      #- clang-4.0
       - libedit-dev
       - g++-5
       - gcc-5

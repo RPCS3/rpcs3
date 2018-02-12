@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 using spu_printf_cb_t = vm::ptr<s32(u32 arg)>;
 

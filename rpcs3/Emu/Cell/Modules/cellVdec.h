@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 // Error Codes
 enum
@@ -129,7 +129,7 @@ struct CellVdecResourceEx
 };
 
 // Access Unit Information
-struct CellVdecAuInfo 
+struct CellVdecAuInfo
 {
 	be_t<u32> startAddr;
 	be_t<u32> size;

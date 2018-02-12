@@ -3,7 +3,6 @@
 #include <map>
 #include <thread>
 
-#include "Emu/System.h"
 #include "../Utilities/types.h"
 #include "Emu/Io/PadHandler.h"
 

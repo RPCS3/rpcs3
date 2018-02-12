@@ -134,16 +134,18 @@ namespace spu
 			{
 				if (timeout_ms > 0)
 				{
-					const auto timeout = timeout_ms * 1000u; //convert to microseconds
-					const auto start = get_system_time();
+					const u64 timeout = timeout_ms * 1000u; //convert to microseconds
+					const u64 start = get_system_time();
 					auto remaining = timeout;
 
 					while (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
 					{
 						if (remaining >= native_jiffy_duration_us)
 							std::this_thread::sleep_for(1ms);
-						else
+						else if (remaining > 100)
 							std::this_thread::yield();
+						else
+							busy_wait();
 
 						const auto now = get_system_time();
 						const auto elapsed = now - start;
@@ -155,7 +157,8 @@ namespace spu
 				else
 				{
 					//Slight pause if function is overburdened
-					thread_ctrl::wait_for(100);
+					const auto count = atomic_instruction_table[pc_offset].load(std::memory_order_consume) * 100ull;
+					busy_wait(count);
 				}
 			}
 
@@ -278,25 +281,15 @@ spu_imm_table_t::spu_imm_table_t()
 
 void SPUThread::on_spawn()
 {
-	if (g_cfg.core.bind_spu_cores)
+	if (g_cfg.core.thread_scheduler_enabled)
 	{
-		//Get next secondary core number
-		auto core_count = std::thread::hardware_concurrency();
-		if (core_count > 0 && core_count <= 16)
-		{
-			auto half_count = core_count / 2;
-			auto assigned_secondary_core = ((g_num_spu_threads % half_count) * 2) + 1;
-
-			thread_ctrl::set_ideal_processor_core((s32)assigned_secondary_core);
-		}
+		thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::spu));
 	}
 
 	if (g_cfg.core.lower_spu_priority)
 	{
 		thread_ctrl::set_native_priority(-1);
 	}
-
-	g_num_spu_threads++;
 }
 
 void SPUThread::on_init(const std::shared_ptr<void>& _this)
@@ -396,7 +389,7 @@ void SPUThread::cpu_task()
 		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
 
 	// LS base address
-	const auto base = vm::ps3::_ptr<const u32>(offset);
+	const auto base = vm::_ptr<const u32>(offset);
 
 	while (true)
 	{
@@ -651,7 +644,7 @@ void SPUThread::process_mfc_cmd()
 	{
 	case MFC_GETLLAR_CMD:
 	{
-		auto& data = vm::ps3::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
+		auto& data = vm::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
 
 		const u32 _addr = ch_mfc_cmd.eal;
 		const u64 _time = vm::reservation_acquire(raddr, 128);
@@ -725,7 +718,7 @@ void SPUThread::process_mfc_cmd()
 	case MFC_PUTLLC_CMD:
 	{
 		// Store conditionally
-		auto& data = vm::ps3::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
+		auto& data = vm::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
 		const auto to_write = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ffff);
 
 		bool result = false;
@@ -791,7 +784,7 @@ void SPUThread::process_mfc_cmd()
 			raddr = 0;
 		}
 
-		auto& data = vm::ps3::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
+		auto& data = vm::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
 		const auto to_write = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ffff);
 
 		vm::reservation_acquire(ch_mfc_cmd.eal, 128);
@@ -981,7 +974,7 @@ void SPUThread::process_mfc_cmd()
 u32 SPUThread::get_events(bool waiting)
 {
 	// Check reservation status and set SPU_EVENT_LR if lost
-	if (raddr && (vm::reservation_acquire(raddr, sizeof(rdata)) != rtime || rdata != vm::ps3::_ref<decltype(rdata)>(raddr)))
+	if (raddr && (vm::reservation_acquire(raddr, sizeof(rdata)) != rtime || rdata != vm::_ref<decltype(rdata)>(raddr)))
 	{
 		ch_event_stat |= SPU_EVENT_LR;
 		raddr = 0;
@@ -1108,7 +1101,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	case SPU_RdSRR0:
 	{
 		out = srr0;
-		break;
+		return true;
 	}
 	case SPU_RdInMbox:
 	{
@@ -1243,7 +1236,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	case SPU_WrSRR0:
 	{
 		srr0 = value;
-		break;
+		return true;
 	}
 
 	case SPU_WrOutIntrMbox:
@@ -1771,6 +1764,17 @@ bool SPUThread::stop_and_signal(u32 code)
 			}
 		}
 
+		return true;
+	}
+
+	case 0x100:
+	{
+		if (ch_out_mbox.get_count())
+		{
+			fmt::throw_exception("STOP code 0x100: Out_MBox is not empty" HERE);
+		}
+
+		_mm_mfence();
 		return true;
 	}
 

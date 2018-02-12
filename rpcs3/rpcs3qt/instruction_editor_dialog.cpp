@@ -18,8 +18,8 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	setMinimumSize(300, sizeHint().height());
 
 	const auto cpu = _cpu.get();
-	m_cpu_offset = g_system == system_type::ps3 && cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
-	QString instruction = qstr(fmt::format("%08x", vm::ps3::read32(m_cpu_offset + m_pc).value()));
+	m_cpu_offset = cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
+	QString instruction = qstr(fmt::format("%08x", vm::read32(m_cpu_offset + m_pc).value()));
 
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
 	QHBoxLayout* hbox_panel(new QHBoxLayout());
@@ -75,7 +75,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 			QMessageBox::critical(this, tr("Error"), tr("Failed to parse PPU instruction."));
 			return;
 		}
-		else if (g_system == system_type::ps3 && cpu->id_type() == 1)
+		else if (cpu->id_type() == 1)
 		{
 			if (!ppu_patch(m_cpu_offset + m_pc, static_cast<u32>(opcode)))
 			{
@@ -83,14 +83,11 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 				return;
 			}
 		}
-		else if (g_system == system_type::ps3)
-		{
-			vm::ps3::write32(m_cpu_offset + m_pc, static_cast<u32>(opcode));
-		}
 		else
 		{
-			vm::psv::write32(m_cpu_offset + m_pc, static_cast<u32>(opcode));
+			vm::write32(m_cpu_offset + m_pc, static_cast<u32>(opcode));
 		}
+
 		accept();
 	});
 	connect(button_cancel, &QAbstractButton::pressed, this, &instruction_editor_dialog::reject);
@@ -107,14 +104,7 @@ void instruction_editor_dialog::updatePreview()
 
 	if (ok)
 	{
-		if (g_system == system_type::psv)
-		{
-			m_preview->setText(tr("Preview for ARMv7Thread not implemented yet."));
-		}
-		else
-		{
-			m_preview->setText(tr("Preview disabled."));
-		}
+		m_preview->setText(tr("Preview disabled."));
 	}
 	else
 	{

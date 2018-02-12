@@ -11,7 +11,7 @@
 
 #include <thread>
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_timer("sys_timer");
 
@@ -45,7 +45,7 @@ void lv2_timer::on_task()
 				}
 
 				// Stop: oneshot or the event port was disconnected (TODO: is it correct?)
-				state = SYS_TIMER_STATE_STOP; 
+				state = SYS_TIMER_STATE_STOP;
 				continue;
 			}
 
@@ -81,7 +81,7 @@ error_code sys_timer_create(vm::ptr<u32> timer_id)
 		*timer_id = id;
 		return CELL_OK;
 	}
-	
+
 	return CELL_EAGAIN;
 }
 
@@ -146,7 +146,7 @@ error_code _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 		// Invalid oneshot (TODO: what will happen if both args are 0?)
 		return not_an_error(CELL_ETIMEDOUT);
 	}
-	
+
 	if (period && period < 100)
 	{
 		// Invalid periodic timer

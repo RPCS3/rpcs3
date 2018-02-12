@@ -3,6 +3,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/System.h"
 #include "MFC.h"
 
 const bool s_use_rtm = utils::has_rtm();
@@ -157,7 +158,7 @@ void mfc_thread::cpu_task()
 
 					if ((cmd.cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK)) == MFC_PUTQLLUC_CMD)
 					{
-						auto& data = vm::ps3::_ref<decltype(spu.rdata)>(cmd.eal);
+						auto& data = vm::_ref<decltype(spu.rdata)>(cmd.eal);
 						const auto to_write = spu._ref<decltype(spu.rdata)>(cmd.lsa & 0x3ffff);
 
 						cmd.size = 0;
@@ -186,7 +187,7 @@ void mfc_thread::cpu_task()
 							vm::notify(cmd.eal, 128);
 						}
 					}
-					else if (cmd.cmd & MFC_LIST_MASK)
+					else if (cmd.cmd & MFC_LIST_MASK && LIKELY(cmd.cmd != MFC_SYNC_CMD))
 					{
 						struct list_element
 						{
@@ -301,7 +302,7 @@ void mfc_thread::cpu_task()
 					spu.ch_tag_stat.push(spu, completed);
 					no_updates = 0;
 				}
-				else if (completed && spu.ch_tag_mask == completed && spu.ch_tag_upd.compare_and_swap_test(2, 0))
+				else if (spu.ch_tag_mask == completed && spu.ch_tag_upd.compare_and_swap_test(2, 0))
 				{
 					spu.ch_tag_stat.push(spu, completed);
 					no_updates = 0;
@@ -374,4 +375,13 @@ void mfc_thread::add_spu(spu_ptr _spu)
 	}
 
 	run();
+}
+
+void mfc_thread::on_spawn()
+{
+	if (g_cfg.core.thread_scheduler_enabled)
+	{
+		// Bind to same set with the SPUs
+		thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::spu));
+	}
 }

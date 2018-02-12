@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 //error codes
 enum
@@ -92,7 +92,7 @@ enum CellOskDialogType
 	CELL_OSKDIALOG_TYPE_SEPARATE_CANDIDATE_WINDOW = 8,
 };
 
-enum 
+enum
 {
 	CELL_OSKDIALOG_STRING_SIZE = 512, //Theroretical maxium for osk input, games can specify a lower limit
 };

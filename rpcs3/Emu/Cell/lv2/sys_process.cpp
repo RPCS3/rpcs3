@@ -23,7 +23,7 @@
 #include "sys_fs.h"
 #include "sys_process.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_process("sys_process");
 

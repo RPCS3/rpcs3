@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 // libCelpEnc = 0x80614001 - 0x806140ff
 
@@ -19,14 +19,14 @@ enum
 enum
 {
 	CELL_CELPENC_FS_16kHz = 2,
-	
+
 	CELL_CELPENC_EXCITATION_MODE_RPE = 1,
-	
+
 	CELL_CELPENC_RPE_CONFIG_0,
 	CELL_CELPENC_RPE_CONFIG_1,
 	CELL_CELPENC_RPE_CONFIG_2,
 	CELL_CELPENC_RPE_CONFIG_3,
-	
+
 	CELL_CELPENC_WORD_SZ_INI16_LE,
 	CELL_CELPENC_WORD_SZ_FLOAT,
 };

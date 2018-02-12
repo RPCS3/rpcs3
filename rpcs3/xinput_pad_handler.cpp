@@ -1,12 +1,11 @@
 
 #ifdef _MSC_VER
 #include "xinput_pad_handler.h"
-#include "rpcs3qt/pad_settings_dialog.h"
 
-xinput_pad_handler::xinput_pad_handler() :
-	library(nullptr), xinputGetState(nullptr), xinputEnable(nullptr),
-	xinputSetState(nullptr), xinputGetBatteryInformation(nullptr), is_init(false)
+xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
 {
+	init_configs();
+
 	// Define border values
 	thumb_min = -32768;
 	thumb_max = 32767;
@@ -15,51 +14,13 @@ xinput_pad_handler::xinput_pad_handler() :
 	vibration_min = 0;
 	vibration_max = 65535;
 
-	// Set this handler's type and save location
-	m_pad_config.cfg_type = "xinput";
-	m_pad_config.cfg_name = fs::get_config_dir() + "/config_xinput.yml";
-
-	// Set default button mapping
-	m_pad_config.ls_left.def  = button_list.at(XInputKeyCodes::LSXNeg);
-	m_pad_config.ls_down.def  = button_list.at(XInputKeyCodes::LSYNeg);
-	m_pad_config.ls_right.def = button_list.at(XInputKeyCodes::LSXPos);
-	m_pad_config.ls_up.def    = button_list.at(XInputKeyCodes::LSYPos);
-	m_pad_config.rs_left.def  = button_list.at(XInputKeyCodes::RSXNeg);
-	m_pad_config.rs_down.def  = button_list.at(XInputKeyCodes::RSYNeg);
-	m_pad_config.rs_right.def = button_list.at(XInputKeyCodes::RSXPos);
-	m_pad_config.rs_up.def    = button_list.at(XInputKeyCodes::RSYPos);
-	m_pad_config.start.def    = button_list.at(XInputKeyCodes::Start);
-	m_pad_config.select.def   = button_list.at(XInputKeyCodes::Back);
-	m_pad_config.ps.def       = button_list.at(XInputKeyCodes::Guide);
-	m_pad_config.square.def   = button_list.at(XInputKeyCodes::X);
-	m_pad_config.cross.def    = button_list.at(XInputKeyCodes::A);
-	m_pad_config.circle.def   = button_list.at(XInputKeyCodes::B);
-	m_pad_config.triangle.def = button_list.at(XInputKeyCodes::Y);
-	m_pad_config.left.def     = button_list.at(XInputKeyCodes::Left);
-	m_pad_config.down.def     = button_list.at(XInputKeyCodes::Down);
-	m_pad_config.right.def    = button_list.at(XInputKeyCodes::Right);
-	m_pad_config.up.def       = button_list.at(XInputKeyCodes::Up);
-	m_pad_config.r1.def       = button_list.at(XInputKeyCodes::RB);
-	m_pad_config.r2.def       = button_list.at(XInputKeyCodes::RT);
-	m_pad_config.r3.def       = button_list.at(XInputKeyCodes::RS);
-	m_pad_config.l1.def       = button_list.at(XInputKeyCodes::LB);
-	m_pad_config.l2.def       = button_list.at(XInputKeyCodes::LT);
-	m_pad_config.l3.def       = button_list.at(XInputKeyCodes::LS);
-
-	// Set default misc variables
-	m_pad_config.lstickdeadzone.def = XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE;  // between 0 and 32767
-	m_pad_config.rstickdeadzone.def = XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE; // between 0 and 32767
-	m_pad_config.ltriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD; // between 0 and 255
-	m_pad_config.rtriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD; // between 0 and 255
-	m_pad_config.padsquircling.def = 8000;
-
-	// apply defaults
-	m_pad_config.from_default();
-
 	// set capabilities
 	b_has_config = true;
 	b_has_rumble = true;
 	b_has_deadzones = true;
+
+	m_name_string = "XInput Pad #";
+	m_max_devices = XUSER_MAX_COUNT;
 
 	m_trigger_threshold = trigger_max / 2;
 	m_thumb_threshold = thumb_max / 2;
@@ -68,6 +29,49 @@ xinput_pad_handler::xinput_pad_handler() :
 xinput_pad_handler::~xinput_pad_handler()
 {
 	Close();
+}
+
+void xinput_pad_handler::init_config(pad_config* cfg, const std::string& name)
+{
+	// Set this profile's save location
+	cfg->cfg_name = name;
+
+	// Set default button mapping
+	cfg->ls_left.def  = button_list.at(XInputKeyCodes::LSXNeg);
+	cfg->ls_down.def  = button_list.at(XInputKeyCodes::LSYNeg);
+	cfg->ls_right.def = button_list.at(XInputKeyCodes::LSXPos);
+	cfg->ls_up.def    = button_list.at(XInputKeyCodes::LSYPos);
+	cfg->rs_left.def  = button_list.at(XInputKeyCodes::RSXNeg);
+	cfg->rs_down.def  = button_list.at(XInputKeyCodes::RSYNeg);
+	cfg->rs_right.def = button_list.at(XInputKeyCodes::RSXPos);
+	cfg->rs_up.def    = button_list.at(XInputKeyCodes::RSYPos);
+	cfg->start.def    = button_list.at(XInputKeyCodes::Start);
+	cfg->select.def   = button_list.at(XInputKeyCodes::Back);
+	cfg->ps.def       = button_list.at(XInputKeyCodes::Guide);
+	cfg->square.def   = button_list.at(XInputKeyCodes::X);
+	cfg->cross.def    = button_list.at(XInputKeyCodes::A);
+	cfg->circle.def   = button_list.at(XInputKeyCodes::B);
+	cfg->triangle.def = button_list.at(XInputKeyCodes::Y);
+	cfg->left.def     = button_list.at(XInputKeyCodes::Left);
+	cfg->down.def     = button_list.at(XInputKeyCodes::Down);
+	cfg->right.def    = button_list.at(XInputKeyCodes::Right);
+	cfg->up.def       = button_list.at(XInputKeyCodes::Up);
+	cfg->r1.def       = button_list.at(XInputKeyCodes::RB);
+	cfg->r2.def       = button_list.at(XInputKeyCodes::RT);
+	cfg->r3.def       = button_list.at(XInputKeyCodes::RS);
+	cfg->l1.def       = button_list.at(XInputKeyCodes::LB);
+	cfg->l2.def       = button_list.at(XInputKeyCodes::LT);
+	cfg->l3.def       = button_list.at(XInputKeyCodes::LS);
+
+	// Set default misc variables
+	cfg->lstickdeadzone.def    = XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE;  // between 0 and 32767
+	cfg->rstickdeadzone.def    = XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE; // between 0 and 32767
+	cfg->ltriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD;    // between 0 and 255
+	cfg->rtriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD;    // between 0 and 255
+	cfg->padsquircling.def     = 8000;
+
+	// apply defaults
+	cfg->from_default();
 }
 
 void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist, std::vector<std::string> buttons)
@@ -152,29 +156,30 @@ void xinput_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& v
 {
 	// Update the pad button values based on their type and thresholds.
 	// With this you can use axis or triggers as buttons or vice versa
+	auto p_profile = m_dev->config;
 	switch (keyCode)
 	{
 	case XInputKeyCodes::LT:
-		pressed = val > m_pad_config.ltriggerthreshold;
-		val = pressed ? NormalizeTriggerInput(val, m_pad_config.ltriggerthreshold) : 0;
+		pressed = val > p_profile->ltriggerthreshold;
+		val = pressed ? NormalizeTriggerInput(val, p_profile->ltriggerthreshold) : 0;
 		break;
 	case XInputKeyCodes::RT:
-		pressed = val > m_pad_config.rtriggerthreshold;
-		val = pressed ? NormalizeTriggerInput(val, m_pad_config.rtriggerthreshold) : 0;
+		pressed = val > p_profile->rtriggerthreshold;
+		val = pressed ? NormalizeTriggerInput(val, p_profile->rtriggerthreshold) : 0;
 		break;
 	case XInputKeyCodes::LSXNeg:
 	case XInputKeyCodes::LSXPos:
 	case XInputKeyCodes::LSYPos:
 	case XInputKeyCodes::LSYNeg:
-		pressed = val > (ignore_threshold ? 0 : m_pad_config.lstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, m_pad_config.lstickdeadzone, ignore_threshold) : 0;
+		pressed = val > (ignore_threshold ? 0 : p_profile->lstickdeadzone);
+		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, ignore_threshold) : 0;
 		break;
 	case XInputKeyCodes::RSXNeg:
 	case XInputKeyCodes::RSXPos:
 	case XInputKeyCodes::RSYPos:
 	case XInputKeyCodes::RSYNeg:
-		pressed = val > (ignore_threshold ? 0 : m_pad_config.rstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, m_pad_config.rstickdeadzone, ignore_threshold) : 0;
+		pressed = val > (ignore_threshold ? 0 : p_profile->rstickdeadzone);
+		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, ignore_threshold) : 0;
 		break;
 	default: // normal button (should in theory also support sensitive buttons)
 		pressed = val > 0;
@@ -188,7 +193,7 @@ int xinput_pad_handler::GetDeviceNumber(const std::string& padId)
 	if (!Init())
 		return -1;
 
-	size_t pos = padId.find("Xinput Pad #");
+	size_t pos = padId.find(m_name_string);
 	if (pos == std::string::npos)
 		return -1;
 
@@ -293,10 +298,6 @@ bool xinput_pad_handler::Init()
 	if (!is_init)
 		return false;
 
-	m_pad_config.load();
-	if (!m_pad_config.exist())
-		m_pad_config.save();
-
 	return true;
 }
 
@@ -316,8 +317,9 @@ void xinput_pad_handler::ThreadProc()
 {
 	for (auto &bind : bindings)
 	{
-		auto device = bind.first;
-		auto padnum = device->deviceNumber;
+		m_dev = bind.first;
+		auto padnum = m_dev->deviceNumber;
+		auto profile = m_dev->config;
 		auto pad = bind.second;
 
 		result = (*xinputGetState)(padnum, &state);
@@ -333,7 +335,7 @@ void xinput_pad_handler::ThreadProc()
 				last_connection_status[padnum] = false;
 				connected--;
 			}
-			return;
+			continue;
 
 		case ERROR_SUCCESS:
 			if (last_connection_status[padnum] == false)
@@ -364,7 +366,7 @@ void xinput_pad_handler::ThreadProc()
 			}
 
 			// used to get the absolute value of an axis
-			float stick_val[4];
+			s32 stick_val[4];
 
 			// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
 			for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
@@ -388,13 +390,13 @@ void xinput_pad_handler::ThreadProc()
 			u16 lx, ly, rx, ry;
 
 			// Normalize our two stick's axis based on the thresholds
-			std::tie(lx, ly) = NormalizeStickDeadzone(stick_val[0], stick_val[1], m_pad_config.lstickdeadzone);
-			std::tie(rx, ry) = NormalizeStickDeadzone(stick_val[2], stick_val[3], m_pad_config.rstickdeadzone);
+			std::tie(lx, ly) = NormalizeStickDeadzone(stick_val[0], stick_val[1], profile->lstickdeadzone);
+			std::tie(rx, ry) = NormalizeStickDeadzone(stick_val[2], stick_val[3], profile->rstickdeadzone);
 
-			if (m_pad_config.padsquircling != 0)
+			if (profile->padsquircling != 0)
 			{
-				std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, m_pad_config.padsquircling);
-				std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, m_pad_config.padsquircling);
+				std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, profile->padsquircling);
+				std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, profile->padsquircling);
 			}
 
 			pad->m_sticks[0].m_value = lx;
@@ -410,19 +412,19 @@ void xinput_pad_handler::ThreadProc()
 
 			// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 			// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
-			int idx_l = m_pad_config.switch_vibration_motors ? 1 : 0;
-			int idx_s = m_pad_config.switch_vibration_motors ? 0 : 1;
+			int idx_l = profile->switch_vibration_motors ? 1 : 0;
+			int idx_s = profile->switch_vibration_motors ? 0 : 1;
 
-			int speed_large = m_pad_config.enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : vibration_min;
-			int speed_small = m_pad_config.enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : vibration_min;
+			int speed_large = profile->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : vibration_min;
+			int speed_small = profile->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : vibration_min;
 
-			device->newVibrateData = device->newVibrateData || device->largeVibrate != speed_large || device->smallVibrate != speed_small;
+			m_dev->newVibrateData = m_dev->newVibrateData || m_dev->largeVibrate != speed_large || m_dev->smallVibrate != speed_small;
 
-			device->largeVibrate = speed_large;
-			device->smallVibrate = speed_small;
+			m_dev->largeVibrate = speed_large;
+			m_dev->smallVibrate = speed_small;
 
 			// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse. So I'll use 20ms to be on the safe side. No lag was noticable.
-			if (device->newVibrateData && (clock() - device->last_vibration > 20))
+			if (m_dev->newVibrateData && (clock() - m_dev->last_vibration > 20))
 			{
 				XINPUT_VIBRATION vibrate;
 				vibrate.wLeftMotorSpeed = speed_large;
@@ -430,8 +432,8 @@ void xinput_pad_handler::ThreadProc()
 
 				if ((*xinputSetState)(padnum, &vibrate) == ERROR_SUCCESS)
 				{
-					device->newVibrateData = false;
-					device->last_vibration = clock();
+					m_dev->newVibrateData = false;
+					m_dev->last_vibration = clock();
 				}
 			}
 
@@ -452,7 +454,7 @@ std::vector<std::string> xinput_pad_handler::ListDevices()
 		XINPUT_STATE state;
 		DWORD result = (*xinputGetState)(i, &state);
 		if (result == ERROR_SUCCESS)
-			xinput_pads_list.push_back(fmt::format("Xinput Pad #%d", i));
+			xinput_pads_list.push_back(m_name_string + std::to_string(i));
 	}
 	return xinput_pads_list;
 }
@@ -464,42 +466,47 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 	if (device_number < 0)
 		return false;
 
-	std::shared_ptr<XInputDevice> device_id = std::make_shared<XInputDevice>();
-	device_id->deviceNumber = static_cast<u32>(device_number);
+	std::shared_ptr<XInputDevice> x_device = std::make_shared<XInputDevice>();
+	x_device->deviceNumber = static_cast<u32>(device_number);
 
-	m_pad_config.load();
+	int index = static_cast<int>(bindings.size());
+	m_pad_configs[index].load();
+	x_device->config = &m_pad_configs[index];
+	pad_config* p_profile = x_device->config;
+	if (p_profile == nullptr)
+		return false;
 
 	pad->Init
 	(
-		CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES,
+		CELL_PAD_STATUS_DISCONNECTED,
 		CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
 		CELL_PAD_DEV_TYPE_STANDARD
 	);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.up),       CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.down),     CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.left),     CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.right),    CELL_PAD_CTRL_RIGHT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.start),    CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.select),   CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.l3),       CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, m_pad_config.r3),       CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.l1),       CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.r1),       CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.ps),       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.cross),    CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.circle),   CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.square),   CELL_PAD_CTRL_SQUARE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.triangle), CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.l2),       CELL_PAD_CTRL_L2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, m_pad_config.r2),       CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->up),       CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->down),     CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->left),     CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->right),    CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->start),    CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->select),   CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->l3),       CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->r3),       CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->l1),       CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->r1),       CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->ps),       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->cross),    CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->circle),   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->square),   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->triangle), CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->l2),       CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->r2),       CELL_PAD_CTRL_R2);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
 
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  FindKeyCode(button_list, m_pad_config.ls_left), FindKeyCode(button_list, m_pad_config.ls_right));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  FindKeyCode(button_list, m_pad_config.ls_down), FindKeyCode(button_list, m_pad_config.ls_up));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, FindKeyCode(button_list, m_pad_config.rs_left), FindKeyCode(button_list, m_pad_config.rs_right));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, FindKeyCode(button_list, m_pad_config.rs_down), FindKeyCode(button_list, m_pad_config.rs_up));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  FindKeyCode(button_list, p_profile->ls_left), FindKeyCode(button_list, p_profile->ls_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  FindKeyCode(button_list, p_profile->ls_down), FindKeyCode(button_list, p_profile->ls_up));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, FindKeyCode(button_list, p_profile->rs_left), FindKeyCode(button_list, p_profile->rs_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, FindKeyCode(button_list, p_profile->rs_down), FindKeyCode(button_list, p_profile->rs_up));
 
 	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 512);
 	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 399);
@@ -509,7 +516,7 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 	pad->m_vibrateMotors.emplace_back(true, 0);
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
-	bindings.emplace_back(device_id, pad);
+	bindings.emplace_back(x_device, pad);
 
 	return true;
 }

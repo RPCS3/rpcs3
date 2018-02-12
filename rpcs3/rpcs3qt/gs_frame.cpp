@@ -7,28 +7,33 @@
 #include <QKeyEvent>
 #include <QTimer>
 #include <QThread>
-
 #include <string>
 
 #include "rpcs3_version.h"
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#include <QGuiApplication>
+#include <qpa/qplatformnativeinterface.h>
+#endif
+#include <X11/Xlib.h>
 #endif
 
 constexpr auto qstr = QString::fromStdString;
 
-gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse)
+gs_frame::gs_frame(const QString& title, const QRect& geometry, QIcon appIcon, bool disableMouse)
 	: QWindow(), m_windowTitle(title), m_disable_mouse(disableMouse)
 {
 	//Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
 	std::string version = rpcs3::version.to_string();
 	version = version.substr(0 , version.find_last_of("-"));
 
-	//Add branch to version on frame , unless it's master.
-	if (rpcs3::get_branch().compare("master") != 0 && rpcs3::get_branch().compare("HEAD") != 0)
+	//Add branch and commit hash to version on frame , unless it's master.
+	if ((rpcs3::get_branch().compare("master") != 0) && (rpcs3::get_branch().compare("HEAD") != 0))
 	{
-		version = version + "-" + rpcs3::get_branch();
+		version = version + "-" + rpcs3::version.to_string().substr((rpcs3::version.to_string().find_last_of("-") + 1), 8) + "-" + rpcs3::get_branch();
 	}
 
 	m_windowTitle += qstr(" | " + version);
@@ -40,7 +45,7 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 
 	if (!Emu.GetTitleID().empty())
 	{
-		m_windowTitle += qstr(" | [" + Emu.GetTitleID() + ']');
+		m_windowTitle += qstr(" [" + Emu.GetTitleID() + ']');
 	}
 
 	if (!appIcon.isNull())
@@ -50,8 +55,7 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 
 	m_show_fps = static_cast<bool>(g_cfg.misc.show_fps_in_title);
 
-	resize(w, h);
-
+	setGeometry(geometry);
 	setTitle(m_windowTitle);
 	setVisibility(Hidden);
 	create();
@@ -63,6 +67,18 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 void gs_frame::paintEvent(QPaintEvent *event)
 {
 	Q_UNUSED(event);
+}
+
+void gs_frame::showEvent(QShowEvent *event)
+{
+	// we have to calculate new window positions, since the frame is only known once the window was created
+	// the left and right margins are too big on my setup for some reason yet unknown, so we'll have to ignore them
+	int x = geometry().left(); //std::max(geometry().left(), frameMargins().left());
+	int y = std::max(geometry().top(), frameMargins().top());
+
+	setPosition(x, y);
+
+	QWindow::showEvent(event);
 }
 
 void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
@@ -145,12 +161,28 @@ void gs_frame::show()
 	});
 }
 
-void* gs_frame::handle() const
+display_handle_t gs_frame::handle() const
 {
 #ifdef _WIN32
 	return (HWND) this->winId();
 #else
-	return (void *)this->winId();
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+	QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
+	struct wl_display *wl_dpy = static_cast<struct wl_display *>(
+		native->nativeResourceForWindow("display", NULL));
+	struct wl_surface *wl_surf = static_cast<struct wl_surface *>(
+		native->nativeResourceForWindow("surface", (QWindow *)this));
+	if (wl_dpy != nullptr && wl_surf != nullptr)
+	{
+		return std::make_pair(wl_dpy, wl_surf);
+	}
+	else
+	{
+#endif
+		return std::make_pair(XOpenDisplay(0), (unsigned long)(this->winId()));
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+	}
+#endif
 #endif
 }
 

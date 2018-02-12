@@ -31,7 +31,7 @@ struct lv2_timer final : public lv2_obj, public named_thread
 	u64 source;
 	u64 data1;
 	u64 data2;
-	
+
 	atomic_t<u64> expire{0}; // Next expiration time
 	atomic_t<u64> period{0}; // Period (oneshot if 0)
 };
@@ -40,9 +40,9 @@ class ppu_thread;
 
 // Syscalls
 
-error_code sys_timer_create(vm::ps3::ptr<u32> timer_id);
+error_code sys_timer_create(vm::ptr<u32> timer_id);
 error_code sys_timer_destroy(u32 timer_id);
-error_code sys_timer_get_information(u32 timer_id, vm::ps3::ptr<sys_timer_information_t> info);
+error_code sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> info);
 error_code _sys_timer_start(u32 timer_id, u64 basetime, u64 period); // basetime type changed from s64
 error_code sys_timer_stop(u32 timer_id);
 error_code sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2);

@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include "../../Utilities/Config.h"
 #include "../../Utilities/types.h"
+#include "Emu/System.h"
 
 // TODO: HLE info (constants, structs, etc.) should not be available here
 
@@ -248,9 +249,50 @@ struct Pad
 	}
 };
 
-struct pad_config : cfg::node
+struct cfg_player final : cfg::node
 {
-	std::string cfg_type = "";
+	pad_handler def_handler = pad_handler::null;
+	cfg_player(node* owner, const std::string& name, pad_handler type) : cfg::node(owner, name), def_handler(type) {};
+
+	cfg::_enum<pad_handler> handler{ this, "Handler", def_handler };
+	cfg::string device{ this, "Device", handler.to_string() };
+	cfg::string profile{ this, "Profile", "Default Profile" };
+};
+
+struct cfg_input final : cfg::node
+{
+	const std::string cfg_name = fs::get_config_dir() + "/config_input.yml";
+
+	cfg_player player1{ this, "Player 1 Input", pad_handler::keyboard };
+	cfg_player player2{ this, "Player 2 Input", pad_handler::null };
+	cfg_player player3{ this, "Player 3 Input", pad_handler::null };
+	cfg_player player4{ this, "Player 4 Input", pad_handler::null };
+	cfg_player player5{ this, "Player 5 Input", pad_handler::null };
+	cfg_player player6{ this, "Player 6 Input", pad_handler::null };
+	cfg_player player7{ this, "Player 7 Input", pad_handler::null };
+
+	cfg_player *player[7]{ &player1, &player2, &player3, &player4, &player5, &player6, &player7 }; // Thanks gcc! 
+
+	bool load()
+	{
+		if (fs::file cfg_file{ cfg_name, fs::read })
+		{
+			return from_string(cfg_file.to_string());
+		}
+
+		return false;
+	};
+
+	void save()
+	{
+		fs::file(cfg_name, fs::rewrite).write(to_string());
+	};
+};
+
+extern cfg_input g_cfg_input;
+
+struct pad_config final : cfg::node
+{
 	std::string cfg_name = "";
 
 	cfg::string ls_left { this, "Left Stick Left", "" };
@@ -321,13 +363,15 @@ protected:
 
 	std::array<bool, MAX_GAMEPADS> last_connection_status{{ false, false, false, false, false, false, false }};
 
+	std::string m_name_string;
+	int m_max_devices = 0;
 	int m_trigger_threshold = 0;
 	int m_thumb_threshold = 0;
 
 	bool b_has_deadzones = false;
 	bool b_has_rumble = false;
 	bool b_has_config = false;
-	pad_config m_pad_config;
+	std::array<pad_config, MAX_GAMEPADS> m_pad_configs;
 
 	template <typename T>
 	T lerp(T v0, T v1, T t) {
@@ -335,245 +379,52 @@ protected:
 	}
 
 	// Search an unordered map for a string value and return found keycode
-	int FindKeyCode(std::unordered_map<u32, std::string> map, const cfg::string& name, bool fallback = true)
-	{
-		std::string def = name.def;
-		std::string nam = name.to_string();
-		int def_code = -1;
-
-		for (auto it = map.begin(); it != map.end(); ++it)
-		{
-			if (it->second == nam)
-				return it->first;
-
-			if (fallback && it->second == def)
-				def_code = it->first;
-		}
-
-		if (fallback)
-		{
-			LOG_ERROR(HLE, "int FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
-			if (def_code < 0)
-				def_code = 0;
-		}
-
-		return def_code;
-	};
-
-	long FindKeyCode(std::unordered_map<u64, std::string> map, const cfg::string& name, bool fallback = true)
-	{
-		std::string def = name.def;
-		std::string nam = name.to_string();
-		int def_code = -1;
-
-		for (auto it = map.begin(); it != map.end(); ++it)
-		{
-			if (it->second == nam)
-				return it->first;
-
-			if (fallback && it->second == def)
-				def_code = it->first;
-		}
-
-		if (fallback)
-		{
-			LOG_ERROR(HLE, "long FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
-			if (def_code < 0)
-				def_code = 0;
-		}
-
-		return def_code;
-	};
+	int FindKeyCode(std::unordered_map<u32, std::string> map, const cfg::string& name, bool fallback = true);
 
 	// Search an unordered map for a string value and return found keycode
-	int FindKeyCodeByString(std::unordered_map<u32, std::string> map, const std::string& name, bool fallback = true)
-	{
-		for (auto it = map.begin(); it != map.end(); ++it)
-		{
-			if (it->second == name)
-				return it->first;
-		}
-
-		if (fallback)
-		{
-			LOG_ERROR(HLE, "long FindKeyCodeByString fohr [name = %s] returned with 0", name);
-			return 0;
-		}
-
-		return -1;
-	};
+	long FindKeyCode(std::unordered_map<u64, std::string> map, const cfg::string& name, bool fallback = true);
 
 	// Search an unordered map for a string value and return found keycode
-	long FindKeyCodeByString(std::unordered_map<u64, std::string> map, const std::string& name, bool fallback = true)
-	{
-		for (auto it = map.begin(); it != map.end(); ++it)
-		{
-			if (it->second == name)
-				return it->first;
-		}
+	int FindKeyCodeByString(std::unordered_map<u32, std::string> map, const std::string& name, bool fallback = true);
 
-		if (fallback)
-		{
-			LOG_ERROR(HLE, "long FindKeyCodeByString fohr [name = %s] returned with 0", name);
-			return 0;
-		}
-
-		return -1;
-	};
-
-	// Get normalized trigger value based on the range defined by a threshold
-	u16 NormalizeTriggerInput(u16 value, int threshold)
-	{
-		if (value <= threshold || threshold >= trigger_max)
-		{
-			return static_cast<u16>(0);
-		}
-		else if (threshold <= trigger_min)
-		{
-			return value;
-		}
-		else
-		{
-			return (u16)(float(trigger_max) * float(value - threshold) / float(trigger_max - threshold));
-		}
-	};
+	// Search an unordered map for a string value and return found keycode
+	long FindKeyCodeByString(std::unordered_map<u64, std::string> map, const std::string& name, bool fallback = true);
 
 	// Get new scaled value between 0 and 255 based on its minimum and maximum
-	float ScaleStickInput(s32 raw_value, int minimum, int maximum)
-	{
-		// value based on max range converted to [0, 1]
-		float val = float(Clamp(raw_value, minimum, maximum) - minimum) / float(abs(maximum) + abs(minimum));
-		return 255.0f * val;
-	};
+	float ScaleStickInput(s32 raw_value, int minimum, int maximum);
 
 	// Get new scaled value between -255 and 255 based on its minimum and maximum
-	float ScaleStickInput2(s32 raw_value, int minimum, int maximum)
-	{
-		// value based on max range converted to [0, 1]
-		float val = float(Clamp(raw_value, minimum, maximum) - minimum) / float(abs(maximum) + abs(minimum));
-		return (510.0f * val) - 255.0f;
-	};
+	float ScaleStickInput2(s32 raw_value, int minimum, int maximum);
+
+	// Get normalized trigger value based on the range defined by a threshold
+	u16 NormalizeTriggerInput(u16 value, int threshold);
 
 	// normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
 	// the input values must lie in 0+
-	u16 NormalizeDirectedInput(u16 raw_value, float threshold, float maximum)
-	{
-		if (threshold >= maximum || maximum <= 0)
-		{
-			return static_cast<u16>(0);
-		}
+	u16 NormalizeDirectedInput(u16 raw_value, s32 threshold, s32 maximum);
 
-		float val = float(Clamp(raw_value, 0, maximum)) / maximum; // value based on max range converted to [0, 1]
-
-		if (threshold <= 0)
-		{
-			return static_cast<u16>(255.0f * val);
-		}
-		else
-		{
-			float thresh = threshold / maximum; // threshold converted to [0, 1]
-			return static_cast<u16>(255.0f * std::min(1.0f, (val - thresh) / (1.0f - thresh)));
-		}
-	};
-
-	u16 NormalizeStickInput(s32 raw_value, int threshold, bool ignore_threshold = false)
-	{
-		if (ignore_threshold)
-		{
-			return static_cast<u16>(ScaleStickInput(raw_value, 0, thumb_max));
-		}
-		else
-		{
-			return NormalizeDirectedInput(raw_value, threshold, thumb_max);
-		}
-	}
+	u16 NormalizeStickInput(u16 raw_value, int threshold, bool ignore_threshold = false);
 
 	// This function normalizes stick deadzone based on the DS3's deadzone, which is ~13%
 	// X and Y is expected to be in (-255) to 255 range, deadzone should be in terms of thumb stick range
 	// return is new x and y values in 0-255 range
-	std::tuple<u16, u16> NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone)
-	{
-		const float dzRange = deadzone / float((std::abs(thumb_max) + std::abs(thumb_min)));
-
-		float X = inX / 255.0f;
-		float Y = inY / 255.0f;
-
-		if (dzRange > 0.f)
-		{
-			const float mag = std::min(sqrtf(X*X + Y*Y), 1.f);
-
-			if (mag <= 0)
-			{
-				return std::tuple<u16, u16>(ConvertAxis(X), ConvertAxis(Y));
-			}
-
-			if (mag > dzRange) {
-				float pos = lerp(0.13f, 1.f, (mag - dzRange) / (1 - dzRange));
-				float scale = pos / mag;
-				X = X * scale;
-				Y = Y * scale;
-			}
-			else {
-				float pos = lerp(0.f, 0.13f, mag / dzRange);
-				float scale = pos / mag;
-				X = X * scale;
-				Y = Y * scale;
-			}
-		}
-		return std::tuple<u16, u16>( ConvertAxis(X), ConvertAxis(Y) );
-	};
+	std::tuple<u16, u16> NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone);
 
 	// get clamped value between min and max
-	s32 Clamp(f32 input, s32 min, s32 max)
-	{
-		if (input > max)
-			return max;
-		else if (input < min)
-			return min;
-		else return static_cast<s32>(input);
-	};
-
+	s32 Clamp(f32 input, s32 min, s32 max);
 	// get clamped value between 0 and 255
-	u16 Clamp0To255(f32 input)
-	{
-		return static_cast<u16>(Clamp(input, 0, 255));
-	};
-
+	u16 Clamp0To255(f32 input);
 	// get clamped value between 0 and 1023
-	u16 Clamp0To1023(f32 input)
-	{
-		return static_cast<u16>(Clamp(input, 0, 1023));
-	}
+	u16 Clamp0To1023(f32 input);
 
 	// input has to be [-1,1]. result will be [0,255]
-	u16 ConvertAxis(float value)
-	{
-		return static_cast<u16>((value + 1.0)*(255.0 / 2.0));
-	};
+	u16 ConvertAxis(float value);
 
 	// The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
 	// using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
 	// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of 8000
-	// This function assumes inX and inY is already in 0-255 
-	std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY, float squircle_factor)
-	{
-		// convert inX and Y to a (-1, 1) vector;
-		const f32 x = ((f32)inX - 127.5f) / 127.5f;
-		const f32 y = ((f32)inY - 127.5f) / 127.5f;
-
-		// compute angle and len of given point to be used for squircle radius
-		const f32 angle = std::atan2(y, x);
-		const f32 r = std::sqrt(std::pow(x, 2.f) + std::pow(y, 2.f));
-
-		// now find len/point on the given squircle from our current angle and radius in polar coords
-		// https://thatsmaths.com/2016/07/14/squircles/
-		const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / (squircle_factor / 1000.f)) * r;
-
-		// we now have len and angle, convert to cartisian
-		const int newX = Clamp0To255(((newLen * std::cos(angle)) + 1) * 127.5f);
-		const int newY = Clamp0To255(((newLen * std::sin(angle)) + 1) * 127.5f);
-		return std::tuple<u16, u16>(newX, newY);
-	}
+	// This function assumes inX and inY is already in 0-255
+	std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY, int squircle_factor);
 
 public:
 	s32 thumb_min = 0;
@@ -584,24 +435,34 @@ public:
 	s32 vibration_max = 255;
 	u32 connected = 0;
 
-	virtual bool Init() { return true; };
-	virtual ~PadHandlerBase() = default;
+	pad_handler m_type = pad_handler::null;
 
-	//Does it have GUI Config?
-	bool has_config() { return b_has_config; };
-	bool has_rumble() { return b_has_rumble; };
-	bool has_deadzones() { return b_has_deadzones; };
-	pad_config* GetConfig() { return &m_pad_config; };
+	std::string name_string();
+	int max_devices();
+	bool has_config();
+	bool has_rumble();
+	bool has_deadzones();
+
+	static std::string get_config_dir(pad_handler type);
+	static std::string get_config_filename(int i);
+
+	virtual bool Init() { return true; };
+	PadHandlerBase(pad_handler type = pad_handler::null);
+	virtual ~PadHandlerBase() = default;
 	//Sets window to config the controller(optional)
-	virtual void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist = false, std::vector<std::string> buttons = {}) {};
-	virtual void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) {};
+	virtual void GetNextButtonPress(const std::string& /*padId*/, const std::function<void(u16, std::string, int[])>& /*callback*/, bool /*get_blacklist*/ = false, std::vector<std::string> /*buttons*/ = {}) {};
+	virtual void TestVibration(const std::string& /*padId*/, u32 /*largeMotor*/, u32 /*smallMotor*/) {};
 	//Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;
 	//Callback called during pad_thread::ThreadFunc
 	virtual void ThreadProc() = 0;
 	//Binds a Pad to a device
-	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) = 0;
+	virtual bool bindPadToDevice(std::shared_ptr<Pad> /*pad*/, const std::string& /*device*/) = 0;
+	virtual void init_config(pad_config* /*cfg*/, const std::string& /*name*/) = 0;
 
 private:
-	virtual void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) {};
+	virtual void TranslateButtonPress(u64 /*keyCode*/, bool& /*pressed*/, u16& /*val*/, bool /*ignore_threshold*/ = false) {};
+
+protected:
+	void init_configs();
 };

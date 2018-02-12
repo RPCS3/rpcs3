@@ -302,11 +302,12 @@ class evdev_joystick_handler final : public PadHandlerBase
 
 	struct EvdevDevice
 	{
-		libevdev* device = nullptr;
+		libevdev* device{ nullptr };
+		pad_config* config{ nullptr };
 		std::string path;
 		std::shared_ptr<Pad> pad;
 		std::unordered_map<int, bool> axis_orientations; // value is true if key was found in rev_axis_list
-		float stick_val[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		s32 stick_val[4] = { 0, 0, 0, 0 };
 		u16 val_min[4] = { 0, 0, 0, 0 };
 		u16 val_max[4] = { 0, 0, 0, 0 };
 		EvdevButton trigger_left  = { 0, 0, 0 };
@@ -328,6 +329,7 @@ public:
 	evdev_joystick_handler();
 	~evdev_joystick_handler();
 
+	void init_config(pad_config* cfg, const std::string& name) override;
 	bool Init() override;
 	std::vector<std::string> ListDevices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
@@ -339,8 +341,8 @@ public:
 private:
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 	EvdevDevice* get_device(const std::string& device);
-	bool update_device(EvdevDevice& device, bool use_cell = true);
-	void update_devs(bool use_cell = true);
+	bool update_device(EvdevDevice& device);
+	void update_devs();
 	int add_device(const std::string& device, bool in_settings = false);
 	int GetButtonInfo(const input_event& evt, const EvdevDevice& device, int& button_code);
 	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(const EvdevDevice& device);

@@ -26,7 +26,7 @@ namespace ppu_cb_detail
 		static_assert(!std::is_pointer<T>::value, "Invalid callback argument type (pointer)");
 		static_assert(!std::is_reference<T>::value, "Invalid callback argument type (reference)");
 		static_assert(sizeof(T) <= 8, "Invalid callback argument type for ARG_GENERAL");
-		
+
 		static inline void set_value(ppu_thread& CPU, const T& arg)
 		{
 			CPU.gpr[g_count + 2] = ppu_gpr_cast(arg);
@@ -64,7 +64,7 @@ namespace ppu_cb_detail
 		{
 			const s64 stack_pos = (g_count - 1) * 0x8 + 0x30 - FIXED_STACK_FRAME_SIZE;
 			static_assert(stack_pos < 0, "TODO: Increase FIXED_STACK_FRAME_SIZE (arg count limit broken)");
-			vm::ps3::write64(CPU.gpr[1] + stack_pos, ppu_gpr_cast(arg)); // TODO
+			vm::write64(CPU.gpr[1] + stack_pos, ppu_gpr_cast(arg)); // TODO
 		}
 	};
 
@@ -103,7 +103,7 @@ namespace ppu_cb_detail
 		const u32 g = g_count + (is_general || is_float ? 1 : is_vector ? ::align(g_count, 2) + 2 : 0);
 		const u32 f = f_count + is_float;
 		const u32 v = v_count + is_vector;
-		
+
 		_func_arg<T1, t, g, f, v>::set_value(CPU, arg1);
 
 		// return true if stack was used
@@ -179,7 +179,7 @@ namespace vm
 	template<typename AT, typename RT, typename... T>
 	FORCE_INLINE RT _ptr_base<RT(T...), AT>::operator()(ppu_thread& CPU, T... args) const
 	{
-		const auto data = vm::ps3::_ptr<u32>(vm::cast(m_addr, HERE));
+		const auto data = vm::_ptr<u32>(vm::cast(m_addr, HERE));
 		const u32 pc = data[0];
 		const u32 rtoc = data[1];
 

@@ -15,14 +15,9 @@
 #include <set>
 
 #include <QDesktopServices>
-#include <QDir>
 #include <QHeaderView>
-#include <QListView>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QTimer>
-#include <QUrl>
-#include <QLabel>
 #include <QScrollBar>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
@@ -149,7 +144,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->verticalScrollBar()->installEventFilter(this);
 	m_gameList->verticalScrollBar()->setSingleStep(20);
 	m_gameList->horizontalScrollBar()->setSingleStep(20);
-	m_gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);	
+	m_gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	m_gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
 	m_gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
 	m_gameList->verticalHeader()->setVisible(false);
@@ -175,7 +170,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->setHorizontalHeaderItem(gui::column_parental,   new QTableWidgetItem(tr("Parental Level")));
 	m_gameList->setHorizontalHeaderItem(gui::column_compat,     new QTableWidgetItem(tr("Compatibility")));
 
-	// since this won't work somehow: gameList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);	
+	// since this won't work somehow: gameList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	for (int i = 0; i < m_gameList->horizontalHeader()->count(); i++)
 	{
 		m_gameList->horizontalHeaderItem(i)->setTextAlignment(Qt::AlignLeft);
@@ -278,14 +273,15 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	{
 		m_columnActs[col]->setCheckable(true);
 
-		connect(m_columnActs[col], &QAction::triggered, [this, col](bool val)
+		connect(m_columnActs[col], &QAction::triggered, [this, col](bool checked)
 		{
-			if (!val) // be sure to have at least one column left so you can call the context menu at all time
+			if (!checked) // be sure to have at least one column left so you can call the context menu at all time
 			{
 				int c = 0;
 				for (int i = 0; i < m_columnActs.count(); ++i)
 				{
-					if (xgui_settings->GetGamelistColVisibility(i)) { if (++c > 1) { break; } }
+					if (xgui_settings->GetGamelistColVisibility(i) && ++c > 1)
+						break;
 				}
 				if (c < 2)
 				{
@@ -293,8 +289,14 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 					return;
 				}
 			}
-			m_gameList->setColumnHidden(col, !val); // Negate because it's a set col hidden and we have menu say show.
-			xgui_settings->SetGamelistColVisibility(col, val);
+			m_gameList->setColumnHidden(col, !checked); // Negate because it's a set col hidden and we have menu say show.
+			xgui_settings->SetGamelistColVisibility(col, checked);
+
+			if (checked) // handle hidden columns that have zero width after showing them (stuck between others)
+			{
+				if (m_gameList->columnWidth(col) <= m_gameList->horizontalHeader()->minimumSectionSize())
+					m_gameList->setColumnWidth(col, m_gameList->horizontalHeader()->minimumSectionSize());
+			}
 		});
 	}
 }
@@ -330,8 +332,6 @@ void game_list_frame::LoadSettings()
 	m_colSortOrder = xgui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
 
 	m_sortColumn = xgui_settings->GetValue(gui::gl_sortCol).toInt();
-
-	m_Icon_Color = xgui_settings->GetValue(gui::gl_iconColor).value<QColor>();
 
 	m_categoryFilters = xgui_settings->GetGameListCategoryFilters();
 
@@ -423,8 +423,10 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			path_list.back().resize(path_list.back().find_last_not_of('/') + 1);
 		}
 
-		// std::set is used to remove duplicates from the list
-		for (const auto& dir : std::set<std::string>(std::make_move_iterator(path_list.begin()), std::make_move_iterator(path_list.end())))
+		// Used to remove duplications from the list (serial -> set of cats)
+		std::map<std::string, std::set<std::string>> serial_cat;
+
+		for (const auto& dir : path_list) { try
 		{
 			const std::string sfb = dir + "/PS3_DISC.SFB";
 			const std::string sfo = dir + (fs::is_file(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
@@ -435,7 +437,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				continue;
 			}
 
-			const auto& psf = psf::load_object(sfo_file);
+			const auto psf = psf::load_object(sfo_file);
 
 			GameInfo game;
 			game.path         = dir;
@@ -447,6 +449,12 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL");
 			game.resolution   = psf::get_integer(psf, "RESOLUTION");
 			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
+
+			// Detect duplication
+			if (!serial_cat[game.serial].emplace(game.category).second)
+			{
+				continue;
+			}
 
 			bool bootable = false;
 			auto cat = category::cat_boot.find(game.category);
@@ -493,6 +501,12 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 			m_game_data.push_back({ game, m_game_compat->GetCompatibility(game.serial), img, pxmap, true, bootable, hasCustomConfig });
 		}
+		catch (const std::exception& e)
+		{
+			LOG_FATAL(GENERAL, "Failed to update game list at %s\n%s thrown: %s", dir, typeid(e).name(), e.what());
+			continue;
+			// Blame MSVC for double }}
+		}}
 
 		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2)
 		{
@@ -597,7 +611,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 	{
 		i = m_xgrid->item(index.row(), index.column())->data(Qt::ItemDataRole::UserRole).toInt();
 	}
-	
+
 	if (1)
 	{
 		if (Boot(m_game_data[i].info))
@@ -936,6 +950,7 @@ void game_list_frame::SetToolBarVisible(const bool& showToolBar)
 	m_Tool_Bar->setVisible(showToolBar);
 	xgui_settings->SetValue(gui::gl_toolBarVisible, showToolBar);
 }
+
 bool game_list_frame::GetToolBarVisible()
 {
 	return m_showToolBar;
@@ -1128,10 +1143,10 @@ int game_list_frame::PopulateGameList()
 	return result;
 }
 
-void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color)
+void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color)
 {
-	uint r = 0;
-	uint c = 0;
+	int r = 0;
+	int c = 0;
 
 	std::string selected_item = CurrentSelectionIconPath();
 
@@ -1200,7 +1215,7 @@ void game_list_frame::PopulateGameGrid(uint maxCols, const QSize& image_size, co
 
 	if (c != 0)
 	{ // if left over games exist -- if empty entries exist
-		for (uint col = c; col < maxCols; ++col)
+		for (int col = c; col < maxCols; ++col)
 		{
 			QTableWidgetItem* emptyItem = new QTableWidgetItem();
 			emptyItem->setFlags(Qt::NoItemFlags);
@@ -1232,18 +1247,13 @@ std::string game_list_frame::CurrentSelectionIconPath()
 {
 	std::string selection = "";
 
-	// The index can be more than the size of m_game_data if you use the VFS to load a directory which has less games.
-	if (m_oldLayoutIsList && m_gameList->selectedItems().count() && m_gameList->currentRow() < m_game_data.size())
+	if (m_gameList->selectedItems().count())
 	{
-		selection = m_game_data.at(m_gameList->item(m_gameList->currentRow(), 0)->data(Qt::UserRole).toInt()).info.icon_path;
-	}
-	else if (!m_oldLayoutIsList && m_xgrid->selectedItems().count())
-	{
-		int ind = m_xgrid->currentItem()->data(Qt::UserRole).toInt();
+		QTableWidgetItem* item = m_oldLayoutIsList ? m_gameList->item(m_gameList->currentRow(), 0) : m_xgrid->currentItem();
+		int ind = item->data(Qt::UserRole).toInt();
+
 		if (ind < m_game_data.size())
-		{
 			selection = m_game_data.at(ind).info.icon_path;
-		}
 	}
 
 	m_oldLayoutIsList = m_isListLayout;

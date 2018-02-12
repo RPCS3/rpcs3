@@ -8,7 +8,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_semaphore.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_semaphore("sys_semaphore");
 
@@ -72,7 +72,7 @@ error_code sys_semaphore_destroy(u32 sem_id)
 	{
 		return CELL_ESRCH;
 	}
-	
+
 	if (sem.ret)
 	{
 		return sem.ret;
@@ -88,7 +88,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
 	{
 		const s32 val = sema.val;
-		
+
 		if (val > 0)
 		{
 			if (sema.val.compare_and_swap_test(val, val - 1))
@@ -167,7 +167,7 @@ error_code sys_semaphore_trywait(u32 sem_id)
 	const auto sem = idm::check<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
 	{
 		const s32 val = sema.val;
-		
+
 		if (val > 0)
 		{
 			if (sema.val.compare_and_swap_test(val, val - 1))

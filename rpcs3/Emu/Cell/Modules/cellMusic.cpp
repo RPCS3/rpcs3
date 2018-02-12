@@ -6,7 +6,7 @@
 #include "cellMusic.h"
 #include "cellSysutil.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellMusic("cellMusic");
 
@@ -18,115 +18,115 @@ struct music2_t
 
 s32 cellMusicGetSelectionContext()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicSetSelectionContext2()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicSetVolume2()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicGetContentsId()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicSetSelectionContext()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicInitialize2SystemWorkload()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicGetPlaybackStatus2()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicGetContentsId2()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicFinalize()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicInitializeSystemWorkload()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicInitialize()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicFinalize2()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicGetSelectionContext2()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicGetVolume()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicGetPlaybackStatus()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicSetPlaybackCommand2()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicSetPlaybackCommand()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicSelectContents2()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicSelectContents()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
@@ -155,13 +155,13 @@ s32 cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Callback> 
 
 s32 cellMusicSetVolume()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 
 s32 cellMusicGetVolume2()
 {
-	UNIMPLEMENTED_FUNC(cellMusic); 
+	UNIMPLEMENTED_FUNC(cellMusic);
 	return CELL_OK;
 }
 

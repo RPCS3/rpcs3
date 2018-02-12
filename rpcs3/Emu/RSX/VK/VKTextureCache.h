@@ -327,18 +327,8 @@ namespace vk
 			}
 
 			dma_buffer->unmap();
+
 			//Its highly likely that this surface will be reused, so we just leave resources in place
-
-			switch (gcm_format)
-			{
-			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-				rsx::shuffle_texel_data_wzyx<u16>(pixels_dst, rsx_pitch, width, height);
-				break;
-			case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-				rsx::shuffle_texel_data_wzyx<u32>(pixels_dst, rsx_pitch, width, height);
-				break;
-			}
-
 			return result;
 		}
 
@@ -425,7 +415,6 @@ namespace vk
 		vk::gpu_formats_support m_formats_support;
 		VkQueue m_submit_queue;
 		vk_data_heap* m_texture_upload_heap;
-		vk::buffer* m_texture_upload_buffer;
 
 		//Stuff that has been dereferenced goes into these
 		std::list<discarded_storage> m_discardable_storage;
@@ -787,7 +776,7 @@ namespace vk
 			}
 
 			vk::copy_mipmaped_image_using_buffer(cmd, image->value, subresource_layout, gcm_format, input_swizzled, mipmaps, subres_range.aspectMask,
-				*m_texture_upload_heap, m_texture_upload_buffer);
+				*m_texture_upload_heap);
 
 			vk::leave_uninterruptible();
 
@@ -842,20 +831,21 @@ namespace vk
 			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 
-		void insert_texture_barrier() override
-		{}
+		void insert_texture_barrier(vk::command_buffer& cmd, vk::image* tex) override
+		{
+			vk::insert_texture_barrier(cmd, tex);
+		}
 
 	public:
 
 		void initialize(vk::render_device& device, vk::memory_type_mapping& memory_types, vk::gpu_formats_support& formats_support,
-					VkQueue submit_queue, vk::vk_data_heap& upload_heap, vk::buffer* upload_buffer)
+					VkQueue submit_queue, vk::vk_data_heap& upload_heap)
 		{
 			m_memory_types = memory_types;
 			m_formats_support = formats_support;
 			m_device = &device;
 			m_submit_queue = submit_queue;
 			m_texture_upload_heap = &upload_heap;
-			m_texture_upload_buffer = upload_buffer;
 		}
 
 		void destroy() override

@@ -13,11 +13,9 @@
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;
 
-pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_ptr<PadHandlerBase> handler, QWidget *parent)
-	: QDialog(parent), ui(new Ui::pad_settings_dialog), m_handler_cfg(handler->GetConfig()), m_device_name(device), m_handler(handler)
+pad_settings_dialog::pad_settings_dialog(const std::string& device, const std::string& profile, std::shared_ptr<PadHandlerBase> handler, QWidget *parent)
+	: QDialog(parent), ui(new Ui::pad_settings_dialog), m_device_name(device), m_handler(handler), m_handler_type(handler->m_type)
 {
-	m_handler_cfg->load();
-
 	ui->setupUi(this);
 
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
@@ -28,37 +26,47 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 	m_padButtons = new QButtonGroup(this);
 	m_palette = ui->b_left->palette(); // save normal palette
 
-	ui->chb_vibration_large->setChecked((bool)m_handler_cfg->enable_vibration_motor_large);
-	ui->chb_vibration_small->setChecked((bool)m_handler_cfg->enable_vibration_motor_small);
-	ui->chb_vibration_switch->setChecked((bool)m_handler_cfg->switch_vibration_motors);
+	std::string cfg_name = PadHandlerBase::get_config_dir(m_handler_type) + profile + ".yml";
 
 	// Adjust to the different pad handlers
-	if (m_handler_cfg->cfg_type == "keyboard")
+	if (m_handler_type == pad_handler::keyboard)
 	{
 		setWindowTitle(tr("Configure Keyboard"));
-		m_handler_type = handler_type::handler_type_keyboard;
 		ui->b_blacklist->setEnabled(false);
+		((keyboard_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 	}
-	else if (m_handler_cfg->cfg_type == "xinput")
-	{
-		setWindowTitle(tr("Configure XInput"));
-		m_handler_type = handler_type::handler_type_xinput;
-	}
-	else if (m_handler_cfg->cfg_type == "ds4")
+	else if (m_handler_type == pad_handler::ds4)
 	{
 		setWindowTitle(tr("Configure DS4"));
-		m_handler_type = handler_type::handler_type_ds4;
+		((ds4_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 	}
-	else if (m_handler_cfg->cfg_type == "mmjoystick")
+#ifdef _MSC_VER
+	else if (m_handler_type == pad_handler::xinput)
+	{
+		setWindowTitle(tr("Configure XInput"));
+		((xinput_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
+	}
+#endif
+#ifdef _WIN32
+	else if (m_handler_type == pad_handler::mm)
 	{
 		setWindowTitle(tr("Configure MMJoystick"));
-		m_handler_type = handler_type::handler_type_mmjoy;
+		((mm_joystick_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 	}
-	else if (m_handler_cfg->cfg_type == "evdev")
+#endif
+#ifdef HAVE_LIBEVDEV
+	else if (m_handler_type == pad_handler::evdev)
 	{
 		setWindowTitle(tr("Configure evdev"));
-		m_handler_type = handler_type::handler_type_evdev;
+		((evdev_joystick_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 	}
+#endif
+
+	m_handler_cfg.load();
+
+	ui->chb_vibration_large->setChecked((bool)m_handler_cfg.enable_vibration_motor_large);
+	ui->chb_vibration_small->setChecked((bool)m_handler_cfg.enable_vibration_motor_small);
+	ui->chb_vibration_switch->setChecked((bool)m_handler_cfg.switch_vibration_motors);
 
 	// Enable Button Remapping
 	if (m_handler->has_config())
@@ -74,18 +82,18 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 				if (lx != preview_values[2] || ly != preview_values[3])
 				{
 					lx = preview_values[2], ly = preview_values[3];
-					RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->sizeHint().width(), lx, ly);
+					RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), lx, ly);
 				}
 				if (rx != preview_values[4] || ry != preview_values[5])
 				{
 					rx = preview_values[4], ry = preview_values[5];
-					RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->sizeHint().width(), rx, ry);
+					RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), rx, ry);
 				}
 			}
 
 			if (val <= 0) return;
 
-			LOG_NOTICE(HLE, "GetNextButtonPress: %s button %s pressed with value %d", m_handler_cfg->cfg_type, name, val);
+			LOG_NOTICE(HLE, "GetNextButtonPress: %s button %s pressed with value %d", m_handler_type, name, val);
 			if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end)
 			{
 				m_cfg_entries[m_button_id].key = name;
@@ -185,25 +193,25 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 		};
 
 		// Enable Trigger Thresholds
-		initSlider(ui->slider_trigger_left, m_handler_cfg->ltriggerthreshold, 0, m_handler->trigger_max);
-		initSlider(ui->slider_trigger_right, m_handler_cfg->rtriggerthreshold, 0, m_handler->trigger_max);
+		initSlider(ui->slider_trigger_left, m_handler_cfg.ltriggerthreshold, 0, m_handler->trigger_max);
+		initSlider(ui->slider_trigger_right, m_handler_cfg.rtriggerthreshold, 0, m_handler->trigger_max);
 		ui->preview_trigger_left->setRange(0, m_handler->trigger_max);
 		ui->preview_trigger_right->setRange(0, m_handler->trigger_max);
 
 		// Enable Stick Deadzones
-		initSlider(ui->slider_stick_left, m_handler_cfg->lstickdeadzone, 0, m_handler->thumb_max);
-		initSlider(ui->slider_stick_right, m_handler_cfg->rstickdeadzone, 0, m_handler->thumb_max);
+		initSlider(ui->slider_stick_left, m_handler_cfg.lstickdeadzone, 0, m_handler->thumb_max);
+		initSlider(ui->slider_stick_right, m_handler_cfg.rstickdeadzone, 0, m_handler->thumb_max);
 
-		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->sizeHint().width(), lx, ly);
+		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), lx, ly);
 		connect(ui->slider_stick_left, &QSlider::valueChanged, [&](int value)
 		{
-			RepaintPreviewLabel(ui->preview_stick_left, value, ui->slider_stick_left->sizeHint().width(), lx, ly);
+			RepaintPreviewLabel(ui->preview_stick_left, value, ui->slider_stick_left->size().width(), lx, ly);
 		});
 
-		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->sizeHint().width(), rx, ry);
+		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), rx, ry);
 		connect(ui->slider_stick_right, &QSlider::valueChanged, [&](int value)
 		{
-			RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->sizeHint().width(), rx, ry);
+			RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->size().width(), rx, ry);
 		});
 	}
 	else
@@ -224,37 +232,37 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, std::shared_
 		button->installEventFilter(this);
 	};
 
-	insertButton(button_ids::id_pad_lstick_left,  ui->b_lstick_left,  &m_handler_cfg->ls_left);  
-	insertButton(button_ids::id_pad_lstick_down,  ui->b_lstick_down,  &m_handler_cfg->ls_down);
-	insertButton(button_ids::id_pad_lstick_right, ui->b_lstick_right, &m_handler_cfg->ls_right);
-	insertButton(button_ids::id_pad_lstick_up,    ui->b_lstick_up,    &m_handler_cfg->ls_up);
+	insertButton(button_ids::id_pad_lstick_left,  ui->b_lstick_left,  &m_handler_cfg.ls_left);
+	insertButton(button_ids::id_pad_lstick_down,  ui->b_lstick_down,  &m_handler_cfg.ls_down);
+	insertButton(button_ids::id_pad_lstick_right, ui->b_lstick_right, &m_handler_cfg.ls_right);
+	insertButton(button_ids::id_pad_lstick_up,    ui->b_lstick_up,    &m_handler_cfg.ls_up);
 
-	insertButton(button_ids::id_pad_left,  ui->b_left,  &m_handler_cfg->left);
-	insertButton(button_ids::id_pad_down,  ui->b_down,  &m_handler_cfg->down);
-	insertButton(button_ids::id_pad_right, ui->b_right, &m_handler_cfg->right);
-	insertButton(button_ids::id_pad_up,    ui->b_up,    &m_handler_cfg->up);
+	insertButton(button_ids::id_pad_left,  ui->b_left,  &m_handler_cfg.left);
+	insertButton(button_ids::id_pad_down,  ui->b_down,  &m_handler_cfg.down);
+	insertButton(button_ids::id_pad_right, ui->b_right, &m_handler_cfg.right);
+	insertButton(button_ids::id_pad_up,    ui->b_up,    &m_handler_cfg.up);
 
-	insertButton(button_ids::id_pad_l1, ui->b_shift_l1, &m_handler_cfg->l1);
-	insertButton(button_ids::id_pad_l2, ui->b_shift_l2, &m_handler_cfg->l2);
-	insertButton(button_ids::id_pad_l3, ui->b_shift_l3, &m_handler_cfg->l3);
+	insertButton(button_ids::id_pad_l1, ui->b_shift_l1, &m_handler_cfg.l1);
+	insertButton(button_ids::id_pad_l2, ui->b_shift_l2, &m_handler_cfg.l2);
+	insertButton(button_ids::id_pad_l3, ui->b_shift_l3, &m_handler_cfg.l3);
 
-	insertButton(button_ids::id_pad_start,  ui->b_start,  &m_handler_cfg->start);
-	insertButton(button_ids::id_pad_select, ui->b_select, &m_handler_cfg->select);
-	insertButton(button_ids::id_pad_ps,     ui->b_ps,     &m_handler_cfg->ps);
+	insertButton(button_ids::id_pad_start,  ui->b_start,  &m_handler_cfg.start);
+	insertButton(button_ids::id_pad_select, ui->b_select, &m_handler_cfg.select);
+	insertButton(button_ids::id_pad_ps,     ui->b_ps,     &m_handler_cfg.ps);
 
-	insertButton(button_ids::id_pad_r1, ui->b_shift_r1, &m_handler_cfg->r1);
-	insertButton(button_ids::id_pad_r2, ui->b_shift_r2, &m_handler_cfg->r2);
-	insertButton(button_ids::id_pad_r3, ui->b_shift_r3, &m_handler_cfg->r3);
+	insertButton(button_ids::id_pad_r1, ui->b_shift_r1, &m_handler_cfg.r1);
+	insertButton(button_ids::id_pad_r2, ui->b_shift_r2, &m_handler_cfg.r2);
+	insertButton(button_ids::id_pad_r3, ui->b_shift_r3, &m_handler_cfg.r3);
 
-	insertButton(button_ids::id_pad_square,   ui->b_square,   &m_handler_cfg->square);
-	insertButton(button_ids::id_pad_cross,    ui->b_cross,    &m_handler_cfg->cross);
-	insertButton(button_ids::id_pad_circle,   ui->b_circle,   &m_handler_cfg->circle);
-	insertButton(button_ids::id_pad_triangle, ui->b_triangle, &m_handler_cfg->triangle);
+	insertButton(button_ids::id_pad_square,   ui->b_square,   &m_handler_cfg.square);
+	insertButton(button_ids::id_pad_cross,    ui->b_cross,    &m_handler_cfg.cross);
+	insertButton(button_ids::id_pad_circle,   ui->b_circle,   &m_handler_cfg.circle);
+	insertButton(button_ids::id_pad_triangle, ui->b_triangle, &m_handler_cfg.triangle);
 
-	insertButton(button_ids::id_pad_rstick_left,  ui->b_rstick_left,  &m_handler_cfg->rs_left);
-	insertButton(button_ids::id_pad_rstick_down,  ui->b_rstick_down,  &m_handler_cfg->rs_down);
-	insertButton(button_ids::id_pad_rstick_right, ui->b_rstick_right, &m_handler_cfg->rs_right);
-	insertButton(button_ids::id_pad_rstick_up,    ui->b_rstick_up,    &m_handler_cfg->rs_up);
+	insertButton(button_ids::id_pad_rstick_left,  ui->b_rstick_left,  &m_handler_cfg.rs_left);
+	insertButton(button_ids::id_pad_rstick_down,  ui->b_rstick_down,  &m_handler_cfg.rs_down);
+	insertButton(button_ids::id_pad_rstick_right, ui->b_rstick_right, &m_handler_cfg.rs_right);
+	insertButton(button_ids::id_pad_rstick_up,    ui->b_rstick_up,    &m_handler_cfg.rs_up);
 
 	m_padButtons->addButton(ui->b_reset,     button_ids::id_reset_parameters);
 	m_padButtons->addButton(ui->b_blacklist, button_ids::id_blacklist);
@@ -345,7 +353,7 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int dz, int w, int x, i
 
 void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 {
-	if (m_handler_type != handler_type::handler_type_keyboard)
+	if (m_handler_type != pad_handler::keyboard)
 	{
 		return;
 	}
@@ -370,7 +378,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 
 void pad_settings_dialog::mousePressEvent(QMouseEvent* event)
 {
-	if (m_handler_type != handler_type::handler_type_keyboard)
+	if (m_handler_type != pad_handler::keyboard)
 	{
 		return;
 	}
@@ -407,17 +415,17 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 	{
 		if (m_handler->has_rumble())
 		{
-			ui->chb_vibration_large->setChecked((bool)m_handler_cfg->enable_vibration_motor_large);
-			ui->chb_vibration_small->setChecked((bool)m_handler_cfg->enable_vibration_motor_small);
-			ui->chb_vibration_switch->setChecked((bool)m_handler_cfg->switch_vibration_motors);
+			ui->chb_vibration_large->setChecked((bool)m_handler_cfg.enable_vibration_motor_large);
+			ui->chb_vibration_small->setChecked((bool)m_handler_cfg.enable_vibration_motor_small);
+			ui->chb_vibration_switch->setChecked((bool)m_handler_cfg.switch_vibration_motors);
 		}
 
 		if (m_handler->has_deadzones())
 		{
-			ui->slider_trigger_left->setValue(m_handler_cfg->ltriggerthreshold);
-			ui->slider_trigger_right->setValue(m_handler_cfg->rtriggerthreshold);
-			ui->slider_stick_left->setValue(m_handler_cfg->lstickdeadzone);
-			ui->slider_stick_right->setValue(m_handler_cfg->rstickdeadzone);
+			ui->slider_trigger_left->setValue(m_handler_cfg.ltriggerthreshold);
+			ui->slider_trigger_right->setValue(m_handler_cfg.rtriggerthreshold);
+			ui->slider_stick_left->setValue(m_handler_cfg.lstickdeadzone);
+			ui->slider_stick_right->setValue(m_handler_cfg.rstickdeadzone);
 		}
 	}
 
@@ -450,20 +458,20 @@ void pad_settings_dialog::SaveConfig()
 
 	if (m_handler->has_rumble())
 	{
-		m_handler_cfg->enable_vibration_motor_large.set(ui->chb_vibration_large->isChecked());
-		m_handler_cfg->enable_vibration_motor_small.set(ui->chb_vibration_small->isChecked());
-		m_handler_cfg->switch_vibration_motors.set(ui->chb_vibration_switch->isChecked());
+		m_handler_cfg.enable_vibration_motor_large.set(ui->chb_vibration_large->isChecked());
+		m_handler_cfg.enable_vibration_motor_small.set(ui->chb_vibration_small->isChecked());
+		m_handler_cfg.switch_vibration_motors.set(ui->chb_vibration_switch->isChecked());
 	}
 
 	if (m_handler->has_deadzones())
 	{
-		m_handler_cfg->ltriggerthreshold.set(ui->slider_trigger_left->value());
-		m_handler_cfg->rtriggerthreshold.set(ui->slider_trigger_right->value());
-		m_handler_cfg->lstickdeadzone.set(ui->slider_stick_left->value());
-		m_handler_cfg->rstickdeadzone.set(ui->slider_stick_right->value());
+		m_handler_cfg.ltriggerthreshold.set(ui->slider_trigger_left->value());
+		m_handler_cfg.rtriggerthreshold.set(ui->slider_trigger_right->value());
+		m_handler_cfg.lstickdeadzone.set(ui->slider_stick_left->value());
+		m_handler_cfg.rstickdeadzone.set(ui->slider_stick_right->value());
 	}
 
-	m_handler_cfg->save();
+	m_handler_cfg.save();
 }
 
 void pad_settings_dialog::OnPadButtonClicked(int id)
@@ -476,7 +484,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 		return;
 	case button_ids::id_reset_parameters:
 		ReactivateButtons();
-		m_handler_cfg->from_default();
+		m_handler_cfg.from_default();
 		UpdateLabel(true);
 		return;
 	case button_ids::id_blacklist:

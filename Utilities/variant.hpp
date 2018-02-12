@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "recursive_wrapper.hpp"
+#include "variant_visitor.hpp"
 
 // clang-format off
 // [[deprecated]] is only available in C++14, use this for the time being
@@ -847,6 +848,22 @@ namespace std {
 				-> decltype(detail::binary_dispatcher<F, V, R, Types...>::apply(v0, v1, std::forward<F>(f)))
 			{
 				return detail::binary_dispatcher<F, V, R, Types...>::apply(v0, v1, std::forward<F>(f));
+			}
+
+			// match
+			// unary
+			template <typename... Fs>
+			auto VARIANT_INLINE match(Fs&&... fs) const
+			-> decltype(variant::visit(*this, ::std::make_visitor(std::forward<Fs>(fs)...)))
+			{
+				return variant::visit(*this, ::std::make_visitor(std::forward<Fs>(fs)...));
+			}
+			// non-const
+			template <typename... Fs>
+			auto VARIANT_INLINE match(Fs&&... fs)
+			-> decltype(variant::visit(*this, ::std::make_visitor(std::forward<Fs>(fs)...)))
+			{
+				return variant::visit(*this, ::std::make_visitor(std::forward<Fs>(fs)...));
 			}
 
 			~variant() noexcept // no-throw destructor

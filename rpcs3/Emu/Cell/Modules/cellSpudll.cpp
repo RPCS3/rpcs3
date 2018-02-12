@@ -3,7 +3,7 @@
 
 #include "cellSpudll.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellSpudll("cellSpudll");
 

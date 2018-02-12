@@ -8,7 +8,7 @@
 #include "sys_rsx.h"
 #include "sys_event.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_rsx("sys_rsx");
 
@@ -44,7 +44,7 @@ s32 sys_rsx_device_close()
  * @param size (IN): Local memory size. E.g. 0x0F900000 (249 MB).
  * @param flags (IN): E.g. Immediate value passed in cellGcmSys is 8.
  * @param a5 (IN): E.g. Immediate value passed in cellGcmSys is 0x00300000 (3 MB?).
- * @param a6 (IN): E.g. Immediate value passed in cellGcmSys is 16. 
+ * @param a6 (IN): E.g. Immediate value passed in cellGcmSys is 16.
  * @param a7 (IN): E.g. Immediate value passed in cellGcmSys is 8.
  */
 s32 sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u64> mem_addr, u32 size, u64 flags, u64 a5, u64 a6, u64 a7)
@@ -326,8 +326,8 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		//a5 low bits = ret.format = base | ((base + ((size - 1) / 0x10000)) << 13) | (comp << 26) | (1 << 30);
 
 		auto& tile = render->tiles[a3];
-		
-		// When tile is going to be unbinded, we can use it as a hint that the address will no longer be used as a surface and can be removed/invalidated 
+
+		// When tile is going to be unbinded, we can use it as a hint that the address will no longer be used as a surface and can be removed/invalidated
 		// Todo: There may be more checks such as format/size/width can could be done
 		if (tile.binded && a5 == 0)
 			render->notify_tile_unbound(a3);
@@ -391,7 +391,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 			sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 11), 0); // second vhandler
 		break;
 	case 0xFEF: // hack: user command
-		// 'custom' invalid package id for now 
+		// 'custom' invalid package id for now
 		// as i think we need custom lv1 interrupts to handle this accurately
 		// this also should probly be set by rsxthread
 		driverInfo.userCmdParam = a4;
@@ -415,7 +415,7 @@ s32 sys_rsx_device_map(vm::ptr<u64> addr, vm::ptr<u64> a2, u32 dev_id)
 	sys_rsx.warning("sys_rsx_device_map(addr=*0x%x, a2=*0x%x, dev_id=0x%x)", addr, a2, dev_id);
 
 	if (dev_id != 8) {
-		// TODO: lv1 related 
+		// TODO: lv1 related
 		fmt::throw_exception("sys_rsx_device_map: Invalid dev_id %d", dev_id);
 	}
 

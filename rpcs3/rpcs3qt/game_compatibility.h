@@ -21,11 +21,11 @@ class game_compatibility : public QObject
 
 	const std::map<QString, Compat_Status> Status_Data =
 	{
-		{ "Playable", { 0, "", "#2ecc71", QObject::tr("Playable"),         QObject::tr("Games that can be properly played from start to finish") } },
-		{ "Ingame",   { 1, "", "#f1c40f", QObject::tr("Ingame"),           QObject::tr("Games that either can't be finished, have serious glitches or have insufficient performance") } },
-		{ "Intro",    { 2, "", "#f39c12", QObject::tr("Intro"),            QObject::tr("Games that display image but don't make it past the menus") } },
+		{ "Playable", { 0, "", "#1ebc61", QObject::tr("Playable"),         QObject::tr("Games that can be properly played from start to finish") } },
+		{ "Ingame",   { 1, "", "#f9b32f", QObject::tr("Ingame"),           QObject::tr("Games that either can't be finished, have serious glitches or have insufficient performance") } },
+		{ "Intro",    { 2, "", "#e08a1e", QObject::tr("Intro"),            QObject::tr("Games that display image but don't make it past the menus") } },
 		{ "Loadable", { 3, "", "#e74c3c", QObject::tr("Loadable"),         QObject::tr("Games that display a black screen with a framerate on the window's title") } },
-		{ "Nothing",  { 4, "", "#2c3e50", QObject::tr("Nothing"),          QObject::tr("Games that don't initialize properly, not loading at all and/or crashing the emulator") } },
+		{ "Nothing",  { 4, "", "#455556", QObject::tr("Nothing"),          QObject::tr("Games that don't initialize properly, not loading at all and/or crashing the emulator") } },
 		{ "NoResult", { 5, "", "",        QObject::tr("No results found"), QObject::tr("There is no entry for this game or application in the compatibility database yet.") } },
 		{ "NoData",   { 6, "", "",        QObject::tr("Database missing"), QObject::tr("Right click here and download the current database.\nMake sure you are connected to the internet.") } },
 		{ "Download", { 7, "", "",        QObject::tr("Retrieving..."),    QObject::tr("Downloading the compatibility database. Please wait...") } }

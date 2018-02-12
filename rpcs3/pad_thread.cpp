@@ -30,7 +30,7 @@ void pad_thread::Init(const u32 max_connect)
 	m_info.max_connect = std::min(max_connect, (u32)7); // max 7 pads
 	m_info.now_connect = 0;
 
-	input_cfg.load();
+	g_cfg_input.load();
 
 	std::shared_ptr<keyboard_pad_handler> keyptr;
 
@@ -42,7 +42,7 @@ void pad_thread::Init(const u32 max_connect)
 	{
 		std::shared_ptr<PadHandlerBase> cur_pad_handler;
 
-		const auto &handler_type = input_cfg.player_input[i];
+		const auto &handler_type = g_cfg_input.player[i]->handler;
 		
 		if (handlers.count(handler_type) != 0)
 		{
@@ -76,6 +76,8 @@ void pad_thread::Init(const u32 max_connect)
 				cur_pad_handler = std::make_shared<evdev_joystick_handler>();
 				break;
 #endif
+			default:
+				break;
 			}
 			handlers.emplace(handler_type, cur_pad_handler);
 		}
@@ -87,11 +89,11 @@ void pad_thread::Init(const u32 max_connect)
 			CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_ACTUATOR,
 			CELL_PAD_DEV_TYPE_STANDARD));
 
-		if (cur_pad_handler->bindPadToDevice(m_pads.back(), input_cfg.player_device[i]->to_string()) == false)
+		if (cur_pad_handler->bindPadToDevice(m_pads.back(), g_cfg_input.player[i]->device.to_string()) == false)
 		{
 			//Failed to bind the device to cur_pad_handler so binds to NullPadHandler
-			LOG_ERROR(GENERAL, "Failed to bind device %s to handler %s", input_cfg.player_device[i]->to_string(), handler_type.to_string());
-			nullpad->bindPadToDevice(m_pads.back(), input_cfg.player_device[i]->to_string());
+			LOG_ERROR(GENERAL, "Failed to bind device %s to handler %s", g_cfg_input.player[i]->device.to_string(), handler_type.to_string());
+			nullpad->bindPadToDevice(m_pads.back(), g_cfg_input.player[i]->device.to_string());
 		}
 	}
 

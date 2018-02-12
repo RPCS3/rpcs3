@@ -2,8 +2,15 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellWebBrowser.h"
+#include "Emu/IdManager.h"
 
 extern logs::channel cellSysutil;
+
+struct browser_t
+{
+	vm::ptr<CellWebBrowserSystemCallback> system_cb;
+	vm::ptr<void> userData;
+};
 
 s32 cellWebBrowserActivate()
 {
@@ -15,9 +22,10 @@ s32 cellWebBrowserConfig()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 cellWebBrowserConfig2()
+error_code cellWebBrowserConfig2(vm::cptr<CellWebBrowserConfig2> config, u32 version)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfig2(config=*0x%x, version=%d)", config, version);
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigGetHeapSize()
@@ -45,9 +53,10 @@ s32 cellWebBrowserConfigSetErrorHook2()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 cellWebBrowserConfigSetFullScreen2()
+error_code cellWebBrowserConfigSetFullScreen2(vm::cptr<CellWebBrowserConfig2> config, u32 full)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetFullScreen2(config=*0x%x, full=%d)", config, full);
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigSetFullVersion2()
@@ -60,9 +69,10 @@ s32 cellWebBrowserConfigSetFunction()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 cellWebBrowserConfigSetFunction2()
+error_code cellWebBrowserConfigSetFunction2(vm::ptr<CellWebBrowserConfig2> config, u32 funcset)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetFunction2(config=*0x%x, funcset=0x%x)", config, funcset);
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigSetHeapSize()
@@ -70,9 +80,10 @@ s32 cellWebBrowserConfigSetHeapSize()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 cellWebBrowserConfigSetHeapSize2()
+error_code cellWebBrowserConfigSetHeapSize2(vm::ptr<CellWebBrowserConfig2> config, u32 size)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetHeapSize(config=*0x%x, size=0x%x)", config, size);
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigSetMimeSet()
@@ -80,9 +91,10 @@ s32 cellWebBrowserConfigSetMimeSet()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 cellWebBrowserConfigSetNotifyHook2()
+error_code cellWebBrowserConfigSetNotifyHook2(vm::cptr<CellWebBrowserConfig2> config, vm::ptr<CellWebBrowserNotify> cb, vm::ptr<void> userdata)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetNotifyHook2(config=*0x%x, cb=*0x%x, userdata=*0x%x)", config, cb, userdata);
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigSetRequestHook2()
@@ -95,14 +107,16 @@ s32 cellWebBrowserConfigSetStatusHook2()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 cellWebBrowserConfigSetTabCount2()
+error_code cellWebBrowserConfigSetTabCount2(vm::cptr<CellWebBrowserConfig2> config, u32 tab_count)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetTabCount2(config=*0x%x, tab_count=%d)", config, tab_count);
+	return CELL_OK;
 }
 
-s32 cellWebBrowserConfigSetUnknownMIMETypeHook2()
+error_code cellWebBrowserConfigSetUnknownMIMETypeHook2(vm::cptr<CellWebBrowserConfig2> config, vm::ptr<CellWebBrowserMIMETypeCallback> cb, vm::ptr<void> userdata)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetUnknownMIMETypeHook2(config=*0x%x, cb=*0x%x, userdata=*0x%x)", config, cb, userdata);
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigSetVersion()
@@ -110,9 +124,10 @@ s32 cellWebBrowserConfigSetVersion()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 cellWebBrowserConfigSetViewCondition2()
+error_code cellWebBrowserConfigSetViewCondition2(vm::ptr<CellWebBrowserConfig2> config, u32 cond)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetViewCondition2(config=*0x%x, cond=0x%x)", config, cond);
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigSetViewRect2()
@@ -180,7 +195,7 @@ s32 cellWebBrowserEstimate()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 cellWebBrowserEstimate2(vm::cptr<CellWebBrowserConfig2> config, vm::ptr<u32> memSize)
+error_code cellWebBrowserEstimate2(vm::cptr<CellWebBrowserConfig2> config, vm::ptr<u32> memSize)
 {
 	cellSysutil.warning("cellWebBrowserEstimate2(config=*0x%x, memSize=*0x%x)", config, memSize);
 
@@ -190,15 +205,26 @@ s32 cellWebBrowserEstimate2(vm::cptr<CellWebBrowserConfig2> config, vm::ptr<u32>
 	return CELL_OK;
 }
 
-s32 cellWebBrowserGetUsrdataOnGameExit(vm::ptr<CellWebBrowserUsrdata> ptr)
+error_code cellWebBrowserGetUsrdataOnGameExit(vm::ptr<CellWebBrowserUsrdata> ptr)
 {
-	cellSysutil.todo("cellWebBrowserGetUsrdataOnGameExit(ptr=*0x%x", ptr);
+	cellSysutil.todo("cellWebBrowserGetUsrdataOnGameExit(ptr=*0x%x)", ptr);
 	return CELL_OK;
 }
 
-s32 cellWebBrowserInitialize()
+error_code cellWebBrowserInitialize(vm::ptr<CellWebBrowserSystemCallback> system_cb, u32 container)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserInitialize(system_cb=*0x%x, container=0x%x)", system_cb, container);
+
+	const auto browser = fxm::make_always<browser_t>();
+	browser->system_cb = system_cb;
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		system_cb(ppu, CELL_SYSUTIL_WEBBROWSER_INITIALIZING_FINISHED, browser->userData);
+		return CELL_OK;
+	});
+
+	return CELL_OK;
 }
 
 s32 cellWebBrowserNavigate2()
@@ -216,9 +242,17 @@ s32 cellWebBrowserSetSystemCallbackUsrdata()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 cellWebBrowserShutdown()
+void cellWebBrowserShutdown()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserShutdown()");
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		const auto browser = fxm::get_always<browser_t>();
+
+		browser->system_cb(ppu, CELL_SYSUTIL_WEBBROWSER_SHUTDOWN_FINISHED, browser->userData);
+		return CELL_OK;
+	});
 }
 
 s32 cellWebBrowserUpdatePointerDisplayPos2()

@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 struct CellVideoUploadOption
 {
 	be_t<s32> type;
@@ -31,7 +29,7 @@ struct CellVideoUploadParam
 	vm::bptr<CellVideoUploadOption> pOption;
 };
 
-typedef void(CellVideoUploadCallback)(s32 status, s32 errorCode, vm::cptr<char> pResultURL, vm::ptr<void> userdata);
+using CellVideoUploadCallback = void(s32 status, s32 errorCode, vm::cptr<char> pResultURL, vm::ptr<void> userdata);
 
 enum
 {
@@ -58,4 +56,10 @@ enum
 	CELL_VIDEO_UPLOAD_ERROR_INVALID_VALUE       = 0x8002d022,
 	CELL_VIDEO_UPLOAD_ERROR_FILE_OPEN           = 0x8002d023,
 	CELL_VIDEO_UPLOAD_ERROR_INVALID_STATE       = 0x8002d024
+};
+
+enum
+{
+	CELL_VIDEO_UPLOAD_STATUS_INITIALIZED = 1,
+	CELL_VIDEO_UPLOAD_STATUS_FINALIZED = 2
 };

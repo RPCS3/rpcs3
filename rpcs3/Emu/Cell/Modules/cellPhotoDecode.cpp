@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellPhotoDecode("cellPhotoDecode");
 
@@ -18,14 +18,14 @@ enum
 
 // Datatypes
 struct CellPhotoDecodeSetParam
-{ 
+{
 	u32 dstBuffer_addr;
 	u16 width;
 	u16 height;
 };
 
 struct CellPhotoDecodeReturnParam
-{ 
+{
 	u16 width;
 	u16 height;
 };

@@ -1,36 +1,99 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "cellSysutil.h"
+
+
+
 logs::channel cellVideoExport("cellVideoExport");
 
-s32 cellVideoExportProgress()
+struct CellVideoExportSetParam
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	vm::bptr<char> title;
+	vm::bptr<char> game_title;
+	vm::bptr<char> game_comment;
+	be_t<s32> editable;
+	vm::bptr<void> reserved2;
+};
+
+using CellVideoExportUtilFinishCallback = void(s32 result, vm::ptr<void> userdata);
+
+error_code cellVideoExportProgress(vm::ptr<CellVideoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
+{
+	cellVideoExport.todo("cellVideoExportProgress(funcFinish=*0x%x, userdata=*0x%x)", funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, 0xFFFF, userdata); // 0-0xFFFF where 0xFFFF = 100%
+		return CELL_OK;
+	});
+
+	return CELL_OK;
 }
 
-s32 cellVideoExportInitialize2()
+error_code cellVideoExportInitialize2(u32 version, vm::ptr<CellVideoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellVideoExport.todo("cellVideoExportInitialize2(version=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
+	return CELL_OK;
 }
 
-s32 cellVideoExportInitialize()
+error_code cellVideoExportInitialize(u32 version, u32 container, vm::ptr<CellVideoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellVideoExport.todo("cellVideoExportInitialize(version=0x%x, container=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, container, funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
+	return CELL_OK;
 }
 
-s32 cellVideoExportFromFileWithCopy()
+error_code cellVideoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<char> srcHddFile, vm::ptr<CellVideoExportSetParam> param, vm::ptr<CellVideoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellVideoExport.todo("cellVideoExportFromFileWithCopy(srcHddDir=%s, srcHddFile=%s, param=*0x%x, funcFinish=*0x%x, userdata=*0x%x)", srcHddDir, srcHddFile, param, funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
+	return CELL_OK;
 }
 
-s32 cellVideoExportFromFile()
+error_code cellVideoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcHddFile, vm::ptr<CellVideoExportSetParam> param, vm::ptr<CellVideoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellVideoExport.todo("cellVideoExportFromFile(srcHddDir=%s, srcHddFile=%s, param=*0x%x, funcFinish=*0x%x, userdata=*0x%x)", srcHddDir, srcHddFile, param, funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
+	return CELL_OK;
 }
 
-s32 cellVideoExportFinalize()
+error_code cellVideoExportFinalize(vm::ptr<CellVideoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellVideoExport.todo("cellVideoExportFinalize(funcFinish=*0x%x, userdata=*0x%x)", funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
+	return CELL_OK;
 }
 
 

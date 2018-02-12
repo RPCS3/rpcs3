@@ -6,7 +6,9 @@
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Thread.h"
+#include "sysinfo.h"
 #include <typeinfo>
+#include <thread>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -88,7 +90,7 @@ enum x64_reg_t : u32
 	X64R_XMM13,
 	X64R_XMM14,
 	X64R_XMM15,
-	
+
 	X64R_AL,
 	X64R_CL,
 	X64R_DL,
@@ -97,7 +99,7 @@ enum x64_reg_t : u32
 	X64R_CH,
 	X64R_DH,
 	X64R_BH,
-	
+
 	X64_NOT_SET,
 	X64_IMM8,
 	X64_IMM16,
@@ -174,7 +176,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 			{
 				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): LOCK prefix found twice", (size_t)code - out_length);
 			}
-			
+
 			lock = true;
 			continue;
 		}
@@ -184,7 +186,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 			{
 				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): REPNE/REPNZ prefix found twice", (size_t)code - out_length);
 			}
-			
+
 			repne = true;
 			continue;
 		}
@@ -194,7 +196,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 			{
 				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): REP/REPE/REPZ prefix found twice", (size_t)code - out_length);
 			}
-			
+
 			repe = true;
 			continue;
 		}
@@ -223,7 +225,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 			{
 				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): operand-size override prefix found twice", (size_t)code - out_length);
 			}
-			
+
 			oso = true;
 			continue;
 		}
@@ -915,7 +917,7 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 	else if (reg == X64_IMM32)
 	{
 		const s32 imm_value = *(s32*)(RIP(context) + i_size - 4);
-		
+
 		switch (d_size)
 		{
 		case 4: out_value = (u32)imm_value; return true;
@@ -1252,7 +1254,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				}
 				if (entry.start_addr <= addr && addr <= addr + mem->size - 1)
 				{
-					// Place the page fault event onto table so that other functions [sys_mmapper_free_address and ppu pagefault funcs] 
+					// Place the page fault event onto table so that other functions [sys_mmapper_free_address and ppu pagefault funcs]
 					// know that this thread is page faulted and where.
 
 					auto pf_entries = fxm::get_always<page_fault_event_entries>();
@@ -1272,7 +1274,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 						addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only" : "using unmapped");
 
 					error_code sending_error = sys_event_port_send(entry.port_id, data1, data2, data3);
-					
+
 					// If we fail due to being busy, wait a bit and try again.
 					while (sending_error == CELL_EBUSY)
 					{
@@ -1280,7 +1282,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 						thread_ctrl::wait_for(1000);
 						sending_error = sys_event_port_send(entry.port_id, data1, data2, data3);
 					}
-					
+
 					if (sending_error)
 					{
 						fmt::throw_exception("Unknown error %x while trying to pass page fault.", sending_error.value);
@@ -1547,6 +1549,8 @@ thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
 extern thread_local std::string(*g_tls_log_prefix)();
 
+DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined };
+
 void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack task)
 {
 #ifdef _WIN32
@@ -1703,7 +1707,7 @@ bool thread_ctrl::_wait_for(u64 usec)
 		}
 	}
 	_lock{_this->m_mutex};
-	
+
 	do
 	{
 		// Mutex is unlocked at the start and after the waiting
@@ -1853,6 +1857,98 @@ void thread_ctrl::test()
 	}
 }
 
+void thread_ctrl::detect_cpu_layout()
+{
+	if (!g_native_core_layout.compare_and_swap_test(native_core_arrangement::undefined, native_core_arrangement::generic))
+		return;
+
+	const auto system_id = utils::get_system_info();
+	if (system_id.find("Ryzen") != std::string::npos)
+	{
+		g_native_core_layout.store(native_core_arrangement::amd_ccx);
+	}
+	else if (system_id.find("i3") != std::string::npos || system_id.find("i7") != std::string::npos)
+	{
+		g_native_core_layout.store(native_core_arrangement::intel_ht);
+	}
+}
+
+u16 thread_ctrl::get_affinity_mask(thread_class group)
+{
+	detect_cpu_layout();
+
+	if (const auto thread_count = std::thread::hardware_concurrency())
+	{
+		const u16 all_cores_mask = thread_count < 16 ? (u16)(~(UINT16_MAX << thread_count)): UINT16_MAX;
+
+		switch (g_native_core_layout)
+		{
+		default:
+		case native_core_arrangement::generic:
+		{
+			return all_cores_mask;
+		}
+		case native_core_arrangement::amd_ccx:
+		{
+			u16 spu_mask, ppu_mask, rsx_mask;
+			if (thread_count >= 16)
+			{
+				// Threadripper, R7
+				// Assign threads 8-16
+				// It appears some windows code is bound to lower core addresses, binding 8-16 is alot faster than 0-7
+				ppu_mask = spu_mask = 0b1111111100000000;
+				rsx_mask = all_cores_mask;
+			}
+			else if (thread_count == 12)
+			{
+				// 1600/2600 (x)
+				ppu_mask = spu_mask = 0b111111000000;
+				rsx_mask = all_cores_mask;
+			}
+			else
+			{
+				// R5 & R3 don't seem to improve performance no matter how these are shuffled
+				ppu_mask = spu_mask = rsx_mask = 0b11111111 & all_cores_mask;
+			}
+
+			switch (group)
+			{
+			default:
+			case thread_class::general:
+				return all_cores_mask;
+			case thread_class::rsx:
+				return rsx_mask;
+			case thread_class::ppu:
+				return ppu_mask;
+			case thread_class::spu:
+				return spu_mask;
+			}
+		}
+		case native_core_arrangement::intel_ht:
+		{
+			if (thread_count <= 4)
+			{
+				//i3 or worse
+				switch (group)
+				{
+				case thread_class::rsx:
+				case thread_class::ppu:
+					return (0b0101 & all_cores_mask);
+				case thread_class::spu:
+					return (0b1010 & all_cores_mask);
+				case thread_class::general:
+					return all_cores_mask;
+				}
+			}
+
+			return all_cores_mask;
+		}
+		}
+	}
+
+	return UINT16_MAX;
+}
+
 void thread_ctrl::set_native_priority(int priority)
 {
 #ifdef _WIN32
@@ -1886,23 +1982,30 @@ void thread_ctrl::set_native_priority(int priority)
 #endif
 }
 
-void thread_ctrl::set_ideal_processor_core(int core)
+void thread_ctrl::set_thread_affinity_mask(u16 mask)
 {
 #ifdef _WIN32
 	HANDLE _this_thread = GetCurrentThread();
-	SetThreadIdealProcessor(_this_thread, core);
+	SetThreadAffinityMask(_this_thread, (DWORD_PTR)mask);
 #elif __APPLE__
-	thread_affinity_policy_data_t policy = { static_cast<integer_t>(core) };
+	thread_affinity_policy_data_t policy = { static_cast<integer_t>(mask) };
 	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
 	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
 #elif defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__)
 	cpu_set_t cs;
 	CPU_ZERO(&cs);
-	CPU_SET(core, &cs);
+
+	for (u32 core = 0; core < 16u; ++core)
+	{
+		if ((u32)mask & (1u << core))
+		{
+			CPU_SET(core, &cs);
+		}
+	}
+
 	pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cs);
 #endif
 }
-
 
 named_thread::named_thread()
 {

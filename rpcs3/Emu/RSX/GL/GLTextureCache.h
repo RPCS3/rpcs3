@@ -142,7 +142,6 @@ namespace gl
 
 			switch (fmt_)
 			{
-			case texture::format::red:
 			case texture::format::r:
 				break;
 			case texture::format::rg:
@@ -202,14 +201,14 @@ namespace gl
 
 			if (flushable)
 				init_buffer();
-			
+
 			flushed = false;
 			copied = false;
 			is_depth = false;
 
 			vram_texture = 0;
 		}
-		
+
 		void create(u16 w, u16 h, u16 depth, u16 mipmaps, void*,
 				gl::texture* image, u32 rsx_pitch, bool read_only,
 				gl::texture::format gl_format, gl::texture::type gl_type, bool swap_bytes)
@@ -445,7 +444,7 @@ namespace gl
 
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 			void *data = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, pbo_size, GL_MAP_READ_BIT);
-			u8 *dst = vm::ps3::_ptr<u8>(cpu_address_base);
+			u8 *dst = vm::_ptr<u8>(cpu_address_base);
 
 			//throw if map failed since we'll segfault anyway
 			verify(HERE), data != nullptr;
@@ -460,16 +459,6 @@ namespace gl
 				const u8 samples_u = (aa_mode == rsx::surface_antialiasing::center_1_sample) ? 1 : 2;
 				const u8 samples_v = (aa_mode == rsx::surface_antialiasing::square_centered_4_samples || aa_mode == rsx::surface_antialiasing::square_rotated_4_samples) ? 2 : 1;
 				rsx::scale_image_nearest(dst, const_cast<const void*>(data), width, height, rsx_pitch, real_pitch, pixel_size, samples_u, samples_v);
-			}
-
-			switch (gcm_format)
-			{
-			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-				rsx::shuffle_texel_data_wzyx<u16>(dst, rsx_pitch, width, height);
-				break;
-			case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-				rsx::shuffle_texel_data_wzyx<u32>(dst, rsx_pitch, width, height);
-				break;
 			}
 
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
@@ -509,17 +498,17 @@ namespace gl
 			if (!m_fence.is_empty())
 				m_fence.destroy();
 		}
-		
+
 		texture::format get_format() const
 		{
 			return format;
 		}
-		
+
 		bool exists() const
 		{
 			return vram_texture != 0;
 		}
-		
+
 		bool is_flushable() const
 		{
 			return (locked && pbo_id != 0);
@@ -574,7 +563,7 @@ namespace gl
 			return (gl::texture::format)fmt == tex->get_internal_format();
 		}
 	};
-		
+
 	class texture_cache : public rsx::texture_cache<void*, cached_texture_section, u32, u32, gl::texture, gl::texture::format>
 	{
 	private:
@@ -607,7 +596,7 @@ namespace gl
 			clear_temporary_subresources();
 			m_unreleased_texture_objects = 0;
 		}
-		
+
 		void clear_temporary_subresources()
 		{
 			for (u32 &id : m_temporary_surfaces)
@@ -697,9 +686,9 @@ namespace gl
 			}
 			}
 		}
-		
+
 	protected:
-		
+
 		void free_texture_section(cached_texture_section& tex) override
 		{
 			tex.destroy();
@@ -776,8 +765,9 @@ namespace gl
 				break;
 			}
 
-			glBindTexture(GL_TEXTURE_2D, vram_texture);
-			apply_component_mapping_flags(GL_TEXTURE_2D, gcm_format, flags);
+			auto target = gl::get_target(type);
+			glBindTexture(target, vram_texture);
+			apply_component_mapping_flags(target, gcm_format, flags);
 
 			auto& cached = create_texture(vram_texture, rsx_address, rsx_size, width, height, depth, mipmaps);
 			cached.set_dirty(false);
@@ -847,7 +837,7 @@ namespace gl
 			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 
-		void insert_texture_barrier() override
+		void insert_texture_barrier(void*&, gl::texture*) override
 		{
 			auto &caps = gl::get_driver_caps();
 
@@ -908,7 +898,7 @@ namespace gl
 			{
 				purge_dirty();
 			}
-			
+
 			clear_temporary_subresources();
 			m_temporary_subresource_cache.clear();
 		}
