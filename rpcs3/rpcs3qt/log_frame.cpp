@@ -335,8 +335,7 @@ void log_frame::UpdateUI()
 		// Hackily used the state of the check..  be better if I actually stored this value.
 		if (m_TTYAct->isChecked())
 		{
-			text.chop(1); // remove newline since Qt automatically adds a newline.
-			m_tty->append(text);
+			m_tty->insertPlainText(text);
 		}
 		// Limit processing time
 		if (steady_clock::now() >= start + 4ms || text.isEmpty()) break;
