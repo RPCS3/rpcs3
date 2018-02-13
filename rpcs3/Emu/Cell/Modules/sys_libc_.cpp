@@ -12,6 +12,10 @@ extern fs::file g_tty;
 
 // cfmt implementation (TODO)
 
+using qsortcmp = s32(vm::ptr<const void> e1, vm::ptr<const void> e2);
+
+static thread_local vm::ptr<qsortcmp> g_cmp;
+
 struct ps3_fmt_src
 {
 	ppu_thread* ctx;
@@ -452,9 +456,16 @@ s32 _sys_vsprintf()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 _sys_qsort()
+void _sys_qsort(vm::ptr<void> base, u32 nelem, u32 size, vm::ptr<qsortcmp> cmp)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.warning("_sys_qsort(base=*0x%x, nelem=%d, size=0x%x, cmp=*0x%x)", base, nelem, size, cmp);
+
+	g_cmp = cmp;
+
+	std::qsort(base.get_ptr(), nelem, size, [](const void* a, const void* b) -> s32
+	{
+		return g_cmp(static_cast<ppu_thread&>(*get_current_cpu_thread()), vm::get_addr(a), vm::get_addr(b));
+	});
 }
 
 void sysPrxForUser_sys_libc_init()
