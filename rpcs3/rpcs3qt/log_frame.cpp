@@ -110,7 +110,7 @@ log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
 	m_log->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_log->installEventFilter(this);
 
-	m_tty = new QTextEdit(m_tabWidget);
+	m_tty = new QPlainTextEdit(m_tabWidget);
 	m_tty->setObjectName("tty_frame");
 	m_tty->setReadOnly(true);
 	m_tty->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -121,8 +121,11 @@ log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
 
 	setWidget(m_tabWidget);
 
-	// Open or create TTY.log
-	m_tty_file.open(fs::get_config_dir() + "TTY.log", fs::read + fs::create);
+	// Open TTY.log
+	m_tty_qfile = std::make_unique<QFile>(qstr(fs::get_config_dir() + "TTY.log"));
+	m_tty_qfile->open(QFile::ReadOnly | QFile::Text);
+
+	m_tty_stream = std::make_unique<QTextStream>(m_tty_qfile.get());
 
 	CreateAndConnectActions();
 
@@ -203,7 +206,7 @@ void log_frame::CreateAndConnectActions()
 	connect(m_clearAct, &QAction::triggered, m_log, &QTextEdit::clear);
 
 	m_clearTTYAct = new QAction(tr("Clear"), this);
-	connect(m_clearTTYAct, &QAction::triggered, m_tty, &QTextEdit::clear);
+	connect(m_clearTTYAct, &QAction::triggered, m_tty, &QPlainTextEdit::clear);
 
 	// Action groups make these actions mutually exclusive.
 	m_logLevels = new QActionGroup(this);
@@ -293,52 +296,20 @@ void log_frame::RepaintTextColors()
 	m_color.append(gui::get_Label_Color("log_level_trace"));
 
 	m_color_stack = gui::get_Label_Color("log_stack");
-
-	m_tty->setTextColor(gui::get_Label_Color("tty_text"));
 }
 
 void log_frame::UpdateUI()
 {
-	std::vector<char> buf(4096);
-
-	// Get UTF-8 string from file
-	auto get_utf8 = [&](const fs::file& file, u64 size) -> QString
-	{
-		size = file.read(buf.data(), size);
-
-		for (u64 i = 0; i < size; i++)
-		{
-			// Get UTF-8 sequence length (no real validation performed)
-			const u64 tail =
-				(buf[i] & 0xF0) == 0xF0 ? 3 :
-				(buf[i] & 0xE0) == 0xE0 ? 2 :
-				(buf[i] & 0xC0) == 0xC0 ? 1 : 0;
-
-			if (i + tail >= size)
-			{ // Copying is expensive-- O(i)-- but I suspect this corruption will be exceptionally unlikely.
-				file.seek(i - size, fs::seek_cur);
-				std::vector<char> sub(&buf[0], &buf[i]);
-				return QString(sub.data());
-			}
-		}
-		return QString(buf.data());
-	};
-
 	const auto start = steady_clock::now();
 
 	// Check TTY logs
-
-	while (const u64 size = std::min<u64>(buf.size(), m_tty_file.size() - m_tty_file.pos()))
+	if (m_tty_qfile->isReadable() && m_TTYAct->isChecked())
 	{
-		QString text = get_utf8(m_tty_file, size);
-
-		// Hackily used the state of the check..  be better if I actually stored this value.
-		if (m_TTYAct->isChecked())
+		QString line;
+		while (m_tty_stream->readLineInto(&line) && (steady_clock::now() < (start + 4ms)))
 		{
-			m_tty->insertPlainText(text);
+			m_tty->appendPlainText(line);
 		}
-		// Limit processing time
-		if (steady_clock::now() >= start + 4ms || text.isEmpty()) break;
 	}
 
 	// Check main logs
