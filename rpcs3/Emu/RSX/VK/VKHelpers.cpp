@@ -283,7 +283,8 @@ namespace vk
 		g_current_renderer = device;
 		const auto gpu_name = g_current_renderer.gpu().name();
 
-/*		const std::array<std::string, 8> black_listed =
+#ifdef _WIN32
+		const std::array<std::string, 8> black_listed =
 		{
 			// Black list all polaris unless its proven they dont have a problem with primitive restart
 			"RX 580",
@@ -303,12 +304,14 @@ namespace vk
 				g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
 				break;
 			}
-		}*/
+		}
 
-		if (gpu_name.find("AMD") != std::string::npos)
+		//Older cards back to GCN1 break primitive restart on 16-bit indices
+		if (gpu_name.find("Radeon") != std::string::npos)
 		{
 			g_drv_force_32bit_indices = true;
 		}
+#endif
 	}
 
 	bool emulate_primitive_restart()
