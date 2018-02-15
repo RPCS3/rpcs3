@@ -591,7 +591,20 @@ namespace gl
 
 			if (auto as_rtt = dynamic_cast<gl::render_target*>(tex))
 			{
-				return (GLenum)as_rtt->get_compatible_internal_format() == fmt;
+				const auto rtt_internal_fmt = (GLenum)as_rtt->get_compatible_internal_format();
+				if (rtt_internal_fmt != fmt)
+				{
+					//When high precision Z is enabled, RTT depth surfaces use DEPTH32F instead of DEPTH24
+					if (rtt_internal_fmt == GL_DEPTH32F_STENCIL8 && fmt == GL_DEPTH24_STENCIL8)
+						return true;
+
+					return false;
+				}
+				else
+				{
+					//Match
+					return true;
+				}
 			}
 
 			return (gl::texture::format)fmt == tex->get_internal_format();
