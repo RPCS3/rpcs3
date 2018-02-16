@@ -74,7 +74,7 @@ namespace gl
 	{
 		bind_as(target::read_frame_buffer);
 		dst.bind_as(target::draw_frame_buffer);
-		__glcheck glBlitFramebuffer(
+		glBlitFramebuffer(
 			src_area.x1, src_area.y1, src_area.x2, src_area.y2,
 			dst_area.x1, dst_area.y1, dst_area.x2, dst_area.y2,
 			(GLbitfield)buffers_, (GLenum)filter_);
@@ -122,7 +122,7 @@ namespace gl
 	{
 		save_binding_state save(*this);
 		GLenum buf = buffer.id();
-		__glcheck glDrawBuffers(1, &buf);
+		glDrawBuffers(1, &buf);
 	}
 
 	void fbo::draw_buffers(const std::initializer_list<attachment>& indexes) const
@@ -134,7 +134,7 @@ namespace gl
 		for (auto &index : indexes)
 			ids.push_back(index.id());
 
-		__glcheck glDrawBuffers((GLsizei)ids.size(), ids.data());
+		glDrawBuffers((GLsizei)ids.size(), ids.data());
 	}
 
 	void fbo::read_buffer(const attachment& buffer) const
@@ -142,13 +142,13 @@ namespace gl
 		save_binding_state save(*this);
 		GLenum buf = buffer.id();
 
-		__glcheck glReadBuffer(buf);
+		glReadBuffer(buf);
 	}
 
 	void fbo::draw_arrays(rsx::primitive_type mode, GLsizei count, GLint first) const
 	{
 		save_binding_state save(*this);
-		__glcheck glDrawArrays(draw_mode(mode), first, count);
+		glDrawArrays(draw_mode(mode), first, count);
 	}
 
 	void fbo::draw_arrays(const buffer& buffer, rsx::primitive_type mode, GLsizei count, GLint first) const
@@ -166,19 +166,19 @@ namespace gl
 	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const
 	{
 		save_binding_state save(*this);
-		__glcheck glDrawElements(draw_mode(mode), count, (GLenum)type, indices);
+		glDrawElements(draw_mode(mode), count, (GLenum)type, indices);
 	}
 
 	void fbo::draw_elements(const buffer& buffer, rsx::primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const
 	{
 		buffer.bind(buffer::target::array);
-		__glcheck glDrawElements(draw_mode(mode), count, (GLenum)type, indices);
+		glDrawElements(draw_mode(mode), count, (GLenum)type, indices);
 	}
 
 	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
 	{
 		indices.bind(buffer::target::element_array);
-		__glcheck glDrawElements(draw_mode(mode), count, (GLenum)type, (GLvoid*)indices_buffer_offset);
+		glDrawElements(draw_mode(mode), count, (GLenum)type, (GLvoid*)indices_buffer_offset);
 	}
 
 	void fbo::draw_elements(const buffer& buffer_, rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
@@ -296,6 +296,16 @@ namespace gl
 		m_id = id;
 	}
 
+	void fbo::set_extents(size2i extents)
+	{
+		m_size = extents;
+	}
+
+	size2i fbo::get_extents() const
+	{
+		return m_size;
+	}
+
 	void texture::settings::apply(const texture &texture) const
 	{
 		save_binding_state save(texture);
@@ -327,42 +337,68 @@ namespace gl
 				}
 			}
 
-			__glcheck glCompressedTexImage2D((GLenum)m_parent->get_target(), m_level, (GLint)m_internal_format, m_width, m_height, 0, compressed_image_size, m_pixels);
+			if (m_parent->get_target() != gl::texture::target::texture2D)
+				fmt::throw_exception("Mutable compressed texture of non-2D type is unimplemented" HERE);
+
+			glCompressedTexImage2D((GLenum)m_parent->get_target(), m_level, (GLint)m_internal_format, m_width, m_height, 0, compressed_image_size, m_pixels);
 		}
 		else
 		{
-			__glcheck glTexImage2D((GLenum)m_parent->get_target(), m_level, (GLint)m_internal_format, m_width, m_height, 0, (GLint)m_format, (GLint)m_type, m_pixels);
+			switch ((GLenum)m_parent->get_target())
+			{
+			case GL_TEXTURE_1D:
+			{
+				glTexImage1D(GL_TEXTURE_1D, m_level, (GLint)m_internal_format, m_width, 0, (GLint)m_format, (GLint)m_type, m_pixels);
+				break;
+			}
+			case GL_TEXTURE_2D:
+			{
+				glTexImage2D(GL_TEXTURE_2D, m_level, (GLint)m_internal_format, m_width, m_height, 0, (GLint)m_format, (GLint)m_type, m_pixels);
+				break;
+			}
+			case GL_TEXTURE_3D:
+			{
+				glTexImage3D(GL_TEXTURE_3D, m_level, (GLint)m_internal_format, m_width, m_height, m_depth, 0, (GLint)m_format, (GLint)m_type, m_pixels);
+				break;
+			}
+			case GL_TEXTURE_CUBE_MAP:
+			{
+				for (int face = 0; face < 6; ++face)
+					glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, m_level, (GLint)m_internal_format, m_width, m_height, 0, (GLint)m_format, (GLint)m_type, m_pixels);
+				break;
+			}
+			}
 		}
 
-		__glcheck glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_MAX_LEVEL, m_max_level);
+		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_MAX_LEVEL, m_max_level);
 
-		if (m_pixels)
+		if (m_pixels && m_generate_mipmap)
 		{
-			__glcheck glTexParameteri((GLenum)m_parent->get_target(), GL_GENERATE_MIPMAP, m_generate_mipmap ? GL_TRUE : GL_FALSE);
+			glGenerateMipmap((GLenum)m_parent->get_target());
 		}
 
-		__glcheck glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_WRAP_S, (GLint)m_wrap_s);
-		__glcheck glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_WRAP_T, (GLint)m_wrap_t);
-		__glcheck glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_WRAP_R, (GLint)m_wrap_r);
+		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_WRAP_S, (GLint)m_wrap_s);
+		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_WRAP_T, (GLint)m_wrap_t);
+		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_WRAP_R, (GLint)m_wrap_r);
 
-		__glcheck glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_COMPARE_MODE, (GLint)m_compare_mode);
-		__glcheck glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_COMPARE_FUNC, (GLint)m_compare_func);
+		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_COMPARE_MODE, (GLint)m_compare_mode);
+		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_COMPARE_FUNC, (GLint)m_compare_func);
 
-		__glcheck glTexParameterf((GLenum)m_parent->get_target(), GL_TEXTURE_MIN_LOD, m_max_lod);
-		__glcheck glTexParameterf((GLenum)m_parent->get_target(), GL_TEXTURE_MAX_LOD, m_min_lod);
-		__glcheck glTexParameterf((GLenum)m_parent->get_target(), GL_TEXTURE_LOD_BIAS, m_lod);
+		glTexParameterf((GLenum)m_parent->get_target(), GL_TEXTURE_MIN_LOD, m_max_lod);
+		glTexParameterf((GLenum)m_parent->get_target(), GL_TEXTURE_MAX_LOD, m_min_lod);
+		glTexParameterf((GLenum)m_parent->get_target(), GL_TEXTURE_LOD_BIAS, m_lod);
 
-		__glcheck glTexParameterfv((GLenum)m_parent->get_target(), GL_TEXTURE_BORDER_COLOR, m_border_color.rgba);
+		glTexParameterfv((GLenum)m_parent->get_target(), GL_TEXTURE_BORDER_COLOR, m_border_color.rgba);
 
-		__glcheck glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_MIN_FILTER, (GLint)m_min_filter);
-		__glcheck glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_MAG_FILTER, (GLint)m_mag_filter);
+		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_MIN_FILTER, (GLint)m_min_filter);
+		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_MAG_FILTER, (GLint)m_mag_filter);
 
-		__glcheck glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_R, (GLint)m_swizzle_r);
-		__glcheck glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_G, (GLint)m_swizzle_g);
-		__glcheck glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_B, (GLint)m_swizzle_b);
-		__glcheck glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_A, (GLint)m_swizzle_a);
+		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_R, (GLint)m_swizzle_r);
+		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_G, (GLint)m_swizzle_g);
+		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_B, (GLint)m_swizzle_b);
+		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_A, (GLint)m_swizzle_a);
 
-		__glcheck glTexParameterf((GLenum)m_parent->get_target(), GL_TEXTURE_MAX_ANISOTROPY_EXT, m_aniso);
+		glTexParameterf((GLenum)m_parent->get_target(), GL_TEXTURE_MAX_ANISOTROPY_EXT, m_aniso);
 	}
 
 	void texture::settings::apply()
@@ -419,6 +455,12 @@ namespace gl
 	texture::settings& texture::settings::height(uint height)
 	{
 		m_height = height;
+		return *this;
+	}
+
+	texture::settings& texture::settings::depth(uint depth)
+	{
+		m_depth = depth;
 		return *this;
 	}
 

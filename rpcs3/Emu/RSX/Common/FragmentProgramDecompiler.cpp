@@ -502,7 +502,78 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 std::string FragmentProgramDecompiler::BuildCode()
 {
-	//main += fmt::format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
+	//Scan if any outputs are available
+	const bool use_32_bit_exports = !!(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
+	const bool exports_depth = !!(m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
+	const std::set<std::string> output_values =
+	{
+		(use_32_bit_exports) ? "r0" : "h0",
+		"r1",
+		(use_32_bit_exports) ? "r2" : "h4",
+		(use_32_bit_exports) ? "r3" : "h6",
+		(use_32_bit_exports) ? "r4" : "h8",
+	};
+
+	bool gather_output_registers = true;
+	const auto float4_name = getFloatTypeName(4);
+	for (auto &v : output_values)
+	{
+		if (m_parr.HasParam(PF_PARAM_NONE, float4_name, v))
+		{
+			gather_output_registers = false;
+			break;
+		}
+	}
+
+	//Explicitly discard on encountering null shaders
+	if (gather_output_registers)
+	{
+		bool has_any_output = false;
+		bool first_output_exists = false;
+
+		if (use_32_bit_exports || exports_depth)
+		{
+			for (int reg = 0; reg < 5; ++reg)
+			{
+				if (reg == 1 && !exports_depth)
+					continue;
+
+				const std::string half_register = "h" + std::to_string(reg + 1);
+				if (m_parr.HasParam(PF_PARAM_NONE, float4_name, half_register))
+				{
+					has_any_output = true;
+					if (!reg) first_output_exists = true;
+
+					const std::string this_register = "r" + std::to_string(reg);
+					AddReg(reg, 0);
+					AddCode("//Register gather because output was not specified");
+					AddCode(this_register + ".zw = gather(" + half_register + ");");
+				}
+			}
+		}
+
+		if (!has_any_output)
+		{
+			properties.has_no_output = true;
+
+			LOG_ERROR(RSX, "Invalid fragment shader: No output register was updated!");
+
+			//Comment out main block as it is now useless
+			main = "/*\n" + main + "*/\n";
+			AddCode("//No output, manually abort writes (nvidia+vulkan writes garbage otherwise)");
+			AddCode("discard;");
+		}
+		else
+		{
+			//Requires gather operation for output...
+			properties.has_gather_op = true;
+
+			if (!first_output_exists)
+			{
+				LOG_WARNING(RSX, "Fragment shader does not write to first RTT and has no explicit output registers");
+			}
+		}
+	}
 
 	std::stringstream OS;
 	insertHeader(OS);
@@ -806,9 +877,17 @@ std::string FragmentProgramDecompiler::Decompile()
 				if (m_loop_count) AddFlowOp("break");
 				else LOG_ERROR(RSX, "BRK opcode found outside of a loop");
 				break;
-			case RSX_FP_OPCODE_CAL: LOG_ERROR(RSX, "Unimplemented SIP instruction: CAL"); break;
-			case RSX_FP_OPCODE_FENCT: forced_unit = FORCE_SCT; break;
-			case RSX_FP_OPCODE_FENCB: forced_unit = FORCE_SCB; break;
+			case RSX_FP_OPCODE_CAL:
+				LOG_ERROR(RSX, "Unimplemented SIP instruction: CAL");
+				break;
+			case RSX_FP_OPCODE_FENCT:
+				AddCode("//FENCT");
+				forced_unit = FORCE_SCT;
+				break;
+			case RSX_FP_OPCODE_FENCB:
+				AddCode("//FENCB");
+				forced_unit = FORCE_SCB;
+				break;
 			case RSX_FP_OPCODE_IFE:
 				AddCode("if($cond)");
 				if (src2.end_offset != src1.else_offset)
@@ -849,7 +928,9 @@ std::string FragmentProgramDecompiler::Decompile()
 					m_code_level++;
 				}
 				break;
-			case RSX_FP_OPCODE_RET: AddFlowOp("return"); break;
+			case RSX_FP_OPCODE_RET:
+				AddFlowOp("return");
+				break;
 
 			default:
 				return false;

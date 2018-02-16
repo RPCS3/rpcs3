@@ -25,11 +25,12 @@ namespace vk
 	using shader_cache = rsx::shaders_cache<vk::pipeline_props, VKProgramBuffer>;
 }
 
-//Heap allocation sizes in MB - each 'frame' owns a private heap, one of each kind
+//Heap allocation sizes in MB
+//NOTE: Texture uploads can be huge, upto 16MB for a single texture (4096x4096px)
 #define VK_ATTRIB_RING_BUFFER_SIZE_M 256
+#define VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M 256
 #define VK_UBO_RING_BUFFER_SIZE_M 64
 #define VK_INDEX_RING_BUFFER_SIZE_M 64
-#define VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M 128
 
 #define VK_MAX_ASYNC_CB_COUNT 64
 #define VK_MAX_ASYNC_FRAMES 2
@@ -252,6 +253,7 @@ private:
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
 	std::unique_ptr<vk::depth_convert_pass> m_depth_converter;
+	std::unique_ptr<vk::depth_scaling_pass> m_depth_scaler;
 	std::unique_ptr<vk::ui_overlay_renderer> m_ui_renderer;
 
 	std::mutex m_sampler_mutex;
@@ -375,6 +377,8 @@ private:
 	void close_render_pass();
 
 	void update_draw_state();
+
+	void check_heap_status();
 
 	/// returns primitive topology, index_count, allocated_verts, vertex_base_index, (offset in index buffer, index type)
 	std::tuple<VkPrimitiveTopology, u32, u32, u32, std::optional<std::tuple<VkDeviceSize, VkIndexType> > > upload_vertex_data();
