@@ -226,6 +226,7 @@ public:
 		bool has_lit_op = false;
 		bool has_gather_op = false;
 		bool has_wpos_input = false;
+		bool has_no_output = false;
 	}
 	properties;
 
