@@ -394,7 +394,7 @@ if(NOT MSVC)
 endif()
 
 if(WIN32)
-	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
+	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
 	if(NOT MSVC)
 		target_link_libraries(rpcs3 ${OPENGL_LIBRARIES} opengl32.lib glu32.lib libpthread)
 	else()

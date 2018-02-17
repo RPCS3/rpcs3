@@ -238,9 +238,7 @@ class VKGSRender : public GSRender
 private:
 	VKFragmentProgram m_fragment_prog;
 	VKVertexProgram m_vertex_prog;
-
 	vk::glsl::program *m_program;
-	vk::context m_thread_context;
 
 	vk::texture_cache m_texture_cache;
 	rsx::vk_render_targets m_rtts;
@@ -275,8 +273,9 @@ public:
 private:
 	std::unique_ptr<VKProgramBuffer> m_prog_buffer;
 
+	std::unique_ptr<vk::swapchain_base> m_swapchain;
+	vk::context m_thread_context;
 	vk::render_device *m_device;
-	vk::swap_chain* m_swap_chain;
 
 	//Vulkan internals
 	vk::command_pool m_command_buffer_pool;
