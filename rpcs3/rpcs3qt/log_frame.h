@@ -56,8 +56,8 @@ private:
 	ullong m_log_counter;
 	bool m_stack_log;
 
-	std::unique_ptr<QFile> m_tty_qfile;
-	std::unique_ptr<QTextStream> m_tty_stream;
+	QFile m_tty_qfile;
+	QTextStream m_tty_stream;
 
 	QAction* m_clearAct;
 	QAction* m_clearTTYAct;

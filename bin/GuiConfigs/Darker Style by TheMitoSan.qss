@@ -289,9 +289,6 @@ QLabel#log_stack {
 QTextEdit#tty_frame {
 	background-color: #000; /* Black */
 }
-QLabel#tty_text {
-	color: #fff; /* White */
-}
 
 /* RSX Debugger */
 QLabel#rsx_debugger_display_buffer {

@@ -122,10 +122,9 @@ log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
 	setWidget(m_tabWidget);
 
 	// Open TTY.log
-	m_tty_qfile = std::make_unique<QFile>(qstr(fs::get_config_dir() + "TTY.log"));
-	m_tty_qfile->open(QFile::ReadOnly | QFile::Text);
-
-	m_tty_stream = std::make_unique<QTextStream>(m_tty_qfile.get());
+	m_tty_qfile.setFileName(qstr(fs::get_config_dir() + "TTY.log"));
+	m_tty_qfile.open(QFile::ReadOnly | QFile::Text);
+	m_tty_stream.setDevice(&m_tty_qfile);
 
 	CreateAndConnectActions();
 
@@ -303,10 +302,10 @@ void log_frame::UpdateUI()
 	const auto start = steady_clock::now();
 
 	// Check TTY logs
-	if (m_tty_qfile->isReadable() && m_TTYAct->isChecked())
+	if (m_TTYAct->isChecked())
 	{
 		QString line;
-		while (m_tty_stream->readLineInto(&line) && (steady_clock::now() < (start + 4ms)))
+		while (m_tty_stream.readLineInto(&line) && (steady_clock::now() < (start + 4ms)))
 		{
 			m_tty->appendPlainText(line);
 		}
