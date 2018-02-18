@@ -84,7 +84,7 @@ namespace vk
 			CHECK_RESULT(vkCreatePipelineLayout(*m_device, &layout_info, nullptr, &m_pipeline_layout));
 		}
 
-		virtual void update_uniforms(vk::glsl::program *program)
+		virtual void update_uniforms(vk::glsl::program* /*program*/)
 		{
 		}
 
@@ -714,6 +714,44 @@ namespace vk
 			}
 
 			ui.update();
+		}
+	};
+
+	struct depth_scaling_pass : public overlay_pass
+	{
+		depth_scaling_pass()
+		{
+			vs_src =
+			{
+				"#version 450\n"
+				"#extension GL_ARB_separate_shader_objects : enable\n"
+				"layout(location=0) out vec2 tc0;\n"
+				"\n"
+				"void main()\n"
+				"{\n"
+				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
+				"	vec2 coords[] = {vec2(0., 0.), vec2(1., 0.), vec2(0., 1.), vec2(1., 1.)};\n"
+				"	gl_Position = vec4(positions[gl_VertexIndex % 4], 0., 1.);\n"
+				"	tc0 = coords[gl_VertexIndex % 4];\n"
+				"}\n"
+			};
+
+			fs_src =
+			{
+				"#version 420\n"
+				"#extension GL_ARB_separate_shader_objects : enable\n"
+				"layout(set=0, binding=0) uniform sampler2D fs0;\n"
+				"layout(location=0) in vec2 tc0;\n"
+				"\n"
+				"void main()\n"
+				"{\n"
+				"	gl_FragDepth = texture(fs0, tc0).x;\n"
+				"}\n"
+			};
+
+			renderpass_config.write_color = false;
+			m_vertex_shader.id = 100006;
+			m_fragment_shader.id = 100007;
 		}
 	};
 }

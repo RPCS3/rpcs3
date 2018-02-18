@@ -189,6 +189,8 @@ namespace rsx
 
 		void decode(u32 reg, u32 value);
 
+		bool test(u32 reg, u32 value) const;
+
 		void reset();
 
 		template<typename Archive>
