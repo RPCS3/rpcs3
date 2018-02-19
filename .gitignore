@@ -93,6 +93,10 @@ CMakeCache.txt
 rpcs3/cotire/*
 rpcs3/rpcs3_*_cotire.cmake
 
+# kdevelop
+*.kdev4
+.kdev4/*
+
 # Qt
 moc_*.cpp
 qrc_resources.cpp
