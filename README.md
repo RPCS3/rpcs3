@@ -101,6 +101,9 @@ This Builds RPCS3 with support for debugging PS3 games using gdb.
 - ```-DUSE_VULKAN=ON/OFF``` (default = *ON*)  
 This builds RPCS3 with Vulkan support.
 
+- ```-DUSE_NATIVE_INSTRUCTIONS=ON/OFF``` (default = *ON*)  
+This builds rpcs3 with -march=native, which is useful for local builds, but not good for packages.
+
 ## License
 
 Most files are licensed under the terms of GNU GPLv2 License, see LICENSE file for details. Some files may be licensed differently, check appropriate file headers for details.

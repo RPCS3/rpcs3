@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 
 option(WITH_GDB "WITH_GDB" OFF)
 option(WITHOUT_LLVM "WITHOUT_LLVM" OFF)
+option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
 
 if (WITH_GDB)
 	add_definitions(-DWITH_GDB_DEBUGGER)
