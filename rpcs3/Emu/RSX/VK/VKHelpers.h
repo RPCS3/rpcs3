@@ -1121,6 +1121,12 @@ public:
 			m_width = rect.right - rect.left;
 			m_height = rect.bottom - rect.top;
 
+			if (m_width == 0 || m_height == 0)
+			{
+				LOG_ERROR(RSX, "Invalid window dimensions %d x %d", m_width, m_height);
+				return false;
+			}
+
 			BITMAPINFO bitmap = {};
 			bitmap.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 			bitmap.bmiHeader.biWidth = m_width;
@@ -1161,10 +1167,13 @@ public:
 			auto& src = swapchain_images[image];
 			GdiFlush();
 
-			memcpy(hPtr, src.second->get_pixels(), src.second->get_required_memory_size());
-			BitBlt(hDstDC, 0, 0, m_width, m_height, hSrcDC, 0, 0, SRCCOPY);
+			if (hSrcDC)
+			{
+				memcpy(hPtr, src.second->get_pixels(), src.second->get_required_memory_size());
+				BitBlt(hDstDC, 0, 0, m_width, m_height, hSrcDC, 0, 0, SRCCOPY);
+				src.second->free_pixels();
+			}
 
-			src.second->free_pixels();
 			src.first = false;
 			return VK_SUCCESS;
 		}
@@ -1264,7 +1273,7 @@ public:
 		}
 #endif
 
-		VkResult acquire_next_swapchain_image(VkSemaphore semaphore, u64 timeout, u32* result) override
+		VkResult acquire_next_swapchain_image(VkSemaphore /*semaphore*/, u64 /*timeout*/, u32* result) override
 		{
 			u32 index = 0;
 			for (auto &p : swapchain_images)
@@ -1301,7 +1310,6 @@ public:
 		void init_swapchain_images(render_device& dev, u32 preferred_count) override
 		{
 			swapchain_images.resize(preferred_count);
-			printf("Preparing %d images with sizes %d x %d\n", preferred_count, m_width, m_height);
 			for (auto &img : swapchain_images)
 			{
 				img.second = std::make_unique<swapchain_image_RPCS3>(dev, dev.get_memory_mapping(), m_width, m_height);
@@ -1323,7 +1331,7 @@ public:
 		PFN_vkQueuePresentKHR queuePresentKHR = nullptr;
 
 	protected:
-		void init_swapchain_images(render_device& dev, u32 preferred_count) override
+		void init_swapchain_images(render_device& dev, u32 /*preferred_count*/ = 0) override
 		{
 			u32 nb_swap_images = 0;
 			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, nullptr);
@@ -1507,7 +1515,7 @@ public:
 				destroySwapchainKHR(dev, old_swapchain, nullptr);
 			}
 
-			init_swapchain_images(dev, nb_swap_images);
+			init_swapchain_images(dev);
 			return true;
 		}
 
@@ -1516,7 +1524,7 @@ public:
 			return vkAcquireNextImageKHR(dev, m_vk_swapchain, timeout, semaphore, VK_NULL_HANDLE, result);
 		}
 
-		void end_frame(command_buffer &cmd, u32 index) override
+		void end_frame(command_buffer& /*cmd*/, u32 /*index*/) override
 		{
 		}
 
