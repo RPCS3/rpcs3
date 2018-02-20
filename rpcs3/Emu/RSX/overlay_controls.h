@@ -1157,7 +1157,7 @@ namespace rsx
 				set_size(_w, _h);
 			}
 
-			void set_size(u16 w, u16 h) override
+			void set_size(u16 /*w*/, u16 h) override
 			{
 				image_view::set_size(h, h);
 				text_offset = (h / 2) + 10; //By default text is at the horizontal center
