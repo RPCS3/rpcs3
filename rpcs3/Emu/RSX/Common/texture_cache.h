@@ -1311,28 +1311,6 @@ namespace rsx
 			u32 internal_height = tex_height;
 			get_native_dimensions(internal_width, internal_height, texptr);
 
-			if (internal_width > surface_width || internal_height > surface_height)
-			{
-				//An AA flag is likely missing
-				//HACK
-				auto aa_mode = texptr->aa_mode;
-				if ((internal_width >> 1) == surface_width)
-				{
-					if (internal_height > surface_height)
-						texptr->aa_mode = rsx::surface_antialiasing::square_centered_4_samples;
-					else
-						texptr->aa_mode = rsx::surface_antialiasing::diagonal_centered_2_samples;
-
-					internal_width = tex_width;
-					internal_height = tex_height;
-					get_native_dimensions(internal_width, internal_height, texptr);
-				}
-
-				internal_width = std::min(internal_width, (u32)surface_width);
-				internal_height = std::min(internal_height, (u32)surface_height);
-				texptr->aa_mode = aa_mode;
-			}
-
 			const bool unnormalized = (gcm_format & CELL_GCM_TEXTURE_UN) != 0;
 			f32 scale_x = (unnormalized)? (1.f / tex_width) : 1.f;
 			f32 scale_y = (unnormalized)? (1.f / tex_height) : 1.f;
@@ -1343,9 +1321,18 @@ namespace rsx
 				scale_y = 0.f;
 			}
 
-			bool requires_processing = surface_width != internal_width || surface_height != internal_height;
+			bool requires_processing = surface_width > internal_width || surface_height > internal_height;
 			if (!requires_processing)
 			{
+				//NOTE: The scale also accounts for sampling outside the RTT region, e.g render to one quadrant but send whole texture for sampling
+				//In these cases, internal dimensions will exceed available surface dimensions. Account for the missing information using scaling (missing data will result in border color)
+				//TODO: Proper gather and stitching without performance loss
+				if (internal_width > surface_width)
+					scale_x *= ((f32)internal_width / surface_width);
+
+				if (internal_height > surface_height)
+					scale_y *= ((f32)internal_height / surface_height);
+
 				if (!is_depth)
 				{
 					for (const auto& tex : m_rtts.m_bound_render_targets)
