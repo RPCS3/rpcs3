@@ -69,9 +69,6 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\ps3emu_api\ps3emu_api.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="..\Utilities\bin_patch.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -115,6 +112,7 @@
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="..\Utilities\version.cpp" />
     <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_gpio.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_net.cpp" />
     <ClCompile Include="Emu\Cell\PPUAnalyser.cpp" />
     <ClCompile Include="Emu\Cell\PPUTranslator.cpp">
@@ -350,7 +348,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\3rdparty\stblib\stb_image.h" />
-    <ClInclude Include="..\ps3emu_api\ps3emu_api.h" />
     <ClInclude Include="..\Utilities\Atomic.h" />
     <ClInclude Include="..\Utilities\AtomicPtr.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
@@ -393,6 +390,7 @@
     <ClInclude Include="Crypto\unself.h" />
     <ClInclude Include="Crypto\utils.h" />
     <ClInclude Include="define_new_memleakdetect.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_gpio.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_net.h" />
     <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h" />
     <ClInclude Include="Emu\Cell\PPUAnalyser.h" />
@@ -569,8 +567,6 @@
     <ClInclude Include="Loader\TAR.h" />
     <ClInclude Include="Loader\TROPUSR.h" />
     <ClInclude Include="Loader\TRP.h" />
-    <ClInclude Include="ps3emu_api_enums.h" />
-    <ClInclude Include="ps3emu_api_structs.h" />
     <ClInclude Include="restore_new.h" />
     <ClInclude Include="rpcs3_version.h" />
     <ClInclude Include="stdafx.h" />

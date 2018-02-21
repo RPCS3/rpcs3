@@ -533,7 +533,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		}
 		else
 		{
-			m_gameList->verticalScrollBar()->setValue(std::min(m_gameList->verticalScrollBar()->maximum(), scroll_position));
+			m_gameList->verticalScrollBar()->setValue(scroll_position);
 		}
 	}
 	else
@@ -551,15 +551,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 		m_Central_Widget->addWidget(m_xgrid);
 		m_Central_Widget->setCurrentWidget(m_xgrid);
-
-		if (scrollAfter)
-		{
-			m_xgrid->scrollTo(m_xgrid->currentIndex());
-		}
-		else
-		{
-			m_xgrid->verticalScrollBar()->setValue(std::min(m_xgrid->verticalScrollBar()->maximum(), scroll_position));
-		}
+		m_xgrid->verticalScrollBar()->setValue(scroll_position);
 	}
 }
 

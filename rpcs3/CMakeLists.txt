@@ -108,7 +108,7 @@ if(NOT MSVC)
 
 	add_compile_options(-msse -msse2 -mcx16 -mrtm)
 
-	if(NOT DEFINED ENV{TRAVIS})
+	if(NOT DEFINED ENV{TRAVIS} AND USE_NATIVE_INSTRUCTIONS)
 		add_compile_options(-march=native)
 	endif()
 
@@ -394,7 +394,7 @@ if(NOT MSVC)
 endif()
 
 if(WIN32)
-	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
+	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
 	if(NOT MSVC)
 		target_link_libraries(rpcs3 ${OPENGL_LIBRARIES} opengl32.lib glu32.lib libpthread)
 	else()

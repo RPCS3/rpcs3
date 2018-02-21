@@ -6,7 +6,7 @@ or our discord:
 https://discord.me/RPCS3
 
 PLEASE READ THE GUIDELINES BEFORE OPENING AN ISSUE:
-https://github.com/RPCS3/rpcs3/blob/master/CONTRIBUTING.md
+https://github.com/RPCS3/rpcs3/blob/master/.github/CONTRIBUTING.md
 
 ====================================================
 

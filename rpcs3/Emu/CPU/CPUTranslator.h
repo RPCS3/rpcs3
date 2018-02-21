@@ -711,6 +711,38 @@ public:
 		return result;
 	}
 
+	template <typename T, typename T2>
+	value_t<T> bitcast(T2 expr)
+	{
+		value_t<T> result;
+		result.value = m_ir->CreateBitCast(expr.eval(m_ir), result.get_type(m_context));
+		return result;
+	}
+
+	template <typename T, typename T2>
+	value_t<T> trunc(T2 expr)
+	{
+		value_t<T> result;
+		result.value = m_ir->CreateTrunc(expr.eval(m_ir), result.get_type(m_context));
+		return result;
+	}
+
+	template <typename T, typename T2>
+	value_t<T> sext(T2 expr)
+	{
+		value_t<T> result;
+		result.value = m_ir->CreateSExt(expr.eval(m_ir), result.get_type(m_context));
+		return result;
+	}
+
+	template <typename T, typename T2>
+	value_t<T> zext(T2 expr)
+	{
+		value_t<T> result;
+		result.value = m_ir->CreateZExt(expr.eval(m_ir), result.get_type(m_context));
+		return result;
+	}
+
 	// Get unsigned addition carry into the sign bit (s = a + b)
 	template <typename T>
 	static inline auto ucarry(T a, T b, T s)
