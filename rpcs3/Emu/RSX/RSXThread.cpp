@@ -1257,6 +1257,7 @@ namespace rsx
 		if (state.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			vertex_input_layout result = {};
+			result.interleaved_blocks.reserve(8);
 
 			interleaved_range_info info = {};
 			info.interleaved = true;
@@ -1281,6 +1282,8 @@ namespace rsx
 
 		const u32 frequency_divider_mask = rsx::method_registers.frequency_divider_operation_mask();
 		vertex_input_layout result = {};
+		result.interleaved_blocks.reserve(8);
+		result.referenced_registers.reserve(4);
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
