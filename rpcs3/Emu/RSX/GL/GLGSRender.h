@@ -374,7 +374,6 @@ protected:
 	void on_exit() override;
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
-	u64 timestamp() const override;
 
 	void do_local_task(bool idle) override;
 
