@@ -666,6 +666,9 @@ VKGSRender::~VKGSRender()
 	vk::finalize_compiler_context();
 	m_prog_buffer->clear();
 
+	m_persistent_attribute_storage.reset();
+	m_volatile_attribute_storage.reset();
+
 	//Global resources
 	vk::destroy_global_resources();
 
@@ -1209,10 +1212,12 @@ void VKGSRender::end()
 
 	//Load program
 	std::chrono::time_point<steady_clock> program_start = textures_end;
-	load_program(std::get<2>(upload_info), std::get<3>(upload_info));
+	load_program(upload_info);
 
-	m_program->bind_uniform(m_persistent_attribute_storage, "persistent_input_stream", m_current_frame->descriptor_set);
-	m_program->bind_uniform(m_volatile_attribute_storage, "volatile_input_stream", m_current_frame->descriptor_set);
+	VkBufferView persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
+	VkBufferView volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
+	m_program->bind_uniform(persistent_buffer, "persistent_input_stream", m_current_frame->descriptor_set);
+	m_program->bind_uniform(volatile_buffer, "volatile_input_stream", m_current_frame->descriptor_set);
 
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
@@ -1445,8 +1450,6 @@ void VKGSRender::end()
 		vkCmdClearAttachments(*m_current_command_buffer, static_cast<u32>(buffers_to_clear.size()), buffers_to_clear.data(), 1, &clear_rect);
 	}
 
-	std::optional<std::tuple<VkDeviceSize, VkIndexType> > index_info = std::get<4>(upload_info);
-
 	bool primitive_emulated = false;
 	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
 
@@ -1461,12 +1464,11 @@ void VKGSRender::end()
 		m_occlusion_map[m_active_query_info->driver_handle].command_buffer_to_wait = m_current_command_buffer;
 	}
 
-	if (!index_info)
+	if (!upload_info.index_info)
 	{
 		if (single_draw)
 		{
-			const auto vertex_count = std::get<1>(upload_info);
-			vkCmdDraw(*m_current_command_buffer, vertex_count, 1, 0, 0);
+			vkCmdDraw(*m_current_command_buffer, upload_info.vertex_draw_count, 1, 0, 0);
 		}
 		else
 		{
@@ -1480,10 +1482,10 @@ void VKGSRender::end()
 	else
 	{
 		VkIndexType index_type;
-		u32 index_count = std::get<1>(upload_info);
+		const u32 index_count = upload_info.vertex_draw_count;
 		VkDeviceSize offset;
 
-		std::tie(offset, index_type) = index_info.value();
+		std::tie(offset, index_type) = upload_info.index_info.value();
 		vkCmdBindIndexBuffer(*m_current_command_buffer, m_index_buffer_ring_info.heap->value, offset, index_type);
 
 		if (single_draw)
@@ -2160,7 +2162,7 @@ bool VKGSRender::check_program_status()
 	return (rsx::method_registers.shader_program_address() != 0);
 }
 
-void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
+void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 {
 	get_current_fragment_program(fs_sampler_state);
 	verify(HERE), current_fragment_program.valid;
@@ -2343,11 +2345,13 @@ void VKGSRender::load_program(u32 vertex_count, u32 vertex_base)
 	fill_scale_offset_data(buf, false);
 	fill_user_clip_data(buf + 64);
 	*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
-	*(reinterpret_cast<u32*>(buf + 132)) = vertex_base;
+	*(reinterpret_cast<u32*>(buf + 132)) = vertex_info.vertex_index_base;
 	*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
 	*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
 	*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
-	fill_vertex_layout_state(m_vertex_layout, vertex_count, reinterpret_cast<s32*>(buf + 160));
+
+	fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, reinterpret_cast<s32*>(buf + 160),
+			vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
 
 	//Vertex constants
 	buf = buf + 512;
