@@ -98,7 +98,7 @@ struct driver_state
 		return !!test;
 	}
 
-	const bool test_property(GLenum property, u32 test) const
+	inline bool test_property(GLenum property, u32 test) const
 	{
 		auto found = properties.find(property);
 		if (found == properties.end())
@@ -374,7 +374,6 @@ protected:
 	void on_exit() override;
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
-	u64 timestamp() const override;
 
 	void do_local_task(bool idle) override;
 
