@@ -21,6 +21,16 @@ namespace gl
 	using null_vertex_cache = vertex_cache;
 
 	using shader_cache = rsx::shaders_cache<void*, GLProgramBuffer>;
+
+	struct vertex_upload_info
+	{
+		u32 vertex_draw_count;
+		u32 allocated_vertex_count;
+		u32 vertex_index_base;
+		u32 persistent_mapping_offset;
+		u32 volatile_mapping_offset;
+		std::optional<std::tuple<GLenum, u32> > index_info;
+	};
 }
 
 struct work_item
@@ -255,16 +265,6 @@ struct driver_state
 	}
 };
 
-struct vertex_upload_info
-{
-	u32 vertex_draw_count;
-	u32 allocated_vertex_count;
-	u32 vertex_index_base;
-	u32 persistent_mapping_offset;
-	u32 volatile_mapping_offset;
-	std::optional<std::tuple<GLenum, u32> > index_info;
-};
-
 class GLGSRender : public GSRender
 {
 private:
@@ -340,14 +340,14 @@ private:
 	driver_state gl_state;
 
 	// Return element to draw and in case of indexed draw index type and offset in index buffer
-	vertex_upload_info set_vertex_buffer();
+	gl::vertex_upload_info set_vertex_buffer();
 	rsx::vertex_input_layout m_vertex_layout = {};
 
 	void clear_surface(u32 arg);
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 
 	bool check_program_state();
-	void load_program(const vertex_upload_info& upload_info);
+	void load_program(const gl::vertex_upload_info& upload_info);
 
 	void update_draw_state();
 

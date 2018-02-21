@@ -1034,7 +1034,7 @@ bool GLGSRender::check_program_state()
 	return (rsx::method_registers.shader_program_address() != 0);
 }
 
-void GLGSRender::load_program(const vertex_upload_info& upload_info)
+void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 {
 	get_current_fragment_program(fs_sampler_state);
 	verify(HERE), current_fragment_program.valid;

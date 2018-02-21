@@ -253,8 +253,7 @@ namespace
 	};
 }
 
-std::tuple<VkPrimitiveTopology, u32, u32, u32, std::optional<std::tuple<VkDeviceSize, VkIndexType> > >
-VKGSRender::upload_vertex_data()
+vk::vertex_upload_info VKGSRender::upload_vertex_data()
 {
 	m_vertex_layout = analyse_inputs_interleaved();
 
@@ -266,10 +265,8 @@ VKGSRender::upload_vertex_data()
 
 	//Do actual vertex upload
 	auto required = calculate_memory_requirements(m_vertex_layout, vertex_count);
+	u32 persistent_range_base = UINT32_MAX, volatile_range_base = UINT32_MAX;
 	size_t persistent_offset = UINT64_MAX, volatile_offset = UINT64_MAX;
-
-	m_persistent_attribute_storage = VK_NULL_HANDLE;
-	m_volatile_attribute_storage = VK_NULL_HANDLE;
 
 	if (required.first > 0)
 	{
@@ -287,8 +284,7 @@ VKGSRender::upload_vertex_data()
 			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, VK_FORMAT_R8_UINT, required.first))
 			{
 				in_cache = true;
-				m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device,
-					m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, cached->offset_in_heap, required.first));
+				persistent_range_base = cached->offset_in_heap;
 			}
 			else
 			{
@@ -299,8 +295,7 @@ VKGSRender::upload_vertex_data()
 		if (!in_cache)
 		{
 			persistent_offset = (u32)m_attrib_ring_info.alloc<256>(required.first);
-			m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device,
-				m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, persistent_offset, required.first));
+			persistent_range_base = (u32)persistent_offset;
 
 			if (to_store)
 			{
@@ -308,25 +303,12 @@ VKGSRender::upload_vertex_data()
 				m_vertex_cache->store_range(storage_address, VK_FORMAT_R8_UINT, required.first, (u32)persistent_offset);
 			}
 		}
-
-		m_persistent_attribute_storage = m_current_frame->buffer_views_to_clean.back()->value;
-	}
-	else
-	{
-		m_persistent_attribute_storage = null_buffer_view->value;
 	}
 
 	if (required.second > 0)
 	{
 		volatile_offset = (u32)m_attrib_ring_info.alloc<256>(required.second);
-		m_current_frame->buffer_views_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device,
-			m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, volatile_offset, required.second));
-
-		m_volatile_attribute_storage = m_current_frame->buffer_views_to_clean.back()->value;
-	}
-	else
-	{
-		m_volatile_attribute_storage = null_buffer_view->value;
+		volatile_range_base = (u32)volatile_offset;
 	}
 
 	//Write all the data once if possible
@@ -358,5 +340,32 @@ VKGSRender::upload_vertex_data()
 		}
 	}
 
-	return std::make_tuple(result.native_primitive_type, result.vertex_draw_count, result.allocated_vertex_count, result.vertex_index_base, result.index_info);
+	if (persistent_range_base != UINT32_MAX)
+	{
+		if (!m_persistent_attribute_storage || !m_persistent_attribute_storage->in_range(persistent_range_base, required.first, persistent_range_base))
+		{
+			if (m_persistent_attribute_storage)
+				m_current_frame->buffer_views_to_clean.push_back(std::move(m_persistent_attribute_storage));
+
+			//View 64M blocks at a time (different drivers will only allow a fixed viewable heap size, 64M should be safe)
+			const size_t view_size = (persistent_range_base + 0x4000000) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - persistent_range_base : 0x4000000;
+			m_persistent_attribute_storage = std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, persistent_range_base, view_size);
+			persistent_range_base = 0;
+		}
+	}
+
+	if (volatile_range_base != UINT32_MAX)
+	{
+		if (!m_volatile_attribute_storage || !m_volatile_attribute_storage->in_range(volatile_range_base, required.second, volatile_range_base))
+		{
+			if (m_volatile_attribute_storage)
+				m_current_frame->buffer_views_to_clean.push_back(std::move(m_volatile_attribute_storage));
+
+			const size_t view_size = (volatile_range_base + 0x4000000) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - volatile_range_base : 0x4000000;
+			m_volatile_attribute_storage = std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, volatile_range_base, view_size);
+			volatile_range_base = 0;
+		}
+	}
+
+	return{ result.native_primitive_type, result.vertex_draw_count, result.allocated_vertex_count, result.vertex_index_base, persistent_range_base, volatile_range_base, result.index_info };
 }
