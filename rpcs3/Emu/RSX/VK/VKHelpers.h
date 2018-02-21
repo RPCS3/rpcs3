@@ -616,6 +616,25 @@ namespace vk
 		buffer_view(const buffer_view&) = delete;
 		buffer_view(buffer_view&&) = delete;
 
+		bool in_range(u32 address, u32 size, u32& offset) const
+		{
+			if (address < info.offset)
+				return false;
+
+			const u32 _offset = address - (u32)info.offset;
+			if (info.range < _offset)
+				return false;
+
+			const auto remaining = info.range - _offset;
+			if (size <= remaining)
+			{
+				offset = _offset;
+				return true;
+			}
+
+			return false;
+		}
+
 	private:
 		VkDevice m_device;
 	};

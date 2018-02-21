@@ -23,6 +23,17 @@ namespace vk
 	using null_vertex_cache = vertex_cache;
 
 	using shader_cache = rsx::shaders_cache<vk::pipeline_props, VKProgramBuffer>;
+
+	struct vertex_upload_info
+	{
+		VkPrimitiveTopology primitive;
+		u32 vertex_draw_count;
+		u32 allocated_vertex_count;
+		u32 vertex_index_base;
+		u32 persistent_window_offset;
+		u32 volatile_window_offset;
+		std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info;
+	};
 }
 
 //Heap allocation sizes in MB
@@ -262,8 +273,8 @@ private:
 	std::array<std::unique_ptr<vk::sampler>, rsx::limits::fragment_textures_count> fs_sampler_handles;
 	std::array<std::unique_ptr<vk::sampler>, rsx::limits::vertex_textures_count> vs_sampler_handles;
 
-	VkBufferView m_persistent_attribute_storage;
-	VkBufferView m_volatile_attribute_storage;
+	std::unique_ptr<vk::buffer_view> m_persistent_attribute_storage;
+	std::unique_ptr<vk::buffer_view> m_volatile_attribute_storage;
 
 public:
 	//vk::fbo draw_fbo;
@@ -379,11 +390,11 @@ private:
 
 	void check_heap_status();
 
-	/// returns primitive topology, index_count, allocated_verts, vertex_base_index, (offset in index buffer, index type)
-	std::tuple<VkPrimitiveTopology, u32, u32, u32, std::optional<std::tuple<VkDeviceSize, VkIndexType> > > upload_vertex_data();
+	vk::vertex_upload_info upload_vertex_data();
+
 public:
 	bool check_program_status();
-	void load_program(u32 vertex_count, u32 vertex_base);
+	void load_program(const vk::vertex_upload_info& vertex_info);
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 	void read_buffers();
 	void write_buffers();

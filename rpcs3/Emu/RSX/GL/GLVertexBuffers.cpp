@@ -180,7 +180,7 @@ namespace
 	};
 }
 
-vertex_upload_info GLGSRender::set_vertex_buffer()
+gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 {
 	std::chrono::time_point<steady_clock> then = steady_clock::now();
 
@@ -196,7 +196,7 @@ vertex_upload_info GLGSRender::set_vertex_buffer()
 	auto required = calculate_memory_requirements(m_vertex_layout, vertex_count);
 
 	std::pair<void*, u32> persistent_mapping = {}, volatile_mapping = {};
-	vertex_upload_info upload_info = { result.vertex_draw_count, result.allocated_vertex_count, result.vertex_index_base, 0u, 0u, result.index_info };
+	gl::vertex_upload_info upload_info = { result.vertex_draw_count, result.allocated_vertex_count, result.vertex_index_base, 0u, 0u, result.index_info };
 
 	if (required.first > 0)
 	{
