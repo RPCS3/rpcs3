@@ -1399,14 +1399,6 @@ void GLGSRender::flip(int buffer)
 	m_textures_upload_time = 0;
 }
 
-
-u64 GLGSRender::timestamp() const
-{
-	GLint64 result;
-	glGetInteger64v(GL_TIMESTAMP, &result);
-	return result;
-}
-
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
 	bool can_flush = (std::this_thread::get_id() == m_thread_id);
