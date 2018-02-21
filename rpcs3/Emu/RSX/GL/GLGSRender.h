@@ -98,7 +98,7 @@ struct driver_state
 		return !!test;
 	}
 
-	const bool test_property(GLenum property, u32 test) const
+	inline bool test_property(GLenum property, u32 test) const
 	{
 		auto found = properties.find(property);
 		if (found == properties.end())
