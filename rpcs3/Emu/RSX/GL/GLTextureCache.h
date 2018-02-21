@@ -654,7 +654,7 @@ namespace gl
 			m_temporary_surfaces.resize(0);
 		}
 
-		u32 create_temporary_subresource_impl(u32 src_id, GLenum sized_internal_fmt, GLenum dst_type, u16 x, u16 y, u16 width, u16 height)
+		u32 create_temporary_subresource_impl(u32 src_id, GLenum sized_internal_fmt, GLenum dst_type, u16 x, u16 y, u16 width, u16 height, bool copy = true)
 		{
 			u32 dst_id = 0;
 
@@ -686,17 +686,20 @@ namespace gl
 
 			m_temporary_surfaces.push_back(dst_id);
 
-			//Empty GL_ERROR
-			glGetError();
-
-			glCopyImageSubData(src_id, GL_TEXTURE_2D, 0, x, y, 0,
-				dst_id, dst_type, 0, 0, 0, 0, width, height, 1);
-
-			//Check for error
-			if (GLenum err = glGetError())
+			if (copy)
 			{
-				LOG_WARNING(RSX, "Failed to copy image subresource with GL error 0x%X", err);
-				return 0;
+				//Empty GL_ERROR
+				glGetError();
+
+				glCopyImageSubData(src_id, GL_TEXTURE_2D, 0, x, y, 0,
+					dst_id, dst_type, 0, 0, 0, 0, width, height, 1);
+
+				//Check for error
+				if (GLenum err = glGetError())
+				{
+					LOG_WARNING(RSX, "Failed to copy image subresource with GL error 0x%X", err);
+					return 0;
+				}
 			}
 
 			return dst_id;
@@ -813,6 +816,26 @@ namespace gl
 			}
 
 			return dst_id;
+		}
+
+		u32 generate_atlas_from_images(void*&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy) override
+		{
+			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
+			auto result = create_temporary_subresource_impl(sections_to_copy.front().src, ifmt, GL_TEXTURE_2D, 0, 0, width, height, false);
+
+			for (const auto &region : sections_to_copy)
+			{
+				glCopyImageSubData(region.src, GL_TEXTURE_2D, 0, region.src_x, region.src_y, 0,
+					result, GL_TEXTURE_2D, 0, region.dst_x, region.dst_y, 0, region.w, region.h, 1);
+			}
+
+			return result;
+		}
+
+		void update_image_contents(void*&, u32 dst, u32 src, u16 width, u16 height) override
+		{
+			glCopyImageSubData(src, GL_TEXTURE_2D, 0, 0, 0, 0,
+					dst, GL_TEXTURE_2D, 0, 0, 0, 0, width, height, 1);
 		}
 
 		cached_texture_section* create_new_texture(void*&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,

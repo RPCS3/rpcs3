@@ -35,6 +35,20 @@ namespace rsx
 		{}
 	};
 
+	template <typename surface_type>
+	struct surface_overlap_info_t
+	{
+		surface_type surface = nullptr;
+		bool is_depth = false;
+
+		u16 src_x = 0;
+		u16 src_y = 0;
+		u16 dst_x = 0;
+		u16 dst_y = 0;
+		u16 width = 0;
+		u16 height = 0;
+	};
+
 	struct surface_format_info
 	{
 		u32 surface_width;
@@ -120,6 +134,7 @@ namespace rsx
 		using command_list_type = typename Traits::command_list_type;
 		using download_buffer_object = typename Traits::download_buffer_object;
 		using surface_subresource = surface_subresource_storage<surface_type>;
+		using surface_overlap_info = surface_overlap_info_t<surface_type>;
 
 		std::unordered_map<u32, surface_storage_type> m_render_targets_storage = {};
 		std::unordered_map<u32, surface_storage_type> m_depth_stencil_storage = {};
@@ -845,6 +860,62 @@ namespace rsx
 			}
 
 			return{};
+		}
+
+		std::vector<surface_overlap_info> get_merged_texture_memory_region(u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u32 bpp)
+		{
+			std::vector<surface_overlap_info> result;
+			const u32 limit = texaddr + (required_pitch * required_height);
+
+			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data, bool is_depth)
+			{
+				for (auto &tex_info : data)
+				{
+					auto this_address = std::get<0>(tex_info);
+					if (this_address > limit)
+						continue;
+
+					auto surface = std::get<1>(tex_info).get();
+					const auto pitch = surface->get_rsx_pitch();
+					if (pitch != required_pitch)
+						continue;
+
+					const auto texture_size = pitch * surface->get_surface_height();
+					if ((this_address + texture_size) <= texaddr)
+						continue;
+
+					surface_overlap_info info;
+					info.surface = surface;
+					info.is_depth = is_depth;
+
+					if (this_address < texaddr)
+					{
+						auto offset = texaddr - this_address;
+						info.src_y = (offset / required_pitch);
+						info.src_x = (offset % required_pitch) / bpp;
+						info.dst_x = 0;
+						info.dst_y = 0;
+						info.width = std::min<u32>(required_width, surface->get_surface_width() - info.src_x);
+						info.height = std::min<u32>(required_height, surface->get_surface_height() - info.src_y);
+					}
+					else
+					{
+						auto offset = this_address - texaddr;
+						info.src_x = 0;
+						info.src_y = 0;
+						info.dst_y = (offset / required_pitch);
+						info.dst_x = (offset % required_pitch) / bpp;
+						info.width = std::min<u32>(surface->get_surface_width(), required_width - info.dst_x);
+						info.height = std::min<u32>(surface->get_surface_height(), required_height - info.dst_y);
+					}
+
+					result.push_back(info);
+				}
+			};
+
+			process_list_function(m_render_targets_storage, false);
+			process_list_function(m_depth_stencil_storage, true);
+			return result;
 		}
 	};
 }
