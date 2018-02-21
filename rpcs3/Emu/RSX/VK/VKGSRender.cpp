@@ -1129,22 +1129,8 @@ void VKGSRender::end()
 
 					if (replace)
 					{
-						for (auto &sampler : m_current_frame->samplers_to_clean)
-						{
-							if (sampler->matches(wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
-								min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode))
-							{
-								fs_sampler_handles[i] = std::move(sampler);
-								replace = false;
-								break;
-							}
-						}
-
-						if (replace)
-						{
-							fs_sampler_handles[i] = std::make_unique<vk::sampler>(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
-								min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode);
-						}
+						fs_sampler_handles[i] = std::make_unique<vk::sampler>(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
+							min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode);
 					}
 				}
 				else
@@ -1188,7 +1174,6 @@ void VKGSRender::end()
 
 					if (replace)
 					{
-						//This is unlikely, there is no need to check the dirty pool
 						vs_sampler_handles[i] = std::make_unique<vk::sampler>(
 							*m_device,
 							VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
