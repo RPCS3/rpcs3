@@ -69,6 +69,5 @@ void gl_gs_frame::flip(draw_context_t context, bool skip_frame)
 	//Do not swap buffers if frame skip is active
 	if (skip_frame) return;
 
-	((QOpenGLContext*)context)->makeCurrent(this);
 	((QOpenGLContext*)context)->swapBuffers(this);
 }

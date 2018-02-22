@@ -40,7 +40,7 @@ namespace vk
 //NOTE: Texture uploads can be huge, upto 16MB for a single texture (4096x4096px)
 #define VK_ATTRIB_RING_BUFFER_SIZE_M 256
 #define VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M 256
-#define VK_UBO_RING_BUFFER_SIZE_M 64
+#define VK_UBO_RING_BUFFER_SIZE_M 128
 #define VK_INDEX_RING_BUFFER_SIZE_M 64
 
 #define VK_MAX_ASYNC_CB_COUNT 64

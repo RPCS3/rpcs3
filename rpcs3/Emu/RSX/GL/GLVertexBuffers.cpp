@@ -233,12 +233,30 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 				m_vertex_cache->store_range(storage_address, GL_R8UI, required.first, persistent_mapping.second);
 			}
 		}
+
+		if (!m_persistent_stream_view.in_range(upload_info.persistent_mapping_offset, required.first, upload_info.persistent_mapping_offset))
+		{
+			const size_t view_size = ((upload_info.persistent_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
+				(m_attrib_ring_buffer->size() - upload_info.persistent_mapping_offset) : m_max_texbuffer_size;
+
+			m_persistent_stream_view.update(m_attrib_ring_buffer.get(), upload_info.persistent_mapping_offset, (u32)view_size);
+			m_gl_persistent_stream_buffer.copy_from(m_persistent_stream_view);
+		}
 	}
 
 	if (required.second > 0)
 	{
 		volatile_mapping = m_attrib_ring_buffer->alloc_from_heap(required.second, m_min_texbuffer_alignment);
 		upload_info.volatile_mapping_offset = volatile_mapping.second;
+
+		if (!m_volatile_stream_view.in_range(upload_info.volatile_mapping_offset, required.second, upload_info.volatile_mapping_offset))
+		{
+			const size_t view_size = ((upload_info.volatile_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
+				(m_attrib_ring_buffer->size() - upload_info.volatile_mapping_offset) : m_max_texbuffer_size;
+
+			m_volatile_stream_view.update(m_attrib_ring_buffer.get(), upload_info.volatile_mapping_offset, (u32)view_size);
+			m_gl_volatile_stream_buffer.copy_from(m_volatile_stream_view);
+		}
 	}
 
 	//Write all the data
