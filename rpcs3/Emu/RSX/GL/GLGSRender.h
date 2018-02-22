@@ -279,6 +279,8 @@ private:
 
 	gl::texture_cache m_gl_texture_cache;
 
+	gl::buffer_view m_persistent_stream_view;
+	gl::buffer_view m_volatile_stream_view;
 	gl::texture m_gl_persistent_stream_buffer;
 	gl::texture m_gl_volatile_stream_buffer;
 

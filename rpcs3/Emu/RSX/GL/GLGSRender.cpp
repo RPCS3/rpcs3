@@ -736,14 +736,16 @@ void GLGSRender::on_init_thread()
 		m_index_ring_buffer.reset(new gl::ring_buffer());
 	}
 
-	m_attrib_ring_buffer->create(gl::buffer::target::texture, std::min<GLsizeiptr>(m_max_texbuffer_size, 256 * 0x100000));
-	m_index_ring_buffer->create(gl::buffer::target::element_array, std::min<GLsizeiptr>(m_max_texbuffer_size, 64 * 0x100000));
-	m_transform_constants_buffer->create(gl::buffer::target::uniform, std::min<GLsizeiptr>(m_max_texbuffer_size, 16 * 0x100000));
-	m_fragment_constants_buffer->create(gl::buffer::target::uniform, std::min<GLsizeiptr>(m_max_texbuffer_size, 16 * 0x100000));
-	m_vertex_state_buffer->create(gl::buffer::target::uniform, std::min<GLsizeiptr>(m_max_texbuffer_size, 16 * 0x100000));
+	m_attrib_ring_buffer->create(gl::buffer::target::texture, 256 * 0x100000);
+	m_index_ring_buffer->create(gl::buffer::target::element_array, 64 * 0x100000);
+	m_transform_constants_buffer->create(gl::buffer::target::uniform, 64 * 0x100000);
+	m_fragment_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_vertex_state_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
-	m_gl_persistent_stream_buffer.copy_from(*m_attrib_ring_buffer, GL_R8UI, 0, (u32)m_attrib_ring_buffer->size());
-	m_gl_volatile_stream_buffer.copy_from(*m_attrib_ring_buffer, GL_R8UI, 0, (u32)m_attrib_ring_buffer->size());
+	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, m_max_texbuffer_size);
+	m_volatile_stream_view.update(m_attrib_ring_buffer.get(), 0, m_max_texbuffer_size);
+	m_gl_persistent_stream_buffer.copy_from(m_persistent_stream_view);
+	m_gl_volatile_stream_buffer.copy_from(m_volatile_stream_view);
 
 	m_vao.element_array_buffer = *m_index_ring_buffer;
 
