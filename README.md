@@ -24,11 +24,11 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 * [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
 * [Cmake 3.1.0+](https://www.cmake.org/download/) (required; add to PATH)
 * [Python 3.3+](https://www.python.org/downloads/) (required; add to PATH)
-* [Qt 5.8+](https://www.qt.io/download-open-source/) (required; add QTDIR `<QtInstallFolder>\5.8\msvc2015_64\` environment variable if you do not want to use the Visual Studio Qt Plugin)
+* [Qt 5.10+](https://www.qt.io/download-open-source/) (required; add QTDIR environment variable if you do not want to use the Visual Studio Qt Plugin: e.g. `<QtInstallFolder>\5.10.1\msvc2015_64\`)
 * [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2015) (optional; see above)
 
 ### Linux
-* [Qt 5.7+](https://www.qt.io/download-open-source/)
+* [Qt 5.10+](https://www.qt.io/download-open-source/)
 * GCC 5.1+ or Clang 3.5.0+ ([not GCC 6.1](https://github.com/RPCS3/rpcs3/issues/1691))
 * Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git qt5-default`
 * Arch: `sudo pacman -S glew openal cmake llvm qt5-base`
@@ -48,14 +48,14 @@ To initialize the repository don't forget to execute `git submodule update --ini
 ### Configuring Qt
 
 *If you're using Visual Studio 2017 without Qt plugin support (or simply dont want to use it):* 
-1) Add `QTDIR` environment variable and set it to `<QtInstallFolder>\5.8\msvc2015_64\` </br>
+1) Add `QTDIR` environment variable and set it to e.g `<QtInstallFolder>\5.10.1\msvc2015_64\` </br>
 
 
 Open `rpcs3.sln`
 
 
 *If you wish to use the Visual Studio plugin for Qt:* </br>
-1) Go to the Qt5 menu and edit Qt5 options. Add the path to your Qt installation with compiler e.g. `C:\Qt\5.8\msvc2015_64`. </br>
+1) Go to the Qt5 menu and edit Qt5 options. Add the path to your Qt installation with compiler e.g. `C:\Qt\5.10.1\msvc2015_64`. </br>
 2) While selecting the rpcs3qt project, go to Qt5->Project Setting and select the version you added. 
 
 ### Building the projects

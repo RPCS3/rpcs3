@@ -52,7 +52,7 @@ before_script:
   - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
   - mkdir build
   - cd build
-  - export CMAKE_PREFIX_PATH=~/Qt/5.10.0/gcc_64/lib/cmake
+  - export CMAKE_PREFIX_PATH=~/Qt/5.10.1/gcc_64/lib/cmake
   - export CXXFLAGS="$CXXFLAGS -DTRAVIS=true";
   - if [ "$TRAVIS_PULL_REQUEST" = false ]; then
       export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH";
@@ -63,20 +63,20 @@ before_script:
   - ninja
   - # AppImage generation
   - if [ -n "$UPLOAD_URL" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
-      export LD_LIBRARY_PATH=~/Qt/5.10.0/gcc_64/lib;
+      export LD_LIBRARY_PATH=~/Qt/5.10.1/gcc_64/lib;
       DESTDIR=appdir ninja install ; find appdir/ ;
       find ../bin ;
       wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" ;
       chmod a+x linuxdeployqt*.AppImage ;
-      export PATH=~/Qt/5.10.0/gcc_64/bin/:${PATH} ;
+      export PATH=~/Qt/5.10.1/gcc_64/bin/:${PATH} ;
       ./linuxdeployqt*.AppImage --appimage-extract ;
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
       mkdir ./appdir/usr/plugins/xcbglintegrations/ ;
       mkdir ./appdir/usr/plugins/imageformats/ ;
-      cp ~/Qt/5.10.0/gcc_64/lib/libQt5Svg.so.5 ./appdir/usr/lib/ ;
-      cp ~/Qt/5.10.0/gcc_64/plugins/xcbglintegrations/* ./appdir/usr/plugins/xcbglintegrations/ ;
-      cp ~/Qt/5.10.0/gcc_64/plugins/imageformats/* ./appdir/usr/plugins/imageformats/ ;
-      cp ~/Qt/5.10.0/gcc_64/plugins/platforms/* ./appdir/usr/plugins/platforms/ ;
+      cp ~/Qt/5.10.1/gcc_64/lib/libQt5Svg.so.5 ./appdir/usr/lib/ ;
+      cp ~/Qt/5.10.1/gcc_64/plugins/xcbglintegrations/* ./appdir/usr/plugins/xcbglintegrations/ ;
+      cp ~/Qt/5.10.1/gcc_64/plugins/imageformats/* ./appdir/usr/plugins/imageformats/ ;
+      cp ~/Qt/5.10.1/gcc_64/plugins/platforms/* ./appdir/usr/plugins/platforms/ ;
       rm ./appdir/usr/lib/libfreetype.so.6 ;
       export PATH=${TRAVIS_BUILD_DIR}/build/squashfs-root/usr/bin/:${PATH} ;
       ./squashfs-root/usr/bin/appimagetool ${TRAVIS_BUILD_DIR}/build/appdir ;
@@ -117,7 +117,7 @@ addons:
       - libstdc++-5-dev
       - lib32stdc++6
       - zlib1g-dev
-      # We need to install qt 5.10.0 manually because the version trusty provides is too old.
+      # We need to install qt 5.10.1 manually because the version trusty provides is too old.
       #- qtbase5-dev
       - libudev-dev
       - libevdev-dev
