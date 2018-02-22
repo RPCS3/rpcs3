@@ -6,12 +6,12 @@ set(CMAKE_CXX_STANDARD 14)
 include(CheckCXXCompilerFlag)
 
 # Qt section
-find_package(Qt5 5.7 COMPONENTS Widgets Network)
+find_package(Qt5 5.10 COMPONENTS Widgets Network)
 if(WIN32)
-	find_package(Qt5 5.7 COMPONENTS WinExtras REQUIRED)
+	find_package(Qt5 5.10 COMPONENTS WinExtras REQUIRED)
 	set(RPCS3_QT_LIBS Qt5::Widgets Qt5::WinExtras Qt5::Network)
 else()
-	find_package(Qt5 5.7 COMPONENTS DBus Gui)
+	find_package(Qt5 5.10 COMPONENTS DBus Gui)
 	if(Qt5DBus_FOUND)
 		set(RPCS3_QT_LIBS Qt5::Widgets Qt5::DBus Qt5::Network)
 		add_definitions(-DHAVE_QTDBUS)
@@ -23,15 +23,15 @@ endif()
 
 # Let's make sure we have Qt before we continue
 if(NOT Qt5Widgets_FOUND)
-	if(Qt5Widgets_VERSION VERSION_LESS 5.7.0)
-		message("Minimum supported Qt5 version is 5.7! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
+	if(Qt5Widgets_VERSION VERSION_LESS 5.10.0)
+		message("Minimum supported Qt5 version is 5.10.0! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
 		if("${CMAKE_SYSTEM}" MATCHES "Linux")
 			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.
 If you're on Ubuntu or Linux Mint, there are PPAs you can use to install an up-to-date qt5 version.
-        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt593-xenial
-        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt593-trusty
+        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-xenial
+        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-trusty
 just make sure to run
-    source /opt/qt59/bin/qt59-env.sh
+    source /opt/qt510/bin/qt510-env.sh
 before re-running cmake")
 		elseif(WIN32)
 			message(FATAL_ERROR "You can download the latest version of Qt5 here: https://www.qt.io/download-open-source/")
@@ -42,7 +42,7 @@ before re-running cmake")
 
 	message("CMake was unable to find Qt5!")
 	if(WIN32)
-		message(FATAL_ERROR "Make sure the QTDIR env variable has been set properly. (for example C:\\Qt\\5.8\\msvc2017_64\\)")
+		message(FATAL_ERROR "Make sure the QTDIR env variable has been set properly. (for example C:\\Qt\\5.10.1\\msvc2017_64\\)")
 	elseif("${CMAKE_SYSTEM}" MATCHES "Linux")
 		message(FATAL_ERROR "Make sure to install your distro's qt5 package!")
 	else()
