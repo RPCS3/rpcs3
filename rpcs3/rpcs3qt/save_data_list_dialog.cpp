@@ -16,8 +16,6 @@ constexpr auto qstr = QString::fromStdString;
 save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, u32 op, vm::ptr<CellSaveDataListSet> listSet, QWidget* parent)
 	: QDialog(parent), m_save_entries(entries), m_entry(selection_code::new_save), m_entry_label(nullptr)
 {
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
-
 	if (op >= 8)
 	{
 		setWindowTitle(tr("Save Data Interface (Delete)"));

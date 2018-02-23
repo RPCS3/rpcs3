@@ -630,7 +630,7 @@ namespace vk
 			return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, memory_types, upload_heap, key, desc->w, desc->h, false, true, desc->data);
 		}
 
-		void update_uniforms(vk::glsl::program *program) override
+		void update_uniforms(vk::glsl::program* /*program*/) override
 		{
 			auto dst = (f32*)m_ubo->map(first_vertex * 128, 128);
 			dst[0] = m_scale_offset.r;

@@ -1,10 +1,5 @@
 #include "vfs_dialog.h"
 
-#include "Emu/System.h"
-
-#include "vfs_dialog_tab.h"
-
-#include <QVBoxLayout>
 #include <QPushButton>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
@@ -69,8 +64,9 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 	{
 		for (int i = 0; i < tabs->count(); ++i)
 		{
-			static_cast<vfs_dialog_tab*>(tabs->widget(i))->SaveSettings();
+			static_cast<vfs_dialog_tab*>(tabs->widget(i))->SetSettings();
 		}
+		m_emu_settings->SaveSettings();
 		accept();
 	});
 
@@ -86,6 +82,5 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 	vbox->addLayout(buttons);
 
 	setLayout(vbox);
-	setWindowTitle("Virtual File System");
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
+	setWindowTitle(tr("Virtual File System"));
 }
