@@ -901,6 +901,30 @@ namespace vk
 			vk::insert_texture_barrier(cmd, tex);
 		}
 
+		bool render_target_format_is_compatible(vk::image* tex, u32 gcm_format) override
+		{
+			auto vk_format = tex->info.format;
+			switch (gcm_format)
+			{
+			default:
+				//TODO
+				LOG_TRACE(RSX, "Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)vk_format, gcm_format);
+				return false;
+			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+				return (vk_format == VK_FORMAT_R16G16B16A16_SFLOAT);
+			case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+				return (vk_format == VK_FORMAT_R32G32B32A32_SFLOAT);
+			case CELL_GCM_TEXTURE_X32_FLOAT:
+				return (vk_format == VK_FORMAT_R32_SFLOAT);
+			case CELL_GCM_TEXTURE_R5G6B5:
+				return (vk_format == VK_FORMAT_R5G6B5_UNORM_PACK16);
+			case CELL_GCM_TEXTURE_DEPTH24_D8:
+				return (vk_format == VK_FORMAT_D24_UNORM_S8_UINT || vk_format == VK_FORMAT_D32_SFLOAT_S8_UINT);
+			case CELL_GCM_TEXTURE_A8R8G8B8:
+				return (vk_format == VK_FORMAT_B8G8R8A8_UNORM || vk_format == VK_FORMAT_D24_UNORM_S8_UINT || vk_format == VK_FORMAT_D32_SFLOAT_S8_UINT);
+			}
+		}
+
 	public:
 
 		struct vk_blit_op_result : public blit_op_result

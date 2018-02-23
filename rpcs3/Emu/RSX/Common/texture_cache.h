@@ -370,6 +370,7 @@ namespace rsx
 		virtual void set_up_remap_vector(section_storage_type& section, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex) = 0;
 		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::array<image_resource_type, 6>& sources) = 0;
+		virtual bool render_target_format_is_compatible(image_storage_type* tex, u32 gcm_format) = 0;
 
 		constexpr u32 get_block_size() const { return 0x1000000; }
 		inline u32 get_block_address(u32 address) const { return (address & ~0xFFFFFF); }
@@ -1383,6 +1384,12 @@ namespace rsx
 						}
 					}
 				}
+			}
+
+			if (!requires_processing)
+			{
+				//Check if we need to do anything about the formats
+				requires_processing = !render_target_format_is_compatible(texptr, format);
 			}
 
 			if (requires_processing)

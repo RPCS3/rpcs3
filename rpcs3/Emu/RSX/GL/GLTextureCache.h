@@ -947,6 +947,35 @@ namespace gl
 				glTextureBarrierNV();
 		}
 
+		bool render_target_format_is_compatible(gl::texture* tex, u32 gcm_format) override
+		{
+			if (auto as_rtt = dynamic_cast<gl::render_target*>(tex))
+			{
+				auto ifmt = as_rtt->get_compatible_internal_format();
+				switch (gcm_format)
+				{
+				default:
+					//TODO
+					LOG_TRACE(RSX, "Format incompatibility detected, reporting failure to force data copy (GL_INTERNAL_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)ifmt, gcm_format);
+					return false;
+				case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+					return (ifmt == gl::texture::internal_format::rgba16f);
+				case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+					return (ifmt == gl::texture::internal_format::rgba32f);
+				case CELL_GCM_TEXTURE_X32_FLOAT:
+					return (ifmt == gl::texture::internal_format::r32f);
+				case CELL_GCM_TEXTURE_R5G6B5:
+					return (ifmt == gl::texture::internal_format::r5g6b5);
+				case CELL_GCM_TEXTURE_DEPTH24_D8:
+					return (ifmt == gl::texture::internal_format::depth24_stencil8 || ifmt == gl::texture::internal_format::depth32f_stencil8);
+				case CELL_GCM_TEXTURE_A8R8G8B8:
+					return (ifmt == gl::texture::internal_format::rgba8 || ifmt == gl::texture::internal_format::depth24_stencil8 || ifmt == gl::texture::internal_format::depth32f_stencil8);
+				}
+			}
+
+			fmt::throw_exception("Format comparison for non-rendertargets is not implemented" HERE);
+		}
+
 	public:
 
 		texture_cache() {}
