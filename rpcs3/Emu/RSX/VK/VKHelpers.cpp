@@ -14,8 +14,11 @@ namespace vk
 	VkSampler g_null_sampler = nullptr;
 
 	atomic_t<bool> g_cb_no_interrupt_flag { false };
-	atomic_t<bool> g_drv_no_primitive_restart_flag { false };
-	atomic_t<bool> g_drv_force_32bit_indices{ false };
+
+	//Driver compatibility workarounds
+	bool g_drv_no_primitive_restart_flag = false;
+	bool g_drv_force_32bit_indices = false;
+	bool g_drv_sanitize_fp_values = false;
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
@@ -312,6 +315,12 @@ namespace vk
 			g_drv_force_32bit_indices = true;
 		}
 #endif
+
+		//Nvidia cards are easily susceptible to NaN poisoning
+		if (gpu_name.find("NVIDIA") != std::string::npos || gpu_name.find("GeForce") != std::string::npos)
+		{
+			g_drv_sanitize_fp_values = true;
+		}
 	}
 
 	bool emulate_primitive_restart()
@@ -322,6 +331,11 @@ namespace vk
 	bool force_32bit_index_buffer()
 	{
 		return g_drv_force_32bit_indices;
+	}
+
+	bool sanitize_fp_values()
+	{
+		return g_drv_sanitize_fp_values;
 	}
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)

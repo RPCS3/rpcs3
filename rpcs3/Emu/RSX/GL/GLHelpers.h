@@ -85,9 +85,9 @@ namespace gl
 		bool ARB_texture_barrier_supported = false;
 		bool NV_texture_barrier_supported = false;
 		bool initialized = false;
-		bool vendor_INTEL = false;
-		bool vendor_AMD = false;
-		bool vendor_NVIDIA = false;
+		bool vendor_INTEL = false;  //has broken GLSL compiler
+		bool vendor_AMD = false;    //has broken ARB_multidraw
+		bool vendor_NVIDIA = false; //has NaN poisoning issues
 
 		void initialize()
 		{

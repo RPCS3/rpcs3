@@ -305,7 +305,7 @@ public:
 		return 0;
 	}
 
-	void fill_fragment_constants_buffer(gsl::span<f32, gsl::dynamic_range> dst_buffer, const RSXFragmentProgram &fragment_program) const
+	void fill_fragment_constants_buffer(gsl::span<f32, gsl::dynamic_range> dst_buffer, const RSXFragmentProgram &fragment_program, bool sanitize = false) const
 	{
 		const auto I = m_fragment_shader_cache.find(fragment_program);
 		if (I == m_fragment_shader_cache.end())
@@ -344,6 +344,11 @@ public:
 						dst[i] = tmp[i];
 					}
 				}
+			}
+			else if (sanitize)
+			{
+				//Lower NaNs to 0
+				_mm_stream_si128((__m128i*)dst, (__m128i&)_mm_andnot_ps((__m128&)shuffled_vector, _mm_cmpunord_ps((__m128&)shuffled_vector, _mm_set1_ps(1.f))));
 			}
 			else
 			{

@@ -72,6 +72,7 @@ namespace vk
 	//Compatibility workarounds
 	bool emulate_primitive_restart();
 	bool force_32bit_index_buffer();
+	bool sanitize_fp_values();
 
 	VkComponentMapping default_component_map();
 	VkImageSubresource default_image_subresource();
