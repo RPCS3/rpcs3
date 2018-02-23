@@ -1112,7 +1112,10 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 	buf = static_cast<u8*>(mapping.first);
 	fragment_constants_offset = mapping.second;
 	if (fragment_constants_size)
-		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) }, fragment_program);
+	{
+		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) },
+				fragment_program, gl::get_driver_caps().vendor_NVIDIA);
+	}
 
 	// Fragment state
 	fill_fragment_state_buffer(buf+fragment_constants_size, fragment_program);

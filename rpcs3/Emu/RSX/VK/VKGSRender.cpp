@@ -2346,7 +2346,10 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 	//Fragment constants
 	buf = buf + 8192;
 	if (fragment_constants_sz)
-		m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) }, fragment_program);
+	{
+		m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) },
+				fragment_program, vk::sanitize_fp_values());
+	}
 
 	fill_fragment_state_buffer(buf + fragment_constants_sz, fragment_program);
 	
