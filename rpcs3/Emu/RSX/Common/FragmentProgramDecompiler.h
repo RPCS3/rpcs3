@@ -24,25 +24,41 @@ class FragmentProgramDecompiler
 		bool aliased_r0 = false;
 		bool aliased_h0 = false;
 		bool aliased_h1 = false;
-		bool last_write_half = false;
+		bool last_write_half[4] = { false, false, false, false };
 
 		u32 real_index = UINT32_MAX;
 
-		void tag(u32 index, bool half_register)
+		void tag(u32 index, bool half_register, bool x, bool y, bool z, bool w)
 		{
 			if (half_register)
 			{
-				last_write_half = true;
-
 				if (index & 1)
+				{
+					if (x) last_write_half[2] = true;
+					if (y) last_write_half[2] = true;
+					if (z) last_write_half[3] = true;
+					if (w) last_write_half[3] = true;
+
 					aliased_h1 = true;
+				}
 				else
+				{
+					if (x) last_write_half[0] = true;
+					if (y) last_write_half[0] = true;
+					if (z) last_write_half[1] = true;
+					if (w) last_write_half[1] = true;
+
 					aliased_h0 = true;
+				}
 			}
 			else
 			{
+				if (x) last_write_half[0] = false;
+				if (y) last_write_half[1] = false;
+				if (z) last_write_half[2] = false;
+				if (w) last_write_half[3] = false;
+
 				aliased_r0 = true;
-				last_write_half = false;
 			}
 
 			if (real_index == UINT32_MAX)
@@ -54,12 +70,19 @@ class FragmentProgramDecompiler
 			}
 		}
 
-		bool requires_gather(bool xy, bool zw) const
+		bool requires_gather(u8 channel) const
 		{
 			//Data fetched from the single precision register requires merging of the two half registers
-			//TODO: Check individual swizzle channels
-			if ((aliased_h0 && xy) || (aliased_h1 && zw))
-				return last_write_half;
+			verify(HERE), channel < 4;
+			if (aliased_h0 && channel < 2)
+			{
+				return last_write_half[channel];
+			}
+
+			if (aliased_h1 && channel > 1)
+			{
+				return last_write_half[channel];
+			}
 
 			return false;
 		}
@@ -67,7 +90,7 @@ class FragmentProgramDecompiler
 		bool requires_split(u32 /*index*/) const
 		{
 			//Data fetched from any of the two half registers requires sync with the full register
-			if (!last_write_half && aliased_r0)
+			if (!(last_write_half[0] || last_write_half[1]) && aliased_r0)
 			{
 				//r0 has been written to
 				//TODO: Check for specific elements in real32 register
@@ -85,15 +108,12 @@ class FragmentProgramDecompiler
 			std::string ret = "//Invalid gather";
 
 			if (aliased_h0 && aliased_h1)
-				ret = reg + " = gather(" + h0 + ", " + h1 + ");";
+				ret = "(gather(" + h0 + ", " + h1 + "))";
 			else if (aliased_h0)
-				ret = reg + ".xy = gather(" + h0 + ");";
+				ret = "(gather(" + h0 + "), " + reg + ".zw)";
 			else if (aliased_h1)
-				ret = reg + ".zw = gather(" + h1 + ");";
+				ret = "(" + reg + ".xy, gather(" + h1 + "))";
 
-			last_write_half = false;
-			aliased_h0 = false;
-			aliased_h1 = false;
 			return ret;
 		}
 	};
