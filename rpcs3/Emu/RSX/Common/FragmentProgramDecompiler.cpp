@@ -111,7 +111,7 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	}
 
 	u32 reg_index = dst.fp16 ? dst.dest_reg >> 1 : dst.dest_reg;
-	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16);
+	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
 }
 
 void FragmentProgramDecompiler::AddFlowOp(std::string code)
@@ -283,14 +283,15 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 		{ "$_i", [this]() -> std::string {return std::to_string(dst.tex_num);} },
 		{ "$m", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetMask), this) },
 		{ "$ifcond ", [this]() -> std::string
-	{
-		const std::string& cond = GetCond();
-		if (cond == "true") return "";
-		return "if(" + cond + ") ";
-	}
+			{
+				const std::string& cond = GetCond();
+				if (cond == "true") return "";
+				return "if(" + cond + ") ";
+			}
 		},
 		{ "$cond", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetCond), this) },
-		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) }
+		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) },
+		{ "$float4", [this]() -> std::string { return getFloatTypeName(4); } }
 	};
 
 	if (!ignore_redirects)
@@ -407,20 +408,13 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				dst.opcode == RSX_FP_OPCODE_UPB ||
 				dst.opcode == RSX_FP_OPCODE_UPG)
 			{
-				//TODO: Implement aliased gather for half floats
-				bool xy_read = false;
-				bool zw_read = false;
-
-				if (src.swizzle_x < 2 || src.swizzle_y < 2 || src.swizzle_z < 2 || src.swizzle_w < 2)
-					xy_read = true;
-				if (src.swizzle_x > 1 || src.swizzle_y > 1 || src.swizzle_z > 1 || src.swizzle_w > 1)
-					zw_read = true;
-
 				auto &reg = temp_registers[src.tmp_reg_index];
-				if (reg.requires_gather(xy_read, zw_read))
+				if (reg.requires_gather(src.swizzle_x))
 				{
 					properties.has_gather_op = true;
-					AddCode(reg.gather_r());
+					AddReg(src.tmp_reg_index, src.fp16);
+					ret = getFloatTypeName(4) + reg.gather_r();
+					break;
 				}
 			}
 		}
