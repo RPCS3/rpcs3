@@ -146,6 +146,11 @@ struct D3D12Traits
 	}
 
 	static
+	void validate_pipeline_properties(const vertex_program_type&, const fragment_program_type&, pipeline_properties&)
+	{
+	}
+
+	static
 	pipeline_storage_type build_pipeline(
 		const vertex_program_type &vertexProgramData, const fragment_program_type &fragmentProgramData, const pipeline_properties &pipelineProperties,
 		ID3D12Device *device, ID3D12RootSignature* root_signatures)

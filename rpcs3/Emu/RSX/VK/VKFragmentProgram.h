@@ -52,6 +52,8 @@ public:
 	std::string shader;
 	std::vector<size_t> FragmentConstantOffsetCache;
 
+	std::array<u32, 4> output_color_masks{ {} };
+
 	std::vector<vk::glsl::program_input> uniforms;
 	void SetInputs(std::vector<vk::glsl::program_input>& uniforms);
 	/**
