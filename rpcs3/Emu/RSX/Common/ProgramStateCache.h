@@ -348,7 +348,8 @@ public:
 			else if (sanitize)
 			{
 				//Lower NaNs to 0
-				_mm_stream_si128((__m128i*)dst, (__m128i&)_mm_andnot_ps((__m128&)shuffled_vector, _mm_cmpunord_ps((__m128&)shuffled_vector, _mm_set1_ps(1.f))));
+				const auto mask = _mm_cmpunord_ps((__m128&)shuffled_vector, _mm_set1_ps(1.f));
+				_mm_stream_si128((__m128i*)dst, (__m128i&)_mm_andnot_ps(mask, (__m128&)shuffled_vector));
 			}
 			else
 			{
