@@ -40,14 +40,14 @@ if(EXISTS ${GIT_VERSION_FILE})
 	# Don't update if marked not to update.
 	file(STRINGS ${GIT_VERSION_FILE} match
 		REGEX "RPCS3_GIT_VERSION_NO_UPDATE 1")
-	if(NOT ${match} EQUAL "")
+	if(NOT "${match}" EQUAL "")
 		set(GIT_VERSION_UPDATE "0")
 	endif()
 
 	# Don't update if it's already the same.
 	file(STRINGS ${GIT_VERSION_FILE} match
 		REGEX "${GIT_VERSION}")
-	if(NOT ${match} EQUAL "")
+	if(NOT "${match}" EQUAL "")
 		set(GIT_VERSION_UPDATE "0")
 	endif()	
 endif()
