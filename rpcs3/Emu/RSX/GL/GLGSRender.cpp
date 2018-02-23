@@ -1376,13 +1376,14 @@ void GLGSRender::flip(int buffer)
 		m_text_printer.print_text(0, 54, m_frame->client_width(), m_frame->client_height(), "textures upload time: " + std::to_string(m_textures_upload_time) + "us");
 		m_text_printer.print_text(0, 72, m_frame->client_width(), m_frame->client_height(), "draw call execution: " + std::to_string(m_draw_time) + "us");
 
-		auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
-		auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
-		auto num_flushes = m_gl_texture_cache.get_num_flush_requests();
-		auto cache_miss_ratio = (u32)ceil(m_gl_texture_cache.get_cache_miss_ratio() * 100);
+		const auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
+		const auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
+		const auto num_flushes = m_gl_texture_cache.get_num_flush_requests();
+		const auto num_mispredict = m_gl_texture_cache.get_num_cache_mispredictions();
+		const auto cache_miss_ratio = (u32)ceil(m_gl_texture_cache.get_cache_miss_ratio() * 100);
 		m_text_printer.print_text(0, 108, m_frame->client_width(), m_frame->client_height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
 		m_text_printer.print_text(0, 126, m_frame->client_width(), m_frame->client_height(), "Texture memory: " + std::to_string(texture_memory_size) + "M");
-		m_text_printer.print_text(0, 144, m_frame->client_width(), m_frame->client_height(), "Flush requests: " + std::to_string(num_flushes) + " (" + std::to_string(cache_miss_ratio) + "% hard faults)");
+		m_text_printer.print_text(0, 144, m_frame->client_width(), m_frame->client_height(), fmt::format("Flush requests: %d (%d%% hard faults, %d mispedictions)", num_flushes, cache_miss_ratio, num_mispredict));
 	}
 
 	m_frame->flip(m_context);

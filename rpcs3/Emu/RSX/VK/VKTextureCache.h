@@ -597,8 +597,18 @@ namespace vk
 				w, h, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, source->info.flags));
 
+			VkComponentMapping view_swizzle = source->native_component_map;
+			if (dst_format != source->info.format)
+			{
+				//This is a data cast operation
+				//Use native mapping for the new type
+				//TODO: Also reapply the view swizzle
+				const auto remap = get_component_mapping(gcm_format);
+				view_swizzle = { remap[1], remap[2], remap[3], remap[0] };
+			}
+
 			VkImageSubresourceRange view_range = { aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 1 };
-			view.reset(new vk::image_view(*vk::get_current_renderer(), image->value, view_type, dst_format, source->native_component_map, view_range));
+			view.reset(new vk::image_view(*vk::get_current_renderer(), image->value, view_type, dst_format, view_swizzle, view_range));
 
 			if (copy)
 			{
@@ -981,6 +991,30 @@ namespace vk
 		void insert_texture_barrier(vk::command_buffer& cmd, vk::image* tex) override
 		{
 			vk::insert_texture_barrier(cmd, tex);
+		}
+
+		bool render_target_format_is_compatible(vk::image* tex, u32 gcm_format) override
+		{
+			auto vk_format = tex->info.format;
+			switch (gcm_format)
+			{
+			default:
+				//TODO
+				err_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)vk_format, gcm_format);
+				return false;
+			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+				return (vk_format == VK_FORMAT_R16G16B16A16_SFLOAT);
+			case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+				return (vk_format == VK_FORMAT_R32G32B32A32_SFLOAT);
+			case CELL_GCM_TEXTURE_X32_FLOAT:
+				return (vk_format == VK_FORMAT_R32_SFLOAT);
+			case CELL_GCM_TEXTURE_R5G6B5:
+				return (vk_format == VK_FORMAT_R5G6B5_UNORM_PACK16);
+			case CELL_GCM_TEXTURE_DEPTH24_D8:
+				return (vk_format == VK_FORMAT_D24_UNORM_S8_UINT || vk_format == VK_FORMAT_D32_SFLOAT_S8_UINT);
+			case CELL_GCM_TEXTURE_A8R8G8B8:
+				return (vk_format == VK_FORMAT_B8G8R8A8_UNORM || vk_format == VK_FORMAT_D24_UNORM_S8_UINT || vk_format == VK_FORMAT_D32_SFLOAT_S8_UINT);
+			}
 		}
 
 	public:

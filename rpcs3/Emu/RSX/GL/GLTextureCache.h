@@ -654,9 +654,12 @@ namespace gl
 			m_temporary_surfaces.resize(0);
 		}
 
-		u32 create_temporary_subresource_impl(u32 src_id, GLenum sized_internal_fmt, GLenum dst_type, u16 x, u16 y, u16 width, u16 height, bool copy = true)
+		u32 create_temporary_subresource_impl(u32 src_id, GLenum sized_internal_fmt, GLenum dst_type, u32 gcm_format, u16 x, u16 y, u16 width, u16 height, bool copy = true)
 		{
 			u32 dst_id = 0;
+
+			if (sized_internal_fmt == GL_NONE)
+				sized_internal_fmt = gl::get_sized_internal_format(gcm_format);
 
 			GLenum ifmt;
 			glBindTexture(GL_TEXTURE_2D, src_id);
@@ -700,6 +703,13 @@ namespace gl
 					LOG_WARNING(RSX, "Failed to copy image subresource with GL error 0x%X", err);
 					return 0;
 				}
+			}
+
+			if (ifmt != sized_internal_fmt)
+			{
+				err_once("GL format mismatch (data cast?). Sized ifmt=0x%X vs Src ifmt=0x%X", sized_internal_fmt, ifmt);
+				//Apply base component map onto the new texture if a data cast has been done
+				apply_component_mapping_flags(dst_type, gcm_format, rsx::texture_create_flags::default_component_order);
 			}
 
 			return dst_id;
@@ -764,20 +774,18 @@ namespace gl
 
 		u32 create_temporary_subresource_view(void*&, u32* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) override
 		{
-			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
-			return create_temporary_subresource_impl(*src, ifmt, GL_TEXTURE_2D, x, y, w, h);
+			return create_temporary_subresource_impl(*src, GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h);
 		}
 
 		u32 create_temporary_subresource_view(void*&, gl::texture* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) override
 		{
 			if (auto as_rtt = dynamic_cast<gl::render_target*>(src))
 			{
-				return create_temporary_subresource_impl(src->id(), (GLenum)as_rtt->get_compatible_internal_format(), GL_TEXTURE_2D, x, y, w, h);
+				return create_temporary_subresource_impl(src->id(), (GLenum)as_rtt->get_compatible_internal_format(), GL_TEXTURE_2D, gcm_format, x, y, w, h);
 			}
 			else
 			{
-				const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
-				return create_temporary_subresource_impl(src->id(), ifmt, GL_TEXTURE_2D, x, y, w, h);
+				return create_temporary_subresource_impl(src->id(), GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h);
 			}
 		}
 
@@ -820,8 +828,7 @@ namespace gl
 
 		u32 generate_atlas_from_images(void*&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy) override
 		{
-			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
-			auto result = create_temporary_subresource_impl(sections_to_copy.front().src, ifmt, GL_TEXTURE_2D, 0, 0, width, height, false);
+			auto result = create_temporary_subresource_impl(sections_to_copy.front().src, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, false);
 
 			for (const auto &region : sections_to_copy)
 			{
@@ -968,6 +975,35 @@ namespace gl
 				glTextureBarrier();
 			else if (caps.NV_texture_barrier_supported)
 				glTextureBarrierNV();
+		}
+
+		bool render_target_format_is_compatible(gl::texture* tex, u32 gcm_format) override
+		{
+			if (auto as_rtt = dynamic_cast<gl::render_target*>(tex))
+			{
+				auto ifmt = as_rtt->get_compatible_internal_format();
+				switch (gcm_format)
+				{
+				default:
+					//TODO
+					err_once("Format incompatibility detected, reporting failure to force data copy (GL_INTERNAL_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)ifmt, gcm_format);
+					return false;
+				case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+					return (ifmt == gl::texture::internal_format::rgba16f);
+				case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+					return (ifmt == gl::texture::internal_format::rgba32f);
+				case CELL_GCM_TEXTURE_X32_FLOAT:
+					return (ifmt == gl::texture::internal_format::r32f);
+				case CELL_GCM_TEXTURE_R5G6B5:
+					return (ifmt == gl::texture::internal_format::r5g6b5);
+				case CELL_GCM_TEXTURE_DEPTH24_D8:
+					return (ifmt == gl::texture::internal_format::depth24_stencil8 || ifmt == gl::texture::internal_format::depth32f_stencil8);
+				case CELL_GCM_TEXTURE_A8R8G8B8:
+					return (ifmt == gl::texture::internal_format::rgba8 || ifmt == gl::texture::internal_format::depth24_stencil8 || ifmt == gl::texture::internal_format::depth32f_stencil8);
+				}
+			}
+
+			fmt::throw_exception("Format comparison for non-rendertargets is not implemented" HERE);
 		}
 
 	public:
