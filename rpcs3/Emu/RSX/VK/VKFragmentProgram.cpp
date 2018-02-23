@@ -96,7 +96,10 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
+		{
 			OS << "layout(location=" << std::to_string(output_index++) << ") " << "out vec4 " << table[i].first << ";\n";
+			vk_prog->output_color_masks[i] = UINT32_MAX;
+		}
 	}
 }
 
