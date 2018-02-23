@@ -78,6 +78,7 @@ namespace program_hash_util
 * - static void recompile_fragment_program(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, size_t ID);
 * - static void recompile_vertex_program(RSXVertexProgram *RSXVP, VertexProgramData& vertexProgramData, size_t ID);
 * - static PipelineData build_program(VertexProgramData &vertexProgramData, FragmentProgramData &fragmentProgramData, const PipelineProperties &pipelineProperties, const ExtraData& extraData);
+* - static void validate_pipeline_properties(const VertexProgramData &vertexProgramData, const FragmentProgramData &fragmentProgramData, PipelineProperties& props);
 */
 template<typename backend_traits>
 class program_state_cache
@@ -261,7 +262,7 @@ public:
 	pipeline_storage_type& getGraphicPipelineState(
 		const RSXVertexProgram& vertexShader,
 		const RSXFragmentProgram& fragmentShader,
-		const pipeline_properties& pipelineProperties,
+		pipeline_properties& pipelineProperties,
 		Args&& ...args
 		)
 	{
@@ -273,6 +274,7 @@ public:
 		bool already_existing_fragment_program = std::get<1>(fp_search);
 		bool already_existing_vertex_program = std::get<1>(vp_search);
 
+		backend_traits::validate_pipeline_properties(vertex_program, fragment_program, pipelineProperties);
 		pipeline_key key = { vertex_program.id, fragment_program.id, pipelineProperties };
 
 		if (already_existing_fragment_program && already_existing_vertex_program)
