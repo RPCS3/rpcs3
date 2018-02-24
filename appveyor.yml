@@ -22,12 +22,12 @@ install:
     
     if ($env:APPVEYOR_PULL_REQUEST_NUMBER) {
         $env:BUILD = "rpcs3-{0}-{1}_win64.7z" -f $env:COMM_TAG, $env:COMM_HASH
+        $env:AVVER = "{0}-{1}" -f $env:COMM_TAG.TrimStart("v"), $env:COMM_HASH
     }
     else {
         $env:BUILD = "rpcs3-{0}-{1}-{2}_win64.7z" -f $env:COMM_TAG, $env:COMM_COUNT, $env:COMM_HASH
+        $env:AVVER = "{0}-{1}-{2}" -f $env:COMM_TAG.TrimStart("v"), $env:COMM_COUNT, $env:COMM_HASH
     }
-    
-    $env:AVVER = "{0}-{1}" -f $env:COMM_TAG.TrimStart("v"), $env:APPVEYOR_BUILD_NUMBER
 
 - ps: | # used for experimental build warnings for pr builds
     $env:BRANCH = "{0}/{1}/#{2}" -f $env:APPVEYOR_REPO_NAME, `
