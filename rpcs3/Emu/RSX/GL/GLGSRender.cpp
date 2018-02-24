@@ -297,7 +297,7 @@ void GLGSRender::end()
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
-		if (m_program->uniforms.has_location("tex" + std::to_string(i), &unused_location))
+		if (m_program->uniforms.has_location(rsx::constants::fragment_texture_names[i], &unused_location))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 			auto &tex = rsx::method_registers.fragment_textures[i];
@@ -318,19 +318,22 @@ void GLGSRender::end()
 				}
 				else
 				{
-					glBindTexture(target, GL_NONE);
+					glBindTexture(target, m_null_textures[target]->id());
 				}
 			}
 			else
 			{
-				glBindTexture(GL_TEXTURE_2D, GL_NONE);
+				glBindTexture(GL_TEXTURE_1D, m_null_textures[GL_TEXTURE_1D]->id());
+				glBindTexture(GL_TEXTURE_2D, m_null_textures[GL_TEXTURE_2D]->id());
+				glBindTexture(GL_TEXTURE_3D, m_null_textures[GL_TEXTURE_3D]->id());
+				glBindTexture(GL_TEXTURE_CUBE_MAP, m_null_textures[GL_TEXTURE_CUBE_MAP]->id());
 			}
 		}
 	}
 
 	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
 	{
-		if (m_program->uniforms.has_location("vtex" + std::to_string(i), &unused_location))
+		if (m_program->uniforms.has_location(rsx::constants::vertex_texture_names[i], &unused_location))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
 			glActiveTexture(GL_TEXTURE0 + rsx::limits::fragment_textures_count + i);
@@ -672,6 +675,40 @@ void GLGSRender::on_init_thread()
 		tex.bind();
 	}
 
+	//Fallback null texture instead of relying on texture0
+	{
+		std::vector<u32> pixeldata = {0, 0, 0, 0};
+
+		//1D
+		auto tex1D = std::make_unique<gl::texture>();
+		tex1D->create();
+		tex1D->set_target(gl::texture::target::texture1D);
+		tex1D->config().width(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+
+		//2D
+		auto tex2D = std::make_unique<gl::texture>();
+		tex2D->create();
+		tex2D->set_target(gl::texture::target::texture2D);
+		tex2D->config().width(1).height(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+
+		//3D
+		auto tex3D = std::make_unique<gl::texture>();
+		tex3D->create();
+		tex3D->set_target(gl::texture::target::texture3D);
+		tex3D->config().width(1).height(1).depth(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+
+		//CUBE
+		auto texCUBE = std::make_unique<gl::texture>();
+		texCUBE->create();
+		texCUBE->set_target(gl::texture::target::textureCUBE);
+		texCUBE->config().width(1).height(1).depth(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+
+		m_null_textures[GL_TEXTURE_1D] = std::move(tex1D);
+		m_null_textures[GL_TEXTURE_2D] = std::move(tex2D);
+		m_null_textures[GL_TEXTURE_3D] = std::move(tex3D);
+		m_null_textures[GL_TEXTURE_CUBE_MAP] = std::move(texCUBE);
+	}
+
 	if (!gl_caps.ARB_buffer_storage_supported)
 	{
 		LOG_WARNING(RSX, "Forcing use of legacy OpenGL buffers because ARB_buffer_storage is not supported");
@@ -842,6 +879,11 @@ void GLGSRender::on_exit()
 	for (auto &sampler : m_gl_sampler_states)
 	{
 		sampler.remove();
+	}
+
+	for (auto &tex : m_null_textures)
+	{
+		tex.second->remove();
 	}
 
 	if (m_attrib_ring_buffer)
@@ -1331,8 +1373,11 @@ void GLGSRender::flip(int buffer)
 
 		auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
 		auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
+		auto num_flushes = m_gl_texture_cache.get_num_flush_requests();
+		auto cache_miss_ratio = (u32)ceil(m_gl_texture_cache.get_cache_miss_ratio() * 100);
 		m_text_printer.print_text(0, 108, m_frame->client_width(), m_frame->client_height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
 		m_text_printer.print_text(0, 126, m_frame->client_width(), m_frame->client_height(), "Texture memory: " + std::to_string(texture_memory_size) + "M");
+		m_text_printer.print_text(0, 144, m_frame->client_width(), m_frame->client_height(), "Flush requests: " + std::to_string(num_flushes) + " (" + std::to_string(cache_miss_ratio) + "% hard faults)");
 	}
 
 	m_frame->flip(m_context);
@@ -1341,10 +1386,7 @@ void GLGSRender::flip(int buffer)
 	// Cleanup
 	m_gl_texture_cache.on_frame_end();
 
-	for (auto &tex : m_rtts.invalidated_resources)
-		tex->remove();
-
-	m_rtts.invalidated_resources.clear();
+	m_rtts.free_invalidated();
 	m_vertex_cache->purge();
 
 	//If we are skipping the next frame, do not reset perf counters
@@ -1412,21 +1454,30 @@ void GLGSRender::do_local_task(bool /*idle*/)
 {
 	m_frame->clear_wm_events();
 
-	std::lock_guard<std::mutex> lock(queue_guard);
-
-	work_queue.remove_if([](work_item &q) { return q.received; });
-
-	for (work_item& q: work_queue)
+	if (!work_queue.empty())
 	{
-		if (q.processed) continue;
+		std::lock_guard<std::mutex> lock(queue_guard);
 
-		std::unique_lock<std::mutex> lock(q.guard_mutex);
-		q.result = m_gl_texture_cache.flush_all(q.section_data);
-		q.processed = true;
+		work_queue.remove_if([](work_item &q) { return q.received; });
 
-		//Notify thread waiting on this
-		lock.unlock();
-		q.cv.notify_one();
+		for (work_item& q : work_queue)
+		{
+			if (q.processed) continue;
+
+			std::unique_lock<std::mutex> lock(q.guard_mutex);
+			q.result = m_gl_texture_cache.flush_all(q.section_data);
+			q.processed = true;
+
+			//Notify thread waiting on this
+			lock.unlock();
+			q.cv.notify_one();
+		}
+	}
+	else if (!in_begin_end)
+	{
+		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
+		//Only call when there are no waiters
+		m_gl_texture_cache.do_update();
 	}
 
 	if (m_overlay_cleanup_requests.size())

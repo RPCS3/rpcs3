@@ -15,6 +15,7 @@ enum : s32
 	CELL_FS_O_TRUNC   = 001000,
 	CELL_FS_O_APPEND  = 002000,
 	CELL_FS_O_MSELF   = 010000,
+	CELL_FS_O_UNK     = 01000000, // Tests have shown this is independent of other flags.  Only known to be called in Rockband games.
 };
 
 // Seek Mode

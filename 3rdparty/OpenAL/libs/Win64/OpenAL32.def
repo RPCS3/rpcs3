@@ -18,9 +18,6 @@ EXPORTS
     alDeleteBuffers
     alDeleteEffects
     alDeleteFilters
-    alDeleteFontsoundsSOFT
-    alDeletePresetsSOFT
-    alDeleteSoundfontsSOFT
     alDeleteSources
     alDisable
     alDistanceModel
@@ -35,17 +32,10 @@ EXPORTS
     alFilterfv
     alFilteri
     alFilteriv
-    alFontsound2iSOFT
-    alFontsoundModulatoriSOFT
-    alFontsoundiSOFT
-    alFontsoundivSOFT
     alGenAuxiliaryEffectSlots
     alGenBuffers
     alGenEffects
     alGenFilters
-    alGenFontsoundsSOFT
-    alGenPresetsSOFT
-    alGenSoundfontsSOFT
     alGenSources
     alGetAuxiliaryEffectSlotf
     alGetAuxiliaryEffectSlotfv
@@ -74,8 +64,6 @@ EXPORTS
     alGetFilteriv
     alGetFloat
     alGetFloatv
-    alGetFontsoundModulatorivSOFT
-    alGetFontsoundivSOFT
     alGetInteger
     alGetInteger64SOFT
     alGetInteger64vSOFT
@@ -86,9 +74,7 @@ EXPORTS
     alGetListenerfv
     alGetListeneri
     alGetListeneriv
-    alGetPresetivSOFT
     alGetProcAddress
-    alGetSoundfontivSOFT
     alGetSource3dSOFT
     alGetSource3f
     alGetSource3i
@@ -102,6 +88,7 @@ EXPORTS
     alGetSourcei64vSOFT
     alGetSourceiv
     alGetString
+    alGetStringiSOFT
     alIsAuxiliaryEffectSlot
     alIsBuffer
     alIsBufferFormatSupportedSOFT
@@ -109,9 +96,6 @@ EXPORTS
     alIsEnabled
     alIsExtensionPresent
     alIsFilter
-    alIsFontsoundSOFT
-    alIsPresetSOFT
-    alIsSoundfontSOFT
     alIsSource
     alListener3f
     alListener3i
@@ -119,21 +103,7 @@ EXPORTS
     alListenerfv
     alListeneri
     alListeneriv
-    alLoadSoundfontSOFT
-    alMidiEventSOFT
-    alMidiGainSOFT
-    alMidiPauseSOFT
-    alMidiPlaySOFT
-    alMidiResetSOFT
-    alMidiSoundfontSOFT
-    alMidiSoundfontvSOFT
-    alMidiStopSOFT
-    alMidiSysExSOFT
-    alPresetFontsoundsSOFT
-    alPresetiSOFT
-    alPresetivSOFT
     alProcessUpdatesSOFT
-    alSoundfontPresetsSOFT
     alSource3dSOFT
     alSource3f
     alSource3i
@@ -175,7 +145,9 @@ EXPORTS
     alcGetIntegerv
     alcGetProcAddress
     alcGetString
+    alcGetStringiSOFT
     alcGetThreadContext
+    alcIsAmbisonicFormatSupportedSOFT
     alcIsExtensionPresent
     alcIsRenderFormatSupportedSOFT
     alcLoopbackOpenDeviceSOFT
@@ -183,5 +155,6 @@ EXPORTS
     alcOpenDevice
     alcProcessContext
     alcRenderSamplesSOFT
+    alcResetDeviceSOFT
     alcSetThreadContext
     alcSuspendContext
