@@ -187,11 +187,11 @@ struct sys_net_fd_set
 // hostent prefixed with sys_net_
 struct sys_net_hostent
 {
-	vm::ps3::bptr<char> h_name;
-	vm::ps3::bpptr<char> h_aliases;
+	vm::bptr<char> h_name;
+	vm::bpptr<char> h_aliases;
 	be_t<s32> h_addrtype;
 	be_t<s32> h_length;
-	vm::ps3::bpptr<char> h_addr_list;
+	vm::bpptr<char> h_addr_list;
 };
 
 // in_addr prefixed with sys_net_
@@ -204,7 +204,7 @@ struct sys_net_in_addr
 struct sys_net_iovec
 {
 	be_t<s32> zero1;
-	vm::ps3::bptr<void> iov_base;
+	vm::bptr<void> iov_base;
 	be_t<s32> zero2;
 	be_t<u32> iov_len;
 };
@@ -220,15 +220,15 @@ struct sys_net_ip_mreq
 struct sys_net_msghdr
 {
 	be_t<s32> zero1;
-	vm::ps3::bptr<void> msg_name;
+	vm::bptr<void> msg_name;
 	be_t<u32> msg_namelen;
 	be_t<s32> pad1;
 	be_t<s32> zero2;
-	vm::ps3::bptr<sys_net_iovec> msg_iov;
+	vm::bptr<sys_net_iovec> msg_iov;
 	be_t<s32> msg_iovlen;
 	be_t<s32> pad2;
 	be_t<s32> zero3;
-	vm::ps3::bptr<void> msg_control;
+	vm::bptr<void> msg_control;
 	be_t<u32> msg_controllen;
 	be_t<s32> msg_flags;
 };
@@ -360,30 +360,30 @@ class ppu_thread;
 
 // Syscalls
 
-s32 sys_net_bnet_accept(ppu_thread&, s32 s, vm::ps3::ptr<sys_net_sockaddr> addr, vm::ps3::ptr<u32> paddrlen);
-s32 sys_net_bnet_bind(ppu_thread&, s32 s, vm::ps3::cptr<sys_net_sockaddr> addr, u32 addrlen);
-s32 sys_net_bnet_connect(ppu_thread&, s32 s, vm::ps3::ptr<sys_net_sockaddr> addr, u32 addrlen);
-s32 sys_net_bnet_getpeername(ppu_thread&, s32 s, vm::ps3::ptr<sys_net_sockaddr> addr, vm::ps3::ptr<u32> paddrlen);
-s32 sys_net_bnet_getsockname(ppu_thread&, s32 s, vm::ps3::ptr<sys_net_sockaddr> addr, vm::ps3::ptr<u32> paddrlen);
-s32 sys_net_bnet_getsockopt(ppu_thread&, s32 s, s32 level, s32 optname, vm::ps3::ptr<void> optval, vm::ps3::ptr<u32> optlen);
+s32 sys_net_bnet_accept(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
+s32 sys_net_bnet_bind(ppu_thread&, s32 s, vm::cptr<sys_net_sockaddr> addr, u32 addrlen);
+s32 sys_net_bnet_connect(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, u32 addrlen);
+s32 sys_net_bnet_getpeername(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
+s32 sys_net_bnet_getsockname(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
+s32 sys_net_bnet_getsockopt(ppu_thread&, s32 s, s32 level, s32 optname, vm::ptr<void> optval, vm::ptr<u32> optlen);
 s32 sys_net_bnet_listen(ppu_thread&, s32 s, s32 backlog);
-s32 sys_net_bnet_recvfrom(ppu_thread&, s32 s, vm::ps3::ptr<void> buf, u32 len, s32 flags, vm::ps3::ptr<sys_net_sockaddr> addr, vm::ps3::ptr<u32> paddrlen);
-s32 sys_net_bnet_recvmsg(ppu_thread&, s32 s, vm::ps3::ptr<sys_net_msghdr> msg, s32 flags);
-s32 sys_net_bnet_sendmsg(ppu_thread&, s32 s, vm::ps3::cptr<sys_net_msghdr> msg, s32 flags);
-s32 sys_net_bnet_sendto(ppu_thread&, s32 s, vm::ps3::cptr<void> buf, u32 len, s32 flags, vm::ps3::cptr<sys_net_sockaddr> addr, u32 addrlen);
-s32 sys_net_bnet_setsockopt(ppu_thread&, s32 s, s32 level, s32 optname, vm::ps3::cptr<void> optval, u32 optlen);
+s32 sys_net_bnet_recvfrom(ppu_thread&, s32 s, vm::ptr<void> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
+s32 sys_net_bnet_recvmsg(ppu_thread&, s32 s, vm::ptr<sys_net_msghdr> msg, s32 flags);
+s32 sys_net_bnet_sendmsg(ppu_thread&, s32 s, vm::cptr<sys_net_msghdr> msg, s32 flags);
+s32 sys_net_bnet_sendto(ppu_thread&, s32 s, vm::cptr<void> buf, u32 len, s32 flags, vm::cptr<sys_net_sockaddr> addr, u32 addrlen);
+s32 sys_net_bnet_setsockopt(ppu_thread&, s32 s, s32 level, s32 optname, vm::cptr<void> optval, u32 optlen);
 s32 sys_net_bnet_shutdown(ppu_thread&, s32 s, s32 how);
 s32 sys_net_bnet_socket(ppu_thread&, s32 family, s32 type, s32 protocol);
 s32 sys_net_bnet_close(ppu_thread&, s32 s);
-s32 sys_net_bnet_poll(ppu_thread&, vm::ps3::ptr<sys_net_pollfd> fds, s32 nfds, s32 ms);
-s32 sys_net_bnet_select(ppu_thread&, s32 nfds, vm::ps3::ptr<sys_net_fd_set> readfds, vm::ps3::ptr<sys_net_fd_set> writefds, vm::ps3::ptr<sys_net_fd_set> exceptfds, vm::ps3::ptr<sys_net_timeval> timeout);
+s32 sys_net_bnet_poll(ppu_thread&, vm::ptr<sys_net_pollfd> fds, s32 nfds, s32 ms);
+s32 sys_net_bnet_select(ppu_thread&, s32 nfds, vm::ptr<sys_net_fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<sys_net_timeval> timeout);
 s32 _sys_net_open_dump(ppu_thread&, s32 len, s32 flags);
-s32 _sys_net_read_dump(ppu_thread&, s32 id, vm::ps3::ptr<void> buf, s32 len, vm::ps3::ptr<s32> pflags);
-s32 _sys_net_close_dump(ppu_thread&, s32 id, vm::ps3::ptr<s32> pflags);
-s32 _sys_net_write_dump(ppu_thread&, s32 id, vm::ps3::cptr<void> buf, s32 len, u32 unknown);
+s32 _sys_net_read_dump(ppu_thread&, s32 id, vm::ptr<void> buf, s32 len, vm::ptr<s32> pflags);
+s32 _sys_net_close_dump(ppu_thread&, s32 id, vm::ptr<s32> pflags);
+s32 _sys_net_write_dump(ppu_thread&, s32 id, vm::cptr<void> buf, s32 len, u32 unknown);
 s32 sys_net_abort(ppu_thread&, s32 type, u64 arg, s32 flags);
-s32 sys_net_infoctl(ppu_thread&, s32 cmd, vm::ps3::ptr<void> arg);
-s32 sys_net_control(ppu_thread&, u32 arg1, s32 arg2, vm::ps3::ptr<void> arg3, s32 arg4);
+s32 sys_net_infoctl(ppu_thread&, s32 cmd, vm::ptr<void> arg);
+s32 sys_net_control(ppu_thread&, u32 arg1, s32 arg2, vm::ptr<void> arg3, s32 arg4);
 s32 sys_net_bnet_ioctl(ppu_thread&, s32 arg1, u32 arg2, u32 arg3);
-s32 sys_net_bnet_sysctl(ppu_thread&, u32 arg1, u32 arg2, u32 arg3, vm::ps3::ptr<void> arg4, u32 arg5, u32 arg6);
+s32 sys_net_bnet_sysctl(ppu_thread&, u32 arg1, u32 arg2, u32 arg3, vm::ptr<void> arg4, u32 arg5, u32 arg6);
 s32 sys_net_eurus_post_command(ppu_thread&, s32 arg1, u32 arg2, u32 arg3);

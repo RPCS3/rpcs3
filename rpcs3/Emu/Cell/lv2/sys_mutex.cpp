@@ -8,7 +8,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_mutex.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_mutex("sys_mutex");
 
@@ -42,7 +42,7 @@ error_code sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t
 	switch (attr->recursive)
 	{
 	case SYS_SYNC_RECURSIVE: break;
-	case SYS_SYNC_NOT_RECURSIVE: break;	
+	case SYS_SYNC_NOT_RECURSIVE: break;
 	default:
 	{
 		sys_mutex.error("sys_mutex_create(): unknown recursive (0x%x)", attr->recursive);

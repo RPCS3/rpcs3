@@ -9,7 +9,7 @@
 #include "Emu/IdManager.h"
 #include "Utilities/StrUtil.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_fs("sys_fs");
 
@@ -64,7 +64,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(const char* filename)
 	return &g_mp_sys_dev_hdd0;
 }
 
-u64 lv2_file::op_read(vm::ps3::ptr<void> buf, u64 size)
+u64 lv2_file::op_read(vm::ptr<void> buf, u64 size)
 {
 	// Copy data from intermediate buffer (avoid passing vm pointer to a native API)
 	std::unique_ptr<u8[]> local_buf(new u8[size]);
@@ -73,7 +73,7 @@ u64 lv2_file::op_read(vm::ps3::ptr<void> buf, u64 size)
 	return result;
 }
 
-u64 lv2_file::op_write(vm::ps3::cptr<void> buf, u64 size)
+u64 lv2_file::op_write(vm::cptr<void> buf, u64 size)
 {
 	// Copy data to intermediate buffer (avoid passing vm pointer to a native API)
 	std::unique_ptr<u8[]> local_buf(new u8[size]);
@@ -257,8 +257,15 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 		}
 	}
 
-	if (flags & ~(CELL_FS_O_ACCMODE | CELL_FS_O_CREAT | CELL_FS_O_TRUNC | CELL_FS_O_APPEND | CELL_FS_O_EXCL | CELL_FS_O_MSELF))
+	if (flags & CELL_FS_O_UNK)
 	{
+		sys_fs.warning("sys_fs_open called with CELL_FS_O_UNK flag enabled. FLAGS: %#o", flags);
+	}
+
+	// Tests have shown that invalid combinations get resolved internally (without exceptions), but that would complicate code with minimal accuracy gains.
+	// For example, no games are known to try and call TRUNCATE | APPEND | RW, or APPEND | READ, which currently would cause an exception.
+	if (flags & ~(CELL_FS_O_UNK | CELL_FS_O_ACCMODE | CELL_FS_O_CREAT | CELL_FS_O_TRUNC | CELL_FS_O_APPEND | CELL_FS_O_EXCL | CELL_FS_O_MSELF))
+	{ 
 		open_mode = {}; // error
 	}
 
@@ -725,7 +732,7 @@ error_code sys_fs_unlink(vm::cptr<char> path)
 	return CELL_OK;
 }
 
-error_code sys_fs_access(vm::ps3::cptr<char> path, s32 mode)
+error_code sys_fs_access(vm::cptr<char> path, s32 mode)
 {
 	sys_fs.todo("sys_fs_access(path=%s, mode=%#o)", path, mode);
 
@@ -1300,7 +1307,7 @@ error_code sys_fs_chown(vm::cptr<char> path, s32 uid, s32 gid)
 	return CELL_OK;
 }
 
-error_code sys_fs_disk_free(vm::ps3::cptr<char> path, vm::ptr<u64> total_free, vm::ptr<u64> avail_free)
+error_code sys_fs_disk_free(vm::cptr<char> path, vm::ptr<u64> total_free, vm::ptr<u64> avail_free)
 {
 	sys_fs.warning("sys_fs_disk_free(path=%s total_free=*0x%x avail_free=*0x%x)", path, total_free, avail_free);
 
@@ -1334,7 +1341,7 @@ error_code sys_fs_disk_free(vm::ps3::cptr<char> path, vm::ptr<u64> total_free, v
 	return CELL_OK;
 }
 
-error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> timep)
+error_code sys_fs_utime(vm::cptr<char> path, vm::cptr<CellFsUtimbuf> timep)
 {
 	sys_fs.warning("sys_fs_utime(path=%s, timep=*0x%x)", path, timep);
 	sys_fs.warning("** actime=%u, modtime=%u", timep->actime, timep->modtime);
@@ -1365,21 +1372,21 @@ error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> t
 	return CELL_OK;
 }
 
-error_code sys_fs_acl_read(vm::ps3::cptr<char> path, vm::ps3::ptr<void> ptr)
+error_code sys_fs_acl_read(vm::cptr<char> path, vm::ptr<void> ptr)
 {
 	sys_fs.todo("sys_fs_acl_read(path=%s, ptr=*0x%x)", path, ptr);
 
 	return CELL_OK;
 }
 
-error_code sys_fs_acl_write(vm::ps3::cptr<char> path, vm::ps3::ptr<void> ptr)
+error_code sys_fs_acl_write(vm::cptr<char> path, vm::ptr<void> ptr)
 {
 	sys_fs.todo("sys_fs_acl_write(path=%s, ptr=*0x%x)", path, ptr);
 
 	return CELL_OK;
 }
 
-error_code sys_fs_lsn_get_cda_size(u32 fd, vm::ps3::ptr<u64> ptr)
+error_code sys_fs_lsn_get_cda_size(u32 fd, vm::ptr<u64> ptr)
 {
 	sys_fs.warning("sys_fs_lsn_get_cda_size(fd=%d, ptr=*0x%x)", fd, ptr);
 
@@ -1395,7 +1402,7 @@ error_code sys_fs_lsn_get_cda_size(u32 fd, vm::ps3::ptr<u64> ptr)
 	return CELL_OK;
 }
 
-error_code sys_fs_lsn_get_cda(u32 fd, vm::ps3::ptr<void> arg2, u64 arg3, vm::ps3::ptr<u64> arg4)
+error_code sys_fs_lsn_get_cda(u32 fd, vm::ptr<void> arg2, u64 arg3, vm::ptr<u64> arg4)
 {
 	sys_fs.todo("sys_fs_lsn_get_cda(fd=%d, arg2=*0x%x, arg3=0x%x, arg4=*0x%x)", fd, arg2, arg3, arg4);
 
@@ -1442,28 +1449,28 @@ error_code sys_fs_lsn_unlock(u32 fd)
 	return CELL_OK;
 }
 
-error_code sys_fs_lsn_read(u32 fd, vm::ps3::cptr<void> ptr, u64 size)
+error_code sys_fs_lsn_read(u32 fd, vm::cptr<void> ptr, u64 size)
 {
 	sys_fs.todo("sys_fs_lsn_read(fd=%d, ptr=*0x%x, size=0x%x)", fd, ptr, size);
 
 	return CELL_OK;
 }
 
-error_code sys_fs_lsn_write(u32 fd, vm::ps3::cptr<void> ptr, u64 size)
+error_code sys_fs_lsn_write(u32 fd, vm::cptr<void> ptr, u64 size)
 {
 	sys_fs.todo("sys_fs_lsn_write(fd=%d, ptr=*0x%x, size=0x%x)", fd, ptr, size);
 
 	return CELL_OK;
 }
 
-error_code sys_fs_mapped_allocate(u32 fd, u64 size, vm::ps3::pptr<void> out_ptr)
+error_code sys_fs_mapped_allocate(u32 fd, u64 size, vm::pptr<void> out_ptr)
 {
 	sys_fs.todo("sys_fs_mapped_allocate(fd=%d, arg2=0x%x, out_ptr=**0x%x)", fd, size, out_ptr);
 
 	return CELL_OK;
 }
 
-error_code sys_fs_mapped_free(u32 fd, vm::ps3::ptr<void> ptr)
+error_code sys_fs_mapped_free(u32 fd, vm::ptr<void> ptr)
 {
 	sys_fs.todo("sys_fs_mapped_free(fd=%d, ptr=0x%#x)", fd, ptr);
 

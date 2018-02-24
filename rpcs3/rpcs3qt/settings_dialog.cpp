@@ -30,8 +30,6 @@ inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, const int& tabIndex, QWidget *parent, const GameInfo* game)
 	: QDialog(parent), xgui_settings(guiSettings), xemu_settings(emuSettings), ui(new Ui::settings_dialog), m_tab_Index(tabIndex)
 {
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
-
 	ui->setupUi(this);
 	ui->cancelButton->setFocus();
 	ui->tabWidget->setUsesScrollButtons(false);

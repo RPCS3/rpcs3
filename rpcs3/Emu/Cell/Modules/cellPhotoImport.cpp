@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellPhotoImportUtil("cellPhotoImportUtil");
 
@@ -18,24 +18,24 @@ enum
 
 // Datatypes
 struct CellPhotoImportFileDataSub
-{ 
+{
 	int width;
 	int height;
-	//CellPhotoImportFormatType format; 
-	//CellPhotoImportTexRot rotate; 
-}; 
+	//CellPhotoImportFormatType format;
+	//CellPhotoImportTexRot rotate;
+};
 
 struct CellPhotoImportFileData
-{ 
-	char dstFileName;   //[CELL_FS_MAX_FS_FILE_NAME_LENGTH]; 
-	char photo_title;   //[CELL_PHOTO_IMPORT_PHOTO_TITLE_MAX_LENGTH*3]; 
-	char game_title;    //[CELL_PHOTO_IMPORT_GAME_TITLE_MAX_SIZE]; 
-	char game_comment;  //[CELL_PHOTO_IMPORT_GAME_COMMENT_MAX_SIZE]; 
-	CellPhotoImportFileDataSub* data_sub; 
+{
+	char dstFileName;   //[CELL_FS_MAX_FS_FILE_NAME_LENGTH];
+	char photo_title;   //[CELL_PHOTO_IMPORT_PHOTO_TITLE_MAX_LENGTH*3];
+	char game_title;    //[CELL_PHOTO_IMPORT_GAME_TITLE_MAX_SIZE];
+	char game_comment;  //[CELL_PHOTO_IMPORT_GAME_COMMENT_MAX_SIZE];
+	CellPhotoImportFileDataSub* data_sub;
 };
 
 struct CellPhotoImportSetParam
-{ 
+{
 	unsigned int fileSizeMax;
 };
 

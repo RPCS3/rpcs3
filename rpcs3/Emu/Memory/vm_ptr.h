@@ -3,7 +3,6 @@
 #include "vm_ref.h"
 
 class ppu_thread;
-class ARMv7Thread;
 
 namespace vm
 {
@@ -260,9 +259,6 @@ namespace vm
 
 		// Callback; defined in PPUCallback.h, passing context is mandatory
 		RT operator()(ppu_thread& ppu, T... args) const;
-
-		// Callback; defined in ARMv7Callback.h, passing context is mandatory
-		RT operator()(ARMv7Thread& cpu, T... args) const;
 	};
 
 	template<typename AT, typename RT, typename... T>
@@ -291,7 +287,7 @@ namespace vm
 	// LE pointer to BE data
 	template<typename T, typename AT = u32> using lptrb = _ptr_base<to_be_t<T>, to_le_t<AT>>;
 
-	namespace ps3
+	inline namespace ps3_
 	{
 		// Default pointer type for PS3 HLE functions (Native endianness pointer to BE data)
 		template<typename T, typename AT = u32> using ptr = ptrb<T, AT>;
@@ -319,39 +315,6 @@ namespace vm
 		// Perform const_cast (for example, vm::cptr<char> to vm::ptr<char>)
 		template<typename CT, typename T, typename AT, typename = decltype(const_cast<to_be_t<CT>*>(std::declval<T*>()))>
 		inline _ptr_base<to_be_t<CT>> const_ptr_cast(const _ptr_base<T, AT>& other)
-		{
-			return vm::cast(other.addr(), HERE);
-		}
-	}
-
-	namespace psv
-	{
-		// Default pointer type for PSV HLE functions (Native endianness pointer to LE data)
-		template<typename T> using ptr = ptrl<T>;
-		template<typename T> using cptr = ptr<const T>;
-
-		// Default pointer to pointer type for PSV HLE functions (Native endianness pointer to LE pointer to LE data)
-		template<typename T> using pptr = ptr<ptr<T>>;
-		template<typename T> using cpptr = pptr<const T>;
-
-		// Default pointer type for PSV HLE structures (LE pointer to LE data)
-		template<typename T> using lptr = lptrl<T>;
-		template<typename T> using lcptr = lptr<const T>;
-
-		// Default pointer to pointer type for PSV HLE structures (LE pointer to LE pointer to LE data)
-		template<typename T> using lpptr = lptr<ptr<T>>;
-		template<typename T> using lcpptr = lpptr<const T>;
-
-		// Perform static_cast (for example, vm::ptr<void> to vm::ptr<char>)
-		template<typename CT, typename T, typename AT, typename = decltype(static_cast<to_le_t<CT>*>(std::declval<T*>()))>
-		inline _ptr_base<to_le_t<CT>> static_ptr_cast(const _ptr_base<T, AT>& other)
-		{
-			return vm::cast(other.addr(), HERE);
-		}
-
-		// Perform const_cast (for example, vm::cptr<char> to vm::ptr<char>)
-		template<typename CT, typename T, typename AT, typename = decltype(const_cast<to_le_t<CT>*>(std::declval<T*>()))>
-		inline _ptr_base<to_le_t<CT>> const_ptr_cast(const _ptr_base<T, AT>& other)
 		{
 			return vm::cast(other.addr(), HERE);
 		}
@@ -400,7 +363,7 @@ namespace vm
 		{
 			return false;
 		}
-		
+
 		template<typename T, typename AT>
 		friend bool operator <=(const null_t&, const _ptr_base<T, AT>&)
 		{

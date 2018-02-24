@@ -9,7 +9,7 @@
 #include "sys_event.h"
 #include "sys_mmapper.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_ppu_thread("sys_ppu_thread");
 
@@ -105,7 +105,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 		{
 			lv2_obj::sleep(ppu);
 		}
-		
+
 		return result;
 	});
 
@@ -113,7 +113,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	{
 		return CELL_ESRCH;
 	}
-	
+
 	if (thread.ret && thread.ret != CELL_EBUSY)
 	{
 		return thread.ret;
@@ -182,7 +182,7 @@ error_code sys_ppu_thread_detach(u32 thread_id)
 	{
 		idm::remove<ppu_thread>(thread_id);
 	}
-	
+
 	return CELL_OK;
 }
 
@@ -448,4 +448,3 @@ error_code sys_ppu_thread_get_page_fault_context(u32 thread_id, vm::ptr<sys_ppu_
 
 	return CELL_OK;
 }
-

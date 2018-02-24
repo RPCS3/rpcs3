@@ -5,7 +5,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_trace.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_trace("sys_trace");
 

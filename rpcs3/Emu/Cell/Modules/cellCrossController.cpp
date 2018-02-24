@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellCrossController("cellCrossController");
 

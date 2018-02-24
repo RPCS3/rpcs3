@@ -8,6 +8,18 @@
 
 namespace gl
 {
+	GLenum get_target(rsx::texture_dimension_extended type)
+	{
+		switch (type)
+		{
+		case rsx::texture_dimension_extended::texture_dimension_1d: return GL_TEXTURE_1D;
+		case rsx::texture_dimension_extended::texture_dimension_2d: return GL_TEXTURE_2D;
+		case rsx::texture_dimension_extended::texture_dimension_cubemap: return GL_TEXTURE_CUBE_MAP;
+		case rsx::texture_dimension_extended::texture_dimension_3d: return GL_TEXTURE_3D;
+		}
+		fmt::throw_exception("Unknown texture target" HERE);
+	}
+
 	GLenum get_sized_internal_format(u32 texture_format)
 	{
 		switch (texture_format)

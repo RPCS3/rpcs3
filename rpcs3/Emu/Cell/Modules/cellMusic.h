@@ -12,8 +12,8 @@ enum
 	CELL_MUSIC_ERROR_PLAYBACK_FAILURE   = 0x8002c107,
 	CELL_MUSIC_ERROR_NO_MORE_CONTENT    = 0x8002c108,
 	CELL_MUSIC_DIALOG_OPEN              = 0x8002c109,
-	CELL_MUSIC_DIALOG_CLOSE             = 0x8002c10A,
-	CELL_MUSIC_ERROR_GENERIC            = 0x8002c1FF,
+	CELL_MUSIC_DIALOG_CLOSE             = 0x8002c10a,
+	CELL_MUSIC_ERROR_GENERIC            = 0x8002c1ff,
 
 	CELL_MUSIC2_PLAYBACK_FINISHED       = CELL_MUSIC_PLAYBACK_FINISHED,
 	CELL_MUSIC2_ERROR_PARAM             = CELL_MUSIC_ERROR_PARAM,
@@ -120,8 +120,8 @@ enum
 	CELL_MUSIC_SELECTION_CONTEXT_SIZE         = 2048,
 };
 
-using CellMusicCallback = void(u32 event, vm::ps3::ptr<void> param, vm::ps3::ptr<void> userData);
-using CellMusic2Callback = void(u32 event, vm::ps3::ptr<void> param, vm::ps3::ptr<void> userData);
+using CellMusicCallback = void(u32 event, vm::ptr<void> param, vm::ptr<void> userData);
+using CellMusic2Callback = void(u32 event, vm::ptr<void> param, vm::ptr<void> userData);
 
 struct CellMusicSelectionContext
 {

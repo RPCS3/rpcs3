@@ -19,7 +19,7 @@ namespace vm
 		user_space,
 		video,
 		stack,
-		
+
 		memory_location_max,
 		any = 0xffffffff,
 	};
@@ -268,7 +268,7 @@ namespace vm
 		g_base_addr[addr] = value;
 	}
 
-	namespace ps3
+	inline namespace ps3_
 	{
 		// Convert specified PS3 address to a pointer of specified (possibly converted to BE) type
 		template<typename T> inline to_be_t<T>* _ptr(u32 addr)
@@ -311,58 +311,6 @@ namespace vm
 		{
 			_ref<u64>(addr) = value;
 		}
-
-		void init();
-	}
-	
-	namespace psv
-	{
-		template<typename T> inline to_le_t<T>* _ptr(u32 addr)
-		{
-			return static_cast<to_le_t<T>*>(base(addr));
-		}
-
-		template<typename T> inline to_le_t<T>& _ref(u32 addr)
-		{
-			return *_ptr<T>(addr);
-		}
-
-		inline const le_t<u16>& read16(u32 addr)
-		{
-			return _ref<u16>(addr);
-		}
-
-		inline void write16(u32 addr, le_t<u16> value)
-		{
-			_ref<u16>(addr) = value;
-		}
-
-		inline const le_t<u32>& read32(u32 addr)
-		{
-			return _ref<u32>(addr);
-		}
-
-		inline void write32(u32 addr, le_t<u32> value)
-		{
-			_ref<u32>(addr) = value;
-		}
-
-		inline const le_t<u64>& read64(u32 addr)
-		{
-			return _ref<u64>(addr);
-		}
-
-		inline void write64(u32 addr, le_t<u64> value)
-		{
-			_ref<u64>(addr) = value;
-		}
-
-		void init();
-	}
-
-	namespace psp
-	{
-		using namespace psv;
 
 		void init();
 	}

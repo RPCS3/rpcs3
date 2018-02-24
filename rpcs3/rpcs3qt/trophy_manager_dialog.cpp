@@ -40,7 +40,6 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	: QWidget(), m_sort_column(0), m_col_sort_order(Qt::AscendingOrder), m_gui_settings(gui_settings)
 {
 	// Nonspecific widget settings
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setWindowTitle(tr("Trophy Manager"));
 
 	m_icon_height            = m_gui_settings->GetValue(gui::tr_icon_height).toInt();

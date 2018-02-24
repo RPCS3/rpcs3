@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "sys_tty.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_tty("sys_tty");
 
@@ -23,20 +23,20 @@ error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwrit
 	{
 		return CELL_EINVAL;
 	}
-	
+
 	const u32 written_len = static_cast<s32>(len) > 0 ? len : 0;
 
 	if (written_len > 0 && g_tty)
 	{
 		g_tty.write(buf.get_ptr(), len);
 	}
-	
+
 	if (!pwritelen)
 	{
 		return CELL_EFAULT;
 	}
 
 	*pwritelen = written_len;
-	
+
 	return CELL_OK;
 }

@@ -59,6 +59,7 @@ rpcs3/git-version.h
 
 # Visual Studio Files
 .vs/*
+.vscode/*
 *.vspx
 *.psess
 *.VC.*
@@ -91,6 +92,10 @@ CMakeCache.txt
 # cotire
 rpcs3/cotire/*
 rpcs3/rpcs3_*_cotire.cmake
+
+# kdevelop
+*.kdev4
+.kdev4/*
 
 # Qt
 moc_*.cpp

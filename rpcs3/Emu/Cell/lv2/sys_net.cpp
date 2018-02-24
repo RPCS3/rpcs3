@@ -24,7 +24,7 @@
 #include <poll.h>
 #endif
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_net("sys_net");
 

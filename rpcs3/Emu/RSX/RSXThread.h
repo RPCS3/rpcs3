@@ -45,6 +45,20 @@ namespace rsx
 		};
 	}
 
+	namespace constants
+	{
+		static std::array<const char*, 16> fragment_texture_names =
+		{
+			"tex0", "tex1", "tex2", "tex3", "tex4", "tex5", "tex6", "tex7",
+			"tex8", "tex9", "tex10", "tex11", "tex12", "tex13", "tex14", "tex15",
+		};
+
+		static std::array<const char*, 4> vertex_texture_names =
+		{
+			"vtex0", "vtex1", "vtex2", "vtex3",
+		};
+	}
+
 	enum framebuffer_creation_context : u8
 	{
 		context_draw = 0,
@@ -311,9 +325,9 @@ namespace rsx
 		u64 start_rsx_time = 0;
 		u64 int_flip_index = 0;
 		u64 last_flip_time;
-		vm::ps3::ptr<void(u32)> flip_handler = vm::null;
-		vm::ps3::ptr<void(u32)> user_handler = vm::null;
-		vm::ps3::ptr<void(u32)> vblank_handler = vm::null;
+		vm::ptr<void(u32)> flip_handler = vm::null;
+		vm::ptr<void(u32)> user_handler = vm::null;
+		vm::ptr<void(u32)> vblank_handler = vm::null;
 		u64 vblank_count;
 
 	public:
@@ -333,12 +347,12 @@ namespace rsx
 
 		virtual void on_task() override;
 		virtual void on_exit() override;
-		
+
 		/**
 		 * Execute a backend local task queue
 		 * Idle argument checks that the FIFO queue is in an idle state
 		 */
-		virtual void do_local_task(bool idle) {}
+		virtual void do_local_task(bool /*idle*/) {}
 
 	public:
 		virtual std::string get_name() const override;
@@ -375,7 +389,7 @@ namespace rsx
 
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
 		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges, const u64 consumed_attrib_mask) const;
-		
+
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;
 

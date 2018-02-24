@@ -1,7 +1,8 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "cellSysutil.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellPhotoExport("cellPhotoExport");
 
@@ -19,6 +20,16 @@ enum
 	CELL_PHOTO_EXPORT_UTIL_ERROR_MOVE         = 0x8002c209,
 	CELL_PHOTO_EXPORT_UTIL_ERROR_INITIALIZE   = 0x8002c20a,
 };
+
+struct CellPhotoExportSetParam
+{
+	vm::bptr<char> photo_title;
+	vm::bptr<char> game_title;
+	vm::bptr<char> game_comment;
+	vm::bptr<void> reserved;
+};
+
+using CellPhotoExportUtilFinishCallback = void(s32 result, vm::ptr<void> userdata);
 
 s32 cellPhotoInitialize()
 {
@@ -38,39 +49,81 @@ s32 cellPhotoRegistFromFile()
 	return CELL_OK;
 }
 
-s32 cellPhotoExportInitialize()
+error_code cellPhotoExportInitialize(u32 version, u32 container, vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellPhotoExport);
+	cellPhotoExport.todo("cellPhotoExportInitialize(version=0x%x, container=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, container, funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellPhotoExportInitialize2()
+error_code cellPhotoExportInitialize2(u32 version, vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellPhotoExport);
+	cellPhotoExport.todo("cellPhotoExportInitialize2(version=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellPhotoExportFinalize()
+error_code cellPhotoExportFinalize(vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellPhotoExport);
+	cellPhotoExport.todo("cellPhotoExportFinalize(funcFinish=*0x%x, userdata=*0x%x)", funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellPhotoExportFromFile()
+error_code cellPhotoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcHddFile, vm::ptr<CellPhotoExportSetParam> param, vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellPhotoExport);
+	cellPhotoExport.todo("cellPhotoExportFromFile(srcHddDir=%s, srcHddFile=%s, param=*0x%x, funcFinish=*0x%x, userdata=*0x%x)", srcHddDir, srcHddFile, param, funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellPhotoExportFromFileWithCopy()
+error_code cellPhotoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<char> srcHddFile, vm::ptr<CellPhotoExportSetParam> param, vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellPhotoExport);
+	cellPhotoExport.todo("cellPhotoExportFromFileWithCopy(srcHddDir=%s, srcHddFile=%s, param=*0x%x, funcFinish=*0x%x, userdata=*0x%x)", srcHddDir, srcHddFile, param, funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellPhotoExportProgress()
+error_code cellPhotoExportProgress(vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellPhotoExport);
+	cellPhotoExport.todo("cellPhotoExportProgress(funcFinish=*0x%x, userdata=*0x%x)", funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, 0xFFFF, userdata); // 0-0xFFFF where 0xFFFF = 100%
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 

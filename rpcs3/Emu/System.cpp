@@ -11,7 +11,6 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
-#include "Emu/PSP2/ARMv7Thread.h"
 
 #include "Emu/IdManager.h"
 #include "Emu/RSX/GSRender.h"
@@ -32,8 +31,6 @@
 
 cfg_root g_cfg;
 
-system_type g_system;
-
 std::string g_cfg_defaults;
 
 extern atomic_t<u32> g_thread_count;
@@ -42,7 +39,6 @@ extern u64 get_system_time();
 
 extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
-extern void arm_load_exec(const arm_exec_object&);
 extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
 
 extern void network_thread_init();
@@ -663,7 +659,6 @@ void Emulator::Load(bool add_only)
 		ppu_exec_object ppu_exec;
 		ppu_prx_object ppu_prx;
 		spu_exec_object spu_exec;
-		arm_exec_object arm_exec;
 
 		if (!elf_file)
 		{
@@ -673,11 +668,10 @@ void Emulator::Load(bool add_only)
 		else if (ppu_exec.open(elf_file) == elf_error::ok)
 		{
 			// PS3 executable
-			g_system = system_type::ps3;
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 
-			vm::ps3::init();
+			vm::init();
 
 			if (argv.empty())
 			{
@@ -713,41 +707,18 @@ void Emulator::Load(bool add_only)
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{
 			// PPU PRX (experimental)
-			g_system = system_type::ps3;
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
-			vm::ps3::init();
+			vm::init();
 			ppu_load_prx(ppu_prx, m_path);
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{
 			// SPU executable (experimental)
-			g_system = system_type::ps3;
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
-			vm::ps3::init();
+			vm::init();
 			spu_load_exec(spu_exec);
-		}
-		else if (arm_exec.open(elf_file) == elf_error::ok)
-		{
-			// ARMv7 executable
-			g_system = system_type::psv;
-			m_state = system_state::ready;
-			GetCallbacks().on_ready();
-			vm::psv::init();
-
-			if (argv.empty())
-			{
-				argv.resize(1);
-			}
-
-			if (argv[0].empty())
-			{
-				argv[0] = "host_root:" + m_path;
-				LOG_NOTICE(LOADER, "Elf path: %s", argv[0]);
-			}
-
-			arm_load_exec(arm_exec);
 		}
 		else
 		{
@@ -756,7 +727,6 @@ void Emulator::Load(bool add_only)
 			LOG_WARNING(LOADER, "** ppu_exec -> %s", ppu_exec.get_error());
 			LOG_WARNING(LOADER, "** ppu_prx  -> %s", ppu_prx.get_error());
 			LOG_WARNING(LOADER, "** spu_exec -> %s", spu_exec.get_error());
-			LOG_WARNING(LOADER, "** arm_exec -> %s", arm_exec.get_error());
 			return;
 		}
 
@@ -806,7 +776,6 @@ void Emulator::Run()
 	};
 
 	idm::select<ppu_thread>(on_select);
-	idm::select<ARMv7Thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
 }
@@ -835,7 +804,6 @@ bool Emulator::Pause()
 	};
 
 	idm::select<ppu_thread>(on_select);
-	idm::select<ARMv7Thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
 
@@ -859,7 +827,7 @@ void Emulator::Resume()
 	}
 
 	// Print and reset debug data collected
-	if (m_state == system_state::paused && g_cfg.core.ppu_debug && g_system == system_type::ps3)
+	if (m_state == system_state::paused && g_cfg.core.ppu_debug)
 	{
 		PPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
 		dis_asm.offset = vm::g_base_addr;
@@ -907,7 +875,6 @@ void Emulator::Resume()
 	};
 
 	idm::select<ppu_thread>(on_select);
-	idm::select<ARMv7Thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
 
@@ -948,7 +915,6 @@ void Emulator::Stop(bool restart)
 	};
 
 	idm::select<ppu_thread>(on_select);
-	idm::select<ARMv7Thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
 
@@ -1031,21 +997,13 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 
 	if (auto thread = get_current_cpu_thread())
 	{
-		if (g_system == system_type::ps3 && thread->id_type() == 1)
+		if (thread->id_type() == 1)
 		{
 			auto& ppu = static_cast<ppu_thread&>(*thread);
 
 			if (ppu.last_function)
 			{
 				func = ppu.last_function;
-			}
-		}
-
-		if (g_system == system_type::psv)
-		{
-			if (auto _func = static_cast<ARMv7Thread*>(thread)->last_function)
-			{
-				func = _func;
 			}
 		}
 	}

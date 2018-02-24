@@ -59,7 +59,7 @@ namespace rsx
 
 			virtual void update(){}
 
-			virtual void on_button_pressed(pad_button button_press)
+			virtual void on_button_pressed(pad_button /*button_press*/)
 			{
 				close();
 			};
@@ -332,7 +332,7 @@ namespace rsx
 				return result;
 			}
 
-			s32 show(std::vector<SaveDataEntry>& save_entries, u32 op, vm::ptr<CellSaveDataListSet> listSet)
+			s32 show(std::vector<SaveDataEntry>& save_entries, u32 op, vm::ptr<CellSaveDataListSet> /*listSet*/)
 			{
 				std::vector<u8> null_icon;
 				auto num_actual_saves = save_entries.size();

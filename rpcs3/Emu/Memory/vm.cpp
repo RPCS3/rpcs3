@@ -130,7 +130,7 @@ namespace vm
 		{
 			cpu = nullptr;
 		}
-		
+
 		g_mutex.lock_shared();
 
 		if (cpu)
@@ -344,7 +344,7 @@ namespace vm
 			utils::memory_commit(g_exec_addr + addr, size);
 		}
 
-		if (g_cfg.core.ppu_debug && g_system == system_type::ps3)
+		if (g_cfg.core.ppu_debug)
 		{
 			utils::memory_commit(g_stat_addr + addr, size);
 		}
@@ -442,7 +442,7 @@ namespace vm
 		utils::memory_decommit(g_base_addr + addr, size);
 		utils::memory_decommit(g_exec_addr + addr, size);
 
-		if (g_cfg.core.ppu_debug && g_system == system_type::ps3)
+		if (g_cfg.core.ppu_debug)
 		{
 			utils::memory_decommit(g_stat_addr + addr, size);
 		}
@@ -457,7 +457,7 @@ namespace vm
 				return false;
 			}
 		}
-		
+
 		return true;
 	}
 
@@ -768,7 +768,7 @@ namespace vm
 
 			return nullptr;
 		}
-		
+
 		// search location by address
 		for (auto& block : g_locations)
 		{
@@ -781,7 +781,7 @@ namespace vm
 		return nullptr;
 	}
 
-	namespace ps3
+	inline namespace ps3_
 	{
 		void init()
 		{
@@ -794,37 +794,6 @@ namespace vm
 				std::make_shared<block_t>(0xE0000000, 0x20000000), // SPU reserved
 				std::make_shared<block_t>(0x40000000, 0x10000000), // rsx contexts
 				std::make_shared<block_t>(0x30000000, 0x10000000), // main extend
-			};
-		}
-	}
-
-	namespace psv
-	{
-		void init()
-		{
-			g_locations = 
-			{
-				std::make_shared<block_t>(0x81000000, 0x10000000), // RAM
-				std::make_shared<block_t>(0x91000000, 0x2F000000), // user
-				std::make_shared<block_t>(0xC0000000, 0x10000000), // video (arbitrarily)
-				std::make_shared<block_t>(0xD0000000, 0x10000000), // stack (arbitrarily)
-			};
-		}
-	}
-
-	namespace psp
-	{
-		void init()
-		{
-			g_locations =
-			{
-				std::make_shared<block_t>(0x08000000, 0x02000000), // RAM
-				std::make_shared<block_t>(0x08800000, 0x01800000), // user
-				std::make_shared<block_t>(0x04000000, 0x00200000), // VRAM
-				nullptr, // stack
-
-				std::make_shared<block_t>(0x00010000, 0x00004000), // scratchpad
-				std::make_shared<block_t>(0x88000000, 0x00800000), // kernel
 			};
 		}
 	}

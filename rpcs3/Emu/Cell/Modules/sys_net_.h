@@ -35,7 +35,7 @@ struct sys_net_sockinfo_ex_t
 
 struct sys_net_initialize_parameter_t
 {
-	vm::ps3::bptr<void> memory;
+	vm::bptr<void> memory;
 	be_t<s32> memory_size;
 	be_t<s32> flags;
 };

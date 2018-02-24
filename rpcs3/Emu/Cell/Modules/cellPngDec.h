@@ -1,5 +1,5 @@
 #pragma once
-namespace vm { using namespace ps3; }
+
 
 #include "cellPng.h"
 
@@ -328,7 +328,7 @@ static s32 getPngDecColourType(u8 type)
 
 static bool cellPngColorSpaceHasAlpha(u32 colorspace)
 {
-	switch (colorspace) 
+	switch (colorspace)
 	{
 	case CELL_PNGDEC_RGBA:
 	case CELL_PNGDEC_ARGB:

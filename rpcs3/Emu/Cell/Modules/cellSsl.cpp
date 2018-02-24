@@ -9,7 +9,7 @@
 
 logs::channel cellSsl("cellSsl");
 
-namespace vm { using namespace ps3; }
+
 
 enum SpecialCerts { BaltimoreCert = 6, Class3G2V2Cert = 13, ClassSSV4Cert = 15, EntrustNetCert = 18, GTECyberTrustGlobalCert = 23 };
 

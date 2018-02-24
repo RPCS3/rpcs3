@@ -17,7 +17,7 @@
 #include <set>
 #include <algorithm>
 
-namespace vm { using namespace ps3; }
+
 
 extern void ppu_initialize_syscalls();
 extern std::string ppu_get_function_name(const std::string& module, u32 fnid);
@@ -244,6 +244,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::sceNp2,
 		&ppu_module_manager::sceNpClans,
 		&ppu_module_manager::sceNpCommerce2,
+		&ppu_module_manager::sceNpMatchingInt,
 		&ppu_module_manager::sceNpSns,
 		&ppu_module_manager::sceNpTrophy,
 		&ppu_module_manager::sceNpTus,
@@ -268,8 +269,8 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 	for (u32 addr = ppu_function_manager::addr, index = 0; index < hle_funcs.size(); addr += 8, index++)
 	{
 		// Function address = current address, RTOC = BLR instruction for the interpreter
-		vm::ps3::write32(addr + 0, addr);
-		vm::ps3::write32(addr + 4, ppu_instructions::BLR());
+		vm::write32(addr + 0, addr);
+		vm::write32(addr + 4, ppu_instructions::BLR());
 
 		// Register the HLE function directly
 		ppu_register_function_at(addr + 0, 4, hle_funcs[index]);
@@ -1128,7 +1129,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 					//be_t<u32> crash_dump_param_addr;
 				};
 
-				const auto& info = vm::ps3::_ref<process_param_t>(vm::cast(prog.p_vaddr, HERE));
+				const auto& info = vm::_ref<process_param_t>(vm::cast(prog.p_vaddr, HERE));
 
 				if (info.size < sizeof(process_param_t))
 				{

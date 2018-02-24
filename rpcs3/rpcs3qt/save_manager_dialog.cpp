@@ -81,7 +81,6 @@ namespace
 save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::string dir, QWidget* parent)
 	: QDialog(parent), m_save_entries(), m_dir(dir), m_sort_column(1), m_sort_ascending(true), m_gui_settings(gui_settings)
 {
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setWindowTitle(tr("Save Manager"));
 	setMinimumSize(QSize(400, 400));
 
@@ -249,7 +248,7 @@ void save_manager_dialog::OnEntryRemove()
 	if (idx != -1)
 	{
 		int idx_real = m_list->item(idx, 0)->data(Qt::UserRole).toInt();
-		if (QMessageBox::question(this, "Delete Confirmation", "Are you sure you want to delete:\n" + qstr(m_save_entries[idx_real].title) + "?", QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+		if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete:\n%1?").arg(qstr(m_save_entries[idx_real].title)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 		{
 			fs::remove_all(m_dir + m_save_entries[idx_real].dirName + "/");
 			m_list->removeRow(idx);
@@ -271,8 +270,7 @@ void save_manager_dialog::OnEntriesRemove()
 		return;
 	}
 
-	if (QMessageBox::question(this, "Delete Confirmation", QString("Are you sure you want to delete these %1 items?").arg(selection.size())
-		, QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %1 items?").arg(selection.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
 		qSort(selection.begin(), selection.end(), qGreater<QModelIndex>());
 		for (QModelIndex index : selection)
@@ -325,7 +323,8 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 	// Events
 	connect(removeAct, &QAction::triggered, this, &save_manager_dialog::OnEntriesRemove); // entriesremove handles case of one as well
 	connect(infoAct, &QAction::triggered, this, &save_manager_dialog::OnEntryInfo);
-	connect(showDirAct, &QAction::triggered, [=]() {
+	connect(showDirAct, &QAction::triggered, [=]()
+	{
 		int idx_real = m_list->item(idx, 0)->data(Qt::UserRole).toInt();
 		QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
 		QDesktopServices::openUrl(QUrl("file:///" + path));

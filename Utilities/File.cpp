@@ -1034,7 +1034,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
 
 			const auto result = ::lseek(m_fd, offset, mode);
-			
+
 			if (result == -1)
 			{
 				g_tls_error = to_error(errno);
@@ -1258,7 +1258,12 @@ bool fs::dir::open(const std::string& path)
 			}
 
 			struct ::stat file_info;
-			verify("dir::read" HERE), ::fstatat(::dirfd(m_dd), found->d_name, &file_info, 0) == 0;
+
+			if (::fstatat(::dirfd(m_dd), found->d_name, &file_info, 0) != 0)
+			{
+				//failed metadata (broken symlink?), ignore and skip to next file
+				return read(info);
+			}
 
 			info.name = found->d_name;
 			info.is_directory = S_ISDIR(file_info.st_mode);
@@ -1358,7 +1363,7 @@ std::string fs::get_data_dir(const std::string& prefix, const std::string& locat
 
 			continue;
 		}
-		
+
 		buf.push_back(c);
 	}
 

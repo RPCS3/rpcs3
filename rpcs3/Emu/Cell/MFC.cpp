@@ -158,7 +158,7 @@ void mfc_thread::cpu_task()
 
 					if ((cmd.cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK)) == MFC_PUTQLLUC_CMD)
 					{
-						auto& data = vm::ps3::_ref<decltype(spu.rdata)>(cmd.eal);
+						auto& data = vm::_ref<decltype(spu.rdata)>(cmd.eal);
 						const auto to_write = spu._ref<decltype(spu.rdata)>(cmd.lsa & 0x3ffff);
 
 						cmd.size = 0;
@@ -302,7 +302,7 @@ void mfc_thread::cpu_task()
 					spu.ch_tag_stat.push(spu, completed);
 					no_updates = 0;
 				}
-				else if (completed && spu.ch_tag_mask == completed && spu.ch_tag_upd.compare_and_swap_test(2, 0))
+				else if (spu.ch_tag_mask == completed && spu.ch_tag_upd.compare_and_swap_test(2, 0))
 				{
 					spu.ch_tag_stat.push(spu, completed);
 					no_updates = 0;

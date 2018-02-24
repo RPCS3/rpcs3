@@ -103,7 +103,7 @@ static int clock_gettime(int clk_id, struct timespec* tp)
 
 #endif
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_time("sys_time");
 

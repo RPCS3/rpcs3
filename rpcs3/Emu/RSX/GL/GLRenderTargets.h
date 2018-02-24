@@ -49,7 +49,7 @@ namespace rsx
 
 namespace gl
 {
-	class render_target : public texture, public rsx::render_target_descriptor<u32>
+	class render_target : public texture, public rsx::ref_counted, public rsx::render_target_descriptor<u32>
 	{
 		bool is_cleared = false;
 
@@ -242,10 +242,10 @@ struct gl_render_target_traits
 		info->bpp = static_cast<u8>(info->native_pitch / info->surface_width);
 	}
 
-	static void prepare_rtt_for_drawing(void *, gl::render_target*) {}
+	static void prepare_rtt_for_drawing(void *, gl::render_target *rtt) { rtt->reset_refs(); }
 	static void prepare_rtt_for_sampling(void *, gl::render_target*) {}
 	
-	static void prepare_ds_for_drawing(void *, gl::render_target*) {}
+	static void prepare_ds_for_drawing(void *, gl::render_target *ds) { ds->reset_refs(); }
 	static void prepare_ds_for_sampling(void *, gl::render_target*) {}
 
 	static void invalidate_rtt_surface_contents(void *, gl::render_target *rtt, gl::render_target* /*old*/, bool forced) { if (forced) rtt->set_cleared(false); }
@@ -318,6 +318,20 @@ struct gl_render_target_traits
 	}
 };
 
-class gl_render_targets : public rsx::surface_store<gl_render_target_traits>
+struct gl_render_targets : public rsx::surface_store<gl_render_target_traits>
 {
+	void free_invalidated()
+	{
+		invalidated_resources.remove_if([&](auto &rtt)
+		{
+			if (rtt->deref_count >= 2)
+			{
+				rtt->remove();
+				return true;
+			}
+
+			rtt->deref_count++;
+			return false;
+		});
+	}
 };

@@ -303,7 +303,7 @@ extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr);
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value);
 extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value);
 
-namespace vm { using namespace ps3; }
+
 
 class ppu_scale_table_t
 {

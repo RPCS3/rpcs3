@@ -23,7 +23,7 @@
 
 constexpr auto qstr = QString::fromStdString;
 
-gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse)
+gs_frame::gs_frame(const QString& title, const QRect& geometry, QIcon appIcon, bool disableMouse)
 	: QWindow(), m_windowTitle(title), m_disable_mouse(disableMouse)
 {
 	//Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
@@ -55,8 +55,7 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 
 	m_show_fps = static_cast<bool>(g_cfg.misc.show_fps_in_title);
 
-	resize(w, h);
-
+	setGeometry(geometry);
 	setTitle(m_windowTitle);
 	setVisibility(Hidden);
 	create();
@@ -68,6 +67,18 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 void gs_frame::paintEvent(QPaintEvent *event)
 {
 	Q_UNUSED(event);
+}
+
+void gs_frame::showEvent(QShowEvent *event)
+{
+	// we have to calculate new window positions, since the frame is only known once the window was created
+	// the left and right margins are too big on my setup for some reason yet unknown, so we'll have to ignore them
+	int x = geometry().left(); //std::max(geometry().left(), frameMargins().left());
+	int y = std::max(geometry().top(), frameMargins().top());
+
+	setPosition(x, y);
+
+	QWindow::showEvent(event);
 }
 
 void gs_frame::keyPressEvent(QKeyEvent *keyEvent)

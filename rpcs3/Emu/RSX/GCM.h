@@ -24,14 +24,14 @@ struct CellGcmConfig
 
 struct CellGcmContextData;
 
-typedef s32(CellGcmContextCallback)(vm::ps3::ptr<CellGcmContextData>, u32);
+typedef s32(CellGcmContextCallback)(vm::ptr<CellGcmContextData>, u32);
 
 struct CellGcmContextData
 {
-	vm::ps3::bptr<u32> begin;
-	vm::ps3::bptr<u32> end;
-	vm::ps3::bptr<u32> current;
-	vm::ps3::bptr<CellGcmContextCallback> callback;
+	vm::bptr<u32> begin;
+	vm::bptr<u32> end;
+	vm::bptr<u32> current;
+	vm::bptr<CellGcmContextCallback> callback;
 };
 
 struct gcmInfo

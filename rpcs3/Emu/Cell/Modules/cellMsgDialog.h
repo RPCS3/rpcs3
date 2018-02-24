@@ -2,7 +2,7 @@
 
 #include "Utilities/BitField.h"
 
-namespace vm { using namespace ps3; }
+
 
 enum
 {

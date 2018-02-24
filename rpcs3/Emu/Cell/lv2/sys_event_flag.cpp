@@ -10,7 +10,7 @@
 
 #include <algorithm>
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_event_flag("sys_event_flag");
 
@@ -186,7 +186,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 			thread_ctrl::wait();
 		}
 	}
-	
+
 	ppu.test_state();
 	if (result) *result = ppu.gpr[6];
 	return not_an_error(ppu.gpr[3]);
@@ -267,7 +267,7 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 
 				const u64 pattern = ppu.gpr[4];
 				const u64 mode = ppu.gpr[5];
-				
+
 				if (lv2_event_flag::check_pattern(value, pattern, mode, &ppu.gpr[6]))
 				{
 					ppu.gpr[3] = CELL_OK;
@@ -300,7 +300,7 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 
 		flag->sq.erase(tail, flag->sq.end());
 	}
-	
+
 	return CELL_OK;
 }
 

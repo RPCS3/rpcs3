@@ -4,7 +4,7 @@
 #include "sys_ppu_thread.h"
 #include "Emu/Cell/lv2/sys_event.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_mmapper("sys_mmapper");
 
@@ -23,7 +23,7 @@ error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::
 	}
 
 	// This is a workaround for psl1ght, which gives us an alignment of 0, which is technically invalid, but apparently is allowed on actual ps3
-	// https://github.com/ps3dev/PSL1GHT/blob/534e58950732c54dc6a553910b653c99ba6e9edc/ppu/librt/sbrk.c#L71 
+	// https://github.com/ps3dev/PSL1GHT/blob/534e58950732c54dc6a553910b653c99ba6e9edc/ppu/librt/sbrk.c#L71
 	if (!alignment)
 	{
 		alignment = 0x10000000;
@@ -60,7 +60,7 @@ error_code sys_mmapper_allocate_fixed_address()
 	{
 		return CELL_EEXIST;
 	}
-	
+
 	return CELL_OK;
 }
 
@@ -124,7 +124,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 		{
 			return CELL_EALIGN;
 		}
-		
+
 		break;
 	}
 
@@ -350,7 +350,7 @@ error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 			*mem_id = id;
 			return true;
 		}
-		
+
 		return false;
 	});
 

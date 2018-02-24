@@ -90,7 +90,7 @@ enum x64_reg_t : u32
 	X64R_XMM13,
 	X64R_XMM14,
 	X64R_XMM15,
-	
+
 	X64R_AL,
 	X64R_CL,
 	X64R_DL,
@@ -99,7 +99,7 @@ enum x64_reg_t : u32
 	X64R_CH,
 	X64R_DH,
 	X64R_BH,
-	
+
 	X64_NOT_SET,
 	X64_IMM8,
 	X64_IMM16,
@@ -176,7 +176,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 			{
 				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): LOCK prefix found twice", (size_t)code - out_length);
 			}
-			
+
 			lock = true;
 			continue;
 		}
@@ -186,7 +186,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 			{
 				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): REPNE/REPNZ prefix found twice", (size_t)code - out_length);
 			}
-			
+
 			repne = true;
 			continue;
 		}
@@ -196,7 +196,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 			{
 				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): REP/REPE/REPZ prefix found twice", (size_t)code - out_length);
 			}
-			
+
 			repe = true;
 			continue;
 		}
@@ -225,7 +225,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 			{
 				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): operand-size override prefix found twice", (size_t)code - out_length);
 			}
-			
+
 			oso = true;
 			continue;
 		}
@@ -917,7 +917,7 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 	else if (reg == X64_IMM32)
 	{
 		const s32 imm_value = *(s32*)(RIP(context) + i_size - 4);
-		
+
 		switch (d_size)
 		{
 		case 4: out_value = (u32)imm_value; return true;
@@ -1254,7 +1254,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				}
 				if (entry.start_addr <= addr && addr <= addr + mem->size - 1)
 				{
-					// Place the page fault event onto table so that other functions [sys_mmapper_free_address and ppu pagefault funcs] 
+					// Place the page fault event onto table so that other functions [sys_mmapper_free_address and ppu pagefault funcs]
 					// know that this thread is page faulted and where.
 
 					auto pf_entries = fxm::get_always<page_fault_event_entries>();
@@ -1274,7 +1274,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 						addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only" : "using unmapped");
 
 					error_code sending_error = sys_event_port_send(entry.port_id, data1, data2, data3);
-					
+
 					// If we fail due to being busy, wait a bit and try again.
 					while (sending_error == CELL_EBUSY)
 					{
@@ -1282,7 +1282,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 						thread_ctrl::wait_for(1000);
 						sending_error = sys_event_port_send(entry.port_id, data1, data2, data3);
 					}
-					
+
 					if (sending_error)
 					{
 						fmt::throw_exception("Unknown error %x while trying to pass page fault.", sending_error.value);
@@ -1707,7 +1707,7 @@ bool thread_ctrl::_wait_for(u64 usec)
 		}
 	}
 	_lock{_this->m_mutex};
-	
+
 	do
 	{
 		// Mutex is unlocked at the start and after the waiting
