@@ -306,12 +306,8 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "r1"))
 		{
-			/**
-			 * Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
-			 * but it writes depth in r1.z and not h2.z.
-			 * Maybe there's a different flag for depth ?
-			 */
-			 //		OS << "	Out.depth = " << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "r1.z;" : "h2.z;") << "\n";
+			//Depth writes are always from a fp32 register. See issues section on nvidia's NV_fragment_program spec
+			//https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 			OS << "	Out.depth = r1.z;\n";
 		}
 		else
