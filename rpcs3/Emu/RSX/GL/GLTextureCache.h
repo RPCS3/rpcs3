@@ -996,10 +996,23 @@ namespace gl
 					return (ifmt == gl::texture::internal_format::r32f);
 				case CELL_GCM_TEXTURE_R5G6B5:
 					return (ifmt == gl::texture::internal_format::r5g6b5);
-				case CELL_GCM_TEXTURE_DEPTH24_D8:
-					return (ifmt == gl::texture::internal_format::depth24_stencil8 || ifmt == gl::texture::internal_format::depth32f_stencil8);
 				case CELL_GCM_TEXTURE_A8R8G8B8:
-					return (ifmt == gl::texture::internal_format::rgba8 || ifmt == gl::texture::internal_format::depth24_stencil8 || ifmt == gl::texture::internal_format::depth32f_stencil8);
+					return (ifmt == gl::texture::internal_format::rgba8 ||
+							ifmt == gl::texture::internal_format::depth24_stencil8 ||
+							ifmt == gl::texture::internal_format::depth32f_stencil8);
+				case CELL_GCM_TEXTURE_B8:
+					return (ifmt == gl::texture::internal_format::r8);
+				case CELL_GCM_TEXTURE_G8B8:
+					return (ifmt == gl::texture::internal_format::rg8);
+				case CELL_GCM_TEXTURE_DEPTH24_D8:
+				case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+					return (ifmt == gl::texture::internal_format::depth24_stencil8 ||
+							ifmt == gl::texture::internal_format::depth32f_stencil8 ||
+							ifmt == gl::texture::internal_format::depth_stencil);
+				case CELL_GCM_TEXTURE_DEPTH16:
+				case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+					return (ifmt == gl::texture::internal_format::depth16 ||
+							ifmt == gl::texture::internal_format::depth);
 				}
 			}
 
