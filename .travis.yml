@@ -81,7 +81,9 @@ before_script:
       export PATH=${TRAVIS_BUILD_DIR}/build/squashfs-root/usr/bin/:${PATH} ;
       ./squashfs-root/usr/bin/appimagetool ${TRAVIS_BUILD_DIR}/build/appdir ;
       find ./appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq ;
-      curl ${UPLOAD_URL}${TRAVIS_COMMIT:0:7}-${TRAVIS_BUILD_NUMBER}_linux64 --upload-file ./RPCS3*.AppImage;
+      COMM_TAG="$(git describe --tags $(git rev-list --tags --max-count=1))" ;
+      COMM_COUNT="$(git rev-list --count HEAD)" ;
+      curl "${UPLOAD_URL}${TRAVIS_COMMIT:0:8}&t=${COMM_TAG}&a=${COMM_COUNT}" --upload-file ./RPCS3*.AppImage;
    fi;
 
 script:
