@@ -389,24 +389,18 @@ void SPUThread::cpu_task()
 		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
 
 	// LS base address
-	const auto base = vm::_ptr<const u32>(offset);
+	const u64 base = reinterpret_cast<u64>(vm::base(offset));
 
-	while (true)
+	while (LIKELY(!test(state)) || !check_state())
 	{
-		if (!test(state) || !check_state())
-		{
-			// Read opcode
-			const u32 op = base[pc / 4];
+		// Read opcode
+		const u32 op = *reinterpret_cast<const be_t<u32>*>(base + pc);
 
-			// Call interpreter function
-			table[spu_decode(op)](*this, { op });
+		// Call interpreter function
+		table[spu_decode(op)](*this, { op });
 
-			// Next instruction
-			pc += 4;
-
-			continue;
-		}
-		return;
+		// Next instruction
+		pc += 4;
 	}
 }
 
