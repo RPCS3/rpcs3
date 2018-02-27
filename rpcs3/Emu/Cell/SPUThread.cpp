@@ -32,6 +32,7 @@ const bool s_use_ssse3 =
 	true;
 #else
 	false;
+#define _mm_shuffle_epi8
 #endif
 
 #ifdef _MSC_VER
@@ -388,25 +389,75 @@ void SPUThread::cpu_task()
 		g_cfg.core.spu_decoder == spu_decoder_type::fast ? &g_spu_interpreter_fast.get_table() :
 		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
 
-	// LS base address
-	const auto base = vm::_ptr<const u32>(offset);
+	// LS pointer
+	const auto base = vm::_ptr<const u8>(offset);
+	const auto bswap4 = _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3);
+
+	v128 _op;
+	using func_t = decltype(&spu_interpreter::UNK);
+	func_t func0, func1, func2, func3, func4, func5;
 
 	while (true)
 	{
-		if (!test(state) || !check_state())
+		if (UNLIKELY(test(state)))
 		{
-			// Read opcode
-			const u32 op = base[pc / 4];
+			if (check_state()) return;
 
-			// Call interpreter function
-			table[spu_decode(op)](*this, { op });
-
-			// Next instruction
-			pc += 4;
-
+			// Decode single instruction (may be step)
+			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + pc);
+			if (table[spu_decode(op)](*this, {op})) { pc += 4; }
 			continue;
 		}
-		return;
+
+		if (pc % 16 || !s_use_ssse3)
+		{
+			// Unaligned
+			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + pc);
+			if (table[spu_decode(op)](*this, {op})) { pc += 4; }
+			continue;
+		}
+
+		// Reinitialize
+		_op.vi =  _mm_shuffle_epi8(_mm_load_si128(reinterpret_cast<const __m128i*>(base + pc)), bswap4);
+		func0 = table[spu_decode(_op._u32[0])];
+		func1 = table[spu_decode(_op._u32[1])];
+		func2 = table[spu_decode(_op._u32[2])];
+		func3 = table[spu_decode(_op._u32[3])];
+
+		while (LIKELY(func0(*this, {_op._u32[0]})))
+		{
+			pc += 4;
+			if (LIKELY(func1(*this, {_op._u32[1]})))
+			{
+				pc += 4;
+				u32 op2 = _op._u32[2];
+				u32 op3 = _op._u32[3];
+				_op.vi =  _mm_shuffle_epi8(_mm_load_si128(reinterpret_cast<const __m128i*>(base + pc + 8)), bswap4);
+				func0 = table[spu_decode(_op._u32[0])];
+				func1 = table[spu_decode(_op._u32[1])];
+				func4 = table[spu_decode(_op._u32[2])];
+				func5 = table[spu_decode(_op._u32[3])];
+				if (LIKELY(func2(*this, {op2})))
+				{
+					pc += 4;
+					if (LIKELY(func3(*this, {op3})))
+					{
+						pc += 4;
+						func2 = func4;
+						func3 = func5;
+
+						if (UNLIKELY(test(state)))
+						{
+							break;
+						}
+						continue;
+					}
+					break;
+				}
+				break;
+			}
+			break;
+		}
 	}
 }
 
