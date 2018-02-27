@@ -25,15 +25,19 @@ git:
   depth: false # Unshallow clone to obtain proper GIT_VERSION
   submodules: false
 
+env:
+    - QTVER=5.10.1
+  
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
     fi;
+
+install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       wget http://download.qt.io/official_releases/online_installers/qt-unified-linux-x64-online.run ;
       chmod a+x ./qt-unified-linux-x64-online.run ;
-      export QT_QPA_PLATFORM=minimal ;
-      travis_wait 60 ./qt-unified-linux-x64-online.run --script qt-installer-noninteractive.qs --no-force-installations --verbose ;
+      QT_QPA_PLATFORM=minimal QTVER="${QTVER//.}" travis_wait 60 ./qt-unified-linux-x64-online.run --script qt-installer-noninteractive.qs --no-force-installations --verbose ;
     fi;
 
   # Install updated libglew-dev since the version provided by trusty is outdated
@@ -50,9 +54,8 @@ before_install:
 
 before_script:
   - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
-  - mkdir build
-  - cd build
-  - export CMAKE_PREFIX_PATH=~/Qt/5.10.1/gcc_64/lib/cmake
+  - mkdir build ; cd build
+  - export CMAKE_PREFIX_PATH=~/Qt/${QTVER}/gcc_64/lib/cmake
   - export CXXFLAGS="$CXXFLAGS -DTRAVIS=true";
   - if [ "$TRAVIS_PULL_REQUEST" = false ]; then
       export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH";
@@ -60,23 +63,28 @@ before_script:
       export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/#$TRAVIS_PULL_REQUEST";
     fi;
   - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -G Ninja;
+
+script:
   - ninja
+    
+after_script:
+  - cd build
   - # AppImage generation
   - if [ -n "$UPLOAD_URL" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
-      export LD_LIBRARY_PATH=~/Qt/5.10.1/gcc_64/lib;
+      export LD_LIBRARY_PATH=~/Qt/${QTVER}/gcc_64/lib;
       DESTDIR=appdir ninja install ; find appdir/ ;
       find ../bin ;
       wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" ;
       chmod a+x linuxdeployqt*.AppImage ;
-      export PATH=~/Qt/5.10.1/gcc_64/bin/:${PATH} ;
+      export PATH=~/Qt/$QTVER/gcc_64/bin/:${PATH} ;
       ./linuxdeployqt*.AppImage --appimage-extract ;
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
       mkdir ./appdir/usr/plugins/xcbglintegrations/ ;
       mkdir ./appdir/usr/plugins/imageformats/ ;
-      cp ~/Qt/5.10.1/gcc_64/lib/libQt5Svg.so.5 ./appdir/usr/lib/ ;
-      cp ~/Qt/5.10.1/gcc_64/plugins/xcbglintegrations/* ./appdir/usr/plugins/xcbglintegrations/ ;
-      cp ~/Qt/5.10.1/gcc_64/plugins/imageformats/* ./appdir/usr/plugins/imageformats/ ;
-      cp ~/Qt/5.10.1/gcc_64/plugins/platforms/* ./appdir/usr/plugins/platforms/ ;
+      cp ~/Qt/$QTVER/gcc_64/lib/libQt5Svg.so.5 ./appdir/usr/lib/ ;
+      cp ~/Qt/$QTVER/gcc_64/plugins/xcbglintegrations/* ./appdir/usr/plugins/xcbglintegrations/ ;
+      cp ~/Qt/$QTVER/gcc_64/plugins/imageformats/* ./appdir/usr/plugins/imageformats/ ;
+      cp ~/Qt/$QTVER/gcc_64/plugins/platforms/* ./appdir/usr/plugins/platforms/ ;
       rm ./appdir/usr/lib/libfreetype.so.6 ;
       export PATH=${TRAVIS_BUILD_DIR}/build/squashfs-root/usr/bin/:${PATH} ;
       ./squashfs-root/usr/bin/appimagetool ${TRAVIS_BUILD_DIR}/build/appdir ;
@@ -85,13 +93,6 @@ before_script:
       COMM_COUNT="$(git rev-list --count HEAD)" ;
       curl "${UPLOAD_URL}${TRAVIS_COMMIT:0:8}&t=${COMM_TAG}&a=${COMM_COUNT}" --upload-file ./RPCS3*.AppImage;
    fi;
-
-script:
-  # Add a command to show all the variables. May be useful for debugging Travis.
-  #- echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--";
-  # And to ensure the versions of toolchain
-  - echo "--CXX version?"; "$CXX" --version; echo "--CXX version confirmed";
-
 addons:
   apt:
     sources:
