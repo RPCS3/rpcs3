@@ -1679,6 +1679,7 @@ public:
 			std::vector<const char *> extensions;
 			std::vector<const char *> layers;
 
+#ifndef __APPLE__
 			extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 			extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 #ifdef _WIN32
@@ -1704,10 +1705,9 @@ public:
 				return 0;
 			}
 #endif
-
 			if (!fast && g_cfg.video.debug_output)
 				layers.push_back("VK_LAYER_LUNARG_standard_validation");
-
+#endif
 			VkInstanceCreateInfo instance_info = {};
 			instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 			instance_info.pApplicationInfo = &app;
@@ -1791,6 +1791,10 @@ public:
 			VkSurfaceKHR surface;
 			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface));
 
+#elif defined(__APPLE__)
+			using swapchain_NATIVE = swapchain_X11;
+			VkSurfaceKHR surface;
+
 #else
 			using swapchain_NATIVE = swapchain_X11;
 			VkSurfaceKHR surface;
@@ -1818,14 +1822,15 @@ public:
 #endif
 
 			uint32_t device_queues = dev.get_queue_count();
-			std::vector<VkBool32> supportsPresent(device_queues);
+			std::vector<VkBool32> supportsPresent(device_queues, VK_FALSE);
+			bool present_possible = false;
 
+#ifndef __APPLE__
 			for (u32 index = 0; index < device_queues; index++)
 			{
 				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, surface, &supportsPresent[index]);
 			}
 
-			bool present_possible = false;
 			for (const auto &value : supportsPresent)
 			{
 				if (value)
@@ -1839,6 +1844,7 @@ public:
 			{
 				LOG_ERROR(RSX, "It is not possible for the currently selected GPU to present to the window (Likely caused by NVIDIA driver running the current display)");
 			}
+#endif
 
 			// Search for a graphics and a present queue in the array of queue
 			// families, try to find one that supports both
@@ -1896,6 +1902,10 @@ public:
 				swapchain->create(window_handle);
 				return swapchain;
 			}
+
+#ifdef __APPLE__
+			fmt::throw_exception("Unreachable" HERE);
+#endif
 
 			// Get the list of VkFormat's that are supported:
 			uint32_t formatCount;
