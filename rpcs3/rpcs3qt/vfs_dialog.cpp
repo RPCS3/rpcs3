@@ -83,4 +83,5 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 
 	setLayout(vbox);
 	setWindowTitle(tr("Virtual File System"));
+	setObjectName("vfs_dialog");
 }
