@@ -492,17 +492,8 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 		i = m_xgrid->item(index.row(), index.column())->data(Qt::ItemDataRole::UserRole).toInt();
 	}
 
-	if (1)
-	{
-		if (Boot(m_game_data[i].info))
-		{
-			LOG_SUCCESS(LOADER, "Boot from gamelist per doubleclick: done");
-		}
-	}
-	else
-	{
-		open_dir(m_game_data[i].info.path);
-	}
+	LOG_NOTICE(LOADER, "Booting from gamelist per doubleclick...");
+	Q_EMIT RequestBoot(m_game_data[i].info.path);
 }
 
 void game_list_frame::ShowContextMenu(const QPoint &pos)
@@ -570,10 +561,8 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 	connect(boot, &QAction::triggered, [=]
 	{
-		if (Boot(currGame))
-		{
-			LOG_SUCCESS(LOADER, "Boot from gamelist per Boot: done");
-		}
+		LOG_NOTICE(LOADER, "Booting from gamelist per context menu...");
+		Q_EMIT RequestBoot(currGame.path);
 	});
 	connect(configure, &QAction::triggered, [=]
 	{
@@ -669,27 +658,6 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	removeConfig->setEnabled(m_game_data[row].hasCustomConfig);
 
 	myMenu.exec(globalPos);
-}
-
-bool game_list_frame::Boot(const GameInfo& game)
-{
-	Q_EMIT RequestIconPathSet(game.path);
-
-	Emu.SetForceBoot(true);
-	Emu.Stop();
-
-	if (!Emu.BootGame(game.path))
-	{
-		QMessageBox::warning(this, tr("Warning!"), tr("Failed to boot ") + qstr(game.path));
-		LOG_ERROR(LOADER, "Failed to boot %s", game.path);
-		return false;
-	}
-	else
-	{
-		Q_EMIT RequestAddRecentGame(gui::Recent_Game(qstr(Emu.GetBoot()), qstr("[" + game.serial + "] " + game.name)));
-		Refresh(true);
-		return true;
-	}
 }
 
 void game_list_frame::RemoveCustomConfiguration(int row)
