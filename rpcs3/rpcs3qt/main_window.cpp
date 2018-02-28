@@ -227,6 +227,25 @@ void main_window::SetAppIconFromPath(const std::string& path)
 	m_appIcon = QApplication::windowIcon();
 }
 
+void main_window::Boot(const std::string& path, bool direct, bool add_only, bool force_boot)
+{
+	SetAppIconFromPath(path);
+	Emu.SetForceBoot(force_boot);
+
+	if (Emu.BootGame(path, add_only))
+	{
+		LOG_SUCCESS(LOADER, "Boot successful.");
+		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
+		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+	}
+	else
+	{
+		LOG_ERROR(GENERAL, "Boot failed: path=%s direct=%d add_only=%d force_boot=%d", path, direct, add_only, force_boot);
+	}
+
+	m_gameListFrame->Refresh(true);
+}
+
 void main_window::BootElf()
 {
 	bool stopped = false;
@@ -253,30 +272,14 @@ void main_window::BootElf()
 		return;
 	}
 
-	LOG_NOTICE(LOADER, "(S)ELF: booting...");
-
 	// If we resolved the filepath earlier we would end up setting the last opened dir to the unwanted
 	// game folder in case of having e.g. a Game Folder with collected links to elf files.
 	// Don't set last path earlier in case of cancelled dialog
 	guiSettings->SetValue(gui::fd_boot_elf, filePath);
 	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
 
-	SetAppIconFromPath(path);
-	Emu.SetForceBoot(true);
-	Emu.Stop();
-
-	if (!Emu.BootGame(path, true))
-	{
-		LOG_ERROR(GENERAL, "PS3 executable not found at path (%s)", path);
-	}
-	else
-	{
-		LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
-
-		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
-		m_gameListFrame->Refresh(true);
-	}
+	LOG_NOTICE(LOADER, "Booting from BootElf...");
+	Boot(path, true);
 }
 
 void main_window::BootGame()
@@ -298,24 +301,11 @@ void main_window::BootGame()
 		return;
 	}
 
-	Emu.SetForceBoot(true);
-	Emu.Stop();
 	guiSettings->SetValue(gui::fd_boot_game, QFileInfo(dirPath).path());
 	const std::string path = sstr(dirPath);
-	SetAppIconFromPath(path);
 
-	if (!Emu.BootGame(path))
-	{
-		LOG_ERROR(GENERAL, "PS3 executable not found in selected folder (%s)", path);
-	}
-	else
-	{
-		LOG_SUCCESS(LOADER, "Boot Game: boot done.");
-
-		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
-		m_gameListFrame->Refresh(true);
-	}
+	LOG_NOTICE(LOADER, "Booting from BootGame...");
+	Boot(path);
 }
 
 void main_window::InstallPkg(const QString& dropPath)
@@ -495,7 +485,7 @@ void main_window::InstallPup(const QString& dropPath)
 				}
 
 				tar_object dev_flash_tar(dev_flash_tar_f[2]);
-				if (!dev_flash_tar.extract(fs::get_config_dir()))
+				if (!dev_flash_tar.extract(Emu.GetEmuDir()))
 				{
 					LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
 					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: TAR contents are invalid."));
@@ -813,6 +803,7 @@ void main_window::BootRecentAction(const QAction* act)
 	}
 
 	const QString pth = act->data().toString();
+	const std::string path = sstr(pth);
 	QString nam;
 	bool containsPath = false;
 
@@ -844,7 +835,7 @@ void main_window::BootRecentAction(const QAction* act)
 
 			guiSettings->SetValue(gui::rg_entries, guiSettings->List2Var(m_rg_entries));
 
-			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", sstr(pth));
+			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", path);
 
 			// refill menu with actions
 			for (int i = 0; i < m_recentGameActs.count(); i++)
@@ -855,30 +846,15 @@ void main_window::BootRecentAction(const QAction* act)
 			}
 
 			LOG_WARNING(GENERAL, "Boot Recent list refreshed");
-
 			return;
 		}
 
-		LOG_ERROR(GENERAL, "Path invalid and not in m_rg_paths: %s", sstr(pth));
-
+		LOG_ERROR(GENERAL, "Path invalid and not in m_rg_paths: %s", path);
 		return;
 	}
 
-	SetAppIconFromPath(sstr(pth));
-
-	Emu.SetForceBoot(true);
-	Emu.Stop();
-
-	if (!Emu.BootGame(sstr(pth), true))
-	{
-		LOG_ERROR(LOADER, "Failed to boot %s", sstr(pth));
-	}
-	else
-	{
-		LOG_SUCCESS(LOADER, "Boot from Recent List: done");
-		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), nam));
-		m_gameListFrame->Refresh(true);
-	}
+	LOG_NOTICE(LOADER, "Booting from recent games list...");
+	Boot(path, true);
 };
 
 QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint& sc_idx)
@@ -986,7 +962,6 @@ void main_window::RepaintGui()
 	if (m_gameListFrame)
 	{
 		m_gameListFrame->RepaintIcons(true);
-		m_gameListFrame->RepaintToolBarIcons();
 	}
 
 	if (m_logFrame)
@@ -1210,11 +1185,6 @@ void main_window::CreateConnects()
 		guiSettings->SetValue(gui::mw_toolBarVisible, checked);
 	});
 
-	connect(ui->showGameToolBarAct, &QAction::triggered, [=](bool checked)
-	{
-		m_gameListFrame->SetToolBarVisible(checked);
-	});
-
 	connect(ui->refreshGameListAct, &QAction::triggered, [=]
 	{
 		m_gameListFrame->Refresh(true);
@@ -1235,7 +1205,6 @@ void main_window::CreateConnects()
 		else if (act == ui->showCatOtherAct)      categories += category::others, id = Category::Others;
 		else LOG_WARNING(GENERAL, "categoryVisibleActGroup: category action not found");
 
-		m_gameListFrame->SetCategoryActIcon(m_categoryVisibleActGroup->actions().indexOf(act), checked);
 		m_gameListFrame->ToggleCategoryFilter(categories, checked);
 		guiSettings->SetCategoryVisibility(id, checked);
 	});
@@ -1250,20 +1219,16 @@ void main_window::CreateConnects()
 
 	auto resizeIcons = [=](const int& index)
 	{
-		int val = ui->sizeSlider->value();
-		if (val != index)
+		if (ui->sizeSlider->value() != index)
 		{
 			ui->sizeSlider->setSliderPosition(index);
 		}
-		if (val != m_gameListFrame->GetSliderValue())
+		if (m_save_slider_pos)
 		{
-			if (m_save_slider_pos)
-			{
-				m_save_slider_pos = false;
-				guiSettings->SetValue(gui::gl_iconSize, index);
-			}
-			m_gameListFrame->ResizeIcons(index);
+			m_save_slider_pos = false;
+			guiSettings->SetValue(gui::gl_iconSize, index);
 		}
+		m_gameListFrame->ResizeIcons(index);
 	};
 
 	connect(m_iconSizeActGroup, &QActionGroup::triggered, [=](QAction* act)
@@ -1283,26 +1248,12 @@ void main_window::CreateConnects()
 		resizeIcons(index);
 	});
 
-	connect (m_gameListFrame, &game_list_frame::RequestIconSizeActSet, [=](const int& idx)
+	connect (m_gameListFrame, &game_list_frame::RequestIconSizeChange, [=](const int& val)
 	{
+		const int idx = ui->sizeSlider->value() + val;
+		m_save_slider_pos = true;
 		SetIconSizeActions(idx);
 		resizeIcons(idx);
-	});
-
-	connect(m_gameListFrame, &game_list_frame::RequestSaveSliderPos, [=](const bool& save)
-	{
-		Q_UNUSED(save);
-		m_save_slider_pos = true;
-	});
-
-	connect(m_gameListFrame, &game_list_frame::RequestListModeActSet, [=](const bool& isList)
-	{
-		isList ? ui->setlistModeListAct->trigger() : ui->setlistModeGridAct->trigger();
-	});
-
-	connect(m_gameListFrame, &game_list_frame::RequestCategoryActSet, [=](const int& id)
-	{
-		m_categoryVisibleActGroup->actions().at(id)->trigger();
 	});
 
 	connect(m_listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
@@ -1335,9 +1286,9 @@ void main_window::CreateConnects()
 	connect(ui->toolbar_config, &QAction::triggered, [=]() { openSettings(0); });
 	connect(ui->toolbar_list, &QAction::triggered, [=]() { ui->setlistModeListAct->trigger(); });
 	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });
+
 	connect(ui->sizeSlider, &QSlider::valueChanged, resizeIcons);
 	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [&] { guiSettings->SetValue(gui::gl_iconSize, ui->sizeSlider->value()); });
-
 	connect(ui->sizeSlider, &QSlider::actionTriggered, [&](int action)
 	{
 		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
@@ -1395,8 +1346,7 @@ void main_window::CreateDockWindows()
 		}
 	});
 
-	connect(m_gameListFrame, &game_list_frame::RequestIconPathSet, this, &main_window::SetAppIconFromPath);
-	connect(m_gameListFrame, &game_list_frame::RequestAddRecentGame, this, &main_window::AddRecentAction);
+	connect(m_gameListFrame, &game_list_frame::RequestBoot, [this](const std::string& path){ Boot(path); });
 }
 
 void main_window::ConfigureGuiFromSettings(bool configure_all)
@@ -1452,12 +1402,10 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	ui->showGameListAct->setChecked(guiSettings->GetValue(gui::mw_gamelist).toBool());
 	ui->showDebuggerAct->setChecked(guiSettings->GetValue(gui::mw_debugger).toBool());
 	ui->showToolBarAct->setChecked(guiSettings->GetValue(gui::mw_toolBarVisible).toBool());
-	ui->showGameToolBarAct->setChecked(guiSettings->GetValue(gui::gl_toolBarVisible).toBool());
 
 	m_debuggerFrame->setVisible(ui->showDebuggerAct->isChecked());
 	m_logFrame->setVisible(ui->showLogAct->isChecked());
 	m_gameListFrame->setVisible(ui->showGameListAct->isChecked());
-	m_gameListFrame->SetToolBarVisible(ui->showGameToolBarAct->isChecked());
 	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
 
 	RepaintToolbar();

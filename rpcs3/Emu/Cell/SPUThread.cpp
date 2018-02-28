@@ -393,7 +393,7 @@ void SPUThread::cpu_task()
 
 	while (true)
 	{
-		if (!test(state))
+		if (!test(state) || !check_state())
 		{
 			// Read opcode
 			const u32 op = base[pc / 4];
@@ -403,10 +403,10 @@ void SPUThread::cpu_task()
 
 			// Next instruction
 			pc += 4;
+
 			continue;
 		}
-
-		if (check_state()) return;
+		return;
 	}
 }
 
