@@ -76,7 +76,6 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 	json_file.open(QIODevice::ReadOnly | QIODevice::Text);
 	QJsonObject json_input = QJsonDocument::fromJson(json_file.readAll()).object().value("input").toObject();
 	json_file.close();
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
 	QVBoxLayout *dialog_layout = new QVBoxLayout();
 	QHBoxLayout *all_players = new QHBoxLayout();

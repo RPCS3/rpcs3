@@ -198,8 +198,7 @@ void Emulator::Init()
 	g_cfg.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
 
 	// Create directories
-	const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
-	const std::string emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+	const std::string emu_dir = GetEmuDir();
 	const std::string dev_hdd0 = fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir);
 	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
 	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
@@ -307,20 +306,20 @@ bool Emulator::InstallPkg(const std::string& path)
 	return false;
 }
 
-std::string Emulator::GetHddDir()
+std::string Emulator::GetEmuDir()
 {
 	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
-	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+	return emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+}
 
-	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir);
+std::string Emulator::GetHddDir()
+{
+	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", GetEmuDir());
 }
 
 std::string Emulator::GetLibDir()
 {
-	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
-	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
-
-	return fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
+	return fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", GetEmuDir()) + "sys/external/";
 }
 
 void Emulator::SetForceBoot(bool force_boot)
@@ -423,8 +422,7 @@ void Emulator::Load(bool add_only)
 		fxm::check_unlocked<patch_engine>()->append(m_cache_path + "/patch.yml");
 
 		// Mount all devices
-		const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
-		const std::string emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+		const std::string emu_dir = GetEmuDir();
 		const std::string home_dir = g_cfg.vfs.app_home;
 		std::string bdvd_dir = g_cfg.vfs.dev_bdvd;
 

@@ -86,6 +86,7 @@ int main(int argc, char** argv)
 #endif
 
 	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+	QCoreApplication::setAttribute(Qt::AA_DisableWindowContextHelpButton);
 
 	s_init.post();
 	s_qt_mutex.wait();

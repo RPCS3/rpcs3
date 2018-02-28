@@ -19,6 +19,10 @@
 #include "../Common/GLSLCommon.h"
 #include "../rsx_cache.h"
 
+#ifndef _WIN32
+#include <X11/Xutil.h>
+#endif
+
 #define DESCRIPTOR_MAX_DRAW_CALLS 4096
 
 #define VERTEX_BUFFERS_FIRST_BIND_SLOT 3
@@ -114,7 +118,7 @@ namespace vk
 		uint32_t device_local;
 	};
 
-	memory_type_mapping get_memory_mapping(VkPhysicalDevice pdev);
+	memory_type_mapping get_memory_mapping(const physical_device& dev);
 
 	class physical_device
 	{
@@ -135,12 +139,12 @@ namespace vk
 			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
 		}
 
-		std::string name()
+		std::string name() const
 		{
 			return props.deviceName;
 		}
 
-		uint32_t get_queue_count()
+		uint32_t get_queue_count() const
 		{
 			if (queue_props.size())
 				return (u32)queue_props.size();
@@ -166,12 +170,12 @@ namespace vk
 			return queue_props[queue];
 		}
 
-		VkPhysicalDeviceMemoryProperties get_memory_properties()
+		VkPhysicalDeviceMemoryProperties get_memory_properties() const
 		{
 			return memory_properties;
 		}
 
-		operator VkPhysicalDevice()
+		operator VkPhysicalDevice() const
 		{
 			return dev;
 		}
@@ -179,16 +183,13 @@ namespace vk
 
 	class render_device
 	{
-		vk::physical_device *pgpu;
-		VkDevice dev;
+		physical_device *pgpu = nullptr;
+		memory_type_mapping memory_map{};
+		VkDevice dev = VK_NULL_HANDLE;
 
 	public:
-
 		render_device()
-		{
-			dev = nullptr;
-			pgpu = nullptr;
-		}
+		{}
 
 		render_device(vk::physical_device &pdev, uint32_t graphics_queue_idx)
 		{
@@ -235,6 +236,7 @@ namespace vk
 			device.pEnabledFeatures = &available_features;
 
 			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
+			memory_map = vk::get_memory_mapping(pdev);
 		}
 
 		~render_device()
@@ -271,12 +273,17 @@ namespace vk
 			return false;
 		}
 
-		vk::physical_device& gpu()
+		const physical_device& gpu() const
 		{
 			return *pgpu;
 		}
 
-		operator VkDevice()
+		const memory_type_mapping& get_memory_mapping() const
+		{
+			return memory_map;
+		}
+
+		operator VkDevice&()
 		{
 			return dev;
 		}
@@ -381,7 +388,7 @@ namespace vk
 
 	struct image
 	{
-		VkImage value;
+		VkImage value = VK_NULL_HANDLE;
 		VkComponentMapping native_component_map = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
 		VkImageLayout current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		VkImageCreateInfo info = {};
@@ -573,6 +580,11 @@ namespace vk
 			vkUnmapMemory(m_device, memory->memory);
 		}
 
+		u32 size() const
+		{
+			return (u32)info.size;
+		}
+
 		buffer(const buffer&) = delete;
 		buffer(buffer&&) = delete;
 
@@ -739,301 +751,6 @@ namespace vk
 		VkDevice m_device;
 	};
 
-	class swap_chain_image
-	{
-		VkImageView view = nullptr;
-		VkImage image = nullptr;
-		VkFormat internal_format;
-		vk::render_device *owner = nullptr;
-
-	public:
-		swap_chain_image() {}
-
-		void create(vk::render_device &dev, VkImage &swap_image, VkFormat format)
-		{
-			VkImageViewCreateInfo color_image_view = {};
-
-			color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			color_image_view.format = format;
-
-			color_image_view.components.r = VK_COMPONENT_SWIZZLE_R;
-			color_image_view.components.g = VK_COMPONENT_SWIZZLE_G;
-			color_image_view.components.b = VK_COMPONENT_SWIZZLE_B;
-			color_image_view.components.a = VK_COMPONENT_SWIZZLE_A;
-
-			color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			color_image_view.subresourceRange.baseMipLevel = 0;
-			color_image_view.subresourceRange.levelCount = 1;
-			color_image_view.subresourceRange.baseArrayLayer = 0;
-			color_image_view.subresourceRange.layerCount = 1;
-
-			color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
-
-			color_image_view.image = swap_image;
-			vkCreateImageView(dev, &color_image_view, nullptr, &view);
-
-			image = swap_image;
-			internal_format = format;
-			owner = &dev;
-		}
-
-		void discard(vk::render_device &dev)
-		{
-			vkDestroyImageView(dev, view, nullptr);
-		}
-
-		operator VkImage()
-		{
-			return image;
-		}
-
-		operator VkImageView()
-		{
-			return view;
-		}
-	};
-
-	class swap_chain
-	{
-		vk::render_device dev;
-
-		uint32_t m_present_queue = 0xFFFF;
-		uint32_t m_graphics_queue = 0xFFFF;
-
-		VkQueue vk_graphics_queue = nullptr;
-		VkQueue vk_present_queue = nullptr;
-
-		/* WSI surface information */
-		VkSurfaceKHR m_surface = nullptr;
-		VkFormat m_surface_format;
-		VkColorSpaceKHR m_color_space;
-
-		VkSwapchainKHR m_vk_swapchain = nullptr;
-		std::vector<vk::swap_chain_image> m_swap_images;
-
-	public:
-
-		PFN_vkCreateSwapchainKHR createSwapchainKHR;
-		PFN_vkDestroySwapchainKHR destroySwapchainKHR;
-		PFN_vkGetSwapchainImagesKHR getSwapchainImagesKHR;
-		PFN_vkAcquireNextImageKHR acquireNextImageKHR;
-		PFN_vkQueuePresentKHR queuePresentKHR;
-
-		swap_chain(vk::physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format, VkSurfaceKHR surface, VkColorSpaceKHR color_space)
-		{
-			dev = render_device(gpu, _graphics_queue);
-
-			createSwapchainKHR = (PFN_vkCreateSwapchainKHR)vkGetDeviceProcAddr(dev, "vkCreateSwapchainKHR");
-			destroySwapchainKHR = (PFN_vkDestroySwapchainKHR)vkGetDeviceProcAddr(dev, "vkDestroySwapchainKHR");
-			getSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)vkGetDeviceProcAddr(dev, "vkGetSwapchainImagesKHR");
-			acquireNextImageKHR = (PFN_vkAcquireNextImageKHR)vkGetDeviceProcAddr(dev, "vkAcquireNextImageKHR");
-			queuePresentKHR = (PFN_vkQueuePresentKHR)vkGetDeviceProcAddr(dev, "vkQueuePresentKHR");
-
-			vkGetDeviceQueue(dev, _graphics_queue, 0, &vk_graphics_queue);
-			vkGetDeviceQueue(dev, _present_queue, 0, &vk_present_queue);
-
-			m_present_queue = _present_queue;
-			m_graphics_queue = _graphics_queue;
-			m_surface = surface;
-			m_color_space = color_space;
-			m_surface_format = format;
-		}
-
-		~swap_chain()
-		{
-		}
-
-		void destroy()
-		{
-			if (VkDevice pdev = (VkDevice)dev)
-			{
-				if (m_vk_swapchain)
-				{
-					if (m_swap_images.size())
-					{
-						for (vk::swap_chain_image &img : m_swap_images)
-							img.discard(dev);
-					}
-
-					destroySwapchainKHR(pdev, m_vk_swapchain, nullptr);
-				}
-
-				dev.destroy();
-			}
-		}
-
-		bool init_swapchain(u32 width, u32 height)
-		{
-			VkSwapchainKHR old_swapchain = m_vk_swapchain;
-			vk::physical_device& gpu = const_cast<vk::physical_device&>(dev.gpu());
-
-			VkSurfaceCapabilitiesKHR surface_descriptors = {};
-			CHECK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, m_surface, &surface_descriptors));
-
-			if (surface_descriptors.maxImageExtent.width < width ||
-				surface_descriptors.maxImageExtent.height < height)
-			{
-				LOG_ERROR(RSX, "Swapchain: Swapchain creation failed because dimensions cannot fit. Max = %d, %d, Requested = %d, %d",
-					surface_descriptors.maxImageExtent.width, surface_descriptors.maxImageExtent.height, width, height);
-
-				return false;
-			}
-
-			VkExtent2D swapchainExtent;
-			if (surface_descriptors.currentExtent.width == (uint32_t)-1)
-			{
-				swapchainExtent.width = width;
-				swapchainExtent.height = height;
-			}
-			else
-			{
-				if (surface_descriptors.currentExtent.width == 0 || surface_descriptors.currentExtent.height == 0)
-				{
-					LOG_WARNING(RSX, "Swapchain: Current surface extent is a null region. Is the window minimized?");
-					return false;
-				}
-
-				swapchainExtent = surface_descriptors.currentExtent;
-				width = surface_descriptors.currentExtent.width;
-				height = surface_descriptors.currentExtent.height;
-			}
-
-			uint32_t nb_available_modes = 0;
-			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, nullptr));
-
-			std::vector<VkPresentModeKHR> present_modes(nb_available_modes);
-			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, present_modes.data()));
-
-			VkPresentModeKHR swapchain_present_mode = VK_PRESENT_MODE_FIFO_KHR;
-			std::vector<VkPresentModeKHR> preferred_modes;
-
-			//List of preferred modes in decreasing desirability
-			if (g_cfg.video.vsync)
-				preferred_modes = { VK_PRESENT_MODE_MAILBOX_KHR };
-			else if (!g_cfg.video.vk.force_fifo)
-				preferred_modes = { VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR, VK_PRESENT_MODE_MAILBOX_KHR };
-
-			bool mode_found = false;
-			for (VkPresentModeKHR preferred_mode : preferred_modes)
-			{
-				//Search for this mode in supported modes
-				for (VkPresentModeKHR mode : present_modes)
-				{
-					if (mode == preferred_mode)
-					{
-						swapchain_present_mode = mode;
-						mode_found = true;
-						break;
-					}
-				}
-
-				if (mode_found)
-					break;
-			}
-
-			LOG_NOTICE(RSX, "Swapchain: present mode %d in use.", (s32&)swapchain_present_mode);
-
-			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
-			if (surface_descriptors.maxImageCount > 0)
-			{
-				//Try to negotiate for a triple buffer setup
-				//In cases where the front-buffer isnt available for present, its better to have a spare surface
-				nb_swap_images = std::max(surface_descriptors.minImageCount + 2u, 3u);
-
-				if (nb_swap_images > surface_descriptors.maxImageCount)
-				{
-					// Application must settle for fewer images than desired:
-					nb_swap_images = surface_descriptors.maxImageCount;
-				}
-			}
-
-			VkSurfaceTransformFlagBitsKHR pre_transform = surface_descriptors.currentTransform;
-			if (surface_descriptors.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
-				pre_transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-
-			VkSwapchainCreateInfoKHR swap_info = {};
-			swap_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-			swap_info.surface = m_surface;
-			swap_info.minImageCount = nb_swap_images;
-			swap_info.imageFormat = m_surface_format;
-			swap_info.imageColorSpace = m_color_space;
-
-			swap_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-			swap_info.preTransform = pre_transform;
-			swap_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-			swap_info.imageArrayLayers = 1;
-			swap_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-			swap_info.presentMode = swapchain_present_mode;
-			swap_info.oldSwapchain = old_swapchain;
-			swap_info.clipped = true;
-
-			swap_info.imageExtent.width = width;
-			swap_info.imageExtent.height = height;
-
-			createSwapchainKHR(dev, &swap_info, nullptr, &m_vk_swapchain);
-
-			if (old_swapchain)
-			{
-				if (m_swap_images.size())
-				{
-					for (auto &img : m_swap_images)
-						img.discard(dev);
-
-					m_swap_images.resize(0);
-				}
-
-				destroySwapchainKHR(dev, old_swapchain, nullptr);
-			}
-
-			nb_swap_images = 0;
-			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, nullptr);
-
-			if (!nb_swap_images) fmt::throw_exception("Driver returned 0 images for swapchain" HERE);
-
-			std::vector<VkImage> swap_images;
-			swap_images.resize(nb_swap_images);
-			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, swap_images.data());
-
-			m_swap_images.resize(nb_swap_images);
-			for (u32 i = 0; i < nb_swap_images; ++i)
-			{
-				m_swap_images[i].create(dev, swap_images[i], m_surface_format);
-			}
-
-			return true;
-		}
-
-		u32 get_swap_image_count()
-		{
-			return (u32)m_swap_images.size();
-		}
-
-		vk::swap_chain_image& get_swap_chain_image(const int index)
-		{
-			return m_swap_images[index];
-		}
-
-		const vk::render_device& get_device()
-		{
-			return dev;
-		}
-
-		const VkQueue& get_present_queue()
-		{
-			return vk_graphics_queue;
-		}
-
-		const VkFormat get_surface_format()
-		{
-			return m_surface_format;
-		}
-
-		operator const VkSwapchainKHR()
-		{
-			return m_vk_swapchain;
-		}
-	};
-
 	class command_pool
 	{
 		vk::render_device *owner = nullptr;
@@ -1171,13 +888,675 @@ namespace vk
 		}
 	};
 
+	class swapchain_image_WSI
+	{
+		VkImageView view = nullptr;
+		VkImage image = nullptr;
+		VkFormat internal_format;
+		vk::render_device *owner = nullptr;
+
+	public:
+		swapchain_image_WSI() {}
+
+		void create(vk::render_device &dev, VkImage &swap_image, VkFormat format)
+		{
+			VkImageViewCreateInfo color_image_view = {};
+
+			color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			color_image_view.format = format;
+
+			color_image_view.components.r = VK_COMPONENT_SWIZZLE_R;
+			color_image_view.components.g = VK_COMPONENT_SWIZZLE_G;
+			color_image_view.components.b = VK_COMPONENT_SWIZZLE_B;
+			color_image_view.components.a = VK_COMPONENT_SWIZZLE_A;
+
+			color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			color_image_view.subresourceRange.baseMipLevel = 0;
+			color_image_view.subresourceRange.levelCount = 1;
+			color_image_view.subresourceRange.baseArrayLayer = 0;
+			color_image_view.subresourceRange.layerCount = 1;
+
+			color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+
+			color_image_view.image = swap_image;
+			vkCreateImageView(dev, &color_image_view, nullptr, &view);
+
+			image = swap_image;
+			internal_format = format;
+			owner = &dev;
+		}
+
+		void discard(vk::render_device &dev)
+		{
+			vkDestroyImageView(dev, view, nullptr);
+		}
+
+		operator VkImage&()
+		{
+			return image;
+		}
+
+		operator VkImageView&()
+		{
+			return view;
+		}
+	};
+
+	class swapchain_image_RPCS3 : public image
+	{
+		std::unique_ptr<buffer> m_dma_buffer;
+		u32 m_width = 0;
+		u32 m_height = 0;
+
+public:
+		swapchain_image_RPCS3(render_device &dev, const memory_type_mapping& memory_map, u32 width, u32 height)
+		:image(dev, memory_map.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, width, height, 1, 1, 1,
+			VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 0)
+		{
+			m_width = width;
+			m_height = height;
+			current_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+			m_dma_buffer = std::make_unique<buffer>(dev, m_width * m_height * 4, memory_map.host_visible_coherent,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+		}
+
+		void do_dma_transfer(command_buffer& cmd)
+		{
+			VkBufferImageCopy copyRegion = {};
+			copyRegion.bufferOffset = 0;
+			copyRegion.bufferRowLength = m_width;
+			copyRegion.bufferImageHeight = m_height;
+			copyRegion.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+			copyRegion.imageOffset = {};
+			copyRegion.imageExtent = {m_width, m_height, 1};
+
+			VkImageSubresourceRange subresource_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+			change_image_layout(cmd, this, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+			vkCmdCopyImageToBuffer(cmd, value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_dma_buffer->value, 1, &copyRegion);
+			change_image_layout(cmd, this, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+		}
+
+		u32 get_required_memory_size() const
+		{
+			return m_width * m_height * 4;
+		}
+
+		void* get_pixels()
+		{
+			return m_dma_buffer->map(0, VK_WHOLE_SIZE);
+		}
+
+		void free_pixels()
+		{
+			m_dma_buffer->unmap();
+		}
+	};
+
+	class swapchain_base
+	{
+	protected:
+		render_device dev;
+
+		uint32_t m_present_queue = UINT32_MAX;
+		uint32_t m_graphics_queue = UINT32_MAX;
+		VkQueue vk_graphics_queue = VK_NULL_HANDLE;
+		VkQueue vk_present_queue = VK_NULL_HANDLE;
+
+		display_handle_t window_handle{};
+		u32 m_width = 0;
+		u32 m_height = 0;
+		VkFormat m_surface_format = VK_FORMAT_B8G8R8A8_UNORM;
+
+		virtual void init_swapchain_images(render_device& dev, u32 count) = 0;
+
+	public:
+		swapchain_base(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		{
+			dev = render_device(gpu, _graphics_queue);
+
+			if (_graphics_queue < UINT32_MAX) vkGetDeviceQueue(dev, _graphics_queue, 0, &vk_graphics_queue);
+			if (_present_queue < UINT32_MAX) vkGetDeviceQueue(dev, _present_queue, 0, &vk_present_queue);
+
+			m_present_queue = _present_queue;
+			m_graphics_queue = _graphics_queue;
+			m_surface_format = format;
+		}
+
+		~swapchain_base(){}
+
+		virtual void create(display_handle_t& handle) = 0;
+		virtual void destroy(bool full = true) = 0;
+		virtual bool init() = 0;
+
+		virtual u32 get_swap_image_count() const = 0;
+		virtual VkImage& get_image(u32 index) = 0;
+		virtual VkResult acquire_next_swapchain_image(VkSemaphore semaphore, u64 timeout, u32* result) = 0;
+		virtual void end_frame(command_buffer& cmd, u32 index) = 0;
+		virtual VkResult present(u32 index) = 0;
+		virtual VkImageLayout get_optimal_present_layout() = 0;
+
+		virtual bool init(u32 w, u32 h)
+		{
+			m_width = w;
+			m_height = h;
+			return init();
+		}
+
+		const vk::render_device& get_device()
+		{
+			return dev;
+		}
+
+		const VkQueue& get_present_queue()
+		{
+			return vk_present_queue;
+		}
+
+		const VkQueue& get_graphics_queue()
+		{
+			return vk_graphics_queue;
+		}
+
+		const VkFormat get_surface_format()
+		{
+			return m_surface_format;
+		}
+
+		const bool is_headless() const
+		{
+			return (vk_present_queue == VK_NULL_HANDLE);
+		}
+	};
+
+	template<typename T>
+	class abstract_swapchain_impl : public swapchain_base
+	{
+	protected:
+		std::vector<T> swapchain_images;
+
+	public:
+		abstract_swapchain_impl(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		: swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		{}
+
+		~abstract_swapchain_impl()
+		{}
+
+		u32 get_swap_image_count() const override
+		{
+			return (u32)swapchain_images.size();
+		}
+
+		using swapchain_base::init;
+	};
+
+	using native_swapchain_base = abstract_swapchain_impl<std::pair<bool, std::unique_ptr<swapchain_image_RPCS3>>>;
+	using WSI_swapchain_base = abstract_swapchain_impl<swapchain_image_WSI>;
+
+#ifdef _WIN32
+
+	class swapchain_WIN32 : public native_swapchain_base
+	{
+		HDC hDstDC = NULL;
+		HDC hSrcDC = NULL;
+		HBITMAP hDIB = NULL;
+		LPVOID hPtr = NULL;
+
+	public:
+		swapchain_WIN32(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		{}
+
+		~swapchain_WIN32(){}
+
+		bool init() override
+		{
+			if (hDIB || hSrcDC)
+				destroy(false);
+
+			RECT rect;
+			GetClientRect(window_handle, &rect);
+			m_width = rect.right - rect.left;
+			m_height = rect.bottom - rect.top;
+
+			if (m_width == 0 || m_height == 0)
+			{
+				LOG_ERROR(RSX, "Invalid window dimensions %d x %d", m_width, m_height);
+				return false;
+			}
+
+			BITMAPINFO bitmap = {};
+			bitmap.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+			bitmap.bmiHeader.biWidth = m_width;
+			bitmap.bmiHeader.biHeight = m_height * -1;
+			bitmap.bmiHeader.biPlanes = 1;
+			bitmap.bmiHeader.biBitCount = 32;
+			bitmap.bmiHeader.biCompression = BI_RGB;
+
+			hSrcDC = CreateCompatibleDC(hDstDC);
+			hDIB = CreateDIBSection(hSrcDC, &bitmap, DIB_RGB_COLORS, &hPtr, NULL, 0);
+			SelectObject(hSrcDC, hDIB);
+			init_swapchain_images(dev, 3);
+			return true;
+		}
+
+		void create(display_handle_t& handle) override
+		{
+			window_handle = handle;
+			hDstDC = GetDC(handle);
+			init();
+		}
+
+		void destroy(bool full=true) override
+		{
+			DeleteObject(hDIB);
+			DeleteDC(hSrcDC);
+			hDIB = NULL;
+			hSrcDC = NULL;
+
+			swapchain_images.clear();
+
+			if (full)
+				dev.destroy();
+		}
+
+		VkResult present(u32 image) override
+		{
+			auto& src = swapchain_images[image];
+			GdiFlush();
+
+			if (hSrcDC)
+			{
+				memcpy(hPtr, src.second->get_pixels(), src.second->get_required_memory_size());
+				BitBlt(hDstDC, 0, 0, m_width, m_height, hSrcDC, 0, 0, SRCCOPY);
+				src.second->free_pixels();
+			}
+
+			src.first = false;
+			return VK_SUCCESS;
+		}
+#else
+
+	class swapchain_X11 : public native_swapchain_base
+	{
+		Display *display = NULL;
+		Window window = (Window)NULL;
+		XImage* pixmap = NULL;
+		GC gc = NULL;
+		int bit_depth = 24;
+
+	public:
+		swapchain_X11(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		{}
+
+		~swapchain_X11(){}
+
+		bool init() override
+		{
+			if (pixmap)
+				destroy(false);
+
+			Window root;
+			int x, y;
+			u32 w = 0, h = 0, border, depth;
+
+			if (XGetGeometry(display, window, &root, &x, &y, &w, & h, &border, &depth))
+			{
+				m_width = w;
+				m_height = h;
+				bit_depth = depth;
+			}
+
+			if (m_width == 0 || m_height == 0)
+			{
+				LOG_ERROR(RSX, "Invalid window dimensions %d x %d", m_width, m_height);
+				return false;
+			}
+
+			XVisualInfo visual{};
+			if (!XMatchVisualInfo(display, DefaultScreen(display), bit_depth, TrueColor, &visual))
+			{
+				LOG_ERROR(RSX, "Could not find matching visual info!" HERE);
+				return false;
+			}
+
+			pixmap = XCreateImage(display, visual.visual, visual.depth, ZPixmap, 0, nullptr, m_width, m_height, 32, 0);
+			init_swapchain_images(dev, 3);
+			return true;
+		}
+
+		void create(display_handle_t& window_handle) override
+		{
+			window_handle.match([&](std::pair<Display*, Window> p) { display = p.first; window = p.second; }, [](auto _) {});
+
+			if (display == NULL)
+			{
+				LOG_FATAL(RSX, "Could not create virtual display on this window protocol (Wayland?)");
+				return;
+			}
+
+			gc = DefaultGC(display, DefaultScreen(display));
+			init();
+		}
+
+		void destroy(bool full=true) override
+		{
+			pixmap->data = nullptr;
+			XDestroyImage(pixmap);
+			pixmap = NULL;
+
+			swapchain_images.clear();
+
+			if (full)
+				dev.destroy();
+		}
+
+		VkResult present(u32 index) override
+		{
+			auto& src = swapchain_images[index];
+			if (pixmap)
+			{
+				pixmap->data = (char*)src.second->get_pixels();
+
+				XPutImage(display, window, gc, pixmap, 0, 0, 0, 0, m_width, m_height);
+				XFlush(display);
+
+				src.second->free_pixels();
+			}
+
+			//Release reference
+			src.first = false;
+			return VK_SUCCESS;
+		}
+#endif
+
+		VkResult acquire_next_swapchain_image(VkSemaphore /*semaphore*/, u64 /*timeout*/, u32* result) override
+		{
+			u32 index = 0;
+			for (auto &p : swapchain_images)
+			{
+				if (!p.first)
+				{
+					p.first = true;
+					*result = index;
+					return VK_SUCCESS;
+				}
+
+				++index;
+			}
+
+			return VK_NOT_READY;
+		}
+
+		void end_frame(command_buffer& cmd, u32 index) override
+		{
+			swapchain_images[index].second->do_dma_transfer(cmd);
+		}
+
+		VkImage& get_image(u32 index)
+		{
+			return (VkImage&)(*swapchain_images[index].second.get());
+		}
+
+		VkImageLayout get_optimal_present_layout() override
+		{
+			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		}
+
+	protected:
+		void init_swapchain_images(render_device& dev, u32 preferred_count) override
+		{
+			swapchain_images.resize(preferred_count);
+			for (auto &img : swapchain_images)
+			{
+				img.second = std::make_unique<swapchain_image_RPCS3>(dev, dev.get_memory_mapping(), m_width, m_height);
+				img.first = false;
+			}
+		}
+	};
+
+	class swapchain_WSI : public WSI_swapchain_base
+	{
+		VkSurfaceKHR m_surface = VK_NULL_HANDLE;
+		VkColorSpaceKHR m_color_space = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+		VkSwapchainKHR m_vk_swapchain = nullptr;
+
+		PFN_vkCreateSwapchainKHR createSwapchainKHR = nullptr;
+		PFN_vkDestroySwapchainKHR destroySwapchainKHR = nullptr;
+		PFN_vkGetSwapchainImagesKHR getSwapchainImagesKHR = nullptr;
+		PFN_vkAcquireNextImageKHR acquireNextImageKHR = nullptr;
+		PFN_vkQueuePresentKHR queuePresentKHR = nullptr;
+
+	protected:
+		void init_swapchain_images(render_device& dev, u32 /*preferred_count*/ = 0) override
+		{
+			u32 nb_swap_images = 0;
+			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, nullptr);
+
+			if (!nb_swap_images) fmt::throw_exception("Driver returned 0 images for swapchain" HERE);
+
+			std::vector<VkImage> vk_images;
+			vk_images.resize(nb_swap_images);
+			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, vk_images.data());
+
+			swapchain_images.resize(nb_swap_images);
+			for (u32 i = 0; i < nb_swap_images; ++i)
+			{
+				swapchain_images[i].create(dev, vk_images[i], m_surface_format);
+			}
+		}
+
+	public:
+		swapchain_WSI(vk::physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format, VkSurfaceKHR surface, VkColorSpaceKHR color_space)
+			: WSI_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		{
+			createSwapchainKHR = (PFN_vkCreateSwapchainKHR)vkGetDeviceProcAddr(dev, "vkCreateSwapchainKHR");
+			destroySwapchainKHR = (PFN_vkDestroySwapchainKHR)vkGetDeviceProcAddr(dev, "vkDestroySwapchainKHR");
+			getSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)vkGetDeviceProcAddr(dev, "vkGetSwapchainImagesKHR");
+			acquireNextImageKHR = (PFN_vkAcquireNextImageKHR)vkGetDeviceProcAddr(dev, "vkAcquireNextImageKHR");
+			queuePresentKHR = (PFN_vkQueuePresentKHR)vkGetDeviceProcAddr(dev, "vkQueuePresentKHR");
+
+			m_surface = surface;
+			m_color_space = color_space;
+		}
+
+		~swapchain_WSI()
+		{}
+
+		void create(display_handle_t&) override
+		{}
+
+		void destroy(bool=true) override
+		{
+			if (VkDevice pdev = (VkDevice)dev)
+			{
+				if (m_vk_swapchain)
+				{
+					for (auto &img : swapchain_images)
+						img.discard(dev);
+
+					destroySwapchainKHR(pdev, m_vk_swapchain, nullptr);
+				}
+
+				dev.destroy();
+			}
+		}
+
+		using WSI_swapchain_base::init;
+		bool init() override
+		{
+			if (vk_present_queue == VK_NULL_HANDLE)
+			{
+				LOG_ERROR(RSX, "Cannot create WSI swapchain without a present queue");
+				return false;
+			}
+
+			VkSwapchainKHR old_swapchain = m_vk_swapchain;
+			vk::physical_device& gpu = const_cast<vk::physical_device&>(dev.gpu());
+
+			VkSurfaceCapabilitiesKHR surface_descriptors = {};
+			CHECK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, m_surface, &surface_descriptors));
+
+			if (surface_descriptors.maxImageExtent.width < m_width ||
+				surface_descriptors.maxImageExtent.height < m_height)
+			{
+				LOG_ERROR(RSX, "Swapchain: Swapchain creation failed because dimensions cannot fit. Max = %d, %d, Requested = %d, %d",
+					surface_descriptors.maxImageExtent.width, surface_descriptors.maxImageExtent.height, m_width, m_height);
+
+				return false;
+			}
+
+			VkExtent2D swapchainExtent;
+			if (surface_descriptors.currentExtent.width == (uint32_t)-1)
+			{
+				swapchainExtent.width = m_width;
+				swapchainExtent.height = m_height;
+			}
+			else
+			{
+				if (surface_descriptors.currentExtent.width == 0 || surface_descriptors.currentExtent.height == 0)
+				{
+					LOG_WARNING(RSX, "Swapchain: Current surface extent is a null region. Is the window minimized?");
+					return false;
+				}
+
+				swapchainExtent = surface_descriptors.currentExtent;
+				m_width = surface_descriptors.currentExtent.width;
+				m_height = surface_descriptors.currentExtent.height;
+			}
+
+			uint32_t nb_available_modes = 0;
+			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, nullptr));
+
+			std::vector<VkPresentModeKHR> present_modes(nb_available_modes);
+			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, present_modes.data()));
+
+			VkPresentModeKHR swapchain_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+			std::vector<VkPresentModeKHR> preferred_modes;
+
+			//List of preferred modes in decreasing desirability
+			if (g_cfg.video.vsync)
+				preferred_modes = { VK_PRESENT_MODE_MAILBOX_KHR };
+			else if (!g_cfg.video.vk.force_fifo)
+				preferred_modes = { VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR, VK_PRESENT_MODE_MAILBOX_KHR };
+
+			bool mode_found = false;
+			for (VkPresentModeKHR preferred_mode : preferred_modes)
+			{
+				//Search for this mode in supported modes
+				for (VkPresentModeKHR mode : present_modes)
+				{
+					if (mode == preferred_mode)
+					{
+						swapchain_present_mode = mode;
+						mode_found = true;
+						break;
+					}
+				}
+
+				if (mode_found)
+					break;
+			}
+
+			LOG_NOTICE(RSX, "Swapchain: present mode %d in use.", (s32&)swapchain_present_mode);
+
+			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
+			if (surface_descriptors.maxImageCount > 0)
+			{
+				//Try to negotiate for a triple buffer setup
+				//In cases where the front-buffer isnt available for present, its better to have a spare surface
+				nb_swap_images = std::max(surface_descriptors.minImageCount + 2u, 3u);
+
+				if (nb_swap_images > surface_descriptors.maxImageCount)
+				{
+					// Application must settle for fewer images than desired:
+					nb_swap_images = surface_descriptors.maxImageCount;
+				}
+			}
+
+			VkSurfaceTransformFlagBitsKHR pre_transform = surface_descriptors.currentTransform;
+			if (surface_descriptors.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
+				pre_transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+
+			VkSwapchainCreateInfoKHR swap_info = {};
+			swap_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+			swap_info.surface = m_surface;
+			swap_info.minImageCount = nb_swap_images;
+			swap_info.imageFormat = m_surface_format;
+			swap_info.imageColorSpace = m_color_space;
+
+			swap_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			swap_info.preTransform = pre_transform;
+			swap_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+			swap_info.imageArrayLayers = 1;
+			swap_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			swap_info.presentMode = swapchain_present_mode;
+			swap_info.oldSwapchain = old_swapchain;
+			swap_info.clipped = true;
+
+			swap_info.imageExtent.width = m_width;
+			swap_info.imageExtent.height = m_height;
+
+			createSwapchainKHR(dev, &swap_info, nullptr, &m_vk_swapchain);
+
+			if (old_swapchain)
+			{
+				if (swapchain_images.size())
+				{
+					for (auto &img : swapchain_images)
+						img.discard(dev);
+
+					swapchain_images.resize(0);
+				}
+
+				destroySwapchainKHR(dev, old_swapchain, nullptr);
+			}
+
+			init_swapchain_images(dev);
+			return true;
+		}
+
+		VkResult acquire_next_swapchain_image(VkSemaphore semaphore, u64 timeout, u32* result) override
+		{
+			return vkAcquireNextImageKHR(dev, m_vk_swapchain, timeout, semaphore, VK_NULL_HANDLE, result);
+		}
+
+		void end_frame(command_buffer& /*cmd*/, u32 /*index*/) override
+		{
+		}
+
+		VkResult present(u32 image) override
+		{
+			VkPresentInfoKHR present = {};
+			present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+			present.pNext = nullptr;
+			present.swapchainCount = 1;
+			present.pSwapchains = &m_vk_swapchain;
+			present.pImageIndices = &image;
+
+			return queuePresentKHR(vk_present_queue, &present);
+		}
+
+		VkImage& get_image(u32 index)
+		{
+			return (VkImage&)swapchain_images[index];
+		}
+
+		VkImageLayout get_optimal_present_layout() override
+		{
+			return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		}
+	};
+
 	class supported_extensions
 	{
 	private:
 		std::vector<VkExtensionProperties> m_vk_exts;
 
 	public:
-
 		supported_extensions()
 		{
 			uint32_t count;
@@ -1378,24 +1757,25 @@ namespace vk
 			return gpus;
 		}
 
-#ifdef _WIN32
-
-		vk::swap_chain* createSwapChain(HINSTANCE hInstance, display_handle_t hWnd, vk::physical_device &dev)
+		swapchain_base* createSwapChain(display_handle_t window_handle, vk::physical_device &dev)
 		{
+#ifdef _WIN32
+			using swapchain_NATIVE = swapchain_WIN32;
+			HINSTANCE hInstance = NULL;
+
 			VkWin32SurfaceCreateInfoKHR createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
 			createInfo.hinstance = hInstance;
-			createInfo.hwnd = hWnd;
+			createInfo.hwnd = window_handle;
 
 			VkSurfaceKHR surface;
 			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface));
-#elif HAVE_VULKAN
 
-		vk::swap_chain* createSwapChain(display_handle_t ctx, vk::physical_device &dev)
-		{
+#else
+			using swapchain_NATIVE = swapchain_X11;
 			VkSurfaceKHR surface;
 
-			ctx.match(
+			window_handle.match(
 				[&](std::pair<Display*, Window> p)
 				{
 					VkXlibSurfaceCreateInfoKHR createInfo = {};
@@ -1423,6 +1803,21 @@ namespace vk
 			for (u32 index = 0; index < device_queues; index++)
 			{
 				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, surface, &supportsPresent[index]);
+			}
+
+			bool present_possible = false;
+			for (const auto &value : supportsPresent)
+			{
+				if (value)
+				{
+					present_possible = true;
+					break;
+				}
+			}
+
+			if (!present_possible)
+			{
+				LOG_ERROR(RSX, "It is not possible for the currently selected GPU to present to the window (Likely caused by NVIDIA driver running the current display)");
 			}
 
 			// Search for a graphics and a present queue in the array of queue
@@ -1461,12 +1856,26 @@ namespace vk
 				}
 			}
 
-			// Generate error if could not find both a graphics and a present queue
-			if (graphicsQueueNodeIndex == UINT32_MAX || presentQueueNodeIndex == UINT32_MAX)
-				fmt::throw_exception("Failed to find a suitable graphics/compute queue" HERE);
+			if (graphicsQueueNodeIndex == UINT32_MAX)
+			{
+				LOG_FATAL(RSX, "Failed to find a suitable graphics queue" HERE);
+				return nullptr;
+			}
 
 			if (graphicsQueueNodeIndex != presentQueueNodeIndex)
-				fmt::throw_exception("Separate graphics and present queues not supported" HERE);
+			{
+				//Separate graphics and present, use headless fallback
+				present_possible = false;
+			}
+
+			if (!present_possible)
+			{
+				//Native(sw) swapchain
+				LOG_WARNING(RSX, "Falling back to software present support (native windowing API)");
+				auto swapchain = new swapchain_NATIVE(dev, UINT32_MAX, graphicsQueueNodeIndex);
+				swapchain->create(window_handle);
+				return swapchain;
+			}
 
 			// Get the list of VkFormat's that are supported:
 			uint32_t formatCount;
@@ -1500,7 +1909,7 @@ namespace vk
 
 			color_space = surfFormats[0].colorSpace;
 
-			return new swap_chain(dev, presentQueueNodeIndex, graphicsQueueNodeIndex, format, surface, color_space);
+			return new swapchain_WSI(dev, presentQueueNodeIndex, graphicsQueueNodeIndex, format, surface, color_space);
 		}
 	};
 

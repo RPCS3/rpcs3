@@ -485,7 +485,7 @@ void main_window::InstallPup(const QString& dropPath)
 				}
 
 				tar_object dev_flash_tar(dev_flash_tar_f[2]);
-				if (!dev_flash_tar.extract(fs::get_config_dir()))
+				if (!dev_flash_tar.extract(Emu.GetEmuDir()))
 				{
 					LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
 					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: TAR contents are invalid."));
@@ -962,7 +962,6 @@ void main_window::RepaintGui()
 	if (m_gameListFrame)
 	{
 		m_gameListFrame->RepaintIcons(true);
-		m_gameListFrame->RepaintToolBarIcons();
 	}
 
 	if (m_logFrame)
@@ -1186,11 +1185,6 @@ void main_window::CreateConnects()
 		guiSettings->SetValue(gui::mw_toolBarVisible, checked);
 	});
 
-	connect(ui->showGameToolBarAct, &QAction::triggered, [=](bool checked)
-	{
-		m_gameListFrame->SetToolBarVisible(checked);
-	});
-
 	connect(ui->refreshGameListAct, &QAction::triggered, [=]
 	{
 		m_gameListFrame->Refresh(true);
@@ -1211,7 +1205,6 @@ void main_window::CreateConnects()
 		else if (act == ui->showCatOtherAct)      categories += category::others, id = Category::Others;
 		else LOG_WARNING(GENERAL, "categoryVisibleActGroup: category action not found");
 
-		m_gameListFrame->SetCategoryActIcon(m_categoryVisibleActGroup->actions().indexOf(act), checked);
 		m_gameListFrame->ToggleCategoryFilter(categories, checked);
 		guiSettings->SetCategoryVisibility(id, checked);
 	});
@@ -1226,20 +1219,16 @@ void main_window::CreateConnects()
 
 	auto resizeIcons = [=](const int& index)
 	{
-		int val = ui->sizeSlider->value();
-		if (val != index)
+		if (ui->sizeSlider->value() != index)
 		{
 			ui->sizeSlider->setSliderPosition(index);
 		}
-		if (val != m_gameListFrame->GetSliderValue())
+		if (m_save_slider_pos)
 		{
-			if (m_save_slider_pos)
-			{
-				m_save_slider_pos = false;
-				guiSettings->SetValue(gui::gl_iconSize, index);
-			}
-			m_gameListFrame->ResizeIcons(index);
+			m_save_slider_pos = false;
+			guiSettings->SetValue(gui::gl_iconSize, index);
 		}
+		m_gameListFrame->ResizeIcons(index);
 	};
 
 	connect(m_iconSizeActGroup, &QActionGroup::triggered, [=](QAction* act)
@@ -1259,26 +1248,12 @@ void main_window::CreateConnects()
 		resizeIcons(index);
 	});
 
-	connect (m_gameListFrame, &game_list_frame::RequestIconSizeActSet, [=](const int& idx)
+	connect (m_gameListFrame, &game_list_frame::RequestIconSizeChange, [=](const int& val)
 	{
+		const int idx = ui->sizeSlider->value() + val;
+		m_save_slider_pos = true;
 		SetIconSizeActions(idx);
 		resizeIcons(idx);
-	});
-
-	connect(m_gameListFrame, &game_list_frame::RequestSaveSliderPos, [=](const bool& save)
-	{
-		Q_UNUSED(save);
-		m_save_slider_pos = true;
-	});
-
-	connect(m_gameListFrame, &game_list_frame::RequestListModeActSet, [=](const bool& isList)
-	{
-		isList ? ui->setlistModeListAct->trigger() : ui->setlistModeGridAct->trigger();
-	});
-
-	connect(m_gameListFrame, &game_list_frame::RequestCategoryActSet, [=](const int& id)
-	{
-		m_categoryVisibleActGroup->actions().at(id)->trigger();
 	});
 
 	connect(m_listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
@@ -1311,9 +1286,9 @@ void main_window::CreateConnects()
 	connect(ui->toolbar_config, &QAction::triggered, [=]() { openSettings(0); });
 	connect(ui->toolbar_list, &QAction::triggered, [=]() { ui->setlistModeListAct->trigger(); });
 	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });
+
 	connect(ui->sizeSlider, &QSlider::valueChanged, resizeIcons);
 	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [&] { guiSettings->SetValue(gui::gl_iconSize, ui->sizeSlider->value()); });
-
 	connect(ui->sizeSlider, &QSlider::actionTriggered, [&](int action)
 	{
 		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
@@ -1427,12 +1402,10 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	ui->showGameListAct->setChecked(guiSettings->GetValue(gui::mw_gamelist).toBool());
 	ui->showDebuggerAct->setChecked(guiSettings->GetValue(gui::mw_debugger).toBool());
 	ui->showToolBarAct->setChecked(guiSettings->GetValue(gui::mw_toolBarVisible).toBool());
-	ui->showGameToolBarAct->setChecked(guiSettings->GetValue(gui::gl_toolBarVisible).toBool());
 
 	m_debuggerFrame->setVisible(ui->showDebuggerAct->isChecked());
 	m_logFrame->setVisible(ui->showLogAct->isChecked());
 	m_gameListFrame->setVisible(ui->showGameListAct->isChecked());
-	m_gameListFrame->SetToolBarVisible(ui->showGameToolBarAct->isChecked());
 	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
 
 	RepaintToolbar();
