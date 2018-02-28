@@ -1614,7 +1614,7 @@ inline bool isdenormal(double x)
 
 void spu_interpreter_precise::FREST(SPUThread& spu, spu_opcode_t op)
 {
-	SetHostRoundingMode(FPSCR_RN_ZERO);
+	fesetround(FE_TOWARDZERO);
 	for (int i = 0; i < 4; i++)
 	{
 		const float a = spu.gpr[op.ra]._f[i];
@@ -1634,7 +1634,7 @@ void spu_interpreter_precise::FREST(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter_precise::FRSQEST(SPUThread& spu, spu_opcode_t op)
 {
-	SetHostRoundingMode(FPSCR_RN_ZERO);
+	fesetround(FE_TOWARDZERO);
 	for (int i = 0; i < 4; i++)
 	{
 		const float a = spu.gpr[op.ra]._f[i];
@@ -1677,7 +1677,7 @@ void spu_interpreter_precise::FCGT(SPUThread& spu, spu_opcode_t op)
 
 static void FA_FS(SPUThread& spu, spu_opcode_t op, bool sub)
 {
-	SetHostRoundingMode(FPSCR_RN_ZERO);
+	fesetround(FE_TOWARDZERO);
 	for (int w = 0; w < 4; w++)
 	{
 		const float a = spu.gpr[op.ra]._f[w];
@@ -1766,7 +1766,7 @@ void spu_interpreter_precise::FS(SPUThread& spu, spu_opcode_t op) { FA_FS(spu, o
 
 void spu_interpreter_precise::FM(SPUThread& spu, spu_opcode_t op)
 {
-	SetHostRoundingMode(FPSCR_RN_ZERO);
+	fesetround(FE_TOWARDZERO);
 	for (int w = 0; w < 4; w++)
 	{
 		const float a = spu.gpr[op.ra]._f[w];
@@ -1899,18 +1899,19 @@ static void DFASM(SPUThread& spu, spu_opcode_t op, DoubleOp operation)
 			case DFASM_S: result = a - b; break;
 			case DFASM_M: result = a * b; break;
 			}
-			if (fetestexcept(FE_INVALID))
+			const u32 e = _mm_getcsr();
+			if (e & _MM_MASK_INVALID)
 			{
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINV);
 				result = DOUBLE_NAN;
 			}
 			else
 			{
-				if (fetestexcept(FE_OVERFLOW))
+				if (e & _MM_MASK_OVERFLOW)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DOVF);
-				if (fetestexcept(FE_UNDERFLOW))
+				if (e & _MM_MASK_UNDERFLOW)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DUNF);
-				if (fetestexcept(FE_INEXACT))
+				if (e & _MM_MASK_INEXACT)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINX);
 			}
 		}
@@ -1959,18 +1960,19 @@ static void DFMA(SPUThread& spu, spu_opcode_t op, bool neg, bool sub)
 			SetHostRoundingMode(spu.fpscr.checkSliceRounding(i));
 			feclearexcept(FE_ALL_EXCEPT);
 			result = fma(a, b, sub ? -c : c);
-			if (fetestexcept(FE_INVALID))
+			const u32 e = _mm_getcsr();
+			if (e & _MM_MASK_INVALID)
 			{
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINV);
 				result = DOUBLE_NAN;
 			}
 			else
 			{
-				if (fetestexcept(FE_OVERFLOW))
+				if (e & _MM_MASK_OVERFLOW)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DOVF);
-				if (fetestexcept(FE_UNDERFLOW))
+				if (e & _MM_MASK_UNDERFLOW)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DUNF);
-				if (fetestexcept(FE_INEXACT))
+				if (e & _MM_MASK_INEXACT)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINX);
 				if (neg) result = -result;
 			}
@@ -2033,11 +2035,12 @@ void spu_interpreter_precise::FRDS(SPUThread& spu, spu_opcode_t op)
 		{
 			feclearexcept(FE_ALL_EXCEPT);
 			spu.gpr[op.rt]._f[i * 2 + 1] = (float)a;
-			if (fetestexcept(FE_OVERFLOW))
+			const u32 e = _mm_getcsr();
+			if (e & _MM_MASK_OVERFLOW)
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DOVF);
-			if (fetestexcept(FE_UNDERFLOW))
+			if (e & _MM_MASK_UNDERFLOW)
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DUNF);
-			if (fetestexcept(FE_INEXACT))
+			if (e & _MM_MASK_INEXACT)
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINX);
 		}
 		spu.gpr[op.rt]._u32[i * 2] = 0;
@@ -2131,7 +2134,7 @@ void spu_interpreter_precise::CFLTU(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter_precise::CSFLT(SPUThread& spu, spu_opcode_t op)
 {
-	SetHostRoundingMode(FPSCR_RN_ZERO);
+	fesetround(FE_TOWARDZERO);
 	const int scale = 155 - (op.i8 & 0xff); //unsigned immediate
 	for (int i = 0; i < 4; i++)
 	{
@@ -2154,7 +2157,7 @@ void spu_interpreter_precise::CSFLT(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter_precise::CUFLT(SPUThread& spu, spu_opcode_t op)
 {
-	SetHostRoundingMode(FPSCR_RN_ZERO);
+	fesetround(FE_TOWARDZERO);
 	const int scale = 155 - (op.i8 & 0xff); //unsigned immediate
 	for (int i = 0; i < 4; i++)
 	{
@@ -2177,7 +2180,7 @@ void spu_interpreter_precise::CUFLT(SPUThread& spu, spu_opcode_t op)
 
 static void FMA(SPUThread& spu, spu_opcode_t op, bool neg, bool sub)
 {
-	SetHostRoundingMode(FPSCR_RN_ZERO);
+	fesetround(FE_TOWARDZERO);
 	for (int w = 0; w < 4; w++)
 	{
 		float a = spu.gpr[op.ra]._f[w];
