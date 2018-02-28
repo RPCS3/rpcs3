@@ -10,7 +10,6 @@
 
 #include "rpcs3qt/trophy_notification_helper.h"
 #include "rpcs3qt/save_data_dialog.h"
-#include "rpcs3qt/msg_dialog_frame.h"
 
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "basic_keyboard_handler.h"
@@ -356,6 +355,23 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
+		QString config_dir = qstr(fs::get_config_dir());
+
+		// HACK: dev_flash must be mounted for vfs to work for loading fonts.
+		vfs::mount("dev_flash", fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", Emu.GetEmuDir()));
+
+		// Add PS3 fonts
+		QDirIterator ps3_font_it(qstr(vfs::get("/dev_flash/data/font/")), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+		while (ps3_font_it.hasNext())
+			QFontDatabase::addApplicationFont(ps3_font_it.next());
+
+		// Add custom fonts
+		QDirIterator custom_font_it(config_dir + "fonts/", QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+		while (custom_font_it.hasNext())
+			QFontDatabase::addApplicationFont(custom_font_it.next());
+
+		// Set root for stylesheets
+		QDir::setCurrent(config_dir);
 		setStyleSheet(file.readAll());
 		file.close();
 	}

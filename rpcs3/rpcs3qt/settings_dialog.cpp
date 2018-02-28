@@ -32,13 +32,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 {
 	ui->setupUi(this);
 	ui->cancelButton->setFocus();
-	ui->tabWidget->setUsesScrollButtons(false);
+	ui->tab_widget_settings->setUsesScrollButtons(false);
+	ui->tab_widget_settings->tabBar()->setObjectName("tab_bar_settings");
 
 	bool showDebugTab = xgui_settings->GetValue(gui::m_showDebugTab).toBool();
 	xgui_settings->SetValue(gui::m_showDebugTab, showDebugTab);
 	if (!showDebugTab)
 	{
-		ui->tabWidget->removeTab(7);
+		ui->tab_widget_settings->removeTab(7);
 	}
 
 	// Add description labels
@@ -111,7 +112,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	connect(ui->cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
 
-	connect(ui->tabWidget, &QTabWidget::currentChanged, [=]()
+	connect(ui->tab_widget_settings, &QTabWidget::currentChanged, [=]()
 	{
 		ui->cancelButton->setFocus();
 	});
@@ -1081,7 +1082,7 @@ int settings_dialog::exec()
 	// If we use setCurrentIndex now we will miraculously see a resize of the dialog as soon as we
 	// switch to the cpu tab after conjuring the settings_dialog with another tab opened first.
 	// Weirdly enough this won't happen if we change the tab order so that anything else is at index 0.
-	QTimer::singleShot(0, [=]{ ui->tabWidget->setCurrentIndex(m_tab_Index); });
+	QTimer::singleShot(0, [=]{ ui->tab_widget_settings->setCurrentIndex(m_tab_Index); });
 	return QDialog::exec();
 }
 
@@ -1105,7 +1106,7 @@ bool settings_dialog::eventFilter(QObject* object, QEvent* event)
 		return QDialog::eventFilter(object, event);
 	}
 
-	int i = ui->tabWidget->currentIndex();
+	int i = ui->tab_widget_settings->currentIndex();
 	QLabel* label = m_description_labels[i].first;
 
 	if (event->type() == QEvent::Enter)

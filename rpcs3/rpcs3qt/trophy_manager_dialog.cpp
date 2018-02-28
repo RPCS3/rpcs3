@@ -41,6 +41,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 {
 	// Nonspecific widget settings
 	setWindowTitle(tr("Trophy Manager"));
+	setObjectName("trophy_manager");
 
 	m_icon_height            = m_gui_settings->GetValue(gui::tr_icon_height).toInt();
 	m_show_locked_trophies   = m_gui_settings->GetValue(gui::tr_show_locked).toBool();
