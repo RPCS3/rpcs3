@@ -296,7 +296,7 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 	// Pause and wait if necessary
 	bool status = ppu.state.test_and_set(cpu_flag::dbg_pause);
 #ifdef WITH_GDB_DEBUGGER
-	fxm::get<GDBDebugServer>()->notify();
+	fxm::get<GDBDebugServer>()->pause_from(&ppu);
 #endif
 	if (!status && ppu.check_state())
 	{

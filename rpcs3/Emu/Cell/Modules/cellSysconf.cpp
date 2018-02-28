@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "cellSysutil.h"
 
 #include "cellSysconf.h"
 
@@ -14,6 +15,13 @@ s32 cellSysconfAbort()
 s32 cellSysconfOpen(u32 type, vm::ptr<CellSysconfCallback> func, vm::ptr<void> userdata, vm::ptr<void> extparam, u32 id)
 {
 	cellSysconf.todo("cellSysconfOpen(type=%d, func=*0x%x, userdata=*0x%x, extparam=*0x%x, id=%d)", type, func, userdata, extparam, id);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		func(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 

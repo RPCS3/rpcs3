@@ -121,7 +121,6 @@ namespace gui
 	const QString savedata    = "SaveData";
 
 	const QColor gl_icon_color       = QColor(209, 209, 209, 255);
-	const QColor gl_tool_icon_color  = QColor(  0, 100, 231, 255);
 	const QColor mw_tool_icon_color  = QColor( 64,  64,  64, 255);
 	const QColor mw_tool_bar_color   = QColor(227, 227, 227, 255);
 	const QColor mw_thumb_icon_color = QColor(  0, 100, 231, 255);
@@ -158,16 +157,14 @@ namespace gui
 	const gui_save cat_unknown     = gui_save(game_list, "categoryVisibleUnknown",    true );
 	const gui_save cat_other       = gui_save(game_list, "categoryVisibleOther",      true );
 
-	const gui_save gl_sortAsc        = gui_save(game_list, "sortAsc",        true );
-	const gui_save gl_sortCol        = gui_save(game_list, "sortCol",        1 );
-	const gui_save gl_state          = gui_save(game_list, "state",          QByteArray() );
-	const gui_save gl_iconSize       = gui_save(game_list, "iconSize",       get_Index(gl_icon_size_small));
-	const gui_save gl_iconColor      = gui_save(game_list, "iconColor",      gl_icon_color);
-	const gui_save gl_listMode       = gui_save(game_list, "listMode",       true );
-	const gui_save gl_textFactor     = gui_save(game_list, "textFactor",     (qreal) 2.0 );
-	const gui_save gl_marginFactor   = gui_save(game_list, "marginFactor",   (qreal) 0.09 );
-	const gui_save gl_toolBarVisible = gui_save(game_list, "toolBarVisible", false);
-	const gui_save gl_toolIconColor  = gui_save(game_list, "toolIconColor",  gl_tool_icon_color);
+	const gui_save gl_sortAsc       = gui_save(game_list, "sortAsc",       true );
+	const gui_save gl_sortCol       = gui_save(game_list, "sortCol",       1 );
+	const gui_save gl_state         = gui_save(game_list, "state",         QByteArray() );
+	const gui_save gl_iconSize      = gui_save(game_list, "iconSize",      get_Index(gl_icon_size_small));
+	const gui_save gl_iconColor     = gui_save(game_list, "iconColor",     gl_icon_color);
+	const gui_save gl_listMode      = gui_save(game_list, "listMode",      true );
+	const gui_save gl_textFactor    = gui_save(game_list, "textFactor",    (qreal) 2.0 );
+	const gui_save gl_marginFactor  = gui_save(game_list, "marginFactor",  (qreal) 0.09 );
 
 	const gui_save fs_emulator_dir_list = gui_save(fs, "emulator_dir_list", QStringList());
 	const gui_save fs_dev_hdd0_list     = gui_save(fs, "dev_hdd0_list",     QStringList());

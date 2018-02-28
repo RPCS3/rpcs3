@@ -10,6 +10,7 @@ constexpr auto qstr = QString::fromStdString;
 
 trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& imgBuffer, const SceNpTrophyDetails& trophy, int height) : QWidget()
 {
+	setObjectName("trophy_notification_frame");
 	setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
 	setAttribute(Qt::WA_ShowWithoutActivating);
 
@@ -42,14 +43,14 @@ trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& i
 	QString trophyType = "";
 	switch (trophy.trophyGrade)
 	{
-	case SCE_NP_TROPHY_GRADE_BRONZE: trophyType = "bronze"; break;
-	case SCE_NP_TROPHY_GRADE_SILVER: trophyType = "silver"; break;
-	case SCE_NP_TROPHY_GRADE_GOLD: trophyType = "gold"; break;
+	case SCE_NP_TROPHY_GRADE_BRONZE:   trophyType = "bronze";   break;
+	case SCE_NP_TROPHY_GRADE_SILVER:   trophyType = "silver";   break;
+	case SCE_NP_TROPHY_GRADE_GOLD:     trophyType = "gold";     break;
 	case SCE_NP_TROPHY_GRADE_PLATINUM: trophyType = "platinum"; break;
 	default: break;
 	}
 
-	trophyName->setText("You have earned the " + trophyType + " trophy\n" + qstr(trophy.name));
+	trophyName->setText(tr("You have earned the %1 trophy\n").arg(trophyType) + qstr(trophy.name));
 	trophyName->setAutoFillBackground(true);
 	trophyName->setPalette(black_background);
 
@@ -60,7 +61,8 @@ trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& i
 	setPalette(black_background);
 
 	// I may consider moving this code later to be done at a better location.
-	QTimer::singleShot(TROPHY_TIMEOUT_MS, [this]() {
+	QTimer::singleShot(TROPHY_TIMEOUT_MS, [this]()
+	{
 		deleteLater();
 	});
 }
