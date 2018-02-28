@@ -539,16 +539,15 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 	GameInfo currGame = m_game_data[row].info;
 
-	QMenu myMenu;
-
 	// Make Actions
+	QMenu myMenu;
 	QAction* boot = myMenu.addAction(tr("&Boot"));
 	QFont f = boot->font();
 	f.setBold(true);
 	boot->setFont(f);
 	QAction* configure = myMenu.addAction(tr("&Configure"));
 	myMenu.addSeparator();
-	QAction* removeGame = myMenu.addAction(tr("&Remove"));
+	QAction* removeGame = myMenu.addAction(tr("&Remove %1").arg(qstr(currGame.category)));
 	QAction* removeConfig = myMenu.addAction(tr("&Remove Custom Configuration"));
 	QAction* deleteShadersCache = myMenu.addAction(tr("&Delete Shaders Cache"));
 	QAction* deleteLLVMCache = myMenu.addAction(tr("&Delete LLVM Cache"));
@@ -558,6 +557,8 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	myMenu.addSeparator();
 	QAction* checkCompat = myMenu.addAction(tr("&Check Game Compatibility"));
 	QAction* downloadCompat = myMenu.addAction(tr("&Download Compatibility Database"));
+
+	const std::string config_base_dir = fs::get_config_dir() + "data/" + m_game_data[row].info.serial;
 
 	connect(boot, &QAction::triggered, [=]
 	{
@@ -575,47 +576,36 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	});
 	connect(removeGame, &QAction::triggered, [=]
 	{
-		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Permanently delete files?")) == QMessageBox::Yes)
+		QMessageBox* mb = new QMessageBox(QMessageBox::Question, tr("Confirm %1 Removal").arg(qstr(currGame.category)), tr("Permanently remove %1 from drive?").arg(qstr(currGame.name)), QMessageBox::Yes | QMessageBox::No, this);
+		mb->setCheckBox(new QCheckBox(tr("Remove caches and custom config")));
+		mb->deleteLater();
+		if (mb->exec() == QMessageBox::Yes)
 		{
+			if (mb->checkBox()->isChecked())
+			{
+				DeleteShadersCache(config_base_dir);
+				DeleteLLVMCache(config_base_dir);
+				RemoveCustomConfiguration(config_base_dir);
+			}
 			fs::remove_all(currGame.path);
 			m_game_data.erase(m_game_data.begin() + row);
 			Refresh();
+			LOG_SUCCESS(GENERAL, "Removed %s %s in %s", currGame.category, currGame.name, currGame.path);
 		}
 	});
 	connect(removeConfig, &QAction::triggered, [=]()
 	{
-		RemoveCustomConfiguration(row);
-		Refresh(true, false);
+		if (RemoveCustomConfiguration(config_base_dir, true))
+			Refresh(true, false);
 	});
 	connect(deleteShadersCache, &QAction::triggered, [=]()
 	{
-		DeleteShadersCache(row);
+		DeleteShadersCache(config_base_dir, true);
 	});
-
 	connect(deleteLLVMCache, &QAction::triggered, [=]()
 	{
-		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Delete LLVM cache?")) == QMessageBox::Yes)
-		{
-			const std::string config_base_dir = fs::get_config_dir() + "data/" + m_game_data[row].info.serial;
-
-			for (auto&& subdir : fs::dir{config_base_dir})
-			{
-				if (!subdir.is_directory || subdir.name == "." || subdir.name == "..")
-				{
-					continue;
-				}
-
-				for (auto&& entry : fs::dir{config_base_dir + "/" + subdir.name})
-				{
-					if (entry.name.size() >= 4 && entry.name.compare(entry.name.size() - 4, 4, ".obj", 4) == 0)
-					{
-						fs::remove_file(config_base_dir + "/" + subdir.name + "/" + entry.name);
-					}
-				}
-			}
-		}
+		DeleteLLVMCache(config_base_dir, true);
 	});
-
 	connect(openGameFolder, &QAction::triggered, [=]()
 	{
 		open_dir(currGame.path);
@@ -657,59 +647,88 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	// Disable removeconfig if no config exists.
 	removeConfig->setEnabled(m_game_data[row].hasCustomConfig);
 
+	// remove delete options if necessary
+	if (!fs::is_dir(config_base_dir))
+	{
+		deleteShadersCache->setEnabled(false);
+		deleteLLVMCache->setEnabled(false);
+	}
+
 	myMenu.exec(globalPos);
 }
 
-void game_list_frame::RemoveCustomConfiguration(int row)
+bool game_list_frame::RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive)
 {
-	const std::string config_path = fs::get_config_dir() + "data/" + m_game_data[row].info.serial + "/config.yml";
+	const std::string config_path = base_dir + "/config.yml";
 
-	if (fs::is_file(config_path))
+	if (!fs::is_file(config_path))
+		return false;
+
+	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete custom game configuration?")) != QMessageBox::Yes)
+		return false;
+
+	if (fs::remove_file(config_path))
 	{
-		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Delete custom game configuration?")) == QMessageBox::Yes)
-		{
-			if (fs::remove_file(config_path))
-			{
-				LOG_SUCCESS(GENERAL, "Removed configuration file: %s", config_path);
-			}
-			else
-			{
-				QMessageBox::warning(this, tr("Warning!"), tr("Failed to delete configuration file!"));
-				LOG_FATAL(GENERAL, "Failed to delete configuration file: %s\nError: %s", config_path, fs::g_tls_error);
-			}
-		}
+		LOG_SUCCESS(GENERAL, "Removed configuration file: %s", config_path);
+		return true;
 	}
 	else
 	{
-		QMessageBox::warning(this, tr("Warning!"), tr("No custom configuration found!"));
-		LOG_ERROR(GENERAL, "Configuration file not found: %s", config_path);
+		QMessageBox::warning(this, tr("Warning!"), tr("Failed to delete configuration file!"));
+		LOG_FATAL(GENERAL, "Failed to delete configuration file: %s\nError: %s", config_path, fs::g_tls_error);
+		return false;
 	}
 }
 
-void game_list_frame::DeleteShadersCache(int row)
+bool game_list_frame::DeleteShadersCache(const std::string& base_dir, bool is_interactive)
 {
-	if (QMessageBox::question(this, tr("Confirm Delete"), tr("Delete shaders cache?")) != QMessageBox::Yes)
-		return;
+	if (!fs::is_dir(base_dir))
+		return false;
 
-	const std::string config_base_dir = fs::get_config_dir() + "data/" + m_game_data[row].info.serial;
+	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete shaders cache?")) != QMessageBox::Yes)
+		return false;
 
-	if (fs::is_dir(config_base_dir))
+	fs::dir root = fs::dir(base_dir);
+	fs::dir_entry tmp;
+
+	while (root.read(tmp))
 	{
-		fs::dir root = fs::dir(config_base_dir);
-		fs::dir_entry tmp;
+		if (!fs::is_dir(base_dir + "/" + tmp.name))
+			continue;
 
-		while (root.read(tmp))
+		const std::string shader_cache_name = base_dir + "/" + tmp.name + "/shaders_cache";
+		if (fs::is_dir(shader_cache_name))
+			fs::remove_all(shader_cache_name, true);
+	}
+
+	LOG_SUCCESS(GENERAL, "Removed shaders cache in %s", base_dir);
+	return true;
+}
+
+bool game_list_frame::DeleteLLVMCache(const std::string& base_dir, bool is_interactive)
+{
+	if (!fs::is_dir(base_dir))
+		return false;
+
+	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete LLVM cache?")) != QMessageBox::Yes)
+		return false;
+
+	for (auto&& subdir : fs::dir{ base_dir })
+	{
+		if (!subdir.is_directory || subdir.name == "." || subdir.name == "..")
+			continue;
+
+		const std::string dir = base_dir + "/" + subdir.name;
+
+		for (auto&& entry : fs::dir{ dir })
 		{
-			if (!fs::is_dir(config_base_dir + "/" + tmp.name))
-				continue;
-
-			const std::string shader_cache_name = config_base_dir + "/" + tmp.name + "/shaders_cache";
-			if (fs::is_dir(shader_cache_name))
-			{
-				fs::remove_all(shader_cache_name, true);
-			}
+			if (entry.name.size() >= 4 && entry.name.compare(entry.name.size() - 4, 4, ".obj", 4) == 0)
+				fs::remove_file(dir + "/" + entry.name);
 		}
 	}
+
+	LOG_SUCCESS(GENERAL, "Removed llvm cache in %s", base_dir);
+	return true;
 }
 
 QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paintConfigIcon)

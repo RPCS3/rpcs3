@@ -201,8 +201,9 @@ public Q_SLOTS:
 	void SetSearchText(const QString& text);
 
 private Q_SLOTS:
-	void RemoveCustomConfiguration(int row);
-	void DeleteShadersCache(int row);
+	bool RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive = false);
+	bool DeleteShadersCache(const std::string& base_dir, bool is_interactive = false);
+	bool DeleteLLVMCache(const std::string& base_dir, bool is_interactive = false);
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void ShowSpecifiedContextMenu(const QPoint &pos, int index); // Different name because the notation for overloaded connects is messy
