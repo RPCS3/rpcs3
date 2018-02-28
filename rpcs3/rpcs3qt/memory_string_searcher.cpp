@@ -8,7 +8,6 @@ memory_string_searcher::memory_string_searcher(QWidget* parent)
 {
 	setWindowTitle(tr("String Searcher"));
 	setAttribute(Qt::WA_DeleteOnClose);
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
 	m_addr_line = new QLineEdit(this);
 	m_addr_line->setFixedWidth(QLabel("This is the very length of the lineedit due to hidpi reasons.").sizeHint().width());

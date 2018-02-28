@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_fs.h"
+#include "cellSysutil.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellPhotoImportUtil("cellPhotoImportUtil");
 
@@ -16,39 +18,88 @@ enum
 	CELL_PHOTO_IMPORT_ERROR_INITIALIZE   = 0x8002c706,
 };
 
-// Datatypes
+enum
+{
+	CELL_PHOTO_IMPORT_HDD_PATH_MAX           = 1055,
+	CELL_PHOTO_IMPORT_PHOTO_TITLE_MAX_LENGTH = 64,
+	CELL_PHOTO_IMPORT_GAME_TITLE_MAX_SIZE    = 128,
+	CELL_PHOTO_IMPORT_GAME_COMMENT_MAX_SIZE  = 1024
+};
+
+enum CellPhotoImportFormatType
+{
+	CELL_PHOTO_IMPORT_FT_UNKNOWN = 0,
+	CELL_PHOTO_IMPORT_FT_JPEG,
+	CELL_PHOTO_IMPORT_FT_PNG,
+	CELL_PHOTO_IMPORT_FT_GIF,
+	CELL_PHOTO_IMPORT_FT_BMP,
+	CELL_PHOTO_IMPORT_FT_TIFF,
+	CELL_PHOTO_IMPORT_FT_MPO,
+};
+
+enum CellPhotoImportTexRot
+{
+	CELL_PHOTO_IMPORT_TEX_ROT_0 = 0,
+	CELL_PHOTO_IMPORT_TEX_ROT_90,
+	CELL_PHOTO_IMPORT_TEX_ROT_180,
+	CELL_PHOTO_IMPORT_TEX_ROT_270,
+};
+
 struct CellPhotoImportFileDataSub
 { 
-	int width;
-	int height;
-	//CellPhotoImportFormatType format; 
-	//CellPhotoImportTexRot rotate; 
+	be_t<s32> width;
+	be_t<s32> height;
+	be_t<CellPhotoImportFormatType> format;
+	be_t<CellPhotoImportTexRot> rotate;
 }; 
 
 struct CellPhotoImportFileData
 { 
-	char dstFileName;   //[CELL_FS_MAX_FS_FILE_NAME_LENGTH]; 
-	char photo_title;   //[CELL_PHOTO_IMPORT_PHOTO_TITLE_MAX_LENGTH*3]; 
-	char game_title;    //[CELL_PHOTO_IMPORT_GAME_TITLE_MAX_SIZE]; 
-	char game_comment;  //[CELL_PHOTO_IMPORT_GAME_COMMENT_MAX_SIZE]; 
-	CellPhotoImportFileDataSub* data_sub; 
+	char dstFileName[CELL_FS_MAX_FS_FILE_NAME_LENGTH];
+	char photo_title[CELL_PHOTO_IMPORT_PHOTO_TITLE_MAX_LENGTH * 3];
+	char game_title[CELL_PHOTO_IMPORT_GAME_TITLE_MAX_SIZE];
+	char game_comment[CELL_PHOTO_IMPORT_GAME_COMMENT_MAX_SIZE];
+	char padding;
+	vm::bptr<CellPhotoImportFileDataSub> data_sub;
+	vm::bptr<void> reserved;
 };
 
 struct CellPhotoImportSetParam
 { 
-	unsigned int fileSizeMax;
+	be_t<u32> fileSizeMax;
+	vm::bptr<void> reserved1;
+	vm::bptr<void> reserved2;
 };
 
-// Functions
-s32 cellPhotoImport()
+using CellPhotoImportFinishCallback = void(s32 result, vm::ptr<CellPhotoImportFileData> filedata, vm::ptr<void> userdata);
+
+error_code cellPhotoImport(u32 version, vm::cptr<char> dstHddPath, vm::ptr<CellPhotoImportSetParam> param, u32 container, vm::ptr<CellPhotoImportFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellPhotoImportUtil);
+	cellPhotoImportUtil.todo("cellPhotoImport(version=0x%x, dstHddPath=%s, param=*0x%x, container=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, dstHddPath, param, container, funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		vm::var<CellPhotoImportFileData> filedata;
+		filedata->data_sub = vm::var<CellPhotoImportFileDataSub>();
+		funcFinish(ppu, CELL_OK, filedata, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellPhotoImport2()
+error_code cellPhotoImport2(u32 version, vm::cptr<char> dstHddPath, vm::ptr<CellPhotoImportSetParam> param, vm::ptr<CellPhotoImportFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellPhotoImportUtil);
+	cellPhotoImportUtil.todo("cellPhotoImport2(version=0x%x, dstHddPath=%s, param=*0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, dstHddPath, param, funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		vm::var<CellPhotoImportFileData> filedata;
+		filedata->data_sub = vm::var<CellPhotoImportFileDataSub>();
+		funcFinish(ppu, CELL_OK, filedata, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 

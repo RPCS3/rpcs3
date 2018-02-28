@@ -1,6 +1,7 @@
 #pragma once
 #include "Utilities/types.h"
 #include "Utilities/geometry.h"
+#include "Emu/System.h"
 
 #include <string>
 #include <vector>
@@ -137,7 +138,7 @@ namespace rsx
 				fallback_fonts.push_back("/usr/share/fonts/TTF/DejaVuSans.ttf"); //arch
 #endif
 				//Also attempt to load from dev_flash as a last resort
-				fallback_fonts.push_back(fs::get_config_dir() + "dev_flash/data/font/SCE-PS3-VR-R-LATIN.TTF");
+				fallback_fonts.push_back(Emu.GetEmuDir() + "dev_flash/data/font/SCE-PS3-VR-R-LATIN.TTF");
 
 				std::string requested_file = font_dir + ttf_name + ".ttf";
 				std::string file_path = requested_file;
@@ -1157,7 +1158,7 @@ namespace rsx
 				set_size(_w, _h);
 			}
 
-			void set_size(u16 w, u16 h) override
+			void set_size(u16 /*w*/, u16 h) override
 			{
 				image_view::set_size(h, h);
 				text_offset = (h / 2) + 10; //By default text is at the horizontal center

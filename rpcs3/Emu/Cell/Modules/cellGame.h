@@ -2,7 +2,7 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 
-namespace vm { using namespace ps3; }
+
 
 // Return Codes
 enum

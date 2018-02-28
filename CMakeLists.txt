@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.1)
 
 option(WITH_GDB "WITH_GDB" OFF)
 option(WITHOUT_LLVM "WITHOUT_LLVM" OFF)
+option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
+option(VULKAN_PREBUILT "" OFF)
 
 if (WITH_GDB)
 	add_definitions(-DWITH_GDB_DEBUGGER)
@@ -34,8 +36,6 @@ set(PNG_TESTS  OFF CACHE BOOL "Build tests." FORCE)
 if (NOT USE_SYSTEM_LIBPNG)
 	add_subdirectory( 3rdparty/libpng )
 endif()
-
-option(VULKAN_PREBUILT "" OFF)
 
 # TODO: do real installation, including copying directory structure
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")

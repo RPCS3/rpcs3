@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 typedef vm::ptr<void> CellImeJpHandle;
 
@@ -17,11 +17,9 @@ enum {
 	CELL_IMEJP_MOVE_CLAUSE_GAP	= 8,
 };
 
-//cellImeJpEnterChar, returning values pointed in pOutputStatus. 
+//cellImeJpEnterChar, returning values pointed in pOutputStatus.
 enum {
 	CELL_IMEJP_RET_NONE			= 0,
 	CELL_IMEJP_RET_THROUGH		= 1,
 	CELL_IMEJP_RET_CONFIRMED	= 2,
 };
-
-

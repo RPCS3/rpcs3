@@ -4,7 +4,7 @@
 
 #include "sys_net_.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel libnet("libnet");
 
@@ -690,7 +690,7 @@ DECLARE(ppu_module_manager::sys_net)("sys_net", []()
 	REG_FUNC(sys_net, _sys_net_h_errno_loc);
 	REG_FUNC(sys_net, sys_net_set_netemu_test_param);
 	REG_FUNC(sys_net, sys_net_free_thread_context);
-	
+
 	REG_FUNC(sys_net, _sys_net_lib_abort);
 	REG_FUNC(sys_net, _sys_net_lib_bnet_control);
 	REG_FUNC(sys_net, __sys_net_lib_calloc);
@@ -703,7 +703,7 @@ DECLARE(ppu_module_manager::sys_net)("sys_net", []()
 	REG_FUNC(sys_net, __sys_net_lib_realloc);
 	REG_FUNC(sys_net, _sys_net_lib_reset_libnetctl_queue);
 	REG_FUNC(sys_net, _sys_net_lib_set_libnetctl_queue);
-	
+
 	REG_FUNC(sys_net, _sys_net_lib_thread_create);
 	REG_FUNC(sys_net, _sys_net_lib_thread_exit);
 	REG_FUNC(sys_net, _sys_net_lib_thread_join);
@@ -716,7 +716,7 @@ DECLARE(ppu_module_manager::sys_net)("sys_net", []()
 
 	REG_FUNC(sys_net, _sys_net_lib_sysctl);
 	REG_FUNC(sys_net, _sys_net_lib_usleep);
-	
+
 	REG_FUNC(sys_net, sys_netset_abort);
 	REG_FUNC(sys_net, sys_netset_close);
 	REG_FUNC(sys_net, sys_netset_get_if_id);

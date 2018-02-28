@@ -243,9 +243,6 @@ QToolButton::hover {
 QLabel#gamelist_icon_background_color {
 	color: transparent;
 }
-QLabel#gamelist_toolbar_icon_color {
-	color: #828790;
-}
 
 /* Set Windows Taskbar Thumbnail colors */
 QLabel#thumbnail_icon_color {

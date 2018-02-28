@@ -11,7 +11,7 @@
 
 #include <mutex>
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellFs("cellFs");
 
@@ -417,7 +417,7 @@ error_code cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entri
 		return CellError(+op->arg._code);
 	}
 
-	return not_an_error(rc);	
+	return not_an_error(rc);
 }
 
 error_code cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size, vm::ptr<u64> nread)
@@ -433,7 +433,7 @@ error_code cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffe
 	vm::var<lv2_file_op_rw> arg;
 
 	arg->_vtable = vm::cast(0xfa8a0000); // Intentionally wrong (provide correct vtable if necessary)
-	
+
 	arg->op = 0x8000000a;
 	arg->fd = fd;
 	arg->buf = buf;
@@ -447,7 +447,7 @@ error_code cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffe
 	{
 		*nread = rc && rc != CELL_EFSSPECIFIC ? 0 : arg->out_size.value();
 	}
-	
+
 	if (!rc && arg->out_code)
 	{
 		return CellError(+arg->out_code);
@@ -475,7 +475,7 @@ error_code cellFsWriteWithOffset(u32 fd, u64 offset, vm::cptr<void> buf, u64 dat
 	vm::var<lv2_file_op_rw> arg;
 
 	arg->_vtable = vm::cast(0xfa8b0000); // Intentionally wrong (provide correct vtable if necessary)
-	
+
 	arg->op = 0x8000000b;
 	arg->fd = fd;
 	arg->buf = vm::const_ptr_cast<void>(buf);
@@ -623,7 +623,7 @@ error_code cellFsAllocateFileAreaWithoutZeroFill(vm::cptr<char> path, u64 size)
 	{
 		return CellError(rc);
 	}
-	
+
 	return CELL_OK;
 }
 
@@ -670,7 +670,7 @@ s32 cellFsStReadInit(u32 fd, vm::cptr<CellFsRingBuffer> ringbuf)
 	{
 		return CELL_EBADF;
 	}
-	
+
 	if (file->flags & CELL_FS_O_WRONLY)
 	{
 		return CELL_EPERM;
@@ -780,7 +780,7 @@ s32 cellFsStReadStop(u32 fd)
 s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 {
 	cellFs.todo("cellFsStRead(fd=%d, buf=*0x%x, size=0x%llx, rsize=*0x%x)", fd, buf, size, rsize);
-	
+
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
@@ -812,7 +812,7 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr, vm::ptr<u64> size)
 s32 cellFsStReadPutCurrentAddr(u32 fd, vm::ptr<u8> addr, u64 size)
 {
 	cellFs.todo("cellFsStReadPutCurrentAddr(fd=%d, addr=*0x%x, size=0x%llx)", fd, addr, size);
-	
+
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
@@ -828,7 +828,7 @@ s32 cellFsStReadPutCurrentAddr(u32 fd, vm::ptr<u8> addr, u64 size)
 s32 cellFsStReadWait(u32 fd, u64 size)
 {
 	cellFs.todo("cellFsStReadWait(fd=%d, size=0x%llx)", fd, size);
-	
+
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
@@ -837,7 +837,7 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 	}
 
 	// TODO
-	
+
 	return CELL_OK;
 }
 
@@ -853,7 +853,7 @@ s32 cellFsStReadWaitCallback(u32 fd, u64 size, vm::ptr<void(s32 xfd, u64 xsize)>
 	}
 
 	// TODO
-	
+
 	return CELL_OK;
 }
 

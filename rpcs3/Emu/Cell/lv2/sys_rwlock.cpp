@@ -8,7 +8,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_rwlock.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_rwlock("sys_rwlock");
 
@@ -383,7 +383,7 @@ error_code sys_rwlock_trywlock(ppu_thread& ppu, u32 rw_lock_id)
 		{
 			return CELL_EDEADLK;
 		}
-		
+
 		return not_an_error(CELL_EBUSY);
 	}
 

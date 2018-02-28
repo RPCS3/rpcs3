@@ -4,7 +4,7 @@
 
 #include "cellScreenshot.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellScreenshot("cellScreenshot");
 

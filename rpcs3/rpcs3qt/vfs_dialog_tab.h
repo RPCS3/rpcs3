@@ -6,7 +6,7 @@
 #include "gui_settings.h"
 #include "emu_settings.h"
 
-#include <QWidget>
+#include <QHBoxLayout>
 #include <QListWidget>
 #include <QLabel>
 
@@ -25,13 +25,11 @@ class vfs_dialog_tab : public QWidget
 public:
 	explicit vfs_dialog_tab(const vfs_settings_info& info, std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent = nullptr);
 
-	void SaveSettings();
+	void SetSettings();
 	void AddNewDirectory();
 	void Reset();
 private:
-	QString EmuConfigDir();
-
-	const QString EmptyPath = "Empty Path";
+	const QString EmptyPath = tr("Empty Path");
 
 	vfs_settings_info m_info;
 	std::shared_ptr<gui_settings> m_gui_settings;

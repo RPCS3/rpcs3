@@ -68,7 +68,7 @@ const bool s_use_ssse3 =
 
 extern u64 get_system_time();
 
-namespace vm { using namespace ps3; }
+
 
 enum class join_status : u32
 {
@@ -296,7 +296,7 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 	// Pause and wait if necessary
 	bool status = ppu.state.test_and_set(cpu_flag::dbg_pause);
 #ifdef WITH_GDB_DEBUGGER
-	fxm::get<GDBDebugServer>()->notify();
+	fxm::get<GDBDebugServer>()->pause_from(&ppu);
 #endif
 	if (!status && ppu.check_state())
 	{
@@ -842,7 +842,7 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 		else
 		{
 			const u32 addr = static_cast<u32>(context.gpr[1]);
-			vm::ps3::_ref<nse_t<u32>>(addr + size) = old_pos;
+			vm::_ref<nse_t<u32>>(addr + size) = old_pos;
 			std::memset(vm::base(addr), 0, size);
 			return addr;
 		}
@@ -863,7 +863,7 @@ void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
 			return;
 		}
 
-		context.gpr[1] = vm::ps3::_ref<nse_t<u32>>(context.gpr[1] + size);
+		context.gpr[1] = vm::_ref<nse_t<u32>>(context.gpr[1] + size);
 		return;
 	}
 
@@ -1274,7 +1274,7 @@ extern void ppu_initialize(const ppu_module& info)
 					}
 
 					// TODO: relocations must be taken into account (TODO)
-					sha1_update(&ctx, vm::ps3::_ptr<const u8>(block.first), block.second);
+					sha1_update(&ctx, vm::_ptr<const u8>(block.first), block.second);
 				}
 
 				if (reloc)
@@ -1282,7 +1282,7 @@ extern void ppu_initialize(const ppu_module& info)
 					continue;
 				}
 
-				sha1_update(&ctx, vm::ps3::_ptr<const u8>(func.addr), func.size);
+				sha1_update(&ctx, vm::_ptr<const u8>(func.addr), func.size);
 			}
 
 			if (info.name == "liblv2.sprx" || info.name == "libsysmodule.sprx" || info.name == "libnet.sprx")

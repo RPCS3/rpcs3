@@ -3,7 +3,7 @@
 
 #include "cellSysutil.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellVideoExport("cellVideoExport");
 

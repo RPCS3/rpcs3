@@ -1,7 +1,8 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "cellSysutil.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellMusicExport("cellMusicExport");
 
@@ -20,33 +21,81 @@ enum
 	CELL_MUSIC_EXPORT_UTIL_ERROR_INITIALIZE   = 0x8002c60a,
 };
 
-s32 cellMusicExportInitialize()
+struct CellMusicExportSetParam
 {
-	UNIMPLEMENTED_FUNC(cellMusicExport);
+	vm::bptr<char> title;
+	vm::bptr<char> game_title;
+	vm::bptr<char> artist;
+	vm::bptr<char> genre;
+	vm::bptr<char> game_comment;
+	vm::bptr<void> reserved1;
+	vm::bptr<void> reserved2;
+};
+
+using CellMusicExportUtilFinishCallback = void(s32 result, vm::ptr<void> userdata);
+
+error_code cellMusicExportInitialize(u32 version, u32 container, vm::ptr<CellMusicExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
+{
+	cellMusicExport.todo("cellMusicExportInitialize(version=0x%x, container=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, container, funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellMusicExportInitialize2()
+error_code cellMusicExportInitialize2(u32 version, vm::ptr<CellMusicExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellMusicExport);
+	cellMusicExport.todo("cellMusicExportInitialize2(version=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellMusicExportFinalize()
+error_code cellMusicExportFinalize(vm::ptr<CellMusicExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellMusicExport);
+	cellMusicExport.todo("cellMusicExportFinalize(funcFinish=*0x%x, userdata=*0x%x)", funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellMusicExportFromFile()
+error_code cellMusicExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcHddFile, vm::ptr<CellMusicExportSetParam> param, vm::ptr<CellMusicExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellMusicExport);
+	cellMusicExport.todo("cellMusicExportFromFile(srcHddDir=%s, srcHddFile=%s, param=*0x%x, funcFinish=*0x%x, userdata=*0x%x)", srcHddDir, srcHddFile, param, funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellMusicExportProgress()
+error_code cellMusicExportProgress(vm::ptr<CellMusicExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellMusicExport);
+	cellMusicExport.todo("cellMusicExportProgress(funcFinish=*0x%x, userdata=*0x%x)", funcFinish, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, 0xFFFF, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 

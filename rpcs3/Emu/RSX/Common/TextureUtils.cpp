@@ -147,7 +147,7 @@ std::vector<rsx_subresource_layout> get_subresources_layout_impl(const RsxTextur
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
 	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
-	auto pixels = reinterpret_cast<const gsl::byte*>(vm::ps3::_ptr<const u8>(texaddr));
+	auto pixels = reinterpret_cast<const gsl::byte*>(vm::_ptr<const u8>(texaddr));
 	bool is_swizzled = !(texture.format() & CELL_GCM_TEXTURE_LN);
 	switch (format)
 	{
@@ -209,7 +209,7 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 	// Ignore when texture width > pitch
 	if (w > pitch)
 		return;
-		
+
 	switch (format)
 	{
 	case CELL_GCM_TEXTURE_B8:

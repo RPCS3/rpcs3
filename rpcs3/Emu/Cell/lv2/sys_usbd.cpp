@@ -5,7 +5,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_usbd.h"
 #include "sys_ppu_thread.h"
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_usbd("sys_usbd");
 

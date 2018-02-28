@@ -7,7 +7,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_lwmutex.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_lwmutex("sys_lwmutex");
 
@@ -19,7 +19,7 @@ error_code _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sy
 
 	if (protocol == SYS_SYNC_RETRY)
 		sys_lwmutex.todo("_sys_lwmutex_create(): SYS_SYNC_RETRY");
-	
+
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_RETRY && protocol != SYS_SYNC_PRIORITY)
 	{
 		sys_lwmutex.error("_sys_lwmutex_create(): unknown protocol (0x%x)", protocol);

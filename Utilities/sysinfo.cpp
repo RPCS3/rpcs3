@@ -39,6 +39,12 @@ bool utils::has_512()
 	return g_value;
 }
 
+bool utils::has_xop()
+{
+	static const bool g_value = has_avx() && get_cpuid(0x80000001, 0)[2] & 0x800;
+	return g_value;
+}
+
 std::string utils::get_system_info()
 {
 	std::string result;
@@ -91,6 +97,11 @@ std::string utils::get_system_info()
 		if (has_512())
 		{
 			result += '+';
+		}
+
+		if (has_xop())
+		{
+			result += 'x';
 		}
 	}
 

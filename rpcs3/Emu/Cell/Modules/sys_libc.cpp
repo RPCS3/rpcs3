@@ -3,7 +3,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUOpcodes.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_libc("sys_libc");
 

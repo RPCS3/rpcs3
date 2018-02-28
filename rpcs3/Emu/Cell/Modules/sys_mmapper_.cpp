@@ -2,7 +2,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 
-namespace vm { using namespace ps3; }
+
 
 extern logs::channel sysPrxForUser;
 

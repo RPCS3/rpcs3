@@ -1,7 +1,6 @@
 #pragma once
 
-#include "gui_settings.h"
-#include "emu_settings.h"
+#include "vfs_dialog_tab.h"
 
 #include <QTabWidget>
 #include <QDialog>

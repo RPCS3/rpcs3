@@ -24,7 +24,7 @@ class GSRender;
 bool user_asked_for_frame_capture = false;
 rsx::frame_capture_data frame_debug;
 
-namespace vm { using namespace ps3; }
+
 
 namespace rsx
 {
@@ -444,23 +444,25 @@ namespace rsx
 
 				if (deferred_stack.size() > 0)
 				{
-					//TODO: Verify this works correctly
-					LOG_ERROR(RSX, "Disjoint draw range detected");
+					LOG_TRACE(RSX, "Disjoint draw range detected");
 
-					deferred_stack.push_back(num_draws - 1); //Append last pair
+					deferred_stack.push_back(num_draws); //Append last pair
 					std::vector<std::pair<u32, u32>> temp_range = first_counts;
+					auto current_command = rsx::method_registers.current_draw_clause.command;
 
 					u32 last_index = 0;
 
 					for (const u32 draw : deferred_stack)
 					{
-						first_counts.resize(draw - last_index);
-						std::copy(temp_range.begin() + last_index, temp_range.begin() + draw, first_counts.begin());
-
 						if (emit_begin)
 							methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
 						else
 							emit_begin = true;
+
+						//NOTE: These values are reset if begin command is emitted
+						first_counts.resize(draw - last_index);
+						std::copy(temp_range.begin() + last_index, temp_range.begin() + draw, first_counts.begin());
+						rsx::method_registers.current_draw_clause.command = current_command;
 
 						methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
 						last_index = draw;
@@ -725,6 +727,21 @@ namespace rsx
 							break;
 
 						flush_commands_flag = false;
+						break;
+					}
+					case NV4097_SET_TEXTURE_OFFSET:
+					case NV4097_SET_TEXTURE_FORMAT:
+					case NV4097_SET_TEXTURE_ADDRESS:
+					case NV4097_SET_TEXTURE_CONTROL0:
+					case NV4097_SET_TEXTURE_CONTROL1:
+					case NV4097_SET_TEXTURE_FILTER:
+					case NV4097_SET_TEXTURE_IMAGE_RECT:
+					case NV4097_SET_TEXTURE_BORDER_COLOR:
+					{
+						//Safe to ignore if value has not changed
+						if (method_registers.test(reg, value))
+							flush_commands_flag = false;
+
 						break;
 					}
 					}

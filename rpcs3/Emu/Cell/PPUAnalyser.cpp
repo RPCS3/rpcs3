@@ -7,7 +7,7 @@
 
 #include "yaml-cpp/yaml.h"
 
-namespace vm { using namespace ps3; }
+
 
 const ppu_decoder<ppu_itype> s_ppu_itype;
 
@@ -876,7 +876,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 					func.attr += ppu_attr::no_return;
 					continue;
 				}
-				
+
 				if (target >= start && target < end)
 				{
 					auto& new_func = add_func(target, func.toc, func.addr);
@@ -1122,7 +1122,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 						block_queue.clear();
 						break;
 					}
-					
+
 					// Add next block if necessary
 					if ((is_call && !test(pfunc->attr, ppu_attr::no_return)) || (type == ppu_itype::BC && (op.bo & 0x14) != 0x14))
 					{
@@ -1241,7 +1241,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			func_queue.emplace_back(func);
 			continue;
 		}
-		
+
 		// Finalization: determine function size
 		if (!test(func.attr, ppu_attr::known_size))
 		{
@@ -1400,7 +1400,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			{
 				_ptr.set(next);
 			}
-			
+
 			if (_ptr.addr() >= next)
 			{
 				LOG_WARNING(PPU, "Function gap: [0x%x] 0x%x bytes at 0x%x", func.addr, next - start, start);
@@ -1422,7 +1422,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			}
 		}
 	}
-	
+
 	// Convert map to vector (destructive)
 	for (auto&& pair : fmap)
 	{
@@ -3384,6 +3384,6 @@ const bool s_tes = []()
 	r1 = ppu_acontext::spec_gpr::range(0x13311, 0x1fe22);
 	r1 = r1 ^ ppu_acontext::spec_gpr::approx(0x000, 0xf00);
 	LOG_SUCCESS(PPU, "0x%x..0x%x", r1.imin, r1.imax);
-	
+
 	return true;
 }();

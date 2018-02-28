@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "sys_memory.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_memory("sys_memory");
 
@@ -22,7 +22,7 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 
 		break;
 	}
-		
+
 	case SYS_MEMORY_PAGE_SIZE_64K:
 	{
 		if (size % 0x10000)
@@ -57,7 +57,7 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr)
 {
 	sys_memory.warning("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, cid, flags, alloc_addr);
-	
+
 	// Check allocation size
 	switch (flags)
 	{
@@ -172,7 +172,7 @@ error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr
 	{
 		attr->page_size = 4096;
 	}
-	
+
 	return CELL_OK;
 }
 
@@ -264,11 +264,11 @@ error_code sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u3
 	}
 
 	mem_info->total_user_memory = ct->size; // Total container memory
-	// Available container memory, minus a hidden 'buffer' 
+	// Available container memory, minus a hidden 'buffer'
 	// This buffer seems to be used by the PS3 OS for c style 'mallocs'
-	// Todo: Research this more, even though we dont use this buffer, it helps out games when calculating 
+	// Todo: Research this more, even though we dont use this buffer, it helps out games when calculating
 	//	     expected memory they can use allowing them to boot
-	mem_info->available_user_memory = ct->size - ct->used - 0x1000000; 
+	mem_info->available_user_memory = ct->size - ct->used - 0x1000000;
 
 	return CELL_OK;
 }

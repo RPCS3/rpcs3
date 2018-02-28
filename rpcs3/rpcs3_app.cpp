@@ -8,14 +8,9 @@
 #include "rpcs3qt/gs_frame.h"
 #include "rpcs3qt/gl_gs_frame.h"
 
-#include "Emu/Cell/Modules/sceNpTrophy.h"
 #include "rpcs3qt/trophy_notification_helper.h"
-
-#include "Emu/Cell/Modules/cellSaveData.h"
 #include "rpcs3qt/save_data_dialog.h"
-
 #include "rpcs3qt/msg_dialog_frame.h"
-#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "basic_keyboard_handler.h"
@@ -318,13 +313,6 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 			"QLabel#thumbnail_icon_color { color: " + rgba(gui::mw_thumb_icon_color) + " }"
 		);
 
-		// gamelist toolbar stylesheet
-		QString style_gamelist_toolbar = QString
-		(
-			"QLineEdit#tb_searchbar { background: transparent; }"
-			"QLabel#gamelist_toolbar_icon_color { color: " + rgba(gui::gl_tool_icon_color) + " }"
-		);
-
 		// gamelist icon color stylesheet
 		QString style_gamelist_icons = QString
 		(
@@ -364,7 +352,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
 		);
 
-		setStyleSheet(style_toolbar + style_toolbar_icons + style_thumbnail_icons + style_gamelist_toolbar + style_gamelist_icons + style_log + style_rest);
+		setStyleSheet(style_toolbar + style_toolbar_icons + style_thumbnail_icons + style_gamelist_icons + style_log + style_rest);
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{

@@ -8,7 +8,7 @@
 #include "Emu/Cell/PPUOpcodes.h"
 #include "sys_interrupt.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_interrupt("sys_interrupt");
 

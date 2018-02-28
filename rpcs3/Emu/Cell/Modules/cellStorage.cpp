@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "cellSysutil.h"
 
-namespace vm { using namespace ps3; }
 
 extern logs::channel cellSysutil;
 
@@ -44,18 +44,39 @@ void fmt_class_string<CellStorageError>::format(std::string& out, u64 arg)
 error_code cellStorageDataImportMove(u32 version, vm::ptr<char> srcMediaFile, vm::ptr<char> dstHddDir, vm::ptr<CellStorageDataSetParam> param, vm::ptr<CellStorageDataFinishCallback> funcFinish, u32 container, vm::ptr<void> userdata)
 {
 	cellSysutil.todo("cellStorageDataImportMove(version=0x%x, srcMediaFile=%s, dstHddDir=%s, param=*0x%x, funcFinish=*0x%x, container=0x%x, userdata=*0x%x)", version, srcMediaFile, dstHddDir, param, funcFinish, container, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
 error_code cellStorageDataImport(u32 version, vm::ptr<char> srcMediaFile, vm::ptr<char> dstHddDir, vm::ptr<CellStorageDataSetParam> param, vm::ptr<CellStorageDataFinishCallback> funcFinish, u32 container, vm::ptr<void> userdata)
 {
 	cellSysutil.todo("cellStorageDataImport(version=0x%x, srcMediaFile=%s, dstHddDir=%s, param=*0x%x, funcFinish=*0x%x, container=0x%x, userdata=*0x%x)", version, srcMediaFile, dstHddDir, param, funcFinish, container, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
 error_code cellStorageDataExport(u32 version, vm::ptr<char> srcHddFile, vm::ptr<char> dstMediaDir, vm::ptr<CellStorageDataSetParam> param, vm::ptr<CellStorageDataFinishCallback> funcFinish, u32 container, vm::ptr<void> userdata)
 {
 	cellSysutil.todo("cellStorageDataExport(version=0x%x, srcHddFile=%s, dstMediaDir=%s, param=*0x%x, funcFinish=*0x%x, container=0x%x, userdata=*0x%x)", version, srcHddFile, dstMediaDir, param, funcFinish, container, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		funcFinish(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 

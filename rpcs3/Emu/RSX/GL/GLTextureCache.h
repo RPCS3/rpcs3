@@ -96,13 +96,10 @@ namespace gl
 		u32 vram_texture = 0;
 		u32 scaled_texture = 0;
 
-		bool copied = false;
-		bool flushed = false;
 		bool is_depth = false;
 
 		texture::format format = texture::format::rgba;
 		texture::type type = texture::type::ubyte;
-		bool pack_unpack_swap_bytes = false;
 		rsx::surface_antialiasing aa_mode = rsx::surface_antialiasing::center_1_sample;
 
 		u8 get_pixel_size(texture::format fmt_, texture::type type_)
@@ -173,18 +170,21 @@ namespace gl
 
 		void init_buffer()
 		{
+			const f32 resolution_scale = (context == rsx::texture_upload_context::framebuffer_storage? rsx::get_resolution_scale() : 1.f);
+			const u32 real_buffer_size = (resolution_scale <= 1.f) ? cpu_address_range : (u32)(resolution_scale * resolution_scale * cpu_address_range);
+			const u32 buffer_size = align(real_buffer_size, 4096);
+
 			if (pbo_id)
 			{
+				if (pbo_size >= buffer_size)
+					return;
+
 				glDeleteBuffers(1, &pbo_id);
 				pbo_id = 0;
 				pbo_size = 0;
 			}
 
 			glGenBuffers(1, &pbo_id);
-
-			const f32 resolution_scale = rsx::get_resolution_scale();
-			const u32 real_buffer_size = (resolution_scale < 1.f)? cpu_address_range: (u32)(resolution_scale * resolution_scale * cpu_address_range);
-			const u32 buffer_size = align(real_buffer_size, 4096);
 
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 			glBufferStorage(GL_PIXEL_PACK_BUFFER, buffer_size, nullptr, GL_MAP_READ_BIT);
@@ -194,21 +194,18 @@ namespace gl
 
 	public:
 
-		void reset(u32 base, u32 size, bool flushable=false)
+		void reset(u32 base, u32 size, bool /*flushable*/=false)
 		{
 			rsx::protection_policy policy = g_cfg.video.strict_rendering_mode ? rsx::protection_policy::protect_policy_full_range : rsx::protection_policy::protect_policy_conservative;
 			rsx::buffered_section::reset(base, size, policy);
 
-			if (flushable)
-				init_buffer();
-			
 			flushed = false;
-			copied = false;
+			synchronized = false;
 			is_depth = false;
 
 			vram_texture = 0;
 		}
-		
+
 		void create(u16 w, u16 h, u16 depth, u16 mipmaps, void*,
 				gl::texture* image, u32 rsx_pitch, bool read_only,
 				gl::texture::format gl_format, gl::texture::type gl_type, bool swap_bytes)
@@ -226,7 +223,7 @@ namespace gl
 			}
 
 			flushed = false;
-			copied = false;
+			synchronized = false;
 			is_depth = false;
 
 			this->width = w;
@@ -250,6 +247,12 @@ namespace gl
 
 			rsx_pitch = 0;
 			real_pitch = 0;
+		}
+
+		void make_flushable()
+		{
+			//verify(HERE), pbo_id == 0;
+			init_buffer();
 		}
 
 		void set_dimensions(u32 width, u32 height, u32 /*depth*/, u32 pitch)
@@ -300,8 +303,14 @@ namespace gl
 				return;
 			}
 
+			if (!pbo_id)
+			{
+				init_buffer();
+			}
+
 			u32 target_texture = vram_texture;
-			if (real_pitch != rsx_pitch || rsx::get_resolution_scale_percent() != 100)
+			if ((rsx::get_resolution_scale_percent() != 100 && context == rsx::texture_upload_context::framebuffer_storage) ||
+				(real_pitch != rsx_pitch))
 			{
 				u32 real_width = width;
 				u32 real_height = height;
@@ -392,7 +401,7 @@ namespace gl
 					}
 				}
 
-				if (!recovered && rsx::get_resolution_scale_percent() != 100)
+				if (!recovered && rsx::get_resolution_scale_percent() != 100 && context == rsx::texture_upload_context::framebuffer_storage)
 				{
 					LOG_ERROR(RSX, "Texture readback failed. Disable resolution scaling to get the 'Write Color Buffers' option to work properly");
 				}
@@ -401,12 +410,12 @@ namespace gl
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 			m_fence.reset();
-			copied = true;
+			synchronized = true;
 		}
 
 		void fill_texture(gl::texture* tex)
 		{
-			if (!copied)
+			if (!synchronized)
 			{
 				//LOG_WARNING(RSX, "Request to fill texture rejected because contents were not read");
 				return;
@@ -426,17 +435,20 @@ namespace gl
 		{
 			if (flushed) return true; //Already written, ignore
 
-			if (!copied)
+			bool result = true;
+			if (!synchronized)
 			{
 				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", cpu_address_base);
 				copy_texture();
 
-				if (!copied)
+				if (!synchronized)
 				{
 					LOG_WARNING(RSX, "Nothing to copy; Setting section to readable and moving on...");
 					protect(utils::protection::ro);
 					return false;
 				}
+
+				result = false;
 			}
 
 			m_fence.wait_for_signal();
@@ -444,10 +456,17 @@ namespace gl
 
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 			void *data = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, pbo_size, GL_MAP_READ_BIT);
-			u8 *dst = vm::ps3::_ptr<u8>(cpu_address_base);
+			u8 *dst = vm::_ptr<u8>(cpu_address_base);
 
 			//throw if map failed since we'll segfault anyway
 			verify(HERE), data != nullptr;
+
+			bool require_manual_shuffle = false;
+			if (pack_unpack_swap_bytes)
+			{
+				if (type == gl::texture::type::sbyte || type == gl::texture::type::ubyte)
+					require_manual_shuffle = true;
+			}
 
 			if (real_pitch >= rsx_pitch || scaled_texture != 0)
 			{
@@ -461,10 +480,25 @@ namespace gl
 				rsx::scale_image_nearest(dst, const_cast<const void*>(data), width, height, rsx_pitch, real_pitch, pixel_size, samples_u, samples_v);
 			}
 
+			if (require_manual_shuffle)
+			{
+				//byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
+				rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, height);
+			}
+
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
-			return true;
+			reset_write_statistics();
+
+			return result;
+		}
+
+		void reprotect(utils::protection prot)
+		{
+			flushed = false;
+			synchronized = false;
+			protect(prot);
 		}
 
 		void destroy()
@@ -498,17 +532,17 @@ namespace gl
 			if (!m_fence.is_empty())
 				m_fence.destroy();
 		}
-		
+
 		texture::format get_format() const
 		{
 			return format;
 		}
-		
+
 		bool exists() const
 		{
 			return vram_texture != 0;
 		}
-		
+
 		bool is_flushable() const
 		{
 			return (locked && pbo_id != 0);
@@ -521,7 +555,7 @@ namespace gl
 
 		bool is_synchronized() const
 		{
-			return copied;
+			return synchronized;
 		}
 
 		void set_flushed(bool state)
@@ -557,13 +591,26 @@ namespace gl
 
 			if (auto as_rtt = dynamic_cast<gl::render_target*>(tex))
 			{
-				return (GLenum)as_rtt->get_compatible_internal_format() == fmt;
+				const auto rtt_internal_fmt = (GLenum)as_rtt->get_compatible_internal_format();
+				if (rtt_internal_fmt != fmt)
+				{
+					//When high precision Z is enabled, RTT depth surfaces use DEPTH32F instead of DEPTH24
+					if (rtt_internal_fmt == GL_DEPTH32F_STENCIL8 && fmt == GL_DEPTH24_STENCIL8)
+						return true;
+
+					return false;
+				}
+				else
+				{
+					//Match
+					return true;
+				}
 			}
 
 			return (gl::texture::format)fmt == tex->get_internal_format();
 		}
 	};
-		
+
 	class texture_cache : public rsx::texture_cache<void*, cached_texture_section, u32, u32, gl::texture, gl::texture::format>
 	{
 	private:
@@ -596,7 +643,7 @@ namespace gl
 			clear_temporary_subresources();
 			m_unreleased_texture_objects = 0;
 		}
-		
+
 		void clear_temporary_subresources()
 		{
 			for (u32 &id : m_temporary_surfaces)
@@ -657,6 +704,24 @@ namespace gl
 
 		void apply_component_mapping_flags(GLenum target, u32 gcm_format, rsx::texture_create_flags flags)
 		{
+			//NOTE: Depth textures should always read RRRR
+			switch (gcm_format)
+			{
+			case CELL_GCM_TEXTURE_DEPTH24_D8:
+			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+			case CELL_GCM_TEXTURE_DEPTH16:
+			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+			{
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_RED);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_RED);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_RED);
+				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, GL_RED);
+				return;
+			}
+			default:
+				break;
+			}
+
 			switch (flags)
 			{
 			case rsx::texture_create_flags::default_component_order:
@@ -686,9 +751,9 @@ namespace gl
 			}
 			}
 		}
-		
+
 	protected:
-		
+
 		void free_texture_section(cached_texture_section& tex) override
 		{
 			tex.destroy();
@@ -777,13 +842,48 @@ namespace gl
 			cached.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 			cached.set_image_type(type);
 
-			//Its not necessary to lock blit dst textures as they are just reused as necessary
-			if (context != rsx::texture_upload_context::blit_engine_dst || g_cfg.video.strict_rendering_mode)
+			if (context != rsx::texture_upload_context::blit_engine_dst)
 			{
 				cached.protect(utils::protection::ro);
-				update_cache_tag();
+			}
+			else
+			{
+				//TODO: More tests on byte order
+				//ARGB8+native+unswizzled is confirmed with Dark Souls II character preview
+				switch (gcm_format)
+				{
+				case CELL_GCM_TEXTURE_A8R8G8B8:
+				{
+					bool bgra = (flags == rsx::texture_create_flags::native_component_order);
+					cached.set_format(bgra ? gl::texture::format::bgra : gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, false);
+					break;
+				}
+				case CELL_GCM_TEXTURE_R5G6B5:
+				{
+					cached.set_format(gl::texture::format::rgb, gl::texture::type::ushort_5_6_5, true);
+					break;
+				}
+				case CELL_GCM_TEXTURE_DEPTH24_D8:
+				{
+					cached.set_format(gl::texture::format::depth_stencil, gl::texture::type::uint_24_8, true);
+					break;
+				}
+				case CELL_GCM_TEXTURE_DEPTH16:
+				{
+					cached.set_format(gl::texture::format::depth, gl::texture::type::ushort, true);
+					break;
+				}
+				default:
+					fmt::throw_exception("Unexpected gcm format 0x%X" HERE, gcm_format);
+				}
+
+				cached.make_flushable();
+				cached.set_dimensions(width, height, depth, (rsx_size / height));
+				cached.protect(utils::protection::no);
+				no_access_range = cached.get_min_max(no_access_range);
 			}
 
+			update_cache_tag();
 			return &cached;
 		}
 
@@ -898,15 +998,40 @@ namespace gl
 			{
 				purge_dirty();
 			}
-			
+
 			clear_temporary_subresources();
 			m_temporary_subresource_cache.clear();
+			reset_frame_statistics();
 		}
 
 		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool linear_interpolate, gl_render_targets& m_rtts)
 		{
 			void* unused = nullptr;
-			return upload_scaled_image(src, dst, linear_interpolate, unused, m_rtts, m_hw_blitter);
+			auto result = upload_scaled_image(src, dst, linear_interpolate, unused, m_rtts, m_hw_blitter);
+
+			if (result.succeeded)
+			{
+				if (result.real_dst_size)
+				{
+					gl::texture::format fmt;
+					if (!result.is_depth)
+					{
+						fmt = dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8 ?
+							gl::texture::format::bgra : gl::texture::format::rgba;
+					}
+					else
+					{
+						fmt = dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8 ?
+							gl::texture::format::depth_stencil : gl::texture::format::depth;
+					}
+
+					flush_if_cache_miss_likely(fmt, result.real_dst_address, result.real_dst_size);
+				}
+
+				return true;
+			}
+
+			return false;
 		}
 	};
 }

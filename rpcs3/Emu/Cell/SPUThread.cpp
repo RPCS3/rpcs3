@@ -389,11 +389,11 @@ void SPUThread::cpu_task()
 		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
 
 	// LS base address
-	const auto base = vm::ps3::_ptr<const u32>(offset);
+	const auto base = vm::_ptr<const u32>(offset);
 
 	while (true)
 	{
-		if (!test(state))
+		if (!test(state) || !check_state())
 		{
 			// Read opcode
 			const u32 op = base[pc / 4];
@@ -403,10 +403,10 @@ void SPUThread::cpu_task()
 
 			// Next instruction
 			pc += 4;
+
 			continue;
 		}
-
-		if (check_state()) return;
+		return;
 	}
 }
 
@@ -644,7 +644,7 @@ void SPUThread::process_mfc_cmd()
 	{
 	case MFC_GETLLAR_CMD:
 	{
-		auto& data = vm::ps3::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
+		auto& data = vm::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
 
 		const u32 _addr = ch_mfc_cmd.eal;
 		const u64 _time = vm::reservation_acquire(raddr, 128);
@@ -718,7 +718,7 @@ void SPUThread::process_mfc_cmd()
 	case MFC_PUTLLC_CMD:
 	{
 		// Store conditionally
-		auto& data = vm::ps3::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
+		auto& data = vm::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
 		const auto to_write = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ffff);
 
 		bool result = false;
@@ -784,7 +784,7 @@ void SPUThread::process_mfc_cmd()
 			raddr = 0;
 		}
 
-		auto& data = vm::ps3::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
+		auto& data = vm::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
 		const auto to_write = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ffff);
 
 		vm::reservation_acquire(ch_mfc_cmd.eal, 128);
@@ -974,7 +974,7 @@ void SPUThread::process_mfc_cmd()
 u32 SPUThread::get_events(bool waiting)
 {
 	// Check reservation status and set SPU_EVENT_LR if lost
-	if (raddr && (vm::reservation_acquire(raddr, sizeof(rdata)) != rtime || rdata != vm::ps3::_ref<decltype(rdata)>(raddr)))
+	if (raddr && (vm::reservation_acquire(raddr, sizeof(rdata)) != rtime || rdata != vm::_ref<decltype(rdata)>(raddr)))
 	{
 		ch_event_stat |= SPU_EVENT_LR;
 		raddr = 0;
@@ -1764,6 +1764,17 @@ bool SPUThread::stop_and_signal(u32 code)
 			}
 		}
 
+		return true;
+	}
+
+	case 0x100:
+	{
+		if (ch_out_mbox.get_count())
+		{
+			fmt::throw_exception("STOP code 0x100: Out_MBox is not empty" HERE);
+		}
+
+		_mm_mfence();
 		return true;
 	}
 

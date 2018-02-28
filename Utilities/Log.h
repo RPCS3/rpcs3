@@ -104,7 +104,6 @@ namespace logs
 	extern channel HLE;
 	extern channel PPU;
 	extern channel SPU;
-	extern channel ARMv7;
 
 	// Log level control: set all channels to level::notice
 	void reset();
