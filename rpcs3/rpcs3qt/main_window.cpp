@@ -227,10 +227,11 @@ void main_window::SetAppIconFromPath(const std::string& path)
 	m_appIcon = QApplication::windowIcon();
 }
 
-void main_window::Boot(const std::string& path, bool direct, bool add_only, bool force_boot)
+void main_window::Boot(const std::string& path, bool direct, bool add_only)
 {
 	SetAppIconFromPath(path);
-	Emu.SetForceBoot(force_boot);
+	Emu.SetForceBoot(true);
+	Emu.Stop();
 
 	if (Emu.BootGame(path, add_only))
 	{
@@ -240,7 +241,7 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only, bool
 	}
 	else
 	{
-		LOG_ERROR(GENERAL, "Boot failed: path=%s direct=%d add_only=%d force_boot=%d", path, direct, add_only, force_boot);
+		LOG_ERROR(GENERAL, "Boot failed: path=%s direct=%d add_only=%d", path, direct, add_only);
 	}
 
 	m_gameListFrame->Refresh(true);
