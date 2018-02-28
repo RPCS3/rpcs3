@@ -257,6 +257,18 @@ namespace rsx
 		atomic_t<bool> external_interrupt_lock{ false };
 		atomic_t<bool> external_interrupt_ack{ false };
 
+		//performance approximation counters
+		struct
+		{
+			atomic_t<u64> idle_time{ 0 };  //Time spent idling in microseconds
+			u64 last_update_timestamp = 0; //Timestamp of last load update
+			u64 FIFO_idle_timestamp = 0; //Timestamp of when FIFO queue becomes idle
+			bool FIFO_is_idle = false; //True if FIFO is in idle state
+			u32 approximate_load = 0;
+			u32 sampled_frames = 0;
+		}
+		performance_counters;
+
 		//native UI interrupts
 		atomic_t<bool> native_ui_flip_request{ false };
 
@@ -509,6 +521,9 @@ namespace rsx
 
 		void pause();
 		void unpause();
+
+		//Get RSX approximate load in %
+		u32 get_load();
 
 		//HLE vsh stuff
 		//TODO: Move into a separate helper
