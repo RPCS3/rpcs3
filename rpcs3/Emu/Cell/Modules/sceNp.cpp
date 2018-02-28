@@ -140,6 +140,11 @@ s32 sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 {
 	sceNp.warning("sceNpDrmVerifyUpgradeLicense(content_id=%s)", content_id);
 
+	if (!content_id)
+	{
+		return SCE_NP_DRM_ERROR_INVALID_PARAM;
+	}
+
 	if (!fs::is_file(vfs::get("/dev_hdd0/home/00000001/exdata/") + content_id.get_ptr() + ".rap"))
 	{
 		// Game hasn't been purchased therefore no RAP file present
@@ -153,6 +158,11 @@ s32 sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 s32 sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 {
 	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(content_id=%s)", content_id);
+
+	if (!content_id)
+	{
+		return SCE_NP_DRM_ERROR_INVALID_PARAM;
+	}
 
 	if (!fs::is_file(vfs::get("/dev_hdd0/home/00000001/exdata/") + content_id.get_ptr() + ".rap"))
 	{

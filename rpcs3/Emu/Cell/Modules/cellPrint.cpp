@@ -1,5 +1,8 @@
 #include "stdafx.h"
+#include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "cellSysutil.h"
 
 logs::channel cellPrint("cellPrint");
 
@@ -16,87 +19,131 @@ enum
 	CELL_PRINT_ERROR_CANCELED_BY_PRINTER = 0x8002c408,
 };
 
-s32 cellSysutilPrintInit()
+struct CellPrintLoadParam
+{
+	be_t<u32> mode;
+	u8 reserved[32];
+};
+
+struct CellPrintStatus
+{
+	be_t<s32> status;
+	be_t<s32> errorStatus;
+	be_t<s32> continueEnabled;
+	u8 reserved[32];
+};
+
+using CellPrintCallback = void(s32 result, vm::ptr<void> userdata);
+
+error_code cellSysutilPrintInit()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-s32 cellSysutilPrintShutdown()
+error_code cellSysutilPrintShutdown()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-s32 cellPrintLoadAsync()
+error_code cellPrintLoadAsync(vm::ptr<CellPrintCallback> function, vm::ptr<void> userdata, vm::cptr<CellPrintLoadParam> param, u32 container)
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.todo("cellPrintLoadAsync(function=*0x%x, userdata=*0x%x, param=*0x%x, container=0x%x)", function, userdata, param, container);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		function(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellPrintLoadAsync2()
+error_code cellPrintLoadAsync2(vm::ptr<CellPrintCallback> function, vm::ptr<void> userdata, vm::cptr<CellPrintLoadParam> param)
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.todo("cellPrintLoadAsync2(function=*0x%x, userdata=*0x%x, param=*0x%x)", function, userdata, param);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		function(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellPrintUnloadAsync()
+error_code cellPrintUnloadAsync(vm::ptr<CellPrintCallback> function, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.todo("cellPrintUnloadAsync(function=*0x%x, userdata=*0x%x)", function, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		function(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellPrintGetStatus()
+error_code cellPrintGetStatus(vm::ptr<CellPrintStatus> status)
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.todo("cellPrintGetStatus(status=*0x%x)", status);
 	return CELL_OK;
 }
 
-s32 cellPrintOpenConfig()
+error_code cellPrintOpenConfig(vm::ptr<CellPrintCallback> function, vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.todo("cellPrintOpenConfig(function=*0x%x, userdata=*0x%x)", function, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		function(ppu, CELL_OK, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
-s32 cellPrintGetPrintableArea()
+error_code cellPrintGetPrintableArea(vm::ptr<s32> pixelWidth, vm::ptr<s32> pixelHeight)
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.todo("cellPrintGetPrintableArea(pixelWidth=*0x%x, pixelHeight=*0x%x)", pixelWidth, pixelHeight);
 	return CELL_OK;
 }
 
-s32 cellPrintStartJob()
+error_code cellPrintStartJob(s32 totalPage, s32 colorFormat)
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.todo("cellPrintStartJob(totalPage=0x%x, colorFormat=0x%x)", totalPage, colorFormat);
 	return CELL_OK;
 }
 
-s32 cellPrintEndJob()
+error_code cellPrintEndJob()
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.todo("cellPrintEndJob()");
 	return CELL_OK;
 }
 
-s32 cellPrintCancelJob()
+error_code cellPrintCancelJob()
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.todo("cellPrintCancelJob()");
 	return CELL_OK;
 }
 
-s32 cellPrintStartPage()
+error_code cellPrintStartPage()
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.todo("cellPrintStartPage()");
 	return CELL_OK;
 }
 
-s32 cellPrintEndPage()
+error_code cellPrintEndPage()
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.todo("cellPrintEndPage()");
 	return CELL_OK;
 }
 
-s32 cellPrintSendBand()
+error_code cellPrintSendBand(vm::cptr<u8> buff, s32 buffsize, vm::ptr<s32> sendsize)
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.todo("cellPrintSendBand(buff=*0x%x, buffsize=0x%x, sendsize=*0x%x)", buff, buffsize, sendsize);
 	return CELL_OK;
 }
 

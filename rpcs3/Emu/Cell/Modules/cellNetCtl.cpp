@@ -266,35 +266,34 @@ error_code cellGameUpdateTerm()
 	return CELL_OK;
 }
 
-error_code cellGameUpdateCheckStartAsync(ppu_thread& ppu, vm::cptr<CellGameUpdateParam> param, vm::ptr<CellGameUpdateCallback> cb_func, vm::ptr<void> userdata)
+error_code cellGameUpdateCheckStartAsync(vm::cptr<CellGameUpdateParam> param, vm::ptr<CellGameUpdateCallback> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckStartAsync(param=*0x%x, cb_func=*0x%x, userdata=*0x%x)", param, cb_func, userdata);
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		cb_func(ppu, CELL_OK, CELL_OK, userdata);
+		cb_func(ppu, CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK, userdata);
 		return CELL_OK;
 	});
 	return CELL_OK;
 }
 
-error_code cellGameUpdateCheckFinishAsync(ppu_thread& ppu, vm::ptr<CellGameUpdateCallback> cb_func, vm::ptr<void> userdata)
+error_code cellGameUpdateCheckFinishAsync(vm::ptr<CellGameUpdateCallback> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckFinishAsync(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
-	const u32 PROCESSING_COMPLETE = 5;
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		cb_func(ppu, PROCESSING_COMPLETE, CELL_OK, userdata);
+		cb_func(ppu, CELL_GAMEUPDATE_RESULT_STATUS_FINISHED, CELL_OK, userdata);
 		return CELL_OK;
 	});
 	return CELL_OK;
 }
 
-error_code cellGameUpdateCheckStartWithoutDialogAsync(ppu_thread& ppu, vm::ptr<CellGameUpdateCallback> cb_func, vm::ptr<void> userdata)
+error_code cellGameUpdateCheckStartWithoutDialogAsync(vm::ptr<CellGameUpdateCallback> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckStartWithoutDialogAsync(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		cb_func(ppu, CELL_OK, CELL_OK, userdata);
+		cb_func(ppu, CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK, userdata);
 		return CELL_OK;
 	});
 	return CELL_OK;
@@ -306,35 +305,35 @@ error_code cellGameUpdateCheckAbort()
 	return CELL_OK;
 }
 
-error_code cellGameUpdateCheckStartAsyncEx(ppu_thread& ppu, vm::cptr<CellGameUpdateParam> param, vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
+error_code cellGameUpdateCheckStartAsyncEx(vm::cptr<CellGameUpdateParam> param, vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckStartAsyncEx(param=*0x%x, cb_func=*0x%x, userdata=*0x%x)", param, cb_func, userdata);
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		cb_func(ppu, vm::make_var(CellGameUpdateResult{ CELL_OK, CELL_OK, 0x0, 0x0}), userdata);
+		cb_func(ppu, vm::make_var(CellGameUpdateResult{ CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK, 0x0, 0x0}), userdata);
 		return CELL_OK;
 	});
 	return CELL_OK;
 }
 
-error_code cellGameUpdateCheckFinishAsyncEx(ppu_thread& ppu, vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
+error_code cellGameUpdateCheckFinishAsyncEx(vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckFinishAsyncEx(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
 	const s32 PROCESSING_COMPLETE = 5;
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		cb_func(ppu, vm::make_var(CellGameUpdateResult{ PROCESSING_COMPLETE, CELL_OK, 0x0, 0x0}), userdata);
+		cb_func(ppu, vm::make_var(CellGameUpdateResult{ CELL_GAMEUPDATE_RESULT_STATUS_FINISHED, CELL_OK, 0x0, 0x0}), userdata);
 		return CELL_OK;
 	});
 	return CELL_OK;
 }
 
-error_code cellGameUpdateCheckStartWithoutDialogAsyncEx(ppu_thread& ppu, vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
+error_code cellGameUpdateCheckStartWithoutDialogAsyncEx(vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckStartWithoutDialogAsyncEx(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		cb_func(ppu, vm::make_var(CellGameUpdateResult{ CELL_OK, CELL_OK, 0x0, 0x0}), userdata);
+		cb_func(ppu, vm::make_var(CellGameUpdateResult{ CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK, 0x0, 0x0}), userdata);
 		return CELL_OK;
 	});
 	return CELL_OK;
