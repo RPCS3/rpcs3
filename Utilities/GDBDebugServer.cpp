@@ -13,7 +13,7 @@
 #include "Emu/Cell/SPUThread.h"
 
 #ifndef _WIN32
-#include"fcntl.h"
+#include "fcntl.h"
 #endif
 
 extern void ppu_set_breakpoint(u32 addr);
@@ -365,7 +365,7 @@ std::string GDBDebugServer::get_reg(std::shared_ptr<ppu_thread> thread, u32 rid)
 		return std::string(8, 'x');
 	default:
 		if (rid > 70) return "";
-		return (rid > 31) 
+		return (rid > 31)
 			? u64_to_padded_hex(reinterpret_cast<u64&>(thread->fpr[rid - 32])) //fpr
 			: u64_to_padded_hex(thread->gpr[rid]); //gpr
 	}
@@ -453,13 +453,12 @@ bool GDBDebugServer::cmd_thread_info(gdb_cmd & cmd)
 		result += u64_to_padded_hex(static_cast<u64>(cpu.id));
 	};
 	idm::select<ppu_thread>(on_select);
-	idm::select<ARMv7Thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
 
 	//todo: this may exceed max command length
 	result = "m" + result + "l";
-	
+
 	return send_cmd_ack(result);;
 }
 
@@ -768,7 +767,7 @@ void GDBDebugServer::on_task()
 				}
 			}
 		}
-		catch (std::runtime_error& e) 
+		catch (std::runtime_error& e)
 		{
 			if (client_socket) {
 				closesocket(client_socket);

@@ -158,7 +158,7 @@ void mfc_thread::cpu_task()
 
 					if ((cmd.cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK)) == MFC_PUTQLLUC_CMD)
 					{
-						auto& data = vm::ps3::_ref<decltype(spu.rdata)>(cmd.eal);
+						auto& data = vm::_ref<decltype(spu.rdata)>(cmd.eal);
 						const auto to_write = spu._ref<decltype(spu.rdata)>(cmd.lsa & 0x3ffff);
 
 						cmd.size = 0;

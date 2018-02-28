@@ -223,7 +223,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 				if (lg2w > 0 || lg2h > 0)
 				{
 					//Something was actually declared for the swizzle context dimensions
-					LOG_ERROR(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+					LOG_WARNING(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
 				}
 			}
 			else
@@ -244,7 +244,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 				if (lg2w > 0 || lg2h > 0)
 				{
 					//Something was actually declared for the swizzle context dimensions
-					LOG_ERROR(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+					LOG_WARNING(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
 				}
 			}
 			else
@@ -284,10 +284,39 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		return;
 	}
 
+	if (draw_fbo)
+	{
+		bool really_changed = false;
+		auto sz = draw_fbo.get_extents();
+
+		if (sz.width == clip_horizontal && sz.height == clip_vertical)
+		{
+			for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
+			{
+				if (m_surface_info[i].address != surface_addresses[i])
+				{
+					really_changed = true;
+					break;
+				}
+			}
+
+			if (!really_changed)
+			{
+				if (depth_address == m_depth_surface_info.address)
+				{
+					//Nothing has changed, we're still using the same framebuffer
+					return;
+				}
+			}
+		}
+	}
+
 	m_rtts.prepare_render_target(nullptr, surface_format, depth_format,  clip_horizontal, clip_vertical,
 		target, surface_addresses, depth_address);
 
 	draw_fbo.recreate();
+	draw_fbo.bind();
+	draw_fbo.set_extents({ (int)clip_horizontal, (int)clip_vertical });
 
 	bool old_format_found = false;
 	gl::texture::format old_format;
@@ -308,6 +337,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 				old_format_found = true;
 			}
 
+			m_gl_texture_cache.set_memory_read_flags(m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height, rsx::memory_read_flags::flush_once);
 			m_gl_texture_cache.flush_if_cache_miss_likely(old_format, m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height);
 		}
 
@@ -332,6 +362,15 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil))
 	{
+		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
+		{
+			auto bpp = m_depth_surface_info.pitch / m_depth_surface_info.width;
+			auto old_format = (bpp == 2) ? gl::texture::format::depth : gl::texture::format::depth_stencil;
+
+			m_gl_texture_cache.set_memory_read_flags(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, rsx::memory_read_flags::flush_once);
+			m_gl_texture_cache.flush_if_cache_miss_likely(old_format, m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height);
+		}
+
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		u8 texel_size = 2;
 
@@ -360,8 +399,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	if (!framebuffer_status_valid) return;
 
 	check_zcull_status(true, false);
-
-	draw_fbo.bind();
 	set_viewport();
 
 	switch (rsx::method_registers.surface_color_target())
@@ -475,7 +512,7 @@ void GLGSRender::read_buffers()
 
 				if (!m_surface_info[i].pitch)
 					continue;
-					
+
 				const u32 range = pitch * height;
 
 				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
@@ -560,7 +597,7 @@ void GLGSRender::read_buffers()
 			if (rsx::method_registers.surface_depth_fmt() == rsx::surface_depth_format::z16)
 			{
 				u16 *dst = (u16*)pixels;
-				const be_t<u16>* src = vm::ps3::_ptr<u16>(depth_address);
+				const be_t<u16>* src = vm::_ptr<u16>(depth_address);
 				for (int i = 0, end = std::get<1>(m_rtts.m_bound_depth_stencil)->width() * std::get<1>(m_rtts.m_bound_depth_stencil)->height(); i < end; ++i)
 				{
 					dst[i] = src[i];
@@ -569,7 +606,7 @@ void GLGSRender::read_buffers()
 			else
 			{
 				u32 *dst = (u32*)pixels;
-				const be_t<u32>* src = vm::ps3::_ptr<u32>(depth_address);
+				const be_t<u32>* src = vm::_ptr<u32>(depth_address);
 				for (int i = 0, end = std::get<1>(m_rtts.m_bound_depth_stencil)->width() * std::get<1>(m_rtts.m_bound_depth_stencil)->height(); i < end; ++i)
 				{
 					dst[i] = src[i];

@@ -114,7 +114,7 @@ namespace vm
 	// BE variable
 	template<typename T, typename A> using varb = _var_base<to_be_t<T>, A>;
 
-	namespace ps3
+	inline namespace ps3_
 	{
 		// BE variable
 		template<typename T, typename A = stack_allocator<ppu_thread>> using var = varb<T, A>;
@@ -128,34 +128,6 @@ namespace vm
 
 		// Make char[] variable initialized from std::string
 		template<typename A = stack_allocator<ppu_thread>>
-		static auto make_str(const std::string& str)
-		{
-			var<char[], A> var_(size32(str) + 1);
-			std::memcpy(var_.get_ptr(), str.c_str(), str.size() + 1);
-			return var_;
-		}
-
-		// Global HLE variable
-		template<typename T>
-		struct gvar : ptr<T>
-		{
-		};
-	}
-
-	namespace psv
-	{
-		// LE variable
-		template<typename T, typename A = stack_allocator<ARMv7Thread>> using var = varl<T, A>;
-
-		// Make LE variable initialized from value
-		template<typename T, typename A = stack_allocator<ARMv7Thread>>
-		inline auto make_var(const T& value)
-		{
-			return var<T, A>(value);
-		}
-
-		// Make char[] variable initialized from std::string
-		template<typename A = stack_allocator<ARMv7Thread>>
 		static auto make_str(const std::string& str)
 		{
 			var<char[], A> var_(size32(str) + 1);

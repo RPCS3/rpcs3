@@ -26,6 +26,8 @@ namespace utils
 
 	bool has_512();
 
+	bool has_xop();
+
 	inline bool transaction_enter()
 	{
 		while (true)

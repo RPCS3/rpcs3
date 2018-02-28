@@ -13,7 +13,6 @@ struct vfs_manager
 };
 
 const std::regex s_regex_ps3("^/+(.*?)(?:$|/)(.*)", std::regex::optimize);
-const std::regex s_regex_psv("^(.*?):(.*)", std::regex::optimize);
 
 bool vfs::mount(const std::string& dev_name, const std::string& path)
 {
@@ -24,7 +23,7 @@ bool vfs::mount(const std::string& dev_name, const std::string& path)
 	return table->mounted.emplace(dev_name, path).second;
 }
 
-std::string vfs::get(const std::string& vpath, vfs::type _type)
+std::string vfs::get(const std::string& vpath)
 {
 	const auto table = fxm::get_always<vfs_manager>();
 
@@ -32,7 +31,7 @@ std::string vfs::get(const std::string& vpath, vfs::type _type)
 
 	std::smatch match;
 
-	if (!std::regex_match(vpath, match, _type == type::ps3 ? s_regex_ps3 : s_regex_psv))
+	if (!std::regex_match(vpath, match, s_regex_ps3))
 	{
 		const auto found = table->mounted.find("");
 
@@ -45,7 +44,7 @@ std::string vfs::get(const std::string& vpath, vfs::type _type)
 		return found->second + vfs::escape(vpath);
 	}
 
-	if (_type == type::ps3 && match.length(1) == 0)
+	if (match.length(1) == 0)
 	{
 		return "/";
 	}

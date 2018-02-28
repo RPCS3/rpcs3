@@ -3,7 +3,7 @@
 #include "Emu/IdManager.h"
 #include "cellSysutil.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellRec("cellRec");
 

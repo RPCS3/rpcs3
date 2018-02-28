@@ -63,12 +63,6 @@
     <Filter Include="Emu\Cell\Modules">
       <UniqueIdentifier>{4317ac27-38e4-4f8d-9bac-496f9b00f615}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Emu\PSP2">
-      <UniqueIdentifier>{93b1cff1-0158-4327-a437-e9abcac8d724}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Emu\PSP2\Modules">
-      <UniqueIdentifier>{1d9e6fc4-9a79-4329-a8b5-081e24822aaa}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -674,208 +668,10 @@
     <ClCompile Include="Emu\IdManager.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\PSP2\ARMv7Thread.cpp">
-      <Filter>Emu\PSP2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\ARMv7DisAsm.cpp">
-      <Filter>Emu\PSP2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\ARMv7Function.cpp">
-      <Filter>Emu\PSP2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\ARMv7Interpreter.cpp">
-      <Filter>Emu\PSP2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\ARMv7Module.cpp">
-      <Filter>Emu\PSP2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceAppMgr.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceAppUtil.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceAudio.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceAudiodec.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceAudioenc.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceAudioIn.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceCamera.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceCodecEngine.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceCommonDialog.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceCtrl.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceDbg.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceDeci4p.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceDeflt.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceDisplay.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceFiber.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceFios.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceFpu.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceGxm.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceHttp.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceIme.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceJpeg.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceJpegEnc.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceLibc.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceLibKernel.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceLibm.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceLibstdcxx.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceLibXml.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceLiveArea.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceLocation.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceMd5.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceMotion.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceMt19937.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceNet.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceNetCtl.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceNgs.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceNpBasic.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceNpCommon.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceNpManager.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceNpMatching.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceNpScore.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceNpUtility.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\scePerf.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\scePgf.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\scePhotoExport.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceRazorCapture.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceRtc.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceSas.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceScreenShot.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceSfmt.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceSha.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceSqlite.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceSsl.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceSulpha.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceSysmodule.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceSystemGesture.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceTouch.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceUlt.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceVideodec.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceVoice.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\PSP2\Modules\sceVoiceQoS.cpp">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\dynamic_library.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3_api.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\ps3emu_api\ps3emu_api.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\version.cpp">
@@ -943,6 +739,9 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\overlays.cpp">
       <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\lv2\sys_gpio.cpp">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1507,207 +1306,6 @@
     <ClInclude Include="..\Utilities\geometry.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\PSP2\ARMv7Callback.h">
-      <Filter>Emu\PSP2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\ARMv7DisAsm.h">
-      <Filter>Emu\PSP2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\ARMv7Function.h">
-      <Filter>Emu\PSP2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\ARMv7Interpreter.h">
-      <Filter>Emu\PSP2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\ARMv7Module.h">
-      <Filter>Emu\PSP2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\ARMv7Opcodes.h">
-      <Filter>Emu\PSP2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\ARMv7Thread.h">
-      <Filter>Emu\PSP2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\ErrorCodes.h">
-      <Filter>Emu\PSP2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceAppMgr.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceAppUtil.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceAudio.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceAudiodec.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceAudioenc.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceAudioIn.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceCamera.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceCodecEngine.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceCommonDialog.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceCtrl.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceDbg.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceDeci4p.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceDeflt.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceDisplay.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceFiber.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceFios.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceFpu.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceGxm.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceHttp.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceIme.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceJpeg.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceJpegEnc.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceLibc.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceLibKernel.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceLibm.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceLibstdcxx.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceLibXml.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceLiveArea.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceLocation.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceMd5.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceMotion.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceMt19937.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceNet.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceNetCtl.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceNgs.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceNpBasic.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceNpCommon.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceNpManager.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceNpMatching.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceNpScore.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceNpUtility.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\scePerf.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\scePgf.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\scePhotoExport.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceRazorCapture.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceRtc.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceSas.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceScreenShot.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceSqlite.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceSsl.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceSulpha.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceSysmodule.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceSystemGesture.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceTouch.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceUlt.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceVideodec.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceVoice.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\sceVoiceQoS.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\PSP2\Modules\Common.h">
-      <Filter>Emu\PSP2\Modules</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\IPC.h">
       <Filter>Emu</Filter>
     </ClInclude>
@@ -1722,15 +1320,6 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\dynamic_library.h">
       <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="ps3emu_api_enums.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ps3emu_api_structs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ps3emu_api\ps3emu_api.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\version.h">
       <Filter>Header Files</Filter>
@@ -1821,6 +1410,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\overlays.h">
       <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\sys_gpio.h">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

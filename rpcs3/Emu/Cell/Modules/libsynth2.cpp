@@ -3,7 +3,7 @@
 
 #include "libsynth2.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel libsynth2("libsynth2");
 

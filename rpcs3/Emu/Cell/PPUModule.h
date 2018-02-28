@@ -20,7 +20,7 @@ constexpr const char* ppu_select_name(const char* name, const char* orig_name)
 // Generate FNID or VNID for given name
 extern u32 ppu_generate_id(const char* name);
 
-// Overload for REG_FNID, REG_VNID macro 
+// Overload for REG_FNID, REG_VNID macro
 constexpr u32 ppu_generate_id(u32 id)
 {
 	return id;
@@ -55,7 +55,7 @@ struct ppu_static_function
 struct ppu_static_variable
 {
 	const char* name;
-	vm::ps3::gvar<void>* var; // Pointer to variable address storage
+	vm::gvar<void>* var; // Pointer to variable address storage
 	void(*init)(); // Variable initialization function
 	u32 size;
 	u32 align;
@@ -150,7 +150,7 @@ public:
 		auto& info = access_static_variable(module, vnid);
 
 		info.name  = name;
-		info.var   = reinterpret_cast<vm::ps3::gvar<void>*>(Var);
+		info.var   = reinterpret_cast<vm::gvar<void>*>(Var);
 		info.init  = [] {};
 		info.size  = SIZE_32(typename T::type);
 		info.align = ALIGN_32(typename T::type);
@@ -274,7 +274,7 @@ ppu_static_function* ppu_module_manager::registered<T, Func>::info = nullptr;
 template<typename T, T Func, typename... Args, typename RT = std::result_of_t<T(Args...)>>
 inline RT ppu_execute_function_or_callback(ppu_thread& ppu, Args&&... args)
 {
-	vm::ps3::ptr<RT(Args...)> func = vm::cast(*ppu_module_manager::find_static_function<T, Func>().export_addr);
+	vm::ptr<RT(Args...)> func = vm::cast(*ppu_module_manager::find_static_function<T, Func>().export_addr);
 	return func(ppu, std::forward<Args>(args)...);
 }
 

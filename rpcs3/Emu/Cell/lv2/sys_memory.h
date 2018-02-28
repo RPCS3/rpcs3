@@ -55,7 +55,7 @@ struct lv2_memory_container
 	const u32 size = 0xEC00000; // Amount of "physical" memory in this container
 
 	atomic_t<u32> used{}; // Amount of "physical" memory currently used
-	
+
 	lv2_memory_container() = default;
 
 	lv2_memory_container(u32 size)
@@ -84,11 +84,11 @@ struct lv2_memory_container
 };
 
 // SysCalls
-error_code sys_memory_allocate(u32 size, u64 flags, vm::ps3::ptr<u32> alloc_addr);
-error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ps3::ptr<u32> alloc_addr);
+error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr);
+error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr);
 error_code sys_memory_free(u32 start_addr);
-error_code sys_memory_get_page_attribute(u32 addr, vm::ps3::ptr<sys_page_attr_t> attr);
-error_code sys_memory_get_user_memory_size(vm::ps3::ptr<sys_memory_info_t> mem_info);
-error_code sys_memory_container_create(vm::ps3::ptr<u32> cid, u32 size);
+error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr);
+error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info);
+error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size);
 error_code sys_memory_container_destroy(u32 cid);
-error_code sys_memory_container_get_size(vm::ps3::ptr<sys_memory_info_t> mem_info, u32 cid);
+error_code sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid);

@@ -210,6 +210,7 @@ namespace gl
 	{
 		GLsync m_value = nullptr;
 		GLenum flags = GL_SYNC_FLUSH_COMMANDS_BIT;
+		bool signaled = false;
 
 	public:
 
@@ -245,11 +246,16 @@ namespace gl
 		{
 			verify(HERE), m_value != nullptr;
 
+			if (signaled)
+				return true;
+
 			if (flags)
 			{
 				GLenum err = glClientWaitSync(m_value, flags, 0);
 				flags = 0;
-				return (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
+
+				if (!(err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED))
+					return false;
 			}
 			else
 			{
@@ -257,8 +263,12 @@ namespace gl
 				GLint tmp;
 
 				glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
-				return (status == GL_SIGNALED);
+
+				if (status != GL_SIGNALED)
+					return false;
 			}
+
+			signaled = true;
 			return true;
 		}
 
@@ -266,44 +276,49 @@ namespace gl
 		{
 			verify(HERE), m_value != nullptr;
 
-			GLenum err = GL_WAIT_FAILED;
-			bool done = false;
-
-			while (!done)
+			if (signaled == GL_FALSE)
 			{
-				if (flags)
-				{
-					err = glClientWaitSync(m_value, flags, 0);
-					flags = 0;
+				GLenum err = GL_WAIT_FAILED;
+				bool done = false;
 
-					switch (err)
+				while (!done)
+				{
+					if (flags)
 					{
-					default:
-						LOG_ERROR(RSX, "gl::fence sync returned unknown error 0x%X", err);
-					case GL_ALREADY_SIGNALED:
-					case GL_CONDITION_SATISFIED:
-						done = true;
-						break;
-					case GL_TIMEOUT_EXPIRED:
-						continue;
+						err = glClientWaitSync(m_value, flags, 0);
+						flags = 0;
+
+						switch (err)
+						{
+						default:
+							LOG_ERROR(RSX, "gl::fence sync returned unknown error 0x%X", err);
+						case GL_ALREADY_SIGNALED:
+						case GL_CONDITION_SATISFIED:
+							done = true;
+							break;
+						case GL_TIMEOUT_EXPIRED:
+							continue;
+						}
+					}
+					else
+					{
+						GLint status = GL_UNSIGNALED;
+						GLint tmp;
+
+						glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
+
+						if (status == GL_SIGNALED)
+							break;
 					}
 				}
-				else
-				{
-					GLint status = GL_UNSIGNALED;
-					GLint tmp;
 
-					glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
-
-					if (status == GL_SIGNALED)
-						break;
-				}
+				signaled = (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
 			}
 
 			glDeleteSync(m_value);
 			m_value = nullptr;
 
-			return (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
+			return signaled;
 		}
 	};
 
@@ -1342,6 +1357,7 @@ namespace gl
 			texture1D = GL_TEXTURE_1D,
 			texture2D = GL_TEXTURE_2D,
 			texture3D = GL_TEXTURE_3D,
+			textureCUBE = GL_TEXTURE_CUBE_MAP,
 			textureBuffer = GL_TEXTURE_BUFFER
 		};
 
@@ -1378,7 +1394,10 @@ namespace gl
 				case target::texture1D: pname = GL_TEXTURE_BINDING_1D; break;
 				case target::texture2D: pname = GL_TEXTURE_BINDING_2D; break;
 				case target::texture3D: pname = GL_TEXTURE_BINDING_3D; break;
+				case target::textureCUBE: pname = GL_TEXTURE_BINDING_CUBE_MAP; break;
 				case target::textureBuffer: pname = GL_TEXTURE_BINDING_BUFFER; break;
+				default:
+					fmt::throw_exception("Unknown target 0x%X" HERE, (u32)new_binding.get_target());
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
@@ -1841,6 +1860,7 @@ namespace gl
 
 		uint m_width = 0;
 		uint m_height = 0;
+		uint m_depth = 1;
 		int m_level = 0;
 
 		int m_compressed_image_size = 0;
@@ -1887,6 +1907,7 @@ namespace gl
 		settings& filter(min_filter min_filter, filter mag_filter);
 		settings& width(uint width);
 		settings& height(uint height);
+		settings& depth(uint depth);
 		settings& size(sizei size);
 		settings& level(int value);
 		settings& compressed_image_size(int size);
@@ -1921,6 +1942,7 @@ namespace gl
 	class fbo
 	{
 		GLuint m_id = GL_NONE;
+		size2i m_size;
 
 	public:
 		fbo() = default;
@@ -1939,17 +1961,23 @@ namespace gl
 		class save_binding_state
 		{
 			GLint m_last_binding;
+			bool reset = true;
 
 		public:
 			save_binding_state(const fbo& new_binding)
 			{
 				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &m_last_binding);
-				new_binding.bind();
+
+				if (m_last_binding != new_binding.id())
+					new_binding.bind();
+				else
+					reset = false;
 			}
 
 			~save_binding_state()
 			{
-				glBindFramebuffer(GL_FRAMEBUFFER, m_last_binding);
+				if (reset)
+					glBindFramebuffer(GL_FRAMEBUFFER, m_last_binding);
 			}
 		};
 
@@ -2092,6 +2120,9 @@ namespace gl
 
 		GLuint id() const;
 		void set_id(GLuint id);
+
+		void set_extents(size2i extents);
+		size2i get_extents() const;
 
 		explicit operator bool() const
 		{

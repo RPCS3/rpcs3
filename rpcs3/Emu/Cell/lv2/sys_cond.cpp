@@ -9,7 +9,7 @@
 #include "sys_mutex.h"
 #include "sys_cond.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_cond("sys_cond");
 
@@ -248,7 +248,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 			if (passed >= timeout)
 			{
 				semaphore_lock lock(cond->mutex->mutex);
-				
+
 				// Try to cancel the waiting
 				if (cond->unqueue(cond->sq, &ppu))
 				{

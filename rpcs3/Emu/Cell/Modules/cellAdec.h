@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 // Error Codes
 enum
@@ -308,7 +308,7 @@ enum CellAdecChannel : s32
 	CELL_ADEC_CH_3_4,
 	CELL_ADEC_CH_3_4_LFE,
 	CELL_ADEC_CH_RESERVED3,
-};	
+};
 
 // Sampling Rate
 enum CellAdecSampleRate : s32
@@ -532,13 +532,13 @@ struct CellAdecParamM4Aac
 
 	union
 	{
-		struct 
+		struct
 		{
 			be_t<u32> programNumber;
 		}
 		adifConfig;
 
-		struct 
+		struct
 		{
 			be_t<s32> samplingFreqIndex; // MPEG4AAC_SamplingFreq
 			be_t<u32> profile; // LC profile (1)
@@ -683,10 +683,10 @@ struct CellAdecParamAc3
 	AC3_WordSize wordSize;
 	AC3_OutputMode outputMode;
 	AC3_LFE outLfeOn;
-	
+
 	be_t<float> drcCutScaleFactor;
 	be_t<float> drcBoostScaleFactor;
-	
+
 	AC3_CompressionMode compressionMode;
 	AC3_InputChannel numberOfChannels;
 	AC3_StereoMode stereoMode;

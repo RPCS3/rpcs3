@@ -177,7 +177,6 @@ namespace logs
 	channel HLE("HLE");
 	channel PPU("PPU");
 	channel SPU("SPU");
-	channel ARMv7("ARMv7");
 
 	// Channel registry mutex
 	semaphore<> g_mutex;

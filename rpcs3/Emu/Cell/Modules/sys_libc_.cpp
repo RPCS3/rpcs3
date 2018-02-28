@@ -4,13 +4,15 @@
 #include <string.h>
 #include <ctype.h>
 
-namespace vm { using namespace ps3; }
+
 
 extern logs::channel sysPrxForUser;
 
 extern fs::file g_tty;
 
 // cfmt implementation (TODO)
+
+using qsortcmp = s32(vm::cptr<void> e1, vm::cptr<void> e2);
 
 struct ps3_fmt_src
 {
@@ -37,7 +39,7 @@ struct ps3_fmt_src
 	std::size_t fmt_string(std::string& out, std::size_t extra) const
 	{
 		const std::size_t start = out.size();
-		out += vm::ps3::_ptr<const char>(get<u32>(extra));
+		out += vm::_ptr<const char>(get<u32>(extra));
 		return out.size() - start;
 	}
 
@@ -339,7 +341,7 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dst, vm::cptr<char> src, s32 len)
 s32 _sys_strncasecmp(vm::cptr<char> str1, vm::cptr<char> str2, u32 n)
 {
 	sysPrxForUser.trace("_sys_strncasecmp(str1=%s, str2=%s, n=%d)", str1, str2, n);
-	
+
 	for (u32 i = 0; i < n; i++)
 	{
 		const int ch1 = _sys_tolower(str1[i]), ch2 = _sys_tolower(str2[i]);
@@ -356,7 +358,7 @@ s32 _sys_strncasecmp(vm::cptr<char> str1, vm::cptr<char> str2, u32 n)
 vm::cptr<char> _sys_strrchr(vm::cptr<char> str, char ch)
 {
 	sysPrxForUser.trace("_sys_strrchr(str=%s, ch=%d)", str, ch);
-	
+
 	vm::cptr<char> res = vm::null;
 
 	for (u32 i = 0;; i++)
@@ -452,9 +454,17 @@ s32 _sys_vsprintf()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 _sys_qsort()
+void _sys_qsort(vm::ptr<void> base, u32 nelem, u32 size, vm::ptr<qsortcmp> cmp)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.warning("_sys_qsort(base=*0x%x, nelem=%d, size=0x%x, cmp=*0x%x)", base, nelem, size, cmp);
+
+	static thread_local decltype(cmp) g_tls_cmp;
+	g_tls_cmp = cmp;
+
+	std::qsort(base.get_ptr(), nelem, size, [](const void* a, const void* b) -> s32
+	{
+		return g_tls_cmp(static_cast<ppu_thread&>(*get_current_cpu_thread()), vm::get_addr(a), vm::get_addr(b));
+	});
 }
 
 void sysPrxForUser_sys_libc_init()

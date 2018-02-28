@@ -9,27 +9,27 @@ struct CellVideoUploadOption
 struct CellVideoUploadParam
 {
 	be_t<s32> siteID;
-	vm::ps3::bcptr<char> pFilePath;
+	vm::bcptr<char> pFilePath;
 	union
 	{
 		struct
 		{
-			vm::ps3::bcptr<char> pClientId;
-			vm::ps3::bcptr<char> pDeveloperKey;
-			vm::ps3::bcptr<char> pTitle_UTF8;
-			vm::ps3::bcptr<char> pDescription_UTF8;
-			vm::ps3::bcptr<char> pKeyword_1_UTF8;
-			vm::ps3::bcptr<char> pKeyword_2_UTF8;
-			vm::ps3::bcptr<char> pKeyword_3_UTF8;
+			vm::bcptr<char> pClientId;
+			vm::bcptr<char> pDeveloperKey;
+			vm::bcptr<char> pTitle_UTF8;
+			vm::bcptr<char> pDescription_UTF8;
+			vm::bcptr<char> pKeyword_1_UTF8;
+			vm::bcptr<char> pKeyword_2_UTF8;
+			vm::bcptr<char> pKeyword_3_UTF8;
 			u8 isPrivate;
 			u8 rating;
 		} youtube;
 	} u;
 	be_t<s32> numOfOption;
-	vm::ps3::bptr<CellVideoUploadOption> pOption;
+	vm::bptr<CellVideoUploadOption> pOption;
 };
 
-using CellVideoUploadCallback = void(s32 status, s32 errorCode, vm::ps3::cptr<char> pResultURL, vm::ps3::ptr<void> userdata);
+using CellVideoUploadCallback = void(s32 status, s32 errorCode, vm::cptr<char> pResultURL, vm::ptr<void> userdata);
 
 enum
 {

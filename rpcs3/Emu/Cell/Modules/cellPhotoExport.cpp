@@ -2,7 +2,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "cellSysutil.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellPhotoExport("cellPhotoExport");
 

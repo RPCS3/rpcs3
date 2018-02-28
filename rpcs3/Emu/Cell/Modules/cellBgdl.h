@@ -30,5 +30,5 @@ struct CellBGDLInfo
 	be_t<u64> received_size;
 	be_t<u64> content_size;
 	be_t<s32> state; // CellBGDLState
-	vm::ps3::bptr<void> reserved;
+	vm::bptr<void> reserved;
 };

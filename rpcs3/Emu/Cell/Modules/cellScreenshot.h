@@ -12,7 +12,7 @@ enum
 
 struct CellScreenShotSetParam
 {
-	vm::ps3::bcptr<char> photo_title;
-	vm::ps3::bcptr<char> game_title;
-	vm::ps3::bcptr<char> game_comment;
+	vm::bcptr<char> photo_title;
+	vm::bcptr<char> game_title;
+	vm::bcptr<char> game_comment;
 };

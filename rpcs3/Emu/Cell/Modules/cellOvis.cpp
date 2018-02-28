@@ -2,7 +2,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_spu.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellOvis("cellOvis");
 

@@ -68,14 +68,14 @@ struct page_fault_event_entries
 };
 
 // SysCalls
-error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ps3::ptr<u32> alloc_addr);
+error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr);
 error_code sys_mmapper_allocate_fixed_address();
-error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::ps3::ptr<u32> mem_id);
-error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, u32 cid, u64 flags, vm::ps3::ptr<u32> mem_id);
+error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::ptr<u32> mem_id);
+error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, u32 cid, u64 flags, vm::ptr<u32> mem_id);
 error_code sys_mmapper_change_address_access_right(u32 addr, u64 flags);
 error_code sys_mmapper_free_address(u32 addr);
 error_code sys_mmapper_free_shared_memory(u32 mem_id);
 error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags);
-error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ps3::ptr<u32> alloc_addr);
-error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ps3::ptr<u32> mem_id);
+error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u32> alloc_addr);
+error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id);
 error_code sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 event_queue_id);

@@ -2,9 +2,10 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "cellMusic.h"
+#include "cellSysutil.h"
 
 #include "cellSearch.h"
-#include "cellSysutil.h"
 
 logs::channel cellSearch("cellSearch");
 

@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>26</height>
+     <height>38</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -260,7 +260,6 @@
     <addaction name="showToolBarAct"/>
     <addaction name="separator"/>
     <addaction name="showGameListAct"/>
-    <addaction name="showGameToolBarAct"/>
     <addaction name="separator"/>
     <addaction name="refreshGameListAct"/>
     <addaction name="menuGame_List_Mode"/>

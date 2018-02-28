@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 // libHttp_Util: 0x80711001 - 0x807110ff
 

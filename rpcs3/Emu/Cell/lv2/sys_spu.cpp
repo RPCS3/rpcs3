@@ -15,7 +15,7 @@
 #include "sys_event.h"
 #include "sys_spu.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_spu("sys_spu");
 
@@ -222,7 +222,7 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 	{
 		return CELL_EINVAL;
 	}
-	
+
 	if (group->threads[spu_num] || group->run_state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
 	{
 		return CELL_EBUSY;
@@ -660,7 +660,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		group->join_state &= ~SPU_TGJSF_IS_JOINING;
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED; // hack
 	}
-	
+
 	ppu.test_state();
 
 	switch (join_state & ~SPU_TGJSF_IS_JOINING)
@@ -690,7 +690,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 	{
 		*status = group->exit_status;
 	}
-	
+
 	return CELL_OK;
 }
 
@@ -927,7 +927,7 @@ error_code sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et)
 		{
 			return CELL_EBUSY;
 		}
-		
+
 		group->ep_run = queue;
 		break;
 	}
@@ -1376,7 +1376,7 @@ error_code sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, 
 		*intrtag = tag;
 		return CELL_OK;
 	}
-	
+
 	return error;
 }
 
