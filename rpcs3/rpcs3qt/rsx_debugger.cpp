@@ -17,6 +17,7 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	, exit(false)
 {
 	setWindowTitle(tr("RSX Debugger"));
+	setObjectName("rsx_debugger");
 	setAttribute(Qt::WA_DeleteOnClose);
 
 	//Fonts and Colors

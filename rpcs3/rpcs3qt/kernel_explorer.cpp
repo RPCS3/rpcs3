@@ -54,7 +54,6 @@ kernel_explorer::kernel_explorer(QWidget* parent) : QDialog(parent)
 	// Events
 	connect(button_refresh, &QAbstractButton::clicked, this, &kernel_explorer::Update);
 
-	// Fill the wxTreeCtrl
 	Update();
 };
 

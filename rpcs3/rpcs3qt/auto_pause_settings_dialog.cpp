@@ -37,6 +37,7 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 
 	setMinimumSize(QSize(400, 360));
 	setWindowTitle(tr("Auto Pause Manager"));
+	setObjectName("auto_pause_manager");
 
 	//Events
 	connect(pauseList, &QTableWidget::customContextMenuRequested, this, &auto_pause_settings_dialog::ShowContextMenu);

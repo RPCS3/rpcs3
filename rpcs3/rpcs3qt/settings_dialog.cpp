@@ -32,13 +32,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 {
 	ui->setupUi(this);
 	ui->cancelButton->setFocus();
-	ui->tabWidget->setUsesScrollButtons(false);
+	ui->tab_widget_settings->setUsesScrollButtons(false);
+	ui->tab_widget_settings->tabBar()->setObjectName("tab_bar_settings");
 
 	bool showDebugTab = xgui_settings->GetValue(gui::m_showDebugTab).toBool();
 	xgui_settings->SetValue(gui::m_showDebugTab, showDebugTab);
 	if (!showDebugTab)
 	{
-		ui->tabWidget->removeTab(7);
+		ui->tab_widget_settings->removeTab(7);
 	}
 
 	// Add description labels
@@ -111,7 +112,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	connect(ui->cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
 
-	connect(ui->tabWidget, &QTabWidget::currentChanged, [=]()
+	connect(ui->tab_widget_settings, &QTabWidget::currentChanged, [=]()
 	{
 		ui->cancelButton->setFocus();
 	});
@@ -765,7 +766,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		{
 			addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(gui::gl_iconColor).value<QColor>());
 			addColoredIcon(ui->pb_tool_bar_color, xgui_settings->GetValue(gui::mw_toolBarColor).value<QColor>());
-			addColoredIcon(ui->pb_gl_tool_icon_color, xgui_settings->GetValue(gui::gl_toolIconColor).value<QColor>(), QIcon(":/Icons/home_blue.png"), gui::gl_tool_icon_color);
 			addColoredIcon(ui->pb_tool_icon_color, xgui_settings->GetValue(gui::mw_toolIconColor).value<QColor>(), QIcon(":/Icons/stop.png"), gui::mw_tool_icon_color);
 		};
 		AddColoredIcons();
@@ -775,7 +775,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		bool enableUIColors = xgui_settings->GetValue(gui::m_enableUIColors).toBool();
 		ui->cb_custom_colors->setChecked(enableUIColors);
 		ui->pb_gl_icon_color->setEnabled(enableUIColors);
-		ui->pb_gl_tool_icon_color->setEnabled(enableUIColors);
 		ui->pb_tool_bar_color->setEnabled(enableUIColors);
 		ui->pb_tool_icon_color->setEnabled(enableUIColors);
 
@@ -834,7 +833,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		{
 			xgui_settings->SetValue(gui::m_enableUIColors, val);
 			ui->pb_gl_icon_color->setEnabled(val);
-			ui->pb_gl_tool_icon_color->setEnabled(val);
 			ui->pb_tool_bar_color->setEnabled(val);
 			ui->pb_tool_icon_color->setEnabled(val);
 			Q_EMIT GuiRepaintRequest();
@@ -864,11 +862,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]()
 		{
 			colorDialog(gui::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color);
-		});
-
-		connect(ui->pb_gl_tool_icon_color, &QAbstractButton::clicked, [=]()
-		{
-			colorDialog(gui::gl_toolIconColor, tr("Choose gamelist tool icon color"), ui->pb_gl_tool_icon_color);
 		});
 
 		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]()
@@ -1089,7 +1082,7 @@ int settings_dialog::exec()
 	// If we use setCurrentIndex now we will miraculously see a resize of the dialog as soon as we
 	// switch to the cpu tab after conjuring the settings_dialog with another tab opened first.
 	// Weirdly enough this won't happen if we change the tab order so that anything else is at index 0.
-	QTimer::singleShot(0, [=]{ ui->tabWidget->setCurrentIndex(m_tab_Index); });
+	QTimer::singleShot(0, [=]{ ui->tab_widget_settings->setCurrentIndex(m_tab_Index); });
 	return QDialog::exec();
 }
 
@@ -1113,7 +1106,7 @@ bool settings_dialog::eventFilter(QObject* object, QEvent* event)
 		return QDialog::eventFilter(object, event);
 	}
 
-	int i = ui->tabWidget->currentIndex();
+	int i = ui->tab_widget_settings->currentIndex();
 	QLabel* label = m_description_labels[i].first;
 
 	if (event->type() == QEvent::Enter)

@@ -258,9 +258,8 @@ void gui_settings::ShowInfoBox(const gui_save& entry, const QString& title, cons
 {
 	if (GetValue(entry).toBool())
 	{
-		QCheckBox* cb = new QCheckBox(tr("Don't show again"));
 		QMessageBox* mb = new QMessageBox(QMessageBox::Information, title, text, QMessageBox::Ok, parent);
-		mb->setCheckBox(cb);
+		mb->setCheckBox(new QCheckBox(tr("Don't show again")));
 		mb->deleteLater();
 		mb->exec();
 		if (mb->checkBox()->isChecked())

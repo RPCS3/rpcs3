@@ -101,7 +101,7 @@ bool cpu_thread::check_state()
 {
 #ifdef WITH_GDB_DEBUGGER
 	if (test(state, cpu_flag::dbg_pause)) {
-		fxm::get<GDBDebugServer>()->notify();
+		fxm::get<GDBDebugServer>()->pause_from(this);
 	}
 #endif
 

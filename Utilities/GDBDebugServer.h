@@ -50,7 +50,7 @@ class GDBDebugServer : public named_thread {
 
 	//initialize server socket and start listening
 	void start_server();
-	//read at most cnt bytes to buf, returns nubmer of bytes actually read
+	//read at most cnt bytes to buf, returns number of bytes actually read
 	int read(void* buf, int cnt);
 	//reads one character
 	char read_char();
@@ -90,6 +90,8 @@ class GDBDebugServer : public named_thread {
 	//send reason of stop, returns false if sending response failed
 	bool send_reason();
 
+	void wait_with_interrupts();
+
 	//commands
 	bool cmd_extended_mode(gdb_cmd& cmd);
 	bool cmd_reason(gdb_cmd& cmd);
@@ -115,17 +117,24 @@ protected:
 	void on_exit() override final;
 
 public:
-	static const u32 id_base = 1;
-	static const u32 id_step = 1;
-	static const u32 id_count = 0x100000;
-
 	bool from_breakpoint = true;
 	bool stop = false;
+	bool paused = false;
+	u64 pausedBy;
 
 	virtual std::string get_name() const;
 	virtual void on_stop() override final;
+	void pause_from(cpu_thread* t);
 };
 
 extern u32 g_gdb_debugger_id;
+
+template <>
+struct id_manager::on_stop<GDBDebugServer> {
+	static inline void func(GDBDebugServer* ptr)
+	{
+		if (ptr) ptr->on_stop();
+	}
+};
 
 #endif
