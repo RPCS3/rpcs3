@@ -71,10 +71,10 @@ namespace rsx
 			{
 				// todo: LLE: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
 				if (addr == 0x40000030)
-					break;
+					return;
 
 				if (Emu.IsStopped())
-					break;
+					return;
 
 				const auto tdr = (s64)g_cfg.video.driver_recovery_timeout;
 				if (tdr == 0)
@@ -106,6 +106,8 @@ namespace rsx
 					std::this_thread::yield();
 				}
 			}
+
+			rsx->performance_counters.idle_time += (get_system_time() - start);
 		}
 
 		void semaphore_release(thread* rsx, u32 _reg, u32 arg)
@@ -1024,7 +1026,9 @@ namespace rsx
 
 				if (expected > time + 1000)
 				{
-					std::this_thread::sleep_for(std::chrono::milliseconds{static_cast<s64>(expected - time) / 1000});
+					const auto delay_us = static_cast<s64>(expected - time);
+					std::this_thread::sleep_for(std::chrono::milliseconds{delay_us / 1000});
+					rsx->performance_counters.idle_time += delay_us;
 				}
 			}
 		}

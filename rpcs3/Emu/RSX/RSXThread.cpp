@@ -527,10 +527,24 @@ namespace rsx
 			if (put == internal_get || !Emu.IsRunning())
 			{
 				if (has_deferred_call)
+				{
 					flush_command_queue();
+				}
+				else if (!performance_counters.FIFO_is_idle)
+				{
+					performance_counters.FIFO_idle_timestamp = get_system_time();
+					performance_counters.FIFO_is_idle = true;
+				}
 
 				do_internal_task();
 				continue;
+			}
+
+			if (performance_counters.FIFO_is_idle)
+			{
+				//Update performance counters with time spent in idle mode
+				performance_counters.FIFO_is_idle = false;
+				performance_counters.idle_time += (get_system_time() - performance_counters.FIFO_idle_timestamp);
 			}
 
 			//Validate put and get registers
@@ -2027,6 +2041,8 @@ namespace rsx
 
 			skip_frame = (m_skip_frame_ctr < 0);
 		}
+
+		performance_counters.sampled_frames++;
 	}
 
 	void thread::check_zcull_status(bool framebuffer_swap, bool force_read)
@@ -2221,6 +2237,28 @@ namespace rsx
 	void thread::unpause()
 	{
 		external_interrupt_lock.store(false);
+	}
+
+	u32 thread::get_load()
+	{
+		//Average load over around 30 frames
+		if (!performance_counters.last_update_timestamp || performance_counters.sampled_frames > 30)
+		{
+			const auto timestamp = get_system_time();
+			const auto idle = performance_counters.idle_time.load();
+			const auto elapsed = timestamp - performance_counters.last_update_timestamp;
+
+			if (elapsed > idle)
+				performance_counters.approximate_load = (elapsed - idle) * 100 / elapsed;
+			else
+				performance_counters.approximate_load = 0;
+
+			performance_counters.idle_time = 0;
+			performance_counters.sampled_frames = 0;
+			performance_counters.last_update_timestamp = timestamp;
+		}
+
+		return performance_counters.approximate_load;
 	}
 
 	//TODO: Move these helpers into a better class dedicated to shell interface handling (use idm?)
