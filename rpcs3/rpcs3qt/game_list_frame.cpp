@@ -24,7 +24,7 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline QSize sizeFromSlider(const int& pos) { return gui::gl_icon_size_min + (gui::gl_icon_size_max - gui::gl_icon_size_min) * (pos / (float)gui::gl_max_slider_pos); }
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
-	: QDockWidget(tr("Game List"), parent), xgui_settings(guiSettings), xemu_settings(emuSettings)
+	: custom_dock_widget(tr("Game List"), parent), xgui_settings(guiSettings), xemu_settings(emuSettings)
 {
 	m_isListLayout    = xgui_settings->GetValue(gui::gl_listMode).toBool();
 	m_icon_size_index = xgui_settings->GetValue(gui::gl_iconSize).toInt();

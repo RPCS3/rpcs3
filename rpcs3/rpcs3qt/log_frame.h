@@ -3,19 +3,19 @@
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
 
+#include "custom_dock_widget.h"
 #include "gui_settings.h"
 #include "find_dialog.h"
 
 #include <memory>
 
-#include <QDockWidget>
 #include <QTabWidget>
 #include <QTextEdit>
 #include <QActionGroup>
 #include <QTimer>
 #include <QKeyEvent>
 
-class log_frame : public QDockWidget
+class log_frame : public custom_dock_widget
 {
 	Q_OBJECT
 
