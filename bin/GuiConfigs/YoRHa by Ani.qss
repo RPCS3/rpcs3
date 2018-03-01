@@ -226,7 +226,7 @@ QDockWidget {
 	font-weight: 500;
 }
 [floating="true"] {
-	background: #b3ac98;
+	border-image: url("GuiConfigs/YoRHa-background.jpg");
 }
 QDockWidget::title {
 	background: #4d4940;

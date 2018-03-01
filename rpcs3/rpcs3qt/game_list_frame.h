@@ -3,12 +3,12 @@
 #include "stdafx.h"
 #include "Emu/GameInfo.h"
 
+#include "custom_dock_widget.h"
 #include "game_list.h"
 #include "game_list_grid.h"
 #include "emu_settings.h"
 #include "game_compatibility.h"
 
-#include <QDockWidget>
 #include <QMainWindow>
 #include <QToolBar>
 #include <QLineEdit>
@@ -170,7 +170,7 @@ struct GUI_GameInfo
 	bool hasCustomConfig;
 };
 
-class game_list_frame : public QDockWidget
+class game_list_frame : public custom_dock_widget
 {
 	Q_OBJECT
 

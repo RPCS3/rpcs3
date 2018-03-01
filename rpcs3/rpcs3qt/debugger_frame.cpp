@@ -10,7 +10,7 @@ constexpr auto qstr = QString::fromStdString;
 extern bool user_asked_for_frame_capture;
 
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent)
-	: QDockWidget(tr("Debugger"), parent), xgui_settings(settings)
+	: custom_dock_widget(tr("Debugger"), parent), xgui_settings(settings)
 {
 	m_update = new QTimer(this);
 	connect(m_update, &QTimer::timeout, this, &debugger_frame::UpdateUI);
