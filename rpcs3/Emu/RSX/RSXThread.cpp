@@ -750,18 +750,58 @@ namespace rsx
 						flush_commands_flag = false;
 						break;
 					}
-					case NV4097_SET_TEXTURE_OFFSET:
-					case NV4097_SET_TEXTURE_FORMAT:
-					case NV4097_SET_TEXTURE_ADDRESS:
-					case NV4097_SET_TEXTURE_CONTROL0:
-					case NV4097_SET_TEXTURE_CONTROL1:
-					case NV4097_SET_TEXTURE_FILTER:
-					case NV4097_SET_TEXTURE_IMAGE_RECT:
-					case NV4097_SET_TEXTURE_BORDER_COLOR:
+					default:
 					{
-						//Safe to ignore if value has not changed
-						if (method_registers.test(reg, value))
-							flush_commands_flag = false;
+						//TODO: Reorder draw commands between synchronization events to maximize batched sizes
+						static const std::pair<u32, u32> skippable_ranges[] =
+						{
+							//Texture configuration
+							{ NV4097_SET_TEXTURE_OFFSET, 8 * 16 },
+							{ NV4097_SET_TEXTURE_CONTROL2, 16 },
+							{ NV4097_SET_TEXTURE_CONTROL3, 16 },
+							{ NV4097_SET_VERTEX_TEXTURE_OFFSET, 8 * 4 },
+							//Surface configuration
+							{ NV4097_SET_SURFACE_CLIP_HORIZONTAL, 1 },
+							{ NV4097_SET_SURFACE_CLIP_VERTICAL, 1 },
+							{ NV4097_SET_SURFACE_COLOR_AOFFSET, 1 },
+							{ NV4097_SET_SURFACE_COLOR_BOFFSET, 1 },
+							{ NV4097_SET_SURFACE_COLOR_COFFSET, 1 },
+							{ NV4097_SET_SURFACE_COLOR_DOFFSET, 1 },
+							{ NV4097_SET_SURFACE_ZETA_OFFSET, 1 },
+							{ NV4097_SET_CONTEXT_DMA_COLOR_A, 1 },
+							{ NV4097_SET_CONTEXT_DMA_COLOR_B, 1 },
+							{ NV4097_SET_CONTEXT_DMA_COLOR_C, 1 },
+							{ NV4097_SET_CONTEXT_DMA_COLOR_D, 1 },
+							{ NV4097_SET_CONTEXT_DMA_ZETA, 1 },
+							{ NV4097_SET_SURFACE_FORMAT, 1 },
+							{ NV4097_SET_SURFACE_PITCH_A, 1 },
+							{ NV4097_SET_SURFACE_PITCH_B, 1 },
+							{ NV4097_SET_SURFACE_PITCH_C, 1 },
+							{ NV4097_SET_SURFACE_PITCH_D, 1 },
+							{ NV4097_SET_SURFACE_PITCH_Z, 1 }
+						};
+
+						if (has_deferred_call)
+						{
+							//Hopefully this is skippable so the batch can keep growing
+							for (const auto &method : skippable_ranges)
+							{
+								if (reg < method.first)
+									continue;
+
+								if (reg - method.first < method.second)
+								{
+									//Safe to ignore if value has not changed
+									if (method_registers.test(reg, value))
+									{
+										execute_method_call = false;
+										flush_commands_flag = false;
+									}
+
+									break;
+								}
+							}
+						}
 
 						break;
 					}
