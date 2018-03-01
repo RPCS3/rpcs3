@@ -233,7 +233,7 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only)
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
-	if (Emu.BootGame(path, add_only))
+	if (Emu.BootGame(path, direct, add_only))
 	{
 		LOG_SUCCESS(LOADER, "Boot successful.");
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
@@ -241,7 +241,7 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only)
 	}
 	else
 	{
-		LOG_ERROR(GENERAL, "Boot failed: path=%s direct=%d add_only=%d", path, direct, add_only);
+		LOG_ERROR(GENERAL, "Boot failed: %s", path);
 	}
 
 	m_gameListFrame->Refresh(true);
