@@ -48,8 +48,8 @@ private:
 
 	QList<QColor> m_color;
 	QColor m_color_stack;
-	QTextEdit *m_log;
-	QTextEdit *m_tty;
+	QTextEdit* m_log;
+	QTextEdit* m_tty;
 	QString m_old_text;
 	ullong m_log_counter;
 	bool m_stack_log;

@@ -1,14 +1,11 @@
 #include "stdafx.h"
+#include "Emu/Cell/lv2/sys_tty.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Utilities/cfmt.h"
 #include <string.h>
 #include <ctype.h>
 
-
-
 extern logs::channel sysPrxForUser;
-
-extern fs::file g_tty;
 
 // cfmt implementation (TODO)
 
@@ -420,10 +417,9 @@ s32 _sys_printf(ppu_thread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
 	sysPrxForUser.warning("_sys_printf(fmt=%s, ...)", fmt);
 
-	if (g_tty)
-	{
-		g_tty.write(ps3_fmt(ppu, fmt, va_args.count));
-	}
+	const auto buf = vm::make_str(ps3_fmt(ppu, fmt, va_args.count));
+
+	sys_tty_write(0, buf, buf.get_count() - 1, vm::var<u32>{});
 
 	return CELL_OK;
 }

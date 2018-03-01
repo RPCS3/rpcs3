@@ -1,11 +1,10 @@
 #include "stdafx.h"
 #include "sys_tty.h"
 
-
-
 logs::channel sys_tty("sys_tty");
 
 extern fs::file g_tty;
+extern atomic_t<s64> g_tty_size;
 
 error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadlen)
 {
@@ -28,7 +27,10 @@ error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwrit
 
 	if (written_len > 0 && g_tty)
 	{
+		// Lock size by making it negative
+		g_tty_size -= (1ll << 48);
 		g_tty.write(buf.get_ptr(), len);
+		g_tty_size += (1ll << 48) + len;
 	}
 
 	if (!pwritelen)

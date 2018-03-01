@@ -44,6 +44,7 @@ extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const
 extern void network_thread_init();
 
 fs::file g_tty;
+atomic_t<s64> g_tty_size{0};
 
 template <>
 void fmt_class_string<mouse_handler>::format(std::string& out, u64 arg)
