@@ -322,7 +322,6 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 		QString style_log = QString
 		(
 			"QTextEdit#tty_frame { background-color: #ffffff; }"
-			"QLabel#tty_text { color: #000000; }"
 			"QTextEdit#log_frame { background-color: #ffffff; }"
 			"QLabel#log_level_always { color: #107896; }"
 			"QLabel#log_level_fatal { color: #ff00ff; }"

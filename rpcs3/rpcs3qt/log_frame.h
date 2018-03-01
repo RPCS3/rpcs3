@@ -14,6 +14,8 @@
 #include <QActionGroup>
 #include <QTimer>
 #include <QKeyEvent>
+#include <QtCore/QTextStream>
+#include <QtWidgets/QPlainTextEdit>
 
 class log_frame : public QDockWidget
 {
@@ -49,12 +51,13 @@ private:
 	QList<QColor> m_color;
 	QColor m_color_stack;
 	QTextEdit *m_log;
-	QTextEdit *m_tty;
+	QPlainTextEdit *m_tty;
 	QString m_old_text;
 	ullong m_log_counter;
 	bool m_stack_log;
 
-	fs::file m_tty_file;
+	QFile m_tty_qfile;
+	QTextStream m_tty_stream;
 
 	QAction* m_clearAct;
 	QAction* m_clearTTYAct;
