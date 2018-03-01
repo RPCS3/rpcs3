@@ -57,7 +57,7 @@ QWidget#cg_disasm {
 
 
 /* Main Window, Dialogs and Trophy Manager which isn't a dialog */
-QDialog, QWidget#trophy_manager, QMainWindow#main_window  {
+QDialog, QWidget#trophy_manager, QMainWindow#main_window {
 	border-image: url("GuiConfigs/YoRHa-background.jpg");
 }
 
@@ -224,6 +224,9 @@ QDockWidget {
 	text-transform: uppercase;
 	color: #b3ac98;
 	font-weight: 500;
+}
+[floating="true"] {
+	background: #b3ac98;
 }
 QDockWidget::title {
 	background: #4d4940;
