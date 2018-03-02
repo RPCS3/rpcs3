@@ -605,6 +605,9 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_register_editor_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\breakpoint_handler.cpp">
+      <Filter>Gui\debugger</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -687,6 +690,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\qt_utils.h">
       <Filter>Gui\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\breakpoint_handler.h">
+      <Filter>Gui\debugger</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

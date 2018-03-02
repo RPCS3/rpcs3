@@ -10,7 +10,7 @@ constexpr auto qstr = QString::fromStdString;
 extern bool user_asked_for_frame_capture;
 
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent)
-	: QDockWidget(tr("Debugger"), parent), xgui_settings(settings)
+	: QDockWidget(tr("Debugger"), parent), xgui_settings(settings), m_brkpt_handler()
 {
 	m_update = new QTimer(this);
 	connect(m_update, &QTimer::timeout, this, &debugger_frame::UpdateUI);
@@ -187,12 +187,6 @@ void debugger_frame::hideEvent(QHideEvent * event)
 	xgui_settings->SetValue(gui::d_splitterState, m_splitter->saveState());
 	QDockWidget::hideEvent(event);
 }
-
-#include <map>
-
-std::map<u32, bool> g_breakpoints;
-
-extern void ppu_breakpoint(u32 addr);
 
 u32 debugger_frame::GetPc() const
 {
@@ -481,11 +475,13 @@ void debugger_frame::EnableButtons(bool enable)
 
 void debugger_frame::ClearBreakpoints()
 {
-	//This is required to actually delete the breakpoints, not just visually.
-	for (std::map<u32, bool>::iterator it = g_breakpoints.begin(); it != g_breakpoints.end(); it++)
-		m_list->RemoveBreakPoint(it->first, false);
-
-	g_breakpoints.clear();
+	while (m_breakpoints_list->count())
+	{
+		auto* currentItem = m_breakpoints_list->takeItem(0);
+		u32 loc = currentItem->data(Qt::UserRole).value<u32>();
+		m_brkpt_handler.RemoveBreakpoint(loc);
+		delete currentItem;
+	}
 }
 
 void debugger_frame::OnBreakpointListDoubleClicked()
@@ -594,13 +590,17 @@ void debugger_list::ShowAddr(u32 addr)
 
 bool debugger_list::IsBreakPoint(u32 pc)
 {
-	return g_breakpoints.count(pc) != 0;
+	return m_debugFrame->m_brkpt_handler.HasBreakpoint(pc);
 }
 
 void debugger_list::AddBreakPoint(u32 pc)
 {
-	g_breakpoints.emplace(pc, false);
-	ppu_breakpoint(pc);
+	if (m_debugFrame->m_brkpt_handler.HasBreakpoint(pc))
+	{
+		RemoveBreakPoint(pc);
+		return;
+	}
+	m_debugFrame->m_brkpt_handler.AddBreakpoint(pc);
 
 	const auto cpu = m_debugFrame->cpu.lock();
 	const u32 cpu_offset = cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
@@ -621,15 +621,11 @@ void debugger_list::AddBreakPoint(u32 pc)
 	m_debugFrame->m_breakpoints_list->addItem(breakpointItem);
 }
 
-void debugger_list::RemoveBreakPoint(u32 pc, bool eraseFromMap)
+void debugger_list::RemoveBreakPoint(u32 pc)
 {
-	if(eraseFromMap)
-		g_breakpoints.erase(pc);
-	ppu_breakpoint(pc);
+	m_debugFrame->m_brkpt_handler.RemoveBreakpoint(pc);
 
-	int breakpointsListCount = m_debugFrame->m_breakpoints_list->count();
-
-	for (int i = 0; i < breakpointsListCount; i++)
+	for (int i = 0; i < m_debugFrame->m_breakpoints_list->count(); i++)
 	{
 		QListWidgetItem* currentItem = m_debugFrame->m_breakpoints_list->item(i);
 
@@ -641,7 +637,6 @@ void debugger_list::RemoveBreakPoint(u32 pc, bool eraseFromMap)
 	}
 
 	ShowAddr(m_pc - (m_item_count) * 4);
-
 }
 
 void debugger_list::keyPressEvent(QKeyEvent* event)

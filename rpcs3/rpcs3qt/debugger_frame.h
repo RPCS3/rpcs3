@@ -13,6 +13,7 @@
 #include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/Cell/PPUInterpreter.h"
 
+#include "breakpoint_handler.h"
 #include "instruction_editor_dialog.h"
 #include "register_editor_dialog.h"
 #include "gui_settings.h"
@@ -61,10 +62,10 @@ class debugger_frame : public QDockWidget
 	std::shared_ptr<gui_settings> xgui_settings;
 
 	QAction* m_breakpoints_list_delete;
-
 public:
 	std::unique_ptr<CPUDisAsm> m_disasm;
 	QListWidget* m_breakpoints_list;
+	breakpoint_handler m_brkpt_handler;
 	std::weak_ptr<cpu_thread> cpu;
 
 public:
@@ -122,7 +123,7 @@ public:
 public:
 	debugger_list(debugger_frame* parent);
 	void ShowAddr(u32 addr);
-	void RemoveBreakPoint(u32 pc, bool eraseFromMap = true);
+	void RemoveBreakPoint(u32 pc);
 
 private:
 	bool IsBreakPoint(u32 pc);
