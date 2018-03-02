@@ -126,7 +126,6 @@ public:
 	void RemoveBreakPoint(u32 pc);
 
 private:
-	bool IsBreakPoint(u32 pc);
 	void AddBreakPoint(u32 pc);
 
 protected:

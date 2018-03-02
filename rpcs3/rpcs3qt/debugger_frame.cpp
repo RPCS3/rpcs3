@@ -558,21 +558,21 @@ void debugger_list::ShowAddr(u32 addr)
 		{
 			if (!vm::check_addr(cpu_offset + m_pc, 4))
 			{
-				item(i)->setText((IsBreakPoint(m_pc) ? ">>> " : "    ") + qstr(fmt::format("[%08x] illegal address", m_pc)));
+				item(i)->setText((m_debugFrame->m_brkpt_handler.HasBreakpoint(m_pc) ? ">>> " : "    ") + qstr(fmt::format("[%08x] illegal address", m_pc)));
 				count = 4;
 				continue;
 			}
 
 			count = m_debugFrame->m_disasm->disasm(m_debugFrame->m_disasm->dump_pc = m_pc);
 
-			item(i)->setText((IsBreakPoint(m_pc) ? ">>> " : "    ") + qstr(m_debugFrame->m_disasm->last_opcode));
+			item(i)->setText((m_debugFrame->m_brkpt_handler.HasBreakpoint(m_pc) ? ">>> " : "    ") + qstr(m_debugFrame->m_disasm->last_opcode));
 
 			if (test(cpu->state & cpu_state_pause) && m_pc == m_debugFrame->GetPc())
 			{
 				item(i)->setTextColor(m_text_color_pc);
 				item(i)->setBackgroundColor(m_color_pc);
 			}
-			else if (IsBreakPoint(m_pc))
+			else if (m_debugFrame->m_brkpt_handler.HasBreakpoint(m_pc))
 			{
 				item(i)->setTextColor(m_text_color_bp);
 				item(i)->setBackgroundColor(m_color_bp);
@@ -588,18 +588,8 @@ void debugger_list::ShowAddr(u32 addr)
 	setLineWidth(-1);
 }
 
-bool debugger_list::IsBreakPoint(u32 pc)
-{
-	return m_debugFrame->m_brkpt_handler.HasBreakpoint(pc);
-}
-
 void debugger_list::AddBreakPoint(u32 pc)
 {
-	if (m_debugFrame->m_brkpt_handler.HasBreakpoint(pc))
-	{
-		RemoveBreakPoint(pc);
-		return;
-	}
 	m_debugFrame->m_brkpt_handler.AddBreakpoint(pc);
 
 	const auto cpu = m_debugFrame->cpu.lock();
@@ -697,7 +687,7 @@ void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 		const u32 pc = start_pc + i * 4;
 		//ConLog.Write("pc=0x%llx", pc);
 
-		if (IsBreakPoint(pc))
+		if (m_debugFrame->m_brkpt_handler.HasBreakpoint(pc))
 		{
 			RemoveBreakPoint(pc);
 		}
