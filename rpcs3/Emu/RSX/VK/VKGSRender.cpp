@@ -2580,6 +2580,43 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	const auto bpp = get_format_block_size_in_bytes(color_fmt);
 	const u32 aa_factor = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
 
+	//Window (raster) offsets
+	const auto window_offset_x = rsx::method_registers.window_offset_x();
+	const auto window_offset_y = rsx::method_registers.window_offset_y();
+	const auto window_clip_width = rsx::method_registers.window_clip_horizontal();
+	const auto window_clip_height = rsx::method_registers.window_clip_vertical();
+
+	if (window_offset_x || window_offset_y)
+	{
+		//Window offset is what affects the raster position!
+		//Tested with Turbo: Super stunt squad that only changes the window offset to declare new framebuffers
+		//Sampling behavior clearly indicates the addresses are expected to have changed
+		if (auto clip_type = rsx::method_registers.window_clip_type())
+			LOG_ERROR(RSX, "Unknown window clip type 0x%X" HERE, clip_type);
+
+		for (const auto &index : rsx::utility::get_rtt_indexes(target))
+		{
+			if (surface_addresses[index])
+			{
+				const u32 window_offset_bytes = (std::max<u32>(surface_pitchs[index], clip_width * aa_factor * bpp) * window_offset_y) + ((aa_factor * bpp) * window_offset_x);
+				surface_addresses[index] += window_offset_bytes;
+			}
+		}
+
+		if (zeta_address)
+		{
+			const auto depth_bpp = (depth_fmt == rsx::surface_depth_format::z16 ? 2 : 4);
+			zeta_address += (std::max<u32>(zeta_pitch, clip_width * aa_factor * depth_bpp) * window_offset_y) + ((aa_factor * depth_bpp) * window_offset_x);
+		}
+	}
+
+	if ((window_clip_width && window_clip_width != clip_width) ||
+		(window_clip_height && window_clip_height != clip_height))
+	{
+		LOG_ERROR(RSX, "Unexpected window clip dimensions: window_clip=%dx%d, surface_clip=%dx%d",
+			window_clip_width, window_clip_height, clip_width, clip_height);
+	}
+
 	if (m_draw_fbo)
 	{
 		bool really_changed = false;
@@ -2668,10 +2705,9 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			surface->rsx_pitch = surface_pitchs[index];
 
 			surface->aa_mode = aa_mode;
-			surface->set_raster_offset(clip_x, clip_y, bpp);
 			m_texture_cache.notify_surface_changed(surface_addresses[index]);
 
-			m_texture_cache.tag_framebuffer(surface_addresses[index] + surface->raster_address_offset);
+			m_texture_cache.tag_framebuffer(surface_addresses[index]);
 			m_draw_buffers_count++;
 		}
 	}
@@ -2686,10 +2722,9 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		ds->rsx_pitch = m_depth_surface_info.pitch;
 
 		ds->aa_mode = aa_mode;
-		ds->set_raster_offset(clip_x, clip_y, get_pixel_size(rsx::method_registers.surface_depth_fmt()));
 		m_texture_cache.notify_surface_changed(zeta_address);
 
-		m_texture_cache.tag_framebuffer(zeta_address + ds->raster_address_offset);
+		m_texture_cache.tag_framebuffer(zeta_address);
 	}
 
 	if (g_cfg.video.write_color_buffers)
