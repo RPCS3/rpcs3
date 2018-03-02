@@ -257,14 +257,29 @@ namespace rsx
 			return decode<NV4097_SET_SHADER_WINDOW>().window_shader_height();
 		}
 
-		u16 shader_window_offset_x() const
+		u16 window_offset_x() const
 		{
 			return decode<NV4097_SET_WINDOW_OFFSET>().window_offset_x();
 		}
 
-		u16 shader_window_offset_y() const
+		u16 window_offset_y() const
 		{
 			return decode<NV4097_SET_WINDOW_OFFSET>().window_offset_y();
+		}
+
+		u32 window_clip_type() const
+		{
+			return registers[NV4097_SET_WINDOW_CLIP_TYPE];
+		}
+
+		u32 window_clip_horizontal() const
+		{
+			return registers[NV4097_SET_WINDOW_CLIP_HORIZONTAL];
+		}
+
+		u32 window_clip_vertical() const
+		{
+			return registers[NV4097_SET_WINDOW_CLIP_HORIZONTAL];
 		}
 
 		bool depth_test_enabled() const

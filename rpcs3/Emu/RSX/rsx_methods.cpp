@@ -76,7 +76,7 @@ namespace rsx
 				if (Emu.IsStopped())
 					return;
 
-				const auto tdr = (s64)g_cfg.video.driver_recovery_timeout;
+				const auto tdr = (u64)g_cfg.video.driver_recovery_timeout;
 				if (tdr == 0)
 				{
 					//No timeout
@@ -508,9 +508,10 @@ namespace rsx
 			rsx->notify_zcull_info_changed();
 		}
 
-		void set_surface_dirty_bit(thread* rsx, u32 _reg, u32)
+		void set_surface_dirty_bit(thread* rsx, u32, u32)
 		{
 			rsx->m_rtts_dirty = true;
+			rsx->m_framebuffer_state_contested = false;
 		}
 
 		void set_surface_options_dirty_bit(thread* rsx, u32, u32)
@@ -1643,6 +1644,7 @@ namespace rsx
 		bind<NV4097_SET_SURFACE_PITCH_C, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_SURFACE_PITCH_D, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_SURFACE_PITCH_Z, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_WINDOW_OFFSET, nv4097::set_surface_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_OFFSET, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_FORMAT, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_ADDRESS, 8, 16, nv4097::set_texture_dirty_bit>();
