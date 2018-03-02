@@ -63,6 +63,22 @@ void fmt_class_string<CellGameDataError>::format(std::string& out, u64 arg)
 	});
 }
 
+template<>
+void fmt_class_string<CellDiscGameError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_DISCGAME_ERROR_INTERNAL);
+			STR_CASE(CELL_DISCGAME_ERROR_NOT_DISCBOOT);
+			STR_CASE(CELL_DISCGAME_ERROR_PARAM);
+		}
+
+		return unknown;
+	});
+}
+
 // If dir is empty:
 // contentInfo = "/dev_bdvd/PS3_GAME"
 // usrdir = "/dev_bdvd/PS3_GAME/USRDIR"
@@ -831,16 +847,18 @@ s32 cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getParam)
 {
 	cellGame.warning("cellDiscGameGetBootDiscInfo(getParam=*0x%x)", getParam);
 
+	if (!getParam)
+		return CELL_DISCGAME_ERROR_PARAM;
+
 	// This is also called by non-disc games, see NPUB90029
 	const std::string dir = "/dev_bdvd/PS3_GAME"s;
 
 	if (!fs::is_dir(vfs::get(dir)))
 	{
-		// Not a disc game. TODO: Fetch PARAM.SFO from proper game dir
-		cellGame.warning("cellDiscGameGetBootDiscInfo(): directory '%s' not found", dir);
 		getParam->parentalLevel = 0;
 		strcpy_trunc(getParam->titleId, "0");
-		return CELL_OK;
+
+		return CELL_DISCGAME_ERROR_NOT_DISCBOOT;
 	}
 
 	const auto& psf = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
