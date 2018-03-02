@@ -6,13 +6,12 @@
 #include "Emu/Cell/lv2/sys_interrupt.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_ss.h"
+#include "Emu/Cell/lv2/sys_tty.h"
 #include "sysPrxForUser.h"
 
 logs::channel sysPrxForUser("sysPrxForUser");
 
 extern u64 get_system_time();
-
-extern fs::file g_tty;
 
 vm::gvar<s32> sys_prx_version; // ???
 vm::gvar<vm::ptr<void()>> g_ppu_atexitspawn;
@@ -97,20 +96,16 @@ s32 console_getc()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 console_putc()
+void console_putc(char ch)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.trace("console_putc(ch=0x%x)", ch);
+	sys_tty_write(0, vm::var<char>(ch), 1, vm::var<u32>{});
 }
 
-s32 console_write(vm::ptr<char> data, u32 len)
+error_code console_write(vm::ptr<char> data, u32 len)
 {
-	sysPrxForUser.warning("console_write(data=*0x%x, len=%d)", data, len);
-
-	if (g_tty)
-	{
-		g_tty.write(data.get_ptr(), len);
-	}
-
+	sysPrxForUser.trace("console_write(data=*0x%x, len=%d)", data, len);
+	sys_tty_write(0, data, len, vm::var<u32>{});
 	return CELL_OK;
 }
 

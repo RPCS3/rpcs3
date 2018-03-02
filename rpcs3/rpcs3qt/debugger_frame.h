@@ -86,9 +86,9 @@ public:
 
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
-	void closeEvent(QCloseEvent* event);
-	void showEvent(QShowEvent* event);
-	void hideEvent(QHideEvent* event);
+	void closeEvent(QCloseEvent* event) override;
+	void showEvent(QShowEvent* event) override;
+	void hideEvent(QHideEvent* event) override;
 
 Q_SIGNALS:
 	void DebugFrameClosed();

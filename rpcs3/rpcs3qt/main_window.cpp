@@ -233,7 +233,7 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only)
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
-	if (Emu.BootGame(path, add_only))
+	if (Emu.BootGame(path, direct, add_only))
 	{
 		LOG_SUCCESS(LOADER, "Boot successful.");
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
@@ -241,7 +241,7 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only)
 	}
 	else
 	{
-		LOG_ERROR(GENERAL, "Boot failed: path=%s direct=%d add_only=%d", path, direct, add_only);
+		LOG_ERROR(GENERAL, "Boot failed: %s", path);
 	}
 
 	m_gameListFrame->Refresh(true);
@@ -1328,6 +1328,11 @@ void main_window::CreateDockWindows()
 			guiSettings->SetValue(gui::mw_logger, false);
 		}
 	});
+	connect(m_logFrame, &log_frame::topLevelChanged, [=](bool/* topLevel*/)
+	{
+		m_logFrame->style()->unpolish(m_logFrame);
+		m_logFrame->style()->polish(m_logFrame);
+	});
 
 	connect(m_debuggerFrame, &debugger_frame::DebugFrameClosed, [=]()
 	{
@@ -1337,6 +1342,11 @@ void main_window::CreateDockWindows()
 			guiSettings->SetValue(gui::mw_debugger, false);
 		}
 	});
+	connect(m_debuggerFrame, &log_frame::topLevelChanged, [=](bool/* topLevel*/)
+	{
+		m_debuggerFrame->style()->unpolish(m_debuggerFrame);
+		m_debuggerFrame->style()->polish(m_debuggerFrame);
+	});
 
 	connect(m_gameListFrame, &game_list_frame::GameListFrameClosed, [=]()
 	{
@@ -1345,6 +1355,11 @@ void main_window::CreateDockWindows()
 			ui->showGameListAct->setChecked(false);
 			guiSettings->SetValue(gui::mw_gamelist, false);
 		}
+	});
+	connect(m_gameListFrame, &log_frame::topLevelChanged, [=](bool/* topLevel*/)
+	{
+		m_gameListFrame->style()->unpolish(m_gameListFrame);
+		m_gameListFrame->style()->polish(m_gameListFrame);
 	});
 
 	connect(m_gameListFrame, &game_list_frame::RequestBoot, [this](const std::string& path){ Boot(path); });

@@ -191,13 +191,17 @@ s32 cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOu
 	if (deviceIndex) return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
 
 	info->portType = CELL_AUDIO_OUT_PORT_HDMI;
-	info->availableModeCount = 1;
+	info->availableModeCount = 2;
 	info->state = CELL_AUDIO_OUT_DEVICE_STATE_AVAILABLE;
 	info->latency = 1000;
 	info->availableModes[0].type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
 	info->availableModes[0].channel = CELL_AUDIO_OUT_CHNUM_8;
 	info->availableModes[0].fs = CELL_AUDIO_OUT_FS_48KHZ;
 	info->availableModes[0].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
+	info->availableModes[1].type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+	info->availableModes[1].channel = CELL_AUDIO_OUT_CHNUM_2;
+	info->availableModes[1].fs = CELL_AUDIO_OUT_FS_48KHZ;
+	info->availableModes[1].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_2CH;
 
 	return CELL_OK;
 }

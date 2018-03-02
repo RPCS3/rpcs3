@@ -117,7 +117,7 @@ u32 cellSpursModulePollStatus(SPUThread& spu, u32* status)
 void cellSpursModuleExit(SPUThread& spu)
 {
 	auto ctxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
-	spu.pc = ctxt->exitToKernelAddr - 4;
+	spu.pc = ctxt->exitToKernelAddr;
 	throw SpursModuleExit();
 }
 
@@ -659,7 +659,7 @@ void spursKernelDispatchWorkload(SPUThread& spu, u64 widAndPollStatus)
 	spu.gpr[3]._u32[3] = 0x100;
 	spu.gpr[4]._u64[1] = wklInfo->arg;
 	spu.gpr[5]._u32[3] = pollStatus;
-	spu.pc = 0xA00 - 4;
+	spu.pc = 0xA00;
 }
 
 // SPURS kernel workload exit
@@ -1404,7 +1404,7 @@ void spursTasksetResumeTask(SPUThread& spu)
 		spu.gpr[80 + i] = ctxt->savedContextR80ToR127[i];
 	}
 
-	spu.pc = spu.gpr[0]._u32[3] - 4;
+	spu.pc = spu.gpr[0]._u32[3];
 }
 
 // Start a task
@@ -1422,7 +1422,7 @@ void spursTasksetStartTask(SPUThread& spu, CellSpursTaskArgument& taskArgs)
 		spu.gpr[i].clear();
 	}
 
-	spu.pc = ctxt->savedContextLr.value()._u32[3] - 4;
+	spu.pc = ctxt->savedContextLr.value()._u32[3];
 }
 
 // Process a request and update the state of the taskset

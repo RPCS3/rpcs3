@@ -340,18 +340,13 @@ void spu_recompiler::InterpreterCall(spu_opcode_t op)
 		{
 			// TODO: check correctness
 
-			const u32 old_pc = _spu->pc;
-
 			if (test(_spu->state) && _spu->check_state())
 			{
 				return 0x2000000 | _spu->pc;
 			}
 
-			_func(*_spu, { opcode });
-
-			if (old_pc != _spu->pc)
+			if (UNLIKELY(!_func(*_spu, {opcode})))
 			{
-				_spu->pc += 4;
 				return 0x2000000 | _spu->pc;
 			}
 
