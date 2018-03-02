@@ -105,6 +105,12 @@ enum class fake_camera_type
 	uvc1_1,
 };
 
+enum class move_handler
+{
+	null,
+	fake,
+};
+
 enum class video_resolution
 {
 	_1080,
@@ -392,6 +398,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<pad_handler> pad{this, "Pad", pad_handler::keyboard};
 		cfg::_enum<camera_handler> camera{this, "Camera", camera_handler::null};
 		cfg::_enum<fake_camera_type> camera_type{this, "Camera type", fake_camera_type::unknown};
+		cfg::_enum<move_handler> move{this, "Move", move_handler::null};
 
 	} io{this};
 

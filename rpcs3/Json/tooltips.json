@@ -98,7 +98,8 @@
 		"keyboardHandlerBox": "Some games support native keyboard input.\nBasic will work in these cases.",
 		"mouseHandlerBox": "Some games support native mouse input.\nBasic will work in these cases.",
 		"cameraBox": "Camera support is not implemented, leave this on null.",
-		"cameraTypeBox": "Camera support is not implemented, leave this on unknown."
+		"cameraTypeBox": "Camera support is not implemented, leave this on unknown.",
+		"moveBox": "Playstation Move support.\nFake: Experimental, maps Move controls to DS4 controller mappings."
 	},
 	"network": {
 		"netStatusBox": "Leave as disconnected unless you're debugging.\nRPCS3 has no online support."

@@ -890,20 +890,16 @@
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_6">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+          <widget class="QGroupBox" name="groupBox_2">
+           <property name="title">
+            <string>Move Handler</string>
            </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
+           <layout class="QVBoxLayout" name="verticalLayout_62">
+            <item>
+             <widget class="QComboBox" name="moveBox"/>
+            </item>
+           </layout>
+          </widget>
          </item>
         </layout>
        </item>
