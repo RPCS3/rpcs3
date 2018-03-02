@@ -88,7 +88,7 @@ public:
 		}
 	}
 private:
-	void keyPressEvent(QKeyEvent* event)
+	void keyPressEvent(QKeyEvent* event) override
 	{
 		// this won't work with Alt+F4, the window still closes
 		if (m_disable_cancel && event->key() == Qt::Key_Escape)
@@ -100,7 +100,7 @@ private:
 			QDialog::keyPressEvent(event);
 		}
 	}
-	void closeEvent(QCloseEvent* event)
+	void closeEvent(QCloseEvent* event) override
 	{
 		// spontaneous: don't close on external system level events like Alt+F4
 		if (m_disable_cancel && event->spontaneous())

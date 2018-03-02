@@ -313,7 +313,7 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 }
 
 // Set or remove breakpoint
-extern void ppu_breakpoint(u32 addr)
+extern void ppu_breakpoint(u32 addr, bool isAdding)
 {
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
@@ -322,15 +322,15 @@ extern void ppu_breakpoint(u32 addr)
 
 	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 
-	if (ppu_ref(addr) == _break)
-	{
-		// Remove breakpoint
-		ppu_ref(addr) = ppu_cache(addr);
-	}
-	else
+	if (isAdding)
 	{
 		// Set breakpoint
 		ppu_ref(addr) = _break;
+	}
+	else
+	{
+		// Remove breakpoint
+		ppu_ref(addr) = ppu_cache(addr);
 	}
 }
 
