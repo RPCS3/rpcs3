@@ -2182,16 +2182,20 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 	if (rsx::method_registers.color_mask_g()) mask |= VK_COLOR_COMPONENT_G_BIT;
 	if (rsx::method_registers.color_mask_r()) mask |= VK_COLOR_COMPONENT_R_BIT;
 
-	VkColorComponentFlags color_masks[4] = { mask };
-
-	u8 render_targets[] = { 0, 1, 2, 3 };
-
 	for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
 	{
-		properties.att_state[render_targets[idx]].colorWriteMask = mask;
+		properties.att_state[idx].colorWriteMask = mask;
 	}
 
-	if (rsx::method_registers.blend_enabled())
+	const bool mrt_blend_enabled[] =
+	{
+		rsx::method_registers.blend_enabled(),
+		rsx::method_registers.blend_enabled_surface_1(),
+		rsx::method_registers.blend_enabled_surface_2(),
+		rsx::method_registers.blend_enabled_surface_3()
+	};
+
+	if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
 	{
 		VkBlendFactor sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
 		VkBlendFactor sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
@@ -2203,20 +2207,16 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 
 		for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
 		{
-			properties.att_state[render_targets[idx]].blendEnable = VK_TRUE;
-			properties.att_state[render_targets[idx]].srcColorBlendFactor = sfactor_rgb;
-			properties.att_state[render_targets[idx]].dstColorBlendFactor = dfactor_rgb;
-			properties.att_state[render_targets[idx]].srcAlphaBlendFactor = sfactor_a;
-			properties.att_state[render_targets[idx]].dstAlphaBlendFactor = dfactor_a;
-			properties.att_state[render_targets[idx]].colorBlendOp = equation_rgb;
-			properties.att_state[render_targets[idx]].alphaBlendOp = equation_a;
-		}
-	}
-	else
-	{
-		for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
-		{
-			properties.att_state[render_targets[idx]].blendEnable = VK_FALSE;
+			if (mrt_blend_enabled[idx])
+			{
+				properties.att_state[idx].blendEnable = VK_TRUE;
+				properties.att_state[idx].srcColorBlendFactor = sfactor_rgb;
+				properties.att_state[idx].dstColorBlendFactor = dfactor_rgb;
+				properties.att_state[idx].srcAlphaBlendFactor = sfactor_a;
+				properties.att_state[idx].dstAlphaBlendFactor = dfactor_a;
+				properties.att_state[idx].colorBlendOp = equation_rgb;
+				properties.att_state[idx].alphaBlendOp = equation_a;
+			}
 		}
 	}
 
