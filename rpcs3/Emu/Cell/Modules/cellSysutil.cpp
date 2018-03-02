@@ -198,6 +198,10 @@ s32 cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> value)
 		*value = 0;
 	break;
 
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_MAGNETOMETER:
+		*value = 0;
+	break;
+
 	default:
 		return CELL_EINVAL;
 	}
@@ -301,7 +305,7 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 
 	const std::string& cache_id = param->cacheId;
 	verify(HERE), cache_id.size() < sizeof(param->cacheId);
-	
+
 	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
 	strcpy_trunc(param->getCachePath, cache_path);
 
@@ -329,7 +333,7 @@ s32 cellSysutilEnableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> par
 	cellSysutil.warning("cellSysutilEnableBgmPlaybackEx(param=*0x%x)", param);
 
 	// TODO
-	g_bgm_playback_enabled = true; 
+	g_bgm_playback_enabled = true;
 
 	return CELL_OK;
 }
@@ -723,12 +727,12 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, _ZN8cxmlutil16CheckElementNameERKN4cxml7ElementEPKc);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil16FindChildElementERKN4cxml7ElementEPKcS5_S5_);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil7GetFileERKN4cxml7ElementEPKcPNS0_4FileE);
-	
+
 	REG_FUNC(cellSysutil, _ZN16sysutil_cxmlutil11FixedMemory3EndEi);
 	REG_FUNC(cellSysutil, _ZN16sysutil_cxmlutil11FixedMemory5BeginEi);
 	REG_FUNC(cellSysutil, _ZN16sysutil_cxmlutil11FixedMemory8AllocateEN4cxml14AllocationTypeEPvS3_jPS3_Pj);
 	REG_FUNC(cellSysutil, _ZN16sysutil_cxmlutil12PacketWriter5WriteEPKvjPv);
 	REG_FUNC(cellSysutil, _ZN16sysutil_cxmlutil12PacketWriterC1EiiRN4cxml8DocumentE);
-	
+
 	REG_FNID(cellSysutil, 0xE1EC7B6A, cellSysutil_E1EC7B6A);
 });

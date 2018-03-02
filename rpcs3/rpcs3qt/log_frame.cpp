@@ -103,7 +103,8 @@ struct gui_listener : logs::listener
 // GUI Listener instance
 static gui_listener s_gui_listener;
 
-log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent) : QDockWidget(tr("Log"), parent), xgui_settings(guiSettings)
+log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
+	: custom_dock_widget(tr("Log"), parent), xgui_settings(guiSettings)
 {
 	m_tabWidget = new QTabWidget;
 	m_tabWidget->setObjectName("tab_widget_log");
