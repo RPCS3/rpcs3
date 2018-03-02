@@ -484,6 +484,48 @@ void debugger_frame::ClearBreakpoints()
 	}
 }
 
+void debugger_frame::RemoveBreakpoint(u32 pc)
+{
+	m_brkpt_handler.RemoveBreakpoint(pc);
+
+	for (int i = 0; i < m_breakpoints_list->count(); i++)
+	{
+		QListWidgetItem* currentItem = m_breakpoints_list->item(i);
+
+		if (currentItem->data(Qt::UserRole).value<u32>() == pc)
+		{
+			delete m_breakpoints_list->takeItem(i);
+			break;
+		}
+	}
+	
+	// todo clean that up
+	m_list->ShowAddr(m_list->m_pc - (m_list->m_item_count) * 4);
+}
+
+void debugger_frame::AddBreakpoint(u32 pc)
+{
+	m_brkpt_handler.AddBreakpoint(pc);
+
+	const auto cpu = this->cpu.lock();
+	const u32 cpu_offset = cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
+	m_disasm->offset = (u8*)vm::base(cpu_offset);
+
+	m_disasm->disasm(m_disasm->dump_pc = pc);
+
+	QString breakpointItemText = qstr(m_disasm->last_opcode);
+
+	breakpointItemText.remove(10, 13);
+
+	QListWidgetItem* breakpointItem = new QListWidgetItem(breakpointItemText);
+	breakpointItem->setTextColor(m_list->m_text_color_bp);
+	breakpointItem->setBackgroundColor(m_list->m_color_bp);
+	QVariant pcVariant;
+	pcVariant.setValue(pc);
+	breakpointItem->setData(Qt::UserRole, pcVariant);
+	m_breakpoints_list->addItem(breakpointItem);
+}
+
 void debugger_frame::OnBreakpointListDoubleClicked()
 {
 	m_list->ShowAddr(CentrePc(m_breakpoints_list->currentItem()->data(Qt::UserRole).value<u32>()));
@@ -523,7 +565,7 @@ void debugger_frame::OnBreakpointListDelete()
 
 	for (int i = selectedCount - 1; i >= 0; i--)
 	{
-		m_list->RemoveBreakPoint(m_breakpoints_list->item(i)->data(Qt::UserRole).value<u32>());
+		RemoveBreakpoint(m_breakpoints_list->item(i)->data(Qt::UserRole).value<u32>());
 	}
 }
 
@@ -549,6 +591,7 @@ void debugger_list::ShowAddr(u32 addr)
 	}
 	else
 	{
+		bool hasBreakpoint = m_debugFrame->m_brkpt_handler.HasBreakpoint(m_pc);
 		const bool is_spu = cpu->id_type() != 1;
 		const u32 cpu_offset = is_spu ? static_cast<SPUThread&>(*cpu).offset : 0;
 		const u32 address_limits = is_spu ? 0x3ffff : ~0;
@@ -558,21 +601,21 @@ void debugger_list::ShowAddr(u32 addr)
 		{
 			if (!vm::check_addr(cpu_offset + m_pc, 4))
 			{
-				item(i)->setText((m_debugFrame->m_brkpt_handler.HasBreakpoint(m_pc) ? ">>> " : "    ") + qstr(fmt::format("[%08x] illegal address", m_pc)));
+				item(i)->setText((hasBreakpoint ? ">>> " : "    ") + qstr(fmt::format("[%08x] illegal address", m_pc)));
 				count = 4;
 				continue;
 			}
 
 			count = m_debugFrame->m_disasm->disasm(m_debugFrame->m_disasm->dump_pc = m_pc);
 
-			item(i)->setText((m_debugFrame->m_brkpt_handler.HasBreakpoint(m_pc) ? ">>> " : "    ") + qstr(m_debugFrame->m_disasm->last_opcode));
+			item(i)->setText((hasBreakpoint ? ">>> " : "    ") + qstr(m_debugFrame->m_disasm->last_opcode));
 
 			if (test(cpu->state & cpu_state_pause) && m_pc == m_debugFrame->GetPc())
 			{
 				item(i)->setTextColor(m_text_color_pc);
 				item(i)->setBackgroundColor(m_color_pc);
 			}
-			else if (m_debugFrame->m_brkpt_handler.HasBreakpoint(m_pc))
+			else if (hasBreakpoint)
 			{
 				item(i)->setTextColor(m_text_color_bp);
 				item(i)->setBackgroundColor(m_color_bp);
@@ -586,47 +629,6 @@ void debugger_list::ShowAddr(u32 addr)
 	}
 
 	setLineWidth(-1);
-}
-
-void debugger_list::AddBreakPoint(u32 pc)
-{
-	m_debugFrame->m_brkpt_handler.AddBreakpoint(pc);
-
-	const auto cpu = m_debugFrame->cpu.lock();
-	const u32 cpu_offset = cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
-	m_debugFrame->m_disasm->offset = (u8*)vm::base(cpu_offset);
-
-	m_debugFrame->m_disasm->disasm(m_debugFrame->m_disasm->dump_pc = pc);
-
-	QString breakpointItemText = qstr(m_debugFrame->m_disasm->last_opcode);
-
-	breakpointItemText.remove(10, 13);
-
-	QListWidgetItem* breakpointItem = new QListWidgetItem(breakpointItemText);
-	breakpointItem->setTextColor(m_text_color_bp);
-	breakpointItem->setBackgroundColor(m_color_bp);
-	QVariant pcVariant;
-	pcVariant.setValue(pc);
-	breakpointItem->setData(Qt::UserRole, pcVariant);
-	m_debugFrame->m_breakpoints_list->addItem(breakpointItem);
-}
-
-void debugger_list::RemoveBreakPoint(u32 pc)
-{
-	m_debugFrame->m_brkpt_handler.RemoveBreakpoint(pc);
-
-	for (int i = 0; i < m_debugFrame->m_breakpoints_list->count(); i++)
-	{
-		QListWidgetItem* currentItem = m_debugFrame->m_breakpoints_list->item(i);
-
-		if (currentItem->data(Qt::UserRole).value<u32>() == pc)
-		{
-			delete m_debugFrame->m_breakpoints_list->takeItem(i);
-			break;
-		}
-	}
-
-	ShowAddr(m_pc - (m_item_count) * 4);
 }
 
 void debugger_list::keyPressEvent(QKeyEvent* event)
@@ -689,7 +691,7 @@ void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 
 		if (m_debugFrame->m_brkpt_handler.HasBreakpoint(pc))
 		{
-			RemoveBreakPoint(pc);
+			m_debugFrame->RemoveBreakpoint(pc);
 		}
 		else
 		{
@@ -697,7 +699,7 @@ void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 
 			if (cpu->id_type() == 1 && vm::check_addr(pc))
 			{
-				AddBreakPoint(pc);
+				m_debugFrame->AddBreakpoint(pc);
 			}
 		}
 

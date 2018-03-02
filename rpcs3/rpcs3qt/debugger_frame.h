@@ -82,6 +82,8 @@ public:
 	void WriteRegs();
 	void EnableButtons(bool enable);
 	void ClearBreakpoints();
+	void RemoveBreakpoint(u32 loc);
+	void AddBreakpoint(u32 loc);
 
 	void OnUpdate();
 
@@ -123,10 +125,6 @@ public:
 public:
 	debugger_list(debugger_frame* parent);
 	void ShowAddr(u32 addr);
-	void RemoveBreakPoint(u32 pc);
-
-private:
-	void AddBreakPoint(u32 pc);
 
 protected:
 	void keyPressEvent(QKeyEvent* event);
