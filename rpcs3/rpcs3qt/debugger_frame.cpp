@@ -133,9 +133,9 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	connect(m_choice_units, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &debugger_frame::OnSelectUnit);
 	connect(this, &QDockWidget::visibilityChanged, this, &debugger_frame::EnableUpdateTimer);
 
-	connect(m_breakpoints_list, &QListWidget::itemDoubleClicked, this, &debugger_frame::OnBreakpointList_doubleClicked);
-	connect(m_breakpoints_list, &QListWidget::customContextMenuRequested, this, &debugger_frame::OnBreakpointList_rightClicked);
-	connect(m_breakpoints_list_delete, &QAction::triggered, this, &debugger_frame::OnBreakpointList_delete);
+	connect(m_breakpoints_list, &QListWidget::itemDoubleClicked, this, &debugger_frame::OnBreakpointListDoubleClicked);
+	connect(m_breakpoints_list, &QListWidget::customContextMenuRequested, this, &debugger_frame::OnBreakpointListRightClicked);
+	connect(m_breakpoints_list_delete, &QAction::triggered, this, &debugger_frame::OnBreakpointListDelete);
 
 	m_list->ShowAddr(CentrePc(m_list->m_pc));
 	UpdateUnitList();
@@ -488,13 +488,13 @@ void debugger_frame::ClearBreakpoints()
 	g_breakpoints.clear();
 }
 
-void debugger_frame::OnBreakpointList_doubleClicked()
+void debugger_frame::OnBreakpointListDoubleClicked()
 {
 	m_list->ShowAddr(CentrePc(m_breakpoints_list->currentItem()->data(Qt::UserRole).value<u32>()));
 	m_list->setCurrentRow(16);
 }
 
-void debugger_frame::OnBreakpointList_rightClicked(const QPoint &pos)
+void debugger_frame::OnBreakpointListRightClicked(const QPoint &pos)
 {
 	if (m_breakpoints_list->itemAt(pos) == NULL)
 		return;
@@ -521,7 +521,7 @@ void debugger_frame::OnBreakpointList_rightClicked(const QPoint &pos)
 	}
 }
 
-void debugger_frame::OnBreakpointList_delete()
+void debugger_frame::OnBreakpointListDelete()
 {
 	int selectedCount = m_breakpoints_list->selectedItems().count();
 

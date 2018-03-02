@@ -95,9 +95,9 @@ Q_SIGNALS:
 public Q_SLOTS:
 	void DoStep();
 private Q_SLOTS:
-	void OnBreakpointList_doubleClicked();
-	void OnBreakpointList_rightClicked(const QPoint &pos);
-	void OnBreakpointList_delete();
+	void OnBreakpointListDoubleClicked();
+	void OnBreakpointListRightClicked(const QPoint &pos);
+	void OnBreakpointListDelete();
 	void OnSelectUnit();
 	void Show_Val();
 	void Show_PC();
