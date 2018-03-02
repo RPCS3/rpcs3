@@ -43,7 +43,7 @@ public Q_SLOTS:
 	void OnRemove();
 private Q_SLOTS:
 	void ShowContextMenu(const QPoint &pos);
-	void keyPressEvent(QKeyEvent *event);
+	void keyPressEvent(QKeyEvent *event) override;
 };
 
 class AutoPauseConfigDialog : public QDialog

@@ -29,8 +29,8 @@ public:
 	explicit cg_disasm_window(std::shared_ptr<gui_settings> xSettings);
 
 protected:
-	void dropEvent(QDropEvent* ev);
-	void dragEnterEvent(QDragEnterEvent* ev);
-	void dragMoveEvent(QDragMoveEvent* ev);
-	void dragLeaveEvent(QDragLeaveEvent* ev);
+	void dropEvent(QDropEvent* ev) override;
+	void dragEnterEvent(QDragEnterEvent* ev) override;
+	void dragMoveEvent(QDragMoveEvent* ev) override;
+	void dragLeaveEvent(QDragLeaveEvent* ev) override;
 };
