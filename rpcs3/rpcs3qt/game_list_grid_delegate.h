@@ -8,8 +8,8 @@ class game_list_grid_delegate : public QAbstractItemDelegate
 public:
 	game_list_grid_delegate(const QSize& imageSize, const qreal& margin_factor, const qreal& margin_ratio, const QFont& font, const QColor& font_color, QObject *parent = 0);
 
-	void paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index) const;
-	QSize sizeHint(const QStyleOptionViewItem & option, const QModelIndex & index) const;
+	void paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index) const override;
+	QSize sizeHint(const QStyleOptionViewItem & option, const QModelIndex & index) const override;
 	void setItemSize(const QSize& size);
 	virtual ~game_list_grid_delegate();
 private:

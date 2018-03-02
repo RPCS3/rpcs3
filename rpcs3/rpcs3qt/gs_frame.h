@@ -30,7 +30,7 @@ public:
 	wm_event get_default_wm_event() const override;
 protected:
 	virtual void paintEvent(QPaintEvent *event);
-	virtual void showEvent(QShowEvent *event);
+	virtual void showEvent(QShowEvent *event) override;
 
 	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void OnFullScreen();
