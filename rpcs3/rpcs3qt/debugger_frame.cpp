@@ -209,7 +209,10 @@ void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
 
-	if (m_no_thread_selected) return;
+	if (m_no_thread_selected)
+	{
+		return;
+	}
 
 	const auto cpu = this->cpu.lock();
 
@@ -534,8 +537,10 @@ void debugger_frame::OnBreakpointListDoubleClicked()
 
 void debugger_frame::OnBreakpointListRightClicked(const QPoint &pos)
 {
-	if (m_breakpoints_list->itemAt(pos) == NULL)
+	if (!m_breakpoints_list->itemAt(pos))
+	{
 		return;
+	}
 
 	QMenu* menu = new QMenu();
 
@@ -547,15 +552,12 @@ void debugger_frame::OnBreakpointListRightClicked(const QPoint &pos)
 	menu->addAction(m_breakpoints_list_delete);
 
 	QAction* selectedItem = menu->exec(QCursor::pos());
-	if (selectedItem != NULL)
+	if (selectedItem && selectedItem->text() == "Rename")
 	{
-		if (selectedItem->text() == "Rename")
-		{
-			QListWidgetItem* currentItem = m_breakpoints_list->selectedItems().at(0);
+		QListWidgetItem* currentItem = m_breakpoints_list->selectedItems().at(0);
 
-			currentItem->setFlags(currentItem->flags() | Qt::ItemIsEditable);
-			m_breakpoints_list->editItem(currentItem);
-		}
+		currentItem->setFlags(currentItem->flags() | Qt::ItemIsEditable);
+		m_breakpoints_list->editItem(currentItem);
 	}
 }
 
