@@ -2,7 +2,7 @@
 
 extern void ppu_breakpoint(u32 loc, bool isAdding);
 
-breakpoint_handler::breakpoint_handler()
+breakpoint_handler::breakpoint_handler() :m_breakpoints()
 {
 
 }

@@ -13,6 +13,7 @@
 #include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/Cell/PPUInterpreter.h"
 
+#include "debugger_list.h"
 #include "breakpoint_handler.h"
 #include "instruction_editor_dialog.h"
 #include "register_editor_dialog.h"
@@ -27,8 +28,6 @@
 #include <QTimer>
 #include <QTextEdit>
 #include <QSplitter>
-
-class debugger_list;
 
 class debugger_frame : public QDockWidget
 {
@@ -61,11 +60,11 @@ class debugger_frame : public QDockWidget
 
 	std::shared_ptr<gui_settings> xgui_settings;
 
+	breakpoint_handler* m_brkpt_handler; // Handles communicating with PPU to simplify logic in debugger.
 	QAction* m_breakpoints_list_delete;
 public:
-	std::unique_ptr<CPUDisAsm> m_disasm;
+	std::shared_ptr<CPUDisAsm> m_disasm;
 	QListWidget* m_breakpoints_list;
-	breakpoint_handler m_brkpt_handler;
 	std::weak_ptr<cpu_thread> cpu;
 
 public:
@@ -98,6 +97,7 @@ Q_SIGNALS:
 public Q_SLOTS:
 	void DoStep();
 private Q_SLOTS:
+	void HandleBreakpointRequest(u32 loc);
 	void OnBreakpointListDoubleClicked();
 	void OnBreakpointListRightClicked(const QPoint &pos);
 	void OnBreakpointListDelete();
@@ -105,32 +105,6 @@ private Q_SLOTS:
 	void Show_Val();
 	void Show_PC();
 	void EnableUpdateTimer(bool state);
-};
-
-class debugger_list : public QListWidget
-{
-	Q_OBJECT
-
-	debugger_frame* m_debugFrame;
-
-public:
-	u32 m_pc;
-	u32 m_item_count;
-	bool m_no_thread_selected;
-	QColor m_color_bp;
-	QColor m_color_pc;
-	QColor m_text_color_bp;
-	QColor m_text_color_pc;
-
-public:
-	debugger_list(debugger_frame* parent);
-	void ShowAddr(u32 addr);
-
-protected:
-	void keyPressEvent(QKeyEvent* event);
-	void mouseDoubleClickEvent(QMouseEvent* event);
-	void wheelEvent(QWheelEvent* event);
-	void resizeEvent(QResizeEvent* event);
 };
 
 Q_DECLARE_METATYPE(u32);

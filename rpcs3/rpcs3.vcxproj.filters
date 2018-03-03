@@ -608,6 +608,21 @@
     <ClCompile Include="rpcs3qt\breakpoint_handler.cpp">
       <Filter>Gui\debugger</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\debugger_list.cpp">
+      <Filter>Gui\debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_debugger_list.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_debugger_list.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_debugger_list.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_debugger_list.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -814,6 +829,9 @@
       <Filter>Gui\game list</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\register_editor_dialog.h">
+      <Filter>Gui\debugger</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\debugger_list.h">
       <Filter>Gui\debugger</Filter>
     </CustomBuild>
   </ItemGroup>
