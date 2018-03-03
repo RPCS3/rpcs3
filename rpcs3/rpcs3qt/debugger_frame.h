@@ -33,40 +33,6 @@ class debugger_frame : public QDockWidget
 {
 	Q_OBJECT
 
-	debugger_list* m_list;
-	QSplitter* m_right_splitter;
-	QFont m_mono;
-	QTextEdit* m_regs;
-	QPushButton* m_go_to_addr;
-	QPushButton* m_go_to_pc;
-	QPushButton* m_btn_capture;
-	QPushButton* m_btn_step;
-	QPushButton* m_btn_run;
-	QComboBox* m_choice_units;
-	QString m_current_choice;
-	bool m_no_thread_selected = true;
-
-	u64 m_threads_created = 0;
-	u64 m_threads_deleted = 0;
-	u32 m_last_pc = -1;
-	u32 m_last_stat = 0;
-
-	QTimer* m_update;
-	QSplitter* m_splitter;
-
-	const QString NoThread = tr("No Thread");
-	const QString Run = tr("Run");
-	const QString Pause = tr("Pause");
-
-	std::shared_ptr<gui_settings> xgui_settings;
-
-	breakpoint_handler* m_brkpt_handler; // Handles communicating with PPU to simplify logic in debugger.
-	QAction* m_breakpoints_list_delete;
-public:
-	std::shared_ptr<CPUDisAsm> m_disasm;
-	QListWidget* m_breakpoints_list;
-	std::weak_ptr<cpu_thread> cpu;
-
 public:
 	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = 0);
 	void SaveSettings();
@@ -105,6 +71,41 @@ private Q_SLOTS:
 	void Show_Val();
 	void Show_PC();
 	void EnableUpdateTimer(bool state);
+
+private:
+	debugger_list* m_list;
+	QSplitter* m_right_splitter;
+	QFont m_mono;
+	QTextEdit* m_regs;
+	QPushButton* m_go_to_addr;
+	QPushButton* m_go_to_pc;
+	QPushButton* m_btn_capture;
+	QPushButton* m_btn_step;
+	QPushButton* m_btn_run;
+	QComboBox* m_choice_units;
+	QString m_current_choice;
+	bool m_no_thread_selected = true;
+
+	u64 m_threads_created = 0;
+	u64 m_threads_deleted = 0;
+	u32 m_last_pc = -1;
+	u32 m_last_stat = 0;
+
+	QTimer* m_update;
+	QSplitter* m_splitter;
+
+	const QString NoThread = tr("No Thread");
+	const QString Run = tr("Run");
+	const QString Pause = tr("Pause");
+
+	QListWidget* m_breakpoints_list;
+	breakpoint_handler* m_brkpt_handler; // Handles communicating with PPU to simplify logic in debugger.
+	QAction* m_breakpoints_list_delete;
+
+	std::shared_ptr<CPUDisAsm> m_disasm;
+	std::weak_ptr<cpu_thread> cpu;
+
+	std::shared_ptr<gui_settings> xgui_settings;
 };
 
 Q_DECLARE_METATYPE(u32);
