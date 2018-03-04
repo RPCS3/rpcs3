@@ -5,8 +5,6 @@ r1 (2018.02.27)
 */
 
 /*
-Known issue: Detached QFrames won't work properly as background can't be properly defined (the stylesheet has no effect when window is undocked)
-
 Color Scheme
 
 - Pod Programs
@@ -28,7 +26,7 @@ aea993
 /* Every widget */
 QWidget {
 	font-family: SCE-PS3 Rodin LATIN, Arial;
-	font-size: 9.25pt;
+	font-size: 9.00pt;
 
 	color: #292929;
 	background: transparent;
@@ -36,21 +34,53 @@ QWidget {
 }
 
 
-/* Uppercase text in QListWidget (Debugger) */
-QListWidget {
-	text-transform: uppercase;
+/* Debugger: Sets font-family to default (any invalid value could be provided) */
+#debugger QListWidget, #debugger QTextEdit {
+	font-family: none;
 }
 
 
-/* Mouse tooltips */
-QToolTip {
+/* Log+TTY: Use flat dark color background with default font for better readability */
+#log_frame, #tty_frame {
+	background: rgba(52, 49, 40, 0.9);
+	font-size: 8.50pt;
+	font-family: none;
+}
+
+
+/* Debugger: Restore original font size */
+#debugger QListWidget, #debugger QTextEdit {
+	font-size: 9.50pt;
+}
+
+
+/* LLE: Style QListWidget checkboxes (QListWidget) */
+#lleList::indicator {
 	border: 0.05em solid #4d4940;
+}
+#lleList::indicator::unchecked {
 	background-color: #b3ac98;
+}
+#lleList::indicator::checked {
+	background-color: #4d4940;
+}
+#lleList::indicator::disabled {
+	background-color: #828790;
+}
+#lleList::item::selected {
 	color: #4d4940;
 }
 
 
-/* CG Disasm: background-image doesn't work */
+/* Mouse Tooltips */
+QToolTip {
+	background-color: #b3ac98;
+	color: #4d4940;
+	border: 0.10em solid #4d4940;
+}
+
+
+/* CG Disasm: background-image doesn't work, use static color */
 QWidget#cg_disasm {
 	background: #b3ac98;
 }
@@ -65,7 +95,7 @@ QDialog, QWidget#trophy_manager, QMainWindow#main_window {
 /* Table headers */
 QHeaderView::section {
 	text-transform: uppercase;
-	background: #4d4940; /* Transparency not working on linux (tested on ubuntu 17.10) */
+	background: #4d4940;
 	color: #b3ac98;
 	padding-left: 0.15em;
 	padding-top: 0.15em;
@@ -209,6 +239,19 @@ QPushButton::disabled {
 QSpinBox {
 	/* background: transparent; - This hits a weird bug in Qt where background flickers */
 	background-color: #b3ac98;
+	border: 0.05em solid #4d4940;
+	border-radius: 0.10em;
+}
+
+
+/* Styles Sliders */
+QSlider::groove:horizontal {
+	border: 0.10em solid #4d4940;
+	border-radius: 0.10em;
+}
+QSlider::handle:horizontal {
+	background: #4d4940;
+	width: 0.50em;
 }
 
 
@@ -333,9 +376,8 @@ QLabel#thumbnail_icon_color {
 }
 
 
-/* Set Log colors */
 QLabel#log_level_always {
-	color: #0000FF; /* Dark Blue */
+	color: #00ffff; /* Cyan */
 }
 QLabel#log_level_fatal {
 	color: #ff00ff; /* Fuchsia */
@@ -347,7 +389,7 @@ QLabel#log_level_todo {
 	color: #ff6000; /* Orange */
 }
 QLabel#log_level_success {
-	color: #006400; /* Green */
+	color: #00ff00; /* Green */
 }
 QLabel#log_level_warning {
 	color: #ffff00; /* Yellow */
@@ -359,13 +401,12 @@ QLabel#log_level_trace {
 	color: #808080; /* Gray */
 }
 QLabel#log_stack {
-	color: #4d4940; /* Dark */
+	color: #b3ac98; /* Light */
 }
 
-
 /* Set TTY colors */
-QLabel#tty_text {
-	color: #4d4940; /* Dark */
+#tty_frame {
+	color: #b3ac98; /* Light */
 }
 
 
