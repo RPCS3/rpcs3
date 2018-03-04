@@ -334,7 +334,13 @@ namespace rsx
 				static constexpr u8 subreg = index % 4;
 
 				u32 load = rsx::method_registers.transform_constant_load();
-				rsx::method_registers.transform_constants[load + reg].rgba[subreg] = (f32&)arg;
+				if ((load + index) >= 512)
+				{
+					LOG_ERROR(RSX, "Invalid register index (load=%d, index=%d)", load, index);
+					return;
+				}
+
+				rsx::method_registers.transform_constants[load + reg][subreg] = arg;
 				rsxthr->m_transform_constants_dirty = true;
 			}
 		};
