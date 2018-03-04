@@ -275,9 +275,6 @@ namespace rsx
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
 
-		// Constant stored for whole frame
-		std::unordered_map<u32, color4f> local_transform_constants;
-
 		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
 

@@ -337,7 +337,6 @@ namespace rsx
 
 	void thread::end()
 	{
-		rsx::method_registers.transform_constants.clear();
 		in_begin_end = false;
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
@@ -937,13 +936,7 @@ namespace rsx
 	*/
 	void thread::fill_vertex_program_constants_data(void *buffer)
 	{
-		//Some games dont initialize some registers that they use in the vertex stage
-		memset(buffer, 0, 512 * 4 * sizeof(float));
-
-		for (const auto &entry : rsx::method_registers.transform_constants)
-			local_transform_constants[entry.first] = entry.second;
-		for (const auto &entry : local_transform_constants)
-			stream_vector_from_memory((char*)buffer + entry.first * 4 * sizeof(float), (void*)entry.second.rgba);
+		memcpy(buffer, rsx::method_registers.transform_constants.data(), 468 * 4 * sizeof(float));
 	}
 
 	void thread::fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program)
