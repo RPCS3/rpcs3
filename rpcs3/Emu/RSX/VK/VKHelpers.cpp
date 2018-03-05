@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "VKHelpers.h"
 
-#include <mutex>
+#include "Utilities/mutex.h"
 
 namespace vk
 {
@@ -24,7 +24,7 @@ namespace vk
 	u64 g_num_total_frames = 0;
 
 	//global submit guard to prevent race condition on queue submit
-	std::mutex g_submit_mutex;
+	shared_mutex g_submit_mutex;
 
 	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{

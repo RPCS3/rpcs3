@@ -318,8 +318,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		}
 	}
 
-	if ((window_clip_width && window_clip_width != clip_horizontal) ||
-		(window_clip_height && window_clip_height != clip_vertical))
+	if ((window_clip_width && window_clip_width < clip_horizontal) ||
+		(window_clip_height && window_clip_height < clip_vertical))
 	{
 		LOG_ERROR(RSX, "Unexpected window clip dimensions: window_clip=%dx%d, surface_clip=%dx%d",
 			window_clip_width, window_clip_height, clip_horizontal, clip_vertical);
@@ -428,7 +428,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	framebuffer_status_valid = draw_fbo.check();
 	if (!framebuffer_status_valid) return;
 
-	check_zcull_status(true, false);
+	check_zcull_status(true);
 	set_viewport();
 
 	switch (rsx::method_registers.surface_color_target())

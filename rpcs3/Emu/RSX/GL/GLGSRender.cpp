@@ -209,7 +209,7 @@ void GLGSRender::end()
 	{
 		std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
-		std::lock_guard<std::mutex> lock(m_sampler_mutex);
+		std::lock_guard<shared_mutex> lock(m_sampler_mutex);
 		void* unused = nullptr;
 		bool  update_framebuffer_sourced = false;
 
@@ -598,6 +598,7 @@ void GLGSRender::set_viewport()
 void GLGSRender::on_init_thread()
 {
 	GSRender::on_init_thread();
+	zcull_ctrl.reset(static_cast<::rsx::reports::ZCULL_control*>(this));
 
 	gl::init();
 
@@ -768,7 +769,7 @@ void GLGSRender::on_init_thread()
 	for (u32 i = 0; i < occlusion_query_count; ++i)
 	{
 		GLuint handle = 0;
-		auto &query = occlusion_query_data[i];
+		auto &query = m_occlusion_query_data[i];
 		glGenQueries(1, &handle);
 		
 		query.driver_handle = (u64)handle;
@@ -853,6 +854,8 @@ void GLGSRender::on_init_thread()
 
 void GLGSRender::on_exit()
 {
+	zcull_ctrl.release();
+
 	m_prog_buffer.clear();
 
 	if (draw_fbo)
@@ -920,7 +923,7 @@ void GLGSRender::on_exit()
 
 	for (u32 i = 0; i < occlusion_query_count; ++i)
 	{
-		auto &query = occlusion_query_data[i];
+		auto &query = m_occlusion_query_data[i];
 		query.active = false;
 		query.pending = false;
 
@@ -1424,7 +1427,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 		return false;
 
 	{
-		std::lock_guard<std::mutex> lock(m_sampler_mutex);
+		std::lock_guard<shared_mutex> lock(m_sampler_mutex);
 		m_samplers_dirty.store(true);
 	}
 
@@ -1452,7 +1455,7 @@ void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 	{
 		m_gl_texture_cache.purge_dirty();
 		{
-			std::lock_guard<std::mutex> lock(m_sampler_mutex);
+			std::lock_guard<shared_mutex> lock(m_sampler_mutex);
 			m_samplers_dirty.store(true);
 		}
 	}
@@ -1464,7 +1467,7 @@ void GLGSRender::do_local_task(bool /*idle*/)
 
 	if (!work_queue.empty())
 	{
-		std::lock_guard<std::mutex> lock(queue_guard);
+		std::lock_guard<shared_mutex> lock(queue_guard);
 
 		work_queue.remove_if([](work_item &q) { return q.received; });
 
@@ -1505,7 +1508,7 @@ void GLGSRender::do_local_task(bool /*idle*/)
 
 work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data)
 {
-	std::lock_guard<std::mutex> lock(queue_guard);
+	std::lock_guard<shared_mutex> lock(queue_guard);
 
 	work_queue.emplace_back();
 	work_item &result = work_queue.back();
@@ -1537,31 +1540,38 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	//m_rtts.invalidate_surface_address(addr, false);
 }
 
-void GLGSRender::begin_occlusion_query(rsx::occlusion_query_info* query)
+void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
 	query->result = 0;
 	glBeginQuery(GL_ANY_SAMPLES_PASSED, (GLuint)query->driver_handle);
 }
 
-void GLGSRender::end_occlusion_query(rsx::occlusion_query_info* query)
+void GLGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
-	glEndQuery(GL_ANY_SAMPLES_PASSED);
+	if (query->num_draws)
+		glEndQuery(GL_ANY_SAMPLES_PASSED);
 }
 
-bool GLGSRender::check_occlusion_query_status(rsx::occlusion_query_info* query)
+bool GLGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info* query)
 {
+	if (!query->num_draws)
+		return true;
+
 	GLint status = GL_TRUE;
 	glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT_AVAILABLE, &status);
 
 	return status != GL_FALSE;
 }
 
-void GLGSRender::get_occlusion_query_result(rsx::occlusion_query_info* query)
+void GLGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* query)
 {
-	GLint result;
-	glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT, &result);
+	if (query->num_draws)
+	{
+		GLint result;
+		glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT, &result);
 
-	query->result += result;
+		query->result += result;
+	}
 }
 
 void GLGSRender::shell_do_cleanup()
