@@ -349,8 +349,8 @@ namespace rsx
 
 		element_push_buffer.resize(0);
 
-		if (zcull_task_queue.active_query && zcull_task_queue.active_query->active)
-			zcull_task_queue.active_query->num_draws++;
+		if (zcull_ctrl->active)
+			zcull_ctrl->on_draw();
 
 		if (capture_current_frame)
 		{
@@ -364,6 +364,12 @@ namespace rsx
 		on_init_thread();
 
 		reset();
+
+		if (!zcull_ctrl)
+		{
+			//Backend did not provide an implementation, provide NULL object
+			zcull_ctrl = std::make_unique<::rsx::reports::ZCULL_control>();
+		}
 
 		last_flip_time = get_system_time() - 1000000;
 
@@ -502,6 +508,9 @@ namespace rsx
 
 			//Execute backend-local tasks first
 			do_local_task(ctrl->put.load() == internal_get.load());
+
+			//Update sub-units
+			zcull_ctrl->update(this);
 
 			//Set up restore state if needed
 			if (sync_point_request)
@@ -1140,6 +1149,12 @@ namespace rsx
 
 	void thread::do_internal_task()
 	{
+		if (zcull_ctrl->has_pending())
+		{
+			zcull_ctrl->sync(this);
+			return;
+		}
+
 		if (m_internal_tasks.empty())
 		{
 			std::this_thread::yield();
@@ -1147,7 +1162,7 @@ namespace rsx
 		else
 		{
 			fmt::throw_exception("Disabled" HERE);
-			//std::lock_guard<std::mutex> lock{ m_mtx_task };
+			//std::lock_guard<shared_mutex> lock{ m_mtx_task };
 
 			//internal_task_entry &front = m_internal_tasks.front();
 
@@ -1161,7 +1176,7 @@ namespace rsx
 
 	//std::future<void> thread::add_internal_task(std::function<bool()> callback)
 	//{
-	//	std::lock_guard<std::mutex> lock{ m_mtx_task };
+	//	std::lock_guard<shared_mutex> lock{ m_mtx_task };
 	//	m_internal_tasks.emplace_back(callback);
 
 	//	return m_internal_tasks.back().promise.get_future();
@@ -2075,10 +2090,20 @@ namespace rsx
 			skip_frame = (m_skip_frame_ctr < 0);
 		}
 
+		//Reset zcull ctrl
+		zcull_ctrl->set_active(this, false);
+		zcull_ctrl->clear();
+
+		if (zcull_ctrl->has_pending())
+		{
+			LOG_ERROR(RSX, "Dangling reports found, discarding...");
+			zcull_ctrl->sync(this);
+		}
+
 		performance_counters.sampled_frames++;
 	}
 
-	void thread::check_zcull_status(bool framebuffer_swap, bool force_read)
+	void thread::check_zcull_status(bool framebuffer_swap)
 	{
 		if (g_cfg.video.disable_zcull_queries)
 			return;
@@ -2108,35 +2133,8 @@ namespace rsx
 			}
 		}
 
-		occlusion_query_info* query = nullptr;
-
-		if (zcull_task_queue.task_stack.size() > 0)
-			query = zcull_task_queue.active_query;
-
-		if (query && query->active)
-		{
-			if (force_read || (!zcull_rendering_enabled || !testing_enabled || !zcull_surface_active))
-			{
-				end_occlusion_query(query);
-				query->active = false;
-				query->pending = true;
-			}
-		}
-		else
-		{
-			if (zcull_rendering_enabled && testing_enabled && zcull_surface_active)
-			{
-				//Find query
-				u32 free_index = synchronize_zcull_stats();
-				query = &occlusion_query_data[free_index];
-				zcull_task_queue.add(query);
-
-				begin_occlusion_query(query);
-				query->active = true;
-				query->result = 0;
-				query->num_draws = 0;
-			}
-		}
+		zcull_ctrl->set_enabled(this, zcull_rendering_enabled);
+		zcull_ctrl->set_active(this, zcull_rendering_enabled && testing_enabled && zcull_surface_active);
 	}
 
 	void thread::clear_zcull_stats(u32 type)
@@ -2144,113 +2142,50 @@ namespace rsx
 		if (g_cfg.video.disable_zcull_queries)
 			return;
 
-		if (type == CELL_GCM_ZPASS_PIXEL_CNT)
-		{
-			if (zcull_task_queue.active_query &&
-				zcull_task_queue.active_query->active &&
-				zcull_task_queue.active_query->num_draws > 0)
-			{
-				//discard active query results
-				check_zcull_status(false, true);
-				zcull_task_queue.active_query->pending = false;
+		zcull_ctrl->clear();
+	}
 
-				//re-enable cull stats if stats are enabled
-				check_zcull_status(false, false);
-				zcull_task_queue.active_query->num_draws = 0;
+	void thread::get_zcull_stats(u32 type, vm::addr_t sink)
+	{
+		u32 value = 0;
+		if (!g_cfg.video.disable_zcull_queries)
+		{
+			switch (type)
+			{
+			case CELL_GCM_ZPASS_PIXEL_CNT:
+			{
+				zcull_ctrl->read_report(this, sink, type);
+				return;
 			}
-
-			current_zcull_stats.clear();
-		}
-	}
-
-	u32 thread::get_zcull_stats(u32 type)
-	{
-		if (g_cfg.video.disable_zcull_queries)
-			return 0u;
-
-		if (zcull_task_queue.active_query &&
-			zcull_task_queue.active_query->active &&
-			current_zcull_stats.zpass_pixel_cnt == 0 &&
-			type == CELL_GCM_ZPASS_PIXEL_CNT)
-		{
-			//The zcull unit is still bound as the read is happening and there are no results ready
-			check_zcull_status(false, true);  //close current query
-			check_zcull_status(false, false); //start new query since stat counting is still active
-		}
-
-		switch (type)
-		{
-		case CELL_GCM_ZPASS_PIXEL_CNT:
-		{
-			if (current_zcull_stats.zpass_pixel_cnt > 0)
-				return UINT16_MAX;
-
-			synchronize_zcull_stats(true);
-			return (current_zcull_stats.zpass_pixel_cnt > 0) ? UINT16_MAX : 0;
-		}
-		case CELL_GCM_ZCULL_STATS:
-		case CELL_GCM_ZCULL_STATS1:
-		case CELL_GCM_ZCULL_STATS2:
-			//TODO
-			return UINT16_MAX;
-		case CELL_GCM_ZCULL_STATS3:
-		{
-			//Some kind of inverse value
-			if (current_zcull_stats.zpass_pixel_cnt > 0)
-				return 0;
-
-			synchronize_zcull_stats(true);
-			return (current_zcull_stats.zpass_pixel_cnt > 0) ? 0 : UINT16_MAX;
-		}
-		default:
-			LOG_ERROR(RSX, "Unknown zcull stat type %d", type);
-			return 0;
-		}
-	}
-
-	u32 thread::synchronize_zcull_stats(bool hard_sync)
-	{
-		if (!zcull_rendering_enabled || zcull_task_queue.pending == 0)
-			return 0;
-
-		u32 result = UINT16_MAX;
-
-		for (auto &query : zcull_task_queue.task_stack)
-		{
-			if (query == nullptr || query->active)
-				continue;
-
-			bool status = check_occlusion_query_status(query);
-			if (status == false && !hard_sync)
-				continue;
-
-			get_occlusion_query_result(query);
-			current_zcull_stats.zpass_pixel_cnt += query->result;
-
-			query->pending = false;
-			query = nullptr;
-			zcull_task_queue.pending--;
-		}
-
-		for (u32 i = 0; i < occlusion_query_count; ++i)
-		{
-			auto &query = occlusion_query_data[i];
-			if (!query.pending && !query.active)
+			case CELL_GCM_ZCULL_STATS:
+			case CELL_GCM_ZCULL_STATS1:
+			case CELL_GCM_ZCULL_STATS2:
+			case CELL_GCM_ZCULL_STATS3:
 			{
-				result = i;
+				//TODO
+				value = (type != CELL_GCM_ZCULL_STATS3)? UINT16_MAX : 0;
+				break;
+			}
+			default:
+				LOG_ERROR(RSX, "Unknown zcull stat type %d", type);
 				break;
 			}
 		}
 
-		if (result == UINT16_MAX && !hard_sync)
-			return synchronize_zcull_stats(true);
+		vm::ptr<CellGcmReportData> result = sink;
+		result->value = value;
+		result->padding = 0;
+		result->timer = timestamp();
+	}
 
-		return result;
+	void thread::sync()
+	{
+		zcull_ctrl->sync(this);
 	}
 
 	void thread::notify_zcull_info_changed()
 	{
-		check_zcull_status(false, false);
+		check_zcull_status(false);
 	}
 
 	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!
@@ -2355,5 +2290,386 @@ namespace rsx
 		}
 
 		return false;
+	}
+
+	namespace reports
+	{
+		void ZCULL_control::set_enabled(class ::rsx::thread* ptimer, bool state)
+		{
+			if (state != enabled)
+			{
+				enabled = state;
+
+				if (active && !enabled)
+					set_active(ptimer, false);
+			}
+		}
+
+		void ZCULL_control::set_active(class ::rsx::thread* ptimer, bool state)
+		{
+			if (state != active)
+			{
+				active = state;
+
+				if (state)
+				{
+					verify(HERE), enabled && m_current_task == nullptr;
+					allocate_new_query(ptimer);
+					begin_occlusion_query(m_current_task);
+				}
+				else
+				{
+					verify(HERE), m_current_task;
+					if (m_current_task->num_draws)
+					{
+						end_occlusion_query(m_current_task);
+						m_current_task->active = false;
+						m_current_task->pending = true;
+
+						m_pending_writes.push_back({});
+						m_pending_writes.back().query = m_current_task;
+					}
+					else
+					{
+						discard_occlusion_query(m_current_task);
+						m_current_task->active = false;
+					}
+
+					m_current_task = nullptr;
+				}
+			}
+		}
+
+		void ZCULL_control::read_report(::rsx::thread* ptimer, vm::addr_t sink, u32 type)
+		{
+			if (m_current_task)
+			{
+				m_current_task->owned = true;
+				end_occlusion_query(m_current_task);
+				m_pending_writes.push_back({});
+
+				m_current_task->active = false;
+				m_current_task->pending = true;
+				m_pending_writes.back().query = m_current_task;
+
+				allocate_new_query(ptimer);
+				begin_occlusion_query(m_current_task);
+			}
+			else
+			{
+				//Spam; send null query down the pipeline to copy the last result
+				//Might be used to capture a timestamp (verify)
+				m_pending_writes.push_back({});
+			}
+
+			auto forwarder = &m_pending_writes.back();
+			for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); It++)
+			{
+				if (!It->sink)
+				{
+					It->counter_tag = m_statistics_tag_id;
+					It->due_tsc = m_tsc + m_cycles_delay;
+					It->sink = sink;
+					It->type = type;
+
+					if (forwarder != &(*It))
+					{
+						//Not the last one in the chain, forward the writing operation to the last writer
+						It->forwarder = forwarder;
+						It->query->owned = true;
+					}
+
+					continue;
+				}
+
+				break;
+			}
+		}
+
+		void ZCULL_control::allocate_new_query(::rsx::thread* ptimer)
+		{
+			int retries = 0;
+			while (!Emu.IsStopped())
+			{
+				for (int n = 0; n < occlusion_query_count; ++n)
+				{
+					if (m_occlusion_query_data[n].pending || m_occlusion_query_data[n].active)
+						continue;
+
+					m_current_task = &m_occlusion_query_data[n];
+					m_current_task->num_draws = 0;
+					m_current_task->result = 0;
+					m_current_task->sync_timestamp = 0;
+					m_current_task->active = true;
+					m_current_task->owned = false;
+					return;
+				}
+
+				if (retries > 0)
+				{
+					LOG_ERROR(RSX, "ZCULL report queue is overflowing!!");
+					m_statistics_map[m_statistics_tag_id] = 1;
+
+					verify(HERE), m_pending_writes.front().sink == 0;
+					m_pending_writes.resize(0);
+
+					for (auto &query : m_occlusion_query_data)
+					{
+						discard_occlusion_query(&query);
+						query.pending = false;
+					}
+
+					m_current_task = &m_occlusion_query_data[0];
+					m_current_task->num_draws = 0;
+					m_current_task->result = 0;
+					m_current_task->sync_timestamp = 0;
+					m_current_task->active = true;
+					m_current_task->owned = false;
+					return;
+				}
+
+				//All slots are occupied, try to pop the earliest entry
+				m_tsc += max_zcull_cycles_delay;
+				update(ptimer);
+
+				retries++;
+			}
+		}
+
+		void ZCULL_control::clear()
+		{
+			if (!m_pending_writes.empty())
+			{
+				//Remove any dangling/unclaimed queries as the information is lost anyway
+				auto valid_size = m_pending_writes.size();
+				for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); ++It)
+				{
+					if (!It->sink)
+					{
+						discard_occlusion_query(It->query);
+						It->query->pending = false;
+						valid_size--;
+						continue;
+					}
+
+					break;
+				}
+
+				m_pending_writes.resize(valid_size);
+			}
+
+			m_statistics_tag_id++;
+			m_statistics_map[m_statistics_tag_id] = 0;
+		}
+
+		void ZCULL_control::on_draw()
+		{
+			if (m_current_task)
+				m_current_task->num_draws++;
+
+			m_cycles_delay = max_zcull_cycles_delay;
+		}
+
+		void ZCULL_control::write(vm::addr_t sink, u32 timestamp, u32 value)
+		{
+			verify(HERE), sink;
+			vm::ptr<CellGcmReportData> out = sink;
+			out->value = value;
+			out->timer = timestamp;
+			out->padding = 0;
+		}
+
+		void ZCULL_control::sync(::rsx::thread* ptimer)
+		{
+			if (!m_pending_writes.empty())
+			{
+				u32 processed = 0;
+				const bool has_unclaimed = (m_pending_writes.back().sink == 0);
+
+				//Write all claimed reports unconditionally
+				for (auto &writer : m_pending_writes)
+				{
+					if (!writer.sink)
+						break;
+
+					auto query = writer.query;
+					u32 result = m_statistics_map[writer.counter_tag];
+
+					if (query)
+					{
+						verify(HERE), query->pending;
+
+						if (!result && query->num_draws)
+						{
+							get_occlusion_query_result(query);
+
+							if (query->result)
+							{
+								result += query->result;
+								m_statistics_map[writer.counter_tag] = result;
+							}
+						}
+						else
+						{
+							//Already have a hit, no need to retest
+							discard_occlusion_query(query);
+						}
+
+						query->pending = false;
+					}
+
+					if (!writer.forwarder)
+						//No other queries in the chain, write result
+						write(writer.sink, ptimer->timestamp(), result ? UINT16_MAX : 0);
+
+					processed++;
+				}
+
+				if (!has_unclaimed)
+				{
+					verify(HERE), processed == m_pending_writes.size();
+					m_pending_writes.resize(0);
+				}
+				else
+				{
+					auto remaining = m_pending_writes.size() - processed;
+					verify(HERE), remaining > 0;
+
+					if (remaining == 1)
+					{
+						m_pending_writes.front() = m_pending_writes.back();
+						m_pending_writes.resize(1);
+					}
+					else
+					{
+						std::move(m_pending_writes.begin() + processed, m_pending_writes.end(), m_pending_writes.begin());
+						m_pending_writes.resize(remaining);
+					}
+				}
+
+				//Delete all statistics caches but leave the current one
+				for (auto It = m_statistics_map.begin(); It != m_statistics_map.end(); )
+				{
+					if (It->first == m_statistics_tag_id)
+						++It;
+					else
+						It = m_statistics_map.erase(It);
+				}
+			}
+
+			//Critical, since its likely a WAIT_FOR_IDLE type has been processed, all results are considered available
+			m_cycles_delay = 2;
+		}
+
+		void ZCULL_control::update(::rsx::thread* ptimer)
+		{
+			m_tsc++;
+
+			if (m_pending_writes.empty())
+				return;
+
+			u32 stat_tag_to_remove = m_statistics_tag_id;
+			u32 processed = 0;
+			for (auto &writer : m_pending_writes)
+			{
+				if (!writer.sink)
+					break;
+
+				if (writer.counter_tag != stat_tag_to_remove &&
+					stat_tag_to_remove != m_statistics_tag_id)
+				{
+					//If the stat id is different from this stat id and the queue is advancing,
+					//its guaranteed that the previous tag has no remaining writes as the queue is ordered
+					m_statistics_map.erase(stat_tag_to_remove);
+					stat_tag_to_remove = m_statistics_tag_id;
+				}
+
+				auto query = writer.query;
+				u32 result = m_statistics_map[writer.counter_tag];
+
+				if (query)
+				{
+					verify(HERE), query->pending;
+
+					if (UNLIKELY(writer.due_tsc < m_tsc))
+					{
+						if (!result && query->num_draws)
+						{
+							get_occlusion_query_result(query);
+
+							if (query->result)
+							{
+								result += query->result;
+								m_statistics_map[writer.counter_tag] = result;
+							}
+						}
+						else
+						{
+							//No need to read this
+							discard_occlusion_query(query);
+						}
+					}
+					else
+					{
+						if (result || !query->num_draws)
+						{
+							//Not necessary to read the result anymore
+							discard_occlusion_query(query);
+						}
+						else
+						{
+							//Maybe we get lucky and results are ready
+							if (check_occlusion_query_status(query))
+							{
+								get_occlusion_query_result(query);
+								if (query->result)
+								{
+									result += query->result;
+									m_statistics_map[writer.counter_tag] = result;
+								}
+							}
+							else
+							{
+								//Too early; abort
+								break;
+							}
+						}
+					}
+
+					query->pending = false;
+				}
+
+				stat_tag_to_remove = writer.counter_tag;
+
+				//only zpass supported right now
+				if (!writer.forwarder)
+					//No other queries in the chain, write result
+					write(writer.sink, ptimer->timestamp(), result ? UINT16_MAX : 0);
+
+				processed++;
+			}
+
+			if (stat_tag_to_remove != m_statistics_tag_id)
+				m_statistics_map.erase(stat_tag_to_remove);
+
+			if (processed)
+			{
+				auto remaining = m_pending_writes.size() - processed;
+				if (remaining == 1)
+				{
+					m_pending_writes.front() = m_pending_writes.back();
+					m_pending_writes.resize(1);
+				}
+				else if (remaining)
+				{
+					std::move(m_pending_writes.begin() + processed, m_pending_writes.end(), m_pending_writes.begin());
+					m_pending_writes.resize(remaining);
+				}
+				else
+				{
+					m_pending_writes.resize(0);
+				}
+			}
+		}
 	}
 }

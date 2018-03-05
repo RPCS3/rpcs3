@@ -265,7 +265,7 @@ struct driver_state
 	}
 };
 
-class GLGSRender : public GSRender
+class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
 private:
 	GLFragmentProgram m_fragment_prog;
@@ -311,7 +311,7 @@ private:
 
 	std::vector<u64> m_overlay_cleanup_requests;
 
-	std::mutex queue_guard;
+	shared_mutex queue_guard;
 	std::list<work_item> work_queue;
 
 	bool flush_draw_buffers = false;
@@ -327,7 +327,7 @@ private:
 	//vaos are mandatory for core profile
 	gl::vao m_vao;
 
-	std::mutex m_sampler_mutex;
+	shared_mutex m_sampler_mutex;
 	u64 surface_store_tag = 0;
 	std::atomic_bool m_samplers_dirty = {true};
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
@@ -363,10 +363,10 @@ public:
 
 	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;
 
-	void begin_occlusion_query(rsx::occlusion_query_info* query) override;
-	void end_occlusion_query(rsx::occlusion_query_info* query) override;
-	bool check_occlusion_query_status(rsx::occlusion_query_info* query) override;
-	void get_occlusion_query_result(rsx::occlusion_query_info* query) override;
+	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
+	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;
+	bool check_occlusion_query_status(rsx::reports::occlusion_query_info* query) override;
+	void get_occlusion_query_result(rsx::reports::occlusion_query_info* query) override;
 
 protected:
 	void begin() override;

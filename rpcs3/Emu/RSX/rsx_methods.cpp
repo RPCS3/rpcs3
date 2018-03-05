@@ -57,6 +57,7 @@ namespace rsx
 	{
 		void set_reference(thread* rsx, u32 _reg, u32 arg)
 		{
+			rsx->sync();
 			rsx->ctrl->ref.exchange(arg);
 		}
 
@@ -112,6 +113,7 @@ namespace rsx
 
 		void semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
+			rsx->sync();
 			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 
@@ -164,6 +166,8 @@ namespace rsx
 			{
 				//
 			}
+
+			rsx->sync();
 			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
 			sema.semaphore[index].val = arg;
 			sema.semaphore[index].pad = 0;
@@ -177,8 +181,9 @@ namespace rsx
 			{
 				//
 			}
-			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
 
+			rsx->sync();
+			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
 			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
 			sema.semaphore[index].val = val;
 			sema.semaphore[index].pad = 0;
@@ -433,16 +438,14 @@ namespace rsx
 			case CELL_GCM_ZCULL_STATS1:
 			case CELL_GCM_ZCULL_STATS2:
 			case CELL_GCM_ZCULL_STATS3:
-				result->value = rsx->get_zcull_stats(type);
-				LOG_WARNING(RSX, "NV4097_GET_REPORT: Unimplemented type %d", type);
+				rsx->get_zcull_stats(type, address_ptr);
 				break;
 			default:
 				LOG_ERROR(RSX, "NV4097_GET_REPORT: Bad type %d", type);
+				result->timer = rsx->timestamp();
+				result->padding = 0;
 				break;
 			}
-
-			result->timer = rsx->timestamp();
-			result->padding = 0;
 		}
 
 		void clear_report_value(thread* rsx, u32 _reg, u32 arg)
@@ -450,10 +453,7 @@ namespace rsx
 			switch (arg)
 			{
 			case CELL_GCM_ZPASS_PIXEL_CNT:
-				LOG_WARNING(RSX, "TODO: NV4097_CLEAR_REPORT_VALUE: ZPASS_PIXEL_CNT");
-				break;
 			case CELL_GCM_ZCULL_STATS:
-				LOG_WARNING(RSX, "TODO: NV4097_CLEAR_REPORT_VALUE: ZCULL_STATS");
 				break;
 			default:
 				LOG_ERROR(RSX, "NV4097_CLEAR_REPORT_VALUE: Bad type: %d", arg);
@@ -492,6 +492,7 @@ namespace rsx
 				return;
 			}
 
+			rsx->sync();
 			vm::ptr<CellGcmReportData> result = address_ptr;
 			rsx->conditional_render_test_failed = (result->value == 0);
 		}
@@ -512,6 +513,11 @@ namespace rsx
 		{
 			rsx->zcull_pixel_cnt_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
+		}
+
+		void sync(thread* rsx, u32, u32)
+		{
+			rsx->sync();
 		}
 
 		void set_surface_dirty_bit(thread* rsx, u32, u32)
@@ -1678,6 +1684,9 @@ namespace rsx
 		bind<NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
+		bind<NV4097_ZCULL_SYNC, nv4097::sync>();
+		bind<NV4097_SET_CONTEXT_DMA_REPORT, nv4097::sync>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();
