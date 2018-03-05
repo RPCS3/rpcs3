@@ -180,7 +180,7 @@ s32 cellCameraInit()
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
+		return CELL_OK;
 	}
 
 	// Start camera thread
