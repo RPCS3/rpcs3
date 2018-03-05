@@ -643,9 +643,6 @@ void debugger_list::ShowAddress(u32 addr)
 		for (uint i = 0; i < m_item_count; ++i, m_pc += 4)
 		{
 			item(i)->setText(qstr(fmt::format("[%08x] illegal address", m_pc)));
-
-			if (m_pc == addr)
-				item(i)->setSelected(true);
 		}
 	}
 	else
@@ -683,9 +680,6 @@ void debugger_list::ShowAddress(u32 addr)
 				item(i)->setTextColor(palette().color(foregroundRole()));
 				item(i)->setBackgroundColor(palette().color(backgroundRole()));
 			}
-
-			if (m_pc == addr)
-				item(i)->setSelected(true);
 		}
 	}
 
