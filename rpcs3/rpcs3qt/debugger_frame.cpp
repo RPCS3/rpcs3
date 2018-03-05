@@ -481,12 +481,16 @@ u64 debugger_frame::EvaluateExpression(const QString& expression)
 		auto ppu = static_cast<ppu_thread*>(thread.get());
 
 		for (int i = 0; i < 32; ++i)
-			scriptEngine.globalObject().setProperty(QString("r%1").arg(i), QJSValue((double)(ppu->gpr[i])));
+		{
+			scriptEngine.globalObject().setProperty(QString("r%1hi").arg(i), QJSValue((u32)(ppu->gpr[i] >> 32)));
+			scriptEngine.globalObject().setProperty(QString("r%1").arg(i), QJSValue((u32)(ppu->gpr[i])));
+		}
 
-		scriptEngine.globalObject().setProperty("lr", QJSValue((double)ppu->lr));
-		scriptEngine.globalObject().setProperty("ctr", QJSValue((double)ppu->ctr));
-		scriptEngine.globalObject().setProperty("vrsave", QJSValue((double)(ppu->vrsave)));
-		scriptEngine.globalObject().setProperty("cia", QJSValue((double)ppu->cia));
+		scriptEngine.globalObject().setProperty("lrhi", QJSValue((u32)(ppu->lr >> 32 )));
+		scriptEngine.globalObject().setProperty("lr", QJSValue((u32)(ppu->lr)));
+		scriptEngine.globalObject().setProperty("ctrhi", QJSValue((u32)(ppu->ctr >> 32)));
+		scriptEngine.globalObject().setProperty("ctr", QJSValue((u32)(ppu->ctr)));
+		scriptEngine.globalObject().setProperty("cia", QJSValue(ppu->cia));
 	}
 	else
 	{
@@ -494,8 +498,10 @@ u64 debugger_frame::EvaluateExpression(const QString& expression)
 
 		for (int i = 0; i < 128; ++i)
 		{
-			scriptEngine.globalObject().setProperty(QString("r%1_lo").arg(i), QJSValue((double)spu->gpr[i]._u64[0]));
-			scriptEngine.globalObject().setProperty(QString("r%1_hi").arg(i), QJSValue((double)spu->gpr[i]._u64[1]));
+			scriptEngine.globalObject().setProperty(QString("r%1hi").arg(i), QJSValue(spu->gpr[i]._u32[0]));
+			scriptEngine.globalObject().setProperty(QString("r%1lo").arg(i), QJSValue(spu->gpr[i]._u32[1]));
+			scriptEngine.globalObject().setProperty(QString("r%1hilo").arg(i), QJSValue(spu->gpr[i]._u32[2]));
+			scriptEngine.globalObject().setProperty(QString("r%1hihi").arg(i), QJSValue(spu->gpr[i]._u32[3]));
 		}
 	}
 
