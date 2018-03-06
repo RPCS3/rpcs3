@@ -16,6 +16,7 @@ void lv2_int_serv::exec()
 {
 	thread->cmd_list
 	({
+		{ ppu_cmd::reset_stack, 0 },
 		{ ppu_cmd::set_args, 2 }, arg1, arg2,
 		{ ppu_cmd::lle_call, 2 },
 		{ ppu_cmd::sleep, 0 }

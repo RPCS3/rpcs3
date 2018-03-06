@@ -16,6 +16,7 @@ enum class ppu_cmd : u32
 	hle_call, // Execute function by index (arg)
 	initialize, // ppu_initialize()
 	sleep,
+	reset_stack, // resets stack address
 };
 
 // Formatting helper
