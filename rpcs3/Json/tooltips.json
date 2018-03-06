@@ -26,7 +26,7 @@
 		},
 		"checkboxes": {
 			"hookStFunc": "Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.",
-			"enableThreadScheduler": "Allows rpcs3 to manually schedule physical cores to run specific tasks on, instead of letting the OS handle it.\nVery useful on windows, especially for AMD Ryzen systems where it can give huge performance gains.",
+			"enableThreadScheduler": "Allows RPCS3 to manually schedule physical cores to run specific tasks on, instead of letting the OS handle it.\nVery useful on Windows, especially for AMD Ryzen systems where it can give huge performance gains.",
 			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen.",
 			"spuLoopDetection": "Try to detect loop conditions in SPU kernels and use them as scheduling hints.\nImproves performance and reduces CPU usage.\nMay cause severe audio stuttering in rare cases."
 		},
@@ -65,7 +65,7 @@
 			"showTrophyPopups": "Show trophy popups when a trophy is unlocked.",
 			"gs_disableMouse": "Disables the activation of fullscreen mode per doubleclick while the game screen is active.\nCheck this if you want to play with mouse and keyboard (for example with UCR).",
 			"maxLLVMThreads": "Limits the maximum number of threads used for PPU Module compilation.\nLower this in order to increase performance of other open applications.\nThe default uses all available threads.",
-			"useNativeInterface": "Enables use of native HUD within the game window that can interacts with the game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nNot all languages are currently supported (English only)"
+			"useNativeInterface": "Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, only the English language is supported."
 		}
 	},
 	"gpu": {
@@ -98,7 +98,8 @@
 		"keyboardHandlerBox": "Some games support native keyboard input.\nBasic will work in these cases.",
 		"mouseHandlerBox": "Some games support native mouse input.\nBasic will work in these cases.",
 		"cameraBox": "Camera support is not implemented, leave this on null.",
-		"cameraTypeBox": "Camera support is not implemented, leave this on unknown."
+		"cameraTypeBox": "Camera support is not implemented, leave this on unknown.",
+		"moveBox": "PlayStation Move support.\nFake: Experimental! This maps Move controls to DS4 controller mappings."
 	},
 	"network": {
 		"netStatusBox": "Leave as disconnected unless you're debugging.\nRPCS3 has no online support."

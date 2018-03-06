@@ -43,6 +43,13 @@ enum CellGameDataError : u32
 	CELL_GAMEDATA_ERROR_FAILURE      = 0x8002b607,
 };
 
+enum CellDiscGameError : u32
+{
+	CELL_DISCGAME_ERROR_INTERNAL      = 0x8002bd01,
+	CELL_DISCGAME_ERROR_NOT_DISCBOOT  = 0x8002bd02,
+	CELL_DISCGAME_ERROR_PARAM         = 0x8002bd03,
+};
+
 // Definitions
 enum
 {

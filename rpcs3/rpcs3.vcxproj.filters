@@ -688,6 +688,9 @@
     <ClInclude Include="rpcs3qt\qt_utils.h">
       <Filter>Gui\utils</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\custom_dock_widget.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="debug\moc_predefs.h.cbt">
