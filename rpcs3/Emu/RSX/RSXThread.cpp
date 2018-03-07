@@ -543,8 +543,11 @@ namespace rsx
 					performance_counters.FIFO_idle_timestamp = get_system_time();
 					performance_counters.FIFO_is_idle = true;
 				}
+				else
+				{
+					do_internal_task();
+				}
 
-				do_internal_task();
 				continue;
 			}
 
@@ -950,11 +953,28 @@ namespace rsx
 
 	void thread::fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program)
 	{
-		const u32 is_alpha_tested = rsx::method_registers.alpha_test_enabled();
-		const f32 alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
+		//TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
+		auto fragment_alpha_func = rsx::method_registers.alpha_func();
+		auto alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
+		auto is_alpha_tested = (u32)rsx::method_registers.alpha_test_enabled();
+
+		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !is_alpha_tested)
+		{
+			if (rsx::method_registers.msaa_enabled() &&
+				rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample)
+			{
+				//alpha values generate a coverage mask for order independent blending
+				//requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
+				//simulated using combined alpha blend and alpha test
+				fragment_alpha_func = rsx::comparison_function::greater;
+				alpha_ref = rsx::method_registers.msaa_sample_mask()? 0.25f : 0.f;
+				is_alpha_tested |= (1 << 4);
+			}
+		}
+
 		const f32 fog0 = rsx::method_registers.fog_params_0();
 		const f32 fog1 = rsx::method_registers.fog_params_1();
-		const u32 alpha_func = static_cast<u32>(rsx::method_registers.alpha_func());
+		const u32 alpha_func = static_cast<u32>(fragment_alpha_func);
 		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
 
 		// Generate wpos coeffecients
