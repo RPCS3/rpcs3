@@ -89,6 +89,13 @@ namespace rsx
 		}
 	}
 
+	// The rsx internally adds the 'data_base_offset' and the 'vert_offset' and masks it 
+	// before actually attempting to translate to the internal address. Seen happening heavily in R&C games
+	u32 get_vertex_offset_from_base(u32 vert_data_base_offset, u32 vert_base_offset)
+	{
+		return ((u64)vert_data_base_offset + vert_base_offset) & 0xFFFFFFF;
+	}
+
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
 	{
 		switch (type)
@@ -997,7 +1004,7 @@ namespace rsx
 	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
 	{
 		u32 offset  = vertex_array_info.offset();
-		u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
+		u32 address = rsx::get_address(rsx::get_vertex_offset_from_base(base_offset, offset & 0x7fffffff), offset >> 31);
 
 		u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array_info.type(), vertex_array_info.size());
 
@@ -1384,7 +1391,7 @@ namespace rsx
 		for (auto &info : result.interleaved_blocks)
 		{
 			//Calculate real data address to be used during upload
-			info.real_offset_address = state.vertex_data_base_offset() + rsx::get_address(info.base_offset, info.memory_location);
+			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info.base_offset), info.memory_location);
 		}
 
 		return result;
