@@ -123,7 +123,7 @@ public:
 	bool m_center_shown_addresses;
 
 public:
-	debugger_list(debugger_frame* parent);
+	debugger_list(debugger_frame* parent, std::shared_ptr<gui_settings> settings);
 	void ShowAddress(u32 addr);
 	void RemoveBreakPoint(u32 pc, bool eraseFromMap = true);
 	bool IsBreakPoint(u32 pc);

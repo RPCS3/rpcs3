@@ -23,7 +23,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	QVBoxLayout* vbox_p_main = new QVBoxLayout();
 	QHBoxLayout* hbox_b_main = new QHBoxLayout();
 
-	m_list = new debugger_list(this);
+	m_list = new debugger_list(this, settings);
 	m_breakpoints_list = new QListWidget(this);
 	m_breakpoints_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_breakpoints_list->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -618,12 +618,12 @@ void debugger_frame::OnBreakpointList_delete()
 	}
 }
 
-debugger_list::debugger_list(debugger_frame* parent) : QListWidget(parent)
+debugger_list::debugger_list(debugger_frame* parent, std::shared_ptr<gui_settings> settings) : QListWidget(parent)
 {
 	m_pc = 0;
 	m_item_count = 30;
 	m_debugFrame = parent;
-	m_center_shown_addresses = gui::d_centerPC.def.toBool();
+	m_center_shown_addresses = settings->GetValue(gui::d_centerPC).toBool();
 };
 
 u32 debugger_list::GetCenteredAddress(u32 address)
