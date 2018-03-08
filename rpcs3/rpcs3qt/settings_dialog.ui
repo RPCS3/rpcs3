@@ -154,7 +154,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Automatically load required libraries</string>
+                 <string>Automatically Load Required Libraries</string>
                 </property>
                </widget>
               </item>
@@ -167,7 +167,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Manually load selected libraries</string>
+                 <string>Manually Load Selected Libraries</string>
                 </property>
                </widget>
               </item>
@@ -180,7 +180,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Load automatic and manual selection</string>
+                 <string>Load Automatic and Manual Selection</string>
                 </property>
                </widget>
               </item>
@@ -193,7 +193,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Load liblv2.sprx only</string>
+                 <string>Load liblv2.sprx Only</string>
                 </property>
                </widget>
               </item>
@@ -209,28 +209,28 @@
               <item>
                <widget class="QCheckBox" name="enableScheduler">
                 <property name="text">
-                 <string>Enable thread scheduler</string>
+                 <string>Enable Thread Scheduler</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="lowerSPUThrPrio">
                 <property name="text">
-                 <string>Lower SPU thread priority</string>
+                 <string>Lower SPU Thread Priority</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="spuLoopDetection">
                 <property name="text">
-                 <string>Enable SPU loop detection</string>
+                 <string>Enable SPU Loop Detection</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="hookStFunc">
                 <property name="text">
-                 <string>Hook static functions</string>
+                 <string>Hook Static Functions</string>
                 </property>
                </widget>
               </item>
