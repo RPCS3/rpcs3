@@ -3057,6 +3057,11 @@ void VKGSRender::flip(int buffer)
 			//The render might have been done offscreen or in software and a blit used to display
 			image_to_flip = surface->get_raw_texture();
 		}
+		else
+		{
+			//Read from cell
+			image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, absolute_address, buffer_width, buffer_height);
+		}
 	}
 
 	VkImage target_image = m_swapchain->get_image(m_current_frame->present_image);

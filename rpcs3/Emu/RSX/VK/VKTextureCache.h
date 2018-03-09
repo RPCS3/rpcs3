@@ -1120,6 +1120,53 @@ namespace vk
 			return upload_texture(cmd, tex, m_rtts, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 		}
 
+		vk::image *upload_image_simple(vk::command_buffer& cmd, u32 address, u32 width, u32 height)
+		{
+			//Uploads a linear memory range as a BGRA8 texture
+			auto image = std::make_unique<vk::image>(*m_device, m_memory_types.host_visible_coherent,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+				VK_IMAGE_TYPE_2D,
+				VK_FORMAT_B8G8R8A8_UNORM,
+				width, height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0);
+
+			VkImageSubresource subresource{};
+			subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+			VkSubresourceLayout layout{};
+			vkGetImageSubresourceLayout(*m_device, image->value, &subresource, &layout);
+
+			void* mem = nullptr;
+			vkMapMemory(*m_device, image->memory->memory, 0, layout.rowPitch * height, 0, &mem);
+
+			u32 row_pitch = width * 4;
+			char *src = (char *)vm::base(address);
+			char *dst = (char *)mem;
+
+			//TODO: SSE optimization
+			for (u32 row = 0; row < height; ++row)
+			{
+				be_t<u32>* casted_src = (be_t<u32>*)src;
+				u32* casted_dst = (u32*)dst;
+
+				for (int col = 0; col < width; ++col)
+					casted_dst[col] = casted_src[col];
+
+				src += row_pitch;
+				dst += layout.rowPitch;
+			}
+
+			vkUnmapMemory(*m_device, image->memory->memory);
+
+			auto result = image.get();
+			const u32 resource_memory = width * height * 4; //Rough approximate
+			m_discardable_storage.push_back(image);
+			m_discardable_storage.back().block_size = resource_memory;
+			m_discarded_memory_size += resource_memory;
+
+			return result;
+		}
+
 		vk_blit_op_result blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)
 		{
 			struct blit_helper
