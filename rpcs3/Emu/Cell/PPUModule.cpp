@@ -1685,7 +1685,7 @@ u32 ppu_load_overlay_exec(const ppu_exec_object& elf, const std::string& path)
 											//and a lot of zeros.
 				};
 
-				const auto& info = vm::ps3::_ref<process_param_t>(vm::cast(prog.p_vaddr, HERE));
+				const auto& info = vm::_ref<process_param_t>(vm::cast(prog.p_vaddr, HERE));
 
 				if (info.size < sizeof(process_param_t))
 				{

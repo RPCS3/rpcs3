@@ -10,8 +10,6 @@
 #include "sys_overlay.h"
 
 
-namespace vm { using namespace ps3; }
-
 extern u32 ppu_load_overlay_exec(const ppu_exec_object&, const std::string& path);
 extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 
@@ -20,7 +18,7 @@ extern std::vector<std::string> g_ppu_function_names;
 
 logs::channel sys_overlay("sys_overlay");
 
-error_code sys_overlay_load_module(vm::ps3::ptr<sys_overlay_t> ovlmid, vm::ps3::cptr<char> path2, uint64_t flags, vm::ps3::ptr<u32> entry)
+error_code sys_overlay_load_module(vm::ptr<sys_overlay_t> ovlmid, vm::cptr<char> path2, uint64_t flags, vm::ptr<u32> entry)
 {
 	sys_overlay.warning("sys_overlay_load_module(ovlmid= 0x%x, *ovlmid=0x%x, path = 0x%x, pathstr = %s, flags = 0x%x, entry = 0x%x)", ovlmid, (*ovlmid).id, path2, path2.get_ptr(), flags, entry);
 	const std::string path = path2.get_ptr();

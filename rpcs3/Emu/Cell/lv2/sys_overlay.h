@@ -15,7 +15,7 @@ struct sys_overlay_t {
 };
 
 
-error_code sys_overlay_load_module(vm::ps3::ptr<sys_overlay_t> ovlmid, vm::ps3::cptr<char> path, uint64_t flags, vm::ps3::ptr<u32> entry);
+error_code sys_overlay_load_module(vm::ptr<sys_overlay_t> ovlmid, vm::cptr<char> path, uint64_t flags, vm::ptr<u32> entry);
 error_code sys_overlay_unload_module(u32 ovlmid);
 //error_code sys_overlay_get_module_list(sys_pid_t pid, size_t ovlmids_num, sys_overlay_t * ovlmids, size_t * num_of_modules);
 //error_code sys_overlay_get_module_info(sys_pid_t pid, sys_overlay_t ovlmid, sys_overlay_module_info_t * info);
