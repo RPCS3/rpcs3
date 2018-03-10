@@ -499,6 +499,7 @@ void SPUThread::push_snr(u32 number, u32 value)
 	{
 		channel->push(*this, value);
 	}
+	set_events(SPU_EVENT_S1 >> number);
 }
 
 void SPUThread::do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc)
@@ -1469,14 +1470,10 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 		ch_tag_stat.set_value(0, false);
 		ch_tag_upd = value;
 
-		if (ch_tag_mask == 0)
-		{
-			// TODO
-			ch_tag_stat.set_value(0);
-		}
-		else if (mfc_queue.size() == 0 && (!value || ch_tag_upd.exchange(0)))
+		if (mfc_queue.size() == 0 && (!value || ch_tag_upd.exchange(0)))
 		{
 			ch_tag_stat.set_value(ch_tag_mask);
+			set_events(SPU_EVENT_TG);
 		}
 		else if (!value)
 		{
@@ -1493,6 +1490,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 			}
 
 			ch_tag_stat.set_value(completed);
+			set_events(SPU_EVENT_TG);
 		}
 		else
 		{
@@ -1596,6 +1594,23 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 		ch_event_stat &= ~value;
 		return true;
+	}
+
+	case MFC_WrMSSyncReq:
+	{
+		// Hack: empty the queue immediately
+		while (mfc_queue.size())
+		{
+			if (test(state, cpu_flag::stop + cpu_flag::dbg_global_stop))
+			{
+				return false;
+			}
+
+			std::this_thread::yield();
+			_mm_lfence();
+		}
+
+		set_events(SPU_EVENT_MS);
 	}
 
 	case 69:

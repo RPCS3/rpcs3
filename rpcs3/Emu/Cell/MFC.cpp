@@ -300,11 +300,13 @@ void mfc_thread::cpu_task()
 				if (completed && spu.ch_tag_upd.compare_and_swap_test(1, 0))
 				{
 					spu.ch_tag_stat.push(spu, completed);
+					spu.set_events(SPU_EVENT_TG);
 					no_updates = 0;
 				}
 				else if (spu.ch_tag_mask == completed && spu.ch_tag_upd.compare_and_swap_test(2, 0))
 				{
 					spu.ch_tag_stat.push(spu, completed);
+					spu.set_events(SPU_EVENT_TG);
 					no_updates = 0;
 				}
 			}

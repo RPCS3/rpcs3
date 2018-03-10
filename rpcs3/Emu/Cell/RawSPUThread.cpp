@@ -62,7 +62,9 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 
 	case SPU_Out_MBox_offs:
 	{
+		const u8 old_count = ch_out_mbox.get_count();
 		value = ch_out_mbox.pop(*this);
+		if (!old_count) set_events(SPU_EVENT_LE);
 		return true;
 	}
 
@@ -90,10 +92,29 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 		value = npc;
 		return true;
 	}
+	
+	case SPU_RdSigNotify1_offs:
+	{
+		value = ch_snr1.pop(*this);
+		return true;
+	}
+
+	case SPU_RdSigNotify2_offs:
+	{
+		value = ch_snr2.pop(*this);
+		return true;
+	}
+
 
 	case SPU_RunCntl_offs:
 	{
 		value = run_ctrl;
+		return true;
+	}
+
+	case MFC_MSSync_offs:
+	{
+		value = 0;
 		return true;
 	}
 	}
@@ -189,7 +210,9 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 
 	case SPU_In_MBox_offs:
 	{
+		bool is_written = ch_in_mbox.get_count();
 		ch_in_mbox.push(*this, value);
+		if (!is_written) set_events(SPU_EVENT_MB);
 		return true;
 	}
 
