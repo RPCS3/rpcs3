@@ -1094,7 +1094,7 @@ namespace gl
 			return m_format;
 		}
 
-		buffer* buffer() const
+		buffer* value() const
 		{
 			return m_buffer;
 		}
@@ -1756,7 +1756,7 @@ namespace gl
 
 		void copy_from(buffer_view &view)
 		{
-			copy_from(*view.buffer(), view.format(), view.offset(), view.range());
+			copy_from(*view.value(), view.format(), view.offset(), view.range());
 		}
 
 		void copy_from(const buffer& buf, texture::format format, texture::type type, class pixel_unpack_settings pixel_settings)
