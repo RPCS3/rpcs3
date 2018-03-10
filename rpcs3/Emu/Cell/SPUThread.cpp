@@ -488,7 +488,6 @@ void SPUThread::cpu_init()
 
 	run_ctrl = 0;
 	status = 0;
-	npc = 0;
 
 	int_ctrl[0].clear();
 	int_ctrl[1].clear();

@@ -4,8 +4,6 @@
 
 class RawSPUThread final : public SPUThread
 {
-	void cpu_task() override;
-
 public:
 	static const u32 id_base = 0;
 	static const u32 id_step = 1;

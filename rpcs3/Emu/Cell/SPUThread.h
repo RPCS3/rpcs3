@@ -567,7 +567,6 @@ public:
 
 	atomic_t<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
 	atomic_t<u32> status; // SPU Status register
-	atomic_t<u32> npc; // SPU Next Program Counter register
 
 	std::array<spu_int_ctrl_t, 3> int_ctrl; // SPU Class 0, 1, 2 Interrupt Management
 

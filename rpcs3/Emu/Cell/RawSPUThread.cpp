@@ -9,21 +9,6 @@
 // Originally, SPU MFC registers are accessed externally in a concurrent manner (don't mix with channels, SPU MFC channels are isolated)
 thread_local spu_mfc_cmd g_tls_mfc[8] = {};
 
-void RawSPUThread::cpu_task()
-{
-	// get next PC and SPU Interrupt status
-	pc = npc.exchange(0);
-
-	set_interrupt_status((pc & 1) != 0);
-
-	pc &= 0x3fffc;
-
-	SPUThread::cpu_task();
-
-	// save next PC and current SPU Interrupt status
-	npc = pc | (interrupts_enabled);
-}
-
 void RawSPUThread::on_init(const std::shared_ptr<void>& _this)
 {
 	if (!offset)
@@ -85,8 +70,7 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 
 	case SPU_NPC_offs:
 	{
-		//npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
-		value = npc;
+		value = pc | interrupts_enabled;
 		return true;
 	}
 
@@ -268,7 +252,12 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 			break;
 		}
 
-		npc = value;
+		if ((status & SPU_STATUS_RUNNING) == 0)
+		{
+			pc = value & 0x3fffc;
+			interrupts_enabled = value & 0x1;
+		}
+
 		return true;
 	}
 
@@ -302,5 +291,6 @@ void spu_load_exec(const spu_exec_object& elf)
 	}
 
 	spu->cpu_init();
-	spu->npc = elf.header.e_entry;
+	spu->pc = elf.header.e_entry & 0x3fffc;
+	spu->interrupts_enabled = elf.header.e_entry & 1;
 }
