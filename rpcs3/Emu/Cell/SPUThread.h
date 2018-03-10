@@ -63,14 +63,11 @@ enum : u32
 	SPU_EVENT_SN = 0x2,    // MFC List Command stall-and-notify event
 	SPU_EVENT_TG = 0x1,    // MFC Tag Group status update event
 
-	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN, // Mask of implemented events
-	SPU_EVENT_INTR_IMPLEMENTED = SPU_EVENT_SN,
+	SPU_INTR_ENABLED = 0x80000000, //
+	SPU_EVENT_AVAILABLE = 0x40000000, // Channel count for SPU_RdEventStat channel
+	//SPU_DEC_RUN = 0x20000000, // Reflects the state of the decrementer
 
-	SPU_EVENT_WAITING      = 0x80000000, // Originally unused, set when SPU thread starts waiting on ch_event_stat
-	//SPU_EVENT_AVAILABLE  = 0x40000000, // Originally unused, channel count of the SPU_RdEventStat channel
-	//SPU_EVENT_INTR_ENABLED = 0x20000000, // Originally unused, represents "SPU Interrupts Enabled" status
-
-	SPU_EVENT_INTR_TEST = SPU_EVENT_INTR_IMPLEMENTED
+	SPU_INTR_TEST = SPU_INTR_ENABLED | SPU_EVENT_AVAILABLE,
 };
 
 // SPU Class 0 Interrupts
@@ -97,15 +94,17 @@ enum
 	SPU_RUNCNTL_RUN_REQUEST  = 1,
 };
 
-// SPU Status Register bits (not accurate)
-enum
+// SPU Status Register bits
+enum : u32
 {
-	SPU_STATUS_STOPPED             = 0x0,
-	SPU_STATUS_RUNNING             = 0x1,
-	SPU_STATUS_STOPPED_BY_STOP     = 0x2,
-	SPU_STATUS_STOPPED_BY_HALT     = 0x4,
+	SPU_STATUS_STOPPED = 0x0,
+	SPU_STATUS_RUNNING = 0x1,
+	SPU_STATUS_STOPPED_BY_STOP = 0x2,
+	SPU_STATUS_STOPPED_BY_HALT = 0x4,
 	SPU_STATUS_WAITING_FOR_CHANNEL = 0x8,
-	SPU_STATUS_SINGLE_STEP         = 0x10,
+	SPU_STATUS_SINGLE_STEP = 0x10,
+	SPU_STATUS_INVAL_INSTRC = 0x20,
+	SPU_STATUS_INVAL_CHANNEL = 0x40,
 };
 
 enum : u32
@@ -563,10 +562,9 @@ public:
 
 	atomic_t<u32> ch_event_mask;
 	atomic_t<u32> ch_event_stat;
-	atomic_t<bool> interrupts_enabled;
 
 	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
-	u32 ch_dec_value; // written decrementer value
+	u32 ch_dec_value; // written decrementer value and the decrementer value when it stops.
 
 	atomic_t<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
 	atomic_t<u32> status; // SPU Status register
@@ -595,9 +593,8 @@ public:
 	void do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc = true);
 
 	void process_mfc_cmd();
-	u32 get_events(bool waiting = false);
+	u32 get_events(const bool count = false);
 	void set_events(u32 mask);
-	void set_interrupt_status(bool enable);
 	u32 get_ch_count(u32 ch);
 	bool get_ch_value(u32 ch, u32& out);
 	bool set_ch_value(u32 ch, u32 value);

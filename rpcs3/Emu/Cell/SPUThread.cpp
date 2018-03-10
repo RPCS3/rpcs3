@@ -347,7 +347,6 @@ void SPUThread::cpu_init()
 
 	ch_event_mask = 0;
 	ch_event_stat = 0;
-	interrupts_enabled = false;
 	raddr = 0;
 
 	ch_dec_start_timestamp = get_timebased_time(); // ???
@@ -703,7 +702,7 @@ void SPUThread::process_mfc_cmd()
 
 		if (raddr && raddr != ch_mfc_cmd.eal)
 		{
-			ch_event_stat |= SPU_EVENT_LR;
+			set_events(SPU_EVENT_LR);
 		}
 
 		const bool is_polling = false;// raddr == _addr && rtime == _time; // TODO
@@ -822,7 +821,7 @@ void SPUThread::process_mfc_cmd()
 
 		if (raddr && !result)
 		{
-			ch_event_stat |= SPU_EVENT_LR;
+			set_events(SPU_EVENT_LR);
 		}
 
 		raddr = 0;
@@ -832,8 +831,8 @@ void SPUThread::process_mfc_cmd()
 	{
 		if (raddr && ch_mfc_cmd.eal == raddr)
 		{
-			ch_event_stat |= SPU_EVENT_LR;
 			raddr = 0;
+			set_events(SPU_EVENT_LR);
 		}
 
 		auto& data = vm::_ref<decltype(rdata)>(ch_mfc_cmd.eal);
@@ -1023,13 +1022,13 @@ void SPUThread::process_mfc_cmd()
 	}
 }
 
-u32 SPUThread::get_events(bool waiting)
+u32 SPUThread::get_events(const bool count)
 {
 	// Check reservation status and set SPU_EVENT_LR if lost
 	if (raddr && (vm::reservation_acquire(raddr, sizeof(rdata)) != rtime || rdata != vm::_ref<decltype(rdata)>(raddr)))
 	{
-		ch_event_stat |= SPU_EVENT_LR;
 		raddr = 0;
+		set_events(SPU_EVENT_LR);
 	}
 
 	// SPU Decrementer Event
@@ -1037,55 +1036,24 @@ u32 SPUThread::get_events(bool waiting)
 	{
 		if ((ch_event_stat & SPU_EVENT_TM) == 0)
 		{
-			ch_event_stat |= SPU_EVENT_TM;
+			set_events(SPU_EVENT_TM);
 		}
 	}
 
-	// Simple polling or polling with atomically set/removed SPU_EVENT_WAITING flag
-	return !waiting ? ch_event_stat & ch_event_mask : ch_event_stat.atomic_op([&](u32& stat) -> u32
-	{
-		if (u32 res = stat & ch_event_mask)
-		{
-			stat &= ~SPU_EVENT_WAITING;
-			return res;
-		}
-
-		stat |= SPU_EVENT_WAITING;
-		return 0;
-	});
+	// Simple polling or returning SPU_EVENT_AVAILABLE flag status
+	return !count ? ch_event_stat & ch_event_mask : (ch_event_stat & SPU_EVENT_AVAILABLE) != 0 ;
 }
 
 void SPUThread::set_events(u32 mask)
 {
-	if (u32 unimpl = mask & ~SPU_EVENT_IMPLEMENTED)
+	if (mask & ~ch_event_stat)
 	{
-		fmt::throw_exception("Unimplemented events (0x%x)" HERE, unimpl);
-	}
-
-	// Set new events, get old event mask
-	const u32 old_stat = ch_event_stat.fetch_or(mask);
-
-	// Notify if some events were set
-	if (~old_stat & mask && old_stat & SPU_EVENT_WAITING && ch_event_stat & SPU_EVENT_WAITING)
-	{
-		notify();
-	}
-}
-
-void SPUThread::set_interrupt_status(bool enable)
-{
-	if (enable)
-	{
-		// detect enabling interrupts with events masked
-		if (u32 mask = ch_event_mask & ~SPU_EVENT_INTR_IMPLEMENTED)
+		ch_event_stat |= mask;
+		if (ch_event_mask & mask)
 		{
-			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, mask);
+			ch_event_stat |= SPU_EVENT_AVAILABLE;
+			notify();
 		}
-		interrupts_enabled = true;
-	}
-	else
-	{
-		interrupts_enabled = false;
 	}
 }
 
@@ -1104,7 +1072,7 @@ u32 SPUThread::get_ch_count(u32 ch)
 	case SPU_RdSigNotify1:    return ch_snr1.get_count();
 	case SPU_RdSigNotify2:    return ch_snr2.get_count();
 	case MFC_RdAtomicStat:    return ch_atomic_stat.get_count();
-	case SPU_RdEventStat:     return get_events() != 0;
+	case SPU_RdEventStat:     return get_events(true);
 	case MFC_Cmd:             return std::max(16 - mfc_queue.size(), (u32)0);
 	}
 
@@ -1233,18 +1201,9 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case SPU_RdEventStat:
 	{
-		u32 res = get_events();
-
-		if (res)
+		if ((ch_event_mask & ~ch_event_stat) & SPU_EVENT_LR)
 		{
-			out = res;
-			return true;
-		}
-
-		vm::waiter waiter;
-
-		if (ch_event_mask & SPU_EVENT_LR)
-		{
+			vm::waiter waiter;
 			waiter.owner = this;
 			waiter.addr = raddr;
 			waiter.size = 128;
@@ -1253,7 +1212,8 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 			waiter.init();
 		}
 
-		while (!(res = get_events(true)))
+		// Waits on SPU_EVENT_AVAILABLE to set
+		while (!get_events(true))
 		{
 			if (test(state & cpu_flag::stop))
 			{
@@ -1261,9 +1221,11 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 			}
 
 			thread_ctrl::wait_for(100);
+			_mm_mfence();
 		}
+		out = ch_event_stat & ch_event_mask;
+		ch_event_stat &= ~SPU_EVENT_AVAILABLE;
 
-		out = res;
 		return true;
 	}
 
@@ -1271,7 +1233,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	{
 		// HACK: "Not isolated" status
 		// Return SPU Interrupt status in LSB
-		out = interrupts_enabled == true;
+		out = (ch_event_stat & SPU_INTR_ENABLED) != 0;
 		return true;
 	}
 	}
@@ -1569,36 +1531,41 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrEventMask:
 	{
-		// detect masking events with enabled interrupt status
-		if (value & ~SPU_EVENT_INTR_IMPLEMENTED && interrupts_enabled)
-		{
-			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, value);
-		}
-
-		// detect masking unimplemented events
-		if (value & ~SPU_EVENT_IMPLEMENTED)
-		{
-			break;
-		}
-
 		ch_event_mask = value;
+
+		// Check reported events
+		if (get_events()) 
+		{
+			ch_event_stat |= SPU_EVENT_AVAILABLE;
+		}
 		return true;
 	}
 
 	case SPU_WrEventAck:
 	{
-		if (value & ~SPU_EVENT_IMPLEMENTED)
+		get_events(); // TODO: remove, meant for recieving yet to be interruptable events
+		ch_event_stat &= ~value;
+
+		// Check reported events
+		if (ch_event_stat & ch_event_mask) 
 		{
-			break;
+			ch_event_stat |= SPU_EVENT_AVAILABLE;
 		}
 
-		ch_event_stat &= ~value;
+		//if (ch_event_stat & SPU_DEC_RUN)
+		//{
+		//	if (value & SPU_EVENT_TM && (ch_event_mask & SPU_EVENT_TM) == 0)
+		//	{
+		//		ch_dec_value -= (u32)(get_timebased_time() - ch_dec_start_timestamp);
+		//		ch_event_stat.raw() &= ~SPU_DEC_RUN; // Stop the decrementer.
+		//	}
+		//}
 		return true;
 	}
 
 	case MFC_WrMSSyncReq:
 	{
-		// Hack: empty the queue immediately
+		// Hack: empty the queue
 		while (mfc_queue.size())
 		{
 			if (test(state, cpu_flag::stop + cpu_flag::dbg_global_stop))

@@ -14,14 +14,14 @@ void RawSPUThread::cpu_task()
 	// get next PC and SPU Interrupt status
 	pc = npc.exchange(0);
 
-	set_interrupt_status((pc & 1) != 0);
+	ch_event_stat = (pc & 1u) << 31;
 
 	pc &= 0x3fffc;
 
 	SPUThread::cpu_task();
 
 	// save next PC and current SPU Interrupt status
-	npc = pc | (interrupts_enabled);
+	npc = pc | ((ch_event_stat & SPU_INTR_ENABLED) != 0);
 }
 
 void RawSPUThread::on_init(const std::shared_ptr<void>& _this)
@@ -70,7 +70,7 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 
 	case SPU_MBox_Status_offs:
 	{
-		value = (ch_out_mbox.get_count() & 0xff) | ((4 - ch_in_mbox.get_count()) << 8 & 0xff00) | (ch_out_intr_mbox.get_count() << 16 & 0xff0000);
+		value = ch_out_mbox.get_count() | ((4 - ch_in_mbox.get_count()) << 8 & 0xff00) | (ch_out_intr_mbox.get_count() << 16);
 		return true;
 	}
 		
@@ -88,7 +88,6 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 
 	case SPU_NPC_offs:
 	{
-		//npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
 		value = npc;
 		return true;
 	}
@@ -238,7 +237,7 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 
 	case SPU_NPC_offs:
 	{
-		if ((value & 2) || value >= 0x40000)
+		if (value & ~0x3fffd)
 		{
 			break;
 		}
