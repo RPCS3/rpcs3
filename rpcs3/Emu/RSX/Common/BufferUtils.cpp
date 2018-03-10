@@ -525,7 +525,7 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 namespace
 {
 template<typename T>
-std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
+std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index, u32 base_index)
 {
 	T min_index = -1;
 	T max_index = 0;
@@ -535,6 +535,7 @@ std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::spa
 	u32 dst_idx = 0;
 	for (T index : src)
 	{
+		index = (base_index + index) & 0x000fffff;
 		if (is_primitive_restart_enabled && index == primitive_restart_index)
 		{
 			// List types do not need primitive restart. Just skip over this instead
@@ -780,19 +781,19 @@ namespace
 	std::tuple<T, T, u32> write_index_array_data_to_buffer_impl(gsl::span<T> dst,
 		gsl::span<const be_t<T>> src,
 		rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
-		std::function<bool(rsx::primitive_type)> expands)
+		std::function<bool(rsx::primitive_type)> expands, u32 base_index)
 	{
 		u32 first;
 		u32 count;
 		std::tie(first, count) = get_first_count_from_draw_indexed_clause(first_count_arguments);
 
-		if (!expands(draw_mode)) return upload_untouched<T>(src, dst, restart_index_enabled, restart_index);
+		if (!expands(draw_mode)) return upload_untouched<T>(src, dst, restart_index_enabled, restart_index, base_index);
 
 		switch (draw_mode)
 		{
 		case rsx::primitive_type::line_loop:
 		{
-			const auto &returnvalue = upload_untouched<T>(src, dst, restart_index_enabled, restart_index);
+			const auto &returnvalue = upload_untouched<T>(src, dst, restart_index_enabled, restart_index, base_index);
 			dst[count] = src[0];
 			return returnvalue;
 		}
@@ -810,16 +811,16 @@ namespace
 std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst,
 	gsl::span<const gsl::byte> src,
 	rsx::index_array_type type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
-	std::function<bool(rsx::primitive_type)> expands)
+	std::function<bool(rsx::primitive_type)> expands, u32 base_index)
 {
 	switch (type)
 	{
 	case rsx::index_array_type::u16:
 		return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u16>(dst),
-			gsl::as_span<const be_t<u16>>(src), draw_mode, restart_index_enabled, restart_index, first_count_arguments, expands);
+			gsl::as_span<const be_t<u16>>(src), draw_mode, restart_index_enabled, restart_index, first_count_arguments, expands, base_index);
 	case rsx::index_array_type::u32:
 		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst),
-			gsl::as_span<const be_t<u32>>(src), draw_mode, restart_index_enabled, restart_index, first_count_arguments, expands);
+			gsl::as_span<const be_t<u32>>(src), draw_mode, restart_index_enabled, restart_index, first_count_arguments, expands, base_index);
 	}
 	fmt::throw_exception("Unknown index type" HERE);
 }
