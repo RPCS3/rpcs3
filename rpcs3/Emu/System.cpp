@@ -681,17 +681,21 @@ void Emulator::Load(bool add_only)
 				if (m_path.find(hdd0_game) != -1)
 				{
 					argv[0] = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size());
+					m_dir = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 10);
+					LOG_NOTICE(LOADER, "Boot path: %s", m_dir);
 				}
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
 					// Disc games are on /dev_bdvd/
 					const std::size_t pos = m_path.rfind("PS3_GAME");
 					argv[0] = "/dev_bdvd/" + m_path.substr(pos);
+					m_dir = "/dev_bdvd/PS3_GAME/";
 				}
 				else
 				{
 					// For homebrew
 					argv[0] = "/host_root/" + m_path;
+					m_dir = "/host_root/" + elf_dir + '/';
 				}
 
 				LOG_NOTICE(LOADER, "Elf path: %s", argv[0]);
