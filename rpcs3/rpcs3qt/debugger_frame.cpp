@@ -10,7 +10,7 @@ constexpr auto qstr = QString::fromStdString;
 extern bool user_asked_for_frame_capture;
 
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent)
-	: custom_dock_widget(tr("Debugger"), parent), xgui_settings(settings)
+	: custom_dock_widget(tr(u8"\u5075\u932F\u5668"), parent), xgui_settings(settings)
 {
 	m_update = new QTimer(this);
 	connect(m_update, &QTimer::timeout, this, &debugger_frame::UpdateUI);
@@ -33,21 +33,21 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	m_choice_units->setMaximumWidth(500);
 	m_choice_units->setEditable(true);
 	m_choice_units->setInsertPolicy(QComboBox::NoInsert);
-	m_choice_units->lineEdit()->setPlaceholderText("Choose a thread");
+	m_choice_units->lineEdit()->setPlaceholderText(u8"\u9078\u53D6\u4E00\u500B\u57F7\u884C\u7DD2");
 	m_choice_units->completer()->setCompletionMode(QCompleter::PopupCompletion);
 	m_choice_units->completer()->setMaxVisibleItems(30);
 	m_choice_units->completer()->setFilterMode(Qt::MatchContains);
 
-	m_breakpoints_list_delete = new QAction("Delete", m_breakpoints_list);
+	m_breakpoints_list_delete = new QAction(u8"\u522A\u9664", m_breakpoints_list);
 	m_breakpoints_list_delete->setShortcut(Qt::Key_Delete);
 	m_breakpoints_list_delete->setShortcutContext(Qt::WidgetShortcut);
 	m_breakpoints_list->addAction(m_breakpoints_list_delete);
 
-	m_go_to_addr = new QPushButton(tr("Go To Address"), this);
-	m_go_to_pc = new QPushButton(tr("Go To PC"), this);
-	m_btn_capture = new QPushButton(tr("Capture"), this);
-	m_btn_step = new QPushButton(tr("Step"), this);
-	m_btn_run = new QPushButton(Run, this);
+	m_go_to_addr = new QPushButton(tr(u8"\u81F3 \u4F4D\u5740"), this);
+	m_go_to_pc = new QPushButton(tr(u8"\u81F3 PC"), this);
+	m_btn_capture = new QPushButton(tr(u8"\u622A\u53D6"), this);
+	m_btn_step = new QPushButton(tr(u8"\u6B65"), this);
+	m_btn_run = new QPushButton(tr(u8"\u57F7\u884C"), this);
 
 	EnableButtons(!Emu.IsStopped());
 	ChangeColors();
@@ -365,11 +365,11 @@ void debugger_frame::OnUpdate()
 void debugger_frame::Show_Val()
 {
 	QDialog* diag = new QDialog(this);
-	diag->setWindowTitle(tr("Set value"));
+	diag->setWindowTitle(tr(u8"\u8A2D\u5B9A\u503C"));
 	diag->setModal(true);
 
-	QPushButton* button_ok = new QPushButton(tr("Ok"));
-	QPushButton* button_cancel = new QPushButton(tr("Cancel"));
+	QPushButton* button_ok = new QPushButton(tr(u8"\u78BA\u5B9A"));
+	QPushButton* button_cancel = new QPushButton(tr(u8"\u53D6\u6D88"));
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
 	QHBoxLayout* hbox_text_panel(new QHBoxLayout());
 	QHBoxLayout* hbox_button_panel(new QHBoxLayout());
@@ -397,26 +397,26 @@ void debugger_frame::Show_Val()
 	if (cpu)
 	{
 		unsigned long pc = cpu ? GetPc() : 0x0;
-		addr->setText("Address: " + QString("%1").arg(pc, 8, 16, QChar('0')));	// set address input line to 8 digits
+		addr->setText((u8"\u4F4D\u5740: ") + QString("%1").arg(pc, 8, 16, QChar('0')));	// set address input line to 8 digits
 		p_pc->setPlaceholderText(QString("%1").arg(pc, 8, 16, QChar('0')));
 	}
 	else
 	{
 		p_pc->setPlaceholderText("00000000");
-		addr->setText("Address: 00000000");
+		addr->setText((u8"\u4F4D\u5740: 00000000"));
 	}
 
 	auto l_changeLabel = [=]()
 	{
 		if (p_pc->text().isEmpty())
 		{
-			addr->setText("Address: " + p_pc->placeholderText());
+			addr->setText((u8"\u4F4D\u5740: ") + p_pc->placeholderText());
 		}
 		else
 		{
 			bool ok;
 			ulong ul_addr = p_pc->text().toULong(&ok, 16);
-			addr->setText("Address: " + QString("%1").arg(ul_addr, 8, 16, QChar('0'))); // set address input line to 8 digits
+			addr->setText((u8"\u4F4D\u5740: ") + QString("%1").arg(ul_addr, 8, 16, QChar('0'))); // set address input line to 8 digits
 		}
 	};
 

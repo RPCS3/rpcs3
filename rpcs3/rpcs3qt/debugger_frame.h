@@ -54,9 +54,9 @@ class debugger_frame : public custom_dock_widget
 	QTimer* m_update;
 	QSplitter* m_splitter;
 
-	const QString NoThread = tr("No Thread");
-	const QString Run = tr("Run");
-	const QString Pause = tr("Pause");
+	const QString NoThread = tr(u8"\u6C92\u6709\u57F7\u884C\u7DD2");
+	const QString Run = tr(u8"\u57F7\u884C");
+	const QString Pause = tr(u8"\u66AB\u505C");
 
 	std::shared_ptr<gui_settings> xgui_settings;
 
