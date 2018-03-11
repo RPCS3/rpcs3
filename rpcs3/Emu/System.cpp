@@ -683,7 +683,13 @@ void Emulator::Load(bool add_only)
 
 			if (argv[0].empty())
 			{
-				if (m_path.find(hdd0_game) != -1)
+				if (from_hdd0_game && m_cat == "DG")
+				{
+					argv[0] = "/dev_bdvd/PS3_GAME/" + m_path.substr(hdd0_game.size() + 10);
+					m_dir = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 10);
+					LOG_NOTICE(LOADER, "Disc path: %s", m_dir);
+				}
+				else if (from_hdd0_game)
 				{
 					argv[0] = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size());
 					m_dir = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 10);
