@@ -513,12 +513,17 @@ void Emulator::Load(bool add_only)
 		{
 			// Don't need /dev_bdvd
 		}
-		else if (disc.empty() && !from_hdd0_game)
+		else if (m_cat == "DG" && from_hdd0_game)
+		{
+			vfs::mount("dev_bdvd/PS3_GAME", hdd0_game + m_path.substr(hdd0_game.size(), 10));
+			LOG_NOTICE(LOADER, "Game: %s", vfs::get("/dev_bdvd/PS3_GAME"));
+		}
+		else if (disc.empty())
 		{
 			LOG_ERROR(LOADER, "Failed to mount disc directory for the disc game %s", m_title_id);
 			return;
 		}
-		else if (!disc.empty())
+		else
 		{
 			bdvd_dir = disc;
 			vfs::mount("dev_bdvd", bdvd_dir);
