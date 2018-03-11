@@ -1295,6 +1295,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			}
 		}
 
+		vm::temporary_unlock(*cpu);
 		LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
 		cpu->state += cpu_flag::dbg_pause;
 		cpu->check_state();
@@ -1637,6 +1638,10 @@ void thread_ctrl::initialize()
 		{
 		}
 	}
+#endif
+
+#ifndef _WIN32
+	pthread_setname_np(pthread_self(), m_name.substr(0, 15).c_str());
 #endif
 }
 

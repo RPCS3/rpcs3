@@ -178,6 +178,7 @@ class Emulator final
 	std::string m_title_id;
 	std::string m_title;
 	std::string m_cat;
+	std::string m_dir;
 
 	bool m_force_boot = false;
 
@@ -239,6 +240,11 @@ public:
 	const std::string& GetCachePath() const
 	{
 		return m_cache_path;
+	}
+
+	const std::string& GetDir() const
+	{
+		return m_dir;
 	}
 
 	u64 GetPauseTime()
