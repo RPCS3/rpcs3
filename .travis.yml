@@ -34,13 +34,8 @@ before_install:
     fi;
 
 install:
-  # Install QT from a PPA
   # Install updated libglew-dev since the version provided by trusty is outdated
-  # TODO: Install QT for OS X when time comes
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      sudo add-apt-repository ppa:beineri/opt-qt-5.10.1-trusty -y;
-      sudo apt update -q;
-      sudo apt install qt510-meta-minimal -yq;
       wget https://mirrors.kernel.org/ubuntu/pool/universe/g/glew/libglew-dev_2.0.0-5_amd64.deb;
       wget https://mirrors.kernel.org/ubuntu/pool/universe/g/glew/libglew2.0_2.0.0-5_amd64.deb;
       wget https://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan1_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
@@ -98,6 +93,7 @@ addons:
       - ubuntu-toolchain-r-test
       - llvm-toolchain-trusty-4.0
       - sourceline: 'ppa:jonathonf/binutils' # We need to update binutils to a newer version to link against the ffmpeg libs on.
+      - sourceline: 'ppa:beineri/opt-qt-${QTVER}-trusty' # Add QT PPA since the installer is quite bad
     packages:
       - binutils
       - cmake
@@ -119,8 +115,8 @@ addons:
       - libstdc++-5-dev
       - lib32stdc++6
       - zlib1g-dev
-      # We need to install qt 5.10.1 manually because the version trusty provides is too old. Not needed anymore, now using a PPA
-      #- qtbase5-dev
+      # From the beineri PPA
+      - qt510-meta-minimal
       - libudev-dev
       - libevdev-dev
       - libpulse-dev
