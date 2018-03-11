@@ -198,7 +198,7 @@ s32 cellHddGameGetSizeKB(vm::ptr<u32> size)
 {
 	cellGame.warning("cellHddGameGetSizeKB(size=*0x%x)", size);
 
-	const std::string local_dir = vfs::get("/dev_hdd0/game/" + Emu.GetTitleID());
+	const std::string local_dir = vfs::get(Emu.GetDir());
 
 	if (!fs::is_dir(local_dir))
 	{
@@ -226,7 +226,7 @@ s32 cellGameDataGetSizeKB(vm::ptr<u32> size)
 {
 	cellGame.warning("cellGameDataGetSizeKB(size=*0x%x)", size);
 
-	const std::string local_dir = vfs::get("/dev_hdd0/game/" + Emu.GetTitleID());
+	const std::string local_dir = vfs::get(Emu.GetDir());
 
 	if (!fs::is_dir(local_dir))
 	{
@@ -275,7 +275,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		*attributes = 0; // TODO
 		// TODO: dirName might be a read only string when BootCheck is called on a disc game. (e.g. Ben 10 Ultimate Alien: Cosmic Destruction)
 
-		if (!fxm::make<content_permission>("", psf::load_object(fs::file(vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")))))
+		if (!fxm::make<content_permission>("", psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")))))
 		{
 			return CELL_GAME_ERROR_BUSY;
 		}
@@ -286,7 +286,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		*attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
 		if (dirName) strcpy_trunc(*dirName, Emu.GetTitleID()); // ???
 
-		if (!fxm::make<content_permission>("", psf::load_object(fs::file(vfs::get("/dev_hdd0/game/" + Emu.GetTitleID() + "/PARAM.SFO")))))
+		if (!fxm::make<content_permission>("", psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")))))
 		{
 			return CELL_GAME_ERROR_BUSY;
 		}
@@ -297,7 +297,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		*attributes = 0; // TODO
 		if (dirName) strcpy_trunc(*dirName, Emu.GetTitleID());
 
-		if (!fxm::make<content_permission>(Emu.GetTitleID(), psf::load_object(fs::file(vfs::get("/dev_hdd0/game/" + Emu.GetTitleID() + "/PARAM.SFO")))))
+		if (!fxm::make<content_permission>(Emu.GetTitleID(), psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")))))
 		{
 			return CELL_GAME_ERROR_BUSY;
 		}
@@ -325,7 +325,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 		return CELL_GAME_ERROR_NOTPATCH;
 	}
 
-	if (!fxm::make<content_permission>(Emu.GetTitleID(), psf::load_object(fs::file(vfs::get("/dev_hdd0/game/" + Emu.GetTitleID() + "/PARAM.SFO")))))
+	if (!fxm::make<content_permission>(Emu.GetTitleID(), psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")))))
 	{
 		return CELL_GAME_ERROR_BUSY;
 	}
@@ -360,7 +360,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		return CELL_GAME_ERROR_BUSY;
 	}
 
-	const std::string dir = prm->dir.empty() ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + prm->dir;
+	const std::string dir = prm->dir.empty() ? Emu.GetDir() : "/dev_hdd0/game/" + prm->dir;
 
 	if (!fs::is_dir(vfs::get(dir)))
 	{
@@ -389,7 +389,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 		return CELL_GAME_ERROR_FAILURE;
 	}
 
-	const std::string dir = prm->dir.empty() ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + prm->dir;
+	const std::string dir = prm->dir.empty() ? Emu.GetDir() : "/dev_hdd0/game/" + prm->dir;
 
 	if (!prm->temp.empty())
 	{
@@ -460,7 +460,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	cbGet->sizeKB = CELL_GAMEDATA_SIZEKB_NOTCALC;
 	cbGet->sysSizeKB = 0;
 
-	psf::registry sfo = psf::load_object(fs::file(vfs::get(Emu.GetCat() == "DG" ? "/dev_bdvd/PS3_GAME/PARAM.SFO"s : "/dev_hdd0/game/" + Emu.GetTitleID() + "/PARAM.SFO")));
+	psf::registry sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 
 	cbGet->getParam.attribute = CELL_GAMEDATA_ATTR_NORMAL;
 	cbGet->getParam.parentalLevel = psf::get_integer(sfo, "PARENTAL_LEVEL", 0);

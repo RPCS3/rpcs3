@@ -439,8 +439,10 @@ void Emulator::Load(bool add_only)
 		// Detect boot location
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
+		const std::size_t bdvd_pos = m_cat == "DG" && bdvd_dir.empty() && disc.empty() ? elf_dir.rfind("/PS3_GAME/") + 1 : 0;
+		const bool from_hdd0_game = m_path.find(hdd0_game) != -1;
 
-		if (m_cat == "DG" && m_path.find(hdd0_game) != -1 && disc.empty())
+		if (bdvd_pos && from_hdd0_game)
 		{
 			// Booting disc game from wrong location
 			LOG_ERROR(LOADER, u8"\u5149\u789F\u904A\u6232 %s \u5728\u7121\u6548\u7684\u4F4D\u7F6E\u627E\u5230 /dev_hdd0/game/", m_title_id);
@@ -459,13 +461,10 @@ void Emulator::Load(bool add_only)
 		}
 
 		// Booting disc game
-		if (m_cat == "DG" && bdvd_dir.empty() && disc.empty())
+		if (bdvd_pos)
 		{
 			// Mount /dev_bdvd/ if necessary
-			if (auto pos = elf_dir.rfind("/PS3_GAME/") + 1)
-			{
-				bdvd_dir = elf_dir.substr(0, pos);
-			}
+			bdvd_dir = elf_dir.substr(0, bdvd_pos);
 		}
 
 		// Booting patch data
@@ -513,6 +512,11 @@ void Emulator::Load(bool add_only)
 		else if (m_cat != "DG" && m_cat != "GD")
 		{
 			// Don't need /dev_bdvd
+		}
+		else if (m_cat == "DG" && from_hdd0_game)
+		{
+			vfs::mount("dev_bdvd/PS3_GAME", hdd0_game + m_path.substr(hdd0_game.size(), 10));
+			LOG_NOTICE(LOADER, "Game: %s", vfs::get("/dev_bdvd/PS3_GAME"));
 		}
 		else if (disc.empty())
 		{
@@ -679,20 +683,30 @@ void Emulator::Load(bool add_only)
 
 			if (argv[0].empty())
 			{
-				if (m_path.find(hdd0_game) != -1)
+				if (from_hdd0_game && m_cat == "DG")
+				{
+					argv[0] = "/dev_bdvd/PS3_GAME/" + m_path.substr(hdd0_game.size() + 10);
+					m_dir = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 10);
+					LOG_NOTICE(LOADER, "Disc path: %s", m_dir);
+				}
+				else if (from_hdd0_game)
 				{
 					argv[0] = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size());
+					m_dir = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 10);
+					LOG_NOTICE(LOADER, "Boot path: %s", m_dir);
 				}
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
 					// Disc games are on /dev_bdvd/
 					const std::size_t pos = m_path.rfind("PS3_GAME");
 					argv[0] = "/dev_bdvd/" + m_path.substr(pos);
+					m_dir = "/dev_bdvd/PS3_GAME/";
 				}
 				else
 				{
 					// For homebrew
 					argv[0] = "/host_root/" + m_path;
+					m_dir = "/host_root/" + elf_dir + '/';
 				}
 
 				LOG_NOTICE(LOADER, u8"Elf \u8DEF\u5F91: %s", argv[0]);
@@ -910,7 +924,13 @@ void Emulator::Stop(bool restart)
 	auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		cpu.state += cpu_flag::dbg_global_stop;
-		cpu.get()->set_exception(e_stop);
+
+		// Can't normally be null.
+		// Hack for a possible vm deadlock on thread creation.
+		if (auto thread = cpu.get())
+		{
+			thread->set_exception(e_stop);
+		}
 	};
 
 	idm::select<ppu_thread>(on_select);
