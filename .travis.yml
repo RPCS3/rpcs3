@@ -93,7 +93,7 @@ addons:
       - ubuntu-toolchain-r-test
       - llvm-toolchain-trusty-4.0
       - sourceline: 'ppa:jonathonf/binutils' # We need to update binutils to a newer version to link against the ffmpeg libs on.
-      - sourceline: 'ppa:beineri/opt-qt-5.10.1-trusty' # Add QT PPA since the installer is quite bad
+      - sourceline: 'ppa:beineri/opt-qt-5.10.1-trusty' # <<WARNING>>: This needs to be updated manually whenever the QT Version changes. Add QT PPA since the installer is quite bad.
     packages:
       - binutils
       - cmake
@@ -116,7 +116,7 @@ addons:
       - lib32stdc++6
       - zlib1g-dev
       # From the beineri PPA
-      - qt510-meta-minimal
+      - qt510-meta-minimal # <<WARNING>>: This needs to be updated manually whenever the QT Version changes.
       - libudev-dev
       - libevdev-dev
       - libpulse-dev
