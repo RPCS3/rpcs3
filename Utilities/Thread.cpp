@@ -1639,6 +1639,10 @@ void thread_ctrl::initialize()
 		}
 	}
 #endif
+
+#ifndef _WIN32
+	pthread_setname_np(pthread_self(), m_name.substr(0, 15).c_str());
+#endif
 }
 
 void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
