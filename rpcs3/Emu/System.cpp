@@ -924,7 +924,13 @@ void Emulator::Stop(bool restart)
 	auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		cpu.state += cpu_flag::dbg_global_stop;
-		cpu.get()->set_exception(e_stop);
+
+		// Can't normally be null.
+		// Hack for a possible vm deadlock on thread creation.
+		if (auto thread = cpu.get())
+		{
+			thread->set_exception(e_stop);
+		}
 	};
 
 	idm::select<ppu_thread>(on_select);
