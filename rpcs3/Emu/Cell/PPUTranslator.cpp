@@ -77,6 +77,21 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 			// Check relocation type
 			switch (rel.type)
 			{
+
+			// Ignore relative relocations, they are handled in emmitted code
+			// Comment out types we haven't confirmed as used and working
+			// case 10:
+			case 11:
+			// case 12:
+			// case 13:
+			// case 26:
+			// case 28:
+			{
+				LOG_NOTICE(PPU, "Ignoring relative relocation at 0x%x (%u)", rel.addr, rel.type);
+				continue;
+			}
+
+			// Ignore 64-bit relocations
 			case 20:
 			case 22:
 			case 38:
@@ -89,7 +104,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 			case 73:
 			case 78:
 			{
-				LOG_ERROR(PPU, "64-bit relocation at 0x%x (%u)", rel.addr, rel.type);
+				LOG_ERROR(PPU, "Ignoring 64-bit relocation at 0x%x (%u)", rel.addr, rel.type);
 				continue;
 			}
 			}
@@ -181,7 +196,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 
 			if (m_rel)
 			{
-				// This is very bæd
+				// This is very bad. m_rel is normally set to nullptr after a relocation is handled (so it wasn't)
 				LOG_ERROR(PPU, "LLVM: [0x%x] Unsupported relocation(%u) in '%s'. Please report.", rel_found->first, m_rel->type, m_info.name);
 				return nullptr;
 			}
