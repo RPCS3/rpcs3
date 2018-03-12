@@ -99,6 +99,8 @@ struct content_permission final
 	// Temporary directory path
 	std::string temp;
 
+	bool can_create = false;
+
 	template <typename Dir, typename Sfo>
 	content_permission(Dir&& dir, Sfo&& sfo)
 		: dir(std::forward<Dir>(dir))
@@ -360,6 +362,11 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		return CELL_GAME_ERROR_BUSY;
 	}
 
+	if (type == CELL_GAME_GAMETYPE_GAMEDATA)
+	{
+		prm->can_create = true;
+	}
+
 	const std::string dir = prm->dir.empty() ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + prm->dir;
 
 	if (!fs::is_dir(vfs::get(dir)))
@@ -369,7 +376,6 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	}
 
 	prm->sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
-
 	return CELL_OK;
 }
 
@@ -563,6 +569,11 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 	if (!prm || prm->dir.empty())
 	{
 		return CELL_GAME_ERROR_FAILURE;
+	}
+
+	if (!prm->can_create)
+	{
+		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
 
 	std::string tmp_contentInfo = "/dev_hdd1/game/" + prm->dir;
