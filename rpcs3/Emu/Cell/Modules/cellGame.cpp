@@ -99,6 +99,8 @@ struct content_permission final
 	// Temporary directory path
 	std::string temp;
 
+	bool can_create = false;
+
 	template <typename Dir, typename Sfo>
 	content_permission(Dir&& dir, Sfo&& sfo)
 		: dir(std::forward<Dir>(dir))
@@ -275,7 +277,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		*attributes = 0; // TODO
 		// TODO: dirName might be a read only string when BootCheck is called on a disc game. (e.g. Ben 10 Ultimate Alien: Cosmic Destruction)
 
-		if (!fxm::make<content_permission>("", psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")))))
+		if (!fxm::make<content_permission>("", psf::load_object(fs::file(vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")))))
 		{
 			return CELL_GAME_ERROR_BUSY;
 		}
@@ -360,7 +362,12 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		return CELL_GAME_ERROR_BUSY;
 	}
 
-	const std::string dir = prm->dir.empty() ? Emu.GetDir() : "/dev_hdd0/game/" + prm->dir;
+	if (type == CELL_GAME_GAMETYPE_GAMEDATA)
+	{
+		prm->can_create = true;
+	}
+
+	const std::string dir = prm->dir.empty() ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + prm->dir;
 
 	if (!fs::is_dir(vfs::get(dir)))
 	{
@@ -369,7 +376,6 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	}
 
 	prm->sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
-
 	return CELL_OK;
 }
 
@@ -389,17 +395,12 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 		return CELL_GAME_ERROR_FAILURE;
 	}
 
-	const std::string dir = prm->dir.empty() ? Emu.GetDir() : "/dev_hdd0/game/" + prm->dir;
+	const std::string dir = prm->dir.empty() ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + prm->dir;
 
 	if (!prm->temp.empty())
 	{
 		// Make temporary directory persistent
 		const auto vdir = vfs::get(dir);
-
-		if (fs::exists(vdir))
-		{
-			fmt::throw_exception("cellGameContentPermit(): epic fail: directory '%s' already exists", dir);
-		}
 
 		if (fs::rename(prm->temp, vdir, false))
 		{
@@ -407,7 +408,11 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 		}
 		else
 		{
-			fmt::throw_exception("cellGameContentPermit(): failed to initialize directory '%s'", dir);
+			cellGame.error("cellGameContentPermit(): failed to initialize directory '%s' (%s)", dir, fs::g_tls_error);
+			strcpy_trunc(*contentInfoPath, dir);
+			strcpy_trunc(*usrdirPath, dir + "/USRDIR");
+			verify(HERE), fxm::remove<content_permission>();
+			return CELL_OK;
 		}
 
 		// Create PARAM.SFO
@@ -563,6 +568,11 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 	if (!prm || prm->dir.empty())
 	{
 		return CELL_GAME_ERROR_FAILURE;
+	}
+
+	if (!prm->can_create)
+	{
+		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
 
 	std::string tmp_contentInfo = "/dev_hdd1/game/" + prm->dir;
