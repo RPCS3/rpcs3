@@ -64,7 +64,7 @@ void shared_mutex::imp_lock_shared(s64 _old)
 
 		if (value0 >= c_min)
 		{
-			return;	
+			return;
 		}
 
 		// Acquire writer lock
@@ -79,7 +79,7 @@ void shared_mutex::imp_lock_shared(s64 _old)
 		}
 
 		value1 += c_one - c_min;
-		
+
 		if (value1 > 0)
 		{
 			return;
@@ -109,7 +109,7 @@ void shared_mutex::imp_lock_shared(s64 _old)
 		{
 			return;
 		}
-		
+
 		imp_unlock_shared(value2);
 	}
 #endif
@@ -300,7 +300,7 @@ safe_writer_lock::safe_writer_lock(shared_mutex& mutex)
 
 		if (m_is_owned)
 		{
-			m_mutex.lock_shared();
+			m_mutex.lock();
 			g_tls_locks.emplace_back(&m_mutex);
 			return;
 		}
