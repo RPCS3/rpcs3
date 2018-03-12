@@ -402,18 +402,17 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 		// Make temporary directory persistent
 		const auto vdir = vfs::get(dir);
 
-		if (fs::exists(vdir))
-		{
-			fmt::throw_exception("cellGameContentPermit(): epic fail: directory '%s' already exists", dir);
-		}
-
 		if (fs::rename(prm->temp, vdir, false))
 		{
 			cellGame.success("cellGameContentPermit(): directory '%s' has been created", dir);
 		}
 		else
 		{
-			fmt::throw_exception("cellGameContentPermit(): failed to initialize directory '%s'", dir);
+			cellGame.error("cellGameContentPermit(): failed to initialize directory '%s' (%s)", dir, fs::g_tls_error);
+			strcpy_trunc(*contentInfoPath, dir);
+			strcpy_trunc(*usrdirPath, dir + "/USRDIR");
+			verify(HERE), fxm::remove<content_permission>();
+			return CELL_OK;
 		}
 
 		// Create PARAM.SFO
