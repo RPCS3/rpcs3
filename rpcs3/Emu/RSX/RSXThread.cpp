@@ -2197,8 +2197,9 @@ namespace rsx
 	{
 		zcull_ctrl->sync(this);
 
-		_mm_mfence();
-		verify (HERE), async_tasks_pending.load() == 0;
+		//TODO: On sync every sub-unit should finish any pending tasks
+		//Might cause zcull lockup due to zombie 'unclaimed reports' which are not forcefully removed currently
+		//verify (HERE), async_tasks_pending.load() == 0;
 	}
 
 	void thread::read_barrier(u32 memory_address, u32 memory_range)
