@@ -575,6 +575,11 @@ void ppu_thread::cpu_task()
 			cmd_pop(), lv2_obj::sleep(*this);
 			break;
 		}
+		case ppu_cmd::reset_stack:
+		{
+			cmd_pop(), gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
+			break;
+		}
 		default:
 		{
 			fmt::throw_exception("Unknown ppu_cmd(0x%x)" HERE, (u32)type);
