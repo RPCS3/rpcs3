@@ -1517,6 +1517,8 @@ namespace rsx
 			auto &tex = rsx::method_registers.fragment_textures[i];
 			result.texture_scale[i][0] = sampler_descriptors[i]->scale_x;
 			result.texture_scale[i][1] = sampler_descriptors[i]->scale_y;
+			result.texture_scale[i][2] = (f32)tex.remap();  //Debug value
+			result.texture_scale[i][3] = (f32)tex.format(); //Debug value
 			result.textures_alpha_kill[i] = 0;
 			result.textures_zfunc[i] = 0;
 
