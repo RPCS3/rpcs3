@@ -1574,6 +1574,11 @@ void GLGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 	}
 }
 
+void GLGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* query)
+{
+	glEndQuery(GL_ANY_SAMPLES_PASSED);
+}
+
 void GLGSRender::shell_do_cleanup()
 {
 	//TODO: Key cleanup requests with UID to identify resources to remove

@@ -367,6 +367,7 @@ public:
 	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 	bool check_occlusion_query_status(rsx::reports::occlusion_query_info* query) override;
 	void get_occlusion_query_result(rsx::reports::occlusion_query_info* query) override;
+	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 
 protected:
 	void begin() override;

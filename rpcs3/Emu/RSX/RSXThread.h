@@ -185,9 +185,8 @@ namespace rsx
 		struct ZCULL_control
 		{
 			//Delay in 'cycles' before a report update operation is forced to retire
-			//Larger values might give more performance but some engines (UE3) dont seem to wait for results and will flicker
-			//TODO: Determine the real max delay in real hardware
-			const u32 max_zcull_cycles_delay = 10;
+			const u32 max_zcull_cycles_delay = 128;
+			const u32 min_zcull_cycles_delay = 16;
 
 			//Number of occlusion query slots available. Real hardware actually has far fewer units before choking
 			const u32 occlusion_query_count = 128;
@@ -200,7 +199,7 @@ namespace rsx
 			occlusion_query_info* m_current_task = nullptr;
 			u32 m_statistics_tag_id = 0;
 			u32 m_tsc = 0;
-			u32 m_cycles_delay = 10;
+			u32 m_cycles_delay = max_zcull_cycles_delay;
 
 			std::vector<queued_report_write> m_pending_writes;
 			std::unordered_map<u32, u32> m_statistics_map;
@@ -211,7 +210,7 @@ namespace rsx
 			void set_enabled(class ::rsx::thread* ptimer, bool enabled);
 			void set_active(class ::rsx::thread* ptimer, bool active);
 
-			void write(vm::addr_t sink, u32 timestamp, u32 value);
+			void write(vm::addr_t sink, u32 timestamp, u32 type, u32 value);
 
 			//Read current zcull statistics into the address provided
 			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
@@ -220,10 +219,13 @@ namespace rsx
 			void allocate_new_query(class ::rsx::thread* ptimer);
 
 			//clears current stat block and increments stat_tag_id
-			void clear();
+			void clear(class ::rsx::thread* ptimer);
 
 			//forcefully flushes all
 			void sync(class ::rsx::thread* ptimer);
+
+			//conditionally sync any pending writes if range overlaps
+			void read_barrier(class ::rsx::thread* ptimer, u32 memory_address, u32 memory_range);
 
 			//call once every 'tick' to update
 			void update(class ::rsx::thread* ptimer);
@@ -367,6 +369,8 @@ namespace rsx
 		bool sync_point_request = false;
 		bool in_begin_end = false;
 
+		atomic_t<s32> async_tasks_pending{ 0 };
+
 		bool conditional_render_test_failed = false;
 		bool conditional_render_enabled = false;
 		bool zcull_stats_enabled = false;
@@ -412,6 +416,7 @@ namespace rsx
 
 		//sync
 		void sync();
+		void read_barrier(u32 memory_address, u32 memory_range);
 		
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;

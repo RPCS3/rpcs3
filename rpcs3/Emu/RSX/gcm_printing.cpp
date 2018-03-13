@@ -724,7 +724,7 @@ std::string rsx::get_method_name(const u32 id)
 		return std::string("CELL_GCM_") + found->second;
 	}
 
-	return fmt::format("Unknown/illegal method [0x%08x]", id);
+	return fmt::format("Unknown/illegal method [0x%08x]", id << 2);
 }
 
 // Various parameter pretty printing function

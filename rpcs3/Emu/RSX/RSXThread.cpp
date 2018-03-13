@@ -2092,7 +2092,7 @@ namespace rsx
 
 		//Reset zcull ctrl
 		zcull_ctrl->set_active(this, false);
-		zcull_ctrl->clear();
+		zcull_ctrl->clear(this);
 
 		if (zcull_ctrl->has_pending())
 		{
@@ -2142,7 +2142,7 @@ namespace rsx
 		if (g_cfg.video.disable_zcull_queries)
 			return;
 
-		zcull_ctrl->clear();
+		zcull_ctrl->clear(this);
 	}
 
 	void thread::get_zcull_stats(u32 type, vm::addr_t sink)
@@ -2153,18 +2153,13 @@ namespace rsx
 			switch (type)
 			{
 			case CELL_GCM_ZPASS_PIXEL_CNT:
-			{
-				zcull_ctrl->read_report(this, sink, type);
-				return;
-			}
 			case CELL_GCM_ZCULL_STATS:
 			case CELL_GCM_ZCULL_STATS1:
 			case CELL_GCM_ZCULL_STATS2:
 			case CELL_GCM_ZCULL_STATS3:
 			{
-				//TODO
-				value = (type != CELL_GCM_ZCULL_STATS3)? UINT16_MAX : 0;
-				break;
+				zcull_ctrl->read_report(this, sink, type);
+				return;
 			}
 			default:
 				LOG_ERROR(RSX, "Unknown zcull stat type %d", type);
@@ -2181,6 +2176,14 @@ namespace rsx
 	void thread::sync()
 	{
 		zcull_ctrl->sync(this);
+
+		_mm_mfence();
+		verify (HERE), async_tasks_pending.load() == 0;
+	}
+
+	void thread::read_barrier(u32 memory_address, u32 memory_range)
+	{
+		zcull_ctrl->read_barrier(this, memory_address, memory_range);
 	}
 
 	void thread::notify_zcull_info_changed()
@@ -2328,6 +2331,7 @@ namespace rsx
 
 						m_pending_writes.push_back({});
 						m_pending_writes.back().query = m_current_task;
+						ptimer->async_tasks_pending++;
 					}
 					else
 					{
@@ -2342,7 +2346,7 @@ namespace rsx
 
 		void ZCULL_control::read_report(::rsx::thread* ptimer, vm::addr_t sink, u32 type)
 		{
-			if (m_current_task)
+			if (m_current_task && type == CELL_GCM_ZPASS_PIXEL_CNT)
 			{
 				m_current_task->owned = true;
 				end_occlusion_query(m_current_task);
@@ -2384,6 +2388,8 @@ namespace rsx
 
 				break;
 			}
+
+			ptimer->async_tasks_pending++;
 		}
 
 		void ZCULL_control::allocate_new_query(::rsx::thread* ptimer)
@@ -2436,7 +2442,7 @@ namespace rsx
 			}
 		}
 
-		void ZCULL_control::clear()
+		void ZCULL_control::clear(class ::rsx::thread* ptimer)
 		{
 			if (!m_pending_writes.empty())
 			{
@@ -2449,6 +2455,7 @@ namespace rsx
 						discard_occlusion_query(It->query);
 						It->query->pending = false;
 						valid_size--;
+						ptimer->async_tasks_pending--;
 						continue;
 					}
 
@@ -2470,9 +2477,27 @@ namespace rsx
 			m_cycles_delay = max_zcull_cycles_delay;
 		}
 
-		void ZCULL_control::write(vm::addr_t sink, u32 timestamp, u32 value)
+		void ZCULL_control::write(vm::addr_t sink, u32 timestamp, u32 type, u32 value)
 		{
 			verify(HERE), sink;
+
+			switch (type)
+			{
+			case CELL_GCM_ZPASS_PIXEL_CNT:
+				value = value ? UINT16_MAX : 0;
+				break;
+			case CELL_GCM_ZCULL_STATS3:
+				value = value ? 0 : UINT16_MAX;
+				break;
+			case CELL_GCM_ZCULL_STATS2:
+			case CELL_GCM_ZCULL_STATS1:
+			case CELL_GCM_ZCULL_STATS:
+			default:
+				//Not implemented
+				value = UINT32_MAX;
+				break;
+			}
+
 			vm::ptr<CellGcmReportData> out = sink;
 			out->value = value;
 			out->timer = timestamp;
@@ -2520,7 +2545,7 @@ namespace rsx
 
 					if (!writer.forwarder)
 						//No other queries in the chain, write result
-						write(writer.sink, ptimer->timestamp(), result ? UINT16_MAX : 0);
+						write(writer.sink, ptimer->timestamp(), writer.type, result);
 
 					processed++;
 				}
@@ -2555,10 +2580,13 @@ namespace rsx
 					else
 						It = m_statistics_map.erase(It);
 				}
+
+				//Decrement jobs counter
+				ptimer->async_tasks_pending -= processed;
 			}
 
 			//Critical, since its likely a WAIT_FOR_IDLE type has been processed, all results are considered available
-			m_cycles_delay = 2;
+			m_cycles_delay = min_zcull_cycles_delay;
 		}
 
 		void ZCULL_control::update(::rsx::thread* ptimer)
@@ -2644,7 +2672,7 @@ namespace rsx
 				//only zpass supported right now
 				if (!writer.forwarder)
 					//No other queries in the chain, write result
-					write(writer.sink, ptimer->timestamp(), result ? UINT16_MAX : 0);
+					write(writer.sink, ptimer->timestamp(), writer.type, result);
 
 				processed++;
 			}
@@ -2668,6 +2696,24 @@ namespace rsx
 				else
 				{
 					m_pending_writes.resize(0);
+				}
+
+				ptimer->async_tasks_pending -= processed;
+			}
+		}
+
+		void ZCULL_control::read_barrier(::rsx::thread* ptimer, u32 memory_address, u32 memory_range)
+		{
+			if (m_pending_writes.empty())
+				return;
+
+			const auto memory_end = memory_address + memory_range;
+			for (const auto &writer : m_pending_writes)
+			{
+				if (writer.sink >= memory_address && writer.sink < memory_end)
+				{
+					sync(ptimer);
+					return;
 				}
 			}
 		}
