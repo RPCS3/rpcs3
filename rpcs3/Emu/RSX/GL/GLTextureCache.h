@@ -847,9 +847,9 @@ namespace gl
 
 		cached_texture_section* create_new_texture(void*&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
 				rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags,
-				const std::pair<std::array<u8, 4>, std::array<u8, 4>>& /*remap_vector*/) override
+				rsx::texture_colorspace colorspace, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& /*remap_vector*/) override
 		{
-			u32 vram_texture = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
+			u32 vram_texture = gl::create_texture(gcm_format, width, height, depth, mipmaps, type, colorspace);
 			bool depth_flag = false;
 
 			switch (gcm_format)
@@ -918,12 +918,12 @@ namespace gl
 		}
 
 		cached_texture_section* upload_image_from_cpu(void*&, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
-			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled,
-			const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type,
+			rsx::texture_colorspace colorspace, bool swizzled, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			void* unused = nullptr;
 			auto section = create_new_texture(unused, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
-				rsx::texture_create_flags::default_component_order, remap_vector);
+				rsx::texture_create_flags::default_component_order, colorspace, remap_vector);
 
 			bool input_swizzled = swizzled;
 			if (context == rsx::texture_upload_context::blit_engine_src)
@@ -938,7 +938,8 @@ namespace gl
 				section->set_sampler_status(rsx::texture_sampler_status::status_ready);
 			}
 
-			gl::upload_texture(section->get_raw_texture(), rsx_address, gcm_format, width, height, depth, mipmaps, input_swizzled, type, subresource_layout, remap_vector, false);
+			gl::upload_texture(section->get_raw_texture(), rsx_address, gcm_format, width, height, depth, mipmaps,
+					input_swizzled, type, subresource_layout, remap_vector, false, colorspace);
 			return section;
 		}
 

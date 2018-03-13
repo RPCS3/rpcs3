@@ -800,7 +800,7 @@ namespace vk
 
 		cached_texture_section* create_new_texture(vk::command_buffer& cmd, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
 				rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags,
-				const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+				rsx::texture_colorspace colorspace, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			const u16 section_depth = depth;
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
@@ -855,6 +855,9 @@ namespace vk
 			default:
 				aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
 				vk_format = get_compatible_sampler_format(gcm_format);
+
+				if (colorspace != rsx::texture_colorspace::rgb_linear)
+					vk_format = get_compatible_srgb_format(vk_format);
 				break;
 			}
 
@@ -898,11 +901,11 @@ namespace vk
 		}
 
 		cached_texture_section* upload_image_from_cpu(vk::command_buffer& cmd, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
-			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled,
-			const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type,
+			rsx::texture_colorspace colorspace, bool swizzled, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
 		{
 			auto section = create_new_texture(cmd, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
-					rsx::texture_create_flags::default_component_order, remap_vector);
+					rsx::texture_create_flags::default_component_order, colorspace, remap_vector);
 
 			auto image = section->get_raw_texture();
 			auto subres_range = section->get_raw_view()->info.subresourceRange;

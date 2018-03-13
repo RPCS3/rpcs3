@@ -193,10 +193,19 @@ namespace rsx
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-			//Low bit in remap control affects whether the G component should read from first or second component
+		{
+			//Low bit in remap control affects whether the G component should match R and B components
 			//Components are usually interleaved R-G-R-G unless flag is set, then its R-R-R-G (Virtua Fighter 5)
-			remap_ctl = (remap_override) ?(0b01010110 | (remap_ctl & 0xFF00)): (0b01100110 | (remap_ctl & 0xFF00));
+			//NOTE: The remap vector can also read from B-A-B-A in some cases (Mass Effect 3)
+			if (remap_override)
+			{
+				auto r_component = (remap_ctl >> 2) & 3;
+				remap_ctl = remap_ctl & ~(3 << 4) | r_component << 4;
+			}
+
+			remap_ctl &= 0xFFFF;
 			break;
+		}
 		default:
 			break;
 		}
