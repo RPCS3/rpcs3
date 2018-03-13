@@ -144,6 +144,23 @@ namespace vk
 		fmt::throw_exception("Invalid or unsupported sampler format for texture format (0x%x)" HERE, format);
 	}
 
+	VkFormat get_compatible_srgb_format(VkFormat rgb_format)
+	{
+		switch (rgb_format)
+		{
+		case VK_FORMAT_B8G8R8A8_UNORM:
+			return VK_FORMAT_B8G8R8A8_SRGB;
+		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
+			return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
+		case VK_FORMAT_BC2_UNORM_BLOCK:
+			return VK_FORMAT_BC2_SRGB_BLOCK;
+		case VK_FORMAT_BC3_UNORM_BLOCK:
+			return VK_FORMAT_BC3_SRGB_BLOCK;
+		default:
+			return rgb_format;
+		}
+	}
+
 	u8 get_format_texel_width(const VkFormat format)
 	{
 		switch (format)
@@ -167,9 +184,13 @@ namespace vk
 		case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
 		case VK_FORMAT_R8G8B8A8_UNORM:
 		case VK_FORMAT_B8G8R8A8_UNORM:
+		case VK_FORMAT_B8G8R8A8_SRGB:
 		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
 		case VK_FORMAT_BC2_UNORM_BLOCK:
 		case VK_FORMAT_BC3_UNORM_BLOCK:
+		case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+		case VK_FORMAT_BC2_SRGB_BLOCK:
+		case VK_FORMAT_BC3_SRGB_BLOCK:
 			return 4;
 		case VK_FORMAT_R16G16B16A16_SFLOAT:
 			return 8;
