@@ -689,6 +689,9 @@ namespace rsx
 				in_pitch = in_bpp * in_w;
 			}
 
+			const auto read_address = get_address(src_offset, src_dma);
+			rsx->read_barrier(read_address, in_pitch * in_h);
+
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
 			{
@@ -933,7 +936,7 @@ namespace rsx
 
 	namespace nv0039
 	{
-		void buffer_notify(thread*, u32, u32 arg)
+		void buffer_notify(thread *rsx, u32, u32 arg)
 		{
 			s32 in_pitch = method_registers.nv0039_input_pitch();
 			s32 out_pitch = method_registers.nv0039_output_pitch();
@@ -968,8 +971,11 @@ namespace rsx
 			u32 dst_offset = method_registers.nv0039_output_offset();
 			u32 dst_dma = method_registers.nv0039_output_location();
 
+			const auto read_address = get_address(src_offset, src_dma);
+			rsx->read_barrier(read_address, in_pitch * line_count);
+
 			u8 *dst = (u8*)vm::base(get_address(dst_offset, dst_dma));
-			const u8 *src = (u8*)vm::base(get_address(src_offset, src_dma));
+			const u8 *src = (u8*)vm::base(read_address);
 
 			if (in_pitch == out_pitch && out_pitch == line_length)
 			{
