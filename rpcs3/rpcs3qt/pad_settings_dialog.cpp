@@ -29,33 +29,33 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, const std::s
 	// Adjust to the different pad handlers
 	if (m_handler_type == pad_handler::keyboard)
 	{
-		setWindowTitle(tr("Configure Keyboard"));
+		setWindowTitle(tr(u8"\u8A2D\u7F6E\u9375\u76E4"));
 		ui->b_blacklist->setEnabled(false);
 		((keyboard_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 	}
 	else if (m_handler_type == pad_handler::ds4)
 	{
-		setWindowTitle(tr("Configure DS4"));
+		setWindowTitle(tr(u8"\u8A2D\u7F6E DS4"));
 		((ds4_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 	}
 #ifdef _MSC_VER
 	else if (m_handler_type == pad_handler::xinput)
 	{
-		setWindowTitle(tr("Configure XInput"));
+		setWindowTitle(tr(u8"\u8A2D\u7F6E XInput"));
 		((xinput_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 	}
 #endif
 #ifdef _WIN32
 	else if (m_handler_type == pad_handler::mm)
 	{
-		setWindowTitle(tr("Configure MMJoystick"));
+		setWindowTitle(tr(u8"\u8A2D\u7F6E MMJoystick"));
 		((mm_joystick_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 	}
 #endif
 #ifdef HAVE_LIBEVDEV
 	else if (m_handler_type == pad_handler::evdev)
 	{
-		setWindowTitle(tr("Configure evdev"));
+		setWindowTitle(tr(u8"\u8A2D\u7F6E evdev"));
 		((evdev_joystick_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 	}
 #endif
@@ -91,7 +91,7 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, const std::s
 
 			if (val <= 0) return;
 
-			LOG_NOTICE(HLE, "GetNextButtonPress: %s button %s pressed with value %d", m_handler_type, name, val);
+			LOG_NOTICE(HLE, u8"GetNextButtonPress: %s \u6309\u9375 %s \u6309\u4E0B\u503C %d", m_handler_type, name, val);
 			if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end)
 			{
 				m_cfg_entries[m_button_id].key = name;
@@ -276,7 +276,7 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, const std::s
 			ReactivateButtons();
 			return;
 		}
-		m_padButtons->button(m_button_id)->setText(tr("[ Waiting %1 ]").arg(m_seconds));
+		m_padButtons->button(m_button_id)->setText(tr(u8"[ \u7B49\u5019 %1 ]").arg(m_seconds));
 	});
 
 	UpdateLabel();
@@ -363,7 +363,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler_type), m_button_id);
+		LOG_NOTICE(HLE, u8"Pad \u8A2D\u5B9A: \u8655\u7406\u7A0B\u5E8F\u985E\u578B: %d, \u672A\u77E5\u7684\u6309\u9215 ID: %d", static_cast<int>(m_handler_type), m_button_id);
 	}
 	else
 	{
@@ -388,7 +388,7 @@ void pad_settings_dialog::mousePressEvent(QMouseEvent* event)
 
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
-		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler_type), m_button_id);
+		LOG_NOTICE(HLE, u8"Pad \u8A2D\u5B9A: \u8655\u7406\u7A0B\u5E8F\u985E\u578B: %d, \u672A\u77E5\u7684\u6309\u9215 ID: %d", static_cast<int>(m_handler_type), m_button_id);
 	}
 	else
 	{
@@ -502,7 +502,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	}
 
 	m_button_id = id;
-	m_padButtons->button(m_button_id)->setText(tr("[ Waiting %1 ]").arg(MAX_SECONDS));
+	m_padButtons->button(m_button_id)->setText(tr(u8"[ \u7B49\u5019 %1 ]").arg(MAX_SECONDS));
 	m_padButtons->button(m_button_id)->setPalette(QPalette(Qt::blue));
 	SwitchButtons(false); // disable all buttons, needed for using Space, Enter and other specific buttons
 	m_timer.start(1000);

@@ -24,7 +24,7 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline QSize sizeFromSlider(const int& pos) { return gui::gl_icon_size_min + (gui::gl_icon_size_max - gui::gl_icon_size_min) * (pos / (float)gui::gl_max_slider_pos); }
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
-	: custom_dock_widget(tr("Game List"), parent), xgui_settings(guiSettings), xemu_settings(emuSettings)
+	: custom_dock_widget(tr(u8"\u904A\u6232\u6E05\u55AE"), parent), xgui_settings(guiSettings), xemu_settings(emuSettings)
 {
 	m_isListLayout    = xgui_settings->GetValue(gui::gl_listMode).toBool();
 	m_icon_size_index = xgui_settings->GetValue(gui::gl_iconSize).toInt();
@@ -73,17 +73,17 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->installEventFilter(this);
 
 	m_gameList->setColumnCount(gui::column_count);
-	m_gameList->setHorizontalHeaderItem(gui::column_icon,       new QTableWidgetItem(tr("Icon")));
-	m_gameList->setHorizontalHeaderItem(gui::column_name,       new QTableWidgetItem(tr("Name")));
-	m_gameList->setHorizontalHeaderItem(gui::column_serial,     new QTableWidgetItem(tr("Serial")));
-	m_gameList->setHorizontalHeaderItem(gui::column_firmware,   new QTableWidgetItem(tr("Firmware")));
-	m_gameList->setHorizontalHeaderItem(gui::column_version,    new QTableWidgetItem(tr("Version")));
-	m_gameList->setHorizontalHeaderItem(gui::column_category,   new QTableWidgetItem(tr("Category")));
-	m_gameList->setHorizontalHeaderItem(gui::column_path,       new QTableWidgetItem(tr("Path")));
-	m_gameList->setHorizontalHeaderItem(gui::column_resolution, new QTableWidgetItem(tr("Supported Resolutions")));
-	m_gameList->setHorizontalHeaderItem(gui::column_sound,      new QTableWidgetItem(tr("Sound Formats")));
-	m_gameList->setHorizontalHeaderItem(gui::column_parental,   new QTableWidgetItem(tr("Parental Level")));
-	m_gameList->setHorizontalHeaderItem(gui::column_compat,     new QTableWidgetItem(tr("Compatibility")));
+	m_gameList->setHorizontalHeaderItem(gui::column_icon,       new QTableWidgetItem(tr(u8"\u5716\u793A")));
+	m_gameList->setHorizontalHeaderItem(gui::column_name,       new QTableWidgetItem(tr(u8"\u540D\u7A31")));
+	m_gameList->setHorizontalHeaderItem(gui::column_serial,     new QTableWidgetItem(tr(u8"\u5E8F\u5217")));
+	m_gameList->setHorizontalHeaderItem(gui::column_firmware,   new QTableWidgetItem(tr(u8"\u97CC\u9AD4")));
+	m_gameList->setHorizontalHeaderItem(gui::column_version,    new QTableWidgetItem(tr(u8"\u7248\u672C")));
+	m_gameList->setHorizontalHeaderItem(gui::column_category,   new QTableWidgetItem(tr(u8"\u985E\u5225")));
+	m_gameList->setHorizontalHeaderItem(gui::column_path,       new QTableWidgetItem(tr(u8"\u8DEF\u5F91")));
+	m_gameList->setHorizontalHeaderItem(gui::column_resolution, new QTableWidgetItem(tr(u8"\u652F\u63F4\u89E3\u6790\u5EA6")));
+	m_gameList->setHorizontalHeaderItem(gui::column_sound,      new QTableWidgetItem(tr(u8"\u8072\u97F3\u683C\u5F0F")));
+	m_gameList->setHorizontalHeaderItem(gui::column_parental,   new QTableWidgetItem(tr(u8"\u5E74\u9F61\u5206\u7D1A")));
+	m_gameList->setHorizontalHeaderItem(gui::column_compat,     new QTableWidgetItem(tr(u8"\u76F8\u5BB9\u6027")));
 
 	// since this won't work somehow: gameList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	for (int i = 0; i < m_gameList->horizontalHeader()->count(); i++)
@@ -101,17 +101,17 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_Game_Dock->setCentralWidget(m_Central_Widget);
 
 	// Actions regarding showing/hiding columns
-	QAction* showIconColAct          = new QAction(tr("Show Icons"), this);
-	QAction* showNameColAct          = new QAction(tr("Show Names"), this);
-	QAction* showSerialColAct        = new QAction(tr("Show Serials"), this);
-	QAction* showFWColAct            = new QAction(tr("Show Firmwares"), this);
-	QAction* showAppVersionColAct    = new QAction(tr("Show Versions"), this);
-	QAction* showCategoryColAct      = new QAction(tr("Show Categories"), this);
-	QAction* showPathColAct          = new QAction(tr("Show Paths"), this);
-	QAction* showResolutionColAct    = new QAction(tr("Show Supported Resolutions"), this);
-	QAction* showSoundFormatColAct   = new QAction(tr("Show Sound Formats"), this);
-	QAction* showParentalLevelColAct = new QAction(tr("Show Parental Levels"), this);
-	QAction* showCompatibilityAct    = new QAction(tr("Show Compatibilities"), this);
+	QAction* showIconColAct          = new QAction(tr(u8"\u986F\u793A\u5716\u793A"), this);
+	QAction* showNameColAct          = new QAction(tr(u8"\u986F\u793A\u540D\u7A31"), this);
+	QAction* showSerialColAct        = new QAction(tr(u8"\u986F\u793A\u5E8F\u5217"), this);
+	QAction* showFWColAct            = new QAction(tr(u8"\u986F\u793A\u97CC\u9AD4"), this);
+	QAction* showAppVersionColAct    = new QAction(tr(u8"\u986F\u793A\u7248\u672C"), this);
+	QAction* showCategoryColAct      = new QAction(tr(u8"\u986F\u793A\u985E\u5225"), this);
+	QAction* showPathColAct          = new QAction(tr(u8"\u986F\u793A\u8DEF\u5F91"), this);
+	QAction* showResolutionColAct    = new QAction(tr(u8"\u986F\u793A\u652F\u63F4\u89E3\u6790\u5EA6"), this);
+	QAction* showSoundFormatColAct   = new QAction(tr(u8"\u986F\u793A\u8072\u97F3\u683C\u5F0F"), this);
+	QAction* showParentalLevelColAct = new QAction(tr(u8"\u986F\u793A\u5E74\u9F61\u5206\u7D1A"), this);
+	QAction* showCompatibilityAct    = new QAction(tr(u8"\u986F\u793A\u76F8\u5BB9\u6027"), this);
 
 	m_columnActs = { showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct,
 		showResolutionColAct, showSoundFormatColAct, showParentalLevelColAct, showCompatibilityAct };
@@ -154,7 +154,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 			game.compat = m_game_compat->GetCompatibility(game.info.serial);
 		}
 		Refresh();
-		QMessageBox::warning(this, tr("Warning!"), tr("Failed to retrieve the online compatibility database!\nFalling back to local database.\n\n") + tr(qPrintable(error)));
+		QMessageBox::warning(this, tr(u8"\u8B66\u544A!"), tr(u8"\u7121\u6CD5\u53D6\u5F97\u7DDA\u4E0A\u76F8\u5BB9\u6027\u8CC7\u6599!\n\u8FD4\u56DE\u672C\u6A5F\u8CC7\u6599\u5EAB\u3002\n\n") + tr(qPrintable(error)));
 	});
 
 	for (int col = 0; col < m_columnActs.count(); ++col)
@@ -380,7 +380,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 			if (game.icon_path.empty() || !img.load(qstr(game.icon_path)))
 			{
-				LOG_WARNING(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
+				LOG_WARNING(GENERAL, u8"\u7121\u6CD5\u8B80\u53D6\u5716\u50CF\u8DEF\u5F91 %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
 			}
 
 			bool hasCustomConfig = fs::is_file(fs::get_config_dir() + "data/" + game.serial + "/config.yml");
@@ -391,7 +391,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		}
 		catch (const std::exception& e)
 		{
-			LOG_FATAL(GENERAL, "Failed to update game list at %s\n%s thrown: %s", dir, typeid(e).name(), e.what());
+			LOG_FATAL(GENERAL, u8"\u7121\u6CD5\u66F4\u65B0\u904A\u6232\u6E05\u55AE %s\n%s thrown: %s", dir, typeid(e).name(), e.what());
 			continue;
 			// Blame MSVC for double }}
 		}}
@@ -492,7 +492,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 		i = m_xgrid->item(index.row(), index.column())->data(Qt::ItemDataRole::UserRole).toInt();
 	}
 
-	LOG_NOTICE(LOADER, "Booting from gamelist per doubleclick...");
+	LOG_NOTICE(LOADER, u8"\u96D9\u64CA\u904A\u6232\u6E05\u55AE\u555F\u52D5...");
 	Q_EMIT RequestBoot(m_game_data[i].info.path);
 }
 
@@ -541,28 +541,28 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 	// Make Actions
 	QMenu myMenu;
-	QAction* boot = myMenu.addAction(tr("&Boot"));
+	QAction* boot = myMenu.addAction(tr(u8"\u555F\u52D5"));
 	QFont f = boot->font();
 	f.setBold(true);
 	boot->setFont(f);
-	QAction* configure = myMenu.addAction(tr("&Configure"));
+	QAction* configure = myMenu.addAction(tr(u8"\u8A2D\u5B9A"));
 	myMenu.addSeparator();
-	QAction* removeGame = myMenu.addAction(tr("&Remove %1").arg(qstr(currGame.category)));
-	QAction* removeConfig = myMenu.addAction(tr("&Remove Custom Configuration"));
-	QAction* deleteShadersCache = myMenu.addAction(tr("&Delete Shaders Cache"));
-	QAction* deleteLLVMCache = myMenu.addAction(tr("&Delete LLVM Cache"));
+	QAction* removeGame = myMenu.addAction(tr(u8"\u79FB\u9664 %1").arg(qstr(currGame.category)));
+	QAction* removeConfig = myMenu.addAction(tr(u8"\u79FB\u9664\u81EA\u8A02\u7D44\u614B"));
+	QAction* deleteShadersCache = myMenu.addAction(tr(u8"\u522A\u9664\u8457\u8272\u5FEB\u53D6"));
+	QAction* deleteLLVMCache = myMenu.addAction(tr(u8"\u522A\u9664 LLVM \u5FEB\u53D6"));
 	myMenu.addSeparator();
-	QAction* openGameFolder = myMenu.addAction(tr("&Open Install Folder"));
-	QAction* openConfig = myMenu.addAction(tr("&Open Config Folder"));
+	QAction* openGameFolder = myMenu.addAction(tr(u8"\u958B\u555F\u5B89\u88DD\u8CC7\u6599\u593E"));
+	QAction* openConfig = myMenu.addAction(tr(u8"\u958B\u555F\u81EA\u8A02\u8CC7\u6599\u593E"));
 	myMenu.addSeparator();
-	QAction* checkCompat = myMenu.addAction(tr("&Check Game Compatibility"));
-	QAction* downloadCompat = myMenu.addAction(tr("&Download Compatibility Database"));
+	QAction* checkCompat = myMenu.addAction(tr(u8"\u6AA2\u95B1\u904A\u6232\u76F8\u5BB9\u6027"));
+	QAction* downloadCompat = myMenu.addAction(tr(u8"\u4E0B\u8F09\u76F8\u5BB9\u6027\u8CC7\u6599\u5EAB"));
 
 	const std::string config_base_dir = fs::get_config_dir() + "data/" + m_game_data[row].info.serial;
 
 	connect(boot, &QAction::triggered, [=]
 	{
-		LOG_NOTICE(LOADER, "Booting from gamelist per context menu...");
+		LOG_NOTICE(LOADER, u8"\u5F9E\u904A\u6232\u6E05\u55AE\u555F\u52D5...");
 		Q_EMIT RequestBoot(currGame.path);
 	});
 	connect(configure, &QAction::triggered, [=]
@@ -576,8 +576,8 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	});
 	connect(removeGame, &QAction::triggered, [=]
 	{
-		QMessageBox* mb = new QMessageBox(QMessageBox::Question, tr("Confirm %1 Removal").arg(qstr(currGame.category)), tr("Permanently remove %1 from drive?").arg(qstr(currGame.name)), QMessageBox::Yes | QMessageBox::No, this);
-		mb->setCheckBox(new QCheckBox(tr("Remove caches and custom config")));
+		QMessageBox* mb = new QMessageBox(QMessageBox::Question, tr(u8"\u78BA\u8A8D\u522A\u9664 %1 ").arg(qstr(currGame.category)), tr(u8"\u5F9E\u78C1\u789F\u6C38\u4E45\u522A\u9664 %1 ?").arg(qstr(currGame.name)), QMessageBox::Yes | QMessageBox::No, this);
+		mb->setCheckBox(new QCheckBox(tr(u8"\u522A\u9664\u5FEB\u53D6\u8207\u81EA\u8A02\u7D44\u614B")));
 		mb->deleteLater();
 		if (mb->exec() == QMessageBox::Yes)
 		{
@@ -590,7 +590,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 			fs::remove_all(currGame.path);
 			m_game_data.erase(m_game_data.begin() + row);
 			Refresh();
-			LOG_SUCCESS(GENERAL, "Removed %s %s in %s", currGame.category, currGame.name, currGame.path);
+			LOG_SUCCESS(GENERAL, u8"\u522A\u9664 %s %s \u5728 %s", currGame.category, currGame.name, currGame.path);
 		}
 	});
 	connect(removeConfig, &QAction::triggered, [=]()
@@ -664,18 +664,18 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& base_dir, boo
 	if (!fs::is_file(config_path))
 		return false;
 
-	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete custom game configuration?")) != QMessageBox::Yes)
+	if (is_interactive && QMessageBox::question(this, tr(u8"\u78BA\u8A8D\u522A\u9664"), tr(u8"\u522A\u9664\u81EA\u8A02\u904A\u6232\u7D44\u614B?")) != QMessageBox::Yes)
 		return false;
 
 	if (fs::remove_file(config_path))
 	{
-		LOG_SUCCESS(GENERAL, "Removed configuration file: %s", config_path);
+		LOG_SUCCESS(GENERAL, u8"\u522A\u9664\u7D44\u614B\u6A94\u6848: %s", config_path);
 		return true;
 	}
 	else
 	{
-		QMessageBox::warning(this, tr("Warning!"), tr("Failed to delete configuration file!"));
-		LOG_FATAL(GENERAL, "Failed to delete configuration file: %s\nError: %s", config_path, fs::g_tls_error);
+		QMessageBox::warning(this, tr(u8"\u8B66\u544A!"), tr(u8"\u7121\u6CD5\u522A\u9664\u7D44\u614B\u6A94\u6848!"));
+		LOG_FATAL(GENERAL, u8"\u7121\u6CD5\u522A\u9664\u7D44\u614B\u6A94\u6848: %s\n\u932F\u8AA4: %s", config_path, fs::g_tls_error);
 		return false;
 	}
 }
@@ -685,7 +685,7 @@ bool game_list_frame::DeleteShadersCache(const std::string& base_dir, bool is_in
 	if (!fs::is_dir(base_dir))
 		return false;
 
-	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete shaders cache?")) != QMessageBox::Yes)
+	if (is_interactive && QMessageBox::question(this, tr(u8"\u78BA\u8A8D\u522A\u9664"), tr(u8"\u522A\u9664\u8457\u8272\u5FEB\u53D6?")) != QMessageBox::Yes)
 		return false;
 
 	fs::dir root = fs::dir(base_dir);
@@ -701,7 +701,7 @@ bool game_list_frame::DeleteShadersCache(const std::string& base_dir, bool is_in
 			fs::remove_all(shader_cache_name, true);
 	}
 
-	LOG_SUCCESS(GENERAL, "Removed shaders cache in %s", base_dir);
+	LOG_SUCCESS(GENERAL, u8"\u522A\u9664\u8457\u8272\u5FEB\u53D6 %s", base_dir);
 	return true;
 }
 
@@ -710,7 +710,7 @@ bool game_list_frame::DeleteLLVMCache(const std::string& base_dir, bool is_inter
 	if (!fs::is_dir(base_dir))
 		return false;
 
-	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete LLVM cache?")) != QMessageBox::Yes)
+	if (is_interactive && QMessageBox::question(this, tr(u8"\u78BA\u8A8D\u522A\u9664"), tr(u8"\u522A\u9664 LLVM \u5FEB\u53D6?")) != QMessageBox::Yes)
 		return false;
 
 	for (auto&& subdir : fs::dir{ base_dir })
@@ -727,7 +727,7 @@ bool game_list_frame::DeleteLLVMCache(const std::string& base_dir, bool is_inter
 		}
 	}
 
-	LOG_SUCCESS(GENERAL, "Removed llvm cache in %s", base_dir);
+	LOG_SUCCESS(GENERAL, u8"\u522A\u9664 LLVM \u5FEB\u53D6 %s", base_dir);
 	return true;
 }
 
@@ -1076,7 +1076,7 @@ std::string game_list_frame::GetStringFromU32(const u32& key, const std::map<u32
 
 	if (string.isEmpty())
 	{
-		string << tr("Unknown");
+		string << tr(u8"\u672A\u77E5");
 	}
 
 	return sstr(string.join(", "));

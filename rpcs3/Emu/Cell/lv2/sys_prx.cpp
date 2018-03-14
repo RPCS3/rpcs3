@@ -114,7 +114,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	if (ignore)
 	{
-		sys_prx.warning("Ignored module: %s", vpath);
+		sys_prx.warning(u8"\u5FFD\u7565\u6A21\u7D44: %s", vpath);
 
 		const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
 
@@ -145,7 +145,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	ppu_initialize(*prx);
 
-	sys_prx.success("Loaded module: %s", vpath);
+	sys_prx.success(u8"\u8B80\u53D6\u6A21\u7D44: %s", vpath);
 
 	return not_an_error(idm::last_id());
 }
