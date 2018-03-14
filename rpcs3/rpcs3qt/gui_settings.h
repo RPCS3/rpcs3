@@ -174,7 +174,7 @@ namespace gui
 
 	const gui_save l_tty   = gui_save(logger, "TTY",   true );
 	const gui_save l_level = gui_save(logger, "level", (uint)(logs::level::success) );
-	const gui_save l_stack = gui_save(logger, "stack", false );
+	const gui_save l_stack = gui_save(logger, "stack", true );
 
 	const gui_save d_splitterState = gui_save(debugger, "splitterState", QByteArray());
 	const gui_save d_centerPC = gui_save(debugger, "centerPC", false);
