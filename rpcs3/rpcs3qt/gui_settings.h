@@ -177,6 +177,7 @@ namespace gui
 	const gui_save l_stack = gui_save(logger, "stack", false );
 
 	const gui_save d_splitterState = gui_save(debugger, "splitterState", QByteArray());
+	const gui_save d_centerPC = gui_save(debugger, "centerPC", false);
 
 	const gui_save m_currentConfig     = gui_save(meta, "currentConfig",     QObject::tr("CurrentSettings"));
 	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", Default);

@@ -21,6 +21,16 @@ namespace gl
 	using null_vertex_cache = vertex_cache;
 
 	using shader_cache = rsx::shaders_cache<void*, GLProgramBuffer>;
+
+	struct vertex_upload_info
+	{
+		u32 vertex_draw_count;
+		u32 allocated_vertex_count;
+		u32 vertex_index_base;
+		u32 persistent_mapping_offset;
+		u32 volatile_mapping_offset;
+		std::optional<std::tuple<GLenum, u32> > index_info;
+	};
 }
 
 struct work_item
@@ -88,7 +98,7 @@ struct driver_state
 		return !!test;
 	}
 
-	const bool test_property(GLenum property, u32 test) const
+	inline bool test_property(GLenum property, u32 test) const
 	{
 		auto found = properties.find(property);
 		if (found == properties.end())
@@ -255,17 +265,7 @@ struct driver_state
 	}
 };
 
-struct vertex_upload_info
-{
-	u32 vertex_draw_count;
-	u32 allocated_vertex_count;
-	u32 vertex_index_base;
-	u32 persistent_mapping_offset;
-	u32 volatile_mapping_offset;
-	std::optional<std::tuple<GLenum, u32> > index_info;
-};
-
-class GLGSRender : public GSRender
+class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
 private:
 	GLFragmentProgram m_fragment_prog;
@@ -279,6 +279,8 @@ private:
 
 	gl::texture_cache m_gl_texture_cache;
 
+	gl::buffer_view m_persistent_stream_view;
+	gl::buffer_view m_volatile_stream_view;
 	gl::texture m_gl_persistent_stream_buffer;
 	gl::texture m_gl_volatile_stream_buffer;
 
@@ -309,7 +311,7 @@ private:
 
 	std::vector<u64> m_overlay_cleanup_requests;
 
-	std::mutex queue_guard;
+	shared_mutex queue_guard;
 	std::list<work_item> work_queue;
 
 	bool flush_draw_buffers = false;
@@ -325,7 +327,7 @@ private:
 	//vaos are mandatory for core profile
 	gl::vao m_vao;
 
-	std::mutex m_sampler_mutex;
+	shared_mutex m_sampler_mutex;
 	u64 surface_store_tag = 0;
 	std::atomic_bool m_samplers_dirty = {true};
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
@@ -340,14 +342,14 @@ private:
 	driver_state gl_state;
 
 	// Return element to draw and in case of indexed draw index type and offset in index buffer
-	vertex_upload_info set_vertex_buffer();
+	gl::vertex_upload_info set_vertex_buffer();
 	rsx::vertex_input_layout m_vertex_layout = {};
 
 	void clear_surface(u32 arg);
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 
 	bool check_program_state();
-	void load_program(const vertex_upload_info& upload_info);
+	void load_program(const gl::vertex_upload_info& upload_info);
 
 	void update_draw_state();
 
@@ -361,10 +363,11 @@ public:
 
 	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;
 
-	void begin_occlusion_query(rsx::occlusion_query_info* query) override;
-	void end_occlusion_query(rsx::occlusion_query_info* query) override;
-	bool check_occlusion_query_status(rsx::occlusion_query_info* query) override;
-	void get_occlusion_query_result(rsx::occlusion_query_info* query) override;
+	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
+	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;
+	bool check_occlusion_query_status(rsx::reports::occlusion_query_info* query) override;
+	void get_occlusion_query_result(rsx::reports::occlusion_query_info* query) override;
+	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 
 protected:
 	void begin() override;
@@ -374,7 +377,6 @@ protected:
 	void on_exit() override;
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
-	u64 timestamp() const override;
 
 	void do_local_task(bool idle) override;
 

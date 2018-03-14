@@ -23,13 +23,24 @@ namespace vk
 	using null_vertex_cache = vertex_cache;
 
 	using shader_cache = rsx::shaders_cache<vk::pipeline_props, VKProgramBuffer>;
+
+	struct vertex_upload_info
+	{
+		VkPrimitiveTopology primitive;
+		u32 vertex_draw_count;
+		u32 allocated_vertex_count;
+		u32 vertex_index_base;
+		u32 persistent_window_offset;
+		u32 volatile_window_offset;
+		std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info;
+	};
 }
 
 //Heap allocation sizes in MB
 //NOTE: Texture uploads can be huge, upto 16MB for a single texture (4096x4096px)
-#define VK_ATTRIB_RING_BUFFER_SIZE_M 256
+#define VK_ATTRIB_RING_BUFFER_SIZE_M 384
 #define VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M 256
-#define VK_UBO_RING_BUFFER_SIZE_M 64
+#define VK_UBO_RING_BUFFER_SIZE_M 128
 #define VK_INDEX_RING_BUFFER_SIZE_M 64
 
 #define VK_MAX_ASYNC_CB_COUNT 64
@@ -44,7 +55,7 @@ struct command_buffer_chunk: public vk::command_buffer
 
 	std::atomic_bool pending = { false };
 	std::atomic<u64> last_sync = { 0 };
-	std::mutex guard_mutex;
+	shared_mutex guard_mutex;
 
 	command_buffer_chunk()
 	{}
@@ -86,7 +97,7 @@ struct command_buffer_chunk: public vk::command_buffer
 	{
 		if (vkGetFenceStatus(m_device, submit_fence) == VK_SUCCESS)
 		{
-			std::lock_guard<std::mutex> lock(guard_mutex);
+			std::lock_guard<shared_mutex> lock(guard_mutex);
 
 			if (pending)
 			{
@@ -100,7 +111,7 @@ struct command_buffer_chunk: public vk::command_buffer
 
 	void wait()
 	{
-		std::lock_guard<std::mutex> lock(guard_mutex);
+		std::lock_guard<shared_mutex> lock(guard_mutex);
 
 		if (!pending)
 			return;
@@ -233,7 +244,7 @@ struct flush_request_task
 	}
 };
 
-class VKGSRender : public GSRender
+class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
 private:
 	VKFragmentProgram m_fragment_prog;
@@ -254,7 +265,7 @@ private:
 	std::unique_ptr<vk::depth_scaling_pass> m_depth_scaler;
 	std::unique_ptr<vk::ui_overlay_renderer> m_ui_renderer;
 
-	std::mutex m_sampler_mutex;
+	shared_mutex m_sampler_mutex;
 	u64 surface_store_tag = 0;
 	std::atomic_bool m_samplers_dirty = { true };
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
@@ -262,8 +273,8 @@ private:
 	std::array<std::unique_ptr<vk::sampler>, rsx::limits::fragment_textures_count> fs_sampler_handles;
 	std::array<std::unique_ptr<vk::sampler>, rsx::limits::vertex_textures_count> vs_sampler_handles;
 
-	VkBufferView m_persistent_attribute_storage;
-	VkBufferView m_volatile_attribute_storage;
+	std::unique_ptr<vk::buffer_view> m_persistent_attribute_storage;
+	std::unique_ptr<vk::buffer_view> m_volatile_attribute_storage;
 
 public:
 	//vk::fbo draw_fbo;
@@ -281,10 +292,10 @@ private:
 	vk::command_pool m_command_buffer_pool;
 	vk::occlusion_query_pool m_occlusion_query_pool;
 	bool m_occlusion_query_active = false;
-	rsx::occlusion_query_info *m_active_query_info = nullptr;
+	rsx::reports::occlusion_query_info *m_active_query_info = nullptr;
 	std::unordered_map<u32, occlusion_data> m_occlusion_map;
 
-	std::mutex m_secondary_cb_guard;
+	shared_mutex m_secondary_cb_guard;
 	vk::command_pool m_secondary_command_buffer_pool;
 	vk::command_buffer m_secondary_command_buffer;  //command buffer used for setup operations
 
@@ -335,7 +346,7 @@ private:
 	bool m_flush_draw_buffers = false;
 	std::atomic<int> m_last_flushable_cb = {-1 };
 	
-	std::mutex m_flush_queue_mutex;
+	shared_mutex m_flush_queue_mutex;
 	flush_request_task m_flush_requests;
 
 	std::thread::id rsx_thread;
@@ -379,21 +390,21 @@ private:
 
 	void check_heap_status();
 
-	/// returns primitive topology, index_count, allocated_verts, vertex_base_index, (offset in index buffer, index type)
-	std::tuple<VkPrimitiveTopology, u32, u32, u32, std::optional<std::tuple<VkDeviceSize, VkIndexType> > > upload_vertex_data();
+	vk::vertex_upload_info upload_vertex_data();
+
 public:
 	bool check_program_status();
-	void load_program(u32 vertex_count, u32 vertex_base);
+	void load_program(const vk::vertex_upload_info& vertex_info);
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 	void read_buffers();
 	void write_buffers();
 	void set_viewport();
 
-	void clear_zcull_stats(u32 type) override;
-	void begin_occlusion_query(rsx::occlusion_query_info* query) override;
-	void end_occlusion_query(rsx::occlusion_query_info* query) override;
-	bool check_occlusion_query_status(rsx::occlusion_query_info* query) override;
-	void get_occlusion_query_result(rsx::occlusion_query_info* query) override;
+	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
+	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;
+	bool check_occlusion_query_status(rsx::reports::occlusion_query_info* query) override;
+	void get_occlusion_query_result(rsx::reports::occlusion_query_info* query) override;
+	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 
 protected:
 	void begin() override;

@@ -25,7 +25,7 @@ void sys_spu_image::load(const fs::file& stream)
 
 	if (obj != elf_error::ok)
 	{
-		fmt::throw_exception(u8"\u7121\u6CD5\u8B80\u53D6 SPU image: %s" HERE, obj.get_error());
+		fmt::throw_exception("Failed to load SPU image: %s" HERE, obj.get_error());
 	}
 
 	for (const auto& shdr : obj.shdrs)
@@ -39,7 +39,7 @@ void sys_spu_image::load(const fs::file& stream)
 
 		if (prog.p_type != SYS_SPU_SEGMENT_TYPE_COPY && prog.p_type != SYS_SPU_SEGMENT_TYPE_INFO)
 		{
-			LOG_ERROR(SPU, u8"\u672A\u77E5\u7A0B\u5F0F\u985E\u578B (0x%x)", prog.p_type);
+			LOG_ERROR(SPU, "Unknown program type (0x%x)", prog.p_type);
 		}
 	}
 
@@ -136,7 +136,7 @@ void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
 		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr + loc);
 	}
 
-	LOG_NOTICE(LOADER, u8"\u8B80\u53D6 SPU image: %s (<- %u)%s", hash, applied, dump);
+	LOG_NOTICE(LOADER, "Loaded SPU image: %s (<- %u)%s", hash, applied, dump);
 }
 
 error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
@@ -168,7 +168,7 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 
 	if (!elf_file)
 	{
-		sys_spu.error(u8"sys_spu_image_open() \u932F\u8AA4: \u7121\u6CD5\u958B\u555F %s!", path);
+		sys_spu.error("sys_spu_image_open() error: failed to open %s!", path);
 		return CELL_ENOENT;
 	}
 
@@ -230,7 +230,7 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 
 	if (u32 option = attr->option)
 	{
-		sys_spu.todo(u8"\u672A\u5BE6\u73FE\u7684 SPU \u57F7\u884C\u7DD2\u9078\u9805 (0x%x)", option);
+		sys_spu.todo("Unimplemented SPU Thread options (0x%x)", option);
 	}
 
 	auto spu = idm::make_ptr<SPUThread>(thread_name, spu_num, group.get());
@@ -305,7 +305,7 @@ error_code sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::p
 
 	if (attr->type)
 	{
-		sys_spu.todo(u8"\u4E0D\u652F\u63F4\u7684 SPU \u57F7\u884C\u7DD2\u7D44\u985E\u578B (0x%x)", attr->type);
+		sys_spu.todo("Unsupported SPU Thread Group type (0x%x)", attr->type);
 	}
 
 	*id = idm::make<lv2_spu_group>(std::string(attr->name.get_ptr(), std::max<u32>(attr->nsize, 1) - 1), num, prio, attr->type, attr->ct);
@@ -682,7 +682,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 	}
 	default:
 	{
-		fmt::throw_exception(u8"\u7570\u5E38 join_state" HERE);
+		fmt::throw_exception("Unexpected join_state" HERE);
 	}
 	}
 
@@ -953,7 +953,7 @@ error_code sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et)
 	}
 	default:
 	{
-		sys_spu.error(u8"sys_spu_thread_group_connect_event(): \u672A\u77E5\u4E8B\u4EF6\u985E\u578B (%d)", et);
+		sys_spu.error("sys_spu_thread_group_connect_event(): unknown event type (%d)", et);
 		return CELL_EINVAL;
 	}
 	}
@@ -1008,7 +1008,7 @@ error_code sys_spu_thread_group_disconnect_event(u32 id, u32 et)
 	}
 	default:
 	{
-		sys_spu.error(u8"sys_spu_thread_group_disconnect_event(): \u672A\u77E5\u4E8B\u4EF6\u985E\u578B (%d)", et);
+		sys_spu.error("sys_spu_thread_group_disconnect_event(): unknown event type (%d)", et);
 		return CELL_EINVAL;
 	}
 	}
@@ -1030,7 +1030,7 @@ error_code sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 
 	if (et != SYS_SPU_THREAD_EVENT_USER || spup > 63 || queue->type != SYS_PPU_QUEUE)
 	{
-		sys_spu.error(u8"sys_spu_thread_connect_event(): \u53C3\u6578\u7121\u6548 (et=%d, spup=%d, queue->type=%d)", et, spup, queue->type);
+		sys_spu.error("sys_spu_thread_connect_event(): invalid arguments (et=%d, spup=%d, queue->type=%d)", et, spup, queue->type);
 		return CELL_EINVAL;
 	}
 
@@ -1061,7 +1061,7 @@ error_code sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
 
 	if (et != SYS_SPU_THREAD_EVENT_USER || spup > 63)
 	{
-		sys_spu.error(u8"sys_spu_thread_disconnect_event(): \u53C3\u6578\u7121\u6548 (et=%d, spup=%d)", et, spup);
+		sys_spu.error("sys_spu_thread_disconnect_event(): invalid arguments (et=%d, spup=%d)", et, spup);
 		return CELL_EINVAL;
 	}
 
@@ -1486,7 +1486,7 @@ error_code sys_raw_spu_set_spu_cfg(u32 id, u32 value)
 
 	if (value > 3)
 	{
-		fmt::throw_exception(u8"\u7570\u5E38\u7684\u503C (0x%x)" HERE, value);
+		fmt::throw_exception("Unexpected value (0x%x)" HERE, value);
 	}
 
 	const auto thread = idm::get<RawSPUThread>(id);

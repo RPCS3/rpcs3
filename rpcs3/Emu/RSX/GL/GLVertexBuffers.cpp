@@ -180,7 +180,7 @@ namespace
 	};
 }
 
-vertex_upload_info GLGSRender::set_vertex_buffer()
+gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 {
 	std::chrono::time_point<steady_clock> then = steady_clock::now();
 
@@ -196,7 +196,7 @@ vertex_upload_info GLGSRender::set_vertex_buffer()
 	auto required = calculate_memory_requirements(m_vertex_layout, vertex_count);
 
 	std::pair<void*, u32> persistent_mapping = {}, volatile_mapping = {};
-	vertex_upload_info upload_info = { result.vertex_draw_count, result.allocated_vertex_count, result.vertex_index_base, 0u, 0u, result.index_info };
+	gl::vertex_upload_info upload_info = { result.vertex_draw_count, result.allocated_vertex_count, result.vertex_index_base, 0u, 0u, result.index_info };
 
 	if (required.first > 0)
 	{
@@ -233,12 +233,32 @@ vertex_upload_info GLGSRender::set_vertex_buffer()
 				m_vertex_cache->store_range(storage_address, GL_R8UI, required.first, persistent_mapping.second);
 			}
 		}
+
+		if (!m_persistent_stream_view.in_range(upload_info.persistent_mapping_offset, required.first, upload_info.persistent_mapping_offset))
+		{
+			const size_t view_size = ((upload_info.persistent_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
+				(m_attrib_ring_buffer->size() - upload_info.persistent_mapping_offset) : m_max_texbuffer_size;
+
+			m_persistent_stream_view.update(m_attrib_ring_buffer.get(), upload_info.persistent_mapping_offset, (u32)view_size);
+			m_gl_persistent_stream_buffer.copy_from(m_persistent_stream_view);
+			upload_info.persistent_mapping_offset = 0;
+		}
 	}
 
 	if (required.second > 0)
 	{
 		volatile_mapping = m_attrib_ring_buffer->alloc_from_heap(required.second, m_min_texbuffer_alignment);
 		upload_info.volatile_mapping_offset = volatile_mapping.second;
+
+		if (!m_volatile_stream_view.in_range(upload_info.volatile_mapping_offset, required.second, upload_info.volatile_mapping_offset))
+		{
+			const size_t view_size = ((upload_info.volatile_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
+				(m_attrib_ring_buffer->size() - upload_info.volatile_mapping_offset) : m_max_texbuffer_size;
+
+			m_volatile_stream_view.update(m_attrib_ring_buffer.get(), upload_info.volatile_mapping_offset, (u32)view_size);
+			m_gl_volatile_stream_buffer.copy_from(m_volatile_stream_view);
+			upload_info.volatile_mapping_offset = 0;
+		}
 	}
 
 	//Write all the data

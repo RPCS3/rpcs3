@@ -20,12 +20,12 @@ void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case frame_limit_type::none: return (u8"\u95DC\u9589");
+		case frame_limit_type::none: return "Off";
 		case frame_limit_type::_59_94: return "59.94";
 		case frame_limit_type::_50: return "50";
 		case frame_limit_type::_60: return "60";
 		case frame_limit_type::_30: return "30";
-		case frame_limit_type::_auto: return (u8"\u81EA\u52D5");
+		case frame_limit_type::_auto: return "Auto";
 		}
 
 		return unknown;
@@ -42,7 +42,7 @@ namespace rsx
 	{
 		//Don't throw, gather information and ignore broken/garbage commands
 		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
-		LOG_ERROR(RSX, u8"\u7121\u6548 RSX \u6A21\u5F0F 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
+		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
 		rsx->invalid_command_interrupt_raised = true;
 	}
 
@@ -57,6 +57,7 @@ namespace rsx
 	{
 		void set_reference(thread* rsx, u32 _reg, u32 arg)
 		{
+			rsx->sync();
 			rsx->ctrl->ref.exchange(arg);
 		}
 
@@ -71,12 +72,12 @@ namespace rsx
 			{
 				// todo: LLE: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
 				if (addr == 0x40000030)
-					break;
+					return;
 
 				if (Emu.IsStopped())
-					break;
+					return;
 
-				const auto tdr = (s64)g_cfg.video.driver_recovery_timeout;
+				const auto tdr = (u64)g_cfg.video.driver_recovery_timeout;
 				if (tdr == 0)
 				{
 					//No timeout
@@ -106,10 +107,13 @@ namespace rsx
 					std::this_thread::yield();
 				}
 			}
+
+			rsx->performance_counters.idle_time += (get_system_time() - start);
 		}
 
 		void semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
+			rsx->sync();
 			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 
@@ -162,6 +166,8 @@ namespace rsx
 			{
 				//
 			}
+
+			rsx->sync();
 			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
 			sema.semaphore[index].val = arg;
 			sema.semaphore[index].pad = 0;
@@ -175,8 +181,9 @@ namespace rsx
 			{
 				//
 			}
-			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
 
+			rsx->sync();
+			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
 			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
 			sema.semaphore[index].val = val;
 			sema.semaphore[index].pad = 0;
@@ -332,7 +339,13 @@ namespace rsx
 				static constexpr u8 subreg = index % 4;
 
 				u32 load = rsx::method_registers.transform_constant_load();
-				rsx::method_registers.transform_constants[load + reg].rgba[subreg] = (f32&)arg;
+				if ((load + index) >= 512)
+				{
+					LOG_ERROR(RSX, "Invalid register index (load=%d, index=%d)", load, index);
+					return;
+				}
+
+				rsx::method_registers.transform_constants[load + reg][subreg] = arg;
 				rsxthr->m_transform_constants_dirty = true;
 			}
 		};
@@ -425,16 +438,14 @@ namespace rsx
 			case CELL_GCM_ZCULL_STATS1:
 			case CELL_GCM_ZCULL_STATS2:
 			case CELL_GCM_ZCULL_STATS3:
-				result->value = rsx->get_zcull_stats(type);
-				LOG_WARNING(RSX, "NV4097_GET_REPORT: Unimplemented type %d", type);
+				rsx->get_zcull_stats(type, address_ptr);
 				break;
 			default:
-				LOG_ERROR(RSX, u8"NV4097_GET_REPORT: \u4E0D\u826F\u985E\u578B %d", type);
+				LOG_ERROR(RSX, "NV4097_GET_REPORT: Bad type %d", type);
+				result->timer = rsx->timestamp();
+				result->padding = 0;
 				break;
 			}
-
-			result->timer = rsx->timestamp();
-			result->padding = 0;
 		}
 
 		void clear_report_value(thread* rsx, u32 _reg, u32 arg)
@@ -442,13 +453,10 @@ namespace rsx
 			switch (arg)
 			{
 			case CELL_GCM_ZPASS_PIXEL_CNT:
-				LOG_WARNING(RSX, "TODO: NV4097_CLEAR_REPORT_VALUE: ZPASS_PIXEL_CNT");
-				break;
 			case CELL_GCM_ZCULL_STATS:
-				LOG_WARNING(RSX, "TODO: NV4097_CLEAR_REPORT_VALUE: ZCULL_STATS");
 				break;
 			default:
-				LOG_ERROR(RSX, u8"NV4097_CLEAR_REPORT_VALUE: \u4E0D\u826F\u985E\u578B: %d", arg);
+				LOG_ERROR(RSX, "NV4097_CLEAR_REPORT_VALUE: Bad type: %d", arg);
 				break;
 			}
 
@@ -484,6 +492,7 @@ namespace rsx
 				return;
 			}
 
+			rsx->sync();
 			vm::ptr<CellGcmReportData> result = address_ptr;
 			rsx->conditional_render_test_failed = (result->value == 0);
 		}
@@ -506,9 +515,15 @@ namespace rsx
 			rsx->notify_zcull_info_changed();
 		}
 
-		void set_surface_dirty_bit(thread* rsx, u32 _reg, u32)
+		void sync(thread* rsx, u32, u32)
+		{
+			rsx->sync();
+		}
+
+		void set_surface_dirty_bit(thread* rsx, u32, u32)
 		{
 			rsx->m_rtts_dirty = true;
+			rsx->m_framebuffer_state_contested = false;
 		}
 
 		void set_surface_options_dirty_bit(thread* rsx, u32, u32)
@@ -548,7 +563,7 @@ namespace rsx
 
 				if (y)
 				{
-					LOG_ERROR(RSX, u8"%s: y \u4E0D\u662F\u7A7A\u7684 (0x%x)", __FUNCTION__, y);
+					LOG_ERROR(RSX, "%s: y is not null (0x%x)", __FUNCTION__, y);
 				}
 
 				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x << 2);
@@ -614,12 +629,12 @@ namespace rsx
 			if (in_origin != blit_engine::transfer_origin::corner)
 			{
 				// Probably refers to texel geometry which would affect clipping algorithm slightly when rounding texel addresses
-				LOG_WARNING(RSX, u8"NV3089_IMAGE_IN_SIZE: \u4E0D\u660E\u539F\u56E0 (%d)", (u8)in_origin);
+				LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", (u8)in_origin);
 			}
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
 			{
-				LOG_ERROR(RSX, u8"NV3089_IMAGE_IN_SIZE: \u672A\u77E5\u64CD\u4F5C (%d)", (u8)operation);
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown operation (%d)", (u8)operation);
 			}
 
 			const u32 src_offset = method_registers.blit_engine_input_offset();
@@ -648,7 +663,7 @@ namespace rsx
 				break;
 
 			default:
-				LOG_ERROR(RSX, u8"NV3089_IMAGE_IN_SIZE: \u672A\u77E5 m_context_surface (0x%x)", (u8)method_registers.blit_engine_context_surface());
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", (u8)method_registers.blit_engine_context_surface());
 				return;
 			}
 
@@ -674,16 +689,19 @@ namespace rsx
 				in_pitch = in_bpp * in_w;
 			}
 
+			const auto read_address = get_address(src_offset, src_dma);
+			rsx->read_barrier(read_address, in_pitch * in_h);
+
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
 			{
-				LOG_ERROR(RSX, u8"NV3089_IMAGE_IN_SIZE: \u672A\u77E5 dst_color_format (%d)", (u8)dst_color_format);
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)", (u8)dst_color_format);
 			}
 
 			if (src_color_format != rsx::blit_engine::transfer_source_format::r5g6b5 &&
 				src_color_format != rsx::blit_engine::transfer_source_format::a8r8g8b8)
 			{
-				LOG_ERROR(RSX, u8"NV3089_IMAGE_IN_SIZE: \u672A\u77E5 src_color_format (%d)", (u8)src_color_format);
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", (u8)src_color_format);
 			}
 
 			f32 scale_x = 1048576.f / method_registers.blit_engine_ds_dx();
@@ -918,7 +936,7 @@ namespace rsx
 
 	namespace nv0039
 	{
-		void buffer_notify(thread*, u32, u32 arg)
+		void buffer_notify(thread *rsx, u32, u32 arg)
 		{
 			s32 in_pitch = method_registers.nv0039_input_pitch();
 			s32 out_pitch = method_registers.nv0039_output_pitch();
@@ -931,7 +949,7 @@ namespace rsx
 			// The existing GCM commands use only the value 0x1 for inFormat and outFormat
 			if (in_format != 0x01 || out_format != 0x01)
 			{
-				LOG_ERROR(RSX, u8"NV0039_OFFSET_IN: \u4E0D\u652F\u63F4\u7684\u683C\u5F0F: inFormat=%d, outFormat=%d", in_format, out_format);
+				LOG_ERROR(RSX, "NV0039_OFFSET_IN: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
 			}
 
 			LOG_TRACE(RSX, "NV0039_OFFSET_IN: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
@@ -953,8 +971,11 @@ namespace rsx
 			u32 dst_offset = method_registers.nv0039_output_offset();
 			u32 dst_dma = method_registers.nv0039_output_location();
 
+			const auto read_address = get_address(src_offset, src_dma);
+			rsx->read_barrier(read_address, in_pitch * line_count);
+
 			u8 *dst = (u8*)vm::base(get_address(dst_offset, dst_dma));
-			const u8 *src = (u8*)vm::base(get_address(src_offset, src_dma));
+			const u8 *src = (u8*)vm::base(read_address);
 
 			if (in_pitch == out_pitch && out_pitch == line_length)
 			{
@@ -1024,7 +1045,9 @@ namespace rsx
 
 				if (expected > time + 1000)
 				{
-					std::this_thread::sleep_for(std::chrono::milliseconds{static_cast<s64>(expected - time) / 1000});
+					const auto delay_us = static_cast<s64>(expected - time);
+					std::this_thread::sleep_for(std::chrono::milliseconds{delay_us / 1000});
+					rsx->performance_counters.idle_time += delay_us;
 				}
 			}
 		}
@@ -1639,6 +1662,7 @@ namespace rsx
 		bind<NV4097_SET_SURFACE_PITCH_C, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_SURFACE_PITCH_D, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_SURFACE_PITCH_Z, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_WINDOW_OFFSET, nv4097::set_surface_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_OFFSET, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_FORMAT, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_ADDRESS, 8, 16, nv4097::set_texture_dirty_bit>();
@@ -1666,6 +1690,9 @@ namespace rsx
 		bind<NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
+		bind<NV4097_ZCULL_SYNC, nv4097::sync>();
+		bind<NV4097_SET_CONTEXT_DMA_REPORT, nv4097::sync>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();

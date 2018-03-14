@@ -6,15 +6,15 @@
 memory_string_searcher::memory_string_searcher(QWidget* parent)
 	: QDialog(parent)
 {
-	setWindowTitle(tr((u8"\u5B57\u4E32\u641C\u5C0B")));
+	setWindowTitle(tr("String Searcher"));
 	setObjectName("memory_string_searcher");
 	setAttribute(Qt::WA_DeleteOnClose);
 
 	m_addr_line = new QLineEdit(this);
 	m_addr_line->setFixedWidth(QLabel("This is the very length of the lineedit due to hidpi reasons.").sizeHint().width());
-	m_addr_line->setPlaceholderText(tr(u8"\u641C\u5C0B..."));
+	m_addr_line->setPlaceholderText(tr("Search..."));
 
-	QPushButton* button_search = new QPushButton(tr(u8"\u641C\u5C0B"), this);
+	QPushButton* button_search = new QPushButton(tr("&Search"), this);
 
 	QHBoxLayout* hbox_panel = new QHBoxLayout();
 	hbox_panel->addWidget(m_addr_line);

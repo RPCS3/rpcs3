@@ -109,10 +109,10 @@ void fmt_class_string<spu_decoder_type>::format(std::string& out, u64 arg)
 	{
 		switch (type)
 		{
-		case spu_decoder_type::precise: return (u8"\u76F4\u8B6F\u5668 (\u6E96\u78BA)");
-		case spu_decoder_type::fast: return (u8"\u76F4\u8B6F\u5668 (\u5FEB\u901F)");
-		case spu_decoder_type::asmjit: return (u8"\u53CD\u7DE8\u8B6F (ASMJIT)");
-		case spu_decoder_type::llvm: return (u8"\u53CD\u7DE8\u8B6F (LLVM)");
+		case spu_decoder_type::precise: return "Interpreter (precise)";
+		case spu_decoder_type::fast: return "Interpreter (fast)";
+		case spu_decoder_type::asmjit: return "Recompiler (ASMJIT)";
+		case spu_decoder_type::llvm: return "Recompiler (LLVM)";
 		}
 
 		return unknown;
@@ -305,7 +305,7 @@ void SPUThread::on_init(const std::shared_ptr<void>& _this)
 
 std::string SPUThread::get_name() const
 {
-	return fmt::format(u8"%sSPU[0x%x] \u57F7\u884C\u7DD2 (%s)", offset >= RAW_SPU_BASE_ADDR ? "Raw" : "", id, m_name);
+	return fmt::format("%sSPU[0x%x] Thread (%s)", offset >= RAW_SPU_BASE_ADDR ? "Raw" : "", id, m_name);
 }
 
 std::string SPUThread::dump() const
@@ -387,7 +387,7 @@ void SPUThread::cpu_task()
 	const auto& table = *(
 		g_cfg.core.spu_decoder == spu_decoder_type::precise ? &g_spu_interpreter_precise.get_table() :
 		g_cfg.core.spu_decoder == spu_decoder_type::fast ? &g_spu_interpreter_fast.get_table() :
-		(fmt::throw_exception<std::logic_error>(u8"\u7121\u6548\u7684 SPU \u8B6F\u78BC\u5668"), nullptr));
+		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
 
 	// LS pointer
 	const auto base = vm::_ptr<const u8>(offset);
@@ -528,12 +528,12 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args, bool from_mfc)
 			}
 			else
 			{
-				fmt::throw_exception(u8"\u7121\u6548 MMIO offset (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
+				fmt::throw_exception("Invalid MMIO offset (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
 			}
 		}
 		else
 		{
-			fmt::throw_exception(u8"\u7121\u6548\u57F7\u884C\u7DD2\u985E\u578B (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
+			fmt::throw_exception("Invalid thread type (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
 		}
 	}
 
@@ -1008,7 +1008,7 @@ void SPUThread::process_mfc_cmd()
 	}
 	default:
 	{
-		fmt::throw_exception(u8"\u672A\u77E5\u7684\u6307\u4EE4 (cmd=%s, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, ch_mfc_cmd.cmd, ch_mfc_cmd.lsa, ch_mfc_cmd.eal, ch_mfc_cmd.tag, ch_mfc_cmd.size);
+		fmt::throw_exception("Unknown command (cmd=%s, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, ch_mfc_cmd.cmd, ch_mfc_cmd.lsa, ch_mfc_cmd.eal, ch_mfc_cmd.tag, ch_mfc_cmd.size);
 	}
 	}
 
@@ -1058,7 +1058,7 @@ void SPUThread::set_events(u32 mask)
 {
 	if (u32 unimpl = mask & ~SPU_EVENT_IMPLEMENTED)
 	{
-		fmt::throw_exception(u8"\u672A\u5BE6\u73FE\u7684\u4E8B\u4EF6 (0x%x)" HERE, unimpl);
+		fmt::throw_exception("Unimplemented events (0x%x)" HERE, unimpl);
 	}
 
 	// Set new events, get old event mask
@@ -1078,7 +1078,7 @@ void SPUThread::set_interrupt_status(bool enable)
 		// detect enabling interrupts with events masked
 		if (u32 mask = ch_event_mask & ~SPU_EVENT_INTR_IMPLEMENTED)
 		{
-			fmt::throw_exception(u8"SPU \u4E2D\u65B7\u672A\u5BE6\u65BD (mask=0x%x)" HERE, mask);
+			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, mask);
 		}
 		interrupts_enabled = true;
 	}
@@ -1107,7 +1107,7 @@ u32 SPUThread::get_ch_count(u32 ch)
 	case MFC_Cmd:             return std::max(16 - mfc_queue.size(), (u32)0);
 	}
 
-	fmt::throw_exception(u8"\u672A\u77E5/\u975E\u6CD5 \u6E20\u9053 (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
+	fmt::throw_exception("Unknown/illegal channel (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
 }
 
 bool SPUThread::get_ch_value(u32 ch, u32& out)
@@ -1275,7 +1275,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	}
 	}
 
-	fmt::throw_exception(u8"\u672A\u77E5/\u975E\u6CD5 \u6E20\u9053 (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
+	fmt::throw_exception("Unknown/illegal channel (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
 }
 
 bool SPUThread::set_ch_value(u32 ch, u32 value)
@@ -1319,12 +1319,12 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				if (!ch_out_mbox.try_pop(data))
 				{
-					fmt::throw_exception(u8"sys_spu_thread_send_event(value=0x%x, spup=%d): Out_MBox \u662F\u7A7A\u7684" HERE, value, spup);
+					fmt::throw_exception("sys_spu_thread_send_event(value=0x%x, spup=%d): Out_MBox is empty" HERE, value, spup);
 				}
 
 				if (u32 count = ch_in_mbox.get_count())
 				{
-					fmt::throw_exception(u8"sys_spu_thread_send_event(value=0x%x, spup=%d): In_MBox \u4E0D\u662F\u7A7A\u7684 (count=%d)" HERE, value, spup, count);
+					fmt::throw_exception("sys_spu_thread_send_event(value=0x%x, spup=%d): In_MBox is not empty (count=%d)" HERE, value, spup, count);
 				}
 
 				LOG_TRACE(SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
@@ -1333,7 +1333,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				if (!queue)
 				{
-					LOG_WARNING(SPU, u8"sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): \u4E8B\u4EF6\u968A\u5217\u672A\u9023\u63A5", spup, (value & 0x00ffffff), data);
+					LOG_WARNING(SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (value & 0x00ffffff), data);
 					ch_in_mbox.set_values(1, CELL_ENOTCONN);
 					return true;
 				}
@@ -1356,7 +1356,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				if (!ch_out_mbox.try_pop(data))
 				{
-					fmt::throw_exception(u8"sys_spu_thread_throw_event(value=0x%x, spup=%d): Out_MBox \u662F\u7A7A\u7684" HERE, value, spup);
+					fmt::throw_exception("sys_spu_thread_throw_event(value=0x%x, spup=%d): Out_MBox is empty" HERE, value, spup);
 				}
 
 				LOG_TRACE(SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
@@ -1365,14 +1365,14 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				if (!queue)
 				{
-					LOG_WARNING(SPU, u8"sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x): \u4E8B\u4EF6\u968A\u5217\u672A\u9023\u63A5", spup, (value & 0x00ffffff), data);
+					LOG_WARNING(SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (value & 0x00ffffff), data);
 					return true;
 				}
 
 				// TODO: check passing spup value
 				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, id, ((u64)spup << 32) | (value & 0x00ffffff), data))
 				{
-					LOG_WARNING(SPU, u8"sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x) \u5931\u6557 (\u968A\u5217\u5DF2\u6EFF)", spup, (value & 0x00ffffff), data);
+					LOG_WARNING(SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x) failed (queue is full)", spup, (value & 0x00ffffff), data);
 				}
 
 				return true;
@@ -1386,12 +1386,12 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				if (!ch_out_mbox.try_pop(data))
 				{
-					fmt::throw_exception(u8"sys_event_flag_set_bit(value=0x%x (flag=%d)): Out_MBox \u662F\u7A7A\u7684" HERE, value, flag);
+					fmt::throw_exception("sys_event_flag_set_bit(value=0x%x (flag=%d)): Out_MBox is empty" HERE, value, flag);
 				}
 
 				if (u32 count = ch_in_mbox.get_count())
 				{
-					fmt::throw_exception(u8"sys_event_flag_set_bit(value=0x%x (flag=%d)): In_MBox \u4E0D\u662F\u7A7A\u7684 (%d)" HERE, value, flag, count);
+					fmt::throw_exception("sys_event_flag_set_bit(value=0x%x (flag=%d)): In_MBox is not empty (%d)" HERE, value, flag, count);
 				}
 
 				LOG_TRACE(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
@@ -1415,7 +1415,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				if (!ch_out_mbox.try_pop(data))
 				{
-					fmt::throw_exception(u8"sys_event_flag_set_bit_impatient(value=0x%x (flag=%d)): Out_MBox \u662F\u7A7A\u7684" HERE, value, flag);
+					fmt::throw_exception("sys_event_flag_set_bit_impatient(value=0x%x (flag=%d)): Out_MBox is empty" HERE, value, flag);
 				}
 
 				LOG_TRACE(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
@@ -1428,11 +1428,11 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 			{
 				if (ch_out_mbox.get_count())
 				{
-					fmt::throw_exception(u8"SPU_WrOutIntrMbox: \u672A\u77E5\u8CC7\u6599 (value=0x%x); Out_MBox = 0x%x" HERE, value, ch_out_mbox.get_value());
+					fmt::throw_exception("SPU_WrOutIntrMbox: unknown data (value=0x%x); Out_MBox = 0x%x" HERE, value, ch_out_mbox.get_value());
 				}
 				else
 				{
-					fmt::throw_exception(u8"SPU_WrOutIntrMbox: \u672A\u77E5\u8CC7\u6599 (value=0x%x)" HERE, value);
+					fmt::throw_exception("SPU_WrOutIntrMbox: unknown data (value=0x%x)" HERE, value);
 				}
 			}
 		}
@@ -1574,7 +1574,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 		// detect masking events with enabled interrupt status
 		if (value & ~SPU_EVENT_INTR_IMPLEMENTED && interrupts_enabled)
 		{
-			fmt::throw_exception(u8"SPU \u4E2D\u65B7\u672A\u5BE6\u73FE (mask=0x%x)" HERE, value);
+			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, value);
 		}
 
 		// detect masking unimplemented events
@@ -1604,7 +1604,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	}
 	}
 
-	fmt::throw_exception(u8"\u672A\u77E5/\u975E\u6CD5 \u6E20\u9053 (ch=%d [%s], value=0x%x)" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???", value);
+	fmt::throw_exception("Unknown/illegal channel (ch=%d [%s], value=0x%x)" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???", value);
 }
 
 bool SPUThread::stop_and_signal(u32 code)
@@ -1682,12 +1682,12 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		if (!ch_out_mbox.try_pop(spuq))
 		{
-			fmt::throw_exception(u8"sys_spu_thread_receive_event(): Out_MBox \u662F\u7A7A\u7684" HERE);
+			fmt::throw_exception("sys_spu_thread_receive_event(): Out_MBox is empty" HERE);
 		}
 
 		if (u32 count = ch_in_mbox.get_count())
 		{
-			LOG_ERROR(SPU, u8"sys_spu_thread_receive_event(): In_MBox \u4E0D\u662F\u7A7A\u7684 (%d)", count);
+			LOG_ERROR(SPU, "sys_spu_thread_receive_event(): In_MBox is not empty (%d)", count);
 			return ch_in_mbox.set_values(1, CELL_EBUSY), true;
 		}
 
@@ -1837,7 +1837,7 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		if (!ch_out_mbox.try_pop(value))
 		{
-			fmt::throw_exception(u8"sys_spu_thread_group_exit(): Out_MBox \u662F\u7A7A\u7684" HERE);
+			fmt::throw_exception("sys_spu_thread_group_exit(): Out_MBox is empty" HERE);
 		}
 
 		LOG_TRACE(SPU, "sys_spu_thread_group_exit(status=0x%x)", value);
@@ -1868,7 +1868,7 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		if (!ch_out_mbox.get_count())
 		{
-			fmt::throw_exception(u8"sys_spu_thread_exit(): Out_MBox \u662F\u7A7A\u7684" HERE);
+			fmt::throw_exception("sys_spu_thread_exit(): Out_MBox is empty" HERE);
 		}
 
 		LOG_TRACE(SPU, "sys_spu_thread_exit(status=0x%x)", ch_out_mbox.get_value());
@@ -1885,11 +1885,11 @@ bool SPUThread::stop_and_signal(u32 code)
 
 	if (!ch_out_mbox.get_count())
 	{
-		fmt::throw_exception(u8"\u672A\u77E5\u7684 STOP \u4EE3\u78BC: 0x%x (Out_MBox \u662F\u7A7A\u7684)" HERE, code);
+		fmt::throw_exception("Unknown STOP code: 0x%x (Out_MBox is empty)" HERE, code);
 	}
 	else
 	{
-		fmt::throw_exception(u8"\u672A\u77E5\u7684 STOP \u4EE3\u78BC: 0x%x (Out_MBox=0x%x)" HERE, code, ch_out_mbox.get_value());
+		fmt::throw_exception("Unknown STOP code: 0x%x (Out_MBox=0x%x)" HERE, code, ch_out_mbox.get_value());
 	}
 }
 

@@ -96,7 +96,10 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
+		{
 			OS << "layout(location=" << std::to_string(output_index++) << ") " << "out vec4 " << table[i].first << ";\n";
+			vk_prog->output_color_masks[i] = UINT32_MAX;
+		}
 	}
 }
 
@@ -403,11 +406,8 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "r1"))
 		{
-			/** Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
-			* but it writes depth in r1.z and not h2.z.
-			* Maybe there's a different flag for depth ?
-			*/
-			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << "\n";
+			//Depth writes are always from a fp32 register. See issues section on nvidia's NV_fragment_program spec
+			//https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 			OS << "	gl_FragDepth = r1.z;\n";
 		}
 		else

@@ -1,111 +1,111 @@
 ﻿{
 	"audio": {
-		"audioOutBox": "不例外，總是使用 XAudio。\nOpenAL 使用跨平台的方式，但會在大多數遊戲中感受到較差的聲音質量和不順暢的聲音。",
+		"audioOutBox": "Always use XAudio, no exceptions.\nOpenAL uses a cross-platform approach but will have poor audio quality and stuttering sound in most games.",
 		"audioOutBox_Linux": "PulseAudio uses the recommended native Linux sound system and has good compatibility and sound quality. If it is unavailable on your system, ALSA is the next best alternative. \nOpenAL uses a cross-platform approach but will have poor audio quality and stuttering sound in most games.",
-		"audioDump": "將所有聲音儲存為 wav 檔案，如果不確定，請取消勾選。",
-		"convert": "使用 16-bit 聲音樣本，而不是預設的 32-bit 浮點。\n如果沒有聲音或完全破碎的聲音，請使用 buggy 聲音驅動程式。",
-		"downmix": "使用立體聲輸出，而不是預設 7.1 環繞型聲音。\n使用立體聲音訊裝置，僅當您使用環繞聲音系統時，才能停用它。"
+		"audioDump": "Saves all audio as a raw wave file. If unsure, leave this unchecked.",
+		"convert": "Uses 16-bit audio samples instead of default 32-bit floating point.\nUse with buggy audio drivers if you have no sound or completely broken sound.",
+		"downmix": "Uses stereo audio output instead of default 7.1 surround sound.\nUse with stereo audio devices. Disable it only if you are using a surround sound audio system."
 	},
 	"cpu": {
 		"PPU": {
-			"precise": "這是最「準確」的直譯器，但玩遊戲很慢。\n如果您遇到奇怪的錯誤或崩潰，您可以嘗試將其作為最後的手段。\n如果不確定，請使用「PPU 直譯器 (快速)」 與 「PPU 反編譯 (LLVM)」。",
-			"fast": "這是最「快速」的直譯器。\n交換速度準確，即使與「準確」選項相比，也不易破壞遊戲。\n如果「PPU 反編譯 (LLVM)」失敗，請嘗試此選項。",
-			"LLVM": "首次「反編譯」遊戲的執行檔，然後再執行。\n這是迄今為止最快的選項，應該始終使用。\n如果遇到相容性問題，退回其中一項「直譯器」重試。\n如果不確定，請使用此選項。"
+			"precise": "This is the most accurate Interpreter, but very slow to play games with.\nYou may try this as a last resort if you encounter odd bugs or crashes.\nIf unsure, use PPU Interpreter Fast or PPU Recompiler (LLVM).",
+			"fast": "This is the fastest interpreter.\nTrades accuracy for speed, and it very rarely breaks games even in comparison to the Precise option.\nTry this if PPU Recompiler (LLVM) fails.",
+			"LLVM": "Recompiles the game's executable once before running it for the first time.\nThis is by far the fastest option and should always be used.\nShould you face compatibility issues, fall back to one of the Interpreters and retry.\nIf unsure, use this option."
 		},
 		"SPU": {
-			"precise": "這是非常慢的，但可能在一些遊戲中修復破碎的圖形。",
-			"fast": "這比「SPU 反編譯」慢，但明顯快於「準確」的直譯器。\n但很少遊戲有這個需求。",
-			"ASMJIT": "這是相容性非常好的最快的選項。\n如果不確定，請使用此選項。",
-			"LLVM": "尚未實現"
+			"precise": "This is extremely slow but may fix broken graphics in some games.",
+			"fast": "This is slower than the SPU Recompiler but significantly faster than the precise interpreter.\nGames rarely need this however.",
+			"ASMJIT": "This is the fastest option with very good compatibility.\nIf unsure, use this option.",
+			"LLVM": "This doesn't exist (yet)"
 		},
 		"libraries": {
-			"auto": "自動選擇要讀取的 LLE 庫。\n雖然此選項能在大多數情況下正常工作，但「liblv2」是更好的選擇。",
-			"manual": "允許使用者手動選擇要讀取的 LLE 庫。\n如果不確定，請勿使用此選項。(如果使用什麼都不會奏效的話)",
-			"both": "自動選擇要讀取的 LLE 庫，並允許使用者手動選擇其它庫。\n如果不確定，請勿使用此選項。",
-			"liblv2": "這準確地模擬遊戲如何「讀取」和「卸載」一個真正的 PlayStation 3 系統模組檔案。\n一些遊戲需要此項目，這是優先選項。"
+			"auto": "Automatically selects the LLE libraries to load.\nWhile this option works fine in most cases, liblv2 is the preferred option.",
+			"manual": "Allows the user to manually choose the LLE libraries to load.\nIf unsure, don't use this option. Nothing will work if you use this.",
+			"both": "Automatically selects the LLE libraries to load and allows the user to choose additional libraries manually.\nIf unsure, don't use this option.",
+			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this.\nThis is the preferred option."
 		},
 		"checkboxes": {
-			"hookStFunc": "允許 hook some functions 如 'memcpy' 替代與 high-level 實現。可能什麼也不會做或破壞一些項目。(實驗)",
-			"enableThreadScheduler": "允許 RPCS3 手動排定實體核心上執行特定的工作，而不是讓作業系統處理它。\n在 Windows 上非常有用，尤其是對於能夠帶來巨大性能收益的 AMD Ryzen 系統。",
-			"lowerSPUThrPrio": "執行優先權低於 PPU 執行緒的 SPU 執行緒。\ni3 或 i5 通常更快，i7 或 Ryzen 可能更慢或沒有差異。",
-			"spuLoopDetection": "嘗試偵測 SPU 核心中的循環條件，並將其用作為排程點。\n提高性能並降低 CPU 使用率。\n在極少數情況下可能引起嚴重的聲音延遲。"
+			"hookStFunc": "Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.",
+			"enableThreadScheduler": "Allows RPCS3 to manually schedule physical cores to run specific tasks on, instead of letting the OS handle it.\nVery useful on Windows, especially for AMD Ryzen systems where it can give huge performance gains.",
+			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen.",
+			"spuLoopDetection": "Try to detect loop conditions in SPU kernels and use them as scheduling hints.\nImproves performance and reduces CPU usage.\nMay cause severe audio stuttering in rare cases."
 		},
 		"comboboxes": {
-			"preferredSPUThreads": "Some SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\n將其設定較小的值也許提高性能並減少某些遊戲中的卡頓。\n如果設定較小的值時性能受到影響，請保持為「自動」。"
+			"preferredSPUThreads": "Some SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value."
 		}
 	},
 	"debug": {
-		"ppuDebug": "請勿使用",
-		"spuDebug": "請勿使用",
-		"readColor": "請勿使用",
-		"dumpDepth": "請勿使用",
-		"readDepth": "請勿使用",
-		"glLegacyBuffers": "「使用舊版的 OpenGL 緩衝」允許截取工具使用 RPCS3，例如;RenderDoc。\n如果不確定，請勿使用此選項。",
-		"forceHighpZ": "僅當偵錯 GPU 硬體的差異時才有用。\n一般使用者不需要。\n如果不確定，請勿使用此選項。",
-		"debugOutput": "啟用選定 API 內置偵錯功能。\n會導致嚴重的性能下降，特別是 vulkan。\n只對開發人員有用。\n如果不確定，請勿使用此選項。",
-		"debugOverlay": "提供各種偵錯訊息的圖形覆蓋。\n如果不確定，請勿使用此選項。",
-		"logProg": "傾印遊戲著色器檔案。 只對開發人員有用\n如果不確定，請勿使用此選項。",
+		"ppuDebug": "Never use this.",
+		"spuDebug": "Never use this.",
+		"readColor": "Never use this.",
+		"dumpDepth": "Never use this.",
+		"readDepth": "Never use this.",
+		"glLegacyBuffers": "Enables use of classic OpenGL buffers which allows capturing tools to work with RPCS3 e.g RenderDoc.\nIf unsure, don't use this option.",
+		"forceHighpZ": "Only useful when debugging differences in GPU hardware.\nNot necessary for average users.\nIf unsure, don't use this option.",
+		"debugOutput": "Enables the selected API's inbuilt debugging functionality.\nWill cause severe performance degradation especially with Vulkan.\nOnly useful to developers.\nIf unsure, don't use this option.",
+		"debugOverlay": "Provides a graphical overlay of various debugging information.\nIf unsure, don't use this option.",
+		"logProg": "Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option.",
 		"disableOcclusionQueries": "Disables running occlusion queries. Minor to moderate performance boost.\nMight introduce issues with broken occlusion e.g missing geometry and extreme pop-in.",
-		"forceCpuBlitEmulation": "強制對 CPU 進行所有位塊傳輸和圖像處理操作的仿真。\n在大多數情況下還要啟用「寫入色彩緩衝」選項以避免丟失圖形。\n在某些情況下性能顯著降低了但更準確。\n此設定將覆蓋「GPU 紋理縮放」選項。",
-		"disableOnDiskShaderCache": "禁止從資料目錄著色快取中讀取與儲存著色。"
+		"forceCpuBlitEmulation": "Forces emulation of all blit and image manipulation operations on the CPU.\nRequires 'Write Color Buffers' option to also be enabled in most cases to avoid missing graphics.\nSignificantly degrades performance but is more accurate in some cases.\nThis setting overrides the 'GPU texture scaling' option.",
+		"disableOnDiskShaderCache": "Disables the loading and saving of shaders from and to the shader cache in the data directory."
 	},
 	"emulator": {
 		"gui": {
-			"configs": "只對開發人員有用。\n如果不確定，請勿使用此選項。",
-			"stylesheets": "更改 RPCS3 的整體外觀。\n選擇一個「風格」並點擊「套用」風格之間切換。",
-			"show_welcome": "顯示啟動 RPCS3 時的初始歡迎畫面。",
-			"custom_colors": "根據「風格」中設定的屬性確定自訂使用者介面色彩。"
+			"configs": "Only useful to developers.\nIf unsure, don't use this option.",
+			"stylesheets": "Changes the overall look of RPCS3.\nChoose a stylesheet and click Apply to change between styles.",
+			"show_welcome": "Shows the initial welcome screen upon starting RPCS3.",
+			"custom_colors": "Prioritize custom user interface colors over properties set in stylesheet."
 		},
 		"misc": {
-			"exitOnStop": "關閉遊戲時自動關閉 RPCS3，或當遊戲自己關閉時。",
-			"alwaysStart": "請保持啟用，除非您是開發人員。",
-			"startGameFullscreen": "自動將游戲視窗全螢幕顯示。\n雙擊遊戲視窗或按下 Alt + Enter 鍵切換全螢幕和視窗模式。",
+			"exitOnStop": "Automatically close RPCS3 when closing a game, or when a game closes itself.",
+			"alwaysStart": "Leave this enabled unless you are a developer.",
+			"startGameFullscreen": "Automatically puts the game window in fullscreen.\nDouble click on the game window or press alt+enter to toggle fullscreen and windowed mode.",
 			"showFPSInTitle": "Shows the framerate in the game window title. May cause buggy or outdated recording software to not notice RPCS3.",
-			"gs_resizeOnBoot": "在啟動時自動調整遊戲視窗大小。\n這不會改變內部遊戲的解析度。",
-			"showTrophyPopups": "當獎盃「解鎖」時顯示獎盃彈出視窗",
-			"gs_disableMouse": "當遊戲畫面處於活動狀態時，禁止雙擊觸發全螢幕模式。\n檢查這個，如果你想用滑鼠和鍵盤時。(例如與 UCR)",
-			"maxLLVMThreads": "限制用於 PPU 模組編譯的最大執行緒數。\n降低此值以提高其它開啟的應用程式的性能。\n預設使用所有可用的執行緒。",
-			"useNativeInterface": "允許遊戲視窗中使用本體 HUD 與遊戲控制器互動。\n停用時，將使用正常的 Qt 訊息框。\n目前僅支援英文語言。"
+			"gs_resizeOnBoot": "Automatically resizes the game window on boot.\nThis does not change the internal game resolution.",
+			"showTrophyPopups": "Show trophy popups when a trophy is unlocked.",
+			"gs_disableMouse": "Disables the activation of fullscreen mode per doubleclick while the game screen is active.\nCheck this if you want to play with mouse and keyboard (for example with UCR).",
+			"maxLLVMThreads": "Limits the maximum number of threads used for PPU Module compilation.\nLower this in order to increase performance of other open applications.\nThe default uses all available threads.",
+			"useNativeInterface": "Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, only the English language is supported."
 		}
 	},
 	"gpu": {
 		"comboboxes": {
-			"renderBox": "Vulkan 是最快速的渲染器。 OpenGL 是最準確的渲染器。\n如果不確定，請使用 Vulkan。 如果您有任何相容性問題，請回到 OpenGL。\nDirectX 12 已被棄用，不應該使用。",
+			"renderBox": "Vulkan is the fastest renderer. OpenGL is the most accurate renderer.\nIf unsure, use Vulkan. Should you have any compatibility issues, fall back to OpenGL.\nDirectX 12 is deprecated and should never be used.",
 			"renderBox_Linux": "Vulkan is the fastest renderer. OpenGL is the most accurate renderer.\nIf unsure, use Vulkan. Should you have any compatibility issues, fall back to OpenGL.",
-			"resBox": "如果「解析度比例」設定為 100% 以外的任何值，則此設定將被忽略！ 請保持在「1280x720」上，每個 PS3 遊戲都與這個解析度相容，僅當遊戲支援的情況下，才能將其設定為「1920x1080」。 較低的解析度可能工作，但不實用，然而很少會出於仿真的錯誤，一些遊戲只能在低解析度 (480p) 下呈現。",
-			"graphicsAdapterBox": "在多 GPU 系統上選擇要使用的 GPU 在 RPCS3 中使用 Vulkan 或 DirectX 12。\n當使用 OpenGL 時，這非必要的。",
+			"resBox": "This setting will be ignored if the Resolution Scale is set to anything other than 100%!\nLeave this on 1280x720, every PS3 game is compatible with this resolution.\nOnly use 1920x1080 if the game supports it.\nRarely due to emulation bugs some games will only render at low resolutions like 480p.",
+			"graphicsAdapterBox": "On multi GPU systems select which GPU to use in RPCS3 when using Vulkan or DirectX 12.\nThis is not needed when using OpenGL.",
 			"graphicsAdapterBox_Linux": "On multi GPU systems select which GPU to use in RPCS3 when using Vulkan.\nThis is not needed when using OpenGL.",
-			"aspectBox": "請保持 16:9，除非你有一個 4:3 的顯示器。\n如果您使用的解析度不是 720p，其「自動」也很好。",
-			"frameLimitBox": "「關閉」是最好的選擇，因為它執行得更快。\n使用「框限制」 將增加額外的負擔並減緩遊戲速度。\n但是，如果框速過高，某些遊戲將會崩潰。\n如果發生這種情況，請將值設定為「關閉」以外的任何值。",
-			"anisotropicFilterOverride": "更高的值以 GPU 資源為代價增加了斜面上紋理的銳度。\n當前 GPU 可以處理這個設定，甚至在「16x」。\n如果要使用真正的 PS3 原始設定，請將此保持為「自動」。"
+			"aspectBox": "Leave this on 16:9 unless you have a 4:3 monitor.\nAuto also works well, especially if you use a resolution that is not 720p.",
+			"frameLimitBox": "Off is the best option as it performs faster.\nUsing the frame limiter will add extra overhead and slow down the game.\nHowever, some games will crash if the framerate is too high.\nIf that happens, set value to anything other than Off.",
+			"anisotropicFilterOverride": "Higher values increase sharpness of textures on sloped surfaces at the cost of GPU resources.\nModern GPUs can handle this setting just fine even at 16x.\nKeep this on Automatic if you want to use the original setting used by a real PS3."
 		},
 		"sliders": {
-			"resolutionScale": "指定「百分比」縮放遊戲的解析度。\n基本解析度總是「1280x720」。\n如果要使用常規解析度選項，請將此值設定為「100%」。",
-			"minimumScalableDimension": "僅大於此大小的框緩衝才會被放大。\n增加此值可能會在倍增時修復缺少圖形的問題，尤其是在啟用「寫入色彩緩衝」時。\n如果您不確定，請不要碰此設定。"
+			"resolutionScale": "Scales the game's resolution by the given percentage.\nThe base resolution is always 1280x720.\nSet this value to 100% if you want to use the normal Resolution options.",
+			"minimumScalableDimension": "Only framebuffers greater than this size will be upscaled.\nIncreasing this value might fix problems with missing graphics when upscaling, especially when Write Color Buffers is enabled.\nDo not touch this setting if you are unsure."
 		},
 		"main": {
-			"dumpColor": "如果缺失圖形或損壞的遊戲採光，請啟用此選項。\n可能會降低性能，在某些情況下引起卡頓。\n如有需求的遊戲「Demon's Souls」。",
-			"vsync": "將它關掉可能會獲得更高的框速，但會損失遊戲中的器物。",
-			"gpuTextureScaling": "在大多數遊戲中小顯著的性能提升，很少有副作用。\n在極少數情況下可能會導致紋理損壞。",
-			"scrictModeRendering": "強制執行 API 規格。\n可能導致某些遊戲性能下降。\n可以解決罕見的圖形和閃爍的情況。\n如果不確定，請勿使用此選項。",
-			"disableVertexCache": "停用頂點快取。\n可能解決丟失或閃爍的圖形輸出。\n可能會降低性能。",
-			"stretchToDisplayArea": "覆蓋「寬高比」並將圖像延伸到完整顯示區域。"
+			"dumpColor": "Enable this option if you get missing graphics or broken lighting ingame.\nMight degrade performance and introduce stuttering in some cases.\nRequired for Demon's Souls.",
+			"vsync": "By having this off you might obtain a higher frame rate at the cost of tearing artifacts in the game.",
+			"gpuTextureScaling": "Small to significant performance boost in most games and rarely with side effects.\nMay cause texture corruption in rare cases.",
+			"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
+			"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.",
+			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area."
 		}
 	},
 	"input": {
-		"padHandlerBox": "想使用鍵盤進行操控，請選擇「keyboard」選項。\n如果您有 DualShock 4 控制器，就請選擇 「DualShock 4」選項。\n如果您有 Xbox 控制器或其它相容裝置，請使用「XInput」選項。\n較早期的控制器，如具有適配器的 PS2 控制器通常能與「MMJoystick」手把/手柄工作。\n檢查 Windows 控制面板的按鍵映射。",
+		"padHandlerBox": "If you want to use the keyboard to control, select the Keyboard option.\nIf you have a DualShock 4, select DualShock 4.\nIf you have an Xbox controller, or another compatible device, use XInput.\nOlder controllers such as PS2 controllers with an adapter usually work fine with MMJoystick.\nCheck button mappings in the Windows control panel.",
 		"padHandlerBox_Linux": "If you want to use the keyboard to control, select the Keyboard option.\nIf you have a DualShock 4, select DualShock 4.\nevdev input is WIP.",
-		"keyboardHandlerBox": "一些遊戲支援本體鍵盤輸入。\n「基本」將在這些情況下工作。",
-		"mouseHandlerBox": "一些遊戲支援本體滑鼠輸入。\n「基本」將在這些情況下工作。",
-		"cameraBox": "攝影尚未實現，請將其保持為「空」。",
-		"cameraTypeBox": "攝影尚未實現，請將其保持為「未知」。",
-		"moveBox": "PlayStation Move 支援\n虛設: 實驗! 動態控制器將映射到 DS4 控制器映射。"
+		"keyboardHandlerBox": "Some games support native keyboard input.\nBasic will work in these cases.",
+		"mouseHandlerBox": "Some games support native mouse input.\nBasic will work in these cases.",
+		"cameraBox": "Camera support is not implemented, leave this on null.",
+		"cameraTypeBox": "Camera support is not implemented, leave this on unknown.",
+		"moveBox": "PlayStation Move support.\nFake: Experimental! This maps Move controls to DS4 controller mappings."
 	},
 	"network": {
-		"netStatusBox": "保持為「中斷」，除非你正在偵錯。\nRPCS3 尚未支援線上連線。"
+		"netStatusBox": "Leave as disconnected unless you're debugging.\nRPCS3 has no online support."
 	},
 	"system": {
-		"sysLangBox": "如果系統語言在遊戲本身不可用，某些遊戲可能無法啟動。\n一些遊戲會自動將語言切換到所選擇的內容。\n建議選擇遊戲所支援的語言。",
-		"enableHostRoot": "一些自製的需要。\n如果不確定，請勿使用此選項。"
+		"sysLangBox": "Some games may fail to boot if the system language is not available in the game itself.\nOther games will switch language automatically to what is selected here.\nIt is recommended leaving this on a language supported by the game.",
+		"enableHostRoot": "Required for some Homebrew.\nIf unsure, don't use this option."
 	}
 }

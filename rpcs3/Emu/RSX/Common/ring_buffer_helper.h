@@ -131,4 +131,9 @@ public:
 		else
 			fmt::throw_exception("m_put_pos == m_get_pos!" HERE);
 	}
+
+	size_t size() const
+	{
+		return m_size;
+	}
 };
