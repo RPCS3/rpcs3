@@ -64,6 +64,7 @@ rpcs3/git-version.h
 *.psess
 *.VC.*
 *.vcxproj.user
+enc_temp_folder/*
 
 # Copyrighted files
 /bin/data/
