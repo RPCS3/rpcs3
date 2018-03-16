@@ -70,13 +70,13 @@ void game_compatibility::RequestCompatibility(bool online)
 			QJsonObject json_result = json_results[key].toObject();
 
 			// Retrieve compatibility information from json
-			Compat_Status compat_status = Status_Data.at(json_result.value("status").toString("NoResult"));
+			compat_status status = Status_Data.at(json_result.value("status").toString("NoResult"));
 
 			// Add date if possible
-			compat_status.date = json_result.value("date").toString();
+			status.date = json_result.value("date").toString();
 
 			// Add status to map
-			m_compat_database.emplace(std::pair<std::string, Compat_Status>(sstr(key), compat_status));
+			m_compat_database.emplace(std::pair<std::string, compat_status>(sstr(key), status));
 		}
 
 		return true;
@@ -220,7 +220,7 @@ void game_compatibility::RequestCompatibility(bool online)
 	Q_EMIT DownloadStarted();
 }
 
-Compat_Status game_compatibility::GetCompatibility(const std::string& title_id)
+compat_status game_compatibility::GetCompatibility(const std::string& title_id)
 {
 	if (m_compat_database.empty())
 	{
@@ -234,7 +234,7 @@ Compat_Status game_compatibility::GetCompatibility(const std::string& title_id)
 	return Status_Data.at("NoResult");
 }
 
-Compat_Status game_compatibility::GetStatusData(const QString& status)
+compat_status game_compatibility::GetStatusData(const QString& status)
 {
 	return Status_Data.at(status);
 }

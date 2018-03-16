@@ -163,7 +163,7 @@ namespace sound
 struct GUI_GameInfo
 {
 	GameInfo info;
-	Compat_Status compat;
+	compat_status compat;
 	QImage icon;
 	QPixmap pxmap;
 	bool bootable;

@@ -10,15 +10,6 @@
 #include <QBitmap>
 #include <QLabel>
 
-struct Compat_Status
-{
-	int index;
-	QString date;
-	QString color;
-	QString text;
-	QString tooltip;
-};
-
 struct gui_save
 {
 	QString key;
