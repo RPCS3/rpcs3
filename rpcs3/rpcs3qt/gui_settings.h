@@ -70,16 +70,9 @@ namespace gui
 		return gl_max_slider_pos * current_delta / size_delta;
 	};
 
-	inline QString get_Single_Line(const QString& multi_line_string)
-	{
-		QString single_line_string = multi_line_string;
-		single_line_string.replace("\n"," ");
-		return single_line_string;
-	}
-
 	inline q_string_pair Recent_Game(const QString& path, const QString& title)
 	{
-		return q_string_pair(path, get_Single_Line(title));
+		return q_string_pair(path, title.simplified()); // simplified() forces single line text
 	}
 
 	const QString Default     = QObject::tr("default");

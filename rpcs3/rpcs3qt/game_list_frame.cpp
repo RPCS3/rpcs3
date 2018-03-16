@@ -890,12 +890,9 @@ int game_list_frame::PopulateGameList()
 
 	auto l_GetItem = [](const std::string& text)
 	{
-		// force single line text ("hack" used instead of Qt shenanigans like Qt::TextSingleLine)
-		QString formattedText = gui::get_Single_Line(qstr(text));
-
 		QTableWidgetItem* curr = new QTableWidgetItem;
 		curr->setFlags(curr->flags() & ~Qt::ItemIsEditable);
-		curr->setText(formattedText);
+		curr->setText(qstr(text).simplified()); // simplified() forces single line text
 		return curr;
 	};
 
@@ -1008,7 +1005,7 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	for (const auto& app : matching_apps)
 	{
-		QString title = gui::get_Single_Line(qstr(app.first->info.name));
+		const QString title = qstr(app.first->info.name).simplified(); // simplified() forces single line text
 
 		m_xgrid->addItem(app.first->pxmap, title, app.second, r, c);
 
