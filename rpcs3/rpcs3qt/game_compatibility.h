@@ -15,11 +15,20 @@
 
 #include "gui_settings.h"
 
+struct compat_status
+{
+	int index;
+	QString date;
+	QString color;
+	QString text;
+	QString tooltip;
+};
+
 class game_compatibility : public QObject
 {
 	Q_OBJECT
 
-	const std::map<QString, Compat_Status> Status_Data =
+	const std::map<QString, compat_status> Status_Data =
 	{
 		{ "Playable", { 0, "", "#1ebc61", QObject::tr("Playable"),         QObject::tr("Games that can be properly played from start to finish") } },
 		{ "Ingame",   { 1, "", "#f9b32f", QObject::tr("Ingame"),           QObject::tr("Games that either can't be finished, have serious glitches or have insufficient performance") } },
@@ -38,7 +47,7 @@ class game_compatibility : public QObject
 	std::unique_ptr<QTimer> m_progress_timer;
 	std::unique_ptr<QProgressDialog> m_progress_dialog;
 	std::unique_ptr<QNetworkAccessManager> m_network_access_manager;
-	std::map<std::string, Compat_Status> m_compat_database;
+	std::map<std::string, compat_status> m_compat_database;
 
 public:
 	/** Handles reads, writes and downloads for the compatibility database */
@@ -48,10 +57,10 @@ public:
 	void RequestCompatibility(bool online = false);
 
 	/** Returns the compatibility status for the requested title */
-	Compat_Status GetCompatibility(const std::string& title_id);
+	compat_status GetCompatibility(const std::string& title_id);
 
 	/** Returns the data for the requested status */
-	Compat_Status GetStatusData(const QString& status);
+	compat_status GetStatusData(const QString& status);
 
 Q_SIGNALS:
 	void DownloadStarted();
