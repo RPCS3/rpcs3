@@ -1,5 +1,6 @@
 #include "game_compatibility.h"
 
+#include <QLabel>
 #include <QMessageBox>
 
 constexpr auto qstr = QString::fromStdString;
