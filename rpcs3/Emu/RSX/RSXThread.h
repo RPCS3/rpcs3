@@ -157,64 +157,93 @@ namespace rsx
 		std::array<attribute_buffer_placement, 16> attribute_placement;
 	};
 
-	struct zcull_statistics
+	namespace reports
 	{
-		u32 zpass_pixel_cnt;
-		u32 zcull_stats;
-		u32 zcull_stats1;
-		u32 zcull_stats2;
-		u32 zcull_stats3;
-
-		void clear()
+		struct occlusion_query_info
 		{
-			zpass_pixel_cnt = zcull_stats = zcull_stats1 = zcull_stats2 = zcull_stats3 = 0;
-		}
-	};
+			u32 driver_handle;
+			u32 result;
+			u32 num_draws;
+			bool pending;
+			bool active;
+			bool owned;
 
-	struct occlusion_query_info
-	{
-		u32 driver_handle;
-		u32 result;
-		u32 num_draws;
-		bool pending;
-		bool active;
+			u64 sync_timestamp;
+		};
 
-		u64 sync_timestamp;
-		u64 external_flags;
-	};
-
-	struct occlusion_task
-	{
-		std::vector<occlusion_query_info*> task_stack;
-		occlusion_query_info* active_query = nullptr;
-		u32 pending = 0;
-
-		//Add one query to the task
-		void add(occlusion_query_info* query)
+		struct queued_report_write
 		{
-			active_query = query;
+			u32 type = CELL_GCM_ZPASS_PIXEL_CNT;
+			u32 counter_tag;
+			occlusion_query_info* query;
+			queued_report_write* forwarder;
+			vm::addr_t sink;
 
-			if (task_stack.size() > 0 && pending == 0)
-				task_stack.resize(0);
+			u32 due_tsc;
+		};
 
-			const auto empty_slots = task_stack.size() - pending;
-			if (empty_slots >= 4)
-			{
-				for (auto &_query : task_stack)
-				{
-					if (_query == nullptr)
-					{
-						_query = query;
-						pending++;
-						return;
-					}
-				}
-			}
+		struct ZCULL_control
+		{
+			//Delay in 'cycles' before a report update operation is forced to retire
+			const u32 max_zcull_cycles_delay = 128;
+			const u32 min_zcull_cycles_delay = 16;
 
-			task_stack.push_back(query);
-			pending++;
-		}
-	};
+			//Number of occlusion query slots available. Real hardware actually has far fewer units before choking
+			const u32 occlusion_query_count = 128;
+
+			bool active = false;
+			bool enabled = false;
+
+			std::array<occlusion_query_info, 128> m_occlusion_query_data = {};
+
+			occlusion_query_info* m_current_task = nullptr;
+			u32 m_statistics_tag_id = 0;
+			u32 m_tsc = 0;
+			u32 m_cycles_delay = max_zcull_cycles_delay;
+
+			std::vector<queued_report_write> m_pending_writes;
+			std::unordered_map<u32, u32> m_statistics_map;
+
+			ZCULL_control() {}
+			~ZCULL_control() {}
+
+			void set_enabled(class ::rsx::thread* ptimer, bool enabled);
+			void set_active(class ::rsx::thread* ptimer, bool active);
+
+			void write(vm::addr_t sink, u32 timestamp, u32 type, u32 value);
+
+			//Read current zcull statistics into the address provided
+			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
+
+			//Sets up a new query slot and sets it to the current task
+			void allocate_new_query(class ::rsx::thread* ptimer);
+
+			//clears current stat block and increments stat_tag_id
+			void clear(class ::rsx::thread* ptimer);
+
+			//forcefully flushes all
+			void sync(class ::rsx::thread* ptimer);
+
+			//conditionally sync any pending writes if range overlaps
+			void read_barrier(class ::rsx::thread* ptimer, u32 memory_address, u32 memory_range);
+
+			//call once every 'tick' to update
+			void update(class ::rsx::thread* ptimer);
+
+			//Draw call notification
+			void on_draw();
+
+			//Check for pending writes
+			bool has_pending() const { return (m_pending_writes.size() != 0); }
+
+			//Backend methods (optional, will return everything as always visible by default)
+			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
+			virtual void end_occlusion_query(occlusion_query_info* /*query*/) {}
+			virtual bool check_occlusion_query_status(occlusion_query_info* /*query*/) { return true; }
+			virtual void get_occlusion_query_result(occlusion_query_info* query) { query->result = UINT32_MAX; }
+			virtual void discard_occlusion_query(occlusion_query_info* /*query*/) {}
+		};
+	}
 
 	struct sampled_image_descriptor_base;
 
@@ -236,11 +265,7 @@ namespace rsx
 
 		//occlusion query
 		bool zcull_surface_active = false;
-		zcull_statistics current_zcull_stats;
-
-		const u32 occlusion_query_count = 128;
-		std::array<occlusion_query_info, 128> occlusion_query_data = {};
-		occlusion_task zcull_task_queue = {};
+		std::unique_ptr<reports::ZCULL_control> zcull_ctrl;
 
 		//framebuffer setup
 		rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
@@ -257,14 +282,23 @@ namespace rsx
 		atomic_t<bool> external_interrupt_lock{ false };
 		atomic_t<bool> external_interrupt_ack{ false };
 
+		//performance approximation counters
+		struct
+		{
+			atomic_t<u64> idle_time{ 0 };  //Time spent idling in microseconds
+			u64 last_update_timestamp = 0; //Timestamp of last load update
+			u64 FIFO_idle_timestamp = 0; //Timestamp of when FIFO queue becomes idle
+			bool FIFO_is_idle = false; //True if FIFO is in idle state
+			u32 approximate_load = 0;
+			u32 sampled_frames = 0;
+		}
+		performance_counters;
+
 		//native UI interrupts
 		atomic_t<bool> native_ui_flip_request{ false };
 
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
-
-		// Constant stored for whole frame
-		std::unordered_map<u32, color4f> local_transform_constants;
 
 		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
@@ -335,6 +369,8 @@ namespace rsx
 		bool sync_point_request = false;
 		bool in_begin_end = false;
 
+		atomic_t<s32> async_tasks_pending{ 0 };
+
 		bool conditional_render_test_failed = false;
 		bool conditional_render_enabled = false;
 		bool zcull_stats_enabled = false;
@@ -373,17 +409,15 @@ namespace rsx
 		virtual void notify_tile_unbound(u32 /*tile*/) {}
 
 		//zcull
-		virtual void notify_zcull_info_changed();
-		virtual void clear_zcull_stats(u32 type);
-		virtual u32 get_zcull_stats(u32 type);
-		virtual void check_zcull_status(bool framebuffer_swap, bool force_read);
-		virtual u32 synchronize_zcull_stats(bool hard_sync = false);
+		void notify_zcull_info_changed();
+		void clear_zcull_stats(u32 type);
+		void check_zcull_status(bool framebuffer_swap);
+		void get_zcull_stats(u32 type, vm::addr_t sink);
 
-		virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
-		virtual void end_occlusion_query(occlusion_query_info* /*query*/) {}
-		virtual bool check_occlusion_query_status(occlusion_query_info* /*query*/) { return true; }
-		virtual void get_occlusion_query_result(occlusion_query_info* query) { query->result = UINT32_MAX; }
-
+		//sync
+		void sync();
+		void read_barrier(u32 memory_address, u32 memory_range);
+		
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
 
@@ -424,7 +458,7 @@ namespace rsx
 		void write_vertex_data_to_memory(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, void *persistent_data, void *volatile_data);
 
 	private:
-		std::mutex m_mtx_task;
+		shared_mutex m_mtx_task;
 
 		struct internal_task_entry
 		{
@@ -509,6 +543,9 @@ namespace rsx
 
 		void pause();
 		void unpause();
+
+		//Get RSX approximate load in %
+		u32 get_load();
 
 		//HLE vsh stuff
 		//TODO: Move into a separate helper

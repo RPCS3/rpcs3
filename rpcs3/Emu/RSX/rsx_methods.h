@@ -155,7 +155,7 @@ namespace rsx
 
 
 		std::array<u32, 512 * 4> transform_program;
-		std::unordered_map<u32, color4_base<f32>> transform_constants;
+		std::array<u32[4], 512> transform_constants;
 
 		draw_clause current_draw_clause;
 
@@ -183,7 +183,10 @@ namespace rsx
 			fragment_textures(fill_array<fragment_texture>(registers, std::make_index_sequence<16>())),
 			vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
 			vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
-		{ }
+		{
+			//NOTE: Transform constants persist through a context reset (NPEB00913)
+			memset(transform_constants.data(), 0, 512 * 4 * sizeof(u32));
+		}
 
 		~rsx_state() { }
 
@@ -257,14 +260,29 @@ namespace rsx
 			return decode<NV4097_SET_SHADER_WINDOW>().window_shader_height();
 		}
 
-		u16 shader_window_offset_x() const
+		u16 window_offset_x() const
 		{
 			return decode<NV4097_SET_WINDOW_OFFSET>().window_offset_x();
 		}
 
-		u16 shader_window_offset_y() const
+		u16 window_offset_y() const
 		{
 			return decode<NV4097_SET_WINDOW_OFFSET>().window_offset_y();
+		}
+
+		u32 window_clip_type() const
+		{
+			return registers[NV4097_SET_WINDOW_CLIP_TYPE];
+		}
+
+		u32 window_clip_horizontal() const
+		{
+			return registers[NV4097_SET_WINDOW_CLIP_HORIZONTAL];
+		}
+
+		u32 window_clip_vertical() const
+		{
+			return registers[NV4097_SET_WINDOW_CLIP_HORIZONTAL];
 		}
 
 		bool depth_test_enabled() const

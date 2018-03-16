@@ -4,7 +4,7 @@ version: '{build}'
 image: Visual Studio 2015
 
 environment:
-  QTDIR: C:\Qt\5.10.0\msvc2015_64
+  QTDIR: C:\Qt\5.10\msvc2015_64
   LLVMLIBS: https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8
   VULKAN: https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export

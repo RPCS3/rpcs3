@@ -21,7 +21,7 @@
 #include <mach/thread_act.h>
 #include <mach/thread_policy.h>
 #endif
-#if defined(__DragonFly__) || defined(__FreeBSD__)
+#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 #include <pthread_np.h>
 #define cpu_set_t cpuset_t
 #endif
@@ -1640,7 +1640,13 @@ void thread_ctrl::initialize()
 	}
 #endif
 
-#ifndef _WIN32
+#if defined(__APPLE__)
+	pthread_setname_np(m_name.substr(0, 15).c_str());
+#elif defined(__DragonFly__) || defined(__FreeBSD__) || defined(__OpenBSD__)
+	pthread_set_name_np(pthread_self(), m_name.c_str());
+#elif defined(__NetBSD__)
+	pthread_setname_np(pthread_self(), "%s", (void*)m_name.c_str());
+#elif !defined(_WIN32)
 	pthread_setname_np(pthread_self(), m_name.substr(0, 15).c_str());
 #endif
 }

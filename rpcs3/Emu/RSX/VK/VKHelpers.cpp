@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "VKHelpers.h"
 
-#include <mutex>
+#include "Utilities/mutex.h"
 
 namespace vk
 {
@@ -14,14 +14,17 @@ namespace vk
 	VkSampler g_null_sampler = nullptr;
 
 	atomic_t<bool> g_cb_no_interrupt_flag { false };
-	atomic_t<bool> g_drv_no_primitive_restart_flag { false };
-	atomic_t<bool> g_drv_force_32bit_indices{ false };
+
+	//Driver compatibility workarounds
+	bool g_drv_no_primitive_restart_flag = false;
+	bool g_drv_force_32bit_indices = false;
+	bool g_drv_sanitize_fp_values = false;
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
 
 	//global submit guard to prevent race condition on queue submit
-	std::mutex g_submit_mutex;
+	shared_mutex g_submit_mutex;
 
 	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
@@ -118,10 +121,10 @@ namespace vk
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return VK_FORMAT_BC3_UNORM_BLOCK;
 		case CELL_GCM_TEXTURE_G8B8: return VK_FORMAT_R8G8_UNORM;
 		case CELL_GCM_TEXTURE_R6G5B5: return VK_FORMAT_R5G6B5_UNORM_PACK16; // Expand, discard high bit?
-		case CELL_GCM_TEXTURE_DEPTH24_D8: return VK_FORMAT_R32_UINT;
-		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:	return VK_FORMAT_R32_SFLOAT;
-		case CELL_GCM_TEXTURE_DEPTH16: return VK_FORMAT_R16_UINT;
-		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return VK_FORMAT_R16_SFLOAT;
+		case CELL_GCM_TEXTURE_DEPTH24_D8: return VK_FORMAT_D24_UNORM_S8_UINT; //TODO
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:	return VK_FORMAT_D24_UNORM_S8_UINT; //TODO
+		case CELL_GCM_TEXTURE_DEPTH16: return VK_FORMAT_D16_UNORM;
+		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return VK_FORMAT_D16_UNORM;
 		case CELL_GCM_TEXTURE_X16: return VK_FORMAT_R16_UNORM;
 		case CELL_GCM_TEXTURE_Y16_X16: return VK_FORMAT_R16G16_UNORM;
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return VK_FORMAT_R16G16_SFLOAT;
@@ -312,6 +315,12 @@ namespace vk
 			g_drv_force_32bit_indices = true;
 		}
 #endif
+
+		//Nvidia cards are easily susceptible to NaN poisoning
+		if (gpu_name.find("NVIDIA") != std::string::npos || gpu_name.find("GeForce") != std::string::npos)
+		{
+			g_drv_sanitize_fp_values = true;
+		}
 	}
 
 	bool emulate_primitive_restart()
@@ -322,6 +331,11 @@ namespace vk
 	bool force_32bit_index_buffer()
 	{
 		return g_drv_force_32bit_indices;
+	}
+
+	bool sanitize_fp_values()
+	{
+		return g_drv_sanitize_fp_values;
 	}
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)
