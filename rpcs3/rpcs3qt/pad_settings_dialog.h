@@ -1,10 +1,11 @@
 #pragma once
 
+#include <QButtonGroup>
 #include <QDialog>
 #include <QEvent>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QTimer>
-#include <QButtonGroup>
 
 #include "keyboard_pad_handler.h"
 #include "Utilities/types.h"
@@ -12,7 +13,6 @@
 #include "Emu/Io/PadHandler.h"
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "gui_settings.h"
 
 #ifdef _WIN32
 #include "xinput_pad_handler.h"

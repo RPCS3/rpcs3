@@ -7,8 +7,6 @@
 #include <QVariant>
 #include <QSize>
 #include <QColor>
-#include <QBitmap>
-#include <QLabel>
 
 struct gui_save
 {
@@ -70,22 +68,6 @@ namespace gui
 		int size_delta = gl_icon_size_max.width() - gl_icon_size_min.width();
 		int current_delta = current.width() - gl_icon_size_min.width();
 		return gl_max_slider_pos * current_delta / size_delta;
-	};
-
-	inline QColor get_Label_Color(const QString& objectName, QPalette::ColorRole colorRole = QPalette::Foreground)
-	{
-		QLabel dummy_color;
-		dummy_color.setObjectName(objectName);
-		dummy_color.ensurePolished();
-		return dummy_color.palette().color(colorRole);
-	};
-
-	inline QFont get_Label_Font(const QString& objectName)
-	{
-		QLabel dummy_font;
-		dummy_font.setObjectName(objectName);
-		dummy_font.ensurePolished();
-		return dummy_font.font();
 	};
 
 	inline QString get_Single_Line(const QString& multi_line_string)
@@ -222,21 +204,9 @@ public:
 	bool GetGamelistColVisibility(int col);
 	QColor GetCustomColor(int col);
 	QStringList GetConfigEntries();
-	static QStringList GetDirEntries(const QDir& dir, const QStringList& nameFilters);
 	QString GetCurrentStylesheetPath();
 	QStringList GetStylesheetEntries();
 	QStringList GetGameListCategoryFilters();
-
-	/**
-		Creates a custom colored QIcon based on another QIcon
-		@param icon the icon to colorize
-		@param oldColor the current color of icon
-		@param newColor the desired color for the new icon
-		@param useSpecialMasks only used for icons with white parts and disc game icon
-	*/
-	static QIcon colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks = false, bool colorizeAll = false);
-	static QPixmap colorizedPixmap(const QPixmap& old_pixmap, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks = false, bool colorizeAll = false);
-	static QImage GetOpaqueImageArea(const QString& path);
 
 public Q_SLOTS:
 	void Reset(bool removeMeta = false);

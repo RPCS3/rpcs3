@@ -1,5 +1,5 @@
 #include "game_list_frame.h"
-
+#include "qt_utils.h"
 #include "settings_dialog.h"
 #include "table_item_delegate.h"
 #include "custom_table_widget_item.h"
@@ -790,7 +790,7 @@ void game_list_frame::RepaintIcons(const bool& fromSettings)
 		}
 		else
 		{
-			m_Icon_Color = gui::get_Label_Color("gamelist_icon_background_color");
+			m_Icon_Color = gui::utils::get_label_color("gamelist_icon_background_color");
 		}
 	}
 

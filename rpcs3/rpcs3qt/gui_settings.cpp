@@ -3,7 +3,6 @@
 #include "game_list_frame.h"
 
 #include <QCoreApplication>
-#include <QDir>
 #include <QMessageBox>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
@@ -77,105 +76,6 @@ q_pair_list gui_settings::Var2List(const QVariant& var)
 	QDataStream stream(&ba, QIODevice::ReadOnly);
 	stream >> list;
 	return list;
-}
-
-QIcon gui_settings::colorizedIcon(const QIcon& icon, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks, bool colorizeAll)
-{
-	return QIcon(colorizedPixmap(icon.pixmap(icon.availableSizes().at(0)), oldColor, newColor, useSpecialMasks, colorizeAll));
-}
-
-QPixmap gui_settings::colorizedPixmap(const QPixmap& old_pixmap, const QColor& oldColor, const QColor& newColor, bool useSpecialMasks, bool colorizeAll)
-{
-	QPixmap pixmap = old_pixmap;
-
-	if (colorizeAll)
-	{
-		QBitmap mask = pixmap.createMaskFromColor(Qt::transparent, Qt::MaskInColor);
-		pixmap.fill(newColor);
-		pixmap.setMask(mask);
-		return pixmap;
-	}
-
-	QBitmap mask = pixmap.createMaskFromColor(oldColor, Qt::MaskOutColor);
-	pixmap.fill(newColor);
-	pixmap.setMask(mask);
-
-	// special masks for disc icon and others
-
-	if (useSpecialMasks)
-	{
-		auto saturatedColor = [](const QColor& col, float sat /* must be < 1 */)
-		{
-			int r = col.red() + sat * (255 - col.red());
-			int g = col.green() + sat * (255 - col.green());
-			int b = col.blue() + sat * (255 - col.blue());
-			return QColor(r, g, b, col.alpha());
-		};
-
-		QColor colorS1(Qt::white);
-		QPixmap pixmapS1 = old_pixmap;
-		QBitmap maskS1 = pixmapS1.createMaskFromColor(colorS1, Qt::MaskOutColor);
-		pixmapS1.fill(colorS1);
-		pixmapS1.setMask(maskS1);
-
-		QColor colorS2(0, 173, 246, 255);
-		QPixmap pixmapS2 = old_pixmap;
-		QBitmap maskS2 = pixmapS2.createMaskFromColor(colorS2, Qt::MaskOutColor);
-		pixmapS2.fill(saturatedColor(newColor, 0.6f));
-		pixmapS2.setMask(maskS2);
-
-		QColor colorS3(0, 132, 244, 255);
-		QPixmap pixmapS3 = old_pixmap;
-		QBitmap maskS3 = pixmapS3.createMaskFromColor(colorS3, Qt::MaskOutColor);
-		pixmapS3.fill(saturatedColor(newColor, 0.3f));
-		pixmapS3.setMask(maskS3);
-
-		QPainter painter(&pixmap);
-		painter.drawPixmap(QPoint(0, 0), pixmapS1);
-		painter.drawPixmap(QPoint(0, 0), pixmapS2);
-		painter.drawPixmap(QPoint(0, 0), pixmapS3);
-		painter.end();
-	}
-	return pixmap;
-}
-
-QImage gui_settings::GetOpaqueImageArea(const QString& path)
-{
-	QImage image = QImage(path);
-
-	int w_min = 0;
-	int w_max = image.width();
-	int h_min = 0;
-	int h_max = image.height();
-
-	for (int y = 0; y < image.height(); ++y)
-	{
-		QRgb *row = (QRgb*)image.scanLine(y);
-		bool rowFilled = false;
-
-		for (int x = 0; x < image.width(); ++x)
-		{
-			if (qAlpha(row[x]))
-			{
-				rowFilled = true;
-				w_min = std::max(w_min, x);
-
-				if (w_max > x)
-				{
-					w_max = x;
-					x = w_min;
-				}
-			}
-		}
-
-		if (rowFilled)
-		{
-			h_max = std::min(h_max, y);
-			h_min = y;
-		}
-	}
-
-	return image.copy(QRect(QPoint(w_max, h_max), QPoint(w_min, h_min)));
 }
 
 void gui_settings::SetValue(const gui_save& entry, const QVariant& value)
@@ -317,17 +217,6 @@ QStringList gui_settings::GetConfigEntries()
 		res.append(entry.baseName());
 	}
 
-	return res;
-}
-
-QStringList gui_settings::GetDirEntries(const QDir& dir, const QStringList& nameFilters)
-{
-	QFileInfoList entries = dir.entryInfoList(nameFilters, QDir::Files);
-	QStringList res;
-	for (const QFileInfo &entry : entries)
-	{
-		res.append(entry.baseName());
-	}
 	return res;
 }
 

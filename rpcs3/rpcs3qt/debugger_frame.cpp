@@ -1,4 +1,5 @@
 #include "debugger_frame.h"
+#include "qt_utils.h"
 
 #include <QScrollBar>
 #include <QApplication>
@@ -155,10 +156,10 @@ void debugger_frame::ChangeColors()
 {
 	if (m_list)
 	{
-		m_list->m_color_bp = gui::get_Label_Color("debugger_frame_breakpoint", QPalette::Background);
-		m_list->m_color_pc = gui::get_Label_Color("debugger_frame_pc", QPalette::Background);
-		m_list->m_text_color_bp = gui::get_Label_Color("debugger_frame_breakpoint");;
-		m_list->m_text_color_pc = gui::get_Label_Color("debugger_frame_pc");;
+		m_list->m_color_bp = gui::utils::get_label_color("debugger_frame_breakpoint", QPalette::Background);
+		m_list->m_color_pc = gui::utils::get_label_color("debugger_frame_pc", QPalette::Background);
+		m_list->m_text_color_bp = gui::utils::get_label_color("debugger_frame_breakpoint");;
+		m_list->m_text_color_pc = gui::utils::get_label_color("debugger_frame_pc");;
 	}
 }
 

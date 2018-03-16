@@ -8,6 +8,7 @@
 #include <QDesktopWidget>
 #include <QMimeData>
 
+#include "qt_utils.h"
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
 #include "trophy_manager_dialog.h"
@@ -604,11 +605,11 @@ void main_window::SaveWindowState()
 
 void main_window::RepaintThumbnailIcons()
 {
-	QColor newColor = gui::get_Label_Color("thumbnail_icon_color");
+	QColor newColor = gui::utils::get_label_color("thumbnail_icon_color");
 
 	auto icon = [&newColor](const QString& path)
 	{
-		return gui_settings::colorizedIcon(QPixmap::fromImage(gui_settings::GetOpaqueImageArea(path)), gui::mw_tool_icon_color, newColor);
+		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), gui::mw_tool_icon_color, newColor);
 	};
 
 #ifdef _WIN32
@@ -635,12 +636,12 @@ void main_window::RepaintToolBarIcons()
 	}
 	else
 	{
-		newColor = gui::get_Label_Color("toolbar_icon_color");
+		newColor = gui::utils::get_label_color("toolbar_icon_color");
 	}
 
 	auto icon = [&newColor](const QString& path)
 	{
-		return gui_settings::colorizedIcon(QIcon(path), gui::mw_tool_icon_color, newColor);
+		return gui::utils::get_colorized_icon(QIcon(path), gui::mw_tool_icon_color, newColor);
 	};
 
 	m_icon_play           = icon(":/Icons/play.png");
