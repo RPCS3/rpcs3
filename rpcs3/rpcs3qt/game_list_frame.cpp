@@ -549,6 +549,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	f.setBold(true);
 	boot->setFont(f);
 	QAction* configure = myMenu.addAction(tr("&Configure"));
+	QAction* createLLVMCache = myMenu.addAction(tr("&Create LLVM Cache"));
 	myMenu.addSeparator();
 	QAction* hide_serial = myMenu.addAction(tr("&Hide From Game List"));
 	hide_serial->setCheckable(true);
@@ -590,6 +591,13 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 		xgui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.toList()));
 		Refresh();
+	});
+	connect(createLLVMCache, &QAction::triggered, [=]
+	{
+		Emu.SetForceBoot(true);
+		Emu.Stop();
+		Emu.SetForceBoot(true);
+		Emu.BootGame(currGame.path, true);
 	});
 	connect(removeGame, &QAction::triggered, [=]
 	{

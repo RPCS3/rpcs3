@@ -42,6 +42,17 @@ struct ppu_reloc
 	u32 addr;
 	u32 type;
 	u64 data;
+
+	// Operator for sorting
+	bool operator <(const ppu_reloc& rhs) const
+	{
+		return addr < rhs.addr;
+	}
+
+	bool operator <(u32 rhs) const
+	{
+		return addr < rhs;
+	}
 };
 
 // PPU Segment Information

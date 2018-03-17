@@ -929,7 +929,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 		prx->specials = ppu_load_exports(link, lib_info->exports_start, lib_info->exports_end);
 		prx->imports = ppu_load_imports(prx->relocs, link, lib_info->imports_start, lib_info->imports_end);
-
+		std::stable_sort(prx->relocs.begin(), prx->relocs.end());
 		prx->analyse(lib_info->toc, 0);
 	}
 	else
@@ -1191,6 +1191,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 				ppu_load_exports(link, proc_prx_param.libent_start, proc_prx_param.libent_end);
 				ppu_load_imports(_main->relocs, link, proc_prx_param.libstub_start, proc_prx_param.libstub_end);
+				std::stable_sort(_main->relocs.begin(), _main->relocs.end());
 			}
 			break;
 		}
