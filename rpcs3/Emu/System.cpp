@@ -278,9 +278,13 @@ void Emulator::Init()
 
 	// Create directories
 	const std::string emu_dir = GetEmuDir();
-	const std::string dev_hdd0 = fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir);
+	const std::string dev_hdd0 = GetHddDir();
 	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
 	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
+
+	// Set selected user.
+	m_usr = g_cfg.usr.selected_usr;
+	m_usrid = static_cast<u32>(std::stoul(m_usr));
 
 	fs::create_path(dev_hdd0);
 	fs::create_path(dev_hdd1);
@@ -290,11 +294,11 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd0 + "game/TEST12345/USRDIR/");
 	fs::create_dir(dev_hdd0 + "game/.locks/");
 	fs::create_dir(dev_hdd0 + "home/");
-	fs::create_dir(dev_hdd0 + "home/00000001/");
-	fs::create_dir(dev_hdd0 + "home/00000001/exdata/");
-	fs::create_dir(dev_hdd0 + "home/00000001/savedata/");
-	fs::create_dir(dev_hdd0 + "home/00000001/trophy/");
-	fs::write_file(dev_hdd0 + "home/00000001/localusername", fs::create + fs::excl + fs::write, "User"s);
+	fs::create_dir(dev_hdd0 + "home/" + m_usr + "/");
+	fs::create_dir(dev_hdd0 + "home/" + m_usr + "/exdata/");
+	fs::create_dir(dev_hdd0 + "home/" + m_usr + "/savedata/");
+	fs::create_dir(dev_hdd0 + "home/" + m_usr + "/trophy/");
+	fs::write_file(dev_hdd0 + "home/" + m_usr + "/localusername", fs::create + fs::excl + fs::write, "User"s);
 	fs::create_dir(dev_hdd0 + "disc/");
 	fs::create_dir(dev_hdd0 + "savedata/");
 	fs::create_dir(dev_hdd0 + "savedata/vmc/");

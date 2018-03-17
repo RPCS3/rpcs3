@@ -106,6 +106,7 @@ private:
 	bool m_show_silver_trophies = true;
 	bool m_show_gold_trophies = true;
 	bool m_show_platinum_trophies = true;
+	std::string m_trophy_dir;
 
 	int m_icon_height = 75;
 	bool m_save_icon_height = false;
