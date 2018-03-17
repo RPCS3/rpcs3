@@ -84,7 +84,7 @@
 			"minimumScalableDimension": "Only framebuffers greater than this size will be upscaled.\nIncreasing this value might fix problems with missing graphics when upscaling, especially when Write Color Buffers is enabled.\nDo not touch this setting if you are unsure."
 		},
 		"main": {
-			"dumpColor": "Enable this option if you get missing graphics or broken lighting ingame.\nMight degrade performance and introduce stuttering in some cases.\nRequired for Demon's Souls.",
+			"dumpColor": "Enable this option if you get missing graphics or broken lighting ingame.\nMight degrade performance and introduce stuttering in some cases.\nRequired for Demon's Souls and OKAMI HD.",
 			"vsync": "By having this off you might obtain a higher frame rate at the cost of tearing artifacts in the game.",
 			"gpuTextureScaling": "Small to significant performance boost in most games and rarely with side effects.\nMay cause texture corruption in rare cases.",
 			"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
