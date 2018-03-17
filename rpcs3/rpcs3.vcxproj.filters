@@ -102,6 +102,9 @@
     <Filter Include="Gui\utils">
       <UniqueIdentifier>{77ca7382-c296-43af-adb4-fb32f5ab4571}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\user accounts">
+      <UniqueIdentifier>{bebec4fb-789c-4456-a838-5ba7e158af5c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\rpcs3qt\*.cpp">
@@ -599,6 +602,24 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_register_editor_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\user_manager_dialog.cpp">
+      <Filter>Gui\user accounts</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\user_account.cpp">
+      <Filter>Gui\user accounts</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_user_manager_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_user_manager_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_user_manager_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_user_manager_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\breakpoint_handler.cpp">
       <Filter>Gui\debugger</Filter>
     </ClCompile>
@@ -717,6 +738,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\custom_dock_widget.h">
       <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\user_account.h">
+      <Filter>Gui\user accounts</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\_discord_utils.h">
       <Filter>Gui\utils</Filter>
@@ -839,6 +863,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\register_editor_dialog.h">
       <Filter>Gui\debugger</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\user_manager_dialog.h">
+      <Filter>Gui\user accounts</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\debugger_list.h">
       <Filter>Gui\debugger</Filter>

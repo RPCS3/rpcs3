@@ -16,6 +16,7 @@
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
 #include "trophy_manager_dialog.h"
+#include "user_manager_dialog.h"
 #include "kernel_explorer.h"
 #include "game_list_frame.h"
 #include "debugger_frame.h"
@@ -891,6 +892,8 @@ void main_window::OnEmuStop()
 		ui->toolbar_start->setText(tr("Play"));
 		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	}
+	ui->actionManage_Users->setEnabled(true);
+
 #ifdef WITH_DISCORD_RPC
 	// Discord Rich Presence Integration
 	if (guiSettings->GetValue(gui::m_richPresence).toBool())
@@ -913,6 +916,8 @@ void main_window::OnEmuReady()
 	ui->toolbar_start->setText(tr("Play"));
 	ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	EnableMenus(true);
+
+	ui->actionManage_Users->setEnabled(false);
 }
 
 void main_window::EnableMenus(bool enabled)
@@ -1260,6 +1265,12 @@ void main_window::CreateConnects()
 		trophy_manager_dialog* trop_manager = new trophy_manager_dialog(guiSettings);
 		connect(this, &main_window::RequestTrophyManagerRepaint, trop_manager, &trophy_manager_dialog::HandleRepaintUiRequest);
 		trop_manager->show();
+	});
+
+	connect(ui->actionManage_Users, &QAction::triggered, [=]
+	{
+		user_manager_dialog* user_manager = new user_manager_dialog(guiSettings, emuSettings, "", this);
+		user_manager->show();
 	});
 
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=]
@@ -1778,8 +1789,7 @@ void main_window::dropEvent(QDropEvent* event)
 		{
 			const std::string rapname = sstr(QFileInfo(rap).fileName());
 
-			// TODO: use correct user ID once User Manager is implemented
-			if (!fs::copy_file(sstr(rap), fmt::format("%s/home/%s/exdata/%s", Emu.GetHddDir(), "00000001", rapname), false))
+			if (!fs::copy_file(sstr(rap), fmt::format("%s/home/%s/exdata/%s", Emu.GetHddDir(), Emu.GetUsr(), rapname), false))
 			{
 				LOG_WARNING(GENERAL, "Could not copy rap file by drop: %s", rapname);
 			}

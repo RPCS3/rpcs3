@@ -146,7 +146,8 @@ void save_manager_dialog::UpdateList()
 {
 	if (m_dir == "")
 	{
-		m_dir = Emu.GetHddDir() + "home/00000001/savedata/";
+		// fmt::format(%shome ... is harder to read than straight concatenation.
+		m_dir = Emu.GetHddDir() + "home/" + Emu.GetUsr() + "/savedata/";
 	}
 
 	m_save_entries = GetSaveEntries(m_dir);

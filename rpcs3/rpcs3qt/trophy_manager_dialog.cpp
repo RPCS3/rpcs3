@@ -29,8 +29,6 @@
 #include <QScrollBar>
 #include <QWheelEvent>
 
-static const char* m_TROPHY_DIR = "/dev_hdd0/home/00000001/trophy/";
-
 namespace
 {
 	constexpr auto qstr = QString::fromStdString;
@@ -57,6 +55,10 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 
 	// HACK: dev_hdd0 must be mounted for vfs to work for loading trophies.
 	vfs::mount("dev_hdd0", Emu.GetHddDir());
+
+
+	// Get the currently selected user's trophy path.
+	m_trophy_dir = fmt::format("/dev_hdd0/home/%s/trophy/", Emu.GetUsr());
 
 	// Game chooser combo box
 	m_game_combo = new QComboBox();
@@ -320,7 +322,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 
 bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 {
-	std::string trophyPath = m_TROPHY_DIR + trop_name;
+	std::string trophyPath = m_trophy_dir + trop_name;
 
 	// Populate GameTrophiesData
 	std::unique_ptr<GameTrophiesData> game_trophy_data = std::make_unique<GameTrophiesData>();
