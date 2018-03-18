@@ -393,10 +393,8 @@ namespace gl
 		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_MIN_FILTER, (GLint)m_min_filter);
 		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_MAG_FILTER, (GLint)m_mag_filter);
 
-		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_R, (GLint)m_swizzle_r);
-		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_G, (GLint)m_swizzle_g);
-		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_B, (GLint)m_swizzle_b);
-		glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_A, (GLint)m_swizzle_a);
+		const GLint params[] = { (GLint)m_swizzle_r, (GLint)m_swizzle_g, (GLint)m_swizzle_b, (GLint)m_swizzle_a };
+		glTexParameteriv((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_RGBA, params);
 
 		glTexParameterf((GLenum)m_parent->get_target(), GL_TEXTURE_MAX_ANISOTROPY_EXT, m_aniso);
 	}

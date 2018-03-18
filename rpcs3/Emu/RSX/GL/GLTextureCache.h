@@ -725,10 +725,8 @@ namespace gl
 			case CELL_GCM_TEXTURE_DEPTH16:
 			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 			{
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_RED);
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_RED);
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_RED);
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, GL_RED);
+				constexpr GLint params[] = { GL_RED, GL_RED, GL_RED, GL_RED };
+				glTexParameteriv(target, GL_TEXTURE_SWIZZLE_RGBA, params);
 				return;
 			}
 			default:
@@ -739,27 +737,21 @@ namespace gl
 			{
 			case rsx::texture_create_flags::default_component_order:
 			{
-				auto remap = gl::get_swizzle_remap(gcm_format);
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, remap[1]);
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, remap[2]);
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, remap[3]);
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, remap[0]);
+				const auto remap = gl::get_swizzle_remap(gcm_format);
+				const GLuint params[] = { remap[1], remap[2], remap[3], remap[0] };
+				glTexParameteriv(target, GL_TEXTURE_SWIZZLE_RGBA, (GLint*)params);
 				break;
 			}
 			case rsx::texture_create_flags::native_component_order:
 			{
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_RED);
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_BLUE);
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
+				constexpr GLint params[] = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
+				glTexParameteriv(target, GL_TEXTURE_SWIZZLE_RGBA, params);
 				break;
 			}
 			case rsx::texture_create_flags::swapped_native_component_order:
 			{
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_ALPHA);
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_RED);
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_GREEN);
-				glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
+				constexpr GLint params[] = { GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
+				glTexParameteriv(target, GL_TEXTURE_SWIZZLE_RGBA, params);
 				break;
 			}
 			}
@@ -958,10 +950,10 @@ namespace gl
 		{
 			std::array<GLenum, 4> swizzle_remap;
 			glBindTexture(GL_TEXTURE_2D, section.get_raw_texture());
-			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, (GLint*)&swizzle_remap[0]);
-			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, (GLint*)&swizzle_remap[1]);
-			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, (GLint*)&swizzle_remap[2]);
-			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, (GLint*)&swizzle_remap[3]);
+
+			GLint params[4];
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, params);
+			std::rotate(swizzle_remap.rbegin(), swizzle_remap.rbegin() + 1, swizzle_remap.rend());	// RGBA -> ARGB
 
 			apply_swizzle_remap(GL_TEXTURE_2D, swizzle_remap, remap_vector);
 			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
