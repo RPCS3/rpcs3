@@ -111,7 +111,7 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	}
 
 	u32 reg_index = dst.fp16 ? dst.dest_reg >> 1 : dst.dest_reg;
-	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16);
+	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
 }
 
 void FragmentProgramDecompiler::AddFlowOp(std::string code)
@@ -283,14 +283,15 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 		{ "$_i", [this]() -> std::string {return std::to_string(dst.tex_num);} },
 		{ "$m", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetMask), this) },
 		{ "$ifcond ", [this]() -> std::string
-	{
-		const std::string& cond = GetCond();
-		if (cond == "true") return "";
-		return "if(" + cond + ") ";
-	}
+			{
+				const std::string& cond = GetCond();
+				if (cond == "true") return "";
+				return "if(" + cond + ") ";
+			}
 		},
 		{ "$cond", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetCond), this) },
-		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) }
+		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) },
+		{ "$float4", [this]() -> std::string { return getFloatTypeName(4); } }
 	};
 
 	if (!ignore_redirects)
@@ -407,20 +408,13 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				dst.opcode == RSX_FP_OPCODE_UPB ||
 				dst.opcode == RSX_FP_OPCODE_UPG)
 			{
-				//TODO: Implement aliased gather for half floats
-				bool xy_read = false;
-				bool zw_read = false;
-
-				if (src.swizzle_x < 2 || src.swizzle_y < 2 || src.swizzle_z < 2 || src.swizzle_w < 2)
-					xy_read = true;
-				if (src.swizzle_x > 1 || src.swizzle_y > 1 || src.swizzle_z > 1 || src.swizzle_w > 1)
-					zw_read = true;
-
 				auto &reg = temp_registers[src.tmp_reg_index];
-				if (reg.requires_gather(xy_read, zw_read))
+				if (reg.requires_gather(src.swizzle_x))
 				{
 					properties.has_gather_op = true;
-					AddCode(reg.gather_r());
+					AddReg(src.tmp_reg_index, src.fp16);
+					ret = getFloatTypeName(4) + reg.gather_r();
+					break;
 				}
 			}
 		}
@@ -502,8 +496,6 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 std::string FragmentProgramDecompiler::BuildCode()
 {
-	//main += fmt::format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
-
 	std::stringstream OS;
 	insertHeader(OS);
 	OS << "\n";
@@ -765,10 +757,27 @@ std::string FragmentProgramDecompiler::Decompile()
 
 	int forced_unit = FORCE_NONE;
 
+	//Add the output registers. They are statically written to and have guaranteed initialization (except r1.z which == wpos.z)
+	//This can be used instead of an explicit clear pass in some games (Motorstorm)
+	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
+	{
+		AddReg(0, CELL_GCM_FALSE);
+		AddReg(2, CELL_GCM_FALSE);
+		AddReg(3, CELL_GCM_FALSE);
+		AddReg(4, CELL_GCM_FALSE);
+	}
+	else
+	{
+		AddReg(0, CELL_GCM_TRUE);
+		AddReg(4, CELL_GCM_TRUE);
+		AddReg(6, CELL_GCM_TRUE);
+		AddReg(8, CELL_GCM_TRUE);
+	}
+
 	while (true)
 	{
 		for (auto found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
-		found != m_end_offsets.end();
+			found != m_end_offsets.end();
 			found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size))
 		{
 			m_end_offsets.erase(found);
@@ -778,7 +787,7 @@ std::string FragmentProgramDecompiler::Decompile()
 		}
 
 		for (auto found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
-		found != m_else_offsets.end();
+			found != m_else_offsets.end();
 			found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size))
 		{
 			m_else_offsets.erase(found);
@@ -806,9 +815,17 @@ std::string FragmentProgramDecompiler::Decompile()
 				if (m_loop_count) AddFlowOp("break");
 				else LOG_ERROR(RSX, "BRK opcode found outside of a loop");
 				break;
-			case RSX_FP_OPCODE_CAL: LOG_ERROR(RSX, "Unimplemented SIP instruction: CAL"); break;
-			case RSX_FP_OPCODE_FENCT: forced_unit = FORCE_SCT; break;
-			case RSX_FP_OPCODE_FENCB: forced_unit = FORCE_SCB; break;
+			case RSX_FP_OPCODE_CAL:
+				LOG_ERROR(RSX, "Unimplemented SIP instruction: CAL");
+				break;
+			case RSX_FP_OPCODE_FENCT:
+				AddCode("//FENCT");
+				forced_unit = FORCE_SCT;
+				break;
+			case RSX_FP_OPCODE_FENCB:
+				AddCode("//FENCB");
+				forced_unit = FORCE_SCB;
+				break;
 			case RSX_FP_OPCODE_IFE:
 				AddCode("if($cond)");
 				if (src2.end_offset != src1.else_offset)
@@ -849,7 +866,9 @@ std::string FragmentProgramDecompiler::Decompile()
 					m_code_level++;
 				}
 				break;
-			case RSX_FP_OPCODE_RET: AddFlowOp("return"); break;
+			case RSX_FP_OPCODE_RET:
+				AddFlowOp("return");
+				break;
 
 			default:
 				return false;

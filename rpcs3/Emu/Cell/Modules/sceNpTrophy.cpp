@@ -196,9 +196,9 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	}
 
 	// open trophy pack file
-	fs::file stream(vfs::get("/dev_hdd0/game/" + Emu.GetTitleID() + "/TROPDIR/" + name + "/TROPHY.TRP"));
+	fs::file stream(vfs::get(Emu.GetDir() + "TROPDIR/" + name + "/TROPHY.TRP"));
 
-	if (!stream && (Emu.GetCat() == "DG" || Emu.GetCat() == "GD"))
+	if (!stream && Emu.GetCat() == "GD")
 	{
 		stream.open(vfs::get("/dev_bdvd/PS3_GAME/TROPDIR/" + name + "/TROPHY.TRP"));
 	}
@@ -352,7 +352,7 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	if (!fs::is_dir("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name))
+	if (!fs::is_dir(vfs::get("/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name)))
 	{
 		TRPLoader trp(ctxt->trp_stream);
 

@@ -78,6 +78,7 @@ public:
 		MouseHandler,
 		Camera,
 		CameraType,
+		Move,
 
 		// Misc
 		ExitRPCS3OnFinish,
@@ -137,7 +138,7 @@ public:
 		Render_Creator();
 	};
 
-	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml 
+	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml
 	* Settings are only written when SaveSettings is called.
 	*/
 	emu_settings();
@@ -236,6 +237,7 @@ private:
 		{ MouseHandler,    { "Input/Output", "Mouse"}},
 		{ Camera,          { "Input/Output", "Camera"}},
 		{ CameraType,      { "Input/Output", "Camera type"}},
+		{ Move,            { "Input/Output", "Move" }},
 
 		// Misc
 		{ExitRPCS3OnFinish,   { "Miscellaneous", "Exit RPCS3 when process finishes" }},

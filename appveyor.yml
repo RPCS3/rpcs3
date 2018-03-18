@@ -4,7 +4,7 @@ version: '{build}'
 image: Visual Studio 2015
 
 environment:
-  QTDIR: C:\Qt\5.10.0\msvc2015_64
+  QTDIR: C:\Qt\5.10\msvc2015_64
   LLVMLIBS: https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8
   VULKAN: https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export
@@ -16,12 +16,18 @@ cache:
 
 install:
 - ps: | # set env vars for versioning
-    $commDate = $env:APPVEYOR_REPO_COMMIT_TIMESTAMP.Substring(0,10)
-    $commSha = $env:APPVEYOR_REPO_COMMIT.Substring(0,8)
-    $commTag = $(git describe --tags $(git rev-list --tags --max-count=1))
+    $env:COMM_TAG = $(git describe --tags $(git rev-list --tags --max-count=1))
+    $env:COMM_COUNT = $(git rev-list --count HEAD)
+    $env:COMM_HASH = $env:APPVEYOR_REPO_COMMIT.Substring(0,8)
     
-    $env:AVVER = "{0}-{1}" -f $commTag.TrimStart("v"), $env:APPVEYOR_BUILD_NUMBER
-    $env:BUILD = "rpcs3-{0}-{1}-{2}_win64.7z" -f $commTag, $commDate, $commSha
+    if ($env:APPVEYOR_PULL_REQUEST_NUMBER) {
+        $env:BUILD = "rpcs3-{0}-{1}_win64.7z" -f $env:COMM_TAG, $env:COMM_HASH
+        $env:AVVER = "{0}-{1}" -f $env:COMM_TAG.TrimStart("v"), $env:COMM_HASH
+    }
+    else {
+        $env:BUILD = "rpcs3-{0}-{1}-{2}_win64.7z" -f $env:COMM_TAG, $env:COMM_COUNT, $env:COMM_HASH
+        $env:AVVER = "{0}-{1}" -f $env:COMM_TAG.TrimStart("v"), $env:COMM_COUNT
+    }
 
 - ps: | # used for experimental build warnings for pr builds
     $env:BRANCH = "{0}/{1}/#{2}" -f $env:APPVEYOR_REPO_NAME, `
@@ -80,8 +86,8 @@ after_build:
       C:\OpenSSL-Win64\bin\ssleay32.dll
 
 - ps: | # generate sha256 hashes
-    (Get-FileHash $env:BUILD -Algorithm SHA256).Hash | Out-File -encoding ASCII "$($env:BUILD).sha256"
-    (Get-FileHash openssl_win64.7z -Algorithm SHA256).Hash | Out-File -encoding ASCII "openssl_win64.7z.sha256"
+    (get-filehash $env:BUILD -algorithm SHA256).Hash | out-file ("{0}.sha256" -f $env:BUILD) -encoding ascii
+    (get-filehash openssl_win64.7z -algorithm SHA256).Hash | out-file "openssl_win64.7z.sha256" -encoding ascii
 
 test: off
 

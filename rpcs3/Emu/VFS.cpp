@@ -18,20 +18,20 @@ bool vfs::mount(const std::string& dev_name, const std::string& path)
 {
 	const auto table = fxm::get_always<vfs_manager>();
 
-	writer_lock lock(table->mutex);
+	safe_writer_lock lock(table->mutex);
 
 	return table->mounted.emplace(dev_name, path).second;
 }
 
-std::string vfs::get(const std::string& vpath)
+std::string vfs::get(const std::string& vpath, const std::string* prev, std::size_t pos)
 {
 	const auto table = fxm::get_always<vfs_manager>();
 
-	reader_lock lock(table->mutex);
+	safe_reader_lock lock(table->mutex);
 
 	std::smatch match;
 
-	if (!std::regex_match(vpath, match, s_regex_ps3))
+	if (!std::regex_match(vpath.begin() + pos, vpath.end(), match, s_regex_ps3))
 	{
 		const auto found = table->mounted.find("");
 
@@ -44,15 +44,30 @@ std::string vfs::get(const std::string& vpath)
 		return found->second + vfs::escape(vpath);
 	}
 
-	if (match.length(1) == 0)
+	if (match.length(1) + pos == 0)
 	{
 		return "/";
 	}
 
-	const auto found = table->mounted.find(match.str(1));
+	std::string dev;
+
+	if (prev)
+	{
+		dev += *prev;
+		dev += '/';
+	}
+
+	dev += match.str(1);
+
+	const auto found = table->mounted.find(dev);
 
 	if (found == table->mounted.end())
 	{
+		if (match.length(2))
+		{
+			return vfs::get(vpath, &dev, pos + match.position(1) + match.length(1));
+		}
+
 		LOG_WARNING(GENERAL, "vfs::get(): device not found: %s", vpath);
 		return {};
 	}

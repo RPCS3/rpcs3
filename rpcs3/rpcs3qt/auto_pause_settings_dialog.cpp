@@ -5,8 +5,6 @@ constexpr auto qstr = QString::fromStdString;
 
 auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialog(parent)
 {
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
-
 	QLabel *description = new QLabel(tr("To use auto pause: enter the ID(s) of a function or a system call.\nRestart of the game is required to apply. You can enable/disable this in the settings."), this);
 
 	pauseList = new QTableWidget(this);
@@ -39,6 +37,7 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 
 	setMinimumSize(QSize(400, 360));
 	setWindowTitle(tr("Auto Pause Manager"));
+	setObjectName("auto_pause_manager");
 
 	//Events
 	connect(pauseList, &QTableWidget::customContextMenuRequested, this, &auto_pause_settings_dialog::ShowContextMenu);

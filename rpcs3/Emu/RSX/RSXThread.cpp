@@ -89,6 +89,13 @@ namespace rsx
 		}
 	}
 
+	// The rsx internally adds the 'data_base_offset' and the 'vert_offset' and masks it 
+	// before actually attempting to translate to the internal address. Seen happening heavily in R&C games
+	u32 get_vertex_offset_from_base(u32 vert_data_base_offset, u32 vert_base_offset)
+	{
+		return ((u64)vert_data_base_offset + vert_base_offset) & 0xFFFFFFF;
+	}
+
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
 	{
 		switch (type)
@@ -330,7 +337,6 @@ namespace rsx
 
 	void thread::end()
 	{
-		rsx::method_registers.transform_constants.clear();
 		in_begin_end = false;
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
@@ -343,8 +349,8 @@ namespace rsx
 
 		element_push_buffer.resize(0);
 
-		if (zcull_task_queue.active_query && zcull_task_queue.active_query->active)
-			zcull_task_queue.active_query->num_draws++;
+		if (zcull_ctrl->active)
+			zcull_ctrl->on_draw();
 
 		if (capture_current_frame)
 		{
@@ -358,6 +364,12 @@ namespace rsx
 		on_init_thread();
 
 		reset();
+
+		if (!zcull_ctrl)
+		{
+			//Backend did not provide an implementation, provide NULL object
+			zcull_ctrl = std::make_unique<::rsx::reports::ZCULL_control>();
+		}
 
 		last_flip_time = get_system_time() - 1000000;
 
@@ -444,23 +456,25 @@ namespace rsx
 
 				if (deferred_stack.size() > 0)
 				{
-					//TODO: Verify this works correctly
-					LOG_ERROR(RSX, "Disjoint draw range detected");
+					LOG_TRACE(RSX, "Disjoint draw range detected");
 
-					deferred_stack.push_back(num_draws - 1); //Append last pair
+					deferred_stack.push_back(num_draws); //Append last pair
 					std::vector<std::pair<u32, u32>> temp_range = first_counts;
+					auto current_command = rsx::method_registers.current_draw_clause.command;
 
 					u32 last_index = 0;
 
 					for (const u32 draw : deferred_stack)
 					{
-						first_counts.resize(draw - last_index);
-						std::copy(temp_range.begin() + last_index, temp_range.begin() + draw, first_counts.begin());
-
 						if (emit_begin)
 							methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
 						else
 							emit_begin = true;
+
+						//NOTE: These values are reset if begin command is emitted
+						first_counts.resize(draw - last_index);
+						std::copy(temp_range.begin() + last_index, temp_range.begin() + draw, first_counts.begin());
+						rsx::method_registers.current_draw_clause.command = current_command;
 
 						methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
 						last_index = draw;
@@ -495,6 +509,9 @@ namespace rsx
 			//Execute backend-local tasks first
 			do_local_task(ctrl->put.load() == internal_get.load());
 
+			//Update sub-units
+			zcull_ctrl->update(this);
+
 			//Set up restore state if needed
 			if (sync_point_request)
 			{
@@ -518,10 +535,27 @@ namespace rsx
 			if (put == internal_get || !Emu.IsRunning())
 			{
 				if (has_deferred_call)
+				{
 					flush_command_queue();
+				}
+				else if (!performance_counters.FIFO_is_idle)
+				{
+					performance_counters.FIFO_idle_timestamp = get_system_time();
+					performance_counters.FIFO_is_idle = true;
+				}
+				else
+				{
+					do_internal_task();
+				}
 
-				do_internal_task();
 				continue;
+			}
+
+			if (performance_counters.FIFO_is_idle)
+			{
+				//Update performance counters with time spent in idle mode
+				performance_counters.FIFO_is_idle = false;
+				performance_counters.idle_time += (get_system_time() - performance_counters.FIFO_idle_timestamp);
 			}
 
 			//Validate put and get registers
@@ -727,6 +761,61 @@ namespace rsx
 						flush_commands_flag = false;
 						break;
 					}
+					default:
+					{
+						//TODO: Reorder draw commands between synchronization events to maximize batched sizes
+						static const std::pair<u32, u32> skippable_ranges[] =
+						{
+							//Texture configuration
+							{ NV4097_SET_TEXTURE_OFFSET, 8 * 16 },
+							{ NV4097_SET_TEXTURE_CONTROL2, 16 },
+							{ NV4097_SET_TEXTURE_CONTROL3, 16 },
+							{ NV4097_SET_VERTEX_TEXTURE_OFFSET, 8 * 4 },
+							//Surface configuration
+							{ NV4097_SET_SURFACE_CLIP_HORIZONTAL, 1 },
+							{ NV4097_SET_SURFACE_CLIP_VERTICAL, 1 },
+							{ NV4097_SET_SURFACE_COLOR_AOFFSET, 1 },
+							{ NV4097_SET_SURFACE_COLOR_BOFFSET, 1 },
+							{ NV4097_SET_SURFACE_COLOR_COFFSET, 1 },
+							{ NV4097_SET_SURFACE_COLOR_DOFFSET, 1 },
+							{ NV4097_SET_SURFACE_ZETA_OFFSET, 1 },
+							{ NV4097_SET_CONTEXT_DMA_COLOR_A, 1 },
+							{ NV4097_SET_CONTEXT_DMA_COLOR_B, 1 },
+							{ NV4097_SET_CONTEXT_DMA_COLOR_C, 1 },
+							{ NV4097_SET_CONTEXT_DMA_COLOR_D, 1 },
+							{ NV4097_SET_CONTEXT_DMA_ZETA, 1 },
+							{ NV4097_SET_SURFACE_FORMAT, 1 },
+							{ NV4097_SET_SURFACE_PITCH_A, 1 },
+							{ NV4097_SET_SURFACE_PITCH_B, 1 },
+							{ NV4097_SET_SURFACE_PITCH_C, 1 },
+							{ NV4097_SET_SURFACE_PITCH_D, 1 },
+							{ NV4097_SET_SURFACE_PITCH_Z, 1 }
+						};
+
+						if (has_deferred_call)
+						{
+							//Hopefully this is skippable so the batch can keep growing
+							for (const auto &method : skippable_ranges)
+							{
+								if (reg < method.first)
+									continue;
+
+								if (reg - method.first < method.second)
+								{
+									//Safe to ignore if value has not changed
+									if (method_registers.test(reg, value))
+									{
+										execute_method_call = false;
+										flush_commands_flag = false;
+									}
+
+									break;
+								}
+							}
+						}
+
+						break;
+					}
 					}
 
 					if (flush_commands_flag)
@@ -859,22 +948,33 @@ namespace rsx
 	*/
 	void thread::fill_vertex_program_constants_data(void *buffer)
 	{
-		//Some games dont initialize some registers that they use in the vertex stage
-		memset(buffer, 0, 512 * 4 * sizeof(float));
-
-		for (const auto &entry : rsx::method_registers.transform_constants)
-			local_transform_constants[entry.first] = entry.second;
-		for (const auto &entry : local_transform_constants)
-			stream_vector_from_memory((char*)buffer + entry.first * 4 * sizeof(float), (void*)entry.second.rgba);
+		memcpy(buffer, rsx::method_registers.transform_constants.data(), 468 * 4 * sizeof(float));
 	}
 
 	void thread::fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program)
 	{
-		const u32 is_alpha_tested = rsx::method_registers.alpha_test_enabled();
-		const f32 alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
+		//TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
+		auto fragment_alpha_func = rsx::method_registers.alpha_func();
+		auto alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
+		auto is_alpha_tested = (u32)rsx::method_registers.alpha_test_enabled();
+
+		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !is_alpha_tested)
+		{
+			if (rsx::method_registers.msaa_enabled() &&
+				rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample)
+			{
+				//alpha values generate a coverage mask for order independent blending
+				//requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
+				//simulated using combined alpha blend and alpha test
+				fragment_alpha_func = rsx::comparison_function::greater;
+				alpha_ref = rsx::method_registers.msaa_sample_mask()? 0.25f : 0.f;
+				is_alpha_tested |= (1 << 4);
+			}
+		}
+
 		const f32 fog0 = rsx::method_registers.fog_params_0();
 		const f32 fog1 = rsx::method_registers.fog_params_1();
-		const u32 alpha_func = static_cast<u32>(rsx::method_registers.alpha_func());
+		const u32 alpha_func = static_cast<u32>(fragment_alpha_func);
 		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
 
 		// Generate wpos coeffecients
@@ -980,7 +1080,7 @@ namespace rsx
 	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
 	{
 		u32 offset  = vertex_array_info.offset();
-		u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
+		u32 address = rsx::get_address(rsx::get_vertex_offset_from_base(base_offset, offset & 0x7fffffff), offset >> 31);
 
 		u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array_info.type(), vertex_array_info.size());
 
@@ -1069,6 +1169,12 @@ namespace rsx
 
 	void thread::do_internal_task()
 	{
+		if (zcull_ctrl->has_pending())
+		{
+			zcull_ctrl->sync(this);
+			return;
+		}
+
 		if (m_internal_tasks.empty())
 		{
 			std::this_thread::yield();
@@ -1076,7 +1182,7 @@ namespace rsx
 		else
 		{
 			fmt::throw_exception("Disabled" HERE);
-			//std::lock_guard<std::mutex> lock{ m_mtx_task };
+			//std::lock_guard<shared_mutex> lock{ m_mtx_task };
 
 			//internal_task_entry &front = m_internal_tasks.front();
 
@@ -1090,7 +1196,7 @@ namespace rsx
 
 	//std::future<void> thread::add_internal_task(std::function<bool()> callback)
 	//{
-	//	std::lock_guard<std::mutex> lock{ m_mtx_task };
+	//	std::lock_guard<shared_mutex> lock{ m_mtx_task };
 	//	m_internal_tasks.emplace_back(callback);
 
 	//	return m_internal_tasks.back().promise.get_future();
@@ -1240,6 +1346,7 @@ namespace rsx
 		if (state.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			vertex_input_layout result = {};
+			result.interleaved_blocks.reserve(8);
 
 			interleaved_range_info info = {};
 			info.interleaved = true;
@@ -1264,6 +1371,8 @@ namespace rsx
 
 		const u32 frequency_divider_mask = rsx::method_registers.frequency_divider_operation_mask();
 		vertex_input_layout result = {};
+		result.interleaved_blocks.reserve(8);
+		result.referenced_registers.reserve(4);
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
@@ -1367,7 +1476,7 @@ namespace rsx
 		for (auto &info : result.interleaved_blocks)
 		{
 			//Calculate real data address to be used during upload
-			info.real_offset_address = state.vertex_data_base_offset() + rsx::get_address(info.base_offset, info.memory_location);
+			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info.base_offset), info.memory_location);
 		}
 
 		return result;
@@ -2000,9 +2109,21 @@ namespace rsx
 
 			skip_frame = (m_skip_frame_ctr < 0);
 		}
+
+		//Reset zcull ctrl
+		zcull_ctrl->set_active(this, false);
+		zcull_ctrl->clear(this);
+
+		if (zcull_ctrl->has_pending())
+		{
+			LOG_ERROR(RSX, "Dangling reports found, discarding...");
+			zcull_ctrl->sync(this);
+		}
+
+		performance_counters.sampled_frames++;
 	}
 
-	void thread::check_zcull_status(bool framebuffer_swap, bool force_read)
+	void thread::check_zcull_status(bool framebuffer_swap)
 	{
 		if (g_cfg.video.disable_zcull_queries)
 			return;
@@ -2032,35 +2153,8 @@ namespace rsx
 			}
 		}
 
-		occlusion_query_info* query = nullptr;
-
-		if (zcull_task_queue.task_stack.size() > 0)
-			query = zcull_task_queue.active_query;
-
-		if (query && query->active)
-		{
-			if (force_read || (!zcull_rendering_enabled || !testing_enabled || !zcull_surface_active))
-			{
-				end_occlusion_query(query);
-				query->active = false;
-				query->pending = true;
-			}
-		}
-		else
-		{
-			if (zcull_rendering_enabled && testing_enabled && zcull_surface_active)
-			{
-				//Find query
-				u32 free_index = synchronize_zcull_stats();
-				query = &occlusion_query_data[free_index];
-				zcull_task_queue.add(query);
-
-				begin_occlusion_query(query);
-				query->active = true;
-				query->result = 0;
-				query->num_draws = 0;
-			}
-		}
+		zcull_ctrl->set_enabled(this, zcull_rendering_enabled);
+		zcull_ctrl->set_active(this, zcull_rendering_enabled && testing_enabled && zcull_surface_active);
 	}
 
 	void thread::clear_zcull_stats(u32 type)
@@ -2068,113 +2162,54 @@ namespace rsx
 		if (g_cfg.video.disable_zcull_queries)
 			return;
 
-		if (type == CELL_GCM_ZPASS_PIXEL_CNT)
-		{
-			if (zcull_task_queue.active_query &&
-				zcull_task_queue.active_query->active &&
-				zcull_task_queue.active_query->num_draws > 0)
-			{
-				//discard active query results
-				check_zcull_status(false, true);
-				zcull_task_queue.active_query->pending = false;
+		zcull_ctrl->clear(this);
+	}
 
-				//re-enable cull stats if stats are enabled
-				check_zcull_status(false, false);
-				zcull_task_queue.active_query->num_draws = 0;
+	void thread::get_zcull_stats(u32 type, vm::addr_t sink)
+	{
+		u32 value = 0;
+		if (!g_cfg.video.disable_zcull_queries)
+		{
+			switch (type)
+			{
+			case CELL_GCM_ZPASS_PIXEL_CNT:
+			case CELL_GCM_ZCULL_STATS:
+			case CELL_GCM_ZCULL_STATS1:
+			case CELL_GCM_ZCULL_STATS2:
+			case CELL_GCM_ZCULL_STATS3:
+			{
+				zcull_ctrl->read_report(this, sink, type);
+				return;
 			}
-
-			current_zcull_stats.clear();
-		}
-	}
-
-	u32 thread::get_zcull_stats(u32 type)
-	{
-		if (g_cfg.video.disable_zcull_queries)
-			return 0u;
-
-		if (zcull_task_queue.active_query &&
-			zcull_task_queue.active_query->active &&
-			current_zcull_stats.zpass_pixel_cnt == 0 &&
-			type == CELL_GCM_ZPASS_PIXEL_CNT)
-		{
-			//The zcull unit is still bound as the read is happening and there are no results ready
-			check_zcull_status(false, true);  //close current query
-			check_zcull_status(false, false); //start new query since stat counting is still active
-		}
-
-		switch (type)
-		{
-		case CELL_GCM_ZPASS_PIXEL_CNT:
-		{
-			if (current_zcull_stats.zpass_pixel_cnt > 0)
-				return UINT16_MAX;
-
-			synchronize_zcull_stats(true);
-			return (current_zcull_stats.zpass_pixel_cnt > 0) ? UINT16_MAX : 0;
-		}
-		case CELL_GCM_ZCULL_STATS:
-		case CELL_GCM_ZCULL_STATS1:
-		case CELL_GCM_ZCULL_STATS2:
-			//TODO
-			return UINT16_MAX;
-		case CELL_GCM_ZCULL_STATS3:
-		{
-			//Some kind of inverse value
-			if (current_zcull_stats.zpass_pixel_cnt > 0)
-				return 0;
-
-			synchronize_zcull_stats(true);
-			return (current_zcull_stats.zpass_pixel_cnt > 0) ? 0 : UINT16_MAX;
-		}
-		default:
-			LOG_ERROR(RSX, "Unknown zcull stat type %d", type);
-			return 0;
-		}
-	}
-
-	u32 thread::synchronize_zcull_stats(bool hard_sync)
-	{
-		if (!zcull_rendering_enabled || zcull_task_queue.pending == 0)
-			return 0;
-
-		u32 result = UINT16_MAX;
-
-		for (auto &query : zcull_task_queue.task_stack)
-		{
-			if (query == nullptr || query->active)
-				continue;
-
-			bool status = check_occlusion_query_status(query);
-			if (status == false && !hard_sync)
-				continue;
-
-			get_occlusion_query_result(query);
-			current_zcull_stats.zpass_pixel_cnt += query->result;
-
-			query->pending = false;
-			query = nullptr;
-			zcull_task_queue.pending--;
-		}
-
-		for (u32 i = 0; i < occlusion_query_count; ++i)
-		{
-			auto &query = occlusion_query_data[i];
-			if (!query.pending && !query.active)
-			{
-				result = i;
+			default:
+				LOG_ERROR(RSX, "Unknown zcull stat type %d", type);
 				break;
 			}
 		}
 
-		if (result == UINT16_MAX && !hard_sync)
-			return synchronize_zcull_stats(true);
+		vm::ptr<CellGcmReportData> result = sink;
+		result->value = value;
+		result->padding = 0;
+		result->timer = timestamp();
+	}
 
-		return result;
+	void thread::sync()
+	{
+		zcull_ctrl->sync(this);
+
+		//TODO: On sync every sub-unit should finish any pending tasks
+		//Might cause zcull lockup due to zombie 'unclaimed reports' which are not forcefully removed currently
+		//verify (HERE), async_tasks_pending.load() == 0;
+	}
+
+	void thread::read_barrier(u32 memory_address, u32 memory_range)
+	{
+		zcull_ctrl->read_barrier(this, memory_address, memory_range);
 	}
 
 	void thread::notify_zcull_info_changed()
 	{
-		check_zcull_status(false, false);
+		check_zcull_status(false);
 	}
 
 	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!
@@ -2194,6 +2229,28 @@ namespace rsx
 	void thread::unpause()
 	{
 		external_interrupt_lock.store(false);
+	}
+
+	u32 thread::get_load()
+	{
+		//Average load over around 30 frames
+		if (!performance_counters.last_update_timestamp || performance_counters.sampled_frames > 30)
+		{
+			const auto timestamp = get_system_time();
+			const auto idle = performance_counters.idle_time.load();
+			const auto elapsed = timestamp - performance_counters.last_update_timestamp;
+
+			if (elapsed > idle)
+				performance_counters.approximate_load = (elapsed - idle) * 100 / elapsed;
+			else
+				performance_counters.approximate_load = 0;
+
+			performance_counters.idle_time = 0;
+			performance_counters.sampled_frames = 0;
+			performance_counters.last_update_timestamp = timestamp;
+		}
+
+		return performance_counters.approximate_load;
 	}
 
 	//TODO: Move these helpers into a better class dedicated to shell interface handling (use idm?)
@@ -2257,5 +2314,429 @@ namespace rsx
 		}
 
 		return false;
+	}
+
+	namespace reports
+	{
+		void ZCULL_control::set_enabled(class ::rsx::thread* ptimer, bool state)
+		{
+			if (state != enabled)
+			{
+				enabled = state;
+
+				if (active && !enabled)
+					set_active(ptimer, false);
+			}
+		}
+
+		void ZCULL_control::set_active(class ::rsx::thread* ptimer, bool state)
+		{
+			if (state != active)
+			{
+				active = state;
+
+				if (state)
+				{
+					verify(HERE), enabled && m_current_task == nullptr;
+					allocate_new_query(ptimer);
+					begin_occlusion_query(m_current_task);
+				}
+				else
+				{
+					verify(HERE), m_current_task;
+					if (m_current_task->num_draws)
+					{
+						end_occlusion_query(m_current_task);
+						m_current_task->active = false;
+						m_current_task->pending = true;
+
+						m_pending_writes.push_back({});
+						m_pending_writes.back().query = m_current_task;
+						ptimer->async_tasks_pending++;
+					}
+					else
+					{
+						discard_occlusion_query(m_current_task);
+						m_current_task->active = false;
+					}
+
+					m_current_task = nullptr;
+				}
+			}
+		}
+
+		void ZCULL_control::read_report(::rsx::thread* ptimer, vm::addr_t sink, u32 type)
+		{
+			if (m_current_task && type == CELL_GCM_ZPASS_PIXEL_CNT)
+			{
+				m_current_task->owned = true;
+				end_occlusion_query(m_current_task);
+				m_pending_writes.push_back({});
+
+				m_current_task->active = false;
+				m_current_task->pending = true;
+				m_pending_writes.back().query = m_current_task;
+
+				allocate_new_query(ptimer);
+				begin_occlusion_query(m_current_task);
+			}
+			else
+			{
+				//Spam; send null query down the pipeline to copy the last result
+				//Might be used to capture a timestamp (verify)
+				m_pending_writes.push_back({});
+			}
+
+			auto forwarder = &m_pending_writes.back();
+			for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); It++)
+			{
+				if (!It->sink)
+				{
+					It->counter_tag = m_statistics_tag_id;
+					It->due_tsc = m_tsc + m_cycles_delay;
+					It->sink = sink;
+					It->type = type;
+
+					if (forwarder != &(*It))
+					{
+						//Not the last one in the chain, forward the writing operation to the last writer
+						It->forwarder = forwarder;
+						It->query->owned = true;
+					}
+
+					continue;
+				}
+
+				break;
+			}
+
+			ptimer->async_tasks_pending++;
+		}
+
+		void ZCULL_control::allocate_new_query(::rsx::thread* ptimer)
+		{
+			int retries = 0;
+			while (!Emu.IsStopped())
+			{
+				for (int n = 0; n < occlusion_query_count; ++n)
+				{
+					if (m_occlusion_query_data[n].pending || m_occlusion_query_data[n].active)
+						continue;
+
+					m_current_task = &m_occlusion_query_data[n];
+					m_current_task->num_draws = 0;
+					m_current_task->result = 0;
+					m_current_task->sync_timestamp = 0;
+					m_current_task->active = true;
+					m_current_task->owned = false;
+					return;
+				}
+
+				if (retries > 0)
+				{
+					LOG_ERROR(RSX, "ZCULL report queue is overflowing!!");
+					m_statistics_map[m_statistics_tag_id] = 1;
+
+					verify(HERE), m_pending_writes.front().sink == 0;
+					m_pending_writes.resize(0);
+
+					for (auto &query : m_occlusion_query_data)
+					{
+						discard_occlusion_query(&query);
+						query.pending = false;
+					}
+
+					m_current_task = &m_occlusion_query_data[0];
+					m_current_task->num_draws = 0;
+					m_current_task->result = 0;
+					m_current_task->sync_timestamp = 0;
+					m_current_task->active = true;
+					m_current_task->owned = false;
+					return;
+				}
+
+				//All slots are occupied, try to pop the earliest entry
+				m_tsc += max_zcull_cycles_delay;
+				update(ptimer);
+
+				retries++;
+			}
+		}
+
+		void ZCULL_control::clear(class ::rsx::thread* ptimer)
+		{
+			if (!m_pending_writes.empty())
+			{
+				//Remove any dangling/unclaimed queries as the information is lost anyway
+				auto valid_size = m_pending_writes.size();
+				for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); ++It)
+				{
+					if (!It->sink)
+					{
+						discard_occlusion_query(It->query);
+						It->query->pending = false;
+						valid_size--;
+						ptimer->async_tasks_pending--;
+						continue;
+					}
+
+					break;
+				}
+
+				m_pending_writes.resize(valid_size);
+			}
+
+			m_statistics_tag_id++;
+			m_statistics_map[m_statistics_tag_id] = 0;
+		}
+
+		void ZCULL_control::on_draw()
+		{
+			if (m_current_task)
+				m_current_task->num_draws++;
+
+			m_cycles_delay = max_zcull_cycles_delay;
+		}
+
+		void ZCULL_control::write(vm::addr_t sink, u32 timestamp, u32 type, u32 value)
+		{
+			verify(HERE), sink;
+
+			switch (type)
+			{
+			case CELL_GCM_ZPASS_PIXEL_CNT:
+				value = value ? UINT16_MAX : 0;
+				break;
+			case CELL_GCM_ZCULL_STATS3:
+				value = value ? 0 : UINT16_MAX;
+				break;
+			case CELL_GCM_ZCULL_STATS2:
+			case CELL_GCM_ZCULL_STATS1:
+			case CELL_GCM_ZCULL_STATS:
+			default:
+				//Not implemented
+				value = UINT32_MAX;
+				break;
+			}
+
+			vm::ptr<CellGcmReportData> out = sink;
+			out->value = value;
+			out->timer = timestamp;
+			out->padding = 0;
+		}
+
+		void ZCULL_control::sync(::rsx::thread* ptimer)
+		{
+			if (!m_pending_writes.empty())
+			{
+				u32 processed = 0;
+				const bool has_unclaimed = (m_pending_writes.back().sink == 0);
+
+				//Write all claimed reports unconditionally
+				for (auto &writer : m_pending_writes)
+				{
+					if (!writer.sink)
+						break;
+
+					auto query = writer.query;
+					u32 result = m_statistics_map[writer.counter_tag];
+
+					if (query)
+					{
+						verify(HERE), query->pending;
+
+						if (!result && query->num_draws)
+						{
+							get_occlusion_query_result(query);
+
+							if (query->result)
+							{
+								result += query->result;
+								m_statistics_map[writer.counter_tag] = result;
+							}
+						}
+						else
+						{
+							//Already have a hit, no need to retest
+							discard_occlusion_query(query);
+						}
+
+						query->pending = false;
+					}
+
+					if (!writer.forwarder)
+						//No other queries in the chain, write result
+						write(writer.sink, ptimer->timestamp(), writer.type, result);
+
+					processed++;
+				}
+
+				if (!has_unclaimed)
+				{
+					verify(HERE), processed == m_pending_writes.size();
+					m_pending_writes.resize(0);
+				}
+				else
+				{
+					auto remaining = m_pending_writes.size() - processed;
+					verify(HERE), remaining > 0;
+
+					if (remaining == 1)
+					{
+						m_pending_writes.front() = m_pending_writes.back();
+						m_pending_writes.resize(1);
+					}
+					else
+					{
+						std::move(m_pending_writes.begin() + processed, m_pending_writes.end(), m_pending_writes.begin());
+						m_pending_writes.resize(remaining);
+					}
+				}
+
+				//Delete all statistics caches but leave the current one
+				for (auto It = m_statistics_map.begin(); It != m_statistics_map.end(); )
+				{
+					if (It->first == m_statistics_tag_id)
+						++It;
+					else
+						It = m_statistics_map.erase(It);
+				}
+
+				//Decrement jobs counter
+				ptimer->async_tasks_pending -= processed;
+			}
+
+			//Critical, since its likely a WAIT_FOR_IDLE type has been processed, all results are considered available
+			m_cycles_delay = min_zcull_cycles_delay;
+		}
+
+		void ZCULL_control::update(::rsx::thread* ptimer)
+		{
+			m_tsc++;
+
+			if (m_pending_writes.empty())
+				return;
+
+			u32 stat_tag_to_remove = m_statistics_tag_id;
+			u32 processed = 0;
+			for (auto &writer : m_pending_writes)
+			{
+				if (!writer.sink)
+					break;
+
+				if (writer.counter_tag != stat_tag_to_remove &&
+					stat_tag_to_remove != m_statistics_tag_id)
+				{
+					//If the stat id is different from this stat id and the queue is advancing,
+					//its guaranteed that the previous tag has no remaining writes as the queue is ordered
+					m_statistics_map.erase(stat_tag_to_remove);
+					stat_tag_to_remove = m_statistics_tag_id;
+				}
+
+				auto query = writer.query;
+				u32 result = m_statistics_map[writer.counter_tag];
+
+				if (query)
+				{
+					verify(HERE), query->pending;
+
+					if (UNLIKELY(writer.due_tsc < m_tsc))
+					{
+						if (!result && query->num_draws)
+						{
+							get_occlusion_query_result(query);
+
+							if (query->result)
+							{
+								result += query->result;
+								m_statistics_map[writer.counter_tag] = result;
+							}
+						}
+						else
+						{
+							//No need to read this
+							discard_occlusion_query(query);
+						}
+					}
+					else
+					{
+						if (result || !query->num_draws)
+						{
+							//Not necessary to read the result anymore
+							discard_occlusion_query(query);
+						}
+						else
+						{
+							//Maybe we get lucky and results are ready
+							if (check_occlusion_query_status(query))
+							{
+								get_occlusion_query_result(query);
+								if (query->result)
+								{
+									result += query->result;
+									m_statistics_map[writer.counter_tag] = result;
+								}
+							}
+							else
+							{
+								//Too early; abort
+								break;
+							}
+						}
+					}
+
+					query->pending = false;
+				}
+
+				stat_tag_to_remove = writer.counter_tag;
+
+				//only zpass supported right now
+				if (!writer.forwarder)
+					//No other queries in the chain, write result
+					write(writer.sink, ptimer->timestamp(), writer.type, result);
+
+				processed++;
+			}
+
+			if (stat_tag_to_remove != m_statistics_tag_id)
+				m_statistics_map.erase(stat_tag_to_remove);
+
+			if (processed)
+			{
+				auto remaining = m_pending_writes.size() - processed;
+				if (remaining == 1)
+				{
+					m_pending_writes.front() = m_pending_writes.back();
+					m_pending_writes.resize(1);
+				}
+				else if (remaining)
+				{
+					std::move(m_pending_writes.begin() + processed, m_pending_writes.end(), m_pending_writes.begin());
+					m_pending_writes.resize(remaining);
+				}
+				else
+				{
+					m_pending_writes.resize(0);
+				}
+
+				ptimer->async_tasks_pending -= processed;
+			}
+		}
+
+		void ZCULL_control::read_barrier(::rsx::thread* ptimer, u32 memory_address, u32 memory_range)
+		{
+			if (m_pending_writes.empty())
+				return;
+
+			const auto memory_end = memory_address + memory_range;
+			for (const auto &writer : m_pending_writes)
+			{
+				if (writer.sink >= memory_address && writer.sink < memory_end)
+				{
+					sync(ptimer);
+					return;
+				}
+			}
+		}
 	}
 }

@@ -17,8 +17,8 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	, exit(false)
 {
 	setWindowTitle(tr("RSX Debugger"));
+	setObjectName("rsx_debugger");
 	setAttribute(Qt::WA_DeleteOnClose);
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
 	//Fonts and Colors
 	QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);

@@ -9,7 +9,6 @@ constexpr auto qstr = QString::fromStdString;
 save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget* parent)
 	: QDialog(parent), m_entry(save)
 {
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setWindowTitle(tr("Save Data Information"));
 
 	// Table

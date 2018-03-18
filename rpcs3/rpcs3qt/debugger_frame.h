@@ -13,11 +13,11 @@
 #include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/Cell/PPUInterpreter.h"
 
+#include "custom_dock_widget.h"
 #include "instruction_editor_dialog.h"
 #include "register_editor_dialog.h"
 #include "gui_settings.h"
 
-#include <QDockWidget>
 #include <QListWidget>
 #include <QPushButton>
 #include <QComboBox>
@@ -29,9 +29,13 @@
 
 class debugger_list;
 
-class debugger_frame : public QDockWidget
+class debugger_frame : public custom_dock_widget
 {
-	Q_OBJECT
+	Q_OBJECT;
+
+	const QString NoThreadString = tr("No Thread");
+	const QString RunString = tr("Run");
+	const QString PauseString = tr("Pause");
 
 	debugger_list* m_list;
 	QSplitter* m_right_splitter;
@@ -41,34 +45,30 @@ class debugger_frame : public QDockWidget
 	QPushButton* m_go_to_pc;
 	QPushButton* m_btn_capture;
 	QPushButton* m_btn_step;
+	QPushButton* m_btn_step_over;
 	QPushButton* m_btn_run;
 	QComboBox* m_choice_units;
 	QString m_current_choice;
-	bool m_no_thread_selected = true;
+	QTimer* m_update;
+	QSplitter* m_splitter;
+	QAction* m_breakpoints_list_delete;
 
 	u64 m_threads_created = 0;
 	u64 m_threads_deleted = 0;
 	u32 m_last_pc = -1;
 	u32 m_last_stat = 0;
-
-	QTimer* m_update;
-	QSplitter* m_splitter;
-
-	const QString NoThread = tr("No Thread");
-	const QString Run = tr("Run");
-	const QString Pause = tr("Pause");
+	u32 m_last_step_over_breakpoint = -1;
+	bool m_no_thread_selected = true;
 
 	std::shared_ptr<gui_settings> xgui_settings;
-
-	QAction* m_breakpoints_list_delete;
 
 public:
 	std::unique_ptr<CPUDisAsm> m_disasm;
 	QListWidget* m_breakpoints_list;
 	std::weak_ptr<cpu_thread> cpu;
 
-public:
 	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = 0);
+
 	void SaveSettings();
 	void ChangeColors();
 
@@ -76,37 +76,39 @@ public:
 	void UpdateUnitList();
 
 	u32 GetPc() const;
-	u32 CentrePc(u32 pc) const;
 	void DoUpdate();
 	void WriteRegs();
 	void EnableButtons(bool enable);
 	void ClearBreakpoints();
+	void ShowGotoAddressDialog();
+	u64 EvaluateExpression(const QString& expression);
 
 	void OnUpdate();
 
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
-	void closeEvent(QCloseEvent* event);
-	void showEvent(QShowEvent* event);
-	void hideEvent(QHideEvent* event);
+	void closeEvent(QCloseEvent* event) override;
+	void showEvent(QShowEvent* event) override;
+	void hideEvent(QHideEvent* event) override;
 
 Q_SIGNALS:
 	void DebugFrameClosed();
+
 public Q_SLOTS:
-	void DoStep();
+	void DoStep(bool stepOver = false);
+
 private Q_SLOTS:
 	void OnBreakpointList_doubleClicked();
 	void OnBreakpointList_rightClicked(const QPoint &pos);
 	void OnBreakpointList_delete();
 	void OnSelectUnit();
-	void Show_Val();
 	void Show_PC();
 	void EnableUpdateTimer(bool state);
 };
 
 class debugger_list : public QListWidget
 {
-	Q_OBJECT
+	Q_OBJECT;
 
 	debugger_frame* m_debugFrame;
 
@@ -118,15 +120,17 @@ public:
 	QColor m_color_pc;
 	QColor m_text_color_bp;
 	QColor m_text_color_pc;
+	bool m_center_shown_addresses;
 
 public:
-	debugger_list(debugger_frame* parent);
-	void ShowAddr(u32 addr);
+	debugger_list(debugger_frame* parent, std::shared_ptr<gui_settings> settings);
+	void ShowAddress(u32 addr);
 	void RemoveBreakPoint(u32 pc, bool eraseFromMap = true);
-
-private:
 	bool IsBreakPoint(u32 pc);
 	void AddBreakPoint(u32 pc);
+
+private:
+	u32 GetCenteredAddress(u32 address);
 
 protected:
 	void keyPressEvent(QKeyEvent* event);

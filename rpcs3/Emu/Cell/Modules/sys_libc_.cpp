@@ -1,16 +1,15 @@
 #include "stdafx.h"
+#include "Emu/Cell/lv2/sys_tty.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Utilities/cfmt.h"
 #include <string.h>
 #include <ctype.h>
 
-
-
 extern logs::channel sysPrxForUser;
 
-extern fs::file g_tty;
-
 // cfmt implementation (TODO)
+
+using qsortcmp = s32(vm::cptr<void> e1, vm::cptr<void> e2);
 
 struct ps3_fmt_src
 {
@@ -418,10 +417,9 @@ s32 _sys_printf(ppu_thread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
 	sysPrxForUser.warning("_sys_printf(fmt=%s, ...)", fmt);
 
-	if (g_tty)
-	{
-		g_tty.write(ps3_fmt(ppu, fmt, va_args.count));
-	}
+	const auto buf = vm::make_str(ps3_fmt(ppu, fmt, va_args.count));
+
+	sys_tty_write(0, buf, buf.get_count() - 1, vm::var<u32>{});
 
 	return CELL_OK;
 }
@@ -452,9 +450,17 @@ s32 _sys_vsprintf()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-s32 _sys_qsort()
+void _sys_qsort(vm::ptr<void> base, u32 nelem, u32 size, vm::ptr<qsortcmp> cmp)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.warning("_sys_qsort(base=*0x%x, nelem=%d, size=0x%x, cmp=*0x%x)", base, nelem, size, cmp);
+
+	static thread_local decltype(cmp) g_tls_cmp;
+	g_tls_cmp = cmp;
+
+	std::qsort(base.get_ptr(), nelem, size, [](const void* a, const void* b) -> s32
+	{
+		return g_tls_cmp(static_cast<ppu_thread&>(*get_current_cpu_thread()), vm::get_addr(a), vm::get_addr(b));
+	});
 }
 
 void sysPrxForUser_sys_libc_init()

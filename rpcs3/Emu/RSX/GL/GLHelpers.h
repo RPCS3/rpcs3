@@ -85,8 +85,9 @@ namespace gl
 		bool ARB_texture_barrier_supported = false;
 		bool NV_texture_barrier_supported = false;
 		bool initialized = false;
-		bool vendor_INTEL = false;
-		bool vendor_AMD = false;
+		bool vendor_INTEL = false;  //has broken GLSL compiler
+		bool vendor_AMD = false;    //has broken ARB_multidraw
+		bool vendor_NVIDIA = false; //has NaN poisoning issues
 
 		void initialize()
 		{
@@ -104,35 +105,35 @@ namespace gl
 				if (ext_name == "GL_ARB_shader_draw_parameters")
 				{
 					ARB_shader_draw_parameters_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
 				if (ext_name == "GL_EXT_direct_state_access")
 				{
 					EXT_dsa_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
 				if (ext_name == "GL_ARB_direct_state_access")
 				{
 					ARB_dsa_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
 				if (ext_name == "GL_ARB_buffer_storage")
 				{
 					ARB_buffer_storage_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
 				if (ext_name == "GL_ARB_texture_buffer_object")
 				{
 					ARB_texture_buffer_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
@@ -195,6 +196,10 @@ namespace gl
 				if (!EXT_dsa_supported && glGetTextureImageEXT && glTextureBufferRangeEXT)
 					EXT_dsa_supported = true;
 			}
+			else if (vendor_string.find("nvidia") != std::string::npos)
+			{
+				vendor_NVIDIA = true;
+			}
 #ifdef _WIN32
 			else if (vendor_string.find("amd") != std::string::npos || vendor_string.find("ati") != std::string::npos)
 			{
@@ -210,6 +215,7 @@ namespace gl
 	{
 		GLsync m_value = nullptr;
 		GLenum flags = GL_SYNC_FLUSH_COMMANDS_BIT;
+		bool signaled = false;
 
 	public:
 
@@ -245,11 +251,16 @@ namespace gl
 		{
 			verify(HERE), m_value != nullptr;
 
+			if (signaled)
+				return true;
+
 			if (flags)
 			{
 				GLenum err = glClientWaitSync(m_value, flags, 0);
 				flags = 0;
-				return (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
+
+				if (!(err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED))
+					return false;
 			}
 			else
 			{
@@ -257,8 +268,12 @@ namespace gl
 				GLint tmp;
 
 				glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
-				return (status == GL_SIGNALED);
+
+				if (status != GL_SIGNALED)
+					return false;
 			}
+
+			signaled = true;
 			return true;
 		}
 
@@ -266,44 +281,49 @@ namespace gl
 		{
 			verify(HERE), m_value != nullptr;
 
-			GLenum err = GL_WAIT_FAILED;
-			bool done = false;
-
-			while (!done)
+			if (signaled == GL_FALSE)
 			{
-				if (flags)
-				{
-					err = glClientWaitSync(m_value, flags, 0);
-					flags = 0;
+				GLenum err = GL_WAIT_FAILED;
+				bool done = false;
 
-					switch (err)
+				while (!done)
+				{
+					if (flags)
 					{
-					default:
-						LOG_ERROR(RSX, "gl::fence sync returned unknown error 0x%X", err);
-					case GL_ALREADY_SIGNALED:
-					case GL_CONDITION_SATISFIED:
-						done = true;
-						break;
-					case GL_TIMEOUT_EXPIRED:
-						continue;
+						err = glClientWaitSync(m_value, flags, 0);
+						flags = 0;
+
+						switch (err)
+						{
+						default:
+							LOG_ERROR(RSX, "gl::fence sync returned unknown error 0x%X", err);
+						case GL_ALREADY_SIGNALED:
+						case GL_CONDITION_SATISFIED:
+							done = true;
+							break;
+						case GL_TIMEOUT_EXPIRED:
+							continue;
+						}
+					}
+					else
+					{
+						GLint status = GL_UNSIGNALED;
+						GLint tmp;
+
+						glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
+
+						if (status == GL_SIGNALED)
+							break;
 					}
 				}
-				else
-				{
-					GLint status = GL_UNSIGNALED;
-					GLint tmp;
 
-					glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
-
-					if (status == GL_SIGNALED)
-						break;
-				}
+				signaled = (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
 			}
 
 			glDeleteSync(m_value);
 			m_value = nullptr;
 
-			return (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
+			return signaled;
 		}
 	};
 
@@ -849,7 +869,7 @@ namespace gl
 			buffer::create();
 
 			glBindBuffer((GLenum)m_target, m_id);
-			glBufferStorage((GLenum)m_target, size, data, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_CLIENT_STORAGE_BIT | GL_MAP_COHERENT_BIT);
+			glBufferStorage((GLenum)m_target, size, data, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 			m_memory_mapping = glMapBufferRange((GLenum)m_target, 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 
 			verify(HERE), m_memory_mapping != nullptr;
@@ -871,14 +891,18 @@ namespace gl
 			if ((offset + alloc_size) > m_size)
 			{
 				if (!m_fence.is_empty())
+				{
 					m_fence.wait_for_signal();
+				}
+				else
+				{
+					LOG_ERROR(RSX, "OOM Error: Ring buffer was likely being used without notify() being called");
+					glFinish();
+				}
 
 				m_data_loc = 0;
 				offset = 0;
 			}
-
-			if (!m_data_loc)
-				m_fence.reset();
 
 			//Align data loc to 256; allows some "guard" region so we dont trample our own data inadvertently
 			m_data_loc = align(offset + alloc_size, 256);
@@ -913,7 +937,8 @@ namespace gl
 		//Notification of a draw command
 		virtual void notify()
 		{
-			if (m_fence.is_empty())
+			//Insert fence about 25% into the buffer
+			if (m_fence.is_empty() && (m_data_loc > (m_size >> 2)))
 				m_fence.reset();
 		}
 	};
@@ -1029,6 +1054,69 @@ namespace gl
 		}
 
 		void notify() override {}
+	};
+
+	class buffer_view
+	{
+		buffer* m_buffer = nullptr;
+		u32 m_offset = 0;
+		u32 m_range = 0;
+		GLenum m_format = GL_R8UI;
+
+	public:
+		buffer_view(buffer *_buffer, u32 offset, u32 range, GLenum format = GL_R8UI)
+			: m_buffer(_buffer), m_offset(offset), m_range(range), m_format(format)
+		{}
+
+		buffer_view()
+		{}
+
+		void update(buffer *_buffer, u32 offset, u32 range, GLenum format = GL_R8UI)
+		{
+			m_buffer = _buffer;
+			m_offset = offset;
+			m_range = range;
+			m_format = format;
+		}
+
+		u32 offset() const
+		{
+			return m_offset;
+		}
+
+		u32 range() const
+		{
+			return m_range;
+		}
+
+		u32 format() const
+		{
+			return m_format;
+		}
+
+		buffer* value() const
+		{
+			return m_buffer;
+		}
+
+		bool in_range(u32 address, u32 size, u32& new_offset) const
+		{
+			if (address < m_offset)
+				return false;
+
+			const u32 _offset = address - m_offset;
+			if (m_range < _offset)
+				return false;
+
+			const auto remaining = m_range - _offset;
+			if (size <= remaining)
+			{
+				new_offset = _offset;
+				return true;
+			}
+
+			return false;
+		}
 	};
 
 	class vao
@@ -1342,6 +1430,7 @@ namespace gl
 			texture1D = GL_TEXTURE_1D,
 			texture2D = GL_TEXTURE_2D,
 			texture3D = GL_TEXTURE_3D,
+			textureCUBE = GL_TEXTURE_CUBE_MAP,
 			textureBuffer = GL_TEXTURE_BUFFER
 		};
 
@@ -1378,7 +1467,10 @@ namespace gl
 				case target::texture1D: pname = GL_TEXTURE_BINDING_1D; break;
 				case target::texture2D: pname = GL_TEXTURE_BINDING_2D; break;
 				case target::texture3D: pname = GL_TEXTURE_BINDING_3D; break;
+				case target::textureCUBE: pname = GL_TEXTURE_BINDING_CUBE_MAP; break;
 				case target::textureBuffer: pname = GL_TEXTURE_BINDING_BUFFER; break;
+				default:
+					fmt::throw_exception("Unknown target 0x%X" HERE, (u32)new_binding.get_target());
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
@@ -1662,6 +1754,11 @@ namespace gl
 				__glcheck glTextureBufferRange(id(), gl_format_type, buf.id(), offset, length);
 		}
 
+		void copy_from(buffer_view &view)
+		{
+			copy_from(*view.value(), view.format(), view.offset(), view.range());
+		}
+
 		void copy_from(const buffer& buf, texture::format format, texture::type type, class pixel_unpack_settings pixel_settings)
 		{
 			buffer::save_binding_state save_buffer(buffer::target::pixel_unpack, buf);
@@ -1841,6 +1938,7 @@ namespace gl
 
 		uint m_width = 0;
 		uint m_height = 0;
+		uint m_depth = 1;
 		int m_level = 0;
 
 		int m_compressed_image_size = 0;
@@ -1887,6 +1985,7 @@ namespace gl
 		settings& filter(min_filter min_filter, filter mag_filter);
 		settings& width(uint width);
 		settings& height(uint height);
+		settings& depth(uint depth);
 		settings& size(sizei size);
 		settings& level(int value);
 		settings& compressed_image_size(int size);
@@ -1921,6 +2020,7 @@ namespace gl
 	class fbo
 	{
 		GLuint m_id = GL_NONE;
+		size2i m_size;
 
 	public:
 		fbo() = default;
@@ -1939,17 +2039,23 @@ namespace gl
 		class save_binding_state
 		{
 			GLint m_last_binding;
+			bool reset = true;
 
 		public:
 			save_binding_state(const fbo& new_binding)
 			{
 				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &m_last_binding);
-				new_binding.bind();
+
+				if (m_last_binding != new_binding.id())
+					new_binding.bind();
+				else
+					reset = false;
 			}
 
 			~save_binding_state()
 			{
-				glBindFramebuffer(GL_FRAMEBUFFER, m_last_binding);
+				if (reset)
+					glBindFramebuffer(GL_FRAMEBUFFER, m_last_binding);
 			}
 		};
 
@@ -2092,6 +2198,9 @@ namespace gl
 
 		GLuint id() const;
 		void set_id(GLuint id);
+
+		void set_extents(size2i extents);
+		size2i get_extents() const;
 
 		explicit operator bool() const
 		{
@@ -2730,19 +2839,6 @@ namespace gl
 		}
 
 		~rbo_view()
-		{
-			set_id(0);
-		}
-	};
-
-	class buffer_view : public buffer
-	{
-	public:
-		buffer_view(GLuint id) : buffer(id)
-		{
-		}
-
-		~buffer_view()
 		{
 			set_id(0);
 		}

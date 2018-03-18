@@ -109,7 +109,7 @@ public:
 	bool is_critical()
 	{
 		const size_t guard_length = std::max(m_min_guard_size, m_largest_allocated_pool);
-		return (m_current_allocated_size + guard_length) > m_size;
+		return (m_current_allocated_size + guard_length) >= m_size;
 	}
 
 	void reset_allocation_stats()
@@ -130,5 +130,10 @@ public:
 			m_current_allocated_size = (m_put_pos + (m_size - m_get_pos - 1));
 		else
 			fmt::throw_exception("m_put_pos == m_get_pos!" HERE);
+	}
+
+	size_t size() const
+	{
+		return m_size;
 	}
 };

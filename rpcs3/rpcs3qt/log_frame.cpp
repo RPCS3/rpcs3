@@ -7,6 +7,9 @@
 #include <QMenu>
 #include <QActionGroup>
 #include <QScrollBar>
+#include <QTabBar>
+
+extern atomic_t<s64> g_tty_size;
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -100,9 +103,12 @@ struct gui_listener : logs::listener
 // GUI Listener instance
 static gui_listener s_gui_listener;
 
-log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent) : QDockWidget(tr("Log"), parent), xgui_settings(guiSettings)
+log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
+	: custom_dock_widget(tr("Log"), parent), xgui_settings(guiSettings)
 {
 	m_tabWidget = new QTabWidget;
+	m_tabWidget->setObjectName("tab_widget_log");
+	m_tabWidget->tabBar()->setObjectName("tab_bar_log");
 
 	m_log = new QTextEdit(m_tabWidget);
 	m_log->setObjectName("log_frame");
@@ -190,7 +196,7 @@ void log_frame::CreateAndConnectActions()
 	auto l_initAct = [this](QAction* act, logs::level logLevel)
 	{
 		act->setCheckable(true);
-		
+
 		// This sets the log level properly when the action is triggered.
 		connect(act, &QAction::triggered, [this, logLevel]()
 		{
@@ -299,47 +305,30 @@ void log_frame::RepaintTextColors()
 
 void log_frame::UpdateUI()
 {
-	std::vector<char> buf(4096);
-
-	// Get UTF-8 string from file
-	auto get_utf8 = [&](const fs::file& file, u64 size) -> QString
-	{
-		size = file.read(buf.data(), size);
-
-		for (u64 i = 0; i < size; i++)
-		{
-			// Get UTF-8 sequence length (no real validation performed)
-			const u64 tail =
-				(buf[i] & 0xF0) == 0xF0 ? 3 :
-				(buf[i] & 0xE0) == 0xE0 ? 2 :
-				(buf[i] & 0xC0) == 0xC0 ? 1 : 0;
-
-			if (i + tail >= size)
-			{ // Copying is expensive-- O(i)-- but I suspect this corruption will be exceptionally unlikely.
-				file.seek(i - size, fs::seek_cur);
-				std::vector<char> sub(&buf[0], &buf[i]);
-				return QString(sub.data());
-			}
-		}
-		return QString(buf.data());
-	};
-
 	const auto start = steady_clock::now();
 
 	// Check TTY logs
-
-	while (const u64 size = std::min<u64>(buf.size(), m_tty_file.size() - m_tty_file.pos()))
+	while (const u64 size = std::max<s64>(0, g_tty_size.load() - m_tty_file.pos()))
 	{
-		QString text = get_utf8(m_tty_file, size);
+		std::string buf;
+		buf.resize(size);
+		buf.resize(m_tty_file.read(&buf.front(), buf.size()));
 
-		// Hackily used the state of the check..  be better if I actually stored this value.
-		if (m_TTYAct->isChecked())
+		if (buf.find_first_of('\0') != -1)
 		{
-			text.chop(1); // remove newline since Qt automatically adds a newline.
-			m_tty->append(text);
+			m_tty_file.seek(s64{0} - buf.size(), fs::seek_mode::seek_cur);
+			break;
 		}
+
+		if (buf.size() && m_TTYAct->isChecked())
+		{
+			QTextCursor text_cursor{m_tty->document()};
+			text_cursor.movePosition(QTextCursor::End);
+			text_cursor.insertText(qstr(buf));
+		}
+
 		// Limit processing time
-		if (steady_clock::now() >= start + 4ms || text.isEmpty()) break;
+		if (steady_clock::now() >= start + 4ms || buf.empty()) break;
 	}
 
 	// Check main logs

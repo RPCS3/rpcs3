@@ -30,7 +30,6 @@ kernel_explorer::kernel_explorer(QWidget* parent) : QDialog(parent)
 	setWindowTitle(tr("Kernel Explorer"));
 	setObjectName("kernel_explorer");
 	setAttribute(Qt::WA_DeleteOnClose);
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	setMinimumSize(QSize(700, 450));
 
 	QVBoxLayout* vbox_panel = new QVBoxLayout();
@@ -55,7 +54,6 @@ kernel_explorer::kernel_explorer(QWidget* parent) : QDialog(parent)
 	// Events
 	connect(button_refresh, &QAbstractButton::clicked, this, &kernel_explorer::Update);
 
-	// Fill the wxTreeCtrl
 	Update();
 };
 

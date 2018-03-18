@@ -44,6 +44,7 @@ extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const
 extern void network_thread_init();
 
 fs::file g_tty;
+atomic_t<s64> g_tty_size{0};
 
 template <>
 void fmt_class_string<mouse_handler>::format(std::string& out, u64 arg)
@@ -198,8 +199,7 @@ void Emulator::Init()
 	g_cfg.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
 
 	// Create directories
-	const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
-	const std::string emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+	const std::string emu_dir = GetEmuDir();
 	const std::string dev_hdd0 = fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir);
 	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
 	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
@@ -307,20 +307,20 @@ bool Emulator::InstallPkg(const std::string& path)
 	return false;
 }
 
-std::string Emulator::GetHddDir()
+std::string Emulator::GetEmuDir()
 {
 	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
-	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+	return emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+}
 
-	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir);
+std::string Emulator::GetHddDir()
+{
+	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", GetEmuDir());
 }
 
 std::string Emulator::GetLibDir()
 {
-	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
-	const std::string& emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
-
-	return fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir) + "sys/external/";
+	return fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", GetEmuDir()) + "sys/external/";
 }
 
 void Emulator::SetForceBoot(bool force_boot)
@@ -423,8 +423,7 @@ void Emulator::Load(bool add_only)
 		fxm::check_unlocked<patch_engine>()->append(m_cache_path + "/patch.yml");
 
 		// Mount all devices
-		const std::string emu_dir_ = g_cfg.vfs.emulator_dir;
-		const std::string emu_dir = emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+		const std::string emu_dir = GetEmuDir();
 		const std::string home_dir = g_cfg.vfs.app_home;
 		std::string bdvd_dir = g_cfg.vfs.dev_bdvd;
 
@@ -440,8 +439,10 @@ void Emulator::Load(bool add_only)
 		// Detect boot location
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
+		const std::size_t bdvd_pos = m_cat == "DG" && bdvd_dir.empty() && disc.empty() ? elf_dir.rfind("/PS3_GAME/") + 1 : 0;
+		const bool from_hdd0_game = m_path.find(hdd0_game) != -1;
 
-		if (m_cat == "DG" && m_path.find(hdd0_game) != -1 && disc.empty())
+		if (bdvd_pos && from_hdd0_game)
 		{
 			// Booting disc game from wrong location
 			LOG_ERROR(LOADER, "Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
@@ -460,13 +461,10 @@ void Emulator::Load(bool add_only)
 		}
 
 		// Booting disc game
-		if (m_cat == "DG" && bdvd_dir.empty() && disc.empty())
+		if (bdvd_pos)
 		{
 			// Mount /dev_bdvd/ if necessary
-			if (auto pos = elf_dir.rfind("/PS3_GAME/") + 1)
-			{
-				bdvd_dir = elf_dir.substr(0, pos);
-			}
+			bdvd_dir = elf_dir.substr(0, bdvd_pos);
 		}
 
 		// Booting patch data
@@ -514,6 +512,11 @@ void Emulator::Load(bool add_only)
 		else if (m_cat != "DG" && m_cat != "GD")
 		{
 			// Don't need /dev_bdvd
+		}
+		else if (m_cat == "DG" && from_hdd0_game)
+		{
+			vfs::mount("dev_bdvd/PS3_GAME", hdd0_game + m_path.substr(hdd0_game.size(), 10));
+			LOG_NOTICE(LOADER, "Game: %s", vfs::get("/dev_bdvd/PS3_GAME"));
 		}
 		else if (disc.empty())
 		{
@@ -680,20 +683,30 @@ void Emulator::Load(bool add_only)
 
 			if (argv[0].empty())
 			{
-				if (m_path.find(hdd0_game) != -1)
+				if (from_hdd0_game && m_cat == "DG")
+				{
+					argv[0] = "/dev_bdvd/PS3_GAME/" + m_path.substr(hdd0_game.size() + 10);
+					m_dir = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 10);
+					LOG_NOTICE(LOADER, "Disc path: %s", m_dir);
+				}
+				else if (from_hdd0_game)
 				{
 					argv[0] = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size());
+					m_dir = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 10);
+					LOG_NOTICE(LOADER, "Boot path: %s", m_dir);
 				}
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
 					// Disc games are on /dev_bdvd/
 					const std::size_t pos = m_path.rfind("PS3_GAME");
 					argv[0] = "/dev_bdvd/" + m_path.substr(pos);
+					m_dir = "/dev_bdvd/PS3_GAME/";
 				}
 				else
 				{
 					// For homebrew
 					argv[0] = "/host_root/" + m_path;
+					m_dir = "/host_root/" + elf_dir + '/';
 				}
 
 				LOG_NOTICE(LOADER, "Elf path: %s", argv[0]);
@@ -911,7 +924,13 @@ void Emulator::Stop(bool restart)
 	auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		cpu.state += cpu_flag::dbg_global_stop;
-		cpu.get()->set_exception(e_stop);
+
+		// Can't normally be null.
+		// Hack for a possible vm deadlock on thread creation.
+		if (auto thread = cpu.get())
+		{
+			thread->set_exception(e_stop);
+		}
 	};
 
 	idm::select<ppu_thread>(on_select);

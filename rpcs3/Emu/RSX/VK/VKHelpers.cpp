@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "VKHelpers.h"
 
-#include <mutex>
+#include "Utilities/mutex.h"
 
 namespace vk
 {
@@ -14,13 +14,17 @@ namespace vk
 	VkSampler g_null_sampler = nullptr;
 
 	atomic_t<bool> g_cb_no_interrupt_flag { false };
-	atomic_t<bool> g_drv_no_primitive_restart_flag { false };
+
+	//Driver compatibility workarounds
+	bool g_drv_no_primitive_restart_flag = false;
+	bool g_drv_force_32bit_indices = false;
+	bool g_drv_sanitize_fp_values = false;
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
 
 	//global submit guard to prevent race condition on queue submit
-	std::mutex g_submit_mutex;
+	shared_mutex g_submit_mutex;
 
 	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
@@ -55,10 +59,10 @@ namespace vk
 #endif
 	}
 
-	memory_type_mapping get_memory_mapping(VkPhysicalDevice pdev)
+	memory_type_mapping get_memory_mapping(const vk::physical_device& dev)
 	{
 		VkPhysicalDeviceMemoryProperties memory_properties;
-		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+		vkGetPhysicalDeviceMemoryProperties((VkPhysicalDevice&)dev, &memory_properties);
 
 		memory_type_mapping result;
 		result.device_local = VK_MAX_MEMORY_TYPES;
@@ -117,10 +121,10 @@ namespace vk
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return VK_FORMAT_BC3_UNORM_BLOCK;
 		case CELL_GCM_TEXTURE_G8B8: return VK_FORMAT_R8G8_UNORM;
 		case CELL_GCM_TEXTURE_R6G5B5: return VK_FORMAT_R5G6B5_UNORM_PACK16; // Expand, discard high bit?
-		case CELL_GCM_TEXTURE_DEPTH24_D8: return VK_FORMAT_R32_UINT;
-		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:	return VK_FORMAT_R32_SFLOAT;
-		case CELL_GCM_TEXTURE_DEPTH16: return VK_FORMAT_R16_UINT;
-		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return VK_FORMAT_R16_SFLOAT;
+		case CELL_GCM_TEXTURE_DEPTH24_D8: return VK_FORMAT_D24_UNORM_S8_UINT; //TODO
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:	return VK_FORMAT_D24_UNORM_S8_UINT; //TODO
+		case CELL_GCM_TEXTURE_DEPTH16: return VK_FORMAT_D16_UNORM;
+		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return VK_FORMAT_D16_UNORM;
 		case CELL_GCM_TEXTURE_X16: return VK_FORMAT_R16_UNORM;
 		case CELL_GCM_TEXTURE_Y16_X16: return VK_FORMAT_R16G16_UNORM;
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return VK_FORMAT_R16G16_SFLOAT;
@@ -280,7 +284,9 @@ namespace vk
 	void set_current_renderer(const vk::render_device &device)
 	{
 		g_current_renderer = device;
+		const auto gpu_name = g_current_renderer.gpu().name();
 
+#ifdef _WIN32
 		const std::array<std::string, 8> black_listed =
 		{
 			// Black list all polaris unless its proven they dont have a problem with primitive restart
@@ -294,7 +300,6 @@ namespace vk
 			"RX Vega",
 		};
 
-		const auto gpu_name = g_current_renderer.gpu().name();
 		for (const auto& test : black_listed)
 		{
 			if (gpu_name.find(test) != std::string::npos)
@@ -303,11 +308,34 @@ namespace vk
 				break;
 			}
 		}
+
+		//Older cards back to GCN1 break primitive restart on 16-bit indices
+		if (gpu_name.find("Radeon") != std::string::npos)
+		{
+			g_drv_force_32bit_indices = true;
+		}
+#endif
+
+		//Nvidia cards are easily susceptible to NaN poisoning
+		if (gpu_name.find("NVIDIA") != std::string::npos || gpu_name.find("GeForce") != std::string::npos)
+		{
+			g_drv_sanitize_fp_values = true;
+		}
 	}
 
 	bool emulate_primitive_restart()
 	{
 		return g_drv_no_primitive_restart_flag;
+	}
+
+	bool force_32bit_index_buffer()
+	{
+		return g_drv_force_32bit_indices;
+	}
+
+	bool sanitize_fp_values()
+	{
+		return g_drv_sanitize_fp_values;
 	}
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)
@@ -388,6 +416,26 @@ namespace vk
 		image->current_layout = new_layout;
 	}
 
+	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout)
+	{
+		if (image->current_layout == new_layout) return;
+
+		VkImageAspectFlags flags = VK_IMAGE_ASPECT_COLOR_BIT;
+		switch (image->info.format)
+		{
+		case VK_FORMAT_D16_UNORM:
+			flags = VK_IMAGE_ASPECT_DEPTH_BIT;
+			break;
+		case VK_FORMAT_D24_UNORM_S8_UINT:
+		case VK_FORMAT_D32_SFLOAT_S8_UINT:
+			flags = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+			break;
+		}
+
+		change_image_layout(cmd, image->value, image->current_layout, new_layout, { flags, 0, 1, 0, 1 });
+		image->current_layout = new_layout;
+	}
+
 	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range)
 	{
 		VkImageMemoryBarrier barrier = {};
@@ -419,7 +467,9 @@ namespace vk
 	{
 		if (image->info.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
 		{
-			insert_texture_barrier(cmd, image->value, image->current_layout, { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 });
+			VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+			if (image->info.format != VK_FORMAT_D16_UNORM) aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
+			insert_texture_barrier(cmd, image->value, image->current_layout, { aspect, 0, 1, 0, 1 });
 		}
 		else
 		{

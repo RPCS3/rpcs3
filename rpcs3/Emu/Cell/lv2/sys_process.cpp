@@ -290,8 +290,8 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 	if (Emu.GetCat() == "DG" || Emu.GetCat() == "GD")
 		disc = vfs::get("/dev_bdvd/");
-	else if (Emu.GetTitleID().size())
-		disc = vfs::get("/dev_hdd0/game/" + Emu.GetTitleID() + "/");
+	if (disc.empty() && Emu.GetTitleID().size())
+		disc = vfs::get(Emu.GetDir());
 
 	vm::temporary_unlock(ppu);
 

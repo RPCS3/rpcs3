@@ -115,6 +115,7 @@ namespace rsx
 			else
 				locked_address_range = align(base + length, 4096) - locked_address_base;
 
+			verify(HERE), locked_address_range > 0;
 			protection = utils::protection::rw;
 			guard_policy = protect_policy;
 			locked = false;
@@ -124,6 +125,7 @@ namespace rsx
 		{
 			if (prot == protection) return;
 
+			verify(HERE), locked_address_range > 0;
 			utils::memory_protect(vm::base(locked_address_base), locked_address_range, prot);
 			protection = prot;
 			locked = prot != utils::protection::rw;

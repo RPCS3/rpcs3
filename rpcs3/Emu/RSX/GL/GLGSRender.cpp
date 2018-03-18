@@ -209,7 +209,7 @@ void GLGSRender::end()
 	{
 		std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
-		std::lock_guard<std::mutex> lock(m_sampler_mutex);
+		std::lock_guard<shared_mutex> lock(m_sampler_mutex);
 		void* unused = nullptr;
 		bool  update_framebuffer_sourced = false;
 
@@ -297,7 +297,7 @@ void GLGSRender::end()
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
-		if (m_program->uniforms.has_location("tex" + std::to_string(i), &unused_location))
+		if (m_program->uniforms.has_location(rsx::constants::fragment_texture_names[i], &unused_location))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 			auto &tex = rsx::method_registers.fragment_textures[i];
@@ -318,19 +318,22 @@ void GLGSRender::end()
 				}
 				else
 				{
-					glBindTexture(target, GL_NONE);
+					glBindTexture(target, m_null_textures[target]->id());
 				}
 			}
 			else
 			{
-				glBindTexture(GL_TEXTURE_2D, GL_NONE);
+				glBindTexture(GL_TEXTURE_1D, m_null_textures[GL_TEXTURE_1D]->id());
+				glBindTexture(GL_TEXTURE_2D, m_null_textures[GL_TEXTURE_2D]->id());
+				glBindTexture(GL_TEXTURE_3D, m_null_textures[GL_TEXTURE_3D]->id());
+				glBindTexture(GL_TEXTURE_CUBE_MAP, m_null_textures[GL_TEXTURE_CUBE_MAP]->id());
 			}
 		}
 	}
 
 	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
 	{
-		if (m_program->uniforms.has_location("vtex" + std::to_string(i), &unused_location))
+		if (m_program->uniforms.has_location(rsx::constants::vertex_texture_names[i], &unused_location))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
 			glActiveTexture(GL_TEXTURE0 + rsx::limits::fragment_textures_count + i);
@@ -595,6 +598,7 @@ void GLGSRender::set_viewport()
 void GLGSRender::on_init_thread()
 {
 	GSRender::on_init_thread();
+	zcull_ctrl.reset(static_cast<::rsx::reports::ZCULL_control*>(this));
 
 	gl::init();
 
@@ -672,6 +676,40 @@ void GLGSRender::on_init_thread()
 		tex.bind();
 	}
 
+	//Fallback null texture instead of relying on texture0
+	{
+		std::vector<u32> pixeldata = {0, 0, 0, 0};
+
+		//1D
+		auto tex1D = std::make_unique<gl::texture>();
+		tex1D->create();
+		tex1D->set_target(gl::texture::target::texture1D);
+		tex1D->config().width(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+
+		//2D
+		auto tex2D = std::make_unique<gl::texture>();
+		tex2D->create();
+		tex2D->set_target(gl::texture::target::texture2D);
+		tex2D->config().width(1).height(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+
+		//3D
+		auto tex3D = std::make_unique<gl::texture>();
+		tex3D->create();
+		tex3D->set_target(gl::texture::target::texture3D);
+		tex3D->config().width(1).height(1).depth(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+
+		//CUBE
+		auto texCUBE = std::make_unique<gl::texture>();
+		texCUBE->create();
+		texCUBE->set_target(gl::texture::target::textureCUBE);
+		texCUBE->config().width(1).height(1).depth(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+
+		m_null_textures[GL_TEXTURE_1D] = std::move(tex1D);
+		m_null_textures[GL_TEXTURE_2D] = std::move(tex2D);
+		m_null_textures[GL_TEXTURE_3D] = std::move(tex3D);
+		m_null_textures[GL_TEXTURE_CUBE_MAP] = std::move(texCUBE);
+	}
+
 	if (!gl_caps.ARB_buffer_storage_supported)
 	{
 		LOG_WARNING(RSX, "Forcing use of legacy OpenGL buffers because ARB_buffer_storage is not supported");
@@ -699,14 +737,16 @@ void GLGSRender::on_init_thread()
 		m_index_ring_buffer.reset(new gl::ring_buffer());
 	}
 
-	m_attrib_ring_buffer->create(gl::buffer::target::texture, std::min<GLsizeiptr>(m_max_texbuffer_size, 256 * 0x100000));
-	m_index_ring_buffer->create(gl::buffer::target::element_array, std::min<GLsizeiptr>(m_max_texbuffer_size, 64 * 0x100000));
-	m_transform_constants_buffer->create(gl::buffer::target::uniform, std::min<GLsizeiptr>(m_max_texbuffer_size, 16 * 0x100000));
-	m_fragment_constants_buffer->create(gl::buffer::target::uniform, std::min<GLsizeiptr>(m_max_texbuffer_size, 16 * 0x100000));
-	m_vertex_state_buffer->create(gl::buffer::target::uniform, std::min<GLsizeiptr>(m_max_texbuffer_size, 16 * 0x100000));
+	m_attrib_ring_buffer->create(gl::buffer::target::texture, 256 * 0x100000);
+	m_index_ring_buffer->create(gl::buffer::target::element_array, 64 * 0x100000);
+	m_transform_constants_buffer->create(gl::buffer::target::uniform, 64 * 0x100000);
+	m_fragment_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_vertex_state_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
-	m_gl_persistent_stream_buffer.copy_from(*m_attrib_ring_buffer, GL_R8UI, 0, (u32)m_attrib_ring_buffer->size());
-	m_gl_volatile_stream_buffer.copy_from(*m_attrib_ring_buffer, GL_R8UI, 0, (u32)m_attrib_ring_buffer->size());
+	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, m_max_texbuffer_size);
+	m_volatile_stream_view.update(m_attrib_ring_buffer.get(), 0, m_max_texbuffer_size);
+	m_gl_persistent_stream_buffer.copy_from(m_persistent_stream_view);
+	m_gl_volatile_stream_buffer.copy_from(m_volatile_stream_view);
 
 	m_vao.element_array_buffer = *m_index_ring_buffer;
 
@@ -729,7 +769,7 @@ void GLGSRender::on_init_thread()
 	for (u32 i = 0; i < occlusion_query_count; ++i)
 	{
 		GLuint handle = 0;
-		auto &query = occlusion_query_data[i];
+		auto &query = m_occlusion_query_data[i];
 		glGenQueries(1, &handle);
 		
 		query.driver_handle = (u64)handle;
@@ -814,6 +854,8 @@ void GLGSRender::on_init_thread()
 
 void GLGSRender::on_exit()
 {
+	zcull_ctrl.release();
+
 	m_prog_buffer.clear();
 
 	if (draw_fbo)
@@ -842,6 +884,11 @@ void GLGSRender::on_exit()
 	for (auto &sampler : m_gl_sampler_states)
 	{
 		sampler.remove();
+	}
+
+	for (auto &tex : m_null_textures)
+	{
+		tex.second->remove();
 	}
 
 	if (m_attrib_ring_buffer)
@@ -876,7 +923,7 @@ void GLGSRender::on_exit()
 
 	for (u32 i = 0; i < occlusion_query_count; ++i)
 	{
-		auto &query = occlusion_query_data[i];
+		auto &query = m_occlusion_query_data[i];
 		query.active = false;
 		query.pending = false;
 
@@ -992,7 +1039,7 @@ bool GLGSRender::check_program_state()
 	return (rsx::method_registers.shader_program_address() != 0);
 }
 
-void GLGSRender::load_program(const vertex_upload_info& upload_info)
+void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 {
 	get_current_fragment_program(fs_sampler_state);
 	verify(HERE), current_fragment_program.valid;
@@ -1068,7 +1115,10 @@ void GLGSRender::load_program(const vertex_upload_info& upload_info)
 	buf = static_cast<u8*>(mapping.first);
 	fragment_constants_offset = mapping.second;
 	if (fragment_constants_size)
-		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) }, fragment_program);
+	{
+		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) },
+				fragment_program, gl::get_driver_caps().vendor_NVIDIA);
+	}
 
 	// Fragment state
 	fill_fragment_state_buffer(buf+fragment_constants_size, fragment_program);
@@ -1116,20 +1166,6 @@ void GLGSRender::update_draw_state()
 
 	gl_state.enable(rsx::method_registers.dither_enabled(), GL_DITHER);
 
-	if (gl_state.enable(rsx::method_registers.blend_enabled(), GL_BLEND))
-	{
-		glBlendFuncSeparate(blend_factor(rsx::method_registers.blend_func_sfactor_rgb()),
-			blend_factor(rsx::method_registers.blend_func_dfactor_rgb()),
-			blend_factor(rsx::method_registers.blend_func_sfactor_a()),
-			blend_factor(rsx::method_registers.blend_func_dfactor_a()));
-
-		auto blend_colors = rsx::get_constant_blend_colors();
-		glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
-
-		glBlendEquationSeparate(blend_equation(rsx::method_registers.blend_equation_rgb()),
-			blend_equation(rsx::method_registers.blend_equation_a()));
-	}
-
 	if (gl_state.enable(rsx::method_registers.stencil_test_enabled(), GL_STENCIL_TEST))
 	{
 		glStencilFunc(comparison_op(rsx::method_registers.stencil_func()),
@@ -1151,9 +1187,52 @@ void GLGSRender::update_draw_state()
 		}
 	}
 
-	gl_state.enablei(rsx::method_registers.blend_enabled_surface_1(), GL_BLEND, 1);
-	gl_state.enablei(rsx::method_registers.blend_enabled_surface_2(), GL_BLEND, 2);
-	gl_state.enablei(rsx::method_registers.blend_enabled_surface_3(), GL_BLEND, 3);
+	bool mrt_blend_enabled[] =
+	{
+		rsx::method_registers.blend_enabled(),
+		rsx::method_registers.blend_enabled_surface_1(),
+		rsx::method_registers.blend_enabled_surface_2(),
+		rsx::method_registers.blend_enabled_surface_3()
+	};
+
+	bool blend_equation_override = false;
+	if (rsx::method_registers.msaa_alpha_to_coverage_enabled() &&
+		!rsx::method_registers.alpha_test_enabled())
+	{
+		if (rsx::method_registers.msaa_enabled() &&
+			rsx::method_registers.msaa_sample_mask() &&
+			rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample)
+		{
+			//fake alpha-to-coverage
+			//blend used in conjunction with alpha test to fake order-independent edge transparency
+			mrt_blend_enabled[0] = mrt_blend_enabled[1] = mrt_blend_enabled[2] = mrt_blend_enabled[3] = true;
+			blend_equation_override = true;
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glBlendEquation(GL_FUNC_ADD);
+		}
+	}
+
+	if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
+	{
+		if (!blend_equation_override)
+		{
+			glBlendFuncSeparate(blend_factor(rsx::method_registers.blend_func_sfactor_rgb()),
+				blend_factor(rsx::method_registers.blend_func_dfactor_rgb()),
+				blend_factor(rsx::method_registers.blend_func_sfactor_a()),
+				blend_factor(rsx::method_registers.blend_func_dfactor_a()));
+
+			auto blend_colors = rsx::get_constant_blend_colors();
+			glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
+
+			glBlendEquationSeparate(blend_equation(rsx::method_registers.blend_equation_rgb()),
+				blend_equation(rsx::method_registers.blend_equation_a()));
+		}
+	}
+
+	gl_state.enablei(mrt_blend_enabled[0], GL_BLEND, 0);
+	gl_state.enablei(mrt_blend_enabled[1], GL_BLEND, 1);
+	gl_state.enablei(mrt_blend_enabled[2], GL_BLEND, 2);
+	gl_state.enablei(mrt_blend_enabled[3], GL_BLEND, 3);
 
 	if (gl_state.enable(rsx::method_registers.logic_op_enabled(), GL_COLOR_LOGIC_OP))
 	{
@@ -1323,16 +1402,21 @@ void GLGSRender::flip(int buffer)
 		gl::screen.bind();
 		glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
 
-		m_text_printer.print_text(0, 0, m_frame->client_width(), m_frame->client_height(), "draw calls: " + std::to_string(m_draw_calls));
-		m_text_printer.print_text(0, 18, m_frame->client_width(), m_frame->client_height(), "draw call setup: " + std::to_string(m_begin_time) + "us");
-		m_text_printer.print_text(0, 36, m_frame->client_width(), m_frame->client_height(), "vertex upload time: " + std::to_string(m_vertex_upload_time) + "us");
-		m_text_printer.print_text(0, 54, m_frame->client_width(), m_frame->client_height(), "textures upload time: " + std::to_string(m_textures_upload_time) + "us");
-		m_text_printer.print_text(0, 72, m_frame->client_width(), m_frame->client_height(), "draw call execution: " + std::to_string(m_draw_time) + "us");
+		m_text_printer.print_text(0, 0, m_frame->client_width(), m_frame->client_height(), "RSX Load: " + std::to_string(get_load()) + "%");
+		m_text_printer.print_text(0, 18, m_frame->client_width(), m_frame->client_height(), "draw calls: " + std::to_string(m_draw_calls));
+		m_text_printer.print_text(0, 36, m_frame->client_width(), m_frame->client_height(), "draw call setup: " + std::to_string(m_begin_time) + "us");
+		m_text_printer.print_text(0, 54, m_frame->client_width(), m_frame->client_height(), "vertex upload time: " + std::to_string(m_vertex_upload_time) + "us");
+		m_text_printer.print_text(0, 72, m_frame->client_width(), m_frame->client_height(), "textures upload time: " + std::to_string(m_textures_upload_time) + "us");
+		m_text_printer.print_text(0, 90, m_frame->client_width(), m_frame->client_height(), "draw call execution: " + std::to_string(m_draw_time) + "us");
 
-		auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
-		auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
-		m_text_printer.print_text(0, 108, m_frame->client_width(), m_frame->client_height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
-		m_text_printer.print_text(0, 126, m_frame->client_width(), m_frame->client_height(), "Texture memory: " + std::to_string(texture_memory_size) + "M");
+		const auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
+		const auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
+		const auto num_flushes = m_gl_texture_cache.get_num_flush_requests();
+		const auto num_mispredict = m_gl_texture_cache.get_num_cache_mispredictions();
+		const auto cache_miss_ratio = (u32)ceil(m_gl_texture_cache.get_cache_miss_ratio() * 100);
+		m_text_printer.print_text(0, 126, m_frame->client_width(), m_frame->client_height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
+		m_text_printer.print_text(0, 144, m_frame->client_width(), m_frame->client_height(), "Texture memory: " + std::to_string(texture_memory_size) + "M");
+		m_text_printer.print_text(0, 162, m_frame->client_width(), m_frame->client_height(), fmt::format("Flush requests: %d (%d%% hard faults, %d mispedictions)", num_flushes, cache_miss_ratio, num_mispredict));
 	}
 
 	m_frame->flip(m_context);
@@ -1341,10 +1425,7 @@ void GLGSRender::flip(int buffer)
 	// Cleanup
 	m_gl_texture_cache.on_frame_end();
 
-	for (auto &tex : m_rtts.invalidated_resources)
-		tex->remove();
-
-	m_rtts.invalidated_resources.clear();
+	m_rtts.free_invalidated();
 	m_vertex_cache->purge();
 
 	//If we are skipping the next frame, do not reset perf counters
@@ -1357,14 +1438,6 @@ void GLGSRender::flip(int buffer)
 	m_textures_upload_time = 0;
 }
 
-
-u64 GLGSRender::timestamp() const
-{
-	GLint64 result;
-	glGetInteger64v(GL_TIMESTAMP, &result);
-	return result;
-}
-
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
 	bool can_flush = (std::this_thread::get_id() == m_thread_id);
@@ -1374,7 +1447,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 		return false;
 
 	{
-		std::lock_guard<std::mutex> lock(m_sampler_mutex);
+		std::lock_guard<shared_mutex> lock(m_sampler_mutex);
 		m_samplers_dirty.store(true);
 	}
 
@@ -1402,7 +1475,7 @@ void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 	{
 		m_gl_texture_cache.purge_dirty();
 		{
-			std::lock_guard<std::mutex> lock(m_sampler_mutex);
+			std::lock_guard<shared_mutex> lock(m_sampler_mutex);
 			m_samplers_dirty.store(true);
 		}
 	}
@@ -1412,21 +1485,30 @@ void GLGSRender::do_local_task(bool /*idle*/)
 {
 	m_frame->clear_wm_events();
 
-	std::lock_guard<std::mutex> lock(queue_guard);
-
-	work_queue.remove_if([](work_item &q) { return q.received; });
-
-	for (work_item& q: work_queue)
+	if (!work_queue.empty())
 	{
-		if (q.processed) continue;
+		std::lock_guard<shared_mutex> lock(queue_guard);
 
-		std::unique_lock<std::mutex> lock(q.guard_mutex);
-		q.result = m_gl_texture_cache.flush_all(q.section_data);
-		q.processed = true;
+		work_queue.remove_if([](work_item &q) { return q.received; });
 
-		//Notify thread waiting on this
-		lock.unlock();
-		q.cv.notify_one();
+		for (work_item& q : work_queue)
+		{
+			if (q.processed) continue;
+
+			std::unique_lock<std::mutex> lock(q.guard_mutex);
+			q.result = m_gl_texture_cache.flush_all(q.section_data);
+			q.processed = true;
+
+			//Notify thread waiting on this
+			lock.unlock();
+			q.cv.notify_one();
+		}
+	}
+	else if (!in_begin_end)
+	{
+		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
+		//Only call when there are no waiters
+		m_gl_texture_cache.do_update();
 	}
 
 	if (m_overlay_cleanup_requests.size())
@@ -1446,7 +1528,7 @@ void GLGSRender::do_local_task(bool /*idle*/)
 
 work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data)
 {
-	std::lock_guard<std::mutex> lock(queue_guard);
+	std::lock_guard<shared_mutex> lock(queue_guard);
 
 	work_queue.emplace_back();
 	work_item &result = work_queue.back();
@@ -1478,31 +1560,43 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	//m_rtts.invalidate_surface_address(addr, false);
 }
 
-void GLGSRender::begin_occlusion_query(rsx::occlusion_query_info* query)
+void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
 	query->result = 0;
 	glBeginQuery(GL_ANY_SAMPLES_PASSED, (GLuint)query->driver_handle);
 }
 
-void GLGSRender::end_occlusion_query(rsx::occlusion_query_info* query)
+void GLGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
-	glEndQuery(GL_ANY_SAMPLES_PASSED);
+	if (query->num_draws)
+		glEndQuery(GL_ANY_SAMPLES_PASSED);
 }
 
-bool GLGSRender::check_occlusion_query_status(rsx::occlusion_query_info* query)
+bool GLGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info* query)
 {
+	if (!query->num_draws)
+		return true;
+
 	GLint status = GL_TRUE;
 	glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT_AVAILABLE, &status);
 
 	return status != GL_FALSE;
 }
 
-void GLGSRender::get_occlusion_query_result(rsx::occlusion_query_info* query)
+void GLGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* query)
 {
-	GLint result;
-	glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT, &result);
+	if (query->num_draws)
+	{
+		GLint result;
+		glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT, &result);
 
-	query->result += result;
+		query->result += result;
+	}
+}
+
+void GLGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* query)
+{
+	glEndQuery(GL_ANY_SAMPLES_PASSED);
 }
 
 void GLGSRender::shell_do_cleanup()

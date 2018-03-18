@@ -23,7 +23,6 @@ about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_
 	connect(ui->patreon, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.patreon.com/Nekotekina")); });
 	connect(ui->close, &QAbstractButton::clicked, this, &QWidget::close);
 
-	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
 

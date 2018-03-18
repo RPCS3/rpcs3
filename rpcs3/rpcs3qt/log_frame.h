@@ -3,19 +3,19 @@
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
 
+#include "custom_dock_widget.h"
 #include "gui_settings.h"
 #include "find_dialog.h"
 
 #include <memory>
 
-#include <QDockWidget>
 #include <QTabWidget>
 #include <QTextEdit>
 #include <QActionGroup>
 #include <QTimer>
 #include <QKeyEvent>
 
-class log_frame : public QDockWidget
+class log_frame : public custom_dock_widget
 {
 	Q_OBJECT
 
@@ -48,8 +48,8 @@ private:
 
 	QList<QColor> m_color;
 	QColor m_color_stack;
-	QTextEdit *m_log;
-	QTextEdit *m_tty;
+	QTextEdit* m_log;
+	QTextEdit* m_tty;
 	QString m_old_text;
 	ullong m_log_counter;
 	bool m_stack_log;

@@ -223,7 +223,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 				if (lg2w > 0 || lg2h > 0)
 				{
 					//Something was actually declared for the swizzle context dimensions
-					LOG_ERROR(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+					LOG_WARNING(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
 				}
 			}
 			else
@@ -244,7 +244,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 				if (lg2w > 0 || lg2h > 0)
 				{
 					//Something was actually declared for the swizzle context dimensions
-					LOG_ERROR(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+					LOG_WARNING(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
 				}
 			}
 			else
@@ -284,19 +284,86 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		return;
 	}
 
+	const auto aa_mode = rsx::method_registers.surface_antialias();
+	const auto bpp = get_format_block_size_in_bytes(surface_format);
+	const u32 aa_factor = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
+
+	//Window (raster) offsets
+	const auto window_offset_x = rsx::method_registers.window_offset_x();
+	const auto window_offset_y = rsx::method_registers.window_offset_y();
+	const auto window_clip_width = rsx::method_registers.window_clip_horizontal();
+	const auto window_clip_height = rsx::method_registers.window_clip_vertical();
+
+	if (window_offset_x || window_offset_y)
+	{
+		//Window offset is what affects the raster position!
+		//Tested with Turbo: Super stunt squad that only changes the window offset to declare new framebuffers
+		//Sampling behavior clearly indicates the addresses are expected to have changed
+		if (auto clip_type = rsx::method_registers.window_clip_type())
+			LOG_ERROR(RSX, "Unknown window clip type 0x%X" HERE, clip_type);
+
+		for (const auto &index : rsx::utility::get_rtt_indexes(target))
+		{
+			if (surface_addresses[index])
+			{
+				const u32 window_offset_bytes = (std::max<u32>(pitchs[index], clip_horizontal * aa_factor * bpp) * window_offset_y) + ((aa_factor * bpp) * window_offset_x);
+				surface_addresses[index] += window_offset_bytes;
+			}
+		}
+
+		if (depth_address)
+		{
+			const auto depth_bpp = depth_format == rsx::surface_depth_format::z16 ? 2 : 4;
+			depth_address += (std::max<u32>(zeta_pitch, clip_horizontal * aa_factor * depth_bpp) * window_offset_y) + ((aa_factor * depth_bpp) * window_offset_x);
+		}
+	}
+
+	if ((window_clip_width && window_clip_width < clip_horizontal) ||
+		(window_clip_height && window_clip_height < clip_vertical))
+	{
+		LOG_ERROR(RSX, "Unexpected window clip dimensions: window_clip=%dx%d, surface_clip=%dx%d",
+			window_clip_width, window_clip_height, clip_horizontal, clip_vertical);
+	}
+
+	if (draw_fbo)
+	{
+		bool really_changed = false;
+		auto sz = draw_fbo.get_extents();
+
+		if (sz.width == clip_horizontal && sz.height == clip_vertical)
+		{
+			for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
+			{
+				if (m_surface_info[i].address != surface_addresses[i])
+				{
+					really_changed = true;
+					break;
+				}
+			}
+
+			if (!really_changed)
+			{
+				if (depth_address == m_depth_surface_info.address)
+				{
+					//Nothing has changed, we're still using the same framebuffer
+					return;
+				}
+			}
+		}
+	}
+
 	m_rtts.prepare_render_target(nullptr, surface_format, depth_format,  clip_horizontal, clip_vertical,
 		target, surface_addresses, depth_address);
 
 	draw_fbo.recreate();
+	draw_fbo.bind();
+	draw_fbo.set_extents({ (int)clip_horizontal, (int)clip_vertical });
 
 	bool old_format_found = false;
 	gl::texture::format old_format;
 
 	const auto color_offsets = get_offsets();
 	const auto color_locations = get_locations();
-	const auto aa_mode = rsx::method_registers.surface_antialias();
-	const auto bpp = get_format_block_size_in_bytes(surface_format);
-	const u32 aa_factor = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
 
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
@@ -308,6 +375,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 				old_format_found = true;
 			}
 
+			m_gl_texture_cache.set_memory_read_flags(m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height, rsx::memory_read_flags::flush_once);
 			m_gl_texture_cache.flush_if_cache_miss_likely(old_format, m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height);
 		}
 
@@ -321,10 +389,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 			rtt->tile = find_tile(color_offsets[i], color_locations[i]);
 			rtt->aa_mode = aa_mode;
-			rtt->set_raster_offset(clip_x, clip_y, bpp);
 			m_gl_texture_cache.notify_surface_changed(surface_addresses[i]);
-
-			m_gl_texture_cache.tag_framebuffer(surface_addresses[i] + rtt->raster_address_offset);
+			m_gl_texture_cache.tag_framebuffer(surface_addresses[i]);
 		}
 		else
 			m_surface_info[i] = {};
@@ -332,14 +398,18 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil))
 	{
-		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-		u8 texel_size = 2;
-
-		if (depth_format == rsx::surface_depth_format::z24s8)
+		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
 		{
-			draw_fbo.depth_stencil = *ds;
-			texel_size = 4;
+			auto bpp = m_depth_surface_info.pitch / m_depth_surface_info.width;
+			auto old_format = (bpp == 2) ? gl::texture::format::depth : gl::texture::format::depth_stencil;
+
+			m_gl_texture_cache.set_memory_read_flags(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, rsx::memory_read_flags::flush_once);
+			m_gl_texture_cache.flush_if_cache_miss_likely(old_format, m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height);
 		}
+
+		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+		if (depth_format == rsx::surface_depth_format::z24s8)
+			draw_fbo.depth_stencil = *ds;
 		else
 			draw_fbo.depth = *ds;
 
@@ -348,10 +418,9 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		m_depth_surface_info = { depth_address, depth_surface_pitch, true, surface_format, depth_format, clip_horizontal, clip_vertical };
 
 		ds->aa_mode = aa_mode;
-		ds->set_raster_offset(clip_x, clip_y, texel_size);
 		m_gl_texture_cache.notify_surface_changed(depth_address);
 
-		m_gl_texture_cache.tag_framebuffer(depth_address + ds->raster_address_offset);
+		m_gl_texture_cache.tag_framebuffer(depth_address);
 	}
 	else
 		m_depth_surface_info = {};
@@ -359,9 +428,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	framebuffer_status_valid = draw_fbo.check();
 	if (!framebuffer_status_valid) return;
 
-	check_zcull_status(true, false);
-
-	draw_fbo.bind();
+	check_zcull_status(true);
 	set_viewport();
 
 	switch (rsx::method_registers.surface_color_target())

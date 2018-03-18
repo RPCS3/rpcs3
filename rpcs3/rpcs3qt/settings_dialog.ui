@@ -25,7 +25,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_6">
    <item>
-    <widget class="QTabWidget" name="tabWidget">
+    <widget class="QTabWidget" name="tab_widget_settings">
      <property name="enabled">
       <bool>true</bool>
      </property>
@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>6</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -890,20 +890,16 @@
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_6">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+          <widget class="QGroupBox" name="groupBox_2">
+           <property name="title">
+            <string>Move Handler</string>
            </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
+           <layout class="QVBoxLayout" name="verticalLayout_62">
+            <item>
+             <widget class="QComboBox" name="moveBox"/>
+            </item>
+           </layout>
+          </widget>
          </item>
         </layout>
        </item>
@@ -1505,13 +1501,6 @@
                <widget class="QPushButton" name="pb_gl_icon_color">
                 <property name="text">
                  <string>Gamelist icons</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pb_gl_tool_icon_color">
-                <property name="text">
-                 <string>Gamelist tool icons</string>
                 </property>
                </widget>
               </item>
