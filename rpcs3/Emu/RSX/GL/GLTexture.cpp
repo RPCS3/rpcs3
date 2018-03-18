@@ -331,7 +331,7 @@ namespace gl
 		GLenum internal_format = get_sized_internal_format(gcm_format);
 
 		glGenTextures(1, &id);
-		
+
 		switch (type)
 		{
 		case rsx::texture_dimension_extended::texture_dimension_1d:
@@ -497,17 +497,15 @@ namespace gl
 			}
 		}
 
-		glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, remap_values[0]);
-		glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, remap_values[1]);
-		glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, remap_values[2]);
-		glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, remap_values[3]);
+		const GLuint params[] = { remap_values[1], remap_values[2], remap_values[3], remap_values[0] };
+		glTexParameteriv(target, GL_TEXTURE_SWIZZLE_RGBA, (GLint*)params);
 	}
 
 	void upload_texture(GLuint id, u32 texaddr, u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
 			const std::vector<rsx_subresource_layout>& subresources_layout, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap, bool static_state)
 	{
 		const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
-		
+
 		size_t texture_data_sz = get_placed_texture_storage_size(width, height, depth, gcm_format, mipmaps, is_cubemap, 256, 512);
 		std::vector<gsl::byte> data_upload_buf(texture_data_sz);
 
@@ -541,10 +539,8 @@ namespace gl
 		{
 			//Usually for vertex textures
 
-			glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, glRemap[0]);
-			glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, glRemap[1]);
-			glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, glRemap[2]);
-			glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, glRemap[3]);
+			const GLuint params[] = { glRemap[1], glRemap[2], glRemap[3], glRemap[0] };
+			glTexParameteriv(target, GL_TEXTURE_SWIZZLE_RGBA, (GLint*)params);
 
 			glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT);
