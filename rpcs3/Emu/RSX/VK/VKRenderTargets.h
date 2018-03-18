@@ -20,7 +20,7 @@ namespace vk
 		u16 surface_height = 0;
 
 		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
-		std::unique_ptr<vk::image_view> view;
+		std::vector<std::unique_ptr<vk::image_view>> views;
 
 		render_target *old_contents = nullptr; //Data occupying the memory location that this surface is replacing
 		u64 frame_tag = 0; //frame id when invalidated, 0 if not invalid
@@ -42,13 +42,43 @@ namespace vk
 					mipmaps, layers, samples, initial_layout, tiling, usage, image_flags)
 		{}
 
+		vk::image_view* get_view(const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
+		{
+			VkComponentMapping real_mapping = vk::apply_swizzle_remap
+			(
+				{native_component_map.a, native_component_map.r, native_component_map.g, native_component_map.b },
+				remap
+			);
+
+			for (const auto& view : views)
+			{
+				if (view->info.components.a == real_mapping.a &&
+					view->info.components.r == real_mapping.r &&
+					view->info.components.g == real_mapping.g &&
+					view->info.components.b == real_mapping.b)
+				{
+					return view.get();
+				}
+			}
+
+			auto view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), value, VK_IMAGE_VIEW_TYPE_2D, info.format,
+					real_mapping, vk::get_image_subresource_range(0, 0, 1, 1, attachment_aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT)));
+
+			views.push_back(std::move(view));
+			return views.back().get();
+		}
+
 		vk::image_view* get_view()
 		{
-			if (!view)
-				view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), value, VK_IMAGE_VIEW_TYPE_2D, info.format,
+			if (views.empty())
+			{
+				auto view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), value, VK_IMAGE_VIEW_TYPE_2D, info.format,
 						native_component_map, vk::get_image_subresource_range(0, 0, 1, 1, attachment_aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT)));
 
-			return view.get();
+				views.push_back(std::move(view));
+			}
+
+			return views.back().get();
 		}
 
 		vk::image* get_surface() const override

@@ -75,6 +75,7 @@ namespace vk
 	bool sanitize_fp_values();
 
 	VkComponentMapping default_component_map();
+	VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector);
 	VkImageSubresource default_image_subresource();
 	VkImageSubresourceRange get_image_subresource_range(uint32_t base_layer, uint32_t base_mip, uint32_t layer_count, uint32_t level_count, VkImageAspectFlags aspect);
 

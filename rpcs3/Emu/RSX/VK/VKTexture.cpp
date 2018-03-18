@@ -180,4 +180,29 @@ namespace vk
 			mipmap_level++;
 		}
 	}
+
+	VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector)
+	{
+		VkComponentSwizzle final_mapping[4] = {};
+
+		for (u8 channel = 0; channel < 4; ++channel)
+		{
+			switch (remap_vector.second[channel])
+			{
+			case CELL_GCM_TEXTURE_REMAP_ONE:
+				final_mapping[channel] = VK_COMPONENT_SWIZZLE_ONE;
+				break;
+			case CELL_GCM_TEXTURE_REMAP_ZERO:
+				final_mapping[channel] = VK_COMPONENT_SWIZZLE_ZERO;
+				break;
+			case CELL_GCM_TEXTURE_REMAP_REMAP:
+				final_mapping[channel] = base_remap[remap_vector.first[channel]];
+				break;
+			default:
+				LOG_ERROR(RSX, "Unknown remap lookup value %d", remap_vector.second[channel]);
+			}
+		}
+
+		return{ final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
+	}
 }
