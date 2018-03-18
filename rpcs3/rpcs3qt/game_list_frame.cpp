@@ -397,7 +397,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2)
 		{
-			return game1.info.name < game2.info.name;
+			return qstr(game1.info.name).toLower() < qstr(game2.info.name).toLower();
 		};
 
 		// Sort by name at the very least.
