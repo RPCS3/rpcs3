@@ -1073,6 +1073,7 @@ namespace gl
 
 		void update(buffer *_buffer, u32 offset, u32 range, GLenum format = GL_R8UI)
 		{
+			verify(HERE), _buffer->size() >= (offset + range);
 			m_buffer = _buffer;
 			m_offset = offset;
 			m_range = range;

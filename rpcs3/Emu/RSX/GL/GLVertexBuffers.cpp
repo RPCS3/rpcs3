@@ -236,6 +236,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 
 		if (!m_persistent_stream_view.in_range(upload_info.persistent_mapping_offset, required.first, upload_info.persistent_mapping_offset))
 		{
+			verify(HERE), m_max_texbuffer_size < m_attrib_ring_buffer->size();
 			const size_t view_size = ((upload_info.persistent_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
 				(m_attrib_ring_buffer->size() - upload_info.persistent_mapping_offset) : m_max_texbuffer_size;
 
@@ -252,6 +253,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 
 		if (!m_volatile_stream_view.in_range(upload_info.volatile_mapping_offset, required.second, upload_info.volatile_mapping_offset))
 		{
+			verify(HERE), m_max_texbuffer_size < m_attrib_ring_buffer->size();
 			const size_t view_size = ((upload_info.volatile_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
 				(m_attrib_ring_buffer->size() - upload_info.volatile_mapping_offset) : m_max_texbuffer_size;
 

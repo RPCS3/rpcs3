@@ -197,7 +197,8 @@ namespace gl
 			glSamplerParameteri(samplerHandle, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
 		}
 
-		f32 af_level = g_cfg.video.anisotropic_level_override > 0 ? (f32)g_cfg.video.anisotropic_level_override : max_aniso(tex.max_aniso());
+		const bool aniso_override = !g_cfg.video.strict_rendering_mode && g_cfg.video.anisotropic_level_override > 0;
+		f32 af_level = aniso_override ? g_cfg.video.anisotropic_level_override : max_aniso(tex.max_aniso());
 		glSamplerParameterf(samplerHandle, GL_TEXTURE_MAX_ANISOTROPY_EXT, af_level);
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAG_FILTER, tex_mag_filter(tex.mag_filter()));
 

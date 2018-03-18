@@ -619,7 +619,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache.reset(new vk::weak_vertex_cache());
 
-	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.1"));
+	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.2"));
 
 	open_command_buffer();
 
@@ -1097,7 +1097,8 @@ void VKGSRender::end()
 					f32 min_lod = 0.f, max_lod = 0.f;
 					f32 lod_bias = 0.f;
 
-					const f32 af_level = g_cfg.video.anisotropic_level_override > 0 ? g_cfg.video.anisotropic_level_override : vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso());
+					const bool aniso_override = !g_cfg.video.strict_rendering_mode && g_cfg.video.anisotropic_level_override > 0;
+					const f32 af_level = aniso_override ? g_cfg.video.anisotropic_level_override : vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso());
 					const auto wrap_s = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s());
 					const auto wrap_t = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t());
 					const auto wrap_r = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r());
