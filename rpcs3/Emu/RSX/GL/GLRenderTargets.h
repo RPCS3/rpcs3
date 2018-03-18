@@ -63,7 +63,7 @@ namespace gl
 		u16 surface_pixel_size = 0;
 
 		texture::internal_format compatible_internal_format = texture::internal_format::rgba8;
-
+		std::array<GLenum, 4> native_component_mapping;
 	public:
 		render_target *old_contents = nullptr;
 
@@ -116,8 +116,10 @@ namespace gl
 			return id();
 		}
 
-		u32 get_view() const
+		u32 get_view(const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap) const
 		{
+			bind();
+			apply_swizzle_remap(GL_TEXTURE_2D, native_component_mapping, remap);
 			return id();
 		}
 
@@ -137,6 +139,12 @@ namespace gl
 			internal_height = height();
 			surface_width = rsx::apply_inverse_resolution_scale(internal_width, true);
 			surface_height = rsx::apply_inverse_resolution_scale(internal_height, true);
+
+			bind();
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, (GLint*)&native_component_mapping[0]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, (GLint*)&native_component_mapping[1]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, (GLint*)&native_component_mapping[2]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, (GLint*)&native_component_mapping[3]);
 		}
 
 		bool matches_dimensions(u16 _width, u16 _height) const

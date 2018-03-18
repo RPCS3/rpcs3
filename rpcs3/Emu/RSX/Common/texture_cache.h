@@ -262,11 +262,13 @@ namespace rsx
 			u16 h;
 		};
 
+		using texture_channel_remap_t = std::pair<std::array<u8, 4>, std::array<u8, 4>>;
 		struct deferred_subresource
 		{
 			image_resource_type external_handle = 0;
 			std::array<image_resource_type, 6> external_cubemap_sources;
 			std::vector<copy_region_descriptor> sections_to_copy;
+			texture_channel_remap_t remap;
 			u32 base_address = 0;
 			u32 gcm_format = 0;
 			u16 x = 0;
@@ -280,8 +282,8 @@ namespace rsx
 			deferred_subresource()
 			{}
 
-			deferred_subresource(image_resource_type _res, u32 _addr, u32 _fmt, u16 _x, u16 _y, u16 _w, u16 _h) :
-				external_handle(_res), base_address(_addr), gcm_format(_fmt), x(_x), y(_y), width(_w), height(_h)
+			deferred_subresource(image_resource_type _res, u32 _addr, u32 _fmt, u16 _x, u16 _y, u16 _w, u16 _h, const texture_channel_remap_t& _remap) :
+				external_handle(_res), base_address(_addr), gcm_format(_fmt), x(_x), y(_y), width(_w), height(_h), remap(_remap)
 			{}
 		};
 
@@ -316,9 +318,9 @@ namespace rsx
 			}
 
 			sampled_image_descriptor(image_resource_type external_handle, u32 base_address, u32 gcm_format, u16 x_offset, u16 y_offset, u16 width, u16 height,
-				texture_upload_context ctx, bool is_depth, f32 x_scale, f32 y_scale, rsx::texture_dimension_extended type)
+				texture_upload_context ctx, bool is_depth, f32 x_scale, f32 y_scale, rsx::texture_dimension_extended type, const texture_channel_remap_t& remap)
 			{
-				external_subresource_desc = { external_handle, base_address, gcm_format, x_offset, y_offset, width, height };
+				external_subresource_desc = { external_handle, base_address, gcm_format, x_offset, y_offset, width, height, remap };
 
 				image_handle = 0;
 				upload_context = ctx;
@@ -336,7 +338,7 @@ namespace rsx
 		};
 
 	protected:
-		std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector =
+		texture_channel_remap_t default_remap_vector =
 		{
 			{ CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B },
 			{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
@@ -375,17 +377,17 @@ namespace rsx
 
 		/* Helpers */
 		virtual void free_texture_section(section_storage_type&) = 0;
-		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_resource_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) = 0;
-		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_storage_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) = 0;
+		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_resource_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector) = 0;
+		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_storage_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector) = 0;
 		virtual section_storage_type* create_new_texture(commandbuffer_type&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
-				rsx::texture_upload_context context, rsx::texture_dimension_extended type, texture_create_flags flags, rsx::texture_colorspace colorspace, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
+				rsx::texture_upload_context context, rsx::texture_dimension_extended type, texture_create_flags flags, rsx::texture_colorspace colorspace, const texture_channel_remap_t& remap_vector) = 0;
 		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format, texture_upload_context context,
-				const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, rsx::texture_colorspace colorspace, bool swizzled, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
+				const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, rsx::texture_colorspace colorspace, bool swizzled, const texture_channel_remap_t& remap_vector) = 0;
 		virtual void enforce_surface_creation_type(section_storage_type& section, u32 gcm_format, texture_create_flags expected) = 0;
-		virtual void set_up_remap_vector(section_storage_type& section, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) = 0;
+		virtual void set_up_remap_vector(section_storage_type& section, const texture_channel_remap_t& remap_vector) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex) = 0;
-		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::array<image_resource_type, 6>& sources) = 0;
-		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy) = 0;
+		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::array<image_resource_type, 6>& sources, const texture_channel_remap_t& remap_vector) = 0;
+		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
 		virtual void update_image_contents(commandbuffer_type&, image_view_type dst, image_resource_type src, u16 width, u16 height) = 0;
 		virtual bool render_target_format_is_compatible(image_storage_type* tex, u32 gcm_format) = 0;
 
@@ -1267,11 +1269,11 @@ namespace rsx
 
 			image_view_type result = 0;
 			if (desc.is_copy_cmd)
-				result = generate_atlas_from_images(cmd, desc.gcm_format, desc.width, desc.height, desc.sections_to_copy);
+				result = generate_atlas_from_images(cmd, desc.gcm_format, desc.width, desc.height, desc.sections_to_copy, desc.remap);
 			else if (desc.is_cubemap)
-				result = generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, desc.external_cubemap_sources);
+				result = generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, desc.external_cubemap_sources, desc.remap);
 			else
-				result = create_temporary_subresource_view(cmd, &desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height);
+				result = create_temporary_subresource_view(cmd, &desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height, desc.remap);
 
 			if (result)
 			{
@@ -1288,7 +1290,7 @@ namespace rsx
 
 		template <typename render_target_type, typename surface_store_type>
 		sampled_image_descriptor process_framebuffer_resource(commandbuffer_type& cmd, render_target_type texptr, u32 texaddr, u32 gcm_format, surface_store_type& m_rtts,
-				u16 tex_width, u16 tex_height, u16 tex_pitch, rsx::texture_dimension_extended extended_dimension, bool is_depth)
+				u16 tex_width, u16 tex_height, u16 tex_pitch, rsx::texture_dimension_extended extended_dimension, bool is_depth, const texture_channel_remap_t& remap)
 		{
 			const u32 format = gcm_format & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
 			const auto surface_width = texptr->get_surface_width();
@@ -1348,7 +1350,7 @@ namespace rsx
 
 					sampled_image_descriptor desc = { texptr->get_surface(), texaddr, format, 0, 0, rsx::apply_resolution_scale(surface_width, true),
 							rsx::apply_resolution_scale(surface_height, true), texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
-							rsx::texture_dimension_extended::texture_dimension_cubemap };
+							rsx::texture_dimension_extended::texture_dimension_cubemap, remap };
 
 					desc.set_external_cubemap_resources(image_array);
 					return desc;
@@ -1383,7 +1385,7 @@ namespace rsx
 
 					sampled_image_descriptor result = { texptr->get_surface(), texaddr, format, 0, 0, w, h,
 						texture_upload_context::framebuffer_storage, is_depth, scale_x, scale_y,
-						rsx::texture_dimension_extended::texture_dimension_2d };
+						rsx::texture_dimension_extended::texture_dimension_2d, remap };
 
 					result.external_subresource_desc.is_copy_cmd = true;
 					result.external_subresource_desc.sections_to_copy.reserve(overlapping.size());
@@ -1472,13 +1474,13 @@ namespace rsx
 				const auto h = rsx::apply_resolution_scale(internal_height, true);
 
 				sampled_image_descriptor result = { texptr->get_surface(), texaddr, format, 0, 0, w, h, texture_upload_context::framebuffer_storage,
-					is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
+					is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, remap };
 
 				result.external_subresource_desc.update_cached = update_subresource_cache;
 				return result;
 			}
 
-			return{ texptr->get_view(), texture_upload_context::framebuffer_storage, is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
+			return{ texptr->get_view(remap), texture_upload_context::framebuffer_storage, is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
 		}
 
 		template <typename RsxTextureType, typename surface_store_type, typename ...Args>
@@ -1527,7 +1529,8 @@ namespace rsx
 				{
 					if (test_framebuffer(texaddr))
 					{
-						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, tex_pitch, extended_dimension, false);
+						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts,
+								tex_width, tex_height, tex_pitch, extended_dimension, false, tex.decoded_remap());
 					}
 					else
 					{
@@ -1540,7 +1543,8 @@ namespace rsx
 				{
 					if (test_framebuffer(texaddr))
 					{
-						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts, tex_width, tex_height, tex_pitch, extended_dimension, true);
+						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts,
+								tex_width, tex_height, tex_pitch, extended_dimension, true, tex.decoded_remap());
 					}
 					else
 					{
@@ -1559,17 +1563,11 @@ namespace rsx
 
 			if (!is_compressed_format)
 			{
-				/* Check if we are re-sampling a subresource of an RTV/DSV texture, bound or otherwise
-				 * This check is much stricter than the one above
-				 * (Turbo: Super Stunt Squad does this; bypassing the need for a sync object)
-				 * The engine does not read back the texture resource through cell, but specifies a texture location that is
-				 * a bound render target. We can bypass the expensive download in this case
-				 */
+				// Check if we are re-sampling a subresource of an RTV/DSV texture, bound or otherwise
 
 				const auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, tex_width, tex_height, tex_pitch);
 				if (rsc.surface)
 				{
-					//TODO: Check that this region is not cpu-dirty before doing a copy
 					if (!test_framebuffer(rsc.base_address))
 					{
 						m_rtts.invalidate_surface_address(rsc.base_address, rsc.is_depth_surface);
@@ -1587,23 +1585,10 @@ namespace rsx
 						u16 internal_height = tex_height;
 
 						get_native_dimensions(internal_width, internal_height, rsc.surface);
-						if (!rsc.is_bound || !g_cfg.video.strict_rendering_mode)
+						if (!rsc.x && !rsc.y && rsc.w == internal_width && rsc.h == internal_height)
 						{
-							if (!rsc.x && !rsc.y && rsc.w == internal_width && rsc.h == internal_height)
-							{
-								if (rsc.is_bound)
-								{
-									LOG_WARNING(RSX, "Sampling from a currently bound render target @ 0x%x", texaddr);
-									insert_texture_barrier(cmd, rsc.surface);
-								}
-
-								return{ rsc.surface->get_view(), texture_upload_context::framebuffer_storage, rsc.is_depth_surface,
-									scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
-							}
-						}
-						else
-						{
-							LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
+							//Full sized hit from the surface cache. This should have been already found before getting here
+							fmt::throw_exception("Unreachable" HERE);
 						}
 
 						internal_width = rsx::apply_resolution_scale(internal_width, true);
@@ -1611,7 +1596,7 @@ namespace rsx
 
 						return{ rsc.surface->get_surface(), rsc.base_address, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
 							internal_width, internal_height, texture_upload_context::framebuffer_storage, rsc.is_depth_surface, scale_x, scale_y,
-							rsx::texture_dimension_extended::texture_dimension_2d };
+							rsx::texture_dimension_extended::texture_dimension_2d, tex.decoded_remap() };
 					}
 				}
 			}
@@ -1680,7 +1665,7 @@ namespace rsx
 
 									auto src_image = surface->get_raw_texture();
 									return{ src_image, surface->get_section_base(), format, offset_x, offset_y, tex_width, tex_height, texture_upload_context::blit_engine_dst,
-											surface->is_depth_texture(), scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
+											surface->is_depth_texture(), scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, default_remap_vector };
 								}
 							}
 						}
