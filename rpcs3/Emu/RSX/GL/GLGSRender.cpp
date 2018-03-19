@@ -24,7 +24,7 @@ namespace
 
 GLGSRender::GLGSRender() : GSRender()
 {
-	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.1"));
+	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.2"));
 
 	if (g_cfg.video.disable_vertex_cache)
 		m_vertex_cache.reset(new gl::null_vertex_cache());
@@ -743,8 +743,8 @@ void GLGSRender::on_init_thread()
 	m_fragment_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_vertex_state_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
-	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, m_max_texbuffer_size);
-	m_volatile_stream_view.update(m_attrib_ring_buffer.get(), 0, m_max_texbuffer_size);
+	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>((u32)m_attrib_ring_buffer->size(), m_max_texbuffer_size));
+	m_volatile_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>((u32)m_attrib_ring_buffer->size(), m_max_texbuffer_size));
 	m_gl_persistent_stream_buffer.copy_from(m_persistent_stream_view);
 	m_gl_volatile_stream_buffer.copy_from(m_volatile_stream_view);
 
