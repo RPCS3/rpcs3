@@ -1416,7 +1416,7 @@ void VKGSRender::end()
 	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
 
 	const bool is_emulated_restart = (!primitive_emulated && rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart() && rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed);
-	const bool single_draw = !supports_multidraw || (!is_emulated_restart && (rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive));
+	const bool single_draw = (!is_emulated_restart && (!supports_multidraw || rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive));
 
 	if (m_occlusion_query_active && (occlusion_id != UINT32_MAX))
 	{
