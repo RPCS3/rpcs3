@@ -13,6 +13,7 @@
 #include <QToolBar>
 #include <QLineEdit>
 #include <QStackedWidget>
+#include <QSet>
 
 #include <memory>
 
@@ -165,7 +166,6 @@ struct GUI_GameInfo
 	Compat_Status compat;
 	QImage icon;
 	QPixmap pxmap;
-	bool isVisible;
 	bool bootable;
 	bool hasCustomConfig;
 };
@@ -196,6 +196,8 @@ public:
 	/** Repaint Gamelist Icons with new background color */
 	void RepaintIcons(const bool& fromSettings = false);
 
+	void SetShowHidden(bool show);
+
 public Q_SLOTS:
 	void SetListMode(const bool& isList);
 	void SetSearchText(const QString& text);
@@ -220,7 +222,7 @@ protected:
 private:
 	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
-	void FilterData();
+	bool IsEntryVisible(const GUI_GameInfo& game);
 	void SortGameList();
 
 	int PopulateGameList();
@@ -254,6 +256,8 @@ private:
 	std::shared_ptr<gui_settings> xgui_settings;
 	std::shared_ptr<emu_settings> xemu_settings;
 	std::vector<GUI_GameInfo> m_game_data;
+	QSet<QString> m_hidden_list;
+	bool m_show_hidden{false};
 
 	// Search
 	QString m_search_text;
