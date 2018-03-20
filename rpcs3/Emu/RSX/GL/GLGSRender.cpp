@@ -610,9 +610,9 @@ void GLGSRender::on_init_thread()
 	if (g_cfg.video.debug_output)
 		gl::enable_debugging();
 
-	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VERSION));
-	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
-	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VENDOR));
+	LOG_NOTICE(RSX, "GL RENDERER: %s (%s)", (const char*)glGetString(GL_RENDERER), (const char*)glGetString(GL_VENDOR));
+	LOG_NOTICE(RSX, "GL VERSION: %s", (const char*)glGetString(GL_VERSION));
+	LOG_NOTICE(RSX, "GLSL VERSION: %s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
 
 	auto& gl_caps = gl::get_driver_caps();
 

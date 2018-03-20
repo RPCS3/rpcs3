@@ -238,16 +238,13 @@ struct RSXFragmentProgram
 
 	rsx::texture_dimension_extended get_texture_dimension(u8 id) const
 	{
-		return (rsx::texture_dimension_extended)((texture_dimensions >> (id * 2)) & 0x3);
-	}
-
-	void set_texture_dimension(const std::array<rsx::texture_dimension_extended, 16> &dimensions)
-	{
-		texture_dimensions = 0;
-		for (u32 i = 0, offset = 0; i < 16; ++i, offset += 2)
+		if (const auto type = (texture_dimensions >> (id * 2)) & 0x3)
 		{
-			texture_dimensions |= (u32)dimensions[i] << offset;
+			return (rsx::texture_dimension_extended)(type);
 		}
+
+		//This slot is not in use, return 2D as a fallback
+		return rsx::texture_dimension_extended::texture_dimension_2d;
 	}
 
 	RSXFragmentProgram()

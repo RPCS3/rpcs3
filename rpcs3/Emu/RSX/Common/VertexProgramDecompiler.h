@@ -2,6 +2,7 @@
 #include "Emu/RSX/RSXVertexProgram.h"
 #include <vector>
 #include <set>
+#include <stack>
 #include <sstream>
 #include "ShaderParam.h"
 
@@ -54,9 +55,7 @@ struct VertexProgramDecompiler
 
 	std::set<int> m_jump_lvls;
 	std::vector<std::string> m_body;
-	std::vector<FuncInfo> m_funcs;
-
-	//wxString main;
+	std::stack<u32> m_call_stack;
 
 	const std::vector<u32>& m_data;
 	ParamArray m_parr;
@@ -67,7 +66,6 @@ struct VertexProgramDecompiler
 	std::string GetScaMask();
 	std::string GetDST(bool is_sca = false);
 	std::string GetSRC(const u32 n);
-	std::string GetFunc();
 	std::string GetTex();
 	std::string GetCond();
 	std::string GetOptionalBranchCond();	//Conditional branch expression modified externally at runtime
@@ -82,7 +80,6 @@ struct VertexProgramDecompiler
 	void SetDST(bool is_sca, std::string value);
 	void SetDSTVec(const std::string& code);
 	void SetDSTSca(const std::string& code);
-	std::string BuildFuncBody(const FuncInfo& func);
 	std::string BuildCode();
 
 protected:
