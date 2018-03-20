@@ -730,6 +730,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->useNativeInterface, emu_settings::UseNativeInterface);
 	SubscribeTooltip(ui->useNativeInterface, json_emu_misc["useNativeInterface"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->showShaderCompilationHint, emu_settings::ShowShaderCompilationHint);
+	SubscribeTooltip(ui->showShaderCompilationHint, json_emu_misc["showShaderCompilationHint"].toString());
+
 	if (game)
 	{
 		ui->gb_stylesheets->setEnabled(false);
