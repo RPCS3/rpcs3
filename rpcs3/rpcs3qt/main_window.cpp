@@ -1186,6 +1186,13 @@ void main_window::CreateConnects()
 		guiSettings->SetValue(gui::mw_toolBarVisible, checked);
 	});
 
+	connect(ui->showHiddenEntriesAct, &QAction::triggered, [=](bool checked)
+	{
+		guiSettings->SetValue(gui::gl_show_hidden, checked);
+		m_gameListFrame->SetShowHidden(checked);
+		m_gameListFrame->Refresh();
+	});
+
 	connect(ui->refreshGameListAct, &QAction::triggered, [=]
 	{
 		m_gameListFrame->Refresh(true);
@@ -1410,6 +1417,9 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
 
 	RepaintToolbar();
+
+	ui->showHiddenEntriesAct->setChecked(guiSettings->GetValue(gui::gl_show_hidden).toBool());
+	m_gameListFrame->SetShowHidden(ui->showHiddenEntriesAct->isChecked()); // prevent GetValue in m_gameListFrame->LoadSettings
 
 	ui->showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Non_Disc_Game));
 	ui->showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Disc_Game));
