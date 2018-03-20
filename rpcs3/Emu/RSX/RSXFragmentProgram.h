@@ -238,13 +238,7 @@ struct RSXFragmentProgram
 
 	rsx::texture_dimension_extended get_texture_dimension(u8 id) const
 	{
-		if (const auto type = (texture_dimensions >> (id * 2)) & 0x3)
-		{
-			return (rsx::texture_dimension_extended)(type);
-		}
-
-		//This slot is not in use, return 2D as a fallback
-		return rsx::texture_dimension_extended::texture_dimension_2d;
+		return (rsx::texture_dimension_extended)((texture_dimensions >> (id * 2)) & 0x3);
 	}
 
 	RSXFragmentProgram()

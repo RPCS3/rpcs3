@@ -137,7 +137,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 	while (true)
 	{
 		const qword& inst = instBuffer[instIndex];
-		const u32 opcode = inst.word[0] >> 16 & 0x3F;
+		const u32 opcode = (inst.word[0] >> 16) & 0x3F;
 
 		if (opcode)
 		{
@@ -156,6 +156,12 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 				//Bits 16-23 are swapped into the upper 8 bits (24-31)
 				const u32 tex_num = (inst.word[0] >> 25) & 15;
 				textures_mask |= (1 << tex_num);
+			}
+
+			if (is_constant(inst.word[1]) || is_constant(inst.word[2]) || is_constant(inst.word[3]))
+			{
+				//Instruction references constant, skip one slot occupied by data
+				instIndex++;
 			}
 
 			if ((inst.word[0] >> 8) & 0x1)
