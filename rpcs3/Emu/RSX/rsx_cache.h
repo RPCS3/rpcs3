@@ -306,7 +306,7 @@ namespace rsx
 				return;
 			}
 
-			std::string directory_path = root_path + "/pipelines/" + pipeline_class_name;
+			std::string directory_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix;
 
 			if (!fs::is_dir(directory_path))
 			{
@@ -331,6 +331,9 @@ namespace rsx
 
 			root.rewind();
 
+			// Invalid pipeline entries to be removed
+			std::vector<std::string> invalid_entries;
+
 			// Progress dialog
 			std::unique_ptr<progress_dialog_helper> fallback_dlg;
 			if (!dlg)
@@ -348,11 +351,9 @@ namespace rsx
 				if (tmp.name == "." || tmp.name == "..")
 					continue;
 
-				if (tmp.name.compare(0, prefix_length, version_prefix) != 0)
-					continue;
-
+				const auto filename = directory_path + "/" + tmp.name;
 				std::vector<u8> bytes;
-				fs::file f(directory_path + "/" + tmp.name);
+				fs::file f(filename);
 
 				processed++;
 				dlg->update_msg(processed, entry_count);
@@ -360,6 +361,7 @@ namespace rsx
 				if (f.size() != sizeof(pipeline_data))
 				{
 					LOG_ERROR(RSX, "Cached pipeline object %s is not binary compatible with the current shader cache", tmp.name.c_str());
+					invalid_entries.push_back(filename);
 					continue;
 				}
 
@@ -375,6 +377,16 @@ namespace rsx
 
 					tally -= (f32)value;
 				}
+			}
+
+			if (!invalid_entries.empty())
+			{
+				for (const auto &filename : invalid_entries)
+				{
+					fs::remove_file(filename);
+				}
+
+				LOG_NOTICE(RSX, "shader cache: %d entries were marked as invalid and removed", invalid_entries.size());
 			}
 
 			dlg->close();
@@ -416,7 +428,7 @@ namespace rsx
 			state_hash ^= rpcs3::hash_base<u64>(data.fp_zfunc_mask);
 
 			std::string pipeline_file_name = fmt::format("%llX+%llX+%llX+%llX.bin", data.vertex_program_hash, data.fragment_program_hash, data.pipeline_storage_hash, state_hash);
-			std::string pipeline_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix + "-" + pipeline_file_name;
+			std::string pipeline_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix + "/" + pipeline_file_name;
 			fs::file(pipeline_path, fs::rewrite).write(&data, sizeof(pipeline_data));
 		}
 
