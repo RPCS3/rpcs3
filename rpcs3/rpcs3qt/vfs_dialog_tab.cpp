@@ -31,7 +31,7 @@ vfs_dialog_tab::vfs_dialog_tab(const vfs_settings_info& settingsInfo, std::share
 	m_dirList->setMinimumWidth(m_dirList->sizeHintForColumn(0));
 
 	QHBoxLayout* selectedConfigLayout = new QHBoxLayout;
-	QLabel* selectedMessage = new QLabel(m_info.name + " directory:");
+	QLabel* selectedMessage = new QLabel(m_info.name + (u8" 目錄:"));
 	m_selectedConfigLabel = new QLabel();
 	m_selectedConfigLabel->setText(current_dir.isEmpty() ? EmptyPath : current_dir);
 	selectedConfigLayout->addWidget(selectedMessage);
@@ -76,7 +76,7 @@ void vfs_dialog_tab::Reset()
 
 void vfs_dialog_tab::AddNewDirectory()
 {
-	QString dir = QFileDialog::getExistingDirectory(nullptr, "Choose a directory", QCoreApplication::applicationDirPath());
+	QString dir = QFileDialog::getExistingDirectory(nullptr, (u8"選擇一個目錄"), QCoreApplication::applicationDirPath());
 	if (dir != "")
 	{
 		if (dir.endsWith("/") == false) dir += '/';

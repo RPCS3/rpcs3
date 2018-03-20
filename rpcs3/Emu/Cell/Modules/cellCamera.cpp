@@ -28,8 +28,8 @@ void fmt_class_string<camera_handler>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case camera_handler::null: return "Null";
-		case camera_handler::fake: return "Fake";
+		case camera_handler::null: return (u8"空");
+		case camera_handler::fake: return (u8"虛設");
 		}
 
 		return unknown;
@@ -43,7 +43,7 @@ void fmt_class_string<fake_camera_type>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case fake_camera_type::unknown: return "Unknown";
+		case fake_camera_type::unknown: return (u8"未知");
 		case fake_camera_type::eyetoy: return "EyeToy";
 		case fake_camera_type::eyetoy2: return "PS Eye";
 		case fake_camera_type::uvc1_1: return "UVC 1.1";
@@ -136,7 +136,7 @@ u32 set_and_send_read_mode(s32 dev_num, const s32 read_mode)
 	}
 	else
 	{
-		cellCamera.error("Unknown read mode set: %d", read_mode);
+		cellCamera.error(u8"未知的讀取模式設置: %d", read_mode);
 	}
 
 	// Send read mode to camera thread
@@ -862,7 +862,7 @@ void camera_thread::on_task()
 					}
 					default:
 					{
-						cellCamera.error("Unknown read mode set: %d. This should never happen.", read_mode.load());
+						cellCamera.error(u8"未知的讀取模式設置: %d. This should never happen.", read_mode.load());
 						return;
 					}
 					}

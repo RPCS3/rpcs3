@@ -30,26 +30,26 @@ bool verify_mself(u32 fd, fs::file const& mself_file)
 	FsMselfHeader mself_header;
 	if (!mself_file.read<FsMselfHeader>(mself_header))
 	{
-		sys_fs.error("verify_mself: Didn't read expected bytes for header.");
+		sys_fs.error(u8"verify_mself: 沒有讀取標題的預期位元組。");
 		return false;
 	}
 
 	if (mself_header.m_magic != 0x4D534600)
 	{
-		sys_fs.error("verify_mself: Header magic is incorrect.");
+		sys_fs.error(u8"verify_mself: 標題 magic 不正確。");
 		return false;
 	}
 
 	if (mself_header.m_format_version != 1)
 	{
-		sys_fs.error("verify_mself: Unexpected header format version.");
+		sys_fs.error(u8"verify_mself: 異常的標題檔案格式版本。");
 		return false;
 	}
 
 	// sanity check
 	if (mself_header.m_entry_size != sizeof(FsMselfEntry))
 	{
-		sys_fs.error("verify_mself: Unexpected header entry size.");
+		sys_fs.error(u8"verify_mself: 異常的標題寫入大小。");
 		return false;
 	}
 
@@ -130,7 +130,7 @@ struct lv2_file::file_view : fs::file_base
 			whence == fs::seek_set ? offset :
 			whence == fs::seek_cur ? offset + m_pos :
 			whence == fs::seek_end ? offset + size() :
-			(fmt::raw_error("lv2_file::file_view::seek(): invalid whence"), 0);
+			(fmt::raw_error(u8"lv2_file::file_view::seek(): 無效的"), 0);
 
 		if (new_pos < 0)
 		{
@@ -161,7 +161,7 @@ error_code sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<
 
 	if (arg1 != 6 || arg2 != 0 || arg4 != sizeof(u32))
 	{
-		sys_fs.todo("sys_fs_test: unknown arguments (arg1=0x%x, arg2=0x%x, arg3=*0x%x, arg4=0x%x)", arg1, arg2, arg3, arg4);
+		sys_fs.todo(u8"sys_fs_test: 未知參數 (arg1=0x%x, arg2=0x%x, arg3=*0x%x, arg4=0x%x)", arg1, arg2, arg3, arg4);
 	}
 
 	if (!arg3)
@@ -276,7 +276,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 
 	if (!test(open_mode))
 	{
-		fmt::throw_exception("sys_fs_open(%s): Invalid or unimplemented flags: %#o" HERE, path, flags);
+		fmt::throw_exception(u8"sys_fs_open(%s): 無效或未實現的標誌: %#o" HERE, path, flags);
 	}
 
 	fs::file file(local_path, open_mode);
@@ -291,7 +291,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_open(): unknown error %s", error);
+		default: sys_fs.error(u8"sys_fs_open(): 未知錯誤 %s", error);
 		}
 
 		return {CELL_EIO, path};
@@ -458,7 +458,7 @@ error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_opendir(): unknown error %s", error);
+		default: sys_fs.error(u8"sys_fs_opendir(): 未知錯誤 %s", error);
 		}
 
 		return {CELL_EIO, path};
@@ -546,7 +546,7 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_stat(): unknown error %s", error);
+		default: sys_fs.error(u8"sys_fs_stat(): 未知錯誤 %s", error);
 		}
 
 		return {CELL_EIO, path};
@@ -620,13 +620,13 @@ error_code sys_fs_mkdir(vm::cptr<char> path, s32 mode)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
 		case fs::error::exist: return {CELL_EEXIST, path};
-		default: sys_fs.error("sys_fs_mkdir(): unknown error %s", error);
+		default: sys_fs.error(u8"sys_fs_mkdir(): 未知錯誤 %s", error);
 		}
 
 		return {CELL_EIO, path}; // ???
 	}
 
-	sys_fs.notice("sys_fs_mkdir(): directory %s created", path);
+	sys_fs.notice(u8"sys_fs_mkdir(): 目錄 %s 建立", path);
 	return CELL_OK;
 }
 
@@ -659,7 +659,7 @@ error_code sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to)
 		return {CELL_EIO, from}; // ???
 	}
 
-	sys_fs.notice("sys_fs_rename(): %s renamed to %s", from, to);
+	sys_fs.notice(u8"sys_fs_rename(): %s 更名為 %s", from, to);
 	return CELL_OK;
 }
 
@@ -685,13 +685,13 @@ error_code sys_fs_rmdir(vm::cptr<char> path)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
 		case fs::error::notempty: return {CELL_ENOTEMPTY, path};
-		default: sys_fs.error("sys_fs_rmdir(): unknown error %s", error);
+		default: sys_fs.error(u8"sys_fs_rmdir(): 未知錯誤 %s", error);
 		}
 
 		return {CELL_EIO, path}; // ???
 	}
 
-	sys_fs.notice("sys_fs_rmdir(): directory %s removed", path);
+	sys_fs.notice(u8"sys_fs_rmdir(): 目錄 %s 刪除", path);
 	return CELL_OK;
 }
 
@@ -722,13 +722,13 @@ error_code sys_fs_unlink(vm::cptr<char> path)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_unlink(): unknown error %s", error);
+		default: sys_fs.error(u8"sys_fs_unlink(): 未知錯誤 %s", error);
 		}
 
 		return {CELL_EIO, path}; // ???
 	}
 
-	sys_fs.notice("sys_fs_unlink(): file %s deleted", path);
+	sys_fs.notice(u8"sys_fs_unlink(): 檔案 %s 刪除", path);
 	return CELL_OK;
 }
 
@@ -865,7 +865,7 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 			switch (auto error = fs::g_tls_error)
 			{
 			case fs::error::noent: return {CELL_ENOENT, arg->path};
-			default: sys_fs.error("sys_fs_fcntl(0xc0000002): unknown error %s", error);
+			default: sys_fs.error(u8"sys_fs_fcntl(0xc0000002): 未知錯誤 %s", error);
 			}
 
 			return CELL_EIO; // ???
@@ -1112,7 +1112,7 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 	}
 	}
 
-	sys_fs.fatal("sys_fs_fcntl(): Unknown operation 0x%08x (fd=%d, arg=*0x%x, size=0x%x)", op, fd, _arg, _size);
+	sys_fs.fatal(u8"sys_fs_fcntl(): 未知操作 0x%08x (fd=%d, arg=*0x%x, size=0x%x)", op, fd, _arg, _size);
 	return CELL_OK;
 }
 
@@ -1141,7 +1141,7 @@ error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::inval: return CELL_EINVAL;
-		default: sys_fs.error("sys_fs_lseek(): unknown error %s", error);
+		default: sys_fs.error(u8"sys_fs_lseek(): 未知錯誤 %s", error);
 		}
 
 		return CELL_EIO; // ???
@@ -1236,7 +1236,7 @@ error_code sys_fs_truncate(vm::cptr<char> path, u64 size)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_truncate(): unknown error %s", error);
+		default: sys_fs.error(u8"sys_fs_truncate(): 未知錯誤 %s", error);
 		}
 
 		return {CELL_EIO, path}; // ???
@@ -1277,7 +1277,7 @@ error_code sys_fs_ftruncate(u32 fd, u64 size)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::ok:
-		default: sys_fs.error("sys_fs_ftruncate(): unknown error %s", error);
+		default: sys_fs.error(u8"sys_fs_ftruncate(): 未知錯誤 %s", error);
 		}
 
 		return CELL_EIO; // ???
@@ -1329,7 +1329,7 @@ error_code sys_fs_disk_free(vm::cptr<char> path, vm::ptr<u64> total_free, vm::pt
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_disk_free(): unknown error %s", error);
+		default: sys_fs.error(u8"sys_fs_disk_free(): 未知錯誤 %s", error);
 		}
 
 		return {CELL_EIO, path};  // ???
@@ -1363,7 +1363,7 @@ error_code sys_fs_utime(vm::cptr<char> path, vm::cptr<CellFsUtimbuf> timep)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_utime(): unknown error %s", error);
+		default: sys_fs.error(u8"sys_fs_utime(): 未知錯誤 %s", error);
 		}
 
 		return {CELL_EIO, path}; // ???

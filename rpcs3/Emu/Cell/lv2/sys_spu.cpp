@@ -25,7 +25,7 @@ void sys_spu_image::load(const fs::file& stream)
 
 	if (obj != elf_error::ok)
 	{
-		fmt::throw_exception("Failed to load SPU image: %s" HERE, obj.get_error());
+		fmt::throw_exception(u8"無法讀取 SPU image: %s" HERE, obj.get_error());
 	}
 
 	for (const auto& shdr : obj.shdrs)
@@ -39,7 +39,7 @@ void sys_spu_image::load(const fs::file& stream)
 
 		if (prog.p_type != SYS_SPU_SEGMENT_TYPE_COPY && prog.p_type != SYS_SPU_SEGMENT_TYPE_INFO)
 		{
-			LOG_ERROR(SPU, "Unknown program type (0x%x)", prog.p_type);
+			LOG_ERROR(SPU, u8"未知程式類型 (0x%x)", prog.p_type);
 		}
 	}
 
@@ -136,7 +136,7 @@ void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
 		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr + loc);
 	}
 
-	LOG_NOTICE(LOADER, "Loaded SPU image: %s (<- %u)%s", hash, applied, dump);
+	LOG_NOTICE(LOADER, u8"讀取 SPU image: %s (<- %u)%s", hash, applied, dump);
 }
 
 error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
@@ -168,7 +168,7 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 
 	if (!elf_file)
 	{
-		sys_spu.error("sys_spu_image_open() error: failed to open %s!", path);
+		sys_spu.error(u8"sys_spu_image_open() 錯誤: 無法開啟 %s!", path);
 		return CELL_ENOENT;
 	}
 
@@ -230,7 +230,7 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 
 	if (u32 option = attr->option)
 	{
-		sys_spu.todo("Unimplemented SPU Thread options (0x%x)", option);
+		sys_spu.todo(u8"未實現的 SPU 執行緒選項 (0x%x)", option);
 	}
 
 	auto spu = idm::make_ptr<SPUThread>(thread_name, spu_num, group.get());
@@ -305,7 +305,7 @@ error_code sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::p
 
 	if (attr->type)
 	{
-		sys_spu.todo("Unsupported SPU Thread Group type (0x%x)", attr->type);
+		sys_spu.todo(u8"不支援的 SPU 執行緒組類型 (0x%x)", attr->type);
 	}
 
 	*id = idm::make<lv2_spu_group>(std::string(attr->name.get_ptr(), std::max<u32>(attr->nsize, 1) - 1), num, prio, attr->type, attr->ct);
@@ -682,7 +682,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 	}
 	default:
 	{
-		fmt::throw_exception("Unexpected join_state" HERE);
+		fmt::throw_exception(u8"異常 join_state" HERE);
 	}
 	}
 
@@ -953,7 +953,7 @@ error_code sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et)
 	}
 	default:
 	{
-		sys_spu.error("sys_spu_thread_group_connect_event(): unknown event type (%d)", et);
+		sys_spu.error(u8"sys_spu_thread_group_connect_event(): 未知事件類型 (%d)", et);
 		return CELL_EINVAL;
 	}
 	}
@@ -1008,7 +1008,7 @@ error_code sys_spu_thread_group_disconnect_event(u32 id, u32 et)
 	}
 	default:
 	{
-		sys_spu.error("sys_spu_thread_group_disconnect_event(): unknown event type (%d)", et);
+		sys_spu.error(u8"sys_spu_thread_group_disconnect_event(): 未知事件類型 (%d)", et);
 		return CELL_EINVAL;
 	}
 	}
@@ -1030,7 +1030,7 @@ error_code sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 
 	if (et != SYS_SPU_THREAD_EVENT_USER || spup > 63 || queue->type != SYS_PPU_QUEUE)
 	{
-		sys_spu.error("sys_spu_thread_connect_event(): invalid arguments (et=%d, spup=%d, queue->type=%d)", et, spup, queue->type);
+		sys_spu.error(u8"sys_spu_thread_connect_event(): 參數無效 (et=%d, spup=%d, queue->type=%d)", et, spup, queue->type);
 		return CELL_EINVAL;
 	}
 
@@ -1061,7 +1061,7 @@ error_code sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
 
 	if (et != SYS_SPU_THREAD_EVENT_USER || spup > 63)
 	{
-		sys_spu.error("sys_spu_thread_disconnect_event(): invalid arguments (et=%d, spup=%d)", et, spup);
+		sys_spu.error(u8"sys_spu_thread_disconnect_event(): 參數無效 (et=%d, spup=%d)", et, spup);
 		return CELL_EINVAL;
 	}
 
@@ -1486,7 +1486,7 @@ error_code sys_raw_spu_set_spu_cfg(u32 id, u32 value)
 
 	if (value > 3)
 	{
-		fmt::throw_exception("Unexpected value (0x%x)" HERE, value);
+		fmt::throw_exception(u8"異常的值 (0x%x)" HERE, value);
 	}
 
 	const auto thread = idm::get<RawSPUThread>(id);

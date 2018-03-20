@@ -198,7 +198,7 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 			if (get_blacklist)
 			{
 				blacklist.emplace_back(keycode);
-				LOG_ERROR(HLE, "DS4 Calibration: Added key [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
+				LOG_ERROR(HLE, u8"DS4 校正: 增加鍵 [ %d = %s ] 到黑名單。 值 = %d", keycode, button.second, value);
 			}
 			else if (value > pressed_button.first)
 				pressed_button = { value, button.second };
@@ -208,7 +208,7 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 	if (get_blacklist)
 	{
 		if (blacklist.size() <= 0)
-			LOG_SUCCESS(HLE, "DS4 Calibration: Blacklist is clear. No input spam detected");
+			LOG_SUCCESS(HLE, u8"DS4 校正: 清理黑名單。 No input spam detected");
 		return;
 	}
 
@@ -753,9 +753,9 @@ bool ds4_pad_handler::Init()
 	}
 
 	if (controllers.size() == 0)
-		LOG_ERROR(HLE, "[DS4] No controllers found!");
+		LOG_ERROR(HLE, u8"[DS4] 找不到控制器!");
 	else
-		LOG_SUCCESS(HLE, "[DS4] Controllers found: %d", controllers.size());
+		LOG_SUCCESS(HLE, u8"[DS4] 找到控制器: %d", controllers.size());
 
 	is_init = true;
 	return true;
@@ -978,7 +978,7 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 		const u32 crcReported = GetU32LEData(&buf[DS4_INPUT_REPORT_0x11_SIZE - 4]);
 		if (crcCalc != crcReported)
 		{
-			LOG_WARNING(HLE, "[DS4] Data packet CRC check failed, ignoring! Received 0x%x, Expected 0x%x", crcReported, crcCalc);
+			LOG_WARNING(HLE, u8"[DS4] 資料包 CRC 校對失敗, 忽略! 收到 0x%x, 預期 0x%x", crcReported, crcCalc);
 			return DS4DataStatus::NoNewData;
 		}
 

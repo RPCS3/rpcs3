@@ -16,7 +16,7 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	, m_cur_texture(0)
 	, exit(false)
 {
-	setWindowTitle(tr("RSX Debugger"));
+	setWindowTitle(tr((u8"RSX 偵錯器")));
 	setObjectName("rsx_debugger");
 	setAttribute(Qt::WA_DeleteOnClose);
 
@@ -30,11 +30,11 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	QVBoxLayout* vbox_tools = new QVBoxLayout();
 
 	// Controls
-	QGroupBox* gb_controls = new QGroupBox(tr("RSX Debugger Controls"), this);
+	QGroupBox* gb_controls = new QGroupBox(tr(u8"RSX 偵錯控制器"), this);
 	QHBoxLayout* hbox_controls = new QHBoxLayout();
 
 	// Controls: Address
-	QGroupBox* gb_controls_addr = new QGroupBox(tr("Address:"), this);
+	QGroupBox* gb_controls_addr = new QGroupBox(tr(u8"位址:"), this);
 	QHBoxLayout* hbox_controls_addr = new QHBoxLayout();
 	m_addr_line = new QLineEdit();
 	m_addr_line->setFont(mono);
@@ -45,10 +45,10 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	gb_controls_addr->setLayout(hbox_controls_addr);
 
 	// Controls: Go to
-	QGroupBox* gb_controls_goto = new QGroupBox(tr("Go to:"), this);
+	QGroupBox* gb_controls_goto = new QGroupBox(tr(u8"至:"), this);
 	QHBoxLayout* hbox_controls_goto = new QHBoxLayout();
-	QPushButton* b_goto_get = new QPushButton(tr("Get"), this);
-	QPushButton* b_goto_put = new QPushButton(tr("Put"), this);
+	QPushButton* b_goto_get = new QPushButton(tr(u8"取得"), this);
+	QPushButton* b_goto_put = new QPushButton(tr(u8"置於"), this);
 	b_goto_get->setAutoDefault(false);
 	b_goto_put->setAutoDefault(false);
 	hbox_controls_goto->addWidget(b_goto_get);
@@ -58,11 +58,11 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	// Controls: Breaks
 	QGroupBox* gb_controls_breaks = new QGroupBox(tr("Break on:"), this);
 	QHBoxLayout* hbox_controls_breaks = new QHBoxLayout();
-	QPushButton* b_break_frame = new QPushButton(tr("Frame"), this);
-	QPushButton* b_break_text  = new QPushButton(tr("Texture"), this);
-	QPushButton* b_break_draw  = new QPushButton(tr("Draw"), this);
-	QPushButton* b_break_prim  = new QPushButton(tr("Primitive"), this);
-	QPushButton* b_break_inst  = new QPushButton(tr("Command"), this);
+	QPushButton* b_break_frame = new QPushButton(tr(u8"框架"), this);
+	QPushButton* b_break_text  = new QPushButton(tr(u8"紋理"), this);
+	QPushButton* b_break_draw  = new QPushButton(tr(u8"繪製"), this);
+	QPushButton* b_break_prim  = new QPushButton(tr(u8"原素"), this);
+	QPushButton* b_break_inst  = new QPushButton(tr(u8"指令"), this);
 	b_break_frame->setAutoDefault(false);
 	b_break_text->setAutoDefault(false);
 	b_break_draw->setAutoDefault(false);
@@ -110,40 +110,40 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 		return table;
 	};
 
-	m_list_commands = l_addRSXTab(m_list_commands, tr("RSX Commands"), 4);
-	m_list_captured_frame = l_addRSXTab(m_list_captured_frame, tr("Captured Frame"), 1);
-	m_list_captured_draw_calls = l_addRSXTab(m_list_captured_draw_calls, tr("Captured Draw Calls"), 1);
-	m_list_flags = l_addRSXTab(m_list_flags, tr("Flags"), 2);
-	m_list_lightning = l_addRSXTab(m_list_lightning, tr("Lightning"), 2);
-	m_list_texture = l_addRSXTab(m_list_texture, tr("Texture"), 9);
-	m_list_settings = l_addRSXTab(m_list_settings, tr("Settings"), 2);
+	m_list_commands = l_addRSXTab(m_list_commands, tr(u8"RSX 指令"), 4);
+	m_list_captured_frame = l_addRSXTab(m_list_captured_frame, tr(u8"截取框"), 1);
+	m_list_captured_draw_calls = l_addRSXTab(m_list_captured_draw_calls, tr(u8"截取繪製調用"), 1);
+	m_list_flags = l_addRSXTab(m_list_flags, tr(u8"旗標"), 2);
+	m_list_lightning = l_addRSXTab(m_list_lightning, tr(u8"Lightning"), 2);
+	m_list_texture = l_addRSXTab(m_list_texture, tr(u8"紋理"), 9);
+	m_list_settings = l_addRSXTab(m_list_settings, tr(u8"設定"), 2);
 
 	//Tabs: List Columns
-	m_list_commands->setHorizontalHeaderLabels(QStringList() << tr("Column") << tr("Value") << tr("Command") << tr("Count"));
+	m_list_commands->setHorizontalHeaderLabels(QStringList() << tr(u8"行") << tr(u8"值") << tr(u8"指令") << tr(u8"計數"));
 	m_list_commands->setColumnWidth(0, 70);
 	m_list_commands->setColumnWidth(1, 70);
 	m_list_commands->setColumnWidth(2, 520);
 	m_list_commands->setColumnWidth(3, 60);
 
-	m_list_captured_frame->setHorizontalHeaderLabels(QStringList() << tr("Column"));
+	m_list_captured_frame->setHorizontalHeaderLabels(QStringList() << tr(u8"行"));
 	m_list_captured_frame->setColumnWidth(0, 720);
 
-	m_list_captured_draw_calls->setHorizontalHeaderLabels(QStringList() << tr("Draw calls"));
+	m_list_captured_draw_calls->setHorizontalHeaderLabels(QStringList() << tr(u8"繪製調用"));
 	m_list_captured_draw_calls->setColumnWidth(0, 720);
 
-	m_list_flags->setHorizontalHeaderLabels(QStringList() << tr("Name") << tr("Value"));
+	m_list_flags->setHorizontalHeaderLabels(QStringList() << tr(u8"名稱") << tr(u8"值"));
 	m_list_flags->setColumnWidth(0, 170);
 	m_list_flags->setColumnWidth(1, 270);
 
-	m_list_lightning->setHorizontalHeaderLabels(QStringList() << tr("Name") << tr("Value"));
+	m_list_lightning->setHorizontalHeaderLabels(QStringList() << tr(u8"名稱") << tr(u8"值"));
 	m_list_lightning->setColumnWidth(0, 170);
 	m_list_lightning->setColumnWidth(1, 270);
 
-	m_list_texture->setHorizontalHeaderLabels(QStringList() << tr("Index") << tr("Address") << tr("Cubemap")
-		<< tr("Dimension") << tr("Enabled") << tr("Format") << tr("Mipmap") << tr("Pitch") << tr("Size"));
+	m_list_texture->setHorizontalHeaderLabels(QStringList() << tr(u8"索引") << tr(u8"位址") << tr(u8"立方體貼圖")
+		<< tr(u8"維度") << tr(u8"啟用") << tr(u8"格式") << tr(u8"紋理貼圖") << tr(u8"間距") << tr(u8"大小"));
 	for (int i = 0; i<m_list_texture->columnCount(); i++) m_list_lightning->setColumnWidth(i, 80);
 
-	m_list_settings->setHorizontalHeaderLabels(QStringList() << tr("Name") << tr("Value"));
+	m_list_settings->setHorizontalHeaderLabels(QStringList() << tr(u8"名稱") << tr(u8"值"));
 	m_list_settings->setColumnWidth(0, 170);
 	m_list_settings->setColumnWidth(1, 270);
 
@@ -170,10 +170,10 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	QWidget* p_shader_program = new QWidget(state_rsx);
 	QWidget* p_index_buffer = new QWidget(state_rsx);
 
-	state_rsx->addTab(p_buffers, tr("RTTs and DS"));
-	state_rsx->addTab(p_transform_program, tr("Transform program"));
-	state_rsx->addTab(p_shader_program, tr("Shader program"));
-	state_rsx->addTab(p_index_buffer, tr("Index buffer"));
+	state_rsx->addTab(p_buffers, tr(u8"RTTs 與 DS"));
+	state_rsx->addTab(p_transform_program, tr(u8"轉換程序"));
+	state_rsx->addTab(p_shader_program, tr(u8"著色器程序"));
+	state_rsx->addTab(p_index_buffer, tr(u8"索引緩衝區"));
 
 	m_text_transform_program = new QLabel(p_transform_program);
 	m_text_transform_program->setFixedSize(QSize(720, 720));
@@ -194,13 +194,13 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	//Buffers
 	QVBoxLayout* vbox_buffers1 = new QVBoxLayout();
 	QVBoxLayout* vbox_buffers2 = new QVBoxLayout();
-	QGroupBox* gb_buffers_colorA  = new QGroupBox(tr("Color Buffer A"), p_buffers);
-	QGroupBox* gb_buffers_colorB  = new QGroupBox(tr("Color Buffer B"), p_buffers);
-	QGroupBox* gb_buffers_colorC  = new QGroupBox(tr("Color Buffer C"), p_buffers);
-	QGroupBox* gb_buffers_colorD  = new QGroupBox(tr("Color Buffer D"), p_buffers);
-	QGroupBox* gb_buffers_depth   = new QGroupBox(tr("Depth Buffer"), p_buffers);
-	QGroupBox* gb_buffers_stencil = new QGroupBox(tr("Stencil Buffer"), p_buffers);
-	QGroupBox* gb_buffers_text    = new QGroupBox(tr("Texture"), p_buffers);
+	QGroupBox* gb_buffers_colorA  = new QGroupBox(tr(u8"色彩緩衝區 A"), p_buffers);
+	QGroupBox* gb_buffers_colorB  = new QGroupBox(tr(u8"色彩緩衝區 B"), p_buffers);
+	QGroupBox* gb_buffers_colorC  = new QGroupBox(tr(u8"色彩緩衝區 C"), p_buffers);
+	QGroupBox* gb_buffers_colorD  = new QGroupBox(tr(u8"色彩緩衝區 D"), p_buffers);
+	QGroupBox* gb_buffers_depth   = new QGroupBox(tr(u8"深度緩衝區"), p_buffers);
+	QGroupBox* gb_buffers_stencil = new QGroupBox(tr(u8"模組緩衝區"), p_buffers);
+	QGroupBox* gb_buffers_text    = new QGroupBox(tr(u8"紋理"), p_buffers);
 	QHBoxLayout* hbox_buffers_colorA	= new QHBoxLayout();
 	QHBoxLayout* hbox_buffers_colorB	= new QHBoxLayout();
 	QHBoxLayout* hbox_buffers_colorC	= new QHBoxLayout();
@@ -793,7 +793,7 @@ void rsx_debugger::GetFlags()
 	int i=0;
 
 #define LIST_FLAGS_ADD(name, value) \
-	m_list_flags->setItem(i, 0, new QTableWidgetItem(qstr(name))); m_list_flags->setItem(i, 1, new QTableWidgetItem(qstr(value ? "Enabled" : "Disabled"))); i++;
+	m_list_flags->setItem(i, 0, new QTableWidgetItem(qstr(name))); m_list_flags->setItem(i, 1, new QTableWidgetItem(qstr(value ? (u8"啟用") : (u8"停用")))); i++;
 	/*
 	LIST_FLAGS_ADD("Alpha test",         render->m_set_alpha_test);
 	LIST_FLAGS_ADD("Blend",              render->m_set_blend);

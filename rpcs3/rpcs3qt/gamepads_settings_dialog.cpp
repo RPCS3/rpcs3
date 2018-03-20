@@ -24,12 +24,12 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 	QString input_dir = qstr(fs::get_config_dir()) + "/InputConfigs/";
 	if (!QDir().mkdir(input_dir) && !QDir().exists(input_dir))
 	{
-		LOG_ERROR(GENERAL, "Failed to create dir %s", sstr(input_dir));
+		LOG_ERROR(GENERAL, u8"無法創建目錄 %s", sstr(input_dir));
 		return false;
 	}
 	if (!QDir().mkdir(dir) && !QDir().exists(dir))
 	{
-		LOG_ERROR(GENERAL, "Failed to create dir %s", sstr(dir));
+		LOG_ERROR(GENERAL, u8"無法創建目錄 %s", sstr(dir));
 		return false;
 	}
 
@@ -38,7 +38,7 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 
 	if (!new_file.open(QIODevice::WriteOnly))
 	{
-		LOG_ERROR(GENERAL, "Failed to create file %s", sstr(filename));
+		LOG_ERROR(GENERAL, u8"無法創建檔案 %s", sstr(filename));
 		return false;
 	}
 
@@ -69,7 +69,7 @@ inline void resizeComboBoxView(QComboBox* combo)
 gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 	: QDialog(parent)
 {
-	setWindowTitle(tr("Gamepads Settings"));
+	setWindowTitle(tr(u8"遊戲控制器設定"));
 
 	// read tooltips from json
 	QFile json_file(":/Json/tooltips.json");
@@ -85,7 +85,7 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 
 	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
-		QGroupBox *grp_player = new QGroupBox(QString(tr("Player %1").arg(i+1)));
+		QGroupBox *grp_player = new QGroupBox(QString(tr(u8"玩家 %1").arg(i+1)));
 
 		QVBoxLayout *ppad_layout = new QVBoxLayout();
 
@@ -112,9 +112,9 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 		ppad_layout->addWidget(co_profile[i]);
 
 		QHBoxLayout *button_layout = new QHBoxLayout();
-		bu_new_profile[i] = new QPushButton(tr("Add Profile"));
+		bu_new_profile[i] = new QPushButton(tr(u8"增加設置檔"));
 		bu_new_profile[i]->setEnabled(false);
-		bu_config[i] = new QPushButton(tr("Configure"));
+		bu_config[i] = new QPushButton(tr(u8"組態"));
 		bu_config[i]->setEnabled(false);
 		button_layout->setContentsMargins(0,0,0,0);
 		button_layout->addWidget(bu_config[i]);
@@ -146,9 +146,9 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 	dialog_layout->addLayout(all_players);
 
 	QHBoxLayout *buttons_layout = new QHBoxLayout();
-	QPushButton *ok_button = new QPushButton(tr("OK"));
-	QPushButton *cancel_button = new QPushButton(tr("Cancel"));
-	QPushButton *refresh_button = new QPushButton(tr("Refresh"));
+	QPushButton *ok_button = new QPushButton(tr(u8"確定"));
+	QPushButton *cancel_button = new QPushButton(tr(u8"取消"));
+	QPushButton *refresh_button = new QPushButton(tr(u8"更新"));
 	buttons_layout->addWidget(ok_button);
 	buttons_layout->addWidget(refresh_button);
 	buttons_layout->addWidget(cancel_button);
@@ -182,7 +182,7 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 			if (!g_cfg_input.player[i]->device.from_string(device))
 			{
 				//Something went wrong
-				LOG_ERROR(GENERAL, "Failed to convert device string: %s", device);
+				LOG_ERROR(GENERAL, u8"無法轉換裝置字串: %s", device);
 				return;
 			}
 		});
@@ -192,7 +192,7 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 			if (!g_cfg_input.player[i]->profile.from_string(profile))
 			{
 				//Something went wrong 
-				LOG_ERROR(GENERAL, "Failed to convert profile string: %s", profile);
+				LOG_ERROR(GENERAL, u8"無法轉換設置檔字串: %s", profile);
 				return;
 			}
 		});
@@ -203,8 +203,8 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 		connect(bu_new_profile[i], &QAbstractButton::clicked, [=]
 		{
 			QInputDialog* dialog = new QInputDialog(this);
-			dialog->setWindowTitle(tr("Choose a unique name"));
-			dialog->setLabelText(tr("Profile Name: "));
+			dialog->setWindowTitle(tr(u8"請命名唯一的名稱"));
+			dialog->setLabelText(tr(u8"設置檔名稱: "));
 			dialog->setFixedSize(500, 100);
 
 			while (dialog->exec() != QDialog::Rejected)
@@ -212,17 +212,17 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 				QString friendlyName = dialog->textValue();
 				if (friendlyName == "")
 				{
-					QMessageBox::warning(this, tr("Error"), tr("Name cannot be empty"));
+					QMessageBox::warning(this, tr(u8"錯誤"), tr(u8"名稱不能為空"));
 					continue;
 				}
 				if (friendlyName.contains("."))
 				{
-					QMessageBox::warning(this, tr("Error"), tr("Must choose a name without '.'"));
+					QMessageBox::warning(this, tr(u8"錯誤"), tr(u8"必須命名沒有的名字 '.'"));
 					continue;
 				}
 				if (co_profile[i]->findText(friendlyName) != -1)
 				{
-					QMessageBox::warning(this, tr("Error"), tr("Please choose a non-existing name"));
+					QMessageBox::warning(this, tr(u8"錯誤"), tr(u8"請命名不存在的名字"));
 					continue;
 				}
 				if (CreateConfigFile(qstr(PadHandlerBase::get_config_dir(g_cfg_input.player[i]->handler)), friendlyName))
@@ -313,7 +313,7 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 	if (!g_cfg_input.player[player]->handler.from_string(handler))
 	{
 		//Something went wrong
-		LOG_ERROR(GENERAL, "Failed to convert input string:%s", handler);
+		LOG_ERROR(GENERAL, u8"無法轉換輸入字串:%s", handler);
 		return;
 	}
 
@@ -358,7 +358,7 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 	}
 	else
 	{
-		co_deviceID[player]->addItem(tr("No Device Detected"), -1);
+		co_deviceID[player]->addItem(tr(u8"未偵測到裝置"), -1);
 	}
 
 	bool config_enabled = force_enable || (device_found && cur_pad_handler->has_config());
@@ -372,7 +372,7 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 
 		if (profiles.isEmpty())
 		{
-			QString def_name = "Default Profile";
+			QString def_name = u8"預設設置檔";
 			if (!CreateConfigFile(s_profile_dir, def_name))
 			{
 				config_enabled = false;
@@ -394,7 +394,7 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 	}
 
 	if (!config_enabled)
-		co_profile[player]->addItem(tr("No Profiles"));
+		co_profile[player]->addItem(tr(u8"沒有設置檔"));
 
 	// enable configuration and profile list if possible
 	bu_config[player]->setEnabled(config_enabled);

@@ -30,42 +30,42 @@ enum Category
 namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories 
 {
 	// PS3 bootable
-	const QString app_Music = QObject::tr("App Music");
-	const QString app_Photo = QObject::tr("App Photo");
-	const QString app_TV    = QObject::tr("App TV");
-	const QString app_Video = QObject::tr("App Video");
-	const QString bc_Video  = QObject::tr("Broadcast Video");
-	const QString disc_Game = QObject::tr("Disc Game");
-	const QString hdd_Game  = QObject::tr("HDD Game");
-	const QString home      = QObject::tr("Home");
-	const QString network   = QObject::tr("Network");
-	const QString store_FE  = QObject::tr("Store");
-	const QString web_TV    = QObject::tr("Web TV");
+	const QString app_Music = QObject::tr(u8"應用音樂");
+	const QString app_Photo = QObject::tr(u8"應用圖片");
+	const QString app_TV    = QObject::tr(u8"應用電視");
+	const QString app_Video = QObject::tr(u8"應用影視");
+	const QString bc_Video  = QObject::tr(u8"播放影視");
+	const QString disc_Game = QObject::tr(u8"光碟遊戲");
+	const QString hdd_Game  = QObject::tr(u8"硬碟遊戲");
+	const QString home      = QObject::tr(u8"Home");
+	const QString network   = QObject::tr(u8"網路");
+	const QString store_FE  = QObject::tr(u8"商店");
+	const QString web_TV    = QObject::tr(u8"網路電視");
 
 	// PS2 bootable
-	const QString ps2_game = QObject::tr("PS2 Classics");
-	const QString ps2_inst = QObject::tr("PS2 Game");
+	const QString ps2_game = QObject::tr(u8"PS2 經典");
+	const QString ps2_inst = QObject::tr(u8"PS2 遊戲");
 
 	// PS1 bootable
-	const QString ps1_game = QObject::tr("PS1 Classics");
+	const QString ps1_game = QObject::tr(u8"PS1 經典");
 
 	// PSP bootable
-	const QString psp_game = QObject::tr("PSP Game");
-	const QString psp_mini = QObject::tr("PSP Minis");
-	const QString psp_rema = QObject::tr("PSP Remasters");
+	const QString psp_game = QObject::tr(u8"PSP 遊戲");
+	const QString psp_mini = QObject::tr(u8"PSP 秀珍");
+	const QString psp_rema = QObject::tr(u8"PSP 重製");
 
 	// Data
-	const QString ps3_Data = QObject::tr("PS3 Game Data");
-	const QString ps2_Data = QObject::tr("PS2 Emulator Data");
+	const QString ps3_Data = QObject::tr(u8"PS3 遊戲資料");
+	const QString ps2_Data = QObject::tr(u8"PS2 模擬器資料");
 
 	// Save
-	const QString ps3_Save = QObject::tr("PS3 Save Data");
-	const QString psp_Save = QObject::tr("PSP Minis Save Data");
+	const QString ps3_Save = QObject::tr(u8"PS3 儲存資料");
+	const QString psp_Save = QObject::tr(u8"PSP 秀珍 儲存資料");
 
 	// others
-	const QString trophy  = QObject::tr("Trophy");
-	const QString unknown = QObject::tr("Unknown");
-	const QString other   = QObject::tr("Other");
+	const QString trophy  = QObject::tr(u8"獎盃");
+	const QString unknown = QObject::tr(u8"未知");
+	const QString other   = QObject::tr(u8"其它");
 
 	const q_from_char cat_boot =
 	{

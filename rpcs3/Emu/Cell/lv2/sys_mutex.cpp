@@ -34,7 +34,7 @@ error_code sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t
 		break;
 	default:
 	{
-		sys_mutex.error("sys_mutex_create(): unknown protocol (0x%x)", attr->protocol);
+		sys_mutex.error(u8"sys_mutex_create(): 未知協定 (0x%x)", attr->protocol);
 		return CELL_EINVAL;
 	}
 	}
@@ -45,14 +45,14 @@ error_code sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t
 	case SYS_SYNC_NOT_RECURSIVE: break;
 	default:
 	{
-		sys_mutex.error("sys_mutex_create(): unknown recursive (0x%x)", attr->recursive);
+		sys_mutex.error(u8"sys_mutex_create(): 未知遞迴 (0x%x)", attr->recursive);
 		return CELL_EINVAL;
 	}
 	}
 
 	if (attr->adaptive != SYS_SYNC_NOT_ADAPTIVE)
 	{
-		sys_mutex.todo("sys_mutex_create(): unexpected adaptive (0x%x)", attr->adaptive);
+		sys_mutex.todo(u8"sys_mutex_create(): 異常適應 (0x%x)", attr->adaptive);
 	}
 
 	if (auto error = lv2_obj::create<lv2_mutex>(attr->pshared, attr->ipc_key, attr->flags, [&]()

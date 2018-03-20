@@ -35,19 +35,19 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 	tabs->addTab(dev_usb000_tab, "dev_usb000");
 
 	// Create buttons
-	QPushButton* addDir = new QPushButton(tr("Add New Directory"));
+	QPushButton* addDir = new QPushButton(tr((u8"新增目錄")));
 	connect(addDir, &QAbstractButton::pressed, [=]
 	{
 		static_cast<vfs_dialog_tab*>(tabs->currentWidget())->AddNewDirectory();
 	});
 
-	QPushButton* reset = new QPushButton(tr("Reset"));
+	QPushButton* reset = new QPushButton(tr(u8"重設"));
 	connect(reset, &QAbstractButton::pressed, [=]
 	{
 		static_cast<vfs_dialog_tab*>(tabs->currentWidget())->Reset();
 	});
 
-	QPushButton* resetAll = new QPushButton(tr("Reset All"));
+	QPushButton* resetAll = new QPushButton(tr(u8"全部重設"));
 	connect(resetAll, &QAbstractButton::pressed, [=]
 	{
 		for (int i = 0; i < tabs->count(); ++i)
@@ -56,7 +56,7 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 		}
 	});
 
-	QPushButton* okay = new QPushButton(tr("Okay"));
+	QPushButton* okay = new QPushButton(tr(u8"確定"));
 	okay->setAutoDefault(true);
 	okay->setDefault(true);
 
@@ -82,6 +82,6 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 	vbox->addLayout(buttons);
 
 	setLayout(vbox);
-	setWindowTitle(tr("Virtual File System"));
+	setWindowTitle(tr(u8"虛擬檔案系統"));
 	setObjectName("vfs_dialog");
 }

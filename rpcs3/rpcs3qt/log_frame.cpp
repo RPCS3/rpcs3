@@ -104,7 +104,7 @@ struct gui_listener : logs::listener
 static gui_listener s_gui_listener;
 
 log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
-	: custom_dock_widget(tr("Log"), parent), xgui_settings(guiSettings)
+	: custom_dock_widget(tr(u8"日誌"), parent), xgui_settings(guiSettings)
 {
 	m_tabWidget = new QTabWidget;
 	m_tabWidget->setObjectName("tab_widget_log");
@@ -205,25 +205,25 @@ void log_frame::CreateAndConnectActions()
 		});
 	};
 
-	m_clearAct = new QAction(tr("Clear"), this);
+	m_clearAct = new QAction(tr(u8"清理"), this);
 	connect(m_clearAct, &QAction::triggered, m_log, &QTextEdit::clear);
 
-	m_clearTTYAct = new QAction(tr("Clear"), this);
+	m_clearTTYAct = new QAction(tr(u8"清理"), this);
 	connect(m_clearTTYAct, &QAction::triggered, m_tty, &QTextEdit::clear);
 
 	// Action groups make these actions mutually exclusive.
 	m_logLevels = new QActionGroup(this);
-	m_nothingAct = new QAction(tr("Nothing"), m_logLevels);
+	m_nothingAct = new QAction(tr(u8"空"), m_logLevels);
 	m_nothingAct->setVisible(false);
-	m_fatalAct = new QAction(tr("Fatal"), m_logLevels);
-	m_errorAct = new QAction(tr("Error"), m_logLevels);
-	m_todoAct = new QAction(tr("Todo"), m_logLevels);
-	m_successAct = new QAction(tr("Success"), m_logLevels);
-	m_warningAct = new QAction(tr("Warning"), m_logLevels);
-	m_noticeAct = new QAction(tr("Notice"), m_logLevels);
-	m_traceAct = new QAction(tr("Trace"), m_logLevels);
+	m_fatalAct = new QAction(tr(u8"嚴重"), m_logLevels);
+	m_errorAct = new QAction(tr(u8"錯誤"), m_logLevels);
+	m_todoAct = new QAction(tr(u8"待辦事項"), m_logLevels);
+	m_successAct = new QAction(tr(u8"成功"), m_logLevels);
+	m_warningAct = new QAction(tr(u8"警告"), m_logLevels);
+	m_noticeAct = new QAction(tr(u8"注意"), m_logLevels);
+	m_traceAct = new QAction(tr(u8"追蹤"), m_logLevels);
 
-	m_stackAct = new QAction(tr("Stack Mode"), this);
+	m_stackAct = new QAction(tr(u8"堆疊模式"), this);
 	m_stackAct->setCheckable(true);
 	connect(m_stackAct, &QAction::toggled, xgui_settings.get(), [=](bool checked)
 	{

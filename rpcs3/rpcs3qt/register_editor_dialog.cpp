@@ -11,7 +11,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 	, cpu(_cpu)
 	, m_disasm(_disasm)
 {
-	setWindowTitle(tr("Edit registers"));
+	setWindowTitle(tr((u8"編輯暫存器")));
 	setAttribute(Qt::WA_DeleteOnClose);
 
 	QVBoxLayout* vbox_panel = new QVBoxLayout();
@@ -20,11 +20,11 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 	QVBoxLayout* vbox_right_panel = new QVBoxLayout();
 	QHBoxLayout* hbox_button_panel = new QHBoxLayout();
 
-	QLabel* t1_text = new QLabel(tr("Register:     "), this);
-	QLabel* t2_text = new QLabel(tr("Value (Hex):"), this);
+	QLabel* t1_text = new QLabel(tr((u8"暫存器:     ")), this);
+	QLabel* t2_text = new QLabel(tr((u8"值 (十六進位):")), this);
 
 	QPushButton* button_ok = new QPushButton(tr("&Ok"));
-	QPushButton* button_cancel = new QPushButton(tr("&Cancel"));
+	QPushButton* button_cancel = new QPushButton(tr((u8"取消")));
 	button_ok->setFixedWidth(80);
 	button_cancel->setFixedWidth(80);
 
@@ -202,5 +202,5 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		{
 		}
 	}
-	QMessageBox::critical(this, tr("Error"), tr("This value could not be converted.\nNo changes were made."));
+	QMessageBox::critical(this, tr((u8"錯誤")), tr((u8"該值無法轉換。\n未進行任何更改。")));
 }

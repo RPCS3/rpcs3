@@ -282,7 +282,7 @@ error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
 
 	if (const u32 old_addr = mem->addr.compare_and_swap(0, -1))
 	{
-		sys_mmapper.warning("sys_mmapper_map_shared_memory(): Already mapped (mem_id=0x%x, addr=0x%x)", mem_id, old_addr);
+		sys_mmapper.warning(u8"sys_mmapper_map_shared_memory(): ¤w¬M®g (mem_id=0x%x, addr=0x%x)", mem_id, old_addr);
 		return CELL_OK;
 	}
 
@@ -316,7 +316,7 @@ error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm:
 
 	if (const u32 old_addr = mem->addr.compare_and_swap(0, -1))
 	{
-		sys_mmapper.warning("sys_mmapper_search_and_map(): Already mapped (mem_id=0x%x, addr=0x%x)", mem_id, old_addr);
+		sys_mmapper.warning(u8"sys_mmapper_search_and_map(): ¤w¬M®g (mem_id=0x%x, addr=0x%x)", mem_id, old_addr);
 		return CELL_OK;
 	}
 

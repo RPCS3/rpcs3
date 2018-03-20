@@ -22,7 +22,7 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings): xgui_settings(xSettings)
 {
-	setWindowTitle(tr("Cg Disasm"));
+	setWindowTitle(tr((u8"Cg 反組譯")));
 	setObjectName("cg_disasm");
 	setAttribute(Qt::WA_DeleteOnClose);
 	setAcceptDrops(true);
@@ -174,8 +174,8 @@ cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings): xgu
 void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 {
 	QMenu myMenu;
-	QAction* clear = new QAction(tr("&Clear"));
-	QAction* open = new QAction(tr("Open &Cg binary program"));
+	QAction* clear = new QAction(tr((u8"&清理")));
+	QAction* open = new QAction(tr((u8"開啟 &Cg 二進位程序")));
 
 	myMenu.addAction(open);
 	myMenu.addSeparator();
@@ -189,7 +189,7 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 
 	connect(open, &QAction::triggered, [=]
 	{
-		QString filePath = QFileDialog::getOpenFileName(this, tr("Select Cg program object"), m_path_last, tr("Cg program objects (*.fpo;*.vpo);;"));
+		QString filePath = QFileDialog::getOpenFileName(this, tr((u8"選擇 Cg 程序目標")), m_path_last, tr((u8"Cg 程序目標 (*.fpo;*.vpo);;")));
 		if (filePath == NULL) return;
 		m_path_last = filePath;
 		ShowDisasm();

@@ -5,21 +5,21 @@ constexpr auto qstr = QString::fromStdString;
 
 auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialog(parent)
 {
-	QLabel *description = new QLabel(tr("To use auto pause: enter the ID(s) of a function or a system call.\nRestart of the game is required to apply. You can enable/disable this in the settings."), this);
+	QLabel *description = new QLabel(tr(u8"使用 Auto Pause: 輸入一個函數或系統 Call ID，遊戲需要重新啟動才會套用。 您可以啟用或停用此設定。"), this);
 
 	pauseList = new QTableWidget(this);
 	pauseList->setColumnCount(2);
-	pauseList->setHorizontalHeaderLabels(QStringList() << tr("Call ID") << tr("Type"));
+	pauseList->setHorizontalHeaderLabels(QStringList() << tr("Call ID") << tr((u8"類型")));
 	//pauseList->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 	pauseList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	pauseList->setContextMenuPolicy(Qt::CustomContextMenu);
 	pauseList->setItemDelegate(new table_item_delegate(this));
 	pauseList->setShowGrid(false);
 
-	QPushButton *clearButton = new QPushButton(tr("Clear"), this);
-	QPushButton *reloadButton = new QPushButton(tr("Reload"), this);
-	QPushButton *saveButton = new QPushButton(tr("Save"), this);
-	QPushButton *cancelButton = new QPushButton(tr("Cancel"), this);
+	QPushButton *clearButton = new QPushButton(tr((u8"清理")), this);
+	QPushButton *reloadButton = new QPushButton(tr((u8"重載")), this);
+	QPushButton *saveButton = new QPushButton(tr((u8"儲存")), this);
+	QPushButton *cancelButton = new QPushButton(tr((u8"關閉")), this);
 	cancelButton->setDefault(true);
 
 	QHBoxLayout *buttonsLayout = new QHBoxLayout();
@@ -36,7 +36,7 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 	setLayout(mainLayout);
 
 	setMinimumSize(QSize(400, 360));
-	setWindowTitle(tr("Auto Pause Manager"));
+	setWindowTitle(tr((u8"Auto Pause 管理")));
 	setObjectName("auto_pause_manager");
 
 	//Events
@@ -145,10 +145,10 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 	QMenu myMenu;
 
 	// Make Actions
-	QAction* add = myMenu.addAction(tr("&Add"));
-	QAction* remove = myMenu.addAction(tr("&Remove"));
+	QAction* add = myMenu.addAction(tr((u8"新增")));
+	QAction* remove = myMenu.addAction(tr((u8"刪除")));
 	myMenu.addSeparator();
-	QAction* config = myMenu.addAction(tr("&Config"));
+	QAction* config = myMenu.addAction(tr((u8"設定")));
 
 	if (row == -1)
 	{
@@ -202,15 +202,15 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 	m_entry = *m_presult;
 	setMinimumSize(QSize(300, -1));
 
-	QPushButton* button_ok = new QPushButton(tr("&Ok"), this);
-	QPushButton* button_cancel = new QPushButton(tr("&Cancel"), this);
+	QPushButton* button_ok = new QPushButton(tr((u8"確定")), this);
+	QPushButton* button_cancel = new QPushButton(tr((u8"取消")), this);
 	button_ok->setFixedWidth(50);
 	button_cancel->setFixedWidth(50);
 
-	QLabel* description = new QLabel(tr("Specify ID of System Call or Function Call below. You need to use a Hexadecimal ID."), this);
+	QLabel* description = new QLabel(tr((u8"指定系統 Call 或以下函數 Call 的 ID， 您使用的 ID 必須是十六進位。")), this);
 	description->setWordWrap(true);
 
-	m_current_converted = new QLabel(tr("Currently it gets an id of \"Unset\"."), this);
+	m_current_converted = new QLabel(tr((u8"目前取得一個 ID \"Unset\".")), this);
 	m_current_converted->setWordWrap(true);
 	
 	m_id = new QLineEdit(this);
@@ -219,7 +219,7 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 	m_id->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 	m_id->setMaxLength(8);
 	m_id->setFixedWidth(65);
-	setWindowTitle("Auto Pause Setting: " + m_id->text());
+	setWindowTitle((u8"Auto Pause 設定: ") + m_id->text());
 	
 	connect(button_cancel, &QAbstractButton::clicked, this, &AutoPauseConfigDialog::OnCancel);
 	connect(button_ok, &QAbstractButton::clicked, this, &AutoPauseConfigDialog::OnOk);
@@ -268,5 +268,5 @@ void AutoPauseConfigDialog::OnUpdateValue()
 	ullong value = m_id->text().toULongLong(&ok, 16);
 	const bool is_ok = ok && value <= UINT32_MAX;
 	
-	m_current_converted->setText(qstr(fmt::format("Current value: %08x (%s)", u32(value), is_ok ? "OK" : "conversion failed")));
+	m_current_converted->setText(qstr(fmt::format((u8"當前值: %08x (%s)"), u32(value), is_ok ? "OK" : (u8"轉換失敗"))));
 }

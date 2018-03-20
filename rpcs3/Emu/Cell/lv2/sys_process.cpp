@@ -242,7 +242,7 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 
 	Emu.CallAfter([]()
 	{
-		sys_process.success("Process finished");
+		sys_process.success(u8"流程完成");
 		Emu.Stop();
 	});
 
@@ -297,7 +297,7 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc), klic = fxm::get_always<LoadedNpdrmKeys_t>()->devKlic]() mutable
 	{
-		sys_process.success("Process finished -> %s", argv[0]);
+		sys_process.success(u8"流程完成 -> %s", argv[0]);
 		Emu.SetForceBoot(true);
 		Emu.Stop();
 		Emu.argv = std::move(argv);

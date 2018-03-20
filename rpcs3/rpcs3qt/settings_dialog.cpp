@@ -84,12 +84,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	if (game)
 	{
 		xemu_settings->LoadSettings("data/" + game->serial);
-		setWindowTitle(tr("Settings: [") + qstr(game->serial) + "] " + qstr(game->name));
+		setWindowTitle(tr(u8"設定: [") + qstr(game->serial) + "] " + qstr(game->name));
 	}
 	else
 	{
 		xemu_settings->LoadSettings();
-		setWindowTitle(tr("Settings"));
+		setWindowTitle(tr(u8"設定"));
 	}
 
 	// Various connects
@@ -142,7 +142,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceComboBox(ui->preferredSPUThreads, emu_settings::PreferredSPUThreads, true);
 	SubscribeTooltip(ui->preferredSPUThreads, json_cpu_cbo["preferredSPUThreads"].toString());
-	ui->preferredSPUThreads->setItemText(ui->preferredSPUThreads->findData("0"), tr("Auto"));
+	ui->preferredSPUThreads->setItemText(ui->preferredSPUThreads->findData("0"), tr(u8"自動"));
 
 	// PPU tool tips
 	SubscribeTooltip(ui->ppu_precise, json_cpu_ppu["precise"].toString());
@@ -373,7 +373,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	ui->renderBox->setItemText(ui->renderBox->findData("D3D12"), render_creator.name_D3D12);
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
-	ui->resBox->setItemText(ui->resBox->findData("1280x720"), tr("1280x720 (Recommended)"));
+	ui->resBox->setItemText(ui->resBox->findData("1280x720"), tr(u8"1280x720 (推薦)"));
 	SubscribeTooltip(ui->resBox, json_gpu_cbo["resBox"].toString());
 
 	xemu_settings->EnhanceComboBox(ui->aspectBox, emu_settings::AspectRatio);
@@ -390,10 +390,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		switch (int val = ui->anisotropicFilterOverride->itemData(i).toInt())
 		{
 		case 0:
-			ui->anisotropicFilterOverride->setItemText(i, tr("Automatic"));
+			ui->anisotropicFilterOverride->setItemText(i, tr(u8"自動"));
 			break;
 		case 1:
-			ui->anisotropicFilterOverride->setItemText(i, tr("Force Disabled"));
+			ui->anisotropicFilterOverride->setItemText(i, tr(u8"強制停用"));
 			break;
 		case 2:
 		case 4:
@@ -444,7 +444,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	int resolutionScaleDef = stoi(xemu_settings->GetSettingDefault(emu_settings::ResolutionScale));
 	auto ScaledResolution = [resolutionScaleDef](int percentage)
 	{
-		if (percentage == resolutionScaleDef) return QString(tr("100% (Default)"));
+		if (percentage == resolutionScaleDef) return QString(tr(u8"100% (預設)"));
 		return QString("%1% (%2x%3)").arg(percentage).arg(1280 * percentage / 100).arg(720 * percentage / 100);
 	};
 	ui->resolutionScale->setPageStep(50);
@@ -469,7 +469,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	int minimumScalableDimensionDef = stoi(xemu_settings->GetSettingDefault(emu_settings::MinimumScalableDimension));
 	auto MinScalableDimension = [minimumScalableDimensionDef](int dim)
 	{
-		if (dim == minimumScalableDimensionDef) return tr("%1x%1 (Default)").arg(dim);
+		if (dim == minimumScalableDimensionDef) return tr(u8"%1x%1 (預設)").arg(dim);
 		return QString("%1x%1").arg(dim);
 	};
 	ui->minimumScalableDimension->setPageStep(64);
@@ -529,7 +529,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			if (!renderer.has_adapters)
 			{
 				ui->graphicsAdapterBox->clear();
-				ui->graphicsAdapterBox->addItem(tr("Not needed for %1 renderer").arg(text));
+				ui->graphicsAdapterBox->addItem(tr(u8"「%1」無需渲染").arg(text));
 				return;
 			}
 			// Fill combobox
@@ -545,11 +545,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				idx = 0;
 				if (renderer.old_adapter.isEmpty())
 				{
-					LOG_WARNING(RSX, "%s adapter config empty: setting to default!", sstr(renderer.name));
+					LOG_WARNING(RSX, u8"%s 適配器設定為空: 設定為預設值!", sstr(renderer.name));
 				}
 				else
 				{
-					LOG_WARNING(RSX, "Last used %s adapter not found: setting to default!", sstr(renderer.name));
+					LOG_WARNING(RSX, u8"上次使用 %s 適配器未找到: 設定為預設值!", sstr(renderer.name));
 				}
 			}
 			ui->graphicsAdapterBox->setCurrentIndex(idx);
@@ -697,7 +697,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceComboBox(ui->maxLLVMThreads, emu_settings::MaxLLVMThreads, true, true, std::thread::hardware_concurrency());
 	SubscribeTooltip(ui->maxLLVMThreads, json_emu_misc["maxLLVMThreads"].toString());
-	ui->maxLLVMThreads->setItemText(ui->maxLLVMThreads->findData("0"), tr("All (%1)").arg(std::thread::hardware_concurrency()));
+	ui->maxLLVMThreads->setItemText(ui->maxLLVMThreads->findData("0"), tr(u8"全部 (%1)").arg(std::thread::hardware_concurrency()));
 
 	SubscribeTooltip(ui->combo_configs, json_emu_gui["configs"].toString());
 
@@ -805,7 +805,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 		connect(ui->pb_reset_default, &QAbstractButton::clicked, [=]
 		{
-			if (QMessageBox::question(this, tr("Reset GUI to default?"), tr("This will include your stylesheet as well. Do you wish to proceed?"),
+			if (QMessageBox::question(this, tr(u8"將 GUI 重設為預設值?"), tr(u8"這將包括您的風格。你想繼續嗎?"),
 				QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
 			{
 				ApplyGuiOptions(true);
@@ -864,17 +864,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]()
 		{
-			colorDialog(gui::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color);
+			colorDialog(gui::gl_iconColor, tr(u8"選擇遊戲清單圖示色彩"), ui->pb_gl_icon_color);
 		});
 
 		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]()
 		{
-			colorDialog(gui::mw_toolBarColor, tr("Choose tool bar color"), ui->pb_tool_bar_color);
+			colorDialog(gui::mw_toolBarColor, tr(u8"選擇工具列色彩"), ui->pb_tool_bar_color);
 		});
 
 		connect(ui->pb_tool_icon_color, &QAbstractButton::clicked, [=]()
 		{
-			colorDialog(gui::mw_toolIconColor, tr("Choose tool icon color"), ui->pb_tool_icon_color);
+			colorDialog(gui::mw_toolIconColor, tr(u8"選擇工具圖示色彩"), ui->pb_tool_icon_color);
 		});
 
 		ui->gs_disableMouse->setChecked(xgui_settings->GetValue(gui::gs_disableMouse).toBool());
@@ -999,7 +999,7 @@ void settings_dialog::AddConfigs()
 	}
 	else
 	{
-		LOG_WARNING(GENERAL, "Trying to set an invalid config index ", index);
+		LOG_WARNING(GENERAL, u8"嘗試設定無效的組態索引 ", index);
 	}
 }
 
@@ -1007,7 +1007,7 @@ void settings_dialog::AddStylesheets()
 {
 	ui->combo_stylesheets->clear();
 
-	ui->combo_stylesheets->addItem("Default (Bright)", gui::Default);
+	ui->combo_stylesheets->addItem(u8"預設 (明亮)", gui::Default);
 
 	for (const QString& entry : xgui_settings->GetStylesheetEntries())
 	{
@@ -1026,15 +1026,15 @@ void settings_dialog::AddStylesheets()
 	}
 	else
 	{
-		LOG_WARNING(GENERAL, "Trying to set an invalid stylesheets index ", index);
+		LOG_WARNING(GENERAL, u8"嘗試設定無效的風格索引 ", index);
 	}
 }
 
 void settings_dialog::OnBackupCurrentConfig()
 {
 	QInputDialog* dialog = new QInputDialog(this);
-	dialog->setWindowTitle(tr("Choose a unique name"));
-	dialog->setLabelText(tr("Configuration Name: "));
+	dialog->setWindowTitle(tr(u8"請命名唯一的名稱"));
+	dialog->setLabelText(tr(u8"組態名稱: "));
 	dialog->resize(500, 100);
 
 	while (dialog->exec() != QDialog::Rejected)
@@ -1043,17 +1043,17 @@ void settings_dialog::OnBackupCurrentConfig()
 		QString friendlyName = dialog->textValue();
 		if (friendlyName == "")
 		{
-			QMessageBox::warning(this, tr("Error"), tr("Name cannot be empty"));
+			QMessageBox::warning(this, tr(u8"錯誤"), tr(u8"名稱不能為空"));
 			continue;
 		}
 		if (friendlyName.contains("."))
 		{
-			QMessageBox::warning(this, tr("Error"), tr("Must choose a name with no '.'"));
+			QMessageBox::warning(this, tr(u8"錯誤"), tr(u8"必須命名沒有的名字 '.'"));
 			continue;
 		}
 		if (ui->combo_configs->findText(friendlyName) != -1)
 		{
-			QMessageBox::warning(this, tr("Error"), tr("Please choose a non-existing name"));
+			QMessageBox::warning(this, tr(u8"錯誤"), tr(u8"請命名不存在的名稱"));
 			continue;
 		}
 		Q_EMIT GuiSettingsSaveRequest();

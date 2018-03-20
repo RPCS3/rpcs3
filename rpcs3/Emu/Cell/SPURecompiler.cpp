@@ -17,7 +17,7 @@ void spu_recompiler_base::enter(SPUThread& spu)
 {
 	if (spu.pc >= 0x40000 || spu.pc % 4)
 	{
-		fmt::throw_exception("Invalid PC: 0x%05x", spu.pc);
+		fmt::throw_exception(u8"無效 PC: 0x%05x", spu.pc);
 	}
 
 	// Get SPU LS pointer
@@ -50,7 +50,7 @@ void spu_recompiler_base::enter(SPUThread& spu)
 
 		spu.spu_rec->compile(*func);
 
-		if (!func->compiled) fmt::throw_exception("Compilation failed" HERE);
+		if (!func->compiled) fmt::throw_exception(u8"編譯失敗" HERE);
 	}
 
 	const u32 res = func->compiled(&spu, _ls);
@@ -74,7 +74,7 @@ void spu_recompiler_base::enter(SPUThread& spu)
 	{
 		if (res & 0x8000000)
 		{
-			fmt::throw_exception("Invalid interrupt status set (0x%x)" HERE, res);
+			fmt::throw_exception(u8"無效中斷狀態集 (0x%x)" HERE, res);
 		}
 
 		spu.set_interrupt_status(true);

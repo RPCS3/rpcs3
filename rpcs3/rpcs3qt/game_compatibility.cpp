@@ -29,28 +29,28 @@ void game_compatibility::RequestCompatibility(bool online)
 				switch (return_code)
 				{
 				case -1:
-					error_message = "Server Error - Internal Error";
+					error_message = u8"伺服器錯誤 - 內部錯誤";
 					break;
 				case -2:
-					error_message = "Server Error - Maintenance Mode";
+					error_message = u8"伺服器錯誤 - 維護模式";
 					break;
 				default:
-					error_message = "Server Error - Unknown Error";
+					error_message = u8"伺服器錯誤 - 未知錯誤";
 					break;
 				}
-				LOG_ERROR(GENERAL, "Compatibility error: { %s: return code %d }", error_message, return_code);
+				LOG_ERROR(GENERAL, u8"相容性錯誤: { %s: 返回碼 %d }", error_message, return_code);
 				Q_EMIT DownloadError(qstr(error_message) + " " + QString::number(return_code));
 			}
 			else
 			{
-				LOG_ERROR(GENERAL, "Compatibility error: { Database Error - Invalid: return code %d }", return_code);
+				LOG_ERROR(GENERAL, u8"相容性錯誤: { 資料庫錯誤 - 無效: 返回碼 %d }", return_code);
 			}
 			return false;
 		}
 
 		if (!json_data["results"].isObject())
 		{
-			LOG_ERROR(GENERAL, "Compatibility error: { Database Error - No Results found }");
+			LOG_ERROR(GENERAL, u8"相容性錯誤: { 資料庫錯誤 - 未找到結果 }");
 			return false;
 		}
 
@@ -63,7 +63,7 @@ void game_compatibility::RequestCompatibility(bool online)
 		{
 			if (!json_results[key].isObject())
 			{
-				LOG_ERROR(GENERAL, "Compatibility error: { Database Error - Unusable object %s }", sstr(key));
+				LOG_ERROR(GENERAL, u8"相容性錯誤: { 資料庫錯誤 - 不可用的目標 %s }", sstr(key));
 				continue;
 			}
 
@@ -89,20 +89,20 @@ void game_compatibility::RequestCompatibility(bool online)
 
 		if (!file.exists())
 		{
-			LOG_NOTICE(GENERAL, "Compatibility notice: { Database file not found: %s }", sstr(m_filepath));
+			LOG_NOTICE(GENERAL, u8"相容性通知: { 未找到資料庫檔案: %s }", sstr(m_filepath));
 			return;
 		}
 
 		if (!file.open(QIODevice::ReadOnly))
 		{
-			LOG_ERROR(GENERAL, "Compatibility error: { Database Error - Could not read database from file: %s }", sstr(m_filepath));
+			LOG_ERROR(GENERAL, u8"相容性錯誤: { 資料庫錯誤 - 無法從檔案中讀取資料庫: %s }", sstr(m_filepath));
 			return;
 		}
 
 		QByteArray data = file.readAll();
 		file.close();
 
-		LOG_NOTICE(GENERAL, "Compatibility notice: { Finished reading database from file: %s }", sstr(m_filepath));
+		LOG_NOTICE(GENERAL, u8"相容性通知: { 從檔案中已完成讀取資料庫: %s }", sstr(m_filepath));
 
 		// Create new map from database
 		ReadJSON(QJsonDocument::fromJson(data).object(), online);
@@ -112,21 +112,21 @@ void game_compatibility::RequestCompatibility(bool online)
 
 	if (QSslSocket::supportsSsl() == false)
 	{
-		LOG_ERROR(GENERAL, "Can not retrieve the online database! Please make sure your system supports SSL.");
-		QMessageBox::warning(nullptr, tr("Warning!"), tr("Can not retrieve the online database! Please make sure your system supports SSL."));
+		LOG_ERROR(GENERAL, u8"無法取得線上資料庫! 請確定您的系統支援 SSL。");
+		QMessageBox::warning(nullptr, tr(u8"警告!"), tr(u8"無法取得線上資料庫! 請確定您的系統支援 SSL。"));
 		return;
 	}
 
-	LOG_NOTICE(GENERAL, "SSL supported! Beginning compatibility database download from: %s", sstr(m_url));
+	LOG_NOTICE(GENERAL, u8"SSL 支援! 初始相容性資料庫下載從: %s", sstr(m_url));
 
 	// Send request and wait for response
 	m_network_access_manager.reset(new QNetworkAccessManager());
 	QNetworkReply* network_reply = m_network_access_manager->get(m_network_request);
 
 	// Show Progress
-	m_progress_dialog.reset(new QProgressDialog(tr(".Please wait."), tr("Abort"), 0, 100));
-	m_progress_dialog->setWindowTitle(tr("Downloading Database"));
-	m_progress_dialog->setFixedWidth(QLabel("This is the very length of the progressbar due to hidpi reasons.").sizeHint().width());
+	m_progress_dialog.reset(new QProgressDialog(tr(u8".請稍候."), tr(u8"中止"), 0, 100));
+	m_progress_dialog->setWindowTitle(tr(u8"正在下載資料庫"));
+	m_progress_dialog->setFixedWidth(QLabel(u8"由於 HiDPI 的原因，這是進度條的長度。").sizeHint().width());
 	m_progress_dialog->setValue(0);
 	m_progress_dialog->show();
 
@@ -138,13 +138,13 @@ void game_compatibility::RequestCompatibility(bool online)
 		{
 		case 0:
 			m_timer_count = 0;
-			m_progress_dialog->setLabelText(tr(".Please wait."));
+			m_progress_dialog->setLabelText(tr(u8".請稍候."));
 			break;
 		case 1:
-			m_progress_dialog->setLabelText(tr("..Please wait.."));
+			m_progress_dialog->setLabelText(tr(u8"..請稍候.."));
 			break;
 		default:
-			m_progress_dialog->setLabelText(tr("...Please wait..."));
+			m_progress_dialog->setLabelText(tr(u8"...請稍候..."));
 			break;
 		}
 	});
@@ -179,11 +179,11 @@ void game_compatibility::RequestCompatibility(bool online)
 			// We failed to retrieve a new database, therefore refresh gamelist to old state
 			QString error = network_reply->errorString();
 			Q_EMIT DownloadError(error);
-			LOG_ERROR(GENERAL, "Compatibility error: { Network Error - %s }", sstr(error));
+			LOG_ERROR(GENERAL, u8"相容性錯誤: { 網路錯誤 - %s }", sstr(error));
 			return;
 		}
 
-		LOG_NOTICE(GENERAL, "Compatibility notice: { Database download finished }");
+		LOG_NOTICE(GENERAL, u8"相容性通知: { 資料庫下載完成 }");
 
 		// Read data from network reply
 		QByteArray data = network_reply->readAll();
@@ -200,19 +200,19 @@ void game_compatibility::RequestCompatibility(bool online)
 
 			if (file.exists())
 			{
-				LOG_NOTICE(GENERAL, "Compatibility notice: { Database file found: %s }", sstr(m_filepath));
+				LOG_NOTICE(GENERAL, u8"相容性通知: { 找到資料庫檔案: %s }", sstr(m_filepath));
 			}
 
 			if (!file.open(QIODevice::WriteOnly))
 			{
-				LOG_ERROR(GENERAL, "Compatibility error: { Database Error - Could not write database to file: %s }", sstr(m_filepath));
+				LOG_ERROR(GENERAL, u8"相容性錯誤: { 資料庫錯誤 - 無法將資料庫寫入檔案: %s }", sstr(m_filepath));
 				return;
 			}
 
 			file.write(data);
 			file.close();
 
-			LOG_SUCCESS(GENERAL, "Compatibility success: { Write database to file: %s }", sstr(m_filepath));
+			LOG_SUCCESS(GENERAL, u8"相容性成功: { 將資料庫寫入檔案: %s }", sstr(m_filepath));
 		}
 	});
 

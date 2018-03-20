@@ -24,7 +24,7 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline QSize sizeFromSlider(const int& pos) { return gui::gl_icon_size_min + (gui::gl_icon_size_max - gui::gl_icon_size_min) * (pos / (float)gui::gl_max_slider_pos); }
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
-	: custom_dock_widget(tr("Game List"), parent), xgui_settings(guiSettings), xemu_settings(emuSettings)
+	: custom_dock_widget(tr(u8"遊戲清單"), parent), xgui_settings(guiSettings), xemu_settings(emuSettings)
 {
 	m_isListLayout    = xgui_settings->GetValue(gui::gl_listMode).toBool();
 	m_icon_size_index = xgui_settings->GetValue(gui::gl_iconSize).toInt();
@@ -73,17 +73,17 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->installEventFilter(this);
 
 	m_gameList->setColumnCount(gui::column_count);
-	m_gameList->setHorizontalHeaderItem(gui::column_icon,       new QTableWidgetItem(tr("Icon")));
-	m_gameList->setHorizontalHeaderItem(gui::column_name,       new QTableWidgetItem(tr("Name")));
-	m_gameList->setHorizontalHeaderItem(gui::column_serial,     new QTableWidgetItem(tr("Serial")));
-	m_gameList->setHorizontalHeaderItem(gui::column_firmware,   new QTableWidgetItem(tr("Firmware")));
-	m_gameList->setHorizontalHeaderItem(gui::column_version,    new QTableWidgetItem(tr("Version")));
-	m_gameList->setHorizontalHeaderItem(gui::column_category,   new QTableWidgetItem(tr("Category")));
-	m_gameList->setHorizontalHeaderItem(gui::column_path,       new QTableWidgetItem(tr("Path")));
-	m_gameList->setHorizontalHeaderItem(gui::column_resolution, new QTableWidgetItem(tr("Supported Resolutions")));
-	m_gameList->setHorizontalHeaderItem(gui::column_sound,      new QTableWidgetItem(tr("Sound Formats")));
-	m_gameList->setHorizontalHeaderItem(gui::column_parental,   new QTableWidgetItem(tr("Parental Level")));
-	m_gameList->setHorizontalHeaderItem(gui::column_compat,     new QTableWidgetItem(tr("Compatibility")));
+	m_gameList->setHorizontalHeaderItem(gui::column_icon,       new QTableWidgetItem(tr(u8"圖示")));
+	m_gameList->setHorizontalHeaderItem(gui::column_name,       new QTableWidgetItem(tr(u8"名稱")));
+	m_gameList->setHorizontalHeaderItem(gui::column_serial,     new QTableWidgetItem(tr(u8"序列")));
+	m_gameList->setHorizontalHeaderItem(gui::column_firmware,   new QTableWidgetItem(tr(u8"韌體")));
+	m_gameList->setHorizontalHeaderItem(gui::column_version,    new QTableWidgetItem(tr(u8"版本")));
+	m_gameList->setHorizontalHeaderItem(gui::column_category,   new QTableWidgetItem(tr(u8"類別")));
+	m_gameList->setHorizontalHeaderItem(gui::column_path,       new QTableWidgetItem(tr(u8"路徑")));
+	m_gameList->setHorizontalHeaderItem(gui::column_resolution, new QTableWidgetItem(tr(u8"支援解析度")));
+	m_gameList->setHorizontalHeaderItem(gui::column_sound,      new QTableWidgetItem(tr(u8"聲音格式")));
+	m_gameList->setHorizontalHeaderItem(gui::column_parental,   new QTableWidgetItem(tr(u8"年齡分級")));
+	m_gameList->setHorizontalHeaderItem(gui::column_compat,     new QTableWidgetItem(tr(u8"相容性")));
 
 	// since this won't work somehow: gameList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	for (int i = 0; i < m_gameList->horizontalHeader()->count(); i++)
@@ -101,17 +101,17 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_Game_Dock->setCentralWidget(m_Central_Widget);
 
 	// Actions regarding showing/hiding columns
-	QAction* showIconColAct          = new QAction(tr("Show Icons"), this);
-	QAction* showNameColAct          = new QAction(tr("Show Names"), this);
-	QAction* showSerialColAct        = new QAction(tr("Show Serials"), this);
-	QAction* showFWColAct            = new QAction(tr("Show Firmwares"), this);
-	QAction* showAppVersionColAct    = new QAction(tr("Show Versions"), this);
-	QAction* showCategoryColAct      = new QAction(tr("Show Categories"), this);
-	QAction* showPathColAct          = new QAction(tr("Show Paths"), this);
-	QAction* showResolutionColAct    = new QAction(tr("Show Supported Resolutions"), this);
-	QAction* showSoundFormatColAct   = new QAction(tr("Show Sound Formats"), this);
-	QAction* showParentalLevelColAct = new QAction(tr("Show Parental Levels"), this);
-	QAction* showCompatibilityAct    = new QAction(tr("Show Compatibilities"), this);
+	QAction* showIconColAct          = new QAction(tr(u8"顯示圖示"), this);
+	QAction* showNameColAct          = new QAction(tr(u8"顯示名稱"), this);
+	QAction* showSerialColAct        = new QAction(tr(u8"顯示序列"), this);
+	QAction* showFWColAct            = new QAction(tr(u8"顯示韌體"), this);
+	QAction* showAppVersionColAct    = new QAction(tr(u8"顯示版本"), this);
+	QAction* showCategoryColAct      = new QAction(tr(u8"顯示類別"), this);
+	QAction* showPathColAct          = new QAction(tr(u8"顯示路徑"), this);
+	QAction* showResolutionColAct    = new QAction(tr(u8"顯示支援解析度"), this);
+	QAction* showSoundFormatColAct   = new QAction(tr(u8"顯示聲音格式"), this);
+	QAction* showParentalLevelColAct = new QAction(tr(u8"顯示年齡分級"), this);
+	QAction* showCompatibilityAct    = new QAction(tr(u8"顯示相容性"), this);
 
 	m_columnActs = { showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct,
 		showResolutionColAct, showSoundFormatColAct, showParentalLevelColAct, showCompatibilityAct };
@@ -154,7 +154,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 			game.compat = m_game_compat->GetCompatibility(game.info.serial);
 		}
 		Refresh();
-		QMessageBox::warning(this, tr("Warning!"), tr("Failed to retrieve the online compatibility database!\nFalling back to local database.\n\n") + tr(qPrintable(error)));
+		QMessageBox::warning(this, tr(u8"警告!"), tr(u8"無法取得線上相容性資料!\n返回本機資料庫。\n\n") + tr(qPrintable(error)));
 	});
 
 	for (int col = 0; col < m_columnActs.count(); ++col)
@@ -380,7 +380,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 			if (game.icon_path.empty() || !img.load(qstr(game.icon_path)))
 			{
-				LOG_WARNING(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
+				LOG_WARNING(GENERAL, u8"無法讀取圖像路徑 %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
 			}
 
 			bool hasCustomConfig = fs::is_file(fs::get_config_dir() + "data/" + game.serial + "/config.yml");
@@ -391,7 +391,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		}
 		catch (const std::exception& e)
 		{
-			LOG_FATAL(GENERAL, "Failed to update game list at %s\n%s thrown: %s", dir, typeid(e).name(), e.what());
+			LOG_FATAL(GENERAL, u8"無法更新遊戲清單 %s\n%s thrown: %s", dir, typeid(e).name(), e.what());
 			continue;
 			// Blame MSVC for double }}
 		}}
@@ -492,7 +492,7 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 		i = m_xgrid->item(index.row(), index.column())->data(Qt::ItemDataRole::UserRole).toInt();
 	}
 
-	LOG_NOTICE(LOADER, "Booting from gamelist per doubleclick...");
+	LOG_NOTICE(LOADER, u8"雙擊遊戲清單啟動...");
 	Q_EMIT RequestBoot(m_game_data[i].info.path);
 }
 
@@ -541,28 +541,28 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 	// Make Actions
 	QMenu myMenu;
-	QAction* boot = myMenu.addAction(tr("&Boot"));
+	QAction* boot = myMenu.addAction(tr(u8"啟動"));
 	QFont f = boot->font();
 	f.setBold(true);
 	boot->setFont(f);
-	QAction* configure = myMenu.addAction(tr("&Configure"));
+	QAction* configure = myMenu.addAction(tr(u8"設定"));
 	myMenu.addSeparator();
-	QAction* removeGame = myMenu.addAction(tr("&Remove %1").arg(qstr(currGame.category)));
-	QAction* removeConfig = myMenu.addAction(tr("&Remove Custom Configuration"));
-	QAction* deleteShadersCache = myMenu.addAction(tr("&Delete Shaders Cache"));
-	QAction* deleteLLVMCache = myMenu.addAction(tr("&Delete LLVM Cache"));
+	QAction* removeGame = myMenu.addAction(tr(u8"移除 %1").arg(qstr(currGame.category)));
+	QAction* removeConfig = myMenu.addAction(tr(u8"移除自訂組態"));
+	QAction* deleteShadersCache = myMenu.addAction(tr(u8"刪除著色快取"));
+	QAction* deleteLLVMCache = myMenu.addAction(tr(u8"刪除 LLVM 快取"));
 	myMenu.addSeparator();
-	QAction* openGameFolder = myMenu.addAction(tr("&Open Install Folder"));
-	QAction* openConfig = myMenu.addAction(tr("&Open Config Folder"));
+	QAction* openGameFolder = myMenu.addAction(tr(u8"開啟安裝資料夾"));
+	QAction* openConfig = myMenu.addAction(tr(u8"開啟自訂資料夾"));
 	myMenu.addSeparator();
-	QAction* checkCompat = myMenu.addAction(tr("&Check Game Compatibility"));
-	QAction* downloadCompat = myMenu.addAction(tr("&Download Compatibility Database"));
+	QAction* checkCompat = myMenu.addAction(tr(u8"檢閱遊戲相容性"));
+	QAction* downloadCompat = myMenu.addAction(tr(u8"下載相容性資料庫"));
 
 	const std::string config_base_dir = fs::get_config_dir() + "data/" + m_game_data[row].info.serial;
 
 	connect(boot, &QAction::triggered, [=]
 	{
-		LOG_NOTICE(LOADER, "Booting from gamelist per context menu...");
+		LOG_NOTICE(LOADER, u8"從遊戲清單啟動...");
 		Q_EMIT RequestBoot(currGame.path);
 	});
 	connect(configure, &QAction::triggered, [=]
@@ -576,8 +576,8 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	});
 	connect(removeGame, &QAction::triggered, [=]
 	{
-		QMessageBox* mb = new QMessageBox(QMessageBox::Question, tr("Confirm %1 Removal").arg(qstr(currGame.category)), tr("Permanently remove %1 from drive?").arg(qstr(currGame.name)), QMessageBox::Yes | QMessageBox::No, this);
-		mb->setCheckBox(new QCheckBox(tr("Remove caches and custom config")));
+		QMessageBox* mb = new QMessageBox(QMessageBox::Question, tr(u8"確認刪除 %1 ").arg(qstr(currGame.category)), tr(u8"從磁碟永久刪除 %1 ?").arg(qstr(currGame.name)), QMessageBox::Yes | QMessageBox::No, this);
+		mb->setCheckBox(new QCheckBox(tr(u8"刪除快取與自訂組態")));
 		mb->deleteLater();
 		if (mb->exec() == QMessageBox::Yes)
 		{
@@ -590,7 +590,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 			fs::remove_all(currGame.path);
 			m_game_data.erase(m_game_data.begin() + row);
 			Refresh();
-			LOG_SUCCESS(GENERAL, "Removed %s %s in %s", currGame.category, currGame.name, currGame.path);
+			LOG_SUCCESS(GENERAL, u8"刪除 %s %s 在 %s", currGame.category, currGame.name, currGame.path);
 		}
 	});
 	connect(removeConfig, &QAction::triggered, [=]()
@@ -664,18 +664,18 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& base_dir, boo
 	if (!fs::is_file(config_path))
 		return false;
 
-	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete custom game configuration?")) != QMessageBox::Yes)
+	if (is_interactive && QMessageBox::question(this, tr(u8"確認刪除"), tr(u8"刪除自訂遊戲組態?")) != QMessageBox::Yes)
 		return false;
 
 	if (fs::remove_file(config_path))
 	{
-		LOG_SUCCESS(GENERAL, "Removed configuration file: %s", config_path);
+		LOG_SUCCESS(GENERAL, u8"刪除組態檔案: %s", config_path);
 		return true;
 	}
 	else
 	{
-		QMessageBox::warning(this, tr("Warning!"), tr("Failed to delete configuration file!"));
-		LOG_FATAL(GENERAL, "Failed to delete configuration file: %s\nError: %s", config_path, fs::g_tls_error);
+		QMessageBox::warning(this, tr(u8"警告!"), tr(u8"無法刪除組態檔案!"));
+		LOG_FATAL(GENERAL, u8"無法刪除組態檔案: %s\n錯誤: %s", config_path, fs::g_tls_error);
 		return false;
 	}
 }
@@ -685,7 +685,7 @@ bool game_list_frame::DeleteShadersCache(const std::string& base_dir, bool is_in
 	if (!fs::is_dir(base_dir))
 		return false;
 
-	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete shaders cache?")) != QMessageBox::Yes)
+	if (is_interactive && QMessageBox::question(this, tr(u8"確認刪除"), tr(u8"刪除著色快取?")) != QMessageBox::Yes)
 		return false;
 
 	fs::dir root = fs::dir(base_dir);
@@ -701,7 +701,7 @@ bool game_list_frame::DeleteShadersCache(const std::string& base_dir, bool is_in
 			fs::remove_all(shader_cache_name, true);
 	}
 
-	LOG_SUCCESS(GENERAL, "Removed shaders cache in %s", base_dir);
+	LOG_SUCCESS(GENERAL, u8"刪除著色快取 %s", base_dir);
 	return true;
 }
 
@@ -710,7 +710,7 @@ bool game_list_frame::DeleteLLVMCache(const std::string& base_dir, bool is_inter
 	if (!fs::is_dir(base_dir))
 		return false;
 
-	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete LLVM cache?")) != QMessageBox::Yes)
+	if (is_interactive && QMessageBox::question(this, tr(u8"確認刪除"), tr(u8"刪除 LLVM 快取?")) != QMessageBox::Yes)
 		return false;
 
 	for (auto&& subdir : fs::dir{ base_dir })
@@ -727,7 +727,7 @@ bool game_list_frame::DeleteLLVMCache(const std::string& base_dir, bool is_inter
 		}
 	}
 
-	LOG_SUCCESS(GENERAL, "Removed llvm cache in %s", base_dir);
+	LOG_SUCCESS(GENERAL, u8"刪除 LLVM 快取 %s", base_dir);
 	return true;
 }
 
@@ -1076,7 +1076,7 @@ std::string game_list_frame::GetStringFromU32(const u32& key, const std::map<u32
 
 	if (string.isEmpty())
 	{
-		string << tr("Unknown");
+		string << tr(u8"未知");
 	}
 
 	return sstr(string.join(", "));

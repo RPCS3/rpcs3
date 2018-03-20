@@ -102,9 +102,9 @@ void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 	{
 		switch (type)
 		{
-		case ppu_decoder_type::precise: return "Interpreter (precise)";
-		case ppu_decoder_type::fast: return "Interpreter (fast)";
-		case ppu_decoder_type::llvm: return "Recompiler (LLVM)";
+		case ppu_decoder_type::precise: return (u8"直譯器 (準確)");
+		case ppu_decoder_type::fast: return (u8"直譯器 (快速)");
+		case ppu_decoder_type::llvm: return (u8"反編譯 (LLVM)");
 		}
 
 		return unknown;
@@ -181,7 +181,7 @@ static u32 ppu_cache(u32 addr)
 	const auto& table = *(
 		g_cfg.core.ppu_decoder == ppu_decoder_type::precise ? &g_ppu_interpreter_precise.get_table() :
 		g_cfg.core.ppu_decoder == ppu_decoder_type::fast ? &g_ppu_interpreter_fast.get_table() :
-		(fmt::throw_exception<std::logic_error>("Invalid PPU decoder"), nullptr));
+		(fmt::throw_exception<std::logic_error>(u8"無效的 PPU 譯碼器"), nullptr));
 
 	return ::narrow<u32>(reinterpret_cast<std::uintptr_t>(table[ppu_decode(vm::read32(addr))]));
 }
@@ -190,14 +190,14 @@ static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
 {
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
-		fmt::throw_exception("Unregistered PPU function");
+		fmt::throw_exception(u8"未註冊 PPU function");
 	}
 
 	ppu_ref(ppu.cia) = ppu_cache(ppu.cia);
 
 	if (g_cfg.core.ppu_debug)
 	{
-		LOG_ERROR(PPU, "Unregistered instruction: 0x%08x", op.opcode);
+		LOG_ERROR(PPU, u8"未註冊的指令: 0x%08x", op.opcode);
 	}
 
 	return false;
@@ -212,7 +212,7 @@ static bool ppu_check_toc(ppu_thread& ppu, ppu_opcode_t op)
 
 	if (ppu.gpr[2] != found->second)
 	{
-		LOG_ERROR(PPU, "Unexpected TOC (0x%x, expected 0x%x)", ppu.gpr[2], found->second);
+		LOG_ERROR(PPU, u8"異常 TOC (0x%x, 預期 0x%x)", ppu.gpr[2], found->second);
 
 		if (!ppu.state.test_and_set(cpu_flag::dbg_pause) && ppu.check_state())
 		{
@@ -233,7 +233,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 {
 	if (!size)
 	{
-		LOG_ERROR(PPU, "ppu_register_range(0x%x): empty range", addr);
+		LOG_ERROR(PPU, u8"ppu_register_range(0x%x): 空範圍", addr);
 		return;
 	}
 
@@ -264,7 +264,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 	{
 		if (g_cfg.core.ppu_debug)
 		{
-			LOG_ERROR(PPU, "ppu_register_function_at(0x%x): empty range", addr);
+			LOG_ERROR(PPU, u8"ppu_register_function_at(0x%x): 空範圍", addr);
 		}
 
 		return;
@@ -436,7 +436,7 @@ extern bool ppu_patch(u32 addr, u32 value)
 
 std::string ppu_thread::get_name() const
 {
-	return fmt::format("PPU[0x%x] Thread (%s)", id, m_name);
+	return fmt::format(u8"PPU[0x%x] 執行緒 (%s)", id, m_name);
 }
 
 std::string ppu_thread::dump() const
@@ -502,7 +502,7 @@ std::string ppu_thread::dump() const
 	for (u64 sp = vm::read64(stack_ptr); sp >= stack_min && sp + 0x200 < stack_max; sp = vm::read64(static_cast<u32>(sp)))
 	{
 		// TODO: print also function addresses
-		fmt::append(ret, "> from 0x%08llx (0x0)\n", vm::read64(static_cast<u32>(sp + 16)));
+		fmt::append(ret, u8"> 從 0x%08llx (0x0)\n", vm::read64(static_cast<u32>(sp + 16)));
 	}
 
 	return ret;
@@ -532,7 +532,7 @@ void ppu_thread::cpu_task()
 		{
 			if (arg >= 32)
 			{
-				fmt::throw_exception("Invalid ppu_cmd::set_gpr arg (0x%x)" HERE, arg);
+				fmt::throw_exception(u8"無效 ppu_cmd::set_gpr arg (0x%x)" HERE, arg);
 			}
 
 			gpr[arg % 32] = cmd_get(1).as<u64>();
@@ -543,7 +543,7 @@ void ppu_thread::cpu_task()
 		{
 			if (arg > 8)
 			{
-				fmt::throw_exception("Unsupported ppu_cmd::set_args size (0x%x)" HERE, arg);
+				fmt::throw_exception(u8"不支援 ppu_cmd::set_args 大小 (0x%x)" HERE, arg);
 			}
 
 			for (u32 i = 0; i < arg; i++)
@@ -582,7 +582,7 @@ void ppu_thread::cpu_task()
 		}
 		default:
 		{
-			fmt::throw_exception("Unknown ppu_cmd(0x%x)" HERE, (u32)type);
+			fmt::throw_exception(u8"未知 ppu_cmd(0x%x)" HERE, (u32)type);
 		}
 		}
 	}
@@ -853,7 +853,7 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 		}
 	}
 
-	fmt::throw_exception("Invalid thread" HERE);
+	fmt::throw_exception(u8"執行緒無效" HERE);
 }
 
 void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
@@ -872,7 +872,7 @@ void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
 		return;
 	}
 
-	LOG_ERROR(PPU, "Invalid thread" HERE);
+	LOG_ERROR(PPU, u8"執行緒無效" HERE);
 }
 
 const ppu_decoder<ppu_itype> s_ppu_itype;
@@ -904,7 +904,7 @@ extern void sse_cellbe_stvrx_v0(u64 addr, __m128i a);
 [[noreturn]] static void ppu_error(ppu_thread& ppu, u64 addr, u32 op)
 {
 	ppu.cia = ::narrow<u32>(addr);
-	fmt::throw_exception("Unknown/Illegal opcode 0x08x (0x%llx)", op, addr);
+	fmt::throw_exception(u8"未知/非法 運算碼 0x08x (0x%llx)", op, addr);
 }
 
 static void ppu_check(ppu_thread& ppu, u64 addr)
@@ -1320,7 +1320,7 @@ extern void ppu_initialize(const ppu_module& info)
 			semaphore_lock lock(jmutex);
 			jit->add(cache_path + obj_name);
 
-			LOG_SUCCESS(PPU, "LLVM: Loaded module %s", obj_name);
+			LOG_SUCCESS(PPU, u8"LLVM: 讀取模組 %s", obj_name);
 			continue;
 		}
 
@@ -1437,7 +1437,7 @@ extern void ppu_initialize(const ppu_module& info)
 		}
 	}
 #else
-	fmt::throw_exception("LLVM is not available in this build.");
+	fmt::throw_exception(u8"LLVM 在此編譯中無法使用。");
 #endif
 }
 
@@ -1510,7 +1510,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 		Emu.CallAfter([=]()
 		{
-			dlg->Create("Compiling PPU module:\n" + obj_name + "\nPlease wait...");
+			dlg->Create(u8"編譯 PPU 模組:\n" + obj_name + u8"\n請稍候...");
 		});
 
 		// Translate functions
@@ -1518,7 +1518,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		{
 			if (Emu.IsStopped())
 			{
-				LOG_SUCCESS(PPU, "LLVM: Translation cancelled");
+				LOG_SUCCESS(PPU, u8"LLVM: 轉譯取消");
 				return;
 			}
 
@@ -1527,13 +1527,13 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 				// Update dialog
 				Emu.CallAfter([=, max = module_part.funcs.size(), &fragment_sync]()
 				{
-					dlg->ProgressBarSetMsg(0, fmt::format("Compiling %u of %u", fi + 1, fmax));
+					dlg->ProgressBarSetMsg(0, fmt::format(u8"編譯 %u 於 %u", fi + 1, fmax));
 
 					if (fi * 100 / fmax != (fi + 1) * 100 / fmax)
 						dlg->ProgressBarInc(0, 1);
 
 					if (u32 fragment_count = fragment_sync.load())
-						dlg->SetMsg(fmt::format("Compiling PPU module (%u of %u):\n%s\nPlease wait...", fragment_index + 1, fragment_count, obj_name));
+						dlg->SetMsg(fmt::format(u8"編譯 PPU 模組 (%u 於 %u):\n%s\n請稍候...", fragment_index + 1, fragment_count, obj_name));
 				});
 
 				// Translate
@@ -1561,11 +1561,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		// Update dialog
 		Emu.CallAfter([=, &fragment_sync]()
 		{
-			dlg->ProgressBarSetMsg(0, "Generating code, this may take a long time...");
+			dlg->ProgressBarSetMsg(0, u8"程式碼產生... 需要一些時間，請耐心等候...");
 			dlg->ProgressBarInc(0, 100);
 
 			if (u32 fragment_count = fragment_sync.load())
-				dlg->SetMsg(fmt::format("Compiling PPU module (%u of %u):\n%s\nPlease wait...", fragment_index + 1, fragment_count, obj_name));
+				dlg->SetMsg(fmt::format(u8"編譯 PPU 模組 (%u 於 %u):\n%s\n請稍候...", fragment_index + 1, fragment_count, obj_name));
 		});
 
 		std::string result;
@@ -1581,12 +1581,12 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		if (verifyModule(*module, &out))
 		{
 			out.flush();
-			LOG_ERROR(PPU, "LLVM: Verification failed for %s:\n%s", obj_name, result);
+			LOG_ERROR(PPU, u8"LLVM: 驗證失敗 %s:\n%s", obj_name, result);
 			Emu.CallAfter([]{ Emu.Stop(); });
 			return;
 		}
 
-		LOG_NOTICE(PPU, "LLVM: %zu functions generated", module->getFunctionList().size());
+		LOG_NOTICE(PPU, u8"LLVM: %zu functions 產生", module->getFunctionList().size());
 	}
 
 	// Load or compile module

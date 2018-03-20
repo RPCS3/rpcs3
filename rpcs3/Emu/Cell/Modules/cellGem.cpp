@@ -112,8 +112,8 @@ void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case move_handler::null: return "Null";
-		case move_handler::fake: return "Fake";
+		case move_handler::null: return u8"ªÅ";
+		case move_handler::fake: return u8"µê³]";
 		}
 
 		return unknown;

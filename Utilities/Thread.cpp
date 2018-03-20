@@ -47,11 +47,11 @@ thread_local u64 g_tls_fault_spu = 0;
 	}
 	catch (const std::exception& e)
 	{
-		report_fatal_error("Unhandled exception of type '"s + typeid(e).name() + "': "s + e.what());
+		report_fatal_error(u8"未處理的類型異常 '"s + typeid(e).name() + "': "s + e.what());
 	}
 	catch (...)
 	{
-		report_fatal_error("Unhandled exception (unknown)");
+		report_fatal_error(u8"未處理異常 (未知)");
 	}
 }
 

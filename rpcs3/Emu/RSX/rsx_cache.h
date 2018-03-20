@@ -302,7 +302,7 @@ namespace rsx
 
 				Emu.CallAfter([&]()
 				{
-					dlg->Create("Preloading cached shaders from disk.\nPlease wait...");
+					dlg->Create(u8"從磁碟預載著色器快取。\n請稍後...");
 					initialized.store(true);
 				});
 
@@ -316,7 +316,7 @@ namespace rsx
 			{
 				Emu.CallAfter([=]()
 				{
-					dlg->ProgressBarSetMsg(0, fmt::format("Loading pipeline object %u of %u", processed, entry_count));
+					dlg->ProgressBarSetMsg(0, fmt::format(u8"載入傳遞途徑目標 %u 於 %u", processed, entry_count));
 				});
 			}
 
@@ -401,7 +401,7 @@ namespace rsx
 
 				if (f.size() != sizeof(pipeline_data))
 				{
-					LOG_ERROR(RSX, "Cached pipeline object %s is not binary compatible with the current shader cache", tmp.name.c_str());
+					LOG_ERROR(RSX, u8"快取傳遞途徑目標 %s 不與當前的著色器快取二進位相容", tmp.name.c_str());
 					continue;
 				}
 

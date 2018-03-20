@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Settings</string>
+   <string>設定</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../resources.qrc">
@@ -50,27 +50,27 @@
            <item>
             <widget class="QGroupBox" name="ppu">
              <property name="title">
-              <string>PPU Decoder</string>
+              <string>PPU 譯碼器</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_2">
               <item>
                <widget class="QRadioButton" name="ppu_precise">
                 <property name="text">
-                 <string>Interpreter (precise)</string>
+                 <string>直譯器 (準確)</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QRadioButton" name="ppu_fast">
                 <property name="text">
-                 <string>Interpreter (fast)</string>
+                 <string>直譯器 (快速)</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QRadioButton" name="ppu_llvm">
                 <property name="text">
-                 <string>Recompiler (LLVM)</string>
+                 <string>反編譯 (LLVM)</string>
                 </property>
                </widget>
               </item>
@@ -80,27 +80,27 @@
            <item>
             <widget class="QGroupBox" name="spu">
              <property name="title">
-              <string>SPU Decoder</string>
+              <string>SPU 譯碼器</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_3">
               <item>
                <widget class="QRadioButton" name="spu_precise">
                 <property name="text">
-                 <string>Interpreter (precise)</string>
+                 <string>直譯器 (準確)</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QRadioButton" name="spu_fast">
                 <property name="text">
-                 <string>Interpreter (fast)</string>
+                 <string>直譯器 (快速)</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QRadioButton" name="spu_asmjit">
                 <property name="text">
-                 <string>Recompiler (ASMJIT)</string>
+                 <string>反編譯 (ASMJIT)</string>
                 </property>
                </widget>
               </item>
@@ -110,7 +110,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="text">
-                 <string>Recompiler (LLVM)</string>
+                 <string>反編譯 (LLVM)</string>
                 </property>
                </widget>
               </item>
@@ -120,7 +120,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_6">
              <property name="title">
-              <string>Preferred SPU Threads</string>
+              <string>優先 SPU 執行緒</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_51">
               <item>
@@ -142,7 +142,7 @@
               </sizepolicy>
              </property>
              <property name="title">
-              <string>Firmware Settings</string>
+              <string>韌體設定</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout">
               <item>
@@ -154,7 +154,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Automatically load required libraries</string>
+                 <string>自動讀取必要的元件庫</string>
                 </property>
                </widget>
               </item>
@@ -167,7 +167,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Manually load selected libraries</string>
+                 <string>讀取手動所選的元件庫</string>
                 </property>
                </widget>
               </item>
@@ -180,7 +180,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Load automatic and manual selection</string>
+                 <string>自動讀取與手動選擇</string>
                 </property>
                </widget>
               </item>
@@ -193,7 +193,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Load liblv2.sprx only</string>
+                 <string>僅讀取 liblv2.sprx</string>
                 </property>
                </widget>
               </item>
@@ -203,27 +203,27 @@
            <item>
             <widget class="QGroupBox" name="checkboxes">
              <property name="title">
-              <string>Additional Settings</string>
+              <string>其它設定</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_4">
               <item>
                <widget class="QCheckBox" name="enableScheduler">
                 <property name="text">
-                 <string>Enable thread scheduler</string>
+                 <string>啟用執行緒排程器</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="lowerSPUThrPrio">
                 <property name="text">
-                 <string>Lower SPU thread priority</string>
+                 <string>低優先權的 SPU 執行緒</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="spuLoopDetection">
                 <property name="text">
-                 <string>Enable SPU loop detection</string>
+                 <string>啟用 SPU 循環偵測</string>
                 </property>
                </widget>
               </item>
@@ -250,7 +250,7 @@
               </sizepolicy>
              </property>
              <property name="title">
-              <string>Firmware Libraries</string>
+              <string>韌體元件庫</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_12">
               <item>
@@ -275,7 +275,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_40">
              <property name="title">
-              <string>Search Libraries</string>
+              <string>搜尋元件庫</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_11">
               <item>
@@ -314,13 +314,13 @@
        <item>
         <widget class="QGroupBox" name="groupBox_41">
          <property name="title">
-          <string>Description</string>
+          <string>描述</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_5">
           <item>
            <widget class="QLabel" name="description_cpu">
             <property name="text">
-             <string>Point your mouse at an option to display a description in here.
+             <string>將滑鼠指向一個選項，以便在此處顯示描述。
 
 
 </string>
@@ -353,7 +353,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_26">
              <property name="title">
-              <string>Renderer</string>
+              <string>渲染</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_19">
               <item>
@@ -365,7 +365,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_42">
              <property name="title">
-              <string>Graphics Device</string>
+              <string>圖形裝置</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_18">
               <item>
@@ -379,7 +379,7 @@
              <item>
               <widget class="QGroupBox" name="groupBox_44">
                <property name="title">
-                <string>Aspect Ratio</string>
+                <string>寬高比</string>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_14">
                 <item>
@@ -391,7 +391,7 @@
              <item>
               <widget class="QGroupBox" name="groupBox_45">
                <property name="title">
-                <string>Framelimit</string>
+                <string>框限制</string>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_15">
                 <item>
@@ -420,7 +420,7 @@
               <item>
                <widget class="QGroupBox" name="gb_anisotropicFilter">
                 <property name="title">
-                 <string>Anisotropic Filter</string>
+                 <string>非等方性過濾</string>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_54">
                  <item>
@@ -435,7 +435,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="title">
-                 <string>Anti-Aliasing</string>
+                 <string>反鋸齒</string>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_56">
                  <item>
@@ -454,7 +454,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_29">
              <property name="title">
-              <string>Default Resolution</string>
+              <string>預設解析度</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_22">
               <item>
@@ -474,7 +474,7 @@
              <item>
               <widget class="QGroupBox" name="gb_resolutionScale">
                <property name="title">
-                <string>Resolution Scale (Disable Strict Mode)</string>
+                <string>解析度比例 (停用精密模式)</string>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_29">
                 <item>
@@ -537,7 +537,7 @@
                   <item>
                    <widget class="QPushButton" name="resolutionScaleReset">
                     <property name="text">
-                     <string>Reset</string>
+                     <string>重設</string>
                     </property>
                    </widget>
                   </item>
@@ -549,7 +549,7 @@
              <item>
               <widget class="QGroupBox" name="gb_minimumScalableDimension">
                <property name="title">
-                <string>Resolution Scale Threshold</string>
+                <string>解析度比例臨界值</string>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_57">
                 <item>
@@ -598,7 +598,7 @@
                   <item>
                    <widget class="QPushButton" name="minimumScalableDimensionReset">
                     <property name="text">
-                     <string>Reset</string>
+                     <string>重設</string>
                     </property>
                    </widget>
                   </item>
@@ -620,7 +620,7 @@
             </sizepolicy>
            </property>
            <property name="title">
-            <string>Additional Settings</string>
+            <string>其它設定</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -629,42 +629,42 @@
             <item>
              <widget class="QCheckBox" name="dumpColor">
               <property name="text">
-               <string>Write Color Buffers</string>
+               <string>寫入色彩緩衝</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="gpuTextureScaling">
               <property name="text">
-               <string>Use GPU Texture Scaling</string>
+               <string>使用 GPU 紋理縮放</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="scrictModeRendering">
               <property name="text">
-               <string>Strict Rendering Mode</string>
+               <string>精密渲染模式</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="vsync">
               <property name="text">
-               <string>VSync</string>
+               <string>垂直同步</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="stretchToDisplayArea">
               <property name="text">
-               <string>Stretch To Display Area</string>
+               <string>延伸顯示面積</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="disableVertexCache">
               <property name="text">
-               <string>Disable Vertex Cache</string>
+               <string>停用頂點快取</string>
               </property>
              </widget>
             </item>
@@ -708,13 +708,13 @@
        <item>
         <widget class="QGroupBox" name="groupBox_47">
          <property name="title">
-          <string>Description</string>
+          <string>描述</string>
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_5">
           <item>
            <widget class="QLabel" name="description_gpu">
             <property name="text">
-             <string>Point your mouse at an option to display a description in here.
+             <string>將滑鼠指向一個選項，以便在此處顯示描述。
 
 
 </string>
@@ -737,7 +737,7 @@
      </widget>
      <widget class="QWidget" name="audioTab">
       <attribute name="title">
-       <string>Audio</string>
+       <string>聲音</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_26">
        <item>
@@ -747,7 +747,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_30">
              <property name="title">
-              <string>Audio Out</string>
+              <string>聲音輸出</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_24">
               <item>
@@ -759,27 +759,27 @@
            <item>
             <widget class="QGroupBox" name="groupBox_49">
              <property name="title">
-              <string>Audio Settings</string>
+              <string>聲音設定</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_23">
               <item>
                <widget class="QCheckBox" name="audioDump">
                 <property name="text">
-                 <string>Dump to File</string>
+                 <string>傾印至檔案</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="convert">
                 <property name="text">
-                 <string>Convert to 16-bit</string>
+                 <string>轉換為 16-bit</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="downmix">
                 <property name="text">
-                 <string>Downmix to Stereo</string>
+                 <string>縮混至立體聲</string>
                 </property>
                 <property name="checked">
                  <bool>false</bool>
@@ -831,13 +831,13 @@
        <item>
         <widget class="QGroupBox" name="groupBox_50">
          <property name="title">
-          <string>Description</string>
+          <string>描述</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_20">
           <item>
            <widget class="QLabel" name="description_audio">
             <property name="text">
-             <string>Point your mouse at an option to display a description in here.
+             <string>將滑鼠指向一個選項，以便在此處顯示描述。
 
 
 </string>
@@ -860,7 +860,7 @@
      </widget>
      <widget class="QWidget" name="inputTab">
       <attribute name="title">
-       <string>I/O</string>
+       <string>輸入/輸出</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_32">
        <item>
@@ -868,7 +868,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_51">
            <property name="title">
-            <string>Keyboard Handler</string>
+            <string>鍵盤處理程序</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_27">
             <item>
@@ -880,7 +880,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_31">
            <property name="title">
-            <string>Camera Input</string>
+            <string>攝影輸入</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_30">
             <item>
@@ -892,7 +892,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_2">
            <property name="title">
-            <string>Move Handler</string>
+            <string>Move 處理程序</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_62">
             <item>
@@ -908,7 +908,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_53">
            <property name="title">
-            <string>Mouse Handler</string>
+            <string>滑鼠處理程序</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_28">
             <item>
@@ -920,7 +920,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_54">
            <property name="title">
-            <string>Camera Settings</string>
+            <string>攝影設定</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_31">
             <item>
@@ -966,13 +966,13 @@
        <item>
         <widget class="QGroupBox" name="groupBox_59">
          <property name="title">
-          <string>Description</string>
+          <string>描述</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_33">
           <item>
            <widget class="QLabel" name="description_io">
             <property name="text">
-             <string>Point your mouse at an option to display a description in here.
+             <string>將滑鼠指向一個選項，以便在此處顯示描述。
 
 
 </string>
@@ -995,7 +995,7 @@
      </widget>
      <widget class="QWidget" name="systemTab">
       <attribute name="title">
-       <string>System</string>
+       <string>系統</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_37">
        <item>
@@ -1003,7 +1003,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_34">
            <property name="title">
-            <string>Console Language</string>
+            <string>控制台語言</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_34">
             <item>
@@ -1015,13 +1015,13 @@
          <item>
           <widget class="QGroupBox" name="groupBox">
            <property name="title">
-            <string>Homebrew</string>
+            <string>自製</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_35">
             <item>
              <widget class="QCheckBox" name="enableHostRoot">
               <property name="text">
-               <string>Enable /host_root/</string>
+               <string>啟用 /host_root/</string>
               </property>
              </widget>
             </item>
@@ -1054,7 +1054,7 @@
             <bool>false</bool>
            </property>
            <property name="title">
-            <string>Console Region</string>
+            <string>控制台區域</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_36">
             <item>
@@ -1103,13 +1103,13 @@
        <item>
         <widget class="QGroupBox" name="groupBox_61">
          <property name="title">
-          <string>Description</string>
+          <string>描述</string>
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_13">
           <item>
            <widget class="QLabel" name="description_system">
             <property name="text">
-             <string>Point your mouse at an option to display a description in here.
+             <string>將滑鼠指向一個選項，以便在此處顯示描述。
 
 
 </string>
@@ -1132,7 +1132,7 @@
      </widget>
      <widget class="QWidget" name="networkTab">
       <attribute name="title">
-       <string>Network</string>
+       <string>網路</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_40">
        <item>
@@ -1140,7 +1140,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_32">
            <property name="title">
-            <string>Network Status</string>
+            <string>網路狀態</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_38">
             <item>
@@ -1189,13 +1189,13 @@
        <item>
         <widget class="QGroupBox" name="groupBox_60">
          <property name="title">
-          <string>Description</string>
+          <string>描述</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_39">
           <item>
            <widget class="QLabel" name="description_network">
             <property name="text">
-             <string>Point your mouse at an option to display a description in here.
+             <string>將滑鼠指向一個選項，以便在此處顯示描述。
 
 
 </string>
@@ -1218,7 +1218,7 @@
      </widget>
      <widget class="QWidget" name="emulatorTab">
       <attribute name="title">
-       <string>Emulator</string>
+       <string>仿真器</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_46">
        <item>
@@ -1228,48 +1228,48 @@
            <item>
             <widget class="QGroupBox" name="groupBox_55">
              <property name="title">
-              <string>Emulator Settings</string>
+              <string>仿真器設定</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_41">
               <item>
                <widget class="QCheckBox" name="exitOnStop">
                 <property name="text">
-                 <string>Exit RPCS3 when process finishes</string>
+                 <string>當結束處理程序時，關閉 RPCS3</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="alwaysStart">
                 <property name="text">
-                 <string>Automatically start games after boot</string>
+                 <string>總是啟動 BOOT</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="startGameFullscreen">
                 <property name="text">
-                 <string>Start games in Fullscreen mode</string>
+                 <string>以全螢幕模式開始遊戲</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="showFPSInTitle">
                 <property name="text">
-                 <string>Show framerate counter in window title</string>
+                 <string>在視窗標題中顯示 FPS 計數器</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="showTrophyPopups">
                 <property name="text">
-                 <string>Show trophy popups</string>
+                 <string>顯示獎盃彈出視窗</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="useNativeInterface">
                 <property name="text">
-                 <string>Use native user interface</string>
+                 <string>使用本體使用者介面</string>
                 </property>
                </widget>
               </item>
@@ -1279,20 +1279,20 @@
            <item>
             <widget class="QGroupBox" name="gb_viewport">
              <property name="title">
-              <string>Viewport</string>
+              <string>視區</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_50">
               <item>
                <widget class="QCheckBox" name="gs_disableMouse">
                 <property name="text">
-                 <string>Don't use doubleclick for Fullscreen mode</string>
+                 <string>不使用雙擊全螢幕模式</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QCheckBox" name="gs_resizeOnBoot">
                 <property name="text">
-                 <string>Resize game window on boot</string>
+                 <string>啟動時調整遊戲視窗</string>
                 </property>
                </widget>
               </item>
@@ -1301,7 +1301,7 @@
                 <item>
                  <widget class="QGroupBox" name="groupBox_4">
                   <property name="title">
-                   <string>Width</string>
+                   <string>寬度</string>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_49">
                    <item>
@@ -1332,7 +1332,7 @@
                 <item>
                  <widget class="QGroupBox" name="groupBox_5">
                   <property name="title">
-                   <string>Height</string>
+                   <string>高度</string>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_48">
                    <item>
@@ -1375,7 +1375,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_2">
              <property name="title">
-              <string>Max LLVM Compile Threads</string>
+              <string>最大 LLVM 編譯執行緒</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_63">
               <item>
@@ -1387,34 +1387,34 @@
            <item>
             <widget class="QGroupBox" name="gb_settings">
              <property name="title">
-              <string>UI Settings</string>
+              <string>UI 設定</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_42">
               <item>
                <widget class="QCheckBox" name="cb_show_welcome">
                 <property name="text">
-                 <string>Show Welcome Screen</string>
+                 <string>顯示歡迎畫面</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="pb_reset_default">
                 <property name="text">
-                 <string>Restore default settings</string>
+                 <string>恢復預設設定</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="pb_backup_config">
                 <property name="text">
-                 <string>Save current settings</string>
+                 <string>儲存目前設定</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="pb_open_folder">
                 <property name="text">
-                 <string>Open configuration folder</string>
+                 <string>開啟組態資料夾</string>
                 </property>
                </widget>
               </item>
@@ -1440,7 +1440,7 @@
               <item>
                <widget class="QPushButton" name="pb_apply_config">
                 <property name="text">
-                 <string>Apply</string>
+                 <string>套用</string>
                 </property>
                </widget>
               </item>
@@ -1454,7 +1454,7 @@
            <item>
             <widget class="QGroupBox" name="gb_stylesheets">
              <property name="title">
-              <string>UI Stylesheets</string>
+              <string>UI 風格</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_43">
               <item>
@@ -1463,7 +1463,7 @@
               <item>
                <widget class="QPushButton" name="pb_apply_stylesheet">
                 <property name="text">
-                 <string>Apply</string>
+                 <string>套用</string>
                 </property>
                </widget>
               </item>
@@ -1473,34 +1473,34 @@
            <item>
             <widget class="QGroupBox" name="gb_colors">
              <property name="title">
-              <string>UI Colors</string>
+              <string>UI 色彩</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_13">
               <item>
                <widget class="QCheckBox" name="cb_custom_colors">
                 <property name="text">
-                 <string>Use custom UI Colors</string>
+                 <string>使用自訂 UI 色彩</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="pb_tool_bar_color">
                 <property name="text">
-                 <string>Main window tool bar</string>
+                 <string>主視窗工具列</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="pb_tool_icon_color">
                 <property name="text">
-                 <string>Main window tool icons</string>
+                 <string>主視窗工具圖示</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="pb_gl_icon_color">
                 <property name="text">
-                 <string>Gamelist icons</string>
+                 <string>遊戲清單圖示</string>
                 </property>
                </widget>
               </item>
@@ -1546,13 +1546,13 @@
        <item>
         <widget class="QGroupBox" name="groupBox_62">
          <property name="title">
-          <string>Description</string>
+          <string>描述</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_45">
           <item>
            <widget class="QLabel" name="description_emulator">
             <property name="text">
-             <string>Point your mouse at an option to display a description in here.
+             <string>將滑鼠指向一個選項，以便在此處顯示描述。
 
 
 </string>
@@ -1575,7 +1575,7 @@
      </widget>
      <widget class="QWidget" name="debugTab">
       <attribute name="title">
-       <string>Debug</string>
+       <string>偵錯</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_53">
        <item>
@@ -1598,77 +1598,77 @@
                <bool>false</bool>
               </property>
               <property name="text">
-               <string>Use Legacy OpenGL Buffers</string>
+               <string>使用舊版 OpenGL 緩衝</string>
               </property>
              </widget>
             </item>
             <item alignment="Qt::AlignTop">
              <widget class="QCheckBox" name="debugOutput">
               <property name="text">
-               <string>Debug Output</string>
+               <string>偵錯輸出</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="debugOverlay">
               <property name="text">
-               <string>Debug Overlay</string>
+               <string>偵錯覆蓋</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="logProg">
               <property name="text">
-               <string>Log Shader Programs</string>
+               <string>著色器程序日誌</string>
               </property>
              </widget>
             </item>
             <item alignment="Qt::AlignTop">
              <widget class="QCheckBox" name="forceHighpZ">
               <property name="text">
-               <string>Use High Precision Z-buffer</string>
+               <string>使用高精度 Z 緩衝</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="dumpDepth">
               <property name="text">
-               <string>Write Depth Buffers</string>
+               <string>寫入深度緩衝</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="readDepth">
               <property name="text">
-               <string>Read Depth Buffers</string>
+               <string>讀取深度緩衝</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="readColor">
               <property name="text">
-               <string>Read Color Buffers</string>
+               <string>讀取色彩緩衝</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="disableHwOcclusionQueries">
               <property name="text">
-               <string>Disable ZCull Occlusion Queries</string>
+               <string>停用 ZCull 遮擋查詢</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="forceCpuBlitEmulation">
               <property name="text">
-               <string>Force CPU blit emulation</string>
+               <string>強制 CPU 位塊傳輸仿真</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="disableOnDiskShaderCache">
               <property name="text">
-               <string>Disable On-Disk Shader Cache</string>
+               <string>停用磁碟著色器快取</string>
               </property>
              </widget>
             </item>
@@ -1678,20 +1678,20 @@
          <item>
           <widget class="QGroupBox" name="groupBox_7">
            <property name="title">
-            <string>Core</string>
+            <string>核心</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_44">
             <item>
              <widget class="QCheckBox" name="ppuDebug">
               <property name="text">
-               <string>PPU Debug</string>
+               <string>PPU 偵錯器</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="spuDebug">
               <property name="text">
-               <string>SPU Debug</string>
+               <string>SPU 偵錯器</string>
               </property>
              </widget>
             </item>
@@ -1745,13 +1745,13 @@
        <item>
         <widget class="QGroupBox" name="groupBox_63">
          <property name="title">
-          <string>Description</string>
+          <string>描述</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_52">
           <item>
            <widget class="QLabel" name="description_debug">
             <property name="text">
-             <string>Point your mouse at an option to display a description in here.
+             <string>將滑鼠指向一個選項，以便在此處顯示描述。
 
 
 </string>
@@ -1779,7 +1779,7 @@
      <item alignment="Qt::AlignLeft">
       <widget class="QPushButton" name="okButton">
        <property name="text">
-        <string>Save</string>
+        <string>儲存</string>
        </property>
        <property name="autoDefault">
         <bool>false</bool>
@@ -1789,7 +1789,7 @@
      <item alignment="Qt::AlignLeft">
       <widget class="QPushButton" name="cancelButton">
        <property name="text">
-        <string>Close</string>
+        <string>關閉</string>
        </property>
        <property name="autoDefault">
         <bool>false</bool>

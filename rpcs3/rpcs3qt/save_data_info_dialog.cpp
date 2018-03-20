@@ -9,7 +9,7 @@ constexpr auto qstr = QString::fromStdString;
 save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget* parent)
 	: QDialog(parent), m_entry(save)
 {
-	setWindowTitle(tr("Save Data Information"));
+	setWindowTitle(tr(u8"儲存資料訊息"));
 
 	// Table
 	m_list = new QTableWidget(this);
@@ -18,10 +18,10 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows); // enable to only select whole rows instead of items
 	m_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_list->setColumnCount(2);
-	m_list->setHorizontalHeaderLabels(QStringList() << tr("Name") << tr("Detail"));
+	m_list->setHorizontalHeaderLabels(QStringList() << tr(u8"名稱") << tr(u8"內容"));
 
 	// Buttons
-	QPushButton* close_button = new QPushButton(tr("&Close"), this);
+	QPushButton* close_button = new QPushButton(tr(u8"關閉"), this);
 	connect(close_button, &QAbstractButton::clicked, this, &save_data_info_dialog::close);
 
 	// Button Layout
@@ -59,16 +59,16 @@ void save_data_info_dialog::UpdateData()
 	m_list->setRowCount(num_entries);
 
 	//Maybe there should be more details of save data.
-	m_list->setItem(0, 0, new QTableWidgetItem(tr("User ID")));
-	m_list->setItem(0, 1, new QTableWidgetItem("00000001 (Default)"));
+	m_list->setItem(0, 0, new QTableWidgetItem(tr(u8"使用者 ID")));
+	m_list->setItem(0, 1, new QTableWidgetItem(u8"00000001 (預設)"));
 
-	m_list->setItem(1, 0, new QTableWidgetItem(tr("Title")));
+	m_list->setItem(1, 0, new QTableWidgetItem(tr(u8"標題")));
 	m_list->setItem(1, 1, new QTableWidgetItem(qstr(m_entry.title)));
 
-	m_list->setItem(2, 0, new QTableWidgetItem(tr("Subtitle")));
+	m_list->setItem(2, 0, new QTableWidgetItem(tr(u8"副標題")));
 	m_list->setItem(2, 1, new QTableWidgetItem(qstr(m_entry.subtitle)));
 
-	m_list->setItem(3, 0, new QTableWidgetItem(tr("Detail")));
+	m_list->setItem(3, 0, new QTableWidgetItem(tr(u8"內容")));
 	m_list->setItem(3, 1, new QTableWidgetItem(qstr(m_entry.details)));
 
 	QImage img;
@@ -77,7 +77,7 @@ void save_data_info_dialog::UpdateData()
 		m_list->insertRow(0);
 		QTableWidgetItem* img_item = new QTableWidgetItem();
 		img_item->setData(Qt::DecorationRole, QPixmap::fromImage(img));
-		m_list->setItem(0, 0, new QTableWidgetItem(tr("Icon")));
+		m_list->setItem(0, 0, new QTableWidgetItem(tr(u8"圖示")));
 		m_list->setItem(0, 1, img_item);
 	}
 }

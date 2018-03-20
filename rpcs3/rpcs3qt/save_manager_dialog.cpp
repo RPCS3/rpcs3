@@ -81,7 +81,7 @@ namespace
 save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::string dir, QWidget* parent)
 	: QDialog(parent), m_save_entries(), m_dir(dir), m_sort_column(1), m_sort_ascending(true), m_gui_settings(gui_settings)
 {
-	setWindowTitle(tr("Save Manager"));
+	setWindowTitle(tr(u8"儲存管理器"));
 	setMinimumSize(QSize(400, 400));
 
 	Init(dir);
@@ -100,11 +100,11 @@ void save_manager_dialog::Init(std::string dir)
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_list->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_list->setColumnCount(4);
-	m_list->setHorizontalHeaderLabels(QStringList() << tr("Title") << tr("Subtitle") << tr("Save ID") << tr("Entry Notes"));
+	m_list->setHorizontalHeaderLabels(QStringList() << tr(u8"標題") << tr(u8"副標題") << tr(u8"儲存 ID") << tr(u8"記錄備注"));
 
-	QPushButton* push_remove_entries = new QPushButton(tr("Delete Selection"), this);
+	QPushButton* push_remove_entries = new QPushButton(tr(u8"刪除選擇"), this);
 
-	QPushButton* push_close = new QPushButton(tr("&Close"), this);
+	QPushButton* push_close = new QPushButton(tr(u8"關閉"), this);
 	push_close->setAutoDefault(true);
 
 	// Button Layout
@@ -248,7 +248,7 @@ void save_manager_dialog::OnEntryRemove()
 	if (idx != -1)
 	{
 		int idx_real = m_list->item(idx, 0)->data(Qt::UserRole).toInt();
-		if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete:\n%1?").arg(qstr(m_save_entries[idx_real].title)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+		if (QMessageBox::question(this, tr(u8"刪除確認"), tr(u8"你確定要刪除:\n%1?").arg(qstr(m_save_entries[idx_real].title)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 		{
 			fs::remove_all(m_dir + m_save_entries[idx_real].dirName + "/");
 			m_list->removeRow(idx);
@@ -270,7 +270,7 @@ void save_manager_dialog::OnEntriesRemove()
 		return;
 	}
 
-	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %1 items?").arg(selection.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+	if (QMessageBox::question(this, tr(u8"刪除確認"), tr(u8"你確定要刪除這 %1 項目?").arg(selection.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
 		qSort(selection.begin(), selection.end(), qGreater<QModelIndex>());
 		for (QModelIndex index : selection)
@@ -295,17 +295,17 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 		return;
 	}
 
-	QAction* saveIDAct = new QAction(tr("SaveID"), this);
-	QAction* titleAct = new QAction(tr("Title"), this);
-	QAction* subtitleAct = new QAction(tr("Subtitle"), this);
+	QAction* saveIDAct = new QAction(tr(u8"儲存ID"), this);
+	QAction* titleAct = new QAction(tr(u8"標題"), this);
+	QAction* subtitleAct = new QAction(tr(u8"副標題"), this);
 
-	QAction* removeAct = new QAction(tr("&Remove"), this);
-	QAction* infoAct = new QAction(tr("&Info"), this);
-	QAction* showDirAct = new QAction(tr("&Open Save Directory"), this);
+	QAction* removeAct = new QAction(tr(u8"清理"), this);
+	QAction* infoAct = new QAction(tr(u8"訊息"), this);
+	QAction* showDirAct = new QAction(tr(u8"開啟儲存目錄"), this);
 
 	//This is also a stub for the sort setting. Ids are set accordingly to their sort-type integer.
 	// TODO: add more sorting types.
-	m_sort_options = new QMenu(tr("&Sort By"));
+	m_sort_options = new QMenu(tr(u8"排序方式"));
 	m_sort_options->addAction(titleAct);
 	m_sort_options->addAction(subtitleAct);
 	m_sort_options->addAction(saveIDAct);

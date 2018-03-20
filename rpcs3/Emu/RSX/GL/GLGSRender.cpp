@@ -616,12 +616,12 @@ void GLGSRender::on_init_thread()
 
 	if (!gl_caps.ARB_texture_buffer_supported)
 	{
-		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_texture_buffer_object is required but not supported by your GPU");
+		fmt::throw_exception("無法初始化 OpenGL 渲染器。 需要 ARB_texture_buffer_object 但您的 GPU 不支援。");
 	}
 
 	if (!gl_caps.ARB_dsa_supported && !gl_caps.EXT_dsa_supported)
 	{
-		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_direct_state_access or EXT_direct_state_access is required but not supported by your GPU");
+		fmt::throw_exception("無法初始化 OpenGL 渲染器。 需要 ARB_direct_state_access 或 EXT_direct_state_access 但您的 GPU 不支援。");
 	}
 
 	if (!gl_caps.ARB_depth_buffer_float_supported && g_cfg.video.force_high_precision_z_buffer)

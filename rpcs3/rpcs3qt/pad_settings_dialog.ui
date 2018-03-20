@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Configure Keyboard</string>
+   <string>設置鍵盤</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../resources.qrc">
@@ -26,7 +26,7 @@
      <item>
       <widget class="QGroupBox" name="groupBox_15">
        <property name="title">
-        <string>D-Pad</string>
+        <string>方向鍵</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_25">
         <property name="spacing">
@@ -78,7 +78,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_16">
              <property name="title">
-              <string>Up</string>
+              <string>上</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_21">
               <property name="leftMargin">
@@ -127,7 +127,7 @@
           <item>
            <widget class="QGroupBox" name="groupBox_18">
             <property name="title">
-             <string>Left</string>
+             <string>左</string>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_23">
              <property name="leftMargin">
@@ -158,7 +158,7 @@
           <item>
            <widget class="QGroupBox" name="groupBox_17">
             <property name="title">
-             <string>Right</string>
+             <string>右</string>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_24">
              <property name="leftMargin">
@@ -219,7 +219,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_19">
              <property name="title">
-              <string>Down</string>
+              <string>下</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_22">
               <property name="leftMargin">
@@ -269,7 +269,7 @@
      <item>
       <widget class="QGroupBox" name="groupBox_25">
        <property name="title">
-        <string>Left Analog</string>
+        <string>左類比</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_20">
         <property name="leftMargin">
@@ -315,7 +315,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_26">
              <property name="title">
-              <string>Up</string>
+              <string>上</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_16">
               <property name="leftMargin">
@@ -333,7 +333,7 @@
               <item>
                <widget class="QPushButton" name="b_lstick_up">
                 <property name="text">
-                 <string>Up</string>
+                 <string>上</string>
                 </property>
                 <property name="autoDefault">
                  <bool>false</bool>
@@ -364,7 +364,7 @@
           <item>
            <widget class="QGroupBox" name="groupBox_28">
             <property name="title">
-             <string>Left</string>
+             <string>左</string>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
              <property name="leftMargin">
@@ -382,7 +382,7 @@
              <item>
               <widget class="QPushButton" name="b_lstick_left">
                <property name="text">
-                <string>Left</string>
+                <string>左</string>
                </property>
                <property name="autoDefault">
                 <bool>false</bool>
@@ -395,7 +395,7 @@
           <item>
            <widget class="QGroupBox" name="groupBox_27">
             <property name="title">
-             <string>Right</string>
+             <string>右</string>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_19">
              <property name="leftMargin">
@@ -413,7 +413,7 @@
              <item>
               <widget class="QPushButton" name="b_lstick_right">
                <property name="text">
-                <string>Right</string>
+                <string>右</string>
                </property>
                <property name="autoDefault">
                 <bool>false</bool>
@@ -456,7 +456,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_29">
              <property name="title">
-              <string>Down</string>
+              <string>下</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_17">
               <property name="leftMargin">
@@ -474,7 +474,7 @@
               <item>
                <widget class="QPushButton" name="b_lstick_down">
                 <property name="text">
-                 <string>Down</string>
+                 <string>下</string>
                 </property>
                 <property name="autoDefault">
                  <bool>false</bool>
@@ -512,7 +512,7 @@
         </size>
        </property>
        <property name="title">
-        <string>Trigger Thresholds</string>
+        <string>觸發臨界值</string>
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_21">
         <property name="leftMargin">
@@ -581,7 +581,7 @@
      <item>
       <widget class="QGroupBox" name="gb_vibration">
        <property name="title">
-        <string>Enable Vibration</string>
+        <string>啟用振動</string>
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <property name="leftMargin">
@@ -602,7 +602,7 @@
            <bool>false</bool>
           </property>
           <property name="text">
-           <string>Large</string>
+           <string>大</string>
           </property>
           <property name="checked">
            <bool>true</bool>
@@ -615,7 +615,7 @@
            <bool>false</bool>
           </property>
           <property name="text">
-           <string>Small</string>
+           <string>小</string>
           </property>
           <property name="checked">
            <bool>true</bool>
@@ -628,7 +628,7 @@
            <bool>false</bool>
           </property>
           <property name="text">
-           <string>Switch</string>
+           <string>開關</string>
           </property>
          </widget>
         </item>
@@ -653,7 +653,7 @@
        <item>
         <widget class="QPushButton" name="b_ok">
          <property name="text">
-          <string>Save</string>
+          <string>儲存</string>
          </property>
          <property name="autoDefault">
           <bool>false</bool>
@@ -663,7 +663,7 @@
        <item>
         <widget class="QPushButton" name="b_cancel">
          <property name="text">
-          <string>Close</string>
+          <string>關閉</string>
          </property>
         </widget>
        </item>
@@ -770,7 +770,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_10">
              <property name="title">
-              <string>Select</string>
+              <string>選擇</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_32">
               <property name="leftMargin">
@@ -801,7 +801,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_11">
              <property name="title">
-              <string>Start</string>
+              <string>開始</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_33">
               <property name="leftMargin">
@@ -875,7 +875,7 @@
             <item>
              <widget class="QGroupBox" name="groupBox_12">
               <property name="title">
-               <string>PS Button</string>
+               <string>PS 按鍵</string>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_31">
                <property name="leftMargin">
@@ -893,7 +893,7 @@
                <item>
                 <widget class="QPushButton" name="b_ps">
                  <property name="text">
-                  <string>Backspace</string>
+                  <string>退格</string>
                  </property>
                  <property name="autoDefault">
                   <bool>false</bool>
@@ -1149,13 +1149,13 @@
      <item>
       <widget class="QGroupBox" name="gb_description">
        <property name="title">
-        <string>Description</string>
+        <string>描述</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_15">
         <item>
          <widget class="QLabel" name="l_description">
           <property name="text">
-           <string>Unfortunately, we currently do not natively support DualShock 3 controllers. You can however use third party tools like SCP Driver Package to allow your DualShock 3 controller to function like an XInput controller. We plan to add additional input methods in the future.</string>
+           <string>很可惜目前尚不支援 DualShock 3 控制器。然而，也可使用第三方工具，如 SCP 驅動程式包，讓您的 DUALSHOCK 3 控制器就像 XINPUT 控制器一樣的作用。 我們計劃在以後加入額外的輸入方式。</string>
           </property>
           <property name="textFormat">
            <enum>Qt::PlainText</enum>
@@ -1181,7 +1181,7 @@
      <item>
       <widget class="QGroupBox" name="groupBox_20">
        <property name="title">
-        <string>Face Buttons</string>
+        <string>正面按鍵</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_8">
         <property name="leftMargin">
@@ -1227,7 +1227,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_21">
              <property name="title">
-              <string>Triangle</string>
+              <string>△</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_7">
               <property name="leftMargin">
@@ -1276,7 +1276,7 @@
           <item>
            <widget class="QGroupBox" name="groupBox_23">
             <property name="title">
-             <string>Square</string>
+             <string>□</string>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_4">
              <property name="leftMargin">
@@ -1307,7 +1307,7 @@
           <item>
            <widget class="QGroupBox" name="groupBox_22">
             <property name="title">
-             <string>Circle</string>
+             <string>○</string>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_5">
              <property name="leftMargin">
@@ -1368,7 +1368,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_24">
              <property name="title">
-              <string>Cross</string>
+              <string>╳</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_6">
               <property name="leftMargin">
@@ -1418,7 +1418,7 @@
      <item>
       <widget class="QGroupBox" name="groupBox_30">
        <property name="title">
-        <string>Right Analog</string>
+        <string>右類比</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_13">
         <property name="leftMargin">
@@ -1464,7 +1464,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_31">
              <property name="title">
-              <string>Up</string>
+              <string>上</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_9">
               <property name="leftMargin">
@@ -1513,7 +1513,7 @@
           <item>
            <widget class="QGroupBox" name="groupBox_33">
             <property name="title">
-             <string>Left</string>
+             <string>左</string>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_10">
              <property name="leftMargin">
@@ -1544,7 +1544,7 @@
           <item>
            <widget class="QGroupBox" name="groupBox_32">
             <property name="title">
-             <string>Right</string>
+             <string>右</string>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_11">
              <property name="leftMargin">
@@ -1605,7 +1605,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_34">
              <property name="title">
-              <string>Down</string>
+              <string>下</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_12">
               <property name="leftMargin">
@@ -1655,7 +1655,7 @@
      <item>
       <widget class="QGroupBox" name="gb_sticks">
        <property name="title">
-        <string>Analog Deadzones</string>
+        <string>類比盲區</string>
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_22">
         <property name="leftMargin">
@@ -1733,14 +1733,14 @@
        <item>
         <widget class="QPushButton" name="b_blacklist">
          <property name="text">
-          <string>Filter Noise</string>
+          <string>過濾雜訊</string>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QPushButton" name="b_reset">
          <property name="text">
-          <string>Restore Defaults</string>
+          <string>恢復預設值</string>
          </property>
          <property name="autoDefault">
           <bool>false</bool>

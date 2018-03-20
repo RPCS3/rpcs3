@@ -21,14 +21,14 @@ class game_compatibility : public QObject
 
 	const std::map<QString, Compat_Status> Status_Data =
 	{
-		{ "Playable", { 0, "", "#1ebc61", QObject::tr("Playable"),         QObject::tr("Games that can be properly played from start to finish") } },
-		{ "Ingame",   { 1, "", "#f9b32f", QObject::tr("Ingame"),           QObject::tr("Games that either can't be finished, have serious glitches or have insufficient performance") } },
-		{ "Intro",    { 2, "", "#e08a1e", QObject::tr("Intro"),            QObject::tr("Games that display image but don't make it past the menus") } },
-		{ "Loadable", { 3, "", "#e74c3c", QObject::tr("Loadable"),         QObject::tr("Games that display a black screen with a framerate on the window's title") } },
-		{ "Nothing",  { 4, "", "#455556", QObject::tr("Nothing"),          QObject::tr("Games that don't initialize properly, not loading at all and/or crashing the emulator") } },
-		{ "NoResult", { 5, "", "",        QObject::tr("No results found"), QObject::tr("There is no entry for this game or application in the compatibility database yet.") } },
-		{ "NoData",   { 6, "", "",        QObject::tr("Database missing"), QObject::tr("Right click here and download the current database.\nMake sure you are connected to the internet.") } },
-		{ "Download", { 7, "", "",        QObject::tr("Retrieving..."),    QObject::tr("Downloading the compatibility database. Please wait...") } }
+		{ "Playable", { 0, "", "#1ebc61", QObject::tr(u8"可玩"),         QObject::tr(u8"可以從頭到尾執行的遊戲。") } },
+		{ "Ingame",   { 1, "", "#f9b32f", QObject::tr(u8"遊戲中"),           QObject::tr(u8"不完善的遊戲，有嚴重故障或性能不足。") } },
+		{ "Intro",    { 2, "", "#e08a1e", QObject::tr(u8"介紹"),            QObject::tr(u8"顯示圖像但不會超過遊戲選單。") } },
+		{ "Loadable", { 3, "", "#e74c3c", QObject::tr(u8"可讀取"),         QObject::tr(u8"在視窗標題上僅顯示框速率但黑畫面的遊戲。") } },
+		{ "Nothing",  { 4, "", "#455556", QObject::tr(u8"沒有"),          QObject::tr(u8"不正確初始化遊戲，根本不讀取或使仿真器崩潰。") } },
+		{ "NoResult", { 5, "", "",        QObject::tr(u8"未找到結果"), QObject::tr(u8"此相容性資料庫中未發現遊戲或應用程式項目。") } },
+		{ "NoData",   { 6, "", "",        QObject::tr(u8"資料庫遺失"), QObject::tr(u8"右鍵點擊此處並下載最新的資料庫。\n確定您已連結到網際網路。") } },
+		{ "Download", { 7, "", "",        QObject::tr(u8"提取..."),    QObject::tr(u8"下載相容性資料庫。 請稍候...") } }
 	};
 	int m_timer_count = 0;
 	QString m_filepath;
