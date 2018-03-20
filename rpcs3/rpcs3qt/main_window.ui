@@ -73,7 +73,7 @@
      <bool>false</bool>
     </property>
     <property name="placeholderText">
-     <string>搜尋...</string>
+     <string>Search...</string>
     </property>
     <property name="clearButtonEnabled">
      <bool>false</bool>
@@ -149,14 +149,14 @@
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>檔案</string>
+     <string>File</string>
     </property>
     <widget class="QMenu" name="bootRecentMenu">
      <property name="enabled">
       <bool>true</bool>
      </property>
      <property name="title">
-      <string>近期啟動</string>
+      <string>Boot Recent</string>
      </property>
      <property name="toolTipsVisible">
       <bool>true</bool>
@@ -176,7 +176,7 @@
    </widget>
    <widget class="QMenu" name="menuEmulation">
     <property name="title">
-     <string>仿真</string>
+     <string>Emulation</string>
     </property>
     <addaction name="sysPauseAct"/>
     <addaction name="sysStopAct"/>
@@ -187,7 +187,7 @@
    </widget>
    <widget class="QMenu" name="menuConfiguration">
     <property name="title">
-     <string>組態</string>
+     <string>Configuration</string>
     </property>
     <addaction name="confCPUAct"/>
     <addaction name="confGPUAct"/>
@@ -201,7 +201,7 @@
    </widget>
    <widget class="QMenu" name="menuManage">
     <property name="title">
-     <string>管理</string>
+     <string>Manage</string>
     </property>
     <addaction name="confVFSDialogAct"/>
     <addaction name="separator"/>
@@ -212,7 +212,7 @@
    </widget>
    <widget class="QMenu" name="menuUtilities">
     <property name="title">
-     <string>實用項</string>
+     <string>Utilities</string>
     </property>
     <addaction name="toolsCgDisasmAct"/>
     <addaction name="toolskernel_explorerAct"/>
@@ -224,11 +224,11 @@
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
-     <string>檢視</string>
+     <string>View</string>
     </property>
     <widget class="QMenu" name="menuGame_List_Icons">
      <property name="title">
-      <string>遊戲清單圖示</string>
+      <string>Game List Icons</string>
      </property>
      <addaction name="setIconSizeTinyAct"/>
      <addaction name="setIconSizeSmallAct"/>
@@ -237,14 +237,14 @@
     </widget>
     <widget class="QMenu" name="menuGame_List_Mode">
      <property name="title">
-      <string>遊戲清單模式</string>
+      <string>Game List Mode</string>
      </property>
      <addaction name="setlistModeListAct"/>
      <addaction name="setlistModeGridAct"/>
     </widget>
     <widget class="QMenu" name="menuGame_Categories">
      <property name="title">
-      <string>遊戲類別</string>
+      <string>Game Categories</string>
      </property>
      <addaction name="showCatHDDGameAct"/>
      <addaction name="showCatDiscGameAct"/>
@@ -268,7 +268,7 @@
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
-     <string>說明</string>
+     <string>Help</string>
     </property>
     <addaction name="actionCheck_for_Updates"/>
     <addaction name="separator"/>
@@ -294,7 +294,7 @@
     <enum>Qt::PreventContextMenu</enum>
    </property>
    <property name="windowTitle">
-    <string>顯示工具列</string>
+    <string>Show tool bar</string>
    </property>
    <property name="movable">
     <bool>false</bool>
@@ -338,28 +338,28 @@
   </widget>
   <action name="bootElfAct">
    <property name="text">
-    <string>啟動 SELF/ELF 檔案</string>
+    <string>Boot SELF/ELF</string>
    </property>
   </action>
   <action name="bootGameAct">
    <property name="text">
-    <string>啟動遊戲</string>
+    <string>Boot Game</string>
    </property>
   </action>
   <action name="bootInstallPkgAct">
    <property name="text">
-    <string>安裝 PKG</string>
+    <string>Install .pkg</string>
    </property>
    <property name="toolTip">
-    <string>從 PKG 檔案安裝應用程式</string>
+    <string>Install application from pkg file</string>
    </property>
   </action>
   <action name="bootInstallPupAct">
    <property name="text">
-    <string>安裝 韌體/固件</string>
+    <string>Install Firmware</string>
    </property>
    <property name="toolTip">
-    <string>從 PS3UPDAT.PUP 安裝韌體</string>
+    <string>Install firmware from PS3UPDAT.PUP</string>
    </property>
   </action>
   <action name="sysPauseAct">
@@ -371,10 +371,10 @@
      <normaloff>:/Icons/pause.png</normaloff>:/Icons/pause.png</iconset>
    </property>
    <property name="text">
-    <string>暫停</string>
+    <string>Pause</string>
    </property>
    <property name="toolTip">
-    <string>啟動仿真</string>
+    <string>Start Emulation</string>
    </property>
   </action>
   <action name="sysStopAct">
@@ -386,10 +386,10 @@
      <normaloff>:/Icons/stop.png</normaloff>:/Icons/stop.png</iconset>
    </property>
    <property name="text">
-    <string>停止</string>
+    <string>Stop</string>
    </property>
    <property name="toolTip">
-    <string>停止仿真</string>
+    <string>Stop Emulation</string>
    </property>
   </action>
   <action name="sysSendOpenMenuAct">
@@ -397,7 +397,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>傳送開啟系統選單 CMD</string>
+    <string>Send Open System Menu CMD</string>
    </property>
   </action>
   <action name="sysSendExitAct">
@@ -405,7 +405,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>傳送關閉 CMD</string>
+    <string>Send Exit CMD</string>
    </property>
   </action>
   <action name="confCPUAct">
@@ -413,7 +413,7 @@
     <string>CPU</string>
    </property>
    <property name="toolTip">
-    <string>設定 CPU</string>
+    <string>Configure CPU</string>
    </property>
   </action>
   <action name="confGPUAct">
@@ -421,42 +421,42 @@
     <string>GPU</string>
    </property>
    <property name="toolTip">
-    <string>設定圖形</string>
+    <string>Configure Graphics</string>
    </property>
   </action>
   <action name="confPadsAct">
    <property name="text">
-    <string>控制器(PAD)</string>
+    <string>Pads</string>
    </property>
    <property name="iconText">
-    <string>控制器(PAD)</string>
+    <string>Pads</string>
    </property>
    <property name="toolTip">
-    <string>設定控制器</string>
+    <string>Configure Controls</string>
    </property>
   </action>
   <action name="confAudioAct">
    <property name="text">
-    <string>聲音</string>
+    <string>Audio</string>
    </property>
    <property name="toolTip">
-    <string>設定聲音</string>
+    <string>Configure Audio</string>
    </property>
   </action>
   <action name="confIOAct">
    <property name="text">
-    <string>輸入/輸出</string>
+    <string>Input/Output</string>
    </property>
    <property name="toolTip">
-    <string>設定輸入/輸出</string>
+    <string>Configure Input/Output</string>
    </property>
   </action>
   <action name="confSystemAct">
    <property name="text">
-    <string>系統</string>
+    <string>System</string>
    </property>
    <property name="toolTip">
-    <string>設定系統</string>
+    <string>Configure System</string>
    </property>
   </action>
   <action name="confAutopauseManagerAct">
@@ -467,18 +467,18 @@
     <string>Auto Pause</string>
    </property>
    <property name="toolTip">
-    <string>設定 Auto Pause</string>
+    <string>Configure Auto Pause</string>
    </property>
   </action>
   <action name="exitAct">
    <property name="text">
-    <string>關閉</string>
+    <string>Exit</string>
    </property>
    <property name="toolTip">
-    <string>關閉 RPCS3</string>
+    <string>Exit RPCS3</string>
    </property>
    <property name="statusTip">
-    <string>關閉應用程式</string>
+    <string>Exit the application</string>
    </property>
   </action>
   <action name="confSavedataManagerAct">
@@ -486,10 +486,10 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>儲存資料</string>
+    <string>Save Data</string>
    </property>
    <property name="toolTip">
-    <string>管理儲存資料</string>
+    <string>Manage Save Data</string>
    </property>
   </action>
   <action name="actionManage_Trophy_Data">
@@ -497,10 +497,10 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>獎盃</string>
+    <string>Trophies</string>
    </property>
    <property name="toolTip">
-    <string>管理獎盃</string>
+    <string>Manage Trophies</string>
    </property>
   </action>
   <action name="actionManage_Users">
@@ -508,15 +508,15 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>使用者帳號</string>
+    <string>User Accounts</string>
    </property>
    <property name="toolTip">
-    <string>管理使用者帳號</string>
+    <string>Manage User Accounts</string>
    </property>
   </action>
   <action name="toolsCgDisasmAct">
    <property name="text">
-    <string>Cg 反組譯</string>
+    <string>Cg Disasm</string>
    </property>
   </action>
   <action name="toolskernel_explorerAct">
@@ -524,7 +524,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>核心瀏覽器</string>
+    <string>Kernel Explorer</string>
    </property>
   </action>
   <action name="toolsmemory_viewerAct">
@@ -532,7 +532,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>記憶體檢視器</string>
+    <string>Memory Viewer</string>
    </property>
   </action>
   <action name="toolsRsxDebuggerAct">
@@ -540,7 +540,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>RSX 偵錯器</string>
+    <string>RSX Debugger</string>
    </property>
   </action>
   <action name="toolsStringSearchAct">
@@ -548,12 +548,12 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>字串搜尋</string>
+    <string>String Search</string>
    </property>
   </action>
   <action name="toolsDecryptSprxLibsAct">
    <property name="text">
-    <string>SPRX 解密</string>
+    <string>SPRX Decryption</string>
    </property>
   </action>
   <action name="showDebuggerAct">
@@ -561,7 +561,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>顯示偵錯器</string>
+    <string>Show Debugger</string>
    </property>
   </action>
   <action name="showLogAct">
@@ -569,17 +569,17 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>顯示日誌</string>
+    <string>Show Log/TTY</string>
    </property>
   </action>
   <action name="aboutAct">
    <property name="text">
-    <string>關於 RPCS3</string>
+    <string>About RPCS3</string>
    </property>
   </action>
   <action name="aboutQtAct">
    <property name="text">
-    <string>關於 Qt</string>
+    <string>About Qt</string>
    </property>
   </action>
   <action name="showGameListAct">
@@ -587,7 +587,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>顯示遊戲清單</string>
+    <string>Show Game List</string>
    </property>
   </action>
   <action name="showToolBarAct">
@@ -595,12 +595,12 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>顯示工具列</string>
+    <string>Show Tool Bar</string>
    </property>
   </action>
   <action name="refreshGameListAct">
    <property name="text">
-    <string>更新遊戲清單</string>
+    <string>Game List Refresh</string>
    </property>
   </action>
   <action name="actionManage_RAP_Licences">
@@ -608,7 +608,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>RAP 檔案</string>
+    <string>RAP Files</string>
    </property>
   </action>
   <action name="actionCheck_for_Updates">
@@ -616,17 +616,17 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>檢查更新</string>
+    <string>Check for Updates</string>
    </property>
   </action>
   <action name="confVFSDialogAct">
    <property name="text">
-    <string>虛擬檔案系統</string>
+    <string>Virtual File System</string>
    </property>
   </action>
   <action name="clearRecentAct">
    <property name="text">
-    <string>清理清單</string>
+    <string>List Clear</string>
    </property>
   </action>
   <action name="freezeRecentAct">
@@ -634,7 +634,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>停用清單</string>
+    <string>List Freeze</string>
    </property>
   </action>
   <action name="setIconSizeTinyAct">
@@ -642,7 +642,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>最小</string>
+    <string>Tiny</string>
    </property>
   </action>
   <action name="setIconSizeSmallAct">
@@ -653,7 +653,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>小</string>
+    <string>Small</string>
    </property>
   </action>
   <action name="setIconSizeMediumAct">
@@ -661,7 +661,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>中</string>
+    <string>Medium</string>
    </property>
   </action>
   <action name="setIconSizeLargeAct">
@@ -669,7 +669,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>最大</string>
+    <string>Large</string>
    </property>
   </action>
   <action name="setlistModeListAct">
@@ -680,7 +680,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>顯示清單</string>
+    <string>List View</string>
    </property>
   </action>
   <action name="setlistModeGridAct">
@@ -688,7 +688,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>格狀圖示</string>
+    <string>Grid View</string>
    </property>
   </action>
   <action name="sysRebootAct">
@@ -700,7 +700,7 @@
      <normaloff>:/Icons/restart.png</normaloff>:/Icons/restart.png</iconset>
    </property>
    <property name="text">
-    <string>重啟</string>
+    <string>Restart</string>
    </property>
   </action>
   <action name="showCatHDDGameAct">
@@ -711,7 +711,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>硬碟遊戲</string>
+    <string>HDD Games</string>
    </property>
   </action>
   <action name="showCatDiscGameAct">
@@ -722,7 +722,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>光碟遊戲</string>
+    <string>Disc Games</string>
    </property>
   </action>
   <action name="showCatHomeAct">
@@ -744,7 +744,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>音樂/影視</string>
+    <string>Audio/Video</string>
    </property>
   </action>
   <action name="showCatGameDataAct">
@@ -755,7 +755,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>遊戲資料</string>
+    <string>Game Data</string>
    </property>
   </action>
   <action name="showCatUnknownAct">
@@ -766,7 +766,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>未知</string>
+    <string>Unknown</string>
    </property>
   </action>
   <action name="toolbar_start">
@@ -775,10 +775,10 @@
      <normaloff>:/Icons/pause.png</normaloff>:/Icons/pause.png</iconset>
    </property>
    <property name="text">
-    <string>啟動</string>
+    <string>start</string>
    </property>
    <property name="toolTip">
-    <string>暫停仿真</string>
+    <string>Pause emulation</string>
    </property>
   </action>
   <action name="toolbar_stop">
@@ -787,10 +787,10 @@
      <normaloff>:/Icons/stop.png</normaloff>:/Icons/stop.png</iconset>
    </property>
    <property name="text">
-    <string>停止</string>
+    <string>stop</string>
    </property>
    <property name="toolTip">
-    <string>停止仿真</string>
+    <string>Stop emulation</string>
    </property>
   </action>
   <action name="toolbar_config">
@@ -799,10 +799,10 @@
      <normaloff>:/Icons/configure.png</normaloff>:/Icons/configure.png</iconset>
    </property>
    <property name="text">
-    <string>設置</string>
+    <string>config</string>
    </property>
    <property name="toolTip">
-    <string>組態</string>
+    <string>Configuration</string>
    </property>
   </action>
   <action name="toolbar_controls">
@@ -811,13 +811,13 @@
      <normaloff>:/Icons/controls.png</normaloff>:/Icons/controls.png</iconset>
    </property>
    <property name="text">
-    <string>控制器</string>
+    <string>Controls</string>
    </property>
    <property name="iconText">
-    <string>控制器</string>
+    <string>Controls</string>
    </property>
    <property name="toolTip">
-    <string>設置控制器</string>
+    <string>Configure controls</string>
    </property>
   </action>
   <action name="toolbar_snap">
@@ -832,7 +832,7 @@
     <string>snap</string>
    </property>
    <property name="toolTip">
-    <string>截取框</string>
+    <string>Capture frame</string>
    </property>
    <property name="visible">
     <bool>false</bool>
@@ -847,10 +847,10 @@
      <normaloff>:/Icons/fullscreen.png</normaloff>:/Icons/fullscreen.png</iconset>
    </property>
    <property name="text">
-    <string>全螢幕</string>
+    <string>fullscreen</string>
    </property>
    <property name="toolTip">
-    <string>切換全螢幕</string>
+    <string>Toggle fullscreen</string>
    </property>
   </action>
   <action name="toolbar_list">
@@ -859,10 +859,10 @@
      <normaloff>:/Icons/list.png</normaloff>:/Icons/list.png</iconset>
    </property>
    <property name="text">
-    <string>清單</string>
+    <string>list</string>
    </property>
    <property name="toolTip">
-    <string>切換清單模式</string>
+    <string>Switch to list mode</string>
    </property>
   </action>
   <action name="toolbar_grid">
@@ -871,10 +871,10 @@
      <normaloff>:/Icons/grid.png</normaloff>:/Icons/grid.png</iconset>
    </property>
    <property name="text">
-    <string>格狀</string>
+    <string>grid</string>
    </property>
    <property name="toolTip">
-    <string>切換格狀模式</string>
+    <string>Switch to grid mode</string>
    </property>
   </action>
   <action name="toolbar_sort">
@@ -886,10 +886,10 @@
      <normaloff>:/Icons/sort.png</normaloff>:/Icons/sort.png</iconset>
    </property>
    <property name="text">
-    <string>分類</string>
+    <string>sort</string>
    </property>
    <property name="toolTip">
-    <string>排序選項</string>
+    <string>Sort options</string>
    </property>
    <property name="visible">
     <bool>false</bool>
@@ -904,10 +904,10 @@
      <normaloff>:/Icons/refresh.png</normaloff>:/Icons/refresh.png</iconset>
    </property>
    <property name="text">
-    <string>更新</string>
+    <string>refresh</string>
    </property>
    <property name="toolTip">
-    <string>更新遊戲清單</string>
+    <string>Refresh gamelist</string>
    </property>
   </action>
   <action name="toolbar_disc">
@@ -916,10 +916,10 @@
      <normaloff>:/Icons/disc.png</normaloff>:/Icons/disc.png</iconset>
    </property>
    <property name="text">
-    <string>光碟</string>
+    <string>disc</string>
    </property>
    <property name="toolTip">
-    <string>啟動遊戲</string>
+    <string>Boot game</string>
    </property>
   </action>
   <action name="showCatOtherAct">
@@ -930,7 +930,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>其它</string>
+    <string>Other</string>
    </property>
   </action>
   <action name="showGameToolBarAct">
@@ -938,7 +938,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>顯示遊戲工具列</string>
+    <string>Show Game Tool Bar</string>
    </property>
   </action>
  </widget>

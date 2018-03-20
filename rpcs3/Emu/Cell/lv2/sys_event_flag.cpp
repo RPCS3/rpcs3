@@ -36,7 +36,7 @@ error_code sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribu
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_RETRY && protocol != SYS_SYNC_PRIORITY && protocol != SYS_SYNC_PRIORITY_INHERIT)
 	{
-		sys_event_flag.error(u8"sys_event_flag_create(): \u672A\u77E5\u5354\u5B9A (0x%x)", protocol);
+		sys_event_flag.error("sys_event_flag_create(): unknown protocol (0x%x)", protocol);
 		return CELL_EINVAL;
 	}
 
@@ -44,7 +44,7 @@ error_code sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribu
 
 	if (type != SYS_SYNC_WAITER_SINGLE && type != SYS_SYNC_WAITER_MULTIPLE)
 	{
-		sys_event_flag.error(u8"sys_event_flag_create(): \u672A\u77E5\u985E\u578B (0x%x)", type);
+		sys_event_flag.error("sys_event_flag_create(): unknown type (0x%x)", type);
 		return CELL_EINVAL;
 	}
 
@@ -109,7 +109,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 	if (!lv2_event_flag::check_mode(mode))
 	{
-		sys_event_flag.error(u8"sys_event_flag_wait(): \u672A\u77E5\u6A21\u5F0F (0x%x)", mode);
+		sys_event_flag.error("sys_event_flag_wait(): unknown mode (0x%x)", mode);
 		return CELL_EINVAL;
 	}
 
@@ -200,7 +200,7 @@ error_code sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> res
 
 	if (!lv2_event_flag::check_mode(mode))
 	{
-		sys_event_flag.error(u8"sys_event_flag_trywait(): \u672A\u77E5\u6A21\u5F0F (0x%x)", mode);
+		sys_event_flag.error("sys_event_flag_trywait(): unknown mode (0x%x)", mode);
 		return CELL_EINVAL;
 	}
 

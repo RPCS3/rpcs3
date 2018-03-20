@@ -25,7 +25,7 @@ SPUDatabase::SPUDatabase()
 {
 	// TODO: load existing database associated with currently running executable
 
-	LOG_SUCCESS(SPU, u8"SPU \u8CC7\u6599\u5EAB\u521D\u59CB\u5316...");
+	LOG_SUCCESS(SPU, "SPU Database initialized...");
 }
 
 SPUDatabase::~SPUDatabase()
@@ -38,7 +38,7 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 	// Check arguments (bounds and alignment)
 	if (max_limit > 0x40000 || entry >= max_limit || entry % 4 || max_limit % 4)
 	{
-		fmt::throw_exception(u8"\u53C3\u6578\u7121\u6548 (entry=0x%05x, limit=0x%05x)" HERE, entry, max_limit);
+		fmt::throw_exception("Invalid arguments (entry=0x%05x, limit=0x%05x)" HERE, entry, max_limit);
 	}
 
 	// Key for multimap

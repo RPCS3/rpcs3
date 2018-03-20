@@ -22,13 +22,13 @@ error_code _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sy
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_RETRY && protocol != SYS_SYNC_PRIORITY)
 	{
-		sys_lwmutex.error(u8"_sys_lwmutex_create(): \u672A\u77E5\u5354\u5B9A (0x%x)", protocol);
+		sys_lwmutex.error("_sys_lwmutex_create(): unknown protocol (0x%x)", protocol);
 		return CELL_EINVAL;
 	}
 
 	if (arg4 != 0x80000001 || arg6)
 	{
-		fmt::throw_exception(u8"\u672A\u77E5\u53C3\u6578 (arg4=0x%x, arg6=0x%x)" HERE, arg4, arg6);
+		fmt::throw_exception("Unknown arguments (arg4=0x%x, arg6=0x%x)" HERE, arg4, arg6);
 	}
 
 	if (const u32 id = idm::make<lv2_obj, lv2_lwmutex>(protocol, control, name))

@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>歡迎使用 RPCS3</string>
+   <string>Welcome to RPCS3</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../resources.qrc">
@@ -115,7 +115,7 @@
              </font>
             </property>
             <property name="text">
-             <string>RPCS3 PlayStation 3 仿真器</string>
+             <string>RPCS3 PlayStation 3 Emulator</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -131,7 +131,7 @@
              </font>
             </property>
             <property name="text">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;RPCS3 是一款開放式原始碼的 Sony PlayStation 3 仿真器與偵錯器。&lt;br/&gt;所使用 C ++ 編寫用於 Windows 和 Linux 與 &lt;a href=&quot;https://www.patreon.com/Nekotekina&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;資助&lt;/span&gt;&lt;/a&gt;.&lt;br/&gt;我們的主要「開發人員」和「貢獻人員」一直在努力著確保這個項目可以是最好的，&lt;br/&gt;但還有很多可以進行實現及優化的工作要做。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;RPCS3 is an open-source Sony PlayStation 3 emulator and debugger.&lt;br/&gt;It is written in C++ for Windows and Linux and funded with &lt;a href=&quot;https://www.patreon.com/Nekotekina&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Patreon&lt;/span&gt;&lt;/a&gt;.&lt;br/&gt;Our developers and contributors are always working hard to ensure this project can be the best that it can be.&lt;br/&gt;There are still plenty of implementations to be made and optimizations to be done.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="textFormat">
              <enum>Qt::RichText</enum>
@@ -176,7 +176,7 @@
         </font>
        </property>
        <property name="text">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;在開始使用前，您需要安裝 &lt;span style=&quot; font-weight:600;&quot;&gt;PlayStation 3 韌體&lt;/span&gt;.&lt;br/&gt;請參閱 &lt;a href=&quot;https://rpcs3.net/quickstart&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;快速開始&lt;/span&gt;&lt;/a&gt; 指南，了解更多訊息可在官方網站上找到。&lt;br/&gt;如果您還有其他疑問，請參閱 &lt;a href=&quot;https://rpcs3.net/faq&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;常見問題&lt;/span&gt;&lt;/a&gt;.&lt;br/&gt;除此之外，也可以進一步討論，可以到我們的支援 &lt;a href=&quot;https://forums.rpcs3.net&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;論壇&lt;/span&gt;&lt;/a&gt; 或者在我們的 &lt;a href=&quot;https://discord.me/RPCS3&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Discord&lt;/span&gt;&lt;/a&gt; 服務器。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;To get started, you must first install the &lt;span style=&quot; font-weight:600;&quot;&gt;PlayStation 3 firmware&lt;/span&gt;.&lt;br/&gt;Please refer to the &lt;a href=&quot;https://rpcs3.net/quickstart&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Quickstart&lt;/span&gt;&lt;/a&gt; guide found on the official website for further information.&lt;br/&gt;If you have any further questions, please refer to the &lt;a href=&quot;https://rpcs3.net/faq&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;FAQ&lt;/span&gt;&lt;/a&gt;.&lt;br/&gt;Otherwise, further discussion and support can be found on the &lt;a href=&quot;https://forums.rpcs3.net&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Forums&lt;/span&gt;&lt;/a&gt; or on our &lt;a href=&quot;https://discord.me/RPCS3&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Discord&lt;/span&gt;&lt;/a&gt; server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="textFormat">
         <enum>Qt::RichText</enum>
@@ -203,7 +203,7 @@
         </font>
        </property>
        <property name="text">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600; color:#ff0000;&quot;&gt;RPCS3 絕不縱容盜版，你必須傾印自己的遊戲。&lt;/span&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600; color:#ff0000;&quot;&gt;RPCS3 does not condone piracy. You must dump your own games.&lt;/span&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -227,7 +227,7 @@
        <item alignment="Qt::AlignLeft">
         <widget class="QPushButton" name="okay">
          <property name="text">
-          <string>繼續</string>
+          <string>Continue</string>
          </property>
          <property name="autoDefault">
           <bool>true</bool>
@@ -250,7 +250,7 @@
        <item alignment="Qt::AlignLeft">
         <widget class="QCheckBox" name="i_have_read">
          <property name="text">
-          <string>我已閱讀快速入門指南</string>
+          <string>I have read the Quickstart guide</string>
          </property>
         </widget>
        </item>
@@ -270,7 +270,7 @@
        <item alignment="Qt::AlignLeft">
         <widget class="QCheckBox" name="do_not_show">
          <property name="text">
-          <string>不再顯示</string>
+          <string>Do not show again</string>
          </property>
         </widget>
        </item>

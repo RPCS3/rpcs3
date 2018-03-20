@@ -88,7 +88,7 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
 
 	u32 addr = vm::falloc(0x40000000, 0x400000);
 	if (addr == 0 || addr != 0x40000000)
-		fmt::throw_exception(u8"\u7121\u6CD5\u5206\u914D 0x40000000.");
+		fmt::throw_exception("Failed to alloc 0x40000000.");
 
 	*context_id = 0x55555555;
 
@@ -416,7 +416,7 @@ s32 sys_rsx_device_map(vm::ptr<u64> addr, vm::ptr<u64> a2, u32 dev_id)
 
 	if (dev_id != 8) {
 		// TODO: lv1 related
-		fmt::throw_exception(u8"sys_rsx_device_map: \u7121\u6548 dev_id %d", dev_id);
+		fmt::throw_exception("sys_rsx_device_map: Invalid dev_id %d", dev_id);
 	}
 
 	// a2 seems to not be referenced in cellGcmSys

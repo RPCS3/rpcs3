@@ -27,12 +27,12 @@ const spu_decoder<spu_recompiler> s_spu_decoder;
 spu_recompiler::spu_recompiler()
 	: m_jit(std::make_shared<asmjit::JitRuntime>())
 {
-	LOG_SUCCESS(SPU, u8"SPU \u53CD\u7DE8\u8B6F (ASMJIT) \u5EFA\u7ACB...");
+	LOG_SUCCESS(SPU, "SPU Recompiler (ASMJIT) created...");
 
 	if (g_cfg.core.spu_debug)
 	{
 		fs::file log(Emu.GetCachePath() + "SPUJIT.log", fs::rewrite);
-		log.write(fmt::format(u8"SPU JIT \u521D\u59CB\u5316...\n\n\u6A19\u984C: %s\n\u6A19\u984C ID: %s\n\n", Emu.GetTitle().c_str(), Emu.GetTitleID().c_str()));
+		log.write(fmt::format("SPU JIT initialization...\n\nTitle: %s\nTitle ID: %s\n\n", Emu.GetTitle().c_str(), Emu.GetTitleID().c_str()));
 	}
 }
 
@@ -48,7 +48,7 @@ void spu_recompiler::compile(spu_function_t& f)
 
 	if (f.addr >= 0x40000 || f.addr % 4 || f.size == 0 || f.size > 0x40000 - f.addr || f.size % 4)
 	{
-		fmt::throw_exception(u8"\u7121\u6548 SPU function (addr=0x%05x, size=0x%x)" HERE, f.addr, f.size);
+		fmt::throw_exception("Invalid SPU function (addr=0x%05x, size=0x%x)" HERE, f.addr, f.size);
 	}
 
 	using namespace asmjit;
