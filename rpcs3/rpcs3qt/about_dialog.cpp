@@ -14,7 +14,7 @@ about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_
 
 	ui->close->setDefault(true);
 
-	ui->version->setText(tr(u8"RPCS3 ª©¥»: %1").arg(qstr(rpcs3::version.to_string())));
+	ui->version->setText(tr(u8"RPCS3 \u7248\u672C: %1").arg(qstr(rpcs3::version.to_string())));
 
 	// Events
 	connect(ui->gitHub, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.github.com/RPCS3")); });

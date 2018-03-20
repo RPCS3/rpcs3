@@ -47,7 +47,7 @@ static semaphore<> s_qt_mutex{};
 	}
 
 	QMessageBox msg;
-	msg.setWindowTitle(tr(u8"RPCS3: 致命錯誤"));
+	msg.setWindowTitle(tr(u8"RPCS3: \u81F4\u547D\u932F\u8AA4"));
 	msg.setIcon(QMessageBox::Critical);
 	msg.setTextFormat(Qt::RichText);
 	msg.setText(QString(R"(
@@ -59,8 +59,8 @@ static semaphore<> s_qt_mutex{};
 		</p>
 		)")
 		.arg(Qt::convertFromPlainText(QString::fromStdString(text)))
-		.arg(tr(u8"如何報告錯誤:"))
-		.arg(tr(u8"請勿傳送不正確的報告，感謝您的理解。")));
+		.arg(tr(u8"\u5982\u4F55\u5831\u544A\u932F\u8AA4:"))
+		.arg(tr(u8"\u8ACB\u52FF\u50B3\u9001\u4E0D\u6B63\u78BA\u7684\u5831\u544A\uFF0C\u611F\u8B1D\u60A8\u7684\u7406\u89E3\u3002")));
 	msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 	msg.exec();
 

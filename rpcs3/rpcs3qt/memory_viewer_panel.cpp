@@ -8,7 +8,7 @@ constexpr auto qstr = QString::fromStdString;
 memory_viewer_panel::memory_viewer_panel(QWidget* parent) 
 	: QDialog(parent)
 {
-	setWindowTitle(tr((u8"記憶體檢視器")));
+	setWindowTitle(tr((u8"\u8A18\u61B6\u9AD4\u6AA2\u8996\u5668")));
 	setObjectName("memory_viewer");
 	setAttribute(Qt::WA_DeleteOnClose);
 	exit = false;
@@ -29,11 +29,11 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	QHBoxLayout* hbox_tools = new QHBoxLayout();
 
 	//Tools: Memory Viewer Options
-	QGroupBox* tools_mem = new QGroupBox(tr((u8"記憶體檢視器選項")));
+	QGroupBox* tools_mem = new QGroupBox(tr((u8"\u8A18\u61B6\u9AD4\u6AA2\u8996\u5668\u9078\u9805")));
 	QHBoxLayout* hbox_tools_mem = new QHBoxLayout();
 
 	//Tools: Memory Viewer Options: Address
-	QGroupBox* tools_mem_addr = new QGroupBox(tr((u8"位址")));
+	QGroupBox* tools_mem_addr = new QGroupBox(tr((u8"\u4F4D\u5740")));
 	QHBoxLayout* hbox_tools_mem_addr = new QHBoxLayout();
 	m_addr_line = new QLineEdit(this);
 	m_addr_line->setPlaceholderText("00000000");
@@ -45,7 +45,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	tools_mem_addr->setLayout(hbox_tools_mem_addr);
 
 	//Tools: Memory Viewer Options: Bytes
-	QGroupBox* tools_mem_bytes = new QGroupBox(tr((u8"位元組")));
+	QGroupBox* tools_mem_bytes = new QGroupBox(tr((u8"\u4F4D\u5143\u7D44")));
 	QHBoxLayout* hbox_tools_mem_bytes = new QHBoxLayout();
 	QSpinBox* sb_bytes = new QSpinBox(this);
 	sb_bytes->setRange(1, 16);
@@ -54,7 +54,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	tools_mem_bytes->setLayout(hbox_tools_mem_bytes);
 
 	//Tools: Memory Viewer Options: Control
-	QGroupBox* tools_mem_buttons = new QGroupBox(tr((u8"控制")));
+	QGroupBox* tools_mem_buttons = new QGroupBox(tr((u8"\u63A7\u5236")));
 	QHBoxLayout* hbox_tools_mem_buttons = new QHBoxLayout();
 	QPushButton* b_fprev = new QPushButton("<<", this);
 	QPushButton* b_prev = new QPushButton("<", this);
@@ -81,11 +81,11 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	tools_mem->setLayout(hbox_tools_mem);
 
 	//Tools: Raw Image Preview Options
-	QGroupBox* tools_img = new QGroupBox(tr((u8"RAW 圖像預覽選項")));
+	QGroupBox* tools_img = new QGroupBox(tr((u8"RAW \u5716\u50CF\u9810\u89BD\u9078\u9805")));
 	QHBoxLayout* hbox_tools_img = new QHBoxLayout();;
 
 	//Tools: Raw Image Preview Options : Size
-	QGroupBox* tools_img_size = new QGroupBox(tr((u8"大小")));
+	QGroupBox* tools_img_size = new QGroupBox(tr((u8"\u5927\u5C0F")));
 	QHBoxLayout* hbox_tools_img_size = new QHBoxLayout();
 	QLabel* l_x = new QLabel(" x ");
 	QSpinBox* sb_img_size_x = new QSpinBox(this);
@@ -100,7 +100,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	tools_img_size->setLayout(hbox_tools_img_size);
 
 	//Tools: Raw Image Preview Options: Mode
-	QGroupBox* tools_img_mode = new QGroupBox(tr((u8"模式")));
+	QGroupBox* tools_img_mode = new QGroupBox(tr((u8"\u6A21\u5F0F")));
 	QHBoxLayout* hbox_tools_img_mode = new QHBoxLayout();
 	QComboBox* cbox_img_mode = new QComboBox(this);
 	cbox_img_mode->addItem("RGB");
@@ -117,9 +117,9 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	tools_img->setLayout(hbox_tools_img);
 
 	//Tools: Tool Buttons
-	QGroupBox* tools_buttons = new QGroupBox(tr((u8"工具")));
+	QGroupBox* tools_buttons = new QGroupBox(tr((u8"\u5DE5\u5177")));
 	QVBoxLayout* hbox_tools_buttons = new QVBoxLayout(this);
-	QPushButton* b_img = new QPushButton(tr((u8"視圖\n圖像")), this);
+	QPushButton* b_img = new QPushButton(tr((u8"\u8996\u5716\n\u5716\u50CF")), this);
 	b_img->setAutoDefault(false);
 	hbox_tools_buttons->addWidget(b_img);
 	tools_buttons->setLayout(hbox_tools_buttons);
@@ -389,7 +389,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	layout->addWidget(canvas);
 
 	QDialog* f_image_viewer = new QDialog(parent);
-	f_image_viewer->setWindowTitle(qstr(fmt::format((u8"Raw 圖像 @ 0x%x"), addr)));
+	f_image_viewer->setWindowTitle(qstr(fmt::format((u8"Raw \u5716\u50CF @ 0x%x"), addr)));
 	f_image_viewer->setFixedSize(QSize(width, height));
 	f_image_viewer->setLayout(layout);
 	f_image_viewer->show();

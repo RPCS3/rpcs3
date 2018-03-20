@@ -254,22 +254,22 @@ struct cfg_player final : cfg::node
 	pad_handler def_handler = pad_handler::null;
 	cfg_player(node* owner, const std::string& name, pad_handler type) : cfg::node(owner, name), def_handler(type) {};
 
-	cfg::_enum<pad_handler> handler{ this, u8"處理程序", def_handler };
-	cfg::string device{ this, u8"裝置", handler.to_string() };
-	cfg::string profile{ this, u8"檔案", u8"預設設置檔" };
+	cfg::_enum<pad_handler> handler{ this, u8"\u8655\u7406\u7A0B\u5E8F", def_handler };
+	cfg::string device{ this, u8"\u88DD\u7F6E", handler.to_string() };
+	cfg::string profile{ this, u8"\u6A94\u6848", u8"\u9810\u8A2D\u8A2D\u7F6E\u6A94" };
 };
 
 struct cfg_input final : cfg::node
 {
 	const std::string cfg_name = fs::get_config_dir() + "/config_input.yml";
 
-	cfg_player player1{ this, u8"玩家 1 輸入", pad_handler::keyboard };
-	cfg_player player2{ this, u8"玩家 2 輸入", pad_handler::null };
-	cfg_player player3{ this, u8"玩家 3 輸入", pad_handler::null };
-	cfg_player player4{ this, u8"玩家 4 輸入", pad_handler::null };
-	cfg_player player5{ this, u8"玩家 5 輸入", pad_handler::null };
-	cfg_player player6{ this, u8"玩家 6 輸入", pad_handler::null };
-	cfg_player player7{ this, u8"玩家 7 輸入", pad_handler::null };
+	cfg_player player1{ this, u8"\u73A9\u5BB6 1 \u8F38\u5165", pad_handler::keyboard };
+	cfg_player player2{ this, u8"\u73A9\u5BB6 2 \u8F38\u5165", pad_handler::null };
+	cfg_player player3{ this, u8"\u73A9\u5BB6 3 \u8F38\u5165", pad_handler::null };
+	cfg_player player4{ this, u8"\u73A9\u5BB6 4 \u8F38\u5165", pad_handler::null };
+	cfg_player player5{ this, u8"\u73A9\u5BB6 5 \u8F38\u5165", pad_handler::null };
+	cfg_player player6{ this, u8"\u73A9\u5BB6 6 \u8F38\u5165", pad_handler::null };
+	cfg_player player7{ this, u8"\u73A9\u5BB6 7 \u8F38\u5165", pad_handler::null };
 
 	cfg_player *player[7]{ &player1, &player2, &player3, &player4, &player5, &player6, &player7 }; // Thanks gcc! 
 

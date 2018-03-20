@@ -17,7 +17,7 @@ public:
 	std::vector<std::string> ListDevices() override
 	{
 		std::vector<std::string> nulllist;
-		nulllist.push_back(u8"預設空裝置");
+		nulllist.push_back(u8"\u9810\u8A2D\u7A7A\u88DD\u7F6E");
 		return nulllist;
 	}
 

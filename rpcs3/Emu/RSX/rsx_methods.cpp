@@ -20,12 +20,12 @@ void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case frame_limit_type::none: return (u8"關閉");
+		case frame_limit_type::none: return (u8"\u95DC\u9589");
 		case frame_limit_type::_59_94: return "59.94";
 		case frame_limit_type::_50: return "50";
 		case frame_limit_type::_60: return "60";
 		case frame_limit_type::_30: return "30";
-		case frame_limit_type::_auto: return (u8"自動");
+		case frame_limit_type::_auto: return (u8"\u81EA\u52D5");
 		}
 
 		return unknown;
@@ -42,7 +42,7 @@ namespace rsx
 	{
 		//Don't throw, gather information and ignore broken/garbage commands
 		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
-		LOG_ERROR(RSX, u8"無效 RSX 模式 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
+		LOG_ERROR(RSX, u8"\u7121\u6548 RSX \u6A21\u5F0F 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
 		rsx->invalid_command_interrupt_raised = true;
 	}
 
@@ -441,7 +441,7 @@ namespace rsx
 				rsx->get_zcull_stats(type, address_ptr);
 				break;
 			default:
-				LOG_ERROR(RSX, u8"NV4097_GET_REPORT: 不良類型 %d", type);
+				LOG_ERROR(RSX, u8"NV4097_GET_REPORT: \u4E0D\u826F\u985E\u578B %d", type);
 				result->timer = rsx->timestamp();
 				result->padding = 0;
 				break;
@@ -456,7 +456,7 @@ namespace rsx
 			case CELL_GCM_ZCULL_STATS:
 				break;
 			default:
-				LOG_ERROR(RSX, u8"NV4097_CLEAR_REPORT_VALUE: 不良類型: %d", arg);
+				LOG_ERROR(RSX, u8"NV4097_CLEAR_REPORT_VALUE: \u4E0D\u826F\u985E\u578B: %d", arg);
 				break;
 			}
 
@@ -563,7 +563,7 @@ namespace rsx
 
 				if (y)
 				{
-					LOG_ERROR(RSX, u8"%s: y 不是空的 (0x%x)", __FUNCTION__, y);
+					LOG_ERROR(RSX, u8"%s: y \u4E0D\u662F\u7A7A\u7684 (0x%x)", __FUNCTION__, y);
 				}
 
 				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x << 2);
@@ -629,12 +629,12 @@ namespace rsx
 			if (in_origin != blit_engine::transfer_origin::corner)
 			{
 				// Probably refers to texel geometry which would affect clipping algorithm slightly when rounding texel addresses
-				LOG_WARNING(RSX, u8"NV3089_IMAGE_IN_SIZE: 不明原因 (%d)", (u8)in_origin);
+				LOG_WARNING(RSX, u8"NV3089_IMAGE_IN_SIZE: \u4E0D\u660E\u539F\u56E0 (%d)", (u8)in_origin);
 			}
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
 			{
-				LOG_ERROR(RSX, u8"NV3089_IMAGE_IN_SIZE: 未知操作 (%d)", (u8)operation);
+				LOG_ERROR(RSX, u8"NV3089_IMAGE_IN_SIZE: \u672A\u77E5\u64CD\u4F5C (%d)", (u8)operation);
 			}
 
 			const u32 src_offset = method_registers.blit_engine_input_offset();
@@ -663,7 +663,7 @@ namespace rsx
 				break;
 
 			default:
-				LOG_ERROR(RSX, u8"NV3089_IMAGE_IN_SIZE: 未知 m_context_surface (0x%x)", (u8)method_registers.blit_engine_context_surface());
+				LOG_ERROR(RSX, u8"NV3089_IMAGE_IN_SIZE: \u672A\u77E5 m_context_surface (0x%x)", (u8)method_registers.blit_engine_context_surface());
 				return;
 			}
 
@@ -695,13 +695,13 @@ namespace rsx
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
 			{
-				LOG_ERROR(RSX, u8"NV3089_IMAGE_IN_SIZE: 未知 dst_color_format (%d)", (u8)dst_color_format);
+				LOG_ERROR(RSX, u8"NV3089_IMAGE_IN_SIZE: \u672A\u77E5 dst_color_format (%d)", (u8)dst_color_format);
 			}
 
 			if (src_color_format != rsx::blit_engine::transfer_source_format::r5g6b5 &&
 				src_color_format != rsx::blit_engine::transfer_source_format::a8r8g8b8)
 			{
-				LOG_ERROR(RSX, u8"NV3089_IMAGE_IN_SIZE: 未知 src_color_format (%d)", (u8)src_color_format);
+				LOG_ERROR(RSX, u8"NV3089_IMAGE_IN_SIZE: \u672A\u77E5 src_color_format (%d)", (u8)src_color_format);
 			}
 
 			f32 scale_x = 1048576.f / method_registers.blit_engine_ds_dx();
@@ -949,7 +949,7 @@ namespace rsx
 			// The existing GCM commands use only the value 0x1 for inFormat and outFormat
 			if (in_format != 0x01 || out_format != 0x01)
 			{
-				LOG_ERROR(RSX, u8"NV0039_OFFSET_IN: 不支援的格式: inFormat=%d, outFormat=%d", in_format, out_format);
+				LOG_ERROR(RSX, u8"NV0039_OFFSET_IN: \u4E0D\u652F\u63F4\u7684\u683C\u5F0F: inFormat=%d, outFormat=%d", in_format, out_format);
 			}
 
 			LOG_TRACE(RSX, "NV0039_OFFSET_IN: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",

@@ -30,42 +30,42 @@ enum Category
 namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories 
 {
 	// PS3 bootable
-	const QString app_Music = QObject::tr(u8"應用音樂");
-	const QString app_Photo = QObject::tr(u8"應用圖片");
-	const QString app_TV    = QObject::tr(u8"應用電視");
-	const QString app_Video = QObject::tr(u8"應用影視");
-	const QString bc_Video  = QObject::tr(u8"播放影視");
-	const QString disc_Game = QObject::tr(u8"光碟遊戲");
-	const QString hdd_Game  = QObject::tr(u8"硬碟遊戲");
+	const QString app_Music = QObject::tr(u8"\u61C9\u7528\u97F3\u6A02");
+	const QString app_Photo = QObject::tr(u8"\u61C9\u7528\u5716\u7247");
+	const QString app_TV    = QObject::tr(u8"\u61C9\u7528\u96FB\u8996");
+	const QString app_Video = QObject::tr(u8"\u61C9\u7528\u5F71\u8996");
+	const QString bc_Video  = QObject::tr(u8"\u64AD\u653E\u5F71\u8996");
+	const QString disc_Game = QObject::tr(u8"\u5149\u789F\u904A\u6232");
+	const QString hdd_Game  = QObject::tr(u8"\u786C\u789F\u904A\u6232");
 	const QString home      = QObject::tr(u8"Home");
-	const QString network   = QObject::tr(u8"網路");
-	const QString store_FE  = QObject::tr(u8"商店");
-	const QString web_TV    = QObject::tr(u8"網路電視");
+	const QString network   = QObject::tr(u8"\u7DB2\u8DEF");
+	const QString store_FE  = QObject::tr(u8"\u5546\u5E97");
+	const QString web_TV    = QObject::tr(u8"\u7DB2\u8DEF\u96FB\u8996");
 
 	// PS2 bootable
-	const QString ps2_game = QObject::tr(u8"PS2 經典");
-	const QString ps2_inst = QObject::tr(u8"PS2 遊戲");
+	const QString ps2_game = QObject::tr(u8"PS2 \u7D93\u5178");
+	const QString ps2_inst = QObject::tr(u8"PS2 \u904A\u6232");
 
 	// PS1 bootable
-	const QString ps1_game = QObject::tr(u8"PS1 經典");
+	const QString ps1_game = QObject::tr(u8"PS1 \u7D93\u5178");
 
 	// PSP bootable
-	const QString psp_game = QObject::tr(u8"PSP 遊戲");
-	const QString psp_mini = QObject::tr(u8"PSP 秀珍");
-	const QString psp_rema = QObject::tr(u8"PSP 重製");
+	const QString psp_game = QObject::tr(u8"PSP \u904A\u6232");
+	const QString psp_mini = QObject::tr(u8"PSP \u79C0\u73CD");
+	const QString psp_rema = QObject::tr(u8"PSP \u91CD\u88FD");
 
 	// Data
-	const QString ps3_Data = QObject::tr(u8"PS3 遊戲資料");
-	const QString ps2_Data = QObject::tr(u8"PS2 模擬器資料");
+	const QString ps3_Data = QObject::tr(u8"PS3 \u904A\u6232\u8CC7\u6599");
+	const QString ps2_Data = QObject::tr(u8"PS2 \u6A21\u64EC\u5668\u8CC7\u6599");
 
 	// Save
-	const QString ps3_Save = QObject::tr(u8"PS3 儲存資料");
-	const QString psp_Save = QObject::tr(u8"PSP 秀珍 儲存資料");
+	const QString ps3_Save = QObject::tr(u8"PS3 \u5132\u5B58\u8CC7\u6599");
+	const QString psp_Save = QObject::tr(u8"PSP \u79C0\u73CD \u5132\u5B58\u8CC7\u6599");
 
 	// others
-	const QString trophy  = QObject::tr(u8"獎盃");
-	const QString unknown = QObject::tr(u8"未知");
-	const QString other   = QObject::tr(u8"其它");
+	const QString trophy  = QObject::tr(u8"\u734E\u76C3");
+	const QString unknown = QObject::tr(u8"\u672A\u77E5");
+	const QString other   = QObject::tr(u8"\u5176\u5B83");
 
 	const q_from_char cat_boot =
 	{

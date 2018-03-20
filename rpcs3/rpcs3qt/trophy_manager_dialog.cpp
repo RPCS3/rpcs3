@@ -40,7 +40,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	: QWidget(), m_sort_column(0), m_col_sort_order(Qt::AscendingOrder), m_gui_settings(gui_settings)
 {
 	// Nonspecific widget settings
-	setWindowTitle(tr(u8"獎盃管理"));
+	setWindowTitle(tr(u8"\u734E\u76C3\u7BA1\u7406"));
 	setObjectName("trophy_manager");
 
 	m_icon_height            = m_gui_settings->GetValue(gui::tr_icon_height).toInt();
@@ -60,7 +60,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_trophy_tree->setColumnCount(6);
 
 	QStringList column_names;
-	column_names << tr(u8"圖示") << tr(u8"名稱") << tr(u8"描述") << tr(u8"類型") << tr(u8"狀態") << tr("ID");
+	column_names << tr(u8"\u5716\u793A") << tr(u8"\u540D\u7A31") << tr(u8"\u63CF\u8FF0") << tr(u8"\u985E\u578B") << tr(u8"\u72C0\u614B") << tr("ID");
 	m_trophy_tree->setHeaderLabels(column_names);
 	m_trophy_tree->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 	m_trophy_tree->header()->setStretchLastSection(false);
@@ -77,7 +77,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 			continue;
 		}
 		std::string dirName = sstr(dir_iter.fileName());
-		LOG_TRACE(GENERAL, u8"讀取獎盃目錄: %s", dirName);
+		LOG_TRACE(GENERAL, u8"\u8B80\u53D6\u734E\u76C3\u76EE\u9304: %s", dirName);
 		LoadTrophyFolderToDB(dirName);
 	}
 
@@ -85,43 +85,43 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	ApplyFilter();
 
 	// Checkboxes to control dialog
-	QCheckBox* check_lock_trophy = new QCheckBox(tr(u8"顯示鎖定的獎盃"));
+	QCheckBox* check_lock_trophy = new QCheckBox(tr(u8"\u986F\u793A\u9396\u5B9A\u7684\u734E\u76C3"));
 	check_lock_trophy->setCheckable(true);
 	check_lock_trophy->setChecked(m_show_locked_trophies);
 
-	QCheckBox* check_unlock_trophy = new QCheckBox(tr(u8"顯示解鎖的獎盃"));
+	QCheckBox* check_unlock_trophy = new QCheckBox(tr(u8"\u986F\u793A\u89E3\u9396\u7684\u734E\u76C3"));
 	check_unlock_trophy->setCheckable(true);
 	check_unlock_trophy->setChecked(m_show_unlocked_trophies);
 
-	QCheckBox* check_hidden_trophy = new QCheckBox(tr(u8"顯示隱藏的獎盃"));
+	QCheckBox* check_hidden_trophy = new QCheckBox(tr(u8"\u986F\u793A\u96B1\u85CF\u7684\u734E\u76C3"));
 	check_hidden_trophy->setCheckable(true);
 	check_hidden_trophy->setChecked(m_show_hidden_trophies);
 
-	QCheckBox* check_bronze_trophy = new QCheckBox(tr(u8"顯示青銅獎盃"));
+	QCheckBox* check_bronze_trophy = new QCheckBox(tr(u8"\u986F\u793A\u9752\u9285\u734E\u76C3"));
 	check_bronze_trophy->setCheckable(true);
 	check_bronze_trophy->setChecked(m_show_bronze_trophies);
 
-	QCheckBox* check_silver_trophy = new QCheckBox(tr(u8"顯示白銀獎盃"));
+	QCheckBox* check_silver_trophy = new QCheckBox(tr(u8"\u986F\u793A\u767D\u9280\u734E\u76C3"));
 	check_silver_trophy->setCheckable(true);
 	check_silver_trophy->setChecked(m_show_silver_trophies);
 
-	QCheckBox* check_gold_trophy = new QCheckBox(tr(u8"顯示黃金獎盃"));
+	QCheckBox* check_gold_trophy = new QCheckBox(tr(u8"\u986F\u793A\u9EC3\u91D1\u734E\u76C3"));
 	check_gold_trophy->setCheckable(true);
 	check_gold_trophy->setChecked(m_show_gold_trophies);
 
-	QCheckBox* check_platinum_trophy = new QCheckBox(tr(u8"顯示白金獎盃"));
+	QCheckBox* check_platinum_trophy = new QCheckBox(tr(u8"\u986F\u793A\u767D\u91D1\u734E\u76C3"));
 	check_platinum_trophy->setCheckable(true);
 	check_platinum_trophy->setChecked(m_show_platinum_trophies);
 
 	QLabel* slider_label = new QLabel();
-	slider_label->setText(tr(u8"圖示大小: %0").arg(m_icon_height));
+	slider_label->setText(tr(u8"\u5716\u793A\u5927\u5C0F: %0").arg(m_icon_height));
 
 	m_icon_slider = new QSlider(Qt::Horizontal);
 	m_icon_slider->setRange(25, 225);
 	m_icon_slider->setValue(m_icon_height);
 
 	// LAYOUTS
-	QGroupBox* show_settings = new QGroupBox(tr(u8"獎盃視圖選項"));
+	QGroupBox* show_settings = new QGroupBox(tr(u8"\u734E\u76C3\u8996\u5716\u9078\u9805"));
 	show_settings->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 	QVBoxLayout* settings_layout = new QVBoxLayout();
 	settings_layout->addWidget(check_lock_trophy);
@@ -133,7 +133,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	settings_layout->addWidget(check_platinum_trophy);
 	show_settings->setLayout(settings_layout);
 
-	QGroupBox* icon_settings = new QGroupBox(tr(u8"獎盃圖示選項"));
+	QGroupBox* icon_settings = new QGroupBox(tr(u8"\u734E\u76C3\u5716\u793A\u9078\u9805"));
 	QVBoxLayout* slider_layout = new QVBoxLayout();
 	slider_layout->addWidget(slider_label);
 	slider_layout->addWidget(m_icon_slider);
@@ -164,7 +164,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	// Make connects
 	connect(m_icon_slider, &QSlider::valueChanged, this, [=](int val)
 	{
-		slider_label->setText(tr(u8"圖示大小: %0").arg(val));
+		slider_label->setText(tr(u8"\u5716\u793A\u5927\u5C0F: %0").arg(val));
 		ResizeTrophyIcons(val);
 		if (m_save_icon_height)
 		{
@@ -257,7 +257,7 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 
 	if (!success || !config)
 	{
-		LOG_ERROR(GENERAL, u8"無法讀取 %s 獎盃資料庫", trop_name);
+		LOG_ERROR(GENERAL, u8"\u7121\u6CD5\u8B80\u53D6 %s \u734E\u76C3\u8CC7\u6599\u5EAB", trop_name);
 		return false;
 	}
 
@@ -284,7 +284,7 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 		QString path = qstr(game_trophy_data->path) + "TROP" + padding + QString::number(trophy_id) + ".PNG";
 		if (!trophy_icon.load(path))
 		{
-			LOG_ERROR(GENERAL, u8"無法從獎盃 %n %s 讀取獎盃圖示。", trophy_id, game_trophy_data->path);
+			LOG_ERROR(GENERAL, u8"\u7121\u6CD5\u5F9E\u734E\u76C3 %n %s \u8B80\u53D6\u734E\u76C3\u5716\u793A\u3002", trophy_id, game_trophy_data->path);
 		}
 		game_trophy_data->trophy_images.emplace_back(std::move(trophy_icon));
 	}
@@ -404,7 +404,7 @@ void trophy_manager_dialog::ShowContextMenu(const QPoint& loc)
 		return;
 	}
 
-	QAction* show_trophy_dir = new QAction(tr(u8"開啟獎盃目錄"), menu);
+	QAction* show_trophy_dir = new QAction(tr(u8"\u958B\u555F\u734E\u76C3\u76EE\u9304"), menu);
 
 	// Only two levels in this tree (ignoring root). So getting the index as such works.
 	int db_ind;
@@ -511,7 +511,7 @@ void trophy_manager_dialog::PopulateUI()
 			trophy_item->setText(TrophyColumns::Name, qstr(details.name));
 			trophy_item->setText(TrophyColumns::Description, qstr(details.description));
 			trophy_item->setText(TrophyColumns::Type, trophy_type);
-			trophy_item->setText(TrophyColumns::IsUnlocked, unlocked ? u8"解鎖" : u8"鎖定");
+			trophy_item->setText(TrophyColumns::IsUnlocked, unlocked ? u8"\u89E3\u9396" : u8"\u9396\u5B9A");
 			trophy_item->setText(TrophyColumns::Id, QString::number(trophy_id));
 			trophy_item->setData(TrophyColumns::Hidden, Qt::UserRole, hidden);
 

@@ -53,8 +53,8 @@ void fmt_class_string<mouse_handler>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case mouse_handler::null: return (u8"空");
-		case mouse_handler::basic: return (u8"基本");
+		case mouse_handler::null: return (u8"\u7A7A");
+		case mouse_handler::basic: return (u8"\u57FA\u672C");
 		}
 
 		return unknown;
@@ -68,7 +68,7 @@ void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case pad_handler::null: return (u8"空");
+		case pad_handler::null: return (u8"\u7A7A");
 		case pad_handler::keyboard: return "Keyboard";
 		case pad_handler::ds4: return "DualShock 4";
 #ifdef _MSC_VER
@@ -93,7 +93,7 @@ void fmt_class_string<video_renderer>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case video_renderer::null: return (u8"空");
+		case video_renderer::null: return (u8"\u7A7A");
 		case video_renderer::opengl: return "OpenGL";
 		case video_renderer::vulkan: return "Vulkan";
 #ifdef _MSC_VER
@@ -133,7 +133,7 @@ void fmt_class_string<video_aspect>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case video_aspect::_auto: return (u8"自動");
+		case video_aspect::_auto: return (u8"\u81EA\u52D5");
 		case video_aspect::_4_3: return "4:3";
 		case video_aspect::_16_9: return "16:9";
 		}
@@ -149,8 +149,8 @@ void fmt_class_string<keyboard_handler>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case keyboard_handler::null: return (u8"空");
-		case keyboard_handler::basic: return (u8"基本");
+		case keyboard_handler::null: return (u8"\u7A7A");
+		case keyboard_handler::basic: return (u8"\u57FA\u672C");
 		}
 
 		return unknown;
@@ -164,7 +164,7 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case audio_renderer::null: return (u8"空");
+		case audio_renderer::null: return (u8"\u7A7A");
 #ifdef _WIN32
 		case audio_renderer::xaudio: return "XAudio2";
 #endif
@@ -264,13 +264,13 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 
 bool Emulator::InstallPkg(const std::string& path)
 {
-	LOG_SUCCESS(GENERAL, u8"安裝軟體包: %s", path);
+	LOG_SUCCESS(GENERAL, u8"\u5B89\u88DD\u8EDF\u9AD4\u5305: %s", path);
 
 	atomic_t<double> progress(0.);
 	int int_progress = 0;
 	{
 		// Run PKG unpacking asynchronously
-		scope_thread worker(u8"PKG 安裝", [&]
+		scope_thread worker(u8"PKG \u5B89\u88DD", [&]
 		{
 			if (pkg_install(path, progress))
 			{
@@ -347,7 +347,7 @@ void Emulator::Load(bool add_only)
 			games.reset();
 		}
 
-		LOG_NOTICE(LOADER, u8"路徑: %s", m_path);
+		LOG_NOTICE(LOADER, u8"\u8DEF\u5F91: %s", m_path);
 
 		const std::string elf_dir = fs::get_parent_dir(m_path);
 
@@ -398,25 +398,25 @@ void Emulator::Load(bool add_only)
 		// Load custom config-0
 		if (fs::file cfg_file{m_cache_path + "/config.yml"})
 		{
-			LOG_NOTICE(LOADER, u8"套用自訂組態: %s/config.yml", m_cache_path);
+			LOG_NOTICE(LOADER, u8"\u5957\u7528\u81EA\u8A02\u7D44\u614B: %s/config.yml", m_cache_path);
 			g_cfg.from_string(cfg_file.to_string());
 		}
 
 		// Load custom config-1
 		if (fs::file cfg_file{fs::get_config_dir() + "data/" + m_title_id + "/config.yml"})
 		{
-			LOG_NOTICE(LOADER, u8"套用自訂組態: data/%s/config.yml", m_title_id);
+			LOG_NOTICE(LOADER, u8"\u5957\u7528\u81EA\u8A02\u7D44\u614B: data/%s/config.yml", m_title_id);
 			g_cfg.from_string(cfg_file.to_string());
 		}
 
 		// Load custom config-2
 		if (fs::file cfg_file{m_path + ".yml"})
 		{
-			LOG_NOTICE(LOADER, u8"套用自訂組態: %s.yml", m_path);
+			LOG_NOTICE(LOADER, u8"\u5957\u7528\u81EA\u8A02\u7D44\u614B: %s.yml", m_path);
 			g_cfg.from_string(cfg_file.to_string());
 		}
 
-		LOG_NOTICE(LOADER, u8"使用的組態:\n%s\n", g_cfg.to_string());
+		LOG_NOTICE(LOADER, u8"\u4F7F\u7528\u7684\u7D44\u614B:\n%s\n", g_cfg.to_string());
 
 		// Load patches from different locations
 		fxm::check_unlocked<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
@@ -445,17 +445,17 @@ void Emulator::Load(bool add_only)
 		if (bdvd_pos && from_hdd0_game)
 		{
 			// Booting disc game from wrong location
-			LOG_ERROR(LOADER, u8"光碟遊戲 %s 在無效的位置找到 /dev_hdd0/game/", m_title_id);
+			LOG_ERROR(LOADER, u8"\u5149\u789F\u904A\u6232 %s \u5728\u7121\u6548\u7684\u4F4D\u7F6E\u627E\u5230 /dev_hdd0/game/", m_title_id);
 
 			// Move and retry from correct location
 			if (fs::rename(elf_dir + "/../../", hdd0_disc + elf_dir.substr(hdd0_game.size()) + "/../../", false))
 			{
-				LOG_SUCCESS(LOADER, u8"光碟遊戲 %s 移動到專用位置 /dev_hdd0/disc/", m_title_id);
+				LOG_SUCCESS(LOADER, u8"\u5149\u789F\u904A\u6232 %s \u79FB\u52D5\u5230\u5C08\u7528\u4F4D\u7F6E /dev_hdd0/disc/", m_title_id);
 				return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load();
 			}
 			else
 			{
-				LOG_ERROR(LOADER, u8"無法移動光碟遊戲 %s 到 /dev_hdd0/disc/ (%s)", m_title_id, fs::g_tls_error);
+				LOG_ERROR(LOADER, u8"\u7121\u6CD5\u79FB\u52D5\u5149\u789F\u904A\u6232 %s \u5230 /dev_hdd0/disc/ (%s)", m_title_id, fs::g_tls_error);
 				return;
 			}
 		}
@@ -477,7 +477,7 @@ void Emulator::Load(bool add_only)
 			}
 			else
 			{
-				LOG_FATAL(LOADER, u8"找不到光碟目錄。 嘗試從實際的遊戲光碟目錄中執行遊戲。");
+				LOG_FATAL(LOADER, u8"\u627E\u4E0D\u5230\u5149\u789F\u76EE\u9304\u3002 \u5617\u8A66\u5F9E\u5BE6\u969B\u7684\u904A\u6232\u5149\u789F\u76EE\u9304\u4E2D\u57F7\u884C\u904A\u6232\u3002");
 			}
 		}
 
@@ -487,11 +487,11 @@ void Emulator::Load(bool add_only)
 			fs::file sfb_file;
 
 			vfs::mount("dev_bdvd", bdvd_dir);
-			LOG_NOTICE(LOADER, u8"光碟: %s", vfs::get("/dev_bdvd"));
+			LOG_NOTICE(LOADER, u8"\u5149\u789F: %s", vfs::get("/dev_bdvd"));
 
 			if (!sfb_file.open(vfs::get("/dev_bdvd/PS3_DISC.SFB")) || sfb_file.size() < 4 || sfb_file.read<u32>() != ".SFB"_u32)
 			{
-				LOG_ERROR(LOADER, u8"此光碟遊戲的光碟目錄無效 %s", m_title_id);
+				LOG_ERROR(LOADER, u8"\u6B64\u5149\u789F\u904A\u6232\u7684\u5149\u789F\u76EE\u9304\u7121\u6548 %s", m_title_id);
 				return;
 			}
 
@@ -499,7 +499,7 @@ void Emulator::Load(bool add_only)
 
 			if (bdvd_title_id != m_title_id)
 			{
-				LOG_ERROR(LOADER, u8"此光碟遊戲的光碟目錄異常 %s (found %s)", m_title_id, bdvd_title_id);
+				LOG_ERROR(LOADER, u8"\u6B64\u5149\u789F\u904A\u6232\u7684\u5149\u789F\u76EE\u9304\u7570\u5E38 %s (found %s)", m_title_id, bdvd_title_id);
 				return;
 			}
 
@@ -520,7 +520,7 @@ void Emulator::Load(bool add_only)
 		}
 		else if (disc.empty())
 		{
-			LOG_ERROR(LOADER, u8"此光碟遊戲無法安裝到光碟目錄 %s", m_title_id);
+			LOG_ERROR(LOADER, u8"\u6B64\u5149\u789F\u904A\u6232\u7121\u6CD5\u5B89\u88DD\u5230\u5149\u789F\u76EE\u9304 %s", m_title_id);
 			return;
 		}
 		else
@@ -552,13 +552,13 @@ void Emulator::Load(bool add_only)
 
 			if (lock_file && fs::is_dir(ins_dir))
 			{
-				LOG_NOTICE(LOADER, u8"找到 INSDIR: %s", ins_dir);
+				LOG_NOTICE(LOADER, u8"\u627E\u5230 INSDIR: %s", ins_dir);
 
 				for (auto&& entry : fs::dir{ins_dir})
 				{
 					if (!entry.is_directory && ends_with(entry.name, ".PKG") && !InstallPkg(ins_dir + entry.name))
 					{
-						LOG_ERROR(LOADER, u8"無法安裝 /dev_bdvd/PS3_GAME/INSDIR/%s", entry.name);
+						LOG_ERROR(LOADER, u8"\u7121\u6CD5\u5B89\u88DD /dev_bdvd/PS3_GAME/INSDIR/%s", entry.name);
 						return;
 					}
 				}
@@ -566,7 +566,7 @@ void Emulator::Load(bool add_only)
 
 			if (lock_file && fs::is_dir(pkg_dir))
 			{
-				LOG_NOTICE(LOADER, u8"找到 PKGDIR: %s", pkg_dir);
+				LOG_NOTICE(LOADER, u8"\u627E\u5230 PKGDIR: %s", pkg_dir);
 
 				for (auto&& entry : fs::dir{pkg_dir})
 				{
@@ -576,7 +576,7 @@ void Emulator::Load(bool add_only)
 
 						if (fs::is_file(pkg_file) && !InstallPkg(pkg_file))
 						{
-							LOG_ERROR(LOADER, u8"無法安裝 /dev_bdvd/PS3_GAME/PKGDIR/%s/INSTALL.PKG", entry.name);
+							LOG_ERROR(LOADER, u8"\u7121\u6CD5\u5B89\u88DD /dev_bdvd/PS3_GAME/PKGDIR/%s/INSTALL.PKG", entry.name);
 							return;
 						}
 					}
@@ -585,7 +585,7 @@ void Emulator::Load(bool add_only)
 
 			if (lock_file && fs::is_dir(extra_dir))
 			{
-				LOG_NOTICE(LOADER, u8"找到 PS3_EXTRA: %s", extra_dir);
+				LOG_NOTICE(LOADER, u8"\u627E\u5230 PS3_EXTRA: %s", extra_dir);
 
 				for (auto&& entry : fs::dir{extra_dir})
 				{
@@ -595,7 +595,7 @@ void Emulator::Load(bool add_only)
 
 						if (fs::is_file(pkg_file) && !InstallPkg(pkg_file))
 						{
-							LOG_ERROR(LOADER, u8"無法安裝 /dev_bdvd/PS3_GAME/PKGDIR/%s/DATA000.PKG", entry.name);
+							LOG_ERROR(LOADER, u8"\u7121\u6CD5\u5B89\u88DD /dev_bdvd/PS3_GAME/PKGDIR/%s/DATA000.PKG", entry.name);
 							return;
 						}
 					}
@@ -609,7 +609,7 @@ void Emulator::Load(bool add_only)
 		if (disc.empty() && m_cat == "DG" && fs::is_file(hdd0_boot))
 		{
 			// Booting game update
-			LOG_SUCCESS(LOADER, u8"發現的更新 /dev_hdd0/game/%s/!", m_title_id);
+			LOG_SUCCESS(LOADER, u8"\u767C\u73FE\u7684\u66F4\u65B0 /dev_hdd0/game/%s/!", m_title_id);
 			return m_path = hdd0_boot, Load();
 		}
 
@@ -624,7 +624,7 @@ void Emulator::Load(bool add_only)
 
 		if (!elf_file)
 		{
-			LOG_ERROR(LOADER, u8"無法開啟執行檔: %s", m_path);
+			LOG_ERROR(LOADER, u8"\u7121\u6CD5\u958B\u555F\u57F7\u884C\u6A94: %s", m_path);
 			return;
 		}
 
@@ -654,7 +654,7 @@ void Emulator::Load(bool add_only)
 				}
 				else
 				{
-					LOG_ERROR(LOADER, u8"無法創建 boot.elf");
+					LOG_ERROR(LOADER, u8"\u7121\u6CD5\u5275\u5EFA boot.elf");
 				}
 			}
 		}
@@ -665,7 +665,7 @@ void Emulator::Load(bool add_only)
 
 		if (!elf_file)
 		{
-			LOG_ERROR(LOADER, u8"無法解密 SELF: %s", m_path);
+			LOG_ERROR(LOADER, u8"\u7121\u6CD5\u89E3\u5BC6 SELF: %s", m_path);
 			return;
 		}
 		else if (ppu_exec.open(elf_file) == elf_error::ok)
@@ -709,7 +709,7 @@ void Emulator::Load(bool add_only)
 					m_dir = "/host_root/" + elf_dir + '/';
 				}
 
-				LOG_NOTICE(LOADER, u8"Elf 路徑: %s", argv[0]);
+				LOG_NOTICE(LOADER, u8"Elf \u8DEF\u5F91: %s", argv[0]);
 			}
 
 			ppu_load_exec(ppu_exec);
@@ -735,7 +735,7 @@ void Emulator::Load(bool add_only)
 		}
 		else
 		{
-			LOG_ERROR(LOADER, u8"無效或不支援的檔案格式: %s", m_path);
+			LOG_ERROR(LOADER, u8"\u7121\u6548\u6216\u4E0D\u652F\u63F4\u7684\u6A94\u6848\u683C\u5F0F: %s", m_path);
 
 			LOG_WARNING(LOADER, "** ppu_exec -> %s", ppu_exec.get_error());
 			LOG_WARNING(LOADER, "** ppu_prx  -> %s", ppu_prx.get_error());
@@ -1029,7 +1029,7 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 
 	// Format log message (use preallocated buffer)
 	g_tls_error_str.clear();
-	fmt::append(g_tls_error_str, u8"'%s' 失敗 0x%08x%s%s%s%s", func, arg, sup ? " : " : "", std::make_pair(sup, arg), sup2 ? ", " : "", std::make_pair(sup2, arg2));
+	fmt::append(g_tls_error_str, u8"'%s' \u5931\u6557 0x%08x%s%s%s%s", func, arg, sup ? " : " : "", std::make_pair(sup, arg), sup2 ? ", " : "", std::make_pair(sup2, arg2));
 
 	// Update stats and check log threshold
 	const auto stat = ++g_tls_error_stats[g_tls_error_str];

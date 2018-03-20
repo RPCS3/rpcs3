@@ -27,7 +27,7 @@ error_code sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attri
 
 	if (max_val <= 0 || initial_val > max_val || initial_val < 0)
 	{
-		sys_semaphore.error(u8"sys_semaphore_create(): 參數無效 (initial_val=%d, max_val=%d)", initial_val, max_val);
+		sys_semaphore.error(u8"sys_semaphore_create(): \u53C3\u6578\u7121\u6548 (initial_val=%d, max_val=%d)", initial_val, max_val);
 		return CELL_EINVAL;
 	}
 
@@ -38,7 +38,7 @@ error_code sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attri
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY && protocol != SYS_SYNC_PRIORITY_INHERIT)
 	{
-		sys_semaphore.error(u8"sys_semaphore_create(): 未知協定 (0x%x)", protocol);
+		sys_semaphore.error(u8"sys_semaphore_create(): \u672A\u77E5\u5354\u5B9A (0x%x)", protocol);
 		return CELL_EINVAL;
 	}
 

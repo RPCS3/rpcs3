@@ -33,9 +33,9 @@ class debugger_frame : public custom_dock_widget
 {
 	Q_OBJECT;
 
-	const QString NoThreadString = tr(u8"沒有執行緒");
-	const QString RunString = tr(u8"執行");
-	const QString PauseString = tr(u8"暫停");
+	const QString NoThreadString = tr(u8"\u6C92\u6709\u57F7\u884C\u7DD2");
+	const QString RunString = tr(u8"\u57F7\u884C");
+	const QString PauseString = tr(u8"\u66AB\u505C");
 
 	debugger_list* m_list;
 	QSplitter* m_right_splitter;

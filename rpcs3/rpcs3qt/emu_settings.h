@@ -127,7 +127,7 @@ public:
 		QStringList vulkanAdapters;
 		QString name_Null = tr("Null");
 		QString name_Vulkan = tr("Vulkan");
-		QString name_D3D12 = tr(u8"D3D12[¤£¨Ï¥Î]");
+		QString name_D3D12 = tr(u8"D3D12[\u4E0D\u4F7F\u7528]");
 		QString name_OpenGL = tr("OpenGL");
 		Render_Info D3D12;
 		Render_Info Vulkan;

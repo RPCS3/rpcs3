@@ -294,7 +294,7 @@ public:
 		m_storage[key] = backend_traits::build_pipeline(vertex_program, fragment_program, pipelineProperties, std::forward<Args>(args)...);
 		m_cache_miss_flag = true;
 
-		LOG_SUCCESS(RSX, u8"新方案編譯成功");
+		LOG_SUCCESS(RSX, u8"\u65B0\u65B9\u6848\u7DE8\u8B6F\u6210\u529F");
 		return m_storage[key];
 	}
 

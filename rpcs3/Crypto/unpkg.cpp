@@ -70,13 +70,13 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 	if (archive_read(&header, sizeof(header)) != sizeof(header))
 	{
-		LOG_ERROR(LOADER, u8"PKG 檔案過短!");
+		LOG_ERROR(LOADER, u8"PKG \u6A94\u6848\u904E\u77ED!");
 		return false;
 	}
 
 	if (header.pkg_magic != "\x7FPKG"_u32)
 	{
-		LOG_ERROR(LOADER, u8"不是 PKG 檔案!");
+		LOG_ERROR(LOADER, u8"\u4E0D\u662F PKG \u6A94\u6848!");
 		return false;
 	}
 
@@ -86,7 +86,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	case PKG_RELEASE_TYPE_RELEASE: break;
 	default:
 	{
-		LOG_ERROR(LOADER, u8"未知 PKG 類型 (0x%x)", type);
+		LOG_ERROR(LOADER, u8"\u672A\u77E5 PKG \u985E\u578B (0x%x)", type);
 		return false;
 	}
 	}
@@ -97,7 +97,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	case PKG_PLATFORM_TYPE_PSP: break;
 	default:
 	{
-		LOG_ERROR(LOADER, u8"未知 PKG 平台 (0x%x)", platform);
+		LOG_ERROR(LOADER, u8"\u672A\u77E5 PKG \u5E73\u53F0 (0x%x)", platform);
 		return false;
 	}
 	}
@@ -107,7 +107,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		// Check if multi-files pkg
 		if (path.size() < 7 || path.compare(path.size() - 7, 7, "_00.pkg", 7) != 0)
 		{
-			LOG_ERROR(LOADER, u8"PKG 檔案大小不符合 (pkg_size=0x%llx)", header.pkg_size);
+			LOG_ERROR(LOADER, u8"PKG \u6A94\u6848\u5927\u5C0F\u4E0D\u7B26\u5408 (pkg_size=0x%llx)", header.pkg_size);
 			return false;
 		}
 
@@ -120,7 +120,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 			fs::file archive_file(archive_filename);
 			if (!archive_file)
 			{
-				LOG_ERROR(LOADER, u8"遺失部分多檔案 PKG: %s", archive_filename);
+				LOG_ERROR(LOADER, u8"\u907A\u5931\u90E8\u5206\u591A\u6A94\u6848 PKG: %s", archive_filename);
 				return false;
 			}
 
@@ -131,7 +131,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 	if (header.data_size + header.data_offset > header.pkg_size)
 	{
-		LOG_ERROR(LOADER, u8"PKG 資料大小不符合 (data_size=0x%llx, data_offset=0x%llx, file_size=0x%llx)", header.data_size, header.data_offset, header.pkg_size);
+		LOG_ERROR(LOADER, u8"PKG \u8CC7\u6599\u5927\u5C0F\u4E0D\u7B26\u5408 (data_size=0x%llx, data_offset=0x%llx, file_size=0x%llx)", header.data_size, header.data_offset, header.pkg_size);
 		return false;
 	}
 
@@ -211,7 +211,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		}
 		else
 		{
-			LOG_ERROR(LOADER, u8"PKG: 無法建立安裝目錄 %s", dir);
+			LOG_ERROR(LOADER, u8"PKG: \u7121\u6CD5\u5EFA\u7ACB\u5B89\u88DD\u76EE\u9304 %s", dir);
 			return false;
 		}
 	}
@@ -312,7 +312,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 		if (entry.name_size > 256)
 		{
-			LOG_ERROR(LOADER, u8"PKG 名稱大小過大 (0x%x)", entry.name_size);
+			LOG_ERROR(LOADER, u8"PKG \u540D\u7A31\u5927\u5C0F\u904E\u5927 (0x%x)", entry.name_size);
 			continue;
 		}
 
@@ -342,7 +342,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 			if (did_overwrite && (entry.type & PKG_FILE_ENTRY_OVERWRITE) == 0)
 			{
-				LOG_NOTICE(LOADER, u8"沒有覆蓋 %s", name);
+				LOG_NOTICE(LOADER, u8"\u6C92\u6709\u8986\u84CB %s", name);
 				break;
 			}
 
@@ -354,13 +354,13 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 					if (decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : dec_key.data()) != block_size)
 					{
-						LOG_ERROR(LOADER, u8"無法提取檔案 %s", path);
+						LOG_ERROR(LOADER, u8"\u7121\u6CD5\u63D0\u53D6\u6A94\u6848 %s", path);
 						break;
 					}
 
 					if (out.write(buf.get(), block_size) != block_size)
 					{
-						LOG_ERROR(LOADER, u8"無法寫入檔案 %s", path);
+						LOG_ERROR(LOADER, u8"\u7121\u6CD5\u5BEB\u5165\u6A94\u6848 %s", path);
 						break;
 					}
 
@@ -368,7 +368,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 					{
 						if (was_null)
 						{
-							LOG_ERROR(LOADER, u8"軟體包的安裝已取消: %s", dir);
+							LOG_ERROR(LOADER, u8"\u8EDF\u9AD4\u5305\u7684\u5B89\u88DD\u5DF2\u53D6\u6D88: %s", dir);
 							out.close();
 							fs::remove_all(dir, true);
 							return false;
@@ -381,16 +381,16 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 				if (did_overwrite)
 				{
-					LOG_WARNING(LOADER, u8"覆蓋檔案 %s", name);
+					LOG_WARNING(LOADER, u8"\u8986\u84CB\u6A94\u6848 %s", name);
 				}
 				else
 				{
-					LOG_NOTICE(LOADER, u8"建立檔案 %s", name);
+					LOG_NOTICE(LOADER, u8"\u5EFA\u7ACB\u6A94\u6848 %s", name);
 				}
 			}
 			else
 			{
-				LOG_ERROR(LOADER, u8"檔案建立失敗 %s", path);
+				LOG_ERROR(LOADER, u8"\u6A94\u6848\u5EFA\u7ACB\u5931\u6557 %s", path);
 			}
 
 			break;
@@ -403,15 +403,15 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 			if (fs::create_dir(path))
 			{
-				LOG_NOTICE(LOADER, u8"建立目錄 %s", name);
+				LOG_NOTICE(LOADER, u8"\u5EFA\u7ACB\u76EE\u9304 %s", name);
 			}
 			else if (fs::is_dir(path))
 			{
-				LOG_WARNING(LOADER, u8"重複使用現有的目錄 %s", name);
+				LOG_WARNING(LOADER, u8"\u91CD\u8907\u4F7F\u7528\u73FE\u6709\u7684\u76EE\u9304 %s", name);
 			}
 			else
 			{
-				LOG_ERROR(LOADER, u8"無法建立目錄 %s", path);
+				LOG_ERROR(LOADER, u8"\u7121\u6CD5\u5EFA\u7ACB\u76EE\u9304 %s", path);
 			}
 
 			break;
@@ -419,11 +419,11 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 		default:
 		{
-			LOG_ERROR(LOADER, u8"未知的 PKG 項目類型 (0x%x) %s", entry.type, name);
+			LOG_ERROR(LOADER, u8"\u672A\u77E5\u7684 PKG \u9805\u76EE\u985E\u578B (0x%x) %s", entry.type, name);
 		}
 		}
 	}
 
-	LOG_SUCCESS(LOADER, u8"軟體包成功安裝到 %s", dir);
+	LOG_SUCCESS(LOADER, u8"\u8EDF\u9AD4\u5305\u6210\u529F\u5B89\u88DD\u5230 %s", dir);
 	return true;
 }
