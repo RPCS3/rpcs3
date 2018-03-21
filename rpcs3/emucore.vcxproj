@@ -114,6 +114,7 @@
     <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_gpio.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_net.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_rsxaudio.cpp" />
     <ClCompile Include="Emu\Cell\PPUAnalyser.cpp" />
     <ClCompile Include="Emu\Cell\PPUTranslator.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -425,6 +426,7 @@
     <ClInclude Include="Emu\Cell\lv2\sys_process.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_prx.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_rsx.h" />
+	<ClInclude Include="Emu\Cell\lv2\sys_rsxaudio.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_rwlock.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_semaphore.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_spu.h" />

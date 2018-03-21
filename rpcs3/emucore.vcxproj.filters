@@ -743,6 +743,9 @@
     <ClCompile Include="Emu\Cell\lv2\sys_gpio.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\lv2\sys_rsxaudio.cpp">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1414,6 +1417,7 @@
     <ClInclude Include="Emu\Cell\lv2\sys_gpio.h">
       <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
+<<<<<<< 6d96402822a3e6ac9e608366a30a9d33c970912f
     <ClInclude Include="Emu\Cell\Modules\cellVoice.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
@@ -1434,6 +1438,8 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellJpgEnc.h">
       <Filter>Emu\Cell\Modules</Filter>
+    <ClInclude Include="Emu\Cell\lv2\sys_rsxaudio.h">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
