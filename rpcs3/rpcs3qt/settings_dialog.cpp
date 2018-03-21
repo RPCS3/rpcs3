@@ -393,7 +393,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			ui->anisotropicFilterOverride->setItemText(i, tr("Automatic"));
 			break;
 		case 1:
-			ui->anisotropicFilterOverride->setItemText(i, tr("Disabled"));
+			ui->anisotropicFilterOverride->setItemText(i, tr("Force Disabled"));
 			break;
 		case 2:
 		case 4:

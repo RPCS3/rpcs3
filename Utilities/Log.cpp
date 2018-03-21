@@ -18,6 +18,7 @@ using namespace std::literals::chrono_literals;
 #include <Windows.h>
 #else
 #include <sys/mman.h>
+#include <sys/stat.h>
 #endif
 
 #include <zlib.h>
@@ -309,7 +310,7 @@ logs::file_writer::file_writer(const std::string& name)
 
 	try
 	{
-		if (!m_file.open(buf_name, fs::read + fs::write + fs::create + fs::trunc + fs::unshare))
+		if (!m_file.open(buf_name, fs::read + fs::rewrite + fs::lock))
 		{
 			if (fs::g_tls_error == fs::error::acces)
 			{
@@ -361,11 +362,18 @@ logs::file_writer::file_writer(const std::string& name)
 		// Actual log file (allowed to fail)
 		m_fout.open(log_name, fs::rewrite);
 
-		// Compressed log
-		if (!m_fout2.open(log_name + ".gz", fs::rewrite) || deflateInit2(&m_zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) != Z_OK)
+		// Compressed log, make it inaccessible (foolproof)
+		if (!m_fout2.open(log_name + ".gz", fs::rewrite + fs::unread) || deflateInit2(&m_zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) != Z_OK)
 		{
 			m_fout2.close();
 		}
+
+#ifdef _WIN32
+		// Autodelete compressed log file
+		FILE_DISPOSITION_INFO disp;
+		disp.DeleteFileW = TRUE;
+		SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
+#endif
 	}
 	catch (const std::exception& e)
 	{
@@ -443,9 +451,16 @@ logs::file_writer::~file_writer()
 	}
 
 #ifdef _WIN32
+	// Cancel compressed log file autodeletion
+	FILE_DISPOSITION_INFO disp;
+	disp.DeleteFileW = FALSE;
+	SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
+
 	UnmapViewOfFile(m_fptr);
 	CloseHandle(m_fmap);
 #else
+	// Restore compressed log file permissions
+	::fchmod(m_fout2.get_handle(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	::munmap(m_fptr, s_log_size);
 #endif
 }
@@ -591,7 +606,7 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	case level::_uninit: text = u8"·  "; break;
 	}
 
-	// Print miscosecond timestamp
+	// Print µs timestamp
 	const u64 hours = stamp / 3600'000'000;
 	const u64 mins = (stamp % 3600'000'000) / 60'000'000;
 	const u64 secs = (stamp % 60'000'000) / 1'000'000;

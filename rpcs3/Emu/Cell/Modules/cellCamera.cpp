@@ -111,7 +111,7 @@ static const char* get_camera_attr_name(s32 value)
 	return nullptr;
 }
 
-static bool check_dev_num(u32 dev_num)
+static bool check_dev_num(s32 dev_num)
 {
 	return dev_num == 0;
 }
@@ -180,7 +180,7 @@ s32 cellCameraInit()
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
+		return CELL_OK;
 	}
 
 	// Start camera thread
@@ -246,6 +246,11 @@ s32 cellCameraEnd()
 {
 	cellCamera.todo("cellCameraEnd()");
 
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_OK;
+	}
+
 	if (!fxm::remove<camera_thread>())
 	{
 		return CELL_CAMERA_ERROR_NOT_INIT;
@@ -263,6 +268,11 @@ s32 cellCameraOpen() // seems unused
 s32 cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 {
 	cellCamera.todo("cellCameraOpenEx(dev_num=%d, type=*0x%x)", dev_num, info);
+
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
+	}
 
 	const auto g_camera = fxm::get<camera_thread>();
 
@@ -307,6 +317,11 @@ s32 cellCameraClose(s32 dev_num)
 {
 	cellCamera.todo("cellCameraClose(dev_num=%d)", dev_num);
 
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_CAMERA_ERROR_NOT_OPEN;
+	}
+
 	const auto g_camera = fxm::get<camera_thread>();
 
 	if (!g_camera)
@@ -331,6 +346,11 @@ s32 cellCameraGetDeviceGUID(s32 dev_num, vm::ptr<u32> guid)
 s32 cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 {
 	cellCamera.todo("cellCameraGetType(dev_num=%d, type=*0x%x)", dev_num, type);
+
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
+	}
 
 	const auto g_camera = fxm::get<camera_thread>();
 
@@ -358,6 +378,11 @@ s32 cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 s32 cellCameraIsAvailable(s32 dev_num)
 {
 	cellCamera.todo("cellCameraIsAvailable(dev_num=%d)", dev_num);
+
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return false;
+	}
 
 	const auto g_camera = fxm::get<camera_thread>();
 
@@ -429,6 +454,11 @@ s32 cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u
 	const auto attr_name = get_camera_attr_name(attrib);
 	cellCamera.todo("cellCameraGetAttribute: get attrib %s to: 0x%x - 0x%x)", attr_name ? attr_name : "(invalid)", arg1, arg2);
 
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
+	}
+
 	const auto g_camera = fxm::get<camera_thread>();
 
 	if (!g_camera)
@@ -462,6 +492,11 @@ s32 cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 	const auto attr_name = get_camera_attr_name(attrib);
 	cellCamera.todo("cellCameraSetAttribute: set attrib %s to: %d - %d)", attr_name ? attr_name : "(invalid)", arg1, arg2);
 
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_CAMERA_ERROR_NOT_OPEN;
+	}
+
 	const auto g_camera = fxm::get<camera_thread>();
 
 	if (!g_camera)
@@ -483,6 +518,11 @@ s32 cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 s32 cellCameraGetBufferSize(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 {
 	cellCamera.todo("cellCameraGetBufferSize(dev_num=%d, info=*0x%x)", dev_num, info);
+
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
+	}
 
 	const auto g_camera = fxm::get<camera_thread>();
 
@@ -523,7 +563,12 @@ s32 cellCameraGetBufferInfo()
 
 s32 cellCameraGetBufferInfoEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 {
-	cellCamera.todo("cellCameraReadEx(dev_num=%d, read=0x%x)", dev_num, info);
+	cellCamera.todo("cellCameraGetBufferInfoEx(dev_num=%d, read=0x%x)", dev_num, info);
+
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_CAMERA_ERROR_NOT_OPEN;
+	}
 
 	const auto g_camera = fxm::get<camera_thread>();
 
@@ -570,7 +615,12 @@ s32 cellCameraSetExtensionUnit(s32 dev_num, u16 value, u16 length, vm::ptr<u8> d
 
 s32 cellCameraReset(s32 dev_num)
 {
-	UNIMPLEMENTED_FUNC(cellCamera);
+	cellCamera.todo("cellCameraReset(dev_num=%d)", dev_num);
+
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_CAMERA_ERROR_NOT_OPEN;
+	}
 
 	return CELL_OK;
 }
@@ -578,6 +628,11 @@ s32 cellCameraReset(s32 dev_num)
 s32 cellCameraStart(s32 dev_num)
 {
 	cellCamera.todo("cellCameraStart(dev_num=%d", dev_num);
+
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_CAMERA_ERROR_NOT_OPEN;
+	}
 
 	const auto g_camera = fxm::get<camera_thread>();
 
@@ -591,13 +646,24 @@ s32 cellCameraStart(s32 dev_num)
 
 s32 cellCameraRead(s32 dev_num, vm::ptr<u32> frame_num, vm::ptr<u32> bytes_read)
 {
-	UNIMPLEMENTED_FUNC(cellCamera);
+	cellCamera.todo("cellCameraRead(dev_num=%d, frame_num=*0x%x, bytes_read=*0x%x)", dev_num, frame_num, bytes_read);
+
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_CAMERA_ERROR_NOT_OPEN;
+	}
+
 	return CELL_OK;
 }
 
 s32 cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 {
 	cellCamera.todo("cellCameraReadEx(dev_num=%d, read=0x%x)", dev_num, read);
+
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_CAMERA_ERROR_NOT_OPEN;
+	}
 
 	const auto g_camera = fxm::get<camera_thread>();
 
@@ -630,6 +696,11 @@ s32 cellCameraStop(s32 dev_num)
 {
 	cellCamera.todo("cellCameraStop(dev_num=%d", dev_num);
 
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_CAMERA_ERROR_NOT_OPEN;
+	}
+
 	const auto g_camera = fxm::get<camera_thread>();
 
 	semaphore_lock lock(g_camera->mutex);
@@ -656,6 +727,11 @@ s32 cellCameraSetNotifyEventQueue2(u64 key, u64 source, u64 flag)
 {
 	cellCamera.todo("cellCameraSetNotifyEventQueue2(key=0x%x, source=%d, flag=%d)", key, source, flag);
 
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_OK;
+	}
+
 	const auto g_camera = fxm::get<camera_thread>();
 
 	if (!g_camera)
@@ -679,6 +755,11 @@ s32 cellCameraSetNotifyEventQueue2(u64 key, u64 source, u64 flag)
 s32 cellCameraRemoveNotifyEventQueue2(u64 key)
 {
 	cellCamera.todo("cellCameraRemoveNotifyEventQueue2(key=0x%x", key);
+
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_OK;
+	}
 
 	const auto g_camera = fxm::get<camera_thread>();
 

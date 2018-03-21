@@ -88,6 +88,7 @@ namespace gl
 		bool vendor_INTEL = false;  //has broken GLSL compiler
 		bool vendor_AMD = false;    //has broken ARB_multidraw
 		bool vendor_NVIDIA = false; //has NaN poisoning issues
+		bool vendor_MESA = false;   //requires CLIENT_STORAGE bit set for streaming buffers
 
 		void initialize()
 		{
@@ -199,6 +200,10 @@ namespace gl
 			else if (vendor_string.find("nvidia") != std::string::npos)
 			{
 				vendor_NVIDIA = true;
+			}
+			else if (vendor_string.find("x.org") != std::string::npos)
+			{
+				vendor_MESA = true;
 			}
 #ifdef _WIN32
 			else if (vendor_string.find("amd") != std::string::npos || vendor_string.find("ati") != std::string::npos)
@@ -868,8 +873,11 @@ namespace gl
 
 			buffer::create();
 
+			GLbitfield buffer_storage_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+			if (get_driver_caps().vendor_MESA) buffer_storage_flags |= GL_CLIENT_STORAGE_BIT;
+
 			glBindBuffer((GLenum)m_target, m_id);
-			glBufferStorage((GLenum)m_target, size, data, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+			glBufferStorage((GLenum)m_target, size, data, buffer_storage_flags);
 			m_memory_mapping = glMapBufferRange((GLenum)m_target, 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 
 			verify(HERE), m_memory_mapping != nullptr;
@@ -1073,6 +1081,7 @@ namespace gl
 
 		void update(buffer *_buffer, u32 offset, u32 range, GLenum format = GL_R8UI)
 		{
+			verify(HERE), _buffer->size() >= (offset + range);
 			m_buffer = _buffer;
 			m_offset = offset;
 			m_range = range;
