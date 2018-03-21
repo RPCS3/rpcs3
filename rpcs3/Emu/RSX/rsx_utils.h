@@ -52,6 +52,14 @@ namespace rsx
 		{}
 	};
 
+	struct avconf
+	{
+		u8 format = 0; //XRGB
+		u8 aspect = 0; //AUTO
+		u32 scanline_pitch = 0; //PACKED
+		f32 gamma = 1.f; //NO GAMMA CORRECTION
+	};
+
 	template<typename T>
 	void pad_texture(void* input_pixels, void* output_pixels, u16 input_width, u16 input_height, u16 output_width, u16 output_height)
 	{
