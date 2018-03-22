@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>38</height>
+     <height>26</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -260,6 +260,8 @@
     <addaction name="showToolBarAct"/>
     <addaction name="separator"/>
     <addaction name="showGameListAct"/>
+    <addaction name="separator"/>
+    <addaction name="showHiddenEntriesAct"/>
     <addaction name="separator"/>
     <addaction name="refreshGameListAct"/>
     <addaction name="menuGame_List_Mode"/>
@@ -939,6 +941,14 @@
    </property>
    <property name="text">
     <string>Show Game Tool Bar</string>
+   </property>
+  </action>
+  <action name="showHiddenEntriesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Hidden Entries</string>
    </property>
   </action>
  </widget>

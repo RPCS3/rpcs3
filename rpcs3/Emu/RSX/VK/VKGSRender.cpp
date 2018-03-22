@@ -2303,15 +2303,18 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 		m_shaders_cache->store(properties, vertex_program, fragment_program);
 
 		//Notify the user with HUD notification
-		if (!m_custom_ui)
+		if (g_cfg.misc.show_shader_compilation_hint)
 		{
-			//Create notification but do not draw it at this time. No need to spam flip requests
-			m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
-		}
-		else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
-		{
-			//Probe the notification
-			casted->touch();
+			if (!m_custom_ui)
+			{
+				//Create notification but do not draw it at this time. No need to spam flip requests
+				m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
+			}
+			else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
+			{
+				//Probe the notification
+				casted->touch();
+			}
 		}
 	}
 
