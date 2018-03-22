@@ -90,6 +90,13 @@ else()
 	add_definitions(-DGLX_GLXEXT_PROTOTYPES)
 endif()
 
+if(USE_NATIVE_INSTRUCTIONS)
+	CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+	if(COMPILER_SUPPORTS_MARCH_NATIVE)
+		add_compile_options(-march=native)
+	endif()
+endif()
+
 if(NOT MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
 	# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
@@ -107,10 +114,6 @@ if(NOT MSVC)
 	endif()
 
 	add_compile_options(-msse -msse2 -mcx16 -mrtm)
-
-	if(NOT DEFINED ENV{TRAVIS} AND USE_NATIVE_INSTRUCTIONS)
-		add_compile_options(-march=native)
-	endif()
 
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 		# This fixes 'some' of the st11range issues. See issue #2516

@@ -50,13 +50,12 @@ before_script:
   - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
   - mkdir build ; cd build
   - export CMAKE_PREFIX_PATH=~/Qt/${QTVER}/gcc_64/lib/cmake
-  - export CXXFLAGS="$CXXFLAGS -DTRAVIS=true";
   - if [ "$TRAVIS_PULL_REQUEST" = false ]; then
       export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH";
     else
       export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/#$TRAVIS_PULL_REQUEST";
     fi;
-  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -G Ninja;
+  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DUSE_NATIVE_INSTRUCTIONS=OFF -G Ninja;
 
 script:
   - ninja
