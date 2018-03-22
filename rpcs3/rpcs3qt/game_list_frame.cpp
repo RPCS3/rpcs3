@@ -27,7 +27,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	: custom_dock_widget(tr("Game List"), parent), xgui_settings(guiSettings), xemu_settings(emuSettings)
 {
 	m_isListLayout    = xgui_settings->GetValue(gui::gl_listMode).toBool();
-	m_icon_size_index = xgui_settings->GetValue(gui::gl_iconSize).toInt();
 	m_Margin_Factor   = xgui_settings->GetValue(gui::gl_marginFactor).toReal();
 	m_Text_Factor     = xgui_settings->GetValue(gui::gl_textFactor).toReal();
 	m_Icon_Color      = xgui_settings->GetValue(gui::gl_iconColor).value<QColor>();
@@ -46,9 +45,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_Game_Dock->setWindowFlags(Qt::Widget);
 	setWidget(m_Game_Dock);
 
-	bool showText = m_icon_size_index < gui::gl_max_slider_pos;
-	m_Icon_Size = sizeFromSlider(m_icon_size_index);
-	m_xgrid = new game_list_grid(m_Icon_Size, m_Icon_Color, m_Margin_Factor, m_Text_Factor, showText);
+	m_xgrid = new game_list_grid(QSize(), m_Icon_Color, m_Margin_Factor, m_Text_Factor, false);
 
 	m_gameList = new game_list();
 	m_gameList->setShowGrid(false);
