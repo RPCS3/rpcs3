@@ -53,6 +53,38 @@ struct copy_unmodified_block_swizzled
 	}
 };
 
+struct copy_unmodified_block_vtc
+{
+	template<typename T, typename U>
+	static void copy_mipmap_level(gsl::span<T> dst, gsl::span<const U> src, u16 width_in_block, u16 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
+	{
+
+		static_assert(sizeof(T) == sizeof(U), "Type size doesn't match.");
+		u32 row_element_count = width_in_block * row_count;
+		u32 dst_offset = 0;
+		u32 src_offset = 0;
+		const u32 vtc_tile_row_count = 4;
+
+		// Undo Nvidia VTC tiling - place each 2D texture slice back to back in linear memory
+		for (int d = 0; d < depth; d++) {
+
+			// copy one slice of the 3d texture
+			for (u32 i = 0; i < row_element_count; i += 1) {
+				copy(dst.subspan(dst_offset + i, 1), src.subspan(src_offset + i * vtc_tile_row_count, 1));
+			}
+
+			dst_offset += row_element_count;
+
+			if (d && ((d & (vtc_tile_row_count - 1)) == 0)) {
+				src_offset += row_element_count;
+			}
+			else {
+				src_offset += 1;
+			}
+		}
+	}
+};
+
 namespace
 {
 	/**
@@ -199,7 +231,7 @@ std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::vertex_te
 	return get_subresources_layout_impl(texture);
 }
 
-void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, size_t dst_row_pitch_multiple_of)
+void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, bool vtc_support, size_t dst_row_pitch_multiple_of)
 {
 	u16 w = src_layout.width_in_block;
 	u16 h = src_layout.height_in_block;
@@ -270,12 +302,29 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 		break;
 
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-		copy_unmodified_block::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), gsl::as_span<const u64>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_bytes);
+		if (depth > 1 && !vtc_support) {
+			// PS3 uses VTC memory layout for compressed 3d texture
+			// Remove the VTC tiling to support ATI and Vulkan
+			copy_unmodified_block_vtc::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), gsl::as_span<const u64>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_bytes);
+		}
+		else {
+			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), gsl::as_span<const u64>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_bytes);
+		}
 		break;
 
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		copy_unmodified_block::copy_mipmap_level(as_span_workaround<u128>(dst_buffer), gsl::as_span<const u128>(src_layout.data), w, h, depth, get_row_pitch_in_block<u128>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_bytes);
+		if (depth > 1 && !vtc_support) {
+			// PS3 uses VTC memory layout for compressed 3d texture
+			// This is only supported using Nvidia OpenGL.
+			// Remove the VTC tiling to support ATI and Vulkan
+			copy_unmodified_block_vtc::copy_mipmap_level(as_span_workaround<u128>(dst_buffer), gsl::as_span<const u128>(src_layout.data), w, h, depth, get_row_pitch_in_block<u128>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_bytes);
+
+		}
+		else {
+			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u128>(dst_buffer), gsl::as_span<const u128>(src_layout.data), w, h, depth, get_row_pitch_in_block<u128>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_bytes);
+
+		}
 		break;
 
 	default:
