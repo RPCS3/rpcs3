@@ -88,7 +88,7 @@ struct copy_unmodified_block_vtc
 			// Last plane in the group of 4?
 			if (d && ((d & 3) == 0))
 			{
-				src_offset += row_element_count;
+				src_offset += row_element_count - 4;
 			}
 			else
 			{
