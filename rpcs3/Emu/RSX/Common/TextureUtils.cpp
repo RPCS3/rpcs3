@@ -62,7 +62,7 @@ struct copy_unmodified_block_vtc
 		u32 row_element_count = width_in_block * row_count;
 		u32 dst_offset = 0;
 		u32 src_offset = 0;
-		const u32 vtc_tile_row_count = 4;
+		const u32 depth_4 = (depth >> 2) * 4;	// multiple of 4
 
 		// Undo Nvidia VTC tiling - place each 2D texture slice back to back in linear memory
 		//
@@ -71,19 +71,22 @@ struct copy_unmodified_block_vtc
 		//
 		// Note that the memory is tiled 4 planes at a time in the depth direction.
 		// e.g.  d0, d1, d2, d3 is tiled as a group then d4, d5, d6, d7
-		//       
-		for (int d = 0; d < depth; d++)
+		//
+
+		//  Tile as 4x4x4
+		for (int d = 0; d < depth_4; d++)
 		{
 			// Copy one slice of the 3d texture
 			for (u32 i = 0; i < row_element_count; i += 1)
 			{
-				copy(dst.subspan(dst_offset + i, 1), src.subspan(src_offset + i * vtc_tile_row_count, 1));
+				// Copy one span (8 bytes for DXT1 or 16 bytes for DXT5)
+				copy(dst.subspan(dst_offset + i, 1), src.subspan(src_offset + i * 4, 1));
 			}
 
 			dst_offset += row_element_count;
 
 			// Last plane in the group of 4?
-			if (d && ((d & (vtc_tile_row_count - 1)) == 0))
+			if (d && ((d & 3) == 0))
 			{
 				src_offset += row_element_count;
 			}
@@ -91,6 +94,21 @@ struct copy_unmodified_block_vtc
 			{
 				src_offset += 1;
 			}
+		}
+
+		// End Case - tile as 4x4x3 or 4x4x2 or 4x4x1
+		const u32 vtc_tile_count = depth - depth_4;
+		for (int d = 0; d < vtc_tile_count; d++)
+		{
+			// Copy one slice of the 3d texture
+			for (u32 i = 0; i < row_element_count; i += 1)
+			{
+				// Copy one span (8 bytes for DXT1 or 16 bytes for DXT5)
+				copy(dst.subspan(dst_offset + i, 1), src.subspan(src_offset + i * vtc_tile_count, 1));
+			}
+
+			dst_offset += row_element_count;
+			src_offset += 1;
 		}
 	}
 };
