@@ -953,8 +953,8 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	prx->start.set(prx->specials[0xbc9a0086]);
 	prx->stop.set(prx->specials[0xab779874]);
 	prx->exit.set(prx->specials[0x3ab9a95e]);
-	prx->prologue.set(prx->specials[0x0D10FD3F]);
-	prx->epilogue.set(prx->specials[0x330F7005]);
+	prx->prologue.set(prx->specials[0x0d10fd3f]);
+	prx->epilogue.set(prx->specials[0x330f7005]);
 	prx->name = path.substr(path.find_last_of('/') + 1);
 	prx->path = path;
 
