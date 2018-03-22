@@ -367,6 +367,8 @@ namespace gl
 			const std::vector<rsx_subresource_layout> &input_layouts, bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<gsl::byte>& staging_buffer)
 	{
 		int mip_level = 0;
+		bool vtc_support = gl::get_driver_caps().vendor_NVIDIA;
+
 		if (is_compressed_format(format))
 		{
 			//Compressed formats have a 4-byte alignment
@@ -381,7 +383,7 @@ namespace gl
 			{
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block, gl_format, gl_type, staging_buffer.data());
 				}
 			}
@@ -390,7 +392,7 @@ namespace gl
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
 					u32 size = layout.width_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glCompressedTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block * 4, gl_format, size, staging_buffer.data());
 				}
 			}
@@ -403,7 +405,7 @@ namespace gl
 			{
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block, layout.height_in_block, gl_format, gl_type, staging_buffer.data());
 				}
 			}
@@ -412,7 +414,7 @@ namespace gl
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
 					u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glCompressedTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, gl_format, size, staging_buffer.data());
 				}
 			}
@@ -428,7 +430,7 @@ namespace gl
 			{
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block, layout.height_in_block, gl_format, gl_type, staging_buffer.data());
 					mip_level++;
 				}
@@ -438,7 +440,7 @@ namespace gl
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
 					u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, gl_format, size, staging_buffer.data());
 					mip_level++;
 				}
@@ -452,7 +454,7 @@ namespace gl
 			{
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block, layout.height_in_block, depth, gl_format, gl_type, staging_buffer.data());
 				}
 			}
@@ -461,7 +463,7 @@ namespace gl
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
 					u32 size = layout.width_in_block * layout.height_in_block * layout.depth * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glCompressedTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, layout.depth, gl_format, size, staging_buffer.data());
 				}
 			}
