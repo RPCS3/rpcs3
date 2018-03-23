@@ -717,9 +717,17 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	// Initialize HLE modules
 	ppu_initialize_modules(link);
 
+	// Library hash
+	sha1_context sha;
+	sha1_starts(&sha);
+
 	for (const auto& prog : elf.progs)
 	{
 		LOG_NOTICE(LOADER, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
+
+		// Hash big-endian values
+		sha1_update(&sha, (uchar*)&prog.p_type, sizeof(prog.p_type));
+		sha1_update(&sha, (uchar*)&prog.p_flags, sizeof(prog.p_flags));
 
 		switch (const u32 p_type = prog.p_type)
 		{
@@ -742,6 +750,11 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 				// Copy segment data
 				std::memcpy(vm::base(addr), prog.bin.data(), file_size);
 				LOG_WARNING(LOADER, "**** Loaded to 0x%x (size=0x%x)", addr, mem_size);
+
+				// Hash segment
+				sha1_update(&sha, (uchar*)&prog.p_vaddr, sizeof(prog.p_vaddr));
+				sha1_update(&sha, (uchar*)&prog.p_memsz, sizeof(prog.p_memsz));
+				sha1_update(&sha, prog.bin.data(), prog.bin.size());
 
 				// Initialize executable code if necessary
 				if (prog.p_flags & 0x1)
@@ -929,7 +942,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 		prx->specials = ppu_load_exports(link, lib_info->exports_start, lib_info->exports_end);
 		prx->imports = ppu_load_imports(prx->relocs, link, lib_info->imports_start, lib_info->imports_end);
-
+		std::stable_sort(prx->relocs.begin(), prx->relocs.end());
 		prx->analyse(lib_info->toc, 0);
 	}
 	else
@@ -940,10 +953,32 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	prx->start.set(prx->specials[0xbc9a0086]);
 	prx->stop.set(prx->specials[0xab779874]);
 	prx->exit.set(prx->specials[0x3ab9a95e]);
-	prx->prologue.set(prx->specials[0x0D10FD3F]);
-	prx->epilogue.set(prx->specials[0x330F7005]);
+	prx->prologue.set(prx->specials[0x0d10fd3f]);
+	prx->epilogue.set(prx->specials[0x330f7005]);
 	prx->name = path.substr(path.find_last_of('/') + 1);
 	prx->path = path;
+
+	sha1_finish(&sha, prx->sha1);
+
+	// Format patch name
+	std::string hash("PRX-0000000000000000000000000000000000000000");
+	for (u32 i = 0; i < 20; i++)
+	{
+		constexpr auto pal = "0123456789abcdef";
+		hash[4 + i * 2] = pal[prx->sha1[i] >> 4];
+		hash[5 + i * 2] = pal[prx->sha1[i] & 15];
+	}
+
+	// Apply the patch
+	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
+
+	if (!Emu.GetTitleID().empty())
+	{
+		// Alternative patch
+		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+	}
+
+	LOG_NOTICE(LOADER, "PRX library hash: %s (<- %u)", hash, applied);
 
 	if (Emu.IsReady() && fxm::import<ppu_module>([&] { return prx; }))
 	{
@@ -1011,7 +1046,6 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Executable hash
 	sha1_context sha;
 	sha1_starts(&sha);
-	u8 sha1_hash[20];
 
 	// Allocate memory at fixed positions
 	for (const auto& prog : elf.progs)
@@ -1072,15 +1106,15 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		}
 	}
 
-	sha1_finish(&sha, sha1_hash);
+	sha1_finish(&sha, _main->sha1);
 
 	// Format patch name
 	std::string hash("PPU-0000000000000000000000000000000000000000");
-	for (u32 i = 0; i < sizeof(sha1_hash); i++)
+	for (u32 i = 0; i < 20; i++)
 	{
 		constexpr auto pal = "0123456789abcdef";
-		hash[4 + i * 2] = pal[sha1_hash[i] >> 4];
-		hash[5 + i * 2] = pal[sha1_hash[i] & 15];
+		hash[4 + i * 2] = pal[_main->sha1[i] >> 4];
+		hash[5 + i * 2] = pal[_main->sha1[i] & 15];
 	}
 
 	// Apply the patch
@@ -1191,6 +1225,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 				ppu_load_exports(link, proc_prx_param.libent_start, proc_prx_param.libent_end);
 				ppu_load_imports(_main->relocs, link, proc_prx_param.libstub_start, proc_prx_param.libstub_end);
+				std::stable_sort(_main->relocs.begin(), _main->relocs.end());
 			}
 			break;
 		}

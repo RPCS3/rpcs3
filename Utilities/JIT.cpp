@@ -403,10 +403,10 @@ public:
 	}
 };
 
-jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string _cpu)
-	: m_link(_link)
-	, m_cpu(std::move(_cpu))
+std::string jit_compiler::cpu(const std::string& _cpu)
 {
+	std::string m_cpu = _cpu;
+
 	if (m_cpu.empty())
 	{
 		m_cpu = llvm::sys::getHostCPUName();
@@ -426,6 +426,13 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, st
 		}
 	}
 
+	return m_cpu;
+}
+
+jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu)
+	: m_link(_link)
+	, m_cpu(cpu(_cpu))
+{
 	std::string result;
 
 	if (m_link.empty())
