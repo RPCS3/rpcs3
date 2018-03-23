@@ -350,7 +350,7 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 			}
 		}
 
-		OS << "	if (alpha_test != 0 && !comparison_passes(Out." << first_output_name << ".a, alpha_ref, alpha_func)) discard;\n";
+		OS << "	if ((alpha_test & 0x11) != 0 && !comparison_passes(Out." << first_output_name << ".a, alpha_ref, alpha_func)) discard;\n";
 		
 	}
 	OS << "	return Out;\n";

@@ -1693,10 +1693,10 @@ namespace rsx
 			//Invalidate with writing=false, discard=false, rebuild=false, native_flush=true
 			invalidate_range_impl_base(texaddr, tex_size, false, false, false, true, std::forward<Args>(extras)...);
 
-			const auto colorspace = tex.gamma() ? rsx::texture_colorspace::srgb_nonlinear : rsx::texture_colorspace::rgb_linear;
+			//NOTE: SRGB correction is to be handled in the fragment shader; upload as linear RGB
 			m_texture_memory_in_use += (tex_pitch * tex_height);
 			return{ upload_image_from_cpu(cmd, texaddr, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
-				texture_upload_context::shader_read, subresources_layout, extended_dimension, colorspace, is_swizzled, remap_vector)->get_raw_view(),
+				texture_upload_context::shader_read, subresources_layout, extended_dimension, rsx::texture_colorspace::rgb_linear, is_swizzled, remap_vector)->get_raw_view(),
 				texture_upload_context::shader_read, is_depth_format, scale_x, scale_y, extended_dimension };
 		}
 
