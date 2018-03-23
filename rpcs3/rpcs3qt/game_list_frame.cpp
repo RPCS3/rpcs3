@@ -549,7 +549,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	f.setBold(true);
 	boot->setFont(f);
 	QAction* configure = myMenu.addAction(tr(u8"\u8A2D\u5B9A"));
-	QAction* createLLVMCache = myMenu.addAction(tr("&Create LLVM Cache"));
+	QAction* createLLVMCache = myMenu.addAction(tr(u8"\u5efa\u7acb LLVM \u5feb\u53d6"));
 	myMenu.addSeparator();
 	QAction* hide_serial = myMenu.addAction(tr(u8"\u96B1\u85CF\u904A\u6232\u6E05\u55AE"));
 	hide_serial->setCheckable(true);
