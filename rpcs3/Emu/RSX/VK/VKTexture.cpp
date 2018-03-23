@@ -162,7 +162,7 @@ namespace vk
 
 			void *mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size);
 			gsl::span<gsl::byte> mapped{ (gsl::byte*)mapped_buffer, ::narrow<int>(image_linear_size) };
-			upload_texture_subresource(mapped, layout, format, is_swizzled, 256);
+			upload_texture_subresource(mapped, layout, format, is_swizzled, false, 256);
 			upload_heap.unmap();
 
 			VkBufferImageCopy copy_info = {};

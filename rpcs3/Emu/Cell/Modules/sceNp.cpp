@@ -1406,9 +1406,9 @@ s32 sceNpScoreDestroyTitleCtx()
 	return CELL_OK;
 }
 
-s32 sceNpScoreCreateTransactionCtx()
+s32 sceNpScoreCreateTransactionCtx(s32 titleCtxId)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpScoreCreateTransactionCtx(titleCtxId=%d)", titleCtxId);
 	return CELL_OK;
 }
 
@@ -1430,15 +1430,27 @@ s32 sceNpScoreSetPlayerCharacterId()
 	return CELL_OK;
 }
 
-s32 sceNpScoreWaitAsync()
+s32 sceNpScoreWaitAsync(s32 transId, vm::ptr<s32> result)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpScoreWaitAsync(transId=%d, result=*0x%x)", transId, result);
+
+	if (transId <= 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpScorePollAsync()
+s32 sceNpScorePollAsync(s32 transId, vm::ptr<s32> result)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpScorePollAsync(transId=%d, result=*0x%x)", transId, result);
+
+	if (transId <= 0)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
+	}
+
 	return CELL_OK;
 }
 
