@@ -34,10 +34,10 @@ enum TrophyColumns
 
 class trophy_manager_dialog : public QWidget
 {
-	const QString Bronze   = "Bronze";
-	const QString Silver   = "Silver";
-	const QString Gold     = "Gold";
-	const QString Platinum = "Platinum";
+	const QString Bronze   = u8"\u9752\u9285";
+	const QString Silver   = u8"\u767D\u9280";
+	const QString Gold     = u8"\u9EC3\u91D1";
+	const QString Platinum = u8"\u767D\u91D1";
 
 public:
 	explicit trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings);

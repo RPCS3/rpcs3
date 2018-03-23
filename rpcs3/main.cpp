@@ -2,6 +2,9 @@
 // by Sacha Refshauge
 
 #include <QApplication>
+#include <QTranslator>
+#include <QTextCodec>
+
 #include <QCommandLineParser>
 #include <QFileInfo>
 #include <QTimer>
@@ -44,7 +47,7 @@ static semaphore<> s_qt_mutex{};
 	}
 
 	QMessageBox msg;
-	msg.setWindowTitle(tr("RPCS3: Fatal Error"));
+	msg.setWindowTitle(tr(u8"RPCS3: \u81F4\u547D\u932F\u8AA4"));
 	msg.setIcon(QMessageBox::Critical);
 	msg.setTextFormat(Qt::RichText);
 	msg.setText(QString(R"(
@@ -56,8 +59,8 @@ static semaphore<> s_qt_mutex{};
 		</p>
 		)")
 		.arg(Qt::convertFromPlainText(QString::fromStdString(text)))
-		.arg(tr("HOW TO REPORT ERRORS:"))
-		.arg(tr("Please, don't send incorrect reports. Thanks for understanding.")));
+		.arg(tr(u8"\u5982\u4F55\u5831\u544A\u932F\u8AA4:"))
+		.arg(tr(u8"\u8ACB\u52FF\u50B3\u9001\u4E0D\u6B63\u78BA\u7684\u5831\u544A\uFF0C\u611F\u8B1D\u60A8\u7684\u7406\u89E3\u3002")));
 	msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 	msg.exec();
 
@@ -130,5 +133,19 @@ int main(int argc, char** argv)
 
 	s_qt_init.post();
 	s_qt_mutex.post();
+	QTextCodec*codec = QTextCodec::codecForName("System");
+	QTextCodec::setCodecForLocale(codec);
+
+	QTranslator tran;
+	bool ok = tran.load("qt_zh_TW.qm", ":/lan/");
+	app.installTranslator(&tran);
+
+	QTranslator user;
+	ok = user.load("widgets.qm", ":/lan/");
+	app.installTranslator(&user);
+
+	QTranslator user2;
+	ok = user2.load("gui.qm", ":/lan/");
+	app.installTranslator(&user2);
 	return app.exec();
 }

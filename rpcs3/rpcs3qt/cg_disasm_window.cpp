@@ -22,7 +22,7 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings): xgui_settings(xSettings)
 {
-	setWindowTitle(tr("Cg Disasm"));
+	setWindowTitle(tr((u8"Cg \u53CD\u7D44\u8B6F")));
 	setObjectName("cg_disasm");
 	setAttribute(Qt::WA_DeleteOnClose);
 	setAcceptDrops(true);
@@ -174,8 +174,8 @@ cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings): xgu
 void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 {
 	QMenu myMenu;
-	QAction* clear = new QAction(tr("&Clear"));
-	QAction* open = new QAction(tr("Open &Cg binary program"));
+	QAction* clear = new QAction(tr((u8"&\u6E05\u7406")));
+	QAction* open = new QAction(tr((u8"\u958B\u555F &Cg \u4E8C\u9032\u4F4D\u7A0B\u5E8F")));
 
 	myMenu.addAction(open);
 	myMenu.addSeparator();
@@ -189,7 +189,7 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 
 	connect(open, &QAction::triggered, [=]
 	{
-		QString filePath = QFileDialog::getOpenFileName(this, tr("Select Cg program object"), m_path_last, tr("Cg program objects (*.fpo;*.vpo);;"));
+		QString filePath = QFileDialog::getOpenFileName(this, tr((u8"\u9078\u64C7 Cg \u7A0B\u5E8F\u76EE\u6A19")), m_path_last, tr((u8"Cg \u7A0B\u5E8F\u76EE\u6A19 (*.fpo;*.vpo);;")));
 		if (filePath == NULL) return;
 		m_path_last = filePath;
 		ShowDisasm();
