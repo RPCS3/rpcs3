@@ -62,7 +62,7 @@ struct copy_unmodified_block_vtc
 		u32 row_element_count = width_in_block * row_count;
 		u32 dst_offset = 0;
 		u32 src_offset = 0;
-		const u32 depth_4 = (depth >> 2) * 4;	// multiple of 4
+		const u16 depth_4 = (depth >> 2) * 4;	// multiple of 4
 
 		// Undo Nvidia VTC tiling - place each 2D texture slice back to back in linear memory
 		//
@@ -86,9 +86,10 @@ struct copy_unmodified_block_vtc
 			dst_offset += row_element_count;
 
 			// Last plane in the group of 4?
-			if (d && ((d & 3) == 0))
+			if ((d & 0x3) == 0x3)
 			{
-				src_offset += row_element_count - 4;
+				// Move forward to next group of 4 planes
+				src_offset += row_element_count * 4 - 3;
 			}
 			else
 			{
@@ -97,7 +98,7 @@ struct copy_unmodified_block_vtc
 		}
 
 		// End Case - tile as 4x4x3 or 4x4x2 or 4x4x1
-		const u32 vtc_tile_count = depth - depth_4;
+		const int vtc_tile_count = depth - depth_4;
 		for (int d = 0; d < vtc_tile_count; d++)
 		{
 			// Copy one slice of the 3d texture
