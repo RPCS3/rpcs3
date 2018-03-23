@@ -526,6 +526,9 @@ void main_window::InstallPup(const QString& dropPath)
 	{
 		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware version %s.", version_string);
 		guiSettings->ShowInfoBox(gui::ib_pup_success, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), this);
+
+		Emu.SetForceBoot(true);
+		Emu.BootGame(Emu.GetLibDir(), true);
 	}
 }
 
