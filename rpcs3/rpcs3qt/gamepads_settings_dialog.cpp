@@ -1,5 +1,7 @@
 #include "gamepads_settings_dialog.h"
 #include "pad_settings_dialog.h"
+#include "qt_utils.h"
+
 #include "../Emu/Io/PadHandler.h"
 #include "../ds4_pad_handler.h"
 #ifdef _WIN32
@@ -11,6 +13,7 @@
 #include "../keyboard_pad_handler.h"
 #include "../Emu/Io/Null/NullPadHandler.h"
 
+#include <QDir>
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QInputDialog>
@@ -368,7 +371,7 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 	if (config_enabled)
 	{
 		QString s_profile_dir = qstr(PadHandlerBase::get_config_dir(cur_pad_handler->m_type));
-		QStringList profiles = gui_settings::GetDirEntries(QDir(s_profile_dir), QStringList() << "*.yml");
+		QStringList profiles = gui::utils::get_dir_entries(QDir(s_profile_dir), QStringList() << "*.yml");
 
 		if (profiles.isEmpty())
 		{

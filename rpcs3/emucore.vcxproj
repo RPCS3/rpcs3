@@ -392,7 +392,14 @@
     <ClInclude Include="define_new_memleakdetect.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_gpio.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_net.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellCelp8Enc.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellCelpEnc.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellDaisy.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellHttp.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellHttpUtil.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellJpgEnc.h" />
     <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellVoice.h" />
     <ClInclude Include="Emu\Cell\PPUAnalyser.h" />
     <ClInclude Include="Emu\Cell\PPUTranslator.h" />
     <ClInclude Include="Emu\CPU\CPUTranslator.h" />

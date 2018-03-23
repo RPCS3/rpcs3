@@ -1,5 +1,4 @@
 #include <QVBoxLayout>
-#include <QHBoxLayout>
 #include <QPushButton>
 #include <QMessageBox>
 #include <QInputDialog>
@@ -13,8 +12,8 @@
 #include <QDesktopWidget>
 #include <QTimer>
 
+#include "qt_utils.h"
 #include "settings_dialog.h"
-
 #include "ui_settings_dialog.h"
 
 #include "stdafx.h"
@@ -731,6 +730,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->useNativeInterface, emu_settings::UseNativeInterface);
 	SubscribeTooltip(ui->useNativeInterface, json_emu_misc["useNativeInterface"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->showShaderCompilationHint, emu_settings::ShowShaderCompilationHint);
+	SubscribeTooltip(ui->showShaderCompilationHint, json_emu_misc["showShaderCompilationHint"].toString());
+
 	if (game)
 	{
 		ui->gb_stylesheets->setEnabled(false);
@@ -756,7 +758,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			}
 			else
 			{
-				button->setIcon(gui_settings::colorizedIcon(icon, iconColor, color));
+				button->setIcon(gui::utils::get_colorized_icon(icon, iconColor, color));
 			}
 			button->setText("");
 			button->setStyleSheet(styleSheet().append("text-align:left;"));
@@ -857,7 +859,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 					xgui_settings->SetCustomColor(i, dlg.customColor(i));
 				}
 				xgui_settings->SetValue(color, dlg.selectedColor());
-				button->setIcon(gui_settings::colorizedIcon(button->icon(), oldColor, dlg.selectedColor(), true));
+				button->setIcon(gui::utils::get_colorized_icon(button->icon(), oldColor, dlg.selectedColor(), true));
 				Q_EMIT GuiRepaintRequest();
 			}
 		};
