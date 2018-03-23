@@ -1919,7 +1919,7 @@ struct registers_decoder<NV4097_SET_SHADER_PACKER>
 
 		bool srgb_output_enabled() const
 		{
-			return bool(m_data.raw_value);
+			return !!m_data.raw_value;
 		}
 	};
 

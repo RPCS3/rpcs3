@@ -1344,13 +1344,19 @@ void GLGSRender::flip(int buffer)
 			buffer_width = render_target_texture->width();
 			buffer_height = render_target_texture->height();
 
-			image = render_target_texture->id();
+			image = render_target_texture->get_view();
 		}
 		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address))
 		{
 			//Hack - this should be the first location to check for output
 			//The render might have been done offscreen or in software and a blit used to display
 			image = surface->get_raw_view();
+
+			//Reset color swizzle
+			glBindTexture(GL_TEXTURE_2D, image);
+			const GLenum rgba_shuffle[] = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
+			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, (GLint*)rgba_shuffle);
+			surface->set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 		}
 		else
 		{
