@@ -155,7 +155,7 @@ namespace gl
 				GLboolean scissor_enabled = glIsEnabled(GL_SCISSOR_TEST);
 				GLboolean depth_test_enabled = glIsEnabled(GL_DEPTH_TEST);
 				GLboolean cull_face_enabled = glIsEnabled(GL_CULL_FACE);
-				GLboolean blend_enabled = glIsEnabled(GL_BLEND);
+				GLboolean blend_enabled = glIsEnabledi(GL_BLEND, 0);
 				GLboolean stencil_test_enabled = glIsEnabled(GL_STENCIL_TEST);
 
 				if (use_blending)
@@ -184,14 +184,14 @@ namespace gl
 				if (use_blending)
 				{
 					if (!blend_enabled)
-						glEnable(GL_BLEND);
+						glEnablei(GL_BLEND, 0);
 
 					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 					glBlendEquation(GL_FUNC_ADD);
 				}
 				else if (blend_enabled)
 				{
-					glDisable(GL_BLEND);
+					glDisablei(GL_BLEND, 0);
 				}
 
 				// Render
@@ -226,14 +226,14 @@ namespace gl
 				if (use_blending)
 				{
 					if (!blend_enabled)
-						glDisable(GL_BLEND);
+						glDisablei(GL_BLEND, 0);
 
 					glBlendFuncSeparate(blend_src_rgb, blend_dst_rgb, blend_src_a, blend_dst_a);
 					glBlendEquationSeparate(blend_eq_rgb, blend_eq_a);
 				}
 				else if (blend_enabled)
 				{
-					 glEnable(GL_BLEND);
+					 glEnablei(GL_BLEND, 0);
 				}
 			}
 			else
