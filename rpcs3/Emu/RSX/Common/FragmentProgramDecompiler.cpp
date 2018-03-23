@@ -711,6 +711,23 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		}
 		return false;
 	case RSX_FP_OPCODE_TXB:
+		switch (m_prog.get_texture_dimension(dst.tex_num))
+		{
+		case rsx::texture_dimension_extended::texture_dimension_1d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_BIAS));
+			return true;
+		case rsx::texture_dimension_extended::texture_dimension_2d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_BIAS));
+			m_2d_sampled_textures |= (1 << dst.tex_num);
+			return true;
+		case rsx::texture_dimension_extended::texture_dimension_cubemap:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_BIAS));
+			return true;
+		case rsx::texture_dimension_extended::texture_dimension_3d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_BIAS));
+			return true;
+		}
+		return false;
 	case RSX_FP_OPCODE_TXL:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
