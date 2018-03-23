@@ -16,7 +16,7 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	, m_cur_texture(0)
 	, exit(false)
 {
-	setWindowTitle(tr((u8"RSX \u5075\u932F\u5668")));
+	setWindowTitle(tr("RSX Debugger"));
 	setObjectName("rsx_debugger");
 	setAttribute(Qt::WA_DeleteOnClose);
 
@@ -30,11 +30,11 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	QVBoxLayout* vbox_tools = new QVBoxLayout();
 
 	// Controls
-	QGroupBox* gb_controls = new QGroupBox(tr(u8"RSX \u5075\u932F\u63A7\u5236\u5668"), this);
+	QGroupBox* gb_controls = new QGroupBox(tr("RSX Debugger Controls"), this);
 	QHBoxLayout* hbox_controls = new QHBoxLayout();
 
 	// Controls: Address
-	QGroupBox* gb_controls_addr = new QGroupBox(tr(u8"\u4F4D\u5740:"), this);
+	QGroupBox* gb_controls_addr = new QGroupBox(tr("Address:"), this);
 	QHBoxLayout* hbox_controls_addr = new QHBoxLayout();
 	m_addr_line = new QLineEdit();
 	m_addr_line->setFont(mono);
@@ -45,10 +45,10 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	gb_controls_addr->setLayout(hbox_controls_addr);
 
 	// Controls: Go to
-	QGroupBox* gb_controls_goto = new QGroupBox(tr(u8"\u81F3:"), this);
+	QGroupBox* gb_controls_goto = new QGroupBox(tr("Go to:"), this);
 	QHBoxLayout* hbox_controls_goto = new QHBoxLayout();
-	QPushButton* b_goto_get = new QPushButton(tr(u8"\u53D6\u5F97"), this);
-	QPushButton* b_goto_put = new QPushButton(tr(u8"\u7F6E\u65BC"), this);
+	QPushButton* b_goto_get = new QPushButton(tr("Get"), this);
+	QPushButton* b_goto_put = new QPushButton(tr("Put"), this);
 	b_goto_get->setAutoDefault(false);
 	b_goto_put->setAutoDefault(false);
 	hbox_controls_goto->addWidget(b_goto_get);
@@ -58,11 +58,11 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	// Controls: Breaks
 	QGroupBox* gb_controls_breaks = new QGroupBox(tr("Break on:"), this);
 	QHBoxLayout* hbox_controls_breaks = new QHBoxLayout();
-	QPushButton* b_break_frame = new QPushButton(tr(u8"\u6846\u67B6"), this);
-	QPushButton* b_break_text  = new QPushButton(tr(u8"\u7D0B\u7406"), this);
-	QPushButton* b_break_draw  = new QPushButton(tr(u8"\u7E6A\u88FD"), this);
-	QPushButton* b_break_prim  = new QPushButton(tr(u8"\u539F\u7D20"), this);
-	QPushButton* b_break_inst  = new QPushButton(tr(u8"\u6307\u4EE4"), this);
+	QPushButton* b_break_frame = new QPushButton(tr("Frame"), this);
+	QPushButton* b_break_text  = new QPushButton(tr("Texture"), this);
+	QPushButton* b_break_draw  = new QPushButton(tr("Draw"), this);
+	QPushButton* b_break_prim  = new QPushButton(tr("Primitive"), this);
+	QPushButton* b_break_inst  = new QPushButton(tr("Command"), this);
 	b_break_frame->setAutoDefault(false);
 	b_break_text->setAutoDefault(false);
 	b_break_draw->setAutoDefault(false);
@@ -110,40 +110,40 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 		return table;
 	};
 
-	m_list_commands = l_addRSXTab(m_list_commands, tr(u8"RSX \u6307\u4EE4"), 4);
-	m_list_captured_frame = l_addRSXTab(m_list_captured_frame, tr(u8"\u622A\u53D6\u6846"), 1);
-	m_list_captured_draw_calls = l_addRSXTab(m_list_captured_draw_calls, tr(u8"\u622A\u53D6\u7E6A\u88FD\u8ABF\u7528"), 1);
-	m_list_flags = l_addRSXTab(m_list_flags, tr(u8"\u65D7\u6A19"), 2);
-	m_list_lightning = l_addRSXTab(m_list_lightning, tr(u8"Lightning"), 2);
-	m_list_texture = l_addRSXTab(m_list_texture, tr(u8"\u7D0B\u7406"), 9);
-	m_list_settings = l_addRSXTab(m_list_settings, tr(u8"\u8A2D\u5B9A"), 2);
+	m_list_commands = l_addRSXTab(m_list_commands, tr("RSX Commands"), 4);
+	m_list_captured_frame = l_addRSXTab(m_list_captured_frame, tr("Captured Frame"), 1);
+	m_list_captured_draw_calls = l_addRSXTab(m_list_captured_draw_calls, tr("Captured Draw Calls"), 1);
+	m_list_flags = l_addRSXTab(m_list_flags, tr("Flags"), 2);
+	m_list_lightning = l_addRSXTab(m_list_lightning, tr("Lightning"), 2);
+	m_list_texture = l_addRSXTab(m_list_texture, tr("Texture"), 9);
+	m_list_settings = l_addRSXTab(m_list_settings, tr("Settings"), 2);
 
 	//Tabs: List Columns
-	m_list_commands->setHorizontalHeaderLabels(QStringList() << tr(u8"\u884C") << tr(u8"\u503C") << tr(u8"\u6307\u4EE4") << tr(u8"\u8A08\u6578"));
+	m_list_commands->setHorizontalHeaderLabels(QStringList() << tr("Column") << tr("Value") << tr("Command") << tr("Count"));
 	m_list_commands->setColumnWidth(0, 70);
 	m_list_commands->setColumnWidth(1, 70);
 	m_list_commands->setColumnWidth(2, 520);
 	m_list_commands->setColumnWidth(3, 60);
 
-	m_list_captured_frame->setHorizontalHeaderLabels(QStringList() << tr(u8"\u884C"));
+	m_list_captured_frame->setHorizontalHeaderLabels(QStringList() << tr("Column"));
 	m_list_captured_frame->setColumnWidth(0, 720);
 
-	m_list_captured_draw_calls->setHorizontalHeaderLabels(QStringList() << tr(u8"\u7E6A\u88FD\u8ABF\u7528"));
+	m_list_captured_draw_calls->setHorizontalHeaderLabels(QStringList() << tr("Draw calls"));
 	m_list_captured_draw_calls->setColumnWidth(0, 720);
 
-	m_list_flags->setHorizontalHeaderLabels(QStringList() << tr(u8"\u540D\u7A31") << tr(u8"\u503C"));
+	m_list_flags->setHorizontalHeaderLabels(QStringList() << tr("Name") << tr("Value"));
 	m_list_flags->setColumnWidth(0, 170);
 	m_list_flags->setColumnWidth(1, 270);
 
-	m_list_lightning->setHorizontalHeaderLabels(QStringList() << tr(u8"\u540D\u7A31") << tr(u8"\u503C"));
+	m_list_lightning->setHorizontalHeaderLabels(QStringList() << tr("Name") << tr("Value"));
 	m_list_lightning->setColumnWidth(0, 170);
 	m_list_lightning->setColumnWidth(1, 270);
 
-	m_list_texture->setHorizontalHeaderLabels(QStringList() << tr(u8"\u7D22\u5F15") << tr(u8"\u4F4D\u5740") << tr(u8"\u7ACB\u65B9\u9AD4\u8CBC\u5716")
-		<< tr(u8"\u7DAD\u5EA6") << tr(u8"\u555F\u7528") << tr(u8"\u683C\u5F0F") << tr(u8"\u7D0B\u7406\u8CBC\u5716") << tr(u8"\u9593\u8DDD") << tr(u8"\u5927\u5C0F"));
+	m_list_texture->setHorizontalHeaderLabels(QStringList() << tr("Index") << tr("Address") << tr("Cubemap")
+		<< tr("Dimension") << tr("Enabled") << tr("Format") << tr("Mipmap") << tr("Pitch") << tr("Size"));
 	for (int i = 0; i<m_list_texture->columnCount(); i++) m_list_lightning->setColumnWidth(i, 80);
 
-	m_list_settings->setHorizontalHeaderLabels(QStringList() << tr(u8"\u540D\u7A31") << tr(u8"\u503C"));
+	m_list_settings->setHorizontalHeaderLabels(QStringList() << tr("Name") << tr("Value"));
 	m_list_settings->setColumnWidth(0, 170);
 	m_list_settings->setColumnWidth(1, 270);
 
@@ -170,10 +170,10 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	QWidget* p_shader_program = new QWidget(state_rsx);
 	QWidget* p_index_buffer = new QWidget(state_rsx);
 
-	state_rsx->addTab(p_buffers, tr(u8"RTTs \u8207 DS"));
-	state_rsx->addTab(p_transform_program, tr(u8"\u8F49\u63DB\u7A0B\u5E8F"));
-	state_rsx->addTab(p_shader_program, tr(u8"\u8457\u8272\u5668\u7A0B\u5E8F"));
-	state_rsx->addTab(p_index_buffer, tr(u8"\u7D22\u5F15\u7DE9\u885D\u5340"));
+	state_rsx->addTab(p_buffers, tr("RTTs and DS"));
+	state_rsx->addTab(p_transform_program, tr("Transform program"));
+	state_rsx->addTab(p_shader_program, tr("Shader program"));
+	state_rsx->addTab(p_index_buffer, tr("Index buffer"));
 
 	m_text_transform_program = new QLabel(p_transform_program);
 	m_text_transform_program->setFixedSize(QSize(720, 720));
@@ -194,13 +194,13 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	//Buffers
 	QVBoxLayout* vbox_buffers1 = new QVBoxLayout();
 	QVBoxLayout* vbox_buffers2 = new QVBoxLayout();
-	QGroupBox* gb_buffers_colorA  = new QGroupBox(tr(u8"\u8272\u5F69\u7DE9\u885D\u5340 A"), p_buffers);
-	QGroupBox* gb_buffers_colorB  = new QGroupBox(tr(u8"\u8272\u5F69\u7DE9\u885D\u5340 B"), p_buffers);
-	QGroupBox* gb_buffers_colorC  = new QGroupBox(tr(u8"\u8272\u5F69\u7DE9\u885D\u5340 C"), p_buffers);
-	QGroupBox* gb_buffers_colorD  = new QGroupBox(tr(u8"\u8272\u5F69\u7DE9\u885D\u5340 D"), p_buffers);
-	QGroupBox* gb_buffers_depth   = new QGroupBox(tr(u8"\u6DF1\u5EA6\u7DE9\u885D\u5340"), p_buffers);
-	QGroupBox* gb_buffers_stencil = new QGroupBox(tr(u8"\u6A21\u7D44\u7DE9\u885D\u5340"), p_buffers);
-	QGroupBox* gb_buffers_text    = new QGroupBox(tr(u8"\u7D0B\u7406"), p_buffers);
+	QGroupBox* gb_buffers_colorA  = new QGroupBox(tr("Color Buffer A"), p_buffers);
+	QGroupBox* gb_buffers_colorB  = new QGroupBox(tr("Color Buffer B"), p_buffers);
+	QGroupBox* gb_buffers_colorC  = new QGroupBox(tr("Color Buffer C"), p_buffers);
+	QGroupBox* gb_buffers_colorD  = new QGroupBox(tr("Color Buffer D"), p_buffers);
+	QGroupBox* gb_buffers_depth   = new QGroupBox(tr("Depth Buffer"), p_buffers);
+	QGroupBox* gb_buffers_stencil = new QGroupBox(tr("Stencil Buffer"), p_buffers);
+	QGroupBox* gb_buffers_text    = new QGroupBox(tr("Texture"), p_buffers);
 	QHBoxLayout* hbox_buffers_colorA	= new QHBoxLayout();
 	QHBoxLayout* hbox_buffers_colorB	= new QHBoxLayout();
 	QHBoxLayout* hbox_buffers_colorC	= new QHBoxLayout();
@@ -793,7 +793,7 @@ void rsx_debugger::GetFlags()
 	int i=0;
 
 #define LIST_FLAGS_ADD(name, value) \
-	m_list_flags->setItem(i, 0, new QTableWidgetItem(qstr(name))); m_list_flags->setItem(i, 1, new QTableWidgetItem(qstr(value ? (u8"\u555F\u7528") : (u8"\u505C\u7528")))); i++;
+	m_list_flags->setItem(i, 0, new QTableWidgetItem(qstr(name))); m_list_flags->setItem(i, 1, new QTableWidgetItem(qstr(value ? "Enabled" : "Disabled"))); i++;
 	/*
 	LIST_FLAGS_ADD("Alpha test",         render->m_set_alpha_test);
 	LIST_FLAGS_ADD("Blend",              render->m_set_blend);

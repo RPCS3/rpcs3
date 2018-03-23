@@ -15,20 +15,29 @@
 
 #include "gui_settings.h"
 
+struct compat_status
+{
+	int index;
+	QString date;
+	QString color;
+	QString text;
+	QString tooltip;
+};
+
 class game_compatibility : public QObject
 {
 	Q_OBJECT
 
-	const std::map<QString, Compat_Status> Status_Data =
+	const std::map<QString, compat_status> Status_Data =
 	{
-		{ "Playable", { 0, "", "#1ebc61", QObject::tr(u8"\u53EF\u73A9"),         QObject::tr(u8"\u53EF\u4EE5\u5F9E\u982D\u5230\u5C3E\u57F7\u884C\u7684\u904A\u6232\u3002") } },
-		{ "Ingame",   { 1, "", "#f9b32f", QObject::tr(u8"\u904A\u6232\u4E2D"),           QObject::tr(u8"\u4E0D\u5B8C\u5584\u7684\u904A\u6232\uFF0C\u6709\u56B4\u91CD\u6545\u969C\u6216\u6027\u80FD\u4E0D\u8DB3\u3002") } },
-		{ "Intro",    { 2, "", "#e08a1e", QObject::tr(u8"\u4ECB\u7D39"),            QObject::tr(u8"\u986F\u793A\u5716\u50CF\u4F46\u4E0D\u6703\u8D85\u904E\u904A\u6232\u9078\u55AE\u3002") } },
-		{ "Loadable", { 3, "", "#e74c3c", QObject::tr(u8"\u53EF\u8B80\u53D6"),         QObject::tr(u8"\u5728\u8996\u7A97\u6A19\u984C\u4E0A\u50C5\u986F\u793A\u6846\u901F\u7387\u4F46\u9ED1\u756B\u9762\u7684\u904A\u6232\u3002") } },
-		{ "Nothing",  { 4, "", "#455556", QObject::tr(u8"\u6C92\u6709"),          QObject::tr(u8"\u4E0D\u6B63\u78BA\u521D\u59CB\u5316\u904A\u6232\uFF0C\u6839\u672C\u4E0D\u8B80\u53D6\u6216\u4F7F\u4EFF\u771F\u5668\u5D29\u6F70\u3002") } },
-		{ "NoResult", { 5, "", "",        QObject::tr(u8"\u672A\u627E\u5230\u7D50\u679C"), QObject::tr(u8"\u6B64\u76F8\u5BB9\u6027\u8CC7\u6599\u5EAB\u4E2D\u672A\u767C\u73FE\u904A\u6232\u6216\u61C9\u7528\u7A0B\u5F0F\u9805\u76EE\u3002") } },
-		{ "NoData",   { 6, "", "",        QObject::tr(u8"\u8CC7\u6599\u5EAB\u907A\u5931"), QObject::tr(u8"\u53F3\u9375\u9EDE\u64CA\u6B64\u8655\u4E26\u4E0B\u8F09\u6700\u65B0\u7684\u8CC7\u6599\u5EAB\u3002\n\u78BA\u5B9A\u60A8\u5DF2\u9023\u7D50\u5230\u7DB2\u969B\u7DB2\u8DEF\u3002") } },
-		{ "Download", { 7, "", "",        QObject::tr(u8"\u63D0\u53D6..."),    QObject::tr(u8"\u4E0B\u8F09\u76F8\u5BB9\u6027\u8CC7\u6599\u5EAB\u3002 \u8ACB\u7A0D\u5019...") } }
+		{ "Playable", { 0, "", "#1ebc61", QObject::tr("Playable"),         QObject::tr("Games that can be properly played from start to finish") } },
+		{ "Ingame",   { 1, "", "#f9b32f", QObject::tr("Ingame"),           QObject::tr("Games that either can't be finished, have serious glitches or have insufficient performance") } },
+		{ "Intro",    { 2, "", "#e08a1e", QObject::tr("Intro"),            QObject::tr("Games that display image but don't make it past the menus") } },
+		{ "Loadable", { 3, "", "#e74c3c", QObject::tr("Loadable"),         QObject::tr("Games that display a black screen with a framerate on the window's title") } },
+		{ "Nothing",  { 4, "", "#455556", QObject::tr("Nothing"),          QObject::tr("Games that don't initialize properly, not loading at all and/or crashing the emulator") } },
+		{ "NoResult", { 5, "", "",        QObject::tr("No results found"), QObject::tr("There is no entry for this game or application in the compatibility database yet.") } },
+		{ "NoData",   { 6, "", "",        QObject::tr("Database missing"), QObject::tr("Right click here and download the current database.\nMake sure you are connected to the internet.") } },
+		{ "Download", { 7, "", "",        QObject::tr("Retrieving..."),    QObject::tr("Downloading the compatibility database. Please wait...") } }
 	};
 	int m_timer_count = 0;
 	QString m_filepath;
@@ -38,7 +47,7 @@ class game_compatibility : public QObject
 	std::unique_ptr<QTimer> m_progress_timer;
 	std::unique_ptr<QProgressDialog> m_progress_dialog;
 	std::unique_ptr<QNetworkAccessManager> m_network_access_manager;
-	std::map<std::string, Compat_Status> m_compat_database;
+	std::map<std::string, compat_status> m_compat_database;
 
 public:
 	/** Handles reads, writes and downloads for the compatibility database */
@@ -48,10 +57,10 @@ public:
 	void RequestCompatibility(bool online = false);
 
 	/** Returns the compatibility status for the requested title */
-	Compat_Status GetCompatibility(const std::string& title_id);
+	compat_status GetCompatibility(const std::string& title_id);
 
 	/** Returns the data for the requested status */
-	Compat_Status GetStatusData(const QString& status);
+	compat_status GetStatusData(const QString& status);
 
 Q_SIGNALS:
 	void DownloadStarted();

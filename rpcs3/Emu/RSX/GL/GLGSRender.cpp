@@ -616,12 +616,12 @@ void GLGSRender::on_init_thread()
 
 	if (!gl_caps.ARB_texture_buffer_supported)
 	{
-		fmt::throw_exception("\u7121\u6CD5\u521D\u59CB\u5316 OpenGL \u6E32\u67D3\u5668\u3002 \u9700\u8981 ARB_texture_buffer_object \u4F46\u60A8\u7684 GPU \u4E0D\u652F\u63F4\u3002");
+		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_texture_buffer_object is required but not supported by your GPU");
 	}
 
 	if (!gl_caps.ARB_dsa_supported && !gl_caps.EXT_dsa_supported)
 	{
-		fmt::throw_exception("\u7121\u6CD5\u521D\u59CB\u5316 OpenGL \u6E32\u67D3\u5668\u3002 \u9700\u8981 ARB_direct_state_access \u6216 EXT_direct_state_access \u4F46\u60A8\u7684 GPU \u4E0D\u652F\u63F4\u3002");
+		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_direct_state_access or EXT_direct_state_access is required but not supported by your GPU");
 	}
 
 	if (!gl_caps.ARB_depth_buffer_float_supported && g_cfg.video.force_high_precision_z_buffer)
@@ -1061,15 +1061,18 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 		m_shaders_cache->store(pipeline_properties, vertex_program, fragment_program);
 
 		//Notify the user with HUD notification
-		if (!m_custom_ui)
+		if (g_cfg.misc.show_shader_compilation_hint)
 		{
-			//Create notification but do not draw it at this time. No need to spam flip requests
-			m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
-		}
-		else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
-		{
-			//Probe the notification
-			casted->touch();
+			if (!m_custom_ui)
+			{
+				//Create notification but do not draw it at this time. No need to spam flip requests
+				m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
+			}
+			else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
+			{
+				//Probe the notification
+				casted->touch();
+			}
 		}
 	}
 

@@ -75,10 +75,10 @@ void fmt_class_string<CellNetCtlState>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case CELL_NET_CTL_STATE_Disconnected: return (u8"\u4E2D\u65B7");
-		case CELL_NET_CTL_STATE_Connecting: return (u8"\u9023\u7D50");
-		case CELL_NET_CTL_STATE_IPObtaining: return (u8"\u53D6\u5F97 IP");
-		case CELL_NET_CTL_STATE_IPObtained: return (u8"IP \u53D6\u5F97");
+		case CELL_NET_CTL_STATE_Disconnected: return "Disconnected";
+		case CELL_NET_CTL_STATE_Connecting: return "Connecting";
+		case CELL_NET_CTL_STATE_IPObtaining: return "Obtaining IP";
+		case CELL_NET_CTL_STATE_IPObtained: return "IP Obtained";
 		}
 
 		return unknown;

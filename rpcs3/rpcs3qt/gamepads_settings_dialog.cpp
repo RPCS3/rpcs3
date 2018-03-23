@@ -1,5 +1,7 @@
 #include "gamepads_settings_dialog.h"
 #include "pad_settings_dialog.h"
+#include "qt_utils.h"
+
 #include "../Emu/Io/PadHandler.h"
 #include "../ds4_pad_handler.h"
 #ifdef _WIN32
@@ -11,6 +13,7 @@
 #include "../keyboard_pad_handler.h"
 #include "../Emu/Io/Null/NullPadHandler.h"
 
+#include <QDir>
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QInputDialog>
@@ -24,12 +27,12 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 	QString input_dir = qstr(fs::get_config_dir()) + "/InputConfigs/";
 	if (!QDir().mkdir(input_dir) && !QDir().exists(input_dir))
 	{
-		LOG_ERROR(GENERAL, u8"\u7121\u6CD5\u5275\u5EFA\u76EE\u9304 %s", sstr(input_dir));
+		LOG_ERROR(GENERAL, "Failed to create dir %s", sstr(input_dir));
 		return false;
 	}
 	if (!QDir().mkdir(dir) && !QDir().exists(dir))
 	{
-		LOG_ERROR(GENERAL, u8"\u7121\u6CD5\u5275\u5EFA\u76EE\u9304 %s", sstr(dir));
+		LOG_ERROR(GENERAL, "Failed to create dir %s", sstr(dir));
 		return false;
 	}
 
@@ -38,7 +41,7 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 
 	if (!new_file.open(QIODevice::WriteOnly))
 	{
-		LOG_ERROR(GENERAL, u8"\u7121\u6CD5\u5275\u5EFA\u6A94\u6848 %s", sstr(filename));
+		LOG_ERROR(GENERAL, "Failed to create file %s", sstr(filename));
 		return false;
 	}
 
@@ -69,7 +72,7 @@ inline void resizeComboBoxView(QComboBox* combo)
 gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 	: QDialog(parent)
 {
-	setWindowTitle(tr(u8"\u904A\u6232\u63A7\u5236\u5668\u8A2D\u5B9A"));
+	setWindowTitle(tr("Gamepads Settings"));
 
 	// read tooltips from json
 	QFile json_file(":/Json/tooltips.json");
@@ -85,7 +88,7 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 
 	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
-		QGroupBox *grp_player = new QGroupBox(QString(tr(u8"\u73A9\u5BB6 %1").arg(i+1)));
+		QGroupBox *grp_player = new QGroupBox(QString(tr("Player %1").arg(i+1)));
 
 		QVBoxLayout *ppad_layout = new QVBoxLayout();
 
@@ -112,9 +115,9 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 		ppad_layout->addWidget(co_profile[i]);
 
 		QHBoxLayout *button_layout = new QHBoxLayout();
-		bu_new_profile[i] = new QPushButton(tr(u8"\u589E\u52A0\u8A2D\u7F6E\u6A94"));
+		bu_new_profile[i] = new QPushButton(tr("Add Profile"));
 		bu_new_profile[i]->setEnabled(false);
-		bu_config[i] = new QPushButton(tr(u8"\u7D44\u614B"));
+		bu_config[i] = new QPushButton(tr("Configure"));
 		bu_config[i]->setEnabled(false);
 		button_layout->setContentsMargins(0,0,0,0);
 		button_layout->addWidget(bu_config[i]);
@@ -146,9 +149,9 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 	dialog_layout->addLayout(all_players);
 
 	QHBoxLayout *buttons_layout = new QHBoxLayout();
-	QPushButton *ok_button = new QPushButton(tr(u8"\u78BA\u5B9A"));
-	QPushButton *cancel_button = new QPushButton(tr(u8"\u53D6\u6D88"));
-	QPushButton *refresh_button = new QPushButton(tr(u8"\u66F4\u65B0"));
+	QPushButton *ok_button = new QPushButton(tr("OK"));
+	QPushButton *cancel_button = new QPushButton(tr("Cancel"));
+	QPushButton *refresh_button = new QPushButton(tr("Refresh"));
 	buttons_layout->addWidget(ok_button);
 	buttons_layout->addWidget(refresh_button);
 	buttons_layout->addWidget(cancel_button);
@@ -182,7 +185,7 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 			if (!g_cfg_input.player[i]->device.from_string(device))
 			{
 				//Something went wrong
-				LOG_ERROR(GENERAL, u8"\u7121\u6CD5\u8F49\u63DB\u88DD\u7F6E\u5B57\u4E32: %s", device);
+				LOG_ERROR(GENERAL, "Failed to convert device string: %s", device);
 				return;
 			}
 		});
@@ -192,7 +195,7 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 			if (!g_cfg_input.player[i]->profile.from_string(profile))
 			{
 				//Something went wrong 
-				LOG_ERROR(GENERAL, u8"\u7121\u6CD5\u8F49\u63DB\u8A2D\u7F6E\u6A94\u5B57\u4E32: %s", profile);
+				LOG_ERROR(GENERAL, "Failed to convert profile string: %s", profile);
 				return;
 			}
 		});
@@ -203,8 +206,8 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 		connect(bu_new_profile[i], &QAbstractButton::clicked, [=]
 		{
 			QInputDialog* dialog = new QInputDialog(this);
-			dialog->setWindowTitle(tr(u8"\u8ACB\u547D\u540D\u552F\u4E00\u7684\u540D\u7A31"));
-			dialog->setLabelText(tr(u8"\u8A2D\u7F6E\u6A94\u540D\u7A31: "));
+			dialog->setWindowTitle(tr("Choose a unique name"));
+			dialog->setLabelText(tr("Profile Name: "));
 			dialog->setFixedSize(500, 100);
 
 			while (dialog->exec() != QDialog::Rejected)
@@ -212,17 +215,17 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 				QString friendlyName = dialog->textValue();
 				if (friendlyName == "")
 				{
-					QMessageBox::warning(this, tr(u8"\u932F\u8AA4"), tr(u8"\u540D\u7A31\u4E0D\u80FD\u70BA\u7A7A"));
+					QMessageBox::warning(this, tr("Error"), tr("Name cannot be empty"));
 					continue;
 				}
 				if (friendlyName.contains("."))
 				{
-					QMessageBox::warning(this, tr(u8"\u932F\u8AA4"), tr(u8"\u5FC5\u9808\u547D\u540D\u6C92\u6709\u7684\u540D\u5B57 '.'"));
+					QMessageBox::warning(this, tr("Error"), tr("Must choose a name without '.'"));
 					continue;
 				}
 				if (co_profile[i]->findText(friendlyName) != -1)
 				{
-					QMessageBox::warning(this, tr(u8"\u932F\u8AA4"), tr(u8"\u8ACB\u547D\u540D\u4E0D\u5B58\u5728\u7684\u540D\u5B57"));
+					QMessageBox::warning(this, tr("Error"), tr("Please choose a non-existing name"));
 					continue;
 				}
 				if (CreateConfigFile(qstr(PadHandlerBase::get_config_dir(g_cfg_input.player[i]->handler)), friendlyName))
@@ -313,7 +316,7 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 	if (!g_cfg_input.player[player]->handler.from_string(handler))
 	{
 		//Something went wrong
-		LOG_ERROR(GENERAL, u8"\u7121\u6CD5\u8F49\u63DB\u8F38\u5165\u5B57\u4E32:%s", handler);
+		LOG_ERROR(GENERAL, "Failed to convert input string:%s", handler);
 		return;
 	}
 
@@ -358,7 +361,7 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 	}
 	else
 	{
-		co_deviceID[player]->addItem(tr(u8"\u672A\u5075\u6E2C\u5230\u88DD\u7F6E"), -1);
+		co_deviceID[player]->addItem(tr("No Device Detected"), -1);
 	}
 
 	bool config_enabled = force_enable || (device_found && cur_pad_handler->has_config());
@@ -368,11 +371,11 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 	if (config_enabled)
 	{
 		QString s_profile_dir = qstr(PadHandlerBase::get_config_dir(cur_pad_handler->m_type));
-		QStringList profiles = gui_settings::GetDirEntries(QDir(s_profile_dir), QStringList() << "*.yml");
+		QStringList profiles = gui::utils::get_dir_entries(QDir(s_profile_dir), QStringList() << "*.yml");
 
 		if (profiles.isEmpty())
 		{
-			QString def_name = u8"\u9810\u8A2D\u8A2D\u7F6E\u6A94";
+			QString def_name = "Default Profile";
 			if (!CreateConfigFile(s_profile_dir, def_name))
 			{
 				config_enabled = false;
@@ -394,7 +397,7 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 	}
 
 	if (!config_enabled)
-		co_profile[player]->addItem(tr(u8"\u6C92\u6709\u8A2D\u7F6E\u6A94"));
+		co_profile[player]->addItem(tr("No Profiles"));
 
 	// enable configuration and profile list if possible
 	bu_config[player]->setEnabled(config_enabled);

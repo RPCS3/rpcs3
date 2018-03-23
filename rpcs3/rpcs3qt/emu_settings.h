@@ -88,6 +88,7 @@ public:
 		ShowTrophyPopups,
 		ShowWelcomeScreen,
 		UseNativeInterface,
+		ShowShaderCompilationHint,
 
 		// Network
 		ConnectionStatus,
@@ -127,7 +128,7 @@ public:
 		QStringList vulkanAdapters;
 		QString name_Null = tr("Null");
 		QString name_Vulkan = tr("Vulkan");
-		QString name_D3D12 = tr(u8"D3D12[\u4E0D\u4F7F\u7528]");
+		QString name_D3D12 = tr("D3D12[DO NOT USE]");
 		QString name_OpenGL = tr("OpenGL");
 		Render_Info D3D12;
 		Render_Info Vulkan;
@@ -240,20 +241,21 @@ private:
 		{ Move,            { "Input/Output", "Move" }},
 
 		// Misc
-		{ExitRPCS3OnFinish,   { "Miscellaneous", "Exit RPCS3 when process finishes" }},
-		{StartOnBoot,         { "Miscellaneous", "Automatically start games after boot" }},
-		{StartGameFullscreen, { "Miscellaneous", "Start games in fullscreen mode"}},
-		{ShowFPSInTitle,      { "Miscellaneous", "Show FPS counter in window title"}},
-		{ShowTrophyPopups,    { "Miscellaneous", "Show trophy popups"}},
-		{ShowWelcomeScreen,   { "Miscellaneous", "Show Welcome Screen"}},
-		{UseNativeInterface,  { "Miscellaneous", "Use native user interface"}},
+		{ ExitRPCS3OnFinish,         { "Miscellaneous", "Exit RPCS3 when process finishes" }},
+		{ StartOnBoot,               { "Miscellaneous", "Automatically start games after boot" }},
+		{ StartGameFullscreen,       { "Miscellaneous", "Start games in fullscreen mode"}},
+		{ ShowFPSInTitle,            { "Miscellaneous", "Show FPS counter in window title"}},
+		{ ShowTrophyPopups,          { "Miscellaneous", "Show trophy popups"}},
+		{ ShowWelcomeScreen,         { "Miscellaneous", "Show Welcome Screen"}},
+		{ UseNativeInterface,        { "Miscellaneous", "Use native user interface"}},
+		{ ShowShaderCompilationHint, { "Miscellaneous", "Show shader compilation hint"}},
 
 		// Networking
-		{ConnectionStatus, { "Net", "Connection status"}},
+		{ ConnectionStatus, { "Net", "Connection status"}},
 
 		// System
-		{Language,       { "System", "Language"}},
-		{EnableHostRoot, { "VFS", "Enable /host_root/"}},
+		{ Language,       { "System", "Language"}},
+		{ EnableHostRoot, { "VFS", "Enable /host_root/"}},
 
 		// Virtual File System
 		{ emulatorLocation,   { "VFS", "$(EmulatorDir)"}},

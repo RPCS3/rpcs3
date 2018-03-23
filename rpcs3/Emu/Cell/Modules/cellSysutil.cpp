@@ -74,26 +74,26 @@ void fmt_class_string<CellSysutilLang>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case CELL_SYSUTIL_LANG_JAPANESE: return (u8"日文");
-		case CELL_SYSUTIL_LANG_ENGLISH_US: return (u8"英文 (US)");
-		case CELL_SYSUTIL_LANG_FRENCH: return (u8"法文");
-		case CELL_SYSUTIL_LANG_SPANISH: return (u8"西班牙");
-		case CELL_SYSUTIL_LANG_GERMAN: return (u8"德文");
-		case CELL_SYSUTIL_LANG_ITALIAN: return (u8"意大利");
-		case CELL_SYSUTIL_LANG_DUTCH: return (u8"荷蘭");
-		case CELL_SYSUTIL_LANG_PORTUGUESE_PT: return (u8"葡萄牙 (PT)");
-		case CELL_SYSUTIL_LANG_RUSSIAN: return (u8"俄文");
-		case CELL_SYSUTIL_LANG_KOREAN: return (u8"韓文");
-		case CELL_SYSUTIL_LANG_CHINESE_T: return (u8"繁體中文");
-		case CELL_SYSUTIL_LANG_CHINESE_S: return (u8"簡體中文");
-		case CELL_SYSUTIL_LANG_FINNISH: return (u8"芬蘭");
-		case CELL_SYSUTIL_LANG_SWEDISH: return (u8"瑞典");
-		case CELL_SYSUTIL_LANG_DANISH: return (u8"丹麥");
-		case CELL_SYSUTIL_LANG_NORWEGIAN: return (u8"挪威");
-		case CELL_SYSUTIL_LANG_POLISH: return (u8"波蘭");
-		case CELL_SYSUTIL_LANG_ENGLISH_GB: return (u8"英文 (UK)");
-		case CELL_SYSUTIL_LANG_PORTUGUESE_BR: return (u8"葡萄牙 (BR)");
-		case CELL_SYSUTIL_LANG_TURKISH: return (u8"土耳其");
+		case CELL_SYSUTIL_LANG_JAPANESE: return "Japanese";
+		case CELL_SYSUTIL_LANG_ENGLISH_US: return "English (US)";
+		case CELL_SYSUTIL_LANG_FRENCH: return "French";
+		case CELL_SYSUTIL_LANG_SPANISH: return "Spanish";
+		case CELL_SYSUTIL_LANG_GERMAN: return "German";
+		case CELL_SYSUTIL_LANG_ITALIAN: return "Italian";
+		case CELL_SYSUTIL_LANG_DUTCH: return "Dutch";
+		case CELL_SYSUTIL_LANG_PORTUGUESE_PT: return "Portuguese (PT)";
+		case CELL_SYSUTIL_LANG_RUSSIAN: return "Russian";
+		case CELL_SYSUTIL_LANG_KOREAN: return "Korean";
+		case CELL_SYSUTIL_LANG_CHINESE_T: return "Chinese (Trad.)";
+		case CELL_SYSUTIL_LANG_CHINESE_S: return "Chinese (Simp.)";
+		case CELL_SYSUTIL_LANG_FINNISH: return "Finnish";
+		case CELL_SYSUTIL_LANG_SWEDISH: return "Swedish";
+		case CELL_SYSUTIL_LANG_DANISH: return "Danish";
+		case CELL_SYSUTIL_LANG_NORWEGIAN: return "Norwegian";
+		case CELL_SYSUTIL_LANG_POLISH: return "Polish";
+		case CELL_SYSUTIL_LANG_ENGLISH_GB: return "English (UK)";
+		case CELL_SYSUTIL_LANG_PORTUGUESE_BR: return "Portuguese (BR)";
+		case CELL_SYSUTIL_LANG_TURKISH: return "Turkish";
 		}
 
 		return unknown;
