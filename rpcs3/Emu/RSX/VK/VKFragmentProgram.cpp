@@ -324,7 +324,7 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << "\n" << "	fs_main(" + parameters + ");\n\n";
 
-	glsl::insert_rop(OS, m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
+	glsl::insert_rop(OS, !!(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS));
 
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{

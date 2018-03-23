@@ -116,7 +116,7 @@ namespace vk
 			if (context != rsx::texture_upload_context::framebuffer_storage)
 				return uploaded_image_view.get();
 			else
-				return static_cast<vk::render_target*>(vram_texture)->get_view();
+				return static_cast<vk::render_target*>(vram_texture)->get_view(0xAAE4, rsx::default_remap_vector);
 		}
 
 		vk::image* get_raw_texture()
@@ -585,8 +585,8 @@ namespace vk
 				view_swizzle = { remap[1], remap[2], remap[3], remap[0] };
 			}
 
-			if (memcmp(remap_vector.first.data(), default_remap_vector.first.data(), 4) ||
-				memcmp(remap_vector.second.data(), default_remap_vector.second.data(), 4))
+			if (memcmp(remap_vector.first.data(), rsx::default_remap_vector.first.data(), 4) ||
+				memcmp(remap_vector.second.data(), rsx::default_remap_vector.second.data(), 4))
 				view_swizzle = vk::apply_swizzle_remap({view_swizzle.a, view_swizzle.r, view_swizzle.g, view_swizzle.b}, remap_vector);
 
 			VkImageSubresourceRange view_range = { aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 1 };
@@ -633,7 +633,7 @@ namespace vk
 		}
 
 		vk::image_view* generate_cubemap_from_images(vk::command_buffer& cmd, u32 gcm_format, u16 size,
-				const std::array<vk::image*, 6>& sources, const texture_channel_remap_t& remap_vector) override
+				const std::array<vk::image*, 6>& sources, const texture_channel_remap_t& /*remap_vector*/) override
 		{
 			std::unique_ptr<vk::image> image;
 			std::unique_ptr<vk::image_view> view;
@@ -706,10 +706,10 @@ namespace vk
 		}
 
 		vk::image_view* generate_atlas_from_images(vk::command_buffer& cmd, u32 gcm_format, u16 width, u16 height,
-				const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) override
+				const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& /*remap_vector*/) override
 		{
 			auto result = create_temporary_subresource_view_impl(cmd, sections_to_copy.front().src, VK_IMAGE_TYPE_2D,
-					VK_IMAGE_VIEW_TYPE_2D, gcm_format, 0, 0, width, height, default_remap_vector, false);
+					VK_IMAGE_VIEW_TYPE_2D, gcm_format, 0, 0, width, height, rsx::default_remap_vector, false);
 
 			VkImage dst = result->info.image;
 			VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -940,7 +940,7 @@ namespace vk
 			vk::image* image = section.get_raw_texture();
 			auto& view = section.get_view();
 
-			VkComponentMapping mapping = apply_component_mapping_flags(gcm_format, expected_flags, default_remap_vector);
+			VkComponentMapping mapping = apply_component_mapping_flags(gcm_format, expected_flags, rsx::default_remap_vector);
 
 			if (mapping.a != view->info.components.a ||
 				mapping.b != view->info.components.b ||
@@ -1110,7 +1110,7 @@ namespace vk
 			return upload_texture(cmd, tex, m_rtts, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
 		}
 
-		vk::image *upload_image_simple(vk::command_buffer& cmd, u32 address, u32 width, u32 height)
+		vk::image *upload_image_simple(vk::command_buffer& /*cmd*/, u32 address, u32 width, u32 height)
 		{
 			//Uploads a linear memory range as a BGRA8 texture
 			auto image = std::make_unique<vk::image>(*m_device, m_memory_types.host_visible_coherent,
@@ -1139,7 +1139,7 @@ namespace vk
 				be_t<u32>* casted_src = (be_t<u32>*)src;
 				u32* casted_dst = (u32*)dst;
 
-				for (int col = 0; col < width; ++col)
+				for (u32 col = 0; col < width; ++col)
 					casted_dst[col] = casted_src[col];
 
 				src += row_pitch;

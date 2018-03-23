@@ -2246,9 +2246,9 @@ namespace rsx
 			const auto elapsed = timestamp - performance_counters.last_update_timestamp;
 
 			if (elapsed > idle)
-				performance_counters.approximate_load = (elapsed - idle) * 100 / elapsed;
+				performance_counters.approximate_load = (u32)((elapsed - idle) * 100 / elapsed);
 			else
-				performance_counters.approximate_load = 0;
+				performance_counters.approximate_load = 0u;
 
 			performance_counters.idle_time = 0;
 			performance_counters.sampled_frames = 0;
@@ -2423,7 +2423,7 @@ namespace rsx
 			int retries = 0;
 			while (!Emu.IsStopped())
 			{
-				for (int n = 0; n < occlusion_query_count; ++n)
+				for (u32 n = 0; n < occlusion_query_count; ++n)
 				{
 					if (m_occlusion_query_data[n].pending || m_occlusion_query_data[n].active)
 						continue;
@@ -2571,7 +2571,7 @@ namespace rsx
 
 					if (!writer.forwarder)
 						//No other queries in the chain, write result
-						write(writer.sink, ptimer->timestamp(), writer.type, result);
+						write(writer.sink, (u32)ptimer->timestamp(), writer.type, result);
 
 					processed++;
 				}
@@ -2698,7 +2698,7 @@ namespace rsx
 				//only zpass supported right now
 				if (!writer.forwarder)
 					//No other queries in the chain, write result
-					write(writer.sink, ptimer->timestamp(), writer.type, result);
+					write(writer.sink, (u32)ptimer->timestamp(), writer.type, result);
 
 				processed++;
 			}

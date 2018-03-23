@@ -64,6 +64,8 @@ namespace gl
 
 		texture::internal_format compatible_internal_format = texture::internal_format::rgba8;
 		std::array<GLenum, 4> native_component_mapping;
+		u32 current_remap_encoding = 0;
+
 	public:
 		render_target *old_contents = nullptr;
 
@@ -116,10 +118,29 @@ namespace gl
 			return id();
 		}
 
-		u32 get_view(const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap) const
+		u32 get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
 		{
-			bind();
-			apply_swizzle_remap(GL_TEXTURE_2D, native_component_mapping, remap);
+			if (remap_encoding != current_remap_encoding)
+			{
+				current_remap_encoding = remap_encoding;
+
+				bind();
+				apply_swizzle_remap(GL_TEXTURE_2D, native_component_mapping, remap);
+			}
+
+			return id();
+		}
+
+		u32 get_view()
+		{
+			//Get view with components in true native layout
+			//TODO: Implement real image views
+			const GLenum rgba_remap[4] = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
+			glBindTexture(GL_TEXTURE_2D, id());
+			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, (GLint*)rgba_remap);
+
+			//Reset view encoding
+			current_remap_encoding = 0;
 			return id();
 		}
 

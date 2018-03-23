@@ -398,6 +398,12 @@ namespace rsx
 		};
 	}
 
+	u32 vertex_texture::remap() const
+	{
+		//disabled
+		return 0xAAE4;
+	}
+
 	u8 vertex_texture::zfunc() const
 	{
 		return ((registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 28) & 0xf);

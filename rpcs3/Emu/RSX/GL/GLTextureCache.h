@@ -713,8 +713,8 @@ namespace gl
 				apply_component_mapping_flags(dst_type, gcm_format, rsx::texture_create_flags::default_component_order);
 			}
 
-			if (memcmp(remap.first.data(), default_remap_vector.first.data(), 4) ||
-				memcmp(remap.second.data(), default_remap_vector.second.data(), 4))
+			if (memcmp(remap.first.data(), rsx::default_remap_vector.first.data(), 4) ||
+				memcmp(remap.second.data(), rsx::default_remap_vector.second.data(), 4))
 				set_up_remap_vector(dst_id, dst_type, remap);
 
 			return dst_id;
@@ -810,7 +810,7 @@ namespace gl
 			}
 		}
 
-		u32 generate_cubemap_from_images(void*&, u32 gcm_format, u16 size, const std::array<u32, 6>& sources, const texture_channel_remap_t& remap_vector) override
+		u32 generate_cubemap_from_images(void*&, u32 gcm_format, u16 size, const std::array<u32, 6>& sources, const texture_channel_remap_t& /*remap_vector*/) override
 		{
 			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
 			GLuint dst_id = 0;

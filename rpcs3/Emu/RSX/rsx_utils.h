@@ -60,6 +60,12 @@ namespace rsx
 		f32 gamma = 1.f; //NO GAMMA CORRECTION
 	};
 
+	static const std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector =
+	{
+		{ CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B },
+		{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
+	};
+
 	template<typename T>
 	void pad_texture(void* input_pixels, void* output_pixels, u16 input_width, u16 input_height, u16 output_width, u16 output_height)
 	{

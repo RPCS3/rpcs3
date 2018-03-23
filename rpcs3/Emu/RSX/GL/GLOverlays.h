@@ -627,6 +627,7 @@ namespace gl
 			program_handle.uniforms["x_offset"] = x_offset;
 			program_handle.uniforms["y_offset"] = y_offset;
 			program_handle.uniforms["gamma"] = gamma;
+			program_handle.uniforms["limit_range"] = (int)limited_rgb;
 
 			glActiveTexture(GL_TEXTURE31);
 			glBindTexture(GL_TEXTURE_2D, source);
