@@ -788,6 +788,7 @@ void GLGSRender::on_init_thread()
 
 	m_depth_converter.create();
 	m_ui_renderer.create();
+	m_video_output_pass.create();
 
 	m_gl_texture_cache.initialize();
 	m_thread_id = std::this_thread::get_id();
@@ -920,6 +921,7 @@ void GLGSRender::on_exit()
 	m_gl_texture_cache.destroy();
 	m_depth_converter.destroy();
 	m_ui_renderer.destroy();
+	m_video_output_pass.destroy();
 
 	for (u32 i = 0; i < occlusion_query_count; ++i)
 	{
@@ -1304,7 +1306,7 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_height = display_buffers[buffer].height;
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
-	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height && buffer_pitch)
+	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height)
 	{
 		// Calculate blit coordinates
 		coordi aspect_ratio;
@@ -1335,29 +1337,26 @@ void GLGSRender::flip(int buffer)
 		rsx::tiled_region buffer_region = get_tiled_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 		u32 absolute_address = buffer_region.address + buffer_region.base;
 
-		m_flip_fbo.recreate();
-		m_flip_fbo.bind();
+		GLuint image = GL_NONE;
 
-		const u32 size = buffer_pitch * buffer_height;
 		if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
 		{
 			buffer_width = render_target_texture->width();
 			buffer_height = render_target_texture->height();
 
-			m_flip_fbo.color = *render_target_texture;
-			m_flip_fbo.read_buffer(m_flip_fbo.color);
+			image = render_target_texture->id();
 		}
 		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address))
 		{
 			//Hack - this should be the first location to check for output
 			//The render might have been done offscreen or in software and a blit used to display
-			m_flip_fbo.color = surface->get_raw_view();
-			m_flip_fbo.read_buffer(m_flip_fbo.color);
+			image = surface->get_raw_view();
 		}
 		else
 		{
 			LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
 
+			if (!buffer_pitch) buffer_pitch = buffer_width * 4;
 			if (!m_flip_tex_color || m_flip_tex_color.size() != sizei{ (int)buffer_width, (int)buffer_height })
 			{
 				m_flip_tex_color.recreate(gl::texture::target::texture2D);
@@ -1381,16 +1380,33 @@ void GLGSRender::flip(int buffer)
 				m_flip_tex_color.copy_from(buffer_region.ptr, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 			}
 
-			m_flip_fbo.color = m_flip_tex_color;
-			m_flip_fbo.read_buffer(m_flip_fbo.color);
+			image = m_flip_tex_color.id();
 		}
 
-		// Blit source image to the screen
-		// Disable scissor test (affects blit)
-		glDisable(GL_SCISSOR_TEST);
-
 		areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
-		m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
+		auto avconfig = fxm::get<rsx::avconf>();
+
+		if (g_cfg.video.full_rgb_range_output && (!avconfig || avconfig->gamma == 1.f))
+		{
+			// Blit source image to the screen
+			// Disable scissor test (affects blit)
+			glDisable(GL_SCISSOR_TEST);
+
+			m_flip_fbo.recreate();
+			m_flip_fbo.bind();
+			m_flip_fbo.color = image;
+			m_flip_fbo.read_buffer(m_flip_fbo.color);
+			m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
+		}
+		else
+		{
+			const f32 gamma = avconfig ? avconfig->gamma : 1.f;
+			const bool limited_range = !g_cfg.video.full_rgb_range_output;
+
+			gl::screen.bind();
+			glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
+			m_video_output_pass.run(m_frame->client_width(), m_frame->client_height(), image, areai(aspect_ratio), gamma, limited_range);
+		}
 	}
 
 	if (m_custom_ui)

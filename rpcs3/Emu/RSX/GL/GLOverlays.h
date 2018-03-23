@@ -569,4 +569,68 @@ namespace gl
 			ui.update();
 		}
 	};
+
+	struct video_out_calibration_pass : public overlay_pass
+	{
+		video_out_calibration_pass()
+		{
+			vs_src =
+			{
+				"#version 420\n\n"
+				"layout(location=0) out vec2 tc0;\n"
+				"uniform float x_scale;\n"
+				"uniform float y_scale;\n"
+				"uniform float x_offset;\n"
+				"uniform float y_offset;\n"
+				"\n"
+				"void main()\n"
+				"{\n"
+				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
+				"	vec2 coords[] = {vec2(0., 1.), vec2(1., 1.), vec2(0., 0.), vec2(1., 0.)};\n"
+				"	tc0 = coords[gl_VertexID % 4];\n"
+				"	vec2 pos = positions[gl_VertexID % 4] * vec2(x_scale, y_scale) + (2. * vec2(x_offset, y_offset));\n"
+				"	gl_Position = vec4(pos, 0., 1.);\n"
+				"}\n"
+			};
+
+			fs_src =
+			{
+				"#version 420\n\n"
+				"layout(binding=31) uniform sampler2D fs0;\n"
+				"layout(location=0) in vec2 tc0;\n"
+				"layout(location=0) out vec4 ocol;\n"
+				"\n"
+				"uniform float gamma;\n"
+				"uniform int limit_range;\n"
+				"\n"
+				"void main()\n"
+				"{\n"
+				"	vec4 color = texture(fs0, tc0);\n"
+				"	color.rgb = pow(color.rgb, vec3(gamma));\n"
+				"	if (limit_range > 0)\n"
+				"		ocol = ((color * 220.) + 16.) / 255.;\n"
+				"	else\n"
+				"		ocol = color;\n"
+				"}\n"
+			};
+		}
+
+		void run(u16 w, u16 h, GLuint source, const areai& region, f32 gamma, bool limited_rgb)
+		{
+			const f32 x_scale = (f32)(region.x2 - region.x1) / w;
+			const f32 y_scale = (f32)(region.y2 - region.y1) / h;
+			const f32 x_offset = (f32)(region.x1) / w;
+			const f32 y_offset = (f32)(region.y1) / h;
+
+			program_handle.uniforms["x_scale"] = x_scale;
+			program_handle.uniforms["y_scale"] = y_scale;
+			program_handle.uniforms["x_offset"] = x_offset;
+			program_handle.uniforms["y_offset"] = y_offset;
+			program_handle.uniforms["gamma"] = gamma;
+
+			glActiveTexture(GL_TEXTURE31);
+			glBindTexture(GL_TEXTURE_2D, source);
+			overlay_pass::run(w, h, GL_NONE, false, false);
+		}
+	};
 }
