@@ -948,12 +948,6 @@ bool Emulator::Pause()
 	idm::select<ppu_thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
-
-	if (auto mfc = fxm::check<mfc_thread>())
-	{
-		on_select(0, *mfc);
-	}
-
 	return true;
 }
 
@@ -1019,12 +1013,6 @@ void Emulator::Resume()
 	idm::select<ppu_thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
-
-	if (auto mfc = fxm::check<mfc_thread>())
-	{
-		on_select(0, *mfc);
-	}
-
 	GetCallbacks().on_resume();
 }
 
@@ -1065,11 +1053,6 @@ void Emulator::Stop(bool restart)
 	idm::select<ppu_thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
-
-	if (auto mfc = fxm::check<mfc_thread>())
-	{
-		on_select(0, *mfc);
-	}
 
 	LOG_NOTICE(GENERAL, "All threads signaled...");
 
