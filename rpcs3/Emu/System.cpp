@@ -462,6 +462,9 @@ void Emulator::Load(bool add_only)
 			// Force LLVM recompiler
 			g_cfg.core.ppu_decoder.from_default();
 
+			// Workaround for analyser glitches
+			vm::falloc(0x10000, 0xf0000, vm::main);
+
 			return thread_ctrl::spawn("SPRX Loader", [this]
 			{
 				std::vector<std::string> dir_queue;
