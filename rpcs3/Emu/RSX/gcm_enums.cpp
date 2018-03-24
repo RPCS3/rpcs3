@@ -854,7 +854,7 @@ rsx::blit_engine::transfer_origin rsx::blit_engine::to_transfer_origin(u8 in)
 	case CELL_GCM_TRANSFER_ORIGIN_CENTER: return rsx::blit_engine::transfer_origin::center;
 	case CELL_GCM_TRANSFER_ORIGIN_CORNER: return rsx::blit_engine::transfer_origin::corner;
 	}
-	fmt::throw_exception("Unknown tranfer origin 0x%x" HERE, in);
+	fmt::throw_exception("Unknown transfer origin 0x%x" HERE, in);
 }
 
 rsx::blit_engine::transfer_interpolator rsx::blit_engine::to_transfer_interpolator(u8 in)
