@@ -113,9 +113,9 @@ namespace gl
 			return surface_height;
 		}
 
-		u32 get_surface() const override
+		u32 get_surface() override
 		{
-			return id();
+			return get_view(0xAAE4, rsx::default_remap_vector);
 		}
 
 		u32 get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)

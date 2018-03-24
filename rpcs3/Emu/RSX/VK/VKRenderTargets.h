@@ -64,7 +64,7 @@ namespace vk
 			return result;
 		}
 
-		vk::image* get_surface() const override
+		vk::image* get_surface() override
 		{
 			return (vk::image*)this;
 		}

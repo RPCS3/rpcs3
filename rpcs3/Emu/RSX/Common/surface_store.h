@@ -64,7 +64,7 @@ namespace rsx
 		GcmTileInfo *tile = nullptr;
 		rsx::surface_antialiasing aa_mode = rsx::surface_antialiasing::center_1_sample;
 
-		virtual image_storage_type get_surface() const = 0;
+		virtual image_storage_type get_surface() = 0;
 		virtual u16 get_surface_width() const = 0;
 		virtual u16 get_surface_height() const = 0;
 		virtual u16 get_rsx_pitch() const = 0;
