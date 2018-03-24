@@ -34,12 +34,6 @@ before_install:
     fi;
 
 install:
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      wget http://download.qt.io/official_releases/online_installers/qt-unified-linux-x64-online.run ;
-      chmod a+x ./qt-unified-linux-x64-online.run ;
-      QT_QPA_PLATFORM=minimal QTVER="${QTVER//.}" travis_wait 60 ./qt-unified-linux-x64-online.run --script qt-installer-noninteractive.qs --no-force-installations --verbose ;
-    fi;
-
   # Install updated libglew-dev since the version provided by trusty is outdated
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       wget https://mirrors.kernel.org/ubuntu/pool/universe/g/glew/libglew-dev_2.0.0-5_amd64.deb;
@@ -56,13 +50,12 @@ before_script:
   - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
   - mkdir build ; cd build
   - export CMAKE_PREFIX_PATH=~/Qt/${QTVER}/gcc_64/lib/cmake
-  - export CXXFLAGS="$CXXFLAGS -DTRAVIS=true";
   - if [ "$TRAVIS_PULL_REQUEST" = false ]; then
       export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH";
     else
       export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/#$TRAVIS_PULL_REQUEST";
     fi;
-  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -G Ninja;
+  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DUSE_NATIVE_INSTRUCTIONS=OFF -G Ninja;
 
 script:
   - ninja
@@ -71,7 +64,9 @@ after_script:
   - cd build
   - # AppImage generation
   - if [ -n "$UPLOAD_URL" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
-      export LD_LIBRARY_PATH=~/Qt/${QTVER}/gcc_64/lib;
+      source /opt/qt510/bin/qt510-env.sh ;
+      echo $LD_LIBRARY_PATH ;
+      export LD_LIBRARY_PATH=/opt/qt510/lib ;
       DESTDIR=appdir ninja install ; find appdir/ ;
       find ../bin ;
       wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" ;
@@ -79,12 +74,6 @@ after_script:
       export PATH=~/Qt/$QTVER/gcc_64/bin/:${PATH} ;
       ./linuxdeployqt*.AppImage --appimage-extract ;
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
-      mkdir ./appdir/usr/plugins/xcbglintegrations/ ;
-      mkdir ./appdir/usr/plugins/imageformats/ ;
-      cp ~/Qt/$QTVER/gcc_64/lib/libQt5Svg.so.5 ./appdir/usr/lib/ ;
-      cp ~/Qt/$QTVER/gcc_64/plugins/xcbglintegrations/* ./appdir/usr/plugins/xcbglintegrations/ ;
-      cp ~/Qt/$QTVER/gcc_64/plugins/imageformats/* ./appdir/usr/plugins/imageformats/ ;
-      cp ~/Qt/$QTVER/gcc_64/plugins/platforms/* ./appdir/usr/plugins/platforms/ ;
       rm ./appdir/usr/lib/libfreetype.so.6 ;
       export PATH=${TRAVIS_BUILD_DIR}/build/squashfs-root/usr/bin/:${PATH} ;
       ./squashfs-root/usr/bin/appimagetool ${TRAVIS_BUILD_DIR}/build/appdir ;
@@ -99,6 +88,7 @@ addons:
       - ubuntu-toolchain-r-test
       - llvm-toolchain-trusty-4.0
       - sourceline: 'ppa:jonathonf/binutils' # We need to update binutils to a newer version to link against the ffmpeg libs on.
+      - sourceline: 'ppa:beineri/opt-qt-5.10.1-trusty' # <<WARNING>>: This needs to be updated manually whenever the QT Version changes. Add QT PPA since the installer is quite bad.
     packages:
       - binutils
       - cmake
@@ -120,8 +110,8 @@ addons:
       - libstdc++-5-dev
       - lib32stdc++6
       - zlib1g-dev
-      # We need to install qt 5.10.1 manually because the version trusty provides is too old.
-      #- qtbase5-dev
+      # From the beineri PPA
+      - qt510-meta-minimal # <<WARNING>>: This needs to be updated manually whenever the QT Version changes.
       - libudev-dev
       - libevdev-dev
       - libpulse-dev

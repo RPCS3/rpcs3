@@ -192,10 +192,11 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 {
 	sys_fs.warning("sys_fs_open(path=%s, flags=%#o, fd=*0x%x, mode=%#o, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
 
+	if (!path)
+		return CELL_EFAULT;
+
 	if (!path[0])
-	{
-		return CELL_EINVAL;
-	}
+		return CELL_ENOENT;
 
 	const std::string& local_path = vfs::get(path.get_ptr());
 
@@ -265,7 +266,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 	// Tests have shown that invalid combinations get resolved internally (without exceptions), but that would complicate code with minimal accuracy gains.
 	// For example, no games are known to try and call TRUNCATE | APPEND | RW, or APPEND | READ, which currently would cause an exception.
 	if (flags & ~(CELL_FS_O_UNK | CELL_FS_O_ACCMODE | CELL_FS_O_CREAT | CELL_FS_O_TRUNC | CELL_FS_O_APPEND | CELL_FS_O_EXCL | CELL_FS_O_MSELF))
-	{ 
+	{
 		open_mode = {}; // error
 	}
 
@@ -432,6 +433,12 @@ error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 {
 	sys_fs.warning("sys_fs_opendir(path=%s, fd=*0x%x)", path, fd);
 
+	if (!path)
+		return CELL_EFAULT;
+
+	if (!path[0])
+		return CELL_ENOENT;
+
 	const std::string& local_path = vfs::get(path.get_ptr());
 
 	if (local_path.empty())
@@ -526,6 +533,9 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 	if (!path)
 		return CELL_EFAULT;
 
+	if (!path[0])
+		return CELL_ENOENT;
+
 	const std::string local_path = vfs::get(path.get_ptr());
 
 	if (local_path.empty())
@@ -602,6 +612,12 @@ error_code sys_fs_mkdir(vm::cptr<char> path, s32 mode)
 {
 	sys_fs.warning("sys_fs_mkdir(path=%s, mode=%#o)", path, mode);
 
+	if (!path)
+		return CELL_EFAULT;
+
+	if (!path[0])
+		return CELL_ENOENT;
+
 	const std::string local_path = vfs::get(path.get_ptr());
 
 	if (local_path.empty())
@@ -667,6 +683,12 @@ error_code sys_fs_rmdir(vm::cptr<char> path)
 {
 	sys_fs.warning("sys_fs_rmdir(path=%s)", path);
 
+	if (!path)
+		return CELL_EFAULT;
+
+	if (!path[0])
+		return CELL_ENOENT;
+
 	const std::string local_path = vfs::get(path.get_ptr());
 
 	if (local_path.empty())
@@ -699,11 +721,11 @@ error_code sys_fs_unlink(vm::cptr<char> path)
 {
 	sys_fs.warning("sys_fs_unlink(path=%s)", path);
 
-	// If path is just an empty string
-	if (!*path.get_ptr())
-	{
+	if (!path)
+		return CELL_EFAULT;
+
+	if (!path[0])
 		return CELL_ENOENT;
-	}
 
 	const std::string local_path = vfs::get(path.get_ptr());
 
@@ -1219,6 +1241,12 @@ error_code sys_fs_truncate(vm::cptr<char> path, u64 size)
 {
 	sys_fs.warning("sys_fs_truncate(path=%s, size=0x%llx)", path, size);
 
+	if (!path)
+		return CELL_EFAULT;
+
+	if (!path[0])
+		return CELL_ENOENT;
+
 	const std::string local_path = vfs::get(path.get_ptr());
 
 	if (local_path.empty())
@@ -1311,6 +1339,12 @@ error_code sys_fs_disk_free(vm::cptr<char> path, vm::ptr<u64> total_free, vm::pt
 {
 	sys_fs.warning("sys_fs_disk_free(path=%s total_free=*0x%x avail_free=*0x%x)", path, total_free, avail_free);
 
+	if (!path)
+		return CELL_EFAULT;
+
+	if (!path[0])
+		return CELL_EINVAL;
+
 	const std::string local_path = vfs::get(path.get_ptr());
 
 	if (local_path.empty())
@@ -1345,6 +1379,12 @@ error_code sys_fs_utime(vm::cptr<char> path, vm::cptr<CellFsUtimbuf> timep)
 {
 	sys_fs.warning("sys_fs_utime(path=%s, timep=*0x%x)", path, timep);
 	sys_fs.warning("** actime=%u, modtime=%u", timep->actime, timep->modtime);
+
+	if (!path)
+		return CELL_EFAULT;
+
+	if (!path[0])
+		return CELL_ENOENT;
 
 	const std::string local_path = vfs::get(path.get_ptr());
 

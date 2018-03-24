@@ -417,6 +417,11 @@ enum FPSCR_EX
 	FPSCR_DDENORM = 1 << 8, //Denormal
 };
 
+enum
+{
+	max_imm_dma_size = 0x4000, // Custom constant, represents the max number of bytes our mfc can transfer immediately, else enqueueing the command
+};
+
 //Is 128 bits, but bits 0-19, 24-28, 32-49, 56-60, 64-81, 88-92, 96-115, 120-124 are unused
 class SPU_FPSCR
 {

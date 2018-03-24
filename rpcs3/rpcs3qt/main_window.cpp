@@ -8,6 +8,7 @@
 #include <QDesktopWidget>
 #include <QMimeData>
 
+#include "qt_utils.h"
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
 #include "trophy_manager_dialog.h"
@@ -525,6 +526,9 @@ void main_window::InstallPup(const QString& dropPath)
 	{
 		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware version %s.", version_string);
 		guiSettings->ShowInfoBox(gui::ib_pup_success, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), this);
+
+		Emu.SetForceBoot(true);
+		Emu.BootGame(Emu.GetLibDir(), true);
 	}
 }
 
@@ -604,11 +608,11 @@ void main_window::SaveWindowState()
 
 void main_window::RepaintThumbnailIcons()
 {
-	QColor newColor = gui::get_Label_Color("thumbnail_icon_color");
+	QColor newColor = gui::utils::get_label_color("thumbnail_icon_color");
 
 	auto icon = [&newColor](const QString& path)
 	{
-		return gui_settings::colorizedIcon(QPixmap::fromImage(gui_settings::GetOpaqueImageArea(path)), gui::mw_tool_icon_color, newColor);
+		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), gui::mw_tool_icon_color, newColor);
 	};
 
 #ifdef _WIN32
@@ -635,12 +639,12 @@ void main_window::RepaintToolBarIcons()
 	}
 	else
 	{
-		newColor = gui::get_Label_Color("toolbar_icon_color");
+		newColor = gui::utils::get_label_color("toolbar_icon_color");
 	}
 
 	auto icon = [&newColor](const QString& path)
 	{
-		return gui_settings::colorizedIcon(QIcon(path), gui::mw_tool_icon_color, newColor);
+		return gui::utils::get_colorized_icon(QIcon(path), gui::mw_tool_icon_color, newColor);
 	};
 
 	m_icon_play           = icon(":/Icons/play.png");
@@ -1186,6 +1190,13 @@ void main_window::CreateConnects()
 		guiSettings->SetValue(gui::mw_toolBarVisible, checked);
 	});
 
+	connect(ui->showHiddenEntriesAct, &QAction::triggered, [=](bool checked)
+	{
+		guiSettings->SetValue(gui::gl_show_hidden, checked);
+		m_gameListFrame->SetShowHidden(checked);
+		m_gameListFrame->Refresh();
+	});
+
 	connect(ui->refreshGameListAct, &QAction::triggered, [=]
 	{
 		m_gameListFrame->Refresh(true);
@@ -1410,6 +1421,9 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
 
 	RepaintToolbar();
+
+	ui->showHiddenEntriesAct->setChecked(guiSettings->GetValue(gui::gl_show_hidden).toBool());
+	m_gameListFrame->SetShowHidden(ui->showHiddenEntriesAct->isChecked()); // prevent GetValue in m_gameListFrame->LoadSettings
 
 	ui->showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Non_Disc_Game));
 	ui->showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Disc_Game));

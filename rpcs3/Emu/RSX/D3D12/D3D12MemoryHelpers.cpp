@@ -7,7 +7,7 @@
 
 void data_cache::store_and_protect_data(u64 key, u32 start, size_t size, u8 format, size_t w, size_t h, size_t d, size_t m, ComPtr<ID3D12Resource> data)
 {
-	std::lock_guard<std::mutex> lock(m_mut);
+	std::lock_guard<shared_mutex> lock(m_mut);
 	m_address_to_data[key] = std::make_pair(texture_entry(format, w, h, d, m), data);
 	protect_data(key, start, size);
 }
@@ -25,7 +25,7 @@ void data_cache::protect_data(u64 key, u32 start, size_t size)
 bool data_cache::invalidate_address(u32 addr)
 {
 	// In case 2 threads write to texture memory
-	std::lock_guard<std::mutex> lock(m_mut);
+	std::lock_guard<shared_mutex> lock(m_mut);
 	bool handled = false;
 	auto It = m_protected_ranges.begin(), E = m_protected_ranges.end();
 	for (; It != E;)
@@ -49,7 +49,7 @@ bool data_cache::invalidate_address(u32 addr)
 
 std::pair<texture_entry, ComPtr<ID3D12Resource> > *data_cache::find_data_if_available(u64 key)
 {
-	std::lock_guard<std::mutex> lock(m_mut);
+	std::lock_guard<shared_mutex> lock(m_mut);
 	auto It = m_address_to_data.find(key);
 	if (It == m_address_to_data.end())
 		return nullptr;
@@ -58,7 +58,7 @@ std::pair<texture_entry, ComPtr<ID3D12Resource> > *data_cache::find_data_if_avai
 
 void data_cache::unprotect_all()
 {
-	std::lock_guard<std::mutex> lock(m_mut);
+	std::lock_guard<shared_mutex> lock(m_mut);
 	for (auto &protectedTexture : m_protected_ranges)
 	{
 		u32 protectedRangeStart = std::get<1>(protectedTexture), protectedRangeSize = std::get<2>(protectedTexture);

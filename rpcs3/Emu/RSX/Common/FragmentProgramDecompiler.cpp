@@ -111,7 +111,7 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	}
 
 	u32 reg_index = dst.fp16 ? dst.dest_reg >> 1 : dst.dest_reg;
-	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16);
+	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
 }
 
 void FragmentProgramDecompiler::AddFlowOp(std::string code)
@@ -283,14 +283,15 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 		{ "$_i", [this]() -> std::string {return std::to_string(dst.tex_num);} },
 		{ "$m", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetMask), this) },
 		{ "$ifcond ", [this]() -> std::string
-	{
-		const std::string& cond = GetCond();
-		if (cond == "true") return "";
-		return "if(" + cond + ") ";
-	}
+			{
+				const std::string& cond = GetCond();
+				if (cond == "true") return "";
+				return "if(" + cond + ") ";
+			}
 		},
 		{ "$cond", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetCond), this) },
-		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) }
+		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) },
+		{ "$float4", [this]() -> std::string { return getFloatTypeName(4); } }
 	};
 
 	if (!ignore_redirects)
@@ -407,20 +408,13 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				dst.opcode == RSX_FP_OPCODE_UPB ||
 				dst.opcode == RSX_FP_OPCODE_UPG)
 			{
-				//TODO: Implement aliased gather for half floats
-				bool xy_read = false;
-				bool zw_read = false;
-
-				if (src.swizzle_x < 2 || src.swizzle_y < 2 || src.swizzle_z < 2 || src.swizzle_w < 2)
-					xy_read = true;
-				if (src.swizzle_x > 1 || src.swizzle_y > 1 || src.swizzle_z > 1 || src.swizzle_w > 1)
-					zw_read = true;
-
 				auto &reg = temp_registers[src.tmp_reg_index];
-				if (reg.requires_gather(xy_read, zw_read))
+				if (reg.requires_gather(src.swizzle_x))
 				{
 					properties.has_gather_op = true;
-					AddCode(reg.gather_r());
+					AddReg(src.tmp_reg_index, src.fp16);
+					ret = getFloatTypeName(4) + reg.gather_r();
+					break;
 				}
 			}
 		}
@@ -502,79 +496,6 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 std::string FragmentProgramDecompiler::BuildCode()
 {
-	//Scan if any outputs are available
-	const bool use_32_bit_exports = !!(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
-	const bool exports_depth = !!(m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
-	const std::set<std::string> output_values =
-	{
-		(use_32_bit_exports) ? "r0" : "h0",
-		"r1",
-		(use_32_bit_exports) ? "r2" : "h4",
-		(use_32_bit_exports) ? "r3" : "h6",
-		(use_32_bit_exports) ? "r4" : "h8",
-	};
-
-	bool gather_output_registers = true;
-	const auto float4_name = getFloatTypeName(4);
-	for (auto &v : output_values)
-	{
-		if (m_parr.HasParam(PF_PARAM_NONE, float4_name, v))
-		{
-			gather_output_registers = false;
-			break;
-		}
-	}
-
-	//Explicitly discard on encountering null shaders
-	if (gather_output_registers)
-	{
-		bool has_any_output = false;
-		bool first_output_exists = false;
-
-		if (use_32_bit_exports || exports_depth)
-		{
-			for (int reg = 0; reg < 5; ++reg)
-			{
-				if (reg == 1 && !exports_depth)
-					continue;
-
-				const std::string half_register = "h" + std::to_string(reg + 1);
-				if (m_parr.HasParam(PF_PARAM_NONE, float4_name, half_register))
-				{
-					has_any_output = true;
-					if (!reg) first_output_exists = true;
-
-					const std::string this_register = "r" + std::to_string(reg);
-					AddReg(reg, 0);
-					AddCode("//Register gather because output was not specified");
-					AddCode(this_register + ".zw = gather(" + half_register + ");");
-				}
-			}
-		}
-
-		if (!has_any_output)
-		{
-			properties.has_no_output = true;
-
-			LOG_ERROR(RSX, "Invalid fragment shader: No output register was updated!");
-
-			//Comment out main block as it is now useless
-			main = "/*\n" + main + "*/\n";
-			AddCode("//No output, manually abort writes (nvidia+vulkan writes garbage otherwise)");
-			AddCode("discard;");
-		}
-		else
-		{
-			//Requires gather operation for output...
-			properties.has_gather_op = true;
-
-			if (!first_output_exists)
-			{
-				LOG_WARNING(RSX, "Fragment shader does not write to first RTT and has no explicit output registers");
-			}
-		}
-	}
-
 	std::stringstream OS;
 	insertHeader(OS);
 	OS << "\n";
@@ -836,10 +757,27 @@ std::string FragmentProgramDecompiler::Decompile()
 
 	int forced_unit = FORCE_NONE;
 
+	//Add the output registers. They are statically written to and have guaranteed initialization (except r1.z which == wpos.z)
+	//This can be used instead of an explicit clear pass in some games (Motorstorm)
+	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
+	{
+		AddReg(0, CELL_GCM_FALSE);
+		AddReg(2, CELL_GCM_FALSE);
+		AddReg(3, CELL_GCM_FALSE);
+		AddReg(4, CELL_GCM_FALSE);
+	}
+	else
+	{
+		AddReg(0, CELL_GCM_TRUE);
+		AddReg(4, CELL_GCM_TRUE);
+		AddReg(6, CELL_GCM_TRUE);
+		AddReg(8, CELL_GCM_TRUE);
+	}
+
 	while (true)
 	{
 		for (auto found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
-		found != m_end_offsets.end();
+			found != m_end_offsets.end();
 			found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size))
 		{
 			m_end_offsets.erase(found);
@@ -849,7 +787,7 @@ std::string FragmentProgramDecompiler::Decompile()
 		}
 
 		for (auto found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
-		found != m_else_offsets.end();
+			found != m_else_offsets.end();
 			found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size))
 		{
 			m_else_offsets.erase(found);

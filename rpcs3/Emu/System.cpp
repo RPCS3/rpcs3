@@ -8,9 +8,11 @@
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Cell/PPUDisAsm.h"
+#include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Cell/lv2/sys_prx.h"
 
 #include "Emu/IdManager.h"
 #include "Emu/RSX/GSRender.h"
@@ -26,6 +28,7 @@
 
 #include <thread>
 #include <typeinfo>
+#include <queue>
 
 #include "Utilities/GDBDebugServer.h"
 
@@ -39,7 +42,9 @@ extern u64 get_system_time();
 
 extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
-extern std::shared_ptr<struct lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
+extern void ppu_initialize(const ppu_module&);
+extern void ppu_unload_prx(const lv2_prx&);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
 
 extern void network_thread_init();
 
@@ -238,11 +243,10 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 		"/eboot.bin",
 	};
 
-	if (direct && fs::is_file(path))
+	if (direct && fs::exists(path))
 	{
 		m_path = path;
 		Load(add_only);
-
 		return true;
 	}
 
@@ -254,7 +258,6 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 		{
 			m_path = elf;
 			Load(add_only);
-
 			return true;
 		}
 	}
@@ -359,6 +362,17 @@ void Emulator::Load(bool add_only)
 				return sfov;
 			}
 
+			if (fs::is_dir(m_path))
+			{
+				// Special case (directory scan)
+				if (fs::file sfo{m_path + "/PS3_GAME/PARAM.SFO"})
+				{
+					return sfo;
+				}
+
+				return fs::file{m_path + "/PARAM.SFO"};
+			}
+
 			if (disc.size())
 			{
 				// Check previously used category before it's overwritten
@@ -436,11 +450,125 @@ void Emulator::Load(bool add_only)
 		vfs::mount("dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
 		vfs::mount("app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
 
+		// Special boot mode (directory scan)
+		if (fs::is_dir(m_path))
+		{
+			m_state = system_state::ready;
+			GetCallbacks().on_ready();
+			vm::init();
+			Run();
+			m_force_boot = false;
+
+			// Force LLVM recompiler
+			g_cfg.core.ppu_decoder.from_default();
+
+			return thread_ctrl::spawn("SPRX Loader", [this]
+			{
+				std::vector<std::string> dir_queue;
+				dir_queue.emplace_back(m_path + '/');
+
+				std::queue<std::shared_ptr<thread_ctrl>> thread_queue;
+				const uint max_threads = std::thread::hardware_concurrency();
+
+				// Find all .sprx files recursively (TODO: process .mself files)
+				for (std::size_t i = 0; i < dir_queue.size(); i++)
+				{
+					if (Emu.IsStopped())
+					{
+						break;
+					}
+
+					LOG_NOTICE(LOADER, "Scanning directory: %s", dir_queue[i]);
+
+					for (auto&& entry : fs::dir(dir_queue[i]))
+					{
+						if (Emu.IsStopped())
+						{
+							break;
+						}
+
+						if (entry.is_directory)
+						{
+							if (entry.name != "." && entry.name != "..")
+							{
+								dir_queue.emplace_back(dir_queue[i] + entry.name + '/');
+							}
+
+							continue;
+						}
+
+						// Check .sprx filename
+						if (entry.name.size() >= 5 && fmt::to_upper(entry.name).compare(entry.name.size() - 5, 5, ".SPRX", 5) == 0)
+						{
+							if (entry.name == "libfs_155.sprx")
+							{
+								continue;
+							}
+
+							// Get full path
+							const std::string path = dir_queue[i] + entry.name;
+
+							LOG_NOTICE(LOADER, "Trying to load SPRX: %s", path);
+
+							// Some files may fail to decrypt due to the lack of klic
+							const ppu_prx_object obj = decrypt_self(fs::file(path));
+
+							if (obj == elf_error::ok)
+							{
+								if (auto prx = ppu_load_prx(obj, path))
+								{
+									while (g_thread_count >= max_threads + 2)
+									{
+										std::this_thread::sleep_for(10ms);
+									}
+
+									thread_queue.emplace();
+
+									thread_ctrl::spawn(thread_queue.back(), "Worker " + std::to_string(thread_queue.size()), [_prx = std::move(prx)]
+									{
+										ppu_initialize(*_prx);
+										ppu_unload_prx(*_prx);
+									});
+								}
+							}
+							else
+							{
+								LOG_ERROR(LOADER, "Failed to load SPRX '%s' (%s)", path, obj.get_error());
+							}
+						}
+					}
+				}
+
+				// Join every thread and print exceptions
+				while (!thread_queue.empty())
+				{
+					try
+					{
+						thread_queue.front()->join();
+					}
+					catch (const std::exception& e)
+					{
+						LOG_FATAL(LOADER, "[%s] %s thrown: %s", thread_queue.front()->get_name(), typeid(e).name(), e.what());
+					}
+
+					thread_queue.pop();
+				}
+
+				// Exit "process"
+				Emu.CallAfter([]
+				{
+					Emu.Stop();
+				});
+			});
+		}
+
 		// Detect boot location
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
+		const std::size_t bdvd_pos = m_cat == "DG" && bdvd_dir.empty() && disc.empty() ? elf_dir.rfind("/PS3_GAME/") + 1 : 0;
+		const bool from_hdd0_game = m_path.find(hdd0_game) != -1;
 
-		if (m_cat == "DG" && m_path.find(hdd0_game) != -1 && disc.empty())
+		if (bdvd_pos && from_hdd0_game)
 		{
 			// Booting disc game from wrong location
 			LOG_ERROR(LOADER, "Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
@@ -459,13 +587,10 @@ void Emulator::Load(bool add_only)
 		}
 
 		// Booting disc game
-		if (m_cat == "DG" && bdvd_dir.empty() && disc.empty())
+		if (bdvd_pos)
 		{
 			// Mount /dev_bdvd/ if necessary
-			if (auto pos = elf_dir.rfind("/PS3_GAME/") + 1)
-			{
-				bdvd_dir = elf_dir.substr(0, pos);
-			}
+			bdvd_dir = elf_dir.substr(0, bdvd_pos);
 		}
 
 		// Booting patch data
@@ -513,6 +638,11 @@ void Emulator::Load(bool add_only)
 		else if (m_cat != "DG" && m_cat != "GD")
 		{
 			// Don't need /dev_bdvd
+		}
+		else if (m_cat == "DG" && from_hdd0_game)
+		{
+			vfs::mount("dev_bdvd/PS3_GAME", hdd0_game + m_path.substr(hdd0_game.size(), 10));
+			LOG_NOTICE(LOADER, "Game: %s", vfs::get("/dev_bdvd/PS3_GAME"));
 		}
 		else if (disc.empty())
 		{
@@ -679,20 +809,30 @@ void Emulator::Load(bool add_only)
 
 			if (argv[0].empty())
 			{
-				if (m_path.find(hdd0_game) != -1)
+				if (from_hdd0_game && m_cat == "DG")
+				{
+					argv[0] = "/dev_bdvd/PS3_GAME/" + m_path.substr(hdd0_game.size() + 10);
+					m_dir = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 10);
+					LOG_NOTICE(LOADER, "Disc path: %s", m_dir);
+				}
+				else if (from_hdd0_game)
 				{
 					argv[0] = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size());
+					m_dir = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 10);
+					LOG_NOTICE(LOADER, "Boot path: %s", m_dir);
 				}
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
 					// Disc games are on /dev_bdvd/
 					const std::size_t pos = m_path.rfind("PS3_GAME");
 					argv[0] = "/dev_bdvd/" + m_path.substr(pos);
+					m_dir = "/dev_bdvd/PS3_GAME/";
 				}
 				else
 				{
 					// For homebrew
 					argv[0] = "/host_root/" + m_path;
+					m_dir = "/host_root/" + elf_dir + '/';
 				}
 
 				LOG_NOTICE(LOADER, "Elf path: %s", argv[0]);
@@ -910,7 +1050,13 @@ void Emulator::Stop(bool restart)
 	auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		cpu.state += cpu_flag::dbg_global_stop;
-		cpu.get()->set_exception(e_stop);
+
+		// Can't normally be null.
+		// Hack for a possible vm deadlock on thread creation.
+		if (auto thread = cpu.get())
+		{
+			thread->set_exception(e_stop);
+		}
 	};
 
 	idm::select<ppu_thread>(on_select);

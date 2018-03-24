@@ -348,6 +348,26 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		}
 	}
 
+	OS << "}\n\n";
+
+	OS << "void main()\n";
+	OS << "{\n";
+
+	std::string parameters = "";
+	for (auto &reg_name : output_values)
+	{
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
+		{
+			if (parameters.length())
+				parameters += ", ";
+
+			parameters += reg_name;
+			OS << "	vec4 " << reg_name << " = vec4(0.);\n";
+		}
+	}
+
+	OS << "\n" << "	fs_main(" + parameters + ");\n\n";
+
 	if (!first_output_name.empty())
 	{
 		auto make_comparison_test = [](rsx::comparison_function compare_func, const std::string &test, const std::string &a, const std::string &b) -> std::string
@@ -381,28 +401,8 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 			}
 		}
 
-		OS << "	if (alpha_test != 0 && !comparison_passes(" << first_output_name << ".a, alpha_ref, alpha_func)) discard;\n";
+		OS << "	if (alpha_test != 0 && !comparison_passes(" << first_output_name << ".a, alpha_ref, alpha_func)) discard;\n\n";
 	}
-
-	OS << "}\n\n";
-
-	OS << "void main()\n";
-	OS << "{\n";
-
-	std::string parameters = "";
-	for (auto &reg_name : output_values)
-	{
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
-		{
-			if (parameters.length())
-				parameters += ", ";
-
-			parameters += reg_name;
-			OS << "	vec4 " << reg_name << " = vec4(0.);\n";
-		}
-	}
-
-	OS << "\n" << "	fs_main(" + parameters + ");\n\n";
 
 	//Append the color output assignments
 	OS << color_output_block;
@@ -411,11 +411,8 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "r1"))
 		{
-			/** Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
-			* but it writes depth in r1.z and not h2.z.
-			* Maybe there's a different flag for depth ?
-			*/
-			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << "\n";
+			//Depth writes are always from a fp32 register. See issues section on nvidia's NV_fragment_program spec
+			//https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 			OS << "	gl_FragDepth = r1.z;\n";
 		}
 		else

@@ -85,8 +85,10 @@ namespace gl
 		bool ARB_texture_barrier_supported = false;
 		bool NV_texture_barrier_supported = false;
 		bool initialized = false;
-		bool vendor_INTEL = false;
-		bool vendor_AMD = false;
+		bool vendor_INTEL = false;  //has broken GLSL compiler
+		bool vendor_AMD = false;    //has broken ARB_multidraw
+		bool vendor_NVIDIA = false; //has NaN poisoning issues
+		bool vendor_MESA = false;   //requires CLIENT_STORAGE bit set for streaming buffers
 
 		void initialize()
 		{
@@ -104,35 +106,35 @@ namespace gl
 				if (ext_name == "GL_ARB_shader_draw_parameters")
 				{
 					ARB_shader_draw_parameters_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
 				if (ext_name == "GL_EXT_direct_state_access")
 				{
 					EXT_dsa_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
 				if (ext_name == "GL_ARB_direct_state_access")
 				{
 					ARB_dsa_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
 				if (ext_name == "GL_ARB_buffer_storage")
 				{
 					ARB_buffer_storage_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
 				if (ext_name == "GL_ARB_texture_buffer_object")
 				{
 					ARB_texture_buffer_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
@@ -194,6 +196,14 @@ namespace gl
 
 				if (!EXT_dsa_supported && glGetTextureImageEXT && glTextureBufferRangeEXT)
 					EXT_dsa_supported = true;
+			}
+			else if (vendor_string.find("nvidia") != std::string::npos)
+			{
+				vendor_NVIDIA = true;
+			}
+			else if (vendor_string.find("x.org") != std::string::npos)
+			{
+				vendor_MESA = true;
 			}
 #ifdef _WIN32
 			else if (vendor_string.find("amd") != std::string::npos || vendor_string.find("ati") != std::string::npos)
@@ -863,8 +873,11 @@ namespace gl
 
 			buffer::create();
 
+			GLbitfield buffer_storage_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+			if (get_driver_caps().vendor_MESA) buffer_storage_flags |= GL_CLIENT_STORAGE_BIT;
+
 			glBindBuffer((GLenum)m_target, m_id);
-			glBufferStorage((GLenum)m_target, size, data, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_CLIENT_STORAGE_BIT | GL_MAP_COHERENT_BIT);
+			glBufferStorage((GLenum)m_target, size, data, buffer_storage_flags);
 			m_memory_mapping = glMapBufferRange((GLenum)m_target, 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 
 			verify(HERE), m_memory_mapping != nullptr;
@@ -886,14 +899,18 @@ namespace gl
 			if ((offset + alloc_size) > m_size)
 			{
 				if (!m_fence.is_empty())
+				{
 					m_fence.wait_for_signal();
+				}
+				else
+				{
+					LOG_ERROR(RSX, "OOM Error: Ring buffer was likely being used without notify() being called");
+					glFinish();
+				}
 
 				m_data_loc = 0;
 				offset = 0;
 			}
-
-			if (!m_data_loc)
-				m_fence.reset();
 
 			//Align data loc to 256; allows some "guard" region so we dont trample our own data inadvertently
 			m_data_loc = align(offset + alloc_size, 256);
@@ -928,7 +945,8 @@ namespace gl
 		//Notification of a draw command
 		virtual void notify()
 		{
-			if (m_fence.is_empty())
+			//Insert fence about 25% into the buffer
+			if (m_fence.is_empty() && (m_data_loc > (m_size >> 2)))
 				m_fence.reset();
 		}
 	};
@@ -1044,6 +1062,70 @@ namespace gl
 		}
 
 		void notify() override {}
+	};
+
+	class buffer_view
+	{
+		buffer* m_buffer = nullptr;
+		u32 m_offset = 0;
+		u32 m_range = 0;
+		GLenum m_format = GL_R8UI;
+
+	public:
+		buffer_view(buffer *_buffer, u32 offset, u32 range, GLenum format = GL_R8UI)
+			: m_buffer(_buffer), m_offset(offset), m_range(range), m_format(format)
+		{}
+
+		buffer_view()
+		{}
+
+		void update(buffer *_buffer, u32 offset, u32 range, GLenum format = GL_R8UI)
+		{
+			verify(HERE), _buffer->size() >= (offset + range);
+			m_buffer = _buffer;
+			m_offset = offset;
+			m_range = range;
+			m_format = format;
+		}
+
+		u32 offset() const
+		{
+			return m_offset;
+		}
+
+		u32 range() const
+		{
+			return m_range;
+		}
+
+		u32 format() const
+		{
+			return m_format;
+		}
+
+		buffer* value() const
+		{
+			return m_buffer;
+		}
+
+		bool in_range(u32 address, u32 size, u32& new_offset) const
+		{
+			if (address < m_offset)
+				return false;
+
+			const u32 _offset = address - m_offset;
+			if (m_range < _offset)
+				return false;
+
+			const auto remaining = m_range - _offset;
+			if (size <= remaining)
+			{
+				new_offset = _offset;
+				return true;
+			}
+
+			return false;
+		}
 	};
 
 	class vao
@@ -1679,6 +1761,11 @@ namespace gl
 				__glcheck glTextureBufferRangeEXT(id(), (GLenum)target::textureBuffer, gl_format_type, buf.id(), offset, length);
 			else
 				__glcheck glTextureBufferRange(id(), gl_format_type, buf.id(), offset, length);
+		}
+
+		void copy_from(buffer_view &view)
+		{
+			copy_from(*view.value(), view.format(), view.offset(), view.range());
 		}
 
 		void copy_from(const buffer& buf, texture::format format, texture::type type, class pixel_unpack_settings pixel_settings)
@@ -2761,19 +2848,6 @@ namespace gl
 		}
 
 		~rbo_view()
-		{
-			set_id(0);
-		}
-	};
-
-	class buffer_view : public buffer
-	{
-	public:
-		buffer_view(GLuint id) : buffer(id)
-		{
-		}
-
-		~buffer_view()
 		{
 			set_id(0);
 		}

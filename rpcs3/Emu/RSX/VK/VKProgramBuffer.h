@@ -96,6 +96,16 @@ struct VKTraits
 	}
 
 	static
+	void validate_pipeline_properties(const VKVertexProgram&, const VKFragmentProgram &fp, vk::pipeline_props& properties)
+	{
+		//Explicitly disable writing to undefined registers
+		properties.att_state[0].colorWriteMask &= fp.output_color_masks[0];
+		properties.att_state[1].colorWriteMask &= fp.output_color_masks[1];
+		properties.att_state[2].colorWriteMask &= fp.output_color_masks[2];
+		properties.att_state[3].colorWriteMask &= fp.output_color_masks[3];
+	}
+
+	static
 	pipeline_storage_type build_pipeline(const vertex_program_type &vertexProgramData, const fragment_program_type &fragmentProgramData,
 			const vk::pipeline_props &pipelineProperties, VkDevice dev, VkPipelineLayout common_pipeline_layout)
 	{

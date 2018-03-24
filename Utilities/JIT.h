@@ -40,7 +40,7 @@ class jit_compiler final
 	std::string m_cpu;
 
 public:
-	jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string _cpu);
+	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu);
 	~jit_compiler();
 
 	// Get LLVM context
@@ -65,10 +65,7 @@ public:
 	static std::unordered_map<std::string, u64> add(std::unordered_map<std::string, std::string>);
 
 	// Get CPU info
-	const std::string& cpu() const
-	{
-		return m_cpu;
-	}
+	static std::string cpu(const std::string& _cpu);
 
 	// Check JIT purpose
 	bool is_primary() const

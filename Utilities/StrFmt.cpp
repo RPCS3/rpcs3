@@ -23,6 +23,54 @@ void fmt_class_string<std::pair<const fmt_type_info*, u64>>::format(std::string&
 	}
 }
 
+template <>
+void fmt_class_string<fmt::base57>::format(std::string& out, u64 arg)
+{
+	const auto& _arg = get_object(arg);
+
+	if (_arg.data && _arg.size)
+	{
+		// Precomputed tail sizes if input data is not multiple of 8
+		static constexpr u8 s_tail[8] = {0, 2, 3, 5, 6, 7, 9, 10};
+
+		// Get full output size
+		const std::size_t out_size = _arg.size / 8 * 11 + s_tail[_arg.size % 8];
+
+		out.resize(out.size() + out_size);
+
+		const auto ptr = &out.front() + (out.size() - out_size);
+
+		// Each 8 bytes of input data produce 11 bytes of base57 output
+		for (std::size_t i = 0, p = 0; i < _arg.size; i += 8, p += 11)
+		{
+			// Load up to 8 bytes
+			be_t<u64> be_value;
+
+			if (_arg.size - i < sizeof(be_value))
+			{
+				std::memset(&be_value, 0, sizeof(be_value));
+				std::memcpy(&be_value, _arg.data + i, _arg.size - i);
+			}
+			else
+			{
+				std::memcpy(&be_value, _arg.data + i, sizeof(be_value));
+			}
+
+			u64 value = be_value;
+
+			for (int j = 10; j >= 0; j--)
+			{
+				if (p + j < out_size)
+				{
+					ptr[p + j] = "0123456789ACEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"[value % 57];
+				}
+
+				value /= 57;
+			}
+		}
+	}
+}
+
 void fmt_class_string<const void*>::format(std::string& out, u64 arg)
 {
 	if (arg)
@@ -31,7 +79,7 @@ void fmt_class_string<const void*>::format(std::string& out, u64 arg)
 	}
 	else
 	{
-		out += "(NULL)";		
+		out += "(NULL)";
 	}
 }
 
