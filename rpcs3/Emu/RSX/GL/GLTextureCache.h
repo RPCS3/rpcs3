@@ -706,11 +706,25 @@ namespace gl
 				}
 			}
 
+			//TODO: Native texture views are needed here. It works because this routine is only called with rendertarget data
 			if (ifmt != sized_internal_fmt)
 			{
 				err_once("GL format mismatch (data cast?). Sized ifmt=0x%X vs Src ifmt=0x%X", sized_internal_fmt, ifmt);
 				//Apply base component map onto the new texture if a data cast has been done
 				apply_component_mapping_flags(dst_type, gcm_format, rsx::texture_create_flags::default_component_order);
+			}
+			else
+			{
+				//Inherit the parent's default mapping. The caller should ensure the native order is set beforehand
+				GLint src_remap[4];
+				glBindTexture(GL_TEXTURE_2D, src_id);
+				glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, (GLint*)&src_remap[0]);
+				glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, (GLint*)&src_remap[1]);
+				glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, (GLint*)&src_remap[2]);
+				glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, (GLint*)&src_remap[3]);
+
+				glBindTexture(dst_type, dst_id);
+				glTexParameteriv(dst_type, GL_TEXTURE_SWIZZLE_RGBA, src_remap);
 			}
 
 			if (memcmp(remap.first.data(), rsx::default_remap_vector.first.data(), 4) ||

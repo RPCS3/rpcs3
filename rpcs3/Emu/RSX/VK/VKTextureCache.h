@@ -706,10 +706,10 @@ namespace vk
 		}
 
 		vk::image_view* generate_atlas_from_images(vk::command_buffer& cmd, u32 gcm_format, u16 width, u16 height,
-				const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& /*remap_vector*/) override
+				const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) override
 		{
 			auto result = create_temporary_subresource_view_impl(cmd, sections_to_copy.front().src, VK_IMAGE_TYPE_2D,
-					VK_IMAGE_VIEW_TYPE_2D, gcm_format, 0, 0, width, height, rsx::default_remap_vector, false);
+					VK_IMAGE_VIEW_TYPE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
 
 			VkImage dst = result->info.image;
 			VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
