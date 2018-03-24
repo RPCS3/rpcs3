@@ -1593,8 +1593,8 @@ void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query
 
 void GLGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
-	if (query->num_draws)
-		glEndQuery(GL_ANY_SAMPLES_PASSED);
+	verify(HERE), query->active;
+	glEndQuery(GL_ANY_SAMPLES_PASSED);
 }
 
 bool GLGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info* query)
@@ -1612,7 +1612,7 @@ void GLGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 {
 	if (query->num_draws)
 	{
-		GLint result;
+		GLint result = 0;
 		glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT, &result);
 
 		query->result += result;
@@ -1621,7 +1621,11 @@ void GLGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 
 void GLGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
-	glEndQuery(GL_ANY_SAMPLES_PASSED);
+	if (query->active)
+	{
+		//Discard is being called on an active query, close it
+		glEndQuery(GL_ANY_SAMPLES_PASSED);
+	}
 }
 
 void GLGSRender::shell_do_cleanup()
