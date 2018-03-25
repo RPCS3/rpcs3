@@ -65,6 +65,7 @@ namespace program_common
 		template_body += "		break;\n";
 		template_body += "	}\n";
 		template_body += "\n";
+		template_body += "	result.x = max(result.x, 0.);\n";
 		template_body += "	result.y = clamp(result.y, 0., 1.);\n";
 		template_body += "	return result;\n";
 		template_body += "}\n\n";
