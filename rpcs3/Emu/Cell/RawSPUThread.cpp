@@ -106,7 +106,16 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 {
 	auto try_start = [this]()
 	{
-		if (!status.test_and_set(SPU_STATUS_RUNNING))
+		if (status.atomic_op([](u32& status)
+		{
+			if (status & SPU_STATUS_RUNNING)
+			{
+				return false;
+			}
+
+			status = SPU_STATUS_RUNNING;
+			return true;
+		}))
 		{
 			run();
 		}
