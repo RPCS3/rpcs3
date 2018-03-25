@@ -1359,8 +1359,8 @@ namespace rsx
 			get_native_dimensions(internal_width, internal_height, texptr);
 
 			const bool unnormalized = (gcm_format & CELL_GCM_TEXTURE_UN) != 0;
-			f32 scale_x = (unnormalized)? (1.f / tex_width) : 1.f;
-			f32 scale_y = (unnormalized)? (1.f / tex_height) : 1.f;
+			f16 scale_x = (unnormalized)? (1.f / tex_width) : 1.f;
+			f16 scale_y = (unnormalized)? (1.f / tex_height) : 1.f;
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
 			{
