@@ -686,7 +686,14 @@ enum
 enum
 {
 	CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT = 0xe, ///< shader program exports the depth of the shaded fragment
-	CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS = 0x40 ///< shader program exports 32 bits registers values (instead of 16 bits ones)
+	CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS = 0x40, ///< shader program exports 32 bits registers values (instead of 16 bits ones)
+
+	//Other known flags
+	RSX_SHADER_CONTROL_USED_REGS_MASK = 0xf,
+	RSX_SHADER_CONTROL_USED_TEMP_REGS_MASK = 0xff << 24,
+	RSX_SHADER_CONTROL_USES_KIL = 0x80,  //program uses KIL op
+	RSX_SHADER_CONTROL_UNKNOWN0 = 0x400, //seemingly always set
+	RSX_SHADER_CONTROL_UNKNOWN1 = 0x8000 //seemingly set when srgb packer is used??
 };
 
 // GCM Reports

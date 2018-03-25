@@ -349,9 +349,10 @@ public:
 			}
 			else if (sanitize)
 			{
-				//Lower NaNs to 0
-				const auto mask = _mm_cmpunord_ps((__m128&)shuffled_vector, _mm_set1_ps(1.f));
-				const auto result = _mm_andnot_ps(mask, (__m128&)shuffled_vector);
+				//Convert NaNs and Infs to 0
+				const auto masked = _mm_and_si128((__m128i&)shuffled_vector, _mm_set1_epi32(0x7fffffff));
+				const auto valid = _mm_cmplt_epi32(masked, _mm_set1_epi32(0x7f800000));
+				const auto result = _mm_and_si128((__m128i&)shuffled_vector, valid);
 				_mm_stream_si128((__m128i*)dst, (__m128i&)result);
 			}
 			else

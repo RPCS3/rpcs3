@@ -150,46 +150,14 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	// Fragment state parameters
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
-	OS << "	uint alpha_test;\n";
+	OS << "	uint rop_control;\n";
 	OS << "	float alpha_ref;\n";
-	OS << "	uint alpha_func;\n";
+	OS << "	uint reserved;\n";
 	OS << "	uint fog_mode;\n";
 	OS << "	float wpos_scale;\n";
 	OS << "	float wpos_bias;\n";
 	OS << "	vec4 texture_parameters[16];\n";	//sampling: x,y scaling and (unused) offsets data
 	OS << "};\n";
-}
-
-namespace
-{
-	void insert_texture_scale(std::stringstream & OS, const RSXFragmentProgram& prog, int index)
-	{
-		std::string vec_type = "vec2";
-
-		switch (prog.get_texture_dimension(index))
-		{
-		case rsx::texture_dimension_extended::texture_dimension_1d: vec_type = "float"; break;
-		case rsx::texture_dimension_extended::texture_dimension_2d: vec_type = "vec2"; break;
-		case rsx::texture_dimension_extended::texture_dimension_3d:
-		case rsx::texture_dimension_extended::texture_dimension_cubemap: vec_type = "vec3";
-		}
-	}
-
-	std::string insert_texture_fetch(const RSXFragmentProgram& prog, int index)
-	{
-		std::string tex_name = "tex" + std::to_string(index);
-		std::string coord_name = "(tc" + std::to_string(index) + " * texture_parameters[" + std::to_string(index) + "])";
-
-		switch (prog.get_texture_dimension(index))
-		{
-		case rsx::texture_dimension_extended::texture_dimension_1d: return "texture(" + tex_name + ", " + coord_name + ".x)";
-		case rsx::texture_dimension_extended::texture_dimension_2d: return "texture(" + tex_name + ", " + coord_name + ".xy)";
-		case rsx::texture_dimension_extended::texture_dimension_3d:
-		case rsx::texture_dimension_extended::texture_dimension_cubemap: return "texture(" + tex_name + ", " + coord_name + ".xyz)";
-		}
-
-		fmt::throw_exception("Invalid texture dimension %d" HERE, (u32)prog.get_texture_dimension(index));
-	}
 }
 
 void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
@@ -254,20 +222,6 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	if (properties.has_wpos_input)
 		OS << "	vec4 wpos = get_wpos();\n";
 
-	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
-	{
-		if (PT.type != "sampler2D")
-			continue;
-
-		for (const ParamItem& PI : PT.items)
-		{
-			std::string samplerType = PT.type;
-			int index = atoi(&PI.name.data()[3]);
-
-			insert_texture_scale(OS, m_prog, index);
-		}
-	}
-
 	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
@@ -322,31 +276,11 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 
 void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 {
-	const std::pair<std::string, std::string> table[] =
-	{
-		{ "ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
-		{ "ocol1", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r2" : "h4" },
-		{ "ocol2", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6" },
-		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
-	};
-
 	const std::set<std::string> output_values =
 	{
 		"r0", "r1", "r2", "r3", "r4",
 		"h0", "h2", "h4", "h6", "h8"
 	};
-
-	std::string first_output_name = "";
-	std::string color_output_block = "";
-
-	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
-	{
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
-		{
-			color_output_block += "	" + table[i].first + " = " + table[i].second + ";\n";
-			if (first_output_name.empty()) first_output_name = table[i].second;
-		}
-	}
 
 	OS << "}\n\n";
 
@@ -368,44 +302,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << "\n" << "	fs_main(" + parameters + ");\n\n";
 
-	if (!first_output_name.empty())
-	{
-		auto make_comparison_test = [](rsx::comparison_function compare_func, const std::string &test, const std::string &a, const std::string &b) -> std::string
-		{
-			std::string compare;
-			switch (compare_func)
-			{
-			case rsx::comparison_function::equal:            compare = " == "; break;
-			case rsx::comparison_function::not_equal:        compare = " != "; break;
-			case rsx::comparison_function::less_or_equal:    compare = " <= "; break;
-			case rsx::comparison_function::less:             compare = " < ";  break;
-			case rsx::comparison_function::greater:          compare = " > ";  break;
-			case rsx::comparison_function::greater_or_equal: compare = " >= "; break;
-			default:
-				return "";
-			}
-
-			return "	if (" + test + "!(" + a + compare + b + ")) discard;\n";
-		};
-
-		for (u8 index = 0; index < 16; ++index)
-		{
-			if (m_prog.textures_alpha_kill[index])
-			{
-				const std::string texture_name = "tex" + std::to_string(index);
-				if (m_parr.HasParamTypeless(PF_PARAM_UNIFORM, texture_name))
-				{
-					std::string fetch_texture = insert_texture_fetch(m_prog, index) + ".a";
-					OS << make_comparison_test((rsx::comparison_function)m_prog.textures_zfunc[index], "", "0", fetch_texture);
-				}
-			}
-		}
-
-		OS << "	if (alpha_test != 0 && !comparison_passes(" << first_output_name << ".a, alpha_ref, alpha_func)) discard;\n\n";
-	}
-
-	//Append the color output assignments
-	OS << color_output_block;
+	glsl::insert_rop(OS, !!(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS));
 
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
