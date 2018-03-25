@@ -7,8 +7,9 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_ppu_thread.h"
 #include "sys_event.h"
+#include "sys_mmapper.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_ppu_thread("sys_ppu_thread");
 
@@ -104,7 +105,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 		{
 			lv2_obj::sleep(ppu);
 		}
-		
+
 		return result;
 	});
 
@@ -112,7 +113,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	{
 		return CELL_ESRCH;
 	}
-	
+
 	if (thread.ret && thread.ret != CELL_EBUSY)
 	{
 		return thread.ret;
@@ -181,7 +182,7 @@ error_code sys_ppu_thread_detach(u32 thread_id)
 	{
 		idm::remove<ppu_thread>(thread_id);
 	}
-	
+
 	return CELL_OK;
 }
 
@@ -355,7 +356,8 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 			while (!idm::select<lv2_obj, lv2_event_queue>([](u32, lv2_event_queue& eq)
 			{
-				return eq.name == "_mxr000\0"_u64;
+				//some games do not set event queue name, though key seems constant for them
+				return (eq.name == "_mxr000\0"_u64) || (eq.key == 0x8000cafe02460300);
 			}))
 			{
 				thread_ctrl::wait_for(50000);
@@ -378,6 +380,71 @@ error_code sys_ppu_thread_rename(u32 thread_id, vm::cptr<char> name)
 	{
 		return CELL_ESRCH;
 	}
+
+	return CELL_OK;
+}
+
+error_code sys_ppu_thread_recover_page_fault(u32 thread_id)
+{
+	sys_ppu_thread.warning("sys_ppu_thread_recover_page_fault(thread_id=0x%x)", thread_id);
+	const auto thread = idm::get<ppu_thread>(thread_id);
+	if (!thread)
+	{
+		return CELL_ESRCH;
+	}
+
+	// We can only wake a thread if it is being suspended for a page fault.
+	auto pf_events = fxm::get_always<page_fault_event_entries>();
+	auto pf_event_ind = pf_events->events.begin();
+
+	for (auto event_ind = pf_events->events.begin(); event_ind != pf_events->events.end(); ++event_ind)
+	{
+		if (event_ind->thread_id == thread_id)
+		{
+			pf_event_ind = event_ind;
+			break;
+		}
+	}
+
+	if (pf_event_ind == pf_events->events.end())
+	{ // if not found...
+		return CELL_EINVAL;
+	}
+
+	pf_events->events.erase(pf_event_ind);
+
+	lv2_obj::awake(*thread);
+	return CELL_OK;
+}
+
+error_code sys_ppu_thread_get_page_fault_context(u32 thread_id, vm::ptr<sys_ppu_thread_icontext_t> ctxt)
+{
+	sys_ppu_thread.todo("sys_ppu_thread_get_page_fault_context(thread_id=0x%x, ctxt=*0x%x)", thread_id, ctxt);
+
+	const auto thread = idm::get<ppu_thread>(thread_id);
+	if (!thread)
+	{
+		return CELL_ESRCH;
+	}
+
+	// We can only get a context if the thread is being suspended for a page fault.
+	auto pf_events = fxm::get_always<page_fault_event_entries>();
+
+	bool found = false;
+	for (const auto& ev : pf_events->events)
+	{
+		if (ev.thread_id == thread_id)
+		{
+			found = true;
+			break;
+		}
+	}
+	if (!found)
+	{
+		return CELL_EINVAL;
+	}
+
+	// TODO: Fill ctxt with proper information.
 
 	return CELL_OK;
 }

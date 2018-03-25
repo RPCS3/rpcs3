@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 // Error Codes
 enum
@@ -38,7 +38,7 @@ enum
 	CELL_PAMF_FS_48kHz = 1,
 };
 
-enum 
+enum
 {
 	CELL_PAMF_BIT_LENGTH_16 = 1,
 	CELL_PAMF_BIT_LENGTH_24 = 3,
@@ -60,7 +60,7 @@ enum
 	CELL_PAMF_AVC_LEVEL_4P2 = 42,
 };
 
-enum 
+enum
 {
 	CELL_PAMF_AVC_FRC_24000DIV1001 = 0,
 	CELL_PAMF_AVC_FRC_24           = 1,
@@ -263,7 +263,7 @@ struct PamfStreamHeader
 	u8 unknown2;
 	be_t<u32> ep_offset; // offset of EP section in header
 	be_t<u32> ep_num; // count of EPs
-	
+
 	union
 	{
 		u8 data[32]; // specific info

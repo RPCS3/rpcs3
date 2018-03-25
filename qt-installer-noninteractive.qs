@@ -9,7 +9,8 @@ function Controller() {
 }
 
 Controller.prototype.WelcomePageCallback = function() {
-    gui.clickButton(buttons.NextButton);
+    // Wait 10 seconds to load licenses and such.
+    gui.clickButton(buttons.NextButton, 10000);
 }
 
 Controller.prototype.CredentialsPageCallback = function() {
@@ -32,8 +33,7 @@ Controller.prototype.ComponentSelectionPageCallback = function() {
     var widget = gui.currentPageWidget();
 
     widget.deselectAll();
-    widget.selectComponent("qt.591.gcc_64");
-
+    widget.selectComponent("qt.qt5." + installer.environmentVariable("QTVER") + ".gcc_64");
     gui.clickButton(buttons.NextButton);
 }
 

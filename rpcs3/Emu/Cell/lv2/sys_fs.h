@@ -15,6 +15,7 @@ enum : s32
 	CELL_FS_O_TRUNC   = 001000,
 	CELL_FS_O_APPEND  = 002000,
 	CELL_FS_O_MSELF   = 010000,
+	CELL_FS_O_UNK     = 01000000, // Tests have shown this is independent of other flags.  Only known to be called in Rockband games.
 };
 
 // Seek Mode
@@ -186,10 +187,10 @@ struct lv2_file final : lv2_fs_object
 	}
 
 	// File reading with intermediate buffer
-	u64 op_read(vm::ps3::ptr<void> buf, u64 size);
+	u64 op_read(vm::ptr<void> buf, u64 size);
 
 	// File writing with intermediate buffer
-	u64 op_write(vm::ps3::cptr<void> buf, u64 size);
+	u64 op_write(vm::cptr<void> buf, u64 size);
 
 	// For MSELF support
 	struct file_view;
@@ -299,7 +300,7 @@ struct lv2_file_c0000002 : lv2_file_op
 
 	be_t<u32> op;
 	be_t<u32> _x8;
-	vm::ps3::bcptr<char> path;
+	vm::bcptr<char> path;
 	be_t<u32> _x10; // 0
 	be_t<u32> _x14;
 
@@ -317,7 +318,7 @@ struct lv2_file_c0000006 : lv2_file_op
 	be_t<u32> _x4;  // 0x10
 	be_t<u32> _x8;  // 0x18
 	be_t<u32> _xc;  // 0x9
-	vm::ps3::bcptr<char> name;
+	vm::bcptr<char> name;
 	be_t<u32> _x14; // 0
 	be_t<u32> _x18; // 0x80010003
 	be_t<u32> _x1c; // 0
@@ -332,7 +333,7 @@ struct lv2_file_e0000017 : lv2_file_op
 	be_t<u32> _x4; // 0x10, offset
 	be_t<u32> _x8; // 0x20, offset
 	be_t<u32> _xc; // -
-	vm::ps3::bcptr<char> file_path;
+	vm::bcptr<char> file_path;
 	be_t<u64> file_size;
 	be_t<u32> out_code;
 };
@@ -341,43 +342,43 @@ CHECK_SIZE(lv2_file_e0000017, 0x28);
 
 // Syscalls
 
-error_code sys_fs_test(u32 arg1, u32 arg2, vm::ps3::ptr<u32> arg3, u32 arg4, vm::ps3::ptr<char> buf, u32 buf_size);
-error_code sys_fs_open(vm::ps3::cptr<char> path, s32 flags, vm::ps3::ptr<u32> fd, s32 mode, vm::ps3::cptr<void> arg, u64 size);
-error_code sys_fs_read(u32 fd, vm::ps3::ptr<void> buf, u64 nbytes, vm::ps3::ptr<u64> nread);
-error_code sys_fs_write(u32 fd, vm::ps3::cptr<void> buf, u64 nbytes, vm::ps3::ptr<u64> nwrite);
+error_code sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> buf, u32 buf_size);
+error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::cptr<void> arg, u64 size);
+error_code sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread);
+error_code sys_fs_write(u32 fd, vm::cptr<void> buf, u64 nbytes, vm::ptr<u64> nwrite);
 error_code sys_fs_close(u32 fd);
-error_code sys_fs_opendir(vm::ps3::cptr<char> path, vm::ps3::ptr<u32> fd);
-error_code sys_fs_readdir(u32 fd, vm::ps3::ptr<CellFsDirent> dir, vm::ps3::ptr<u64> nread);
+error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd);
+error_code sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread);
 error_code sys_fs_closedir(u32 fd);
-error_code sys_fs_stat(vm::ps3::cptr<char> path, vm::ps3::ptr<CellFsStat> sb);
-error_code sys_fs_fstat(u32 fd, vm::ps3::ptr<CellFsStat> sb);
-error_code sys_fs_link(vm::ps3::cptr<char> from, vm::ps3::cptr<char> to);
-error_code sys_fs_mkdir(vm::ps3::cptr<char> path, s32 mode);
-error_code sys_fs_rename(vm::ps3::cptr<char> from, vm::ps3::cptr<char> to);
-error_code sys_fs_rmdir(vm::ps3::cptr<char> path);
-error_code sys_fs_unlink(vm::ps3::cptr<char> path);
-error_code sys_fs_access(vm::ps3::cptr<char> path, s32 mode);
-error_code sys_fs_fcntl(u32 fd, u32 op, vm::ps3::ptr<void> arg, u32 size);
-error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ps3::ptr<u64> pos);
+error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb);
+error_code sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb);
+error_code sys_fs_link(vm::cptr<char> from, vm::cptr<char> to);
+error_code sys_fs_mkdir(vm::cptr<char> path, s32 mode);
+error_code sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to);
+error_code sys_fs_rmdir(vm::cptr<char> path);
+error_code sys_fs_unlink(vm::cptr<char> path);
+error_code sys_fs_access(vm::cptr<char> path, s32 mode);
+error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> arg, u32 size);
+error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos);
 error_code sys_fs_fdatasync(u32 fd);
 error_code sys_fs_fsync(u32 fd);
-error_code sys_fs_fget_block_size(u32 fd, vm::ps3::ptr<u64> sector_size, vm::ps3::ptr<u64> block_size, vm::ps3::ptr<u64> arg4, vm::ps3::ptr<s32> arg5);
-error_code sys_fs_get_block_size(vm::ps3::cptr<char> path, vm::ps3::ptr<u64> sector_size, vm::ps3::ptr<u64> block_size, vm::ps3::ptr<u64> arg4);
-error_code sys_fs_truncate(vm::ps3::cptr<char> path, u64 size);
+error_code sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<s32> arg5);
+error_code sys_fs_get_block_size(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4);
+error_code sys_fs_truncate(vm::cptr<char> path, u64 size);
 error_code sys_fs_ftruncate(u32 fd, u64 size);
-error_code sys_fs_symbolic_link(vm::ps3::cptr<char> target, vm::ps3::cptr<char> linkpath);
-error_code sys_fs_chmod(vm::ps3::cptr<char> path, s32 mode);
-error_code sys_fs_chown(vm::ps3::cptr<char> path, s32 uid, s32 gid);
-error_code sys_fs_disk_free(vm::ps3::cptr<char> path, vm::ps3::ptr<u64> total_free, vm::ps3::ptr<u64> avail_free);
-error_code sys_fs_utime(vm::ps3::cptr<char> path, vm::ps3::cptr<CellFsUtimbuf> timep);
-error_code sys_fs_acl_read(vm::ps3::cptr<char> path, vm::ps3::ptr<void>);
-error_code sys_fs_acl_write(vm::ps3::cptr<char> path, vm::ps3::ptr<void>);
-error_code sys_fs_lsn_get_cda_size(u32 fd, vm::ps3::ptr<u64> ptr);
-error_code sys_fs_lsn_get_cda(u32 fd, vm::ps3::ptr<void>, u64, vm::ps3::ptr<u64>);
+error_code sys_fs_symbolic_link(vm::cptr<char> target, vm::cptr<char> linkpath);
+error_code sys_fs_chmod(vm::cptr<char> path, s32 mode);
+error_code sys_fs_chown(vm::cptr<char> path, s32 uid, s32 gid);
+error_code sys_fs_disk_free(vm::cptr<char> path, vm::ptr<u64> total_free, vm::ptr<u64> avail_free);
+error_code sys_fs_utime(vm::cptr<char> path, vm::cptr<CellFsUtimbuf> timep);
+error_code sys_fs_acl_read(vm::cptr<char> path, vm::ptr<void>);
+error_code sys_fs_acl_write(vm::cptr<char> path, vm::ptr<void>);
+error_code sys_fs_lsn_get_cda_size(u32 fd, vm::ptr<u64> ptr);
+error_code sys_fs_lsn_get_cda(u32 fd, vm::ptr<void>, u64, vm::ptr<u64>);
 error_code sys_fs_lsn_lock(u32 fd);
 error_code sys_fs_lsn_unlock(u32 fd);
-error_code sys_fs_lsn_read(u32 fd, vm::ps3::cptr<void>, u64);
-error_code sys_fs_lsn_write(u32 fd, vm::ps3::cptr<void>, u64);
-error_code sys_fs_mapped_allocate(u32 fd, u64, vm::ps3::pptr<void> out_ptr);
-error_code sys_fs_mapped_free(u32 fd, vm::ps3::ptr<void> ptr);
+error_code sys_fs_lsn_read(u32 fd, vm::cptr<void>, u64);
+error_code sys_fs_lsn_write(u32 fd, vm::cptr<void>, u64);
+error_code sys_fs_mapped_allocate(u32 fd, u64, vm::pptr<void> out_ptr);
+error_code sys_fs_mapped_free(u32 fd, vm::ptr<void> ptr);
 error_code sys_fs_truncate2(u32 fd, u64 size);

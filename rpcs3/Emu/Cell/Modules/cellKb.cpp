@@ -6,7 +6,7 @@
 #include "Emu/Io/KeyboardHandler.h"
 #include "cellKb.h"
 
-namespace vm { using namespace ps3; }
+
 
 extern logs::channel sys_io;
 
@@ -95,12 +95,12 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 	// ASCII
 	if (rawcode >= 0x04 && rawcode <= 0x1D)                                   // 'A' - 'Z'
 	{
-		rawcode -= 
-			(mkey&(CELL_KB_MKEY_L_SHIFT|CELL_KB_MKEY_R_SHIFT)) ? 
+		rawcode -=
+			(mkey&(CELL_KB_MKEY_L_SHIFT|CELL_KB_MKEY_R_SHIFT)) ?
 			((led&(CELL_KB_LED_CAPS_LOCK)) ? 0 : 0x20) :
 			((led&(CELL_KB_LED_CAPS_LOCK)) ? 0x20 : 0);
 		return rawcode + 0x5D;
-	}				
+	}
 	if (rawcode >= 0x1E && rawcode <= 0x26) return rawcode + 0x13;            // '1' - '9'
 	if (rawcode == 0x27) return 0x30;                                         // '0'
 	if (rawcode == 0x28) return 0x0A;                                         // '\n'
@@ -136,7 +136,7 @@ error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 	{
 		info->status[i] = current_info.status[i];
 	}
-	
+
 	return CELL_OK;
 }
 
@@ -165,7 +165,7 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 	}
 
 	current_data.len = 0;
-	
+
 	return CELL_OK;
 }
 
@@ -177,7 +177,10 @@ error_code cellKbSetCodeType(u32 port_no, u32 type)
 
 	if (!handler)
 		return CELL_KB_ERROR_UNINITIALIZED;
-	
+
+	if (port_no >= handler->GetKeyboards().size())
+		return CELL_KB_ERROR_INVALID_PARAMETER;
+
 	KbConfig& current_config = handler->GetConfig(port_no);
 	current_config.code_type = type;
 	return CELL_OK;
@@ -197,7 +200,10 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 
 	if (!handler)
 		return CELL_KB_ERROR_UNINITIALIZED;
-	
+
+	if (port_no >= handler->GetKeyboards().size())
+		return CELL_KB_ERROR_INVALID_PARAMETER;
+
 	KbConfig& current_config = handler->GetConfig(port_no);
 	current_config.read_mode = rmode;
 
@@ -212,6 +218,9 @@ error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 
 	if (!handler)
 		return CELL_KB_ERROR_UNINITIALIZED;
+
+	if (port_no >= handler->GetKeyboards().size())
+		return CELL_KB_ERROR_INVALID_PARAMETER;
 
 	const KbConfig& current_config = handler->GetConfig(port_no);
 	config->arrange = current_config.arrange;

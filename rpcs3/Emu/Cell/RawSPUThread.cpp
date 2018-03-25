@@ -21,7 +21,7 @@ void RawSPUThread::cpu_task()
 	SPUThread::cpu_task();
 
 	// save next PC and current SPU Interrupt status
-	npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
+	npc = pc | (interrupts_enabled);
 }
 
 void RawSPUThread::on_init(const std::shared_ptr<void>& _this)
@@ -77,6 +77,25 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 		value = status;
 		return true;
 	}
+
+	case Prxy_TagStatus_offs:
+	{
+		value = mfc_proxy.size() ? 0 : +mfc_prxy_mask;
+		return true;
+	}
+
+	case SPU_NPC_offs:
+	{
+		//npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
+		value = npc;
+		return true;
+	}
+
+	case SPU_RunCntl_offs:
+	{
+		value = run_ctrl;
+		return true;
+	}
 	}
 
 	LOG_ERROR(SPU, "RawSPUThread[%d]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
@@ -122,31 +141,23 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 
 	case MFC_Size_Tag_offs:
 	{
-		g_tls_mfc[index].tag = value & 0xff;
-		g_tls_mfc[index].size = value >> 16;
+		g_tls_mfc[index].tag = value & 0x1f;
+		g_tls_mfc[index].size = (value >> 16) & 0x7fff;
 		return true;
 	}
 
 	case MFC_Class_CMD_offs:
 	{
 		g_tls_mfc[index].cmd = MFC(value & 0xff);
-		if (mfc_proxy.try_push(g_tls_mfc[index]))
-		{
-			auto mfc = fxm::check_unlocked<mfc_thread>();
+		do_dma_transfer(g_tls_mfc[index]);
+		g_tls_mfc[index] = {};
+		g_tls_mfc[index].cmd = MFC(MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL);
 
-			if (test(mfc->state, cpu_flag::stop) && mfc->state.test_and_reset(cpu_flag::stop))
-			{
-				mfc->notify();
-			}
-
-			g_tls_mfc[index] = {};
-			g_tls_mfc[index].cmd = MFC(MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL);
-		}
-		else
+		if (value & MFC_START_MASK)
 		{
-			g_tls_mfc[index] = {};
-			g_tls_mfc[index].cmd = MFC(MFC_PPU_DMA_QUEUE_FULL);
+			try_start();
 		}
+
 		return true;
 	}
 		
@@ -172,6 +183,7 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 
 	case Prxy_QueryMask_offs:
 	{
+		mfc_prxy_mask = value;
 		return true;
 	}
 

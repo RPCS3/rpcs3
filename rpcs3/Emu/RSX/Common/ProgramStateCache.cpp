@@ -3,7 +3,7 @@
 
 using namespace program_hash_util;
 
-size_t vertex_program_hash::operator()(const RSXVertexProgram &program) const
+size_t vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgram &program)
 {
 	// 64-bit Fowler/Noll/Vo FNV-1a hash code
 	size_t hash = 0xCBF29CE484222325ULL;
@@ -22,13 +22,20 @@ size_t vertex_program_hash::operator()(const RSXVertexProgram &program) const
 	return hash;
 }
 
+size_t vertex_program_storage_hash::operator()(const RSXVertexProgram &program) const
+{
+	size_t hash = vertex_program_utils::get_vertex_program_ucode_hash(program);
+	hash ^= program.output_mask;
+	return hash;
+}
+
 bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const RSXVertexProgram &binary2) const
 {
 	if (binary1.output_mask != binary2.output_mask)
 		return false;
 	if (binary1.data.size() != binary2.data.size())
 		return false;
-	if (binary1.rsx_vertex_inputs != binary2.rsx_vertex_inputs)
+	if (!binary1.skip_vertex_input_check && !binary2.skip_vertex_input_check && binary1.rsx_vertex_inputs != binary2.rsx_vertex_inputs)
 		return false;
 
 	const qword *instBuffer1 = (const qword*)binary1.data.data();
@@ -77,7 +84,24 @@ size_t fragment_program_utils::get_fragment_program_ucode_size(void *ptr)
 	}
 }
 
-size_t fragment_program_hash::operator()(const RSXFragmentProgram& program) const
+u32 fragment_program_utils::get_fragment_program_start(void *ptr)
+{
+	const qword *instBuffer = (const qword*)ptr;
+	size_t instIndex = 0;
+	while (true)
+	{
+		const qword& inst = instBuffer[instIndex];
+		u32 opcode = inst.word[0] >> 16 & 0x3F;
+		if (opcode)
+			break;
+
+		instIndex++;
+	}
+
+	return instIndex * 16;
+}
+
+size_t fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentProgram& program)
 {
 	// 64-bit Fowler/Noll/Vo FNV-1a hash code
 	size_t hash = 0xCBF29CE484222325ULL;
@@ -104,14 +128,37 @@ size_t fragment_program_hash::operator()(const RSXFragmentProgram& program) cons
 	return 0;
 }
 
+size_t fragment_program_storage_hash::operator()(const RSXFragmentProgram& program) const
+{
+	size_t hash = fragment_program_utils::get_fragment_program_ucode_hash(program);
+	hash ^= program.ctrl;
+	hash ^= program.texture_dimensions;
+	hash ^= program.unnormalized_coords;
+	hash ^= program.back_color_diffuse_output;
+	hash ^= program.back_color_specular_output;
+	hash ^= program.front_back_color_enabled;
+	hash ^= program.shadow_textures;
+	hash ^= program.redirected_textures;
+
+	return hash;
+}
+
 bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2) const
 {
-	if (binary1.texture_dimensions != binary2.texture_dimensions || binary1.unnormalized_coords != binary2.unnormalized_coords ||
-		binary1.height != binary2.height || binary1.origin_mode != binary2.origin_mode || binary1.pixel_center_mode != binary2.pixel_center_mode ||
+	if (binary1.ctrl != binary2.ctrl || binary1.texture_dimensions != binary2.texture_dimensions || binary1.unnormalized_coords != binary2.unnormalized_coords ||
 		binary1.back_color_diffuse_output != binary2.back_color_diffuse_output || binary1.back_color_specular_output != binary2.back_color_specular_output ||
-		binary1.front_back_color_enabled != binary2.front_back_color_enabled || binary1.alpha_func != binary2.alpha_func || 
+		binary1.front_back_color_enabled != binary2.front_back_color_enabled ||
 		binary1.shadow_textures != binary2.shadow_textures || binary1.redirected_textures != binary2.redirected_textures)
 		return false;
+
+	for (u8 index = 0; index < 16; ++index)
+	{
+		if (binary1.textures_alpha_kill[index] != binary2.textures_alpha_kill[index])
+			return false;
+
+		if (binary1.textures_zfunc[index] != binary2.textures_zfunc[index])
+			return false;
+	}
 
 	const qword *instBuffer1 = (const qword*)binary1.addr;
 	const qword *instBuffer2 = (const qword*)binary2.addr;

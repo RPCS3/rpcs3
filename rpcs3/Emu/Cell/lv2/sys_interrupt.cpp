@@ -8,7 +8,7 @@
 #include "Emu/Cell/PPUOpcodes.h"
 #include "sys_interrupt.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_interrupt("sys_interrupt");
 
@@ -16,6 +16,7 @@ void lv2_int_serv::exec()
 {
 	thread->cmd_list
 	({
+		{ ppu_cmd::reset_stack, 0 },
 		{ ppu_cmd::set_args, 2 }, arg1, arg2,
 		{ ppu_cmd::lle_call, 2 },
 		{ ppu_cmd::sleep, 0 }
@@ -130,6 +131,12 @@ error_code _sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih, vm::ptr<u
 
 	if (!handler)
 	{
+		if (const auto thread = idm::withdraw<ppu_thread>(ih))
+		{
+			*r13 = thread->gpr[13];
+			return CELL_OK;
+		}
+
 		return CELL_ESRCH;
 	}
 

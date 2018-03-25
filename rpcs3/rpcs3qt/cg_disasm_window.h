@@ -26,7 +26,7 @@ private:
 	std::shared_ptr<gui_settings> xgui_settings;
 
 public:
-	explicit cg_disasm_window(std::shared_ptr<gui_settings> xSettings, QWidget *parent);
+	explicit cg_disasm_window(std::shared_ptr<gui_settings> xSettings);
 
 protected:
 	void dropEvent(QDropEvent* ev);

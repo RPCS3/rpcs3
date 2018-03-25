@@ -16,6 +16,7 @@ enum class ppu_cmd : u32
 	hle_call, // Execute function by index (arg)
 	initialize, // ppu_initialize()
 	sleep,
+	reset_stack, // resets stack address
 };
 
 // Formatting helper
@@ -30,6 +31,7 @@ public:
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
 
+	virtual void on_spawn() override;
 	virtual void on_init(const std::shared_ptr<void>&) override;
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
@@ -235,6 +237,20 @@ struct ppu_gpr_cast_impl<vm::_ref_base<T, AT>, void>
 	static inline vm::_ref_base<T, AT> from(const u64 reg)
 	{
 		return vm::cast(ppu_gpr_cast_impl<AT>::from(reg));
+	}
+};
+
+template <>
+struct ppu_gpr_cast_impl<vm::null_t, void>
+{
+	static inline u64 to(const vm::null_t& value)
+	{
+		return 0;
+	}
+
+	static inline vm::null_t from(const u64 reg)
+	{
+		return vm::null;
 	}
 };
 

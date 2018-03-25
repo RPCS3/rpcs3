@@ -32,7 +32,6 @@
 #define SAFE_BUFFERS
 #define NEVER_INLINE __attribute__((noinline))
 #define FORCE_INLINE __attribute__((always_inline)) inline
-#define thread_local __thread
 #endif
 
 #define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " type size")
@@ -49,7 +48,7 @@
 #define CONCATENATE_DETAIL(x, y) x ## y
 #define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
 
-#define STRINGIZE_DETAIL(x) #x
+#define STRINGIZE_DETAIL(x) #x ""
 #define STRINGIZE(x) STRINGIZE_DETAIL(x)
 
 #define HERE "\n(in file " __FILE__ ":" STRINGIZE(__LINE__) ")"
@@ -535,6 +534,26 @@ inline u64 cntlz64(u64 arg, bool nonzero = false)
 #endif
 }
 
+inline u32 cnttz32(u32 arg, bool nonzero = false)
+{
+#ifdef _MSC_VER
+	ulong res;
+	return _BitScanForward(&res, arg) || nonzero ? res : 32;
+#else
+	return arg || nonzero ? __builtin_ctzll(arg) : 32;
+#endif
+}
+
+inline u64 cnttz64(u64 arg, bool nonzero = false)
+{
+#ifdef _MSC_VER
+	ulong res;
+	return _BitScanForward64(&res, arg) || nonzero ? res : 64;
+#else
+	return arg || nonzero ? __builtin_ctzll(arg) : 64;
+#endif
+}
+
 // Helper function, used by ""_u16, ""_u32, ""_u64
 constexpr u8 to_u8(char c)
 {
@@ -919,7 +938,7 @@ struct error_code
 	error_code() = default;
 
 	// Implementation must be provided specially
-	static s32 error_report(const fmt_type_info* sup, u64 arg);
+	static s32 error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2);
 
 	// Helper type
 	enum class not_an_error : s32
@@ -940,7 +959,7 @@ struct error_code
 
 	// Not an error constructor
 	template<typename ET, typename = decltype(ET::__not_an_error)>
-	error_code(const ET& value, int = 0)
+	error_code(const ET& value, std::nullptr_t = nullptr)
 		: value(static_cast<s32>(value))
 	{
 	}
@@ -948,7 +967,14 @@ struct error_code
 	// Error constructor
 	template<typename ET, typename = std::enable_if_t<is_error<ET>::value>>
 	error_code(const ET& value)
-		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value)))
+		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), nullptr, 0))
+	{
+	}
+
+	// Error constructor (2 args)
+	template<typename ET, typename T2, typename = std::enable_if_t<is_error<ET>::value>>
+	error_code(const ET& value, const T2& value2)
+		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), fmt::get_type_info<fmt_unveil_t<T2>>(), fmt_unveil<T2>::get(value2)))
 	{
 	}
 

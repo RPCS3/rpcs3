@@ -1,6 +1,12 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+#include "Utilities/Timer.h"
+#include "Emu/Cell/lv2/sys_memory.h"
+#include "Utilities/sema.h"
+#include "Utilities/Thread.h"
+
+#include <map>
+
 
 // Error Codes
 enum
@@ -20,7 +26,7 @@ enum
 	CELL_CAMERA_ERROR_FATAL              = 0x8014080f,
 };
 
-// Event types
+// Event masks
 enum
 {
 	CELL_CAMERA_EFLAG_FRAME_UPDATE = 0x00000001,
@@ -29,6 +35,26 @@ enum
 	CELL_CAMERA_EFLAG_START        = 0x00000008,
 	CELL_CAMERA_EFLAG_STOP         = 0x00000010,
 	CELL_CAMERA_EFLAG_RESET        = 0x00000020,
+};
+
+// Event types
+enum
+{
+	CELL_CAMERA_DETACH       = 0,
+	CELL_CAMERA_ATTACH       = 1,
+	CELL_CAMERA_FRAME_UPDATE = 2,
+	CELL_CAMERA_OPEN         = 3,
+	CELL_CAMERA_CLOSE        = 4,
+	CELL_CAMERA_START        = 5,
+	CELL_CAMERA_STOP         = 6,
+	CELL_CAMERA_RESET        = 7
+};
+
+// Read mode
+enum
+{
+	CELL_CAMERA_READ_FUNCCALL = 0,
+	CELL_CAMERA_READ_DIRECT   = 1,
 };
 
 // Colormatching
@@ -286,14 +312,14 @@ enum CellCameraAttribute : s32
 
 struct CellCameraInfoEx
 {
-	be_t<s32> format; // CellCameraFormat
+	be_t<s32> format;     // CellCameraFormat
 	be_t<s32> resolution; // CellCameraResolution
 	be_t<s32> framerate;
 
 	vm::bptr<u8> buffer;
 	be_t<s32> bytesize;
-	be_t<s32> width;
-	be_t<s32> height;
+	be_t<s32> width;    // only used if resolution == CELL_CAMERA_SPECIFIED_WIDTH_HEIGHT
+	be_t<s32> height;   // likewise
 	be_t<s32> dev_num;
 	be_t<s32> guid;
 
@@ -310,4 +336,53 @@ struct CellCameraReadEx
 	be_t<u32> bytesread;
 	be_t<s64> timestamp;
 	vm::bptr<u8> pbuf;
+};
+
+class camera_thread final : public named_thread
+{
+private:
+	struct notify_event_data
+	{
+		u64 source;
+		u64 flag;
+	};
+
+	void on_task() override;
+
+	std::string get_name() const override { return "Camera Thread"; }
+
+public:
+	void on_init(const std::shared_ptr<void>&) override;
+	void send_attach_state(bool attached);
+
+	std::map<u64, notify_event_data> notify_data_map;
+
+	semaphore<> mutex;
+	semaphore<> mutex_notify_data_map;
+	Timer timer;
+
+	atomic_t<u8> read_mode;
+	atomic_t<bool> is_streaming;
+	atomic_t<bool> is_attached;
+	atomic_t<bool> is_open;
+
+	CellCameraInfoEx info;
+
+	struct attr_t
+	{
+		u32 v1, v2;
+	};
+	attr_t attr[500]{};
+
+	lv2_memory_container container;
+	atomic_t<u32> frame_num;
+
+	camera_thread() : read_mode(CELL_CAMERA_READ_FUNCCALL) {}
+	~camera_thread() = default;
+};
+
+/// Shared data between cellGem and cellCamera
+struct gem_camera_shared
+{
+	atomic_t<s64> frame_timestamp;    // latest read timestamp from cellCamera (cellCameraRead(Ex))
 };

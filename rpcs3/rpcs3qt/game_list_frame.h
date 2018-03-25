@@ -3,17 +3,17 @@
 #include "stdafx.h"
 #include "Emu/GameInfo.h"
 
+#include "custom_dock_widget.h"
 #include "game_list.h"
 #include "game_list_grid.h"
-#include "gui_settings.h"
 #include "emu_settings.h"
+#include "game_compatibility.h"
 
-#include <QDockWidget>
 #include <QMainWindow>
 #include <QToolBar>
 #include <QLineEdit>
 #include <QStackedWidget>
-#include <QDropEvent>
+#include <QSet>
 
 #include <memory>
 
@@ -100,6 +100,16 @@ namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 	const QStringList media = { app_Photo, app_Video, bc_Video, app_Music, app_TV, web_TV };
 	const QStringList data = { ps3_Data, ps2_Data, ps3_Save, psp_Save };
 	const QStringList others = { network, store_FE, trophy, other };
+
+	inline bool CategoryInMap(const std::string& cat, const q_from_char& map)
+	{
+		auto map_contains_category = [s = qstr(cat)](const auto& p)
+		{
+			return p.second == s;
+		};
+
+		return std::find_if(map.begin(), map.end(), map_contains_category) != map.end();
+	}
 }
 
 namespace parental
@@ -153,45 +163,26 @@ namespace sound
 struct GUI_GameInfo
 {
 	GameInfo info;
+	compat_status compat;
 	QImage icon;
 	QPixmap pxmap;
-	bool isVisible;
 	bool bootable;
 	bool hasCustomConfig;
 };
 
-struct Tool_Bar_Button
+class game_list_frame : public custom_dock_widget
 {
-	QAction* action;
-	QIcon colored;
-	QIcon gray;
-	bool isActive;
-};
-
-enum {
-	DROP_ERROR,
-	DROP_PKG,
-	DROP_PUP,
-	DROP_RAP,
-	DROP_DIR,
-	DROP_GAME
-};
-
-class game_list_frame : public QDockWidget {
 	Q_OBJECT
 
 public:
-	explicit game_list_frame(std::shared_ptr<gui_settings> settings, const Render_Creator& r_Creator, QWidget *parent = nullptr);
+	explicit game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent = nullptr);
 	~game_list_frame();
 
 	/** Refresh the gamelist with/without loading game data from files. Public so that main frame can refresh after vfs or install */
-	void Refresh(const bool fromDrive = false);
+	void Refresh(const bool fromDrive = false, const bool scrollAfter = true);
 
 	/** Adds/removes categories that should be shown on gamelist. Public so that main frame menu actions can apply them */
 	void ToggleCategoryFilter(const QStringList& categories, bool show);
-
-	/** Returns the tool bar visibility. Public so that main frame can check the menu action accordingly */
-	bool GetToolBarVisible();
 
 	/** Loads from settings. Public so that main frame can easily reset these settings if needed. */
 	void LoadSettings();
@@ -203,52 +194,39 @@ public:
 	void ResizeIcons(const int& sliderPos);
 
 	/** Repaint Gamelist Icons with new background color */
-	void RepaintIcons(const QColor& color = QColor());
+	void RepaintIcons(const bool& fromSettings = false);
 
-	int GetSliderValue();
+	void SetShowHidden(bool show);
 
 public Q_SLOTS:
 	void SetListMode(const bool& isList);
-	void SetToolBarVisible(const bool& showToolBar);
-	void SetCategoryActIcon(const int& id, const bool& active);
 	void SetSearchText(const QString& text);
-	void RepaintToolBarIcons();
 
 private Q_SLOTS:
-	void RemoveCustomConfiguration(int row);
+	bool RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive = false);
+	bool DeleteShadersCache(const std::string& base_dir, bool is_interactive = false);
+	bool DeleteLLVMCache(const std::string& base_dir, bool is_interactive = false);
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void ShowSpecifiedContextMenu(const QPoint &pos, int index); // Different name because the notation for overloaded connects is messy
 	void doubleClickedSlot(const QModelIndex& index);
 Q_SIGNALS:
 	void GameListFrameClosed();
-	void RequestIconPathSet(const std::string& path);
-	void RequestAddRecentGame(const q_string_pair& entry);
-	void RequestIconSizeActSet(const int& idx);
-	void RequestListModeActSet(const bool& isList);
-	void RequestCategoryActSet(const int& id);
-	void RequestSaveSliderPos(const bool& save);
-	void RequestPackageInstall(const QStringList& paths);
-	void RequestFirmwareInstall(const QString& path);
+	void RequestBoot(const std::string& path);
+	void RequestIconSizeChange(const int& val);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
 	void resizeEvent(QResizeEvent *event) override;
-	void dropEvent(QDropEvent* event) override;
-	void dragEnterEvent(QDragEnterEvent* event) override;
-	void dragMoveEvent(QDragMoveEvent* event) override;
-	void dragLeaveEvent(QDragLeaveEvent* event) override;
+	bool eventFilter(QObject *object, QEvent *event) override;
 private:
 	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
-	bool Boot(const GameInfo& info);
-	void PopulateGameGrid(uint maxCols, const QSize& image_size, const QColor& image_color);
-	void FilterData();
+	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
+	bool IsEntryVisible(const GUI_GameInfo& game);
 	void SortGameList();
 
 	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
-	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
-	void AddGamesFromDir(const QString& path);
 
 	std::string CurrentSelectionIconPath();
 	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
@@ -256,62 +234,40 @@ private:
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_Game_Dock;
 	QStackedWidget* m_Central_Widget;
-	QToolBar* m_Tool_Bar;
-	QLineEdit* m_Search_Bar;
-	QSlider* m_Slider_Size;
-	game_list* gameList;
+
+	// Game Grid
 	game_list_grid* m_xgrid;
 
-	// Actions regarding showing/hiding columns
-	QAction* showIconColAct;
-	QAction* showNameColAct;
-	QAction* showSerialColAct;
-	QAction* showFWColAct;
-	QAction* showAppVersionColAct;
-	QAction* showCategoryColAct;
-	QAction* showPathColAct;
-	QAction* showResolutionColAct;
-	QAction* showSoundFormatColAct;
-	QAction* showParentalLevelColAct;
-
-	QList<QAction*> columnActs;
-
-	// Actions regarding showing/hiding categories
-	Tool_Bar_Button m_catActHDD;
-	Tool_Bar_Button m_catActDisc;
-	Tool_Bar_Button m_catActHome;
-	Tool_Bar_Button m_catActGameData;
-	Tool_Bar_Button m_catActAudioVideo;
-	Tool_Bar_Button m_catActUnknown;
-	Tool_Bar_Button m_catActOther;
-
-	QList<Tool_Bar_Button*> m_categoryButtons;
-
-	QActionGroup* m_categoryActs;
-
-	// Actions regarding switching list modes
-	Tool_Bar_Button m_modeActList;
-	Tool_Bar_Button m_modeActGrid;
-
-	QActionGroup* m_modeActs;
-
-	// TODO: Reorganize this into a sensible order for private variables.
-	std::shared_ptr<gui_settings> xgui_settings;
-
-	int m_sortColumn;
+	// Game List
+	game_list* m_gameList;
+	std::unique_ptr<game_compatibility> m_game_compat;
+	QList<QAction*> m_columnActs;
 	Qt::SortOrder m_colSortOrder;
+	int m_sortColumn;
+
+	// Categories
+	QStringList m_categoryFilters;
+
+	// List Mode
 	bool m_isListLayout = true;
 	bool m_oldLayoutIsList = true;
-	bool m_showToolBar = true;
+
+	// Data
+	std::shared_ptr<gui_settings> xgui_settings;
+	std::shared_ptr<emu_settings> xemu_settings;
 	std::vector<GUI_GameInfo> m_game_data;
-	QSize m_Icon_Size;
+	QSet<QString> m_hidden_list;
+	bool m_show_hidden{false};
+
+	// Search
+	QString m_search_text;
+
+	// Icon Size
 	int m_icon_size_index;
+
+	// Icons
 	QColor m_Icon_Color;
+	QSize m_Icon_Size;
 	qreal m_Margin_Factor;
 	qreal m_Text_Factor;
-	QStringList m_categoryFilters;
-	QString m_searchText;
-	Render_Creator m_Render_Creator;
-
-	uint m_games_per_row = 0;
 };

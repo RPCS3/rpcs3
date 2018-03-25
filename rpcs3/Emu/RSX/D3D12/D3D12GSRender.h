@@ -61,8 +61,6 @@ private:
 	data_cache m_texture_cache;
 	bool invalidate_address(u32 addr);
 
-	RSXVertexProgram m_vertex_program;
-	RSXFragmentProgram m_fragment_program;
 	PipelineStateObjectCache m_pso_cache;
 	std::tuple<ComPtr<ID3D12PipelineState>, size_t, size_t> m_current_pso;
 
@@ -175,6 +173,7 @@ private:
 protected:
 	virtual void on_init_thread() override;
 	virtual void on_exit() override;
+	virtual void do_local_task(bool idle) override;
 	virtual bool do_method(u32 cmd, u32 arg) override;
 	virtual void end() override;
 	virtual void flip(int buffer) override;
@@ -184,4 +183,5 @@ protected:
 	virtual std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
 	virtual std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
 	virtual std::pair<std::string, std::string> get_programs() const override;
+	virtual void notify_tile_unbound(u32 tile) override;
 };

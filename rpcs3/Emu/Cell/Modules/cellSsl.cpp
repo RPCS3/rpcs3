@@ -1,11 +1,21 @@
 ﻿#include "stdafx.h"
+
+#include <bitset>
+#include <string>
+
 #include "Emu/Cell/PPUModule.h"
+#include "Utilities/File.h"
+#include "Emu/VFS.h"
 
 logs::channel cellSsl("cellSsl");
 
-s32 cellSslInit()
+
+
+enum SpecialCerts { BaltimoreCert = 6, Class3G2V2Cert = 13, ClassSSV4Cert = 15, EntrustNetCert = 18, GTECyberTrustGlobalCert = 23 };
+
+s32 cellSslInit(vm::ptr<void> pool, u32 poolSize)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslInit(pool=0x%x, poolSize=%d)", pool, poolSize);
 	return CELL_OK;
 }
 
@@ -15,9 +25,66 @@ s32 cellSslEnd()
 	return CELL_OK;
 }
 
-s32 cellSslCertificateLoader()
+std::string getCert(const std::string certPath, const int certID, const bool isNormalCert)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	int newID = certID;
+
+	// The 'normal' certs have some special rules for loading.
+	if (isNormalCert && certID >= BaltimoreCert && certID <= GTECyberTrustGlobalCert)
+	{
+		if (certID == BaltimoreCert)
+			newID = GTECyberTrustGlobalCert;
+		else if (certID == Class3G2V2Cert)
+			newID = BaltimoreCert;
+		else if (certID == EntrustNetCert)
+			newID = ClassSSV4Cert;
+		else
+			newID = certID - 1;
+	}
+
+	std::string filePath = fmt::format("%sCA%02d.cer", certPath, newID);
+
+	if (!fs::exists(filePath))
+	{
+		cellSsl.error("Can't find certificate file %s, do you have the PS3 firmware installed?", filePath);
+		return "";
+	}
+	return fs::file(filePath).to_string();
+}
+
+s32 cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm::ptr<u32> required)
+{
+	cellSsl.trace("cellSslCertificateLoader(flag=%llu, buffer=0x%x, size=%zu, required=0x%x)", flag, buffer, size, required);
+
+	const std::bitset<58> flagBits(flag);
+	const std::string certPath = vfs::get("/dev_flash/") + "data/cert/";
+
+	if (required)
+	{
+		*required = 0;
+		for (int i = 1; i <= flagBits.size(); i++)
+		{
+			if (!flagBits[i-1])
+				continue;
+			// If we're loading cert 6 (the baltimore cert), then we need set that we're loading the 'normal' set of certs.
+			*required += (u32)(getCert(certPath, i, flagBits[BaltimoreCert-1]).size());
+		}
+	}
+	else
+	{
+		std::string final;
+		for (int i = 1; i <= flagBits.size(); i++)
+		{
+			if (!flagBits[i-1])
+				continue;
+			// If we're loading cert 6 (the baltimore cert), then we need set that we're loading the 'normal' set of certs.
+			final.append(getCert(certPath, i, flagBits[BaltimoreCert-1]));
+		}
+
+		memset(buffer.get_ptr(), '\0', size - 1);
+		memcpy(buffer.get_ptr(), final.c_str(), final.size());
+	}
+
 	return CELL_OK;
 }
 

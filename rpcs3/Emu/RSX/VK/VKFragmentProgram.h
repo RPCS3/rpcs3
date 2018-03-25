@@ -32,6 +32,7 @@ protected:
 	virtual void insertIntputs(std::stringstream &OS) override;
 	virtual void insertOutputs(std::stringstream &OS) override;
 	virtual void insertConstants(std::stringstream &OS) override;
+	virtual void insertGlobalFunctions(std::stringstream &OS) override;
 	virtual void insertMainStart(std::stringstream &OS) override;
 	virtual void insertMainEnd(std::stringstream &OS) override;
 };
@@ -50,6 +51,8 @@ public:
 	u32 id;
 	std::string shader;
 	std::vector<size_t> FragmentConstantOffsetCache;
+
+	std::array<u32, 4> output_color_masks{ {} };
 
 	std::vector<vk::glsl::program_input> uniforms;
 	void SetInputs(std::vector<vk::glsl::program_input>& uniforms);

@@ -3,6 +3,7 @@
 #include "PPUFunction.h"
 #include "PPUCallback.h"
 #include "ErrorCodes.h"
+#include <typeinfo>
 
 // Helper function
 constexpr const char* ppu_select_name(const char* name, u32 id)
@@ -19,14 +20,14 @@ constexpr const char* ppu_select_name(const char* name, const char* orig_name)
 // Generate FNID or VNID for given name
 extern u32 ppu_generate_id(const char* name);
 
-// Overload for REG_FNID, REG_VNID macro 
+// Overload for REG_FNID, REG_VNID macro
 constexpr u32 ppu_generate_id(u32 id)
 {
 	return id;
 }
 
 // Flags set with REG_FUNC
-enum ppu_static_function_flags : u32
+enum ppu_static_module_flags : u32
 {
 	MFF_FORCED_HLE = (1 << 0), // Always call HLE function
 	MFF_PERFECT    = (1 << 1), // Indicates complete implementation and LLE interchangeability
@@ -39,16 +40,35 @@ struct ppu_static_function
 	const char* name;
 	u32 index; // Index for ppu_function_manager
 	u32 flags;
+	const char* type;
+	std::vector<const char*> args; // Arg names
+	const u32* export_addr;
+
+	ppu_static_function& flag(ppu_static_module_flags value)
+	{
+		flags |= value;
+		return *this;
+	}
 };
 
 // HLE variable information
 struct ppu_static_variable
 {
 	const char* name;
-	vm::ps3::gvar<void>* var; // Pointer to variable address storage
+	vm::gvar<void>* var; // Pointer to variable address storage
 	void(*init)(); // Variable initialization function
 	u32 size;
 	u32 align;
+	const char* type;
+	u32 flags;
+	u32 addr;
+	const u32* export_addr;
+
+	ppu_static_variable& flag(ppu_static_module_flags value)
+	{
+		flags |= value;
+		return *this;
+	}
 };
 
 // HLE module information
@@ -91,10 +111,17 @@ class ppu_module_manager final
 
 	static ppu_static_variable& access_static_variable(const char* module, u32 vnid);
 
+	// Global variable for each registered function
+	template <typename T, T Func>
+	struct registered
+	{
+		static ppu_static_function* info;
+	};
+
 public:
 	static const ppu_static_module* get_module(const std::string& name);
 
-	template<typename T, T Func>
+	template <typename T, T Func>
 	static auto& register_static_function(const char* module, const char* name, ppu_function_t func, u32 fnid)
 	{
 		auto& info = access_static_function(module, fnid);
@@ -102,11 +129,20 @@ public:
 		info.name  = name;
 		info.index = ppu_function_manager::register_function<T, Func>(func);
 		info.flags = 0;
+		info.type  = typeid(T).name();
+
+		registered<T, Func>::info = &info;
 
 		return info;
 	}
 
-	template<typename T, T* Var>
+	template <typename T, T Func>
+	static auto& find_static_function()
+	{
+		return *registered<T, Func>::info;
+	}
+
+	template <typename T, T* Var>
 	static auto& register_static_variable(const char* module, const char* name, u32 vnid)
 	{
 		static_assert(std::is_same<u32, std::decay_t<typename T::addr_type>>::value, "Static variable registration: vm::gvar<T> expected");
@@ -114,10 +150,13 @@ public:
 		auto& info = access_static_variable(module, vnid);
 
 		info.name  = name;
-		info.var   = reinterpret_cast<vm::ps3::gvar<void>*>(Var);
+		info.var   = reinterpret_cast<vm::gvar<void>*>(Var);
 		info.init  = [] {};
 		info.size  = SIZE_32(typename T::type);
 		info.align = ALIGN_32(typename T::type);
+		info.type  = typeid(T).name();
+		info.flags = 0;
+		info.addr  = 0;
 
 		return info;
 	}
@@ -216,25 +255,30 @@ public:
 	static const ppu_static_module sceNp2;
 	static const ppu_static_module sceNpClans;
 	static const ppu_static_module sceNpCommerce2;
+	static const ppu_static_module sceNpMatchingInt;
 	static const ppu_static_module sceNpSns;
 	static const ppu_static_module sceNpTrophy;
 	static const ppu_static_module sceNpTus;
 	static const ppu_static_module sceNpUtil;
 	static const ppu_static_module sys_io;
-	static const ppu_static_module libnet;
+	static const ppu_static_module sys_net;
 	static const ppu_static_module sysPrxForUser;
 	static const ppu_static_module sys_libc;
 	static const ppu_static_module sys_lv2dbg;
 };
 
+template<typename T, T Func>
+ppu_static_function* ppu_module_manager::registered<T, Func>::info = nullptr;
+
 // Call specified function directly if LLE is not available, call LLE equivalent in callback style otherwise
 template<typename T, T Func, typename... Args, typename RT = std::result_of_t<T(Args...)>>
-inline RT ppu_execute_function_or_callback(const char* name, ppu_thread& ppu, Args&&... args)
+inline RT ppu_execute_function_or_callback(ppu_thread& ppu, Args&&... args)
 {
-	return Func(std::forward<Args>(args)...);
+	vm::ptr<RT(Args...)> func = vm::cast(*ppu_module_manager::find_static_function<T, Func>().export_addr);
+	return func(ppu, std::forward<Args>(args)...);
 }
 
-#define CALL_FUNC(ppu, func, ...) ppu_execute_function_or_callback<decltype(&func), &func>(#func, ppu, __VA_ARGS__)
+#define CALL_FUNC(ppu, func, ...) ppu_execute_function_or_callback<decltype(&func), &func>(ppu, __VA_ARGS__)
 
 #define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<decltype(&func), &func>(#module, ppu_select_name(#func, nid), BIND_FUNC(func, ppu.cia = (u32)ppu.lr & ~3), ppu_generate_id(nid))
 

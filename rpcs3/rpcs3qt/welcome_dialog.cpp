@@ -15,7 +15,7 @@ welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::we
 {
 	ui->setupUi(this);
 
-	setWindowFlags(Qt::WindowTitleHint);
+	setWindowFlags(windowFlags() & Qt::WindowTitleHint);
 
 	gui_settings* settings = new gui_settings(this);
 
@@ -28,10 +28,15 @@ welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::we
 
 	connect(ui->do_not_show, &QCheckBox::clicked, [=](bool checked)
 	{
-		settings->SetValue(GUI::ib_show_welcome, QVariant(!checked));
+		settings->SetValue(gui::ib_show_welcome, QVariant(!checked));
 	});
 
 	connect(ui->okay, &QPushButton::pressed, this, &QDialog::accept);
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
+}
+
+welcome_dialog::~welcome_dialog()
+{
+	delete ui;
 }

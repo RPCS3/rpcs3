@@ -13,7 +13,7 @@
 #include "Emu/Cell/SPUThread.h"
 
 #ifndef _WIN32
-#include"fcntl.h"
+#include "fcntl.h"
 #endif
 
 extern void ppu_set_breakpoint(u32 addr);
@@ -166,9 +166,10 @@ char GDBDebugServer::read_char()
 
 u8 GDBDebugServer::read_hexbyte()
 {
-	char buf[2];
-	read(buf, 2);
-	return static_cast<u8>(strtol(buf, nullptr, 16));
+	std::string s = "";
+	s += read_char();
+	s += read_char();
+	return hex_to_u8(s);
 }
 
 void GDBDebugServer::try_read_cmd(gdb_cmd & out_cmd)
@@ -176,7 +177,7 @@ void GDBDebugServer::try_read_cmd(gdb_cmd & out_cmd)
 	char c = read_char();
 	//interrupt
 	if (UNLIKELY(c == 0x03)) {
-		out_cmd.cmd = "\0x03";
+		out_cmd.cmd = '\x03';
 		out_cmd.data = "";
 		out_cmd.checksum = 0;
 		return;
@@ -223,7 +224,7 @@ void GDBDebugServer::try_read_cmd(gdb_cmd & out_cmd)
 	}
 	out_cmd.checksum = read_hexbyte();
 	if (out_cmd.checksum != checksum) {
-		throw new wrong_checksum_exception("Wrong checksum for packet" HERE);
+		throw wrong_checksum_exception("Wrong checksum for packet" HERE);
 	}
 }
 
@@ -365,7 +366,7 @@ std::string GDBDebugServer::get_reg(std::shared_ptr<ppu_thread> thread, u32 rid)
 		return std::string(8, 'x');
 	default:
 		if (rid > 70) return "";
-		return (rid > 31) 
+		return (rid > 31)
 			? u64_to_padded_hex(reinterpret_cast<u64&>(thread->fpr[rid - 32])) //fpr
 			: u64_to_padded_hex(thread->gpr[rid]); //gpr
 	}
@@ -427,6 +428,25 @@ bool GDBDebugServer::send_reason()
 	return send_cmd_ack("S05");
 }
 
+void GDBDebugServer::wait_with_interrupts() {
+	char c;
+	while (!paused) {
+		int result = recv(client_socket, &c, 1, 0);
+
+		if (result == SOCKET_ERROR) {
+			if (check_errno_again()) {
+				thread_ctrl::wait_for(50);
+				continue;
+			}
+
+			gdbDebugServer.error("Error during socket read");
+			fmt::throw_exception("Error during socket read" HERE);
+		} else if (c == 0x03) {
+			paused = true;
+		}
+	}
+}
+
 bool GDBDebugServer::cmd_extended_mode(gdb_cmd & cmd)
 {
 	return send_cmd_ack("OK");
@@ -453,24 +473,25 @@ bool GDBDebugServer::cmd_thread_info(gdb_cmd & cmd)
 		result += u64_to_padded_hex(static_cast<u64>(cpu.id));
 	};
 	idm::select<ppu_thread>(on_select);
-	idm::select<ARMv7Thread>(on_select);
-	idm::select<RawSPUThread>(on_select);
-	idm::select<SPUThread>(on_select);
+	//idm::select<RawSPUThread>(on_select);
+	//idm::select<SPUThread>(on_select);
 
 	//todo: this may exceed max command length
 	result = "m" + result + "l";
-	
+
 	return send_cmd_ack(result);;
 }
 
 bool GDBDebugServer::cmd_current_thread(gdb_cmd & cmd)
 {
-	return send_cmd_ack(selected_thread.expired() ? "" : u64_to_padded_hex(selected_thread.lock()->id));
+	return send_cmd_ack(selected_thread.expired() ? "" : ("QC" + u64_to_padded_hex(selected_thread.lock()->id)));
 }
 
 bool GDBDebugServer::cmd_read_register(gdb_cmd & cmd)
 {
-	select_thread(general_ops_thread_id);
+	if (!select_thread(general_ops_thread_id)) {
+		return send_cmd_ack("E02");
+	}
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
 		auto ppu = std::static_pointer_cast<ppu_thread>(th);
@@ -488,7 +509,9 @@ bool GDBDebugServer::cmd_read_register(gdb_cmd & cmd)
 
 bool GDBDebugServer::cmd_write_register(gdb_cmd & cmd)
 {
-	select_thread(general_ops_thread_id);
+	if (!select_thread(general_ops_thread_id)) {
+		return send_cmd_ack("E02");
+	}
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
 		auto ppu = std::static_pointer_cast<ppu_thread>(th);
@@ -517,7 +540,7 @@ bool GDBDebugServer::cmd_read_memory(gdb_cmd & cmd)
 	std::string result;
 	result.reserve(len * 2);
 	for (u32 i = 0; i < len; ++i) {
-		if (vm::check_addr(addr + i)) {
+		if (vm::check_addr(addr, 1, vm::page_info_t::page_readable)) {
 			result += to_hexbyte(vm::read8(addr + i));
 		} else {
 			break;
@@ -543,7 +566,7 @@ bool GDBDebugServer::cmd_write_memory(gdb_cmd & cmd)
 	u32 len = hex_to_u32(cmd.data.substr(s + 1, s2 - s - 1));
 	const char* data_ptr = (cmd.data.c_str()) + s2 + 1;
 	for (u32 i = 0; i < len; ++i) {
-		if (vm::check_addr(addr + i)) {
+		if (vm::check_addr(addr + i, 1, vm::page_info_t::page_writable)) {
 			u8 val;
 			int res = sscanf_s(data_ptr, "%02hhX", &val);
 			if (!res) {
@@ -634,30 +657,31 @@ bool GDBDebugServer::cmd_vcont(gdb_cmd & cmd)
 {
 	//todo: handle multiple actions and thread ids
 	this->from_breakpoint = false;
-	if (cmd.data[1] == 'c') {
+	if (cmd.data[1] == 'c' || cmd.data[1] == 's') {
 		select_thread(continue_ops_thread_id);
 		auto ppu = std::static_pointer_cast<ppu_thread>(selected_thread.lock());
-		ppu->state -= cpu_flag::dbg_pause;
-		if (Emu.IsPaused()) {
-			Emu.Resume();
+		paused = false;
+		if (cmd.data[1] == 's') {
+			ppu->state += cpu_flag::dbg_step;
 		}
-		thread_ctrl::wait();
-		//we are in all-stop mode
-		Emu.Pause();
-		return send_reason();
-	} else if (cmd.data[1] == 's') {
-		select_thread(continue_ops_thread_id);
-		auto ppu = std::static_pointer_cast<ppu_thread>(selected_thread.lock());
-		ppu->state += cpu_flag::dbg_step;
 		ppu->state -= cpu_flag::dbg_pause;
+		//special case if app didn't start yet (only loaded)
+		if (!Emu.IsPaused() && !Emu.IsRunning()) {
+			Emu.Run();
+		}
 		if (Emu.IsPaused()) {
 			Emu.Resume();
 		} else {
 			ppu->notify();
 		}
-		thread_ctrl::wait();
+		wait_with_interrupts();
 		//we are in all-stop mode
 		Emu.Pause();
+		select_thread(pausedBy);
+		// we have to remove dbg_pause from thread that paused execution, otherwise
+		// it will be paused forever (Emu.Resume only removes dbg_global_pause)
+		ppu = std::static_pointer_cast<ppu_thread>(selected_thread.lock());
+		ppu->state -= cpu_flag::dbg_pause;
 		return send_reason();
 	}
 	return send_cmd_ack("");
@@ -729,7 +753,9 @@ void GDBDebugServer::on_task()
 			return;
 		}
 		//stop immediately
-		Emu.Pause();
+		if (Emu.IsRunning()) {
+			Emu.Pause();
+		}
 
 		try {
 			char hostbuf[32];
@@ -768,7 +794,7 @@ void GDBDebugServer::on_task()
 				}
 			}
 		}
-		catch (std::runtime_error& e) 
+		catch (std::runtime_error& e)
 		{
 			if (client_socket) {
 				closesocket(client_socket);
@@ -803,6 +829,15 @@ void GDBDebugServer::on_stop()
 	//just in case we are waiting for breakpoint
 	this->notify();
 	named_thread::on_stop();
+}
+
+void GDBDebugServer::pause_from(cpu_thread* t) {
+	if (paused) {
+		return;
+	}
+	paused = true;
+	pausedBy = t->id;
+	notify();
 }
 
 u32 g_gdb_debugger_id = 0;

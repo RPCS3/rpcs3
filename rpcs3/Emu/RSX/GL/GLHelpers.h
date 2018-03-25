@@ -54,9 +54,12 @@ namespace gl
 #endif
 
 	class capabilities;
+	class blitter;
 
 	void enable_debugging();
 	capabilities& get_driver_caps();
+	bool is_primitive_native(rsx::primitive_type in);
+	GLenum draw_mode(rsx::primitive_type in);
 
 	class exception : public std::exception
 	{
@@ -82,6 +85,10 @@ namespace gl
 		bool ARB_texture_barrier_supported = false;
 		bool NV_texture_barrier_supported = false;
 		bool initialized = false;
+		bool vendor_INTEL = false;  //has broken GLSL compiler
+		bool vendor_AMD = false;    //has broken ARB_multidraw
+		bool vendor_NVIDIA = false; //has NaN poisoning issues
+		bool vendor_MESA = false;   //requires CLIENT_STORAGE bit set for streaming buffers
 
 		void initialize()
 		{
@@ -99,35 +106,35 @@ namespace gl
 				if (ext_name == "GL_ARB_shader_draw_parameters")
 				{
 					ARB_shader_draw_parameters_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
 				if (ext_name == "GL_EXT_direct_state_access")
 				{
 					EXT_dsa_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
 				if (ext_name == "GL_ARB_direct_state_access")
 				{
 					ARB_dsa_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
 				if (ext_name == "GL_ARB_buffer_storage")
 				{
 					ARB_buffer_storage_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
 				if (ext_name == "GL_ARB_texture_buffer_object")
 				{
 					ARB_texture_buffer_supported = true;
-					find_count --;
+					find_count--;
 					continue;
 				}
 
@@ -154,8 +161,17 @@ namespace gl
 			}
 
 			//Workaround for intel drivers which have terrible capability reporting
-			std::string vendor_string = (const char*)glGetString(GL_VENDOR);
-			std::transform(vendor_string.begin(), vendor_string.end(), vendor_string.begin(), ::tolower);
+			std::string vendor_string;
+			if (const char* raw_string = (const char*)glGetString(GL_VENDOR))
+			{
+				vendor_string = raw_string;
+				std::transform(vendor_string.begin(), vendor_string.end(), vendor_string.begin(), ::tolower);
+			}
+			else
+			{
+				LOG_ERROR(RSX, "Failed to get vendor string from driver. Are we missing a context?");
+				vendor_string = "intel"; //lowest acceptable value
+			}
 
 			if (vendor_string.find("intel") != std::string::npos)
 			{
@@ -164,6 +180,8 @@ namespace gl
 
 				glGetIntegerv(GL_MAJOR_VERSION, &version_major);
 				glGetIntegerv(GL_MINOR_VERSION, &version_minor);
+
+				vendor_INTEL = true;
 
 				//Texture buffers moved into core at GL 3.3
 				if (version_major > 3 || (version_major == 3 && version_minor >= 3))
@@ -179,6 +197,20 @@ namespace gl
 				if (!EXT_dsa_supported && glGetTextureImageEXT && glTextureBufferRangeEXT)
 					EXT_dsa_supported = true;
 			}
+			else if (vendor_string.find("nvidia") != std::string::npos)
+			{
+				vendor_NVIDIA = true;
+			}
+			else if (vendor_string.find("x.org") != std::string::npos)
+			{
+				vendor_MESA = true;
+			}
+#ifdef _WIN32
+			else if (vendor_string.find("amd") != std::string::npos || vendor_string.find("ati") != std::string::npos)
+			{
+				vendor_AMD = true;
+			}
+#endif
 
 			initialized = true;
 		}
@@ -188,6 +220,7 @@ namespace gl
 	{
 		GLsync m_value = nullptr;
 		GLenum flags = GL_SYNC_FLUSH_COMMANDS_BIT;
+		bool signaled = false;
 
 	public:
 
@@ -223,11 +256,16 @@ namespace gl
 		{
 			verify(HERE), m_value != nullptr;
 
+			if (signaled)
+				return true;
+
 			if (flags)
 			{
 				GLenum err = glClientWaitSync(m_value, flags, 0);
 				flags = 0;
-				return (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
+
+				if (!(err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED))
+					return false;
 			}
 			else
 			{
@@ -235,52 +273,62 @@ namespace gl
 				GLint tmp;
 
 				glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
-				return (status == GL_SIGNALED);
+
+				if (status != GL_SIGNALED)
+					return false;
 			}
+
+			signaled = true;
+			return true;
 		}
 
 		bool wait_for_signal()
 		{
 			verify(HERE), m_value != nullptr;
 
-			GLenum err = GL_WAIT_FAILED;
-			bool done = false;
-
-			while (!done)
+			if (signaled == GL_FALSE)
 			{
-				if (flags)
-				{
-					err = glClientWaitSync(m_value, flags, 0);
-					flags = 0;
+				GLenum err = GL_WAIT_FAILED;
+				bool done = false;
 
-					switch (err)
+				while (!done)
+				{
+					if (flags)
 					{
-					default:
-						LOG_ERROR(RSX, "gl::fence sync returned unknown error 0x%X", err);
-					case GL_ALREADY_SIGNALED:
-					case GL_CONDITION_SATISFIED:
-						done = true;
-						break;
-					case GL_TIMEOUT_EXPIRED:
-						continue;
+						err = glClientWaitSync(m_value, flags, 0);
+						flags = 0;
+
+						switch (err)
+						{
+						default:
+							LOG_ERROR(RSX, "gl::fence sync returned unknown error 0x%X", err);
+						case GL_ALREADY_SIGNALED:
+						case GL_CONDITION_SATISFIED:
+							done = true;
+							break;
+						case GL_TIMEOUT_EXPIRED:
+							continue;
+						}
+					}
+					else
+					{
+						GLint status = GL_UNSIGNALED;
+						GLint tmp;
+
+						glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
+
+						if (status == GL_SIGNALED)
+							break;
 					}
 				}
-				else
-				{
-					GLint status = GL_UNSIGNALED;
-					GLint tmp;
 
-					glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
-
-					if (status == GL_SIGNALED)
-						break;
-				}
+				signaled = (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
 			}
 
 			glDeleteSync(m_value);
 			m_value = nullptr;
 
-			return (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
+			return signaled;
 		}
 	};
 
@@ -469,6 +517,7 @@ namespace gl
 	};
 
 	class vao;
+	class attrib_t;
 
 	class buffer_pointer
 	{
@@ -808,7 +857,6 @@ namespace gl
 	protected:
 
 		u32 m_data_loc = 0;
-		u32 m_limit = 0;
 		void *m_memory_mapping = nullptr;
 
 		fence m_fence;
@@ -825,13 +873,16 @@ namespace gl
 
 			buffer::create();
 
+			GLbitfield buffer_storage_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+			if (get_driver_caps().vendor_MESA) buffer_storage_flags |= GL_CLIENT_STORAGE_BIT;
+
 			glBindBuffer((GLenum)m_target, m_id);
-			glBufferStorage((GLenum)m_target, size, data, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+			glBufferStorage((GLenum)m_target, size, data, buffer_storage_flags);
 			m_memory_mapping = glMapBufferRange((GLenum)m_target, 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 
 			verify(HERE), m_memory_mapping != nullptr;
 			m_data_loc = 0;
-			m_limit = ::narrow<u32>(size);
+			m_size = ::narrow<u32>(size);
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -845,17 +896,21 @@ namespace gl
 			u32 offset = m_data_loc;
 			if (m_data_loc) offset = align(offset, alignment);
 
-			if ((offset + alloc_size) > m_limit)
+			if ((offset + alloc_size) > m_size)
 			{
 				if (!m_fence.is_empty())
+				{
 					m_fence.wait_for_signal();
+				}
+				else
+				{
+					LOG_ERROR(RSX, "OOM Error: Ring buffer was likely being used without notify() being called");
+					glFinish();
+				}
 
 				m_data_loc = 0;
 				offset = 0;
 			}
-
-			if (!m_data_loc)
-				m_fence.reset();
 
 			//Align data loc to 256; allows some "guard" region so we dont trample our own data inadvertently
 			m_data_loc = align(offset + alloc_size, 256);
@@ -871,7 +926,7 @@ namespace gl
 
 				m_memory_mapping = nullptr;
 				m_data_loc = 0;
-				m_limit = 0;
+				m_size = 0;
 			}
 
 			glDeleteBuffers(1, &m_id);
@@ -890,7 +945,8 @@ namespace gl
 		//Notification of a draw command
 		virtual void notify()
 		{
-			if (m_fence.is_empty())
+			//Insert fence about 25% into the buffer
+			if (m_fence.is_empty() && (m_data_loc > (m_size >> 2)))
 				m_fence.reset();
 		}
 	};
@@ -913,7 +969,7 @@ namespace gl
 
 			m_memory_mapping = nullptr;
 			m_data_loc = 0;
-			m_limit = ::narrow<u32>(size);
+			m_size = ::narrow<u32>(size);
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -931,9 +987,9 @@ namespace gl
 
 			const u32 block_size = align(alloc_size + 16, 256);	//Overallocate just in case we need to realign base
 
-			if ((offset + block_size) > m_limit)
+			if ((offset + block_size) > m_size)
 			{
-				buffer::data(m_limit, nullptr);
+				buffer::data(m_size, nullptr);
 				m_data_loc = 0;
 			}
 
@@ -1006,6 +1062,70 @@ namespace gl
 		}
 
 		void notify() override {}
+	};
+
+	class buffer_view
+	{
+		buffer* m_buffer = nullptr;
+		u32 m_offset = 0;
+		u32 m_range = 0;
+		GLenum m_format = GL_R8UI;
+
+	public:
+		buffer_view(buffer *_buffer, u32 offset, u32 range, GLenum format = GL_R8UI)
+			: m_buffer(_buffer), m_offset(offset), m_range(range), m_format(format)
+		{}
+
+		buffer_view()
+		{}
+
+		void update(buffer *_buffer, u32 offset, u32 range, GLenum format = GL_R8UI)
+		{
+			verify(HERE), _buffer->size() >= (offset + range);
+			m_buffer = _buffer;
+			m_offset = offset;
+			m_range = range;
+			m_format = format;
+		}
+
+		u32 offset() const
+		{
+			return m_offset;
+		}
+
+		u32 range() const
+		{
+			return m_range;
+		}
+
+		u32 format() const
+		{
+			return m_format;
+		}
+
+		buffer* value() const
+		{
+			return m_buffer;
+		}
+
+		bool in_range(u32 address, u32 size, u32& new_offset) const
+		{
+			if (address < m_offset)
+				return false;
+
+			const u32 _offset = address - m_offset;
+			if (m_range < _offset)
+				return false;
+
+			const auto remaining = m_range - _offset;
+			if (size <= remaining)
+			{
+				new_offset = _offset;
+				return true;
+			}
+
+			return false;
+		}
 	};
 
 	class vao
@@ -1147,6 +1267,43 @@ namespace gl
 		{
 			return{ (vao*)this };
 		}
+
+		attrib_t operator [] (u32 index) const noexcept;
+	};
+
+	class attrib_t
+	{
+		GLint m_location;
+
+	public:
+		attrib_t(GLint location)
+			: m_location(location)
+		{
+		}
+
+		GLint location() const
+		{
+			return m_location;
+		}
+
+		void operator = (float rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1f(location(), rhs); }
+		void operator = (double rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1d(location(), rhs); }
+
+		void operator = (const color1f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1f(location(), rhs.r); }
+		void operator = (const color1d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1d(location(), rhs.r); }
+		void operator = (const color2f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib2f(location(), rhs.r, rhs.g); }
+		void operator = (const color2d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib2d(location(), rhs.r, rhs.g); }
+		void operator = (const color3f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib3f(location(), rhs.r, rhs.g, rhs.b); }
+		void operator = (const color3d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib3d(location(), rhs.r, rhs.g, rhs.b); }
+		void operator = (const color4f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4f(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
+		void operator = (const color4d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4d(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
+
+		void operator = (buffer_pointer& pointer) const
+		{
+			pointer.get_vao().enable_for_attribute(m_location);
+			glVertexAttribPointer(location(), pointer.size(), (GLenum)pointer.get_type(), pointer.normalize(),
+				pointer.stride(), (const void*)(size_t)pointer.offset());
+		}
 	};
 
 	class texture_view;
@@ -1201,8 +1358,7 @@ namespace gl
 
 		enum class format
 		{
-			red = GL_RED,
-			r = GL_R,
+			r = GL_RED,
 			rg = GL_RG,
 			rgb = GL_RGB,
 			rgba = GL_RGBA,
@@ -1283,6 +1439,7 @@ namespace gl
 			texture1D = GL_TEXTURE_1D,
 			texture2D = GL_TEXTURE_2D,
 			texture3D = GL_TEXTURE_3D,
+			textureCUBE = GL_TEXTURE_CUBE_MAP,
 			textureBuffer = GL_TEXTURE_BUFFER
 		};
 
@@ -1319,7 +1476,10 @@ namespace gl
 				case target::texture1D: pname = GL_TEXTURE_BINDING_1D; break;
 				case target::texture2D: pname = GL_TEXTURE_BINDING_2D; break;
 				case target::texture3D: pname = GL_TEXTURE_BINDING_3D; break;
+				case target::textureCUBE: pname = GL_TEXTURE_BINDING_CUBE_MAP; break;
 				case target::textureBuffer: pname = GL_TEXTURE_BINDING_BUFFER; break;
+				default:
+					fmt::throw_exception("Unknown target 0x%X" HERE, (u32)new_binding.get_target());
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
@@ -1359,9 +1519,9 @@ namespace gl
 			case internal_format::compressed_rgba_s3tc_dxt3:
 			case internal_format::compressed_rgba_s3tc_dxt5:
 				return true;
+			default:
+				return false;
 			}
-
-			return false;
 		}
 
 		uint id() const noexcept
@@ -1500,6 +1660,11 @@ namespace gl
 			return (texture::format)result;
 		}
 
+		virtual texture::internal_format get_compatible_internal_format() const
+		{
+			return (texture::internal_format)get_internal_format();
+		}
+
 		texture::channel_type get_channel_type(texture::channel_name channel) const
 		{
 			save_binding_state save(*this);
@@ -1598,15 +1763,20 @@ namespace gl
 				__glcheck glTextureBufferRange(id(), gl_format_type, buf.id(), offset, length);
 		}
 
+		void copy_from(buffer_view &view)
+		{
+			copy_from(*view.value(), view.format(), view.offset(), view.range());
+		}
+
 		void copy_from(const buffer& buf, texture::format format, texture::type type, class pixel_unpack_settings pixel_settings)
 		{
 			buffer::save_binding_state save_buffer(buffer::target::pixel_unpack, buf);
 			copy_from(nullptr, format, type, pixel_settings);
 		}
 
-		void copy_from(void* dst, texture::format format, texture::type type)
+		void copy_from(void* src, texture::format format, texture::type type)
 		{
-			copy_from(dst, format, type, pixel_unpack_settings());
+			copy_from(src, format, type, pixel_unpack_settings());
 		}
 
 		void copy_from(const buffer& buf, texture::format format, texture::type type)
@@ -1777,6 +1947,7 @@ namespace gl
 
 		uint m_width = 0;
 		uint m_height = 0;
+		uint m_depth = 1;
 		int m_level = 0;
 
 		int m_compressed_image_size = 0;
@@ -1823,6 +1994,7 @@ namespace gl
 		settings& filter(min_filter min_filter, filter mag_filter);
 		settings& width(uint width);
 		settings& height(uint height);
+		settings& depth(uint depth);
 		settings& size(sizei size);
 		settings& level(int value);
 		settings& compressed_image_size(int size);
@@ -1847,9 +2019,6 @@ namespace gl
 		settings& border_color(color4f value);
 	};
 
-	GLenum draw_mode(rsx::primitive_type in);
-	bool   is_primitive_native(rsx::primitive_type in);
-
 	enum class indices_type
 	{
 		ubyte = GL_UNSIGNED_BYTE,
@@ -1860,6 +2029,7 @@ namespace gl
 	class fbo
 	{
 		GLuint m_id = GL_NONE;
+		size2i m_size;
 
 	public:
 		fbo() = default;
@@ -1878,17 +2048,23 @@ namespace gl
 		class save_binding_state
 		{
 			GLint m_last_binding;
+			bool reset = true;
 
 		public:
 			save_binding_state(const fbo& new_binding)
 			{
 				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &m_last_binding);
-				new_binding.bind();
+
+				if (m_last_binding != new_binding.id())
+					new_binding.bind();
+				else
+					reset = false;
 			}
 
 			~save_binding_state()
 			{
-				glBindFramebuffer(GL_FRAMEBUFFER, m_last_binding);
+				if (reset)
+					glBindFramebuffer(GL_FRAMEBUFFER, m_last_binding);
 			}
 		};
 
@@ -1904,7 +2080,7 @@ namespace gl
 			};
 
 		protected:
-			GLuint m_id;
+			GLuint m_id = GL_NONE;
 			fbo &m_parent;
 
 		public:
@@ -1939,7 +2115,15 @@ namespace gl
 				case texture::target::texture1D: glFramebufferTexture1D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_1D, rhs.id(), rhs.level()); break;
 				case texture::target::texture2D: glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs.id(), rhs.level()); break;
 				case texture::target::texture3D: glFramebufferTexture3D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_3D, rhs.id(), rhs.level(), 0); break;
+				case texture::target::textureBuffer:
+					fmt::throw_exception("Tried to assign unsupported texture of type textureBuffer to fbo." HERE);
 				}
+			}
+
+			void operator = (const GLuint rhs)
+			{
+				save_binding_state save(m_parent);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs, 0);
 			}
 		};
 
@@ -2024,6 +2208,9 @@ namespace gl
 		GLuint id() const;
 		void set_id(GLuint id);
 
+		void set_extents(size2i extents);
+		size2i get_extents() const;
+
 		explicit operator bool() const
 		{
 			return created();
@@ -2034,12 +2221,6 @@ namespace gl
 
 	namespace glsl
 	{
-		enum program_domain
-		{
-			glsl_vertex_program = 0,
-			glsl_fragment_program = 1
-		};
-
 		class compilation_exception : public exception
 		{
 		public:
@@ -2137,9 +2318,12 @@ namespace gl
 				const GLint length = (GLint)src.length();
 
 				{
-					std::string base_name = "shaderlog/VertexProgram";
+					std::string base_name;
 					switch (shader_type)
 					{
+					case type::vertex:
+						base_name = "shaderlog/VertexProgram";
+						break;
 					case type::fragment:
 						base_name = "shaderlog/FragmentProgram";
 						break;
@@ -2230,59 +2414,18 @@ namespace gl
 					return m_location;
 				}
 
-				void operator = (int rhs) const { m_program.use(); glUniform1i(location(), rhs); }
-				void operator = (float rhs) const { m_program.use(); glUniform1f(location(), rhs); }
-				//void operator = (double rhs) const { m_program.use(); glUniform1d(location(), rhs); }
-
-				void operator = (const color1i& rhs) const { m_program.use(); glUniform1i(location(), rhs.r); }
-				void operator = (const color1f& rhs) const { m_program.use(); glUniform1f(location(), rhs.r); }
-				//void operator = (const color1d& rhs) const { m_program.use(); glUniform1d(location(), rhs.r); }
-				void operator = (const color2i& rhs) const { m_program.use(); glUniform2i(location(), rhs.r, rhs.g); }
-				void operator = (const color2f& rhs) const { m_program.use(); glUniform2f(location(), rhs.r, rhs.g); }
-				//void operator = (const color2d& rhs) const { m_program.use(); glUniform2d(location(), rhs.r, rhs.g); }
-				void operator = (const color3i& rhs) const { m_program.use(); glUniform3i(location(), rhs.r, rhs.g, rhs.b); }
-				void operator = (const color3f& rhs) const { m_program.use(); glUniform3f(location(), rhs.r, rhs.g, rhs.b); }
-				//void operator = (const color3d& rhs) const { m_program.use(); glUniform3d(location(), rhs.r, rhs.g, rhs.b); }
-				void operator = (const color4i& rhs) const { m_program.use(); glUniform4i(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-				void operator = (const color4f& rhs) const { m_program.use(); glUniform4f(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-				//void operator = (const color4d& rhs) const { m_program.use(); glUniform4d(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-			};
-
-			class attrib_t
-			{
-				GLuint m_program;
-				GLint m_location;
-
-			public:
-				attrib_t(GLuint program, GLint location)
-					: m_program(program)
-					, m_location(location)
-				{
-				}
-
-				GLint location() const
-				{
-					return m_location;
-				}
-
-				void operator = (float rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1f(location(), rhs); }
-				void operator = (double rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1d(location(), rhs); }
-
-				void operator = (const color1f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1f(location(), rhs.r); }
-				void operator = (const color1d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1d(location(), rhs.r); }
-				void operator = (const color2f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib2f(location(), rhs.r, rhs.g); }
-				void operator = (const color2d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib2d(location(), rhs.r, rhs.g); }
-				void operator = (const color3f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib3f(location(), rhs.r, rhs.g, rhs.b); }
-				void operator = (const color3d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib3d(location(), rhs.r, rhs.g, rhs.b); }
-				void operator = (const color4f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4f(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-				void operator = (const color4d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4d(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-
-				void operator =(buffer_pointer& pointer) const
-				{
-					pointer.get_vao().enable_for_attribute(location());
-					glVertexAttribPointer(location(), pointer.size(), (GLenum)pointer.get_type(), pointer.normalize(),
-						pointer.stride(), (const void*)(size_t)pointer.offset());
-				}
+				void operator = (int rhs) const { glProgramUniform1i(m_program.id(), location(), rhs); }
+				void operator = (float rhs) const { glProgramUniform1f(m_program.id(), location(), rhs); }
+				void operator = (const color1i& rhs) const { glProgramUniform1i(m_program.id(), location(), rhs.r); }
+				void operator = (const color1f& rhs) const { glProgramUniform1f(m_program.id(), location(), rhs.r); }
+				void operator = (const color2i& rhs) const { glProgramUniform2i(m_program.id(), location(), rhs.r, rhs.g); }
+				void operator = (const color2f& rhs) const { glProgramUniform2f(m_program.id(), location(), rhs.r, rhs.g); }
+				void operator = (const color3i& rhs) const { glProgramUniform3i(m_program.id(), location(), rhs.r, rhs.g, rhs.b); }
+				void operator = (const color3f& rhs) const { glProgramUniform3f(m_program.id(), location(), rhs.r, rhs.g, rhs.b); }
+				void operator = (const color4i& rhs) const { glProgramUniform4i(m_program.id(), location(), rhs.r, rhs.g, rhs.b, rhs.a); }
+				void operator = (const color4f& rhs) const { glProgramUniform4f(m_program.id(), location(), rhs.r, rhs.g, rhs.b, rhs.a); }
+				void operator = (const areaf& rhs) const { glProgramUniform4f(m_program.id(), location(), rhs.x1, rhs.y1, rhs.x2, rhs.y2); }
+				void operator = (const areai& rhs) const { glProgramUniform4i(m_program.id(), location(), rhs.x1, rhs.y1, rhs.x2, rhs.y2); }
 			};
 
 			class uniforms_t
@@ -2447,12 +2590,12 @@ namespace gl
 
 				attrib_t operator[](GLint location)
 				{
-					return{ m_program.id(), location };
+					return{ location };
 				}
 
 				attrib_t operator[](const std::string &name)
 				{
-					return{ m_program.id(), location(name) };
+					return{ location(name) };
 				}
 
 				void swap(attribs_t& attribs)
@@ -2538,7 +2681,7 @@ namespace gl
 						error_msg = buf.get();
 					}
 
-					throw validation_exception(error_msg);
+					LOG_ERROR(RSX, "Validation failed: %s", error_msg.c_str());
 				}
 			}
 
@@ -2705,19 +2848,6 @@ namespace gl
 		}
 
 		~rbo_view()
-		{
-			set_id(0);
-		}
-	};
-
-	class buffer_view : public buffer
-	{
-	public:
-		buffer_view(GLuint id) : buffer(id)
-		{
-		}
-
-		~buffer_view()
 		{
 			set_id(0);
 		}

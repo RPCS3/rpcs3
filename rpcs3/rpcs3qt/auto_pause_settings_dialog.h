@@ -52,10 +52,10 @@ class AutoPauseConfigDialog : public QDialog
 
 	u32 m_entry;
 	u32* m_presult;
-	bool b_newEntry;
+	bool m_newEntry;
 	QLineEdit* m_id;
 	QLabel* m_current_converted;
-	auto_pause_settings_dialog* apsd_parent;
+	auto_pause_settings_dialog* m_apsd;
 
 public:
 	explicit AutoPauseConfigDialog(QWidget* parent, auto_pause_settings_dialog* apsd, bool newEntry, u32* entry);

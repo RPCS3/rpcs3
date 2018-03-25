@@ -7,6 +7,44 @@
 #include <unistd.h>
 #endif
 
+bool utils::has_ssse3()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x200;
+	return g_value;
+}
+
+bool utils::has_avx()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x10000000 && (get_cpuid(1, 0)[2] & 0x0C000000) == 0x0C000000 && (get_xgetbv(0) & 0x6) == 0x6;
+	return g_value;
+}
+
+bool utils::has_avx2()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && get_cpuid(7, 0)[1] & 0x20 && (get_cpuid(1, 0)[2] & 0x0C000000) == 0x0C000000 && (get_xgetbv(0) & 0x6) == 0x6;
+	return g_value;
+}
+
+bool utils::has_rtm()
+{
+	// Check RTM and MPX extensions in order to filter out TSX on Haswell CPUs
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x4800) == 0x4800;
+	return g_value;
+}
+
+bool utils::has_512()
+{
+	// Check AVX512F, AVX512CD, AVX512DQ, AVX512BW, AVX512VL extensions (Skylake-X level support)
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0xd0030000) == 0xd0030000 && (get_cpuid(1,0)[2] & 0x0C000000) == 0x0C000000 && (get_xgetbv(0) & 0xe6) == 0xe6;
+	return g_value;
+}
+
+bool utils::has_xop()
+{
+	static const bool g_value = has_avx() && get_cpuid(0x80000001, 0)[2] & 0x800;
+	return g_value;
+}
+
 std::string utils::get_system_info()
 {
 	std::string result;
@@ -50,6 +88,21 @@ std::string utils::get_system_info()
 	if (has_avx())
 	{
 		result += " | AVX";
+
+		if (has_avx2())
+		{
+			result += '+';
+		}
+
+		if (has_512())
+		{
+			result += '+';
+		}
+
+		if (has_xop())
+		{
+			result += 'x';
+		}
 	}
 
 	if (has_rtm())

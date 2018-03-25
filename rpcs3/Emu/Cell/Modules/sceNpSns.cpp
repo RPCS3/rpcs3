@@ -137,27 +137,32 @@ error_code sceNpSnsFbGetAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTokenPa
 
 s32 sceNpSnsFbStreamPublish()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNpSns);
+	return CELL_OK;
 }
 
 s32 sceNpSnsFbCheckThrottle()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNpSns);
+	return CELL_OK;
 }
 
 s32 sceNpSnsFbCheckConfig()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNpSns);
+	return CELL_OK;
 }
 
 s32 sceNpSnsFbLoadThrottle()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNpSns);
+	return CELL_OK;
 }
 
 s32 sceNpSnsFbGetLongAccessToken()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNpSns);
+	return CELL_OK;
 }
 
 

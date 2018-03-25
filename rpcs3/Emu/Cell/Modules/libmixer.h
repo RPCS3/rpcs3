@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 // Error Codes
 enum
@@ -118,10 +118,10 @@ struct CellSSPlayerConfig
 {
 	be_t<u32> channels;
 	be_t<u32> outputMode;
-}; 
+};
 
-struct CellSSPlayerWaveParam 
-{ 
+struct CellSSPlayerWaveParam
+{
 	be_t<u32> addr;
 	be_t<s32> format;
 	be_t<u32> samples;
@@ -129,28 +129,28 @@ struct CellSSPlayerWaveParam
 	be_t<u32> startOffset;
 };
 
-struct CellSSPlayerCommonParam 
-{ 
+struct CellSSPlayerCommonParam
+{
 	be_t<u32> loopMode;
 	be_t<u32> attackMode;
 };
 
-struct CellSurMixerPosition 
-{ 
+struct CellSurMixerPosition
+{
 	be_t<float> x;
 	be_t<float> y;
 	be_t<float> z;
 };
 
-struct CellSSPlayerRuntimeInfo 
-{ 
+struct CellSSPlayerRuntimeInfo
+{
 	be_t<float> level;
 	be_t<float> speed;
 	CellSurMixerPosition position;
 };
 
-struct CellSurMixerConfig 
-{ 
+struct CellSurMixerConfig
+{
 	be_t<s32> priority;
 	be_t<u32> chStrips1;
 	be_t<u32> chStrips2;
@@ -158,8 +158,8 @@ struct CellSurMixerConfig
 	be_t<u32> chStrips8;
 };
 
-struct CellSurMixerChStripParam 
-{ 
+struct CellSurMixerChStripParam
+{
 	be_t<u32> param;
 	be_t<u32> attribute_addr;
 	be_t<s32> dBSwitch;

@@ -43,6 +43,12 @@ s32 cellUsbdRegisterLdd()
 	return CELL_OK;
 }
 
+s32 cellUsbdRegisterCompositeLdd()
+{
+	UNIMPLEMENTED_FUNC(cellUsbd);
+	return CELL_OK;
+}
+
 s32 cellUsbdRegisterExtraLdd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
@@ -56,6 +62,12 @@ s32 cellUsbdRegisterExtraLdd2()
 }
 
 s32 cellUsbdUnregisterLdd()
+{
+	UNIMPLEMENTED_FUNC(cellUsbd);
+	return CELL_OK;
+}
+
+s32 cellUsbdUnregisterCompositeLdd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
@@ -151,6 +163,13 @@ s32 cellUsbdFreeMemory()
 	return CELL_OK;
 }
 
+s32 cellUsbdResetDevice()
+{
+	UNIMPLEMENTED_FUNC(cellUsbd);
+	return CELL_OK;
+}
+
+
 DECLARE(ppu_module_manager::cellUsbd)("cellUsbd", []()
 {
 	REG_FUNC(cellUsbd, cellUsbdInit);
@@ -161,9 +180,11 @@ DECLARE(ppu_module_manager::cellUsbd)("cellUsbd", []()
 	REG_FUNC(cellUsbd, cellUsbdGetThreadPriority);
 
 	REG_FUNC(cellUsbd, cellUsbdRegisterLdd);
+	REG_FUNC(cellUsbd, cellUsbdRegisterCompositeLdd);
 	REG_FUNC(cellUsbd, cellUsbdRegisterExtraLdd);
 	REG_FUNC(cellUsbd, cellUsbdRegisterExtraLdd2);
 	REG_FUNC(cellUsbd, cellUsbdUnregisterLdd);
+	REG_FUNC(cellUsbd, cellUsbdUnregisterCompositeLdd);
 	REG_FUNC(cellUsbd, cellUsbdUnregisterExtraLdd);
 
 	REG_FUNC(cellUsbd, cellUsbdOpenPipe);
@@ -184,4 +205,6 @@ DECLARE(ppu_module_manager::cellUsbd)("cellUsbd", []()
 
 	REG_FUNC(cellUsbd, cellUsbdAllocateMemory);
 	REG_FUNC(cellUsbd, cellUsbdFreeMemory);
+
+	REG_FUNC(cellUsbd, cellUsbdResetDevice);
 });

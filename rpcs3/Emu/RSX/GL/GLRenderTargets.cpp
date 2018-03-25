@@ -14,12 +14,29 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 	case rsx::surface_color_format::a8r8g8b8:
 		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, false, 4, 1 };
 
-	//These formats discard their alpha component (always 1)
+	//These formats discard their alpha component, forced to 0 or 1
+	//All XBGR formats will have remapping before they can be read back in shaders as DRGB8
+	//Prefix o = 1, z = 0
 	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, false, 4, 1,
+		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
+
 	case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, false, 4, 1,
+		{ ::gl::texture::channel::zero, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
+
 	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
+		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, false, 4, 1,
+		{ ::gl::texture::channel::zero, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
+
 	case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, false, 4, 1,
+		{ ::gl::texture::channel::one, ::gl::texture::channel::b, ::gl::texture::channel::g, ::gl::texture::channel::r } };
+
 	case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
+		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, false, 4, 1,
+		{ ::gl::texture::channel::zero, ::gl::texture::channel::b, ::gl::texture::channel::g, ::gl::texture::channel::r } };
+
 	case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, false, 4, 1,
 		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
@@ -31,18 +48,22 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		return{ ::gl::texture::type::f32, ::gl::texture::format::rgba, true, 4, 4 };
 
 	case rsx::surface_color_format::b8:
-		return{ ::gl::texture::type::ubyte, ::gl::texture::format::red, false, 1, 1 };
+		return{ ::gl::texture::type::ubyte, ::gl::texture::format::r, false, 1, 1,
+		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::r, ::gl::texture::channel::r } };
 
 	case rsx::surface_color_format::g8b8:
 		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, false, 2, 1 };
 
 	case rsx::surface_color_format::x32:
-		return{ ::gl::texture::type::f32, ::gl::texture::format::red, true, 1, 4 };
+		return{ ::gl::texture::type::f32, ::gl::texture::format::r, true, 1, 4 };
+
+	case rsx::surface_color_format::a8b8g8r8:
+		//NOTE: To sample this surface as ARGB8 (ABGR8 does not exist), swizzle will be applied by the application
+		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, false, 4, 1,
+		{ ::gl::texture::channel::a, ::gl::texture::channel::b, ::gl::texture::channel::g, ::gl::texture::channel::r } };
 
 	default:
 		LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", (u32)color_format);
-
-	case rsx::surface_color_format::a8b8g8r8:
 		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, false, 4, 1 };
 	}
 }
@@ -149,7 +170,7 @@ namespace
 	}
 }
 
-void GLGSRender::init_buffers(bool skip_reading)
+void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
 {
 	if (draw_fbo && !m_rtts_dirty)
 	{
@@ -165,90 +186,269 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 	const u16 clip_horizontal = rsx::method_registers.surface_clip_width();
 	const u16 clip_vertical = rsx::method_registers.surface_clip_height();
+	const u16 clip_x = rsx::method_registers.surface_clip_origin_x();
+	const u16 clip_y = rsx::method_registers.surface_clip_origin_y();
+
+	framebuffer_status_valid = false;
+	m_framebuffer_state_contested = false;
 
 	if (clip_horizontal == 0 || clip_vertical == 0)
 	{
 		LOG_ERROR(RSX, "Invalid framebuffer setup, w=%d, h=%d", clip_horizontal, clip_vertical);
-		framebuffer_status_valid = false;
 		return;
 	}
 
+	auto surface_addresses = get_color_surface_addresses();
+	auto depth_address = get_zeta_surface_address();
+
 	const auto pitchs = get_pitchs();
+	const auto zeta_pitch = rsx::method_registers.surface_z_pitch();
 	const auto surface_format = rsx::method_registers.surface_color();
 	const auto depth_format = rsx::method_registers.surface_depth_fmt();
+	const auto target = rsx::method_registers.surface_color_target();
 
-	const auto surface_addresses = get_color_surface_addresses();
-	const auto depth_address = get_zeta_surface_address();
+	//NOTE: Its is possible that some renders are done on a swizzled context. Pitch is meaningless in that case
+	//Seen in Nier (color) and GT HD concept (z buffer)
+	//Restriction is that the dimensions are powers of 2. Also, dimensions are passed via log2w and log2h entries
+	const auto required_zeta_pitch = std::max<u32>((u32)(depth_format == rsx::surface_depth_format::z16 ? clip_horizontal * 2 : clip_horizontal * 4), 64u);
+	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(surface_format, clip_horizontal), 64u);
+	const bool stencil_test_enabled = depth_format == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
+	const auto lg2w = rsx::method_registers.surface_log2_width();
+	const auto lg2h = rsx::method_registers.surface_log2_height();
+	const auto clipw_log2 = (u32)floor(log2(clip_horizontal));
+	const auto cliph_log2 = (u32)floor(log2(clip_vertical));
 
-	m_rtts.prepare_render_target(nullptr, surface_format, depth_format,  clip_horizontal, clip_vertical,
-		rsx::method_registers.surface_color_target(),
-		surface_addresses, depth_address);
-
-	draw_fbo.recreate();
-
-	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
+	if (depth_address)
 	{
-		if (std::get<0>(m_rtts.m_bound_render_targets[i]))
+		if (!rsx::method_registers.depth_test_enabled() &&
+			!stencil_test_enabled &&
+			target != rsx::surface_target::none)
 		{
-			__glcheck draw_fbo.color[i] = *std::get<1>(m_rtts.m_bound_render_targets[i]);
+			//Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
+			const bool is_depth_clear = !!(context & rsx::framebuffer_creation_context::context_clear_depth);
+			if (!is_depth_clear)
+			{
+				depth_address = 0;
+				m_framebuffer_state_contested = true;
+			}
+		}
 
-			std::get<1>(m_rtts.m_bound_render_targets[i])->set_rsx_pitch(pitchs[i]);
-			surface_info[i] = { surface_addresses[i], pitchs[i], false, surface_format, depth_format, clip_horizontal, clip_vertical };
+		if (depth_address && zeta_pitch < required_zeta_pitch)
+		{
+			if (lg2w < clipw_log2 || lg2h < cliph_log2)
+			{
+				//Cannot fit
+				depth_address = 0;
 
-			//Verify pitch given is correct if pitch <= 64 (especially 64)
-			if (pitchs[i] <= 64)
-			{	
-				const u16 native_pitch = std::get<1>(m_rtts.m_bound_render_targets[i])->get_native_pitch();
-				if (native_pitch > pitchs[i])
+				if (lg2w > 0 || lg2h > 0)
 				{
-					LOG_TRACE(RSX, "Bad color surface pitch given: surface_width=%d, format=%d, pitch=%d, native_pitch=%d",
-						clip_horizontal, (u32)surface_format, pitchs[i], native_pitch);
+					//Something was actually declared for the swizzle context dimensions
+					LOG_WARNING(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+				}
+			}
+			else
+			{
+				LOG_TRACE(RSX, "Swizzled context depth surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+			}
+		}
+	}
 
-					//Will not transfer this surface between cell and rsx due to misalignment
-					//TODO: Verify correct behaviour
-					surface_info[i].pitch = 0;
+	for (const auto &index : rsx::utility::get_rtt_indexes(target))
+	{
+		if (pitchs[index] < required_color_pitch)
+		{
+			if (lg2w < clipw_log2 || lg2h < cliph_log2)
+			{
+				surface_addresses[index] = 0;
+
+				if (lg2w > 0 || lg2h > 0)
+				{
+					//Something was actually declared for the swizzle context dimensions
+					LOG_WARNING(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+				}
+			}
+			else
+			{
+				LOG_TRACE(RSX, "Swizzled context color surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_horizontal, clip_vertical);
+			}
+		}
+
+		if (surface_addresses[index] == depth_address)
+		{
+			LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, zeta_pitch = %d, color_pitch=%d", depth_address, zeta_pitch, pitchs[index]);
+			//TODO: Research clearing both depth AND color
+			//TODO: If context is creation_draw, deal with possibility of a lost buffer clear
+			if (context == rsx::framebuffer_creation_context::context_clear_depth ||
+				rsx::method_registers.depth_test_enabled() || stencil_test_enabled ||
+				(!rsx::method_registers.color_write_enabled() && rsx::method_registers.depth_write_enabled()))
+			{
+				// Use address for depth data
+				surface_addresses[index] = 0;
+			}
+			else
+			{
+				// Use address for color data
+				depth_address = 0;
+				m_framebuffer_state_contested = true;
+				break;
+			}
+		}
+
+		if (surface_addresses[index])
+			framebuffer_status_valid = true;
+	}
+
+	if (!framebuffer_status_valid && !depth_address)
+	{
+		LOG_WARNING(RSX, "Framebuffer setup failed. Draw calls may have been lost");
+		return;
+	}
+
+	const auto aa_mode = rsx::method_registers.surface_antialias();
+	const auto bpp = get_format_block_size_in_bytes(surface_format);
+	const u32 aa_factor = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
+
+	//Window (raster) offsets
+	const auto window_offset_x = rsx::method_registers.window_offset_x();
+	const auto window_offset_y = rsx::method_registers.window_offset_y();
+	const auto window_clip_width = rsx::method_registers.window_clip_horizontal();
+	const auto window_clip_height = rsx::method_registers.window_clip_vertical();
+
+	if (window_offset_x || window_offset_y)
+	{
+		//Window offset is what affects the raster position!
+		//Tested with Turbo: Super stunt squad that only changes the window offset to declare new framebuffers
+		//Sampling behavior clearly indicates the addresses are expected to have changed
+		if (auto clip_type = rsx::method_registers.window_clip_type())
+			LOG_ERROR(RSX, "Unknown window clip type 0x%X" HERE, clip_type);
+
+		for (const auto &index : rsx::utility::get_rtt_indexes(target))
+		{
+			if (surface_addresses[index])
+			{
+				const u32 window_offset_bytes = (std::max<u32>(pitchs[index], clip_horizontal * aa_factor * bpp) * window_offset_y) + ((aa_factor * bpp) * window_offset_x);
+				surface_addresses[index] += window_offset_bytes;
+			}
+		}
+
+		if (depth_address)
+		{
+			const auto depth_bpp = depth_format == rsx::surface_depth_format::z16 ? 2 : 4;
+			depth_address += (std::max<u32>(zeta_pitch, clip_horizontal * aa_factor * depth_bpp) * window_offset_y) + ((aa_factor * depth_bpp) * window_offset_x);
+		}
+	}
+
+	if ((window_clip_width && window_clip_width < clip_horizontal) ||
+		(window_clip_height && window_clip_height < clip_vertical))
+	{
+		LOG_ERROR(RSX, "Unexpected window clip dimensions: window_clip=%dx%d, surface_clip=%dx%d",
+			window_clip_width, window_clip_height, clip_horizontal, clip_vertical);
+	}
+
+	if (draw_fbo)
+	{
+		bool really_changed = false;
+		auto sz = draw_fbo.get_extents();
+
+		if (sz.width == clip_horizontal && sz.height == clip_vertical)
+		{
+			for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
+			{
+				if (m_surface_info[i].address != surface_addresses[i])
+				{
+					really_changed = true;
+					break;
+				}
+			}
+
+			if (!really_changed)
+			{
+				if (depth_address == m_depth_surface_info.address)
+				{
+					//Nothing has changed, we're still using the same framebuffer
+					return;
 				}
 			}
 		}
+	}
+
+	m_rtts.prepare_render_target(nullptr, surface_format, depth_format,  clip_horizontal, clip_vertical,
+		target, surface_addresses, depth_address);
+
+	draw_fbo.recreate();
+	draw_fbo.bind();
+	draw_fbo.set_extents({ (int)clip_horizontal, (int)clip_vertical });
+
+	bool old_format_found = false;
+	gl::texture::format old_format;
+
+	const auto color_offsets = get_offsets();
+	const auto color_locations = get_locations();
+
+	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
+	{
+		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
+		{
+			if (!old_format_found)
+			{
+				old_format = rsx::internals::surface_color_format_to_gl(m_surface_info[i].color_format).format;
+				old_format_found = true;
+			}
+
+			m_gl_texture_cache.set_memory_read_flags(m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height, rsx::memory_read_flags::flush_once);
+			m_gl_texture_cache.flush_if_cache_miss_likely(old_format, m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height);
+		}
+
+		if (std::get<0>(m_rtts.m_bound_render_targets[i]))
+		{
+			auto rtt = std::get<1>(m_rtts.m_bound_render_targets[i]);
+			draw_fbo.color[i] = *rtt;
+
+			rtt->set_rsx_pitch(pitchs[i]);
+			m_surface_info[i] = { surface_addresses[i], pitchs[i], false, surface_format, depth_format, clip_horizontal, clip_vertical };
+
+			rtt->tile = find_tile(color_offsets[i], color_locations[i]);
+			rtt->aa_mode = aa_mode;
+			m_gl_texture_cache.notify_surface_changed(surface_addresses[i]);
+			m_gl_texture_cache.tag_framebuffer(surface_addresses[i]);
+		}
 		else
-			surface_info[i] = {};
+			m_surface_info[i] = {};
 	}
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil))
 	{
+		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
+		{
+			auto bpp = m_depth_surface_info.pitch / m_depth_surface_info.width;
+			auto old_format = (bpp == 2) ? gl::texture::format::depth : gl::texture::format::depth_stencil;
+
+			m_gl_texture_cache.set_memory_read_flags(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, rsx::memory_read_flags::flush_once);
+			m_gl_texture_cache.flush_if_cache_miss_likely(old_format, m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height);
+		}
+
+		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		if (depth_format == rsx::surface_depth_format::z24s8)
-			__glcheck draw_fbo.depth_stencil = *std::get<1>(m_rtts.m_bound_depth_stencil);
+			draw_fbo.depth_stencil = *ds;
 		else
-			__glcheck draw_fbo.depth = *std::get<1>(m_rtts.m_bound_depth_stencil);
+			draw_fbo.depth = *ds;
 
 		const u32 depth_surface_pitch = rsx::method_registers.surface_z_pitch();
 		std::get<1>(m_rtts.m_bound_depth_stencil)->set_rsx_pitch(rsx::method_registers.surface_z_pitch());
-		depth_surface_info = { depth_address, depth_surface_pitch, true, surface_format, depth_format, clip_horizontal, clip_vertical };
+		m_depth_surface_info = { depth_address, depth_surface_pitch, true, surface_format, depth_format, clip_horizontal, clip_vertical };
 
-		//Verify pitch given is correct if pitch <= 64 (especially 64)
-		if (depth_surface_pitch <= 64)
-		{
-			const u16 native_pitch = std::get<1>(m_rtts.m_bound_depth_stencil)->get_native_pitch();
-			if (native_pitch > depth_surface_pitch)
-			{
-				LOG_TRACE(RSX, "Bad depth surface pitch given: surface_width=%d, format=%d, pitch=%d, native_pitch=%d",
-					clip_horizontal, (u32)depth_format, depth_surface_pitch, native_pitch);
+		ds->aa_mode = aa_mode;
+		m_gl_texture_cache.notify_surface_changed(depth_address);
 
-				//Will not transfer this surface between cell and rsx due to misalignment
-				//TODO: Verify correct behaviour
-				depth_surface_info.pitch = 0;
-			}
-		}
+		m_gl_texture_cache.tag_framebuffer(depth_address);
 	}
 	else
-		depth_surface_info = {};
+		m_depth_surface_info = {};
 
 	framebuffer_status_valid = draw_fbo.check();
 	if (!framebuffer_status_valid) return;
 
 	check_zcull_status(true);
-
-	draw_fbo.bind();
 	set_viewport();
 
 	switch (rsx::method_registers.surface_color_target())
@@ -281,6 +481,8 @@ void GLGSRender::init_buffers(bool skip_reading)
 		break;
 	}
 
+	m_gl_texture_cache.clear_ro_tex_invalidate_intr();
+
 	//Mark buffer regions as NO_ACCESS on Cell visible side
 	if (g_cfg.video.write_color_buffers)
 	{
@@ -288,32 +490,33 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 		for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 		{
-			if (!surface_info[i].address || !surface_info[i].pitch) continue;
+			if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
 
-			const u32 range = surface_info[i].pitch * surface_info[i].height;
-			m_gl_texture_cache.lock_rtt_region(surface_info[i].address, range, surface_info[i].width, surface_info[i].height, surface_info[i].pitch,
-				color_format.format, color_format.type, color_format.swap_bytes, *std::get<1>(m_rtts.m_bound_render_targets[i]));
+			const u32 range = m_surface_info[i].pitch * m_surface_info[i].height * aa_factor;
+			m_gl_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[i]), m_surface_info[i].address, range, m_surface_info[i].width, m_surface_info[i].height, m_surface_info[i].pitch,
+			color_format.format, color_format.type, color_format.swap_bytes);
 		}
 	}
 
 	if (g_cfg.video.write_depth_buffer)
 	{
-		if (depth_surface_info.address && depth_surface_info.pitch)
+		if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 		{
 			auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(depth_format);
 
-			u32 pitch = depth_surface_info.width * 2;
-			if (depth_surface_info.depth_format != rsx::surface_depth_format::z16) pitch *= 2;
+			u32 pitch = m_depth_surface_info.width * 2;
+			if (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) pitch *= 2;
 
-			const u32 range = pitch * depth_surface_info.height;
-
-			//TODO: Verify that depth surface pitch variance affects results
-			if (pitch != depth_surface_info.pitch)
-				LOG_WARNING(RSX, "Depth surface pitch does not match computed pitch, %d vs %d", depth_surface_info.pitch, pitch);
-
-			m_gl_texture_cache.lock_rtt_region(depth_surface_info.address, range, depth_surface_info.width, depth_surface_info.height, pitch,
-				depth_format_gl.format, depth_format_gl.type, true, *std::get<1>(m_rtts.m_bound_depth_stencil));
+			const u32 range = pitch * m_depth_surface_info.height * aa_factor;
+			m_gl_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range, m_depth_surface_info.width, m_depth_surface_info.height, pitch,
+				depth_format_gl.format, depth_format_gl.type, true);
 		}
+	}
+
+	if (m_gl_texture_cache.get_ro_tex_invalidate_intr())
+	{
+		//Invalidate cached sampler state
+		m_samplers_dirty.store(true);
 	}
 }
 
@@ -344,8 +547,8 @@ void GLGSRender::read_buffers()
 
 		auto read_color_buffers = [&](int index, int count)
 		{
-			u32 width = rsx::method_registers.surface_clip_width();
-			u32 height = rsx::method_registers.surface_clip_height();
+			const u32 width = rsx::method_registers.surface_clip_width();
+			const u32 height = rsx::method_registers.surface_clip_height();
 
 			const std::array<u32, 4> offsets = get_offsets();
 			const std::array<u32, 4 > locations = get_locations();
@@ -353,17 +556,19 @@ void GLGSRender::read_buffers()
 
 			for (int i = index; i < index + count; ++i)
 			{
-				u32 offset = offsets[i];
-				u32 location = locations[i];
-				u32 pitch = pitchs[i];
+				const u32 offset = offsets[i];
+				const u32 location = locations[i];
+				const u32 pitch = pitchs[i];
 
-				if (!surface_info[i].pitch)
+				if (!m_surface_info[i].pitch)
 					continue;
+
+				const u32 range = pitch * height;
 
 				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
 				u32 texaddr = (u32)((u64)color_buffer.ptr - (u64)vm::base(0));
 
-				bool success = m_gl_texture_cache.load_rtt((*std::get<1>(m_rtts.m_bound_render_targets[i])), texaddr, pitch);
+				bool success = m_gl_texture_cache.load_memory_from_cache(texaddr, pitch * height, std::get<1>(m_rtts.m_bound_render_targets[i]));
 
 				//Fall back to slower methods if the image could not be fetched from cache.
 				if (!success)
@@ -374,8 +579,7 @@ void GLGSRender::read_buffers()
 					}
 					else
 					{
-						u32 range = pitch * height;
-						m_gl_texture_cache.invalidate_range(texaddr, range);
+						m_gl_texture_cache.invalidate_range(texaddr, range, false, false, true);
 
 						std::unique_ptr<u8[]> buffer(new u8[pitch * height]);
 						color_buffer.read(buffer.get(), width, height, pitch);
@@ -416,13 +620,15 @@ void GLGSRender::read_buffers()
 	if (g_cfg.video.read_depth_buffer)
 	{
 		//TODO: use pitch
-		u32 pitch = depth_surface_info.pitch;
+		const u32 pitch = m_depth_surface_info.pitch;
+		const u32 width = rsx::method_registers.surface_clip_width();
+		const u32 height = rsx::method_registers.surface_clip_height();
 
 		if (!pitch)
 			return;
 
 		u32 depth_address = rsx::get_address(rsx::method_registers.surface_z_offset(), rsx::method_registers.surface_z_dma());
-		bool in_cache = m_gl_texture_cache.load_rtt((*std::get<1>(m_rtts.m_bound_depth_stencil)), depth_address, pitch);
+		bool in_cache = m_gl_texture_cache.load_memory_from_cache(depth_address, pitch * height, std::get<1>(m_rtts.m_bound_depth_stencil));
 
 		if (in_cache)
 			return;
@@ -433,7 +639,7 @@ void GLGSRender::read_buffers()
 		int pixel_size    = rsx::internals::get_pixel_size(rsx::method_registers.surface_depth_fmt());
 		gl::buffer pbo_depth;
 
-		__glcheck pbo_depth.create(rsx::method_registers.surface_clip_width() * rsx::method_registers.surface_clip_height() * pixel_size);
+		__glcheck pbo_depth.create(width * height * pixel_size);
 		__glcheck pbo_depth.map([&](GLubyte* pixels)
 		{
 			u32 depth_address = rsx::get_address(rsx::method_registers.surface_z_offset(), rsx::method_registers.surface_z_dma());
@@ -441,7 +647,7 @@ void GLGSRender::read_buffers()
 			if (rsx::method_registers.surface_depth_fmt() == rsx::surface_depth_format::z16)
 			{
 				u16 *dst = (u16*)pixels;
-				const be_t<u16>* src = vm::ps3::_ptr<u16>(depth_address);
+				const be_t<u16>* src = vm::_ptr<u16>(depth_address);
 				for (int i = 0, end = std::get<1>(m_rtts.m_bound_depth_stencil)->width() * std::get<1>(m_rtts.m_bound_depth_stencil)->height(); i < end; ++i)
 				{
 					dst[i] = src[i];
@@ -450,7 +656,7 @@ void GLGSRender::read_buffers()
 			else
 			{
 				u32 *dst = (u32*)pixels;
-				const be_t<u32>* src = vm::ps3::_ptr<u32>(depth_address);
+				const be_t<u32>* src = vm::_ptr<u32>(depth_address);
 				for (int i = 0, end = std::get<1>(m_rtts.m_bound_depth_stencil)->width() * std::get<1>(m_rtts.m_bound_depth_stencil)->height(); i < end; ++i)
 				{
 					dst[i] = src[i];
@@ -473,7 +679,7 @@ void GLGSRender::write_buffers()
 		{
 			for (int i = index; i < index + count; ++i)
 			{
-				if (surface_info[i].pitch == 0)
+				if (m_surface_info[i].pitch == 0)
 					continue;
 
 				/**Even tiles are loaded as whole textures during read_buffers from testing.
@@ -481,8 +687,8 @@ void GLGSRender::write_buffers()
 				* but using the GPU to perform the caching is many times faster.
 				*/
 
-				const u32 range = surface_info[i].pitch * surface_info[i].height;
-				__glcheck m_gl_texture_cache.save_rtt(surface_info[i].address, range);
+				const u32 range = m_surface_info[i].pitch * m_surface_info[i].height;
+				__glcheck m_gl_texture_cache.flush_memory_to_cache(m_surface_info[i].address, range, true);
 			}
 		};
 
@@ -492,11 +698,11 @@ void GLGSRender::write_buffers()
 	if (g_cfg.video.write_depth_buffer)
 	{
 		//TODO: use pitch
-		if (depth_surface_info.pitch == 0) return;
+		if (m_depth_surface_info.pitch == 0) return;
 
-		u32 range = depth_surface_info.width * depth_surface_info.height * 2;
-		if (depth_surface_info.depth_format != rsx::surface_depth_format::z16) range *= 2;
+		u32 range = m_depth_surface_info.width * m_depth_surface_info.height * 2;
+		if (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) range *= 2;
 
-		m_gl_texture_cache.save_rtt(depth_surface_info.address, range);
+		m_gl_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, range, true);
 	}
 }

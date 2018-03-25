@@ -4,7 +4,7 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+constexpr auto qstr = QString::fromStdString;
 
 save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget* parent)
 	: QDialog(parent), m_entry(save)
@@ -41,13 +41,14 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
 	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
 
-	QSize tableSize = QSize(
+	QSize tableSize = QSize
+	(
 		m_list->verticalHeader()->width() + m_list->horizontalHeader()->length() + m_list->frameWidth() * 2,
-		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2);
+		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2
+	);
 
 	// no minimum size needed because we always have same table size and row count
 	resize(sizeHint() - m_list->sizeHint() + tableSize);
-
 }
 
 //This is intended to write the information of save data to QTableView.

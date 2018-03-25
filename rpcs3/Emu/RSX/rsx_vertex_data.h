@@ -60,8 +60,8 @@ public:
 
 struct push_buffer_vertex_info
 {
-	u8 size;
-	vertex_base_type type;
+	u8 size = 0;
+	vertex_base_type type = vertex_base_type::f;
 
 	u32 vertex_count = 0;
 	u32 attribute_mask = ~0;
@@ -72,6 +72,7 @@ struct push_buffer_vertex_info
 		data.resize(0);
 		attribute_mask = ~0;
 		vertex_count = 0;
+		size = 0;
 	}
 
 	u8 get_vertex_size_in_dwords(vertex_base_type type)

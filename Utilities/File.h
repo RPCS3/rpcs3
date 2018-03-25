@@ -10,6 +10,12 @@
 
 namespace fs
 {
+#ifdef _WIN32
+	using native_handle = void*;
+#else
+	using native_handle = int;
+#endif
+
 	// File open mode flags
 	enum class open_mode : u32
 	{
@@ -19,6 +25,8 @@ namespace fs
 		create,
 		trunc,
 		excl,
+		lock,
+		unread,
 
 		__bitset_enum_max
 	};
@@ -29,6 +37,8 @@ namespace fs
 	constexpr auto create  = +open_mode::create; // Create file if it doesn't exist
 	constexpr auto trunc   = +open_mode::trunc; // Clear opened file if it's not empty
 	constexpr auto excl    = +open_mode::excl; // Failure if the file already exists (used with `create`)
+	constexpr auto lock    = +open_mode::lock; // Prevent opening the file more than once
+	constexpr auto unread  = +open_mode::unread; // Aggressively prevent reading the opened file (do not use)
 
 	constexpr auto rewrite = open_mode::write + open_mode::create + open_mode::trunc;
 
@@ -53,6 +63,12 @@ namespace fs
 		s64 atime;
 		s64 mtime;
 		s64 ctime;
+	};
+
+	// Native handle getter
+	struct get_native_handle
+	{
+		virtual native_handle get() = 0;
 	};
 
 	// File handle base
@@ -145,7 +161,7 @@ namespace fs
 	bool create_path(const std::string& path);
 
 	// Rename (move) file or directory
-	bool rename(const std::string& from, const std::string& to);
+	bool rename(const std::string& from, const std::string& to, bool overwrite);
 
 	// Copy file contents
 	bool copy_file(const std::string& from, const std::string& to, bool overwrite);
@@ -171,7 +187,7 @@ namespace fs
 		file() = default;
 
 		// Open file with specified mode
-		explicit file(const std::string& path, bs_t<open_mode> mode = ::fs::read);		
+		explicit file(const std::string& path, bs_t<open_mode> mode = ::fs::read);
 
 		// Open memory for read
 		explicit file(const void* ptr, std::size_t size);
@@ -347,6 +363,9 @@ namespace fs
 			if (seek(0), !read(result)) xfail();
 			return result;
 		}
+
+		// Get native handle if available
+		native_handle get_handle() const;
 	};
 
 	class dir final
@@ -383,7 +402,7 @@ namespace fs
 		{
 			m_dir = std::move(ptr);
 		}
-		
+
 		std::unique_ptr<dir_base> release()
 		{
 			return std::move(m_dir);
@@ -405,7 +424,7 @@ namespace fs
 
 		class iterator
 		{
-			dir* m_parent;
+			const dir* m_parent;
 			dir_entry m_entry;
 
 		public:
@@ -415,7 +434,7 @@ namespace fs
 				from_current
 			};
 
-			iterator(dir* parent, mode mode_ = mode::from_first)
+			iterator(const dir* parent, mode mode_ = mode::from_first)
 				: m_parent(parent)
 			{
 				if (!m_parent)
@@ -441,7 +460,7 @@ namespace fs
 
 			iterator& operator++()
 			{
-				*this = { m_parent, mode::from_current };
+				*this = {m_parent, mode::from_current};
 				return *this;
 			}
 
@@ -451,14 +470,14 @@ namespace fs
 			}
 		};
 
-		iterator begin()
+		iterator begin() const
 		{
-			return{ m_dir ? this : nullptr };
+			return {m_dir ? this : nullptr};
 		}
 
-		iterator end()
+		iterator end() const
 		{
-			return{ nullptr };
+			return {nullptr};
 		}
 	};
 
@@ -485,6 +504,7 @@ namespace fs
 		noent,
 		exist,
 		acces,
+		notempty,
 	};
 
 	// Error code returned

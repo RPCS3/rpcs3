@@ -8,7 +8,7 @@
 #include "sys_rsx.h"
 #include "sys_event.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_rsx("sys_rsx");
 
@@ -44,7 +44,7 @@ s32 sys_rsx_device_close()
  * @param size (IN): Local memory size. E.g. 0x0F900000 (249 MB).
  * @param flags (IN): E.g. Immediate value passed in cellGcmSys is 8.
  * @param a5 (IN): E.g. Immediate value passed in cellGcmSys is 0x00300000 (3 MB?).
- * @param a6 (IN): E.g. Immediate value passed in cellGcmSys is 16. 
+ * @param a6 (IN): E.g. Immediate value passed in cellGcmSys is 16.
  * @param a7 (IN): E.g. Immediate value passed in cellGcmSys is 8.
  */
 s32 sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u64> mem_addr, u32 size, u64 flags, u64 a5, u64 a6, u64 a7)
@@ -230,12 +230,22 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 
 	auto m_sysrsx = fxm::get<SysRsxConfig>();
 
+	if (!m_sysrsx)
+	{
+		sys_rsx.error("sys_rsx_context_attribute called before sys_rsx_context_allocate: context_id=0x%x, package_id=0x%x, a3=0x%llx, a4=0x%llx, a5=0x%llx, a6=0x%llx)", context_id, package_id, a3, a4, a5, a6);
+		return CELL_EINVAL;
+	}
+
 	auto &driverInfo = vm::_ref<RsxDriverInfo>(m_sysrsx->driverInfo);
 	switch (package_id)
 	{
 	case 0x001: // FIFO
+		render->pause();
 		render->ctrl->get = a3;
 		render->ctrl->put = a4;
+		render->internal_get = a3;
+		render->restore_point = a3;
+		render->unpause();
 		break;
 
 	case 0x100: // Display mode set
@@ -316,6 +326,12 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		//a5 low bits = ret.format = base | ((base + ((size - 1) / 0x10000)) << 13) | (comp << 26) | (1 << 30);
 
 		auto& tile = render->tiles[a3];
+
+		// When tile is going to be unbinded, we can use it as a hint that the address will no longer be used as a surface and can be removed/invalidated
+		// Todo: There may be more checks such as format/size/width can could be done
+		if (tile.binded && a5 == 0)
+			render->notify_tile_unbound(a3);
+
 		tile.location = ((a4 >> 32) & 0xF) - 1;
 		tile.offset = ((((a4 >> 32) & 0xFFFFFFFF) >> 16) * 0x10000);
 		tile.size = ((((a4 & 0x7FFFFFFF) >> 16) + 1) * 0x10000) - tile.offset;
@@ -343,8 +359,12 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		zcull.height = (((a4 & 0xFFFFFFFF) >> 6) & 0xFF) << 6;
 		zcull.cullStart = (a5 >> 32);
 		zcull.offset = (a5 & 0xFFFFFFFF);
+		zcull.zcullDir = ((a6 >> 32) >> 1) & 0x1;
+		zcull.zcullFormat = ((a6 >> 32) >> 2) & 0x3FF;
+		zcull.sFunc = ((a6 >> 32) >> 12) & 0xF;
+		zcull.sRef = ((a6 >> 32) >> 16) & 0xFF;
+		zcull.sMask = ((a6 >> 32) >> 24) & 0xFF;
 		zcull.binded = (a6 & 0xFFFFFFFF) != 0;
-		//TODO: Set zculldir, format, sfunc, sref, smask
 	}
 	break;
 
@@ -371,7 +391,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 			sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 11), 0); // second vhandler
 		break;
 	case 0xFEF: // hack: user command
-		// 'custom' invalid package id for now 
+		// 'custom' invalid package id for now
 		// as i think we need custom lv1 interrupts to handle this accurately
 		// this also should probly be set by rsxthread
 		driverInfo.userCmdParam = a4;
@@ -395,7 +415,7 @@ s32 sys_rsx_device_map(vm::ptr<u64> addr, vm::ptr<u64> a2, u32 dev_id)
 	sys_rsx.warning("sys_rsx_device_map(addr=*0x%x, a2=*0x%x, dev_id=0x%x)", addr, a2, dev_id);
 
 	if (dev_id != 8) {
-		// TODO: lv1 related 
+		// TODO: lv1 related
 		fmt::throw_exception("sys_rsx_device_map: Invalid dev_id %d", dev_id);
 	}
 

@@ -5,6 +5,7 @@
 #include "Emu/Memory/vm.h"
 
 #include "Utilities/GSL.h"
+#include "Utilities/hash.h"
 
 enum class SHADER_TYPE
 {
@@ -23,7 +24,12 @@ namespace program_hash_util
 		u32 word[4];
 	};
 
-	struct vertex_program_hash
+	struct vertex_program_utils
+	{
+		static size_t get_vertex_program_ucode_hash(const RSXVertexProgram &program);
+	};
+
+	struct vertex_program_storage_hash
 	{
 		size_t operator()(const RSXVertexProgram &program) const;
 	};
@@ -41,9 +47,13 @@ namespace program_hash_util
 		static bool is_constant(u32 sourceOperand);
 
 		static size_t get_fragment_program_ucode_size(void *ptr);
+
+		static u32 get_fragment_program_start(void *ptr);
+
+		static size_t get_fragment_program_ucode_hash(const RSXFragmentProgram &program);
 	};
 
-	struct fragment_program_hash
+	struct fragment_program_storage_hash
 	{
 		size_t operator()(const RSXFragmentProgram &program) const;
 	};
@@ -68,6 +78,7 @@ namespace program_hash_util
 * - static void recompile_fragment_program(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, size_t ID);
 * - static void recompile_vertex_program(RSXVertexProgram *RSXVP, VertexProgramData& vertexProgramData, size_t ID);
 * - static PipelineData build_program(VertexProgramData &vertexProgramData, FragmentProgramData &fragmentProgramData, const PipelineProperties &pipelineProperties, const ExtraData& extraData);
+* - static void validate_pipeline_properties(const VertexProgramData &vertexProgramData, const FragmentProgramData &fragmentProgramData, PipelineProperties& props);
 */
 template<typename backend_traits>
 class program_state_cache
@@ -77,8 +88,8 @@ class program_state_cache
 	using vertex_program_type = typename backend_traits::vertex_program_type;
 	using fragment_program_type = typename backend_traits::fragment_program_type;
 
-	using binary_to_vertex_program = std::unordered_map<RSXVertexProgram, vertex_program_type, program_hash_util::vertex_program_hash, program_hash_util::vertex_program_compare> ;
-	using binary_to_fragment_program = std::unordered_map<RSXFragmentProgram, fragment_program_type, program_hash_util::fragment_program_hash, program_hash_util::fragment_program_compare>;
+	using binary_to_vertex_program = std::unordered_map<RSXVertexProgram, vertex_program_type, program_hash_util::vertex_program_storage_hash, program_hash_util::vertex_program_compare> ;
+	using binary_to_fragment_program = std::unordered_map<RSXFragmentProgram, fragment_program_type, program_hash_util::fragment_program_storage_hash, program_hash_util::fragment_program_compare>;
 
 
 	struct pipeline_key
@@ -93,9 +104,9 @@ class program_state_cache
 		size_t operator()(const pipeline_key &key) const
 		{
 			size_t hashValue = 0;
-			hashValue ^= std::hash<unsigned>()(key.vertex_program_id);
-			hashValue ^= std::hash<unsigned>()(key.fragment_program_id);
-			hashValue ^= std::hash<pipeline_properties>()(key.properties);
+			hashValue ^= rpcs3::hash_base<unsigned>(key.vertex_program_id);
+			hashValue ^= rpcs3::hash_base<unsigned>(key.fragment_program_id);
+			hashValue ^= rpcs3::hash_struct<pipeline_properties>(key.properties);
 			return hashValue;
 		}
 	};
@@ -110,6 +121,7 @@ class program_state_cache
 
 protected:
 	size_t m_next_id = 0;
+	bool m_cache_miss_flag;
 	binary_to_vertex_program m_vertex_shader_cache;
 	binary_to_fragment_program m_fragment_shader_cache;
 	std::unordered_map <pipeline_key, pipeline_storage_type, pipeline_key_hash, pipeline_key_compare> m_storage;
@@ -150,6 +162,77 @@ protected:
 	}
 
 public:
+
+	struct program_buffer_patch_entry
+	{
+		union
+		{
+			u32 hex_key;
+			f32 fp_key;
+		};
+
+		union
+		{
+			u32 hex_value;
+			f32 fp_value;
+		};
+
+		program_buffer_patch_entry()
+		{}
+
+		program_buffer_patch_entry(f32& key, f32& value)
+		{
+			fp_key = key;
+			fp_value = value;
+		}
+
+		program_buffer_patch_entry(u32& key, u32& value)
+		{
+			hex_key = key;
+			hex_value = value;
+		}
+
+		bool test_and_set(f32 value, f32* dst) const
+		{
+			u32 hex = (u32&)value;
+			if ((hex & 0x7FFFFFFF) == (hex_key & 0x7FFFFFFF))
+			{
+				hex = (hex & ~0x7FFFFFF) | hex_value;
+				*dst = (f32&)hex;
+				return true;
+			}
+
+			return false;
+		}
+	};
+
+	struct
+	{
+		std::unordered_map<f32, program_buffer_patch_entry> db;
+
+		void add(program_buffer_patch_entry& e)
+		{
+			db[e.fp_key] = e;
+		}
+
+		void add(f32& key, f32& value)
+		{
+			db[key] = { key, value };
+		}
+
+		void clear()
+		{
+			db.clear();
+		}
+
+		bool is_empty() const
+		{
+			return db.size() == 0;
+		}
+	}
+	patch_table;
+
+public:
 	program_state_cache() = default;
 	~program_state_cache()
 	{
@@ -179,7 +262,7 @@ public:
 	pipeline_storage_type& getGraphicPipelineState(
 		const RSXVertexProgram& vertexShader,
 		const RSXFragmentProgram& fragmentShader,
-		const pipeline_properties& pipelineProperties,
+		pipeline_properties& pipelineProperties,
 		Args&& ...args
 		)
 	{
@@ -191,13 +274,17 @@ public:
 		bool already_existing_fragment_program = std::get<1>(fp_search);
 		bool already_existing_vertex_program = std::get<1>(vp_search);
 
+		backend_traits::validate_pipeline_properties(vertex_program, fragment_program, pipelineProperties);
 		pipeline_key key = { vertex_program.id, fragment_program.id, pipelineProperties };
 
 		if (already_existing_fragment_program && already_existing_vertex_program)
 		{
 			const auto I = m_storage.find(key);
 			if (I != m_storage.end())
+			{
+				m_cache_miss_flag = false;
 				return I->second;
+			}
 		}
 
 		LOG_NOTICE(RSX, "Add program :");
@@ -205,6 +292,9 @@ public:
 		LOG_NOTICE(RSX, "*** fp id = %d", fragment_program.id);
 
 		m_storage[key] = backend_traits::build_pipeline(vertex_program, fragment_program, pipelineProperties, std::forward<Args>(args)...);
+		m_cache_miss_flag = true;
+
+		LOG_SUCCESS(RSX, "New program compiled successfully");
 		return m_storage[key];
 	}
 
@@ -217,26 +307,60 @@ public:
 		return 0;
 	}
 
-	void fill_fragment_constants_buffer(gsl::span<f32, gsl::dynamic_range> dst_buffer, const RSXFragmentProgram &fragment_program) const
+	void fill_fragment_constants_buffer(gsl::span<f32, gsl::dynamic_range> dst_buffer, const RSXFragmentProgram &fragment_program, bool sanitize = false) const
 	{
 		const auto I = m_fragment_shader_cache.find(fragment_program);
 		if (I == m_fragment_shader_cache.end())
 			return;
-		__m128i mask = _mm_set_epi8(0xE, 0xF, 0xC, 0xD,
-			0xA, 0xB, 0x8, 0x9,
-			0x6, 0x7, 0x4, 0x5,
-			0x2, 0x3, 0x0, 0x1);
 
 		verify(HERE), (dst_buffer.size_bytes() >= ::narrow<int>(I->second.FragmentConstantOffsetCache.size()) * 16);
 
-		size_t offset = 0;
+		f32* dst = dst_buffer.data();
+		alignas(16) f32 tmp[4];
 		for (size_t offset_in_fragment_program : I->second.FragmentConstantOffsetCache)
 		{
-			void *data = (char*)fragment_program.addr + (u32)offset_in_fragment_program;
-			const __m128i &vector = _mm_loadu_si128((__m128i*)data);
-			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
-			_mm_stream_si128((__m128i*)dst_buffer.subspan(offset, 4).data(), shuffled_vector);
-			offset += sizeof(f32);
+			char* data = (char*)fragment_program.addr + (u32)offset_in_fragment_program;
+			const __m128i vector = _mm_loadu_si128((__m128i*)data);
+			const __m128i shuffled_vector = _mm_or_si128(_mm_slli_epi16(vector, 8), _mm_srli_epi16(vector, 8));
+
+			if (!patch_table.is_empty())
+			{
+				_mm_store_ps(tmp, _mm_castsi128_ps(shuffled_vector));
+				bool patched;
+
+				for (int i = 0; i < 4; ++i)
+				{
+					patched = false;
+					for (auto& e : patch_table.db)
+					{
+						//TODO: Use fp comparison with fabsf without hurting performance
+						patched = e.second.test_and_set(tmp[i], &dst[i]);
+						if (patched)
+						{
+							break;
+						}
+					}
+
+					if (!patched)
+					{
+						dst[i] = tmp[i];
+					}
+				}
+			}
+			else if (sanitize)
+			{
+				//Convert NaNs and Infs to 0
+				const auto masked = _mm_and_si128((__m128i&)shuffled_vector, _mm_set1_epi32(0x7fffffff));
+				const auto valid = _mm_cmplt_epi32(masked, _mm_set1_epi32(0x7f800000));
+				const auto result = _mm_and_si128((__m128i&)shuffled_vector, valid);
+				_mm_stream_si128((__m128i*)dst, (__m128i&)result);
+			}
+			else
+			{
+				_mm_stream_si128((__m128i*)dst, shuffled_vector);
+			}
+
+			dst += 4;
 		}
 	}
 

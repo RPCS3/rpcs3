@@ -103,9 +103,11 @@ namespace vk
 			};
 
 			m_vertex_shader.shader = vs;
+			m_vertex_shader.id = 100000;
 			m_vertex_shader.Compile();
 
 			m_fragment_shader.shader = fs;
+			m_fragment_shader.id = 100001;
 			m_fragment_shader.Compile();
 
 			VkPipelineShaderStageCreateInfo shader_stages[2] = {};
@@ -362,6 +364,9 @@ namespace vk
 
 		void reset_descriptors()
 		{
+			if (m_used_descriptors == 0)
+				return;
+
 			vkResetDescriptorPool(device, m_descriptor_pool, 0);
 			m_used_descriptors = 0;
 		}

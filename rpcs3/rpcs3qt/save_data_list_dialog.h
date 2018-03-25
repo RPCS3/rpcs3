@@ -2,8 +2,10 @@
 
 // I just want the struct for the save data.
 #include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
+#include "gui_settings.h"
 
 #include <QTableWidget>
 #include <QDialog>
@@ -15,36 +17,31 @@ class save_data_list_dialog : public QDialog
 {
 	Q_OBJECT
 
+	enum selection_code
+	{
+		new_save = -1,
+		canceled = -2
+	};
+
 public:
-	explicit save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, bool is_saving, QWidget* parent = nullptr);
+	explicit save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, u32 op, vm::ptr<CellSaveDataListSet>, QWidget* parent = nullptr);
 
 	s32 GetSelection();
 private Q_SLOTS:
-	void OnEntryCopy();
-	void OnEntryRemove();
 	void OnEntryInfo();
-	void ShowContextMenu(const QPoint &pos);
+	void OnSort(int logicalIndex);
 private:
 	void UpdateSelectionLabel(void);
-	void LoadEntries(void);
 	void UpdateList(void);
-	void OnSort(int id);
 
-	s32 m_selectedEntry;
-	QLabel* selectedEntryLabel;
+	s32 m_entry;
+	QLabel* m_entry_label;
 
 	QTableWidget* m_list;
 	std::vector<SaveDataEntry> m_save_entries;
 
-	QMenu* m_sort_options;
+	std::shared_ptr<gui_settings> m_gui_settings;
 
-	int m_sortColumn;
-	bool m_sortAscending;
-
-	QAction* saveIDAct;
-	QAction* titleAct;
-	QAction* subtitleAct;
-	QAction* copyAct;
-	QAction* removeAct;
-	QAction* infoAct;
+	int m_sort_column;
+	bool m_sort_ascending;
 };

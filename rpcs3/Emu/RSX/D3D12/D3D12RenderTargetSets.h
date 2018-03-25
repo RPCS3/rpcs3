@@ -55,6 +55,18 @@ struct render_target_traits
 	}
 
 	static
+	void get_surface_info(ID3D12Resource *surface, rsx::surface_format_info *info)
+	{
+		//TODO
+		auto desc = surface->GetDesc();
+		info->rsx_pitch = static_cast<u16>(desc.Width);
+		info->native_pitch = static_cast<u16>(desc.Width);
+		info->surface_width = static_cast<u32>(desc.Width);
+		info->surface_height = static_cast<u32>(desc.Height);
+		info->bpp = 1;
+	}
+
+	static
 	void prepare_rtt_for_drawing(
 		gsl::not_null<ID3D12GraphicsCommandList*> command_list,
 		ID3D12Resource* rtt)
@@ -130,6 +142,9 @@ struct render_target_traits
 		//TODO
 	}
 
+	static
+	void notify_surface_invalidated(const ComPtr<ID3D12Resource>&)
+	{}
 
 	static
 	bool rtt_has_format_width_height(const ComPtr<ID3D12Resource> &rtt, surface_color_format surface_color_format, size_t width, size_t height, bool=false)

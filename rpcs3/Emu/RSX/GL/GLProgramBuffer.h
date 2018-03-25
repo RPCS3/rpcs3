@@ -25,6 +25,11 @@ struct GLTraits
 	}
 
 	static
+	void validate_pipeline_properties(const vertex_program_type&, const fragment_program_type&, pipeline_properties&)
+	{
+	}
+
+	static
 	pipeline_storage_type build_pipeline(const vertex_program_type &vertexProgramData, const fragment_program_type &fragmentProgramData, const pipeline_properties&)
 	{
 		pipeline_storage_type result;
@@ -54,24 +59,11 @@ struct GLTraits
 				result.uniforms[location] = (i + rsx::limits::fragment_textures_count);
 		}
 
-		//We use texture buffers for vertex attributes. Bind these here as well
-		//as they are guaranteed to be fixed (1 to 1 mapping)
-		std::array<const char*, 16> s_reg_table =
-		{
-			"in_pos_buffer", "in_weight_buffer", "in_normal_buffer",
-			"in_diff_color_buffer", "in_spec_color_buffer",
-			"in_fog_buffer",
-			"in_point_size_buffer", "in_7_buffer",
-			"in_tc0_buffer", "in_tc1_buffer", "in_tc2_buffer", "in_tc3_buffer",
-			"in_tc4_buffer", "in_tc5_buffer", "in_tc6_buffer", "in_tc7_buffer"
-		};
+		const int stream_buffer_start = rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
 
-		for (int i = 0; i < rsx::limits::vertex_count; ++i)
-		{
-			int location;
-			if (result.uniforms.has_location(s_reg_table[i], &location))
-				result.uniforms[location] = (i + rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count);
-		}
+		//Bind locations 0 and 1 to the stream buffers
+		result.uniforms[0] = stream_buffer_start;
+		result.uniforms[1] = stream_buffer_start + 1;
 
 		LOG_NOTICE(RSX, "*** prog id = %d", result.id());
 		LOG_NOTICE(RSX, "*** vp id = %d", vertexProgramData.id);
@@ -86,4 +78,32 @@ struct GLTraits
 
 class GLProgramBuffer : public program_state_cache<GLTraits>
 {
+public:
+
+	u64 get_hash(void*&)
+	{
+		return 0;
+	}
+
+	u64 get_hash(RSXVertexProgram &prog)
+	{
+		return program_hash_util::vertex_program_utils::get_vertex_program_ucode_hash(prog);
+	}
+
+	u64 get_hash(RSXFragmentProgram &prog)
+	{
+		return program_hash_util::fragment_program_utils::get_fragment_program_ucode_hash(prog);
+	}
+
+	template <typename... Args>
+	void add_pipeline_entry(RSXVertexProgram &vp, RSXFragmentProgram &fp, void* &props, Args&& ...args)
+	{
+		vp.skip_vertex_input_check = true;
+		getGraphicPipelineState(vp, fp, props, std::forward<Args>(args)...);
+	}
+
+	bool check_cache_missed() const
+	{
+		return m_cache_miss_flag;
+	}
 };

@@ -1,16 +1,15 @@
 #include "rpcs3_app.h"
 
+#include "rpcs3qt/qt_utils.h"
+
 #include "rpcs3qt/welcome_dialog.h"
 
 #include "Emu/System.h"
 #include "rpcs3qt/gs_frame.h"
 #include "rpcs3qt/gl_gs_frame.h"
 
-#include "Emu/Cell/Modules/cellSaveData.h"
+#include "rpcs3qt/trophy_notification_helper.h"
 #include "rpcs3qt/save_data_dialog.h"
-
-#include "rpcs3qt/msg_dialog_frame.h"
-#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "basic_keyboard_handler.h"
@@ -31,6 +30,7 @@
 #include "evdev_joystick_handler.h"
 #endif
 
+#include "pad_thread.h"
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
@@ -39,7 +39,7 @@
 #ifdef _MSC_VER
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
 #endif
-#if defined(_WIN32) || defined(__linux__)
+#if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
 #ifdef _WIN32
@@ -47,6 +47,9 @@
 #endif
 #ifdef HAVE_ALSA
 #include "Emu/Audio/ALSA/ALSAThread.h"
+#endif
+#ifdef HAVE_PULSE
+#include "Emu/Audio/Pulse/PulseThread.h"
 #endif
 
 // For now, a trivial constructor/destructor.  May add command line usage later.
@@ -56,15 +59,16 @@ rpcs3_app::rpcs3_app(int& argc, char** argv) : QApplication(argc, argv)
 
 void rpcs3_app::Init()
 {
+	setApplicationName("RPCS3");
+	setWindowIcon(QIcon(":/rpcs3.ico"));
+
 	Emu.Init();
 
 	guiSettings.reset(new gui_settings());
+	emuSettings.reset(new emu_settings());
 
 	// Create the main window
-	RPCS3MainWin = new main_window(guiSettings, nullptr);
-
-	// Reset the pads -- see the method for why this is currently needed.
-	ResetPads();
+	RPCS3MainWin = new main_window(guiSettings, emuSettings, nullptr);
 
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
@@ -74,13 +78,12 @@ void rpcs3_app::Init()
 
 	RPCS3MainWin->Init();
 
-	setApplicationName("RPCS3");
 	RPCS3MainWin->show();
 
 	// Create the thumbnail toolbar after the main_window is created
 	RPCS3MainWin->CreateThumbnailToolbar();
 
-	if (guiSettings->GetValue(GUI::ib_show_welcome).toBool())
+	if (guiSettings->GetValue(gui::ib_show_welcome).toBool())
 	{
 		welcome_dialog* welcome = new welcome_dialog();
 		welcome->exec();
@@ -98,7 +101,7 @@ void rpcs3_app::InitializeCallbacks()
 		quit();
 	};
 	callbacks.call_after = [=](std::function<void()> func)
-	{	
+	{
 		RequestCallAfter(std::move(func));
 	};
 
@@ -113,7 +116,13 @@ void rpcs3_app::InitializeCallbacks()
 		switch (keyboard_handler type = g_cfg.io.keyboard)
 		{
 		case keyboard_handler::null: return std::make_shared<NullKeyboardHandler>();
-		case keyboard_handler::basic: return  m_basicKeyboardHandler;
+		case keyboard_handler::basic:
+		{
+			basic_keyboard_handler* ret = new basic_keyboard_handler();
+			ret->moveToThread(thread());
+			ret->SetTargetWindow(gameWindow);
+			return std::shared_ptr<KeyboardHandlerBase>(ret);
+		}
 		default: fmt::throw_exception("Invalid keyboard handler: %s", type);
 		}
 	};
@@ -123,29 +132,20 @@ void rpcs3_app::InitializeCallbacks()
 		switch (mouse_handler type = g_cfg.io.mouse)
 		{
 		case mouse_handler::null: return std::make_shared<NullMouseHandler>();
-		case mouse_handler::basic: return m_basicMouseHandler;
+		case mouse_handler::basic:
+		{
+			basic_mouse_handler* ret = new basic_mouse_handler();
+			ret->moveToThread(thread());
+			ret->SetTargetWindow(gameWindow);
+			return std::shared_ptr<MouseHandlerBase>(ret);
+		}
 		default: fmt::throw_exception("Invalid mouse handler: %s", type);
 		}
 	};
 
-	callbacks.get_pad_handler = [this]() -> std::shared_ptr<PadHandlerBase>
+	callbacks.get_pad_handler = [this]() -> std::shared_ptr<pad_thread>
 	{
-		switch (pad_handler type = g_cfg.io.pad)
-		{
-		case pad_handler::null: return std::make_shared<NullPadHandler>();
-		case pad_handler::keyboard: return m_keyboardPadHandler;
-		case pad_handler::ds4: return std::make_shared<ds4_pad_handler>();
-#ifdef _MSC_VER
-		case pad_handler::xinput: return std::make_shared<xinput_pad_handler>();
-#endif
-#ifdef _WIN32
-		case pad_handler::mm: return std::make_shared<mm_joystick_handler>();
-#endif
-#ifdef HAVE_LIBEVDEV
-		case pad_handler::evdev: return std::make_shared<evdev_joystick_handler>();
-#endif
-		default: fmt::throw_exception("Invalid pad handler: %s", type);
-		}
+		return std::make_shared<pad_thread>(thread(), gameWindow);
 	};
 
 	callbacks.get_gs_frame = [this]() -> std::unique_ptr<GSFrameBase>
@@ -156,24 +156,47 @@ void rpcs3_app::InitializeCallbacks()
 		int w = size.first;
 		int h = size.second;
 
-		if (guiSettings->GetValue(GUI::gs_resize).toBool())
+		if (guiSettings->GetValue(gui::gs_resize).toBool())
 		{
-			w = guiSettings->GetValue(GUI::gs_width).toInt();
-			h = guiSettings->GetValue(GUI::gs_height).toInt();
+			w = guiSettings->GetValue(gui::gs_width).toInt();
+			h = guiSettings->GetValue(gui::gs_height).toInt();
 		}
 
-		bool disableMouse = guiSettings->GetValue(GUI::gs_disableMouse).toBool();
+		bool disableMouse = guiSettings->GetValue(gui::gs_disableMouse).toBool();
+		auto frame_geometry = gui::utils::create_centered_window_geometry(RPCS3MainWin->geometry(), w, h);
+
+		gs_frame* frame;
 
 		switch (video_renderer type = g_cfg.video.renderer)
 		{
-		case video_renderer::null: return std::make_unique<gs_frame>("Null", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
-		case video_renderer::opengl: return std::make_unique<gl_gs_frame>(w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
-		case video_renderer::vulkan: return std::make_unique<gs_frame>("Vulkan", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
-#ifdef _MSC_VER
-		case video_renderer::dx12: return std::make_unique<gs_frame>("DirectX 12", w, h, RPCS3MainWin->GetAppIcon(), disableMouse);
-#endif
-		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+		case video_renderer::null:
+		{
+			frame = new gs_frame("Null", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			break;
 		}
+		case video_renderer::opengl:
+		{
+			frame = new gl_gs_frame(frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			break;
+		}
+		case video_renderer::vulkan:
+		{
+			frame = new gs_frame("Vulkan", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			break;
+		}
+#ifdef _MSC_VER
+		case video_renderer::dx12:
+		{
+			frame = new gs_frame("DirectX 12", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			break;
+		}
+#endif
+		default:
+			fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+		}
+
+		gameWindow = frame;
+		return std::unique_ptr<gs_frame>(frame);
 	};
 
 	callbacks.get_gs_render = []() -> std::shared_ptr<GSRender>
@@ -182,7 +205,7 @@ void rpcs3_app::InitializeCallbacks()
 		{
 		case video_renderer::null: return std::make_shared<NullGSRender>();
 		case video_renderer::opengl: return std::make_shared<GLGSRender>();
-#if defined(_WIN32) || defined(__linux__)
+#if defined(_WIN32) || defined(HAVE_VULKAN)
 		case video_renderer::vulkan: return std::make_shared<VKGSRender>();
 #endif
 #ifdef _MSC_VER
@@ -199,9 +222,14 @@ void rpcs3_app::InitializeCallbacks()
 		case audio_renderer::null: return std::make_shared<NullAudioThread>();
 #ifdef _WIN32
 		case audio_renderer::xaudio: return std::make_shared<XAudio2Thread>();
-#elif defined(HAVE_ALSA)
+#endif
+#ifdef HAVE_ALSA
 		case audio_renderer::alsa: return std::make_shared<ALSAThread>();
 #endif
+#ifdef HAVE_PULSE
+		case audio_renderer::pulse: return std::make_shared<PulseThread>();
+#endif
+
 		case audio_renderer::openal: return std::make_shared<OpenALThread>();
 		default: fmt::throw_exception("Invalid audio renderer: %s" HERE, type);
 		}
@@ -215,6 +243,11 @@ void rpcs3_app::InitializeCallbacks()
 	callbacks.get_save_dialog = [=]() -> std::unique_ptr<SaveDialogBase>
 	{
 		return std::make_unique<save_data_dialog>();
+	};
+
+	callbacks.get_trophy_notification_dialog = [=]() -> std::unique_ptr<TrophyNotificationBase>
+	{
+		return std::make_unique<trophy_notification_helper>(gameWindow);
 	};
 
 	callbacks.on_run = [=]() { OnEmulatorRun(); };
@@ -237,7 +270,6 @@ void rpcs3_app::InitializeConnects()
 	connect(this, &rpcs3_app::RequestCallAfter, this, &rpcs3_app::HandleCallAfter);
 
 	connect(this, &rpcs3_app::OnEmulatorRun, RPCS3MainWin, &main_window::OnEmuRun);
-	connect(this, &rpcs3_app::OnEmulatorStop, this, &rpcs3_app::ResetPads);
 	connect(this, &rpcs3_app::OnEmulatorStop, RPCS3MainWin, &main_window::OnEmuStop);
 	connect(this, &rpcs3_app::OnEmulatorPause, RPCS3MainWin, &main_window::OnEmuPause);
 	connect(this, &rpcs3_app::OnEmulatorResume, RPCS3MainWin, &main_window::OnEmuResume);
@@ -253,13 +285,98 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 	QFile file(sheetFilePath);
 	if (sheetFilePath == "")
 	{
-		setStyleSheet("");
+		auto rgba = [](const QColor& c, int v = 0)
+		{
+			return QString("rgba(%1, %2, %3, %4);").arg(c.red() + v).arg(c.green() + v).arg(c.blue() + v).arg(c.alpha() + v);
+		};
+
+		// toolbar color stylesheet
+		QString rgba_tool_bar = rgba(gui::mw_tool_bar_color);
+		QString style_toolbar = QString
+		(
+			"QLineEdit#mw_searchbar { margin-left:14px; background-color: " + rgba_tool_bar + " }"
+			"QToolBar#mw_toolbar { background-color: " + rgba_tool_bar + " }"
+			"QToolBar#mw_toolbar QSlider { background-color: " + rgba_tool_bar + " }"
+			"QToolBar#mw_toolbar::separator { background-color: " + rgba(gui::mw_tool_bar_color, -20) + " width: 1px; margin-top: 2px; margin-bottom: 2px; }"
+		);
+
+		// toolbar icon color stylesheet
+		QString style_toolbar_icons = QString
+		(
+			"QLabel#toolbar_icon_color { color: " + rgba(gui::mw_tool_icon_color) + " }"
+		);
+
+		// thumbnail icon color stylesheet
+		QString style_thumbnail_icons = QString
+		(
+			"QLabel#thumbnail_icon_color { color: " + rgba(gui::mw_thumb_icon_color) + " }"
+		);
+
+		// gamelist icon color stylesheet
+		QString style_gamelist_icons = QString
+		(
+			"QLabel#gamelist_icon_background_color { color: " + rgba(gui::gl_icon_color) + " }"
+		);
+
+		// log stylesheet
+		QString style_log = QString
+		(
+			"QTextEdit#tty_frame { background-color: #ffffff; }"
+			"QLabel#tty_text { color: #000000; }"
+			"QTextEdit#log_frame { background-color: #ffffff; }"
+			"QLabel#log_level_always { color: #107896; }"
+			"QLabel#log_level_fatal { color: #ff00ff; }"
+			"QLabel#log_level_error { color: #C02F1D; }"
+			"QLabel#log_level_todo { color: #ff6000; }"
+			"QLabel#log_level_success { color: #008000; }"
+			"QLabel#log_level_warning { color: #BA8745; }"
+			"QLabel#log_level_notice { color: #000000; }"
+			"QLabel#log_level_trace { color: #808080; }"
+			"QLabel#log_stack { color: #000000; }"
+		);
+
+		// other objects' stylesheet
+		QString style_rest = QString
+		(
+			"QWidget#header_section { background-color: #ffffff; }"
+			"QDialog#kernel_explorer { background-color: rgba(240, 240, 240, 255); }"
+			"QDialog#memory_viewer { background-color: rgba(240, 240, 240, 255); }"
+			"QLabel#memory_viewer_address_panel { color: rgba(75, 135, 150, 255); background-color: rgba(240, 240, 240, 255); }"
+			"QLabel#memory_viewer_hex_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
+			"QLabel#memory_viewer_ascii_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
+			"QLabel#debugger_frame_breakpoint { color: #000000; background-color: #ffff00; }"
+			"QLabel#debugger_frame_pc { color: #000000; background-color: #00ff00; }"
+			"QLabel#rsx_debugger_display_buffer { background-color: rgba(240, 240, 240, 255); }"
+			"QLabel#l_controller { color: #434343; }"
+			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
+		);
+
+		setStyleSheet(style_toolbar + style_toolbar_icons + style_thumbnail_icons + style_gamelist_icons + style_log + style_rest);
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
+		QString config_dir = qstr(fs::get_config_dir());
+
+		// HACK: dev_flash must be mounted for vfs to work for loading fonts.
+		vfs::mount("dev_flash", fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", Emu.GetEmuDir()));
+
+		// Add PS3 fonts
+		QDirIterator ps3_font_it(qstr(vfs::get("/dev_flash/data/font/")), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+		while (ps3_font_it.hasNext())
+			QFontDatabase::addApplicationFont(ps3_font_it.next());
+
+		// Add custom fonts
+		QDirIterator custom_font_it(config_dir + "fonts/", QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+		while (custom_font_it.hasNext())
+			QFontDatabase::addApplicationFont(custom_font_it.next());
+
+		// Set root for stylesheets
+		QDir::setCurrent(config_dir);
 		setStyleSheet(file.readAll());
 		file.close();
 	}
+	gui::stylesheet = styleSheet();
+	RPCS3MainWin->RepaintGui();
 }
 
 /**
@@ -268,18 +385,4 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 void rpcs3_app::HandleCallAfter(const std::function<void()>& func)
 {
 	func();
-}
-
-/**
- * We need to make this in the main thread to receive events from the main thread.
- * This leads to the tricky situation.  Creating it while booting leads to deadlock with a blocking connection.
- * So, I need to make them before, but when?
- * I opted to reset them when the Emu stops and on first init. Potentially a race condition on restart? Never encountered issues.
- * The other tricky issue is that I don't want Init to be called twice on the same object. Reseting the pointer on emu stop should handle this as well!
-*/
-void rpcs3_app::ResetPads()
-{
-	m_basicKeyboardHandler.reset(new basic_keyboard_handler(this, this));
-	m_basicMouseHandler.reset(new basic_mouse_handler(this, this));
-	m_keyboardPadHandler.reset(new keyboard_pad_handler(this, this));
 }

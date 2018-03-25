@@ -9,7 +9,7 @@
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_event_flag.h"
 
-namespace vm { using namespace ps3; }
+
 
 // Error Codes
 enum

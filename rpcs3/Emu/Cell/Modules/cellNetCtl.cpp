@@ -125,20 +125,25 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
 	cellNetCtl.todo("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 
+	if (code == CELL_NET_CTL_INFO_ETHER_ADDR)
+	{
+		// dummy values set
+		std::memset(info->ether_addr.data, 0xFF, sizeof(info->ether_addr.data));
+		return CELL_OK;
+	}
+
+	if (g_cfg.net.net_status == CELL_NET_CTL_STATE_Disconnected)
+	{
+		return CELL_NET_CTL_ERROR_NOT_CONNECTED;
+	}
+
 	if (code == CELL_NET_CTL_INFO_MTU)
 	{
 		info->mtu = 1500;
 	}
 	else if (code == CELL_NET_CTL_INFO_LINK)
 	{
-		if (g_cfg.net.net_status != CELL_NET_CTL_STATE_Disconnected)
-		{
-			info->link = CELL_NET_CTL_LINK_CONNECTED;
-		}
-		else
-		{
-			info->link = CELL_NET_CTL_LINK_DISCONNECTED;
-		}
+		info->link = CELL_NET_CTL_LINK_CONNECTED;
 	}
 	else if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
 	{
@@ -155,6 +160,10 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	else if (code == CELL_NET_CTL_INFO_NETMASK)
 	{
 		strcpy_trunc(info->netmask, "255.255.255.255");
+	}
+	else if (code == CELL_NET_CTL_INFO_HTTP_PROXY_CONFIG)
+	{
+		info->http_proxy_config = 0;
 	}
 
 	return CELL_OK;
@@ -198,7 +207,55 @@ error_code cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 		cellNetCtl.error("cellNetCtlGetNatInfo : CELL_NET_CTL_ERROR_INVALID_SIZE");
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}
-	
+
+	return CELL_OK;
+}
+
+error_code cellNetCtlAddHandlerGameInt()
+{
+	cellNetCtl.todo("cellNetCtlAddHandlerGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlConnectGameInt()
+{
+	cellNetCtl.todo("cellNetCtlConnectGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlDelHandlerGameInt()
+{
+	cellNetCtl.todo("cellNetCtlDelHandlerGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlDisconnectGameInt()
+{
+	cellNetCtl.todo("cellNetCtlDisconnectGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlGetInfoGameInt()
+{
+	cellNetCtl.todo("cellNetCtlGetInfoGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlGetScanInfoGameInt()
+{
+	cellNetCtl.todo("cellNetCtlGetScanInfoGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlGetStateGameInt()
+{
+	cellNetCtl.todo("cellNetCtlGetStateGameInt()");
+	return CELL_OK;
+}
+
+error_code cellNetCtlScanGameInt()
+{
+	cellNetCtl.todo("cellNetCtlScanGameInt()");
 	return CELL_OK;
 }
 
@@ -217,18 +274,33 @@ error_code cellGameUpdateTerm()
 error_code cellGameUpdateCheckStartAsync(vm::cptr<CellGameUpdateParam> param, vm::ptr<CellGameUpdateCallback> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckStartAsync(param=*0x%x, cb_func=*0x%x, userdata=*0x%x)", param, cb_func, userdata);
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		cb_func(ppu, CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK, userdata);
+		return CELL_OK;
+	});
 	return CELL_OK;
 }
 
 error_code cellGameUpdateCheckFinishAsync(vm::ptr<CellGameUpdateCallback> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckFinishAsync(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		cb_func(ppu, CELL_GAMEUPDATE_RESULT_STATUS_FINISHED, CELL_OK, userdata);
+		return CELL_OK;
+	});
 	return CELL_OK;
 }
 
 error_code cellGameUpdateCheckStartWithoutDialogAsync(vm::ptr<CellGameUpdateCallback> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckStartWithoutDialogAsync(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		cb_func(ppu, CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK, userdata);
+		return CELL_OK;
+	});
 	return CELL_OK;
 }
 
@@ -241,18 +313,34 @@ error_code cellGameUpdateCheckAbort()
 error_code cellGameUpdateCheckStartAsyncEx(vm::cptr<CellGameUpdateParam> param, vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckStartAsyncEx(param=*0x%x, cb_func=*0x%x, userdata=*0x%x)", param, cb_func, userdata);
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		cb_func(ppu, vm::make_var(CellGameUpdateResult{ CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK, 0x0, 0x0}), userdata);
+		return CELL_OK;
+	});
 	return CELL_OK;
 }
 
 error_code cellGameUpdateCheckFinishAsyncEx(vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckFinishAsyncEx(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
+	const s32 PROCESSING_COMPLETE = 5;
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		cb_func(ppu, vm::make_var(CellGameUpdateResult{ CELL_GAMEUPDATE_RESULT_STATUS_FINISHED, CELL_OK, 0x0, 0x0}), userdata);
+		return CELL_OK;
+	});
 	return CELL_OK;
 }
 
 error_code cellGameUpdateCheckStartWithoutDialogAsyncEx(vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckStartWithoutDialogAsyncEx(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		cb_func(ppu, vm::make_var(CellGameUpdateResult{ CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK, 0x0, 0x0}), userdata);
+		return CELL_OK;
+	});
 	return CELL_OK;
 }
 
@@ -273,6 +361,15 @@ DECLARE(ppu_module_manager::cellNetCtl)("cellNetCtl", []()
 	REG_FUNC(cellNetCtl, cellNetCtlNetStartDialogUnloadAsync);
 
 	REG_FUNC(cellNetCtl, cellNetCtlGetNatInfo);
+
+	REG_FUNC(cellNetCtl, cellNetCtlAddHandlerGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlConnectGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlDelHandlerGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlDisconnectGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlGetInfoGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlGetScanInfoGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlGetStateGameInt);
+	REG_FUNC(cellNetCtl, cellNetCtlScanGameInt);
 
 	REG_FUNC(cellNetCtl, cellGameUpdateInit);
 	REG_FUNC(cellNetCtl, cellGameUpdateTerm);

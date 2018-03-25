@@ -29,6 +29,7 @@ namespace rsx
 		draw_command command;
 
 		bool is_immediate_draw;
+		bool is_disjoint_primitive;
 
 		std::vector<u32> inline_vertex_array;
 
@@ -36,6 +37,11 @@ namespace rsx
 		* Stores the first and count argument from draw/draw indexed parameters between begin/end clauses.
 		*/
 		std::vector<std::pair<u32, u32> > first_count_commands;
+
+		/**
+		 * Optionally split first-count pairs for disjoint range rendering. Valid when emulating primitive restart
+		 */
+		std::vector<std::pair<u32, u32> > alternate_first_count_commands;
 
 		/**
 		 * Returns how many vertex or index will be consumed by the draw clause.
@@ -149,7 +155,7 @@ namespace rsx
 
 
 		std::array<u32, 512 * 4> transform_program;
-		std::unordered_map<u32, color4_base<f32>> transform_constants;
+		std::array<u32[4], 512> transform_constants;
 
 		draw_clause current_draw_clause;
 
@@ -177,11 +183,16 @@ namespace rsx
 			fragment_textures(fill_array<fragment_texture>(registers, std::make_index_sequence<16>())),
 			vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
 			vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
-		{ }
+		{
+			//NOTE: Transform constants persist through a context reset (NPEB00913)
+			memset(transform_constants.data(), 0, 512 * 4 * sizeof(u32));
+		}
 
 		~rsx_state() { }
 
 		void decode(u32 reg, u32 value);
+
+		bool test(u32 reg, u32 value) const;
 
 		void reset();
 
@@ -249,14 +260,29 @@ namespace rsx
 			return decode<NV4097_SET_SHADER_WINDOW>().window_shader_height();
 		}
 
-		u16 shader_window_offset_x() const
+		u16 window_offset_x() const
 		{
 			return decode<NV4097_SET_WINDOW_OFFSET>().window_offset_x();
 		}
 
-		u16 shader_window_offset_y() const
+		u16 window_offset_y() const
 		{
 			return decode<NV4097_SET_WINDOW_OFFSET>().window_offset_y();
+		}
+
+		u32 window_clip_type() const
+		{
+			return registers[NV4097_SET_WINDOW_CLIP_TYPE];
+		}
+
+		u32 window_clip_horizontal() const
+		{
+			return registers[NV4097_SET_WINDOW_CLIP_HORIZONTAL];
+		}
+
+		u32 window_clip_vertical() const
+		{
+			return registers[NV4097_SET_WINDOW_CLIP_HORIZONTAL];
 		}
 
 		bool depth_test_enabled() const
@@ -337,6 +363,11 @@ namespace rsx
 		bool color_mask_a() const
 		{
 			return decode<NV4097_SET_COLOR_MASK>().color_a();
+		}
+
+		bool color_write_enabled() const
+		{
+			return decode<NV4097_SET_COLOR_MASK>().color_write_enabled();
 		}
 
 		u8 clear_color_b() const
@@ -652,6 +683,11 @@ namespace rsx
 		f32 line_width() const
 		{
 			return decode<NV4097_SET_LINE_WIDTH>().line_width();
+		}
+
+		f32 point_size() const
+		{
+			return decode<NV4097_SET_POINT_SIZE>().point_size();
 		}
 
 		u8 alpha_ref() const
@@ -1152,6 +1188,46 @@ namespace rsx
 		u32 transform_branch_bits()
 		{
 			return registers[NV4097_SET_TRANSFORM_BRANCH_BITS];
+		}
+
+		u16 msaa_sample_mask()
+		{
+			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_sample_mask();
+		}
+
+		bool msaa_enabled()
+		{
+			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_enabled();
+		}
+
+		bool msaa_alpha_to_coverage_enabled()
+		{
+			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_alpha_to_coverage();
+		}
+
+		bool msaa_alpha_to_one_enabled()
+		{
+			return decode<NV4097_SET_ANTI_ALIASING_CONTROL>().msaa_alpha_to_one();
+		}
+
+		bool depth_clamp_enabled()
+		{
+			return decode<NV4097_SET_ZMIN_MAX_CONTROL>().depth_clamp_enabled();
+		}
+
+		bool depth_clip_enabled()
+		{
+			return decode<NV4097_SET_ZMIN_MAX_CONTROL>().depth_clip_enabled();
+		}
+
+		bool depth_clip_ignore_w()
+		{
+			return decode<NV4097_SET_ZMIN_MAX_CONTROL>().depth_clip_ignore_w();
+		}
+
+		bool framebuffer_srgb_enabled()
+		{
+			return decode<NV4097_SET_SHADER_PACKER>().srgb_output_enabled();
 		}
 	};
 

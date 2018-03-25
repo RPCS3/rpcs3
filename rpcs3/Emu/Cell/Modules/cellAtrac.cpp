@@ -195,6 +195,12 @@ s32 cellAtracGetInternalErrorInfo(vm::ptr<CellAtracHandle> pHandle, vm::ptr<s32>
 	return CELL_OK;
 }
 
+s32 cellAtracGetSamplingRate()
+{
+	UNIMPLEMENTED_FUNC(cellAtrac);
+	return CELL_OK;
+}
+
 DECLARE(ppu_module_manager::cellAtrac)("cellAtrac", []()
 {
 	REG_FUNC(cellAtrac, cellAtracSetDataAndGetMemSize);
@@ -227,4 +233,6 @@ DECLARE(ppu_module_manager::cellAtrac)("cellAtrac", []()
 	REG_FUNC(cellAtrac, cellAtracResetPlayPosition);
 
 	REG_FUNC(cellAtrac, cellAtracGetInternalErrorInfo);
+
+	REG_FUNC(cellAtrac, cellAtracGetSamplingRate);
 });

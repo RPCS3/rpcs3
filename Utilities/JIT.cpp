@@ -30,6 +30,8 @@
 
 #ifdef _WIN32
 #include <Windows.h>
+#else
+#include <sys/mman.h>
 #endif
 
 #include "JIT.h"
@@ -47,6 +49,11 @@ static void* const s_memory = []() -> void*
 	llvm::InitializeNativeTargetAsmPrinter();
 	LLVMLinkInMCJIT();
 
+#ifdef MAP_32BIT
+	auto ptr = ::mmap(nullptr, s_memory_size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_32BIT, -1, 0);
+	if (ptr != MAP_FAILED)
+		return ptr;
+#else
 	for (u64 addr = 0x10000000; addr <= 0x80000000 - s_memory_size; addr += 0x1000000)
 	{
 		if (auto ptr = utils::memory_reserve(s_memory_size, (void*)addr))
@@ -54,6 +61,7 @@ static void* const s_memory = []() -> void*
 			return ptr;
 		}
 	}
+#endif
 
 	return utils::memory_reserve(s_memory_size);
 }();
@@ -63,6 +71,8 @@ static void* s_next = s_memory;
 #ifdef _WIN32
 static std::deque<std::vector<RUNTIME_FUNCTION>> s_unwater;
 static std::vector<std::vector<RUNTIME_FUNCTION>> s_unwind; // .pdata
+#else
+static std::deque<std::tuple<u8*, u64, std::size_t>> s_unfire;
 #endif
 
 // Reset memory manager
@@ -79,7 +89,30 @@ extern void jit_finalize()
 
 	s_unwind.clear();
 #else
-	// TODO: unregister EH frames if necessary
+	struct MemoryManager : llvm::RTDyldMemoryManager
+	{
+		u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
+		{
+			return nullptr;
+		}
+
+		u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
+		{
+			return nullptr;
+		}
+
+		bool finalizeMemory(std::string* = nullptr) override
+		{
+			return false;
+		}
+	} mem;
+
+	for (auto&& t : s_unfire)
+	{
+		mem.deregisterEHFrames(std::get<0>(t), std::get<1>(t), std::get<2>(t));
+	}
+
+	s_unfire.clear();
 #endif
 
 	utils::memory_decommit(s_memory, s_memory_size);
@@ -90,13 +123,13 @@ extern void jit_finalize()
 // Helper class
 struct MemoryManager : llvm::RTDyldMemoryManager
 {
-	std::unordered_map<std::string, std::uintptr_t>& m_link;
+	std::unordered_map<std::string, u64>& m_link;
 
 	std::array<u8, 16>* m_tramps{};
 
 	u8* m_code_addr{}; // TODO
 
-	MemoryManager(std::unordered_map<std::string, std::uintptr_t>& table)
+	MemoryManager(std::unordered_map<std::string, u64>& table)
 		: m_link(table)
 	{
 	}
@@ -163,7 +196,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		return {addr, llvm::JITSymbolFlags::Exported};
 	}
 
-	virtual u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
+	u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
 	{
 		// Lock memory manager
 		writer_lock lock(s_mutex);
@@ -184,7 +217,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		return (u8*)std::exchange(s_next, (void*)next);
 	}
 
-	virtual u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
+	u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
 	{
 		// Lock memory manager
 		writer_lock lock(s_mutex);
@@ -209,7 +242,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		return (u8*)std::exchange(s_next, (void*)next);
 	}
 
-	virtual bool finalizeMemory(std::string* = nullptr) override
+	bool finalizeMemory(std::string* = nullptr) override
 	{
 		// Lock memory manager
 		writer_lock lock(s_mutex);
@@ -226,7 +259,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		return false;
 	}
 
-	virtual void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
 	{
 #ifdef _WIN32
 		// Lock memory manager
@@ -253,16 +286,15 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		{
 			s_unwind.emplace_back(std::move(pdata));
 		}
+#else
+		s_unfire.push_front(std::make_tuple(addr, load_addr, size));
 #endif
 
 		return RTDyldMemoryManager::registerEHFrames(addr, load_addr, size);
 	}
 
-	virtual void deregisterEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	void deregisterEHFrames(u8* addr, u64 load_addr, std::size_t size) override
 	{
-		LOG_ERROR(GENERAL, "deregisterEHFrames() called"); // Not expected
-
-		return RTDyldMemoryManager::deregisterEHFrames(addr, load_addr, size);
 	}
 };
 
@@ -276,7 +308,7 @@ struct EventListener : llvm::JITEventListener
 	{
 	}
 
-	virtual void NotifyObjectEmitted(const llvm::object::ObjectFile& obj, const llvm::RuntimeDyld::LoadedObjectInfo& inf) override
+	void NotifyObjectEmitted(const llvm::object::ObjectFile& obj, const llvm::RuntimeDyld::LoadedObjectInfo& inf) override
 	{
 #ifdef _WIN32
 		for (auto it = obj.section_begin(), end = obj.section_end(); it != end; ++it)
@@ -371,10 +403,10 @@ public:
 	}
 };
 
-jit_compiler::jit_compiler(const std::unordered_map<std::string, std::uintptr_t>& _link, std::string _cpu)
-	: m_link(std::move(_link))
-	, m_cpu(std::move(_cpu))
+std::string jit_compiler::cpu(const std::string& _cpu)
 {
+	std::string m_cpu = _cpu;
+
 	if (m_cpu.empty())
 	{
 		m_cpu = llvm::sys::getHostCPUName();
@@ -394,6 +426,13 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, std::uintptr_t>
 		}
 	}
 
+	return m_cpu;
+}
+
+jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu)
+	: m_link(_link)
+	, m_cpu(cpu(_cpu))
+{
 	std::string result;
 
 	if (m_link.empty())

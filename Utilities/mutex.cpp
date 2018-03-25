@@ -1,7 +1,12 @@
 #include "mutex.h"
 #include "sync.h"
 
-#include <limits.h>
+#include <climits>
+#include <vector>
+#include <algorithm>
+
+// TLS variable for tracking owned mutexes
+thread_local std::vector<shared_mutex*> g_tls_locks;
 
 void shared_mutex::imp_lock_shared(s64 _old)
 {
@@ -59,7 +64,7 @@ void shared_mutex::imp_lock_shared(s64 _old)
 
 		if (value0 >= c_min)
 		{
-			return;	
+			return;
 		}
 
 		// Acquire writer lock
@@ -74,7 +79,7 @@ void shared_mutex::imp_lock_shared(s64 _old)
 		}
 
 		value1 += c_one - c_min;
-		
+
 		if (value1 > 0)
 		{
 			return;
@@ -104,7 +109,7 @@ void shared_mutex::imp_lock_shared(s64 _old)
 		{
 			return;
 		}
-		
+
 		imp_unlock_shared(value2);
 	}
 #endif
@@ -217,12 +222,14 @@ void shared_mutex::imp_unlock(s64 _old)
 
 void shared_mutex::imp_lock_upgrade()
 {
+	// TODO
 	unlock_shared();
 	lock();
 }
 
 void shared_mutex::imp_lock_degrade()
 {
+	// TODO
 	unlock();
 	lock_shared();
 }
@@ -249,4 +256,79 @@ bool shared_mutex::try_lock_degrade()
 {
 	// TODO
 	return m_value.compare_and_swap_test(0, c_one - c_min);
+}
+
+safe_reader_lock::safe_reader_lock(shared_mutex& mutex)
+	: m_mutex(mutex)
+	, m_is_owned(false)
+{
+	if (std::count(g_tls_locks.cbegin(), g_tls_locks.cend(), &m_mutex) == 0)
+	{
+		m_is_owned = true;
+
+		if (m_is_owned)
+		{
+			m_mutex.lock_shared();
+			g_tls_locks.emplace_back(&m_mutex);
+			return;
+		}
+
+		// TODO: order locks
+	}
+}
+
+safe_reader_lock::~safe_reader_lock()
+{
+	if (m_is_owned)
+	{
+		m_mutex.unlock_shared();
+		g_tls_locks.erase(std::remove(g_tls_locks.begin(), g_tls_locks.end(), &m_mutex), g_tls_locks.cend());
+		return;
+	}
+
+	// TODO: order locks
+}
+
+safe_writer_lock::safe_writer_lock(shared_mutex& mutex)
+	: m_mutex(mutex)
+	, m_is_owned(false)
+	, m_is_upgraded(false)
+{
+	if (std::count(g_tls_locks.cbegin(), g_tls_locks.cend(), &m_mutex) == 0)
+	{
+		m_is_owned = true;
+
+		if (m_is_owned)
+		{
+			m_mutex.lock();
+			g_tls_locks.emplace_back(&m_mutex);
+			return;
+		}
+
+		// TODO: order locks
+	}
+
+	if (m_mutex.is_reading())
+	{
+		m_is_upgraded = true;
+		m_mutex.lock_upgrade();
+	}
+}
+
+safe_writer_lock::~safe_writer_lock()
+{
+	if (m_is_upgraded)
+	{
+		m_mutex.lock_degrade();
+		return;
+	}
+
+	if (m_is_owned)
+	{
+		m_mutex.unlock();
+		g_tls_locks.erase(std::remove(g_tls_locks.begin(), g_tls_locks.end(), &m_mutex), g_tls_locks.cend());
+		return;
+	}
+
+	// TODO: order locks
 }

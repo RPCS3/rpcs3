@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-namespace vm { using namespace ps3; }
+
 
 enum
 {
@@ -14,7 +14,7 @@ enum
 };
 
 // Parameter IDs
-enum
+enum CellSysutilParamId: s32
 {
 	// Integers
 	CELL_SYSUTIL_SYSTEMPARAM_ID_LANG                            = 0x0111,
@@ -32,6 +32,7 @@ enum
 	CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD  = 0x0154,
 	CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD   = 0x0155,
 	CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF                     = 0x0156,
+	CELL_SYSUTIL_SYSTEMPARAM_ID_MAGNETOMETER                    = 0x0157,
 
 	// Strings
 	CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME                        = 0x0113,
@@ -141,9 +142,9 @@ enum
 enum
 {
 	CELL_SYSCACHE_RET_OK_CLEARED      = 0,
-	CELL_SYSCACHE_RET_OK_RELAYED      = 1, 
+	CELL_SYSCACHE_RET_OK_RELAYED      = 1,
 
-	CELL_SYSCACHE_ID_SIZE             = 32,	
+	CELL_SYSCACHE_ID_SIZE             = 32,
 	CELL_SYSCACHE_PATH_MAX            = 1055,
 
 	CELL_SYSCACHE_ERROR_ACCESS_ERROR  = 0x8002bc01, // I don't think we need this

@@ -1,6 +1,7 @@
 #pragma once
 #include "Utilities/types.h"
 #include "Utilities/BitField.h"
+#include "Utilities/StrFmt.h"
 #include <tuple>
 #include "gcm_enums.h"
 #pragma warning(disable:4503)
@@ -27,7 +28,7 @@ namespace
 		case rsx::vertex_base_type::cmp: return "CMP";
 		case rsx::vertex_base_type::ub256: return "Unsigned byte unormalized";
 		}
-		throw;
+		fmt::throw_exception("Unexpected enum found" HERE);
 	}
 }
 
@@ -697,6 +698,46 @@ struct registers_decoder<NV4097_SET_DEPTH_MASK>
 	static std::string dump(decoded_type &&decoded_values)
 	{
 		return "Depth: write " + print_boolean(decoded_values.depth_write_enabled());
+	}
+};
+
+template<>
+struct registers_decoder<NV4097_SET_ZMIN_MAX_CONTROL>
+{
+	struct decoded_type
+	{
+	private:
+		union
+		{
+			u32 raw_value;
+			bitfield_decoder_t<0, 4> depth_clip_enabled;
+			bitfield_decoder_t<4, 4> depth_clamp_enabled;
+			bitfield_decoder_t<8, 4> depth_clip_ignore_w;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		bool depth_clip_enabled() const
+		{
+			return bool(m_data.depth_clip_enabled);
+		}
+
+		bool depth_clamp_enabled() const
+		{
+			return bool(m_data.depth_clamp_enabled);
+		}
+
+		bool depth_clip_ignore_w() const
+		{
+			return bool(m_data.depth_clip_ignore_w);
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Depth: clip_enabled " + print_boolean(decoded_values.depth_clip_enabled()) +
+			" clamp " + print_boolean(decoded_values.depth_clamp_enabled()) +
+			" ignore_w " + print_boolean(decoded_values.depth_clip_ignore_w());
 	}
 };
 
@@ -1860,6 +1901,31 @@ struct registers_decoder<NV4097_SET_SHADER_CONTROL>
 			" reg_count = " + std::to_string((decoded_values.shader_ctrl() >> 24) & 0xFF) +
 			((decoded_values.shader_ctrl() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) ? " depth_replace " : "") +
 			((decoded_values.shader_ctrl() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? " 32b_exports " : "");
+	}
+};
+
+template<>
+struct registers_decoder<NV4097_SET_SHADER_PACKER>
+{
+	struct decoded_type
+	{
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		bool srgb_output_enabled() const
+		{
+			return !!m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Shader packer control: srgb_enabled = " + std::to_string(decoded_values.srgb_output_enabled());
 	}
 };
 
@@ -3195,6 +3261,11 @@ struct registers_decoder<NV4097_SET_COLOR_MASK>
 		{
 			return bool(m_data.color_a);
 		}
+
+		bool color_write_enabled() const
+		{
+			return m_data.raw_data != 0;
+		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
@@ -3370,6 +3441,31 @@ struct registers_decoder<NV4097_SET_LINE_WIDTH>
 	static std::string dump(decoded_type &&decoded_values)
 	{
 		return "Line width: " + std::to_string(decoded_values.line_width());
+	}
+};
+
+template<>
+struct registers_decoder<NV4097_SET_POINT_SIZE>
+{
+	struct decoded_type
+	{
+	private:
+		union
+		{
+			u32 raw_data;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_data = raw_value; }
+
+		f32 point_size() const
+		{
+			return (f32&)m_data.raw_data;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Point size: " + std::to_string(decoded_values.point_size());
 	}
 };
 
@@ -4007,21 +4103,23 @@ struct registers_decoder<NV3089_IMAGE_IN>
 	public:
 		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-		u16 x() const
+		// x and y given as 16 bit fixed point
+
+		f32 x() const
 		{
-			return m_data.x;
+			return m_data.x / 16.f;
 		}
 
-		u16 y() const
+		f32 y() const
 		{
-			return m_data.y;
+			return m_data.y / 16.f;
 		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV3089: in x = " + std::to_string(decoded_values.x() / 16.f) +
-			" y = " + std::to_string(decoded_values.y() / 16.f);
+		return "NV3089: in x = " + std::to_string(decoded_values.x()) +
+			" y = " + std::to_string(decoded_values.y());
 	}
 };
 

@@ -2,69 +2,79 @@
 
 #include "Utilities/Config.h"
 #include "Emu/Io/PadHandler.h"
-#include "stdafx.h"
-#include "Emu/System.h"
 
+#include <QWindow>
 #include <QKeyEvent>
-#include <QObject>
-
-struct keyboard_pad_config final : cfg::node
-{
-	const std::string cfg_name = fs::get_config_dir() + "/config_kbpad_qt.yml";
-
-	cfg::int32 left_stick_left{ this, "Left Analog Stick Left", Qt::Key_A };
-	cfg::int32 left_stick_down{ this, "Left Analog Stick Down", Qt::Key_S };
-	cfg::int32 left_stick_right{ this, "Left Analog Stick Right", Qt::Key_D };
-	cfg::int32 left_stick_up{ this, "Left Analog Stick Up", Qt::Key_W };
-	cfg::int32 right_stick_left{ this, "Right Analog Stick Left", Qt::Key_Home };
-	cfg::int32 right_stick_down{ this, "Right Analog Stick Down", Qt::Key_PageDown };
-	cfg::int32 right_stick_right{ this, "Right Analog Stick Right", Qt::Key_End };
-	cfg::int32 right_stick_up{ this, "Right Analog Stick Up", Qt::Key_PageUp };
-	cfg::int32 start{ this, "Start", Qt::Key_Return };
-	cfg::int32 select{ this, "Select", Qt::Key_Space };
-	cfg::int32 square{ this, "Square", Qt::Key_Z };
-	cfg::int32 cross{ this, "Cross", Qt::Key_X };
-	cfg::int32 circle{ this, "Circle", Qt::Key_C };
-	cfg::int32 triangle{ this, "Triangle", Qt::Key_V };
-	cfg::int32 left{ this, "Left", Qt::Key_Left };
-	cfg::int32 down{ this, "Down", Qt::Key_Down };
-	cfg::int32 right{ this, "Right", Qt::Key_Right };
-	cfg::int32 up{ this, "Up", Qt::Key_Up };
-	cfg::int32 r1{ this, "R1", Qt::Key_E };
-	cfg::int32 r2{ this, "R2", Qt::Key_T };
-	cfg::int32 r3{ this, "R3", Qt::Key_G };
-	cfg::int32 l1{ this, "L1", Qt::Key_Q };
-	cfg::int32 l2{ this, "L2", Qt::Key_R };
-	cfg::int32 l3{ this, "L3", Qt::Key_F };
-
-	bool load()
-	{
-		if (fs::file cfg_file{ cfg_name, fs::read })
-		{
-			return from_string(cfg_file.to_string());
-		}
-
-		return false;
-	}
-
-	void save()
-	{
-		fs::file(cfg_name, fs::rewrite).write(to_string());
-	}
-};
 
 class keyboard_pad_handler final : public QObject, public PadHandlerBase
 {
+	// Unique button names for the config files and our pad settings dialog
+	const std::unordered_map<u32, std::string> mouse_list =
+	{
+		{ Qt::NoButton       , ""             },
+		{ Qt::LeftButton     , "Mouse Left"   },
+		{ Qt::RightButton    , "Mouse Right"  },
+		{ Qt::MiddleButton   , "Mouse Middle" },
+		{ Qt::BackButton     , "Mouse Back"   },
+		{ Qt::ForwardButton  , "Mouse Fwd"    },
+		{ Qt::TaskButton     , "Mouse Task"   },
+		{ Qt::ExtraButton4   , "Mouse 4"      },
+		{ Qt::ExtraButton5   , "Mouse 5"      },
+		{ Qt::ExtraButton6   , "Mouse 6"      },
+		{ Qt::ExtraButton7   , "Mouse 7"      },
+		{ Qt::ExtraButton8   , "Mouse 8"      },
+		{ Qt::ExtraButton9   , "Mouse 9"      },
+		{ Qt::ExtraButton10  , "Mouse 10"     },
+		{ Qt::ExtraButton11  , "Mouse 11"     },
+		{ Qt::ExtraButton12  , "Mouse 12"     },
+		{ Qt::ExtraButton13  , "Mouse 13"     },
+		{ Qt::ExtraButton14  , "Mouse 14"     },
+		{ Qt::ExtraButton15  , "Mouse 15"     },
+		{ Qt::ExtraButton16  , "Mouse 16"     },
+		{ Qt::ExtraButton17  , "Mouse 17"     },
+		{ Qt::ExtraButton18  , "Mouse 18"     },
+		{ Qt::ExtraButton19  , "Mouse 19"     },
+		{ Qt::ExtraButton20  , "Mouse 20"     },
+		{ Qt::ExtraButton21  , "Mouse 21"     },
+		{ Qt::ExtraButton22  , "Mouse 22"     },
+		{ Qt::ExtraButton23  , "Mouse 23"     },
+		{ Qt::ExtraButton24  , "Mouse 24"     },
+	};
+
 public:
-	virtual void Init(const u32 max_connect) override;
+	bool Init() override;
 
-	keyboard_pad_handler(QObject* target, QObject* parent);
+	keyboard_pad_handler();
 
+	void SetTargetWindow(QWindow* target);
+	void processKeyEvent(QKeyEvent* event, bool pressed);
 	void keyPressEvent(QKeyEvent* event);
 	void keyReleaseEvent(QKeyEvent* event);
-	void LoadSettings();
+	void mousePressEvent(QMouseEvent* event);
+	void mouseReleaseEvent(QMouseEvent* event);
 
-	bool eventFilter(QObject* obj, QEvent* ev);
+	bool eventFilter(QObject* obj, QEvent* ev) override;
+
+	void init_config(pad_config* cfg, const std::string& name) override;
+	std::vector<std::string> ListDevices() override;
+	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
+	void ThreadProc() override;
+
+	std::string GetMouseName(const QMouseEvent* event);
+	std::string GetMouseName(u32 button);
+	QStringList GetKeyNames(const QKeyEvent* keyEvent);
+	std::string GetKeyName(const QKeyEvent* keyEvent);
+	std::string GetKeyName(const u32& keyCode);
+	u32 GetKeyCode(const std::string& keyName);
+	u32 GetKeyCode(const QString& keyName);
+
+protected:
+	void Key(const u32 code, bool pressed, u16 value = 255);
+	int GetModifierCode(QKeyEvent* e);
+
 private:
-	QObject* m_target;
+	QWindow* m_target = nullptr;
+	std::vector<std::shared_ptr<Pad>> bindings;
+	u8 m_stick_min[4] = { 0, 0, 0, 0 };
+	u8 m_stick_max[4] = { 128, 128, 128, 128 };
 };

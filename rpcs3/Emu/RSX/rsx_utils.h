@@ -1,7 +1,16 @@
 #pragma once
 
+#include "../System.h"
 #include "gcm_enums.h"
 #include <atomic>
+
+// TODO: replace the code below by #include <optional> when C++17 or newer will be used
+#include <optional.hpp>
+namespace std
+{
+	template<class T>
+	using optional = experimental::optional<T>;
+}
 
 extern "C"
 {
@@ -10,6 +19,14 @@ extern "C"
 
 namespace rsx
 {
+	//Base for resources with reference counting
+	struct ref_counted
+	{
+		u8 deref_count = 0;
+
+		void reset_refs() { deref_count = 0; }
+	};
+
 	//Holds information about a framebuffer
 	struct gcm_framebuffer_info
 	{
@@ -35,6 +52,20 @@ namespace rsx
 		{}
 	};
 
+	struct avconf
+	{
+		u8 format = 0; //XRGB
+		u8 aspect = 0; //AUTO
+		u32 scanline_pitch = 0; //PACKED
+		f32 gamma = 1.f; //NO GAMMA CORRECTION
+	};
+
+	static const std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector =
+	{
+		{ CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B },
+		{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
+	};
+
 	template<typename T>
 	void pad_texture(void* input_pixels, void* output_pixels, u16 input_width, u16 input_height, u16 output_width, u16 output_height)
 	{
@@ -56,6 +87,13 @@ namespace rsx
 	static inline u32 ceil_log2(u32 value)
 	{
 		return value <= 1 ? 0 : ::cntlz32((value - 1) << 1, true) ^ 31;
+	}
+
+	static inline u32 next_pow2(u32 x)
+	{
+		if (x <= 2) return x;
+
+		return static_cast<u32>((1ULL << 32) >> ::cntlz32(x - 1, true));
 	}
 
 	/*   Note: What the ps3 calls swizzling in this case is actually z-ordering / morton ordering of pixels
@@ -134,7 +172,7 @@ namespace rsx
 		}
 	}
 
-	void scale_image_nearest(void* dst, const void* src, u16 src_width, u16 src_height, u16 dst_pitch, u16 src_pitch, u8 pixel_size, u8 samples, bool swap_bytes = false);
+	void scale_image_nearest(void* dst, const void* src, u16 src_width, u16 src_height, u16 dst_pitch, u16 src_pitch, u8 pixel_size, u8 samples_u, u8 samples_v, bool swap_bytes = false);
 
 	void convert_scale_image(u8 *dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
 		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear);
@@ -145,6 +183,9 @@ namespace rsx
 	void clip_image(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch);
 	void clip_image(std::unique_ptr<u8[]>& dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch);
 
+	void convert_le_f32_to_be_d24(void *dst, void *src, u32 row_length_in_texels, u32 num_rows);
+	void convert_le_d24x8_to_be_d24x8(void *dst, void *src, u32 row_length_in_texels, u32 num_rows);
+
 	void fill_scale_offset_matrix(void *dest_, bool transpose,
 		float offset_x, float offset_y, float offset_z,
 		float scale_x, float scale_y, float scale_z);
@@ -152,6 +193,38 @@ namespace rsx
 	void fill_viewport_matrix(void *buffer, bool transpose);
 
 	std::array<float, 4> get_constant_blend_colors();
+
+	/**
+	 * Shuffle texel layout from xyzw to wzyx
+	 * TODO: Variable src/dst and optional se conversion
+	 */
+	template <typename T>
+	void shuffle_texel_data_wzyx(void *data, u16 row_pitch_in_bytes, u16 row_length_in_texels, u16 num_rows)
+	{
+		char *raw_src = (char*)data;
+		T tmp[4];
+
+		for (u16 n = 0; n < num_rows; ++n)
+		{
+			T* src = (T*)raw_src;
+			raw_src += row_pitch_in_bytes;
+
+			for (u16 m = 0; m < row_length_in_texels; ++m)
+			{
+				tmp[0] = src[3];
+				tmp[1] = src[2];
+				tmp[2] = src[1];
+				tmp[3] = src[0];
+
+				src[0] = tmp[0];
+				src[1] = tmp[1];
+				src[2] = tmp[2];
+				src[3] = tmp[3];
+
+				src += 4;
+			}
+		}
+	}
 
 	/**
 	 * Clips a rect so that it never falls outside the parent region
@@ -208,34 +281,67 @@ namespace rsx
 		return std::make_tuple(x, y, width, height);
 	}
 
-	// Conditional mutex lock for shared mutex types
-	// May silently fail to acquire the lock
-	template <typename lock_type>
-	struct conditional_lock
+	static inline const f32 get_resolution_scale()
 	{
-		lock_type& _ref;
-		std::atomic_bool& _flag;
-		bool acquired = false;
+		return g_cfg.video.strict_rendering_mode? 1.f : ((f32)g_cfg.video.resolution_scale_percent / 100.f);
+	}
 
-		conditional_lock(std::atomic_bool& flag, lock_type& mutex):
-			_ref(mutex), _flag(flag)
+	static inline const int get_resolution_scale_percent()
+	{
+		return g_cfg.video.strict_rendering_mode ? 100 : g_cfg.video.resolution_scale_percent;
+	}
+
+	static inline const u16 apply_resolution_scale(u16 value, bool clamp)
+	{
+		if (value <= g_cfg.video.min_scalable_dimension)
+			return value;
+		else if (clamp)
+			return (u16)std::max((get_resolution_scale_percent() * value) / 100, 1);
+		else
+			return (get_resolution_scale_percent() * value) / 100;
+	}
+
+	static inline const u16 apply_inverse_resolution_scale(u16 value, bool clamp)
+	{
+		u16 result = value;
+
+		if (clamp)
+			result = (u16)std::max((value * 100) / get_resolution_scale_percent(), 1);
+		else
+			result = (value * 100) / get_resolution_scale_percent();
+
+		if (result <= g_cfg.video.min_scalable_dimension)
+			return value;
+
+		return result;
+	}
+
+	template <typename T>
+	void split_index_list(T* indices, int index_count, T restart_index, std::vector<std::pair<u32, u32>>& out)
+	{
+		int last_valid_index = -1;
+		int last_start = -1;
+
+		for (int i = 0; i < index_count; ++i)
 		{
-			const bool _false = false;
-			if (flag.compare_exchange_weak(const_cast<bool&>(_false), true))
+			if (indices[i] == restart_index)
 			{
-				mutex.lock_shared();
-				acquired = true;
+				if (last_start >= 0)
+				{
+					out.push_back(std::make_pair(last_start, i - last_start));
+					last_start = -1;
+				}
+
+				continue;
 			}
+
+			if (last_start < 0)
+				last_start = i;
+
+			last_valid_index = i;
 		}
 
-		~conditional_lock()
-		{
-			if (acquired)
-			{
-				_ref.unlock_shared();
-				_flag.store(false);
-				acquired = false;
-			}
-		}
-	};
+		if (last_start >= 0)
+			out.push_back(std::make_pair(last_start, last_valid_index - last_start + 1));
+	}
 }

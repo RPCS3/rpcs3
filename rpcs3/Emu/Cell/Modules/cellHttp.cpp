@@ -65,6 +65,12 @@ s32 cellHttpSetProxy()
 	return CELL_OK;
 }
 
+s32 cellHttpGetCookie()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
 s32 cellHttpGetProxy()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
@@ -701,6 +707,7 @@ DECLARE(ppu_module_manager::cellHttp)("cellHttp", []()
 	REG_FUNC(cellHttp, cellHttpsInit);
 	REG_FUNC(cellHttp, cellHttpsEnd);
 	REG_FUNC(cellHttp, cellHttpSetProxy);
+	REG_FUNC(cellHttp, cellHttpGetCookie);
 	REG_FUNC(cellHttp, cellHttpGetProxy);
 
 	REG_FUNC(cellHttp, cellHttpInitCookie);

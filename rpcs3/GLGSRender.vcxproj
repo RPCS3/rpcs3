@@ -61,12 +61,17 @@
     <Import Project="..\rpcs3_llvm.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
+    <ClCompile />
+    <ClCompile />
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="emucore.vcxproj">
       <Project>{c4a10229-4712-4bd2-b63e-50d93c67a038}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
     <ClInclude Include="Emu\RSX\GL\GLTextOut.h" />
     <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h" />
     <ClInclude Include="Emu\RSX\GL\GLFragmentProgram.h" />
@@ -84,7 +89,6 @@
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp" />
-    <ClCompile Include="Emu\RSX\GL\GLTextureCache.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLHelpers.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLRenderTargets.cpp" />

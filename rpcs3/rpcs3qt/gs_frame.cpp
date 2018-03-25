@@ -7,12 +7,37 @@
 #include <QKeyEvent>
 #include <QTimer>
 #include <QThread>
+#include <string>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+#include "rpcs3_version.h"
 
-gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disableMouse)
+#ifdef _WIN32
+#include <windows.h>
+#else
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#include <QGuiApplication>
+#include <qpa/qplatformnativeinterface.h>
+#endif
+#include <X11/Xlib.h>
+#endif
+
+constexpr auto qstr = QString::fromStdString;
+
+gs_frame::gs_frame(const QString& title, const QRect& geometry, QIcon appIcon, bool disableMouse)
 	: QWindow(), m_windowTitle(title), m_disable_mouse(disableMouse)
 {
+	//Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
+	std::string version = rpcs3::version.to_string();
+	version = version.substr(0 , version.find_last_of("-"));
+
+	//Add branch and commit hash to version on frame , unless it's master.
+	if ((rpcs3::get_branch().compare("master") != 0) && (rpcs3::get_branch().compare("HEAD") != 0))
+	{
+		version = version + "-" + rpcs3::version.to_string().substr((rpcs3::version.to_string().find_last_of("-") + 1), 8) + "-" + rpcs3::get_branch();
+	}
+
+	m_windowTitle += qstr(" | " + version);
+
 	if (!Emu.GetTitle().empty())
 	{
 		m_windowTitle += qstr(" | " + Emu.GetTitle());
@@ -20,7 +45,7 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 
 	if (!Emu.GetTitleID().empty())
 	{
-		m_windowTitle += qstr(" | [" + Emu.GetTitleID() + ']');
+		m_windowTitle += qstr(" [" + Emu.GetTitleID() + ']');
 	}
 
 	if (!appIcon.isNull())
@@ -28,10 +53,10 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 		setIcon(appIcon);
 	}
 
-	g_cfg.misc.show_fps_in_title ? m_show_fps = true : m_show_fps = false;
+	m_show_fps = static_cast<bool>(g_cfg.misc.show_fps_in_title);
 
-	resize(w, h);
-
+	setGeometry(geometry);
+	setTitle(m_windowTitle);
 	setVisibility(Hidden);
 	create();
 
@@ -42,6 +67,18 @@ gs_frame::gs_frame(const QString& title, int w, int h, QIcon appIcon, bool disab
 void gs_frame::paintEvent(QPaintEvent *event)
 {
 	Q_UNUSED(event);
+}
+
+void gs_frame::showEvent(QShowEvent *event)
+{
+	// we have to calculate new window positions, since the frame is only known once the window was created
+	// the left and right margins are too big on my setup for some reason yet unknown, so we'll have to ignore them
+	int x = geometry().left(); //std::max(geometry().left(), frameMargins().left());
+	int y = std::max(geometry().top(), frameMargins().top());
+
+	setPosition(x, y);
+
+	QWindow::showEvent(event);
 }
 
 void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
@@ -66,7 +103,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.IsStopped())) { Emu.Stop(); return; }
 			break;
 		case Qt::Key_R:
-			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.GetPath().empty())) { Emu.Stop(); Emu.Load(); return; }
+			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.GetBoot().empty())) { Emu.Restart(); return; }
 			break;
 		case Qt::Key_E:
 			if (keyEvent->modifiers() == Qt::ControlModifier)
@@ -114,8 +151,9 @@ void gs_frame::hide()
 
 void gs_frame::show()
 {
-	Emu.CallAfter([=]() {
-		QWindow::show(); 
+	Emu.CallAfter([=]()
+	{
+		QWindow::show();
 		if (g_cfg.misc.start_fullscreen)
 		{
 			setVisibility(FullScreen);
@@ -123,16 +161,32 @@ void gs_frame::show()
 	});
 }
 
-void* gs_frame::handle() const
+display_handle_t gs_frame::handle() const
 {
 #ifdef _WIN32
 	return (HWND) this->winId();
 #else
-	return (void *)this->winId();
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+	QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
+	struct wl_display *wl_dpy = static_cast<struct wl_display *>(
+		native->nativeResourceForWindow("display", NULL));
+	struct wl_surface *wl_surf = static_cast<struct wl_surface *>(
+		native->nativeResourceForWindow("surface", (QWindow *)this));
+	if (wl_dpy != nullptr && wl_surf != nullptr)
+	{
+		return std::make_pair(wl_dpy, wl_surf);
+	}
+	else
+	{
+#endif
+		return std::make_pair(XOpenDisplay(0), (unsigned long)(this->winId()));
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+	}
+#endif
 #endif
 }
 
-void* gs_frame::make_context()
+draw_context_t gs_frame::make_context()
 {
 	return nullptr;
 }
@@ -142,7 +196,7 @@ void gs_frame::set_current(draw_context_t ctx)
 	Q_UNUSED(ctx);
 }
 
-void gs_frame::delete_context(void* ctx)
+void gs_frame::delete_context(draw_context_t ctx)
 {
 	Q_UNUSED(ctx);
 }
@@ -188,13 +242,6 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 			fps_t.Start();
 		}
 	}
-	else
-	{
-		if (this->title() != m_windowTitle)
-		{
-			Emu.CallAfter([this, title = std::move(m_windowTitle)]() {setTitle(m_windowTitle); });
-		}
-	}
 }
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
@@ -226,4 +273,111 @@ bool gs_frame::event(QEvent* ev)
 		close();
 	}
 	return QWindow::event(ev);
+}
+
+bool gs_frame::nativeEvent(const QByteArray &eventType, void *message, long *result)
+{
+#ifdef _WIN32
+	if (wm_event_queue_enabled.load(std::memory_order_consume) && !Emu.IsStopped())
+	{
+		//Wait for consumer to clear notification pending flag
+		while (wm_event_raised.load(std::memory_order_consume) && !Emu.IsStopped());
+
+		{
+			std::lock_guard<std::mutex> lock(wm_event_lock);
+			MSG* msg = static_cast<MSG*>(message);
+			switch (msg->message)
+			{
+			case WM_WINDOWPOSCHANGING:
+			{
+				const auto flags = reinterpret_cast<LPWINDOWPOS>(msg->lParam)->flags & SWP_NOSIZE;
+				if (m_in_sizing_event || flags != 0)
+					break;
+
+				//About to resize
+				m_in_sizing_event = true;
+				m_interactive_resize = false;
+				m_raised_event = wm_event::geometry_change_notice;
+				wm_event_raised.store(true);
+				break;
+			}
+			case WM_WINDOWPOSCHANGED:
+			{
+				const auto flags = reinterpret_cast<LPWINDOWPOS>(msg->lParam)->flags & (SWP_NOSIZE | SWP_NOMOVE);
+				if (!m_in_sizing_event || m_user_interaction_active || flags == (SWP_NOSIZE | SWP_NOMOVE))
+					break;
+
+				if (flags & SWP_NOSIZE)
+				{
+					m_raised_event = wm_event::window_moved;
+				}
+				else
+				{
+					LPWINDOWPOS wpos = reinterpret_cast<LPWINDOWPOS>(msg->lParam);
+					if (wpos->cx <= GetSystemMetrics(SM_CXMINIMIZED) || wpos->cy <= GetSystemMetrics(SM_CYMINIMIZED))
+					{
+						//Minimize event
+						m_minimized = true;
+						m_raised_event = wm_event::window_minimized;
+					}
+					else if (m_minimized)
+					{
+						m_minimized = false;
+						m_raised_event = wm_event::window_restored;
+					}
+					else
+					{
+						m_raised_event = wm_event::window_resized;
+					}
+				}
+
+				//Just finished resizing using maximize or SWP
+				m_in_sizing_event = false;
+				wm_event_raised.store(true);
+				break;
+			}
+			case WM_ENTERSIZEMOVE:
+				m_user_interaction_active = true;
+				break;
+			case WM_EXITSIZEMOVE:
+				m_user_interaction_active = false;
+				if (m_in_sizing_event && !m_user_interaction_active)
+				{
+					//Just finished resizing using manual interaction. The corresponding WM_SIZE is consumed before this event fires
+					m_raised_event = m_interactive_resize ? wm_event::window_resized : wm_event::window_moved;
+					m_in_sizing_event = false;
+					wm_event_raised.store(true);
+				}
+				break;
+			case WM_SIZE:
+			{
+				if (m_user_interaction_active)
+				{
+					//Interaction is a resize not a move
+					m_interactive_resize = true;
+				}
+				else if (m_in_sizing_event)
+				{
+					//Any other unexpected resize mode will give an unconsumed WM_SIZE event
+					m_raised_event = wm_event::window_resized;
+					m_in_sizing_event = false;
+					wm_event_raised.store(true);
+				}
+				break;
+			}
+			}
+		}
+
+		//Do not enter DefWndProc until the consumer has consumed the message
+		while (wm_event_raised.load(std::memory_order_consume) && !Emu.IsStopped());
+	}
+#endif
+
+	//Let the default handler deal with this. Only the notification is required
+	return false;
+}
+
+wm_event gs_frame::get_default_wm_event() const
+{
+	return (m_user_interaction_active) ? wm_event::geometry_change_in_progress : wm_event::none;
 }

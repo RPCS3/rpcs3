@@ -1,6 +1,7 @@
 #pragma once
 
-struct RsxDriverInfo {
+struct RsxDriverInfo
+{
 	be_t<u32> version_driver;     // 0x0
 	be_t<u32> version_gpu;        // 0x4
 	be_t<u32> memory_size;        // 0x8
@@ -15,7 +16,9 @@ struct RsxDriverInfo {
 	be_t<u32> unk3[6];            // 0x38-0x54
 	be_t<u32> systemModeFlags;    // 0x54
 	u8 unk4[0x1064];              // 0x10B8
-	struct Head {
+
+	struct Head
+	{
 		be_t<u64> lastFlipTime;    // 0x0 last flip time
 		be_t<u32> flipFlags;       // 0x8 flags to handle flip/queue
 		be_t<u32> unk1;            // 0xC
@@ -24,11 +27,12 @@ struct RsxDriverInfo {
 		be_t<u32> unk3;            // 0x18
 		be_t<u32> unk6;            // 0x18 possible low bits of time stamp?  used in getlastVBlankTime
 		be_t<u64> lastSecondVTime; // 0x20 last time for second vhandler freq
-		be_t<u64> unk4;            // 0x28 
+		be_t<u64> unk4;            // 0x28
 		be_t<u64> vBlankCount;     // 0x30
 		be_t<u32> unk;             // 0x38 possible u32, 'flip field', top/bottom for interlaced
 		be_t<u32> unk5;            // 0x3C possible high bits of time stamp? used in getlastVBlankTime
 	} head[8]; // size = 0x40, 0x200
+
 	be_t<u32> unk7;          // 0x12B8
 	be_t<u32> unk8;          // 0x12BC
 	be_t<u32> handlers;      // 0x12C0 -- flags showing which handlers are set
@@ -44,12 +48,14 @@ struct RsxDriverInfo {
 	be_t<u32> unk16;         // 0x12E8
 	be_t<u32> unk17;         // 0x12F0
 	be_t<u32> lastError;     // 0x12F4 error param for cellGcmSetGraphicsHandler
-							 // todo: theres more to this 
+							 // todo: theres more to this
 };
+
 static_assert(sizeof(RsxDriverInfo) == 0x12F8, "rsxSizeTest");
 static_assert(sizeof(RsxDriverInfo::Head) == 0x40, "rsxHeadSizeTest");
 
-struct RsxDmaControl {
+struct RsxDmaControl
+{
 	u8 resv[0x40];
 	atomic_be_t<u32> put;
 	atomic_be_t<u32> get;
@@ -58,30 +64,35 @@ struct RsxDmaControl {
 	be_t<u32> unk1;
 };
 
-struct RsxSemaphore {
+struct RsxSemaphore
+{
 	be_t<u32> val;
 	be_t<u32> pad;
 	be_t<u64> timestamp;
 };
 
-struct RsxNotify {
+struct RsxNotify
+{
 	be_t<u64> timestamp;
 	be_t<u64> zero;
 };
 
-struct RsxReport {
+struct RsxReport
+{
 	be_t<u64> timestamp;
 	be_t<u32> val;
 	be_t<u32> pad;
 };
 
-struct RsxReports {
+struct RsxReports
+{
 	RsxSemaphore semaphore[0x100];
 	RsxNotify notify[64];
 	RsxReport report[2048];
 };
 
-struct RsxDisplayInfo {
+struct RsxDisplayInfo
+{
 	be_t<u32> offset;
 	be_t<u32> pitch;
 	be_t<u32> width;
@@ -91,13 +102,13 @@ struct RsxDisplayInfo {
 // SysCalls
 s32 sys_rsx_device_open();
 s32 sys_rsx_device_close();
-s32 sys_rsx_memory_allocate(vm::ps3::ptr<u32> mem_handle, vm::ps3::ptr<u64> mem_addr, u32 size, u64 flags, u64 a5, u64 a6, u64 a7);
+s32 sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u64> mem_addr, u32 size, u64 flags, u64 a5, u64 a6, u64 a7);
 s32 sys_rsx_memory_free(u32 mem_handle);
-s32 sys_rsx_context_allocate(vm::ps3::ptr<u32> context_id, vm::ps3::ptr<u64> lpar_dma_control, vm::ps3::ptr<u64> lpar_driver_info, vm::ps3::ptr<u64> lpar_reports, u64 mem_ctx, u64 system_mode);
+s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_control, vm::ptr<u64> lpar_driver_info, vm::ptr<u64> lpar_reports, u64 mem_ctx, u64 system_mode);
 s32 sys_rsx_context_free(u32 context_id);
 s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags);
 s32 sys_rsx_context_iounmap(u32 context_id, u32 a2, u32 io_addr, u32 size);
 s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u64 a5, u64 a6);
-s32 sys_rsx_device_map(vm::ps3::ptr<u64> addr, vm::ps3::ptr<u64> a2, u32 dev_id);
+s32 sys_rsx_device_map(vm::ptr<u64> addr, vm::ptr<u64> a2, u32 dev_id);
 s32 sys_rsx_device_unmap(u32 dev_id);
 s32 sys_rsx_attribute(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5);

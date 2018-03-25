@@ -1,6 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+
 
 // Error codes
 enum SceNpTrophyError : u32
@@ -137,3 +137,14 @@ enum
 };
 
 using SceNpTrophyStatusCallback = s32(u32 context, u32 status, s32 completed, s32 total, vm::ptr<void> arg);
+
+// Forward declare this function since trophyunlock needs it
+error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceNpTrophyDetails> details, vm::ptr<SceNpTrophyData> data);
+
+class TrophyNotificationBase
+{
+public:
+	virtual ~TrophyNotificationBase();
+
+	virtual s32 ShowTrophyNotification(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophyIconBfr) = 0;
+};

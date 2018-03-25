@@ -7,6 +7,7 @@
 
 enum class patch_type
 {
+	load,
 	byte,
 	le16,
 	le32,

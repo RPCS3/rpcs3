@@ -11,7 +11,7 @@ public:
 	}
 
 private:
-	u32 DisAsmBranchTarget(const s32 imm)
+	u32 DisAsmBranchTarget(const s32 imm) override
 	{
 		return dump_pc + (imm & ~3);
 	}

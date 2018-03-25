@@ -89,7 +89,7 @@ void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + 512));
 	fill_scale_offset_data(mapped_buffer, true);
 	fill_user_clip_data((char*)mapped_buffer + 64);
-	fill_fragment_state_buffer((char *)mapped_buffer + 128, m_fragment_program);
+	fill_fragment_state_buffer((char *)mapped_buffer + 128, current_fragment_program);
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + 512));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {
@@ -124,7 +124,7 @@ void D3D12GSRender::upload_and_bind_vertex_shader_constants(size_t descriptor_in
 D3D12_CONSTANT_BUFFER_VIEW_DESC D3D12GSRender::upload_fragment_shader_constants()
 {
 	// Get constant from fragment program
-	size_t buffer_size = m_pso_cache.get_fragment_constants_buffer_size(m_fragment_program);
+	size_t buffer_size = m_pso_cache.get_fragment_constants_buffer_size(current_fragment_program);
 	// Multiple of 256 never 0
 	buffer_size = (buffer_size + 255) & ~255;
 
@@ -132,7 +132,7 @@ D3D12_CONSTANT_BUFFER_VIEW_DESC D3D12GSRender::upload_fragment_shader_constants(
 
 	size_t offset = 0;
 	float *mapped_buffer = m_buffer_data.map<float>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	m_pso_cache.fill_fragment_constants_buffer({ mapped_buffer, ::narrow<int>(buffer_size) }, m_fragment_program);
+	m_pso_cache.fill_fragment_constants_buffer({ mapped_buffer, ::narrow<int>(buffer_size) }, current_fragment_program);
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	return {
@@ -410,7 +410,7 @@ namespace
 			gsl::span<gsl::byte> dst{
 				reinterpret_cast<gsl::byte*>(mapped_buffer), ::narrow<u32>(buffer_size)};
 
-			std::tie(min_index, max_index) =
+			std::tie(min_index, max_index, index_count) =
 				write_index_array_data_to_buffer(dst, command.raw_index_buffer, indexed_type,
 					rsx::method_registers.current_draw_clause.primitive,
 					rsx::method_registers.restart_index_enabled(),

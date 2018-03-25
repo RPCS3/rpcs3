@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cerrno>
+#include <typeinfo>
 
 using namespace std::literals::string_literals;
 
@@ -74,10 +75,25 @@ static time_t to_time(const FILETIME& ft)
 
 static FILETIME from_time(s64 _time)
 {
-	const ullong wtime = (_time + 11644473600ULL) * 10000000ULL;
 	FILETIME result;
-	result.dwLowDateTime = static_cast<DWORD>(wtime);
-	result.dwHighDateTime = static_cast<DWORD>(wtime >> 32);
+
+	if (_time <= -11644473600ll)
+	{
+		result.dwLowDateTime = 0;
+		result.dwHighDateTime = 0;
+	}
+	else if (_time > INT64_MAX / 10000000ll - 11644473600ll)
+	{
+		result.dwLowDateTime = 0xffffffff;
+		result.dwHighDateTime = 0x7fffffff;
+	}
+	else
+	{
+		const ullong wtime = (_time + 11644473600ull) * 10000000ull;
+		result.dwLowDateTime = static_cast<DWORD>(wtime);
+		result.dwHighDateTime = static_cast<DWORD>(wtime >> 32);
+	}
+
 	return result;
 }
 
@@ -93,6 +109,10 @@ static fs::error to_error(DWORD e)
 	case ERROR_NEGATIVE_SEEK: return fs::error::inval;
 	case ERROR_DIRECTORY: return fs::error::inval;
 	case ERROR_INVALID_NAME: return fs::error::inval;
+	case ERROR_SHARING_VIOLATION: return fs::error::acces;
+	case ERROR_DIR_NOT_EMPTY: return fs::error::notempty;
+	case ERROR_NOT_READY: return fs::error::noent;
+	//case ERROR_INVALID_PARAMETER: return fs::error::inval;
 	default: fmt::throw_exception("Unknown Win32 error: %u.", e);
 	}
 }
@@ -103,6 +123,7 @@ static fs::error to_error(DWORD e)
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/statvfs.h>
+#include <sys/file.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -127,6 +148,7 @@ static fs::error to_error(int e)
 	case EEXIST: return fs::error::exist;
 	case EINVAL: return fs::error::inval;
 	case EACCES: return fs::error::acces;
+	case ENOTEMPTY: return fs::error::notempty;
 	default: fmt::throw_exception("Unknown system error: %d.", e);
 	}
 }
@@ -509,7 +531,7 @@ bool fs::remove_dir(const std::string& path)
 #endif
 }
 
-bool fs::rename(const std::string& from, const std::string& to)
+bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 {
 	const auto device = get_virtual_device(from);
 
@@ -524,14 +546,43 @@ bool fs::rename(const std::string& from, const std::string& to)
 	}
 
 #ifdef _WIN32
-	if (!MoveFileW(to_wchar(from).get(), to_wchar(to).get()))
+	const auto ws1 = to_wchar(from);
+	const auto ws2 = to_wchar(to);
+
+	if (!MoveFileExW(ws1.get(), ws2.get(), overwrite ? MOVEFILE_REPLACE_EXISTING : 0))
 	{
-		g_tls_error = to_error(GetLastError());
+		DWORD error1 = GetLastError();
+
+		if (overwrite && error1 == ERROR_ACCESS_DENIED && is_dir(from) && is_dir(to))
+		{
+			if (RemoveDirectoryW(ws2.get()))
+			{
+				if (MoveFileW(ws1.get(), ws2.get()))
+				{
+					return true;
+				}
+
+				error1 = GetLastError();
+				CreateDirectoryW(ws2.get(), NULL); // TODO
+			}
+			else
+			{
+				error1 = GetLastError();
+			}
+		}
+
+		g_tls_error = to_error(error1);
 		return false;
 	}
 
 	return true;
 #else
+	if (!overwrite && exists(to))
+	{
+		g_tls_error = fs::error::exist;
+		return false;
+	}
+
 	if (::rename(from.c_str(), to.c_str()) != 0)
 	{
 		g_tls_error = to_error(errno);
@@ -645,18 +696,17 @@ bool fs::truncate_file(const std::string& path, u64 length)
 
 #ifdef _WIN32
 	// Open the file
-	const auto handle = CreateFileW(to_wchar(path).get(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	const auto handle = CreateFileW(to_wchar(path).get(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		g_tls_error = to_error(GetLastError());
 		return false;
 	}
 
-	LARGE_INTEGER distance;
-	distance.QuadPart = length;
+	FILE_END_OF_FILE_INFO _eof;
+	_eof.EndOfFile.QuadPart = length;
 
-	// Seek and truncate
-	if (!SetFilePointerEx(handle, distance, NULL, FILE_BEGIN) || !SetEndOfFile(handle))
+	if (!SetFileInformationByHandle(handle, FileEndOfFileInfo, &_eof, sizeof(_eof)))
 	{
 		g_tls_error = to_error(GetLastError());
 		CloseHandle(handle);
@@ -685,7 +735,7 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 
 #ifdef _WIN32
 	// Open the file
-	const auto handle = CreateFileW(to_wchar(path).get(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	const auto handle = CreateFileW(to_wchar(path).get(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		g_tls_error = to_error(GetLastError());
@@ -744,7 +794,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 #ifdef _WIN32
 	DWORD access = 0;
 	if (test(mode & fs::read)) access |= GENERIC_READ;
-	if (test(mode & fs::write)) access |= test(mode & fs::append) ? FILE_APPEND_DATA : GENERIC_WRITE;
+	if (test(mode & fs::write)) access |= DELETE | (test(mode & fs::append) ? FILE_APPEND_DATA : GENERIC_WRITE);
 
 	DWORD disp = 0;
 	if (test(mode & fs::create))
@@ -764,7 +814,18 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		disp = test(mode & fs::trunc) ? TRUNCATE_EXISTING : OPEN_EXISTING;
 	}
 
-	const HANDLE handle = CreateFileW(to_wchar(path).get(), access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
+	DWORD share = 0;
+	if (!test(mode, fs::unread) || !test(mode & fs::write))
+	{
+		share |= FILE_SHARE_READ;
+	}
+
+	if (!test(mode, fs::lock + fs::unread) || !test(mode & fs::write))
+	{
+		share |= FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+	}
+
+	const HANDLE handle = CreateFileW(to_wchar(path).get(), access, share, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
@@ -772,7 +833,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
-	class windows_file final : public file_base
+	class windows_file final : public file_base, public get_native_handle
 	{
 		const HANDLE m_handle;
 
@@ -810,23 +871,15 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 		bool trunc(u64 length) override
 		{
-			LARGE_INTEGER old, pos;
+			FILE_END_OF_FILE_INFO _eof;
+			_eof.EndOfFile.QuadPart = length;
 
-			pos.QuadPart = 0;
-			if (!SetFilePointerEx(m_handle, pos, &old, FILE_CURRENT)) // get old position
+			if (!SetFileInformationByHandle(m_handle, FileEndOfFileInfo, &_eof, sizeof(_eof)))
 			{
 				g_tls_error = to_error(GetLastError());
 				return false;
 			}
 
-			pos.QuadPart = length;
-			if (!SetFilePointerEx(m_handle, pos, NULL, FILE_BEGIN)) // set new position
-			{
-				g_tls_error = to_error(GetLastError());
-				return false;
-			}
-
-			verify("file::trunc" HERE), SetEndOfFile(m_handle), SetFilePointerEx(m_handle, old, NULL, FILE_BEGIN);
 			return true;
 		}
 
@@ -879,6 +932,11 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 			return size.QuadPart;
 		}
+
+		native_handle get() override
+		{
+			return m_handle;
+		}
 	};
 
 	m_file = std::make_unique<windows_file>(handle);
@@ -891,10 +949,17 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 	if (test(mode & fs::append)) flags |= O_APPEND;
 	if (test(mode & fs::create)) flags |= O_CREAT;
-	if (test(mode & fs::trunc)) flags |= O_TRUNC;
+	if (test(mode & fs::trunc) && !test(mode, fs::lock + fs::unread)) flags |= O_TRUNC;
 	if (test(mode & fs::excl)) flags |= O_EXCL;
 
-	const int fd = ::open(path.c_str(), flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	int perm = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+
+	if (test(mode & fs::write) && test(mode & fs::unread))
+	{
+		perm = 0;
+	}
+
+	const int fd = ::open(path.c_str(), flags, perm);
 
 	if (fd == -1)
 	{
@@ -902,7 +967,20 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
-	class unix_file final : public file_base
+	if (test(mode & fs::write) && test(mode, fs::lock + fs::unread) && ::flock(fd, LOCK_EX | LOCK_NB) != 0)
+	{
+		g_tls_error = errno == EWOULDBLOCK ? fs::error::acces : to_error(errno);
+		::close(fd);
+		return;
+	}
+
+	if (test(mode & fs::trunc) && test(mode, fs::lock + fs::unread))
+	{
+		// Postpone truncation in order to avoid using O_TRUNC on a locked file
+		::ftruncate(fd, 0);
+	}
+
+	class unix_file final : public file_base, public get_native_handle
 	{
 		const int m_fd;
 
@@ -974,7 +1052,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
 
 			const auto result = ::lseek(m_fd, offset, mode);
-			
+
 			if (result == -1)
 			{
 				g_tls_error = to_error(errno);
@@ -990,6 +1068,11 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			verify("file::size" HERE), ::fstat(m_fd, &file_info) == 0;
 
 			return file_info.st_size;
+		}
+
+		native_handle get() override
+		{
+			return m_fd;
 		}
 	};
 
@@ -1064,6 +1147,20 @@ fs::file::file(const void* ptr, std::size_t size)
 	};
 
 	m_file = std::make_unique<memory_stream>(ptr, size);
+}
+
+fs::native_handle fs::file::get_handle() const
+{
+	if (auto getter = dynamic_cast<get_native_handle*>(m_file.get()))
+	{
+		return getter->get();
+	}
+
+#ifdef _WIN32
+	return INVALID_HANDLE_VALUE;
+#else
+	return -1;
+#endif
 }
 
 void fs::dir::xnull() const
@@ -1179,7 +1276,12 @@ bool fs::dir::open(const std::string& path)
 			}
 
 			struct ::stat file_info;
-			verify("dir::read" HERE), ::fstatat(::dirfd(m_dd), found->d_name, &file_info, 0) == 0;
+
+			if (::fstatat(::dirfd(m_dd), found->d_name, &file_info, 0) != 0)
+			{
+				//failed metadata (broken symlink?), ignore and skip to next file
+				return read(info);
+			}
 
 			info.name = found->d_name;
 			info.is_directory = S_ISDIR(file_info.st_mode);
@@ -1279,7 +1381,7 @@ std::string fs::get_data_dir(const std::string& prefix, const std::string& locat
 
 			continue;
 		}
-		
+
 		buf.push_back(c);
 	}
 
@@ -1398,6 +1500,7 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 		case fs::error::noent: return "Not found";
 		case fs::error::exist: return "Already exists";
 		case fs::error::acces: return "Access violation";
+		case fs::error::notempty: return "Not empty";
 		}
 
 		return unknown;

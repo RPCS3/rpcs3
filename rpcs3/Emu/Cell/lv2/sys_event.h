@@ -127,14 +127,15 @@ class ppu_thread;
 
 // Syscalls
 
-error_code sys_event_queue_create(vm::ps3::ptr<u32> equeue_id, vm::ps3::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size);
+error_code sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size);
 error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode);
-error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ps3::ptr<sys_event_t> dummy_event, u64 timeout);
-error_code sys_event_queue_tryreceive(u32 equeue_id, vm::ps3::ptr<sys_event_t> event_array, s32 size, vm::ps3::ptr<u32> number);
+error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> dummy_event, u64 timeout);
+error_code sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number);
 error_code sys_event_queue_drain(u32 event_queue_id);
 
-error_code sys_event_port_create(vm::ps3::ptr<u32> eport_id, s32 port_type, u64 name);
+error_code sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name);
 error_code sys_event_port_destroy(u32 eport_id);
 error_code sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
+error_code sys_event_port_connect_ipc(u32 eport_id, u64 ipc_key);
 error_code sys_event_port_disconnect(u32 eport_id);
 error_code sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);

@@ -2,7 +2,8 @@
 
 #include <QDialog>
 
-namespace Ui {
+namespace Ui
+{
 	class about_dialog;
 }
 
@@ -12,6 +13,7 @@ class about_dialog : public QDialog
 
 public:
 	explicit about_dialog(QWidget* parent = nullptr);
+	~about_dialog();
 
 private:
 	Ui::about_dialog *ui;

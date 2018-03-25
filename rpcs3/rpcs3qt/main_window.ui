@@ -44,7 +44,7 @@
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
-   <widget class="QLineEdit" name="searchBar">
+   <widget class="QLineEdit" name="mw_searchbar">
     <property name="geometry">
      <rect>
       <x>480</x>
@@ -68,10 +68,6 @@
     </property>
     <property name="focusPolicy">
      <enum>Qt::ClickFocus</enum>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">color:#5e5e5e;
-margin-left:14px;</string>
     </property>
     <property name="frame">
      <bool>false</bool>
@@ -145,7 +141,7 @@ margin-left:14px;</string>
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -196,7 +192,7 @@ margin-left:14px;</string>
     <addaction name="confCPUAct"/>
     <addaction name="confGPUAct"/>
     <addaction name="separator"/>
-    <addaction name="confPadAct"/>
+    <addaction name="confPadsAct"/>
     <addaction name="confAudioAct"/>
     <addaction name="confIOAct"/>
     <addaction name="confSystemAct"/>
@@ -264,7 +260,8 @@ margin-left:14px;</string>
     <addaction name="showToolBarAct"/>
     <addaction name="separator"/>
     <addaction name="showGameListAct"/>
-    <addaction name="showGameToolBarAct"/>
+    <addaction name="separator"/>
+    <addaction name="showHiddenEntriesAct"/>
     <addaction name="separator"/>
     <addaction name="refreshGameListAct"/>
     <addaction name="menuGame_List_Mode"/>
@@ -289,17 +286,17 @@ margin-left:14px;</string>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QToolBar" name="toolBar">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
    <property name="contextMenuPolicy">
     <enum>Qt::PreventContextMenu</enum>
    </property>
    <property name="windowTitle">
     <string>Show tool bar</string>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">QToolBar { background-color: rgba(227, 227, 227, 255); }
-QToolBar::separator {background-color: #D1D1D1; width: 1px; margin-top: 2px; margin-bottom: 2px;}
-QSlider { background-color: rgba(227, 227, 227, 255); }
-QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
    </property>
    <property name="movable">
     <bool>false</bool>
@@ -429,9 +426,12 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
     <string>Configure Graphics</string>
    </property>
   </action>
-  <action name="confPadAct">
+  <action name="confPadsAct">
    <property name="text">
-    <string>Keyboard</string>
+    <string>Pads</string>
+   </property>
+   <property name="iconText">
+    <string>Pads</string>
    </property>
    <property name="toolTip">
     <string>Configure Controls</string>
@@ -485,7 +485,7 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
   </action>
   <action name="confSavedataManagerAct">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Save Data</string>
@@ -496,7 +496,7 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
   </action>
   <action name="actionManage_Trophy_Data">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Trophies</string>
@@ -813,10 +813,13 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
      <normaloff>:/Icons/controls.png</normaloff>:/Icons/controls.png</iconset>
    </property>
    <property name="text">
-    <string>Keyboard</string>
+    <string>Controls</string>
+   </property>
+   <property name="iconText">
+    <string>Controls</string>
    </property>
    <property name="toolTip">
-    <string>Configure keyboard</string>
+    <string>Configure controls</string>
    </property>
   </action>
   <action name="toolbar_snap">
@@ -938,6 +941,14 @@ QLineEdit { background-color: rgba(227, 227, 227, 255); }</string>
    </property>
    <property name="text">
     <string>Show Game Tool Bar</string>
+   </property>
+  </action>
+  <action name="showHiddenEntriesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Hidden Entries</string>
    </property>
   </action>
  </widget>

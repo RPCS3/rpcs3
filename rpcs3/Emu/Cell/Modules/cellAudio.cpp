@@ -12,6 +12,34 @@
 
 logs::channel cellAudio("cellAudio");
 
+template <>
+void fmt_class_string<CellAudioError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](CellAudioError value)
+	{
+		switch (value)
+		{
+		STR_CASE(CELL_AUDIO_ERROR_ALREADY_INIT);
+		STR_CASE(CELL_AUDIO_ERROR_AUDIOSYSTEM);
+		STR_CASE(CELL_AUDIO_ERROR_NOT_INIT);
+		STR_CASE(CELL_AUDIO_ERROR_PARAM);
+		STR_CASE(CELL_AUDIO_ERROR_PORT_FULL);
+		STR_CASE(CELL_AUDIO_ERROR_PORT_ALREADY_RUN);
+		STR_CASE(CELL_AUDIO_ERROR_PORT_NOT_OPEN);
+		STR_CASE(CELL_AUDIO_ERROR_PORT_NOT_RUN);
+		STR_CASE(CELL_AUDIO_ERROR_TRANS_EVENT);
+		STR_CASE(CELL_AUDIO_ERROR_PORT_OPEN);
+		STR_CASE(CELL_AUDIO_ERROR_SHAREDMEMORY);
+		STR_CASE(CELL_AUDIO_ERROR_MUTEX);
+		STR_CASE(CELL_AUDIO_ERROR_EVENT_QUEUE);
+		STR_CASE(CELL_AUDIO_ERROR_AUDIOSYSTEM_NOT_FOUND);
+		STR_CASE(CELL_AUDIO_ERROR_TAG_NOT_FOUND);
+		}
+
+		return unknown;
+	});
+}
+
 void audio_config::on_init(const std::shared_ptr<void>& _this)
 {
 	m_buffer.set(vm::alloc(AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT, vm::main));
@@ -29,6 +57,8 @@ void audio_config::on_init(const std::shared_ptr<void>& _this)
 
 void audio_config::on_task()
 {
+	thread_ctrl::set_native_priority(1);
+
 	AudioDumper m_dump(g_cfg.audio.dump_to_file ? 2 : 0); // Init AudioDumper for 2 channels if enabled
 
 	float buf2ch[2 * BUFFER_SIZE]{}; // intermediate buffer for 2 channels
@@ -309,12 +339,12 @@ void audio_config::on_task()
 		case 8: m_dump.WriteData(&buf8ch, sizeof(buf8ch)); break; // write file data (8 ch)
 		}
 
-		cellAudio.trace("Audio perf: start=%d (access=%d, AddData=%d, events=%d, dump=%d)",
-			time_pos, stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
+		cellAudio.trace("Audio perf: (access=%d, AddData=%d, events=%d, dump=%d)",
+			stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
 	}
 }
 
-s32 cellAudioInit()
+error_code cellAudioInit()
 {
 	cellAudio.warning("cellAudioInit()");
 
@@ -329,7 +359,7 @@ s32 cellAudioInit()
 	return CELL_OK;
 }
 
-s32 cellAudioQuit()
+error_code cellAudioQuit()
 {
 	cellAudio.warning("cellAudioQuit()");
 
@@ -344,7 +374,7 @@ s32 cellAudioQuit()
 	return CELL_OK;
 }
 
-s32 cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32> portNum)
+error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32> portNum)
 {
 	cellAudio.warning("cellAudioPortOpen(audioParam=*0x%x, portNum=*0x%x)", audioParam, portNum);
 
@@ -444,7 +474,7 @@ s32 cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32> portN
 	return CELL_OK;
 }
 
-s32 cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> portConfig)
+error_code cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> portConfig)
 {
 	cellAudio.warning("cellAudioGetPortConfig(portNum=%d, portConfig=*0x%x)", portNum, portConfig);
 
@@ -479,7 +509,7 @@ s32 cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> portConfig)
 	return CELL_OK;
 }
 
-s32 cellAudioPortStart(u32 portNum)
+error_code cellAudioPortStart(u32 portNum)
 {
 	cellAudio.warning("cellAudioPortStart(portNum=%d)", portNum);
 
@@ -504,7 +534,7 @@ s32 cellAudioPortStart(u32 portNum)
 	}
 }
 
-s32 cellAudioPortClose(u32 portNum)
+error_code cellAudioPortClose(u32 portNum)
 {
 	cellAudio.warning("cellAudioPortClose(portNum=%d)", portNum);
 
@@ -529,7 +559,7 @@ s32 cellAudioPortClose(u32 portNum)
 	}
 }
 
-s32 cellAudioPortStop(u32 portNum)
+error_code cellAudioPortStop(u32 portNum)
 {
 	cellAudio.warning("cellAudioPortStop(portNum=%d)", portNum);
 
@@ -554,7 +584,7 @@ s32 cellAudioPortStop(u32 portNum)
 	}
 }
 
-s32 cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
+error_code cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
 {
 	cellAudio.trace("cellAudioGetPortTimestamp(portNum=%d, tag=0x%llx, stamp=*0x%x)", portNum, tag, stamp);
 
@@ -584,7 +614,7 @@ s32 cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
 	return CELL_OK;
 }
 
-s32 cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
+error_code cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 {
 	cellAudio.trace("cellAudioGetPortBlockTag(portNum=%d, blockNo=0x%llx, tag=*0x%x)", portNum, blockNo, tag);
 
@@ -627,7 +657,7 @@ s32 cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 	return CELL_OK;
 }
 
-s32 cellAudioSetPortLevel(u32 portNum, float level)
+error_code cellAudioSetPortLevel(u32 portNum, float level)
 {
 	cellAudio.trace("cellAudioSetPortLevel(portNum=%d, level=%f)", portNum, level);
 
@@ -662,7 +692,7 @@ s32 cellAudioSetPortLevel(u32 portNum, float level)
 	return CELL_OK;
 }
 
-s32 cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
+error_code cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 {
 	cellAudio.warning("cellAudioCreateNotifyEventQueue(id=*0x%x, key=*0x%x)", id, key);
 
@@ -693,7 +723,7 @@ s32 cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 	return CELL_AUDIO_ERROR_EVENT_QUEUE;
 }
 
-s32 cellAudioCreateNotifyEventQueueEx(vm::ptr<u32> id, vm::ptr<u64> key, u32 iFlags)
+error_code cellAudioCreateNotifyEventQueueEx(vm::ptr<u32> id, vm::ptr<u64> key, u32 iFlags)
 {
 	cellAudio.todo("cellAudioCreateNotifyEventQueueEx(id=*0x%x, key=*0x%x, iFlags=0x%x)", id, key, iFlags);
 
@@ -707,7 +737,7 @@ s32 cellAudioCreateNotifyEventQueueEx(vm::ptr<u32> id, vm::ptr<u64> key, u32 iFl
 	return CELL_AUDIO_ERROR_EVENT_QUEUE;
 }
 
-s32 cellAudioSetNotifyEventQueue(u64 key)
+error_code cellAudioSetNotifyEventQueue(u64 key)
 {
 	cellAudio.warning("cellAudioSetNotifyEventQueue(key=0x%llx)", key);
 
@@ -733,7 +763,7 @@ s32 cellAudioSetNotifyEventQueue(u64 key)
 	return CELL_OK;
 }
 
-s32 cellAudioSetNotifyEventQueueEx(u64 key, u32 iFlags)
+error_code cellAudioSetNotifyEventQueueEx(u64 key, u32 iFlags)
 {
 	cellAudio.todo("cellAudioSetNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
 
@@ -742,7 +772,7 @@ s32 cellAudioSetNotifyEventQueueEx(u64 key, u32 iFlags)
 	return CELL_OK;
 }
 
-s32 cellAudioRemoveNotifyEventQueue(u64 key)
+error_code cellAudioRemoveNotifyEventQueue(u64 key)
 {
 	cellAudio.warning("cellAudioRemoveNotifyEventQueue(key=0x%llx)", key);
 
@@ -768,7 +798,7 @@ s32 cellAudioRemoveNotifyEventQueue(u64 key)
 	return CELL_AUDIO_ERROR_TRANS_EVENT;
 }
 
-s32 cellAudioRemoveNotifyEventQueueEx(u64 key, u32 iFlags)
+error_code cellAudioRemoveNotifyEventQueueEx(u64 key, u32 iFlags)
 {
 	cellAudio.todo("cellAudioRemoveNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
 
@@ -777,7 +807,7 @@ s32 cellAudioRemoveNotifyEventQueueEx(u64 key, u32 iFlags)
 	return CELL_OK;
 }
 
-s32 cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
+error_code cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 {
 	cellAudio.trace("cellAudioAddData(portNum=%d, src=*0x%x, samples=%d, volume=%f)", portNum, src, samples, volume);
 
@@ -812,7 +842,7 @@ s32 cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 	return CELL_OK;
 }
 
-s32 cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
+error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 {
 	cellAudio.trace("cellAudioAdd2chData(portNum=%d, src=*0x%x, samples=%d, volume=%f)", portNum, src, samples, volume);
 
@@ -881,7 +911,7 @@ s32 cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volu
 	return CELL_OK;
 }
 
-s32 cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
+error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 {
 	cellAudio.trace("cellAudioAdd6chData(portNum=%d, src=*0x%x, volume=%f)", portNum, src, volume);
 
@@ -935,25 +965,25 @@ s32 cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 	return CELL_OK;
 }
 
-s32 cellAudioMiscSetAccessoryVolume(u32 devNum, float volume)
+error_code cellAudioMiscSetAccessoryVolume(u32 devNum, float volume)
 {
 	cellAudio.todo("cellAudioMiscSetAccessoryVolume(devNum=%d, volume=%f)", devNum, volume);
 	return CELL_OK;
 }
 
-s32 cellAudioSendAck(u64 data3)
+error_code cellAudioSendAck(u64 data3)
 {
 	cellAudio.todo("cellAudioSendAck(data3=0x%llx)", data3);
 	return CELL_OK;
 }
 
-s32 cellAudioSetPersonalDevice(s32 iPersonalStream, s32 iDevice)
+error_code cellAudioSetPersonalDevice(s32 iPersonalStream, s32 iDevice)
 {
 	cellAudio.todo("cellAudioSetPersonalDevice(iPersonalStream=%d, iDevice=%d)", iPersonalStream, iDevice);
 	return CELL_OK;
 }
 
-s32 cellAudioUnsetPersonalDevice(s32 iPersonalStream)
+error_code cellAudioUnsetPersonalDevice(s32 iPersonalStream)
 {
 	cellAudio.todo("cellAudioUnsetPersonalDevice(iPersonalStream=%d)", iPersonalStream);
 	return CELL_OK;

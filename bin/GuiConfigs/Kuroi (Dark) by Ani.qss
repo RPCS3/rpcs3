@@ -1,0 +1,327 @@
+/* 
+Kuroi (Dark) Theme for RPCS3 
+by Ani @ https://github.com/AniLeo
+r1 (2017.08.15)
+*/
+
+/* 
+Color Scheme
+(Darker to Lighter)
+  
+  Black 
+   > 292929
+   > 323232
+   > 333333
+   > 3d3d3d
+   > 404040
+   > 444444
+   
+  Light Grey
+   > 828790
+   > bdc3c7
+   > ecf0f1
+   
+   > b1b1b1
+   > 7f8c8d
+   
+  Green
+   > 2ecc71
+   
+  Red
+   > e74c3c
+*/
+
+/* Every widget */
+QWidget {
+	background-color: #323232;
+	color: #bdc3c7;
+	alternate-background-color: #3d3d3d;
+}
+
+/* Mouse tooltips */
+QToolTip {
+	border: 0.05em solid #323232;
+	background-color: #323232;
+	color: #ecf0f1;
+}
+
+/* Table headers */
+QHeaderView::section {
+	background-color: #323232;
+	color: #ecf0f1;
+	padding-left: 0.2em;
+	border: 0.05em solid #323232;
+}
+
+/* Settings Dialog: Tabs */
+QTabBar::tab {
+	color: #ecf0f1;
+	border: 0.05em solid #444;
+	border-bottom-style: none;
+	background-color: #333333;
+	padding-left: 0.9em;
+	padding-right: 0.9em;
+	padding-top: 0.2em;
+	padding-bottom: 0.2em;
+	margin-right: -0.2em;
+}
+QTabBar::tab:last {
+	margin-right: 0em;
+}
+QTabBar::tab:!selected {
+	color: #b1b1b1;
+	border-bottom-style: solid;
+	margin-top: 0.15em;
+	background-color: #292929;
+}
+QTabBar::tab:hover {
+	background-color: #333333;
+	color: #ecf0f1;
+}
+
+/* Checkboxes */
+QCheckBox::indicator {
+	border-radius: 0.1em;
+	border: 0.05em solid #ecf0f1;
+	margin-top: 0.05em;
+	width: 0.8em;
+	height: 0.8em;
+}
+QCheckBox::indicator:checked {
+	background-color: #2ecc71; /* Green */
+}
+QCheckBox::indicator:unchecked {
+	background-color: #e74c3c; /* Red */
+}
+QCheckBox::indicator::disabled {
+	background-color: #7f8c8d; /* Gray */
+}
+
+/* Radio Buttons */
+QRadioButton::indicator {
+  border-radius: 0.4em; 
+  border: 0.05em solid;  
+  border-color: white; 
+  width: 0.8em; 
+  height: 0.8em; 
+}
+QRadioButton::indicator:checked {
+	background-color: #2ecc71; /* Green */
+}
+QRadioButton::indicator:unchecked {
+	background-color: #e74c3c; /* Red */
+}
+QRadioButton::indicator::disabled {
+	background-color: #7f8c8d; /* Gray */
+}
+
+/* Combo Boxes */
+QComboBox {
+	background-color: #404040;
+	color: #fff;
+	border: 0.05em solid #1e1e1e;
+	border-radius: 0.15em;
+	padding-bottom: 0.2em;
+	padding-left: 0.4em;
+}
+QComboBox::disabled {
+	background-color: #828790;
+	color: #fff;
+}
+
+/* Group Boxes (Settings Dialog) */
+QGroupBox {
+	margin-top: 1em;
+	font-size: 8pt;
+	border: 0.05em solid #bdc3c7;
+	border-radius: 0.3em;
+}
+QGroupBox::title {
+	subcontrol-origin: margin;
+	subcontrol-position: top;
+	padding: 0.3em 0.5em 0.3em 0.5em;
+	color: #fff;
+}
+
+/* Buttons */
+QPushButton {
+	background-color: #404040;
+}
+QPushButton::disabled {
+	background-color: #444444;
+	color: #828790;
+}
+
+/* Log and Debugger borders */
+QTextEdit {
+	border: 0.05em solid #828790;
+}
+
+/* For dock buttons to be visible */
+QDockWidget::close-button, QDockWidget::float-button {
+	background-color: #bdc3c7;
+	border: 0.05em solid #000;
+	border-radius: 0.3em;
+}
+
+/* Disable ugly borders */
+QTabWidget::pane {
+	border: 0em solid #828790;
+}
+
+/* Top menu bar */
+QMenuBar::item:selected {
+	background: #444444;
+}
+QMenu::item {
+	padding-left: 1.5em;
+	padding-right: 0.75em;
+	padding-top: 0.25em;
+	padding-bottom: 0.25em;
+}
+QMenu::item:selected {
+	background: #444444;
+	border: 0.05em solid #bdc3c7;
+}
+QMenu::item:disabled {
+	background-color: #444444;
+	color: #828790;
+}
+
+/* Libraries list */
+QListWidget::item:selected {
+	background-color: #3d3d3d;
+	color: #ecf0f1;
+}
+QListWidget::item:hover {
+	background-color: #4c4b4b;
+	color: #ecf0f1;
+}
+
+/* Pad Settings: Controller Image */
+QLabel#l_controller { 
+	color: #bdc3c7;
+}
+
+/* Game Grid Font */
+QLabel#gamegrid_font {
+	font-weight: 600;
+	font-size: 8pt;
+	font-family: Lucida Grande;
+	color: #ecf0f1;
+}
+
+/* Slider on toolbar */
+QWidget#sizeSliderContainer {
+	background: transparent;
+}
+
+/* Debug UI Settings buttons */
+QLabel#color_button {
+	background: transparent;
+}
+
+/* Seachbar on main toolbar */
+QLineEdit#mw_searchbar { 
+	margin-left: 0.7em; 
+	color: #ecf0f1;
+}
+
+/* Uniform colors in Toolbar */
+QToolButton {
+	background: transparent;
+	color: transparent;
+}
+QToolButton::disabled {
+	background-color: #828790;
+}
+QToolButton::hover {
+	background-color: #444444;
+}
+
+/* Set Theme UI colors */
+QLabel#gamelist_icon_background_color {
+	color: transparent;
+}
+
+/* Set Windows Taskbar Thumbnail colors */
+QLabel#thumbnail_icon_color {
+	color: #444444;
+}
+
+/* Set Log colors */
+QTextEdit#log_frame {
+	background-color: #000000; /* Black */
+}
+QLabel#log_level_always {
+	color: #00ffff; /* Cyan */
+}
+QLabel#log_level_fatal {
+	color: #ff00ff; /* Fuchsia */
+}
+QLabel#log_level_error {
+	color: #ff0000; /* Red */
+}
+QLabel#log_level_todo {
+	color: #ff6000; /* Orange */
+}
+QLabel#log_level_success {
+	color: #00ff00; /* Green */
+}
+QLabel#log_level_warning {
+	color: #ffff00; /* Yellow */
+}
+QLabel#log_level_notice {
+	color: #ffffff; /* White */
+}
+QLabel#log_level_trace {
+	color: #808080; /* Gray */
+}
+QLabel#log_stack {
+	color: #ffffff; /* White */
+}
+
+/* Set TTY colors */
+QTextEdit#tty_frame {
+	background-color: #000000; /* Black */
+}
+QLabel#tty_text {
+	color: #ffffff; /* White */
+}
+
+/* RSX Debugger */
+QLabel#rsx_debugger_display_buffer {
+	background-color: #323232;
+}
+
+/* Kernel Explorer */
+QDialog#kernel_explorer {
+	background-color: #323232;
+}
+
+/* Memory Viewer */
+QDialog#memory_viewer {
+	background-color: #323232;
+}
+QLabel#memory_viewer_address_panel {
+	color: #00cbff; /* Font Color: Blue */
+	background-color: #323232;
+}
+QLabel#memory_viewer_hex_panel {
+	color: #bdc3c7; /* Font Color: Grey */
+	background-color: #323232;
+}
+QLabel#memory_viewer_ascii_panel {
+	color: #bdc3c7; /* Font Color: Grey */
+	background-color: #323232;
+}
+
+/* Debugger colors */
+QLabel#debugger_frame_breakpoint {
+	color: #000000; /* Font Color: Black */
+	background-color: #ffff00; /* Yellow */
+}
+QLabel#debugger_frame_pc {
+	color: #000000; /* Font Color: Black */
+	background-color: #00ff00; /* Green */
+}

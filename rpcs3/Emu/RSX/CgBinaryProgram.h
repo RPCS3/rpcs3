@@ -324,13 +324,13 @@ public:
 					if (!f) return;
 
 					size_t size = f.size();
-					vm::ps3::init();
+					vm::init();
 					ptr = vm::alloc(size, vm::main);
 					f.read(vm::base(ptr), size);
 				}
-				
-				auto& vmprog = vm::ps3::_ref<CgBinaryProgram>(ptr);
-				auto& vmfprog = vm::ps3::_ref<CgBinaryFragmentProgram>(ptr + vmprog.program);
+
+				auto& vmprog = vm::_ref<CgBinaryProgram>(ptr);
+				auto& vmfprog = vm::_ref<CgBinaryFragmentProgram>(ptr + vmprog.program);
 				u32 size;
 				u32 ctrl = (vmfprog.outputFromH0 ? 0 : 0x40) | (vmfprog.depthReplace ? 0xe : 0);
 				std::vector<rsx::texture_dimension_extended> td;

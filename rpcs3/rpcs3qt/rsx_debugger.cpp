@@ -7,9 +7,9 @@ enum GCMEnumTypes
 	CELL_GCM_PRIMITIVE_ENUM,
 };
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+constexpr auto qstr = QString::fromStdString;
 
-rsx_debugger::rsx_debugger(QWidget* parent) 
+rsx_debugger::rsx_debugger(QWidget* parent)
 	: QDialog(parent)
 	, m_item_count(37)
 	, m_addr(0x0)
@@ -17,15 +17,13 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	, exit(false)
 {
 	setWindowTitle(tr("RSX Debugger"));
+	setObjectName("rsx_debugger");
 	setAttribute(Qt::WA_DeleteOnClose);
 
 	//Fonts and Colors
-	pSize = 8;
-	mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-	mono.setPointSize(pSize);
-	fontMetrics = new QFontMetrics(mono);
-	palette_bg = new QPalette();
-	palette_bg->setColor(backgroundRole(), QColor(240, 240, 240));
+	QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+	mono.setPointSize(8);
+
 	QHBoxLayout* hbox_panel = new QHBoxLayout();
 
 	//Tools
@@ -38,12 +36,12 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	// Controls: Address
 	QGroupBox* gb_controls_addr = new QGroupBox(tr("Address:"), this);
 	QHBoxLayout* hbox_controls_addr = new QHBoxLayout();
-	t_addr = new QLineEdit();
-	t_addr->setFont(mono);
-	t_addr->setPlaceholderText("00000000");
-	t_addr->setMaxLength(8);
-	t_addr->setMaximumWidth(65);
-	hbox_controls_addr->addWidget(t_addr);
+	m_addr_line = new QLineEdit();
+	m_addr_line->setFont(mono);
+	m_addr_line->setPlaceholderText("00000000");
+	m_addr_line->setMaxLength(8);
+	m_addr_line->setMaximumWidth(65);
+	hbox_controls_addr->addWidget(m_addr_line);
 	gb_controls_addr->setLayout(hbox_controls_addr);
 
 	// Controls: Go to
@@ -83,7 +81,7 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	b_break_draw->setEnabled(false);
 	b_break_prim->setEnabled(false);
 	b_break_inst->setEnabled(false);
-	
+
 	hbox_controls->addWidget(gb_controls_addr);
 	hbox_controls->addWidget(gb_controls_goto);
 	hbox_controls->addWidget(gb_controls_breaks);
@@ -217,12 +215,12 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	gb_buffers_depth	->setLayout(hbox_buffers_depth);
 	gb_buffers_stencil->setLayout(hbox_buffers_stencil);
 	gb_buffers_text		->setLayout(hbox_buffers_text);
-	
+
 	//Buffers and textures
-	m_panel_width = 108;
-	m_panel_height = 108;
-	m_text_width = 108;
-	m_text_height = 108;
+	int m_panel_width = 108;
+	int m_panel_height = 108;
+	int m_text_width = 108;
+	int m_text_height = 108;
 
 	//Panels for displaying the buffers
 	m_buffer_colorA  = new Buffer(p_buffers, false, 0);
@@ -246,7 +244,7 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	hbox_buffers_depth  ->addWidget(m_buffer_depth);
 	hbox_buffers_stencil->addWidget(m_buffer_stencil);
 	hbox_buffers_text   ->addWidget(m_buffer_tex);
-	
+
 	//Merge and display everything
 	vbox_buffers1->addSpacing(10);
 	vbox_buffers1->addWidget(gb_buffers_colorA);
@@ -281,31 +279,39 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	setLayout(hbox_panel);
 
 	//Events
-	connect(b_goto_get, &QAbstractButton::clicked, [=](){
-		if (const auto render = fxm::get<GSRender>()){
+	connect(b_goto_get, &QAbstractButton::clicked, [=]
+	{
+		if (const auto render = fxm::get<GSRender>())
+		{
 			u32 realAddr;
-			if (RSXIOMem.getRealAddr(render->ctrl->get.load(), realAddr)){
+			if (RSXIOMem.getRealAddr(render->ctrl->get.load(), realAddr))
+			{
 				m_addr = realAddr;
 				UpdateInformation();
 			}
 		}
 	});
-	connect(b_goto_put, &QAbstractButton::clicked, [=](){
-		if (const auto render = fxm::get<GSRender>()){
+	connect(b_goto_put, &QAbstractButton::clicked, [=]
+	{
+		if (const auto render = fxm::get<GSRender>())
+		{
 			u32 realAddr;
-			if (RSXIOMem.getRealAddr(render->ctrl->put.load(), realAddr)){
+			if (RSXIOMem.getRealAddr(render->ctrl->put.load(), realAddr))
+			{
 				m_addr = realAddr;
 				UpdateInformation();
 			}
 		}
 	});
-	connect(t_addr, &QLineEdit::returnPressed, [=](){
+	connect(m_addr_line, &QLineEdit::returnPressed, [=]
+	{
 		bool ok;
-		m_addr = t_addr->text().toULong(&ok, 16);
+		m_addr = m_addr_line->text().toULong(&ok, 16);
 		UpdateInformation();
 	});
 	connect(m_list_flags, &QTableWidget::itemClicked, this, &rsx_debugger::SetFlags);
-	connect(m_list_texture, &QTableWidget::itemClicked, [=](){
+	connect(m_list_texture, &QTableWidget::itemClicked, [=]
+	{
 		int index = m_list_texture->currentRow();
 		if (index >= 0) m_cur_texture = index;
 		UpdateInformation();
@@ -315,8 +321,13 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	//Fill the frame
 	UpdateInformation();
 	setFixedSize(sizeHint());
-	setFocusProxy(t_addr);
-};
+	setFocusProxy(m_addr_line);
+}
+
+rsx_debugger::~rsx_debugger()
+{
+	exit = true;
+}
 
 void rsx_debugger::keyPressEvent(QKeyEvent* event)
 {
@@ -345,7 +356,7 @@ void rsx_debugger::wheelEvent(QWheelEvent* event)
 			u32 offset;
 			if(vm::check_addr(m_addr, 4))
 			{
-				u32 cmd = vm::ps3::read32(m_addr);
+				u32 cmd = vm::read32(m_addr);
 				u32 count = ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 					|| ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
 					|| ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
@@ -372,33 +383,32 @@ void rsx_debugger::wheelEvent(QWheelEvent* event)
 namespace
 {
 	// Opens an image in a new window with original size
-	void display_buffer(QWidget *parent, const QImage img)
+	void display_buffer(const QImage& img)
 	{
 		if (img.isNull()) return;
 		//QString title = qstr(fmt::format("Raw Image @ 0x%x", addr));
 		QLabel* canvas = new QLabel();
-		QPalette* pal_bg = new QPalette();
-		pal_bg->setColor(canvas->backgroundRole(), QColor(240, 240, 240));
-		canvas->setPalette(*pal_bg); //This fix the ugly background color under Windows
+		canvas->setObjectName("rsx_debugger_display_buffer");
 		canvas->setPixmap(QPixmap::fromImage(img));
 		canvas->setFixedSize(img.size());
+		canvas->ensurePolished();
 		canvas->show();
 	}
 }
 
 // Draws a formatted and buffered <image> inside the Buffer Widget
-void Buffer::showImage(QImage image)
+void Buffer::showImage(const QImage& image)
 {
 	if (image.isNull()) return;
 	m_image = image;
-	m_scaled = m_image.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-	m_canvas = new QLabel();
+	QImage scaled = m_image.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+	QLabel* m_canvas = new QLabel();
 	m_canvas->setFixedSize(size());
-	m_canvas->setPixmap(QPixmap::fromImage(m_scaled));
-	m_layout = new QHBoxLayout();
-	m_layout->setContentsMargins(0, 0, 0, 0);
-	m_layout->addWidget(m_canvas);
-	setLayout(m_layout);
+	m_canvas->setPixmap(QPixmap::fromImage(scaled));
+	QHBoxLayout* layout = new QHBoxLayout();
+	layout->setContentsMargins(0, 0, 0, 0);
+	layout->addWidget(m_canvas);
+	setLayout(layout);
 }
 
 void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
@@ -424,7 +434,7 @@ void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
 
 	//if (0 <= m_id && m_id < 4) SHOW_BUFFER(m_id);
 
-		display_buffer(this, m_image);
+		display_buffer(m_image);
 
 		if (m_isTex)
 		{
@@ -494,6 +504,7 @@ namespace
 		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
 		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
 		case rsx::surface_color_format::w32z32y32x32:
+		default:
 			fmt::throw_exception("Unsupported format for display" HERE);
 		}
 	}
@@ -531,15 +542,15 @@ void rsx_debugger::OnClickDrawCalls()
 		m_buffer_colorD,
 	};
 
-	size_t width = draw_call.state.surface_clip_width();
-	size_t height = draw_call.state.surface_clip_height();
+	u32 width = draw_call.state.surface_clip_width();
+	u32 height = draw_call.state.surface_clip_height();
 
 	for (size_t i = 0; i < 4; i++)
 	{
 		if (width && height && !draw_call.color_buffer[i].empty())
 		{
 			unsigned char* buffer = convert_to_QImage_buffer(draw_call.state.surface_color(), draw_call.color_buffer[i], width, height);
-			buffers[i]->showImage(QImage(buffer, width, height, QImage::Format_RGB32));
+			buffers[i]->showImage(QImage(buffer, (int)width, (int)height, QImage::Format_RGB32));
 		}
 	}
 
@@ -580,7 +591,7 @@ void rsx_debugger::OnClickDrawCalls()
 					}
 				}
 			}
-			m_buffer_depth->showImage(QImage(buffer, width, height, QImage::Format_RGB32));
+			m_buffer_depth->showImage(QImage(buffer, (int)width, (int)height, QImage::Format_RGB32));
 		}
 	}
 
@@ -602,7 +613,7 @@ void rsx_debugger::OnClickDrawCalls()
 					buffer[4 * col + 3 + width * row * 4] = 255;
 				}
 			}
-			m_buffer_stencil->showImage(QImage(buffer, width, height, QImage::Format_RGB32));
+			m_buffer_stencil->showImage(QImage(buffer, (int)width, (int)height, QImage::Format_RGB32));
 		}
 	}
 
@@ -634,7 +645,7 @@ void rsx_debugger::OnClickDrawCalls()
 
 void rsx_debugger::UpdateInformation()
 {
-	t_addr->setText(QString("%1").arg(m_addr, 8, 16, QChar('0'))); // get 8 digits in input line
+	m_addr_line->setText(QString("%1").arg(m_addr, 8, 16, QChar('0'))); // get 8 digits in input line
 	GetMemory();
 	GetBuffers();
 	GetFlags();
@@ -653,10 +664,10 @@ void rsx_debugger::GetMemory()
 	for(u32 i=0, addr = m_addr; i<m_item_count; i++, addr += 4)
 	{
 		m_list_commands->setItem(i, 0, new QTableWidgetItem(qstr(fmt::format("%08x", addr))));
-	
+
 		if (vm::check_addr(addr))
 		{
-			u32 cmd = vm::ps3::read32(addr);
+			u32 cmd = vm::read32(addr);
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
 			m_list_commands->setItem(i, 3, new QTableWidgetItem(qstr(fmt::format("%d", count))));
@@ -711,14 +722,15 @@ void rsx_debugger::GetBuffers()
 		if(!vm::check_addr(RSXbuffer_addr))
 			continue;
 
-		auto RSXbuffer = vm::ps3::_ptr<u8>(RSXbuffer_addr);
-		
+		auto RSXbuffer = vm::_ptr<u8>(RSXbuffer_addr);
+
 		u32 width  = buffers[bufferId].width;
 		u32 height = buffers[bufferId].height;
 		unsigned char* buffer = (unsigned char*)malloc(width * height * 4);
 
 		// ABGR to ARGB and flip vertically
-		for (u32 y=0; y<height; y++){
+		for (u32 y=0; y<height; y++)
+		{
 			for (u32 i=0, j=0; j<width*4; i+=4, j+=4)
 			{
 				buffer[i+0 + y*width*4] = RSXbuffer[j+1 + (height-y-1)*width*4];	//B
@@ -759,7 +771,7 @@ void rsx_debugger::GetBuffers()
 	if(!vm::check_addr(TexBuffer_addr))
 		return;
 
-	unsigned char* TexBuffer = vm::ps3::_ptr<u8>(TexBuffer_addr);
+	unsigned char* TexBuffer = vm::_ptr<u8>(TexBuffer_addr);
 
 	u32 width  = render->textures[m_cur_texture].width();
 	u32 height = render->textures[m_cur_texture].height();
@@ -849,7 +861,7 @@ void rsx_debugger::GetTexture()
 			}
 			else
 			{
-				m_list_texture->setItem(i, 1, 
+				m_list_texture->setItem(i, 1,
 					new QTableWidgetItem(qstr(fmt::format("0x%x", rsx::get_address(render->textures[i].offset(), location)))));
 			}
 
@@ -1069,7 +1081,7 @@ const char* rsx_debugger::ParseGCMEnum(u32 value, u32 type)
 		case 9:  return "QUAD_STRIP";
 		case 10: return "POLYGON";
 
-		default: return "Wrong Value!"; 
+		default: return "Wrong Value!";
 		}
 	}
 	default: return "Unknown!";
@@ -1129,7 +1141,7 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		&& (cmd & RSX_METHOD_CALL_CMD_MASK) != RSX_METHOD_CALL_CMD
 		&& cmd != RSX_METHOD_RETURN_CMD)
 	{
-		auto args = vm::ps3::ptr<u32>::make(currentAddr + 4);
+		auto args = vm::ptr<u32>::make(currentAddr + 4);
 
 		u32 index = 0;
 		switch((cmd & 0x3ffff) >> 2)
@@ -1181,4 +1193,9 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 #undef DISASM
 
 	return qstr(disasm);
+}
+
+void rsx_debugger::SetPC(const uint pc)
+{
+	m_addr = pc;
 }

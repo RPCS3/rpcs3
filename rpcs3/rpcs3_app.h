@@ -7,6 +7,7 @@
 #include "basic_mouse_handler.h"
 
 #include "Utilities/Config.h"
+#include "Emu/VFS.h"
 #include "Emu/RSX/GSRender.h"
 #include "Emu/Io/KeyboardHandler.h"
 #include "Emu/Io/PadHandler.h"
@@ -16,8 +17,10 @@
 #include "rpcs3qt/msg_dialog_frame.h"
 #include "rpcs3qt/main_window.h"
 #include "rpcs3qt/gui_settings.h"
+#include "rpcs3qt/emu_settings.h"
 
 #include <QApplication>
+#include <QFontDatabase>
 
 /** RPCS3 Application Class
  * The point of this class is to do application initialization and to hold onto the main window. The main thing I intend this class to do, for now, is to initialize callbacks and the main_window.
@@ -41,17 +44,13 @@ Q_SIGNALS:
 private Q_SLOTS:
 	void OnChangeStyleSheetRequest(const QString& path);
 	void HandleCallAfter(const std::function<void()>& func);
-	void ResetPads();
 private:
 	void InitializeCallbacks();
 	void InitializeConnects();
 
-	// See ResetPads() for why these shared pointers exist.
-	std::shared_ptr<keyboard_pad_handler> m_keyboardPadHandler;
-	std::shared_ptr<basic_keyboard_handler> m_basicKeyboardHandler;
-	std::shared_ptr<basic_mouse_handler> m_basicMouseHandler;
-
 	main_window* RPCS3MainWin;
 
 	std::shared_ptr<gui_settings> guiSettings;
+	std::shared_ptr<emu_settings> emuSettings;
+	QWindow* gameWindow = nullptr; //! (Currently) only needed so that pad handlers have a valid target for event filtering.
 };

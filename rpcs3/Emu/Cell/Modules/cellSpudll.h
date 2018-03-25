@@ -17,8 +17,8 @@ struct CellSpudllHandleConfig
 	be_t<u32> dmaTag;
 	be_t<u32> numMaxReferred;
 	be_t<u32> numMaxDepend;
-	vm::ps3::bptr<void> unresolvedSymbolValueForFunc;
-	vm::ps3::bptr<void> unresolvedSymbolValueForObject;
-	vm::ps3::bptr<void> unresolvedSymbolValueForOther;
+	vm::bptr<void> unresolvedSymbolValueForFunc;
+	vm::bptr<void> unresolvedSymbolValueForObject;
+	vm::bptr<void> unresolvedSymbolValueForOther;
 	be_t<u32> __reserved__[9];
 };

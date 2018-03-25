@@ -5,6 +5,7 @@
 #include "cellUserInfo.h"
 
 #include "Utilities/StrUtil.h"
+#include "cellSysutil.h"
 
 logs::channel cellUserInfo("cellUserInfo");
 
@@ -40,6 +41,9 @@ error_code cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 		id = 1;
 	}
 
+	if (!stat)
+		return CELL_USERINFO_ERROR_PARAM;
+
 	const std::string& path = vfs::get(fmt::format("/dev_hdd0/home/%08d/", id));
 
 	if (!fs::is_dir(path))
@@ -65,12 +69,28 @@ error_code cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 error_code cellUserInfoSelectUser_ListType(vm::ptr<CellUserInfoTypeSet> listType, vm::ptr<CellUserInfoFinishCallback> funcSelect, u32 container, vm::ptr<void> userdata)
 {
 	cellUserInfo.todo("cellUserInfoSelectUser_ListType(listType=*0x%x, funcSelect=*0x%x, container=0x%x, userdata=*0x%x)", listType, funcSelect, container, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		vm::var<CellUserInfoUserStat> selectUser;
+		funcSelect(ppu, CELL_OK, selectUser, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
 error_code cellUserInfoSelectUser_SetList(vm::ptr<CellUserInfoListSet> setList, vm::ptr<CellUserInfoFinishCallback> funcSelect, u32 container, vm::ptr<void> userdata)
 {
 	cellUserInfo.todo("cellUserInfoSelectUser_SetList(setList=*0x%x, funcSelect=*0x%x, container=0x%x, userdata=*0x%x)", setList, funcSelect, container, userdata);
+
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
+		vm::var<CellUserInfoUserStat> selectUser;
+		funcSelect(ppu, CELL_OK, selectUser, userdata);
+		return CELL_OK;
+	});
+
 	return CELL_OK;
 }
 
@@ -104,7 +124,7 @@ error_code cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserLis
 		// TODO: Properly set the current user ID here, once implemented
 		*currentUserId = 1;
 	}
-	
+
 	return CELL_OK;
 }
 

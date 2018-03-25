@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
+#include "Crypto/unedat.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sys_lwmutex.h"
@@ -22,7 +23,7 @@
 #include "sys_fs.h"
 #include "sys_process.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_process("sys_process");
 
@@ -44,23 +45,6 @@ s32 sys_process_getppid()
 {
 	sys_process.todo("sys_process_getppid() -> 0");
 	return 0;
-}
-
-s32 sys_process_exit(ppu_thread& ppu, s32 status)
-{
-	vm::temporary_unlock(ppu);
-
-	sys_process.warning("sys_process_exit(status=0x%x)", status);
-
-	Emu.CallAfter([]()
-	{
-		sys_process.success("Process finished");
-		Emu.Stop();
-	});
-
-	thread_ctrl::eternalize();
-
-	return CELL_OK;
 }
 
 template <typename T, typename Get>
@@ -248,4 +232,87 @@ s32 sys_process_detach_child(u64 unk)
 {
 	sys_process.todo("sys_process_detach_child(unk=0x%llx)", unk);
 	return CELL_OK;
+}
+
+void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_process.warning("_sys_process_exit(status=%d, arg2=0x%x, arg3=0x%x)", status, arg2, arg3);
+
+	Emu.CallAfter([]()
+	{
+		sys_process.success("Process finished");
+		Emu.Stop();
+	});
+
+	thread_ctrl::eternalize();
+}
+
+void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> arg, u32 arg_size, u32 arg4)
+{
+	sys_process.warning("_sys_process_exit2(status=%d, arg=*0x%x, arg_size=0x%x, arg4=0x%x)", status, arg, arg_size, arg4);
+
+	auto pstr = +arg->args;
+
+	std::vector<std::string> argv;
+	std::vector<std::string> envp;
+
+	while (auto ptr = *pstr++)
+	{
+		argv.emplace_back(ptr.get_ptr());
+		sys_process.notice(" *** arg: %s", ptr);
+	}
+
+	while (auto ptr = *pstr++)
+	{
+		envp.emplace_back(ptr.get_ptr());
+		sys_process.notice(" *** env: %s", ptr);
+	}
+
+	std::vector<u8> data;
+
+	if (arg_size > 0x1030)
+	{
+		data.resize(0x1000);
+		std::memcpy(data.data(), vm::base(arg.addr() + arg_size - 0x1000), 0x1000);
+	}
+
+	if (argv.empty())
+	{
+		return _sys_process_exit(ppu, status, 0, 0);
+	}
+
+	// TODO: set prio, flags
+
+	std::string path = vfs::get(argv[0]);
+	std::string disc;
+
+	if (Emu.GetCat() == "DG" || Emu.GetCat() == "GD")
+		disc = vfs::get("/dev_bdvd/");
+	if (disc.empty() && Emu.GetTitleID().size())
+		disc = vfs::get(Emu.GetDir());
+
+	vm::temporary_unlock(ppu);
+
+	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc), klic = fxm::get_always<LoadedNpdrmKeys_t>()->devKlic]() mutable
+	{
+		sys_process.success("Process finished -> %s", argv[0]);
+		Emu.SetForceBoot(true);
+		Emu.Stop();
+		Emu.argv = std::move(argv);
+		Emu.envp = std::move(envp);
+		Emu.data = std::move(data);
+		Emu.disc = std::move(disc);
+
+		if (klic != std::array<u8, 16>{})
+		{
+			Emu.klic.assign(klic.begin(), klic.end());
+		}
+
+		Emu.SetForceBoot(true);
+		Emu.BootGame(path, true);
+	});
+
+	thread_ctrl::eternalize();
 }

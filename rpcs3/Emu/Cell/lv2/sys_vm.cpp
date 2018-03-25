@@ -2,7 +2,7 @@
 #include "sys_vm.h"
 #include "sys_memory.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_vm("sys_vm");
 

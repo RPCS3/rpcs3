@@ -4,7 +4,7 @@
 
 #include "cellBgdl.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellBGDL("cellBGDL");
 

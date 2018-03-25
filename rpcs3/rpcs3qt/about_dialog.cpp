@@ -6,7 +6,7 @@
 #include <QDesktopServices>
 #include <QUrl>
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+constexpr auto qstr = QString::fromStdString;
 
 about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_dialog)
 {
@@ -19,9 +19,14 @@ about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_
 	// Events
 	connect(ui->gitHub, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.github.com/RPCS3")); });
 	connect(ui->website, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.rpcs3.net")); });
-	connect(ui->forum, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("http://www.emunewz.net/forum/forumdisplay.php?fid=172")); });
+	connect(ui->forum, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://forums.rpcs3.net")); });
 	connect(ui->patreon, &QAbstractButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.patreon.com/Nekotekina")); });
 	connect(ui->close, &QAbstractButton::clicked, this, &QWidget::close);
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
+}
+
+about_dialog::~about_dialog()
+{
+	delete ui;
 }

@@ -129,6 +129,9 @@ namespace rsx
 		u8 aniso_bias() const;
 		u8 signed_remap() const;
 
+		std::pair<std::array<u8, 4>, std::array<u8, 4>> decoded_remap() const;
+		u32 remap() const;
+
 		// Control0
 		bool enabled() const;
 		u16 min_lod() const;

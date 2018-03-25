@@ -103,13 +103,14 @@ namespace
 
 void D3D12GSRender::clear_surface(u32 arg)
 {
-	// Ignore clear if surface target is set to CELL_GCM_SURFACE_TARGET_NONE
-	if (rsx::method_registers.surface_color_target() == rsx::surface_target::none) return;
-	
+	if ((arg & 0xf3) == 0) return;
+
 	std::chrono::time_point<steady_clock> start_duration = steady_clock::now();
 
 	std::chrono::time_point<steady_clock> rtt_duration_start = steady_clock::now();
 	prepare_render_targets(get_current_resource_storage().command_list.Get());
+
+	if (!framebuffer_status_valid) return;
 
 	std::chrono::time_point<steady_clock> rtt_duration_end = steady_clock::now();
 	m_timers.prepare_rtt_duration += std::chrono::duration_cast<std::chrono::microseconds>(rtt_duration_end - rtt_duration_start).count();
@@ -188,6 +189,8 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 		rsx::method_registers.surface_color_target(),
 		get_color_surface_addresses(), get_zeta_surface_address(),
 		m_device.Get(), clear_color, 1.f, 0);
+
+	framebuffer_status_valid = true;
 
 	// write descriptors
 	DXGI_FORMAT dxgi_format = get_color_surface_format(rsx::method_registers.surface_color());
@@ -297,6 +300,9 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 	// Except when a semaphore is written by RSX
 	int clip_w = rsx::method_registers.surface_clip_width();
 	int clip_h = rsx::method_registers.surface_clip_height();
+
+	if (clip_w == 0 || clip_h == 0)
+		return;
 
 	size_t depth_row_pitch = align(clip_w * 4, 256);
 	size_t depth_buffer_offset_in_heap = 0;

@@ -3,6 +3,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/System.h"
 #include "MFC.h"
 
 const bool s_use_rtm = utils::has_rtm();
@@ -50,6 +51,13 @@ void fmt_class_string<MFC>::format(std::string& out, u64 arg)
 		case MFC_BARRIER_CMD: return "BARRIER";
 		case MFC_EIEIO_CMD: return "EIEIO";
 		case MFC_SYNC_CMD: return "SYNC";
+
+		case MFC_BARRIER_MASK:
+		case MFC_FENCE_MASK:
+		case MFC_LIST_MASK:
+		case MFC_START_MASK:
+		case MFC_RESULT_MASK:
+			break;
 		}
 
 		return unknown;
@@ -135,107 +143,142 @@ void mfc_thread::cpu_task()
 
 			if (queue_size)
 			{
-				auto& cmd = spu.mfc_queue[0];
-
-				if ((cmd.cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK)) == MFC_PUTQLLUC_CMD)
+				u32 fence_mask = 0; // Using this instead of stall_mask to avoid a possible race condition
+				u32 barrier_mask = 0;
+				bool first = true;
+				for (u32 i = 0; i < spu.mfc_queue.size(); i++, first = false)
 				{
-					auto& data = vm::ps3::_ref<decltype(spu.rdata)>(cmd.eal);
-					const auto to_write = spu._ref<decltype(spu.rdata)>(cmd.lsa & 0x3ffff);
+					auto& cmd = spu.mfc_queue[i];
 
-					cmd.size = 0;
-					no_updates = 0;
+					// this check all revolves around a potential 'stalled list' in the queue as its the one thing that can cause out of order mfc list execution currently
+					// a list with barrier hard blocks that tag until it's been dealt with
+					// and a new command that has a fence cant be executed until the stalled list has been dealt with
+					if ((cmd.size != 0) && ((barrier_mask & (1u << cmd.tag)) || ((cmd.cmd & MFC_FENCE_MASK) && ((1 << cmd.tag) & fence_mask))))
+						continue;
 
-					vm::reservation_acquire(cmd.eal, 128);
-
-					// Store unconditionally
-					if (s_use_rtm && utils::transaction_enter())
+					if ((cmd.cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK)) == MFC_PUTQLLUC_CMD)
 					{
-						if (!vm::reader_lock{vm::try_to_lock})
-						{
-							_xabort(0);
-						}
+						auto& data = vm::_ref<decltype(spu.rdata)>(cmd.eal);
+						const auto to_write = spu._ref<decltype(spu.rdata)>(cmd.lsa & 0x3ffff);
 
-						data = to_write;
-						vm::reservation_update(cmd.eal, 128);
-						vm::notify(cmd.eal, 128);
-						_xend();
-					}
-					else
-					{
-						vm::writer_lock lock(0);
-						data = to_write;
-						vm::reservation_update(cmd.eal, 128);
-						vm::notify(cmd.eal, 128);
-					}
-				}
-				else if (cmd.cmd & MFC_LIST_MASK)
-				{
-					struct list_element
-					{
-						be_t<u16> sb; // Stall-and-Notify bit (0x8000)
-						be_t<u16> ts; // List Transfer Size
-						be_t<u32> ea; // External Address Low
-					};
-
-					if (cmd.size && (spu.ch_stall_mask & (1u << cmd.tag)) == 0)
-					{
-						cmd.lsa &= 0x3fff0;
-
-						const list_element item = spu._ref<list_element>(cmd.eal & 0x3fff8);
-
-						const u32 size = item.ts;
-						const u32 addr = item.ea;
-
-						if (size)
-						{
-							spu_mfc_cmd transfer;
-							transfer.eal = addr;
-							transfer.eah = 0;
-							transfer.lsa = cmd.lsa | (addr & 0xf);
-							transfer.tag = cmd.tag;
-							transfer.cmd = MFC(cmd.cmd & ~MFC_LIST_MASK);
-							transfer.size = size;
-
-							spu.do_dma_transfer(transfer);
-							cmd.lsa += std::max<u32>(size, 16);
-						}
-
-						cmd.eal += 8;
-						cmd.size -= 8;
+						cmd.size = 0;
 						no_updates = 0;
 
-						if (item.sb & 0x8000)
+						vm::reservation_acquire(cmd.eal, 128);
+
+						// Store unconditionally
+						if (s_use_rtm && utils::transaction_enter())
 						{
-							spu.ch_stall_stat.push_or(spu, 1 << cmd.tag);
-
-							const u32 evt = spu.ch_event_stat.fetch_or(SPU_EVENT_SN);
-
-							if (evt & SPU_EVENT_WAITING)
+							if (!vm::reader_lock{ vm::try_to_lock })
 							{
-								spu.notify();
+								_xabort(0);
 							}
-							else if (evt & SPU_EVENT_INTR_ENABLED)
-							{
-								spu.state += cpu_flag::suspend;
-							}
+
+							data = to_write;
+							vm::reservation_update(cmd.eal, 128);
+							vm::notify(cmd.eal, 128);
+							_xend();
+						}
+						else
+						{
+							vm::writer_lock lock(0);
+							data = to_write;
+							vm::reservation_update(cmd.eal, 128);
+							vm::notify(cmd.eal, 128);
 						}
 					}
-				}
-				else if (LIKELY(cmd.size))
-				{
-					spu.do_dma_transfer(cmd);
-					cmd.size = 0;
-				}
-				else if (UNLIKELY((cmd.cmd & ~0xc) == MFC_BARRIER_CMD))
-				{
-					// TODO (MFC_BARRIER_CMD, MFC_EIEIO_CMD, MFC_SYNC_CMD)
-					_mm_mfence();
-				}
+					else if (cmd.cmd & MFC_LIST_MASK && LIKELY(cmd.cmd != MFC_SYNC_CMD))
+					{
+						struct list_element
+						{
+							be_t<u16> sb; // Stall-and-Notify bit (0x8000)
+							be_t<u16> ts; // List Transfer Size
+							be_t<u32> ea; // External Address Low
+						};
 
-				if (!cmd.size)
-				{
-					spu.mfc_queue.end_pop();
-					no_updates = 0;
+						if (cmd.size && (spu.ch_stall_mask & (1u << cmd.tag)) == 0)
+						{
+							cmd.lsa &= 0x3fff0;
+
+							// try to get the whole list done in one go
+							while (cmd.size != 0)
+							{
+								const list_element item = spu._ref<list_element>(cmd.eal & 0x3fff8);
+
+								const u32 size = item.ts;
+								const u32 addr = item.ea;
+
+								if (size)
+								{
+									spu_mfc_cmd transfer;
+									transfer.eal = addr;
+									transfer.eah = 0;
+									transfer.lsa = cmd.lsa | (addr & 0xf);
+									transfer.tag = cmd.tag;
+									transfer.cmd = MFC(cmd.cmd & ~MFC_LIST_MASK);
+									transfer.size = size;
+
+									spu.do_dma_transfer(transfer);
+									cmd.lsa += std::max<u32>(size, 16);
+								}
+
+								cmd.eal += 8;
+								cmd.size -= 8;
+								no_updates = 0;
+
+								// dont stall for last 'item' in list
+								if ((item.sb & 0x8000) && (cmd.size != 0))
+								{
+									spu.ch_stall_mask |= (1 << cmd.tag);
+									spu.ch_stall_stat.push_or(spu, 1 << cmd.tag);
+
+									const u32 evt = spu.ch_event_stat.fetch_or(SPU_EVENT_SN);
+
+									if (evt & SPU_EVENT_WAITING)
+									{
+										spu.notify();
+									}
+									break;
+								}
+							}
+						}
+
+						if (cmd.size != 0 && (cmd.cmd & MFC_BARRIER_MASK))
+							barrier_mask |= (1 << cmd.tag);
+						else if (cmd.size != 0)
+							fence_mask |= (1 << cmd.tag);
+					}
+					else if (UNLIKELY((cmd.cmd & ~0xc) == MFC_BARRIER_CMD))
+					{
+						// Raw barrier commands / sync commands are tag agnostic and hard sync the mfc list
+						// Need to gaurentee everything ahead of it has processed before this
+						if (first)
+							cmd.size = 0;
+						else
+							break;
+					}
+					else if (LIKELY(cmd.size))
+					{
+						spu.do_dma_transfer(cmd);
+						cmd.size = 0;
+					}
+					if (!cmd.size && first)
+					{
+						spu.mfc_queue.end_pop();
+						no_updates = 0;
+						break;
+					}
+					else if (!cmd.size && i == 1)
+					{
+						// nasty hack, shoving stalled list down one
+						// this *works* from the idea that the only thing that could have been passed over in position 0 is a stalled list
+						// todo: this can still create a situation where we say the mfc queue is full when its actually not, which will cause a rough deadlock between spu and mfc
+						// which will causes a situation where the spu is waiting for the queue to open up but hasnt signaled the stall yet
+						spu.mfc_queue[1] = spu.mfc_queue[0];
+						spu.mfc_queue.end_pop();
+						no_updates = 0;
+						break;
+					}
 				}
 			}
 
@@ -245,26 +288,21 @@ void mfc_thread::cpu_task()
 			{
 				// Mask incomplete transfers
 				u32 completed = spu.ch_tag_mask;
-
-				for (u32 i = 0; i < spu.mfc_queue.size(); i++)
 				{
-					const auto& _cmd = spu.mfc_queue[i];
-
-					if (_cmd.size)
+					for (u32 i = 0; i < spu.mfc_queue.size(); i++)
 					{
-						if (spu.ch_tag_upd == 1)
-						{
+						const auto& _cmd = spu.mfc_queue[i];
+						if (_cmd.size)
 							completed &= ~(1u << _cmd.tag);
-						}
-						else
-						{
-							completed = 0;
-							break;
-						}
 					}
 				}
 
-				if (completed && spu.ch_tag_upd.exchange(0))
+				if (completed && spu.ch_tag_upd.compare_and_swap_test(1, 0))
+				{
+					spu.ch_tag_stat.push(spu, completed);
+					no_updates = 0;
+				}
+				else if (spu.ch_tag_mask == completed && spu.ch_tag_upd.compare_and_swap_test(2, 0))
 				{
 					spu.ch_tag_stat.push(spu, completed);
 					no_updates = 0;
@@ -273,7 +311,6 @@ void mfc_thread::cpu_task()
 
 			test_state();
 		}
-
 		if (no_updates++)
 		{
 			if (no_updates >= 3)
@@ -338,4 +375,13 @@ void mfc_thread::add_spu(spu_ptr _spu)
 	}
 
 	run();
+}
+
+void mfc_thread::on_spawn()
+{
+	if (g_cfg.core.thread_scheduler_enabled)
+	{
+		// Bind to same set with the SPUs
+		thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::spu));
+	}
 }

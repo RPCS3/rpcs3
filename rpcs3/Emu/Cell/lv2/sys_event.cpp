@@ -10,7 +10,7 @@
 #include "sys_process.h"
 #include "sys_event.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel sys_event("sys_event");
 
@@ -238,7 +238,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 		}
 
 		semaphore_lock lock(queue.mutex);
-		
+
 		if (queue.events.empty())
 		{
 			queue.sq.emplace_back(&ppu);
@@ -323,7 +323,7 @@ error_code sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 {
 	sys_event.warning("sys_event_port_create(eport_id=*0x%x, port_type=%d, name=0x%llx)", eport_id, port_type, name);
 
-	if (port_type != SYS_EVENT_PORT_LOCAL)
+	if (port_type != SYS_EVENT_PORT_LOCAL && port_type != 3)
 	{
 		sys_event.error("sys_event_port_create(): unknown port type (%d)", port_type);
 		return CELL_EINVAL;
@@ -334,7 +334,7 @@ error_code sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 		*eport_id = id;
 		return CELL_OK;
 	}
-	
+
 	return CELL_EAGAIN;
 }
 
@@ -372,7 +372,7 @@ error_code sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 	writer_lock lock(id_manager::g_mutex);
 
 	const auto port = idm::check_unlocked<lv2_obj, lv2_event_port>(eport_id);
-	
+
 	if (!port || !idm::check_unlocked<lv2_obj, lv2_event_queue>(equeue_id))
 	{
 		return CELL_ESRCH;
@@ -389,6 +389,36 @@ error_code sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 	}
 
 	port->queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(equeue_id);
+
+	return CELL_OK;
+}
+
+error_code sys_event_port_connect_ipc(u32 eport_id, u64 ipc_key)
+{
+	sys_event.warning("sys_event_port_connect_ipc(eport_id=0x%x, ipc_key=0x%x)", eport_id, ipc_key);
+
+	auto queue = lv2_event_queue::find(ipc_key);
+
+	writer_lock lock(id_manager::g_mutex);
+
+	const auto port = idm::check_unlocked<lv2_obj, lv2_event_port>(eport_id);
+
+	if (!port || !queue)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (port->type != 3)
+	{
+		return CELL_EINVAL;
+	}
+
+	if (!port->queue.expired())
+	{
+		return CELL_EISCONN;
+	}
+
+	port->queue = std::move(queue);
 
 	return CELL_OK;
 }

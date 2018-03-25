@@ -43,7 +43,7 @@ std::string VertexProgramDecompiler::GetDST(bool isSca)
 
 	std::string mask = GetMask(isSca);
 
-	switch (isSca ? 0x1f : d3.dst)
+	switch ((isSca && d3.sca_dst_tmp != 0x3f) ? 0x1f : d3.dst)
 	{
 	case 0x1f:
 		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("tmp") + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp)) + mask;
@@ -209,6 +209,7 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 		{ "$awm", std::bind(std::mem_fn(&VertexProgramDecompiler::AddAddrRegWithoutMask), this) },
 		{ "$am", std::bind(std::mem_fn(&VertexProgramDecompiler::AddAddrMask), this) },
 		{ "$a", std::bind(std::mem_fn(&VertexProgramDecompiler::AddAddrReg), this) },
+		{ "$vm", std::bind(std::mem_fn(&VertexProgramDecompiler::GetVecMask), this) },
 
 		{ "$t", std::bind(std::mem_fn(&VertexProgramDecompiler::GetTex), this) },
 
@@ -375,7 +376,7 @@ void VertexProgramDecompiler::SetDSTSca(const std::string& code)
 
 std::string VertexProgramDecompiler::NotZeroPositive(const std::string& code)
 {
-	return "max(" + code + ", 1.E-10)";
+	return "max(" + code + ", 0.0000000001)";
 }
 
 std::string VertexProgramDecompiler::BuildFuncBody(const FuncInfo& func)
@@ -606,8 +607,9 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_MAX: SetDSTVec("max($0, $1)"); break;
 		case RSX_VEC_OPCODE_SLT: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")"); break;
 		case RSX_VEC_OPCODE_SGE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); break;
-			// Note: It looks like ARL opcode ignore input/output swizzle mask (SH3)
-		case RSX_VEC_OPCODE_ARL: AddCode("$ifcond $awm = " + getIntTypeName(4) + "($0);");  break;
+			// Note: ARL uses the vec mask to determine channels and ignores the src input mask
+			// Tested with SH3, BLES00574 (G-Force) and NPUB90415 (Dead Space 2 Demo)
+		case RSX_VEC_OPCODE_ARL: AddCode("$ifcond $awm$vm = " + getIntTypeName(4) + "($0)$vm;");  break;
 		case RSX_VEC_OPCODE_FRC: SetDSTVec(getFunction(FUNCTION::FUNCTION_FRACT)); break;
 		case RSX_VEC_OPCODE_FLR: SetDSTVec("floor($0)"); break;
 		case RSX_VEC_OPCODE_SEQ: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); break;
@@ -636,7 +638,10 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_RSQ: SetDSTSca("1. / sqrt(" + NotZeroPositive("$s.x") +").xxxx"); break;
 		case RSX_SCA_OPCODE_EXP: SetDSTSca("exp($s)"); break;
 		case RSX_SCA_OPCODE_LOG: SetDSTSca("log($s)"); break;
-		case RSX_SCA_OPCODE_LIT: SetDSTSca("lit_legacy($s)"); break;
+		case RSX_SCA_OPCODE_LIT:
+			SetDSTSca("lit_legacy($s)");
+			properties.has_lit_op = true;
+			break;
 		case RSX_SCA_OPCODE_BRA:
 		{
 			AddCode("$if ($cond) //BRA");

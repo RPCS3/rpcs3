@@ -3,19 +3,72 @@
 #include "aes.h"
 #include "sha1.h"
 #include "key_vault.h"
+#include "Utilities/StrFmt.h"
+#include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "unpkg.h"
 
-bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>& sync)
+bool pkg_install(const std::string& path, atomic_t<double>& sync)
 {
 	const std::size_t BUF_SIZE = 8192 * 1024; // 8 MB
 
-	// Save current file offset (probably zero)
-	const u64 start_offset = pkg_f.pos();
+	std::vector<fs::file> filelist;
+	filelist.emplace_back(fs::file{path});
+	u32 cur_file = 0;
+	u64 cur_offset = 0;
+	u64 cur_file_offset = 0;
+
+	auto archive_seek = [&](const s64 new_offset, const fs::seek_mode damode = fs::seek_set)
+	{
+		if(damode == fs::seek_set) cur_offset = new_offset;
+		else if (damode == fs::seek_cur) cur_offset += new_offset;
+
+		u64 _offset = 0;
+		for (u32 i = 0; i < filelist.size(); i++)
+		{
+			if (cur_offset < (_offset + filelist[i].size()))
+			{
+				cur_file = i;
+				cur_file_offset = cur_offset - _offset;
+				filelist[i].seek(cur_file_offset);
+				break;
+			}
+			_offset += filelist[i].size();
+		}
+	};
+
+	auto archive_read = [&](const void *data_ptr, const u64 num_bytes)
+	{
+		u64 num_bytes_left = filelist[cur_file].size() - cur_file_offset;
+		//check if it continues in another file
+		if (num_bytes > num_bytes_left)
+		{
+			filelist[cur_file].read((u8 *)data_ptr, num_bytes_left);
+			if ((cur_file + 1) < filelist.size()) cur_file++;
+			else
+			{
+				cur_offset += num_bytes_left;
+				cur_file_offset = filelist[cur_file].size();
+				return num_bytes_left;
+			}
+			u64 num_read = filelist[cur_file].read((u8 *)data_ptr + num_bytes_left, num_bytes - num_bytes_left);
+			cur_offset += (num_read + num_bytes_left);
+			cur_file_offset = num_read;
+			return (num_read+num_bytes_left);
+		}
+
+		u64 num_read = filelist[cur_file].read((u8 *)data_ptr, num_bytes);
+
+		cur_offset += num_read;
+		cur_file_offset += num_read;
+
+		return num_read;
+	};
 
 	// Get basic PKG information
 	PKGHeader header;
 
-	if (!pkg_f.read(header))
+	if (archive_read(&header, sizeof(header)) != sizeof(header))
 	{
 		LOG_ERROR(LOADER, "PKG file is too short!");
 		return false;
@@ -49,10 +102,31 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 	}
 	}
 
-	if (header.pkg_size > pkg_f.size())
+	if (header.pkg_size > filelist[0].size())
 	{
-		LOG_ERROR(LOADER, "PKG file size mismatch (pkg_size=0x%llx)", header.pkg_size);
-		return false;
+		// Check if multi-files pkg
+		if (path.size() < 7 || path.compare(path.size() - 7, 7, "_00.pkg", 7) != 0)
+		{
+			LOG_ERROR(LOADER, "PKG file size mismatch (pkg_size=0x%llx)", header.pkg_size);
+			return false;
+		}
+
+		std::string name_wo_number = path.substr(0, path.size() - 7);
+		u64 cursize = filelist[0].size();
+		while (cursize < header.pkg_size)
+		{
+			std::string archive_filename = fmt::format("%s_%02d.pkg", name_wo_number, filelist.size());
+
+			fs::file archive_file(archive_filename);
+			if (!archive_file)
+			{
+				LOG_ERROR(LOADER, "Missing part of the multi-files pkg: %s", archive_filename);
+				return false;
+			}
+
+			cursize += archive_file.size();
+			filelist.emplace_back(std::move(archive_file));
+		}
 	}
 
 	if (header.data_size + header.data_offset > header.pkg_size)
@@ -63,8 +137,14 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 
 	be_t<u32> drm_type{0};
 	be_t<u32> content_type{0};
+	std::string install_id;
 
-	pkg_f.seek(header.pkg_info_off);
+	// Read title ID and use it as an installation directory
+	install_id.resize(9);
+	archive_seek(55);
+	archive_read(&install_id.front(), install_id.size());
+
+	archive_seek(header.pkg_info_off);
 
 	for (u32 i = 0; i < header.pkg_info_num; i++)
 	{
@@ -74,7 +154,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 			be_t<u32> size;
 		} packet;
 		
-		pkg_f.read(packet);
+		archive_read(&packet, sizeof(packet));
 
 		// TODO
 		switch (+packet.id)
@@ -83,7 +163,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 		{
 			if (packet.size == sizeof(drm_type))
 			{
-				pkg_f.read(drm_type);
+				archive_read(&drm_type, sizeof(drm_type));
 				continue;
 			}
 
@@ -93,7 +173,20 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 		{
 			if (packet.size == sizeof(content_type))
 			{
-				pkg_f.read(content_type);
+				archive_read(&content_type, sizeof(content_type));
+				continue;
+			}
+
+			break;
+		}
+		case 0xA:
+		{
+			if (packet.size > 8)
+			{
+				// Read an actual installation directory (DLC)
+				install_id.resize(packet.size);
+				archive_read(&install_id.front(), packet.size);
+				install_id = install_id.c_str() + 8;
 				continue;
 			}
 
@@ -101,7 +194,26 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 		}
 		}
 
-		pkg_f.seek(packet.size, fs::seek_cur);
+		archive_seek(packet.size, fs::seek_cur);
+	}
+
+	// If false, an existing directory is being overwritten: cannot cancel the operation
+	bool was_null = true;
+
+	// Get full path and create the directory
+	const std::string dir = Emu.GetHddDir() + "game/" + install_id + '/';
+
+	if (!fs::create_dir(dir))
+	{
+		if (fs::g_tls_error == fs::error::exist)
+		{
+			was_null = false;
+		}
+		else
+		{
+			LOG_ERROR(LOADER, "PKG: Could not create the installation directory %s", dir);
+			return false;
+		}
 	}
 
 	// Allocate buffer with BUF_SIZE size or more if required
@@ -110,10 +222,10 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 	// Define decryption subfunction (`psp` arg selects the key for specific block)
 	auto decrypt = [&](u64 offset, u64 size, const uchar* key) -> u64
 	{
-		pkg_f.seek(start_offset + header.data_offset + offset);
+		archive_seek(header.data_offset + offset);
 
 		// Read the data and set available size
-		const u64 read = pkg_f.read(buf.get(), size);
+		const u64 read = archive_read(buf.get(), size);
 
 		// Get block count
 		const u64 blocks = (read + 15) / 16;
@@ -206,7 +318,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 
 		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : dec_key.data());
 
-		const std::string name(reinterpret_cast<char*>(buf.get()), entry.name_size);
+		std::string name{reinterpret_cast<char*>(buf.get()), entry.name_size};
 
 		LOG_NOTICE(LOADER, "Entry 0x%08x: %s", entry.type, name);
 
@@ -224,17 +336,17 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 		case 0x15:
 		case 0x16:
 		{
-			const std::string path = dir + name;
+			const std::string path = dir + vfs::escape(name);
 
 			const bool did_overwrite = fs::is_file(path);
 
-			if (did_overwrite && (entry.type&PKG_FILE_ENTRY_OVERWRITE) == 0)
+			if (did_overwrite && (entry.type & PKG_FILE_ENTRY_OVERWRITE) == 0)
 			{
 				LOG_NOTICE(LOADER, "Didn't overwrite %s", name);
 				break;
 			}
 
-			if (fs::file out{ path, fs::rewrite })
+			if (fs::file out{path, fs::rewrite})
 			{
 				for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
 				{
@@ -254,8 +366,16 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 
 					if (sync.fetch_add((block_size + 0.0) / header.data_size) < 0.)
 					{
-						LOG_ERROR(LOADER, "Package installation cancelled: %s", dir);
-						return false;
+						if (was_null)
+						{
+							LOG_ERROR(LOADER, "Package installation cancelled: %s", dir);
+							out.close();
+							fs::remove_all(dir, true);
+							return false;
+						}
+
+						// Cannot cancel the installation
+						sync += 1.;
 					}
 				}
 
@@ -279,7 +399,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>
 		case PKG_FILE_ENTRY_FOLDER:
 		case 0x12:
 		{
-			const std::string path = dir + name;
+			const std::string path = dir + vfs::escape(name);
 
 			if (fs::create_dir(path))
 			{

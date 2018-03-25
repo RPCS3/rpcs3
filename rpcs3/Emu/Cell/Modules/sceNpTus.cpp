@@ -368,6 +368,19 @@ s32 sceNpTssGetDataAsync()
 	return CELL_OK;
 }
 
+s32 sceNpTssGetDataNoLimit()
+{
+	UNIMPLEMENTED_FUNC(sceNpTus);
+	return CELL_OK;
+}
+
+s32 sceNpTssGetDataNoLimitAsync()
+{
+	UNIMPLEMENTED_FUNC(sceNpTus);
+	return CELL_OK;
+}
+
+
 DECLARE(ppu_module_manager::sceNpTus)("sceNpTus", []()
 {
 	REG_FUNC(sceNpTus, sceNpTusInit);
@@ -430,4 +443,6 @@ DECLARE(ppu_module_manager::sceNpTus)("sceNpTus", []()
 	REG_FUNC(sceNpTus, sceNpTusDeleteMultiSlotDataVUserAsync);
 	REG_FUNC(sceNpTus, sceNpTssGetData);
 	REG_FUNC(sceNpTus, sceNpTssGetDataAsync);
+	REG_FUNC(sceNpTus, sceNpTssGetDataNoLimit);
+	REG_FUNC(sceNpTus, sceNpTssGetDataNoLimitAsync);
 });

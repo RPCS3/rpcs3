@@ -3,25 +3,24 @@
 
 #include "memory_viewer_panel.h"
 
-inline QString qstr(const std::string& _in) { return QString::fromUtf8(_in.data(), _in.size()); }
+constexpr auto qstr = QString::fromStdString;
 
 memory_viewer_panel::memory_viewer_panel(QWidget* parent) 
 	: QDialog(parent)
 {
 	setWindowTitle(tr("Memory Viewer"));
+	setObjectName("memory_viewer");
 	setAttribute(Qt::WA_DeleteOnClose);
 	exit = false;
 	m_addr = 0;
 	m_colcount = 16;
 	m_rowcount = 16;
-	pSize = 10;
+	int pSize = 10;
 
-	//Font and Colors
-	mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+	//Font
+	QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 	mono.setPointSize(pSize);
-	fontMetrics = new QFontMetrics(mono);
-	pal_bg.setColor(QPalette::Background, QColor(240, 240, 240));
-	setPalette(pal_bg);
+	m_fontMetrics = new QFontMetrics(mono);
 
 	//Layout:
 	QVBoxLayout* vbox_panel = new QVBoxLayout();
@@ -36,19 +35,19 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	//Tools: Memory Viewer Options: Address
 	QGroupBox* tools_mem_addr = new QGroupBox(tr("Address"));
 	QHBoxLayout* hbox_tools_mem_addr = new QHBoxLayout();
-	t_addr = new QLineEdit(this);
-	t_addr->setPlaceholderText("00000000");
-	t_addr->setFont(mono);
-	t_addr->setMaxLength(8);
-	t_addr->setFixedWidth(75);
-	t_addr->setFocus();
-	hbox_tools_mem_addr->addWidget(t_addr);
+	m_addr_line = new QLineEdit(this);
+	m_addr_line->setPlaceholderText("00000000");
+	m_addr_line->setFont(mono);
+	m_addr_line->setMaxLength(8);
+	m_addr_line->setFixedWidth(75);
+	m_addr_line->setFocus();
+	hbox_tools_mem_addr->addWidget(m_addr_line);
 	tools_mem_addr->setLayout(hbox_tools_mem_addr);
 
 	//Tools: Memory Viewer Options: Bytes
 	QGroupBox* tools_mem_bytes = new QGroupBox(tr("Bytes"));
 	QHBoxLayout* hbox_tools_mem_bytes = new QHBoxLayout();
-	sb_bytes = new QSpinBox(this);
+	QSpinBox* sb_bytes = new QSpinBox(this);
 	sb_bytes->setRange(1, 16);
 	sb_bytes->setValue(16);
 	hbox_tools_mem_bytes->addWidget(sb_bytes);
@@ -89,8 +88,8 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	QGroupBox* tools_img_size = new QGroupBox(tr("Size"));
 	QHBoxLayout* hbox_tools_img_size = new QHBoxLayout();
 	QLabel* l_x = new QLabel(" x ");
-	sb_img_size_x = new QSpinBox(this);
-	sb_img_size_y = new QSpinBox(this);
+	QSpinBox* sb_img_size_x = new QSpinBox(this);
+	QSpinBox* sb_img_size_y = new QSpinBox(this);
 	sb_img_size_x->setRange(1, 8192);
 	sb_img_size_y->setRange(1, 8192);
 	sb_img_size_x->setValue(256);
@@ -103,7 +102,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	//Tools: Raw Image Preview Options: Mode
 	QGroupBox* tools_img_mode = new QGroupBox(tr("Mode"));
 	QHBoxLayout* hbox_tools_img_mode = new QHBoxLayout();
-	cbox_img_mode = new QComboBox(this);
+	QComboBox* cbox_img_mode = new QComboBox(this);
 	cbox_img_mode->addItem("RGB");
 	cbox_img_mode->addItem("ARGB");
 	cbox_img_mode->addItem("RGBA");
@@ -136,48 +135,42 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	QHBoxLayout* hbox_mem_panel = new QHBoxLayout();
 
 	//Memory Panel: Address Panel
-	t_mem_addr = new QLabel("");
-	t_mem_addr->setFont(mono);
-	t_mem_addr->setAutoFillBackground(true);
-	t_mem_addr->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
-	QPalette palette_addr = t_mem_addr->palette();
-	palette_addr.setColor(t_mem_addr->backgroundRole(), QColor(240, 240, 240));
-	palette_addr.setColor(t_mem_addr->foregroundRole(), QColor(75, 135, 150));
-	t_mem_addr->setPalette(palette_addr);
+	m_mem_addr = new QLabel("");
+	m_mem_addr->setObjectName("memory_viewer_address_panel");
+	m_mem_addr->setFont(mono);
+	m_mem_addr->setAutoFillBackground(true);
+	m_mem_addr->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+	m_mem_addr->ensurePolished();
 
 	//Memory Panel: Hex Panel
-	t_mem_hex = new QLabel("");
-	t_mem_hex->setFont(mono);
-	t_mem_hex->setAutoFillBackground(true);
-	t_mem_hex->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
-	QPalette palette_hex = t_mem_hex->palette();
-	palette_hex.setColor(t_mem_hex->backgroundRole(), QColor(240, 240, 240));
-	palette_hex.setColor(t_mem_hex->foregroundRole(), Qt::black);
-	t_mem_hex->setPalette(palette_hex);
+	m_mem_hex = new QLabel("");
+	m_mem_hex->setObjectName("memory_viewer_hex_panel");
+	m_mem_hex->setFont(mono);
+	m_mem_hex->setAutoFillBackground(true);
+	m_mem_hex->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+	m_mem_hex->ensurePolished();
 
 	//Memory Panel: ASCII Panel
-	t_mem_ascii = new QLabel("");
-	t_mem_ascii->setFont(mono);
-	t_mem_ascii->setAutoFillBackground(true);
-	t_mem_ascii->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
-	QPalette palette_ascii = t_mem_ascii->palette();
-	palette_ascii.setColor(t_mem_ascii->backgroundRole(), QColor(240, 240, 240));
-	palette_ascii.setColor(t_mem_ascii->foregroundRole(), Qt::black);
-	t_mem_ascii->setPalette(palette_ascii);
+	m_mem_ascii = new QLabel("");
+	m_mem_ascii->setObjectName("memory_viewer_ascii_panel");
+	m_mem_ascii->setFont(mono);
+	m_mem_ascii->setAutoFillBackground(true);
+	m_mem_ascii->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+	m_mem_ascii->ensurePolished();
 
 	//Merge Memory Panel:
 	hbox_mem_panel->setAlignment(Qt::AlignLeft);
 	hbox_mem_panel->addSpacing(20);
-	hbox_mem_panel->addWidget(t_mem_addr);
+	hbox_mem_panel->addWidget(m_mem_addr);
 	hbox_mem_panel->addSpacing(10);
-	hbox_mem_panel->addWidget(t_mem_hex);
+	hbox_mem_panel->addWidget(m_mem_hex);
 	hbox_mem_panel->addSpacing(10);
-	hbox_mem_panel->addWidget(t_mem_ascii);
+	hbox_mem_panel->addWidget(m_mem_ascii);
 	hbox_mem_panel->addSpacing(10);
 
 	//Memory Panel: Set size of the QTextEdits
-	t_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
-	t_mem_ascii->setFixedSize(QSize(pSize * m_colcount + 6, 228));
+	m_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
+	m_mem_ascii->setFixedSize(QSize(pSize * m_colcount + 6, 228));
 
 	//Set Margins to adjust WindowSize
 	vbox_panel->setContentsMargins(0, 0, 0, 0);
@@ -201,16 +194,18 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	setLayout(vbox_panel);
 
 	//Events
-	connect(t_addr, &QLineEdit::returnPressed, [=](){
+	connect(m_addr_line, &QLineEdit::returnPressed, [=]
+	{
 		bool ok;
-		m_addr = t_addr->text().toULong(&ok, 16);
-		t_addr->setText(QString("%1").arg(m_addr, 8, 16, QChar('0')));	// get 8 digits in input line
+		m_addr = m_addr_line->text().toULong(&ok, 16);
+		m_addr_line->setText(QString("%1").arg(m_addr, 8, 16, QChar('0')));	// get 8 digits in input line
 		ShowMemory();
 	});
-	connect(sb_bytes, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=](){
+	connect(sb_bytes, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=]
+	{
 		m_colcount = sb_bytes->value();
-		t_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
-		t_mem_ascii->setFixedSize(QSize(pSize * m_colcount + 6, 228));
+		m_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
+		m_mem_ascii->setFixedSize(QSize(pSize * m_colcount + 6, 228));
 		ShowMemory();
 	});
 
@@ -218,8 +213,8 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	connect(b_next, &QAbstractButton::clicked, [=]() { m_addr += m_colcount; ShowMemory(); });
 	connect(b_fprev, &QAbstractButton::clicked, [=]() { m_addr -= m_rowcount * m_colcount; ShowMemory(); });
 	connect(b_fnext, &QAbstractButton::clicked, [=]() { m_addr += m_rowcount * m_colcount; ShowMemory(); });
-	connect(b_img, &QAbstractButton::clicked, [=]() {
-		u32 addr = m_addr;
+	connect(b_img, &QAbstractButton::clicked, [=]
+	{
 		int mode = cbox_img_mode->currentIndex();
 		int sizex = sb_img_size_x->value();
 		int sizey = sb_img_size_y->value();
@@ -229,7 +224,12 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	//Fill the QTextEdits
 	ShowMemory();
 	setFixedSize(sizeHint());
-};
+}
+
+memory_viewer_panel::~memory_viewer_panel()
+{
+	exit = true;
+}
 
 void memory_viewer_panel::wheelEvent(QWheelEvent *event)
 {
@@ -241,7 +241,7 @@ void memory_viewer_panel::wheelEvent(QWheelEvent *event)
 	QPoint numSteps = event->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
 	m_addr -= stepSize * m_colcount * numSteps.y();
 	
-	t_addr->setText(qstr(fmt::format("%08x", m_addr)));
+	m_addr_line->setText(qstr(fmt::format("%08x", m_addr)));
 	ShowMemory();
 }
 
@@ -284,31 +284,37 @@ void memory_viewer_panel::ShowMemory()
 		}
 	}
 
-	t_mem_addr->setText(t_mem_addr_str);
-	t_mem_hex->setText(t_mem_hex_str);
-	t_mem_ascii->setText(t_mem_ascii_str);
+	m_mem_addr->setText(t_mem_addr_str);
+	m_mem_hex->setText(t_mem_hex_str);
+	m_mem_ascii->setText(t_mem_ascii_str);
 
 	// Adjust Text Boxes
-	textSize = fontMetrics->size(0, t_mem_addr->text());
-	t_mem_addr->setFixedSize(textSize.width() + 10, textSize.height() + 10);
+	QSize textSize = m_fontMetrics->size(0, m_mem_addr->text());
+	m_mem_addr->setFixedSize(textSize.width() + 10, textSize.height() + 10);
 
-	textSize = fontMetrics->size(0, t_mem_hex->text());
-	t_mem_hex->setFixedSize(textSize.width() + 10, textSize.height() + 10);
+	textSize = m_fontMetrics->size(0, m_mem_hex->text());
+	m_mem_hex->setFixedSize(textSize.width() + 10, textSize.height() + 10);
 
-	textSize = fontMetrics->size(0, t_mem_ascii->text());
-	t_mem_ascii->setFixedSize(textSize.width() + 10, textSize.height() + 10);
+	textSize = m_fontMetrics->size(0, m_mem_ascii->text());
+	m_mem_ascii->setFixedSize(textSize.width() + 10, textSize.height() + 10);
+}
+
+void memory_viewer_panel::SetPC(const uint pc)
+{
+	m_addr = pc;
 }
 
 void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 width, u32 height, bool flipv)
 {
-	QImage::Format format;
 	unsigned char* originalBuffer  = (unsigned char*)vm::base(addr);
 	unsigned char* convertedBuffer = (unsigned char*)malloc(width * height * 4);
 	switch(mode)
 	{
 	case(0): // RGB
-		for (u32 y = 0; y < height; y++) {
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 3) {
+		for (u32 y = 0; y < height; y++)
+		{
+			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 3)
+			{
 				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 2 + y * width * 3];
 				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 1 + y * width * 3];
 				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 0 + y * width * 3];
@@ -318,8 +324,10 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	break;
 	
 	case(1): // ARGB
-		for (u32 y = 0; y < height; y++) {
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4) {
+		for (u32 y = 0; y < height; y++)
+		{
+			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
+			{
 				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
 				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
 				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
@@ -329,8 +337,10 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	break;
 	
 	case(2): // RGBA
-		for (u32 y = 0; y < height; y++) {
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4) {
+		for (u32 y = 0; y < height; y++)
+		{
+			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
+			{
 				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
 				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
 				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 0 + y * width * 4];
@@ -340,8 +350,10 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	break;
 	
 	case(3): // ABGR
-		for (u32 y = 0; y < height; y++) {
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4) {
+		for (u32 y = 0; y < height; y++)
+		{
+			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
+			{
 				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
 				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
 				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
@@ -352,9 +364,12 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	}
 	
 	// Flip vertically
-	if (flipv) {
-		for (u32 y = 0; y < height / 2; y++) {
-			for (u32 x = 0; x < width * 4; x++) {
+	if (flipv)
+	{
+		for (u32 y = 0; y < height / 2; y++)
+		{
+			for (u32 x = 0; x < width * 4; x++)
+			{
 				const u8 t = convertedBuffer[x + y * width * 4];
 				convertedBuffer[x + y * width * 4] = convertedBuffer[x + (height - y - 1) * width * 4];
 				convertedBuffer[x + (height - y - 1) * width * 4] = t;

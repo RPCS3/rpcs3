@@ -1,6 +1,11 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
+extern "C"
+{
+#include "libswscale/swscale.h"
+}
+
+
 
 // Error Codes
 enum
@@ -327,8 +332,15 @@ public:
 
 	const bool to_rgba;
 
+	SwsContext* sws{};
+
 	VpostInstance(bool rgba)
 		: to_rgba(rgba)
 	{
+	}
+
+	~VpostInstance()
+	{
+		sws_freeContext(sws);
 	}
 };

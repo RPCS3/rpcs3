@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-namespace vm { using namespace ps3; }
+
 
 logs::channel cellKey2char("cellKey2char");
 

@@ -20,36 +20,24 @@ class memory_viewer_panel : public QDialog
 	u32 m_addr;
 	u32 m_colcount;
 	u32 m_rowcount;
-	u32 pSize;
 
-	QLineEdit* t_addr;
-	QSpinBox* sb_bytes;
+	QLineEdit* m_addr_line;
 
-	QSpinBox* sb_img_size_x;
-	QSpinBox* sb_img_size_y;
-	QComboBox* cbox_img_mode;
+	QLabel* m_mem_addr;
+	QLabel* m_mem_hex;
+	QLabel* m_mem_ascii;
 
-	QLabel* t_mem_addr;
-	QLabel* t_mem_hex;
-	QLabel* t_mem_ascii;
-	QFont mono;
-	QFontMetrics* fontMetrics;
-	QSize textSize;
-	QPalette pal_bg;
-	QPalette pal_fg;
+	QFontMetrics* m_fontMetrics;
 
 public:
 	bool exit;
 	memory_viewer_panel(QWidget* parent);
-	~memory_viewer_panel()
-	{
-		exit = true;
-	}
+	~memory_viewer_panel();
 
 	virtual void wheelEvent(QWheelEvent *event);
 
 	virtual void ShowMemory();
-	void SetPC(const uint pc) { m_addr = pc; }
+	void SetPC(const uint pc);
 
 	//Static methods
 	static void ShowImage(QWidget* parent, u32 addr, int mode, u32 sizex, u32 sizey, bool flipv);

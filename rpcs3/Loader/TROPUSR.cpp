@@ -9,14 +9,12 @@ bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configp
 {
 	const std::string& path = vfs::get(filepath);
 
-	if (!fs::is_file(path))
-	{
-		Generate(filepath, configpath);
-	}
-
 	if (!m_file.open(path, fs::read))
 	{
-		return false;
+		if (!Generate(filepath, configpath))
+		{
+			return false;
+		}
 	}
 
 	if (!LoadHeader() || !LoadTableHeaders() || !LoadTables())
@@ -137,17 +135,26 @@ bool TROPUSRLoader::Save(const std::string& filepath)
 
 bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& configpath)
 {
-	const std::string& path = vfs::get(configpath);
+	fs::file config(vfs::get(configpath));
 
-	// TODO: rXmlDocument can open only real file
-	verify(HERE), !fs::get_virtual_device(path);
+	if (!config)
+	{
+		return false;
+	}
+
 	rXmlDocument doc;
-	doc.Load(path);
+	doc.Read(config.to_string());
 
 	m_table4.clear();
 	m_table6.clear();
 
-	for (std::shared_ptr<rXmlNode> n = doc.GetRoot()->GetChildren(); n; n = n->GetNext())
+	auto trophy_base = doc.GetRoot();
+	if (trophy_base->GetChildren()->GetName() == "trophyconf")
+	{
+		trophy_base = trophy_base->GetChildren();
+	}
+
+	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
 	{
 		if (n->GetName() == "trophy")
 		{
@@ -200,6 +207,7 @@ u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 	if (id >= m_table6.size())
 	{
 		LOG_WARNING(LOADER, "TROPUSRLoader::GetUnlockState: Invalid id=%d", id);
+		return 0;
 	}
 
 	return m_table6[id].trophy_state; // Let's assume the trophies are stored ordered
@@ -210,6 +218,7 @@ u64 TROPUSRLoader::GetTrophyTimestamp(u32 id)
 	if (id >= m_table6.size())
 	{
 		LOG_WARNING(LOADER, "TROPUSRLoader::GetTrophyTimestamp: Invalid id=%d", id);
+		return 0;
 	}
 
 	// TODO: What timestamp does sceNpTrophyGetTrophyInfo want, timestamp1 or timestamp2? 
