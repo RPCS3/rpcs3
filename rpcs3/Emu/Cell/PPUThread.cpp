@@ -1168,7 +1168,7 @@ extern void ppu_initialize(const ppu_module& info)
 	// Initialize global semaphore with the max number of threads
 	u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
 	s32 thread_count = max_threads > 0 ? std::min(max_threads, std::thread::hardware_concurrency()) : std::thread::hardware_concurrency();
-	static semaphore<INT32_MAX> jcores(std::max<s32>(thread_count, 1));
+	semaphore<INT32_MAX> jcores(std::max<s32>(thread_count, 1));
 
 	// Worker threads
 	std::vector<std::thread> jthreads;
@@ -1349,7 +1349,7 @@ extern void ppu_initialize(const ppu_module& info)
 		}
 
 		// Create worker thread for compilation
-		jthreads.emplace_back([&jit, obj_name = obj_name, part = std::move(part), &cache_path, fragment_sync, findex = ::size32(jthreads)]()
+		jthreads.emplace_back([&jit, obj_name = obj_name, part = std::move(part), &cache_path, fragment_sync, findex = ::size32(jthreads), &jcores]()
 		{
 			// Set low priority
 			thread_ctrl::set_native_priority(-1);
