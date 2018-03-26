@@ -59,7 +59,7 @@ enum : u32
 	SPU_EVENT_ME = 0x40,   // SPU Outbound Interrupt Mailbox available
 	SPU_EVENT_TM = 0x20,   // SPU Decrementer became negative (?)
 	SPU_EVENT_MB = 0x10,   // SPU Inbound mailbox available
-	SPU_EVENT_QV = 0x4,    // MFC SPU Command Queue available
+	SPU_EVENT_QV = 0x8,    // MFC SPU Command Queue available
 	SPU_EVENT_SN = 0x2,    // MFC List Command stall-and-notify event
 	SPU_EVENT_TG = 0x1,    // MFC Tag Group status update event
 
@@ -415,6 +415,11 @@ enum FPSCR_EX
 	FPSCR_DINV = 1 << 10,   //Invalid operation
 	FPSCR_DNAN = 1 << 9,    //NaN
 	FPSCR_DDENORM = 1 << 8, //Denormal
+};
+
+enum
+{
+	max_imm_dma_size = 0x4000, // Custom constant, represents the max number of bytes our mfc can transfer immediately, else enqueueing the command
 };
 
 //Is 128 bits, but bits 0-19, 24-28, 32-49, 56-60, 64-81, 88-92, 96-115, 120-124 are unused

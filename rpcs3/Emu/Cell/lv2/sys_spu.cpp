@@ -43,11 +43,11 @@ void sys_spu_image::load(const fs::file& stream)
 		}
 	}
 
-	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
-
 	type        = SYS_SPU_IMAGE_TYPE_KERNEL;
 	entry_point = obj.header.e_entry;
 	nsegs       = sys_spu_image::get_nsegs(obj.progs);
+
+	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
 	segs        = vm::cast(vm::alloc(mem_size, vm::main));
 
 	const u32 src = segs.addr() + nsegs * sizeof(sys_spu_segment);
@@ -298,7 +298,7 @@ error_code sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::p
 
 	// TODO: max num value should be affected by sys_spu_initialize() settings
 
-	if (attr->nsize > 0x80 || !num || num > 6 || ((prio < 16 || prio > 255) && attr->type != SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT))
+	if (attr->nsize > 0x80 || !num || num > 6 || ((prio < 16 || prio > 255) && (attr->type != SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT && attr->type != SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM)))
 	{
 		return CELL_EINVAL;
 	}

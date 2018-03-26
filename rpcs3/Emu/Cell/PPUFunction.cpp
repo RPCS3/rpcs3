@@ -578,12 +578,11 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 {
 	if (module == "") switch (fnid)
 	{
-	// these arent the actual hash, but its close enough 
-	case 0x0D10FD3F: return "module_prologue";
-	case 0x330F7005: return "module_epilogue";
+	case 0x0d10fd3f: return "module_prologue";
+	case 0x330f7005: return "module_epilogue";
 	case 0x3ab9a95e: return "module_exit";
-	case 0xBC9A0086: return "module_start";
-	case 0xAB779874: return "module_stop";
+	case 0xbc9a0086: return "module_start";
+	case 0xab779874: return "module_stop";
 	}
 
 	// Check known FNIDs
@@ -2376,73 +2375,73 @@ extern std::string ppu_get_variable_name(const std::string& module, u32 vnid)
 	if (module == "") switch (vnid)
 	{
 	// these arent the actual hash, but its close enough
-	case 0xD7F43016: return "module_info";
+	case 0xd7f43016: return "module_info";
 	}
 	// Check known FNIDs
 	if (module == "sys_libc") switch (vnid)
 	{
-	case 0x071928B0: return "_LNan";
-	case 0x0A331920: return "_Clocale";
-	case 0x0B2E15ED: return "_malloc_limit";
-	case 0x0FBC732D: return "_Zero";
+	case 0x071928b0: return "_LNan";
+	case 0x0a331920: return "_Clocale";
+	case 0x0b2e15ed: return "_malloc_limit";
+	case 0x0fbc732d: return "_Zero";
 	case 0x17667744: return "_LInf";
-	case 0x210B2F6E: return "_FNan";
-	case 0x2418F6C0: return "__TT800";
-	case 0x2470D3BC: return "_Hugeval";
-	case 0x26A34F81: return "_Flt";
-	case 0x277A84BB: return "_Mutex_attr";
-	case 0x29E76A6D: return "_LXbig";
-	case 0x2CF8B5D1: return "_Wctrans";
-	case 0x32E56B1A: return "_Stdin";
-	case 0x3916A06A: return "_FILE_P_Head";
-	case 0x45EC2DF6: return "_LEps";
-	case 0x529D4301: return "_Denorm";
-	case 0x57DBCF27: return "_Inf";
-	case 0x5FF11EB4: return "_FZero";
-	case 0x620967C9: return "_Mbcurmax";
-	case 0x6524499E: return "_FInf";
-	case 0x67D1406B: return "__ctype_ptr";
-	case 0x6A09DF41: return "_LRteps";
-	case 0x73898DB8: return "environ";
-	case 0x76628EFB: return "_FSnan";
-	case 0x790B0082: return "_Xbig";
-	case 0x7AFF3242: return "_Snan";
-	case 0x7BC88211: return "_Tolotab";
-	case 0x7F456AF2: return "_Rteps";
-	case 0x81ACF7C1: return "_LZero";
-	case 0x8F87ED0C: return "_Times";
-	case 0x92C43F6D: return "_Eps";
-	case 0x96E1E748: return "tls_mutex_attr";
-	case 0x985FC057: return "_Dbl";
-	case 0x9C8454C9: return "_LSnan";
-	case 0xAA860D4C: return "_Wctype";
-	case 0xB5B84F80: return "_LDenorm";
-	case 0xB5D2F53B: return "_Touptab";
-	case 0xB6F5F98C: return "_FRteps";
-	case 0xD59C193C: return "_Nan";
-	case 0xD698385D: return "_Ldbl";
-	case 0xD97B0687: return "_Ctype";
-	case 0xE0BC8D86: return "_Loctab";
-	case 0xEACE53D6: return "_FDenorm";
-	case 0xECA056DF: return "_Locale";
-	case 0xEF25075B: return "_FXbig";
-	case 0xFB2BD688: return "_Stdout";
-	case 0xFEFBE065: return "_Stderr";
-	case 0xFF2F0CC7: return "_FEps";
+	case 0x210b2f6e: return "_FNan";
+	case 0x2418f6c0: return "__TT800";
+	case 0x2470d3bc: return "_Hugeval";
+	case 0x26a34f81: return "_Flt";
+	case 0x277a84bb: return "_Mutex_attr";
+	case 0x29e76a6d: return "_LXbig";
+	case 0x2cf8b5d1: return "_Wctrans";
+	case 0x32e56b1a: return "_Stdin";
+	case 0x3916a06a: return "_FILE_P_Head";
+	case 0x45ec2df6: return "_LEps";
+	case 0x529d4301: return "_Denorm";
+	case 0x57dbcf27: return "_Inf";
+	case 0x5ff11eb4: return "_FZero";
+	case 0x620967c9: return "_Mbcurmax";
+	case 0x6524499e: return "_FInf";
+	case 0x67d1406b: return "__ctype_ptr";
+	case 0x6a09df41: return "_LRteps";
+	case 0x73898db8: return "environ";
+	case 0x76628efb: return "_FSnan";
+	case 0x790b0082: return "_Xbig";
+	case 0x7aff3242: return "_Snan";
+	case 0x7bc88211: return "_Tolotab";
+	case 0x7f456af2: return "_Rteps";
+	case 0x81acf7c1: return "_LZero";
+	case 0x8f87ed0c: return "_Times";
+	case 0x92c43f6d: return "_Eps";
+	case 0x96e1e748: return "tls_mutex_attr";
+	case 0x985fc057: return "_Dbl";
+	case 0x9c8454c9: return "_LSnan";
+	case 0xaa860d4c: return "_Wctype";
+	case 0xb5b84f80: return "_LDenorm";
+	case 0xb5d2f53b: return "_Touptab";
+	case 0xb6f5f98c: return "_FRteps";
+	case 0xd59c193c: return "_Nan";
+	case 0xd698385d: return "_Ldbl";
+	case 0xd97b0687: return "_Ctype";
+	case 0xe0bc8d86: return "_Loctab";
+	case 0xeace53d6: return "_FDenorm";
+	case 0xeca056df: return "_Locale";
+	case 0xef25075b: return "_FXbig";
+	case 0xfb2bd688: return "_Stdout";
+	case 0xfefbe065: return "_Stderr";
+	case 0xff2f0cc7: return "_FEps";
 	}
 
 	if (module == "sys_libm") switch (vnid)
 	{
-	case 0x1CF745BC: return "_LErf_one";
-	case 0x2259EF96: return "_LGamma_big";
-	case 0x3ACAD7F1: return "_Erf_small";
-	case 0x3FB8629D: return "_FErf_one";
-	case 0x42EB9508: return "_Fenv0";
-	case 0x4AF28F31: return "_FErf_small";
-	case 0xA8D907FF: return "_LErf_small";
-	case 0xAD443E79: return "_Erf_one";
-	case 0xE9892674: return "_FGamma_big";
-	case 0xF39005FC: return "_Gamma_big";
+	case 0x1cf745bc: return "_LErf_one";
+	case 0x2259ef96: return "_LGamma_big";
+	case 0x3acad7f1: return "_Erf_small";
+	case 0x3fb8629d: return "_FErf_one";
+	case 0x42eb9508: return "_Fenv0";
+	case 0x4af28f31: return "_FErf_small";
+	case 0xa8d907ff: return "_LErf_small";
+	case 0xad443e79: return "_Erf_one";
+	case 0xe9892674: return "_FGamma_big";
+	case 0xf39005fc: return "_Gamma_big";
 	}
 
 	// Check registered variables

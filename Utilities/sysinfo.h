@@ -16,6 +16,17 @@ namespace utils
 		return {0u+regs[0], 0u+regs[1], 0u+regs[2], 0u+regs[3]};
 	}
 
+	inline u64 get_xgetbv(u32 xcr)
+	{
+#ifdef _MSC_VER
+		return _xgetbv(xcr);
+#else
+		u32 eax, edx;
+		__asm__ volatile( "xgetbv" : "=a"(eax), "=d"(edx) : "c"(xcr));
+		return eax | (u64(edx) << 32);
+#endif
+	}
+
 	bool has_ssse3();
 
 	bool has_avx();

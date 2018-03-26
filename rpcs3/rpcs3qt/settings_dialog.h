@@ -6,6 +6,7 @@
 #include "Emu/GameInfo.h"
 
 #include <QDialog>
+#include <QLabel>
 #include <QTabWidget>
 
 #include <memory>

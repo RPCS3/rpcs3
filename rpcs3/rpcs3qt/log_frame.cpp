@@ -1,4 +1,5 @@
 #include "log_frame.h"
+#include "qt_utils.h"
 
 #include "stdafx.h"
 #include "rpcs3_version.h"
@@ -267,7 +268,7 @@ void log_frame::CreateAndConnectActions()
 		menu->exec(mapToGlobal(pos));
 	});
 
-	connect(m_tabWidget, &QTabWidget::currentChanged, [this](int index)
+	connect(m_tabWidget, &QTabWidget::currentChanged, [this](int/* index*/)
 	{
 		if (m_find_dialog)
 			m_find_dialog->close();
@@ -289,18 +290,18 @@ void log_frame::RepaintTextColors()
 {
 	// Get text color. Do this once to prevent possible slowdown
 	m_color.clear();
-	m_color.append(gui::get_Label_Color("log_level_always"));
-	m_color.append(gui::get_Label_Color("log_level_fatal"));
-	m_color.append(gui::get_Label_Color("log_level_error"));
-	m_color.append(gui::get_Label_Color("log_level_todo"));
-	m_color.append(gui::get_Label_Color("log_level_success"));
-	m_color.append(gui::get_Label_Color("log_level_warning"));
-	m_color.append(gui::get_Label_Color("log_level_notice"));
-	m_color.append(gui::get_Label_Color("log_level_trace"));
+	m_color.append(gui::utils::get_label_color("log_level_always"));
+	m_color.append(gui::utils::get_label_color("log_level_fatal"));
+	m_color.append(gui::utils::get_label_color("log_level_error"));
+	m_color.append(gui::utils::get_label_color("log_level_todo"));
+	m_color.append(gui::utils::get_label_color("log_level_success"));
+	m_color.append(gui::utils::get_label_color("log_level_warning"));
+	m_color.append(gui::utils::get_label_color("log_level_notice"));
+	m_color.append(gui::utils::get_label_color("log_level_trace"));
 
-	m_color_stack = gui::get_Label_Color("log_stack");
+	m_color_stack = gui::utils::get_label_color("log_stack");
 
-	m_tty->setTextColor(gui::get_Label_Color("tty_text"));
+	m_tty->setTextColor(gui::utils::get_label_color("tty_text"));
 }
 
 void log_frame::UpdateUI()

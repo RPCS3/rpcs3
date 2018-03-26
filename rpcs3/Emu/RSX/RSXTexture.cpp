@@ -68,7 +68,7 @@ namespace rsx
 		switch (dimension())
 		{
 		case rsx::texture_dimension::dimension1d: return rsx::texture_dimension_extended::texture_dimension_1d;
-		case rsx::texture_dimension::dimension3d: return rsx::texture_dimension_extended::texture_dimension_2d;
+		case rsx::texture_dimension::dimension3d: return rsx::texture_dimension_extended::texture_dimension_3d;
 		case rsx::texture_dimension::dimension2d: return cubemap() ? rsx::texture_dimension_extended::texture_dimension_cubemap : rsx::texture_dimension_extended::texture_dimension_2d;
 
 		default: ASSUME(0);
@@ -193,10 +193,19 @@ namespace rsx
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-			//Low bit in remap control affects whether the G component should read from first or second component
+		{
+			//Low bit in remap control affects whether the G component should match R and B components
 			//Components are usually interleaved R-G-R-G unless flag is set, then its R-R-R-G (Virtua Fighter 5)
-			remap_ctl = (remap_override) ?(0b01010110 | (remap_ctl & 0xFF00)): (0b01100110 | (remap_ctl & 0xFF00));
+			//NOTE: The remap vector can also read from B-A-B-A in some cases (Mass Effect 3)
+			if (remap_override)
+			{
+				auto r_component = (remap_ctl >> 2) & 3;
+				remap_ctl = remap_ctl & ~(3 << 4) | r_component << 4;
+			}
+
+			remap_ctl &= 0xFFFF;
 			break;
+		}
 		default:
 			break;
 		}
@@ -350,7 +359,7 @@ namespace rsx
 		switch (dimension())
 		{
 		case rsx::texture_dimension::dimension1d: return rsx::texture_dimension_extended::texture_dimension_1d;
-		case rsx::texture_dimension::dimension3d: return rsx::texture_dimension_extended::texture_dimension_2d;
+		case rsx::texture_dimension::dimension3d: return rsx::texture_dimension_extended::texture_dimension_3d;
 		case rsx::texture_dimension::dimension2d: return cubemap() ? rsx::texture_dimension_extended::texture_dimension_cubemap : rsx::texture_dimension_extended::texture_dimension_2d;
 
 		default: ASSUME(0);
@@ -387,6 +396,12 @@ namespace rsx
 			{ CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B },
 			{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
 		};
+	}
+
+	u32 vertex_texture::remap() const
+	{
+		//disabled
+		return 0xAAE4;
 	}
 
 	u8 vertex_texture::zfunc() const
