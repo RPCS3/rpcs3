@@ -73,6 +73,7 @@ namespace vk
 	bool emulate_primitive_restart();
 	bool force_32bit_index_buffer();
 	bool sanitize_fp_values();
+	bool fence_reset_disabled();
 
 	VkComponentMapping default_component_map();
 	VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector);
@@ -112,6 +113,9 @@ namespace vk
 	void advance_frame_counter();
 	const u64 get_current_frame_id();
 	const u64 get_last_completed_frame_id();
+
+	//Fence reset with driver workarounds in place
+	void reset_fence(VkFence *pFence);
 
 	void die_with_error(const char* faulting_addr, VkResult error_code);
 

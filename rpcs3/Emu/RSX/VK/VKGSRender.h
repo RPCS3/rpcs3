@@ -66,7 +66,7 @@ struct command_buffer_chunk: public vk::command_buffer
 
 		VkFenceCreateInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		vkCreateFence(m_device, &info, nullptr, &submit_fence);
+		CHECK_RESULT(vkCreateFence(m_device, &info, nullptr, &submit_fence));
 	}
 
 	void destroy()
@@ -90,7 +90,7 @@ struct command_buffer_chunk: public vk::command_buffer
 		if (pending)
 			wait();
 
-		vkResetCommandBuffer(commands, 0);
+		CHECK_RESULT(vkResetCommandBuffer(commands, 0));
 	}
 
 	bool poke()
@@ -101,7 +101,7 @@ struct command_buffer_chunk: public vk::command_buffer
 
 			if (pending)
 			{
-				vkResetFences(m_device, 1, &submit_fence);
+				vk::reset_fence(&submit_fence);
 				pending = false;
 			}
 		}
@@ -121,11 +121,11 @@ struct command_buffer_chunk: public vk::command_buffer
 		case VK_SUCCESS:
 			break;
 		case VK_NOT_READY:
-			vkWaitForFences(m_device, 1, &submit_fence, VK_TRUE, UINT64_MAX);
+			CHECK_RESULT(vkWaitForFences(m_device, 1, &submit_fence, VK_TRUE, UINT64_MAX));
 			break;
 		}
 
-		vkResetFences(m_device, 1, &submit_fence);
+		vk::reset_fence(&submit_fence);
 		pending = false;
 	}
 };
