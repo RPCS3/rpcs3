@@ -63,7 +63,7 @@
               <item>
                <widget class="QRadioButton" name="ppu_fast">
                 <property name="text">
-                 <string>Interpreter (fast)</string>
+                 <string>Interpreter</string>
                 </property>
                </widget>
               </item>
@@ -93,7 +93,7 @@
               <item>
                <widget class="QRadioButton" name="spu_fast">
                 <property name="text">
-                 <string>Interpreter (fast)</string>
+                 <string>Interpreter</string>
                 </property>
                </widget>
               </item>
