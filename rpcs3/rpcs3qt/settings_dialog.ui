@@ -70,7 +70,7 @@
               <item>
                <widget class="QRadioButton" name="ppu_llvm">
                 <property name="text">
-                 <string>Recompiler (LLVM)</string>
+                 <string>LLVM Recompiler (fastest)</string>
                 </property>
                </widget>
               </item>
@@ -100,7 +100,7 @@
               <item>
                <widget class="QRadioButton" name="spu_asmjit">
                 <property name="text">
-                 <string>Recompiler (ASMJIT)</string>
+                 <string>ASMJIT Recompiler (fastest)</string>
                 </property>
                </widget>
               </item>
@@ -110,7 +110,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="text">
-                 <string>Recompiler (LLVM)</string>
+                 <string>LLVM Recompiler</string>
                 </property>
                </widget>
               </item>

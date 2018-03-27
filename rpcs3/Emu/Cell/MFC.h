@@ -80,7 +80,7 @@ enum : u32
 	MFC_SIGNAL_1_EVENT                 = 0x00000200,
 	MFC_LLR_LOST_EVENT                 = 0x00000400,
 	MFC_PRIV_ATTN_EVENT                = 0x00000800,
-	MFG_MULTISOURCE_SYNC_EVENT         = 0x00001000,
+	MFC_MULTISOURCE_SYNC_EVENT         = 0x00001000,
 };
 
 struct alignas(16) spu_mfc_cmd

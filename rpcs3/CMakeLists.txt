@@ -396,6 +396,12 @@ if(NOT MSVC)
 	target_link_libraries(rpcs3 GLEW::GLEW)
 endif()
 
+if(UNIX)
+	find_package(X11 REQUIRED)
+	target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
+	target_link_libraries(rpcs3 ${X11_LIBRARIES})
+endif()
+
 if(WIN32)
 	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
 	if(NOT MSVC)

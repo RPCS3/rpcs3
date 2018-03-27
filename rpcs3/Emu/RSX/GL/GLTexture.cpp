@@ -90,6 +90,24 @@ namespace gl
 		fmt::throw_exception("Compressed or unknown texture format 0x%x" HERE, texture_format);
 	}
 
+	GLenum get_srgb_format(GLenum in_format)
+	{
+		switch (in_format)
+		{
+		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
+		case GL_RGBA8:
+			return GL_SRGB8_ALPHA8;
+		default:
+			//LOG_ERROR(RSX, "No gamma coversion for format 0x%X", in_format);
+			return in_format;
+		}
+	}
+
 	GLenum wrap_mode(rsx::texture_wrap_mode wrap)
 	{
 		switch (wrap)
@@ -288,7 +306,8 @@ namespace gl
 			return{ GL_ONE, GL_RED, GL_RED, GL_RED };
 
 		case CELL_GCM_TEXTURE_X16:
-			return{ GL_RED, GL_ONE, GL_RED, GL_ONE };
+			//Blue component is also R (Mass Effect 3)
+			return{ GL_RED, GL_ONE, GL_RED, GL_RED };
 
 		case CELL_GCM_TEXTURE_X32_FLOAT:
 			return{ GL_RED, GL_RED, GL_RED, GL_RED };
@@ -317,7 +336,8 @@ namespace gl
 		fmt::throw_exception("Unknown format 0x%x" HERE, texture_format);
 	}
 
-	GLuint create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, rsx::texture_dimension_extended type)
+	GLuint create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps,
+			rsx::texture_dimension_extended type, rsx::texture_colorspace colorspace)
 	{
 		if (is_compressed_format(gcm_format))
 		{
@@ -330,6 +350,9 @@ namespace gl
 		GLuint id = 0;
 		GLenum target;
 		GLenum internal_format = get_sized_internal_format(gcm_format);
+
+		if (colorspace != rsx::texture_colorspace::rgb_linear)
+			internal_format = get_srgb_format(internal_format);
 
 		glGenTextures(1, &id);
 		
@@ -367,6 +390,8 @@ namespace gl
 			const std::vector<rsx_subresource_layout> &input_layouts, bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<gsl::byte>& staging_buffer)
 	{
 		int mip_level = 0;
+		bool vtc_support = gl::get_driver_caps().vendor_NVIDIA;
+
 		if (is_compressed_format(format))
 		{
 			//Compressed formats have a 4-byte alignment
@@ -381,7 +406,7 @@ namespace gl
 			{
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block, gl_format, gl_type, staging_buffer.data());
 				}
 			}
@@ -390,7 +415,7 @@ namespace gl
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
 					u32 size = layout.width_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glCompressedTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block * 4, gl_format, size, staging_buffer.data());
 				}
 			}
@@ -403,7 +428,7 @@ namespace gl
 			{
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block, layout.height_in_block, gl_format, gl_type, staging_buffer.data());
 				}
 			}
@@ -412,7 +437,7 @@ namespace gl
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
 					u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glCompressedTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, gl_format, size, staging_buffer.data());
 				}
 			}
@@ -428,7 +453,7 @@ namespace gl
 			{
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block, layout.height_in_block, gl_format, gl_type, staging_buffer.data());
 					mip_level++;
 				}
@@ -438,7 +463,7 @@ namespace gl
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
 					u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, gl_format, size, staging_buffer.data());
 					mip_level++;
 				}
@@ -452,7 +477,7 @@ namespace gl
 			{
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block, layout.height_in_block, depth, gl_format, gl_type, staging_buffer.data());
 				}
 			}
@@ -461,7 +486,7 @@ namespace gl
 				for (const rsx_subresource_layout &layout : input_layouts)
 				{
 					u32 size = layout.width_in_block * layout.height_in_block * layout.depth * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glCompressedTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, layout.depth, gl_format, size, staging_buffer.data());
 				}
 			}
@@ -505,7 +530,8 @@ namespace gl
 	}
 
 	void upload_texture(GLuint id, u32 texaddr, u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
-			const std::vector<rsx_subresource_layout>& subresources_layout, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap, bool static_state)
+			const std::vector<rsx_subresource_layout>& subresources_layout, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap, bool static_state,
+			rsx::texture_colorspace colorspace)
 	{
 		const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
 		
@@ -562,7 +588,7 @@ namespace gl
 
 		//The rest of sampler state is now handled by sampler state objects
 		const auto format_type = get_format_type(gcm_format);
-		const GLenum gl_format = std::get<0>(format_type);
+		const GLenum gl_format = (colorspace == rsx::texture_colorspace::rgb_linear)? std::get<0>(format_type) : get_srgb_format(std::get<0>(format_type));
 		const GLenum gl_type = std::get<1>(format_type);
 		fill_texture(type, mipmaps, gcm_format, width, height, depth, subresources_layout, is_swizzled, gl_format, gl_type, data_upload_buf);
 	}

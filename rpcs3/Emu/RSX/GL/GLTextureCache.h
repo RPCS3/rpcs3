@@ -654,7 +654,8 @@ namespace gl
 			m_temporary_surfaces.resize(0);
 		}
 
-		u32 create_temporary_subresource_impl(u32 src_id, GLenum sized_internal_fmt, GLenum dst_type, u32 gcm_format, u16 x, u16 y, u16 width, u16 height, bool copy = true)
+		u32 create_temporary_subresource_impl(u32 src_id, GLenum sized_internal_fmt, GLenum dst_type, u32 gcm_format,
+				u16 x, u16 y, u16 width, u16 height, const texture_channel_remap_t& remap, bool copy)
 		{
 			u32 dst_id = 0;
 
@@ -705,12 +706,30 @@ namespace gl
 				}
 			}
 
+			//TODO: Native texture views are needed here. It works because this routine is only called with rendertarget data
 			if (ifmt != sized_internal_fmt)
 			{
 				err_once("GL format mismatch (data cast?). Sized ifmt=0x%X vs Src ifmt=0x%X", sized_internal_fmt, ifmt);
 				//Apply base component map onto the new texture if a data cast has been done
 				apply_component_mapping_flags(dst_type, gcm_format, rsx::texture_create_flags::default_component_order);
 			}
+			else
+			{
+				//Inherit the parent's default mapping. The caller should ensure the native order is set beforehand
+				GLint src_remap[4];
+				glBindTexture(GL_TEXTURE_2D, src_id);
+				glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, (GLint*)&src_remap[0]);
+				glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, (GLint*)&src_remap[1]);
+				glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, (GLint*)&src_remap[2]);
+				glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, (GLint*)&src_remap[3]);
+
+				glBindTexture(dst_type, dst_id);
+				glTexParameteriv(dst_type, GL_TEXTURE_SWIZZLE_RGBA, src_remap);
+			}
+
+			if (memcmp(remap.first.data(), rsx::default_remap_vector.first.data(), 4) ||
+				memcmp(remap.second.data(), rsx::default_remap_vector.second.data(), 4))
+				set_up_remap_vector(dst_id, dst_type, remap);
 
 			return dst_id;
 		}
@@ -765,6 +784,18 @@ namespace gl
 			}
 		}
 
+		void set_up_remap_vector(u32 texture_id, GLenum texture_type, const texture_channel_remap_t& remap_vector)
+		{
+			std::array<GLenum, 4> swizzle_remap;
+			glBindTexture(texture_type, texture_id);
+			glGetTexParameteriv(texture_type, GL_TEXTURE_SWIZZLE_A, (GLint*)&swizzle_remap[0]);
+			glGetTexParameteriv(texture_type, GL_TEXTURE_SWIZZLE_R, (GLint*)&swizzle_remap[1]);
+			glGetTexParameteriv(texture_type, GL_TEXTURE_SWIZZLE_G, (GLint*)&swizzle_remap[2]);
+			glGetTexParameteriv(texture_type, GL_TEXTURE_SWIZZLE_B, (GLint*)&swizzle_remap[3]);
+
+			apply_swizzle_remap(texture_type, swizzle_remap, remap_vector);
+		}
+
 	protected:
 
 		void free_texture_section(cached_texture_section& tex) override
@@ -772,24 +803,28 @@ namespace gl
 			tex.destroy();
 		}
 
-		u32 create_temporary_subresource_view(void*&, u32* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) override
+		u32 create_temporary_subresource_view(void*&, u32* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
+				const texture_channel_remap_t& remap_vector) override
 		{
-			return create_temporary_subresource_impl(*src, GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h);
+			return create_temporary_subresource_impl(*src, GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h, remap_vector, true);
 		}
 
-		u32 create_temporary_subresource_view(void*&, gl::texture* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h) override
+		u32 create_temporary_subresource_view(void*&, gl::texture* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
+				const texture_channel_remap_t& remap_vector) override
 		{
 			if (auto as_rtt = dynamic_cast<gl::render_target*>(src))
 			{
-				return create_temporary_subresource_impl(src->id(), (GLenum)as_rtt->get_compatible_internal_format(), GL_TEXTURE_2D, gcm_format, x, y, w, h);
+				return create_temporary_subresource_impl(src->id(), (GLenum)as_rtt->get_compatible_internal_format(),
+						GL_TEXTURE_2D, gcm_format, x, y, w, h, remap_vector, true);
 			}
 			else
 			{
-				return create_temporary_subresource_impl(src->id(), GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h);
+				return create_temporary_subresource_impl(src->id(), GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h,
+						remap_vector, true);
 			}
 		}
 
-		u32 generate_cubemap_from_images(void*&, u32 gcm_format, u16 size, const std::array<u32, 6>& sources) override
+		u32 generate_cubemap_from_images(void*&, u32 gcm_format, u16 size, const std::array<u32, 6>& sources, const texture_channel_remap_t& /*remap_vector*/) override
 		{
 			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
 			GLuint dst_id = 0;
@@ -826,9 +861,10 @@ namespace gl
 			return dst_id;
 		}
 
-		u32 generate_atlas_from_images(void*&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy) override
+		u32 generate_atlas_from_images(void*&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
+				const texture_channel_remap_t& remap_vector) override
 		{
-			auto result = create_temporary_subresource_impl(sections_to_copy.front().src, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, false);
+			auto result = create_temporary_subresource_impl(sections_to_copy.front().src, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
 
 			for (const auto &region : sections_to_copy)
 			{
@@ -847,9 +883,9 @@ namespace gl
 
 		cached_texture_section* create_new_texture(void*&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
 				rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags,
-				const std::pair<std::array<u8, 4>, std::array<u8, 4>>& /*remap_vector*/) override
+				rsx::texture_colorspace colorspace, const texture_channel_remap_t& /*remap_vector*/) override
 		{
-			u32 vram_texture = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
+			u32 vram_texture = gl::create_texture(gcm_format, width, height, depth, mipmaps, type, colorspace);
 			bool depth_flag = false;
 
 			switch (gcm_format)
@@ -918,12 +954,12 @@ namespace gl
 		}
 
 		cached_texture_section* upload_image_from_cpu(void*&, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
-			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled,
-			const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type,
+			rsx::texture_colorspace colorspace, bool swizzled, const texture_channel_remap_t& remap_vector) override
 		{
 			void* unused = nullptr;
 			auto section = create_new_texture(unused, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
-				rsx::texture_create_flags::default_component_order, remap_vector);
+				rsx::texture_create_flags::default_component_order, colorspace, remap_vector);
 
 			bool input_swizzled = swizzled;
 			if (context == rsx::texture_upload_context::blit_engine_src)
@@ -938,7 +974,8 @@ namespace gl
 				section->set_sampler_status(rsx::texture_sampler_status::status_ready);
 			}
 
-			gl::upload_texture(section->get_raw_texture(), rsx_address, gcm_format, width, height, depth, mipmaps, input_swizzled, type, subresource_layout, remap_vector, false);
+			gl::upload_texture(section->get_raw_texture(), rsx_address, gcm_format, width, height, depth, mipmaps,
+					input_swizzled, type, subresource_layout, remap_vector, false, colorspace);
 			return section;
 		}
 
@@ -954,16 +991,9 @@ namespace gl
 			section.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 		}
 
-		void set_up_remap_vector(cached_texture_section& section, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector) override
+		void set_up_remap_vector(cached_texture_section& section, const texture_channel_remap_t& remap_vector) override
 		{
-			std::array<GLenum, 4> swizzle_remap;
-			glBindTexture(GL_TEXTURE_2D, section.get_raw_texture());
-			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, (GLint*)&swizzle_remap[0]);
-			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, (GLint*)&swizzle_remap[1]);
-			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, (GLint*)&swizzle_remap[2]);
-			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, (GLint*)&swizzle_remap[3]);
-
-			apply_swizzle_remap(GL_TEXTURE_2D, swizzle_remap, remap_vector);
+			set_up_remap_vector(section.get_raw_texture(), GL_TEXTURE_2D, remap_vector);
 			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 

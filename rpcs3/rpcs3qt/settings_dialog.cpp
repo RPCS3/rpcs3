@@ -159,19 +159,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 		for (int i = 0; i < ppu_list.count(); i++)
 		{
-			ppuBG->button(i)->setText(ppu_list[i]);
-
 			if (ppu_list[i] == selectedPPU)
 			{
 				ppuBG->button(i)->setChecked(true);
 			}
-
-#ifndef LLVM_AVAILABLE
-			if (ppu_list[i].toLower().contains("llvm"))
-			{
-				ppuBG->button(i)->setEnabled(false);
-			}
-#endif
 
 			connect(ppuBG->button(i), &QAbstractButton::pressed, [=]()
 			{
@@ -198,8 +189,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 		for (int i = 0; i < spu_list.count(); i++)
 		{
-			spuBG->button(i)->setText(spu_list[i]);
-
 			if (spu_list[i] == selectedSPU)
 			{
 				spuBG->button(i)->setChecked(true);
@@ -211,6 +200,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			});
 		}
 	}
+
+#ifndef LLVM_AVAILABLE
+	ui->ppu_llvm->setEnabled(false);
+	ui->spu_llvm->setEnabled(false);
+#endif
 
 	// lib options tool tips
 	SubscribeTooltip(ui->lib_auto, json_cpu_lib["auto"].toString());
