@@ -18,6 +18,7 @@ enum
 	CELL_GEM_ERROR_CONVERT_NOT_STARTED        = 0x80121809,
 	CELL_GEM_ERROR_WRITE_NOT_FINISHED         = 0x8012180A,
 	CELL_GEM_ERROR_NOT_A_HUE                  = 0x8012180B,
+	//CELL_GEM_ERROR_LIGHTING_NOT_CALIBRATED    =;
 };
 
 // Runtime statuses
@@ -87,10 +88,24 @@ enum
 // Video conversion flags
 enum
 {
-	CELL_GEM_VIDEO_CONVERT_UNK1 = 1 << 0,
-	CELL_GEM_VIDEO_CONVERT_UNK2 = 1 << 1,
-	CELL_GEM_VIDEO_CONVERT_UNK3 = 1 << 2,
-	CELL_GEM_VIDEO_CONVERT_UNK4 = 1 << 3,
+	CELL_GEM_AUTO_WHITE_BALANCE           = 0x1,
+	CELL_GEM_GAMMA_BOOST                  = 0x2,
+	CELL_GEM_COMBINE_PREVIOUS_INPUT_FRAME = 0x4,
+	CELL_GEM_FILTER_OUTLIER_PIXELS        = 0x8
+};
+
+// Video conversion output formats
+enum
+{
+	CELL_GEM_NO_VIDEO_OUTPUT           = 1,
+	CELL_GEM_RGBA_640x480              = 2,
+	CELL_GEM_YUV_640x480               = 3,
+	CELL_GEM_YUV422_640x480            = 4,
+	CELL_GEM_YUV411_640x480            = 5,
+	CELL_GEM_RGBA_320x240              = 6,
+	CELL_GEM_BAYER_RESTORED            = 7,
+	CELL_GEM_BAYER_RESTORED_RGGB       = 8,
+	CELL_GEM_BAYER_RESTORED_RASTERIZED = 9
 };
 
 struct CellGemAttribute
