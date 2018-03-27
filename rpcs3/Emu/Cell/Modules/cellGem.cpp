@@ -441,21 +441,9 @@ s32 cellGemForceRGB(u32 gem_num, float r, float g, float b)
 	return CELL_OK;
 }
 
-s32 cellGemGetAccelerometerPositionInDevice(u32 gem_num, vm::ptr<f32[4]> pos)
+s32 cellGemGetAccelerometerPositionInDevice()
 {
-	cellGem.todo("cellGemGetAccelerometerPositionInDevice(gem_num=%d, pos=*0x%x)", gem_num, pos);
-	const auto gem = fxm::get<gem_t>();
-
-	if (!gem)
-	{
-		return CELL_GEM_ERROR_UNINITIALIZED;
-	}
-
-	if (!check_gem_num(gem_num))
-	{
-		return CELL_GEM_ERROR_INVALID_PARAMETER;
-	}
-
+	UNIMPLEMENTED_FUNC(cellGem);
 	return CELL_OK;
 }
 
@@ -471,7 +459,7 @@ s32 cellGemGetAllTrackableHues(vm::ptr<u8> hues)
 
 	for (size_t i = 0; i < 360; i++)
 	{
-		hues[i] = 0;
+		hues[i] = true;
 	}
 
 	return CELL_OK;
@@ -513,13 +501,10 @@ s32 cellGemGetEnvironmentLightingColor(vm::ptr<f32> r, vm::ptr<f32> g, vm::ptr<f
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	//if (0)
-	//{
-	//	*r = 128;
-	//	*g = 128;
-	//	*b = 128;
-	//	return CELL_GEM_ERROR_LIGHTING_NOT_CALIBRATED;
-	//}
+	// default to 128
+	*r = 128;
+	*g = 128;
+	*b = 128;
 
 	return CELL_OK;
 }
@@ -748,7 +733,7 @@ s32 cellGemGetTrackerHue(u32 gem_num, vm::ptr<u32> hue)
 
 	if (!gem)
 	{
-		return CELL_GEM_ERROR_ALREADY_INITIALIZED;
+		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
 	if (!check_gem_num(gem_num) || !hue)
@@ -817,7 +802,7 @@ s32 cellGemInvalidateCalibration(s32 gem_num)
 
 	if (!gem)
 	{
-		return CELL_GEM_ERROR_ALREADY_INITIALIZED;
+		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
 	if (!check_gem_num(gem_num))
@@ -908,7 +893,7 @@ s32 cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, vm::ptr<
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!check_gem_num(gem_num))
+	if (!check_gem_num(gem_num) || !ext_id)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -959,7 +944,7 @@ s32 cellGemSetRumble(u32 gem_num, u8 rumble)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!check_gem_num(gem_num) || rumble > 255)
+	if (!check_gem_num(gem_num))
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -969,21 +954,9 @@ s32 cellGemSetRumble(u32 gem_num, u8 rumble)
 	return CELL_OK;
 }
 
-s32 cellGemSetYaw(u32 gem_num, vm::ptr<f32[4]> z_direction)
+s32 cellGemSetYaw()
 {
-	cellGem.todo("cellGemSetYaw(gem_num=*0x%x, z_direction=*0x%x)", gem_num, z_direction);
-	auto gem = fxm::get<gem_t>();
-
-	if (!gem)
-	{
-		return CELL_GEM_ERROR_UNINITIALIZED;
-	}
-
-	if (!check_gem_num(gem_num))
-	{
-		return CELL_GEM_ERROR_INVALID_PARAMETER;
-	}
-
+	UNIMPLEMENTED_FUNC(cellGem);
 	return CELL_OK;
 }
 
