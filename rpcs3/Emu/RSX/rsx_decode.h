@@ -1905,6 +1905,31 @@ struct registers_decoder<NV4097_SET_SHADER_CONTROL>
 };
 
 template<>
+struct registers_decoder<NV4097_SET_SHADER_PACKER>
+{
+	struct decoded_type
+	{
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		bool srgb_output_enabled() const
+		{
+			return !!m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "Shader packer control: srgb_enabled = " + std::to_string(decoded_values.srgb_output_enabled());
+	}
+};
+
+template<>
 struct registers_decoder<NV4097_SET_VERTEX_DATA_BASE_OFFSET>
 {
 	struct decoded_type

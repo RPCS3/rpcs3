@@ -15,6 +15,12 @@ namespace rsx
 		framebuffer_storage = 3
 	};
 
+	enum texture_colorspace
+	{
+		rgb_linear = 0,
+		srgb_nonlinear = 1
+	};
+
 	//Sampled image descriptor
 	struct sampled_image_descriptor_base
 	{

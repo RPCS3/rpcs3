@@ -63,6 +63,8 @@ namespace gl
 		u16 surface_pixel_size = 0;
 
 		texture::internal_format compatible_internal_format = texture::internal_format::rgba8;
+		std::array<GLenum, 4> native_component_mapping;
+		u32 current_remap_encoding = 0;
 
 	public:
 		render_target *old_contents = nullptr;
@@ -111,13 +113,34 @@ namespace gl
 			return surface_height;
 		}
 
-		u32 get_surface() const override
+		u32 get_surface() override
 		{
+			return get_view(0xAAE4, rsx::default_remap_vector);
+		}
+
+		u32 get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
+		{
+			if (remap_encoding != current_remap_encoding)
+			{
+				current_remap_encoding = remap_encoding;
+
+				bind();
+				apply_swizzle_remap(GL_TEXTURE_2D, native_component_mapping, remap);
+			}
+
 			return id();
 		}
 
-		u32 get_view() const
+		u32 get_view()
 		{
+			//Get view with components in true native layout
+			//TODO: Implement real image views
+			const GLenum rgba_remap[4] = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
+			glBindTexture(GL_TEXTURE_2D, id());
+			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, (GLint*)rgba_remap);
+
+			//Reset view encoding
+			current_remap_encoding = 0;
 			return id();
 		}
 
@@ -137,6 +160,12 @@ namespace gl
 			internal_height = height();
 			surface_width = rsx::apply_inverse_resolution_scale(internal_width, true);
 			surface_height = rsx::apply_inverse_resolution_scale(internal_height, true);
+
+			bind();
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, (GLint*)&native_component_mapping[0]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, (GLint*)&native_component_mapping[1]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, (GLint*)&native_component_mapping[2]);
+			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, (GLint*)&native_component_mapping[3]);
 		}
 
 		bool matches_dimensions(u16 _width, u16 _height) const
