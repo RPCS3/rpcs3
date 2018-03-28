@@ -198,7 +198,7 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 			if (get_blacklist)
 			{
 				blacklist.emplace_back(keycode);
-				LOG_ERROR(HLE, u8"DS4 \u6821\u6B63: \u589E\u52A0\u9375 [ %d = %s ] \u5230\u9ED1\u540D\u55AE\u3002 \u503C = %d", keycode, button.second, value);
+				LOG_ERROR(HLE, "DS4 Calibration: Added key [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
 			}
 			else if (value > pressed_button.first)
 				pressed_button = { value, button.second };
@@ -208,7 +208,7 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 	if (get_blacklist)
 	{
 		if (blacklist.size() <= 0)
-			LOG_SUCCESS(HLE, u8"DS4 \u6821\u6B63: \u6E05\u7406\u9ED1\u540D\u55AE\u3002 No input spam detected");
+			LOG_SUCCESS(HLE, "DS4 Calibration: Blacklist is clear. No input spam detected");
 		return;
 	}
 
@@ -753,9 +753,9 @@ bool ds4_pad_handler::Init()
 	}
 
 	if (controllers.size() == 0)
-		LOG_ERROR(HLE, u8"[DS4] \u627E\u4E0D\u5230\u63A7\u5236\u5668!");
+		LOG_ERROR(HLE, "[DS4] No controllers found!");
 	else
-		LOG_SUCCESS(HLE, u8"[DS4] \u627E\u5230\u63A7\u5236\u5668: %d", controllers.size());
+		LOG_SUCCESS(HLE, "[DS4] Controllers found: %d", controllers.size());
 
 	is_init = true;
 	return true;
@@ -978,7 +978,7 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 		const u32 crcReported = GetU32LEData(&buf[DS4_INPUT_REPORT_0x11_SIZE - 4]);
 		if (crcCalc != crcReported)
 		{
-			LOG_WARNING(HLE, u8"[DS4] \u8CC7\u6599\u5305 CRC \u6821\u5C0D\u5931\u6557, \u5FFD\u7565! \u6536\u5230 0x%x, \u9810\u671F 0x%x", crcReported, crcCalc);
+			LOG_WARNING(HLE, "[DS4] Data packet CRC check failed, ignoring! Received 0x%x, Expected 0x%x", crcReported, crcCalc);
 			return DS4DataStatus::NoNewData;
 		}
 

@@ -1,8 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>lan/qt_zh_TW.qm</file>
-        <file>lan/widgets.qm</file>
-        <file>lan/gui.qm</file>
         <file>Icons/pause.png</file>
         <file>Icons/play.png</file>
         <file>Icons/restart.png</file>

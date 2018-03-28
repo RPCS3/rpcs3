@@ -14,19 +14,19 @@ private:
 	bool operator<(const QTreeWidgetItem &other) const {
 		auto GetTrophyRank = [](const QString& name)
 		{
-			if (name.toLower() == u8"\u9752\u9285")
+			if (name.toLower() == "bronze")
 			{
 				return 0;
 			}
-			else if (name.toLower() == u8"\u767D\u9280")
+			else if (name.toLower() == "silver")
 			{
 				return 1;
 			}
-			else if (name.toLower() == u8"\u9EC3\u91D1")
+			else if (name.toLower() == "gold")
 			{
 				return 2;
 			}
-			else if (name.toLower() == u8"\u767D\u91D1")
+			else if (name.toLower() == "platinum")
 			{
 				return 3;
 			}
