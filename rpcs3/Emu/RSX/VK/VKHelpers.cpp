@@ -19,6 +19,7 @@ namespace vk
 	bool g_drv_no_primitive_restart_flag = false;
 	bool g_drv_force_32bit_indices = false;
 	bool g_drv_sanitize_fp_values = false;
+	bool g_drv_disable_fence_reset = false;
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
@@ -307,7 +308,7 @@ namespace vk
 		g_current_renderer = device;
 		const auto gpu_name = g_current_renderer.gpu().name();
 
-#ifdef _WIN32
+		bool gcn4_proprietary = false;
 		const std::array<std::string, 8> black_listed =
 		{
 			// Black list all polaris unless its proven they dont have a problem with primitive restart
@@ -326,16 +327,18 @@ namespace vk
 			if (gpu_name.find(test) != std::string::npos)
 			{
 				g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
+				gcn4_proprietary = true;
 				break;
 			}
 		}
 
 		//Older cards back to GCN1 break primitive restart on 16-bit indices
-		if (gpu_name.find("Radeon") != std::string::npos)
+		if (!gcn4_proprietary && gpu_name.find("Radeon") != std::string::npos)
 		{
+			//gcn1 - gcn3 workarounds
 			g_drv_force_32bit_indices = true;
+			g_drv_disable_fence_reset = true;
 		}
-#endif
 
 		//Nvidia cards are easily susceptible to NaN poisoning
 		if (gpu_name.find("NVIDIA") != std::string::npos || gpu_name.find("GeForce") != std::string::npos)
@@ -357,6 +360,11 @@ namespace vk
 	bool sanitize_fp_values()
 	{
 		return g_drv_sanitize_fp_values;
+	}
+
+	bool fence_reset_disabled()
+	{
+		return g_drv_disable_fence_reset;
 	}
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)
@@ -532,6 +540,22 @@ namespace vk
 	const u64 get_last_completed_frame_id()
 	{
 		return (g_num_processed_frames > 0)? g_num_processed_frames - 1: 0;
+	}
+
+	void reset_fence(VkFence *pFence)
+	{
+		if (g_drv_disable_fence_reset)
+		{
+			vkDestroyFence(g_current_renderer, *pFence, nullptr);
+
+			VkFenceCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+			CHECK_RESULT(vkCreateFence(g_current_renderer, &info, nullptr, pFence));
+		}
+		else
+		{
+			CHECK_RESULT(vkResetFences(g_current_renderer, 1, pFence));
+		}
 	}
 
 	void die_with_error(const char* faulting_addr, VkResult error_code)
