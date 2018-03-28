@@ -58,8 +58,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->verticalScrollBar()->setSingleStep(20);
 	m_gameList->horizontalScrollBar()->setSingleStep(20);
 	m_gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
-	m_gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
-	m_gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
 	m_gameList->verticalHeader()->setVisible(false);
 	m_gameList->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_gameList->horizontalHeader()->setHighlightSections(false);
