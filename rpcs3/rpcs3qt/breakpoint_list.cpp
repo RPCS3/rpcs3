@@ -3,10 +3,11 @@
 #include "Emu/Cell/SPUThread.h"
 
 #include <QMenu>
+#include <QLineEdit>
 
 constexpr auto qstr = QString::fromStdString;
 
-breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) : QListWidget(parent), m_breakpoint_handler(handler)
+breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) : QListWidget(parent), m_breakpoint_handler(handler), m_lastBreakpointText()
 {
 	setEditTriggers(QAbstractItemView::NoEditTriggers);
 	setContextMenuPolicy(Qt::CustomContextMenu);
@@ -15,6 +16,17 @@ breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) :
 	// connects
 	connect(this, &QListWidget::itemDoubleClicked, this, &breakpoint_list::OnBreakpointListDoubleClicked);
 	connect(this, &QListWidget::customContextMenuRequested, this, &breakpoint_list::OnBreakpointListRightClicked);
+	connect(this->itemDelegate(), &QAbstractItemDelegate::commitData, [this](QWidget* lineEdit) {
+		QString txt = static_cast<QLineEdit*>(lineEdit)->text();
+		if (txt.length() == 0)
+		{
+			txt = m_lastBreakpointText;
+			currentItem()->setText(m_lastBreakpointText);
+		}
+		u32 addr = currentItem()->data(Qt::UserRole).value<u32>();
+		m_breakpoint_handler->RenameBreakpoint(addr, txt);
+	});
+
 }
 
 /** 
@@ -30,16 +42,13 @@ void breakpoint_list::ClearBreakpoints()
 {
 	while (count())
 	{
-		auto* currentItem = takeItem(0);
-		u32 loc = currentItem->data(Qt::UserRole).value<u32>();
-		m_breakpoint_handler->RemoveBreakpoint(loc);
-		delete currentItem;
+		delete takeItem(0);
 	}
 }
 
 void breakpoint_list::RemoveBreakpoint(u32 addr)
 {
-	m_breakpoint_handler->RemoveBreakpoint(addr);
+	m_breakpoint_handler->RemoveBreakpoint(addr, static_cast<u32>(breakpoint_types::exec));
 
 	for (int i = 0; i < count(); i++)
 	{
@@ -55,21 +64,37 @@ void breakpoint_list::RemoveBreakpoint(u32 addr)
 	Q_EMIT RequestShowAddress(addr);
 }
 
-void breakpoint_list::AddBreakpoint(u32 pc)
+void breakpoint_list::SynchronizeList()
 {
-	m_breakpoint_handler->AddBreakpoint(pc);
+	ClearBreakpoints();
+	QMap<u32, breakpoint_data> bps = m_breakpoint_handler->GetCurrentBreakpoints();
 
-	const auto cpu = this->cpu.lock();
-	const u32 cpu_offset = cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
-	m_disasm->offset = (u8*)vm::base(cpu_offset);
+	auto bp_iter = bps.constBegin();
+	while (bp_iter != bps.constEnd())
+	{
+		AddBreakpoint(bp_iter.key(), bp_iter.value().name); // Future, handle the flags. No point doing so right now.
+		++bp_iter;
+	}
+}
 
-	m_disasm->disasm(m_disasm->dump_pc = pc);
+void breakpoint_list::AddBreakpoint(u32 pc, const QString& name)
+{
+	QString bp_name = name;
 
-	QString breakpointItemText = qstr(m_disasm->last_opcode);
+	if (name.length() == 0)
+	{
+		const auto cpu = this->cpu.lock();
+		const u32 cpu_offset = cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
+		m_disasm->offset = (u8*)vm::base(cpu_offset);
+		m_disasm->disasm(m_disasm->dump_pc = pc);
 
-	breakpointItemText.remove(10, 13);
+		bp_name = qstr(m_disasm->last_opcode);
+		bp_name.remove(10, 13);
+	}
+	m_breakpoint_handler->AddBreakpoint(pc, static_cast<u32>(breakpoint_types::exec), bp_name);
 
-	QListWidgetItem* breakpointItem = new QListWidgetItem(breakpointItemText);
+
+	QListWidgetItem* breakpointItem = new QListWidgetItem(bp_name);
 	breakpointItem->setTextColor(m_text_color_bp);
 	breakpointItem->setBackgroundColor(m_color_bp);
 	QVariant pcVariant;
@@ -133,7 +158,8 @@ void breakpoint_list::OnBreakpointListRightClicked(const QPoint &pos)
 		if (selectedItem->text() == "Rename")
 		{
 			QListWidgetItem* currentItem = selectedItems().at(0);
-
+			m_lastBreakpointText = currentItem->text();
+			currentItem->setText("");
 			currentItem->setFlags(currentItem->flags() | Qt::ItemIsEditable);
 			editItem(currentItem);
 		}

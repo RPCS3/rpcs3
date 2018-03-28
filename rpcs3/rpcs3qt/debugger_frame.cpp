@@ -26,7 +26,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	QHBoxLayout* hbox_b_main = new QHBoxLayout();
 
 
-	m_breakpoint_handler = new breakpoint_handler();
+	m_breakpoint_handler = new breakpoint_handler(this);
 	m_debugger_list = new debugger_list(this, settings, m_breakpoint_handler);
 	m_debugger_list->installEventFilter(this);
 
@@ -135,6 +135,15 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 
 	m_debugger_list->ShowAddress(m_debugger_list->m_pc);
 	UpdateUnitList();
+}
+
+void debugger_frame::UpdateBreakpointList()
+{
+	UpdateUnitList(); // Ensure that the thread list is updated.
+	m_choice_units->setCurrentIndex(m_choice_units->count()-1); // trick to make the address valid temporarily.
+	m_breakpoint_handler->UpdateGameID();
+	m_breakpoint_list->SynchronizeList();
+	m_choice_units->setCurrentIndex(0); // now revert index back to original. Since new thread was just created, it'll always be on default.
 }
 
 void debugger_frame::SaveSettings()
@@ -398,7 +407,7 @@ void debugger_frame::DoUpdate()
 	// Check if we need to disable a step over bp
 	if (m_last_step_over_breakpoint != -1 && GetPc() == m_last_step_over_breakpoint)
 	{
-		m_breakpoint_handler->RemoveBreakpoint(m_last_step_over_breakpoint);
+		m_breakpoint_handler->RemoveBreakpoint(m_last_step_over_breakpoint, static_cast<u32>(breakpoint_types::exec));
 		m_last_step_over_breakpoint = -1;
 	}
 
@@ -586,13 +595,13 @@ void debugger_frame::DoStep(bool stepOver)
 
 				// Set breakpoint on next instruction
 				u32 next_instruction_pc = current_instruction_pc + 4;
-				m_breakpoint_handler->AddBreakpoint(next_instruction_pc);
+				m_breakpoint_handler->AddBreakpoint(next_instruction_pc, static_cast<u32>(breakpoint_types::exec), "stepover", true);
 
 				// Undefine previous step over breakpoint if it hasnt been already
 				// This can happen when the user steps over a branch that doesn't return to itself
 				if (m_last_step_over_breakpoint != -1)
 				{
-					m_breakpoint_handler->RemoveBreakpoint(next_instruction_pc);
+					m_breakpoint_handler->RemoveBreakpoint(next_instruction_pc, static_cast<u32>(breakpoint_types::exec));
 				}
 					
 				m_last_step_over_breakpoint = next_instruction_pc;

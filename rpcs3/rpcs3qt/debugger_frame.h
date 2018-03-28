@@ -72,6 +72,7 @@ public:
 	void UpdateUnitList();
 
 	u32 GetPc() const;
+	void UpdateBreakpointList();
 	void DoUpdate();
 	void WriteRegs();
 	void EnableButtons(bool enable);

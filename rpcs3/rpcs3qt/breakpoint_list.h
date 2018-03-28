@@ -15,7 +15,8 @@ public:
 	breakpoint_list(QWidget* parent, breakpoint_handler* handler);
 	void UpdateCPUData(std::weak_ptr<cpu_thread> cpu, std::shared_ptr<CPUDisAsm> disasm);
 	void ClearBreakpoints();
-	void AddBreakpoint(u32 addr);
+	void SynchronizeList();
+	void AddBreakpoint(u32 addr, const QString& name = "");
 	void RemoveBreakpoint(u32 addr);
 
 	QColor m_text_color_bp;
@@ -33,4 +34,5 @@ private:
 
 	std::weak_ptr<cpu_thread> cpu;
 	std::shared_ptr<CPUDisAsm> m_disasm;
+	QString m_lastBreakpointText;
 };
