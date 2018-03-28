@@ -1153,7 +1153,7 @@ void main_window::CreateConnects()
 
 	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, [=]
 	{
-		rsx_debugger* rsx = new rsx_debugger(this);
+		rsx_debugger* rsx = new rsx_debugger(guiSettings);
 		rsx->show();
 	});
 
