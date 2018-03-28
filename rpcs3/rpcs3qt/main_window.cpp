@@ -84,7 +84,6 @@ void main_window::Init()
 	// add toolbar widgets (crappy Qt designer is not able to)
 	ui->toolBar->setObjectName("mw_toolbar");
 	ui->sizeSlider->setRange(0, gui::gl_max_slider_pos);
-	ui->sizeSlider->setSliderPosition(guiSettings->GetValue(gui::gl_iconSize).toInt());
 	ui->toolBar->addWidget(ui->sizeSliderContainer);
 	ui->toolBar->addSeparator();
 	ui->toolBar->addWidget(ui->mw_searchbar);
@@ -1238,7 +1237,7 @@ void main_window::CreateConnects()
 		if (m_save_slider_pos)
 		{
 			m_save_slider_pos = false;
-			guiSettings->SetValue(gui::gl_iconSize, index);
+			guiSettings->SetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid, index);
 		}
 		m_gameListFrame->ResizeIcons(index);
 	};
@@ -1270,9 +1269,17 @@ void main_window::CreateConnects()
 
 	connect(m_listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
-		bool isList = act == ui->setlistModeListAct;
-		m_gameListFrame->SetListMode(isList);
-		m_categoryVisibleActGroup->setEnabled(isList);
+		bool is_list_act = act == ui->setlistModeListAct;
+		if (is_list_act == m_is_list_mode)
+			return;
+
+		int slider_pos = ui->sizeSlider->sliderPosition();
+		ui->sizeSlider->setSliderPosition(m_other_slider_pos);
+		m_other_slider_pos = slider_pos;
+
+		m_is_list_mode = is_list_act;
+		m_gameListFrame->SetListMode(m_is_list_mode);
+		m_categoryVisibleActGroup->setEnabled(m_is_list_mode);
 	});
 
 	connect(ui->toolbar_disc, &QAction::triggered, this, &main_window::BootGame);
@@ -1300,7 +1307,10 @@ void main_window::CreateConnects()
 	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });
 
 	connect(ui->sizeSlider, &QSlider::valueChanged, resizeIcons);
-	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [&] { guiSettings->SetValue(gui::gl_iconSize, ui->sizeSlider->value()); });
+	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [&]
+	{
+		guiSettings->SetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid, ui->sizeSlider->value());
+	});
 	connect(ui->sizeSlider, &QSlider::actionTriggered, [&](int action)
 	{
 		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
@@ -1433,14 +1443,18 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	ui->showCatUnknownAct->setChecked(guiSettings->GetCategoryVisibility(Category::Unknown_Cat));
 	ui->showCatOtherAct->setChecked(guiSettings->GetCategoryVisibility(Category::Others));
 
-	SetIconSizeActions(guiSettings->GetValue(gui::gl_iconSize).toInt());
-
-	bool isListMode = guiSettings->GetValue(gui::gl_listMode).toBool();
-	if (isListMode)
+	// handle icon size options
+	m_is_list_mode = guiSettings->GetValue(gui::gl_listMode).toBool();
+	if (m_is_list_mode)
 		ui->setlistModeListAct->setChecked(true);
 	else
 		ui->setlistModeGridAct->setChecked(true);
-	m_categoryVisibleActGroup->setEnabled(isListMode);
+	m_categoryVisibleActGroup->setEnabled(m_is_list_mode);
+
+	int icon_size_index = guiSettings->GetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid).toInt();
+	m_other_slider_pos = guiSettings->GetValue(!m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid).toInt();
+	ui->sizeSlider->setSliderPosition(icon_size_index);
+	SetIconSizeActions(icon_size_index);
 
 	if (configure_all)
 	{
