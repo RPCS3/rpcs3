@@ -151,15 +151,8 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	all_layout->setStretch(1, 1);
 	setLayout(all_layout);
 
-	QByteArray geometry = m_gui_settings->GetValue(gui::tr_geometry).toByteArray();
-	if (geometry.isEmpty() == false)
-	{
-		restoreGeometry(geometry);
-	}
-	else
-	{
+	if (!restoreGeometry(m_gui_settings->GetValue(gui::tr_geometry).toByteArray()))
 		resize(QDesktopWidget().availableGeometry().size() * 0.7);
-	}
 
 	// Make connects
 	connect(m_icon_slider, &QSlider::valueChanged, this, [=](int val)
