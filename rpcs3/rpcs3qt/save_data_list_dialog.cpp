@@ -18,15 +18,15 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 {
 	if (op >= 8)
 	{
-		setWindowTitle(tr("Save Data Interface (Delete)"));
+		setWindowTitle(tr(u8"儲存資料訊息 (刪除)"));
 	}
 	else if (op & 1)
 	{
-		setWindowTitle(tr("Save Data Interface (Load)"));
+		setWindowTitle(tr(u8"儲存資料訊息 (讀取)"));
 	}
 	else
 	{
-		setWindowTitle(tr("Save Data Interface (Save)"));
+		setWindowTitle(tr(u8"儲存資料訊息 (儲存)"));
 	}
 
 	setMinimumSize(QSize(400, 400));
@@ -41,14 +41,14 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_list->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_list->setColumnCount(4);
-	m_list->setHorizontalHeaderLabels(QStringList() << tr("Title") << tr("Subtitle") << tr("Save ID") << tr("Entry Notes"));
+	m_list->setHorizontalHeaderLabels(QStringList() << tr(u8"標題") << tr(u8"副標題") << tr(u8"儲存 ID") << tr(u8"記錄備注"));
 
 	// Button Layout
 	QHBoxLayout* hbox_action = new QHBoxLayout();
 
 	if (entries.size() > 0)
 	{ // If there are no entries, don't add the selection widget or the selection label to the UI.
-		QPushButton *push_select = new QPushButton(tr("&Select Entry"), this);
+		QPushButton *push_select = new QPushButton(tr(u8"選擇記錄"), this);
 		connect(push_select, &QAbstractButton::clicked, this, &save_data_list_dialog::accept);
 		push_select->setAutoDefault(true);
 		push_select->setDefault(true);
@@ -60,7 +60,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 	if (listSet->newData)
 	{
-		QPushButton *saveNewEntry = new QPushButton(tr("Save New Entry"), this);
+		QPushButton *saveNewEntry = new QPushButton(tr(u8"儲存新記錄"), this);
 		connect(saveNewEntry, &QAbstractButton::clicked, this, [&]()
 		{
 			m_entry = selection_code::new_save;
@@ -71,7 +71,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 	hbox_action->addStretch();
 
-	QPushButton *push_cancel = new QPushButton(tr("&Cancel"), this);
+	QPushButton *push_cancel = new QPushButton(tr(u8"取消"), this);
 	push_cancel->setAutoDefault(false);
 	hbox_action->addWidget(push_cancel);
 
@@ -119,12 +119,12 @@ void save_data_list_dialog::UpdateSelectionLabel()
 	{
 		if (m_list->currentRow() == -1)
 		{
-			m_entry_label->setText(tr("Currently Selected: None"));
+			m_entry_label->setText(tr(u8"目前選擇: 無"));
 		}
 		else
 		{
 			int entry = m_list->item(m_list->currentRow(), 0)->data(Qt::UserRole).toInt();
-			m_entry_label->setText(tr("Currently Selected: ") + qstr(m_save_entries[entry].dirName));
+			m_entry_label->setText(tr(u8"目前選擇: ") + qstr(m_save_entries[entry].dirName));
 		}
 	}
 }

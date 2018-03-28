@@ -23,7 +23,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 	}
 
 	m_dialog = new custom_dialog(type.disable_cancel);
-	m_dialog->setWindowTitle(type.se_normal ? "Normal dialog" : "Error dialog");
+	m_dialog->setWindowTitle(type.se_normal ? (u8"\u8A0A\u606F") : (u8"\u932F\u8AA4\u8A0A\u606F"));
 	m_dialog->setWindowOpacity(type.bg_invisible ? 1. : 0.75);
 
 	m_text = new QLabel(qstr(msg));
@@ -79,8 +79,8 @@ void msg_dialog_frame::Create(const std::string& msg)
 	{
 		m_dialog->setModal(true);
 
-		m_button_yes = new QPushButton("&Yes", m_dialog);
-		m_button_no = new QPushButton("&No", m_dialog);
+		m_button_yes = new QPushButton((u8"\u662F(&Y)"), m_dialog);
+		m_button_no = new QPushButton((u8"\u5426(&N)"), m_dialog);
 
 		QHBoxLayout* hBoxButtons = new QHBoxLayout;
 		hBoxButtons->setAlignment(Qt::AlignCenter);
@@ -156,7 +156,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 	m_dialog->setFixedSize(m_dialog->sizeHint());
 
 	// order compile-dialogs on screen
-	if (qstr(msg).contains("Compiling PPU module"))
+	if (qstr(msg).contains(u8"\u7DE8\u8B6F PPU \u6A21\u7D44"))
 	{
 		const QSize screensize = QApplication::primaryScreen()->geometry().size();
 		const double ratio = (double)screensize.width() / (double)screensize.height();
