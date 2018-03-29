@@ -89,13 +89,6 @@ namespace rsx
 		}
 	}
 
-	// The rsx internally adds the 'data_base_offset' and the 'vert_offset' and masks it 
-	// before actually attempting to translate to the internal address. Seen happening heavily in R&C games
-	u32 get_vertex_offset_from_base(u32 vert_data_base_offset, u32 vert_base_offset)
-	{
-		return ((u64)vert_data_base_offset + vert_base_offset) & 0xFFFFFFF;
-	}
-
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
 	{
 		switch (type)
