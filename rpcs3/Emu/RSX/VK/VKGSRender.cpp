@@ -1072,6 +1072,82 @@ void VKGSRender::end()
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - vertex_start).count();
 
 	std::chrono::time_point<steady_clock> textures_start = vertex_end;
+
+
+	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+
+	//Check for data casts
+	if (ds && ds->old_contents)
+	{
+		if (ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM)
+		{
+			auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
+			auto render_pass = m_render_passes[rp];
+			m_depth_converter->run(*m_current_command_buffer, ds->width(), ds->height(), ds, ds->old_contents->get_view(0xAAE4, rsx::default_remap_vector), render_pass, m_framebuffers_to_clean);
+
+			ds->old_contents = nullptr;
+			ds->dirty = false;
+		}
+		else if (!g_cfg.video.strict_rendering_mode)
+		{
+			//Clear this to avoid dereferencing stale ptr
+			ds->old_contents = nullptr;
+		}
+	}
+
+	if (g_cfg.video.strict_rendering_mode)
+	{
+		auto copy_rtt_contents = [&](vk::render_target* surface)
+		{
+			if (surface->info.format == surface->old_contents->info.format)
+			{
+				const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
+
+				const u16 parent_w = surface->old_contents->width();
+				const u16 parent_h = surface->old_contents->height();
+				u16 copy_w, copy_h;
+
+				std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
+
+				VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
+				VkImageLayout old_layout = surface->current_layout;
+
+				vk::change_image_layout(*m_current_command_buffer, surface, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+				vk::change_image_layout(*m_current_command_buffer, surface->old_contents, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+
+				VkImageCopy copy_rgn;
+				copy_rgn.srcOffset = { 0, 0, 0 };
+				copy_rgn.dstOffset = { 0, 0, 0 };
+				copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
+				copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
+				copy_rgn.extent = { copy_w, copy_h, 1 };
+
+				vkCmdCopyImage(*m_current_command_buffer, surface->old_contents->value, surface->old_contents->current_layout, surface->value, surface->current_layout, 1, &copy_rgn);
+				vk::change_image_layout(*m_current_command_buffer, surface, old_layout, subresource_range);
+
+				surface->dirty = false;
+			}
+			//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
+
+			surface->old_contents = nullptr;
+		};
+
+		//Prepare surfaces if needed
+		for (auto &rtt : m_rtts.m_bound_render_targets)
+		{
+			if (auto surface = std::get<1>(rtt))
+			{
+				if (surface->old_contents != nullptr)
+					copy_rtt_contents(surface);
+			}
+		}
+
+		if (ds && ds->old_contents)
+		{
+			copy_rtt_contents(ds);
+		}
+	}
+
 	//Load textures
 	{
 		std::lock_guard<shared_mutex> lock(m_sampler_mutex);
@@ -1287,80 +1363,6 @@ void VKGSRender::end()
 	//While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
 	//Only textures are synchronized tightly with the GPU and they have been read back above
 	vk::enter_uninterruptible();
-
-	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-
-	//Check for data casts
-	if (ds && ds->old_contents)
-	{
-		if (ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM)
-		{
-			auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
-			auto render_pass = m_render_passes[rp];
-			m_depth_converter->run(*m_current_command_buffer, ds->width(), ds->height(), ds, ds->old_contents->get_view(0xAAE4, rsx::default_remap_vector), render_pass, m_framebuffers_to_clean);
-
-			ds->old_contents = nullptr;
-			ds->dirty = false;
-		}
-		else if (!g_cfg.video.strict_rendering_mode)
-		{
-			//Clear this to avoid dereferencing stale ptr
-			ds->old_contents = nullptr;
-		}
-	}
-
-	if (g_cfg.video.strict_rendering_mode)
-	{
-		auto copy_rtt_contents = [&](vk::render_target* surface)
-		{
-			if (surface->info.format == surface->old_contents->info.format)
-			{
-				const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
-
-				const u16 parent_w = surface->old_contents->width();
-				const u16 parent_h = surface->old_contents->height();
-				u16 copy_w, copy_h;
-
-				std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
-
-				VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
-				VkImageLayout old_layout = surface->current_layout;
-
-				vk::change_image_layout(*m_current_command_buffer, surface, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-				vk::change_image_layout(*m_current_command_buffer, surface->old_contents, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
-
-				VkImageCopy copy_rgn;
-				copy_rgn.srcOffset = { 0, 0, 0 };
-				copy_rgn.dstOffset = { 0, 0, 0 };
-				copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
-				copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
-				copy_rgn.extent = { copy_w, copy_h, 1 };
-
-				vkCmdCopyImage(*m_current_command_buffer, surface->old_contents->value, surface->old_contents->current_layout, surface->value, surface->current_layout, 1, &copy_rgn);
-				vk::change_image_layout(*m_current_command_buffer, surface, old_layout, subresource_range);
-
-				surface->dirty = false;
-			}
-			//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
-
-			surface->old_contents = nullptr;
-		};
-
-		//Prepare surfaces if needed
-		for (auto &rtt : m_rtts.m_bound_render_targets)
-		{
-			if (auto surface = std::get<1>(rtt))
-			{
-				if (surface->old_contents != nullptr)
-					copy_rtt_contents(surface);
-			}
-		}
-
-		if (ds && ds->old_contents)
-		{
-			copy_rtt_contents(ds);
-		}
-	}
 
 	u32 occlusion_id = 0;
 	if (m_occlusion_query_active)
