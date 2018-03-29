@@ -978,7 +978,21 @@ namespace rsx
 		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
 
 		rop_control |= (alpha_func << 16);
-		rop_control |= rsx::method_registers.framebuffer_srgb_enabled() ? 0x2 : 0;
+
+		if (rsx::method_registers.framebuffer_srgb_enabled())
+		{
+			// Check if framebuffer is actually an XRGB format and not a WZYX format
+			switch (rsx::method_registers.surface_color())
+			{
+			case rsx::surface_color_format::w16z16y16x16:
+			case rsx::surface_color_format::w32z32y32x32:
+			case rsx::surface_color_format::x32:
+				break;
+			default:
+				rop_control |= 0x2;
+				break;
+			}
+		}
 
 		// Generate wpos coeffecients
 		// wpos equation is now as follows:
@@ -1543,13 +1557,13 @@ namespace rsx
 
 				const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 				const u32 raw_format = tex.format();
+				const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
 				if (raw_format & CELL_GCM_TEXTURE_UN)
 					result.unnormalized_coords |= (1 << i);
 
 				if (sampler_descriptors[i]->is_depth_texture)
 				{
-					const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 					switch (format)
 					{
 					case CELL_GCM_TEXTURE_A8R8G8B8:
@@ -1578,7 +1592,31 @@ namespace rsx
 					}
 				}
 
-				texture_control |= tex.gamma();
+				if (const auto srgb_mask = tex.gamma())
+				{
+					switch (format)
+					{
+					case CELL_GCM_TEXTURE_DEPTH24_D8:
+					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+					case CELL_GCM_TEXTURE_DEPTH16:
+					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+					case CELL_GCM_TEXTURE_X16:
+					case CELL_GCM_TEXTURE_Y16_X16:
+					case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+					case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+					case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+					case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+					case CELL_GCM_TEXTURE_X32_FLOAT:
+					case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+						//Special data formats (XY, HILO, DEPTH) are not RGB formats
+						//Ignore gamma flags
+						break;
+					default:
+						texture_control |= srgb_mask;
+						break;
+					}
+				}
+
 				result.texture_scale[i][3] = (f32)texture_control;
 			}
 		}
