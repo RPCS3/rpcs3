@@ -205,6 +205,113 @@ void GLGSRender::end()
 	//Do vertex upload before RTT prep / texture lookups to give the driver time to push data
 	auto upload_info = set_vertex_buffer();
 
+	//Check if depth buffer is bound and valid
+	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
+	auto copy_rtt_contents = [](gl::render_target *surface)
+	{
+		if (surface->get_compatible_internal_format() == surface->old_contents->get_compatible_internal_format())
+		{
+			//Copy data from old contents onto this one
+			//1. Clip a rectangular region defning the data
+			//2. Perform a GPU blit
+			u16 parent_w = surface->old_contents->width();
+			u16 parent_h = surface->old_contents->height();
+			u16 copy_w, copy_h;
+
+			std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
+			glCopyImageSubData(surface->old_contents->id(), GL_TEXTURE_2D, 0, 0, 0, 0, surface->id(), GL_TEXTURE_2D, 0, 0, 0, 0, copy_w, copy_h, 1);
+			surface->set_cleared();
+		}
+		//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
+
+		surface->old_contents = nullptr;
+	};
+
+	//Check if we have any 'recycled' surfaces in memory and if so, clear them
+	std::vector<int> buffers_to_clear;
+	bool clear_all_color = true;
+	bool clear_depth = false;
+
+	for (int index = 0; index < 4; index++)
+	{
+		if (std::get<0>(m_rtts.m_bound_render_targets[index]) != 0)
+		{
+			if (std::get<1>(m_rtts.m_bound_render_targets[index])->cleared())
+				clear_all_color = false;
+			else
+				buffers_to_clear.push_back(index);
+		}
+	}
+
+	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+	if (ds && !ds->cleared())
+	{
+		clear_depth = true;
+	}
+
+	//Temporarily disable pixel tests
+	glDisable(GL_SCISSOR_TEST);
+
+	if (clear_depth || buffers_to_clear.size() > 0)
+	{
+		GLenum mask = 0;
+
+		if (clear_depth)
+		{
+			gl_state.depth_mask(GL_TRUE);
+			gl_state.clear_depth(1.0);
+			gl_state.clear_stencil(255);
+			mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+		}
+
+		if (clear_all_color)
+			mask |= GL_COLOR_BUFFER_BIT;
+
+		glClear(mask);
+
+		if (buffers_to_clear.size() > 0 && !clear_all_color)
+		{
+			GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
+			//It is impossible for the render target to be typa A or B here (clear all would have been flagged)
+			for (auto &i : buffers_to_clear)
+				glClearBufferfv(draw_fbo.id(), i, colors);
+		}
+
+		if (clear_depth)
+			gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
+
+		ds->set_cleared();
+	}
+
+	if (ds && ds->old_contents != nullptr && ds->get_rsx_pitch() == ds->old_contents->get_rsx_pitch() &&
+		ds->old_contents->get_compatible_internal_format() == gl::texture::internal_format::rgba8)
+	{
+		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
+		ds->old_contents = nullptr;
+	}
+
+	if (g_cfg.video.strict_rendering_mode)
+	{
+		if (ds && ds->old_contents != nullptr)
+			copy_rtt_contents(ds);
+
+		for (auto &rtt : m_rtts.m_bound_render_targets)
+		{
+			if (auto surface = std::get<1>(rtt))
+			{
+				if (surface->old_contents != nullptr)
+					copy_rtt_contents(surface);
+			}
+		}
+	}
+	else
+	{
+		// Old contents are one use only. Keep the depth conversion check from firing over and over
+		if (ds) ds->old_contents = nullptr;
+	}
+
+	glEnable(GL_SCISSOR_TEST);
+
 	//Load textures
 	{
 		std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
@@ -358,113 +465,6 @@ void GLGSRender::end()
 	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
 	update_draw_state();
-
-	//Check if depth buffer is bound and valid
-	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
-	auto copy_rtt_contents = [](gl::render_target *surface)
-	{
-		if (surface->get_compatible_internal_format() == surface->old_contents->get_compatible_internal_format())
-		{
-			//Copy data from old contents onto this one
-			//1. Clip a rectangular region defning the data
-			//2. Perform a GPU blit
-			u16 parent_w = surface->old_contents->width();
-			u16 parent_h = surface->old_contents->height();
-			u16 copy_w, copy_h;
-
-			std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
-			glCopyImageSubData(surface->old_contents->id(), GL_TEXTURE_2D, 0, 0, 0, 0, surface->id(), GL_TEXTURE_2D, 0, 0, 0, 0, copy_w, copy_h, 1);
-			surface->set_cleared();
-		}
-		//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
-
-		surface->old_contents = nullptr;
-	};
-
-	//Check if we have any 'recycled' surfaces in memory and if so, clear them
-	std::vector<int> buffers_to_clear;
-	bool clear_all_color = true;
-	bool clear_depth = false;
-
-	for (int index = 0; index < 4; index++)
-	{
-		if (std::get<0>(m_rtts.m_bound_render_targets[index]) != 0)
-		{
-			if (std::get<1>(m_rtts.m_bound_render_targets[index])->cleared())
-				clear_all_color = false;
-			else
-				buffers_to_clear.push_back(index);
-		}
-	}
-
-	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-	if (ds && !ds->cleared())
-	{
-		clear_depth = true;
-	}
-
-	//Temporarily disable pixel tests
-	glDisable(GL_SCISSOR_TEST);
-
-	if (clear_depth || buffers_to_clear.size() > 0)
-	{
-		GLenum mask = 0;
-
-		if (clear_depth)
-		{
-			gl_state.depth_mask(GL_TRUE);
-			gl_state.clear_depth(1.0);
-			gl_state.clear_stencil(255);
-			mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
-		}
-
-		if (clear_all_color)
-			mask |= GL_COLOR_BUFFER_BIT;
-
-		glClear(mask);
-
-		if (buffers_to_clear.size() > 0 && !clear_all_color)
-		{
-			GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
-			//It is impossible for the render target to be typa A or B here (clear all would have been flagged)
-			for (auto &i: buffers_to_clear)
-				glClearBufferfv(draw_fbo.id(), i, colors);
-		}
-
-		if (clear_depth)
-			gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
-
-		ds->set_cleared();
-	}
-
-	if (ds && ds->old_contents != nullptr && ds->get_rsx_pitch() == ds->old_contents->get_rsx_pitch() &&
-		ds->old_contents->get_compatible_internal_format() == gl::texture::internal_format::rgba8)
-	{
-		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
-		ds->old_contents = nullptr;
-	}
-
-	if (g_cfg.video.strict_rendering_mode)
-	{
-		if (ds && ds->old_contents != nullptr)
-			copy_rtt_contents(ds);
-
-		for (auto &rtt : m_rtts.m_bound_render_targets)
-		{
-			if (auto surface = std::get<1>(rtt))
-			{
-				if (surface->old_contents != nullptr)
-					copy_rtt_contents(surface);
-			}
-		}
-	}
-	else
-	{
-		// Old contents are one use only. Keep the depth conversion check from firing over and over
-		if (ds) ds->old_contents = nullptr;
-	}
-
-	glEnable(GL_SCISSOR_TEST);
 
 	std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
 

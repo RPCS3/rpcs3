@@ -263,11 +263,11 @@ private:
 	QString m_search_text;
 
 	// Icon Size
-	int m_icon_size_index;
+	int m_icon_size_index = 0;
 
 	// Icons
 	QColor m_Icon_Color;
-	QSize m_Icon_Size;
+	QSize m_Icon_Size = gui::gl_icon_size_min; // ensure a valid size
 	qreal m_Margin_Factor;
 	qreal m_Text_Factor;
 };
