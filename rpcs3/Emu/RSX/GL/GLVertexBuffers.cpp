@@ -53,7 +53,7 @@ namespace
 		gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(ptr), ::narrow<u32>(block_sz) };
 		std::tie(min_index, max_index, vertex_draw_count) = write_index_array_data_to_buffer(dst, raw_index_buffer,
 			type, draw_mode, rsx::method_registers.restart_index_enabled(), rsx::method_registers.restart_index(), first_count_commands,
-			[](auto prim) { return !gl::is_primitive_native(prim); });
+			rsx::method_registers.vertex_data_base_index(), [](auto prim) { return !gl::is_primitive_native(prim); });
 
 		return std::make_tuple(min_index, max_index, vertex_draw_count);
 	}
