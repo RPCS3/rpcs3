@@ -249,7 +249,12 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	});
 	connect(m_list_captured_draw_calls, &QTableWidget::itemClicked, this, &rsx_debugger::OnClickDrawCalls);
 
-	//Fill the frame
+	// Restore header states
+	QVariantMap states = m_gui_settings->GetValue(gui::rsx_states).toMap();
+	for (int i = 0; i < m_tw_rsx->count(); i++)
+		((QTableWidget*)m_tw_rsx->widget(i))->horizontalHeader()->restoreState(states[QString::number(i)].toByteArray());
+
+	// Fill the frame
 	for (u32 i = 0; i < frame_debug.command_queue.size(); i++)
 		m_list_captured_frame->insertRow(i);
 
@@ -264,7 +269,14 @@ rsx_debugger::~rsx_debugger()
 
 void rsx_debugger::closeEvent(QCloseEvent* event)
 {
+	// Save header states and window geometry
+	QVariantMap states;
+	for (int i = 0; i < m_tw_rsx->count(); i++)
+		states[QString::number(i)] = ((QTableWidget*)m_tw_rsx->widget(i))->horizontalHeader()->saveState();
+
+	m_gui_settings->SetValue(gui::rsx_states, states);
 	m_gui_settings->SetValue(gui::rsx_geometry, saveGeometry());
+
 	QDialog::closeEvent(event);
 }
 
