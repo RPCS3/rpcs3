@@ -150,6 +150,7 @@ namespace gui
 	const gui_save d_centerPC      = gui_save(debugger, "centerPC",      false);
 
 	const gui_save rsx_geometry = gui_save(rsx, "geometry", QByteArray());
+	const gui_save rsx_states   = gui_save(rsx, "states",   QVariantMap());
 
 	const gui_save m_currentConfig     = gui_save(meta, "currentConfig",     QObject::tr("CurrentSettings"));
 	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", Default);
