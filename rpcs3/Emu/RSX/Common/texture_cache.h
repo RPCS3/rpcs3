@@ -258,32 +258,42 @@ namespace rsx
 			u16 src_y;
 			u16 dst_x;
 			u16 dst_y;
+			u16 dst_z;
 			u16 w;
 			u16 h;
+		};
+
+		enum deferred_request_command : u32
+		{
+			copy_image_static,
+			copy_image_dynamic,
+			cubemap_gather,
+			cubemap_unwrap,
+			atlas_gather,
+			_3d_gather,
+			_3d_unwrap
 		};
 
 		using texture_channel_remap_t = std::pair<std::array<u8, 4>, std::array<u8, 4>>;
 		struct deferred_subresource
 		{
 			image_resource_type external_handle = 0;
-			std::array<image_resource_type, 6> external_cubemap_sources;
 			std::vector<copy_region_descriptor> sections_to_copy;
 			texture_channel_remap_t remap;
+			deferred_request_command op;
 			u32 base_address = 0;
 			u32 gcm_format = 0;
 			u16 x = 0;
 			u16 y = 0;
 			u16 width = 0;
 			u16 height = 0;
-			bool is_cubemap = false;
-			bool is_copy_cmd = false;
-			bool update_cached = false;
+			u16 depth = 1;
 
 			deferred_subresource()
 			{}
 
-			deferred_subresource(image_resource_type _res, u32 _addr, u32 _fmt, u16 _x, u16 _y, u16 _w, u16 _h, const texture_channel_remap_t& _remap) :
-				external_handle(_res), base_address(_addr), gcm_format(_fmt), x(_x), y(_y), width(_w), height(_h), remap(_remap)
+			deferred_subresource(image_resource_type _res, deferred_request_command _op, u32 _addr, u32 _fmt, u16 _x, u16 _y, u16 _w, u16 _h, u16 _d, const texture_channel_remap_t& _remap) :
+				external_handle(_res), op(_op), base_address(_addr), gcm_format(_fmt), x(_x), y(_y), width(_w), height(_h), depth(_d), remap(_remap)
 			{}
 		};
 
@@ -317,10 +327,11 @@ namespace rsx
 				image_type = type;
 			}
 
-			sampled_image_descriptor(image_resource_type external_handle, u32 base_address, u32 gcm_format, u16 x_offset, u16 y_offset, u16 width, u16 height,
-				texture_upload_context ctx, bool is_depth, f32 x_scale, f32 y_scale, rsx::texture_dimension_extended type, const texture_channel_remap_t& remap)
+			sampled_image_descriptor(image_resource_type external_handle, deferred_request_command reason, u32 base_address, u32 gcm_format,
+				u16 x_offset, u16 y_offset, u16 width, u16 height, u16 depth, texture_upload_context ctx, bool is_depth, f32 x_scale, f32 y_scale,
+				rsx::texture_dimension_extended type, const texture_channel_remap_t& remap)
 			{
-				external_subresource_desc = { external_handle, base_address, gcm_format, x_offset, y_offset, width, height, remap };
+				external_subresource_desc = { external_handle, reason, base_address, gcm_format, x_offset, y_offset, width, height, depth, remap };
 
 				image_handle = 0;
 				upload_context = ctx;
@@ -328,12 +339,6 @@ namespace rsx
 				scale_x = x_scale;
 				scale_y = y_scale;
 				image_type = type;
-			}
-
-			void set_external_cubemap_resources(std::array<image_resource_type, 6> images)
-			{
-				external_subresource_desc.external_cubemap_sources = images;
-				external_subresource_desc.is_cubemap = true;
 			}
 		};
 
@@ -381,7 +386,8 @@ namespace rsx
 		virtual void enforce_surface_creation_type(section_storage_type& section, u32 gcm_format, texture_create_flags expected) = 0;
 		virtual void set_up_remap_vector(section_storage_type& section, const texture_channel_remap_t& remap_vector) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex) = 0;
-		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::array<image_resource_type, 6>& sources, const texture_channel_remap_t& remap_vector) = 0;
+		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
+		virtual image_view_type generate_3d_from_2d_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
 		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
 		virtual void update_image_contents(commandbuffer_type&, image_view_type dst, image_resource_type src, u16 width, u16 height) = 0;
 		virtual bool render_target_format_is_compatible(image_storage_type* tex, u32 gcm_format) = 0;
@@ -1251,24 +1257,70 @@ namespace rsx
 			{
 				const auto& found_desc = It->second.first;
 				if (found_desc.external_handle != desc.external_handle ||
-					found_desc.is_cubemap != desc.is_cubemap ||
+					found_desc.op != desc.op ||
 					found_desc.x != desc.x || found_desc.y != desc.y ||
 					found_desc.width != desc.width || found_desc.height != desc.height)
 					continue;
 
-				if (desc.update_cached)
+				if (desc.op == deferred_request_command::copy_image_dynamic)
 					update_image_contents(cmd, It->second.second, desc.external_handle, desc.width, desc.height);
 
 				return It->second.second;
 			}
 
 			image_view_type result = 0;
-			if (desc.is_copy_cmd)
+			switch (desc.op)
+			{
+			case deferred_request_command::cubemap_gather:
+			{
+				result = generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, desc.sections_to_copy, desc.remap);
+				break;
+			}
+			case deferred_request_command::cubemap_unwrap:
+			{
+				std::vector<copy_region_descriptor> sections(6);
+				for (u16 n = 0; n < 6; ++n)
+				{
+					sections[n] = { desc.external_handle, 0, (u16)(desc.height * n), 0, 0, n, desc.width, desc.height };
+				}
+
+				result = generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, sections, desc.remap);
+				break;
+			}
+			case deferred_request_command::_3d_gather:
+			{
+				result = generate_3d_from_2d_images(cmd, desc.gcm_format, desc.width, desc.height, desc.depth, desc.sections_to_copy, desc.remap);
+				break;
+			}
+			case deferred_request_command::_3d_unwrap:
+			{
+				std::vector<copy_region_descriptor> sections;
+				sections.resize(desc.depth);
+				for (u16 n = 0; n < desc.depth; ++n)
+				{
+					sections[n] = { desc.external_handle, 0, (u16)(desc.height * n), 0, 0, n, desc.width, desc.height };
+				}
+
+				result = generate_3d_from_2d_images(cmd, desc.gcm_format, desc.width, desc.height, desc.depth, sections, desc.remap);
+				break;
+			}
+			case deferred_request_command::atlas_gather:
+			{
 				result = generate_atlas_from_images(cmd, desc.gcm_format, desc.width, desc.height, desc.sections_to_copy, desc.remap);
-			else if (desc.is_cubemap)
-				result = generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, desc.external_cubemap_sources, desc.remap);
-			else
+				break;
+			}
+			case deferred_request_command::copy_image_static:
+			case deferred_request_command::copy_image_dynamic:
+			{
 				result = create_temporary_subresource_view(cmd, &desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height, desc.remap);
+				break;
+			}
+			default:
+			{
+				//Throw
+				fmt::throw_exception("Invalid deferred command op 0x%X" HERE, (u32)desc.op);
+			}
+			}
 
 			if (result)
 			{
@@ -1283,80 +1335,110 @@ namespace rsx
 			m_temporary_subresource_cache.erase(base_address);
 		}
 
+		template<typename surface_store_type>
+		std::vector<copy_region_descriptor> gather_texture_slices_from_framebuffers(u32 texaddr, u16 slice_w, u16 slice_h, u16 pitch, u16 count, u8 bpp, surface_store_type& m_rtts)
+		{
+			std::vector<copy_region_descriptor> surfaces;
+			u32 current_address = texaddr;
+			u32 slice_size = (pitch * slice_h);
+			bool unsafe = false;
+
+			for (u16 slice = 0; slice < count; ++slice)
+			{
+				auto overlapping = m_rtts.get_merged_texture_memory_region(current_address, slice_w, slice_h, pitch, bpp);
+				current_address += (pitch * slice_h);
+
+				if (overlapping.empty())
+				{
+					unsafe = true;
+					surfaces.push_back({});
+				}
+				else
+				{
+					for (auto &section : overlapping)
+					{
+						surfaces.push_back
+						({
+							section.surface->get_surface(),
+							rsx::apply_resolution_scale(section.src_x, true),
+							rsx::apply_resolution_scale(section.src_y, true),
+							rsx::apply_resolution_scale(section.dst_x, true),
+							rsx::apply_resolution_scale(section.dst_y, true),
+							slice,
+							rsx::apply_resolution_scale(section.width, true),
+							rsx::apply_resolution_scale(section.height, true)
+						});
+					}
+				}
+			}
+
+			if (unsafe)
+			{
+				//TODO: Gather remaining sides from the texture cache or upload from cpu (too slow?)
+				LOG_ERROR(RSX, "Could not gather all required slices for cubemap/3d generation");
+			}
+
+			return surfaces;
+		}
+
 		template <typename render_target_type, typename surface_store_type>
 		sampled_image_descriptor process_framebuffer_resource(commandbuffer_type& cmd, render_target_type texptr, u32 texaddr, u32 gcm_format, surface_store_type& m_rtts,
-				u16 tex_width, u16 tex_height, u16 tex_pitch, rsx::texture_dimension_extended extended_dimension, bool is_depth, u32 encoded_remap, const texture_channel_remap_t& decoded_remap)
+				u16 tex_width, u16 tex_height, u16 tex_depth, u16 tex_pitch, rsx::texture_dimension_extended extended_dimension, bool is_depth, u32 encoded_remap, const texture_channel_remap_t& decoded_remap)
 		{
 			const u32 format = gcm_format & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
 			const auto surface_width = texptr->get_surface_width();
 			const auto surface_height = texptr->get_surface_height();
+
+			u32 internal_width = tex_width;
+			u32 internal_height = tex_height;
+			get_native_dimensions(internal_width, internal_height, texptr);
 
 			if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d &&
 				extended_dimension != rsx::texture_dimension_extended::texture_dimension_1d)
 			{
 				if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap)
 				{
+					const auto scaled_size = rsx::apply_resolution_scale(internal_width, true);
 					if (surface_height == (surface_width * 6))
 					{
-						//TODO: Unwrap long RTT block into 6 images and generate cubemap from them
-						LOG_ERROR(RSX, "Unwrapping block rtt to cubemap is unimplemented!");
-						return{};
+						return{ texptr->get_surface(), deferred_request_command::cubemap_unwrap, texaddr, format, 0, 0,
+								scaled_size, scaled_size, 1,
+								texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
+								rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 					}
 
-					std::array<image_resource_type, 6> image_array;
-					image_array[0] = texptr->get_surface();
-					bool safe_cast = true;
-
-					u32 image_size = texptr->get_rsx_pitch() * texptr->get_surface_height();
-					u32 image_address = texaddr + image_size;
-
-					for (int n = 1; n < 6; ++n)
-					{
-						render_target_type img = nullptr;
-						image_array[n] = 0;
-
-						if (!!(img = m_rtts.get_texture_from_render_target_if_applicable(image_address)) ||
-							!!(img = m_rtts.get_texture_from_depth_stencil_if_applicable(image_address)))
-						{
-							if (img->get_surface_width() != surface_width ||
-								img->get_surface_width() != img->get_surface_height())
-							{
-								safe_cast = false;
-							}
-							else
-							{
-								image_array[n] = img->get_surface();
-							}
-						}
-						else
-						{
-							safe_cast = false;
-						}
-
-						image_address += image_size;
-					}
-
-					if (!safe_cast)
-					{
-						//TODO: Lower to warning
-						//TODO: Gather remaining sides from the texture cache or upload from cpu (too slow?)
-						LOG_ERROR(RSX, "Could not gather all required surfaces for cubemap generation");
-					}
-
-					sampled_image_descriptor desc = { texptr->get_surface(), texaddr, format, 0, 0, rsx::apply_resolution_scale(surface_width, true),
-							rsx::apply_resolution_scale(surface_height, true), texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
+					sampled_image_descriptor desc = { texptr->get_surface(), deferred_request_command::cubemap_gather, texaddr, format, 0, 0,
+							scaled_size, scaled_size, 1,
+							texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
 							rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 
-					desc.set_external_cubemap_resources(image_array);
+					auto bpp = get_format_block_size_in_bytes(format);
+					desc.external_subresource_desc.sections_to_copy = std::move(gather_texture_slices_from_framebuffers(texaddr, tex_width, tex_height, tex_pitch, 6, bpp, m_rtts));
 					return desc;
 				}
+				else if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d && tex_depth > 1)
+				{
+					auto minimum_height = (tex_height * tex_depth);
+					auto scaled_w = rsx::apply_resolution_scale(internal_width, true);
+					auto scaled_h = rsx::apply_resolution_scale(internal_height, true);
+					if (surface_height >= minimum_height && surface_width >= tex_width)
+					{
+						return{ texptr->get_surface(), deferred_request_command::_3d_unwrap, texaddr, format, 0, 0,
+								scaled_w, scaled_h, tex_depth,
+								texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
+								rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
+					}
 
-				LOG_ERROR(RSX, "Texture resides in render target memory, but requested type is not 2D (%d)", (u32)extended_dimension);
+					sampled_image_descriptor desc = { texptr->get_surface(), deferred_request_command::_3d_gather, texaddr, format, 0, 0,
+						scaled_w, scaled_h, tex_depth,
+						texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
+						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
+
+					const auto bpp = get_format_block_size_in_bytes(format);
+					desc.external_subresource_desc.sections_to_copy = std::move(gather_texture_slices_from_framebuffers(texaddr, tex_width, tex_height, tex_pitch, tex_depth, bpp, m_rtts));
+					return desc;
+				}
 			}
-
-			u32 internal_width = tex_width;
-			u32 internal_height = tex_height;
-			get_native_dimensions(internal_width, internal_height, texptr);
 
 			const bool unnormalized = (gcm_format & CELL_GCM_TEXTURE_UN) != 0;
 			f32 scale_x = (unnormalized)? (1.f / tex_width) : 1.f;
@@ -1378,11 +1460,10 @@ namespace rsx
 					const auto w = rsx::apply_resolution_scale(internal_width, true);
 					const auto h = rsx::apply_resolution_scale(internal_height, true);
 
-					sampled_image_descriptor result = { texptr->get_surface(), texaddr, format, 0, 0, w, h,
-						texture_upload_context::framebuffer_storage, is_depth, scale_x, scale_y,
-						rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
+					sampled_image_descriptor result = { texptr->get_surface(), deferred_request_command::atlas_gather,
+							texaddr, format, 0, 0, w, h, 1, texture_upload_context::framebuffer_storage, is_depth,
+							scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
 
-					result.external_subresource_desc.is_copy_cmd = true;
 					result.external_subresource_desc.sections_to_copy.reserve(overlapping.size());
 
 					for (auto &section : overlapping)
@@ -1394,6 +1475,7 @@ namespace rsx
 							rsx::apply_resolution_scale(section.src_y, true),
 							rsx::apply_resolution_scale(section.dst_x, true),
 							rsx::apply_resolution_scale(section.dst_y, true),
+							0,
 							rsx::apply_resolution_scale(section.width, true),
 							rsx::apply_resolution_scale(section.height, true)
 						});
@@ -1468,14 +1550,14 @@ namespace rsx
 				const auto w = rsx::apply_resolution_scale(internal_width, true);
 				const auto h = rsx::apply_resolution_scale(internal_height, true);
 
-				sampled_image_descriptor result = { texptr->get_surface(), texaddr, format, 0, 0, w, h, texture_upload_context::framebuffer_storage,
-					is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
-
-				result.external_subresource_desc.update_cached = update_subresource_cache;
-				return result;
+				auto command = update_subresource_cache ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
+				return { texptr->get_surface(), command, texaddr, format, 0, 0, w, h, 1,
+						texture_upload_context::framebuffer_storage, is_depth, scale_x, scale_y,
+						rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
 			}
 
-			return{ texptr->get_view(encoded_remap, decoded_remap), texture_upload_context::framebuffer_storage, is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
+			return{ texptr->get_view(encoded_remap, decoded_remap), texture_upload_context::framebuffer_storage,
+					is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
 		}
 
 		template <typename RsxTextureType, typename surface_store_type, typename ...Args>
@@ -1525,7 +1607,7 @@ namespace rsx
 					if (test_framebuffer(texaddr))
 					{
 						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts,
-								tex_width, tex_height, tex_pitch, extended_dimension, false, tex.remap(),
+								tex_width, tex_height, depth, tex_pitch, extended_dimension, false, tex.remap(),
 								tex.decoded_remap());
 					}
 					else
@@ -1540,7 +1622,7 @@ namespace rsx
 					if (test_framebuffer(texaddr))
 					{
 						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts,
-								tex_width, tex_height, tex_pitch, extended_dimension, true, tex.remap(),
+								tex_width, tex_height, depth, tex_pitch, extended_dimension, true, tex.remap(),
 								tex.decoded_remap());
 					}
 					else
@@ -1591,8 +1673,9 @@ namespace rsx
 						internal_width = rsx::apply_resolution_scale(internal_width, true);
 						internal_height = (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)? 1: rsx::apply_resolution_scale(internal_height, true);
 
-						return{ rsc.surface->get_surface(), rsc.base_address, format, rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
-							internal_width, internal_height, texture_upload_context::framebuffer_storage, rsc.is_depth_surface, scale_x, scale_y,
+						return{ rsc.surface->get_surface(), deferred_request_command::copy_image_static, rsc.base_address, format,
+							rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
+							internal_width, internal_height, 1, texture_upload_context::framebuffer_storage, rsc.is_depth_surface, scale_x, scale_y,
 							rsx::texture_dimension_extended::texture_dimension_2d, tex.decoded_remap() };
 					}
 				}
@@ -1661,8 +1744,9 @@ namespace rsx
 										set_up_remap_vector(*surface, tex.decoded_remap());
 
 									auto src_image = surface->get_raw_texture();
-									return{ src_image, surface->get_section_base(), format, offset_x, offset_y, tex_width, tex_height, texture_upload_context::blit_engine_dst,
-											surface->is_depth_texture(), scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, rsx::default_remap_vector };
+									return{ src_image, deferred_request_command::copy_image_static, surface->get_section_base(), format, offset_x, offset_y, tex_width, tex_height, 1,
+										texture_upload_context::blit_engine_dst, surface->is_depth_texture(), scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d,
+										rsx::default_remap_vector };
 								}
 							}
 						}
