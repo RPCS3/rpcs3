@@ -1,5 +1,6 @@
 
 #include "rsx_debugger.h"
+#include "qt_utils.h"
 
 enum GCMEnumTypes
 {
@@ -301,35 +302,7 @@ bool rsx_debugger::eventFilter(QObject* object, QEvent* event)
 		{
 		case QEvent::Resize:
 		{
-			bool is_empty = m_list_commands->rowCount() < 1;
-			if (is_empty)
-				m_list_commands->insertRow(m_list_commands->rowCount());
-
-			int item_height = m_list_commands->rowHeight(0);
-			if (is_empty)
-			{
-				m_list_commands->clearContents();
-				m_list_commands->setRowCount(0);
-			}
-
-			int available_height = m_list_commands->rect().height() - m_list_commands->horizontalHeader()->height() - m_list_commands->frameWidth() * 2;
-			if (available_height < item_height || item_height < 1)
-				break;
-
-			int new_item_count = available_height / item_height;
-			if (new_item_count == m_item_count)
-				break;
-
-			m_item_count = new_item_count;
-			m_list_commands->clearContents();
-			m_list_commands->setRowCount(0);
-
-			for (u32 i = 0; i < m_item_count; ++i)
-				m_list_commands->insertRow(m_list_commands->rowCount());
-
-			if (m_list_commands->horizontalScrollBar())
-				m_list_commands->removeRow(--m_item_count);
-
+			gui::utils::update_table_item_count(m_list_commands);
 			UpdateInformation();
 			break;
 		}
@@ -337,12 +310,13 @@ bool rsx_debugger::eventFilter(QObject* object, QEvent* event)
 		{
 			QWheelEvent* wheelEvent = static_cast<QWheelEvent*>(event);
 			QPoint numSteps = wheelEvent->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
+			int steps = numSteps.y();
+			int item_count = m_list_commands->rowCount();
+			int step_size = wheelEvent->modifiers() & Qt::ControlModifier ? item_count : 1;
 
 			if (vm::check_addr(m_addr, 4))
 			{
-				int items = wheelEvent->modifiers() & Qt::ControlModifier ? m_item_count : 1;
-
-				for (int i = 0; i<items; ++i)
+				for (int i = 0; i < step_size; ++i)
 				{
 					u32 offset;
 					if (vm::check_addr(m_addr, 4))
@@ -360,12 +334,12 @@ bool rsx_debugger::eventFilter(QObject* object, QEvent* event)
 						offset = 1;
 					}
 
-					m_addr -= 4 * offset * numSteps.y();
+					m_addr -= 4 * offset * steps;
 				}
 			}
 			else
 			{
-				m_addr -= (wheelEvent->modifiers() & Qt::ControlModifier ? m_item_count : 1) * 4 * numSteps.y();
+				m_addr -= step_size * 4 * steps;
 			}
 
 			UpdateInformation();
@@ -667,12 +641,14 @@ void rsx_debugger::UpdateInformation()
 
 void rsx_debugger::GetMemory()
 {
+	int item_count = m_list_commands->rowCount();
+
 	// Clean commands column
-	for(u32 i=0; i<m_item_count; i++)
+	for(u32 i=0; i < item_count; i++)
 		m_list_commands->setItem(i, 2, new QTableWidgetItem(""));
 
 	// Write information
-	for(u32 i=0, addr = m_addr; i<m_item_count; i++, addr += 4)
+	for(u32 i=0, addr = m_addr; i < item_count; i++, addr += 4)
 	{
 		m_list_commands->setItem(i, 0, new QTableWidgetItem(qstr(fmt::format("%08x", addr))));
 
