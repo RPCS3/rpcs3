@@ -191,5 +191,19 @@ namespace gui
 			if (table->horizontalScrollBar())
 				table->removeRow(--item_count);
 		}
+
+		void show_windowed_image(const QImage& img, const QString& title)
+		{
+			if (img.isNull())
+				return;
+
+			QLabel* canvas = new QLabel();
+			canvas->setWindowTitle(title);
+			canvas->setObjectName("windowed_image");
+			canvas->setPixmap(QPixmap::fromImage(img));
+			canvas->setFixedSize(img.size());
+			canvas->ensurePolished();
+			canvas->show();
+		}
 	} // utils
 } // gui
