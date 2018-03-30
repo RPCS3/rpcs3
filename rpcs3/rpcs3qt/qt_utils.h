@@ -40,5 +40,8 @@ namespace gui
 
 		// Recalculates a table's item count based on the available visible space and fills it with empty items
 		void update_table_item_count(QTableWidget* table);
+
+		// Opens an image in a new window with original size
+		void show_windowed_image(const QImage& img, const QString& title = "");
 	} // utils
 } // gui
