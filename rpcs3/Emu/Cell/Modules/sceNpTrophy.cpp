@@ -177,7 +177,6 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	// rough checks for further fmt::format call
 	if (commId->num > 99)
 	{
-		sceNpTrophy.error("sceNpTrophyCreateContext Invalid NP_COMM_ID");
 		return SCE_NP_TROPHY_ERROR_INVALID_NP_COMM_ID;
 	}
 	// generate trophy context name
@@ -206,7 +205,6 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	// check if exists and opened
 	if (!stream)
 	{
-		sceNpTrophy.error("sceNpTrophyCreateContext CONF does not exist");
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 	}
 
@@ -250,7 +248,6 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 
 	if (!ctxt)
 	{
-		sceNpTrophy.error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT");
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 
@@ -258,14 +255,12 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 
 	if (!hndl)
 	{
-		sceNpTrophy.error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE");
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
 	TRPLoader trp(ctxt->trp_stream);
 	if (!trp.LoadHeader())
 	{
-		sceNpTrophy.error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE");
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
@@ -305,7 +300,6 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	std::string trophyPath = "/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name;
 	if (!trp.Install(trophyPath))
 	{
-		sceNpTrophy.error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE");
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
@@ -422,31 +416,41 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 	rXmlDocument doc;
 	doc.Read(config.to_string());
 
-	for (std::shared_ptr<rXmlNode> n = doc.GetRoot()->GetChildren(); n; n = n->GetNext())
+	auto trophy_base = doc.GetRoot();
+	if (trophy_base->GetChildren()->GetName() == "trophyconf")
 	{
+		trophy_base = trophy_base->GetChildren();
+	}
+
+	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
+	{
+		const std::string n_name = n->GetName();
+
 		if (details)
 		{
-			if (n->GetName() == "title-name")
+			if (n_name == "title-name")
 			{
 				std::string titleName = n->GetNodeContent();
 				memcpy(details->title, titleName.c_str(), titleName.size());
+				continue;
 			}
-
-			if (n->GetName() == "title-detail")
+			else if (n_name == "title-detail")
 			{
 				std::string titleDetail = n->GetNodeContent();
 				memcpy(details->description, titleDetail.c_str(), titleDetail.size());
+				continue;
 			}
 		}
 
-		if (n->GetName() == "trophy")
+		if (n_name == "trophy")
 		{
 			u32 trophy_id = atoi(n->GetAttribute("id").c_str());
 
 			if (details)
 			{
 				details->numTrophies++;
-				switch (n->GetAttribute("ttype")[0]) {
+				switch (n->GetAttribute("ttype")[0])
+				{
 				case 'B': details->numBronze++;   break;
 				case 'S': details->numSilver++;   break;
 				case 'G': details->numGold++;     break;
@@ -459,7 +463,8 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 				if (ctxt->tropusr->GetTrophyUnlockState(trophy_id))
 				{
 					data->unlockedTrophies++;
-					switch (n->GetAttribute("ttype")[0]) {
+					switch (n->GetAttribute("ttype")[0])
+					{
 					case 'B': data->unlockedBronze++;   break;
 					case 'S': data->unlockedSilver++;   break;
 					case 'G': data->unlockedGold++;     break;
@@ -636,25 +641,30 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 			if (details)
 			{
 				details->trophyId = trophyId;
-				switch (n->GetAttribute("ttype")[0]) {
+				switch (n->GetAttribute("ttype")[0])
+				{
 				case 'B': details->trophyGrade = SCE_NP_TROPHY_GRADE_BRONZE;   break;
 				case 'S': details->trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   break;
 				case 'G': details->trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     break;
 				case 'P': details->trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; break;
 				}
 
-				switch (n->GetAttribute("hidden")[0]) {
+				switch (n->GetAttribute("hidden")[0])
+				{
 				case 'y': details->hidden = true;  break;
 				case 'n': details->hidden = false; break;
 				}
 
-				for (std::shared_ptr<rXmlNode> n2 = n->GetChildren(); n2; n2 = n2->GetNext()) {
-					if (n2->GetName() == "name")
+				for (std::shared_ptr<rXmlNode> n2 = n->GetChildren(); n2; n2 = n2->GetNext())
+				{
+					const std::string n2_name = n2->GetName();
+
+					if (n2_name == "name")
 					{
 						std::string name = n2->GetNodeContent();
 						memcpy(details->name, name.c_str(), std::min((size_t)SCE_NP_TROPHY_NAME_MAX_SIZE, name.length() + 1));
 					}
-					if (n2->GetName() == "detail")
+					else if (n2_name == "detail")
 					{
 						std::string detail = n2->GetNodeContent();
 						memcpy(details->description, detail.c_str(), std::min((size_t)SCE_NP_TROPHY_DESCR_MAX_SIZE, detail.length() + 1));
