@@ -169,13 +169,13 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	m_list_index_buffer->setFont(mono);
 
 	//Panels for displaying the buffers
-	m_buffer_colorA  = new Buffer(false, 0, tr("Color Buffer A"));
-	m_buffer_colorB  = new Buffer(false, 1, tr("Color Buffer B"));
-	m_buffer_colorC  = new Buffer(false, 2, tr("Color Buffer C"));
-	m_buffer_colorD  = new Buffer(false, 3, tr("Color Buffer D"));
-	m_buffer_depth   = new Buffer(false, 4, tr("Depth Buffer"));
-	m_buffer_stencil = new Buffer(false, 4, tr("Stencil Buffer"));
-	m_buffer_tex     = new Buffer(true, 4, tr("Texture"));
+	m_buffer_colorA  = new Buffer(false, 0, tr("Color Buffer A"), this);
+	m_buffer_colorB  = new Buffer(false, 1, tr("Color Buffer B"), this);
+	m_buffer_colorC  = new Buffer(false, 2, tr("Color Buffer C"), this);
+	m_buffer_colorD  = new Buffer(false, 3, tr("Color Buffer D"), this);
+	m_buffer_depth   = new Buffer(false, 4, tr("Depth Buffer"), this);
+	m_buffer_stencil = new Buffer(false, 4, tr("Stencil Buffer"), this);
+	m_buffer_tex     = new Buffer(true, 4, tr("Texture"), this);
 
 	//Merge and display everything
 	QVBoxLayout* vbox_buffers1 = new QVBoxLayout();
@@ -348,24 +348,21 @@ bool rsx_debugger::eventFilter(QObject* object, QEvent* event)
 			break;
 		}
 	}
+	else if (Buffer* buffer = qobject_cast<Buffer*>(object))
+	{
+		switch (event->type())
+		{
+		case QEvent::MouseButtonDblClick:
+		{
+			buffer->ShowWindowed();
+			break;
+		}
+		default:
+			break;
+		}
+	}
 
 	return QDialog::eventFilter(object, event);
-}
-
-namespace
-{
-	// Opens an image in a new window with original size
-	void display_buffer(const QImage& img)
-	{
-		if (img.isNull()) return;
-		//QString title = qstr(fmt::format("Raw Image @ 0x%x", addr));
-		QLabel* canvas = new QLabel();
-		canvas->setObjectName("rsx_debugger_display_buffer");
-		canvas->setPixmap(QPixmap::fromImage(img));
-		canvas->setFixedSize(img.size());
-		canvas->ensurePolished();
-		canvas->show();
-	}
 }
 
 Buffer::Buffer(bool isTex, u32 id, const QString& name, QWidget* parent)
@@ -380,15 +377,20 @@ Buffer::Buffer(bool isTex, u32 id, const QString& name, QWidget* parent)
 	layout->setContentsMargins(1, 1, 1, 1);
 	layout->addWidget(m_canvas);
 	setLayout(layout);
+
+	installEventFilter(parent);
 };
 
 // Draws a formatted and buffered <image> inside the Buffer Widget
 void Buffer::showImage(const QImage& image)
 {
-	if (image.isNull()) return;
+	if (image.isNull())
+		return;
+
 	m_image = image;
 	QImage scaled = m_image.scaled(m_image_size, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 	m_canvas->setPixmap(QPixmap::fromImage(scaled));
+
 	QHBoxLayout* new_layout = new QHBoxLayout();
 	new_layout->setContentsMargins(1, 1, 1, 1);
 	new_layout->addWidget(m_canvas);
@@ -396,19 +398,15 @@ void Buffer::showImage(const QImage& image)
 	setLayout(new_layout);
 }
 
-void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
+void Buffer::ShowWindowed()
 {
-	if (event->button() == Qt::LeftButton)
-	{
-		const auto render = fxm::get<GSRender>();
-		if (!render)
-		{
-			return;
-		}
+	const auto render = fxm::get<GSRender>();
+	if (!render)
+		return;
 
-		const auto buffers = render->display_buffers;
+	const auto buffers = render->display_buffers;
 
-		// TODO: Is there any better way to choose the color buffers
+	// TODO: Is there any better way to choose the color buffers
 #define SHOW_BUFFER(id) \
 	{ \
 		u32 addr = render->local_mem_addr + buffers[id].offset; \
@@ -419,21 +417,20 @@ void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
 
 	//if (0 <= m_id && m_id < 4) SHOW_BUFFER(m_id);
 
-		display_buffer(m_image);
+	gui::utils::show_windowed_image(m_image, title());
 
-		if (m_isTex)
-		{
-			/*		u8 location = render->textures[m_cur_texture].location();
-					if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location))
-						&& render->textures[m_cur_texture].width() && render->textures[m_cur_texture].height())
-						memory_viewer_panel::ShowImage(this,
-							rsx::get_address(render->textures[m_cur_texture].offset(), location), 1,
-							render->textures[m_cur_texture].width(),
-							render->textures[m_cur_texture].height(), false);*/
-		}
-
-#undef SHOW_BUFFER
+	if (m_isTex)
+	{
+		/*	u8 location = render->textures[m_cur_texture].location();
+			if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location))
+				&& render->textures[m_cur_texture].width() && render->textures[m_cur_texture].height())
+				memory_viewer_panel::ShowImage(this,
+					rsx::get_address(render->textures[m_cur_texture].offset(), location), 1,
+					render->textures[m_cur_texture].width(),
+					render->textures[m_cur_texture].height(), false);*/
 	}
+#undef SHOW_BUFFER
+	return;
 }
 
 namespace
