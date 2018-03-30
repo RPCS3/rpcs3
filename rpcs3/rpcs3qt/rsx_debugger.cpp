@@ -617,10 +617,6 @@ void rsx_debugger::GetMemory()
 {
 	int item_count = m_list_commands->rowCount();
 
-	// Clean commands column
-	for(u32 i=0; i < item_count; i++)
-		m_list_commands->setItem(i, 2, new QTableWidgetItem(""));
-
 	// Write information
 	for(u32 i=0, addr = m_addr; i < item_count; i++, addr += 4)
 	{
@@ -633,8 +629,8 @@ void rsx_debugger::GetMemory()
 			u32 cmd = vm::read32(addr);
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
-			m_list_commands->setItem(i, 3, new QTableWidgetItem(qstr(fmt::format("%d", count))));
 			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr, 0)));
+			m_list_commands->setItem(i, 3, new QTableWidgetItem(QString::number(count)));
 
 			if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
 				&& (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) != RSX_METHOD_NEW_JUMP_CMD
@@ -647,6 +643,8 @@ void rsx_debugger::GetMemory()
 		else
 		{
 			m_list_commands->setItem(i, 1, new QTableWidgetItem("????????"));
+			m_list_commands->setItem(i, 2, new QTableWidgetItem(""));
+			m_list_commands->setItem(i, 3, new QTableWidgetItem(""));
 		}
 	}
 
