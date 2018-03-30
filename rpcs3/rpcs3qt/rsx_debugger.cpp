@@ -120,7 +120,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	m_list_settings = l_addRSXTab(m_list_settings, tr("Settings"), 2);
 
 	//Tabs: List Columns
-	m_list_commands->installEventFilter(this);
+	m_list_commands->viewport()->installEventFilter(this);
 	m_list_commands->setHorizontalHeaderLabels(QStringList() << tr("Column") << tr("Value") << tr("Command") << tr("Count"));
 	m_list_commands->setColumnWidth(0, 70);
 	m_list_commands->setColumnWidth(1, 70);
@@ -296,10 +296,15 @@ void rsx_debugger::keyPressEvent(QKeyEvent* event)
 
 bool rsx_debugger::eventFilter(QObject* object, QEvent* event)
 {
-	if (object == m_list_commands)
+	if (object == m_list_commands->viewport())
 	{
 		switch (event->type())
 		{
+		case QEvent::MouseButtonDblClick:
+		{
+			PerformJump(m_list_commands->item(m_list_commands->currentRow(), 0)->data(Qt::UserRole).toUInt());
+			break;
+		}
 		case QEvent::Resize:
 		{
 			gui::utils::update_table_item_count(m_list_commands);
@@ -313,35 +318,7 @@ bool rsx_debugger::eventFilter(QObject* object, QEvent* event)
 			int steps = numSteps.y();
 			int item_count = m_list_commands->rowCount();
 			int step_size = wheelEvent->modifiers() & Qt::ControlModifier ? item_count : 1;
-
-			if (vm::check_addr(m_addr, 4))
-			{
-				for (int i = 0; i < step_size; ++i)
-				{
-					u32 offset;
-					if (vm::check_addr(m_addr, 4))
-					{
-						u32 cmd = vm::read32(m_addr);
-						u32 count = ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
-							|| ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
-							|| ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
-							|| cmd == RSX_METHOD_RETURN_CMD ? 0 : (cmd >> 18) & 0x7ff;
-
-						offset = 1 + count;
-					}
-					else
-					{
-						offset = 1;
-					}
-
-					m_addr -= 4 * offset * steps;
-				}
-			}
-			else
-			{
-				m_addr -= step_size * 4 * steps;
-			}
-
+			m_addr -= step_size * 4 * steps;
 			UpdateInformation();
 		}
 		default:
@@ -647,7 +624,9 @@ void rsx_debugger::GetMemory()
 	// Write information
 	for(u32 i=0, addr = m_addr; i < item_count; i++, addr += 4)
 	{
-		m_list_commands->setItem(i, 0, new QTableWidgetItem(qstr(fmt::format("%08x", addr))));
+		QTableWidgetItem* address_item = new QTableWidgetItem(qstr(fmt::format("%08x", addr)));
+		address_item->setData(Qt::UserRole, addr);
+		m_list_commands->setItem(i, 0, address_item);
 
 		if (vm::check_addr(addr))
 		{
@@ -1182,4 +1161,24 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 void rsx_debugger::SetPC(const uint pc)
 {
 	m_addr = pc;
+}
+
+void rsx_debugger::PerformJump(u32 address)
+{
+	if (!vm::check_addr(address, 4))
+		return;
+
+	u32 cmd = vm::read32(address);
+	u32 count = ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
+		|| ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
+		|| ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
+		|| cmd == RSX_METHOD_RETURN_CMD ? 0 : (cmd >> 18) & 0x7ff;
+
+	if (count == 0)
+		return;
+
+	m_addr = address + count;
+	UpdateInformation();
+
+	m_list_commands->setCurrentCell(0, 0); // needs to be changed when m_addr doesn't get set to row 0 anymore
 }
