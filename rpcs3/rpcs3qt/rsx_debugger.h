@@ -17,7 +17,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QHBoxLayout>
-#include <QKeyEvent>
+#include <QEvent>
 #include <QTabWidget>
 #include <QListWidget>
 #include <QTableWidget>
@@ -42,9 +42,7 @@ class Buffer : public QGroupBox
 public:
 	Buffer(bool isTex, u32 id, const QString& name, QWidget* parent = 0);
 	void showImage(const QImage& image = QImage());
-
-protected:
-	void mouseDoubleClickEvent(QMouseEvent* event) override;
+	void ShowWindowed();
 };
 
 class rsx_debugger : public QDialog
