@@ -127,6 +127,7 @@ namespace gui
 	const gui_save gl_sortCol      = gui_save(game_list, "sortCol",      1);
 	const gui_save gl_state        = gui_save(game_list, "state",        QByteArray());
 	const gui_save gl_iconSize     = gui_save(game_list, "iconSize",     get_Index(gl_icon_size_small));
+	const gui_save gl_iconSizeGrid = gui_save(game_list, "iconSizeGrid", get_Index(gl_icon_size_small));
 	const gui_save gl_iconColor    = gui_save(game_list, "iconColor",    gl_icon_color);
 	const gui_save gl_listMode     = gui_save(game_list, "listMode",     true);
 	const gui_save gl_textFactor   = gui_save(game_list, "textFactor",   (qreal) 2.0);

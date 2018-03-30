@@ -42,11 +42,11 @@
       <attribute name="title">
        <string>CPU</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_55">
+      <layout class="QVBoxLayout" name="coreTabLayout" stretch="1,0,0">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,1,2">
+        <layout class="QHBoxLayout" name="coreTabItemLayout" stretch="1,1,2">
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout_8" stretch="1,1,1">
+          <layout class="QVBoxLayout" name="coreTabLeftLayout" stretch="1,1,0">
            <item>
             <widget class="QGroupBox" name="ppu">
              <property name="title">
@@ -70,7 +70,7 @@
               <item>
                <widget class="QRadioButton" name="ppu_llvm">
                 <property name="text">
-                 <string>Recompiler (LLVM)</string>
+                 <string>LLVM Recompiler (fastest)</string>
                 </property>
                </widget>
               </item>
@@ -100,7 +100,7 @@
               <item>
                <widget class="QRadioButton" name="spu_asmjit">
                 <property name="text">
-                 <string>Recompiler (ASMJIT)</string>
+                 <string>ASMJIT Recompiler (fastest)</string>
                 </property>
                </widget>
               </item>
@@ -110,7 +110,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="text">
-                 <string>Recompiler (LLVM)</string>
+                 <string>LLVM Recompiler</string>
                 </property>
                </widget>
               </item>
@@ -132,7 +132,7 @@
           </layout>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout_10" stretch="1,1">
+          <layout class="QVBoxLayout" name="coreTabMiddleLayout" stretch="1,1">
            <item>
             <widget class="QGroupBox" name="lib_settings">
              <property name="sizePolicy">
@@ -240,7 +240,7 @@
           </layout>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout_9" stretch="1,0">
+          <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="1,0">
            <item>
             <widget class="QGroupBox" name="groupBox_28">
              <property name="sizePolicy">

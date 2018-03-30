@@ -30,7 +30,9 @@ class main_window : public QMainWindow
 	Ui::main_window *ui;
 
 	bool m_sys_menu_opened;
+	bool m_is_list_mode = true;
 	bool m_save_slider_pos = false;
+	int m_other_slider_pos = 0;
 
 	QIcon m_appIcon;
 	QIcon m_icon_play;
