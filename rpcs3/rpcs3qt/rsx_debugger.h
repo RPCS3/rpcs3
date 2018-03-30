@@ -55,7 +55,6 @@ class rsx_debugger : public QDialog
 
 	QLineEdit* m_addr_line;
 
-	u32 m_item_count;
 	QTableWidget* m_list_commands;
 	QTableWidget* m_list_captured_frame;
 	QTableWidget* m_list_captured_draw_calls;

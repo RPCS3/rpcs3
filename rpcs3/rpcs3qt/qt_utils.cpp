@@ -155,5 +155,41 @@ namespace gui
 
 			return image.copy(QRect(QPoint(w_max, h_max), QPoint(w_min, h_min)));
 		}
+
+		void update_table_item_count(QTableWidget* table)
+		{
+			if (!table)
+				return;
+
+			int item_count = table->rowCount();
+			bool is_empty = item_count < 1;
+			if (is_empty)
+				table->insertRow(0);
+
+			int item_height = table->rowHeight(0);
+			if (is_empty)
+			{
+				table->clearContents();
+				table->setRowCount(0);
+			}
+
+			int available_height = table->rect().height() - table->horizontalHeader()->height() - table->frameWidth() * 2;
+			if (available_height < item_height || item_height < 1)
+				return;
+
+			int new_item_count = available_height / item_height;
+			if (new_item_count == item_count)
+				return;
+
+			item_count = new_item_count;
+			table->clearContents();
+			table->setRowCount(0);
+
+			for (u32 i = 0; i < item_count; ++i)
+				table->insertRow(i);
+
+			if (table->horizontalScrollBar())
+				table->removeRow(--item_count);
+		}
 	} // utils
 } // gui
