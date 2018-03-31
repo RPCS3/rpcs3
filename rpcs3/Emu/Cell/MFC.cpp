@@ -230,14 +230,10 @@ void mfc_thread::cpu_task()
 								if ((item.sb & 0x8000) && (cmd.size != 0))
 								{
 									spu.ch_stall_mask |= (1 << cmd.tag);
+									bool old_count = spu.ch_stall_stat.get_count();
 									spu.ch_stall_stat.push_or(spu, 1 << cmd.tag);
 
-									const u32 evt = spu.ch_event_stat.fetch_or(SPU_EVENT_SN);
-
-									if (evt & SPU_EVENT_WAITING)
-									{
-										spu.notify();
-									}
+									if (!old_count) spu.set_events(SPU_EVENT_SN);
 									break;
 								}
 							}
@@ -300,11 +296,13 @@ void mfc_thread::cpu_task()
 				if (completed && spu.ch_tag_upd.compare_and_swap_test(1, 0))
 				{
 					spu.ch_tag_stat.push(spu, completed);
+					spu.set_events(SPU_EVENT_TG);
 					no_updates = 0;
 				}
 				else if (spu.ch_tag_mask == completed && spu.ch_tag_upd.compare_and_swap_test(2, 0))
 				{
 					spu.ch_tag_stat.push(spu, completed);
+					spu.set_events(SPU_EVENT_TG);
 					no_updates = 0;
 				}
 			}

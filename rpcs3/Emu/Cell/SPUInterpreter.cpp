@@ -47,16 +47,16 @@ void spu_interpreter::set_interrupt_status(SPUThread& spu, spu_opcode_t op)
 			fmt::throw_exception("Undefined behaviour" HERE);
 		}
 
-		spu.set_interrupt_status(true);
+		spu.ch_event_stat |= SPU_INTR_ENABLED;
 	}
 	else if (op.d)
 	{
-		spu.set_interrupt_status(false);
+		spu.ch_event_stat &= ~SPU_INTR_ENABLED;
 	}
 
-	if (spu.interrupts_enabled && (spu.ch_event_mask & spu.ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
+	if ((spu.ch_event_stat & SPU_INTR_TEST) == SPU_INTR_TEST)
 	{
-		spu.interrupts_enabled = false;
+		spu.ch_event_stat &= ~SPU_INTR_ENABLED;
 		spu.srr0 = std::exchange(spu.pc, 0);
 	}
 }
@@ -433,7 +433,14 @@ bool spu_interpreter::IRET(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter::BISLED(SPUThread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
+	const u32 target = spu_branch_target(spu.gpr[op.ra]._u32[3]);
+	spu.gpr[op.rt] = v128::from32r(spu_branch_target(spu.pc + 4));
+
+	if (spu.get_events(true))
+	{
+		spu.pc = target;
+		set_interrupt_status(spu, op);
+	}
 	return true;
 }
 
