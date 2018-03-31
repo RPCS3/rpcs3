@@ -1153,7 +1153,7 @@ void main_window::CreateConnects()
 
 	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, [=]
 	{
-		rsx_debugger* rsx = new rsx_debugger(this);
+		rsx_debugger* rsx = new rsx_debugger(guiSettings);
 		rsx->show();
 	});
 
@@ -1374,17 +1374,11 @@ void main_window::CreateDockWindows()
 void main_window::ConfigureGuiFromSettings(bool configure_all)
 {
 	// Restore GUI state if needed. We need to if they exist.
-	QByteArray geometry = guiSettings->GetValue(gui::mw_geometry).toByteArray();
-	if (geometry.isEmpty() == false)
+	if (!restoreGeometry(guiSettings->GetValue(gui::mw_geometry).toByteArray()))
 	{
-		restoreGeometry(geometry);
-	}
-	else
-	{	// By default, set the window to 70% of the screen and the debugger frame is hidden.
+		// By default, set the window to 70% of the screen and the debugger frame is hidden.
 		m_debuggerFrame->hide();
-
-		QSize defaultSize = QDesktopWidget().availableGeometry().size() * 0.7;
-		resize(defaultSize);
+		resize(QDesktopWidget().availableGeometry().size() * 0.7);
 	}
 
 	restoreState(guiSettings->GetValue(gui::mw_windowState).toByteArray());

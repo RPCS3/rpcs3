@@ -5,6 +5,8 @@
 #include <QFont>
 #include <QIcon>
 #include <QLabel>
+#include <QTableWidget>
+#include <QHeaderView>
 
 namespace gui
 {
@@ -35,5 +37,11 @@ namespace gui
 
 		// Returns the part of the image loaded from path that is inside the bounding box of its opaque areas
 		QImage get_opaque_image_area(const QString& path);
+
+		// Recalculates a table's item count based on the available visible space and fills it with empty items
+		void update_table_item_count(QTableWidget* table);
+
+		// Opens an image in a new window with original size
+		void show_windowed_image(const QImage& img, const QString& title = "");
 	} // utils
 } // gui

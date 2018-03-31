@@ -1,5 +1,6 @@
 
 #include "rsx_debugger.h"
+#include "qt_utils.h"
 
 enum GCMEnumTypes
 {
@@ -9,70 +10,70 @@ enum GCMEnumTypes
 
 constexpr auto qstr = QString::fromStdString;
 
-rsx_debugger::rsx_debugger(QWidget* parent)
+rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
 	: QDialog(parent)
-	, m_item_count(37)
+	, m_gui_settings(gui_settings)
 	, m_addr(0x0)
 	, m_cur_texture(0)
 	, exit(false)
 {
 	setWindowTitle(tr("RSX Debugger"));
 	setObjectName("rsx_debugger");
-	setAttribute(Qt::WA_DeleteOnClose);
+	setWindowFlags(Qt::Window);
 
 	//Fonts and Colors
 	QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 	mono.setPointSize(8);
-
-	QHBoxLayout* hbox_panel = new QHBoxLayout();
-
-	//Tools
-	QVBoxLayout* vbox_tools = new QVBoxLayout();
-
-	// Controls
-	QGroupBox* gb_controls = new QGroupBox(tr("RSX Debugger Controls"), this);
-	QHBoxLayout* hbox_controls = new QHBoxLayout();
+	QLabel l("000000000"); // hacky way to get the lineedit to resize properly
+	l.setFont(mono);
 
 	// Controls: Address
-	QGroupBox* gb_controls_addr = new QGroupBox(tr("Address:"), this);
-	QHBoxLayout* hbox_controls_addr = new QHBoxLayout();
 	m_addr_line = new QLineEdit();
 	m_addr_line->setFont(mono);
 	m_addr_line->setPlaceholderText("00000000");
 	m_addr_line->setMaxLength(8);
-	m_addr_line->setMaximumWidth(65);
+	m_addr_line->setFixedWidth(l.sizeHint().width());
+	setFocusProxy(m_addr_line);
+
+	QHBoxLayout* hbox_controls_addr = new QHBoxLayout();
 	hbox_controls_addr->addWidget(m_addr_line);
+
+	QGroupBox* gb_controls_addr = new QGroupBox(tr("Address:"));
 	gb_controls_addr->setLayout(hbox_controls_addr);
 
 	// Controls: Go to
-	QGroupBox* gb_controls_goto = new QGroupBox(tr("Go to:"), this);
-	QHBoxLayout* hbox_controls_goto = new QHBoxLayout();
-	QPushButton* b_goto_get = new QPushButton(tr("Get"), this);
-	QPushButton* b_goto_put = new QPushButton(tr("Put"), this);
+	QPushButton* b_goto_get = new QPushButton(tr("Get"));
+	QPushButton* b_goto_put = new QPushButton(tr("Put"));
 	b_goto_get->setAutoDefault(false);
 	b_goto_put->setAutoDefault(false);
+
+	QHBoxLayout* hbox_controls_goto = new QHBoxLayout();
 	hbox_controls_goto->addWidget(b_goto_get);
 	hbox_controls_goto->addWidget(b_goto_put);
+
+	QGroupBox* gb_controls_goto = new QGroupBox(tr("Go to:"));
 	gb_controls_goto->setLayout(hbox_controls_goto);
 
 	// Controls: Breaks
-	QGroupBox* gb_controls_breaks = new QGroupBox(tr("Break on:"), this);
-	QHBoxLayout* hbox_controls_breaks = new QHBoxLayout();
-	QPushButton* b_break_frame = new QPushButton(tr("Frame"), this);
-	QPushButton* b_break_text  = new QPushButton(tr("Texture"), this);
-	QPushButton* b_break_draw  = new QPushButton(tr("Draw"), this);
-	QPushButton* b_break_prim  = new QPushButton(tr("Primitive"), this);
-	QPushButton* b_break_inst  = new QPushButton(tr("Command"), this);
+	QPushButton* b_break_frame = new QPushButton(tr("Frame"));
+	QPushButton* b_break_text  = new QPushButton(tr("Texture"));
+	QPushButton* b_break_draw  = new QPushButton(tr("Draw"));
+	QPushButton* b_break_prim  = new QPushButton(tr("Primitive"));
+	QPushButton* b_break_inst  = new QPushButton(tr("Command"));
 	b_break_frame->setAutoDefault(false);
 	b_break_text->setAutoDefault(false);
 	b_break_draw->setAutoDefault(false);
 	b_break_prim->setAutoDefault(false);
 	b_break_inst->setAutoDefault(false);
+
+	QHBoxLayout* hbox_controls_breaks = new QHBoxLayout();
 	hbox_controls_breaks->addWidget(b_break_frame);
 	hbox_controls_breaks->addWidget(b_break_text);
 	hbox_controls_breaks->addWidget(b_break_draw);
 	hbox_controls_breaks->addWidget(b_break_prim);
 	hbox_controls_breaks->addWidget(b_break_inst);
+
+	QGroupBox* gb_controls_breaks = new QGroupBox(tr("Break on:"));
 	gb_controls_breaks->setLayout(hbox_controls_breaks);
 
 	// TODO: This feature is not yet implemented
@@ -82,31 +83,31 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	b_break_prim->setEnabled(false);
 	b_break_inst->setEnabled(false);
 
+	QHBoxLayout* hbox_controls = new QHBoxLayout();
 	hbox_controls->addWidget(gb_controls_addr);
 	hbox_controls->addWidget(gb_controls_goto);
 	hbox_controls->addWidget(gb_controls_breaks);
-	gb_controls->setLayout(hbox_controls);
+	hbox_controls->addStretch(1);
 
-
-	QTabWidget* tw_rsx = new QTabWidget(this);
-	tw_rsx->setFixedSize(QSize(726, 660));
+	m_tw_rsx = new QTabWidget();
 
 	//adds a tab containing a list to the tabwidget
-	auto l_addRSXTab = [=](QTableWidget* table, QString tabname, int columns)
+	auto l_addRSXTab = [=](QTableWidget* table, const QString& tabname, int columns)
 	{
-		QWidget* tab = new QWidget(tw_rsx);
-		tw_rsx->addTab(tab, tabname);
-		table = new QTableWidget(tab);
-		table->setItemDelegate(new table_item_delegate(this));
-		table->setFixedSize(QSize(720, 634));
+		table = new QTableWidget();
+		table->setItemDelegate(new table_item_delegate);
 		table->setFont(mono);
 		table->setGridStyle(Qt::NoPen);
+		table->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+		table->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
 		table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 		table->setSelectionBehavior(QAbstractItemView::SelectRows);
 		table->verticalHeader()->setVisible(false);
 		table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 		table->verticalHeader()->setDefaultSectionSize(16);
+		table->horizontalHeader()->stretchLastSection();
 		table->setColumnCount(columns);
+		m_tw_rsx->addTab(table, tabname);
 		return table;
 	};
 
@@ -119,6 +120,7 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	m_list_settings = l_addRSXTab(m_list_settings, tr("Settings"), 2);
 
 	//Tabs: List Columns
+	m_list_commands->viewport()->installEventFilter(this);
 	m_list_commands->setHorizontalHeaderLabels(QStringList() << tr("Column") << tr("Value") << tr("Command") << tr("Count"));
 	m_list_commands->setColumnWidth(0, 70);
 	m_list_commands->setColumnWidth(1, 70);
@@ -147,136 +149,66 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	m_list_settings->setColumnWidth(0, 170);
 	m_list_settings->setColumnWidth(1, 270);
 
-	// Fill list
-	for(u32 i=0; i<m_item_count; i++)
-	{
-		m_list_commands->insertRow(m_list_commands->rowCount());
-	}
-	for (u32 i = 0; i<frame_debug.command_queue.size(); i++)
-		m_list_captured_frame->insertRow(1);
-
 	//Tools: Tools = Controls + Notebook Tabs
-	vbox_tools->addWidget(gb_controls);
-	vbox_tools->addSpacing(10);
-	vbox_tools->addWidget(tw_rsx);
+	QVBoxLayout* vbox_tools = new QVBoxLayout();
+	vbox_tools->addLayout(hbox_controls);
+	vbox_tools->addWidget(m_tw_rsx);
 
 	// State explorer
-	QHBoxLayout* hbox_state_explorer = new QHBoxLayout();
-	QTabWidget* state_rsx = new QTabWidget(this);
-	state_rsx->setFixedSize(QSize(726,746)); // content fits nicely
-
-	QWidget* p_buffers = new QWidget(state_rsx);
-	QWidget* p_transform_program = new QWidget(state_rsx);
-	QWidget* p_shader_program = new QWidget(state_rsx);
-	QWidget* p_index_buffer = new QWidget(state_rsx);
-
-	state_rsx->addTab(p_buffers, tr("RTTs and DS"));
-	state_rsx->addTab(p_transform_program, tr("Transform program"));
-	state_rsx->addTab(p_shader_program, tr("Shader program"));
-	state_rsx->addTab(p_index_buffer, tr("Index buffer"));
-
-	m_text_transform_program = new QLabel(p_transform_program);
-	m_text_transform_program->setFixedSize(QSize(720, 720));
+	m_text_transform_program = new QLabel();
 	m_text_transform_program->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 	m_text_transform_program->setFont(mono);
 	m_text_transform_program->setText("");
 
-	m_text_shader_program = new QLabel(p_shader_program);
-	m_text_shader_program->setFixedSize(QSize(720, 720));
+	m_text_shader_program = new QLabel();
 	m_text_shader_program->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 	m_text_shader_program->setFont(mono);
 	m_text_shader_program->setText("");
 
-	m_list_index_buffer = new QListWidget(p_index_buffer);
-	m_list_index_buffer->setFixedSize(QSize(720, 720));
+	m_list_index_buffer = new QListWidget();
 	m_list_index_buffer->setFont(mono);
 
-	//Buffers
-	QVBoxLayout* vbox_buffers1 = new QVBoxLayout();
-	QVBoxLayout* vbox_buffers2 = new QVBoxLayout();
-	QGroupBox* gb_buffers_colorA  = new QGroupBox(tr("Color Buffer A"), p_buffers);
-	QGroupBox* gb_buffers_colorB  = new QGroupBox(tr("Color Buffer B"), p_buffers);
-	QGroupBox* gb_buffers_colorC  = new QGroupBox(tr("Color Buffer C"), p_buffers);
-	QGroupBox* gb_buffers_colorD  = new QGroupBox(tr("Color Buffer D"), p_buffers);
-	QGroupBox* gb_buffers_depth   = new QGroupBox(tr("Depth Buffer"), p_buffers);
-	QGroupBox* gb_buffers_stencil = new QGroupBox(tr("Stencil Buffer"), p_buffers);
-	QGroupBox* gb_buffers_text    = new QGroupBox(tr("Texture"), p_buffers);
-	QHBoxLayout* hbox_buffers_colorA	= new QHBoxLayout();
-	QHBoxLayout* hbox_buffers_colorB	= new QHBoxLayout();
-	QHBoxLayout* hbox_buffers_colorC	= new QHBoxLayout();
-	QHBoxLayout* hbox_buffers_colorD	= new QHBoxLayout();
-	QHBoxLayout* hbox_buffers_depth		= new QHBoxLayout();
-	QHBoxLayout* hbox_buffers_stencil	= new QHBoxLayout();
-	QHBoxLayout* hbox_buffers_text		= new QHBoxLayout();
-	gb_buffers_colorA	->setLayout(hbox_buffers_colorA);
-	gb_buffers_colorB	->setLayout(hbox_buffers_colorB);
-	gb_buffers_colorC	->setLayout(hbox_buffers_colorC);
-	gb_buffers_colorD	->setLayout(hbox_buffers_colorD);
-	gb_buffers_depth	->setLayout(hbox_buffers_depth);
-	gb_buffers_stencil->setLayout(hbox_buffers_stencil);
-	gb_buffers_text		->setLayout(hbox_buffers_text);
-
-	//Buffers and textures
-	int m_panel_width = 108;
-	int m_panel_height = 108;
-	int m_text_width = 108;
-	int m_text_height = 108;
-
 	//Panels for displaying the buffers
-	m_buffer_colorA  = new Buffer(p_buffers, false, 0);
-	m_buffer_colorB  = new Buffer(p_buffers, false, 1);
-	m_buffer_colorC  = new Buffer(p_buffers, false, 2);
-	m_buffer_colorD  = new Buffer(p_buffers, false, 3);
-	m_buffer_depth   = new Buffer(p_buffers, false);
-	m_buffer_stencil = new Buffer(p_buffers, false);
-	m_buffer_tex     = new Buffer(p_buffers, true);
-	m_buffer_colorA ->setFixedSize(QSize(m_panel_width, m_panel_height));
-	m_buffer_colorB ->setFixedSize(QSize(m_panel_width, m_panel_height));
-	m_buffer_colorC ->setFixedSize(QSize(m_panel_width, m_panel_height));
-	m_buffer_colorD ->setFixedSize(QSize(m_panel_width, m_panel_height));
-	m_buffer_depth  ->setFixedSize(QSize(m_panel_width, m_panel_height));
-	m_buffer_stencil->setFixedSize(QSize(m_panel_width, m_panel_height));
-	m_buffer_tex    ->setFixedSize(QSize(m_text_width, m_text_height));
-	hbox_buffers_colorA ->addWidget(m_buffer_colorA);
-	hbox_buffers_colorB ->addWidget(m_buffer_colorB);
-	hbox_buffers_colorC ->addWidget(m_buffer_colorC);
-	hbox_buffers_colorD ->addWidget(m_buffer_colorD);
-	hbox_buffers_depth  ->addWidget(m_buffer_depth);
-	hbox_buffers_stencil->addWidget(m_buffer_stencil);
-	hbox_buffers_text   ->addWidget(m_buffer_tex);
+	m_buffer_colorA  = new Buffer(false, 0, tr("Color Buffer A"), this);
+	m_buffer_colorB  = new Buffer(false, 1, tr("Color Buffer B"), this);
+	m_buffer_colorC  = new Buffer(false, 2, tr("Color Buffer C"), this);
+	m_buffer_colorD  = new Buffer(false, 3, tr("Color Buffer D"), this);
+	m_buffer_depth   = new Buffer(false, 4, tr("Depth Buffer"), this);
+	m_buffer_stencil = new Buffer(false, 4, tr("Stencil Buffer"), this);
+	m_buffer_tex     = new Buffer(true, 4, tr("Texture"), this);
 
 	//Merge and display everything
-	vbox_buffers1->addSpacing(10);
-	vbox_buffers1->addWidget(gb_buffers_colorA);
-	vbox_buffers1->addSpacing(10);
-	vbox_buffers1->addWidget(gb_buffers_colorC);
-	vbox_buffers1->addSpacing(10);
-	vbox_buffers1->addWidget(gb_buffers_depth);
-	vbox_buffers1->addSpacing(10);
-	vbox_buffers1->addWidget(gb_buffers_text);
-	vbox_buffers1->addSpacing(10);
+	QVBoxLayout* vbox_buffers1 = new QVBoxLayout();
+	vbox_buffers1->addWidget(m_buffer_colorA);
+	vbox_buffers1->addWidget(m_buffer_colorC);
+	vbox_buffers1->addWidget(m_buffer_depth);
+	vbox_buffers1->addWidget(m_buffer_tex);
 	vbox_buffers1->addStretch();
 
-	vbox_buffers2->addSpacing(10);
-	vbox_buffers2->addWidget(gb_buffers_colorB);
-	vbox_buffers2->addSpacing(10);
-	vbox_buffers2->addWidget(gb_buffers_colorD);
-	vbox_buffers2->addSpacing(10);
-	vbox_buffers2->addWidget(gb_buffers_stencil);
-	vbox_buffers2->addSpacing(10);
+	QVBoxLayout* vbox_buffers2 = new QVBoxLayout();
+	vbox_buffers2->addWidget(m_buffer_colorB);
+	vbox_buffers2->addWidget(m_buffer_colorD);
+	vbox_buffers2->addWidget(m_buffer_stencil);
 	vbox_buffers2->addStretch();
 
-	hbox_state_explorer->addLayout(vbox_buffers1);
-	hbox_state_explorer->addSpacing(10);
-	hbox_state_explorer->addLayout(vbox_buffers2);
-	hbox_state_explorer->addStretch();
+	QHBoxLayout* buffer_layout = new QHBoxLayout();
+	buffer_layout->addLayout(vbox_buffers1);
+	buffer_layout->addLayout(vbox_buffers2);
+	buffer_layout->addStretch();
 
-	p_buffers->setLayout(hbox_state_explorer);
+	QWidget* buffers = new QWidget();
+	buffers->setLayout(buffer_layout);
 
-	hbox_panel->addLayout(vbox_tools);
-	hbox_panel->addSpacing(10);
-	hbox_panel->addWidget(state_rsx);
-	setLayout(hbox_panel);
+	QTabWidget* state_rsx = new QTabWidget();
+	state_rsx->addTab(buffers, tr("RTTs and DS"));
+	state_rsx->addTab(m_text_transform_program, tr("Transform program"));
+	state_rsx->addTab(m_text_shader_program, tr("Shader program"));
+	state_rsx->addTab(m_list_index_buffer, tr("Index buffer"));
+
+	QHBoxLayout* main_layout = new QHBoxLayout();
+	main_layout->addLayout(vbox_tools, 1);
+	main_layout->addWidget(state_rsx, 1);
+	setLayout(main_layout);
 
 	//Events
 	connect(b_goto_get, &QAbstractButton::clicked, [=]
@@ -318,15 +250,35 @@ rsx_debugger::rsx_debugger(QWidget* parent)
 	});
 	connect(m_list_captured_draw_calls, &QTableWidget::itemClicked, this, &rsx_debugger::OnClickDrawCalls);
 
-	//Fill the frame
-	UpdateInformation();
-	setFixedSize(sizeHint());
-	setFocusProxy(m_addr_line);
+	// Restore header states
+	QVariantMap states = m_gui_settings->GetValue(gui::rsx_states).toMap();
+	for (int i = 0; i < m_tw_rsx->count(); i++)
+		((QTableWidget*)m_tw_rsx->widget(i))->horizontalHeader()->restoreState(states[QString::number(i)].toByteArray());
+
+	// Fill the frame
+	for (u32 i = 0; i < frame_debug.command_queue.size(); i++)
+		m_list_captured_frame->insertRow(i);
+
+	if (!restoreGeometry(m_gui_settings->GetValue(gui::rsx_geometry).toByteArray()))
+		UpdateInformation();
 }
 
 rsx_debugger::~rsx_debugger()
 {
 	exit = true;
+}
+
+void rsx_debugger::closeEvent(QCloseEvent* event)
+{
+	// Save header states and window geometry
+	QVariantMap states;
+	for (int i = 0; i < m_tw_rsx->count(); i++)
+		states[QString::number(i)] = ((QTableWidget*)m_tw_rsx->widget(i))->horizontalHeader()->saveState();
+
+	m_gui_settings->SetValue(gui::rsx_states, states);
+	m_gui_settings->SetValue(gui::rsx_geometry, saveGeometry());
+
+	QDialog::closeEvent(event);
 }
 
 void rsx_debugger::keyPressEvent(QKeyEvent* event)
@@ -335,95 +287,103 @@ void rsx_debugger::keyPressEvent(QKeyEvent* event)
 	{
 		switch(event->key())
 		{
-		case Qt::Key_F5: UpdateInformation(); return;
+		case Qt::Key_F5: UpdateInformation(); break;
 		}
 	}
+
+	QDialog::keyPressEvent(event);
 }
 
-void rsx_debugger::wheelEvent(QWheelEvent* event)
+bool rsx_debugger::eventFilter(QObject* object, QEvent* event)
 {
-	if (!m_list_commands->underMouse())
+	if (object == m_list_commands->viewport())
 	{
-		return;
-	}
-	QPoint numSteps = event->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
-	if(vm::check_addr(m_addr, 4))
-	{
-		int items = event->modifiers() & Qt::ControlModifier ? m_item_count : 1;
-
-		for(int i=0; i<items; ++i)
+		switch (event->type())
 		{
-			u32 offset;
-			if(vm::check_addr(m_addr, 4))
-			{
-				u32 cmd = vm::read32(m_addr);
-				u32 count = ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
-					|| ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
-					|| ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
-					|| cmd == RSX_METHOD_RETURN_CMD ? 0 : (cmd >> 18) & 0x7ff;
-
-				offset = 1 + count;
-			}
-			else
-			{
-				offset = 1;
-			}
-
-			m_addr -= 4 * offset * numSteps.y();
+		case QEvent::MouseButtonDblClick:
+		{
+			PerformJump(m_list_commands->item(m_list_commands->currentRow(), 0)->data(Qt::UserRole).toUInt());
+			break;
+		}
+		case QEvent::Resize:
+		{
+			gui::utils::update_table_item_count(m_list_commands);
+			UpdateInformation();
+			break;
+		}
+		case QEvent::Wheel:
+		{
+			QWheelEvent* wheelEvent = static_cast<QWheelEvent*>(event);
+			QPoint numSteps = wheelEvent->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
+			int steps = numSteps.y();
+			int item_count = m_list_commands->rowCount();
+			int step_size = wheelEvent->modifiers() & Qt::ControlModifier ? item_count : 1;
+			m_addr -= step_size * 4 * steps;
+			UpdateInformation();
+		}
+		default:
+			break;
 		}
 	}
-	else
+	else if (Buffer* buffer = qobject_cast<Buffer*>(object))
 	{
-		m_addr -= (event->modifiers() & Qt::ControlModifier ? m_item_count : 1) * 4 * numSteps.y();
+		switch (event->type())
+		{
+		case QEvent::MouseButtonDblClick:
+		{
+			buffer->ShowWindowed();
+			break;
+		}
+		default:
+			break;
+		}
 	}
 
-	UpdateInformation();
+	return QDialog::eventFilter(object, event);
 }
 
-namespace
+Buffer::Buffer(bool isTex, u32 id, const QString& name, QWidget* parent)
+	: QGroupBox(name, parent), m_isTex(isTex), m_id(id)
 {
-	// Opens an image in a new window with original size
-	void display_buffer(const QImage& img)
-	{
-		if (img.isNull()) return;
-		//QString title = qstr(fmt::format("Raw Image @ 0x%x", addr));
-		QLabel* canvas = new QLabel();
-		canvas->setObjectName("rsx_debugger_display_buffer");
-		canvas->setPixmap(QPixmap::fromImage(img));
-		canvas->setFixedSize(img.size());
-		canvas->ensurePolished();
-		canvas->show();
-	}
-}
+	m_image_size = isTex ? Texture_Size : Panel_Size;
+
+	m_canvas = new QLabel();
+	m_canvas->setFixedSize(m_image_size);
+
+	QHBoxLayout* layout = new QHBoxLayout();
+	layout->setContentsMargins(1, 1, 1, 1);
+	layout->addWidget(m_canvas);
+	setLayout(layout);
+
+	installEventFilter(parent);
+};
 
 // Draws a formatted and buffered <image> inside the Buffer Widget
 void Buffer::showImage(const QImage& image)
 {
-	if (image.isNull()) return;
+	if (image.isNull())
+		return;
+
 	m_image = image;
-	QImage scaled = m_image.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-	QLabel* m_canvas = new QLabel();
-	m_canvas->setFixedSize(size());
+	QImage scaled = m_image.scaled(m_image_size, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 	m_canvas->setPixmap(QPixmap::fromImage(scaled));
-	QHBoxLayout* layout = new QHBoxLayout();
-	layout->setContentsMargins(0, 0, 0, 0);
-	layout->addWidget(m_canvas);
-	setLayout(layout);
+
+	QHBoxLayout* new_layout = new QHBoxLayout();
+	new_layout->setContentsMargins(1, 1, 1, 1);
+	new_layout->addWidget(m_canvas);
+	delete layout();
+	setLayout(new_layout);
 }
 
-void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
+void Buffer::ShowWindowed()
 {
-	if (event->button() == Qt::LeftButton)
-	{
-		const auto render = fxm::get<GSRender>();
-		if (!render)
-		{
-			return;
-		}
+	const auto render = fxm::get<GSRender>();
+	if (!render)
+		return;
 
-		const auto buffers = render->display_buffers;
+	const auto buffers = render->display_buffers;
 
-		// TODO: Is there any better way to choose the color buffers
+	// TODO: Is there any better way to choose the color buffers
 #define SHOW_BUFFER(id) \
 	{ \
 		u32 addr = render->local_mem_addr + buffers[id].offset; \
@@ -434,21 +394,20 @@ void Buffer::mouseDoubleClickEvent(QMouseEvent* event)
 
 	//if (0 <= m_id && m_id < 4) SHOW_BUFFER(m_id);
 
-		display_buffer(m_image);
+	gui::utils::show_windowed_image(m_image, title());
 
-		if (m_isTex)
-		{
-			/*		u8 location = render->textures[m_cur_texture].location();
-					if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location))
-						&& render->textures[m_cur_texture].width() && render->textures[m_cur_texture].height())
-						memory_viewer_panel::ShowImage(this,
-							rsx::get_address(render->textures[m_cur_texture].offset(), location), 1,
-							render->textures[m_cur_texture].width(),
-							render->textures[m_cur_texture].height(), false);*/
-		}
-
-#undef SHOW_BUFFER
+	if (m_isTex)
+	{
+		/*	u8 location = render->textures[m_cur_texture].location();
+			if(location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location))
+				&& render->textures[m_cur_texture].width() && render->textures[m_cur_texture].height())
+				memory_viewer_panel::ShowImage(this,
+					rsx::get_address(render->textures[m_cur_texture].offset(), location), 1,
+					render->textures[m_cur_texture].width(),
+					render->textures[m_cur_texture].height(), false);*/
 	}
+#undef SHOW_BUFFER
+	return;
 }
 
 namespace
@@ -656,22 +615,22 @@ void rsx_debugger::UpdateInformation()
 
 void rsx_debugger::GetMemory()
 {
-	// Clean commands column
-	for(u32 i=0; i<m_item_count; i++)
-		m_list_commands->setItem(i, 2, new QTableWidgetItem(""));
+	int item_count = m_list_commands->rowCount();
 
 	// Write information
-	for(u32 i=0, addr = m_addr; i<m_item_count; i++, addr += 4)
+	for(u32 i=0, addr = m_addr; i < item_count; i++, addr += 4)
 	{
-		m_list_commands->setItem(i, 0, new QTableWidgetItem(qstr(fmt::format("%08x", addr))));
+		QTableWidgetItem* address_item = new QTableWidgetItem(qstr(fmt::format("%08x", addr)));
+		address_item->setData(Qt::UserRole, addr);
+		m_list_commands->setItem(i, 0, address_item);
 
 		if (vm::check_addr(addr))
 		{
 			u32 cmd = vm::read32(addr);
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
-			m_list_commands->setItem(i, 3, new QTableWidgetItem(qstr(fmt::format("%d", count))));
 			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr, 0)));
+			m_list_commands->setItem(i, 3, new QTableWidgetItem(QString::number(count)));
 
 			if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
 				&& (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) != RSX_METHOD_NEW_JUMP_CMD
@@ -684,6 +643,8 @@ void rsx_debugger::GetMemory()
 		else
 		{
 			m_list_commands->setItem(i, 1, new QTableWidgetItem("????????"));
+			m_list_commands->setItem(i, 2, new QTableWidgetItem(""));
+			m_list_commands->setItem(i, 3, new QTableWidgetItem(""));
 		}
 	}
 
@@ -744,10 +705,10 @@ void rsx_debugger::GetBuffers()
 		Buffer* pnl;
 		switch(bufferId)
 		{
-		case 0:  pnl = m_buffer_colorA;  break;
-		case 1:  pnl = m_buffer_colorB;  break;
-		case 2:  pnl = m_buffer_colorC;  break;
-		default: pnl = m_buffer_colorD;  break;
+		case 0:  pnl = m_buffer_colorA; break;
+		case 1:  pnl = m_buffer_colorB; break;
+		case 2:  pnl = m_buffer_colorC; break;
+		default: pnl = m_buffer_colorD; break;
 		}
 		pnl->showImage(QImage(buffer, width, height, QImage::Format_RGB32));
 	}
@@ -1109,7 +1070,7 @@ const char* rsx_debugger::ParseGCMEnum(u32 value, u32 type)
 
 QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioAddr)
 {
-	std::string disasm = "";
+	std::string disasm;
 
 #define DISASM(string, ...) { if(disasm.empty()) disasm = fmt::format((string), ##__VA_ARGS__); else disasm += (' ' + fmt::format((string), ##__VA_ARGS__)); }
 	if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
@@ -1198,4 +1159,24 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 void rsx_debugger::SetPC(const uint pc)
 {
 	m_addr = pc;
+}
+
+void rsx_debugger::PerformJump(u32 address)
+{
+	if (!vm::check_addr(address, 4))
+		return;
+
+	u32 cmd = vm::read32(address);
+	u32 count = ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
+		|| ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
+		|| ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
+		|| cmd == RSX_METHOD_RETURN_CMD ? 0 : (cmd >> 18) & 0x7ff;
+
+	if (count == 0)
+		return;
+
+	m_addr = address + count;
+	UpdateInformation();
+
+	m_list_commands->setCurrentCell(0, 0); // needs to be changed when m_addr doesn't get set to row 0 anymore
 }
