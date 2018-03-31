@@ -117,6 +117,57 @@ static bool check_dev_num(s32 dev_num)
 }
 
 /**
+ * \brief Sets up notify event queue supplied and immediately sends an ATTACH event to it
+ * \param key Event queue key to add
+ * \param source Event source port
+ * \param flag Event flag (CELL_CAMERA_EFLAG_*)
+ * \return True on success, false if camera_thead hasn't been initialized
+ */
+bool add_queue_and_send_attach(u64 key, u64 source, u64 flag)
+{
+	const auto g_camera = fxm::get<camera_thread>();
+
+	if (!g_camera)
+	{
+		return false;
+	}
+
+	semaphore_lock lock(g_camera->mutex);
+	{
+		semaphore_lock lock_data_map(g_camera->mutex_notify_data_map);
+
+		g_camera->notify_data_map[key] = { source, flag };
+	}
+
+	// send ATTACH event - HACKY
+	g_camera->send_attach_state(true);
+	return true;
+}
+
+/**
+ * \brief Unsets/removes event queue specified
+ * \param key Event queue key to remove
+ * \return True on success, false if camera_thead hasn't been initialized
+ */
+bool remove_queue(u64 key)
+{
+	const auto g_camera = fxm::get<camera_thread>();
+
+	if (!g_camera)
+	{
+		return false;
+	}
+
+	semaphore_lock lock(g_camera->mutex);
+	{
+		semaphore_lock lock_data_map(g_camera->mutex_notify_data_map);
+
+		g_camera->notify_data_map.erase(key);
+	}
+	return true;
+}
+
+/**
  * \brief Sets read mode attribute (used for deciding how image data is passed to games)
  *		  Also sends it to the camera thread
  *	      NOTE: thread-safe (uses camera_thread::mutex)
@@ -405,11 +456,17 @@ s32 cellCameraIsAttached(s32 dev_num)
 
 	const auto g_camera = fxm::get<camera_thread>();
 
+	if (!g_camera)
+	{
+		return false;
+	}
+
 	semaphore_lock lock(g_camera->mutex);
 
 	bool is_attached = g_camera->is_attached;
 
 	// "attach" camera here
+	// normally should be attached immediately after event queue is registered, but just to be sure
 	if (!is_attached)
 	{
 		g_camera->send_attach_state(true);
@@ -430,8 +487,9 @@ s32 cellCameraIsOpen(s32 dev_num)
 
 	const auto g_camera = fxm::get<camera_thread>();
 
-	bool is_open = g_camera->is_open;
-	return is_open;
+	semaphore_lock lock(g_camera->mutex);
+
+	return g_camera->is_open;
 }
 
 s32 cellCameraIsStarted(s32 dev_num)
@@ -445,8 +503,7 @@ s32 cellCameraIsStarted(s32 dev_num)
 
 	const auto g_camera = fxm::get<camera_thread>();
 
-	bool is_streaming = g_camera->is_streaming;
-	return is_streaming;
+	return g_camera->is_streaming;
 }
 
 s32 cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u32> arg2)
@@ -548,7 +605,6 @@ s32 cellCameraGetBufferSize(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 	semaphore_lock lock(g_camera->mutex);
 
 	info->bytesize = get_video_buffer_size(g_camera->info);
-	info->buffer = g_camera->info.buffer;
 
 	g_camera->info = *info;
 
@@ -627,7 +683,7 @@ s32 cellCameraReset(s32 dev_num)
 
 s32 cellCameraStart(s32 dev_num)
 {
-	cellCamera.todo("cellCameraStart(dev_num=%d", dev_num);
+	cellCamera.todo("cellCameraStart(dev_num=%d)", dev_num);
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
@@ -635,6 +691,11 @@ s32 cellCameraStart(s32 dev_num)
 	}
 
 	const auto g_camera = fxm::get<camera_thread>();
+
+	if (!g_camera)
+	{
+		return CELL_CAMERA_ERROR_NOT_INIT;
+	}
 
 	semaphore_lock lock(g_camera->mutex);
 
@@ -689,12 +750,20 @@ s32 cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 s32 cellCameraReadComplete(s32 dev_num, u32 bufnum, u32 arg2)
 {
 	cellCamera.todo("cellCameraReadComplete(dev_num=%d, bufnum=%d, arg2=%d)", dev_num, bufnum, arg2);
+
+	const auto g_camera = fxm::get<camera_thread>();
+
+	if (!g_camera)
+	{
+		return CELL_CAMERA_ERROR_NOT_INIT;
+	}
+
 	return cellCameraSetAttribute(dev_num, CELL_CAMERA_READFINISH, bufnum, arg2);
 }
 
 s32 cellCameraStop(s32 dev_num)
 {
-	cellCamera.todo("cellCameraStop(dev_num=%d", dev_num);
+	cellCamera.todo("cellCameraStop(dev_num=%d)", dev_num);
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
@@ -702,6 +771,11 @@ s32 cellCameraStop(s32 dev_num)
 	}
 
 	const auto g_camera = fxm::get<camera_thread>();
+
+	if (!g_camera)
+	{
+		return CELL_CAMERA_ERROR_NOT_INIT;
+	}
 
 	semaphore_lock lock(g_camera->mutex);
 
@@ -713,13 +787,25 @@ s32 cellCameraStop(s32 dev_num)
 
 s32 cellCameraSetNotifyEventQueue(u64 key)
 {
-	UNIMPLEMENTED_FUNC(cellCamera);
+	cellCamera.todo("cellCameraSetNotifyEventQueue(key=0x%x)", key);
+
+	if (!add_queue_and_send_attach(key, 0, 0))
+	{
+		return CELL_CAMERA_ERROR_NOT_INIT;
+	}
+
 	return CELL_OK;
 }
 
 s32 cellCameraRemoveNotifyEventQueue(u64 key)
 {
-	UNIMPLEMENTED_FUNC(cellCamera);
+	cellCamera.todo("cellCameraRemoveNotifyEventQueue(key=0x%x)", key);
+
+	if (!remove_queue(key))
+	{
+		return CELL_CAMERA_ERROR_NOT_INIT;
+	}
+
 	return CELL_OK;
 }
 
@@ -732,45 +818,27 @@ s32 cellCameraSetNotifyEventQueue2(u64 key, u64 source, u64 flag)
 		return CELL_OK;
 	}
 
-	const auto g_camera = fxm::get<camera_thread>();
-
-	if (!g_camera)
+	if (!add_queue_and_send_attach(key, source, flag))
 	{
 		return CELL_CAMERA_ERROR_NOT_INIT;
 	}
-	{
-		semaphore_lock lock_data_map(g_camera->mutex_notify_data_map);
 
-		g_camera->notify_data_map[key] = { source, flag };
-	}
-	{
-		semaphore_lock lock(g_camera->mutex);
-
-		// send ATTACH event if necessary - HACKY
-		g_camera->send_attach_state(true);
-	}
 	return CELL_OK;
 }
 
 s32 cellCameraRemoveNotifyEventQueue2(u64 key)
 {
-	cellCamera.todo("cellCameraRemoveNotifyEventQueue2(key=0x%x", key);
+	cellCamera.todo("cellCameraRemoveNotifyEventQueue2(key=0x%x)", key);
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
 		return CELL_OK;
 	}
 
-	const auto g_camera = fxm::get<camera_thread>();
-
-	if (!g_camera)
+	if (!remove_queue(key))
 	{
 		return CELL_CAMERA_ERROR_NOT_INIT;
 	}
-
-	semaphore_lock lock(g_camera->mutex_notify_data_map);
-
-	g_camera->notify_data_map.erase(key);
 
 	return CELL_OK;
 }
