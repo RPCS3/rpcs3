@@ -13,6 +13,7 @@
 #include <QToolBar>
 #include <QLineEdit>
 #include <QStackedWidget>
+#include <QSet>
 
 #include <memory>
 
@@ -162,10 +163,9 @@ namespace sound
 struct GUI_GameInfo
 {
 	GameInfo info;
-	Compat_Status compat;
+	compat_status compat;
 	QImage icon;
 	QPixmap pxmap;
-	bool isVisible;
 	bool bootable;
 	bool hasCustomConfig;
 };
@@ -196,6 +196,8 @@ public:
 	/** Repaint Gamelist Icons with new background color */
 	void RepaintIcons(const bool& fromSettings = false);
 
+	void SetShowHidden(bool show);
+
 public Q_SLOTS:
 	void SetListMode(const bool& isList);
 	void SetSearchText(const QString& text);
@@ -220,7 +222,7 @@ protected:
 private:
 	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
-	void FilterData();
+	bool IsEntryVisible(const GUI_GameInfo& game);
 	void SortGameList();
 
 	int PopulateGameList();
@@ -254,16 +256,18 @@ private:
 	std::shared_ptr<gui_settings> xgui_settings;
 	std::shared_ptr<emu_settings> xemu_settings;
 	std::vector<GUI_GameInfo> m_game_data;
+	QSet<QString> m_hidden_list;
+	bool m_show_hidden{false};
 
 	// Search
 	QString m_search_text;
 
 	// Icon Size
-	int m_icon_size_index;
+	int m_icon_size_index = 0;
 
 	// Icons
 	QColor m_Icon_Color;
-	QSize m_Icon_Size;
+	QSize m_Icon_Size = gui::gl_icon_size_min; // ensure a valid size
 	qreal m_Margin_Factor;
 	qreal m_Text_Factor;
 };

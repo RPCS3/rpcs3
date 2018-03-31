@@ -90,6 +90,13 @@ else()
 	add_definitions(-DGLX_GLXEXT_PROTOTYPES)
 endif()
 
+if(USE_NATIVE_INSTRUCTIONS)
+	CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+	if(COMPILER_SUPPORTS_MARCH_NATIVE)
+		add_compile_options(-march=native)
+	endif()
+endif()
+
 if(NOT MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
 	# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
@@ -107,10 +114,6 @@ if(NOT MSVC)
 	endif()
 
 	add_compile_options(-msse -msse2 -mcx16 -mrtm)
-
-	if(NOT DEFINED ENV{TRAVIS} AND USE_NATIVE_INSTRUCTIONS)
-		add_compile_options(-march=native)
-	endif()
 
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 		# This fixes 'some' of the st11range issues. See issue #2516
@@ -393,6 +396,12 @@ if(NOT MSVC)
 	target_link_libraries(rpcs3 GLEW::GLEW)
 endif()
 
+if(UNIX)
+	find_package(X11 REQUIRED)
+	target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
+	target_link_libraries(rpcs3 ${X11_LIBRARIES})
+endif()
+
 if(WIN32)
 	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
 	if(NOT MSVC)
@@ -446,11 +455,11 @@ if(MSVC)
 	# them from the local QT installation at the end of the build.
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --debug ${CMAKE_BINARY_DIR}/bin
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --debug ${CMAKE_BINARY_DIR}/bin
 		)
 	else()
 		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations ${CMAKE_BINARY_DIR}/bin
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick ${CMAKE_BINARY_DIR}/bin
 		)
 	endif()
 endif()

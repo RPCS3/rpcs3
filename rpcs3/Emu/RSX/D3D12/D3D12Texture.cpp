@@ -115,7 +115,7 @@ namespace {
 		size_t offset_in_buffer = 0;
 		for (const rsx_subresource_layout &layout : input_layouts)
 		{
-			upload_texture_subresource(mapped_buffer.subspan(offset_in_buffer), layout, format, is_swizzled, 256);
+			upload_texture_subresource(mapped_buffer.subspan(offset_in_buffer), layout, format, is_swizzled, false, 256);
 			UINT row_pitch = align(layout.width_in_block * block_size_in_bytes, 256);
 			command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(existing_texture, (UINT)mip_level), 0, 0, 0,
 				&CD3DX12_TEXTURE_COPY_LOCATION(texture_buffer_heap.get_heap(),

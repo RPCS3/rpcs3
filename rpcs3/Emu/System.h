@@ -299,7 +299,6 @@ struct cfg_root : cfg::node
 		cfg::_enum<spu_decoder_type> spu_decoder{this, "SPU Decoder", spu_decoder_type::asmjit};
 		cfg::_bool lower_spu_priority{this, "Lower SPU thread priority"};
 		cfg::_bool spu_debug{this, "SPU Debug"};
-		cfg::_int<0, 16384> max_spu_immediate_write_size{this, "Maximum immediate DMA write size", 16384}; // Maximum size that an SPU thread can write directly without posting to MFC
 		cfg::_int<0, 6> preferred_spu_threads{this, "Preferred SPU Threads", 0}; //Numnber of hardware threads dedicated to heavy simultaneous spu tasks
 		cfg::_int<0, 16> spu_delay_penalty{this, "SPU delay penalty", 3}; //Number of milliseconds to block a thread if a virtual 'core' isn't free
 		cfg::_bool spu_loop_detection{this, "SPU loop detection", true}; //Try to detect wait loops and trigger thread yield
@@ -354,6 +353,7 @@ struct cfg_root : cfg::node
 		cfg::_bool frame_skip_enabled{this, "Enable Frame Skip", false};
 		cfg::_bool force_cpu_blit_processing{this, "Force CPU Blit", false}; // Debugging option
 		cfg::_bool disable_on_disk_shader_cache{this, "Disable On-Disk Shader Cache", false};
+		cfg::_bool full_rgb_range_output{this, "Use full RGB output range", true}; // Video out dynamic range
 		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames To Draw", 1};
 		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames To Skip", 1};
 		cfg::_int<50, 800> resolution_scale_percent{this, "Resolution Scale", 100};
@@ -434,6 +434,7 @@ struct cfg_root : cfg::node
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
 		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true};
 		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true};
+		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", true };
 		cfg::_bool use_native_interface{ this, "Use native user interface", true };
 		cfg::_int<1, 65535> gdb_server_port{this, "Port", 2345};
 

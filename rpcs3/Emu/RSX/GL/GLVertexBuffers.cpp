@@ -53,7 +53,7 @@ namespace
 		gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(ptr), ::narrow<u32>(block_sz) };
 		std::tie(min_index, max_index, vertex_draw_count) = write_index_array_data_to_buffer(dst, raw_index_buffer,
 			type, draw_mode, rsx::method_registers.restart_index_enabled(), rsx::method_registers.restart_index(), first_count_commands,
-			[](auto prim) { return !gl::is_primitive_native(prim); });
+			rsx::method_registers.vertex_data_base_index(), [](auto prim) { return !gl::is_primitive_native(prim); });
 
 		return std::make_tuple(min_index, max_index, vertex_draw_count);
 	}
@@ -236,6 +236,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 
 		if (!m_persistent_stream_view.in_range(upload_info.persistent_mapping_offset, required.first, upload_info.persistent_mapping_offset))
 		{
+			verify(HERE), m_max_texbuffer_size < m_attrib_ring_buffer->size();
 			const size_t view_size = ((upload_info.persistent_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
 				(m_attrib_ring_buffer->size() - upload_info.persistent_mapping_offset) : m_max_texbuffer_size;
 
@@ -252,6 +253,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 
 		if (!m_volatile_stream_view.in_range(upload_info.volatile_mapping_offset, required.second, upload_info.volatile_mapping_offset))
 		{
+			verify(HERE), m_max_texbuffer_size < m_attrib_ring_buffer->size();
 			const size_t view_size = ((upload_info.volatile_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
 				(m_attrib_ring_buffer->size() - upload_info.volatile_mapping_offset) : m_max_texbuffer_size;
 

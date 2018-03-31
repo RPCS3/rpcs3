@@ -1,5 +1,5 @@
 #include "game_list_frame.h"
-
+#include "qt_utils.h"
 #include "settings_dialog.h"
 #include "table_item_delegate.h"
 #include "custom_table_widget_item.h"
@@ -27,12 +27,12 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	: custom_dock_widget(tr("Game List"), parent), xgui_settings(guiSettings), xemu_settings(emuSettings)
 {
 	m_isListLayout    = xgui_settings->GetValue(gui::gl_listMode).toBool();
-	m_icon_size_index = xgui_settings->GetValue(gui::gl_iconSize).toInt();
 	m_Margin_Factor   = xgui_settings->GetValue(gui::gl_marginFactor).toReal();
 	m_Text_Factor     = xgui_settings->GetValue(gui::gl_textFactor).toReal();
 	m_Icon_Color      = xgui_settings->GetValue(gui::gl_iconColor).value<QColor>();
 	m_colSortOrder    = xgui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
 	m_sortColumn      = xgui_settings->GetValue(gui::gl_sortCol).toInt();
+	m_hidden_list     = xgui_settings->GetValue(gui::gl_hidden_list).toStringList().toSet();
 
 	m_oldLayoutIsList = m_isListLayout;
 
@@ -45,9 +45,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_Game_Dock->setWindowFlags(Qt::Widget);
 	setWidget(m_Game_Dock);
 
-	bool showText = m_icon_size_index < gui::gl_max_slider_pos;
-	m_Icon_Size = sizeFromSlider(m_icon_size_index);
-	m_xgrid = new game_list_grid(m_Icon_Size, m_Icon_Color, m_Margin_Factor, m_Text_Factor, showText);
+	m_xgrid = new game_list_grid(QSize(), m_Icon_Color, m_Margin_Factor, m_Text_Factor, false);
 
 	m_gameList = new game_list();
 	m_gameList->setShowGrid(false);
@@ -60,8 +58,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->verticalScrollBar()->setSingleStep(20);
 	m_gameList->horizontalScrollBar()->setSingleStep(20);
 	m_gameList->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
-	m_gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
-	m_gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
 	m_gameList->verticalHeader()->setVisible(false);
 	m_gameList->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_gameList->horizontalHeader()->setHighlightSections(false);
@@ -251,23 +247,17 @@ void game_list_frame::OnColClicked(int col)
 	SortGameList();
 }
 
-// Filter for Categories
-void game_list_frame::FilterData()
+// Get visibility of entries
+bool game_list_frame::IsEntryVisible(const GUI_GameInfo& game)
 {
-	for (auto& game : m_game_data)
+	auto matches_category = [&]()
 	{
-		bool match = false;
-		const QString category = qstr(game.info.category);
-		for (const auto& filter : m_categoryFilters)
-		{
-			if (category.contains(filter))
-			{
-				match = true;
-				break;
-			}
-		}
-		game.isVisible = match && SearchMatchesApp(game.info.name, game.info.serial);
-	}
+		if (m_isListLayout)
+			return m_categoryFilters.contains(qstr(game.info.category));
+		return category::CategoryInMap(game.info.category, category::cat_boot);
+	};
+	bool is_visible = m_show_hidden || !m_hidden_list.contains(qstr(game.info.serial));
+	return is_visible && matches_category() && SearchMatchesApp(game.info.name, game.info.serial);
 }
 
 void game_list_frame::SortGameList()
@@ -314,6 +304,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		// Used to remove duplications from the list (serial -> set of cats)
 		std::map<std::string, std::set<std::string>> serial_cat;
 
+		QSet<QString> serials;
+
 		for (const auto& dir : path_list) { try
 		{
 			const std::string sfb = dir + "/PS3_DISC.SFB";
@@ -343,6 +335,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			{
 				continue;
 			}
+
+			serials.insert(qstr(game.serial));
 
 			bool bootable = false;
 			auto cat = category::cat_boot.find(game.category);
@@ -387,7 +381,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 			QPixmap pxmap = PaintedPixmap(img, hasCustomConfig);
 
-			m_game_data.push_back({ game, m_game_compat->GetCompatibility(game.serial), img, pxmap, true, bootable, hasCustomConfig });
+			m_game_data.push_back({ game, m_game_compat->GetCompatibility(game.serial), img, pxmap, bootable, hasCustomConfig });
 		}
 		catch (const std::exception& e)
 		{
@@ -398,11 +392,15 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		auto op = [](const GUI_GameInfo& game1, const GUI_GameInfo& game2)
 		{
-			return game1.info.name < game2.info.name;
+			return qstr(game1.info.name).toLower() < qstr(game2.info.name).toLower();
 		};
 
 		// Sort by name at the very least.
 		std::sort(m_game_data.begin(), m_game_data.end(), op);
+
+		// clean up hidden games list
+		m_hidden_list.intersect(serials);
+		xgui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.toList()));
 	}
 
 	// Fill Game List / Game Grid
@@ -410,7 +408,6 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 	if (m_isListLayout)
 	{
 		int scroll_position = m_gameList->verticalScrollBar()->value();
-		FilterData();
 		int row = PopulateGameList();
 		m_gameList->selectRow(row);
 		SortGameList();
@@ -538,6 +535,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	}
 
 	GameInfo currGame = m_game_data[row].info;
+	const QString serial = qstr(currGame.serial);
 
 	// Make Actions
 	QMenu myMenu;
@@ -546,6 +544,11 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	f.setBold(true);
 	boot->setFont(f);
 	QAction* configure = myMenu.addAction(tr("&Configure"));
+	QAction* createLLVMCache = myMenu.addAction(tr("&Create LLVM Cache"));
+	myMenu.addSeparator();
+	QAction* hide_serial = myMenu.addAction(tr("&Hide From Game List"));
+	hide_serial->setCheckable(true);
+	hide_serial->setChecked(m_hidden_list.contains(serial));
 	myMenu.addSeparator();
 	QAction* removeGame = myMenu.addAction(tr("&Remove %1").arg(qstr(currGame.category)));
 	QAction* removeConfig = myMenu.addAction(tr("&Remove Custom Configuration"));
@@ -573,6 +576,23 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 			Refresh(true, false);
 		});
 		dlg.exec();
+	});
+	connect(hide_serial, &QAction::triggered, [=](bool checked)
+	{
+		if (checked)
+			m_hidden_list.insert(serial);
+		else
+			m_hidden_list.remove(serial);
+
+		xgui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.toList()));
+		Refresh();
+	});
+	connect(createLLVMCache, &QAction::triggered, [=]
+	{
+		Emu.SetForceBoot(true);
+		Emu.Stop();
+		Emu.SetForceBoot(true);
+		Emu.BootGame(currGame.path, true);
 	});
 	connect(removeGame, &QAction::triggered, [=]
 	{
@@ -773,7 +793,7 @@ void game_list_frame::RepaintIcons(const bool& fromSettings)
 		}
 		else
 		{
-			m_Icon_Color = gui::get_Label_Color("gamelist_icon_background_color");
+			m_Icon_Color = gui::utils::get_label_color("gamelist_icon_background_color");
 		}
 	}
 
@@ -783,6 +803,11 @@ void game_list_frame::RepaintIcons(const bool& fromSettings)
 	}
 
 	Refresh();
+}
+
+void game_list_frame::SetShowHidden(bool show)
+{
+	m_show_hidden = show;
 }
 
 void game_list_frame::SetListMode(const bool& isList)
@@ -868,12 +893,9 @@ int game_list_frame::PopulateGameList()
 
 	auto l_GetItem = [](const std::string& text)
 	{
-		// force single line text ("hack" used instead of Qt shenanigans like Qt::TextSingleLine)
-		QString formattedText = gui::get_Single_Line(qstr(text));
-
 		QTableWidgetItem* curr = new QTableWidgetItem;
 		curr->setFlags(curr->flags() & ~Qt::ItemIsEditable);
-		curr->setText(formattedText);
+		curr->setText(qstr(text).simplified()); // simplified() forces single line text
 		return curr;
 	};
 
@@ -882,10 +904,8 @@ int game_list_frame::PopulateGameList()
 	{
 		index++;
 
-		if (!game.isVisible)
-		{
+		if (!IsEntryVisible(game))
 			continue;
-		}
 
 		// Icon
 		QTableWidgetItem* icon_item = new QTableWidgetItem;
@@ -959,7 +979,7 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	for (uint i = 0; i < m_game_data.size(); i++)
 	{
-		if (category::CategoryInMap(m_game_data[i].info.category, category::cat_boot) && SearchMatchesApp(m_game_data[i].info.name, m_game_data[i].info.serial))
+		if (IsEntryVisible(m_game_data[i]))
 		{
 			matching_apps.append(QPair<GUI_GameInfo*, int>(&m_game_data[i], i));
 		}
@@ -988,7 +1008,7 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	for (const auto& app : matching_apps)
 	{
-		QString title = gui::get_Single_Line(qstr(app.first->info.name));
+		const QString title = qstr(app.first->info.name).simplified(); // simplified() forces single line text
 
 		m_xgrid->addItem(app.first->pxmap, title, app.second, r, c);
 

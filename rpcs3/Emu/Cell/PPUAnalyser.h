@@ -42,6 +42,17 @@ struct ppu_reloc
 	u32 addr;
 	u32 type;
 	u64 data;
+
+	// Operator for sorting
+	bool operator <(const ppu_reloc& rhs) const
+	{
+		return addr < rhs.addr;
+	}
+
+	bool operator <(u32 rhs) const
+	{
+		return addr < rhs;
+	}
 };
 
 // PPU Segment Information
@@ -57,6 +68,7 @@ struct ppu_segment
 // PPU Module Information
 struct ppu_module
 {
+	uchar sha1[20];
 	std::string name;
 	std::string path;
 	std::vector<ppu_reloc> relocs;
@@ -67,6 +79,7 @@ struct ppu_module
 	// Copy info without functions
 	void copy_part(const ppu_module& info)
 	{
+		std::memcpy(sha1, info.sha1, sizeof(sha1));
 		name = info.name;
 		path = info.path;
 		relocs = info.relocs;

@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
+#include "Emu/RSX/rsx_utils.h"
 
 #include "cellVideoOut.h"
 
@@ -144,6 +146,11 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 	{
 		return CELL_VIDEO_OUT_ERROR_ILLEGAL_CONFIGURATION;
 	}
+
+	auto conf = fxm::get_always<rsx::avconf>();
+	conf->aspect = config->aspect;
+	conf->format = config->format;
+	conf->scanline_pitch = config->pitch;
 
 	return CELL_OK;
 }

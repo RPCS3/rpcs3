@@ -55,8 +55,7 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 
 	case MFC_QStatus_offs:
 	{
-		const auto size = mfc_proxy.size();
-		value = (size ? 0 : MFC_PROXY_COMMAND_QUEUE_EMPTY_FLAG) | (8 - size);
+		value = MFC_PROXY_COMMAND_QUEUE_EMPTY_FLAG | 8;
 		return true;
 	}
 
@@ -71,7 +70,7 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 		value = (ch_out_mbox.get_count() & 0xff) | ((4 - ch_in_mbox.get_count()) << 8 & 0xff00) | (ch_out_intr_mbox.get_count() << 16 & 0xff0000);
 		return true;
 	}
-		
+
 	case SPU_Status_offs:
 	{
 		value = status;
@@ -80,7 +79,7 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 
 	case Prxy_TagStatus_offs:
 	{
-		value = mfc_proxy.size() ? 0 : +mfc_prxy_mask;
+		value = mfc_prxy_mask;
 		return true;
 	}
 
@@ -106,7 +105,16 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 {
 	auto try_start = [this]()
 	{
-		if (!status.test_and_set(SPU_STATUS_RUNNING))
+		if (status.atomic_op([](u32& status)
+		{
+			if (status & SPU_STATUS_RUNNING)
+			{
+				return false;
+			}
+
+			status = SPU_STATUS_RUNNING;
+			return true;
+		}))
 		{
 			run();
 		}
@@ -149,18 +157,58 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 	case MFC_Class_CMD_offs:
 	{
 		g_tls_mfc[index].cmd = MFC(value & 0xff);
-		do_dma_transfer(g_tls_mfc[index]);
-		g_tls_mfc[index] = {};
-		g_tls_mfc[index].cmd = MFC(MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL);
 
-		if (value & MFC_START_MASK)
+		switch (value & 0xff)
 		{
-			try_start();
+		case MFC_SNDSIG_CMD:
+		case MFC_SNDSIGB_CMD:
+		case MFC_SNDSIGF_CMD:
+		{
+			g_tls_mfc[index].size = 4;
+			// Fallthrough
+		}
+		case MFC_PUT_CMD:
+		case MFC_PUTB_CMD:
+		case MFC_PUTF_CMD:
+		case MFC_PUTS_CMD:
+		case MFC_PUTBS_CMD:
+		case MFC_PUTFS_CMD:
+		case MFC_GET_CMD:
+		case MFC_GETB_CMD:
+		case MFC_GETF_CMD:
+		case MFC_GETS_CMD:
+		case MFC_GETBS_CMD:
+		case MFC_GETFS_CMD:
+		{
+			if (g_tls_mfc[index].size)
+			{
+				// Perform transfer immediately
+				do_dma_transfer(g_tls_mfc[index]);
+			}
+
+			// .cmd should be zero, which is equal to MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL
+			g_tls_mfc[index] = {};
+
+			if (value & MFC_START_MASK)
+			{
+				try_start();
+			}
+
+			return true;
+		}
+		case MFC_BARRIER_CMD:
+		case MFC_EIEIO_CMD:
+		case MFC_SYNC_CMD:
+		{
+			g_tls_mfc[index] = {};
+			_mm_mfence();
+			return true;
+		}
 		}
 
-		return true;
+		break;
 	}
-		
+
 	case Prxy_QueryType_offs:
 	{
 		// TODO
@@ -255,6 +303,4 @@ void spu_load_exec(const spu_exec_object& elf)
 
 	spu->cpu_init();
 	spu->npc = elf.header.e_entry;
-
-	fxm::get_always<mfc_thread>()->add_spu(std::move(spu));
 }

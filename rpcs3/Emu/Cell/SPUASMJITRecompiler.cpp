@@ -1276,13 +1276,6 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 		c->unuse(*addr);
 		return;
 	}
-	case MFC_WrTagMask:
-	{
-		c->mov(*addr, SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
-		c->mov(SPU_OFF_32(ch_tag_mask), *addr);
-		c->unuse(*addr);
-		return;
-	}
 	case MFC_LSA:
 	{
 		c->mov(*addr, SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
