@@ -37,12 +37,16 @@ struct gem_t
 	struct gem_controller
 	{
 		u32 status;                     // connection status (CELL_GEM_STATUS_DISCONNECTED or CELL_GEM_STATUS_READY)
+		u32 ext_status;                 // external port connection status
 		u32 port;                       // assigned port
 		bool enabled_magnetometer;      // whether the magnetometer is enabled (probably used for additional rotational precision)
 		bool calibrated_magnetometer;   // whether the magnetometer is calibrated
 		bool enabled_filtering;         // whether filtering is enabled
+		bool enabled_tracking;          // whether tracking is enabled
+		bool enabled_LED;               // whether the LED is enabled
 		u8 rumble;                      // rumble intensity
 		gem_color sphere_rgb;           // RGB color of the sphere LED
+		u32 hue;                        // tracking hue of the motion controller
 
 		gem_controller() :
 			status(CELL_GEM_STATUS_DISCONNECTED),
@@ -326,19 +330,33 @@ s32 cellGemClearStatusFlags(u32 gem_num, u64 mask)
 
 s32 cellGemConvertVideoFinish()
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemConvertVideoFinish()");
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellGemConvertVideoStart()
+s32 cellGemConvertVideoStart(vm::cptr<void> video_frame)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemConvertVideoStart(video_frame=*0x%x)", video_frame);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
 s32 cellGemEnableCameraPitchAngleCorrection(u32 enable_flag)
 {
-	cellGem.todo("cellGemEnableCameraPitchAngleCorrection(enable_flag=%d", enable_flag);
+	cellGem.todo("cellGemEnableCameraPitchAngleCorrection(enable_flag=%d)", enable_flag);
 	const auto gem = fxm::get<gem_t>();
 
 	if (!gem)
@@ -432,6 +450,18 @@ s32 cellGemGetAccelerometerPositionInDevice()
 s32 cellGemGetAllTrackableHues(vm::ptr<u8> hues)
 {
 	cellGem.todo("cellGemGetAllTrackableHues(hues=*0x%x)");
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	for (size_t i = 0; i < 360; i++)
+	{
+		hues[i] = true;
+	}
+
 	return CELL_OK;
 }
 
@@ -456,15 +486,44 @@ s32 cellGemGetCameraState(vm::ptr<CellGemCameraState> camera_state)
 	return CELL_OK;
 }
 
-s32 cellGemGetEnvironmentLightingColor()
+s32 cellGemGetEnvironmentLightingColor(vm::ptr<f32> r, vm::ptr<f32> g, vm::ptr<f32> b)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemGetEnvironmentLightingColor(r=*0x%x, g=*0x%x, b=*0x%x)", r, g, b);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!r || !g || !b)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	// default to 128
+	*r = 128;
+	*g = 128;
+	*b = 128;
+
 	return CELL_OK;
 }
 
-s32 cellGemGetHuePixels()
+s32 cellGemGetHuePixels(vm::cptr<void> camera_frame, u32 hue, vm::ptr<u8> pixels)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemGetHuePixels(camera_frame=*0x%x, hue=%d, pixels=*0x%x)", camera_frame, hue, pixels);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!camera_frame || !pixels || hue > 359)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
 	return CELL_OK;
 }
 
@@ -478,7 +537,7 @@ s32 cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> image_state)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!check_gem_num(gem_num))
+	if (!check_gem_num(gem_num) || !image_state)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -513,7 +572,7 @@ s32 cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, vm::ptr<
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!check_gem_num(gem_num) || !inertial_state || !gem->is_controller_ready(gem_num))
+	if (!check_gem_num(gem_num) || state_flag > CELL_GEM_INERTIAL_STATE_FLAG_NEXT || !inertial_state || !gem->is_controller_ready(gem_num))
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -627,7 +686,7 @@ s32 cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<CellGemSt
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!check_gem_num(gem_num))
+	if (!check_gem_num(gem_num) || flag > CELL_GEM_STATE_FLAG_TIMESTAMP || !gem_state)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -637,11 +696,11 @@ s32 cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<CellGemSt
 		map_to_ds3_input(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
 		map_ext_to_ds3_input(gem_num, gem_state->ext);
 
-		gem_state->tracking_flags = CELL_GEM_TRACKING_FLAG_POSITION_TRACKED |
-									CELL_GEM_TRACKING_FLAG_VISIBLE;
+		gem_state->tracking_flags = CELL_GEM_TRACKING_FLAG_POSITION_TRACKED | CELL_GEM_TRACKING_FLAG_VISIBLE;
 		gem_state->timestamp = gem->timer.GetElapsedTimeInMicroSec();
 
 		gem_state->quat[3] = 1.0;
+		return CELL_OK;
 	}
 
 	return CELL_GEM_NOT_CONNECTED;
@@ -667,15 +726,44 @@ s32 cellGemGetStatusFlags(u32 gem_num, vm::ptr<u64> flags)
 	return CELL_OK;
 }
 
-s32 cellGemGetTrackerHue()
+s32 cellGemGetTrackerHue(u32 gem_num, vm::ptr<u32> hue)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.warning("cellGemGetTrackerHue(gem_num=%d, hue=*0x%x)", gem_num, hue);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num) || !hue)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	if (!gem->controllers[gem_num].enabled_tracking || gem->controllers[gem_num].hue > 359)
+	{
+		return CELL_GEM_ERROR_NOT_A_HUE;
+	}
+
+	*hue = gem->controllers[gem_num].hue;
+
 	return CELL_OK;
 }
 
-s32 cellGemHSVtoRGB()
+s32 cellGemHSVtoRGB(f32 h, f32 s, f32 v, vm::ptr<f32> r, vm::ptr<f32> g, vm::ptr<f32> b)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemHSVtoRGB(h=%f, s=%f, v=%f, r=*0x%x, g=*0x%x, b=*0x%x)", h, s, v, r, g, b);
+
+	if (s < 0.0f || s > 1.0f || v < 0.0f || v > 1.0f || !r || !g || !b)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	h = std::clamp(h, 0.0f, 360.0f);
+
+	// TODO: convert
+
 	return CELL_OK;
 }
 
@@ -707,9 +795,27 @@ s32 cellGemInit(vm::cptr<CellGemAttribute> attribute)
 	return CELL_OK;
 }
 
-s32 cellGemInvalidateCalibration()
+s32 cellGemInvalidateCalibration(s32 gem_num)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemInvalidateCalibration(gem_num=%d)", gem_num);
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num))
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	if (g_cfg.io.move == move_handler::fake)
+	{
+		gem->controllers[gem_num].calibrated_magnetometer = false;
+		// TODO: gem->status_flags
+	}
+
 	return CELL_OK;
 }
 
@@ -726,9 +832,21 @@ s32 cellGemIsTrackableHue(u32 hue)
 	return true;
 }
 
-s32 cellGemPrepareCamera()
+s32 cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemPrepareCamera(max_exposure=%d, image_quality=%f)", max_exposure, image_quality);
+	auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	max_exposure = std::clamp(max_exposure, static_cast<s32>(CELL_GEM_MIN_CAMERA_EXPOSURE), static_cast<s32>(CELL_GEM_MAX_CAMERA_EXPOSURE));
+	image_quality = std::clamp(image_quality, 0.0f, 1.0f);
+
+	// TODO: prepare camera
+
 	return CELL_OK;
 }
 
@@ -750,7 +868,7 @@ s32 cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_attribu
 	const auto vc = *vc_attribute;
 
 	if (!vc_attribute || vc.version == 0 || vc.output_format == 0 ||
-		vc.conversion_flags & CELL_GEM_VIDEO_CONVERT_UNK3 && !vc.buffer_memory)
+		vc.conversion_flags & CELL_GEM_COMBINE_PREVIOUS_INPUT_FRAME && !vc.buffer_memory)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -765,9 +883,31 @@ s32 cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_attribu
 	return CELL_OK;
 }
 
-s32 cellGemReadExternalPortDeviceInfo()
+s32 cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, vm::ptr<u8[CELL_GEM_EXTERNAL_PORT_DEVICE_INFO_SIZE]> ext_info)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemReset(gem_num=%d, ext_id=*0x%x, ext_info=%s)", gem_num, ext_id, ext_info);
+	auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num) || !ext_id)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	if (gem->controllers[gem_num].status & CELL_GEM_STATUS_DISCONNECTED)
+	{
+		return CELL_GEM_NOT_CONNECTED;
+	}
+
+	if (!(gem->controllers[gem_num].ext_status & CELL_GEM_EXT_CONNECTED))
+	{
+		return CELL_GEM_NO_EXTERNAL_PORT_DEVICE;
+	}
+
 	return CELL_OK;
 }
 
@@ -820,15 +960,54 @@ s32 cellGemSetYaw()
 	return CELL_OK;
 }
 
-s32 cellGemTrackHues()
+s32 cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemTrackHues(req_hues=*0x%x, res_hues=*0x%x)", req_hues, res_hues);
+	auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!req_hues)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	for (size_t i = 0; i < CELL_GEM_MAX_NUM; i++)
+	{
+		if (req_hues[i] == CELL_GEM_DONT_CARE_HUE)
+		{
+
+		}
+		else if (req_hues[i] == CELL_GEM_DONT_TRACK_HUE)
+		{
+			gem->controllers[i].enabled_tracking = false;
+			gem->controllers[i].enabled_LED = false;
+		}
+		else
+		{
+			if (req_hues[i] > 359)
+			{
+				cellGem.warning("cellGemTrackHues: req_hues[%d]=%d -> this can lead to unexpected behavior", i, req_hues[i]);
+			}
+		}
+	}
+
 	return CELL_OK;
 }
 
 s32 cellGemUpdateFinish()
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemUpdateFinish()");
+	auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
@@ -842,12 +1021,29 @@ s32 cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
+	if (!camera_frame)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellGemWriteExternalPort()
+s32 cellGemWriteExternalPort(u32 gem_num, vm::ptr<u8[CELL_GEM_EXTERNAL_PORT_OUTPUT_SIZE]> data)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemWriteExternalPort(gem_num=%d, data=%s)", gem_num, data);
+	auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num))
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
 	return CELL_OK;
 }
 
