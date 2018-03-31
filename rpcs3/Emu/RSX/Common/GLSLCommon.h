@@ -65,6 +65,7 @@ namespace program_common
 		template_body += "		break;\n";
 		template_body += "	}\n";
 		template_body += "\n";
+		template_body += "	result.x = max(result.x, 0.);\n";
 		template_body += "	result.y = clamp(result.y, 0., 1.);\n";
 		template_body += "	return result;\n";
 		template_body += "}\n\n";
@@ -313,7 +314,45 @@ namespace glsl
 		OS << "}\n\n";
 	}
 
-	static void insert_glsl_legacy_function(std::ostream& OS, glsl::program_domain domain, bool require_lit_emulation, bool require_depth_conversion = false, bool require_wpos = false)
+	static void insert_rop(std::ostream& OS, bool _32_bit_exports)
+	{
+		const std::string reg0 = _32_bit_exports ? "r0" : "h0";
+		const std::string reg1 = _32_bit_exports ? "r2" : "h4";
+		const std::string reg2 = _32_bit_exports ? "r3" : "h6";
+		const std::string reg3 = _32_bit_exports ? "r4" : "h8";
+
+		//TODO: Implement all ROP options like CSAA and ALPHA_TO_ONE here
+		OS << "	if ((rop_control & 0xFF) != 0)\n";
+		OS << "	{\n";
+		OS << "		bool alpha_test = (rop_control & 0x11) > 0;\n";
+		OS << "		uint alpha_func = ((rop_control >> 16) & 0x7);\n";
+		OS << "		bool srgb_convert = (rop_control & 0x2) > 0;\n\n";
+		OS << "		if (alpha_test && !comparison_passes(" << reg0 << ".a, alpha_ref, alpha_func))\n";
+		OS << "		{\n";
+		OS << "			discard;\n";
+		OS << "		}\n";
+
+		if (!_32_bit_exports)
+		{
+			//Tested using NPUB90375; some shaders (32-bit output only?) do not obey srgb flags
+			OS << "		else if (srgb_convert)\n";
+			OS << "		{\n";
+			OS << "			" << reg0 << ".rgb = linear_to_srgb(" << reg0 << ").rgb;\n";
+			OS << "			" << reg1 << ".rgb = linear_to_srgb(" << reg1 << ").rgb;\n";
+			OS << "			" << reg2 << ".rgb = linear_to_srgb(" << reg2 << ").rgb;\n";
+			OS << "			" << reg3 << ".rgb = linear_to_srgb(" << reg3 << ").rgb;\n";
+			OS << "		}\n";
+		}
+
+		OS << "	}\n\n";
+
+		OS << "	ocol0 = " << reg0 << ";\n";
+		OS << "	ocol1 = " << reg1 << ";\n";
+		OS << "	ocol2 = " << reg2 << ";\n";
+		OS << "	ocol3 = " << reg3 << ";\n\n";
+	}
+
+	static void insert_glsl_legacy_function(std::ostream& OS, glsl::program_domain domain, bool require_lit_emulation, bool require_depth_conversion = false, bool require_wpos = false, bool require_texture_ops = true)
 	{
 		if (require_lit_emulation)
 		{
@@ -394,6 +433,67 @@ namespace glsl
 			OS << "}\n\n";
 		}
 
+		if (require_texture_ops)
+		{
+			OS << "vec4 linear_to_srgb(vec4 cl)\n";
+			OS << "{\n";
+			OS << "	vec4 low = cl * 12.92;\n";
+			OS << "	vec4 high = 1.055 * pow(cl, vec4(1. / 2.4)) - 0.055;\n";
+			OS << "	bvec4 select = lessThan(cl, vec4(0.0031308));\n";
+			OS << "	return clamp(mix(high, low, select), 0., 1.);\n";
+			OS << "}\n\n";
+
+			OS << "float srgb_to_linear(float cs)\n";
+			OS << "{\n";
+			OS << "	if (cs <= 0.04045) return cs / 12.92;\n";
+			OS << "	return pow((cs + 0.055) / 1.055, 2.4);\n";
+			OS << "}\n\n";
+
+			//TODO: Move all the texture read control operations here
+			OS << "vec4 process_texel(vec4 rgba, uint control_bits)\n";
+			OS << "{\n";
+			OS << "	if (control_bits == 0) return rgba;\n\n";
+			OS << "	if ((control_bits & 0x10) > 0)\n";
+			OS << "	{\n";
+			OS << "		//Alphakill\n";
+			OS << "		if (!comparison_passes(rgba.a, 0., (control_bits >> 5) & 0x7))\n";
+			OS << "		{\n";
+			OS << "			discard;\n";
+			OS << "			return rgba;\n";
+			OS << "		}\n";
+			OS << "	}\n\n";
+			OS << "	//TODO: Verify gamma control bit ordering, looks to be 0x7 for rgb, 0xF for rgba\n";
+			OS << "	uint srgb_in = (control_bits & 0xF);\n";
+			OS << "	if ((srgb_in & 0x1) > 0) rgba.r = srgb_to_linear(rgba.r);\n";
+			OS << "	if ((srgb_in & 0x2) > 0) rgba.g = srgb_to_linear(rgba.g);\n";
+			OS << "	if ((srgb_in & 0x4) > 0) rgba.b = srgb_to_linear(rgba.b);\n";
+			OS << "	if ((srgb_in & 0x8) > 0) rgba.a = srgb_to_linear(rgba.a);\n";
+			OS << "	return rgba;\n";
+			OS << "}\n\n";
+
+			OS << "#define TEX1D(index, tex, coord1) process_texel(texture(tex, coord1 * texture_parameters[index].x), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX1D_BIAS(index, tex, coord1, bias) process_texel(texture(tex, coord1 * texture_parameters[index].x, bias), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX1D_LOD(index, tex, coord1, lod) process_texel(textureLod(tex, coord1 * texture_parameters[index].x, lod), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX1D_GRAD(index, tex, coord1, dpdx, dpdy) process_texel(textureGrad(tex, coord1 * texture_parameters[index].x, dpdx, dpdy), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX1D_PROJ(index, tex, coord2) process_texel(textureProj(tex, coord2 * vec2(texture_parameters[index].x, 1.)), uint(texture_parameters[index].w))\n";
+
+			OS << "#define TEX2D(index, tex, coord2) process_texel(texture(tex, coord2 * texture_parameters[index].xy), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX2D_BIAS(index, tex, coord2, bias) process_texel(texture(tex, coord2 * texture_parameters[index].xy, bias), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX2D_LOD(index, tex, coord2, lod) process_texel(textureLod(tex, coord2 * texture_parameters[index].xy, lod), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX2D_GRAD(index, tex, coord2, dpdx, dpdy) process_texel(textureGrad(tex, coord2 * texture_parameters[index].xy, dpdx, dpdy), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX2D_PROJ(index, tex, coord4) process_texel(textureProj(tex, coord4 * vec4(texture_parameters[index].xy, 1., 1.)), uint(texture_parameters[index].w))\n";
+
+			OS << "#define TEX2D_DEPTH_RGBA8(index, tex, coord2) process_texel(texture2DReconstruct(tex, coord2 * texture_parameters[index].xy, texture_parameters[index].z), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX2D_SHADOW(index, tex, coord3) texture(tex, coord3 * vec3(texture_parameters[index].xy, 1.))\n";
+			OS << "#define TEX2D_SHADOWPROJ(index, tex, coord4) textureProj(tex, coord4 * vec4(texture_parameters[index].xy, 1., 1.))\n";
+
+			OS << "#define TEX3D(index, tex, coord3) process_texel(texture(tex, coord3), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX3D_BIAS(index, tex, coord3, bias) process_texel(texture(tex, coord3, bias), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX3D_LOD(index, tex, coord3, lod) process_texel(textureLod(tex, coord3, lod), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX3D_GRAD(index, tex, coord3, dpdx, dpdy) process_texel(textureGrad(tex, coord3, dpdx, dpdy), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX3D_PROJ(index, tex, coord4) process_texel(textureProj(tex, coord4), uint(texture_parameters[index].w))\n\n";
+		}
+
 		if (require_wpos)
 		{
 			OS << "vec4 get_wpos()\n";
@@ -434,41 +534,49 @@ namespace glsl
 		case FUNCTION::FUNCTION_REFL:
 			return "vec4($0 - 2.0 * (dot($0, $1)) * $1)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D:
-			return "texture($t, $0.x)";
+			return "TEX1D($_i, $t, $0.x)";
+		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_BIAS:
+			return "TEX1D_BIAS($_i, $t, $0.x, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ:
-			return "textureProj($t, $0.x, $1.x)"; // Note: $1.x is bias
+			return "TEX1D_PROJ($_i, $t, $0.xy)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD:
-			return "textureLod($t, $0.x, $1.x)";
+			return "TEX1D_LOD($_i, $t, $0.x, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_GRAD:
-			return "textureGrad($t, $0.x, $1.x, $2.x)";
+			return "TEX1D_GRAD($_i, $t, $0.x, $1.x, $2.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D:
-			return "texture($t, $0.xy * texture_parameters[$_i].xy)";
+			return "TEX2D($_i, $t, $0.xy)";
+		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_BIAS:
+			return "TEX2D_BIAS($_i, $t, $0.xy, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ:
-			return "textureProj($t, $0 * vec4(texture_parameters[$_i].xy, 1., 1.), $1.x)"; // Note: $1.x is bias
+			return "TEX2D_PROJ($_i, $t, $0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD:
-			return "textureLod($t, $0.xy * texture_parameters[$_i].xy, $1.x)";
+			return "TEX2D_LOD($_i, $t, $0.xy, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD:
-			return "textureGrad($t, $0.xy * texture_parameters[$_i].xy , $1.xy, $2.xy)";
+			return "TEX2D_GRAD($_i, $t, $0.xy, $1.xy, $2.xy)";
 		case FUNCTION::FUNCTION_TEXTURE_SHADOW2D:
-			return "texture($t, $0.xyz * vec3(texture_parameters[$_i].xy, 1.))";
+			return "TEX2D_SHADOW($_i, $t, $0.xyz)";
 		case FUNCTION::FUNCTION_TEXTURE_SHADOW2D_PROJ:
-			return "textureProj($t, $0 * vec4(texture_parameters[$_i].xy, 1., 1.), $1.x)"; // Note: $1.x is bias
+			return "TEX2D_SHADOWPROJ($_i, $t, $0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE:
-			return "texture($t, $0.xyz)";
+			return "TEX3D($_i, $t, $0.xyz)";
+		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_BIAS:
+			return "TEX3D_BIAS($_i, $t, $0.xyz, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ:
-			return "texture($t, ($0.xyz / $0.w))";
+			return "TEX3D($_i, $t, ($0.xyz / $0.w))";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD:
-			return "textureLod($t, $0.xyz, $1.x)";
+			return "TEX3D_LOD($_i, $t, $0.xyz, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD:
-			return "textureGrad($t, $0.xyz, $1.xyz, $2.xyz)";
+			return "TEX3D_GRAD($_i, $t, $0.xyz, $1.xyz, $2.xyz)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D:
-			return "texture($t, $0.xyz)";
+			return "TEX3D($_i, $t, $0.xyz)";
+		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_BIAS:
+			return "TEX3D_BIAS($_i, $t, $0.xyz, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_PROJ:
-			return "textureProj($t, $0.xyzw, $1.x)"; // Note: $1.x is bias
+			return "TEX3D_PROJ($_i, $t, $0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_LOD:
-			return "textureLod($t, $0.xyz, $1.x)";
+			return "TEX3D_LOD($_i, $t, $0.xyz, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_GRAD:
-			return "textureGrad($t, $0.xyz, $1.xyz, $2.xyz)";
+			return "TEX3D_GRAD($_i, $t, $0.xyz, $1.xyz, $2.xyz)";
 		case FUNCTION::FUNCTION_DFDX:
 			return "dFdx($0)";
 		case FUNCTION::FUNCTION_DFDY:
@@ -476,7 +584,7 @@ namespace glsl
 		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D:
 			return "textureLod($t, $0.xy, 0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
-			return "texture2DReconstruct($t, $0.xy * texture_parameters[$_i].xy, texture_parameters[$_i].z)";
+			return "TEX2D_DEPTH_RGBA8($_i, $t, $0.xy)";
 		}
 	}
 }

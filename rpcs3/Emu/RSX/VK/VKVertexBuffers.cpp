@@ -171,7 +171,7 @@ namespace
 				rsx::method_registers.current_draw_clause.primitive,
 				rsx::method_registers.restart_index_enabled(),
 				rsx::method_registers.restart_index(), command.ranges_to_fetch_in_index_buffer,
-				[](auto prim) { return !vk::is_primitive_native(prim); });
+				rsx::method_registers.vertex_data_base_index(), [](auto prim) { return !vk::is_primitive_native(prim); });
 
 			if (min_index >= max_index)
 			{

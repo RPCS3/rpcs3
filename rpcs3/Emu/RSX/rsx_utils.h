@@ -52,6 +52,20 @@ namespace rsx
 		{}
 	};
 
+	struct avconf
+	{
+		u8 format = 0; //XRGB
+		u8 aspect = 0; //AUTO
+		u32 scanline_pitch = 0; //PACKED
+		f32 gamma = 1.f; //NO GAMMA CORRECTION
+	};
+
+	static const std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector =
+	{
+		{ CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B },
+		{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
+	};
+
 	template<typename T>
 	void pad_texture(void* input_pixels, void* output_pixels, u16 input_width, u16 input_height, u16 output_width, u16 output_height)
 	{
@@ -330,4 +344,19 @@ namespace rsx
 		if (last_start >= 0)
 			out.push_back(std::make_pair(last_start, last_valid_index - last_start + 1));
 	}
+
+	// The rsx internally adds the 'data_base_offset' and the 'vert_offset' and masks it 
+	// before actually attempting to translate to the internal address. Seen happening heavily in R&C games
+	static inline u32 get_vertex_offset_from_base(u32 vert_data_base_offset, u32 vert_base_offset)
+	{
+		return ((u64)vert_data_base_offset + vert_base_offset) & 0xFFFFFFF;
+	}
+
+	// Similar to vertex_offset_base calculation, the rsx internally adds and masks index
+	// before using
+	static inline u32 get_index_from_base(u32 index, u32 index_base)
+	{
+		return ((u64)index + index_base) & 0x000FFFFF;
+	}
+
 }

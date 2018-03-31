@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
+#include "Emu/RSX/rsx_utils.h"
 
 #include "cellAudioIn.h"
 #include "cellAudioOut.h"
@@ -8,8 +10,6 @@
 #include "cellSysutil.h"
 
 logs::channel cellAvconfExt("cellAvconfExt");
-
-vm::gvar<f32> g_gamma; // TODO
 
 s32 cellAudioOutUnregisterDevice(u32 deviceNumber)
 {
@@ -56,7 +56,8 @@ s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 	}
 
-	*gamma = *g_gamma;
+	auto conf = fxm::get_always<rsx::avconf>();
+	*gamma = conf->gamma;
 
 	return CELL_OK;
 }
@@ -87,7 +88,8 @@ s32 cellVideoOutSetGamma(u32 videoOut, f32 gamma)
 		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	*g_gamma = gamma;
+	auto conf = fxm::get_always<rsx::avconf>();
+	conf->gamma = gamma;
 
 	return CELL_OK;
 }
@@ -152,12 +154,6 @@ s32 cellVideoOutSetCopyControl(u32 videoOut, u32 control)
 
 DECLARE(ppu_module_manager::cellAvconfExt)("cellSysutilAvconfExt", []()
 {
-	REG_VAR(cellSysutilAvconfExt, g_gamma).flag(MFF_HIDDEN).init = []
-	{
-		// Test
-		*g_gamma = 1.0f;
-	};
-
 	REG_FUNC(cellSysutilAvconfExt, cellAudioOutUnregisterDevice);
 	REG_FUNC(cellSysutilAvconfExt, cellAudioOutGetDeviceInfo2);
 	REG_FUNC(cellSysutilAvconfExt, cellVideoOutSetXVColor);

@@ -8,6 +8,7 @@
 #include <QDesktopWidget>
 #include <QMimeData>
 
+#include "qt_utils.h"
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
 #include "trophy_manager_dialog.h"
@@ -83,7 +84,6 @@ void main_window::Init()
 	// add toolbar widgets (crappy Qt designer is not able to)
 	ui->toolBar->setObjectName("mw_toolbar");
 	ui->sizeSlider->setRange(0, gui::gl_max_slider_pos);
-	ui->sizeSlider->setSliderPosition(guiSettings->GetValue(gui::gl_iconSize).toInt());
 	ui->toolBar->addWidget(ui->sizeSliderContainer);
 	ui->toolBar->addSeparator();
 	ui->toolBar->addWidget(ui->mw_searchbar);
@@ -525,6 +525,9 @@ void main_window::InstallPup(const QString& dropPath)
 	{
 		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware version %s.", version_string);
 		guiSettings->ShowInfoBox(gui::ib_pup_success, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), this);
+
+		Emu.SetForceBoot(true);
+		Emu.BootGame(Emu.GetLibDir(), true);
 	}
 }
 
@@ -604,11 +607,11 @@ void main_window::SaveWindowState()
 
 void main_window::RepaintThumbnailIcons()
 {
-	QColor newColor = gui::get_Label_Color("thumbnail_icon_color");
+	QColor newColor = gui::utils::get_label_color("thumbnail_icon_color");
 
 	auto icon = [&newColor](const QString& path)
 	{
-		return gui_settings::colorizedIcon(QPixmap::fromImage(gui_settings::GetOpaqueImageArea(path)), gui::mw_tool_icon_color, newColor);
+		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), gui::mw_tool_icon_color, newColor);
 	};
 
 #ifdef _WIN32
@@ -635,12 +638,12 @@ void main_window::RepaintToolBarIcons()
 	}
 	else
 	{
-		newColor = gui::get_Label_Color("toolbar_icon_color");
+		newColor = gui::utils::get_label_color("toolbar_icon_color");
 	}
 
 	auto icon = [&newColor](const QString& path)
 	{
-		return gui_settings::colorizedIcon(QIcon(path), gui::mw_tool_icon_color, newColor);
+		return gui::utils::get_colorized_icon(QIcon(path), gui::mw_tool_icon_color, newColor);
 	};
 
 	m_icon_play           = icon(":/Icons/play.png");
@@ -1186,6 +1189,13 @@ void main_window::CreateConnects()
 		guiSettings->SetValue(gui::mw_toolBarVisible, checked);
 	});
 
+	connect(ui->showHiddenEntriesAct, &QAction::triggered, [=](bool checked)
+	{
+		guiSettings->SetValue(gui::gl_show_hidden, checked);
+		m_gameListFrame->SetShowHidden(checked);
+		m_gameListFrame->Refresh();
+	});
+
 	connect(ui->refreshGameListAct, &QAction::triggered, [=]
 	{
 		m_gameListFrame->Refresh(true);
@@ -1227,7 +1237,7 @@ void main_window::CreateConnects()
 		if (m_save_slider_pos)
 		{
 			m_save_slider_pos = false;
-			guiSettings->SetValue(gui::gl_iconSize, index);
+			guiSettings->SetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid, index);
 		}
 		m_gameListFrame->ResizeIcons(index);
 	};
@@ -1259,9 +1269,17 @@ void main_window::CreateConnects()
 
 	connect(m_listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
-		bool isList = act == ui->setlistModeListAct;
-		m_gameListFrame->SetListMode(isList);
-		m_categoryVisibleActGroup->setEnabled(isList);
+		bool is_list_act = act == ui->setlistModeListAct;
+		if (is_list_act == m_is_list_mode)
+			return;
+
+		int slider_pos = ui->sizeSlider->sliderPosition();
+		ui->sizeSlider->setSliderPosition(m_other_slider_pos);
+		m_other_slider_pos = slider_pos;
+
+		m_is_list_mode = is_list_act;
+		m_gameListFrame->SetListMode(m_is_list_mode);
+		m_categoryVisibleActGroup->setEnabled(m_is_list_mode);
 	});
 
 	connect(ui->toolbar_disc, &QAction::triggered, this, &main_window::BootGame);
@@ -1289,7 +1307,10 @@ void main_window::CreateConnects()
 	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });
 
 	connect(ui->sizeSlider, &QSlider::valueChanged, resizeIcons);
-	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [&] { guiSettings->SetValue(gui::gl_iconSize, ui->sizeSlider->value()); });
+	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [&]
+	{
+		guiSettings->SetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid, ui->sizeSlider->value());
+	});
 	connect(ui->sizeSlider, &QSlider::actionTriggered, [&](int action)
 	{
 		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
@@ -1411,6 +1432,9 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 
 	RepaintToolbar();
 
+	ui->showHiddenEntriesAct->setChecked(guiSettings->GetValue(gui::gl_show_hidden).toBool());
+	m_gameListFrame->SetShowHidden(ui->showHiddenEntriesAct->isChecked()); // prevent GetValue in m_gameListFrame->LoadSettings
+
 	ui->showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Non_Disc_Game));
 	ui->showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Disc_Game));
 	ui->showCatHomeAct->setChecked(guiSettings->GetCategoryVisibility(Category::Home));
@@ -1419,14 +1443,18 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	ui->showCatUnknownAct->setChecked(guiSettings->GetCategoryVisibility(Category::Unknown_Cat));
 	ui->showCatOtherAct->setChecked(guiSettings->GetCategoryVisibility(Category::Others));
 
-	SetIconSizeActions(guiSettings->GetValue(gui::gl_iconSize).toInt());
-
-	bool isListMode = guiSettings->GetValue(gui::gl_listMode).toBool();
-	if (isListMode)
+	// handle icon size options
+	m_is_list_mode = guiSettings->GetValue(gui::gl_listMode).toBool();
+	if (m_is_list_mode)
 		ui->setlistModeListAct->setChecked(true);
 	else
 		ui->setlistModeGridAct->setChecked(true);
-	m_categoryVisibleActGroup->setEnabled(isListMode);
+	m_categoryVisibleActGroup->setEnabled(m_is_list_mode);
+
+	int icon_size_index = guiSettings->GetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid).toInt();
+	m_other_slider_pos = guiSettings->GetValue(!m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid).toInt();
+	ui->sizeSlider->setSliderPosition(icon_size_index);
+	SetIconSizeActions(icon_size_index);
 
 	if (configure_all)
 	{

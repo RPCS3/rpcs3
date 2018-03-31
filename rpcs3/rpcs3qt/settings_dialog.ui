@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1011</width>
-    <height>775</height>
+    <width>816</width>
+    <height>570</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -42,11 +42,11 @@
       <attribute name="title">
        <string>CPU</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_55">
+      <layout class="QVBoxLayout" name="coreTabLayout" stretch="1,0,0">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,1,2">
+        <layout class="QHBoxLayout" name="coreTabItemLayout" stretch="1,1,2">
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout_8" stretch="1,1,1">
+          <layout class="QVBoxLayout" name="coreTabLeftLayout" stretch="1,1,0">
            <item>
             <widget class="QGroupBox" name="ppu">
              <property name="title">
@@ -70,7 +70,7 @@
               <item>
                <widget class="QRadioButton" name="ppu_llvm">
                 <property name="text">
-                 <string>Recompiler (LLVM)</string>
+                 <string>LLVM Recompiler (fastest)</string>
                 </property>
                </widget>
               </item>
@@ -100,7 +100,7 @@
               <item>
                <widget class="QRadioButton" name="spu_asmjit">
                 <property name="text">
-                 <string>Recompiler (ASMJIT)</string>
+                 <string>ASMJIT Recompiler (fastest)</string>
                 </property>
                </widget>
               </item>
@@ -110,7 +110,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="text">
-                 <string>Recompiler (LLVM)</string>
+                 <string>LLVM Recompiler</string>
                 </property>
                </widget>
               </item>
@@ -132,7 +132,7 @@
           </layout>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout_10" stretch="1,1">
+          <layout class="QVBoxLayout" name="coreTabMiddleLayout" stretch="1,1">
            <item>
             <widget class="QGroupBox" name="lib_settings">
              <property name="sizePolicy">
@@ -240,7 +240,7 @@
           </layout>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout_9" stretch="1,0">
+          <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="1,0">
            <item>
             <widget class="QGroupBox" name="groupBox_28">
              <property name="sizePolicy">
@@ -1226,11 +1226,18 @@
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_47">
            <item>
-            <widget class="QGroupBox" name="groupBox_55">
+            <widget class="QGroupBox" name="gb_emu_settings">
              <property name="title">
               <string>Emulator Settings</string>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_41">
+              <item>
+               <widget class="QCheckBox" name="cb_show_welcome">
+                <property name="text">
+                 <string>Show Welcome Screen</string>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QCheckBox" name="exitOnStop">
                 <property name="text">
@@ -1273,9 +1280,48 @@
                 </property>
                </widget>
               </item>
+              <item>
+               <widget class="QCheckBox" name="showShaderCompilationHint">
+                <property name="text">
+                 <string>Show shader compilation hint</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="verticalSpacer_13">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::MinimumExpanding</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
              </layout>
             </widget>
            </item>
+           <item>
+            <widget class="QGroupBox" name="gb_max_llvm">
+             <property name="title">
+              <string>Max LLVM Compile Threads</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_63">
+              <item>
+               <widget class="QComboBox" name="maxLLVMThreads"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_60">
            <item>
             <widget class="QGroupBox" name="gb_viewport">
              <property name="title">
@@ -1368,108 +1414,6 @@
              </layout>
             </widget>
            </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_58">
-           <item>
-            <widget class="QGroupBox" name="groupBox_2">
-             <property name="title">
-              <string>Max LLVM Compile Threads</string>
-             </property>
-             <layout class="QVBoxLayout" name="verticalLayout_63">
-              <item>
-               <widget class="QComboBox" name="maxLLVMThreads"/>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="QGroupBox" name="gb_settings">
-             <property name="title">
-              <string>UI Settings</string>
-             </property>
-             <layout class="QVBoxLayout" name="verticalLayout_42">
-              <item>
-               <widget class="QCheckBox" name="cb_show_welcome">
-                <property name="text">
-                 <string>Show Welcome Screen</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pb_reset_default">
-                <property name="text">
-                 <string>Restore default settings</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pb_backup_config">
-                <property name="text">
-                 <string>Save current settings</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pb_open_folder">
-                <property name="text">
-                 <string>Open configuration folder</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <spacer name="verticalSpacer_4">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeType">
-                 <enum>QSizePolicy::MinimumExpanding</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>0</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item>
-               <widget class="QComboBox" name="combo_configs"/>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pb_apply_config">
-                <property name="text">
-                 <string>Apply</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_60">
-           <item>
-            <widget class="QGroupBox" name="gb_stylesheets">
-             <property name="title">
-              <string>UI Stylesheets</string>
-             </property>
-             <layout class="QVBoxLayout" name="verticalLayout_43">
-              <item>
-               <widget class="QComboBox" name="combo_stylesheets"/>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pb_apply_stylesheet">
-                <property name="text">
-                 <string>Apply</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
            <item>
             <widget class="QGroupBox" name="gb_colors">
              <property name="title">
@@ -1519,6 +1463,85 @@
                  </size>
                 </property>
                </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_58">
+           <item>
+            <widget class="QGroupBox" name="gb_stylesheets">
+             <property name="title">
+              <string>UI Stylesheets</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_43">
+              <item>
+               <widget class="QComboBox" name="combo_stylesheets"/>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pb_apply_stylesheet">
+                <property name="text">
+                 <string>Apply</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="gb_settings">
+             <property name="title">
+              <string>UI Settings</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_42">
+              <item>
+               <widget class="QPushButton" name="pb_reset_default">
+                <property name="text">
+                 <string>Restore default settings</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pb_backup_config">
+                <property name="text">
+                 <string>Save current settings</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pb_open_folder">
+                <property name="text">
+                 <string>Open configuration folder</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="verticalSpacer_4">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::MinimumExpanding</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QComboBox" name="combo_configs"/>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pb_apply_config">
+                <property name="text">
+                 <string>Apply</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </widget>

@@ -89,13 +89,6 @@ namespace rsx
 		}
 	}
 
-	// The rsx internally adds the 'data_base_offset' and the 'vert_offset' and masks it 
-	// before actually attempting to translate to the internal address. Seen happening heavily in R&C games
-	u32 get_vertex_offset_from_base(u32 vert_data_base_offset, u32 vert_base_offset)
-	{
-		return ((u64)vert_data_base_offset + vert_base_offset) & 0xFFFFFFF;
-	}
-
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
 	{
 		switch (type)
@@ -956,9 +949,9 @@ namespace rsx
 		//TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
 		auto fragment_alpha_func = rsx::method_registers.alpha_func();
 		auto alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
-		auto is_alpha_tested = (u32)rsx::method_registers.alpha_test_enabled();
+		auto rop_control = (u32)rsx::method_registers.alpha_test_enabled();
 
-		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !is_alpha_tested)
+		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !rop_control)
 		{
 			if (rsx::method_registers.msaa_enabled() &&
 				rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample)
@@ -968,7 +961,7 @@ namespace rsx
 				//simulated using combined alpha blend and alpha test
 				fragment_alpha_func = rsx::comparison_function::greater;
 				alpha_ref = rsx::method_registers.msaa_sample_mask()? 0.25f : 0.f;
-				is_alpha_tested |= (1 << 4);
+				rop_control |= (1 << 4);
 			}
 		}
 
@@ -976,6 +969,23 @@ namespace rsx
 		const f32 fog1 = rsx::method_registers.fog_params_1();
 		const u32 alpha_func = static_cast<u32>(fragment_alpha_func);
 		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
+
+		rop_control |= (alpha_func << 16);
+
+		if (rsx::method_registers.framebuffer_srgb_enabled())
+		{
+			// Check if framebuffer is actually an XRGB format and not a WZYX format
+			switch (rsx::method_registers.surface_color())
+			{
+			case rsx::surface_color_format::w16z16y16x16:
+			case rsx::surface_color_format::w32z32y32x32:
+			case rsx::surface_color_format::x32:
+				break;
+			default:
+				rop_control |= 0x2;
+				break;
+			}
+		}
 
 		// Generate wpos coeffecients
 		// wpos equation is now as follows:
@@ -990,8 +1000,7 @@ namespace rsx
 		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
 
 		u32 *dst = static_cast<u32*>(buffer);
-
-		stream_vector(dst, (u32&)fog0, (u32&)fog1, is_alpha_tested, (u32&)alpha_ref);
+		stream_vector(dst, (u32&)fog0, (u32&)fog1, rop_control, (u32&)alpha_ref);
 		stream_vector(dst + 4, alpha_func, fog_mode, (u32&)wpos_scale, (u32&)wpos_bias);
 
 		size_t offset = 8;
@@ -1517,8 +1526,7 @@ namespace rsx
 			auto &tex = rsx::method_registers.fragment_textures[i];
 			result.texture_scale[i][0] = sampler_descriptors[i]->scale_x;
 			result.texture_scale[i][1] = sampler_descriptors[i]->scale_y;
-			result.textures_alpha_kill[i] = 0;
-			result.textures_zfunc[i] = 0;
+			result.texture_scale[i][2] = (f32)tex.remap();  //Debug value
 
 			if (!tex.enabled())
 			{
@@ -1526,28 +1534,29 @@ namespace rsx
 			}
 			else
 			{
+				u32 texture_control = 0;
 				texture_dimensions[i] = sampler_descriptors[i]->image_type;
 
 				if (tex.alpha_kill_enabled())
 				{
 					//alphakill can be ignored unless a valid comparison function is set
 					const rsx::comparison_function func = (rsx::comparison_function)tex.zfunc();
-					if (func < rsx::comparison_function::always && func > rsx::comparison_function::never)
+					if (func < rsx::comparison_function::always && func >= rsx::comparison_function::never)
 					{
-						result.textures_alpha_kill[i] = 1;
-						result.textures_zfunc[i] = (u8)func;
+						texture_control |= (1 << 4);			//alphakill enable
+						texture_control |= ((u32)func << 5);	//alphakill function
 					}
 				}
 
 				const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 				const u32 raw_format = tex.format();
+				const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
 				if (raw_format & CELL_GCM_TEXTURE_UN)
 					result.unnormalized_coords |= (1 << i);
 
 				if (sampler_descriptors[i]->is_depth_texture)
 				{
-					const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 					switch (format)
 					{
 					case CELL_GCM_TEXTURE_A8R8G8B8:
@@ -1575,6 +1584,33 @@ namespace rsx
 						LOG_ERROR(RSX, "Depth texture bound to pipeline with unexpected format 0x%X", format);
 					}
 				}
+
+				if (const auto srgb_mask = tex.gamma())
+				{
+					switch (format)
+					{
+					case CELL_GCM_TEXTURE_DEPTH24_D8:
+					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+					case CELL_GCM_TEXTURE_DEPTH16:
+					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+					case CELL_GCM_TEXTURE_X16:
+					case CELL_GCM_TEXTURE_Y16_X16:
+					case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+					case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+					case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+					case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+					case CELL_GCM_TEXTURE_X32_FLOAT:
+					case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+						//Special data formats (XY, HILO, DEPTH) are not RGB formats
+						//Ignore gamma flags
+						break;
+					default:
+						texture_control |= srgb_mask;
+						break;
+					}
+				}
+
+				result.texture_scale[i][3] = (f32)texture_control;
 			}
 		}
 
@@ -2241,9 +2277,9 @@ namespace rsx
 			const auto elapsed = timestamp - performance_counters.last_update_timestamp;
 
 			if (elapsed > idle)
-				performance_counters.approximate_load = (elapsed - idle) * 100 / elapsed;
+				performance_counters.approximate_load = (u32)((elapsed - idle) * 100 / elapsed);
 			else
-				performance_counters.approximate_load = 0;
+				performance_counters.approximate_load = 0u;
 
 			performance_counters.idle_time = 0;
 			performance_counters.sampled_frames = 0;
@@ -2418,7 +2454,7 @@ namespace rsx
 			int retries = 0;
 			while (!Emu.IsStopped())
 			{
-				for (int n = 0; n < occlusion_query_count; ++n)
+				for (u32 n = 0; n < occlusion_query_count; ++n)
 				{
 					if (m_occlusion_query_data[n].pending || m_occlusion_query_data[n].active)
 						continue;
@@ -2566,7 +2602,7 @@ namespace rsx
 
 					if (!writer.forwarder)
 						//No other queries in the chain, write result
-						write(writer.sink, ptimer->timestamp(), writer.type, result);
+						write(writer.sink, (u32)ptimer->timestamp(), writer.type, result);
 
 					processed++;
 				}
@@ -2693,7 +2729,7 @@ namespace rsx
 				//only zpass supported right now
 				if (!writer.forwarder)
 					//No other queries in the chain, write result
-					write(writer.sink, ptimer->timestamp(), writer.type, result);
+					write(writer.sink, (u32)ptimer->timestamp(), writer.type, result);
 
 				processed++;
 			}

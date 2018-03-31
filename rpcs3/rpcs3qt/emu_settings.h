@@ -88,6 +88,7 @@ public:
 		ShowTrophyPopups,
 		ShowWelcomeScreen,
 		UseNativeInterface,
+		ShowShaderCompilationHint,
 
 		// Network
 		ConnectionStatus,
@@ -240,20 +241,21 @@ private:
 		{ Move,            { "Input/Output", "Move" }},
 
 		// Misc
-		{ExitRPCS3OnFinish,   { "Miscellaneous", "Exit RPCS3 when process finishes" }},
-		{StartOnBoot,         { "Miscellaneous", "Automatically start games after boot" }},
-		{StartGameFullscreen, { "Miscellaneous", "Start games in fullscreen mode"}},
-		{ShowFPSInTitle,      { "Miscellaneous", "Show FPS counter in window title"}},
-		{ShowTrophyPopups,    { "Miscellaneous", "Show trophy popups"}},
-		{ShowWelcomeScreen,   { "Miscellaneous", "Show Welcome Screen"}},
-		{UseNativeInterface,  { "Miscellaneous", "Use native user interface"}},
+		{ ExitRPCS3OnFinish,         { "Miscellaneous", "Exit RPCS3 when process finishes" }},
+		{ StartOnBoot,               { "Miscellaneous", "Automatically start games after boot" }},
+		{ StartGameFullscreen,       { "Miscellaneous", "Start games in fullscreen mode"}},
+		{ ShowFPSInTitle,            { "Miscellaneous", "Show FPS counter in window title"}},
+		{ ShowTrophyPopups,          { "Miscellaneous", "Show trophy popups"}},
+		{ ShowWelcomeScreen,         { "Miscellaneous", "Show Welcome Screen"}},
+		{ UseNativeInterface,        { "Miscellaneous", "Use native user interface"}},
+		{ ShowShaderCompilationHint, { "Miscellaneous", "Show shader compilation hint"}},
 
 		// Networking
-		{ConnectionStatus, { "Net", "Connection status"}},
+		{ ConnectionStatus, { "Net", "Connection status"}},
 
 		// System
-		{Language,       { "System", "Language"}},
-		{EnableHostRoot, { "VFS", "Enable /host_root/"}},
+		{ Language,       { "System", "Language"}},
+		{ EnableHostRoot, { "VFS", "Enable /host_root/"}},
 
 		// Virtual File System
 		{ emulatorLocation,   { "VFS", "$(EmulatorDir)"}},

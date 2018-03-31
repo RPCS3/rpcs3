@@ -52,23 +52,34 @@ namespace vk
 
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format)
 	{
+		const VkComponentMapping abgr = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A };
+		const VkComponentMapping o_rgb = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_ONE };
+		const VkComponentMapping z_rgb = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_ZERO };
+		const VkComponentMapping o_bgr = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ONE };
+		const VkComponentMapping z_bgr = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ZERO };
+
 		switch (color_format)
 		{
 		case rsx::surface_color_format::r5g6b5:
 			return std::make_pair(VK_FORMAT_R5G6B5_UNORM_PACK16, vk::default_component_map());
 
 		case rsx::surface_color_format::a8r8g8b8:
-		case rsx::surface_color_format::a8b8g8r8:
 			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map());
 
+		case rsx::surface_color_format::a8b8g8r8:
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, abgr);
+
 		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, o_bgr);
+
 		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, z_bgr);
+
 		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, z_rgb);
+
 		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
-		{
-			VkComponentMapping no_alpha = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_ONE };
-			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, no_alpha);
-		}
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, o_rgb);
 
 		case rsx::surface_color_format::w16z16y16x16:
 			return std::make_pair(VK_FORMAT_R16G16B16A16_SFLOAT, vk::default_component_map());
@@ -77,11 +88,10 @@ namespace vk
 			return std::make_pair(VK_FORMAT_R32G32B32A32_SFLOAT, vk::default_component_map());
 
 		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, o_rgb);
+
 		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-		{
-			VkComponentMapping no_alpha = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_ONE };
-			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, no_alpha);
-		}
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, z_rgb);
 
 		case rsx::surface_color_format::b8:
 		{
@@ -619,7 +629,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache.reset(new vk::weak_vertex_cache());
 
-	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.1"));
+	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.2"));
 
 	open_command_buffer();
 
@@ -1062,6 +1072,82 @@ void VKGSRender::end()
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - vertex_start).count();
 
 	std::chrono::time_point<steady_clock> textures_start = vertex_end;
+
+
+	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+
+	//Check for data casts
+	if (ds && ds->old_contents)
+	{
+		if (ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM)
+		{
+			auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
+			auto render_pass = m_render_passes[rp];
+			m_depth_converter->run(*m_current_command_buffer, ds->width(), ds->height(), ds, ds->old_contents->get_view(0xAAE4, rsx::default_remap_vector), render_pass, m_framebuffers_to_clean);
+
+			ds->old_contents = nullptr;
+			ds->dirty = false;
+		}
+		else if (!g_cfg.video.strict_rendering_mode)
+		{
+			//Clear this to avoid dereferencing stale ptr
+			ds->old_contents = nullptr;
+		}
+	}
+
+	if (g_cfg.video.strict_rendering_mode)
+	{
+		auto copy_rtt_contents = [&](vk::render_target* surface)
+		{
+			if (surface->info.format == surface->old_contents->info.format)
+			{
+				const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
+
+				const u16 parent_w = surface->old_contents->width();
+				const u16 parent_h = surface->old_contents->height();
+				u16 copy_w, copy_h;
+
+				std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
+
+				VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
+				VkImageLayout old_layout = surface->current_layout;
+
+				vk::change_image_layout(*m_current_command_buffer, surface, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+				vk::change_image_layout(*m_current_command_buffer, surface->old_contents, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+
+				VkImageCopy copy_rgn;
+				copy_rgn.srcOffset = { 0, 0, 0 };
+				copy_rgn.dstOffset = { 0, 0, 0 };
+				copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
+				copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
+				copy_rgn.extent = { copy_w, copy_h, 1 };
+
+				vkCmdCopyImage(*m_current_command_buffer, surface->old_contents->value, surface->old_contents->current_layout, surface->value, surface->current_layout, 1, &copy_rgn);
+				vk::change_image_layout(*m_current_command_buffer, surface, old_layout, subresource_range);
+
+				surface->dirty = false;
+			}
+			//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
+
+			surface->old_contents = nullptr;
+		};
+
+		//Prepare surfaces if needed
+		for (auto &rtt : m_rtts.m_bound_render_targets)
+		{
+			if (auto surface = std::get<1>(rtt))
+			{
+				if (surface->old_contents != nullptr)
+					copy_rtt_contents(surface);
+			}
+		}
+
+		if (ds && ds->old_contents)
+		{
+			copy_rtt_contents(ds);
+		}
+	}
+
 	//Load textures
 	{
 		std::lock_guard<shared_mutex> lock(m_sampler_mutex);
@@ -1097,7 +1183,8 @@ void VKGSRender::end()
 					f32 min_lod = 0.f, max_lod = 0.f;
 					f32 lod_bias = 0.f;
 
-					const f32 af_level = g_cfg.video.anisotropic_level_override > 0 ? g_cfg.video.anisotropic_level_override : vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso());
+					const bool aniso_override = !g_cfg.video.strict_rendering_mode && g_cfg.video.anisotropic_level_override > 0;
+					const f32 af_level = aniso_override ? g_cfg.video.anisotropic_level_override : vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso());
 					const auto wrap_s = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s());
 					const auto wrap_t = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t());
 					const auto wrap_r = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r());
@@ -1277,80 +1364,6 @@ void VKGSRender::end()
 	//Only textures are synchronized tightly with the GPU and they have been read back above
 	vk::enter_uninterruptible();
 
-	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-
-	//Check for data casts
-	if (ds && ds->old_contents)
-	{
-		if (ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM)
-		{
-			auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
-			auto render_pass = m_render_passes[rp];
-			m_depth_converter->run(*m_current_command_buffer, ds->width(), ds->height(), ds, ds->old_contents->get_view(), render_pass, m_framebuffers_to_clean);
-
-			ds->old_contents = nullptr;
-			ds->dirty = false;
-		}
-		else if (!g_cfg.video.strict_rendering_mode)
-		{
-			//Clear this to avoid dereferencing stale ptr
-			ds->old_contents = nullptr;
-		}
-	}
-
-	if (g_cfg.video.strict_rendering_mode)
-	{
-		auto copy_rtt_contents = [&](vk::render_target* surface)
-		{
-			if (surface->info.format == surface->old_contents->info.format)
-			{
-				const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
-
-				const u16 parent_w = surface->old_contents->width();
-				const u16 parent_h = surface->old_contents->height();
-				u16 copy_w, copy_h;
-
-				std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
-
-				VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
-				VkImageLayout old_layout = surface->current_layout;
-
-				vk::change_image_layout(*m_current_command_buffer, surface, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-				vk::change_image_layout(*m_current_command_buffer, surface->old_contents, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
-
-				VkImageCopy copy_rgn;
-				copy_rgn.srcOffset = { 0, 0, 0 };
-				copy_rgn.dstOffset = { 0, 0, 0 };
-				copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
-				copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
-				copy_rgn.extent = { copy_w, copy_h, 1 };
-
-				vkCmdCopyImage(*m_current_command_buffer, surface->old_contents->value, surface->old_contents->current_layout, surface->value, surface->current_layout, 1, &copy_rgn);
-				vk::change_image_layout(*m_current_command_buffer, surface, old_layout, subresource_range);
-
-				surface->dirty = false;
-			}
-			//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
-
-			surface->old_contents = nullptr;
-		};
-
-		//Prepare surfaces if needed
-		for (auto &rtt : m_rtts.m_bound_render_targets)
-		{
-			if (auto surface = std::get<1>(rtt))
-			{
-				if (surface->old_contents != nullptr)
-					copy_rtt_contents(surface);
-			}
-		}
-
-		if (ds && ds->old_contents)
-		{
-			copy_rtt_contents(ds);
-		}
-	}
-
 	u32 occlusion_id = 0;
 	if (m_occlusion_query_active)
 	{
@@ -1415,7 +1428,7 @@ void VKGSRender::end()
 	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
 
 	const bool is_emulated_restart = (!primitive_emulated && rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart() && rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed);
-	const bool single_draw = !supports_multidraw || (!is_emulated_restart && (rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive));
+	const bool single_draw = (!is_emulated_restart && (!supports_multidraw || rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive));
 
 	if (m_occlusion_query_active && (occlusion_id != UINT32_MAX))
 	{
@@ -2302,15 +2315,18 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 		m_shaders_cache->store(properties, vertex_program, fragment_program);
 
 		//Notify the user with HUD notification
-		if (!m_custom_ui)
+		if (g_cfg.misc.show_shader_compilation_hint)
 		{
-			//Create notification but do not draw it at this time. No need to spam flip requests
-			m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
-		}
-		else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
-		{
-			//Probe the notification
-			casted->touch();
+			if (!m_custom_ui)
+			{
+				//Create notification but do not draw it at this time. No need to spam flip requests
+				m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
+			}
+			else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
+			{
+				//Probe the notification
+				casted->touch();
+			}
 		}
 	}
 

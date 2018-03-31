@@ -223,6 +223,7 @@ struct lv2_spu_group
 	static const u32 id_count = 255;
 
 	const std::string name;
+	const u32 id;
 	const u32 num; // SPU Number
 	const s32 type; // SPU Thread Group Type
 	const u32 ct; // Memory Container Id
@@ -244,7 +245,8 @@ struct lv2_spu_group
 	std::weak_ptr<lv2_event_queue> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
 
 	lv2_spu_group(std::string name, u32 num, s32 prio, s32 type, u32 ct)
-		: name(name)
+		: id(idm::last_id())
+		, name(name)
 		, num(num)
 		, init(0)
 		, prio(prio)

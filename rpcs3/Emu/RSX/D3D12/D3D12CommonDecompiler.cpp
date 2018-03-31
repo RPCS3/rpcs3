@@ -48,6 +48,7 @@ std::string getFunctionImp(FUNCTION f)
 		return "$t.Sample($tsampler, $0.x)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ:
 		return "$t.Sample($tsampler, ($0.x / $0.w))";
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_BIAS:
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD:
 		return "$t.SampleLevel($tsampler, $0.x, $1)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_GRAD:
@@ -58,6 +59,7 @@ std::string getFunctionImp(FUNCTION f)
 		return "$t.Sample($tsampler, $0.xy * $t_scale)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ:
 		return "$t.Sample($tsampler, ($0.xy / $0.w) * $t_scale)";
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_BIAS:
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD:
 		return "$t.SampleLevel($tsampler, $0.xy * $t_scale, $1)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD:
@@ -66,6 +68,7 @@ std::string getFunctionImp(FUNCTION f)
 		return "$t.Sample($tsampler, $0.xyz)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ:
 		return "$t.Sample($tsampler, ($0.xyz / $0.w))";
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_BIAS:
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD:
 		return "$t.SampleLevel($tsampler, $0.xyz, $1)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD:
@@ -74,6 +77,7 @@ std::string getFunctionImp(FUNCTION f)
 		return "$t.Sample($tsampler, $0.xyz)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_PROJ:
 		return "$t.Sample($tsampler, ($0.xyz / $0.w))";
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_BIAS:
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_LOD:
 		return "$t.SampleLevel($tsampler, $0.xyz, $1)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_GRAD:

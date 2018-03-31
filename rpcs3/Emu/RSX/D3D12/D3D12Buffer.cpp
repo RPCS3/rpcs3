@@ -269,7 +269,6 @@ namespace
 				D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST));
 
 		u32 vertex_count = get_vertex_count(vertex_ranges);
-		verify(HERE), rsx::method_registers.vertex_data_base_index() == 0;
 
 		vertex_buffer_visitor visitor(
 			vertex_count, command_list, m_vertex_buffer_data, m_buffer_data);
@@ -415,7 +414,7 @@ namespace
 					rsx::method_registers.current_draw_clause.primitive,
 					rsx::method_registers.restart_index_enabled(),
 					rsx::method_registers.restart_index(), command.ranges_to_fetch_in_index_buffer,
-					[](auto prim) { return !is_primitive_native(prim); });
+					rsx::method_registers.vertex_data_base_index(), [](auto prim) { return !is_primitive_native(prim); });
 
 			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 			D3D12_INDEX_BUFFER_VIEW index_buffer_view = {

@@ -24,7 +24,7 @@ namespace
 
 GLGSRender::GLGSRender() : GSRender()
 {
-	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.1"));
+	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.2"));
 
 	if (g_cfg.video.disable_vertex_cache)
 		m_vertex_cache.reset(new gl::null_vertex_cache());
@@ -205,6 +205,113 @@ void GLGSRender::end()
 	//Do vertex upload before RTT prep / texture lookups to give the driver time to push data
 	auto upload_info = set_vertex_buffer();
 
+	//Check if depth buffer is bound and valid
+	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
+	auto copy_rtt_contents = [](gl::render_target *surface)
+	{
+		if (surface->get_compatible_internal_format() == surface->old_contents->get_compatible_internal_format())
+		{
+			//Copy data from old contents onto this one
+			//1. Clip a rectangular region defning the data
+			//2. Perform a GPU blit
+			u16 parent_w = surface->old_contents->width();
+			u16 parent_h = surface->old_contents->height();
+			u16 copy_w, copy_h;
+
+			std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
+			glCopyImageSubData(surface->old_contents->id(), GL_TEXTURE_2D, 0, 0, 0, 0, surface->id(), GL_TEXTURE_2D, 0, 0, 0, 0, copy_w, copy_h, 1);
+			surface->set_cleared();
+		}
+		//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
+
+		surface->old_contents = nullptr;
+	};
+
+	//Check if we have any 'recycled' surfaces in memory and if so, clear them
+	std::vector<int> buffers_to_clear;
+	bool clear_all_color = true;
+	bool clear_depth = false;
+
+	for (int index = 0; index < 4; index++)
+	{
+		if (std::get<0>(m_rtts.m_bound_render_targets[index]) != 0)
+		{
+			if (std::get<1>(m_rtts.m_bound_render_targets[index])->cleared())
+				clear_all_color = false;
+			else
+				buffers_to_clear.push_back(index);
+		}
+	}
+
+	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+	if (ds && !ds->cleared())
+	{
+		clear_depth = true;
+	}
+
+	//Temporarily disable pixel tests
+	glDisable(GL_SCISSOR_TEST);
+
+	if (clear_depth || buffers_to_clear.size() > 0)
+	{
+		GLenum mask = 0;
+
+		if (clear_depth)
+		{
+			gl_state.depth_mask(GL_TRUE);
+			gl_state.clear_depth(1.0);
+			gl_state.clear_stencil(255);
+			mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+		}
+
+		if (clear_all_color)
+			mask |= GL_COLOR_BUFFER_BIT;
+
+		glClear(mask);
+
+		if (buffers_to_clear.size() > 0 && !clear_all_color)
+		{
+			GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
+			//It is impossible for the render target to be typa A or B here (clear all would have been flagged)
+			for (auto &i : buffers_to_clear)
+				glClearBufferfv(draw_fbo.id(), i, colors);
+		}
+
+		if (clear_depth)
+			gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
+
+		ds->set_cleared();
+	}
+
+	if (ds && ds->old_contents != nullptr && ds->get_rsx_pitch() == ds->old_contents->get_rsx_pitch() &&
+		ds->old_contents->get_compatible_internal_format() == gl::texture::internal_format::rgba8)
+	{
+		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
+		ds->old_contents = nullptr;
+	}
+
+	if (g_cfg.video.strict_rendering_mode)
+	{
+		if (ds && ds->old_contents != nullptr)
+			copy_rtt_contents(ds);
+
+		for (auto &rtt : m_rtts.m_bound_render_targets)
+		{
+			if (auto surface = std::get<1>(rtt))
+			{
+				if (surface->old_contents != nullptr)
+					copy_rtt_contents(surface);
+			}
+		}
+	}
+	else
+	{
+		// Old contents are one use only. Keep the depth conversion check from firing over and over
+		if (ds) ds->old_contents = nullptr;
+	}
+
+	glEnable(GL_SCISSOR_TEST);
+
 	//Load textures
 	{
 		std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
@@ -358,113 +465,6 @@ void GLGSRender::end()
 	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
 	update_draw_state();
-
-	//Check if depth buffer is bound and valid
-	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
-	auto copy_rtt_contents = [](gl::render_target *surface)
-	{
-		if (surface->get_compatible_internal_format() == surface->old_contents->get_compatible_internal_format())
-		{
-			//Copy data from old contents onto this one
-			//1. Clip a rectangular region defning the data
-			//2. Perform a GPU blit
-			u16 parent_w = surface->old_contents->width();
-			u16 parent_h = surface->old_contents->height();
-			u16 copy_w, copy_h;
-
-			std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
-			glCopyImageSubData(surface->old_contents->id(), GL_TEXTURE_2D, 0, 0, 0, 0, surface->id(), GL_TEXTURE_2D, 0, 0, 0, 0, copy_w, copy_h, 1);
-			surface->set_cleared();
-		}
-		//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
-
-		surface->old_contents = nullptr;
-	};
-
-	//Check if we have any 'recycled' surfaces in memory and if so, clear them
-	std::vector<int> buffers_to_clear;
-	bool clear_all_color = true;
-	bool clear_depth = false;
-
-	for (int index = 0; index < 4; index++)
-	{
-		if (std::get<0>(m_rtts.m_bound_render_targets[index]) != 0)
-		{
-			if (std::get<1>(m_rtts.m_bound_render_targets[index])->cleared())
-				clear_all_color = false;
-			else
-				buffers_to_clear.push_back(index);
-		}
-	}
-
-	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-	if (ds && !ds->cleared())
-	{
-		clear_depth = true;
-	}
-
-	//Temporarily disable pixel tests
-	glDisable(GL_SCISSOR_TEST);
-
-	if (clear_depth || buffers_to_clear.size() > 0)
-	{
-		GLenum mask = 0;
-
-		if (clear_depth)
-		{
-			gl_state.depth_mask(GL_TRUE);
-			gl_state.clear_depth(1.0);
-			gl_state.clear_stencil(255);
-			mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
-		}
-
-		if (clear_all_color)
-			mask |= GL_COLOR_BUFFER_BIT;
-
-		glClear(mask);
-
-		if (buffers_to_clear.size() > 0 && !clear_all_color)
-		{
-			GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
-			//It is impossible for the render target to be typa A or B here (clear all would have been flagged)
-			for (auto &i: buffers_to_clear)
-				glClearBufferfv(draw_fbo.id(), i, colors);
-		}
-
-		if (clear_depth)
-			gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
-
-		ds->set_cleared();
-	}
-
-	if (ds && ds->old_contents != nullptr && ds->get_rsx_pitch() == ds->old_contents->get_rsx_pitch() &&
-		ds->old_contents->get_compatible_internal_format() == gl::texture::internal_format::rgba8)
-	{
-		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
-		ds->old_contents = nullptr;
-	}
-
-	if (g_cfg.video.strict_rendering_mode)
-	{
-		if (ds && ds->old_contents != nullptr)
-			copy_rtt_contents(ds);
-
-		for (auto &rtt : m_rtts.m_bound_render_targets)
-		{
-			if (auto surface = std::get<1>(rtt))
-			{
-				if (surface->old_contents != nullptr)
-					copy_rtt_contents(surface);
-			}
-		}
-	}
-	else
-	{
-		// Old contents are one use only. Keep the depth conversion check from firing over and over
-		if (ds) ds->old_contents = nullptr;
-	}
-
-	glEnable(GL_SCISSOR_TEST);
 
 	std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
 
@@ -743,8 +743,8 @@ void GLGSRender::on_init_thread()
 	m_fragment_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_vertex_state_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
-	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, m_max_texbuffer_size);
-	m_volatile_stream_view.update(m_attrib_ring_buffer.get(), 0, m_max_texbuffer_size);
+	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>((u32)m_attrib_ring_buffer->size(), m_max_texbuffer_size));
+	m_volatile_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>((u32)m_attrib_ring_buffer->size(), m_max_texbuffer_size));
 	m_gl_persistent_stream_buffer.copy_from(m_persistent_stream_view);
 	m_gl_volatile_stream_buffer.copy_from(m_volatile_stream_view);
 
@@ -788,6 +788,7 @@ void GLGSRender::on_init_thread()
 
 	m_depth_converter.create();
 	m_ui_renderer.create();
+	m_video_output_pass.create();
 
 	m_gl_texture_cache.initialize();
 	m_thread_id = std::this_thread::get_id();
@@ -920,6 +921,7 @@ void GLGSRender::on_exit()
 	m_gl_texture_cache.destroy();
 	m_depth_converter.destroy();
 	m_ui_renderer.destroy();
+	m_video_output_pass.destroy();
 
 	for (u32 i = 0; i < occlusion_query_count; ++i)
 	{
@@ -1061,15 +1063,18 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 		m_shaders_cache->store(pipeline_properties, vertex_program, fragment_program);
 
 		//Notify the user with HUD notification
-		if (!m_custom_ui)
+		if (g_cfg.misc.show_shader_compilation_hint)
 		{
-			//Create notification but do not draw it at this time. No need to spam flip requests
-			m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
-		}
-		else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
-		{
-			//Probe the notification
-			casted->touch();
+			if (!m_custom_ui)
+			{
+				//Create notification but do not draw it at this time. No need to spam flip requests
+				m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
+			}
+			else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
+			{
+				//Probe the notification
+				casted->touch();
+			}
 		}
 	}
 
@@ -1301,7 +1306,7 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_height = display_buffers[buffer].height;
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
-	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height && buffer_pitch)
+	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height)
 	{
 		// Calculate blit coordinates
 		coordi aspect_ratio;
@@ -1332,29 +1337,32 @@ void GLGSRender::flip(int buffer)
 		rsx::tiled_region buffer_region = get_tiled_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 		u32 absolute_address = buffer_region.address + buffer_region.base;
 
-		m_flip_fbo.recreate();
-		m_flip_fbo.bind();
+		GLuint image = GL_NONE;
 
-		const u32 size = buffer_pitch * buffer_height;
 		if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
 		{
 			buffer_width = render_target_texture->width();
 			buffer_height = render_target_texture->height();
 
-			m_flip_fbo.color = *render_target_texture;
-			m_flip_fbo.read_buffer(m_flip_fbo.color);
+			image = render_target_texture->get_view();
 		}
 		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address))
 		{
 			//Hack - this should be the first location to check for output
 			//The render might have been done offscreen or in software and a blit used to display
-			m_flip_fbo.color = surface->get_raw_view();
-			m_flip_fbo.read_buffer(m_flip_fbo.color);
+			image = surface->get_raw_view();
+
+			//Reset color swizzle
+			glBindTexture(GL_TEXTURE_2D, image);
+			const GLenum rgba_shuffle[] = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
+			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, (GLint*)rgba_shuffle);
+			surface->set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 		}
 		else
 		{
 			LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
 
+			if (!buffer_pitch) buffer_pitch = buffer_width * 4;
 			if (!m_flip_tex_color || m_flip_tex_color.size() != sizei{ (int)buffer_width, (int)buffer_height })
 			{
 				m_flip_tex_color.recreate(gl::texture::target::texture2D);
@@ -1378,16 +1386,33 @@ void GLGSRender::flip(int buffer)
 				m_flip_tex_color.copy_from(buffer_region.ptr, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 			}
 
-			m_flip_fbo.color = m_flip_tex_color;
-			m_flip_fbo.read_buffer(m_flip_fbo.color);
+			image = m_flip_tex_color.id();
 		}
 
-		// Blit source image to the screen
-		// Disable scissor test (affects blit)
-		glDisable(GL_SCISSOR_TEST);
-
 		areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
-		m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
+		auto avconfig = fxm::get<rsx::avconf>();
+
+		if (g_cfg.video.full_rgb_range_output && (!avconfig || avconfig->gamma == 1.f))
+		{
+			// Blit source image to the screen
+			// Disable scissor test (affects blit)
+			glDisable(GL_SCISSOR_TEST);
+
+			m_flip_fbo.recreate();
+			m_flip_fbo.bind();
+			m_flip_fbo.color = image;
+			m_flip_fbo.read_buffer(m_flip_fbo.color);
+			m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
+		}
+		else
+		{
+			const f32 gamma = avconfig ? avconfig->gamma : 1.f;
+			const bool limited_range = !g_cfg.video.full_rgb_range_output;
+
+			gl::screen.bind();
+			glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
+			m_video_output_pass.run(m_frame->client_width(), m_frame->client_height(), image, areai(aspect_ratio), gamma, limited_range);
+		}
 	}
 
 	if (m_custom_ui)
@@ -1568,8 +1593,8 @@ void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query
 
 void GLGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
-	if (query->num_draws)
-		glEndQuery(GL_ANY_SAMPLES_PASSED);
+	verify(HERE), query->active;
+	glEndQuery(GL_ANY_SAMPLES_PASSED);
 }
 
 bool GLGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info* query)
@@ -1587,7 +1612,7 @@ void GLGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 {
 	if (query->num_draws)
 	{
-		GLint result;
+		GLint result = 0;
 		glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT, &result);
 
 		query->result += result;
@@ -1596,7 +1621,11 @@ void GLGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 
 void GLGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
-	glEndQuery(GL_ANY_SAMPLES_PASSED);
+	if (query->active)
+	{
+		//Discard is being called on an active query, close it
+		glEndQuery(GL_ANY_SAMPLES_PASSED);
+	}
 }
 
 void GLGSRender::shell_do_cleanup()

@@ -162,7 +162,7 @@ namespace vk
 
 			void *mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size);
 			gsl::span<gsl::byte> mapped{ (gsl::byte*)mapped_buffer, ::narrow<int>(image_linear_size) };
-			upload_texture_subresource(mapped, layout, format, is_swizzled, 256);
+			upload_texture_subresource(mapped, layout, format, is_swizzled, false, 256);
 			upload_heap.unmap();
 
 			VkBufferImageCopy copy_info = {};
@@ -179,5 +179,30 @@ namespace vk
 			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, dst_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_info);
 			mipmap_level++;
 		}
+	}
+
+	VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector)
+	{
+		VkComponentSwizzle final_mapping[4] = {};
+
+		for (u8 channel = 0; channel < 4; ++channel)
+		{
+			switch (remap_vector.second[channel])
+			{
+			case CELL_GCM_TEXTURE_REMAP_ONE:
+				final_mapping[channel] = VK_COMPONENT_SWIZZLE_ONE;
+				break;
+			case CELL_GCM_TEXTURE_REMAP_ZERO:
+				final_mapping[channel] = VK_COMPONENT_SWIZZLE_ZERO;
+				break;
+			case CELL_GCM_TEXTURE_REMAP_REMAP:
+				final_mapping[channel] = base_remap[remap_vector.first[channel]];
+				break;
+			default:
+				LOG_ERROR(RSX, "Unknown remap lookup value %d", remap_vector.second[channel]);
+			}
+		}
+
+		return{ final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
 	}
 }
