@@ -456,7 +456,7 @@ namespace glsl
 			OS << "	if ((control_bits & 0x10) > 0)\n";
 			OS << "	{\n";
 			OS << "		//Alphakill\n";
-			OS << "		if (!comparison_passes(rgba.a, 0., (control_bits >> 5) & 0x7))\n";
+			OS << "		if (rgba.a < 0.0000000001)\n";
 			OS << "		{\n";
 			OS << "			discard;\n";
 			OS << "			return rgba;\n";

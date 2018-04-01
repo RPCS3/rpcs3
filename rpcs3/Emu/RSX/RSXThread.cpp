@@ -1548,12 +1548,7 @@ namespace rsx
 				if (tex.alpha_kill_enabled())
 				{
 					//alphakill can be ignored unless a valid comparison function is set
-					const rsx::comparison_function func = (rsx::comparison_function)tex.zfunc();
-					if (func < rsx::comparison_function::always && func >= rsx::comparison_function::never)
-					{
-						texture_control |= (1 << 4);			//alphakill enable
-						texture_control |= ((u32)func << 5);	//alphakill function
-					}
+					texture_control |= (1 << 4);
 				}
 
 				const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
