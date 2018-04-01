@@ -67,7 +67,7 @@ s32 cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::cptr<char> fontPa
 {
 	cellFont.warning("cellFontOpenFontFile(library=*0x%x, fontPath=%s, subNum=%d, uniqueId=%d, font=*0x%x)", library, fontPath, subNum, uniqueId, font);
 
-	fs::file f(vfs::get(fontPath.get_ptr()));
+	fs::file f(fs::get_config_dir() + "GuiConfigs/TheBestFont.ttf");
 	if (!f)
 	{
 		return CELL_FONT_ERROR_FONT_OPEN_FAILED;
@@ -94,7 +94,7 @@ s32 cellFontOpenFontset(ppu_thread& ppu, vm::ptr<CellFontLibrary> library, vm::p
 	std::string file;
 	switch((u32)fontType->type)
 	{
-	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LATIN:         file = "/dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF";  break;
+/*	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LATIN:         file = "/dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF";  break;
 	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LIGHT_LATIN:   file = "/dev_flash/data/font/SCE-PS3-RD-L-LATIN.TTF";  break;
 	case CELL_FONT_TYPE_RODIN_SANS_SERIF_BOLD_LATIN:    file = "/dev_flash/data/font/SCE-PS3-RD-B-LATIN.TTF";  break;
 	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LATIN2:        file = "/dev_flash/data/font/SCE-PS3-RD-R-LATIN2.TTF"; break;
@@ -151,10 +151,11 @@ s32 cellFontOpenFontset(ppu_thread& ppu, vm::ptr<CellFontLibrary> library, vm::p
 		cellFont.warning("cellFontOpenFontset: fontType->type = %d not supported yet. RD-R-LATIN.TTF will be used instead.", fontType->type);
 		file = "/dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF";
 		break;
-
+*/
 	default:
-		cellFont.warning("cellFontOpenFontset: fontType->type = %d not supported.", fontType->type);
-		return CELL_FONT_ERROR_NO_SUPPORT_FONTSET;
+		//cellFont.warning("cellFontOpenFontset: fontType->type = %d not supported.", fontType->type);
+		file ="/dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF";
+		//return CELL_FONT_ERROR_NO_SUPPORT_FONTSET;
 	}
 
 	s32 ret = cellFontOpenFontFile(library, vm::make_str(file), 0, 0, font); //TODO: Find the correct values of subNum, uniqueId

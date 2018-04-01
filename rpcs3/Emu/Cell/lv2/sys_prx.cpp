@@ -79,6 +79,8 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 	{ "/dev_flash/sys/external/libsysutil_video_upload.sprx", 0 },
 	{ "/dev_flash/sys/external/libvdec.sprx", 0 },
 	{ "/dev_flash/sys/external/libvoice.sprx", 0 },
+	{ "/dev_flash/sys/external/libfont.sprx", 0 },
+	{ "/dev_flash/sys/external/libfontFT.sprx", 0 },
 };
 
 static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, fs::file src = {})
