@@ -100,7 +100,10 @@ namespace vk
 		}
 		
 		case rsx::surface_color_format::g8b8:
-			return std::make_pair(VK_FORMAT_R8G8_UNORM, vk::default_component_map());
+		{
+			VkComponentMapping gb_rg = { VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R };
+			return std::make_pair(VK_FORMAT_R8G8_UNORM, gb_rg);
+		}
 
 		case rsx::surface_color_format::x32:
 			return std::make_pair(VK_FORMAT_R32_SFLOAT, vk::default_component_map());
@@ -1728,6 +1731,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (clear_descriptors.size() > 0)
 	{
+		//TODO: Implement lw_graphics_pipe objects to manage the color write mask!
 		vk::enter_uninterruptible();
 		begin_render_pass();
 		vkCmdClearAttachments(*m_current_command_buffer, (u32)clear_descriptors.size(), clear_descriptors.data(), 1, &region);
@@ -2167,11 +2171,22 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 		properties.att_state[i].blendEnable = VK_FALSE;
 	}
 
+	bool color_mask_b = rsx::method_registers.color_mask_b();
+	bool color_mask_g = rsx::method_registers.color_mask_g();
+	bool color_mask_r = rsx::method_registers.color_mask_r();
+	bool color_mask_a = rsx::method_registers.color_mask_a();
+
+	if (rsx::method_registers.surface_color() == rsx::surface_color_format::g8b8)
+	{
+		//Map GB components onto RG
+		rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+	}
+
 	VkColorComponentFlags mask = 0;
-	if (rsx::method_registers.color_mask_a()) mask |= VK_COLOR_COMPONENT_A_BIT;
-	if (rsx::method_registers.color_mask_b()) mask |= VK_COLOR_COMPONENT_B_BIT;
-	if (rsx::method_registers.color_mask_g()) mask |= VK_COLOR_COMPONENT_G_BIT;
-	if (rsx::method_registers.color_mask_r()) mask |= VK_COLOR_COMPONENT_R_BIT;
+	if (color_mask_a) mask |= VK_COLOR_COMPONENT_A_BIT;
+	if (color_mask_b) mask |= VK_COLOR_COMPONENT_B_BIT;
+	if (color_mask_g) mask |= VK_COLOR_COMPONENT_G_BIT;
+	if (color_mask_r) mask |= VK_COLOR_COMPONENT_R_BIT;
 
 	for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
 	{
