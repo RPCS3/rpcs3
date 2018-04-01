@@ -50,7 +50,7 @@ trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& i
 	default: break;
 	}
 
-	trophyName->setText(tr("You have earned the %1 trophy\n").arg(trophyType) + qstr(trophy.name));
+	trophyName->setText(tr(u8"\u4F60\u7372\u5F97\u4E86 %1 \u734E\u76C3\n").arg(trophyType) + qstr(trophy.name));
 	trophyName->setAutoFillBackground(true);
 	trophyName->setPalette(black_background);
 

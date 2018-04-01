@@ -1,4 +1,4 @@
-
+﻿
 #include <QApplication>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -116,28 +116,19 @@ void main_window::Init()
 	if (false)
 #endif
 	{
-		LOG_WARNING(GENERAL, "Experimental Build Warning! Build origin: " STRINGIZE(BRANCH));
+		LOG_WARNING(GENERAL, u8"實驗性建置警告! 建置來源: " STRINGIZE(BRANCH));
 
 		QMessageBox msg;
-		msg.setWindowTitle(tr("Experimental Build Warning"));
+		msg.setWindowTitle(u8"實驗性建置警告");
+		msg.setWindowIcon(m_appIcon);
 		msg.setIcon(QMessageBox::Critical);
 		msg.setTextFormat(Qt::RichText);
-		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		msg.setText(u8"請您理解，這一個版本非 RPCS3 官方所發布的版本。<br>此建置可能會破壞遊戲的變化，甚至 <b>毀損</b> 您的資料。<br>建議下載使用官方版本 <a href='https://rpcs3.net/download'>RPCS3 網站</a>.<br><br>建置來源: " STRINGIZE(BRANCH) u8"<br>是否仍要使用此版本?");
+		msg.addButton(tr(u8"是"),QMessageBox::AcceptRole);
+		msg.addButton(tr(u8"否"),QMessageBox::RejectRole);
 		msg.setDefaultButton(QMessageBox::No);
-		msg.setText(QString(tr(
-			R"(
-				<p style="white-space: nowrap;">
-					Please understand that this build is not an official RPCS3 release.<br>
-					This build contains changes that may break games, or even <b>damage</b> your data.<br>
-					We recommend to download and use the official build from the <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>
-					Build origin: %1<br>
-					Do you wish to use this build anyway?
-				</p>
-			)"
-		)).arg(Qt::convertFromPlainText(STRINGIZE(BRANCH))));
-		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 
-		if (msg.exec() == QMessageBox::No)
+		if (msg.exec() == QMessageBox::RejectRole)
 		{
 			std::exit(EXIT_SUCCESS);
 		}
@@ -151,17 +142,17 @@ void main_window::CreateThumbnailToolbar()
 	m_thumb_bar->setWindow(windowHandle());
 
 	m_thumb_playPause = new QWinThumbnailToolButton(m_thumb_bar);
-	m_thumb_playPause->setToolTip(tr("Pause"));
+	m_thumb_playPause->setToolTip(tr(u8"暫停"));
 	m_thumb_playPause->setIcon(m_icon_thumb_pause);
 	m_thumb_playPause->setEnabled(false);
 
 	m_thumb_stop = new QWinThumbnailToolButton(m_thumb_bar);
-	m_thumb_stop->setToolTip(tr("Stop"));
+	m_thumb_stop->setToolTip(tr(u8"停止"));
 	m_thumb_stop->setIcon(m_icon_thumb_stop);
 	m_thumb_stop->setEnabled(false);
 
 	m_thumb_restart = new QWinThumbnailToolButton(m_thumb_bar);
-	m_thumb_restart->setToolTip(tr("Restart"));
+	m_thumb_restart->setToolTip(tr(u8"重啟"));
 	m_thumb_restart->setIcon(m_icon_thumb_restart);
 	m_thumb_restart->setEnabled(false);
 
@@ -235,13 +226,13 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only)
 
 	if (Emu.BootGame(path, direct, add_only))
 	{
-		LOG_SUCCESS(LOADER, "Boot successful.");
+		LOG_SUCCESS(LOADER, u8"啟動完成。");
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
 		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
 	}
 	else
 	{
-		LOG_ERROR(GENERAL, "Boot failed: %s", path);
+		LOG_ERROR(GENERAL, u8"啟動失敗: %s", path);
 	}
 
 	m_gameListFrame->Refresh(true);
@@ -258,13 +249,13 @@ void main_window::BootElf()
 	}
 
 	QString path_last_ELF = guiSettings->GetValue(gui::fd_boot_elf).toString();
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select (S)ELF To Boot"), path_last_ELF, tr(
-		"(S)ELF files (*BOOT.BIN *.elf *.self);;"
-		"ELF files (BOOT.BIN *.elf);;"
-		"SELF files (EBOOT.BIN *.self);;"
-		"BOOT files (*BOOT.BIN);;"
-		"BIN files (*.bin);;"
-		"All files (*.*)"),
+	QString filePath = QFileDialog::getOpenFileName(this, tr(u8"選擇 (S)ELF 啟動"), path_last_ELF, tr(
+		u8"(S)ELF 檔案 (*BOOT.BIN *.elf *.self);;"
+		u8"ELF 檔案 (BOOT.BIN *.elf);;"
+		u8"SELF 檔案 (EBOOT.BIN *.self);;"
+		u8"BOOT 檔案 (*BOOT.BIN);;"
+		u8"BIN 檔案 (*.bin);;"
+		u8"全部檔案 (*.*)"), 
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
 	if (filePath == NULL)
@@ -279,7 +270,7 @@ void main_window::BootElf()
 	guiSettings->SetValue(gui::fd_boot_elf, filePath);
 	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
 
-	LOG_NOTICE(LOADER, "Booting from BootElf...");
+	LOG_NOTICE(LOADER, u8"從 BootElf 啟動...");
 	Boot(path, true);
 }
 
@@ -294,7 +285,7 @@ void main_window::BootGame()
 	}
 
 	QString path_last_Game = guiSettings->GetValue(gui::fd_boot_game).toString();
-	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Select Game Folder"), path_last_Game, QFileDialog::ShowDirsOnly);
+	QString dirPath = QFileDialog::getExistingDirectory(this, tr(u8"選擇遊戲資料夾"), path_last_Game, QFileDialog::ShowDirsOnly);
 
 	if (dirPath == NULL)
 	{
@@ -305,7 +296,7 @@ void main_window::BootGame()
 	guiSettings->SetValue(gui::fd_boot_game, QFileInfo(dirPath).path());
 	const std::string path = sstr(dirPath);
 
-	LOG_NOTICE(LOADER, "Booting from BootGame...");
+	LOG_NOTICE(LOADER, u8"從 BootGame 啟動...");
 	Boot(path);
 }
 
@@ -316,14 +307,14 @@ void main_window::InstallPkg(const QString& dropPath)
 	if (filePath.isEmpty())
 	{
 		QString path_last_PKG = guiSettings->GetValue(gui::fd_install_pkg).toString();
-		filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
+		filePath = QFileDialog::getOpenFileName(this, tr(u8"選擇 PKG 安裝"), path_last_PKG, tr(u8"PKG 檔案 (*.pkg);;全部檔案 (*.*)"));
 	}
 	else
 	{
-		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(filePath),
+		if (QMessageBox::question(this, tr(u8"PKG 解密/安裝程式"), tr(u8"安裝軟體包: %1?").arg(filePath),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
-			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(filePath));
+			LOG_NOTICE(LOADER, u8"PKG: 從拖放取消安裝。 檔案: %s", sstr(filePath));
 			return;
 		}
 	}
@@ -341,9 +332,9 @@ void main_window::InstallPkg(const QString& dropPath)
 	const std::string path = sstr(filePath);
 
 	progress_dialog pdlg(0, 1000, this);
-	pdlg.setWindowTitle(tr("RPCS3 Package Installer"));
-	pdlg.setLabelText(tr("Installing package ... please wait ..."));
-	pdlg.setCancelButtonText(tr("Cancel"));
+	pdlg.setWindowTitle(tr(u8"RPCS3 軟體包安裝程式"));
+	pdlg.setLabelText(tr(u8"安裝軟體包 ... 請稍候 ..."));
+	pdlg.setCancelButtonText(tr(u8"取消"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
@@ -352,7 +343,7 @@ void main_window::InstallPkg(const QString& dropPath)
 	atomic_t<double> progress(0.);
 	{
 		// Run PKG unpacking asynchronously
-		scope_thread worker("PKG Installer", [&]
+		scope_thread worker(u8"PKG 安裝程式", [&]
 		{
 			if (pkg_install(path, progress))
 			{
@@ -388,8 +379,8 @@ void main_window::InstallPkg(const QString& dropPath)
 	if (progress >= 1.)
 	{
 		m_gameListFrame->Refresh(true);
-		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
-		guiSettings->ShowInfoBox(gui::ib_pkg_success, tr("Success!"), tr("Successfully installed software from package!"), this);
+		LOG_SUCCESS(GENERAL, u8"成功安裝 %s.", fileName);
+		guiSettings->ShowInfoBox(gui::ib_pkg_success, tr(u8"成功!"), tr(u8"成功安裝軟體!"), this);
 	}
 }
 
@@ -400,14 +391,14 @@ void main_window::InstallPup(const QString& dropPath)
 	if (filePath.isEmpty())
 	{
 		QString path_last_PUP = guiSettings->GetValue(gui::fd_install_pup).toString();
-		filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), path_last_PUP, tr("PS3 update file (PS3UPDAT.PUP)"));
+		filePath = QFileDialog::getOpenFileName(this, tr(u8"選擇 PS3UPDAT.PUP 安裝"), path_last_PUP, tr(u8"PS3 更新檔案 (PS3UPDAT.PUP)"));
 	}
 	else
 	{
-		if (QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Install firmware: %1?").arg(filePath),
+		if (QMessageBox::question(this, tr(u8"RPCS3 韌體安裝程式"), tr(u8"安裝韌體: %1?").arg(filePath),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
-			LOG_NOTICE(LOADER, "Firmware: Cancelled installation from drop. File: %s", sstr(filePath));
+			LOG_NOTICE(LOADER, u8"韌體: 從拖放取消安裝。 檔案: %s", sstr(filePath));
 			return;
 		}
 	}
@@ -427,8 +418,8 @@ void main_window::InstallPup(const QString& dropPath)
 	pup_object pup(pup_f);
 	if (!pup)
 	{
-		LOG_ERROR(GENERAL, "Error while installing firmware: PUP file is invalid.");
-		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file is invalid."));
+		LOG_ERROR(GENERAL, u8"安裝韌體時錯誤: PUP 檔案無效。");
+		QMessageBox::critical(this, tr(u8"失敗!"), tr(u8"安裝韌體時錯誤: PUP 檔案無效。"));
 		return;
 	}
 
@@ -446,16 +437,16 @@ void main_window::InstallPup(const QString& dropPath)
 	const std::string cur_version = "4.82";
 
 	if (version_string < cur_version &&
-		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(qstr(cur_version), qstr(version_string)),
+		QMessageBox::question(this, tr(u8"RPCS3 韌體安裝程式"), tr(u8"檢測到舊版韌體。\n最新的韌體版本是 %1 並且您正在嘗試安裝 %2 版本\n您想繼續安裝嗎?").arg(qstr(cur_version), qstr(version_string)),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::No)
 	{
 		return;
 	}
 
 	progress_dialog pdlg(0, static_cast<int>(updatefilenames.size()), this);
-	pdlg.setWindowTitle(tr("RPCS3 Firmware Installer"));
-	pdlg.setLabelText(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)));
-	pdlg.setCancelButtonText(tr("Cancel"));
+	pdlg.setWindowTitle(tr(u8"RPCS3 韌體安裝程式"));
+	pdlg.setLabelText(tr(u8"安裝韌體 %1 版本\n請稍候...").arg(qstr(version_string)));
+	pdlg.setCancelButtonText(tr(u8"取消"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
@@ -464,7 +455,7 @@ void main_window::InstallPup(const QString& dropPath)
 	atomic_t<int> progress(0);
 	{
 		// Run asynchronously
-		scope_thread worker("Firmware Installer", [&]
+		scope_thread worker(u8"韌體安裝程式", [&]
 		{
 			for (const auto& updatefilename : updatefilenames)
 			{
@@ -480,16 +471,16 @@ void main_window::InstallPup(const QString& dropPath)
 				auto dev_flash_tar_f = self_dec.MakeFile();
 				if (dev_flash_tar_f.size() < 3)
 				{
-					LOG_ERROR(GENERAL, "Error while installing firmware: PUP contents are invalid.");
-					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP contents are invalid."));
+					LOG_ERROR(GENERAL, u8"安裝韌體時錯誤: PUP 內容無效。");
+					QMessageBox::critical(this, tr(u8"失敗!"), tr(u8"安裝韌體時錯誤: PUP 內容無效。"));
 					progress = -1;
 				}
 
 				tar_object dev_flash_tar(dev_flash_tar_f[2]);
 				if (!dev_flash_tar.extract(Emu.GetEmuDir()))
 				{
-					LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
-					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: TAR contents are invalid."));
+					LOG_ERROR(GENERAL, u8"安裝韌體時錯誤: TAR 內容無效。");
+					QMessageBox::critical(this, tr(u8"失敗!"), tr(u8"安裝韌體時錯誤: TAR 內容無效。"));
 					progress = -1;
 				}
 
@@ -523,8 +514,8 @@ void main_window::InstallPup(const QString& dropPath)
 
 	if (progress > 0)
 	{
-		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware version %s.", version_string);
-		guiSettings->ShowInfoBox(gui::ib_pup_success, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), this);
+		LOG_SUCCESS(GENERAL, u8"成功安裝 PS3 韌體 %s 版本。", version_string);
+		guiSettings->ShowInfoBox(gui::ib_pup_success, tr(u8"成功!"), tr(u8"已成功安裝 PS3 韌體與 LLE 模組!"), this);
 
 		Emu.SetForceBoot(true);
 		Emu.BootGame(Emu.GetLibDir(), true);
@@ -537,7 +528,7 @@ extern void sysutil_send_system_cmd(u64 status, u64 param);
 void main_window::DecryptSPRXLibraries()
 {
 	QString path_last_SPRX = guiSettings->GetValue(gui::fd_decrypt_sprx).toString();
-	QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select SPRX files"), path_last_SPRX, tr("SPRX files (*.sprx)"));
+	QStringList modules = QFileDialog::getOpenFileNames(this, tr(u8"選擇 SPRX 檔案"), path_last_SPRX, tr(u8"SPRX 檔案 (*.sprx)"));
 
 	if (modules.isEmpty())
 	{
@@ -549,7 +540,7 @@ void main_window::DecryptSPRXLibraries()
 
 	guiSettings->SetValue(gui::fd_decrypt_sprx, QFileInfo(modules.first()).path());
 
-	LOG_NOTICE(GENERAL, "Decrypting SPRX libraries...");
+	LOG_NOTICE(GENERAL, u8"解密 SPRX 庫...");
 
 	for (const QString& module : modules)
 	{
@@ -572,21 +563,21 @@ void main_window::DecryptSPRXLibraries()
 				if (fs::file new_file{ prx_path, fs::rewrite })
 				{
 					new_file.write(elf_file.to_string());
-					LOG_SUCCESS(GENERAL, "Decrypted %s", prx_dir + prx_name);
+					LOG_SUCCESS(GENERAL, u8"解密 %s", prx_dir + prx_name);
 				}
 				else
 				{
-					LOG_ERROR(GENERAL, "Failed to create %s", prx_path);
+					LOG_ERROR(GENERAL, u8"無法建立 %s", prx_path);
 				}
 			}
 			else
 			{
-				LOG_ERROR(GENERAL, "Failed to decrypt %s", prx_dir + prx_name);
+				LOG_ERROR(GENERAL, u8"無法解密 %s", prx_dir + prx_name);
 			}
 		}
 	}
 
-	LOG_NOTICE(GENERAL, "Finished decrypting all SPRX libraries.");
+	LOG_NOTICE(GENERAL, u8"完成解密所有的 SPRX 庫。");
 }
 
 /** Needed so that when a backup occurs of window state in guisettings, the state is current.
@@ -693,38 +684,38 @@ void main_window::OnEmuRun()
 {
 	m_debuggerFrame->EnableButtons(true);
 #ifdef _WIN32
-	m_thumb_playPause->setToolTip(tr("Pause emulation"));
+	m_thumb_playPause->setToolTip(tr(u8"暫停仿真"));
 	m_thumb_playPause->setIcon(m_icon_thumb_pause);
 #endif
-	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
+	ui->sysPauseAct->setText(tr(u8"暫停\tCtrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
-	ui->toolbar_start->setToolTip(tr("Pause emulation"));
+	ui->toolbar_start->setToolTip(tr(u8"暫停仿真"));
 	EnableMenus(true);
 }
 
 void main_window::OnEmuResume()
 {
 #ifdef _WIN32
-	m_thumb_playPause->setToolTip(tr("Pause emulation"));
+	m_thumb_playPause->setToolTip(tr(u8"暫停仿真"));
 	m_thumb_playPause->setIcon(m_icon_thumb_pause);
 #endif
-	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
+	ui->sysPauseAct->setText(tr(u8"暫停\tCtrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
-	ui->toolbar_start->setToolTip(tr("Pause emulation"));
+	ui->toolbar_start->setToolTip(tr(u8"暫停仿真"));
 }
 
 void main_window::OnEmuPause()
 {
 #ifdef _WIN32
-	m_thumb_playPause->setToolTip(tr("Resume emulation"));
+	m_thumb_playPause->setToolTip(tr(u8"繼續仿真"));
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
-	ui->sysPauseAct->setText(tr("&Resume\tCtrl+E"));
+	ui->sysPauseAct->setText(tr(u8"繼續\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
-	ui->toolbar_start->setToolTip(tr("Resume emulation"));
+	ui->toolbar_start->setToolTip(tr(u8"繼續仿真"));
 }
 
 void main_window::OnEmuStop()
@@ -732,10 +723,10 @@ void main_window::OnEmuStop()
 	m_debuggerFrame->EnableButtons(false);
 	m_debuggerFrame->ClearBreakpoints();
 
-	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
+	ui->sysPauseAct->setText(Emu.IsReady() ? tr(u8"啟動\tCtrl+E") : tr(u8"繼續\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 #ifdef _WIN32
-	m_thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
+	m_thumb_playPause->setToolTip(Emu.IsReady() ? tr(u8"啟動仿真") : tr(u8"繼續仿真"));
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
 	EnableMenus(false);
@@ -743,7 +734,7 @@ void main_window::OnEmuStop()
 	{
 		ui->toolbar_start->setEnabled(true);
 		ui->toolbar_start->setIcon(m_icon_restart);
-		ui->toolbar_start->setToolTip(tr("Restart emulation"));
+		ui->toolbar_start->setToolTip(tr(u8"重啟仿真"));
 		ui->sysRebootAct->setEnabled(true);
 #ifdef _WIN32
 		m_thumb_restart->setEnabled(true);
@@ -752,7 +743,7 @@ void main_window::OnEmuStop()
 	else
 	{
 		ui->toolbar_start->setIcon(m_icon_play);
-		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
+		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr(u8"啟動仿真") : tr(u8"繼續仿真"));
 	}
 }
 
@@ -760,13 +751,13 @@ void main_window::OnEmuReady()
 {
 	m_debuggerFrame->EnableButtons(true);
 #ifdef _WIN32
-	m_thumb_playPause->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
+	m_thumb_playPause->setToolTip(Emu.IsReady() ? tr(u8"啟動仿真") : tr(u8"繼續仿真"));
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
-	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
+	ui->sysPauseAct->setText(Emu.IsReady() ? tr(u8"啟動\tCtrl+E") : tr(u8"繼續\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
-	ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
+	ui->toolbar_start->setToolTip(Emu.IsReady() ? tr(u8"啟動仿真") : tr(u8"繼續仿真"));
 	EnableMenus(true);
 }
 
@@ -839,7 +830,7 @@ void main_window::BootRecentAction(const QAction* act)
 
 			guiSettings->SetValue(gui::rg_entries, guiSettings->List2Var(m_rg_entries));
 
-			LOG_ERROR(GENERAL, "Recent Game not valid, removed from Boot Recent list: %s", path);
+			LOG_ERROR(GENERAL, u8"近期遊戲無效，從近期啟動清單刪除: %s", path);
 
 			// refill menu with actions
 			for (int i = 0; i < m_recentGameActs.count(); i++)
@@ -849,15 +840,15 @@ void main_window::BootRecentAction(const QAction* act)
 				ui->bootRecentMenu->addAction(m_recentGameActs[i]);
 			}
 
-			LOG_WARNING(GENERAL, "Boot Recent list refreshed");
+			LOG_WARNING(GENERAL, u8"更新近期啟動清單");
 			return;
 		}
 
-		LOG_ERROR(GENERAL, "Path invalid and not in m_rg_paths: %s", path);
+		LOG_ERROR(GENERAL, u8"路徑無效，不在 m_rg_paths: %s", path);
 		return;
 	}
 
-	LOG_NOTICE(LOADER, "Booting from recent games list...");
+	LOG_NOTICE(LOADER, u8"從近期遊戲清單啟動...");
 	Boot(path, true);
 };
 
@@ -868,7 +859,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	{
 		if (m_rg_entries.contains(entry))
 		{
-			LOG_ERROR(GENERAL, "Recent Game not valid, removing from Boot Recent list: %s", sstr(entry.first));
+			LOG_ERROR(GENERAL, u8"近期遊戲無效，從近期啟動清單刪除: %s", sstr(entry.first));
 
 			int idx = m_rg_entries.indexOf(entry);
 			m_rg_entries.removeAt(idx);
@@ -940,7 +931,7 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	}
 	else if (m_rg_entries.count() > 9)
 	{
-		LOG_ERROR(LOADER, "Recent games entrylist too big");
+		LOG_ERROR(LOADER, u8"近期遊戲名單表過大");
 	}
 
 	if (m_rg_entries.count() < 9)
@@ -1652,11 +1643,11 @@ void main_window::dropEvent(QDropEvent* event)
 			// TODO: use correct user ID once User Manager is implemented
 			if (!fs::copy_file(sstr(rap), fmt::format("%s/home/%s/exdata/%s", Emu.GetHddDir(), "00000001", rapname), false))
 			{
-				LOG_WARNING(GENERAL, "Could not copy rap file by drop: %s", rapname);
+				LOG_WARNING(GENERAL, u8"無法拖放複製 rap 檔案: %s", rapname);
 			}
 			else
 			{
-				LOG_SUCCESS(GENERAL, "Successfully copied rap file by drop: %s", rapname);
+				LOG_SUCCESS(GENERAL, u8"成功拖放複製了 rap 檔案: %s", rapname);
 			}
 		}
 		break;
@@ -1670,12 +1661,12 @@ void main_window::dropEvent(QDropEvent* event)
 	case drop_type::drop_game: // import valid games to gamelist (games.yaml)
 		if (Emu.BootGame(sstr(dropPaths.first()), true))
 		{
-			LOG_SUCCESS(GENERAL, "Elf Boot from drag and drop done: %s", sstr(dropPaths.first()));
+			LOG_SUCCESS(GENERAL, u8"拖放 Elf 啟動完成: %s", sstr(dropPaths.first()));
 		}
 		m_gameListFrame->Refresh(true);
 		break;
 	default:
-		LOG_WARNING(GENERAL, "Invalid dropType in gamelist dropEvent");
+		LOG_WARNING(GENERAL, u8"無效的拖放類型於遊戲清單放入事件");
 		break;
 	}
 }

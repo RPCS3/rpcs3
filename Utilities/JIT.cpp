@@ -83,7 +83,7 @@ extern void jit_finalize()
 	{
 		if (!RtlDeleteFunctionTable(unwind.data()))
 		{
-			LOG_FATAL(GENERAL, "RtlDeleteFunctionTable() failed! Error %u", GetLastError());
+			LOG_FATAL(GENERAL, u8"RtlDeleteFunctionTable() \u5931\u6557! \u932F\u8AA4 %u", GetLastError());
 		}
 	}
 
@@ -150,11 +150,11 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 			if (addr)
 			{
-				LOG_WARNING(GENERAL, "LLVM: Symbol requested: %s -> 0x%016llx", name, addr);
+				LOG_WARNING(GENERAL, u8"LLVM: \u7B26\u865F\u8981\u6C42: %s -> 0x%016llx", name, addr);
 			}
 			else
 			{
-				LOG_ERROR(GENERAL, "LLVM: Linkage failed: %s", name);
+				LOG_ERROR(GENERAL, u8"LLVM: \u9023\u63A5\u5931\u6557: %s", name);
 				addr = (u64)null;
 			}
 		}
@@ -206,14 +206,14 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 		if (next > (u64)s_memory + s_memory_size)
 		{
-			LOG_FATAL(GENERAL, "LLVM: Out of memory (size=0x%llx, aligned 0x%x)", size, align);
+			LOG_FATAL(GENERAL, u8"LLVM: \u8A18\u61B6\u4E0D\u8DB3 (size=0x%llx, aligned 0x%x)", size, align);
 			return nullptr;
 		}
 
 		utils::memory_commit(s_next, size, utils::protection::wx);
 		m_code_addr = (u8*)s_next;
 
-		LOG_NOTICE(GENERAL, "LLVM: Code section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), s_next, size, align);
+		LOG_NOTICE(GENERAL, u8"LLVM: \u7A0B\u5F0F\u78BC\u90E8\u5206 %u '%s' \u5206\u914D -> %p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), s_next, size, align);
 		return (u8*)std::exchange(s_next, (void*)next);
 	}
 
@@ -227,18 +227,18 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 		if (next > (u64)s_memory + s_memory_size)
 		{
-			LOG_FATAL(GENERAL, "LLVM: Out of memory (size=0x%llx, aligned 0x%x)", size, align);
+			LOG_FATAL(GENERAL, u8"LLVM: \u8A18\u61B6\u4E0D\u8DB3 (size=0x%llx, aligned 0x%x)", size, align);
 			return nullptr;
 		}
 
 		if (!is_ro)
 		{
-			LOG_ERROR(GENERAL, "LLVM: Writeable data section not supported!");
+			LOG_ERROR(GENERAL, u8"LLVM: \u4E0D\u652F\u63F4\u5BEB\u5165\u8CC7\u6599\u90E8\u5206!");
 		}
 
 		utils::memory_commit(s_next, size);
 
-		LOG_NOTICE(GENERAL, "LLVM: Data section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), s_next, size, align, is_ro ? "ro" : "rw");
+		LOG_NOTICE(GENERAL, u8"LLVM: \u8CC7\u6599\u90E8\u5206 %u '%s' \u5206\u914D -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), s_next, size, align, is_ro ? "ro" : "rw");
 		return (u8*)std::exchange(s_next, (void*)next);
 	}
 
@@ -280,7 +280,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		// Register .xdata UNWIND_INFO structs
 		if (!RtlAddFunctionTable(pdata.data(), (DWORD)pdata.size(), (u64)s_memory))
 		{
-			LOG_ERROR(GENERAL, "RtlAddFunctionTable() failed! Error %u", GetLastError());
+			LOG_ERROR(GENERAL, u8"RtlAddFunctionTable() \u5931\u6557! \u932F\u8AA4 %u", GetLastError());
 		}
 		else
 		{
@@ -373,7 +373,7 @@ public:
 		std::string name = m_path;
 		name.append(module->getName());
 		fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
-		LOG_SUCCESS(GENERAL, "LLVM: Created module: %s", module->getName().data());
+		LOG_SUCCESS(GENERAL, u8"LLVM: \u5EFA\u7ACB\u6A21\u7D44: %s", module->getName().data());
 	}
 
 	static std::unique_ptr<llvm::MemoryBuffer> load(const std::string& path)
@@ -395,7 +395,7 @@ public:
 
 		if (auto buf = load(path))
 		{
-			LOG_SUCCESS(GENERAL, "LLVM: Loaded module: %s", module->getName().data());
+			LOG_SUCCESS(GENERAL, u8"LLVM: \u8B80\u53D6\u6A21\u7D44: %s", module->getName().data());
 			return buf;
 		}
 
@@ -467,7 +467,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 
 	if (!m_engine)
 	{
-		fmt::throw_exception("LLVM: Failed to create ExecutionEngine: %s", result);
+		fmt::throw_exception(u8"LLVM: \u7121\u6CD5\u5EFA\u7ACB\u57F7\u884C\u5F15\u64CE: %s", result);
 	}
 }
 
