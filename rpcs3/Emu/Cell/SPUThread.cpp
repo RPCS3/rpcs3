@@ -777,7 +777,7 @@ bool SPUThread::do_list_transfer(spu_mfc_cmd& args)
 
 		if (size)
 		{
-			if (!vm::check_addr(addr, size, vm::page_readable | (args.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
+			if (!vm::check_addr(addr, size, vm::page_allocated | vm::page_readable | (args.cmd & MFC_PUT_CMD ? vm::page_writable : 0)) && args.eal < RAW_SPU_BASE_ADDR)
 			{
 				Emu.Pause();
 				state += cpu_flag::stop;
@@ -922,7 +922,7 @@ void SPUThread::do_mfc()
 		{
 			vm::reader_lock lock;
 
-			if (!vm::check_addr(args.eal, args.size, vm::page_readable | (args.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
+			if (!vm::check_addr(args.eal, args.size, vm::page_allocated | vm::page_readable | (args.cmd & MFC_PUT_CMD ? vm::page_writable : 0)) && args.eal < RAW_SPU_BASE_ADDR)
 			{
 				Emu.Pause();
 				state += cpu_flag::stop;
@@ -1207,7 +1207,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 			{
 				vm::reader_lock lock;
 
-				if (!vm::check_addr(args.eal, args.size, vm::page_readable | (args.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
+				if (!vm::check_addr(args.eal, args.size, vm::page_allocated | vm::page_readable | (args.cmd & MFC_PUT_CMD ? vm::page_writable : 0)) && args.eal < RAW_SPU_BASE_ADDR)
 				{
 					Emu.Pause();
 					state += cpu_flag::stop;
