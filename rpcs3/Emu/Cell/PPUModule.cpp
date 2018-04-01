@@ -41,10 +41,10 @@ void fmt_class_string<lib_loading_type>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case lib_loading_type::automatic: return (u8"\u81EA\u52D5\u8B80\u53D6\u5FC5\u8981\u7684\u5143\u4EF6\u5EAB");
-		case lib_loading_type::manual: return (u8"\u8B80\u53D6\u624B\u52D5\u6240\u9078\u7684\u5143\u4EF6\u5EAB");
-		case lib_loading_type::both: return (u8"\u81EA\u52D5\u8B80\u53D6\u8207\u624B\u52D5\u9078\u64C7");
-		case lib_loading_type::liblv2only: return (u8"\u50C5\u8B80\u53D6 liblv2.sprx");
+		case lib_loading_type::automatic: return "Automatically load required libraries";
+		case lib_loading_type::manual: return "Manually load selected libraries";
+		case lib_loading_type::both: return "Load automatic and manual selection";
+		case lib_loading_type::liblv2only: return "Load liblv2.sprx only";
 		}
 
 		return unknown;
@@ -92,7 +92,7 @@ ppu_static_function& ppu_module_manager::access_static_function(const char* modu
 
 	if (res.name)
 	{
-		fmt::throw_exception(u8"PPU FNID \u91CD\u8907\u6A21\u7D44 %s (%s, 0x%x)", module, res.name, fnid);
+		fmt::throw_exception("PPU FNID duplication in module %s (%s, 0x%x)", module, res.name, fnid);
 	}
 
 	return res;
@@ -104,7 +104,7 @@ ppu_static_variable& ppu_module_manager::access_static_variable(const char* modu
 
 	if (res.name)
 	{
-		fmt::throw_exception(u8"PPU VNID \u91CD\u8907\u6A21\u7D44 %s (%s, 0x%x)", module, res.name, vnid);
+		fmt::throw_exception("PPU VNID duplication in module %s (%s, 0x%x)", module, res.name, vnid);
 	}
 
 	return res;
@@ -296,7 +296,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 	// "Use" all the modules for correct linkage
 	for (auto& module : registered)
 	{
-		LOG_TRACE(LOADER, u8"\u8A3B\u518A\u975C\u614B\u6A21\u7D44: %s", module->name);
+		LOG_TRACE(LOADER, "Registered static module: %s", module->name);
 	}
 
 	for (auto& pair : ppu_module_manager::get())
@@ -355,7 +355,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 				variable.second.var->set(variable.second.addr);
 			}
 
-			LOG_TRACE(LOADER, u8"\u5206\u914D HLE \u8B8A\u6578 %s.%s \u5728 0x%x", module->name, variable.second.name, variable.second.var->addr());
+			LOG_TRACE(LOADER, "Allocated HLE variable %s.%s at 0x%x", module->name, variable.second.name, variable.second.var->addr());
 
 			// Initialize HLE variable
 			if (variable.second.init)
@@ -434,7 +434,7 @@ static void ppu_patch_refs(std::vector<ppu_reloc>* out_relocs, u32 fref, u32 fad
 			break;
 		}
 
-		default: LOG_ERROR(LOADER, u8"**** REF(%u): \u672A\u77E5/\u975E\u6CD5\u985E\u578B (0x%x, 0x%x)", rtype, raddr, ref->addend);
+		default: LOG_ERROR(LOADER, "**** REF(%u): Unknown/Illegal type (0x%x, 0x%x)", rtype, raddr, ref->addend);
 		}
 	}
 }
@@ -480,11 +480,11 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 
 				if (i < lib.num_func)
 				{
-					LOG_NOTICE(LOADER, u8"** \u9644\u52A0: [%s] at 0x%x", ppu_get_function_name({}, nid), addr);
+					LOG_NOTICE(LOADER, "** Special: [%s] at 0x%x", ppu_get_function_name({}, nid), addr);
 				}
 				else
 				{
-					LOG_NOTICE(LOADER, u8"** \u9644\u52A0: &[%s] at 0x%x", ppu_get_variable_name({}, nid), addr);
+					LOG_NOTICE(LOADER, "** Special: &[%s] at 0x%x", ppu_get_variable_name({}, nid), addr);
 				}
 
 				result.emplace(nid, addr);
@@ -496,11 +496,11 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 
 		const std::string module_name(lib.name.get_ptr());
 
-		LOG_NOTICE(LOADER, u8"** \u5C0E\u51FA\u6A21\u7D44 '%s' (0x%x, 0x%x, 0x%x, 0x%x)", module_name, lib.vnids, lib.vstubs, lib.unk4, lib.unk5);
+		LOG_NOTICE(LOADER, "** Exported module '%s' (0x%x, 0x%x, 0x%x, 0x%x)", module_name, lib.vnids, lib.vstubs, lib.unk4, lib.unk5);
 
 		if (lib.num_tlsvar)
 		{
-			LOG_FATAL(LOADER, u8"\u7570\u5E38 num_tlsvar (%u)!", lib.num_tlsvar);
+			LOG_FATAL(LOADER, "Unexpected num_tlsvar (%u)!", lib.num_tlsvar);
 		}
 
 		// Static module
@@ -517,7 +517,7 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 		{
 			const u32 fnid = fnids[i];
 			const u32 faddr = faddrs[i];
-			LOG_NOTICE(LOADER, u8"**** %s \u5C0E\u51FA: [%s] at 0x%x", module_name, ppu_get_function_name(module_name, fnid), faddr);
+			LOG_NOTICE(LOADER, "**** %s export: [%s] at 0x%x", module_name, ppu_get_function_name(module_name, fnid), faddr);
 
 			// Function linkage info
 			auto& flink = mlink.functions[fnid];
@@ -529,7 +529,7 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 
 			if (flink.export_addr)
 			{
-				LOG_ERROR(LOADER, u8"\u5DF2\u7D93\u95DC\u806F function '%s' \u5728\u6A21\u7D44 '%s'", ppu_get_function_name(module_name, fnid), module_name);
+				LOG_ERROR(LOADER, "Already linked function '%s' in module '%s'", ppu_get_function_name(module_name, fnid), module_name);
 			}
 			//else
 			{
@@ -585,7 +585,7 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 		{
 			const u32 vnid = vnids[i];
 			const u32 vaddr = vaddrs[i];
-			LOG_NOTICE(LOADER, u8"**** %s \u5C0E\u51FA: &[%s] at 0x%x", module_name, ppu_get_variable_name(module_name, vnid), vaddr);
+			LOG_NOTICE(LOADER, "**** %s export: &[%s] at 0x%x", module_name, ppu_get_variable_name(module_name, vnid), vaddr);
 
 			// Variable linkage info
 			auto& vlink = mlink.variables[vnid];
@@ -597,7 +597,7 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 
 			if (vlink.export_addr)
 			{
-				LOG_ERROR(LOADER, u8"\u5DF2\u7D93\u95DC\u806F\u8B8A\u6578 '%s' \u5728\u6A21\u7D44 '%s'", ppu_get_variable_name(module_name, vnid), module_name);
+				LOG_ERROR(LOADER, "Already linked variable '%s' in module '%s'", ppu_get_variable_name(module_name, vnid), module_name);
 			}
 			//else
 			{
@@ -629,11 +629,11 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, const std::shared_p
 
 		const std::string module_name(lib.name.get_ptr());
 
-		LOG_NOTICE(LOADER, u8"** \u5C0E\u5165\u6A21\u7D44 '%s' (ver=0x%x, attr=0x%x, 0x%x, 0x%x) [0x%x]", module_name, lib.version, lib.attributes, lib.unk4, lib.unk5, addr);
+		LOG_NOTICE(LOADER, "** Imported module '%s' (ver=0x%x, attr=0x%x, 0x%x, 0x%x) [0x%x]", module_name, lib.version, lib.attributes, lib.unk4, lib.unk5, addr);
 
 		if (lib.num_tlsvar)
 		{
-			LOG_FATAL(LOADER, u8"\u7570\u5E38 num_tlsvar (%u)!", lib.num_tlsvar);
+			LOG_FATAL(LOADER, "Unexpected num_tlsvar (%u)!", lib.num_tlsvar);
 		}
 
 		// Static module
@@ -650,7 +650,7 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, const std::shared_p
 			const u32 fnid = fnids[i];
 			const u32 fstub = faddrs[i];
 			const u32 faddr = (faddrs + i).addr();
-			LOG_NOTICE(LOADER, u8"**** %s \u5C0E\u5165: [%s] -> 0x%x", module_name, ppu_get_function_name(module_name, fnid), fstub);
+			LOG_NOTICE(LOADER, "**** %s import: [%s] -> 0x%x", module_name, ppu_get_function_name(module_name, fnid), fstub);
 
 			// Function linkage info
 			auto& flink = link->modules[module_name].functions[fnid];
@@ -684,7 +684,7 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, const std::shared_p
 		{
 			const u32 vnid = vnids[i];
 			const u32 vref = vstubs[i];
-			LOG_NOTICE(LOADER, u8"**** %s \u5C0E\u5165: &[%s] (ref=*0x%x)", module_name, ppu_get_variable_name(module_name, vnid), vref);
+			LOG_NOTICE(LOADER, "**** %s import: &[%s] (ref=*0x%x)", module_name, ppu_get_variable_name(module_name, vnid), vref);
 
 			// Variable linkage info
 			auto& vlink = link->modules[module_name].variables[vnid];
@@ -723,7 +723,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 	for (const auto& prog : elf.progs)
 	{
-		LOG_NOTICE(LOADER, u8"** \u5340\u6BB5: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
+		LOG_NOTICE(LOADER, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
 		// Hash big-endian values
 		sha1_update(&sha, (uchar*)&prog.p_type, sizeof(prog.p_type));
@@ -749,7 +749,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 				// Copy segment data
 				std::memcpy(vm::base(addr), prog.bin.data(), file_size);
-				LOG_WARNING(LOADER, u8"**** \u8F09\u5165\u81F3 0x%x (size=0x%x)", addr, mem_size);
+				LOG_WARNING(LOADER, "**** Loaded to 0x%x (size=0x%x)", addr, mem_size);
 
 				// Hash segment
 				sha1_update(&sha, (uchar*)&prog.p_vaddr, sizeof(prog.p_vaddr));
@@ -776,13 +776,13 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 		case 0x700000a4: break; // Relocations
 
-		default: LOG_ERROR(LOADER, u8"\u672A\u77E5\u5340\u6BB5\u985E\u578B! 0x%08x", p_type);
+		default: LOG_ERROR(LOADER, "Unknown segment type! 0x%08x", p_type);
 		}
 	}
 
 	for (const auto& s : elf.shdrs)
 	{
-		LOG_NOTICE(LOADER, u8"** \u90E8\u5206: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
+		LOG_NOTICE(LOADER, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
 
 		const u32 addr = vm::cast(s.sh_addr);
 		const u32 size = vm::cast(s.sh_size);
@@ -901,7 +901,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 					break;
 				}
 
-				default: LOG_ERROR(LOADER, u8"**** RELOCATION(%u): \u975E\u6CD5/\u672A\u77E5\u985E\u578B! (addr=0x%x; 0x%llx)", rtype, raddr, rdata);
+				default: LOG_ERROR(LOADER, "**** RELOCATION(%u): Illegal/Unknown type! (addr=0x%x; 0x%llx)", rtype, raddr, rdata);
 				}
 
 				if (rdata == 0)
@@ -938,7 +938,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		prx->module_info_version[1] = lib_info->version[1];
 		prx->module_info_attributes = lib_info->attributes;
 
-		LOG_WARNING(LOADER, u8"\u5EAB %s (rtoc=0x%x):", lib_name, lib_info->toc);
+		LOG_WARNING(LOADER, "Library %s (rtoc=0x%x):", lib_name, lib_info->toc);
 
 		prx->specials = ppu_load_exports(link, lib_info->exports_start, lib_info->exports_end);
 		prx->imports = ppu_load_imports(prx->relocs, link, lib_info->imports_start, lib_info->imports_end);
@@ -947,7 +947,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	}
 	else
 	{
-		LOG_FATAL(LOADER, u8"\u5EAB %s: PRX \u5EAB\u8A0A\u606F\u672A\u627E\u5230");
+		LOG_FATAL(LOADER, "Library %s: PRX library info not found");
 	}
 
 	prx->start.set(prx->specials[0xbc9a0086]);
@@ -1126,7 +1126,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
-	LOG_NOTICE(LOADER, u8"PPU \u53EF\u57F7\u884C\u6563\u5217: %s (<- %u)", hash, applied);
+	LOG_NOTICE(LOADER, "PPU executable hash: %s (<- %u)", hash, applied);
 
 	// Initialize HLE modules
 	ppu_initialize_modules(link);
@@ -1231,7 +1231,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		}
 		default:
 		{
-			LOG_ERROR(LOADER, u8"\u672A\u77E5\u7684 PHDR \u985E\u578B (0x%08x)", p_type);
+			LOG_ERROR(LOADER, "Unknown phdr type (0x%08x)", p_type);
 		}
 		}
 	}
@@ -1388,9 +1388,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 		if (!fs::is_dir(lle_dir) || !fs::is_file(lle_dir + "libsysmodule.sprx"))
 		{
-			LOG_ERROR(GENERAL, u8"\u672A\u5B89\u88DD PS3 \u97CC\u9AD4\u6216\u5B89\u88DD\u7684\u97CC\u9AD4\u7121\u6548\u3002"
-				u8"\n\u60A8\u61C9\u8A72\u5B89\u88DD PS3\u97CC\u9AD4\u3002\u5728\u300C\u529F\u80FD\u8868\u300D \u6A94\u6848 -> \u5B89\u88DD \u97CC\u9AD4/\u56FA\u4EF6 \u9078\u9805\u3002"
-				u8"\n\u8ACB\u8A2A\u554F https://rpcs3.net/ \u5FEB\u901F\u5165\u9580\u6307\u5357\u4E86\u89E3\u66F4\u591A\u8A0A\u606F\u3002");
+			LOG_ERROR(GENERAL, "PS3 firmware is not installed or the installed firmware is invalid."
+				"\nYou should install the PS3 Firmware (Menu: File -> Install Firmware)."
+				"\nVisit https://rpcs3.net/ for Quickstart Guide and more information.");
 		}
 
 		for (const auto& name : load_libs)
@@ -1399,13 +1399,13 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 			if (obj == elf_error::ok)
 			{
-				LOG_WARNING(LOADER, u8"\u8F09\u5165\u5EAB: %s", name);
+				LOG_WARNING(LOADER, "Loading library: %s", name);
 
 				auto prx = ppu_load_prx(obj, lle_dir + name);
 
 				if (prx->funcs.empty())
 				{
-					LOG_FATAL(LOADER, u8"\u6A21\u7D44 %s \u6C92\u6709\u529F\u80FD!", name);
+					LOG_FATAL(LOADER, "Module %s has no functions!", name);
 				}
 				else
 				{
@@ -1417,7 +1417,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			}
 			else
 			{
-				fmt::throw_exception(u8"\u7121\u6CD5\u8B80\u53D6 /dev_flash/sys/external/%s: %s", name, obj.get_error());
+				fmt::throw_exception("Failed to load /dev_flash/sys/external/%s: %s", name, obj.get_error());
 			}
 		}
 	}

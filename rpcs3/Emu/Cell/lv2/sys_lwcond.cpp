@@ -70,7 +70,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 	if (mode < 1 || mode > 3)
 	{
-		fmt::throw_exception(u8"\u672A\u77E5\u6A21\u5F0F (%d)" HERE, mode);
+		fmt::throw_exception("Unknown mode (%d)" HERE, mode);
 	}
 
 	lv2_lwmutex* mutex = nullptr;
@@ -161,7 +161,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	if (mode < 1 || mode > 2)
 	{
-		fmt::throw_exception(u8"\u672A\u77E5\u6A21\u5F0F (%d)" HERE, mode);
+		fmt::throw_exception("Unknown mode (%d)" HERE, mode);
 	}
 
 	std::basic_string<cpu_thread*> threads;

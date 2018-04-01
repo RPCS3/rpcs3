@@ -5,21 +5,21 @@ constexpr auto qstr = QString::fromStdString;
 
 auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialog(parent)
 {
-	QLabel *description = new QLabel(tr(u8"\u4F7F\u7528 Auto Pause: \u8F38\u5165\u4E00\u500B\u51FD\u6578\u6216\u7CFB\u7D71 Call ID\uFF0C\u904A\u6232\u9700\u8981\u91CD\u65B0\u555F\u52D5\u624D\u6703\u5957\u7528\u3002 \u60A8\u53EF\u4EE5\u555F\u7528\u6216\u505C\u7528\u6B64\u8A2D\u5B9A\u3002"), this);
+	QLabel *description = new QLabel(tr("To use auto pause: enter the ID(s) of a function or a system call.\nRestart of the game is required to apply. You can enable/disable this in the settings."), this);
 
 	pauseList = new QTableWidget(this);
 	pauseList->setColumnCount(2);
-	pauseList->setHorizontalHeaderLabels(QStringList() << tr("Call ID") << tr((u8"\u985E\u578B")));
+	pauseList->setHorizontalHeaderLabels(QStringList() << tr("Call ID") << tr("Type"));
 	//pauseList->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 	pauseList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	pauseList->setContextMenuPolicy(Qt::CustomContextMenu);
 	pauseList->setItemDelegate(new table_item_delegate(this));
 	pauseList->setShowGrid(false);
 
-	QPushButton *clearButton = new QPushButton(tr((u8"\u6E05\u7406")), this);
-	QPushButton *reloadButton = new QPushButton(tr((u8"\u91CD\u8F09")), this);
-	QPushButton *saveButton = new QPushButton(tr((u8"\u5132\u5B58")), this);
-	QPushButton *cancelButton = new QPushButton(tr((u8"\u95DC\u9589")), this);
+	QPushButton *clearButton = new QPushButton(tr("Clear"), this);
+	QPushButton *reloadButton = new QPushButton(tr("Reload"), this);
+	QPushButton *saveButton = new QPushButton(tr("Save"), this);
+	QPushButton *cancelButton = new QPushButton(tr("Cancel"), this);
 	cancelButton->setDefault(true);
 
 	QHBoxLayout *buttonsLayout = new QHBoxLayout();
@@ -36,7 +36,7 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 	setLayout(mainLayout);
 
 	setMinimumSize(QSize(400, 360));
-	setWindowTitle(tr((u8"Auto Pause \u7BA1\u7406")));
+	setWindowTitle(tr("Auto Pause Manager"));
 	setObjectName("auto_pause_manager");
 
 	//Events
@@ -145,10 +145,10 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 	QMenu myMenu;
 
 	// Make Actions
-	QAction* add = myMenu.addAction(tr((u8"\u65B0\u589E")));
-	QAction* remove = myMenu.addAction(tr((u8"\u522A\u9664")));
+	QAction* add = myMenu.addAction(tr("&Add"));
+	QAction* remove = myMenu.addAction(tr("&Remove"));
 	myMenu.addSeparator();
-	QAction* config = myMenu.addAction(tr((u8"\u8A2D\u5B9A")));
+	QAction* config = myMenu.addAction(tr("&Config"));
 
 	if (row == -1)
 	{
@@ -202,15 +202,15 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 	m_entry = *m_presult;
 	setMinimumSize(QSize(300, -1));
 
-	QPushButton* button_ok = new QPushButton(tr((u8"\u78BA\u5B9A")), this);
-	QPushButton* button_cancel = new QPushButton(tr((u8"\u53D6\u6D88")), this);
+	QPushButton* button_ok = new QPushButton(tr("&Ok"), this);
+	QPushButton* button_cancel = new QPushButton(tr("&Cancel"), this);
 	button_ok->setFixedWidth(50);
 	button_cancel->setFixedWidth(50);
 
-	QLabel* description = new QLabel(tr((u8"\u6307\u5B9A\u7CFB\u7D71 Call \u6216\u4EE5\u4E0B\u51FD\u6578 Call \u7684 ID\uFF0C \u60A8\u4F7F\u7528\u7684 ID \u5FC5\u9808\u662F\u5341\u516D\u9032\u4F4D\u3002")), this);
+	QLabel* description = new QLabel(tr("Specify ID of System Call or Function Call below. You need to use a Hexadecimal ID."), this);
 	description->setWordWrap(true);
 
-	m_current_converted = new QLabel(tr((u8"\u76EE\u524D\u53D6\u5F97\u4E00\u500B ID \"Unset\".")), this);
+	m_current_converted = new QLabel(tr("Currently it gets an id of \"Unset\"."), this);
 	m_current_converted->setWordWrap(true);
 	
 	m_id = new QLineEdit(this);
@@ -219,7 +219,7 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 	m_id->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 	m_id->setMaxLength(8);
 	m_id->setFixedWidth(65);
-	setWindowTitle((u8"Auto Pause \u8A2D\u5B9A: ") + m_id->text());
+	setWindowTitle("Auto Pause Setting: " + m_id->text());
 	
 	connect(button_cancel, &QAbstractButton::clicked, this, &AutoPauseConfigDialog::OnCancel);
 	connect(button_ok, &QAbstractButton::clicked, this, &AutoPauseConfigDialog::OnOk);
@@ -268,5 +268,5 @@ void AutoPauseConfigDialog::OnUpdateValue()
 	ullong value = m_id->text().toULongLong(&ok, 16);
 	const bool is_ok = ok && value <= UINT32_MAX;
 	
-	m_current_converted->setText(qstr(fmt::format((u8"\u7576\u524D\u503C: %08x (%s)"), u32(value), is_ok ? "OK" : (u8"\u8F49\u63DB\u5931\u6557"))));
+	m_current_converted->setText(qstr(fmt::format("Current value: %08x (%s)", u32(value), is_ok ? "OK" : "conversion failed")));
 }

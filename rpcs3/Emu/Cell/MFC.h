@@ -1,10 +1,5 @@
 #pragma once
 
-#include "Emu/CPU/CPUThread.h"
-#include "Utilities/lockless.h"
-
-#include <deque>
-
 enum MFC : u8
 {
 	MFC_PUT_CMD      = 0x20, MFC_PUTB_CMD     = 0x21, MFC_PUTF_CMD     = 0x22,
@@ -91,28 +86,4 @@ struct alignas(16) spu_mfc_cmd
 	u32 lsa;
 	u32 eal;
 	u32 eah;
-};
-
-class mfc_thread : public cpu_thread
-{
-	using spu_ptr = std::shared_ptr<class SPUThread>;
-
-	// SPU threads to poll
-	std::vector<spu_ptr> m_spus;
-
-	// SPU threads to enqueue
-	lf_mpsc<spu_ptr, 128> m_spuq;
-
-public:
-	mfc_thread();
-
-	virtual ~mfc_thread() override;
-
-	virtual std::string get_name() const override;
-
-	virtual void cpu_task() override;
-
-	virtual void add_spu(spu_ptr _spu);
-
-	virtual void on_spawn() override;
 };

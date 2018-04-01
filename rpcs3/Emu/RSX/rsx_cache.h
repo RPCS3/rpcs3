@@ -302,7 +302,7 @@ namespace rsx
 
 				Emu.CallAfter([&]()
 				{
-					dlg->Create(u8"\u5F9E\u78C1\u789F\u9810\u8F09\u8457\u8272\u5668\u5FEB\u53D6\u3002\n\u8ACB\u7A0D\u5F8C...");
+					dlg->Create("Preloading cached shaders from disk.\nPlease wait...");
 					initialized.store(true);
 				});
 
@@ -316,7 +316,7 @@ namespace rsx
 			{
 				Emu.CallAfter([=]()
 				{
-					dlg->ProgressBarSetMsg(0, fmt::format(u8"\u8F09\u5165\u50B3\u905E\u9014\u5F91\u76EE\u6A19 %u \u65BC %u", processed, entry_count));
+					dlg->ProgressBarSetMsg(0, fmt::format("Loading pipeline object %u of %u", processed, entry_count));
 				});
 			}
 
@@ -401,7 +401,7 @@ namespace rsx
 
 				if (f.size() != sizeof(pipeline_data))
 				{
-					LOG_ERROR(RSX, u8"\u5FEB\u53D6\u50B3\u905E\u9014\u5F91\u76EE\u6A19 %s \u4E0D\u8207\u7576\u524D\u7684\u8457\u8272\u5668\u5FEB\u53D6\u4E8C\u9032\u4F4D\u76F8\u5BB9", tmp.name.c_str());
+					LOG_ERROR(RSX, "Cached pipeline object %s is not binary compatible with the current shader cache", tmp.name.c_str());
 					continue;
 				}
 

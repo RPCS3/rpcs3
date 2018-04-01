@@ -30,26 +30,26 @@ bool verify_mself(u32 fd, fs::file const& mself_file)
 	FsMselfHeader mself_header;
 	if (!mself_file.read<FsMselfHeader>(mself_header))
 	{
-		sys_fs.error(u8"verify_mself: \u6C92\u6709\u8B80\u53D6\u6A19\u984C\u7684\u9810\u671F\u4F4D\u5143\u7D44\u3002");
+		sys_fs.error("verify_mself: Didn't read expected bytes for header.");
 		return false;
 	}
 
 	if (mself_header.m_magic != 0x4D534600)
 	{
-		sys_fs.error(u8"verify_mself: \u6A19\u984C magic \u4E0D\u6B63\u78BA\u3002");
+		sys_fs.error("verify_mself: Header magic is incorrect.");
 		return false;
 	}
 
 	if (mself_header.m_format_version != 1)
 	{
-		sys_fs.error(u8"verify_mself: \u7570\u5E38\u7684\u6A19\u984C\u6A94\u6848\u683C\u5F0F\u7248\u672C\u3002");
+		sys_fs.error("verify_mself: Unexpected header format version.");
 		return false;
 	}
 
 	// sanity check
 	if (mself_header.m_entry_size != sizeof(FsMselfEntry))
 	{
-		sys_fs.error(u8"verify_mself: \u7570\u5E38\u7684\u6A19\u984C\u5BEB\u5165\u5927\u5C0F\u3002");
+		sys_fs.error("verify_mself: Unexpected header entry size.");
 		return false;
 	}
 
@@ -130,7 +130,7 @@ struct lv2_file::file_view : fs::file_base
 			whence == fs::seek_set ? offset :
 			whence == fs::seek_cur ? offset + m_pos :
 			whence == fs::seek_end ? offset + size() :
-			(fmt::raw_error(u8"lv2_file::file_view::seek(): \u7121\u6548\u7684"), 0);
+			(fmt::raw_error("lv2_file::file_view::seek(): invalid whence"), 0);
 
 		if (new_pos < 0)
 		{
@@ -161,7 +161,7 @@ error_code sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<
 
 	if (arg1 != 6 || arg2 != 0 || arg4 != sizeof(u32))
 	{
-		sys_fs.todo(u8"sys_fs_test: \u672A\u77E5\u53C3\u6578 (arg1=0x%x, arg2=0x%x, arg3=*0x%x, arg4=0x%x)", arg1, arg2, arg3, arg4);
+		sys_fs.todo("sys_fs_test: unknown arguments (arg1=0x%x, arg2=0x%x, arg3=*0x%x, arg4=0x%x)", arg1, arg2, arg3, arg4);
 	}
 
 	if (!arg3)
@@ -277,7 +277,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 
 	if (!test(open_mode))
 	{
-		fmt::throw_exception(u8"sys_fs_open(%s): \u7121\u6548\u6216\u672A\u5BE6\u73FE\u7684\u6A19\u8A8C: %#o" HERE, path, flags);
+		fmt::throw_exception("sys_fs_open(%s): Invalid or unimplemented flags: %#o" HERE, path, flags);
 	}
 
 	fs::file file(local_path, open_mode);
@@ -292,7 +292,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error(u8"sys_fs_open(): \u672A\u77E5\u932F\u8AA4 %s", error);
+		default: sys_fs.error("sys_fs_open(): unknown error %s", error);
 		}
 
 		return {CELL_EIO, path};
@@ -465,7 +465,7 @@ error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error(u8"sys_fs_opendir(): \u672A\u77E5\u932F\u8AA4 %s", error);
+		default: sys_fs.error("sys_fs_opendir(): unknown error %s", error);
 		}
 
 		return {CELL_EIO, path};
@@ -556,7 +556,7 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error(u8"sys_fs_stat(): \u672A\u77E5\u932F\u8AA4 %s", error);
+		default: sys_fs.error("sys_fs_stat(): unknown error %s", error);
 		}
 
 		return {CELL_EIO, path};
@@ -636,13 +636,13 @@ error_code sys_fs_mkdir(vm::cptr<char> path, s32 mode)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
 		case fs::error::exist: return {CELL_EEXIST, path};
-		default: sys_fs.error(u8"sys_fs_mkdir(): \u672A\u77E5\u932F\u8AA4 %s", error);
+		default: sys_fs.error("sys_fs_mkdir(): unknown error %s", error);
 		}
 
 		return {CELL_EIO, path}; // ???
 	}
 
-	sys_fs.notice(u8"sys_fs_mkdir(): \u76EE\u9304 %s \u5EFA\u7ACB", path);
+	sys_fs.notice("sys_fs_mkdir(): directory %s created", path);
 	return CELL_OK;
 }
 
@@ -675,7 +675,7 @@ error_code sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to)
 		return {CELL_EIO, from}; // ???
 	}
 
-	sys_fs.notice(u8"sys_fs_rename(): %s \u66F4\u540D\u70BA %s", from, to);
+	sys_fs.notice("sys_fs_rename(): %s renamed to %s", from, to);
 	return CELL_OK;
 }
 
@@ -707,13 +707,13 @@ error_code sys_fs_rmdir(vm::cptr<char> path)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
 		case fs::error::notempty: return {CELL_ENOTEMPTY, path};
-		default: sys_fs.error(u8"sys_fs_rmdir(): \u672A\u77E5\u932F\u8AA4 %s", error);
+		default: sys_fs.error("sys_fs_rmdir(): unknown error %s", error);
 		}
 
 		return {CELL_EIO, path}; // ???
 	}
 
-	sys_fs.notice(u8"sys_fs_rmdir(): \u76EE\u9304 %s \u522A\u9664", path);
+	sys_fs.notice("sys_fs_rmdir(): directory %s removed", path);
 	return CELL_OK;
 }
 
@@ -744,13 +744,13 @@ error_code sys_fs_unlink(vm::cptr<char> path)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error(u8"sys_fs_unlink(): \u672A\u77E5\u932F\u8AA4 %s", error);
+		default: sys_fs.error("sys_fs_unlink(): unknown error %s", error);
 		}
 
 		return {CELL_EIO, path}; // ???
 	}
 
-	sys_fs.notice(u8"sys_fs_unlink(): \u6A94\u6848 %s \u522A\u9664", path);
+	sys_fs.notice("sys_fs_unlink(): file %s deleted", path);
 	return CELL_OK;
 }
 
@@ -887,7 +887,7 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 			switch (auto error = fs::g_tls_error)
 			{
 			case fs::error::noent: return {CELL_ENOENT, arg->path};
-			default: sys_fs.error(u8"sys_fs_fcntl(0xc0000002): \u672A\u77E5\u932F\u8AA4 %s", error);
+			default: sys_fs.error("sys_fs_fcntl(0xc0000002): unknown error %s", error);
 			}
 
 			return CELL_EIO; // ???
@@ -1134,7 +1134,7 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 	}
 	}
 
-	sys_fs.fatal(u8"sys_fs_fcntl(): \u672A\u77E5\u64CD\u4F5C 0x%08x (fd=%d, arg=*0x%x, size=0x%x)", op, fd, _arg, _size);
+	sys_fs.fatal("sys_fs_fcntl(): Unknown operation 0x%08x (fd=%d, arg=*0x%x, size=0x%x)", op, fd, _arg, _size);
 	return CELL_OK;
 }
 
@@ -1163,7 +1163,7 @@ error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::inval: return CELL_EINVAL;
-		default: sys_fs.error(u8"sys_fs_lseek(): \u672A\u77E5\u932F\u8AA4 %s", error);
+		default: sys_fs.error("sys_fs_lseek(): unknown error %s", error);
 		}
 
 		return CELL_EIO; // ???
@@ -1264,7 +1264,7 @@ error_code sys_fs_truncate(vm::cptr<char> path, u64 size)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error(u8"sys_fs_truncate(): \u672A\u77E5\u932F\u8AA4 %s", error);
+		default: sys_fs.error("sys_fs_truncate(): unknown error %s", error);
 		}
 
 		return {CELL_EIO, path}; // ???
@@ -1305,7 +1305,7 @@ error_code sys_fs_ftruncate(u32 fd, u64 size)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::ok:
-		default: sys_fs.error(u8"sys_fs_ftruncate(): \u672A\u77E5\u932F\u8AA4 %s", error);
+		default: sys_fs.error("sys_fs_ftruncate(): unknown error %s", error);
 		}
 
 		return CELL_EIO; // ???
@@ -1363,7 +1363,7 @@ error_code sys_fs_disk_free(vm::cptr<char> path, vm::ptr<u64> total_free, vm::pt
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error(u8"sys_fs_disk_free(): \u672A\u77E5\u932F\u8AA4 %s", error);
+		default: sys_fs.error("sys_fs_disk_free(): unknown error %s", error);
 		}
 
 		return {CELL_EIO, path};  // ???
@@ -1403,7 +1403,7 @@ error_code sys_fs_utime(vm::cptr<char> path, vm::cptr<CellFsUtimbuf> timep)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error(u8"sys_fs_utime(): \u672A\u77E5\u932F\u8AA4 %s", error);
+		default: sys_fs.error("sys_fs_utime(): unknown error %s", error);
 		}
 
 		return {CELL_EIO, path}; // ???

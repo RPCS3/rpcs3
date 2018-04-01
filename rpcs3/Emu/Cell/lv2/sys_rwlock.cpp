@@ -32,7 +32,7 @@ error_code sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribu
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY && protocol != SYS_SYNC_PRIORITY_INHERIT)
 	{
-		sys_rwlock.error(u8"sys_rwlock_create(): \u672A\u77E5\u5354\u5B9A (0x%x)", protocol);
+		sys_rwlock.error("sys_rwlock_create(): unknown protocol (0x%x)", protocol);
 		return CELL_EINVAL;
 	}
 

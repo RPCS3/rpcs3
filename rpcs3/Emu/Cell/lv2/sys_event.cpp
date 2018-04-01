@@ -87,7 +87,7 @@ error_code sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queu
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY)
 	{
-		sys_event.error(u8"sys_event_queue_create(): \u672A\u77E5\u5354\u5B9A (0x%x)", protocol);
+		sys_event.error("sys_event_queue_create(): unknown protocol (0x%x)", protocol);
 		return CELL_EINVAL;
 	}
 
@@ -95,7 +95,7 @@ error_code sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queu
 
 	if (type != SYS_PPU_QUEUE && type != SYS_SPU_QUEUE)
 	{
-		sys_event.error(u8"sys_event_queue_create(): \u672A\u77E5\u985E\u578B (0x%x)", type);
+		sys_event.error("sys_event_queue_create(): unknown type (0x%x)", type);
 		return CELL_EINVAL;
 	}
 
@@ -325,7 +325,7 @@ error_code sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 
 	if (port_type != SYS_EVENT_PORT_LOCAL && port_type != 3)
 	{
-		sys_event.error(u8"sys_event_port_create(): \u672A\u77E5\u57E0\u985E\u578B (%d)", port_type);
+		sys_event.error("sys_event_port_create(): unknown port type (%d)", port_type);
 		return CELL_EINVAL;
 	}
 

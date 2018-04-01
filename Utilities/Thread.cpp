@@ -47,11 +47,11 @@ thread_local u64 g_tls_fault_spu = 0;
 	}
 	catch (const std::exception& e)
 	{
-		report_fatal_error(u8"\u672A\u8655\u7406\u7684\u985E\u578B\u7570\u5E38 '"s + typeid(e).name() + "': "s + e.what());
+		report_fatal_error("Unhandled exception of type '"s + typeid(e).name() + "': "s + e.what());
 	}
 	catch (...)
 	{
-		report_fatal_error(u8"\u672A\u8655\u7406\u7570\u5E38 (\u672A\u77E5)");
+		report_fatal_error("Unhandled exception (unknown)");
 	}
 }
 

@@ -28,8 +28,8 @@ void fmt_class_string<camera_handler>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case camera_handler::null: return (u8"\u7A7A");
-		case camera_handler::fake: return (u8"\u865B\u8A2D");
+		case camera_handler::null: return "Null";
+		case camera_handler::fake: return "Fake";
 		}
 
 		return unknown;
@@ -43,7 +43,7 @@ void fmt_class_string<fake_camera_type>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case fake_camera_type::unknown: return (u8"\u672A\u77E5");
+		case fake_camera_type::unknown: return "Unknown";
 		case fake_camera_type::eyetoy: return "EyeToy";
 		case fake_camera_type::eyetoy2: return "PS Eye";
 		case fake_camera_type::uvc1_1: return "UVC 1.1";
@@ -187,7 +187,7 @@ u32 set_and_send_read_mode(s32 dev_num, const s32 read_mode)
 	}
 	else
 	{
-		cellCamera.error(u8"\u672A\u77E5\u7684\u8B80\u53D6\u6A21\u5F0F\u8A2D\u7F6E: %d", read_mode);
+		cellCamera.error("Unknown read mode set: %d", read_mode);
 	}
 
 	// Send read mode to camera thread
@@ -930,7 +930,7 @@ void camera_thread::on_task()
 					}
 					default:
 					{
-						cellCamera.error(u8"\u672A\u77E5\u7684\u8B80\u53D6\u6A21\u5F0F\u8A2D\u7F6E: %d. This should never happen.", read_mode.load());
+						cellCamera.error("Unknown read mode set: %d. This should never happen.", read_mode.load());
 						return;
 					}
 					}
