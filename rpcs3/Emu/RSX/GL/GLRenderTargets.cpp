@@ -52,7 +52,8 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::r, ::gl::texture::channel::r } };
 
 	case rsx::surface_color_format::g8b8:
-		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, false, 2, 1 };
+		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, false, 2, 1,
+		{ ::gl::texture::channel::g, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::r } };
 
 	case rsx::surface_color_format::x32:
 		return{ ::gl::texture::type::f32, ::gl::texture::format::r, true, 1, 4 };

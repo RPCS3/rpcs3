@@ -976,25 +976,41 @@ void GLGSRender::clear_surface(u32 arg)
 		mask |= GLenum(gl::buffers::stencil);
 	}
 
-	if (arg & 0xf0)
+	if (auto colormask = (arg & 0xf0))
 	{
-		u8 clear_a = rsx::method_registers.clear_color_a();
-		u8 clear_r = rsx::method_registers.clear_color_r();
-		u8 clear_g = rsx::method_registers.clear_color_g();
-		u8 clear_b = rsx::method_registers.clear_color_b();
-
-		gl_state.color_mask(arg & 0xf0);
-		gl_state.clear_color(clear_r, clear_g, clear_b, clear_a);
-
-		mask |= GLenum(gl::buffers::color);
-
-		for (auto &rtt : m_rtts.m_bound_render_targets)
+		switch (rsx::method_registers.surface_color())
 		{
-			if (std::get<0>(rtt) != 0)
+		case rsx::surface_color_format::x32:
+		case rsx::surface_color_format::w16z16y16x16:
+		case rsx::surface_color_format::w32z32y32x32:
+		case rsx::surface_color_format::g8b8:
+		{
+			//NOP
+			break;
+		}
+		default:
+		{
+			u8 clear_a = rsx::method_registers.clear_color_a();
+			u8 clear_r = rsx::method_registers.clear_color_r();
+			u8 clear_g = rsx::method_registers.clear_color_g();
+			u8 clear_b = rsx::method_registers.clear_color_b();
+
+			gl_state.color_mask(colormask);
+			gl_state.clear_color(clear_r, clear_g, clear_b, clear_a);
+
+			mask |= GLenum(gl::buffers::color);
+
+			for (auto &rtt : m_rtts.m_bound_render_targets)
 			{
-				std::get<1>(rtt)->set_cleared(true);
-				std::get<1>(rtt)->old_contents = nullptr;
+				if (std::get<0>(rtt) != 0)
+				{
+					std::get<1>(rtt)->set_cleared(true);
+					std::get<1>(rtt)->old_contents = nullptr;
+				}
 			}
+
+			break;
+		}
 		}
 	}
 
@@ -1152,6 +1168,12 @@ void GLGSRender::update_draw_state()
 	bool color_mask_g = rsx::method_registers.color_mask_g();
 	bool color_mask_r = rsx::method_registers.color_mask_r();
 	bool color_mask_a = rsx::method_registers.color_mask_a();
+
+	if (rsx::method_registers.surface_color() == rsx::surface_color_format::g8b8)
+	{
+		//Map GB components onto RG
+		rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+	}
 
 	gl_state.color_mask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 	gl_state.depth_mask(rsx::method_registers.depth_write_enabled());

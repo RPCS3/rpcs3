@@ -411,4 +411,21 @@ namespace rsx
 		return ((u64)index + index_base) & 0x000FFFFF;
 	}
 
+	// Convert color write mask for G8B8 to R8G8
+	static inline u32 get_g8b8_r8g8_colormask(u32 mask)
+	{
+		u32 result = 0;
+		if (mask & 0x40) result |= 0x40;
+		if (mask & 0x80) result |= 0x20;
+
+		return result;
+	}
+
+	static inline void get_g8b8_r8g8_colormask(bool &red, bool &green, bool &blue, bool &alpha)
+	{
+		red = blue;
+		green = green;
+		blue = false;
+		alpha = false;
+	}
 }
