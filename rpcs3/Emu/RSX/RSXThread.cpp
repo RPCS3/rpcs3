@@ -1389,25 +1389,33 @@ namespace rsx
 			if (!enabled)
 				continue;
 
-			if (vertex_push_buffers[index].size > 0)
-			{
-				std::pair<u8, u32> volatile_range_info = std::make_pair(index, static_cast<u32>(vertex_push_buffers[index].data.size() * sizeof(u32)));
-				result.volatile_blocks.push_back(volatile_range_info);
-				result.attribute_placement[index] = attribute_buffer_placement::transient;
-				continue;
-			}
-
 			//Check for interleaving
-			auto &info = state.vertex_arrays_info[index];
-			if (info.size() == 0 && state.register_vertex_info[index].size > 0)
+			const auto &info = state.vertex_arrays_info[index];
+			if (rsx::method_registers.current_draw_clause.is_immediate_draw)
 			{
-				//Reads from register
-				result.referenced_registers.push_back(index);
-				result.attribute_placement[index] = attribute_buffer_placement::transient;
-				continue;
+				if (vertex_push_buffers[index].vertex_count > 1)
+				{
+					//Read temp buffer (register array)
+					std::pair<u8, u32> volatile_range_info = std::make_pair(index, static_cast<u32>(vertex_push_buffers[index].data.size() * sizeof(u32)));
+					result.volatile_blocks.push_back(volatile_range_info);
+					result.attribute_placement[index] = attribute_buffer_placement::transient;
+					continue;
+				}
+
+				//Might be an indexed immediate draw - real vertex arrays but glArrayElement style of IB declaration
 			}
 
-			if (info.size() > 0)
+			if (!info.size())
+			{
+				if (state.register_vertex_info[index].size > 0)
+				{
+					//Reads from register
+					result.referenced_registers.push_back(index);
+					result.attribute_placement[index] = attribute_buffer_placement::transient;
+					continue;
+				}
+			}
+			else
 			{
 				result.attribute_placement[index] = attribute_buffer_placement::persistent;
 				const u32 base_address = info.offset() & 0x7fffffff;
@@ -1990,7 +1998,8 @@ namespace rsx
 					//Data is either from an immediate render or register input
 					//Immediate data overrides register input
 
-					if (rsx::method_registers.current_draw_clause.is_immediate_draw && vertex_push_buffers[index].size > 0)
+					if (rsx::method_registers.current_draw_clause.is_immediate_draw &&
+						vertex_push_buffers[index].vertex_count > 1)
 					{
 						const auto &info = rsx::method_registers.register_vertex_info[index];
 						type = info.type;
