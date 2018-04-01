@@ -815,7 +815,7 @@ void SPUThread::do_mfc()
 	// Process enqueued commands
 	std::remove_if(mfc_queue + 0, mfc_queue + mfc_size, [&](spu_mfc_cmd& args)
 	{
-		if ((args.cmd & ~0xc) == MFC_BARRIER_CMD)
+		if (args.cmd == MFC_BARRIER_CMD || args.cmd == MFC_EIEIO_CMD)
 		{
 			if (&args - mfc_queue <= removed)
 			{
@@ -884,6 +884,7 @@ void SPUThread::do_mfc()
 			return false;
 		}
 
+		// Also ignore MFC_SYNC_CMD
 		if (args.size)
 		{
 			vm::reader_lock lock;
@@ -1217,7 +1218,6 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 	}
 	case MFC_BARRIER_CMD:
 	case MFC_EIEIO_CMD:
-	case MFC_SYNC_CMD:
 	{
 		if (mfc_size == 0)
 		{
@@ -1225,6 +1225,20 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		}
 		else
 		{
+			mfc_queue[mfc_size++] = args;
+		}
+
+		return true;
+	}
+	case MFC_SYNC_CMD:
+	{
+		if (LIKELY(do_dma_check(args)))
+		{
+			_mm_mfence();
+		}
+		else
+		{
+			args.size = 0;
 			mfc_queue[mfc_size++] = args;
 		}
 
