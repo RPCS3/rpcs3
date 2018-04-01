@@ -530,12 +530,45 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args)
 	u32 eal = args.eal;
 	u32 lsa = args.lsa & 0x3ffff;
 
-	if (eal >= SYS_SPU_THREAD_BASE_LOW && offset < RAW_SPU_BASE_ADDR) // SPU Thread Group MMIO (LS and SNR)
+	// SPU Thread Group MMIO (LS and SNR) and RawSPU MMIO
+	if (eal >= RAW_SPU_BASE_ADDR)
 	{
 		const u32 index = (eal - SYS_SPU_THREAD_BASE_LOW) / SYS_SPU_THREAD_OFFSET; // thread number in group
 		const u32 offset = (eal - SYS_SPU_THREAD_BASE_LOW) % SYS_SPU_THREAD_OFFSET; // LS offset or MMIO register
 
-		if (group && index < group->num && group->threads[index])
+		if (eal < SYS_SPU_THREAD_BASE_LOW)
+		{
+			// RawSPU MMIO
+			auto thread = idm::get<RawSPUThread>((eal - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET);
+
+			if (!thread)
+			{
+				fmt::throw_exception("RawSPU not found (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
+			}
+
+			u32 value;
+			if ((eal - RAW_SPU_BASE_ADDR) % RAW_SPU_OFFSET + args.size - 1 < 0x40000) // LS access
+			{
+			}
+			else if (args.size == 4 && is_get && thread->read_reg(eal, value))
+			{
+				_ref<u32>(lsa) = value;
+				return;
+			}
+			else if (args.size == 4 && !is_get && thread->write_reg(eal, _ref<u32>(lsa)))
+			{
+				return;
+			}
+			else
+			{
+				fmt::throw_exception("Invalid RawSPU MMIO offset (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
+			}
+		}
+		else if (this->offset >= RAW_SPU_BASE_ADDR)
+		{
+			fmt::throw_exception("SPU MMIO used for RawSPU (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
+		}
+		else if (group && index < group->num && group->threads[index])
 		{
 			auto& spu = static_cast<SPUThread&>(*group->threads[index]);
 
