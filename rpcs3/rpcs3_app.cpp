@@ -282,6 +282,14 @@ void rpcs3_app::InitializeConnects()
 */
 void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 {
+    QString config_dir = qstr(fs::get_config_dir());
+    QFontDatabase::addApplicationFont(config_dir + "GuiConfigs/TheBestFont.ttf");
+    QString str = config_dir + "TheBestFont.ttf";
+    printf("test: %s\n", str.toStdString().c_str());
+    QFont font1("TheBestFont");
+    QFont font2("The Best Font");
+    QApplication::setFont(font1);
+    QApplication::setFont(font2);
 	QFile file(sheetFilePath);
 	if (sheetFilePath == "")
 	{
@@ -348,7 +356,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 			"QLabel#debugger_frame_pc { color: #000000; background-color: #00ff00; }"
 			"QLabel#rsx_debugger_display_buffer { background-color: rgba(240, 240, 240, 255); }"
 			"QLabel#l_controller { color: #434343; }"
-			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
+			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: The Best Font; color: rgba(51, 51, 51, 255); }"
 		);
 
 		setStyleSheet(style_toolbar + style_toolbar_icons + style_thumbnail_icons + style_gamelist_icons + style_log + style_rest);
@@ -362,13 +370,13 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 
 		// Add PS3 fonts
 		QDirIterator ps3_font_it(qstr(vfs::get("/dev_flash/data/font/")), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
-		while (ps3_font_it.hasNext())
-			QFontDatabase::addApplicationFont(ps3_font_it.next());
+		//while (ps3_font_it.hasNext())
+		//	QFontDatabase::addApplicationFont(ps3_font_it.next());
 
 		// Add custom fonts
 		QDirIterator custom_font_it(config_dir + "fonts/", QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
-		while (custom_font_it.hasNext())
-			QFontDatabase::addApplicationFont(custom_font_it.next());
+		//while (custom_font_it.hasNext())
+		//	QFontDatabase::addApplicationFont(custom_font_it.next());
 
 		// Set root for stylesheets
 		QDir::setCurrent(config_dir);

@@ -120,6 +120,9 @@ namespace rsx
 				//Init glyph
 				std::vector<u8> bytes;
 				std::vector<std::string> fallback_fonts;
+				fallback_fonts.push_back(fs::get_config_dir() + "GuiConfigs/TheBestFont.ttf");
+				//QString config_dir = qstr();
+				//QFontDatabase::addApplicationFont(config_dir + "GuiConfigs/TheBestFont.ttf");
 #ifdef _WIN32
 				std::string font_dir = "C:/Windows/Fonts/";
 				fallback_fonts.push_back("C:/Windows/Fonts/Arial.ttf");
