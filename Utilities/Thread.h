@@ -172,6 +172,12 @@ public:
 		return m_name;
 	}
 
+	// Get platform native thread handle.
+	const std::uintptr_t get_native_handle() const
+	{
+		return m_thread.load();
+	}
+
 	// Get exception
 	std::exception_ptr get_exception() const;
 

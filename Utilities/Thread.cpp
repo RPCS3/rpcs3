@@ -6,6 +6,7 @@
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Thread.h"
+#include "hardware_breakpoint/hardware_breakpoint_manager.h"
 #include "sysinfo.h"
 #include <typeinfo>
 #include <thread>
@@ -1360,9 +1361,22 @@ static bool is_leaf_function(u64 rip)
 #endif
 }
 
+// Can't alter thread context while it inside an exception handler because
+// once it leaves the handler the context gets flushed
+extern thread_local bool g_tls_inside_exception_handler = false;
+
 #ifdef _WIN32
 
+static LONG exception_handler_impl(PEXCEPTION_POINTERS pExp);
 static LONG exception_handler(PEXCEPTION_POINTERS pExp)
+{
+	g_tls_inside_exception_handler = true;
+	auto result = exception_handler_impl(pExp);
+	g_tls_inside_exception_handler = false;
+	return result;
+}
+
+static LONG exception_handler_impl(PEXCEPTION_POINTERS pExp)
 {
 	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_base_addr;
 	const u64 exec64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_exec_addr;
@@ -1382,6 +1396,68 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 		{
 			return EXCEPTION_CONTINUE_EXECUTION;
 		}
+	}
+
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP)
+	{
+		// Handle hardware breakpoint
+		bool any_hit = false;
+		const auto cpu = get_current_cpu_thread();
+		auto& breakpoints = hardware_breakpoint_manager::get_breakpoints((thread_handle)(cpu->get()->get_native_handle()));
+
+		for (u32 i = 0; i < 4; ++i)
+		{
+			// Low bits of dr6 indicate which breakpoint was triggered
+			if (!(pExp->ContextRecord->Dr6 & (1 << i)))
+				continue;
+
+			// Get accessed address
+			u64 accessed_address;
+			switch (i)
+			{
+			case 0:
+				accessed_address = pExp->ContextRecord->Dr0;
+				break;
+			case 1:
+				accessed_address = pExp->ContextRecord->Dr1;
+				break;
+			case 2:
+				accessed_address = pExp->ContextRecord->Dr2;
+				break;
+			case 3:
+				accessed_address = pExp->ContextRecord->Dr3;
+				break;
+			}
+
+			logs::GENERAL.success("Hardware breakpoint hit at: 0x%08X", accessed_address);
+
+			if (!any_hit)
+			{
+				any_hit = true;
+
+				if (cpu)
+				{
+					cpu->state += cpu_flag::dbg_pause;
+				}
+			}
+
+			auto found_breakpoint = std::find_if(breakpoints.begin(), breakpoints.end(), [&](auto x) { return x->get_index() == i; });
+			if (found_breakpoint != breakpoints.end())
+			{
+				auto breakpoint = found_breakpoint->get();
+
+				auto handler = breakpoint->get_handler();
+				if (handler != nullptr)
+				{
+					handler(*breakpoint);
+				}
+			}
+		}
+
+		// Clear DR6 -- status register
+		pExp->ContextRecord->Dr6 = 0;
+
+		return EXCEPTION_CONTINUE_EXECUTION;
 	}
 
 	return EXCEPTION_CONTINUE_SEARCH;
@@ -1484,7 +1560,7 @@ const bool s_exception_handler_set = []() -> bool
 
 #else
 
-static void signal_handler(int sig, siginfo_t* info, void* uct)
+static void segfault_signal_handler(int sig, siginfo_t* info, void* uct)
 {
 	x64_context* context = (ucontext_t*)uct;
 
@@ -1525,16 +1601,93 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 	report_fatal_error(fmt::format("Segfault %s location %p at %p.", cause, info->si_addr, RIP(context)));
 }
 
+static void trap_signal_handler(int sig, siginfo_t* info, void* uct)
+{
+	auto context = static_cast<ucontext_t*>(uct);
+
+	// Handle hardware breakpoint
+	bool any_hit = false;
+	const auto cpu = get_current_cpu_thread();
+	auto& breakpoints = hardware_breakpoint_manager::get_breakpoints((thread_handle)(cpu->get()->get_native_handle()));
+
+	for (u32 i = 0; i < 4; ++i)
+	{
+		// Todo
+		//// Low bits of dr6 indicate which breakpoint was triggered
+		//if (!(pExp->ContextRecord->Dr6 & (1 << i)))
+		//	continue;
+
+		//// Get accessed address
+		//u64 accessed_address;
+		//switch (i)
+		//{
+		//case 0:
+		//	accessed_address = pExp->ContextRecord->Dr0;
+		//	break;
+		//case 1:
+		//	accessed_address = pExp->ContextRecord->Dr1;
+		//	break;
+		//case 2:
+		//	accessed_address = pExp->ContextRecord->Dr2;
+		//	break;
+		//case 3:
+		//	accessed_address = pExp->ContextRecord->Dr3;
+		//	break;
+		//}
+
+		//logs::GENERAL.success("Hardware breakpoint hit at: 0x%08X", accessed_address);
+
+		if (!any_hit)
+		{
+			any_hit = true;
+
+			if (cpu)
+			{
+				cpu->state += cpu_flag::dbg_pause;
+			}
+		}
+
+		auto found_breakpoint = std::find_if(breakpoints.begin(), breakpoints.end(), [&](auto x) { return x->get_index() == i; });
+		if (found_breakpoint != breakpoints.end())
+		{
+			auto breakpoint = found_breakpoint->get();
+
+			auto handler = breakpoint->get_handler();
+			if (handler != nullptr)
+			{
+				handler(*breakpoint);
+			}
+		}
+	}
+
+	// Todo
+	// Clear DR6
+	//pExp->ContextRecord->Dr6 = 0;
+}
+
 const bool s_exception_handler_set = []() -> bool
 {
-	struct ::sigaction sa;
-	sa.sa_flags = SA_SIGINFO;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_sigaction = signal_handler;
+	// Set segfault handler
+	struct ::sigaction segfault_action;
+	segfault_action.sa_flags = SA_SIGINFO;
+	sigemptyset(&segfault_action.sa_mask);
+	segfault_action.sa_sigaction = segfault_signal_handler;
 
-	if (::sigaction(SIGSEGV, &sa, NULL) == -1)
+	if (::sigaction(SIGSEGV, &segfault_action, NULL) == -1)
 	{
 		std::printf("sigaction(SIGSEGV) failed (0x%x).", errno);
+		std::abort();
+	}
+
+	// Set trap handler
+	struct ::sigaction trap_action;
+	trap_action.sa_flags = SA_SIGINFO;
+	sigemptyset(&trap_action.sa_mask);
+	trap_action.sa_sigaction = trap_signal_handler;
+
+	if (::sigaction(SIGTRAP, &trap_action, NULL) == -1)
+	{
+		std::printf("sigaction(SIGTRAP) failed (0x%x).", errno);
 		std::abort();
 	}
 
