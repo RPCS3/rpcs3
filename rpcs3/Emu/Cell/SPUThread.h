@@ -509,6 +509,8 @@ public:
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
 	virtual void cpu_task() override;
+	virtual void cpu_mem() override;
+	virtual void cpu_unmem() override;
 	virtual ~SPUThread() override;
 	void cpu_init();
 

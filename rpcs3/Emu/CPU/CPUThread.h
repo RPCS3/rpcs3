@@ -65,6 +65,12 @@ public:
 
 	// Callback for cpu_flag::suspend
 	virtual void cpu_sleep() {}
+
+	// Callback for cpu_flag::memory
+	virtual void cpu_mem() {}
+
+	// Callback for vm::temporary_unlock
+	virtual void cpu_unmem() {}
 };
 
 inline cpu_thread* get_current_cpu_thread() noexcept

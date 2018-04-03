@@ -109,7 +109,7 @@ namespace vm
 	{
 		if (g_tls_locked && g_tls_locked->compare_and_swap_test(&cpu, nullptr))
 		{
-			cpu.state.test_and_set(cpu_flag::memory);
+			cpu.cpu_unmem();
 		}
 	}
 

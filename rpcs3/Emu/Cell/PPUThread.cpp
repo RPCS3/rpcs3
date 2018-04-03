@@ -588,6 +588,22 @@ void ppu_thread::cpu_task()
 	}
 }
 
+void ppu_thread::cpu_sleep()
+{
+	vm::temporary_unlock(*this);
+	lv2_obj::awake(*this);
+}
+
+void ppu_thread::cpu_mem()
+{
+	vm::passive_lock(*this);
+}
+
+void ppu_thread::cpu_unmem()
+{
+	state.test_and_set(cpu_flag::memory);
+}
+
 void ppu_thread::exec_task()
 {
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
