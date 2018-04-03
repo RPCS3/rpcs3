@@ -964,7 +964,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 	if (s_use_rtm && utils::transaction_enter())
 	{
-		if (!vm::reader_lock{vm::try_to_lock})
+		if (!vm::g_mutex.is_lockable())
 		{
 			_xabort(0);
 		}
@@ -1008,7 +1008,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	if (s_use_rtm && utils::transaction_enter())
 	{
-		if (!vm::reader_lock{vm::try_to_lock})
+		if (!vm::g_mutex.is_lockable())
 		{
 			_xabort(0);
 		}

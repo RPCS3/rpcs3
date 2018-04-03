@@ -591,12 +591,15 @@ public:
 	std::shared_ptr<class spu_recompiler_base> spu_rec;
 	u32 recursion_level = 0;
 
+	u64 tx_success = 0;
+	u64 tx_failure = 0;
+
 	void push_snr(u32 number, u32 value);
 	void do_dma_transfer(const spu_mfc_cmd& args);
 	bool do_dma_check(const spu_mfc_cmd& args);
 	bool do_list_transfer(spu_mfc_cmd& args);
-	bool do_putlluc(const spu_mfc_cmd& args);
-	void do_mfc();
+	void do_putlluc(const spu_mfc_cmd& args);
+	void do_mfc(bool wait = true);
 	u32 get_mfc_completed();
 
 	bool process_mfc_cmd(spu_mfc_cmd args);
