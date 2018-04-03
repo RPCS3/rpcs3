@@ -532,6 +532,8 @@ public:
 	// MFC command queue
 	spu_mfc_cmd mfc_queue[16]{};
 	u32 mfc_size = 0;
+	u32 mfc_barrier = -1;
+	u32 mfc_fence = -1;
 	atomic_t<u32> mfc_prxy_mask;
 
 	// Reservation Data

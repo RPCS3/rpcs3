@@ -349,6 +349,8 @@ void SPUThread::cpu_init()
 
 	srr0 = 0;
 	mfc_size = 0;
+	mfc_barrier = -1;
+	mfc_fence = -1;
 	ch_tag_upd = 0;
 	ch_tag_mask = 0;
 	mfc_prxy_mask = 0;
@@ -722,20 +724,49 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args)
 
 bool SPUThread::do_dma_check(const spu_mfc_cmd& args)
 {
-	for (u32 i = 0; i < mfc_size; i++)
-	{
-		if (mfc_queue[i].cmd == MFC_BARRIER_CMD)
-		{
-			return false;
-		}
+	const u32 mask = 1u << args.tag;
 
-		if (mfc_queue[i].tag == args.tag && mfc_queue[i].cmd != MFC_EIEIO_CMD)
+	if (UNLIKELY(mfc_barrier & mask || (args.cmd & MFC_FENCE_MASK && mfc_fence & mask)))
+	{
+		// Check for special value combination (normally impossible)
+		if (UNLIKELY(mfc_barrier == -1 && mfc_fence == -1))
 		{
-			if (args.cmd & MFC_FENCE_MASK || mfc_queue[i].cmd & MFC_BARRIER_MASK)
+			// Update barrier/fence masks if necessary
+			mfc_barrier = 0;
+			mfc_fence = 0;
+
+			for (u32 i = 0; i < mfc_size; i++)
+			{
+				if (mfc_queue[i].cmd == MFC_BARRIER_CMD)
+				{
+					mfc_barrier |= -1;
+					continue;
+				}
+
+				if (mfc_queue[i].cmd != MFC_EIEIO_CMD)
+				{
+					const u32 _mask = 1u << mfc_queue[i].tag;
+
+					// A command with barrier hard blocks that tag until it's been dealt with
+					if (mfc_queue[i].cmd & MFC_BARRIER_MASK)
+					{
+						mfc_barrier |= _mask;
+					}
+
+					// A new command that has a fence can't be executed until the stalled list has been dealt with
+					mfc_fence |= _mask;
+				}
+			}
+
+			if (mfc_barrier & mask || (args.cmd & MFC_FENCE_MASK && mfc_fence & mask))
 			{
 				return false;
 			}
+
+			return true;
 		}
+
+		return false;
 	}
 
 	return true;
@@ -845,6 +876,11 @@ void SPUThread::do_mfc()
 	u32 barrier = 0;
 	u32 fence = 0;
 
+	// Check special value
+	if (UNLIKELY(mfc_barrier == -1 && mfc_fence == -1))
+	{
+	}
+
 	// Process enqueued commands
 	std::remove_if(mfc_queue + 0, mfc_queue + mfc_size, [&](spu_mfc_cmd& args)
 	{
@@ -861,7 +897,7 @@ void SPUThread::do_mfc()
 			if (args.cmd == MFC_BARRIER_CMD)
 			{
 				// Block all tags
-				barrier |= 0xffffffffu;
+				barrier |= -1;
 			}
 
 			return false;
@@ -870,15 +906,9 @@ void SPUThread::do_mfc()
 		// Select tag bit in the tag mask or the stall mask
 		const u32 mask = 1u << args.tag;
 
-		// A list with barrier hard blocks that tag until it's been dealt with
 		if (barrier & mask)
 		{
-			return false;
-		}
-
-		// A new command that has a fence can't be executed until the stalled list has been dealt with
-		if (args.cmd & MFC_FENCE_MASK && fence & mask)
-		{
+			fence |= mask;
 			return false;
 		}
 
@@ -890,8 +920,6 @@ void SPUThread::do_mfc()
 				return true;
 			}
 
-			fence |= mask;
-
 			if (args.cmd & MFC_BARRIER_MASK)
 			{
 				barrier |= mask;
@@ -899,9 +927,10 @@ void SPUThread::do_mfc()
 
 			if (test(state, cpu_flag::stop))
 			{
-				barrier |= 0xffffffffu;
+				barrier |= -1;
 			}
 
+			fence |= mask;
 			return false;
 		}
 
@@ -913,7 +942,7 @@ void SPUThread::do_mfc()
 				return true;
 			}
 
-			barrier |= 0xffffffffu;
+			barrier |= -1;
 			return false;
 		}
 
@@ -930,7 +959,7 @@ void SPUThread::do_mfc()
 					args.cmd & MFC_PUT_CMD ? "writing" : "reading",
 					args.eal, args.cmd, args.size);
 
-				barrier |= 0xffffffffu;
+				barrier |= -1;
 				return false;
 			}
 
@@ -942,6 +971,8 @@ void SPUThread::do_mfc()
 	});
 
 	mfc_size -= removed;
+	mfc_barrier = barrier;
+	mfc_fence = fence;
 
 	if (removed && ch_tag_upd)
 	{
