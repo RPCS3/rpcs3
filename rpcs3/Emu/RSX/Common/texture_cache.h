@@ -1786,7 +1786,6 @@ namespace rsx
 		{
 			//Since we will have dst in vram, we can 'safely' ignore the swizzle flag
 			//TODO: Verify correct behavior
-			bool is_depth_blit = false;
 			bool src_is_render_target = false;
 			bool dst_is_render_target = false;
 			bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
@@ -2038,28 +2037,26 @@ namespace rsx
 				vram_texture = src_subres.surface->get_surface();
 			}
 
-			bool format_mismatch = false;
+			const bool src_is_depth = src_subres.is_depth_surface;
+			const bool dst_is_depth = dst_is_render_target? dst_subres.is_depth_surface :
+										dest_texture ? cached_dest->is_depth_texture() : src_is_depth;
 
-			if (src_subres.is_depth_surface)
+			//Type of blit decided by the source, destination use should adapt on the fly
+			const bool is_depth_blit = src_is_depth;
+
+			bool format_mismatch = (src_is_depth != dst_is_depth);
+			if (format_mismatch)
 			{
-				if (dest_texture)
+				if (dst_is_render_target)
 				{
-					if (dst_is_render_target)
-					{
-						if (!dst_subres.is_depth_surface)
-						{
-							LOG_ERROR(RSX, "Depth->RGBA blit requested but not supported");
-							return true;
-						}
-					}
-					else
-					{
-						if (!cached_dest->has_compatible_format(src_subres.surface))
-							format_mismatch = true;
-					}
+					LOG_ERROR(RSX, "Depth<->RGBA blit on a framebuffer requested but not supported");
+					return false;
 				}
-
-				is_depth_blit = true;
+			}
+			else if (src_is_render_target && cached_dest)
+			{
+				if (!cached_dest->has_compatible_format(src_subres.surface))
+					format_mismatch = true;
 			}
 
 			//TODO: Check for other types of format mismatch
