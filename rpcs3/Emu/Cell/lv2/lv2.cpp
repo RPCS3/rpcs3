@@ -15,6 +15,7 @@
 #include "sys_memory.h"
 #include "sys_mmapper.h"
 #include "sys_net.h"
+#include "sys_overlay.h"
 #include "sys_ppu_thread.h"
 #include "sys_process.h"
 #include "sys_prx.h"
@@ -422,8 +423,8 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, //430-439  UNS
 	uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, //440-449  UNS
 
-	null_func,//BIND_FUNC(sys_overlay_load_module)          //450 (0x1C2)
-	null_func,//BIND_FUNC(sys_overlay_unload_module)        //451 (0x1C3)
+	BIND_FUNC(sys_overlay_load_module),          //450 (0x1C2)
+	BIND_FUNC(sys_overlay_unload_module),      //451 (0x1C3)
 	null_func,//BIND_FUNC(sys_overlay_get_module_list)      //452 (0x1C4)
 	null_func,//BIND_FUNC(sys_overlay_get_module_info)      //453 (0x1C5)
 	null_func,//BIND_FUNC(sys_overlay_load_module_by_fd)    //454 (0x1C6)
