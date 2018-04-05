@@ -80,6 +80,7 @@ namespace gui
 	const QString game_list   = "GameList";
 	const QString logger      = "Logger";
 	const QString debugger    = "Debugger";
+	const QString rsx         = "RSX_Debugger";
 	const QString meta        = "Meta";
 	const QString fs          = "FileSystem";
 	const QString gs_frame    = "GSFrame";
@@ -127,6 +128,7 @@ namespace gui
 	const gui_save gl_sortCol      = gui_save(game_list, "sortCol",      1);
 	const gui_save gl_state        = gui_save(game_list, "state",        QByteArray());
 	const gui_save gl_iconSize     = gui_save(game_list, "iconSize",     get_Index(gl_icon_size_small));
+	const gui_save gl_iconSizeGrid = gui_save(game_list, "iconSizeGrid", get_Index(gl_icon_size_small));
 	const gui_save gl_iconColor    = gui_save(game_list, "iconColor",    gl_icon_color);
 	const gui_save gl_listMode     = gui_save(game_list, "listMode",     true);
 	const gui_save gl_textFactor   = gui_save(game_list, "textFactor",   (qreal) 2.0);
@@ -146,6 +148,9 @@ namespace gui
 
 	const gui_save d_splitterState = gui_save(debugger, "splitterState", QByteArray());
 	const gui_save d_centerPC      = gui_save(debugger, "centerPC",      false);
+
+	const gui_save rsx_geometry = gui_save(rsx, "geometry", QByteArray());
+	const gui_save rsx_states   = gui_save(rsx, "states",   QVariantMap());
 
 	const gui_save m_currentConfig     = gui_save(meta, "currentConfig",     QObject::tr("CurrentSettings"));
 	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", Default);

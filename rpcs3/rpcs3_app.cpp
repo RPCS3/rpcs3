@@ -375,6 +375,20 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 		setStyleSheet(file.readAll());
 		file.close();
 	}
+#if !defined(_WIN32) && !defined(__APPLE__)
+	else
+	{
+		// If we can't open the file, try the /share folder
+		QString shareDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/";
+		QDir::setCurrent(shareDir);
+		QFile newFile(shareDir + "GuiConfigs/" + QFileInfo(file.fileName()).fileName());
+		if (newFile.open(QIODevice::ReadOnly | QIODevice::Text))
+		{
+			setStyleSheet(newFile.readAll());
+			newFile.close();
+		}
+	}
+#endif
 	gui::stylesheet = styleSheet();
 	RPCS3MainWin->RepaintGui();
 }

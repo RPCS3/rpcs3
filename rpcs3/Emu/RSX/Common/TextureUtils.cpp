@@ -42,13 +42,25 @@ struct copy_unmodified_block_swizzled
 	template<typename T, typename U>
 	static void copy_mipmap_level(gsl::span<T> dst, gsl::span<const U> src, u16 width_in_block, u16 row_count, u16 depth, u32 dst_pitch_in_block)
 	{
-		std::unique_ptr<U[]> temp_swizzled(new U[width_in_block * row_count]);
-		for (int d = 0; d < depth; ++d)
+		if (std::is_same<T, U>::value && dst_pitch_in_block == width_in_block)
 		{
-			rsx::convert_linear_swizzle<U>((void*)src.subspan(d * width_in_block * row_count).data(), temp_swizzled.get(), width_in_block, row_count, true);
-			gsl::span<const U> swizzled_src{ temp_swizzled.get(), ::narrow<int>(width_in_block * row_count) };
-			for (int row = 0; row < row_count; ++row)
-				copy(dst.subspan((row + d * row_count) * dst_pitch_in_block, width_in_block), swizzled_src.subspan(row * width_in_block, width_in_block));
+			rsx::convert_linear_swizzle_3d<T>((void*)src.data(), (void*)dst.data(), width_in_block, row_count, depth);
+		}
+		else
+		{
+			std::vector<U> tmp(width_in_block * row_count * depth);
+			rsx::convert_linear_swizzle_3d<U>((void*)src.data(), tmp.data(), width_in_block, row_count, depth);
+
+			gsl::span<U> src_span = tmp;
+			u32 src_offset = 0;
+			u32 dst_offset = 0;
+
+			for (int n = 0; n < row_count * depth; ++n)
+			{
+				copy(dst.subspan(dst_offset, width_in_block), src_span.subspan(src_offset, width_in_block));
+				dst_offset += dst_pitch_in_block;
+				src_offset += width_in_block;
+			}
 		}
 	}
 };

@@ -489,12 +489,12 @@ std::string ppu_thread::dump() const
 	u32 stack_min = stack_ptr & ~0xfff;
 	u32 stack_max = stack_min + 4096;
 
-	while (stack_min && vm::check_addr(stack_min - 4096, 4096, vm::page_writable))
+	while (stack_min && vm::check_addr(stack_min - 4096, 4096, vm::page_allocated | vm::page_writable))
 	{
 		stack_min -= 4096;
 	}
 
-	while (stack_max + 4096 && vm::check_addr(stack_max, 4096, vm::page_writable))
+	while (stack_max + 4096 && vm::check_addr(stack_max, 4096, vm::page_allocated | vm::page_writable))
 	{
 		stack_max += 4096;
 	}
@@ -1156,6 +1156,16 @@ extern void ppu_initialize(const ppu_module& info)
 		std::vector<ppu_function_t> funcs;
 	};
 
+	struct jit_core_allocator
+	{
+		::semaphore<0x7fffffff> sem;
+
+		jit_core_allocator(s32 arg)
+			: sem(arg)
+		{
+		}
+	};
+
 	// Permanently loaded compiled PPU modules (name -> data)
 	jit_module& jit_mod = fxm::get_always<std::unordered_map<std::string, jit_module>>()->emplace(cache_path + info.name, jit_module{}).first->second;
 
@@ -1168,7 +1178,7 @@ extern void ppu_initialize(const ppu_module& info)
 	// Initialize global semaphore with the max number of threads
 	u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
 	s32 thread_count = max_threads > 0 ? std::min(max_threads, std::thread::hardware_concurrency()) : std::thread::hardware_concurrency();
-	static semaphore<INT32_MAX> jcores(std::max<s32>(thread_count, 1));
+	const auto jcores = fxm::get_always<jit_core_allocator>(std::max<s32>(thread_count, 1));
 
 	// Worker threads
 	std::vector<std::thread> jthreads;
@@ -1349,14 +1359,14 @@ extern void ppu_initialize(const ppu_module& info)
 		}
 
 		// Create worker thread for compilation
-		jthreads.emplace_back([&jit, obj_name = obj_name, part = std::move(part), &cache_path, fragment_sync, findex = ::size32(jthreads)]()
+		jthreads.emplace_back([&jit, obj_name = obj_name, part = std::move(part), &cache_path, fragment_sync, jcores, findex = ::size32(jthreads)]()
 		{
 			// Set low priority
 			thread_ctrl::set_native_priority(-1);
 
 			// Allocate "core"
 			{
-				semaphore_lock jlock(jcores);
+				semaphore_lock jlock(jcores->sem);
 
 				if (Emu.IsStopped())
 				{

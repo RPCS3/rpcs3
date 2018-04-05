@@ -257,7 +257,8 @@ struct vdec_thread : ppu_thread
 					{
 						if (frame->interlaced_frame)
 						{
-							fmt::throw_exception("Interlaced frames not supported (0x%x)", frame->interlaced_frame);
+							// NPEB01838, NPUB31260
+							cellVdec.todo("Interlaced frames not supported (0x%x)", frame->interlaced_frame);
 						}
 
 						if (frame->repeat_pict)

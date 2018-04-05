@@ -98,7 +98,7 @@ if(USE_NATIVE_INSTRUCTIONS)
 endif()
 
 if(NOT MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-invalid-pch -Wno-unused-command-line-argument -fexceptions")
 	# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
 	if(NOT APPLE)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--exclude-libs,ALL")
@@ -455,11 +455,11 @@ if(MSVC)
 	# them from the local QT installation at the end of the build.
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --debug ${CMAKE_BINARY_DIR}/bin
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --debug ${CMAKE_BINARY_DIR}/bin
 		)
 	else()
 		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations ${CMAKE_BINARY_DIR}/bin
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick ${CMAKE_BINARY_DIR}/bin
 		)
 	endif()
 endif()

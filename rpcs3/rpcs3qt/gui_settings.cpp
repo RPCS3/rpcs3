@@ -1,6 +1,7 @@
 #include "gui_settings.h"
 
 #include "game_list_frame.h"
+#include "qt_utils.h"
 
 #include <QCoreApplication>
 #include <QMessageBox>
@@ -235,15 +236,15 @@ void gui_settings::BackupSettingsToTarget(const QString& friendlyName)
 
 QStringList gui_settings::GetStylesheetEntries()
 {
-	QStringList nameFilter;
-	nameFilter << "*.qss";
-	QFileInfoList entries = m_settingsDir.entryInfoList(nameFilter, QDir::Files);
-	QStringList res;
-	for (const QFileInfo &entry : entries)
-	{
-		res.append(entry.baseName());
-	}
-
+	QStringList nameFilter = QStringList("*.qss");
+	QStringList res = gui::utils::get_dir_entries(m_settingsDir, nameFilter);
+#if !defined(_WIN32) && !defined(__APPLE__)
+	// Makes stylesheets load if using AppImage or installed to /usr/bin
+	QDir linuxStylesheetDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
+	res.append(gui::utils::get_dir_entries(linuxStylesheetDir, nameFilter));
+	res.removeDuplicates();
+#endif
+	res.sort(Qt::CaseInsensitive);
 	return res;
 }
 

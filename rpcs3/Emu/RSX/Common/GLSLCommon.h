@@ -456,7 +456,7 @@ namespace glsl
 			OS << "	if ((control_bits & 0x10) > 0)\n";
 			OS << "	{\n";
 			OS << "		//Alphakill\n";
-			OS << "		if (!comparison_passes(rgba.a, 0., (control_bits >> 5) & 0x7))\n";
+			OS << "		if (rgba.a < 0.0000000001)\n";
 			OS << "		{\n";
 			OS << "			discard;\n";
 			OS << "			return rgba;\n";
@@ -475,7 +475,7 @@ namespace glsl
 			OS << "#define TEX1D_BIAS(index, tex, coord1, bias) process_texel(texture(tex, coord1 * texture_parameters[index].x, bias), uint(texture_parameters[index].w))\n";
 			OS << "#define TEX1D_LOD(index, tex, coord1, lod) process_texel(textureLod(tex, coord1 * texture_parameters[index].x, lod), uint(texture_parameters[index].w))\n";
 			OS << "#define TEX1D_GRAD(index, tex, coord1, dpdx, dpdy) process_texel(textureGrad(tex, coord1 * texture_parameters[index].x, dpdx, dpdy), uint(texture_parameters[index].w))\n";
-			OS << "#define TEX1D_PROJ(index, tex, coord2) process_texel(textureGrad(tex, coord2 * vec2(texture_parameters[index].x, 1.)), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX1D_PROJ(index, tex, coord2) process_texel(textureProj(tex, coord2 * vec2(texture_parameters[index].x, 1.)), uint(texture_parameters[index].w))\n";
 
 			OS << "#define TEX2D(index, tex, coord2) process_texel(texture(tex, coord2 * texture_parameters[index].xy), uint(texture_parameters[index].w))\n";
 			OS << "#define TEX2D_BIAS(index, tex, coord2, bias) process_texel(texture(tex, coord2 * texture_parameters[index].xy, bias), uint(texture_parameters[index].w))\n";
@@ -536,11 +536,11 @@ namespace glsl
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D:
 			return "TEX1D($_i, $t, $0.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_BIAS:
-			return "TEX1D_BIAS($_i, $t, $0.xy)";
+			return "TEX1D_BIAS($_i, $t, $0.x, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ:
 			return "TEX1D_PROJ($_i, $t, $0.xy)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD:
-			return "TEX1D_LOD($_i, $t, $0.x)";
+			return "TEX1D_LOD($_i, $t, $0.x, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_GRAD:
 			return "TEX1D_GRAD($_i, $t, $0.x, $1.x, $2.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D:

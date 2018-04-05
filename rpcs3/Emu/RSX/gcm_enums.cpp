@@ -854,7 +854,7 @@ rsx::blit_engine::transfer_origin rsx::blit_engine::to_transfer_origin(u8 in)
 	case CELL_GCM_TRANSFER_ORIGIN_CENTER: return rsx::blit_engine::transfer_origin::center;
 	case CELL_GCM_TRANSFER_ORIGIN_CORNER: return rsx::blit_engine::transfer_origin::corner;
 	}
-	fmt::throw_exception("Unknown tranfer origin 0x%x" HERE, in);
+	fmt::throw_exception("Unknown transfer origin 0x%x" HERE, in);
 }
 
 rsx::blit_engine::transfer_interpolator rsx::blit_engine::to_transfer_interpolator(u8 in)
@@ -864,7 +864,7 @@ rsx::blit_engine::transfer_interpolator rsx::blit_engine::to_transfer_interpolat
 	case CELL_GCM_TRANSFER_INTERPOLATOR_ZOH: return rsx::blit_engine::transfer_interpolator::zoh;
 	case CELL_GCM_TRANSFER_INTERPOLATOR_FOH: return rsx::blit_engine::transfer_interpolator::foh;
 	}
-	fmt::throw_exception("Unknown tranfer interpolator 0x%x" HERE, in);
+	fmt::throw_exception("Unknown transfer interpolator 0x%x" HERE, in);
 }
 
 enum
@@ -888,7 +888,7 @@ rsx::blit_engine::transfer_operation rsx::blit_engine::to_transfer_operation(u8 
 	case CELL_GCM_TRANSFER_OPERATION_SRCCOPY_PREMULT: return rsx::blit_engine::transfer_operation::srccopy_premult;
 	case CELL_GCM_TRANSFER_OPERATION_BLEND_PREMULT: return rsx::blit_engine::transfer_operation::blend_premult;
 	}
-	fmt::throw_exception("Unknown tranfer operation 0x%x" HERE, in);
+	fmt::throw_exception("Unknown transfer operation 0x%x" HERE, in);
 }
 
 enum

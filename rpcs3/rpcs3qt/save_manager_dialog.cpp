@@ -122,11 +122,8 @@ void save_manager_dialog::Init(std::string dir)
 
 	UpdateList();
 
-	QByteArray geometry = m_gui_settings->GetValue(gui::sd_geometry).toByteArray();
-	if (geometry.isEmpty() == false)
-	{
-		restoreGeometry(geometry);
-	}
+	if (restoreGeometry(m_gui_settings->GetValue(gui::sd_geometry).toByteArray()))
+		resize(size().expandedTo(QDesktopWidget().availableGeometry().size() * 0.5));
 
 	// Connects and events
 	connect(push_close, &QAbstractButton::clicked, this, &save_manager_dialog::close);
