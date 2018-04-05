@@ -109,7 +109,7 @@ extern void jit_finalize()
 
 	for (auto&& t : s_unfire)
 	{
-		mem.deregisterEHFrames(std::get<0>(t), std::get<1>(t), std::get<2>(t));
+		mem.deregisterEHFrames();
 	}
 
 	s_unfire.clear();
