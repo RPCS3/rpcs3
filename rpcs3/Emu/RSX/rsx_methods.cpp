@@ -561,11 +561,6 @@ namespace rsx
 				u16 x = method_registers.nv308a_x();
 				u16 y = method_registers.nv308a_y();
 
-				if (y)
-				{
-					LOG_ERROR(RSX, "%s: y is not null (0x%x)", __FUNCTION__, y);
-				}
-
 				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x << 2);
 				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + index * 4, method_registers.blit_engine_output_location_nv3062());
 				vm::write32(address, arg);

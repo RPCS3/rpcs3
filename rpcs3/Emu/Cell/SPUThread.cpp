@@ -530,12 +530,45 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args)
 	u32 eal = args.eal;
 	u32 lsa = args.lsa & 0x3ffff;
 
-	if (eal >= SYS_SPU_THREAD_BASE_LOW && offset < RAW_SPU_BASE_ADDR) // SPU Thread Group MMIO (LS and SNR)
+	// SPU Thread Group MMIO (LS and SNR) and RawSPU MMIO
+	if (eal >= RAW_SPU_BASE_ADDR)
 	{
 		const u32 index = (eal - SYS_SPU_THREAD_BASE_LOW) / SYS_SPU_THREAD_OFFSET; // thread number in group
 		const u32 offset = (eal - SYS_SPU_THREAD_BASE_LOW) % SYS_SPU_THREAD_OFFSET; // LS offset or MMIO register
 
-		if (group && index < group->num && group->threads[index])
+		if (eal < SYS_SPU_THREAD_BASE_LOW)
+		{
+			// RawSPU MMIO
+			auto thread = idm::get<RawSPUThread>((eal - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET);
+
+			if (!thread)
+			{
+				fmt::throw_exception("RawSPU not found (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
+			}
+
+			u32 value;
+			if ((eal - RAW_SPU_BASE_ADDR) % RAW_SPU_OFFSET + args.size - 1 < 0x40000) // LS access
+			{
+			}
+			else if (args.size == 4 && is_get && thread->read_reg(eal, value))
+			{
+				_ref<u32>(lsa) = value;
+				return;
+			}
+			else if (args.size == 4 && !is_get && thread->write_reg(eal, _ref<u32>(lsa)))
+			{
+				return;
+			}
+			else
+			{
+				fmt::throw_exception("Invalid RawSPU MMIO offset (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
+			}
+		}
+		else if (this->offset >= RAW_SPU_BASE_ADDR)
+		{
+			fmt::throw_exception("SPU MMIO used for RawSPU (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
+		}
+		else if (group && index < group->num && group->threads[index])
 		{
 			auto& spu = static_cast<SPUThread&>(*group->threads[index]);
 
@@ -744,7 +777,7 @@ bool SPUThread::do_list_transfer(spu_mfc_cmd& args)
 
 		if (size)
 		{
-			if (!vm::check_addr(addr, size, vm::page_readable | (args.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
+			if (!vm::check_addr(addr, size, vm::page_allocated | vm::page_readable | (args.cmd & MFC_PUT_CMD ? vm::page_writable : 0)) && args.eal < RAW_SPU_BASE_ADDR)
 			{
 				Emu.Pause();
 				state += cpu_flag::stop;
@@ -815,7 +848,7 @@ void SPUThread::do_mfc()
 	// Process enqueued commands
 	std::remove_if(mfc_queue + 0, mfc_queue + mfc_size, [&](spu_mfc_cmd& args)
 	{
-		if ((args.cmd & ~0xc) == MFC_BARRIER_CMD)
+		if (args.cmd == MFC_BARRIER_CMD || args.cmd == MFC_EIEIO_CMD)
 		{
 			if (&args - mfc_queue <= removed)
 			{
@@ -884,11 +917,12 @@ void SPUThread::do_mfc()
 			return false;
 		}
 
+		// Also ignore MFC_SYNC_CMD
 		if (args.size)
 		{
 			vm::reader_lock lock;
 
-			if (!vm::check_addr(args.eal, args.size, vm::page_readable | (args.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
+			if (!vm::check_addr(args.eal, args.size, vm::page_allocated | vm::page_readable | (args.cmd & MFC_PUT_CMD ? vm::page_writable : 0)) && args.eal < RAW_SPU_BASE_ADDR)
 			{
 				Emu.Pause();
 				state += cpu_flag::stop;
@@ -1173,7 +1207,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 			{
 				vm::reader_lock lock;
 
-				if (!vm::check_addr(args.eal, args.size, vm::page_readable | (args.cmd & MFC_PUT_CMD ? vm::page_writable : 0)))
+				if (!vm::check_addr(args.eal, args.size, vm::page_allocated | vm::page_readable | (args.cmd & MFC_PUT_CMD ? vm::page_writable : 0)) && args.eal < RAW_SPU_BASE_ADDR)
 				{
 					Emu.Pause();
 					state += cpu_flag::stop;
@@ -1217,7 +1251,6 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 	}
 	case MFC_BARRIER_CMD:
 	case MFC_EIEIO_CMD:
-	case MFC_SYNC_CMD:
 	{
 		if (mfc_size == 0)
 		{
@@ -1225,6 +1258,20 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		}
 		else
 		{
+			mfc_queue[mfc_size++] = args;
+		}
+
+		return true;
+	}
+	case MFC_SYNC_CMD:
+	{
+		if (LIKELY(do_dma_check(args)))
+		{
+			_mm_mfence();
+		}
+		else
+		{
+			args.size = 0;
 			mfc_queue[mfc_size++] = args;
 		}
 

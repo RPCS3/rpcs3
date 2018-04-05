@@ -94,6 +94,12 @@ enum
 	CELL_SAVEDATA_RECREATE_MASK            = 0xffff,
 };
 
+// CellSaveDataListNewData::iconPosition
+enum : u32
+{
+	CELL_SAVEDATA_ICONPOS_HEAD = 0,
+	CELL_SAVEDATA_ICONPOS_TAIL = 1,
+};
 
 // Datatypes
 struct CellSaveDataSetList

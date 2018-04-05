@@ -332,15 +332,16 @@ namespace rsx
 				return result;
 			}
 
-			s32 show(std::vector<SaveDataEntry>& save_entries, u32 op, vm::ptr<CellSaveDataListSet> /*listSet*/)
+			s32 show(std::vector<SaveDataEntry>& save_entries, u32 op, vm::ptr<CellSaveDataListSet> listSet)
 			{
-				std::vector<u8> null_icon;
-				auto num_actual_saves = save_entries.size();
+				std::vector<u8> icon;
+				std::vector<std::unique_ptr<overlay_element>> entries;
 
-				for (auto &entry : save_entries)
+				for (auto& entry : save_entries)
 				{
-					std::unique_ptr<overlay_element> e = std::make_unique<save_dialog_entry>(entry.title.c_str(), (entry.subtitle + " - " + entry.details).c_str(), image_resource_id::raw_image, entry.iconBuf);
-					m_list->add_entry(e);
+					std::unique_ptr<overlay_element> e;
+					e = std::make_unique<save_dialog_entry>(entry.title.c_str(), (entry.subtitle + " - " + entry.details).c_str(), image_resource_id::raw_image, entry.iconBuf);
+					entries.emplace_back(std::move(e));
 				}
 
 				if (op >= 8)
@@ -353,9 +354,55 @@ namespace rsx
 				}
 				else
 				{
-					m_description->text = "Create Save";
-					std::unique_ptr<overlay_element> new_stub = std::make_unique<save_dialog_entry>("Create New", "Select to create a new entry", resource_config::standard_image_resource::new_entry, null_icon);
+					m_description->text = "Save";
+				}
+
+				const bool newpos_head = listSet->newData && listSet->newData->iconPosition == CELL_SAVEDATA_ICONPOS_HEAD;
+
+				if (!newpos_head)
+				{
+					for (auto& entry : entries)
+					{
+						m_list->add_entry(entry);
+					}
+				}
+
+				if (listSet->newData)
+				{
+					std::unique_ptr<overlay_element> new_stub;
+
+					const char* title = "Create New";
+
+					int id = resource_config::standard_image_resource::new_entry;
+
+					if (auto picon = +listSet->newData->icon)
+					{
+						title = picon->title.get_ptr();
+
+						if (picon->iconBuf && picon->iconBufSize && picon->iconBufSize <= 225280)
+						{
+							const auto iconBuf = static_cast<u8*>(picon->iconBuf.get_ptr());
+							const auto iconEnd = iconBuf + picon->iconBufSize;
+							icon.assign(iconBuf, iconEnd);
+						}
+					}
+
+					if (!icon.empty())
+					{
+						id = image_resource_id::raw_image;
+					}
+
+					new_stub = std::make_unique<save_dialog_entry>(title, "Select to create a new entry", id, icon);
+
 					m_list->add_entry(new_stub);
+				}
+
+				if (newpos_head)
+				{
+					for (auto& entry : entries)
+					{
+						m_list->add_entry(entry);
+					}
 				}
 
 				if (!m_list->m_items.size())
@@ -367,7 +414,7 @@ namespace rsx
 					m_no_saves_text->set_size(m_list->w, 30);
 					m_no_saves_text->set_text("There is no saved data.");
 					m_no_saves_text->back_color.a = 0;
-					
+
 					m_no_saves = true;
 					m_list->set_cancel_only(true);
 				}
@@ -377,8 +424,10 @@ namespace rsx
 				if (auto err = run_input_loop())
 					return err;
 
-				if (return_code == num_actual_saves)
+				if (return_code == entries.size() && !newpos_head)
 					return selection_code::new_save;
+				if (return_code >= 0 && newpos_head)
+					return return_code - 1;
 
 				return return_code;
 			}
