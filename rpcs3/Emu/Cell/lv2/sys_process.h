@@ -15,6 +15,7 @@ enum : u32
 	SYS_SPUIMAGE_OBJECT              = 0x22,
 	SYS_PRX_OBJECT                   = 0x23,
 	SYS_SPUPORT_OBJECT               = 0x24,
+	SYS_OVERLAY_OBJECT				 = 0x25,
 	SYS_LWMUTEX_OBJECT               = 0x95,
 	SYS_TIMER_OBJECT                 = 0x11,
 	SYS_SEMAPHORE_OBJECT             = 0x96,

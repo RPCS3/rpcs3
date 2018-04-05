@@ -15,6 +15,7 @@
 #include "Emu/Cell/lv2/sys_event_flag.h"
 #include "Emu/Cell/lv2/sys_rwlock.h"
 #include "Emu/Cell/lv2/sys_prx.h"
+#include "Emu/Cell/lv2/sys_overlay.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_spu.h"
@@ -125,8 +126,9 @@ void kernel_explorer::Update()
 	lv2_types[SYS_EVENT_PORT_OBJECT] =					l_addTreeChild(root, "Event Ports");
 	lv2_types[SYS_TRACE_OBJECT] =								l_addTreeChild(root, "Traces");
 	lv2_types[SYS_SPUIMAGE_OBJECT] =						l_addTreeChild(root, "SPU Images");
-	lv2_types[SYS_PRX_OBJECT] =									l_addTreeChild(root, "Modules");
+	lv2_types[SYS_PRX_OBJECT] =									l_addTreeChild(root, "PRX Modules");
 	lv2_types[SYS_SPUPORT_OBJECT] =							l_addTreeChild(root, "SPU Ports");
+	lv2_types[SYS_OVERLAY_OBJECT] =						 l_addTreeChild(root, "Overlay Modules");
 	lv2_types[SYS_LWMUTEX_OBJECT] =							l_addTreeChild(root, "Light Weight Mutexes");
 	lv2_types[SYS_TIMER_OBJECT] =								l_addTreeChild(root, "Timers");
 	lv2_types[SYS_SEMAPHORE_OBJECT] =						l_addTreeChild(root, "Semaphores");
@@ -210,6 +212,12 @@ void kernel_explorer::Update()
 		case SYS_SPUPORT_OBJECT:
 		{
 			l_addTreeChild(node, qstr(fmt::format("SPU Port: ID = 0x%08x", id)));
+			break;
+		}
+		case SYS_OVERLAY_OBJECT:
+		{
+			auto& overlay_module = static_cast<ppu_overlay_module&>(obj);
+			l_addTreeChild(node, qstr(fmt::format("PRX: ID = 0x%08x '%s'", id, overlay_module.name)));
 			break;
 		}
 		case SYS_LWMUTEX_OBJECT:
