@@ -288,6 +288,14 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 	sys_ppu_thread.warning("_sys_ppu_thread_create(thread_id=*0x%x, param=*0x%x, arg=0x%llx, unk=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=%s)",
 		thread_id, param, arg, unk, prio, _stacksz, flags, threadname);
 
+	// thread_id is checked for null in stub -> CELL_ENOMEM
+	// unk is set to 0 in sys_ppu_thread_create stub
+
+	if (!param || !param->entry)
+	{
+		return CELL_EFAULT;
+	}
+
 	if (prio < 0 || prio > 3071)
 	{
 		return CELL_EINVAL;
@@ -402,6 +410,11 @@ error_code sys_ppu_thread_rename(u32 thread_id, vm::cptr<char> name)
 	if (!thread)
 	{
 		return CELL_ESRCH;
+	}
+
+	if (!name)
+	{
+		return CELL_EFAULT;
 	}
 
 	// thread_ctrl name is not changed (TODO)
