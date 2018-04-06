@@ -8,12 +8,19 @@
 
 static DWORD WINAPI thread_proc(LPVOID lpParameter);
 
+struct breakpoint_context
+{
+	hw_breakpoint* m_handle;
+	bool m_is_setting;
+	bool m_success;
+};
+
 std::shared_ptr<hw_breakpoint> win_hw_breakpoint_manager::set(u32 index,
 	thread_handle thread, hw_breakpoint_type type, hw_breakpoint_size size,
 	u64 address, const hw_breakpoint_handler& handler)
 {
 	auto handle = new hw_breakpoint(index, thread, type, size, address, handler);
-	auto context = std::make_unique<win_hw_breakpoint_context>();
+	auto context = std::make_unique<breakpoint_context>();
 	context->m_handle = handle;
 	context->m_is_setting = true;
 	context->m_success = false;
@@ -57,7 +64,7 @@ bool win_hw_breakpoint_manager::remove(hw_breakpoint& handle)
 		should_close_thread = true;
 	}
 
-	auto context = std::make_unique<win_hw_breakpoint_context>();
+	auto context = std::make_unique<breakpoint_context>();
 	context->m_handle = &handle;
 	context->m_is_setting = false;
 	context->m_success = false;
@@ -96,7 +103,7 @@ inline static void set_debug_register_value(CONTEXT* context, u32 index, u64 val
 
 static DWORD WINAPI thread_proc(LPVOID lpParameter)
 {
-    auto context = static_cast<win_hw_breakpoint_context*>(lpParameter);
+    auto context = static_cast<breakpoint_context*>(lpParameter);
 	auto handle = context->m_handle;
 	auto other_thread = handle->get_thread();
 

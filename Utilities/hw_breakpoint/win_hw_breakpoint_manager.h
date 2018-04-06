@@ -4,13 +4,6 @@
 
 #include "hw_breakpoint_manager_impl.h"
 
-struct win_hw_breakpoint_context
-{
-	hw_breakpoint* m_handle;
-	bool m_is_setting;
-	bool m_success;
-};
-
 class win_hw_breakpoint_manager final : public hw_breakpoint_manager_impl
 {
 protected:
