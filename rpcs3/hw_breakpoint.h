@@ -43,7 +43,7 @@ using thread_handle = int;
 #endif
 
 class hw_breakpoint;
-using hw_breakpoint_handler = std::function<void(const cpu_thread*, hw_breakpoint&)>;
+using hw_breakpoint_handler = std::function<void(const cpu_thread* thread, hw_breakpoint& breakpoint, void* user_data)>;
 
 // Represents a hardware breakpoint, read only.
 class hw_breakpoint

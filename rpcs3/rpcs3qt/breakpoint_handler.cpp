@@ -66,7 +66,7 @@ void breakpoint_handler::test()
 	{
 		u32 addr = 0x8abe9c; // TOCS 2
 		auto native_handle = (thread_handle)cpu->get()->get_native_handle();
-		auto handle = hw_breakpoint_manager::set(native_handle, hw_breakpoint_type::read_write, hw_breakpoint_size::size_4, (u64)vm::g_base_addr + addr, [this](const cpu_thread* cpu, hw_breakpoint& breakpoint)
+		auto handle = hw_breakpoint_manager::set(native_handle, hw_breakpoint_type::read_write, hw_breakpoint_size::size_4, (u64)vm::g_base_addr + addr, [this](const cpu_thread* cpu, hw_breakpoint& breakpoint, void* user_data)
 		{
 			emit BreakpointTriggered(cpu, breakpoint.get_address());
 		});
