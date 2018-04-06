@@ -36,21 +36,17 @@ bool linux_hw_breakpoint_manager::set_debug_register_values(u32 index, pid_t thr
 			_exit(1);
 		}
 
-		// Fetch control register data
-		s64 control_register = ptrace(PTRACE_PEEKUSER, thread, offsetof(struct user, u_debugreg[7]));
-		if (control_register == -1)
-			_exit(1);
-
-		// Set control flags
+		// Set parameters for when the breakpoint should be triggered.
+		s64 control_register = 0;
 		hw_breakpoint_manager_impl::set_debug_control_register(reinterpret_cast<u64*>(&control_register), index,
 			type, size, enable);
 
-		// Set control register value
 		if (ptrace(PTRACE_POKEUSER, thread, offsetof(struct user, u_debugreg[7]), control_register))
 		{
 			_exit(1);
 		}
 
+		// Detach fork
 		if (ptrace(PTRACE_DETACH, thread, nullptr, nullptr))
 		{
 			_exit(1);
@@ -72,9 +68,6 @@ bool linux_hw_breakpoint_manager::set_debug_register_values(u32 index, pid_t thr
 std::shared_ptr<hw_breakpoint> linux_hw_breakpoint_manager::set(u32 index, thread_handle thread,
 	hw_breakpoint_type type, hw_breakpoint_size size, u64 address, const hw_breakpoint_handler& handler)
 {
-	// todo: doesn't work properly but don't have a linux debugging environment to fix it
-	return nullptr;
-
 	if (!set_debug_register_values(index, static_cast<pid_t>(thread), type, size, address, true))
 	{
 		return nullptr;
@@ -85,9 +78,6 @@ std::shared_ptr<hw_breakpoint> linux_hw_breakpoint_manager::set(u32 index, threa
 
 bool linux_hw_breakpoint_manager::remove(hw_breakpoint& handle)
 {
-	// todo
-	return false;
-
 	return set_debug_register_values(handle.get_index(), static_cast<pid_t>(handle.get_thread()), static_cast<hw_breakpoint_type>(0),
 		static_cast<hw_breakpoint_size>(0), 0, false);
 }
