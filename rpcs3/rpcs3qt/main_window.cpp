@@ -8,6 +8,11 @@
 #include <QDesktopWidget>
 #include <QMimeData>
 
+#ifdef WITH_DISCORD_RPC
+#include "discord_rpc.h"
+#include "discord_register.h"
+#endif
+
 #include "qt_utils.h"
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
@@ -59,6 +64,9 @@ main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_
 main_window::~main_window()
 {
 	delete ui;
+#ifdef WITH_DISCORD_RPC
+	Discord_Shutdown();
+#endif
 }
 
 auto Pause = []()
@@ -238,6 +246,17 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only)
 		LOG_SUCCESS(LOADER, "Boot successful.");
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
 		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+#ifdef WITH_DISCORD_RPC
+		// Discord Rich Presence Integration
+		DiscordRichPresence discordPresence = {};
+		discordPresence.state = Emu.GetTitleID().c_str();
+		discordPresence.details = Emu.GetTitle().c_str();
+		discordPresence.largeImageKey = "rpcs3_logo";
+		discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
+		discordPresence.startTimestamp = time(0);
+		discordPresence.instance = 0;
+		Discord_UpdatePresence(&discordPresence);
+#endif
 	}
 	else
 	{
@@ -754,6 +773,13 @@ void main_window::OnEmuStop()
 		ui->toolbar_start->setIcon(m_icon_play);
 		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	}
+#ifdef WITH_DISCORD_RPC
+	// Discord Rich Presence Integration
+	DiscordRichPresence discordPresence = {};
+	discordPresence.largeImageKey = "rpcs3_logo";
+	discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
+	Discord_UpdatePresence(&discordPresence);
+#endif
 }
 
 void main_window::OnEmuReady()
