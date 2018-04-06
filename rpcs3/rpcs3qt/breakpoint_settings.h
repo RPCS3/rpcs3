@@ -6,6 +6,10 @@
 #include <QString>
 #include <QSettings>
 
+
+// Consider making a separate header just to hold this so that I don't have the enum I use and the data struct in different classes.
+// TODO: Add minimum amount so that hardware breakpoints can be reconstructed when serialized.
+// IF merging the two classes together (breakpoint handler, hardare breakpoints) doesn't happen, then use minimal amount possible.
 struct breakpoint_data
 {
 	u32 flags;

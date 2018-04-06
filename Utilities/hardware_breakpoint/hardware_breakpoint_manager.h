@@ -1,6 +1,7 @@
 #pragma once
 
 #include "stdafx.h"
+#include "Emu/CPU/CPUThread.h"
 #include <mutex>
 
 // Represents the type of hardware breakpoint.
@@ -44,7 +45,7 @@ using thread_handle = int;
 #endif
 
 class hardware_breakpoint;
-using hardware_breakpoint_handler = std::function<void(hardware_breakpoint&)>;
+using hardware_breakpoint_handler = std::function<void(const cpu_thread*, hardware_breakpoint&)>;
 
 // Represents a hardware breakpoint, read only.
 class hardware_breakpoint

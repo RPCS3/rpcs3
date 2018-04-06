@@ -294,6 +294,8 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 {
 	// Pause and wait if necessary
+
+	Emu.GetCallbacks().on_ppu_breakpoint_triggered(ppu);
 	bool status = ppu.state.test_and_set(cpu_flag::dbg_pause);
 #ifdef WITH_GDB_DEBUGGER
 	fxm::get<GDBDebugServer>()->pause_from(&ppu);
@@ -310,28 +312,6 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 	}
 
 	return false;
-}
-
-// Set or remove breakpoint
-extern void ppu_breakpoint(u32 addr, bool isAdding)
-{
-	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
-	{
-		return;
-	}
-
-	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
-
-	if (isAdding)
-	{
-		// Set breakpoint
-		ppu_ref(addr) = _break;
-	}
-	else
-	{
-		// Remove breakpoint
-		ppu_ref(addr) = ppu_cache(addr);
-	}
 }
 
 void ppu_thread::on_spawn()

@@ -27,6 +27,15 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 
 
 	m_breakpoint_handler = new breakpoint_handler(this);
+	connect(m_breakpoint_handler, &breakpoint_handler::BreakpointTriggered, [this](const cpu_thread* cpu, u32 /*addr*/) {
+		int ind = m_choice_units->findData(qVariantFromValue((void *) cpu));
+		if (ind != -1)
+		{
+			m_choice_units->setCurrentIndex(ind);
+			m_debugger_list->ShowAddress(GetPc());
+		}		
+	});
+
 	m_debugger_list = new debugger_list(this, settings, m_breakpoint_handler);
 	m_debugger_list->installEventFilter(this);
 
@@ -143,6 +152,7 @@ void debugger_frame::UpdateBreakpointList()
 	m_choice_units->setCurrentIndex(m_choice_units->count()-1); // trick to make the address valid temporarily.
 	m_breakpoint_handler->UpdateGameID();
 	m_breakpoint_list->SynchronizeList();
+	m_breakpoint_handler->test();
 	m_choice_units->setCurrentIndex(0); // now revert index back to original. Since new thread was just created, it'll always be on default.
 }
 
@@ -399,6 +409,7 @@ void debugger_frame::OnSelectUnit()
 
 	m_debugger_list->UpdateCPUData(this->cpu, m_disasm);
 	m_breakpoint_list->UpdateCPUData(this->cpu, m_disasm);
+	m_breakpoint_handler->UpdateCPUThread(this->cpu);
 	DoUpdate();
 }
 
@@ -595,7 +606,7 @@ void debugger_frame::DoStep(bool stepOver)
 
 				// Set breakpoint on next instruction
 				u32 next_instruction_pc = current_instruction_pc + 4;
-				m_breakpoint_handler->AddBreakpoint(next_instruction_pc, static_cast<u32>(breakpoint_types::exec), "stepover", true);
+				m_breakpoint_handler->AddBreakpoint(next_instruction_pc, static_cast<u32>(breakpoint_types::exec), "stepover");
 
 				// Undefine previous step over breakpoint if it hasnt been already
 				// This can happen when the user steps over a branch that doesn't return to itself

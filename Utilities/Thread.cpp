@@ -1449,7 +1449,7 @@ static LONG exception_handler_impl(PEXCEPTION_POINTERS pExp)
 				auto handler = breakpoint->get_handler();
 				if (handler != nullptr)
 				{
-					handler(*breakpoint);
+					handler(cpu, *breakpoint);
 				}
 			}
 		}

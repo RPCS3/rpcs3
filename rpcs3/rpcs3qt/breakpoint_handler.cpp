@@ -1,10 +1,19 @@
 #include "breakpoint_handler.h"
 
-extern void ppu_breakpoint(u32 loc, bool isAdding);
+// PPU Thread functions concerning breakpoints.
+extern void ppu_set_breakpoint(u32 addr);
+extern void ppu_remove_breakpoint(u32 addr);
 
 breakpoint_handler::breakpoint_handler(QObject* parent) : QObject(parent), m_breakpoints(),
-	m_gameid("default"), m_breakpoint_settings(this)
+	m_gameid("default"), m_breakpoint_settings(this), cpu()
 {
+	// Annoying hack since lambdas with captures aren't passed as function pointers--- prevents access violation later if I tried to pass it to ppu_set_breakpoint.
+	// I'll probably try and revise this later, but I wanted to get something working for now.
+	EmuCallbacks callbacks = Emu.GetCallbacks();
+	callbacks.on_ppu_breakpoint_triggered = [this](const ppu_thread& ppu) {
+		Q_EMIT BreakpointTriggered(&ppu, ppu.cia);
+	};
+	Emu.SetCallbacks(std::move(callbacks));
 }
 
 bool breakpoint_handler::HasBreakpoint(u32 addr, u32 flags) const
@@ -17,18 +26,17 @@ void breakpoint_handler::AddBreakpoint(u32 addr, u32 flags, const QString& name,
 {
 	if (HasBreakpoint(addr, flags)) return;
 	u32 val = m_breakpoints[m_gameid].value(addr, {}).flags;
-	if (!(val & static_cast<u32>(breakpoint_types::exec)) && (flags & static_cast<u32>(breakpoint_types::exec)))
+	if (!(val & (u32) breakpoint_types::exec) && (flags & (u32) breakpoint_types::exec))
 	{
-		ppu_breakpoint(addr, true);
-		m_breakpoints[m_gameid][addr] = {val | static_cast<u32>(breakpoint_types::exec), name};
+		ppu_set_breakpoint(addr);
+		m_breakpoints[m_gameid][addr] = {val | (u32) breakpoint_types::exec, name};
 		if (!transient)
 		{
 			m_breakpoint_settings.SetBreakpoint(m_gameid, addr, m_breakpoints[m_gameid][addr]);
 		}
 	}
-	// TODO: Add other breakpoint types.
-}
 
+}
 void breakpoint_handler::RenameBreakpoint(u32 addr, const QString& newName)
 {
 	if (HasBreakpoint(addr))
@@ -41,14 +49,30 @@ void breakpoint_handler::RenameBreakpoint(u32 addr, const QString& newName)
 void breakpoint_handler::RemoveBreakpoint(u32 addr, u32 flags)
 {
 	u32 val = m_breakpoints[m_gameid].value(addr, {}).flags;
-	if ((val & static_cast<u32>(breakpoint_types::exec)) && (flags & static_cast<u32>(breakpoint_types::exec)))
+	if ((val & (u32) breakpoint_types::exec) && (flags & (u32) breakpoint_types::exec))
 	{
-		ppu_breakpoint(addr, false);
-		m_breakpoints[m_gameid][addr].flags = val - static_cast<u32>(breakpoint_types::exec);
+		ppu_remove_breakpoint(addr);
+		m_breakpoints[m_gameid][addr].flags = val - (u32) breakpoint_types::exec;
 		HandleRemove(addr);
 	}
 	// TODO handle other breakpoint types
 }
+
+void breakpoint_handler::test()
+{
+
+	auto cpu = this->cpu.lock();
+	if (cpu)
+	{
+		u32 addr = 0x8abe9c; // TOCS 2
+		auto native_handle = (thread_handle)cpu->get()->get_native_handle();
+		auto handle = hardware_breakpoint_manager::set(native_handle, hardware_breakpoint_type::read_write, hardware_breakpoint_size::size_4, (u64)vm::g_base_addr + addr, [this](const cpu_thread* cpu, hardware_breakpoint& breakpoint)
+		{
+			emit BreakpointTriggered(cpu, breakpoint.get_address());
+		});
+	}
+}
+
 
 /**
 * We need to choose between either removing or setting the value in breakpoint settings.  Do so here.
@@ -85,4 +109,15 @@ void breakpoint_handler::UpdateGameID()
 	{
 		m_gameid = "default";
 	}
+
+	for (u32 addr : m_breakpoints[m_gameid].keys())
+	{
+		// todo: add databreakpoints
+		ppu_set_breakpoint(addr);
+	}
+}
+
+void breakpoint_handler::UpdateCPUThread(std::weak_ptr<cpu_thread> cpu)
+{
+	this->cpu = cpu;
 }
