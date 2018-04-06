@@ -6,7 +6,7 @@
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Thread.h"
-#include "hardware_breakpoint/hardware_breakpoint_manager.h"
+#include "hw_breakpoint/hw_breakpoint_manager.h"
 #include "sysinfo.h"
 #include <typeinfo>
 #include <thread>
@@ -1403,7 +1403,7 @@ static LONG exception_handler_impl(PEXCEPTION_POINTERS pExp)
 		// Handle hardware breakpoint
 		bool any_hit = false;
 		const auto cpu = get_current_cpu_thread();
-		auto& breakpoints = hardware_breakpoint_manager::get_breakpoints((thread_handle)(cpu->get()->get_native_handle()));
+		auto& breakpoints = hw_breakpoint_manager::get_breakpoints((thread_handle)(cpu->get()->get_native_handle()));
 
 		for (u32 i = 0; i < 4; ++i)
 		{
@@ -1608,7 +1608,7 @@ static void trap_signal_handler(int sig, siginfo_t* info, void* uct)
 	// Handle hardware breakpoint
 	bool any_hit = false;
 	const auto cpu = get_current_cpu_thread();
-	auto& breakpoints = hardware_breakpoint_manager::get_breakpoints((thread_handle)(cpu->get()->get_native_handle()));
+	auto& breakpoints = hw_breakpoint_manager::get_breakpoints((thread_handle)(cpu->get()->get_native_handle()));
 
 	for (u32 i = 0; i < 4; ++i)
 	{

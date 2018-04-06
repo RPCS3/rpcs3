@@ -5,11 +5,11 @@
 #include <mutex>
 
 // Represents the type of hardware breakpoint.
-enum class hardware_breakpoint_type
+enum class hw_breakpoint_type
 {
     // Breaks when the CPU tries to execute instructions
     // at the address.
-	// Only valid in combination with hardware_breakpoint_size::size_1.
+	// Only valid in combination with hw_breakpoint_size::size_1.
     executable = 0,
 
     // Breaks when the memory at the address is written to.
@@ -23,7 +23,7 @@ enum class hardware_breakpoint_type
 // Represents the size of a hardware breakpoint.
 // The 'size' refers to the range of bytes watched at
 // the address.
-enum class hardware_breakpoint_size
+enum class hw_breakpoint_size
 {
     // 1 byte.
     size_1 = 0,
@@ -44,26 +44,26 @@ using thread_handle = void*;
 using thread_handle = int;
 #endif
 
-class hardware_breakpoint;
-using hardware_breakpoint_handler = std::function<void(const cpu_thread*, hardware_breakpoint&)>;
+class hw_breakpoint;
+using hw_breakpoint_handler = std::function<void(const cpu_thread*, hw_breakpoint&)>;
 
 // Represents a hardware breakpoint, read only.
-class hardware_breakpoint
+class hw_breakpoint
 {
-    friend class windows_hardware_breakpoint_manager;
-    friend class linux_hardware_breakpoint_manager;
+    friend class win_hw_breakpoint_manager;
+    friend class linux_hw_breakpoint_manager;
 
 private:
 	u32 m_index;
 	thread_handle m_thread;
-    hardware_breakpoint_type m_type;
-    hardware_breakpoint_size m_size;
+    hw_breakpoint_type m_type;
+    hw_breakpoint_size m_size;
     u64 m_address;
-    const hardware_breakpoint_handler m_handler;
+    const hw_breakpoint_handler m_handler;
 
 protected:
-    hardware_breakpoint(const u32 index, const thread_handle thread, const hardware_breakpoint_type type,
-		const hardware_breakpoint_size size, const u64 address, const hardware_breakpoint_handler& handler)
+    hw_breakpoint(const u32 index, const thread_handle thread, const hw_breakpoint_type type,
+		const hw_breakpoint_size size, const u64 address, const hw_breakpoint_handler& handler)
         : m_index(index), m_thread(thread), m_type(type), m_size(size), m_address(address), m_handler(handler)
     {
     }
@@ -76,30 +76,30 @@ public:
 	inline thread_handle get_thread() const { return m_thread; }
 
     // Gets the type of breakpoint.
-	inline hardware_breakpoint_type get_type() const { return m_type; }
+	inline hw_breakpoint_type get_type() const { return m_type; }
 
     // Gets the size of the breakpoint.
-	inline hardware_breakpoint_size get_size() const { return m_size; }
+	inline hw_breakpoint_size get_size() const { return m_size; }
 
     // Gets the address of the breakpoint.
 	inline u64 get_address() const { return m_address; }
 
     // Gets the handler of the breakpoint.
-	inline const hardware_breakpoint_handler& get_handler() const { return m_handler; }
+	inline const hw_breakpoint_handler& get_handler() const { return m_handler; }
 };
 
-class hardware_breakpoint_manager_impl;
-using thread_breakpoints = std::vector<std::shared_ptr<hardware_breakpoint>>;
+class hw_breakpoint_manager_impl;
+using thread_breakpoints = std::vector<std::shared_ptr<hw_breakpoint>>;
 using thread_breakpoints_lookup = std::unordered_map<thread_handle, thread_breakpoints>;
 
 // Static utility class for setting and removing hardware breakpoints.
-class hardware_breakpoint_manager final
+class hw_breakpoint_manager final
 {
 private:
-	hardware_breakpoint_manager() {}
+	hw_breakpoint_manager() {}
 
-    static std::unique_ptr<hardware_breakpoint_manager_impl> s_impl;
-	static thread_breakpoints_lookup s_hardware_breakpoints;
+    static std::unique_ptr<hw_breakpoint_manager_impl> s_impl;
+	static thread_breakpoints_lookup s_hw_breakpoints;
 	static std::mutex s_mutex;
 
 	static thread_breakpoints& lookup_or_create_thread_breakpoints(thread_handle thread);
@@ -108,21 +108,21 @@ private:
 public:
 
 	// Gets the map containing all of the breakpoints for all threads. Unused entries are null.
-	inline static const thread_breakpoints_lookup& get_breakpoints() { return s_hardware_breakpoints; }
+	inline static const thread_breakpoints_lookup& get_breakpoints() { return s_hw_breakpoints; }
 
 	// Gets the array of breakpoints assigned to the given thread. Unused entries are null.
 	inline static const thread_breakpoints& get_breakpoints(thread_handle thread)
 	{
-		return s_hardware_breakpoints[thread];
+		return s_hw_breakpoints[thread];
 	}
 
     // Sets a hardware breakpoint for the given thread. Only up to 4 hardware breakpoints are supported.
     // Returns nullptr on failure.
-    static std::shared_ptr<hardware_breakpoint> set(const thread_handle thread,
-		const hardware_breakpoint_type type, const hardware_breakpoint_size size, const u64 address,
-		const hardware_breakpoint_handler& handler);
+    static std::shared_ptr<hw_breakpoint> set(const thread_handle thread,
+		const hw_breakpoint_type type, const hw_breakpoint_size size, const u64 address,
+		const hw_breakpoint_handler& handler);
 
     // Removes a hardware breakpoint previously set.
 	// The breakpoint is considered invalid after this function has been called.
-    static bool remove(hardware_breakpoint& breakpoint);
+    static bool remove(hw_breakpoint& breakpoint);
 };

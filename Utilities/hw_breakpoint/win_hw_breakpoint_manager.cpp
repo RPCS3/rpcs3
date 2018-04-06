@@ -3,17 +3,17 @@
 
 #ifdef _WIN32
 
-#include "windows_hardware_breakpoint_manager.h"
+#include "win_hw_breakpoint_manager.h"
 #include <Windows.h>
 
 static DWORD WINAPI thread_proc(LPVOID lpParameter);
 
-std::shared_ptr<hardware_breakpoint> windows_hardware_breakpoint_manager::set(u32 index,
-	thread_handle thread, hardware_breakpoint_type type, hardware_breakpoint_size size,
-	u64 address, const hardware_breakpoint_handler& handler)
+std::shared_ptr<hw_breakpoint> win_hw_breakpoint_manager::set(u32 index,
+	thread_handle thread, hw_breakpoint_type type, hw_breakpoint_size size,
+	u64 address, const hw_breakpoint_handler& handler)
 {
-	auto handle = new hardware_breakpoint(index, thread, type, size, address, handler);
-	auto context = std::make_unique<windows_hardware_breakpoint_context>();
+	auto handle = new hw_breakpoint(index, thread, type, size, address, handler);
+	auto context = std::make_unique<win_hw_breakpoint_context>();
 	context->m_handle = handle;
 	context->m_is_setting = true;
 	context->m_success = false;
@@ -43,11 +43,11 @@ std::shared_ptr<hardware_breakpoint> windows_hardware_breakpoint_manager::set(u3
         return nullptr;
     }
 
-	return std::shared_ptr<hardware_breakpoint>(handle);
+	return std::shared_ptr<hw_breakpoint>(handle);
 };
 
 // Removes a hardware breakpoint previously set.
-bool windows_hardware_breakpoint_manager::remove(hardware_breakpoint& handle)
+bool win_hw_breakpoint_manager::remove(hw_breakpoint& handle)
 {
 	bool should_close_thread = false;
 	if (handle.m_thread == GetCurrentThread())
@@ -57,7 +57,7 @@ bool windows_hardware_breakpoint_manager::remove(hardware_breakpoint& handle)
 		should_close_thread = true;
 	}
 
-	auto context = std::make_unique<windows_hardware_breakpoint_context>();
+	auto context = std::make_unique<win_hw_breakpoint_context>();
 	context->m_handle = &handle;
 	context->m_is_setting = false;
 	context->m_success = false;
@@ -96,7 +96,7 @@ inline static void set_debug_register_value(CONTEXT* context, u32 index, u64 val
 
 static DWORD WINAPI thread_proc(LPVOID lpParameter)
 {
-    auto context = static_cast<windows_hardware_breakpoint_context*>(lpParameter);
+    auto context = static_cast<win_hw_breakpoint_context*>(lpParameter);
 	auto handle = context->m_handle;
 	auto other_thread = handle->get_thread();
 
@@ -113,7 +113,7 @@ static DWORD WINAPI thread_proc(LPVOID lpParameter)
 		set_debug_register_value(&thread_context, handle->get_index(), handle->get_address());
 
 		// Set control flags
-		hardware_breakpoint_manager_impl::set_debug_control_register(&thread_context.Dr7, handle->get_index(),
+		hw_breakpoint_manager_impl::set_debug_control_register(&thread_context.Dr7, handle->get_index(),
 			handle->get_type(), handle->get_size(), true);
     }
     else
@@ -122,8 +122,8 @@ static DWORD WINAPI thread_proc(LPVOID lpParameter)
 		set_debug_register_value(&thread_context, handle->get_index(), 0);
 
 		// Set control flags
-		hardware_breakpoint_manager_impl::set_debug_control_register(&thread_context.Dr7, handle->get_index(),
-			static_cast<hardware_breakpoint_type>(0), static_cast<hardware_breakpoint_size>(0), false);
+		hw_breakpoint_manager_impl::set_debug_control_register(&thread_context.Dr7, handle->get_index(),
+			static_cast<hw_breakpoint_type>(0), static_cast<hw_breakpoint_size>(0), false);
     }
 
 	// Set debug registers

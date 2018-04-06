@@ -3,13 +3,13 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUOpcodes.h"
-#include "Utilities/hardware_breakpoint/hardware_breakpoint_manager.h"
+#include "Utilities/hw_breakpoint/hw_breakpoint_manager.h"
 
 #include "breakpoint_settings.h"
 
 #include <QMap>
 
-// Should remove this and just use hardware_breakpoint since in reality, it seems like the flag combinations are more limited than I thought.
+// Should remove this and just use hw_breakpoint since in reality, it seems like the flag combinations are more limited than I thought.
 // It'll make the code a lot cleaner.
 // I was aiming to support some idiot having a ppu breakpoint and a data breakpoint at the same location.
 // But, let's be real, that really isn't necessary in any universe since, in retrospect, code and data are separated in ps3 elf files  

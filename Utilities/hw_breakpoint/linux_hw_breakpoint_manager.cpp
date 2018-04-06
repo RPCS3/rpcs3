@@ -2,7 +2,7 @@
 #include "stdafx.h"
 
 #ifdef __linux__
-#include "linux_hardware_breakpoint_manager.h"
+#include "linux_hw_breakpoint_manager.h"
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 // based on https://github.com/whh8b/hwbp_lib/blob/master/hwbp_lib.c
-bool linux_hardware_breakpoint_manager::set_debug_register_values(u32 index, pid_t thread, hardware_breakpoint_type type, hardware_breakpoint_size size, u32 address, bool enable)
+bool linux_hw_breakpoint_manager::set_debug_register_values(u32 index, pid_t thread, hw_breakpoint_type type, hw_breakpoint_size size, u32 address, bool enable)
 {
 	s32 child_status = 0;
 
@@ -42,7 +42,7 @@ bool linux_hardware_breakpoint_manager::set_debug_register_values(u32 index, pid
 			_exit(1);
 
 		// Set control flags
-		hardware_breakpoint_manager_impl::set_debug_control_register(reinterpret_cast<u64*>(&control_register), index,
+		hw_breakpoint_manager_impl::set_debug_control_register(reinterpret_cast<u64*>(&control_register), index,
 			type, size, enable);
 
 		// Set control register value
@@ -69,8 +69,8 @@ bool linux_hardware_breakpoint_manager::set_debug_register_values(u32 index, pid
 	return false;
 }
 
-std::shared_ptr<hardware_breakpoint> linux_hardware_breakpoint_manager::set(u32 index, thread_handle thread,
-	hardware_breakpoint_type type, hardware_breakpoint_size size, u64 address, const hardware_breakpoint_handler& handler)
+std::shared_ptr<hw_breakpoint> linux_hw_breakpoint_manager::set(u32 index, thread_handle thread,
+	hw_breakpoint_type type, hw_breakpoint_size size, u64 address, const hw_breakpoint_handler& handler)
 {
 	// todo: doesn't work properly but don't have a linux debugging environment to fix it
 	return nullptr;
@@ -80,16 +80,16 @@ std::shared_ptr<hardware_breakpoint> linux_hardware_breakpoint_manager::set(u32 
 		return nullptr;
 	}
 
-	return std::shared_ptr<hardware_breakpoint>(new hardware_breakpoint(index, thread, type, size, address, handler));
+	return std::shared_ptr<hw_breakpoint>(new hw_breakpoint(index, thread, type, size, address, handler));
 }
 
-bool linux_hardware_breakpoint_manager::remove(hardware_breakpoint& handle)
+bool linux_hw_breakpoint_manager::remove(hw_breakpoint& handle)
 {
 	// todo
 	return false;
 
-	return set_debug_register_values(handle.get_index(), static_cast<pid_t>(handle.get_thread()), static_cast<hardware_breakpoint_type>(0),
-		static_cast<hardware_breakpoint_size>(0), 0, false);
+	return set_debug_register_values(handle.get_index(), static_cast<pid_t>(handle.get_thread()), static_cast<hw_breakpoint_type>(0),
+		static_cast<hw_breakpoint_size>(0), 0, false);
 }
 
 #endif // #ifdef __linux__

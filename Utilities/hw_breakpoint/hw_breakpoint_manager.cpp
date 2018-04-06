@@ -1,37 +1,37 @@
 
 #include "stdafx.h"
-#include "hardware_breakpoint_manager.h"
+#include "hw_breakpoint_manager.h"
 #include "Utilities/Thread.h"
 #include <thread>
 #include <chrono>
 
 #ifdef _WIN32
-#include "windows_hardware_breakpoint_manager.h"
+#include "win_hw_breakpoint_manager.h"
 #elif __linux__ 
-#include "linux_hardware_breakpoint_manager.h"
+#include "linux_hw_breakpoint_manager.h"
 #else
-#include "null_hardware_breakpoint_manager.h"
+#include "null_hw_breakpoint_manager.h"
 #endif
 
 #ifdef _WIN32
-std::unique_ptr<hardware_breakpoint_manager_impl> hardware_breakpoint_manager::s_impl = std::make_unique<windows_hardware_breakpoint_manager>();
+std::unique_ptr<hw_breakpoint_manager_impl> hw_breakpoint_manager::s_impl = std::make_unique<win_hw_breakpoint_manager>();
 #elif __linux__
-std::unique_ptr<hardware_breakpoint_manager_impl> hardware_breakpoint_manager::s_impl = std::make_unique<linux_hardware_breakpoint_manager>();
+std::unique_ptr<hw_breakpoint_manager_impl> hw_breakpoint_manager::s_impl = std::make_unique<linux_hw_breakpoint_manager>();
 #else
-std::unique_ptr<hardware_breakpoint_manager_impl> hardware_breakpoint_manager::s_impl = std::make_unique<null_hardware_breakpoint_manager>();
+std::unique_ptr<hw_breakpoint_manager_impl> hw_breakpoint_manager::s_impl = std::make_unique<null_hw_breakpoint_manager>();
 #endif
 
-thread_breakpoints_lookup hardware_breakpoint_manager::s_hardware_breakpoints{};
-std::mutex hardware_breakpoint_manager::s_mutex{};
+thread_breakpoints_lookup hw_breakpoint_manager::s_hw_breakpoints{};
+std::mutex hw_breakpoint_manager::s_mutex{};
 
-thread_breakpoints& hardware_breakpoint_manager::lookup_or_create_thread_breakpoints(thread_handle thread)
+thread_breakpoints& hw_breakpoint_manager::lookup_or_create_thread_breakpoints(thread_handle thread)
 {
-	auto found = s_hardware_breakpoints.find(thread);
-	if (found == s_hardware_breakpoints.end())
+	auto found = s_hw_breakpoints.find(thread);
+	if (found == s_hw_breakpoints.end())
 	{
 		// Make new entry for thread
-		s_hardware_breakpoints[thread] = thread_breakpoints();
-		return s_hardware_breakpoints[thread];
+		s_hw_breakpoints[thread] = thread_breakpoints();
+		return s_hw_breakpoints[thread];
 	}
 	else
 	{
@@ -39,7 +39,7 @@ thread_breakpoints& hardware_breakpoint_manager::lookup_or_create_thread_breakpo
 	}
 }
 
-u32 hardware_breakpoint_manager::get_next_breakpoint_index(const thread_breakpoints& breakpoints)
+u32 hw_breakpoint_manager::get_next_breakpoint_index(const thread_breakpoints& breakpoints)
 {
 	u32 index = 0;
 	while (true)
@@ -69,8 +69,8 @@ u32 hardware_breakpoint_manager::get_next_breakpoint_index(const thread_breakpoi
 
 extern thread_local bool g_tls_inside_exception_handler;
 
-std::shared_ptr<hardware_breakpoint> hardware_breakpoint_manager::set(thread_handle thread, hardware_breakpoint_type type, 
-    hardware_breakpoint_size size, u64 address, const hardware_breakpoint_handler& handler)
+std::shared_ptr<hw_breakpoint> hw_breakpoint_manager::set(thread_handle thread, hw_breakpoint_type type, 
+    hw_breakpoint_size size, u64 address, const hw_breakpoint_handler& handler)
 {
 	if (g_tls_inside_exception_handler)
 	{
@@ -99,11 +99,11 @@ std::shared_ptr<hardware_breakpoint> hardware_breakpoint_manager::set(thread_han
 	return handle;
 };
 
-bool hardware_breakpoint_manager::remove(hardware_breakpoint& handle)
+bool hw_breakpoint_manager::remove(hw_breakpoint& handle)
 {
 	std::lock_guard<std::mutex> lock(s_mutex);
 
-	auto& breakpoints = s_hardware_breakpoints[handle.get_thread()];
+	auto& breakpoints = s_hw_breakpoints[handle.get_thread()];
 	if (breakpoints.size() > 0)
 	{
 		breakpoints.erase(std::remove_if(breakpoints.begin(), breakpoints.end(), [&handle](auto x)
@@ -121,7 +121,7 @@ bool hardware_breakpoint_manager::remove(hardware_breakpoint& handle)
 		
 		bool* inside_exception_handler = &g_tls_inside_exception_handler;
 
-		thread_ctrl::spawn("hardware_breakpoint_remover", [inside_exception_handler, &handle]
+		thread_ctrl::spawn("hw_breakpoint_remover", [inside_exception_handler, &handle]
 		{
 			while (*inside_exception_handler)
 				std::this_thread::sleep_for(5ms);
