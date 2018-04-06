@@ -313,7 +313,7 @@ std::string SPUThread::dump() const
 	std::string ret = cpu_thread::dump();
 
 	// Print some transaction statistics
-	fmt::append(ret, "\nTX: %u; Fail: %u", tx_success, tx_failure);
+	fmt::append(ret, "\nTX: %u; Fail: %u (0x%x)", tx_success, tx_failure, tx_status);
 	fmt::append(ret, "\nRaddr: 0x%08x; R: 0x%x", raddr, raddr ? +vm::reservation_acquire(raddr, 128) : 0);
 	fmt::append(ret, "\nTag Mask: 0x%08x", ch_tag_mask);
 	fmt::append(ret, "\nMFC Stall: 0x%08x", ch_stall_mask);
@@ -855,7 +855,7 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 	if (s_use_rtm && utils::transaction_enter())
 	{
 		// First transaction attempt
-		if (!vm::g_mutex.is_lockable())
+		if (!vm::g_mutex.is_lockable() || vm::g_mutex.is_reading())
 		{
 			_xabort(0);
 		}
@@ -864,12 +864,11 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 		vm::reservation_update(addr, 128);
 		vm::notify(addr, 128);
 		_xend();
-		tx_success++;
 		return;
 	}
 	else if (s_use_rtm)
 	{
-		vm::reader_lock lock;
+		vm::writer_lock lock(0);
 
 		if (utils::transaction_enter())
 		{
@@ -877,15 +876,18 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 			data = to_write;
 			vm::reservation_update(addr, 128);
 			_xend();
-			tx_success++;
-
-			vm::notify(addr, 128);
-			return;
 		}
 		else
 		{
-			tx_failure++;
+			vm::reservation_update(addr, 128, true);
+			_mm_sfence();
+			data = to_write;
+			_mm_sfence();
+			vm::reservation_update(addr, 128);
 		}
+
+		vm::notify(addr, 128);
+		return;
 	}
 
 	vm::writer_lock lock(0);
@@ -1102,7 +1104,6 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 				if (LIKELY(vm::reservation_acquire(raddr, 128) == rtime))
 				{
 					// Copy to LS
-					tx_success++;
 					_ref<decltype(rdata)>(args.lsa & 0x3ffff) = rdata;
 					ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
 					return true;
@@ -1123,11 +1124,9 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 
 			rdata = data;
 			_xend();
-			tx_success++;
 		}
 		else
 		{
-			tx_failure++;
 			vm::reader_lock lock;
 			rtime = vm::reservation_acquire(raddr, 128);
 			rdata = data;
@@ -1153,7 +1152,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 			if (s_use_rtm && utils::transaction_enter())
 			{
 				// First transaction attempt
-				if (!vm::g_mutex.is_lockable())
+				if (!vm::g_mutex.is_lockable() || vm::g_mutex.is_reading())
 				{
 					_xabort(0);
 				}
@@ -1173,12 +1172,15 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 			else if (s_use_rtm)
 			{
 				// Second transaction attempt
-				vm::reader_lock lock;
+				vm::writer_lock lock(0);
+
+				// Touch memory without modifying the value
+				vm::_ref<atomic_t<u32>>(args.eal) += 0;
 
 				// Touch reservation memory area as well
 				vm::reservation_acquire(raddr, 128) += 0;
 
-				if (utils::transaction_enter())
+				if (utils::transaction_enter(&tx_status))
 				{
 					if (rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
 					{
@@ -1199,6 +1201,12 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 				}
 				else
 				{
+					// Workaround MSVC
+					if (rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
+					{
+						vm::reservation_update(raddr, 128);
+					}
+
 					// Don't fallback to heavyweight lock, just give up
 					tx_failure++;
 				}
