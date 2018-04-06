@@ -576,6 +576,7 @@
     <ClInclude Include="Emu\RSX\rsx_methods.h" />
     <ClInclude Include="Emu\RSX\rsx_utils.h" />
     <ClInclude Include="Emu\System.h" />
+    <ClInclude Include="hw_breakpoint.h" />
     <ClInclude Include="Loader\ELF.h" />
     <ClInclude Include="Loader\PSF.h" />
     <ClInclude Include="Loader\PUP.h" />

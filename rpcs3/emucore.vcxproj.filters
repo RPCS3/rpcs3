@@ -1468,5 +1468,8 @@
     <ClInclude Include="..\Utilities\hw_breakpoint\win_hw_breakpoint_manager.h">
       <Filter>Utilities\hw_breakpoint</Filter>
     </ClInclude>
+    <ClInclude Include="hw_breakpoint.h">
+      <Filter>Utilities\hw_breakpoint</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
