@@ -14,7 +14,7 @@ class hw_breakpoint_manager final
 private:
 	hw_breakpoint_manager() {}
 
-    static std::unique_ptr<hw_breakpoint_manager_impl> s_impl;
+	static std::unique_ptr<hw_breakpoint_manager_impl> s_impl;
 	static thread_breakpoints_lookup s_hw_breakpoints;
 	static std::mutex s_mutex;
 
@@ -32,13 +32,13 @@ public:
 		return s_hw_breakpoints[thread];
 	}
 
-    // Sets a hardware breakpoint for the given thread. Only up to 4 hardware breakpoints are supported.
-    // Returns nullptr on failure.
-    static std::shared_ptr<hw_breakpoint> set(const thread_handle thread,
+	// Sets a hardware breakpoint for the given thread. Only up to 4 hardware breakpoints are supported.
+	// Returns nullptr on failure.
+	static std::shared_ptr<hw_breakpoint> set(const thread_handle thread,
 		const hw_breakpoint_type type, const hw_breakpoint_size size, const u64 address,
 		const hw_breakpoint_handler& handler);
 
-    // Removes a hardware breakpoint previously set.
+	// Removes a hardware breakpoint previously set.
 	// The breakpoint is considered invalid after this function has been called.
-    static bool remove(hw_breakpoint& breakpoint);
+	static bool remove(hw_breakpoint& breakpoint);
 };

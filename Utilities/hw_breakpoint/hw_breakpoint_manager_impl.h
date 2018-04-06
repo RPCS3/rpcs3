@@ -5,13 +5,13 @@
 // Abstract interface for hardware breakpoints
 class hw_breakpoint_manager_impl
 {
-    friend class hw_breakpoint_manager;
+	friend class hw_breakpoint_manager;
 
 protected:
-    virtual std::shared_ptr<hw_breakpoint> set(u32 index, thread_handle thread, hw_breakpoint_type type, 
-        hw_breakpoint_size size, u64 address, const hw_breakpoint_handler& handler) = 0;
+	virtual std::shared_ptr<hw_breakpoint> set(u32 index, thread_handle thread, hw_breakpoint_type type,
+		hw_breakpoint_size size, u64 address, const hw_breakpoint_handler& handler) = 0;
 
-    virtual bool remove(hw_breakpoint& handle) = 0;
+	virtual bool remove(hw_breakpoint& handle) = 0;
 
 public:
 	// Todo: move to general utility?

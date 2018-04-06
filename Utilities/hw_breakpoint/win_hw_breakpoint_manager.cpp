@@ -26,29 +26,29 @@ std::shared_ptr<hw_breakpoint> win_hw_breakpoint_manager::set(u32 index,
 	context->m_success = false;
 
 	bool should_close_thread = false;
-    if (thread == GetCurrentThread())
-    {
-        auto pid = GetCurrentThreadId();
+	if (thread == GetCurrentThread())
+	{
+		auto pid = GetCurrentThreadId();
 		handle->m_thread = OpenThread(THREAD_ALL_ACCESS, 0, pid);
 		should_close_thread = true;
-    }
+	}
 
-    auto handler_thread_handle = CreateThread(0, 0, thread_proc, static_cast<LPVOID>(context.get()), 0, 0);
-    WaitForSingleObject(handler_thread_handle, INFINITE);
-    CloseHandle(handler_thread_handle);
+	auto handler_thread_handle = CreateThread(0, 0, thread_proc, static_cast<LPVOID>(context.get()), 0, 0);
+	WaitForSingleObject(handler_thread_handle, INFINITE);
+	CloseHandle(handler_thread_handle);
 
-    if (should_close_thread)
-    {
-        CloseHandle(handle->m_thread);
-    }
+	if (should_close_thread)
+	{
+		CloseHandle(handle->m_thread);
+	}
 
 	handle->m_thread = thread;
 
-    if (!context->m_success)
-    {
+	if (!context->m_success)
+	{
 		delete handle;
-        return nullptr;
-    }
+		return nullptr;
+	}
 
 	return std::shared_ptr<hw_breakpoint>(handle);
 };
@@ -103,43 +103,43 @@ inline static void set_debug_register_value(CONTEXT* context, u32 index, u64 val
 
 static DWORD WINAPI thread_proc(LPVOID lpParameter)
 {
-    auto context = static_cast<breakpoint_context*>(lpParameter);
+	auto context = static_cast<breakpoint_context*>(lpParameter);
 	auto handle = context->m_handle;
 	auto other_thread = handle->get_thread();
 
-    SuspendThread(other_thread);
+	SuspendThread(other_thread);
 
 	// Get debug registers from other thread
-    CONTEXT thread_context = {0};
-    thread_context.ContextFlags = CONTEXT_DEBUG_REGISTERS;
-    GetThreadContext(other_thread, &thread_context);
+	CONTEXT thread_context = {0};
+	thread_context.ContextFlags = CONTEXT_DEBUG_REGISTERS;
+	GetThreadContext(other_thread, &thread_context);
 
-    if (context->m_is_setting)
-    {
+	if (context->m_is_setting)
+	{
 		// Set breakpoint address
 		set_debug_register_value(&thread_context, handle->get_index(), handle->get_address());
 
 		// Set control flags
 		hw_breakpoint_manager_impl::set_debug_control_register(&thread_context.Dr7, handle->get_index(),
 			handle->get_type(), handle->get_size(), true);
-    }
-    else
-    {
+	}
+	else
+	{
 		// Clear breakpoint address
 		set_debug_register_value(&thread_context, handle->get_index(), 0);
 
 		// Set control flags
 		hw_breakpoint_manager_impl::set_debug_control_register(&thread_context.Dr7, handle->get_index(),
 			static_cast<hw_breakpoint_type>(0), static_cast<hw_breakpoint_size>(0), false);
-    }
+	}
 
 	// Set debug registers
-    thread_context.ContextFlags = CONTEXT_DEBUG_REGISTERS;
-    SetThreadContext(other_thread, &thread_context);
+	thread_context.ContextFlags = CONTEXT_DEBUG_REGISTERS;
+	SetThreadContext(other_thread, &thread_context);
 
-    context->m_success = true;
-    ResumeThread(other_thread);
-    return 0;
+	context->m_success = true;
+	ResumeThread(other_thread);
+	return 0;
 }
 
 #endif // #ifdef _WIN32

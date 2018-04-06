@@ -69,8 +69,8 @@ u32 hw_breakpoint_manager::get_next_breakpoint_index(const thread_breakpoints& b
 
 extern thread_local bool g_tls_inside_exception_handler;
 
-std::shared_ptr<hw_breakpoint> hw_breakpoint_manager::set(thread_handle thread, hw_breakpoint_type type, 
-    hw_breakpoint_size size, u64 address, const hw_breakpoint_handler& handler)
+std::shared_ptr<hw_breakpoint> hw_breakpoint_manager::set(thread_handle thread, hw_breakpoint_type type,
+	hw_breakpoint_size size, u64 address, const hw_breakpoint_handler& handler)
 {
 	if (g_tls_inside_exception_handler)
 	{
@@ -118,7 +118,7 @@ bool hw_breakpoint_manager::remove(hw_breakpoint& handle)
 		// We're inside an exception handler, so we can't change the debug registers
 		// so just spawn a thread that disables the breakpoint when we've left the exception
 		// handler
-		
+
 		bool* inside_exception_handler = &g_tls_inside_exception_handler;
 
 		thread_ctrl::spawn("hw_breakpoint_remover", [inside_exception_handler, &handle]
