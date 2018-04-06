@@ -70,7 +70,7 @@ u32 hw_breakpoint_manager::get_next_breakpoint_index(const thread_breakpoints& b
 extern thread_local bool g_tls_inside_exception_handler;
 
 std::shared_ptr<hw_breakpoint> hw_breakpoint_manager::set(thread_handle thread, hw_breakpoint_type type,
-	hw_breakpoint_size size, u64 address, const hw_breakpoint_handler& handler)
+	hw_breakpoint_size size, u64 address, const void* user_data, const hw_breakpoint_handler& handler)
 {
 	if (g_tls_inside_exception_handler)
 	{
@@ -90,7 +90,7 @@ std::shared_ptr<hw_breakpoint> hw_breakpoint_manager::set(thread_handle thread, 
 	// Find next available index
 	u32 index = get_next_breakpoint_index(breakpoints);
 
-	auto handle = s_impl->set(index, thread, type, size, address, handler);
+	auto handle = s_impl->set(index, thread, type, size, address, handler, user_data);
 	if (handle != nullptr)
 	{
 		breakpoints.push_back(handle);

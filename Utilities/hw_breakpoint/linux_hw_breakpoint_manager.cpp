@@ -66,14 +66,14 @@ bool linux_hw_breakpoint_manager::set_debug_register_values(u32 index, pid_t thr
 }
 
 std::shared_ptr<hw_breakpoint> linux_hw_breakpoint_manager::set(u32 index, thread_handle thread,
-	hw_breakpoint_type type, hw_breakpoint_size size, u64 address, const hw_breakpoint_handler& handler)
+	hw_breakpoint_type type, hw_breakpoint_size size, u64 address, const hw_breakpoint_handler& handler, const void* user_data)
 {
 	if (!set_debug_register_values(index, static_cast<pid_t>(thread), type, size, address, true))
 	{
 		return nullptr;
 	}
 
-	return std::shared_ptr<hw_breakpoint>(new hw_breakpoint(index, thread, type, size, address, handler));
+	return std::shared_ptr<hw_breakpoint>(new hw_breakpoint(index, thread, type, size, address, handler, user_data));
 }
 
 bool linux_hw_breakpoint_manager::remove(hw_breakpoint& handle)

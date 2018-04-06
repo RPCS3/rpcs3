@@ -36,7 +36,7 @@ public:
 	// Returns nullptr on failure.
 	static std::shared_ptr<hw_breakpoint> set(const thread_handle thread,
 		const hw_breakpoint_type type, const hw_breakpoint_size size, const u64 address,
-		const hw_breakpoint_handler& handler);
+		const void* user_data, const hw_breakpoint_handler& handler);
 
 	// Removes a hardware breakpoint previously set.
 	// The breakpoint is considered invalid after this function has been called.

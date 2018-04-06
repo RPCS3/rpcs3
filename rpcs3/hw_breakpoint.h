@@ -42,8 +42,7 @@ using thread_handle = void*;
 using thread_handle = int;
 #endif
 
-class hw_breakpoint;
-using hw_breakpoint_handler = std::function<void(const cpu_thread* thread, hw_breakpoint& breakpoint, void* user_data)>;
+using hw_breakpoint_handler = std::function<void(const cpu_thread* thread, class hw_breakpoint& breakpoint)>;
 
 // Represents a hardware breakpoint, read only.
 class hw_breakpoint
@@ -58,11 +57,12 @@ private:
 	hw_breakpoint_size m_size;
 	u64 m_address;
 	const hw_breakpoint_handler m_handler;
+	const void* m_user_data;
 
 protected:
 	hw_breakpoint(const u32 index, const thread_handle thread, const hw_breakpoint_type type,
-		const hw_breakpoint_size size, const u64 address, const hw_breakpoint_handler& handler)
-		: m_index(index), m_thread(thread), m_type(type), m_size(size), m_address(address), m_handler(handler)
+		const hw_breakpoint_size size, const u64 address, const hw_breakpoint_handler& handler, const void* user_data = nullptr)
+		: m_index(index), m_thread(thread), m_type(type), m_size(size), m_address(address), m_handler(handler), m_user_data(user_data)
 	{
 	}
 
@@ -84,4 +84,7 @@ public:
 
 	// Gets the handler of the breakpoint.
 	inline const hw_breakpoint_handler& get_handler() const { return m_handler; }
+
+	// Gets the user data associated with the breakpoint.
+	inline const void* get_user_data() const { return m_user_data; }
 };
