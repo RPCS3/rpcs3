@@ -824,7 +824,7 @@ namespace gl
 			}
 		}
 
-		u32 generate_cubemap_from_images(void*&, u32 gcm_format, u16 size, const std::array<u32, 6>& sources, const texture_channel_remap_t& /*remap_vector*/) override
+		u32 generate_cubemap_from_images(void*&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
 		{
 			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
 			GLuint dst_id = 0;
@@ -841,12 +841,49 @@ namespace gl
 			//Empty GL_ERROR
 			glGetError();
 
-			for (int i = 0; i < 6; ++i)
+			for (const auto &slice : sources)
 			{
-				if (sources[i] != 0)
+				if (slice.src)
 				{
-					glCopyImageSubData(sources[i], GL_TEXTURE_2D, 0, 0, 0, 0,
-						dst_id, GL_TEXTURE_CUBE_MAP, 0, 0, 0, i, size, size, 1);
+					glCopyImageSubData(slice.src, GL_TEXTURE_2D, 0, slice.src_x, slice.src_y, 0,
+						dst_id, GL_TEXTURE_CUBE_MAP, 0, slice.dst_x, slice.dst_y, slice.dst_z, slice.w, slice.h, 1);
+				}
+			}
+
+			m_temporary_surfaces.push_back(dst_id);
+
+			if (GLenum err = glGetError())
+			{
+				LOG_WARNING(RSX, "Failed to copy image subresource with GL error 0x%X", err);
+				return 0;
+			}
+
+			return dst_id;
+		}
+
+		u32 generate_3d_from_2d_images(void*&, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
+		{
+			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
+			GLuint dst_id = 0;
+
+			glGenTextures(1, &dst_id);
+			glBindTexture(GL_TEXTURE_3D, dst_id);
+			glTexStorage3D(GL_TEXTURE_3D, 1, ifmt, width, height, depth);
+
+			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, 0);
+
+			//Empty GL_ERROR
+			glGetError();
+
+			for (const auto &slice : sources)
+			{
+				if (slice.src)
+				{
+					glCopyImageSubData(slice.src, GL_TEXTURE_2D, 0, slice.src_x, slice.src_y, 0,
+						dst_id, GL_TEXTURE_3D, 0, slice.dst_x, slice.dst_y, slice.dst_z, slice.w, slice.h, 1);
 				}
 			}
 

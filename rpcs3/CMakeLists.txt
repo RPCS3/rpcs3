@@ -98,7 +98,7 @@ if(USE_NATIVE_INSTRUCTIONS)
 endif()
 
 if(NOT MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-invalid-pch -Wno-unused-command-line-argument -fexceptions")
 	# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
 	if(NOT APPLE)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--exclude-libs,ALL")

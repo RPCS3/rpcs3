@@ -633,71 +633,178 @@ namespace vk
 		}
 
 		vk::image_view* generate_cubemap_from_images(vk::command_buffer& cmd, u32 gcm_format, u16 size,
-				const std::array<vk::image*, 6>& sources, const texture_channel_remap_t& /*remap_vector*/) override
+				const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& /*remap_vector*/) override
 		{
 			std::unique_ptr<vk::image> image;
 			std::unique_ptr<vk::image_view> view;
 
+			VkImageAspectFlags dst_aspect;
+			VkFormat dst_format = vk::get_compatible_sampler_format(gcm_format);
+
 			image.reset(new vk::image(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
-				vk::get_compatible_sampler_format(gcm_format),
+				dst_format,
 				size, size, 1, 1, 6, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT));
 
-			VkImageSubresourceRange subresource_range = {};
-			VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-
-			for (u32 n = 0; n < 6; ++n)
+			switch (gcm_format)
 			{
-				if (!view)
+			case CELL_GCM_TEXTURE_DEPTH16:
+				dst_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+				break;
+			case CELL_GCM_TEXTURE_DEPTH24_D8:
+				dst_aspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+				break;
+			default:
+				dst_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+				break;
+			}
+
+			VkImageSubresourceRange view_range = { dst_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 6 };
+			view.reset(new vk::image_view(*vk::get_current_renderer(), image->value, VK_IMAGE_VIEW_TYPE_CUBE, image->info.format, image->native_component_map, view_range));
+
+			VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 6 };
+			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_range);
+
+			if (!(dst_aspect & VK_IMAGE_ASPECT_DEPTH_BIT))
+			{
+				VkClearColorValue clear = {};
+				vkCmdClearColorImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			}
+			else
+			{
+				VkClearDepthStencilValue clear = { 1.f, 0 };
+				vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			}
+
+			for (const auto &section : sections_to_copy)
+			{
+				if (section.src)
 				{
-					switch (sources[0]->info.format)
+					VkImageAspectFlags src_aspect;
+					switch (section.src->info.format)
 					{
 					case VK_FORMAT_D16_UNORM:
-						aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+						src_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 						break;
 					case VK_FORMAT_D24_UNORM_S8_UINT:
 					case VK_FORMAT_D32_SFLOAT_S8_UINT:
-						aspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+						src_aspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+						break;
+					default:
+						src_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 						break;
 					}
 
-					VkImageSubresourceRange view_range = { aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 6 };
-					view.reset(new vk::image_view(*vk::get_current_renderer(), image->value, VK_IMAGE_VIEW_TYPE_CUBE, image->info.format, image->native_component_map, view_range));
-					subresource_range = view_range;
-					vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-					subresource_range.layerCount = 1;
-				}
-
-				if (sources[n])
-				{
-					VkImageLayout old_src_layout = sources[n]->current_layout;
-					vk::change_image_layout(cmd, sources[n], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+					VkImageSubresourceRange src_range = { src_aspect, 0, 1, 0, 1 };
+					VkImageLayout old_src_layout = section.src->current_layout;
+					vk::change_image_layout(cmd, section.src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src_range);
 
 					VkImageCopy copy_rgn;
-					copy_rgn.srcOffset = { 0, 0, 0 };
-					copy_rgn.dstOffset = { 0, 0, 0 };
-					copy_rgn.dstSubresource = { aspect, 0, n, 1 };
-					copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
-					copy_rgn.extent = { size, size, 1 };
+					copy_rgn.srcOffset = { section.src_x, section.src_y, 0 };
+					copy_rgn.dstOffset = { section.dst_x, section.dst_y, 0 };
+					copy_rgn.dstSubresource = { dst_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, section.dst_z, 1 };
+					copy_rgn.srcSubresource = { src_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1 };
+					copy_rgn.extent = { section.w, section.h, 1 };
 
-					vkCmdCopyImage(cmd, sources[n]->value, sources[n]->current_layout, image->value, image->current_layout, 1, &copy_rgn);
-					vk::change_image_layout(cmd, sources[n], old_src_layout, subresource_range);
-				}
-				else
-				{
-					//Clear to black
-					VkClearColorValue clear_color{};
-					auto range = subresource_range;
-					range.baseArrayLayer = n;
-					vkCmdClearColorImage(cmd, image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+					vkCmdCopyImage(cmd, section.src->value, section.src->current_layout, image->value, image->current_layout, 1, &copy_rgn);
+					vk::change_image_layout(cmd, section.src, old_src_layout, src_range);
 				}
 			}
 
-			subresource_range.layerCount = 6;
-			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
+			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dst_range);
 
 			const u32 resource_memory = size * size * 6 * 4; //Rough approximate
+			m_discardable_storage.push_back({ image, view });
+			m_discardable_storage.back().block_size = resource_memory;
+			m_discarded_memory_size += resource_memory;
+
+			return m_discardable_storage.back().view.get();
+		}
+
+		vk::image_view* generate_3d_from_2d_images(vk::command_buffer& cmd, u32 gcm_format, u16 width, u16 height, u16 depth,
+			const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& /*remap_vector*/) override
+		{
+			std::unique_ptr<vk::image> image;
+			std::unique_ptr<vk::image_view> view;
+
+			VkImageAspectFlags dst_aspect;
+			VkFormat dst_format = vk::get_compatible_sampler_format(gcm_format);
+
+			image.reset(new vk::image(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				VK_IMAGE_TYPE_3D,
+				vk::get_compatible_sampler_format(gcm_format),
+				width, height, depth, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0));
+
+			switch (gcm_format)
+			{
+			case CELL_GCM_TEXTURE_DEPTH16:
+				dst_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+				break;
+			case CELL_GCM_TEXTURE_DEPTH24_D8:
+				dst_aspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+				break;
+			default:
+				dst_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+				break;
+			}
+
+			VkImageSubresourceRange view_range = { dst_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 1 };
+			view.reset(new vk::image_view(*vk::get_current_renderer(), image->value, VK_IMAGE_VIEW_TYPE_3D, image->info.format, image->native_component_map, view_range));
+
+			VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 1 };
+			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_range);
+
+			if (!(dst_aspect & VK_IMAGE_ASPECT_DEPTH_BIT))
+			{
+				VkClearColorValue clear = {};
+				vkCmdClearColorImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			}
+			else
+			{
+				VkClearDepthStencilValue clear = { 1.f, 0 };
+				vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			}
+
+			for (const auto &section : sections_to_copy)
+			{
+				if (section.src)
+				{
+					VkImageAspectFlags src_aspect;
+					switch (section.src->info.format)
+					{
+					case VK_FORMAT_D16_UNORM:
+						src_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+						break;
+					case VK_FORMAT_D24_UNORM_S8_UINT:
+					case VK_FORMAT_D32_SFLOAT_S8_UINT:
+						src_aspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+						break;
+					default:
+						src_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+						break;
+					}
+
+					VkImageSubresourceRange src_range = { src_aspect, 0, 1, 0, 1 };
+					VkImageLayout old_src_layout = section.src->current_layout;
+					vk::change_image_layout(cmd, section.src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src_range);
+
+					VkImageCopy copy_rgn;
+					copy_rgn.srcOffset = { section.src_x, section.src_y, 0 };
+					copy_rgn.dstOffset = { section.dst_x, section.dst_y, section.dst_z };
+					copy_rgn.dstSubresource = { dst_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1 };
+					copy_rgn.srcSubresource = { src_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1 };
+					copy_rgn.extent = { section.w, section.h, 1 };
+
+					vkCmdCopyImage(cmd, section.src->value, section.src->current_layout, image->value, image->current_layout, 1, &copy_rgn);
+					vk::change_image_layout(cmd, section.src, old_src_layout, src_range);
+				}
+			}
+
+			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dst_range);
+
+			const u32 resource_memory = width * height * depth * 4; //Rough approximate
 			m_discardable_storage.push_back({ image, view });
 			m_discardable_storage.back().block_size = resource_memory;
 			m_discarded_memory_size += resource_memory;
@@ -725,7 +832,7 @@ namespace vk
 				break;
 			}
 
-			VkImageSubresourceRange subresource_range = { aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 1 };
+			VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
 			vk::change_image_layout(cmd, dst, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
 
 			for (const auto &region : sections_to_copy)
@@ -736,8 +843,8 @@ namespace vk
 				VkImageCopy copy_rgn;
 				copy_rgn.srcOffset = { region.src_x, region.src_y, 0 };
 				copy_rgn.dstOffset = { region.dst_x, region.dst_y, 0 };
-				copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
-				copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
+				copy_rgn.dstSubresource = { aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1 };
+				copy_rgn.srcSubresource = { aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1 };
 				copy_rgn.extent = { region.w, region.h, 1 };
 
 				vkCmdCopyImage(cmd, region.src->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,

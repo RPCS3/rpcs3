@@ -469,12 +469,12 @@ std::string ppu_thread::dump() const
 	u32 stack_min = stack_ptr & ~0xfff;
 	u32 stack_max = stack_min + 4096;
 
-	while (stack_min && vm::check_addr(stack_min - 4096, 4096, vm::page_writable))
+	while (stack_min && vm::check_addr(stack_min - 4096, 4096, vm::page_allocated | vm::page_writable))
 	{
 		stack_min -= 4096;
 	}
 
-	while (stack_max + 4096 && vm::check_addr(stack_max, 4096, vm::page_writable))
+	while (stack_max + 4096 && vm::check_addr(stack_max, 4096, vm::page_allocated | vm::page_writable))
 	{
 		stack_max += 4096;
 	}
@@ -566,6 +566,22 @@ void ppu_thread::cpu_task()
 		}
 		}
 	}
+}
+
+void ppu_thread::cpu_sleep()
+{
+	vm::temporary_unlock(*this);
+	lv2_obj::awake(*this);
+}
+
+void ppu_thread::cpu_mem()
+{
+	vm::passive_lock(*this);
+}
+
+void ppu_thread::cpu_unmem()
+{
+	state.test_and_set(cpu_flag::memory);
 }
 
 void ppu_thread::exec_task()
@@ -928,7 +944,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 	if (s_use_rtm && utils::transaction_enter())
 	{
-		if (!vm::reader_lock{vm::try_to_lock})
+		if (!vm::g_mutex.is_lockable())
 		{
 			_xabort(0);
 		}
@@ -972,7 +988,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	if (s_use_rtm && utils::transaction_enter())
 	{
-		if (!vm::reader_lock{vm::try_to_lock})
+		if (!vm::g_mutex.is_lockable())
 		{
 			_xabort(0);
 		}

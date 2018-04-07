@@ -66,25 +66,56 @@ namespace vm
 		}
 	}
 
-	void passive_lock(cpu_thread& cpu)
+	bool passive_lock(cpu_thread& cpu, bool wait)
 	{
-		if (g_tls_locked && *g_tls_locked == &cpu)
+		if (UNLIKELY(g_tls_locked && *g_tls_locked == &cpu))
 		{
-			return;
+			return true;
 		}
 
-		::reader_lock lock(g_mutex);
+		if (LIKELY(g_mutex.is_lockable()))
+		{
+			// Optimistic path (hope that mutex is not exclusively locked)
+			_register_lock(&cpu);
 
-		_register_lock(&cpu);
+			if (UNLIKELY(!g_mutex.is_lockable()))
+			{
+				passive_unlock(cpu);
+
+				if (!wait)
+				{
+					return false;
+				}
+
+				::reader_lock lock(g_mutex);
+				_register_lock(&cpu);
+			}
+		}
+		else
+		{
+			if (!wait)
+			{
+				return false;
+			}
+
+			::reader_lock lock(g_mutex);
+			_register_lock(&cpu);
+		}
+
+		return true;
 	}
 
 	void passive_unlock(cpu_thread& cpu)
 	{
-		if (g_tls_locked)
+		if (auto& ptr = g_tls_locked)
 		{
-			g_tls_locked->compare_and_swap_test(&cpu, nullptr);
-			::reader_lock lock(g_mutex);
-			g_tls_locked = nullptr;
+			*ptr = nullptr;
+			ptr = nullptr;
+
+			if (test(cpu.state, cpu_flag::memory))
+			{
+				cpu.state -= cpu_flag::memory;
+			}
 		}
 	}
 
@@ -109,7 +140,7 @@ namespace vm
 	{
 		if (g_tls_locked && g_tls_locked->compare_and_swap_test(&cpu, nullptr))
 		{
-			cpu.state.test_and_set(cpu_flag::memory);
+			cpu.cpu_unmem();
 		}
 	}
 
@@ -138,11 +169,6 @@ namespace vm
 			_register_lock(cpu);
 			cpu->state -= cpu_flag::memory;
 		}
-	}
-
-	reader_lock::reader_lock(const try_to_lock_t&)
-		: locked(g_mutex.try_lock_shared())
-	{
 	}
 
 	reader_lock::~reader_lock()
@@ -196,11 +222,6 @@ namespace vm
 		}
 	}
 
-	writer_lock::writer_lock(const try_to_lock_t&)
-		: locked(g_mutex.try_lock())
-	{
-	}
-
 	writer_lock::~writer_lock()
 	{
 		if (locked)
@@ -250,16 +271,16 @@ namespace vm
 		return g_pages[addr >> 12][addr].load(std::memory_order_acquire);
 	}
 
-	void reservation_update(u32 addr, u32 _size)
+	void reservation_update(u32 addr, u32 _size, bool lsb)
 	{
 		// Update reservation info with new timestamp (unsafe, assume allocated)
-		(*g_pages[addr >> 12].reservations)[(addr & 0xfff) >> 7].store(__rdtsc(), std::memory_order_release);
+		(*g_pages[addr >> 12].reservations)[(addr & 0xfff) >> 7].store((__rdtsc() & -2) | lsb, std::memory_order_release);
 	}
 
 	void waiter::init()
 	{
 		// Register waiter
-		writer_lock lock(0);
+		vm::writer_lock lock(0);
 
 		g_waiters.emplace_back(this);
 	}
@@ -292,7 +313,7 @@ namespace vm
 	waiter::~waiter()
 	{
 		// Unregister waiter
-		writer_lock lock(0);
+		vm::writer_lock lock(0);
 
 		// Find waiter
 		const auto found = std::find(g_waiters.cbegin(), g_waiters.cend(), this);
@@ -360,7 +381,7 @@ namespace vm
 
 	bool page_protect(u32 addr, u32 size, u8 flags_test, u8 flags_set, u8 flags_clear)
 	{
-		writer_lock lock;
+		vm::writer_lock lock(0);
 
 		if (!size || (size | addr) % 4096)
 		{
@@ -546,7 +567,7 @@ namespace vm
 
 	block_t::~block_t()
 	{
-		writer_lock lock;
+		vm::writer_lock lock(0);
 
 		// Deallocate all memory
 		for (auto& entry : m_map)
@@ -557,7 +578,7 @@ namespace vm
 
 	u32 block_t::alloc(const u32 orig_size, u32 align, const uchar* data, u32 sup)
 	{
-		writer_lock lock;
+		vm::writer_lock lock(0);
 
 		// Align to minimal page size
 		const u32 size = ::align(orig_size, 4096);
@@ -604,7 +625,7 @@ namespace vm
 
 	u32 block_t::falloc(u32 addr, const u32 orig_size, const uchar* data, u32 sup)
 	{
-		writer_lock lock;
+		vm::writer_lock lock(0);
 
 		// align to minimal page size
 		const u32 size = ::align(orig_size, 4096);
@@ -641,7 +662,7 @@ namespace vm
 
 	u32 block_t::dealloc(u32 addr, uchar* data_out, u32* sup_out)
 	{
-		writer_lock lock;
+		vm::writer_lock lock(0);
 
 		const auto found = m_map.find(addr);
 
@@ -690,14 +711,14 @@ namespace vm
 
 	u32 block_t::used()
 	{
-		writer_lock lock(0);
+		vm::writer_lock lock(0);
 
 		return imp_used(lock);
 	}
 
 	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
 	{
-		writer_lock lock(0);
+		vm::writer_lock lock(0);
 
 		if (!size || (size | addr) % 4096)
 		{
@@ -734,7 +755,7 @@ namespace vm
 
 	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty)
 	{
-		writer_lock lock(0);
+		vm::writer_lock lock(0);
 
 		for (auto it = g_locations.begin(); it != g_locations.end(); it++)
 		{
@@ -756,7 +777,7 @@ namespace vm
 
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr)
 	{
-		reader_lock lock;
+		vm::reader_lock lock;
 
 		if (location != any)
 		{

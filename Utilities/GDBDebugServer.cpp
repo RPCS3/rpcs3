@@ -540,7 +540,7 @@ bool GDBDebugServer::cmd_read_memory(gdb_cmd & cmd)
 	std::string result;
 	result.reserve(len * 2);
 	for (u32 i = 0; i < len; ++i) {
-		if (vm::check_addr(addr, 1, vm::page_info_t::page_readable)) {
+		if (vm::check_addr(addr, 1, vm::page_allocated | vm::page_readable)) {
 			result += to_hexbyte(vm::read8(addr + i));
 		} else {
 			break;
@@ -566,7 +566,7 @@ bool GDBDebugServer::cmd_write_memory(gdb_cmd & cmd)
 	u32 len = hex_to_u32(cmd.data.substr(s + 1, s2 - s - 1));
 	const char* data_ptr = (cmd.data.c_str()) + s2 + 1;
 	for (u32 i = 0; i < len; ++i) {
-		if (vm::check_addr(addr + i, 1, vm::page_info_t::page_writable)) {
+		if (vm::check_addr(addr + i, 1, vm::page_allocated | vm::page_writable)) {
 			u8 val;
 			int res = sscanf_s(data_ptr, "%02hhX", &val);
 			if (!res) {

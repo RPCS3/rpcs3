@@ -96,10 +96,32 @@ namespace rsx
 		return static_cast<u32>((1ULL << 32) >> ::cntlz32(x - 1, true));
 	}
 
+	// Returns interleaved bits of X|Y|Z used as Z-order curve indices
+	static inline u32 calculate_z_index(u32 x, u32 y, u32 z)
+	{
+		//Result = X' | Y' | Z' which are x,y,z bits interleaved
+		u32 shift_size = 0;
+		u32 result = 0;
+
+		while (x | y | z)
+		{
+			result |= (x & 0x1) << shift_size++;
+			result |= (y & 0x1) << shift_size++;
+			result |= (z & 0x1) << shift_size++;
+
+			x >>= 1;
+			y >>= 1;
+			z >>= 1;
+		}
+
+		return result;
+	}
+
 	/*   Note: What the ps3 calls swizzling in this case is actually z-ordering / morton ordering of pixels
 	*       - Input can be swizzled or linear, bool flag handles conversion to and from
 	*       - It will handle any width and height that are a power of 2, square or non square
-	*	 Restriction: It has mixed results if the height or width is not a power of 2
+	*    Restriction: It has mixed results if the height or width is not a power of 2
+	*    Restriction: Only works with 2D surfaces
 	*/
 	template<typename T>
 	void convert_linear_swizzle(void* input_pixels, void* output_pixels, u16 width, u16 height, bool input_is_swizzled)
@@ -167,6 +189,36 @@ namespace rsx
 				if (offs_y == 0)
 				{
 					offs_x0 += y_incr;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Write swizzled data to linear memory with support for 3 dimensions
+	 * Z ordering is done in all 3 planes independently with a unit being a 2x2 block per-plane
+	 * A unit in 3d textures is a group of 2x2x2 texels advancing towards depth in units of 2x2x1 blocks
+	 * i.e 32 texels per "unit"
+	 */
+	template <typename T>
+	void convert_linear_swizzle_3d(void *input_pixels, void *output_pixels, u16 width, u16 height, u16 depth)
+	{
+		if (depth == 1)
+		{
+			convert_linear_swizzle<T>(input_pixels, output_pixels, width, height, true);
+			return;
+		}
+
+		T *src = static_cast<T*>(input_pixels);
+		T *dst = static_cast<T*>(output_pixels);
+
+		for (u32 z = 0; z < depth; ++z)
+		{
+			for (u32 y = 0; y < height; ++y)
+			{
+				for (u32 x = 0; x < width; ++x)
+				{
+					*dst++ = src[calculate_z_index(x, y, z)];
 				}
 			}
 		}

@@ -126,7 +126,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 						listGet->dirListNum++; // number of directories in list
 
 						// PSF parameters
-						const auto& psf = psf::load_object(fs::file(base_dir + entry.name + "/PARAM.SFO"));
+						const psf::registry psf = psf::load_object(fs::file(base_dir + entry.name + "/PARAM.SFO"));
 
 						if (psf.empty())
 						{
@@ -150,14 +150,8 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 						save_entry2.atime = entry.atime;
 						save_entry2.mtime = entry.mtime;
 						save_entry2.ctime = entry.ctime;
-						if (fs::is_file(base_dir + entry.name + "/ICON0.PNG"))
-						{
-							fs::file icon = fs::file(base_dir + entry.name + "/ICON0.PNG");
-							u64 iconSize = icon.size();
-							std::vector<uchar> iconData;
-							icon.read(iconData, iconSize);
-							save_entry2.iconBuf = iconData;
-						}
+						if (fs::file icon{base_dir + entry.name + "/ICON0.PNG"})
+							save_entry2.iconBuf = icon.to_vector<uchar>();
 						save_entry2.isNew = false;
 						save_entries.emplace_back(save_entry2);
 					}
@@ -477,7 +471,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	std::string dir_path = base_dir + save_entry.dirName + "/";
 	std::string sfo_path = dir_path + "PARAM.SFO";
 
-	auto&& psf = psf::load_object(fs::file(sfo_path));
+	psf::registry psf = psf::load_object(fs::file(sfo_path));
 
 	// Get save stats
 	{
