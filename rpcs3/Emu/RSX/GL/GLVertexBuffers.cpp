@@ -241,7 +241,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 				(m_attrib_ring_buffer->size() - upload_info.persistent_mapping_offset) : m_max_texbuffer_size;
 
 			m_persistent_stream_view.update(m_attrib_ring_buffer.get(), upload_info.persistent_mapping_offset, (u32)view_size);
-			m_gl_persistent_stream_buffer.copy_from(m_persistent_stream_view);
+			m_gl_persistent_stream_buffer->copy_from(m_persistent_stream_view);
 			upload_info.persistent_mapping_offset = 0;
 		}
 	}
@@ -258,7 +258,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 				(m_attrib_ring_buffer->size() - upload_info.volatile_mapping_offset) : m_max_texbuffer_size;
 
 			m_volatile_stream_view.update(m_attrib_ring_buffer.get(), upload_info.volatile_mapping_offset, (u32)view_size);
-			m_gl_volatile_stream_buffer.copy_from(m_volatile_stream_view);
+			m_gl_volatile_stream_buffer->copy_from(m_volatile_stream_view);
 			upload_info.volatile_mapping_offset = 0;
 		}
 	}

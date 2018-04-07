@@ -336,7 +336,7 @@ namespace gl
 		fmt::throw_exception("Unknown format 0x%x" HERE, texture_format);
 	}
 
-	GLuint create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps,
+	gl::texture* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps,
 			rsx::texture_dimension_extended type, rsx::texture_colorspace colorspace)
 	{
 		if (is_compressed_format(gcm_format))
@@ -347,43 +347,29 @@ namespace gl
 			height = align(height, 4);
 		}
 
-		GLuint id = 0;
 		GLenum target;
 		GLenum internal_format = get_sized_internal_format(gcm_format);
 
 		if (colorspace != rsx::texture_colorspace::rgb_linear)
 			internal_format = get_srgb_format(internal_format);
 
-		glGenTextures(1, &id);
-		
 		switch (type)
 		{
 		case rsx::texture_dimension_extended::texture_dimension_1d:
 			target = GL_TEXTURE_1D;
-			glBindTexture(GL_TEXTURE_1D, id);
-			glTexStorage1D(GL_TEXTURE_1D, mipmaps, internal_format, width);
 			break;
 		case rsx::texture_dimension_extended::texture_dimension_2d:
 			target = GL_TEXTURE_2D;
-			glBindTexture(GL_TEXTURE_2D, id);
-			glTexStorage2D(GL_TEXTURE_2D, mipmaps, internal_format, width, height);
 			break;
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 			target = GL_TEXTURE_3D;
-			glBindTexture(GL_TEXTURE_3D, id);
-			glTexStorage3D(GL_TEXTURE_3D, mipmaps, internal_format, width, height, depth);
 			break;
 		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			target = GL_TEXTURE_CUBE_MAP;
-			glBindTexture(GL_TEXTURE_CUBE_MAP, id);
-			glTexStorage2D(GL_TEXTURE_CUBE_MAP, mipmaps, internal_format, width, height);
 			break;
 		}
 
-		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		return id;
+		return new gl::texture(target, width, height, depth, mipmaps, internal_format);
 	}
 
 	void fill_texture(rsx::texture_dimension_extended dim, u16 mipmap_count, int format, u16 width, u16 height, u16 depth,
@@ -494,7 +480,7 @@ namespace gl
 		}
 	}
 
-	void apply_swizzle_remap(GLenum target, const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap)
+	std::array<GLenum, 4> apply_swizzle_remap(const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap)
 	{
 		//Remapping tables; format is A-R-G-B
 		//Remap input table. Contains channel index to read color from
@@ -503,7 +489,7 @@ namespace gl
 		//Remap control table. Controls whether the remap value is used, or force either 0 or 1
 		const auto remap_lookup = decoded_remap.second;
 
-		GLenum remap_values[4];
+		std::array<GLenum, 4> remap_values;
 
 		for (u8 channel = 0; channel < 4; ++channel)
 		{
@@ -523,10 +509,7 @@ namespace gl
 			}
 		}
 
-		glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, remap_values[0]);
-		glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, remap_values[1]);
-		glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, remap_values[2]);
-		glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, remap_values[3]);
+		return remap_values;
 	}
 
 	void upload_texture(GLuint id, u32 texaddr, u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
@@ -538,10 +521,7 @@ namespace gl
 		size_t texture_data_sz = get_placed_texture_storage_size(width, height, depth, gcm_format, mipmaps, is_cubemap, 256, 512);
 		std::vector<gsl::byte> data_upload_buf(texture_data_sz);
 
-		const std::array<GLenum, 4>& glRemap = get_swizzle_remap(gcm_format);
-
 		GLenum target;
-
 		switch (type)
 		{
 		case rsx::texture_dimension_extended::texture_dimension_1d:
@@ -567,12 +547,6 @@ namespace gl
 		if (static_state)
 		{
 			//Usually for vertex textures
-
-			glTexParameteri(target, GL_TEXTURE_SWIZZLE_A, glRemap[0]);
-			glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, glRemap[1]);
-			glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, glRemap[2]);
-			glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, glRemap[3]);
-
 			glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT);
 			glTexParameteri(target, GL_TEXTURE_WRAP_R, GL_REPEAT);
@@ -580,10 +554,6 @@ namespace gl
 			glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexParameterf(target, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.f);
-		}
-		else
-		{
-			apply_swizzle_remap(target, glRemap, decoded_remap);
 		}
 
 		//The rest of sampler state is now handled by sampler state objects
