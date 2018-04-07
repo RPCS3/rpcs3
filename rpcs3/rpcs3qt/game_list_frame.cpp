@@ -510,7 +510,6 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QTableWidgetItem* item = m_xgrid->item(row, col);
 		if (item == nullptr) return;  // null happens if you are double clicking in dockwidget area on nothing.
 		index = item->data(Qt::ItemDataRole::UserRole).toInt();
-		if (index == -1) return; // empty item shouldn't have context menu
 	}
 	ShowSpecifiedContextMenu(pos, index);
 }
@@ -890,11 +889,15 @@ int game_list_frame::PopulateGameList()
 	m_gameList->clearContents();
 	m_gameList->setRowCount((int)m_game_data.size());
 
-	auto l_GetItem = [](const std::string& text)
+	auto l_GetItem = [](const std::string& text, int sort_role = Qt::DisplayRole, int sort_index = 0)
 	{
-		QTableWidgetItem* curr = new QTableWidgetItem;
+		custom_table_widget_item* curr = new custom_table_widget_item;
 		curr->setFlags(curr->flags() & ~Qt::ItemIsEditable);
 		curr->setText(qstr(text).simplified()); // simplified() forces single line text
+		if (sort_role != Qt::DisplayRole)
+		{
+			curr->setData(sort_role, sort_index, true);
+		}
 		return curr;
 	};
 
@@ -907,12 +910,13 @@ int game_list_frame::PopulateGameList()
 			continue;
 
 		// Icon
-		QTableWidgetItem* icon_item = new QTableWidgetItem;
+		custom_table_widget_item* icon_item = new custom_table_widget_item;
 		icon_item->setFlags(icon_item->flags() & ~Qt::ItemIsEditable);
 		icon_item->setData(Qt::DecorationRole, game.pxmap);
-		icon_item->setData(Qt::UserRole, index);
+		icon_item->setData(Qt::UserRole, index, true);
 
-		QTableWidgetItem* title_item = l_GetItem(game.info.name);
+		// Title
+		custom_table_widget_item* title_item = l_GetItem(game.info.name);
 		if (game.hasCustomConfig)
 		{
 			title_item->setIcon(QIcon(":/Icons/cog_black.png"));
@@ -922,12 +926,13 @@ int game_list_frame::PopulateGameList()
 		custom_table_widget_item* compat_item = new custom_table_widget_item;
 		compat_item->setFlags(compat_item->flags() & ~Qt::ItemIsEditable);
 		compat_item->setText(game.compat.text + (game.compat.date.isEmpty() ? "" : " (" + game.compat.date + ")"));
-		compat_item->setData(Qt::UserRole, game.compat.index);
+		compat_item->setData(Qt::UserRole, game.compat.index, true);
 		compat_item->setToolTip(game.compat.tooltip);
 		if (!game.compat.color.isEmpty())
 		{
 			compat_item->setData(Qt::DecorationRole, compat_pixmap(game.compat.color));
 		}
+
 		m_gameList->setItem(row, gui::column_icon,       icon_item);
 		m_gameList->setItem(row, gui::column_name,       title_item);
 		m_gameList->setItem(row, gui::column_serial,     l_GetItem(game.info.serial));
@@ -937,7 +942,7 @@ int game_list_frame::PopulateGameList()
 		m_gameList->setItem(row, gui::column_path,       l_GetItem(game.info.path));
 		m_gameList->setItem(row, gui::column_resolution, l_GetItem(GetStringFromU32(game.info.resolution, resolution::mode, true)));
 		m_gameList->setItem(row, gui::column_sound,      l_GetItem(GetStringFromU32(game.info.sound_format, sound::format, true)));
-		m_gameList->setItem(row, gui::column_parental,   l_GetItem(GetStringFromU32(game.info.parental_lvl, parental::level)));
+		m_gameList->setItem(row, gui::column_parental,   l_GetItem(GetStringFromU32(game.info.parental_lvl, parental::level), Qt::UserRole, game.info.parental_lvl));
 		m_gameList->setItem(row, gui::column_compat,     compat_item);
 
 		if (selected_item == game.info.icon_path)
