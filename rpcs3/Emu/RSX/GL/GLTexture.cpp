@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "GLTexture.h"
-#include "GLHelpers.h"
 #include "../GCM.h"
 #include "../RSXThread.h"
 #include "../RSXTexture.h"
@@ -8,6 +7,8 @@
 
 namespace gl
 {
+	static buffer g_typeless_transfer_buffer;
+
 	GLenum get_target(rsx::texture_dimension_extended type)
 	{
 		switch (type)
@@ -88,6 +89,38 @@ namespace gl
 		case ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return std::make_tuple(GL_RG, GL_UNSIGNED_BYTE);
 		}
 		fmt::throw_exception("Compressed or unknown texture format 0x%x" HERE, texture_format);
+	}
+
+	std::tuple<GLenum, GLenum, bool> get_format_type(texture::internal_format format)
+	{
+		switch (format)
+		{
+		case texture::internal_format::compressed_rgba_s3tc_dxt1:
+		case texture::internal_format::compressed_rgba_s3tc_dxt3:
+		case texture::internal_format::compressed_rgba_s3tc_dxt5:
+			return std::make_tuple(GL_RGBA, GL_UNSIGNED_BYTE, false);
+		case texture::internal_format::r8:
+			return std::make_tuple(GL_R, GL_UNSIGNED_BYTE, false);
+		case texture::internal_format::r32f:
+			return std::make_tuple(GL_R, GL_FLOAT, true);
+		case texture::internal_format::r5g6b5:
+			return std::make_tuple(GL_RGB, GL_UNSIGNED_SHORT_5_6_5, true);
+		case texture::internal_format::rg8:
+			return std::make_tuple(GL_RG, GL_UNSIGNED_BYTE, false);
+		case texture::internal_format::rgba8:
+			return std::make_tuple(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, false);
+		case texture::internal_format::rgba16f:
+			return std::make_tuple(GL_RGBA, GL_HALF_FLOAT, true);
+		case texture::internal_format::rgba32f:
+			return std::make_tuple(GL_RGBA, GL_FLOAT, true);
+		case texture::internal_format::depth16:
+			return std::make_tuple(GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, true);
+		case texture::internal_format::depth24_stencil8:
+		case texture::internal_format::depth32f_stencil8:
+			return std::make_tuple(GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, true);
+		default:
+			fmt::throw_exception("Unexpected internal format 0x%X" HERE, (u32)format);
+		}
 	}
 
 	GLenum get_srgb_format(GLenum in_format)
@@ -561,5 +594,33 @@ namespace gl
 		const GLenum gl_format = (colorspace == rsx::texture_colorspace::rgb_linear)? std::get<0>(format_type) : get_srgb_format(std::get<0>(format_type));
 		const GLenum gl_type = std::get<1>(format_type);
 		fill_texture(type, mipmaps, gcm_format, width, height, depth, subresources_layout, is_swizzled, gl_format, gl_type, data_upload_buf);
+	}
+
+	void copy_typeless(texture * dst, const texture * src)
+	{
+		GLsizeiptr src_mem = src->width() * src->height();
+		GLsizeiptr dst_mem = dst->width() * dst->height();
+
+		auto max_mem = std::max(src_mem, dst_mem) * 16;
+		if (!g_typeless_transfer_buffer || max_mem > g_typeless_transfer_buffer.size())
+		{
+			if (g_typeless_transfer_buffer) g_typeless_transfer_buffer.remove();
+			g_typeless_transfer_buffer.create(buffer::target::pixel_pack, max_mem, nullptr, GL_STATIC_COPY);
+		}
+
+		auto format_type = get_format_type(src->get_internal_format());
+		pixel_pack_settings pack_settings{};
+		pack_settings.swap_bytes(std::get<2>(format_type));
+		g_typeless_transfer_buffer.bind(buffer::target::pixel_pack);
+		src->copy_to(nullptr, (texture::format)std::get<0>(format_type), (texture::type)std::get<1>(format_type), pack_settings);
+
+		format_type = get_format_type(dst->get_internal_format());
+		pixel_unpack_settings unpack_settings{};
+		unpack_settings.swap_bytes(std::get<2>(format_type));
+		g_typeless_transfer_buffer.bind(buffer::target::pixel_unpack);
+		dst->copy_from(nullptr, (texture::format)std::get<0>(format_type), (texture::type)std::get<1>(format_type), unpack_settings);
+
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
 	}
 }

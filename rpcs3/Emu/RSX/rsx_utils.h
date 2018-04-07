@@ -60,6 +60,47 @@ namespace rsx
 		f32 gamma = 1.f; //NO GAMMA CORRECTION
 	};
 
+	struct blit_src_info
+	{
+		blit_engine::transfer_source_format format;
+		blit_engine::transfer_origin origin;
+		u16 offset_x;
+		u16 offset_y;
+		u16 width;
+		u16 height;
+		u16 slice_h;
+		u16 pitch;
+		void *pixels;
+
+		bool compressed_x;
+		bool compressed_y;
+		u32 rsx_address;
+	};
+
+	struct blit_dst_info
+	{
+		blit_engine::transfer_destination_format format;
+		u16 offset_x;
+		u16 offset_y;
+		u16 width;
+		u16 height;
+		u16 pitch;
+		u16 clip_x;
+		u16 clip_y;
+		u16 clip_width;
+		u16 clip_height;
+		u16 max_tile_h;
+		f32 scale_x;
+		f32 scale_y;
+
+		bool swizzled;
+		void *pixels;
+
+		bool compressed_x;
+		bool compressed_y;
+		u32  rsx_address;
+	};
+
 	static const std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector =
 	{
 		{ CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B },

@@ -737,24 +737,24 @@ namespace gl
 			glGenBuffers(1, &m_id);
 		}
 
-		void create(GLsizeiptr size, const void* data_ = nullptr)
+		void create(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
 		{
 			create();
-			data(size, data_);
+			data(size, data_, usage);
 		}
 
-		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
+		void create(target target_, GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
 		{
 			create();
 			m_target = target_;
-			data(size, data_);
+			data(size, data_, usage);
 		}
 
-		void data(GLsizeiptr size, const void* data_ = nullptr)
+		void data(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
 		{
 			target target_ = current_target();
 			save_binding_state save(target_, *this);
-			glBufferData((GLenum)target_, size, data_, GL_STREAM_DRAW);
+			glBufferData((GLenum)target_, size, data_, usage);
 			m_size = size;
 		}
 

@@ -1,6 +1,7 @@
 #include "OpenGL.h"
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
+#include "GLHelpers.h"
 
 namespace rsx
 {
@@ -10,17 +11,17 @@ namespace rsx
 
 namespace gl
 {
-	class texture;
-
 	GLenum get_target(rsx::texture_dimension_extended type);
 	GLenum get_sized_internal_format(u32 gcm_format);
 	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format);
+	std::tuple<GLenum, GLenum, bool> get_format_type(texture::internal_format format);
 	GLenum wrap_mode(rsx::texture_wrap_mode wrap);
 	float max_aniso(rsx::texture_max_anisotropy aniso);
 	std::array<GLenum, 4> get_swizzle_remap(u32 texture_format);
 
 	texture* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, rsx::texture_dimension_extended type, rsx::texture_colorspace colorspace);
 
+	void copy_typeless(texture* dst, const texture* src);
 	/**
 	 * is_swizzled - determines whether input bytes are in morton order
 	 * subresources_layout - descriptor of the mipmap levels in memory

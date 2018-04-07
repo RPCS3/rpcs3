@@ -973,6 +973,7 @@ namespace vk
 			region.create(width, height, section_depth, mipmaps, view, image, 0, true, gcm_format);
 			region.set_dirty(false);
 			region.set_context(context);
+			region.set_gcm_format(gcm_format);
 			region.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 			region.set_image_type(type);
 
@@ -1275,7 +1276,7 @@ namespace vk
 				vk::image* deferred_op_src = nullptr;
 				vk::image* deferred_op_dst = nullptr;
 
-				void scale_image(vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool /*interpolate*/, bool is_depth)
+				void scale_image(vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool /*interpolate*/, bool is_depth, const rsx::typeless_xfer& /*typeless*/)
 				{
 					VkImageAspectFlagBits aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 					if (is_depth) aspect = (VkImageAspectFlagBits)(src->info.format == VK_FORMAT_D16_UNORM ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
