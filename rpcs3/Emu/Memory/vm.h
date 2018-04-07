@@ -13,6 +13,7 @@ namespace vm
 	extern u8* const g_base_addr;
 	extern u8* const g_exec_addr;
 	extern u8* const g_stat_addr;
+	extern u8* const g_reservations;
 
 	enum memory_location_t : uint
 	{
@@ -100,10 +101,18 @@ namespace vm
 	};
 
 	// Get reservation status for further atomic update: last update timestamp
-	u64 reservation_acquire(u32 addr, u32 size);
+	inline atomic_t<u64>& reservation_acquire(u32 addr, u32 size)
+	{
+		// Access reservation info: stamp and the lock bit
+		return reinterpret_cast<atomic_t<u64>*>(g_reservations)[addr / 128];
+	}
 
-	// End atomic update
-	void reservation_update(u32 addr, u32 size, bool lsb = false);
+	// Update reservation status
+	inline void reservation_update(u32 addr, u32 size, bool lsb = false)
+	{
+		// Update reservation info with new timestamp
+		reservation_acquire(addr, size) = (__rdtsc() & -2) | lsb;
+	}
 
 	// Check and notify memory changes at address
 	void notify(u32 addr, u32 size);

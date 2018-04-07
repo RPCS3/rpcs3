@@ -314,6 +314,7 @@ std::string SPUThread::dump() const
 
 	// Print some transaction statistics
 	fmt::append(ret, "\nTX: %u; Fail: %u", tx_success, tx_failure);
+	fmt::append(ret, "\nRaddr: 0x%08x; R: 0x%x", raddr, raddr ? +vm::reservation_acquire(raddr, 128) : 0);
 	fmt::append(ret, "\nTag Mask: 0x%08x", ch_tag_mask);
 	fmt::append(ret, "\nMFC Stall: 0x%08x", ch_stall_mask);
 	fmt::append(ret, "\nMFC Queue Size: %u", mfc_size);
@@ -1174,6 +1175,9 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 				// Second transaction attempt
 				vm::reader_lock lock;
 
+				// Touch reservation memory area as well
+				vm::reservation_acquire(raddr, 128) += 0;
+
 				if (utils::transaction_enter())
 				{
 					if (rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
@@ -1183,6 +1187,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 
 						vm::reservation_update(raddr, 128);
 					}
+
 					_xend();
 					tx_success++;
 
