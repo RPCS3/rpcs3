@@ -11,7 +11,8 @@ public:
 	trophy_tree_widget_item(QTreeWidget* parent) : QTreeWidgetItem(parent) {};
 	trophy_tree_widget_item(QTreeWidgetItem* parent) : QTreeWidgetItem(parent) {};
 private:
-	bool operator<(const QTreeWidgetItem &other) const {
+	bool operator<(const QTreeWidgetItem &other) const override
+	{
 		auto GetTrophyRank = [](const QString& name)
 		{
 			if (name.toLower() == "bronze")

@@ -701,6 +701,7 @@ void main_window::OnEmuRun()
 	ui->toolbar_start->setIcon(m_icon_pause);
 	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 	EnableMenus(true);
+	m_debuggerFrame->UpdateBreakpointList();
 }
 
 void main_window::OnEmuResume()

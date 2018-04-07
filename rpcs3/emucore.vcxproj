@@ -79,6 +79,9 @@
     <ClCompile Include="..\Utilities\GDBDebugServer.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\Utilities\hw_breakpoint\hw_breakpoint_manager.cpp" />
+    <ClCompile Include="..\Utilities\hw_breakpoint\linux_hw_breakpoint_manager.cpp" />
+    <ClCompile Include="..\Utilities\hw_breakpoint\win_hw_breakpoint_manager.cpp" />
     <ClCompile Include="..\Utilities\JIT.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -362,6 +365,11 @@
     <ClInclude Include="..\Utilities\GDBDebugServer.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
     <ClInclude Include="..\Utilities\GSL.h" />
+    <ClInclude Include="..\Utilities\hw_breakpoint\hw_breakpoint_manager.h" />
+    <ClInclude Include="..\Utilities\hw_breakpoint\hw_breakpoint_manager_impl.h" />
+    <ClInclude Include="..\Utilities\hw_breakpoint\linux_hw_breakpoint_manager.h" />
+    <ClInclude Include="..\Utilities\hw_breakpoint\null_hw_breakpoint_manager.h" />
+    <ClInclude Include="..\Utilities\hw_breakpoint\win_hw_breakpoint_manager.h" />
     <ClInclude Include="..\Utilities\hash.h" />
     <ClInclude Include="..\Utilities\JIT.h" />
     <ClInclude Include="..\Utilities\lockless.h" />
@@ -568,6 +576,7 @@
     <ClInclude Include="Emu\RSX\rsx_methods.h" />
     <ClInclude Include="Emu\RSX\rsx_utils.h" />
     <ClInclude Include="Emu\System.h" />
+    <ClInclude Include="hw_breakpoint.h" />
     <ClInclude Include="Loader\ELF.h" />
     <ClInclude Include="Loader\PSF.h" />
     <ClInclude Include="Loader\PUP.h" />
