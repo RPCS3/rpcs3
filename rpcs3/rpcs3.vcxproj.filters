@@ -665,6 +665,9 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_breakpoint_handler.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="expression_evaluator.cpp">
+      <Filter>Gui\debugger</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -750,6 +753,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\custom_dock_widget.h">
       <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="expression_evaluator.h">
+      <Filter>Gui\debugger</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

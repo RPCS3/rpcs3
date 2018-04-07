@@ -20,6 +20,7 @@
 #include "gui_settings.h"
 #include "debugger_list.h"
 #include "breakpoint_list.h"
+#include "expression_evaluator.h"
 
 #include <QSplitter>
 #include <QTextEdit>
@@ -59,6 +60,7 @@ class debugger_frame : public custom_dock_widget
 
 	breakpoint_list* m_breakpoint_list;
 	breakpoint_handler* m_breakpoint_handler;
+	expression_evaluator m_expression_evaluator;
 
 	std::shared_ptr<gui_settings> xgui_settings;
 
@@ -77,7 +79,6 @@ public:
 	void WriteRegs();
 	void EnableButtons(bool enable);
 	void ShowGotoAddressDialog();
-	u64 EvaluateExpression(const QString& expression);
 	void ClearBreakpoints(); // Fallthrough method into breakpoint_list.
 
 	/** Needed so key press events work when other objects are selected in debugger_frame. */

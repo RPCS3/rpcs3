@@ -7,7 +7,6 @@
 #include <QFontDatabase>
 #include <QCompleter>
 #include <QMenu>
-#include <QJSEngine>
 
 constexpr auto qstr = QString::fromStdString;
 extern bool user_asked_for_frame_capture;
@@ -505,7 +504,7 @@ void debugger_frame::ShowGotoAddressDialog()
 		}
 		else
 		{
-			ulong ul_addr = EvaluateExpression(expression_input->text());
+			ulong ul_addr = m_expression_evaluator.evaluate_u64(*cpu, expression_input->text());
 			address_preview_label->setText("Address: " + QString("0x%1").arg(ul_addr, 8, 16, QChar('0')));
 		}
 	};
@@ -526,7 +525,7 @@ void debugger_frame::ShowGotoAddressDialog()
 		}
 		else
 		{
-			address = EvaluateExpression(expression_input->text());
+			address = m_expression_evaluator.evaluate_u64(*cpu, expression_input->text());
 			address_preview_label->setText(expression_input->text());
 		}
 
@@ -534,46 +533,6 @@ void debugger_frame::ShowGotoAddressDialog()
 	}
 
 	diag->deleteLater();
-}
-
-u64 debugger_frame::EvaluateExpression(const QString& expression)
-{
-	auto thread = cpu.lock();
-
-	// Parse expression
-	QJSEngine scriptEngine;
-	scriptEngine.globalObject().setProperty("pc", GetPc());
-
-	if (thread->id_type() == 1)
-	{
-		auto ppu = static_cast<ppu_thread*>(thread.get());
-
-		for (int i = 0; i < 32; ++i)
-		{
-			scriptEngine.globalObject().setProperty(QString("r%1hi").arg(i), QJSValue((u32)(ppu->gpr[i] >> 32)));
-			scriptEngine.globalObject().setProperty(QString("r%1").arg(i), QJSValue((u32)(ppu->gpr[i])));
-		}
-
-		scriptEngine.globalObject().setProperty("lrhi", QJSValue((u32)(ppu->lr >> 32 )));
-		scriptEngine.globalObject().setProperty("lr", QJSValue((u32)(ppu->lr)));
-		scriptEngine.globalObject().setProperty("ctrhi", QJSValue((u32)(ppu->ctr >> 32)));
-		scriptEngine.globalObject().setProperty("ctr", QJSValue((u32)(ppu->ctr)));
-		scriptEngine.globalObject().setProperty("cia", QJSValue(ppu->cia));
-	}
-	else
-	{
-		auto spu = static_cast<SPUThread*>(thread.get());
-
-		for (int i = 0; i < 128; ++i)
-		{
-			scriptEngine.globalObject().setProperty(QString("r%1hi").arg(i), QJSValue(spu->gpr[i]._u32[0]));
-			scriptEngine.globalObject().setProperty(QString("r%1lo").arg(i), QJSValue(spu->gpr[i]._u32[1]));
-			scriptEngine.globalObject().setProperty(QString("r%1hilo").arg(i), QJSValue(spu->gpr[i]._u32[2]));
-			scriptEngine.globalObject().setProperty(QString("r%1hihi").arg(i), QJSValue(spu->gpr[i]._u32[3]));
-		}
-	}
-
-	return static_cast<ulong>(scriptEngine.evaluate(expression).toNumber());
 }
 
 void debugger_frame::ClearBreakpoints()

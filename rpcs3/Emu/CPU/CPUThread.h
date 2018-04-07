@@ -49,7 +49,7 @@ public:
 	void run();
 
 	// Check thread type
-	u32 id_type()
+	u32 id_type() const
 	{
 		return id >> 24;
 	}

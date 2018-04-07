@@ -337,6 +337,7 @@
     <ClCompile Include="basic_mouse_handler.cpp" />
     <ClCompile Include="ds4_pad_handler.cpp" />
     <ClCompile Include="evdev_joystick_handler.cpp" />
+    <ClCompile Include="expression_evaluator.cpp" />
     <ClCompile Include="keyboard_pad_handler.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mm_joystick_handler.cpp" />
@@ -1114,6 +1115,7 @@
     </CustomBuild>
     <ClInclude Include="ds4_pad_handler.h" />
     <ClInclude Include="evdev_joystick_handler.h" />
+    <ClInclude Include="expression_evaluator.h" />
     <ClInclude Include="keyboard_pad_handler.h" />
     <CustomBuild Include="rpcs3qt\gs_frame.h">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing gs_frame.h...</Message>
