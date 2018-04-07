@@ -1179,9 +1179,3 @@ void lv2_obj::schedule_all()
 		}
 	}
 }
-
-void ppu_thread::cpu_sleep()
-{
-	vm::temporary_unlock(*this);
-	lv2_obj::awake(*this);
-}

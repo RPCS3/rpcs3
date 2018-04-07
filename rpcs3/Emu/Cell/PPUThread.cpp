@@ -588,6 +588,22 @@ void ppu_thread::cpu_task()
 	}
 }
 
+void ppu_thread::cpu_sleep()
+{
+	vm::temporary_unlock(*this);
+	lv2_obj::awake(*this);
+}
+
+void ppu_thread::cpu_mem()
+{
+	vm::passive_lock(*this);
+}
+
+void ppu_thread::cpu_unmem()
+{
+	state.test_and_set(cpu_flag::memory);
+}
+
 void ppu_thread::exec_task()
 {
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
@@ -948,7 +964,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 	if (s_use_rtm && utils::transaction_enter())
 	{
-		if (!vm::reader_lock{vm::try_to_lock})
+		if (!vm::g_mutex.is_lockable() || vm::g_mutex.is_reading())
 		{
 			_xabort(0);
 		}
@@ -992,7 +1008,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	if (s_use_rtm && utils::transaction_enter())
 	{
-		if (!vm::reader_lock{vm::try_to_lock})
+		if (!vm::g_mutex.is_lockable() || vm::g_mutex.is_reading())
 		{
 			_xabort(0);
 		}

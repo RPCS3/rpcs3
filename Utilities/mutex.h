@@ -100,6 +100,11 @@ public:
 	{
 		return (m_value.load() % c_one) != 0;
 	}
+
+	bool is_lockable() const
+	{
+		return m_value.load() >= c_min;
+	}
 };
 
 // Simplified shared (reader) lock implementation.

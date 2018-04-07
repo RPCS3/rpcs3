@@ -102,8 +102,9 @@ error_code sys_vm_flush(u32 addr, u32 size)
 
 error_code sys_vm_invalidate(u32 addr, u32 size)
 {
-	sys_vm.todo("sys_vm_invalidate(addr=0x%x, size=0x%x)", addr, size);
+	sys_vm.warning("sys_vm_invalidate(addr=0x%x, size=0x%x)", addr, size);
 
+	std::memset(vm::base(addr), 0, size);
 	return CELL_OK;
 }
 

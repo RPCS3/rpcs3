@@ -992,9 +992,10 @@ constexpr FORCE_INLINE error_code::not_an_error not_an_error(const T& value)
 }
 
 // Synchronization helper (cache-friendly busy waiting)
-inline void busy_wait(std::size_t count = 100)
+inline void busy_wait(std::size_t cycles = 3000)
 {
-	while (count--) _mm_pause();
+	const u64 s = __rdtsc();
+	do _mm_pause(); while (__rdtsc() - s < cycles);
 }
 
 // Rotate helpers

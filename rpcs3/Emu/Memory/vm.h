@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 
+class shared_mutex;
 class named_thread;
 class cpu_thread;
 
@@ -12,6 +13,7 @@ namespace vm
 	extern u8* const g_base_addr;
 	extern u8* const g_exec_addr;
 	extern u8* const g_stat_addr;
+	extern u8* const g_reservations;
 
 	enum memory_location_t : uint
 	{
@@ -59,10 +61,12 @@ namespace vm
 	// Address type
 	enum addr_t : u32 {};
 
+	extern shared_mutex g_mutex;
+
 	extern thread_local atomic_t<cpu_thread*>* g_tls_locked;
 
 	// Register reader
-	void passive_lock(cpu_thread& cpu);
+	bool passive_lock(cpu_thread& cpu, bool wait = true);
 
 	// Unregister reader
 	void passive_unlock(cpu_thread& cpu);
@@ -74,15 +78,12 @@ namespace vm
 	void temporary_unlock(cpu_thread& cpu) noexcept;
 	void temporary_unlock() noexcept;
 
-	constexpr struct try_to_lock_t{} try_to_lock{};
-
 	struct reader_lock final
 	{
 		const bool locked;
 
 		reader_lock(const reader_lock&) = delete;
 		reader_lock();
-		reader_lock(const try_to_lock_t&);
 		~reader_lock();
 
 		explicit operator bool() const { return locked; }
@@ -93,18 +94,25 @@ namespace vm
 		const bool locked;
 
 		writer_lock(const writer_lock&) = delete;
-		writer_lock(int full = 1);
-		writer_lock(const try_to_lock_t&);
+		writer_lock(int full);
 		~writer_lock();
 
 		explicit operator bool() const { return locked; }
 	};
 
 	// Get reservation status for further atomic update: last update timestamp
-	u64 reservation_acquire(u32 addr, u32 size);
+	inline atomic_t<u64>& reservation_acquire(u32 addr, u32 size)
+	{
+		// Access reservation info: stamp and the lock bit
+		return reinterpret_cast<atomic_t<u64>*>(g_reservations)[addr / 128];
+	}
 
-	// End atomic update
-	void reservation_update(u32 addr, u32 size);
+	// Update reservation status
+	inline void reservation_update(u32 addr, u32 size, bool lsb = false)
+	{
+		// Update reservation info with new timestamp
+		reservation_acquire(addr, size) = (__rdtsc() & -2) | lsb;
+	}
 
 	// Check and notify memory changes at address
 	void notify(u32 addr, u32 size);

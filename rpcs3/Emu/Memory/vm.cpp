@@ -36,11 +36,11 @@ namespace vm
 	// Stats for debugging
 	u8* const g_stat_addr = memory_reserve_4GiB((std::uintptr_t)g_exec_addr);
 
+	// Reservation stats (compressed x16)
+	u8* const g_reservations = memory_reserve_4GiB((std::uintptr_t)g_stat_addr);
+
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
-
-	// Reservations (lock lines) in a single memory page
-	using reservation_info = std::array<std::atomic<u64>, 4096 / 128>;
 
 	// Registered waiters
 	std::deque<vm::waiter*> g_waiters;
@@ -66,25 +66,56 @@ namespace vm
 		}
 	}
 
-	void passive_lock(cpu_thread& cpu)
+	bool passive_lock(cpu_thread& cpu, bool wait)
 	{
-		if (g_tls_locked && *g_tls_locked == &cpu)
+		if (UNLIKELY(g_tls_locked && *g_tls_locked == &cpu))
 		{
-			return;
+			return true;
 		}
 
-		::reader_lock lock(g_mutex);
+		if (LIKELY(g_mutex.is_lockable()))
+		{
+			// Optimistic path (hope that mutex is not exclusively locked)
+			_register_lock(&cpu);
 
-		_register_lock(&cpu);
+			if (UNLIKELY(!g_mutex.is_lockable()))
+			{
+				passive_unlock(cpu);
+
+				if (!wait)
+				{
+					return false;
+				}
+
+				::reader_lock lock(g_mutex);
+				_register_lock(&cpu);
+			}
+		}
+		else
+		{
+			if (!wait)
+			{
+				return false;
+			}
+
+			::reader_lock lock(g_mutex);
+			_register_lock(&cpu);
+		}
+
+		return true;
 	}
 
 	void passive_unlock(cpu_thread& cpu)
 	{
-		if (g_tls_locked)
+		if (auto& ptr = g_tls_locked)
 		{
-			g_tls_locked->compare_and_swap_test(&cpu, nullptr);
-			::reader_lock lock(g_mutex);
-			g_tls_locked = nullptr;
+			*ptr = nullptr;
+			ptr = nullptr;
+
+			if (test(cpu.state, cpu_flag::memory))
+			{
+				cpu.state -= cpu_flag::memory;
+			}
 		}
 	}
 
@@ -109,7 +140,7 @@ namespace vm
 	{
 		if (g_tls_locked && g_tls_locked->compare_and_swap_test(&cpu, nullptr))
 		{
-			cpu.state.test_and_set(cpu_flag::memory);
+			cpu.cpu_unmem();
 		}
 	}
 
@@ -138,11 +169,6 @@ namespace vm
 			_register_lock(cpu);
 			cpu->state -= cpu_flag::memory;
 		}
-	}
-
-	reader_lock::reader_lock(const try_to_lock_t&)
-		: locked(g_mutex.try_lock_shared())
-	{
 	}
 
 	reader_lock::~reader_lock()
@@ -196,11 +222,6 @@ namespace vm
 		}
 	}
 
-	writer_lock::writer_lock(const try_to_lock_t&)
-		: locked(g_mutex.try_lock())
-	{
-	}
-
 	writer_lock::~writer_lock()
 	{
 		if (locked)
@@ -214,52 +235,15 @@ namespace vm
 	{
 		// Memory flags
 		atomic_t<u8> flags;
-
-		atomic_t<u32> waiters;
-
-		// Reservations
-		atomic_t<reservation_info*> reservations;
-
-		// Access reservation info
-		std::atomic<u64>& operator [](u32 addr)
-		{
-			auto ptr = reservations.load();
-
-			if (!ptr)
-			{
-				// Opportunistic memory allocation
-				ptr = new reservation_info{};
-
-				if (auto old_ptr = reservations.compare_and_swap(nullptr, ptr))
-				{
-					delete ptr;
-					ptr = old_ptr;
-				}
-			}
-
-			return (*ptr)[(addr & 0xfff) >> 7];
-		}
 	};
 
 	// Memory pages
 	std::array<memory_page, 0x100000000 / 4096> g_pages{};
 
-	u64 reservation_acquire(u32 addr, u32 _size)
-	{
-		// Access reservation info: stamp and the lock bit
-		return g_pages[addr >> 12][addr].load(std::memory_order_acquire);
-	}
-
-	void reservation_update(u32 addr, u32 _size)
-	{
-		// Update reservation info with new timestamp (unsafe, assume allocated)
-		(*g_pages[addr >> 12].reservations)[(addr & 0xfff) >> 7].store(__rdtsc(), std::memory_order_release);
-	}
-
 	void waiter::init()
 	{
 		// Register waiter
-		writer_lock lock(0);
+		vm::writer_lock lock(0);
 
 		g_waiters.emplace_back(this);
 	}
@@ -271,14 +255,7 @@ namespace vm
 			return;
 		}
 
-		memory_page& page = g_pages[addr >> 12];
-
-		if (page.reservations == nullptr)
-		{
-			return;
-		}
-
-		if (stamp >= (*page.reservations)[(addr & 0xfff) >> 7].load())
+		if (stamp >= reservation_acquire(addr, size))
 		{
 			return;
 		}
@@ -292,7 +269,7 @@ namespace vm
 	waiter::~waiter()
 	{
 		// Unregister waiter
-		writer_lock lock(0);
+		vm::writer_lock lock(0);
 
 		// Find waiter
 		const auto found = std::find(g_waiters.cbegin(), g_waiters.cend(), this);
@@ -360,7 +337,7 @@ namespace vm
 
 	bool page_protect(u32 addr, u32 size, u8 flags_test, u8 flags_set, u8 flags_clear)
 	{
-		writer_lock lock;
+		vm::writer_lock lock(0);
 
 		if (!size || (size | addr) % 4096)
 		{
@@ -542,11 +519,16 @@ namespace vm
 		, size(size)
 		, flags(flags)
 	{
+		// Allocate compressed reservation info area (avoid RSX and SPU areas)
+		if (addr != 0xc0000000 && addr != 0xe0000000)
+		{
+			utils::memory_commit(g_reservations + addr / 16, size / 16);
+		}
 	}
 
 	block_t::~block_t()
 	{
-		writer_lock lock;
+		vm::writer_lock lock(0);
 
 		// Deallocate all memory
 		for (auto& entry : m_map)
@@ -557,7 +539,7 @@ namespace vm
 
 	u32 block_t::alloc(const u32 orig_size, u32 align, const uchar* data, u32 sup)
 	{
-		writer_lock lock;
+		vm::writer_lock lock(0);
 
 		// Align to minimal page size
 		const u32 size = ::align(orig_size, 4096);
@@ -604,7 +586,7 @@ namespace vm
 
 	u32 block_t::falloc(u32 addr, const u32 orig_size, const uchar* data, u32 sup)
 	{
-		writer_lock lock;
+		vm::writer_lock lock(0);
 
 		// align to minimal page size
 		const u32 size = ::align(orig_size, 4096);
@@ -641,7 +623,7 @@ namespace vm
 
 	u32 block_t::dealloc(u32 addr, uchar* data_out, u32* sup_out)
 	{
-		writer_lock lock;
+		vm::writer_lock lock(0);
 
 		const auto found = m_map.find(addr);
 
@@ -690,14 +672,14 @@ namespace vm
 
 	u32 block_t::used()
 	{
-		writer_lock lock(0);
+		vm::writer_lock lock(0);
 
 		return imp_used(lock);
 	}
 
 	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
 	{
-		writer_lock lock(0);
+		vm::writer_lock lock(0);
 
 		if (!size || (size | addr) % 4096)
 		{
@@ -734,7 +716,7 @@ namespace vm
 
 	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty)
 	{
-		writer_lock lock(0);
+		vm::writer_lock lock(0);
 
 		for (auto it = g_locations.begin(); it != g_locations.end(); it++)
 		{
@@ -756,7 +738,7 @@ namespace vm
 
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr)
 	{
-		reader_lock lock;
+		vm::reader_lock lock;
 
 		if (location != any)
 		{
@@ -805,6 +787,7 @@ namespace vm
 		utils::memory_decommit(g_base_addr, 0x100000000);
 		utils::memory_decommit(g_exec_addr, 0x100000000);
 		utils::memory_decommit(g_stat_addr, 0x100000000);
+		utils::memory_decommit(g_reservations, 0x100000000);
 	}
 }
 

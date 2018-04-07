@@ -509,6 +509,8 @@ public:
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
 	virtual void cpu_task() override;
+	virtual void cpu_mem() override;
+	virtual void cpu_unmem() override;
 	virtual ~SPUThread() override;
 	void cpu_init();
 
@@ -532,6 +534,8 @@ public:
 	// MFC command queue
 	spu_mfc_cmd mfc_queue[16]{};
 	u32 mfc_size = 0;
+	u32 mfc_barrier = -1;
+	u32 mfc_fence = -1;
 	atomic_t<u32> mfc_prxy_mask;
 
 	// Reservation Data
@@ -587,12 +591,16 @@ public:
 	std::shared_ptr<class spu_recompiler_base> spu_rec;
 	u32 recursion_level = 0;
 
+	u64 tx_success = 0;
+	u64 tx_failure = 0;
+	uint tx_status = 0;
+
 	void push_snr(u32 number, u32 value);
 	void do_dma_transfer(const spu_mfc_cmd& args);
 	bool do_dma_check(const spu_mfc_cmd& args);
 	bool do_list_transfer(spu_mfc_cmd& args);
-	bool do_putlluc(const spu_mfc_cmd& args);
-	void do_mfc();
+	void do_putlluc(const spu_mfc_cmd& args);
+	void do_mfc(bool wait = true);
 	u32 get_mfc_completed();
 
 	bool process_mfc_cmd(spu_mfc_cmd args);
