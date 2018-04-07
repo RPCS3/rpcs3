@@ -49,7 +49,7 @@ namespace rsx
 
 namespace gl
 {
-	class render_target : public texture, public rsx::ref_counted, public rsx::render_target_descriptor<u32>
+	class render_target : public texture, public rsx::ref_counted, public rsx::render_target_descriptor<texture*>
 	{
 		bool is_cleared = false;
 
@@ -62,14 +62,14 @@ namespace gl
 		u16 surface_width = 0;
 		u16 surface_pixel_size = 0;
 
-		texture::internal_format compatible_internal_format = texture::internal_format::rgba8;
-		std::array<GLenum, 4> native_component_mapping;
-		u32 current_remap_encoding = 0;
+		std::unordered_map<u32, std::unique_ptr<texture_view>> views;
 
 	public:
 		render_target *old_contents = nullptr;
 
-		render_target() {}
+		render_target(GLuint width, GLuint height, GLenum sized_format)
+			:texture(GL_TEXTURE_2D, width, height, 1, 1, sized_format)
+		{}
 
 		void set_cleared(bool clear=true)
 		{
@@ -113,45 +113,29 @@ namespace gl
 			return surface_height;
 		}
 
-		u32 get_surface() override
+		texture* get_surface() override
 		{
-			return get_view(0xAAE4, rsx::default_remap_vector);
+			return (gl::texture*)this;
 		}
 
-		u32 get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
+		texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
 		{
-			if (remap_encoding != current_remap_encoding)
+			auto found = views.find(remap_encoding);
+			if (found != views.end())
 			{
-				current_remap_encoding = remap_encoding;
-
-				bind();
-				apply_swizzle_remap(GL_TEXTURE_2D, native_component_mapping, remap);
+				return found->second.get();
 			}
 
+			auto mapping = gl::apply_swizzle_remap(get_native_component_layout(), remap);
+			auto view = std::make_unique<texture_view>(this, mapping.data());
+			auto result = view.get();
+			views[remap_encoding] = std::move(view);
+			return result;
+		}
+
+		u32 raw_handle() const
+		{
 			return id();
-		}
-
-		u32 get_view()
-		{
-			//Get view with components in true native layout
-			//TODO: Implement real image views
-			const GLenum rgba_remap[4] = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
-			glBindTexture(GL_TEXTURE_2D, id());
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, (GLint*)rgba_remap);
-
-			//Reset view encoding
-			current_remap_encoding = 0;
-			return id();
-		}
-
-		void set_compatible_format(texture::internal_format format)
-		{
-			compatible_internal_format = format;
-		}
-
-		texture::internal_format get_compatible_internal_format() const override
-		{
-			return compatible_internal_format;
 		}
 
 		void update_surface()
@@ -160,12 +144,6 @@ namespace gl
 			internal_height = height();
 			surface_width = rsx::apply_inverse_resolution_scale(internal_width, true);
 			surface_height = rsx::apply_inverse_resolution_scale(internal_height, true);
-
-			bind();
-			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, (GLint*)&native_component_mapping[0]);
-			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, (GLint*)&native_component_mapping[1]);
-			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, (GLint*)&native_component_mapping[2]);
-			glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, (GLint*)&native_component_mapping[3]);
 		}
 
 		bool matches_dimensions(u16 _width, u16 _height) const
@@ -192,27 +170,15 @@ struct gl_render_target_traits
 		gl::render_target* old_surface
 	)
 	{
-		std::unique_ptr<gl::render_target> result(new gl::render_target());
-
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
 		auto internal_fmt = rsx::internals::sized_internal_format(surface_color_format);
 
-		result->recreate(gl::texture::target::texture2D);
+		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale((u16)width, true),
+			rsx::apply_resolution_scale((u16)height, true), (GLenum)internal_fmt));
 		result->set_native_pitch((u16)width * format.channel_count * format.channel_size);
-		result->set_compatible_format(internal_fmt);
 
-		__glcheck result->config()
-			.size({ (int)rsx::apply_resolution_scale((u16)width, true), (int)rsx::apply_resolution_scale((u16)height, true) })
-			.type(format.type)
-			.format(format.format)
-			.internal_format(internal_fmt)
-			.swizzle(format.swizzle.r, format.swizzle.g, format.swizzle.b, format.swizzle.a)
-			.wrap(gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border)
-			.apply();
-
-		__glcheck result->pixel_pack_settings().swap_bytes(format.swap_bytes).aligment(1);
-		__glcheck result->pixel_unpack_settings().swap_bytes(format.swap_bytes).aligment(1);
-
+		std::array<GLenum, 4> native_layout = { (GLenum)format.swizzle.a, (GLenum)format.swizzle.r, (GLenum)format.swizzle.g, (GLenum)format.swizzle.b };
+		result->set_native_component_layout(native_layout);
 		result->old_contents = old_surface;
 
 		result->set_cleared();
@@ -229,32 +195,17 @@ struct gl_render_target_traits
 			gl::render_target* old_surface
 		)
 	{
-		std::unique_ptr<gl::render_target> result(new gl::render_target());
-
 		auto format = rsx::internals::surface_depth_format_to_gl(surface_depth_format);
-		result->recreate(gl::texture::target::texture2D);
-
-		const auto scale = rsx::get_resolution_scale();
-
-		__glcheck result->config()
-			.size({ (int)rsx::apply_resolution_scale((u16)width, true), (int)rsx::apply_resolution_scale((u16)height, true) })
-			.type(format.type)
-			.format(format.format)
-			.internal_format(format.internal_format)
-			.swizzle(gl::texture::channel::r, gl::texture::channel::r, gl::texture::channel::r, gl::texture::channel::r)
-			.wrap(gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border)
-			.apply();
-
-		__glcheck result->pixel_pack_settings().aligment(1);
-		__glcheck result->pixel_unpack_settings().aligment(1);
+		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale((u16)width, true),
+				rsx::apply_resolution_scale((u16)height, true), (GLenum)format.internal_format));
 
 		u16 native_pitch = (u16)width * 2;
 		if (surface_depth_format == rsx::surface_depth_format::z24s8)
 			native_pitch *= 2;
 
+		std::array<GLenum, 4> native_layout = { GL_RED, GL_RED, GL_RED, GL_RED };
 		result->set_native_pitch(native_pitch);
-		result->set_compatible_format(format.internal_format);
-
+		result->set_native_component_layout(native_layout);
 		result->old_contents = old_surface;
 
 		result->update_surface();
@@ -291,7 +242,7 @@ struct gl_render_target_traits
 			return false;
 
 		auto internal_fmt = rsx::internals::sized_internal_format(format);
-		return rtt->get_compatible_internal_format() == internal_fmt && rtt->matches_dimensions((u16)width, (u16)height);
+		return rtt->get_internal_format() == internal_fmt && rtt->matches_dimensions((u16)width, (u16)height);
 	}
 
 	static
@@ -309,7 +260,7 @@ struct gl_render_target_traits
 	{
 		auto pixel_format = rsx::internals::surface_color_format_to_gl(color_format);
 		std::vector<u8> result(width * height * pixel_format.channel_count * pixel_format.channel_size);
-		color_buffer->bind();
+		glBindTexture(GL_TEXTURE_2D, color_buffer->id());
 		glGetTexImage(GL_TEXTURE_2D, 0, (GLenum)pixel_format.format, (GLenum)pixel_format.type, result.data());
 		return result;
 	}
@@ -319,7 +270,7 @@ struct gl_render_target_traits
 		std::vector<u8> result(width * height * 4);
 
 		auto pixel_format = rsx::internals::surface_depth_format_to_gl(depth_format);
-		depth_stencil_buffer->bind();
+		glBindTexture(GL_TEXTURE_2D, depth_stencil_buffer->id());
 		glGetTexImage(GL_TEXTURE_2D, 0, (GLenum)pixel_format.format, (GLenum)pixel_format.type, result.data());
 		return result;
 	}
@@ -354,10 +305,7 @@ struct gl_render_targets : public rsx::surface_store<gl_render_target_traits>
 		invalidated_resources.remove_if([&](auto &rtt)
 		{
 			if (rtt->deref_count >= 2)
-			{
-				rtt->remove();
 				return true;
-			}
 
 			rtt->deref_count++;
 			return false;

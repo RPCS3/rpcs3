@@ -10,6 +10,8 @@ namespace rsx
 
 namespace gl
 {
+	class texture;
+
 	GLenum get_target(rsx::texture_dimension_extended type);
 	GLenum get_sized_internal_format(u32 gcm_format);
 	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format);
@@ -17,7 +19,7 @@ namespace gl
 	float max_aniso(rsx::texture_max_anisotropy aniso);
 	std::array<GLenum, 4> get_swizzle_remap(u32 texture_format);
 
-	GLuint create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, rsx::texture_dimension_extended type, rsx::texture_colorspace colorspace);
+	texture* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, rsx::texture_dimension_extended type, rsx::texture_colorspace colorspace);
 
 	/**
 	 * is_swizzled - determines whether input bytes are in morton order
@@ -31,7 +33,7 @@ namespace gl
 		const std::vector<rsx_subresource_layout>& subresources_layout, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap, bool static_state,
 		rsx::texture_colorspace colorspace);
 
-	void apply_swizzle_remap(GLenum target, const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap);
+	std::array<GLenum, 4> apply_swizzle_remap(const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap);
 
 	class sampler_state
 	{

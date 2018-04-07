@@ -281,8 +281,8 @@ private:
 
 	gl::buffer_view m_persistent_stream_view;
 	gl::buffer_view m_volatile_stream_view;
-	gl::texture m_gl_persistent_stream_buffer;
-	gl::texture m_gl_volatile_stream_buffer;
+	std::unique_ptr<gl::texture> m_gl_persistent_stream_buffer;
+	std::unique_ptr<gl::texture> m_gl_volatile_stream_buffer;
 
 	std::unique_ptr<gl::ring_buffer> m_attrib_ring_buffer;
 	std::unique_ptr<gl::ring_buffer> m_fragment_constants_buffer;
@@ -323,7 +323,7 @@ private:
 	//buffer
 	gl::fbo draw_fbo;
 	gl::fbo m_flip_fbo;
-	gl::texture m_flip_tex_color;
+	std::unique_ptr<gl::texture> m_flip_tex_color;
 
 	//vaos are mandatory for core profile
 	gl::vao m_vao;

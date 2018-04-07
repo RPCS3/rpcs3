@@ -328,7 +328,9 @@ namespace gl
 		u32 num_elements = 0;
 		std::vector<std::unique_ptr<gl::texture>> resources;
 		std::unordered_map<u64, std::unique_ptr<gl::texture>> temp_image_cache;
+		std::unordered_map<u64, std::unique_ptr<gl::texture_view>> temp_view_cache;
 		std::unordered_map<u64, std::unique_ptr<gl::texture>> font_cache;
+		std::unordered_map<u64, std::unique_ptr<gl::texture_view>> view_cache;
 		bool is_font_draw = false;
 
 		ui_overlay_renderer()
@@ -390,31 +392,28 @@ namespace gl
 			};
 		}
 
-		gl::texture* load_simple_image(rsx::overlays::image_info* desc, bool temp_resource)
+		gl::texture_view* load_simple_image(rsx::overlays::image_info* desc, bool temp_resource)
 		{
-			auto tex = std::make_unique<gl::texture>(gl::texture::target::texture2D);
-			tex->create();
-			tex->config()
-				.size({ desc->w, desc->h })
-				.format(gl::texture::format::rgba)
-				.type(gl::texture::type::uint_8_8_8_8)
-				.wrap(gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border)
-				.swizzle(gl::texture::channel::a, gl::texture::channel::b, gl::texture::channel::g, gl::texture::channel::r)
-				.filter(gl::min_filter::linear, gl::filter::linear)
-				.apply();
+			auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, desc->w, desc->h, 1, 1, GL_RGBA8);
 			tex->copy_from(desc->data, gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
 
+			GLenum remap[] = { GL_BLUE, GL_GREEN, GL_RED, GL_ALPHA };
+			auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
+
+			auto result = view.get();
 			if (!temp_resource)
 			{
 				resources.push_back(std::move(tex));
+				view_cache[view_cache.size()] = std::move(view);
 			}
 			else
 			{
 				u64 key = (u64)desc;
 				temp_image_cache[key] = std::move(tex);
+				temp_view_cache[key] = std::move(view);
 			}
 
-			return resources.back().get();
+			return result;
 		}
 
 		void create()
@@ -445,38 +444,32 @@ namespace gl
 			temp_image_cache.clear();
 		}
 
-		gl::texture* find_font(rsx::overlays::font *font)
+		gl::texture_view* find_font(rsx::overlays::font *font)
 		{
 			u64 key = (u64)font;
-			auto found = font_cache.find(key);
-			if (found != font_cache.end())
+			auto found = view_cache.find(key);
+			if (found != view_cache.end())
 				return found->second.get();
 
 			//Create font file
-			auto tex = std::make_unique<gl::texture>(gl::texture::target::texture2D);
-			tex->create();
-			tex->config()
-				.size({ (int)font->width, (int)font->height })
-				.format(gl::texture::format::r)
-				.type(gl::texture::type::ubyte)
-				.internal_format(gl::texture::internal_format::r8)
-				.wrap(gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border)
-				.swizzle(gl::texture::channel::r, gl::texture::channel::r, gl::texture::channel::r, gl::texture::channel::r)
-				.filter(gl::min_filter::linear, gl::filter::linear)
-				.apply();
+			auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, (int)font->width, (int)font->height, 1, 1, GL_R8);
 			tex->copy_from(font->glyph_data.data(), gl::texture::format::r, gl::texture::type::ubyte);
 
-			auto result = tex.get();
+			GLenum remap[] = { GL_RED, GL_RED, GL_RED, GL_RED };
+			auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
+
+			auto result = view.get();
 			font_cache[key] = std::move(tex);
+			view_cache[key] = std::move(view);
 
 			return result;
 		}
 
-		gl::texture* find_temp_image(rsx::overlays::image_info *desc)
+		gl::texture_view* find_temp_image(rsx::overlays::image_info *desc)
 		{
 			auto key = (u64)desc;
-			auto cached = temp_image_cache.find(key);
-			if (cached != temp_image_cache.end())
+			auto cached = temp_view_cache.find(key);
+			if (cached != temp_view_cache.end())
 			{
 				return cached->second.get();
 			}
@@ -553,7 +546,7 @@ namespace gl
 				}
 				default:
 				{
-					glBindTexture(GL_TEXTURE_2D, resources[cmd.first.texture_ref - 1]->id());
+					glBindTexture(GL_TEXTURE_2D, view_cache[cmd.first.texture_ref - 1]->id());
 					break;
 				}
 				}
