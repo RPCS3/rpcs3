@@ -329,6 +329,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL");
 			game.resolution   = psf::get_integer(psf, "RESOLUTION");
 			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
+			game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
 
 			// Detect duplication
 			if (!serial_cat[game.serial].emplace(game.category).second)
@@ -338,7 +339,6 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 			serials.insert(qstr(game.serial));
 
-			bool bootable = false;
 			auto cat = category::cat_boot.find(game.category);
 			if (cat != category::cat_boot.end())
 			{
@@ -352,7 +352,6 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				}
 
 				game.category = sstr(cat->second);
-				bootable = true;
 			}
 			else if ((cat = category::cat_data.find(game.category)) != category::cat_data.end())
 			{
@@ -381,7 +380,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 			QPixmap pxmap = PaintedPixmap(img, hasCustomConfig);
 
-			m_game_data.push_back({ game, m_game_compat->GetCompatibility(game.serial), img, pxmap, bootable, hasCustomConfig });
+			m_game_data.push_back({ game, m_game_compat->GetCompatibility(game.serial), img, pxmap, hasCustomConfig });
 		}
 		catch (const std::exception& e)
 		{

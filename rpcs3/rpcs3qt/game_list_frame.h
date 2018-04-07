@@ -166,7 +166,6 @@ struct GUI_GameInfo
 	compat_status compat;
 	QImage icon;
 	QPixmap pxmap;
-	bool bootable;
 	bool hasCustomConfig;
 };
 
