@@ -29,6 +29,34 @@ namespace rsx
 		flush_once = 1
 	};
 
+	struct typeless_xfer
+	{
+		bool src_is_typeless = false;
+		bool dst_is_typeless = false;
+		bool src_is_depth = false;
+		bool dst_is_depth = false;
+		u32 src_gcm_format = 0;
+		u32 dst_gcm_format = 0;
+		f32 src_scaling_hint = 1.f;
+		f32 dst_scaling_hint = 1.f;
+
+		void analyse()
+		{
+			if (src_is_typeless && dst_is_typeless)
+			{
+				if (src_scaling_hint == dst_scaling_hint &&
+					src_scaling_hint != 1.f)
+				{
+					if (src_is_depth == dst_is_depth)
+					{
+						src_is_typeless = dst_is_typeless = false;
+						src_scaling_hint = dst_scaling_hint = 1.f;
+					}
+				}
+			}
+		}
+	};
+
 	struct cached_texture_section : public rsx::buffered_section
 	{
 		u16 width;
@@ -76,7 +104,7 @@ namespace rsx
 				if (depth && depth != this->depth)
 					return false;
 
-				if (mipmaps && mipmaps != this->mipmaps)
+				if (mipmaps && mipmaps > this->mipmaps)
 					return false;
 
 				return true;
@@ -1717,7 +1745,8 @@ namespace rsx
 					{
 						for (const auto &surface : overlapping_surfaces)
 						{
-							if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst)
+							if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst ||
+								!surface->is_locked())
 								continue;
 
 							if (surface->get_width() >= tex_width && surface->get_height() >= tex_height)
@@ -1791,19 +1820,23 @@ namespace rsx
 			bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
 			bool src_is_argb8 = (src.format == rsx::blit_engine::transfer_source_format::a8r8g8b8);
 
+			typeless_xfer typeless_info = {};
 			image_resource_type vram_texture = 0;
 			image_resource_type dest_texture = 0;
 
 			const u32 src_address = (u32)((u64)src.pixels - (u64)vm::base(0));
 			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
 
-			float scale_x = dst.scale_x;
-			float scale_y = dst.scale_y;
+			f32 scale_x = dst.scale_x;
+			f32 scale_y = dst.scale_y;
 
 			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			//Reproject final clip onto source...
-			const u16 src_w = (const u16)((f32)dst.clip_width / scale_x);
-			const u16 src_h = (const u16)((f32)dst.clip_height / scale_y);
+			u16 src_w = (const u16)((f32)dst.clip_width / scale_x);
+			u16 src_h = (const u16)((f32)dst.clip_height / scale_y);
+
+			u16 dst_w = dst.clip_width;
+			u16 dst_h = dst.clip_height;
 
 			//Check if src/dst are parts of render targets
 			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, false, false);
@@ -1847,6 +1880,51 @@ namespace rsx
 			if (!g_cfg.video.use_gpu_texture_scaling && !(src_is_render_target || dst_is_render_target))
 				return false;
 
+			if (src_is_render_target)
+			{
+				const auto surf = src_subres.surface;
+				auto src_bpp = surf->get_native_pitch() / surf->get_surface_width();
+				auto expected_bpp = src_is_argb8 ? 4 : 2;
+				if (src_bpp != expected_bpp)
+				{
+					//Enable type scaling in src
+					typeless_info.src_is_typeless = true;
+					typeless_info.src_is_depth = src_subres.is_depth_surface;
+					typeless_info.src_scaling_hint = (f32)src_bpp / expected_bpp;
+					typeless_info.src_gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
+
+					src_w = (u16)(src_w / typeless_info.src_scaling_hint);
+					if (!src_subres.is_clipped)
+						src_subres.w = (u16)(src_subres.w / typeless_info.src_scaling_hint);
+					else
+						src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src_w, src_h, src.pitch, true, false, false);
+
+					verify(HERE), src_subres.surface != nullptr;
+				}
+			}
+
+			if (dst_is_render_target)
+			{
+				auto dst_bpp = dst_subres.surface->get_native_pitch() / dst_subres.surface->get_surface_width();
+				auto expected_bpp = dst_is_argb8 ? 4 : 2;
+				if (dst_bpp != expected_bpp)
+				{
+					//Enable type scaling in dst
+					typeless_info.dst_is_typeless = true;
+					typeless_info.dst_is_depth = dst_subres.is_depth_surface;
+					typeless_info.dst_scaling_hint = (f32)dst_bpp / expected_bpp;
+					typeless_info.dst_gcm_format = dst_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
+
+					dst_w = (u16)(dst_w / typeless_info.dst_scaling_hint);
+					if (!dst_subres.is_clipped)
+						dst_subres.w = (u16)(dst_subres.w / typeless_info.dst_scaling_hint);
+					else
+						dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst_w, dst_h, dst.pitch, true, false, false);
+
+					verify(HERE), dst_subres.surface != nullptr;
+				}
+			}
+
 			reader_lock lock(m_cache_mutex);
 
 			//Check if trivial memcpy can perform the same task
@@ -1870,7 +1948,7 @@ namespace rsx
 			u16 max_dst_width = dst.width;
 			u16 max_dst_height = dst.height;
 			areai src_area = { 0, 0, src_w, src_h };
-			areai dst_area = { 0, 0, dst.clip_width, dst.clip_height };
+			areai dst_area = { 0, 0, dst_w, dst_h };
 
 			//1024 height is a hack (for ~720p buffers)
 			//It is possible to have a large buffer that goes up to around 4kx4k but anything above 1280x720 is rare
@@ -1948,7 +2026,7 @@ namespace rsx
 
 				dest_texture = dst_subres.surface->get_surface();
 
-				max_dst_width = dst_subres.surface->get_surface_width();
+				max_dst_width = (u16)(dst_subres.surface->get_surface_width() * typeless_info.dst_scaling_hint);
 				max_dst_height = dst_subres.surface->get_surface_height();
 			}
 
@@ -2019,7 +2097,7 @@ namespace rsx
 					u16 src_subres_h = src_subres.h;
 					get_rsx_dimensions(src_subres_w, src_subres_h, src_subres.surface);
 
-					const int dst_width = (int)(src_subres_w * scale_x);
+					const int dst_width = (int)(src_subres_w * scale_x * typeless_info.src_scaling_hint);
 					const int dst_height = (int)(src_subres_h * scale_y);
 
 					dst_area.x2 = dst_area.x1 + dst_width;
@@ -2055,14 +2133,37 @@ namespace rsx
 			}
 			else if (src_is_render_target && cached_dest)
 			{
-				if (!cached_dest->has_compatible_format(src_subres.surface))
+				switch (cached_dest->get_gcm_format())
+				{
+				case CELL_GCM_TEXTURE_A8R8G8B8:
+				case CELL_GCM_TEXTURE_DEPTH24_D8:
+					format_mismatch = !dst_is_argb8;
+					break;
+				case CELL_GCM_TEXTURE_R5G6B5:
+				case CELL_GCM_TEXTURE_DEPTH16:
+					format_mismatch = dst_is_argb8;
+					break;
+				default:
 					format_mismatch = true;
+					break;
+				}
 			}
 
 			//TODO: Check for other types of format mismatch
 			if (format_mismatch)
 			{
 				lock.upgrade();
+
+				//Mark for removal as the memory is not reusable now
+				if (cached_dest->is_locked())
+				{
+					cached_dest->unprotect();
+					m_cache[get_block_address(cached_dest->get_section_base())].remove_one();
+				}
+
+				cached_dest->set_dirty(true);
+				m_unreleased_texture_objects++;
+
 				invalidate_range_impl_base(cached_dest->get_section_base(), cached_dest->get_section_size(), true, false, false, true, std::forward<Args>(extras)...);
 
 				dest_texture = 0;
@@ -2097,7 +2198,7 @@ namespace rsx
 			//Reproject clip offsets onto source to simplify blit
 			if (dst.clip_x || dst.clip_y)
 			{
-				const u16 scaled_clip_offset_x = (const u16)((f32)dst.clip_x / scale_x);
+				const u16 scaled_clip_offset_x = (const u16)((f32)dst.clip_x / (scale_x * typeless_info.src_scaling_hint));
 				const u16 scaled_clip_offset_y = (const u16)((f32)dst.clip_y / scale_y);
 
 				src_area.x1 += scaled_clip_offset_x;
@@ -2140,14 +2241,42 @@ namespace rsx
 				cached_dest->touch();
 			}
 
-			const f32 scale = rsx::get_resolution_scale();
-			if (src_is_render_target)
-				src_area = src_area * scale;
+			if (rsx::get_resolution_scale_percent() != 100)
+			{
+				const f32 resolution_scale = rsx::get_resolution_scale();
+				if (src_is_render_target)
+				{
+					if (src_subres.surface->get_surface_width() > g_cfg.video.min_scalable_dimension)
+					{
+						src_area.x1 = (u16)(src_area.x1 * resolution_scale);
+						src_area.x2 = (u16)(src_area.x2 * resolution_scale);
+					}
 
-			if (dst_is_render_target)
-				dst_area = dst_area * scale;
+					if (src_subres.surface->get_surface_height() > g_cfg.video.min_scalable_dimension)
+					{
+						src_area.y1 = (u16)(src_area.y1 * resolution_scale);
+						src_area.y2 = (u16)(src_area.y2 * resolution_scale);
+					}
+				}
 
-			blitter.scale_image(vram_texture, dest_texture, src_area, dst_area, interpolate, is_depth_blit);
+				if (dst_is_render_target)
+				{
+					if (dst_subres.surface->get_surface_width() > g_cfg.video.min_scalable_dimension)
+					{
+						dst_area.x1 = (u16)(dst_area.x1 * resolution_scale);
+						dst_area.x2 = (u16)(dst_area.x2 * resolution_scale);
+					}
+
+					if (dst_subres.surface->get_surface_height() > g_cfg.video.min_scalable_dimension)
+					{
+						dst_area.y1 = (u16)(dst_area.y1 * resolution_scale);
+						dst_area.y2 = (u16)(dst_area.y2 * resolution_scale);
+					}
+				}
+			}
+
+			typeless_info.analyse();
+			blitter.scale_image(vram_texture, dest_texture, src_area, dst_area, interpolate, is_depth_blit, typeless_info);
 			notify_surface_changed(dst.rsx_address);
 
 			blit_op_result result = true;
