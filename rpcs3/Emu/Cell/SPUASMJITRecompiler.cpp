@@ -9,6 +9,7 @@
 #include "Utilities/sysinfo.h"
 
 #include <cmath>
+#include <thread>
 
 #define ASMJIT_STATIC
 #define ASMJIT_DEBUG
@@ -2862,7 +2863,7 @@ void spu_recompiler::BRZ(spu_opcode_t op)
 {
 	const u32 target = spu_branch_target(m_pos, op.i16);
 
-	if (target == m_pos) fmt::throw_exception("Branch-to-self (0x%05x)" HERE, target);
+	if (target == m_pos) std::this_thread::yield();
 
 	c->cmp(SPU_OFF_32(gpr, op.rt, &v128::_u32, 3), 0);
 
@@ -2908,7 +2909,7 @@ void spu_recompiler::BRNZ(spu_opcode_t op)
 {
 	const u32 target = spu_branch_target(m_pos, op.i16);
 
-	if (target == m_pos) fmt::throw_exception("Branch-to-self (0x%05x)" HERE, target);
+	if (target == m_pos) std::this_thread::yield();
 
 	c->cmp(SPU_OFF_32(gpr, op.rt, &v128::_u32, 3), 0);
 
@@ -2933,7 +2934,7 @@ void spu_recompiler::BRHZ(spu_opcode_t op)
 {
 	const u32 target = spu_branch_target(m_pos, op.i16);
 
-	if (target == m_pos) fmt::throw_exception("Branch-to-self (0x%05x)" HERE, target);
+	if (target == m_pos) std::this_thread::yield();
 
 	c->cmp(SPU_OFF_16(gpr, op.rt, &v128::_u16, 6), 0);
 
@@ -2958,7 +2959,7 @@ void spu_recompiler::BRHNZ(spu_opcode_t op)
 {
 	const u32 target = spu_branch_target(m_pos, op.i16);
 
-	if (target == m_pos) fmt::throw_exception("Branch-to-self (0x%05x)" HERE, target);
+	if (target == m_pos) std::this_thread::yield();
 
 	c->cmp(SPU_OFF_16(gpr, op.rt, &v128::_u16, 6), 0);
 
@@ -3004,7 +3005,7 @@ void spu_recompiler::BRA(spu_opcode_t op)
 {
 	const u32 target = spu_branch_target(0, op.i16);
 
-	if (target == m_pos) fmt::throw_exception("Branch-to-self (0x%05x)" HERE, target);
+	if (target == m_pos) std::this_thread::yield();
 
 	if (labels[target / 4].isValid())
 	{
@@ -3049,7 +3050,7 @@ void spu_recompiler::BRASL(spu_opcode_t op)
 {
 	const u32 target = spu_branch_target(0, op.i16);
 
-	if (target == m_pos) fmt::throw_exception("Branch-to-self (0x%05x)" HERE, target);
+	if (target == m_pos) std::this_thread::yield();
 
 	const XmmLink& vr = XmmAlloc();
 	c->movdqa(vr, XmmConst(_mm_set_epi32(spu_branch_target(m_pos + 4), 0, 0, 0)));
@@ -3104,7 +3105,7 @@ void spu_recompiler::BRSL(spu_opcode_t op)
 {
 	const u32 target = spu_branch_target(m_pos, op.i16);
 
-	if (target == m_pos) fmt::throw_exception("Branch-to-self (0x%05x)" HERE, target);
+	if (target == m_pos) std::this_thread::yield();
 
 	const XmmLink& vr = XmmAlloc();
 	c->movdqa(vr, XmmConst(_mm_set_epi32(spu_branch_target(m_pos + 4), 0, 0, 0)));
