@@ -84,7 +84,7 @@ after_script:
       chmod a+x ./appdir/AppRun ;
       wget -c https://github.com/darealshinji/AppImageKit-checkrt/releases/download/continuous/exec-x86_64.so -O ./appdir/usr/optional/exec.so ;
       
-      echo "Pacakge it up and send it off" ;
+      echo "Package it up and send it off" ;
       ./linuxdeployqt*.AppImage --appimage-extract ;
       ./squashfs-root/usr/bin/appimagetool ${TRAVIS_BUILD_DIR}/build/appdir ;
       find ./appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq ;
