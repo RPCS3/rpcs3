@@ -37,7 +37,7 @@ void RawSPUThread::on_init(const std::shared_ptr<void>& _this)
 }
 
 RawSPUThread::RawSPUThread(const std::string& name)
-	: SPUThread(name)
+	: SPUThread(name, 0, nullptr)
 {
 }
 

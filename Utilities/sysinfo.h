@@ -29,6 +29,8 @@ namespace utils
 
 	bool has_ssse3();
 
+	bool has_sse41();
+
 	bool has_avx();
 
 	bool has_avx2();

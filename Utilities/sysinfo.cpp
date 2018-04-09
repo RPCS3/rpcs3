@@ -13,6 +13,12 @@ bool utils::has_ssse3()
 	return g_value;
 }
 
+bool utils::has_sse41()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x80000;
+	return g_value;
+}
+
 bool utils::has_avx()
 {
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x10000000 && (get_cpuid(1, 0)[2] & 0x0C000000) == 0x0C000000 && (get_xgetbv(0) & 0x6) == 0x6;

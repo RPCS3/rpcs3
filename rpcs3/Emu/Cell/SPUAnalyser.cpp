@@ -1,39 +1,12 @@
 #include "stdafx.h"
+#include "Emu/Memory/vm.h"
 #include "SPUAnalyser.h"
 #include "SPURecompiler.h"
 #include "SPUOpcodes.h"
 
 const spu_decoder<spu_itype> s_spu_itype;
 
-spu_function_t* SPUDatabase::find(const be_t<u32>* data, u64 key, u32 max_size)
-{
-	for (auto found = m_db.equal_range(key); found.first != found.second; found.first++)
-	{
-		const auto& func = found.first->second;
-
-		// Compare binary data explicitly (TODO: optimize)
-		if (LIKELY(func->size <= max_size) && std::memcmp(func->data.data(), data, func->size) == 0)
-		{
-			return func.get();
-		}
-	}
-
-	return nullptr;
-}
-
-SPUDatabase::SPUDatabase()
-{
-	// TODO: load existing database associated with currently running executable
-
-	LOG_SUCCESS(SPU, "SPU Database initialized...");
-}
-
-SPUDatabase::~SPUDatabase()
-{
-	// TODO: serialize database
-}
-
-spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_limit)
+std::shared_ptr<spu_function> spu_analyse(const be_t<u32>* ls, u32 entry, u32 max_limit)
 {
 	// Check arguments (bounds and alignment)
 	if (max_limit > 0x40000 || entry >= max_limit || entry % 4 || max_limit % 4)
@@ -47,23 +20,23 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 	const u32 block_sz = max_limit - entry;
 
 	{
-		reader_lock lock(m_mutex);
+		//reader_lock lock(m_mutex);
 
 		// Try to find existing function in the database
-		if (auto func = find(base, key, block_sz))
-		{
-			return func;
-		}
+		// if (auto func = find(base, key, block_sz))
+		// {
+		// 	return func;
+		// }
 	}
 
 	{
-		writer_lock lock(m_mutex);
+		//writer_lock lock(m_mutex);
 
 		// Double-check
-		if (auto func = find(base, key, block_sz))
-		{
-			return func;
-		}
+		// if (auto func = find(base, key, block_sz))
+		// {
+		// 	return func;
+		// }
 	}
 
 	// Initialize block entries with the function entry point
@@ -89,14 +62,14 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 		const auto type = s_spu_itype.decode(op.opcode);
 
 		{
-			reader_lock lock(m_mutex);
+			//reader_lock lock(m_mutex);
 
 			// Find existing function
-			if (pos != entry && find(ls + pos / 4, pos | u64{ op.opcode } << 32, limit - pos))
-			{
-				limit = pos;
-				break;
-			}
+			// if (pos != entry && find(ls + pos / 4, pos | u64{ op.opcode } << 32, limit - pos))
+			// {
+			// 	limit = pos;
+			// 	break;
+			// }
 		}
 
 		// Additional analysis at the beginning of the block
@@ -156,7 +129,7 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 
 				// Fix pos value
 				start = pos; pos = pos - 4;
-				
+
 				continue;
 			}
 
@@ -179,10 +152,10 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 
 		// if upcoming instruction is not BI, reset the pigeonhole optimization
 		// todo: can constant propogation somewhere get rid of this check?
-		if ((type != BI))
+		if ((type != spu_itype::BI))
 			ila_r2_addr = 0; // reset
-		
-		if (type == BI || type == IRET) // Branch Indirect
+
+		if (type == spu_itype::BI || type == spu_itype::IRET) // Branch Indirect
 		{
 			blocks.emplace(start);
 			start = pos + 4;
@@ -190,9 +163,9 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 			if (op.ra == 2 && ila_r2_addr > entry)
 				blocks.emplace(ila_r2_addr);
 		}
-		else if (type == BR || type == BRA) // Branch Relative/Absolute
+		else if (type == spu_itype::BR || type == spu_itype::BRA) // Branch Relative/Absolute
 		{
-			const u32 target = spu_branch_target(type == BR ? pos : 0, op.i16);
+			const u32 target = spu_branch_target(type == spu_itype::BR ? pos : 0, op.i16);
 
 			// Add adjacent function because it always could be
 			adjacent.emplace(target);
@@ -205,9 +178,9 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 			blocks.emplace(start);
 			start = pos + 4;
 		}
-		else if (type == BRSL || type == BRASL) // Branch Relative/Absolute and Set Link
+		else if (type == spu_itype::BRSL || type == spu_itype::BRASL) // Branch Relative/Absolute and Set Link
 		{
-			const u32 target = spu_branch_target(type == BRSL ? pos : 0, op.i16);
+			const u32 target = spu_branch_target(type == spu_itype::BRSL ? pos : 0, op.i16);
 
 			if (target == pos + 4)
 			{
@@ -228,11 +201,11 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 				if (op.rt != 0) LOG_ERROR(SPU, "[0x%05x] Function call without $LR", pos);
 			}
 		}
-		else if (type == BISL || type == BISLED) // Branch Indirect and Set Link
+		else if (type == spu_itype::BISL || type == spu_itype::BISLED) // Branch Indirect and Set Link
 		{
 			if (op.rt != 0) LOG_ERROR(SPU, "[0x%05x] Indirect function call without $LR", pos);
 		}
-		else if (type == BRNZ || type == BRZ || type == BRHNZ || type == BRHZ) // Branch Relative if (Not) Zero (Half)word
+		else if (type == spu_itype::BRNZ || type == spu_itype::BRZ || type == spu_itype::BRHNZ || type == spu_itype::BRHZ) // Branch Relative if (Not) Zero (Half)word
 		{
 			const u32 target = spu_branch_target(pos, op.i16);
 
@@ -244,7 +217,7 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 				blocks.emplace(target);
 			}
 		}
-		else if (type == LNOP || type == NOP) {
+		else if (type == spu_itype::LNOP || type == spu_itype::NOP) {
 			// theres a chance that theres some random lnops/nops after the end of a function
 			// havent found a definite pattern, but, is an easy optimization to check for, just push start down if lnop is tagged as a start
 			// todo: remove the last added start pos as its probly unnecessary
@@ -262,7 +235,7 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 			// Analyse stack pointer access
 			else if (rt == 1)
 			{
-				if (type == ILA && pos < ila_sp_pos)
+				if (type == spu_itype::ILA && pos < ila_sp_pos)
 				{
 					// set minimal ila $SP,* instruction position
 					ila_sp_pos = pos;
@@ -272,7 +245,7 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 			// ila r2, addr
 			// bi r2
 			else if (rt == 2) {
-				if (type == ILA)
+				if (type == spu_itype::ILA)
 					ila_r2_addr = spu_branch_target(op.i18);
 			}
 		}
@@ -285,9 +258,9 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 
 		const auto type = s_spu_itype.decode(op.opcode);
 
-		if (type == BRSL || type == BRASL) // Branch Relative/Absolute and Set Link
+		if (type == spu_itype::BRSL || type == spu_itype::BRASL) // Branch Relative/Absolute and Set Link
 		{
-			const u32 target = spu_branch_target(type == BRSL ? pos : 0, op.i16);
+			const u32 target = spu_branch_target(type == spu_itype::BRSL ? pos : 0, op.i16);
 
 			if (target != pos + 4 && target > entry && limit > target)
 			{
@@ -308,7 +281,7 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 	}
 
 	// Prepare new function (set addr and size)
-	auto func = std::make_shared<spu_function_t>(entry, limit - entry);
+	auto func = std::make_shared<spu_function>(entry, limit - entry);
 
 	// Copy function contents
 	func->data = { ls + entry / 4, ls + limit / 4 };
@@ -346,13 +319,13 @@ spu_function_t* SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_lim
 	// Lock here just before we write to the db
 	// Its is unlikely that the second check will pass anyway so we delay this step since compiling functions is very fast
 	{
-		writer_lock lock(m_mutex);
+		//writer_lock lock(m_mutex);
 
 		// Add function to the database
-		m_db.emplace(key, func);
+		//m_db.emplace(key, func);
 	}
 
 	LOG_NOTICE(SPU, "Function detected [0x%05x-0x%05x] (size=0x%x)", func->addr, func->addr + func->size, func->size);
 
-	return func.get();
+	return func;
 }

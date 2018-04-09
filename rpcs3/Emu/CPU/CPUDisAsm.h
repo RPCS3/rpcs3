@@ -42,10 +42,10 @@ protected:
 public:
 	std::string last_opcode;
 	u32 dump_pc;
-	u8* offset;
+	const u8* offset;
 
 protected:
-	CPUDisAsm(CPUDisAsmMode mode) 
+	CPUDisAsm(CPUDisAsmMode mode)
 		: m_mode(mode)
 		, offset(0)
 	{

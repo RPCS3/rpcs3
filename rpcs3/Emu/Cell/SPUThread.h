@@ -5,9 +5,16 @@
 #include "Emu/Cell/SPUInterpreter.h"
 #include "MFC.h"
 
+#include <map>
+
 struct lv2_event_queue;
 struct lv2_spu_group;
 struct lv2_int_tag;
+
+class SPUThread;
+
+// JIT Block
+using spu_function_t = void(*)(SPUThread&, void*, u8*);
 
 // SPU Channels
 enum : u32
@@ -514,15 +521,13 @@ public:
 	virtual ~SPUThread() override;
 	void cpu_init();
 
-protected:
-	SPUThread(const std::string& name);
-
-public:
 	static const u32 id_base = 0x02000000; // TODO (used to determine thread type)
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
 
 	SPUThread(const std::string& name, u32 index, lv2_spu_group* group);
+
+	u32 pc = 0;
 
 	// General-Purpose Registers
 	std::array<v128, 128> gpr;
@@ -577,23 +582,25 @@ public:
 	std::array<std::pair<u32, std::weak_ptr<lv2_event_queue>>, 32> spuq; // Event Queue Keys for SPU Thread
 	std::weak_ptr<lv2_event_queue> spup[64]; // SPU Ports
 
-	u32 pc = 0; //
 	const u32 index; // SPU index
 	const u32 offset; // SPU LS offset
 	lv2_spu_group* const group; // SPU Thread Group
 
 	const std::string m_name; // Thread name
 
-	std::exception_ptr pending_exception;
-
-	std::array<struct spu_function_t*, 65536> compiled_cache{};
-	std::shared_ptr<class SPUDatabase> spu_db;
-	std::shared_ptr<class spu_recompiler_base> spu_rec;
-	u32 recursion_level = 0;
-
 	u64 tx_success = 0;
 	u64 tx_failure = 0;
 	uint tx_status = 0;
+
+	std::unique_ptr<class spu_recompiler_base> jit; // Recompiler instance
+
+	std::map<std::vector<u32>, spu_function_t> jit_map; // All compiled blocks (first u32 is addr)
+
+	u64 block_counter = 0;
+	u64 block_recover = 0;
+	u64 block_failure = 0;
+
+	std::array<spu_function_t, 0x10000> jit_dispatcher; // Dispatch table for indirect calls
 
 	void push_snr(u32 number, u32 value);
 	void do_dma_transfer(const spu_mfc_cmd& args);

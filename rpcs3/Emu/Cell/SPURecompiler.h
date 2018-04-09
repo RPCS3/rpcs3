@@ -1,25 +1,32 @@
 #pragma once
 
-#include "SPUAnalyser.h"
+#include "SPUThread.h"
 
-#include <mutex>
-
-// SPU Recompiler instance base (must be global or PS3 process-local)
+// SPU Recompiler instance base class
 class spu_recompiler_base
 {
 protected:
-	std::mutex m_mutex; // must be locked in compile()
+	SPUThread& m_spu;
 
-	const spu_function_t* m_func; // current function
-
-	u32 m_pos; // current position
+	u32 m_pos;
 
 public:
+	spu_recompiler_base(SPUThread& spu);
+
 	virtual ~spu_recompiler_base();
 
-	// Compile specified function
-	virtual void compile(spu_function_t& f) = 0;
+	// Compile function
+	virtual spu_function_t compile(const std::vector<u32>& func) = 0;
 
-	// Run
-	static void enter(class SPUThread&);
+	// Default dispatch function fallback (second pointer is unused)
+	static void dispatch(SPUThread&, void*, u8*);
+
+	// Direct branch fallback for non-compiled destination
+	static void branch(SPUThread&, std::pair<const std::vector<u32>, spu_function_t>*, u8* rip);
+
+	// Get the block at specified address
+	static std::vector<u32> block(SPUThread&, u32 lsa);
+
+	// Create recompiler instance (ASMJIT)
+	static std::unique_ptr<spu_recompiler_base> make_asmjit_recompiler(SPUThread& spu);
 };

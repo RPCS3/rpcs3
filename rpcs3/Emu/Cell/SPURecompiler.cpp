@@ -3,92 +3,183 @@
 #include "Emu/Memory/Memory.h"
 
 #include "SPUThread.h"
+#include "SPUAnalyser.h"
 #include "SPURecompiler.h"
-#include "SPUASMJITRecompiler.h"
 #include <algorithm>
 
 extern u64 get_system_time();
+
+const spu_decoder<spu_itype> s_spu_itype;
+
+spu_recompiler_base::spu_recompiler_base(SPUThread& spu)
+	: m_spu(spu)
+{
+	// Initialize lookup table
+	spu.jit_dispatcher.fill(&dispatch);
+
+	// Initialize "empty" block
+	spu.jit_map[std::vector<u32>()] = &dispatch;
+}
 
 spu_recompiler_base::~spu_recompiler_base()
 {
 }
 
-void spu_recompiler_base::enter(SPUThread& spu)
+void spu_recompiler_base::dispatch(SPUThread& spu, void*, u8* rip)
 {
-	if (spu.pc >= 0x40000 || spu.pc % 4)
+	const auto result = spu.jit_map.emplace(block(spu, spu.pc), nullptr);
+
+	if (result.second || !result.first->second)
 	{
-		fmt::throw_exception("Invalid PC: 0x%05x", spu.pc);
+		result.first->second = spu.jit->compile(result.first->first);
 	}
 
-	// Get SPU LS pointer
-	const auto _ls = vm::_ptr<u32>(spu.offset);
+	spu.jit_dispatcher[spu.pc / 4] = result.first->second;
+}
 
-	// Search if cached data matches
-	auto func = spu.compiled_cache[spu.pc / 4];
+void spu_recompiler_base::branch(SPUThread& spu, std::pair<const std::vector<u32>, spu_function_t>* pair, u8* rip)
+{
+	spu.pc = pair->first[0];
 
-	// Check shared db if we dont have a match
-	if (!func || !std::equal(func->data.begin(), func->data.end(), _ls + spu.pc / 4, [](const be_t<u32>& l, const be_t<u32>& r) { return *(u32*)(u8*)&l == *(u32*)(u8*)&r; }))
+	if (!pair->second)
 	{
-		func = spu.spu_db->analyse(_ls, spu.pc);
-		spu.compiled_cache[spu.pc / 4] = func;
+		pair->second = spu.jit->compile(pair->first);
 	}
 
-	// Reset callstack if necessary
-	if ((func->does_reset_stack && spu.recursion_level) || spu.recursion_level >= 128)
-	{
-		spu.state += cpu_flag::ret;
-		return;
-	}
+	spu.jit_dispatcher[spu.pc / 4] = pair->second;
 
-	// Compile if needed
-	if (!func->compiled)
+	// Overwrite jump to this function with jump to the compiled function
+	const s64 rel = reinterpret_cast<u64>(pair->second) - reinterpret_cast<u64>(rip) - 5;
+
+	if (rel >= INT32_MIN && rel <= INT32_MAX)
 	{
-		if (!spu.spu_rec)
+		const s64 rel8 = (rel + 5) - 2;
+
+		alignas(8) u8 bytes[8];
+
+		if (rel8 >= INT8_MIN && rel8 <= INT8_MAX)
 		{
-			spu.spu_rec = fxm::get_always<spu_recompiler>();
+			bytes[0] = 0xeb; // jmp rel8
+			bytes[1] = static_cast<s8>(rel8);
+			std::memset(bytes + 2, 0x90, 5);
+			bytes[7] = 0x48;
+		}
+		else
+		{
+			bytes[0] = 0xe9; // jmp rel32
+			std::memcpy(bytes + 1, &rel, 4);
+			std::memset(bytes + 5, 0x90, 2);
+			bytes[7] = 0x48;
 		}
 
-		spu.spu_rec->compile(*func);
-
-		if (!func->compiled) fmt::throw_exception("Compilation failed" HERE);
+#ifdef _MSC_VER
+		*(volatile u64*)(rip) = *reinterpret_cast<u64*>(+bytes);
+#else
+		__atomic_store_n(reinterpret_cast<u64*>(rip), *reinterpret_cast<u64*>(+bytes), __ATOMIC_RELAXED);
+#endif
 	}
-
-	const u32 res = func->compiled(&spu, _ls);
-
-	if (const auto exception = spu.pending_exception)
+	else
 	{
-		spu.pending_exception = nullptr;
-		std::rethrow_exception(exception);
+		alignas(16) u8 bytes[16];
+
+		bytes[0] = 0xff; // jmp [rip+2]
+		bytes[1] = 0x25;
+		bytes[2] = 0x02;
+		bytes[3] = 0x00;
+		bytes[4] = 0x00;
+		bytes[5] = 0x00;
+		bytes[6] = 0x48; // mov rax, imm64 (not executed)
+		bytes[7] = 0xb8;
+		std::memcpy(bytes + 8, &pair->second, 8);
+
+		reinterpret_cast<atomic_t<u128>*>(rip)->store(*reinterpret_cast<u128*>(+bytes));
 	}
+}
 
-	if (res & 0x1000000)
-	{
-		spu.halt();
-	}
+std::vector<u32> spu_recompiler_base::block(SPUThread& spu, u32 lsa)
+{
+	u32 addr = lsa;
 
-	if (res & 0x2000000)
-	{
-	}
+	std::vector<u32> result;
 
-	if (res & 0x4000000)
+	while (addr < 0x40000)
 	{
-		if (res & 0x8000000)
+		const u32 data = spu._ref<u32>(addr);
+
+		if (data == 0 && addr == lsa)
 		{
-			fmt::throw_exception("Invalid interrupt status set (0x%x)" HERE, res);
+			break;
 		}
 
-		spu.set_interrupt_status(true);
-	}
-	else if (res & 0x8000000)
-	{
-		spu.set_interrupt_status(false);
+		addr += 4;
+
+		if (result.empty())
+		{
+			result.emplace_back(lsa);
+		}
+
+		result.emplace_back(se_storage<u32>::swap(data));
+
+		const auto type = s_spu_itype.decode(data);
+
+		switch (type)
+		{
+		case spu_itype::UNK:
+		case spu_itype::STOP:
+		case spu_itype::STOPD:
+		case spu_itype::SYNC:
+		case spu_itype::DSYNC:
+		case spu_itype::DFCEQ:
+		case spu_itype::DFCMEQ:
+		case spu_itype::DFCGT:
+		//case spu_itype::DFCMGT:
+		case spu_itype::DFTSV:
+		case spu_itype::BI:
+		case spu_itype::IRET:
+		case spu_itype::BISL:
+		{
+			break;
+		}
+		case spu_itype::BRA:
+		case spu_itype::BRASL:
+		{
+			if (spu_branch_target(0, spu_opcode_t{data}.i16) == addr)
+			{
+				continue;
+			}
+
+			break;
+		}
+		case spu_itype::BR:
+		case spu_itype::BRSL:
+		{
+			if (spu_branch_target(addr - 4, spu_opcode_t{data}.i16) == addr)
+			{
+				continue;
+			}
+
+			break;
+		}
+		case spu_itype::BRZ:
+		case spu_itype::BRNZ:
+		case spu_itype::BRHZ:
+		case spu_itype::BRHNZ:
+		{
+			if (spu_branch_target(addr - 4, spu_opcode_t{data}.i16) >= addr)
+			{
+				continue;
+			}
+
+			break;
+		}
+		default:
+		{
+			continue;
+		}
+		}
+
+		break;
 	}
 
-	spu.pc = res & 0x3fffc;
-
-	if (spu.interrupts_enabled && (spu.ch_event_mask & spu.ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
-	{
-		spu.interrupts_enabled = false;
-		spu.srr0 = std::exchange(spu.pc, 0);
-	}
+	return result;
 }

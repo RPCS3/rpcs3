@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Utilities/mutex.h"
-
+#include <vector>
 #include <set>
 
 // SPU Instruction Type
@@ -247,7 +246,7 @@ struct spu_itype
 class SPUThread;
 
 // SPU basic function information structure
-struct spu_function_t
+struct spu_function
 {
 	// Entry point (LS address)
 	const u32 addr;
@@ -273,28 +272,9 @@ struct spu_function_t
 	// Pointer to the compiled function
 	u32(*compiled)(SPUThread* _spu, be_t<u32>* _ls) = nullptr;
 
-	spu_function_t(u32 addr, u32 size)
+	spu_function(u32 addr, u32 size)
 		: addr(addr)
 		, size(size)
 	{
 	}
-};
-
-// SPU Function Database (must be global or PS3 process-local)
-class SPUDatabase final : spu_itype
-{
-	shared_mutex m_mutex;
-
-	// All registered functions (uses addr and first instruction as a key)
-	std::unordered_multimap<u64, std::shared_ptr<spu_function_t>> m_db;
-
-	// For internal use
-	spu_function_t* find(const be_t<u32>* data, u64 key, u32 max_size);
-
-public:
-	SPUDatabase();
-	~SPUDatabase();
-
-	// Try to retrieve SPU function information
-	spu_function_t* analyse(const be_t<u32>* ls, u32 entry, u32 limit = 0x40000);
 };

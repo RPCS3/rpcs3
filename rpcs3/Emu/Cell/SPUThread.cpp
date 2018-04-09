@@ -314,7 +314,7 @@ std::string SPUThread::dump() const
 
 	// Print some transaction statistics
 	fmt::append(ret, "\nTX: %u; Fail: %u (0x%x)", tx_success, tx_failure, tx_status);
-	fmt::append(ret, "\nRaddr: 0x%08x; R: 0x%x", raddr, raddr ? +vm::reservation_acquire(raddr, 128) : 0);
+	fmt::append(ret, "\nBlocks: %u; Fail: %u", block_counter, block_failure);
 	fmt::append(ret, "\nTag Mask: 0x%08x", ch_tag_mask);
 	fmt::append(ret, "\nMFC Stall: 0x%08x", ch_stall_mask);
 	fmt::append(ret, "\nMFC Queue Size: %u", mfc_size);
@@ -397,18 +397,22 @@ void SPUThread::cpu_task()
 {
 	std::fesetround(FE_TOWARDZERO);
 
-	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
-	{
-		if (!spu_db) spu_db = fxm::get_always<SPUDatabase>();
-		return spu_recompiler_base::enter(*this);
-	}
-
 	g_tls_log_prefix = []
 	{
 		const auto cpu = static_cast<SPUThread*>(get_current_cpu_thread());
 
 		return fmt::format("%s [0x%05x]", cpu->get_name(), cpu->pc);
 	};
+
+	if (jit)
+	{
+		while (LIKELY(!test(state) || !check_state()))
+		{
+			jit_dispatcher[pc / 4](*this, vm::_ptr<u8>(offset), nullptr);
+		}
+
+		return;
+	}
 
 	// Select opcode table
 	const auto& table = *(
@@ -502,15 +506,6 @@ SPUThread::~SPUThread()
 	vm::dealloc_verbose_nothrow(offset);
 }
 
-SPUThread::SPUThread(const std::string& name)
-	: cpu_thread(idm::last_id())
-	, m_name(name)
-	, index(0)
-	, offset(0)
-	, group(nullptr)
-{
-}
-
 SPUThread::SPUThread(const std::string& name, u32 index, lv2_spu_group* group)
 	: cpu_thread(idm::last_id())
 	, m_name(name)
@@ -518,6 +513,14 @@ SPUThread::SPUThread(const std::string& name, u32 index, lv2_spu_group* group)
 	, offset(0)
 	, group(group)
 {
+	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
+	{
+		jit = spu_recompiler_base::make_asmjit_recompiler(*this);
+	}
+
+	if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+	{
+	}
 }
 
 void SPUThread::push_snr(u32 number, u32 value)
