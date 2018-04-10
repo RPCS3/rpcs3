@@ -1329,6 +1329,10 @@ namespace rsx
 
 	void thread::get_current_vertex_program()
 	{
+		if (!m_vertex_program_dirty)
+			return;
+
+		m_vertex_program_dirty = false;
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
 		current_vertex_program.skip_vertex_input_check = false;
@@ -1341,8 +1345,8 @@ namespace rsx
 
 		memcpy(ucode_dst, ucode_src, current_vertex_program.data.size() * sizeof(u32));
 
-		auto program_info = program_hash_util::vertex_program_utils::analyse_vertex_program(current_vertex_program.data);
-		current_vertex_program.data.resize(program_info.ucode_size);
+		current_vp_metadata = program_hash_util::vertex_program_utils::analyse_vertex_program(current_vertex_program.data);
+		current_vertex_program.data.resize(current_vp_metadata.ucode_size);
 
 		const u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
 		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
@@ -1540,20 +1544,27 @@ namespace rsx
 
 	void thread::get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors)
 	{
+		if (!m_fragment_program_dirty)
+			return;
+
+		m_fragment_program_dirty = false;
 		auto &result = current_fragment_program = {};
 
 		const u32 shader_program = rsx::method_registers.shader_program_address();
 		if (shader_program == 0)
+		{
+			current_fp_metadata = {};
 			return;
+		}
 
 		const u32 program_location = (shader_program & 0x3) - 1;
 		const u32 program_offset = (shader_program & ~0x3);
 
 		result.addr = vm::base(rsx::get_address(program_offset, program_location));
-		const auto program_info = program_hash_util::fragment_program_utils::analyse_fragment_program(result.addr);
+		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(result.addr);
 
-		result.addr = ((u8*)result.addr + program_info.program_start_offset);
-		result.offset = program_offset + program_info.program_start_offset;
+		result.addr = ((u8*)result.addr + current_fp_metadata.program_start_offset);
+		result.offset = program_offset + current_fp_metadata.program_start_offset;
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;
@@ -1574,7 +1585,7 @@ namespace rsx
 			result.texture_scale[i][1] = sampler_descriptors[i]->scale_y;
 			result.texture_scale[i][2] = (f32)tex.remap();  //Debug value
 
-			if (tex.enabled() && (program_info.referenced_textures_mask & (1 << i)))
+			if (tex.enabled() && (current_fp_metadata.referenced_textures_mask & (1 << i)))
 			{
 				u32 texture_control = 0;
 				result.texture_dimensions |= ((u32)sampler_descriptors[i]->image_type << (i << 1));
