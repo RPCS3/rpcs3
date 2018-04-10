@@ -1441,5 +1441,8 @@
     <ClInclude Include="Emu\Cell\lv2\sys_rsxaudio.h">
       <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\sys_rsxaudio.h">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
