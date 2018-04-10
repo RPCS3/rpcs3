@@ -356,8 +356,20 @@ namespace rsx
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				method_registers.commit_4_transform_program_instructions(index);
+				rsx->m_vertex_program_dirty = true;
 			}
 		};
+
+		void set_transform_program_start(thread* rsx, u32, u32)
+		{
+			rsx->m_vertex_program_dirty = true;
+		}
+
+		void set_vertex_attribute_output_mask(thread* rsx, u32, u32)
+		{
+			rsx->m_vertex_program_dirty = true;
+			rsx->m_fragment_program_dirty = true;
+		}
 
 		void set_begin_end(thread* rsxthr, u32 _reg, u32 arg)
 		{
@@ -520,6 +532,11 @@ namespace rsx
 			rsx->sync();
 		}
 
+		void invalidate_L2(thread* rsx, u32, u32)
+		{
+			rsx->m_fragment_program_dirty = true;
+		}
+
 		void set_surface_dirty_bit(thread* rsx, u32, u32)
 		{
 			rsx->m_rtts_dirty = true;
@@ -538,6 +555,7 @@ namespace rsx
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				rsx->m_textures_dirty[index] = true;
+				rsx->m_fragment_program_dirty = true;
 			}
 		};
 
@@ -564,6 +582,8 @@ namespace rsx
 				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x << 2);
 				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + index * 4, method_registers.blit_engine_output_location_nv3062());
 				vm::write32(address, arg);
+
+				rsx->m_fragment_program_dirty = true;
 			}
 		};
 	}
@@ -1688,6 +1708,9 @@ namespace rsx
 		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
 		bind<NV4097_ZCULL_SYNC, nv4097::sync>();
 		bind<NV4097_SET_CONTEXT_DMA_REPORT, nv4097::sync>();
+		bind<NV4097_INVALIDATE_L2, nv4097::invalidate_L2>();
+		bind<NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start>();
+		bind<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();

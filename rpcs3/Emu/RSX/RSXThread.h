@@ -329,6 +329,8 @@ namespace rsx
 		bool m_textures_dirty[16];
 		bool m_vertex_textures_dirty[4];
 		bool m_framebuffer_state_contested = false;
+		bool m_fragment_program_dirty = false;
+		bool m_vertex_program_dirty = false;
 
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
@@ -341,6 +343,9 @@ namespace rsx
 
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
+
+		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
+		program_hash_util::vertex_program_utils::vertex_program_metadata current_vp_metadata = {};
 
 		void get_current_vertex_program();
 

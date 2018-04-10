@@ -1049,37 +1049,37 @@ bool GLGSRender::check_program_state()
 
 void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 {
-	get_current_fragment_program(fs_sampler_state);
-	verify(HERE), current_fragment_program.valid;
-
-	get_current_vertex_program();
-
-	auto &fragment_program = current_fragment_program;
-	auto &vertex_program = current_vertex_program;
-
-	vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
-	fragment_program.unnormalized_coords = 0; //unused
-	void* pipeline_properties = nullptr;
-
-	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, pipeline_properties);
-	m_program->use();
-
-	if (m_prog_buffer.check_cache_missed())
+	if (m_fragment_program_dirty || m_vertex_program_dirty)
 	{
-		m_shaders_cache->store(pipeline_properties, vertex_program, fragment_program);
+		get_current_fragment_program(fs_sampler_state);
+		verify(HERE), current_fragment_program.valid;
 
-		//Notify the user with HUD notification
-		if (g_cfg.misc.show_shader_compilation_hint)
+		get_current_vertex_program();
+
+		current_vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
+		current_fragment_program.unnormalized_coords = 0; //unused
+		void* pipeline_properties = nullptr;
+
+		m_program = &m_prog_buffer.getGraphicPipelineState(current_vertex_program, current_fragment_program, pipeline_properties);
+		m_program->use();
+
+		if (m_prog_buffer.check_cache_missed())
 		{
-			if (!m_custom_ui)
+			m_shaders_cache->store(pipeline_properties, current_vertex_program, current_fragment_program);
+
+			//Notify the user with HUD notification
+			if (g_cfg.misc.show_shader_compilation_hint)
 			{
-				//Create notification but do not draw it at this time. No need to spam flip requests
-				m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
-			}
-			else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
-			{
-				//Probe the notification
-				casted->touch();
+				if (!m_custom_ui)
+				{
+					//Create notification but do not draw it at this time. No need to spam flip requests
+					m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
+				}
+				else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
+				{
+					//Probe the notification
+					casted->touch();
+				}
 			}
 		}
 	}
@@ -1089,7 +1089,7 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 	u32 vertex_constants_offset;
 	u32 fragment_constants_offset;
 
-	const u32 fragment_constants_size = (const u32)m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
+	const u32 fragment_constants_size = (const u32)m_prog_buffer.get_fragment_constants_buffer_size(current_fragment_program);
 	const u32 fragment_buffer_size = fragment_constants_size + (18 * 4 * sizeof(float));
 
 	if (manually_flush_ring_buffers)
@@ -1128,11 +1128,11 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 	if (fragment_constants_size)
 	{
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) },
-				fragment_program, gl::get_driver_caps().vendor_NVIDIA);
+			current_fragment_program, gl::get_driver_caps().vendor_NVIDIA);
 	}
 
 	// Fragment state
-	fill_fragment_state_buffer(buf+fragment_constants_size, fragment_program);
+	fill_fragment_state_buffer(buf+fragment_constants_size, current_fragment_program);
 
 	m_vertex_state_buffer->bind_range(0, vertex_state_offset, 512);
 	m_fragment_constants_buffer->bind_range(2, fragment_constants_offset, fragment_buffer_size);
