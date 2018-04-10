@@ -397,7 +397,7 @@ namespace gl
 			auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, desc->w, desc->h, 1, 1, GL_RGBA8);
 			tex->copy_from(desc->data, gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
 
-			GLenum remap[] = { GL_BLUE, GL_GREEN, GL_RED, GL_ALPHA };
+			GLenum remap[] = { GL_RED, GL_ALPHA, GL_BLUE, GL_GREEN };
 			auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
 
 			auto result = view.get();

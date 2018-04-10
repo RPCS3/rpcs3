@@ -291,6 +291,8 @@ namespace rsx
 				static_cast<label*>(m_time_thingy.get())->auto_resize();
 
 				m_dim_background->back_color.a = 0.8f;
+				m_description->back_color.a = 0.f;
+				m_time_thingy->back_color.a = 0.f;
 
 				return_code = selection_code::canceled;
 			}
