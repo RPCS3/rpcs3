@@ -2209,10 +2209,13 @@ bool VKGSRender::check_program_status()
 
 void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 {
-	get_current_fragment_program(fs_sampler_state);
-	verify(HERE), current_fragment_program.valid;
+	if (m_fragment_program_dirty || m_vertex_program_dirty)
+	{
+		get_current_fragment_program(fs_sampler_state);
+		verify(HERE), current_fragment_program.valid;
 
-	get_current_vertex_program();
+		get_current_vertex_program();
+	}
 
 	auto &vertex_program = current_vertex_program;
 	auto &fragment_program = current_fragment_program;
