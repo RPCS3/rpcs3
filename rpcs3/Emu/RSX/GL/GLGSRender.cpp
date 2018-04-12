@@ -401,6 +401,8 @@ void GLGSRender::end()
 	//Bind textures and resolve external copy operations
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 	int unused_location;
+	void *unused = nullptr;
+	gl::texture_view* tmp_view;
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
@@ -417,10 +419,10 @@ void GLGSRender::end()
 				{
 					sampler_state->image_handle->bind();
 				}
-				else if (sampler_state->external_subresource_desc.external_handle)
+				else if (sampler_state->external_subresource_desc.external_handle &&
+					(tmp_view = m_gl_texture_cache.create_temporary_subresource(unused, sampler_state->external_subresource_desc)))
 				{
-					void *unused = nullptr;
-					m_gl_texture_cache.create_temporary_subresource(unused, sampler_state->external_subresource_desc)->bind();
+					tmp_view->bind();
 				}
 				else
 				{
@@ -967,10 +969,14 @@ void GLGSRender::clear_surface(u32 arg)
 		case rsx::surface_color_format::x32:
 		case rsx::surface_color_format::w16z16y16x16:
 		case rsx::surface_color_format::w32z32y32x32:
+		{
+			//Nop
+			break;
+		}
 		case rsx::surface_color_format::g8b8:
 		{
-			//NOP
-			break;
+			colormask = rsx::get_g8b8_r8g8_colormask(colormask);
+			// Fall through
 		}
 		default:
 		{

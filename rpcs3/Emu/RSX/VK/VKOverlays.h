@@ -30,21 +30,22 @@ namespace vk
 		std::string vs_src;
 		std::string fs_src;
 
-		struct
-		{
-			int color_attachments = 0;
-			bool write_color = true;
-			bool write_depth = true;
-			bool no_depth_test = true;
-			bool enable_blend = false;
-		}
-		renderpass_config;
+		graphics_pipeline_state renderpass_config;
 
 		bool initialized = false;
 		bool compiled = false;
 
 		u32 num_drawable_elements = 4;
 		u32 first_vertex = 0;
+
+		overlay_pass()
+		{
+			//Override-able defaults
+			renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+		}
+
+		~overlay_pass()
+		{}
 
 		void init_descriptors()
 		{
@@ -173,51 +174,16 @@ namespace vk
 			ms.pSampleMask = NULL;
 			ms.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-			VkPipelineInputAssemblyStateCreateInfo ia = {};
-			ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-
-			VkPipelineRasterizationStateCreateInfo rs = {};
-			rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-			rs.lineWidth = 1.f;
-			rs.polygonMode = VK_POLYGON_MODE_FILL;
-
-			VkPipelineColorBlendAttachmentState att = {};
-			if (renderpass_config.write_color)
-			{
-				att.colorWriteMask = 0xf;
-
-				if (renderpass_config.enable_blend)
-				{
-					att.blendEnable = VK_TRUE;
-					att.alphaBlendOp = VK_BLEND_OP_ADD;
-					att.colorBlendOp = VK_BLEND_OP_ADD;
-					att.dstAlphaBlendFactor = att.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-					att.srcAlphaBlendFactor = att.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-				}
-			}
-
-			VkPipelineColorBlendStateCreateInfo cs = {};
-			cs.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-			cs.attachmentCount = renderpass_config.color_attachments;
-			cs.pAttachments = &att;
-
-			VkPipelineDepthStencilStateCreateInfo ds = {};
-			ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-			ds.depthWriteEnable = renderpass_config.write_depth? VK_TRUE: VK_FALSE;
-			ds.depthTestEnable = VK_TRUE;
-			ds.depthCompareOp = VK_COMPARE_OP_ALWAYS;
-
 			VkPipeline pipeline;
 			VkGraphicsPipelineCreateInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 			info.pVertexInputState = &vi;
-			info.pInputAssemblyState = &ia;
-			info.pRasterizationState = &rs;
-			info.pColorBlendState = &cs;
+			info.pInputAssemblyState = &renderpass_config.ia;
+			info.pRasterizationState = &renderpass_config.rs;
+			info.pColorBlendState = &renderpass_config.cs;
 			info.pMultisampleState = &ms;
 			info.pViewportState = &vp;
-			info.pDepthStencilState = &ds;
+			info.pDepthStencilState = &renderpass_config.ds;
 			info.stageCount = 2;
 			info.pStages = shader_stages;
 			info.pDynamicState = &dynamic_state_info;
@@ -426,7 +392,8 @@ namespace vk
 				"}\n"
 			};
 
-			renderpass_config.write_color = false;
+			renderpass_config.set_depth_mask(true);
+			renderpass_config.enable_depth_test(VK_COMPARE_OP_ALWAYS);
 
 			m_vertex_shader.id = 100002;
 			m_fragment_shader.id = 100003;
@@ -507,10 +474,13 @@ namespace vk
 				"}\n"
 			};
 
-			renderpass_config.color_attachments = 1;
-			renderpass_config.write_color = true;
-			renderpass_config.write_depth = false;
-			renderpass_config.enable_blend = true;
+			renderpass_config.set_attachment_count(1);
+			renderpass_config.set_color_mask(true, true, true, true);
+			renderpass_config.set_depth_mask(false);
+			renderpass_config.enable_blend(0,
+				VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_SRC_ALPHA,
+				VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+				VK_BLEND_OP_ADD, VK_BLEND_OP_ADD);
 
 			m_vertex_shader.id = 100004;
 			m_fragment_shader.id = 100005;
@@ -749,9 +719,96 @@ namespace vk
 				"}\n"
 			};
 
-			renderpass_config.write_color = false;
+			renderpass_config.set_depth_mask(true);
+			renderpass_config.enable_depth_test(VK_COMPARE_OP_ALWAYS);
+
 			m_vertex_shader.id = 100006;
 			m_fragment_shader.id = 100007;
+		}
+	};
+
+	struct attachment_clear_pass : public overlay_pass
+	{
+		color4f clear_color = { 0.f, 0.f, 0.f, 0.f };
+		color4f colormask = { 1.f, 1.f, 1.f, 1.f };
+
+		attachment_clear_pass()
+		{
+			vs_src =
+			{
+				"#version 450\n"
+				"#extension GL_ARB_separate_shader_objects : enable\n"
+				"layout(std140, set=0, binding=1) uniform static_data{ vec4 regs[8]; };\n"
+				"layout(location=0) out vec2 tc0;\n"
+				"layout(location=1) out vec4 color;\n"
+				"layout(location=2) out vec4 mask;\n"
+				"\n"
+				"void main()\n"
+				"{\n"
+				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
+				"	vec2 coords[] = {vec2(0., 0.), vec2(1., 0.), vec2(0., 1.), vec2(1., 1.)};\n"
+				"	tc0 = coords[gl_VertexIndex % 4];\n"
+				"	color = regs[0];\n"
+				"	mask = regs[1];\n"
+				"	gl_Position = vec4(positions[gl_VertexIndex % 4], 0., 1.);\n"
+				"}\n"
+			};
+
+			fs_src =
+			{
+				"#version 420\n"
+				"#extension GL_ARB_separate_shader_objects : enable\n"
+				"layout(set=0, binding=0) uniform sampler2D fs0;\n"
+				"layout(location=0) in vec2 tc0;\n"
+				"layout(location=1) in vec4 color;\n"
+				"layout(location=2) in vec4 mask;\n"
+				"layout(location=0) out vec4 out_color;\n"
+				"\n"
+				"void main()\n"
+				"{\n"
+				"	vec4 original_color = texture(fs0, tc0);\n"
+				"	out_color = mix(original_color, color, bvec4(mask));\n"
+				"}\n"
+			};
+
+			renderpass_config.set_depth_mask(false);
+			renderpass_config.set_color_mask(true, true, true, true);
+			renderpass_config.set_attachment_count(1);
+
+			m_vertex_shader.id = 100006;
+			m_fragment_shader.id = 100007;
+		}
+
+		void update_uniforms(vk::glsl::program* /*program*/) override
+		{
+			auto dst = (f32*)m_ubo->map(0, 128);
+			dst[0] = clear_color.r;
+			dst[1] = clear_color.g;
+			dst[2] = clear_color.b;
+			dst[3] = clear_color.a;
+			dst[4] = colormask.r;
+			dst[5] = colormask.g;
+			dst[6] = colormask.b;
+			dst[7] = colormask.a;
+			m_ubo->unmap();
+		}
+
+		bool update_config(u32 clearmask, color4f color)
+		{
+			color4f mask = { 0.f, 0.f, 0.f, 0.f };
+			if (clearmask & 0x10) mask.r = 1.f;
+			if (clearmask & 0x20) mask.g = 1.f;
+			if (clearmask & 0x40) mask.b = 1.f;
+			if (clearmask & 0x80) mask.a = 1.f;
+
+			if (mask != colormask || color != clear_color)
+			{
+				colormask = mask;
+				clear_color = color;
+				return true;
+			}
+
+			return false;
 		}
 	};
 }
