@@ -526,7 +526,7 @@ public:
 	u32 pc = 0;
 
 	// General-Purpose Registers
-	std::array<v128, 128> gpr;
+	std::array<v128, 128> gpr{};
 	SPU_FPSCR fpscr;
 
 	// MFC command data

@@ -385,27 +385,22 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 			sys_spu_image::deploy(thread->offset, img.second.data(), img.first.nsegs);
 
 			thread->pc = img.first.entry_point;
+			thread->gpr = {};
 			thread->cpu_init();
-			thread->gpr[3] = v128::from64(0, args[0]);
-			thread->gpr[4] = v128::from64(0, args[1]);
-			thread->gpr[5] = v128::from64(0, args[2]);
-			thread->gpr[6] = v128::from64(0, args[3]);
+			thread->gpr[3]._u64[1] = args[0];
+			thread->gpr[4]._u64[1] = args[1];
+			thread->gpr[5]._u64[1] = args[2];
+			thread->gpr[6]._u64[1] = args[3];
+			_mm_mfence(); // Finish initialization's data trasnfering
 
 			thread->status.exchange(SPU_STATUS_RUNNING);
+			thread->run();
 		}
 	}
 
 	// Because SPU_THREAD_GROUP_STATUS_READY is not possible, run event is delivered immediately
 	// TODO: check data2 and data3
 	group->send_run_event(id, 0, 0);
-
-	for (auto& thread : group->threads)
-	{
-		if (thread)
-		{
-			thread->run();
-		}
-	}
 
 	return CELL_OK;
 }
@@ -694,11 +689,6 @@ error_code sys_spu_thread_group_set_priority(u32 id, s32 priority)
 {
 	sys_spu.trace("sys_spu_thread_group_set_priority(id=0x%x, priority=%d)", id, priority);
 
-	if (priority < 16 || priority > 255)
-	{
-		return CELL_EINVAL;
-	}
-
 	const auto group = idm::get<lv2_spu_group>(id);
 
 	if (!group)
@@ -706,7 +696,8 @@ error_code sys_spu_thread_group_set_priority(u32 id, s32 priority)
 		return CELL_ESRCH;
 	}
 
-	if (group->type == SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT)
+
+	if (((priority < 16 || priority > 255) && group->type != SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM) || group->type == SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT)
 	{
 		return CELL_EINVAL;
 	}

@@ -345,9 +345,7 @@ std::string SPUThread::dump() const
 
 void SPUThread::cpu_init()
 {
-	gpr = {};
 	fpscr.Reset();
-
 	ch_mfc_cmd = {};
 
 	srr0 = 0;
@@ -2042,13 +2040,7 @@ bool SPUThread::stop_and_signal(u32 code)
 
 	if (offset >= RAW_SPU_BASE_ADDR)
 	{
-		status.atomic_op([code](u32& status)
-		{
-			status = (status & 0xffff) | (code << 16);
-			status |= SPU_STATUS_STOPPED_BY_STOP;
-			status &= ~SPU_STATUS_RUNNING;
-		});
-
+		status.store(SPU_STATUS_STOPPED_BY_STOP | (code << 16)); // Also clears the run bit
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
 		state += cpu_flag::stop;
 		return true; // ???
@@ -2278,6 +2270,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			if (thread && thread.get() != this)
 			{
 				thread->state += cpu_flag::stop;
+				thread->status.store(SPU_STATUS_STOPPED_BY_STOP);
 				thread->notify();
 			}
 		}
@@ -2288,6 +2281,7 @@ bool SPUThread::stop_and_signal(u32 code)
 		group->cv.notify_one();
 
 		state += cpu_flag::stop;
+		status.store(SPU_STATUS_STOPPED_BY_STOP);
 		return true;
 	}
 
@@ -2304,7 +2298,7 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		semaphore_lock lock(group->mutex);
 
-		status |= SPU_STATUS_STOPPED_BY_STOP;
+		status.store(SPU_STATUS_STOPPED_BY_STOP);
 		group->cv.notify_one();
 
 		state += cpu_flag::stop;
@@ -2328,11 +2322,7 @@ void SPUThread::halt()
 
 	if (offset >= RAW_SPU_BASE_ADDR)
 	{
-		status.atomic_op([](u32& status)
-		{
-			status |= SPU_STATUS_STOPPED_BY_HALT;
-			status &= ~SPU_STATUS_RUNNING;
-		});
+		status.store(SPU_STATUS_STOPPED_BY_HALT); // Also clears the run bit
 
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_HALT_OR_STEP_INT);
 
