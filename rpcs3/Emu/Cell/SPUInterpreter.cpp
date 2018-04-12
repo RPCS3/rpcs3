@@ -115,7 +115,7 @@ void spu_interpreter::set_interrupt_status(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter::STOP(SPUThread& spu, spu_opcode_t op)
 {
-	return spu.stop_and_signal(op.opcode & 0x3fff);
+	return spu.stop_and_signal(op.opcode & 0x3fff) && spu.offset < RAW_SPU_BASE_ADDR;
 }
 
 bool spu_interpreter::LNOP(SPUThread& spu, spu_opcode_t op)

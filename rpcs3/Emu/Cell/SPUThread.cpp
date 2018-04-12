@@ -2085,7 +2085,7 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
 		state += cpu_flag::stop;
-		return true; // ???
+		return true;
 	}
 
 	switch (code)
@@ -2367,6 +2367,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			if (thread && thread.get() != this)
 			{
 				thread->state += cpu_flag::stop;
+				thread->status.store(SPU_STATUS_STOPPED_BY_STOP);
 				thread->notify();
 			}
 		}
@@ -2377,7 +2378,8 @@ bool SPUThread::stop_and_signal(u32 code)
 		group->cv.notify_one();
 
 		state += cpu_flag::stop;
-		return true;
+		status.store(SPU_STATUS_STOPPED_BY_STOP);
+		return false;
 	}
 
 	case 0x102:
@@ -2393,11 +2395,11 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		semaphore_lock lock(group->mutex);
 
-		status |= SPU_STATUS_STOPPED_BY_STOP;
+		status.store(SPU_STATUS_STOPPED_BY_STOP);
 		group->cv.notify_one();
 
 		state += cpu_flag::stop;
-		return true;
+		return false;
 	}
 	}
 
