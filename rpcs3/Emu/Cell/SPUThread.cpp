@@ -2095,7 +2095,7 @@ bool spu_thread::stop_and_signal(u32 code)
 	case 0x002:
 	{
 		state += cpu_flag::ret;
-		return true;
+		return false;
 	}
 
 	case 0x110:
@@ -2283,7 +2283,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		group->cv.notify_one();
 
 		state += cpu_flag::stop;
-		return true;
+		return false;
 	}
 
 	case 0x102:
@@ -2303,7 +2303,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		group->cv.notify_one();
 
 		state += cpu_flag::stop;
-		return true;
+		return false;
 	}
 	}
 
