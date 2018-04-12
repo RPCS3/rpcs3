@@ -456,8 +456,8 @@ namespace rsx
 	static inline u32 get_g8b8_r8g8_colormask(u32 mask)
 	{
 		u32 result = 0;
-		if (mask & 0x40) result |= 0x40;
-		if (mask & 0x80) result |= 0x20;
+		if (mask & 0x20) result |= 0x20;
+		if (mask & 0x40) result |= 0x10;
 
 		return result;
 	}

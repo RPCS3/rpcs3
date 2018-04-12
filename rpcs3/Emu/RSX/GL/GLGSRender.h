@@ -158,7 +158,7 @@ struct driver_state
 	{
 		if (!test_property(GL_COLOR_WRITEMASK, mask))
 		{
-			glColorMask(((mask & 0x20) ? 1 : 0), ((mask & 0x40) ? 1 : 0), ((mask & 0x80) ? 1 : 0), ((mask & 0x10) ? 1 : 0));
+			glColorMask(((mask & 0x10) ? 1 : 0), ((mask & 0x20) ? 1 : 0), ((mask & 0x40) ? 1 : 0), ((mask & 0x80) ? 1 : 0));
 			properties[GL_COLOR_WRITEMASK] = mask;
 		}
 	}
@@ -166,10 +166,10 @@ struct driver_state
 	void color_mask(bool r, bool g, bool b, bool a)
 	{
 		u32 mask = 0;
-		if (r) mask |= 0x20;
-		if (g) mask |= 0x40;
-		if (b) mask |= 0x80;
-		if (a) mask |= 0x10;
+		if (r) mask |= 0x10;
+		if (g) mask |= 0x20;
+		if (b) mask |= 0x40;
+		if (a) mask |= 0x80;
 
 		color_mask(mask);
 	}

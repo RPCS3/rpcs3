@@ -2098,6 +2098,164 @@ public:
 		}
 	};
 
+	class graphics_pipeline_state
+	{
+	public:
+		VkPipelineInputAssemblyStateCreateInfo ia;
+		VkPipelineDepthStencilStateCreateInfo ds;
+		VkPipelineColorBlendAttachmentState att_state[4];
+		VkPipelineColorBlendStateCreateInfo cs;
+		VkPipelineRasterizationStateCreateInfo rs;
+
+		graphics_pipeline_state()
+		{
+			ia = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+			cs = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+			ds = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+			rs = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+
+			for (int i = 0; i < 4; ++i)
+			{
+				att_state[i] = {};
+			}
+
+			rs.polygonMode = VK_POLYGON_MODE_FILL;
+			rs.cullMode = VK_CULL_MODE_NONE;
+			rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+			rs.lineWidth = 1.f;
+		}
+
+		~graphics_pipeline_state()
+		{}
+
+		void set_primitive_type(VkPrimitiveTopology type)
+		{
+			ia.topology = type;
+		}
+
+		void enable_primitive_restart(bool enable = true)
+		{
+			ia.primitiveRestartEnable = enable? VK_TRUE : VK_FALSE;
+		}
+
+		void set_color_mask(bool r, bool g, bool b, bool a)
+		{
+			VkColorComponentFlags mask = 0;
+			if (a) mask |= VK_COLOR_COMPONENT_A_BIT;
+			if (b) mask |= VK_COLOR_COMPONENT_B_BIT;
+			if (g) mask |= VK_COLOR_COMPONENT_G_BIT;
+			if (r) mask |= VK_COLOR_COMPONENT_R_BIT;
+
+			att_state[0].colorWriteMask = mask;
+			att_state[1].colorWriteMask = mask;
+			att_state[2].colorWriteMask = mask;
+			att_state[3].colorWriteMask = mask;
+		}
+
+		void set_depth_mask(bool enable)
+		{
+			ds.depthWriteEnable = enable ? VK_TRUE : VK_FALSE;
+		}
+
+		void set_stencil_mask(u32 mask)
+		{
+			ds.front.writeMask = mask;
+			ds.back.writeMask = mask;
+		}
+
+		void set_stencil_mask_separate(int face, u32 mask)
+		{
+			if (!face)
+				ds.front.writeMask = mask;
+			else
+				ds.back.writeMask = mask;
+		}
+
+		void enable_depth_test(VkCompareOp op)
+		{
+			ds.depthTestEnable = VK_TRUE;
+			ds.depthCompareOp = op;
+		}
+
+		void enable_depth_clamp(bool enable = true)
+		{
+			rs.depthClampEnable = enable ? VK_TRUE : VK_FALSE;
+		}
+
+		void enable_depth_bias(bool enable = true)
+		{
+			rs.depthBiasEnable = VK_TRUE;
+		}
+
+		void enable_depth_bounds_test(bool enable = true)
+		{
+			ds.depthBoundsTestEnable = enable? VK_TRUE : VK_FALSE;
+		}
+
+		void enable_blend(int mrt_index, VkBlendFactor src_factor_rgb, VkBlendFactor src_factor_a,
+			VkBlendFactor dst_factor_rgb, VkBlendFactor dst_factor_a,
+			VkBlendOp equation_rgb, VkBlendOp equation_a)
+		{
+			att_state[mrt_index].srcColorBlendFactor = src_factor_rgb;
+			att_state[mrt_index].srcAlphaBlendFactor = src_factor_a;
+			att_state[mrt_index].dstColorBlendFactor = dst_factor_rgb;
+			att_state[mrt_index].dstAlphaBlendFactor = dst_factor_a;
+			att_state[mrt_index].colorBlendOp = equation_rgb;
+			att_state[mrt_index].alphaBlendOp = equation_a;
+			att_state[mrt_index].blendEnable = VK_TRUE;
+		}
+
+		void enable_stencil_test(VkStencilOp fail, VkStencilOp zfail, VkStencilOp pass,
+			VkCompareOp func, u32 func_mask, u32 ref)
+		{
+			ds.front.failOp = fail;
+			ds.front.passOp = pass;
+			ds.front.depthFailOp = zfail;
+			ds.front.compareOp = func;
+			ds.front.compareMask = func_mask;
+			ds.front.reference = ref;
+			ds.back = ds.front;
+
+			ds.stencilTestEnable = VK_TRUE;
+		}
+
+		void enable_stencil_test_separate(int face, VkStencilOp fail, VkStencilOp zfail, VkStencilOp pass,
+			VkCompareOp func, u32 func_mask, u32 ref)
+		{
+			auto& face_props = (face ? ds.back : ds.front);
+			face_props.failOp = fail;
+			face_props.passOp = pass;
+			face_props.depthFailOp = zfail;
+			face_props.compareOp = func;
+			face_props.compareMask = func_mask;
+			face_props.reference = ref;
+
+			ds.stencilTestEnable = VK_TRUE;
+		}
+
+		void enable_logic_op(VkLogicOp op)
+		{
+			cs.logicOpEnable = VK_TRUE;
+			cs.logicOp = op;
+		}
+
+		void enable_cull_face(VkCullModeFlags cull_mode)
+		{
+			rs.cullMode = cull_mode;
+		}
+
+		void set_front_face(VkFrontFace face)
+		{
+			rs.frontFace = face;
+		}
+
+		void set_attachment_count(u32 count)
+		{
+			cs.attachmentCount = count;
+			cs.pAttachments = att_state;
+		}
+	};
+
 	namespace glsl
 	{
 		enum program_input_type
