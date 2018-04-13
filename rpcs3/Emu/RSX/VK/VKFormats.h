@@ -11,12 +11,13 @@ namespace vk
 	};
 
 	gpu_formats_support get_optimal_tiling_supported_formats(VkPhysicalDevice physical_device);
-	VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support, rsx::surface_depth_format format);
-	VkStencilOp get_stencil_op(rsx::stencil_op op);
-	VkLogicOp get_logic_op(rsx::logic_op op);
-	VkFrontFace get_front_face_ccw(rsx::front_face ffv);
-	VkCullModeFlags get_cull_face(u32 cfv);
 	VkBorderColor get_border_color(u8 color);
+
+	VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support, rsx::surface_depth_format format);
+	VkFormat get_compatible_sampler_format(u32 format);
+	VkFormat get_compatible_srgb_format(VkFormat rgb_format);
+	u8 get_format_texel_width(VkFormat format);
+	std::pair<u8, u8> get_format_element_size(VkFormat format);
 
 	std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(rsx::texture_minify_filter min_filter);
 	VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter);

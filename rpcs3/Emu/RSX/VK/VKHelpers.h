@@ -62,6 +62,7 @@ namespace vk
 	class physical_device;
 	class command_buffer;
 	struct image;
+	struct vk_data_heap;
 
 	vk::context *get_current_thread_ctx();
 	void set_current_thread_ctx(const vk::context &ctx);
@@ -79,6 +80,7 @@ namespace vk
 	VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector);
 	VkImageSubresource default_image_subresource();
 	VkImageSubresourceRange get_image_subresource_range(uint32_t base_layer, uint32_t base_mip, uint32_t layer_count, uint32_t level_count, VkImageAspectFlags aspect);
+	VkImageAspectFlagBits get_aspect_flags(VkFormat format);
 
 	VkSampler null_sampler();
 	VkImageView null_image_view(vk::command_buffer&);
@@ -89,15 +91,22 @@ namespace vk
 
 	void destroy_global_resources();
 
+	/**
+	* Allocate enough space in upload_buffer and write all mipmap/layer data into the subbuffer.
+	* Then copy all layers into dst_image.
+	* dst_image must be in TRANSFER_DST_OPTIMAL layout and upload_buffer have TRANSFER_SRC_BIT usage flag.
+	*/
+	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
+		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
+		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap);
+
+	//Other texture management helpers
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, VkImageSubresourceRange range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
 	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 width, u32 height, u32 mipmaps, VkImageAspectFlagBits aspect);
 	void copy_scaled_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height, u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height, u32 mipmaps, VkImageAspectFlagBits aspect, bool compatible_formats);
 
-	VkFormat get_compatible_sampler_format(u32 format);
-	VkFormat get_compatible_srgb_format(VkFormat rgb_format);
-	u8 get_format_texel_width(const VkFormat format);
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
 
@@ -105,6 +114,7 @@ namespace vk
 	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range);
 	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image);
 
+	//Manage 'uininterruptible' state where secondary operations (e.g violation handlers) will have to wait
 	void enter_uninterruptible();
 	void leave_uninterruptible();
 	bool is_uninterruptible();
@@ -2184,7 +2194,7 @@ public:
 
 		void enable_depth_bias(bool enable = true)
 		{
-			rs.depthBiasEnable = VK_TRUE;
+			rs.depthBiasEnable = enable ? VK_TRUE : VK_FALSE;
 		}
 
 		void enable_depth_bounds_test(bool enable = true)
@@ -2334,13 +2344,4 @@ public:
 			heap->unmap();
 		}
 	};
-
-	/**
-	* Allocate enough space in upload_buffer and write all mipmap/layer data into the subbuffer.
-	* Then copy all layers into dst_image.
-	* dst_image must be in TRANSFER_DST_OPTIMAL layout and upload_buffer have TRANSFER_SRC_BIT usage flag.
-	*/
-	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
-		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap);
 }

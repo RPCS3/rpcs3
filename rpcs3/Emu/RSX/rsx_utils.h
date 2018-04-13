@@ -278,6 +278,7 @@ namespace rsx
 
 	void convert_le_f32_to_be_d24(void *dst, void *src, u32 row_length_in_texels, u32 num_rows);
 	void convert_le_d24x8_to_be_d24x8(void *dst, void *src, u32 row_length_in_texels, u32 num_rows);
+	void convert_le_d24x8_to_le_f32(void *dst, void *src, u32 row_length_in_texels, u32 num_rows);
 
 	void fill_scale_offset_matrix(void *dest_, bool transpose,
 		float offset_x, float offset_y, float offset_z,
