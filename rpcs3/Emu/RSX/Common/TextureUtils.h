@@ -38,7 +38,7 @@ struct rsx_subresource_layout
 	u16 width_in_block;
 	u16 height_in_block;
 	u16 depth;
-	u32 pitch_in_bytes;
+	u32 pitch_in_block;
 };
 
 /**

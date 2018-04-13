@@ -2077,7 +2077,7 @@ namespace rsx
 					rsx_subresource_layout subres = {};
 					subres.width_in_block = src.width;
 					subres.height_in_block = src.slice_h;
-					subres.pitch_in_bytes = pitch_in_block;
+					subres.pitch_in_block = pitch_in_block;
 					subres.depth = 1;
 					subres.data = { (const gsl::byte*)src.pixels, src.pitch * src.slice_h };
 					subresource_layout.push_back(subres);

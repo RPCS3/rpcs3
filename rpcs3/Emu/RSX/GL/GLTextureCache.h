@@ -695,14 +695,19 @@ namespace gl
 			if (sized_internal_fmt == GL_NONE)
 				sized_internal_fmt = gl::get_sized_internal_format(gcm_format);
 
-			auto ifmt = src->get_internal_format();
-			switch (ifmt)
+			gl::texture::internal_format ifmt = static_cast<gl::texture::internal_format>(sized_internal_fmt);
+			if (src)
 			{
-			case gl::texture::internal_format::depth16:
-			case gl::texture::internal_format::depth24_stencil8:
-			case gl::texture::internal_format::depth32f_stencil8:
-				sized_internal_fmt = (GLenum)ifmt;
-				break;
+				ifmt = src->get_internal_format();
+				switch (ifmt)
+				{
+				case gl::texture::internal_format::depth16:
+				case gl::texture::internal_format::depth24_stencil8:
+				case gl::texture::internal_format::depth32f_stencil8:
+					//HACK! Should use typeless transfer instead
+					sized_internal_fmt = (GLenum)ifmt;
+					break;
+				}
 			}
 
 			auto dst = std::make_unique<gl::texture>(dst_type, width, height, 1, 1, sized_internal_fmt);
@@ -723,12 +728,21 @@ namespace gl
 				}
 			}
 
-			std::array<GLenum, 4> swizzle = src->get_native_component_layout();
-			if ((GLenum)ifmt != sized_internal_fmt)
+			std::array<GLenum, 4> swizzle;
+			if (!src || (GLenum)ifmt != sized_internal_fmt)
 			{
-				err_once("GL format mismatch (data cast?). Sized ifmt=0x%X vs Src ifmt=0x%X", sized_internal_fmt, (GLenum)ifmt);
+				if (src)
+				{
+					//Format mismatch
+					err_once("GL format mismatch (data cast?). Sized ifmt=0x%X vs Src ifmt=0x%X", sized_internal_fmt, (GLenum)ifmt);
+				}
+
 				//Apply base component map onto the new texture if a data cast has been done
 				swizzle = get_component_mapping(gcm_format, rsx::texture_create_flags::default_component_order);
+			}
+			else
+			{
+				swizzle = src->get_native_component_layout();
 			}
 
 			if (memcmp(remap.first.data(), rsx::default_remap_vector.first.data(), 4) ||
@@ -744,20 +758,6 @@ namespace gl
 
 		std::array<GLenum, 4> get_component_mapping(u32 gcm_format, rsx::texture_create_flags flags)
 		{
-			//NOTE: Depth textures should always read RRRR
-			switch (gcm_format)
-			{
-			case CELL_GCM_TEXTURE_DEPTH24_D8:
-			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-			case CELL_GCM_TEXTURE_DEPTH16:
-			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-			{
-				return{ GL_RED, GL_RED, GL_RED, GL_RED };
-			}
-			default:
-				break;
-			}
-
 			switch (flags)
 			{
 			case rsx::texture_create_flags::default_component_order:
@@ -858,7 +858,7 @@ namespace gl
 		gl::texture_view* generate_atlas_from_images(void*&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
 				const texture_channel_remap_t& remap_vector) override
 		{
-			auto result = create_temporary_subresource_impl(sections_to_copy.front().src, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
+			auto result = create_temporary_subresource_impl(nullptr, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
 
 			for (const auto &region : sections_to_copy)
 			{

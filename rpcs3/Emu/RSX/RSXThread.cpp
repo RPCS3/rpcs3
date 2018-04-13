@@ -1564,8 +1564,8 @@ namespace rsx
 					{
 					case CELL_GCM_TEXTURE_A8R8G8B8:
 					case CELL_GCM_TEXTURE_D8R8G8B8:
-					case CELL_GCM_TEXTURE_A4R4G4B4:
-					case CELL_GCM_TEXTURE_R5G6B5:
+					case CELL_GCM_TEXTURE_A4R4G4B4: //TODO
+					case CELL_GCM_TEXTURE_R5G6B5:   //TODO
 					{
 						u32 remap = tex.remap();
 						result.redirected_textures |= (1 << i);
@@ -1573,8 +1573,9 @@ namespace rsx
 						break;
 					}
 					case CELL_GCM_TEXTURE_DEPTH16:
-					case CELL_GCM_TEXTURE_DEPTH24_D8:
 					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+					case CELL_GCM_TEXTURE_DEPTH24_D8:
+					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 					{
 						const auto compare_mode = (rsx::comparison_function)tex.zfunc();
 						if (result.textures_alpha_kill[i] == 0 &&
@@ -1731,8 +1732,9 @@ namespace rsx
 							break;
 						}
 						case CELL_GCM_TEXTURE_DEPTH16:
-						case CELL_GCM_TEXTURE_DEPTH24_D8:
 						case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+						case CELL_GCM_TEXTURE_DEPTH24_D8:
+						case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 						{
 							const auto compare_mode = (rsx::comparison_function)tex.zfunc();
 							if (result.textures_alpha_kill[i] == 0 &&
