@@ -41,17 +41,17 @@ namespace vk
 		return subres;
 	}
 
-	VkImageAspectFlagBits get_aspect_flags(VkFormat format)
+	VkImageAspectFlags get_aspect_flags(VkFormat format)
 	{
 		switch (format)
 		{
 		default:
-			return VkImageAspectFlagBits(VK_IMAGE_ASPECT_COLOR_BIT);
+			return VK_IMAGE_ASPECT_COLOR_BIT;
 		case VK_FORMAT_D16_UNORM:
-			return VkImageAspectFlagBits(VK_IMAGE_ASPECT_DEPTH_BIT);
+			return VK_IMAGE_ASPECT_DEPTH_BIT;
 		case VK_FORMAT_D24_UNORM_S8_UINT:
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
-			return VkImageAspectFlagBits(VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+			return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
 	}
 

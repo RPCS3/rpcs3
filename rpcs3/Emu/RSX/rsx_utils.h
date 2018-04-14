@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../System.h"
+#include "Utilities/geometry.h"
 #include "gcm_enums.h"
 #include <atomic>
 
@@ -469,5 +470,15 @@ namespace rsx
 		green = green;
 		blue = false;
 		alpha = false;
+	}
+
+	inline color4f decode_border_color(u32 colorref)
+	{
+		color4f result;
+		result.b = (colorref & 0xFF) / 255.f;
+		result.g = ((colorref >> 8) & 0xFF) / 255.f;
+		result.r = ((colorref >> 16) & 0xFF) / 255.f;
+		result.a = ((colorref >> 24) & 0xFF) / 255.f;
+		return result;
 	}
 }

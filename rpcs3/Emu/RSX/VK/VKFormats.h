@@ -11,7 +11,7 @@ namespace vk
 	};
 
 	gpu_formats_support get_optimal_tiling_supported_formats(VkPhysicalDevice physical_device);
-	VkBorderColor get_border_color(u8 color);
+	VkBorderColor get_border_color(u32 color);
 
 	VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support, rsx::surface_depth_format format);
 	VkFormat get_compatible_sampler_format(u32 format);

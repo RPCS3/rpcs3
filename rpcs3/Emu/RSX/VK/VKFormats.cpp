@@ -68,13 +68,27 @@ namespace vk
 		fmt::throw_exception("Invalid mag filter (0x%x)" HERE, (u32)mag_filter);
 	}
 
-	VkBorderColor get_border_color(u8 color)
+	VkBorderColor get_border_color(u32 color)
 	{
-		// TODO: Handle simulated alpha tests and modify texture operations accordingly
-		if ((color / 0x10) >= 0x8) 
+		//TODO: Improve accuracy
+		auto color4 = rsx::decode_border_color(color);
+
+		f32 mag = (color4.r * color4.r) + (color4.g * color4.g) + (color4.b * color4.b);
+		if (mag > 0.f) mag = sqrtf(mag);
+		mag *= 0.3333f;
+
+		if (mag > 0.8f && color4.a > 0.f)
+		{
+			//If color elements are brighter than roughly 0.5 average, use white border
 			return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+		}
 		else
-			return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+		{
+			if (color4.a > 0.5f)
+				return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+			else
+				return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+		}
 	}
 
 	VkSamplerAddressMode vk_wrap_mode(rsx::texture_wrap_mode gcm_wrap)
