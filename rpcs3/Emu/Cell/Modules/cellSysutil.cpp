@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -283,18 +283,23 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 	return CELL_OK;
 }
 
-s32 cellSysCacheClear(void)
+s32 cellSysCacheClear(vm::ptr<CellSysCacheParam> param)
 {
-	cellSysutil.todo("cellSysCacheClear()");
+	cellSysutil.warning("cellSysCacheClear(param=*0x%x)", param);
 
 	if (!fxm::check<CellSysCacheParam>())
 	{
 		return CELL_SYSCACHE_ERROR_NOTMOUNTED;
 	}
 
-	const std::string& local_path = vfs::get("/dev_hdd1/cache/");
+	const std::string& cache_id = param->cacheId;
+	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
 
-	// TODO: Write tests to figure out, what is deleted.
+	if (!fs::exists(vfs::get(cache_path)) || !fs::is_dir(vfs::get(cache_path))) {
+		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
+	}
+
+	fs::remove_dir(vfs::get(cache_path));
 
 	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
