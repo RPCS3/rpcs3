@@ -173,6 +173,9 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 		case MFC_PUTS_CMD:
 		case MFC_PUTBS_CMD:
 		case MFC_PUTFS_CMD:
+		case MFC_PUTR_CMD:
+		case MFC_PUTRF_CMD:
+		case MFC_PUTRB_CMD:
 		case MFC_GET_CMD:
 		case MFC_GETB_CMD:
 		case MFC_GETF_CMD:
