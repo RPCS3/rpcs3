@@ -1029,6 +1029,10 @@ void VKGSRender::update_draw_state()
 		//Update depth bounds min/max
 		vkCmdSetDepthBounds(*m_current_command_buffer, rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
 	}
+	else
+	{
+		vkCmdSetDepthBounds(*m_current_command_buffer, 0.f, 1.f);
+	}
 
 	set_viewport();
 
@@ -1084,25 +1088,54 @@ void VKGSRender::end()
 	std::chrono::time_point<steady_clock> textures_start = vertex_end;
 
 	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+	//Clear any 'dirty' surfaces - possible is a recycled cache surface is used
+	std::vector<VkClearAttachment> buffers_to_clear;
+	buffers_to_clear.reserve(4);
+	const auto targets = rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target());
+
+	//Check for memory clears
+	if (ds && ds->dirty)
+	{
+		//Clear this surface before drawing on it
+		VkClearValue clear_value = {};
+		clear_value.depthStencil = { 1.f, 255 };
+		buffers_to_clear.push_back({ vk::get_aspect_flags(ds->info.format), 0, clear_value });
+		ds->dirty = false;
+	}
+
+	for (u32 index = 0; index < targets.size(); ++index)
+	{
+		if (auto rtt = std::get<1>(m_rtts.m_bound_render_targets[index]))
+		{
+			if (rtt->dirty)
+			{
+				buffers_to_clear.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, index, {} });
+				rtt->dirty = false;
+			}
+		}
+	}
+
+	if (buffers_to_clear.size() > 0)
+	{
+		begin_render_pass();
+
+		VkClearRect rect = { {{0, 0}, {m_draw_fbo->width(), m_draw_fbo->height()}}, 0, 1 };
+		vkCmdClearAttachments(*m_current_command_buffer, (u32)buffers_to_clear.size(),
+			buffers_to_clear.data(), 1, &rect);
+
+		close_render_pass();
+	}
 
 	//Check for data casts
 	if (ds && ds->old_contents)
 	{
 		if (ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM)
 		{
-			//This routine does not recover stencil data, initialize to 255
-			VkClearDepthStencilValue clear_depth = { 1.f, 255 };
-			VkImageSubresourceRange range = { VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
-			change_image_layout(*m_current_command_buffer, ds, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-			vkCmdClearDepthStencilImage(*m_current_command_buffer, ds->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &range);
-			change_image_layout(*m_current_command_buffer, ds, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
 			auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
 			auto render_pass = m_render_passes[rp];
 			m_depth_converter->run(*m_current_command_buffer, ds->width(), ds->height(), ds, ds->old_contents->get_view(0xAAE4, rsx::default_remap_vector), render_pass, m_framebuffers_to_clean);
 
 			ds->old_contents = nullptr;
-			ds->dirty = false;
 		}
 		else if (!g_cfg.video.strict_rendering_mode)
 		{
@@ -1405,41 +1438,6 @@ void VKGSRender::end()
 	update_draw_state();
 
 	begin_render_pass();
-
-	//Clear any 'dirty' surfaces - possible is a recycled cache surface is used
-	std::vector<VkClearAttachment> buffers_to_clear;
-	buffers_to_clear.reserve(4);
-	const auto targets = rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target());
-
-	if (ds && ds->dirty)
-	{
-		//Clear this surface before drawing on it
-		VkClearValue depth_clear_value;
-		depth_clear_value.depthStencil.depth = 1.f;
-		depth_clear_value.depthStencil.stencil = 255;
-
-		VkClearAttachment clear_desc = { ds->attachment_aspect_flag, 0, depth_clear_value };
-		buffers_to_clear.push_back(clear_desc);
-
-		ds->dirty = false;
-	}
-
-	for (int index = 0; index < targets.size(); ++index)
-	{
-		if (std::get<0>(m_rtts.m_bound_render_targets[index]) != 0 && std::get<1>(m_rtts.m_bound_render_targets[index])->dirty)
-		{
-			const u32 real_index = (index == 1 && targets.size() == 1) ? 0 : static_cast<u32>(index);
-			buffers_to_clear.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, real_index, {} });
-
-			std::get<1>(m_rtts.m_bound_render_targets[index])->dirty = false;
-		}
-	}
-
-	if (buffers_to_clear.size() > 0)
-	{
-		VkClearRect clear_rect = { 0, 0, m_draw_fbo->width(), m_draw_fbo->height(), 0, 1 };
-		vkCmdClearAttachments(*m_current_command_buffer, static_cast<u32>(buffers_to_clear.size()), buffers_to_clear.data(), 1, &clear_rect);
-	}
 
 	bool primitive_emulated = false;
 	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
@@ -1756,15 +1754,19 @@ void VKGSRender::clear_surface(u32 mask)
 						color_clear_values.color.float32[3]
 					};
 
+					const auto fbo_format = vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first;
+					const auto rp_index = vk::get_render_pass_location(fbo_format, VK_FORMAT_UNDEFINED, 1);
+					const auto renderpass = m_render_passes[rp_index];
+
 					m_attachment_clear_pass->update_config(colormask, clear_color);
+
 					for (u32 index = 0; index < m_draw_buffers_count; ++index)
 					{
 						if (auto rtt = std::get<1>(m_rtts.m_bound_render_targets[index]))
 						{
 							vk::insert_texture_barrier(*m_current_command_buffer, rtt);
-							m_attachment_clear_pass->run(*m_current_command_buffer, rtt->width(), rtt->height(),
-								rtt, rtt->get_view(0xAAE4, rsx::default_remap_vector),
-								m_draw_fbo->info.renderPass, m_framebuffers_to_clean);
+							m_attachment_clear_pass->run(*m_current_command_buffer, rtt,
+								region.rect, renderpass, m_framebuffers_to_clean);
 						}
 						else
 							fmt::throw_exception("Unreachable" HERE);
@@ -1800,13 +1802,9 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (clear_descriptors.size() > 0)
 	{
-		//TODO: Implement lw_graphics_pipe objects to manage the color write mask!
-		vk::enter_uninterruptible();
 		begin_render_pass();
 		vkCmdClearAttachments(*m_current_command_buffer, (u32)clear_descriptors.size(), clear_descriptors.data(), 1, &region);
-
 		close_render_pass();
-		vk::leave_uninterruptible();
 	}
 }
 
@@ -2234,19 +2232,20 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 
 	// Rasterizer state
 	properties.state.set_attachment_count(m_draw_buffers_count);
-	properties.state.set_depth_mask(rsx::method_registers.depth_write_enabled());
 	properties.state.set_front_face(vk::get_front_face(rsx::method_registers.front_face_mode()));
 	properties.state.enable_depth_clamp(rsx::method_registers.depth_clamp_enabled() || !rsx::method_registers.depth_clip_enabled());
 	properties.state.enable_depth_bias(true);
+	properties.state.enable_depth_bounds_test(true);
 
 	if (rsx::method_registers.depth_test_enabled())
+	{
+		//NOTE: Like stencil, depth write is meaningless without depth test
+		properties.state.set_depth_mask(rsx::method_registers.depth_write_enabled());
 		properties.state.enable_depth_test(vk::get_compare_func(rsx::method_registers.depth_func()));
+	}
 
 	if (rsx::method_registers.logic_op_enabled())
 		properties.state.enable_logic_op(vk::get_logic_op(rsx::method_registers.logic_operation()));
-
-	if (rsx::method_registers.depth_bounds_test_enabled())
-		properties.state.enable_depth_bounds_test();
 
 	if (rsx::method_registers.cull_face_enabled())
 		properties.state.enable_cull_face(vk::get_cull_face(rsx::method_registers.cull_face_mode()));
@@ -2315,36 +2314,28 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 	{
 		if (!rsx::method_registers.two_sided_stencil_test_enabled())
 		{
-			properties.state.set_stencil_mask(rsx::method_registers.stencil_mask());
-
 			properties.state.enable_stencil_test(
 				vk::get_stencil_op(rsx::method_registers.stencil_op_fail()),
 				vk::get_stencil_op(rsx::method_registers.stencil_op_zfail()),
 				vk::get_stencil_op(rsx::method_registers.stencil_op_zpass()),
 				vk::get_compare_func(rsx::method_registers.stencil_func()),
-				rsx::method_registers.stencil_func_mask(),
-				rsx::method_registers.stencil_func_ref());
+				0xFF, 0xFF); //write mask, func_mask, ref are dynamic
 		}
 		else
 		{
-			properties.state.set_stencil_mask_separate(0, rsx::method_registers.stencil_mask());
-			properties.state.set_stencil_mask_separate(1, rsx::method_registers.back_stencil_mask());
-
 			properties.state.enable_stencil_test_separate(0,
 				vk::get_stencil_op(rsx::method_registers.stencil_op_fail()),
 				vk::get_stencil_op(rsx::method_registers.stencil_op_zfail()),
 				vk::get_stencil_op(rsx::method_registers.stencil_op_zpass()),
 				vk::get_compare_func(rsx::method_registers.stencil_func()),
-				rsx::method_registers.stencil_func_mask(),
-				rsx::method_registers.stencil_func_ref());
+				0xFF, 0xFF); //write mask, func_mask, ref are dynamic
 
 			properties.state.enable_stencil_test_separate(1,
 				vk::get_stencil_op(rsx::method_registers.back_stencil_op_fail()),
 				vk::get_stencil_op(rsx::method_registers.back_stencil_op_zfail()),
 				vk::get_stencil_op(rsx::method_registers.back_stencil_op_zpass()),
 				vk::get_compare_func(rsx::method_registers.back_stencil_func()),
-				rsx::method_registers.back_stencil_func_mask(),
-				rsx::method_registers.back_stencil_func_ref());
+				0xFF, 0xFF); //write mask, func_mask, ref are dynamic
 		}
 	}
 

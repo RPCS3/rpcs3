@@ -80,7 +80,7 @@ namespace vk
 	VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector);
 	VkImageSubresource default_image_subresource();
 	VkImageSubresourceRange get_image_subresource_range(uint32_t base_layer, uint32_t base_mip, uint32_t layer_count, uint32_t level_count, VkImageAspectFlags aspect);
-	VkImageAspectFlagBits get_aspect_flags(VkFormat format);
+	VkImageAspectFlags get_aspect_flags(VkFormat format);
 
 	VkSampler null_sampler();
 	VkImageView null_image_view(vk::command_buffer&);

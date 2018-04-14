@@ -206,13 +206,12 @@ namespace gl
 	//Apply sampler state settings
 	void sampler_state::apply(rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image)
 	{
-		const f32 border_color = (f32)tex.border_color() / 255;
-		const f32 border_color_array[] = { border_color, border_color, border_color, border_color };
+		const color4f border_color = rsx::decode_border_color(tex.border_color());
 
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_S, wrap_mode(tex.wrap_s()));
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_T, wrap_mode(tex.wrap_t()));
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_R, wrap_mode(tex.wrap_r()));
-		glSamplerParameterfv(samplerHandle, GL_TEXTURE_BORDER_COLOR, border_color_array);
+		glSamplerParameterfv(samplerHandle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
 
 		if (sampled_image->upload_context != rsx::texture_upload_context::shader_read ||
 			tex.get_exact_mipmap_count() <= 1)

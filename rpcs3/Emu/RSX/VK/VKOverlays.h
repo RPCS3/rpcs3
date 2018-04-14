@@ -319,19 +319,23 @@ namespace vk
 			vkCmdDraw(cmd, num_drawable_elements, 1, first_vertex, 0);
 		}
 
-		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::framebuffer* fbo, VkImageView src, VkRenderPass render_pass)
+		virtual void set_up_viewport(vk::command_buffer &cmd, u16 max_w, u16 max_h)
 		{
-			load_program(cmd, render_pass, src);
-
 			VkViewport vp{};
-			vp.width = (f32)w;
-			vp.height = (f32)h;
+			vp.width = (f32)max_w;
+			vp.height = (f32)max_h;
 			vp.minDepth = 0.f;
 			vp.maxDepth = 1.f;
 			vkCmdSetViewport(cmd, 0, 1, &vp);
 
-			VkRect2D vs = { { 0, 0 },{ 0u + w, 0u + h } };
+			VkRect2D vs = { { 0, 0 }, { 0u + max_w, 0u + max_h } };
 			vkCmdSetScissor(cmd, 0, 1, &vs);
+		}
+
+		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::framebuffer* fbo, VkImageView src, VkRenderPass render_pass)
+		{
+			load_program(cmd, render_pass, src);
+			set_up_viewport(cmd, w, h);
 
 			VkRenderPassBeginInfo rp_begin = {};
 			rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -731,6 +735,7 @@ namespace vk
 	{
 		color4f clear_color = { 0.f, 0.f, 0.f, 0.f };
 		color4f colormask = { 1.f, 1.f, 1.f, 1.f };
+		VkRect2D region = {};
 
 		attachment_clear_pass()
 		{
@@ -793,6 +798,18 @@ namespace vk
 			m_ubo->unmap();
 		}
 
+		void set_up_viewport(vk::command_buffer &cmd, u16 max_w, u16 max_h) override
+		{
+			VkViewport vp{};
+			vp.width = (f32)max_w;
+			vp.height = (f32)max_h;
+			vp.minDepth = 0.f;
+			vp.maxDepth = 1.f;
+			vkCmdSetViewport(cmd, 0, 1, &vp);
+
+			vkCmdSetScissor(cmd, 0, 1, &region);
+		}
+
 		bool update_config(u32 clearmask, color4f color)
 		{
 			color4f mask = { 0.f, 0.f, 0.f, 0.f };
@@ -809,6 +826,15 @@ namespace vk
 			}
 
 			return false;
+		}
+
+		void run(vk::command_buffer &cmd, vk::render_target* target, VkRect2D rect, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
+		{
+			region = rect;
+
+			overlay_pass::run(cmd, target->width(), target->height(), target,
+				target->get_view(0xAAE4, rsx::default_remap_vector)->value,
+				render_pass, framebuffer_resources);
 		}
 	};
 }

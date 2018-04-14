@@ -259,7 +259,7 @@ void GLGSRender::end()
 		if (clear_depth)
 		{
 			gl_state.depth_mask(GL_TRUE);
-			gl_state.clear_depth(1.0);
+			gl_state.clear_depth(1.f);
 			gl_state.clear_stencil(255);
 			mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
 		}
