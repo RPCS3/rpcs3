@@ -485,7 +485,15 @@ bool spu_interpreter::IRET(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter::BISLED(spu_thread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
+	const u32 target = spu_branch_target(spu.gpr[op.ra]._u32[3]);
+	spu.gpr[op.rt] = v128::from32r(spu_branch_target(spu.pc + 4));
+
+	if (spu.get_events())
+	{
+		spu.pc = target;
+		set_interrupt_status(spu, op);
+		return false;
+	}
 	return true;
 }
 
