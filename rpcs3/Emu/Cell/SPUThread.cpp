@@ -1494,7 +1494,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 {
 	LOG_TRACE(SPU, "get_ch_value(ch=%d [%s])", ch, ch < 128 ? spu_ch_name[ch] : "???");
 
-	auto read_channel = [&](spu_channel_t& channel)
+	auto read_channel = [&](spu_channel& channel)
 	{
 		for (int i = 0; i < 10 && channel.get_count() == 0; i++)
 		{
