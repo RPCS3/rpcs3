@@ -910,6 +910,7 @@ namespace rsx
 			}
 
 			section_storage_type tmp;
+			update_cache_tag();
 			m_cache[block_address].add(tmp, rsx_address, rsx_size);
 			return m_cache[block_address].data.back();
 		}
@@ -961,10 +962,35 @@ namespace rsx
 			region.set_context(texture_upload_context::framebuffer_storage);
 			region.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 			region.set_image_type(rsx::texture_dimension_extended::texture_dimension_2d);
-			update_cache_tag();
-
 			region.set_memory_read_flags(memory_read_flags::flush_always);
+
 			m_flush_always_cache[memory_address] = memory_size;
+
+			//Test for invalidated sections from surface cache occupying same address range
+			auto &overlapped = find_texture_from_range(memory_address, memory_size);
+			if (overlapped.size() > 1)
+			{
+				for (auto surface : overlapped)
+				{
+					if (surface == &region)
+						continue;
+
+					//Memory is shared with another surface
+					//Discard it - the backend should ensure memory contents are preserved if needed
+					surface->set_dirty(true);
+
+					if (surface->get_context() != rsx::texture_upload_context::framebuffer_storage)
+						m_unreleased_texture_objects++;
+
+					if (surface->is_locked())
+					{
+						surface->unprotect();
+						m_cache[get_block_address(surface->get_section_base())].remove_one();
+					}
+				}
+			}
+
+			update_cache_tag();
 		}
 
 		void set_memory_read_flags(u32 memory_address, u32 memory_size, memory_read_flags flags)
@@ -2303,18 +2329,20 @@ namespace rsx
 				if (m_cache_update_tag.load(std::memory_order_consume) != m_flush_always_update_timestamp)
 				{
 					writer_lock lock(m_cache_mutex);
+					bool update_tag = false;
 
 					for (const auto &It : m_flush_always_cache)
 					{
 						auto& section = find_cached_texture(It.first, It.second);
 						if (section.get_protection() != utils::protection::no)
 						{
-							auto &range = m_cache[get_block_address(It.first)];
+							//NOTE: find_cached_texture will increment block ctr
 							section.reprotect(utils::protection::no);
-							range.notify();
+							update_tag = true;
 						}
 					}
 
+					if (update_tag) update_cache_tag();
 					m_flush_always_update_timestamp = m_cache_update_tag.load(std::memory_order_consume);
 				}
 			}

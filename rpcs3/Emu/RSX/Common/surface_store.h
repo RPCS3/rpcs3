@@ -849,7 +849,7 @@ namespace rsx
 				for (auto &tex_info : data)
 				{
 					auto this_address = std::get<0>(tex_info);
-					if (this_address > limit)
+					if (this_address >= limit)
 						continue;
 
 					auto surface = std::get<1>(tex_info).get();

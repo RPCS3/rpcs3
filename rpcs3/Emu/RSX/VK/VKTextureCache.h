@@ -736,7 +736,7 @@ namespace vk
 					VK_IMAGE_VIEW_TYPE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
 
 			VkImage dst = result->info.image;
-			VkImageAspectFlags dst_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+			VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
 			VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 1 };
 			vk::change_image_layout(cmd, dst, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_range);
 
