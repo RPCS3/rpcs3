@@ -1100,6 +1100,123 @@ void spu_recompiler::load_rcx()
 #endif
 }
 
+void spu_recompiler::get_events()
+{
+	using namespace asmjit;
+
+	Label label1 = c->newLabel();
+	Label rcheck = c->newLabel();
+	Label tcheck = c->newLabel();
+	Label treset = c->newLabel();
+	Label label2 = c->newLabel();
+
+	// Check if reservation exists
+	c->mov(*addr, SPU_OFF_32(raddr));
+	c->test(*addr, *addr);
+	c->jnz(rcheck);
+
+	// Reservation check (unlikely)
+	after.emplace_back([=]
+	{
+		Label fail = c->newLabel();
+		c->bind(rcheck);
+		c->mov(qw1->r32(), *addr);
+		c->mov(*qw0, imm_ptr(vm::g_reservations));
+		c->shr(qw1->r32(), 4);
+		c->mov(*qw0, x86::qword_ptr(*qw0, *qw1));
+		c->cmp(*qw0, SPU_OFF_64(rtime));
+		c->jne(fail);
+		c->mov(*qw0, imm_ptr(vm::g_base_addr));
+
+		if (utils::has_avx())
+		{
+			c->vmovups(x86::ymm0, x86::yword_ptr(*cpu, offset32(&SPUThread::rdata) + 0));
+			c->vxorps(x86::ymm1, x86::ymm0, x86::yword_ptr(*qw0, *addr, 0, 0));
+			c->vmovups(x86::ymm0, x86::yword_ptr(*cpu, offset32(&SPUThread::rdata) + 32));
+			c->vxorps(x86::ymm2, x86::ymm0, x86::yword_ptr(*qw0, *addr, 0, 32));
+			c->vmovups(x86::ymm0, x86::yword_ptr(*cpu, offset32(&SPUThread::rdata) + 64));
+			c->vxorps(x86::ymm3, x86::ymm0, x86::yword_ptr(*qw0, *addr, 0, 64));
+			c->vmovups(x86::ymm0, x86::yword_ptr(*cpu, offset32(&SPUThread::rdata) + 96));
+			c->vxorps(x86::ymm4, x86::ymm0, x86::yword_ptr(*qw0, *addr, 0, 96));
+			c->vorps(x86::ymm0, x86::ymm1, x86::ymm2);
+			c->vorps(x86::ymm1, x86::ymm3, x86::ymm4);
+			c->vorps(x86::ymm0, x86::ymm1, x86::ymm0);
+			c->vptest(x86::ymm0, x86::ymm0);
+			c->vzeroupper();
+			c->jz(label1);
+		}
+		else
+		{
+			c->movaps(x86::xmm0, x86::dqword_ptr(*qw0, *addr));
+			c->xorps(x86::xmm0, x86::dqword_ptr(*cpu, offset32(&SPUThread::rdata) + 0));
+			for (u32 i = 16; i < 128; i += 16)
+			{
+				c->movaps(x86::xmm1, x86::dqword_ptr(*qw0, *addr, 0, i));
+				c->xorps(x86::xmm1, x86::dqword_ptr(*cpu, offset32(&SPUThread::rdata) + i));
+				c->orps(x86::xmm0, x86::xmm1);
+			}
+
+			if (utils::has_sse41())
+			{
+				c->ptest(x86::xmm0, x86::xmm0);
+				c->jz(label1);
+			}
+			else
+			{
+				c->packssdw(x86::xmm0, x86::xmm0);
+				c->movq(x86::rax, x86::xmm0);
+				c->test(x86::rax, x86::rax);
+				c->jz(label1);
+			}
+		}
+
+		c->bind(fail);
+		c->lock().bts(SPU_OFF_32(ch_event_stat), 10);
+		c->mov(SPU_OFF_32(raddr), 0);
+		c->jmp(label1);
+	});
+
+	c->bind(label1);
+	c->cmp(SPU_OFF_32(ch_dec_value), 0);
+	c->jnz(tcheck);
+
+	// Check decrementer event (unlikely)
+	after.emplace_back([=]
+	{
+		auto sub = [](SPUThread* _spu, spu_function_t _ret)
+		{
+			if ((_spu->ch_dec_value - (get_timebased_time() - _spu->ch_dec_start_timestamp)) >> 31)
+			{
+				_spu->ch_event_stat |= SPU_EVENT_TM;
+			}
+
+			// Restore args and return
+			_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
+		};
+
+		c->bind(tcheck);
+		c->lea(*ls, x86::qword_ptr(label2));
+		c->jmp(imm_ptr<void(*)(SPUThread*, spu_function_t)>(sub));
+	});
+
+	// Check whether SPU_EVENT_TM is already set
+	c->bt(SPU_OFF_32(ch_event_stat), 5);
+	c->jnc(treset);
+
+	// Set SPU_EVENT_TM (unlikely)
+	after.emplace_back([=]
+	{
+		c->bind(treset);
+		c->lock().bts(SPU_OFF_32(ch_event_stat), 5);
+		c->jmp(label2);
+	});
+
+	// Load active events into addr
+	c->bind(label2);
+	c->mov(*addr, SPU_OFF_32(ch_event_stat));
+	c->and_(*addr, SPU_OFF_32(ch_event_mask));
+}
+
 void spu_recompiler::UNK(spu_opcode_t op)
 {
 	auto gate = [](SPUThread* _spu, u32 op)
@@ -1203,16 +1320,88 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 
 void spu_recompiler::RCHCNT(spu_opcode_t op)
 {
+	using namespace asmjit;
+
 	auto gate = [](SPUThread* _spu, u32 ch, v128* out)
 	{
 		*out = v128::from32r(_spu->get_ch_count(ch));
 		_spu->pc += 4;
 	};
 
+	auto ch_cnt = [&](X86Mem channel_ptr, bool inv = false)
+	{
+		// Load channel count
+		const XmmLink& vr = XmmAlloc();
+		c->movq(vr, channel_ptr);
+		c->psrlq(vr, spu_channel::off_count);
+		if (inv)
+			c->pxor(vr, XmmConst(_mm_set1_epi32(1)));
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+	};
+
+	switch (op.ra)
+	{
+	case SPU_WrOutMbox:       return ch_cnt(SPU_OFF_64(ch_out_mbox), true);
+	case SPU_WrOutIntrMbox:   return ch_cnt(SPU_OFF_64(ch_out_intr_mbox), true);
+	case MFC_RdTagStat:       return ch_cnt(SPU_OFF_64(ch_tag_stat));
+	case MFC_RdListStallStat: return ch_cnt(SPU_OFF_64(ch_stall_stat));
+	case SPU_RdSigNotify1:    return ch_cnt(SPU_OFF_64(ch_snr1));
+	case SPU_RdSigNotify2:    return ch_cnt(SPU_OFF_64(ch_snr2));
+	case MFC_RdAtomicStat:    return ch_cnt(SPU_OFF_64(ch_atomic_stat));
+
+	case MFC_WrTagUpdate:
+	{
+		const XmmLink& vr = XmmAlloc();
+		const XmmLink& v1 = XmmAlloc();
+		c->movd(vr, SPU_OFF_32(ch_tag_upd));
+		c->pxor(v1, v1);
+		c->pcmpeqd(vr, v1);
+		c->psrld(vr, 31);
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		return;
+	}
+
+	case MFC_Cmd:
+	{
+		const XmmLink& vr = XmmAlloc();
+		const XmmLink& v1 = XmmAlloc();
+		c->movdqa(vr, XmmConst(_mm_set1_epi32(16)));
+		c->movd(v1, SPU_OFF_32(mfc_size));
+		c->psubd(vr, v1);
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		return;
+	}
+
+	case SPU_RdInMbox:
+	{
+		const XmmLink& vr = XmmAlloc();
+		c->movdqa(vr, SPU_OFF_128(ch_in_mbox));
+		c->pslldq(vr, 14);
+		c->psrldq(vr, 3);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		return;
+	}
+	case SPU_RdEventStat:
+	{
+		LOG_WARNING(SPU, "[0x%x] RCHCNT: RdEventStat", m_pos);
+		get_events();
+		c->setnz(addr->r8());
+		c->movzx(*addr, addr->r8());
+		c->movd(x86::xmm0, *addr);
+		c->pslldq(x86::xmm0, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), x86::xmm0);
+		return;
+	}
+	}
+
+	// Non-returnable fallback for unsupported events
 	c->mov(SPU_OFF_32(pc), m_pos);
 	c->mov(*ls, op.ra);
 	c->lea(*qw0, SPU_OFF_128(gpr, op.rt));
-	c->jmp(asmjit::imm_ptr<void(*)(SPUThread*, u32, v128*)>(gate));
+	c->jmp(imm_ptr<void(*)(SPUThread*, u32, v128*)>(gate));
 	m_pos = -1;
 }
 

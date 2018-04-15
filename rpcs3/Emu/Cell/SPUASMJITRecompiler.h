@@ -102,6 +102,8 @@ private:
 	void save_rcx();
 	void load_rcx();
 
+	void get_events();
+
 public:
 	void UNK(spu_opcode_t op);
 
