@@ -283,23 +283,29 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 	return CELL_OK;
 }
 
-s32 cellSysCacheClear(vm::ptr<CellSysCacheParam> param)
+s32 cellSysCacheClear()
 {
-	cellSysutil.warning("cellSysCacheClear(param=*0x%x)", param);
+	// Checks if the param exists, else we quit
 
 	if (!fxm::check<CellSysCacheParam>())
 	{
 		return CELL_SYSCACHE_ERROR_NOTMOUNTED;
 	}
 
+	// Get the param as a shared ptr, then decipher the cacheid from it
+	// (Instead of assuming naively that the param is passed as argument)
+	std::shared_ptr<CellSysCacheParam> param = fxm::get<CellSysCacheParam>();
 	const std::string& cache_id = param->cacheId;
-	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
 
-	if (!fs::exists(vfs::get(cache_path)) || !fs::is_dir(vfs::get(cache_path))) {
+	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
+	const std::string& dir_path = vfs::get(cache_path);
+
+	if (!fs::exists(dir_path) || !fs::is_dir(dir_path))
+	{
 		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
 	}
 
-	fs::remove_dir(vfs::get(cache_path));
+	fs::remove_dir(dir_path);
 
 	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
