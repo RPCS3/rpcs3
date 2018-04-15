@@ -305,7 +305,7 @@ s32 cellSysCacheClear()
 		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
 	}
 
-	fs::remove_dir(dir_path);
+	fs::remove_all(dir_path, true);
 
 	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
