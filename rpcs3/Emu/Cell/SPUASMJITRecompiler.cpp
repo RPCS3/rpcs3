@@ -31,12 +31,6 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_asmjit_recompiler
 
 spu_runtime::spu_runtime()
 {
-	if (g_cfg.core.spu_debug)
-	{
-		fs::file log(Emu.GetCachePath() + "SPUJIT.log", fs::rewrite);
-		log.write(fmt::format("SPU JIT Log...\n\nTitle: %s\nTitle ID: %s\n\n", Emu.GetTitle().c_str(), Emu.GetTitleID().c_str()));
-	}
-
 	LOG_SUCCESS(SPU, "SPU Recompiler Runtime (ASMJIT) initialized...");
 
 	// Initialize lookup table
@@ -51,8 +45,23 @@ spu_runtime::spu_runtime()
 
 spu_recompiler::spu_recompiler(SPUThread& spu)
 	: spu_recompiler_base(spu)
-	, m_rt(std::make_shared<asmjit::JitRuntime>())
 {
+	if (!g_cfg.core.spu_shared_runtime)
+	{
+		m_spurt = std::make_shared<spu_runtime>();
+	}
+}
+
+spu_function_t spu_recompiler::get(u32 lsa)
+{
+	// Initialize if necessary
+	if (!m_spurt)
+	{
+		m_spurt = fxm::get_always<spu_runtime>();
+	}
+
+	// Simple atomic read
+	return m_spurt->m_dispatcher[lsa / 4];
 }
 
 spu_function_t spu_recompiler::compile(const std::vector<u32>& func)
@@ -61,6 +70,24 @@ spu_function_t spu_recompiler::compile(const std::vector<u32>& func)
 	if (!m_spurt)
 	{
 		m_spurt = fxm::get_always<spu_runtime>();
+	}
+
+	// Don't lock without shared runtime
+	std::unique_lock<shared_mutex> lock(m_spurt->m_mutex, std::defer_lock);
+
+	if (g_cfg.core.spu_shared_runtime)
+	{
+		lock.lock();
+	}
+
+	// Try to find existing function
+	{
+		const auto found = m_spurt->m_map.find(func);
+
+		if (found != m_spurt->m_map.end() && found->second)
+		{
+			return found->second;
+		}
 	}
 
 	using namespace asmjit;
@@ -78,8 +105,9 @@ spu_function_t spu_recompiler::compile(const std::vector<u32>& func)
 		fmt::append(log, "========== SPU BLOCK 0x%05x (size %u) ==========\n\n", func[0], func.size() - 1);
 	}
 
-	asmjit::CodeHolder code;
-	code.init(m_rt->getCodeInfo());
+	CodeHolder code;
+	code.init(m_spurt->m_jitrt.getCodeInfo());
+	code._globalHints = asmjit::CodeEmitter::kHintOptimizedAlign;
 
 	X86Assembler compiler(&code);
 	this->c = &compiler;
@@ -626,7 +654,7 @@ spu_function_t spu_recompiler::compile(const std::vector<u32>& func)
 	c->align(kAlignCode, 16);
 	c->bind(label_diff);
 	c->inc(SPU_OFF_64(block_failure));
-	c->jmp(asmjit::imm_ptr(&spu_recompiler_base::dispatch));
+	c->jmp(imm_ptr(&spu_recompiler_base::dispatch));
 
 	for (auto&& work : decltype(after)(std::move(after)))
 	{
@@ -648,15 +676,228 @@ spu_function_t spu_recompiler::compile(const std::vector<u32>& func)
 	// Compile and get function address
 	spu_function_t fn;
 
-	if (m_rt->add(&fn, &code))
+	if (m_spurt->m_jitrt.add(&fn, &code))
 	{
 		LOG_FATAL(SPU, "Failed to build a function");
+	}
+
+	// Register function
+	m_spurt->m_map[func] = fn;
+
+	// Generate a dispatcher (übertrampoline)
+	std::vector<u32> addrv{func[0]};
+	const auto beg = m_spurt->m_map.lower_bound(addrv);
+	addrv[0] += 4;
+	const auto end = m_spurt->m_map.lower_bound(addrv);
+	const u32 size0 = std::distance(beg, end);
+
+	if (size0 == 1)
+	{
+		m_spurt->m_dispatcher[func[0] / 4] = fn;
+	}
+	else
+	{
+		CodeHolder code;
+		code.init(m_spurt->m_jitrt.getCodeInfo());
+
+		X86Assembler compiler(&code);
+		this->c = &compiler;
+
+		if (g_cfg.core.spu_debug)
+		{
+			// Set logger
+			code.setLogger(&logger);
+		}
+
+		compiler.comment("\n\nTrampoline:\n\n");
+
+		struct work
+		{
+			u32 size;
+			u32 level;
+			Label label;
+			std::map<std::vector<u32>, spu_function_t>::iterator beg;
+			std::map<std::vector<u32>, spu_function_t>::iterator end;
+		};
+
+		std::vector<work> workload;
+		workload.reserve(size0);
+		workload.emplace_back();
+		workload.back().size = size0;
+		workload.back().level = 1;
+		workload.back().beg = beg;
+		workload.back().end = end;
+
+		for (std::size_t i = 0; i < workload.size(); i++)
+		{
+			// Get copy of the workload info
+			work w = workload[i];
+
+			// Split range in two parts
+			auto it = w.beg;
+			auto it2 = w.beg;
+			u32 size1 = w.size / 2;
+			u32 size2 = w.size - size1;
+			std::advance(it2, w.size / 2);
+
+			while (true)
+			{
+				it = it2;
+				size1 = w.size - size2;
+
+				// Adjust ranges (forward)
+				while (it != w.end && w.beg->first.at(w.level) == it->first.at(w.level))
+				{
+					it++;
+					size1++;
+				}
+
+				if (it == w.end)
+				{
+					// Cannot split: words are identical within the range at this level
+					w.level++;
+				}
+				else
+				{
+					size2 = w.size - size1;
+					break;
+				}
+			}
+
+			// Value for comparison
+			const u32 x = it->first.at(w.level);
+
+			// Adjust ranges (backward)
+			while (true)
+			{
+				it--;
+
+				if (it->first.at(w.level) != x)
+				{
+					it++;
+					break;
+				}
+
+				verify(HERE), it != w.beg;
+				size1--;
+				size2++;
+			}
+
+			if (w.label.isValid())
+			{
+				c->align(kAlignCode, 16);
+				c->bind(w.label);
+			}
+
+			c->cmp(x86::dword_ptr(*ls, func[0] + (w.level - 1) * 4), x);
+
+			// Low subrange target label
+			Label label_below;
+
+			if (size1 == 1)
+			{
+				label_below = c->newLabel();
+				c->jb(label_below);
+			}
+			else
+			{
+				workload.push_back(w);
+				workload.back().end = it;
+				workload.back().size = size1;
+				workload.back().label = c->newLabel();
+				c->jb(workload.back().label);
+			}
+
+			// Second subrange target
+			const auto target = it->second ? it->second : &dispatch;
+
+			if (size2 == 1)
+			{
+				c->jmp(imm_ptr(target));
+			}
+			else
+			{
+				it2 = it;
+
+				// Select additional midrange for equality comparison
+				while (it2 != w.end && it2->first.at(w.level) == x)
+				{
+					size2--;
+					it2++;
+				}
+
+				if (it2 != w.end)
+				{
+					// High subrange target label
+					Label label_above;
+
+					if (size2 == 1)
+					{
+						label_above = c->newLabel();
+						c->ja(label_above);
+					}
+					else
+					{
+						workload.push_back(w);
+						workload.back().beg = it2;
+						workload.back().size = size2;
+						workload.back().label = c->newLabel();
+						c->ja(workload.back().label);
+					}
+
+					const u32 size3 = w.size - size1 - size2;
+
+					if (size3 == 1)
+					{
+						c->jmp(imm_ptr(target));
+					}
+					else
+					{
+						workload.push_back(w);
+						workload.back().beg = it;
+						workload.back().end = it2;
+						workload.back().size = size3;
+						workload.back().label = c->newLabel();
+						c->jmp(workload.back().label);
+					}
+
+					if (label_above.isValid())
+					{
+						c->bind(label_above);
+						c->jmp(imm_ptr(it2->second ? it2->second : &dispatch));
+					}
+				}
+				else
+				{
+					workload.push_back(w);
+					workload.back().beg = it;
+					workload.back().size = w.size - size1;
+					workload.back().label = c->newLabel();
+					c->jmp(workload.back().label);
+				}
+			}
+
+			if (label_below.isValid())
+			{
+				c->bind(label_below);
+				c->jmp(imm_ptr(w.beg->second ? w.beg->second : &dispatch));
+			}
+		}
+
+		spu_function_t tr;
+
+		if (m_spurt->m_jitrt.add(&tr, &code))
+		{
+			LOG_FATAL(SPU, "Failed to build a trampoline");
+		}
+
+		m_spurt->m_dispatcher[func[0] / 4] = tr;
 	}
 
 	if (g_cfg.core.spu_debug)
 	{
 		// Add ASMJIT logs
-		fmt::append(log, "{%s} Address: %p\n\n", m_spu.get_name(), fn);
+		fmt::append(log, "Address: %p (%p)\n\n", fn, +m_spurt->m_dispatcher[func[0] / 4]);
 		log += logger.getString();
 		log += "\n\n\n";
 
@@ -731,25 +972,24 @@ void spu_recompiler::branch_fixed(u32 target)
 	Label patch_point = c->newLabel();
 	c->lea(*qw0, x86::qword_ptr(patch_point));
 	c->mov(SPU_OFF_32(pc), target);
-	c->align(kAlignCode, 16);
+
+	// Need to emit exactly one executable instruction within 8 bytes
+	c->align(kAlignCode, 8);
 	c->bind(patch_point);
 
-	const auto result = m_spu.jit_map.emplace(block(m_spu, target), nullptr);
+	const auto result = m_spurt->m_map.emplace(block(m_spu, target), nullptr);
 
 	if (result.second || !result.first->second)
 	{
 		if (result.first->first.size())
 		{
 			// Target block hasn't been compiled yet, record overwriting position
-			c->mov(*ls, imm_ptr(&*result.first));
 			c->jmp(imm_ptr(&spu_recompiler_base::branch));
 		}
 		else
 		{
-			// SPURS Workload entry point or similar thing
-			c->mov(x86::r10, x86::qword_ptr(*cpu, offset32(&SPUThread::jit_dispatcher) + target * 2));
-			c->xor_(qw0->r32(), qw0->r32());
-			c->jmp(x86::r10);
+			// SPURS Workload entry point or similar thing (emit 8-byte NOP)
+			c->dq(0x841f0f);
 		}
 	}
 	else
@@ -757,7 +997,14 @@ void spu_recompiler::branch_fixed(u32 target)
 		c->jmp(imm_ptr(result.first->second));
 	}
 
-	c->align(kAlignCode, 16);
+	// Branch via dispatcher (occupies 16 bytes including padding)
+	c->align(kAlignCode, 8);
+	c->mov(x86::rax, x86::qword_ptr(*cpu, offset32(&SPUThread::jit_dispatcher) + target * 2));
+	c->xor_(qw0->r32(), qw0->r32());
+	c->jmp(x86::rax);
+	c->align(kAlignCode, 8);
+	c->dq(reinterpret_cast<u64>(&*result.first));
+	c->dq(reinterpret_cast<u64>(result.first->second));
 }
 
 void spu_recompiler::branch_indirect(spu_opcode_t op)

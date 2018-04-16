@@ -16,9 +16,6 @@ spu_recompiler_base::spu_recompiler_base(SPUThread& spu)
 {
 	// Initialize lookup table
 	spu.jit_dispatcher.fill(&dispatch);
-
-	// Initialize "empty" block
-	spu.jit_map[std::vector<u32>()] = &dispatch;
 }
 
 spu_recompiler_base::~spu_recompiler_base()
@@ -27,73 +24,89 @@ spu_recompiler_base::~spu_recompiler_base()
 
 void spu_recompiler_base::dispatch(SPUThread& spu, void*, u8* rip)
 {
-	const auto result = spu.jit_map.emplace(block(spu, spu.pc), nullptr);
-
-	if (result.second || !result.first->second)
+	// If check failed after direct branch, patch it with single NOP
+	if (rip)
 	{
-		result.first->second = spu.jit->compile(result.first->first);
+#ifdef _MSC_VER
+		*(volatile u64*)(rip) = 0x841f0f;
+#else
+		__atomic_store_n(reinterpret_cast<u64*>(rip), 0x841f0f, __ATOMIC_RELAXED);
+#endif
 	}
 
-	spu.jit_dispatcher[spu.pc / 4] = result.first->second;
+	const auto func = spu.jit->get(spu.pc);
+
+	// First attempt (load new trampoline and retry)
+	if (func != spu.jit_dispatcher[spu.pc / 4])
+	{
+		spu.jit_dispatcher[spu.pc / 4] = func;
+		return;
+	}
+
+	// Second attempt (recover from the recursion after repeated unsuccessful trampoline call)
+	if (spu.block_counter != spu.block_recover && func != &dispatch)
+	{
+		spu.block_recover = spu.block_counter;
+		return;
+	}
+
+	// Compile
+	verify(HERE), spu.jit->compile(block(spu, spu.pc));
+	spu.jit_dispatcher[spu.pc / 4] = spu.jit->get(spu.pc);
 }
 
-void spu_recompiler_base::branch(SPUThread& spu, std::pair<const std::vector<u32>, spu_function_t>* pair, u8* rip)
+void spu_recompiler_base::branch(SPUThread& spu, void*, u8* rip)
 {
+	const auto pair = *reinterpret_cast<std::pair<const std::vector<u32>, spu_function_t>**>(rip + 24);
+
 	spu.pc = pair->first[0];
 
-	if (!pair->second)
-	{
-		pair->second = spu.jit->compile(pair->first);
-	}
+	const auto func = pair->second ? pair->second : spu.jit->compile(pair->first);
 
-	spu.jit_dispatcher[spu.pc / 4] = pair->second;
+	verify(HERE), func, pair->second == func;
+
+	// Overwrite function address
+	reinterpret_cast<atomic_t<spu_function_t>*>(rip + 32)->store(func);
 
 	// Overwrite jump to this function with jump to the compiled function
-	const s64 rel = reinterpret_cast<u64>(pair->second) - reinterpret_cast<u64>(rip) - 5;
+	const s64 rel = reinterpret_cast<u64>(func) - reinterpret_cast<u64>(rip) - 5;
+
+	alignas(8) u8 bytes[8];
 
 	if (rel >= INT32_MIN && rel <= INT32_MAX)
 	{
 		const s64 rel8 = (rel + 5) - 2;
 
-		alignas(8) u8 bytes[8];
-
 		if (rel8 >= INT8_MIN && rel8 <= INT8_MAX)
 		{
 			bytes[0] = 0xeb; // jmp rel8
 			bytes[1] = static_cast<s8>(rel8);
-			std::memset(bytes + 2, 0x90, 5);
-			bytes[7] = 0x48;
+			std::memset(bytes + 2, 0x90, 6);
 		}
 		else
 		{
 			bytes[0] = 0xe9; // jmp rel32
 			std::memcpy(bytes + 1, &rel, 4);
-			std::memset(bytes + 5, 0x90, 2);
-			bytes[7] = 0x48;
+			std::memset(bytes + 5, 0x90, 3);
 		}
-
-#ifdef _MSC_VER
-		*(volatile u64*)(rip) = *reinterpret_cast<u64*>(+bytes);
-#else
-		__atomic_store_n(reinterpret_cast<u64*>(rip), *reinterpret_cast<u64*>(+bytes), __ATOMIC_RELAXED);
-#endif
 	}
 	else
 	{
-		alignas(16) u8 bytes[16];
-
-		bytes[0] = 0xff; // jmp [rip+2]
+		bytes[0] = 0xff; // jmp [rip+26]
 		bytes[1] = 0x25;
-		bytes[2] = 0x02;
+		bytes[2] = 0x1a;
 		bytes[3] = 0x00;
 		bytes[4] = 0x00;
 		bytes[5] = 0x00;
-		bytes[6] = 0x48; // mov rax, imm64 (not executed)
-		bytes[7] = 0xb8;
-		std::memcpy(bytes + 8, &pair->second, 8);
-
-		reinterpret_cast<atomic_t<u128>*>(rip)->store(*reinterpret_cast<u128*>(+bytes));
+		bytes[6] = 0x90;
+		bytes[7] = 0x90;
 	}
+
+#ifdef _MSC_VER
+	*(volatile u64*)(rip) = *reinterpret_cast<u64*>(+bytes);
+#else
+	__atomic_store_n(reinterpret_cast<u64*>(rip), *reinterpret_cast<u64*>(+bytes), __ATOMIC_RELAXED);
+#endif
 }
 
 std::vector<u32> spu_recompiler_base::block(SPUThread& spu, u32 lsa)

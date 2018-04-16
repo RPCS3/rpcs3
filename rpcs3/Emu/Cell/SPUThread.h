@@ -594,8 +594,6 @@ public:
 
 	std::unique_ptr<class spu_recompiler_base> jit; // Recompiler instance
 
-	std::map<std::vector<u32>, spu_function_t> jit_map; // All compiled blocks (first u32 is addr)
-
 	u64 block_counter = 0;
 	u64 block_recover = 0;
 	u64 block_failure = 0;

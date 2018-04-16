@@ -32,12 +32,12 @@ public:
 // SPU ASMJIT Recompiler
 class spu_recompiler : public spu_recompiler_base
 {
-	const std::shared_ptr<asmjit::JitRuntime> m_rt;
-
 	std::shared_ptr<spu_runtime> m_spurt;
 
 public:
 	spu_recompiler(class SPUThread& spu);
+
+	virtual spu_function_t get(u32 lsa) override;
 
 	virtual spu_function_t compile(const std::vector<u32>& func) override;
 
