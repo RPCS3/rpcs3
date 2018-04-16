@@ -295,6 +295,13 @@ s32 cellSysCacheClear()
 	// Get the param as a shared ptr, then decipher the cacheid from it
 	// (Instead of assuming naively that the param is passed as argument)
 	std::shared_ptr<CellSysCacheParam> param = fxm::get<CellSysCacheParam>();
+
+	// Unit test for param ptr, since it may be null at the time of get()
+	if (!param)
+	{
+		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
+	}
+
 	const std::string& cache_id = param->cacheId;
 
 	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
