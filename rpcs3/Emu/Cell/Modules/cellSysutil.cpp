@@ -285,21 +285,16 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 
 s32 cellSysCacheClear()
 {
-	// Checks if the param exists, else we quit
-
-	if (!fxm::check<CellSysCacheParam>())
-	{
-		return CELL_SYSCACHE_ERROR_NOTMOUNTED;
-	}
-
 	// Get the param as a shared ptr, then decipher the cacheid from it
 	// (Instead of assuming naively that the param is passed as argument)
 	std::shared_ptr<CellSysCacheParam> param = fxm::get<CellSysCacheParam>();
 
+	cellSysutil.todo("cellSysCacheClear()");
+
 	// Unit test for param ptr, since it may be null at the time of get()
 	if (!param)
 	{
-		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
+		return CELL_SYSCACHE_ERROR_NOTMOUNTED;
 	}
 
 	const std::string& cache_id = param->cacheId;
