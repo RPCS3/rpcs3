@@ -398,8 +398,7 @@ bool spu_interpreter::BIHNZ(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter::STOPD(SPUThread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
-	return true;
+	return spu.stop_and_signal(0x3fff);
 }
 
 bool spu_interpreter::STQX(SPUThread& spu, spu_opcode_t op)

@@ -2305,6 +2305,12 @@ bool SPUThread::stop_and_signal(u32 code)
 		state += cpu_flag::stop;
 		return false;
 	}
+
+	case 0x3fff:
+	{
+		LOG_FATAL(SPU, "Trap!" HERE);
+		return state += cpu_flag::dbg_pause, false;
+	}
 	}
 
 	if (!ch_out_mbox.get_count())
