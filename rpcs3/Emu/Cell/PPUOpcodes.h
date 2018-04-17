@@ -32,6 +32,7 @@ union ppu_opcode_t
 	ppu_bf_t<s32, 16, 14> ds; // 16..29, signed
 	ppu_bf_t<s32, 11, 5> vsimm; // 11..15, signed
 	ppu_bf_t<s32, 6, 26> ll; // 6..31, signed
+	ppu_bf_t<s32, 6, 24> li; // 6..29, signed
 	ppu_bf_t<u32, 20, 7> lev; // 20..26
 	ppu_bf_t<u32, 16, 4> i; // 16..19
 	ppu_bf_t<u32, 11, 3> crfs; // 11..13
@@ -611,7 +612,7 @@ namespace ppu_instructions
 	inline u32 ORIS(u32 rt, u32 ra, u32 ui) { ppu_opcode_t op{ 0x19u << 26 }; op.rd = rt; op.ra = ra; op.uimm16 = ui; return op.opcode; }
 	inline u32 OR(u32 ra, u32 rs, u32 rb, bool rc = false) { ppu_opcode_t op{ 0x1fu << 26 | 0x1bcu << 1 }; op.rs = rs; op.ra = ra; op.rb = rb; op.rc = rc; return op.opcode; }
 	inline u32 SC(u32 lev) { ppu_opcode_t op{ 0x11u << 26 | 1 << 1 }; op.lev = lev; return op.opcode; }
-	inline u32 B(s32 li, bool aa = false, bool lk = false) { ppu_opcode_t op{ 0x12u << 26 }; op.ll = li; op.aa = aa; op.lk = lk; return op.opcode; }
+	inline u32 B(s32 li, bool aa = false, bool lk = false) { ppu_opcode_t op{0x12u << 26}; op.ll = li; op.aa = aa; op.lk = lk; return op.opcode; }
 	inline u32 BC(u32 bo, u32 bi, s32 bd, bool aa = false, bool lk = false) { ppu_opcode_t op{ 0x10u << 26 }; op.bo = bo; op.bi = bi; op.ds = bd / 4; op.aa = aa; op.lk = lk; return op.opcode; }
 	inline u32 BCLR(u32 bo, u32 bi, u32 bh, bool lk = false) { ppu_opcode_t op{ 0x13u << 26 | 0x10u << 1 }; op.bo = bo; op.bi = bi; op.bh = bh; op.lk = lk; return op.opcode; }
 	inline u32 BCCTR(u32 bo, u32 bi, u32 bh, bool lk = false) { ppu_opcode_t op{ 0x13u << 26 | 0x210u << 1 }; op.bo = bo; op.bi = bi; op.bh = bh; op.lk = lk; return op.opcode; }
