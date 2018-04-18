@@ -50,6 +50,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList = new game_list();
 	m_gameList->setShowGrid(false);
 	m_gameList->setItemDelegate(new table_item_delegate(this));
+	m_gameList->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_gameList->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_gameList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -893,7 +894,6 @@ int game_list_frame::PopulateGameList()
 	auto l_GetItem = [](const std::string& text, int sort_role = Qt::DisplayRole, int sort_index = 0)
 	{
 		custom_table_widget_item* curr = new custom_table_widget_item;
-		curr->setFlags(curr->flags() & ~Qt::ItemIsEditable);
 		curr->setText(qstr(text).simplified()); // simplified() forces single line text
 		if (sort_role != Qt::DisplayRole)
 		{
@@ -912,7 +912,6 @@ int game_list_frame::PopulateGameList()
 
 		// Icon
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
-		icon_item->setFlags(icon_item->flags() & ~Qt::ItemIsEditable);
 		icon_item->setData(Qt::DecorationRole, game.pxmap);
 		icon_item->setData(Qt::UserRole, index, true);
 
@@ -928,7 +927,6 @@ int game_list_frame::PopulateGameList()
 
 		// Compatibility
 		custom_table_widget_item* compat_item = new custom_table_widget_item;
-		compat_item->setFlags(compat_item->flags() & ~Qt::ItemIsEditable);
 		compat_item->setText(game.compat.text + (game.compat.date.isEmpty() ? "" : " (" + game.compat.date + ")"));
 		compat_item->setData(Qt::UserRole, game.compat.index, true);
 		compat_item->setToolTip(game.compat.tooltip);
