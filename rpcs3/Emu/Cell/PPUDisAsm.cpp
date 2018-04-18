@@ -905,13 +905,13 @@ void PPUDisAsm::SC(ppu_opcode_t op)
 
 void PPUDisAsm::B(ppu_opcode_t op)
 {
-	const u32 ll = op.ll;
+	const u32 li = op.li;
 	const u32 aa = op.aa;
 	const u32 lk = op.lk;
 
 	if (m_mode == CPUDisAsm_CompilerElfMode)
 	{
-		Write(fmt::format("b 0x%x, %d, %d", ll, aa, lk));
+		Write(fmt::format("b 0x%x, %d, %d", li, aa, lk));
 		return;
 	}
 
@@ -920,16 +920,16 @@ void PPUDisAsm::B(ppu_opcode_t op)
 	case 0:
 		switch (aa)
 		{
-		case 0:	DisAsm_BRANCH("b", ll);		break;
-		case 1:	DisAsm_BRANCH_A("ba", ll);	break;
+		case 0:	DisAsm_BRANCH("b", li);		break;
+		case 1:	DisAsm_BRANCH_A("ba", li);	break;
 		}
 		break;
 
 	case 1:
 		switch (aa)
 		{
-		case 0: DisAsm_BRANCH("bl", ll);	break;
-		case 1: DisAsm_BRANCH_A("bla", ll);	break;
+		case 0: DisAsm_BRANCH("bl", li);	break;
+		case 1: DisAsm_BRANCH_A("bla", li);	break;
 		}
 		break;
 	}

@@ -285,9 +285,12 @@ void log_frame::LoadSettings()
 	m_stackAct->setChecked(m_stack_log);
 }
 
-//TODO: repaint old text with new colors
 void log_frame::RepaintTextColors()
 {
+	// Backup old colors
+	QColor old_color_stack{ m_color_stack };
+	QList<QColor> old_color{ m_color };
+
 	// Get text color. Do this once to prevent possible slowdown
 	m_color.clear();
 	m_color.append(gui::utils::get_label_color("log_level_always"));
@@ -301,7 +304,57 @@ void log_frame::RepaintTextColors()
 
 	m_color_stack = gui::utils::get_label_color("log_stack");
 
+	// Repaint TTY with new colors
 	m_tty->setTextColor(gui::utils::get_label_color("tty_text"));
+
+	// Repaint log with new colors
+	QTextCursor text_cursor{ m_log->document() };
+	text_cursor.movePosition(QTextCursor::Start);
+
+	// Go through each line
+	while (!text_cursor.atEnd())
+	{
+		// Jump to the next line, unless this is the first one
+		if (!text_cursor.atStart())
+			text_cursor.movePosition(QTextCursor::NextBlock);
+
+		// Go through each word in the current line
+		while (!text_cursor.atBlockEnd())
+		{
+			// Remove old selection and select a new character (NextWord has proven to be glitchy here)
+			text_cursor.movePosition(QTextCursor::NoMove);
+			text_cursor.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor);
+
+			// Skip if no color needed
+			if (text_cursor.selectedText() == " ")
+				continue;
+
+			// Get current chars color
+			QTextCharFormat text_format = text_cursor.charFormat();
+			QColor col = text_format.foreground().color();
+
+			// Get the new color for this word
+			if (col == old_color_stack)
+			{
+				text_format.setForeground(m_color_stack);
+			}
+			else
+			{
+				for (int i = 0; i < old_color.count(); i++)
+				{
+					if (col == old_color[i])
+					{
+						text_format.setForeground(m_color[i]);
+						break;
+					}
+				}
+			}
+
+			// Reinsert the same text with the new color
+			text_cursor.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
+			text_cursor.insertText(text_cursor.selectedText(), text_format);
+		}
+	}
 }
 
 void log_frame::UpdateUI()

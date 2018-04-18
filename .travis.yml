@@ -74,17 +74,21 @@ after_script:
       export PATH=~/Qt/$QTVER/gcc_64/bin/:${PATH} ;
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
       rm ./appdir/usr/lib/libfreetype.so.6 ;
+      rm ./appdir/usr/lib/libglapi.so.0 ;
+      rm -r ./appdir/usr/share/doc ;
+      rm -r ./appdir/usr/share/man ;
+      rm -r ./appdir/usr/include ;
       export PATH=${TRAVIS_BUILD_DIR}/build/squashfs-root/usr/bin/:${PATH} ;
       
       echo "Embed newer libstdc++ for distros that don't come with it (ubuntu 14.04)";
       mkdir -p appdir/usr/optional/ ; mkdir -p appdir/usr/optional/libstdc++/ ;
       cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ./appdir/usr/optional/libstdc++/ ;
       rm ./appdir/AppRun ;
-      wget -c https://github.com/darealshinji/AppImageKit-checkrt/releases/download/continuous/AppRun-patched-x86_64 -O ./appdir/AppRun ;
+      wget -c https://github.com/RPCS3/AppImageKit-checkrt/releases/download/continuous/AppRun-patched-x86_64 -O ./appdir/AppRun ;
       chmod a+x ./appdir/AppRun ;
-      wget -c https://github.com/darealshinji/AppImageKit-checkrt/releases/download/continuous/exec-x86_64.so -O ./appdir/usr/optional/exec.so ;
+      wget -c https://github.com/RPCS3/AppImageKit-checkrt/releases/download/continuous/exec-x86_64.so -O ./appdir/usr/optional/exec.so ;
       
-      echo "Pacakge it up and send it off" ;
+      echo "Package it up and send it off" ;
       ./linuxdeployqt*.AppImage --appimage-extract ;
       ./squashfs-root/usr/bin/appimagetool ${TRAVIS_BUILD_DIR}/build/appdir ;
       find ./appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq ;

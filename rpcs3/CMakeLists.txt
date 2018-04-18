@@ -498,6 +498,8 @@ if(UNIX AND NOT APPLE)
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps)
 	install(FILES rpcs3.desktop
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
+	install(FILES rpcs3.appdata.xml
+			DESTINATION ${CMAKE_INSTALL_PREFIX}/share/metainfo)
     # Install other files
     install(DIRECTORY ../bin/Icons
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)

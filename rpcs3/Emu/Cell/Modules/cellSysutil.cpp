@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -283,18 +283,32 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 	return CELL_OK;
 }
 
-s32 cellSysCacheClear(void)
+s32 cellSysCacheClear()
 {
-	cellSysutil.todo("cellSysCacheClear()");
 
-	if (!fxm::check<CellSysCacheParam>())
+	cellSysutil.warning("cellSysCacheClear()");
+
+	// Get the param as a shared ptr, then decipher the cacheid from it
+	// (Instead of assuming naively that the param is passed as argument)
+	std::shared_ptr<CellSysCacheParam> param = fxm::get<CellSysCacheParam>();
+
+	// Unit test for param ptr, since it may be null at the time of get()
+	if (!param)
 	{
 		return CELL_SYSCACHE_ERROR_NOTMOUNTED;
 	}
 
-	const std::string& local_path = vfs::get("/dev_hdd1/cache/");
+	const std::string& cache_id = param->cacheId;
 
-	// TODO: Write tests to figure out, what is deleted.
+	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
+	const std::string& dir_path = vfs::get(cache_path);
+
+	if (!fs::exists(dir_path) || !fs::is_dir(dir_path))
+	{
+		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
+	}
+
+	fs::remove_all(dir_path, true);
 
 	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
