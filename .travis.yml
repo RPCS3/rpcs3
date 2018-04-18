@@ -74,6 +74,10 @@ after_script:
       export PATH=~/Qt/$QTVER/gcc_64/bin/:${PATH} ;
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
       rm ./appdir/usr/lib/libfreetype.so.6 ;
+      rm ./appdir/usr/lib/libglapi.so.0 ;
+      rm -r ./appdir/usr/share/doc ;
+      rm -r ./appdir/usr/share/man ;
+      rm -r ./appdir/usr/include ;
       export PATH=${TRAVIS_BUILD_DIR}/build/squashfs-root/usr/bin/:${PATH} ;
       
       echo "Embed newer libstdc++ for distros that don't come with it (ubuntu 14.04)";
