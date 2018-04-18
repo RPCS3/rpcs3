@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright 2018 RPCS3-->
-​<component type="desktop-application">
+<component type="desktop-application">
     ​<id>RPCS3</id>
     ​<metadata_license>FSFAP</metadata_license>
     ​<project_license>GPL-2.0</project_license>
