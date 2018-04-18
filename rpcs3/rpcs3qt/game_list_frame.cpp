@@ -65,6 +65,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->horizontalHeader()->setSortIndicatorShown(true);
 	m_gameList->horizontalHeader()->setStretchLastSection(true);
 	m_gameList->horizontalHeader()->setDefaultSectionSize(150);
+	m_gameList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	m_gameList->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_gameList->setAlternatingRowColors(true);
 	m_gameList->installEventFilter(this);
@@ -82,12 +83,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->setHorizontalHeaderItem(gui::column_sound,      new QTableWidgetItem(tr("Sound Formats")));
 	m_gameList->setHorizontalHeaderItem(gui::column_parental,   new QTableWidgetItem(tr("Parental Level")));
 	m_gameList->setHorizontalHeaderItem(gui::column_compat,     new QTableWidgetItem(tr("Compatibility")));
-
-	// since this won't work somehow: gameList->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
-	for (int i = 0; i < m_gameList->horizontalHeader()->count(); i++)
-	{
-		m_gameList->horizontalHeaderItem(i)->setTextAlignment(Qt::AlignLeft);
-	}
 
 	m_game_compat = std::make_unique<game_compatibility>(xgui_settings);
 
@@ -190,18 +185,16 @@ void game_list_frame::LoadSettings()
 {
 	QByteArray state = xgui_settings->GetValue(gui::gl_state).toByteArray();
 
-	if (state.isEmpty())
-	{ // If no settings exist, go to default.
-		if (m_gameList->rowCount() > 0)
-		{
-			m_gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-			m_gameList->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-			m_gameList->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
-		}
-	}
-	else
+	if (!state.isEmpty())
 	{
 		m_gameList->horizontalHeader()->restoreState(state);
+	}
+	else if (m_gameList->rowCount() > 0)
+	{
+		// If no settings exist, go to default.
+		m_gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		m_gameList->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		m_gameList->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
 	}
 
 	for (int col = 0; col < m_columnActs.count(); ++col)
