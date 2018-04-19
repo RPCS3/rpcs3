@@ -10,6 +10,7 @@
 
 #include <cmath>
 #include <mutex>
+#include <thread>
 
 #include "SPUASMJITRecompiler.h"
 
@@ -1272,6 +1273,8 @@ void spu_recompiler::MFSPR(spu_opcode_t op)
 
 void spu_recompiler::RDCH(spu_opcode_t op)
 {
+	using namespace asmjit;
+
 	auto gate = [](SPUThread* _spu, u32 ch, v128* out)
 	{
 		u32 value;
@@ -1281,6 +1284,45 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 			*out = v128::from32r(value);
 			_spu->pc += 4;
 		}
+	};
+
+	auto read_channel = [&](X86Mem channel_ptr, bool sync = true)
+	{
+		Label wait = c->newLabel();
+		Label again = c->newLabel();
+		c->mov(addr->r64(), channel_ptr);
+		c->xor_(qw0->r32(), qw0->r32());
+		c->align(kAlignCode, 16);
+		c->bind(again);
+		c->bt(addr->r64(), spu_channel::off_count);
+		c->jnc(wait);
+
+		after.emplace_back([=, pos = m_pos]
+		{
+			// Do not continue after waiting
+			c->bind(wait);
+			c->mov(SPU_OFF_32(pc), pos);
+			c->mov(*ls, op.ra);
+			c->lea(*qw0, SPU_OFF_128(gpr, op.rt));
+			c->jmp(imm_ptr<void(*)(SPUThread*, u32, v128*)>(gate));
+		});
+
+		if (sync)
+		{
+			// Channel is externally accessible
+			c->lock().cmpxchg(channel_ptr, *qw0);
+			c->jnz(again);
+		}
+		else
+		{
+			// Just write zero
+			c->mov(channel_ptr, *qw0);
+		}
+
+		const XmmLink& vr = XmmAlloc();
+		c->movd(vr, *addr);
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 	};
 
 	switch (op.ra)
@@ -1293,12 +1335,111 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 		return;
 	}
+	case SPU_RdInMbox:
+	{
+		// TODO
+		Label wait = c->newLabel();
+		Label next = c->newLabel();
+		c->mov(SPU_OFF_32(pc), m_pos);
+		c->cmp(x86::byte_ptr(*cpu, offset32(&SPUThread::ch_in_mbox) + 1), 0);
+		c->jz(wait);
+
+		after.emplace_back([=]
+		{
+			// Do not continue after waiting
+			c->bind(wait);
+			c->mov(*ls, op.ra);
+			c->lea(*qw0, SPU_OFF_128(gpr, op.rt));
+			c->jmp(imm_ptr<void(*)(SPUThread*, u32, v128*)>(gate));
+		});
+
+		auto sub = [](SPUThread* _spu, v128* out, spu_function_t _ret)
+		{
+			// Workaround for gcc (TCO)
+			static thread_local u32 value;
+
+			if (!_spu->get_ch_value(SPU_RdInMbox, value))
+			{
+				// Workaround for MSVC (TCO)
+				fmt::raw_error("spu_recompiler::RDCH(): unexpected SPUThread::get_ch_value(SPU_RdInMbox) call");
+			}
+
+			*out = v128::from32r(value);
+			_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
+		};
+
+		c->lea(*ls, SPU_OFF_128(gpr, op.rt));
+		c->lea(*qw0, x86::qword_ptr(next));
+		c->jmp(imm_ptr<void(*)(SPUThread*, v128*, spu_function_t)>(sub));
+		c->align(kAlignCode, 16);
+		c->bind(next);
+		return;
+	}
+	case MFC_RdTagStat:
+	{
+		read_channel(SPU_OFF_64(ch_tag_stat), false);
+		return;
+	}
 	case MFC_RdTagMask:
 	{
 		const XmmLink& vr = XmmAlloc();
 		c->movd(vr, SPU_OFF_32(ch_tag_mask));
 		c->pslldq(vr, 12);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		return;
+	}
+	case SPU_RdSigNotify1:
+	{
+		read_channel(SPU_OFF_64(ch_snr1));
+		return;
+	}
+	case SPU_RdSigNotify2:
+	{
+		read_channel(SPU_OFF_64(ch_snr2));
+		return;
+	}
+	case MFC_RdAtomicStat:
+	{
+		read_channel(SPU_OFF_64(ch_atomic_stat), false);
+		return;
+	}
+	case MFC_RdListStallStat:
+	{
+		read_channel(SPU_OFF_64(ch_stall_stat), false);
+		return;
+	}
+	case SPU_RdDec:
+	{
+		LOG_WARNING(SPU, "[0x%x] RDCH: RdDec", m_pos);
+
+		auto gate1 = [](SPUThread* _spu, v128* _res, spu_function_t _ret)
+		{
+			const u32 out = _spu->ch_dec_value - static_cast<u32>(get_timebased_time() - _spu->ch_dec_start_timestamp);
+
+			if (out > 1500)
+				std::this_thread::yield();
+
+			*_res = v128::from32r(out);
+			_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
+		};
+
+		auto gate2 = [](SPUThread* _spu, v128* _res, spu_function_t _ret)
+		{
+			const u32 out = _spu->ch_dec_value - static_cast<u32>(get_timebased_time() - _spu->ch_dec_start_timestamp);
+
+			*_res = v128::from32r(out);
+			_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
+		};
+
+		using ftype = void (*)(SPUThread*, v128*, spu_function_t);
+
+		asmjit::Label next = c->newLabel();
+		c->mov(SPU_OFF_32(pc), m_pos);
+		c->lea(*ls, SPU_OFF_128(gpr, op.rt));
+		c->lea(*qw0, asmjit::x86::qword_ptr(next));
+		c->jmp(g_cfg.core.spu_loop_detection ? asmjit::imm_ptr<ftype>(gate1) : asmjit::imm_ptr<ftype>(gate2));
+		c->align(asmjit::kAlignCode, 16);
+		c->bind(next);
 		return;
 	}
 	case SPU_RdEventMask:
@@ -1309,12 +1450,44 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 		return;
 	}
+	case SPU_RdEventStat:
+	{
+		LOG_WARNING(SPU, "[0x%x] RDCH: RdEventStat", m_pos);
+		get_events();
+		Label wait = c->newLabel();
+		c->jz(wait);
+
+		after.emplace_back([=, pos = m_pos]
+		{
+			// Do not continue after waiting
+			c->bind(wait);
+			c->mov(SPU_OFF_32(pc), pos);
+			c->mov(*ls, op.ra);
+			c->lea(*qw0, SPU_OFF_128(gpr, op.rt));
+			c->jmp(imm_ptr<void(*)(SPUThread*, u32, v128*)>(gate));
+		});
+
+		const XmmLink& vr = XmmAlloc();
+		c->movd(vr, *addr);
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		return;
+	}
+	case SPU_RdMachStat:
+	{
+		const XmmLink& vr = XmmAlloc();
+		c->movzx(*addr, SPU_OFF_8(interrupts_enabled));
+		c->movd(vr, *addr);
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		return;
+	}
 	}
 
 	c->mov(SPU_OFF_32(pc), m_pos);
 	c->mov(*ls, op.ra);
 	c->lea(*qw0, SPU_OFF_128(gpr, op.rt));
-	c->jmp(asmjit::imm_ptr<void(*)(SPUThread*, u32, v128*)>(gate));
+	c->jmp(imm_ptr<void(*)(SPUThread*, u32, v128*)>(gate));
 	m_pos = -1;
 }
 
