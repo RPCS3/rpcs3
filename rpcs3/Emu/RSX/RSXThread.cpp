@@ -245,7 +245,8 @@ namespace rsx
 		m_rtts_dirty = true;
 		memset(m_textures_dirty, -1, sizeof(m_textures_dirty));
 		memset(m_vertex_textures_dirty, -1, sizeof(m_vertex_textures_dirty));
-		m_transform_constants_dirty = true;
+
+		m_graphics_state = pipeline_state::all_dirty;
 	}
 
 	thread::~thread()
@@ -1308,10 +1309,10 @@ namespace rsx
 
 	void thread::get_current_vertex_program()
 	{
-		if (!m_vertex_program_dirty)
+		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_dirty))
 			return;
 
-		m_vertex_program_dirty = false;
+		m_graphics_state &= ~(rsx::pipeline_state::vertex_program_dirty);
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
 		current_vertex_program.skip_vertex_input_check = false;
@@ -1523,10 +1524,10 @@ namespace rsx
 
 	void thread::get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors)
 	{
-		if (!m_fragment_program_dirty)
+		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_dirty))
 			return;
 
-		m_fragment_program_dirty = false;
+		m_graphics_state &= ~(rsx::pipeline_state::fragment_program_dirty);
 		auto &result = current_fragment_program = {};
 
 		const u32 shader_program = rsx::method_registers.shader_program_address();
