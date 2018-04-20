@@ -1301,7 +1301,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 						do_dma_transfer(args);
 						return true;
 					}
-					else if (vm::passive_lock(*this, false))
+					else if (vm::passive_lock(*this, true))
 					{
 						do_dma_transfer(args);
 						vm::passive_unlock(*this);
@@ -1348,7 +1348,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 						return true;
 					}
 				}
-				else if (vm::passive_lock(*this, false))
+				else if (vm::passive_lock(*this, true))
 				{
 					if (LIKELY(do_list_transfer(args)))
 					{
@@ -1495,11 +1495,11 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	{
 		for (int i = 0; i < 10 && channel.get_count() == 0; i++)
 		{
-			if (!s_use_rtm && mfc_size)
-			{
-				do_mfc();
-			}
-			else
+			// if (!s_use_rtm && mfc_size && !i)
+			// {
+			// 	do_mfc();
+			// }
+			// else
 			{
 				busy_wait();
 			}
@@ -1531,11 +1531,11 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 		{
 			for (int i = 0; i < 10 && ch_in_mbox.get_count() == 0; i++)
 			{
-				if (!s_use_rtm && mfc_size)
-				{
-					do_mfc();
-				}
-				else
+				// if (!s_use_rtm && mfc_size && !i)
+				// {
+				// 	do_mfc();
+				// }
+				// else
 				{
 					busy_wait();
 				}
@@ -1562,10 +1562,10 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case MFC_RdTagStat:
 	{
-		if (!s_use_rtm && mfc_size && ch_tag_upd)
-		{
-			do_mfc();
-		}
+		// if (!s_use_rtm && mfc_size)
+		// {
+		// 	do_mfc();
+		// }
 
 		if (ch_tag_stat.get_count())
 		{
@@ -1639,17 +1639,17 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case SPU_RdEventStat:
 	{
+		// if (!s_use_rtm && mfc_size)
+		// {
+		// 	do_mfc();
+		// }
+
 		u32 res = get_events();
 
 		if (res)
 		{
 			out = res;
 			return true;
-		}
-
-		if (!s_use_rtm)
-		{
-			do_mfc();
 		}
 
 		vm::waiter waiter;
@@ -1704,10 +1704,10 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrOutIntrMbox:
 	{
-		if (!s_use_rtm)
-		{
-			do_mfc(false);
-		}
+		// if (!s_use_rtm && mfc_size)
+		// {
+		// 	do_mfc(false);
+		// }
 
 		if (offset >= RAW_SPU_BASE_ADDR)
 		{
@@ -1857,10 +1857,10 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrOutMbox:
 	{
-		if (!s_use_rtm)
-		{
-			do_mfc(false);
-		}
+		// if (!s_use_rtm && mfc_size)
+		// {
+		// 	do_mfc(false);
+		// }
 
 		while (!ch_out_mbox.try_push(value))
 		{
@@ -1905,10 +1905,10 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 			break;
 		}
 
-		if (!s_use_rtm)
-		{
-			do_mfc(false);
-		}
+		// if (!s_use_rtm && mfc_size)
+		// {
+		// 	do_mfc(false);
+		// }
 
 		const u32 completed = get_mfc_completed();
 
@@ -1974,7 +1974,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 		// Reset stall status for specified tag
 		if (::test_and_reset(ch_stall_mask, 1u << value))
 		{
-			do_mfc(false);
+			do_mfc(true);
 		}
 
 		return true;
@@ -2029,10 +2029,10 @@ bool SPUThread::stop_and_signal(u32 code)
 {
 	LOG_TRACE(SPU, "stop_and_signal(code=0x%x)", code);
 
-	if (!s_use_rtm)
-	{
-		do_mfc();
-	}
+	// if (!s_use_rtm && mfc_size)
+	// {
+	// 	do_mfc();
+	// }
 
 	if (offset >= RAW_SPU_BASE_ADDR)
 	{

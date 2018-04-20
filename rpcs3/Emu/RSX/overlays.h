@@ -377,7 +377,8 @@ namespace rsx
 
 					if (auto picon = +listSet->newData->icon)
 					{
-						title = picon->title.get_ptr();
+						if (picon->title)
+							title = picon->title.get_ptr();
 
 						if (picon->iconBuf && picon->iconBufSize && picon->iconBufSize <= 225280)
 						{
