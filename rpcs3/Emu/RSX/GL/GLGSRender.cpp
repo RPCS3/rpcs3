@@ -1049,7 +1049,7 @@ bool GLGSRender::check_program_state()
 
 void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 {
-	if (m_fragment_program_dirty || m_vertex_program_dirty)
+	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
 		verify(HERE), current_fragment_program.valid;
@@ -1091,12 +1091,13 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 
 	const u32 fragment_constants_size = (const u32)m_prog_buffer.get_fragment_constants_buffer_size(current_fragment_program);
 	const u32 fragment_buffer_size = fragment_constants_size + (18 * 4 * sizeof(float));
+	const bool update_transform_constants = !!(m_graphics_state & rsx::pipeline_state::transform_constants_dirty);
 
 	if (manually_flush_ring_buffers)
 	{
 		m_vertex_state_buffer->reserve_storage_on_heap(512);
 		m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_buffer_size, 256));
-		if (m_transform_constants_dirty) m_transform_constants_buffer->reserve_storage_on_heap(8192);
+		if (update_transform_constants) m_transform_constants_buffer->reserve_storage_on_heap(8192);
 	}
 
 	// Vertex state
@@ -1112,7 +1113,7 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 	*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
 	fill_vertex_layout_state(m_vertex_layout, upload_info.allocated_vertex_count, reinterpret_cast<s32*>(buf + 160), upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
 
-	if (m_transform_constants_dirty)
+	if (update_transform_constants)
 	{
 		// Vertex constants
 		mapping = m_transform_constants_buffer->alloc_from_heap(8192, m_uniform_buffer_offset_align);
@@ -1137,17 +1138,17 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 	m_vertex_state_buffer->bind_range(0, vertex_state_offset, 512);
 	m_fragment_constants_buffer->bind_range(2, fragment_constants_offset, fragment_buffer_size);
 
-	if (m_transform_constants_dirty) m_transform_constants_buffer->bind_range(1, vertex_constants_offset, 8192);
+	if (update_transform_constants) m_transform_constants_buffer->bind_range(1, vertex_constants_offset, 8192);
 
 	if (manually_flush_ring_buffers)
 	{
 		m_vertex_state_buffer->unmap();
 		m_fragment_constants_buffer->unmap();
 
-		if (m_transform_constants_dirty) m_transform_constants_buffer->unmap();
+		if (update_transform_constants) m_transform_constants_buffer->unmap();
 	}
 
-	m_transform_constants_dirty = false;
+	m_graphics_state = 0;
 }
 
 void GLGSRender::update_draw_state()

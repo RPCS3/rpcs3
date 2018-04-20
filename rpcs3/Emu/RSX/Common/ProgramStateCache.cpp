@@ -141,18 +141,22 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			if (program_offset < 0)
 				program_offset = instIndex * 16;
 
-			if (opcode == RSX_FP_OPCODE_TEX ||
-				opcode == RSX_FP_OPCODE_TEXBEM ||
-				opcode == RSX_FP_OPCODE_TXP ||
-				opcode == RSX_FP_OPCODE_TXPBEM ||
-				opcode == RSX_FP_OPCODE_TXD ||
-				opcode == RSX_FP_OPCODE_TXB ||
-				opcode == RSX_FP_OPCODE_TXL)
+			switch(opcode)
+			{
+			case RSX_FP_OPCODE_TEX:
+			case RSX_FP_OPCODE_TEXBEM:
+			case RSX_FP_OPCODE_TXP:
+			case RSX_FP_OPCODE_TXPBEM:
+			case RSX_FP_OPCODE_TXD:
+			case RSX_FP_OPCODE_TXB:
+			case RSX_FP_OPCODE_TXL:
 			{
 				//Bits 17-20 of word 1, swapped within u16 sections
 				//Bits 16-23 are swapped into the upper 8 bits (24-31)
 				const u32 tex_num = (inst.word[0] >> 25) & 15;
 				textures_mask |= (1 << tex_num);
+				break;
+			}
 			}
 
 			if (is_constant(inst.word[1]) || is_constant(inst.word[2]) || is_constant(inst.word[3]))
