@@ -69,6 +69,18 @@ namespace rsx
 		context_clear_all = context_clear_color | context_clear_depth
 	};
 
+	enum pipeline_state : u8
+	{
+		fragment_program_dirty = 1,
+		vertex_program_dirty = 2,
+		fragment_state_dirty = 4,
+		vertex_state_dirty = 8,
+		transform_constants_dirty = 16,
+
+		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
+		all_dirty = 255
+	};
+
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
 	u32 get_address(u32 offset, u32 location);
@@ -327,12 +339,10 @@ namespace rsx
 		u32 local_mem_addr, main_mem_addr;
 
 		bool m_rtts_dirty;
-		bool m_transform_constants_dirty;
 		bool m_textures_dirty[16];
 		bool m_vertex_textures_dirty[4];
 		bool m_framebuffer_state_contested = false;
-		bool m_fragment_program_dirty = false;
-		bool m_vertex_program_dirty = false;
+		u32  m_graphics_state = 0;
 
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
