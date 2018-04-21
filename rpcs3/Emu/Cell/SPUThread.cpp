@@ -1917,14 +1917,17 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 		if (!value)
 		{
+			ch_tag_upd = 0;
 			ch_tag_stat.set_value(completed);
 		}
 		else if (completed && value == 1)
 		{
+			ch_tag_upd = 0;
 			ch_tag_stat.set_value(completed);
 		}
 		else if (completed == ch_tag_mask && value == 2)
 		{
+			ch_tag_upd = 0;
 			ch_tag_stat.set_value(completed);
 		}
 		else
