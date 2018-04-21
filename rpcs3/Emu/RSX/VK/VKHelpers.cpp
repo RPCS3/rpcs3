@@ -17,7 +17,6 @@ namespace vk
 
 	//Driver compatibility workarounds
 	bool g_drv_no_primitive_restart_flag = false;
-	bool g_drv_force_32bit_indices = false;
 	bool g_drv_sanitize_fp_values = false;
 	bool g_drv_disable_fence_reset = false;
 
@@ -209,35 +208,13 @@ namespace vk
 		g_current_renderer = device;
 		const auto gpu_name = g_current_renderer.gpu().name();
 
-		bool gcn4_proprietary = false;
-		const std::array<std::string, 8> black_listed =
+		//Radeon fails to properly handle degenerate primitives if primitive restart is enabled
+		//One has to choose between using degenerate primitives or primitive restart to break up lists but not both
+		//Polaris and newer will crash with ERROR_DEVICE_LOST
+		//Older GCN will work okay most of the time but also occasionally draws garbage without reason
+		if (gpu_name.find("Radeon") != std::string::npos)
 		{
-			// Black list all polaris unless its proven they dont have a problem with primitive restart
-			"RX 580",
-			"RX 570",
-			"RX 560",
-			"RX 550",
-			"RX 480",
-			"RX 470",
-			"RX 460",
-			"RX Vega",
-		};
-
-		for (const auto& test : black_listed)
-		{
-			if (gpu_name.find(test) != std::string::npos)
-			{
-				g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
-				gcn4_proprietary = true;
-				break;
-			}
-		}
-
-		//Older cards back to GCN1 break primitive restart on 16-bit indices
-		if (!gcn4_proprietary && gpu_name.find("Radeon") != std::string::npos)
-		{
-			//gcn1 - gcn3 workarounds
-			g_drv_force_32bit_indices = true;
+			g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
 			g_drv_disable_fence_reset = true;
 		}
 
@@ -248,14 +225,21 @@ namespace vk
 		}
 	}
 
-	bool emulate_primitive_restart()
+	bool emulate_primitive_restart(rsx::primitive_type type)
 	{
-		return g_drv_no_primitive_restart_flag;
-	}
+		if (g_drv_no_primitive_restart_flag)
+		{
+			switch (type)
+			{
+			case rsx::primitive_type::triangle_strip:
+			case rsx::primitive_type::quad_strip:
+				return true;
+			default:
+				break;
+			}
+		}
 
-	bool force_32bit_index_buffer()
-	{
-		return g_drv_force_32bit_indices;
+		return false;
 	}
 
 	bool sanitize_fp_values()
