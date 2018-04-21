@@ -94,8 +94,12 @@ void rpcs3_app::Init()
 		welcome->exec();
 	}
 #ifdef WITH_DISCORD_RPC
-	DiscordEventHandlers handlers = {};
-	Discord_Initialize("424004941485572097", &handlers, 1, NULL);
+	// Discord Rich Presence Integration
+	if (guiSettings->GetValue(gui::m_richPresence).toBool())
+	{
+		DiscordEventHandlers handlers = {};
+		Discord_Initialize("424004941485572097", &handlers, 1, NULL);
+	}
 #endif
 }
 
