@@ -967,7 +967,7 @@ namespace rsx
 			m_flush_always_cache[memory_address] = memory_size;
 
 			//Test for invalidated sections from surface cache occupying same address range
-			auto &overlapped = find_texture_from_range(memory_address, memory_size);
+			const auto &overlapped = find_texture_from_range(memory_address, memory_size);
 			if (overlapped.size() > 1)
 			{
 				for (auto surface : overlapped)
@@ -1858,8 +1858,8 @@ namespace rsx
 
 			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			//Reproject final clip onto source...
-			u16 src_w = (const u16)((f32)dst.clip_width / scale_x);
-			u16 src_h = (const u16)((f32)dst.clip_height / scale_y);
+			u16 src_w = (u16)((f32)dst.clip_width / scale_x);
+			u16 src_h = (u16)((f32)dst.clip_height / scale_y);
 
 			u16 dst_w = dst.clip_width;
 			u16 dst_h = dst.clip_height;

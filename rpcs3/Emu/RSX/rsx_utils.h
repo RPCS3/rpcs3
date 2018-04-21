@@ -472,7 +472,7 @@ namespace rsx
 		alpha = false;
 	}
 
-	inline color4f decode_border_color(u32 colorref)
+	static inline color4f decode_border_color(u32 colorref)
 	{
 		color4f result;
 		result.b = (colorref & 0xFF) / 255.f;
