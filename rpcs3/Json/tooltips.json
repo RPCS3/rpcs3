@@ -54,6 +54,7 @@
 			"configs": "Only useful to developers.\nIf unsure, don't use this option.",
 			"stylesheets": "Changes the overall look of RPCS3.\nChoose a stylesheet and click Apply to change between styles.",
 			"show_welcome": "Shows the initial welcome screen upon starting RPCS3.",
+			"useRichPresence": "Enables use of Discord Rich Presence to show what game you are playing on Discord.\nRequires a restart of RPCS3 to apply.",
 			"custom_colors": "Prioritize custom user interface colors over properties set in stylesheet."
 		},
 		"misc": {

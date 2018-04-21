@@ -706,6 +706,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	SubscribeTooltip(ui->cb_custom_colors, json_emu_gui["custom_colors"].toString());
 
+	SubscribeTooltip(ui->useRichPresence, json_emu_gui["useRichPresence"].toString());
+
 	xemu_settings->EnhanceCheckBox(ui->exitOnStop, emu_settings::ExitRPCS3OnFinish);
 	SubscribeTooltip(ui->exitOnStop, json_emu_misc["exitOnStop"].toString());
 
@@ -905,6 +907,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		{
 			ui->gs_height->setValue(std::min(ui->gs_height->value(), QApplication::desktop()->screenGeometry().height()));
 			xgui_settings->SetValue(gui::gs_height, ui->gs_height->value());
+		});
+
+		ui->useRichPresence->setChecked(xgui_settings->GetValue(gui::m_richPresence).toBool());
+
+		connect(ui->useRichPresence, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(gui::m_richPresence, val);
 		});
 
 		AddConfigs();
