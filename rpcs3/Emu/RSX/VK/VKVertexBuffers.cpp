@@ -7,7 +7,7 @@
 
 namespace vk
 {
-	VkPrimitiveTopology get_appropriate_topology(rsx::primitive_type& mode, bool &requires_modification)
+	VkPrimitiveTopology get_appropriate_topology(rsx::primitive_type mode, bool &requires_modification)
 	{
 		requires_modification = false;
 
@@ -123,32 +123,30 @@ namespace
 
 		vertex_input_state operator()(const rsx::draw_indexed_array_command& command)
 		{
-			const bool primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
-			const bool emulate_primitive_restart = primitive_restart_enabled && vk::emulate_primitive_restart();
-			const bool expand_indices_to_32bit = primitive_restart_enabled && !emulate_primitive_restart && vk::force_32bit_index_buffer();
-
 			bool primitives_emulated = false;
-			VkPrimitiveTopology prims = vk::get_appropriate_topology(
-				rsx::method_registers.current_draw_clause.primitive, primitives_emulated);
+			auto primitive = rsx::method_registers.current_draw_clause.primitive;
+			const VkPrimitiveTopology prims = vk::get_appropriate_topology(primitive, primitives_emulated);
+			const bool emulate_restart = rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart(primitive);
 
 			rsx::index_array_type index_type = rsx::method_registers.current_draw_clause.is_immediate_draw ?
 				rsx::index_array_type::u32 :
 				rsx::method_registers.index_type();
 
-			rsx::index_array_type upload_type = expand_indices_to_32bit ? rsx::index_array_type::u32 : index_type;
-			u32 type_size = gsl::narrow<u32>(get_index_type_size(upload_type));
+			u32 type_size = gsl::narrow<u32>(get_index_type_size(index_type));
 
 			u32 index_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			if (primitives_emulated)
 				index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, index_count);
 			u32 upload_size = index_count * type_size;
 
-			VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
+			if (emulate_restart) upload_size *= 2;
+
+			VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<4>(upload_size);
 			void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
 
 			gsl::span<gsl::byte> dst;
 			std::vector<gsl::byte> tmp;
-			if (emulate_primitive_restart || (expand_indices_to_32bit && index_type == rsx::index_array_type::u16))
+			if (emulate_restart)
 			{
 				tmp.resize(upload_size);
 				dst = tmp;
@@ -157,9 +155,6 @@ namespace
 			{
 				dst = gsl::span<gsl::byte>(static_cast<gsl::byte*>(buf), upload_size);
 			}
-
-			std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info =
-				std::make_tuple(offset_in_index_buffer, vk::get_index_type(upload_type));
 
 			/**
 			* Upload index (and expands it if primitive type is not natively supported).
@@ -177,42 +172,25 @@ namespace
 			{
 				//empty set, do not draw
 				m_index_buffer_ring_info.unmap();
-				return{ prims, 0, 0, 0, 0, index_info };
+				return{ prims, 0, 0, 0, 0, {} };
 			}
 
-			if (tmp.size() > 0)
+			if (emulate_restart)
 			{
-				if (emulate_primitive_restart)
+				if (index_type == rsx::index_array_type::u16)
 				{
-					//Emulate primitive restart by breaking up the draw calls
-					rsx::method_registers.current_draw_clause.alternate_first_count_commands.resize(0);
-					rsx::method_registers.current_draw_clause.alternate_first_count_commands.reserve(index_count / 3);
-
-					if (index_type == rsx::index_array_type::u16)
-						rsx::split_index_list(reinterpret_cast<u16*>(tmp.data()), index_count, (u16)UINT16_MAX, rsx::method_registers.current_draw_clause.alternate_first_count_commands);
-					else
-						rsx::split_index_list(reinterpret_cast<u32*>(tmp.data()), index_count, (u32)UINT32_MAX, rsx::method_registers.current_draw_clause.alternate_first_count_commands);
-
-					memcpy(buf, tmp.data(), tmp.size());
+					index_count = rsx::remove_restart_index((u16*)buf, (u16*)tmp.data(), index_count, (u16)UINT16_MAX);
 				}
 				else
 				{
-					//Force 32-bit indices
-					verify(HERE), index_type == rsx::index_array_type::u16;
-					u32* dst = reinterpret_cast<u32*>(buf);
-					u16* src = reinterpret_cast<u16*>(tmp.data());
-					for (u32 n = 0; n < index_count; ++n)
-					{
-						const auto index = src[n];
-						if (index == UINT16_MAX)
-							dst[n] = UINT32_MAX;
-						else
-							dst[n] = index;
-					}
+					index_count = rsx::remove_restart_index((u32*)buf, (u32*)tmp.data(), index_count, (u32)UINT32_MAX);
 				}
 			}
 
 			m_index_buffer_ring_info.unmap();
+
+			std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info =
+				std::make_tuple(offset_in_index_buffer, vk::get_index_type(index_type));
 
 			//check for vertex arrays with frquency modifiers
 			for (auto &block : m_vertex_layout.interleaved_blocks)

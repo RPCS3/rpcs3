@@ -411,33 +411,50 @@ namespace rsx
 		return result;
 	}
 
+	/**
+	 * Remove restart index and emulate using degenerate triangles
+	 * Can be used as a workaround when restart_index doesnt work too well
+	 * dst should be able to hold at least 2xcount entries
+	 */
 	template <typename T>
-	void split_index_list(T* indices, int index_count, T restart_index, std::vector<std::pair<u32, u32>>& out)
+	u32 remove_restart_index(T* dst, T* src, int count, T restart_index)
 	{
-		int last_valid_index = -1;
-		int last_start = -1;
-
-		for (int i = 0; i < index_count; ++i)
+		// Converts a stream e.g [1, 2, 3, -1, 4, 5, 6] to a stream with degenerate splits
+		// Output is e.g [1, 2, 3, 3, 3, 4, 4, 5, 6] (5 bogus triangles)
+		T last_index, index;
+		u32 dst_index = 0;
+		for (int n = 0; n < count;)
 		{
-			if (indices[i] == restart_index)
+			index = src[n];
+			if (index == restart_index)
 			{
-				if (last_start >= 0)
+				for (; n < count; ++n)
 				{
-					out.push_back(std::make_pair(last_start, i - last_start));
-					last_start = -1;
+					if (src[n] != restart_index)
+						break;
 				}
 
-				continue;
+				if (n == count)
+					return dst_index;
+
+				dst[dst_index++] = last_index; //Duplicate last
+
+				if ((dst_index & 1) == 0)
+					//Duplicate last again to fix face winding
+					dst[dst_index++] = last_index;
+
+				last_index = src[n];
+				dst[dst_index++] = last_index; //Duplicate next
 			}
-
-			if (last_start < 0)
-				last_start = i;
-
-			last_valid_index = i;
+			else
+			{
+				dst[dst_index++] = index;
+				last_index = index;
+				++n;
+			}
 		}
 
-		if (last_start >= 0)
-			out.push_back(std::make_pair(last_start, last_valid_index - last_start + 1));
+		return dst_index;
 	}
 
 	// The rsx internally adds the 'data_base_offset' and the 'vert_offset' and masks it 

@@ -1444,8 +1444,9 @@ void VKGSRender::end()
 	bool primitive_emulated = false;
 	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
 
-	const bool is_emulated_restart = (!primitive_emulated && rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart() && rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed);
-	const bool single_draw = (!is_emulated_restart && (!supports_multidraw || rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive));
+	const bool single_draw = (!supports_multidraw ||
+		rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 ||
+		rsx::method_registers.current_draw_clause.is_disjoint_primitive);
 
 	if (m_occlusion_query_active && (occlusion_id != UINT32_MAX))
 	{
@@ -1485,23 +1486,12 @@ void VKGSRender::end()
 		}
 		else
 		{
-			if (!is_emulated_restart)
+			u32 first_vertex = 0;
+			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
 			{
-				u32 first_vertex = 0;
-				for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
-				{
-					const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
-					vkCmdDrawIndexed(*m_current_command_buffer, verts, 1, first_vertex, 0, 0);
-					first_vertex += verts;
-				}
-			}
-			else
-			{
-				for (const auto &range : rsx::method_registers.current_draw_clause.alternate_first_count_commands)
-				{
-					//Primitive restart splitting happens after the primitive type expansion step
-					vkCmdDrawIndexed(*m_current_command_buffer, range.second, 1, range.first, 0, 0);
-				}
+				const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
+				vkCmdDrawIndexed(*m_current_command_buffer, verts, 1, first_vertex, 0, 0);
+				first_vertex += verts;
 			}
 		}
 	}
@@ -2236,7 +2226,7 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 	properties.state.set_primitive_type(vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, emulated_primitive_type));
 
 	const bool restarts_valid = rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed && !emulated_primitive_type && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
-	if (rsx::method_registers.restart_index_enabled() && !vk::emulate_primitive_restart() && restarts_valid)
+	if (rsx::method_registers.restart_index_enabled() && !vk::emulate_primitive_restart(rsx::method_registers.current_draw_clause.primitive) && restarts_valid)
 		properties.state.enable_primitive_restart();
 
 	// Rasterizer state
