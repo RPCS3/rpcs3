@@ -406,8 +406,16 @@ void Emulator::Load(bool add_only)
 		LOG_NOTICE(LOADER, "Category: %s", GetCat());
 
 		// Initialize data/cache directory
-		m_cache_path = fs::get_data_dir(m_title_id, m_path);
-		LOG_NOTICE(LOADER, "Cache: %s", GetCachePath());
+		if (fs::is_dir(m_path))
+		{
+			m_cache_path = fs::get_config_dir() + "data/" + GetTitleID() + '/';
+			LOG_NOTICE(LOADER, "Cache: %s", GetCachePath());
+		}
+		else
+		{
+			m_cache_path = fs::get_data_dir(m_title_id, m_path);
+			LOG_NOTICE(LOADER, "Cache: %s", GetCachePath());
+		}
 
 		// Load custom config-0
 		if (fs::file cfg_file{m_cache_path + "/config.yml"})
