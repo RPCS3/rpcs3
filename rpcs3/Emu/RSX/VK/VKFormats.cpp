@@ -70,24 +70,36 @@ namespace vk
 
 	VkBorderColor get_border_color(u32 color)
 	{
-		//TODO: Improve accuracy
-		auto color4 = rsx::decode_border_color(color);
-
-		f32 mag = (color4.r * color4.r) + (color4.g * color4.g) + (color4.b * color4.b);
-		if (mag > 0.f) mag = sqrtf(mag);
-		mag *= 0.3333f;
-
-		if (mag > 0.8f && color4.a > 0.f)
+		switch (color)
 		{
-			//If color elements are brighter than roughly 0.5 average, use white border
+		case 0x00000000:
+		{
+			return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+		}
+		case 0xFFFFFFFF:
+		{
 			return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 		}
-		else
+		case 0xFF000000:
 		{
-			if (color4.a > 0.5f)
-				return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+			return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+		}
+		default:
+		{
+			auto color4 = rsx::decode_border_color(color);
+			if ((color4.r + color4.g + color4.b) > 1.35f)
+			{
+				//If color elements are brighter than roughly 0.5 average, use white border
+				return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+			}
 			else
-				return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+			{
+				if (color4.a > 0.5f)
+					return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+				else
+					return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+			}
+		}
 		}
 	}
 
