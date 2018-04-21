@@ -91,9 +91,9 @@ struct fmt_unveil<T, std::enable_if_t<std::is_enum<T>::value>>
 template <typename T>
 struct fmt_unveil<T*, void>
 {
-	using type = const T*;
+	using type = std::add_const_t<T>*;
 
-	static inline u64 get(const T* arg)
+	static inline u64 get(type arg)
 	{
 		return reinterpret_cast<std::uintptr_t>(arg);
 	}
@@ -102,9 +102,9 @@ struct fmt_unveil<T*, void>
 template <typename T, std::size_t N>
 struct fmt_unveil<T[N], void>
 {
-	using type = const T*;
+	using type = std::add_const_t<T>*;
 
-	static inline u64 get(const T* arg)
+	static inline u64 get(type arg)
 	{
 		return reinterpret_cast<std::uintptr_t>(arg);
 	}
