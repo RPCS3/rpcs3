@@ -391,7 +391,7 @@ void Emulator::Load(bool add_only)
 
 			return fs::file{elf_dir + "/../PARAM.SFO"};
 		}());
-		m_title = psf::get_string(_psf, "TITLE", m_path);
+		m_title = psf::get_string(_psf, "TITLE", m_path.substr(m_path.find_last_of('/') + 1));
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 		m_cat = psf::get_string(_psf, "CATEGORY");
 
