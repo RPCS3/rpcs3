@@ -111,7 +111,7 @@ namespace vm
 	inline void reservation_update(u32 addr, u32 size, bool lsb = false)
 	{
 		// Update reservation info with new timestamp
-		reservation_acquire(addr, size) = (__rdtsc() & -2) | lsb;
+		reservation_acquire(addr, size) = (__rdtsc() & -2) | u64{lsb};
 	}
 
 	// Check and notify memory changes at address
