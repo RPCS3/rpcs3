@@ -8,6 +8,9 @@ extern "C"
 {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
+#ifndef AV_INPUT_BUFFER_PADDING_SIZE
+#define AV_INPUT_BUFFER_PADDING_SIZE FF_INPUT_BUFFER_PADDING_SIZE
+#endif
 }
 
 #include "cellPamf.h"
@@ -229,8 +232,8 @@ public:
 
 						if (size)
 						{
-							data = (u8*)av_calloc(1, size + FF_INPUT_BUFFER_PADDING_SIZE);
-							this->size = size + FF_INPUT_BUFFER_PADDING_SIZE;
+							data = (u8*)av_calloc(1, size + AV_INPUT_BUFFER_PADDING_SIZE);
+							this->size = size + AV_INPUT_BUFFER_PADDING_SIZE;
 						}
 						else
 						{

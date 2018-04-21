@@ -226,6 +226,11 @@ struct vdec_thread : ppu_thread
 
 				while (max_frames)
 				{
+					if (vcmd == vdec_cmd::end_seq)
+					{
+						break;
+					}
+
 					vdec_frame frame;
 					frame.avf.reset(av_frame_alloc());
 

@@ -81,7 +81,7 @@ s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 	const PadInfo& rinfo = handler->GetInfo();
 
-	if (port_no >= rinfo.max_connect)
+	if (port_no >= rinfo.max_connect || !data)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	const auto& pads = handler->GetPads();
@@ -319,6 +319,9 @@ s32 cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 	if (!handler)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
+	if (!info)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+
 	const PadInfo& rinfo = handler->GetInfo();
 
 	std::memset(info.get_ptr(), 0, sizeof(CellPadPeriphInfo));
@@ -357,7 +360,7 @@ s32 cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 
 	const PadInfo& rinfo = handler->GetInfo();
 
-	if (port_no >= rinfo.max_connect)
+	if (port_no >= rinfo.max_connect || !data)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	const auto& pads = handler->GetPads();
@@ -388,7 +391,7 @@ s32 cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<CellPadDa
 
 	const PadInfo& rinfo = handler->GetInfo();
 
-	if (port_no >= rinfo.max_connect)
+	if (port_no >= rinfo.max_connect || !device_type || !data)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	const auto& pads = handler->GetPads();
@@ -420,7 +423,7 @@ s32 cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 
 	const PadInfo& rinfo = handler->GetInfo();
 
-	if (port_no >= rinfo.max_connect)
+	if (port_no >= rinfo.max_connect || !param)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	const auto& pads = handler->GetPads();
@@ -442,6 +445,9 @@ s32 cellPadGetInfo(vm::ptr<CellPadInfo> info)
 
 	if (!handler)
 		return CELL_PAD_ERROR_UNINITIALIZED;
+
+	if (!info)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	std::memset(info.get_ptr(), 0, sizeof(CellPadInfo));
 
@@ -474,6 +480,9 @@ s32 cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 
 	if (!handler)
 		return CELL_PAD_ERROR_UNINITIALIZED;
+
+	if (!info)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	std::memset(info.get_ptr(), 0, sizeof(CellPadInfo2));
 
@@ -510,7 +519,7 @@ s32 cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellCapabilityInfo> info)
 
 	const PadInfo& rinfo = handler->GetInfo();
 
-	if (port_no >= rinfo.max_connect)
+	if (port_no >= rinfo.max_connect || !info)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	const auto& pads = handler->GetPads();
@@ -679,6 +688,9 @@ s32 cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 	if (!handler)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
+	if (handle < 0 || !data)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+
 	return CELL_OK;
 }
 
@@ -706,6 +718,9 @@ s32 cellPadLddUnregisterController(s32 handle)
 
 	if (!handler)
 		return CELL_PAD_ERROR_UNINITIALIZED;
+
+	if (handle < 0)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	return CELL_OK;
 }

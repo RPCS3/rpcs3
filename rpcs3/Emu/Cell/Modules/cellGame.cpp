@@ -449,6 +449,9 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	vm::var<CellGameDataStatSet>  cbSet;
 	cbGet->isNewData = fs::is_dir(vfs::get(dir)) ? CELL_GAMEDATA_ISNEWDATA_NO : CELL_GAMEDATA_ISNEWDATA_YES;
 
+	vm::var<CellGameDataSystemFileParam> setParam;
+	cbSet->setParam = setParam;
+
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	cbGet->hddFreeSizeKB = 40000000; //40 GB
 

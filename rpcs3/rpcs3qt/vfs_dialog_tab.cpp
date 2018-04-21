@@ -31,10 +31,8 @@ vfs_dialog_tab::vfs_dialog_tab(const vfs_settings_info& settingsInfo, std::share
 	m_dirList->setMinimumWidth(m_dirList->sizeHintForColumn(0));
 
 	QHBoxLayout* selectedConfigLayout = new QHBoxLayout;
-	QLabel* selectedMessage = new QLabel(m_info.name + " directory:");
-	m_selectedConfigLabel = new QLabel();
-	m_selectedConfigLabel->setText(current_dir.isEmpty() ? EmptyPath : current_dir);
-	selectedConfigLayout->addWidget(selectedMessage);
+	m_selectedConfigLabel = new QLabel(current_dir.isEmpty() ? EmptyPath : current_dir);
+	selectedConfigLayout->addWidget(new QLabel(m_info.name + tr(" directory:")));
 	selectedConfigLayout->addWidget(m_selectedConfigLabel);
 	selectedConfigLayout->addStretch();
 
@@ -46,6 +44,9 @@ vfs_dialog_tab::vfs_dialog_tab(const vfs_settings_info& settingsInfo, std::share
 
 	connect(m_dirList, &QListWidget::currentItemChanged, [this](QListWidgetItem* current, QListWidgetItem*)
 	{
+		if (!current)
+			return;
+
 		m_selectedConfigLabel->setText(current->text().isEmpty() ? EmptyPath : current->text());
 	});
 }
@@ -66,21 +67,19 @@ void vfs_dialog_tab::SetSettings()
 
 void vfs_dialog_tab::Reset()
 {
-	const QString current_dir = qstr(m_info.cfg_node->to_string());
 	m_dirList->clear();
-	m_info.cfg_node->from_default();
-	m_selectedConfigLabel->setText(current_dir.isEmpty() ? EmptyPath : current_dir);
-	m_dirList->addItem(new QListWidgetItem(current_dir));
-	m_gui_settings->SetValue(m_info.listLocation, QStringList(current_dir));
+	m_dirList->setCurrentItem(new QListWidgetItem(qstr(m_info.cfg_node->def), m_dirList));
 }
 
 void vfs_dialog_tab::AddNewDirectory()
 {
-	QString dir = QFileDialog::getExistingDirectory(nullptr, "Choose a directory", QCoreApplication::applicationDirPath());
-	if (dir != "")
-	{
-		if (dir.endsWith("/") == false) dir += '/';
-		new QListWidgetItem(dir, m_dirList);
-		m_selectedConfigLabel->setText(dir);
-	}
+	QString dir = QFileDialog::getExistingDirectory(nullptr, tr("Choose a directory"), QCoreApplication::applicationDirPath());
+
+	if (dir.isEmpty())
+		return;
+
+	if (!dir.endsWith("/"))
+		dir += '/';
+
+	m_dirList->setCurrentItem(new QListWidgetItem(dir, m_dirList));
 }

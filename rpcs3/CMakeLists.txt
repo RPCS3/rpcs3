@@ -84,10 +84,15 @@ include(ConfigureCompiler)
 if(WIN32)
 	add_definitions(-DUNICODE)
 	add_definitions(-D_WIN32_WINNT=0x0601)
+	add_definitions(-DWITH_DISCORD_RPC)
 	set(RES_FILES "rpcs3.rc")
 else()
 	add_definitions(-DGL_GLEXT_PROTOTYPES)
 	add_definitions(-DGLX_GLXEXT_PROTOTYPES)
+	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux" OR APPLE)
+		# We don't want Discord Rich Presence on the BSDs and other OSes
+		add_definitions(-DWITH_DISCORD_RPC)
+	endif()
 endif()
 
 if(USE_NATIVE_INSTRUCTIONS)
@@ -294,6 +299,7 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../3rdparty/stblib"
 "${RPCS3_SRC_DIR}/../3rdparty/cereal/include"
 "${RPCS3_SRC_DIR}/../3rdparty/Optional"
+"${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/include"
 )
 
 if(WIN32)
@@ -410,6 +416,8 @@ if(WIN32)
 		target_link_libraries(rpcs3 dxgi.lib d2d1.lib dwrite.lib)
 	endif()
 	target_link_libraries(rpcs3 avformat.lib avcodec.lib avutil.lib swscale.lib png16_static ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
+	# Link Discord Rich Presence
+	target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/discord-rpc.lib")
 else()
 	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
 	if(APPLE)
@@ -433,6 +441,12 @@ else()
 		target_link_libraries(rpcs3 ${PNG_LIBRARIES})
 	else()
 		target_link_libraries(rpcs3 png16_static)
+	endif()
+	# Link Discord Rich Presence, but only on Linux
+	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+		target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/libdiscord-rpc-linux.a")
+	elseif(APPLE)
+		target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/libdiscord-rpc-mac.a")
 	endif()
 endif()
 
@@ -484,6 +498,8 @@ if(UNIX AND NOT APPLE)
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps)
 	install(FILES rpcs3.desktop
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
+	install(FILES rpcs3.appdata.xml
+			DESTINATION ${CMAKE_INSTALL_PREFIX}/share/metainfo)
     # Install other files
     install(DIRECTORY ../bin/Icons
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)

@@ -593,6 +593,7 @@ public:
 
 	u64 tx_success = 0;
 	u64 tx_failure = 0;
+	uint tx_status = 0;
 
 	void push_snr(u32 number, u32 value);
 	void do_dma_transfer(const spu_mfc_cmd& args);

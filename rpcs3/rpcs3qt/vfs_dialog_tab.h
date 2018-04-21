@@ -27,7 +27,10 @@ public:
 
 	void SetSettings();
 	void AddNewDirectory();
+
+	// Reset this tab without saving the settings yet
 	void Reset();
+
 private:
 	const QString EmptyPath = tr("Empty Path");
 

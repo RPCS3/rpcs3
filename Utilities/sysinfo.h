@@ -39,11 +39,11 @@ namespace utils
 
 	bool has_xop();
 
-	inline bool transaction_enter()
+	FORCE_INLINE bool transaction_enter(uint* out = nullptr)
 	{
 		while (true)
 		{
-			const auto status = _xbegin();
+			const uint status = _xbegin();
 
 			if (status == _XBEGIN_STARTED)
 			{
@@ -52,6 +52,11 @@ namespace utils
 
 			if (!(status & _XABORT_RETRY))
 			{
+				if (out)
+				{
+					*out = status;
+				}
+
 				return false;
 			}
 		}

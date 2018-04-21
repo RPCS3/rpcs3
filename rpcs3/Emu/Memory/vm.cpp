@@ -36,11 +36,11 @@ namespace vm
 	// Stats for debugging
 	u8* const g_stat_addr = memory_reserve_4GiB((std::uintptr_t)g_exec_addr);
 
+	// Reservation stats (compressed x16)
+	u8* const g_reservations = memory_reserve_4GiB((std::uintptr_t)g_stat_addr);
+
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
-
-	// Reservations (lock lines) in a single memory page
-	using reservation_info = std::array<std::atomic<u64>, 4096 / 128>;
 
 	// Registered waiters
 	std::deque<vm::waiter*> g_waiters;
@@ -235,47 +235,10 @@ namespace vm
 	{
 		// Memory flags
 		atomic_t<u8> flags;
-
-		atomic_t<u32> waiters;
-
-		// Reservations
-		atomic_t<reservation_info*> reservations;
-
-		// Access reservation info
-		std::atomic<u64>& operator [](u32 addr)
-		{
-			auto ptr = reservations.load();
-
-			if (!ptr)
-			{
-				// Opportunistic memory allocation
-				ptr = new reservation_info{};
-
-				if (auto old_ptr = reservations.compare_and_swap(nullptr, ptr))
-				{
-					delete ptr;
-					ptr = old_ptr;
-				}
-			}
-
-			return (*ptr)[(addr & 0xfff) >> 7];
-		}
 	};
 
 	// Memory pages
 	std::array<memory_page, 0x100000000 / 4096> g_pages{};
-
-	u64 reservation_acquire(u32 addr, u32 _size)
-	{
-		// Access reservation info: stamp and the lock bit
-		return g_pages[addr >> 12][addr].load(std::memory_order_acquire);
-	}
-
-	void reservation_update(u32 addr, u32 _size, bool lsb)
-	{
-		// Update reservation info with new timestamp (unsafe, assume allocated)
-		(*g_pages[addr >> 12].reservations)[(addr & 0xfff) >> 7].store((__rdtsc() & -2) | lsb, std::memory_order_release);
-	}
 
 	void waiter::init()
 	{
@@ -292,14 +255,7 @@ namespace vm
 			return;
 		}
 
-		memory_page& page = g_pages[addr >> 12];
-
-		if (page.reservations == nullptr)
-		{
-			return;
-		}
-
-		if (stamp >= (*page.reservations)[(addr & 0xfff) >> 7].load())
+		if (stamp >= reservation_acquire(addr, size))
 		{
 			return;
 		}
@@ -563,6 +519,11 @@ namespace vm
 		, size(size)
 		, flags(flags)
 	{
+		// Allocate compressed reservation info area (avoid RSX and SPU areas)
+		if (addr != 0xc0000000 && addr != 0xe0000000)
+		{
+			utils::memory_commit(g_reservations + addr / 16, size / 16);
+		}
 	}
 
 	block_t::~block_t()
@@ -826,6 +787,7 @@ namespace vm
 		utils::memory_decommit(g_base_addr, 0x100000000);
 		utils::memory_decommit(g_exec_addr, 0x100000000);
 		utils::memory_decommit(g_stat_addr, 0x100000000);
+		utils::memory_decommit(g_reservations, 0x100000000);
 	}
 }
 
