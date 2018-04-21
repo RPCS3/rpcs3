@@ -2235,6 +2235,8 @@ void spu_recompiler::MTSPR(spu_opcode_t op)
 
 void spu_recompiler::WRCH(spu_opcode_t op)
 {
+	using namespace asmjit;
+
 	auto gate = [](SPUThread* _spu, u32 ch, u32 value)
 	{
 		if (_spu->set_ch_value(ch, value))
@@ -2249,6 +2251,137 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	{
 		c->mov(*addr, SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
 		c->mov(SPU_OFF_32(srr0), *addr);
+		return;
+	}
+	case SPU_WrOutIntrMbox:
+	{
+		auto sub = [](SPUThread* _spu, spu_function_t _ret, u32 value)
+		{
+			if (!_spu->set_ch_value(SPU_WrOutIntrMbox, value))
+			{
+				fmt::raw_error("spu_recompiler::WRCH(): unexpected SPUThread::set_ch_value(SPU_WrOutIntrMbox) call");
+			}
+
+			// Continue
+			_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
+		};
+
+		Label ret = c->newLabel();
+		Label wait = c->newLabel();
+		c->mov(SPU_OFF_32(pc), m_pos);
+		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
+		c->bt(SPU_OFF_64(ch_out_intr_mbox), spu_channel::off_count);
+		c->jc(wait);
+
+		after.emplace_back([=]
+		{
+			// Do not continue after waiting
+			c->bind(wait);
+			c->mov(*ls, op.ra);
+			c->jmp(imm_ptr<void(*)(SPUThread*, u32, u32)>(gate));
+		});
+
+		c->lea(*ls, x86::qword_ptr(ret));
+		c->jmp(imm_ptr<void(*)(SPUThread*, spu_function_t, u32)>(sub));
+		c->align(kAlignCode, 16);
+		c->bind(ret);
+		return;
+	}
+	case SPU_WrOutMbox:
+	{
+		Label wait = c->newLabel();
+		Label again = c->newLabel();
+		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
+		c->mov(addr->r64(), SPU_OFF_64(ch_out_mbox));
+		c->align(kAlignCode, 16);
+		c->bind(again);
+		c->mov(qw0->r32(), qw0->r32());
+		c->bt(addr->r64(), spu_channel::off_count);
+		c->jc(wait);
+
+		after.emplace_back([=, pos = m_pos]
+		{
+			// Do not continue after waiting
+			c->bind(wait);
+			c->mov(SPU_OFF_32(pc), pos);
+			c->mov(*ls, op.ra);
+			c->jmp(imm_ptr<void(*)(SPUThread*, u32, u32)>(gate));
+		});
+
+		c->bts(*qw0, spu_channel::off_count);
+		c->lock().cmpxchg(SPU_OFF_64(ch_out_mbox), *qw0);
+		c->jnz(again);
+		return;
+	}
+	case MFC_WrTagMask:
+	{
+		Label upd = c->newLabel();
+		Label ret = c->newLabel();
+		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
+		c->mov(SPU_OFF_32(ch_tag_mask), qw0->r32());
+		c->cmp(SPU_OFF_32(ch_tag_upd), 0);
+		c->jnz(upd);
+
+		after.emplace_back([=, pos = m_pos]
+		{
+			auto sub = [](SPUThread* _spu, spu_function_t _ret, u32 value)
+			{
+				if (!_spu->set_ch_value(MFC_WrTagMask, value))
+				{
+					fmt::raw_error("spu_recompiler::WRCH(): unexpected SPUThread::set_ch_value(MFC_WrTagMask) call");
+				}
+
+				// Continue
+				_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
+			};
+
+			c->bind(upd);
+			c->mov(SPU_OFF_32(pc), pos);
+			c->lea(*ls, x86::qword_ptr(ret));
+			c->jmp(imm_ptr<void(*)(SPUThread*, spu_function_t, u32)>(sub));
+		});
+
+		c->bind(ret);
+		return;
+	}
+	case MFC_WrTagUpdate:
+	{
+		Label fail = c->newLabel();
+		Label zero = c->newLabel();
+		Label ret = c->newLabel();
+		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
+		c->cmp(qw0->r32(), 2);
+		c->ja(fail);
+
+		after.emplace_back([=, pos = m_pos]
+		{
+			c->bind(fail);
+			c->mov(SPU_OFF_32(pc), pos);
+			c->mov(*ls, op.ra);
+			c->jmp(imm_ptr<void(*)(SPUThread*, u32, u32)>(gate));
+
+			c->bind(zero);
+			c->mov(SPU_OFF_32(ch_tag_upd), qw0->r32());
+			c->mov(SPU_OFF_64(ch_tag_stat), 0);
+			c->jmp(ret);
+		});
+
+		// addr = completed mask, will be compared with qw1
+		c->mov(*addr, SPU_OFF_32(mfc_fence));
+		c->not_(*addr);
+		c->and_(*addr, SPU_OFF_32(ch_tag_mask));
+		c->mov(qw1->r32(), *addr);
+		c->test(*addr, *addr);
+		c->cmovz(qw1->r32(), qw0->r32());
+		c->cmp(qw0->r32(), 1);
+		c->cmovb(qw1->r32(), *addr);
+		c->cmova(qw1->r32(), SPU_OFF_32(ch_tag_mask));
+		c->cmp(*addr, qw1->r32());
+		c->jne(zero);
+		c->bts(addr->r64(), spu_channel::off_count);
+		c->mov(SPU_OFF_32(ch_tag_upd), 0);
+		c->mov(SPU_OFF_64(ch_tag_stat), addr->r64());
+		c->bind(ret);
 		return;
 	}
 	case MFC_LSA:
@@ -2272,13 +2405,115 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	case MFC_Size:
 	{
 		c->mov(*addr, SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
+		c->and_(*addr, 0x7fff);
 		c->mov(SPU_OFF_16(ch_mfc_cmd, &spu_mfc_cmd::size), addr->r16());
 		return;
 	}
 	case MFC_TagID:
 	{
 		c->mov(*addr, SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
+		c->and_(*addr, 0x1f);
 		c->mov(SPU_OFF_8(ch_mfc_cmd, &spu_mfc_cmd::tag), addr->r8());
+		return;
+	}
+	case MFC_Cmd:
+	{
+		// TODO
+		auto sub = [](SPUThread* _spu, spu_function_t _ret)
+		{
+			if (!_spu->process_mfc_cmd(_spu->ch_mfc_cmd))
+			{
+				throw cpu_flag::ret;
+			}
+
+			_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
+		};
+
+		Label ret = c->newLabel();
+		c->mov(*addr, SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
+		c->mov(SPU_OFF_8(ch_mfc_cmd, &spu_mfc_cmd::cmd), addr->r8());
+		c->mov(SPU_OFF_32(pc), m_pos);
+		c->lea(*ls, x86::qword_ptr(ret));
+		c->jmp(imm_ptr<void(*)(SPUThread*, spu_function_t)>(sub));
+		c->align(kAlignCode, 16);
+		c->bind(ret);
+		return;
+	}
+	case MFC_WrListStallAck:
+	{
+		auto sub = [](SPUThread* _spu, spu_function_t _ret)
+		{
+			_spu->do_mfc(true);
+			_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
+		};
+
+		Label ret = c->newLabel();
+		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
+		c->and_(qw0->r32(), 0x1f);
+		c->btr(SPU_OFF_32(ch_stall_mask), qw0->r32());
+		c->jnc(ret);
+		c->lea(*ls, x86::qword_ptr(ret));
+		c->jmp(imm_ptr<void(*)(SPUThread*, spu_function_t)>(sub));
+		c->align(kAlignCode, 16);
+		c->bind(ret);
+		return;
+	}
+	case SPU_WrDec:
+	{
+		auto sub = [](SPUThread* _spu, spu_function_t _ret)
+		{
+			_spu->ch_dec_start_timestamp = get_timebased_time();
+			_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
+		};
+
+		Label ret = c->newLabel();
+		c->lea(*ls, x86::qword_ptr(ret));
+		c->jmp(imm_ptr<void(*)(SPUThread*, spu_function_t)>(sub));
+		c->align(kAlignCode, 16);
+		c->bind(ret);
+		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
+		c->mov(SPU_OFF_32(ch_dec_value), qw0->r32());
+		return;
+	}
+	case SPU_WrEventMask:
+	{
+		Label fail = c->newLabel();
+		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
+		c->mov(*addr, ~SPU_EVENT_IMPLEMENTED);
+		c->mov(qw1->r32(), ~SPU_EVENT_INTR_IMPLEMENTED);
+		c->bt(SPU_OFF_8(interrupts_enabled), 0);
+		c->cmovc(*addr, qw1->r32());
+		c->test(qw0->r32(), *addr);
+		c->jnz(fail);
+
+		after.emplace_back([=, pos = m_pos]
+		{
+			c->bind(fail);
+			c->mov(SPU_OFF_32(pc), pos);
+			c->mov(*ls, op.ra);
+			c->jmp(imm_ptr<void(*)(SPUThread*, u32, u32)>(gate));
+		});
+
+		c->mov(SPU_OFF_32(ch_event_mask), qw0->r32());
+		return;
+	}
+	case SPU_WrEventAck:
+	{
+		Label fail = c->newLabel();
+		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
+		c->test(qw0->r32(), ~SPU_EVENT_IMPLEMENTED);
+		c->jnz(fail);
+
+		after.emplace_back([=, pos = m_pos]
+		{
+			c->bind(fail);
+			c->mov(SPU_OFF_32(pc), pos);
+			c->mov(*ls, op.ra);
+			c->jmp(imm_ptr<void(*)(SPUThread*, u32, u32)>(gate));
+		});
+
+		c->not_(qw0->r32());
+		c->lock().and_(SPU_OFF_32(ch_event_stat), qw0->r32());
 		return;
 	}
 	case 69:
@@ -2290,7 +2525,7 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	c->mov(SPU_OFF_32(pc), m_pos);
 	c->mov(*ls, op.ra);
 	c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
-	c->jmp(asmjit::imm_ptr<void(*)(SPUThread*, u32, u32)>(gate));
+	c->jmp(imm_ptr<void(*)(SPUThread*, u32, u32)>(gate));
 	m_pos = -1;
 }
 
