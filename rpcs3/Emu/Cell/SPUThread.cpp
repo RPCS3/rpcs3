@@ -2278,7 +2278,8 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 		group->exit_status = value;
-		group->join_state |= SPU_TGJSF_GROUP_EXIT;
+		group->join_state = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
+		_mm_sfence();
 		group->cv.notify_one();
 
 		state += cpu_flag::stop;
@@ -2300,7 +2301,21 @@ bool SPUThread::stop_and_signal(u32 code)
 		semaphore_lock lock(group->mutex);
 
 		status.store(SPU_STATUS_STOPPED_BY_STOP);
+
+		// Check if other SPUs in the group have already exit
+		for (auto& t : group->threads)
+		{
+			if (t && (t->status & SPU_STATUS_STOPPED_BY_STOP) == 0)
+			{
+				goto no_stop;
+			}
+		}
+
+		group->join_state = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
+		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
+		_mm_sfence();
 		group->cv.notify_one();
+		no_stop:
 
 		state += cpu_flag::stop;
 		return false;
