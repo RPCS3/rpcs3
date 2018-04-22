@@ -544,10 +544,6 @@ VKGSRender::VKGSRender() : GSRender()
 
 	m_device = (vk::render_device*)(&m_swapchain->get_device());
 
-	m_memory_type_mapping = m_device->get_memory_mapping();
-
-	m_optimal_tiling_supported_formats = vk::get_optimal_tiling_supported_formats(m_device->gpu());
-
 	vk::set_current_thread_ctx(m_thread_context);
 	vk::set_current_renderer(m_swapchain->get_device());
 
@@ -573,7 +569,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_secondary_command_buffer.access_hint = vk::command_buffer::access_type_hint::all;
 
 	//Precalculated stuff
-	m_render_passes = get_precomputed_render_passes(*m_device, m_optimal_tiling_supported_formats);
+	m_render_passes = get_precomputed_render_passes(*m_device, m_device->get_formats_support());
 	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
 
 	//Occlusion
@@ -592,14 +588,15 @@ VKGSRender::VKGSRender() : GSRender()
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
 	//VRAM allocation
+	const auto& memory_map = m_device->get_memory_mapping();
 	m_attrib_ring_info.init(VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, "attrib buffer", 0x400000);
-	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
+	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
 	m_uniform_buffer_ring_info.init(VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "uniform buffer");
-	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
+	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
 	m_index_buffer_ring_info.init(VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
-	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
+	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
 	m_texture_upload_buffer_ring_info.init(VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
-	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
 
 	for (auto &ctx : frame_context_storage)
 	{
@@ -607,7 +604,7 @@ VKGSRender::VKGSRender() : GSRender()
 		ctx.descriptor_pool.create(*m_device, sizes.data(), static_cast<uint32_t>(sizes.size()));
 	}
 
-	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, m_memory_type_mapping.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
+	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R8_UINT, 0, 32);
 
 	vk::initialize_compiler_context();
@@ -616,7 +613,7 @@ VKGSRender::VKGSRender() : GSRender()
 	{
 		size_t idx = vk::get_render_pass_location( m_swapchain->get_surface_format(), VK_FORMAT_UNDEFINED, 1);
 		m_text_writer.reset(new vk::text_writer());
-		m_text_writer->init(*m_device, m_memory_type_mapping, m_render_passes[idx]);
+		m_text_writer->init(*m_device, m_render_passes[idx]);
 	}
 
 	m_depth_converter.reset(new vk::depth_convert_pass());
@@ -654,11 +651,11 @@ VKGSRender::VKGSRender() : GSRender()
 
 	m_current_frame = &frame_context_storage[0];
 
-	m_texture_cache.initialize((*m_device), m_memory_type_mapping, m_optimal_tiling_supported_formats, m_swapchain->get_graphics_queue(),
+	m_texture_cache.initialize((*m_device), m_swapchain->get_graphics_queue(),
 			m_texture_upload_buffer_ring_info);
 
 	m_ui_renderer.reset(new vk::ui_overlay_renderer());
-	m_ui_renderer->create(*m_current_command_buffer, m_memory_type_mapping, m_texture_upload_buffer_ring_info);
+	m_ui_renderer->create(*m_current_command_buffer, m_texture_upload_buffer_ring_info);
 
 	supports_multidraw = !g_cfg.video.strict_rendering_mode;
 	supports_native_ui = (bool)g_cfg.misc.use_native_interface;
@@ -790,7 +787,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	vk::texture_cache::thrashed_set result;
 	{
 		std::lock_guard<shared_mutex> lock(m_secondary_cb_guard);
-		result = std::move(m_texture_cache.invalidate_address(address, is_writing, false, m_secondary_command_buffer, m_memory_type_mapping, m_swapchain->get_graphics_queue()));
+		result = std::move(m_texture_cache.invalidate_address(address, is_writing, false, m_secondary_command_buffer, m_swapchain->get_graphics_queue()));
 	}
 
 	if (!result.violation_handled)
@@ -852,7 +849,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			m_flush_requests.producer_wait();
 		}
 
-		m_texture_cache.flush_all(result, m_secondary_command_buffer, m_memory_type_mapping, m_swapchain->get_graphics_queue());
+		m_texture_cache.flush_all(result, m_secondary_command_buffer, m_swapchain->get_graphics_queue());
 
 		if (has_queue_ref)
 		{
@@ -868,7 +865,7 @@ void VKGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 {
 	std::lock_guard<shared_mutex> lock(m_secondary_cb_guard);
 	if (m_texture_cache.invalidate_range(address_base, size, true, true, false,
-		m_secondary_command_buffer, m_memory_type_mapping, m_swapchain->get_graphics_queue()).violation_handled)
+		m_secondary_command_buffer, m_swapchain->get_graphics_queue()).violation_handled)
 	{
 		m_texture_cache.purge_dirty();
 		{
@@ -1835,7 +1832,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 				continue;
 
 			m_texture_cache.flush_memory_to_cache(m_surface_info[index].address, m_surface_info[index].pitch * m_surface_info[index].height, true,
-					*m_current_command_buffer, m_memory_type_mapping, m_swapchain->get_graphics_queue());
+					*m_current_command_buffer, m_swapchain->get_graphics_queue());
 		}
 	}
 
@@ -1844,7 +1841,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 		if (m_depth_surface_info.pitch)
 		{
 			m_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, true,
-				*m_current_command_buffer, m_memory_type_mapping, m_swapchain->get_graphics_queue());
+				*m_current_command_buffer, m_swapchain->get_graphics_queue());
 		}
 	}
 
@@ -2705,7 +2702,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		clip_width, clip_height,
 		target,
 		surface_addresses, zeta_address,
-		(*m_device), &*m_current_command_buffer, m_optimal_tiling_supported_formats, m_memory_type_mapping);
+		(*m_device), &*m_current_command_buffer);
 
 	//Reset framebuffer information
 	VkFormat old_format = VK_FORMAT_UNDEFINED;
@@ -2719,7 +2716,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 			m_texture_cache.set_memory_read_flags(m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height, rsx::memory_read_flags::flush_once);
 			m_texture_cache.flush_if_cache_miss_likely(old_format, m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height,
-				*m_current_command_buffer, m_memory_type_mapping, m_swapchain->get_graphics_queue());
+				*m_current_command_buffer, m_swapchain->get_graphics_queue());
 		}
 
 		m_surface_info[i].address = m_surface_info[i].pitch = 0;
@@ -2732,10 +2729,10 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
 		{
-			auto old_format = vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_depth_surface_info.depth_format);
+			auto old_format = vk::get_compatible_depth_surface_format(m_device->get_formats_support(), m_depth_surface_info.depth_format);
 			m_texture_cache.set_memory_read_flags(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, rsx::memory_read_flags::flush_once);
 			m_texture_cache.flush_if_cache_miss_likely(old_format, m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height,
-				*m_current_command_buffer, m_memory_type_mapping, m_swapchain->get_graphics_queue());
+				*m_current_command_buffer, m_swapchain->get_graphics_queue());
 		}
 
 		m_depth_surface_info.address = m_depth_surface_info.pitch = 0;
@@ -2816,7 +2813,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		}
 	}
 
-	auto vk_depth_format = (zeta_address == 0) ? VK_FORMAT_UNDEFINED : vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, depth_fmt);
+	auto vk_depth_format = (zeta_address == 0) ? VK_FORMAT_UNDEFINED : vk::get_compatible_depth_surface_format(m_device->get_formats_support(), depth_fmt);
 	m_current_renderpass_id = vk::get_render_pass_location(vk::get_compatible_surface_format(color_fmt).first, vk_depth_format, m_draw_buffers_count);
 
 	//Search old framebuffers for this same configuration
@@ -3198,7 +3195,7 @@ void VKGSRender::flip(int buffer)
 
 		if (m_custom_ui)
 		{
-			m_ui_renderer->run(*m_current_command_buffer, direct_fbo->width(), direct_fbo->height(), direct_fbo.get(), single_target_pass, m_memory_type_mapping, m_texture_upload_buffer_ring_info, *m_custom_ui);
+			m_ui_renderer->run(*m_current_command_buffer, direct_fbo->width(), direct_fbo->height(), direct_fbo.get(), single_target_pass, m_texture_upload_buffer_ring_info, *m_custom_ui);
 		}
 
 		if (g_cfg.video.overlay)
@@ -3288,7 +3285,7 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 		if (result.dst_image)
 		{
 			if (m_texture_cache.flush_if_cache_miss_likely(result.dst_image->info.format, result.real_dst_address, result.real_dst_size,
-				*m_current_command_buffer, m_memory_type_mapping, m_swapchain->get_graphics_queue()))
+				*m_current_command_buffer, m_swapchain->get_graphics_queue()))
 				require_flush = true;
 		}
 

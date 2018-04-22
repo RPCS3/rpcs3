@@ -122,13 +122,13 @@ namespace rsx
 			surface_color_format format,
 			size_t width, size_t height,
 			vk::render_target* old_surface,
-			vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &, const vk::memory_type_mapping &mem_mapping)
+			vk::render_device &device, vk::command_buffer *cmd)
 		{
 			auto fmt = vk::get_compatible_surface_format(format);
 			VkFormat requested_format = fmt.first;
 
 			std::unique_ptr<vk::render_target> rtt;
-			rtt.reset(new vk::render_target(device, mem_mapping.device_local,
+			rtt.reset(new vk::render_target(device, device.get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
@@ -158,9 +158,9 @@ namespace rsx
 			surface_depth_format format,
 			size_t width, size_t height,
 			vk::render_target* old_surface,
-			vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &support, const vk::memory_type_mapping &mem_mapping)
+			vk::render_device &device, vk::command_buffer *cmd)
 		{
-			VkFormat requested_format = vk::get_compatible_depth_surface_format(support, format);
+			VkFormat requested_format = vk::get_compatible_depth_surface_format(device.get_formats_support(), format);
 			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
 
 			if (requested_format != VK_FORMAT_D16_UNORM)
@@ -169,7 +169,7 @@ namespace rsx
 			const auto scale = rsx::get_resolution_scale();
 
 			std::unique_ptr<vk::render_target> ds;
-			ds.reset(new vk::render_target(device, mem_mapping.device_local,
+			ds.reset(new vk::render_target(device, device.get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,

@@ -3,19 +3,19 @@
 
 namespace vk
 {
-	gpu_formats_support get_optimal_tiling_supported_formats(VkPhysicalDevice physical_device)
+	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev)
 	{
 		gpu_formats_support result = {};
 
 		VkFormatProperties props;
-		vkGetPhysicalDeviceFormatProperties(physical_device, VK_FORMAT_D24_UNORM_S8_UINT, &props);
+		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_D24_UNORM_S8_UINT, &props);
 
 		result.d24_unorm_s8 = !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
 			&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
 			&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT)
 			&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT);
 
-		vkGetPhysicalDeviceFormatProperties(physical_device, VK_FORMAT_D32_SFLOAT_S8_UINT, &props);
+		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_D32_SFLOAT_S8_UINT, &props);
 		result.d32_sfloat_s8 = !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
 			&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
 			&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
@@ -211,7 +211,7 @@ namespace vk
 		return mapping;
 	}
 
-	VkFormat get_compatible_sampler_format(u32 format)
+	VkFormat get_compatible_sampler_format(const gpu_formats_support &support, u32 format)
 	{
 		switch (format)
 		{
@@ -225,8 +225,8 @@ namespace vk
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return VK_FORMAT_BC3_UNORM_BLOCK;
 		case CELL_GCM_TEXTURE_G8B8: return VK_FORMAT_R8G8_UNORM;
 		case CELL_GCM_TEXTURE_R6G5B5: return VK_FORMAT_R5G6B5_UNORM_PACK16; // Expand, discard high bit?
-		case CELL_GCM_TEXTURE_DEPTH24_D8: return VK_FORMAT_D24_UNORM_S8_UINT; //TODO
-		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:	return VK_FORMAT_D24_UNORM_S8_UINT; //TODO
+		case CELL_GCM_TEXTURE_DEPTH24_D8: return support.d24_unorm_s8? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT;
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:	return support.d24_unorm_s8 ? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT;
 		case CELL_GCM_TEXTURE_DEPTH16: return VK_FORMAT_D16_UNORM;
 		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return VK_FORMAT_D16_UNORM;
 		case CELL_GCM_TEXTURE_X16: return VK_FORMAT_R16_UNORM;
