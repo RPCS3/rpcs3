@@ -135,7 +135,14 @@ namespace vk
 		uint32_t device_local;
 	};
 
+	struct gpu_formats_support
+	{
+		bool d24_unorm_s8;
+		bool d32_sfloat_s8;
+	};
+
 	memory_type_mapping get_memory_mapping(const physical_device& dev);
+	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
 
 	class physical_device
 	{
@@ -202,6 +209,7 @@ namespace vk
 	{
 		physical_device *pgpu = nullptr;
 		memory_type_mapping memory_map{};
+		gpu_formats_support m_formats_support{};
 		VkDevice dev = VK_NULL_HANDLE;
 
 	public:
@@ -253,7 +261,9 @@ namespace vk
 			device.pEnabledFeatures = &available_features;
 
 			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
+
 			memory_map = vk::get_memory_mapping(pdev);
+			m_formats_support = vk::get_optimal_tiling_supported_formats(pdev);
 		}
 
 		~render_device()
@@ -298,6 +308,11 @@ namespace vk
 		const memory_type_mapping& get_memory_mapping() const
 		{
 			return memory_map;
+		}
+
+		const gpu_formats_support& get_formats_support() const
+		{
+			return m_formats_support;
 		}
 
 		operator VkDevice&()

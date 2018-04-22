@@ -141,7 +141,7 @@ namespace vk
 			return (protection == utils::protection::rw && uploaded_image_view.get() == nullptr && managed_texture.get() == nullptr);
 		}
 
-		void copy_texture(bool manage_cb_lifetime, vk::command_buffer& cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
+		void copy_texture(bool manage_cb_lifetime, vk::command_buffer& cmd, VkQueue submit_queue)
 		{
 			if (m_device == nullptr)
 			{
@@ -157,7 +157,8 @@ namespace vk
 
 			if (dma_buffer.get() == nullptr)
 			{
-				dma_buffer.reset(new vk::buffer(*m_device, align(cpu_address_range, 256), memory_types.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0));
+				auto memory_type = m_device->get_memory_mapping().host_visible_coherent;
+				dma_buffer.reset(new vk::buffer(*m_device, align(cpu_address_range, 256), memory_type, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0));
 			}
 
 			if (manage_cb_lifetime)
@@ -227,7 +228,7 @@ namespace vk
 			}
 		}
 
-		bool flush(vk::command_buffer& cmd, vk::memory_type_mapping& memory_types, VkQueue submit_queue)
+		bool flush(vk::command_buffer& cmd, VkQueue submit_queue)
 		{
 			if (flushed) return true;
 
@@ -242,7 +243,7 @@ namespace vk
 			if (!synchronized)
 			{
 				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", cpu_address_base);
-				copy_texture(true, cmd, memory_types, submit_queue);
+				copy_texture(true, cmd, submit_queue);
 				result = false;
 			}
 
@@ -513,7 +514,7 @@ namespace vk
 
 			VkImageAspectFlags aspect;
 			VkImageCreateFlags image_flags;
-			VkFormat dst_format = vk::get_compatible_sampler_format(gcm_format);
+			VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
 
 			if (source)
 			{
@@ -609,7 +610,7 @@ namespace vk
 			std::unique_ptr<vk::image> image;
 			std::unique_ptr<vk::image_view> view;
 
-			VkFormat dst_format = vk::get_compatible_sampler_format(gcm_format);
+			VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
 			VkImageAspectFlags dst_aspect = vk::get_aspect_flags(dst_format);
 
 			image.reset(new vk::image(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -672,7 +673,7 @@ namespace vk
 			std::unique_ptr<vk::image> image;
 			std::unique_ptr<vk::image_view> view;
 
-			VkFormat dst_format = vk::get_compatible_sampler_format(gcm_format);
+			VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
 			VkImageAspectFlags dst_aspect = vk::get_aspect_flags(dst_format);
 
 			image.reset(new vk::image(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -845,7 +846,7 @@ namespace vk
 				break;
 			default:
 				aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
-				vk_format = get_compatible_sampler_format(gcm_format);
+				vk_format = get_compatible_sampler_format(m_formats_support, gcm_format);
 
 				if (colorspace != rsx::texture_colorspace::rgb_linear)
 					vk_format = get_compatible_srgb_format(vk_format);
@@ -1034,12 +1035,11 @@ namespace vk
 
 	public:
 
-		void initialize(vk::render_device& device, vk::memory_type_mapping& memory_types, vk::gpu_formats_support& formats_support,
-					VkQueue submit_queue, vk::vk_data_heap& upload_heap)
+		void initialize(vk::render_device& device, VkQueue submit_queue, vk::vk_data_heap& upload_heap)
 		{
-			m_memory_types = memory_types;
-			m_formats_support = formats_support;
 			m_device = &device;
+			m_memory_types = device.get_memory_mapping();
+			m_formats_support = device.get_formats_support();
 			m_submit_queue = submit_queue;
 			m_texture_upload_heap = &upload_heap;
 		}
@@ -1112,7 +1112,7 @@ namespace vk
 		template<typename RsxTextureType>
 		sampled_image_descriptor _upload_texture(vk::command_buffer& cmd, RsxTextureType& tex, rsx::vk_render_targets& m_rtts)
 		{
-			return upload_texture(cmd, tex, m_rtts, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
+			return upload_texture(cmd, tex, m_rtts, cmd, const_cast<const VkQueue>(m_submit_queue));
 		}
 
 		vk::image *upload_image_simple(vk::command_buffer& /*cmd*/, u32 address, u32 width, u32 height)
@@ -1225,7 +1225,7 @@ namespace vk
 			}
 			helper(&cmd);
 
-			auto reply = upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, cmd, m_memory_types, const_cast<const VkQueue>(m_submit_queue));
+			auto reply = upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, cmd, const_cast<const VkQueue>(m_submit_queue));
 
 			vk_blit_op_result result = reply.succeeded;
 			result.real_dst_address = reply.real_dst_address;

@@ -490,7 +490,7 @@ namespace vk
 			m_fragment_shader.id = 100005;
 		}
 
-		vk::image_view* upload_simple_texture(vk::render_device &dev, vk::command_buffer &cmd, vk::memory_type_mapping &memory_types,
+		vk::image_view* upload_simple_texture(vk::render_device &dev, vk::command_buffer &cmd,
 			vk::vk_data_heap& upload_heap, u64 key, int w, int h, bool font, bool temp, void *pixel_src)
 		{
 			const VkFormat format = (font) ? VK_FORMAT_R8_UNORM : VK_FORMAT_B8G8R8A8_UNORM;
@@ -505,7 +505,7 @@ namespace vk
 
 			const VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
-			auto tex = std::make_unique<vk::image>(dev, memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			auto tex = std::make_unique<vk::image>(dev, dev.get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D, format, std::max(w, 1), std::max(h, 1), 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 				0);
@@ -548,7 +548,7 @@ namespace vk
 			return result;
 		}
 
-		void create(vk::command_buffer &cmd, vk::memory_type_mapping &memory_types, vk::vk_data_heap &upload_heap)
+		void create(vk::command_buffer &cmd, vk::vk_data_heap &upload_heap)
 		{
 			auto& dev = cmd.get_command_pool().get_owner();
 			overlay_pass::create(dev);
@@ -559,7 +559,7 @@ namespace vk
 			u64 storage_key = 1;
 			for (const auto &res : configuration.texture_raw_data)
 			{
-				upload_simple_texture(dev, cmd, memory_types, upload_heap, storage_key++, res->w, res->h, false, false, res->data);
+				upload_simple_texture(dev, cmd, upload_heap, storage_key++, res->w, res->h, false, false, res->data);
 			}
 
 			configuration.free_resources();
@@ -583,7 +583,7 @@ namespace vk
 			temp_view_cache.clear();
 		}
 
-		vk::image_view* find_font(rsx::overlays::font *font, vk::command_buffer &cmd, vk::memory_type_mapping &memory_types, vk::vk_data_heap &upload_heap)
+		vk::image_view* find_font(rsx::overlays::font *font, vk::command_buffer &cmd, vk::vk_data_heap &upload_heap)
 		{
 			u64 key = (u64)font;
 			auto found = view_cache.find(key);
@@ -591,17 +591,17 @@ namespace vk
 				return found->second.get();
 
 			//Create font file
-			return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, memory_types, upload_heap, key, font->width, font->height, true, false, font->glyph_data.data());
+			return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, font->width, font->height, true, false, font->glyph_data.data());
 		}
 
-		vk::image_view* find_temp_image(rsx::overlays::image_info *desc, vk::command_buffer &cmd, vk::memory_type_mapping &memory_types, vk::vk_data_heap &upload_heap)
+		vk::image_view* find_temp_image(rsx::overlays::image_info *desc, vk::command_buffer &cmd, vk::vk_data_heap &upload_heap)
 		{
 			u64 key = (u64)desc;
 			auto found = temp_view_cache.find(key);
 			if (found != temp_view_cache.end())
 				return found->second.get();
 
-			return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, memory_types, upload_heap, key, desc->w, desc->h, false, true, desc->data);
+			return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, desc->w, desc->h, false, true, desc->data);
 		}
 
 		void update_uniforms(vk::glsl::program* /*program*/) override
@@ -639,7 +639,7 @@ namespace vk
 			}
 		}
 
-		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::framebuffer* target, VkRenderPass render_pass, vk::memory_type_mapping &memory_types,
+		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::framebuffer* target, VkRenderPass render_pass,
 				vk::vk_data_heap &upload_heap, rsx::overlays::user_interface &ui)
 		{
 			m_scale_offset = color4f((f32)ui.virtual_width, (f32)ui.virtual_height, 1.f, 1.f);
@@ -671,10 +671,10 @@ namespace vk
 					m_skip_texture_read = true;
 					break;
 				case rsx::overlays::image_resource_id::font_file:
-					src = find_font(command.first.font_ref, cmd, memory_types, upload_heap)->value;
+					src = find_font(command.first.font_ref, cmd, upload_heap)->value;
 					break;
 				case rsx::overlays::image_resource_id::raw_image:
-					src = find_temp_image((rsx::overlays::image_info*)command.first.external_data_ref, cmd, memory_types, upload_heap)->value;
+					src = find_temp_image((rsx::overlays::image_info*)command.first.external_data_ref, cmd, upload_heap)->value;
 					break;
 				default:
 					src = view_cache[command.first.texture_ref]->value;
