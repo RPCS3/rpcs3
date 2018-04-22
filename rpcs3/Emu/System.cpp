@@ -13,6 +13,7 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/Cell/lv2/sys_spu.h"
 
 #include "Emu/IdManager.h"
 #include "Emu/RSX/GSRender.h"
@@ -1371,6 +1372,12 @@ void Emulator::Stop(bool restart)
 #endif
 
 	auto e_stop = std::make_exception_ptr(cpu_flag::dbg_global_stop);
+
+	// Abort all pending SPU group joins
+	idm::select<lv2_spu_group>([&](u32, lv2_spu_group& group)
+	{
+		group.cv.notify_one();
+	});
 
 	auto on_select = [&](u32, cpu_thread& cpu)
 	{

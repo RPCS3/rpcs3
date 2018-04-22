@@ -2351,34 +2351,31 @@ bool SPUThread::stop_and_signal(u32 code)
 	{
 		/* ===== sys_spu_thread_group_exit ===== */
 
-		u32 value;
-
-		if (!ch_out_mbox.try_pop(value))
+		if (!ch_out_mbox.get_count())
 		{
 			fmt::throw_exception("sys_spu_thread_group_exit(): Out_MBox is empty" HERE);
 		}
 
-		LOG_TRACE(SPU, "sys_spu_thread_group_exit(status=0x%x)", value);
+		LOG_TRACE(SPU, "sys_spu_thread_group_exit(status=0x%x)", ch_out_mbox.get_value());
 
 		semaphore_lock lock(group->mutex);
 
 		for (auto& thread : group->threads)
 		{
-			if (thread && thread.get() != this)
+			if (thread)
 			{
+				thread->status.store(SPU_STATUS_STOPPED_BY_STOP | (0x101 << 16));
 				thread->state += cpu_flag::stop;
-				thread->status.store(SPU_STATUS_STOPPED_BY_STOP);
-				thread->notify();
+				if (thread.get() != this) thread->notify();
 			}
 		}
 
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
-		group->exit_status = value;
-		group->join_state |= SPU_TGJSF_GROUP_EXIT;
+		group->exit_status = ch_out_mbox.get_value();
+		group->join_state = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
+		_mm_sfence();
 		group->cv.notify_one();
 
-		state += cpu_flag::stop;
-		status.store(SPU_STATUS_STOPPED_BY_STOP);
 		return false;
 	}
 
@@ -2395,10 +2392,23 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		semaphore_lock lock(group->mutex);
 
-		status.store(SPU_STATUS_STOPPED_BY_STOP);
+		status.store(SPU_STATUS_STOPPED_BY_STOP | (0x102 << 16));
+		state += cpu_flag::stop;
+
+		// Check if other SPUs in the group have already exit
+		for (auto& t : group->threads)
+		{
+			if (t && (t->status & SPU_STATUS_STOPPED_BY_STOP) == 0)
+			{
+				return false;
+			}
+		}
+
+		group->join_state = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
+		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
+		_mm_sfence();
 		group->cv.notify_one();
 
-		state += cpu_flag::stop;
 		return false;
 	}
 	}
