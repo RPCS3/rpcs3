@@ -758,6 +758,18 @@ namespace gl
 
 		std::array<GLenum, 4> get_component_mapping(u32 gcm_format, rsx::texture_create_flags flags)
 		{
+			switch (gcm_format)
+			{
+			case CELL_GCM_TEXTURE_DEPTH24_D8:
+			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+			case CELL_GCM_TEXTURE_DEPTH16:
+			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+				//Dont bother letting this propagate
+				return{ GL_RED, GL_RED, GL_RED, GL_RED };
+			default:
+				break;
+			}
+
 			switch (flags)
 			{
 			case rsx::texture_create_flags::default_component_order:
