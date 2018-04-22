@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sys_ppu_thread.h"
 #include "sys_event.h"
 #include "Emu/Cell/SPUThread.h"
 
@@ -14,11 +15,18 @@ enum : s32
 	SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM = 0x20,
 };
 
-enum
+enum : u32
 {
 	SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT       = 0x0001,
 	SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT = 0x0002,
-	SYS_SPU_THREAD_GROUP_JOIN_TERMINATED       = 0x0004
+	SYS_SPU_THREAD_GROUP_JOIN_TERMINATED       = 0x0004,
+};
+
+enum : u32
+{
+	// Additional SPU Thread Group join flags for inner usage (Originally unused)
+	SYS_SPU_THREAD_GROUP_NO_JOIN               = 0x0000,
+	SYS_SPU_THREAD_GROUP_IS_JOINING            = 0x0008,
 };
 
 enum
@@ -207,14 +215,6 @@ enum : u32
 	SYS_SPU_IMAGE_DIRECT  = 1,
 };
 
-// SPU Thread Group Join State Flag
-enum : u32
-{
-	SPU_TGJSF_IS_JOINING = (1 << 0),
-	SPU_TGJSF_TERMINATED = (1 << 1), // set if SPU Thread Group is terminated by sys_spu_thread_group_terminate
-	SPU_TGJSF_GROUP_EXIT = (1 << 2), // set if SPU Thread Group is terminated by sys_spu_thread_group_exit
-};
-
 struct lv2_spu_group
 {
 	static const u32 id_base = 1; // Wrong?
@@ -231,9 +231,9 @@ struct lv2_spu_group
 	atomic_t<u32> init; // Initialization Counter
 	atomic_t<s32> prio; // SPU Thread Group Priority
 	atomic_t<u32> run_state; // SPU Thread Group State
-	atomic_t<s32> exit_status; // SPU Thread Group Exit Status
+	atomic_t<u32> exit_status; // SPU Thread Group Exit Status
 	atomic_t<u32> join_state; // flags used to detect exit cause
-	cond_variable cv; // used to signal waiting PPU thread
+	atomic_t<ppu_thread*> joiner; // Joiner of the group
 
 	std::array<std::shared_ptr<named_thread<spu_thread>>, 256> threads; // SPU Threads
 	std::array<std::pair<sys_spu_image, std::vector<sys_spu_segment>>, 256> imgs; // SPU Images
@@ -254,6 +254,7 @@ struct lv2_spu_group
 		, run_state(SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
 		, exit_status(0)
 		, join_state(0)
+		, joiner(nullptr)
 	{
 	}
 

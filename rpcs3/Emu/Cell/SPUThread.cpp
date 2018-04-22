@@ -2281,34 +2281,33 @@ bool spu_thread::stop_and_signal(u32 code)
 	{
 		/* ===== sys_spu_thread_group_exit ===== */
 
-		u32 value;
-
-		if (!ch_out_mbox.try_pop(value))
+		if (!ch_out_mbox.get_count())
 		{
 			fmt::throw_exception("sys_spu_thread_group_exit(): Out_MBox is empty" HERE);
 		}
 
-		LOG_TRACE(SPU, "sys_spu_thread_group_exit(status=0x%x)", value);
+		LOG_TRACE(SPU, "sys_spu_thread_group_exit(status=0x%x)", ch_out_mbox.get_value());
 
 		std::lock_guard lock(group->mutex);
 
 		for (auto& thread : group->threads)
 		{
-			if (thread && thread.get() != this)
+			if (thread)
 			{
+				thread->status.store(SPU_STATUS_STOPPED_BY_STOP | (0x101 << 16));
 				thread->state += cpu_flag::stop;
-				thread->status.store(SPU_STATUS_STOPPED_BY_STOP);
-				thread_ctrl::notify(*thread);
+				if (thread.get() != this) thread_ctrl::notify(*thread);
 			}
 		}
 
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
-		group->exit_status = value;
-		group->join_state |= SPU_TGJSF_GROUP_EXIT;
-		group->cv.notify_one();
+		group->exit_status = ch_out_mbox.get_value();
 
-		state += cpu_flag::stop;
-		status.store(SPU_STATUS_STOPPED_BY_STOP);
+		if (group->join_state.exchange(SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT) & SYS_SPU_THREAD_GROUP_IS_JOINING)
+		{
+			group->joiner.load()->notify();
+		}
+
 		return false;
 	}
 
@@ -2325,10 +2324,25 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		std::lock_guard lock(group->mutex);
 
-		status.store(SPU_STATUS_STOPPED_BY_STOP);
-		group->cv.notify_one();
-
+		status.store(SPU_STATUS_STOPPED_BY_STOP | (0x102 << 16));
 		state += cpu_flag::stop;
+
+		// Check if other SPUs in the group have already exit
+		for (auto& t : group->threads)
+		{
+			if (t && (t->status & SPU_STATUS_STOPPED_BY_STOP) == 0)
+			{
+				return false;
+			}
+		}
+
+		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
+
+		if (group->join_state.exchange(SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT) & SYS_SPU_THREAD_GROUP_IS_JOINING)
+		{
+			group->joiner.load()->notify();
+		}
+
 		return false;
 	}
 	}
