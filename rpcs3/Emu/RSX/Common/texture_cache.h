@@ -975,12 +975,21 @@ namespace rsx
 					if (surface == &region)
 						continue;
 
+					if (surface->get_context() != rsx::texture_upload_context::framebuffer_storage)
+					{
+						m_unreleased_texture_objects++;
+					}
+					else
+					{
+						if (surface->get_section_base() != memory_address)
+							//HACK: preserve other overlapped sections despite overlap unless new section is superseding
+							//TODO: write memory to cell or redesign sections to preserve the data
+							continue;
+					}
+
 					//Memory is shared with another surface
 					//Discard it - the backend should ensure memory contents are preserved if needed
 					surface->set_dirty(true);
-
-					if (surface->get_context() != rsx::texture_upload_context::framebuffer_storage)
-						m_unreleased_texture_objects++;
 
 					if (surface->is_locked())
 					{
