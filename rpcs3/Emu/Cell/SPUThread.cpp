@@ -354,13 +354,13 @@ void SPUThread::cpu_init()
 	mfc_size = 0;
 	mfc_barrier = 0;
 	mfc_fence = 0;
-	ch_tag_upd = 0;
+	ch_tag_upd = MFC_TAG_STAT_EMPTY;
 	ch_tag_mask = 0;
 	mfc_prxy_mask = 0;
-	ch_tag_stat.data.store({});
+	ch_tag_stat = 0;
 	ch_stall_mask = 0;
-	ch_stall_stat.data.store({});
-	ch_atomic_stat.data.store({});
+	ch_stall_stat = 0;
+	ch_atomic_stat = MFC_ATOMIC_EMPTY;
 
 	ch_in_mbox.clear();
 
@@ -801,12 +801,12 @@ bool SPUThread::do_list_transfer(spu_mfc_cmd& args)
 		{
 			ch_stall_mask |= (1u << args.tag);
 
-			if (!ch_stall_stat.get_count())
+			if (!ch_stall_stat)
 			{
 				ch_event_stat |= SPU_EVENT_SN;
 			}
 
-			ch_stall_stat.set_value((1u << args.tag) | ch_stall_stat.get_value());
+			ch_stall_stat |= (1u << args.tag);
 			return false;
 		}
 
@@ -1009,18 +1009,18 @@ void SPUThread::do_mfc(bool wait)
 	mfc_barrier = barrier;
 	mfc_fence = fence;
 
-	if (removed && ch_tag_upd)
+	if (removed && ch_tag_upd > 0)
 	{
 		const u32 completed = get_mfc_completed();
 
 		if (completed && ch_tag_upd == 1)
 		{
-			ch_tag_stat.set_value(completed);
+			ch_tag_stat = completed;
 			ch_tag_upd = 0;
 		}
 		else if (completed == ch_tag_mask && ch_tag_upd == 2)
 		{
-			ch_tag_stat.set_value(completed);
+			ch_tag_stat = completed;
 			ch_tag_upd = 0;
 		}
 	}
@@ -1108,7 +1108,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 				{
 					// Copy to LS
 					_ref<decltype(rdata)>(args.lsa & 0x3ffff) = rdata;
-					ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
+					ch_atomic_stat = MFC_GETLLAR_SUCCESS;
 					return true;
 				}
 			}
@@ -1137,7 +1137,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 
 		// Copy to LS
 		_ref<decltype(rdata)>(args.lsa & 0x3ffff) = rdata;
-		ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
+		ch_atomic_stat = MFC_GETLLAR_SUCCESS;
 		return true;
 	}
 
@@ -1146,8 +1146,6 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		// Store conditionally
 		auto& data = vm::_ref<decltype(rdata)>(args.eal);
 		const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ffff);
-
-		bool result = false;
 
 		if (raddr == args.eal && rtime == vm::reservation_acquire(raddr, 128))
 		{
@@ -1163,7 +1161,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 				if (rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
 				{
 					data = to_write;
-					result = true;
+					ch_atomic_stat = MFC_PUTLLC_SUCCESS;
 
 					vm::reservation_update(raddr, 128);
 					vm::notify(raddr, 128);
@@ -1188,18 +1186,19 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 					if (rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
 					{
 						data = to_write;
-						result = true;
+						ch_atomic_stat = MFC_PUTLLC_SUCCESS;
 
 						vm::reservation_update(raddr, 128);
-					}
+						_xend();
 
-					_xend();
-					tx_success++;
-
-					if (result)
-					{
 						// First transaction attempt usually fails on vm::notify
 						vm::notify(raddr, 128);
+						tx_success++;
+					}
+					else
+					{
+						_xend();
+						tx_success++;
 					}
 				}
 				else
@@ -1225,7 +1224,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 					_mm_sfence();
 					data = to_write;
 					_mm_sfence();
-					result = true;
+					ch_atomic_stat = MFC_PUTLLC_SUCCESS;
 
 					vm::reservation_update(raddr, 128);
 					vm::notify(raddr, 128);
@@ -1238,18 +1237,14 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 			}
 		}
 
-		if (result)
+		if (ch_atomic_stat != MFC_PUTLLC_SUCCESS)
 		{
-			ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS);
-		}
-		else
-		{
-			ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
-		}
+			ch_atomic_stat = MFC_PUTLLC_FAILURE;
 
-		if (raddr && !result)
-		{
-			ch_event_stat |= SPU_EVENT_LR;
+			if (raddr)
+			{
+				ch_event_stat |= SPU_EVENT_LR;
+			}
 		}
 
 		raddr = 0;
@@ -1258,7 +1253,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 	case MFC_PUTLLUC_CMD:
 	{
 		do_putlluc(args);
-		ch_atomic_stat.set_value(MFC_PUTLLUC_SUCCESS);
+		ch_atomic_stat = MFC_PUTLLUC_SUCCESS;
 		return true;
 	}
 	case MFC_PUTQLLUC_CMD:
@@ -1477,12 +1472,12 @@ u32 SPUThread::get_ch_count(u32 ch)
 	case SPU_WrOutMbox:       return ch_out_mbox.get_count() ^ 1;
 	case SPU_WrOutIntrMbox:   return ch_out_intr_mbox.get_count() ^ 1;
 	case SPU_RdInMbox:        return ch_in_mbox.get_count();
-	case MFC_RdTagStat:       return ch_tag_stat.get_count();
-	case MFC_RdListStallStat: return ch_stall_stat.get_count();
-	case MFC_WrTagUpdate:     return ch_tag_upd == 0;
+	case MFC_RdTagStat:       return ch_tag_upd == 0;
+	case MFC_RdListStallStat: return ch_stall_stat != 0;
+	case MFC_WrTagUpdate:     return ch_tag_upd <= 0;
 	case SPU_RdSigNotify1:    return ch_snr1.get_count();
 	case SPU_RdSigNotify2:    return ch_snr2.get_count();
-	case MFC_RdAtomicStat:    return ch_atomic_stat.get_count();
+	case MFC_RdAtomicStat:    return ch_atomic_stat >= 0;
 	case SPU_RdEventStat:     return get_events() != 0;
 	case MFC_Cmd:             return 16 - mfc_size;
 	}
@@ -1565,20 +1560,20 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case MFC_RdTagStat:
 	{
-		// if (!s_use_rtm && mfc_size)
-		// {
-		// 	do_mfc();
-		// }
-
-		if (ch_tag_stat.get_count())
+		while (ch_tag_upd)
 		{
-			out = ch_tag_stat.get_value();
-			ch_tag_stat.set_value(0, false);
-			return true;
+			// Will stall infinitely
+			mfc_size ? do_mfc(true) : thread_ctrl::wait();
+
+			if (test(state, cpu_flag::stop))
+			{
+				return false;
+			}
 		}
 
-		// Will stall infinitely
-		return read_channel(ch_tag_stat);
+		out = ch_tag_stat;
+		ch_tag_upd = -1;
+		return true;
 	}
 
 	case MFC_RdTagMask:
@@ -1599,28 +1594,33 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case MFC_RdAtomicStat:
 	{
-		if (ch_atomic_stat.get_count())
+		// This channel data is available when an immediate atomic commands finish
+		// But there is no pending or externally executed atomic commands in our implementation
+		// Hence a stall here is a deadlock
+		if (ch_atomic_stat >= 0)
 		{
-			out = ch_atomic_stat.get_value();
-			ch_atomic_stat.set_value(0, false);
+			out = std::exchange(ch_atomic_stat, -1);
 			return true;
 		}
-
-		// Will stall infinitely
-		return read_channel(ch_atomic_stat);
+		else break;
 	}
 
 	case MFC_RdListStallStat:
 	{
-		if (ch_stall_stat.get_count())
+		// atleast one stalled list need to be reported for the channel to be readable
+		while (!ch_stall_stat)
 		{
-			out = ch_stall_stat.get_value();
-			ch_stall_stat.set_value(0, false);
-			return true;
+			// Will stall infinitely
+			mfc_size ? do_mfc(true) : thread_ctrl::wait();
+
+			if (test(state, cpu_flag::stop))
+			{
+				return false;
+			}
 		}
 
-		// Will stall infinitely
-		return read_channel(ch_stall_stat);
+		out = std::exchange(ch_stall_stat, 0);
+		return true;
 	}
 
 	case SPU_RdDec:
@@ -1882,18 +1882,18 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	{
 		ch_tag_mask = value;
 
-		if (ch_tag_upd)
+		if (ch_tag_upd > 0)
 		{
 			const u32 completed = get_mfc_completed();
 
 			if (completed && ch_tag_upd == 1)
 			{
-				ch_tag_stat.set_value(completed);
+				ch_tag_stat = completed;
 				ch_tag_upd = 0;
 			}
 			else if (completed == value && ch_tag_upd == 2)
 			{
-				ch_tag_stat.set_value(completed);
+				ch_tag_stat = completed;
 				ch_tag_upd = 0;
 			}
 		}
@@ -1915,27 +1915,14 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 		const u32 completed = get_mfc_completed();
 
-		if (!value)
+		if (!value || (completed && value == 1) || (completed == ch_tag_mask && value == 2))
 		{
+			ch_tag_stat = completed;
 			ch_tag_upd = 0;
-			ch_tag_stat.set_value(completed);
-		}
-		else if (completed && value == 1)
-		{
-			ch_tag_upd = 0;
-			ch_tag_stat.set_value(completed);
-		}
-		else if (completed == ch_tag_mask && value == 2)
-		{
-			ch_tag_upd = 0;
-			ch_tag_stat.set_value(completed);
-		}
-		else
-		{
-			ch_tag_upd = value;
-			ch_tag_stat.set_value(0, false);
+			return true;
 		}
 
+		ch_tag_upd = value;
 		return true;
 	}
 

@@ -1286,7 +1286,7 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 		}
 	};
 
-	auto read_channel = [&](X86Mem channel_ptr, bool sync = true)
+	auto read_channel = [&](X86Mem channel_ptr)
 	{
 		Label wait = c->newLabel();
 		Label again = c->newLabel();
@@ -1307,17 +1307,9 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 			c->jmp(imm_ptr<void(*)(SPUThread*, u32, v128*)>(gate));
 		});
 
-		if (sync)
-		{
-			// Channel is externally accessible
-			c->lock().cmpxchg(channel_ptr, *qw0);
-			c->jnz(again);
-		}
-		else
-		{
-			// Just write zero
-			c->mov(channel_ptr, *qw0);
-		}
+		// Channel is externally accessible
+		c->lock().cmpxchg(channel_ptr, *qw0);
+		c->jnz(again);
 
 		const XmmLink& vr = XmmAlloc();
 		c->movd(vr, *addr);
@@ -1377,8 +1369,26 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 	}
 	case MFC_RdTagStat:
 	{
-		read_channel(SPU_OFF_64(ch_tag_stat), false);
+		asmjit::Label ret = c->newLabel();
+		asmjit::Label stall = c->newLabel();
+		c->mov(qw0->r32(), SPU_OFF_32(ch_tag_upd));
+		c->test(qw0->r32(), qw0->r32());
+		c->jnz(stall); // Stall if not zero
+		const XmmLink& vr = XmmAlloc();
+		c->movd(vr, SPU_OFF_32(ch_tag_stat));
+		c->dec(SPU_OFF_32(ch_tag_upd)); // Set tag update request state to negative (no request has being sent and channel data is unavailable)
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		c->bind(ret);
 		return;
+
+		after.emplace_back([=, pos = m_pos]
+		{
+			c->align(asmjit::kAlignCode, 16);
+			c->bind(stall);
+			fall(op);
+			c->jmp(ret);
+		});
 	}
 	case MFC_RdTagMask:
 	{
@@ -1400,13 +1410,47 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 	}
 	case MFC_RdAtomicStat:
 	{
-		read_channel(SPU_OFF_64(ch_atomic_stat), false);
+		c->mov(*qw0, SPU_OFF_32(ch_atomic_stat));
+		c->test(*qw0, *qw0);
+		asmjit::Label _break = c->newLabel();
+		c->js(_break); // Break if negative
+
+		const XmmLink& vr = XmmAlloc();
+		c->movd(vr, *qw0);
+		c->mov(SPU_OFF_32(ch_atomic_stat), -1); // Set channel value to negative
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 		return;
+
+		after.emplace_back([=, pos = m_pos]
+		{
+			c->align(asmjit::kAlignCode, 16);
+			c->bind(_break);
+			fmt::raw_error("spu_recompiler::RDCH() [MFC_RdAtomicStat]: deadlock" HERE);
+		});
 	}
 	case MFC_RdListStallStat:
 	{
-		read_channel(SPU_OFF_64(ch_stall_stat), false);
+		asmjit::Label stall = c->newLabel();
+		asmjit::Label ret = c->newLabel();
+		c->mov(*qw0, SPU_OFF_32(ch_stall_stat));
+		c->test(*qw0, *qw0);
+		c->je(stall); // Stall if zero
+		const XmmLink& vr = XmmAlloc();
+		c->movd(vr, *qw0);
+		c->xor_(SPU_OFF_32(ch_stall_stat), *qw0); // Set channel value to zero
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		c->bind(ret);
 		return;
+
+		after.emplace_back([=, pos = m_pos]
+		{
+			c->align(asmjit::kAlignCode, 16);
+			c->bind(stall);
+			fall(op);
+			c->jmp(ret);
+		});
 	}
 	case SPU_RdDec:
 	{
@@ -1517,13 +1561,35 @@ void spu_recompiler::RCHCNT(spu_opcode_t op)
 	{
 	case SPU_WrOutMbox:       return ch_cnt(SPU_OFF_64(ch_out_mbox), true);
 	case SPU_WrOutIntrMbox:   return ch_cnt(SPU_OFF_64(ch_out_intr_mbox), true);
-	case MFC_RdTagStat:       return ch_cnt(SPU_OFF_64(ch_tag_stat));
-	case MFC_RdListStallStat: return ch_cnt(SPU_OFF_64(ch_stall_stat));
 	case SPU_RdSigNotify1:    return ch_cnt(SPU_OFF_64(ch_snr1));
 	case SPU_RdSigNotify2:    return ch_cnt(SPU_OFF_64(ch_snr2));
-	case MFC_RdAtomicStat:    return ch_cnt(SPU_OFF_64(ch_atomic_stat));
 
-	case MFC_WrTagUpdate:
+	case MFC_RdAtomicStat:
+	{
+		c->mov(qw0->r32(), SPU_OFF_32(ch_atomic_stat));
+		c->shr(qw0->r32(), 31); // take the sign bit
+		c->xor_(qw0->r32(), 1); // and complement it to get the count
+		const XmmLink& vr = XmmAlloc();
+		c->movd(vr, *qw0);
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		return;
+	}
+
+	case MFC_RdListStallStat:
+	{
+		c->mov(qw0->r32(), SPU_OFF_32(ch_stall_stat));
+		c->test(*qw0, *qw0);
+		c->setnz(qw0->r8()); // Count is 1 if not zero
+		c->movzx(qw0->r32(), qw0->r8());
+		const XmmLink& vr = XmmAlloc();
+		c->movd(vr, *qw0);
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		return;
+	}
+
+	case MFC_RdTagStat:
 	{
 		const XmmLink& vr = XmmAlloc();
 		const XmmLink& v1 = XmmAlloc();
@@ -1531,6 +1597,19 @@ void spu_recompiler::RCHCNT(spu_opcode_t op)
 		c->pxor(v1, v1);
 		c->pcmpeqd(vr, v1);
 		c->psrld(vr, 31);
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		return;
+	}
+
+	case MFC_WrTagUpdate:
+	{
+		const XmmLink& vr = XmmAlloc();
+		c->mov(qw0->r32(), SPU_OFF_32(ch_tag_upd));
+		c->test(qw0->r32(), qw0->r32());
+		c->setng(qw0->r8());
+		c->movzx(qw0->r32(), qw0->r8());
+		c->movd(vr, qw0->r32());
 		c->pslldq(vr, 12);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 		return;
@@ -2320,7 +2399,7 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
 		c->mov(SPU_OFF_32(ch_tag_mask), qw0->r32());
 		c->cmp(SPU_OFF_32(ch_tag_upd), 0);
-		c->jnz(upd);
+		c->jg(upd);
 
 		after.emplace_back([=, pos = m_pos]
 		{
@@ -2351,7 +2430,7 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 		Label ret = c->newLabel();
 		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
 		c->cmp(qw0->r32(), 2);
-		c->ja(fail);
+		c->jg(fail);
 
 		after.emplace_back([=, pos = m_pos]
 		{
@@ -2362,7 +2441,6 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 
 			c->bind(zero);
 			c->mov(SPU_OFF_32(ch_tag_upd), qw0->r32());
-			c->mov(SPU_OFF_64(ch_tag_stat), 0);
 			c->jmp(ret);
 		});
 
@@ -2374,13 +2452,12 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 		c->test(*addr, *addr);
 		c->cmovz(qw1->r32(), qw0->r32());
 		c->cmp(qw0->r32(), 1);
-		c->cmovb(qw1->r32(), *addr);
-		c->cmova(qw1->r32(), SPU_OFF_32(ch_tag_mask));
+		c->cmovl(qw1->r32(), *addr);
+		c->cmovg(qw1->r32(), SPU_OFF_32(ch_tag_mask));
 		c->cmp(*addr, qw1->r32());
 		c->jne(zero);
-		c->bts(addr->r64(), spu_channel::off_count);
 		c->mov(SPU_OFF_32(ch_tag_upd), 0);
-		c->mov(SPU_OFF_64(ch_tag_stat), addr->r64());
+		c->mov(SPU_OFF_32(ch_tag_stat), *addr);
 		c->bind(ret);
 		return;
 	}

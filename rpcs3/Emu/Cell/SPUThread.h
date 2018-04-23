@@ -545,12 +545,12 @@ public:
 	u32 raddr = 0;
 
 	u32 srr0;
-	u32 ch_tag_upd;
+	s32 ch_tag_upd;
 	u32 ch_tag_mask;
-	spu_channel ch_tag_stat;
+	u32 ch_tag_stat;
 	u32 ch_stall_mask;
-	spu_channel ch_stall_stat;
-	spu_channel ch_atomic_stat;
+	u32 ch_stall_stat; // count is set if not zero
+	s32 ch_atomic_stat; // count is set if not negative
 
 	spu_channel_4_t ch_in_mbox;
 
