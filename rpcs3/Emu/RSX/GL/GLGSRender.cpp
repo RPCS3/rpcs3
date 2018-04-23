@@ -1318,7 +1318,7 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_height = display_buffers[buffer].height;
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
-	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height)
+	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height && buffer_pitch)
 	{
 		// Calculate blit coordinates
 		coordi aspect_ratio;
@@ -1362,13 +1362,7 @@ void GLGSRender::flip(int buffer)
 		{
 			//Hack - this should be the first location to check for output
 			//The render might have been done offscreen or in software and a blit used to display
-			image = surface->get_raw_view()->id();
-
-			//Reset color swizzle
-			glBindTexture(GL_TEXTURE_2D, image);
-			const GLenum rgba_shuffle[] = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, (GLint*)rgba_shuffle);
-			surface->set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
+			image = surface->get_raw_texture()->id();
 		}
 		else
 		{

@@ -225,6 +225,7 @@ namespace gl
 
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 			glBufferStorage(GL_PIXEL_PACK_BUFFER, buffer_size, nullptr, GL_MAP_READ_BIT);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
 			pbo_size = buffer_size;
 		}
@@ -350,7 +351,7 @@ namespace gl
 				init_buffer();
 			}
 
-			u32 target_texture = vram_texture->id();
+			gl::texture* target_texture = vram_texture;
 			if ((rsx::get_resolution_scale_percent() != 100 && context == rsx::texture_upload_context::framebuffer_storage) ||
 				(real_pitch != rsx_pitch))
 			{
@@ -398,47 +399,33 @@ namespace gl
 
 					bool linear_interp = false; //TODO: Make optional or detect full sized sources
 					g_hw_blitter->scale_image(vram_texture, scaled_texture.get(), src_area, dst_area, linear_interp, is_depth, {});
-					target_texture = scaled_texture->id();
+					target_texture = scaled_texture.get();
 				}
 			}
-
-			glPixelStorei(GL_PACK_SWAP_BYTES, pack_unpack_swap_bytes);
-			glPixelStorei(GL_PACK_ALIGNMENT, 1);
-			glPixelStorei(GL_PACK_ROW_LENGTH, 0);
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 
 			glGetError();
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 
-			if (get_driver_caps().EXT_dsa_supported)
-				glGetTextureImageEXT(target_texture, GL_TEXTURE_2D, 0, (GLenum)format, (GLenum)type, nullptr);
-			else
-				glGetTextureImage(target_texture, 0, (GLenum)format, (GLenum)type, pbo_size, nullptr);
+			pixel_pack_settings pack_settings;
+			pack_settings.aligment(1).swap_bytes(pack_unpack_swap_bytes);
+			target_texture->copy_to(nullptr, format, type, pack_settings);
 
-			if (GLenum err = glGetError())
+			if (auto error = glGetError())
 			{
-				bool recovered = false;
-				if (scaled_texture && (target_texture == scaled_texture->id()))
+				if (error == GL_OUT_OF_MEMORY && ::gl::get_driver_caps().vendor_AMD)
 				{
-					if (get_driver_caps().EXT_dsa_supported)
-						glGetTextureImageEXT(vram_texture->id(), GL_TEXTURE_2D, 0, (GLenum)format, (GLenum)type, nullptr);
-					else
-						glGetTextureImage(vram_texture->id(), 0, (GLenum)format, (GLenum)type, pbo_size, nullptr);
-
-					if (!glGetError())
-					{
-						recovered = true;
-						const u32 min_dimension = cpu_address_range / rsx_pitch;
-						LOG_WARNING(RSX, "Failed to read back a scaled image, but the original texture can be read back. Consider setting min scalable dimension below or equal to %d", min_dimension);
-					}
+					//AMD driver bug
+					//Pixel transfer fails with GL_OUT_OF_MEMORY. Usually happens with float textures
+					//Failed operations also leak a large amount of memory
+					LOG_ERROR(RSX, "Memory transfer failure (AMD bug). Format=0x%x, Type=0x%x", (u32)format, (u32)type);
 				}
-
-				if (!recovered && rsx::get_resolution_scale_percent() != 100 && context == rsx::texture_upload_context::framebuffer_storage)
+				else
 				{
-					LOG_ERROR(RSX, "Texture readback failed. Disable resolution scaling to get the 'Write Color Buffers' option to work properly");
+					LOG_ERROR(RSX, "Memory transfer failed with error 0x%x. Format=0x%x, Type=0x%x", error, (u32)format, (u32)type);
 				}
 			}
 
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
 			m_fence.reset();
 			synchronized = true;
@@ -459,7 +446,7 @@ namespace gl
 			glPixelStorei(GL_UNPACK_SWAP_BYTES, pack_unpack_swap_bytes);
 			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo_id);
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, min_width, min_height, (GLenum)format, (GLenum)type, nullptr);
-			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
 		}
 
 		bool flush()
@@ -518,7 +505,7 @@ namespace gl
 			}
 
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
 			reset_write_statistics();
 
