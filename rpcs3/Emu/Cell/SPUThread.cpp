@@ -2043,7 +2043,8 @@ bool SPUThread::stop_and_signal(u32 code)
 		status.store(SPU_STATUS_STOPPED_BY_STOP | (code << 16)); // Also clears the run bit
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
 		state += cpu_flag::stop;
-		return true; // ???
+		pc += 4;
+		return false; // Check state flags immediately
 	}
 
 	switch (code)
@@ -2092,7 +2093,7 @@ bool SPUThread::stop_and_signal(u32 code)
 	case 0x002:
 	{
 		state += cpu_flag::ret;
-		return true;
+		return false;
 	}
 
 	case 0x110:
@@ -2282,7 +2283,7 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		state += cpu_flag::stop;
 		status.store(SPU_STATUS_STOPPED_BY_STOP);
-		return true;
+		return false;
 	}
 
 	case 0x102:
@@ -2302,7 +2303,7 @@ bool SPUThread::stop_and_signal(u32 code)
 		group->cv.notify_one();
 
 		state += cpu_flag::stop;
-		return true;
+		return false;
 	}
 	}
 
