@@ -910,6 +910,7 @@ bool spu_thread::do_dma_check(const spu_mfc_cmd& args)
 				if ((mfc_queue[i].cmd & ~0xc) == MFC_BARRIER_CMD)
 				{
 					mfc_barrier |= -1;
+					mfc_fence |= 1u << mfc_queue[i].tag;
 					continue;
 				}
 
@@ -1070,6 +1071,7 @@ void spu_thread::do_mfc(bool wait)
 
 			// Block all tags
 			barrier |= -1;
+			fence |= 1u << args.tag;
 			return false;
 		}
 
@@ -1434,6 +1436,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 		{
 			mfc_queue[mfc_size++] = args;
 			mfc_barrier |= -1;
+			mfc_fence |= 1u << args.tag;
 		}
 
 		return true;
