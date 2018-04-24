@@ -407,7 +407,12 @@ namespace gl
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 
 			pixel_pack_settings pack_settings;
-			pack_settings.aligment(1).swap_bytes(pack_unpack_swap_bytes);
+			pack_settings.aligment(1);
+
+			//NOTE: AMD properietary driver bug - disable swap bytes
+			if (!::gl::get_driver_caps().vendor_AMD)
+				pack_settings.swap_bytes(pack_unpack_swap_bytes);
+
 			target_texture->copy_to(nullptr, format, type, pack_settings);
 
 			if (auto error = glGetError())
@@ -502,6 +507,57 @@ namespace gl
 			{
 				//byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
 				rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, height);
+			}
+			else if (pack_unpack_swap_bytes && ::gl::get_driver_caps().vendor_AMD)
+			{
+				//AMD driver bug - cannot use pack_swap_bytes
+				//Manually byteswap texel data
+				switch (type)
+				{
+				case texture::type::f16:
+				case texture::type::sshort:
+				case texture::type::ushort:
+				case texture::type::ushort_5_6_5:
+				case texture::type::ushort_4_4_4_4:
+				case texture::type::ushort_1_5_5_5_rev:
+				case texture::type::ushort_5_5_5_1:
+				{
+					const u32 num_reps = cpu_address_range / 2;
+					be_t<u16>* in = (be_t<u16>*)(dst);
+					u16* out = (u16*)dst;
+
+					for (u32 n = 0; n < num_reps; ++n)
+					{
+						out[n] = in[n];
+					}
+
+					break;
+				}
+				case texture::type::f32:
+				case texture::type::sint:
+				case texture::type::uint:
+				case texture::type::uint_10_10_10_2:
+				case texture::type::uint_24_8:
+				case texture::type::uint_2_10_10_10_rev:
+				case texture::type::uint_8_8_8_8:
+				{
+					u32 num_reps = cpu_address_range / 4;
+					be_t<u32>* in = (be_t<u32>*)(dst);
+					u32* out = (u32*)dst;
+
+					for (u32 n = 0; n < num_reps; ++n)
+					{
+						out[n] = in[n];
+					}
+
+					break;
+				}
+				default:
+				{
+					LOG_ERROR(RSX, "Texture type 0x%x is not implemented " HERE, (u32)type);
+					break;
+				}
+				}
 			}
 
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
