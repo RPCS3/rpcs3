@@ -35,7 +35,7 @@ bool utils::has_avx2()
 bool utils::has_rtm()
 {
 	// Check RTM and filter out TSX on Haswell CPUs
-	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x800) == 0x800 && jit_compiler::cpu() != "haswell";
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x800) == 0x800 && jit_compiler::cpu("") != "haswell";
 	return g_value;
 }
 
