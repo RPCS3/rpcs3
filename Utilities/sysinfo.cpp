@@ -1,5 +1,6 @@
 #include "sysinfo.h"
 #include "StrFmt.h"
+#include "JIT.h"
 
 #ifdef _WIN32
 #include "windows.h"
@@ -33,8 +34,8 @@ bool utils::has_avx2()
 
 bool utils::has_rtm()
 {
-	// Check RTM and MPX extensions in order to filter out TSX on Haswell CPUs
-	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x4800) == 0x4800;
+	// Check RTM and filter out TSX on Haswell CPUs
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x800) == 0x800 && jit_compiler::cpu() != "haswell";
 	return g_value;
 }
 
