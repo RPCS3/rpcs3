@@ -158,7 +158,7 @@ void VertexProgramDecompiler::SetDST(bool is_sca, std::string value)
 
 	if (d0.cond_update_enable_0 || d0.cond_update_enable_1)
 	{
-		dest = m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "cc" + std::to_string(d0.cond_reg_sel_1), getFloatTypeName(4) + "(0., 0., 0., 0.)") + mask;
+		dest = AddCondReg() + mask;
 	}
 	else if (d3.dst != 0x1f || (is_sca ? d3.sca_dst_tmp != 0x3f : d0.dst_tmp != 0x3f))
 	{
@@ -239,7 +239,7 @@ std::string VertexProgramDecompiler::GetCond()
 	swizzle += f[d0.mask_w];
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-	return "any(" + compareFunction(cond_string_table[d0.cond], "cc" + std::to_string(d0.cond_reg_sel_1) + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle) + ")";
+	return "any(" + compareFunction(cond_string_table[d0.cond], AddCondReg() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle) + ")";
 }
 
 std::string VertexProgramDecompiler::GetOptionalBranchCond()
@@ -293,7 +293,7 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-	std::string cond = compareFunction(cond_string_table[d0.cond], "cc" + std::to_string(d0.cond_reg_sel_1) + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
+	std::string cond = compareFunction(cond_string_table[d0.cond], AddCondReg() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
 
 	ShaderVariable dst_var(dst);
 	dst_var.symplify();
@@ -329,6 +329,11 @@ std::string VertexProgramDecompiler::AddAddrReg()
 std::string VertexProgramDecompiler::AddAddrRegWithoutMask()
 {
 	return m_parr.AddParam(PF_PARAM_NONE, getIntTypeName(4), "a" + std::to_string(d0.addr_reg_sel_1), getIntTypeName(4) + "(0, 0, 0, 0)");
+}
+
+std::string VertexProgramDecompiler::AddCondReg()
+{
+	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "cc" + std::to_string(d0.cond_reg_sel_1), getFloatTypeName(4) + "(0., 0., 0., 0.)");
 }
 
 u32 VertexProgramDecompiler::GetAddr()

@@ -72,6 +72,7 @@ struct VertexProgramDecompiler
 	std::string AddAddrMask();
 	std::string AddAddrReg();
 	std::string AddAddrRegWithoutMask();
+	std::string AddCondReg();
 	u32 GetAddr();
 	std::string Format(const std::string& code);
 
