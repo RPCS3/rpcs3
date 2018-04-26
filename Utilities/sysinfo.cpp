@@ -38,7 +38,7 @@ bool utils::has_rtm()
 	{
 		//Check if CPU is Haswell
 		int Model = (get_cpuid(1, 0)[0] >> 4) & 0xf;
-		Model += (get_cpuid(1, 0)[0] >> 16) & 0xf;
+		Model += ((get_cpuid(1, 0)[0] >> 16) & 0xf) << 4;
 		
 		switch (Model) {
 		case 0x3c:
