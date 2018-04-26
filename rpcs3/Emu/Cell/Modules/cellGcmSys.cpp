@@ -1295,6 +1295,156 @@ s32 cellGcmGpadCaptureSnapshot(u32 num)
 	return CELL_OK;
 }
 
+s32 cellGcmTransferData()
+{
+	cellGcmSys.todo("cellGcmTransferData()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetDrawBegin()
+{
+	cellGcmSys.todo("cellGcmSetDrawBegin()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetDrawEnd()
+{
+	cellGcmSys.todo("cellGcmSetDrawEnd()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetDrawInlineArrayPointer()
+{
+	cellGcmSys.todo("cellGcmSetDrawInlineArrayPointer()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetDrawInlineIndexArray16Pointer()
+{
+	cellGcmSys.todo("cellGcmSetDrawInlineIndexArray16Pointer()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetDrawInlineIndexArray32Pointer()
+{
+	cellGcmSys.todo("cellGcmSetDrawInlineIndexArray32Pointer()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetFogMode()
+{
+	cellGcmSys.todo("cellGcmSetFogMode()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetFogParams()
+{
+	cellGcmSys.todo("cellGcmSetFogParams()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetFragmentProgramLoad()
+{
+	cellGcmSys.todo("cellGcmSetFragmentProgramLoad()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetFragmentProgramParameterPointer()
+{
+	cellGcmSys.todo("cellGcmSetFragmentProgramParameterPointer()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetPerfMonTrigger()
+{
+	cellGcmSys.todo("cellGcmSetPerfMonTrigger()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetScullControl()
+{
+	cellGcmSys.todo("cellGcmSetScullControl()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetTextureAddressAnisoBias()
+{
+	cellGcmSys.todo("cellGcmSetTextureAddressAnisoBias()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetTextureRemap()
+{
+	cellGcmSys.todo("cellGcmSetTextureRemap()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetTransferDataFormat()
+{
+	cellGcmSys.todo("cellGcmSetTransferDataFormat()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetTransferDataMode()
+{
+	cellGcmSys.todo("cellGcmSetTransferDataMode()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetTransferDataOffset()
+{
+	cellGcmSys.todo("cellGcmSetTransferDataOffset()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetTransferScaleMode()
+{
+	cellGcmSys.todo("cellGcmSetTransferScaleMode()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetTransferScaleSurface()
+{
+	cellGcmSys.todo("cellGcmSetTransferScaleSurface()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetTransferScaleSwizzle()
+{
+	cellGcmSys.todo("cellGcmSetTransferScaleSwizzle()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetTransformBranchBits()
+{
+	cellGcmSys.todo("cellGcmSetTransformBranchBits()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetTwoSideLightEnable()
+{
+	cellGcmSys.todo("cellGcmSetTwoSideLightEnable()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetVertexAttribOutputMask()
+{
+	cellGcmSys.todo("cellGcmSetVertexAttribOutputMask()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetVertexProgramConstantsPointer()
+{
+	cellGcmSys.todo("cellGcmSetVertexProgramConstantsPointer()");
+	return CELL_OK;
+}
+
+s32 cellGcmSetVertexProgramLoad()
+{
+	cellGcmSys.todo("cellGcmSetVertexProgramLoad()");
+	return CELL_OK;
+}
+
 
 //----------------------------------------------------------------------------
 
@@ -1477,12 +1627,37 @@ DECLARE(ppu_module_manager::cellGcmSys)("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, _cellGcmFunc4);
 	REG_FUNC(cellGcmSys, _cellGcmFunc13);
 	REG_FUNC(cellGcmSys, _cellGcmFunc38);
-
+	REG_FUNC(cellGcmSys, cellGcmTransferData);
+	REG_FUNC(cellGcmSys, cellGcmSetDrawBegin);
+	REG_FUNC(cellGcmSys, cellGcmSetDrawEnd);
+	REG_FUNC(cellGcmSys, cellGcmSetDrawInlineArrayPointer);
+	REG_FUNC(cellGcmSys, cellGcmSetDrawInlineIndexArray16Pointer);
+	REG_FUNC(cellGcmSys, cellGcmSetDrawInlineIndexArray32Pointer);
+	REG_FUNC(cellGcmSys, cellGcmSetFogMode);
+	REG_FUNC(cellGcmSys, cellGcmSetFogParams);
+	REG_FUNC(cellGcmSys, cellGcmSetFragmentProgramLoad);
+	REG_FUNC(cellGcmSys, cellGcmSetFragmentProgramParameterPointer);
+	REG_FUNC(cellGcmSys, cellGcmSetPerfMonTrigger);
+	REG_FUNC(cellGcmSys, cellGcmSetScullControl);
+	REG_FUNC(cellGcmSys, cellGcmSetTextureAddressAnisoBias);
+	REG_FUNC(cellGcmSys, cellGcmSetTextureRemap);
+	REG_FUNC(cellGcmSys, cellGcmSetTransferDataFormat);
+	REG_FUNC(cellGcmSys, cellGcmSetTransferDataMode);
+	REG_FUNC(cellGcmSys, cellGcmSetTransferDataOffset);
+	REG_FUNC(cellGcmSys, cellGcmSetTransferScaleMode);
+	REG_FUNC(cellGcmSys, cellGcmSetTransferScaleSurface);
+	REG_FUNC(cellGcmSys, cellGcmSetTransferScaleSwizzle);
+	REG_FUNC(cellGcmSys, cellGcmSetTransformBranchBits);
+	REG_FUNC(cellGcmSys, cellGcmSetTwoSideLightEnable);
+	REG_FUNC(cellGcmSys, cellGcmSetVertexAttribOutputMask);
+	REG_FUNC(cellGcmSys, cellGcmSetVertexProgramConstantsPointer);
+	REG_FUNC(cellGcmSys, cellGcmSetVertexProgramLoad);
+	
 	// GPAD
 	REG_FUNC(cellGcmSys, cellGcmGpadGetStatus);
 	REG_FUNC(cellGcmSys, cellGcmGpadNotifyCaptureSurface);
 	REG_FUNC(cellGcmSys, cellGcmGpadCaptureSnapshot);
-
+	
 	// Special
 	REG_FUNC(cellGcmSys, cellGcmCallback).flag(MFF_HIDDEN);
 });
