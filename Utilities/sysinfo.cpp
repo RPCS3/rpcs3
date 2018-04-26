@@ -35,7 +35,8 @@ bool utils::has_rtm()
 {
 	// Check RTM
 	static bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x800) == 0x800;
-	if (g_value) {
+	if (g_value) 
+	{
 		//Check if CPU is Haswell
 		int Model = (get_cpuid(1, 0)[0] >> 4) & 0xf;
 		Model += ((get_cpuid(1, 0)[0] >> 16) & 0xf) << 4;
