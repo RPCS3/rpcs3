@@ -360,7 +360,7 @@ struct spu_int_ctrl_t
 
 	std::shared_ptr<struct lv2_int_tag> tag;
 
-	void set(u64 ints);
+	bool set(u64 ints);
 
 	void clear(u64 ints)
 	{

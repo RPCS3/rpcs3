@@ -388,7 +388,7 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	c.ret();
 });
 
-void spu_int_ctrl_t::set(u64 ints)
+bool spu_int_ctrl_t::set(u64 ints)
 {
 	// leave only enabled interrupts
 	ints &= mask;
@@ -403,9 +403,11 @@ void spu_int_ctrl_t::set(u64 ints)
 			if (auto handler = tag->handler.lock())
 			{
 				handler->exec();
+				return true;
 			}
 		}
 	}
+	return false;
 }
 
 const spu_imm_table_t g_spu_imm;
@@ -1771,17 +1773,20 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	{
 		if (offset >= RAW_SPU_BASE_ADDR)
 		{
-			while (!ch_out_intr_mbox.try_push(value))
+			ch_out_intr_mbox.data.store(spu_channel::bit_wait | spu_channel::bit_count | value);
+
+			if (int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT))
 			{
-				if (test(state & cpu_flag::stop))
+				while (ch_out_intr_mbox.get_count())
 				{
-					return false;
+					if (test(state & cpu_flag::stop))
+					{
+						return false;
+					}
+
+					thread_ctrl::wait();
 				}
-
-				thread_ctrl::wait();
 			}
-
-			int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT);
 			return true;
 		}
 
