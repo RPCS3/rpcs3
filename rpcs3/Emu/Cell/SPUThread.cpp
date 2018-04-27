@@ -197,7 +197,7 @@ namespace spu
 	}
 }
 
-void spu_int_ctrl_t::set(u64 ints)
+bool spu_int_ctrl_t::set(u64 ints)
 {
 	// leave only enabled interrupts
 	ints &= mask;
@@ -212,9 +212,11 @@ void spu_int_ctrl_t::set(u64 ints)
 			if (auto handler = tag->handler.lock())
 			{
 				handler->exec();
+				return true;
 			}
 		}
 	}
+	return false;
 }
 
 const spu_imm_table_t g_spu_imm;
@@ -345,9 +347,7 @@ std::string SPUThread::dump() const
 
 void SPUThread::cpu_init()
 {
-	gpr = {};
 	fpscr.Reset();
-
 	ch_mfc_cmd = {};
 
 	srr0 = 0;
@@ -754,6 +754,7 @@ bool SPUThread::do_dma_check(const spu_mfc_cmd& args)
 				if ((mfc_queue[i].cmd & ~0xc) == MFC_BARRIER_CMD)
 				{
 					mfc_barrier |= -1;
+					mfc_fence |= 1u << mfc_queue[i].tag;
 					continue;
 				}
 
@@ -923,6 +924,7 @@ void SPUThread::do_mfc(bool wait)
 
 			// Block all tags
 			barrier |= -1;
+			fence |= 0x1 << args.tag;
 			return false;
 		}
 
@@ -1388,6 +1390,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		{
 			mfc_queue[mfc_size++] = args;
 			mfc_barrier |= -1;
+			mfc_fence |= 0x1 << args.tag; // Take the tag into account when calculating the tag status
 		}
 
 		return true;
@@ -1714,17 +1717,22 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 		if (offset >= RAW_SPU_BASE_ADDR)
 		{
-			while (!ch_out_intr_mbox.try_push(value))
+			ch_out_intr_mbox.set_value(value);
+			ch_out_intr_mbox.try_push(value); // Raise the wait bit
+
+			if (int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT))
 			{
-				if (test(state & cpu_flag::stop))
+
+				while (ch_out_intr_mbox.get_count())
 				{
-					return false;
+					if (test(state & cpu_flag::stop))
+					{
+						return false;
+					}
+
+					thread_ctrl::wait();
 				}
-
-				thread_ctrl::wait();
 			}
-
-			int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT);
 			return true;
 		}
 
@@ -2042,16 +2050,11 @@ bool SPUThread::stop_and_signal(u32 code)
 
 	if (offset >= RAW_SPU_BASE_ADDR)
 	{
-		status.atomic_op([code](u32& status)
-		{
-			status = (status & 0xffff) | (code << 16);
-			status |= SPU_STATUS_STOPPED_BY_STOP;
-			status &= ~SPU_STATUS_RUNNING;
-		});
-
+		status.store(SPU_STATUS_STOPPED_BY_STOP | (code << 16)); // Also clears the run bit
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
 		state += cpu_flag::stop;
-		return true; // ???
+		pc += 4;
+		return false; // Check state flags immediately
 	}
 
 	switch (code)
@@ -2100,7 +2103,7 @@ bool SPUThread::stop_and_signal(u32 code)
 	case 0x002:
 	{
 		state += cpu_flag::ret;
-		return true;
+		return false;
 	}
 
 	case 0x110:
@@ -2278,17 +2281,20 @@ bool SPUThread::stop_and_signal(u32 code)
 			if (thread && thread.get() != this)
 			{
 				thread->state += cpu_flag::stop;
+				thread->status.store(SPU_STATUS_STOPPED_BY_STOP);
 				thread->notify();
 			}
 		}
 
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 		group->exit_status = value;
-		group->join_state |= SPU_TGJSF_GROUP_EXIT;
+		group->join_state = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
+		_mm_sfence();
 		group->cv.notify_one();
 
 		state += cpu_flag::stop;
-		return true;
+		status.store(SPU_STATUS_STOPPED_BY_STOP);
+		return false;
 	}
 
 	case 0x102:
@@ -2304,11 +2310,31 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		semaphore_lock lock(group->mutex);
 
-		status |= SPU_STATUS_STOPPED_BY_STOP;
+		status.store(SPU_STATUS_STOPPED_BY_STOP);
+
+		// Check if other SPUs in the group have already exit
+		for (auto& t : group->threads)
+		{
+			if (t && (t->status & SPU_STATUS_STOPPED_BY_STOP) == 0)
+			{
+				goto no_stop;
+			}
+		}
+
+		group->join_state = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
+		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
+		_mm_sfence();
 		group->cv.notify_one();
+		no_stop:
 
 		state += cpu_flag::stop;
-		return true;
+		return false;
+	}
+
+	case 0x3fff:
+	{
+		LOG_FATAL(SPU, "Trap!" HERE);
+		return state += cpu_flag::dbg_pause, false;
 	}
 	}
 
@@ -2328,11 +2354,7 @@ void SPUThread::halt()
 
 	if (offset >= RAW_SPU_BASE_ADDR)
 	{
-		status.atomic_op([](u32& status)
-		{
-			status |= SPU_STATUS_STOPPED_BY_HALT;
-			status &= ~SPU_STATUS_RUNNING;
-		});
+		status.store(SPU_STATUS_STOPPED_BY_HALT); // Also clears the run bit
 
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_HALT_OR_STEP_INT);
 

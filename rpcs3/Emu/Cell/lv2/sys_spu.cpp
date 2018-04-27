@@ -296,7 +296,7 @@ error_code sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::p
 
 	// TODO: max num value should be affected by sys_spu_initialize() settings
 
-	if (attr->nsize > 0x80 || !num || num > 6 || ((prio < 16 || prio > 255) && (attr->type != SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT && attr->type != SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM)))
+	if (attr->nsize > 0x80 || !num || num > 6 || ((prio < 16 || prio > 255) && ((attr->type & SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT) == 0 && attr->type != SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM)))
 	{
 		return CELL_EINVAL;
 	}
@@ -373,8 +373,6 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 
 	semaphore_lock lock(group->mutex);
 
-	group->join_state = 0;
-
 	for (auto& thread : group->threads)
 	{
 		if (thread)
@@ -385,27 +383,22 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 			sys_spu_image::deploy(thread->offset, img.second.data(), img.first.nsegs);
 
 			thread->pc = img.first.entry_point;
+			thread->gpr = {};
 			thread->cpu_init();
-			thread->gpr[3] = v128::from64(0, args[0]);
-			thread->gpr[4] = v128::from64(0, args[1]);
-			thread->gpr[5] = v128::from64(0, args[2]);
-			thread->gpr[6] = v128::from64(0, args[3]);
+			thread->gpr[3]._u64[1] = args[0];
+			thread->gpr[4]._u64[1] = args[1];
+			thread->gpr[5]._u64[1] = args[2];
+			thread->gpr[6]._u64[1] = args[3];
+			_mm_mfence(); // Finish initialization's data trasnfering
 
 			thread->status.exchange(SPU_STATUS_RUNNING);
+			thread->run();
 		}
 	}
 
 	// Because SPU_THREAD_GROUP_STATUS_READY is not possible, run event is delivered immediately
 	// TODO: check data2 and data3
 	group->send_run_event(id, 0, 0);
-
-	for (auto& thread : group->threads)
-	{
-		if (thread)
-		{
-			thread->run();
-		}
-	}
 
 	return CELL_OK;
 }
@@ -587,7 +580,7 @@ error_code sys_spu_thread_group_terminate(u32 id, s32 value)
 
 	group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	group->exit_status = value;
-	group->join_state |= SPU_TGJSF_TERMINATED;
+	group->join_state = SYS_SPU_THREAD_GROUP_JOIN_TERMINATED;
 	group->cv.notify_one();
 
 	return CELL_OK;
@@ -606,8 +599,10 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		return CELL_ESRCH;
 	}
 
-	u32 join_state = 0;
-	s32 exit_value = 0;
+	if (!cause || !status)
+	{
+		return CELL_EFAULT;
+	}
 
 	{
 		semaphore_lock lock(group->mutex);
@@ -617,7 +612,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 			return CELL_ESTAT;
 		}
 
-		if (group->join_state.fetch_or(SPU_TGJSF_IS_JOINING) & SPU_TGJSF_IS_JOINING)
+		if (group->join_state.test_and_set(SYS_SPU_THREAD_GROUP_IS_JOINING))
 		{
 			// another PPU thread is joining this thread group
 			return CELL_EBUSY;
@@ -625,67 +620,18 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 
 		lv2_obj::sleep(ppu);
 
-		while ((group->join_state & ~SPU_TGJSF_IS_JOINING) == 0)
-		{
-			bool stopped = true;
+		// Put the PPU Thread into sleep as long as the join continues
+		group->cv.wait(lock);
 
-			for (auto& t : group->threads)
-			{
-				if (t)
-				{
-					if ((t->status & SPU_STATUS_STOPPED_BY_STOP) == 0)
-					{
-						stopped = false;
-						break;
-					}
-				}
-			}
-
-			if (stopped)
-			{
-				break;
-			}
-
-			// TODO
-			group->cv.wait(lock, 1000);
-			thread_ctrl::test();
-		}
-
-		join_state = group->join_state;
-		exit_value = group->exit_status;
-		group->join_state &= ~SPU_TGJSF_IS_JOINING;
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED; // hack
 	}
 
+	thread_ctrl::test();
 	ppu.test_state();
 
-	switch (join_state & ~SPU_TGJSF_IS_JOINING)
-	{
-	case 0:
-	{
-		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
-		break;
-	}
-	case SPU_TGJSF_GROUP_EXIT:
-	{
-		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
-		break;
-	}
-	case SPU_TGJSF_TERMINATED:
-	{
-		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_TERMINATED;
-		break;
-	}
-	default:
-	{
-		fmt::throw_exception("Unexpected join_state" HERE);
-	}
-	}
+	*cause = group->join_state.exchange(SYS_SPU_THREAD_GROUP_NO_JOIN); // Clear all join flags
 
-	if (status)
-	{
-		*status = group->exit_status;
-	}
+	*status = group->exit_status;
 
 	return CELL_OK;
 }
@@ -694,11 +640,6 @@ error_code sys_spu_thread_group_set_priority(u32 id, s32 priority)
 {
 	sys_spu.trace("sys_spu_thread_group_set_priority(id=0x%x, priority=%d)", id, priority);
 
-	if (priority < 16 || priority > 255)
-	{
-		return CELL_EINVAL;
-	}
-
 	const auto group = idm::get<lv2_spu_group>(id);
 
 	if (!group)
@@ -706,7 +647,8 @@ error_code sys_spu_thread_group_set_priority(u32 id, s32 priority)
 		return CELL_ESRCH;
 	}
 
-	if (group->type == SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT)
+
+	if (((priority < 16 || priority > 255) && group->type != SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM) || group->type == SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT)
 	{
 		return CELL_EINVAL;
 	}
