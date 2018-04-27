@@ -187,6 +187,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 250: return "sys_spu_thread_group_set_cooperative_victims";
 	case 251: return "sys_spu_thread_group_connect_event_all_threads";
 	case 252: return "sys_spu_thread_group_disconnect_event_all_threads";
+	case 253: return "sys_spu_thread_group...";
 	case 254: return "sys_spu_thread_group_log";
 	case 260: return "sys_spu_image_open_by_fd";
 	case 300: return "sys_vm_memory_map";
@@ -348,6 +349,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 574: return "sys_pad_ldd_register_controller";
 	case 575: return "sys_pad_ldd_get_port_no";
 	case 577: return "sys_pad_manager_...";
+	case 579: return "sys_bluetooth_aud_serial_unk1";
 	case 600: return "sys_storage_open";
 	case 601: return "sys_storage_close";
 	case 602: return "sys_storage_read";
@@ -554,6 +556,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 954: return "sys_dbg_vm_get_info";
 	case 955: return "sys_dbg_enable_floating_point_enabled_exception";
 	case 956: return "sys_dbg_disable_floating_point_enabled_exception";
+	case 957: return "sys_dbg_get_process_memory_container_information";
 	case 960: return "sys_dbg_perfomance_monitor";
 	case 970: return "sys_dbg_get_event_flag_list";
 	case 971: return "sys_dbg_get_event_flag_information";
