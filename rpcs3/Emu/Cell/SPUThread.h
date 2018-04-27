@@ -361,7 +361,7 @@ struct spu_int_ctrl_t
 
 	std::shared_ptr<struct lv2_int_tag> tag;
 
-	void set(u64 ints);
+	bool set(u64 ints);
 
 	void clear(u64 ints)
 	{
@@ -526,7 +526,7 @@ public:
 	u32 pc = 0;
 
 	// General-Purpose Registers
-	std::array<v128, 128> gpr;
+	std::array<v128, 128> gpr{};
 	SPU_FPSCR fpscr;
 
 	// MFC command data
