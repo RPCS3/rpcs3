@@ -187,7 +187,6 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 250: return "sys_spu_thread_group_set_cooperative_victims";
 	case 251: return "sys_spu_thread_group_connect_event_all_threads";
 	case 252: return "sys_spu_thread_group_disconnect_event_all_threads";
-	case 253: return "sys_spu_thread_group...";
 	case 254: return "sys_spu_thread_group_log";
 	case 260: return "sys_spu_image_open_by_fd";
 	case 300: return "sys_vm_memory_map";
@@ -348,7 +347,6 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 573: return "sys_pad_dbg_ldd_set_data_insert_mode";
 	case 574: return "sys_pad_ldd_register_controller";
 	case 575: return "sys_pad_ldd_get_port_no";
-	case 577: return "sys_pad_manager_...";
 	case 579: return "sys_bluetooth_aud_serial_unk1";
 	case 600: return "sys_storage_open";
 	case 601: return "sys_storage_close";
@@ -488,7 +486,6 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 874: return "sys_ss_get_cache_of_flash_ext_flag";
 	case 875: return "sys_ss_get_boot_device";
 	case 876: return "sys_ss_disc_access_control";
-	case 877: return "sys_ss_~utoken_if";
 	case 878: return "sys_ss_ad_sign";
 	case 879: return "sys_ss_media_id";
 	case 880: return "sys_deci3_open";
