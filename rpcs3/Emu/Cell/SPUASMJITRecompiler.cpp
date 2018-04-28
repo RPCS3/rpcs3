@@ -1333,8 +1333,8 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 		Label wait = c->newLabel();
 		Label next = c->newLabel();
 		c->mov(SPU_OFF_32(pc), m_pos);
-		c->cmp(x86::byte_ptr(*cpu, offset32(&SPUThread::ch_in_mbox) + 1), 0);
-		c->jz(wait);
+		c->cmp(x86::dword_ptr(*cpu, offset32(&SPUThread::ch_in_mbox) + 16), 0);
+		c->jle(wait);
 
 		after.emplace_back([=]
 		{
@@ -1630,9 +1630,8 @@ void spu_recompiler::RCHCNT(spu_opcode_t op)
 	case SPU_RdInMbox:
 	{
 		const XmmLink& vr = XmmAlloc();
-		c->movdqa(vr, SPU_OFF_128(ch_in_mbox));
-		c->pslldq(vr, 14);
-		c->psrldq(vr, 3);
+		c->movd(vr, x86::dword_ptr(*cpu, offset32(&SPUThread::ch_in_mbox) + 16));
+		c->pslldq(vr, 12);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 		return;
 	}

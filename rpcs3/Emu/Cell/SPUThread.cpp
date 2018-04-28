@@ -362,7 +362,7 @@ void SPUThread::cpu_init()
 	ch_stall_stat = 0;
 	ch_atomic_stat = MFC_ATOMIC_EMPTY;
 
-	ch_in_mbox.clear();
+	ch_in_mbox.set_values<0>();
 
 	ch_out_mbox.data.store({});
 	ch_out_intr_mbox.data.store({});
@@ -1754,15 +1754,15 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 				if (!queue)
 				{
 					LOG_WARNING(SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (value & 0x00ffffff), data);
-					ch_in_mbox.set_values(1, CELL_ENOTCONN);
+					ch_in_mbox.set_values<1>(CELL_ENOTCONN);
 					return true;
 				}
 
-				ch_in_mbox.set_values(1, CELL_OK);
+				ch_in_mbox.set_values<1>(CELL_OK);
 
 				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, id, ((u64)spup << 32) | (value & 0x00ffffff), data))
 				{
-					ch_in_mbox.set_values(1, CELL_EBUSY);
+					ch_in_mbox.set_values<1>(CELL_EBUSY);
 				}
 
 				return true;
@@ -1816,12 +1816,12 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LOG_TRACE(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
-				ch_in_mbox.set_values(1, CELL_OK);
+				ch_in_mbox.set_values<1>(CELL_OK);
 
 				// Use the syscall to set flag
 				if (s32 res = sys_event_flag_set(data, 1ull << flag))
 				{
-					ch_in_mbox.set_values(1, res);
+					ch_in_mbox.set_values<1>(res);
 				}
 
 				return true;
@@ -2104,14 +2104,14 @@ bool SPUThread::stop_and_signal(u32 code)
 		if (u32 count = ch_in_mbox.get_count())
 		{
 			LOG_ERROR(SPU, "sys_spu_thread_receive_event(): In_MBox is not empty (%d)", count);
-			return ch_in_mbox.set_values(1, CELL_EBUSY), true;
+			return ch_in_mbox.set_values<1>(CELL_EBUSY), true;
 		}
 
 		LOG_TRACE(SPU, "sys_spu_thread_receive_event(spuq=0x%x)", spuq);
 
 		if (group->type & SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT) // this check may be inaccurate
 		{
-			return ch_in_mbox.set_values(1, CELL_EINVAL), true;
+			return ch_in_mbox.set_values<1>(CELL_EINVAL), true;
 		}
 
 		std::shared_ptr<lv2_event_queue> queue;
@@ -2156,7 +2156,7 @@ bool SPUThread::stop_and_signal(u32 code)
 
 			if (!queue)
 			{
-				return ch_in_mbox.set_values(1, CELL_EINVAL), true; // TODO: check error value
+				return ch_in_mbox.set_values<1>(CELL_EINVAL), true; // TODO: check error value
 			}
 
 			semaphore_lock qlock(queue->mutex);
@@ -2184,7 +2184,7 @@ bool SPUThread::stop_and_signal(u32 code)
 				const auto data1 = static_cast<u32>(std::get<1>(event));
 				const auto data2 = static_cast<u32>(std::get<2>(event));
 				const auto data3 = static_cast<u32>(std::get<3>(event));
-				ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
+				ch_in_mbox.set_values<4>(CELL_OK, data1, data2, data3);
 				queue->events.pop_front();
 				return true;
 			}

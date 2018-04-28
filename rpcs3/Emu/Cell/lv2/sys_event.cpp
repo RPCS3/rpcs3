@@ -65,7 +65,7 @@ bool lv2_event_queue::send(lv2_event event)
 		const u32 data1 = static_cast<u32>(std::get<1>(event));
 		const u32 data2 = static_cast<u32>(std::get<2>(event));
 		const u32 data3 = static_cast<u32>(std::get<3>(event));
-		spu.ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
+		spu.ch_in_mbox.set_values<4>(CELL_OK, data1, data2, data3);
 
 		spu.state += cpu_flag::signal;
 		spu.notify();
@@ -180,7 +180,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 			}
 			else
 			{
-				static_cast<SPUThread&>(*cpu).ch_in_mbox.set_values(1, CELL_ECANCELED);
+				static_cast<SPUThread&>(*cpu).ch_in_mbox.set_values<1>(CELL_ECANCELED);
 				cpu->state += cpu_flag::signal;
 				cpu->notify();
 			}
