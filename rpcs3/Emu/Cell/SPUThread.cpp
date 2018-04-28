@@ -743,7 +743,7 @@ bool SPUThread::do_dma_check(const spu_mfc_cmd& args)
 	if (UNLIKELY(mfc_barrier & mask || (args.cmd & MFC_FENCE_MASK && mfc_fence & mask)))
 	{
 		// Check for special value combination (normally impossible)
-		if (UNLIKELY(mfc_barrier == -1 && mfc_fence == -1))
+		if (false)
 		{
 			// Update barrier/fence masks if necessary
 			mfc_barrier = 0;
@@ -998,6 +998,11 @@ void SPUThread::do_mfc(bool wait)
 		}
 		else if (args.cmd == MFC_PUTQLLUC_CMD)
 		{
+			if (fence & mask)
+			{
+				return false;
+			}
+
 			do_putlluc(args);
 		}
 
@@ -1263,11 +1268,13 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 	}
 	case MFC_PUTQLLUC_CMD:
 	{
-		if (UNLIKELY(!do_dma_check(args)))
+		const u32 mask = 1u << args.tag;
+
+		if (UNLIKELY((mfc_barrier | mfc_fence) & mask))
 		{
 			args.size = 0;
 			mfc_queue[mfc_size++] = args;
-			mfc_fence |= 1u << args.tag;
+			mfc_fence |= mask;
 		}
 		else
 		{
