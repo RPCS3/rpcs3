@@ -1,5 +1,6 @@
 #include "sysinfo.h"
 #include "StrFmt.h"
+#include <QMessageBox>
 
 #ifdef _WIN32
 #include "windows.h"
@@ -35,14 +36,47 @@ bool utils::has_rtm()
 {
 	// Check RTM
 	static bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x800) == 0x800;
-	if (g_value) 
+	
+	// Do these checks only if TSX is available and only once
+	static bool RTMChecked = !g_value;
+	if (RTMChecked)
 	{
-		//Check if CPU is Haswell
+		return g_value;
+	}
+	else
+	{
+		// Get CPU Model
 		int Model = (get_cpuid(1, 0)[0] >> 4) & 0xf;
 		Model += ((get_cpuid(1, 0)[0] >> 16) & 0xf) << 4;
 		
-		//Disable TSX in Haswell for now. Possible point to insert a switch here for (unsafe) override of this filter
-		g_value = Model != 0x3c && Model != 0x3f && Model != 0x45 && Model != 0x46;
+		// If CPU is Haswell, display warning Message
+		if (Model != 0x3c && Model != 0x3f && Model != 0x45 && Model != 0x46)
+		{
+			QMessageBox msg;
+			msg.setWindowTitle(tr("Haswell TSX Warning"));
+			msg.setIcon(QMessageBox::Critical);
+			msg.setTextFormat(Qt::RichText);
+			msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+			msg.setDefaultButton(QMessageBox::No);
+			msg.setText(QString(tr(
+				R"(
+					<p style="white-space: nowrap;">
+						RPCS3 has detected you're using TSX functions on a Haswell CPU.<br>
+						Intel has deactivated these functions on your CPU in newer Microcode revisions, because using them leads to unpredicted behaviour.<br>
+						That means using TSX may break games, or even <b>damage</b> your data.<br>
+						We recommend to disable this feature and update your computer BIOS.<br><br>
+						Do you wish to use TSX anyway?
+					</p>
+				)"
+			)).arg(Qt::convertFromPlainText(STRINGIZE(BRANCH))));
+			msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
+
+			if (msg.exec() != QMessageBox::Yes)
+			{
+				g_value = !g_value;
+			}
+			RTMChecked = !RTMChecked;
+		}
 	}
 	return g_value;
 }
