@@ -1041,26 +1041,6 @@ void spu_recompiler::branch_indirect(spu_opcode_t op)
 	c->jmp(x86::r10);
 }
 
-asmjit::Label spu_recompiler::halt(u32 pos)
-{
-	auto gate = [](SPUThread* _spu)
-	{
-		_spu->halt();
-	};
-
-	asmjit::Label label = c->newLabel();
-
-	after.emplace_back([=]
-	{
-		c->align(asmjit::kAlignCode, 16);
-		c->bind(label);
-		c->mov(SPU_OFF_32(pc), pos);
-		c->jmp(asmjit::imm_ptr<void(*)(SPUThread*)>(gate));
-	});
-
-	return label;
-}
-
 void spu_recompiler::fall(spu_opcode_t op)
 {
 	auto gate = [](SPUThread* _spu, u32 opcode, spu_inter_func_t _func, spu_function_t _ret)
@@ -3224,12 +3204,24 @@ void spu_recompiler::SUMB(spu_opcode_t op)
 	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
-//HGT uses signed values.  HLGT uses unsigned values
 void spu_recompiler::HGT(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_s32, 3));
 	c->cmp(*addr, SPU_OFF_32(gpr, op.rb, &v128::_s32, 3));
-	c->jg(halt(m_pos));
+
+	asmjit::Label label = c->newLabel();
+	asmjit::Label ret = c->newLabel();
+	c->jg(label);
+
+	after.emplace_back([=, pos = m_pos]
+	{
+		c->bind(label);
+		c->mov(SPU_OFF_32(pc), pos);
+		c->lock().bts(SPU_OFF_32(status), 2);
+		c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
+		c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
+		c->jmp(ret);
+	});
 }
 
 void spu_recompiler::CLZ(spu_opcode_t op)
@@ -3564,7 +3556,20 @@ void spu_recompiler::HLGT(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
 	c->cmp(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
-	c->ja(halt(m_pos));
+
+	asmjit::Label label = c->newLabel();
+	asmjit::Label ret = c->newLabel();
+	c->ja(label);
+
+	after.emplace_back([=, pos = m_pos]
+	{
+		c->bind(label);
+		c->mov(SPU_OFF_32(pc), pos);
+		c->lock().bts(SPU_OFF_32(status), 2);
+		c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
+		c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
+		c->jmp(ret);
+	});
 }
 
 void spu_recompiler::DFMA(spu_opcode_t op)
@@ -3844,7 +3849,20 @@ void spu_recompiler::HEQ(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_s32, 3));
 	c->cmp(*addr, SPU_OFF_32(gpr, op.rb, &v128::_s32, 3));
-	c->je(halt(m_pos));
+
+	asmjit::Label label = c->newLabel();
+	asmjit::Label ret = c->newLabel();
+	c->je(label);
+
+	after.emplace_back([=, pos = m_pos]
+	{
+		c->bind(label);
+		c->mov(SPU_OFF_32(pc), pos);
+		c->lock().bts(SPU_OFF_32(status), 2);
+		c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
+		c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
+		c->jmp(ret);
+	});
 }
 
 void spu_recompiler::CFLTS(spu_opcode_t op)
@@ -4339,7 +4357,20 @@ void spu_recompiler::CGTBI(spu_opcode_t op)
 void spu_recompiler::HGTI(spu_opcode_t op)
 {
 	c->cmp(SPU_OFF_32(gpr, op.ra, &v128::_s32, 3), op.si10);
-	c->jg(halt(m_pos));
+
+	asmjit::Label label = c->newLabel();
+	asmjit::Label ret = c->newLabel();
+	c->jg(label);
+
+	after.emplace_back([=, pos = m_pos]
+	{
+		c->bind(label);
+		c->mov(SPU_OFF_32(pc), pos);
+		c->lock().bts(SPU_OFF_32(status), 2);
+		c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
+		c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
+		c->jmp(ret);
+	});
 }
 
 void spu_recompiler::CLGTI(spu_opcode_t op)
@@ -4369,7 +4400,20 @@ void spu_recompiler::CLGTBI(spu_opcode_t op)
 void spu_recompiler::HLGTI(spu_opcode_t op)
 {
 	c->cmp(SPU_OFF_32(gpr, op.ra, &v128::_u32, 3), op.si10);
-	c->ja(halt(m_pos));
+
+	asmjit::Label label = c->newLabel();
+	asmjit::Label ret = c->newLabel();
+	c->ja(label);
+
+	after.emplace_back([=, pos = m_pos]
+	{
+		c->bind(label);
+		c->mov(SPU_OFF_32(pc), pos);
+		c->lock().bts(SPU_OFF_32(status), 2);
+		c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
+		c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
+		c->jmp(ret);
+	});
 }
 
 void spu_recompiler::MPYI(spu_opcode_t op)
@@ -4417,7 +4461,20 @@ void spu_recompiler::CEQBI(spu_opcode_t op)
 void spu_recompiler::HEQI(spu_opcode_t op)
 {
 	c->cmp(SPU_OFF_32(gpr, op.ra, &v128::_u32, 3), op.si10);
-	c->je(halt(m_pos));
+
+	asmjit::Label label = c->newLabel();
+	asmjit::Label ret = c->newLabel();
+	c->je(label);
+
+	after.emplace_back([=, pos = m_pos]
+	{
+		c->bind(label);
+		c->mov(SPU_OFF_32(pc), pos);
+		c->lock().bts(SPU_OFF_32(status), 2);
+		c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
+		c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
+		c->jmp(ret);
+	});
 }
 
 void spu_recompiler::HBRA(spu_opcode_t op)
