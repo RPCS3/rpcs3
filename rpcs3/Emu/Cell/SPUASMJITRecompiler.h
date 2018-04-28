@@ -20,7 +20,7 @@ class spu_runtime
 	// All functions
 	std::map<std::vector<u32>, spu_function_t> m_map;
 
-	// TODO
+	// All dispatchers
 	std::array<atomic_t<spu_function_t>, 0x10000> m_dispatcher;
 
 	friend class spu_recompiler;
@@ -97,7 +97,6 @@ private:
 
 	void branch_fixed(u32 target);
 	void branch_indirect(spu_opcode_t op);
-	asmjit::Label halt(u32 pos);
 	void fall(spu_opcode_t op);
 	void save_rcx();
 	void load_rcx();
