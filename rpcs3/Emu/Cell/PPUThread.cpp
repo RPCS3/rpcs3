@@ -934,22 +934,48 @@ static void ppu_trace(u64 addr)
 	LOG_NOTICE(PPU, "Trace: 0x%llx", addr);
 }
 
+template <typename T>
+static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
+{
+	auto& data = vm::_ref<const atomic_be_t<T>>(addr);
+
+	ppu.raddr = addr;
+
+	// Do several attemps
+	for (uint i = 0; i < 5; i++)
+	{
+		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+		_mm_lfence();
+
+		// Check LSB: atomic store may be in progress
+		if (LIKELY((ppu.rtime & 1) == 0))
+		{
+			ppu.rdata = data;
+			_mm_lfence();
+
+			if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
+			{
+				return static_cast<T>(ppu.rdata);
+			}
+		}
+
+		busy_wait(300);
+	}
+
+	vm::reader_lock lock;
+	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+	ppu.rdata = data;
+	return static_cast<T>(ppu.rdata);
+}
+
 extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr)
 {
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(u32));
-	_mm_lfence();
-	ppu.raddr = addr;
-	ppu.rdata = vm::_ref<const atomic_be_t<u32>>(addr);
-	return static_cast<u32>(ppu.rdata);
+	return ppu_load_acquire_reservation<u32>(ppu, addr);
 }
 
 extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 {
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(u64));
-	_mm_lfence();
-	ppu.raddr = addr;
-	ppu.rdata = vm::_ref<const atomic_be_t<u64>>(addr);
-	return ppu.rdata;
+	return ppu_load_acquire_reservation<u64>(ppu, addr);
 }
 
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
