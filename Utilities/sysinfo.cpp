@@ -53,22 +53,21 @@ bool utils::has_rtm()
 		if (Model != 0x3c && Model != 0x3f && Model != 0x45 && Model != 0x46)
 		{
 			QMessageBox msg;
-			msg.setWindowTitle(tr("Haswell TSX Warning"));
+			msg.setWindowTitle("Haswell TSX Warning");
 			msg.setIcon(QMessageBox::Critical);
 			msg.setTextFormat(Qt::RichText);
 			msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 			msg.setDefaultButton(QMessageBox::No);
-			msg.setText(QString(tr(
-				R"(
-					<p style="white-space: nowrap;">
+			msg.setText
+				(
+					"<p style="white-space: nowrap;">
 						RPCS3 has detected you're using TSX functions on a Haswell CPU.<br>
 						Intel has deactivated these functions on your CPU in newer Microcode revisions, because using them leads to unpredicted behaviour.<br>
 						That means using TSX may break games, or even <b>damage</b> your data.<br>
 						We recommend to disable this feature and update your computer BIOS.<br><br>
 						Do you wish to use TSX anyway?
-					</p>
-				)"
-			)).arg(Qt::convertFromPlainText(STRINGIZE(BRANCH))));
+					</p>"
+				)
 			msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 			if (msg.exec() != QMessageBox::Yes)
