@@ -548,7 +548,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	uns_func,                                               //576 (0x240)  UNS
 	null_func,//BIND_FUNC(sys_pad_manager_...)              //577 (0x241)  ROOT  PM
 	null_func,//BIND_FUNC(sys_bluetooth_...)                //578 (0x242)
-	null_func,//BIND_FUNC(sys_bluetooth_aud_serial_unk1)    //579 (0x243)
+	null_func,//BIND_FUNC(sys_bluetooth_aud_serial_...)    //579 (0x243)
 	null_func,//BIND_FUNC(sys_bluetooth_...)                //580 (0x244)  ROOT
 	null_func,//BIND_FUNC(sys_bluetooth_...)                //581 (0x245)  ROOT
 	null_func,//BIND_FUNC(sys_bluetooth_...)                //582 (0x246)  ROOT
