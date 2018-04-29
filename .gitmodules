@@ -19,9 +19,6 @@
 [submodule "Vulkan/glslang"]
 	path = Vulkan/glslang
 	url = https://github.com/KhronosGroup/glslang.git
-[submodule "Vulkan/Vulkan-LoaderAndValidationLayers"]
-	path = Vulkan/Vulkan-LoaderAndValidationLayers
-	url = https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers
 [submodule "Utilities/yaml-cpp"]
 	path = Utilities/yaml-cpp
 	url = https://github.com/RPCS3/yaml-cpp
