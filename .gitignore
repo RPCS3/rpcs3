@@ -82,7 +82,6 @@ enc_temp_folder/*
 bin/dev_hdd0/*.txt
 x64/*
 rpcs3/x64/*
-rpcs3-tests/x64/*
 
 # cmake
 Makefile
