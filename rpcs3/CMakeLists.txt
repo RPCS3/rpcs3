@@ -226,7 +226,6 @@ else()
 	option(USE_ALSA "ALSA audio backend" ON)
 	option(USE_PULSE "PulseAudio audio backend" ON)
 	option(USE_LIBEVDEV "libevdev-based joystick support" ON)
-	option(USE_VULKAN "Vulkan render backend" ON)
 endif()
 
 if(USE_ALSA)
@@ -255,11 +254,12 @@ if(USE_LIBEVDEV)
 		list(APPEND ADDITIONAL_LIBS ${LIBEVDEV_LDFLAGS})
 	endif()
 endif()
-if(NOT WIN32 AND USE_VULKAN)
+option(USE_VULKAN "Vulkan render backend" ON)
+if(NOT APPLE AND USE_VULKAN)
 	find_package(Vulkan)
 	if(VULKAN_FOUND)
 		add_definitions(-DHAVE_VULKAN)
-		list(APPEND ADDITIONAL_LIBS ${VULKAN_LIBRARY})
+		list(APPEND ADDITIONAL_LIBS Vulkan::Vulkan)
 		if(VULKAN_PREBUILT)
 			list(APPEND ADDITIONAL_LIBS glslang HLSL OGLCompiler SPIRV OSDependent)
 		endif()
@@ -299,7 +299,6 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../Utilities/yaml-cpp/include"
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 "${RPCS3_SRC_DIR}/../3rdparty/GSL/include"
-"${RPCS3_SRC_DIR}/../Vulkan/Vulkan-LoaderAndValidationLayers/include"
 "${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/Public"
 "${RPCS3_SRC_DIR}/../Vulkan/glslang/"
 "${RPCS3_SRC_DIR}/../3rdparty/hidapi/hidapi"
@@ -331,11 +330,7 @@ else()
 	endif()
 endif()
 
-link_directories(
-"${RPCS3_SRC_DIR}/../3rdparty/minidx12/"
-"${RPCS3_SRC_DIR}/../Vulkan"
-)
-
+link_directories("${RPCS3_SRC_DIR}/../3rdparty/minidx12/")
 
 if(NOT USE_SYSTEM_FFMPEG)
 	if(MSVC OR NOT WIN32)
@@ -438,9 +433,6 @@ else()
 		target_link_libraries(rpcs3 hidapi-hidraw udev)
 	else()
 		target_link_libraries(rpcs3 hidapi-libusb usb)
-	endif()
-	if(VULKAN_FOUND)
-		target_link_libraries(rpcs3 ${VULKAN_LIBRARIES})
 	endif()
 	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} ZLIB::ZLIB ${ADDITIONAL_LIBS})
 	if(USE_SYSTEM_FFMPEG)
