@@ -469,7 +469,7 @@ void CgBinaryDisasm::TaskFP()
 		if (dst.end)
 		{
 			m_arb_shader.pop_back();
-			m_arb_shader += " # last inctruction\nEND\n";
+			m_arb_shader += " # last instruction\nEND\n";
 			break;
 		}
 

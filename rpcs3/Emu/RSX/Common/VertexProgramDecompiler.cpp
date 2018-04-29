@@ -296,7 +296,7 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 	std::string cond = compareFunction(cond_string_table[d0.cond], AddCondReg() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
 
 	ShaderVariable dst_var(dst);
-	dst_var.symplify();
+	dst_var.simplify();
 
 	//const char *c_mask = f;
 

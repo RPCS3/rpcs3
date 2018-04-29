@@ -853,7 +853,7 @@ namespace vk
 		enum access_type_hint
 		{
 			flush_only, //Only to be submitted/opened/closed via command flush
-			all         //Auxilliary, can be sumitted/opened/closed at any time
+			all         //Auxiliary, can be submitted/opened/closed at any time
 		}
 		access_hint = flush_only;
 
@@ -1644,7 +1644,7 @@ public:
 		{
 			m_instance = nullptr;
 
-			//Check that some critical entry-points have been loaded into memory indicating prescence of a loader
+			//Check that some critical entry-points have been loaded into memory indicating presence of a loader
 			loader_exists = (vkCreateInstance != nullptr);
 		}
 

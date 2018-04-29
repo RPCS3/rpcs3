@@ -274,7 +274,7 @@ namespace
 		}
 	}
 
-	inline void stream_data_to_memory_u8_non_continous(void *dst, const void *src, u32 vertex_count, u8 attribute_size, u8 dst_stride, u8 src_stride)
+	inline void stream_data_to_memory_u8_non_continuous(void *dst, const void *src, u32 vertex_count, u8 attribute_size, u8 dst_stride, u8 src_stride)
 	{
 		char *src_ptr = (char *)src;
 		char *dst_ptr = (char *)dst;
@@ -472,7 +472,7 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 		if (use_stream_no_stride)
 			memcpy(raw_dst_span.data(), src_ptr.data(), count * dst_stride);
 		else if (use_stream_with_stride)
-			stream_data_to_memory_u8_non_continous(raw_dst_span.data(), src_ptr.data(), count, vector_element_count, dst_stride, attribute_src_stride);
+			stream_data_to_memory_u8_non_continuous(raw_dst_span.data(), src_ptr.data(), count, vector_element_count, dst_stride, attribute_src_stride);
 		else
 			copy_whole_attribute_array<u8, u8>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
 
@@ -599,7 +599,7 @@ std::tuple<T, T, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> sr
 
 		if (last_index == invalid_index)
 		{
-			//Need at least one anchor and one outer index to create a triange
+			//Need at least one anchor and one outer index to create a triangle
 			last_index = index;
 			continue;
 		}
