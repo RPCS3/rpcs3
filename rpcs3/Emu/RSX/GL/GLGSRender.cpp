@@ -489,32 +489,33 @@ void GLGSRender::end()
 			glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
 		}
 
+		m_index_ring_buffer->bind();
+
 		if (single_draw)
 		{
 			glDrawElements(draw_mode, upload_info.vertex_draw_count, index_type, (GLvoid *)(uintptr_t)index_offset);
 		}
 		else
 		{
-			std::vector<GLsizei> counts;
-			std::vector<const GLvoid*> offsets;
-
 			const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
 			const u32 type_scale = (index_type == GL_UNSIGNED_SHORT) ? 1 : 2;
 			uintptr_t index_ptr = index_offset;
+			m_scratch_buffer.resize(draw_count * 16);
 
-			counts.reserve(draw_count);
-			offsets.reserve(draw_count);
+			GLsizei *counts = (GLsizei*)m_scratch_buffer.data();
+			const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
+			int dst_index = 0;
 
 			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
 			{
 				const auto index_size = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
-				counts.push_back(index_size);
-				offsets.push_back((const GLvoid*)index_ptr);
+				counts[dst_index] = index_size;
+				offsets[dst_index++] = (const GLvoid*)index_ptr;
 
 				index_ptr += (index_size << type_scale);
 			}
 
-			glMultiDrawElements(draw_mode, counts.data(), index_type, offsets.data(), (GLsizei)draw_count);
+			glMultiDrawElements(draw_mode, counts, index_type, offsets, (GLsizei)draw_count);
 		}
 	}
 	else
@@ -525,31 +526,53 @@ void GLGSRender::end()
 		}
 		else
 		{
-			u32 base_index = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
-			if (gl::get_driver_caps().vendor_AMD == false)
+			const u32 base_index = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
+			bool use_draw_arrays_fallback = false;
+
+			const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
+			const auto driver_caps = gl::get_driver_caps();
+
+			m_scratch_buffer.resize(draw_count * 24);
+			GLint* firsts = (GLint*)m_scratch_buffer.data();
+			GLsizei* counts = (GLsizei*)(firsts + draw_count);
+			const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
+			int dst_index = 0;
+
+			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
 			{
-				std::vector<GLint> firsts;
-				std::vector<GLsizei> counts;
-				const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
+				const GLint first = range.first - base_index;
+				const GLsizei count = range.second;
 
-				firsts.reserve(draw_count);
-				counts.reserve(draw_count);
+				firsts[dst_index] = first;
+				counts[dst_index] = count;
+				offsets[dst_index++] = (const GLvoid*)(first << 2);
 
-				for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+				if (driver_caps.vendor_AMD && (first + count) > (0x100000 >> 2))
 				{
-					firsts.push_back(range.first - base_index);
-					counts.push_back(range.second);
+					//Unlikely, but added here in case the identity buffer is not large enough somehow
+					use_draw_arrays_fallback = true;
+					break;
 				}
-
-				glMultiDrawArrays(draw_mode, firsts.data(), counts.data(), (GLsizei)draw_count);
 			}
-			else
+
+			if (use_draw_arrays_fallback)
 			{
 				//MultiDrawArrays is broken on some primitive types using AMD. One known type is GL_TRIANGLE_STRIP but there could be more
 				for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
 				{
 					glDrawArrays(draw_mode, range.first - base_index, range.second);
 				}
+			}
+			else if (driver_caps.vendor_AMD)
+			{
+				//Use identity index buffer to fix broken vertexID on AMD
+				m_identity_index_buffer->bind();
+				glMultiDrawElements(draw_mode, counts, GL_UNSIGNED_INT, offsets, (GLsizei)draw_count);
+			}
+			else
+			{
+				//Normal render
+				glMultiDrawArrays(draw_mode, firsts, counts, (GLsizei)draw_count);
 			}
 		}
 	}
@@ -733,6 +756,21 @@ void GLGSRender::on_init_thread()
 	m_fragment_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_vertex_state_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
+	if (gl_caps.vendor_AMD)
+	{
+		m_identity_index_buffer.reset(new gl::buffer);
+		m_identity_index_buffer->create(gl::buffer::target::element_array, 1 * 0x100000);
+
+		// Initialize with 256k identity entries
+		auto *dst = (u32*)m_identity_index_buffer->map(gl::buffer::access::write);
+		for (u32 n = 0; n < (0x100000 >> 2); ++n)
+		{
+			dst[n] = n;
+		}
+
+		m_identity_index_buffer->unmap();
+	}
+
 	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>((u32)m_attrib_ring_buffer->size(), m_max_texbuffer_size));
 	m_volatile_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>((u32)m_attrib_ring_buffer->size(), m_max_texbuffer_size));
 	m_gl_persistent_stream_buffer->copy_from(m_persistent_stream_view);
@@ -900,6 +938,11 @@ void GLGSRender::on_exit()
 	if (m_index_ring_buffer)
 	{
 		m_index_ring_buffer->remove();
+	}
+
+	if (m_identity_index_buffer)
+	{
+		m_identity_index_buffer->remove();
 	}
 
 	m_null_textures.clear();
