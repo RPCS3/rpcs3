@@ -85,7 +85,7 @@ namespace rsx
 	{
 		running = 0,
 		empty = 1, //PUT == GET
-		spinning = 2, //Puller continously jumps to self addr (synchronization technique)
+		spinning = 2, //Puller continuously jumps to self addr (synchronization technique)
 		nop = 3, //Puller is processing a NOP command
 	};
 

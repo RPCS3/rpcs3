@@ -136,7 +136,7 @@ namespace gl
 		case GL_RGBA8:
 			return GL_SRGB8_ALPHA8;
 		default:
-			//LOG_ERROR(RSX, "No gamma coversion for format 0x%X", in_format);
+			//LOG_ERROR(RSX, "No gamma conversion for format 0x%X", in_format);
 			return in_format;
 		}
 	}
@@ -189,7 +189,7 @@ namespace gl
 		case rsx::texture_minify_filter::linear_linear: return GL_LINEAR_MIPMAP_LINEAR;
 		case rsx::texture_minify_filter::convolution_min: return GL_LINEAR_MIPMAP_LINEAR;
 		}
-		fmt::throw_exception("Unknow min filter" HERE);
+		fmt::throw_exception("Unknown min filter" HERE);
 	}
 
 	int tex_mag_filter(rsx::texture_magnify_filter mag_filter)
@@ -200,7 +200,7 @@ namespace gl
 		case rsx::texture_magnify_filter::linear: return GL_LINEAR;
 		case rsx::texture_magnify_filter::convolution_mag: return GL_LINEAR;
 		}
-		fmt::throw_exception("Unknow mag filter" HERE);
+		fmt::throw_exception("Unknown mag filter" HERE);
 	}
 
 	//Apply sampler state settings

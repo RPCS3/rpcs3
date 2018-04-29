@@ -13,11 +13,11 @@ struct data_heap
 	/**
 	* Does alloc cross get position ?
 	*/
-	template<int Alignement>
+	template<int Alignment>
 	bool can_alloc(size_t size) const
 	{
-		size_t alloc_size = align(size, Alignement);
-		size_t aligned_put_pos = align(m_put_pos, Alignement);
+		size_t alloc_size = align(size, Alignment);
+		size_t aligned_put_pos = align(m_put_pos, Alignment);
 		if (aligned_put_pos + alloc_size < m_size)
 		{
 			// range before get
@@ -70,17 +70,17 @@ public:
 		m_largest_allocated_pool = 0;
 	}
 
-	template<int Alignement>
+	template<int Alignment>
 	size_t alloc(size_t size)
 	{
-		if (!can_alloc<Alignement>(size))
+		if (!can_alloc<Alignment>(size))
 		{
 			fmt::throw_exception("[%s] Working buffer not big enough, buffer_length=%d allocated=%d requested=%d guard=%d largest_pool=%d" HERE,
 					m_name, m_size, m_current_allocated_size, size, m_min_guard_size, m_largest_allocated_pool);
 		}
 
-		size_t alloc_size = align(size, Alignement);
-		size_t aligned_put_pos = align(m_put_pos, Alignement);
+		size_t alloc_size = align(size, Alignment);
+		size_t aligned_put_pos = align(m_put_pos, Alignment);
 
 		const size_t block_length = (aligned_put_pos - m_put_pos) + alloc_size;
 		m_current_allocated_size += block_length;

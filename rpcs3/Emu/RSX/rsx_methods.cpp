@@ -664,7 +664,7 @@ namespace rsx
 			u32 dst_dma = 0;
 			rsx::blit_engine::transfer_destination_format dst_color_format;
 			u32 out_pitch = 0;
-			u32 out_aligment = 64;
+			u32 out_alignment = 64;
 
 			switch (method_registers.blit_engine_context_surface())
 			{
@@ -673,7 +673,7 @@ namespace rsx
 				dst_offset = method_registers.blit_engine_output_offset_nv3062();
 				dst_color_format = method_registers.blit_engine_nv3062_color_format();
 				out_pitch = method_registers.blit_engine_output_pitch_nv3062();
-				out_aligment = method_registers.blit_engine_output_alignment_nv3062();
+				out_alignment = method_registers.blit_engine_output_alignment_nv3062();
 				break;
 
 			case blit_engine::context_surface::swizzle2d:
@@ -1136,7 +1136,7 @@ namespace rsx
 
 	namespace gcm
 	{
-		// not entirely sure which one should actually do the flip, or if these should be handled seperately,
+		// not entirely sure which one should actually do the flip, or if these should be handled separately,
 		// so for now lets flip in queue and just let the driver deal with it
 		template<u32 index>
 		struct driver_flip

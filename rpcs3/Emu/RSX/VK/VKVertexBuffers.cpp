@@ -192,7 +192,7 @@ namespace
 			std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info =
 				std::make_tuple(offset_in_index_buffer, vk::get_index_type(index_type));
 
-			//check for vertex arrays with frquency modifiers
+			//check for vertex arrays with frequency modifiers
 			for (auto &block : m_vertex_layout.interleaved_blocks)
 			{
 				if (block.min_divisor > 1)
