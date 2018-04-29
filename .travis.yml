@@ -43,7 +43,7 @@ install:
       sudo dpkg -i libglew2.0_2.0.0-5_amd64.deb libglew-dev_2.0.0-5_amd64.deb libvulkan1_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb libvulkan-dev_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
     else
       brew update;
-      brew install ccache glew llvm40;
+      brew install ccache glew llvm60;
     fi;
 
 before_script:
@@ -100,7 +100,7 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-      - llvm-toolchain-trusty-4.0
+      - llvm-toolchain-trusty-6.0
       - sourceline: 'ppa:jonathonf/binutils' # We need to update binutils to a newer version to link against the ffmpeg libs on.
       - sourceline: 'ppa:beineri/opt-qt-5.10.1-trusty' # <<WARNING>>: This needs to be updated manually whenever the QT Version changes. Add QT PPA since the installer is quite bad.
     packages:
@@ -114,8 +114,8 @@ addons:
       #- libvulkan1
       #- libvulkan-dev
       - libc6-dev
-      - llvm-4.0
-      - llvm-4.0-dev
+      - llvm-6.0
+      - llvm-6.0-dev
       # Clang 5.0 is now bundled in travis, so we no longer need the ppa version.
       #- clang-4.0
       - libedit-dev
