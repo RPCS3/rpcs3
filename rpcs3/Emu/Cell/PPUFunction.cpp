@@ -347,7 +347,6 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 573: return "sys_pad_dbg_ldd_set_data_insert_mode";
 	case 574: return "sys_pad_ldd_register_controller";
 	case 575: return "sys_pad_ldd_get_port_no";
-	case 579: return "sys_bluetooth_aud_serial_unk1";
 	case 600: return "sys_storage_open";
 	case 601: return "sys_storage_close";
 	case 602: return "sys_storage_read";
