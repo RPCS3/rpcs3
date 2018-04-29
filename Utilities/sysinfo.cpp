@@ -1,6 +1,5 @@
 #include "sysinfo.h"
 #include "StrFmt.h"
-#include <QMessageBox>
 
 #ifdef _WIN32
 #include "windows.h"
@@ -49,33 +48,9 @@ bool utils::has_rtm()
 		int Model = (get_cpuid(1, 0)[0] >> 4) & 0xf;
 		Model += ((get_cpuid(1, 0)[0] >> 16) & 0xf) << 4;
 		
-		// If CPU is Haswell, display warning Message
-		if (Model != 0x3c && Model != 0x3f && Model != 0x45 && Model != 0x46)
-		{
-			QMessageBox msg;
-			msg.setWindowTitle("Haswell TSX Warning");
-			msg.setIcon(QMessageBox::Critical);
-			msg.setTextFormat(Qt::RichText);
-			msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-			msg.setDefaultButton(QMessageBox::No);
-			msg.setText
-				(
-					"<p style="white-space: nowrap;">
-						RPCS3 has detected you're using TSX functions on a Haswell CPU.<br>
-						Intel has deactivated these functions on your CPU in newer Microcode revisions, because using them leads to unpredicted behaviour.<br>
-						That means using TSX may break games, or even <b>damage</b> your data.<br>
-						We recommend to disable this feature and update your computer BIOS.<br><br>
-						Do you wish to use TSX anyway?
-					</p>"
-				)
-			msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
-
-			if (msg.exec() != QMessageBox::Yes)
-			{
-				g_value = !g_value;
-			}
-			RTMChecked = !RTMChecked;
-		}
+		// If CPU is Haswell, disable TSX (for now)
+		g_value = Model != 0x3c && Model != 0x3f && Model != 0x45 && Model != 0x46;
+		RTMChecked = !RTMChecked;
 	}
 	return g_value;
 }
