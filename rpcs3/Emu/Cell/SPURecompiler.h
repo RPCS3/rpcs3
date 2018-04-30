@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SPUThread.h"
+#include <bitset>
 
 // SPU Recompiler instance base class
 class spu_recompiler_base
@@ -9,6 +10,8 @@ protected:
 	SPUThread& m_spu;
 
 	u32 m_pos;
+
+	std::bitset<0x10000> m_block_info;
 
 public:
 	spu_recompiler_base(SPUThread& spu);
@@ -28,7 +31,7 @@ public:
 	static void branch(SPUThread&, void*, u8*);
 
 	// Get the block at specified address
-	static std::vector<u32> block(SPUThread&, u32 lsa);
+	static std::vector<u32> block(SPUThread&, u32 lsa, std::bitset<0x10000>* = nullptr);
 
 	// Create recompiler instance (ASMJIT)
 	static std::unique_ptr<spu_recompiler_base> make_asmjit_recompiler(SPUThread& spu);
