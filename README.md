@@ -50,10 +50,8 @@ To initialize the repository don't forget to execute `git submodule update --ini
 *If you're using Visual Studio 2017 without Qt plugin support (or simply dont want to use it):* 
 1) Add `QTDIR` environment variable and set it to e.g `<QtInstallFolder>\5.10.1\msvc2015_64\` </br>
 
-### [Optional] Using Visual Studio 2017
 
-*When you first open the project in VS 2017, do not upgrade the targets or the packages. Leave both at "No upgrade". Note that you will need the v140 toolset, which may not be in 2017 by default.* </br>
-
+*If you're using Visual Studio 2017, when you first open the project, do not upgrade the targets or the packages. Leave both at "No upgrade". Note that you will need the v140 toolset, which may not be in 2017 by default.* </br>
 
 Open `rpcs3.sln`
 
