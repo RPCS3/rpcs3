@@ -63,9 +63,9 @@ Open `rpcs3.sln`
 2) While selecting the rpcs3qt project, go to Qt5->Project Setting and select the version you added. 
 
 ### Building the projects
+The recommended build configuration is Release - LLVM, for all purposes. </br>
 You may want to download precompiled [LLVM lib](https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8) and extract to root rpcs3 folder (which contains `rpcs3.sln`), as well as download and extract [additional libs](https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRaHYxV3VOS2d0a0U) to `lib\%CONFIGURATION%-x64\` to speed up compilation time (unoptimised/debug libs are currently not available precompiled).
 
-The recommended build configuration is Release - LLVM, for all purposes.
 If you're not using precompiled libs, build the projects in *__BUILD_BEFORE* folder: right-click on every project > *Build*. </br></br>
 
 `Build > Build Solution`</br>
