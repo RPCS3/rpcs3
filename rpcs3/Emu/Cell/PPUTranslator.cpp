@@ -944,6 +944,18 @@ void PPUTranslator::VMHADDSHS(ppu_opcode_t op)
 	const auto saturated = SaturateSigned(result, -0x8000, 0x7fff);
 	SetVr(op.vd, saturated.first);
 	SetSat(IsNotZero(saturated.second));
+
+	// const auto a = get_vr<s16[8]>(op.va);
+	// const auto b = get_vr<s16[8]>(op.vb);
+	// const auto c = get_vr<s16[8]>(op.vc);
+	// value_t<s16[8]> m;
+	// m.value = m_ir->CreateShl(Trunc(m_ir->CreateAShr(m_ir->CreateMul(SExt(a.value), SExt(b.value)), 16)), 1);
+	// m.value = m_ir->CreateOr(m.value, m_ir->CreateLShr(m_ir->CreateMul(a.value, b.value), 15));
+	// const auto s = eval(c + m);
+	// const auto z = eval((c >> 15) ^ 0x7fff);
+	// const auto x = eval(scarry(c, m, s) >> 15);
+	// set_vr(op.vd, eval(merge(x, z, s)));
+	//SetSat(IsNotZero(saturated.second));
 }
 
 void PPUTranslator::VMHRADDSHS(ppu_opcode_t op)
@@ -1041,74 +1053,71 @@ void PPUTranslator::VMRGLW(ppu_opcode_t op)
 
 void PPUTranslator::VMSUMMBM(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	const auto a = SExt(ab[0], GetType<s32[16]>());
-	const auto b = ZExt(ab[1], GetType<u32[16]>());
-	const auto p = m_ir->CreateMul(a, b);
-	const auto c = GetVr(op.vc, VrType::vi32);
-	const auto e0 = Shuffle(p, nullptr, { 0, 4, 8, 12 });
-	const auto e1 = Shuffle(p, nullptr, { 1, 5, 9, 13 });
-	const auto e2 = Shuffle(p, nullptr, { 2, 6, 10, 14 });
-	const auto e3 = Shuffle(p, nullptr, { 3, 7, 11, 15 });
-	SetVr(op.vd, Add({ c, e0, e1, e2, e3 }));
+	const auto a = get_vr<s16[8]>(op.va);
+	const auto b = get_vr<u16[8]>(op.vb);
+	const auto c = get_vr<s32[4]>(op.vc);
+	const auto ml = bitcast<s32[4]>((a << 8 >> 8) * bitcast<s16[8]>(b << 8 >> 8));
+	const auto mh = bitcast<s32[4]>((a >> 8) * bitcast<s16[8]>(b >> 8));
+	set_vr(op.vd, eval(((ml << 16 >> 16) + (ml >> 16)) + ((mh << 16 >> 16) + (mh >> 16)) + c));
 }
 
 void PPUTranslator::VMSUMSHM(ppu_opcode_t op)
 {
-	const auto ab = SExt(GetVrs(VrType::vi16, op.va, op.vb));
-	const auto p = m_ir->CreateMul(ab[0], ab[1]);
-	const auto c = GetVr(op.vc, VrType::vi32);
-	const auto e0 = Shuffle(p, nullptr, { 0, 2, 4, 6 });
-	const auto e1 = Shuffle(p, nullptr, { 1, 3, 5, 7 });
-	SetVr(op.vd, Add({ c, e0, e1 }));
+	const auto a = get_vr<s32[4]>(op.va);
+	const auto b = get_vr<s32[4]>(op.vb);
+	const auto c = get_vr<s32[4]>(op.vc);
+	const auto ml = eval((a << 16 >> 16) * (b << 16 >> 16));
+	const auto mh = eval((a >> 16) * (b >> 16));
+	set_vr(op.vd, eval(ml + mh + c));
 }
 
 void PPUTranslator::VMSUMSHS(ppu_opcode_t op)
 {
-	const auto ab = SExt(GetVrs(VrType::vi16, op.va, op.vb));
-	const auto p = m_ir->CreateMul(ab[0], ab[1]);
-	const auto c = GetVr(op.vc, VrType::vi32);
-	const auto e0 = Shuffle(p, nullptr, { 0, 2, 4, 6 });
-	const auto e1 = Shuffle(p, nullptr, { 1, 3, 5, 7 });
-	const auto result = Add({ SExt(c), SExt(e0), SExt(e1) });
-	const auto saturated = SaturateSigned(result, -0x80000000ll, 0x7fffffff);
-	SetVr(op.vd, saturated.first);
-	SetSat(IsNotZero(saturated.second));
+	const auto a = get_vr<s32[4]>(op.va);
+	const auto b = get_vr<s32[4]>(op.vb);
+	const auto c = get_vr<s32[4]>(op.vc);
+	const auto ml = eval((a << 16 >> 16) * (b << 16 >> 16));
+	const auto mh = eval((a >> 16) * (b >> 16));
+	const auto m = eval(ml + mh);
+	const auto s = eval(m + c);
+	const auto z = eval((c >> 31) ^ 0x7fffffff);
+	const auto x = eval(scarry(c, eval(m ^ sext<s32[4]>(m == 0x80000000u)), s) >> 31);
+	set_vr(op.vd, eval(merge(x, z, s)));
+	SetSat(IsNotZero(x.value));
 }
 
 void PPUTranslator::VMSUMUBM(ppu_opcode_t op)
 {
-	const auto ab = ZExt(GetVrs(VrType::vi8, op.va, op.vb), GetType<u32[16]>());
-	const auto p = m_ir->CreateMul(ab[0], ab[1]);
-	const auto c = GetVr(op.vc, VrType::vi32);
-	const auto e0 = Shuffle(p, nullptr, { 0, 4, 8, 12 });
-	const auto e1 = Shuffle(p, nullptr, { 1, 5, 9, 13 });
-	const auto e2 = Shuffle(p, nullptr, { 2, 6, 10, 14 });
-	const auto e3 = Shuffle(p, nullptr, { 3, 7, 11, 15 });
-	SetVr(op.vd, Add({ c, e0, e1, e2, e3 }));
+	const auto a = get_vr<u16[8]>(op.va);
+	const auto b = get_vr<u16[8]>(op.vb);
+	const auto c = get_vr<u32[4]>(op.vc);
+	const auto ml = bitcast<u32[4]>((a << 8 >> 8) * (b << 8 >> 8));
+	const auto mh = bitcast<u32[4]>((a >> 8) * (b >> 8));
+	set_vr(op.vd, eval(((ml << 16 >> 16) + (ml >> 16)) + ((mh << 16 >> 16) + (mh >> 16)) + c));
 }
 
 void PPUTranslator::VMSUMUHM(ppu_opcode_t op)
 {
-	const auto ab = ZExt(GetVrs(VrType::vi16, op.va, op.vb));
-	const auto p = m_ir->CreateMul(ab[0], ab[1]);
-	const auto c = GetVr(op.vc, VrType::vi32);
-	const auto e0 = Shuffle(p, nullptr, { 0, 2, 4, 6 });
-	const auto e1 = Shuffle(p, nullptr, { 1, 3, 5, 7 });
-	SetVr(op.vd, Add({ c, e0, e1 }));
+	const auto a = get_vr<u32[4]>(op.va);
+	const auto b = get_vr<u32[4]>(op.vb);
+	const auto c = get_vr<u32[4]>(op.vc);
+	const auto ml = eval((a << 16 >> 16) * (b << 16 >> 16));
+	const auto mh = eval((a >> 16) * (b >> 16));
+	set_vr(op.vd, eval(ml + mh + c));
 }
 
 void PPUTranslator::VMSUMUHS(ppu_opcode_t op)
 {
-	const auto ab = ZExt(GetVrs(VrType::vi16, op.va, op.vb));
-	const auto p = m_ir->CreateMul(ab[0], ab[1]);
-	const auto c = GetVr(op.vc, VrType::vi32);
-	const auto e0 = Shuffle(p, nullptr, { 0, 2, 4, 6 });
-	const auto e1 = Shuffle(p, nullptr, { 1, 3, 5, 7 });
-	const auto result = Add({ ZExt(c), ZExt(e0), ZExt(e1) });
-	const auto saturated = Saturate(result, ICmpInst::ICMP_UGT, m_ir->getInt64(0xffffffff));
-	SetVr(op.vd, saturated.first);
-	SetSat(IsNotZero(saturated.second));
+	const auto a = get_vr<u32[4]>(op.va);
+	const auto b = get_vr<u32[4]>(op.vb);
+	const auto c = get_vr<s32[4]>(op.vc);
+	const auto ml = bitcast<s32[4]>((a << 16 >> 16) * (b << 16 >> 16));
+	const auto mh = bitcast<s32[4]>((a >> 16) * (b >> 16));
+	const auto s = eval(ml + mh);
+	const auto s2 = eval(s + c);
+	const auto x = eval((ucarry(ml, mh, s) | ucarry(s, c, s2)) >> 31);
+	set_vr(op.vd, eval(s2 | x));
+	SetSat(IsNotZero(x.value));
 }
 
 void PPUTranslator::VMULESB(ppu_opcode_t op)
