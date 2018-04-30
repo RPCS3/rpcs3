@@ -543,7 +543,7 @@ void SPUThread::push_snr(u32 number, u32 value)
 
 void SPUThread::do_dma_transfer(const spu_mfc_cmd& args)
 {
-	const bool is_get = (args.cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_START_MASK)) == MFC_GET_CMD;
+	const u8 is_get = args.cmd & MFC_GET_CMD;
 
 	u32 eal = args.eal;
 	u32 lsa = args.lsa & 0x3ffff;
@@ -610,126 +610,84 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args)
 		}
 	}
 
-	void* dst = vm::base(eal);
-	void* src = vm::base(offset + lsa);
+	auto dst = static_cast<f32*>(vm::base(eal));
+	auto src = static_cast<f32*>(vm::base(offset + lsa));
 
 	if (is_get)
 	{
 		std::swap(dst, src);
 	}
 
-	switch (u32 size = args.size)
+	u32 size = args.size;
+
+	if (size & 0xf) // Check if transfer is less than 16 bytes (works unless size is invalid)
 	{
-	case 1:
-	{
-		*static_cast<u8*>(dst) = *static_cast<const u8*>(src);
-		break;
-	}
-	case 2:
-	{
-		*static_cast<u16*>(dst) = *static_cast<const u16*>(src);
-		break;
-	}
-	case 4:
-	{
-		//if (is_get && !from_mfc)
+		if (size == 1)
 		{
-			*static_cast<u32*>(dst) = *static_cast<const u32*>(src);
-			break;
+			*reinterpret_cast<u8*>(dst) = *reinterpret_cast<u8*>(src);
 		}
-
-		//_mm_stream_si32(static_cast<s32*>(dst), *static_cast<const s32*>(src));
-		break;
-	}
-	case 8:
-	{
-		//if (is_get && !from_mfc)
+		else if (size == 2)
 		{
-			*static_cast<u64*>(dst) = *static_cast<const u64*>(src);
-			break;
+			*reinterpret_cast<u16*>(dst) = *reinterpret_cast<u16*>(src);
 		}
-
-		//_mm_stream_si64(static_cast<s64*>(dst), *static_cast<const s64*>(src));
-		break;
-	}
-	default:
-	{
-		auto vdst = static_cast<__m128i*>(dst);
-		auto vsrc = static_cast<const __m128i*>(src);
-		auto vcnt = size / sizeof(__m128i);
-
-		//if (is_get && !from_mfc)
+		else if (size == 4) 
 		{
-			while (vcnt >= 8)
+			*reinterpret_cast<u32*>(dst) = *reinterpret_cast<u32*>(src);
+		}
+		else // must be 8 if valid
+		{
+			*reinterpret_cast<u64*>(dst) = *reinterpret_cast<u64*>(src);
+		}
+	}
+	else
+	{
+		//if (is_get)
+		{
+			while (size >= 128)
 			{
-				const __m128i data[]
-				{
-					_mm_load_si128(vsrc + 0),
-					_mm_load_si128(vsrc + 1),
-					_mm_load_si128(vsrc + 2),
-					_mm_load_si128(vsrc + 3),
-					_mm_load_si128(vsrc + 4),
-					_mm_load_si128(vsrc + 5),
-					_mm_load_si128(vsrc + 6),
-					_mm_load_si128(vsrc + 7),
-				};
+				_mm_store_ps(dst + 0x0, _mm_load_ps(src + 0x0));
+				_mm_store_ps(dst + 0x4, _mm_load_ps(src + 0x4));
+				_mm_store_ps(dst + 0x8, _mm_load_ps(src + 0x8));
+				_mm_store_ps(dst + 0xc, _mm_load_ps(src + 0xc));
+				_mm_store_ps(dst + 0x10, _mm_load_ps(src + 0x10));
+				_mm_store_ps(dst + 0x14, _mm_load_ps(src + 0x14));
+				_mm_store_ps(dst + 0x18, _mm_load_ps(src + 0x18));
+				_mm_store_ps(dst + 0x1c, _mm_load_ps(src + 0x1c));
 
-				_mm_store_si128(vdst + 0, data[0]);
-				_mm_store_si128(vdst + 1, data[1]);
-				_mm_store_si128(vdst + 2, data[2]);
-				_mm_store_si128(vdst + 3, data[3]);
-				_mm_store_si128(vdst + 4, data[4]);
-				_mm_store_si128(vdst + 5, data[5]);
-				_mm_store_si128(vdst + 6, data[6]);
-				_mm_store_si128(vdst + 7, data[7]);
-
-				vcnt -= 8;
-				vsrc += 8;
-				vdst += 8;
+				size -= 128;
+				src += 32;
+				dst += 32;
 			}
 
-			while (vcnt--)
+			while (size)
 			{
-				_mm_store_si128(vdst++, _mm_load_si128(vsrc++));
+				_mm_store_ps(dst, _mm_load_ps(src));
+				dst += 4, src += 4, size -= 16;
 			}
-
-			break;
 		}
 
 		// Disabled
-		while (vcnt >= 8)
+		while (size >= 128)
 		{
-			const __m128i data[]
-			{
-				_mm_load_si128(vsrc + 0),
-				_mm_load_si128(vsrc + 1),
-				_mm_load_si128(vsrc + 2),
-				_mm_load_si128(vsrc + 3),
-				_mm_load_si128(vsrc + 4),
-				_mm_load_si128(vsrc + 5),
-				_mm_load_si128(vsrc + 6),
-				_mm_load_si128(vsrc + 7),
-			};
+			_mm_stream_ps(dst + 0x0, _mm_load_ps(src + 0x0));
+			_mm_stream_ps(dst + 0x4, _mm_load_ps(src + 0x4));
+			_mm_stream_ps(dst + 0x8, _mm_load_ps(src + 0x8));
+			_mm_stream_ps(dst + 0xc, _mm_load_ps(src + 0xc));
+			_mm_stream_ps(dst + 0x10, _mm_load_ps(src + 0x10));
+			_mm_stream_ps(dst + 0x14, _mm_load_ps(src + 0x14));
+			_mm_stream_ps(dst + 0x18, _mm_load_ps(src + 0x18));
+			_mm_stream_ps(dst + 0x1c, _mm_load_ps(src + 0x1c));
 
-			_mm_stream_si128(vdst + 0, data[0]);
-			_mm_stream_si128(vdst + 1, data[1]);
-			_mm_stream_si128(vdst + 2, data[2]);
-			_mm_stream_si128(vdst + 3, data[3]);
-			_mm_stream_si128(vdst + 4, data[4]);
-			_mm_stream_si128(vdst + 5, data[5]);
-			_mm_stream_si128(vdst + 6, data[6]);
-			_mm_stream_si128(vdst + 7, data[7]);
-
-			vcnt -= 8;
-			vsrc += 8;
-			vdst += 8;
+			size -= 128;
+			src += 32;
+			dst += 32;
 		}
 
-		while (vcnt--)
+		while (size)
 		{
-			_mm_stream_si128(vdst++, _mm_load_si128(vsrc++));
+			_mm_stream_ps(dst, _mm_load_ps(src));
+			dst += 4, src += 4, size -= 16;
 		}
-	}
 	}
 
 	if (is_get)
