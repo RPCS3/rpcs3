@@ -94,14 +94,14 @@ bool spu_interpreter::MFSPR(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter::RDCH(SPUThread& spu, spu_opcode_t op)
 {
-	u32 result;
+	const s64 result = spu.get_ch_value(op.ra);
 
-	if (!spu.get_ch_value(op.ra, result))
+	if (result < 0)
 	{
 		return false;
 	}
 
-	spu.gpr[op.rt] = v128::from32r(result);
+	spu.gpr[op.rt] = v128::from32r(static_cast<u32>(result));
 	return true;
 }
 

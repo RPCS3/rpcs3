@@ -59,6 +59,15 @@ private:
 	std::vector<std::function<void()>> after;
 	std::vector<std::function<void()>> consts;
 
+	// Function return label
+	asmjit::Label label_stop;
+
+	// Indirect branch dispatch table
+	asmjit::Label instr_table;
+
+	// All valid instruction labels
+	std::map<u32, asmjit::Label> instr_labels;
+
 	// All emitted 128-bit consts
 	std::map<std::pair<u64, u64>, asmjit::Label> xmm_consts;
 
