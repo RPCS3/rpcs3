@@ -48,7 +48,7 @@ install:
     fi;
 
 before_script:
-  - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional 3rdparty/xxHash Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
+  - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional 3rdparty/xxHash Vulkan/glslang
   - mkdir build ; cd build
   - export CMAKE_PREFIX_PATH=~/Qt/${QTVER}/gcc_64/lib/cmake
   - if [ "$TRAVIS_PULL_REQUEST" = false ]; then
