@@ -202,7 +202,7 @@ if(NOT WITHOUT_LLVM)
 		option(WITH_POLLY OFF)
 
 		# LLVM needs to be built out-of-tree
-		add_subdirectory(../llvm ../llvm_build)
+		add_subdirectory(../llvm ../llvm_build EXCLUDE_FROM_ALL)
 		set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/../llvm_build/lib/cmake/llvm/")
 
 		# now tries to find LLVM again
