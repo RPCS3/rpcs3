@@ -674,9 +674,6 @@
     <ClCompile Include="..\Utilities\dynamic_library.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3_api.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\version.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
