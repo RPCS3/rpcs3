@@ -5,18 +5,17 @@ os:
   - linux
   #- osx
 
-# osx_image: xcode6.4
-
 compiler:
   - clang
   - gcc
 
-cache:
-  ccache: true
-  directories:
-    - $HOME/hombebrew_cache
+cache: ccache
 
 matrix:
+  fast_finish: true
+  allow_failures:
+    - os: osx
+      compiler: clang
   exclude:
     - os: osx
       compiler: gcc
@@ -42,8 +41,10 @@ install:
       wget https://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan-dev_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
       sudo dpkg -i libglew2.0_2.0.0-5_amd64.deb libglew-dev_2.0.0-5_amd64.deb libvulkan1_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb libvulkan-dev_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
     else
-      brew update;
-      brew install ccache glew;
+      brew install ccache glew ninja qt;
+      export CCACHE_SLOPPINESS=pch_defines,time_macros;
+      export CMAKE_PREFIX_PATH=/usr/local/opt/qt5/;
+      export PATH="/usr/local/opt/ccache/libexec:$PATH";
     fi;
 
 before_script:
@@ -63,7 +64,7 @@ script:
 after_script:
   - cd build
   - # AppImage generation
-  - if [ -n "$UPLOAD_URL" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
+  - if [ -n "$UPLOAD_URL" ] && [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
       source /opt/qt510/bin/qt510-env.sh ;
       echo $LD_LIBRARY_PATH ;
       export LD_LIBRARY_PATH=/opt/qt510/lib ;
