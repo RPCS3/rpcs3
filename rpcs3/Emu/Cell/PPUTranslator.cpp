@@ -14,7 +14,7 @@ const ppu_decoder<PPUTranslator> s_ppu_decoder;
 PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_module& info)
 	: cpu_translator(module, false)
 	, m_info(info)
-	, m_pure_attr(AttributeSet::get(m_context, AttributeSet::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadNone}))
+	, m_pure_attr(AttributeList::get(m_context, AttributeList::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadNone}))
 {
 	// Bind context
 	m_context = context;
