@@ -181,9 +181,9 @@ set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if(NOT WITHOUT_LLVM)
-	find_package(LLVM 4.0 CONFIG)
+	find_package(LLVM 999.666 CONFIG)
 	if(NOT LLVM_FOUND)
-		message("System LLVM was not found, LLVM will be built from the submodule.")
+		message("LLVM will be built from the submodule.")
 
 		set(LLVM_TARGETS_TO_BUILD "X86" CACHE INTERNAL "")
 		option(LLVM_BUILD_RUNTIME OFF)
@@ -200,7 +200,7 @@ if(NOT WITHOUT_LLVM)
 		set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/../llvm_build/lib/cmake/llvm/")
 
 		# now tries to find LLVM again
-		find_package(LLVM 4.0 CONFIG)
+		find_package(LLVM 6.0 CONFIG)
 		if(NOT LLVM_FOUND)
 			message(WARNING "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()
@@ -309,7 +309,7 @@ if(WIN32)
 endif()
 
 if(NOT LLVM_FOUND)
-	message("LLVM 4.0 not found. RPCS3 will be compiled without LLVM support.")
+	message("LLVM submodule not found. RPCS3 will be compiled without LLVM support.")
 else()
 	add_definitions(${LLVM_DEFINITIONS})
 	add_definitions(-DLLVM_AVAILABLE)
@@ -486,7 +486,7 @@ add_custom_command(TARGET rpcs3 POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
                        ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons)
 endif()
-                       
+
 # Unix installation
 if(UNIX AND NOT APPLE)
 	# Install the binary

@@ -72,7 +72,7 @@ static void* s_next = s_memory;
 static std::deque<std::vector<RUNTIME_FUNCTION>> s_unwater;
 static std::vector<std::vector<RUNTIME_FUNCTION>> s_unwind; // .pdata
 #else
-static std::deque<std::tuple<u8*, u64, std::size_t>> s_unfire;
+static std::deque<std::pair<u8*, std::size_t>> s_unfire;
 #endif
 
 // Reset memory manager
@@ -89,27 +89,9 @@ extern void jit_finalize()
 
 	s_unwind.clear();
 #else
-	struct MemoryManager : llvm::RTDyldMemoryManager
-	{
-		u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
-		{
-			return nullptr;
-		}
-
-		u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
-		{
-			return nullptr;
-		}
-
-		bool finalizeMemory(std::string* = nullptr) override
-		{
-			return false;
-		}
-	} mem;
-
 	for (auto&& t : s_unfire)
 	{
-		mem.deregisterEHFrames(std::get<0>(t), std::get<1>(t), std::get<2>(t));
+		llvm::RTDyldMemoryManager::deregisterEHFramesInProcess(t.first, t.second);
 	}
 
 	s_unfire.clear();
@@ -287,13 +269,13 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 			s_unwind.emplace_back(std::move(pdata));
 		}
 #else
-		s_unfire.push_front(std::make_tuple(addr, load_addr, size));
+		s_unfire.push_front(std::make_pair(addr, size));
 #endif
 
 		return RTDyldMemoryManager::registerEHFrames(addr, load_addr, size);
 	}
 
-	void deregisterEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	void deregisterEHFrames() override
 	{
 	}
 };
@@ -380,8 +362,8 @@ public:
 	{
 		if (fs::file cached{path, fs::read})
 		{
-			auto buf = llvm::MemoryBuffer::getNewUninitMemBuffer(cached.size());
-			cached.read(const_cast<char*>(buf->getBufferStart()), buf->getBufferSize());
+			auto buf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(cached.size());
+			cached.read(buf->getBufferStart(), buf->getBufferSize());
 			return buf;
 		}
 
@@ -417,11 +399,24 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 			m_cpu == "broadwell" ||
 			m_cpu == "skylake" ||
 			m_cpu == "skylake-avx512" ||
-			m_cpu == "cannonlake")
+			m_cpu == "cannonlake" ||
+			m_cpu == "icelake")
 		{
+			// Downgrade if AVX is not supported by some chips
 			if (!utils::has_avx())
 			{
 				m_cpu = "nehalem";
+			}
+		}
+
+		if (m_cpu == "skylake-avx512" ||
+			m_cpu == "cannonlake" ||
+			m_cpu == "icelake")
+		{
+			// Downgrade if AVX-512 is disabled or not supported
+			if (!utils::has_512())
+			{
+				m_cpu = "skylake";
 			}
 		}
 	}
@@ -429,7 +424,7 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 	return m_cpu;
 }
 
-jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu)
+jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, bool large)
 	: m_link(_link)
 	, m_cpu(cpu(_cpu))
 {
@@ -441,7 +436,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null_", m_context))
 			.setErrorStr(&result)
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
-			.setCodeModel(llvm::CodeModel::Small)
+			.setCodeModel(large ? llvm::CodeModel::Large : llvm::CodeModel::Small)
 			.setMCPU(m_cpu)
 			.create());
 	}
@@ -455,7 +450,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 			.setErrorStr(&result)
 			.setMCJITMemoryManager(std::move(mem))
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
-			.setCodeModel(llvm::CodeModel::Small)
+			.setCodeModel(large ? llvm::CodeModel::Large : llvm::CodeModel::Small)
 			.setMCPU(m_cpu)
 			.create());
 
@@ -484,6 +479,19 @@ void jit_compiler::add(std::unique_ptr<llvm::Module> module, const std::string& 
 	m_engine->addModule(std::move(module));
 	m_engine->generateCodeForModule(ptr);
 	m_engine->setObjectCache(nullptr);
+
+	for (auto& func : ptr->functions())
+	{
+		// Delete IR to lower memory consumption
+		func.deleteBody();
+	}
+}
+
+void jit_compiler::add(std::unique_ptr<llvm::Module> module)
+{
+	const auto ptr = module.get();
+	m_engine->addModule(std::move(module));
+	m_engine->generateCodeForModule(ptr);
 
 	for (auto& func : ptr->functions())
 	{

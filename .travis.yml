@@ -27,7 +27,7 @@ git:
 
 env:
     - QTVER=5.10.1
-  
+
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
@@ -43,11 +43,11 @@ install:
       sudo dpkg -i libglew2.0_2.0.0-5_amd64.deb libglew-dev_2.0.0-5_amd64.deb libvulkan1_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb libvulkan-dev_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
     else
       brew update;
-      brew install ccache glew llvm40;
+      brew install ccache glew;
     fi;
 
 before_script:
-  - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
+  - git submodule update --init llvm asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
   - mkdir build ; cd build
   - export CMAKE_PREFIX_PATH=~/Qt/${QTVER}/gcc_64/lib/cmake
   - if [ "$TRAVIS_PULL_REQUEST" = false ]; then
@@ -59,7 +59,7 @@ before_script:
 
 script:
   - ninja
-    
+
 after_script:
   - cd build
   - # AppImage generation
@@ -79,7 +79,7 @@ after_script:
       rm -r ./appdir/usr/share/man ;
       rm -r ./appdir/usr/include ;
       export PATH=${TRAVIS_BUILD_DIR}/build/squashfs-root/usr/bin/:${PATH} ;
-      
+
       echo "Embed newer libstdc++ for distros that don't come with it (ubuntu 14.04)";
       mkdir -p appdir/usr/optional/ ; mkdir -p appdir/usr/optional/libstdc++/ ;
       cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ./appdir/usr/optional/libstdc++/ ;
@@ -87,7 +87,7 @@ after_script:
       wget -c https://github.com/RPCS3/AppImageKit-checkrt/releases/download/continuous/AppRun-patched-x86_64 -O ./appdir/AppRun ;
       chmod a+x ./appdir/AppRun ;
       wget -c https://github.com/RPCS3/AppImageKit-checkrt/releases/download/continuous/exec-x86_64.so -O ./appdir/usr/optional/exec.so ;
-      
+
       echo "Package it up and send it off" ;
       ./linuxdeployqt*.AppImage --appimage-extract ;
       ./squashfs-root/usr/bin/appimagetool ${TRAVIS_BUILD_DIR}/build/appdir ;
@@ -100,7 +100,6 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-      - llvm-toolchain-trusty-4.0
       - sourceline: 'ppa:jonathonf/binutils' # We need to update binutils to a newer version to link against the ffmpeg libs on.
       - sourceline: 'ppa:beineri/opt-qt-5.10.1-trusty' # <<WARNING>>: This needs to be updated manually whenever the QT Version changes. Add QT PPA since the installer is quite bad.
     packages:
@@ -114,8 +113,6 @@ addons:
       #- libvulkan1
       #- libvulkan-dev
       - libc6-dev
-      - llvm-4.0
-      - llvm-4.0-dev
       # Clang 5.0 is now bundled in travis, so we no longer need the ppa version.
       #- clang-4.0
       - libedit-dev
