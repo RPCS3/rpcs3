@@ -851,7 +851,18 @@ void Emulator::Load(bool add_only)
 
 			if (g_cfg.core.spu_debug)
 			{
-				fs::file log(Emu.GetCachePath() + "SPUJIT.log", fs::rewrite);
+				fs::file log;
+
+				if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
+				{
+					log.open(Emu.GetCachePath() + "SPUJIT.log", fs::rewrite);
+				}
+
+				if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+				{
+					log.open(Emu.GetCachePath() + "SPU.log", fs::rewrite);
+				}
+
 				log.write(fmt::format("SPU JIT Log\n\nTitle: %s\nTitle ID: %s\n\n", Emu.GetTitle(), Emu.GetTitleID()));
 				fs::create_dir(Emu.GetCachePath() + "SPU");
 				fs::remove_all(Emu.GetCachePath() + "SPU", false);
