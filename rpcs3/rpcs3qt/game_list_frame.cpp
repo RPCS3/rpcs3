@@ -559,11 +559,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(configure, &QAction::triggered, [=]
 	{
 		settings_dialog dlg(xgui_settings, xemu_settings, 0, this, &currGame);
-		connect(&dlg, &QDialog::accepted, [this]
+		if (dlg.exec() == QDialog::Accepted && !m_game_data[index].hasCustomConfig)
 		{
-			Refresh(true, false);
-		});
-		dlg.exec();
+			ShowCustomConfigIcon(item, true);
+		}
 	});
 	connect(hide_serial, &QAction::triggered, [=](bool checked)
 	{
@@ -611,7 +610,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(removeConfig, &QAction::triggered, [=]()
 	{
 		if (RemoveCustomConfiguration(config_base_dir, true))
-			Refresh(true, false);
+		{
+			ShowCustomConfigIcon(item, false);
+		}
 	});
 	connect(deleteShadersCache, &QAction::triggered, [=]()
 	{
@@ -770,6 +771,32 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paintConfigIcon)
 	return QPixmap::fromImage(scaled);
 }
 
+void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled)
+{
+	if (item == nullptr)
+	{
+		return;
+	}
+
+	int index = item->data(Qt::UserRole).toInt();
+	auto& game = m_game_data[index];
+	game.hasCustomConfig = enabled;
+	game.pxmap = PaintedPixmap(game.icon, enabled);
+
+	if (!m_isListLayout)
+	{
+		m_xgrid->addItem(game.pxmap, qstr(game.info.name).simplified(), index, m_xgrid->currentItem()->row(), m_xgrid->currentItem()->column());
+	}
+	else if (enabled)
+	{
+		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/cog_black.png"));
+	}
+	else
+	{
+		m_gameList->setItem(item->row(), gui::column_name, new custom_table_widget_item(game.info.name));
+	}
+}
+
 void game_list_frame::ResizeIcons(const int& sliderPos)
 {
 	m_icon_size_index = sliderPos;
@@ -886,17 +913,6 @@ int game_list_frame::PopulateGameList()
 	m_gameList->clearContents();
 	m_gameList->setRowCount((int)m_game_data.size());
 
-	auto l_GetItem = [](const std::string& text, int sort_role = Qt::DisplayRole, int sort_index = 0)
-	{
-		custom_table_widget_item* curr = new custom_table_widget_item;
-		curr->setText(qstr(text).simplified()); // simplified() forces single line text
-		if (sort_role != Qt::DisplayRole)
-		{
-			curr->setData(sort_role, sort_index, true);
-		}
-		return curr;
-	};
-
 	int row = 0, index = -1;
 	for (const auto& game : m_game_data)
 	{
@@ -911,7 +927,7 @@ int game_list_frame::PopulateGameList()
 		icon_item->setData(Qt::UserRole, index, true);
 
 		// Title
-		custom_table_widget_item* title_item = l_GetItem(game.info.name);
+		custom_table_widget_item* title_item = new custom_table_widget_item(game.info.name);
 		if (game.hasCustomConfig)
 		{
 			title_item->setIcon(QIcon(":/Icons/cog_black.png"));
@@ -932,15 +948,15 @@ int game_list_frame::PopulateGameList()
 
 		m_gameList->setItem(row, gui::column_icon,       icon_item);
 		m_gameList->setItem(row, gui::column_name,       title_item);
-		m_gameList->setItem(row, gui::column_serial,     l_GetItem(game.info.serial));
-		m_gameList->setItem(row, gui::column_firmware,   l_GetItem(game.info.fw));
-		m_gameList->setItem(row, gui::column_version,    l_GetItem(game.info.app_ver));
-		m_gameList->setItem(row, gui::column_category,   l_GetItem(game.info.category));
-		m_gameList->setItem(row, gui::column_path,       l_GetItem(game.info.path));
-		m_gameList->setItem(row, gui::column_move,       l_GetItem(sstr(supports_move ? tr("Supported") : tr("Not Supported")), Qt::UserRole, !supports_move));
-		m_gameList->setItem(row, gui::column_resolution, l_GetItem(GetStringFromU32(game.info.resolution, resolution::mode, true)));
-		m_gameList->setItem(row, gui::column_sound,      l_GetItem(GetStringFromU32(game.info.sound_format, sound::format, true)));
-		m_gameList->setItem(row, gui::column_parental,   l_GetItem(GetStringFromU32(game.info.parental_lvl, parental::level), Qt::UserRole, game.info.parental_lvl));
+		m_gameList->setItem(row, gui::column_serial,     new custom_table_widget_item(game.info.serial));
+		m_gameList->setItem(row, gui::column_firmware,   new custom_table_widget_item(game.info.fw));
+		m_gameList->setItem(row, gui::column_version,    new custom_table_widget_item(game.info.app_ver));
+		m_gameList->setItem(row, gui::column_category,   new custom_table_widget_item(game.info.category));
+		m_gameList->setItem(row, gui::column_path,       new custom_table_widget_item(game.info.path));
+		m_gameList->setItem(row, gui::column_move,       new custom_table_widget_item(sstr(supports_move ? tr("Supported") : tr("Not Supported")), Qt::UserRole, !supports_move));
+		m_gameList->setItem(row, gui::column_resolution, new custom_table_widget_item(GetStringFromU32(game.info.resolution, resolution::mode, true)));
+		m_gameList->setItem(row, gui::column_sound,      new custom_table_widget_item(GetStringFromU32(game.info.sound_format, sound::format, true)));
+		m_gameList->setItem(row, gui::column_parental,   new custom_table_widget_item(GetStringFromU32(game.info.parental_lvl, parental::level), Qt::UserRole, game.info.parental_lvl));
 		m_gameList->setItem(row, gui::column_compat,     compat_item);
 
 		if (selected_item == game.info.icon_path)
