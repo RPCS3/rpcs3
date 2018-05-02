@@ -76,6 +76,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->setHorizontalHeaderItem(gui::column_version,    new QTableWidgetItem(tr("Version")));
 	m_gameList->setHorizontalHeaderItem(gui::column_category,   new QTableWidgetItem(tr("Category")));
 	m_gameList->setHorizontalHeaderItem(gui::column_path,       new QTableWidgetItem(tr("Path")));
+	m_gameList->setHorizontalHeaderItem(gui::column_move,       new QTableWidgetItem(tr("PlayStation Move")));
 	m_gameList->setHorizontalHeaderItem(gui::column_resolution, new QTableWidgetItem(tr("Supported Resolutions")));
 	m_gameList->setHorizontalHeaderItem(gui::column_sound,      new QTableWidgetItem(tr("Sound Formats")));
 	m_gameList->setHorizontalHeaderItem(gui::column_parental,   new QTableWidgetItem(tr("Parental Level")));
@@ -97,20 +98,19 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_Game_Dock->setCentralWidget(m_Central_Widget);
 
 	// Actions regarding showing/hiding columns
-	QAction* showIconColAct          = new QAction(tr("Show Icons"), this);
-	QAction* showNameColAct          = new QAction(tr("Show Names"), this);
-	QAction* showSerialColAct        = new QAction(tr("Show Serials"), this);
-	QAction* showFWColAct            = new QAction(tr("Show Firmwares"), this);
-	QAction* showAppVersionColAct    = new QAction(tr("Show Versions"), this);
-	QAction* showCategoryColAct      = new QAction(tr("Show Categories"), this);
-	QAction* showPathColAct          = new QAction(tr("Show Paths"), this);
-	QAction* showResolutionColAct    = new QAction(tr("Show Supported Resolutions"), this);
-	QAction* showSoundFormatColAct   = new QAction(tr("Show Sound Formats"), this);
-	QAction* showParentalLevelColAct = new QAction(tr("Show Parental Levels"), this);
-	QAction* showCompatibilityAct    = new QAction(tr("Show Compatibilities"), this);
-
-	m_columnActs = { showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct,
-		showResolutionColAct, showSoundFormatColAct, showParentalLevelColAct, showCompatibilityAct };
+	m_columnActs.append(new QAction(tr("Show Icons"), this));
+	m_columnActs.append(new QAction(tr("Show Icons"), this));
+	m_columnActs.append(new QAction(tr("Show Names"), this));
+	m_columnActs.append(new QAction(tr("Show Serials"), this));
+	m_columnActs.append(new QAction(tr("Show Firmwares"), this));
+	m_columnActs.append(new QAction(tr("Show Versions"), this));
+	m_columnActs.append(new QAction(tr("Show Categories"), this));
+	m_columnActs.append(new QAction(tr("Show Paths"), this));
+	m_columnActs.append(new QAction(tr("Show PlayStation Move"), this));
+	m_columnActs.append(new QAction(tr("Show Supported Resolutions"), this));
+	m_columnActs.append(new QAction(tr("Show Sound Formats"), this));
+	m_columnActs.append(new QAction(tr("Show Parental Levels"), this));
+	m_columnActs.append(new QAction(tr("Show Compatibilities"), this));
 
 	// Events
 	connect(m_gameList, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
@@ -330,6 +330,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			game.resolution   = psf::get_integer(psf, "RESOLUTION");
 			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
 			game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
+			game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
 
 			// Detect duplication
 			if (!serial_cat[game.serial].emplace(game.category).second)
@@ -922,6 +923,9 @@ int game_list_frame::PopulateGameList()
 			title_item->setIcon(QIcon(":/Icons/cog_black.png"));
 		}
 
+		// Move Support (http://www.psdevwiki.com/ps3/PARAM.SFO#ATTRIBUTE)
+		bool supports_move = game.info.attr & 0x800000;
+
 		// Compatibility
 		custom_table_widget_item* compat_item = new custom_table_widget_item;
 		compat_item->setFlags(compat_item->flags() & ~Qt::ItemIsEditable);
@@ -940,6 +944,7 @@ int game_list_frame::PopulateGameList()
 		m_gameList->setItem(row, gui::column_version,    l_GetItem(game.info.app_ver));
 		m_gameList->setItem(row, gui::column_category,   l_GetItem(game.info.category));
 		m_gameList->setItem(row, gui::column_path,       l_GetItem(game.info.path));
+		m_gameList->setItem(row, gui::column_move,       l_GetItem(sstr(supports_move ? tr("Supported") : tr("Not Supported")), Qt::UserRole, !supports_move));
 		m_gameList->setItem(row, gui::column_resolution, l_GetItem(GetStringFromU32(game.info.resolution, resolution::mode, true)));
 		m_gameList->setItem(row, gui::column_sound,      l_GetItem(GetStringFromU32(game.info.sound_format, sound::format, true)));
 		m_gameList->setItem(row, gui::column_parental,   l_GetItem(GetStringFromU32(game.info.parental_lvl, parental::level), Qt::UserRole, game.info.parental_lvl));
