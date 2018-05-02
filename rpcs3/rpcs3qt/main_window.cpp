@@ -80,24 +80,34 @@ void main_window::Init()
 	// hide utilities from the average user
 	ui->menuUtilities->menuAction()->setVisible(guiSettings->GetValue(gui::m_showDebugTab).toBool());
 
+	// for highdpi resize toolbar icons and height dynamically
+	// choose factors to mimic Gui-Design in main_window.ui
+	// TODO: delete this in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp
+#ifdef _WIN32
+	const int toolIconHeight = menuBar()->sizeHint().height() * 1.5;
+	ui->toolBar->setIconSize(QSize(toolIconHeight, toolIconHeight));
+#endif
+
+	const int toolBarHeight = ui->toolBar->sizeHint().height();
+
+	// resize toolbar actions
+	for (const auto& act : ui->toolBar->actions())
+	{
+		if (act->isSeparator())
+		{
+			continue;
+		}
+
+		ui->toolBar->widgetForAction(act)->setMinimumWidth(toolBarHeight);
+	}
+
+	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 5);
+
 	// add toolbar widgets (crappy Qt designer is not able to)
 	ui->toolBar->setObjectName("mw_toolbar");
 	ui->sizeSlider->setRange(0, gui::gl_max_slider_pos);
 	ui->toolBar->addWidget(ui->sizeSliderContainer);
-	ui->toolBar->addSeparator();
 	ui->toolBar->addWidget(ui->mw_searchbar);
-
-	// for highdpi resize toolbar icons and height dynamically
-	// choose factors to mimic Gui-Design in main_window.ui
-	// TODO: in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp we only need the else branch
-#ifdef _WIN32
-	const int toolBarHeight = menuBar()->sizeHint().height() * 1.5;
-	ui->toolBar->setIconSize(QSize(toolBarHeight, toolBarHeight));
-#else
-	const int toolBarHeight = ui->toolBar->iconSize().height();
-#endif
-	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 5);
-	ui->sizeSlider->setFixedHeight(toolBarHeight * 0.65f);
 
 	CreateActions();
 	CreateDockWindows();
@@ -779,6 +789,7 @@ void main_window::OnEmuRun()
 	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
+	ui->toolbar_start->setText(tr("Pause"));
 	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 	EnableMenus(true);
 
@@ -800,6 +811,7 @@ void main_window::OnEmuResume()
 	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
+	ui->toolbar_start->setText(tr("Pause"));
 	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 }
 
@@ -812,6 +824,7 @@ void main_window::OnEmuPause()
 	ui->sysPauseAct->setText(tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
+	ui->toolbar_start->setText(tr("Play"));
 	ui->toolbar_start->setToolTip(tr("Resume emulation"));
 }
 
@@ -831,6 +844,7 @@ void main_window::OnEmuStop()
 	{
 		ui->toolbar_start->setEnabled(true);
 		ui->toolbar_start->setIcon(m_icon_restart);
+		ui->toolbar_start->setText(tr("Restart"));
 		ui->toolbar_start->setToolTip(tr("Restart emulation"));
 		ui->sysRebootAct->setEnabled(true);
 #ifdef _WIN32
@@ -840,6 +854,7 @@ void main_window::OnEmuStop()
 	else
 	{
 		ui->toolbar_start->setIcon(m_icon_play);
+		ui->toolbar_start->setText(tr("Play"));
 		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	}
 #ifdef WITH_DISCORD_RPC
@@ -861,6 +876,7 @@ void main_window::OnEmuReady()
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
+	ui->toolbar_start->setText(tr("Play"));
 	ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	EnableMenus(true);
 }
