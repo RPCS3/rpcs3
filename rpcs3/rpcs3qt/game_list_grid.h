@@ -22,7 +22,7 @@ public:
 
 	void enableText(const bool& enabled);
 	void setIconSize(const QSize& size);
-	void addItem(const QPixmap& img, const QString& name, const int& idx, const int& row, const int& col);
+	void addItem(const QPixmap& img, const QString& name, const int& row, const int& col);
 
 	qreal getMarginFactor();
 
