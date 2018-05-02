@@ -219,6 +219,7 @@ protected:
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
 	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
+	void ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const GUI_GameInfo& game);
 	void SortGameList();
