@@ -48,6 +48,7 @@ namespace gui
 		column_version,
 		column_category,
 		column_path,
+		column_move,
 		column_resolution,
 		column_sound,
 		column_parental,
