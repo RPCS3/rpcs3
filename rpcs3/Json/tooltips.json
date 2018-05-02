@@ -16,7 +16,7 @@
 			"precise": "This is extremely slow but may fix broken graphics in some games.",
 			"fast": "This is slower than the SPU Recompiler but significantly faster than the precise interpreter.\nGames rarely need this however.",
 			"ASMJIT": "This is the fastest option with very good compatibility.\nIf unsure, use this option.",
-			"LLVM": "This doesn't exist (yet)"
+			"LLVM": ""
 		},
 		"libraries": {
 			"auto": "Automatically selects the LLE libraries to load.\nWhile this option works fine in most cases, liblv2 is the preferred option.",

@@ -10,6 +10,7 @@ protected:
 	SPUThread& m_spu;
 
 	u32 m_pos;
+	u32 m_size;
 
 	std::bitset<0x10000> m_block_info;
 
@@ -35,4 +36,7 @@ public:
 
 	// Create recompiler instance (ASMJIT)
 	static std::unique_ptr<spu_recompiler_base> make_asmjit_recompiler(SPUThread& spu);
+
+	// Create recompiler instance (LLVM)
+	static std::unique_ptr<spu_recompiler_base> make_llvm_recompiler(SPUThread& spu);
 };
