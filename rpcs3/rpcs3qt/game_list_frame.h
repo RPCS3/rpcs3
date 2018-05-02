@@ -207,7 +207,6 @@ private Q_SLOTS:
 	bool DeleteLLVMCache(const std::string& base_dir, bool is_interactive = false);
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
-	void ShowSpecifiedContextMenu(const QPoint &pos, int index); // Different name because the notation for overloaded connects is messy
 	void doubleClickedSlot(const QModelIndex& index);
 Q_SIGNALS:
 	void GameListFrameClosed();

@@ -496,45 +496,33 @@ void game_list_frame::doubleClickedSlot(const QModelIndex& index)
 
 void game_list_frame::ShowContextMenu(const QPoint &pos)
 {
-	int index;
-
-	if (m_isListLayout)
-	{
-		int row = m_gameList->indexAt(pos).row();
-		QTableWidgetItem* item = m_gameList->item(row, gui::column_icon);
-		if (item == nullptr) return;  // null happens if you are double clicking in dockwidget area on nothing.
-		index = item->data(Qt::UserRole).toInt();
-	}
-	else
-	{
-		int row = m_xgrid->indexAt(pos).row();
-		int col = m_xgrid->indexAt(pos).column();
-		QTableWidgetItem* item = m_xgrid->item(row, col);
-		if (item == nullptr) return;  // null happens if you are double clicking in dockwidget area on nothing.
-		index = item->data(Qt::ItemDataRole::UserRole).toInt();
-	}
-	ShowSpecifiedContextMenu(pos, index);
-}
-
-void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
-{
-	if (row == -1)
-	{
-		return; // invalid
-	}
-
 	QPoint globalPos;
+	QTableWidgetItem* item;
 
 	if (m_isListLayout)
 	{
+		item = m_gameList->item(m_gameList->indexAt(pos).row(), gui::column_icon);
 		globalPos = m_gameList->mapToGlobal(pos);
 	}
 	else
 	{
+		QModelIndex mi = m_xgrid->indexAt(pos);
+		item = m_xgrid->item(mi.row(), mi.column());
 		globalPos = m_xgrid->mapToGlobal(pos);
 	}
 
-	GameInfo currGame = m_game_data[row].info;
+	if (item == nullptr)
+	{
+		return; // null happens if you are double clicking in dockwidget area on nothing.
+	}
+
+	int index = item->data(Qt::UserRole).toInt();
+	if (index == -1)
+	{
+		return; // invalid
+	}
+
+	GameInfo currGame = m_game_data[index].info;
 	const QString serial = qstr(currGame.serial);
 
 	// Make Actions
@@ -561,7 +549,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	QAction* checkCompat = myMenu.addAction(tr("&Check Game Compatibility"));
 	QAction* downloadCompat = myMenu.addAction(tr("&Download Compatibility Database"));
 
-	const std::string config_base_dir = fs::get_config_dir() + "data/" + m_game_data[row].info.serial;
+	const std::string config_base_dir = fs::get_config_dir() + "data/" + m_game_data[index].info.serial;
 
 	connect(boot, &QAction::triggered, [=]
 	{
@@ -608,7 +596,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 				RemoveCustomConfiguration(config_base_dir);
 			}
 			fs::remove_all(currGame.path);
-			m_game_data.erase(m_game_data.begin() + row);
+			m_game_data.erase(m_game_data.begin() + index);
 			Refresh();
 			LOG_SUCCESS(GENERAL, "Removed %s %s in %s", currGame.category, currGame.name, currGame.path);
 		}
@@ -665,7 +653,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	}
 
 	// Disable removeconfig if no config exists.
-	removeConfig->setEnabled(m_game_data[row].hasCustomConfig);
+	removeConfig->setEnabled(m_game_data[index].hasCustomConfig);
 
 	// remove delete options if necessary
 	if (!fs::is_dir(config_base_dir))
