@@ -593,6 +593,8 @@ VKGSRender::VKGSRender() : GSRender()
 	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
 	m_uniform_buffer_ring_info.init(VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "uniform buffer");
 	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
+	m_transform_constants_ring_info.init(VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
+	m_transform_constants_ring_info.heap.reset(new vk::buffer(*m_device, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
 	m_index_buffer_ring_info.init(VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
 	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
 	m_texture_upload_buffer_ring_info.init(VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
@@ -632,7 +634,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache.reset(new vk::weak_vertex_cache());
 
-	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.25"));
+	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.3"));
 
 	open_command_buffer();
 
@@ -688,6 +690,7 @@ VKGSRender::~VKGSRender()
 	//Heaps
 	m_index_buffer_ring_info.heap.reset();
 	m_uniform_buffer_ring_info.heap.reset();
+	m_transform_constants_ring_info.heap.reset();
 	m_attrib_ring_info.heap.reset();
 	m_texture_upload_buffer_ring_info.heap.reset();
 
@@ -893,6 +896,7 @@ void VKGSRender::check_heap_status()
 	if (m_attrib_ring_info.is_critical() ||
 		m_texture_upload_buffer_ring_info.is_critical() ||
 		m_uniform_buffer_ring_info.is_critical() ||
+		m_transform_constants_ring_info.is_critical() ||
 		m_index_buffer_ring_info.is_critical())
 	{
 		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
@@ -917,6 +921,7 @@ void VKGSRender::check_heap_status()
 
 			m_index_buffer_ring_info.reset_allocation_stats();
 			m_uniform_buffer_ring_info.reset_allocation_stats();
+			m_transform_constants_ring_info.reset_allocation_stats();
 			m_attrib_ring_info.reset_allocation_stats();
 			m_texture_upload_buffer_ring_info.reset_allocation_stats();
 			m_current_frame->reset_heap_ptrs();
@@ -1439,8 +1444,9 @@ void VKGSRender::end()
 	bool primitive_emulated = false;
 	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
 
-	const bool is_emulated_restart = (!primitive_emulated && rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart() && rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed);
-	const bool single_draw = (!is_emulated_restart && (!supports_multidraw || rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive));
+	const bool single_draw = (!supports_multidraw ||
+		rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 ||
+		rsx::method_registers.current_draw_clause.is_disjoint_primitive);
 
 	if (m_occlusion_query_active && (occlusion_id != UINT32_MAX))
 	{
@@ -1480,23 +1486,12 @@ void VKGSRender::end()
 		}
 		else
 		{
-			if (!is_emulated_restart)
+			u32 first_vertex = 0;
+			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
 			{
-				u32 first_vertex = 0;
-				for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
-				{
-					const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
-					vkCmdDrawIndexed(*m_current_command_buffer, verts, 1, first_vertex, 0, 0);
-					first_vertex += verts;
-				}
-			}
-			else
-			{
-				for (const auto &range : rsx::method_registers.current_draw_clause.alternate_first_count_commands)
-				{
-					//Primitive restart splitting happens after the primitive type expansion step
-					vkCmdDrawIndexed(*m_current_command_buffer, range.second, 1, range.first, 0, 0);
-				}
+				const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
+				vkCmdDrawIndexed(*m_current_command_buffer, verts, 1, first_vertex, 0, 0);
+				first_vertex += verts;
 			}
 		}
 	}
@@ -1938,6 +1933,7 @@ void VKGSRender::advance_queued_frames()
 	m_vertex_cache->purge();
 	m_current_frame->tag_frame_end(m_attrib_ring_info.get_current_put_pos_minus_one(),
 		m_uniform_buffer_ring_info.get_current_put_pos_minus_one(),
+		m_transform_constants_ring_info.get_current_put_pos_minus_one(),
 		m_index_buffer_ring_info.get_current_put_pos_minus_one(),
 		m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one());
 
@@ -2045,11 +2041,13 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 			//Heap cleanup; deallocates memory consumed by the frame if it is still held
 			m_attrib_ring_info.m_get_pos = ctx->attrib_heap_ptr;
 			m_uniform_buffer_ring_info.m_get_pos = ctx->ubo_heap_ptr;
+			m_transform_constants_ring_info.m_get_pos = ctx->vtxconst_heap_ptr;
 			m_index_buffer_ring_info.m_get_pos = ctx->index_heap_ptr;
 			m_texture_upload_buffer_ring_info.m_get_pos = ctx->texture_upload_heap_ptr;
 
 			m_attrib_ring_info.notify();
 			m_uniform_buffer_ring_info.notify();
+			m_transform_constants_ring_info.notify();
 			m_index_buffer_ring_info.notify();
 			m_texture_upload_buffer_ring_info.notify();
 		}
@@ -2209,13 +2207,17 @@ bool VKGSRender::check_program_status()
 
 void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 {
-	get_current_fragment_program(fs_sampler_state);
-	verify(HERE), current_fragment_program.valid;
+	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
+	{
+		get_current_fragment_program(fs_sampler_state);
+		verify(HERE), current_fragment_program.valid;
 
-	get_current_vertex_program();
+		get_current_vertex_program();
+	}
 
 	auto &vertex_program = current_vertex_program;
 	auto &fragment_program = current_fragment_program;
+	auto old_program = m_program;
 
 	vk::pipeline_props properties = {};
 
@@ -2224,7 +2226,7 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 	properties.state.set_primitive_type(vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, emulated_primitive_type));
 
 	const bool restarts_valid = rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed && !emulated_primitive_type && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
-	if (rsx::method_registers.restart_index_enabled() && !vk::emulate_primitive_restart() && restarts_valid)
+	if (rsx::method_registers.restart_index_enabled() && !vk::emulate_primitive_restart(rsx::method_registers.current_draw_clause.primitive) && restarts_valid)
 		properties.state.enable_primitive_restart();
 
 	// Rasterizer state
@@ -2369,49 +2371,66 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 
 	vk::leave_uninterruptible();
 
-	const size_t fragment_constants_sz = m_prog_buffer->get_fragment_constants_buffer_size(fragment_program);
-	const size_t fragment_buffer_sz = fragment_constants_sz + (18 * 4 * sizeof(float));
-	const size_t required_mem = 512 + 8192 + fragment_buffer_sz;
-
-	const size_t vertex_state_offset = m_uniform_buffer_ring_info.alloc<256>(required_mem);
-	const size_t vertex_constants_offset = vertex_state_offset + 512;
-	const size_t fragment_constants_offset = vertex_constants_offset + 8192;
-
-	//We do this in one go
-	u8 *buf = (u8*)m_uniform_buffer_ring_info.map(vertex_state_offset, required_mem);
-
-	//Vertex state
-	fill_scale_offset_data(buf, false);
-	fill_user_clip_data(buf + 64);
-	*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
-	*(reinterpret_cast<u32*>(buf + 132)) = vertex_info.vertex_index_base;
-	*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
-	*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
-	*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
-
-	fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, reinterpret_cast<s32*>(buf + 160),
-			vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
-
-	//Vertex constants
-	buf = buf + 512;
-	fill_vertex_program_constants_data(buf);
-	m_transform_constants_dirty = false;
-	
-	//Fragment constants
-	buf = buf + 8192;
-	if (fragment_constants_sz)
+	if (1)//m_graphics_state & (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty))
 	{
-		m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) },
-				fragment_program, vk::sanitize_fp_values());
+		const size_t fragment_constants_sz = m_prog_buffer->get_fragment_constants_buffer_size(fragment_program);
+		const size_t fragment_buffer_sz = fragment_constants_sz + (18 * 4 * sizeof(float));
+		const size_t required_mem = 512 + fragment_buffer_sz;
+
+		const size_t vertex_state_offset = m_uniform_buffer_ring_info.alloc<256>(required_mem);
+		const size_t fragment_constants_offset = vertex_state_offset + 512;
+
+		//We do this in one go
+		u8 *buf = (u8*)m_uniform_buffer_ring_info.map(vertex_state_offset, required_mem);
+
+		//Vertex state
+		fill_scale_offset_data(buf, false);
+		fill_user_clip_data(buf + 64);
+		*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
+		*(reinterpret_cast<u32*>(buf + 132)) = vertex_info.vertex_index_base;
+		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
+		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
+		*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
+
+		fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, reinterpret_cast<s32*>(buf + 160),
+				vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
+		
+		//Fragment constants
+		buf = buf + 512;
+		if (fragment_constants_sz)
+		{
+			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) },
+					fragment_program, vk::sanitize_fp_values());
+		}
+
+		fill_fragment_state_buffer(buf + fragment_constants_sz, fragment_program);
+		
+		m_uniform_buffer_ring_info.unmap();
+
+		m_vertex_state_buffer_info = { m_uniform_buffer_ring_info.heap->value, vertex_state_offset, 512 };
+		m_fragment_state_buffer_info = { m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_buffer_sz };
 	}
 
-	fill_fragment_state_buffer(buf + fragment_constants_sz, fragment_program);
-	
-	m_uniform_buffer_ring_info.unmap();
+	if (m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
+	{
+		//Vertex constants
+		const size_t vertex_constants_offset = m_transform_constants_ring_info.alloc<256>(8192);
+		auto buf = m_transform_constants_ring_info.map(vertex_constants_offset, 8192);
 
-	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, vertex_state_offset, 512 }, SCALE_OFFSET_BIND_SLOT, m_current_frame->descriptor_set);
-	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, vertex_constants_offset, 8192 }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
-	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_buffer_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
+		fill_vertex_program_constants_data(buf);
+		m_transform_constants_ring_info.unmap();
+		m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, vertex_constants_offset, 8192 };
+	}
+
+	if (1)//m_graphics_state || old_program != m_program)
+	{
+		m_program->bind_uniform(m_vertex_state_buffer_info, SCALE_OFFSET_BIND_SLOT, m_current_frame->descriptor_set);
+		m_program->bind_uniform(m_vertex_constants_buffer_info, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
+		m_program->bind_uniform(m_fragment_state_buffer_info, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
+	}
+
+	//Clear flags
+	m_graphics_state = 0;
 }
 
 static const u32 mr_color_offset[rsx::limits::color_buffers_count] =

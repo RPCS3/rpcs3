@@ -119,6 +119,22 @@ void fmt_class_string<spu_decoder_type>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<spu_block_size_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](spu_block_size_type type)
+	{
+		switch (type)
+		{
+		case spu_block_size_type::safe: return "Safe";
+		case spu_block_size_type::mega: return "Mega";
+		case spu_block_size_type::giga: return "Giga";
+		}
+
+		return unknown;
+	});
+}
+
 namespace spu
 {
 	namespace scheduler
@@ -520,6 +536,7 @@ SPUThread::SPUThread(const std::string& name, u32 index, lv2_spu_group* group)
 
 	if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
+		jit = spu_recompiler_base::make_llvm_recompiler(*this);
 	}
 }
 
@@ -743,7 +760,7 @@ bool SPUThread::do_dma_check(const spu_mfc_cmd& args)
 	if (UNLIKELY(mfc_barrier & mask || (args.cmd & MFC_FENCE_MASK && mfc_fence & mask)))
 	{
 		// Check for special value combination (normally impossible)
-		if (UNLIKELY(mfc_barrier == -1 && mfc_fence == -1))
+		if (false)
 		{
 			// Update barrier/fence masks if necessary
 			mfc_barrier = 0;
@@ -998,6 +1015,11 @@ void SPUThread::do_mfc(bool wait)
 		}
 		else if (args.cmd == MFC_PUTQLLUC_CMD)
 		{
+			if (fence & mask)
+			{
+				return false;
+			}
+
 			do_putlluc(args);
 		}
 
@@ -1263,11 +1285,13 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 	}
 	case MFC_PUTQLLUC_CMD:
 	{
-		if (UNLIKELY(!do_dma_check(args)))
+		const u32 mask = 1u << args.tag;
+
+		if (UNLIKELY((mfc_barrier | mfc_fence) & mask))
 		{
 			args.size = 0;
 			mfc_queue[mfc_size++] = args;
-			mfc_fence |= 1u << args.tag;
+			mfc_fence |= mask;
 		}
 		else
 		{
@@ -1490,11 +1514,11 @@ u32 SPUThread::get_ch_count(u32 ch)
 	fmt::throw_exception("Unknown/illegal channel (ch=%d [%s])" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???");
 }
 
-bool SPUThread::get_ch_value(u32 ch, u32& out)
+s64 SPUThread::get_ch_value(u32 ch)
 {
 	LOG_TRACE(SPU, "get_ch_value(ch=%d [%s])", ch, ch < 128 ? spu_ch_name[ch] : "???");
 
-	auto read_channel = [&](spu_channel& channel)
+	auto read_channel = [&](spu_channel& channel) -> s64
 	{
 		for (int i = 0; i < 10 && channel.get_count() == 0; i++)
 		{
@@ -1508,25 +1532,26 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 			}
 		}
 
+		u32 out;
+
 		while (!channel.try_pop(out))
 		{
 			if (test(state, cpu_flag::stop))
 			{
-				return false;
+				return -1;
 			}
 
 			thread_ctrl::wait();
 		}
 
-		return true;
+		return out;
 	};
 
 	switch (ch)
 	{
 	case SPU_RdSRR0:
 	{
-		out = srr0;
-		return true;
+		return srr0;
 	}
 	case SPU_RdInMbox:
 	{
@@ -1544,6 +1569,8 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 				}
 			}
 
+			u32 out;
+
 			if (const uint old_count = ch_in_mbox.try_pop(out))
 			{
 				if (old_count == 4 /* SPU_IN_MBOX_THRESHOLD */) // TODO: check this
@@ -1551,12 +1578,12 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 					int_ctrl[2].set(SPU_INT2_STAT_SPU_MAILBOX_THRESHOLD_INT);
 				}
 
-				return true;
+				return out;
 			}
 
 			if (test(state & cpu_flag::stop))
 			{
-				return false;
+				return -1;
 			}
 
 			thread_ctrl::wait();
@@ -1572,9 +1599,9 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 		if (ch_tag_stat.get_count())
 		{
-			out = ch_tag_stat.get_value();
+			u32 out = ch_tag_stat.get_value();
 			ch_tag_stat.set_value(0, false);
-			return true;
+			return out;
 		}
 
 		// Will stall infinitely
@@ -1583,8 +1610,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case MFC_RdTagMask:
 	{
-		out = ch_tag_mask;
-		return true;
+		return ch_tag_mask;
 	}
 
 	case SPU_RdSigNotify1:
@@ -1601,9 +1627,9 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	{
 		if (ch_atomic_stat.get_count())
 		{
-			out = ch_atomic_stat.get_value();
+			u32 out = ch_atomic_stat.get_value();
 			ch_atomic_stat.set_value(0, false);
-			return true;
+			return out;
 		}
 
 		// Will stall infinitely
@@ -1614,9 +1640,9 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	{
 		if (ch_stall_stat.get_count())
 		{
-			out = ch_stall_stat.get_value();
+			u32 out = ch_stall_stat.get_value();
 			ch_stall_stat.set_value(0, false);
-			return true;
+			return out;
 		}
 
 		// Will stall infinitely
@@ -1625,19 +1651,18 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case SPU_RdDec:
 	{
-		out = ch_dec_value - (u32)(get_timebased_time() - ch_dec_start_timestamp);
+		u32 out = ch_dec_value - (u32)(get_timebased_time() - ch_dec_start_timestamp);
 
 		//Polling: We might as well hint to the scheduler to slot in another thread since this one is counting down
 		if (g_cfg.core.spu_loop_detection && out > spu::scheduler::native_jiffy_duration_us)
 			std::this_thread::yield();
 
-		return true;
+		return out;
 	}
 
 	case SPU_RdEventMask:
 	{
-		out = ch_event_mask;
-		return true;
+		return ch_event_mask;
 	}
 
 	case SPU_RdEventStat:
@@ -1651,8 +1676,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 		if (res)
 		{
-			out = res;
-			return true;
+			return res;
 		}
 
 		vm::waiter waiter;
@@ -1671,22 +1695,20 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 		{
 			if (test(state & cpu_flag::stop))
 			{
-				return false;
+				return -1;
 			}
 
 			thread_ctrl::wait_for(100);
 		}
 
-		out = res;
-		return true;
+		return res;
 	}
 
 	case SPU_RdMachStat:
 	{
 		// HACK: "Not isolated" status
 		// Return SPU Interrupt status in LSB
-		out = interrupts_enabled == true;
-		return true;
+		return interrupts_enabled == true;
 	}
 	}
 

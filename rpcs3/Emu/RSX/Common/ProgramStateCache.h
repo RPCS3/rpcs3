@@ -26,7 +26,14 @@ namespace program_hash_util
 
 	struct vertex_program_utils
 	{
+		struct vertex_program_metadata
+		{
+			u32 ucode_size;
+		};
+
 		static size_t get_vertex_program_ucode_hash(const RSXVertexProgram &program);
+
+		static vertex_program_metadata analyse_vertex_program(const std::vector<u32>& data);
 	};
 
 	struct vertex_program_storage_hash
@@ -41,6 +48,12 @@ namespace program_hash_util
 
 	struct fragment_program_utils
 	{
+		struct fragment_program_metadata
+		{
+			u32 program_start_offset;
+			u16 referenced_textures_mask;
+		};
+
 		/**
 		* returns true if the given source Operand is a constant
 		*/
@@ -48,7 +61,7 @@ namespace program_hash_util
 
 		static size_t get_fragment_program_ucode_size(void *ptr);
 
-		static u32 get_fragment_program_start(void *ptr);
+		static fragment_program_metadata analyse_fragment_program(void *ptr);
 
 		static size_t get_fragment_program_ucode_hash(const RSXFragmentProgram &program);
 	};
