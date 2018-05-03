@@ -332,6 +332,9 @@ namespace rsx
 
 			root.rewind();
 
+			// Invalid pipeline entries to be removed
+			std::vector<std::string> invalid_entries;
+
 			// Progress dialog
 			std::unique_ptr<progress_dialog_helper> fallback_dlg;
 			if (!dlg)
@@ -349,11 +352,15 @@ namespace rsx
 				if (tmp.name == "." || tmp.name == "..")
 					continue;
 
+				const auto filename = directory_path + "/" + tmp.name;
 				if (tmp.name.compare(0, prefix_length, version_prefix) != 0)
+				{
+					invalid_entries.push_back(filename);
 					continue;
+				}
 
 				std::vector<u8> bytes;
-				fs::file f(directory_path + "/" + tmp.name);
+				fs::file f(filename);
 
 				processed++;
 				dlg->update_msg(processed, entry_count);
@@ -361,6 +368,7 @@ namespace rsx
 				if (f.size() != sizeof(pipeline_data))
 				{
 					LOG_ERROR(RSX, "Cached pipeline object %s is not binary compatible with the current shader cache", tmp.name.c_str());
+					invalid_entries.push_back(filename);
 					continue;
 				}
 
@@ -376,6 +384,16 @@ namespace rsx
 
 					tally -= (f32)value;
 				}
+			}
+
+			if (!invalid_entries.empty())
+			{
+				for (const auto &filename : invalid_entries)
+				{
+					fs::remove_file(filename);
+				}
+
+				LOG_NOTICE(RSX, "shader cache: %d entries were marked as invalid and removed", invalid_entries.size());
 			}
 
 			dlg->close();

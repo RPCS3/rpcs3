@@ -158,7 +158,7 @@ void VertexProgramDecompiler::SetDST(bool is_sca, std::string value)
 
 	if (d0.cond_update_enable_0 || d0.cond_update_enable_1)
 	{
-		dest = m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "cc" + std::to_string(d0.cond_reg_sel_1), getFloatTypeName(4) + "(0., 0., 0., 0.)") + mask;
+		dest = AddCondReg() + mask;
 	}
 	else if (d3.dst != 0x1f || (is_sca ? d3.sca_dst_tmp != 0x3f : d0.dst_tmp != 0x3f))
 	{
@@ -172,24 +172,6 @@ void VertexProgramDecompiler::SetDST(bool is_sca, std::string value)
 	//AddCode(code + ";");
 
 	AddCodeCond(Format(dest), value);
-}
-
-std::string VertexProgramDecompiler::GetFunc()
-{
-	std::string name = "func$a";
-
-	for (const auto& func : m_funcs) {
-		if (func.name.compare(name) == 0) {
-			return name + "()";
-		}
-	}
-
-	m_funcs.emplace_back();
-	FuncInfo &idx = m_funcs.back();
-	idx.offset = GetAddr();
-	idx.name = name;
-
-	return name + "()";
 }
 
 std::string VertexProgramDecompiler::GetTex()
@@ -210,17 +192,13 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 		{ "$am", std::bind(std::mem_fn(&VertexProgramDecompiler::AddAddrMask), this) },
 		{ "$a", std::bind(std::mem_fn(&VertexProgramDecompiler::AddAddrReg), this) },
 		{ "$vm", std::bind(std::mem_fn(&VertexProgramDecompiler::GetVecMask), this) },
-
 		{ "$t", std::bind(std::mem_fn(&VertexProgramDecompiler::GetTex), this) },
-
-		{ "$fa", [this]()->std::string { return std::to_string(GetAddr()); } },
-		{ "$f()", std::bind(std::mem_fn(&VertexProgramDecompiler::GetFunc), this) },
 		{ "$ifcond ", [this]() -> std::string
-	{
-		const std::string& cond = GetCond();
-		if (cond == "true") return "";
-		return "if(" + cond + ") ";
-	}
+			{
+				const std::string& cond = GetCond();
+				if (cond == "true") return "";
+				return "if(" + cond + ") ";
+			}
 		},
 		{ "$cond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetCond), this) },
 		{ "$ifbcond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetOptionalBranchCond), this) }
@@ -261,7 +239,7 @@ std::string VertexProgramDecompiler::GetCond()
 	swizzle += f[d0.mask_w];
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-	return "any(" + compareFunction(cond_string_table[d0.cond], "cc" + std::to_string(d0.cond_reg_sel_1) + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle) + ")";
+	return "any(" + compareFunction(cond_string_table[d0.cond], AddCondReg() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle) + ")";
 }
 
 std::string VertexProgramDecompiler::GetOptionalBranchCond()
@@ -315,7 +293,7 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-	std::string cond = compareFunction(cond_string_table[d0.cond], "cc" + std::to_string(d0.cond_reg_sel_1) + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
+	std::string cond = compareFunction(cond_string_table[d0.cond], AddCondReg() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
 
 	ShaderVariable dst_var(dst);
 	dst_var.symplify();
@@ -353,6 +331,11 @@ std::string VertexProgramDecompiler::AddAddrRegWithoutMask()
 	return m_parr.AddParam(PF_PARAM_NONE, getIntTypeName(4), "a" + std::to_string(d0.addr_reg_sel_1), getIntTypeName(4) + "(0, 0, 0, 0)");
 }
 
+std::string VertexProgramDecompiler::AddCondReg()
+{
+	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "cc" + std::to_string(d0.cond_reg_sel_1), getFloatTypeName(4) + "(0., 0., 0., 0.)");
+}
+
 u32 VertexProgramDecompiler::GetAddr()
 {
 	return (d2.iaddrh << 3) | d3.iaddrl;
@@ -377,37 +360,6 @@ void VertexProgramDecompiler::SetDSTSca(const std::string& code)
 std::string VertexProgramDecompiler::NotZeroPositive(const std::string& code)
 {
 	return "max(" + code + ", 0.0000000001)";
-}
-
-std::string VertexProgramDecompiler::BuildFuncBody(const FuncInfo& func)
-{
-	std::string result;
-
-	for (uint i = func.offset; i<m_body.size(); ++i)
-	{
-		if (i != func.offset)
-		{
-			uint call_func = -1;
-			for (uint j = 0; j<m_funcs.size(); ++j)
-			{
-				if (m_funcs[j].offset == i)
-				{
-					call_func = j;
-					break;
-				}
-			}
-
-			if (call_func != -1)
-			{
-				result += '\t' + m_funcs[call_func].name + "();\n";
-				break;
-			}
-		}
-
-		result += '\t' + m_body[i] + '\n';
-	}
-
-	return result;
 }
 
 std::string VertexProgramDecompiler::BuildCode()
@@ -459,20 +411,14 @@ std::string VertexProgramDecompiler::BuildCode()
 VertexProgramDecompiler::VertexProgramDecompiler(const RSXVertexProgram& prog) :
 	m_data(prog.data)
 {
-	m_funcs.emplace_back();
-	m_funcs[0].offset = 0;
-	m_funcs[0].name = "main";
-	m_funcs.emplace_back();
-	m_funcs[1].offset = 0;
-	m_funcs[1].name = "func0";
-	//m_cur_func->body = "\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n";
 }
 
 std::string VertexProgramDecompiler::Decompile()
 {
 	for (unsigned i = 0; i < PF_PARAM_COUNT; i++)
 		m_parr.params[i].clear();
-	m_instr_count = 0;
+
+	m_instr_count = m_data.size() / 4;
 
 	for (int i = 0; i < m_max_instr_count; ++i)
 	{
@@ -480,11 +426,10 @@ std::string VertexProgramDecompiler::Decompile()
 	}
 
 	bool is_has_BRA = false;
+	u32 i = 1;
 
-	for (u32 i = 1; m_instr_count < m_max_instr_count; m_instr_count++)
+	while (i < m_data.size())
 	{
-		m_cur_instr = &m_instructions[m_instr_count];
-
 		if (is_has_BRA)
 		{
 			d3.HEX = m_data[i];
@@ -497,6 +442,7 @@ std::string VertexProgramDecompiler::Decompile()
 			switch (d1.sca_opcode)
 			{
 			case RSX_SCA_OPCODE_BRA:
+				LOG_ERROR(RSX, "Unimplemented VP opcode BRA");
 				is_has_BRA = true;
 				m_jump_lvls.clear();
 				d3.HEX = m_data[++i];
@@ -505,6 +451,9 @@ std::string VertexProgramDecompiler::Decompile()
 
 			case RSX_SCA_OPCODE_BRB:
 			case RSX_SCA_OPCODE_BRI:
+			case RSX_SCA_OPCODE_CAL:
+			case RSX_SCA_OPCODE_CLI:
+			case RSX_SCA_OPCODE_CLB:
 				d2.HEX = m_data[i++];
 				d3.HEX = m_data[i];
 				i += 2;
@@ -517,22 +466,9 @@ std::string VertexProgramDecompiler::Decompile()
 				break;
 			}
 		}
-
-		if (d3.end)
-		{
-			m_instr_count++;
-
-			if (i < m_data.size())
-			{
-				LOG_ERROR(RSX, "Program end before buffer end.");
-			}
-
-			break;
-		}
 	}
 
 	uint jump_position = 0;
-
 	if (is_has_BRA || !m_jump_lvls.empty())
 	{
 		m_cur_instr = &m_instructions[0];
@@ -561,9 +497,38 @@ std::string VertexProgramDecompiler::Decompile()
 		return jump;
 	};
 
-	for (u32 i = 0; i < m_instr_count; ++i)
+	auto do_function_call = [this, &i](const std::string& condition)
 	{
-		m_cur_instr = &m_instructions[i];
+		//call function
+		m_call_stack.push(i+1);
+		AddCode(condition);
+		AddCode("{");
+		m_cur_instr->open_scopes++;
+		i = GetAddr();
+	};
+
+	auto do_function_return = [this, &i]()
+	{
+		if (!m_call_stack.empty())
+		{
+			//TODO: Conditional returns
+			i = m_call_stack.top();
+			m_call_stack.pop();
+			m_cur_instr->close_scopes++;
+			AddCode("}");
+		}
+		else
+		{
+			AddCode("$ifcond return");
+		}
+	};
+
+	for (i = 0; i < m_instr_count; ++i)
+	{
+		if (m_call_stack.empty())
+		{
+			m_cur_instr = &m_instructions[i];
+		}
 
 		d0.HEX = m_data[i * 4 + 0];
 		d1.HEX = m_data[i * 4 + 1];
@@ -576,15 +541,19 @@ std::string VertexProgramDecompiler::Decompile()
 		src[2].src2l = d3.src2l;
 		src[2].src2h = d2.src2h;
 
-		if (i && (is_has_BRA || std::find(m_jump_lvls.begin(), m_jump_lvls.end(), i) != m_jump_lvls.end()))
+		if (m_call_stack.empty())
 		{
-			m_cur_instr->close_scopes++;
-			AddCode("}");
-			AddCode("");
+			//TODO: Subroutines can also have arbitrary jumps!
+			if (i && (is_has_BRA || std::find(m_jump_lvls.begin(), m_jump_lvls.end(), i) != m_jump_lvls.end()))
+			{
+				m_cur_instr->close_scopes++;
+				AddCode("}");
+				AddCode("");
 
-			AddCode(fmt::format("if (jump_position <= %u)", jump_position++));
-			AddCode("{");
-			m_cur_instr->open_scopes++;
+				AddCode(fmt::format("if (jump_position <= %u)", jump_position++));
+				AddCode("{");
+				m_cur_instr->open_scopes++;
+			}
 		}
 
 		if (!d1.sca_opcode && !d1.vec_opcode)
@@ -644,39 +613,58 @@ std::string VertexProgramDecompiler::Decompile()
 			break;
 		case RSX_SCA_OPCODE_BRA:
 		{
-			AddCode("$if ($cond) //BRA");
-			AddCode("{");
-			m_cur_instr->open_scopes++;
-			AddCode("jump_position = $a$am;");
-			AddCode("continue;");
-			m_cur_instr->close_scopes++;
-			AddCode("}");
+			if (m_call_stack.empty())
+			{
+				AddCode("$if ($cond) //BRA");
+				AddCode("{");
+				m_cur_instr->open_scopes++;
+				AddCode("jump_position = $a$am;");
+				AddCode("continue;");
+				m_cur_instr->close_scopes++;
+				AddCode("}");
+			}
+			else
+			{
+				//TODO
+				LOG_ERROR(RSX, "BRA opcode found in subroutine!");
+			}
 		}
 		break;
 		case RSX_SCA_OPCODE_BRI: // works differently (BRI o[1].x(TR) L0;)
 		{
-			u32 jump_position = find_jump_lvl(GetAddr());
+			if (m_call_stack.empty())
+			{
+				u32 jump_position = find_jump_lvl(GetAddr());
 
-			AddCode("$ifcond //BRI");
-			AddCode("{");
-			m_cur_instr->open_scopes++;
-			AddCode(fmt::format("jump_position = %u;", jump_position));
-			AddCode("continue;");
-			m_cur_instr->close_scopes++;
-			AddCode("}");
+				AddCode("$ifcond //BRI");
+				AddCode("{");
+				m_cur_instr->open_scopes++;
+				AddCode(fmt::format("jump_position = %u;", jump_position));
+				AddCode("continue;");
+				m_cur_instr->close_scopes++;
+				AddCode("}");
+			}
+			else
+			{
+				//TODO
+				LOG_ERROR(RSX, "BRI opcode found in subroutine!");
+			}
 		}
 		break;
 		case RSX_SCA_OPCODE_CAL:
 			// works same as BRI
-			AddCode("$ifcond $f(); //CAL");
+			AddCode("//CAL");
+			do_function_call("$ifcond");
 			break;
 		case RSX_SCA_OPCODE_CLI:
 			// works same as BRI
-			AddCode("$ifcond $f(); //CLI");
+			LOG_ERROR(RSX, "Unimplemented VP opcode CLI");
+			AddCode("//CLI");
+			do_function_call("$ifcond");
 			break;
 		case RSX_SCA_OPCODE_RET:
 			// works like BRI but shorter (RET o[1].x(TR);)
-			AddCode("$ifcond return;");
+			do_function_return();
 			break;
 		case RSX_SCA_OPCODE_LG2: SetDSTSca("log2(" + NotZeroPositive("$s") + ")"); break;
 		case RSX_SCA_OPCODE_EX2: SetDSTSca("exp2($s)"); break;
@@ -686,29 +674,32 @@ std::string VertexProgramDecompiler::Decompile()
 			// works differently (BRB o[1].x !b0, L0;)
 		{
 			LOG_WARNING(RSX, "sca_opcode BRB, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
-			AddCode(fmt::format("//BRB opcode, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX));
-			
-			u32 jump_position = find_jump_lvl(GetAddr());
-			
-			AddCode("$ifbcond //BRB");
-			AddCode("{");
-			m_cur_instr->open_scopes++;
-			AddCode(fmt::format("jump_position = %u;", jump_position));
-			AddCode("continue;");
-			m_cur_instr->close_scopes++;
-			AddCode("}");
-			AddCode("");
+
+			if (m_call_stack.empty())
+			{
+				u32 jump_position = find_jump_lvl(GetAddr());
+
+				AddCode("$ifbcond //BRB");
+				AddCode("{");
+				m_cur_instr->open_scopes++;
+				AddCode(fmt::format("jump_position = %u;", jump_position));
+				AddCode("continue;");
+				m_cur_instr->close_scopes++;
+				AddCode("}");
+				AddCode("");
+			}
+			else
+			{
+				//TODO
+				LOG_ERROR(RSX, "BRA opcode found in subroutine!");
+			}
 
 			break;
 		}
 		case RSX_SCA_OPCODE_CLB: break;
 			// works same as BRB
-			LOG_WARNING(RSX, "sca_opcode CLB, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
 			AddCode("//CLB");
-			
-			AddCode("$ifbcond $f(); //CLB");
-			AddCode("");
-
+			do_function_call("$ifbcond");
 			break;
 		case RSX_SCA_OPCODE_PSH: break;
 			// works differently (PSH o[1].x A0;)
@@ -724,6 +715,21 @@ std::string VertexProgramDecompiler::Decompile()
 			LOG_ERROR(RSX, "Unknown vp sca_opcode 0x%x", u32{ d1.sca_opcode });
 			Emu.Pause();
 			break;
+		}
+
+		if (d3.end)
+		{
+			AddCode("//END");
+			if (!m_call_stack.empty())
+			{
+				LOG_ERROR(RSX, "vertex program end in subroutine call!");
+				do_function_return();
+			}
+			else if ((i + 1) < m_instr_count)
+			{
+				LOG_ERROR(RSX, "vertex program end in main body!");
+				AddCode("return;");
+			}
 		}
 	}
 
@@ -741,10 +747,6 @@ std::string VertexProgramDecompiler::Decompile()
 
 	m_jump_lvls.clear();
 	m_body.clear();
-	if (m_funcs.size() > 2)
-	{
-		m_funcs.erase(m_funcs.begin() + 2, m_funcs.end());
-	}
 
 	return result;
 }

@@ -341,12 +341,17 @@ namespace rsx
 				u32 load = rsx::method_registers.transform_constant_load();
 				if ((load + index) >= 512)
 				{
-					LOG_ERROR(RSX, "Invalid register index (load=%d, index=%d)", load, index);
+					LOG_ERROR(RSX, "Invalid transform register index (load=%d, index=%d)", load, index);
 					return;
 				}
 
-				rsx::method_registers.transform_constants[load + reg][subreg] = arg;
-				rsxthr->m_transform_constants_dirty = true;
+				auto &value = rsx::method_registers.transform_constants[load + reg][subreg];
+				if (value != arg)
+				{
+					//Transform constants invalidation is expensive (~8k bytes per update)
+					value = arg;
+					rsxthr->m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+				}
 			}
 		};
 
@@ -356,8 +361,19 @@ namespace rsx
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				method_registers.commit_4_transform_program_instructions(index);
+				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
 			}
 		};
+
+		void set_transform_program_start(thread* rsx, u32, u32)
+		{
+			rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
+		}
+
+		void set_vertex_attribute_output_mask(thread* rsx, u32, u32)
+		{
+			rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty | rsx::pipeline_state::fragment_program_dirty;
+		}
 
 		void set_begin_end(thread* rsxthr, u32 _reg, u32 arg)
 		{
@@ -520,6 +536,11 @@ namespace rsx
 			rsx->sync();
 		}
 
+		void invalidate_L2(thread* rsx, u32, u32)
+		{
+			rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
+		}
+
 		void set_surface_dirty_bit(thread* rsx, u32, u32)
 		{
 			rsx->m_rtts_dirty = true;
@@ -538,6 +559,7 @@ namespace rsx
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				rsx->m_textures_dirty[index] = true;
+				rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
 			}
 		};
 
@@ -564,6 +586,8 @@ namespace rsx
 				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x << 2);
 				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + index * 4, method_registers.blit_engine_output_location_nv3062());
 				vm::write32(address, arg);
+
+				rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
 			}
 		};
 	}
@@ -1688,6 +1712,9 @@ namespace rsx
 		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
 		bind<NV4097_ZCULL_SYNC, nv4097::sync>();
 		bind<NV4097_SET_CONTEXT_DMA_REPORT, nv4097::sync>();
+		bind<NV4097_INVALIDATE_L2, nv4097::invalidate_L2>();
+		bind<NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start>();
+		bind<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();

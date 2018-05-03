@@ -245,7 +245,8 @@ namespace rsx
 		m_rtts_dirty = true;
 		memset(m_textures_dirty, -1, sizeof(m_textures_dirty));
 		memset(m_vertex_textures_dirty, -1, sizeof(m_vertex_textures_dirty));
-		m_transform_constants_dirty = true;
+
+		m_graphics_state = pipeline_state::all_dirty;
 	}
 
 	thread::~thread()
@@ -1308,6 +1309,10 @@ namespace rsx
 
 	void thread::get_current_vertex_program()
 	{
+		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_dirty))
+			return;
+
+		m_graphics_state &= ~(rsx::pipeline_state::vertex_program_dirty);
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
 		current_vertex_program.skip_vertex_input_check = false;
@@ -1317,23 +1322,11 @@ namespace rsx
 
 		u32* ucode_src = rsx::method_registers.transform_program.data() + (transform_program_start * 4);
 		u32* ucode_dst = current_vertex_program.data.data();
-		u32  ucode_size = 0;
-		D3   d3;
 
-		for (int i = transform_program_start; i < 512; ++i)
-		{
-			ucode_size += 4;
-			memcpy(ucode_dst, ucode_src, 4 * sizeof(u32));
+		memcpy(ucode_dst, ucode_src, current_vertex_program.data.size() * sizeof(u32));
 
-			d3.HEX = ucode_src[3];
-			if (d3.end)
-				break;
-
-			ucode_src += 4;
-			ucode_dst += 4;
-		}
-
-		current_vertex_program.data.resize(ucode_size);
+		current_vp_metadata = program_hash_util::vertex_program_utils::analyse_vertex_program(current_vertex_program.data);
+		current_vertex_program.data.resize(current_vp_metadata.ucode_size);
 
 		const u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
 		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
@@ -1531,20 +1524,27 @@ namespace rsx
 
 	void thread::get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors)
 	{
+		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_dirty))
+			return;
+
+		m_graphics_state &= ~(rsx::pipeline_state::fragment_program_dirty);
 		auto &result = current_fragment_program = {};
 
 		const u32 shader_program = rsx::method_registers.shader_program_address();
 		if (shader_program == 0)
+		{
+			current_fp_metadata = {};
 			return;
+		}
 
 		const u32 program_location = (shader_program & 0x3) - 1;
 		const u32 program_offset = (shader_program & ~0x3);
 
 		result.addr = vm::base(rsx::get_address(program_offset, program_location));
-		auto program_start = program_hash_util::fragment_program_utils::get_fragment_program_start(result.addr);
+		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(result.addr);
 
-		result.addr = ((u8*)result.addr + program_start);
-		result.offset = program_offset + program_start;
+		result.addr = ((u8*)result.addr + current_fp_metadata.program_start_offset);
+		result.offset = program_offset + current_fp_metadata.program_start_offset;
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;
@@ -1556,7 +1556,6 @@ namespace rsx
 		result.redirected_textures = 0;
 		result.shadow_textures = 0;
 
-		std::array<texture_dimension_extended, 16> texture_dimensions;
 		const auto resolution_scale = rsx::get_resolution_scale();
 
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
@@ -1566,14 +1565,10 @@ namespace rsx
 			result.texture_scale[i][1] = sampler_descriptors[i]->scale_y;
 			result.texture_scale[i][2] = (f32)tex.remap();  //Debug value
 
-			if (!tex.enabled())
-			{
-				texture_dimensions[i] = texture_dimension_extended::texture_dimension_2d;
-			}
-			else
+			if (tex.enabled() && (current_fp_metadata.referenced_textures_mask & (1 << i)))
 			{
 				u32 texture_control = 0;
-				texture_dimensions[i] = sampler_descriptors[i]->image_type;
+				result.texture_dimensions |= ((u32)sampler_descriptors[i]->image_type << (i << 1));
 
 				if (tex.alpha_kill_enabled())
 				{
@@ -1648,8 +1643,6 @@ namespace rsx
 			}
 		}
 
-		result.set_texture_dimension(texture_dimensions);
-
 		//Sanity checks
 		if (result.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 		{
@@ -1673,10 +1666,10 @@ namespace rsx
 		const u32 program_offset = (shader_program & ~0x3);
 
 		result.addr = vm::base(rsx::get_address(program_offset, program_location));
-		auto program_start = program_hash_util::fragment_program_utils::get_fragment_program_start(result.addr);
+		auto program_info = program_hash_util::fragment_program_utils::analyse_fragment_program(result.addr);
 
-		result.addr = ((u8*)result.addr + program_start);
-		result.offset = program_offset + program_start;
+		result.addr = ((u8*)result.addr + program_info.program_start_offset);
+		result.offset = program_offset + program_info.program_start_offset;
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;
@@ -1688,7 +1681,6 @@ namespace rsx
 		result.redirected_textures = 0;
 		result.shadow_textures = 0;
 
-		std::array<texture_dimension_extended, 16> texture_dimensions;
 		const auto resolution_scale = rsx::get_resolution_scale();
 
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
@@ -1699,13 +1691,9 @@ namespace rsx
 			result.textures_alpha_kill[i] = 0;
 			result.textures_zfunc[i] = 0;
 
-			if (!tex.enabled())
+			if (tex.enabled() && (program_info.referenced_textures_mask & (1 << i)))
 			{
-				texture_dimensions[i] = texture_dimension_extended::texture_dimension_2d;
-			}
-			else
-			{
-				texture_dimensions[i] = tex.get_extended_texture_dimension();
+				result.texture_dimensions |= ((u32)tex.get_extended_texture_dimension() << (i << 1));
 
 				if (tex.alpha_kill_enabled())
 				{
@@ -1780,8 +1768,6 @@ namespace rsx
 				}
 			}
 		}
-
-		result.set_texture_dimension(texture_dimensions);
 	}
 
 	void thread::reset()

@@ -19,6 +19,7 @@
 #include "sys_process.h"
 #include "sys_prx.h"
 #include "sys_rsx.h"
+#include "sys_rsxaudio.h"
 #include "sys_rwlock.h"
 #include "sys_semaphore.h"
 #include "sys_spu.h"
@@ -612,16 +613,16 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func, null_func, null_func, null_func, null_func,  //644  DEPRECATED
 	null_func, null_func, null_func, null_func, null_func,  //649  DEPRECATED
 
-	null_func,//BIND_FUNC(sys_rsxaudio_initialize)          //650 (0x28A)
-	null_func,//BIND_FUNC(sys_rsxaudio_finalize)            //651 (0x28B)
-	null_func,//BIND_FUNC(sys_rsxaudio_import_shared_memory) //652 (0x28C)
-	null_func,//BIND_FUNC(sys_rsxaudio_unimport_shared_memory) //653 (0x28D)
-	null_func,//BIND_FUNC(sys_rsxaudio_create_connection)   //654 (0x28E)
-	null_func,//BIND_FUNC(sys_rsxaudio_close_connection)    //655 (0x28F)
-	null_func,//BIND_FUNC(sys_rsxaudio_prepare_process)     //656 (0x290)
-	null_func,//BIND_FUNC(sys_rsxaudio_start_process)       //657 (0x291)
-	null_func,//BIND_FUNC(sys_rsxaudio_stop_process)        //658 (0x292)
-	null_func,//BIND_FUNC(sys_rsxaudio_)                    //659 (0x293)
+	BIND_FUNC(sys_rsxaudio_initialize),                     //650 (0x28A)
+	BIND_FUNC(sys_rsxaudio_finalize),                       //651 (0x28B)
+	BIND_FUNC(sys_rsxaudio_import_shared_memory),           //652 (0x28C)
+	BIND_FUNC(sys_rsxaudio_unimport_shared_memory),         //653 (0x28D)
+	BIND_FUNC(sys_rsxaudio_create_connection),              //654 (0x28E)
+	BIND_FUNC(sys_rsxaudio_close_connection),               //655 (0x28F)
+	BIND_FUNC(sys_rsxaudio_prepare_process),                //656 (0x290)
+	BIND_FUNC(sys_rsxaudio_start_process),                  //657 (0x291)
+	BIND_FUNC(sys_rsxaudio_stop_process),                   //658 (0x292)
+	BIND_FUNC(sys_rsxaudio_),                               //659 (0x293)
 
 	uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, //660-665  UNS
 
