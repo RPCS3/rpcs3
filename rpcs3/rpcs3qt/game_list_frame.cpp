@@ -591,7 +591,13 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(removeGame, &QAction::triggered, [=]
 	{
-		QMessageBox* mb = new QMessageBox(QMessageBox::Question, tr("Confirm %1 Removal").arg(qstr(currGame.category)), tr("Permanently remove %1 from drive?").arg(qstr(currGame.name)), QMessageBox::Yes | QMessageBox::No, this);
+		if (currGame.path.empty())
+		{
+			LOG_FATAL(GENERAL, "Cannot delete game. Path is empty");
+			return;
+		}
+
+		QMessageBox* mb = new QMessageBox(QMessageBox::Question, tr("Confirm %1 Removal").arg(qstr(currGame.category)), tr("Permanently remove %0 from drive?\nPath: %1").arg(qstr(currGame.name)).arg(qstr(currGame.path)), QMessageBox::Yes | QMessageBox::No, this);
 		mb->setCheckBox(new QCheckBox(tr("Remove caches and custom config")));
 		mb->deleteLater();
 		if (mb->exec() == QMessageBox::Yes)
@@ -1020,14 +1026,8 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 	{ // For whatever reason, 0%x is division by zero.  Absolute nonsense by definition of modulus.  But, I'll acquiesce.
 		return;
 	}
-	if (maxCols == 0)
-	{
-		maxCols = 1;
-	}
-	if (maxCols > entries)
-	{
-		maxCols = entries;
-	}
+
+	maxCols = std::clamp(maxCols, 1, entries);
 
 	int needsExtraRow = (entries % maxCols) != 0;
 	int maxRows = needsExtraRow + entries / maxCols;
