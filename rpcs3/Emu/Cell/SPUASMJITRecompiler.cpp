@@ -25,9 +25,9 @@ const spu_decoder<spu_recompiler> s_spu_decoder;
 
 extern u64 get_timebased_time();
 
-std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_asmjit_recompiler(SPUThread& spu)
+std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_asmjit_recompiler()
 {
-	return std::make_unique<spu_recompiler>(spu);
+	return std::make_unique<spu_recompiler>();
 }
 
 spu_runtime::spu_runtime()
@@ -44,8 +44,7 @@ spu_runtime::spu_runtime()
 	m_map[std::vector<u32>()] = &spu_recompiler_base::dispatch;
 }
 
-spu_recompiler::spu_recompiler(SPUThread& spu)
-	: spu_recompiler_base(spu)
+spu_recompiler::spu_recompiler()
 {
 	if (!g_cfg.core.spu_shared_runtime)
 	{
@@ -1115,15 +1114,18 @@ void spu_recompiler::branch_fixed(u32 target)
 		c->cmp(SPU_OFF_32(state), 0);
 		c->jz(local->second);
 		c->mov(SPU_OFF_32(pc), target);
-		c->ret();
+		c->jmp(label_stop);
 		return;
 	}
 
-	if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
+	c->mov(x86::rax, x86::qword_ptr(*cpu, offset32(&SPUThread::jit_dispatcher) + target * 2));
+	c->mov(SPU_OFF_32(pc), target);
+	c->cmp(SPU_OFF_32(state), 0);
+	c->jnz(label_stop);
+
+	if (false)
 	{
-		// Don't generate patch points in this mode
-		c->mov(x86::rax, x86::qword_ptr(*cpu, offset32(&SPUThread::jit_dispatcher) + target * 2));
-		c->mov(SPU_OFF_32(pc), target);
+		// Don't generate patch points (TODO)
 		c->xor_(qw0->r32(), qw0->r32());
 		c->jmp(x86::rax);
 		return;
@@ -1132,40 +1134,17 @@ void spu_recompiler::branch_fixed(u32 target)
 	// Set patch address as a third argument and fallback to it
 	Label patch_point = c->newLabel();
 	c->lea(*qw0, x86::qword_ptr(patch_point));
-	c->mov(SPU_OFF_32(pc), target);
 
 	// Need to emit exactly one executable instruction within 8 bytes
 	c->align(kAlignCode, 8);
 	c->bind(patch_point);
+	//c->dq(0x841f0f);
+	c->jmp(imm_ptr(&spu_recompiler_base::branch));
 
-	const auto result = m_spurt->m_map.emplace(block(m_spu, target), nullptr);
-
-	if (result.second || !result.first->second)
-	{
-		if (result.first->first.size())
-		{
-			// Target block hasn't been compiled yet, record overwriting position
-			c->jmp(imm_ptr(&spu_recompiler_base::branch));
-		}
-		else
-		{
-			// SPURS Workload entry point or similar thing (emit 8-byte NOP)
-			c->dq(0x841f0f);
-		}
-	}
-	else
-	{
-		c->jmp(imm_ptr(result.first->second));
-	}
-
-	// Branch via dispatcher (occupies 16 bytes including padding)
+	// Fallback to the branch via dispatcher
 	c->align(kAlignCode, 8);
-	c->mov(x86::rax, x86::qword_ptr(*cpu, offset32(&SPUThread::jit_dispatcher) + target * 2));
 	c->xor_(qw0->r32(), qw0->r32());
 	c->jmp(x86::rax);
-	c->align(kAlignCode, 8);
-	c->dq(reinterpret_cast<u64>(&*result.first));
-	c->dq(reinterpret_cast<u64>(result.first->second));
 }
 
 void spu_recompiler::branch_indirect(spu_opcode_t op)

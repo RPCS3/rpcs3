@@ -35,7 +35,7 @@ class spu_recompiler : public spu_recompiler_base
 	std::shared_ptr<spu_runtime> m_spurt;
 
 public:
-	spu_recompiler(class SPUThread& spu);
+	spu_recompiler();
 
 	virtual spu_function_t get(u32 lsa) override;
 

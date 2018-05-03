@@ -531,13 +531,16 @@ SPUThread::SPUThread(const std::string& name, u32 index, lv2_spu_group* group)
 {
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
 	{
-		jit = spu_recompiler_base::make_asmjit_recompiler(*this);
+		jit = spu_recompiler_base::make_asmjit_recompiler();
 	}
 
 	if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
-		jit = spu_recompiler_base::make_llvm_recompiler(*this);
+		jit = spu_recompiler_base::make_llvm_recompiler();
 	}
+
+	// Initialize lookup table
+	jit_dispatcher.fill(&spu_recompiler_base::dispatch);
 }
 
 void SPUThread::push_snr(u32 number, u32 value)

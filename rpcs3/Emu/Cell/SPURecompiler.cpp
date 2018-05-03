@@ -17,11 +17,8 @@ extern u64 get_system_time();
 
 const spu_decoder<spu_itype> s_spu_itype;
 
-spu_recompiler_base::spu_recompiler_base(SPUThread& spu)
-	: m_spu(spu)
+spu_recompiler_base::spu_recompiler_base()
 {
-	// Initialize lookup table
-	spu.jit_dispatcher.fill(&dispatch);
 }
 
 spu_recompiler_base::~spu_recompiler_base()
@@ -30,7 +27,7 @@ spu_recompiler_base::~spu_recompiler_base()
 
 void spu_recompiler_base::dispatch(SPUThread& spu, void*, u8* rip)
 {
-	// If check failed after direct branch, patch it with single NOP
+	// If code verification failed from a patched patchpoint, clear it with a single NOP
 	if (rip)
 	{
 #ifdef _MSC_VER
@@ -63,16 +60,9 @@ void spu_recompiler_base::dispatch(SPUThread& spu, void*, u8* rip)
 
 void spu_recompiler_base::branch(SPUThread& spu, void*, u8* rip)
 {
-	const auto pair = *reinterpret_cast<std::pair<const std::vector<u32>, spu_function_t>**>(rip + 24);
-
-	spu.pc = pair->first[0];
-
-	const auto func = pair->second ? pair->second : spu.jit->compile(pair->first);
-
-	verify(HERE), func, pair->second == func;
-
-	// Overwrite function address
-	reinterpret_cast<atomic_t<spu_function_t>*>(rip + 32)->store(func);
+	// Compile
+	const auto func = verify(HERE, spu.jit->compile(block(spu, spu.pc, &spu.jit->m_block_info)));
+	spu.jit_dispatcher[spu.pc / 4] = spu.jit->get(spu.pc);
 
 	// Overwrite jump to this function with jump to the compiled function
 	const s64 rel = reinterpret_cast<u64>(func) - reinterpret_cast<u64>(rip) - 5;
@@ -98,14 +88,11 @@ void spu_recompiler_base::branch(SPUThread& spu, void*, u8* rip)
 	}
 	else
 	{
-		bytes[0] = 0xff; // jmp [rip+26]
-		bytes[1] = 0x25;
-		bytes[2] = 0x1a;
-		bytes[3] = 0x00;
-		bytes[4] = 0x00;
-		bytes[5] = 0x00;
-		bytes[6] = 0x90;
-		bytes[7] = 0x90;
+		// Far jumps: extremely rare and disabled due to implementation complexity
+		bytes[0] = 0x0f; // nop (8-byte form)
+		bytes[1] = 0x1f;
+		bytes[2] = 0x84;
+		std::memset(bytes + 3, 0x00, 5);
 	}
 
 #ifdef _MSC_VER
@@ -200,7 +187,7 @@ std::vector<u32> spu_recompiler_base::block(SPUThread& spu, u32 lsa, std::bitset
 		//case spu_itype::DFCMGT:
 		case spu_itype::DFTSV:
 		{
-			// Stop on invalid instructions (TODO)
+			// Stop before invalid instructions (TODO)
 			blocks[pos / 4] = true;
 			next_block();
 			continue;
@@ -211,7 +198,7 @@ std::vector<u32> spu_recompiler_base::block(SPUThread& spu, u32 lsa, std::bitset
 		case spu_itype::STOP:
 		case spu_itype::STOPD:
 		{
-			if (data == 0)
+			if (data == 0 || data == 0x80)
 			{
 				// Stop before null data
 				blocks[pos / 4] = true;
@@ -751,8 +738,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	}
 
 public:
-	spu_llvm_recompiler(class SPUThread& spu)
-		: spu_recompiler_base(spu)
+	spu_llvm_recompiler()
+		: spu_recompiler_base()
 		, cpu_translator(nullptr, false)
 	{
 		if (g_cfg.core.spu_shared_runtime)
@@ -1033,21 +1020,6 @@ public:
 				// Execute recompiler function (TODO)
 				(this->*g_decoder.decode(op))({op});
 			}
-		}
-
-		if (g_cfg.core.spu_debug)
-		{
-			log += '\n';
-
-			for (u32 i = 0; i < 128; i++)
-			{
-				if (m_gpr[i].first)
-				{
-					fmt::append(log, "$% -3u = %s\n", i, m_spu.gpr[i]);
-				}
-			}
-
-			log += '\n';
 		}
 
 		// Make fallthrough if necessary
@@ -2827,9 +2799,9 @@ public:
 	static const spu_decoder<spu_llvm_recompiler> g_decoder;
 };
 
-std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler(SPUThread& spu)
+std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler()
 {
-	return std::make_unique<spu_llvm_recompiler>(spu);
+	return std::make_unique<spu_llvm_recompiler>();
 }
 
 DECLARE(spu_llvm_recompiler::g_decoder);
