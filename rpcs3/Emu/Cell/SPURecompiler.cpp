@@ -1,14 +1,16 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Memory/Memory.h"
 #include "Crypto/sha1.h"
+#include "Utilities/StrUtil.h"
 
 #include "SPUThread.h"
 #include "SPUAnalyser.h"
 #include "SPUInterpreter.h"
 #include "SPUDisAsm.h"
 #include "SPURecompiler.h"
+#include "PPUAnalyser.h"
 #include <algorithm>
 #include <mutex>
 #include <thread>
@@ -16,6 +18,166 @@
 extern u64 get_system_time();
 
 const spu_decoder<spu_itype> s_spu_itype;
+
+spu_cache::spu_cache(const std::string& loc)
+	: m_file(loc, fs::read + fs::write + fs::create)
+{
+}
+
+spu_cache::~spu_cache()
+{
+}
+
+std::vector<std::vector<u32>> spu_cache::get()
+{
+	std::vector<std::vector<u32>> result;
+
+	if (!m_file)
+	{
+		return result;
+	}
+
+	m_file.seek(0);
+
+	// TODO: signal truncated or otherwise broken file
+	while (true)
+	{
+		be_t<u32> size;
+		be_t<u32> addr;
+		std::vector<u32> func;
+
+		if (!m_file.read(size) || !m_file.read(addr))
+		{
+			break;
+		}
+
+		func.resize(size + 1);
+		func[0] = addr;
+
+		if (m_file.read(func.data() + 1, func.size() * 4 - 4) != func.size() * 4 - 4)
+		{
+			break;
+		}
+
+		result.emplace_back(std::move(func));
+	}
+
+	return result;
+}
+
+void spu_cache::add(const std::vector<u32>& func)
+{
+	if (!m_file)
+	{
+		return;
+	}
+
+	be_t<u32> size = ::size32(func) - 1;
+	be_t<u32> addr = func[0];
+	m_file.write(size);
+	m_file.write(addr);
+	m_file.write(func.data() + 1, func.size() * 4 - 4);
+}
+
+void spu_cache::initialize()
+{
+	const auto _main = fxm::get<ppu_module>();
+
+	if (!_main || !g_cfg.core.spu_shared_runtime)
+	{
+		return;
+	}
+
+	// SPU cache file (version + block size type)
+	const std::string loc = _main->cache + u8"spu-§" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v0.dat";
+
+	auto cache = std::make_shared<spu_cache>(loc);
+
+	if (!*cache)
+	{
+		LOG_ERROR(SPU, "Failed to initialize SPU cache at: %s", loc);
+		return;
+	}
+
+	// Read cache
+	auto func_list = cache->get();
+
+	// Recompiler instance for cache initialization
+	std::unique_ptr<spu_recompiler_base> compiler;
+
+	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
+	{
+		compiler = spu_recompiler_base::make_asmjit_recompiler();
+	}
+
+	if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+	{
+		compiler = spu_recompiler_base::make_llvm_recompiler();
+	}
+
+	if (compiler)
+	{
+		compiler->init();
+	}
+
+	if (compiler && !func_list.empty())
+	{
+		// Fake LS
+		std::vector<be_t<u32>> ls(0x10000);
+
+		// Used to show progress
+		u64 timex = get_system_time();
+
+		// Build functions
+		for (auto&& func : func_list)
+		{
+			// Initialize LS with function data only
+			for (u32 i = 1, pos = func[0]; i < func.size(); i++, pos += 4)
+			{
+				ls[pos / 4] = se_storage<u32>::swap(func[i]);
+			}
+
+			// Call analyser
+			std::vector<u32> func2 = compiler->block(ls.data(), func[0]);
+
+			compiler->compile(std::move(func));
+
+			// Clear fake LS
+			for (u32 i = 1, pos = func2[0]; i < func2.size(); i++, pos += 4)
+			{
+				if (se_storage<u32>::swap(func2[i]) != ls[pos / 4])
+				{
+					LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed at 0x%x", func2[0], pos);
+				}
+
+				ls[pos / 4] = 0;
+			}
+
+			if (Emu.IsStopped())
+			{
+				LOG_ERROR(SPU, "SPU Runtime: Cache building aborted.");
+				return;
+			}
+
+			// Print progress every 400 ms
+			const u64 timed = get_system_time() - timex;
+
+			if (timed >= 400000)
+			{
+				LOG_SUCCESS(SPU, "Building SPU cache (%u/%u)...", &func - func_list.data(), func_list.size());
+				timex += 400000;
+			}
+		}
+
+		LOG_SUCCESS(SPU, "SPU Runtime: Built %u functions.", func_list.size());
+	}
+
+	// Register cache instance
+	fxm::import<spu_cache>([&]() -> std::shared_ptr<spu_cache>&&
+	{
+		return std::move(cache);
+	});
+}
 
 spu_recompiler_base::spu_recompiler_base()
 {
@@ -54,14 +216,14 @@ void spu_recompiler_base::dispatch(SPUThread& spu, void*, u8* rip)
 	}
 
 	// Compile
-	verify(HERE), spu.jit->compile(block(spu, spu.pc, &spu.jit->m_block_info));
+	verify(HERE), spu.jit->compile(spu.jit->block(spu._ptr<u32>(0), spu.pc));
 	spu.jit_dispatcher[spu.pc / 4] = spu.jit->get(spu.pc);
 }
 
 void spu_recompiler_base::branch(SPUThread& spu, void*, u8* rip)
 {
 	// Compile
-	const auto func = verify(HERE, spu.jit->compile(block(spu, spu.pc, &spu.jit->m_block_info)));
+	const auto func = verify(HERE, spu.jit->compile(spu.jit->block(spu._ptr<u32>(0), spu.pc)));
 	spu.jit_dispatcher[spu.pc / 4] = spu.jit->get(spu.pc);
 
 	// Overwrite jump to this function with jump to the compiled function
@@ -102,23 +264,16 @@ void spu_recompiler_base::branch(SPUThread& spu, void*, u8* rip)
 #endif
 }
 
-std::vector<u32> spu_recompiler_base::block(SPUThread& spu, u32 lsa, std::bitset<0x10000>* out_info)
+std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 {
-	// Block info (local)
-	std::bitset<0x10000> block_info{};
-
-	// Select one to use
-	std::bitset<0x10000>& blocks = out_info ? *out_info : block_info;
-
-	if (out_info)
-	{
-		out_info->reset();
-	}
-
 	// Result: addr + raw instruction data
 	std::vector<u32> result;
 	result.reserve(256);
 	result.push_back(lsa);
+
+	// Initialize block entries
+	std::bitset<0x10000>& blocks = m_block_info;
+	blocks.reset();
 	blocks.set(lsa / 4);
 
 	// Simple block entry workload list
@@ -139,13 +294,6 @@ std::vector<u32> spu_recompiler_base::block(SPUThread& spu, u32 lsa, std::bitset
 
 	// Associated constant values for 32-bit preferred slot
 	std::array<u32, 128> values;
-
-	if (spu.pc == lsa && g_cfg.core.spu_block_size == spu_block_size_type::giga)
-	{
-		// TODO: use current register values for speculations
-		vflags[0] = +vf::is_const;
-		values[0] = spu.gpr[0]._u32[3];
-	}
 
 	for (u32 wi = 0; wi < wl.size();)
 	{
@@ -172,7 +320,7 @@ std::vector<u32> spu_recompiler_base::block(SPUThread& spu, u32 lsa, std::bitset
 		};
 
 		const u32 pos = wl[wi];
-		const u32 data = spu._ref<u32>(pos);
+		const u32 data = ls[pos / 4];
 		const auto op = spu_opcode_t{data};
 
 		wl[wi] += 4;
@@ -272,7 +420,7 @@ std::vector<u32> spu_recompiler_base::block(SPUThread& spu, u32 lsa, std::bitset
 
 				for (u32 i = start; i < limit; i += 4)
 				{
-					const u32 target = spu._ref<u32>(i);
+					const u32 target = ls[i / 4];
 
 					if (target == 0 || target % 4)
 					{
@@ -542,7 +690,7 @@ std::vector<u32> spu_recompiler_base::block(SPUThread& spu, u32 lsa, std::bitset
 			if (result[i] == 0)
 			{
 				const u32 pos = lsa + (i - 1) * 4;
-				const u32 data = spu._ref<u32>(pos);
+				const u32 data = ls[pos / 4];
 				const auto type = s_spu_itype.decode(data);
 
 				// Allow only NOP or LNOP instructions in holes
@@ -597,13 +745,14 @@ class spu_llvm_runtime
 	// JIT instance (TODO: use small code model)
 	jit_compiler m_jit{{}, jit_compiler::cpu(g_cfg.core.llvm_cpu), true};
 
+	// Debug module output location
+	std::string m_cache_path;
+
 	friend class spu_llvm_recompiler;
 
 public:
 	spu_llvm_runtime()
 	{
-		LOG_SUCCESS(SPU, "SPU Recompiler Runtime (LLVM) initialized...");
-
 		// Initialize lookup table
 		for (auto& v : m_dispatcher)
 		{
@@ -612,6 +761,13 @@ public:
 
 		// Initialize "empty" block
 		m_map[std::vector<u32>()] = &spu_recompiler_base::dispatch;
+
+		// Clear LLVM output
+		m_cache_path = fxm::check_unlocked<ppu_module>()->cache + "llvm/";
+		fs::create_dir(m_cache_path);
+		fs::remove_all(m_cache_path, false);
+
+		LOG_SUCCESS(SPU, "SPU Recompiler Runtime (LLVM) initialized...");
 	}
 };
 
@@ -791,27 +947,28 @@ public:
 		}
 	}
 
-	virtual spu_function_t get(u32 lsa) override
+	virtual void init() override
 	{
 		// Initialize if necessary
 		if (!m_spurt)
 		{
+			m_cache = fxm::get<spu_cache>();
 			m_spurt = fxm::get_always<spu_llvm_runtime>();
 			m_context = m_spurt->m_jit.get_context();
 		}
+	}
+
+	virtual spu_function_t get(u32 lsa) override
+	{
+		init();
 
 		// Simple atomic read
 		return m_spurt->m_dispatcher[lsa / 4];
 	}
 
-	virtual spu_function_t compile(const std::vector<u32>& func) override
+	virtual spu_function_t compile(std::vector<u32>&& func_rv) override
 	{
-		// Initialize if necessary
-		if (!m_spurt)
-		{
-			m_spurt = fxm::get_always<spu_llvm_runtime>();
-			m_context = m_spurt->m_jit.get_context();
-		}
+		init();
 
 		// Don't lock without shared runtime
 		std::unique_lock<shared_mutex> lock(m_spurt->m_mutex, std::defer_lock);
@@ -821,13 +978,17 @@ public:
 			lock.lock();
 		}
 
-		// Try to find existing function, register new
-		auto& fn_location = m_spurt->m_map[func];
+		// Try to find existing function, register new one if necessary
+		const auto fn_info = m_spurt->m_map.emplace(std::move(func_rv), nullptr);
+
+		auto& fn_location = fn_info.first->second;
 
 		if (fn_location)
 		{
 			return fn_location;
 		}
+
+		auto& func = fn_info.first->first;
 
 		std::string hash;
 		{
@@ -855,7 +1016,7 @@ public:
 		}
 
 		// Create LLVM module
-		std::unique_ptr<Module> module = std::make_unique<Module>(hash, m_context);
+		std::unique_ptr<Module> module = std::make_unique<Module>(hash + ".obj", m_context);
 
 		// Initialize target
 		module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
@@ -1244,7 +1405,7 @@ public:
 		if (g_cfg.core.spu_debug)
 		{
 			// Testing only
-			m_spurt->m_jit.add(std::move(module), fmt::format("%sSPU/%s.obj", Emu.GetCachePath(), hash));
+			m_spurt->m_jit.add(std::move(module), m_spurt->m_cache_path);
 		}
 		else
 		{
@@ -1275,6 +1436,11 @@ public:
 		{
 			out.flush();
 			fs::file(Emu.GetCachePath() + "SPU.log", fs::write + fs::append).write(log);
+		}
+
+		if (m_cache)
+		{
+			m_cache->add(func);
 		}
 
 		return fn;
