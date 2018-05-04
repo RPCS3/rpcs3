@@ -132,6 +132,11 @@ namespace cfg
 			return m_value;
 		}
 
+		bool get() const
+		{
+			return m_value;
+		}
+
 		void from_default() override;
 
 		std::string to_string() const override
@@ -174,6 +179,11 @@ namespace cfg
 		}
 
 		operator T() const
+		{
+			return m_value;
+		}
+
+		T get() const
 		{
 			return m_value;
 		}
@@ -232,6 +242,11 @@ namespace cfg
 		}
 
 		operator int_type() const
+		{
+			return m_value;
+		}
+
+		int_type get() const
 		{
 			return m_value;
 		}
