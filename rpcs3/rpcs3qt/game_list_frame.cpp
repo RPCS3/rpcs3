@@ -925,7 +925,7 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paintConfigIcon)
 	{
 		int width = m_Icon_Size.width() * 0.2;
 		QPoint origin = QPoint(m_Icon_Size.width() - width, 0);
-		painter.drawImage(origin, QImage(":/Icons/cog_gray.png").scaled(QSize(width, width), Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+		painter.drawImage(origin, QImage(":/Icons/custom_config_2.png").scaled(QSize(width, width), Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 	}
 
 	painter.end();
@@ -952,7 +952,7 @@ void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled)
 	}
 	else if (enabled)
 	{
-		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/cog_black.png"));
+		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/custom_config.png"));
 	}
 	else
 	{
@@ -1150,7 +1150,7 @@ int game_list_frame::PopulateGameList()
 		custom_table_widget_item* title_item = new custom_table_widget_item(game->info.name);
 		if (game->hasCustomConfig)
 		{
-			title_item->setIcon(QIcon(":/Icons/cog_black.png"));
+			title_item->setIcon(QIcon(":/Icons/custom_config.png"));
 		}
 
 		// Serial
