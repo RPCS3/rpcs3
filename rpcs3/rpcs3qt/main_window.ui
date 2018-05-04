@@ -324,17 +324,15 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="toolbar_disc"/>
+   <addaction name="toolbar_open"/>
    <addaction name="toolbar_refresh"/>
    <addaction name="toolbar_fullscreen"/>
-   <addaction name="toolbar_snap"/>
    <addaction name="toolbar_stop"/>
    <addaction name="toolbar_start"/>
    <addaction name="toolbar_config"/>
    <addaction name="toolbar_controls"/>
    <addaction name="toolbar_list"/>
    <addaction name="toolbar_grid"/>
-   <addaction name="toolbar_sort"/>
   </widget>
   <action name="bootElfAct">
    <property name="text">
@@ -808,34 +806,13 @@
   <action name="toolbar_controls">
    <property name="icon">
     <iconset resource="../resources.qrc">
-     <normaloff>:/Icons/controls.png</normaloff>:/Icons/controls.png</iconset>
+     <normaloff>:/Icons/controllers.png</normaloff>:/Icons/controllers.png</iconset>
    </property>
    <property name="text">
     <string>Pads</string>
    </property>
    <property name="toolTip">
     <string>Configure controls</string>
-   </property>
-  </action>
-  <action name="toolbar_snap">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="../resources.qrc">
-     <normaloff>:/Icons/screenshot.png</normaloff>:/Icons/screenshot.png</iconset>
-   </property>
-   <property name="text">
-    <string>snap</string>
-   </property>
-   <property name="toolTip">
-    <string>Capture frame</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
-   <property name="iconVisibleInMenu">
-    <bool>true</bool>
    </property>
   </action>
   <action name="toolbar_fullscreen">
@@ -874,27 +851,6 @@
     <string>Switch to grid mode</string>
    </property>
   </action>
-  <action name="toolbar_sort">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="../resources.qrc">
-     <normaloff>:/Icons/sort.png</normaloff>:/Icons/sort.png</iconset>
-   </property>
-   <property name="text">
-    <string>sort</string>
-   </property>
-   <property name="toolTip">
-    <string>Sort options</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
-   <property name="iconVisibleInMenu">
-    <bool>true</bool>
-   </property>
-  </action>
   <action name="toolbar_refresh">
    <property name="icon">
     <iconset resource="../resources.qrc">
@@ -907,13 +863,13 @@
     <string>Refresh gamelist</string>
    </property>
   </action>
-  <action name="toolbar_disc">
+  <action name="toolbar_open">
    <property name="icon">
     <iconset resource="../resources.qrc">
-     <normaloff>:/Icons/disc.png</normaloff>:/Icons/disc.png</iconset>
+     <normaloff>:/Icons/open.png</normaloff>:/Icons/open.png</iconset>
    </property>
    <property name="text">
-    <string>Disc</string>
+    <string>Open</string>
    </property>
    <property name="toolTip">
     <string>Boot game</string>

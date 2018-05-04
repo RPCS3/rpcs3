@@ -701,7 +701,7 @@ void main_window::RepaintThumbnailIcons()
 
 	auto icon = [&newColor](const QString& path)
 	{
-		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), gui::mw_tool_icon_color, newColor);
+		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, newColor);
 	};
 
 #ifdef _WIN32
@@ -733,7 +733,7 @@ void main_window::RepaintToolBarIcons()
 
 	auto icon = [&newColor](const QString& path)
 	{
-		return gui::utils::get_colorized_icon(QIcon(path), gui::mw_tool_icon_color, newColor);
+		return gui::utils::get_colorized_icon(QIcon(path), Qt::black, newColor);
 	};
 
 	m_icon_play           = icon(":/Icons/play.png");
@@ -741,16 +741,14 @@ void main_window::RepaintToolBarIcons()
 	m_icon_stop           = icon(":/Icons/stop.png");
 	m_icon_restart        = icon(":/Icons/restart.png");
 	m_icon_fullscreen_on  = icon(":/Icons/fullscreen.png");
-	m_icon_fullscreen_off = icon(":/Icons/fullscreen_invert.png");
+	m_icon_fullscreen_off = icon(":/Icons/exit_fullscreen.png");
 
 	ui->toolbar_config  ->setIcon(icon(":/Icons/configure.png"));
 	ui->toolbar_controls->setIcon(icon(":/Icons/controllers.png"));
-	ui->toolbar_disc    ->setIcon(icon(":/Icons/disc.png"));
+	ui->toolbar_open    ->setIcon(icon(":/Icons/open.png"));
 	ui->toolbar_grid    ->setIcon(icon(":/Icons/grid.png"));
 	ui->toolbar_list    ->setIcon(icon(":/Icons/list.png"));
 	ui->toolbar_refresh ->setIcon(icon(":/Icons/refresh.png"));
-	ui->toolbar_snap    ->setIcon(icon(":/Icons/screenshot.png"));
-	ui->toolbar_sort    ->setIcon(icon(":/Icons/sort.png"));
 	ui->toolbar_stop    ->setIcon(icon(":/Icons/stop.png"));
 
 	if (Emu.IsRunning())
@@ -1382,7 +1380,7 @@ void main_window::CreateConnects()
 		m_categoryVisibleActGroup->setEnabled(m_is_list_mode);
 	});
 
-	connect(ui->toolbar_disc, &QAction::triggered, this, &main_window::BootGame);
+	connect(ui->toolbar_open, &QAction::triggered, this, &main_window::BootGame);
 	connect(ui->toolbar_refresh, &QAction::triggered, [=]() { m_gameListFrame->Refresh(true); });
 	connect(ui->toolbar_stop, &QAction::triggered, [=]() { Emu.Stop(); });
 	connect(ui->toolbar_start, &QAction::triggered, this, &main_window::OnPlayOrPause);
