@@ -395,6 +395,13 @@ void Emulator::Load(bool add_only)
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 		m_cat = psf::get_string(_psf, "CATEGORY");
 
+		for (auto& c : m_title)
+		{
+			// Replace newlines with spaces
+			if (c == '\n')
+				c = ' ';
+		}
+
 		if (!_psf.empty() && m_cat.empty())
 		{
 			LOG_FATAL(LOADER, "Corrupted PARAM.SFO found! Assuming category GD. Try reinstalling the game.");
