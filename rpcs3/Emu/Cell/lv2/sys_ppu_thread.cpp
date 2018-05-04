@@ -288,9 +288,17 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 		return CELL_EPERM;
 	}
 
+	u32 stack_base = vm::alloc(stacksize + 4096, vm::stack);
+	if (!stack_base)
+	{
+		return CELL_ENOMEM;
+	}
+
+	vm::page_protect(stack_base, 4096, 0, 0, vm::page_readable + vm::page_writable);
+
 	const u32 tid = idm::import<ppu_thread>([&]()
 	{
-		auto ppu = std::make_shared<ppu_thread>(threadname ? threadname.get_ptr() : "", prio, stacksize);
+		auto ppu = std::make_shared<ppu_thread>(threadname ? threadname.get_ptr() : "", prio, stacksize, stack_base + 4096);
 
 		if ((flags & SYS_PPU_THREAD_CREATE_JOINABLE) != 0)
 		{
@@ -319,6 +327,7 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 
 	if (!tid)
 	{
+		vm::dealloc(stack_base, vm::stack);
 		return CELL_EAGAIN;
 	}
 

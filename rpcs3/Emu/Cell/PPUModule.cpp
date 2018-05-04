@@ -1472,6 +1472,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	case 0x50: primary_stacksize = 256 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_256K
 	case 0x60: primary_stacksize = 512 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_512K
 	case 0x70: primary_stacksize = 1024 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_1M
+	default:   primary_stacksize = std::clamp<u32>(primary_stacksize, 0x8000, 0x100000); break;
 	}
 
 	// Initialize main thread

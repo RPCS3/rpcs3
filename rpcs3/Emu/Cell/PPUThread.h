@@ -41,7 +41,7 @@ public:
 	virtual void cpu_unmem() override;
 	virtual ~ppu_thread() override;
 
-	ppu_thread(const std::string& name, u32 prio = 0, u32 stack = 0x10000);
+	ppu_thread(const std::string& name, u32 prio = 0, u32 stack = 0x10000, u32 stack_addr = 0);
 
 	u64 gpr[32] = {}; // General-Purpose Registers
 	f64 fpr[32] = {}; // Floating Point Registers

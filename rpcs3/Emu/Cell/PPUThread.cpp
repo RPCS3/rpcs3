@@ -358,11 +358,11 @@ void ppu_thread::on_init(const std::shared_ptr<void>& _this)
 
 		// Make the gap inaccessible
 		vm::page_protect(new_stack_base, 4096, 0, 0, vm::page_readable + vm::page_writable);
-
-		gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
-
-		cpu_thread::on_init(_this);
 	}
+
+	gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
+
+	cpu_thread::on_init(_this);
 }
 
 //sets breakpoint, does nothing if there is a breakpoint there already
@@ -703,11 +703,11 @@ ppu_thread::~ppu_thread()
 	}
 }
 
-ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
+ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack, u32 stack_addr)
 	: cpu_thread(idm::last_id())
 	, prio(prio)
-	, stack_size(stack >= 0x1000 ? ::align(std::min<u32>(stack, 0x100000), 0x1000) : 0x4000)
-	, stack_addr(0)
+	, stack_size(stack >= 0x1000 ? ::align(stack, 0x1000) : 0x4000)
+	, stack_addr(stack_addr)
 	, start_time(get_system_time())
 	, m_name(name)
 {
