@@ -134,6 +134,7 @@ namespace fmt
 	}
 
 	std::string to_upper(const std::string& string);
+	std::string to_lower(const std::string& string);
 
 	bool match(const std::string& source, const std::string& mask);
 }
