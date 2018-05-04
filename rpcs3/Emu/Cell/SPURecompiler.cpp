@@ -198,7 +198,7 @@ std::vector<u32> spu_recompiler_base::block(SPUThread& spu, u32 lsa, std::bitset
 		case spu_itype::STOP:
 		case spu_itype::STOPD:
 		{
-			if (data == 0 || data == 0x80)
+			if (data == 0 || data == 3)
 			{
 				// Stop before null data
 				blocks[pos / 4] = true;
@@ -267,12 +267,14 @@ std::vector<u32> spu_recompiler_base::block(SPUThread& spu, u32 lsa, std::bitset
 				std::basic_string<u32> jt_rel;
 				const u32 start = pos + 4;
 				const u32 limit = 0x40000;
+				u64 dabs = 0;
+				u64 drel = 0;
 
 				for (u32 i = start; i < limit; i += 4)
 				{
 					const u32 target = spu._ref<u32>(i);
 
-					if (target % 4)
+					if (target == 0 || target % 4)
 					{
 						// Address cannot be misaligned: abort
 						break;
@@ -297,22 +299,62 @@ std::vector<u32> spu_recompiler_base::block(SPUThread& spu, u32 lsa, std::bitset
 					}
 				}
 
-				// Add detected jump table blocks (TODO: avoid adding both)
+				// Choose position after the jt as an anchor and compute the average distance
+				for (u32 target : jt_abs)
+				{
+					dabs += std::abs(static_cast<s32>(target - start - jt_abs.size() * 4));
+				}
+
+				for (u32 target : jt_rel)
+				{
+					drel += std::abs(static_cast<s32>(target - start - jt_rel.size() * 4));
+				}
+
+				// Add detected jump table blocks
 				if (jt_abs.size() >= 3 || jt_rel.size() >= 3)
 				{
+					if (jt_abs.size() == jt_rel.size())
+					{
+						if (dabs < drel)
+						{
+							jt_rel.clear();
+						}
+
+						if (dabs > drel)
+						{
+							jt_abs.clear();
+						}
+					}
+
 					if (jt_abs.size() >= jt_rel.size())
 					{
-						for (u32 target : jt_abs)
+						const u32 new_size = (start - lsa) / 4 + 1 + jt_abs.size();
+
+						if (result.size() < new_size)
 						{
-							add_block(target);
+							result.resize(new_size);
+						}
+
+						for (u32 i = 0; i < jt_abs.size(); i++)
+						{
+							add_block(jt_abs[i]);
+							result[(start - lsa) / 4 + 1 + i] = se_storage<u32>::swap(jt_abs[i]);
 						}
 					}
 
 					if (jt_rel.size() >= jt_abs.size())
 					{
-						for (u32 target : jt_rel)
+						const u32 new_size = (start - lsa) / 4 + 1 + jt_rel.size();
+
+						if (result.size() < new_size)
 						{
-							add_block(target);
+							result.resize(new_size);
+						}
+
+						for (u32 i = 0; i < jt_rel.size(); i++)
+						{
+							add_block(jt_rel[i]);
+							result[(start - lsa) / 4 + 1 + i] = se_storage<u32>::swap(jt_rel[i] - start);
 						}
 					}
 				}
