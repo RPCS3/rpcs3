@@ -32,6 +32,10 @@
 
 #include "Utilities/GDBDebugServer.h"
 
+#include "Utilities/sysinfo.h"
+
+bool g_use_rtm;
+
 cfg_root g_cfg;
 
 std::string g_cfg_defaults;
@@ -439,6 +443,20 @@ void Emulator::Load(bool add_only)
 		}
 
 		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", g_cfg.to_string());
+		
+		// Set RTM usage
+		g_use_rtm = utils::has_rtm() && (utils::is_haswell_or_broadwell() == utils::ModelNotHaswellBroadwell || g_cfg.core.enable_TSX);
+		if (utils::has_rtm())
+		{
+			if (g_use_rtm)
+			{
+				LOG_NOTICE(GENERAL, "TSX enabled");
+			}
+			else
+			{
+				LOG_NOTICE(GENERAL, "TSX disabled");
+			}
+		}
 
 		// Load patches from different locations
 		fxm::check_unlocked<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
