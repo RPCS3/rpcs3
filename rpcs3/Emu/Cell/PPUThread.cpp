@@ -54,8 +54,6 @@
 #include <cfenv>
 #include "Utilities/GSL.h"
 
-const bool s_use_rtm = utils::has_rtm();
-
 const bool s_use_ssse3 =
 #ifdef _MSC_VER
 	utils::has_ssse3();
@@ -962,7 +960,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		return false;
 	}
 
-	if (s_use_rtm && utils::transaction_enter())
+	if (g_use_rtm && utils::transaction_enter())
 	{
 		if (!vm::g_mutex.is_lockable() || vm::g_mutex.is_reading())
 		{
@@ -1006,7 +1004,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return false;
 	}
 
-	if (s_use_rtm && utils::transaction_enter())
+	if (g_use_rtm && utils::transaction_enter())
 	{
 		if (!vm::g_mutex.is_lockable() || vm::g_mutex.is_reading())
 		{
