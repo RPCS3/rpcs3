@@ -23,8 +23,6 @@
 #include <atomic>
 #include <thread>
 
-const bool s_use_rtm = utils::has_rtm();
-
 const bool s_use_ssse3 =
 #ifdef _MSC_VER
 	utils::has_ssse3();
@@ -855,7 +853,7 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 	vm::reservation_acquire(addr, 128);
 
 	// Store unconditionally
-	if (s_use_rtm && utils::transaction_enter())
+	if (g_use_rtm && utils::transaction_enter())
 	{
 		// First transaction attempt
 		if (!vm::g_mutex.is_lockable() || vm::g_mutex.is_reading())
@@ -869,7 +867,7 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 		_xend();
 		return;
 	}
-	else if (s_use_rtm)
+	else if (g_use_rtm)
 	{
 		vm::writer_lock lock(0);
 
@@ -944,7 +942,7 @@ void SPUThread::do_mfc(bool wait)
 		{
 			if (!test(ch_stall_mask, mask))
 			{
-				if (s_use_rtm)
+				if (g_use_rtm)
 				{
 					if (do_list_transfer(args))
 					{
@@ -976,7 +974,7 @@ void SPUThread::do_mfc(bool wait)
 
 		if (args.size)
 		{
-			if (s_use_rtm)
+			if (g_use_rtm)
 			{
 				do_dma_transfer(args);
 			}
@@ -1116,7 +1114,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 			busy_wait(300);
 		}
 
-		if (s_use_rtm && utils::transaction_enter())
+		if (g_use_rtm && utils::transaction_enter())
 		{
 			rtime = vm::reservation_acquire(raddr, 128);
 
@@ -1152,7 +1150,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		if (raddr == args.eal && rtime == vm::reservation_acquire(raddr, 128))
 		{
 			// TODO: vm::check_addr
-			if (s_use_rtm && utils::transaction_enter())
+			if (g_use_rtm && utils::transaction_enter())
 			{
 				// First transaction attempt
 				if (!vm::g_mutex.is_lockable() || vm::g_mutex.is_reading())
@@ -1172,7 +1170,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 				_xend();
 				tx_success++;
 			}
-			else if (s_use_rtm)
+			else if (g_use_rtm)
 			{
 				// Second transaction attempt
 				vm::writer_lock lock(0);
@@ -1299,7 +1297,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 			{
 				if (LIKELY(args.size))
 				{
-					if (s_use_rtm)
+					if (g_use_rtm)
 					{
 						do_dma_transfer(args);
 						return true;
@@ -1344,7 +1342,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		{
 			if (LIKELY(do_dma_check(args) && !test(ch_stall_mask, 1u << args.tag)))
 			{
-				if (s_use_rtm)
+				if (g_use_rtm)
 				{
 					if (LIKELY(do_list_transfer(args)))
 					{
@@ -1498,7 +1496,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	{
 		for (int i = 0; i < 10 && channel.get_count() == 0; i++)
 		{
-			// if (!s_use_rtm && mfc_size && !i)
+			// if (!g_use_rtm && mfc_size && !i)
 			// {
 			// 	do_mfc();
 			// }
@@ -1534,7 +1532,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 		{
 			for (int i = 0; i < 10 && ch_in_mbox.get_count() == 0; i++)
 			{
-				// if (!s_use_rtm && mfc_size && !i)
+				// if (!g_use_rtm && mfc_size && !i)
 				// {
 				// 	do_mfc();
 				// }
@@ -1565,7 +1563,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case MFC_RdTagStat:
 	{
-		// if (!s_use_rtm && mfc_size)
+		// if (!g_use_rtm && mfc_size)
 		// {
 		// 	do_mfc();
 		// }
@@ -1642,7 +1640,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case SPU_RdEventStat:
 	{
-		// if (!s_use_rtm && mfc_size)
+		// if (!g_use_rtm && mfc_size)
 		// {
 		// 	do_mfc();
 		// }
@@ -1707,7 +1705,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrOutIntrMbox:
 	{
-		// if (!s_use_rtm && mfc_size)
+		// if (!g_use_rtm && mfc_size)
 		// {
 		// 	do_mfc(false);
 		// }
@@ -1860,7 +1858,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrOutMbox:
 	{
-		// if (!s_use_rtm && mfc_size)
+		// if (!g_use_rtm && mfc_size)
 		// {
 		// 	do_mfc(false);
 		// }
@@ -1908,7 +1906,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 			break;
 		}
 
-		// if (!s_use_rtm && mfc_size)
+		// if (!g_use_rtm && mfc_size)
 		// {
 		// 	do_mfc(false);
 		// }
@@ -2035,7 +2033,7 @@ bool SPUThread::stop_and_signal(u32 code)
 {
 	LOG_TRACE(SPU, "stop_and_signal(code=0x%x)", code);
 
-	// if (!s_use_rtm && mfc_size)
+	// if (!g_use_rtm && mfc_size)
 	// {
 	// 	do_mfc();
 	// }
