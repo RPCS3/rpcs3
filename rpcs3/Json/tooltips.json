@@ -37,6 +37,7 @@
 	"debug": {
 		"ppuDebug": "Never use this.",
 		"spuDebug": "Never use this.",
+		"enableTSX": "Force usage of TSX instructions on Haswell/Broadwell CPUs.\nOn older hardware this can lead to system instability, use it with caution.",
 		"readColor": "Never use this.",
 		"dumpDepth": "Never use this.",
 		"readDepth": "Never use this.",
