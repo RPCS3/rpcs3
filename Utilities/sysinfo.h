@@ -40,6 +40,15 @@ namespace utils
 	bool has_512();
 
 	bool has_xop();
+	
+	int is_haswell_or_broadwell();
+	
+	enum haswell_broadwell
+	{
+		ModelNotHaswellBroadwell,
+		ModelHaswell,
+		ModelBroadwell
+	};
 
 	FORCE_INLINE bool transaction_enter(uint* out = nullptr)
 	{
