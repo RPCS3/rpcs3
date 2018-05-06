@@ -81,6 +81,14 @@ namespace rsx
 		all_dirty = 255
 	};
 
+	enum FIFO_state : u8
+	{
+		running = 0,
+		empty = 1, //PUT == GET
+		spinning = 2, //Puller continously jumps to self addr (synchronization technique)
+		nop = 3, //Puller is processing a NOP command
+	};
+
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
 	u32 get_address(u32 offset, u32 location);
@@ -302,7 +310,7 @@ namespace rsx
 			atomic_t<u64> idle_time{ 0 };  //Time spent idling in microseconds
 			u64 last_update_timestamp = 0; //Timestamp of last load update
 			u64 FIFO_idle_timestamp = 0; //Timestamp of when FIFO queue becomes idle
-			bool FIFO_is_idle = false; //True if FIFO is in idle state
+			FIFO_state state = FIFO_state::running;
 			u32 approximate_load = 0;
 			u32 sampled_frames = 0;
 		}

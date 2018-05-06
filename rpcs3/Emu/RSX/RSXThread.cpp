@@ -490,7 +490,7 @@ namespace rsx
 			}
 
 			//Execute backend-local tasks first
-			do_local_task(performance_counters.FIFO_is_idle);
+			do_local_task(performance_counters.state != FIFO_state::running);
 
 			//Update sub-units
 			zcull_ctrl->update(this);
@@ -510,16 +510,23 @@ namespace rsx
 
 				sync_point_request = false;
 			}
-			else if (performance_counters.FIFO_is_idle)
+			else if (performance_counters.state != FIFO_state::running)
 			{
-				//Registers not updated, do housekeeping since queue is idle
-				if (has_deferred_call)
+				if (performance_counters.state != FIFO_state::nop)
 				{
-					flush_command_queue();
-				}
-				else
-				{
-					do_internal_task();
+					if (has_deferred_call)
+					{
+						//Flush if spinning or queue is empty
+						flush_command_queue();
+					}
+					else if (zcull_ctrl->has_pending())
+					{
+						zcull_ctrl->sync(this);
+					}
+					else
+					{
+						//do_internal_task();
+					}
 				}
 			}
 
@@ -529,10 +536,10 @@ namespace rsx
 
 			if (put == internal_get || !Emu.IsRunning())
 			{
-				if (!performance_counters.FIFO_is_idle)
+				if (performance_counters.state == FIFO_state::running)
 				{
 					performance_counters.FIFO_idle_timestamp = get_system_time();
-					performance_counters.FIFO_is_idle = true;
+					performance_counters.state = FIFO_state::empty;
 				}
 
 				continue;
@@ -569,12 +576,13 @@ namespace rsx
 				u32 offs = cmd & 0x1ffffffc;
 				if (offs == internal_get.load())
 				{
-					//Jump to self
-					if (!performance_counters.FIFO_is_idle)
+					//Jump to self. Often preceded by NOP
+					if (performance_counters.state == FIFO_state::running)
 					{
 						performance_counters.FIFO_idle_timestamp = get_system_time();
-						performance_counters.FIFO_is_idle = true;
 					}
+
+					performance_counters.state = FIFO_state::spinning;
 				}
 
 				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
@@ -586,12 +594,13 @@ namespace rsx
 				u32 offs = cmd & 0xfffffffc;
 				if (offs == internal_get.load())
 				{
-					//Jump to self
-					if (!performance_counters.FIFO_is_idle)
+					//Jump to self. Often preceded by NOP
+					if (performance_counters.state == FIFO_state::running)
 					{
 						performance_counters.FIFO_idle_timestamp = get_system_time();
-						performance_counters.FIFO_is_idle = true;
 					}
+
+					performance_counters.state = FIFO_state::spinning;
 				}
 
 				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
@@ -623,10 +632,10 @@ namespace rsx
 			}
 			if (cmd == 0) //nop
 			{
-				if (!performance_counters.FIFO_is_idle)
+				if (performance_counters.state == FIFO_state::running)
 				{
 					performance_counters.FIFO_idle_timestamp = get_system_time();
-					performance_counters.FIFO_is_idle = true;
+					performance_counters.state = FIFO_state::nop;
 				}
 
 				internal_get += 4;
@@ -675,11 +684,20 @@ namespace rsx
 			if (internal_get < put && ((internal_get + (count + 1) * 4) > put))
 				LOG_ERROR(RSX, "Get pointer jumping over put pointer! This is bad!");
 
-			if (performance_counters.FIFO_is_idle)
+			if (performance_counters.state != FIFO_state::running)
 			{
 				//Update performance counters with time spent in idle mode
-				performance_counters.FIFO_is_idle = false;
 				performance_counters.idle_time += (get_system_time() - performance_counters.FIFO_idle_timestamp);
+
+				if (performance_counters.state == FIFO_state::spinning)
+				{
+					//TODO: Properly simulate FIFO wake delay.
+					//NOTE: The typical spin setup is a NOP followed by a jump-to-self
+					//NOTE: There is a small delay when the jump address is dynamically edited by cell
+					busy_wait(3000);
+				}
+
+				performance_counters.state = FIFO_state::running;
 			}
 
 			for (u32 i = 0; i < count; i++)
@@ -1230,12 +1248,6 @@ namespace rsx
 
 	void thread::do_internal_task()
 	{
-		if (zcull_ctrl->has_pending())
-		{
-			zcull_ctrl->sync(this);
-			return;
-		}
-
 		if (m_internal_tasks.empty())
 		{
 			std::this_thread::yield();
