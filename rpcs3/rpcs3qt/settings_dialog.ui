@@ -1288,6 +1288,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="useRichPresence">
+                <property name="text">
+                 <string>Use Discord Rich Presence</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <spacer name="verticalSpacer_13">
                 <property name="orientation">
                  <enum>Qt::Vertical</enum>
