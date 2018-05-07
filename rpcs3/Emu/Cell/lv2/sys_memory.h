@@ -83,6 +83,21 @@ struct lv2_memory_container
 	}
 };
 
+struct lv2_memory_alloca
+{
+	static const u32 id_base = 0x1;
+	static const u32 id_step = 0x1;
+	static const u32 id_count = 0x1000;
+
+	const u32 size; // Memory size
+	const u32 align; // Alignment required
+	const u64 flags;
+	const std::shared_ptr<lv2_memory_container> ct;
+	const std::shared_ptr<utils::shm> shm;
+
+	lv2_memory_alloca(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container>& ct);
+};
+
 // SysCalls
 error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr);
 error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr);
