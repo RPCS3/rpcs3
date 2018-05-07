@@ -22,6 +22,7 @@
 #include <cfenv>
 #include <atomic>
 #include <thread>
+#include <algorithm>
 
 const bool s_use_rtm = utils::has_rtm();
 
@@ -46,6 +47,7 @@ extern u64 get_timebased_time();
 extern u64 get_system_time();
 
 extern thread_local u64 g_tls_fault_spu;
+namespace vm { extern class SPUThread* g_waiters[6]; };
 
 // Table of identical interpreter functions when precise contains SSE2 version, and fast contains SSSE3 functions
 const std::pair<spu_inter_func_t, spu_inter_func_t> s_spu_dispatch_table[]
@@ -1067,31 +1069,6 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 
 		raddr = args.eal;
 
-		const bool is_polling = false; // TODO
-
-		if (is_polling)
-		{
-			vm::waiter waiter;
-			waiter.owner = this;
-			waiter.addr  = raddr;
-			waiter.size  = 128;
-			waiter.stamp = rtime;
-			waiter.data  = rdata.data();
-			waiter.init();
-
-			while (vm::reservation_acquire(raddr, 128) == waiter.stamp && rdata == data)
-			{
-				vm::temporary_unlock(*this);
-
-				if (test(state, cpu_flag::stop))
-				{
-					break;
-				}
-
-				thread_ctrl::wait_for(100);
-			}
-		}
-
 		// Do several attemps
 		for (uint i = 0; i < 5; i++)
 		{
@@ -1397,7 +1374,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		args.cmd, args.lsa, args.eal, args.tag, args.size);
 }
 
-u32 SPUThread::get_events(bool waiting)
+u32 SPUThread::get_events()
 {
 	// Check reservation status and set SPU_EVENT_LR if lost
 	if (raddr && (vm::reservation_acquire(raddr, sizeof(rdata)) != rtime || rdata != vm::_ref<decltype(rdata)>(raddr)))
@@ -1416,17 +1393,7 @@ u32 SPUThread::get_events(bool waiting)
 	}
 
 	// Simple polling or polling with atomically set/removed SPU_EVENT_WAITING flag
-	return !waiting ? ch_event_stat & ch_event_mask : ch_event_stat.atomic_op([&](u32& stat) -> u32
-	{
-		if (u32 res = stat & ch_event_mask)
-		{
-			stat &= ~SPU_EVENT_WAITING;
-			return res;
-		}
-
-		stat |= SPU_EVENT_WAITING;
-		return 0;
-	});
+	return ch_event_stat & ch_event_mask;
 }
 
 void SPUThread::set_events(u32 mask)
@@ -1655,19 +1622,13 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 			return true;
 		}
 
-		vm::waiter waiter;
-
 		if (ch_event_mask & SPU_EVENT_LR)
 		{
-			waiter.owner = this;
-			waiter.addr = raddr;
-			waiter.size = 128;
-			waiter.stamp = rtime;
-			waiter.data = rdata.data();
-			waiter.init();
+			*std::find(vm::g_waiters, vm::g_waiters + 5, nullptr) = this; // Set waiting SPU thread
+			_mm_sfence();
 		}
 
-		while (!(res = get_events(true)))
+		while (!(res = get_events()))
 		{
 			if (test(state & cpu_flag::stop))
 			{
@@ -1675,6 +1636,11 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 			}
 
 			thread_ctrl::wait_for(100);
+		}
+	
+		if (ch_event_mask & SPU_EVENT_LR)
+		{
+			*std::find(vm::g_waiters, vm::g_waiters + 5, this) = nullptr; // Remove waiter
 		}
 
 		out = res;

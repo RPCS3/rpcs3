@@ -40,24 +40,6 @@ namespace vm
 		page_allocated          = (1 << 7),
 	};
 
-	struct waiter
-	{
-		named_thread* owner;
-		u32 addr;
-		u32 size;
-		u64 stamp;
-		const void* data;
-
-		waiter() = default;
-
-		waiter(const waiter&) = delete;
-
-		void init();
-		void test() const;
-
-		~waiter();
-	};
-
 	// Address type
 	enum addr_t : u32 {};
 
@@ -116,9 +98,6 @@ namespace vm
 
 	// Check and notify memory changes at address
 	void notify(u32 addr, u32 size);
-
-	// Check and notify memory changes
-	void notify_all();
 
 	// Change memory protection of specified memory region
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);

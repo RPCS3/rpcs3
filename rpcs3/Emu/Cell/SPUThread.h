@@ -563,7 +563,7 @@ public:
 	spu_channel ch_snr1; // SPU Signal Notification Register 1
 	spu_channel ch_snr2; // SPU Signal Notification Register 2
 
-	atomic_t<u32> ch_event_mask;
+	u32 ch_event_mask;
 	atomic_t<u32> ch_event_stat;
 	atomic_t<bool> interrupts_enabled;
 
@@ -606,7 +606,7 @@ public:
 	u32 get_mfc_completed();
 
 	bool process_mfc_cmd(spu_mfc_cmd args);
-	u32 get_events(bool waiting = false);
+	u32 get_events();
 	void set_events(u32 mask);
 	void set_interrupt_status(bool enable);
 	u32 get_ch_count(u32 ch);
