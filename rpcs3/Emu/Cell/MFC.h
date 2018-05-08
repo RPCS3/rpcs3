@@ -28,8 +28,9 @@ enum MFC : u8
 };
 
 // Atomic Status Update
-enum : u32
+enum : s32
 {
+	MFC_ATOMIC_EMPTY = -1, // Originally unused, value is used when the atomic channel is empty
 	MFC_PUTLLC_SUCCESS = 0,
 	MFC_PUTLLC_FAILURE = 1, // reservation was lost
 	MFC_PUTLLUC_SUCCESS = 2,
@@ -37,8 +38,9 @@ enum : u32
 };
 
 // MFC Write Tag Status Update Request Channel (ch23) operations
-enum : u32
+enum : s32
 {
+	MFC_TAG_STAT_EMPTY       = -1, // Originally unused, value is used when the tag status update channel is empty
 	MFC_TAG_UPDATE_IMMEDIATE = 0,
 	MFC_TAG_UPDATE_ANY       = 1,
 	MFC_TAG_UPDATE_ALL       = 2,

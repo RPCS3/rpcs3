@@ -269,88 +269,89 @@ struct spu_channel_4_t
 {
 	struct alignas(16) sync_var_t
 	{
-		u8 waiting;
-		u8 count;
-		u32 value0;
-		u32 value1;
-		u32 value2;
+		u32 value[4];
 	};
 
-	atomic_t<sync_var_t> values;
-	atomic_t<u32> value3;
+	union
+	{
+		atomic_t<sync_var_t> data;
+		atomic_t<u32> m_values[4];
+	};
+
+	atomic_t<s32> count;
 
 public:
-	void clear()
-	{
-		values.store({});
-		value3 = 0;
-	}
+	static const s32 is_waiting = -1;
 
 	// push unconditionally (overwriting latest value), returns true if needs signaling
-	void push(cpu_thread& spu, u32 value)
+	void push(cpu_thread& spu, const u32 value)
 	{
-		value3 = value; _mm_sfence();
+		const s32 old_count = this->count.load();
 
-		if (values.atomic_op([=](sync_var_t& data) -> bool
+		// Only overwrite last value if the mailbox is full
+		if (old_count == 4)
 		{
-			switch (data.count++)
-			{
-			case 0: data.value0 = value; break;
-			case 1: data.value1 = value; break;
-			case 2: data.value2 = value; break;
-			default: data.count = 4;
-			}
-
-			if (data.waiting)
-			{
-				data.waiting = 0;
-
-				return true;
-			}
-
-			return false;
-		}))
-		{
-			spu.notify();
+			m_values[3].store(value);
+			return;
 		}
+
+		// the SPU thread is waiting for a notification
+		if (old_count < 0)
+		{
+			this->count += 2; // set count to 1 via lock add
+			m_values[0].store(value);
+			return spu.notify();
+		}
+
+		m_values[this->count++].store(value);
 	}
 
 	// returns non-zero value on success: queue size before removal
 	uint try_pop(u32& out)
 	{
-		return values.atomic_op([&](sync_var_t& data)
+		// If the mailbox has atleast one entry, read it, else turn on the wait state
+		if (this->count > 0)
 		{
-			const uint result = data.count;
+			out = m_values[0].load();
 
-			if (result != 0)
 			{
-				data.waiting = 0;
-				data.count--;
-				out = data.value0;
+				sync_var_t new_data;
+				*reinterpret_cast<u64*>(&new_data.value[0]) = (*reinterpret_cast<atomic_t<u64>*>(&m_values[1].raw())).load();
 
-				data.value0 = data.value1;
-				data.value1 = data.value2;
-				_mm_lfence();
-				data.value2 = this->value3;
-			}
-			else
-			{
-				data.waiting = 1;
+				new_data.value[2] = m_values[3].load();
+
+				data.store(new_data);
 			}
 
-			return result;
-		});
+			_mm_mfence();
+			return static_cast<uint>(this->count--);
+		}
+
+		this->count.store(is_waiting);
+		return 0;
 	}
 
 	u32 get_count()
 	{
-		return values.raw().count;
+		return (u32)count.raw();
 	}
 
-	void set_values(u32 count, u32 value0, u32 value1 = 0, u32 value2 = 0, u32 value3 = 0)
+	template<const u32 count>
+	inline void set_values(u32 value0 = 0, u32 value1 = 0, u32 value2 = 0, u32 value3 = 0)
 	{
-		this->values.raw() = { 0, static_cast<u8>(count), value0, value1, value2 };
-		this->value3 = value3;
+		static_assert(count <= 4, "Illegal inbound mailbox count.");
+
+		// Write only on specified entries, the if's are being inlined due to the template
+		if (count > 0)
+			this->m_values[0].raw() = value0;
+		if (count > 1)
+			this->m_values[1].raw() = value1;
+		if (count > 2)
+			this->m_values[2].raw() = value2;
+		if (count > 3)
+			this->m_values[3].raw() = value3;
+
+		this->count.raw() = count;
 	}
 };
 
@@ -545,12 +546,12 @@ public:
 	u32 raddr = 0;
 
 	u32 srr0;
-	u32 ch_tag_upd;
+	s32 ch_tag_upd;
 	u32 ch_tag_mask;
-	spu_channel ch_tag_stat;
+	u32 ch_tag_stat;
 	u32 ch_stall_mask;
-	spu_channel ch_stall_stat;
-	spu_channel ch_atomic_stat;
+	u32 ch_stall_stat; // count is set if not zero
+	s32 ch_atomic_stat; // count is set if not negative
 
 	spu_channel_4_t ch_in_mbox;
 
@@ -562,7 +563,7 @@ public:
 	spu_channel ch_snr1; // SPU Signal Notification Register 1
 	spu_channel ch_snr2; // SPU Signal Notification Register 2
 
-	atomic_t<u32> ch_event_mask;
+	u32 ch_event_mask;
 	atomic_t<u32> ch_event_stat;
 	atomic_t<bool> interrupts_enabled;
 
@@ -605,7 +606,7 @@ public:
 	u32 get_mfc_completed();
 
 	bool process_mfc_cmd(spu_mfc_cmd args);
-	u32 get_events(bool waiting = false);
+	u32 get_events();
 	void set_events(u32 mask);
 	void set_interrupt_status(bool enable);
 	u32 get_ch_count(u32 ch);

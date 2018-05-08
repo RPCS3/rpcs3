@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Memory.h"
 #include "Emu/System.h"
 #include "Utilities/mutex.h"
@@ -7,9 +7,9 @@
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/RSX/GSRender.h"
+#include "Emu/Cell/SPUThread.h"
 
 #include <atomic>
-#include <deque>
 
 namespace vm
 {
@@ -42,8 +42,8 @@ namespace vm
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
 
-	// Registered waiters
-	std::deque<vm::waiter*> g_waiters;
+	// Registered waiting SPU Threads
+	class SPUThread* g_waiters[6];
 
 	// Memory mutex core
 	shared_mutex g_mutex;
@@ -240,62 +240,31 @@ namespace vm
 	// Memory pages
 	std::array<memory_page, 0x100000000 / 4096> g_pages{};
 
-	void waiter::init()
-	{
-		// Register waiter
-		vm::writer_lock lock(0);
-
-		g_waiters.emplace_back(this);
-	}
-
-	void waiter::test() const
-	{
-		if (std::memcmp(data, vm::base(addr), size) == 0)
-		{
-			return;
-		}
-
-		if (stamp >= reservation_acquire(addr, size))
-		{
-			return;
-		}
-
-		if (owner)
-		{
-			owner->notify();
-		}
-	}
-
-	waiter::~waiter()
-	{
-		// Unregister waiter
-		vm::writer_lock lock(0);
-
-		// Find waiter
-		const auto found = std::find(g_waiters.cbegin(), g_waiters.cend(), this);
-
-		if (found != g_waiters.cend())
-		{
-			g_waiters.erase(found);
-		}
-	}
-
 	void notify(u32 addr, u32 size)
 	{
-		for (const waiter* ptr : g_waiters)
+		for (auto spu : g_waiters)
 		{
-			if (ptr->addr / 128 == addr / 128)
+			if (spu)
 			{
-				ptr->test();
-			}
-		}
-	}
+				if (spu->raddr / 128 == addr / 128)
+				{
+					{
+						const u64 lock_time = reservation_acquire(addr, size);
 
-	void notify_all()
-	{
-		for (const waiter* ptr : g_waiters)
-		{
-			ptr->test();
+						if (lock_time & 1) // Atomic update in progress
+						{
+							return;
+						}
+
+						if (spu->rtime >= lock_time)
+						{
+							continue;
+						}
+					}
+
+					spu->notify();
+				}
+			}
 		}
 	}
 
@@ -783,6 +752,7 @@ namespace vm
 	void close()
 	{
 		g_locations.clear();
+		std::memset(g_waiters, 0, 6 * sizeof(void*));
 
 		utils::memory_decommit(g_base_addr, 0x100000000);
 		utils::memory_decommit(g_exec_addr, 0x100000000);
