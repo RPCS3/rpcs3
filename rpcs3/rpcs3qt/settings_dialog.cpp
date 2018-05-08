@@ -962,7 +962,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->spuDebug, emu_settings::SPUDebug);
 	SubscribeTooltip(ui->spuDebug, json_debug["spuDebug"].toString());
 		
-	if (utils::is_haswell_or_broadwell()!=utils::ModelNotHaswellBroadwell && utils::has_rtm())
+	if (utils::is_haswell() != utils::is_broadwell() && utils::has_rtm())
 	{
 		xemu_settings->EnhanceCheckBox(ui->enableTSX, emu_settings::EnableTSX);
 		SubscribeTooltip(ui->enableTSX, json_debug["enableTSX"].toString());
@@ -971,7 +971,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		connect(ui->enableTSX, &QCheckBox::toggled, [this](bool checked)
 		{
 			// create a messagebox depending on the CPU Model if the checkbox was checked
-			if (utils::is_haswell_or_broadwell() == utils::ModelHaswell)
+			if (utils::is_haswell())
 			{
 				if (checked && QMessageBox::No == QMessageBox::critical(this, tr("Haswell TSX Warning"), tr(
 					R"(

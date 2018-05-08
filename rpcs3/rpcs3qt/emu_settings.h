@@ -198,7 +198,7 @@ private:
 		{ PPUDebug,                 { "Core", "PPU Debug"}},
 		{ SPUDebug,                 { "Core", "SPU Debug"}},
 		{ MaxLLVMThreads,           { "Core", "Max LLVM Compile Threads"}},
-		{ EnableTSX,				{ "Core", "Enable TSX on Haswell/Broadwell"}},
+		{ EnableTSX,                { "Core", "Enable TSX on Haswell/Broadwell"}},
 
 		// Graphics Tab
 		{ Renderer,                 { "Video", "Renderer"}},

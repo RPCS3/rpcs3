@@ -445,8 +445,8 @@ void Emulator::Load(bool add_only)
 		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", g_cfg.to_string());
 		
 		// Set RTM usage
-		g_use_rtm = utils::has_rtm() && (utils::is_haswell_or_broadwell() == utils::ModelNotHaswellBroadwell || g_cfg.core.enable_TSX);
-		if (utils::has_rtm())
+		g_use_rtm = utils::has_rtm() && (utils::is_haswell() == utils::is_broadwell() || g_cfg.core.enable_TSX);
+		if (utils::has_rtm() && (utils::is_haswell() || utils::is_broadwell()))
 		{
 			if (g_use_rtm)
 			{

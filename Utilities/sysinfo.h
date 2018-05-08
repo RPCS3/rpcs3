@@ -41,14 +41,9 @@ namespace utils
 
 	bool has_xop();
 	
-	int is_haswell_or_broadwell();
-	
-	enum haswell_broadwell
-	{
-		ModelNotHaswellBroadwell,
-		ModelHaswell,
-		ModelBroadwell
-	};
+	bool is_haswell();
+
+	bool is_broadwell();
 
 	FORCE_INLINE bool transaction_enter(uint* out = nullptr)
 	{
