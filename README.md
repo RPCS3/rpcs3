@@ -51,6 +51,8 @@ To initialize the repository don't forget to execute `git submodule update --ini
 1) Add `QTDIR` environment variable and set it to e.g `<QtInstallFolder>\5.10.1\msvc2015_64\` </br>
 
 
+*If you're using Visual Studio 2017, when you first open the project, do not upgrade the targets or the packages. Leave both at "No upgrade". Note that you will need the v140 toolset, which may not be in 2017 by default.* </br>
+
 Open `rpcs3.sln`
 
 
@@ -59,6 +61,7 @@ Open `rpcs3.sln`
 2) While selecting the rpcs3qt project, go to Qt5->Project Setting and select the version you added. 
 
 ### Building the projects
+The recommended build configuration is Release - LLVM, for all purposes. </br> </br>
 You may want to download precompiled [LLVM lib](https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8) and extract to root rpcs3 folder (which contains `rpcs3.sln`), as well as download and extract [additional libs](https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRaHYxV3VOS2d0a0U) to `lib\%CONFIGURATION%-x64\` to speed up compilation time (unoptimised/debug libs are currently not available precompiled).
 
 If you're not using precompiled libs, build the projects in *__BUILD_BEFORE* folder: right-click on every project > *Build*. </br></br>

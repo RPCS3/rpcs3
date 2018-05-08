@@ -248,14 +248,17 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only)
 		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
 #ifdef WITH_DISCORD_RPC
 		// Discord Rich Presence Integration
-		DiscordRichPresence discordPresence = {};
-		discordPresence.state = Emu.GetTitleID().c_str();
-		discordPresence.details = Emu.GetTitle().c_str();
-		discordPresence.largeImageKey = "rpcs3_logo";
-		discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
-		discordPresence.startTimestamp = time(0);
-		discordPresence.instance = 0;
-		Discord_UpdatePresence(&discordPresence);
+		if (guiSettings->GetValue(gui::m_richPresence).toBool())
+		{
+			DiscordRichPresence discordPresence = {};
+			discordPresence.state = Emu.GetTitleID().c_str();
+			discordPresence.details = Emu.GetTitle().c_str();
+			discordPresence.largeImageKey = "rpcs3_logo";
+			discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
+			discordPresence.startTimestamp = time(0);
+			discordPresence.instance = 0;
+			Discord_UpdatePresence(&discordPresence);
+		}
 #endif
 	}
 	else
@@ -775,10 +778,13 @@ void main_window::OnEmuStop()
 	}
 #ifdef WITH_DISCORD_RPC
 	// Discord Rich Presence Integration
-	DiscordRichPresence discordPresence = {};
-	discordPresence.largeImageKey = "rpcs3_logo";
-	discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
-	Discord_UpdatePresence(&discordPresence);
+	if (guiSettings->GetValue(gui::m_richPresence).toBool())
+	{
+		DiscordRichPresence discordPresence = {};
+		discordPresence.largeImageKey = "rpcs3_logo";
+		discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
+		Discord_UpdatePresence(&discordPresence);
+	}
 #endif
 }
 
