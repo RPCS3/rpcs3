@@ -52,16 +52,20 @@ bool utils::has_xop()
 
 bool utils::is_haswell()
 {
-	static const int g_model = ((get_cpuid(1, 0)[0] >> 4) & 0xf) + (((get_cpuid(1, 0)[0] >> 16) & 0xf) << 4);
-	static const bool g_value = g_model == 0x3c || g_model == 0x3f || g_model == 0x45 || g_model == 0x46;
+	static const bool g_value = get_cpu_model() == 0x3c || get_cpu_model() == 0x3f || get_cpu_model() == 0x45 || get_cpu_model() == 0x46;
 	return g_value;
 }
 
 bool utils::is_broadwell()
 {
-	static const int g_model = ((get_cpuid(1, 0)[0] >> 4) & 0xf) + (((get_cpuid(1, 0)[0] >> 16) & 0xf) << 4);
-	static const bool g_value = g_model == 0x3d || g_model == 0x4f || g_model == 0x47 || g_model == 0x56;
+	static const bool g_value = get_cpu_model() == 0x3d || get_cpu_model() == 0x4f || get_cpu_model() == 0x47 || get_cpu_model() == 0x56;
 	return g_value;
+}
+
+int utils::get_cpu_model()
+{
+	static const int g_model = ((get_cpuid(1, 0)[0] >> 4) & 0xf) + (((get_cpuid(1, 0)[0] >> 16) & 0xf) << 4);
+	return g_model;
 }
 
 std::string utils::get_system_info()

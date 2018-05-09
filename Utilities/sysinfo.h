@@ -45,6 +45,8 @@ namespace utils
 
 	bool is_broadwell();
 
+	int get_cpu_model();
+
 	FORCE_INLINE bool transaction_enter(uint* out = nullptr)
 	{
 		while (true)
