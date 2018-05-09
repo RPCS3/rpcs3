@@ -1007,7 +1007,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 						Intel has deactivated these functions on early CPUs in newer Microcode revisions, since they can lead to unpredicted behaviour.<br>
 						We recommend you update your computer BIOS before you use that feature.<br>
 						If you are already on the latest BIOS it should be safe to use this feature.<br><br>
-						Do you wish to use TSX features?
+						Do you wish to use TSX anyway?
 					</p>
 				)"
 				), QMessageBox::Yes, QMessageBox::No))
