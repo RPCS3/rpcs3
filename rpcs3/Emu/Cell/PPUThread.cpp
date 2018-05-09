@@ -508,6 +508,12 @@ void ppu_thread::cpu_task()
 {
 	std::fesetround(FE_TONEAREST);
 
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::precise)
+	{
+		// Set DAZ and FTZ
+		_mm_setcsr(_mm_getcsr() | 0x8840);
+	}
+
 	// Execute cmd_queue
 	while (cmd64 cmd = cmd_wait())
 	{

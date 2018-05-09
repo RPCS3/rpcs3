@@ -413,6 +413,12 @@ void SPUThread::cpu_task()
 {
 	std::fesetround(FE_TOWARDZERO);
 
+	if (g_cfg.core.spu_decoder != spu_decoder_type::precise)
+	{
+		// Set DAZ and FTZ
+		_mm_setcsr(_mm_getcsr() | 0x8840);
+	}
+
 	g_tls_log_prefix = []
 	{
 		const auto cpu = static_cast<SPUThread*>(get_current_cpu_thread());
