@@ -211,10 +211,18 @@ namespace vk
 		//Radeon fails to properly handle degenerate primitives if primitive restart is enabled
 		//One has to choose between using degenerate primitives or primitive restart to break up lists but not both
 		//Polaris and newer will crash with ERROR_DEVICE_LOST
-		//Older GCN will work okay most of the time but also occasionally draws garbage without reason
-		if (gpu_name.find("Radeon") != std::string::npos)
+		//Older GCN will work okay most of the time but also occasionally draws garbage without reason (properietary driver only)
+		if (gpu_name.find("Radeon") != std::string::npos ||  //Proprietary driver
+			gpu_name.find("POLARIS") != std::string::npos || //RADV POLARIS
+			gpu_name.find("VEGA") != std::string::npos)      //RADV VEGA
 		{
 			g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
+		}
+
+		//Radeon proprietary driver does not properly handle fence reset and can segfault during vkResetFences
+		//Disable fence reset for proprietary driver and delete+initialize a new fence instead
+		if (gpu_name.find("Radeon") != std::string::npos)
+		{
 			g_drv_disable_fence_reset = true;
 		}
 
