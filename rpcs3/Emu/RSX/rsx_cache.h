@@ -301,7 +301,7 @@ namespace rsx
 		template <typename... Args>
 		void load(progress_dialog_helper* dlg, Args&& ...args)
 		{
-			if (g_cfg.video.disable_on_disk_shader_cache)
+			if (g_cfg.video.disable_on_disk_shader_cache || Emu.GetCachePath() == "")
 			{
 				return;
 			}
@@ -382,7 +382,7 @@ namespace rsx
 
 		void store(pipeline_storage_type &pipeline, RSXVertexProgram &vp, RSXFragmentProgram &fp)
 		{
-			if (g_cfg.video.disable_on_disk_shader_cache)
+			if (g_cfg.video.disable_on_disk_shader_cache || Emu.GetCachePath() == "")
 			{
 				return;
 			}

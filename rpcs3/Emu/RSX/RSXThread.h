@@ -17,7 +17,8 @@
 
 #include "Utilities/Thread.h"
 #include "Utilities/geometry.h"
-#include "rsx_trace.h"
+#include "Capture/rsx_trace.h"
+#include "Capture/rsx_replay.h"
 #include "restore_new.h"
 #include "Utilities/variant.hpp"
 #include "define_new_memleakdetect.h"
@@ -27,7 +28,8 @@
 extern u64 get_system_time();
 
 extern bool user_asked_for_frame_capture;
-extern rsx::frame_capture_data frame_debug;
+extern rsx::frame_trace_data frame_debug;
+extern rsx::frame_capture_data frame_capture;
 
 namespace rsx
 {
