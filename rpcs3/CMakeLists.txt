@@ -107,7 +107,11 @@ if(USE_NATIVE_INSTRUCTIONS)
 endif()
 
 if(NOT MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-invalid-pch -Wno-unused-command-line-argument -fexceptions")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-invalid-pch -fexceptions")
+	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument")
+	endif()
+
 	# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
 	if(NOT APPLE)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--exclude-libs,ALL")
@@ -124,7 +128,7 @@ if(NOT MSVC)
 
 	add_compile_options(-msse -msse2 -mcx16)
 
-	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		# This fixes 'some' of the st11range issues. See issue #2516
 		if(APPLE)
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-image_base,0x10000 -Wl,-pagezero_size,0x10000")
