@@ -216,6 +216,13 @@ namespace vk
 	void set_current_renderer(const vk::render_device &device)
 	{
 		g_current_renderer = device;
+		g_cb_no_interrupt_flag.store(false);
+		g_drv_no_primitive_restart_flag = false;
+		g_drv_sanitize_fp_values = false;
+		g_drv_disable_fence_reset = false;
+		g_num_processed_frames = 0;
+		g_num_total_frames = 0;
+
 		const auto gpu_name = g_current_renderer.gpu().name();
 
 		//Radeon fails to properly handle degenerate primitives if primitive restart is enabled

@@ -205,26 +205,20 @@ namespace vk
 		}
 
 		template<typename T, bool swapped>
-		void do_memory_transfer(void *pixels_dst, const void *pixels_src, u32 channels_count)
+		void do_memory_transfer(void *pixels_dst, const void *pixels_src, u32 max_length)
 		{
-			if (sizeof(T) == 1)
-				memcpy(pixels_dst, pixels_src, cpu_address_range);
+			if (sizeof(T) == 1 || !swapped)
+			{
+				memcpy(pixels_dst, pixels_src, max_length);
+			}
 			else
 			{
-				const u32 block_size = width * height * channels_count;
+				const u32 block_size = max_length / sizeof(T);
+				auto typed_dst = (be_t<T> *)pixels_dst;
+				auto typed_src = (T *)pixels_src;
 
-				if (swapped)
-				{
-					auto typed_dst = (be_t<T> *)pixels_dst;
-					auto typed_src = (T *)pixels_src;
-
-					for (u32 px = 0; px < block_size; ++px)
-						typed_dst[px] = typed_src[px];
-				}
-				else
-				{
-					memcpy(pixels_dst, pixels_src, block_size * sizeof(T));
-				}
+				for (u32 px = 0; px < block_size; ++px)
+					typed_dst[px] = typed_src[px];
 			}
 		}
 
@@ -249,12 +243,12 @@ namespace vk
 
 			flushed = true;
 
-			void* pixels_src = dma_buffer->map(0, cpu_address_range);
-			void* pixels_dst = vm::base(cpu_address_base);
+			const auto valid_range = get_confirmed_range();
+			void* pixels_src = dma_buffer->map(valid_range.first, valid_range.second);
+			void* pixels_dst = get_raw_ptr(valid_range.first);
 
 			const auto texel_layout = vk::get_format_element_size(vram_texture->info.format);
 			const auto elem_size = texel_layout.first;
-			const auto channel_count = texel_layout.second;
 
 			//We have to do our own byte swapping since the driver doesnt do it for us
 			if (real_pitch == rsx_pitch)
@@ -263,10 +257,10 @@ namespace vk
 				switch (vram_texture->info.format)
 				{
 				case VK_FORMAT_D32_SFLOAT_S8_UINT:
-					rsx::convert_le_f32_to_be_d24(pixels_dst, pixels_src, cpu_address_range >> 2, 1);
+					rsx::convert_le_f32_to_be_d24(pixels_dst, pixels_src, valid_range.second >> 2, 1);
 					break;
 				case VK_FORMAT_D24_UNORM_S8_UINT:
-					rsx::convert_le_d24x8_to_be_d24x8(pixels_dst, pixels_src, cpu_address_range >> 2, 1);
+					rsx::convert_le_d24x8_to_be_d24x8(pixels_dst, pixels_src, valid_range.second >> 2, 1);
 					break;
 				default:
 					is_depth_format = false;
@@ -280,19 +274,19 @@ namespace vk
 					default:
 						LOG_ERROR(RSX, "Invalid element width %d", elem_size);
 					case 1:
-						do_memory_transfer<u8, false>(pixels_dst, pixels_src, channel_count);
+						do_memory_transfer<u8, false>(pixels_dst, pixels_src, valid_range.second);
 						break;
 					case 2:
 						if (pack_unpack_swap_bytes)
-							do_memory_transfer<u16, true>(pixels_dst, pixels_src, channel_count);
+							do_memory_transfer<u16, true>(pixels_dst, pixels_src, valid_range.second);
 						else
-							do_memory_transfer<u16, false>(pixels_dst, pixels_src, channel_count);
+							do_memory_transfer<u16, false>(pixels_dst, pixels_src, valid_range.second);
 						break;
 					case 4:
 						if (pack_unpack_swap_bytes)
-							do_memory_transfer<u32, true>(pixels_dst, pixels_src, channel_count);
+							do_memory_transfer<u32, true>(pixels_dst, pixels_src, valid_range.second);
 						else
-							do_memory_transfer<u32, false>(pixels_dst, pixels_src, channel_count);
+							do_memory_transfer<u32, false>(pixels_dst, pixels_src, valid_range.second);
 						break;
 					}
 				}
@@ -314,16 +308,17 @@ namespace vk
 					break;
 				}
 
-				u16 row_length = u16(width * channel_count);
-				rsx::scale_image_nearest(pixels_dst, pixels_src, row_length, height, rsx_pitch, real_pitch, elem_size, samples_u, samples_v, pack_unpack_swap_bytes);
+				const u16 row_length = u16(width * texel_layout.second);
+				const u16 usable_height = (valid_range.second / rsx_pitch) / samples_v;
+				rsx::scale_image_nearest(pixels_dst, pixels_src, row_length, usable_height, rsx_pitch, real_pitch, elem_size, samples_u, samples_v, pack_unpack_swap_bytes);
 
 				switch (vram_texture->info.format)
 				{
 				case VK_FORMAT_D32_SFLOAT_S8_UINT:
-					rsx::convert_le_f32_to_be_d24(pixels_dst, pixels_dst, cpu_address_range >> 2, 1);
+					rsx::convert_le_f32_to_be_d24(pixels_dst, pixels_dst, valid_range.second >> 2, 1);
 					break;
 				case VK_FORMAT_D24_UNORM_S8_UINT:
-					rsx::convert_le_d24x8_to_be_d24x8(pixels_dst, pixels_dst, cpu_address_range >> 2, 1);
+					rsx::convert_le_d24x8_to_be_d24x8(pixels_dst, pixels_dst, valid_range.second >> 2, 1);
 					break;
 				}
 			}
@@ -338,6 +333,16 @@ namespace vk
 		void set_unpack_swap_bytes(bool swap_bytes)
 		{
 			pack_unpack_swap_bytes = swap_bytes;
+		}
+
+		void reprotect(utils::protection prot, const std::pair<u32, u32>& range)
+		{
+			//Reset properties and protect again
+			flushed = false;
+			synchronized = false;
+			sync_timestamp = 0ull;
+
+			protect(prot, range);
 		}
 
 		void reprotect(utils::protection prot)
@@ -896,7 +901,7 @@ namespace vk
 			else
 			{
 				//TODO: Confirm byte swap patterns
-				region.protect(utils::protection::no);
+				//NOTE: Protection is handled by the caller
 				region.set_unpack_swap_bytes((aspect_flags & VK_IMAGE_ASPECT_COLOR_BIT) == VK_IMAGE_ASPECT_COLOR_BIT);
 				no_access_range = region.get_min_max(no_access_range);
 			}
@@ -1077,7 +1082,7 @@ namespace vk
 				if (tex.is_dirty())
 					continue;
 
-				if (!tex.overlaps(rsx_address, true))
+				if (!tex.overlaps(rsx_address, rsx::overlap_test_bounds::full_range))
 					continue;
 
 				if ((rsx_address + rsx_size - tex.get_section_base()) <= tex.get_section_size())

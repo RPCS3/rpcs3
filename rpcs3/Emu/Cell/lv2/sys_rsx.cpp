@@ -150,7 +150,7 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
 
 	m_sysrsx->rsx_event_port = queueId->value();
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	render->display_buffers_count = 0;
 	render->current_display_buffer = 0;
 	render->main_mem_addr = 0;
@@ -222,7 +222,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 
 	// todo: these event ports probly 'shouldnt' be here as i think its supposed to be interrupts that are sent from rsx somewhere in lv1
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 
 	//hle protection
 	if (render->isHLE)

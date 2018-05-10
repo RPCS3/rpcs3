@@ -30,6 +30,7 @@ rsx::frame_capture_data frame_capture;
 namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
+	thread* g_current_renderer = nullptr;
 
 	//TODO: Restore a working shaders cache
 
@@ -239,10 +240,12 @@ namespace rsx
 
 	thread::thread()
 	{
+		g_current_renderer = this;
 		g_access_violation_handler = [this](u32 address, bool is_writing)
 		{
 			return on_access_violation(address, is_writing);
 		};
+
 		m_rtts_dirty = true;
 		memset(m_textures_dirty, -1, sizeof(m_textures_dirty));
 		memset(m_vertex_textures_dirty, -1, sizeof(m_vertex_textures_dirty));
@@ -253,6 +256,7 @@ namespace rsx
 	thread::~thread()
 	{
 		g_access_violation_handler = nullptr;
+		g_current_renderer = nullptr;
 	}
 
 	void thread::capture_frame(const std::string &name)
