@@ -4,6 +4,7 @@
 #include "Utilities/geometry.h"
 #include "gcm_enums.h"
 #include <atomic>
+#include <memory>
 
 // TODO: replace the code below by #include <optional> when C++17 or newer will be used
 #include <optional.hpp>
@@ -20,12 +21,52 @@ extern "C"
 
 namespace rsx
 {
+	class thread;
+	extern thread* g_current_renderer;
+
 	//Base for resources with reference counting
 	struct ref_counted
 	{
 		u8 deref_count = 0;
 
 		void reset_refs() { deref_count = 0; }
+	};
+
+	//Weak pointer without lock semantics
+	//Backed by a real shared_ptr for non-rsx memory
+	//Backed by a global shared pool for rsx memory
+	struct weak_ptr
+	{
+		void* _ptr;
+		std::shared_ptr<u8> _extern;
+
+		weak_ptr(void* raw, bool is_rsx_mem = true)
+		{
+			_ptr = raw;
+			if (!is_rsx_mem) _extern.reset((u8*)raw);
+		}
+
+		weak_ptr(std::shared_ptr<u8>& block)
+		{
+			_extern = block;
+			_ptr = _extern.get();
+		}
+
+		weak_ptr()
+		{
+			_ptr = nullptr;
+		}
+
+		template <typename T = void>
+		T* get(u32 offset = 0) const
+		{
+			return (T*)((u8*)_ptr + offset);
+		}
+
+		operator bool() const
+		{
+			return (_ptr != nullptr);
+		}
 	};
 
 	//Holds information about a framebuffer
@@ -289,6 +330,9 @@ namespace rsx
 
 	std::array<float, 4> get_constant_blend_colors();
 
+	// Acquire memory mirror with r/w permissions
+	weak_ptr get_super_ptr(u32 addr, u32 size);
+
 	/**
 	 * Shuffle texel layout from xyzw to wzyx
 	 * TODO: Variable src/dst and optional se conversion
@@ -497,5 +541,10 @@ namespace rsx
 		result.r = ((colorref >> 16) & 0xFF) / 255.f;
 		result.a = ((colorref >> 24) & 0xFF) / 255.f;
 		return result;
+	}
+
+	static inline thread* get_current_renderer()
+	{
+		return g_current_renderer;
 	}
 }

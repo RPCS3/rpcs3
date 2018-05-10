@@ -275,7 +275,7 @@ s32 cellGcmBindTile(u8 index)
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	fxm::get<GSRender>()->tiles[index].binded = true;
+	rsx::get_current_renderer()->tiles[index].binded = true;
 
 	return CELL_OK;
 }
@@ -291,7 +291,7 @@ s32 cellGcmBindZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart,
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	fxm::get<GSRender>()->zculls[index].binded = true;
+	rsx::get_current_renderer()->zculls[index].binded = true;
 
 	return CELL_OK;
 }
@@ -307,7 +307,7 @@ void cellGcmGetConfiguration(vm::ptr<CellGcmConfig> config)
 
 u32 cellGcmGetFlipStatus()
 {
-	u32 status = fxm::get<GSRender>()->flip_status;
+	u32 status = rsx::get_current_renderer()->flip_status;
 
 	cellGcmSys.trace("cellGcmGetFlipStatus() -> %d", status);
 
@@ -421,7 +421,7 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	ctrl.get = 0;
 	ctrl.ref = -1;
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	render->intr_thread = idm::make_ptr<ppu_thread>("_gcm_intr_thread", 1, 0x4000);
 	render->intr_thread->run();
 	render->main_mem_addr = 0;
@@ -436,7 +436,7 @@ void cellGcmResetFlipStatus()
 {
 	cellGcmSys.trace("cellGcmResetFlipStatus()");
 
-	fxm::get<GSRender>()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_WAITING;
+	rsx::get_current_renderer()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_WAITING;
 }
 
 void cellGcmSetDebugOutputLevel(s32 level)
@@ -448,7 +448,7 @@ void cellGcmSetDebugOutputLevel(s32 level)
 	case CELL_GCM_DEBUG_LEVEL0:
 	case CELL_GCM_DEBUG_LEVEL1:
 	case CELL_GCM_DEBUG_LEVEL2:
-		fxm::get<GSRender>()->debug_level = level;
+		rsx::get_current_renderer()->debug_level = level;
 		break;
 
 	default:
@@ -470,7 +470,7 @@ s32 cellGcmSetDisplayBuffer(u8 id, u32 offset, u32 pitch, u32 width, u32 height)
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 
 	auto buffers = render->display_buffers;
 
@@ -496,21 +496,21 @@ void cellGcmSetFlipHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.warning("cellGcmSetFlipHandler(handler=*0x%x)", handler);
 
-	fxm::get<GSRender>()->flip_handler = handler;
+	rsx::get_current_renderer()->flip_handler = handler;
 }
 
 void cellGcmSetFlipMode(u32 mode)
 {
 	cellGcmSys.warning("cellGcmSetFlipMode(mode=%d)", mode);
 
-	fxm::get<GSRender>()->requested_vsync.store(mode == CELL_GCM_DISPLAY_VSYNC);
+	rsx::get_current_renderer()->requested_vsync.store(mode == CELL_GCM_DISPLAY_VSYNC);
 }
 
 void cellGcmSetFlipStatus()
 {
 	cellGcmSys.warning("cellGcmSetFlipStatus()");
 
-	fxm::get<GSRender>()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+	rsx::get_current_renderer()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 }
 
 s32 cellGcmSetPrepareFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 id)
@@ -561,7 +561,7 @@ void cellGcmSetSecondVFrequency(u32 freq)
 {
 	cellGcmSys.warning("cellGcmSetSecondVFrequency(level=%d)", freq);
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 
 	switch (freq)
 	{
@@ -612,7 +612,7 @@ s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 		cellGcmSys.error("cellGcmSetTileInfo: bad compression mode! (%d)", comp);
 	}
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 
 	auto& tile = render->tiles[index];
 	tile.location = location;
@@ -631,7 +631,7 @@ void cellGcmSetUserHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.warning("cellGcmSetUserHandler(handler=*0x%x)", handler);
 
-	fxm::get<GSRender>()->user_handler = handler;
+	rsx::get_current_renderer()->user_handler = handler;
 }
 
 void cellGcmSetUserCommand(vm::ptr<CellGcmContextData> ctxt, u32 cause)
@@ -643,7 +643,7 @@ void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.warning("cellGcmSetVBlankHandler(handler=*0x%x)", handler);
 
-	fxm::get<GSRender>()->vblank_handler = handler;
+	rsx::get_current_renderer()->vblank_handler = handler;
 }
 
 void cellGcmSetWaitFlip(vm::ptr<CellGcmContextData> ctxt)
@@ -675,7 +675,7 @@ void cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart,
 		return;
 	}
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 
 	auto& zcull = render->zculls[index];
 	zcull.offset = offset;
@@ -703,7 +703,7 @@ s32 cellGcmUnbindTile(u8 index)
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	fxm::get<GSRender>()->tiles[index].binded = false;
+	rsx::get_current_renderer()->tiles[index].binded = false;
 
 	return CELL_OK;
 }
@@ -718,7 +718,7 @@ s32 cellGcmUnbindZcull(u8 index)
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	fxm::get<GSRender>()->zculls[index].binded = false;
+	rsx::get_current_renderer()->zculls[index].binded = false;
 
 	return CELL_OK;
 }
@@ -754,7 +754,7 @@ s32 cellGcmGetCurrentDisplayBufferId(vm::ptr<u8> id)
 {
 	cellGcmSys.warning("cellGcmGetCurrentDisplayBufferId(id=*0x%x)", id);
 
-	if ((*id = fxm::get<GSRender>()->current_display_buffer) > UINT8_MAX)
+	if ((*id = rsx::get_current_renderer()->current_display_buffer) > UINT8_MAX)
 	{
 		fmt::throw_exception("Unexpected" HERE);
 	}
@@ -788,7 +788,7 @@ u64 cellGcmGetLastFlipTime()
 {
 	cellGcmSys.trace("cellGcmGetLastFlipTime()");
 
-	return fxm::get<GSRender>()->last_flip_time;
+	return rsx::get_current_renderer()->last_flip_time;
 }
 
 u64 cellGcmGetLastSecondVTime()
@@ -801,7 +801,7 @@ u64 cellGcmGetVBlankCount()
 {
 	cellGcmSys.trace("cellGcmGetVBlankCount()");
 
-	return fxm::get<GSRender>()->vblank_count;
+	return rsx::get_current_renderer()->vblank_count;
 }
 
 s32 cellGcmSysGetLastVBlankTime()
@@ -933,7 +933,7 @@ s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 {
 	if ((ea & 0xFFFFF) || (io & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 
 	// Check if the mapping was successfull
 	if (RSXIOMem.Map(ea, size, io))
@@ -997,7 +997,7 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 
 	u32 io = RSXIOMem.Map(ea, size);
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 
 	//check if the mapping was successfull
 	if (RSXIOMem.RealAddr(io) == ea)
@@ -1237,7 +1237,7 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 		cellGcmSys.error("cellGcmSetTile: bad compression mode! (%d)", comp);
 	}
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 
 	auto& tile = render->tiles[index];
 	tile.location = location;

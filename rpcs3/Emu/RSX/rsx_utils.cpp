@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "rsx_utils.h"
 #include "rsx_methods.h"
+#include "RSXThread.h"
 #include "Emu/RSX/GCM.h"
 #include "Common/BufferUtils.h"
 #include "Overlays/overlays.h"
@@ -73,6 +74,49 @@ namespace rsx
 
 			return { blend_color_r / 255.f, blend_color_g / 255.f, blend_color_b / 255.f, blend_color_a / 255.f };
 		}
+	}
+
+	weak_ptr get_super_ptr(u32 addr, u32 len)
+	{
+		verify(HERE), g_current_renderer;
+
+		if (!g_current_renderer->super_memory_map.first)
+		{
+			auto block = vm::get(vm::any, 0xC0000000);
+			if (block)
+			{
+				g_current_renderer->super_memory_map.first = block->used();
+				g_current_renderer->super_memory_map.second = vm::get_super_ptr<u8>(0xC0000000, g_current_renderer->super_memory_map.first - 1);
+
+				if (!g_current_renderer->super_memory_map.second)
+				{
+					//Disjoint allocation?
+					LOG_ERROR(RSX, "Could not initialize contiguous RSX super-memory");
+				}
+			}
+			else
+			{
+				fmt::throw_exception("RSX memory not mapped!");
+			}
+		}
+
+		if (g_current_renderer->super_memory_map.second)
+		{
+			if (addr >= 0xC0000000 && (addr + len) <= (0xC0000000 + g_current_renderer->super_memory_map.first))
+			{
+				//RSX local
+				return { g_current_renderer->super_memory_map.second.get() + (addr - 0xC0000000) };
+			}
+		}
+
+		auto result = vm::get_super_ptr<u8>(addr, len - 1);
+		if (!result)
+		{
+			//Probably allocated as split blocks??
+			LOG_ERROR(RSX, "Could not get super_ptr for memory block 0x%x+0x%x", addr, len);
+		}
+
+		return { result };
 	}
 
 	/* Fast image scaling routines

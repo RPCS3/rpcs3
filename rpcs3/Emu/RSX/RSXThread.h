@@ -322,6 +322,9 @@ namespace rsx
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
 
+		//super memory map (mapped block with r/w permissions)
+		std::pair<u32, std::shared_ptr<u8>> super_memory_map;
+
 		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
 

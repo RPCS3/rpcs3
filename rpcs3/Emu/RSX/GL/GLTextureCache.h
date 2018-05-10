@@ -477,12 +477,14 @@ namespace gl
 			m_fence.wait_for_signal();
 			flushed = true;
 
+			const auto valid_range = get_confirmed_range();
+			void *dst = get_raw_ptr(valid_range.first);
+
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
-			void *data = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, pbo_size, GL_MAP_READ_BIT);
-			u8 *dst = vm::_ptr<u8>(cpu_address_base);
+			void *src = glMapBufferRange(GL_PIXEL_PACK_BUFFER, valid_range.first, valid_range.second, GL_MAP_READ_BIT);
 
 			//throw if map failed since we'll segfault anyway
-			verify(HERE), data != nullptr;
+			verify(HERE), src != nullptr;
 
 			bool require_manual_shuffle = false;
 			if (pack_unpack_swap_bytes)
@@ -493,20 +495,17 @@ namespace gl
 
 			if (real_pitch >= rsx_pitch || scaled_texture != 0)
 			{
-				memcpy(dst, data, cpu_address_range);
+				memcpy(dst, src, valid_range.second);
 			}
 			else
 			{
-				const u8 pixel_size = get_pixel_size(format, type);
-				const u8 samples_u = (aa_mode == rsx::surface_antialiasing::center_1_sample) ? 1 : 2;
-				const u8 samples_v = (aa_mode == rsx::surface_antialiasing::square_centered_4_samples || aa_mode == rsx::surface_antialiasing::square_rotated_4_samples) ? 2 : 1;
-				rsx::scale_image_nearest(dst, const_cast<const void*>(data), width, height, rsx_pitch, real_pitch, pixel_size, samples_u, samples_v);
+				fmt::throw_exception("Unreachable");
 			}
 
 			if (require_manual_shuffle)
 			{
 				//byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
-				rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, height);
+				rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, valid_range.second / rsx_pitch);
 			}
 			else if (pack_unpack_swap_bytes && ::gl::get_driver_caps().vendor_AMD)
 			{
@@ -522,7 +521,7 @@ namespace gl
 				case texture::type::ushort_1_5_5_5_rev:
 				case texture::type::ushort_5_5_5_1:
 				{
-					const u32 num_reps = cpu_address_range / 2;
+					const u32 num_reps = valid_range.second / 2;
 					be_t<u16>* in = (be_t<u16>*)(dst);
 					u16* out = (u16*)dst;
 
@@ -541,7 +540,7 @@ namespace gl
 				case texture::type::uint_2_10_10_10_rev:
 				case texture::type::uint_8_8_8_8:
 				{
-					u32 num_reps = cpu_address_range / 4;
+					u32 num_reps = valid_range.second / 4;
 					be_t<u32>* in = (be_t<u32>*)(dst);
 					u32* out = (u32*)dst;
 
@@ -566,6 +565,13 @@ namespace gl
 			reset_write_statistics();
 
 			return result;
+		}
+
+		void reprotect(utils::protection prot, const std::pair<u32, u32>& range)
+		{
+			flushed = false;
+			synchronized = false;
+			protect(prot, range);
 		}
 
 		void reprotect(utils::protection prot)
@@ -992,9 +998,9 @@ namespace gl
 					fmt::throw_exception("Unexpected gcm format 0x%X" HERE, gcm_format);
 				}
 
+				//NOTE: Protection is handled by the caller
 				cached.make_flushable();
 				cached.set_dimensions(width, height, depth, (rsx_size / height));
-				cached.protect(utils::protection::no);
 				no_access_range = cached.get_min_max(no_access_range);
 			}
 
@@ -1141,7 +1147,7 @@ namespace gl
 				if (tex.is_dirty())
 					continue;
 
-				if (!tex.overlaps(rsx_address, true))
+				if (!tex.overlaps(rsx_address, rsx::overlap_test_bounds::full_range))
 					continue;
 
 				if ((rsx_address + rsx_size - tex.get_section_base()) <= tex.get_section_size())
