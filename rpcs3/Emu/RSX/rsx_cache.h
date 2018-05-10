@@ -42,7 +42,7 @@ namespace rsx
 		buffered_section() {}
 		~buffered_section() {}
 
-		void reset(u32 base, u32 length, protection_policy protect_policy= protect_policy_full_range)
+		void reset(u32 base, u32 length, protection_policy protect_policy = protect_policy_full_range)
 		{
 			verify(HERE), locked == false;
 
@@ -83,7 +83,6 @@ namespace rsx
 		void protect(utils::protection prot)
 		{
 			if (prot == protection) return;
-
 			verify(HERE), locked_address_range > 0;
 			utils::memory_protect(vm::base(locked_address_base), locked_address_range, prot);
 			protection = prot;
@@ -131,7 +130,7 @@ namespace rsx
 
 		/**
 		 * Check if the page containing the address tramples this section. Also compares a former trampled page range to compare
-		 * If true, returns the range <min, max> with updated invalid range 
+		 * If true, returns the range <min, max> with updated invalid range
 		 */
 		std::tuple<bool, std::pair<u32, u32>> overlaps_page(std::pair<u32, u32> old_range, u32 address, bool full_range_check) const
 		{

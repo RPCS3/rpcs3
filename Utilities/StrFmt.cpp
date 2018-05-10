@@ -423,6 +423,14 @@ std::string fmt::to_upper(const std::string& string)
 	return result;
 }
 
+std::string fmt::to_lower(const std::string& string)
+{
+	std::string result;
+	result.resize(string.size());
+	std::transform(string.begin(), string.end(), result.begin(), ::tolower);
+	return result;
+}
+
 bool fmt::match(const std::string& source, const std::string& mask)
 {
 	std::size_t source_position = 0, mask_position = 0;

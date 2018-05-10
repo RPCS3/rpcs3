@@ -9,6 +9,7 @@
 #include "PPUInterpreter.h"
 #include "PPUAnalyser.h"
 #include "PPUModule.h"
+#include "SPURecompiler.h"
 #include "lv2/sys_sync.h"
 #include "lv2/sys_prx.h"
 #include "Utilities/GDBDebugServer.h"
@@ -397,39 +398,32 @@ extern void ppu_remove_breakpoint(u32 addr)
 
 extern bool ppu_patch(u32 addr, u32 value)
 {
-	// TODO: check executable flag
-	if (vm::check_addr(addr, sizeof(u32)))
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm && Emu.GetStatus() != system_state::ready)
 	{
-		if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm && Emu.GetStatus() != system_state::ready)
-		{
-			// TODO
-			return false;
-		}
-
-		if (!vm::check_addr(addr, sizeof(u32), vm::page_writable))
-		{
-			utils::memory_protect(vm::g_base_addr + addr, sizeof(u32), utils::protection::rw);
-		}
-
-		vm::write32(addr, value);
-
-		const u32 _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
-		const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_fallback));
-
-		if (ppu_ref(addr) != _break && ppu_ref(addr) != fallback)
-		{
-			ppu_ref(addr) = ppu_cache(addr);
-		}
-
-		if (!vm::check_addr(addr, sizeof(u32), vm::page_writable))
-		{
-			utils::memory_protect(vm::g_base_addr + addr, sizeof(u32), utils::protection::ro);
-		}
-
-		return true;
+		// TODO: support recompilers
+		LOG_FATAL(GENERAL, "Patch failed at 0x%x: LLVM recompiler is used.", addr);
+		return false;
 	}
 
-	return false;
+	const auto ptr = vm::get_super_ptr<u32>(addr);
+
+	if (!ptr)
+	{
+		LOG_FATAL(GENERAL, "Patch failed at 0x%x: invalid memory address.", addr);
+		return false;
+	}
+
+	*ptr = value;
+
+	const u32 _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
+	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_fallback));
+
+	if (ppu_ref(addr) != _break && ppu_ref(addr) != fallback)
+	{
+		ppu_ref(addr) = ppu_cache(addr);
+	}
+
+	return true;
 }
 
 std::string ppu_thread::get_name() const
@@ -511,6 +505,12 @@ extern thread_local std::string(*g_tls_log_prefix)();
 void ppu_thread::cpu_task()
 {
 	std::fesetround(FE_TONEAREST);
+
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::precise)
+	{
+		// Set DAZ and FTZ
+		_mm_setcsr(_mm_getcsr() | 0x8840);
+	}
 
 	// Execute cmd_queue
 	while (cmd64 cmd = cmd_wait())
@@ -932,22 +932,48 @@ static void ppu_trace(u64 addr)
 	LOG_NOTICE(PPU, "Trace: 0x%llx", addr);
 }
 
+template <typename T>
+static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
+{
+	auto& data = vm::_ref<const atomic_be_t<T>>(addr);
+
+	ppu.raddr = addr;
+
+	// Do several attemps
+	for (uint i = 0; i < 5; i++)
+	{
+		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+		_mm_lfence();
+
+		// Check LSB: atomic store may be in progress
+		if (LIKELY((ppu.rtime & 1) == 0))
+		{
+			ppu.rdata = data;
+			_mm_lfence();
+
+			if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
+			{
+				return static_cast<T>(ppu.rdata);
+			}
+		}
+
+		busy_wait(300);
+	}
+
+	vm::reader_lock lock;
+	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+	ppu.rdata = data;
+	return static_cast<T>(ppu.rdata);
+}
+
 extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr)
 {
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(u32));
-	_mm_lfence();
-	ppu.raddr = addr;
-	ppu.rdata = vm::_ref<const atomic_be_t<u32>>(addr);
-	return static_cast<u32>(ppu.rdata);
+	return ppu_load_acquire_reservation<u32>(ppu, addr);
 }
 
 extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 {
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(u64));
-	_mm_lfence();
-	ppu.raddr = addr;
-	ppu.rdata = vm::_ref<const atomic_be_t<u64>>(addr);
-	return ppu.rdata;
+	return ppu_load_acquire_reservation<u64>(ppu, addr);
 }
 
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
@@ -1054,6 +1080,22 @@ extern void ppu_initialize()
 	const auto _main = fxm::get<ppu_module>();
 
 	if (!_main)
+	{
+		return;
+	}
+
+	// New PPU cache location
+	_main->cache = fmt::format("%sdata/%s/ppu-%s-%s/", fs::get_config_dir(), Emu.GetTitleID(), fmt::base57(_main->sha1), Emu.GetBoot().substr(Emu.GetBoot().find_last_of('/') + 1));
+
+	if (!fs::create_path(_main->cache))
+	{
+		fmt::throw_exception("Failed to create cache directory: %s (%s)", _main->cache, fs::g_tls_error);
+	}
+
+	// Initialize SPU cache
+	spu_cache::initialize();
+
+	if (Emu.IsStopped())
 	{
 		return;
 	}

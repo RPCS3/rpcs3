@@ -20,7 +20,7 @@ class spu_runtime
 	// All functions
 	std::map<std::vector<u32>, spu_function_t> m_map;
 
-	// TODO
+	// All dispatchers
 	std::array<atomic_t<spu_function_t>, 0x10000> m_dispatcher;
 
 	friend class spu_recompiler;
@@ -35,11 +35,13 @@ class spu_recompiler : public spu_recompiler_base
 	std::shared_ptr<spu_runtime> m_spurt;
 
 public:
-	spu_recompiler(class SPUThread& spu);
+	spu_recompiler();
+
+	virtual void init() override;
 
 	virtual spu_function_t get(u32 lsa) override;
 
-	virtual spu_function_t compile(const std::vector<u32>& func) override;
+	virtual spu_function_t compile(std::vector<u32>&&) override;
 
 private:
 	// emitter:
@@ -58,6 +60,15 @@ private:
 	// workload for the end of function:
 	std::vector<std::function<void()>> after;
 	std::vector<std::function<void()>> consts;
+
+	// Function return label
+	asmjit::Label label_stop;
+
+	// Indirect branch dispatch table
+	asmjit::Label instr_table;
+
+	// All valid instruction labels
+	std::map<u32, asmjit::Label> instr_labels;
 
 	// All emitted 128-bit consts
 	std::map<std::pair<u64, u64>, asmjit::Label> xmm_consts;
@@ -97,7 +108,6 @@ private:
 
 	void branch_fixed(u32 target);
 	void branch_indirect(spu_opcode_t op);
-	asmjit::Label halt(u32 pos);
 	void fall(spu_opcode_t op);
 	void save_rcx();
 	void load_rcx();

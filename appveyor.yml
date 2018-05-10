@@ -5,12 +5,11 @@ image: Visual Studio 2015
 
 environment:
   QTDIR: C:\Qt\5.10\msvc2015_64
-  LLVMLIBS: https://drive.google.com/uc?export=download&id=0B8A6NaxhQAGRY2k3Q2Yya05lcm8
+  LLVMLIBS: https://github.com/RPCS3/llvm/releases/download/continuous-release_60/llvmlibs.7z
   VULKAN: https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export
 
 cache:
-- llvmlibs.7z -> appveyor.yml
 - vulkan.7z -> appveyor.yml
 - compat_database.dat
 
@@ -19,7 +18,7 @@ install:
     $env:COMM_TAG = $(git describe --tags $(git rev-list --tags --max-count=1))
     $env:COMM_COUNT = $(git rev-list --count HEAD)
     $env:COMM_HASH = $env:APPVEYOR_REPO_COMMIT.Substring(0,8)
-    
+
     if ($env:APPVEYOR_PULL_REQUEST_NUMBER) {
         $env:BUILD = "rpcs3-{0}-{1}_win64.7z" -f $env:COMM_TAG, $env:COMM_HASH
         $env:AVVER = "{0}-{1}" -f $env:COMM_TAG.TrimStart("v"), $env:COMM_HASH
@@ -101,6 +100,6 @@ artifacts:
 - path: openssl_win64.7z.sha256
   name: openssl sha256 hash
 
-on_finish: 
+on_finish:
 - ps: | # update appveyor build version, done last to prevent webhook breakage
     update-appveyorbuild -version $env:AVVER

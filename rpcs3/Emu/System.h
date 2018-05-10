@@ -30,6 +30,13 @@ enum class spu_decoder_type
 	llvm,
 };
 
+enum class spu_block_size_type
+{
+	safe,
+	mega,
+	giga,
+};
+
 enum class lib_loading_type
 {
 	automatic,
@@ -304,7 +311,8 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 16> spu_delay_penalty{this, "SPU delay penalty", 3}; //Number of milliseconds to block a thread if a virtual 'core' isn't free
 		cfg::_bool spu_loop_detection{this, "SPU loop detection", true}; //Try to detect wait loops and trigger thread yield
 		cfg::_bool spu_shared_runtime{this, "SPU Shared Runtime", true}; // Share compiled SPU functions between all threads
-		cfg::_bool enable_TSX{ this, "Enable TSX on Haswell/Broadwell", false }; // Enable TSX on Haswell CPUs. This should be used carefully
+    cfg::_enum<spu_block_size_type> spu_block_size{this, "SPU Block Size"};
+		cfg::_bool enable_TSX{this, "Enable TSX on Haswell/Broadwell", false}; // Enable TSX on Haswell/Broadwell CPUs. This should be used carefully
 
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::liblv2only};
 		cfg::_bool hook_functions{this, "Hook static functions"};

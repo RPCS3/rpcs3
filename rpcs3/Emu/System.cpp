@@ -399,6 +399,13 @@ void Emulator::Load(bool add_only)
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 		m_cat = psf::get_string(_psf, "CATEGORY");
 
+		for (auto& c : m_title)
+		{
+			// Replace newlines with spaces
+			if (c == '\n')
+				c = ' ';
+		}
+
 		if (!_psf.empty() && m_cat.empty())
 		{
 			LOG_FATAL(LOADER, "Corrupted PARAM.SFO found! Assuming category GD. Try reinstalling the game.");
@@ -869,7 +876,18 @@ void Emulator::Load(bool add_only)
 
 			if (g_cfg.core.spu_debug)
 			{
-				fs::file log(Emu.GetCachePath() + "SPUJIT.log", fs::rewrite);
+				fs::file log;
+
+				if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
+				{
+					log.open(Emu.GetCachePath() + "SPUJIT.log", fs::rewrite);
+				}
+
+				if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+				{
+					log.open(Emu.GetCachePath() + "SPU.log", fs::rewrite);
+				}
+
 				log.write(fmt::format("SPU JIT Log\n\nTitle: %s\nTitle ID: %s\n\n", Emu.GetTitle(), Emu.GetTitleID()));
 			}
 
