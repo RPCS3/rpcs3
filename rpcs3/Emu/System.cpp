@@ -457,11 +457,11 @@ void Emulator::Load(bool add_only)
 		{
 			if (g_use_rtm)
 			{
-				LOG_NOTICE(GENERAL, "TSX enabled");
+				LOG_WARNING(GENERAL, "TSX forced by User");
 			}
 			else
 			{
-				LOG_NOTICE(GENERAL, "TSX disabled");
+				LOG_WARNING(GENERAL, "TSX disabled on your CPU due to security reasons");
 			}
 		}
 
