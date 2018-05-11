@@ -542,7 +542,11 @@ SPUThread::SPUThread(const std::string& name, u32 index, lv2_spu_group* group)
 
 	if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
+#ifdef LLVM_AVAILABLE
 		jit = spu_recompiler_base::make_llvm_recompiler();
+#else
+		fmt::throw_exception("LLVM is not available in this build.");
+#endif
 	}
 
 	// Initialize lookup table

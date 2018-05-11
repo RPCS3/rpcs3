@@ -112,7 +112,11 @@ void spu_cache::initialize()
 
 	if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
+#ifdef LLVM_AVAILABLE
 		compiler = spu_recompiler_base::make_llvm_recompiler();
+#else
+		fmt::throw_exception("LLVM is not available in this build.");
+#endif
 	}
 
 	if (compiler)
@@ -720,6 +724,8 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 
 	return result;
 }
+
+#ifdef LLVM_AVAILABLE
 
 #include "Emu/CPU/CPUTranslator.h"
 #include "llvm/ADT/Triple.h"
@@ -3013,3 +3019,5 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler()
 }
 
 DECLARE(spu_llvm_recompiler::g_decoder);
+
+#endif
