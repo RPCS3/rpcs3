@@ -65,6 +65,8 @@ public:
 	// Create recompiler instance (ASMJIT)
 	static std::unique_ptr<spu_recompiler_base> make_asmjit_recompiler();
 
+#ifdef LLVM_AVAILABLE
 	// Create recompiler instance (LLVM)
 	static std::unique_ptr<spu_recompiler_base> make_llvm_recompiler();
+#endif
 };
