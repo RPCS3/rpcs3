@@ -10,6 +10,7 @@
 #include <QSpinBox>
 #include <QApplication>
 #include <QDesktopWidget>
+#include <QButtonGroup>
 #include <QTimer>
 
 #include "qt_utils.h"
