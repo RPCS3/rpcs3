@@ -841,8 +841,8 @@ class spu_llvm_runtime
 	// All dispatchers
 	std::array<atomic_t<spu_function_t>, 0x10000> m_dispatcher;
 
-	// JIT instance (TODO: use small code model)
-	jit_compiler m_jit{{}, jit_compiler::cpu(g_cfg.core.llvm_cpu), true};
+	// JIT instance
+	jit_compiler m_jit{{}, jit_compiler::cpu(g_cfg.core.llvm_cpu)};
 
 	// Debug module output location
 	std::string m_cache_path;
