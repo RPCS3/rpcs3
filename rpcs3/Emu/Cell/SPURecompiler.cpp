@@ -820,6 +820,8 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 	return result;
 }
 
+#ifdef LLVM_AVAILABLE
+
 #include "Emu/CPU/CPUTranslator.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -3118,3 +3120,12 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler()
 }
 
 DECLARE(spu_llvm_recompiler::g_decoder);
+
+#else
+
+std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler()
+{
+	fmt::throw_exception("LLVM is not available in this build.");
+}
+
+#endif
