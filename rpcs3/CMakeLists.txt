@@ -181,7 +181,7 @@ set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if(NOT WITHOUT_LLVM)
-	find_package(LLVM 999.666 CONFIG)
+	find_package(LLVM 6.0 CONFIG)
 	if(NOT LLVM_FOUND)
 		message("LLVM will be built from the submodule.")
 
