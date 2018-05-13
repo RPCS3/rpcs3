@@ -103,3 +103,4 @@ moc_*.cpp
 qrc_resources.cpp
 rpcs3_automoc.cpp
 ui_*.h
+rpcs3/rpcs3_autogen/*
