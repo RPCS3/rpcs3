@@ -601,11 +601,11 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 	// Get next reliable function address
 	auto get_limit = [&](u32 addr) -> u32
 	{
-		for (auto it = fmap.lower_bound(addr), end = fmap.end(); it != end; it++)
+		for (auto& entry: fmap)
 		{
-			if (test(it->second.attr, ppu_attr::known_addr))
+			if (test(entry.second.attr, ppu_attr::known_addr))
 			{
-				return it->first;
+				return entry.first;
 			}
 		}
 
