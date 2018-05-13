@@ -89,7 +89,7 @@ void spu_cache::initialize()
 	}
 
 	// SPU cache file (version + block size type)
-	const std::string loc = _main->cache + u8"spu-§" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v1.dat";
+	const std::string loc = _main->cache + u8"spu-§" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v2.dat";
 
 	auto cache = std::make_shared<spu_cache>(loc);
 
@@ -139,6 +139,11 @@ void spu_cache::initialize()
 
 			// Call analyser
 			std::vector<u32> func2 = compiler->block(ls.data(), func[0]);
+
+			if (func2.size() != func.size())
+			{
+				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2[0], func2.size() - 1, func.size() - 1);
+			}
 
 			compiler->compile(std::move(func));
 
@@ -281,6 +286,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 
 	m_regmod.fill(0xff);
 	m_targets.clear();
+	m_preds.clear();
 
 	// Value flags (TODO)
 	enum class vf : u32
@@ -306,6 +312,8 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 			wi++;
 		};
 
+		const u32 pos = wl[wi];
+
 		const auto add_block = [&](u32 target)
 		{
 			// Verify validity of the new target (TODO)
@@ -316,12 +324,21 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 				{
 					m_block_info[target / 4] = true;
 					wl.push_back(target);
-					return;
 				}
+
+				// Add predecessor (check if already exists)
+				for (u32 pred : m_preds[target])
+				{
+					if (pred == pos)
+					{
+						return;
+					}
+				}
+
+				m_preds[target].push_back(pos);
 			}
 		};
 
-		const u32 pos = wl[wi];
 		const u32 data = ls[pos / 4];
 		const auto op = spu_opcode_t{data};
 
@@ -779,8 +796,33 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 		}
 	}
 
-	if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
+	while (g_cfg.core.spu_block_size == spu_block_size_type::safe)
 	{
+		const u32 initial_size = result.size();
+
+		// Check unreachable blocks in safe mode (TODO)
+		u32 limit = lsa + result.size() * 4 - 4;
+
+		for (auto& pair : m_preds)
+		{
+			bool reachable = false;
+
+			for (u32 pred : pair.second)
+			{
+				if (pred >= lsa && pred < limit)
+				{
+					reachable = true;
+				}
+			}
+
+			if (!reachable && pair.first < limit)
+			{
+				limit = pair.first;
+			}
+		}
+
+		result.resize((limit - lsa) / 4 + 1);
+
 		// Check holes in safe mode (TODO)
 		u32 valid_size = 0;
 
@@ -790,13 +832,13 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 			{
 				const u32 pos = lsa + (i - 1) * 4;
 				const u32 data = ls[pos / 4];
-				const auto type = s_spu_itype.decode(data);
 
 				// Allow only NOP or LNOP instructions in holes
-				if (type == spu_itype::NOP || type == spu_itype::LNOP)
+				if (data == 0x200000 || (data & 0xffffff80) == 0x40200000)
 				{
 					if (i + 1 < result.size())
 					{
+						result[i] = se_storage<u32>::swap(data);
 						continue;
 					}
 				}
@@ -808,6 +850,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 			{
 				valid_size = i;
 			}
+		}
+
+		// Repeat if blocks were removed
+		if (result.size() == initial_size)
+		{
+			break;
 		}
 	}
 
