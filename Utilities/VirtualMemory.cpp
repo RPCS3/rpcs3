@@ -12,6 +12,14 @@
 #include <sys/types.h>
 #endif
 
+#if 0
+#include <sys/syscall.h>
+static int memfd_create(const char *name, unsigned int flags)
+{
+    return syscall(__NR_memfd_create, name, flags);
+}
+#endif
+
 namespace utils
 {
 	// Convert memory protection (internal)
@@ -115,21 +123,27 @@ namespace utils
 	{
 #ifdef _WIN32
 		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, m_size, NULL);
+		verify(HERE), m_handle != INVALID_HANDLE_VALUE;
 //#elif __linux__
-//		m_file = ::memfd_create("mem1", 0);
-//		::ftruncate(m_file, m_size);
+//		m_file = ::memfd_create("", 0);
+//		verify(HERE), m_file >= 0;
+//		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
 #else
 		while ((m_file = ::shm_open("/rpcs3-mem1", O_RDWR | O_CREAT | O_EXCL, S_IWUSR | S_IRUSR)) == -1)
 		{
-			if (errno != EEXIST)
-				return;
+			if (m_file == -1 && errno == EMFILE)
+			{
+				fmt::throw_exception("Too many open files. Raise the limit and try again.");
+			}
+
+			verify(HERE), errno == EEXIST;
 		}
 
-		::shm_unlink("/rpcs3-mem1");
-		::ftruncate(m_file, m_size);
+		verify(HERE), ::shm_unlink("/rpcs3-mem1") >= 0;
+		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
 #endif
 
-		m_ptr = this->map(nullptr);
+		m_ptr = verify(HERE, this->map(nullptr));
 	}
 
 	shm::~shm()
