@@ -129,6 +129,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 	const qword *instBuffer = (const qword*)ptr;
 	size_t instIndex = 0;
 	s32 program_offset = -1;
+	u32 ucode_size = 0;
 	u16 textures_mask = 0;
 
 	while (true)
@@ -163,13 +164,22 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			{
 				//Instruction references constant, skip one slot occupied by data
 				instIndex++;
+				ucode_size += 16;
 			}
+		}
+
+		if (program_offset >= 0)
+		{
+			ucode_size += 16;
 		}
 
 		if ((inst.word[0] >> 8) & 0x1)
 		{
 			if (program_offset < 0)
+			{
 				program_offset = instIndex * 16;
+				ucode_size = 16;
+			}
 
 			break;
 		}
@@ -177,7 +187,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 		instIndex++;
 	}
 
-	return{ (u32)program_offset, textures_mask };
+	return{ (u32)program_offset, ucode_size, textures_mask };
 }
 
 size_t fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentProgram& program)
