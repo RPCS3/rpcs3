@@ -106,6 +106,7 @@ namespace rsx
 			{
 				if (!tex.enabled())
 					continue;
+
 				const u32 texaddr = get_address(tex.offset(), tex.location());
 				auto layout       = get_subresources_layout(tex);
 
@@ -132,6 +133,7 @@ namespace rsx
 			{
 				if (!tex.enabled())
 					continue;
+
 				const u32 texaddr = get_address(tex.offset(), tex.location());
 				auto layout       = get_subresources_layout(tex);
 
@@ -161,6 +163,7 @@ namespace rsx
 					const bool enabled = !!(input_mask & (1 << index));
 					if (!enabled)
 						continue;
+
 					const auto& info = method_registers.vertex_arrays_info[index];
 					if (!info.size())
 						continue;
@@ -271,6 +274,7 @@ namespace rsx
 					const bool enabled = !!(input_mask & (1 << index));
 					if (!enabled)
 						continue;
+
 					const auto& info = method_registers.vertex_arrays_info[index];
 					if (!info.size())
 						continue;
@@ -554,14 +558,16 @@ namespace rsx
 		{
 			const auto target = rsx::method_registers.surface_color_target();
 
-			u32 offset_color[] = {
+			u32 offset_color[] =
+			{
 			    rsx::method_registers.surface_a_offset(),
 			    rsx::method_registers.surface_b_offset(),
 			    rsx::method_registers.surface_c_offset(),
 			    rsx::method_registers.surface_d_offset(),
 			};
 
-			u32 context_dma_color[] = {
+			u32 context_dma_color[] =
+			{
 			    rsx::method_registers.surface_a_dma(),
 			    rsx::method_registers.surface_b_dma(),
 			    rsx::method_registers.surface_c_dma(),
