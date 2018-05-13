@@ -665,9 +665,6 @@
     <ClCompile Include="Emu\VFS.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Memory\wait_engine.cpp">
-      <Filter>Emu\Memory</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\IdManager.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
@@ -1302,9 +1299,6 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\AtomicPtr.h">
       <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Memory\wait_engine.h">
-      <Filter>Emu\Memory</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\StrUtil.h">
       <Filter>Utilities</Filter>
