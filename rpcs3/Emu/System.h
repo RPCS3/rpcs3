@@ -288,6 +288,13 @@ struct cfg_root : cfg::node
 {
 	struct node_core : cfg::node
 	{
+		static constexpr bool thread_scheduler_enabled_def =
+#ifdef _WIN32
+			true;
+#else
+			false;
+#endif
+
 		node_core(cfg::node* _this) : cfg::node(_this, "Core") {}
 
 		cfg::_enum<ppu_decoder_type> ppu_decoder{this, "PPU Decoder", ppu_decoder_type::llvm};
@@ -296,13 +303,8 @@ struct cfg_root : cfg::node
 		cfg::_bool llvm_logs{this, "Save LLVM logs"};
 		cfg::string llvm_cpu{this, "Use LLVM CPU"};
 		cfg::_int<0, INT32_MAX> llvm_threads{this, "Max LLVM Compile Threads", 0};
-
-#ifdef _WIN32
-		cfg::_bool thread_scheduler_enabled{ this, "Enable thread scheduler", true };
-#else
-		cfg::_bool thread_scheduler_enabled{ this, "Enable thread scheduler", false };
-#endif
-
+		cfg::_bool thread_scheduler_enabled{this, "Enable thread scheduler", thread_scheduler_enabled_def};
+		cfg::_bool set_daz_and_ftz{this, "Set DAZ and FTZ", false};
 		cfg::_enum<spu_decoder_type> spu_decoder{this, "SPU Decoder", spu_decoder_type::asmjit};
 		cfg::_bool lower_spu_priority{this, "Lower SPU thread priority"};
 		cfg::_bool spu_debug{this, "SPU Debug"};

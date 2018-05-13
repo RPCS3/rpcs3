@@ -1156,27 +1156,36 @@ void spu_recompiler::branch_fixed(u32 target)
 	c->jmp(x86::rax);
 }
 
-void spu_recompiler::branch_indirect(spu_opcode_t op)
+void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt)
 {
 	using namespace asmjit;
 
-	if (!instr_table.isValid())
+	if (g_cfg.core.spu_block_size == spu_block_size_type::safe && !jt)
 	{
-		// Request instruction table
-		instr_table = c->newLabel();
+		// Simply external call (return or indirect call)
+		c->mov(x86::r10, x86::qword_ptr(*cpu, addr->r64(), 1, offset32(&SPUThread::jit_dispatcher)));
+		c->xor_(qw0->r32(), qw0->r32());
 	}
+	else
+	{
+		if (!instr_table.isValid())
+		{
+			// Request instruction table
+			instr_table = c->newLabel();
+		}
 
-	const u32 start = instr_labels.begin()->first;
-	const u32 end = instr_labels.rbegin()->first + 4;
+		const u32 start = instr_labels.begin()->first;
+		const u32 end = instr_labels.rbegin()->first + 4;
 
-	// Load indirect jump address, choose between local and external
-	c->lea(x86::r10, x86::qword_ptr(instr_table));
-	c->lea(*qw1, x86::qword_ptr(*addr, 0 - start));
-	c->xor_(qw0->r32(), qw0->r32());
-	c->cmp(qw1->r32(), end - start);
-	c->cmovae(qw1->r32(), qw0->r32());
-	c->cmovb(x86::r10, x86::qword_ptr(x86::r10, *qw1, 1, 0));
-	c->cmovae(x86::r10, x86::qword_ptr(*cpu, addr->r64(), 1, offset32(&SPUThread::jit_dispatcher)));
+		// Load indirect jump address, choose between local and external
+		c->lea(x86::r10, x86::qword_ptr(instr_table));
+		c->lea(*qw1, x86::qword_ptr(*addr, 0 - start));
+		c->xor_(qw0->r32(), qw0->r32());
+		c->cmp(qw1->r32(), end - start);
+		c->cmovae(qw1->r32(), qw0->r32());
+		c->cmovb(x86::r10, x86::qword_ptr(x86::r10, *qw1, 1, 0));
+		c->cmovae(x86::r10, x86::qword_ptr(*cpu, addr->r64(), 1, offset32(&SPUThread::jit_dispatcher)));
+	}
 
 	if (op.d)
 	{
@@ -2741,7 +2750,7 @@ void spu_recompiler::BI(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
 	c->and_(*addr, 0x3fffc);
-	branch_indirect(op);
+	branch_indirect(op, verify(HERE, m_targets[m_pos].size()) > 2);
 	m_pos = -1;
 }
 
