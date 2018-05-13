@@ -27,6 +27,5 @@
         <file>Icons/stop_blue.png</file>
         <file>Icons/cog_black.png</file>
         <file>Icons/cog_gray.png</file>
-        <file>qt/etc/qt.conf</file>
     </qresource>
 </RCC>
