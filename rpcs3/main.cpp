@@ -13,6 +13,11 @@
 #include <windows.h>
 #endif
 
+#ifdef __linux__
+#include <sys/time.h>
+#include <sys/resource.h>
+#endif
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 template <typename... Args>
@@ -83,6 +88,14 @@ int main(int argc, char** argv)
 	});
 #else
 	qputenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1");
+#endif
+
+#ifdef __linux__
+	struct ::rlimit rlim;
+	rlim.rlim_cur = 4096;
+	rlim.rlim_max = 4096;
+	if (::setrlimit(RLIMIT_NOFILE, &rlim) != 0)
+		std::fprintf(stderr, "Failed to set max open file limit (4096).");
 #endif
 
 	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
