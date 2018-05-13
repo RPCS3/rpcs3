@@ -4,6 +4,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
+#include "Modules/cellMsgDialog.h"
 
 #include "SPUThread.h"
 #include "SPUAnalyser.h"
@@ -122,11 +123,31 @@ void spu_cache::initialize()
 
 	if (compiler && !func_list.empty())
 	{
+		// Initialize message dialog
+		std::shared_ptr<MsgDialogBase> dlg = Emu.GetCallbacks().get_msg_dialog();
+		dlg->type.se_normal = true;
+		dlg->type.bg_invisible = true;
+		dlg->type.progress_bar_count = 1;
+		dlg->on_close = [](s32 status)
+		{
+			Emu.CallAfter([]()
+			{
+				// Abort everything
+				Emu.Stop();
+			});
+		};
+
+		Emu.CallAfter([=]()
+		{
+			dlg->Create("Please wait...");
+		});
+
 		// Fake LS
 		std::vector<be_t<u32>> ls(0x10000);
 
 		// Used to show progress
 		u64 timex = get_system_time();
+		u32 old_val = 0;
 
 		// Build functions
 		for (auto&& func : func_list)
@@ -164,14 +185,22 @@ void spu_cache::initialize()
 				return;
 			}
 
-			// Print progress every 400 ms
-			const u64 timed = get_system_time() - timex;
+			// Calculate progress stats
+			const u32 progress = &func - func_list.data();
+			const u32 new_val = 100 * progress / func_list.size();
 
-			if (timed >= 400000)
+			// Update dialog
+			Emu.CallAfter([=]()
 			{
-				LOG_SUCCESS(SPU, "Building SPU cache (%u/%u)...", &func - func_list.data(), func_list.size());
-				timex += 400000;
-			}
+				dlg->ProgressBarSetMsg(0, fmt::format("Building SPU cache (%u/%u)", progress, func_list.size()));
+
+				if (new_val > old_val)
+				{
+					dlg->ProgressBarInc(0, new_val - old_val);
+				}
+			});
+
+			old_val = new_val;
 		}
 
 		LOG_SUCCESS(SPU, "SPU Runtime: Built %u functions.", func_list.size());

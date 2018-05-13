@@ -374,7 +374,7 @@ void msg_dialog_frame::ProgressBarReset(u32 index)
 
 void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 {
-	if (m_dialog)
+	if (m_dialog && delta > 0)
 	{
 		if (index == 0 && m_gauge1)
 		{
