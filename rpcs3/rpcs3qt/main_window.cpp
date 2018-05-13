@@ -331,6 +331,32 @@ void main_window::BootGame()
 	Boot(path);
 }
 
+void main_window::BootRsxCapture()
+{
+	bool stopped = false;
+	if (Emu.IsRunning())
+	{
+		Emu.Pause();
+		stopped = true;
+	}
+
+	QString filePath = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), "", tr("RRC files (*.rrc);;All files (*.*)"));
+	if (filePath.isEmpty())
+	{
+		if (stopped) Emu.Resume();
+		return;
+	}
+	Emu.SetForceBoot(true);
+	Emu.Stop();
+
+	const std::string path = sstr(filePath);
+
+	if (!Emu.BootRsxCapture(path))
+		LOG_ERROR(GENERAL, "Capture Boot Failed");
+	else
+		LOG_SUCCESS(LOADER, "Capture Boot Success");
+}   
+
 void main_window::InstallPkg(const QString& dropPath)
 {
 	QString filePath = dropPath;
@@ -1068,6 +1094,7 @@ void main_window::CreateConnects()
 {
 	connect(ui->bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
+	connect(ui->actionopen_rsx_capture, &QAction::triggered, this, &main_window::BootRsxCapture);
 
 	connect(ui->bootRecentMenu, &QMenu::aboutToShow, [=]
 	{

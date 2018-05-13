@@ -8,6 +8,7 @@
 
 #include "Common/BufferUtils.h"
 #include "Common/texture_cache.h"
+#include "Capture/rsx_capture.h"
 #include "rsx_methods.h"
 #include "rsx_utils.h"
 
@@ -15,6 +16,7 @@
 #include "Utilities/StrUtil.h"
 
 #include <thread>
+#include <unordered_set>
 #include <fenv.h>
 
 class GSRender;
@@ -22,9 +24,8 @@ class GSRender;
 #define CMD_DEBUG 0
 
 bool user_asked_for_frame_capture = false;
-rsx::frame_capture_data frame_debug;
-
-
+rsx::frame_trace_data frame_debug;
+rsx::frame_capture_data frame_capture;
 
 namespace rsx
 {
@@ -255,22 +256,7 @@ namespace rsx
 
 	void thread::capture_frame(const std::string &name)
 	{
-		frame_capture_data::draw_state draw_state = {};
-
-		int clip_w = rsx::method_registers.surface_clip_width();
-		int clip_h = rsx::method_registers.surface_clip_height();
-		draw_state.state = rsx::method_registers;
-		draw_state.color_buffer = std::move(copy_render_targets_to_memory());
-		draw_state.depth_stencil = std::move(copy_depth_stencil_buffer_to_memory());
-
-		if (draw_state.state.current_draw_clause.command == rsx::draw_command::indexed)
-		{
-			draw_state.vertex_count = 0;
-			draw_state.vertex_count = draw_state.state.current_draw_clause.get_elements_count();
-			auto index_raw_data_ptr = get_raw_index_array(draw_state.state.current_draw_clause.first_count_commands);
-			draw_state.index.resize(index_raw_data_ptr.size_bytes());
-			std::copy(index_raw_data_ptr.begin(), index_raw_data_ptr.end(), draw_state.index.begin());
-		}
+		frame_trace_data::draw_state draw_state = {};
 
 		draw_state.programs = get_programs();
 		draw_state.name = name;
@@ -330,6 +316,9 @@ namespace rsx
 
 	void thread::end()
 	{
+		if (capture_current_frame)
+			capture::capture_draw_memory(this);
+
 		in_begin_end = false;
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
@@ -847,12 +836,44 @@ namespace rsx
 					}
 				}
 
-				method_registers.decode(reg, value);
-
 				if (capture_current_frame)
 				{
 					frame_debug.command_queue.push_back(std::make_pair(reg, value));
+
+					if (!(reg == NV406E_SET_REFERENCE || reg == NV406E_SEMAPHORE_RELEASE || reg == NV406E_SEMAPHORE_ACQUIRE))
+					{
+						// todo: handle nv406e methods better?, do we care about call/jumps?
+						rsx::frame_capture_data::replay_command replay_cmd;
+						replay_cmd.rsx_command = std::make_pair(i == 0 ? cmd : 0, value);
+
+						frame_capture.replay_commands.push_back(replay_cmd);
+
+						// to make this easier, use the replay command 'i' positions back
+						auto it = std::prev(frame_capture.replay_commands.end(), i + 1);
+
+						switch (reg)
+						{
+						case NV4097_GET_REPORT:
+							capture::capture_get_report(this, *it, value);
+							break;
+						case NV3089_IMAGE_IN:
+							capture::capture_image_in(this, *it);
+							break;
+						case NV0039_BUFFER_NOTIFY:
+							capture::capture_buffer_notify(this, *it);
+							break;
+						case NV4097_CLEAR_SURFACE:
+							capture::capture_surface_state(this, *it);
+							break;
+						default:
+							if (reg >= NV308A_COLOR && reg < NV3089_SET_OBJECT)
+								capture::capture_inline_transfer(this, *it, reg - NV308A_COLOR, value);
+							break;
+						}
+					}
 				}
+
+				method_registers.decode(reg, value);
 
 				if (execute_method_call)
 				{

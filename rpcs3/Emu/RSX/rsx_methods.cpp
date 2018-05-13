@@ -7,6 +7,7 @@
 #include "rsx_decode.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Capture/rsx_capture.h"
 
 #include <sstream>
 #include <cereal/archives/binary.hpp>
@@ -990,22 +991,44 @@ namespace rsx
 
 	void flip_command(thread* rsx, u32, u32 arg)
 	{
-		if (user_asked_for_frame_capture)
+		if (user_asked_for_frame_capture && !g_cfg.video.strict_rendering_mode)
+		{
+			// not dealing with non-strict rendering capture for now
+			user_asked_for_frame_capture = false;
+			LOG_FATAL(RSX, "RSX Capture: Capture only supported when ran with strict rendering mode.");
+		}
+		else if (user_asked_for_frame_capture && !rsx->capture_current_frame)
 		{
 			rsx->capture_current_frame = true;
 			user_asked_for_frame_capture = false;
 			frame_debug.reset();
+			frame_capture.reset();
+
+			// random number just to jumpstart the size
+			frame_capture.replay_commands.reserve(8000);
+
+			// capture first tile state with nop cmd
+			rsx::frame_capture_data::replay_command replay_cmd;
+			replay_cmd.rsx_command = std::make_pair(NV4097_NO_OPERATION, 0);
+			frame_capture.replay_commands.push_back(replay_cmd);
+			capture::capture_display_tile_state(rsx, frame_capture.replay_commands.back());
 		}
 		else if (rsx->capture_current_frame)
 		{
 			rsx->capture_current_frame = false;
 			std::stringstream os;
 			cereal::BinaryOutputArchive archive(os);
-			archive(frame_debug);
+			const std::string& filePath = fs::get_config_dir() + "capture.rrc";
+			archive(frame_capture);
 			{
-				fs::file f(fs::get_config_dir() + "capture.txt", fs::rewrite);
+				// todo: 'dynamicly' create capture filename, also may want to compress this data?
+				fs::file f(filePath, fs::rewrite);
 				f.write(os.str());
 			}
+
+			LOG_SUCCESS(RSX, "capture successful: %s", filePath.c_str());
+			
+			frame_capture.reset();
 			Emu.Pause();
 		}
 

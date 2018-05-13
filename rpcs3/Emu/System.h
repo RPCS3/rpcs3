@@ -260,6 +260,7 @@ public:
 	}
 
 	bool BootGame(const std::string& path, bool direct = false, bool add_only = false);
+	bool BootRsxCapture(const std::string& path);
 	bool InstallPkg(const std::string& path);
 
 	static std::string GetEmuDir();

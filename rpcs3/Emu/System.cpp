@@ -13,9 +13,11 @@
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
+#include "Emu/Cell/lv2/sys_rsx.h"
 
 #include "Emu/IdManager.h"
 #include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/Capture/rsx_replay.h"
 
 #include "Loader/PSF.h"
 #include "Loader/ELF.h"
@@ -26,9 +28,13 @@
 #include "../Crypto/unpkg.h"
 #include "yaml-cpp/yaml.h"
 
+#include "cereal/archives/binary.hpp"
+
 #include <thread>
 #include <typeinfo>
 #include <queue>
+#include <fstream>
+#include <memory>
 
 #include "Utilities/GDBDebugServer.h"
 
@@ -231,6 +237,50 @@ void Emulator::Init()
 #endif
 	// Initialize patch engine
 	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
+}
+
+bool Emulator::BootRsxCapture(const std::string& path)
+{
+	if (!fs::is_file(path))
+		return false;
+
+	std::fstream f(path, std::ios::in | std::ios::binary);
+
+	cereal::BinaryInputArchive archive(f);
+	std::unique_ptr<rsx::frame_capture_data> frame = std::make_unique<rsx::frame_capture_data>();
+	archive(*frame);
+
+	if (frame->magic != rsx::FRAME_CAPTURE_MAGIC)
+	{
+		LOG_ERROR(LOADER, "Invalid rsx capture file!");
+		return false;
+	}
+
+	if (frame->version != rsx::FRAME_CAPTURE_VERSION)
+	{
+		LOG_ERROR(LOADER, "Rsx capture file version not supported! Expected %d, found %d", rsx::FRAME_CAPTURE_VERSION, frame->version);
+		return false;
+	}
+
+	Init();
+
+	vm::init();
+
+	// PS3 'executable'
+	m_state = system_state::ready;
+	GetCallbacks().on_ready();
+
+	auto gsrender = fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render);
+	if (gsrender.get() == nullptr)
+		return false;
+
+	GetCallbacks().on_run();
+	m_state = system_state::running;
+
+	auto&& rsxcapture = idm::make_ptr<ppu_thread, rsx::rsx_replay_thread>(std::move(frame));
+	rsxcapture->run();
+
+	return true;
 }
 
 bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
