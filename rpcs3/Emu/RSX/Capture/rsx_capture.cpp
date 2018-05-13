@@ -87,8 +87,9 @@ namespace rsx
 				const u32 program_offset   = (shader_program & ~0x3);
 
 				const u32 addr          = get_address(program_offset, program_location);
-				const u32 program_start = program_hash_util::fragment_program_utils::get_fragment_program_start(vm::base(addr));
-				const u32 ucode_size    = program_hash_util::fragment_program_utils::get_fragment_program_ucode_size(vm::base(addr + program_start));
+				const auto program_info = program_hash_util::fragment_program_utils::analyse_fragment_program(vm::base(addr));
+				const u32 program_start = program_info.program_start_offset;
+				const u32 ucode_size    = program_info.program_ucode_length;
 
 				frame_capture_data::memory_block block;
 				block.addr     = addr;

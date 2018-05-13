@@ -51,6 +51,7 @@ namespace program_hash_util
 		struct fragment_program_metadata
 		{
 			u32 program_start_offset;
+			u32 program_ucode_length;
 			u16 referenced_textures_mask;
 		};
 
