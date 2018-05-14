@@ -42,3 +42,6 @@
 [submodule "3rdparty/pugixml"]
 	path = 3rdparty/pugixml
 	url = https://github.com/zeux/pugixml
+[submodule "3rdparty/xxHash"]
+	path = 3rdparty/xxHash
+	url = https://github.com/Cyan4973/xxHash

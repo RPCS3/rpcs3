@@ -45,7 +45,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 
 	m_go_to_addr = new QPushButton(tr("Go To Address"), this);
 	m_go_to_pc = new QPushButton(tr("Go To PC"), this);
-	m_btn_capture = new QPushButton(tr("Capture"), this);
+	m_btn_capture = new QPushButton(tr("RSX Capture"), this);
 	m_btn_step = new QPushButton(tr("Step"), this);
 	m_btn_step_over = new QPushButton(tr("Step Over"), this);
 	m_btn_run = new QPushButton(RunString, this);
