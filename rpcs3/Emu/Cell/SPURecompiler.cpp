@@ -89,7 +89,7 @@ void spu_cache::initialize()
 	}
 
 	// SPU cache file (version + block size type)
-	const std::string loc = _main->cache + u8"spu-§" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v0.dat";
+	const std::string loc = _main->cache + u8"spu-§" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v2.dat";
 
 	auto cache = std::make_shared<spu_cache>(loc);
 
@@ -139,6 +139,11 @@ void spu_cache::initialize()
 
 			// Call analyser
 			std::vector<u32> func2 = compiler->block(ls.data(), func[0]);
+
+			if (func2.size() != func.size())
+			{
+				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2[0], func2.size() - 1, func.size() - 1);
+			}
 
 			compiler->compile(std::move(func));
 
@@ -272,13 +277,16 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 	result.push_back(lsa);
 
 	// Initialize block entries
-	std::bitset<0x10000>& blocks = m_block_info;
-	blocks.reset();
-	blocks.set(lsa / 4);
+	m_block_info.reset();
+	m_block_info.set(lsa / 4);
 
 	// Simple block entry workload list
 	std::vector<u32> wl;
 	wl.push_back(lsa);
+
+	m_regmod.fill(0xff);
+	m_targets.clear();
+	m_preds.clear();
 
 	// Value flags (TODO)
 	enum class vf : u32
@@ -304,26 +312,39 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 			wi++;
 		};
 
+		const u32 pos = wl[wi];
+
 		const auto add_block = [&](u32 target)
 		{
 			// Verify validity of the new target (TODO)
 			if (target > lsa)
 			{
 				// Check for redundancy
-				if (!blocks[target / 4])
+				if (!m_block_info[target / 4])
 				{
-					blocks[target / 4] = true;
+					m_block_info[target / 4] = true;
 					wl.push_back(target);
-					return;
 				}
+
+				// Add predecessor (check if already exists)
+				for (u32 pred : m_preds[target])
+				{
+					if (pred == pos)
+					{
+						return;
+					}
+				}
+
+				m_preds[target].push_back(pos);
 			}
 		};
 
-		const u32 pos = wl[wi];
 		const u32 data = ls[pos / 4];
 		const auto op = spu_opcode_t{data};
 
 		wl[wi] += 4;
+
+		m_targets.erase(pos);
 
 		// Analyse instruction
 		switch (const auto type = s_spu_itype.decode(data))
@@ -336,7 +357,8 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 		case spu_itype::DFTSV:
 		{
 			// Stop before invalid instructions (TODO)
-			blocks[pos / 4] = true;
+			m_targets[pos].push_back(-1);
+			m_block_info[pos / 4] = true;
 			next_block();
 			continue;
 		}
@@ -349,7 +371,8 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 			if (data == 0 || data == 3)
 			{
 				// Stop before null data
-				blocks[pos / 4] = true;
+				m_targets[pos].push_back(-1);
+				m_block_info[pos / 4] = true;
 				next_block();
 				continue;
 			}
@@ -357,6 +380,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 			if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
 			{
 				// Stop on special instructions (TODO)
+				m_targets[pos].push_back(-1);
 				next_block();
 				break;
 			}
@@ -366,6 +390,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 
 		case spu_itype::IRET:
 		{
+			m_targets[pos].push_back(-1);
 			next_block();
 			break;
 		}
@@ -382,6 +407,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 
 			if (type == spu_itype::BISL)
 			{
+				m_regmod[pos / 4] = op.rt;
 				vflags[op.rt] = +vf::is_const;
 				values[op.rt] = pos + 4;
 			}
@@ -389,23 +415,24 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 			if (test(af, vf::is_const))
 			{
 				const u32 target = spu_branch_target(av);
+				LOG_WARNING(SPU, "[0x%x] At 0x%x: indirect branch to 0x%x", lsa, pos, target);
 
 				if (target == pos + 4)
 				{
 					// Nop (unless BISL)
-					break;
+					LOG_WARNING(SPU, "[0x%x] At 0x%x: indirect branch to next!", lsa, pos);
 				}
+
+				m_targets[pos].push_back(target);
 
 				if (type != spu_itype::BISL || g_cfg.core.spu_block_size == spu_block_size_type::giga)
 				{
-					LOG_WARNING(SPU, "[0x%x] At 0x%x: indirect branch to 0x%x", lsa, pos, target);
 					add_block(target);
 				}
 
-				if (type == spu_itype::BISL && target < lsa)
+				if (type == spu_itype::BISL && target >= lsa && g_cfg.core.spu_block_size == spu_block_size_type::giga)
 				{
-					next_block();
-					break;
+					add_block(pos + 4);
 				}
 			}
 			else if (type == spu_itype::BI && !op.d && !op.e)
@@ -488,6 +515,8 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 							add_block(jt_abs[i]);
 							result[(start - lsa) / 4 + 1 + i] = se_storage<u32>::swap(jt_abs[i]);
 						}
+
+						m_targets.emplace(pos, std::move(jt_abs));
 					}
 
 					if (jt_rel.size() >= jt_abs.size())
@@ -504,19 +533,33 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 							add_block(jt_rel[i]);
 							result[(start - lsa) / 4 + 1 + i] = se_storage<u32>::swap(jt_rel[i] - start);
 						}
+
+						m_targets.emplace(pos, std::move(jt_rel));
 					}
 				}
 			}
 
-			if (type == spu_itype::BI || type == spu_itype::BISL || g_cfg.core.spu_block_size == spu_block_size_type::safe)
+			if (type == spu_itype::BI || type == spu_itype::BISL)
 			{
 				if (type == spu_itype::BI || g_cfg.core.spu_block_size != spu_block_size_type::giga)
 				{
-					next_block();
-					break;
+					if (m_targets[pos].empty())
+					{
+						m_targets[pos].push_back(-1);
+					}
+				}
+				else
+				{
+					add_block(pos + 4);
 				}
 			}
+			else
+			{
+				m_targets[pos].push_back(pos + 4);
+				add_block(pos + 4);
+			}
 
+			next_block();
 			break;
 		}
 
@@ -525,6 +568,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 		{
 			const u32 target = spu_branch_target(type == spu_itype::BRASL ? 0 : pos, op.i16);
 
+			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = pos + 4;
 
@@ -534,11 +578,11 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 				break;
 			}
 
-			if (target < lsa || g_cfg.core.spu_block_size != spu_block_size_type::giga)
+			m_targets[pos].push_back(target);
+
+			if (target >= lsa && g_cfg.core.spu_block_size == spu_block_size_type::giga)
 			{
-				// Stop on direct calls
-				next_block();
-				break;
+				add_block(pos + 4);
 			}
 
 			if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
@@ -546,6 +590,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 				add_block(target);
 			}
 
+			next_block();
 			break;
 		}
 
@@ -564,15 +609,16 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 				break;
 			}
 
+			m_targets[pos].push_back(target);
 			add_block(target);
 
-			if (type == spu_itype::BR || type == spu_itype::BRA)
+			if (type != spu_itype::BR && type != spu_itype::BRA)
 			{
-				// Stop on direct branches
-				next_block();
-				break;
+				m_targets[pos].push_back(pos + 4);
+				add_block(pos + 4);
 			}
 
+			next_block();
 			break;
 		}
 
@@ -601,61 +647,131 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 
 		case spu_itype::IL:
 		{
+			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.si16;
 			break;
 		}
 		case spu_itype::ILA:
 		{
+			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.i18;
 			break;
 		}
 		case spu_itype::ILH:
 		{
+			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.i16 << 16 | op.i16;
 			break;
 		}
 		case spu_itype::ILHU:
 		{
+			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.i16 << 16;
 			break;
 		}
 		case spu_itype::IOHL:
 		{
+			m_regmod[pos / 4] = op.rt;
 			values[op.rt] = values[op.rt] | op.i16;
 			break;
 		}
 		case spu_itype::ORI:
 		{
+			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = values[op.ra] | op.si10;
 			break;
 		}
 		case spu_itype::OR:
 		{
+			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.ra] | values[op.rb];
 			break;
 		}
+		case spu_itype::ANDI:
+		{
+			m_regmod[pos / 4] = op.rt;
+			vflags[op.rt] = vflags[op.ra] & vf::is_const;
+			values[op.rt] = values[op.ra] & op.si10;
+			break;
+		}
+		case spu_itype::AND:
+		{
+			m_regmod[pos / 4] = op.rt;
+			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
+			values[op.rt] = values[op.ra] & values[op.rb];
+			break;
+		}
 		case spu_itype::AI:
 		{
+			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = values[op.ra] + op.si10;
 			break;
 		}
 		case spu_itype::A:
 		{
+			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.ra] + values[op.rb];
 			break;
 		}
+		case spu_itype::SFI:
+		{
+			m_regmod[pos / 4] = op.rt;
+			vflags[op.rt] = vflags[op.ra] & vf::is_const;
+			values[op.rt] = op.si10 - values[op.ra];
+			break;
+		}
+		case spu_itype::SF:
+		{
+			m_regmod[pos / 4] = op.rt;
+			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
+			values[op.rt] = values[op.rb] - values[op.ra];
+			break;
+		}
+		case spu_itype::ROTMI:
+		{
+			m_regmod[pos / 4] = op.rt;
+
+			if (-op.i7 & 0x20)
+			{
+				vflags[op.rt] = +vf::is_const;
+				values[op.rt] = 0;
+				break;
+			}
+
+			vflags[op.rt] = vflags[op.ra] & vf::is_const;
+			values[op.rt] = values[op.ra] >> (-op.i7 & 0x1f);
+			break;
+		}
+		case spu_itype::SHLI:
+		{
+			m_regmod[pos / 4] = op.rt;
+
+			if (op.i7 & 0x20)
+			{
+				vflags[op.rt] = +vf::is_const;
+				values[op.rt] = 0;
+				break;
+			}
+
+			vflags[op.rt] = vflags[op.ra] & vf::is_const;
+			values[op.rt] = values[op.ra] << (op.i7 & 0x1f);
+			break;
+		}
+
 		default:
 		{
 			// Unconst
-			vflags[type & spu_itype::_quadrop ? +op.rt4 : +op.rt] = {};
+			const u32 op_rt = type & spu_itype::_quadrop ? +op.rt4 : +op.rt;
+			m_regmod[pos / 4] = op_rt;
+			vflags[op_rt] = {};
 			break;
 		}
 		}
@@ -680,8 +796,33 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 		}
 	}
 
-	if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
+	while (g_cfg.core.spu_block_size == spu_block_size_type::safe)
 	{
+		const u32 initial_size = result.size();
+
+		// Check unreachable blocks in safe mode (TODO)
+		u32 limit = lsa + result.size() * 4 - 4;
+
+		for (auto& pair : m_preds)
+		{
+			bool reachable = false;
+
+			for (u32 pred : pair.second)
+			{
+				if (pred >= lsa && pred < limit)
+				{
+					reachable = true;
+				}
+			}
+
+			if (!reachable && pair.first < limit)
+			{
+				limit = pair.first;
+			}
+		}
+
+		result.resize((limit - lsa) / 4 + 1);
+
 		// Check holes in safe mode (TODO)
 		u32 valid_size = 0;
 
@@ -691,13 +832,13 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 			{
 				const u32 pos = lsa + (i - 1) * 4;
 				const u32 data = ls[pos / 4];
-				const auto type = s_spu_itype.decode(data);
 
 				// Allow only NOP or LNOP instructions in holes
-				if (type == spu_itype::NOP || type == spu_itype::LNOP)
+				if (data == 0x200000 || (data & 0xffffff80) == 0x40200000)
 				{
 					if (i + 1 < result.size())
 					{
+						result[i] = se_storage<u32>::swap(data);
 						continue;
 					}
 				}
@@ -710,6 +851,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 				valid_size = i;
 			}
 		}
+
+		// Repeat if blocks were removed
+		if (result.size() == initial_size)
+		{
+			break;
+		}
 	}
 
 	if (result.size() == 1)
@@ -720,6 +867,8 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 
 	return result;
 }
+
+#ifdef LLVM_AVAILABLE
 
 #include "Emu/CPU/CPUTranslator.h"
 #include "llvm/ADT/Triple.h"
@@ -742,8 +891,8 @@ class spu_llvm_runtime
 	// All dispatchers
 	std::array<atomic_t<spu_function_t>, 0x10000> m_dispatcher;
 
-	// JIT instance (TODO: use small code model)
-	jit_compiler m_jit{{}, jit_compiler::cpu(g_cfg.core.llvm_cpu), true};
+	// JIT instance
+	jit_compiler m_jit{{}, jit_compiler::cpu(g_cfg.core.llvm_cpu)};
 
 	// Debug module output location
 	std::string m_cache_path;
@@ -783,7 +932,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	llvm::Value* m_lsptr;
 
 	llvm::BasicBlock* m_stop;
-	llvm::GlobalVariable* m_jt;
 
 	std::array<std::pair<llvm::Value*, llvm::Value*>, 128> m_gpr;
 	std::array<llvm::Instruction*, 128> m_flush_gpr;
@@ -1047,26 +1195,14 @@ public:
 
 		m_stop = BasicBlock::Create(m_context, "", m_function);
 
-		const auto jtt = ArrayType::get(GetType<u8*>(), m_size / 4);
-		std::vector<llvm::Constant*> jt;
-		jt.reserve(m_size / 4);
-
 		// Create instruction blocks
 		for (u32 i = 1, pos = start; i < func.size(); i++, pos += 4)
 		{
 			if (func[i] && m_block_info[pos / 4])
 			{
-				const auto b = BasicBlock::Create(m_context, "", m_function);
-				jt.push_back(llvm::BlockAddress::get(b));
-				m_instr_map.emplace(pos, b);
-			}
-			else
-			{
-				jt.push_back(llvm::BlockAddress::get(m_stop));
+				m_instr_map.emplace(pos, BasicBlock::Create(m_context, "", m_function));
 			}
 		}
-
-		m_jt = new GlobalVariable(*module, jtt, true, GlobalValue::PrivateLinkage, llvm::ConstantArray::get(jtt, jt), "jt");
 
 		update_pc();
 
@@ -2764,24 +2900,43 @@ public:
 			addr.value = call(&exec_check_interrupts, m_thread, addr.value);
 		}
 
-		if (llvm::isa<llvm::ConstantInt>(addr.value))
+		if (const auto _int = llvm::dyn_cast<llvm::ConstantInt>(addr.value))
 		{
-			return branch_fixed(llvm::cast<llvm::ConstantInt>(addr.value)->getZExtValue());
+			LOG_WARNING(SPU, "[0x%x] Fixed branch to 0x%x", m_pos, _int->getZExtValue());
+			return branch_fixed(_int->getZExtValue());
 		}
 
 		m_ir->CreateStore(addr.value, spu_ptr<u32>(&SPUThread::pc));
 
-		const u32 start = m_instr_map.begin()->first;
-		const auto local = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto exter = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto off = m_ir->CreateSub(addr.value, m_ir->getInt32(start));
-		m_ir->CreateCondBr(m_ir->CreateICmpULT(off, m_ir->getInt32(m_size)), local, exter);
-		m_ir->SetInsertPoint(local);
-		const auto table = m_ir->CreateIndirectBr(m_ir->CreateLoad(m_ir->CreateGEP(m_jt, {(llvm::Value*)m_ir->getInt32(0), m_ir->CreateLShr(off, 2)})), m_instr_map.size() + 1);
-		for (const auto& pair : m_instr_map)
-			table->addDestination(pair.second);
-		table->addDestination(m_stop);
-		m_ir->SetInsertPoint(exter);
+		const auto tfound = m_targets.find(m_pos);
+
+		if (tfound != m_targets.end() && tfound->second.size() >= 3)
+		{
+			const u32 start = m_instr_map.begin()->first;
+
+			const std::set<u32> targets(tfound->second.begin(), tfound->second.end());
+
+			const auto exter = llvm::BasicBlock::Create(m_context, "", m_function);
+
+			const auto sw = m_ir->CreateSwitch(m_ir->CreateLShr(addr.value, 2, "", true), exter, m_size / 4);
+
+			for (u32 pos = start; pos < start + m_size; pos += 4)
+			{
+				const auto found = m_instr_map.find(pos);
+
+				if (found != m_instr_map.end() && targets.count(pos))
+				{
+					sw->addCase(m_ir->getInt32(pos / 4), found->second);
+				}
+				else
+				{
+					sw->addCase(m_ir->getInt32(pos / 4), m_stop);
+				}
+			}
+
+			m_ir->SetInsertPoint(exter);
+		}
+
 		const auto disp = m_ir->CreateAdd(m_thread, m_ir->getInt64(::offset32(&SPUThread::jit_dispatcher)));
 		const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u64>(), get_type<u64>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
 		tail(m_ir->CreateLoad(m_ir->CreateIntToPtr(m_ir->CreateAdd(disp, zext<u64>(addr << 1).value), type)));
@@ -3013,3 +3168,12 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler()
 }
 
 DECLARE(spu_llvm_recompiler::g_decoder);
+
+#else
+
+std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler()
+{
+	fmt::throw_exception("LLVM is not available in this build.");
+}
+
+#endif

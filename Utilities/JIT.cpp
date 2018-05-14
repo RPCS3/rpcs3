@@ -435,6 +435,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		// Auxiliary JIT (does not use custom memory manager, only writes the objects)
 		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null_", m_context))
 			.setErrorStr(&result)
+			.setEngineKind(llvm::EngineKind::JIT)
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
 			.setCodeModel(large ? llvm::CodeModel::Large : llvm::CodeModel::Small)
 			.setMCPU(m_cpu)
@@ -448,6 +449,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 
 		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null", m_context))
 			.setErrorStr(&result)
+			.setEngineKind(llvm::EngineKind::JIT)
 			.setMCJITMemoryManager(std::move(mem))
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
 			.setCodeModel(large ? llvm::CodeModel::Large : llvm::CodeModel::Small)
