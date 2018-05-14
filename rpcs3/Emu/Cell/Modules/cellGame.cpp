@@ -150,6 +150,9 @@ s32 cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 e
 	strcpy_trunc(get->contentInfoPath, "/dev_hdd0/game/" + dir);
 	strcpy_trunc(get->hddGamePath, "/dev_hdd0/game/" + dir + "/USRDIR");
 
+	vm::var<CellHddGameSystemFileParam> setParam;
+	set->setParam = setParam;
+
 	const std::string& local_dir = vfs::get("/dev_hdd0/game/" + dir);
 
 	if (!fs::is_dir(local_dir))

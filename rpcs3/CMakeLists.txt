@@ -81,6 +81,10 @@ add_custom_command(OUTPUT something_that_never_exists
 # Check for a sufficient compiler and set build options
 include(ConfigureCompiler)
 
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+	add_definitions(-DNDEBUG)
+endif()
+
 if(WIN32)
 	add_definitions(-DUNICODE)
 	add_definitions(-D_WIN32_WINNT=0x0601)
