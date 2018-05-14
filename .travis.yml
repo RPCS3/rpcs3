@@ -25,7 +25,7 @@ git:
   submodules: false
 
 env:
-    - QTVER=5.10.1
+  - QTVER=5.10.1
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
@@ -56,7 +56,6 @@ install:
 before_script:
   - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional 3rdparty/xxHash Vulkan/glslang
   - mkdir build ; cd build
-  - export CMAKE_PREFIX_PATH=~/Qt/${QTVER}/gcc_64/lib/cmake
   - if [ "$TRAVIS_PULL_REQUEST" = false ]; then
       export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH";
     else
@@ -71,14 +70,13 @@ after_script:
   - cd build
   - # AppImage generation
   - if [ -n "$UPLOAD_URL" ] && [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
-      source /opt/qt510/bin/qt510-env.sh ;
+      source /opt/qt*/bin/qt*-env.sh ;
       echo $LD_LIBRARY_PATH ;
       export LD_LIBRARY_PATH=/opt/qt510/lib ;
       DESTDIR=appdir ninja install ; find appdir/ ;
       find ../bin ;
       wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" ;
       chmod a+x linuxdeployqt*.AppImage ;
-      export PATH=~/Qt/$QTVER/gcc_64/bin/:${PATH} ;
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
       rm ./appdir/usr/lib/libfreetype.so.6 ;
       rm ./appdir/usr/lib/libglapi.so.0 ;
