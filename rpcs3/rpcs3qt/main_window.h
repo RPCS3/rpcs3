@@ -90,6 +90,7 @@ private Q_SLOTS:
 	void Boot(const std::string& path, bool direct = false, bool add_only = false);
 	void BootElf();
 	void BootGame();
+	void BootRsxCapture();
 	void DecryptSPRXLibraries();
 
 	void SaveWindowState();

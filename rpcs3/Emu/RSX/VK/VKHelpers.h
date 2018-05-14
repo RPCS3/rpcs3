@@ -71,8 +71,7 @@ namespace vk
 	void set_current_renderer(const vk::render_device &device);
 
 	//Compatibility workarounds
-	bool emulate_primitive_restart();
-	bool force_32bit_index_buffer();
+	bool emulate_primitive_restart(rsx::primitive_type type);
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
 

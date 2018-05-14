@@ -45,6 +45,9 @@ protected:
 	// List of possible targets for the instruction ({} = next instruction, {-1} = no targets)
 	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_targets;
 
+	// List of block predecessors
+	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_preds;
+
 	std::shared_ptr<spu_cache> m_cache;
 
 public:
