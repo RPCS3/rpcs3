@@ -12,9 +12,9 @@ namespace asmjit
 	JitRuntime& get_global_runtime();
 
 	// Emit xbegin and adjacent loop
-	void build_transaction_enter(X86Assembler& c, Label abort);
+	void build_transaction_enter(X86Assembler& c, Label fallback);
 
-	// Emit xabort and return zero
+	// Emit xabort
 	void build_transaction_abort(X86Assembler& c, unsigned char code);
 }
 

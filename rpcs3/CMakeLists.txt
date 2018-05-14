@@ -122,7 +122,7 @@ if(NOT MSVC)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--allow-multiple-definition")
 	endif()
 
-	add_compile_options(-msse -msse2 -mcx16 -mrtm)
+	add_compile_options(-msse -msse2 -mcx16)
 
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 		# This fixes 'some' of the st11range issues. See issue #2516

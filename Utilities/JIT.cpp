@@ -7,14 +7,14 @@ asmjit::JitRuntime& asmjit::get_global_runtime()
 	return g_rt;
 }
 
-void asmjit::build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label abort)
+void asmjit::build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label fallback)
 {
 	Label fall = c.newLabel();
 	Label begin = c.newLabel();
 	c.jmp(begin);
 	c.bind(fall);
 	c.test(x86::eax, _XABORT_RETRY);
-	c.jz(abort);
+	c.jz(fallback);
 	c.align(kAlignCode, 16);
 	c.bind(begin);
 	c.xbegin(fall);
@@ -25,8 +25,6 @@ void asmjit::build_transaction_abort(asmjit::X86Assembler& c, unsigned char code
 	c.db(0xc6);
 	c.db(0xf8);
 	c.db(code);
-	c.xor_(x86::eax, x86::eax);
-	c.ret();
 }
 
 #ifdef LLVM_AVAILABLE

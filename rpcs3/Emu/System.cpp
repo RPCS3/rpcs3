@@ -23,6 +23,7 @@
 #include "Loader/ELF.h"
 
 #include "Utilities/StrUtil.h"
+#include "Utilities/sysinfo.h"
 
 #include "../Crypto/unself.h"
 #include "../Crypto/unpkg.h"
@@ -39,6 +40,8 @@
 #include "Utilities/GDBDebugServer.h"
 
 cfg_root g_cfg;
+
+bool g_use_rtm = utils::has_rtm();
 
 std::string g_cfg_defaults;
 
