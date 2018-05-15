@@ -124,7 +124,7 @@ namespace rsx
 			}
 		};
 
-		// bleh, may need to break these out, might be unneccessary to do both always
+		// bleh, may need to break these out, might be unnecessary to do both always
 		struct tile_state
 		{
 			tile_info tiles[15];

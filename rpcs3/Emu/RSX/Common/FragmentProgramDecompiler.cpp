@@ -225,7 +225,7 @@ std::string FragmentProgramDecompiler::AddX2d()
 }
 
 //Both of these were tested with a trace SoulCalibur IV title screen
-//Failure to catch causes infinite values since theres alot of rcp(0)
+//Failure to catch causes infinite values since there is a lot of rcp(0)
 std::string FragmentProgramDecompiler::NotZero(const std::string& code)
 {
 	return "(max(abs(" + code + "), 0.0000000001) * sign(" + code + "))";
@@ -238,8 +238,8 @@ std::string FragmentProgramDecompiler::NotZeroPositive(const std::string& code)
 
 std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 precision)
 {
-	//FP16 is expected to overflow alot easier at 0+-65504
-	//FP32 can still work upto 0+-3.4E38
+	//FP16 is expected to overflow a lot easier at 0+-65504
+	//FP32 can still work up to 0+-3.4E38
 	//See http://http.download.nvidia.com/developer/Papers/2005/FP_Specials/FP_Specials.pdf
 
 	switch (precision)
@@ -374,7 +374,7 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 	std::string cond = GetRawCond();
 
 	ShaderVariable dst_var(dst);
-	dst_var.symplify();
+	dst_var.simplify();
 
 	//const char *c_mask = f;
 
@@ -501,7 +501,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 	OS << "\n";
 	insertConstants(OS);
 	OS << "\n";
-	insertIntputs(OS);
+	insertInputs(OS);
 	OS << "\n";
 	insertOutputs(OS);
 	OS << "\n";
@@ -557,7 +557,7 @@ bool FragmentProgramDecompiler::handle_sct(u32 opcode)
 	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); return true;
 	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
 	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
-	// Note: It's higly likely that RCP is not IEEE compliant but a game that uses rcp(0) has to be found
+	// Note: It's highly likely that RCP is not IEEE compliant but a game that uses rcp(0) has to be found
 	case RSX_FP_OPCODE_RCP: SetDst("(1. / " +  NotZero("$0.x") + ").xxxx"); return true;
 	// Note: RSQ is not IEEE compliant. rsq(0) is some big number (Silent Hill 3 HD)
 	// It is not know what happens if 0 is negative.
@@ -908,8 +908,8 @@ std::string FragmentProgramDecompiler::Decompile()
 			if (handle_tex_srb(opcode)) break;
 
 			//FENCT/FENCB do not actually reject instructions if they dont match the forced unit
-			//Tested with Dark Souls II where the repecting FENCX instruction will result in empty luminance averaging shaders
-			//TODO: More reasearch is needed to determine what real HW does
+			//Tested with Dark Souls II where the respecting FENCX instruction will result in empty luminance averaging shaders
+			//TODO: More research is needed to determine what real HW does
 			if (handle_sct(opcode)) break;
 			if (handle_scb(opcode)) break;
 			forced_unit = FORCE_NONE;

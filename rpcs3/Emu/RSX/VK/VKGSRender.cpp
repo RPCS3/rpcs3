@@ -338,34 +338,34 @@ namespace
 		std::vector<VkAttachmentDescription> attachments = {};
 		std::vector<VkAttachmentReference> attachment_references;
 
-		VkAttachmentDescription color_attachement_description = {};
-		color_attachement_description.format = color_format;
-		color_attachement_description.samples = VK_SAMPLE_COUNT_1_BIT;
-		color_attachement_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		color_attachement_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		color_attachement_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		color_attachement_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		color_attachement_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		color_attachement_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		VkAttachmentDescription color_attachment_description = {};
+		color_attachment_description.format = color_format;
+		color_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+		color_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		color_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		color_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		color_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		color_attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		color_attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		for (u32 i = 0; i < number_of_color_surface; ++i)
 		{
-			attachments.push_back(color_attachement_description);
+			attachments.push_back(color_attachment_description);
 			attachment_references.push_back({ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
 		}
 
 		if (depth_format != VK_FORMAT_UNDEFINED)
 		{
-			VkAttachmentDescription depth_attachement_description = {};
-			depth_attachement_description.format = depth_format;
-			depth_attachement_description.samples = VK_SAMPLE_COUNT_1_BIT;
-			depth_attachement_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-			depth_attachement_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			depth_attachement_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-			depth_attachement_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-			depth_attachement_description.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			depth_attachement_description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			attachments.push_back(depth_attachement_description);
+			VkAttachmentDescription depth_attachment_description = {};
+			depth_attachment_description.format = depth_format;
+			depth_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+			depth_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			depth_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			depth_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			depth_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+			depth_attachment_description.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			depth_attachment_description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			attachments.push_back(depth_attachment_description);
 
 			attachment_references.push_back({ number_of_color_surface, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
 		}
@@ -1764,7 +1764,7 @@ void VKGSRender::clear_surface(u32 mask)
 							fmt::throw_exception("Unreachable" HERE);
 					}
 
-					//Fush unconditinally - parameters might not persist
+					//Fush unconditionally - parameters might not persist
 					//TODO: Better parameter management for overlay passes
 					flush_command_queue();
 				}
@@ -1857,7 +1857,7 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 		//swap handler checks the pending flag, so call it here
 		process_swap_request(m_current_frame);
 
-		//wait for the latest intruction to execute
+		//wait for the latest instruction to execute
 		m_current_command_buffer->pending = true;
 		m_current_command_buffer->reset();
 
@@ -2472,7 +2472,7 @@ void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 				if (&ctx == m_current_frame && ctx.swap_command_buffer->pending)
 				{
-					//Instead of stoppiing to wait, use the aux storage to ease pressure
+					//Instead of stopping to wait, use the aux storage to ease pressure
 					m_aux_frame_context.grab_resources(*m_current_frame);
 					m_current_frame = &m_aux_frame_context;
 				}

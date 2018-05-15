@@ -62,10 +62,10 @@ public:
 	// Unmap address (please specify only starting point, no midway memory will be unmapped), returns the size of the unmapped area
 	bool UnmapAddress(u32 addr, u32& size);
 
-	// Reserve a certain amount so no one can use it, returns true on succces, false on failure
+	// Reserve a certain amount so no one can use it, returns true on success, false on failure
 	bool Reserve(u32 size);
 
-	// Unreserve a certain amount of bytes, returns true on succcess, false if size is bigger than the reserved amount
+	// Unreserve a certain amount of bytes, returns true on success, false if size is bigger than the reserved amount
 	bool Unreserve(u32 size);
 
 	// Return the total amount of reserved memory

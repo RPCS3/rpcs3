@@ -107,7 +107,7 @@
               <item>
                <widget class="QRadioButton" name="spu_llvm">
                 <property name="text">
-                 <string>LLVM Recompiler</string>
+                 <string>LLVM Recompiler (experimental)</string>
                 </property>
                </widget>
               </item>

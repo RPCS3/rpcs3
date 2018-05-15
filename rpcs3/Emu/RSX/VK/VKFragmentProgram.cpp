@@ -33,7 +33,7 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 	OS << "#extension GL_ARB_separate_shader_objects: enable\n\n";
 }
 
-void VKFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
+void VKFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 {
 	//It is possible for the two_sided_enabled flag to be set without actual 2-sided outputs
 	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);

@@ -747,7 +747,7 @@ namespace rsx
 									{
 										if (first_count[n].first != next)
 										{
-											LOG_ERROR(RSX, "Non-continous first-count range passed as one draw; will be split.");
+											LOG_ERROR(RSX, "Non-continuous first-count range passed as one draw; will be split.");
 
 											first_count[deferred_call_size - 1].second = count;
 											deferred_call_size++;
@@ -1057,7 +1057,7 @@ namespace rsx
 			}
 		}
 
-		// Generate wpos coeffecients
+		// Generate wpos coefficients
 		// wpos equation is now as follows:
 		// wpos.y = (frag_coord / resolution_scale) * ((window_origin!=top)?-1.: 1.) + ((window_origin!=top)? window_height : 0)
 		// wpos.x = (frag_coord / resolution_scale)

@@ -301,7 +301,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "	gl_Position = gl_Position * scale_offset_mat;\n";
 	OS << "	gl_Position = apply_zclip_xform(gl_Position, z_near, z_far);\n";
 
-	//Since our clip_space is symetrical [-1, 1] we map it to linear space using the eqn:
+	//Since our clip_space is symmetrical [-1, 1] we map it to linear space using the eqn:
 	//ln = (clip * 2) - 1 to fully utilize the 0-1 range of the depth buffer
 	//RSX matrices passed already map to the [0, 1] range but mapping to classic OGL requires that we undo this step
 	//This can be made unnecessary using the call glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE).

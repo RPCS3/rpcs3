@@ -123,7 +123,7 @@ namespace rsx
 			{
 				if (count != 0)
 				{
-					// todo: support memory state in the middle of incrememented command
+					// todo: support memory state in the middle of incremented command
 					// This shouldn't ever happen as long as captures stay in 'strict' aka non-multidraw mode
 					fmt::throw_exception("capture replay: state change not supported between increment commands");
 				}

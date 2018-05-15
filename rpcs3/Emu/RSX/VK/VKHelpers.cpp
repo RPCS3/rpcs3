@@ -211,7 +211,7 @@ namespace vk
 		//Radeon fails to properly handle degenerate primitives if primitive restart is enabled
 		//One has to choose between using degenerate primitives or primitive restart to break up lists but not both
 		//Polaris and newer will crash with ERROR_DEVICE_LOST
-		//Older GCN will work okay most of the time but also occasionally draws garbage without reason (properietary driver only)
+		//Older GCN will work okay most of the time but also occasionally draws garbage without reason (proprietary driver only)
 		if (gpu_name.find("Radeon") != std::string::npos ||  //Proprietary driver
 			gpu_name.find("POLARIS") != std::string::npos || //RADV POLARIS
 			gpu_name.find("VEGA") != std::string::npos)      //RADV VEGA

@@ -193,7 +193,7 @@ void GLGSRender::end()
 
 	if (manually_flush_ring_buffers)
 	{
-		//Use approximations to reseve space. This path is mostly for debug purposes anyway
+		//Use approximations to reserve space. This path is mostly for debug purposes anyway
 		u32 approx_vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
 		u32 approx_working_buffer_size = approx_vertex_count * 256;
 
@@ -212,7 +212,7 @@ void GLGSRender::end()
 		if (surface->get_internal_format() == surface->old_contents->get_internal_format())
 		{
 			//Copy data from old contents onto this one
-			//1. Clip a rectangular region defning the data
+			//1. Clip a rectangular region defining the data
 			//2. Perform a GPU blit
 			u16 parent_w = surface->old_contents->width();
 			u16 parent_h = surface->old_contents->height();
@@ -272,7 +272,7 @@ void GLGSRender::end()
 		if (buffers_to_clear.size() > 0 && !clear_all_color)
 		{
 			GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
-			//It is impossible for the render target to be typa A or B here (clear all would have been flagged)
+			//It is impossible for the render target to be type A or B here (clear all would have been flagged)
 			for (auto &i : buffers_to_clear)
 				glClearBufferfv(draw_fbo.id(), i, colors);
 		}
@@ -1308,7 +1308,7 @@ void GLGSRender::update_draw_state()
 	gl_state.enable(rsx::method_registers.poly_offset_fill_enabled(), GL_POLYGON_OFFSET_FILL);
 
 	//offset_bias is the constant factor, multiplied by the implementation factor R
-	//offst_scale is the slope factor, multiplied by the triangle slope factor M
+	//offset_scale is the slope factor, multiplied by the triangle slope factor M
 	gl_state.polygon_offset(rsx::method_registers.poly_offset_scale(), rsx::method_registers.poly_offset_bias());
 
 	if (gl_state.enable(rsx::method_registers.cull_face_enabled(), GL_CULL_FACE))
@@ -1414,7 +1414,7 @@ void GLGSRender::flip(int buffer)
 
 			if (!buffer_pitch) buffer_pitch = buffer_width * 4;
 			gl::pixel_unpack_settings unpack_settings;
-			unpack_settings.aligment(1).row_length(buffer_pitch / 4);
+			unpack_settings.alignment(1).row_length(buffer_pitch / 4);
 
 			if (!m_flip_tex_color || m_flip_tex_color->size2D() != sizei{ (int)buffer_width, (int)buffer_height })
 			{
