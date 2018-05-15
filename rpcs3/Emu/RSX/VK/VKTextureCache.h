@@ -559,7 +559,7 @@ namespace vk
 			{
 				//This is a data cast operation
 				//Use native mapping for the new type
-				//TODO: Also simlulate the readback+reupload step (very tricky)
+				//TODO: Also simulate the readback+reupload step (very tricky)
 				const auto remap = get_component_mapping(gcm_format);
 				view_swizzle = { remap[1], remap[2], remap[3], remap[0] };
 			}

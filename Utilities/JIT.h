@@ -40,7 +40,7 @@ class jit_compiler final
 	std::string m_cpu;
 
 public:
-	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu);
+	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, bool large = false);
 	~jit_compiler();
 
 	// Get LLVM context
@@ -49,8 +49,16 @@ public:
 		return m_context;
 	}
 
+	auto& get_engine() const
+	{
+		return *m_engine;
+	}
+
 	// Add module (path to obj cache dir)
 	void add(std::unique_ptr<llvm::Module> module, const std::string& path);
+
+	// Add module (not cached)
+	void add(std::unique_ptr<llvm::Module> module);
 
 	// Add object (path to obj file)
 	void add(const std::string& path);

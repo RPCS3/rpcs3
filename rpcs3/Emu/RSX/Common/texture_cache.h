@@ -272,7 +272,7 @@ namespace rsx
 			bool violation_handled = false;
 			std::vector<section_storage_type*> sections_to_flush; //Sections to be flushed
 			std::vector<section_storage_type*> sections_to_reprotect; //Sections to be protected after flushing
-			std::vector<section_storage_type*> sections_to_unprotect; //These sections are to be unpotected and discarded by caller
+			std::vector<section_storage_type*> sections_to_unprotect; //These sections are to be unprotected and discarded by caller
 			int num_flushable = 0;
 			u64 cache_tag = 0;
 			u32 address_base = 0;

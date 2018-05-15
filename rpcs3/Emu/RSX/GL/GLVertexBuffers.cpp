@@ -140,7 +140,7 @@ namespace
 				return{ 0, 0, 0, 0, std::make_tuple(get_index_type(type), offset_in_index_buffer) };
 			}
 
-			//check for vertex arrays with frquency modifiers
+			//check for vertex arrays with frequency modifiers
 			for (auto &block : m_vertex_layout.interleaved_blocks)
 			{
 				if (block.min_divisor > 1)

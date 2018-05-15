@@ -381,7 +381,7 @@ u32 _sys_memalign(u32 align, u32 size)
 {
 	sysPrxForUser.warning("_sys_memalign(align=0x%x, size=0x%x)", align, size);
 
-	return vm::alloc(size, vm::main, std::max<u32>(align, 4096));
+	return vm::alloc(size, vm::main, std::max<u32>(align, 0x10000));
 }
 
 s32 _sys_free(u32 addr)

@@ -221,6 +221,7 @@
     <addaction name="toolsStringSearchAct"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
+    <addaction name="actionopen_rsx_capture"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -260,6 +261,7 @@
     <addaction name="showToolBarAct"/>
     <addaction name="separator"/>
     <addaction name="showGameListAct"/>
+    <addaction name="showGameToolBarAct"/>
     <addaction name="separator"/>
     <addaction name="showHiddenEntriesAct"/>
     <addaction name="separator"/>
@@ -949,6 +951,11 @@
    </property>
    <property name="text">
     <string>Show Hidden Entries</string>
+   </property>
+  </action>
+  <action name="actionopen_rsx_capture">
+   <property name="text">
+    <string>Open RSX Capture</string>
    </property>
   </action>
  </widget>

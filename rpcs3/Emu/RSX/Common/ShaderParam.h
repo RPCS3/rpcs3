@@ -198,7 +198,7 @@ public:
 		return swizzles[swizzles.size() - 1].length();
 	}
 
-	ShaderVariable& symplify()
+	ShaderVariable& simplify()
 	{
 		std::unordered_map<char, char> swizzle;
 

@@ -56,7 +56,7 @@ enum vec_opcode
 	RSX_VEC_OPCODE_SLE = 0x13, // Set-If-LessEqual
 	RSX_VEC_OPCODE_SNE = 0x14, // Set-If-NotEqual
 	RSX_VEC_OPCODE_STR = 0x15, // Set-If-True
-	RSX_VEC_OPCODE_SSG = 0x16, // Convert postive values to 1 and negative values to -1
+	RSX_VEC_OPCODE_SSG = 0x16, // Convert positive values to 1 and negative values to -1
 	RSX_VEC_OPCODE_TXL = 0x19, // Texture fetch
 };
 

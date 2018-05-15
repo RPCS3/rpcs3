@@ -624,10 +624,10 @@ namespace rsx
 		}
 
 		/**
-		 * Clipping and fitting lookup funcrions
+		 * Clipping and fitting lookup functions
 		 * surface_overlaps - returns true if surface overlaps a given surface address and returns the relative x and y position of the surface address within the surface
 		 * address_is_bound - returns true if the surface at a given address is actively bound
-		 * get_surface_subresource_if_available - returns a sectiion descriptor that allows to crop surfaces stored in memory
+		 * get_surface_subresource_if_available - returns a section descriptor that allows to crop surfaces stored in memory
 		 */
 		bool surface_overlaps_address(surface_type surface, u32 surface_address, u32 texaddr, u16 *x, u16 *y)
 		{

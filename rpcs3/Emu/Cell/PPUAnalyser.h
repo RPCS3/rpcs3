@@ -71,6 +71,7 @@ struct ppu_module
 	uchar sha1[20];
 	std::string name;
 	std::string path;
+	std::string cache;
 	std::vector<ppu_reloc> relocs;
 	std::vector<ppu_segment> segs;
 	std::vector<ppu_segment> secs;

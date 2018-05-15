@@ -1,42 +1,37 @@
 #include "stdafx.h"
+#include "Utilities/VirtualMemory.h"
+#include "Emu/IdManager.h"
 #include "sys_memory.h"
 
-
-
 logs::channel sys_memory("sys_memory");
+
+lv2_memory_alloca::lv2_memory_alloca(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container>& ct)
+	: size(size)
+	, align(align)
+	, flags(flags)
+	, ct(ct)
+	, shm(std::make_shared<utils::shm>(size))
+{
+}
 
 error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 {
 	sys_memory.warning("sys_memory_allocate(size=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, flags, alloc_addr);
 
 	// Check allocation size
-	switch (flags)
-	{
-	case 0:		//handle "default" value, issue 2510
-	case SYS_MEMORY_PAGE_SIZE_1M:
-	{
-		if (size % 0x100000)
-		{
-			return CELL_EALIGN;
-		}
+	const u32 align =
+		flags == SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 :
+		flags == SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 :
+		flags == 0 ? 0x10000 : 0;
 
-		break;
+	if (!align)
+	{
+		return {CELL_EINVAL, flags};
 	}
 
-	case SYS_MEMORY_PAGE_SIZE_64K:
+	if (size % align)
 	{
-		if (size % 0x10000)
-		{
-			return CELL_EALIGN;
-		}
-
-		break;
-	}
-
-	default:
-	{
-		return CELL_EINVAL;
-	}
+		return {CELL_EALIGN, size};
 	}
 
 	// Get "default" memory container
@@ -49,7 +44,7 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	}
 
 	// Allocate memory, write back the start address of the allocated area
-	*alloc_addr = verify(HERE, vm::alloc(size, vm::user_space, flags == SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000));
+	*alloc_addr = verify(HERE, vm::alloc(size, vm::user_space, align));
 
 	return CELL_OK;
 }
@@ -59,32 +54,19 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 	sys_memory.warning("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, cid, flags, alloc_addr);
 
 	// Check allocation size
-	switch (flags)
-	{
-	case SYS_MEMORY_PAGE_SIZE_1M:
-	{
-		if (size % 0x100000)
-		{
-			return CELL_EALIGN;
-		}
+	const u32 align =
+		flags == SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 :
+		flags == SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 :
+		flags == 0 ? 0x10000 : 0;
 
-		break;
+	if (!align)
+	{
+		return {CELL_EINVAL, flags};
 	}
 
-	case SYS_MEMORY_PAGE_SIZE_64K:
+	if (size % align)
 	{
-		if (size % 0x10000)
-		{
-			return CELL_EALIGN;
-		}
-
-		break;
-	}
-
-	default:
-	{
-		return CELL_EINVAL;
-	}
+		return {CELL_EALIGN, size};
 	}
 
 	const auto ct = idm::get<lv2_memory_container>(cid, [&](lv2_memory_container& ct) -> CellError
@@ -108,8 +90,11 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 		return ct.ret;
 	}
 
-	// Allocate memory, write back the start address of the allocated area, use cid as the supplementary info
-	*alloc_addr = verify(HERE, vm::alloc(size, vm::user_space, flags == SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000, cid));
+	// Create phantom memory object
+	const auto mem = idm::make_ptr<lv2_memory_alloca>(size, align, flags, ct.ptr);
+
+	// Allocate memory
+	*alloc_addr = verify(HERE, vm::get(vm::user_space)->alloc(size, mem->align, &mem->shm));
 
 	return CELL_OK;
 }
@@ -120,25 +105,49 @@ error_code sys_memory_free(u32 addr)
 
 	const auto area = vm::get(vm::user_space);
 
-	verify(HERE), area;
+	const auto shm = area->get(addr);
+
+	if (!shm.second)
+	{
+		return {CELL_EINVAL, addr};
+	}
+
+	// Retrieve phantom memory object
+	const auto mem = idm::select<lv2_memory_alloca>([&](u32 id, lv2_memory_alloca& mem) -> u32
+	{
+		if (mem.shm.get() == shm.second.get())
+		{
+			return id;
+		}
+
+		return 0;
+	});
+
+	if (!mem)
+	{
+		// Deallocate memory (simple)
+		if (!area->dealloc(addr))
+		{
+			return {CELL_EINVAL, addr};
+		}
+
+		// Return "physical memory" to the default container
+		fxm::get_always<lv2_memory_container>()->used -= shm.second->size();
+
+		return CELL_OK;
+	}
 
 	// Deallocate memory
-	u32 cid, size = area->dealloc(addr, nullptr, &cid);
-
-	if (!size)
+	if (!area->dealloc(addr, &shm.second))
 	{
-		return CELL_EINVAL;
+		return {CELL_EINVAL, addr};
 	}
 
 	// Return "physical memory"
-	if (cid == 0)
-	{
-		fxm::get<lv2_memory_container>()->used -= size;
-	}
-	else if (const auto ct = idm::get<lv2_memory_container>(cid))
-	{
-		ct->used -= size;
-	}
+	mem->ct->used -= mem->size;
+
+	// Remove phantom memory object
+	verify(HERE), idm::remove<lv2_memory_alloca>(mem.ret);
 
 	return CELL_OK;
 }
