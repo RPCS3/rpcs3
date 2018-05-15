@@ -44,7 +44,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${PROJECT_BINARY_DIR}/bin")
 
 add_subdirectory( Vulkan )
 add_subdirectory( rpcs3 )
-add_subdirectory(3rdparty/xxHash/cmake_unofficial)
 
 include_directories(3rdparty/hidapi/hidapi)
 if(APPLE)
@@ -58,3 +57,7 @@ else()
 	add_subdirectory(3rdparty/hidapi/libusb)
 	#list(APPEND LIBS hidapi-libusb)
 endif()
+
+set(XXHASH_BUNDLED_MODE ON)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Make xxHash build static libs")
+add_subdirectory(3rdparty/xxHash/cmake_unofficial)
