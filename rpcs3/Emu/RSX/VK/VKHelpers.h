@@ -62,6 +62,7 @@ namespace vk
 	class physical_device;
 	class command_buffer;
 	struct image;
+	struct vk_data_heap;
 
 	vk::context *get_current_thread_ctx();
 	void set_current_thread_ctx(const vk::context &ctx);
@@ -70,8 +71,7 @@ namespace vk
 	void set_current_renderer(const vk::render_device &device);
 
 	//Compatibility workarounds
-	bool emulate_primitive_restart();
-	bool force_32bit_index_buffer();
+	bool emulate_primitive_restart(rsx::primitive_type type);
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
 
@@ -79,6 +79,7 @@ namespace vk
 	VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector);
 	VkImageSubresource default_image_subresource();
 	VkImageSubresourceRange get_image_subresource_range(uint32_t base_layer, uint32_t base_mip, uint32_t layer_count, uint32_t level_count, VkImageAspectFlags aspect);
+	VkImageAspectFlags get_aspect_flags(VkFormat format);
 
 	VkSampler null_sampler();
 	VkImageView null_image_view(vk::command_buffer&);
@@ -89,15 +90,22 @@ namespace vk
 
 	void destroy_global_resources();
 
+	/**
+	* Allocate enough space in upload_buffer and write all mipmap/layer data into the subbuffer.
+	* Then copy all layers into dst_image.
+	* dst_image must be in TRANSFER_DST_OPTIMAL layout and upload_buffer have TRANSFER_SRC_BIT usage flag.
+	*/
+	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
+		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
+		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap);
+
+	//Other texture management helpers
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, VkImageSubresourceRange range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
 	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 width, u32 height, u32 mipmaps, VkImageAspectFlagBits aspect);
 	void copy_scaled_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height, u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height, u32 mipmaps, VkImageAspectFlagBits aspect, bool compatible_formats);
 
-	VkFormat get_compatible_sampler_format(u32 format);
-	VkFormat get_compatible_srgb_format(VkFormat rgb_format);
-	u8 get_format_texel_width(const VkFormat format);
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
 
@@ -105,6 +113,7 @@ namespace vk
 	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range);
 	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image);
 
+	//Manage 'uininterruptible' state where secondary operations (e.g violation handlers) will have to wait
 	void enter_uninterruptible();
 	void leave_uninterruptible();
 	bool is_uninterruptible();
@@ -125,7 +134,14 @@ namespace vk
 		uint32_t device_local;
 	};
 
+	struct gpu_formats_support
+	{
+		bool d24_unorm_s8;
+		bool d32_sfloat_s8;
+	};
+
 	memory_type_mapping get_memory_mapping(const physical_device& dev);
+	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
 
 	class physical_device
 	{
@@ -192,6 +208,7 @@ namespace vk
 	{
 		physical_device *pgpu = nullptr;
 		memory_type_mapping memory_map{};
+		gpu_formats_support m_formats_support{};
 		VkDevice dev = VK_NULL_HANDLE;
 
 	public:
@@ -243,7 +260,9 @@ namespace vk
 			device.pEnabledFeatures = &available_features;
 
 			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
+
 			memory_map = vk::get_memory_mapping(pdev);
+			m_formats_support = vk::get_optimal_tiling_supported_formats(pdev);
 		}
 
 		~render_device()
@@ -288,6 +307,11 @@ namespace vk
 		const memory_type_mapping& get_memory_mapping() const
 		{
 			return memory_map;
+		}
+
+		const gpu_formats_support& get_formats_support() const
+		{
+			return m_formats_support;
 		}
 
 		operator VkDevice&()
@@ -829,7 +853,7 @@ namespace vk
 		enum access_type_hint
 		{
 			flush_only, //Only to be submitted/opened/closed via command flush
-			all         //Auxilliary, can be sumitted/opened/closed at any time
+			all         //Auxiliary, can be submitted/opened/closed at any time
 		}
 		access_hint = flush_only;
 
@@ -1620,7 +1644,7 @@ public:
 		{
 			m_instance = nullptr;
 
-			//Check that some critical entry-points have been loaded into memory indicating prescence of a loader
+			//Check that some critical entry-points have been loaded into memory indicating presence of a loader
 			loader_exists = (vkCreateInstance != nullptr);
 		}
 
@@ -2098,6 +2122,164 @@ public:
 		}
 	};
 
+	class graphics_pipeline_state
+	{
+	public:
+		VkPipelineInputAssemblyStateCreateInfo ia;
+		VkPipelineDepthStencilStateCreateInfo ds;
+		VkPipelineColorBlendAttachmentState att_state[4];
+		VkPipelineColorBlendStateCreateInfo cs;
+		VkPipelineRasterizationStateCreateInfo rs;
+
+		graphics_pipeline_state()
+		{
+			ia = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+			cs = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+			ds = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+			rs = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+
+			for (int i = 0; i < 4; ++i)
+			{
+				att_state[i] = {};
+			}
+
+			rs.polygonMode = VK_POLYGON_MODE_FILL;
+			rs.cullMode = VK_CULL_MODE_NONE;
+			rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+			rs.lineWidth = 1.f;
+		}
+
+		~graphics_pipeline_state()
+		{}
+
+		void set_primitive_type(VkPrimitiveTopology type)
+		{
+			ia.topology = type;
+		}
+
+		void enable_primitive_restart(bool enable = true)
+		{
+			ia.primitiveRestartEnable = enable? VK_TRUE : VK_FALSE;
+		}
+
+		void set_color_mask(bool r, bool g, bool b, bool a)
+		{
+			VkColorComponentFlags mask = 0;
+			if (a) mask |= VK_COLOR_COMPONENT_A_BIT;
+			if (b) mask |= VK_COLOR_COMPONENT_B_BIT;
+			if (g) mask |= VK_COLOR_COMPONENT_G_BIT;
+			if (r) mask |= VK_COLOR_COMPONENT_R_BIT;
+
+			att_state[0].colorWriteMask = mask;
+			att_state[1].colorWriteMask = mask;
+			att_state[2].colorWriteMask = mask;
+			att_state[3].colorWriteMask = mask;
+		}
+
+		void set_depth_mask(bool enable)
+		{
+			ds.depthWriteEnable = enable ? VK_TRUE : VK_FALSE;
+		}
+
+		void set_stencil_mask(u32 mask)
+		{
+			ds.front.writeMask = mask;
+			ds.back.writeMask = mask;
+		}
+
+		void set_stencil_mask_separate(int face, u32 mask)
+		{
+			if (!face)
+				ds.front.writeMask = mask;
+			else
+				ds.back.writeMask = mask;
+		}
+
+		void enable_depth_test(VkCompareOp op)
+		{
+			ds.depthTestEnable = VK_TRUE;
+			ds.depthCompareOp = op;
+		}
+
+		void enable_depth_clamp(bool enable = true)
+		{
+			rs.depthClampEnable = enable ? VK_TRUE : VK_FALSE;
+		}
+
+		void enable_depth_bias(bool enable = true)
+		{
+			rs.depthBiasEnable = enable ? VK_TRUE : VK_FALSE;
+		}
+
+		void enable_depth_bounds_test(bool enable = true)
+		{
+			ds.depthBoundsTestEnable = enable? VK_TRUE : VK_FALSE;
+		}
+
+		void enable_blend(int mrt_index, VkBlendFactor src_factor_rgb, VkBlendFactor src_factor_a,
+			VkBlendFactor dst_factor_rgb, VkBlendFactor dst_factor_a,
+			VkBlendOp equation_rgb, VkBlendOp equation_a)
+		{
+			att_state[mrt_index].srcColorBlendFactor = src_factor_rgb;
+			att_state[mrt_index].srcAlphaBlendFactor = src_factor_a;
+			att_state[mrt_index].dstColorBlendFactor = dst_factor_rgb;
+			att_state[mrt_index].dstAlphaBlendFactor = dst_factor_a;
+			att_state[mrt_index].colorBlendOp = equation_rgb;
+			att_state[mrt_index].alphaBlendOp = equation_a;
+			att_state[mrt_index].blendEnable = VK_TRUE;
+		}
+
+		void enable_stencil_test(VkStencilOp fail, VkStencilOp zfail, VkStencilOp pass,
+			VkCompareOp func, u32 func_mask, u32 ref)
+		{
+			ds.front.failOp = fail;
+			ds.front.passOp = pass;
+			ds.front.depthFailOp = zfail;
+			ds.front.compareOp = func;
+			ds.front.compareMask = func_mask;
+			ds.front.reference = ref;
+			ds.back = ds.front;
+
+			ds.stencilTestEnable = VK_TRUE;
+		}
+
+		void enable_stencil_test_separate(int face, VkStencilOp fail, VkStencilOp zfail, VkStencilOp pass,
+			VkCompareOp func, u32 func_mask, u32 ref)
+		{
+			auto& face_props = (face ? ds.back : ds.front);
+			face_props.failOp = fail;
+			face_props.passOp = pass;
+			face_props.depthFailOp = zfail;
+			face_props.compareOp = func;
+			face_props.compareMask = func_mask;
+			face_props.reference = ref;
+
+			ds.stencilTestEnable = VK_TRUE;
+		}
+
+		void enable_logic_op(VkLogicOp op)
+		{
+			cs.logicOpEnable = VK_TRUE;
+			cs.logicOp = op;
+		}
+
+		void enable_cull_face(VkCullModeFlags cull_mode)
+		{
+			rs.cullMode = cull_mode;
+		}
+
+		void set_front_face(VkFrontFace face)
+		{
+			rs.frontFace = face;
+		}
+
+		void set_attachment_count(u32 count)
+		{
+			cs.attachmentCount = count;
+			cs.pAttachments = att_state;
+		}
+	};
+
 	namespace glsl
 	{
 		enum program_input_type
@@ -2176,13 +2358,4 @@ public:
 			heap->unmap();
 		}
 	};
-
-	/**
-	* Allocate enough space in upload_buffer and write all mipmap/layer data into the subbuffer.
-	* Then copy all layers into dst_image.
-	* dst_image must be in TRANSFER_DST_OPTIMAL layout and upload_buffer have TRANSFER_SRC_BIT usage flag.
-	*/
-	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
-		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap);
 }

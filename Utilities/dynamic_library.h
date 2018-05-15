@@ -63,14 +63,26 @@ namespace utils
 		{
 		}
 
-		// Caller
-		R operator()(Args... args)
+		void init()
 		{
 			if (!ptr)
 			{
 				// TODO: atomic
 				ptr = reinterpret_cast<R(*)(Args...)>(get_proc_address(lib, name));
 			}
+		}
+
+		operator bool()
+		{
+			init();
+
+			return ptr;
+		}
+
+		// Caller
+		R operator()(Args... args)
+		{
+			init();
 
 			return ptr(args...);
 		}

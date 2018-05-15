@@ -2326,7 +2326,7 @@ struct registers_decoder<NV0039_LINE_LENGTH_IN>
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "NV0039: line lenght input = " + std::to_string(decoded_values.input_line_length());
+		return "NV0039: line length input = " + std::to_string(decoded_values.input_line_length());
 	}
 };
 

@@ -24,7 +24,7 @@ namespace
 
 GLGSRender::GLGSRender() : GSRender()
 {
-	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.2"));
+	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.3"));
 
 	if (g_cfg.video.disable_vertex_cache)
 		m_vertex_cache.reset(new gl::null_vertex_cache());
@@ -193,7 +193,7 @@ void GLGSRender::end()
 
 	if (manually_flush_ring_buffers)
 	{
-		//Use approximations to reseve space. This path is mostly for debug purposes anyway
+		//Use approximations to reserve space. This path is mostly for debug purposes anyway
 		u32 approx_vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
 		u32 approx_working_buffer_size = approx_vertex_count * 256;
 
@@ -209,10 +209,10 @@ void GLGSRender::end()
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
 	auto copy_rtt_contents = [](gl::render_target *surface)
 	{
-		if (surface->get_compatible_internal_format() == surface->old_contents->get_compatible_internal_format())
+		if (surface->get_internal_format() == surface->old_contents->get_internal_format())
 		{
 			//Copy data from old contents onto this one
-			//1. Clip a rectangular region defning the data
+			//1. Clip a rectangular region defining the data
 			//2. Perform a GPU blit
 			u16 parent_w = surface->old_contents->width();
 			u16 parent_h = surface->old_contents->height();
@@ -259,7 +259,7 @@ void GLGSRender::end()
 		if (clear_depth)
 		{
 			gl_state.depth_mask(GL_TRUE);
-			gl_state.clear_depth(1.0);
+			gl_state.clear_depth(1.f);
 			gl_state.clear_stencil(255);
 			mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
 		}
@@ -272,7 +272,7 @@ void GLGSRender::end()
 		if (buffers_to_clear.size() > 0 && !clear_all_color)
 		{
 			GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
-			//It is impossible for the render target to be typa A or B here (clear all would have been flagged)
+			//It is impossible for the render target to be type A or B here (clear all would have been flagged)
 			for (auto &i : buffers_to_clear)
 				glClearBufferfv(draw_fbo.id(), i, colors);
 		}
@@ -284,7 +284,7 @@ void GLGSRender::end()
 	}
 
 	if (ds && ds->old_contents != nullptr && ds->get_rsx_pitch() == ds->old_contents->get_rsx_pitch() &&
-		ds->old_contents->get_compatible_internal_format() == gl::texture::internal_format::rgba8)
+		ds->old_contents->get_internal_format() == gl::texture::internal_format::rgba8)
 	{
 		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
 		ds->old_contents = nullptr;
@@ -401,6 +401,8 @@ void GLGSRender::end()
 	//Bind textures and resolve external copy operations
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 	int unused_location;
+	void *unused = nullptr;
+	gl::texture_view* tmp_view;
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
@@ -413,18 +415,18 @@ void GLGSRender::end()
 
 			if (tex.enabled())
 			{
-				GLenum target = gl::get_target(sampler_state->image_type);
 				if (sampler_state->image_handle)
 				{
-					glBindTexture(target, sampler_state->image_handle);
+					sampler_state->image_handle->bind();
 				}
-				else if (sampler_state->external_subresource_desc.external_handle)
+				else if (sampler_state->external_subresource_desc.external_handle &&
+					(tmp_view = m_gl_texture_cache.create_temporary_subresource(unused, sampler_state->external_subresource_desc)))
 				{
-					void *unused = nullptr;
-					glBindTexture(target, m_gl_texture_cache.create_temporary_subresource(unused, sampler_state->external_subresource_desc));
+					tmp_view->bind();
 				}
 				else
 				{
+					auto target = gl::get_target(sampler_state->image_type);
 					glBindTexture(target, m_null_textures[target]->id());
 				}
 			}
@@ -447,12 +449,12 @@ void GLGSRender::end()
 
 			if (sampler_state->image_handle)
 			{
-				glBindTexture(GL_TEXTURE_2D, sampler_state->image_handle);
+				sampler_state->image_handle->bind();
 			}
 			else if (sampler_state->external_subresource_desc.external_handle)
 			{
 				void *unused = nullptr;
-				glBindTexture(GL_TEXTURE_2D, m_gl_texture_cache.create_temporary_subresource(unused, sampler_state->external_subresource_desc));
+				m_gl_texture_cache.create_temporary_subresource(unused, sampler_state->external_subresource_desc)->bind();
 			}
 			else
 			{
@@ -487,32 +489,33 @@ void GLGSRender::end()
 			glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
 		}
 
+		m_index_ring_buffer->bind();
+
 		if (single_draw)
 		{
 			glDrawElements(draw_mode, upload_info.vertex_draw_count, index_type, (GLvoid *)(uintptr_t)index_offset);
 		}
 		else
 		{
-			std::vector<GLsizei> counts;
-			std::vector<const GLvoid*> offsets;
-
 			const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
 			const u32 type_scale = (index_type == GL_UNSIGNED_SHORT) ? 1 : 2;
 			uintptr_t index_ptr = index_offset;
+			m_scratch_buffer.resize(draw_count * 16);
 
-			counts.reserve(draw_count);
-			offsets.reserve(draw_count);
+			GLsizei *counts = (GLsizei*)m_scratch_buffer.data();
+			const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
+			int dst_index = 0;
 
 			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
 			{
 				const auto index_size = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
-				counts.push_back(index_size);
-				offsets.push_back((const GLvoid*)index_ptr);
+				counts[dst_index] = index_size;
+				offsets[dst_index++] = (const GLvoid*)index_ptr;
 
 				index_ptr += (index_size << type_scale);
 			}
 
-			glMultiDrawElements(draw_mode, counts.data(), index_type, offsets.data(), (GLsizei)draw_count);
+			glMultiDrawElements(draw_mode, counts, index_type, offsets, (GLsizei)draw_count);
 		}
 	}
 	else
@@ -523,31 +526,53 @@ void GLGSRender::end()
 		}
 		else
 		{
-			u32 base_index = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
-			if (gl::get_driver_caps().vendor_AMD == false)
+			const u32 base_index = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
+			bool use_draw_arrays_fallback = false;
+
+			const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
+			const auto driver_caps = gl::get_driver_caps();
+
+			m_scratch_buffer.resize(draw_count * 24);
+			GLint* firsts = (GLint*)m_scratch_buffer.data();
+			GLsizei* counts = (GLsizei*)(firsts + draw_count);
+			const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
+			int dst_index = 0;
+
+			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
 			{
-				std::vector<GLint> firsts;
-				std::vector<GLsizei> counts;
-				const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
+				const GLint first = range.first - base_index;
+				const GLsizei count = range.second;
 
-				firsts.reserve(draw_count);
-				counts.reserve(draw_count);
+				firsts[dst_index] = first;
+				counts[dst_index] = count;
+				offsets[dst_index++] = (const GLvoid*)(first << 2);
 
-				for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+				if (driver_caps.vendor_AMD && (first + count) > (0x100000 >> 2))
 				{
-					firsts.push_back(range.first - base_index);
-					counts.push_back(range.second);
+					//Unlikely, but added here in case the identity buffer is not large enough somehow
+					use_draw_arrays_fallback = true;
+					break;
 				}
-
-				glMultiDrawArrays(draw_mode, firsts.data(), counts.data(), (GLsizei)draw_count);
 			}
-			else
+
+			if (use_draw_arrays_fallback)
 			{
 				//MultiDrawArrays is broken on some primitive types using AMD. One known type is GL_TRIANGLE_STRIP but there could be more
 				for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
 				{
 					glDrawArrays(draw_mode, range.first - base_index, range.second);
 				}
+			}
+			else if (driver_caps.vendor_AMD)
+			{
+				//Use identity index buffer to fix broken vertexID on AMD
+				m_identity_index_buffer->bind();
+				glMultiDrawElements(draw_mode, counts, GL_UNSIGNED_INT, offsets, (GLsizei)draw_count);
+			}
+			else
+			{
+				//Normal render
+				glMultiDrawArrays(draw_mode, firsts, counts, (GLsizei)draw_count);
 			}
 		}
 	}
@@ -608,9 +633,9 @@ void GLGSRender::on_init_thread()
 	if (g_cfg.video.debug_output)
 		gl::enable_debugging();
 
-	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VERSION));
-	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
-	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VENDOR));
+	LOG_NOTICE(RSX, "GL RENDERER: %s (%s)", (const char*)glGetString(GL_RENDERER), (const char*)glGetString(GL_VENDOR));
+	LOG_NOTICE(RSX, "GL VERSION: %s", (const char*)glGetString(GL_VERSION));
+	LOG_NOTICE(RSX, "GLSL VERSION: %s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
 
 	auto& gl_caps = gl::get_driver_caps();
 
@@ -660,20 +685,16 @@ void GLGSRender::on_init_thread()
 
 	//Array stream buffer
 	{
-		auto &tex = m_gl_persistent_stream_buffer;
-		tex.create();
-		tex.set_target(gl::texture::target::textureBuffer);
+		m_gl_persistent_stream_buffer = std::make_unique<gl::texture>(GL_TEXTURE_BUFFER, 0, 0, 0, 0, GL_R8UI);
 		glActiveTexture(GL_TEXTURE0 + texture_index_offset);
-		tex.bind();
+		glBindTexture(GL_TEXTURE_BUFFER, m_gl_persistent_stream_buffer->id());
 	}
 
 	//Register stream buffer
 	{
-		auto &tex = m_gl_volatile_stream_buffer;
-		tex.create();
-		tex.set_target(gl::texture::target::textureBuffer);
+		m_gl_volatile_stream_buffer = std::make_unique<gl::texture>(GL_TEXTURE_BUFFER, 0, 0, 0, 0, GL_R8UI);
 		glActiveTexture(GL_TEXTURE0 + texture_index_offset + 1);
-		tex.bind();
+		glBindTexture(GL_TEXTURE_BUFFER, m_gl_volatile_stream_buffer->id());
 	}
 
 	//Fallback null texture instead of relying on texture0
@@ -681,28 +702,20 @@ void GLGSRender::on_init_thread()
 		std::vector<u32> pixeldata = {0, 0, 0, 0};
 
 		//1D
-		auto tex1D = std::make_unique<gl::texture>();
-		tex1D->create();
-		tex1D->set_target(gl::texture::target::texture1D);
-		tex1D->config().width(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+		auto tex1D = std::make_unique<gl::texture>(GL_TEXTURE_1D, 1, 1, 1, 1, GL_RGBA8);
+		tex1D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
 
 		//2D
-		auto tex2D = std::make_unique<gl::texture>();
-		tex2D->create();
-		tex2D->set_target(gl::texture::target::texture2D);
-		tex2D->config().width(1).height(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+		auto tex2D = std::make_unique<gl::texture>(GL_TEXTURE_2D, 1, 1, 1, 1, GL_RGBA8);
+		tex2D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
 
 		//3D
-		auto tex3D = std::make_unique<gl::texture>();
-		tex3D->create();
-		tex3D->set_target(gl::texture::target::texture3D);
-		tex3D->config().width(1).height(1).depth(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+		auto tex3D = std::make_unique<gl::texture>(GL_TEXTURE_3D, 1, 1, 1, 1, GL_RGBA8);
+		tex3D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
 
 		//CUBE
-		auto texCUBE = std::make_unique<gl::texture>();
-		texCUBE->create();
-		texCUBE->set_target(gl::texture::target::textureCUBE);
-		texCUBE->config().width(1).height(1).depth(1).min_lod(0.f).max_lod(0.f).pixels(pixeldata.data()).apply();
+		auto texCUBE = std::make_unique<gl::texture>(GL_TEXTURE_CUBE_MAP, 1, 1, 1, 1, GL_RGBA8);
+		texCUBE->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
 
 		m_null_textures[GL_TEXTURE_1D] = std::move(tex1D);
 		m_null_textures[GL_TEXTURE_2D] = std::move(tex2D);
@@ -743,10 +756,25 @@ void GLGSRender::on_init_thread()
 	m_fragment_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_vertex_state_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
+	if (gl_caps.vendor_AMD)
+	{
+		m_identity_index_buffer.reset(new gl::buffer);
+		m_identity_index_buffer->create(gl::buffer::target::element_array, 1 * 0x100000);
+
+		// Initialize with 256k identity entries
+		auto *dst = (u32*)m_identity_index_buffer->map(gl::buffer::access::write);
+		for (u32 n = 0; n < (0x100000 >> 2); ++n)
+		{
+			dst[n] = n;
+		}
+
+		m_identity_index_buffer->unmap();
+	}
+
 	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>((u32)m_attrib_ring_buffer->size(), m_max_texbuffer_size));
 	m_volatile_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>((u32)m_attrib_ring_buffer->size(), m_max_texbuffer_size));
-	m_gl_persistent_stream_buffer.copy_from(m_persistent_stream_view);
-	m_gl_volatile_stream_buffer.copy_from(m_volatile_stream_view);
+	m_gl_persistent_stream_buffer->copy_from(m_persistent_stream_view);
+	m_gl_volatile_stream_buffer->copy_from(m_volatile_stream_view);
 
 	m_vao.element_array_buffer = *m_index_ring_buffer;
 
@@ -871,7 +899,7 @@ void GLGSRender::on_exit()
 
 	if (m_flip_tex_color)
 	{
-		m_flip_tex_color.remove();
+		m_flip_tex_color.reset();
 	}
 
 	if (m_vao)
@@ -879,17 +907,12 @@ void GLGSRender::on_exit()
 		m_vao.remove();
 	}
 
-	m_gl_persistent_stream_buffer.remove();
-	m_gl_volatile_stream_buffer.remove();
+	m_gl_persistent_stream_buffer.reset();
+	m_gl_volatile_stream_buffer.reset();
 
 	for (auto &sampler : m_gl_sampler_states)
 	{
 		sampler.remove();
-	}
-
-	for (auto &tex : m_null_textures)
-	{
-		tex.second->remove();
 	}
 
 	if (m_attrib_ring_buffer)
@@ -917,6 +940,12 @@ void GLGSRender::on_exit()
 		m_index_ring_buffer->remove();
 	}
 
+	if (m_identity_index_buffer)
+	{
+		m_identity_index_buffer->remove();
+	}
+
+	m_null_textures.clear();
 	m_text_printer.close();
 	m_gl_texture_cache.destroy();
 	m_depth_converter.destroy();
@@ -976,25 +1005,45 @@ void GLGSRender::clear_surface(u32 arg)
 		mask |= GLenum(gl::buffers::stencil);
 	}
 
-	if (arg & 0xf0)
+	if (auto colormask = (arg & 0xf0))
 	{
-		u8 clear_a = rsx::method_registers.clear_color_a();
-		u8 clear_r = rsx::method_registers.clear_color_r();
-		u8 clear_g = rsx::method_registers.clear_color_g();
-		u8 clear_b = rsx::method_registers.clear_color_b();
-
-		gl_state.color_mask(arg & 0xf0);
-		gl_state.clear_color(clear_r, clear_g, clear_b, clear_a);
-
-		mask |= GLenum(gl::buffers::color);
-
-		for (auto &rtt : m_rtts.m_bound_render_targets)
+		switch (rsx::method_registers.surface_color())
 		{
-			if (std::get<0>(rtt) != 0)
+		case rsx::surface_color_format::x32:
+		case rsx::surface_color_format::w16z16y16x16:
+		case rsx::surface_color_format::w32z32y32x32:
+		{
+			//Nop
+			break;
+		}
+		case rsx::surface_color_format::g8b8:
+		{
+			colormask = rsx::get_g8b8_r8g8_colormask(colormask);
+			// Fall through
+		}
+		default:
+		{
+			u8 clear_a = rsx::method_registers.clear_color_a();
+			u8 clear_r = rsx::method_registers.clear_color_r();
+			u8 clear_g = rsx::method_registers.clear_color_g();
+			u8 clear_b = rsx::method_registers.clear_color_b();
+
+			gl_state.color_mask(colormask);
+			gl_state.clear_color(clear_r, clear_g, clear_b, clear_a);
+
+			mask |= GLenum(gl::buffers::color);
+
+			for (auto &rtt : m_rtts.m_bound_render_targets)
 			{
-				std::get<1>(rtt)->set_cleared(true);
-				std::get<1>(rtt)->old_contents = nullptr;
+				if (std::get<0>(rtt) != 0)
+				{
+					std::get<1>(rtt)->set_cleared(true);
+					std::get<1>(rtt)->old_contents = nullptr;
+				}
 			}
+
+			break;
+		}
 		}
 	}
 
@@ -1043,37 +1092,37 @@ bool GLGSRender::check_program_state()
 
 void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 {
-	get_current_fragment_program(fs_sampler_state);
-	verify(HERE), current_fragment_program.valid;
-
-	get_current_vertex_program();
-
-	auto &fragment_program = current_fragment_program;
-	auto &vertex_program = current_vertex_program;
-
-	vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
-	fragment_program.unnormalized_coords = 0; //unused
-	void* pipeline_properties = nullptr;
-
-	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, pipeline_properties);
-	m_program->use();
-
-	if (m_prog_buffer.check_cache_missed())
+	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
-		m_shaders_cache->store(pipeline_properties, vertex_program, fragment_program);
+		get_current_fragment_program(fs_sampler_state);
+		verify(HERE), current_fragment_program.valid;
 
-		//Notify the user with HUD notification
-		if (g_cfg.misc.show_shader_compilation_hint)
+		get_current_vertex_program();
+
+		current_vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
+		current_fragment_program.unnormalized_coords = 0; //unused
+		void* pipeline_properties = nullptr;
+
+		m_program = &m_prog_buffer.getGraphicPipelineState(current_vertex_program, current_fragment_program, pipeline_properties);
+		m_program->use();
+
+		if (m_prog_buffer.check_cache_missed())
 		{
-			if (!m_custom_ui)
+			m_shaders_cache->store(pipeline_properties, current_vertex_program, current_fragment_program);
+
+			//Notify the user with HUD notification
+			if (g_cfg.misc.show_shader_compilation_hint)
 			{
-				//Create notification but do not draw it at this time. No need to spam flip requests
-				m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
-			}
-			else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
-			{
-				//Probe the notification
-				casted->touch();
+				if (!m_custom_ui)
+				{
+					//Create notification but do not draw it at this time. No need to spam flip requests
+					m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
+				}
+				else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
+				{
+					//Probe the notification
+					casted->touch();
+				}
 			}
 		}
 	}
@@ -1083,14 +1132,15 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 	u32 vertex_constants_offset;
 	u32 fragment_constants_offset;
 
-	const u32 fragment_constants_size = (const u32)m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
+	const u32 fragment_constants_size = (const u32)m_prog_buffer.get_fragment_constants_buffer_size(current_fragment_program);
 	const u32 fragment_buffer_size = fragment_constants_size + (18 * 4 * sizeof(float));
+	const bool update_transform_constants = !!(m_graphics_state & rsx::pipeline_state::transform_constants_dirty);
 
 	if (manually_flush_ring_buffers)
 	{
 		m_vertex_state_buffer->reserve_storage_on_heap(512);
 		m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_buffer_size, 256));
-		if (m_transform_constants_dirty) m_transform_constants_buffer->reserve_storage_on_heap(8192);
+		if (update_transform_constants) m_transform_constants_buffer->reserve_storage_on_heap(8192);
 	}
 
 	// Vertex state
@@ -1106,7 +1156,7 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 	*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
 	fill_vertex_layout_state(m_vertex_layout, upload_info.allocated_vertex_count, reinterpret_cast<s32*>(buf + 160), upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
 
-	if (m_transform_constants_dirty)
+	if (update_transform_constants)
 	{
 		// Vertex constants
 		mapping = m_transform_constants_buffer->alloc_from_heap(8192, m_uniform_buffer_offset_align);
@@ -1122,26 +1172,26 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 	if (fragment_constants_size)
 	{
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) },
-				fragment_program, gl::get_driver_caps().vendor_NVIDIA);
+			current_fragment_program, gl::get_driver_caps().vendor_NVIDIA);
 	}
 
 	// Fragment state
-	fill_fragment_state_buffer(buf+fragment_constants_size, fragment_program);
+	fill_fragment_state_buffer(buf+fragment_constants_size, current_fragment_program);
 
 	m_vertex_state_buffer->bind_range(0, vertex_state_offset, 512);
 	m_fragment_constants_buffer->bind_range(2, fragment_constants_offset, fragment_buffer_size);
 
-	if (m_transform_constants_dirty) m_transform_constants_buffer->bind_range(1, vertex_constants_offset, 8192);
+	if (update_transform_constants) m_transform_constants_buffer->bind_range(1, vertex_constants_offset, 8192);
 
 	if (manually_flush_ring_buffers)
 	{
 		m_vertex_state_buffer->unmap();
 		m_fragment_constants_buffer->unmap();
 
-		if (m_transform_constants_dirty) m_transform_constants_buffer->unmap();
+		if (update_transform_constants) m_transform_constants_buffer->unmap();
 	}
 
-	m_transform_constants_dirty = false;
+	m_graphics_state = 0;
 }
 
 void GLGSRender::update_draw_state()
@@ -1152,6 +1202,12 @@ void GLGSRender::update_draw_state()
 	bool color_mask_g = rsx::method_registers.color_mask_g();
 	bool color_mask_r = rsx::method_registers.color_mask_r();
 	bool color_mask_a = rsx::method_registers.color_mask_a();
+
+	if (rsx::method_registers.surface_color() == rsx::surface_color_format::g8b8)
+	{
+		//Map GB components onto RG
+		rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+	}
 
 	gl_state.color_mask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 	gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
@@ -1252,7 +1308,7 @@ void GLGSRender::update_draw_state()
 	gl_state.enable(rsx::method_registers.poly_offset_fill_enabled(), GL_POLYGON_OFFSET_FILL);
 
 	//offset_bias is the constant factor, multiplied by the implementation factor R
-	//offst_scale is the slope factor, multiplied by the triangle slope factor M
+	//offset_scale is the slope factor, multiplied by the triangle slope factor M
 	gl_state.polygon_offset(rsx::method_registers.poly_offset_scale(), rsx::method_registers.poly_offset_bias());
 
 	if (gl_state.enable(rsx::method_registers.cull_face_enabled(), GL_CULL_FACE))
@@ -1306,7 +1362,7 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_height = display_buffers[buffer].height;
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
-	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height)
+	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height && buffer_pitch)
 	{
 		// Calculate blit coordinates
 		coordi aspect_ratio;
@@ -1344,49 +1400,39 @@ void GLGSRender::flip(int buffer)
 			buffer_width = render_target_texture->width();
 			buffer_height = render_target_texture->height();
 
-			image = render_target_texture->get_view();
+			image = render_target_texture->raw_handle();
 		}
 		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address))
 		{
 			//Hack - this should be the first location to check for output
 			//The render might have been done offscreen or in software and a blit used to display
-			image = surface->get_raw_view();
-
-			//Reset color swizzle
-			glBindTexture(GL_TEXTURE_2D, image);
-			const GLenum rgba_shuffle[] = { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, (GLint*)rgba_shuffle);
-			surface->set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
+			image = surface->get_raw_texture()->id();
 		}
 		else
 		{
 			LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
 
 			if (!buffer_pitch) buffer_pitch = buffer_width * 4;
-			if (!m_flip_tex_color || m_flip_tex_color.size() != sizei{ (int)buffer_width, (int)buffer_height })
+			gl::pixel_unpack_settings unpack_settings;
+			unpack_settings.alignment(1).row_length(buffer_pitch / 4);
+
+			if (!m_flip_tex_color || m_flip_tex_color->size2D() != sizei{ (int)buffer_width, (int)buffer_height })
 			{
-				m_flip_tex_color.recreate(gl::texture::target::texture2D);
-
-				m_flip_tex_color.config()
-					.size({ (int)buffer_width, (int)buffer_height })
-					.type(gl::texture::type::uint_8_8_8_8)
-					.format(gl::texture::format::bgra);
-
-				m_flip_tex_color.pixel_unpack_settings().aligment(1).row_length(buffer_pitch / 4);
+				m_flip_tex_color.reset(new gl::texture(GL_TEXTURE_2D, buffer_width, buffer_height, 1, 1, GL_RGBA8));
 			}
 
 			if (buffer_region.tile)
 			{
 				std::unique_ptr<u8[]> temp(new u8[buffer_height * buffer_pitch]);
 				buffer_region.read(temp.get(), buffer_width, buffer_height, buffer_pitch);
-				m_flip_tex_color.copy_from(temp.get(), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+				m_flip_tex_color->copy_from(temp.get(), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
 			}
 			else
 			{
-				m_flip_tex_color.copy_from(buffer_region.ptr, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+				m_flip_tex_color->copy_from(buffer_region.ptr, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
 			}
 
-			image = m_flip_tex_color.id();
+			image = m_flip_tex_color->id();
 		}
 
 		areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });

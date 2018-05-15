@@ -91,7 +91,7 @@ namespace vk
 
 		bool matches_dimensions(u16 _width, u16 _height) const
 		{
-			//Use foward scaling to account for rounding and clamping errors
+			//Use forward scaling to account for rounding and clamping errors
 			return (rsx::apply_resolution_scale(_width, true) == width()) && (rsx::apply_resolution_scale(_height, true) == height());
 		}
 	};
@@ -122,13 +122,13 @@ namespace rsx
 			surface_color_format format,
 			size_t width, size_t height,
 			vk::render_target* old_surface,
-			vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &, const vk::memory_type_mapping &mem_mapping)
+			vk::render_device &device, vk::command_buffer *cmd)
 		{
 			auto fmt = vk::get_compatible_surface_format(format);
 			VkFormat requested_format = fmt.first;
 
 			std::unique_ptr<vk::render_target> rtt;
-			rtt.reset(new vk::render_target(device, mem_mapping.device_local,
+			rtt.reset(new vk::render_target(device, device.get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
@@ -138,29 +138,17 @@ namespace rsx
 				VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT|VK_IMAGE_USAGE_SAMPLED_BIT,
 				0));
-			change_image_layout(*cmd, rtt.get(), VK_IMAGE_LAYOUT_GENERAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
-			//Clear new surface
-			VkClearColorValue clear_color;
-			VkImageSubresourceRange range = vk::get_image_subresource_range(0,0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
 
-			clear_color.float32[0] = 0.f;
-			clear_color.float32[1] = 0.f;
-			clear_color.float32[2] = 0.f;
-			clear_color.float32[3] = 0.f;
-
-			vkCmdClearColorImage(*cmd, rtt->value, VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
 			change_image_layout(*cmd, rtt.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 
 			rtt->native_component_map = fmt.second;
 			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format);
 			rtt->surface_width = (u16)width;
 			rtt->surface_height = (u16)height;
+			rtt->dirty = true;
 
 			if (old_surface != nullptr && old_surface->info.format == requested_format)
-			{
 				rtt->old_contents = old_surface;
-				rtt->dirty = true;
-			}
 
 			return rtt;
 		}
@@ -170,9 +158,9 @@ namespace rsx
 			surface_depth_format format,
 			size_t width, size_t height,
 			vk::render_target* old_surface,
-			vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &support, const vk::memory_type_mapping &mem_mapping)
+			vk::render_device &device, vk::command_buffer *cmd)
 		{
-			VkFormat requested_format = vk::get_compatible_depth_surface_format(support, format);
+			VkFormat requested_format = vk::get_compatible_depth_surface_format(device.get_formats_support(), format);
 			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
 
 			if (requested_format != VK_FORMAT_D16_UNORM)
@@ -181,7 +169,7 @@ namespace rsx
 			const auto scale = rsx::get_resolution_scale();
 
 			std::unique_ptr<vk::render_target> ds;
-			ds.reset(new vk::render_target(device, mem_mapping.device_local,
+			ds.reset(new vk::render_target(device, device.get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
@@ -193,15 +181,6 @@ namespace rsx
 				0));
 
 			ds->native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
-			change_image_layout(*cmd, ds.get(), VK_IMAGE_LAYOUT_GENERAL, range);
-
-			//Clear new surface..
-			VkClearDepthStencilValue clear_depth = {};
-
-			clear_depth.depth = 1.f;
-			clear_depth.stencil = 255;
-
-			vkCmdClearDepthStencilImage(*cmd, ds->value, VK_IMAGE_LAYOUT_GENERAL, &clear_depth, 1, &range);
 			change_image_layout(*cmd, ds.get(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
 
 			ds->native_pitch = (u16)width * 2;
@@ -211,12 +190,10 @@ namespace rsx
 			ds->attachment_aspect_flag = range.aspectMask;
 			ds->surface_width = (u16)width;
 			ds->surface_height = (u16)height;
+			ds->dirty = true;
 
 			if (old_surface != nullptr && old_surface->info.format == requested_format)
-			{
 				ds->old_contents = old_surface;
-				ds->dirty = true;
-			}
 
 			return ds;
 		}

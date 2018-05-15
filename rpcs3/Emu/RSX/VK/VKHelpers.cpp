@@ -17,7 +17,6 @@ namespace vk
 
 	//Driver compatibility workarounds
 	bool g_drv_no_primitive_restart_flag = false;
-	bool g_drv_force_32bit_indices = false;
 	bool g_drv_sanitize_fp_values = false;
 	bool g_drv_disable_fence_reset = false;
 
@@ -106,105 +105,6 @@ namespace vk
 		if (result.device_local == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support device local memory" HERE);
 		if (result.host_visible_coherent == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support host coherent device local memory" HERE);
 		return result;
-	}
-
-	VkFormat get_compatible_sampler_format(u32 format)
-	{
-		switch (format)
-		{
-		case CELL_GCM_TEXTURE_B8: return VK_FORMAT_R8_UNORM;
-		case CELL_GCM_TEXTURE_A1R5G5B5: return VK_FORMAT_A1R5G5B5_UNORM_PACK16;
-		case CELL_GCM_TEXTURE_A4R4G4B4: return VK_FORMAT_R4G4B4A4_UNORM_PACK16;
-		case CELL_GCM_TEXTURE_R5G6B5: return VK_FORMAT_R5G6B5_UNORM_PACK16;
-		case CELL_GCM_TEXTURE_A8R8G8B8: return VK_FORMAT_B8G8R8A8_UNORM;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return VK_FORMAT_BC2_UNORM_BLOCK;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return VK_FORMAT_BC3_UNORM_BLOCK;
-		case CELL_GCM_TEXTURE_G8B8: return VK_FORMAT_R8G8_UNORM;
-		case CELL_GCM_TEXTURE_R6G5B5: return VK_FORMAT_R5G6B5_UNORM_PACK16; // Expand, discard high bit?
-		case CELL_GCM_TEXTURE_DEPTH24_D8: return VK_FORMAT_D24_UNORM_S8_UINT; //TODO
-		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:	return VK_FORMAT_D24_UNORM_S8_UINT; //TODO
-		case CELL_GCM_TEXTURE_DEPTH16: return VK_FORMAT_D16_UNORM;
-		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return VK_FORMAT_D16_UNORM;
-		case CELL_GCM_TEXTURE_X16: return VK_FORMAT_R16_UNORM;
-		case CELL_GCM_TEXTURE_Y16_X16: return VK_FORMAT_R16G16_UNORM;
-		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return VK_FORMAT_R16G16_SFLOAT;
-		case CELL_GCM_TEXTURE_R5G5B5A1: return VK_FORMAT_R5G5B5A1_UNORM_PACK16;
-		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return VK_FORMAT_R16G16B16A16_SFLOAT;
-		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return VK_FORMAT_R32G32B32A32_SFLOAT;
-		case CELL_GCM_TEXTURE_X32_FLOAT: return VK_FORMAT_R32_SFLOAT;
-		case CELL_GCM_TEXTURE_D1R5G5B5: return VK_FORMAT_A1R5G5B5_UNORM_PACK16;
-		case CELL_GCM_TEXTURE_D8R8G8B8: return VK_FORMAT_B8G8R8A8_UNORM;
-		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return VK_FORMAT_A8B8G8R8_UNORM_PACK32;	// Expand
-		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return VK_FORMAT_R8G8B8A8_UNORM; // Expand
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO8: return VK_FORMAT_R8G8_UNORM;
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8: return VK_FORMAT_R8G8_SNORM;
-		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return VK_FORMAT_R8G8_UNORM; // Not right
-		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return VK_FORMAT_R8G8_UNORM; // Not right
-		}
-		fmt::throw_exception("Invalid or unsupported sampler format for texture format (0x%x)" HERE, format);
-	}
-
-	VkFormat get_compatible_srgb_format(VkFormat rgb_format)
-	{
-		switch (rgb_format)
-		{
-		case VK_FORMAT_B8G8R8A8_UNORM:
-			return VK_FORMAT_B8G8R8A8_SRGB;
-		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
-			return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
-		case VK_FORMAT_BC2_UNORM_BLOCK:
-			return VK_FORMAT_BC2_SRGB_BLOCK;
-		case VK_FORMAT_BC3_UNORM_BLOCK:
-			return VK_FORMAT_BC3_SRGB_BLOCK;
-		default:
-			return rgb_format;
-		}
-	}
-
-	u8 get_format_texel_width(const VkFormat format)
-	{
-		switch (format)
-		{
-		case VK_FORMAT_R8_UNORM:
-			return 1;
-		case VK_FORMAT_R16_UINT:
-		case VK_FORMAT_R16_SFLOAT:
-		case VK_FORMAT_R16_UNORM:
-		case VK_FORMAT_R8G8_UNORM:
-		case VK_FORMAT_R8G8_SNORM:
-		case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
-		case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
-		case VK_FORMAT_R5G6B5_UNORM_PACK16:
-		case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
-			return 2;
-		case VK_FORMAT_R32_UINT:
-		case VK_FORMAT_R32_SFLOAT:
-		case VK_FORMAT_R16G16_UNORM:
-		case VK_FORMAT_R16G16_SFLOAT:
-		case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
-		case VK_FORMAT_R8G8B8A8_UNORM:
-		case VK_FORMAT_B8G8R8A8_UNORM:
-		case VK_FORMAT_B8G8R8A8_SRGB:
-		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
-		case VK_FORMAT_BC2_UNORM_BLOCK:
-		case VK_FORMAT_BC3_UNORM_BLOCK:
-		case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
-		case VK_FORMAT_BC2_SRGB_BLOCK:
-		case VK_FORMAT_BC3_SRGB_BLOCK:
-			return 4;
-		case VK_FORMAT_R16G16B16A16_SFLOAT:
-			return 8;
-		case VK_FORMAT_R32G32B32A32_SFLOAT:
-			return 16;
-		case VK_FORMAT_D16_UNORM:
-			return 2;
-		case VK_FORMAT_D32_SFLOAT_S8_UINT: //TODO: Translate to D24S8
-		case VK_FORMAT_D24_UNORM_S8_UINT:
-			return 4;
-		}
-
-		fmt::throw_exception("Unexpected vkFormat 0x%X", (u32)format);
 	}
 
 	VkAllocationCallbacks default_callbacks()
@@ -308,35 +208,21 @@ namespace vk
 		g_current_renderer = device;
 		const auto gpu_name = g_current_renderer.gpu().name();
 
-		bool gcn4_proprietary = false;
-		const std::array<std::string, 8> black_listed =
+		//Radeon fails to properly handle degenerate primitives if primitive restart is enabled
+		//One has to choose between using degenerate primitives or primitive restart to break up lists but not both
+		//Polaris and newer will crash with ERROR_DEVICE_LOST
+		//Older GCN will work okay most of the time but also occasionally draws garbage without reason (proprietary driver only)
+		if (gpu_name.find("Radeon") != std::string::npos ||  //Proprietary driver
+			gpu_name.find("POLARIS") != std::string::npos || //RADV POLARIS
+			gpu_name.find("VEGA") != std::string::npos)      //RADV VEGA
 		{
-			// Black list all polaris unless its proven they dont have a problem with primitive restart
-			"RX 580",
-			"RX 570",
-			"RX 560",
-			"RX 550",
-			"RX 480",
-			"RX 470",
-			"RX 460",
-			"RX Vega",
-		};
-
-		for (const auto& test : black_listed)
-		{
-			if (gpu_name.find(test) != std::string::npos)
-			{
-				g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
-				gcn4_proprietary = true;
-				break;
-			}
+			g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
 		}
 
-		//Older cards back to GCN1 break primitive restart on 16-bit indices
-		if (!gcn4_proprietary && gpu_name.find("Radeon") != std::string::npos)
+		//Radeon proprietary driver does not properly handle fence reset and can segfault during vkResetFences
+		//Disable fence reset for proprietary driver and delete+initialize a new fence instead
+		if (gpu_name.find("Radeon") != std::string::npos)
 		{
-			//gcn1 - gcn3 workarounds
-			g_drv_force_32bit_indices = true;
 			g_drv_disable_fence_reset = true;
 		}
 
@@ -347,14 +233,21 @@ namespace vk
 		}
 	}
 
-	bool emulate_primitive_restart()
+	bool emulate_primitive_restart(rsx::primitive_type type)
 	{
-		return g_drv_no_primitive_restart_flag;
-	}
+		if (g_drv_no_primitive_restart_flag)
+		{
+			switch (type)
+			{
+			case rsx::primitive_type::triangle_strip:
+			case rsx::primitive_type::quad_strip:
+				return true;
+			default:
+				break;
+			}
+		}
 
-	bool force_32bit_index_buffer()
-	{
-		return g_drv_force_32bit_indices;
+		return false;
 	}
 
 	bool sanitize_fp_values()
@@ -449,18 +342,7 @@ namespace vk
 	{
 		if (image->current_layout == new_layout) return;
 
-		VkImageAspectFlags flags = VK_IMAGE_ASPECT_COLOR_BIT;
-		switch (image->info.format)
-		{
-		case VK_FORMAT_D16_UNORM:
-			flags = VK_IMAGE_ASPECT_DEPTH_BIT;
-			break;
-		case VK_FORMAT_D24_UNORM_S8_UINT:
-		case VK_FORMAT_D32_SFLOAT_S8_UINT:
-			flags = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-			break;
-		}
-
+		VkImageAspectFlags flags = get_aspect_flags(image->info.format);
 		change_image_layout(cmd, image->value, image->current_layout, new_layout, { flags, 0, 1, 0, 1 });
 		image->current_layout = new_layout;
 	}

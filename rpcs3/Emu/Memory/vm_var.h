@@ -9,7 +9,7 @@ namespace vm
 	{
 		static inline vm::addr_t alloc(u32 size, u32 align)
 		{
-			return vm::cast(vm::alloc(size, Location, std::max<u32>(align, 4096)));
+			return vm::cast(vm::alloc(size, Location, std::max<u32>(align, 0x10000)));
 		}
 
 		static inline void dealloc(u32 addr, u32 size = 0) noexcept

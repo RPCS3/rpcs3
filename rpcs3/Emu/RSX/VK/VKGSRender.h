@@ -37,10 +37,11 @@ namespace vk
 }
 
 //Heap allocation sizes in MB
-//NOTE: Texture uploads can be huge, upto 16MB for a single texture (4096x4096px)
+//NOTE: Texture uploads can be huge, up to 16MB for a single texture (4096x4096px)
 #define VK_ATTRIB_RING_BUFFER_SIZE_M 384
 #define VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M 256
-#define VK_UBO_RING_BUFFER_SIZE_M 128
+#define VK_UBO_RING_BUFFER_SIZE_M 64
+#define VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M 64
 #define VK_INDEX_RING_BUFFER_SIZE_M 64
 
 #define VK_MAX_ASYNC_CB_COUNT 64
@@ -152,6 +153,7 @@ struct frame_context_t
 	//Heap pointers
 	s64 attrib_heap_ptr = 0;
 	s64 ubo_heap_ptr = 0;
+	s64 vtxconst_heap_ptr = 0;
 	s64 index_heap_ptr = 0;
 	s64 texture_upload_heap_ptr = 0;
 
@@ -167,6 +169,7 @@ struct frame_context_t
 
 		attrib_heap_ptr = other.attrib_heap_ptr;
 		ubo_heap_ptr = other.attrib_heap_ptr;
+		vtxconst_heap_ptr = other.vtxconst_heap_ptr;
 		index_heap_ptr = other.attrib_heap_ptr;
 		texture_upload_heap_ptr = other.texture_upload_heap_ptr;
 	}
@@ -178,10 +181,11 @@ struct frame_context_t
 		std::swap(samplers_to_clean, other.samplers_to_clean);
 	}
 
-	void tag_frame_end(s64 attrib_loc, s64 ubo_loc, s64 index_loc, s64 texture_loc)
+	void tag_frame_end(s64 attrib_loc, s64 ubo_loc, s64 vtxconst_loc, s64 index_loc, s64 texture_loc)
 	{
 		attrib_heap_ptr = attrib_loc;
 		ubo_heap_ptr = ubo_loc;
+		vtxconst_heap_ptr = vtxconst_loc;
 		index_heap_ptr = index_loc;
 		texture_upload_heap_ptr = texture_loc;
 
@@ -254,9 +258,6 @@ private:
 	vk::texture_cache m_texture_cache;
 	rsx::vk_render_targets m_rtts;
 
-	vk::gpu_formats_support m_optimal_tiling_supported_formats;
-	vk::memory_type_mapping m_memory_type_mapping;
-
 	std::unique_ptr<vk::buffer> null_buffer;
 	std::unique_ptr<vk::buffer_view> null_buffer_view;
 
@@ -264,6 +265,7 @@ private:
 	std::unique_ptr<vk::depth_convert_pass> m_depth_converter;
 	std::unique_ptr<vk::depth_scaling_pass> m_depth_scaler;
 	std::unique_ptr<vk::ui_overlay_renderer> m_ui_renderer;
+	std::unique_ptr<vk::attachment_clear_pass> m_attachment_clear_pass;
 
 	shared_mutex m_sampler_mutex;
 	u64 surface_store_tag = 0;
@@ -316,8 +318,13 @@ private:
 	u64 m_last_heap_sync_time = 0;
 	vk::vk_data_heap m_attrib_ring_info;
 	vk::vk_data_heap m_uniform_buffer_ring_info;
+	vk::vk_data_heap m_transform_constants_ring_info;
 	vk::vk_data_heap m_index_buffer_ring_info;
 	vk::vk_data_heap m_texture_upload_buffer_ring_info;
+
+	VkDescriptorBufferInfo m_vertex_state_buffer_info;
+	VkDescriptorBufferInfo m_vertex_constants_buffer_info;
+	VkDescriptorBufferInfo m_fragment_state_buffer_info;
 
 	std::array<frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
 	//Temp frame context to use if the real frame queue is overburdened. Only used for storage

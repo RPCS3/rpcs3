@@ -9,50 +9,9 @@
 
 namespace rsx
 {
-	struct blit_src_info
-	{
-		blit_engine::transfer_source_format format;
-		blit_engine::transfer_origin origin;
-		u16 offset_x;
-		u16 offset_y;
-		u16 width;
-		u16 height;
-		u16 slice_h;
-		u16 pitch;
-		void *pixels;
-
-		bool compressed_x;
-		bool compressed_y;
-		u32 rsx_address;
-	};
-
-	struct blit_dst_info
-	{
-		blit_engine::transfer_destination_format format;
-		u16 offset_x;
-		u16 offset_y;
-		u16 width;
-		u16 height;
-		u16 pitch;
-		u16 clip_x;
-		u16 clip_y;
-		u16 clip_width;
-		u16 clip_height;
-		u16 max_tile_h;
-		f32 scale_x;
-		f32 scale_y;
-
-		bool swizzled;
-		void *pixels;
-
-		bool compressed_x;
-		bool compressed_y;
-		u32  rsx_address;
-	};
-
 	enum protection_policy
 	{
-		protect_policy_one_page,	//Only guard one page, preferrably one where this section 'wholly' fits
+		protect_policy_one_page,	//Only guard one page, preferably one where this section 'wholly' fits
 		protect_policy_conservative, //Guards as much memory as possible that is guaranteed to only be covered by the defined range without sharing
 		protect_policy_full_range	//Guard the full memory range. Shared pages may be invalidated by access outside the object we're guarding
 	};
@@ -83,7 +42,7 @@ namespace rsx
 		buffered_section() {}
 		~buffered_section() {}
 
-		void reset(u32 base, u32 length, protection_policy protect_policy= protect_policy_full_range)
+		void reset(u32 base, u32 length, protection_policy protect_policy = protect_policy_full_range)
 		{
 			verify(HERE), locked == false;
 
@@ -124,7 +83,6 @@ namespace rsx
 		void protect(utils::protection prot)
 		{
 			if (prot == protection) return;
-
 			verify(HERE), locked_address_range > 0;
 			utils::memory_protect(vm::base(locked_address_base), locked_address_range, prot);
 			protection = prot;
@@ -172,7 +130,7 @@ namespace rsx
 
 		/**
 		 * Check if the page containing the address tramples this section. Also compares a former trampled page range to compare
-		 * If true, returns the range <min, max> with updated invalid range 
+		 * If true, returns the range <min, max> with updated invalid range
 		 */
 		std::tuple<bool, std::pair<u32, u32>> overlaps_page(std::pair<u32, u32> old_range, u32 address, bool full_range_check) const
 		{
@@ -343,12 +301,12 @@ namespace rsx
 		template <typename... Args>
 		void load(progress_dialog_helper* dlg, Args&& ...args)
 		{
-			if (g_cfg.video.disable_on_disk_shader_cache)
+			if (g_cfg.video.disable_on_disk_shader_cache || Emu.GetCachePath() == "")
 			{
 				return;
 			}
 
-			std::string directory_path = root_path + "/pipelines/" + pipeline_class_name;
+			std::string directory_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix;
 
 			if (!fs::is_dir(directory_path))
 			{
@@ -373,6 +331,9 @@ namespace rsx
 
 			root.rewind();
 
+			// Invalid pipeline entries to be removed
+			std::vector<std::string> invalid_entries;
+
 			// Progress dialog
 			std::unique_ptr<progress_dialog_helper> fallback_dlg;
 			if (!dlg)
@@ -390,11 +351,9 @@ namespace rsx
 				if (tmp.name == "." || tmp.name == "..")
 					continue;
 
-				if (tmp.name.compare(0, prefix_length, version_prefix) != 0)
-					continue;
-
+				const auto filename = directory_path + "/" + tmp.name;
 				std::vector<u8> bytes;
-				fs::file f(directory_path + "/" + tmp.name);
+				fs::file f(filename);
 
 				processed++;
 				dlg->update_msg(processed, entry_count);
@@ -402,6 +361,7 @@ namespace rsx
 				if (f.size() != sizeof(pipeline_data))
 				{
 					LOG_ERROR(RSX, "Cached pipeline object %s is not binary compatible with the current shader cache", tmp.name.c_str());
+					invalid_entries.push_back(filename);
 					continue;
 				}
 
@@ -419,12 +379,22 @@ namespace rsx
 				}
 			}
 
+			if (!invalid_entries.empty())
+			{
+				for (const auto &filename : invalid_entries)
+				{
+					fs::remove_file(filename);
+				}
+
+				LOG_NOTICE(RSX, "shader cache: %d entries were marked as invalid and removed", invalid_entries.size());
+			}
+
 			dlg->close();
 		}
 
 		void store(pipeline_storage_type &pipeline, RSXVertexProgram &vp, RSXFragmentProgram &fp)
 		{
-			if (g_cfg.video.disable_on_disk_shader_cache)
+			if (g_cfg.video.disable_on_disk_shader_cache || Emu.GetCachePath() == "")
 			{
 				return;
 			}
@@ -458,7 +428,7 @@ namespace rsx
 			state_hash ^= rpcs3::hash_base<u64>(data.fp_zfunc_mask);
 
 			std::string pipeline_file_name = fmt::format("%llX+%llX+%llX+%llX.bin", data.vertex_program_hash, data.fragment_program_hash, data.pipeline_storage_hash, state_hash);
-			std::string pipeline_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix + "-" + pipeline_file_name;
+			std::string pipeline_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix + "/" + pipeline_file_name;
 			fs::file(pipeline_path, fs::rewrite).write(&data, sizeof(pipeline_data));
 		}
 

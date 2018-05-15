@@ -22,6 +22,46 @@ size_t vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgra
 	return hash;
 }
 
+vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vertex_program(const std::vector<u32>& data)
+{
+	u32 ucode_size = 0;
+	u32 current_instrution = 0;
+	u32 last_instruction_address = 0;
+	D3  d3;
+	D2  d2;
+	D1  d1;
+
+	for (; ucode_size < data.size(); ucode_size += 4)
+	{
+		d1.HEX = data[ucode_size + 1];
+		d3.HEX = data[ucode_size + 3];
+
+		switch (d1.sca_opcode)
+		{
+		case RSX_SCA_OPCODE_BRI:
+		case RSX_SCA_OPCODE_BRB:
+		case RSX_SCA_OPCODE_CAL:
+		case RSX_SCA_OPCODE_CLI:
+		case RSX_SCA_OPCODE_CLB:
+		{
+			d2.HEX = data[ucode_size + 2];
+
+			u32 jump_address = ((d2.iaddrh << 3) | d3.iaddrl) * 4;
+			last_instruction_address = std::max(last_instruction_address, jump_address);
+			break;
+		}
+		}
+
+		if (d3.end && (ucode_size >= last_instruction_address))
+		{
+			//Jumping over an end label is legal (verified)
+			break;
+		}
+	}
+
+	return{ ucode_size + 4 };
+}
+
 size_t vertex_program_storage_hash::operator()(const RSXVertexProgram &program) const
 {
 	size_t hash = vertex_program_utils::get_vertex_program_ucode_hash(program);
@@ -84,21 +124,70 @@ size_t fragment_program_utils::get_fragment_program_ucode_size(void *ptr)
 	}
 }
 
-u32 fragment_program_utils::get_fragment_program_start(void *ptr)
+fragment_program_utils::fragment_program_metadata fragment_program_utils::analyse_fragment_program(void *ptr)
 {
 	const qword *instBuffer = (const qword*)ptr;
 	size_t instIndex = 0;
+	s32 program_offset = -1;
+	u32 ucode_size = 0;
+	u16 textures_mask = 0;
+
 	while (true)
 	{
 		const qword& inst = instBuffer[instIndex];
-		u32 opcode = inst.word[0] >> 16 & 0x3F;
+		const u32 opcode = (inst.word[0] >> 16) & 0x3F;
+
 		if (opcode)
+		{
+			if (program_offset < 0)
+				program_offset = instIndex * 16;
+
+			switch(opcode)
+			{
+			case RSX_FP_OPCODE_TEX:
+			case RSX_FP_OPCODE_TEXBEM:
+			case RSX_FP_OPCODE_TXP:
+			case RSX_FP_OPCODE_TXPBEM:
+			case RSX_FP_OPCODE_TXD:
+			case RSX_FP_OPCODE_TXB:
+			case RSX_FP_OPCODE_TXL:
+			{
+				//Bits 17-20 of word 1, swapped within u16 sections
+				//Bits 16-23 are swapped into the upper 8 bits (24-31)
+				const u32 tex_num = (inst.word[0] >> 25) & 15;
+				textures_mask |= (1 << tex_num);
+				break;
+			}
+			}
+
+			if (is_constant(inst.word[1]) || is_constant(inst.word[2]) || is_constant(inst.word[3]))
+			{
+				//Instruction references constant, skip one slot occupied by data
+				instIndex++;
+				ucode_size += 16;
+			}
+		}
+
+		if (program_offset >= 0)
+		{
+			ucode_size += 16;
+		}
+
+		if ((inst.word[0] >> 8) & 0x1)
+		{
+			if (program_offset < 0)
+			{
+				program_offset = instIndex * 16;
+				ucode_size = 16;
+			}
+
 			break;
+		}
 
 		instIndex++;
 	}
 
-	return instIndex * 16;
+	return{ (u32)program_offset, ucode_size, textures_mask };
 }
 
 size_t fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentProgram& program)

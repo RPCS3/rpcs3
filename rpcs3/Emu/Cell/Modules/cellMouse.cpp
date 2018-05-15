@@ -134,7 +134,7 @@ s32 cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 
 s32 cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 {
-	sys_io.todo("cellMouseGetDataList(port_no=%d, data=0x%x", port_no, data);
+	sys_io.todo("cellMouseGetDataList(port_no=%d, data=0x%x)", port_no, data);
 	if (g_cfg.io.mouse == mouse_handler::null)
 		return CELL_MOUSE_ERROR_NO_DEVICE;
 	else

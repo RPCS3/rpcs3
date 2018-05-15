@@ -41,6 +41,20 @@ namespace vk
 		return subres;
 	}
 
+	VkImageAspectFlags get_aspect_flags(VkFormat format)
+	{
+		switch (format)
+		{
+		default:
+			return VK_IMAGE_ASPECT_COLOR_BIT;
+		case VK_FORMAT_D16_UNORM:
+			return VK_IMAGE_ASPECT_DEPTH_BIT;
+		case VK_FORMAT_D24_UNORM_S8_UINT:
+		case VK_FORMAT_D32_SFLOAT_S8_UINT:
+			return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+	}
+
 	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 width, u32 height, u32 mipmaps, VkImageAspectFlagBits aspect)
 	{
 		VkImageSubresourceLayers a_src = {}, a_dst = {};
@@ -147,22 +161,69 @@ namespace vk
 			change_image_layout(cmd, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLayout, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 	}
 
-	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
+	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
 		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
 		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap)
 	{
 		u32 mipmap_level = 0;
 		u32 block_in_pixel = get_format_block_size_in_texel(format);
 		u8 block_size_in_bytes = get_format_block_size_in_bytes(format);
+		std::vector<u8> staging_buffer;
+
+		//TODO: Depth and stencil transfer together
+		flags &= ~(VK_IMAGE_ASPECT_STENCIL_BIT);
+
 		for (const rsx_subresource_layout &layout : subresource_layout)
 		{
 			u32 row_pitch = align(layout.width_in_block * block_size_in_bytes, 256);
 			u32 image_linear_size = row_pitch * layout.height_in_block * layout.depth;
-			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size);
 
-			void *mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size);
-			gsl::span<gsl::byte> mapped{ (gsl::byte*)mapped_buffer, ::narrow<int>(image_linear_size) };
+			//Map with extra padding bytes in case of realignment
+			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size + 8);
+			void *mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size + 8);
+			void *dst = mapped_buffer;
+
+			bool use_staging = false;
+			if (dst_image->info.format == VK_FORMAT_D24_UNORM_S8_UINT ||
+				dst_image->info.format == VK_FORMAT_D32_SFLOAT_S8_UINT)
+			{
+				//Misalign intentionally to skip the first stencil byte in D24S8 data
+				//Ensures the real depth data is dword aligned
+
+				if (dst_image->info.format == VK_FORMAT_D32_SFLOAT_S8_UINT)
+				{
+					//Emulate D24x8 passthrough to D32 format
+					//Reads from GPU managed memory are slow at best and at worst unreliable
+					use_staging = true;
+					staging_buffer.resize(image_linear_size + 8);
+					dst = staging_buffer.data() + 4 - 1;
+				}
+				else
+				{
+					//Skip leading dword when writing to texture
+					offset_in_buffer += 4;
+					dst = (char*)(mapped_buffer) + 4 - 1;
+				}
+			}
+
+			gsl::span<gsl::byte> mapped{ (gsl::byte*)dst, ::narrow<int>(image_linear_size) };
 			upload_texture_subresource(mapped, layout, format, is_swizzled, false, 256);
+
+			if (use_staging)
+			{
+				if (dst_image->info.format == VK_FORMAT_D32_SFLOAT_S8_UINT)
+				{
+					//Map depth component from D24x8 to a f32 depth value
+					//NOTE: One byte (contains first S8 value) is skipped
+					rsx::convert_le_d24x8_to_le_f32(mapped_buffer, (char*)dst + 1, image_linear_size >> 2, 1);
+				}
+				else //unused
+				{
+					//Copy emulated data back to the target buffer
+					memcpy(mapped_buffer, dst, image_linear_size);
+				}
+			}
+
 			upload_heap.unmap();
 
 			VkBufferImageCopy copy_info = {};
@@ -176,7 +237,7 @@ namespace vk
 			copy_info.imageSubresource.mipLevel = mipmap_level % mipmap_count;
 			copy_info.bufferRowLength = block_in_pixel * row_pitch / block_size_in_bytes;
 
-			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, dst_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_info);
+			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_info);
 			mipmap_level++;
 		}
 	}

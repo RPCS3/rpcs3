@@ -158,7 +158,7 @@ struct driver_state
 	{
 		if (!test_property(GL_COLOR_WRITEMASK, mask))
 		{
-			glColorMask(((mask & 0x20) ? 1 : 0), ((mask & 0x40) ? 1 : 0), ((mask & 0x80) ? 1 : 0), ((mask & 0x10) ? 1 : 0));
+			glColorMask(((mask & 0x10) ? 1 : 0), ((mask & 0x20) ? 1 : 0), ((mask & 0x40) ? 1 : 0), ((mask & 0x80) ? 1 : 0));
 			properties[GL_COLOR_WRITEMASK] = mask;
 		}
 	}
@@ -166,10 +166,10 @@ struct driver_state
 	void color_mask(bool r, bool g, bool b, bool a)
 	{
 		u32 mask = 0;
-		if (r) mask |= 0x20;
-		if (g) mask |= 0x40;
-		if (b) mask |= 0x80;
-		if (a) mask |= 0x10;
+		if (r) mask |= 0x10;
+		if (g) mask |= 0x20;
+		if (b) mask |= 0x40;
+		if (a) mask |= 0x80;
 
 		color_mask(mask);
 	}
@@ -281,14 +281,17 @@ private:
 
 	gl::buffer_view m_persistent_stream_view;
 	gl::buffer_view m_volatile_stream_view;
-	gl::texture m_gl_persistent_stream_buffer;
-	gl::texture m_gl_volatile_stream_buffer;
+	std::unique_ptr<gl::texture> m_gl_persistent_stream_buffer;
+	std::unique_ptr<gl::texture> m_gl_volatile_stream_buffer;
 
 	std::unique_ptr<gl::ring_buffer> m_attrib_ring_buffer;
 	std::unique_ptr<gl::ring_buffer> m_fragment_constants_buffer;
 	std::unique_ptr<gl::ring_buffer> m_transform_constants_buffer;
 	std::unique_ptr<gl::ring_buffer> m_vertex_state_buffer;
 	std::unique_ptr<gl::ring_buffer> m_index_ring_buffer;
+
+	// Identity buffer used to fix broken gl_VertexID on ATI stack
+	std::unique_ptr<gl::buffer> m_identity_index_buffer;
 
 	u32 m_draw_calls = 0;
 	s64 m_begin_time = 0;
@@ -323,7 +326,7 @@ private:
 	//buffer
 	gl::fbo draw_fbo;
 	gl::fbo m_flip_fbo;
-	gl::texture m_flip_tex_color;
+	std::unique_ptr<gl::texture> m_flip_tex_color;
 
 	//vaos are mandatory for core profile
 	gl::vao m_vao;
@@ -334,6 +337,7 @@ private:
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
 	std::unordered_map<GLenum, std::unique_ptr<gl::texture>> m_null_textures;
+	std::vector<u8> m_scratch_buffer;
 
 public:
 	GLGSRender();

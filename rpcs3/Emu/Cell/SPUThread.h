@@ -609,7 +609,7 @@ public:
 	void set_events(u32 mask);
 	void set_interrupt_status(bool enable);
 	u32 get_ch_count(u32 ch);
-	bool get_ch_value(u32 ch, u32& out);
+	s64 get_ch_value(u32 ch);
 	bool set_ch_value(u32 ch, u32 value);
 	bool stop_and_signal(u32 code);
 	void halt();

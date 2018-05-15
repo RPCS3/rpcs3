@@ -57,3 +57,7 @@ else()
 	add_subdirectory(3rdparty/hidapi/libusb)
 	#list(APPEND LIBS hidapi-libusb)
 endif()
+
+set(XXHASH_BUNDLED_MODE ON)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Make xxHash build static libs")
+add_subdirectory(3rdparty/xxHash/cmake_unofficial)

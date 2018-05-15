@@ -347,7 +347,6 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 573: return "sys_pad_dbg_ldd_set_data_insert_mode";
 	case 574: return "sys_pad_ldd_register_controller";
 	case 575: return "sys_pad_ldd_get_port_no";
-	case 577: return "sys_pad_manager_...";
 	case 600: return "sys_storage_open";
 	case 601: return "sys_storage_close";
 	case 602: return "sys_storage_read";
@@ -486,7 +485,6 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 874: return "sys_ss_get_cache_of_flash_ext_flag";
 	case 875: return "sys_ss_get_boot_device";
 	case 876: return "sys_ss_disc_access_control";
-	case 877: return "sys_ss_~utoken_if";
 	case 878: return "sys_ss_ad_sign";
 	case 879: return "sys_ss_media_id";
 	case 880: return "sys_deci3_open";
@@ -554,6 +552,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 954: return "sys_dbg_vm_get_info";
 	case 955: return "sys_dbg_enable_floating_point_enabled_exception";
 	case 956: return "sys_dbg_disable_floating_point_enabled_exception";
+	case 957: return "sys_dbg_get_process_memory_container_information";
 	case 960: return "sys_dbg_perfomance_monitor";
 	case 970: return "sys_dbg_get_event_flag_list";
 	case 971: return "sys_dbg_get_event_flag_information";

@@ -106,11 +106,8 @@
               </item>
               <item>
                <widget class="QRadioButton" name="spu_llvm">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
                 <property name="text">
-                 <string>LLVM Recompiler</string>
+                 <string>LLVM Recompiler (experimental)</string>
                 </property>
                </widget>
               </item>
@@ -1284,6 +1281,13 @@
                <widget class="QCheckBox" name="showShaderCompilationHint">
                 <property name="text">
                  <string>Show shader compilation hint</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="useRichPresence">
+                <property name="text">
+                 <string>Use Discord Rich Presence</string>
                 </property>
                </widget>
               </item>

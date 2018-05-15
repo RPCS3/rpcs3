@@ -38,16 +38,16 @@ struct rsx_subresource_layout
 	u16 width_in_block;
 	u16 height_in_block;
 	u16 depth;
-	u32 pitch_in_bytes;
+	u32 pitch_in_block;
 };
 
 /**
 * Get size to store texture in a linear fashion.
-* Storage is assumed to use a rowPitchAlignement boundary for every row of texture.
+* Storage is assumed to use a rowPitchAlignment boundary for every row of texture.
 */
-size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignement, size_t mipmap_alignment);
-size_t get_placed_texture_storage_size(const rsx::fragment_texture &texture, size_t row_pitch_alignement, size_t mipmap_alignment = 0x200);
-size_t get_placed_texture_storage_size(const rsx::vertex_texture &texture, size_t row_pitch_alignement, size_t mipmap_alignment = 0x200);
+size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignment, size_t mipmap_alignment);
+size_t get_placed_texture_storage_size(const rsx::fragment_texture &texture, size_t row_pitch_alignment, size_t mipmap_alignment = 0x200);
+size_t get_placed_texture_storage_size(const rsx::vertex_texture &texture, size_t row_pitch_alignment, size_t mipmap_alignment = 0x200);
 
 /**
  * get all rsx_subresource_layout for texture.

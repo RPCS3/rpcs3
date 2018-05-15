@@ -11,11 +11,11 @@ BreakConstructorInitializersBeforeComma: true
 BreakBeforeBinaryOperators: false
 BreakBeforeTernaryOperators: false
 AlwaysBreakTemplateDeclarations: true
-AllowShortIfStatementsOnASingleLine: true
-AllowShortBlocksOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: false
+AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: false
-AllowShortLoopsOnASingleLine: true
+AllowShortLoopsOnASingleLine: false
 Cpp11BracedListStyle: true
 IndentCaseLabels: false
 SortIncludes: false
@@ -29,5 +29,3 @@ BinPackParameters: true
 AlwaysBreakAfterReturnType: None
 KeepEmptyLinesAtTheStartOfBlocks: true
 IndentWrappedFunctionNames: false
-
-#SpaceAfterTemplateKeyword: false
