@@ -79,13 +79,6 @@ int main(int argc, char** argv)
 	// I think there was an issue with gsframe if I recall correctly, so look out for that
 	//QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 	SetProcessDPIAware();
-
-	timeBeginPeriod(1);
-
-	atexit([]
-	{
-		timeEndPeriod(1);
-	});
 #else
 	qputenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1");
 #endif

@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+
 enum class system_state
 {
 	running,
@@ -188,6 +189,10 @@ class Emulator final
 	std::string m_dir;
 
 	bool m_force_boot = false;
+
+#ifdef _WIN32
+	unsigned long m_orig_timer_resolution = 0;
+#endif
 
 public:
 	Emulator() = default;
