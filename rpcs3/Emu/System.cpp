@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/event.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
