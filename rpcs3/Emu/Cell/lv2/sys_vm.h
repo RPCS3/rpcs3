@@ -3,6 +3,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
+#include "sys_memory.h"
 
 enum : u64
 {
@@ -23,6 +24,19 @@ struct sys_vm_statistics_t
 	be_t<u32> pmem_total;     // Total physical memory allocated for the virtual memory area.
 	be_t<u32> pmem_used;      // Physical memory in use by the virtual memory area.
 	be_t<u64> timestamp;
+};
+
+struct sys_vm_block_t
+{
+	static const u32 id_base = 0x1;
+	static const u32 id_step = 0x1;
+	static const u32 id_count = 16;
+
+	const std::shared_ptr<lv2_memory_container> ct;
+	u32 addr;
+	u32 psize;
+
+	sys_vm_block_t(const std::shared_ptr<lv2_memory_container>& ct, u32 addr, u32 psize);
 };
 
 // SysCalls
