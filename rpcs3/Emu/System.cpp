@@ -40,7 +40,9 @@
 #include "Utilities/GDBDebugServer.h"
 
 #ifdef _WIN32
-#include "Utilities/sync.h"		// NtSetTimerResolution 
+#include "Utilities/dynamic_library.h"
+DYNAMIC_IMPORT("ntdll.dll", NtQueryTimerResolution, NTSTATUS(PULONG MinimumResolution, PULONG MaximumResolution, PULONG CurrentResolution));
+DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResolution, BOOLEAN SetResolution, PULONG CurrentResolution));
 #endif
 
 cfg_root g_cfg;
