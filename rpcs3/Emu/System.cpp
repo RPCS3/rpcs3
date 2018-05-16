@@ -986,9 +986,9 @@ void Emulator::Run()
 #ifdef _WIN32
 	// Set 0.5 msec timer resolution for best performance
 	ULONG min_res, max_res, orig_res, new_res;
-	if (NtQueryTimerResolution(&min_res, &max_res, &orig_res) == 0 && NtSetTimerResolution(max_res, TRUE, &new_res) == 0)
+	if (NtQueryTimerResolution(&min_res, &max_res, &orig_res) == 0)
 	{
-		m_orig_timer_resolution = orig_res;
+		NtSetTimerResolution(max_res, TRUE, &new_res);
 	}
 #endif
 
@@ -1190,10 +1190,8 @@ void Emulator::Stop(bool restart)
 
 #ifdef _WIN32
 	// Restore original timer resolution
-	if (m_orig_timer_resolution) {
-		ULONG new_res;
-		NtSetTimerResolution(m_orig_timer_resolution, TRUE, &new_res);
-	}
+	ULONG new_res;
+	NtSetTimerResolution(0, FALSE, &new_res);
 #endif
 
 	if (restart)

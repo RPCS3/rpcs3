@@ -190,10 +190,6 @@ class Emulator final
 
 	bool m_force_boot = false;
 
-#ifdef _WIN32
-	unsigned long m_orig_timer_resolution = 0;
-#endif
-
 public:
 	Emulator() = default;
 
