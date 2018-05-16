@@ -71,8 +71,7 @@ namespace vk
 	void set_current_renderer(const vk::render_device &device);
 
 	//Compatibility workarounds
-	bool emulate_primitive_restart();
-	bool force_32bit_index_buffer();
+	bool emulate_primitive_restart(rsx::primitive_type type);
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
 
@@ -854,7 +853,7 @@ namespace vk
 		enum access_type_hint
 		{
 			flush_only, //Only to be submitted/opened/closed via command flush
-			all         //Auxilliary, can be sumitted/opened/closed at any time
+			all         //Auxiliary, can be submitted/opened/closed at any time
 		}
 		access_hint = flush_only;
 
@@ -1645,7 +1644,7 @@ public:
 		{
 			m_instance = nullptr;
 
-			//Check that some critical entry-points have been loaded into memory indicating prescence of a loader
+			//Check that some critical entry-points have been loaded into memory indicating presence of a loader
 			loader_exists = (vkCreateInstance != nullptr);
 		}
 

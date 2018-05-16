@@ -33,7 +33,7 @@ inline std::string get_hresult_message(HRESULT hr)
 
 /**
  * Send data to dst pointer without polluting cache.
- * Usefull to write to mapped memory from upload heap.
+ * Useful to write to mapped memory from upload heap.
  */
 inline
 void streamToBuffer(void* dst, void* src, size_t sizeInBytes)
@@ -47,7 +47,7 @@ void streamToBuffer(void* dst, void* src, size_t sizeInBytes)
 
 /**
 * copy src to dst pointer without polluting cache.
-* Usefull to write to mapped memory from upload heap.
+* Useful to write to mapped memory from upload heap.
 */
 inline
 void streamBuffer(void* dst, void* src, size_t sizeInBytes)

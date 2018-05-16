@@ -3,10 +3,12 @@
 #include <map>
 #include <functional>
 #include <memory>
+#include "Utilities/VirtualMemory.h"
 
 class shared_mutex;
 class named_thread;
 class cpu_thread;
+class notifier;
 
 namespace vm
 {
@@ -14,6 +16,7 @@ namespace vm
 	extern u8* const g_exec_addr;
 	extern u8* const g_stat_addr;
 	extern u8* const g_reservations;
+	extern u8* const g_reservations2;
 
 	enum memory_location_t : uint
 	{
@@ -38,24 +41,6 @@ namespace vm
 		page_1m_size            = (1 << 6),
 
 		page_allocated          = (1 << 7),
-	};
-
-	struct waiter
-	{
-		named_thread* owner;
-		u32 addr;
-		u32 size;
-		u64 stamp;
-		const void* data;
-
-		waiter() = default;
-
-		waiter(const waiter&) = delete;
-
-		void init();
-		void test() const;
-
-		~waiter();
 	};
 
 	// Address type
@@ -111,14 +96,14 @@ namespace vm
 	inline void reservation_update(u32 addr, u32 size, bool lsb = false)
 	{
 		// Update reservation info with new timestamp
-		reservation_acquire(addr, size) = (__rdtsc() & -2) | u64{lsb};
+		reservation_acquire(addr, size) = (__rdtsc() << 1) | u64{lsb};
 	}
 
-	// Check and notify memory changes at address
-	void notify(u32 addr, u32 size);
-
-	// Check and notify memory changes
-	void notify_all();
+	// Get reservation sync variable
+	inline notifier& reservation_notifier(u32 addr, u32 size)
+	{
+		return *reinterpret_cast<notifier*>(g_reservations2 + addr / 16);
+	}
 
 	// Change memory protection of specified memory region
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
@@ -126,14 +111,14 @@ namespace vm
 	// Check flags for specified memory range (unsafe)
 	bool check_addr(u32 addr, u32 size = 1, u8 flags = page_allocated);
 
-	// Search and map memory in specified memory location (don't pass alignment smaller than 4096)
-	u32 alloc(u32 size, memory_location_t location, u32 align = 4096, u32 sup = 0);
+	// Search and map memory in specified memory location (min alignment is 0x10000)
+	u32 alloc(u32 size, memory_location_t location, u32 align = 0x10000);
 
 	// Map memory at specified address (in optionally specified memory location)
-	u32 falloc(u32 addr, u32 size, memory_location_t location = any, u32 sup = 0);
+	u32 falloc(u32 addr, u32 size, memory_location_t location = any);
 
 	// Unmap memory at specified address (in optionally specified memory location), return size
-	u32 dealloc(u32 addr, memory_location_t location = any, u32* sup_out = nullptr);
+	u32 dealloc(u32 addr, memory_location_t location = any);
 
 	// dealloc() with no return value and no exceptions
 	void dealloc_verbose_nothrow(u32 addr, memory_location_t location = any) noexcept;
@@ -141,10 +126,10 @@ namespace vm
 	// Object that handles memory allocations inside specific constant bounds ("location")
 	class block_t final
 	{
-		std::map<u32, u32> m_map; // Mapped memory: addr -> size
-		std::unordered_map<u32, u32> m_sup; // Supplementary info for allocations
+		// Mapped regions: addr -> shm handle
+		std::map<u32, std::shared_ptr<utils::shm>> m_map;
 
-		bool try_alloc(u32 addr, u32 size, u8 flags, u32 sup);
+		bool try_alloc(u32 addr, u8 flags, std::shared_ptr<utils::shm>&&);
 
 	public:
 		block_t(u32 addr, u32 size, u64 flags = 0);
@@ -156,14 +141,17 @@ namespace vm
 		const u32 size; // Total size
 		const u64 flags; // Currently unused
 
-		// Search and map memory (don't pass alignment smaller than 4096)
-		u32 alloc(u32 size, u32 align = 4096, const uchar* data = nullptr, u32 sup = 0);
+		// Search and map memory (min alignment is 0x10000)
+		u32 alloc(u32 size, u32 align = 0x10000, const std::shared_ptr<utils::shm>* = nullptr);
 
 		// Try to map memory at fixed location
-		u32 falloc(u32 addr, u32 size, const uchar* data = nullptr, u32 sup = 0);
+		u32 falloc(u32 addr, u32 size, const std::shared_ptr<utils::shm>* = nullptr);
 
 		// Unmap memory at specified location previously returned by alloc(), return size
-		u32 dealloc(u32 addr, uchar* data_out = nullptr, u32* sup_out = nullptr);
+		u32 dealloc(u32 addr, const std::shared_ptr<utils::shm>* = nullptr);
+
+		// Get memory at specified address (if size = 0, addr assumed exact)
+		std::pair<const u32, std::shared_ptr<utils::shm>> get(u32 addr, u32 size = 0);
 
 		// Internal
 		u32 imp_used(const vm::writer_lock&);
@@ -288,6 +276,35 @@ namespace vm
 		template<typename T> inline to_be_t<T>& _ref(u32 addr)
 		{
 			return *_ptr<T>(addr);
+		}
+
+		// Access memory bypassing memory protection
+		template <typename T>
+		inline std::shared_ptr<to_be_t<T>> get_super_ptr(u32 addr, u32 count = 1)
+		{
+			const auto area = vm::get(vm::any, addr);
+
+			if (!area || addr + u64{count} * sizeof(T) > UINT32_MAX)
+			{
+				return nullptr;
+			}
+
+			const auto shm = area->get(addr, sizeof(T) * count);
+
+			if (!shm.second || shm.first > addr)
+			{
+				return nullptr;
+			}
+
+			const auto ptr = reinterpret_cast<to_be_t<T>*>(shm.second->get(addr - shm.first, sizeof(T) * count));
+
+			if (!ptr)
+			{
+				return nullptr;
+			}
+
+			// Create a shared pointer using the aliasing constructor
+			return {shm.second, ptr};
 		}
 
 		inline const be_t<u16>& read16(u32 addr)

@@ -29,7 +29,7 @@ void fmt_class_string<CellSubDisplayError>::format(std::string& out, u64 arg)
 error_code cellSubDisplayInit(vm::ptr<CellSubDisplayParam> pParam, vm::ptr<CellSubDisplayHandler> func, vm::ptr<void> userdata, u32 container)
 {
 	cellSubDisplay.todo("cellSubDisplayInit(pParam=*0x%x, func=*0x%x, userdata=*0x%x, container=0x%x)", pParam, func, userdata, container);
-	return CELL_OK;
+	return CELL_SUBDISPLAY_ERROR_ZERO_REGISTERED;
 }
 
 error_code cellSubDisplayEnd()

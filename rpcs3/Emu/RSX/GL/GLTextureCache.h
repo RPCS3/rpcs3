@@ -407,9 +407,9 @@ namespace gl
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 
 			pixel_pack_settings pack_settings;
-			pack_settings.aligment(1);
+			pack_settings.alignment(1);
 
-			//NOTE: AMD properietary driver bug - disable swap bytes
+			//NOTE: AMD proprietary driver bug - disable swap bytes
 			if (!::gl::get_driver_caps().vendor_AMD)
 				pack_settings.swap_bytes(pack_unpack_swap_bytes);
 

@@ -82,7 +82,6 @@ enc_temp_folder/*
 bin/dev_hdd0/*.txt
 x64/*
 rpcs3/x64/*
-rpcs3-tests/x64/*
 
 # cmake
 Makefile
@@ -100,6 +99,7 @@ rpcs3/rpcs3_*_cotire.cmake
 
 # Qt
 moc_*.cpp
-qrc_resources.cpp
+qrc_*.cpp
 rpcs3_automoc.cpp
 ui_*.h
+rpcs3/rpcs3_autogen/*

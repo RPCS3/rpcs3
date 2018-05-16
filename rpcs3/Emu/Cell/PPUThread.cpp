@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/sysinfo.h"
+#include "Utilities/JIT.h"
 #include "Crypto/sha1.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -9,6 +10,7 @@
 #include "PPUInterpreter.h"
 #include "PPUAnalyser.h"
 #include "PPUModule.h"
+#include "SPURecompiler.h"
 #include "lv2/sys_sync.h"
 #include "lv2/sys_prx.h"
 #include "Utilities/GDBDebugServer.h"
@@ -45,7 +47,6 @@
 #endif
 #include "define_new_memleakdetect.h"
 
-#include "Utilities/JIT.h"
 #include "PPUTranslator.h"
 #include "Modules/cellMsgDialog.h"
 #endif
@@ -53,8 +54,6 @@
 #include <thread>
 #include <cfenv>
 #include "Utilities/GSL.h"
-
-const bool s_use_rtm = utils::has_rtm();
 
 const bool s_use_ssse3 =
 #ifdef _MSC_VER
@@ -399,39 +398,32 @@ extern void ppu_remove_breakpoint(u32 addr)
 
 extern bool ppu_patch(u32 addr, u32 value)
 {
-	// TODO: check executable flag
-	if (vm::check_addr(addr, sizeof(u32)))
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm && Emu.GetStatus() != system_state::ready)
 	{
-		if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm && Emu.GetStatus() != system_state::ready)
-		{
-			// TODO
-			return false;
-		}
-
-		if (!vm::check_addr(addr, sizeof(u32), vm::page_writable))
-		{
-			utils::memory_protect(vm::g_base_addr + addr, sizeof(u32), utils::protection::rw);
-		}
-
-		vm::write32(addr, value);
-
-		const u32 _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
-		const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_fallback));
-
-		if (ppu_ref(addr) != _break && ppu_ref(addr) != fallback)
-		{
-			ppu_ref(addr) = ppu_cache(addr);
-		}
-
-		if (!vm::check_addr(addr, sizeof(u32), vm::page_writable))
-		{
-			utils::memory_protect(vm::g_base_addr + addr, sizeof(u32), utils::protection::ro);
-		}
-
-		return true;
+		// TODO: support recompilers
+		LOG_FATAL(GENERAL, "Patch failed at 0x%x: LLVM recompiler is used.", addr);
+		return false;
 	}
 
-	return false;
+	const auto ptr = vm::get_super_ptr<u32>(addr);
+
+	if (!ptr)
+	{
+		LOG_FATAL(GENERAL, "Patch failed at 0x%x: invalid memory address.", addr);
+		return false;
+	}
+
+	*ptr = value;
+
+	const u32 _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
+	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_fallback));
+
+	if (ppu_ref(addr) != _break && ppu_ref(addr) != fallback)
+	{
+		ppu_ref(addr) = ppu_cache(addr);
+	}
+
+	return true;
 }
 
 std::string ppu_thread::get_name() const
@@ -513,6 +505,12 @@ extern thread_local std::string(*g_tls_log_prefix)();
 void ppu_thread::cpu_task()
 {
 	std::fesetround(FE_TONEAREST);
+
+	if (g_cfg.core.set_daz_and_ftz && g_cfg.core.ppu_decoder != ppu_decoder_type::precise)
+	{
+		// Set DAZ and FTZ
+		_mm_setcsr(_mm_getcsr() | 0x8840);
+	}
 
 	// Execute cmd_queue
 	while (cmd64 cmd = cmd_wait())
@@ -713,7 +711,12 @@ ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
 	, m_name(name)
 {
 	// Trigger the scheduler
-	state += cpu_flag::suspend + cpu_flag::memory;
+	state += cpu_flag::suspend;
+
+	if (!g_use_rtm)
+	{
+		state += cpu_flag::memory;
+	}
 }
 
 void ppu_thread::cmd_push(cmd64 cmd)
@@ -934,23 +937,100 @@ static void ppu_trace(u64 addr)
 	LOG_NOTICE(PPU, "Trace: 0x%llx", addr);
 }
 
+template <typename T>
+static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
+{
+	auto& data = vm::_ref<const atomic_be_t<T>>(addr);
+
+	ppu.raddr = addr;
+
+	// Do several attemps
+	for (uint i = 0; g_use_rtm || i < 5; i++)
+	{
+		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+		_mm_lfence();
+
+		// Check LSB: atomic store may be in progress
+		if (LIKELY((ppu.rtime & 1) == 0))
+		{
+			ppu.rdata = data;
+			_mm_lfence();
+
+			if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
+			{
+				return static_cast<T>(ppu.rdata);
+			}
+		}
+
+		busy_wait(300);
+	}
+
+	vm::reader_lock lock;
+	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+	ppu.rdata = data;
+	return static_cast<T>(ppu.rdata);
+}
+
 extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr)
 {
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(u32));
-	_mm_lfence();
-	ppu.raddr = addr;
-	ppu.rdata = vm::_ref<const atomic_be_t<u32>>(addr);
-	return static_cast<u32>(ppu.rdata);
+	return ppu_load_acquire_reservation<u32>(ppu, addr);
 }
 
 extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 {
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(u64));
-	_mm_lfence();
-	ppu.raddr = addr;
-	ppu.rdata = vm::_ref<const atomic_be_t<u64>>(addr);
-	return ppu.rdata;
+	return ppu_load_acquire_reservation<u64>(ppu, addr);
 }
+
+const auto ppu_stwcx_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, u64 rdata, u32 value)>([](asmjit::X86Assembler& c, auto& args)
+{
+	using namespace asmjit;
+
+	Label fall = c.newLabel();
+	Label fail = c.newLabel();
+
+	// Prepare registers
+	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
+	c.mov(x86::r10, x86::qword_ptr(x86::rax));
+	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
+	c.mov(x86::r11, x86::qword_ptr(x86::rax));
+	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
+	c.shr(args[0], 7);
+	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
+	c.bswap(args[2].r32());
+	c.bswap(args[3].r32());
+
+	// Touch memory (heavyweight)
+	c.lock().add(x86::dword_ptr(x86::r11), 0);
+	c.xor_(x86::eax, x86::eax);
+	c.lock().xadd(x86::qword_ptr(x86::r10), x86::rax);
+	c.cmp(x86::rax, args[1]);
+	c.jne(fail);
+
+	// Begin transaction
+	build_transaction_enter(c, fall);
+	c.cmp(x86::qword_ptr(x86::r10), args[1]);
+	c.jne(fail);
+	c.cmp(x86::dword_ptr(x86::r11), args[2].r32());
+	c.jne(fail);
+	c.mov(x86::dword_ptr(x86::r11), args[3].r32());
+	c.rdtsc(); // destroys args[1] or args[2]
+	c.shl(x86::rdx, 33);
+	c.shl(x86::rax, 1);
+	c.or_(x86::rax, x86::rdx);
+	c.mov(x86::qword_ptr(x86::r10), x86::rax);
+	c.xend();
+	c.mov(x86::eax, 1);
+	c.ret();
+
+	c.bind(fall);
+	c.sar(x86::eax, 24);
+	c.ret();
+
+	c.bind(fail);
+	build_transaction_abort(c, 0xff);
+	c.or_(x86::eax, -1);
+	c.ret();
+});
 
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 {
@@ -962,24 +1042,31 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		return false;
 	}
 
-	if (s_use_rtm && utils::transaction_enter())
+	if (g_use_rtm)
 	{
-		if (!vm::g_mutex.is_lockable() || vm::g_mutex.is_reading())
+		// Do several attempts (TODO)
+		for (u32 i = 0; i < 5; i++)
 		{
-			_xabort(0);
+			const int r = ppu_stwcx_tx(addr, ppu.rtime, ppu.rdata, reg_value);
+
+			if (r > 0)
+			{
+				vm::reservation_notifier(addr, sizeof(u32)).notify_all();
+				ppu.raddr = 0;
+				return true;
+			}
+
+			if (r < 0)
+			{
+				// Reservation lost
+				ppu.raddr = 0;
+				return false;
+			}
 		}
 
-		const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
-
-		if (result)
-		{
-			vm::reservation_update(addr, sizeof(u32));
-			vm::notify(addr, sizeof(u32));
-		}
-
-		_xend();
+		// Give up
 		ppu.raddr = 0;
-		return result;
+		return false;
 	}
 
 	vm::writer_lock lock(0);
@@ -989,12 +1076,63 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 	if (result)
 	{
 		vm::reservation_update(addr, sizeof(u32));
-		vm::notify(addr, sizeof(u32));
+		vm::reservation_notifier(addr, sizeof(u32)).notify_all();
 	}
 
 	ppu.raddr = 0;
 	return result;
 }
+
+const auto ppu_stdcx_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, u64 rdata, u64 value)>([](asmjit::X86Assembler& c, auto& args)
+{
+	using namespace asmjit;
+
+	Label fall = c.newLabel();
+	Label fail = c.newLabel();
+
+	// Prepare registers
+	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
+	c.mov(x86::r10, x86::qword_ptr(x86::rax));
+	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
+	c.mov(x86::r11, x86::qword_ptr(x86::rax));
+	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
+	c.shr(args[0], 7);
+	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
+	c.bswap(args[2]);
+	c.bswap(args[3]);
+
+	// Touch memory (heavyweight)
+	c.lock().add(x86::qword_ptr(x86::r11), 0);
+	c.xor_(x86::eax, x86::eax);
+	c.lock().xadd(x86::qword_ptr(x86::r10), x86::rax);
+	c.cmp(x86::rax, args[1]);
+	c.jne(fail);
+
+	// Begin transaction
+	build_transaction_enter(c, fall);
+	c.cmp(x86::qword_ptr(x86::r10), args[1]);
+	c.jne(fail);
+	c.cmp(x86::qword_ptr(x86::r11), args[2]);
+	c.jne(fail);
+	c.mov(x86::qword_ptr(x86::r11), args[3]);
+	c.rdtsc(); // destroys args[1] or args[2]
+	c.shl(x86::rdx, 33);
+	c.shl(x86::rax, 1);
+	c.or_(x86::rax, x86::rdx);
+	c.mov(x86::qword_ptr(x86::r10), x86::rax);
+	c.xend();
+	c.mov(x86::eax, 1);
+	c.ret();
+
+	c.bind(fall);
+	c.sar(x86::eax, 24);
+	c.ret();
+
+	c.bind(fail);
+	build_transaction_abort(c, 0xff);
+	c.or_(x86::eax, -1);
+	c.ret();
+});
 
 extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 {
@@ -1006,24 +1144,31 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return false;
 	}
 
-	if (s_use_rtm && utils::transaction_enter())
+	if (g_use_rtm)
 	{
-		if (!vm::g_mutex.is_lockable() || vm::g_mutex.is_reading())
+		// Do several attempts (TODO)
+		for (u32 i = 0; i < 5; i++)
 		{
-			_xabort(0);
+			const int r = ppu_stdcx_tx(addr, ppu.rtime, ppu.rdata, reg_value);
+
+			if (r > 0)
+			{
+				vm::reservation_notifier(addr, sizeof(u64)).notify_all();
+				ppu.raddr = 0;
+				return true;
+			}
+
+			if (r < 0)
+			{
+				// Reservation lost
+				ppu.raddr = 0;
+				return false;
+			}
 		}
 
-		const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u64)) && data.compare_and_swap_test(ppu.rdata, reg_value);
-
-		if (result)
-		{
-			vm::reservation_update(addr, sizeof(u64));
-			vm::notify(addr, sizeof(u64));
-		}
-
-		_xend();
+		// Give up
 		ppu.raddr = 0;
-		return result;
+		return false;
 	}
 
 	vm::writer_lock lock(0);
@@ -1033,7 +1178,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 	if (result)
 	{
 		vm::reservation_update(addr, sizeof(u64));
-		vm::notify(addr, sizeof(u64));
+		vm::reservation_notifier(addr, sizeof(u64)).notify_all();
 	}
 
 	ppu.raddr = 0;
@@ -1056,6 +1201,22 @@ extern void ppu_initialize()
 	const auto _main = fxm::get<ppu_module>();
 
 	if (!_main)
+	{
+		return;
+	}
+
+	// New PPU cache location
+	_main->cache = fmt::format("%sdata/%s/ppu-%s-%s/", fs::get_config_dir(), Emu.GetTitleID(), fmt::base57(_main->sha1), Emu.GetBoot().substr(Emu.GetBoot().find_last_of('/') + 1));
+
+	if (!fs::create_path(_main->cache))
+	{
+		fmt::throw_exception("Failed to create cache directory: %s (%s)", _main->cache, fs::g_tls_error);
+	}
+
+	// Initialize SPU cache
+	spu_cache::initialize();
+
+	if (Emu.IsStopped())
 	{
 		return;
 	}

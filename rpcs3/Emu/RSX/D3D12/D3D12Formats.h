@@ -94,12 +94,12 @@ DXGI_FORMAT get_depth_samplable_surface_format(rsx::surface_depth_format format)
 UCHAR get_dxgi_texel_size(DXGI_FORMAT format);
 
 /**
- * Convert front face value to bool value telling wheter front face is counterclockwise or not
+ * Convert front face value to bool value telling whether front face is counterclockwise or not
  */
 BOOL get_front_face_ccw(rsx::front_face set_front_face_value);
 
 /**
-* Convert cull face value to a D3D12_CULL_MODE telling wheter cull face is front or back
+* Convert cull face value to a D3D12_CULL_MODE telling whether cull face is front or back
 */
 D3D12_CULL_MODE get_cull_face(rsx::cull_face set_cull_face_value);
 

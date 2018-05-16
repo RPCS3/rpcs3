@@ -495,14 +495,19 @@ bool fs::create_dir(const std::string& path)
 
 bool fs::create_path(const std::string& path)
 {
-	const auto& parent = get_parent_dir(path);
+	const std::string parent = get_parent_dir(path);
 
-	if (!parent.empty() && !is_dir(parent) && !create_path(parent))
+	if (!parent.empty() && !create_path(parent))
 	{
 		return false;
 	}
 
-	return create_dir(path);
+	if (!create_dir(path) && g_tls_error != error::exist)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 bool fs::remove_dir(const std::string& path)
@@ -1336,7 +1341,7 @@ const std::string& fs::get_config_dir()
 
 		dir += "/rpcs3/";
 
-		if (!is_dir(dir) && !create_path(dir))
+		if (!create_path(dir))
 		{
 			std::printf("Failed to create configuration directory '%s' (%d).\n", dir.c_str(), errno);
 		}
@@ -1352,9 +1357,9 @@ std::string fs::get_data_dir(const std::string& prefix, const std::string& locat
 {
 	static const std::string s_dir = []
 	{
-		const std::string& dir = get_config_dir() + "data/";
+		const std::string dir = get_config_dir() + "data/";
 
-		if (!is_dir(dir) && !create_path(dir))
+		if (!create_path(dir))
 		{
 			return get_config_dir();
 		}
@@ -1390,16 +1395,13 @@ std::string fs::get_data_dir(const std::string& prefix, const std::string& locat
 	sha1(buf.data(), buf.size(), hash);
 
 	// Concatenate
-	std::string&& result = fmt::format("%s%s/%016llx%08x-%s/", s_dir, prefix, reinterpret_cast<be_t<u64>&>(hash[0]), reinterpret_cast<be_t<u32>&>(hash[8]), suffix);
+	std::string result = fmt::format("%s%s/%016llx%08x-%s/", s_dir, prefix, reinterpret_cast<be_t<u64>&>(hash[0]), reinterpret_cast<be_t<u32>&>(hash[8]), suffix);
 
-	if (!is_dir(result))
+	// Create dir if necessary
+	if (create_path(result))
 	{
-		// Create dir if necessary
-		if (create_path(result))
-		{
-			// Acknowledge original location
-			file(result + ".location", rewrite).write(buf);
-		}
+		// Acknowledge original location
+		file(result + ".location", rewrite).write(buf);
 	}
 
 	return result;

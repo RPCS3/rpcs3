@@ -16,7 +16,7 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 	LARGE_INTEGER timeout;
 	timeout.QuadPart = _timeout * -10;
 
-	if (HRESULT rc = NtWaitForKeyedEvent(nullptr, &m_value, false, is_inf ? nullptr : &timeout))
+	if (HRESULT rc = _timeout ? NtWaitForKeyedEvent(nullptr, &m_value, false, is_inf ? nullptr : &timeout) : WAIT_TIMEOUT)
 	{
 		verify(HERE), rc == WAIT_TIMEOUT;
 
@@ -32,6 +32,12 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 
 	return true;
 #else
+	if (!_timeout)
+	{
+		verify(HERE), m_value--;
+		return false;
+	}
+
 	timespec timeout;
 	timeout.tv_sec  = _timeout / 1000000;
 	timeout.tv_nsec = (_timeout % 1000000) * 1000;

@@ -276,7 +276,8 @@
     <ClCompile Include="Emu\Cell\SPUDisAsm.cpp" />
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp" />
     <ClCompile Include="Emu\IdManager.cpp" />
-    <ClCompile Include="Emu\Memory\wait_engine.cpp" />
+    <ClCompile Include="Emu\RSX\Capture\rsx_capture.cpp" />
+    <ClCompile Include="Emu\RSX\Capture\rsx_replay.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp" />
@@ -339,7 +340,6 @@
     <ClCompile Include="Loader\TAR.cpp" />
     <ClCompile Include="Loader\TROPUSR.cpp" />
     <ClCompile Include="Loader\TRP.cpp" />
-    <ClCompile Include="rpcs3_api.cpp" />
     <ClCompile Include="rpcs3_version.cpp" />
     <ClCompile Include="stb_image.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -522,7 +522,9 @@
     <ClInclude Include="Emu\Cell\SPUThread.h" />
     <ClInclude Include="Emu\CPU\CPUDisAsm.h" />
     <ClInclude Include="Emu\CPU\CPUThread.h" />
-    <ClInclude Include="Emu\Memory\wait_engine.h" />
+    <ClInclude Include="Emu\RSX\Capture\rsx_capture.h" />
+    <ClInclude Include="Emu\RSX\Capture\rsx_replay.h" />
+    <ClInclude Include="Emu\RSX\Capture\rsx_trace.h" />
     <ClInclude Include="Emu\RSX\Common\GLSLCommon.h" />
     <ClInclude Include="Emu\RSX\Common\TextGlyphs.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache.h" />
@@ -532,7 +534,6 @@
     <ClInclude Include="Emu\RSX\overlay_controls.h" />
     <ClInclude Include="Emu\RSX\rsx_cache.h" />
     <ClInclude Include="Emu\RSX\rsx_decode.h" />
-    <ClInclude Include="Emu\RSX\rsx_trace.h" />
     <ClInclude Include="Emu\RSX\rsx_vertex_data.h" />
     <ClInclude Include="Emu\VFS.h" />
     <ClInclude Include="Emu\GameInfo.h" />

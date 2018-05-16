@@ -6,8 +6,6 @@
 #include "Emu/System.h"
 #include "MFC.h"
 
-const bool s_use_rtm = utils::has_rtm();
-
 template <>
 void fmt_class_string<MFC>::format(std::string& out, u64 arg)
 {
