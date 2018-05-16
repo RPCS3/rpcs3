@@ -547,7 +547,7 @@ public:
 	spu_channel ch_stall_stat;
 	spu_channel ch_atomic_stat;
 
-	spu_channel_4_t ch_in_mbox;
+	spu_channel_4_t ch_in_mbox{};
 
 	spu_channel ch_out_mbox;
 	spu_channel ch_out_intr_mbox;

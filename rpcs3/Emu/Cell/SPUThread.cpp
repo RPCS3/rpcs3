@@ -528,8 +528,6 @@ void SPUThread::cpu_init()
 	ch_stall_stat.data.store({});
 	ch_atomic_stat.data.store({});
 
-	ch_in_mbox.clear();
-
 	ch_out_mbox.data.store({});
 	ch_out_intr_mbox.data.store({});
 

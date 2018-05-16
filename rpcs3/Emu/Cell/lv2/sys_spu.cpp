@@ -828,15 +828,6 @@ error_code sys_spu_thread_write_spu_mb(u32 id, u32 value)
 		return CELL_ESRCH;
 	}
 
-	const auto group = thread->group;
-
-	semaphore_lock lock(group->mutex);
-
-	if (group->run_state < SPU_THREAD_GROUP_STATUS_WAITING || group->run_state > SPU_THREAD_GROUP_STATUS_RUNNING)
-	{
-		return CELL_ESTAT;
-	}
-
 	thread->ch_in_mbox.push(*thread, value);
 
 	return CELL_OK;
