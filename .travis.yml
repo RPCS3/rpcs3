@@ -132,3 +132,8 @@ addons:
       - libudev-dev
       - libevdev-dev
       - libpulse-dev
+      # Wayland support, Ubuntu 14.04's version is quite old, but it's better than nothing
+      - libwayland-dev
+      - libwayland-cursor0
+      - libwayland-client0
+      - libwayland-server0
