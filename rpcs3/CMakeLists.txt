@@ -185,6 +185,8 @@ endif()
 
 set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
 
+# Prefer GLVND for OpenGL rather than legacy
+set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if(NOT WITHOUT_LLVM)
