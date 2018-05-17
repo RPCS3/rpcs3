@@ -1663,7 +1663,6 @@
     <ClInclude Include="rpcs3qt\trophy_manager_dialog.h" />
     <ClInclude Include="rpcs3qt\trophy_notification_frame.h" />
     <ClInclude Include="rpcs3qt\trophy_notification_helper.h" />
-    <ClInclude Include="rpcs3qt\trophy_tree_widget_item.h" />
     <ClInclude Include="xinput_pad_handler.h" />
     <ClInclude Include="\rpcs3qt\*.h" />
   </ItemGroup>
