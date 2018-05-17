@@ -1761,8 +1761,9 @@ s64 SPUThread::get_ch_value(u32 ch)
 
 		if (mask1 & SPU_EVENT_LR && raddr)
 		{
-			if (mask1 != SPU_EVENT_LR)
+			if (mask1 != SPU_EVENT_LR && mask1 != SPU_EVENT_LR + SPU_EVENT_TM)
 			{
+				// Combining LR with other flags needs another solution
 				fmt::throw_exception("Not supported: event mask 0x%x" HERE, mask1);
 			}
 
