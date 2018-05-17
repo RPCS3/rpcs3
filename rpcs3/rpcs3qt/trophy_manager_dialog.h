@@ -33,15 +33,16 @@ enum TrophyColumns
 	IsUnlocked = 4,
 	Id = 5,
 
-	Count = 6,
+	Count
 };
 
 enum GameColumns
 {
-	GameName = 0,
-	GameProgress = 1,
+	GameIcon = 0,
+	GameName = 1,
+	GameProgress = 2,
 
-	GameColumnsCount = 2,
+	GameColumnsCount
 };
 
 class trophy_manager_dialog : public QWidget
@@ -54,6 +55,7 @@ class trophy_manager_dialog : public QWidget
 public:
 	explicit trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings);
 private Q_SLOTS:
+	void ResizeGameIcons(int val);
 	void ResizeTrophyIcons(int val);
 	void ApplyFilter();
 	void ShowContextMenu(const QPoint& pos);
@@ -68,7 +70,8 @@ private:
 	*/
 	void PopulateUI();
 
-	void ReadjustTable();
+	void ReadjustGameTable();
+	void ReadjustTrophyTable();
 
 	void closeEvent(QCloseEvent* event) override;
 
@@ -92,6 +95,11 @@ private:
 	int m_icon_height = 75;
 	bool m_save_icon_height = false;
 	QSlider* m_icon_slider = nullptr;
+
+	int m_game_icon_size_index = 25;
+	QSize m_game_icon_size = QSize(m_game_icon_size_index, m_game_icon_size_index);
+	bool m_save_game_icon_size = false;
+	QSlider* m_game_icon_slider = nullptr;
 };
 
 #endif

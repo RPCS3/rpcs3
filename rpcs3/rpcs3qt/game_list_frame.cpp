@@ -21,7 +21,6 @@
 #include <QScrollBar>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-inline QSize sizeFromSlider(const int& pos) { return gui::gl_icon_size_min + (gui::gl_icon_size_max - gui::gl_icon_size_min) * (pos / (float)gui::gl_max_slider_pos); }
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
 	: custom_dock_widget(tr("Game List"), parent), xgui_settings(guiSettings), xemu_settings(emuSettings)
@@ -808,7 +807,7 @@ void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled)
 void game_list_frame::ResizeIcons(const int& sliderPos)
 {
 	m_icon_size_index = sliderPos;
-	m_Icon_Size = sizeFromSlider(sliderPos);
+	m_Icon_Size = gui_settings::SizeFromSlider(sliderPos);
 
 	RepaintIcons();
 }
