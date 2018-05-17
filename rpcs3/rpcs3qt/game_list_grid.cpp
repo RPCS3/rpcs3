@@ -58,7 +58,7 @@ void game_list_grid::setIconSize(const QSize& size)
 	}
 }
 
-void game_list_grid::addItem(const QPixmap& img, const QString& name, const int& idx, const int& row, const int& col)
+void game_list_grid::addItem(const QPixmap& img, const QString& name, const int& row, const int& col)
 {
 	// define size of expanded image, which is raw image size + margins
 	QSize exp_size;
@@ -91,7 +91,6 @@ void game_list_grid::addItem(const QPixmap& img, const QString& name, const int&
 	// create item with expanded image, title and position
 	QTableWidgetItem* item = new QTableWidgetItem();
 	item->setData(Qt::ItemDataRole::DecorationRole, QPixmap::fromImage(exp_img));
-	item->setData(Qt::ItemDataRole::UserRole, idx);
 	item->setData(Qt::ItemDataRole::ToolTipRole, name);
 
 	if (m_text_enabled)

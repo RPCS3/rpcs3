@@ -1,3 +1,32 @@
+#include "JIT.h"
+
+asmjit::JitRuntime& asmjit::get_global_runtime()
+{
+	// Magic static
+	static asmjit::JitRuntime g_rt;
+	return g_rt;
+}
+
+void asmjit::build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label fallback)
+{
+	Label fall = c.newLabel();
+	Label begin = c.newLabel();
+	c.jmp(begin);
+	c.bind(fall);
+	c.test(x86::eax, _XABORT_RETRY);
+	c.jz(fallback);
+	c.align(kAlignCode, 16);
+	c.bind(begin);
+	c.xbegin(fall);
+}
+
+void asmjit::build_transaction_abort(asmjit::X86Assembler& c, unsigned char code)
+{
+	c.db(0xc6);
+	c.db(0xf8);
+	c.db(code);
+}
+
 #ifdef LLVM_AVAILABLE
 
 #include <unordered_map>
@@ -33,8 +62,6 @@
 #else
 #include <sys/mman.h>
 #endif
-
-#include "JIT.h"
 
 // Memory manager mutex
 shared_mutex s_mutex;

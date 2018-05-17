@@ -2,6 +2,7 @@
 #include "Memory.h"
 #include "Emu/System.h"
 #include "Utilities/mutex.h"
+#include "Utilities/cond.h"
 #include "Utilities/Thread.h"
 #include "Utilities/VirtualMemory.h"
 #include "Emu/CPU/CPUThread.h"
@@ -9,6 +10,8 @@
 #include "Emu/RSX/GSRender.h"
 #include <atomic>
 #include <deque>
+
+static_assert(sizeof(notifier) == 8, "Unexpected size of notifier");
 
 namespace vm
 {
@@ -38,11 +41,11 @@ namespace vm
 	// Reservation stats (compressed x16)
 	u8* const g_reservations = memory_reserve_4GiB((std::uintptr_t)g_stat_addr);
 
+	// Reservation sync variables
+	u8* const g_reservations2 = g_reservations + 0x10000000;
+
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
-
-	// Registered waiters
-	std::deque<vm::waiter*> g_waiters;
 
 	// Memory mutex core
 	shared_mutex g_mutex;
@@ -238,65 +241,6 @@ namespace vm
 
 	// Memory pages
 	std::array<memory_page, 0x100000000 / 4096> g_pages{};
-
-	void waiter::init()
-	{
-		// Register waiter
-		vm::writer_lock lock(0);
-
-		g_waiters.emplace_back(this);
-	}
-
-	void waiter::test() const
-	{
-		if (std::memcmp(data, vm::base(addr), size) == 0)
-		{
-			return;
-		}
-
-		if (stamp >= reservation_acquire(addr, size))
-		{
-			return;
-		}
-
-		if (owner)
-		{
-			owner->notify();
-		}
-	}
-
-	waiter::~waiter()
-	{
-		// Unregister waiter
-		vm::writer_lock lock(0);
-
-		// Find waiter
-		const auto found = std::find(g_waiters.cbegin(), g_waiters.cend(), this);
-
-		if (found != g_waiters.cend())
-		{
-			g_waiters.erase(found);
-		}
-	}
-
-	void notify(u32 addr, u32 size)
-	{
-		for (const waiter* ptr : g_waiters)
-		{
-			if (ptr->addr / 128 == addr / 128)
-			{
-				ptr->test();
-			}
-		}
-	}
-
-	void notify_all()
-	{
-		for (const waiter* ptr : g_waiters)
-		{
-			ptr->test();
-		}
-	}
 
 	static void _page_map(u32 addr, u8 flags, utils::shm& shm)
 	{
@@ -539,6 +483,7 @@ namespace vm
 		if (addr != 0xc0000000 && addr != 0xe0000000)
 		{
 			utils::memory_commit(g_reservations + addr / 16, size / 16);
+			utils::memory_commit(g_reservations2 + addr / 16, size / 16);
 		}
 	}
 
