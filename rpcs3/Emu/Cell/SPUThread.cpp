@@ -1320,7 +1320,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 			if (g_use_rtm)
 			{
 				// Do several attempts (TODO)
-				for (u32 i = 0;; i++)
+				for (u32 i = 0; i < 3; i++)
 				{
 					const int r = spu_putllc_tx(raddr, rtime, rdata.data(), to_write.data());
 
