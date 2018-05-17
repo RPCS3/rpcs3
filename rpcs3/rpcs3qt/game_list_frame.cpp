@@ -193,7 +193,6 @@ void game_list_frame::LoadSettings()
 		// If no settings exist, go to default.
 		m_gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 		m_gameList->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-		m_gameList->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
 	}
 
 	for (int col = 0; col < m_columnActs.count(); ++col)
@@ -204,7 +203,6 @@ void game_list_frame::LoadSettings()
 	}
 
 	m_gameList->horizontalHeader()->restoreState(m_gameList->horizontalHeader()->saveState());
-	m_gameList->horizontalHeader()->stretchLastSection();
 
 	m_colSortOrder = xgui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
 
@@ -259,10 +257,18 @@ bool game_list_frame::IsEntryVisible(const game_info& game)
 void game_list_frame::SortGameList()
 {
 	m_gameList->sortByColumn(m_sortColumn, m_colSortOrder);
+
+	// Fixate vertical header and row height
 	m_gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
 	m_gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
 	m_gameList->resizeRowsToContents();
-	m_gameList->resizeColumnToContents(0);
+
+	// Resize and fixate icon column
+	m_gameList->resizeColumnToContents(gui::column_icon);
+	m_gameList->horizontalHeader()->setSectionResizeMode(gui::column_icon, QHeaderView::Fixed);
+
+	// Shorten the last section to remove horizontal scrollbar if possible
+	m_gameList->resizeColumnToContents(gui::column_count - 1);
 }
 
 void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
