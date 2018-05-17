@@ -39,12 +39,6 @@
 
 #include "Utilities/GDBDebugServer.h"
 
-#ifdef _WIN32
-#include "Utilities/dynamic_library.h"
-DYNAMIC_IMPORT("ntdll.dll", NtQueryTimerResolution, NTSTATUS(PULONG MinimumResolution, PULONG MaximumResolution, PULONG CurrentResolution));
-DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResolution, BOOLEAN SetResolution, PULONG CurrentResolution));
-#endif
-
 cfg_root g_cfg;
 
 bool g_use_rtm = utils::has_rtm();
@@ -983,16 +977,6 @@ void Emulator::Load(bool add_only)
 
 void Emulator::Run()
 {
-#ifdef _WIN32
-	// Set 0.5 msec timer resolution for best performance
-	// As QT5 sets the timer resolution to 1 msec, don't bother "unsetting" the timer resolution after the emulator stops.
-	ULONG min_res, max_res, orig_res, new_res;
-	if (NtQueryTimerResolution(&min_res, &max_res, &orig_res) == 0)
-	{
-		NtSetTimerResolution(max_res, TRUE, &new_res);
-	}
-#endif
-
 	if (!IsReady())
 	{
 		Load();
