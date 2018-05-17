@@ -105,7 +105,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 		table->verticalHeader()->setVisible(false);
 		table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 		table->verticalHeader()->setDefaultSectionSize(16);
-		table->horizontalHeader()->stretchLastSection();
+		table->horizontalHeader()->setStretchLastSection(true);
 		table->setColumnCount(columns);
 		m_tw_rsx->addTab(table, tabname);
 		return table;
