@@ -999,13 +999,6 @@ const auto ppu_stwcx_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, u64 rd
 	c.bswap(args[2].r32());
 	c.bswap(args[3].r32());
 
-	// Touch memory (heavyweight)
-	c.lock().add(x86::dword_ptr(x86::r11), 0);
-	c.xor_(x86::eax, x86::eax);
-	c.lock().xadd(x86::qword_ptr(x86::r10), x86::rax);
-	c.cmp(x86::rax, args[1]);
-	c.jne(fail);
-
 	// Begin transaction
 	build_transaction_enter(c, fall);
 	c.cmp(x86::qword_ptr(x86::r10), args[1]);
@@ -1022,21 +1015,23 @@ const auto ppu_stwcx_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, u64 rd
 	c.mov(x86::eax, 1);
 	c.ret();
 
+	// Touch memory after transaction failure
 	c.bind(fall);
+	c.lock().add(x86::dword_ptr(x86::r11), 0);
+	c.lock().add(x86::qword_ptr(x86::r10), 0);
 	c.sar(x86::eax, 24);
 	c.ret();
 
 	c.bind(fail);
 	build_transaction_abort(c, 0xff);
-	c.or_(x86::eax, -1);
-	c.ret();
+	c.int3();
 });
 
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 {
 	atomic_be_t<u32>& data = vm::_ref<atomic_be_t<u32>>(addr);
 
-	if (ppu.raddr != addr || ppu.rdata != data.load())
+	if (ppu.raddr != addr || ppu.rdata != data.load() || ppu.rtime != vm::reservation_acquire(addr, sizeof(u32)))
 	{
 		ppu.raddr = 0;
 		return false;
@@ -1101,13 +1096,6 @@ const auto ppu_stdcx_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, u64 rd
 	c.bswap(args[2]);
 	c.bswap(args[3]);
 
-	// Touch memory (heavyweight)
-	c.lock().add(x86::qword_ptr(x86::r11), 0);
-	c.xor_(x86::eax, x86::eax);
-	c.lock().xadd(x86::qword_ptr(x86::r10), x86::rax);
-	c.cmp(x86::rax, args[1]);
-	c.jne(fail);
-
 	// Begin transaction
 	build_transaction_enter(c, fall);
 	c.cmp(x86::qword_ptr(x86::r10), args[1]);
@@ -1124,21 +1112,23 @@ const auto ppu_stdcx_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, u64 rd
 	c.mov(x86::eax, 1);
 	c.ret();
 
+	// Touch memory after transaction failure
 	c.bind(fall);
+	c.lock().add(x86::qword_ptr(x86::r11), 0);
+	c.lock().add(x86::qword_ptr(x86::r10), 0);
 	c.sar(x86::eax, 24);
 	c.ret();
 
 	c.bind(fail);
 	build_transaction_abort(c, 0xff);
-	c.or_(x86::eax, -1);
-	c.ret();
+	c.int3();
 });
 
 extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 {
 	atomic_be_t<u64>& data = vm::_ref<atomic_be_t<u64>>(addr);
 
-	if (ppu.raddr != addr || ppu.rdata != data.load())
+	if (ppu.raddr != addr || ppu.rdata != data.load() || ppu.rtime != vm::reservation_acquire(addr, sizeof(u64)))
 	{
 		ppu.raddr = 0;
 		return false;

@@ -229,13 +229,6 @@ const auto spu_putllc_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, const
 	c.shr(args[0], 4);
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 
-	// Touch memory (heavyweight)
-	c.lock().add(x86::qword_ptr(x86::r11), 0);
-	c.xor_(x86::eax, x86::eax);
-	c.lock().xadd(x86::qword_ptr(x86::r10), x86::rax);
-	c.cmp(x86::rax, args[1]);
-	c.jne(fail);
-
 	// Prepare data (Windows has only 6 volatile vector registers)
 	c.vmovups(x86::ymm0, x86::yword_ptr(args[2], 0));
 	c.vmovups(x86::ymm1, x86::yword_ptr(args[2], 32));
@@ -287,14 +280,16 @@ const auto spu_putllc_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, const
 	c.mov(x86::eax, 1);
 	c.ret();
 
+	// Touch memory after transaction failure
 	c.bind(fall);
+	c.lock().add(x86::qword_ptr(x86::r11), 0);
+	c.lock().add(x86::qword_ptr(x86::r10), 0);
 	c.sar(x86::eax, 24);
 	c.ret();
 
 	c.bind(fail);
 	build_transaction_abort(c, 0xff);
-	c.or_(x86::eax, -1);
-	c.ret();
+	c.int3();
 });
 
 const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](asmjit::X86Assembler& c, auto& args)
@@ -312,10 +307,6 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	c.shr(args[0], 4);
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 
-	// Touch memory
-	c.mov(x86::rax, x86::qword_ptr(x86::r11));
-	c.mov(x86::rax, x86::qword_ptr(x86::r10));
-
 	// Begin transaction
 	build_transaction_enter(c, fall);
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
@@ -331,7 +322,10 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	c.vzeroupper();
 	c.ret();
 
+	// Touch memory after transaction failure
 	c.bind(fall);
+	c.mov(x86::rax, x86::qword_ptr(x86::r11));
+	c.mov(x86::rax, x86::qword_ptr(x86::r10));
 	c.mov(x86::eax, 1);
 	c.ret();
 });
@@ -350,10 +344,6 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
 	c.shr(args[0], 4);
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
-
-	// Touch memory (heavyweight)
-	c.lock().add(x86::qword_ptr(x86::r11), 0);
-	c.lock().add(x86::qword_ptr(x86::r10), 0);
 
 	// Prepare data
 	c.vmovups(x86::ymm0, x86::yword_ptr(args[1], 0));
@@ -377,7 +367,10 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	c.mov(x86::eax, 1);
 	c.ret();
 
+	// Touch memory after transaction failure
 	c.bind(fall);
+	c.lock().add(x86::qword_ptr(x86::r11), 0);
+	c.lock().add(x86::qword_ptr(x86::r10), 0);
 	c.xor_(x86::eax, x86::eax);
 	c.ret();
 });
