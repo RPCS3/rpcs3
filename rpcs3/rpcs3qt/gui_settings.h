@@ -233,6 +233,7 @@ public Q_SLOTS:
 	void SaveCurrentConfig(const QString& friendlyName);
 
 	static QSize SizeFromSlider(int pos);
+	static gui_save GetGuiSaveForColumn(int col);
 
 private:
 	QString ComputeSettingsDir();
