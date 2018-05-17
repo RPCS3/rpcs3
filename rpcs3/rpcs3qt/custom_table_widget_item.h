@@ -9,12 +9,20 @@ private:
 
 public:
 	custom_table_widget_item(){}
-	custom_table_widget_item(const std::string& text, int sort_role = Qt::DisplayRole, int sort_index = 0)
-	: QTableWidgetItem(qstr(text).simplified()) // simplified() forces single line text
+	custom_table_widget_item(const std::string& text, int sort_role = Qt::DisplayRole, const QVariant& sort_value = 0)
+	: QTableWidgetItem(QString::fromStdString(text).simplified()) // simplified() forces single line text
 	{
 		if (sort_role != Qt::DisplayRole)
 		{
-			setData(sort_role, sort_index, true);
+			setData(sort_role, sort_value, true);
+		}
+	}
+	custom_table_widget_item(const QString& text, int sort_role = Qt::DisplayRole, const QVariant& sort_value = 0)
+	: QTableWidgetItem(text.simplified()) // simplified() forces single line text
+	{
+		if (sort_role != Qt::DisplayRole)
+		{
+			setData(sort_role, sort_value, true);
 		}
 	}
 
