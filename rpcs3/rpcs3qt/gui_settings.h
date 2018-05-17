@@ -171,6 +171,7 @@ namespace gui
 	const gui_save gs_height       = gui_save(gs_frame, "height",       720);
 
 	const gui_save tr_icon_height   = gui_save(trophy, "icon_height",   75);
+	const gui_save tr_game_iconSize = gui_save(trophy, "game_iconSize", 25);
 	const gui_save tr_show_locked   = gui_save(trophy, "show_locked",   true);
 	const gui_save tr_show_unlocked = gui_save(trophy, "show_unlocked", true);
 	const gui_save tr_show_hidden   = gui_save(trophy, "show_hidden",   false);
@@ -230,6 +231,8 @@ public Q_SLOTS:
 	void SetCustomColor(int col, const QColor& val);
 
 	void SaveCurrentConfig(const QString& friendlyName);
+
+	static QSize SizeFromSlider(int pos);
 
 private:
 	QString ComputeSettingsDir();

@@ -259,3 +259,8 @@ QString gui_settings::GetCurrentStylesheetPath()
 
 	return m_settingsDir.absoluteFilePath(stylesheet + ".qss");
 }
+
+QSize gui_settings::SizeFromSlider(int pos)
+{
+	return gui::gl_icon_size_min + (gui::gl_icon_size_max - gui::gl_icon_size_min) * (pos / (float)gui::gl_max_slider_pos);
+}
