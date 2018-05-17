@@ -230,19 +230,21 @@ const auto spu_putllc_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, const
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 
 	// Touch memory (heavyweight)
-	c.mov(x86::eax, x86::dword_ptr(args[2]));
-	c.mov(x86::eax, x86::dword_ptr(args[3]));
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.xor_(x86::eax, x86::eax);
 	c.lock().xadd(x86::qword_ptr(x86::r10), x86::rax);
 	c.cmp(x86::rax, args[1]);
 	c.jne(fail);
 
+	// Prepare data (Windows has only 6 volatile vector registers)
 	c.vmovups(x86::ymm0, x86::yword_ptr(args[2], 0));
 	c.vmovups(x86::ymm1, x86::yword_ptr(args[2], 32));
 	c.vmovups(x86::ymm2, x86::yword_ptr(args[2], 64));
 	c.vmovups(x86::ymm3, x86::yword_ptr(args[2], 96));
-#ifndef _WIN32
+#ifdef _WIN32
+	c.vmovups(x86::ymm4, x86::yword_ptr(args[3], 0));
+	c.vmovups(x86::ymm5, x86::yword_ptr(args[3], 96));
+#else
 	c.vmovups(x86::ymm6, x86::yword_ptr(args[3], 0));
 	c.vmovups(x86::ymm7, x86::yword_ptr(args[3], 32));
 	c.vmovups(x86::ymm8, x86::yword_ptr(args[3], 64));
@@ -263,14 +265,12 @@ const auto spu_putllc_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, const
 	c.vptest(x86::ymm0, x86::ymm0);
 	c.jnz(fail);
 #ifdef _WIN32
-	c.vmovups(x86::ymm0, x86::yword_ptr(args[3], 0));
-	c.vmovaps(x86::yword_ptr(x86::r11, 0), x86::ymm0);
-	c.vmovups(x86::ymm1, x86::yword_ptr(args[3], 32));
-	c.vmovaps(x86::yword_ptr(x86::r11, 32), x86::ymm1);
-	c.vmovups(x86::ymm2, x86::yword_ptr(args[3], 64));
-	c.vmovaps(x86::yword_ptr(x86::r11, 64), x86::ymm2);
-	c.vmovups(x86::ymm3, x86::yword_ptr(args[3], 96));
-	c.vmovaps(x86::yword_ptr(x86::r11, 96), x86::ymm3);
+	c.vmovups(x86::ymm2, x86::yword_ptr(args[3], 32));
+	c.vmovups(x86::ymm3, x86::yword_ptr(args[3], 64));
+	c.vmovaps(x86::yword_ptr(x86::r11, 0), x86::ymm4);
+	c.vmovaps(x86::yword_ptr(x86::r11, 32), x86::ymm2);
+	c.vmovaps(x86::yword_ptr(x86::r11, 64), x86::ymm3);
+	c.vmovaps(x86::yword_ptr(x86::r11, 96), x86::ymm5);
 #else
 	c.vmovaps(x86::yword_ptr(x86::r11, 0), x86::ymm6);
 	c.vmovaps(x86::yword_ptr(x86::r11, 32), x86::ymm7);
