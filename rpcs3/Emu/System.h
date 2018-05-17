@@ -7,7 +7,6 @@
 #include <memory>
 #include <string>
 
-
 enum class system_state
 {
 	running,
