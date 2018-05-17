@@ -1883,34 +1883,38 @@ public:
 			std::vector<const char *> layers;
 
 #ifndef __APPLE__
-			extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-			extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+			if (!fast)
+			{
+				extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+				extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 #ifdef _WIN32
-			extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+				extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #else
-			supported_extensions support;
-			bool found_surface_ext = false;
-			if (support.is_supported(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
-			{
-				extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-				found_surface_ext = true;
-			}
+				supported_extensions support;
+				bool found_surface_ext = false;
+				if (support.is_supported(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
+				{
+					extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+					found_surface_ext = true;
+				}
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-			if (support.is_supported(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
-			{
-				extensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
-				found_surface_ext = true;
+				if (support.is_supported(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
+				{
+					extensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+					found_surface_ext = true;
+				}
+#endif //(WAYLAND)
+				if (!found_surface_ext)
+				{
+					LOG_ERROR(RSX, "Could not find a supported Vulkan surface extension");
+					return 0;
+				}
+#endif //(WIN32)
+				if (g_cfg.video.debug_output)
+					layers.push_back("VK_LAYER_LUNARG_standard_validation");
 			}
-#endif
-			if (!found_surface_ext)
-			{
-				LOG_ERROR(RSX, "Could not find a supported Vulkan surface extension");
-				return 0;
-			}
-#endif
-			if (!fast && g_cfg.video.debug_output)
-				layers.push_back("VK_LAYER_LUNARG_standard_validation");
-#endif
+#endif //(!APPLE)
+
 			VkInstanceCreateInfo instance_info = {};
 			instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 			instance_info.pApplicationInfo = &app;
