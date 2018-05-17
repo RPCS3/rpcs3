@@ -8,9 +8,12 @@
 #include "Utilities/rXml.h"
 
 #include <QWidget>
+#include <QComboBox>
+#include <QLabel>
 #include <QPixmap>
-#include <QTreeWidget>
+#include <QTableWidget>
 #include <QSlider>
+#include <QSplitter>
 
 struct GameTrophiesData
 {
@@ -29,7 +32,16 @@ enum TrophyColumns
 	Type = 3,
 	IsUnlocked = 4,
 	Id = 5,
-	Hidden = 6,
+
+	Count = 6,
+};
+
+enum GameColumns
+{
+	GameName = 0,
+	GameProgress = 1,
+
+	GameColumnsCount = 2,
 };
 
 class trophy_manager_dialog : public QWidget
@@ -42,7 +54,6 @@ class trophy_manager_dialog : public QWidget
 public:
 	explicit trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings);
 private Q_SLOTS:
-	void OnColClicked(int col);
 	void ResizeTrophyIcons(int val);
 	void ApplyFilter();
 	void ShowContextMenu(const QPoint& pos);
@@ -57,15 +68,18 @@ private:
 	*/
 	void PopulateUI();
 
+	void ReadjustTable();
+
 	void closeEvent(QCloseEvent* event) override;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	std::vector<std::unique_ptr<GameTrophiesData>> m_trophies_db; //! Holds all the trophy information.
-	QTreeWidget* m_trophy_tree; //! UI element to display trophy stuff.
-
-	int m_sort_column = 0; //! Tracks which row we are sorting by.
-	Qt::SortOrder m_col_sort_order = Qt::AscendingOrder; //! Tracks order in which we are sorting.
+	QComboBox* m_game_combo; //! Lets you choose a game
+	QLabel* m_game_progress; //! Shows you the current game's progress
+	QSplitter* m_splitter; //! Contains the game and trophy tables
+	QTableWidget* m_trophy_table; //! UI element to display trophy stuff.
+	QTableWidget* m_game_table; //! UI element to display games.
 
 	bool m_show_hidden_trophies = false;
 	bool m_show_unlocked_trophies = true;

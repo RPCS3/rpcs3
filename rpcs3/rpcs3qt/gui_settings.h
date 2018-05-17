@@ -179,6 +179,9 @@ namespace gui
 	const gui_save tr_show_gold     = gui_save(trophy, "show_gold",     true);
 	const gui_save tr_show_platinum = gui_save(trophy, "show_platinum", true);
 	const gui_save tr_geometry      = gui_save(trophy, "geometry",      QByteArray());
+	const gui_save tr_splitterState = gui_save(trophy, "splitterState", QByteArray());
+	const gui_save tr_games_state   = gui_save(trophy, "games_state",   QByteArray());
+	const gui_save tr_trophy_state  = gui_save(trophy, "trophy_state",  QByteArray());
 
 	const gui_save sd_geometry = gui_save(savedata, "geometry", QByteArray());
 }
