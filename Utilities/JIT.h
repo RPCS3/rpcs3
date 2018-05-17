@@ -4,6 +4,7 @@
 #define ASMJIT_DEBUG
 
 #include "asmjit.h"
+#include <array>
 #include <functional>
 
 namespace asmjit

@@ -39,6 +39,11 @@ namespace gui
 {
 	static QString stylesheet;
 
+	enum custom_roles
+	{
+		game_role = Qt::UserRole + 1337,
+	};
+
 	enum game_list_columns
 	{
 		column_icon,
@@ -48,6 +53,7 @@ namespace gui
 		column_version,
 		column_category,
 		column_path,
+		column_move,
 		column_resolution,
 		column_sound,
 		column_parental,

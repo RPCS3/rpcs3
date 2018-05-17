@@ -31,7 +31,6 @@
 *.wav
 
 /build
-/bin
 /lib
 /tmp
 /ipch
@@ -41,21 +40,18 @@
 /Vulkan/Vulkan-build
 /Vulkan/glslang-build
 
+!/bin
+/bin/*
+
 # Themes
 !/bin/GuiConfigs/
 /bin/GuiConfigs/*.ini
 
-/bin/rpcs3.ini
-/bin/rpcs3.ipdb
-/bin/rpcs3.iobj
-/bin/FragmentProgram.txt
-/bin/VertexProgram.txt
-/bin/*.hlsl
-/bin/BreakPoints.dat
-/bin/textures
-/bin/*.lib
-/bin/*.exp
-rpcs3/git-version.h
+# Ignore installed games except test homebrews
+!/bin/dev_hdd0/game/
+/bin/dev_hdd0/game/*
+!/bin/dev_hdd0/game/TEST12345/
+/bin/dev_hdd0/disc/*
 
 # Visual Studio Files
 .vs/*
@@ -66,22 +62,10 @@ rpcs3/git-version.h
 *.vcxproj.user
 enc_temp_folder/*
 
-# Copyrighted files
-/bin/data/
-/bin/dev_flash/data/font
-/bin/dev_flash/sys
-/bin/dev_flash/vsh
-
-# Ignore installed games except test homebrews
-!/bin/dev_hdd0/game/
-/bin/dev_hdd0/game/*
-!/bin/dev_hdd0/game/TEST12345/
-/bin/dev_hdd0/disc/*
-
 # Ignore other system generated files
-bin/dev_hdd0/*.txt
 x64/*
 rpcs3/x64/*
+rpcs3/git-version.h
 
 # cmake
 Makefile

@@ -185,7 +185,9 @@ set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if(NOT WITHOUT_LLVM)
-	find_package(LLVM 999.666 CONFIG)
+    if (EXISTS "${CMAKE_SOURCE_DIR}/llvmlibs")
+        find_package(LLVM 6.0 CONFIG)
+    endif()
 	if(NOT LLVM_FOUND)
 		message("LLVM will be built from the submodule.")
 
@@ -200,7 +202,7 @@ if(NOT WITHOUT_LLVM)
 		option(WITH_POLLY OFF)
 
 		# LLVM needs to be built out-of-tree
-		add_subdirectory(../llvm ../llvm_build)
+		add_subdirectory(../llvm ../llvm_build EXCLUDE_FROM_ALL)
 		set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/../llvm_build/lib/cmake/llvm/")
 
 		# now tries to find LLVM again
@@ -318,11 +320,7 @@ if(NOT LLVM_FOUND)
 else()
 	add_definitions(${LLVM_DEFINITIONS})
 	add_definitions(-DLLVM_AVAILABLE)
-	if(CMAKE_BUILD_TYPE STREQUAL "Release")
-		llvm_map_components_to_libnames(LLVM_LIBS core support executionengine object runtimedyld x86desc x86info scalaropts mcjit vectorize ipo x86codegen x86disassembler)
-	else()
-		llvm_map_components_to_libnames(LLVM_LIBS core support executionengine object runtimedyld x86desc x86info scalaropts mcjit vectorize ipo x86codegen x86disassembler mcdisassembler)
-	endif()
+	set(LLVM_LIBS LLVMMCJIT LLVMX86CodeGen)
 
 	if(NOT MSVC)
 		set_source_files_properties(${RPCS3_SRC_DIR}/../Utilities/JIT.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
