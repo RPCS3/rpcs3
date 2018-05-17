@@ -21,9 +21,17 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 		verify(HERE), rc == WAIT_TIMEOUT;
 
 		// Retire
-		if (!m_value.fetch_op([](u32& value) { if (value) value--; }))
+		while (!m_value.fetch_op([](u32& value) { if (value) value--; }))
 		{
-			NtWaitForKeyedEvent(nullptr, &m_value, false, nullptr);
+			timeout.QuadPart = 0;
+
+			if (HRESULT rc2 = NtWaitForKeyedEvent(nullptr, &m_value, false, &timeout))
+			{
+				verify(HERE), rc2 == WAIT_TIMEOUT;
+				SwitchToThread();
+				continue;
+			}
+
 			return true;
 		}
 
