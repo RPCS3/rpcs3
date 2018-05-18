@@ -68,20 +68,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_gameList->setAlternatingRowColors(true);
 	m_gameList->installEventFilter(this);
-
 	m_gameList->setColumnCount(gui::column_count);
-	m_gameList->setHorizontalHeaderItem(gui::column_icon,       new QTableWidgetItem(tr("Icon")));
-	m_gameList->setHorizontalHeaderItem(gui::column_name,       new QTableWidgetItem(tr("Name")));
-	m_gameList->setHorizontalHeaderItem(gui::column_serial,     new QTableWidgetItem(tr("Serial")));
-	m_gameList->setHorizontalHeaderItem(gui::column_firmware,   new QTableWidgetItem(tr("Firmware")));
-	m_gameList->setHorizontalHeaderItem(gui::column_version,    new QTableWidgetItem(tr("Version")));
-	m_gameList->setHorizontalHeaderItem(gui::column_category,   new QTableWidgetItem(tr("Category")));
-	m_gameList->setHorizontalHeaderItem(gui::column_path,       new QTableWidgetItem(tr("Path")));
-	m_gameList->setHorizontalHeaderItem(gui::column_move,       new QTableWidgetItem(tr("PlayStation Move")));
-	m_gameList->setHorizontalHeaderItem(gui::column_resolution, new QTableWidgetItem(tr("Supported Resolutions")));
-	m_gameList->setHorizontalHeaderItem(gui::column_sound,      new QTableWidgetItem(tr("Sound Formats")));
-	m_gameList->setHorizontalHeaderItem(gui::column_parental,   new QTableWidgetItem(tr("Parental Level")));
-	m_gameList->setHorizontalHeaderItem(gui::column_compat,     new QTableWidgetItem(tr("Compatibility")));
 
 	m_game_compat = std::make_unique<game_compatibility>(xgui_settings);
 
@@ -93,19 +80,24 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_Game_Dock->setCentralWidget(m_Central_Widget);
 
 	// Actions regarding showing/hiding columns
-	m_columnActs.append(new QAction(tr("Show Icons"), this));
-	m_columnActs.append(new QAction(tr("Show Icons"), this));
-	m_columnActs.append(new QAction(tr("Show Names"), this));
-	m_columnActs.append(new QAction(tr("Show Serials"), this));
-	m_columnActs.append(new QAction(tr("Show Firmwares"), this));
-	m_columnActs.append(new QAction(tr("Show Versions"), this));
-	m_columnActs.append(new QAction(tr("Show Categories"), this));
-	m_columnActs.append(new QAction(tr("Show Paths"), this));
-	m_columnActs.append(new QAction(tr("Show PlayStation Move"), this));
-	m_columnActs.append(new QAction(tr("Show Supported Resolutions"), this));
-	m_columnActs.append(new QAction(tr("Show Sound Formats"), this));
-	m_columnActs.append(new QAction(tr("Show Parental Levels"), this));
-	m_columnActs.append(new QAction(tr("Show Compatibilities"), this));
+	auto AddColumn = [this](gui::game_list_columns col, const QString& header_text, const QString& action_text)
+	{
+		m_gameList->setHorizontalHeaderItem(col, new QTableWidgetItem(header_text));
+		m_columnActs.append(new QAction(action_text, this));
+	};
+
+	AddColumn(gui::column_icon,       tr("Icon"),                  tr("Show Icons"));
+	AddColumn(gui::column_name,       tr("Name"),                  tr("Show Names"));
+	AddColumn(gui::column_serial,     tr("Serial"),                tr("Show Serials"));
+	AddColumn(gui::column_firmware,   tr("Firmware"),              tr("Show Firmwares"));
+	AddColumn(gui::column_version,    tr("Version"),               tr("Show Versions"));
+	AddColumn(gui::column_category,   tr("Category"),              tr("Show Categories"));
+	AddColumn(gui::column_path,       tr("Path"),                  tr("Show Paths"));
+	AddColumn(gui::column_move,       tr("PlayStation Move"),      tr("Show PlayStation Move"));
+	AddColumn(gui::column_resolution, tr("Supported Resolutions"), tr("Show Supported Resolutions"));
+	AddColumn(gui::column_sound,      tr("Sound Formats"),         tr("Show Sound Formats"));
+	AddColumn(gui::column_parental,   tr("Parental Level"),        tr("Show Parental Levels"));
+	AddColumn(gui::column_compat,     tr("Compatibility"),         tr("Show Compatibility"));
 
 	// Events
 	connect(m_gameList, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
