@@ -12,8 +12,8 @@ namespace asmjit
 	// Should only be used to build global functions
 	JitRuntime& get_global_runtime();
 
-	// Emit xbegin and adjacent loop
-	void build_transaction_enter(X86Assembler& c, Label fallback);
+	// Emit xbegin and adjacent loop, return label at xbegin
+	Label build_transaction_enter(X86Assembler& c, Label fallback);
 
 	// Emit xabort
 	void build_transaction_abort(X86Assembler& c, unsigned char code);

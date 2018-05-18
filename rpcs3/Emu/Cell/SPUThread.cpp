@@ -213,7 +213,7 @@ namespace spu
 	}
 }
 
-const auto spu_putllc_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, const void* _old, const void* _new)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_putllc_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, const void* _old, const void* _new)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -228,6 +228,7 @@ const auto spu_putllc_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, const
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
 	c.shr(args[0], 4);
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
+	c.mov(args[0].r32(), 3);
 
 	// Prepare data (Windows has only 6 volatile vector registers)
 	c.vmovups(x86::ymm0, x86::yword_ptr(args[2], 0));
@@ -245,7 +246,7 @@ const auto spu_putllc_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, const
 #endif
 
 	// Begin transaction
-	build_transaction_enter(c, fall);
+	Label begin = build_transaction_enter(c, fall);
 	c.cmp(x86::qword_ptr(x86::r10), args[1]);
 	c.jne(fail);
 	c.vxorps(x86::ymm0, x86::ymm0, x86::yword_ptr(x86::r11, 0));
@@ -282,14 +283,22 @@ const auto spu_putllc_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, const
 
 	// Touch memory after transaction failure
 	c.bind(fall);
+	c.sub(args[0].r32(), 1);
+	c.jz(fail);
+	c.sar(x86::eax, 24);
+	c.js(fail);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
-	c.sar(x86::eax, 24);
-	c.ret();
+#ifdef _WIN32
+	c.vmovups(x86::ymm4, x86::yword_ptr(args[3], 0));
+	c.vmovups(x86::ymm5, x86::yword_ptr(args[3], 96));
+#endif
+	c.jmp(begin);
 
 	c.bind(fail);
 	build_transaction_abort(c, 0xff);
-	c.int3();
+	c.xor_(x86::eax, x86::eax);
+	c.ret();
 });
 
 const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](asmjit::X86Assembler& c, auto& args)
@@ -308,7 +317,7 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 
 	// Begin transaction
-	build_transaction_enter(c, fall);
+	Label begin = build_transaction_enter(c, fall);
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
 	c.vmovaps(x86::ymm0, x86::yword_ptr(x86::r11, 0));
 	c.vmovaps(x86::ymm1, x86::yword_ptr(x86::r11, 32));
@@ -324,13 +333,13 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 
 	// Touch memory after transaction failure
 	c.bind(fall);
+	c.pause();
 	c.mov(x86::rax, x86::qword_ptr(x86::r11));
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
-	c.mov(x86::eax, 1);
-	c.ret();
+	c.jmp(begin);
 });
 
-const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rdata)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_putlluc_tx = build_function_asm<void(*)(u32 raddr, const void* rdata)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -352,7 +361,7 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	c.vmovups(x86::ymm3, x86::yword_ptr(args[1], 96));
 
 	// Begin transaction
-	build_transaction_enter(c, fall);
+	Label begin = build_transaction_enter(c, fall);
 	c.vmovaps(x86::yword_ptr(x86::r11, 0), x86::ymm0);
 	c.vmovaps(x86::yword_ptr(x86::r11, 32), x86::ymm1);
 	c.vmovaps(x86::yword_ptr(x86::r11, 64), x86::ymm2);
@@ -364,15 +373,14 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	c.mov(x86::qword_ptr(x86::r10), x86::rax);
 	c.xend();
 	c.vzeroupper();
-	c.mov(x86::eax, 1);
 	c.ret();
 
 	// Touch memory after transaction failure
 	c.bind(fall);
+	c.pause();
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
-	c.xor_(x86::eax, x86::eax);
-	c.ret();
+	c.jmp(begin);
 });
 
 void spu_int_ctrl_t::set(u64 ints)
@@ -1042,20 +1050,12 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 	auto& data = vm::_ref<decltype(rdata)>(addr);
 	const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ffff);
 
-	vm::reservation_acquire(addr, 128);
-
 	// Store unconditionally
-	while (g_use_rtm)
+	if (g_use_rtm)
 	{
-		if (spu_putlluc_tx(addr, to_write.data()))
-		{
-			vm::reservation_notifier(addr, 128).notify_all();
-			tx_success++;
-			return;
-		}
-
-		busy_wait(300);
-		tx_failure++;
+		spu_putlluc_tx(addr, to_write.data());
+		vm::reservation_notifier(addr, 128).notify_all();
+		return;
 	}
 
 	vm::writer_lock lock(0);
@@ -1248,19 +1248,9 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 			}
 		}
 
-		while (g_use_rtm)
+		if (g_use_rtm)
 		{
 			rtime = spu_getll_tx(raddr, rdata.data());
-
-			if (rtime & 1)
-			{
-				tx_failure++;
-				busy_wait(300);
-				continue;
-			}
-
-			tx_success++;
-			break;
 		}
 
 		// Do several attemps
@@ -1312,28 +1302,13 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		{
 			if (g_use_rtm)
 			{
-				// Do several attempts (TODO)
-				for (u32 i = 0; i < 3; i++)
+				if (spu_putllc_tx(raddr, rtime, rdata.data(), to_write.data()))
 				{
-					const int r = spu_putllc_tx(raddr, rtime, rdata.data(), to_write.data());
-
-					if (r > 0)
-					{
-						vm::reservation_notifier(raddr, 128).notify_all();
-						result = true;
-						tx_success++;
-						break;
-					}
-
-					if (r < 0)
-					{
-						// Reservation lost
-						break;
-					}
-
-					// Don't fallback to heavyweight lock, just give up
-					tx_failure++;
+					vm::reservation_notifier(raddr, 128).notify_all();
+					result = true;
 				}
+
+				// Don't fallback to heavyweight lock, just give up
 			}
 			else if (rdata == data)
 			{

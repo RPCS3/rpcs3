@@ -944,8 +944,23 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 	ppu.raddr = addr;
 
+	while (g_use_rtm)
+	{
+		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+		ppu.rdata = data;
+
+		if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
+		{
+			return static_cast<T>(ppu.rdata);
+		}
+		else
+		{
+			_mm_pause();
+		}
+	}
+
 	// Do several attemps
-	for (uint i = 0; g_use_rtm || i < 5; i++)
+	for (uint i = 0; i < 5; i++)
 	{
 		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
 		_mm_lfence();
@@ -981,7 +996,7 @@ extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 	return ppu_load_acquire_reservation<u64>(ppu, addr);
 }
 
-const auto ppu_stwcx_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, u64 rdata, u32 value)>([](asmjit::X86Assembler& c, auto& args)
+const auto ppu_stwcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 rdata, u32 value)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -998,9 +1013,10 @@ const auto ppu_stwcx_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, u64 rd
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
 	c.bswap(args[2].r32());
 	c.bswap(args[3].r32());
+	c.mov(args[0].r32(), 5);
 
 	// Begin transaction
-	build_transaction_enter(c, fall);
+	Label begin = build_transaction_enter(c, fall);
 	c.cmp(x86::qword_ptr(x86::r10), args[1]);
 	c.jne(fail);
 	c.cmp(x86::dword_ptr(x86::r11), args[2].r32());
@@ -1017,14 +1033,18 @@ const auto ppu_stwcx_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, u64 rd
 
 	// Touch memory after transaction failure
 	c.bind(fall);
+	c.sub(args[0].r32(), 1);
+	c.jz(fail);
+	c.sar(x86::eax, 24);
+	c.js(fail);
 	c.lock().add(x86::dword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
-	c.sar(x86::eax, 24);
-	c.ret();
+	c.jmp(begin);
 
 	c.bind(fail);
 	build_transaction_abort(c, 0xff);
-	c.int3();
+	c.xor_(x86::eax, x86::eax);
+	c.ret();
 });
 
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
@@ -1039,27 +1059,14 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 	if (g_use_rtm)
 	{
-		// Do several attempts (TODO)
-		for (u32 i = 0; i < 5; i++)
+		if (ppu_stwcx_tx(addr, ppu.rtime, ppu.rdata, reg_value))
 		{
-			const int r = ppu_stwcx_tx(addr, ppu.rtime, ppu.rdata, reg_value);
-
-			if (r > 0)
-			{
-				vm::reservation_notifier(addr, sizeof(u32)).notify_all();
-				ppu.raddr = 0;
-				return true;
-			}
-
-			if (r < 0)
-			{
-				// Reservation lost
-				ppu.raddr = 0;
-				return false;
-			}
+			vm::reservation_notifier(addr, sizeof(u32)).notify_all();
+			ppu.raddr = 0;
+			return true;
 		}
 
-		// Give up
+		// Reservation lost
 		ppu.raddr = 0;
 		return false;
 	}
@@ -1078,7 +1085,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 	return result;
 }
 
-const auto ppu_stdcx_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, u64 rdata, u64 value)>([](asmjit::X86Assembler& c, auto& args)
+const auto ppu_stdcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 rdata, u64 value)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -1095,9 +1102,10 @@ const auto ppu_stdcx_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, u64 rd
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
 	c.bswap(args[2]);
 	c.bswap(args[3]);
+	c.mov(args[0].r32(), 5);
 
 	// Begin transaction
-	build_transaction_enter(c, fall);
+	Label begin = build_transaction_enter(c, fall);
 	c.cmp(x86::qword_ptr(x86::r10), args[1]);
 	c.jne(fail);
 	c.cmp(x86::qword_ptr(x86::r11), args[2]);
@@ -1114,14 +1122,18 @@ const auto ppu_stdcx_tx = build_function_asm<int(*)(u32 raddr, u64 rtime, u64 rd
 
 	// Touch memory after transaction failure
 	c.bind(fall);
+	c.sub(args[0].r32(), 1);
+	c.jz(fail);
+	c.sar(x86::eax, 24);
+	c.js(fail);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
-	c.sar(x86::eax, 24);
-	c.ret();
+	c.jmp(begin);
 
 	c.bind(fail);
 	build_transaction_abort(c, 0xff);
-	c.int3();
+	c.xor_(x86::eax, x86::eax);
+	c.ret();
 });
 
 extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
@@ -1136,27 +1148,14 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	if (g_use_rtm)
 	{
-		// Do several attempts (TODO)
-		for (u32 i = 0; i < 5; i++)
+		if (ppu_stdcx_tx(addr, ppu.rtime, ppu.rdata, reg_value))
 		{
-			const int r = ppu_stdcx_tx(addr, ppu.rtime, ppu.rdata, reg_value);
-
-			if (r > 0)
-			{
-				vm::reservation_notifier(addr, sizeof(u64)).notify_all();
-				ppu.raddr = 0;
-				return true;
-			}
-
-			if (r < 0)
-			{
-				// Reservation lost
-				ppu.raddr = 0;
-				return false;
-			}
+			vm::reservation_notifier(addr, sizeof(u64)).notify_all();
+			ppu.raddr = 0;
+			return true;
 		}
 
-		// Give up
+		// Reservation lost
 		ppu.raddr = 0;
 		return false;
 	}
