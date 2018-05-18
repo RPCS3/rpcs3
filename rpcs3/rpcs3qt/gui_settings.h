@@ -62,6 +62,40 @@ namespace gui
 		column_count
 	};
 
+	inline QString get_game_list_column_name(game_list_columns col)
+	{
+		switch (col)
+		{
+		case column_icon:
+			return "column_icon";
+		case column_name:
+			return "column_name";
+		case column_serial:
+			return "column_serial";
+		case column_firmware:
+			return "column_firmware";
+		case column_version:
+			return "column_version";
+		case column_category:
+			return "column_category";
+		case column_path:
+			return "column_path";
+		case column_move:
+			return "column_move";
+		case column_resolution:
+			return "column_resolution";
+		case column_sound:
+			return "column_sound";
+		case column_parental:
+			return "column_parental";
+		case column_compat:
+			return "column_compat";
+		case column_count:
+		default:
+			return "";
+		}
+	};
+
 	const QSize gl_icon_size_min    = QSize(40, 22);
 	const QSize gl_icon_size_small  = QSize(80, 44);
 	const QSize gl_icon_size_medium = QSize(160, 88);
@@ -242,3 +276,5 @@ private:
 	QSettings m_settings;
 	QDir m_settingsDir;
 };
+
+	static gui_save GetGuiSaveForColumn(int col);

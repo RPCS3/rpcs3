@@ -265,5 +265,5 @@ gui_save gui_settings::GetGuiSaveForColumn(int col)
 {
 	// hide sound format, parental level, firmware version and path by default
 	bool show = col != gui::column_sound && col != gui::column_parental && col != gui::column_firmware && col != gui::column_path;
-	return gui_save{ gui::game_list, "Col" + QString::number(col) + "visible", show };
+	return gui_save{ gui::game_list, "visibility_" + gui::get_game_list_column_name((gui::game_list_columns)col), show };
 }
