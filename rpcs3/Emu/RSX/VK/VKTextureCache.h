@@ -1013,7 +1013,7 @@ namespace vk
 			{
 			default:
 				//TODO
-				err_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)vk_format, gcm_format);
+				warn_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)vk_format, gcm_format);
 				return false;
 			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 				return (vk_format == VK_FORMAT_R16G16B16A16_SFLOAT);
