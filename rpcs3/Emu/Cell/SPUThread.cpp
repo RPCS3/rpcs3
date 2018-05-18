@@ -499,8 +499,8 @@ std::string SPUThread::dump() const
 	std::string ret = cpu_thread::dump();
 
 	// Print some transaction statistics
-	fmt::append(ret, "\nTX: %u; Fail: %u (0x%x)", tx_success, tx_failure, tx_status);
 	fmt::append(ret, "\nBlocks: %u; Fail: %u", block_counter, block_failure);
+	fmt::append(ret, "\n[%s]", ch_mfc_cmd);
 	fmt::append(ret, "\nTag Mask: 0x%08x", ch_tag_mask);
 	fmt::append(ret, "\nMFC Stall: 0x%08x", ch_stall_mask);
 	fmt::append(ret, "\nMFC Queue Size: %u", mfc_size);
@@ -509,9 +509,7 @@ std::string SPUThread::dump() const
 	{
 		if (i < mfc_size)
 		{
-			fmt::append(ret, "\n[%s #%02u 0x%05x:0x%08x 0x%x]",
-				mfc_queue[i].cmd, mfc_queue[i].tag, mfc_queue[i].lsa,
-				mfc_queue[i].eah * 0x100000000ull + mfc_queue[i].eal, mfc_queue[i].size);
+			fmt::append(ret, "\n%s", mfc_queue[i]);
 		}
 		else
 		{

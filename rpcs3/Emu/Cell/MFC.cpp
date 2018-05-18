@@ -61,3 +61,11 @@ void fmt_class_string<MFC>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+template <>
+void fmt_class_string<spu_mfc_cmd>::format(std::string& out, u64 arg)
+{
+	const auto& cmd = get_object(arg);
+
+	fmt::append(out, "%s #%02u 0x%05x:0x%08x 0x%x", cmd.cmd, cmd.tag, cmd.lsa, cmd.eah * 0x100000000ull + cmd.eal, cmd.size);
+}

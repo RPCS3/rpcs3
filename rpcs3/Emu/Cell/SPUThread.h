@@ -584,10 +584,6 @@ public:
 
 	const std::string m_name; // Thread name
 
-	u64 tx_success = 0;
-	u64 tx_failure = 0;
-	uint tx_status = 0;
-
 	std::unique_ptr<class spu_recompiler_base> jit; // Recompiler instance
 
 	u64 block_counter = 0;
