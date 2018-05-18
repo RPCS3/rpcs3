@@ -1045,12 +1045,9 @@ namespace rsx
 			writer_lock lock(m_cache_mutex);
 			section_storage_type* region = find_flushable_section(memory_address, memory_size);
 
-			//TODO: Make this an assertion
+			//Check if section was released, usually if cell overwrites a currently bound render target
 			if (region == nullptr)
-			{
-				LOG_ERROR(RSX, "Failed to find section for render target 0x%X + 0x%X", memory_address, memory_size);
-				return false;
-			}
+				return true;
 
 			if (skip_synchronized && region->is_synchronized())
 				return false;
