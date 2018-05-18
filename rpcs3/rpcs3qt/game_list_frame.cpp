@@ -192,6 +192,10 @@ void game_list_frame::LoadSettings()
 		bool vis = xgui_settings->GetGamelistColVisibility(col);
 		m_columnActs[col]->setChecked(vis);
 		m_gameList->setColumnHidden(col, !vis);
+
+		// handle columns that have zero width after showing them (stuck between others)
+		if (vis && m_gameList->columnWidth(col) <= m_gameList->horizontalHeader()->minimumSectionSize())
+			m_gameList->setColumnWidth(col, m_gameList->horizontalHeader()->minimumSectionSize());
 	}
 
 	m_gameList->horizontalHeader()->restoreState(m_gameList->horizontalHeader()->saveState());
