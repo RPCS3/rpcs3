@@ -1733,7 +1733,9 @@ s64 SPUThread::get_ch_value(u32 ch)
 				fmt::throw_exception("Not supported: event mask 0x%x" HERE, mask1);
 			}
 
-			std::shared_lock<notifier> pseudo_lock(vm::reservation_notifier(raddr, 128));
+			std::shared_lock<notifier> pseudo_lock(vm::reservation_notifier(raddr, 128), std::try_to_lock);
+
+			verify(HERE), pseudo_lock;
 
 			while (res = get_events(), !res)
 			{
