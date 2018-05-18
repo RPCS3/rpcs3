@@ -665,17 +665,11 @@
     <ClCompile Include="Emu\VFS.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Memory\wait_engine.cpp">
-      <Filter>Emu\Memory</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\IdManager.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\dynamic_library.cpp">
       <Filter>Utilities</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3_api.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\version.cpp">
       <Filter>Source Files</Filter>
@@ -1305,9 +1299,6 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\AtomicPtr.h">
       <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Memory\wait_engine.h">
-      <Filter>Emu\Memory</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\StrUtil.h">
       <Filter>Utilities</Filter>

@@ -1,14 +1,10 @@
 #pragma once
 
+#include "Utilities/JIT.h"
 #include "Utilities/mutex.h"
 #include "SPURecompiler.h"
 
 #include <functional>
-
-#define ASMJIT_STATIC
-#define ASMJIT_DEBUG
-
-#include "asmjit.h"
 
 // SPU ASMJIT Runtime object (global)
 class spu_runtime

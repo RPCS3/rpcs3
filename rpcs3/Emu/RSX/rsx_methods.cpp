@@ -118,16 +118,20 @@ namespace rsx
 			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 
-			if (addr >> 28 == 0x4)
+			if (g_use_rtm || addr >> 28 == 0x4)
 			{
-				// TODO: check no reservation area instead
 				vm::write32(addr, arg);
-				return;
+			}
+			else
+			{
+				vm::reader_lock lock;
+				vm::write32(addr, arg);
 			}
 
-			vm::reader_lock lock;
-			vm::write32(addr, arg);
-			vm::notify(addr, 4);
+			if (addr >> 28 != 0x4)
+			{
+				vm::reservation_notifier(addr, 4).notify_all();
+			}
 		}
 	}
 
@@ -1051,7 +1055,7 @@ namespace rsx
 			}
 
 			LOG_SUCCESS(RSX, "capture successful: %s", filePath.c_str());
-			
+
 			frame_capture.reset();
 			Emu.Pause();
 		}
