@@ -54,11 +54,13 @@ class trophy_manager_dialog : public QWidget
 
 public:
 	explicit trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings);
+
 private Q_SLOTS:
-	void ResizeGameIcons(int val);
-	void ResizeTrophyIcons(int val);
+	void ResizeGameIcons();
+	void ResizeTrophyIcons();
 	void ApplyFilter();
 	void ShowContextMenu(const QPoint& pos);
+
 private:
 	/** Loads a trophy folder. 
 	Returns true if successful.  Does not attempt to install if failure occurs, like sceNpTrophy.
@@ -73,7 +75,7 @@ private:
 	void ReadjustGameTable();
 	void ReadjustTrophyTable();
 
-	void closeEvent(QCloseEvent* event) override;
+	void closeEvent(QCloseEvent *event) override;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
