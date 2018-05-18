@@ -38,6 +38,10 @@
 
 #include "Utilities/GDBDebugServer.h"
 
+#if defined(_WIN32) || defined(HAVE_VULKAN)
+#include "Emu/RSX/VK/VulkanAPI.h"
+#endif
+
 cfg_root g_cfg;
 
 bool g_use_rtm = utils::has_rtm();
@@ -496,6 +500,13 @@ void Emulator::Load(bool add_only)
 			LOG_NOTICE(LOADER, "Applying custom config: %s.yml", m_path);
 			g_cfg.from_string(cfg_file.to_string());
 		}
+
+#if defined(_WIN32) || defined(HAVE_VULKAN)
+		if (g_cfg.video.renderer == video_renderer::vulkan)
+		{
+			LOG_NOTICE(LOADER, "Vulkan SDK Revision: %d", VK_HEADER_VERSION);
+		}
+#endif
 
 		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", g_cfg.to_string());
 
