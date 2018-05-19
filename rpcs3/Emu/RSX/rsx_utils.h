@@ -35,21 +35,60 @@ namespace rsx
 	//Weak pointer without lock semantics
 	//Backed by a real shared_ptr for non-rsx memory
 	//Backed by a global shared pool for rsx memory
-	struct weak_ptr
+	class weak_ptr
 	{
-		void* _ptr;
-		std::shared_ptr<u8> _extern;
+	public:
+		using memory_block_t = std::pair<std::shared_ptr<u8>, u32>;
 
+	private:
+		void* _ptr = nullptr;
+		std::vector<memory_block_t> _blocks;
+		std::vector<u8> io_cache;
+		bool contiguous = true;
+		bool synchronized = true;
+
+	public:
 		weak_ptr(void* raw, bool is_rsx_mem = true)
 		{
 			_ptr = raw;
-			if (!is_rsx_mem) _extern.reset((u8*)raw);
+
+			if (!is_rsx_mem)
+			{
+				_blocks.push_back({});
+				_blocks.back().first.reset((u8*)raw);
+			}
 		}
 
 		weak_ptr(std::shared_ptr<u8>& block)
 		{
-			_extern = block;
-			_ptr = _extern.get();
+			_blocks.push_back({ block, 0 });
+			_ptr = block.get();
+		}
+
+		weak_ptr(std::vector<memory_block_t>& blocks)
+		{
+			verify(HERE), blocks.size() > 0;
+
+			_blocks = std::move(blocks);
+			_ptr = nullptr;
+
+			if (blocks.size() == 1)
+			{
+				_ptr = _blocks[0].first.get();
+				contiguous = true;
+			}
+			else
+			{
+				u32 block_length = 0;
+				for (const auto &block : _blocks)
+				{
+					block_length += block.second;
+				}
+
+				io_cache.resize(block_length);
+				contiguous = false;
+				synchronized = false;
+			}
 		}
 
 		weak_ptr()
@@ -58,14 +97,52 @@ namespace rsx
 		}
 
 		template <typename T = void>
-		T* get(u32 offset = 0) const
+		T* get(u32 offset = 0)
 		{
-			return (T*)((u8*)_ptr + offset);
+			if (contiguous)
+			{
+				return (T*)((u8*)_ptr + offset);
+			}
+			else
+			{
+				if (!synchronized)
+					sync();
+
+				return (T*)(io_cache.data() + offset);
+			}
+		}
+
+		void sync()
+		{
+			if (synchronized)
+				return;
+
+			u8* dst = (u8*)io_cache.data();
+			for (const auto &block : _blocks)
+			{
+				memcpy(dst, block.first.get(), block.second);
+				dst += block.second;
+			}
+
+			synchronized = true;
+		}
+
+		void flush() const
+		{
+			if (contiguous)
+				return;
+
+			u8* src = (u8*)io_cache.data();
+			for (const auto &block : _blocks)
+			{
+				memcpy(block.first.get(), src, block.second);
+				src += block.second;
+			}
 		}
 
 		operator bool() const
 		{
-			return (_ptr != nullptr);
+			return (_ptr != nullptr || _blocks.size() > 1);
 		}
 	};
 

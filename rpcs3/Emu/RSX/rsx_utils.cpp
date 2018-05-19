@@ -109,14 +109,40 @@ namespace rsx
 			}
 		}
 
-		auto result = vm::get_super_ptr<u8>(addr, len - 1);
-		if (!result)
+		if (auto result = vm::get_super_ptr<u8>(addr, len - 1))
 		{
-			//Probably allocated as split blocks??
-			LOG_ERROR(RSX, "Could not get super_ptr for memory block 0x%x+0x%x", addr, len);
+			return { result };
 		}
 
-		return { result };
+		//Probably allocated as split blocks. Try to grab separate chunks
+		std::vector<weak_ptr::memory_block_t> blocks;
+		const u32 limit = addr + len;
+		u32 next = addr;
+		u32 remaining = len;
+
+		while (true)
+		{
+			auto region = vm::get(vm::any, next)->get(next, 1);
+			if (!region.second)
+			{
+				break;
+			}
+
+			const u32 block_offset = next - region.first;
+			const u32 block_length = std::min(remaining, region.second->size() - block_offset);
+			std::shared_ptr<u8> _ptr = { region.second, region.second->get(block_offset, block_length) };
+			blocks.push_back({_ptr, block_length});
+
+			remaining -= block_length;
+			next = region.first + region.second->size();
+			if (next >= limit)
+			{
+				return { blocks };
+			}
+		}
+
+		LOG_ERROR(RSX, "Could not get super_ptr for memory block 0x%x+0x%x", addr, len);
+		return {};
 	}
 
 	/* Fast image scaling routines
