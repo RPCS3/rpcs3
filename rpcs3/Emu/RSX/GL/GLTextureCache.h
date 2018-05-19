@@ -559,6 +559,7 @@ namespace gl
 				}
 			}
 
+			flush_io();
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 

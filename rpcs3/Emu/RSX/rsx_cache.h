@@ -43,6 +43,8 @@ namespace rsx
 
 				*first = cpu_address_base + confirmed_range.first;
 				*last = cpu_address_base + valid_limit - 4;
+
+				locked_memory_ptr.flush();
 			}
 		}
 
@@ -319,13 +321,13 @@ namespace rsx
 		}
 
 		template <typename T = void>
-		T* get_raw_ptr(u32 offset = 0) const
+		T* get_raw_ptr(u32 offset = 0)
 		{
 			verify(HERE), locked_memory_ptr;
 			return locked_memory_ptr.get<T>(offset);
 		}
 
-		bool test_memory_head() const
+		bool test_memory_head()
 		{
 			if (!locked_memory_ptr)
 			{
@@ -336,7 +338,7 @@ namespace rsx
 			return (*first == (cpu_address_base + confirmed_range.first));
 		}
 
-		bool test_memory_tail() const
+		bool test_memory_tail()
 		{
 			if (!locked_memory_ptr)
 			{
@@ -346,6 +348,11 @@ namespace rsx
 			const u32 valid_limit = (confirmed_range.second) ? confirmed_range.first + confirmed_range.second : cpu_address_range;
 			const u32* last = locked_memory_ptr.get<u32>(valid_limit - 4);
 			return (*last == (cpu_address_base + valid_limit - 4));
+		}
+
+		void flush_io() const
+		{
+			locked_memory_ptr.flush();
 		}
 
 		std::pair<u32, u32> get_confirmed_range() const

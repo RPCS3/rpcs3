@@ -323,6 +323,7 @@ namespace vk
 				}
 			}
 
+			flush_io();
 			dma_buffer->unmap();
 			reset_write_statistics();
 
