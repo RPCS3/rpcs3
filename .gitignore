@@ -46,6 +46,9 @@
 # Themes
 !/bin/GuiConfigs/
 /bin/GuiConfigs/*.ini
+/bin/GuiConfigs/*.ini.*
+/bin/GuiConfigs/*.dat
+/bin/GuiConfigs/*.dat.*
 
 # Ignore installed games except test homebrews
 !/bin/dev_hdd0/game/
