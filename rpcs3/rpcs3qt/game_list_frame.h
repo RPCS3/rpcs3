@@ -180,6 +180,9 @@ public:
 	explicit game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent = nullptr);
 	~game_list_frame();
 
+	/** Fix columns with width smaller than the minimal section size */
+	void FixNarrowColumns();
+
 	/** Refresh the gamelist with/without loading game data from files. Public so that main frame can refresh after vfs or install */
 	void Refresh(const bool fromDrive = false, const bool scrollAfter = true);
 

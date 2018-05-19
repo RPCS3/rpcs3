@@ -165,8 +165,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 
 			if (checked) // handle hidden columns that have zero width after showing them (stuck between others)
 			{
-				if (m_gameList->columnWidth(col) <= m_gameList->horizontalHeader()->minimumSectionSize())
-					m_gameList->setColumnWidth(col, m_gameList->horizontalHeader()->minimumSectionSize());
+				FixNarrowColumns();
 			}
 		});
 	}
@@ -192,11 +191,9 @@ void game_list_frame::LoadSettings()
 		bool vis = xgui_settings->GetGamelistColVisibility(col);
 		m_columnActs[col]->setChecked(vis);
 		m_gameList->setColumnHidden(col, !vis);
-
-		// handle columns that have zero width after showing them (stuck between others)
-		if (vis && m_gameList->columnWidth(col) <= m_gameList->horizontalHeader()->minimumSectionSize())
-			m_gameList->setColumnWidth(col, m_gameList->horizontalHeader()->minimumSectionSize());
 	}
+
+	FixNarrowColumns();
 
 	m_gameList->horizontalHeader()->restoreState(m_gameList->horizontalHeader()->saveState());
 
@@ -212,6 +209,28 @@ void game_list_frame::LoadSettings()
 game_list_frame::~game_list_frame()
 {
 	SaveSettings();
+}
+
+void game_list_frame::FixNarrowColumns()
+{
+	if (!isVisible()) // don't use isHidden here
+	{
+		// Handle Qt glitch. If we call columnWidth when the table is not shown yet then some columns will have 0 width
+		return;
+	}
+
+	qApp->processEvents();
+
+	// handle columns (other than the icon column) that have zero width after showing them (stuck between others)
+	for (int col = 1; col < m_columnActs.count(); ++col)
+	{
+		const bool visible = !m_gameList->isColumnHidden(col);
+
+		if (visible && m_gameList->columnWidth(col) <= m_gameList->horizontalHeader()->minimumSectionSize())
+		{
+			m_gameList->setColumnWidth(col, m_gameList->horizontalHeader()->minimumSectionSize());
+		}
+	}
 }
 
 void game_list_frame::OnColClicked(int col)

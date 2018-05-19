@@ -186,6 +186,9 @@ void main_window::Init()
 	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.Restart(); });
 	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, this, &main_window::OnPlayOrPause);
 #endif
+
+	// Fix possible hidden game list columns. The game list has to be visible already. Use this after show()
+	m_gameListFrame->FixNarrowColumns();
 }
 
 // returns appIcon
