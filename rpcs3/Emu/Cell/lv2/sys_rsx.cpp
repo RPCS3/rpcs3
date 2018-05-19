@@ -419,8 +419,8 @@ s32 sys_rsx_device_map(vm::ptr<u64> addr, vm::ptr<u64> a2, u32 dev_id)
 		fmt::throw_exception("sys_rsx_device_map: Invalid dev_id %d", dev_id);
 	}
 
-	// a2 seems to not be referenced in cellGcmSys
-	*a2 = 0;
+	// a2 seems to not be referenced in cellGcmSys, tests show this arg is ignored
+	//*a2 = 0;
 
 	*addr = 0x40000000;
 
