@@ -339,7 +339,7 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	c.jmp(begin);
 });
 
-const auto spu_putlluc_tx = build_function_asm<void(*)(u32 raddr, const void* rdata)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rdata)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -353,6 +353,7 @@ const auto spu_putlluc_tx = build_function_asm<void(*)(u32 raddr, const void* rd
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
 	c.shr(args[0], 4);
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
+	c.mov(args[0].r32(), 1);
 
 	// Prepare data
 	c.vmovups(x86::ymm0, x86::yword_ptr(args[1], 0));
@@ -373,6 +374,7 @@ const auto spu_putlluc_tx = build_function_asm<void(*)(u32 raddr, const void* rd
 	c.mov(x86::qword_ptr(x86::r10), x86::rax);
 	c.xend();
 	c.vzeroupper();
+	c.mov(x86::rax, args[0]);
 	c.ret();
 
 	// Touch memory after transaction failure
@@ -380,6 +382,7 @@ const auto spu_putlluc_tx = build_function_asm<void(*)(u32 raddr, const void* rd
 	c.pause();
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
+	c.add(args[0], 1);
 	c.jmp(begin);
 });
 
@@ -1051,7 +1054,13 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 	// Store unconditionally
 	if (g_use_rtm)
 	{
-		spu_putlluc_tx(addr, to_write.data());
+		const u64 count = spu_putlluc_tx(addr, to_write.data());
+
+		if (count > 5)
+		{
+			LOG_ERROR(SPU, "%s took too long: %u", args.cmd, count);
+		}
+
 		vm::reservation_notifier(addr, 128).notify_all();
 		return;
 	}
