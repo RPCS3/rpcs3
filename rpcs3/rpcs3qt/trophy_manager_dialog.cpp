@@ -58,6 +58,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 
 	// Game chooser combo box
 	m_game_combo = new QComboBox();
+	m_game_combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
 
 	// Game progression label
 	m_game_progress = new QLabel(tr("Progress: %1% (%2/%3)").arg(0).arg(0).arg(0));
@@ -147,6 +148,8 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		m_game_table->setItem(i, GameColumns::GameName, new custom_table_widget_item(name));
 		m_game_table->setItem(i, GameColumns::GameProgress, new custom_table_widget_item(progress, Qt::UserRole, percentage));
 	}
+
+	gui::utils::resize_combo_box_view(m_game_combo);
 
 	m_game_table->setSortingEnabled(true); // Enable sorting only after using setItem calls
 
