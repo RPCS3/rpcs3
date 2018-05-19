@@ -162,7 +162,7 @@ void game_compatibility::RequestCompatibility(bool online)
 	});
 
 	// Handle response according to its contents
-	connect(network_reply, &QNetworkReply::finished, [&]()
+	connect(network_reply, &QNetworkReply::finished, [=]()
 	{
 		// Clean up Progress Dialog
 		if (m_progress_dialog)
