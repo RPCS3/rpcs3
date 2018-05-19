@@ -301,7 +301,7 @@ const auto spu_putllc_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, cons
 	c.ret();
 });
 
-const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, u64* out_rtime)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -315,6 +315,7 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
 	c.shr(args[0], 4);
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
+	c.mov(args[0].r32(), 1);
 
 	// Begin transaction
 	Label begin = build_transaction_enter(c, fall);
@@ -329,6 +330,8 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	c.vmovups(x86::yword_ptr(args[1], 64), x86::ymm2);
 	c.vmovups(x86::yword_ptr(args[1], 96), x86::ymm3);
 	c.vzeroupper();
+	c.mov(x86::qword_ptr(args[2]), x86::rax);
+	c.mov(x86::rax, args[0]);
 	c.ret();
 
 	// Touch memory after transaction failure
@@ -336,6 +339,7 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	c.pause();
 	c.mov(x86::rax, x86::qword_ptr(x86::r11));
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
+	c.add(args[0], 1);
 	c.jmp(begin);
 });
 
@@ -1257,7 +1261,12 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 
 		if (g_use_rtm)
 		{
-			rtime = spu_getll_tx(raddr, rdata.data());
+			const u64 count = spu_getll_tx(raddr, rdata.data(), &rtime);
+
+			if (count > 9)
+			{
+				LOG_ERROR(SPU, "%s took too long: %u", args.cmd, count);
+			}
 		}
 
 		// Do several attemps
