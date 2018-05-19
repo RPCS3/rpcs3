@@ -51,7 +51,7 @@ s32 sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u64> mem_addr, u32 
 {
 	sys_rsx.warning("sys_rsx_memory_allocate(mem_handle=*0x%x, mem_addr=*0x%x, size=0x%x, flags=0x%llx, a5=0x%llx, a6=0x%llx, a7=0x%llx)", mem_handle, mem_addr, size, flags, a5, a6, a7);
 
-	*mem_handle = 1;
+	*mem_handle = 0x5a5a5a5b;
 	*mem_addr = vm::falloc(0xC0000000, size, vm::video);
 
 	return CELL_OK;
