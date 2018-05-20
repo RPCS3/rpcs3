@@ -551,6 +551,8 @@ void trophy_manager_dialog::ApplyFilter()
 
 		m_trophy_table->setRowHidden(i, hide);
 	}
+
+	ReadjustTrophyTable();
 }
 
 void trophy_manager_dialog::ShowContextMenu(const QPoint& loc)
