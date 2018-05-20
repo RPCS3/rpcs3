@@ -202,9 +202,9 @@ namespace rsx
 			}
 
 			template <typename T, typename ...Args>
-			T* create(Args&&...)
+			T* create(Args&&... args)
 			{
-				std::unique_ptr<T> object = std::make_unique<T>(std::forward<Args>(Args)...);
+				std::unique_ptr<T> object = std::make_unique<T>(std::forward<Args>(args)...);
 				return add(object);
 			}
 
