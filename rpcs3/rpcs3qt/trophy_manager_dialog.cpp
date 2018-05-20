@@ -72,6 +72,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_table->horizontalScrollBar()->setSingleStep(20);
 	m_game_table->setItemDelegate(new table_item_delegate(this));
 	m_game_table->setSelectionBehavior(QAbstractItemView::SelectRows);
+	m_game_table->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_game_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_game_table->setColumnCount(GameColumns::GameColumnsCount);
 	m_game_table->setHorizontalHeaderLabels(QStringList{ tr("Icon"), tr("Game"), tr("Progress") });
@@ -390,7 +391,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		ApplyFilter();
 	});
 
-	connect(m_game_table, &QTableWidget::doubleClicked, [this]
+	connect(m_game_table, &QTableWidget::itemSelectionChanged, [this]
 	{
 		m_game_combo->setCurrentText(m_game_table->item(m_game_table->currentRow(), GameColumns::GameName)->text());
 	});
