@@ -102,7 +102,7 @@ namespace vm
 	// Get reservation sync variable
 	inline notifier& reservation_notifier(u32 addr, u32 size)
 	{
-		return *reinterpret_cast<notifier*>(g_reservations2 + addr / 16);
+		return *reinterpret_cast<notifier*>(g_reservations2 + addr / 128 * 8);
 	}
 
 	// Change memory protection of specified memory region
