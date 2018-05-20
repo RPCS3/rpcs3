@@ -313,8 +313,6 @@ private:
 	gl::ui_overlay_renderer m_ui_renderer;
 	gl::video_out_calibration_pass m_video_output_pass;
 
-	std::vector<u64> m_overlay_cleanup_requests;
-
 	shared_mutex queue_guard;
 	std::list<work_item> work_queue;
 
@@ -391,6 +389,4 @@ protected:
 
 	std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
 	std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
-
-	void shell_do_cleanup() override;
 };

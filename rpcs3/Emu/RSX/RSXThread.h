@@ -12,7 +12,7 @@
 #include "RSXFragmentProgram.h"
 #include "rsx_methods.h"
 #include "rsx_utils.h"
-#include "overlays.h"
+#include "Overlays/overlays.h"
 #include <Utilities/GSL.h>
 
 #include "Utilities/Thread.h"
@@ -294,7 +294,7 @@ namespace rsx
 		rsx::gcm_framebuffer_info m_depth_surface_info;
 		bool framebuffer_status_valid = false;
 
-		std::unique_ptr<rsx::overlays::user_interface> m_custom_ui;
+		std::shared_ptr<rsx::overlays::display_manager> m_overlay_manager;
 		std::unique_ptr<rsx::overlays::user_interface> m_invalidated_ui;
 
 	public:
@@ -571,14 +571,5 @@ namespace rsx
 
 		//Get RSX approximate load in %
 		u32 get_load();
-
-		//HLE vsh stuff
-		//TODO: Move into a separate helper
-		virtual rsx::overlays::save_dialog* shell_open_save_dialog();
-		virtual rsx::overlays::message_dialog* shell_open_message_dialog();
-		virtual rsx::overlays::trophy_notification* shell_open_trophy_notification();
-		virtual rsx::overlays::user_interface* shell_get_current_dialog();
-		virtual bool shell_close_dialog();
-		virtual void shell_do_cleanup(){}
 	};
 }

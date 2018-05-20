@@ -3,16 +3,13 @@
 #include "trophy_notification_frame.h"
 
 #include "../Emu/System.h"
-#include "../Emu/RSX/GSRender.h"
+#include "../Emu/RSX/Overlays/overlays.h"
 
 s32 trophy_notification_helper::ShowTrophyNotification(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophy_icon_buffer)
 {
-	if (auto rsxthr = fxm::get<GSRender>())
+	if (auto manager = fxm::get<rsx::overlays::display_manager>())
 	{
-		if (auto dlg = rsxthr->shell_open_trophy_notification())
-		{
-			return dlg->show(trophy, trophy_icon_buffer);
-		}
+		return manager->create<rsx::overlays::trophy_notification>()->show(trophy, trophy_icon_buffer);
 	}
 
 	Emu.CallAfter([=]

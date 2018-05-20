@@ -3,7 +3,7 @@
 #include "rsx_methods.h"
 #include "Emu/RSX/GCM.h"
 #include "Common/BufferUtils.h"
-#include "overlays.h"
+#include "Overlays/overlays.h"
 #include "Utilities/sysinfo.h"
 
 extern "C"
