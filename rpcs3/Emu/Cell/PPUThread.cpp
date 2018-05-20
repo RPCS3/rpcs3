@@ -1022,11 +1022,7 @@ const auto ppu_stwcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 	c.cmp(x86::dword_ptr(x86::r11), args[2].r32());
 	c.jne(fail);
 	c.mov(x86::dword_ptr(x86::r11), args[3].r32());
-	c.rdtsc(); // destroys args[1] or args[2]
-	c.shl(x86::rdx, 33);
-	c.shl(x86::rax, 1);
-	c.or_(x86::rax, x86::rdx);
-	c.mov(x86::qword_ptr(x86::r10), x86::rax);
+	c.add(x86::qword_ptr(x86::r10), 1);
 	c.xend();
 	c.mov(x86::eax, 1);
 	c.ret();
@@ -1111,11 +1107,7 @@ const auto ppu_stdcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 	c.cmp(x86::qword_ptr(x86::r11), args[2]);
 	c.jne(fail);
 	c.mov(x86::qword_ptr(x86::r11), args[3]);
-	c.rdtsc(); // destroys args[1] or args[2]
-	c.shl(x86::rdx, 33);
-	c.shl(x86::rax, 1);
-	c.or_(x86::rax, x86::rdx);
-	c.mov(x86::qword_ptr(x86::r10), x86::rax);
+	c.add(x86::qword_ptr(x86::r10), 1);
 	c.xend();
 	c.mov(x86::eax, 1);
 	c.ret();

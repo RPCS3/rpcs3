@@ -271,11 +271,7 @@ const auto spu_putllc_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, cons
 	c.vmovaps(x86::yword_ptr(x86::r11, 64), x86::ymm8);
 	c.vmovaps(x86::yword_ptr(x86::r11, 96), x86::ymm9);
 #endif
-	c.rdtsc(); // destroys args[1] or args[2]
-	c.shl(x86::rdx, 33);
-	c.shl(x86::rax, 1);
-	c.or_(x86::rax, x86::rdx);
-	c.mov(x86::qword_ptr(x86::r10), x86::rax);
+	c.add(x86::qword_ptr(x86::r10), 1);
 	c.xend();
 	c.vzeroupper();
 	c.mov(x86::eax, 1);
@@ -371,11 +367,7 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 	c.vmovaps(x86::yword_ptr(x86::r11, 32), x86::ymm1);
 	c.vmovaps(x86::yword_ptr(x86::r11, 64), x86::ymm2);
 	c.vmovaps(x86::yword_ptr(x86::r11, 96), x86::ymm3);
-	c.rdtsc(); // destroys args[1] or args[2]
-	c.shl(x86::rdx, 33);
-	c.shl(x86::rax, 1);
-	c.or_(x86::rax, x86::rdx);
-	c.mov(x86::qword_ptr(x86::r10), x86::rax);
+	c.add(x86::qword_ptr(x86::r10), 1);
 	c.xend();
 	c.vzeroupper();
 	c.mov(x86::rax, args[0]);
