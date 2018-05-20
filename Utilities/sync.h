@@ -24,7 +24,6 @@
 #include <unordered_map>
 
 #ifdef _WIN32
-DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResolution, BOOLEAN SetResolution, PULONG CurrentResolution));
 DYNAMIC_IMPORT("ntdll.dll", NtWaitForKeyedEvent, NTSTATUS(HANDLE Handle, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtReleaseKeyedEvent, NTSTATUS(HANDLE Handle, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtDelayExecution, NTSTATUS(BOOLEAN Alertable, PLARGE_INTEGER DelayInterval));
@@ -107,7 +106,7 @@ inline int futex(int* uaddr, int futex_op, int val, const timespec* timeout, int
 				{
 					// TODO
 				}
-				
+
 				map.erase(std::find(map.find(uaddr), map.end(), ref));
 				return res;
 			}
@@ -124,7 +123,7 @@ inline int futex(int* uaddr, int futex_op, int val, const timespec* timeout, int
 				for (auto range = map.equal_range(uaddr); val && range.first != range.second; range.first++)
 				{
 					auto& entry = *range.first->second;
-					
+
 					if (entry.mask & val3)
 					{
 						entry.cv.notify_one();

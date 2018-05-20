@@ -152,7 +152,7 @@ void game_compatibility::RequestCompatibility(bool online)
 	m_progress_timer->start(500);
 
 	// Handle abort
-	connect(m_progress_dialog.get(), &QProgressDialog::rejected, network_reply, &QNetworkReply::abort);
+	connect(m_progress_dialog.get(), &QProgressDialog::canceled, network_reply, &QNetworkReply::abort);
 
 	// Handle progress
 	connect(network_reply, &QNetworkReply::downloadProgress, [&](qint64 bytesReceived, qint64 bytesTotal)
@@ -175,10 +175,16 @@ void game_compatibility::RequestCompatibility(bool online)
 		}
 
 		// Handle Errors
-		if (network_reply->error() != QNetworkReply::NoError)
+		if (network_reply->error() == QNetworkReply::OperationCanceledError)
+		{
+			network_reply->deleteLater();
+			return;
+		}
+		else if (network_reply->error() != QNetworkReply::NoError)
 		{
 			// We failed to retrieve a new database, therefore refresh gamelist to old state
 			QString error = network_reply->errorString();
+			network_reply->deleteLater();
 			Q_EMIT DownloadError(error);
 			LOG_ERROR(GENERAL, "Compatibility error: { Network Error - %s }", sstr(error));
 			return;

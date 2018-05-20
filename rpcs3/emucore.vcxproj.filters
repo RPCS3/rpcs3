@@ -63,6 +63,9 @@
     <Filter Include="Emu\Cell\Modules">
       <UniqueIdentifier>{4317ac27-38e4-4f8d-9bac-496f9b00f615}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Capture">
+      <UniqueIdentifier>{3f233c0b-4ee1-4c02-963f-0109d3d9c705}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -662,17 +665,11 @@
     <ClCompile Include="Emu\VFS.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Memory\wait_engine.cpp">
-      <Filter>Emu\Memory</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\IdManager.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\dynamic_library.cpp">
       <Filter>Utilities</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3_api.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\version.cpp">
       <Filter>Source Files</Filter>
@@ -742,6 +739,12 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_gpio.cpp">
       <Filter>Emu\Cell\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Capture\rsx_replay.cpp">
+      <Filter>Emu\GPU\RSX\Capture</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Capture\rsx_capture.cpp">
+      <Filter>Emu\GPU\RSX\Capture</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1297,9 +1300,6 @@
     <ClInclude Include="..\Utilities\AtomicPtr.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Memory\wait_engine.h">
-      <Filter>Emu\Memory</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\StrUtil.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1334,9 +1334,6 @@
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\rsx_decode.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\rsx_trace.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\gcm_enums.h">
@@ -1434,6 +1431,15 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellJpgEnc.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Capture\rsx_replay.h">
+      <Filter>Emu\GPU\RSX\Capture</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Capture\rsx_trace.h">
+      <Filter>Emu\GPU\RSX\Capture</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Capture\rsx_capture.h">
+      <Filter>Emu\GPU\RSX\Capture</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

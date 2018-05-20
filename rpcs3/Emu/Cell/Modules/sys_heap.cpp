@@ -48,7 +48,7 @@ u32 _sys_heap_memalign(u32 heap, u32 align, u32 size)
 {
 	sysPrxForUser.warning("_sys_heap_memalign(heap=0x%x, align=0x%x, size=0x%x)", heap, align, size);
 
-	return vm::alloc(size, vm::main, std::max<u32>(align, 4096));
+	return vm::alloc(size, vm::main, std::max<u32>(align, 0x10000));
 }
 
 s32 _sys_heap_free(u32 heap, u32 addr)

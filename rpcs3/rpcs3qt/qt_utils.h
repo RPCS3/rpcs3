@@ -2,6 +2,7 @@
 
 #include "stdafx.h"
 #include <QtCore>
+#include <QComboBox>
 #include <QFont>
 #include <QIcon>
 #include <QLabel>
@@ -37,6 +38,9 @@ namespace gui
 
 		// Returns the part of the image loaded from path that is inside the bounding box of its opaque areas
 		QImage get_opaque_image_area(const QString& path);
+
+		// Workaround: resize the dropdown combobox items
+		void resize_combo_box_view(QComboBox* combo);
 
 		// Recalculates a table's item count based on the available visible space and fills it with empty items
 		void update_table_item_count(QTableWidget* table);

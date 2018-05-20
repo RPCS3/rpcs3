@@ -334,7 +334,9 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 	menu->exec(globalPos);
 }
 
-void save_manager_dialog::closeEvent(QCloseEvent * event)
+void save_manager_dialog::closeEvent(QCloseEvent *event)
 {
 	m_gui_settings->SetValue(gui::sd_geometry, saveGeometry());
+
+	QDialog::closeEvent(event);
 }

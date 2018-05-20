@@ -71,7 +71,6 @@ public:
 	explicit main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent = 0);
 	void Init();
 	~main_window();
-	void CreateThumbnailToolbar();
 	QIcon GetAppIcon();
 
 Q_SIGNALS:
@@ -87,9 +86,11 @@ public Q_SLOTS:
 	void RepaintGui();
 
 private Q_SLOTS:
+	void OnPlayOrPause();
 	void Boot(const std::string& path, bool direct = false, bool add_only = false);
 	void BootElf();
 	void BootGame();
+	void BootRsxCapture();
 	void DecryptSPRXLibraries();
 
 	void SaveWindowState();

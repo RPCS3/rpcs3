@@ -8,9 +8,12 @@
 #include "Utilities/rXml.h"
 
 #include <QWidget>
+#include <QComboBox>
+#include <QLabel>
 #include <QPixmap>
-#include <QTreeWidget>
+#include <QTableWidget>
 #include <QSlider>
+#include <QSplitter>
 
 struct GameTrophiesData
 {
@@ -29,7 +32,17 @@ enum TrophyColumns
 	Type = 3,
 	IsUnlocked = 4,
 	Id = 5,
-	Hidden = 6,
+
+	Count
+};
+
+enum GameColumns
+{
+	GameIcon = 0,
+	GameName = 1,
+	GameProgress = 2,
+
+	GameColumnsCount
 };
 
 class trophy_manager_dialog : public QWidget
@@ -41,11 +54,13 @@ class trophy_manager_dialog : public QWidget
 
 public:
 	explicit trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings);
+
 private Q_SLOTS:
-	void OnColClicked(int col);
-	void ResizeTrophyIcons(int val);
+	void ResizeGameIcons();
+	void ResizeTrophyIcons();
 	void ApplyFilter();
 	void ShowContextMenu(const QPoint& pos);
+
 private:
 	/** Loads a trophy folder. 
 	Returns true if successful.  Does not attempt to install if failure occurs, like sceNpTrophy.
@@ -57,15 +72,19 @@ private:
 	*/
 	void PopulateUI();
 
-	void closeEvent(QCloseEvent* event) override;
+	void ReadjustGameTable();
+	void ReadjustTrophyTable();
+
+	void closeEvent(QCloseEvent *event) override;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	std::vector<std::unique_ptr<GameTrophiesData>> m_trophies_db; //! Holds all the trophy information.
-	QTreeWidget* m_trophy_tree; //! UI element to display trophy stuff.
-
-	int m_sort_column = 0; //! Tracks which row we are sorting by.
-	Qt::SortOrder m_col_sort_order = Qt::AscendingOrder; //! Tracks order in which we are sorting.
+	QComboBox* m_game_combo; //! Lets you choose a game
+	QLabel* m_game_progress; //! Shows you the current game's progress
+	QSplitter* m_splitter; //! Contains the game and trophy tables
+	QTableWidget* m_trophy_table; //! UI element to display trophy stuff.
+	QTableWidget* m_game_table; //! UI element to display games.
 
 	bool m_show_hidden_trophies = false;
 	bool m_show_unlocked_trophies = true;
@@ -78,6 +97,11 @@ private:
 	int m_icon_height = 75;
 	bool m_save_icon_height = false;
 	QSlider* m_icon_slider = nullptr;
+
+	int m_game_icon_size_index = 25;
+	QSize m_game_icon_size = QSize(m_game_icon_size_index, m_game_icon_size_index);
+	bool m_save_game_icon_size = false;
+	QSlider* m_game_icon_slider = nullptr;
 };
 
 #endif
