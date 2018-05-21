@@ -14,8 +14,6 @@
 #include <thread>
 #include <atomic>
 
-#pragma comment(lib, "VKstatic.1.lib")
-
 namespace vk
 {
 	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range<VkFormat>, VkFormat>;
