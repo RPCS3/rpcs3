@@ -944,7 +944,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 	ppu.raddr = addr;
 
-	while (g_use_rtm)
+	while (LIKELY(g_use_rtm))
 	{
 		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
 		ppu.rdata = data;
@@ -959,30 +959,46 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}
 
-	// Do several attemps
-	for (uint i = 0; i < 5; i++)
+	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+
+	if (LIKELY((ppu.rtime & 1) == 0))
+	{
+		ppu.rdata = data;
+
+		if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
+		{
+			return static_cast<T>(ppu.rdata);
+		}
+	}
+
+	vm::temporary_unlock(ppu);
+
+	for (u64 i = 0;; i++)
 	{
 		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-		_mm_lfence();
 
-		// Check LSB: atomic store may be in progress
 		if (LIKELY((ppu.rtime & 1) == 0))
 		{
 			ppu.rdata = data;
-			_mm_lfence();
 
 			if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
 			{
-				return static_cast<T>(ppu.rdata);
+				break;
 			}
 		}
 
-		busy_wait(300);
+		if (i < 20)
+		{
+			busy_wait(300);
+		}
+		else
+		{
+			std::this_thread::yield();
+		}
 	}
 
-	vm::reader_lock lock;
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-	ppu.rdata = data;
+	ppu.cpu_mem();
+
 	return static_cast<T>(ppu.rdata);
 }
 
@@ -1053,7 +1069,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		return false;
 	}
 
-	if (g_use_rtm)
+	if (LIKELY(g_use_rtm))
 	{
 		if (ppu_stwcx_tx(addr, ppu.rtime, ppu.rdata, reg_value))
 		{
@@ -1067,16 +1083,23 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		return false;
 	}
 
-	vm::writer_lock lock(0);
+	vm::temporary_unlock(ppu);
 
-	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
+	auto& res = vm::reservation_lock(addr, sizeof(u32));
+
+	const bool result = ppu.rtime == (res & ~1ull) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
 
 	if (result)
 	{
 		vm::reservation_update(addr, sizeof(u32));
 		vm::reservation_notifier(addr, sizeof(u32)).notify_all();
 	}
+	else
+	{
+		res &= ~1ull;
+	}
 
+	ppu.cpu_mem();
 	ppu.raddr = 0;
 	return result;
 }
@@ -1138,7 +1161,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return false;
 	}
 
-	if (g_use_rtm)
+	if (LIKELY(g_use_rtm))
 	{
 		if (ppu_stdcx_tx(addr, ppu.rtime, ppu.rdata, reg_value))
 		{
@@ -1152,16 +1175,23 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return false;
 	}
 
-	vm::writer_lock lock(0);
+	vm::temporary_unlock(ppu);
 
-	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u64)) && data.compare_and_swap_test(ppu.rdata, reg_value);
+	auto& res = vm::reservation_lock(addr, sizeof(u64));
+
+	const bool result = ppu.rtime == (res & ~1ull) && data.compare_and_swap_test(ppu.rdata, reg_value);
 
 	if (result)
 	{
 		vm::reservation_update(addr, sizeof(u64));
 		vm::reservation_notifier(addr, sizeof(u64)).notify_all();
 	}
+	else
+	{
+		res &= ~1ull;
+	}
 
+	ppu.cpu_mem();
 	ppu.raddr = 0;
 	return result;
 }

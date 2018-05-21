@@ -118,14 +118,15 @@ namespace rsx
 			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 
-			if (g_use_rtm || addr >> 28 == 0x4)
+			if (LIKELY(g_use_rtm))
 			{
 				vm::write32(addr, arg);
 			}
 			else
 			{
-				vm::reader_lock lock;
+				auto& res = vm::reservation_lock(addr, 4);
 				vm::write32(addr, arg);
+				res &= ~1ull;
 			}
 
 			if (addr >> 28 != 0x4)
