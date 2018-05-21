@@ -152,6 +152,7 @@ void main_window::Init()
 	{
 		ui->sysPauseAct->setEnabled(true);
 		ui->sysPauseAct->setText(tr("&Start last played game\tCtrl+E"));
+		ui->sysPauseAct->setIcon(m_icon_play);
 		ui->toolbar_start->setToolTip(tr("Start last played game"));
 		ui->toolbar_start->setEnabled(true);
 	}
@@ -385,7 +386,7 @@ void main_window::BootRsxCapture()
 		LOG_ERROR(GENERAL, "Capture Boot Failed");
 	else
 		LOG_SUCCESS(LOADER, "Capture Boot Success");
-}   
+}
 
 void main_window::InstallPkg(const QString& dropPath)
 {
