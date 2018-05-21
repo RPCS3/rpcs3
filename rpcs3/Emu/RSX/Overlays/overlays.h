@@ -169,7 +169,7 @@ namespace rsx
 		private:
 			atomic_t<u32> m_uid_ctr { 0u };
 			std::vector<std::unique_ptr<user_interface>> m_iface_list;
-			std::vector<u32> m_uids_to_clean;
+			std::vector<std::unique_ptr<user_interface>> m_dirty_list;
 
 		public:
 			display_manager() {}
@@ -189,7 +189,7 @@ namespace rsx
 						if (It->get()->type_index == e->type_index)
 						{
 							// Replace
-							m_uids_to_clean.push_back(It->get()->uid);
+							m_dirty_list.push_back(std::move(*It));
 							It->reset(e);
 							entry.reset();
 							return e;
@@ -215,8 +215,8 @@ namespace rsx
 					const auto e = It->get();
 					if (e->uid == uid)
 					{
+						m_dirty_list.push_back(std::move(*It));
 						m_iface_list.erase(It);
-						m_uids_to_clean.push_back(uid);
 						return true;
 					}
 				}
@@ -232,6 +232,7 @@ namespace rsx
 				{
 					if (It->get()->type_index == type_id)
 					{
+						m_dirty_list.push_back(std::move(*It));
 						It = m_iface_list.erase(It);
 					}
 					else
@@ -250,7 +251,7 @@ namespace rsx
 			// True if any elements have been deleted but their resources may not have been cleaned up
 			bool has_dirty() const
 			{
-				return !m_uids_to_clean.empty();
+				return !m_dirty_list.empty();
 			}
 
 			const std::vector<std::unique_ptr<user_interface>>& get_views() const
@@ -258,14 +259,14 @@ namespace rsx
 				return m_iface_list;
 			}
 
-			const std::vector<u32>& get_dirty() const
+			const std::vector<std::unique_ptr<user_interface>>& get_dirty() const
 			{
-				return m_uids_to_clean;
+				return m_dirty_list;
 			}
 
 			void clear_dirty()
 			{
-				m_uids_to_clean.clear();
+				m_dirty_list.clear();
 			}
 
 			user_interface* get(u32 uid) const

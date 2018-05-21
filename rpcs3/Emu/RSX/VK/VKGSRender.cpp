@@ -2028,9 +2028,9 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 		if (m_overlay_manager && m_overlay_manager->has_dirty())
 		{
-			for (const auto& uid : m_overlay_manager->get_dirty())
+			for (const auto& view : m_overlay_manager->get_dirty())
 			{
-				m_ui_renderer->remove_temp_resources(uid);
+				m_ui_renderer->remove_temp_resources(view->uid);
 			}
 
 			m_overlay_manager->clear_dirty();
