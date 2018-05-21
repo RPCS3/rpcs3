@@ -588,7 +588,10 @@ bool GDBDebugServer::cmd_read_all_registers(gdb_cmd & cmd)
 	select_thread(general_ops_thread_id);
 
 	auto th = selected_thread.lock();
-	if (th->id_type() == 1) {
+	if (th == nullptr) {
+		fmt::throw_exception("attempt to select expired thread" HERE);
+		return send_cmd_ack("");
+	} else if (th->id_type() == 1) {
 		auto ppu = std::static_pointer_cast<ppu_thread>(th);
 		//68 64-bit registers, and 3 32-bit
 		result.reserve(68*16 + 3*8);
