@@ -478,7 +478,7 @@ namespace gl
 			flushed = true;
 
 			const auto valid_range = get_confirmed_range();
-			void *dst = get_raw_ptr(valid_range.first);
+			void *dst = get_raw_ptr(valid_range.first, true);
 
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 			void *src = glMapBufferRange(GL_PIXEL_PACK_BUFFER, valid_range.first, valid_range.second, GL_MAP_READ_BIT);
@@ -559,7 +559,7 @@ namespace gl
 				}
 			}
 
-			flush_io();
+			flush_io(valid_range.first, valid_range.second);
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 

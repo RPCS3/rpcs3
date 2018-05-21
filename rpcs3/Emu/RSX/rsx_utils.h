@@ -97,7 +97,7 @@ namespace rsx
 		}
 
 		template <typename T = void>
-		T* get(u32 offset = 0)
+		T* get(u32 offset = 0, bool no_sync = false)
 		{
 			if (contiguous)
 			{
@@ -105,7 +105,7 @@ namespace rsx
 			}
 			else
 			{
-				if (!synchronized)
+				if (!synchronized && !no_sync)
 					sync();
 
 				return (T*)(io_cache.data() + offset);
@@ -127,16 +127,70 @@ namespace rsx
 			synchronized = true;
 		}
 
-		void flush() const
+		void flush(u32 offset = 0, u32 len = 0) const
 		{
 			if (contiguous)
 				return;
 
 			u8* src = (u8*)io_cache.data();
-			for (const auto &block : _blocks)
+
+			if (!offset && (!len || len == io_cache.size()))
 			{
-				memcpy(block.first.get(), src, block.second);
-				src += block.second;
+				for (const auto &block : _blocks)
+				{
+					memcpy(block.first.get(), src, block.second);
+					src += block.second;
+				}
+			}
+			else
+			{
+				auto remaining_bytes = len? len : io_cache.size() - offset;
+				const auto write_end = remaining_bytes + offset;
+
+				u32 write_offset;
+				u32 write_length;
+				u32 base_offset = 0;
+
+				for (const auto &block : _blocks)
+				{
+					const u32 block_end = base_offset + block.second;
+
+					if (offset >= base_offset && offset < block_end)
+					{
+						// Head
+						write_offset = (offset - base_offset);
+						write_length = std::min<u32>(block.second - write_offset, remaining_bytes);
+					}
+					else if (base_offset > offset && block_end <= write_end)
+					{
+						// Completely spanned
+						write_offset = 0;
+						write_length = block.second;
+					}
+					else if (base_offset > offset && write_end < block_end)
+					{
+						// Tail
+						write_offset = 0;
+						write_length = remaining_bytes;
+					}
+					else
+					{
+						// No overlap; skip
+						write_length = 0;
+					}
+
+					if (write_length)
+					{
+						memcpy(block.first.get() + write_offset, src + (base_offset + write_offset), write_length);
+
+						verify(HERE), write_length <= remaining_bytes;
+						remaining_bytes -= write_length;
+						if (!remaining_bytes)
+							break;
+					}
+
+					base_offset += block.second;
+				}
 			}
 		}
 

@@ -245,7 +245,7 @@ namespace vk
 
 			const auto valid_range = get_confirmed_range();
 			void* pixels_src = dma_buffer->map(valid_range.first, valid_range.second);
-			void* pixels_dst = get_raw_ptr(valid_range.first);
+			void* pixels_dst = get_raw_ptr(valid_range.first, true);
 
 			const auto texel_layout = vk::get_format_element_size(vram_texture->info.format);
 			const auto elem_size = texel_layout.first;
@@ -323,7 +323,7 @@ namespace vk
 				}
 			}
 
-			flush_io();
+			flush_io(valid_range.first, valid_range.second);
 			dma_buffer->unmap();
 			reset_write_statistics();
 
