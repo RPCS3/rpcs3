@@ -182,7 +182,7 @@ void game_list_frame::LoadSettings()
 	QByteArray state = xgui_settings->GetValue(gui::gl_state).toByteArray();
 	if (!m_gameList->horizontalHeader()->restoreState(state) && m_gameList->rowCount())
 	{
-		// If no settings exist, go to default.
+		// If no settings exist, resize to contents.
 		m_gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 		m_gameList->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 	}
