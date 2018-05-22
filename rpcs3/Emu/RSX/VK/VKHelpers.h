@@ -19,7 +19,7 @@
 #include "../Common/GLSLCommon.h"
 #include "../rsx_cache.h"
 
-#include "3rdparty/GPUOpen/Include/vk_mem_alloc.h"
+#include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
 
 #ifndef _WIN32
 #include <X11/Xutil.h>

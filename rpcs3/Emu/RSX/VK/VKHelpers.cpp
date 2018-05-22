@@ -3,8 +3,6 @@
 #include "VKHelpers.h"
 #include "Utilities/mutex.h"
 
-
-
 namespace vk
 {
 	context* g_current_vulkan_ctx = nullptr;
