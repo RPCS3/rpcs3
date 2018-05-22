@@ -1429,6 +1429,7 @@ void main_window::CreateDockWindows()
 	m_mw->addDockWidget(Qt::LeftDockWidgetArea, m_logFrame);
 	m_mw->addDockWidget(Qt::RightDockWidgetArea, m_debuggerFrame);
 	m_mw->setDockNestingEnabled(true);
+	m_mw->resizeDocks({ m_logFrame }, { m_mw->sizeHint().height() / 10 }, Qt::Orientation::Vertical);
 	setCentralWidget(m_mw);
 
 	connect(m_logFrame, &log_frame::LogFrameClosed, [=]()
