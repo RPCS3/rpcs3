@@ -919,12 +919,15 @@ s32 cellGcmIoOffsetToAddress(u32 ioOffset, vm::ptr<u32> address)
 {
 	cellGcmSys.trace("cellGcmIoOffsetToAddress(ioOffset=0x%x, address=*0x%x)", ioOffset, address);
 
-	u32 realAddr;
+	const u32 upper12Bits = offsetTable.eaAddress[ioOffset >> 20];
 
-	if (!RSXIOMem.getRealAddr(ioOffset, realAddr))
+	if (static_cast<s16>(upper12Bits) < 0)
+	{
+		cellGcmSys.error("cellGcmIoOffsetToAddress: CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
+	}
 
-	*address = realAddr;
+	*address = (upper12Bits << 20) | (ioOffset & 0xFFFFF);
 
 	return CELL_OK;
 }
