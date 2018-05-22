@@ -283,7 +283,26 @@ bool game_list_frame::IsEntryVisible(const game_info& game)
 
 void game_list_frame::SortGameList()
 {
+	// Sorting resizes hidden columns, so unhide them as a workaround
+	QList<int> columns_to_hide;
+
+	for (int i = 0; i < m_gameList->columnCount(); i++)
+	{
+		if (m_gameList->isColumnHidden(i))
+		{
+			m_gameList->setColumnHidden(i, false);
+			columns_to_hide << i;
+		}
+	}
+
+	// Sort the list by column and sort order
 	m_gameList->sortByColumn(m_sortColumn, m_colSortOrder);
+
+	// Hide columns again
+	for (auto i : columns_to_hide)
+	{
+		m_gameList->setColumnHidden(i, true);
+	}
 
 	// Fixate vertical header and row height
 	m_gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
