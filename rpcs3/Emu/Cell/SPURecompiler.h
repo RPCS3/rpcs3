@@ -5,6 +5,7 @@
 #include <vector>
 #include <bitset>
 #include <memory>
+#include <string>
 
 // Helper class
 class spu_cache
@@ -35,7 +36,17 @@ protected:
 	u32 m_pos;
 	u32 m_size;
 
+	// Bit indicating start of the block
 	std::bitset<0x10000> m_block_info;
+
+	// GPR modified by the instruction (-1 = not set)
+	std::array<u8, 0x10000> m_regmod;
+
+	// List of possible targets for the instruction ({} = next instruction, {-1} = no targets)
+	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_targets;
+
+	// List of block predecessors
+	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_preds;
 
 	std::shared_ptr<spu_cache> m_cache;
 

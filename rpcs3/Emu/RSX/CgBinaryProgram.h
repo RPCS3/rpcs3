@@ -26,7 +26,7 @@ typedef struct CgBinaryProgram          CgBinaryProgram;
 // fragment programs have their constants embedded in the microcode
 struct CgBinaryEmbeddedConstant
 {
-	be_t<u32> ucodeCount;       // occurances
+	be_t<u32> ucodeCount;       // occurrences
 	be_t<u32> ucodeOffset[1];   // offsets that need to be patched follow
 };
 
@@ -76,7 +76,7 @@ struct CgBinaryFragmentProgram
 	be_t<u16> texCoordsCentroid;       // tex coords that are centroid  (tex<n> is bit n)
 	u8        registerCount;           // R registers count
 	u8        outputFromH0;            // final color from R0 or H0
-	u8        depthReplace;            // fp generated z epth value
+	u8        depthReplace;            // fp generated z depth value
 	u8        pixelKill;               // fp uses kill operations
 };
 

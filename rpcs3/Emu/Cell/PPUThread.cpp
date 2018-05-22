@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/sysinfo.h"
+#include "Utilities/JIT.h"
 #include "Crypto/sha1.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -46,7 +47,6 @@
 #endif
 #include "define_new_memleakdetect.h"
 
-#include "Utilities/JIT.h"
 #include "PPUTranslator.h"
 #include "Modules/cellMsgDialog.h"
 #endif
@@ -54,8 +54,6 @@
 #include <thread>
 #include <cfenv>
 #include "Utilities/GSL.h"
-
-const bool s_use_rtm = utils::has_rtm();
 
 const bool s_use_ssse3 =
 #ifdef _MSC_VER
@@ -508,7 +506,7 @@ void ppu_thread::cpu_task()
 {
 	std::fesetround(FE_TONEAREST);
 
-	if (g_cfg.core.ppu_decoder != ppu_decoder_type::precise)
+	if (g_cfg.core.set_daz_and_ftz && g_cfg.core.ppu_decoder != ppu_decoder_type::precise)
 	{
 		// Set DAZ and FTZ
 		_mm_setcsr(_mm_getcsr() | 0x8840);
@@ -713,7 +711,12 @@ ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
 	, m_name(name)
 {
 	// Trigger the scheduler
-	state += cpu_flag::suspend + cpu_flag::memory;
+	state += cpu_flag::suspend;
+
+	if (!g_use_rtm)
+	{
+		state += cpu_flag::memory;
+	}
 }
 
 void ppu_thread::cmd_push(cmd64 cmd)
@@ -941,30 +944,61 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 	ppu.raddr = addr;
 
-	// Do several attemps
-	for (uint i = 0; i < 5; i++)
+	while (LIKELY(g_use_rtm))
 	{
 		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-		_mm_lfence();
+		ppu.rdata = data;
 
-		// Check LSB: atomic store may be in progress
+		if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
+		{
+			return static_cast<T>(ppu.rdata);
+		}
+		else
+		{
+			_mm_pause();
+		}
+	}
+
+	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+
+	if (LIKELY((ppu.rtime & 1) == 0))
+	{
+		ppu.rdata = data;
+
+		if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
+		{
+			return static_cast<T>(ppu.rdata);
+		}
+	}
+
+	vm::temporary_unlock(ppu);
+
+	for (u64 i = 0;; i++)
+	{
+		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+
 		if (LIKELY((ppu.rtime & 1) == 0))
 		{
 			ppu.rdata = data;
-			_mm_lfence();
 
 			if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
 			{
-				return static_cast<T>(ppu.rdata);
+				break;
 			}
 		}
 
-		busy_wait(300);
+		if (i < 20)
+		{
+			busy_wait(300);
+		}
+		else
+		{
+			std::this_thread::yield();
+		}
 	}
 
-	vm::reader_lock lock;
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-	ppu.rdata = data;
+	ppu.cpu_mem();
+
 	return static_cast<T>(ppu.rdata);
 }
 
@@ -978,90 +1012,186 @@ extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 	return ppu_load_acquire_reservation<u64>(ppu, addr);
 }
 
+const auto ppu_stwcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 rdata, u32 value)>([](asmjit::X86Assembler& c, auto& args)
+{
+	using namespace asmjit;
+
+	Label fall = c.newLabel();
+	Label fail = c.newLabel();
+
+	// Prepare registers
+	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
+	c.mov(x86::r10, x86::qword_ptr(x86::rax));
+	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
+	c.mov(x86::r11, x86::qword_ptr(x86::rax));
+	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
+	c.shr(args[0], 7);
+	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
+	c.bswap(args[2].r32());
+	c.bswap(args[3].r32());
+	c.mov(args[0].r32(), 5);
+
+	// Begin transaction
+	Label begin = build_transaction_enter(c, fall);
+	c.cmp(x86::qword_ptr(x86::r10), args[1]);
+	c.jne(fail);
+	c.cmp(x86::dword_ptr(x86::r11), args[2].r32());
+	c.jne(fail);
+	c.mov(x86::dword_ptr(x86::r11), args[3].r32());
+	c.add(x86::qword_ptr(x86::r10), 1);
+	c.xend();
+	c.mov(x86::eax, 1);
+	c.ret();
+
+	// Touch memory after transaction failure
+	c.bind(fall);
+	c.sub(args[0].r32(), 1);
+	c.jz(fail);
+	c.sar(x86::eax, 24);
+	c.js(fail);
+	c.lock().add(x86::dword_ptr(x86::r11), 0);
+	c.lock().add(x86::qword_ptr(x86::r10), 0);
+	c.jmp(begin);
+
+	c.bind(fail);
+	build_transaction_abort(c, 0xff);
+	c.xor_(x86::eax, x86::eax);
+	c.ret();
+});
+
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 {
 	atomic_be_t<u32>& data = vm::_ref<atomic_be_t<u32>>(addr);
 
-	if (ppu.raddr != addr || ppu.rdata != data.load())
+	if (ppu.raddr != addr || ppu.rdata != data.load() || ppu.rtime != vm::reservation_acquire(addr, sizeof(u32)))
 	{
 		ppu.raddr = 0;
 		return false;
 	}
 
-	if (s_use_rtm && utils::transaction_enter())
+	if (LIKELY(g_use_rtm))
 	{
-		if (!vm::g_mutex.is_lockable() || vm::g_mutex.is_reading())
+		if (ppu_stwcx_tx(addr, ppu.rtime, ppu.rdata, reg_value))
 		{
-			_xabort(0);
+			vm::reservation_notifier(addr, sizeof(u32)).notify_all();
+			ppu.raddr = 0;
+			return true;
 		}
 
-		const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
-
-		if (result)
-		{
-			vm::reservation_update(addr, sizeof(u32));
-			vm::notify(addr, sizeof(u32));
-		}
-
-		_xend();
+		// Reservation lost
 		ppu.raddr = 0;
-		return result;
+		return false;
 	}
 
-	vm::writer_lock lock(0);
+	vm::temporary_unlock(ppu);
 
-	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
+	auto& res = vm::reservation_lock(addr, sizeof(u32));
+
+	const bool result = ppu.rtime == (res & ~1ull) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
 
 	if (result)
 	{
 		vm::reservation_update(addr, sizeof(u32));
-		vm::notify(addr, sizeof(u32));
+		vm::reservation_notifier(addr, sizeof(u32)).notify_all();
+	}
+	else
+	{
+		res &= ~1ull;
 	}
 
+	ppu.cpu_mem();
 	ppu.raddr = 0;
 	return result;
 }
+
+const auto ppu_stdcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 rdata, u64 value)>([](asmjit::X86Assembler& c, auto& args)
+{
+	using namespace asmjit;
+
+	Label fall = c.newLabel();
+	Label fail = c.newLabel();
+
+	// Prepare registers
+	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
+	c.mov(x86::r10, x86::qword_ptr(x86::rax));
+	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
+	c.mov(x86::r11, x86::qword_ptr(x86::rax));
+	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
+	c.shr(args[0], 7);
+	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
+	c.bswap(args[2]);
+	c.bswap(args[3]);
+	c.mov(args[0].r32(), 5);
+
+	// Begin transaction
+	Label begin = build_transaction_enter(c, fall);
+	c.cmp(x86::qword_ptr(x86::r10), args[1]);
+	c.jne(fail);
+	c.cmp(x86::qword_ptr(x86::r11), args[2]);
+	c.jne(fail);
+	c.mov(x86::qword_ptr(x86::r11), args[3]);
+	c.add(x86::qword_ptr(x86::r10), 1);
+	c.xend();
+	c.mov(x86::eax, 1);
+	c.ret();
+
+	// Touch memory after transaction failure
+	c.bind(fall);
+	c.sub(args[0].r32(), 1);
+	c.jz(fail);
+	c.sar(x86::eax, 24);
+	c.js(fail);
+	c.lock().add(x86::qword_ptr(x86::r11), 0);
+	c.lock().add(x86::qword_ptr(x86::r10), 0);
+	c.jmp(begin);
+
+	c.bind(fail);
+	build_transaction_abort(c, 0xff);
+	c.xor_(x86::eax, x86::eax);
+	c.ret();
+});
 
 extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 {
 	atomic_be_t<u64>& data = vm::_ref<atomic_be_t<u64>>(addr);
 
-	if (ppu.raddr != addr || ppu.rdata != data.load())
+	if (ppu.raddr != addr || ppu.rdata != data.load() || ppu.rtime != vm::reservation_acquire(addr, sizeof(u64)))
 	{
 		ppu.raddr = 0;
 		return false;
 	}
 
-	if (s_use_rtm && utils::transaction_enter())
+	if (LIKELY(g_use_rtm))
 	{
-		if (!vm::g_mutex.is_lockable() || vm::g_mutex.is_reading())
+		if (ppu_stdcx_tx(addr, ppu.rtime, ppu.rdata, reg_value))
 		{
-			_xabort(0);
+			vm::reservation_notifier(addr, sizeof(u64)).notify_all();
+			ppu.raddr = 0;
+			return true;
 		}
 
-		const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u64)) && data.compare_and_swap_test(ppu.rdata, reg_value);
-
-		if (result)
-		{
-			vm::reservation_update(addr, sizeof(u64));
-			vm::notify(addr, sizeof(u64));
-		}
-
-		_xend();
+		// Reservation lost
 		ppu.raddr = 0;
-		return result;
+		return false;
 	}
 
-	vm::writer_lock lock(0);
+	vm::temporary_unlock(ppu);
 
-	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u64)) && data.compare_and_swap_test(ppu.rdata, reg_value);
+	auto& res = vm::reservation_lock(addr, sizeof(u64));
+
+	const bool result = ppu.rtime == (res & ~1ull) && data.compare_and_swap_test(ppu.rdata, reg_value);
 
 	if (result)
 	{
 		vm::reservation_update(addr, sizeof(u64));
-		vm::notify(addr, sizeof(u64));
+		vm::reservation_notifier(addr, sizeof(u64)).notify_all();
+	}
+	else
+	{
+		res &= ~1ull;
 	}
 
+	ppu.cpu_mem();
 	ppu.raddr = 0;
 	return result;
 }

@@ -1,14 +1,10 @@
 #pragma once
 
+#include "Utilities/JIT.h"
 #include "Utilities/mutex.h"
 #include "SPURecompiler.h"
 
 #include <functional>
-
-#define ASMJIT_STATIC
-#define ASMJIT_DEBUG
-
-#include "asmjit.h"
 
 // SPU ASMJIT Runtime object (global)
 class spu_runtime
@@ -107,7 +103,7 @@ private:
 	asmjit::X86Mem XmmConst(__m128i data);
 
 	void branch_fixed(u32 target);
-	void branch_indirect(spu_opcode_t op);
+	void branch_indirect(spu_opcode_t op, bool local = false);
 	void fall(spu_opcode_t op);
 	void save_rcx();
 	void load_rcx();

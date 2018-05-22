@@ -61,7 +61,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\3rdparty\zlib;..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\zlib;..\llvm\include;..\llvm_build\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
     </ClCompile>
     <PreBuildEvent>
       <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
@@ -276,7 +276,8 @@
     <ClCompile Include="Emu\Cell\SPUDisAsm.cpp" />
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp" />
     <ClCompile Include="Emu\IdManager.cpp" />
-    <ClCompile Include="Emu\Memory\wait_engine.cpp" />
+    <ClCompile Include="Emu\RSX\Capture\rsx_capture.cpp" />
+    <ClCompile Include="Emu\RSX\Capture\rsx_replay.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp" />
@@ -293,7 +294,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
-    <ClCompile Include="Emu\RSX\overlays.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlays.cpp" />
     <ClCompile Include="Emu\RSX\rsx_methods.cpp" />
     <ClCompile Include="Emu\RSX\rsx_utils.cpp" />
     <ClCompile Include="Crypto\aes.cpp">
@@ -339,7 +340,6 @@
     <ClCompile Include="Loader\TAR.cpp" />
     <ClCompile Include="Loader\TROPUSR.cpp" />
     <ClCompile Include="Loader\TRP.cpp" />
-    <ClCompile Include="rpcs3_api.cpp" />
     <ClCompile Include="rpcs3_version.cpp" />
     <ClCompile Include="stb_image.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -522,17 +522,18 @@
     <ClInclude Include="Emu\Cell\SPUThread.h" />
     <ClInclude Include="Emu\CPU\CPUDisAsm.h" />
     <ClInclude Include="Emu\CPU\CPUThread.h" />
-    <ClInclude Include="Emu\Memory\wait_engine.h" />
+    <ClInclude Include="Emu\RSX\Capture\rsx_capture.h" />
+    <ClInclude Include="Emu\RSX\Capture\rsx_replay.h" />
+    <ClInclude Include="Emu\RSX\Capture\rsx_trace.h" />
     <ClInclude Include="Emu\RSX\Common\GLSLCommon.h" />
     <ClInclude Include="Emu\RSX\Common\TextGlyphs.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache.h" />
     <ClInclude Include="Emu\RSX\gcm_enums.h" />
     <ClInclude Include="Emu\RSX\gcm_printing.h" />
-    <ClInclude Include="Emu\RSX\overlays.h" />
-    <ClInclude Include="Emu\RSX\overlay_controls.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlays.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_controls.h" />
     <ClInclude Include="Emu\RSX\rsx_cache.h" />
     <ClInclude Include="Emu\RSX\rsx_decode.h" />
-    <ClInclude Include="Emu\RSX\rsx_trace.h" />
     <ClInclude Include="Emu\RSX\rsx_vertex_data.h" />
     <ClInclude Include="Emu\VFS.h" />
     <ClInclude Include="Emu\GameInfo.h" />

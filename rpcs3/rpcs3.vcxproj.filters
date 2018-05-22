@@ -638,6 +638,9 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_breakpoint_list.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\qrc_windows.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -704,9 +707,6 @@
       <Filter>Gui\debugger</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\trophy_manager_dialog.h">
-      <Filter>Gui\trophy</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\trophy_tree_widget_item.h">
       <Filter>Gui\trophy</Filter>
     </ClInclude>
     <ClInclude Include="evdev_joystick_handler.h">
@@ -854,6 +854,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\breakpoint_list.h">
       <Filter>Gui\debugger</Filter>
+    </CustomBuild>
+    <CustomBuild Include="windows.qrc">
+      <Filter>Resource Files</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

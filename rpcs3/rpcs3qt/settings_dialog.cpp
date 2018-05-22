@@ -1,4 +1,5 @@
 #include <QVBoxLayout>
+#include <QButtonGroup>
 #include <QPushButton>
 #include <QMessageBox>
 #include <QInputDialog>

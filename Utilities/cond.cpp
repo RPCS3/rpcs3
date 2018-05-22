@@ -16,14 +16,22 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 	LARGE_INTEGER timeout;
 	timeout.QuadPart = _timeout * -10;
 
-	if (HRESULT rc = NtWaitForKeyedEvent(nullptr, &m_value, false, is_inf ? nullptr : &timeout))
+	if (HRESULT rc = _timeout ? NtWaitForKeyedEvent(nullptr, &m_value, false, is_inf ? nullptr : &timeout) : WAIT_TIMEOUT)
 	{
 		verify(HERE), rc == WAIT_TIMEOUT;
 
 		// Retire
-		if (!m_value.fetch_op([](u32& value) { if (value) value--; }))
+		while (!m_value.fetch_op([](u32& value) { if (value) value--; }))
 		{
-			NtWaitForKeyedEvent(nullptr, &m_value, false, nullptr);
+			timeout.QuadPart = 0;
+
+			if (HRESULT rc2 = NtWaitForKeyedEvent(nullptr, &m_value, false, &timeout))
+			{
+				verify(HERE), rc2 == WAIT_TIMEOUT;
+				SwitchToThread();
+				continue;
+			}
+
 			return true;
 		}
 
@@ -32,6 +40,12 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 
 	return true;
 #else
+	if (!_timeout)
+	{
+		verify(HERE), m_value--;
+		return false;
+	}
+
 	timespec timeout;
 	timeout.tv_sec  = _timeout / 1000000;
 	timeout.tv_nsec = (_timeout % 1000000) * 1000;
@@ -105,4 +119,98 @@ void cond_variable::imp_wake(u32 _count) noexcept
 		}
 	}
 #endif
+}
+
+bool notifier::imp_try_lock(u32 count)
+{
+	return m_counter.atomic_op([&](u32& value)
+	{
+		if ((value % (max_readers + 1)) + count <= max_readers)
+		{
+			value += count;
+			return true;
+		}
+
+		return false;
+	});
+}
+
+void notifier::imp_unlock(u32 count)
+{
+	const u32 counter = m_counter.sub_fetch(count);
+
+	if (UNLIKELY(counter % (max_readers + 1)))
+	{
+		return;
+	}
+
+	if (counter)
+	{
+		const u32 _old = m_counter.atomic_op([](u32& value) -> u32
+		{
+			if (value % (max_readers + 1))
+			{
+				return 0;
+			}
+
+			return std::exchange(value, 0) / (max_readers + 1);
+		});
+
+		const u32 wc = m_cond.m_value;
+
+		if (_old && wc)
+		{
+			m_cond.imp_wake(_old > wc ? wc : _old);
+		}
+	}
+}
+
+u32 notifier::imp_notify(u32 count)
+{
+	return m_counter.atomic_op([&](u32& value) -> u32
+	{
+		if (const u32 add = value % (max_readers + 1))
+		{
+			// Mutex is locked
+			const u32 result = add > count ? count : add;
+			value += result * (max_readers + 1);
+			return result;
+		}
+		else
+		{
+			// Mutex is unlocked
+			value = 0;
+			return count;
+		}
+	});
+}
+
+explicit_bool_t notifier::wait(u64 usec_timeout)
+{
+	const u32 _old = m_cond.m_value.fetch_add(1);
+
+	if (max_readers < m_counter.fetch_op([](u32& value)
+	{
+		if (value > max_readers)
+		{
+			value -= max_readers;
+		}
+
+		value -= 1;
+	}))
+	{
+		// Return without waiting
+		m_cond.imp_wait(_old, 0);
+		return true;
+	}
+
+	const bool res = m_cond.imp_wait(_old, usec_timeout);
+
+	while (!try_lock_shared())
+	{
+		// TODO
+		busy_wait();
+	}
+
+	return res;
 }

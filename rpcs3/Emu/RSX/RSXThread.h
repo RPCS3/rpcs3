@@ -12,12 +12,13 @@
 #include "RSXFragmentProgram.h"
 #include "rsx_methods.h"
 #include "rsx_utils.h"
-#include "overlays.h"
+#include "Overlays/overlays.h"
 #include <Utilities/GSL.h>
 
 #include "Utilities/Thread.h"
 #include "Utilities/geometry.h"
-#include "rsx_trace.h"
+#include "Capture/rsx_trace.h"
+#include "Capture/rsx_replay.h"
 #include "restore_new.h"
 #include "Utilities/variant.hpp"
 #include "define_new_memleakdetect.h"
@@ -27,7 +28,8 @@
 extern u64 get_system_time();
 
 extern bool user_asked_for_frame_capture;
-extern rsx::frame_capture_data frame_debug;
+extern rsx::frame_trace_data frame_debug;
+extern rsx::frame_capture_data frame_capture;
 
 namespace rsx
 {
@@ -65,6 +67,26 @@ namespace rsx
 		context_clear_color = 1,
 		context_clear_depth = 2,
 		context_clear_all = context_clear_color | context_clear_depth
+	};
+
+	enum pipeline_state : u8
+	{
+		fragment_program_dirty = 1,
+		vertex_program_dirty = 2,
+		fragment_state_dirty = 4,
+		vertex_state_dirty = 8,
+		transform_constants_dirty = 16,
+
+		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
+		all_dirty = 255
+	};
+
+	enum FIFO_state : u8
+	{
+		running = 0,
+		empty = 1, //PUT == GET
+		spinning = 2, //Puller continuously jumps to self addr (synchronization technique)
+		nop = 3, //Puller is processing a NOP command
 	};
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
@@ -272,7 +294,7 @@ namespace rsx
 		rsx::gcm_framebuffer_info m_depth_surface_info;
 		bool framebuffer_status_valid = false;
 
-		std::unique_ptr<rsx::overlays::user_interface> m_custom_ui;
+		std::shared_ptr<rsx::overlays::display_manager> m_overlay_manager;
 		std::unique_ptr<rsx::overlays::user_interface> m_invalidated_ui;
 
 	public:
@@ -288,7 +310,7 @@ namespace rsx
 			atomic_t<u64> idle_time{ 0 };  //Time spent idling in microseconds
 			u64 last_update_timestamp = 0; //Timestamp of last load update
 			u64 FIFO_idle_timestamp = 0; //Timestamp of when FIFO queue becomes idle
-			bool FIFO_is_idle = false; //True if FIFO is in idle state
+			FIFO_state state = FIFO_state::running;
 			u32 approximate_load = 0;
 			u32 sampled_frames = 0;
 		}
@@ -325,10 +347,10 @@ namespace rsx
 		u32 local_mem_addr, main_mem_addr;
 
 		bool m_rtts_dirty;
-		bool m_transform_constants_dirty;
 		bool m_textures_dirty[16];
 		bool m_vertex_textures_dirty[4];
 		bool m_framebuffer_state_contested = false;
+		u32  m_graphics_state = 0;
 
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
@@ -341,6 +363,9 @@ namespace rsx
 
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
+
+		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
+		program_hash_util::vertex_program_utils::vertex_program_metadata current_vp_metadata = {};
 
 		void get_current_vertex_program();
 
@@ -546,14 +571,5 @@ namespace rsx
 
 		//Get RSX approximate load in %
 		u32 get_load();
-
-		//HLE vsh stuff
-		//TODO: Move into a separate helper
-		virtual rsx::overlays::save_dialog* shell_open_save_dialog();
-		virtual rsx::overlays::message_dialog* shell_open_message_dialog();
-		virtual rsx::overlays::trophy_notification* shell_open_trophy_notification();
-		virtual rsx::overlays::user_interface* shell_get_current_dialog();
-		virtual bool shell_close_dialog();
-		virtual void shell_do_cleanup(){}
 	};
 }

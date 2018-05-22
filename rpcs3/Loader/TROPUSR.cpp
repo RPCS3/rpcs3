@@ -202,6 +202,19 @@ u32 TROPUSRLoader::GetTrophiesCount()
 	return (u32)m_table6.size();
 }
 
+u32 TROPUSRLoader::GetUnlockedTrophiesCount()
+{
+	u32 count = 0;
+	for (const auto& trophy : m_table6)
+	{
+		if (trophy.trophy_state)
+		{
+			count++;
+		}
+	}
+	return count;
+}
+
 u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 {
 	if (id >= m_table6.size())

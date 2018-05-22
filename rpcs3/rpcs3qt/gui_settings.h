@@ -39,6 +39,11 @@ namespace gui
 {
 	static QString stylesheet;
 
+	enum custom_roles
+	{
+		game_role = Qt::UserRole + 1337,
+	};
+
 	enum game_list_columns
 	{
 		column_icon,
@@ -48,12 +53,47 @@ namespace gui
 		column_version,
 		column_category,
 		column_path,
+		column_move,
 		column_resolution,
 		column_sound,
 		column_parental,
 		column_compat,
 
 		column_count
+	};
+
+	inline QString get_game_list_column_name(game_list_columns col)
+	{
+		switch (col)
+		{
+		case column_icon:
+			return "column_icon";
+		case column_name:
+			return "column_name";
+		case column_serial:
+			return "column_serial";
+		case column_firmware:
+			return "column_firmware";
+		case column_version:
+			return "column_version";
+		case column_category:
+			return "column_category";
+		case column_path:
+			return "column_path";
+		case column_move:
+			return "column_move";
+		case column_resolution:
+			return "column_resolution";
+		case column_sound:
+			return "column_sound";
+		case column_parental:
+			return "column_parental";
+		case column_compat:
+			return "column_compat";
+		case column_count:
+		default:
+			return "";
+		}
 	};
 
 	const QSize gl_icon_size_min    = QSize(40, 22);
@@ -165,6 +205,7 @@ namespace gui
 	const gui_save gs_height       = gui_save(gs_frame, "height",       720);
 
 	const gui_save tr_icon_height   = gui_save(trophy, "icon_height",   75);
+	const gui_save tr_game_iconSize = gui_save(trophy, "game_iconSize", 25);
 	const gui_save tr_show_locked   = gui_save(trophy, "show_locked",   true);
 	const gui_save tr_show_unlocked = gui_save(trophy, "show_unlocked", true);
 	const gui_save tr_show_hidden   = gui_save(trophy, "show_hidden",   false);
@@ -173,6 +214,9 @@ namespace gui
 	const gui_save tr_show_gold     = gui_save(trophy, "show_gold",     true);
 	const gui_save tr_show_platinum = gui_save(trophy, "show_platinum", true);
 	const gui_save tr_geometry      = gui_save(trophy, "geometry",      QByteArray());
+	const gui_save tr_splitterState = gui_save(trophy, "splitterState", QByteArray());
+	const gui_save tr_games_state   = gui_save(trophy, "games_state",   QByteArray());
+	const gui_save tr_trophy_state  = gui_save(trophy, "trophy_state",  QByteArray());
 
 	const gui_save sd_geometry = gui_save(savedata, "geometry", QByteArray());
 }
@@ -222,6 +266,9 @@ public Q_SLOTS:
 
 	void SaveCurrentConfig(const QString& friendlyName);
 
+	static QSize SizeFromSlider(int pos);
+	static gui_save GetGuiSaveForColumn(int col);
+
 private:
 	QString ComputeSettingsDir();
 	void BackupSettingsToTarget(const QString& destination);
@@ -229,3 +276,5 @@ private:
 	QSettings m_settings;
 	QDir m_settingsDir;
 };
+
+	static gui_save GetGuiSaveForColumn(int col);

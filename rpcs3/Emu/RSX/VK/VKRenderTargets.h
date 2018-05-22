@@ -91,7 +91,7 @@ namespace vk
 
 		bool matches_dimensions(u16 _width, u16 _height) const
 		{
-			//Use foward scaling to account for rounding and clamping errors
+			//Use forward scaling to account for rounding and clamping errors
 			return (rsx::apply_resolution_scale(_width, true) == width()) && (rsx::apply_resolution_scale(_height, true) == height());
 		}
 	};

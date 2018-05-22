@@ -73,6 +73,7 @@ public:
 	virtual bool Save(const std::string& filepath);
 
 	virtual u32 GetTrophiesCount();
+	virtual u32 GetUnlockedTrophiesCount();
 
 	virtual u32 GetTrophyUnlockState(u32 id);
 	virtual u64 GetTrophyTimestamp(u32 id);
