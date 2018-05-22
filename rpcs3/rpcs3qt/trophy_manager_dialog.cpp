@@ -58,6 +58,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 
 	// Game chooser combo box
 	m_game_combo = new QComboBox();
+	m_game_combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
 
 	// Game progression label
 	m_game_progress = new QLabel(tr("Progress: %1% (%2/%3)").arg(0).arg(0).arg(0));
@@ -71,6 +72,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_table->horizontalScrollBar()->setSingleStep(20);
 	m_game_table->setItemDelegate(new table_item_delegate(this));
 	m_game_table->setSelectionBehavior(QAbstractItemView::SelectRows);
+	m_game_table->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_game_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_game_table->setColumnCount(GameColumns::GameColumnsCount);
 	m_game_table->setHorizontalHeaderLabels(QStringList{ tr("Icon"), tr("Game"), tr("Progress") });
@@ -147,6 +149,8 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		m_game_table->setItem(i, GameColumns::GameName, new custom_table_widget_item(name));
 		m_game_table->setItem(i, GameColumns::GameProgress, new custom_table_widget_item(progress, Qt::UserRole, percentage));
 	}
+
+	gui::utils::resize_combo_box_view(m_game_combo);
 
 	m_game_table->setSortingEnabled(true); // Enable sorting only after using setItem calls
 
@@ -239,43 +243,31 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	if (!restoreGeometry(m_gui_settings->GetValue(gui::tr_geometry).toByteArray()))
 		resize(QDesktopWidget().availableGeometry().size() * 0.7);
 
-	QByteArray splitterstate = m_gui_settings->GetValue(gui::tr_splitterState).toByteArray();
-	if (splitterstate.isEmpty())
+	if (!m_splitter->restoreState(m_gui_settings->GetValue(gui::tr_splitterState).toByteArray()))
 	{
 		const int width_left = m_splitter->width() * 0.4;
 		const int width_right = m_splitter->width() - width_left;
 		m_splitter->setSizes({ width_left, width_right });
 	}
-	else
-	{
-		m_splitter->restoreState(splitterstate);
-	}
+
+	PopulateUI();
 
 	QByteArray game_table_state = m_gui_settings->GetValue(gui::tr_games_state).toByteArray();
-	if (!game_table_state.isEmpty())
+	if (!m_game_table->horizontalHeader()->restoreState(game_table_state) && m_game_table->rowCount())
 	{
-		m_game_table->horizontalHeader()->restoreState(game_table_state);
-	}
-	else if (m_game_table->rowCount() > 0)
-	{
-		// If no settings exist, go to default.
-		m_game_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-		m_game_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		// If no settings exist, resize to contents. (disabled)
+		//m_game_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		//m_game_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 	}
 
 	QByteArray trophy_table_state = m_gui_settings->GetValue(gui::tr_trophy_state).toByteArray();
-	if (!trophy_table_state.isEmpty())
+	if (!m_trophy_table->horizontalHeader()->restoreState(trophy_table_state) && m_trophy_table->rowCount())
 	{
-		m_trophy_table->horizontalHeader()->restoreState(trophy_table_state);
-	}
-	else if (m_trophy_table->rowCount() > 0)
-	{
-		// If no settings exist, go to default.
-		m_trophy_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-		m_trophy_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		// If no settings exist, resize to contents. (disabled)
+		//m_trophy_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		//m_trophy_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 	}
 
-	PopulateUI();
 	ApplyFilter();
 
 	// Make connects
@@ -387,7 +379,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		ApplyFilter();
 	});
 
-	connect(m_game_table, &QTableWidget::doubleClicked, [this]
+	connect(m_game_table, &QTableWidget::itemSelectionChanged, [this]
 	{
 		m_game_combo->setCurrentText(m_game_table->item(m_game_table->currentRow(), GameColumns::GameName)->text());
 	});
@@ -547,6 +539,8 @@ void trophy_manager_dialog::ApplyFilter()
 
 		m_trophy_table->setRowHidden(i, hide);
 	}
+
+	ReadjustTrophyTable();
 }
 
 void trophy_manager_dialog::ShowContextMenu(const QPoint& loc)

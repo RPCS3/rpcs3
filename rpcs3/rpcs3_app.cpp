@@ -89,11 +89,6 @@ void rpcs3_app::Init()
 
 	RPCS3MainWin->Init();
 
-	RPCS3MainWin->show();
-
-	// Create the thumbnail toolbar after the main_window is created
-	RPCS3MainWin->CreateThumbnailToolbar();
-
 	if (guiSettings->GetValue(gui::ib_show_welcome).toBool())
 	{
 		welcome_dialog* welcome = new welcome_dialog();

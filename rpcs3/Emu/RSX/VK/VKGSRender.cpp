@@ -1587,7 +1587,7 @@ void VKGSRender::on_init_thread()
 				type.disable_cancel = true;
 				type.progress_bar_count = 1;
 
-				dlg = owner->shell_open_message_dialog();
+				dlg = fxm::get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>();
 				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
 				{
 					if (status != CELL_OK)
@@ -2026,6 +2026,16 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 			m_text_writer->reset_descriptors();
 		}
 
+		if (m_overlay_manager && m_overlay_manager->has_dirty())
+		{
+			for (const auto& view : m_overlay_manager->get_dirty())
+			{
+				m_ui_renderer->remove_temp_resources(view->uid);
+			}
+
+			m_overlay_manager->clear_dirty();
+		}
+
 		m_attachment_clear_pass->free_resources();
 		m_depth_converter->free_resources();
 		m_depth_scaler->free_resources();
@@ -2166,14 +2176,7 @@ void VKGSRender::do_local_task(bool /*idle*/)
 
 #endif
 
-	//TODO: Guard this
-	if (m_overlay_cleanup_requests.size())
-	{
-		flush_command_queue(true);
-		m_ui_renderer->remove_temp_resources();
-		m_overlay_cleanup_requests.clear();
-	}
-	else if (m_custom_ui)
+	if (m_overlay_manager)
 	{
 		if (!in_begin_end && native_ui_flip_request.load())
 		{
@@ -2356,15 +2359,18 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 		//Notify the user with HUD notification
 		if (g_cfg.misc.show_shader_compilation_hint)
 		{
-			if (!m_custom_ui)
+			if (m_overlay_manager)
 			{
-				//Create notification but do not draw it at this time. No need to spam flip requests
-				m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
-			}
-			else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
-			{
-				//Probe the notification
-				casted->touch();
+				if (auto dlg = m_overlay_manager->get<rsx::overlays::shader_compile_notification>())
+				{
+					//Extend duration
+					dlg->touch();
+				}
+				else
+				{
+					//Create dialog but do not show immediately
+					m_overlay_manager->create<rsx::overlays::shader_compile_notification>();
+				}
 			}
 		}
 	}
@@ -3174,7 +3180,8 @@ void VKGSRender::flip(int buffer)
 
 	std::unique_ptr<vk::framebuffer_holder> direct_fbo;
 	std::vector<std::unique_ptr<vk::image_view>> swap_image_view;
-	if (g_cfg.video.overlay || m_custom_ui)
+	const bool has_overlay = (m_overlay_manager && m_overlay_manager->has_visible());
+	if (g_cfg.video.overlay || has_overlay)
 	{
 		//Change the image layout whilst setting up a dependency on waiting for the blit op to finish before we start writing
 		VkImageSubresourceRange subres = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
@@ -3212,9 +3219,12 @@ void VKGSRender::flip(int buffer)
 			direct_fbo.reset(new vk::framebuffer_holder(*m_device, single_target_pass, m_client_width, m_client_height, std::move(swap_image_view)));
 		}
 
-		if (m_custom_ui)
+		if (has_overlay)
 		{
-			m_ui_renderer->run(*m_current_command_buffer, direct_fbo->width(), direct_fbo->height(), direct_fbo.get(), single_target_pass, m_texture_upload_buffer_ring_info, *m_custom_ui);
+			for (const auto& view : m_overlay_manager->get_views())
+			{
+				m_ui_renderer->run(*m_current_command_buffer, direct_fbo->width(), direct_fbo->height(), direct_fbo.get(), single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
+			}
 		}
 
 		if (g_cfg.video.overlay)
@@ -3433,10 +3443,4 @@ void VKGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 
 	m_occlusion_query_pool.reset_queries(*m_current_command_buffer, data.indices);
 	m_occlusion_map.erase(query->driver_handle);
-}
-
-void VKGSRender::shell_do_cleanup()
-{
-	//TODO: Guard this
-	m_overlay_cleanup_requests.push_back(0);
 }

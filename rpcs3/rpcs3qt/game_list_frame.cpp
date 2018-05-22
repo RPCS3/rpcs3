@@ -165,8 +165,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 
 			if (checked) // handle hidden columns that have zero width after showing them (stuck between others)
 			{
-				if (m_gameList->columnWidth(col) <= m_gameList->horizontalHeader()->minimumSectionSize())
-					m_gameList->setColumnWidth(col, m_gameList->horizontalHeader()->minimumSectionSize());
+				FixNarrowColumns();
 			}
 		});
 	}
@@ -174,17 +173,17 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 
 void game_list_frame::LoadSettings()
 {
-	QByteArray state = xgui_settings->GetValue(gui::gl_state).toByteArray();
+	m_colSortOrder = xgui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
+	m_sortColumn = xgui_settings->GetValue(gui::gl_sortCol).toInt();
+	m_categoryFilters = xgui_settings->GetGameListCategoryFilters();
 
-	if (!state.isEmpty())
+	Refresh(true);
+
+	QByteArray state = xgui_settings->GetValue(gui::gl_state).toByteArray();
+	if (!m_gameList->horizontalHeader()->restoreState(state) && m_gameList->rowCount())
 	{
-		m_gameList->horizontalHeader()->restoreState(state);
-	}
-	else if (m_gameList->rowCount() > 0)
-	{
-		// If no settings exist, go to default.
-		m_gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-		m_gameList->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		// If no settings exist, resize to contents.
+		ResizeColumnsToContents();
 	}
 
 	for (int col = 0; col < m_columnActs.count(); ++col)
@@ -192,26 +191,58 @@ void game_list_frame::LoadSettings()
 		bool vis = xgui_settings->GetGamelistColVisibility(col);
 		m_columnActs[col]->setChecked(vis);
 		m_gameList->setColumnHidden(col, !vis);
-
-		// handle columns that have zero width after showing them (stuck between others)
-		if (vis && m_gameList->columnWidth(col) <= m_gameList->horizontalHeader()->minimumSectionSize())
-			m_gameList->setColumnWidth(col, m_gameList->horizontalHeader()->minimumSectionSize());
 	}
 
+	FixNarrowColumns();
+
 	m_gameList->horizontalHeader()->restoreState(m_gameList->horizontalHeader()->saveState());
-
-	m_colSortOrder = xgui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
-
-	m_sortColumn = xgui_settings->GetValue(gui::gl_sortCol).toInt();
-
-	m_categoryFilters = xgui_settings->GetGameListCategoryFilters();
-
-	Refresh(true);
 }
 
 game_list_frame::~game_list_frame()
 {
 	SaveSettings();
+}
+
+void game_list_frame::FixNarrowColumns()
+{
+	qApp->processEvents();
+
+	// handle columns (other than the icon column) that have zero width after showing them (stuck between others)
+	for (int col = 1; col < m_columnActs.count(); ++col)
+	{
+		if (m_gameList->isColumnHidden(col))
+		{
+			continue;
+		}
+
+		if (m_gameList->columnWidth(col) <= m_gameList->horizontalHeader()->minimumSectionSize())
+		{
+			m_gameList->setColumnWidth(col, m_gameList->horizontalHeader()->minimumSectionSize());
+		}
+	}
+}
+
+void game_list_frame::ResizeColumnsToContents(int spacing)
+{
+	if (!m_gameList)
+	{
+		return;
+	}
+
+	m_gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+	m_gameList->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+
+	// Make non-icon columns slighty bigger for better visuals
+	for (int i = 1; i < m_gameList->columnCount(); i++)
+	{
+		if (m_gameList->isColumnHidden(i))
+		{
+			continue;
+		}
+
+		int size = m_gameList->horizontalHeader()->sectionSize(i) + spacing;
+		m_gameList->horizontalHeader()->resizeSection(i, size);
+	}
 }
 
 void game_list_frame::OnColClicked(int col)
@@ -252,7 +283,26 @@ bool game_list_frame::IsEntryVisible(const game_info& game)
 
 void game_list_frame::SortGameList()
 {
+	// Sorting resizes hidden columns, so unhide them as a workaround
+	QList<int> columns_to_hide;
+
+	for (int i = 0; i < m_gameList->columnCount(); i++)
+	{
+		if (m_gameList->isColumnHidden(i))
+		{
+			m_gameList->setColumnHidden(i, false);
+			columns_to_hide << i;
+		}
+	}
+
+	// Sort the list by column and sort order
 	m_gameList->sortByColumn(m_sortColumn, m_colSortOrder);
+
+	// Hide columns again
+	for (auto i : columns_to_hide)
+	{
+		m_gameList->setColumnHidden(i, true);
+	}
 
 	// Fixate vertical header and row height
 	m_gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
@@ -406,9 +456,16 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 	if (m_isListLayout)
 	{
 		int scroll_position = m_gameList->verticalScrollBar()->value();
+		int rows = m_gameList->rowCount();
 		int row = PopulateGameList();
 		m_gameList->selectRow(row);
 		SortGameList();
+
+		// Resize columns if the game list was empty before
+		if (!rows)
+		{
+			ResizeColumnsToContents();
+		}
 
 		if (scrollAfter)
 		{

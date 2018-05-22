@@ -37,9 +37,10 @@ install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       wget https://mirrors.kernel.org/ubuntu/pool/universe/g/glew/libglew-dev_2.0.0-5_amd64.deb;
       wget https://mirrors.kernel.org/ubuntu/pool/universe/g/glew/libglew2.0_2.0.0-5_amd64.deb;
-      wget https://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan1_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
-      wget https://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan-dev_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
-      sudo dpkg -i libglew2.0_2.0.0-5_amd64.deb libglew-dev_2.0.0-5_amd64.deb libvulkan1_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb libvulkan-dev_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
+      wget https://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan1_1.1.73+dfsg-1_amd64.deb;
+      wget https://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan-dev_1.1.73+dfsg-1_amd64.deb;
+      sudo apt-get install --only-upgrade dpkg;
+      sudo dpkg -i libglew2.0_2.0.0-5_amd64.deb libglew-dev_2.0.0-5_amd64.deb libvulkan1_1.1.73+dfsg-1_amd64.deb libvulkan-dev_1.1.73+dfsg-1_amd64.deb;
     else
       brew install ccache glew ninja qt;
       export CCACHE_SLOPPINESS=pch_defines,time_macros;

@@ -69,14 +69,6 @@ main_window::~main_window()
 #endif
 }
 
-auto Pause = []()
-{
-	if (Emu.IsReady()) Emu.Run();
-	else if (Emu.IsPaused()) Emu.Resume();
-	else if (Emu.IsRunning()) Emu.Pause();
-	else if (!Emu.GetBoot().empty()) Emu.Load();
-};
-
 /* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).
  * Simplifies logic a bit.
  */
@@ -150,18 +142,30 @@ void main_window::Init()
 			std::exit(EXIT_SUCCESS);
 		}
 	}
-}
 
-void main_window::CreateThumbnailToolbar()
-{
+	show(); // needs to be done before creating the thumbnail toolbar
+
+	// enable play options if a recent game exists
+	const bool enable_play_last = !m_recentGameActs.isEmpty();
+
+	if (enable_play_last)
+	{
+		ui->sysPauseAct->setEnabled(true);
+		ui->sysPauseAct->setText(tr("&Start last played game\tCtrl+E"));
+		ui->sysPauseAct->setIcon(m_icon_play);
+		ui->toolbar_start->setToolTip(tr("Start last played game"));
+		ui->toolbar_start->setEnabled(true);
+	}
+
+	// create tool buttons for the taskbar thumbnail
 #ifdef _WIN32
 	m_thumb_bar = new QWinThumbnailToolBar(this);
 	m_thumb_bar->setWindow(windowHandle());
 
 	m_thumb_playPause = new QWinThumbnailToolButton(m_thumb_bar);
-	m_thumb_playPause->setToolTip(tr("Pause"));
-	m_thumb_playPause->setIcon(m_icon_thumb_pause);
-	m_thumb_playPause->setEnabled(false);
+	m_thumb_playPause->setToolTip(enable_play_last ? tr("Start last played game") : tr("Start emulation"));
+	m_thumb_playPause->setIcon(m_icon_thumb_play);
+	m_thumb_playPause->setEnabled(enable_play_last);
 
 	m_thumb_stop = new QWinThumbnailToolButton(m_thumb_bar);
 	m_thumb_stop->setToolTip(tr("Stop"));
@@ -181,8 +185,11 @@ void main_window::CreateThumbnailToolbar()
 
 	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, [=]() { Emu.Stop(); });
 	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, [=]() { Emu.Restart(); });
-	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, Pause);
+	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, this, &main_window::OnPlayOrPause);
 #endif
+
+	// Fix possible hidden game list columns. The game list has to be visible already. Use this after show()
+	m_gameListFrame->FixNarrowColumns();
 }
 
 // returns appIcon
@@ -233,6 +240,30 @@ void main_window::SetAppIconFromPath(const std::string& path)
 	}
 	// if nothing was found reset the icon to default
 	m_appIcon = QApplication::windowIcon();
+}
+
+void main_window::OnPlayOrPause()
+{
+	if (Emu.IsReady())
+	{
+		Emu.Run();
+	}
+	else if (Emu.IsPaused())
+	{
+		Emu.Resume();
+	}
+	else if (Emu.IsRunning())
+	{
+		Emu.Pause();
+	}
+	else if (!Emu.GetBoot().empty())
+	{
+		Emu.Load();
+	}
+	else if (Emu.IsStopped() && !m_recentGameActs.isEmpty())
+	{
+		BootRecentAction(m_recentGameActs.first());
+	}
 }
 
 void main_window::Boot(const std::string& path, bool direct, bool add_only)
@@ -355,7 +386,7 @@ void main_window::BootRsxCapture()
 		LOG_ERROR(GENERAL, "Capture Boot Failed");
 	else
 		LOG_SUCCESS(LOADER, "Capture Boot Success");
-}   
+}
 
 void main_window::InstallPkg(const QString& dropPath)
 {
@@ -926,7 +957,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	{
 		if (m_rg_entries.contains(entry))
 		{
-			LOG_ERROR(GENERAL, "Recent Game not valid, removing from Boot Recent list: %s", sstr(entry.first));
+			LOG_WARNING(GENERAL, "Recent Game not valid, removing from Boot Recent list: %s", sstr(entry.first));
 
 			int idx = m_rg_entries.indexOf(entry);
 			m_rg_entries.removeAt(idx);
@@ -1129,7 +1160,7 @@ void main_window::CreateConnects()
 	connect(ui->bootInstallPkgAct, &QAction::triggered, [this] {InstallPkg(); });
 	connect(ui->bootInstallPupAct, &QAction::triggered, [this] {InstallPup(); });
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
-	connect(ui->sysPauseAct, &QAction::triggered, Pause);
+	connect(ui->sysPauseAct, &QAction::triggered, this, &main_window::OnPlayOrPause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
 	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.Restart(); });
 
@@ -1344,7 +1375,7 @@ void main_window::CreateConnects()
 	connect(ui->toolbar_disc, &QAction::triggered, this, &main_window::BootGame);
 	connect(ui->toolbar_refresh, &QAction::triggered, [=]() { m_gameListFrame->Refresh(true); });
 	connect(ui->toolbar_stop, &QAction::triggered, [=]() { Emu.Stop(); });
-	connect(ui->toolbar_start, &QAction::triggered, Pause);
+	connect(ui->toolbar_start, &QAction::triggered, this, &main_window::OnPlayOrPause);
 
 	connect(ui->toolbar_fullscreen, &QAction::triggered, [=]
 	{
@@ -1398,6 +1429,7 @@ void main_window::CreateDockWindows()
 	m_mw->addDockWidget(Qt::LeftDockWidgetArea, m_logFrame);
 	m_mw->addDockWidget(Qt::RightDockWidgetArea, m_debuggerFrame);
 	m_mw->setDockNestingEnabled(true);
+	m_mw->resizeDocks({ m_logFrame }, { m_mw->sizeHint().height() / 10 }, Qt::Orientation::Vertical);
 	setCentralWidget(m_mw);
 
 	connect(m_logFrame, &log_frame::LogFrameClosed, [=]()
@@ -1452,6 +1484,7 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 		ui->bootRecentMenu->removeAction(act);
 	}
 	m_recentGameActs.clear();
+
 	// Fill the recent games menu
 	for (int i = 0; i < m_rg_entries.count(); i++)
 	{

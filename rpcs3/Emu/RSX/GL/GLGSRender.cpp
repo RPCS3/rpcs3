@@ -847,7 +847,7 @@ void GLGSRender::on_init_thread()
 				type.disable_cancel = true;
 				type.progress_bar_count = 1;
 
-				dlg = owner->shell_open_message_dialog();
+				dlg = fxm::get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>();
 				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
 				{
 					if (status != CELL_OK)
@@ -1113,15 +1113,18 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 			//Notify the user with HUD notification
 			if (g_cfg.misc.show_shader_compilation_hint)
 			{
-				if (!m_custom_ui)
+				if (m_overlay_manager)
 				{
-					//Create notification but do not draw it at this time. No need to spam flip requests
-					m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
-				}
-				else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
-				{
-					//Probe the notification
-					casted->touch();
+					if (auto dlg = m_overlay_manager->get<rsx::overlays::shader_compile_notification>())
+					{
+						//Extend duration
+						dlg->touch();
+					}
+					else
+					{
+						//Create dialog but do not show immediately
+						m_overlay_manager->create<rsx::overlays::shader_compile_notification>();
+					}
 				}
 			}
 		}
@@ -1461,11 +1464,28 @@ void GLGSRender::flip(int buffer)
 		}
 	}
 
-	if (m_custom_ui)
+	if (m_overlay_manager)
 	{
-		gl::screen.bind();
-		glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
-		m_ui_renderer.run(m_frame->client_width(), m_frame->client_height(), 0, *m_custom_ui.get());
+		if (m_overlay_manager->has_dirty())
+		{
+			for (const auto& view : m_overlay_manager->get_dirty())
+			{
+				m_ui_renderer.remove_temp_resources(view->uid);
+			}
+
+			m_overlay_manager->clear_dirty();
+		}
+
+		if (m_overlay_manager->has_visible())
+		{
+			gl::screen.bind();
+			glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
+
+			for (const auto& view : m_overlay_manager->get_views())
+			{
+				m_ui_renderer.run(m_frame->client_width(), m_frame->client_height(), 0, *view.get());
+			}
+		}
 	}
 
 	if (g_cfg.video.overlay)
@@ -1582,12 +1602,7 @@ void GLGSRender::do_local_task(bool /*idle*/)
 		m_gl_texture_cache.do_update();
 	}
 
-	if (m_overlay_cleanup_requests.size())
-	{
-		m_ui_renderer.remove_temp_resources();
-		m_overlay_cleanup_requests.clear();
-	}
-	else if (m_custom_ui)
+	if (m_overlay_manager)
 	{
 		if (!in_begin_end && native_ui_flip_request.load())
 		{
@@ -1672,10 +1687,4 @@ void GLGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 		//Discard is being called on an active query, close it
 		glEndQuery(GL_ANY_SAMPLES_PASSED);
 	}
-}
-
-void GLGSRender::shell_do_cleanup()
-{
-	//TODO: Key cleanup requests with UID to identify resources to remove
-	m_overlay_cleanup_requests.push_back(0);
 }
