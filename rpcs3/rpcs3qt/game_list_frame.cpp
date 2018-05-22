@@ -183,8 +183,7 @@ void game_list_frame::LoadSettings()
 	if (!m_gameList->horizontalHeader()->restoreState(state) && m_gameList->rowCount())
 	{
 		// If no settings exist, resize to contents.
-		m_gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-		m_gameList->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		ResizeColumnsToContents();
 	}
 
 	for (int col = 0; col < m_columnActs.count(); ++col)
@@ -223,6 +222,29 @@ void game_list_frame::FixNarrowColumns()
 		{
 			m_gameList->setColumnWidth(col, m_gameList->horizontalHeader()->minimumSectionSize());
 		}
+	}
+}
+
+void game_list_frame::ResizeColumnsToContents(int spacing)
+{
+	if (!m_gameList)
+	{
+		return;
+	}
+
+	m_gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+	m_gameList->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+
+	// Make non-icon columns slighty bigger for better visuals
+	for (int i = 1; i < m_gameList->columnCount(); i++)
+	{
+		if (m_gameList->isColumnHidden(i))
+		{
+			continue;
+		}
+
+		int size = m_gameList->horizontalHeader()->sectionSize(i) + spacing;
+		m_gameList->horizontalHeader()->resizeSection(i, size);
 	}
 }
 
@@ -418,9 +440,16 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 	if (m_isListLayout)
 	{
 		int scroll_position = m_gameList->verticalScrollBar()->value();
+		int rows = m_gameList->rowCount();
 		int row = PopulateGameList();
 		m_gameList->selectRow(row);
 		SortGameList();
+
+		// Resize columns if the game list was empty before
+		if (!rows)
+		{
+			ResizeColumnsToContents();
+		}
 
 		if (scrollAfter)
 		{

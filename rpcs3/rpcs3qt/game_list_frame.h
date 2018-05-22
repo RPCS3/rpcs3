@@ -183,6 +183,9 @@ public:
 	/** Fix columns with width smaller than the minimal section size */
 	void FixNarrowColumns();
 
+	/** Resizes the columns to their contents and adds a small spacing */
+	void ResizeColumnsToContents(int spacing = 20);
+
 	/** Refresh the gamelist with/without loading game data from files. Public so that main frame can refresh after vfs or install */
 	void Refresh(const bool fromDrive = false, const bool scrollAfter = true);
 
