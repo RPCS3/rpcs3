@@ -250,6 +250,8 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		m_splitter->setSizes({ width_left, width_right });
 	}
 
+	PopulateUI();
+
 	QByteArray game_table_state = m_gui_settings->GetValue(gui::tr_games_state).toByteArray();
 	if (!m_game_table->horizontalHeader()->restoreState(game_table_state) && m_game_table->rowCount())
 	{
@@ -266,7 +268,6 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		m_trophy_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 	}
 
-	PopulateUI();
 	ApplyFilter();
 
 	// Make connects
