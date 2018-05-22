@@ -9,6 +9,7 @@
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/RSX/GSRender.h"
 #include <atomic>
+#include <thread>
 #include <deque>
 
 static_assert(sizeof(notifier) == 8, "Unexpected size of notifier");
@@ -229,6 +230,26 @@ namespace vm
 		if (locked)
 		{
 			g_mutex.unlock();
+		}
+	}
+
+	void reservation_lock_internal(atomic_t<u64>& res)
+	{
+		for (u64 i = 0;; i++)
+		{
+			if (LIKELY(!atomic_storage<u64>::bts(res.raw(), 0)))
+			{
+				break;
+			}
+
+			if (i < 15)
+			{
+				busy_wait(500);
+			}
+			else
+			{
+				std::this_thread::yield();
+			}
 		}
 	}
 
@@ -479,11 +500,20 @@ namespace vm
 		, size(size)
 		, flags(flags)
 	{
-		// Allocate compressed reservation info area (avoid RSX and SPU areas)
-		if (addr != 0xc0000000 && addr != 0xe0000000)
+		// Allocate compressed reservation info area (avoid SPU MMIO area)
+		if (addr != 0xe0000000)
 		{
 			utils::memory_commit(g_reservations + addr / 16, size / 16);
 			utils::memory_commit(g_reservations2 + addr / 16, size / 16);
+		}
+		else
+		{
+			// RawSPU LS
+			for (u32 i = 0; i < 6; i++)
+			{
+				utils::memory_commit(g_reservations + addr / 16 + i * 0x10000, 0x4000);
+				utils::memory_commit(g_reservations2 + addr / 16 + i * 0x10000, 0x4000);
+			}
 		}
 	}
 

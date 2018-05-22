@@ -653,6 +653,11 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			return CELL_SAVEDATA_ERROR_PARAM;
 		}
 		}
+
+		if (result->result != CELL_SAVEDATA_CBRESULT_OK_NEXT)
+		{
+			funcFile = vm::null;
+		}
 	}
 
 

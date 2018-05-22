@@ -172,17 +172,11 @@ void debugger_frame::closeEvent(QCloseEvent *event)
 void debugger_frame::showEvent(QShowEvent * event)
 {
 	// resize splitter widgets
-	QByteArray state = xgui_settings->GetValue(gui::d_splitterState).toByteArray();
-
-	if (state.isEmpty()) // resize 2:1
+	if (!m_splitter->restoreState(xgui_settings->GetValue(gui::d_splitterState).toByteArray()))
 	{
 		const int width_right = width() / 3;
 		const int width_left = width() - width_right;
 		m_splitter->setSizes({width_left, width_right});
-	}
-	else
-	{
-		m_splitter->restoreState(state);
 	}
 
 	QDockWidget::showEvent(event);

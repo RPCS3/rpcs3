@@ -806,6 +806,79 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args)
 	void* dst = vm::base(eal);
 	void* src = vm::base(offset + lsa);
 
+	if (UNLIKELY(!is_get && !g_use_rtm))
+	{
+		switch (u32 size = args.size)
+		{
+		case 1:
+		{
+			auto& res = vm::reservation_lock(eal, 1);
+			*static_cast<u8*>(dst) = *static_cast<const u8*>(src);
+			res &= ~1ull;
+			break;
+		}
+		case 2:
+		{
+			auto& res = vm::reservation_lock(eal, 2);
+			*static_cast<u16*>(dst) = *static_cast<const u16*>(src);
+			res &= ~1ull;
+			break;
+		}
+		case 4:
+		{
+			auto& res = vm::reservation_lock(eal, 4);
+			*static_cast<u32*>(dst) = *static_cast<const u32*>(src);
+			res &= ~1ull;
+			break;
+		}
+		case 8:
+		{
+			auto& res = vm::reservation_lock(eal, 8);
+			*static_cast<u64*>(dst) = *static_cast<const u64*>(src);
+			res &= ~1ull;
+			break;
+		}
+		case 16:
+		{
+			auto& res = vm::reservation_lock(eal, 16);
+			_mm_store_si128(static_cast<__m128i*>(dst), _mm_load_si128(static_cast<const __m128i*>(src)));
+			res &= ~1ull;
+			break;
+		}
+		default:
+		{
+			auto* res = &vm::reservation_lock(eal, 16);
+			auto vdst = static_cast<__m128i*>(dst);
+			auto vsrc = static_cast<const __m128i*>(src);
+
+			for (u32 addr = eal, end = eal + size;; vdst++, vsrc++)
+			{
+				_mm_store_si128(vdst, _mm_load_si128(vsrc));
+
+				addr += 16;
+
+				if (addr == end)
+				{
+					break;
+				}
+
+				if (addr % 128)
+				{
+					continue;
+				}
+
+				res->fetch_and(~1ull);
+				res = &vm::reservation_lock(addr, 16);
+			}
+
+			res->fetch_and(~1ull);
+			break;
+		}
+		}
+
+		return;
+	}
+
 	if (is_get)
 	{
 		std::swap(dst, src);
@@ -825,24 +898,17 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args)
 	}
 	case 4:
 	{
-		//if (is_get && !from_mfc)
-		{
-			*static_cast<u32*>(dst) = *static_cast<const u32*>(src);
-			break;
-		}
-
-		//_mm_stream_si32(static_cast<s32*>(dst), *static_cast<const s32*>(src));
+		*static_cast<u32*>(dst) = *static_cast<const u32*>(src);
 		break;
 	}
 	case 8:
 	{
-		//if (is_get && !from_mfc)
-		{
-			*static_cast<u64*>(dst) = *static_cast<const u64*>(src);
-			break;
-		}
-
-		//_mm_stream_si64(static_cast<s64*>(dst), *static_cast<const s64*>(src));
+		*static_cast<u64*>(dst) = *static_cast<const u64*>(src);
+		break;
+	}
+	case 16:
+	{
+		_mm_store_si128(static_cast<__m128i*>(dst), _mm_load_si128(static_cast<const __m128i*>(src)));
 		break;
 	}
 	default:
@@ -851,45 +917,6 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args)
 		auto vsrc = static_cast<const __m128i*>(src);
 		auto vcnt = size / sizeof(__m128i);
 
-		//if (is_get && !from_mfc)
-		{
-			while (vcnt >= 8)
-			{
-				const __m128i data[]
-				{
-					_mm_load_si128(vsrc + 0),
-					_mm_load_si128(vsrc + 1),
-					_mm_load_si128(vsrc + 2),
-					_mm_load_si128(vsrc + 3),
-					_mm_load_si128(vsrc + 4),
-					_mm_load_si128(vsrc + 5),
-					_mm_load_si128(vsrc + 6),
-					_mm_load_si128(vsrc + 7),
-				};
-
-				_mm_store_si128(vdst + 0, data[0]);
-				_mm_store_si128(vdst + 1, data[1]);
-				_mm_store_si128(vdst + 2, data[2]);
-				_mm_store_si128(vdst + 3, data[3]);
-				_mm_store_si128(vdst + 4, data[4]);
-				_mm_store_si128(vdst + 5, data[5]);
-				_mm_store_si128(vdst + 6, data[6]);
-				_mm_store_si128(vdst + 7, data[7]);
-
-				vcnt -= 8;
-				vsrc += 8;
-				vdst += 8;
-			}
-
-			while (vcnt--)
-			{
-				_mm_store_si128(vdst++, _mm_load_si128(vsrc++));
-			}
-
-			break;
-		}
-
-		// Disabled
 		while (vcnt >= 8)
 		{
 			const __m128i data[]
@@ -904,14 +931,14 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args)
 				_mm_load_si128(vsrc + 7),
 			};
 
-			_mm_stream_si128(vdst + 0, data[0]);
-			_mm_stream_si128(vdst + 1, data[1]);
-			_mm_stream_si128(vdst + 2, data[2]);
-			_mm_stream_si128(vdst + 3, data[3]);
-			_mm_stream_si128(vdst + 4, data[4]);
-			_mm_stream_si128(vdst + 5, data[5]);
-			_mm_stream_si128(vdst + 6, data[6]);
-			_mm_stream_si128(vdst + 7, data[7]);
+			_mm_store_si128(vdst + 0, data[0]);
+			_mm_store_si128(vdst + 1, data[1]);
+			_mm_store_si128(vdst + 2, data[2]);
+			_mm_store_si128(vdst + 3, data[3]);
+			_mm_store_si128(vdst + 4, data[4]);
+			_mm_store_si128(vdst + 5, data[5]);
+			_mm_store_si128(vdst + 6, data[6]);
+			_mm_store_si128(vdst + 7, data[7]);
 
 			vcnt -= 8;
 			vsrc += 8;
@@ -920,14 +947,10 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args)
 
 		while (vcnt--)
 		{
-			_mm_stream_si128(vdst++, _mm_load_si128(vsrc++));
+			_mm_store_si128(vdst++, _mm_load_si128(vsrc++));
 		}
+		break;
 	}
-	}
-
-	if (is_get)
-	{
-		//_mm_sfence();
 	}
 }
 
@@ -1048,7 +1071,7 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 	const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ffff);
 
 	// Store unconditionally
-	if (g_use_rtm)
+	if (LIKELY(g_use_rtm))
 	{
 		const u64 count = spu_putlluc_tx(addr, to_write.data());
 
@@ -1056,17 +1079,14 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 		{
 			LOG_ERROR(SPU, "%s took too long: %u", args.cmd, count);
 		}
-
-		vm::reservation_notifier(addr, 128).notify_all();
-		return;
+	}
+	else
+	{
+		auto& res = vm::reservation_lock(addr, 128);
+		data = to_write;
+		vm::reservation_update(addr, 128);
 	}
 
-	vm::writer_lock lock(0);
-	vm::reservation_update(addr, 128, true);
-	_mm_sfence();
-	data = to_write;
-	_mm_sfence();
-	vm::reservation_update(addr, 128);
 	vm::reservation_notifier(addr, 128).notify_all();
 }
 
@@ -1251,7 +1271,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 			}
 		}
 
-		if (g_use_rtm)
+		if (LIKELY(g_use_rtm))
 		{
 			const u64 count = spu_getll_tx(raddr, rdata.data(), &rtime);
 
@@ -1260,36 +1280,12 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 				LOG_ERROR(SPU, "%s took too long: %u", args.cmd, count);
 			}
 		}
-
-		// Do several attemps
-		for (uint i = 0; !g_use_rtm && i < 5; i++)
+		else
 		{
-			rtime = vm::reservation_acquire(raddr, 128);
-			_mm_lfence();
-
-			// Check LSB: atomic store may be in progress
-			if (LIKELY((rtime & 1) == 0))
-			{
-				rdata = data;
-				_mm_lfence();
-
-				if (LIKELY(vm::reservation_acquire(raddr, 128) == rtime))
-				{
-					// Copy to LS
-					_ref<decltype(rdata)>(args.lsa & 0x3ffff) = rdata;
-					ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
-					return true;
-				}
-			}
-
-			busy_wait(300);
-		}
-
-		if (!g_use_rtm)
-		{
-			vm::reader_lock lock;
-			rtime = vm::reservation_acquire(raddr, 128);
+			auto& res = vm::reservation_lock(raddr, 128);
+			rtime = res & ~1ull;
 			rdata = data;
+			res &= ~1ull;
 		}
 
 		// Copy to LS
@@ -1308,7 +1304,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 
 		if (raddr == args.eal && rtime == vm::reservation_acquire(raddr, 128))
 		{
-			if (g_use_rtm)
+			if (LIKELY(g_use_rtm))
 			{
 				if (spu_putllc_tx(raddr, rtime, rdata.data(), to_write.data()))
 				{
@@ -1320,20 +1316,24 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 			}
 			else if (rdata == data)
 			{
+				auto& res = vm::reservation_lock(raddr, 128);
+
+				vm::_ref<atomic_t<u32>>(raddr) += 0;
+
 				// Full lock (heavyweight)
 				// TODO: vm::check_addr
 				vm::writer_lock lock(1);
 
-				if (rtime == vm::reservation_acquire(raddr, 128) && rdata == data)
+				if (rtime == (res & ~1ull) && rdata == data)
 				{
-					vm::reservation_update(raddr, 128, true);
-					_mm_sfence();
 					data = to_write;
-					_mm_sfence();
-					result = true;
-
 					vm::reservation_update(raddr, 128);
 					vm::reservation_notifier(raddr, 128).notify_all();
+					result = true;
+				}
+				else
+				{
+					res &= ~1ull;
 				}
 			}
 		}

@@ -105,6 +105,20 @@ namespace vm
 		return *reinterpret_cast<notifier*>(g_reservations2 + addr / 128 * 8);
 	}
 
+	void reservation_lock_internal(atomic_t<u64>&);
+
+	inline atomic_t<u64>& reservation_lock(u32 addr, u32 size)
+	{
+		auto& res = vm::reservation_acquire(addr, size);
+
+		if (UNLIKELY(atomic_storage<u64>::bts(res.raw(), 0)))
+		{
+			reservation_lock_internal(res);
+		}
+
+		return res;
+	}
+
 	// Change memory protection of specified memory region
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
 
