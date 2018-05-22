@@ -174,12 +174,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 void game_list_frame::LoadSettings()
 {
 	QByteArray state = xgui_settings->GetValue(gui::gl_state).toByteArray();
-
-	if (!state.isEmpty())
-	{
-		m_gameList->horizontalHeader()->restoreState(state);
-	}
-	else if (m_gameList->rowCount() > 0)
+	if (!m_gameList->horizontalHeader()->restoreState(state) && m_gameList->rowCount())
 	{
 		// If no settings exist, go to default.
 		m_gameList->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
@@ -198,9 +193,7 @@ void game_list_frame::LoadSettings()
 	m_gameList->horizontalHeader()->restoreState(m_gameList->horizontalHeader()->saveState());
 
 	m_colSortOrder = xgui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
-
 	m_sortColumn = xgui_settings->GetValue(gui::gl_sortCol).toInt();
-
 	m_categoryFilters = xgui_settings->GetGameListCategoryFilters();
 
 	Refresh(true);
