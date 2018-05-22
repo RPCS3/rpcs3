@@ -205,20 +205,17 @@ game_list_frame::~game_list_frame()
 
 void game_list_frame::FixNarrowColumns()
 {
-	if (!isVisible()) // don't use isHidden here
-	{
-		// Handle Qt glitch. If we call columnWidth when the table is not shown yet then some columns will have 0 width
-		return;
-	}
-
 	qApp->processEvents();
 
 	// handle columns (other than the icon column) that have zero width after showing them (stuck between others)
 	for (int col = 1; col < m_columnActs.count(); ++col)
 	{
-		const bool visible = !m_gameList->isColumnHidden(col);
+		if (m_gameList->isColumnHidden(col))
+		{
+			continue;
+		}
 
-		if (visible && m_gameList->columnWidth(col) <= m_gameList->horizontalHeader()->minimumSectionSize())
+		if (m_gameList->columnWidth(col) <= m_gameList->horizontalHeader()->minimumSectionSize())
 		{
 			m_gameList->setColumnWidth(col, m_gameList->horizontalHeader()->minimumSectionSize());
 		}
