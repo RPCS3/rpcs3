@@ -1191,7 +1191,7 @@ s32 sceNpManagerRequestTicket()
 s32 sceNpManagerRequestTicket2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
-	return CELL_OK;
+	return SCE_NP_ERROR_OFFLINE;
 }
 
 s32 sceNpManagerGetTicket()
