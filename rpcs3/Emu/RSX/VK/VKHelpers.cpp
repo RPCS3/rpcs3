@@ -201,7 +201,6 @@ namespace vk
 		return g_mem_allocator;
 	}
 
-
 	void set_current_thread_ctx(const vk::context &ctx)
 	{
 		g_current_vulkan_ctx = (vk::context *)&ctx;

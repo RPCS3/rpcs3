@@ -19,7 +19,7 @@
 #include "../Common/GLSLCommon.h"
 #include "../rsx_cache.h"
 
-#include "vk_mem_alloc.h"
+#include "3rdparty/GPUOpen/Include/vk_mem_alloc.h"
 
 #ifndef _WIN32
 #include <X11/Xutil.h>
@@ -328,22 +328,22 @@ namespace vk
 
 	// Memory Allocator - base class
 
-	typedef void *HANDLE_DEV_MEM;	// abstract handle to device memory
-
 	class mem_allocator_base
 	{
 	public:
+		using mem_handle_t = void *;
+
 		mem_allocator_base(VkDevice dev, VkPhysicalDevice pdev) : m_device(dev) {};
 		~mem_allocator_base() {};
 
 		virtual void destroy() = 0;
 
-		virtual HANDLE_DEV_MEM alloc(u64 block_sz, uint32_t memory_type_index) = 0;
-		virtual void free(HANDLE_DEV_MEM) = 0;
-		virtual void *map(HANDLE_DEV_MEM, u64 offset, u64 size) = 0;
-		virtual void unmap(HANDLE_DEV_MEM) = 0;
-		virtual VkDeviceMemory get_vk_device_memory(HANDLE_DEV_MEM h_dev_mem) = 0;
-		virtual u64 get_vk_device_memory_offset(HANDLE_DEV_MEM h_dev_mem) = 0;
+		virtual mem_handle_t alloc(u64 block_sz, uint32_t memory_type_index) = 0;
+		virtual void free(mem_handle_t mem_handle) = 0;
+		virtual void *map(mem_handle_t mem_handle, u64 offset, u64 size) = 0;
+		virtual void unmap(mem_handle_t mem_handle) = 0;
+		virtual VkDeviceMemory get_vk_device_memory(mem_handle_t mem_handle) = 0;
+		virtual u64 get_vk_device_memory_offset(mem_handle_t mem_handle) = 0;
 
 	protected:
 		VkDevice m_device;
@@ -372,7 +372,7 @@ namespace vk
 			vmaDestroyAllocator(m_allocator);
 		}
 
-		HANDLE_DEV_MEM alloc(u64 block_sz, uint32_t memory_type_index) override
+		mem_handle_t alloc(u64 block_sz, uint32_t memory_type_index) override
 		{
 			VmaAllocation vma_alloc;
 			VkMemoryRequirements mem_req = {};
@@ -385,40 +385,40 @@ namespace vk
 			return vma_alloc;
 		}
 
-		void free(HANDLE_DEV_MEM h_dev_mem) override
+		void free(mem_handle_t mem_handle) override
 		{
-			vmaFreeMemory(m_allocator, static_cast<VmaAllocation>(h_dev_mem));
+			vmaFreeMemory(m_allocator, static_cast<VmaAllocation>(mem_handle));
 		}
 
-		void *map(HANDLE_DEV_MEM h_dev_mem, u64 offset, u64 size) override
+		void *map(mem_handle_t mem_handle, u64 offset, u64 size) override
 		{
 			void *data = nullptr;
 
-			CHECK_RESULT(vmaMapMemory(m_allocator, static_cast<VmaAllocation>(h_dev_mem), &data));
+			CHECK_RESULT(vmaMapMemory(m_allocator, static_cast<VmaAllocation>(mem_handle), &data));
 
 			// Add offset
 			data = static_cast<u8 *>(data) + offset;
 			return data;
 		}
 
-		void unmap(HANDLE_DEV_MEM h_dev_mem) override
+		void unmap(mem_handle_t mem_handle) override
 		{
-			vmaUnmapMemory(m_allocator, static_cast<VmaAllocation>(h_dev_mem));
+			vmaUnmapMemory(m_allocator, static_cast<VmaAllocation>(mem_handle));
 		}
 
-		VkDeviceMemory get_vk_device_memory(HANDLE_DEV_MEM h_dev_mem)
+		VkDeviceMemory get_vk_device_memory(mem_handle_t mem_handle)
 		{
 			VmaAllocationInfo alloc_info;
 
-			vmaGetAllocationInfo(m_allocator, static_cast<VmaAllocation>(h_dev_mem), &alloc_info);
+			vmaGetAllocationInfo(m_allocator, static_cast<VmaAllocation>(mem_handle), &alloc_info);
 			return alloc_info.deviceMemory;
 		}
 
-		u64 get_vk_device_memory_offset(HANDLE_DEV_MEM h_dev_mem)
+		u64 get_vk_device_memory_offset(mem_handle_t mem_handle)
 		{
 			VmaAllocationInfo alloc_info;
 
-			vmaGetAllocationInfo(m_allocator, static_cast<VmaAllocation>(h_dev_mem), &alloc_info);
+			vmaGetAllocationInfo(m_allocator, static_cast<VmaAllocation>(mem_handle), &alloc_info);
 			return alloc_info.offset;
 		}
 
@@ -436,7 +436,7 @@ namespace vk
 
 		void destroy() override {};
 
-		HANDLE_DEV_MEM alloc(u64 block_sz, uint32_t memory_type_index) override
+		mem_handle_t alloc(u64 block_sz, uint32_t memory_type_index) override
 		{
 			VkDeviceMemory memory;
 			VkMemoryAllocateInfo info = {};
@@ -448,29 +448,29 @@ namespace vk
 			return memory;
 		}
 
-		void free(HANDLE_DEV_MEM h_dev_mem) override
+		void free(mem_handle_t mem_handle) override
 		{
-			vkFreeMemory(m_device, (VkDeviceMemory)h_dev_mem, nullptr);
+			vkFreeMemory(m_device, (VkDeviceMemory)mem_handle, nullptr);
 		}
 
-		void *map(HANDLE_DEV_MEM h_dev_mem, u64 offset, u64 size) override
+		void *map(mem_handle_t mem_handle, u64 offset, u64 size) override
 		{
 			void *data = nullptr;
-			CHECK_RESULT(vkMapMemory(m_device, (VkDeviceMemory)h_dev_mem, offset, std::max<u64>(size, 1u), 0, &data));
+			CHECK_RESULT(vkMapMemory(m_device, (VkDeviceMemory)mem_handle, offset, std::max<u64>(size, 1u), 0, &data));
 			return data;
 		}
 
-		void unmap(HANDLE_DEV_MEM h_dev_mem) override
+		void unmap(mem_handle_t mem_handle) override
 		{
-			vkUnmapMemory(m_device, (VkDeviceMemory)h_dev_mem);
+			vkUnmapMemory(m_device, (VkDeviceMemory)mem_handle);
 		}
 
-		VkDeviceMemory get_vk_device_memory(HANDLE_DEV_MEM h_dev_mem) override
+		VkDeviceMemory get_vk_device_memory(mem_handle_t mem_handle) override
 		{
-			return (VkDeviceMemory)h_dev_mem;
+			return (VkDeviceMemory)mem_handle;
 		}
 
-		u64 get_vk_device_memory_offset(HANDLE_DEV_MEM h_dev_mem)
+		u64 get_vk_device_memory_offset(mem_handle_t mem_handle)
 		{
 			return 0;
 		}
@@ -480,37 +480,36 @@ namespace vk
 
 	struct memory_block
 	{
-		HANDLE_DEV_MEM m_h_dev_mem;
 
 		memory_block(VkDevice dev, u64 block_sz, uint32_t memory_type_index) : m_device(dev)
 		{
 			m_mem_allocator = get_current_mem_allocator();
-			m_h_dev_mem = m_mem_allocator->alloc(block_sz, memory_type_index);
+			m_mem_handle = m_mem_allocator->alloc(block_sz, memory_type_index);
 		}
 
 		~memory_block()
 		{
-			m_mem_allocator->free(m_h_dev_mem);
+			m_mem_allocator->free(m_mem_handle);
 		}
 
 		VkDeviceMemory get_vk_device_memory()
 		{
-			return m_mem_allocator->get_vk_device_memory(m_h_dev_mem);
+			return m_mem_allocator->get_vk_device_memory(m_mem_handle);
 		}
 
 		u64 get_vk_device_memory_offset()
 		{
-			return m_mem_allocator->get_vk_device_memory_offset(m_h_dev_mem);
+			return m_mem_allocator->get_vk_device_memory_offset(m_mem_handle);
 		}
 
 		void *map(u64 offset, u64 size)
 		{
-			return m_mem_allocator->map(m_h_dev_mem, offset, size);
+			return m_mem_allocator->map(m_mem_handle, offset, size);
 		}
 
 		void unmap()
 		{
-			m_mem_allocator->unmap(m_h_dev_mem);
+			m_mem_allocator->unmap(m_mem_handle);
 		}
 
 		memory_block(const memory_block&) = delete;
@@ -519,6 +518,7 @@ namespace vk
 	private:
 		VkDevice m_device;
 		std::shared_ptr<vk::mem_allocator_base> m_mem_allocator;
+		mem_allocator_base::mem_handle_t m_mem_handle;
 	};
 
 	class memory_block_deprecated

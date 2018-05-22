@@ -1699,6 +1699,13 @@
               </property>
              </widget>
             </item>
+            <item>
+               <widget class="QCheckBox" name="disableVulkanMemAllocator">
+                <property name="text">
+                <string>Disable Vulkan Memory Allocator</string>
+               </property>
+              </widget>
+            </item>             
            </layout>
           </widget>
          </item>

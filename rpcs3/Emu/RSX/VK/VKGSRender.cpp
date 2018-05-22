@@ -548,8 +548,16 @@ VKGSRender::VKGSRender() : GSRender()
 	vk::set_current_renderer(m_swapchain->get_device());
 
 	// Choose memory allocator (device memory)
-	//m_mem_allocator = std::make_shared<vk::mem_allocator_vk>(*m_device, m_device->gpu());
-	m_mem_allocator = std::make_shared<vk::mem_allocator_vma>(*m_device, m_device->gpu());
+	if (g_cfg.video.disable_vulkan_mem_allocator) 
+	{
+		m_mem_allocator = std::make_shared<vk::mem_allocator_vk>(*m_device, m_device->gpu());
+	}
+	else 
+	{
+		m_mem_allocator = std::make_shared<vk::mem_allocator_vma>(*m_device, m_device->gpu());
+	}
+
+	
 	vk::set_current_mem_allocator(m_mem_allocator);
 
 	m_client_width = m_frame->client_width();
