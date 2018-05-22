@@ -243,43 +243,31 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	if (!restoreGeometry(m_gui_settings->GetValue(gui::tr_geometry).toByteArray()))
 		resize(QDesktopWidget().availableGeometry().size() * 0.7);
 
-	QByteArray splitterstate = m_gui_settings->GetValue(gui::tr_splitterState).toByteArray();
-	if (splitterstate.isEmpty())
+	if (!m_splitter->restoreState(m_gui_settings->GetValue(gui::tr_splitterState).toByteArray()))
 	{
 		const int width_left = m_splitter->width() * 0.4;
 		const int width_right = m_splitter->width() - width_left;
 		m_splitter->setSizes({ width_left, width_right });
 	}
-	else
-	{
-		m_splitter->restoreState(splitterstate);
-	}
+
+	PopulateUI();
 
 	QByteArray game_table_state = m_gui_settings->GetValue(gui::tr_games_state).toByteArray();
-	if (!game_table_state.isEmpty())
+	if (!m_game_table->horizontalHeader()->restoreState(game_table_state) && m_game_table->rowCount())
 	{
-		m_game_table->horizontalHeader()->restoreState(game_table_state);
-	}
-	else if (m_game_table->rowCount() > 0)
-	{
-		// If no settings exist, go to default.
-		m_game_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-		m_game_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		// If no settings exist, resize to contents. (disabled)
+		//m_game_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		//m_game_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 	}
 
 	QByteArray trophy_table_state = m_gui_settings->GetValue(gui::tr_trophy_state).toByteArray();
-	if (!trophy_table_state.isEmpty())
+	if (!m_trophy_table->horizontalHeader()->restoreState(trophy_table_state) && m_trophy_table->rowCount())
 	{
-		m_trophy_table->horizontalHeader()->restoreState(trophy_table_state);
-	}
-	else if (m_trophy_table->rowCount() > 0)
-	{
-		// If no settings exist, go to default.
-		m_trophy_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-		m_trophy_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		// If no settings exist, resize to contents. (disabled)
+		//m_trophy_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		//m_trophy_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 	}
 
-	PopulateUI();
 	ApplyFilter();
 
 	// Make connects

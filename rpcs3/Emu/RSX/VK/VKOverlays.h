@@ -4,7 +4,7 @@
 #include "VKFragmentProgram.h"
 #include "VKRenderTargets.h"
 
-#include "../overlays.h"
+#include "../Overlays/overlays.h"
 
 namespace vk
 {
@@ -417,7 +417,7 @@ namespace vk
 		std::vector<std::unique_ptr<vk::image>> resources;
 		std::unordered_map<u64, std::unique_ptr<vk::image>> font_cache;
 		std::unordered_map<u64, std::unique_ptr<vk::image_view>> view_cache;
-		std::vector<std::unique_ptr<vk::image>> temp_image_cache;
+		std::unordered_map<u64, std::pair<u32, std::unique_ptr<vk::image>>> temp_image_cache;
 		std::unordered_map<u64, std::unique_ptr<vk::image_view>> temp_view_cache;
 
 		ui_overlay_renderer()
@@ -491,7 +491,7 @@ namespace vk
 		}
 
 		vk::image_view* upload_simple_texture(vk::render_device &dev, vk::command_buffer &cmd,
-			vk::vk_data_heap& upload_heap, u64 key, int w, int h, bool font, bool temp, void *pixel_src)
+			vk::vk_data_heap& upload_heap, u64 key, int w, int h, bool font, bool temp, void *pixel_src, u32 owner_uid)
 		{
 			const VkFormat format = (font) ? VK_FORMAT_R8_UNORM : VK_FORMAT_B8G8R8A8_UNORM;
 			const u32 pitch = (font) ? w : w * 4;
@@ -543,7 +543,7 @@ namespace vk
 			else if (!temp)
 				resources.push_back(std::move(tex));
 			else
-				temp_image_cache.push_back(std::move(tex));
+				temp_image_cache[key] = std::move(std::make_pair(owner_uid, std::move(tex)));
 
 			return result;
 		}
@@ -559,7 +559,7 @@ namespace vk
 			u64 storage_key = 1;
 			for (const auto &res : configuration.texture_raw_data)
 			{
-				upload_simple_texture(dev, cmd, upload_heap, storage_key++, res->w, res->h, false, false, res->data);
+				upload_simple_texture(dev, cmd, upload_heap, storage_key++, res->w, res->h, false, false, res->data, UINT32_MAX);
 			}
 
 			configuration.free_resources();
@@ -577,10 +577,22 @@ namespace vk
 			overlay_pass::destroy();
 		}
 
-		void remove_temp_resources()
+		void remove_temp_resources(u32 key)
 		{
-			temp_image_cache.clear();
-			temp_view_cache.clear();
+			std::vector<u64> keys_to_remove;
+			for (auto It = temp_image_cache.begin(); It != temp_image_cache.end(); ++It)
+			{
+				if (It->second.first == key)
+				{
+					keys_to_remove.push_back(It->first);
+				}
+			}
+
+			for (const auto& _key : keys_to_remove)
+			{
+				temp_image_cache.erase(_key);
+				temp_view_cache.erase(_key);
+			}
 		}
 
 		vk::image_view* find_font(rsx::overlays::font *font, vk::command_buffer &cmd, vk::vk_data_heap &upload_heap)
@@ -591,17 +603,19 @@ namespace vk
 				return found->second.get();
 
 			//Create font file
-			return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, font->width, font->height, true, false, font->glyph_data.data());
+			return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, font->width, font->height,
+					true, false, font->glyph_data.data(), UINT32_MAX);
 		}
 
-		vk::image_view* find_temp_image(rsx::overlays::image_info *desc, vk::command_buffer &cmd, vk::vk_data_heap &upload_heap)
+		vk::image_view* find_temp_image(rsx::overlays::image_info *desc, vk::command_buffer &cmd, vk::vk_data_heap &upload_heap, u32 owner_uid)
 		{
 			u64 key = (u64)desc;
 			auto found = temp_view_cache.find(key);
 			if (found != temp_view_cache.end())
 				return found->second.get();
 
-			return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, desc->w, desc->h, false, true, desc->data);
+			return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, desc->w, desc->h,
+					false, true, desc->data, owner_uid);
 		}
 
 		void update_uniforms(vk::glsl::program* /*program*/) override
@@ -674,7 +688,7 @@ namespace vk
 					src = find_font(command.first.font_ref, cmd, upload_heap)->value;
 					break;
 				case rsx::overlays::image_resource_id::raw_image:
-					src = find_temp_image((rsx::overlays::image_info*)command.first.external_data_ref, cmd, upload_heap)->value;
+					src = find_temp_image((rsx::overlays::image_info*)command.first.external_data_ref, cmd, upload_heap, ui.uid)->value;
 					break;
 				default:
 					src = view_cache[command.first.texture_ref]->value;
