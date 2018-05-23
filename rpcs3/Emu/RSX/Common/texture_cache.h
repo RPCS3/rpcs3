@@ -976,7 +976,6 @@ namespace rsx
 				no_access_range = region.get_min_max(no_access_range);
 			}
 
-			region.protect(utils::protection::no);
 			region.create(width, height, 1, 1, nullptr, image, pitch, false, std::forward<Args>(extras)...);
 			region.set_context(texture_upload_context::framebuffer_storage);
 			region.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
@@ -1018,6 +1017,8 @@ namespace rsx
 				}
 			}
 
+			// Delay protection until here in case the invalidation block above has unprotected pages in this range
+			region.reprotect(utils::protection::no, { 0, memory_size });
 			update_cache_tag();
 		}
 
