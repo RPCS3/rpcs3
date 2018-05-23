@@ -338,7 +338,7 @@ namespace vk
 
 		virtual void destroy() = 0;
 
-		virtual mem_handle_t alloc(u64 block_sz, uint32_t memory_type_index) = 0;
+		virtual mem_handle_t alloc(u64 block_sz, u64 alignment, uint32_t memory_type_index) = 0;
 		virtual void free(mem_handle_t mem_handle) = 0;
 		virtual void *map(mem_handle_t mem_handle, u64 offset, u64 size) = 0;
 		virtual void unmap(mem_handle_t mem_handle) = 0;
@@ -372,7 +372,7 @@ namespace vk
 			vmaDestroyAllocator(m_allocator);
 		}
 
-		mem_handle_t alloc(u64 block_sz, uint32_t memory_type_index) override
+		mem_handle_t alloc(u64 block_sz, u64 alignment, uint32_t memory_type_index) override
 		{
 			VmaAllocation vma_alloc;
 			VkMemoryRequirements mem_req = {};
@@ -380,6 +380,7 @@ namespace vk
 
 			mem_req.memoryTypeBits = 1u << memory_type_index;
 			mem_req.size = block_sz;
+			mem_req.alignment = alignment;
 			create_info.memoryTypeBits = 1u << memory_type_index;
 			CHECK_RESULT(vmaAllocateMemory(m_allocator, &mem_req, &create_info, &vma_alloc, nullptr));
 			return vma_alloc;
@@ -436,7 +437,7 @@ namespace vk
 
 		void destroy() override {};
 
-		mem_handle_t alloc(u64 block_sz, uint32_t memory_type_index) override
+		mem_handle_t alloc(u64 block_sz, u64 alignment, uint32_t memory_type_index) override
 		{
 			VkDeviceMemory memory;
 			VkMemoryAllocateInfo info = {};
@@ -480,11 +481,10 @@ namespace vk
 
 	struct memory_block
 	{
-
-		memory_block(VkDevice dev, u64 block_sz, uint32_t memory_type_index) : m_device(dev)
+		memory_block(VkDevice dev, u64 block_sz, u64 alignment, uint32_t memory_type_index) : m_device(dev)
 		{
 			m_mem_allocator = get_current_mem_allocator();
-			m_mem_handle = m_mem_allocator->alloc(block_sz, memory_type_index);
+			m_mem_handle = m_mem_allocator->alloc(block_sz, alignment, memory_type_index);
 		}
 
 		~memory_block()
@@ -519,77 +519,6 @@ namespace vk
 		VkDevice m_device;
 		std::shared_ptr<vk::mem_allocator_base> m_mem_allocator;
 		mem_allocator_base::mem_handle_t m_mem_handle;
-	};
-
-	class memory_block_deprecated
-	{
-		VkDeviceMemory vram = nullptr;
-		vk::render_device *owner = nullptr;
-		u64 vram_block_sz = 0;
-		bool mappable = false;
-
-	public:
-		memory_block_deprecated() {}
-		~memory_block_deprecated() {}
-
-		void allocate_from_pool(vk::render_device &device, u64 block_sz, bool host_visible, u32 typeBits)
-		{
-			if (vram)
-				destroy();
-
-			u32 typeIndex = 0;
-
-			owner = (vk::render_device*)&device;
-			VkDevice dev = (VkDevice)(*owner);
-
-			u32 access_mask = 0;
-
-			if (host_visible)
-				access_mask |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-
-			if (!owner->get_compatible_memory_type(typeBits, access_mask, &typeIndex))
-				fmt::throw_exception("Could not find suitable memory type!" HERE);
-
-			VkMemoryAllocateInfo infos;
-			infos.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			infos.pNext = nullptr;
-			infos.allocationSize = block_sz;
-			infos.memoryTypeIndex = typeIndex;
-
-			CHECK_RESULT(vkAllocateMemory(dev, &infos, nullptr, &vram));
-			vram_block_sz = block_sz;
-			mappable = host_visible;
-		}
-
-		void allocate_from_pool(vk::render_device &device, u64 block_sz, u32 typeBits)
-		{
-			allocate_from_pool(device, block_sz, true, typeBits);
-		}
-
-		void destroy()
-		{
-			VkDevice dev = (VkDevice)(*owner);
-			vkFreeMemory(dev, vram, nullptr);
-
-			owner = nullptr;
-			vram = nullptr;
-			vram_block_sz = 0;
-		}
-
-		bool is_mappable()
-		{
-			return mappable;
-		}
-
-		vk::render_device& get_owner()
-		{
-			return (*owner);
-		}
-
-		operator VkDeviceMemory()
-		{
-			return vram;
-		}
 	};
 
 	struct image
@@ -640,7 +569,7 @@ namespace vk
 					fmt::throw_exception("No compatible memory type was found!" HERE);
 			}
 
-			memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_type_index);
+			memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_req.alignment, memory_type_index);
 			CHECK_RESULT(vkBindImageMemory(m_device, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset()));
 		}
 
@@ -765,7 +694,7 @@ namespace vk
 					fmt::throw_exception("No compatible memory type was found!" HERE);
 			}
 
-			memory.reset(new memory_block(m_device, memory_reqs.size, memory_type_index));
+			memory.reset(new memory_block(m_device, memory_reqs.size, memory_reqs.alignment, memory_type_index));
 			vkBindBufferMemory(dev, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset());
 		}
 
@@ -1858,7 +1787,7 @@ public:
 			VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = {};
 			dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
 			dbgCreateInfo.pfnCallback = callback;
-			dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+			dbgCreateInfo.flags = 0x1F;// VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
 
 			CHECK_RESULT(createDebugReportCallback(m_instance, &dbgCreateInfo, NULL, &m_debugger));
 		}
