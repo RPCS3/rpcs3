@@ -1,5 +1,4 @@
 #include "stdafx.h"
-
 #include "VKHelpers.h"
 #include "Utilities/mutex.h"
 
