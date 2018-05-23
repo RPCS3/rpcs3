@@ -1280,14 +1280,17 @@ namespace rsx
 	{
 		if (!in_begin_end)
 		{
-			reader_lock lock(m_mtx_task);
-			for (const auto& range : m_invalidated_memory_ranges)
+			if (!m_invalidated_memory_ranges.empty())
 			{
-				on_invalidate_memory_range(range.first, range.second);
-			}
+				writer_lock lock(m_mtx_task);
 
-			lock.upgrade();
-			m_invalidated_memory_ranges.clear();
+				for (const auto& range : m_invalidated_memory_ranges)
+				{
+					on_invalidate_memory_range(range.first, range.second);
+				}
+
+				m_invalidated_memory_ranges.clear();
+			}
 		}
 	}
 
