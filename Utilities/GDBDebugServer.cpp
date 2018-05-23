@@ -94,11 +94,6 @@ u64 hex_to_u64(std::string val) {
 	return result;
 }
 
-inline bool GDBDebugServer::threadIsActive(std::shared_ptr<cpu_thread> t)
-{
-	return t != nullptr;
-}
-
 void GDBDebugServer::start_server()
 {
 	server_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -343,6 +338,7 @@ bool GDBDebugServer::select_thread(u64 id)
 		selected_thread = ppu.ptr;
 		return true;
 	}
+	gdbDebugServer.warning("Can't select thread! Is the emulator running?" HERE);
 	return false;
 }
 
@@ -591,14 +587,8 @@ bool GDBDebugServer::cmd_read_all_registers(gdb_cmd & cmd)
 {
 	std::string result;
 	select_thread(general_ops_thread_id);
-
 	auto th = selected_thread.lock();
-	if (!threadIsActive(th)) {
-		gdbDebugServer.warning("No threads running; sending empty processor state to GDB client");
-		result.reserve(68*16 + 3*8);
-		result.clear(); //may not be necessary but good to prevent accidental leakage of memory contents
-		return send_cmd_ack(result);
-	} else if (th->id_type() == 1) {
+	if (th->id_type() == 1) {
 		auto ppu = std::static_pointer_cast<ppu_thread>(th);
 		//68 64-bit registers, and 3 32-bit
 		result.reserve(68*16 + 3*8);

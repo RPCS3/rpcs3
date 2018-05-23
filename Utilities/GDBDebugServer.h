@@ -125,10 +125,6 @@ public:
 	virtual std::string get_name() const;
 	virtual void on_stop() override final;
 	void pause_from(cpu_thread* t);
-
-private:
-	//safety check to see if a thread exists
-	inline bool threadIsActive(std::shared_ptr<cpu_thread> t);
 };
 
 extern u32 g_gdb_debugger_id;

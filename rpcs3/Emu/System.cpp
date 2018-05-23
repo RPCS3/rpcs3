@@ -239,8 +239,11 @@ void Emulator::Init()
 	fs::create_path(dev_usb);
 
 #ifdef WITH_GDB_DEBUGGER
-	fxm::make<GDBDebugServer>();
+	// TODO/FIXME: this is the previous location of GDB debug server initialization
+	// FIXME: using legacy notation, should be switched to standard
+	LOG_SUCCESS(GENERAL, "GDB debug server will be started and listening on %d upon emulator boot", (int) g_cfg.misc.gdb_server_port);
 #endif
+
 	// Initialize patch engine
 	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
 }
@@ -1015,6 +1018,11 @@ void Emulator::Run()
 	idm::select<ppu_thread>(on_select);
 	idm::select<RawSPUThread>(on_select);
 	idm::select<SPUThread>(on_select);
+
+#ifdef WITH_GDB_DEBUGGER
+	// Initialize debug server at the end of emu run sequence
+	fxm::make<GDBDebugServer>();
+#endif
 }
 
 bool Emulator::Pause()
