@@ -1280,11 +1280,13 @@ namespace rsx
 	{
 		if (!in_begin_end)
 		{
+			reader_lock lock(m_mtx_task);
 			for (const auto& range : m_invalidated_memory_ranges)
 			{
 				on_invalidate_memory_range(range.first, range.second);
 			}
 
+			lock.upgrade();
 			m_invalidated_memory_ranges.clear();
 		}
 	}
@@ -2327,6 +2329,7 @@ namespace rsx
 
 	void thread::on_notify_memory_unmapped(u32 base_address, u32 size)
 	{
+		writer_lock lock(m_mtx_task);
 		m_invalidated_memory_ranges.push_back({ base_address, size });
 	}
 
