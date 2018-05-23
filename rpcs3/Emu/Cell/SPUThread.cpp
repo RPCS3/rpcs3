@@ -1132,24 +1132,10 @@ void SPUThread::do_mfc(bool wait)
 		{
 			if (!test(ch_stall_mask, mask))
 			{
-				if (g_use_rtm)
+				if (do_list_transfer(args))
 				{
-					if (do_list_transfer(args))
-					{
-						removed++;
-						return true;
-					}
-				}
-				else if (vm::passive_lock(*this, wait))
-				{
-					if (do_list_transfer(args))
-					{
-						vm::passive_unlock(*this);
-						removed++;
-						return true;
-					}
-
-					vm::passive_unlock(*this);
+					removed++;
+					return true;
 				}
 			}
 
@@ -1164,25 +1150,7 @@ void SPUThread::do_mfc(bool wait)
 
 		if (args.size)
 		{
-			if (g_use_rtm)
-			{
-				do_dma_transfer(args);
-			}
-			else if (vm::passive_lock(*this, wait))
-			{
-				do_dma_transfer(args);
-				vm::passive_unlock(*this);
-			}
-			else
-			{
-				if (args.cmd & MFC_BARRIER_MASK)
-				{
-					barrier |= mask;
-				}
-
-				fence |= mask;
-				return false;
-			}
+			do_dma_transfer(args);
 		}
 		else if (args.cmd == MFC_PUTQLLUC_CMD)
 		{
@@ -1401,22 +1369,10 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 			{
 				if (LIKELY(args.size))
 				{
-					if (g_use_rtm)
-					{
-						do_dma_transfer(args);
-						return true;
-					}
-					else if (vm::passive_lock(*this, true))
-					{
-						do_dma_transfer(args);
-						vm::passive_unlock(*this);
-						return true;
-					}
+					do_dma_transfer(args);
 				}
-				else
-				{
-					return true;
-				}
+
+				return true;
 			}
 
 			mfc_queue[mfc_size++] = args;
@@ -1446,22 +1402,9 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		{
 			if (LIKELY(do_dma_check(args) && !test(ch_stall_mask, 1u << args.tag)))
 			{
-				if (g_use_rtm)
+				if (LIKELY(do_list_transfer(args)))
 				{
-					if (LIKELY(do_list_transfer(args)))
-					{
-						return true;
-					}
-				}
-				else if (vm::passive_lock(*this, true))
-				{
-					if (LIKELY(do_list_transfer(args)))
-					{
-						vm::passive_unlock(*this);
-						return true;
-					}
-
-					vm::passive_unlock(*this);
+					return true;
 				}
 			}
 
