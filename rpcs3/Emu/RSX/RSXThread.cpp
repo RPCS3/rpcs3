@@ -1276,6 +1276,19 @@ namespace rsx
 		}
 	}
 
+	void thread::do_local_task(bool /*idle*/)
+	{
+		if (!in_begin_end)
+		{
+			for (const auto& range : m_invalidated_memory_ranges)
+			{
+				on_invalidate_memory_range(range.first, range.second);
+			}
+
+			m_invalidated_memory_ranges.clear();
+		}
+	}
+
 	//std::future<void> thread::add_internal_task(std::function<bool()> callback)
 	//{
 	//	std::lock_guard<shared_mutex> lock{ m_mtx_task };
@@ -2310,6 +2323,11 @@ namespace rsx
 	void thread::notify_zcull_info_changed()
 	{
 		check_zcull_status(false);
+	}
+
+	void thread::on_notify_memory_unmapped(u32 base_address, u32 size)
+	{
+		m_invalidated_memory_ranges.push_back({ base_address, size });
 	}
 
 	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!
