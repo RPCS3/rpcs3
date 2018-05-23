@@ -309,6 +309,7 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../3rdparty/Optional"
 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/include"
 "${RPCS3_SRC_DIR}/../3rdparty/xxHash"
+"${RPCS3_SRC_DIR}/../3rdparty/GPUOpen/include"
 )
 
 if(WIN32)

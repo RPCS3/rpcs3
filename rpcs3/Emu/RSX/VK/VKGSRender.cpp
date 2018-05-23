@@ -547,6 +547,19 @@ VKGSRender::VKGSRender() : GSRender()
 	vk::set_current_thread_ctx(m_thread_context);
 	vk::set_current_renderer(m_swapchain->get_device());
 
+	// Choose memory allocator (device memory)
+	if (g_cfg.video.disable_vulkan_mem_allocator) 
+	{
+		m_mem_allocator = std::make_shared<vk::mem_allocator_vk>(*m_device, m_device->gpu());
+	}
+	else 
+	{
+		m_mem_allocator = std::make_shared<vk::mem_allocator_vma>(*m_device, m_device->gpu());
+	}
+
+	
+	vk::set_current_mem_allocator(m_mem_allocator);
+
 	m_client_width = m_frame->client_width();
 	m_client_height = m_frame->client_height();
 	if (!m_swapchain->init(m_client_width, m_client_height))
@@ -774,6 +787,9 @@ VKGSRender::~VKGSRender()
 
 	m_secondary_command_buffer.destroy();
 	m_secondary_command_buffer_pool.destroy();
+
+	// Memory allocator (device memory)
+	m_mem_allocator->destroy();
 
 	//Device handles/contexts
 	m_swapchain->destroy();

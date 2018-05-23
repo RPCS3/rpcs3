@@ -1143,8 +1143,7 @@ namespace vk
 			VkSubresourceLayout layout{};
 			vkGetImageSubresourceLayout(*m_device, image->value, &subresource, &layout);
 
-			void* mem = nullptr;
-			vkMapMemory(*m_device, image->memory->memory, 0, layout.rowPitch * height, 0, &mem);
+			void* mem = image->memory->map(0, layout.rowPitch * height);
 
 			u32 row_pitch = width * 4;
 			char *src = (char *)vm::base(address);
@@ -1163,7 +1162,7 @@ namespace vk
 				dst += layout.rowPitch;
 			}
 
-			vkUnmapMemory(*m_device, image->memory->memory);
+			image->memory->unmap();
 
 			auto result = image.get();
 			const u32 resource_memory = width * height * 4; //Rough approximate
