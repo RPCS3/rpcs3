@@ -1559,7 +1559,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 	return true;
 }
 
-void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
+void GLGSRender::on_invalidate_memory_range(u32 address_base, u32 size)
 {
 	//Discard all memory in that range without bothering with writeback (Force it for strict?)
 	if (m_gl_texture_cache.invalidate_range(address_base, size, true, true, false).violation_handled)
@@ -1572,7 +1572,7 @@ void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 	}
 }
 
-void GLGSRender::do_local_task(bool /*idle*/)
+void GLGSRender::do_local_task(bool idle)
 {
 	m_frame->clear_wm_events();
 
@@ -1610,6 +1610,8 @@ void GLGSRender::do_local_task(bool /*idle*/)
 			flip((s32)current_display_buffer);
 		}
 	}
+
+	rsx::thread::do_local_task(idle);
 }
 
 work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data)
@@ -1644,6 +1646,11 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	//u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
 	//on_notify_memory_unmapped(addr, tiles[tile].size);
 	//m_rtts.invalidate_surface_address(addr, false);
+
+	{
+		std::lock_guard<shared_mutex> lock(m_sampler_mutex);
+		m_samplers_dirty.store(true);
+	}
 }
 
 void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)
