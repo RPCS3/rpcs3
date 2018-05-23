@@ -309,6 +309,7 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../3rdparty/Optional"
 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/include"
 "${RPCS3_SRC_DIR}/../3rdparty/xxHash"
+"${RPCS3_SRC_DIR}/../3rdparty/GPUOpen/include"
 )
 
 if(WIN32)
@@ -416,7 +417,7 @@ endif()
 target_link_libraries(rpcs3 xxhash)
 
 if(WIN32)
-	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
+	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
 	if(NOT MSVC)
 		target_link_libraries(rpcs3 ${OPENGL_LIBRARIES} opengl32.lib glu32.lib)
 	else()

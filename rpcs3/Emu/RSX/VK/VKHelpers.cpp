@@ -1,12 +1,12 @@
 #include "stdafx.h"
 #include "VKHelpers.h"
-
 #include "Utilities/mutex.h"
 
 namespace vk
 {
 	context* g_current_vulkan_ctx = nullptr;
 	render_device g_current_renderer;
+	std::shared_ptr<vk::mem_allocator_base> g_mem_allocator = nullptr;
 
 	std::unique_ptr<image> g_null_texture;
 	std::unique_ptr<image_view> g_null_image_view;
@@ -188,6 +188,16 @@ namespace vk
 		g_null_sampler = nullptr;
 	}
 
+	void set_current_mem_allocator(std::shared_ptr<vk::mem_allocator_base> mem_allocator)
+	{
+		g_mem_allocator = mem_allocator;
+	}
+
+	std::shared_ptr<vk::mem_allocator_base> get_current_mem_allocator()
+	{
+		return g_mem_allocator;
+	}
+
 	void set_current_thread_ctx(const vk::context &ctx)
 	{
 		g_current_vulkan_ctx = (vk::context *)&ctx;
@@ -206,6 +216,13 @@ namespace vk
 	void set_current_renderer(const vk::render_device &device)
 	{
 		g_current_renderer = device;
+		g_cb_no_interrupt_flag.store(false);
+		g_drv_no_primitive_restart_flag = false;
+		g_drv_sanitize_fp_values = false;
+		g_drv_disable_fence_reset = false;
+		g_num_processed_frames = 0;
+		g_num_total_frames = 0;
+
 		const auto gpu_name = g_current_renderer.gpu().name();
 
 		//Radeon fails to properly handle degenerate primitives if primitive restart is enabled

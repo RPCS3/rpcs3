@@ -107,6 +107,11 @@ void spu_cache::initialize()
 
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
 	{
+		if (g_cfg.core.spu_debug)
+		{
+			fs::file(Emu.GetCachePath() + "SPUJIT.log", fs::rewrite);
+		}
+
 		compiler = spu_recompiler_base::make_asmjit_recompiler();
 	}
 
@@ -916,6 +921,11 @@ public:
 		fs::create_dir(m_cache_path);
 		fs::remove_all(m_cache_path, false);
 
+		if (g_cfg.core.spu_debug)
+		{
+			fs::file(m_cache_path + "../spu.log", fs::rewrite);
+		}
+
 		LOG_SUCCESS(SPU, "SPU Recompiler Runtime (LLVM) initialized...");
 	}
 };
@@ -1571,7 +1581,7 @@ public:
 		if (g_cfg.core.spu_debug)
 		{
 			out.flush();
-			fs::file(Emu.GetCachePath() + "SPU.log", fs::write + fs::append).write(log);
+			fs::file(m_spurt->m_cache_path + "../spu.log", fs::write + fs::append).write(log);
 		}
 
 		if (m_cache)

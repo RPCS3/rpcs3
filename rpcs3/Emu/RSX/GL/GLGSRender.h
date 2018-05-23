@@ -384,7 +384,7 @@ protected:
 	void do_local_task(bool idle) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_notify_memory_unmapped(u32 address_base, u32 size) override;
+	void on_invalidate_memory_range(u32 address_base, u32 size) override;
 	void notify_tile_unbound(u32 tile) override;
 
 	std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;

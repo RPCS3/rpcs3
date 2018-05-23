@@ -213,7 +213,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	//Events
 	connect(b_goto_get, &QAbstractButton::clicked, [=]
 	{
-		if (const auto render = fxm::get<GSRender>())
+		if (const auto render = rsx::get_current_renderer())
 		{
 			u32 realAddr;
 			if (RSXIOMem.getRealAddr(render->ctrl->get.load(), realAddr))
@@ -225,7 +225,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	});
 	connect(b_goto_put, &QAbstractButton::clicked, [=]
 	{
-		if (const auto render = fxm::get<GSRender>())
+		if (const auto render = rsx::get_current_renderer())
 		{
 			u32 realAddr;
 			if (RSXIOMem.getRealAddr(render->ctrl->put.load(), realAddr))
@@ -377,7 +377,7 @@ void Buffer::showImage(const QImage& image)
 
 void Buffer::ShowWindowed()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 		return;
 
@@ -667,7 +667,7 @@ void rsx_debugger::GetMemory()
 
 void rsx_debugger::GetBuffers()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 	{
 		return;
@@ -744,7 +744,7 @@ void rsx_debugger::GetBuffers()
 
 void rsx_debugger::GetFlags()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 	{
 		return;
@@ -781,7 +781,7 @@ void rsx_debugger::GetFlags()
 
 void rsx_debugger::GetLightning()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 	{
 		return;
@@ -800,7 +800,7 @@ void rsx_debugger::GetLightning()
 
 void rsx_debugger::GetTexture()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 	{
 		return;
@@ -843,7 +843,7 @@ void rsx_debugger::GetTexture()
 
 void rsx_debugger::GetSettings()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 	{
 		return;
@@ -942,7 +942,7 @@ void rsx_debugger::SetFlags()
 
 void rsx_debugger::SetPrograms()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 	{
 		return;

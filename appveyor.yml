@@ -9,7 +9,7 @@ environment:
   GLSLANG: https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export
   VULKAN_SDK: "C:\\VulkanSDK\\1.1.73.0"
-  VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.73.0/windows/VulkanSDK-1.1.73.0-Installer.exe
+  VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.73.0/windows/VulkanSDK-1.1.73.0-Installer.exe?Human=true
 
 cache:
 - glslang.7z -> appveyor.yml

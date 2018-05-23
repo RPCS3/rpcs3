@@ -14,8 +14,6 @@
 #include <thread>
 #include <atomic>
 
-#pragma comment(lib, "VKstatic.1.lib")
-
 namespace vk
 {
 	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range<VkFormat>, VkFormat>;
@@ -283,6 +281,8 @@ public:
 	std::unique_ptr<vk::vertex_cache> m_vertex_cache;
 	std::unique_ptr<vk::shader_cache> m_shaders_cache;
 
+	std::shared_ptr<vk::mem_allocator_base> m_mem_allocator;
+
 private:
 	std::unique_ptr<VKProgramBuffer> m_prog_buffer;
 
@@ -425,5 +425,5 @@ protected:
 	void notify_tile_unbound(u32 tile) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_notify_memory_unmapped(u32 address_base, u32 size) override;
+	void on_invalidate_memory_range(u32 address_base, u32 size) override;
 };

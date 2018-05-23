@@ -30,6 +30,7 @@ rsx::frame_capture_data frame_capture;
 namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
+	thread* g_current_renderer = nullptr;
 
 	//TODO: Restore a working shaders cache
 
@@ -239,10 +240,12 @@ namespace rsx
 
 	thread::thread()
 	{
+		g_current_renderer = this;
 		g_access_violation_handler = [this](u32 address, bool is_writing)
 		{
 			return on_access_violation(address, is_writing);
 		};
+
 		m_rtts_dirty = true;
 		memset(m_textures_dirty, -1, sizeof(m_textures_dirty));
 		memset(m_vertex_textures_dirty, -1, sizeof(m_vertex_textures_dirty));
@@ -253,6 +256,7 @@ namespace rsx
 	thread::~thread()
 	{
 		g_access_violation_handler = nullptr;
+		g_current_renderer = nullptr;
 	}
 
 	void thread::capture_frame(const std::string &name)
@@ -1269,6 +1273,21 @@ namespace rsx
 			//	front.promise.set_value();
 			//	m_internal_tasks.pop_front();
 			//}
+		}
+	}
+
+	void thread::do_local_task(bool /*idle*/)
+	{
+		if (!in_begin_end)
+		{
+			reader_lock lock(m_mtx_task);
+			for (const auto& range : m_invalidated_memory_ranges)
+			{
+				on_invalidate_memory_range(range.first, range.second);
+			}
+
+			lock.upgrade();
+			m_invalidated_memory_ranges.clear();
 		}
 	}
 
@@ -2306,6 +2325,12 @@ namespace rsx
 	void thread::notify_zcull_info_changed()
 	{
 		check_zcull_status(false);
+	}
+
+	void thread::on_notify_memory_unmapped(u32 base_address, u32 size)
+	{
+		writer_lock lock(m_mtx_task);
+		m_invalidated_memory_ranges.push_back({ base_address, size });
 	}
 
 	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!

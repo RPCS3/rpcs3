@@ -46,6 +46,7 @@
     <ClCompile Include="Emu\RSX\VK\VKTexture.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKMemAlloc.cpp" />
     <ClCompile Include="Emu\RSX\VK\VulkanAPI.cpp" />
   </ItemGroup>
   <ItemGroup>

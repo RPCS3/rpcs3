@@ -84,9 +84,9 @@ namespace rsx
 	enum FIFO_state : u8
 	{
 		running = 0,
-		empty = 1, //PUT == GET
-		spinning = 2, //Puller continuously jumps to self addr (synchronization technique)
-		nop = 3, //Puller is processing a NOP command
+		empty = 1,    // PUT == GET
+		spinning = 2, // Puller continuously jumps to self addr (synchronization technique)
+		nop = 3,      // Puller is processing a NOP command
 	};
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
@@ -172,9 +172,9 @@ namespace rsx
 
 	struct vertex_input_layout
 	{
-		std::vector<interleaved_range_info> interleaved_blocks;  //Interleaved blocks to be uploaded as-is
-		std::vector<std::pair<u8, u32>> volatile_blocks;  //Volatile data blocks (immediate draw vertex data for example)
-		std::vector<u8> referenced_registers;  //Volatile register data
+		std::vector<interleaved_range_info> interleaved_blocks;  // Interleaved blocks to be uploaded as-is
+		std::vector<std::pair<u8, u32>> volatile_blocks;  // Volatile data blocks (immediate draw vertex data for example)
+		std::vector<u8> referenced_registers;  // Volatile register data
 
 		std::array<attribute_buffer_placement, 16> attribute_placement;
 	};
@@ -206,11 +206,11 @@ namespace rsx
 
 		struct ZCULL_control
 		{
-			//Delay in 'cycles' before a report update operation is forced to retire
+			// Delay in 'cycles' before a report update operation is forced to retire
 			const u32 max_zcull_cycles_delay = 128;
 			const u32 min_zcull_cycles_delay = 16;
 
-			//Number of occlusion query slots available. Real hardware actually has far fewer units before choking
+			// Number of occlusion query slots available. Real hardware actually has far fewer units before choking
 			const u32 occlusion_query_count = 128;
 
 			bool active = false;
@@ -234,31 +234,31 @@ namespace rsx
 
 			void write(vm::addr_t sink, u32 timestamp, u32 type, u32 value);
 
-			//Read current zcull statistics into the address provided
+			// Read current zcull statistics into the address provided
 			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
 
-			//Sets up a new query slot and sets it to the current task
+			// Sets up a new query slot and sets it to the current task
 			void allocate_new_query(class ::rsx::thread* ptimer);
 
-			//clears current stat block and increments stat_tag_id
+			// Clears current stat block and increments stat_tag_id
 			void clear(class ::rsx::thread* ptimer);
 
-			//forcefully flushes all
+			// Forcefully flushes all
 			void sync(class ::rsx::thread* ptimer);
 
-			//conditionally sync any pending writes if range overlaps
+			// Conditionally sync any pending writes if range overlaps
 			void read_barrier(class ::rsx::thread* ptimer, u32 memory_address, u32 memory_range);
 
-			//call once every 'tick' to update
+			// Call once every 'tick' to update
 			void update(class ::rsx::thread* ptimer);
 
-			//Draw call notification
+			// Draw call notification
 			void on_draw();
 
-			//Check for pending writes
+			// Check for pending writes
 			bool has_pending() const { return (m_pending_writes.size() != 0); }
 
-			//Backend methods (optional, will return everything as always visible by default)
+			// Backend methods (optional, will return everything as always visible by default)
 			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
 			virtual void end_occlusion_query(occlusion_query_info* /*query*/) {}
 			virtual bool check_occlusion_query_status(occlusion_query_info* /*query*/) { return true; }
@@ -285,17 +285,20 @@ namespace rsx
 		bool supports_multidraw = false;
 		bool supports_native_ui = false;
 
-		//occlusion query
+		// Occlusion query
 		bool zcull_surface_active = false;
 		std::unique_ptr<reports::ZCULL_control> zcull_ctrl;
 
-		//framebuffer setup
+		// Framebuffer setup
 		rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
 		rsx::gcm_framebuffer_info m_depth_surface_info;
 		bool framebuffer_status_valid = false;
 
+		// Overlays
 		std::shared_ptr<rsx::overlays::display_manager> m_overlay_manager;
-		std::unique_ptr<rsx::overlays::user_interface> m_invalidated_ui;
+
+		// Invalidated memory range
+		std::vector<std::pair<u32, u32>> m_invalidated_memory_ranges;
 
 	public:
 		RsxDmaControl* ctrl = nullptr;
@@ -304,23 +307,26 @@ namespace rsx
 		atomic_t<bool> external_interrupt_lock{ false };
 		atomic_t<bool> external_interrupt_ack{ false };
 
-		//performance approximation counters
+		// Performance approximation counters
 		struct
 		{
-			atomic_t<u64> idle_time{ 0 };  //Time spent idling in microseconds
-			u64 last_update_timestamp = 0; //Timestamp of last load update
-			u64 FIFO_idle_timestamp = 0; //Timestamp of when FIFO queue becomes idle
+			atomic_t<u64> idle_time{ 0 };  // Time spent idling in microseconds
+			u64 last_update_timestamp = 0; // Timestamp of last load update
+			u64 FIFO_idle_timestamp = 0;   // Timestamp of when FIFO queue becomes idle
 			FIFO_state state = FIFO_state::running;
 			u32 approximate_load = 0;
 			u32 sampled_frames = 0;
 		}
 		performance_counters;
 
-		//native UI interrupts
+		// Native UI interrupts
 		atomic_t<bool> native_ui_flip_request{ false };
 
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
+
+		// Super memory map (mapped block with r/w permissions)
+		std::pair<u32, std::shared_ptr<u8>> super_memory_map;
 
 		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
@@ -413,7 +419,7 @@ namespace rsx
 		 * Execute a backend local task queue
 		 * Idle argument checks that the FIFO queue is in an idle state
 		 */
-		virtual void do_local_task(bool /*idle*/) {}
+		virtual void do_local_task(bool idle);
 
 	public:
 		virtual std::string get_name() const override;
@@ -430,16 +436,16 @@ namespace rsx
 		virtual void flip(int buffer) = 0;
 		virtual u64 timestamp() const;
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
-		virtual void on_notify_memory_unmapped(u32 /*address_base*/, u32 /*size*/) {}
+		virtual void on_invalidate_memory_range(u32 /*address*/, u32 /*range*/) {}
 		virtual void notify_tile_unbound(u32 /*tile*/) {}
 
-		//zcull
+		// zcull
 		void notify_zcull_info_changed();
 		void clear_zcull_stats(u32 type);
 		void check_zcull_status(bool framebuffer_swap);
 		void get_zcull_stats(u32 type, vm::addr_t sink);
 
-		//sync
+		// sync
 		void sync();
 		void read_barrier(u32 memory_address, u32 memory_range);
 		
@@ -501,8 +507,6 @@ namespace rsx
 	public:
 		//std::future<void> add_internal_task(std::function<bool()> callback);
 		//void invoke(std::function<bool()> callback);
-		void add_user_interface(std::shared_ptr<rsx::overlays::user_interface> iface);
-		void remove_user_interface();
 
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.
@@ -513,8 +517,7 @@ namespace rsx
 
 		/**
 		 * Fill buffer with user clip information
-		*/
-
+		 */
 		void fill_user_clip_data(void *buffer) const;
 
 		/**
@@ -530,11 +533,17 @@ namespace rsx
 		void fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program);
 
 		/**
-		* Write inlined array data to buffer.
-		* The storage of inlined data looks different from memory stored arrays.
-		* There is no swapping required except for 4 u8 (according to Bleach Soul Resurection)
-		*/
+		 * Write inlined array data to buffer.
+		 * The storage of inlined data looks different from memory stored arrays.
+		 * There is no swapping required except for 4 u8 (according to Bleach Soul Resurection)
+		 */
 		void write_inline_array_to_buffer(void *dst_buffer);
+
+		/**
+		 * Notify that a section of memory has been unmapped
+		 * Any data held in the defined range is discarded
+		 */
+		void on_notify_memory_unmapped(u32 address_base, u32 size);
 
 		/**
 		 * Copy rtt values to buffer.
