@@ -919,23 +919,6 @@ void Emulator::Load(bool add_only)
 				LOG_NOTICE(LOADER, "Elf path: %s", argv[0]);
 			}
 
-			if (g_cfg.core.spu_debug)
-			{
-				fs::file log;
-
-				if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
-				{
-					log.open(Emu.GetCachePath() + "SPUJIT.log", fs::rewrite);
-				}
-
-				if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
-				{
-					log.open(Emu.GetCachePath() + "SPU.log", fs::rewrite);
-				}
-
-				log.write(fmt::format("SPU JIT Log\n\nTitle: %s\nTitle ID: %s\n\n", Emu.GetTitle(), Emu.GetTitleID()));
-			}
-
 			ppu_load_exec(ppu_exec);
 
 			fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render); // TODO: must be created in appropriate sys_rsx syscall
