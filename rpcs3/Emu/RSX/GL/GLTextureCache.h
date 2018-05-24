@@ -493,13 +493,26 @@ namespace gl
 					require_manual_shuffle = true;
 			}
 
-			if (real_pitch >= rsx_pitch || scaled_texture != 0)
+			if (real_pitch >= rsx_pitch || scaled_texture != 0 || valid_range.second <= rsx_pitch)
 			{
 				memcpy(dst, src, valid_range.second);
 			}
 			else
 			{
-				fmt::throw_exception("Unreachable");
+				if (valid_range.second % rsx_pitch)
+				{
+					fmt::throw_exception("Unreachable" HERE);
+				}
+
+				u8 *_src = (u8*)src;
+				u8 *_dst = (u8*)dst;
+				const auto num_rows = valid_range.second / rsx_pitch;
+				for (u32 row = 0; row < num_rows; ++row)
+				{
+					memcpy(_dst, _src, real_pitch);
+					_src += real_pitch;
+					_dst += rsx_pitch;
+				}
 			}
 
 			if (require_manual_shuffle)
