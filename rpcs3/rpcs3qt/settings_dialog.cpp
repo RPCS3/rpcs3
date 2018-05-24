@@ -975,7 +975,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->spuDebug, emu_settings::SPUDebug);
 	SubscribeTooltip(ui->spuDebug, json_debug["spuDebug"].toString());
 		
-	if (utils::is_haswell() != utils::is_broadwell() && utils::has_rtm())
+	if (utils::has_rtm() && !utils::has_mpx())
 	{
 		xemu_settings->EnhanceCheckBox(ui->enableTSX, emu_settings::EnableTSX);
 		SubscribeTooltip(ui->enableTSX, json_debug["enableTSX"].toString());
@@ -983,42 +983,20 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		// connect the toogled signal so that the stateChanged signal in EnhanceCheckBox can be prevented
 		connect(ui->enableTSX, &QCheckBox::toggled, [this](bool checked)
 		{
-			// create a messagebox depending on the CPU Model if the checkbox was checked
-			if (utils::is_haswell())
-			{
-				if (checked && QMessageBox::No == QMessageBox::critical(this, tr("Haswell TSX Warning"), tr(
-					R"(
+			if (checked && QMessageBox::No == QMessageBox::critical(this, tr("Haswell/Broadwell TSX Warning"), tr(
+				R"(
 					<p style="white-space: nowrap;">
-						RPCS3 has detected you are using TSX functions on a Haswell CPU.<br>
+						RPCS3 has detected you are using TSX functions on a Haswell or Broadwell CPU.<br>
 						Intel has deactivated these functions in newer Microcode revisions, since they can lead to unpredicted behaviour.<br>
 						That means using TSX may break games or even <font color="red"><b>damage</b></font> your data.<br>
 						We recommend to disable this feature and update your computer BIOS.<br><br>
 						Do you wish to use TSX anyway?
 					</p>
 				)"
-				), QMessageBox::Yes, QMessageBox::No))
-				{
-					// Uncheck if the messagebox was answered with no. This prevents the stateChanged signal in EnhanceCheckBox
-					ui->enableTSX->setChecked(false);
-				}
-			}
-			else
+			), QMessageBox::Yes, QMessageBox::No))
 			{
-				if (checked && QMessageBox::No == QMessageBox::critical(this, tr("Broadwell TSX Warning"), tr(
-					R"(
-					<p style="white-space: nowrap;">
-						RPCS3 has detected you are using TSX functions on a Broadwell CPU.<br>
-						Intel has deactivated these functions on early CPUs in newer Microcode revisions, since they can lead to unpredicted behaviour.<br>
-						We recommend you update your computer BIOS before you use that feature.<br>
-						If you are already on the latest BIOS it should be safe to use this feature.<br><br>
-						Do you wish to use TSX anyway?
-					</p>
-				)"
-				), QMessageBox::Yes, QMessageBox::No))
-				{
-					// Uncheck if the messagebox was answered with no. This prevents the stateChanged signal in EnhanceCheckBox
-					ui->enableTSX->setChecked(false);
-				}
+				// Uncheck if the messagebox was answered with no. This prevents the stateChanged signal in EnhanceCheckBox
+				ui->enableTSX->setChecked(false);
 			}
 		});
 	}

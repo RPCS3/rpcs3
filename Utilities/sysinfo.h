@@ -37,15 +37,11 @@ namespace utils
 
 	bool has_rtm();
 
+	bool has_mpx();
+
 	bool has_512();
 
 	bool has_xop();
-	
-	bool is_haswell();
-
-	bool is_broadwell();
-
-	int get_cpu_model();
 
 	std::string get_system_info();
 }

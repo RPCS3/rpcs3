@@ -46,7 +46,7 @@
 
 cfg_root g_cfg;
 
-bool g_use_rtm = utils::has_rtm();
+bool g_use_rtm;
 
 std::string g_cfg_defaults;
 
@@ -513,17 +513,10 @@ void Emulator::Load(bool add_only)
 		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", g_cfg.to_string());
 		
 		// Set RTM usage
-		g_use_rtm = utils::has_rtm() && (utils::is_haswell() == utils::is_broadwell() || g_cfg.core.enable_TSX);
-		if (utils::has_rtm() && (utils::is_haswell() || utils::is_broadwell()))
+		g_use_rtm = utils::has_rtm() && (utils::has_mpx() || g_cfg.core.enable_TSX);
+		if (g_cfg.core.enable_TSX)
 		{
-			if (g_use_rtm)
-			{
-				LOG_WARNING(GENERAL, "TSX forced by User");
-			}
-			else
-			{
-				LOG_WARNING(GENERAL, "TSX disabled on your CPU due to security reasons");
-			}
+			LOG_WARNING(GENERAL, "TSX forced by User");
 		}
 
 		// Load patches from different locations

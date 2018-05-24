@@ -37,6 +37,12 @@ bool utils::has_rtm()
 	return g_value;
 }
 
+bool utils::has_mpx()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x4000) == 0x4000;
+	return g_value;
+}
+
 bool utils::has_512()
 {
 	// Check AVX512F, AVX512CD, AVX512DQ, AVX512BW, AVX512VL extensions (Skylake-X level support)
@@ -48,24 +54,6 @@ bool utils::has_xop()
 {
 	static const bool g_value = has_avx() && get_cpuid(0x80000001, 0)[2] & 0x800;
 	return g_value;
-}
-
-bool utils::is_haswell()
-{
-	static const bool g_value = get_cpu_model() == 0x3c || get_cpu_model() == 0x3f || get_cpu_model() == 0x45 || get_cpu_model() == 0x46;
-	return g_value;
-}
-
-bool utils::is_broadwell()
-{
-	static const bool g_value = get_cpu_model() == 0x3d || get_cpu_model() == 0x4f || get_cpu_model() == 0x47 || get_cpu_model() == 0x56;
-	return g_value;
-}
-
-int utils::get_cpu_model()
-{
-	static const int g_model = ((get_cpuid(1, 0)[0] >> 4) & 0xf) + (((get_cpuid(1, 0)[0] >> 16) & 0xf) << 4);
-	return g_model;
 }
 
 std::string utils::get_system_info()
@@ -131,6 +119,10 @@ std::string utils::get_system_info()
 	if (has_rtm())
 	{
 		result += " | TSX";
+		if (!has_mpx())
+		{
+			result += " disabled by default";
+		}
 	}
 
 	return result;
