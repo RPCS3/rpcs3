@@ -6,12 +6,41 @@
 #include "windows.h"
 #include "tlhelp32.h"
 #else
-#include "dirent.h"
 #include "stdlib.h"
-#include "stdio.h"
-#include "string.h"
 #include "sys/times.h"
 #include "sys/types.h"
+#include "unistd.h"
+#endif
+
+#ifdef __APPLE__
+# include <mach/mach_init.h>
+# include <mach/task.h>
+# include <mach/vm_map.h>
+#endif
+
+#ifdef __linux__
+# include <dirent.h>
+#endif
+
+#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+# include <sys/sysctl.h>
+# if defined(__DragonFly__) || defined(__FreeBSD__)
+#  include <sys/user.h>
+# endif
+
+# if defined(__NetBSD__)
+#  undef KERN_PROC
+#  define KERN_PROC KERN_PROC2
+#  define kinfo_proc kinfo_proc2
+# endif
+
+# if defined(__DragonFly__)
+#  define KP_NLWP(kp) (kp.kp_nthreads)
+# elif defined(__FreeBSD__)
+#  define KP_NLWP(kp) (kp.ki_numthreads)
+# elif defined(__NetBSD__)
+#  define KP_NLWP(kp) (kp.p_nlwps)
+# endif
 #endif
 
 class CPUStats
@@ -45,22 +74,12 @@ public:
 		memcpy(&m_sys_cpu, &fsys, sizeof(FILETIME));
 		memcpy(&m_usr_cpu, &fuser, sizeof(FILETIME));
 #else
-		FILE* file;
 		struct tms timeSample;
-		char line[128];
 
 		m_last_cpu = times(&timeSample);
 		m_sys_cpu  = timeSample.tms_stime;
 		m_usr_cpu  = timeSample.tms_utime;
-
-		file             = fopen("/proc/cpuinfo", "r");
-		m_num_processors = 0;
-		while (fgets(line, 128, file) != NULL)
-		{
-			if (strncmp(line, "processor", 9) == 0)
-				m_num_processors++;
-		}
-		fclose(file);
+		m_num_processors = sysconf(_SC_NPROCESSORS_ONLN);
 #endif
 	}
 
@@ -133,7 +152,71 @@ public:
 		}
 		CloseHandle(snapshot);
 		return ret ? entry.cntThreads : 0;
-#else
+#elif defined(__APPLE__)
+		const task_t task = mach_task_self();
+		mach_msg_type_number_t thread_count;
+		thread_act_array_t thread_list;
+		if (task_threads(task, &thread_list, &thread_count) != KERN_SUCCESS)
+		{
+			return 0;
+		}
+		vm_deallocate(task, reinterpret_cast<vm_address_t>(thread_list),
+			      sizeof(thread_t) * thread_count);
+		return static_cast<u32>(thread_count);
+#elif defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)
+		int mib[] = {
+			CTL_KERN,
+			KERN_PROC,
+			KERN_PROC_PID,
+			getpid(),
+#if defined(__NetBSD__)
+			sizeof(struct kinfo_proc),
+			1,
+#endif
+		};
+		u_int miblen = sizeof(mib) / sizeof(mib[0]);
+		struct kinfo_proc info;
+		size_t size = sizeof(info);
+		if (sysctl(mib, miblen, &info, &size, NULL, 0))
+		{
+			return 0;
+		}
+		return KP_NLWP(info);
+#elif defined(__OpenBSD__)
+		int mib[] = {
+			CTL_KERN,
+			KERN_PROC,
+			KERN_PROC_PID | KERN_PROC_SHOW_THREADS,
+			getpid(),
+			sizeof(struct kinfo_proc),
+			0,
+		};
+		u_int miblen = sizeof(mib) / sizeof(mib[0]);
+
+		// get number of structs
+		size_t size;
+		if (sysctl(mib, miblen, NULL, &size, NULL, 0))
+		{
+			return 0;
+		}
+		mib[5] = size / mib[4];
+
+		// populate array of structs
+		struct kinfo_proc info[mib[5]];
+		if (sysctl(mib, miblen, &info, &size, NULL, 0))
+		{
+			return 0;
+		}
+
+		// exclude empty members
+		u32 thread_count{0};
+		for (int i = 0; i < size / mib[4]; i++)
+		{
+			if (info[i].p_tid != -1)
+				++thread_count;
+		}
+		return thread_count;
+#elif defined(__linux__)
 		u32 thread_count{0};
 
 		DIR* proc_dir = opendir("/proc/self/task");
@@ -152,6 +235,9 @@ public:
 			closedir(proc_dir);
 		}
 		return thread_count;
+#else
+		// unimplemented
+		return 0;
 #endif
 	}
 };
