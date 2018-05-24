@@ -57,6 +57,12 @@
 #include "Emu/Audio/Pulse/PulseThread.h"
 #endif
 
+#ifdef _WIN32
+#include "Utilities/dynamic_library.h"
+DYNAMIC_IMPORT("ntdll.dll", NtQueryTimerResolution, NTSTATUS(PULONG MinimumResolution, PULONG MaximumResolution, PULONG CurrentResolution));
+DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResolution, BOOLEAN SetResolution, PULONG CurrentResolution));
+#endif
+
 // For now, a trivial constructor/destructor.  May add command line usage later.
 rpcs3_app::rpcs3_app(int& argc, char** argv) : QApplication(argc, argv)
 {
@@ -83,11 +89,6 @@ void rpcs3_app::Init()
 
 	RPCS3MainWin->Init();
 
-	RPCS3MainWin->show();
-
-	// Create the thumbnail toolbar after the main_window is created
-	RPCS3MainWin->CreateThumbnailToolbar();
-
 	if (guiSettings->GetValue(gui::ib_show_welcome).toBool())
 	{
 		welcome_dialog* welcome = new welcome_dialog();
@@ -99,6 +100,17 @@ void rpcs3_app::Init()
 	{
 		DiscordEventHandlers handlers = {};
 		Discord_Initialize("424004941485572097", &handlers, 1, NULL);
+	}
+#endif
+
+#ifdef _WIN32
+	// Set 0.5 msec timer resolution for best performance
+	// - As QT5 timers (QTimer) sets the timer resolution to 1 msec, override it here.
+	// - Don't bother "unsetting" the timer resolution after the emulator stops as QT5 will still require the timer resolution to be set to 1 msec.
+	ULONG min_res, max_res, orig_res, new_res;
+	if (NtQueryTimerResolution(&min_res, &max_res, &orig_res) == 0)
+	{
+		NtSetTimerResolution(max_res, TRUE, &new_res);
 	}
 #endif
 }

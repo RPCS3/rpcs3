@@ -260,6 +260,7 @@ public:
 	}
 
 	bool BootGame(const std::string& path, bool direct = false, bool add_only = false);
+	bool BootRsxCapture(const std::string& path);
 	bool InstallPkg(const std::string& path);
 
 	static std::string GetEmuDir();
@@ -366,6 +367,7 @@ struct cfg_root : cfg::node
 		cfg::_bool frame_skip_enabled{this, "Enable Frame Skip", false};
 		cfg::_bool force_cpu_blit_processing{this, "Force CPU Blit", false}; // Debugging option
 		cfg::_bool disable_on_disk_shader_cache{this, "Disable On-Disk Shader Cache", false};
+		cfg::_bool disable_vulkan_mem_allocator{ this, "Disable Vulkan Memory Allocator", false };
 		cfg::_bool full_rgb_range_output{this, "Use full RGB output range", true}; // Video out dynamic range
 		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames To Draw", 1};
 		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames To Skip", 1};
@@ -457,3 +459,5 @@ struct cfg_root : cfg::node
 };
 
 extern cfg_root g_cfg;
+
+extern bool g_use_rtm;

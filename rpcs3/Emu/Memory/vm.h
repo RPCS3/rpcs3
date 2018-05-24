@@ -8,6 +8,7 @@
 class shared_mutex;
 class named_thread;
 class cpu_thread;
+class notifier;
 
 namespace vm
 {
@@ -15,6 +16,7 @@ namespace vm
 	extern u8* const g_exec_addr;
 	extern u8* const g_stat_addr;
 	extern u8* const g_reservations;
+	extern u8* const g_reservations2;
 
 	enum memory_location_t : uint
 	{
@@ -39,24 +41,6 @@ namespace vm
 		page_1m_size            = (1 << 6),
 
 		page_allocated          = (1 << 7),
-	};
-
-	struct waiter
-	{
-		named_thread* owner;
-		u32 addr;
-		u32 size;
-		u64 stamp;
-		const void* data;
-
-		waiter() = default;
-
-		waiter(const waiter&) = delete;
-
-		void init();
-		void test() const;
-
-		~waiter();
 	};
 
 	// Address type
@@ -112,14 +96,28 @@ namespace vm
 	inline void reservation_update(u32 addr, u32 size, bool lsb = false)
 	{
 		// Update reservation info with new timestamp
-		reservation_acquire(addr, size) = (__rdtsc() & -2) | u64{lsb};
+		reservation_acquire(addr, size) = (__rdtsc() << 1) | u64{lsb};
 	}
 
-	// Check and notify memory changes at address
-	void notify(u32 addr, u32 size);
+	// Get reservation sync variable
+	inline notifier& reservation_notifier(u32 addr, u32 size)
+	{
+		return *reinterpret_cast<notifier*>(g_reservations2 + addr / 128 * 8);
+	}
 
-	// Check and notify memory changes
-	void notify_all();
+	void reservation_lock_internal(atomic_t<u64>&);
+
+	inline atomic_t<u64>& reservation_lock(u32 addr, u32 size)
+	{
+		auto& res = vm::reservation_acquire(addr, size);
+
+		if (UNLIKELY(atomic_storage<u64>::bts(res.raw(), 0)))
+		{
+			reservation_lock_internal(res);
+		}
+
+		return res;
+	}
 
 	// Change memory protection of specified memory region
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);

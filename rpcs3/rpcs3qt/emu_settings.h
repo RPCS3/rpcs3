@@ -66,6 +66,7 @@ public:
 		MinimumScalableDimension,
 		ForceCPUBlitEmulation,
 		DisableOnDiskShaderCache,
+		DisableVulkanMemAllocator,
 
 		// Audio
 		AudioRenderer,
@@ -222,6 +223,7 @@ private:
 		{ DisableOcclusionQueries,  { "Video", "Disable ZCull Occlusion Queries" }},
 		{ ForceCPUBlitEmulation,    { "Video", "Force CPU Blit" }},
 		{ DisableOnDiskShaderCache, { "Video", "Disable On-Disk Shader Cache"}},
+		{ DisableVulkanMemAllocator, { "Video", "Disable Vulkan Memory Allocator" }},
 		{ AnisotropicFilterOverride,{ "Video", "Anisotropic Filter Override" }},
 		{ ResolutionScale,          { "Video", "Resolution Scale" }},
 		{ MinimumScalableDimension, { "Video", "Minimum Scalable Dimension" }},

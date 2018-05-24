@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/Overlays/overlays.h"
 
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
@@ -75,24 +75,21 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 		cellSysutil.error(msgString.get_ptr());
 	}
 
-	if (auto rsxthr = fxm::get<GSRender>())
+	if (auto manager = fxm::get<rsx::overlays::display_manager>())
 	{
-		if (auto dlg = rsxthr->shell_open_message_dialog())
+		manager->create<rsx::overlays::message_dialog>()->show(msgString.get_ptr(), _type, [callback, userData](s32 status)
 		{
-			dlg->show(msgString.get_ptr(), _type, [callback, userData](s32 status)
+			if (callback)
 			{
-				if (callback)
+				sysutil_register_cb([=](ppu_thread& ppu) -> s32
 				{
-					sysutil_register_cb([=](ppu_thread& ppu) -> s32
-					{
-						callback(ppu, status, userData);
-						return CELL_OK;
-					});
-				}
-			});
+					callback(ppu, status, userData);
+					return CELL_OK;
+				});
+			}
+		});
 
-			return CELL_OK;
-		}
+		return CELL_OK;
 	}
 
 	const auto dlg = fxm::import<MsgDialogBase>(Emu.GetCallbacks().get_msg_dialog);
@@ -237,9 +234,9 @@ s32 cellMsgDialogClose(f32 delay)
 	extern u64 get_system_time();
 	const u64 wait_until = get_system_time() + static_cast<s64>(std::max<float>(delay, 0.0f) * 1000);
 
-	if (auto rsxthr = fxm::get<GSRender>())
+	if (auto manager = fxm::get<rsx::overlays::display_manager>())
 	{
-		if (auto dlg = rsxthr->shell_get_current_dialog())
+		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
 			thread_ctrl::spawn("cellMsgDialogClose() Thread", [=]
 			{
@@ -248,7 +245,7 @@ s32 cellMsgDialogClose(f32 delay)
 					if (Emu.IsStopped())
 						return;
 
-					if (rsxthr->shell_get_current_dialog() != dlg)
+					if (manager->get<rsx::overlays::message_dialog>() != dlg)
 						return;
 
 					std::this_thread::sleep_for(1ms);
@@ -287,10 +284,11 @@ s32 cellMsgDialogAbort()
 {
 	cellSysutil.warning("cellMsgDialogAbort()");
 
-	if (auto rsxthr = fxm::get<GSRender>())
+	if (auto manager = fxm::get<rsx::overlays::display_manager>())
 	{
-		if (rsxthr->shell_close_dialog())
+		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
+			dlg->close();
 			return CELL_OK;
 		}
 	}
@@ -320,12 +318,11 @@ s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> msgStrin
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	if (auto rsxthr = fxm::get<GSRender>())
+	if (auto manager = fxm::get<rsx::overlays::display_manager>())
 	{
-		if (auto dlg2 = rsxthr->shell_get_current_dialog())
+		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
-			if (auto casted = dynamic_cast<rsx::overlays::message_dialog*>(dlg2))
-				return casted->progress_bar_set_message(progressBarIndex, msgString.get_ptr());
+			return dlg->progress_bar_set_message(progressBarIndex, msgString.get_ptr());
 		}
 	}
 
@@ -353,12 +350,11 @@ s32 cellMsgDialogProgressBarReset(u32 progressBarIndex)
 {
 	cellSysutil.warning("cellMsgDialogProgressBarReset(progressBarIndex=%d)", progressBarIndex);
 
-	if (auto rsxthr = fxm::get<GSRender>())
+	if (auto manager = fxm::get<rsx::overlays::display_manager>())
 	{
-		if (auto dlg2 = rsxthr->shell_get_current_dialog())
+		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
-			if (auto casted = dynamic_cast<rsx::overlays::message_dialog*>(dlg2))
-				return casted->progress_bar_reset(progressBarIndex);
+			return dlg->progress_bar_reset(progressBarIndex);
 		}
 	}
 
@@ -386,12 +382,11 @@ s32 cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 {
 	cellSysutil.warning("cellMsgDialogProgressBarInc(progressBarIndex=%d, delta=%d)", progressBarIndex, delta);
 
-	if (auto rsxthr = fxm::get<GSRender>())
+	if (auto manager = fxm::get<rsx::overlays::display_manager>())
 	{
-		if (auto dlg2 = rsxthr->shell_get_current_dialog())
+		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
-			if (auto casted = dynamic_cast<rsx::overlays::message_dialog*>(dlg2))
-				return casted->progress_bar_increment(progressBarIndex, (f32)delta);
+			return dlg->progress_bar_increment(progressBarIndex, (f32)delta);
 		}
 	}
 

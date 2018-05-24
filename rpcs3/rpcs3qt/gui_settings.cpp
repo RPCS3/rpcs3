@@ -174,9 +174,7 @@ void gui_settings::ShowInfoBox(const gui_save& entry, const QString& title, cons
 
 void gui_settings::SetGamelistColVisibility(int col, bool val)
 {
-	// hide sound format and parental level
-	bool show = col != 8 && col != 9;
-	SetValue(gui_save(gui::game_list, "Col" + QString::number(col) + "visible", show), val);
+	SetValue(GetGuiSaveForColumn(col), val);
 }
 
 void gui_settings::SetCustomColor(int col, const QColor& val)
@@ -197,9 +195,7 @@ logs::level gui_settings::GetLogLevel()
 
 bool gui_settings::GetGamelistColVisibility(int col)
 {
-	// hide sound format and parental level
-	bool show = col != gui::column_sound && col != gui::column_parental;
-	return GetValue(gui_save(gui::game_list, "Col" + QString::number(col) + "visible", show)).toBool();
+	return GetValue(GetGuiSaveForColumn(col)).toBool();
 }
 
 QColor gui_settings::GetCustomColor(int col)
@@ -258,4 +254,16 @@ QString gui_settings::GetCurrentStylesheetPath()
 	}
 
 	return m_settingsDir.absoluteFilePath(stylesheet + ".qss");
+}
+
+QSize gui_settings::SizeFromSlider(int pos)
+{
+	return gui::gl_icon_size_min + (gui::gl_icon_size_max - gui::gl_icon_size_min) * (pos / (float)gui::gl_max_slider_pos);
+}
+
+gui_save gui_settings::GetGuiSaveForColumn(int col)
+{
+	// hide sound format, parental level, firmware version and path by default
+	bool show = col != gui::column_sound && col != gui::column_parental && col != gui::column_firmware && col != gui::column_path;
+	return gui_save{ gui::game_list, "visibility_" + gui::get_game_list_column_name((gui::game_list_columns)col), show };
 }

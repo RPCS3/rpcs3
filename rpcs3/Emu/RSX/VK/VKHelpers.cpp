@@ -1,12 +1,12 @@
 #include "stdafx.h"
 #include "VKHelpers.h"
-
 #include "Utilities/mutex.h"
 
 namespace vk
 {
 	context* g_current_vulkan_ctx = nullptr;
 	render_device g_current_renderer;
+	std::shared_ptr<vk::mem_allocator_base> g_mem_allocator = nullptr;
 
 	std::unique_ptr<image> g_null_texture;
 	std::unique_ptr<image_view> g_null_image_view;
@@ -17,7 +17,6 @@ namespace vk
 
 	//Driver compatibility workarounds
 	bool g_drv_no_primitive_restart_flag = false;
-	bool g_drv_force_32bit_indices = false;
 	bool g_drv_sanitize_fp_values = false;
 	bool g_drv_disable_fence_reset = false;
 
@@ -189,6 +188,16 @@ namespace vk
 		g_null_sampler = nullptr;
 	}
 
+	void set_current_mem_allocator(std::shared_ptr<vk::mem_allocator_base> mem_allocator)
+	{
+		g_mem_allocator = mem_allocator;
+	}
+
+	std::shared_ptr<vk::mem_allocator_base> get_current_mem_allocator()
+	{
+		return g_mem_allocator;
+	}
+
 	void set_current_thread_ctx(const vk::context &ctx)
 	{
 		g_current_vulkan_ctx = (vk::context *)&ctx;
@@ -207,37 +216,30 @@ namespace vk
 	void set_current_renderer(const vk::render_device &device)
 	{
 		g_current_renderer = device;
+		g_cb_no_interrupt_flag.store(false);
+		g_drv_no_primitive_restart_flag = false;
+		g_drv_sanitize_fp_values = false;
+		g_drv_disable_fence_reset = false;
+		g_num_processed_frames = 0;
+		g_num_total_frames = 0;
+
 		const auto gpu_name = g_current_renderer.gpu().name();
 
-		bool gcn4_proprietary = false;
-		const std::array<std::string, 8> black_listed =
+		//Radeon fails to properly handle degenerate primitives if primitive restart is enabled
+		//One has to choose between using degenerate primitives or primitive restart to break up lists but not both
+		//Polaris and newer will crash with ERROR_DEVICE_LOST
+		//Older GCN will work okay most of the time but also occasionally draws garbage without reason (proprietary driver only)
+		if (gpu_name.find("Radeon") != std::string::npos ||  //Proprietary driver
+			gpu_name.find("POLARIS") != std::string::npos || //RADV POLARIS
+			gpu_name.find("VEGA") != std::string::npos)      //RADV VEGA
 		{
-			// Black list all polaris unless its proven they dont have a problem with primitive restart
-			"RX 580",
-			"RX 570",
-			"RX 560",
-			"RX 550",
-			"RX 480",
-			"RX 470",
-			"RX 460",
-			"RX Vega",
-		};
-
-		for (const auto& test : black_listed)
-		{
-			if (gpu_name.find(test) != std::string::npos)
-			{
-				g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
-				gcn4_proprietary = true;
-				break;
-			}
+			g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
 		}
 
-		//Older cards back to GCN1 break primitive restart on 16-bit indices
-		if (!gcn4_proprietary && gpu_name.find("Radeon") != std::string::npos)
+		//Radeon proprietary driver does not properly handle fence reset and can segfault during vkResetFences
+		//Disable fence reset for proprietary driver and delete+initialize a new fence instead
+		if (gpu_name.find("Radeon") != std::string::npos)
 		{
-			//gcn1 - gcn3 workarounds
-			g_drv_force_32bit_indices = true;
 			g_drv_disable_fence_reset = true;
 		}
 
@@ -248,14 +250,21 @@ namespace vk
 		}
 	}
 
-	bool emulate_primitive_restart()
+	bool emulate_primitive_restart(rsx::primitive_type type)
 	{
-		return g_drv_no_primitive_restart_flag;
-	}
+		if (g_drv_no_primitive_restart_flag)
+		{
+			switch (type)
+			{
+			case rsx::primitive_type::triangle_strip:
+			case rsx::primitive_type::quad_strip:
+				return true;
+			default:
+				break;
+			}
+		}
 
-	bool force_32bit_index_buffer()
-	{
-		return g_drv_force_32bit_indices;
+		return false;
 	}
 
 	bool sanitize_fp_values()

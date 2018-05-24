@@ -2,7 +2,7 @@
 
 #include "stdafx.h"
 #include "GLHelpers.h"
-#include "../overlays.h"
+#include "../Overlays/overlays.h"
 
 extern u64 get_system_time();
 
@@ -327,7 +327,7 @@ namespace gl
 	{
 		u32 num_elements = 0;
 		std::vector<std::unique_ptr<gl::texture>> resources;
-		std::unordered_map<u64, std::unique_ptr<gl::texture>> temp_image_cache;
+		std::unordered_map<u64, std::pair<u32, std::unique_ptr<gl::texture>>> temp_image_cache;
 		std::unordered_map<u64, std::unique_ptr<gl::texture_view>> temp_view_cache;
 		std::unordered_map<u64, std::unique_ptr<gl::texture>> font_cache;
 		std::unordered_map<u64, std::unique_ptr<gl::texture_view>> view_cache;
@@ -392,7 +392,7 @@ namespace gl
 			};
 		}
 
-		gl::texture_view* load_simple_image(rsx::overlays::image_info* desc, bool temp_resource)
+		gl::texture_view* load_simple_image(rsx::overlays::image_info* desc, bool temp_resource, u32 owner_uid)
 		{
 			auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, desc->w, desc->h, 1, 1, GL_RGBA8);
 			tex->copy_from(desc->data, gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
@@ -409,7 +409,7 @@ namespace gl
 			else
 			{
 				u64 key = (u64)desc;
-				temp_image_cache[key] = std::move(tex);
+				temp_image_cache[key] = std::move(std::make_pair(owner_uid, std::move(tex)));
 				temp_view_cache[key] = std::move(view);
 			}
 
@@ -425,7 +425,7 @@ namespace gl
 
 			for (const auto &res : configuration.texture_raw_data)
 			{
-				load_simple_image(res.get(), false);
+				load_simple_image(res.get(), false, UINT32_MAX);
 			}
 
 			configuration.free_resources();
@@ -439,9 +439,22 @@ namespace gl
 			overlay_pass::destroy();
 		}
 
-		void remove_temp_resources()
+		void remove_temp_resources(u64 key)
 		{
-			temp_image_cache.clear();
+			std::vector<u64> keys_to_remove;
+			for (auto It = temp_image_cache.begin(); It != temp_image_cache.end(); ++It)
+			{
+				if (It->second.first == key)
+				{
+					keys_to_remove.push_back(It->first);
+				}
+			}
+
+			for (const auto& _key : keys_to_remove)
+			{
+				temp_image_cache.erase(_key);
+				temp_view_cache.erase(_key);
+			}
 		}
 
 		gl::texture_view* find_font(rsx::overlays::font *font)
@@ -465,7 +478,7 @@ namespace gl
 			return result;
 		}
 
-		gl::texture_view* find_temp_image(rsx::overlays::image_info *desc)
+		gl::texture_view* find_temp_image(rsx::overlays::image_info *desc, u32 owner_uid)
 		{
 			auto key = (u64)desc;
 			auto cached = temp_view_cache.find(key);
@@ -475,7 +488,7 @@ namespace gl
 			}
 			else
 			{
-				return load_simple_image(desc, true);
+				return load_simple_image(desc, true, owner_uid);
 			}
 		}
 
@@ -535,7 +548,7 @@ namespace gl
 				}
 				case rsx::overlays::image_resource_id::raw_image:
 				{
-					glBindTexture(GL_TEXTURE_2D, find_temp_image((rsx::overlays::image_info*)cmd.first.external_data_ref)->id());
+					glBindTexture(GL_TEXTURE_2D, find_temp_image((rsx::overlays::image_info*)cmd.first.external_data_ref, ui.uid)->id());
 					break;
 				}
 				case rsx::overlays::image_resource_id::font_file:

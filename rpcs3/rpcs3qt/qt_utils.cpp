@@ -2,6 +2,7 @@
 #include "qt_utils.h"
 #include <QApplication>
 #include <QBitmap>
+#include <QFontMetrics>
 #include <QPainter>
 #include <QScreen>
 
@@ -155,6 +156,27 @@ namespace gui
 
 			return image.copy(QRect(QPoint(w_max, h_max), QPoint(w_min, h_min)));
 		}
+
+		// taken from https://stackoverflow.com/a/30818424/8353754
+		// because size policies won't work as expected (see similar bugs in Qt bugtracker)
+		void resize_combo_box_view(QComboBox* combo)
+		{
+			int max_width = 0;
+			QFontMetrics font_metrics(combo->font());
+
+			for (int i = 0; i < combo->count(); ++i)
+			{
+				max_width = std::max(max_width, font_metrics.width(combo->itemText(i)));
+			}
+
+			if (combo->view()->minimumWidth() < max_width)
+			{
+				// add scrollbar width and margin
+				max_width += combo->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+				max_width += combo->view()->autoScrollMargin();
+				combo->view()->setMinimumWidth(max_width);
+			}
+		};
 
 		void update_table_item_count(QTableWidget* table)
 		{

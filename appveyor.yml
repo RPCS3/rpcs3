@@ -6,12 +6,15 @@ image: Visual Studio 2015
 environment:
   QTDIR: C:\Qt\5.10\msvc2015_64
   LLVMLIBS: https://github.com/RPCS3/llvm/releases/download/continuous-release_60/llvmlibs.7z
-  VULKAN: https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R
+  GLSLANG: https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export
+  VULKAN_SDK: "C:\\VulkanSDK\\1.1.73.0"
+  VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.73.0/windows/VulkanSDK-1.1.73.0-Installer.exe?Human=true
 
 cache:
-- vulkan.7z -> appveyor.yml
+- glslang.7z -> appveyor.yml
 - compat_database.dat
+- vulkan-sdk.exe -> appveyor.yml
 
 install:
 - ps: | # set env vars for versioning
@@ -46,11 +49,11 @@ install:
       3rdparty/libpng `
       3rdparty/Optional `
       3rdparty/pugixml `
+      3rdparty/xxHash `
       3rdparty/zlib `
       asmjit `
       Utilities/yaml-cpp `
-      Vulkan/glslang `
-      Vulkan/Vulkan-LoaderAndValidationLayers
+      Vulkan/glslang
 
 platform: x64
 
@@ -64,9 +67,11 @@ build:
 before_build:
 - ps: | # fetch precompiled build dependencies
     if (!(test-path llvmlibs.7z)) { irm $env:LLVMLIBS -outfile llvmlibs.7z }
-    if (!(test-path vulkan.7z)) { irm $env:VULKAN -outfile vulkan.7z }
+    if (!(test-path glslang.7z)) { irm $env:GLSLANG -outfile glslang.7z }
     7z x llvmlibs.7z -aos -o"." | out-null
-    7z x vulkan.7z -aos -o".\lib\$env:CONFIGURATION-$env:PLATFORM" | out-null
+    7z x glslang.7z -aos -o".\lib\$env:CONFIGURATION-$env:PLATFORM" | out-null
+    if (!(test-path vulkan-sdk.exe)) { irm $env:VULKAN_SDK_URL -outfile vulkan-sdk.exe }
+    .\vulkan-sdk.exe /S
 
 after_build:
 - ps: | # remove unnecessary files

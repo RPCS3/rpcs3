@@ -5,18 +5,17 @@ os:
   - linux
   #- osx
 
-# osx_image: xcode6.4
-
 compiler:
   - clang
   - gcc
 
-cache:
-  ccache: true
-  directories:
-    - $HOME/hombebrew_cache
+cache: ccache
 
 matrix:
+  fast_finish: true
+  allow_failures:
+    - os: osx
+      compiler: clang
   exclude:
     - os: osx
       compiler: gcc
@@ -26,7 +25,7 @@ git:
   submodules: false
 
 env:
-    - QTVER=5.10.1
+  - QTVER=5.10.1
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
@@ -38,24 +37,32 @@ install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       wget https://mirrors.kernel.org/ubuntu/pool/universe/g/glew/libglew-dev_2.0.0-5_amd64.deb;
       wget https://mirrors.kernel.org/ubuntu/pool/universe/g/glew/libglew2.0_2.0.0-5_amd64.deb;
-      wget https://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan1_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
-      wget https://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan-dev_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
-      sudo dpkg -i libglew2.0_2.0.0-5_amd64.deb libglew-dev_2.0.0-5_amd64.deb libvulkan1_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb libvulkan-dev_1.0.61.1+dfsg1-1ubuntu1~16.04.1_amd64.deb;
+      wget https://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan1_1.1.73+dfsg-1_amd64.deb;
+      wget https://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan-dev_1.1.73+dfsg-1_amd64.deb;
+      sudo apt-get install --only-upgrade dpkg;
+      sudo dpkg -i libglew2.0_2.0.0-5_amd64.deb libglew-dev_2.0.0-5_amd64.deb libvulkan1_1.1.73+dfsg-1_amd64.deb libvulkan-dev_1.1.73+dfsg-1_amd64.deb;
     else
-      brew update;
-      brew install ccache glew;
+      brew install ccache glew ninja qt;
+      export CCACHE_SLOPPINESS=pch_defines,time_macros;
+      export CMAKE_PREFIX_PATH=/usr/local/opt/qt5/;
+      export PATH="/usr/local/opt/ccache/libexec:$PATH";
     fi;
+  # Download pre-compiled LLVM libs
+  -  if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+        wget https://github.com/RPCS3/llvm/releases/download/continuous-linux-release_60/llvmlibs-linux.tar.gz;
+        mkdir llvmlibs;
+        tar -xzf ./llvmlibs-linux.tar.gz -C llvmlibs;
+     fi;
 
 before_script:
-  - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
+  - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional 3rdparty/xxHash Vulkan/glslang
   - mkdir build ; cd build
-  - export CMAKE_PREFIX_PATH=~/Qt/${QTVER}/gcc_64/lib/cmake
   - if [ "$TRAVIS_PULL_REQUEST" = false ]; then
       export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH";
     else
       export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/#$TRAVIS_PULL_REQUEST";
     fi;
-  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DUSE_NATIVE_INSTRUCTIONS=OFF -DWITHOUT_LLVM=ON -G Ninja;
+  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DLLVM_DIR=../llvmlibs/lib/cmake/llvm/ -DUSE_NATIVE_INSTRUCTIONS=OFF -G Ninja;
 
 script:
   - ninja -j 2
@@ -63,15 +70,14 @@ script:
 after_script:
   - cd build
   - # AppImage generation
-  - if [ -n "$UPLOAD_URL" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
-      source /opt/qt510/bin/qt510-env.sh ;
+  - if [ -n "$UPLOAD_URL" ] && [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$CC" = "clang" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
+      source /opt/qt*/bin/qt*-env.sh ;
       echo $LD_LIBRARY_PATH ;
       export LD_LIBRARY_PATH=/opt/qt510/lib ;
       DESTDIR=appdir ninja install ; find appdir/ ;
       find ../bin ;
       wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" ;
       chmod a+x linuxdeployqt*.AppImage ;
-      export PATH=~/Qt/$QTVER/gcc_64/bin/:${PATH} ;
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
       rm ./appdir/usr/lib/libfreetype.so.6 ;
       rm ./appdir/usr/lib/libglapi.so.0 ;

@@ -87,7 +87,6 @@ s32 cellRtcGetTick(vm::ptr<CellRtcDateTime> pTime, vm::ptr<CellRtcTick> pTick)
 {
 	cellRtc.todo("cellRtcGetTick(pTime=*0x%x, pTick=*0x%x)", pTime, pTick);
 
-
 	return CELL_OK;
 }
 

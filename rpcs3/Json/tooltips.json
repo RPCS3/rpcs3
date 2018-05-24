@@ -16,7 +16,7 @@
 			"precise": "This is extremely slow but may fix broken graphics in some games.",
 			"fast": "This is slower than the SPU Recompiler but significantly faster than the precise interpreter.\nGames rarely need this however.",
 			"ASMJIT": "This is the fastest option with very good compatibility.\nIf unsure, use this option.",
-			"LLVM": ""
+			"LLVM": "Experimental. May improve performance, but may also break games."
 		},
 		"libraries": {
 			"auto": "Automatically selects the LLE libraries to load.\nWhile this option works fine in most cases, liblv2 is the preferred option.",
@@ -48,7 +48,8 @@
 		"logProg": "Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option.",
 		"disableOcclusionQueries": "Disables running occlusion queries. Minor to moderate performance boost.\nMight introduce issues with broken occlusion e.g missing geometry and extreme pop-in.",
 		"forceCpuBlitEmulation": "Forces emulation of all blit and image manipulation operations on the CPU.\nRequires 'Write Color Buffers' option to also be enabled in most cases to avoid missing graphics.\nSignificantly degrades performance but is more accurate in some cases.\nThis setting overrides the 'GPU texture scaling' option.",
-		"disableOnDiskShaderCache": "Disables the loading and saving of shaders from and to the shader cache in the data directory."
+		"disableOnDiskShaderCache": "Disables the loading and saving of shaders from and to the shader cache in the data directory.",
+		"disableVulkanMemAllocator": "Disables the custom Vulkan memory allocator and reverts to direct calls to VkAllocateMemory/VkFreeMemory."
 	},
 	"emulator": {
 		"gui": {

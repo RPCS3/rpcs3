@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/event.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -13,30 +12,41 @@
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
+#include "Emu/Cell/lv2/sys_rsx.h"
 
 #include "Emu/IdManager.h"
 #include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/Capture/rsx_replay.h"
 
 #include "Loader/PSF.h"
 #include "Loader/ELF.h"
 
 #include "Utilities/StrUtil.h"
+#include "Utilities/sysinfo.h"
 
 #include "../Crypto/unself.h"
 #include "../Crypto/unpkg.h"
 #include "yaml-cpp/yaml.h"
 
+#include "cereal/archives/binary.hpp"
+
 #include <thread>
 #include <typeinfo>
 #include <queue>
+#include <fstream>
+#include <memory>
 
 #include "Utilities/GDBDebugServer.h"
 
 #include "Utilities/sysinfo.h"
 
-bool g_use_rtm;
+#if defined(_WIN32) || defined(HAVE_VULKAN)
+#include "Emu/RSX/VK/VulkanAPI.h"
+#endif
 
 cfg_root g_cfg;
+
+bool g_use_rtm = utils::has_rtm();
 
 std::string g_cfg_defaults;
 
@@ -235,6 +245,50 @@ void Emulator::Init()
 #endif
 	// Initialize patch engine
 	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
+}
+
+bool Emulator::BootRsxCapture(const std::string& path)
+{
+	if (!fs::is_file(path))
+		return false;
+
+	std::fstream f(path, std::ios::in | std::ios::binary);
+
+	cereal::BinaryInputArchive archive(f);
+	std::unique_ptr<rsx::frame_capture_data> frame = std::make_unique<rsx::frame_capture_data>();
+	archive(*frame);
+
+	if (frame->magic != rsx::FRAME_CAPTURE_MAGIC)
+	{
+		LOG_ERROR(LOADER, "Invalid rsx capture file!");
+		return false;
+	}
+
+	if (frame->version != rsx::FRAME_CAPTURE_VERSION)
+	{
+		LOG_ERROR(LOADER, "Rsx capture file version not supported! Expected %d, found %d", rsx::FRAME_CAPTURE_VERSION, frame->version);
+		return false;
+	}
+
+	Init();
+
+	vm::init();
+
+	// PS3 'executable'
+	m_state = system_state::ready;
+	GetCallbacks().on_ready();
+
+	auto gsrender = fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render);
+	if (gsrender.get() == nullptr)
+		return false;
+
+	GetCallbacks().on_run();
+	m_state = system_state::running;
+
+	auto&& rsxcapture = idm::make_ptr<ppu_thread, rsx::rsx_replay_thread>(std::move(frame));
+	rsxcapture->run();
+
+	return true;
 }
 
 bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
@@ -448,6 +502,13 @@ void Emulator::Load(bool add_only)
 			LOG_NOTICE(LOADER, "Applying custom config: %s.yml", m_path);
 			g_cfg.from_string(cfg_file.to_string());
 		}
+
+#if defined(_WIN32) || defined(HAVE_VULKAN)
+		if (g_cfg.video.renderer == video_renderer::vulkan)
+		{
+			LOG_NOTICE(LOADER, "Vulkan SDK Revision: %d", VK_HEADER_VERSION);
+		}
+#endif
 
 		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", g_cfg.to_string());
 		
@@ -872,23 +933,6 @@ void Emulator::Load(bool add_only)
 				}
 
 				LOG_NOTICE(LOADER, "Elf path: %s", argv[0]);
-			}
-
-			if (g_cfg.core.spu_debug)
-			{
-				fs::file log;
-
-				if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
-				{
-					log.open(Emu.GetCachePath() + "SPUJIT.log", fs::rewrite);
-				}
-
-				if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
-				{
-					log.open(Emu.GetCachePath() + "SPU.log", fs::rewrite);
-				}
-
-				log.write(fmt::format("SPU JIT Log\n\nTitle: %s\nTitle ID: %s\n\n", Emu.GetTitle(), Emu.GetTitleID()));
 			}
 
 			ppu_load_exec(ppu_exec);

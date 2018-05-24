@@ -400,7 +400,7 @@ namespace gl
 		int m_skip_rows = 0;
 		int m_skip_pixels = 0;
 		int m_skip_images = 0;
-		int m_aligment = 4;
+		int m_alignment = 4;
 
 	public:
 		void apply() const
@@ -412,7 +412,7 @@ namespace gl
 			glPixelStorei(GL_PACK_SKIP_ROWS, m_skip_rows);
 			glPixelStorei(GL_PACK_SKIP_PIXELS, m_skip_pixels);
 			glPixelStorei(GL_PACK_SKIP_IMAGES, m_skip_images);
-			glPixelStorei(GL_PACK_ALIGNMENT, m_aligment);
+			glPixelStorei(GL_PACK_ALIGNMENT, m_alignment);
 		}
 
 		pixel_pack_settings& swap_bytes(bool value = true)
@@ -450,9 +450,9 @@ namespace gl
 			m_skip_images = value;
 			return *this;
 		}
-		pixel_pack_settings& aligment(int value)
+		pixel_pack_settings& alignment(int value)
 		{
-			m_aligment = value;
+			m_alignment = value;
 			return *this;
 		}
 	};
@@ -466,7 +466,7 @@ namespace gl
 		int m_skip_rows = 0;
 		int m_skip_pixels = 0;
 		int m_skip_images = 0;
-		int m_aligment = 4;
+		int m_alignment = 4;
 
 	public:
 		void apply() const
@@ -478,7 +478,7 @@ namespace gl
 			glPixelStorei(GL_UNPACK_SKIP_ROWS, m_skip_rows);
 			glPixelStorei(GL_UNPACK_SKIP_PIXELS, m_skip_pixels);
 			glPixelStorei(GL_UNPACK_SKIP_IMAGES, m_skip_images);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, m_aligment);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, m_alignment);
 		}
 
 		pixel_unpack_settings& swap_bytes(bool value = true)
@@ -516,9 +516,9 @@ namespace gl
 			m_skip_images = value;
 			return *this;
 		}
-		pixel_unpack_settings& aligment(int value)
+		pixel_unpack_settings& alignment(int value)
 		{
-			m_aligment = value;
+			m_alignment = value;
 			return *this;
 		}
 	};

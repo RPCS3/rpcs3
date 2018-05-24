@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "overlays.h"
-#include "GSRender.h"
+#include "../GSRender.h"
 
 namespace rsx
 {
@@ -13,8 +13,8 @@ namespace rsx
 		{
 			//Force unload
 			exit = true;
-			if (auto rsxthr = fxm::get<GSRender>())
-				rsxthr->shell_close_dialog();
+			if (auto manager = fxm::get<display_manager>())
+				manager->remove(uid);
 
 			if (on_close)
 				on_close(return_code);
@@ -22,7 +22,7 @@ namespace rsx
 
 		void user_interface::refresh()
 		{
-			if (auto rsxthr = fxm::get<GSRender>())
+			if (auto rsxthr = rsx::get_current_renderer())
 			{
 				rsxthr->native_ui_flip_request.store(true);
 			}

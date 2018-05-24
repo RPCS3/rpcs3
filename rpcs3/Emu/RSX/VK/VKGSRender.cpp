@@ -338,34 +338,34 @@ namespace
 		std::vector<VkAttachmentDescription> attachments = {};
 		std::vector<VkAttachmentReference> attachment_references;
 
-		VkAttachmentDescription color_attachement_description = {};
-		color_attachement_description.format = color_format;
-		color_attachement_description.samples = VK_SAMPLE_COUNT_1_BIT;
-		color_attachement_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		color_attachement_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		color_attachement_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		color_attachement_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		color_attachement_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		color_attachement_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		VkAttachmentDescription color_attachment_description = {};
+		color_attachment_description.format = color_format;
+		color_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+		color_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		color_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		color_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		color_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		color_attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		color_attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		for (u32 i = 0; i < number_of_color_surface; ++i)
 		{
-			attachments.push_back(color_attachement_description);
+			attachments.push_back(color_attachment_description);
 			attachment_references.push_back({ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
 		}
 
 		if (depth_format != VK_FORMAT_UNDEFINED)
 		{
-			VkAttachmentDescription depth_attachement_description = {};
-			depth_attachement_description.format = depth_format;
-			depth_attachement_description.samples = VK_SAMPLE_COUNT_1_BIT;
-			depth_attachement_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-			depth_attachement_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			depth_attachement_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-			depth_attachement_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-			depth_attachement_description.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			depth_attachement_description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			attachments.push_back(depth_attachement_description);
+			VkAttachmentDescription depth_attachment_description = {};
+			depth_attachment_description.format = depth_format;
+			depth_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+			depth_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			depth_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			depth_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			depth_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+			depth_attachment_description.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			depth_attachment_description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			attachments.push_back(depth_attachment_description);
 
 			attachment_references.push_back({ number_of_color_surface, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
 		}
@@ -547,6 +547,19 @@ VKGSRender::VKGSRender() : GSRender()
 	vk::set_current_thread_ctx(m_thread_context);
 	vk::set_current_renderer(m_swapchain->get_device());
 
+	// Choose memory allocator (device memory)
+	if (g_cfg.video.disable_vulkan_mem_allocator) 
+	{
+		m_mem_allocator = std::make_shared<vk::mem_allocator_vk>(*m_device, m_device->gpu());
+	}
+	else 
+	{
+		m_mem_allocator = std::make_shared<vk::mem_allocator_vma>(*m_device, m_device->gpu());
+	}
+
+	
+	vk::set_current_mem_allocator(m_mem_allocator);
+
 	m_client_width = m_frame->client_width();
 	m_client_height = m_frame->client_height();
 	if (!m_swapchain->init(m_client_width, m_client_height))
@@ -593,6 +606,8 @@ VKGSRender::VKGSRender() : GSRender()
 	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
 	m_uniform_buffer_ring_info.init(VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "uniform buffer");
 	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
+	m_transform_constants_ring_info.init(VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
+	m_transform_constants_ring_info.heap.reset(new vk::buffer(*m_device, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
 	m_index_buffer_ring_info.init(VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
 	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
 	m_texture_upload_buffer_ring_info.init(VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
@@ -632,7 +647,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache.reset(new vk::weak_vertex_cache());
 
-	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.25"));
+	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.3"));
 
 	open_command_buffer();
 
@@ -688,6 +703,7 @@ VKGSRender::~VKGSRender()
 	//Heaps
 	m_index_buffer_ring_info.heap.reset();
 	m_uniform_buffer_ring_info.heap.reset();
+	m_transform_constants_ring_info.heap.reset();
 	m_attrib_ring_info.heap.reset();
 	m_texture_upload_buffer_ring_info.heap.reset();
 
@@ -771,6 +787,9 @@ VKGSRender::~VKGSRender()
 
 	m_secondary_command_buffer.destroy();
 	m_secondary_command_buffer_pool.destroy();
+
+	// Memory allocator (device memory)
+	m_mem_allocator->destroy();
 
 	//Device handles/contexts
 	m_swapchain->destroy();
@@ -861,7 +880,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	return false;
 }
 
-void VKGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
+void VKGSRender::on_invalidate_memory_range(u32 address_base, u32 size)
 {
 	std::lock_guard<shared_mutex> lock(m_secondary_cb_guard);
 	if (m_texture_cache.invalidate_range(address_base, size, true, true, false,
@@ -893,6 +912,7 @@ void VKGSRender::check_heap_status()
 	if (m_attrib_ring_info.is_critical() ||
 		m_texture_upload_buffer_ring_info.is_critical() ||
 		m_uniform_buffer_ring_info.is_critical() ||
+		m_transform_constants_ring_info.is_critical() ||
 		m_index_buffer_ring_info.is_critical())
 	{
 		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
@@ -917,6 +937,7 @@ void VKGSRender::check_heap_status()
 
 			m_index_buffer_ring_info.reset_allocation_stats();
 			m_uniform_buffer_ring_info.reset_allocation_stats();
+			m_transform_constants_ring_info.reset_allocation_stats();
 			m_attrib_ring_info.reset_allocation_stats();
 			m_texture_upload_buffer_ring_info.reset_allocation_stats();
 			m_current_frame->reset_heap_ptrs();
@@ -1439,8 +1460,9 @@ void VKGSRender::end()
 	bool primitive_emulated = false;
 	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
 
-	const bool is_emulated_restart = (!primitive_emulated && rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart() && rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed);
-	const bool single_draw = (!is_emulated_restart && (!supports_multidraw || rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive));
+	const bool single_draw = (!supports_multidraw ||
+		rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 ||
+		rsx::method_registers.current_draw_clause.is_disjoint_primitive);
 
 	if (m_occlusion_query_active && (occlusion_id != UINT32_MAX))
 	{
@@ -1480,23 +1502,12 @@ void VKGSRender::end()
 		}
 		else
 		{
-			if (!is_emulated_restart)
+			u32 first_vertex = 0;
+			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
 			{
-				u32 first_vertex = 0;
-				for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
-				{
-					const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
-					vkCmdDrawIndexed(*m_current_command_buffer, verts, 1, first_vertex, 0, 0);
-					first_vertex += verts;
-				}
-			}
-			else
-			{
-				for (const auto &range : rsx::method_registers.current_draw_clause.alternate_first_count_commands)
-				{
-					//Primitive restart splitting happens after the primitive type expansion step
-					vkCmdDrawIndexed(*m_current_command_buffer, range.second, 1, range.first, 0, 0);
-				}
+				const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
+				vkCmdDrawIndexed(*m_current_command_buffer, verts, 1, first_vertex, 0, 0);
+				first_vertex += verts;
 			}
 		}
 	}
@@ -1592,7 +1603,7 @@ void VKGSRender::on_init_thread()
 				type.disable_cancel = true;
 				type.progress_bar_count = 1;
 
-				dlg = owner->shell_open_message_dialog();
+				dlg = fxm::get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>();
 				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
 				{
 					if (status != CELL_OK)
@@ -1769,7 +1780,7 @@ void VKGSRender::clear_surface(u32 mask)
 							fmt::throw_exception("Unreachable" HERE);
 					}
 
-					//Fush unconditinally - parameters might not persist
+					//Fush unconditionally - parameters might not persist
 					//TODO: Better parameter management for overlay passes
 					flush_command_queue();
 				}
@@ -1862,7 +1873,7 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 		//swap handler checks the pending flag, so call it here
 		process_swap_request(m_current_frame);
 
-		//wait for the latest intruction to execute
+		//wait for the latest instruction to execute
 		m_current_command_buffer->pending = true;
 		m_current_command_buffer->reset();
 
@@ -1938,6 +1949,7 @@ void VKGSRender::advance_queued_frames()
 	m_vertex_cache->purge();
 	m_current_frame->tag_frame_end(m_attrib_ring_info.get_current_put_pos_minus_one(),
 		m_uniform_buffer_ring_info.get_current_put_pos_minus_one(),
+		m_transform_constants_ring_info.get_current_put_pos_minus_one(),
 		m_index_buffer_ring_info.get_current_put_pos_minus_one(),
 		m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one());
 
@@ -2030,6 +2042,16 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 			m_text_writer->reset_descriptors();
 		}
 
+		if (m_overlay_manager && m_overlay_manager->has_dirty())
+		{
+			for (const auto& view : m_overlay_manager->get_dirty())
+			{
+				m_ui_renderer->remove_temp_resources(view->uid);
+			}
+
+			m_overlay_manager->clear_dirty();
+		}
+
 		m_attachment_clear_pass->free_resources();
 		m_depth_converter->free_resources();
 		m_depth_scaler->free_resources();
@@ -2045,11 +2067,13 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 			//Heap cleanup; deallocates memory consumed by the frame if it is still held
 			m_attrib_ring_info.m_get_pos = ctx->attrib_heap_ptr;
 			m_uniform_buffer_ring_info.m_get_pos = ctx->ubo_heap_ptr;
+			m_transform_constants_ring_info.m_get_pos = ctx->vtxconst_heap_ptr;
 			m_index_buffer_ring_info.m_get_pos = ctx->index_heap_ptr;
 			m_texture_upload_buffer_ring_info.m_get_pos = ctx->texture_upload_heap_ptr;
 
 			m_attrib_ring_info.notify();
 			m_uniform_buffer_ring_info.notify();
+			m_transform_constants_ring_info.notify();
 			m_index_buffer_ring_info.notify();
 			m_texture_upload_buffer_ring_info.notify();
 		}
@@ -2058,7 +2082,7 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 	ctx->swap_command_buffer = nullptr;
 }
 
-void VKGSRender::do_local_task(bool /*idle*/)
+void VKGSRender::do_local_task(bool idle)
 {
 	if (m_flush_requests.pending())
 	{
@@ -2168,14 +2192,7 @@ void VKGSRender::do_local_task(bool /*idle*/)
 
 #endif
 
-	//TODO: Guard this
-	if (m_overlay_cleanup_requests.size())
-	{
-		flush_command_queue(true);
-		m_ui_renderer->remove_temp_resources();
-		m_overlay_cleanup_requests.clear();
-	}
-	else if (m_custom_ui)
+	if (m_overlay_manager)
 	{
 		if (!in_begin_end && native_ui_flip_request.load())
 		{
@@ -2184,6 +2201,8 @@ void VKGSRender::do_local_task(bool /*idle*/)
 			flip((s32)current_display_buffer);
 		}
 	}
+
+	rsx::thread::do_local_task(idle);
 }
 
 bool VKGSRender::do_method(u32 cmd, u32 arg)
@@ -2209,13 +2228,17 @@ bool VKGSRender::check_program_status()
 
 void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 {
-	get_current_fragment_program(fs_sampler_state);
-	verify(HERE), current_fragment_program.valid;
+	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
+	{
+		get_current_fragment_program(fs_sampler_state);
+		verify(HERE), current_fragment_program.valid;
 
-	get_current_vertex_program();
+		get_current_vertex_program();
+	}
 
 	auto &vertex_program = current_vertex_program;
 	auto &fragment_program = current_fragment_program;
+	auto old_program = m_program;
 
 	vk::pipeline_props properties = {};
 
@@ -2224,7 +2247,7 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 	properties.state.set_primitive_type(vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, emulated_primitive_type));
 
 	const bool restarts_valid = rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed && !emulated_primitive_type && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
-	if (rsx::method_registers.restart_index_enabled() && !vk::emulate_primitive_restart() && restarts_valid)
+	if (rsx::method_registers.restart_index_enabled() && !vk::emulate_primitive_restart(rsx::method_registers.current_draw_clause.primitive) && restarts_valid)
 		properties.state.enable_primitive_restart();
 
 	// Rasterizer state
@@ -2354,64 +2377,84 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 		//Notify the user with HUD notification
 		if (g_cfg.misc.show_shader_compilation_hint)
 		{
-			if (!m_custom_ui)
+			if (m_overlay_manager)
 			{
-				//Create notification but do not draw it at this time. No need to spam flip requests
-				m_custom_ui = std::make_unique<rsx::overlays::shader_compile_notification>();
-			}
-			else if (auto casted = dynamic_cast<rsx::overlays::shader_compile_notification*>(m_custom_ui.get()))
-			{
-				//Probe the notification
-				casted->touch();
+				if (auto dlg = m_overlay_manager->get<rsx::overlays::shader_compile_notification>())
+				{
+					//Extend duration
+					dlg->touch();
+				}
+				else
+				{
+					//Create dialog but do not show immediately
+					m_overlay_manager->create<rsx::overlays::shader_compile_notification>();
+				}
 			}
 		}
 	}
 
 	vk::leave_uninterruptible();
 
-	const size_t fragment_constants_sz = m_prog_buffer->get_fragment_constants_buffer_size(fragment_program);
-	const size_t fragment_buffer_sz = fragment_constants_sz + (18 * 4 * sizeof(float));
-	const size_t required_mem = 512 + 8192 + fragment_buffer_sz;
-
-	const size_t vertex_state_offset = m_uniform_buffer_ring_info.alloc<256>(required_mem);
-	const size_t vertex_constants_offset = vertex_state_offset + 512;
-	const size_t fragment_constants_offset = vertex_constants_offset + 8192;
-
-	//We do this in one go
-	u8 *buf = (u8*)m_uniform_buffer_ring_info.map(vertex_state_offset, required_mem);
-
-	//Vertex state
-	fill_scale_offset_data(buf, false);
-	fill_user_clip_data(buf + 64);
-	*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
-	*(reinterpret_cast<u32*>(buf + 132)) = vertex_info.vertex_index_base;
-	*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
-	*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
-	*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
-
-	fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, reinterpret_cast<s32*>(buf + 160),
-			vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
-
-	//Vertex constants
-	buf = buf + 512;
-	fill_vertex_program_constants_data(buf);
-	m_transform_constants_dirty = false;
-	
-	//Fragment constants
-	buf = buf + 8192;
-	if (fragment_constants_sz)
+	if (1)//m_graphics_state & (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty))
 	{
-		m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) },
-				fragment_program, vk::sanitize_fp_values());
+		const size_t fragment_constants_sz = m_prog_buffer->get_fragment_constants_buffer_size(fragment_program);
+		const size_t fragment_buffer_sz = fragment_constants_sz + (18 * 4 * sizeof(float));
+		const size_t required_mem = 512 + fragment_buffer_sz;
+
+		const size_t vertex_state_offset = m_uniform_buffer_ring_info.alloc<256>(required_mem);
+		const size_t fragment_constants_offset = vertex_state_offset + 512;
+
+		//We do this in one go
+		u8 *buf = (u8*)m_uniform_buffer_ring_info.map(vertex_state_offset, required_mem);
+
+		//Vertex state
+		fill_scale_offset_data(buf, false);
+		fill_user_clip_data(buf + 64);
+		*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
+		*(reinterpret_cast<u32*>(buf + 132)) = vertex_info.vertex_index_base;
+		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
+		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
+		*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
+
+		fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, reinterpret_cast<s32*>(buf + 160),
+				vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
+		
+		//Fragment constants
+		buf = buf + 512;
+		if (fragment_constants_sz)
+		{
+			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) },
+					fragment_program, vk::sanitize_fp_values());
+		}
+
+		fill_fragment_state_buffer(buf + fragment_constants_sz, fragment_program);
+		
+		m_uniform_buffer_ring_info.unmap();
+
+		m_vertex_state_buffer_info = { m_uniform_buffer_ring_info.heap->value, vertex_state_offset, 512 };
+		m_fragment_state_buffer_info = { m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_buffer_sz };
 	}
 
-	fill_fragment_state_buffer(buf + fragment_constants_sz, fragment_program);
-	
-	m_uniform_buffer_ring_info.unmap();
+	if (m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
+	{
+		//Vertex constants
+		const size_t vertex_constants_offset = m_transform_constants_ring_info.alloc<256>(8192);
+		auto buf = m_transform_constants_ring_info.map(vertex_constants_offset, 8192);
 
-	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, vertex_state_offset, 512 }, SCALE_OFFSET_BIND_SLOT, m_current_frame->descriptor_set);
-	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, vertex_constants_offset, 8192 }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
-	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_buffer_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
+		fill_vertex_program_constants_data(buf);
+		m_transform_constants_ring_info.unmap();
+		m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, vertex_constants_offset, 8192 };
+	}
+
+	if (1)//m_graphics_state || old_program != m_program)
+	{
+		m_program->bind_uniform(m_vertex_state_buffer_info, SCALE_OFFSET_BIND_SLOT, m_current_frame->descriptor_set);
+		m_program->bind_uniform(m_vertex_constants_buffer_info, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
+		m_program->bind_uniform(m_fragment_state_buffer_info, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
+	}
+
+	//Clear flags
+	m_graphics_state = 0;
 }
 
 static const u32 mr_color_offset[rsx::limits::color_buffers_count] =
@@ -2453,7 +2496,7 @@ void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 				if (&ctx == m_current_frame && ctx.swap_command_buffer->pending)
 				{
-					//Instead of stoppiing to wait, use the aux storage to ease pressure
+					//Instead of stopping to wait, use the aux storage to ease pressure
 					m_aux_frame_context.grab_resources(*m_current_frame);
 					m_current_frame = &m_aux_frame_context;
 				}
@@ -3155,7 +3198,8 @@ void VKGSRender::flip(int buffer)
 
 	std::unique_ptr<vk::framebuffer_holder> direct_fbo;
 	std::vector<std::unique_ptr<vk::image_view>> swap_image_view;
-	if (g_cfg.video.overlay || m_custom_ui)
+	const bool has_overlay = (m_overlay_manager && m_overlay_manager->has_visible());
+	if (g_cfg.video.overlay || has_overlay)
 	{
 		//Change the image layout whilst setting up a dependency on waiting for the blit op to finish before we start writing
 		VkImageSubresourceRange subres = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
@@ -3193,9 +3237,12 @@ void VKGSRender::flip(int buffer)
 			direct_fbo.reset(new vk::framebuffer_holder(*m_device, single_target_pass, m_client_width, m_client_height, std::move(swap_image_view)));
 		}
 
-		if (m_custom_ui)
+		if (has_overlay)
 		{
-			m_ui_renderer->run(*m_current_command_buffer, direct_fbo->width(), direct_fbo->height(), direct_fbo.get(), single_target_pass, m_texture_upload_buffer_ring_info, *m_custom_ui);
+			for (const auto& view : m_overlay_manager->get_views())
+			{
+				m_ui_renderer->run(*m_current_command_buffer, direct_fbo->width(), direct_fbo->height(), direct_fbo.get(), single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
+			}
 		}
 
 		if (g_cfg.video.overlay)
@@ -3414,10 +3461,4 @@ void VKGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 
 	m_occlusion_query_pool.reset_queries(*m_current_command_buffer, data.indices);
 	m_occlusion_map.erase(query->driver_handle);
-}
-
-void VKGSRender::shell_do_cleanup()
-{
-	//TODO: Guard this
-	m_overlay_cleanup_requests.push_back(0);
 }

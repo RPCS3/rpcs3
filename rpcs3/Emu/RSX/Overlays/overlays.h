@@ -1,8 +1,8 @@
 #pragma once
 #include "overlay_controls.h"
 
-#include "../../Utilities/Thread.h"
-#include "../Io/PadHandler.h"
+#include "../../../Utilities/Thread.h"
+#include "../../Io/PadHandler.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
 #include "pad_thread.h"
@@ -42,6 +42,9 @@ namespace rsx
 				square,
 				cross
 			};
+
+			u32 uid = UINT32_MAX;
+			u32 type_index = UINT32_MAX;
 
 			u16 virtual_width = 1280;
 			u16 virtual_height = 720;
@@ -158,6 +161,138 @@ namespace rsx
 
 				//Unreachable
 				return 0;
+			}
+		};
+
+		class display_manager
+		{
+		private:
+			atomic_t<u32> m_uid_ctr { 0u };
+			std::vector<std::unique_ptr<user_interface>> m_iface_list;
+			std::vector<std::unique_ptr<user_interface>> m_dirty_list;
+
+		public:
+			display_manager() {}
+			~display_manager() {}
+
+			template <typename T>
+			T* add(std::unique_ptr<T>& entry, bool remove_existing = true)
+			{
+				T* e = entry.get();
+				e->uid = m_uid_ctr.fetch_add(1);
+				e->type_index = id_manager::typeinfo::get_index<T>();
+
+				if (remove_existing)
+				{
+					for (auto It = m_iface_list.begin(); It != m_iface_list.end(); It++)
+					{
+						if (It->get()->type_index == e->type_index)
+						{
+							// Replace
+							m_dirty_list.push_back(std::move(*It));
+							It->reset(e);
+							entry.reset();
+							return e;
+						}
+					}
+				}
+
+				m_iface_list.push_back(std::move(entry));
+				return e;
+			}
+
+			template <typename T, typename ...Args>
+			T* create(Args&&... args)
+			{
+				std::unique_ptr<T> object = std::make_unique<T>(std::forward<Args>(args)...);
+				return add(object);
+			}
+
+			bool remove(u32 uid)
+			{
+				for (auto It = m_iface_list.begin(); It != m_iface_list.end(); It++)
+				{
+					const auto e = It->get();
+					if (e->uid == uid)
+					{
+						m_dirty_list.push_back(std::move(*It));
+						m_iface_list.erase(It);
+						return true;
+					}
+				}
+
+				return false;
+			}
+
+			template <typename T>
+			bool remove()
+			{
+				const auto type_id = id_manager::typeinfo::get_index<T>();
+				for (auto It = m_iface_list.begin(); It != m_iface_list.end();)
+				{
+					if (It->get()->type_index == type_id)
+					{
+						m_dirty_list.push_back(std::move(*It));
+						It = m_iface_list.erase(It);
+					}
+					else
+					{
+						++It;
+					}
+				}
+			}
+
+			// True if any visible elements to draw exist
+			bool has_visible() const
+			{
+				return !m_iface_list.empty();
+			}
+
+			// True if any elements have been deleted but their resources may not have been cleaned up
+			bool has_dirty() const
+			{
+				return !m_dirty_list.empty();
+			}
+
+			const std::vector<std::unique_ptr<user_interface>>& get_views() const
+			{
+				return m_iface_list;
+			}
+
+			const std::vector<std::unique_ptr<user_interface>>& get_dirty() const
+			{
+				return m_dirty_list;
+			}
+
+			void clear_dirty()
+			{
+				m_dirty_list.clear();
+			}
+
+			user_interface* get(u32 uid) const
+			{
+				for (const auto& iface : m_iface_list)
+				{
+					if (iface->uid == uid)
+						return iface.get();
+				}
+
+				return nullptr;
+			}
+
+			template <typename T>
+			T* get() const
+			{
+				const auto type_id = id_manager::typeinfo::get_index<T>();
+				for (const auto& iface : m_iface_list)
+				{
+					if (iface->type_index == type_id)
+					{
+						return static_cast<T*>(iface.get());
+					}
+				}
+
+				return nullptr;
 			}
 		};
 

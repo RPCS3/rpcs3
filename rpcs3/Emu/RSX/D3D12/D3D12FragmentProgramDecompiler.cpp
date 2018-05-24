@@ -55,7 +55,7 @@ void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 	OS << "};\n";
 }
 
-void D3D12FragmentDecompiler::insertIntputs(std::stringstream & OS)
+void D3D12FragmentDecompiler::insertInputs(std::stringstream & OS)
 {
 	OS << "struct PixelInput\n";
 	OS << "{\n";
