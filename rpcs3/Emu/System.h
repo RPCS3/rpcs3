@@ -284,7 +284,6 @@ public:
 };
 
 extern Emulator Emu;
-extern bool g_use_rtm;
 
 struct cfg_root : cfg::node
 {
