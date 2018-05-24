@@ -2513,7 +2513,7 @@ public:
 		const auto cr = c ^ 0xf;
 		const auto a = pshufb(get_vr<u8[16]>(op.ra), cr);
 		const auto b = pshufb(get_vr<u8[16]>(op.rb), cr);
-		set_vr(op.rt4, merge(sext<u8[16]>((c & 0x10) == 0), a, b) | x);
+		set_vr(op.rt4, select(bitcast<s8[16]>(cr << 3) >= 0, a, b) | x);
 	}
 
 	void MPYA(spu_opcode_t op)

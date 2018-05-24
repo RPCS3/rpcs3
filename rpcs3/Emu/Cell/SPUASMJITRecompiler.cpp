@@ -4701,11 +4701,19 @@ void spu_recompiler::SHUFB(spu_opcode_t op)
 	const XmmLink& v5 = XmmAlloc();
 	c->movdqa(vm, XmmConst(_mm_set1_epi8(0xc0)));
 
-	// Test for (110xxxxx) and (11xxxxxx) bit values
 	if (utils::has_avx())
 	{
 		c->vpand(v5, vc, XmmConst(_mm_set1_epi8(0xe0)));
-		c->vpand(vt, vc, vm);
+		c->vpxor(vc, vc, XmmConst(_mm_set1_epi8(0xf)));
+		c->vpshufb(va, va, vc);
+		c->vpslld(vt, vc, 3);
+		c->vpcmpeqb(v5, v5, vm);
+		c->vpshufb(vb, vb, vc);
+		c->vpand(vc, vc, vm);
+		c->vpblendvb(vb, va, vb, vt);
+		c->vpcmpeqb(vt, vc, vm);
+		c->vpavgb(vt, vt, v5);
+		c->vpor(vt, vt, vb);
 	}
 	else
 	{
@@ -4713,35 +4721,21 @@ void spu_recompiler::SHUFB(spu_opcode_t op)
 		c->pand(v5, XmmConst(_mm_set1_epi8(0xe0)));
 		c->movdqa(vt, vc);
 		c->pand(vt, vm);
-	}
-
-	c->pxor(vc, XmmConst(_mm_set1_epi8(0xf)));
-	c->pshufb(va, vc);
-	c->pshufb(vb, vc);
-	c->pand(vc, XmmConst(_mm_set1_epi8(0x10)));
-	c->pcmpeqb(v5, vm); // If true, result should become 0xFF
-	c->pcmpeqb(vt, vm); // If true, result should become either 0xFF or 0x80
-	c->pavgb(vt, v5); // Generate result constant: AVG(0xff, 0x00) == 0x80
-	c->pxor(vm, vm);
-	c->pcmpeqb(vc, vm);
-
-	// Select result value from va or vb
-	if (utils::has_512())
-	{
-		c->vpternlogd(vc, va, vb, 0xca /* A?B:C */);
-	}
-	else if (utils::has_xop())
-	{
-		c->vpcmov(vc, va, vb, vc);
-	}
-	else
-	{
+		c->pxor(vc, XmmConst(_mm_set1_epi8(0xf)));
+		c->pshufb(va, vc);
+		c->pshufb(vb, vc);
+		c->pslld(vc, 3);
+		c->pcmpeqb(v5, vm); // If true, result should become 0xFF
+		c->pcmpeqb(vt, vm); // If true, result should become either 0xFF or 0x80
+		c->pcmpeqb(vm, vm);
+		c->pcmpgtb(vc, vm);
 		c->pand(va, vc);
 		c->pandn(vc, vb);
-		c->por(vc, va);
+		c->por(vc, va); // Select result value from va or vb
+		c->pavgb(vt, v5); // Generate result constant: AVG(0xff, 0x00) == 0x80
+		c->por(vt, vc);
 	}
 
-	c->por(vt, vc);
 	c->movdqa(SPU_OFF_128(gpr, op.rt4), vt);
 }
 
