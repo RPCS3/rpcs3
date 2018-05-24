@@ -31,6 +31,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <time.h>
 #endif
 
 #include "sync.h"
@@ -1848,6 +1849,36 @@ void thread_ctrl::notify()
 	{
 		m_signal |= 1;
 		_notify(&thread_ctrl::m_cond);
+	}
+}
+
+u64 thread_ctrl::get_cycles()
+{
+	u64 cycles;
+
+#ifdef _WIN32
+	if (QueryThreadCycleTime((HANDLE)m_thread.load(), &cycles))
+	{
+#else
+	struct timespec thread_time;
+	if (!clock_gettime(CLOCK_THREAD_CPUTIME_ID, &thread_time))
+	{
+		cycles = static_cast<u64>(thread_time.tv_sec) * 1'000'000'000 + thread_time.tv_nsec;
+#endif
+		// Report 0 the first time this function is called
+		if (m_cycles == 0)
+		{
+			m_cycles = cycles;
+			return 0;
+		}
+
+		const auto diff_cycles = cycles - m_cycles;
+		m_cycles = cycles;
+		return diff_cycles;
+	}
+	else
+	{
+		return m_cycles;
 	}
 }
 

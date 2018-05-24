@@ -138,6 +138,9 @@ class thread_ctrl final
 	// Fixed name
 	std::string m_name;
 
+	// CPU cycles thread has run for
+	u64 m_cycles{0};
+
 	// Start thread
 	static void start(const std::shared_ptr<thread_ctrl>&, task_stack);
 
@@ -170,6 +173,15 @@ public:
 	const std::string& get_name() const
 	{
 		return m_name;
+	}
+
+	// Get CPU cycles since last time this function was called. First call returns 0.
+	u64 get_cycles();
+
+	// Get platform-specific thread handle
+	std::uintptr_t get_native_handle() const
+	{
+		return m_thread.load();
 	}
 
 	// Get exception
