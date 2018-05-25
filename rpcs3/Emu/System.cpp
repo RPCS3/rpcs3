@@ -239,7 +239,6 @@ void Emulator::Init()
 	fs::create_path(dev_usb);
 
 #ifdef WITH_GDB_DEBUGGER
-	// TODO: using legacy call to logger -- should be switched to log::GENERAL.SUCCESS(...)?
 	LOG_SUCCESS(GENERAL, "GDB debug server will be started and listening on %d upon emulator boot", (int) g_cfg.misc.gdb_server_port);
 #endif
 
