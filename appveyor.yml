@@ -9,7 +9,9 @@ environment:
   GLSLANG: https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export
   VULKAN_SDK: "C:\\VulkanSDK\\1.1.73.0"
-  VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.73.0/windows/VulkanSDK-1.1.73.0-Installer.exe?Human=true
+  VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.73.0/windows/VulkanSDK-1.1.73.0-Installer.exe
+  VULKAN_SDK_MIRROR: https://obk.ee/rpcs3/VulkanSDK-1.1.73.0-Installer.exe
+  VULKAN_SDK_SHA: a5d193f97db4de97e6b4fdd81f00ff6a603f66bb17dc3cf8ac0fe9aec58497c7
 
 cache:
 - glslang.7z -> appveyor.yml
@@ -65,12 +67,31 @@ build:
   verbosity: normal
 
 before_build:
-- ps: | # fetch precompiled build dependencies
+- ps: | # initialize mirror arrays and fetch precompiled build dependencies
+    $VULKAN_SDK_URLS = @(
+        $env:VULKAN_SDK_MIRROR;
+        $env:VULKAN_SDK_URL;
+        "$($env:VULKAN_SDK_URL)?Human=true";
+    )
     if (!(test-path llvmlibs.7z)) { irm $env:LLVMLIBS -outfile llvmlibs.7z }
     if (!(test-path glslang.7z)) { irm $env:GLSLANG -outfile glslang.7z }
     7z x llvmlibs.7z -aos -o"." | out-null
     7z x glslang.7z -aos -o".\lib\$env:CONFIGURATION-$env:PLATFORM" | out-null
-    if (!(test-path vulkan-sdk.exe)) { irm $env:VULKAN_SDK_URL -outfile vulkan-sdk.exe }
+    if (!(test-path vulkan-sdk.exe)) 
+    {
+        foreach ($url in $VULKAN_SDK_URLS) {
+            irm $url -outfile vulkan-sdk.exe 
+            if ($env:VULKAN_SDK_SHA -eq $(Get-FileHash .\vulkan-sdk.exe).Hash) 
+            {
+                echo "Successfully downloaded and verified vulkan-sdk.exe!"
+                break
+            }
+            else 
+            {
+                echo "Invalid file hash, Vulkan SDK Setup was possibly tampered with, retrying with a different mirror..."
+            }
+        }
+    }
     .\vulkan-sdk.exe /S
 
 after_build:
