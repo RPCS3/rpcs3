@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 
 option(WITH_GDB "WITH_GDB" OFF)
 option(WITHOUT_LLVM "WITHOUT_LLVM" OFF)
+option(BUILD_LLVM "Force RPCS3 to build LLVM, rather than just download it. Downloading llvm libs only works on linux." OFF)
 option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
 option(VULKAN_PREBUILT "" OFF)
 

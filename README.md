@@ -99,6 +99,9 @@ Build against the shared ffmpeg libraries instead of using the builtin patched v
 - ```-DWITHOUT_LLVM=ON/OFF``` (default = *OFF*)  
 This forces RPCS3 to build without LLVM, not recommended.
 
+- ```-DBUILD_LLVM=ON/OFF``` (default = *OFF*)
+This Forces RPCS3 to build LLVM, rather than just download it. This may be desired if you want to use a different LLVM, or if you want to compile LLVM with native cpu optimizations.  Downloading llvm libs only works on linux.
+
 - ```-DWITH_GDB=ON/OFF``` (default = *OFF*)  
 This Builds RPCS3 with support for debugging PS3 games using gdb.
 

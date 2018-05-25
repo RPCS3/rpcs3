@@ -47,13 +47,6 @@ install:
       export CMAKE_PREFIX_PATH=/usr/local/opt/qt5/;
       export PATH="/usr/local/opt/ccache/libexec:$PATH";
     fi;
-  # Download pre-compiled LLVM libs
-  -  if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-        wget https://github.com/RPCS3/llvm/releases/download/continuous-linux-release_60/llvmlibs-linux.tar.gz;
-        mkdir llvmlibs;
-        tar -xzf ./llvmlibs-linux.tar.gz -C llvmlibs;
-     fi;
-
 before_script:
   - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional 3rdparty/xxHash Vulkan/glslang
   - mkdir build ; cd build
@@ -62,7 +55,7 @@ before_script:
     else
       export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH/#$TRAVIS_PULL_REQUEST";
     fi;
-  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DLLVM_DIR=../llvmlibs/lib/cmake/llvm/ -DUSE_NATIVE_INSTRUCTIONS=OFF -G Ninja;
+  - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DUSE_NATIVE_INSTRUCTIONS=OFF -G Ninja;
 
 script:
   - ninja -j 2
