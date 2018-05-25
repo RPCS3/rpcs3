@@ -1468,18 +1468,28 @@ void GLGSRender::flip(int buffer)
 	{
 		if (m_overlay_manager->has_dirty())
 		{
+			m_overlay_manager->lock();
+
+			std::vector<u32> uids_to_dispose;
+			uids_to_dispose.reserve(m_overlay_manager->get_dirty().size());
+
 			for (const auto& view : m_overlay_manager->get_dirty())
 			{
 				m_ui_renderer.remove_temp_resources(view->uid);
+				uids_to_dispose.push_back(view->uid);
 			}
 
-			m_overlay_manager->clear_dirty();
+			m_overlay_manager->unlock();
+			m_overlay_manager->dispose(uids_to_dispose);
 		}
 
 		if (m_overlay_manager->has_visible())
 		{
 			gl::screen.bind();
 			glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
+
+			// Lock to avoid modification during run-update chain
+			std::lock_guard<rsx::overlays::display_manager> lock(*m_overlay_manager);
 
 			for (const auto& view : m_overlay_manager->get_views())
 			{

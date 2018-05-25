@@ -2044,12 +2044,19 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 		if (m_overlay_manager && m_overlay_manager->has_dirty())
 		{
+			m_overlay_manager->lock();
+
+			std::vector<u32> uids_to_dispose;
+			uids_to_dispose.reserve(m_overlay_manager->get_dirty().size());
+
 			for (const auto& view : m_overlay_manager->get_dirty())
 			{
 				m_ui_renderer->remove_temp_resources(view->uid);
+				uids_to_dispose.push_back(view->uid);
 			}
 
-			m_overlay_manager->clear_dirty();
+			m_overlay_manager->unlock();
+			m_overlay_manager->dispose(uids_to_dispose);
 		}
 
 		m_attachment_clear_pass->free_resources();
@@ -3239,6 +3246,9 @@ void VKGSRender::flip(int buffer)
 
 		if (has_overlay)
 		{
+			// Lock to avoid modification during run-update chain
+			std::lock_guard<rsx::overlays::display_manager> lock(*m_overlay_manager);
+
 			for (const auto& view : m_overlay_manager->get_views())
 			{
 				m_ui_renderer->run(*m_current_command_buffer, direct_fbo->width(), direct_fbo->height(), direct_fbo.get(), single_target_pass, m_texture_upload_buffer_ring_info, *view.get());

@@ -171,13 +171,73 @@ namespace rsx
 			std::vector<std::unique_ptr<user_interface>> m_iface_list;
 			std::vector<std::unique_ptr<user_interface>> m_dirty_list;
 
+			shared_mutex m_list_mutex;
+			std::vector<u32> m_uids_to_remove;
+			std::vector<u32> m_type_ids_to_remove;
+
+			bool remove_type(u32 type_id)
+			{
+				bool found = false;
+				for (auto It = m_iface_list.begin(); It != m_iface_list.end();)
+				{
+					if (It->get()->type_index == type_id)
+					{
+						m_dirty_list.push_back(std::move(*It));
+						It = m_iface_list.erase(It);
+						found = true;
+					}
+					else
+					{
+						++It;
+					}
+				}
+
+				return found;
+			}
+
+			bool remove_uid(u32 uid)
+			{
+				for (auto It = m_iface_list.begin(); It != m_iface_list.end(); It++)
+				{
+					const auto e = It->get();
+					if (e->uid == uid)
+					{
+						m_dirty_list.push_back(std::move(*It));
+						m_iface_list.erase(It);
+						return true;
+					}
+				}
+
+				return false;
+			}
+
+			void cleanup_internal()
+			{
+				for (const auto &uid : m_uids_to_remove)
+				{
+					remove_uid(uid);
+				}
+
+				for (const auto &type_id : m_type_ids_to_remove)
+				{
+					remove_type(type_id);
+				}
+
+				m_uids_to_remove.clear();
+				m_type_ids_to_remove.clear();
+			}
+
 		public:
 			display_manager() {}
 			~display_manager() {}
 
+			// Adds an object to the internal list. Optionally removes other objects of the same type.
+			// Original handle loses ownership but a usable pointer is returned
 			template <typename T>
 			T* add(std::unique_ptr<T>& entry, bool remove_existing = true)
 			{
+				writer_lock lock(m_list_mutex);
+
 				T* e = entry.get();
 				e->uid = m_uid_ctr.fetch_add(1);
 				e->type_index = id_manager::typeinfo::get_index<T>();
@@ -201,6 +261,7 @@ namespace rsx
 				return e;
 			}
 
+			// Allocates object and adds to internal list. Returns pointer to created object
 			template <typename T, typename ...Args>
 			T* create(Args&&... args)
 			{
@@ -208,37 +269,33 @@ namespace rsx
 				return add(object);
 			}
 
-			bool remove(u32 uid)
+			// Removes item from list if it matches the uid
+			void remove(u32 uid)
 			{
-				for (auto It = m_iface_list.begin(); It != m_iface_list.end(); It++)
+				if (m_list_mutex.try_lock())
 				{
-					const auto e = It->get();
-					if (e->uid == uid)
-					{
-						m_dirty_list.push_back(std::move(*It));
-						m_iface_list.erase(It);
-						return true;
-					}
+					remove_uid(uid);
+					m_list_mutex.unlock();
 				}
-
-				return false;
+				else
+				{
+					m_uids_to_remove.push_back(uid);
+				}
 			}
 
+			// Removes all objects of this type from the list
 			template <typename T>
-			bool remove()
+			void remove()
 			{
 				const auto type_id = id_manager::typeinfo::get_index<T>();
-				for (auto It = m_iface_list.begin(); It != m_iface_list.end();)
+				if (m_list_mutex.try_lock())
 				{
-					if (It->get()->type_index == type_id)
-					{
-						m_dirty_list.push_back(std::move(*It));
-						It = m_iface_list.erase(It);
-					}
-					else
-					{
-						++It;
-					}
+					remove_type(type_id);
+					m_list_mutex.unlock();
+				}
+				else
+				{
+					m_type_ids_to_remove.push_back(type_id);
 				}
 			}
 
@@ -254,23 +311,43 @@ namespace rsx
 				return !m_dirty_list.empty();
 			}
 
+			// Returns current list for reading. Caller must ensure synchronization by first locking the list
 			const std::vector<std::unique_ptr<user_interface>>& get_views() const
 			{
 				return m_iface_list;
 			}
 
+			// Returns current list of removed objects not yet deallocated for reading.
+			// Caller must ensure synchronization by first locking the list
 			const std::vector<std::unique_ptr<user_interface>>& get_dirty() const
 			{
 				return m_dirty_list;
 			}
 
-			void clear_dirty()
+			// Deallocate object. Object must first be removed via the remove() functions
+			void dispose(const std::vector<u32>& uids)
 			{
-				m_dirty_list.clear();
+				writer_lock lock(m_list_mutex);
+
+				if (!m_uids_to_remove.empty() || !m_type_ids_to_remove.empty())
+				{
+					cleanup_internal();
+				}
+
+				m_dirty_list.erase
+				(
+					std::remove_if(m_dirty_list.begin(), m_dirty_list.end(), [&uids](std::unique_ptr<user_interface>& e)
+					{
+						return std::find(uids.begin(), uids.end(), e->uid) != uids.end();
+					})
+				);
 			}
 
-			user_interface* get(u32 uid) const
+			// Returns pointer to the object matching the given uid
+			user_interface* get(u32 uid)
 			{
+				reader_lock lock(m_list_mutex);
+
 				for (const auto& iface : m_iface_list)
 				{
 					if (iface->uid == uid)
@@ -280,9 +357,12 @@ namespace rsx
 				return nullptr;
 			}
 
+			// Returns pointer to the first object matching the given type
 			template <typename T>
-			T* get() const
+			T* get()
 			{
+				reader_lock lock(m_list_mutex);
+
 				const auto type_id = id_manager::typeinfo::get_index<T>();
 				for (const auto& iface : m_iface_list)
 				{
@@ -293,6 +373,24 @@ namespace rsx
 				}
 
 				return nullptr;
+			}
+
+			// Lock for read-only access (BasicLockable)
+			void lock()
+			{
+				m_list_mutex.lock_shared();
+			}
+
+			// Release read-only lock (BasicLockable). May perform internal cleanup before returning
+			void unlock()
+			{
+				m_list_mutex.unlock_shared();
+
+				if (!m_uids_to_remove.empty() || !m_type_ids_to_remove.empty())
+				{
+					writer_lock lock(m_list_mutex);
+					cleanup_internal();
+				}
 			}
 		};
 
