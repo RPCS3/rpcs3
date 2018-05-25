@@ -769,7 +769,8 @@ void cellGcmSetInvalidateTile(u8 index)
 
 s32 cellGcmTerminate()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	// The firmware just return CELL_OK as well
+	return CELL_OK;
 }
 
 s32 cellGcmDumpGraphicsError()
