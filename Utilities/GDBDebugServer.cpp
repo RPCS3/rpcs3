@@ -338,7 +338,7 @@ bool GDBDebugServer::select_thread(u64 id)
 		selected_thread = ppu.ptr;
 		return true;
 	}
-	gdbDebugServer.warning("Can't select thread! Is the emulator running?" HERE);
+	gdbDebugServer.warning("Unable to select thread! Is the emulator running?" HERE);
 	return false;
 }
 
@@ -587,6 +587,7 @@ bool GDBDebugServer::cmd_read_all_registers(gdb_cmd & cmd)
 {
 	std::string result;
 	select_thread(general_ops_thread_id);
+
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
 		auto ppu = std::static_pointer_cast<ppu_thread>(th);
