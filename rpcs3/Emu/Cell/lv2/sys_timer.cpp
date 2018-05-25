@@ -290,6 +290,10 @@ error_code sys_timer_sleep(ppu_thread& ppu, u32 sleep_time)
 
 error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 {
+	if (sleep_time <= 300) {
+		return CELL_OK;
+	}
+
 	vm::temporary_unlock(ppu);
 
 	sys_timer.trace("sys_timer_usleep(sleep_time=0x%llx)", sleep_time);
