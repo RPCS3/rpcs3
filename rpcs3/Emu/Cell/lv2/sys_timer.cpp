@@ -290,18 +290,30 @@ error_code sys_timer_sleep(ppu_thread& ppu, u32 sleep_time)
 
 error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 {
-	vm::temporary_unlock(ppu);
+	// Windows OS mininum sleep time is 500 usec (i.e. the timer resolution which is set to 0.5 msec by rpcs3)
+	// TODO - determine Linux value
+	const int os_sleep_resolution_usec = 500;
 
 	sys_timer.trace("sys_timer_usleep(sleep_time=0x%llx)", sleep_time);
 
-	u64 passed = 0;
+	vm::temporary_unlock(ppu);
 
-	lv2_obj::sleep(ppu, std::max<u64>(1, sleep_time));
+	s64 remaining = sleep_time;
+	lv2_obj::sleep(ppu, sleep_time);
 
-	while (sleep_time >= passed)
+	while (remaining > 0)
 	{
-		thread_ctrl::wait_for(std::max<u64>(1, sleep_time - passed));
-		passed = get_system_time() - ppu.start_time;
+		if (remaining > os_sleep_resolution_usec)
+		{
+			thread_ctrl::wait_for(remaining - (remaining % os_sleep_resolution_usec));
+		}
+		else
+		{
+			// ~1 usec on a 4 GHz CPU
+			busy_wait(4000);
+		}
+
+		remaining = sleep_time - (get_system_time() - ppu.start_time);
 	}
 
 	return CELL_OK;
