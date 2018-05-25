@@ -290,7 +290,11 @@ error_code sys_timer_sleep(ppu_thread& ppu, u32 sleep_time)
 
 error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 {
-	if (sleep_time <= 300) {
+	if (sleep_time < 10) {
+		u64 start = get_system_time();
+		while ((get_system_time() - start) < sleep_time) {
+			_mm_pause();
+		}
 		return CELL_OK;
 	}
 
