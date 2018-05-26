@@ -147,6 +147,15 @@ enum class frame_limit_type
 	_auto,
 };
 
+#ifndef _WIN32
+// TODO: manually specifying available sockets for gdb server as a safety measure-- probably not necessary though?
+enum class gdb_server_socket_type
+{
+	soc_inet,
+	soc_unix,
+};
+#endif
+
 enum CellNetCtlState : s32;
 enum CellSysutilLang : s32;
 
@@ -438,6 +447,22 @@ struct cfg_root : cfg::node
 
 	} net{this};
 
+	struct node_gdb : cfg::node
+	{
+		node_gdb(cfg::node* _this) : cfg::node(_this, "GDB debug server") {}
+
+		cfg::_bool enabled{this, "Enabled", true};
+		cfg::_enum<gdb_server_socket_type> socket_type{this, "Socket type", gdb_server_socket_type::soc_inet};
+		cfg::_int<1, 65535> ipv4_port{this, "IPv4 port", 2345};
+		cfg::string unix_fpath{this, "UNIX socket file path",
+#ifndef _WIN32
+			"/tmp/rpcs3.gdb.socket"
+#else
+			""
+#endif
+		};
+	} gdb{this};
+
 	struct node_misc : cfg::node
 	{
 		node_misc(cfg::node* _this) : cfg::node(_this, "Miscellaneous") {}
@@ -449,7 +474,6 @@ struct cfg_root : cfg::node
 		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true};
 		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", true };
 		cfg::_bool use_native_interface{ this, "Use native user interface", true };
-		cfg::_int<1, 65535> gdb_server_port{this, "Port", 2345};
 
 	} misc{this};
 

@@ -198,6 +198,19 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<gdb_server_socket_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](gdb_server_socket_type value)
+	{
+			switch (value)
+			{
+				case gdb_server_socket_type::soc_inet: return "IPv4 port";
+				case gdb_server_socket_type::soc_unix: return "UNIX socket file";
+			}
+	});
+}
+
 void Emulator::Init()
 {
 	if (!g_tty)
@@ -239,7 +252,23 @@ void Emulator::Init()
 	fs::create_path(dev_usb);
 
 #ifdef WITH_GDB_DEBUGGER
-	LOG_SUCCESS(GENERAL, "GDB debug server will be started and listening on %d upon emulator boot", (int) g_cfg.misc.gdb_server_port);
+# define GDB_WILL_LISTEN "GDB debug server will listen "
+# define UPON_EMU_BOOT   " upon emulator boot."
+# define GDB_LISTENING_MSG(socket_location_msg, socket_location) LOG_SUCCESS(GENERAL, GDB_WILL_LISTEN socket_location_msg UPON_EMU_BOOT, socket_location);
+# ifdef _WIN32
+# else
+	switch (g_cfg.gdb.socket_type)
+	{
+		case (gdb_server_socket_type::soc_inet):
+			GDB_LISTENING_MSG("on port %d", (int) g_cfg.gdb.ipv4_port);
+			break;
+		case (gdb_server_socket_type::soc_unix):
+			GDB_LISTENING_MSG("at file %s", g_cfg.gdb.unix_fpath.get()); // TODO: need to do get() to get raw string from cfg::string variable, but maybe there's another way to format the string that's clearer?
+	}
+# endif
+# undef GDB_LISTENING_MSG
+# undef UPON_EMU_BOOT
+# undef GDB_WILL_LISTEN
 #endif
 
 	// Initialize patch engine

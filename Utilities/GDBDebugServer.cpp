@@ -96,7 +96,21 @@ u64 hex_to_u64(std::string val) {
 
 void GDBDebugServer::start_server()
 {
-	server_socket = socket(AF_INET, SOCK_STREAM, 0);
+	switch (g_cfg.gdb.socket_type) {
+#ifndef _WIN32
+		case (gdb_server_socket_type::soc_inet):
+			// open up INET port
+		  server_socket = socket(AF_INET, SOCK_STREAM, 0);
+			break;
+		case (gdb_server_socket_type::soc_unix):
+			// create socket file
+			server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+			break;
+#endif
+		default:
+			server_socket = socket(AF_INET, SOCK_STREAM, 0);
+			break;
+	};
 
 	if (server_socket == INVALID_SOCKET) {
 		gdbDebugServer.error("Error creating server socket");
@@ -116,7 +130,7 @@ void GDBDebugServer::start_server()
 
 	sockaddr_in server_saddr;
 	server_saddr.sin_family = AF_INET;
-	int port = g_cfg.misc.gdb_server_port;
+	int port = g_cfg.gdb.ipv4_port;
 	server_saddr.sin_port = htons(port);
 	server_saddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
