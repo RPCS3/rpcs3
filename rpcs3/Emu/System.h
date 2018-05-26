@@ -3,6 +3,7 @@
 #include "VFS.h"
 #include "Utilities/Atomic.h"
 #include "Utilities/Config.h"
+#include <sys/socket.h>
 #include <functional>
 #include <memory>
 #include <string>
@@ -151,8 +152,8 @@ enum class frame_limit_type
 // TODO: manually specifying available sockets for gdb server as a safety measure-- probably not necessary though?
 enum class gdb_server_socket_type
 {
-	soc_inet,
-	soc_unix,
+	soc_inet = AF_INET,
+	soc_unix = AF_UNIX,
 };
 #endif
 

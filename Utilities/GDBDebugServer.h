@@ -20,6 +20,10 @@
 #include <unistd.h>
 #endif
 
+#ifndef _WIN32
+# include <sys/un.h> // sockaddr_un
+#endif
+
 #ifdef _WIN32
 using socket_t = SOCKET;
 #else

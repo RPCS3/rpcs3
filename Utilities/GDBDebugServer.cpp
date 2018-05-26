@@ -96,26 +96,9 @@ u64 hex_to_u64(std::string val) {
 
 void GDBDebugServer::start_server()
 {
-	switch (g_cfg.gdb.socket_type) {
-#ifndef _WIN32
-		case (gdb_server_socket_type::soc_inet):
-			// open up INET port
-		  server_socket = socket(AF_INET, SOCK_STREAM, 0);
-			break;
-		case (gdb_server_socket_type::soc_unix):
-			// create socket file
-			server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
-			break;
-#endif
-		default:
-			server_socket = socket(AF_INET, SOCK_STREAM, 0);
-			break;
-	};
-
-	if (server_socket == INVALID_SOCKET) {
-		gdbDebugServer.error("Error creating server socket");
-		return;
-	}
+	// TODO: validate domain against those in gdb_server_socket_type?
+	gdb_server_socket_type domain = g_cfg.gdb.socket_type;
+	server_socket = socket((int) domain, SOCK_STREAM, 0);
 
 #ifdef WIN32
 	{
@@ -126,27 +109,71 @@ void GDBDebugServer::start_server()
 	fcntl(server_socket, F_SETFL, fcntl(server_socket, F_GETFL) | O_NONBLOCK);
 #endif
 
+	// TODO: refactor?
+	std::string msg_bindError   = "";
+	std::string msg_listenError = "";
+	std::string msg_success		  = "";
+
 	int err;
+	switch (domain)
+	{
+		default:
+			gdbDebugServer.error("Invalid socket domain");
+			return;
 
-	sockaddr_in server_saddr;
-	server_saddr.sin_family = AF_INET;
-	int port = g_cfg.gdb.ipv4_port;
-	server_saddr.sin_port = htons(port);
-	server_saddr.sin_addr.s_addr = htonl(INADDR_ANY);
+		case (gdb_server_socket_type::soc_inet):
+			// bind to ipv4 port
+			{
+				int port = g_cfg.gdb.ipv4_port;
+				msg_bindError   = fmt::format("Error binding to port %d", port);
+				msg_listenError = fmt::format("Error listening on port %d", port);
+				msg_success			= fmt::format("GDB Debug Server listening on port %d", port);
 
-	err = bind(server_socket, (struct sockaddr *) &server_saddr, sizeof(server_saddr));
+				sockaddr_in ipv4_server_saddr;
+				ipv4_server_saddr.sin_family 			= AF_INET;
+				ipv4_server_saddr.sin_port 	      = htons(port);
+				ipv4_server_saddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+				err = bind(server_socket, (struct sockaddr *) &ipv4_server_saddr, sizeof(ipv4_server_saddr));
+			}
+			break;
+#ifndef _WIN32
+		case (gdb_server_socket_type::soc_unix):
+			// create socket file (non-Win32 only for the time being)
+			{
+				std::string fpath = g_cfg.gdb.unix_fpath;
+				msg_bindError   = "Error binding port at " + fpath;
+				msg_listenError = "Error listening at " + fpath;
+				msg_success			= "GDB Debug Server listening at " + fpath;
+
+				sockaddr_un unix_server_saddr;
+				unix_server_saddr.sun_family = AF_UNIX;
+				fpath.copy((char *) &(unix_server_saddr.sun_path), fpath.length());
+
+				err = bind(server_socket, (struct sockaddr *) &unix_server_saddr, sizeof(unix_server_saddr));
+			}
+			break;
+#endif
+	}
+
+	if (server_socket == INVALID_SOCKET) {
+		gdbDebugServer.error("Error creating server socket");
+		return;
+	}
+
 	if (err == SOCKET_ERROR) {
-		gdbDebugServer.error("Error binding to port %d", port);
+		gdbDebugServer.error(msg_bindError.c_str());
 		return;
 	}
 
 	err = listen(server_socket, 1);
 	if (err == SOCKET_ERROR) {
-		gdbDebugServer.error("Error listening on port %d", port);
+		gdbDebugServer.error(msg_listenError.c_str());
 		return;
 	}
 
-	gdbDebugServer.success("GDB Debug Server listening on port %d", port);
+	gdbDebugServer.success(msg_success.c_str());
+
 }
 
 int GDBDebugServer::read(void * buf, int cnt)
