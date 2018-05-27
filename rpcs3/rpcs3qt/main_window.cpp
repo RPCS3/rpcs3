@@ -101,7 +101,8 @@ void main_window::Init()
 		ui->toolBar->widgetForAction(act)->setMinimumWidth(toolBarHeight);
 	}
 
-	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 5);
+	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 4);
+	ui->mw_searchbar->setFixedWidth(toolBarHeight * 5);
 
 	// add toolbar widgets (crappy Qt designer is not able to)
 	ui->toolBar->setObjectName("mw_toolbar");

@@ -329,39 +329,36 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 			return QString("rgba(%1, %2, %3, %4);").arg(c.red() + v).arg(c.green() + v).arg(c.blue() + v).arg(c.alpha() + v);
 		};
 
-		// toolbar color stylesheet
 		QString rgba_tool_bar = rgba(gui::mw_tool_bar_color);
-		QString style_toolbar = QString
+		QString style_sheet = QString
 		(
-			"QLineEdit#mw_searchbar { margin-left:14px; background-color: " + rgba_tool_bar + " }"
+			// main window toolbar search
+			//"QLineEdit#mw_searchbar { margin-left:14px; background-color: " + rgba_tool_bar + " }"
+			"QLineEdit#mw_searchbar { border-radius: 1.25em; padding: 0 1em; background: #bbbbbb; selection-background-color: lightblue; margin: .8em; }"
+
+			// main window toolbar slider
+			"QSlider#sizeSlider { color: #505050; background: " + rgba_tool_bar + "; }"
+			"QSlider::handle:horizontal { border: 0em smooth #404040; border-radius: .49em; background: #404040; width: 1em; margin: -.4em 0; }"
+			"QSlider::groove:horizontal { border-radius: .15em; background: #505050; height: .3em; }"
+
+			// main window toolbar
 			"QToolBar#mw_toolbar { background-color: " + rgba_tool_bar + " }"
-			"QToolBar#mw_toolbar QSlider { background-color: " + rgba_tool_bar + " }"
 			"QToolBar#mw_toolbar::separator { background-color: " + rgba(gui::mw_tool_bar_color, -20) + " width: 1px; margin-top: 2px; margin-bottom: 2px; }"
-		);
 
-		// toolbar icon color stylesheet
-		QString style_toolbar_icons = QString
-		(
+			// main window toolbar icon color
 			"QLabel#toolbar_icon_color { color: " + rgba(gui::mw_tool_icon_color) + " }"
-		);
 
-		// thumbnail icon color stylesheet
-		QString style_thumbnail_icons = QString
-		(
+			// thumbnail icon color
 			"QLabel#thumbnail_icon_color { color: " + rgba(gui::mw_thumb_icon_color) + " }"
-		);
 
-		// gamelist icon color stylesheet
-		QString style_gamelist_icons = QString
-		(
+			// game list icon color
 			"QLabel#gamelist_icon_background_color { color: " + rgba(gui::gl_icon_color) + " }"
-		);
 
-		// log stylesheet
-		QString style_log = QString
-		(
+			// log frame tty
 			"QTextEdit#tty_frame { background-color: #ffffff; }"
 			"QLabel#tty_text { color: #000000; }"
+
+			// log frame log
 			"QTextEdit#log_frame { background-color: #ffffff; }"
 			"QLabel#log_level_always { color: #107896; }"
 			"QLabel#log_level_fatal { color: #ff00ff; }"
@@ -372,25 +369,37 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 			"QLabel#log_level_notice { color: #000000; }"
 			"QLabel#log_level_trace { color: #808080; }"
 			"QLabel#log_stack { color: #000000; }"
-		);
 
-		// other objects' stylesheet
-		QString style_rest = QString
-		(
+			// about dialog
 			"QWidget#header_section { background-color: #ffffff; }"
+
+			// kernel explorer
 			"QDialog#kernel_explorer { background-color: rgba(240, 240, 240, 255); }"
+
+			// memory viewer
 			"QDialog#memory_viewer { background-color: rgba(240, 240, 240, 255); }"
 			"QLabel#memory_viewer_address_panel { color: rgba(75, 135, 150, 255); background-color: rgba(240, 240, 240, 255); }"
 			"QLabel#memory_viewer_hex_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
 			"QLabel#memory_viewer_ascii_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
+
+			// debugger frame
 			"QLabel#debugger_frame_breakpoint { color: #000000; background-color: #ffff00; }"
 			"QLabel#debugger_frame_pc { color: #000000; background-color: #00ff00; }"
+
+			// rsx debugger
 			"QLabel#rsx_debugger_display_buffer { background-color: rgba(240, 240, 240, 255); }"
+
+			// pad settings
 			"QLabel#l_controller { color: #434343; }"
+
+			// game list
+			"QTableView::item { border-left: 1px solid white; border-right: 1px solid white; }"
+
+			// game grid
 			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
 		);
 
-		setStyleSheet(style_toolbar + style_toolbar_icons + style_thumbnail_icons + style_gamelist_icons + style_log + style_rest);
+		setStyleSheet(style_sheet);
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
