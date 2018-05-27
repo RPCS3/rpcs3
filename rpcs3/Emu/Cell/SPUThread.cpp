@@ -45,62 +45,11 @@ bool operator ==(const u128& lhs, const u128& rhs)
 extern u64 get_timebased_time();
 extern u64 get_system_time();
 
+extern const spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise;
+
+extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast;
+
 extern thread_local u64 g_tls_fault_spu;
-
-// Table of identical interpreter functions when precise contains SSE2 version, and fast contains SSSE3 functions
-const std::pair<spu_inter_func_t, spu_inter_func_t> s_spu_dispatch_table[]
-{
-#define FUNC(x) {&spu_interpreter_precise::x, &spu_interpreter_fast::x}
-	FUNC(ROTQBYBI),
-	FUNC(ROTQMBYBI),
-	FUNC(SHLQBYBI),
-	FUNC(ROTQBY),
-	FUNC(ROTQMBY),
-	FUNC(SHLQBY),
-	FUNC(ROTQBYI),
-	FUNC(ROTQMBYI),
-	FUNC(SHLQBYI),
-	FUNC(SHUFB),
-#undef FUNC
-};
-
-extern const spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise([](auto& table)
-{
-	if (s_use_ssse3)
-	{
-		for (auto& func : table)
-		{
-			for (const auto& pair : s_spu_dispatch_table)
-			{
-				if (pair.first == func)
-				{
-					func = pair.second;
-					break;
-				}
-			}
-		}
-	}
-});
-
-extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast([](auto& table)
-{
-	if (!s_use_ssse3)
-	{
-		for (auto& func : table)
-		{
-			for (const auto& pair : s_spu_dispatch_table)
-			{
-				if (pair.second == func)
-				{
-					func = pair.first;
-					break;
-				}
-			}
-		}
-	}
-});
-
-std::atomic<u64> g_num_spu_threads{0ull};
 
 template <>
 void fmt_class_string<spu_decoder_type>::format(std::string& out, u64 arg)
