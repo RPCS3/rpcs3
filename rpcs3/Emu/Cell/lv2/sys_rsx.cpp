@@ -9,15 +9,9 @@
 #include "sys_event.h"
 
 
-
 logs::channel sys_rsx("sys_rsx");
 
 extern u64 get_timebased_time();
-
-struct SysRsxConfig {
-	be_t<u32> rsx_event_port{ 0 };
-	u32 driverInfo{ 0 };
-};
 
 u64 rsxTimeStamp() {
 	return get_timebased_time();

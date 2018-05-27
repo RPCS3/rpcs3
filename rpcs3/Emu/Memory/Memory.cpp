@@ -13,35 +13,7 @@ VirtualMemoryBlock* VirtualMemoryBlock::SetRange(const u32 start, const u32 size
 
 bool VirtualMemoryBlock::IsInMyRange(const u32 addr, const u32 size)
 {
-	return addr >= m_range_start && addr + size - 1 <= m_range_start + m_range_size - 1 - GetReservedAmount();
-}
-
-u32 VirtualMemoryBlock::Map(u32 realaddr, u32 size)
-{
-	for (u32 addr = m_range_start; addr <= m_range_start + m_range_size - 1 - GetReservedAmount() - size;)
-	{
-		bool is_good_addr = true;
-
-		// check if address is already mapped
-		for (u32 i = 0; i<m_mapped_memory.size(); ++i)
-		{
-			if ((addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size) ||
-				(m_mapped_memory[i].addr >= addr && m_mapped_memory[i].addr < addr + size))
-			{
-				is_good_addr = false;
-				addr = m_mapped_memory[i].addr + m_mapped_memory[i].size;
-				break;
-			}
-		}
-
-		if (!is_good_addr) continue;
-
-		m_mapped_memory.emplace_back(addr, realaddr, size);
-
-		return addr;
-	}
-
-	return 0;
+	return addr >= m_range_start && addr + size <= m_range_start + m_range_size - GetReservedAmount();
 }
 
 bool VirtualMemoryBlock::Map(u32 realaddr, u32 size, u32 addr)
@@ -117,7 +89,7 @@ bool VirtualMemoryBlock::getRealAddr(u32 addr, u32& result)
 	return false;
 }
 
-u32 VirtualMemoryBlock::getMappedAddress(u32 realAddress)
+s32 VirtualMemoryBlock::getMappedAddress(u32 realAddress)
 {
 	for (u32 i = 0; i<m_mapped_memory.size(); ++i)
 	{
@@ -127,7 +99,7 @@ u32 VirtualMemoryBlock::getMappedAddress(u32 realAddress)
 		}
 	}
 
-	return 0;
+	return -1;
 }
 
 bool VirtualMemoryBlock::Reserve(u32 size)
@@ -151,4 +123,14 @@ bool VirtualMemoryBlock::Unreserve(u32 size)
 u32 VirtualMemoryBlock::GetReservedAmount()
 {
 	return m_reserve_size;
+}
+
+u32 VirtualMemoryBlock::GetRangeStart()
+{
+	return m_range_start;
+}
+
+u32 VirtualMemoryBlock::GetRangeEnd()
+{
+	return m_range_start + m_range_size - GetReservedAmount();
 }
