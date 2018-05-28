@@ -28,10 +28,10 @@ if(NOT Qt5Widgets_FOUND)
 		if(CMAKE_SYSTEM MATCHES "Linux")
 			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.
 If you're on Ubuntu or Linux Mint, there are PPAs you can use to install an up-to-date qt5 version.
-        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-xenial
-        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-trusty
+		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-xenial
+		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-trusty
 just make sure to run
-    source /opt/qt510/bin/qt510-env.sh
+	source /opt/qt510/bin/qt510-env.sh
 before re-running cmake")
 		elseif(WIN32)
 			message(FATAL_ERROR "You can download the latest version of Qt5 here: https://www.qt.io/download-open-source/")
@@ -188,9 +188,9 @@ set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if(NOT WITHOUT_LLVM)
-    if (EXISTS "${CMAKE_SOURCE_DIR}/llvmlibs")
-        find_package(LLVM 6.0 CONFIG)
-    endif()
+	if (EXISTS "${CMAKE_SOURCE_DIR}/llvmlibs")
+		find_package(LLVM 6.0 CONFIG)
+	endif()
 	if(NOT LLVM_FOUND)
 		message("LLVM will be built from the submodule.")
 
@@ -487,9 +487,9 @@ cotire(rpcs3)
 
 if (UNIX)
 # Copy icons to executable directory
-add_custom_command(TARGET rpcs3 POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory
-                       ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons)
+add_custom_command(	TARGET rpcs3 POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy_directory
+					${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons)
 endif()
 
 # Unix installation
@@ -505,9 +505,9 @@ if(UNIX AND NOT APPLE)
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
 	install(FILES rpcs3.appdata.xml
 			DESTINATION ${CMAKE_INSTALL_PREFIX}/share/metainfo)
-    # Install other files
-    install(DIRECTORY ../bin/Icons
+	# Install other files
+	install(DIRECTORY ../bin/Icons
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
-    install(DIRECTORY ../bin/GuiConfigs
+	install(DIRECTORY ../bin/GuiConfigs
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
 endif()
