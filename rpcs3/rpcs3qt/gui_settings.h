@@ -198,6 +198,7 @@ namespace gui
 	const gui_save m_showDebugTab      = gui_save(meta, "showDebugTab",      false);
 	const gui_save m_enableUIColors    = gui_save(meta, "enableUIColors",    false);
 	const gui_save m_richPresence      = gui_save(meta, "useRichPresence",   true);
+	const gui_save m_discordState      = gui_save(meta, "discordState",      "");
 
 	const gui_save gs_disableMouse = gui_save(gs_frame, "disableMouse", false);
 	const gui_save gs_resize       = gui_save(gs_frame, "resize",       false);
