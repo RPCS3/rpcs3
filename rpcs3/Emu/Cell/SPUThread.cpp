@@ -361,30 +361,6 @@ spu_imm_table_t::scale_table_t::scale_table_t()
 
 spu_imm_table_t::spu_imm_table_t()
 {
-	for (u32 i = 0; i < sizeof(fsm) / sizeof(fsm[0]); i++)
-	{
-		for (u32 j = 0; j < 4; j++)
-		{
-			fsm[i]._u32[j] = (i & (1 << j)) ? 0xffffffff : 0;
-		}
-	}
-
-	for (u32 i = 0; i < sizeof(fsmh) / sizeof(fsmh[0]); i++)
-	{
-		for (u32 j = 0; j < 8; j++)
-		{
-			fsmh[i]._u16[j] = (i & (1 << j)) ? 0xffff : 0;
-		}
-	}
-
-	for (u32 i = 0; i < sizeof(fsmb) / sizeof(fsmb[0]); i++)
-	{
-		for (u32 j = 0; j < 16; j++)
-		{
-			fsmb[i]._u8[j] = (i & (1 << j)) ? 0xff : 0;
-		}
-	}
-
 	for (u32 i = 0; i < sizeof(sldq_pshufb) / sizeof(sldq_pshufb[0]); i++)
 	{
 		for (u32 j = 0; j < 16; j++)

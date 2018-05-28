@@ -2815,35 +2815,47 @@ void spu_recompiler::GBB(spu_opcode_t op)
 
 void spu_recompiler::FSM(spu_opcode_t op)
 {
-	const XmmLink& vr = XmmAlloc();
-	c->mov(*qw0, asmjit::imm_ptr((void*)g_spu_imm.fsm));
-	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	c->and_(*addr, 0xf);
-	c->shl(*addr, 4);
-	c->movdqa(vr, asmjit::x86::oword_ptr(*qw0, addr->r64()));
-	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vm = XmmAlloc();
+	c->pshufd(va, va, 0xff);
+	c->movdqa(vm, XmmConst(_mm_set_epi32(8, 4, 2, 1)));
+	c->pand(va, vm);
+	c->pcmpeqd(va, vm);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
 void spu_recompiler::FSMH(spu_opcode_t op)
 {
-	const XmmLink& vr = XmmAlloc();
-	c->mov(*qw0, asmjit::imm_ptr((void*)g_spu_imm.fsmh));
-	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	c->and_(*addr, 0xff);
-	c->shl(*addr, 4);
-	c->movdqa(vr, asmjit::x86::oword_ptr(*qw0, addr->r64()));
-	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vm = XmmAlloc();
+	c->punpckhwd(va, va);
+	c->pshufd(va, va, 0xaa);
+	c->movdqa(vm, XmmConst(_mm_set_epi16(128, 64, 32, 16, 8, 4, 2, 1)));
+	c->pand(va, vm);
+	c->pcmpeqw(va, vm);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
 void spu_recompiler::FSMB(spu_opcode_t op)
 {
-	const XmmLink& vr = XmmAlloc();
-	c->mov(*qw0, asmjit::imm_ptr((void*)g_spu_imm.fsmb));
-	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	c->and_(*addr, 0xffff);
-	c->shl(*addr, 4);
-	c->movdqa(vr, asmjit::x86::oword_ptr(*qw0, addr->r64()));
-	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vm = XmmAlloc();
+
+	if (utils::has_ssse3())
+	{
+		c->pshufb(va, XmmConst(_mm_set_epi8(13, 13, 13, 13, 13, 13, 13, 13, 12, 12, 12, 12, 12, 12, 12, 12)));
+	}
+	else
+	{
+		c->punpckhbw(va, va);
+		c->pshufhw(va, va, 0x50);
+		c->pshufd(va, va, 0xfa);
+	}
+
+	c->movdqa(vm, XmmConst(_mm_set_epi8(128, 64, 32, 16, 8, 4, 2, 1, 128, 64, 32, 16, 8, 4, 2, 1)));
+	c->pand(va, vm);
+	c->pcmpeqb(va, vm);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
 void spu_recompiler::FREST(spu_opcode_t op)
@@ -4268,8 +4280,12 @@ void spu_recompiler::BR(spu_opcode_t op)
 
 void spu_recompiler::FSMBI(spu_opcode_t op)
 {
+	v128 data;
+	for (u32 i = 0; i < 16; i++)
+		data._u8[i] = op.i16 & (1u << i) ? 0xff : 0;
+
 	const XmmLink& vr = XmmAlloc();
-	c->movdqa(vr, XmmConst(g_spu_imm.fsmb[op.i16]));
+	c->movdqa(vr, XmmConst(data));
 	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 }
 

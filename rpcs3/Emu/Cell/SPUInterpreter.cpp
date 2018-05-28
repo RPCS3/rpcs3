@@ -513,19 +513,27 @@ bool spu_interpreter::GBB(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter::FSM(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = g_spu_imm.fsm[spu.gpr[op.ra]._u32[3] & 0xf];
+	const auto bits = _mm_shuffle_epi32(spu.gpr[op.ra].vi, 0xff);
+	const auto mask = _mm_set_epi32(8, 4, 2, 1);
+	spu.gpr[op.rt].vi = _mm_cmpeq_epi32(_mm_and_si128(bits, mask), mask);
 	return true;
 }
 
 bool spu_interpreter::FSMH(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = g_spu_imm.fsmh[spu.gpr[op.ra]._u32[3] & 0xff];
+	const auto vsrc = spu.gpr[op.ra].vi;
+	const auto bits = _mm_shuffle_epi32(_mm_unpackhi_epi16(vsrc, vsrc), 0xaa);
+	const auto mask = _mm_set_epi16(128, 64, 32, 16, 8, 4, 2, 1);
+	spu.gpr[op.rt].vi = _mm_cmpeq_epi16(_mm_and_si128(bits, mask), mask);
 	return true;
 }
 
 bool spu_interpreter::FSMB(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = g_spu_imm.fsmb[spu.gpr[op.ra]._u32[3] & 0xffff];
+	const auto vsrc = spu.gpr[op.ra].vi;
+	const auto bits = _mm_shuffle_epi32(_mm_shufflehi_epi16(_mm_unpackhi_epi8(vsrc, vsrc), 0x50), 0xfa);
+	const auto mask = _mm_set_epi8(128, 64, 32, 16, 8, 4, 2, 1, 128, 64, 32, 16, 8, 4, 2, 1);
+	spu.gpr[op.rt].vi = _mm_cmpeq_epi8(_mm_and_si128(bits, mask), mask);
 	return true;
 }
 
@@ -1382,7 +1390,10 @@ bool spu_interpreter::BR(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter::FSMBI(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = g_spu_imm.fsmb[op.i16];
+	const auto vsrc = _mm_set_epi32(0, 0, 0, op.i16);
+	const auto bits = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_unpacklo_epi8(vsrc, vsrc), 0x50), 0x50);
+	const auto mask = _mm_set_epi8(128, 64, 32, 16, 8, 4, 2, 1, 128, 64, 32, 16, 8, 4, 2, 1);
+	spu.gpr[op.rt].vi = _mm_cmpeq_epi8(_mm_and_si128(bits, mask), mask);
 	return true;
 }
 
