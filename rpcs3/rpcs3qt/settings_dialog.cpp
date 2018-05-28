@@ -24,6 +24,11 @@
 #include <unordered_set>
 #include <thread>
 
+#ifdef WITH_DISCORD_RPC
+#include "discord_rpc.h"
+#include "discord_register.h"
+#endif
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
@@ -99,6 +104,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		setWindowTitle(tr("Settings"));
 	}
 
+	// Discord variables
+	bool use_discord = xgui_settings->GetValue(gui::m_richPresence).toBool();
+	QString discord_state = xgui_settings->GetValue(gui::m_discordState).toString();
+
 	// Various connects
 	connect(ui->okButton, &QAbstractButton::clicked, [=]
 	{
@@ -115,6 +124,32 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		xemu_settings->SaveSelectedLibraries(selected_ls);
 		xemu_settings->SaveSettings();
 		accept();
+
+#ifdef WITH_DISCORD_RPC
+		bool use_discord_new = xgui_settings->GetValue(gui::m_richPresence).toBool();
+		QString discord_state_new = xgui_settings->GetValue(gui::m_discordState).toString();
+
+		if (use_discord != use_discord_new || discord_state != discord_state_new)
+		{
+			if (use_discord_new)
+			{
+				DiscordEventHandlers handlers = {};
+				Discord_Initialize("424004941485572097", &handlers, 1, NULL);
+
+				DiscordRichPresence discordPresence = {};
+				discordPresence.details = "Idle";
+				discordPresence.state = sstr(discord_state_new).c_str();
+				discordPresence.largeImageKey = "rpcs3_logo";
+				discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
+				discordPresence.startTimestamp = time(0);
+				Discord_UpdatePresence(&discordPresence);
+			}
+			else
+			{
+				Discord_ClearPresence();
+			}
+		}
+#endif
 	});
 
 	connect(ui->cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
@@ -798,13 +833,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			ui->gs_height->setValue(std::min(ui->gs_height->value(), QApplication::desktop()->screenGeometry().height()));
 			xgui_settings->SetValue(gui::gs_height, ui->gs_height->value());
 		});
-
-		ui->useRichPresence->setChecked(xgui_settings->GetValue(gui::m_richPresence).toBool());
-
-		connect(ui->useRichPresence, &QCheckBox::clicked, [=](bool val)
-		{
-			xgui_settings->SetValue(gui::m_richPresence, val);
-		});
 	}
 
 	//     _____  _    _  _   _______    _     
@@ -827,8 +855,28 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	SubscribeTooltip(ui->useRichPresence, json_gui["useRichPresence"].toString());
 
+	SubscribeTooltip(ui->discordState, json_gui["discordState"].toString());
+
 	if (!game)
 	{
+		// Discord:
+		ui->useRichPresence->setChecked(use_discord);
+		ui->label_discordState->setEnabled(use_discord);
+		ui->discordState->setEnabled(use_discord);
+		ui->discordState->setText(discord_state);
+
+		connect(ui->useRichPresence, &QCheckBox::clicked, [this](bool checked)
+		{
+			ui->discordState->setEnabled(checked);
+			ui->label_discordState->setEnabled(checked);
+			xgui_settings->SetValue(gui::m_richPresence, checked);
+		});
+
+		connect(ui->discordState, &QLineEdit::editingFinished, [this]()
+		{
+			xgui_settings->SetValue(gui::m_discordState, ui->discordState->text());
+		});
+
 		// colorize preview icons
 		auto addColoredIcon = [&](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor())
 		{
@@ -890,7 +938,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			}
 		};
 
-		connect(ui->okButton, &QAbstractButton::clicked, [=]() { ApplyGuiOptions(); });
+		connect(ui->okButton, &QAbstractButton::clicked, [=]()
+		{
+			ApplyGuiOptions();
+		});
 
 		connect(ui->pb_reset_default, &QAbstractButton::clicked, [=]
 		{
