@@ -2021,23 +2021,23 @@ public:
 
 	void ROTQBI(spu_opcode_t op)
 	{
-		const auto a = get_vr(op.ra);
-		const auto b = zshuffle<u32[4]>(get_vr<u32[4]>(op.rb) & 0x7, 3, 3, 3, 3);
-		set_vr(op.rt, a << b | zshuffle<u32[4]>(a, 3, 0, 1, 2) >> (32 - b));
+		const auto a = get_vr<u64[2]>(op.ra);
+		const auto b = eval((get_vr<u64[2]>(op.rb) >> 32) & 0x7);
+		set_vr(op.rt, a << zshuffle<u64[2]>(b, 1, 1) | zshuffle<u64[2]>(a, 1, 0) >> 56 >> zshuffle<u64[2]>(8 - b, 1, 1));
 	}
 
 	void ROTQMBI(spu_opcode_t op)
 	{
-		const auto a = get_vr(op.ra);
-		const auto b = zshuffle<u32[4]>(-get_vr<u32[4]>(op.rb) & 0x7, 3, 3, 3, 3);
-		set_vr(op.rt, a >> b | zshuffle<u32[4]>(a, 1, 2, 3, 4) << (32 - b));
+		const auto a = get_vr<u64[2]>(op.ra);
+		const auto b = eval(-(get_vr<u64[2]>(op.rb) >> 32) & 0x7);
+		set_vr(op.rt, a >> zshuffle<u64[2]>(b, 1, 1) | zshuffle<u64[2]>(a, 1, 2) << 56 << zshuffle<u64[2]>(8 - b, 1, 1));
 	}
 
 	void SHLQBI(spu_opcode_t op)
 	{
-		const auto a = get_vr(op.ra);
-		const auto b = zshuffle<u32[4]>(get_vr<u32[4]>(op.rb) & 0x7, 3, 3, 3, 3);
-		set_vr(op.rt, a << b | zshuffle<u32[4]>(a, 4, 0, 1, 2) >> (32 - b));
+		const auto a = get_vr<u64[2]>(op.ra);
+		const auto b = eval((get_vr<u64[2]>(op.rb) >> 32) & 0x7);
+		set_vr(op.rt, a << zshuffle<u64[2]>(b, 1, 1) | zshuffle<u64[2]>(a, 2, 0) >> 56 >> zshuffle<u64[2]>(8 - b, 1, 1));
 	}
 
 	void ROTQBY(spu_opcode_t op)
