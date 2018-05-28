@@ -159,10 +159,8 @@ namespace spu
 					{
 						if (remaining >= native_jiffy_duration_us)
 							std::this_thread::sleep_for(1ms);
-						else if (remaining > 100)
-							std::this_thread::yield();
 						else
-							busy_wait();
+							std::this_thread::yield();
 
 						const auto now = get_system_time();
 						const auto elapsed = now - start;
