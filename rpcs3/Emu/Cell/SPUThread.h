@@ -388,14 +388,14 @@ struct spu_imm_table_t
 
 	class scale_table_t
 	{
-		std::array<__m128, 155 + 174> m_data;
+		std::array<v128, 155 + 174> m_data;
 
 	public:
 		scale_table_t();
 
 		FORCE_INLINE __m128 operator [] (s32 scale) const
 		{
-			return m_data[scale + 155];
+			return m_data[scale + 155].vf;
 		}
 	}
 	const scale;

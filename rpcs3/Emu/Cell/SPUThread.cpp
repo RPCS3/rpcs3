@@ -355,7 +355,7 @@ spu_imm_table_t::scale_table_t::scale_table_t()
 {
 	for (s32 i = -155; i < 174; i++)
 	{
-		m_data[i + 155] = _mm_set1_ps(static_cast<float>(std::exp2(i)));
+		m_data[i + 155].vf = _mm_set1_ps(static_cast<float>(std::exp2(i)));
 	}
 }
 
