@@ -351,7 +351,8 @@ namespace rsx
 					std::remove_if(m_dirty_list.begin(), m_dirty_list.end(), [&uids](std::unique_ptr<overlay>& e)
 					{
 						return std::find(uids.begin(), uids.end(), e->uid) != uids.end();
-					})
+					}),
+					m_dirty_list.end()
 				);
 			}
 
