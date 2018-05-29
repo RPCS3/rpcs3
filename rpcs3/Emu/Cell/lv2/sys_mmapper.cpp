@@ -279,7 +279,14 @@ error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
 
 	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
 	{
-		if (addr % mem.align)
+		const u32 page_alignment = area->flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000;
+
+		if (mem.align < page_alignment)
+		{
+			return CELL_EINVAL;
+		}
+
+		if (addr % page_alignment)
 		{
 			return CELL_EALIGN;
 		}
