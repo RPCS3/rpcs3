@@ -198,6 +198,23 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+inline void fmt_class_string<detail_level>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](detail_level value)
+	{
+		switch (value)
+		{
+		case detail_level::minimal: return "Minimal";
+		case detail_level::low: return "Low";
+		case detail_level::medium: return "Medium";
+		case detail_level::high: return "High";
+		}
+
+		return unknown;
+	});
+}
+
 void Emulator::Init()
 {
 	if (!g_tty)
