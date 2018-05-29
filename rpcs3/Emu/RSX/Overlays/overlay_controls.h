@@ -627,6 +627,7 @@ namespace rsx
 
 			overlay_element() {}
 			overlay_element(u16 _w, u16 _h) : w(_w), h(_h) {}
+			virtual ~overlay_element() = default;
 
 			virtual void refresh()
 			{
@@ -949,7 +950,7 @@ namespace rsx
 
 		struct vertical_layout : public layout_container
 		{
-			overlay_element* add_element(std::unique_ptr<overlay_element>& item, int offset = -1)
+			overlay_element* add_element(std::unique_ptr<overlay_element>& item, int offset = -1) override
 			{
 				if (auto_resize)
 				{
@@ -1023,7 +1024,7 @@ namespace rsx
 
 		struct horizontal_layout : public layout_container
 		{
-			overlay_element* add_element(std::unique_ptr<overlay_element>& item, int offset = -1)
+			overlay_element* add_element(std::unique_ptr<overlay_element>& item, int offset = -1) override
 			{
 				if (auto_resize)
 				{
@@ -1490,7 +1491,7 @@ namespace rsx
 				m_cancel_btn->translate(_x, _y);
 			}
 
-			compiled_resource& get_compiled()
+			compiled_resource& get_compiled() override
 			{
 				if (!is_compiled)
 				{
