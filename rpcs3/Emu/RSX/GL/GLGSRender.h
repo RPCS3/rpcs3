@@ -35,15 +35,23 @@ namespace gl
 
 struct work_item
 {
-	std::condition_variable cv;
-	std::mutex guard_mutex;
-
 	u32  address_to_flush = 0;
 	gl::texture_cache::thrashed_set section_data;
 
 	volatile bool processed = false;
 	volatile bool result = false;
 	volatile bool received = false;
+
+	void producer_wait()
+	{
+		while (!processed)
+		{
+			_mm_lfence();
+			std::this_thread::yield();
+		}
+
+		received = true;
+	}
 };
 
 struct driver_state
