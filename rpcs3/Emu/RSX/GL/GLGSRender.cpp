@@ -1582,10 +1582,8 @@ void GLGSRender::on_invalidate_memory_range(u32 address_base, u32 size)
 	}
 }
 
-void GLGSRender::do_local_task(bool idle)
+void GLGSRender::do_local_task(rsx::FIFO_state state)
 {
-	m_frame->clear_wm_events();
-
 	if (!work_queue.empty())
 	{
 		std::lock_guard<shared_mutex> lock(queue_guard);
@@ -1605,12 +1603,22 @@ void GLGSRender::do_local_task(bool idle)
 			q.cv.notify_one();
 		}
 	}
-	else if (!in_begin_end)
+	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
 	{
 		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
 		//Only call when there are no waiters
 		m_gl_texture_cache.do_update();
 	}
+
+	rsx::thread::do_local_task(state);
+
+	if (state == rsx::FIFO_state::lock_wait)
+	{
+		// Critical check finished
+		return;
+	}
+
+	m_frame->clear_wm_events();
 
 	if (m_overlay_manager)
 	{
@@ -1620,8 +1628,6 @@ void GLGSRender::do_local_task(bool idle)
 			flip((s32)current_display_buffer);
 		}
 	}
-
-	rsx::thread::do_local_task(idle);
 }
 
 work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data)

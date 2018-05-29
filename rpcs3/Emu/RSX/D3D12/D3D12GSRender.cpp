@@ -301,10 +301,15 @@ void D3D12GSRender::on_exit()
 	return GSRender::on_exit();
 }
 
-void D3D12GSRender::do_local_task(bool)
+void D3D12GSRender::do_local_task(rsx::FIFO_state state)
 {
-	//TODO
-	m_frame->clear_wm_events();
+	if (state != rsx::FIFO_state::lock_wait)
+	{
+		//TODO
+		m_frame->clear_wm_events();
+	}
+
+	rsx::thread::do_local_task(state);
 }
 
 bool D3D12GSRender::do_method(u32 cmd, u32 arg)
