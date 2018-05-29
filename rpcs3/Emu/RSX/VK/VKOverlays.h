@@ -654,7 +654,7 @@ namespace vk
 		}
 
 		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::framebuffer* target, VkRenderPass render_pass,
-				vk::vk_data_heap &upload_heap, rsx::overlays::user_interface &ui)
+				vk::vk_data_heap &upload_heap, rsx::overlays::overlay &ui)
 		{
 			m_scale_offset = color4f((f32)ui.virtual_width, (f32)ui.virtual_height, 1.f, 1.f);
 			m_time = (f32)(get_system_time() / 1000) * 0.005f;

@@ -523,7 +523,7 @@ namespace gl
 			}
 		}
 
-		void run(u16 w, u16 h, GLuint target, rsx::overlays::user_interface& ui)
+		void run(u16 w, u16 h, GLuint target, rsx::overlays::overlay& ui)
 		{
 			program_handle.uniforms["ui_scale"] = color4f((f32)ui.virtual_width, (f32)ui.virtual_height, 1.f, 1.f);
 			program_handle.uniforms["time"] = (f32)(get_system_time() / 1000) * 0.005f;
