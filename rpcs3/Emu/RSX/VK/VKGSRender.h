@@ -241,7 +241,7 @@ struct flush_request_task
 		while (pending_state.load())
 		{
 			_mm_lfence();
-			_mm_pause();
+			std::this_thread::yield();
 		}
 	}
 };

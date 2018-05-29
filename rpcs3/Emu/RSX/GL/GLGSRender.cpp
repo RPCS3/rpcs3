@@ -1557,12 +1557,8 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 		work_item &task = post_flush_request(address, result);
 
 		vm::temporary_unlock();
-		{
-			std::unique_lock<std::mutex> lock(task.guard_mutex);
-			task.cv.wait(lock, [&task] { return task.processed; });
-		}
+		task.producer_wait();
 
-		task.received = true;
 		return true;
 	}
 
@@ -1594,13 +1590,8 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 		{
 			if (q.processed) continue;
 
-			std::unique_lock<std::mutex> lock(q.guard_mutex);
 			q.result = m_gl_texture_cache.flush_all(q.section_data);
 			q.processed = true;
-
-			//Notify thread waiting on this
-			lock.unlock();
-			q.cv.notify_one();
 		}
 	}
 	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
