@@ -857,9 +857,6 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 			if (target_cb)
 				target_cb->wait();
-
-			if (is_rsxthr)
-				m_last_flushable_cb = -1;
 		}
 
 		if (has_queue_ref)
@@ -1858,7 +1855,6 @@ void VKGSRender::copy_render_targets_to_dma_location()
 
 	vk::leave_uninterruptible();
 
-	m_last_flushable_cb = m_current_cb_index;
 	flush_command_queue();
 
 	m_flush_draw_buffers = false;
@@ -1884,7 +1880,6 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 				cb.poke();
 		}
 
-		m_last_flushable_cb = -1;
 		m_flush_requests.clear_pending_flag();
 	}
 	else
@@ -1904,9 +1899,6 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 		}
 
 		m_current_command_buffer->reset();
-
-		if (m_last_flushable_cb == m_current_cb_index)
-			m_last_flushable_cb = -1;
 	}
 
 	open_command_buffer();
@@ -2089,7 +2081,7 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 	ctx->swap_command_buffer = nullptr;
 }
 
-void VKGSRender::do_local_task(bool idle)
+void VKGSRender::do_local_task(rsx::FIFO_state state)
 {
 	if (m_flush_requests.pending())
 	{
@@ -2102,22 +2094,19 @@ void VKGSRender::do_local_task(bool idle)
 		m_flush_requests.clear_pending_flag();
 		m_flush_requests.consumer_wait();
 	}
-	else if (!in_begin_end)
+	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
 	{
 		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
 		//Only call when there are no waiters
 		m_texture_cache.do_update();
 	}
 
-	if (m_last_flushable_cb > -1)
+	rsx::thread::do_local_task(state);
+
+	if (state == rsx::FIFO_state::lock_wait)
 	{
-		auto cb = &m_primary_cb_list[m_last_flushable_cb];
-
-		if (cb->pending)
-			cb->poke();
-
-		if (!cb->pending)
-			m_last_flushable_cb = -1;
+		// Critical check finished
+		return;
 	}
 
 #ifdef _WIN32
@@ -2208,8 +2197,6 @@ void VKGSRender::do_local_task(bool idle)
 			flip((s32)current_display_buffer);
 		}
 	}
-
-	rsx::thread::do_local_task(idle);
 }
 
 bool VKGSRender::do_method(u32 cmd, u32 arg)

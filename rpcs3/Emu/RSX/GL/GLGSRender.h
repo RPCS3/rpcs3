@@ -381,7 +381,7 @@ protected:
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
 
-	void do_local_task(bool idle) override;
+	void do_local_task(rsx::FIFO_state state) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_invalidate_memory_range(u32 address_base, u32 size) override;
