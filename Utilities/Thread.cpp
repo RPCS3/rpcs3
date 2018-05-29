@@ -1878,10 +1878,8 @@ void thread_ctrl::detect_cpu_layout()
 	{
 		g_native_core_layout.store(native_core_arrangement::amd_ccx);
 	}
-	else if (system_id.find("i3") != std::string::npos || system_id.find("i7") != std::string::npos)
-	{
-		g_native_core_layout.store(native_core_arrangement::intel_ht);
-	}
+
+	// TODO: Detect hyperthreaded intel CPUs
 }
 
 u16 thread_ctrl::get_affinity_mask(thread_class group)
