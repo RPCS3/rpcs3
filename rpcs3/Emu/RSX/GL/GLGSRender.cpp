@@ -857,7 +857,7 @@ void GLGSRender::on_init_thread()
 
 			void update_msg(u32 index, u32 processed, u32 entry_count) override
 			{
-				char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
+				const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
 				dlg->progress_bar_set_message(index, fmt::format(text, processed, entry_count));
 				owner->flip(0);
 			}
