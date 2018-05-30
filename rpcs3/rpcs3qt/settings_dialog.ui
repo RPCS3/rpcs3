@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>7</number>
+      <number>6</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -1401,29 +1401,106 @@
                 </item>
                </layout>
               </item>
+              <item>
+               <spacer name="verticalSpacer_14">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::MinimumExpanding</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
              </layout>
             </widget>
-           </item>
-           <item>
-            <spacer name="verticalSpacer_14">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::MinimumExpanding</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-            </spacer>
            </item>
           </layout>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout_58"/>
+          <layout class="QVBoxLayout" name="verticalLayout_58">
+           <item>
+            <widget class="QGroupBox" name="gb_performance_overlay">
+             <property name="title">
+              <string>Performance Overlay</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_67">
+              <item>
+               <widget class="QCheckBox" name="perfOverlayEnabled">
+                <property name="text">
+                 <string>Enable performance overlay</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_detail_level">
+                <property name="text">
+                 <string>Detail Level:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="perfOverlayDetailLevel"/>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_update_interval">
+                <property name="text">
+                 <string>Update Interval:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="perfOverlayUpdateInterval">
+                <property name="singleStep">
+                 <number>10</number>
+                </property>
+                <property name="pageStep">
+                 <number>100</number>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_font_size">
+                <property name="text">
+                 <string>Font Size: </string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="perfOverlayFontSize">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="verticalSpacer_18">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::MinimumExpanding</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>0</width>
+                  <height>55</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </item>

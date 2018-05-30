@@ -80,8 +80,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	QJsonObject json_sys   = json_obj.value("system").toObject();
 	QJsonObject json_net   = json_obj.value("network").toObject();
 
-	QJsonObject json_emu      = json_obj.value("emulator").toObject();
-	QJsonObject json_emu_misc = json_emu.value("misc").toObject();
+	QJsonObject json_emu         = json_obj.value("emulator").toObject();
+	QJsonObject json_emu_misc    = json_emu.value("misc").toObject();
+	QJsonObject json_emu_overlay = json_emu.value("overlay").toObject();
 
 	QJsonObject json_gui = json_obj.value("gui").toObject();
 
@@ -699,6 +700,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeTooltip(ui->maxLLVMThreads, json_emu_misc["maxLLVMThreads"].toString());
 	ui->maxLLVMThreads->setItemText(ui->maxLLVMThreads->findData("0"), tr("All (%1)").arg(std::thread::hardware_concurrency()));
 
+	xemu_settings->EnhanceComboBox(ui->perfOverlayDetailLevel, emu_settings::PerfOverlayDetailLevel);
+	SubscribeTooltip(ui->perfOverlayDetailLevel, json_emu_overlay["perfOverlayDetailLevel"].toString());
+
 	// Checkboxes
 
 	SubscribeTooltip(ui->gs_resizeOnBoot, json_emu_misc["gs_resizeOnBoot"].toString());
@@ -726,6 +730,39 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->showShaderCompilationHint, emu_settings::ShowShaderCompilationHint);
 	SubscribeTooltip(ui->showShaderCompilationHint, json_emu_misc["showShaderCompilationHint"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->perfOverlayEnabled, emu_settings::PerfOverlayEnabled);
+	SubscribeTooltip(ui->perfOverlayEnabled, json_emu_overlay["perfOverlayEnabled"].toString());
+	auto EnablePerfOverlayOptions = [this](bool enabled)
+	{
+		ui->label_detail_level->setEnabled(enabled);
+		ui->label_update_interval->setEnabled(enabled);
+		ui->label_font_size->setEnabled(enabled);
+		ui->perfOverlayDetailLevel->setEnabled(enabled);
+		ui->perfOverlayUpdateInterval->setEnabled(enabled);
+		ui->perfOverlayFontSize->setEnabled(enabled);
+	};
+	EnablePerfOverlayOptions(ui->perfOverlayEnabled->isChecked());
+	connect(ui->perfOverlayEnabled, &QCheckBox::clicked, EnablePerfOverlayOptions);
+
+	// Sliders
+
+	xemu_settings->EnhanceSlider(ui->perfOverlayUpdateInterval, emu_settings::PerfOverlayUpdateInterval, true);
+	SubscribeTooltip(ui->perfOverlayUpdateInterval, json_emu_overlay["perfOverlayUpdateInterval"].toString());
+	ui->label_update_interval->setText(tr("Update Interval: %0 ms").arg(ui->perfOverlayUpdateInterval->value()));
+	connect(ui->perfOverlayUpdateInterval, &QSlider::valueChanged, [this](int value)
+	{
+		ui->label_update_interval->setText(tr("Update Interval: %0 ms").arg(value));
+	});
+
+	xemu_settings->EnhanceSlider(ui->perfOverlayFontSize, emu_settings::PerfOverlayFontSize, true);
+	SubscribeTooltip(ui->perfOverlayFontSize, json_emu_overlay["perfOverlayFontSize"].toString());
+	ui->label_font_size->setText(tr("Font Size: %0 px").arg(ui->perfOverlayFontSize->value()));
+	connect(ui->perfOverlayFontSize, &QSlider::valueChanged, [this](int value)
+	{
+		ui->label_font_size->setText(tr("Font Size: %0 px").arg(value));
+	});
+
+	// Global settings (gui_settings)
 	if (!game)
 	{
 		ui->gs_disableMouse->setChecked(xgui_settings->GetValue(gui::gs_disableMouse).toBool());
