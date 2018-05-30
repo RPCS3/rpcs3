@@ -20,12 +20,12 @@ namespace rsx
 				on_close(return_code);
 		}
 
-		void user_interface::refresh()
+		void overlay::refresh()
 		{
 			if (auto rsxthr = rsx::get_current_renderer())
 			{
 				rsxthr->native_ui_flip_request.store(true);
 			}
 		}
-	}
-}
+	} // namespace overlays
+} // namespace rsx

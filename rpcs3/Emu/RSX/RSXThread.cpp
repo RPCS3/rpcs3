@@ -11,6 +11,8 @@
 #include "Capture/rsx_capture.h"
 #include "rsx_methods.h"
 #include "rsx_utils.h"
+#include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/Modules/cellGcmSys.h"
 
 #include "Utilities/GSL.h"
 #include "Utilities/StrUtil.h"
@@ -26,6 +28,8 @@ class GSRender;
 bool user_asked_for_frame_capture = false;
 rsx::frame_trace_data frame_debug;
 rsx::frame_capture_data frame_capture;
+
+extern CellGcmOffsetTable offsetTable;
 
 namespace rsx
 {
@@ -351,6 +355,16 @@ namespace rsx
 		if (supports_native_ui)
 		{
 			m_overlay_manager = fxm::make_always<rsx::overlays::display_manager>();
+
+			if (g_cfg.video.perf_overlay.perf_overlay_enabled)
+			{
+				auto perf_overlay = m_overlay_manager->create<rsx::overlays::perf_metrics_overlay>(false);
+
+				perf_overlay->set_detail_level(g_cfg.video.perf_overlay.level);
+				perf_overlay->set_update_interval(g_cfg.video.perf_overlay.update_interval);
+				perf_overlay->set_font_size(g_cfg.video.perf_overlay.font_size);
+				perf_overlay->init();
+			}
 		}
 
 		on_init_thread();
@@ -2332,6 +2346,28 @@ namespace rsx
 
 	void thread::on_notify_memory_unmapped(u32 base_address, u32 size)
 	{
+		{
+			s32 io_addr = RSXIOMem.getMappedAddress(base_address);
+			if (io_addr >= 0)
+			{
+				if (!isHLE)
+				{
+					const u64 unmap_key = u64((1ull << (size >> 20)) - 1) << ((io_addr >> 20) & 0x3f);
+					const u64 gcm_flag = 0x100000000ull << (io_addr >> 26);
+					sys_event_port_send(fxm::get<SysRsxConfig>()->rsx_event_port, 0, gcm_flag, unmap_key);
+				}
+				else
+				{
+					const u32 end = (base_address + size) >> 20;
+					for (base_address >>= 20, io_addr >>= 20; base_address < end;) 
+					{
+						offsetTable.ioAddress[base_address++] = 0xFFFF;
+						offsetTable.eaAddress[io_addr++] = 0xFFFF;
+					}
+				}
+			}
+		}
+
 		writer_lock lock(m_mtx_task);
 		m_invalidated_memory_ranges.push_back({ base_address, size });
 	}

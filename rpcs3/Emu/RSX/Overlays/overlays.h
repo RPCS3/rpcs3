@@ -11,6 +11,8 @@
 #include "Emu/Cell/Modules/cellSaveData.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
+#include "Utilities/CPUStats.h"
+#include "Utilities/Timer.h"
 
 #include <time.h>
 
@@ -21,7 +23,25 @@ namespace rsx
 {
 	namespace overlays
 	{
-		struct user_interface
+		// Non-interactable UI element
+		struct overlay
+		{
+			u32 uid = UINT32_MAX;
+			u32 type_index = UINT32_MAX;
+
+			u16 virtual_width = 1280;
+			u16 virtual_height = 720;
+
+			virtual ~overlay() = default;
+
+			virtual void update() {}
+			virtual compiled_resource get_compiled() = 0;
+
+			void refresh();
+		};
+
+		// Interactable UI element
+		struct user_interface : overlay
 		{
 			//Move this somewhere to avoid duplication
 			enum selection_code
@@ -43,29 +63,21 @@ namespace rsx
 				cross
 			};
 
-			u32 uid = UINT32_MAX;
-			u32 type_index = UINT32_MAX;
-
-			u16 virtual_width = 1280;
-			u16 virtual_height = 720;
-
 			u64  input_timestamp = 0;
 			bool exit = false;
 
 			s32 return_code = CELL_OK;
 			std::function<void(s32 status)> on_close;
 
-			virtual compiled_resource get_compiled() = 0;
-
-			void close();
-			void refresh();
-
-			virtual void update(){}
+			virtual void update() override {}
+			virtual compiled_resource get_compiled() override = 0;
 
 			virtual void on_button_pressed(pad_button /*button_press*/)
 			{
 				close();
-			};
+			}
+
+			void close();
 
 			s32 run_input_loop()
 			{
@@ -168,8 +180,8 @@ namespace rsx
 		{
 		private:
 			atomic_t<u32> m_uid_ctr { 0u };
-			std::vector<std::unique_ptr<user_interface>> m_iface_list;
-			std::vector<std::unique_ptr<user_interface>> m_dirty_list;
+			std::vector<std::unique_ptr<overlay>> m_iface_list;
+			std::vector<std::unique_ptr<overlay>> m_dirty_list;
 
 			shared_mutex m_list_mutex;
 			std::vector<u32> m_uids_to_remove;
@@ -312,14 +324,14 @@ namespace rsx
 			}
 
 			// Returns current list for reading. Caller must ensure synchronization by first locking the list
-			const std::vector<std::unique_ptr<user_interface>>& get_views() const
+			const std::vector<std::unique_ptr<overlay>>& get_views() const
 			{
 				return m_iface_list;
 			}
 
 			// Returns current list of removed objects not yet deallocated for reading.
 			// Caller must ensure synchronization by first locking the list
-			const std::vector<std::unique_ptr<user_interface>>& get_dirty() const
+			const std::vector<std::unique_ptr<overlay>>& get_dirty() const
 			{
 				return m_dirty_list;
 			}
@@ -336,7 +348,7 @@ namespace rsx
 
 				m_dirty_list.erase
 				(
-					std::remove_if(m_dirty_list.begin(), m_dirty_list.end(), [&uids](std::unique_ptr<user_interface>& e)
+					std::remove_if(m_dirty_list.begin(), m_dirty_list.end(), [&uids](std::unique_ptr<overlay>& e)
 					{
 						return std::find(uids.begin(), uids.end(), e->uid) != uids.end();
 					}),
@@ -345,7 +357,7 @@ namespace rsx
 			}
 
 			// Returns pointer to the object matching the given uid
-			user_interface* get(u32 uid)
+			overlay* get(u32 uid)
 			{
 				reader_lock lock(m_list_mutex);
 
@@ -395,27 +407,50 @@ namespace rsx
 			}
 		};
 
-		struct fps_display : user_interface
+		struct perf_metrics_overlay : overlay
 		{
-			label m_display;
+		private:
+			/*
+			   minimal - fps
+			   low - fps, total cpu usage
+			   medium  - fps, detailed cpu usage
+			   high - fps, frametime, detailed cpu usage, thread number, rsx load
+			 */
+			detail_level m_detail;
 
-			fps_display()
-			{
-				m_display.w = 150;
-				m_display.h = 30;
-				m_display.set_font("Arial", 16);
-				m_display.set_pos(1100, 20);
-			}
+			label m_body;
+			label m_titles;
 
-			void update(std::string current_fps)
-			{
-				m_display.text = current_fps;
-				m_display.refresh();
-			}
+			CPUStats m_cpu_stats;
+			Timer m_update_timer;
+			u32 m_update_interval; // in ms
+			u32 m_frames{ 0 };
+			u32 m_font_size;
+
+			bool m_force_update;
+
+			const std::string title1_medium{"CPU Utilization:"};
+			const std::string title1_high{"Host Utilization (CPU):"};
+			const std::string title2{"Guest Utilization (PS3):"};
+
+			void reset_body();
+			void reset_titles();
+
+		public:
+			perf_metrics_overlay(bool initialize = true);
+
+			void init();
+			void set_detail_level(detail_level level);
+			void set_update_interval(u32 update_interval);
+			void set_font_size(u32 font_size);
+			void force_next_update();
+
+			void update() override;
 
 			compiled_resource get_compiled() override
 			{
-				return m_display.get_compiled();
+				m_body.get_compiled().add(m_titles.get_compiled());
+				return m_body.get_compiled();
 			}
 		};
 
