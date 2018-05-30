@@ -8,6 +8,7 @@
 #include "Emu/System.h"
 
 #include "rsx_utils.h"
+#include <thread>
 
 namespace rsx
 {
