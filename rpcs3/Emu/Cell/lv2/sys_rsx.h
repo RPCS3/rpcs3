@@ -99,6 +99,12 @@ struct RsxDisplayInfo
 	be_t<u32> height;
 };
 
+struct SysRsxConfig
+{
+	be_t<u32> rsx_event_port{ 0 };
+	u32 driverInfo{ 0 };
+};
+
 // SysCalls
 s32 sys_rsx_device_open();
 s32 sys_rsx_device_close();

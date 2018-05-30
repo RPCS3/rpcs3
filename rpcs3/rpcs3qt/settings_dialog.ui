@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>7</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -1700,12 +1700,19 @@
              </widget>
             </item>
             <item>
-               <widget class="QCheckBox" name="disableVulkanMemAllocator">
-                <property name="text">
-                <string>Disable Vulkan Memory Allocator</string>
-               </property>
-              </widget>
-            </item>             
+             <widget class="QCheckBox" name="disableVulkanMemAllocator">
+              <property name="text">
+               <string>Disable Vulkan Memory Allocator</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="disableFIFOReordering">
+              <property name="text">
+               <string>Disable FIFO Reordering</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </item>

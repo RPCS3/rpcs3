@@ -11,6 +11,8 @@
 #include "Emu/Cell/Modules/cellSaveData.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
+#include "Utilities/CPUStats.h"
+#include "Utilities/Timer.h"
 
 #include <time.h>
 
@@ -21,7 +23,25 @@ namespace rsx
 {
 	namespace overlays
 	{
-		struct user_interface
+		// Non-interactable UI element
+		struct overlay
+		{
+			u32 uid = UINT32_MAX;
+			u32 type_index = UINT32_MAX;
+
+			u16 virtual_width = 1280;
+			u16 virtual_height = 720;
+
+			virtual ~overlay() = default;
+
+			virtual void update() {}
+			virtual compiled_resource get_compiled() = 0;
+
+			void refresh();
+		};
+
+		// Interactable UI element
+		struct user_interface : overlay
 		{
 			//Move this somewhere to avoid duplication
 			enum selection_code
@@ -43,29 +63,21 @@ namespace rsx
 				cross
 			};
 
-			u32 uid = UINT32_MAX;
-			u32 type_index = UINT32_MAX;
-
-			u16 virtual_width = 1280;
-			u16 virtual_height = 720;
-
 			u64  input_timestamp = 0;
 			bool exit = false;
 
 			s32 return_code = CELL_OK;
 			std::function<void(s32 status)> on_close;
 
-			virtual compiled_resource get_compiled() = 0;
-
-			void close();
-			void refresh();
-
-			virtual void update(){}
+			virtual void update() override {}
+			virtual compiled_resource get_compiled() override = 0;
 
 			virtual void on_button_pressed(pad_button /*button_press*/)
 			{
 				close();
-			};
+			}
+
+			void close();
 
 			s32 run_input_loop()
 			{
@@ -168,16 +180,76 @@ namespace rsx
 		{
 		private:
 			atomic_t<u32> m_uid_ctr { 0u };
-			std::vector<std::unique_ptr<user_interface>> m_iface_list;
-			std::vector<std::unique_ptr<user_interface>> m_dirty_list;
+			std::vector<std::unique_ptr<overlay>> m_iface_list;
+			std::vector<std::unique_ptr<overlay>> m_dirty_list;
+
+			shared_mutex m_list_mutex;
+			std::vector<u32> m_uids_to_remove;
+			std::vector<u32> m_type_ids_to_remove;
+
+			bool remove_type(u32 type_id)
+			{
+				bool found = false;
+				for (auto It = m_iface_list.begin(); It != m_iface_list.end();)
+				{
+					if (It->get()->type_index == type_id)
+					{
+						m_dirty_list.push_back(std::move(*It));
+						It = m_iface_list.erase(It);
+						found = true;
+					}
+					else
+					{
+						++It;
+					}
+				}
+
+				return found;
+			}
+
+			bool remove_uid(u32 uid)
+			{
+				for (auto It = m_iface_list.begin(); It != m_iface_list.end(); It++)
+				{
+					const auto e = It->get();
+					if (e->uid == uid)
+					{
+						m_dirty_list.push_back(std::move(*It));
+						m_iface_list.erase(It);
+						return true;
+					}
+				}
+
+				return false;
+			}
+
+			void cleanup_internal()
+			{
+				for (const auto &uid : m_uids_to_remove)
+				{
+					remove_uid(uid);
+				}
+
+				for (const auto &type_id : m_type_ids_to_remove)
+				{
+					remove_type(type_id);
+				}
+
+				m_uids_to_remove.clear();
+				m_type_ids_to_remove.clear();
+			}
 
 		public:
 			display_manager() {}
 			~display_manager() {}
 
+			// Adds an object to the internal list. Optionally removes other objects of the same type.
+			// Original handle loses ownership but a usable pointer is returned
 			template <typename T>
 			T* add(std::unique_ptr<T>& entry, bool remove_existing = true)
 			{
+				writer_lock lock(m_list_mutex);
+
 				T* e = entry.get();
 				e->uid = m_uid_ctr.fetch_add(1);
 				e->type_index = id_manager::typeinfo::get_index<T>();
@@ -201,6 +273,7 @@ namespace rsx
 				return e;
 			}
 
+			// Allocates object and adds to internal list. Returns pointer to created object
 			template <typename T, typename ...Args>
 			T* create(Args&&... args)
 			{
@@ -208,37 +281,33 @@ namespace rsx
 				return add(object);
 			}
 
-			bool remove(u32 uid)
+			// Removes item from list if it matches the uid
+			void remove(u32 uid)
 			{
-				for (auto It = m_iface_list.begin(); It != m_iface_list.end(); It++)
+				if (m_list_mutex.try_lock())
 				{
-					const auto e = It->get();
-					if (e->uid == uid)
-					{
-						m_dirty_list.push_back(std::move(*It));
-						m_iface_list.erase(It);
-						return true;
-					}
+					remove_uid(uid);
+					m_list_mutex.unlock();
 				}
-
-				return false;
+				else
+				{
+					m_uids_to_remove.push_back(uid);
+				}
 			}
 
+			// Removes all objects of this type from the list
 			template <typename T>
-			bool remove()
+			void remove()
 			{
 				const auto type_id = id_manager::typeinfo::get_index<T>();
-				for (auto It = m_iface_list.begin(); It != m_iface_list.end();)
+				if (m_list_mutex.try_lock())
 				{
-					if (It->get()->type_index == type_id)
-					{
-						m_dirty_list.push_back(std::move(*It));
-						It = m_iface_list.erase(It);
-					}
-					else
-					{
-						++It;
-					}
+					remove_type(type_id);
+					m_list_mutex.unlock();
+				}
+				else
+				{
+					m_type_ids_to_remove.push_back(type_id);
 				}
 			}
 
@@ -254,23 +323,44 @@ namespace rsx
 				return !m_dirty_list.empty();
 			}
 
-			const std::vector<std::unique_ptr<user_interface>>& get_views() const
+			// Returns current list for reading. Caller must ensure synchronization by first locking the list
+			const std::vector<std::unique_ptr<overlay>>& get_views() const
 			{
 				return m_iface_list;
 			}
 
-			const std::vector<std::unique_ptr<user_interface>>& get_dirty() const
+			// Returns current list of removed objects not yet deallocated for reading.
+			// Caller must ensure synchronization by first locking the list
+			const std::vector<std::unique_ptr<overlay>>& get_dirty() const
 			{
 				return m_dirty_list;
 			}
 
-			void clear_dirty()
+			// Deallocate object. Object must first be removed via the remove() functions
+			void dispose(const std::vector<u32>& uids)
 			{
-				m_dirty_list.clear();
+				writer_lock lock(m_list_mutex);
+
+				if (!m_uids_to_remove.empty() || !m_type_ids_to_remove.empty())
+				{
+					cleanup_internal();
+				}
+
+				m_dirty_list.erase
+				(
+					std::remove_if(m_dirty_list.begin(), m_dirty_list.end(), [&uids](std::unique_ptr<overlay>& e)
+					{
+						return std::find(uids.begin(), uids.end(), e->uid) != uids.end();
+					}),
+					m_dirty_list.end()
+				);
 			}
 
-			user_interface* get(u32 uid) const
+			// Returns pointer to the object matching the given uid
+			overlay* get(u32 uid)
 			{
+				reader_lock lock(m_list_mutex);
+
 				for (const auto& iface : m_iface_list)
 				{
 					if (iface->uid == uid)
@@ -280,9 +370,12 @@ namespace rsx
 				return nullptr;
 			}
 
+			// Returns pointer to the first object matching the given type
 			template <typename T>
-			T* get() const
+			T* get()
 			{
+				reader_lock lock(m_list_mutex);
+
 				const auto type_id = id_manager::typeinfo::get_index<T>();
 				for (const auto& iface : m_iface_list)
 				{
@@ -294,29 +387,70 @@ namespace rsx
 
 				return nullptr;
 			}
+
+			// Lock for read-only access (BasicLockable)
+			void lock()
+			{
+				m_list_mutex.lock_shared();
+			}
+
+			// Release read-only lock (BasicLockable). May perform internal cleanup before returning
+			void unlock()
+			{
+				m_list_mutex.unlock_shared();
+
+				if (!m_uids_to_remove.empty() || !m_type_ids_to_remove.empty())
+				{
+					writer_lock lock(m_list_mutex);
+					cleanup_internal();
+				}
+			}
 		};
 
-		struct fps_display : user_interface
+		struct perf_metrics_overlay : overlay
 		{
-			label m_display;
+		private:
+			/*
+			   minimal - fps
+			   low - fps, total cpu usage
+			   medium  - fps, detailed cpu usage
+			   high - fps, frametime, detailed cpu usage, thread number, rsx load
+			 */
+			detail_level m_detail;
 
-			fps_display()
-			{
-				m_display.w = 150;
-				m_display.h = 30;
-				m_display.set_font("Arial", 16);
-				m_display.set_pos(1100, 20);
-			}
+			label m_body;
+			label m_titles;
 
-			void update(std::string current_fps)
-			{
-				m_display.text = current_fps;
-				m_display.refresh();
-			}
+			CPUStats m_cpu_stats;
+			Timer m_update_timer;
+			u32 m_update_interval; // in ms
+			u32 m_frames{ 0 };
+			u32 m_font_size;
+
+			bool m_force_update;
+
+			const std::string title1_medium{"CPU Utilization:"};
+			const std::string title1_high{"Host Utilization (CPU):"};
+			const std::string title2{"Guest Utilization (PS3):"};
+
+			void reset_body();
+			void reset_titles();
+
+		public:
+			perf_metrics_overlay(bool initialize = true);
+
+			void init();
+			void set_detail_level(detail_level level);
+			void set_update_interval(u32 update_interval);
+			void set_font_size(u32 font_size);
+			void force_next_update();
+
+			void update() override;
 
 			compiled_resource get_compiled() override
 			{
-				return m_display.get_compiled();
+				m_body.get_compiled().add(m_titles.get_compiled());
+				return m_body.get_compiled();
 			}
 		};
 

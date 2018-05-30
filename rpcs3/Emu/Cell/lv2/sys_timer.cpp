@@ -294,14 +294,38 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 
 	sys_timer.trace("sys_timer_usleep(sleep_time=0x%llx)", sleep_time);
 
-	u64 passed = 0;
-
-	lv2_obj::sleep(ppu, std::max<u64>(1, sleep_time));
-
-	while (sleep_time >= passed)
+	if (sleep_time)
 	{
-		thread_ctrl::wait_for(std::max<u64>(1, sleep_time - passed));
-		passed = get_system_time() - ppu.start_time;
+		// Host scheduler quantum for windows (worst case)
+		// NOTE: On ps3 this function has very high accuracy
+		const u32  host_min_quantum = 500;
+
+		u64 passed = 0;
+		u64 remaining;
+
+		lv2_obj::sleep(ppu, sleep_time);
+
+		while (sleep_time >= passed)
+		{
+			remaining = sleep_time - passed;
+
+			if (remaining > host_min_quantum)
+			{
+				// Wait on multiple of min quantum for large durations
+				thread_ctrl::wait_for(remaining - (remaining % host_min_quantum));
+			}
+			else
+			{
+				// Try yielding. May cause long wake latency but helps weaker CPUs a lot by alleviating resource pressure
+				std::this_thread::yield();
+			}
+
+			passed = (get_system_time() - ppu.start_time);
+		}
+	}
+	else
+	{
+		lv2_obj::yield(ppu);
 	}
 
 	return CELL_OK;
