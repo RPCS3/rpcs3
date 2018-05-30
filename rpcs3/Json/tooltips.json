@@ -63,6 +63,12 @@
 			"maxLLVMThreads": "Limits the maximum number of threads used for PPU Module compilation.\nLower this in order to increase performance of other open applications.\nThe default uses all available threads.",
 			"showShaderCompilationHint": "Show shader compilation hints using the native overlay.",
 			"useNativeInterface": "Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, only the English language is supported."
+		},
+		"overlay": {
+			"perfOverlayEnabled": "Enables or disables the performance overlay.",
+			"perfOverlayDetailLevel": "Controls the amount of information displayed on the performance overlay.",
+			"perfOverlayUpdateInterval": "Sets the time interval in which the performance overlay is being updated (measured in milliseconds).",
+			"perfOverlayFontSize": "Sets the font size of the performance overlay (measured in pixels)."
 		}
 	},
 	"gpu": {

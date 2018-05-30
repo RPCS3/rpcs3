@@ -403,7 +403,7 @@ struct cfg_root : cfg::node
 
 		struct node_perf_overlay : cfg::node
 		{
-			node_perf_overlay(cfg::node* _this) : cfg::node(_this, "Perfomance Overlay") {}
+			node_perf_overlay(cfg::node* _this) : cfg::node(_this, "Performance Overlay") {}
 
 			cfg::_bool perf_overlay_enabled{this, "Enabled", false};
 			cfg::_enum<detail_level> level{this, "Detail level", detail_level::high};
