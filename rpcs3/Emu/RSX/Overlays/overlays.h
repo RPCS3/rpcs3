@@ -449,8 +449,9 @@ namespace rsx
 
 			compiled_resource get_compiled() override
 			{
-				m_body.get_compiled().add(m_titles.get_compiled());
-				return m_body.get_compiled();
+				auto result = m_body.get_compiled();
+				result.add(m_titles.get_compiled());
+				return result;
 			}
 		};
 
