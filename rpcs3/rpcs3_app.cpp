@@ -100,6 +100,12 @@ void rpcs3_app::Init()
 	{
 		DiscordEventHandlers handlers = {};
 		Discord_Initialize("424004941485572097", &handlers, 1, NULL);
+
+		DiscordRichPresence discordPresence = {};
+		discordPresence.largeImageKey = "rpcs3_logo";
+		discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
+		discordPresence.details = "In menu";
+		Discord_UpdatePresence(&discordPresence);
 	}
 #endif
 

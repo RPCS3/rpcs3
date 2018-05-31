@@ -840,6 +840,7 @@ void main_window::OnEmuStop()
 		DiscordRichPresence discordPresence = {};
 		discordPresence.largeImageKey = "rpcs3_logo";
 		discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
+		discordPresence.details = "In menu";
 		Discord_UpdatePresence(&discordPresence);
 	}
 #endif
