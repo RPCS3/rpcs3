@@ -63,6 +63,13 @@ extern void network_thread_init();
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
 
+// Progress display server synchronization variables
+atomic_t<const char*> g_progr{nullptr};
+atomic_t<u64> g_progr_ftotal{0};
+atomic_t<u64> g_progr_fdone{0};
+atomic_t<u64> g_progr_ptotal{0};
+atomic_t<u64> g_progr_pdone{0};
+
 template <>
 void fmt_class_string<mouse_handler>::format(std::string& out, u64 arg)
 {
@@ -198,21 +205,22 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 	});
 }
 
-/*
-TODO: remove
 template <>
-void fmt_class_string<gdb_server_socket_type>::format(std::string& out, u64 arg)
+inline void fmt_class_string<detail_level>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](gdb_server_socket_type value)
+	format_enum(out, arg, [](detail_level value)
 	{
-			switch (value)
-			{
-				case gdb_server_socket_type::soc_inet: return "IPv4 port";
-				case gdb_server_socket_type::soc_unix: return "UNIX socket file";
-			}
+		switch (value)
+		{
+		case detail_level::minimal: return "Minimal";
+		case detail_level::low: return "Low";
+		case detail_level::medium: return "Medium";
+		case detail_level::high: return "High";
+		}
+
+		return unknown;
 	});
 }
-*/
 
 void Emulator::Init()
 {
@@ -279,6 +287,100 @@ void Emulator::Init()
 
 	// Initialize patch engine
 	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
+
+	// Initialize progress dialog server (TODO)
+	if (g_progr.exchange("") == nullptr)
+	{
+		std::thread server([]()
+		{
+			while (true)
+			{
+				std::shared_ptr<MsgDialogBase> dlg;
+
+				// Wait for the start condition
+				while (!g_progr_ftotal && !g_progr_ptotal)
+				{
+					std::this_thread::sleep_for(5ms);
+				}
+
+				// Initialize message dialog
+				dlg = Emu.GetCallbacks().get_msg_dialog();
+				dlg->type.se_normal = true;
+				dlg->type.bg_invisible = true;
+				dlg->type.progress_bar_count = 1;
+				dlg->on_close = [](s32 status)
+				{
+					Emu.CallAfter([]()
+					{
+						// Abort everything
+						Emu.Stop();
+					});
+				};
+
+				Emu.CallAfter([=]()
+				{
+					dlg->Create(+g_progr);
+				});
+
+				u64 ftotal = 0;
+				u64 fdone = 0;
+				u64 ptotal = 0;
+				u64 pdone = 0;
+				u32 value = 0;
+
+				// Update progress
+				while (true)
+				{
+					if (ftotal != g_progr_ftotal || fdone != g_progr_fdone || ptotal != g_progr_ptotal || pdone != g_progr_pdone)
+					{
+						ftotal = g_progr_ftotal;
+						fdone = g_progr_fdone;
+						ptotal = g_progr_ptotal;
+						pdone = g_progr_pdone;
+
+						// Compute new progress in percents
+						const u32 new_value = ((ptotal ? pdone * 1. / ptotal : 0.) + fdone) * 100. / (ftotal ? ftotal : 1);
+
+						// Compute the difference
+						const u32 delta = new_value > value ? new_value - value : 0;
+
+						value += delta;
+
+						// Changes detected, send update
+						Emu.CallAfter([=]()
+						{
+							std::string progr = "Progress:";
+
+							if (ftotal)
+								fmt::append(progr, " file %u of %u%s", fdone, ftotal, ptotal ? "," : "");
+							if (ptotal)
+								fmt::append(progr, " module %u of %u", pdone, ptotal);
+
+							dlg->SetMsg(+g_progr);
+							dlg->ProgressBarSetMsg(0, progr);
+							dlg->ProgressBarInc(0, delta);
+						});
+					}
+
+					if (fdone >= ftotal && pdone >= ptotal)
+					{
+						// Close dialog
+						break;
+					}
+
+					std::this_thread::sleep_for(10ms);
+				}
+
+				// Cleanup
+				g_progr_ftotal -= fdone;
+				g_progr_fdone  -= fdone;
+				g_progr_ptotal -= pdone;
+				g_progr_pdone  -= pdone;
+			}
+		});
+
+		server.detach();
+	}
 }
 
 bool Emulator::BootRsxCapture(const std::string& path)
@@ -584,8 +686,14 @@ void Emulator::Load(bool add_only)
 				std::vector<std::string> dir_queue;
 				dir_queue.emplace_back(m_path + '/');
 
+				std::vector<std::pair<std::string, u64>> file_queue;
+				file_queue.reserve(2000);
+
 				std::queue<std::shared_ptr<thread_ctrl>> thread_queue;
 				const uint max_threads = std::thread::hardware_concurrency();
+
+				// Initialize progress dialog
+				g_progr = "Scanning directories for SPRX libraries...";
 
 				// Find all .sprx files recursively (TODO: process .mself files)
 				for (std::size_t i = 0; i < dir_queue.size(); i++)
@@ -623,37 +731,53 @@ void Emulator::Load(bool add_only)
 							}
 
 							// Get full path
-							const std::string path = dir_queue[i] + entry.name;
-
-							LOG_NOTICE(LOADER, "Trying to load SPRX: %s", path);
-
-							// Some files may fail to decrypt due to the lack of klic
-							const ppu_prx_object obj = decrypt_self(fs::file(path));
-
-							if (obj == elf_error::ok)
-							{
-								if (auto prx = ppu_load_prx(obj, path))
-								{
-									while (g_thread_count >= max_threads + 2)
-									{
-										std::this_thread::sleep_for(10ms);
-									}
-
-									thread_queue.emplace();
-
-									thread_ctrl::spawn(thread_queue.back(), "Worker " + std::to_string(thread_queue.size()), [_prx = std::move(prx)]
-									{
-										ppu_initialize(*_prx);
-										ppu_unload_prx(*_prx);
-									});
-								}
-							}
-							else
-							{
-								LOG_ERROR(LOADER, "Failed to load SPRX '%s' (%s)", path, obj.get_error());
-							}
+							file_queue.emplace_back(dir_queue[i] + entry.name, 0);
+							g_progr_ftotal++;
 						}
 					}
+				}
+
+				for (std::size_t i = 0; i < file_queue.size(); i++)
+				{
+					const auto& path = file_queue[i].first;
+
+					LOG_NOTICE(LOADER, "Trying to load SPRX: %s", path);
+
+					// Load MSELF or SPRX
+					fs::file src{path};
+
+					if (file_queue[i].second == 0)
+					{
+						// Some files may fail to decrypt due to the lack of klic
+						src = decrypt_self(std::move(src));
+					}
+
+					const ppu_prx_object obj = src;
+
+					if (obj == elf_error::ok)
+					{
+						if (auto prx = ppu_load_prx(obj, path))
+						{
+							while (g_thread_count >= max_threads + 2)
+							{
+								std::this_thread::sleep_for(10ms);
+							}
+
+							thread_queue.emplace();
+
+							thread_ctrl::spawn(thread_queue.back(), "Worker " + std::to_string(thread_queue.size()), [_prx = std::move(prx)]
+							{
+								ppu_initialize(*_prx);
+								ppu_unload_prx(*_prx);
+								g_progr_fdone++;
+							});
+
+							continue;
+						}
+					}
+
+					LOG_ERROR(LOADER, "Failed to load SPRX '%s' (%s)", path, obj.get_error());
+					g_progr_fdone++;
 				}
 
 				// Join every thread and print exceptions

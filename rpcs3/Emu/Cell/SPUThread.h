@@ -378,24 +378,20 @@ struct spu_int_ctrl_t
 
 struct spu_imm_table_t
 {
-	v128 fsmb[65536]; // table for FSMB, FSMBI instructions
-	v128 fsmh[256]; // table for FSMH instruction
-	v128 fsm[16]; // table for FSM instruction
-
 	v128 sldq_pshufb[32]; // table for SHLQBYBI, SHLQBY, SHLQBYI instructions
 	v128 srdq_pshufb[32]; // table for ROTQMBYBI, ROTQMBY, ROTQMBYI instructions
 	v128 rldq_pshufb[16]; // table for ROTQBYBI, ROTQBY, ROTQBYI instructions
 
 	class scale_table_t
 	{
-		std::array<__m128, 155 + 174> m_data;
+		std::array<v128, 155 + 174> m_data;
 
 	public:
 		scale_table_t();
 
 		FORCE_INLINE __m128 operator [] (s32 scale) const
 		{
-			return m_data[scale + 155];
+			return m_data[scale + 155].vf;
 		}
 	}
 	const scale;

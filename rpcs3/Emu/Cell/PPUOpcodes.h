@@ -83,6 +83,20 @@ class ppu_decoder
 		u32 value;
 		T pointer;
 		u32 magn; // Non-zero for "columns" (effectively, number of most significant bits "eaten")
+
+		instruction_info(u32 v, T p, u32 m = 0)
+			: value(v)
+			, pointer(p)
+			, magn(m)
+		{
+		}
+
+		instruction_info(u32 v, const T* p, u32 m = 0)
+			: value(v)
+			, pointer(*p)
+			, magn(m)
+		{
+		}
 	};
 
 	// Fill lookup table

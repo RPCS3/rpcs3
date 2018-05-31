@@ -972,6 +972,17 @@ public:
 		return a << (b & mask) | a >> ((0 - b) & mask);
 	}
 
+	// Select (c ? a : b)
+	template <typename T, typename T2>
+	auto select(T2 c, T a, T b)
+	{
+		static_assert(value_t<typename T2::type>::esize == 1, "select: expected bool type (first argument)");
+		static_assert(value_t<typename T2::type>::is_vector == value_t<typename T::type>::is_vector, "select: incompatible arguments (vectors)");
+		T result;
+		result.value = m_ir->CreateSelect(c.eval(m_ir), a.eval(m_ir), b.eval(m_ir));
+		return result;
+	}
+
 	template <typename T, typename E>
 	auto insert(T v, u64 i, E e)
 	{

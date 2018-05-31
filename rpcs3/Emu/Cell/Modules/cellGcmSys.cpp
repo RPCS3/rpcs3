@@ -769,7 +769,8 @@ void cellGcmSetInvalidateTile(u8 index)
 
 s32 cellGcmTerminate()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	// The firmware just return CELL_OK as well
+	return CELL_OK;
 }
 
 s32 cellGcmDumpGraphicsError()
@@ -919,12 +920,15 @@ s32 cellGcmIoOffsetToAddress(u32 ioOffset, vm::ptr<u32> address)
 {
 	cellGcmSys.trace("cellGcmIoOffsetToAddress(ioOffset=0x%x, address=*0x%x)", ioOffset, address);
 
-	u32 realAddr;
+	const u32 upper12Bits = offsetTable.eaAddress[ioOffset >> 20];
 
-	if (!RSXIOMem.getRealAddr(ioOffset, realAddr))
+	if (static_cast<s16>(upper12Bits) < 0)
+	{
+		cellGcmSys.error("cellGcmIoOffsetToAddress: CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
+	}
 
-	*address = realAddr;
+	*address = (upper12Bits << 20) | (ioOffset & 0xFFFFF);
 
 	return CELL_OK;
 }
@@ -992,34 +996,41 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 {
 	cellGcmSys.warning("cellGcmMapMainMemory(ea=0x%x, size=0x%x, offset=*0x%x)", ea, size, offset);
 
-	if (size == 0) return CELL_OK;
-	if ((ea & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
+	if (!size || (ea & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
 
-	u32 io = RSXIOMem.Map(ea, size);
-
-	const auto render = rsx::get_current_renderer();
-
-	//check if the mapping was successfull
-	if (RSXIOMem.RealAddr(io) == ea)
+	// Use the offset table to find the next free io address
+	for (u32 io = RSXIOMem.GetRangeStart() >> 20, end = RSXIOMem.GetRangeEnd() >> 20, unmap_count = 1; io < end; unmap_count++)
 	{
-		//fill the offset table
-		for (u32 i = 0; i<(size >> 20); i++)
+		if (static_cast<s16>(offsetTable.eaAddress[io]) < 0)
 		{
-			offsetTable.ioAddress[(ea >> 20) + i] = (u16)((io >> 20) + i);
-			offsetTable.eaAddress[(io >> 20) + i] = (u16)((ea >> 20) + i);
+			if (unmap_count >= (size >> 20))
+			{
+				io <<= 20;
+
+				RSXIOMem.Map(ea, size, io);
+				*offset = io;
+
+				io >>= 20, ea >>= 20;
+
+				//fill the offset table
+				for (u32 i = 0; i<(size >> 20); ++i)
+				{
+					offsetTable.ioAddress[ea + i] = io + i;
+					offsetTable.eaAddress[io + i] = ea + i;
+				}
+
+				return CELL_OK;
+			}
 		}
-
-		*offset = io;
-	}
-	else
-	{
-		cellGcmSys.error("cellGcmMapMainMemory: CELL_GCM_ERROR_NO_IO_PAGE_TABLE");
-		return CELL_GCM_ERROR_NO_IO_PAGE_TABLE;
+		else
+		{
+			io += unmap_count;
+			unmap_count = 0;
+		}
 	}
 
-	render->main_mem_addr = render->ioAddress;
-
-	return CELL_OK;
+	cellGcmSys.error("cellGcmMapMainMemory: CELL_GCM_ERROR_NO_IO_PAGE_TABLE");
+	return CELL_GCM_ERROR_NO_IO_PAGE_TABLE;
 }
 
 s32 cellGcmReserveIoMapSize(u32 size)

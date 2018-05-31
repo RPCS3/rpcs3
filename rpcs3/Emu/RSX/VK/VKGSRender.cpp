@@ -672,7 +672,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_ui_renderer.reset(new vk::ui_overlay_renderer());
 	m_ui_renderer->create(*m_current_command_buffer, m_texture_upload_buffer_ring_info);
 
-	supports_multidraw = !g_cfg.video.strict_rendering_mode;
+	supports_multidraw = true;
 	supports_native_ui = (bool)g_cfg.misc.use_native_interface;
 }
 
@@ -857,9 +857,6 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 			if (target_cb)
 				target_cb->wait();
-
-			if (is_rsxthr)
-				m_last_flushable_cb = -1;
 		}
 
 		if (has_queue_ref)
@@ -1858,7 +1855,6 @@ void VKGSRender::copy_render_targets_to_dma_location()
 
 	vk::leave_uninterruptible();
 
-	m_last_flushable_cb = m_current_cb_index;
 	flush_command_queue();
 
 	m_flush_draw_buffers = false;
@@ -1884,7 +1880,6 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 				cb.poke();
 		}
 
-		m_last_flushable_cb = -1;
 		m_flush_requests.clear_pending_flag();
 	}
 	else
@@ -1904,9 +1899,6 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 		}
 
 		m_current_command_buffer->reset();
-
-		if (m_last_flushable_cb == m_current_cb_index)
-			m_last_flushable_cb = -1;
 	}
 
 	open_command_buffer();
@@ -2044,12 +2036,19 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 		if (m_overlay_manager && m_overlay_manager->has_dirty())
 		{
+			m_overlay_manager->lock();
+
+			std::vector<u32> uids_to_dispose;
+			uids_to_dispose.reserve(m_overlay_manager->get_dirty().size());
+
 			for (const auto& view : m_overlay_manager->get_dirty())
 			{
 				m_ui_renderer->remove_temp_resources(view->uid);
+				uids_to_dispose.push_back(view->uid);
 			}
 
-			m_overlay_manager->clear_dirty();
+			m_overlay_manager->unlock();
+			m_overlay_manager->dispose(uids_to_dispose);
 		}
 
 		m_attachment_clear_pass->free_resources();
@@ -2082,7 +2081,7 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 	ctx->swap_command_buffer = nullptr;
 }
 
-void VKGSRender::do_local_task(bool idle)
+void VKGSRender::do_local_task(rsx::FIFO_state state)
 {
 	if (m_flush_requests.pending())
 	{
@@ -2095,22 +2094,19 @@ void VKGSRender::do_local_task(bool idle)
 		m_flush_requests.clear_pending_flag();
 		m_flush_requests.consumer_wait();
 	}
-	else if (!in_begin_end)
+	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
 	{
 		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
 		//Only call when there are no waiters
 		m_texture_cache.do_update();
 	}
 
-	if (m_last_flushable_cb > -1)
+	rsx::thread::do_local_task(state);
+
+	if (state == rsx::FIFO_state::lock_wait)
 	{
-		auto cb = &m_primary_cb_list[m_last_flushable_cb];
-
-		if (cb->pending)
-			cb->poke();
-
-		if (!cb->pending)
-			m_last_flushable_cb = -1;
+		// Critical check finished
+		return;
 	}
 
 #ifdef _WIN32
@@ -2201,8 +2197,6 @@ void VKGSRender::do_local_task(bool idle)
 			flip((s32)current_display_buffer);
 		}
 	}
-
-	rsx::thread::do_local_task(idle);
 }
 
 bool VKGSRender::do_method(u32 cmd, u32 arg)
@@ -3239,6 +3233,9 @@ void VKGSRender::flip(int buffer)
 
 		if (has_overlay)
 		{
+			// Lock to avoid modification during run-update chain
+			std::lock_guard<rsx::overlays::display_manager> lock(*m_overlay_manager);
+
 			for (const auto& view : m_overlay_manager->get_views())
 			{
 				m_ui_renderer->run(*m_current_command_buffer, direct_fbo->width(), direct_fbo->height(), direct_fbo.get(), single_target_pass, m_texture_upload_buffer_ring_info, *view.get());

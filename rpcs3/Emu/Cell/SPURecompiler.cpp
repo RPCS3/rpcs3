@@ -1089,7 +1089,29 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	value_t<u8[16]> pshufb(T1 a, T2 b)
 	{
 		value_t<u8[16]> result;
-		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_ssse3_pshuf_b_128), {a.eval(m_ir), b.eval(m_ir)});
+
+		if (m_spurt->m_jit.has_ssse3())
+		{
+			result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_ssse3_pshuf_b_128), {a.eval(m_ir), b.eval(m_ir)});
+		}
+		else
+		{
+			const auto data0 = a.eval(m_ir);
+			const auto index = b.eval(m_ir);
+			const auto mask = m_ir->CreateAnd(index, 0xf);
+			const auto zero = llvm::ConstantInt::get(get_type<u8[16]>(), 0u);
+
+			result.value = zero;
+
+			for (u32 i = 0; i < 16; i++)
+			{
+				const auto x = m_ir->CreateExtractElement(data0, m_ir->CreateExtractElement(mask, i));
+				result.value = m_ir->CreateInsertElement(result.value, x, i);
+			}
+
+			result.value = m_ir->CreateSelect(m_ir->CreateICmpSLT(index, zero), zero, result.value);
+		}
+
 		return result;
 	}
 
@@ -1999,23 +2021,23 @@ public:
 
 	void ROTQBI(spu_opcode_t op)
 	{
-		const auto a = get_vr(op.ra);
-		const auto b = zshuffle<u32[4]>(get_vr<u32[4]>(op.rb) & 0x7, 3, 3, 3, 3);
-		set_vr(op.rt, a << b | zshuffle<u32[4]>(a, 3, 0, 1, 2) >> (32 - b));
+		const auto a = get_vr<u64[2]>(op.ra);
+		const auto b = eval((get_vr<u64[2]>(op.rb) >> 32) & 0x7);
+		set_vr(op.rt, a << zshuffle<u64[2]>(b, 1, 1) | zshuffle<u64[2]>(a, 1, 0) >> 56 >> zshuffle<u64[2]>(8 - b, 1, 1));
 	}
 
 	void ROTQMBI(spu_opcode_t op)
 	{
-		const auto a = get_vr(op.ra);
-		const auto b = zshuffle<u32[4]>(-get_vr<u32[4]>(op.rb) & 0x7, 3, 3, 3, 3);
-		set_vr(op.rt, a >> b | zshuffle<u32[4]>(a, 1, 2, 3, 4) << (32 - b));
+		const auto a = get_vr<u64[2]>(op.ra);
+		const auto b = eval(-(get_vr<u64[2]>(op.rb) >> 32) & 0x7);
+		set_vr(op.rt, a >> zshuffle<u64[2]>(b, 1, 1) | zshuffle<u64[2]>(a, 1, 2) << 56 << zshuffle<u64[2]>(8 - b, 1, 1));
 	}
 
 	void SHLQBI(spu_opcode_t op)
 	{
-		const auto a = get_vr(op.ra);
-		const auto b = zshuffle<u32[4]>(get_vr<u32[4]>(op.rb) & 0x7, 3, 3, 3, 3);
-		set_vr(op.rt, a << b | zshuffle<u32[4]>(a, 4, 0, 1, 2) >> (32 - b));
+		const auto a = get_vr<u64[2]>(op.ra);
+		const auto b = eval((get_vr<u64[2]>(op.rb) >> 32) & 0x7);
+		set_vr(op.rt, a << zshuffle<u64[2]>(b, 1, 1) | zshuffle<u64[2]>(a, 2, 0) >> 56 >> zshuffle<u64[2]>(8 - b, 1, 1));
 	}
 
 	void ROTQBY(spu_opcode_t op)
@@ -2513,7 +2535,7 @@ public:
 		const auto cr = c ^ 0xf;
 		const auto a = pshufb(get_vr<u8[16]>(op.ra), cr);
 		const auto b = pshufb(get_vr<u8[16]>(op.rb), cr);
-		set_vr(op.rt4, merge(sext<u8[16]>((c & 0x10) == 0), a, b) | x);
+		set_vr(op.rt4, select(bitcast<s8[16]>(cr << 3) >= 0, a, b) | x);
 	}
 
 	void MPYA(spu_opcode_t op)
