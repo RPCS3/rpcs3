@@ -111,6 +111,9 @@ public:
 		return *m_engine;
 	}
 
+	// Test SSSE3 feature
+	bool has_ssse3() const;
+
 	// Add module (path to obj cache dir)
 	void add(std::unique_ptr<llvm::Module> module, const std::string& path);
 
