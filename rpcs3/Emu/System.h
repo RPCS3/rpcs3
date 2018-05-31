@@ -148,17 +148,21 @@ enum class frame_limit_type
 	_auto,
 };
 
-#ifndef _WIN32
-// TODO: manually specifying available sockets for gdb server as a safety measure-- probably not necessary though?
-enum class gdb_server_socket_type
-{
-	soc_inet = AF_INET,
-	soc_unix = AF_UNIX,
-};
-#endif
+enum CellNetCtlState 		 : s32;
+enum CellSysutilLang 		 : s32;
 
-enum CellNetCtlState : s32;
-enum CellSysutilLang : s32;
+// maps string name of GDB socket type in config to corresponding socket.h AF Number
+inline int get_gdb_socket_type(cfg::string&);
+
+inline int get_gdb_socket_type(cfg::string &socket)
+{
+	static std::map<std::string, int> gdb_socket_map =
+	{
+		{"INET", AF_INET},
+		{"UNIX", AF_UNIX}
+	};
+	return gdb_socket_map[socket.get()];
+}
 
 struct EmuCallbacks
 {
@@ -453,7 +457,7 @@ struct cfg_root : cfg::node
 		node_gdb(cfg::node* _this) : cfg::node(_this, "GDB debug server") {}
 
 		cfg::_bool enabled{this, "Enabled", true};
-		cfg::_enum<gdb_server_socket_type> socket_type{this, "Socket type", gdb_server_socket_type::soc_inet};
+		cfg::string socket_type{this, "Socket type", "INET"};
 		cfg::_int<1, 65535> ipv4_port{this, "IPv4 port", 2345};
 		cfg::string unix_fpath{this, "UNIX socket file path",
 #ifndef _WIN32

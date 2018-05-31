@@ -198,6 +198,8 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 	});
 }
 
+/*
+TODO: remove
 template <>
 void fmt_class_string<gdb_server_socket_type>::format(std::string& out, u64 arg)
 {
@@ -210,6 +212,7 @@ void fmt_class_string<gdb_server_socket_type>::format(std::string& out, u64 arg)
 			}
 	});
 }
+*/
 
 void Emulator::Init()
 {
@@ -251,21 +254,24 @@ void Emulator::Init()
 	fs::create_path(dev_hdd1);
 	fs::create_path(dev_usb);
 
+// initialize the debug server
 #ifdef WITH_GDB_DEBUGGER
 # define GDB_WILL_LISTEN "GDB debug server will listen "
 # define UPON_EMU_BOOT   " upon emulator boot."
 # define GDB_LISTENING_MSG(socket_location_msg, socket_location) LOG_SUCCESS(GENERAL, GDB_WILL_LISTEN socket_location_msg UPON_EMU_BOOT, socket_location);
-# ifdef _WIN32
-# else
-	switch (g_cfg.gdb.socket_type)
+// TODO: write function executing callbacks for separate cases?
+	switch (get_gdb_socket_type(g_cfg.gdb.socket_type))
 	{
-		case (gdb_server_socket_type::soc_inet):
+# ifndef _WIN32
+		case (AF_UNIX):
+			GDB_LISTENING_MSG("at file %s", g_cfg.gdb.unix_fpath.get()); // TODO: need to do get() to get raw string from cfg::string variable, but maybe there's another way to format the string that's clearer?
+			break;
+# endif
+		case (AF_INET):
+		default:
 			GDB_LISTENING_MSG("on port %d", (int) g_cfg.gdb.ipv4_port);
 			break;
-		case (gdb_server_socket_type::soc_unix):
-			GDB_LISTENING_MSG("at file %s", g_cfg.gdb.unix_fpath.get()); // TODO: need to do get() to get raw string from cfg::string variable, but maybe there's another way to format the string that's clearer?
 	}
-# endif
 # undef GDB_LISTENING_MSG
 # undef UPON_EMU_BOOT
 # undef GDB_WILL_LISTEN

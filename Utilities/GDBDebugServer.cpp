@@ -96,9 +96,13 @@ u64 hex_to_u64(std::string val) {
 
 void GDBDebugServer::start_server()
 {
-	// TODO: validate domain against those in gdb_server_socket_type?
-	gdb_server_socket_type domain = g_cfg.gdb.socket_type;
-	server_socket = socket((int) domain, SOCK_STREAM, 0);
+#ifndef _WIN32
+	int domain = get_gdb_socket_type(g_cfg.gdb.socket_type);
+#else
+	int domain = AF_INET;
+#endif
+
+	server_socket = socket(domain, SOCK_STREAM, 0);
 
 #ifdef WIN32
 	{
@@ -120,8 +124,7 @@ void GDBDebugServer::start_server()
 		default:
 			gdbDebugServer.error("Invalid socket domain");
 			return;
-
-		case (gdb_server_socket_type::soc_inet):
+		case (AF_INET):
 			// bind to ipv4 port
 			{
 				int port = g_cfg.gdb.ipv4_port;
@@ -138,7 +141,7 @@ void GDBDebugServer::start_server()
 			}
 			break;
 #ifndef _WIN32
-		case (gdb_server_socket_type::soc_unix):
+		case (AF_UNIX):
 			// create socket file (non-Win32 only for the time being)
 			{
 				std::string fpath = g_cfg.gdb.unix_fpath;
