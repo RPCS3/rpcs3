@@ -457,15 +457,15 @@ namespace rsx
 		};
 
 		shaders_cache(backend_storage& storage, std::string pipeline_class, std::string version_prefix_str = "v1")
-		    : version_prefix(version_prefix_str)
-		    , pipeline_class_name(pipeline_class)
-		    , m_storage(storage)
+			: version_prefix(version_prefix_str)
+			, pipeline_class_name(pipeline_class)
+			, m_storage(storage)
 		{
 			root_path = Emu.GetCachePath() + "/shaders_cache";
 		}
 
 		template <typename... Args>
-		void load(progress_dialog_helper* dlg, Args&&... args)
+		void load(progress_dialog_helper* dlg, Args&& ...args)
 		{
 			if (g_cfg.video.disable_on_disk_shader_cache || Emu.GetCachePath() == "")
 			{
@@ -525,8 +525,9 @@ namespace rsx
 			// Preload everything needed to compile the shaders
 			// Can probably be parallelized too, but since it's mostly reading files it's probably not worth it
 			std::vector<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>> unpackeds;
-			std::chrono::milliseconds last_update;
+			std::chrono::time_point<steady_clock> last_update;
 			u32 processed_since_last_update = 0;
+
 			for (u32 i = 0; (i < entry_count) && !Emu.IsStopped(); i++)
 			{
 				fs::dir_entry tmp = entries[i];
@@ -547,9 +548,9 @@ namespace rsx
 				unpackeds.push_back(unpacked);
 
 				// Only update the screen at about 10fps since updating it everytime slows down the process
-				std::chrono::milliseconds now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+				std::chrono::time_point<steady_clock> now = std::chrono::steady_clock::now();
 				processed_since_last_update++;
-				if ((now - last_update > 100ms) || (i == entry_count - 1))
+				if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (i == entry_count - 1))
 				{
 					dlg->update_msg(0, i + 1, entry_count);
 					dlg->inc_value(0, processed_since_last_update);
@@ -559,9 +560,10 @@ namespace rsx
 			}
 
 			atomic_t<u32> processed(0);
-			std::function<void(u32)> shader_comp_worker = [&](u32 index) {
+			std::function<void(u32)> shader_comp_worker = [&](u32 index)
+			{
 				u32 pos;
-				while (((pos = ++processed - 1) < entry_count) && !Emu.IsStopped())
+				while (((pos = processed++) < entry_count) && !Emu.IsStopped())
 				{
 					auto unpacked = unpackeds[pos];
 					m_storage.add_pipeline_entry(std::get<1>(unpacked), std::get<2>(unpacked), std::get<0>(unpacked), std::forward<Args>(args)...);
@@ -597,13 +599,21 @@ namespace rsx
 			else
 			{
 				u32 pos;
-				while (((pos = ++processed - 1) < entry_count) && !Emu.IsStopped())
+				while (((pos = processed++) < entry_count) && !Emu.IsStopped())
 				{
 					auto unpacked = unpackeds[pos];
 					m_storage.add_pipeline_entry(std::get<1>(unpacked), std::get<2>(unpacked), std::get<0>(unpacked), std::forward<Args>(args)...);
 
-					dlg->update_msg(1, processed.load(), entry_count);
-					dlg->inc_value(1, 1);
+					// Update screen at about 10fps
+					std::chrono::time_point<steady_clock> now = std::chrono::steady_clock::now();
+					processed_since_last_update++;
+					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (pos == entry_count - 1))
+					{
+						dlg->update_msg(1, pos, entry_count);
+						dlg->inc_value(1, processed_since_last_update);
+						last_update = now;
+						processed_since_last_update = 0;
+					}
 				}
 			}
 

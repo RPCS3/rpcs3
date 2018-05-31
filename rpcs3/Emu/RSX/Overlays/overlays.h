@@ -938,7 +938,8 @@ namespace rsx
 				return CELL_OK;
 			}
 
-			s32 progress_bar_set_limit(u32 index, u32 limit) {
+			s32 progress_bar_set_limit(u32 index, u32 limit)
+			{
 				if (index >= num_progress_bars)
 					return CELL_MSGDIALOG_ERROR_PARAM;
 

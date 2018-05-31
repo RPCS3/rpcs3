@@ -151,8 +151,7 @@ protected:
 			return std::forward_as_tuple(I->second, true);
 		}
 		LOG_NOTICE(RSX, "VP not found in buffer!");
-
-		vertex_program_type &new_shader = m_vertex_shader_cache[rsx_vp];
+		vertex_program_type& new_shader = m_vertex_shader_cache[rsx_vp];
 		backend_traits::recompile_vertex_program(rsx_vp, new_shader, m_next_id++);
 
 		return std::forward_as_tuple(new_shader, false);
@@ -172,7 +171,6 @@ protected:
 		std::memcpy(fragment_program_ucode_copy, rsx_fp.addr, fragment_program_size);
 		RSXFragmentProgram new_fp_key = rsx_fp;
 		new_fp_key.addr = fragment_program_ucode_copy;
-
 		fragment_program_type &new_shader = m_fragment_shader_cache[new_fp_key];
 		backend_traits::recompile_fragment_program(rsx_fp, new_shader, m_next_id++);
 
@@ -310,9 +308,8 @@ public:
 		LOG_NOTICE(RSX, "*** fp id = %d", fragment_program.id);
 
 		pipeline_storage_type pipeline = backend_traits::build_pipeline(vertex_program, fragment_program, pipelineProperties, std::forward<Args>(args)...);
-		s_mtx.lock();
+		std::lock_guard<std::mutex> lock(s_mtx);
 		auto &rtn = m_storage[key] = std::move(pipeline);
-		s_mtx.unlock();
 		m_cache_miss_flag = true;
 
 		LOG_SUCCESS(RSX, "New program compiled successfully");
