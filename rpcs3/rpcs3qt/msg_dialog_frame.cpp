@@ -10,11 +10,6 @@ constexpr auto qstr = QString::fromStdString;
 void msg_dialog_frame::Create(const std::string& msg)
 {
 	static const auto& barWidth = [](){return QLabel("This is the very length of the progressbar due to hidpi reasons.").sizeHint().width();};
-	static const auto& horizontalSpacing = []() {return QLabel("Ora").sizeHint().width(); };
-	static const auto& verticalSpacing = []() {return QLabel("Ora Ora").sizeHint().width(); };
-	static int dialog_nr;
-	static int dialog_count;
-	++dialog_count;
 
 	if (m_dialog)
 	{
@@ -145,82 +140,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 		}
 	});
 
-	connect(m_dialog, &QDialog::destroyed, [=]
-	{
-		if (--dialog_count <= 0)
-		{
-			dialog_nr = 0;
-		}
-	});
-
 	//Fix size
-	m_dialog->setFixedSize(m_dialog->sizeHint());
-
-	// order compile-dialogs on screen
-	if (qstr(msg).contains("Compiling PPU module"))
-	{
-		const QSize screensize = QApplication::primaryScreen()->geometry().size();
-		const double ratio = (double)screensize.width() / (double)screensize.height();
-		const int thread_count = QThread::idealThreadCount();
-		const int min_x = screensize.width() / 10;
-		const int max_x = screensize.width() - min_x;
-		const int min_y = screensize.height() / 10;
-		const int max_y = screensize.height() - min_y;
-		const int s_width = horizontalSpacing() + m_dialog->frameSize().width();
-		const int s_height = verticalSpacing() + m_dialog->frameSize().height();
-		const int max_dialogs_x = std::max(1, (max_x - min_x) / s_width);
-		const int max_dialogs_y = std::max(1, (max_y - min_y) / s_height);
-		int dialogs_x = std::min(max_dialogs_x, thread_count);
-		int dialogs_y = std::min(max_dialogs_y, (int)((double)thread_count / (double)max_dialogs_x + 0.5));
-		const int dialogs = std::min(dialogs_x * dialogs_y, thread_count);
-
-		// resize to better aspect ratio
-		while ((double)dialogs_x / (double)dialogs_y > ratio)
-		{
-			--dialogs_x;
-			while (dialogs_x * dialogs_y < dialogs)
-			{
-				++dialogs_y;
-			}
-		}
-
-		const int origin_x = (screensize.width() - dialogs_x * s_width) / 2;
-		const int origin_y = (screensize.height() - dialogs_y * s_height) / 2;
-
-		// create positions
-		QList<QPoint> location;
-		for (int y = 0; y < dialogs_y; y++)
-		{
-			for (int x = 0; x < dialogs_x; x++)
-			{
-				location.append(QPoint(origin_x + x * s_width, origin_y + y * s_height));
-			}
-		}
-
-		// create offset positions for moar threads than your window can handle
-		if (dialogs_x * dialogs_y < thread_count)
-		{
-			for (int y = 0; y < dialogs_y; y++)
-			{
-				for (int x = 0; x < dialogs_x; x++)
-				{
-					location.append(QPoint(origin_x + s_width / 2 + x * s_width, origin_y + s_height / 2 + y * s_height));
-				}
-			}
-		}
-
-		// move to position
-		m_dialog->move(location.at(dialog_nr));
-
-		// reset dialog_nr if needed
-		if (++dialog_nr >= location.count()) dialog_nr = 0;
-	}
-	else
-	{
-		// we assume compilation is over, so reset dialog_nr
-		dialog_nr = 0;
-	}
-
 	m_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);
 	m_dialog->show();
 
