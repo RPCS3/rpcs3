@@ -91,7 +91,7 @@ void spu_cache::initialize()
 	}
 
 	// SPU cache file (version + block size type)
-	const std::string loc = _main->cache + u8"spu-§" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v2.dat";
+	const std::string loc = _main->cache + u8"spu-§" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v3.dat";
 
 	auto cache = std::make_shared<spu_cache>(loc);
 
@@ -814,12 +814,72 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 		{
 			bool reachable = false;
 
-			for (u32 pred : pair.second)
+			if (pair.first >= limit)
 			{
-				if (pred >= lsa && pred < limit)
+				continue;
+			}
+
+			// All (direct and indirect) predecessors to check
+			std::basic_string<u32> workload;
+
+			// Bit array used to deduplicate workload list
+			workload.push_back(pair.first);
+			m_bits[pair.first / 4] = true;
+
+			for (std::size_t i = 0; !reachable && i < workload.size(); i++)
+			{
+				for (u32 j = workload[i];; j -= 4)
 				{
-					reachable = true;
+					// Go backward from an address until the entry point (=lsa) is reached
+					if (j == lsa)
+					{
+						reachable = true;
+						break;
+					}
+
+					const auto found = m_preds.find(j);
+
+					bool had_fallthrough = false;
+
+					if (found != m_preds.end())
+					{
+						for (u32 new_pred : found->second)
+						{
+							// Check whether the predecessor is previous instruction
+							if (new_pred == j - 4)
+							{
+								had_fallthrough = true;
+								continue;
+							}
+
+							// Check whether in range and not already added
+							if (new_pred >= lsa && new_pred < limit && !m_bits[new_pred / 4])
+							{
+								workload.push_back(new_pred);
+								m_bits[new_pred / 4] = true;
+							}
+						}
+					}
+
+					// Check for possible fallthrough predecessor
+					if (!had_fallthrough)
+					{
+						if (result.at((j - lsa) / 4) == 0 || m_targets.count(j - 4))
+						{
+							break;
+						}
+					}
+
+					if (i == 0)
+					{
+						// TODO
+					}
 				}
+			}
+
+			for (u32 pred : workload)
+			{
+				m_bits[pred / 4] = false;
 			}
 
 			if (!reachable && pair.first < limit)
