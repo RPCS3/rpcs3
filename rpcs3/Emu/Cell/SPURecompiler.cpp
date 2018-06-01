@@ -15,7 +15,9 @@
 #include <mutex>
 #include <thread>
 
-extern u64 get_system_time();
+extern atomic_t<const char*> g_progr;
+extern atomic_t<u64> g_progr_ptotal;
+extern atomic_t<u64> g_progr_pdone;
 
 const spu_decoder<spu_itype> s_spu_itype;
 
@@ -130,12 +132,19 @@ void spu_cache::initialize()
 		// Fake LS
 		std::vector<be_t<u32>> ls(0x10000);
 
-		// Used to show progress
-		u64 timex = get_system_time();
+		// Initialize progress dialog
+		g_progr = "Building SPU cache...";
+		g_progr_ptotal += func_list.size();
 
 		// Build functions
 		for (auto&& func : func_list)
 		{
+			if (Emu.IsStopped())
+			{
+				g_progr_pdone++;
+				continue;
+			}
+
 			// Initialize LS with function data only
 			for (u32 i = 1, pos = func[0]; i < func.size(); i++, pos += 4)
 			{
@@ -163,20 +172,13 @@ void spu_cache::initialize()
 				ls[pos / 4] = 0;
 			}
 
-			if (Emu.IsStopped())
-			{
-				LOG_ERROR(SPU, "SPU Runtime: Cache building aborted.");
-				return;
-			}
+			g_progr_pdone++;
+		}
 
-			// Print progress every 400 ms
-			const u64 timed = get_system_time() - timex;
-
-			if (timed >= 400000)
-			{
-				LOG_SUCCESS(SPU, "Building SPU cache (%u/%u)...", &func - func_list.data(), func_list.size());
-				timex += 400000;
-			}
+		if (Emu.IsStopped())
+		{
+			LOG_ERROR(SPU, "SPU Runtime: Cache building aborted.");
+			return;
 		}
 
 		LOG_SUCCESS(SPU, "SPU Runtime: Built %u functions.", func_list.size());
