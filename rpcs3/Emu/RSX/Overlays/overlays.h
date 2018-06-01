@@ -938,6 +938,19 @@ namespace rsx
 
 				return CELL_OK;
 			}
+
+			s32 progress_bar_set_limit(u32 index, u32 limit)
+			{
+				if (index >= num_progress_bars)
+					return CELL_MSGDIALOG_ERROR_PARAM;
+
+				if (index == 0)
+					progress_1.set_limit((float)limit);
+				else
+					progress_2.set_limit((float)limit);
+
+				return CELL_OK;
+			}
 		};
 
 		struct trophy_notification : public user_interface
