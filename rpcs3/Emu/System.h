@@ -161,7 +161,6 @@ enum CellSysutilLang : s32;
 struct EmuCallbacks
 {
 	std::function<void(std::function<void()>)> call_after;
-	std::function<void()> process_events;
 	std::function<void()> on_run;
 	std::function<void()> on_pause;
 	std::function<void()> on_resume;

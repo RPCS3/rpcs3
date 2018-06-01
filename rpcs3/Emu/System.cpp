@@ -471,8 +471,6 @@ bool Emulator::InstallPkg(const std::string& path)
 				int_progress = static_cast<int>(pval);
 				LOG_SUCCESS(GENERAL, "... %u%%", int_progress);
 			}
-
-			m_cb.process_events();
 		}
 	}
 
@@ -1276,8 +1274,6 @@ void Emulator::Stop(bool restart)
 
 	while (g_thread_count)
 	{
-		m_cb.process_events();
-
 		std::this_thread::sleep_for(10ms);
 	}
 
