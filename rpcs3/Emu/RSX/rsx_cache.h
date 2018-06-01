@@ -412,7 +412,7 @@ namespace rsx
 				dlg = Emu.GetCallbacks().get_msg_dialog();
 				dlg->type.se_normal = true;
 				dlg->type.bg_invisible = true;
-				dlg->type.progress_bar_count = 1;
+				dlg->type.progress_bar_count = 2;
 				dlg->on_close = [](s32 status)
 				{
 					Emu.CallAfter([]()
@@ -437,7 +437,8 @@ namespace rsx
 			{
 				Emu.CallAfter([=]()
 				{
-					dlg->ProgressBarSetMsg(0, fmt::format("Loading pipeline object %u of %u", processed, entry_count));
+					const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
+					dlg->ProgressBarSetMsg(index, fmt::format(text, processed, entry_count));
 				});
 			}
 
@@ -445,12 +446,17 @@ namespace rsx
 			{
 				Emu.CallAfter([=]()
 				{
-					dlg->ProgressBarInc(0, value);
+					dlg->ProgressBarInc(index, value);
 				});
 			}
 			
 			virtual void set_limit(u32 index, u32 limit)
-			{}
+			{
+				Emu.CallAfter([=]()
+				{
+					dlg->ProgressBarSetLimit(index, limit);
+				});
+			}
 
 			virtual void close()
 			{}
