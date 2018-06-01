@@ -23,8 +23,8 @@ namespace vk
 		std::unordered_map<VkRenderPass, std::unique_ptr<vk::glsl::program>> m_program_cache;
 		std::unique_ptr<vk::sampler> m_sampler;
 		std::unique_ptr<vk::framebuffer> m_draw_fbo;
-		std::unique_ptr<vk::buffer> m_vao;
-		std::unique_ptr<vk::buffer> m_ubo;
+		vk_data_heap m_vao;
+		vk_data_heap m_ubo;
 		vk::render_device* m_device = nullptr;
 
 		std::string vs_src;
@@ -38,6 +38,10 @@ namespace vk
 		u32 num_drawable_elements = 4;
 		u32 first_vertex = 0;
 
+		u32 m_ubo_length = 128;
+		u32 m_ubo_offset = 0;
+		u32 m_vao_offset = 0;
+
 		overlay_pass()
 		{
 			//Override-able defaults
@@ -46,6 +50,20 @@ namespace vk
 
 		~overlay_pass()
 		{}
+
+		void check_heap()
+		{
+			if (!m_vao.heap)
+			{
+				auto memory_types = vk::get_memory_mapping(m_device->gpu());
+
+				m_vao.init(1 * 0x100000, "overlays VAO", 128);
+				m_vao.heap = std::make_unique<vk::buffer>(*m_device, 1 * 0x100000, memory_types.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0);
+
+				m_ubo.init(8 * 0x100000, "overlays UBO", 128);
+				m_ubo.heap = std::make_unique<vk::buffer>(*m_device, 8 * 0x100000, memory_types.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0);
+			}
+		}
 
 		void init_descriptors()
 		{
@@ -91,13 +109,7 @@ namespace vk
 
 		virtual std::vector<vk::glsl::program_input> get_vertex_inputs()
 		{
-			if (!m_vao)
-			{
-				auto memory_types = vk::get_memory_mapping(m_device->gpu());
-				m_vao = std::make_unique<vk::buffer>(*m_device, 1 * 0x100000, memory_types.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0);
-				m_ubo = std::make_unique<vk::buffer>(*m_device, 8 * 0x100000, memory_types.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0);
-			}
-
+			check_heap();
 			return{};
 		}
 
@@ -109,19 +121,15 @@ namespace vk
 			return fs_inputs;
 		}
 
-		void upload_vertex_data(f32 *data, u32 first, u32 count)
+		void upload_vertex_data(f32 *data, u32 count)
 		{
-			verify(HERE), (first + count) <= 65536;
-			if (!m_vao)
-			{
-				auto memory_types = vk::get_memory_mapping(m_device->gpu());
-				m_vao = std::make_unique<vk::buffer>(*m_device, 1 * 0x100000, memory_types.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0);
-				m_ubo = std::make_unique<vk::buffer>(*m_device, 8 * 0x100000, memory_types.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0);
-			}
+			check_heap();
 
-			auto dst = m_vao->map((first * 4), VK_WHOLE_SIZE);
-			std::memcpy(dst, data, count * sizeof(f32));
-			m_vao->unmap();
+			const auto size = count * sizeof(f32);
+			m_vao_offset = m_vao.alloc<16>(size);
+			auto dst = m_vao.map(m_vao_offset, size);
+			std::memcpy(dst, data, size);
+			m_vao.unmap();
 		}
 
 		vk::glsl::program* build_pipeline(VkRenderPass render_pass)
@@ -228,17 +236,17 @@ namespace vk
 					VK_FALSE, 0.f, 1.f, 0.f, 0.f, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 			}
 
+			update_uniforms(program);
+
 			VkDescriptorImageInfo info = { m_sampler->value, src, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 			program->bind_uniform(info, "fs0", m_descriptor_set);
-			program->bind_uniform({ m_ubo->value, first_vertex * 128, 128 }, 1, m_descriptor_set);
-
-			update_uniforms(program);
+			program->bind_uniform({ m_ubo.heap->value, m_ubo_offset, std::max(m_ubo_length, 4u) }, 1, m_descriptor_set);
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, program->pipeline);
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
 
-			VkBuffer buffers = m_vao->value;
-			VkDeviceSize offsets = 0;
+			VkBuffer buffers = m_vao.heap->value;
+			VkDeviceSize offsets = m_vao_offset;
 			vkCmdBindVertexBuffers(cmd, 0, 1, &buffers, &offsets);
 		}
 
@@ -275,6 +283,9 @@ namespace vk
 
 			vkResetDescriptorPool(*m_device, m_descriptor_pool, 0);
 			m_used_descriptors = 0;
+
+			m_vao.reset_allocation_stats();
+			m_ubo.reset_allocation_stats();
 		}
 
 		vk::framebuffer* get_framebuffer(vk::image* target, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
@@ -620,7 +631,8 @@ namespace vk
 
 		void update_uniforms(vk::glsl::program* /*program*/) override
 		{
-			auto dst = (f32*)m_ubo->map(first_vertex * 128, 128);
+			m_ubo_offset = m_ubo.alloc<256>(128);
+			auto dst = (f32*)m_ubo.map(m_ubo_offset, 128);
 			dst[0] = m_scale_offset.r;
 			dst[1] = m_scale_offset.g;
 			dst[2] = m_scale_offset.b;
@@ -637,19 +649,19 @@ namespace vk
 			dst[13] = m_clip_region.y1;
 			dst[14] = m_clip_region.x2;
 			dst[15] = m_clip_region.y2;
-			m_ubo->unmap();
+			m_ubo.unmap();
 		}
 
 		void emit_geometry(vk::command_buffer &cmd)
 		{
 			//Split into groups of 4
-			auto tmp_first = first_vertex;
-			auto num_quads = num_drawable_elements / 4;
+			u32 first = 0;
+			u32 num_quads = num_drawable_elements / 4;
 
 			for (u32 n = 0; n < num_quads; ++n)
 			{
-				vkCmdDraw(cmd, 4, 1, tmp_first, 0);
-				tmp_first += 4;
+				vkCmdDraw(cmd, 4, 1, first, 0);
+				first += 4;
 			}
 		}
 
@@ -659,15 +671,12 @@ namespace vk
 			m_scale_offset = color4f((f32)ui.virtual_width, (f32)ui.virtual_height, 1.f, 1.f);
 			m_time = (f32)(get_system_time() / 1000) * 0.005f;
 
-			u32 vertex_data_offset = 0;
-			first_vertex = 0;
-
 			for (auto &command : ui.get_compiled().draw_commands)
 			{
 				num_drawable_elements = (u32)command.second.size();
 				const u32 value_count = num_drawable_elements * 4;
 
-				upload_vertex_data((f32*)command.second.data(), vertex_data_offset, value_count);
+				upload_vertex_data((f32*)command.second.data(), value_count);
 
 				m_skip_texture_read = false;
 				m_color = command.first.color;
@@ -696,9 +705,6 @@ namespace vk
 				}
 
 				overlay_pass::run(cmd, w, h, target, src, render_pass);
-
-				vertex_data_offset += value_count;
-				first_vertex += num_drawable_elements;
 			}
 
 			ui.update();
@@ -800,7 +806,8 @@ namespace vk
 
 		void update_uniforms(vk::glsl::program* /*program*/) override
 		{
-			auto dst = (f32*)m_ubo->map(0, 128);
+			m_ubo_offset = m_ubo.alloc<256>(128);
+			auto dst = (f32*)m_ubo.map(m_ubo_offset, 128);
 			dst[0] = clear_color.r;
 			dst[1] = clear_color.g;
 			dst[2] = clear_color.b;
@@ -809,7 +816,7 @@ namespace vk
 			dst[5] = colormask.g;
 			dst[6] = colormask.b;
 			dst[7] = colormask.a;
-			m_ubo->unmap();
+			m_ubo.unmap();
 		}
 
 		void set_up_viewport(vk::command_buffer &cmd, u16 max_w, u16 max_h) override

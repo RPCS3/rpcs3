@@ -239,11 +239,6 @@ namespace vk
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME
 			};
 
-			std::vector<const char *> layers;
-
-			if (g_cfg.video.debug_output)
-				layers.push_back("VK_LAYER_LUNARG_standard_validation");
-
 			//Enable hardware features manually
 			//Currently we require:
 			//1. Anisotropic sampling
@@ -259,8 +254,8 @@ namespace vk
 			device.pNext = NULL;
 			device.queueCreateInfoCount = 1;
 			device.pQueueCreateInfos = &queue;
-			device.enabledLayerCount = static_cast<uint32_t>(layers.size());
-			device.ppEnabledLayerNames = layers.data();
+			device.enabledLayerCount = 0;
+			device.ppEnabledLayerNames = nullptr; // Deprecated
 			device.enabledExtensionCount = 1;
 			device.ppEnabledExtensionNames = requested_extensions;
 			device.pEnabledFeatures = &available_features;
@@ -1787,7 +1782,7 @@ public:
 			VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = {};
 			dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
 			dbgCreateInfo.pfnCallback = callback;
-			dbgCreateInfo.flags = 0x1F;// VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+			dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
 
 			CHECK_RESULT(createDebugReportCallback(m_instance, &dbgCreateInfo, NULL, &m_debugger));
 		}

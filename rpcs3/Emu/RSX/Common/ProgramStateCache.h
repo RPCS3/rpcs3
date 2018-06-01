@@ -6,6 +6,7 @@
 
 #include "Utilities/GSL.h"
 #include "Utilities/hash.h"
+#include <mutex>
 
 enum class SHADER_TYPE
 {
@@ -134,6 +135,7 @@ class program_state_cache
 	};
 
 protected:
+	std::mutex s_mtx; // TODO: Only need to synchronize when loading cache
 	size_t m_next_id = 0;
 	bool m_cache_miss_flag;
 	binary_to_vertex_program m_vertex_shader_cache;
@@ -305,11 +307,13 @@ public:
 		LOG_NOTICE(RSX, "*** vp id = %d", vertex_program.id);
 		LOG_NOTICE(RSX, "*** fp id = %d", fragment_program.id);
 
-		m_storage[key] = backend_traits::build_pipeline(vertex_program, fragment_program, pipelineProperties, std::forward<Args>(args)...);
+		pipeline_storage_type pipeline = backend_traits::build_pipeline(vertex_program, fragment_program, pipelineProperties, std::forward<Args>(args)...);
+		std::lock_guard<std::mutex> lock(s_mtx);
+		auto &rtn = m_storage[key] = std::move(pipeline);
 		m_cache_miss_flag = true;
 
 		LOG_SUCCESS(RSX, "New program compiled successfully");
-		return m_storage[key];
+		return rtn;
 	}
 
 	size_t get_fragment_constants_buffer_size(const RSXFragmentProgram &fragmentShader) const
