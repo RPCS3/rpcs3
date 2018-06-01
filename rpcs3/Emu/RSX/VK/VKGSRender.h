@@ -241,7 +241,7 @@ struct flush_request_task
 		while (pending_state.load())
 		{
 			_mm_lfence();
-			_mm_pause();
+			std::this_thread::yield();
 		}
 	}
 };
@@ -351,7 +351,6 @@ private:
 
 	u8 m_draw_buffers_count = 0;
 	bool m_flush_draw_buffers = false;
-	std::atomic<int> m_last_flushable_cb = {-1 };
 	
 	shared_mutex m_flush_queue_mutex;
 	flush_request_task m_flush_requests;
@@ -420,7 +419,7 @@ protected:
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
 
-	void do_local_task(bool idle) override;
+	void do_local_task(rsx::FIFO_state state) override;
 	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;
 	void notify_tile_unbound(u32 tile) override;
 

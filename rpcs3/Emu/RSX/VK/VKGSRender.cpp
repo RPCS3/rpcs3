@@ -857,9 +857,6 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 			if (target_cb)
 				target_cb->wait();
-
-			if (is_rsxthr)
-				m_last_flushable_cb = -1;
 		}
 
 		if (has_queue_ref)
@@ -1601,7 +1598,7 @@ void VKGSRender::on_init_thread()
 			{
 				MsgDialogType type = {};
 				type.disable_cancel = true;
-				type.progress_bar_count = 1;
+				type.progress_bar_count = 2;
 
 				dlg = fxm::get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>();
 				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
@@ -1611,15 +1608,22 @@ void VKGSRender::on_init_thread()
 				});
 			}
 
-			void update_msg(u32 processed, u32 entry_count) override
+			void update_msg(u32 index, u32 processed, u32 entry_count) override
 			{
-				dlg->progress_bar_set_message(0, fmt::format("Loading pipeline object %u of %u", processed, entry_count));
+				const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
+				dlg->progress_bar_set_message(index, fmt::format(text, processed, entry_count));
 				owner->flip(0);
 			}
 
-			void inc_value(u32 value) override
+			void inc_value(u32 index, u32 value) override
 			{
-				dlg->progress_bar_increment(0, (f32)value);
+				dlg->progress_bar_increment(index, (f32)value);
+				owner->flip(0);
+			}
+
+			void set_limit(u32 index, u32 limit) override
+			{
+				dlg->progress_bar_set_limit(index, limit);
 				owner->flip(0);
 			}
 
@@ -1858,7 +1862,6 @@ void VKGSRender::copy_render_targets_to_dma_location()
 
 	vk::leave_uninterruptible();
 
-	m_last_flushable_cb = m_current_cb_index;
 	flush_command_queue();
 
 	m_flush_draw_buffers = false;
@@ -1884,7 +1887,6 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 				cb.poke();
 		}
 
-		m_last_flushable_cb = -1;
 		m_flush_requests.clear_pending_flag();
 	}
 	else
@@ -1904,9 +1906,6 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 		}
 
 		m_current_command_buffer->reset();
-
-		if (m_last_flushable_cb == m_current_cb_index)
-			m_last_flushable_cb = -1;
 	}
 
 	open_command_buffer();
@@ -2089,7 +2088,7 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 	ctx->swap_command_buffer = nullptr;
 }
 
-void VKGSRender::do_local_task(bool idle)
+void VKGSRender::do_local_task(rsx::FIFO_state state)
 {
 	if (m_flush_requests.pending())
 	{
@@ -2102,22 +2101,19 @@ void VKGSRender::do_local_task(bool idle)
 		m_flush_requests.clear_pending_flag();
 		m_flush_requests.consumer_wait();
 	}
-	else if (!in_begin_end)
+	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
 	{
 		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
 		//Only call when there are no waiters
 		m_texture_cache.do_update();
 	}
 
-	if (m_last_flushable_cb > -1)
+	rsx::thread::do_local_task(state);
+
+	if (state == rsx::FIFO_state::lock_wait)
 	{
-		auto cb = &m_primary_cb_list[m_last_flushable_cb];
-
-		if (cb->pending)
-			cb->poke();
-
-		if (!cb->pending)
-			m_last_flushable_cb = -1;
+		// Critical check finished
+		return;
 	}
 
 #ifdef _WIN32
@@ -2208,8 +2204,6 @@ void VKGSRender::do_local_task(bool idle)
 			flip((s32)current_display_buffer);
 		}
 	}
-
-	rsx::thread::do_local_task(idle);
 }
 
 bool VKGSRender::do_method(u32 cmd, u32 arg)

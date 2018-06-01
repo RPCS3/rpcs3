@@ -126,6 +126,6 @@ artifacts:
 - path: openssl_win64.7z.sha256
   name: openssl sha256 hash
 
-on_finish:
+on_success:
 - ps: | # update appveyor build version, done last to prevent webhook breakage
     update-appveyorbuild -version $env:AVVER
