@@ -366,7 +366,24 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			{
 				if (depth_address == m_depth_surface_info.address)
 				{
-					//Nothing has changed, we're still using the same framebuffer
+					// Nothing has changed, we're still using the same framebuffer
+					// Update flags to match current
+
+					const auto aa_mode = rsx::method_registers.surface_antialias();
+
+					for (u32 index = 0; index < 4; index++)
+					{
+						if (auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]))
+						{
+							surface->aa_mode = aa_mode;
+						}
+					}
+
+					if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+					{
+						ds->aa_mode = aa_mode;
+					}
+
 					return;
 				}
 			}

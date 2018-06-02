@@ -100,7 +100,7 @@ namespace vk
 			VkImageLayout srcLayout, VkImageLayout dstLayout,
 			u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height,
 			u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height,
-			u32 mipmaps, VkImageAspectFlagBits aspect, bool compatible_formats)
+			u32 mipmaps, VkImageAspectFlags aspect, bool compatible_formats)
 	{
 		VkImageSubresourceLayers a_src = {}, a_dst = {};
 		a_src.aspectMask = aspect;

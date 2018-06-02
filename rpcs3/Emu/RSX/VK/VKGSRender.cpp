@@ -1161,33 +1161,34 @@ void VKGSRender::end()
 
 	if (g_cfg.video.strict_rendering_mode)
 	{
-		auto copy_rtt_contents = [&](vk::render_target* surface)
+		auto copy_rtt_contents = [&](vk::render_target* surface, bool is_depth)
 		{
 			if (surface->info.format == surface->old_contents->info.format)
 			{
-				const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
+				const auto region = rsx::get_transferable_region(surface);
+				const auto src_w = std::get<0>(region);
+				const auto src_h = std::get<1>(region);
+				const auto dst_w = std::get<2>(region);
+				const auto dst_h = std::get<3>(region);
 
-				const u16 parent_w = surface->old_contents->width();
-				const u16 parent_h = surface->old_contents->height();
-				u16 copy_w, copy_h;
+				if (!is_depth || (src_w == dst_w && src_h == dst_h))
+				{
+					const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
 
-				std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
+					vk::copy_scaled_image(*m_current_command_buffer, surface->old_contents->value, surface->value,
+						surface->old_contents->current_layout, surface->current_layout, 0, 0, src_w, src_h,
+						0, 0, dst_w, dst_h, 1, aspect, true);
+				}
+				else
+				{
+					auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, surface->info.format, 0);
+					auto render_pass = m_render_passes[rp];
 
-				VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
-				VkImageLayout old_layout = surface->current_layout;
+					vk::change_image_layout(*m_current_command_buffer, surface->old_contents, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-				vk::change_image_layout(*m_current_command_buffer, surface, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-				vk::change_image_layout(*m_current_command_buffer, surface->old_contents, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
-
-				VkImageCopy copy_rgn;
-				copy_rgn.srcOffset = { 0, 0, 0 };
-				copy_rgn.dstOffset = { 0, 0, 0 };
-				copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
-				copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
-				copy_rgn.extent = { copy_w, copy_h, 1 };
-
-				vkCmdCopyImage(*m_current_command_buffer, surface->old_contents->value, surface->old_contents->current_layout, surface->value, surface->current_layout, 1, &copy_rgn);
-				vk::change_image_layout(*m_current_command_buffer, surface, old_layout, subresource_range);
+					m_depth_scaler->run(*m_current_command_buffer, { 0, 0, (f32)src_w, (f32)src_h }, { 0, 0, (f32)dst_w, (f32)dst_h }, surface,
+						surface->old_contents, surface->old_contents->get_view(0xAAE4, rsx::default_remap_vector), render_pass, m_framebuffers_to_clean);
+				}
 
 				surface->dirty = false;
 			}
@@ -1202,13 +1203,13 @@ void VKGSRender::end()
 			if (auto surface = std::get<1>(rtt))
 			{
 				if (surface->old_contents != nullptr)
-					copy_rtt_contents(surface);
+					copy_rtt_contents(surface, false);
 			}
 		}
 
 		if (ds && ds->old_contents)
 		{
-			copy_rtt_contents(ds);
+			copy_rtt_contents(ds, true);
 		}
 	}
 
@@ -2734,7 +2735,24 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			{
 				if (zeta_address == m_depth_surface_info.address)
 				{
-					//Nothing has changed, we're still using the same framebuffer
+					// Nothing has changed, we're still using the same framebuffer
+					// Update flags to match current
+
+					const auto aa_mode = rsx::method_registers.surface_antialias();
+
+					for (u32 index = 0; index < 4; index++)
+					{
+						if (auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]))
+						{
+							surface->aa_mode = aa_mode;
+						}
+					}
+
+					if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+					{
+						ds->aa_mode = aa_mode;
+					}
+
 					return;
 				}
 			}
@@ -3324,8 +3342,11 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 			vk::change_image_layout(*m_current_command_buffer, result.src_image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			vk::change_image_layout(*m_current_command_buffer, result.dst_image, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-			m_depth_scaler->run(*m_current_command_buffer, result.dst_image->width(), result.dst_image->height(), result.dst_image,
-				result.src_view, render_pass, m_framebuffers_to_clean);
+			// TODO: Insets
+			const areaf src_area = { 0, 0, (f32)result.src_image->width(), (f32)result.src_image->height() };
+			const areaf dst_area = { 0, 0, (f32)result.dst_image->width(), (f32)result.dst_image->height() };
+			m_depth_scaler->run(*m_current_command_buffer, src_area, dst_area, result.dst_image, result.src_image,
+					result.src_view, render_pass, m_framebuffers_to_clean);
 
 			vk::change_image_layout(*m_current_command_buffer, result.src_image, old_src_layout);
 			vk::change_image_layout(*m_current_command_buffer, result.dst_image, old_dst_layout);
