@@ -1011,7 +1011,7 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 	// Use the offset table to find the next free io address
 	for (u32 io = RSXIOMem.GetRangeStart() >> 20, end = RSXIOMem.GetRangeEnd() >> 20, unmap_count = 1; io < end; unmap_count++)
 	{
-		if (static_cast<s16>(offsetTable.eaAddress[io]) < 0)
+		if (static_cast<s16>(offsetTable.eaAddress[io + unmap_count - 1]) < 0)
 		{
 			if (unmap_count >= (size >> 20))
 			{
