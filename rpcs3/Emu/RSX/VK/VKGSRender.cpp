@@ -1196,6 +1196,20 @@ void VKGSRender::end()
 			surface->old_contents = nullptr;
 		};
 
+		if (m_surface_change_valid)
+		{
+			m_surface_change_valid = false;
+
+			// Color surface
+			auto rtt = m_rtts.m_surface_change_bound_render_target;
+			if (auto surface = std::get<1>(rtt))
+			{
+				if (surface->old_contents != nullptr)
+					copy_rtt_contents(surface);
+			}
+		}
+
+
 		//Prepare surfaces if needed
 		for (auto &rtt : m_rtts.m_bound_render_targets)
 		{
@@ -1205,6 +1219,7 @@ void VKGSRender::end()
 					copy_rtt_contents(surface);
 			}
 		}
+
 
 		if (ds && ds->old_contents)
 		{
@@ -2739,6 +2754,22 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 				}
 			}
 		}
+	}
+
+	// Detect if surface change occurred prior to beginning of rendering
+	if (m_surface_change_valid && surface_addresses[0] != m_surface_change_address)
+	{
+		std::array<u32, 4> addrs = {};
+		addrs[0] = m_surface_change_address;
+
+		m_rtts.prepare_render_target(&*m_current_command_buffer,
+			m_surface_change_color_format, m_surface_zeta_surface_format,
+			m_surface_change_width, m_surface_change_height,
+			rsx::surface_target::surface_a,
+			addrs, 0 /* m_surface_zeta_surface_address*/,
+			(*m_device), &*m_current_command_buffer);
+
+		m_rtts.m_surface_change_bound_render_target = m_rtts.m_bound_render_targets[0];
 	}
 
 	m_rtts.prepare_render_target(&*m_current_command_buffer,

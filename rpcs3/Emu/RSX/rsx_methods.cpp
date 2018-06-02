@@ -377,6 +377,24 @@ namespace rsx
 			rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty | rsx::pipeline_state::fragment_program_dirty;
 		}
 
+		
+		void set_shader_window(thread* rsxthr, u32 _reg, u32 arg)	
+		{
+			if (!rsxthr->m_surface_change_valid)
+			{
+				rsxthr->m_surface_change_valid = true;
+				rsxthr->m_surface_change_address = rsx::get_address(rsx::method_registers.surface_a_offset(), rsx::method_registers.surface_a_dma());
+				rsxthr->m_surface_change_width = rsx::method_registers.surface_clip_width();
+				rsxthr->m_surface_change_height = rsx::method_registers.surface_clip_height();
+				rsxthr->m_surface_change_color_format = rsx::method_registers.surface_color();
+				rsxthr->m_surface_change_pitch = rsx::method_registers.surface_a_pitch();
+				rsxthr->m_surface_zeta_surface_address = rsx::get_address(rsx::method_registers.surface_z_offset(), rsx::method_registers.surface_z_dma());
+				rsxthr->m_surface_zeta_surface_format = rsx::method_registers.surface_depth_fmt();
+				rsxthr->m_surface_zeta_surface_pitch = rsx::method_registers.surface_z_pitch();
+			}
+
+		}
+
 		void set_begin_end(thread* rsxthr, u32 _reg, u32 arg)
 		{
 			if (arg)
@@ -1739,7 +1757,9 @@ namespace rsx
 		bind<NV4097_INVALIDATE_L2, nv4097::invalidate_L2>();
 		bind<NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start>();
 		bind<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask>();
+		bind<NV4097_SET_SHADER_WINDOW, nv4097::set_shader_window>();
 
+		
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();
 		bind_range<NV308A_COLOR + 256, 1, 512, nv308a::color, 256>();
