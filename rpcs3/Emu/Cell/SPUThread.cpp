@@ -1155,9 +1155,8 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		if (is_polling)
 		{
 			rtime = vm::reservation_acquire(raddr, 128);
-			_mm_lfence();
 
-			while (vm::reservation_acquire(raddr, 128) == rtime && rdata == data)
+			while (rdata == data && vm::reservation_acquire(raddr, 128) == rtime)
 			{
 				if (test(state, cpu_flag::stop))
 				{
@@ -1170,7 +1169,26 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 
 		if (LIKELY(g_use_rtm))
 		{
-			const u64 count = spu_getll_tx(raddr, rdata.data(), &rtime);
+			u64 count = 0;
+
+			if (g_cfg.core.spu_accurate_getllar)
+			{
+				count = spu_getll_tx(raddr, rdata.data(), &rtime);
+			}
+
+			if (count == 0)
+			{
+				for (++count;; count++, busy_wait(300))
+				{
+					rtime = vm::reservation_acquire(raddr, 128);
+					rdata = data;
+
+					if (LIKELY(vm::reservation_acquire(raddr, 128) == rtime))
+					{
+						break;
+					}
+				}
+			}
 
 			if (count > 9)
 			{
@@ -1180,9 +1198,25 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		else
 		{
 			auto& res = vm::reservation_lock(raddr, 128);
-			rtime = res & ~1ull;
-			rdata = data;
-			res &= ~1ull;
+
+			if (g_cfg.core.spu_accurate_getllar)
+			{
+				vm::_ref<atomic_t<u32>>(raddr) += 0;
+
+				// Full lock (heavyweight)
+				// TODO: vm::check_addr
+				vm::writer_lock lock(1);
+
+				rtime = res & ~1ull;
+				rdata = data;
+				res &= ~1ull;
+			}
+			else
+			{
+				rtime = res & ~1ull;
+				rdata = data;
+				res &= ~1ull;
+			}
 		}
 
 		// Copy to LS
