@@ -394,6 +394,22 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 	}
 }
 
+void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
+{
+	if (m_dialog)
+	{
+		if (index == 0 && m_gauge1)
+		{
+			m_gauge1->setMaximum(limit);
+		}
+
+		if (index == 1 && m_gauge2)
+		{
+			m_gauge2->setMaximum(limit);
+		}
+	}
+}
+
 #ifdef HAVE_QTDBUS
 void msg_dialog_frame::UpdateProgress(int progress, bool disable)
 {

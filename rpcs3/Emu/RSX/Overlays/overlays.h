@@ -449,8 +449,9 @@ namespace rsx
 
 			compiled_resource get_compiled() override
 			{
-				m_body.get_compiled().add(m_titles.get_compiled());
-				return m_body.get_compiled();
+				auto result = m_body.get_compiled();
+				result.add(m_titles.get_compiled());
+				return result;
 			}
 		};
 
@@ -934,6 +935,19 @@ namespace rsx
 					progress_1.set_value(0.f);
 				else
 					progress_2.set_value(0.f);
+
+				return CELL_OK;
+			}
+
+			s32 progress_bar_set_limit(u32 index, u32 limit)
+			{
+				if (index >= num_progress_bars)
+					return CELL_MSGDIALOG_ERROR_PARAM;
+
+				if (index == 0)
+					progress_1.set_limit((float)limit);
+				else
+					progress_2.set_limit((float)limit);
 
 				return CELL_OK;
 			}
