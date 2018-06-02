@@ -1006,6 +1006,12 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 	else
 	{
 		auto& res = vm::reservation_lock(addr, 128);
+
+		vm::_ref<atomic_t<u32>>(addr) += 0;
+
+		// Full lock (heavyweight)
+		// TODO: vm::check_addr
+		vm::writer_lock lock(1);
 		data = to_write;
 		vm::reservation_update(addr, 128);
 	}
