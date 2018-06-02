@@ -76,19 +76,16 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
 	sys_rsx.warning("sys_rsx_context_allocate(context_id=*0x%x, lpar_dma_control=*0x%x, lpar_driver_info=*0x%x, lpar_reports=*0x%x, mem_ctx=0x%llx, system_mode=0x%llx)",
 		context_id, lpar_dma_control, lpar_driver_info, lpar_reports, mem_ctx, system_mode);
 
-	auto m_sysrsx = fxm::make<SysRsxConfig>();
-	if (!m_sysrsx)
-		fmt::throw_exception("sys_rsx_context_allocate called twice.");
+	auto m_sysrsx = fxm::get<SysRsxConfig>();
 
-	u32 addr = vm::falloc(0x40000000, 0x400000);
-	if (addr == 0 || addr != 0x40000000)
-		fmt::throw_exception("Failed to alloc 0x40000000.");
+	if (!m_sysrsx) // TODO: check if called twice
+		return CELL_EINVAL;
 
 	*context_id = 0x55555555;
 
-	*lpar_dma_control = 0x40100000;
-	*lpar_driver_info = 0x40200000;
-	*lpar_reports = 0x40300000;
+	*lpar_dma_control = m_sysrsx->rsx_context_addr + 0x100000;
+	*lpar_driver_info = m_sysrsx->rsx_context_addr + 0x200000;
+	*lpar_reports = m_sysrsx->rsx_context_addr + 0x300000;
 
 	auto &reports = vm::_ref<RsxReports>(*lpar_reports);
 	std::memset(&reports, 0, sizeof(RsxReports));
@@ -149,6 +146,7 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
 	render->current_display_buffer = 0;
 	render->main_mem_addr = 0;
 	render->label_addr = *lpar_reports;
+	render->ctxt_addr = m_sysrsx->rsx_context_addr;
 	render->init(0, 0, *lpar_dma_control, 0xC0000000);
 
 	return CELL_OK;
@@ -258,7 +256,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		// lets give this a shot for giving bufferid back to gcm
 		driverInfo.head[a3].flipBufferId = driverInfo.head[a3].queuedBufferId;
 		// seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
-		vm::_ref<u32>(0x40300010) = 0;
+		vm::_ref<u32>(render->label_addr + 0x10) = 0;
 		if (a3 == 0)
 			sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 3), 0);
 		if (a3 == 1)
@@ -403,13 +401,13 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 
 /*
  * lv2 SysCall 675 (0x2A3): sys_rsx_device_map
- * @param a1 (OUT): For example: In vsh.self it is 0x60000000, global semaphore. For a game it is 0x40000000.
+ * @param a1 (OUT): rsx device map address : 0x40000000, 0x50000000.. 0xB0000000
  * @param a2 (OUT): Unused?
  * @param dev_id (IN): An immediate value and always 8. (cellGcmInitPerfMon uses 11, 10, 9, 7, 12 successively).
  */
-s32 sys_rsx_device_map(vm::ptr<u64> addr, vm::ptr<u64> a2, u32 dev_id)
+s32 sys_rsx_device_map(vm::ptr<u64> dev_addr, vm::ptr<u64> a2, u32 dev_id)
 {
-	sys_rsx.warning("sys_rsx_device_map(addr=*0x%x, a2=*0x%x, dev_id=0x%x)", addr, a2, dev_id);
+	sys_rsx.warning("sys_rsx_device_map(dev_addr=*0x%x, a2=*0x%x, dev_id=0x%x)", dev_addr, a2, dev_id);
 
 	if (dev_id != 8) {
 		// TODO: lv1 related
@@ -419,9 +417,26 @@ s32 sys_rsx_device_map(vm::ptr<u64> addr, vm::ptr<u64> a2, u32 dev_id)
 	// a2 seems to not be referenced in cellGcmSys, tests show this arg is ignored
 	//*a2 = 0;
 
-	*addr = 0x40000000;
+	auto m_sysrsx = fxm::make<SysRsxConfig>();
 
-	return CELL_OK;
+	if (!m_sysrsx)
+	{
+		return CELL_EINVAL; // sys_rsx_device_map called twice
+	}
+
+	for (u32 addr = 0x40000000; addr < 0xC0000000; addr += 0x10000000)
+	{
+		if (vm::map(addr, 0x10000000, 0x400))
+		{
+			vm::falloc(addr, 0x400000);
+
+			m_sysrsx->rsx_context_addr = *dev_addr = addr;
+
+			return CELL_OK;
+		}
+	}
+
+	return CELL_ENOMEM;
 }
 
 /*

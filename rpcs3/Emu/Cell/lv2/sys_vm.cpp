@@ -21,7 +21,7 @@ error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy
 	}
 
 	// Look for unmapped space (roughly)
-	for (u32 found = 0x60000000; found <= 0xC0000000 - vsize; found += 0x2000000)
+	for (u32 found = 0x40000000; found <= 0xC0000000 - vsize; found += 0x1000000)
 	{
 		// Try to map
 		if (const auto area = vm::map(found, vsize, flag))
