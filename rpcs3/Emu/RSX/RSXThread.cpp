@@ -62,7 +62,7 @@ namespace rsx
 		}
 
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL:
-			return 0x40301400 + offset;
+			return get_current_renderer()->label_addr + 0x1400 + offset;
 
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
 		{
@@ -82,13 +82,13 @@ namespace rsx
 
 		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW:
 		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R:
-			return 0x40300000 + offset;
+			return get_current_renderer()->label_addr + offset;
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
-			return 0x40000000 + offset;
+			return get_current_renderer()->ctxt_addr + offset;
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_R:
-			return 0x40000000 + offset;
+			return get_current_renderer()->ctxt_addr + offset;
 
 		default:
 			fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
