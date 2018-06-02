@@ -1111,6 +1111,21 @@ inline asmjit::X86Mem spu_recompiler::XmmConst(__m128i data)
 	return XmmConst(v128::fromV(data));
 }
 
+static void check_state_ret(SPUThread& _spu, void*, u8*)
+{
+	// MSVC workaround (TCO)
+}
+
+static void check_state(SPUThread* _spu, spu_function_t _ret)
+{
+	if (_spu->check_state())
+	{
+		_ret = &check_state_ret;
+	}
+
+	_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
+}
+
 void spu_recompiler::branch_fixed(u32 target)
 {
 	using namespace asmjit;
@@ -1123,7 +1138,8 @@ void spu_recompiler::branch_fixed(u32 target)
 		c->cmp(SPU_OFF_32(state), 0);
 		c->jz(local->second);
 		c->mov(SPU_OFF_32(pc), target);
-		c->jmp(label_stop);
+		c->lea(*ls, x86::qword_ptr(local->second));
+		c->jmp(imm_ptr(&check_state));
 		return;
 	}
 
@@ -1218,10 +1234,14 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool local)
 		c->bind(no_intr);
 	}
 
+	Label label_check = c->newLabel();
 	c->mov(SPU_OFF_32(pc), *addr);
 	c->cmp(SPU_OFF_32(state), 0);
-	c->jnz(label_stop);
+	c->jnz(label_check);
 	c->jmp(x86::r10);
+	c->bind(label_check);
+	c->mov(*ls, x86::r10);
+	c->jmp(imm_ptr(&check_state));
 }
 
 void spu_recompiler::fall(spu_opcode_t op)
