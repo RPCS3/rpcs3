@@ -126,7 +126,7 @@ namespace vk
 			check_heap();
 
 			const auto size = count * sizeof(f32);
-			m_vao_offset = m_vao.alloc<16>(size);
+			m_vao_offset = (u32)m_vao.alloc<16>(size);
 			auto dst = m_vao.map(m_vao_offset, size);
 			std::memcpy(dst, data, size);
 			m_vao.unmap();
@@ -631,7 +631,7 @@ namespace vk
 
 		void update_uniforms(vk::glsl::program* /*program*/) override
 		{
-			m_ubo_offset = m_ubo.alloc<256>(128);
+			m_ubo_offset = (u32)m_ubo.alloc<256>(128);
 			auto dst = (f32*)m_ubo.map(m_ubo_offset, 128);
 			dst[0] = m_scale_offset.r;
 			dst[1] = m_scale_offset.g;
@@ -713,12 +713,18 @@ namespace vk
 
 	struct depth_scaling_pass : public overlay_pass
 	{
+		areaf src_area;
+		areaf dst_area;
+		u16 src_width;
+		u16 src_height;
+
 		depth_scaling_pass()
 		{
 			vs_src =
 			{
 				"#version 450\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
+				"layout(std140, set=0, binding=1) uniform static_data{ vec4 regs[8]; };\n"
 				"layout(location=0) out vec2 tc0;\n"
 				"\n"
 				"void main()\n"
@@ -726,7 +732,7 @@ namespace vk
 				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
 				"	vec2 coords[] = {vec2(0., 0.), vec2(1., 0.), vec2(0., 1.), vec2(1., 1.)};\n"
 				"	gl_Position = vec4(positions[gl_VertexIndex % 4], 0., 1.);\n"
-				"	tc0 = coords[gl_VertexIndex % 4];\n"
+				"	tc0 = coords[gl_VertexIndex % 4] * regs[0].xy + regs[0].zw;\n"
 				"}\n"
 			};
 
@@ -748,6 +754,42 @@ namespace vk
 
 			m_vertex_shader.id = 100006;
 			m_fragment_shader.id = 100007;
+		}
+
+		void update_uniforms(vk::glsl::program* /*program*/) override
+		{
+			m_ubo_offset = (u32)m_ubo.alloc<256>(128);
+			auto dst = (f32*)m_ubo.map(m_ubo_offset, 128);
+			dst[0] = f32(src_area.x2 - src_area.x1) / src_width;
+			dst[1] = f32(src_area.y2 - src_area.y1) / src_height;
+			dst[2] = src_area.x1 / f32(src_area.x2 - src_area.x1);
+			dst[3] = src_area.y1 / f32(src_area.y2 - src_area.y1);
+			m_ubo.unmap();
+		}
+
+		void set_up_viewport(vk::command_buffer &cmd, u16 max_w, u16 max_h) override
+		{
+			VkRect2D region = { { s32(dst_area.x1), s32(dst_area.y1) },{ u32(dst_area.x2 - dst_area.x1), u32(dst_area.y2 - dst_area.y1) } };
+			vkCmdSetScissor(cmd, 0, 1, &region);
+
+			VkViewport vp{};
+			vp.x = dst_area.x1;
+			vp.y = dst_area.y1;
+			vp.width = f32(region.extent.width);
+			vp.height = f32(region.extent.height);
+			vp.minDepth = 0.f;
+			vp.maxDepth = 1.f;
+			vkCmdSetViewport(cmd, 0, 1, &vp);
+		}
+
+		void run(vk::command_buffer &cmd, const areaf& src_rect, const areaf& dst_rect, vk::image* target, vk::image* src, vk::image_view* src_view, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
+		{
+			src_area = src_rect;
+			dst_area = dst_rect;
+			src_width = src->width();
+			src_height = src->height();
+
+			overlay_pass::run(cmd, target->width(), target->height(), target, src_view, render_pass, framebuffer_resources);
 		}
 	};
 
@@ -806,7 +848,7 @@ namespace vk
 
 		void update_uniforms(vk::glsl::program* /*program*/) override
 		{
-			m_ubo_offset = m_ubo.alloc<256>(128);
+			m_ubo_offset = (u32)m_ubo.alloc<256>(128);
 			auto dst = (f32*)m_ubo.map(m_ubo_offset, 128);
 			dst[0] = clear_color.r;
 			dst[1] = clear_color.g;

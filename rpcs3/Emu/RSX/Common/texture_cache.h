@@ -1593,8 +1593,8 @@ namespace rsx
 
 			if (requires_processing)
 			{
-				const auto w = rsx::apply_resolution_scale(internal_width, true);
-				const auto h = rsx::apply_resolution_scale(internal_height, true);
+				const auto w = rsx::apply_resolution_scale(std::min<u16>(internal_width, surface_width), true);
+				const auto h = rsx::apply_resolution_scale(std::min<u16>(internal_height, surface_height), true);
 
 				auto command = update_subresource_cache ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
 				return { texptr->get_surface(), command, texaddr, format, 0, 0, w, h, 1,

@@ -207,19 +207,13 @@ void GLGSRender::end()
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
-	auto copy_rtt_contents = [](gl::render_target *surface)
+	auto copy_rtt_contents = [](gl::render_target *surface, bool is_depth)
 	{
 		if (surface->get_internal_format() == surface->old_contents->get_internal_format())
 		{
 			//Copy data from old contents onto this one
-			//1. Clip a rectangular region defining the data
-			//2. Perform a GPU blit
-			u16 parent_w = surface->old_contents->width();
-			u16 parent_h = surface->old_contents->height();
-			u16 copy_w, copy_h;
-
-			std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
-			glCopyImageSubData(surface->old_contents->id(), GL_TEXTURE_2D, 0, 0, 0, 0, surface->id(), GL_TEXTURE_2D, 0, 0, 0, 0, copy_w, copy_h, 1);
+			const auto region = rsx::get_transferable_region(surface);
+			gl::g_hw_blitter->scale_image(surface->old_contents, surface, { 0, 0, std::get<0>(region), std::get<1>(region) }, { 0, 0, std::get<2>(region) , std::get<3>(region) }, !is_depth, is_depth, {});
 			surface->set_cleared();
 		}
 		//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
@@ -293,14 +287,14 @@ void GLGSRender::end()
 	if (g_cfg.video.strict_rendering_mode)
 	{
 		if (ds && ds->old_contents != nullptr)
-			copy_rtt_contents(ds);
+			copy_rtt_contents(ds, true);
 
 		for (auto &rtt : m_rtts.m_bound_render_targets)
 		{
 			if (auto surface = std::get<1>(rtt))
 			{
 				if (surface->old_contents != nullptr)
-					copy_rtt_contents(surface);
+					copy_rtt_contents(surface, false);
 			}
 		}
 	}
