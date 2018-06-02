@@ -131,6 +131,7 @@ namespace rsx
 	public:
 		std::array<std::tuple<u32, surface_type>, 4> m_bound_render_targets = {};
 		std::tuple<u32, surface_type> m_bound_depth_stencil = {};
+		std::tuple<u32, surface_type> m_surface_change_bound_render_target;
 
 		std::list<surface_storage_type> invalidated_resources;
 		u64 cache_tag = 0ull;

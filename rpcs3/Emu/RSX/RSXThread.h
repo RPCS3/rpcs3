@@ -358,6 +358,15 @@ namespace rsx
 		bool m_vertex_textures_dirty[4];
 		bool m_framebuffer_state_contested = false;
 		u32  m_graphics_state = 0;
+		bool m_surface_change_valid = false;
+		u32 m_surface_change_address;
+		u32 m_surface_change_width;
+		u32 m_surface_change_height;
+		u32 m_surface_change_pitch;
+		surface_color_format m_surface_change_color_format;
+		u32 m_surface_zeta_surface_address;
+		surface_depth_format m_surface_zeta_surface_format;
+		u32 m_surface_zeta_surface_pitch;
 
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
