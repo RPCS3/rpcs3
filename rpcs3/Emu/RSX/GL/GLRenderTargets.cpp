@@ -375,13 +375,13 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 					{
 						if (auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]))
 						{
-							surface->aa_mode = aa_mode;
+							surface->write_aa_mode = aa_mode;
 						}
 					}
 
 					if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
 					{
-						ds->aa_mode = aa_mode;
+						ds->write_aa_mode = aa_mode;
 					}
 
 					return;
@@ -426,7 +426,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			m_surface_info[i] = { surface_addresses[i], pitchs[i], false, surface_format, depth_format, clip_horizontal, clip_vertical };
 
 			rtt->tile = find_tile(color_offsets[i], color_locations[i]);
-			rtt->aa_mode = aa_mode;
+			rtt->write_aa_mode = aa_mode;
 			m_gl_texture_cache.notify_surface_changed(surface_addresses[i]);
 			m_gl_texture_cache.tag_framebuffer(surface_addresses[i]);
 		}
@@ -455,7 +455,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		std::get<1>(m_rtts.m_bound_depth_stencil)->set_rsx_pitch(rsx::method_registers.surface_z_pitch());
 		m_depth_surface_info = { depth_address, depth_surface_pitch, true, surface_format, depth_format, clip_horizontal, clip_vertical };
 
-		ds->aa_mode = aa_mode;
+		ds->write_aa_mode = aa_mode;
 		m_gl_texture_cache.notify_surface_changed(depth_address);
 
 		m_gl_texture_cache.tag_framebuffer(depth_address);

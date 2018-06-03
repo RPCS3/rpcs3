@@ -61,14 +61,36 @@ namespace rsx
 	template <typename image_storage_type>
 	struct render_target_descriptor
 	{
+		bool dirty = false;
+		image_storage_type old_contents = nullptr;
+		rsx::surface_antialiasing read_aa_mode = rsx::surface_antialiasing::center_1_sample;
+
 		GcmTileInfo *tile = nullptr;
-		rsx::surface_antialiasing aa_mode = rsx::surface_antialiasing::center_1_sample;
+		rsx::surface_antialiasing write_aa_mode = rsx::surface_antialiasing::center_1_sample;
 
 		virtual image_storage_type get_surface() = 0;
 		virtual u16 get_surface_width() const = 0;
 		virtual u16 get_surface_height() const = 0;
 		virtual u16 get_rsx_pitch() const = 0;
 		virtual u16 get_native_pitch() const = 0;
+
+		void save_aa_mode()
+		{
+			read_aa_mode = write_aa_mode;
+			write_aa_mode = rsx::surface_antialiasing::center_1_sample;
+		}
+
+		void reset_aa_mode()
+		{
+			write_aa_mode = read_aa_mode = rsx::surface_antialiasing::center_1_sample;
+		}
+
+		void on_write()
+		{
+			read_aa_mode = write_aa_mode;
+			dirty = false;
+			old_contents = nullptr;
+		}
 	};
 
 	/**
@@ -134,6 +156,7 @@ namespace rsx
 
 		std::list<surface_storage_type> invalidated_resources;
 		u64 cache_tag = 0ull;
+		u64 write_tag = 0ull;
 
 		surface_store() = default;
 		~surface_store() = default;
@@ -175,6 +198,7 @@ namespace rsx
 				surface_storage_type &rtt = It->second;
 				if (Traits::rtt_has_format_width_height(rtt, color_format, width, height))
 				{
+					Traits::notify_surface_persist(rtt);
 					Traits::prepare_rtt_for_drawing(command_list, Traits::get(rtt));
 					return Traits::get(rtt);
 				}
@@ -206,7 +230,7 @@ namespace rsx
 						invalidated_resources.erase(It);
 
 					new_surface = Traits::get(new_surface_storage);
-					Traits::invalidate_rtt_surface_contents(command_list, new_surface, contents_to_copy, true);
+					Traits::invalidate_surface_contents(command_list, new_surface, contents_to_copy);
 					Traits::prepare_rtt_for_drawing(command_list, new_surface);
 					break;
 				}
@@ -259,6 +283,7 @@ namespace rsx
 				surface_storage_type &ds = It->second;
 				if (Traits::ds_has_format_width_height(ds, depth_format, width, height))
 				{
+					Traits::notify_surface_persist(ds);
 					Traits::prepare_ds_for_drawing(command_list, Traits::get(ds));
 					return Traits::get(ds);
 				}
@@ -290,7 +315,7 @@ namespace rsx
 
 					new_surface = Traits::get(new_surface_storage);
 					Traits::prepare_ds_for_drawing(command_list, new_surface);
-					Traits::invalidate_depth_surface_contents(command_list, new_surface, contents_to_copy, true);
+					Traits::invalidate_surface_contents(command_list, new_surface, contents_to_copy);
 					break;
 				}
 			}
@@ -528,19 +553,6 @@ namespace rsx
 		}
 
 		/**
-		 * Invalidates cached surface data and marks surface contents as deleteable
-		 * Called at the end of a frame (workaround, need to find the proper invalidate command)
-		 */
-		void invalidate_surface_cache_data(command_list_type command_list)
-		{
-			for (auto &rtt : m_render_targets_storage)
-				Traits::invalidate_rtt_surface_contents(command_list, Traits::get(std::get<1>(rtt)), nullptr, false);
-
-			for (auto &ds : m_depth_stencil_storage)
-				Traits::invalidate_depth_surface_contents(command_list, Traits::get(std::get<1>(ds)), nullptr, true);
-		}
-
-		/**
 		 * Moves a single surface from surface storage to invalidated surface store.
 		 * Can be triggered by the texture cache's blit functionality when formats do not match
 		 */
@@ -653,7 +665,7 @@ namespace rsx
 				bool doubled_x = false;
 				bool doubled_y = false;
 
-				switch (surface->aa_mode)
+				switch (surface->read_aa_mode)
 				{
 				case rsx::surface_antialiasing::square_rotated_4_samples:
 				case rsx::surface_antialiasing::square_centered_4_samples:
@@ -741,7 +753,7 @@ namespace rsx
 					u16 real_width = requested_width;
 					u16 real_height = requested_height;
 
-					switch (surface->aa_mode)
+					switch (surface->read_aa_mode)
 					{
 					case rsx::surface_antialiasing::diagonal_centered_2_samples:
 						real_width /= 2;
@@ -893,6 +905,27 @@ namespace rsx
 			process_list_function(m_render_targets_storage, false);
 			process_list_function(m_depth_stencil_storage, true);
 			return result;
+		}
+
+		void on_write()
+		{
+			if (write_tag == cache_tag)
+				return;
+
+			for (auto &rtt : m_bound_render_targets)
+			{
+				if (auto surface = std::get<1>(rtt))
+				{
+					surface->on_write();
+				}
+			}
+
+			if (auto ds = std::get<1>(m_bound_depth_stencil))
+			{
+				ds->on_write();
+			}
+
+			write_tag = cache_tag;
 		}
 	};
 }

@@ -214,11 +214,8 @@ void GLGSRender::end()
 			//Copy data from old contents onto this one
 			const auto region = rsx::get_transferable_region(surface);
 			gl::g_hw_blitter->scale_image(surface->old_contents, surface, { 0, 0, std::get<0>(region), std::get<1>(region) }, { 0, 0, std::get<2>(region) , std::get<3>(region) }, !is_depth, is_depth, {});
-			surface->set_cleared();
 		}
 		//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
-
-		surface->old_contents = nullptr;
 	};
 
 	//Check if we have any 'recycled' surfaces in memory and if so, clear them
@@ -273,15 +270,12 @@ void GLGSRender::end()
 
 		if (clear_depth)
 			gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
-
-		ds->set_cleared();
 	}
 
-	if (ds && ds->old_contents != nullptr && ds->get_rsx_pitch() == ds->old_contents->get_rsx_pitch() &&
+	if (ds && ds->old_contents != nullptr && ds->get_rsx_pitch() == static_cast<gl::render_target*>(ds->old_contents)->get_rsx_pitch() &&
 		ds->old_contents->get_internal_format() == gl::texture::internal_format::rgba8)
 	{
 		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
-		ds->old_contents = nullptr;
 	}
 
 	if (g_cfg.video.strict_rendering_mode)
@@ -297,11 +291,6 @@ void GLGSRender::end()
 					copy_rtt_contents(surface, false);
 			}
 		}
-	}
-	else
-	{
-		// Old contents are one use only. Keep the depth conversion check from firing over and over
-		if (ds) ds->old_contents = nullptr;
 	}
 
 	glEnable(GL_SCISSOR_TEST);
@@ -570,6 +559,8 @@ void GLGSRender::end()
 			}
 		}
 	}
+
+	m_rtts.on_write();
 
 	m_attrib_ring_buffer->notify();
 	m_index_ring_buffer->notify();
@@ -988,11 +979,9 @@ void GLGSRender::clear_surface(u32 arg)
 		gl_state.clear_depth(f32(clear_depth) / max_depth_value);
 		mask |= GLenum(gl::buffers::depth);
 
-		gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-		if (ds && !ds->cleared())
+		if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
 		{
-			ds->set_cleared();
-			ds->old_contents = nullptr;
+			ds->on_write();
 		}
 	}
 
@@ -1036,10 +1025,9 @@ void GLGSRender::clear_surface(u32 arg)
 
 			for (auto &rtt : m_rtts.m_bound_render_targets)
 			{
-				if (std::get<0>(rtt) != 0)
+				if (auto surface = std::get<1>(rtt))
 				{
-					std::get<1>(rtt)->set_cleared(true);
-					std::get<1>(rtt)->old_contents = nullptr;
+					surface->on_write();
 				}
 			}
 

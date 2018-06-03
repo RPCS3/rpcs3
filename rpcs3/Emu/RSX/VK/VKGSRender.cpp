@@ -1115,7 +1115,6 @@ void VKGSRender::end()
 		VkClearValue clear_value = {};
 		clear_value.depthStencil = { 1.f, 255 };
 		buffers_to_clear.push_back({ vk::get_aspect_flags(ds->info.format), 0, clear_value });
-		ds->dirty = false;
 	}
 
 	for (u32 index = 0; index < targets.size(); ++index)
@@ -1125,7 +1124,6 @@ void VKGSRender::end()
 			if (rtt->dirty)
 			{
 				buffers_to_clear.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, index, {} });
-				rtt->dirty = false;
 			}
 		}
 	}
@@ -1148,14 +1146,9 @@ void VKGSRender::end()
 		{
 			auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
 			auto render_pass = m_render_passes[rp];
-			m_depth_converter->run(*m_current_command_buffer, ds->width(), ds->height(), ds, ds->old_contents->get_view(0xAAE4, rsx::default_remap_vector), render_pass, m_framebuffers_to_clean);
-
-			ds->old_contents = nullptr;
-		}
-		else if (!g_cfg.video.strict_rendering_mode)
-		{
-			//Clear this to avoid dereferencing stale ptr
-			ds->old_contents = nullptr;
+			m_depth_converter->run(*m_current_command_buffer, ds->width(), ds->height(), ds,
+				static_cast<vk::render_target*>(ds->old_contents)->get_view(0xAAE4, rsx::default_remap_vector),
+				render_pass, m_framebuffers_to_clean);
 		}
 	}
 
@@ -1187,14 +1180,9 @@ void VKGSRender::end()
 					vk::change_image_layout(*m_current_command_buffer, surface->old_contents, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 					m_depth_scaler->run(*m_current_command_buffer, { 0, 0, (f32)src_w, (f32)src_h }, { 0, 0, (f32)dst_w, (f32)dst_h }, surface,
-						surface->old_contents, surface->old_contents->get_view(0xAAE4, rsx::default_remap_vector), render_pass, m_framebuffers_to_clean);
+						surface->old_contents, static_cast<vk::render_target*>(surface->old_contents)->get_view(0xAAE4, rsx::default_remap_vector), render_pass, m_framebuffers_to_clean);
 				}
-
-				surface->dirty = false;
 			}
-			//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
-
-			surface->old_contents = nullptr;
 		};
 
 		//Prepare surfaces if needed
@@ -1519,6 +1507,8 @@ void VKGSRender::end()
 	close_render_pass();
 	vk::leave_uninterruptible();
 
+	m_rtts.on_write();
+
 	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	m_draw_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_end - textures_end).count();
 
@@ -1792,10 +1782,9 @@ void VKGSRender::clear_surface(u32 mask)
 
 				for (auto &rtt : m_rtts.m_bound_render_targets)
 				{
-					if (std::get<0>(rtt) != 0)
+					if (auto surface = std::get<1>(rtt))
 					{
-						std::get<1>(rtt)->dirty = false;
-						std::get<1>(rtt)->old_contents = nullptr;
+						surface->on_write();
 					}
 				}
 			}
@@ -1804,11 +1793,9 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (mask & 0x3)
 	{
-		if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
+		if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
 		{
-			std::get<1>(m_rtts.m_bound_depth_stencil)->dirty = false;
-			std::get<1>(m_rtts.m_bound_depth_stencil)->old_contents = nullptr;
-
+			ds->on_write();
 			clear_descriptors.push_back({ (VkImageAspectFlags)depth_stencil_mask, 0, depth_stencil_clear_values });
 		}
 	}
@@ -2744,13 +2731,13 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 					{
 						if (auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]))
 						{
-							surface->aa_mode = aa_mode;
+							surface->write_aa_mode = aa_mode;
 						}
 					}
 
 					if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
 					{
-						ds->aa_mode = aa_mode;
+						ds->write_aa_mode = aa_mode;
 					}
 
 					return;
@@ -2820,7 +2807,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			m_surface_info[index].pitch = surface_pitchs[index];
 			surface->rsx_pitch = surface_pitchs[index];
 
-			surface->aa_mode = aa_mode;
+			surface->write_aa_mode = aa_mode;
 			m_texture_cache.notify_surface_changed(surface_addresses[index]);
 
 			m_texture_cache.tag_framebuffer(surface_addresses[index]);
@@ -2837,7 +2824,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_depth_surface_info.pitch = rsx::method_registers.surface_z_pitch();
 		ds->rsx_pitch = m_depth_surface_info.pitch;
 
-		ds->aa_mode = aa_mode;
+		ds->write_aa_mode = aa_mode;
 		m_texture_cache.notify_surface_changed(zeta_address);
 
 		m_texture_cache.tag_framebuffer(zeta_address);
