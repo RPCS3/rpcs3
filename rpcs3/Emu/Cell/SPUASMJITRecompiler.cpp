@@ -1055,7 +1055,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 		fs::file(Emu.GetCachePath() + "SPUJIT.log", fs::write + fs::append).write(log);
 	}
 
-	if (m_cache)
+	if (m_cache && g_cfg.core.spu_cache)
 	{
 		m_cache->add(func);
 	}

@@ -1716,7 +1716,7 @@ public:
 			fs::file(m_spurt->m_cache_path + "../spu.log", fs::write + fs::append).write(log);
 		}
 
-		if (m_cache)
+		if (m_cache && g_cfg.core.spu_cache)
 		{
 			m_cache->add(func);
 		}
