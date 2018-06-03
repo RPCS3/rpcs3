@@ -597,7 +597,7 @@ namespace rsx
 		u16 dst_w = src_w;
 		u16 dst_h = src_h;
 
-		switch (surface->old_contents->aa_mode)
+		switch (static_cast<SurfaceType*>(surface->old_contents)->read_aa_mode)
 		{
 		case rsx::surface_antialiasing::center_1_sample:
 			break;
@@ -611,7 +611,7 @@ namespace rsx
 			break;
 		}
 
-		switch (surface->aa_mode)
+		switch (surface->write_aa_mode)
 		{
 		case rsx::surface_antialiasing::center_1_sample:
 			break;

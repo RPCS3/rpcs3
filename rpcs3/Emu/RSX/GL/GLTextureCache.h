@@ -265,7 +265,7 @@ namespace gl
 				if (pbo_id == 0)
 					init_buffer();
 
-				aa_mode = static_cast<gl::render_target*>(image)->aa_mode;
+				aa_mode = static_cast<gl::render_target*>(image)->read_aa_mode;
 			}
 
 			flushed = false;

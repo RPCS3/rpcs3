@@ -740,7 +740,7 @@ namespace rsx
 		template <typename T, typename U>
 		inline void get_native_dimensions(T &width, T &height, U surface)
 		{
-			switch (surface->aa_mode)
+			switch (surface->read_aa_mode)
 			{
 			case rsx::surface_antialiasing::center_1_sample:
 				return;
@@ -758,7 +758,7 @@ namespace rsx
 		template <typename T, typename U>
 		inline void get_rsx_dimensions(T &width, T &height, U surface)
 		{
-			switch (surface->aa_mode)
+			switch (surface->read_aa_mode)
 			{
 			case rsx::surface_antialiasing::center_1_sample:
 				return;
@@ -776,7 +776,7 @@ namespace rsx
 		template <typename T>
 		inline f32 get_internal_scaling_x(T surface)
 		{
-			switch (surface->aa_mode)
+			switch (surface->read_aa_mode)
 			{
 			default:
 			case rsx::surface_antialiasing::center_1_sample:
@@ -791,7 +791,7 @@ namespace rsx
 		template <typename T>
 		inline f32 get_internal_scaling_y(T surface)
 		{
-			switch (surface->aa_mode)
+			switch (surface->read_aa_mode)
 			{
 			default:
 			case rsx::surface_antialiasing::center_1_sample:

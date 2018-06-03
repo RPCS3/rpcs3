@@ -129,21 +129,17 @@ struct render_target_traits
 	}
 
 	static
-	void invalidate_rtt_surface_contents(
+	void invalidate_surface_contents(
 		gsl::not_null<ID3D12GraphicsCommandList*>,
-		ID3D12Resource*, ID3D12Resource*, bool)
+		ID3D12Resource*, ID3D12Resource*)
 	{}
 
 	static
-	void invalidate_depth_surface_contents(
-		gsl::not_null<ID3D12GraphicsCommandList*>,
-		ID3D12Resource*, ID3D12Resource*, bool)
-	{
-		//TODO
-	}
+	void notify_surface_invalidated(const ComPtr<ID3D12Resource>&)
+	{}
 
 	static
-	void notify_surface_invalidated(const ComPtr<ID3D12Resource>&)
+	void notify_surface_persist(const ComPtr<ID3D12Resource>&)
 	{}
 
 	static
