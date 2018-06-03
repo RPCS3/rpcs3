@@ -206,9 +206,9 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 	};
 
 	// Check code
-	if (false)
+	if (!g_cfg.core.spu_verification)
 	{
-		// Disable check (not available)
+		// Disable check (unsafe)
 	}
 	else if (func.size() - 1 == 1)
 	{
@@ -764,11 +764,14 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 	c->bind(label_stop);
 	c->ret();
 
-	// Dispatch
-	c->align(kAlignCode, 16);
-	c->bind(label_diff);
-	c->inc(SPU_OFF_64(block_failure));
-	c->jmp(imm_ptr(&spu_recompiler_base::dispatch));
+	if (g_cfg.core.spu_verification)
+	{
+		// Dispatch
+		c->align(kAlignCode, 16);
+		c->bind(label_diff);
+		c->inc(SPU_OFF_64(block_failure));
+		c->jmp(imm_ptr(&spu_recompiler_base::dispatch));
+	}
 
 	for (auto&& work : decltype(after)(std::move(after)))
 	{

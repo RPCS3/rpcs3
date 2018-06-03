@@ -1320,9 +1320,10 @@ public:
 		// Emit code check
 		m_ir->SetInsertPoint(label_test);
 
-		if (false)
+		if (!g_cfg.core.spu_verification)
 		{
-			// Disable check (not available)
+			// Disable check (unsafe)
+			m_ir->CreateBr(label_body);
 		}
 		else if (func.size() - 1 == 1)
 		{
@@ -1506,9 +1507,17 @@ public:
 		m_ir->CreateRetVoid();
 
 		m_ir->SetInsertPoint(label_diff);
-		const auto pbfail = spu_ptr<u64>(&SPUThread::block_failure);
-		m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(pbfail), m_ir->getInt64(1)), pbfail);
-		tail(&spu_recompiler_base::dispatch, m_thread, m_ir->getInt32(0), m_ir->getInt32(0));
+
+		if (g_cfg.core.spu_verification)
+		{
+			const auto pbfail = spu_ptr<u64>(&SPUThread::block_failure);
+			m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(pbfail), m_ir->getInt64(1)), pbfail);
+			tail(&spu_recompiler_base::dispatch, m_thread, m_ir->getInt32(0), m_ir->getInt32(0));
+		}
+		else
+		{
+			m_ir->CreateUnreachable();
+		}
 
 		// Clear context
 		m_gpr.fill({});
