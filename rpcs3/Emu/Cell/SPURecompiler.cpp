@@ -1443,6 +1443,36 @@ public:
 				}
 
 				m_ir->SetInsertPoint(found->second);
+
+				// Build state check if necessary (TODO: more conditions)
+				bool need_check_state = false;
+
+				const auto pfound = m_preds.find(pos);
+
+				if (pfound != m_preds.end())
+				{
+					for (u32 pred : pfound->second)
+					{
+						if (pred >= pos)
+						{
+							// If this block is a target of a backward branch (possibly loop), emit a check
+							need_check_state = true;
+							break;
+						}
+					}
+				}
+
+				if (need_check_state)
+				{
+					// Call cpu_thread::check_state if necessary and return or continue (full check)
+					const auto _body = BasicBlock::Create(m_context, "", m_function);
+					const auto check = BasicBlock::Create(m_context, "", m_function);
+					m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(pstate), m_ir->getInt32(0)), _body, check);
+					m_ir->SetInsertPoint(check);
+					m_ir->CreateStore(m_ir->getInt32(pos), spu_ptr<u32>(&SPUThread::pc));
+					m_ir->CreateCondBr(call(&check_state, m_thread), m_stop, _body);
+					m_ir->SetInsertPoint(_body);
+				}
 			}
 
 			if (!m_ir->GetInsertBlock()->getTerminator())
@@ -1674,6 +1704,11 @@ public:
 		}
 
 		return fn;
+	}
+
+	static bool check_state(SPUThread* _spu)
+	{
+		return _spu->check_state();
 	}
 
 	template <spu_inter_func_t F>
@@ -3038,16 +3073,15 @@ public:
 
 	void branch_fixed(u32 target)
 	{
-		m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&SPUThread::pc));
-
 		const auto found = m_instr_map.find(target);
 
 		if (found != m_instr_map.end())
 		{
-			m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::state)), m_ir->getInt32(0)), m_stop, found->second);
+			m_ir->CreateBr(found->second);
 			return;
 		}
 
+		m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&SPUThread::pc));
 		const auto addr = m_ir->CreateAdd(m_thread, m_ir->getInt64(::offset32(&SPUThread::jit_dispatcher) + target * 2));
 		const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u64>(), get_type<u64>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
 		const auto func = m_ir->CreateLoad(m_ir->CreateIntToPtr(addr, type));
