@@ -94,14 +94,16 @@ struct command_buffer_chunk: public vk::command_buffer
 
 	bool poke()
 	{
+		reader_lock lock(guard_mutex);
+
 		if (vkGetFenceStatus(m_device, submit_fence) == VK_SUCCESS)
 		{
-			std::lock_guard<shared_mutex> lock(guard_mutex);
+			lock.upgrade();
 
 			if (pending)
 			{
-				vk::reset_fence(&submit_fence);
 				pending = false;
+				vk::reset_fence(&submit_fence);
 			}
 		}
 
@@ -110,7 +112,7 @@ struct command_buffer_chunk: public vk::command_buffer
 
 	void wait()
 	{
-		std::lock_guard<shared_mutex> lock(guard_mutex);
+		reader_lock lock(guard_mutex);
 
 		if (!pending)
 			return;
@@ -124,8 +126,13 @@ struct command_buffer_chunk: public vk::command_buffer
 			break;
 		}
 
-		vk::reset_fence(&submit_fence);
-		pending = false;
+		lock.upgrade();
+
+		if (pending)
+		{
+			vk::reset_fence(&submit_fence);
+			pending = false;
+		}
 	}
 };
 
