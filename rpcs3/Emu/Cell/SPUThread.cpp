@@ -637,8 +637,17 @@ SPUThread::SPUThread(const std::string& name, u32 index, lv2_spu_group* group)
 		jit = spu_recompiler_base::make_llvm_recompiler();
 	}
 
-	// Initialize lookup table
-	jit_dispatcher.fill(&spu_recompiler_base::dispatch);
+	if (g_cfg.core.spu_decoder != spu_decoder_type::fast && g_cfg.core.spu_decoder != spu_decoder_type::precise)
+	{
+		// Initialize lookup table
+		jit_dispatcher.fill(&spu_recompiler_base::dispatch);
+
+		if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
+		{
+			// Initialize stack mirror
+			std::memset(stack_mirror.data(), 0xff, sizeof(stack_mirror));
+		}
+	}
 }
 
 void SPUThread::push_snr(u32 number, u32 value)

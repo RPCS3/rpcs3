@@ -90,6 +90,12 @@ void spu_cache::initialize()
 		return;
 	}
 
+	if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+	{
+		// Force Safe mode
+		g_cfg.core.spu_block_size.from_default();
+	}
+
 	// SPU cache file (version + block size type)
 	const std::string loc = _main->cache + u8"spu-§" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v3.dat";
 
@@ -384,7 +390,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 				continue;
 			}
 
-			if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
+			if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
 			{
 				// Stop on special instructions (TODO)
 				m_targets[pos].push_back(-1);
@@ -437,8 +443,9 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 					add_block(target);
 				}
 
-				if (type == spu_itype::BISL && target >= lsa && g_cfg.core.spu_block_size == spu_block_size_type::giga)
+				if (type == spu_itype::BISL && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 				{
+					m_targets[pos].push_back(pos + 4);
 					add_block(pos + 4);
 				}
 			}
@@ -548,7 +555,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 
 			if (type == spu_itype::BI || type == spu_itype::BISL)
 			{
-				if (type == spu_itype::BI || g_cfg.core.spu_block_size != spu_block_size_type::giga)
+				if (type == spu_itype::BI || g_cfg.core.spu_block_size == spu_block_size_type::safe)
 				{
 					if (m_targets[pos].empty())
 					{
@@ -557,6 +564,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 				}
 				else
 				{
+					m_targets[pos].push_back(pos + 4);
 					add_block(pos + 4);
 				}
 			}
@@ -587,8 +595,9 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 
 			m_targets[pos].push_back(target);
 
-			if (target >= lsa && g_cfg.core.spu_block_size == spu_block_size_type::giga)
+			if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
 			{
+				m_targets[pos].push_back(pos + 4);
 				add_block(pos + 4);
 			}
 
@@ -803,11 +812,11 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 		}
 	}
 
-	while (g_cfg.core.spu_block_size == spu_block_size_type::safe)
+	while (g_cfg.core.spu_block_size != spu_block_size_type::giga)
 	{
 		const u32 initial_size = result.size();
 
-		// Check unreachable blocks in safe mode (TODO)
+		// Check unreachable blocks in safe and mega modes (TODO)
 		u32 limit = lsa + result.size() * 4 - 4;
 
 		for (auto& pair : m_preds)

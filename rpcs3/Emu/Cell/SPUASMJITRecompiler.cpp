@@ -730,6 +730,11 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 
 		if (found != instr_labels.end())
 		{
+			if (m_preds.count(pos))
+			{
+				c->align(kAlignCode, 16);
+			}
+
 			c->bind(found->second);
 		}
 
@@ -1118,9 +1123,20 @@ static void check_state_ret(SPUThread& _spu, void*, u8*)
 
 static void check_state(SPUThread* _spu, spu_function_t _ret)
 {
-	if (_spu->check_state())
+	if (test(_spu->state) && _spu->check_state())
 	{
 		_ret = &check_state_ret;
+	}
+
+	if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
+	{
+		// Get stack pointer, try to use native return address (check SPU return address)
+		const auto x = _spu->stack_mirror[(_spu->gpr[1]._u32[3] & 0x3fff0) >> 4];
+
+		if (x._u32[2] == _spu->pc)
+		{
+			_ret = reinterpret_cast<spu_function_t>(x._u64[0]);
+		}
 	}
 
 	_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
@@ -1172,11 +1188,11 @@ void spu_recompiler::branch_fixed(u32 target)
 	c->jmp(x86::rax);
 }
 
-void spu_recompiler::branch_indirect(spu_opcode_t op, bool local)
+void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 {
 	using namespace asmjit;
 
-	if (g_cfg.core.spu_block_size == spu_block_size_type::safe && !local)
+	if (g_cfg.core.spu_block_size != spu_block_size_type::giga && !jt)
 	{
 		// Simply external call (return or indirect call)
 		c->mov(x86::r10, x86::qword_ptr(*cpu, addr->r64(), 1, offset32(&SPUThread::jit_dispatcher)));
@@ -1238,10 +1254,57 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool local)
 	c->mov(SPU_OFF_32(pc), *addr);
 	c->cmp(SPU_OFF_32(state), 0);
 	c->jnz(label_check);
+
+	if (g_cfg.core.spu_block_size != spu_block_size_type::safe && ret)
+	{
+		// Get stack pointer, try to use native return address (check SPU return address)
+		c->mov(qw1->r32(), SPU_OFF_32(gpr, 1, &v128::_u32, 3));
+		c->and_(qw1->r32(), 0x3fff0);
+		c->lea(*qw1, x86::qword_ptr(*cpu, *qw1, 0, ::offset32(&SPUThread::stack_mirror)));
+		c->cmp(x86::dword_ptr(*qw1, 8), *addr);
+		c->cmove(x86::r10, x86::qword_ptr(*qw1));
+	}
+
 	c->jmp(x86::r10);
 	c->bind(label_check);
 	c->mov(*ls, x86::r10);
 	c->jmp(imm_ptr(&check_state));
+}
+
+void spu_recompiler::branch_set_link(u32 target)
+{
+	using namespace asmjit;
+
+	if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
+	{
+		// Find instruction at target
+		const auto local = instr_labels.find(target);
+
+		if (local != instr_labels.end() && local->second.isValid())
+		{
+			Label ret = c->newLabel();
+
+			// Get stack pointer, write native and SPU return addresses into the stack mirror
+			c->mov(qw1->r32(), SPU_OFF_32(gpr, 1, &v128::_u32, 3));
+			c->and_(qw1->r32(), 0x3fff0);
+			c->lea(*qw1, x86::qword_ptr(*cpu, *qw1, 0, ::offset32(&SPUThread::stack_mirror)));
+			c->lea(x86::r10, x86::qword_ptr(ret));
+			c->mov(x86::qword_ptr(*qw1, 0), x86::r10);
+			c->mov(x86::qword_ptr(*qw1, 8), target);
+
+			after.emplace_back([=, target = local->second]
+			{
+				// Clear return info after use
+				c->align(kAlignCode, 16);
+				c->bind(ret);
+				c->mov(qw1->r32(), SPU_OFF_32(gpr, 1, &v128::_u32, 3));
+				c->and_(qw1->r32(), 0x3fff0);
+				c->pcmpeqd(x86::xmm0, x86::xmm0);
+				c->movdqa(x86::dqword_ptr(*cpu, *qw1, 0, ::offset32(&SPUThread::stack_mirror)), x86::xmm0);
+				c->jmp(target);
+			});
+		}
+	}
 }
 
 void spu_recompiler::fall(spu_opcode_t op)
@@ -2768,9 +2831,17 @@ void spu_recompiler::STQX(spu_opcode_t op)
 
 void spu_recompiler::BI(spu_opcode_t op)
 {
+	const auto found = m_targets.find(m_pos);
+	const auto is_jt = found == m_targets.end() || found->second.size() != 1 || found->second.front() != -1;
+
+	if (found == m_targets.end() || found->second.empty())
+	{
+		LOG_ERROR(SPU, "[0x%x] BI: no targets", m_pos);
+	}
+
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
 	c->and_(*addr, 0x3fffc);
-	branch_indirect(op, m_targets.find(m_pos) != m_targets.end());
+	branch_indirect(op, is_jt, !is_jt);
 	m_pos = -1;
 }
 
@@ -2781,7 +2852,8 @@ void spu_recompiler::BISL(spu_opcode_t op)
 	const XmmLink& vr = XmmAlloc();
 	c->movdqa(vr, XmmConst(_mm_set_epi32(spu_branch_target(m_pos + 4), 0, 0, 0)));
 	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
-	branch_indirect(op, m_targets.find(m_pos) != m_targets.end());
+	branch_set_link(m_pos + 4);
+	branch_indirect(op, true, false);
 	m_pos = -1;
 }
 
@@ -4282,6 +4354,7 @@ void spu_recompiler::BRASL(spu_opcode_t op)
 
 	if (target != m_pos + 4)
 	{
+		branch_set_link(m_pos + 4);
 		branch_fixed(target);
 		m_pos = -1;
 	}
@@ -4319,6 +4392,7 @@ void spu_recompiler::BRSL(spu_opcode_t op)
 
 	if (target != m_pos + 4)
 	{
+		branch_set_link(m_pos + 4);
 		branch_fixed(target);
 		m_pos = -1;
 	}
