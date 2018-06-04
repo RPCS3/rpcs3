@@ -34,12 +34,12 @@ class msg_dialog_frame : public QObject, public MsgDialogBase
 {
 	Q_OBJECT
 
+private:
 #ifdef _WIN32
 	QWinTaskbarButton* m_tb_button = nullptr;
 	QWinTaskbarProgress* m_tb_progress = nullptr;
-
 #elif HAVE_QTDBUS
-	int progressValue = 0;
+	int m_progress_value = 0;
 #endif
 	custom_dialog* m_dialog =nullptr;
 	QLabel* m_text = nullptr;
@@ -56,7 +56,7 @@ class msg_dialog_frame : public QObject, public MsgDialogBase
 	custom_dialog* m_osk_dialog = nullptr;
 	char16_t* m_osk_text_return;
 
-	const int m_gauge_max = 100;
+	int m_gauge_max = 0;
 
 public:
 	msg_dialog_frame(QWindow* taskbarTarget);

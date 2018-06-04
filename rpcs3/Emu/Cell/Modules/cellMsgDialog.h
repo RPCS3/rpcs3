@@ -78,6 +78,9 @@ public:
 
 	MsgDialogType type{};
 
+	// the progressbar that will be represented in the taskbar. Use -1 to combine the progress.
+	s32 taskbar_index = 0;
+
 	std::function<void(s32 status)> on_close;
 	std::function<void()> on_osk_input_entered;
 
