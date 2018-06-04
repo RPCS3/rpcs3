@@ -76,22 +76,27 @@ namespace vk
 			//Reserve descriptor pools
 			m_descriptor_pool.create(*m_device, descriptor_pool_sizes, 2);
 
-			VkDescriptorSetLayoutBinding bindings[2] = {};
+			VkDescriptorSetLayoutBinding bindings[3] = {};
 
-			bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			bindings[0].descriptorCount = 1;
-			bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			bindings[0].binding = 0;
 
-			bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			bindings[1].descriptorCount = 1;
-			bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+			bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 			bindings[1].binding = 1;
+
+			bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			bindings[2].descriptorCount = 1;
+			bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[2].binding = 2;
 
 			VkDescriptorSetLayoutCreateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 			infos.pBindings = bindings;
-			infos.bindingCount = 2;
+			infos.bindingCount = 3;
 
 			CHECK_RESULT(vkCreateDescriptorSetLayout(*m_device, &infos, nullptr, &m_descriptor_layout));
 
@@ -116,8 +121,9 @@ namespace vk
 		virtual std::vector<vk::glsl::program_input> get_fragment_inputs()
 		{
 			std::vector<vk::glsl::program_input> fs_inputs;
-			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, 0, "fs0" });
-			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_uniform_buffer,{},{}, 1, "static_data" });
+			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_uniform_buffer,{},{}, 0, "static_data" });
+			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, 1, "fs0" });
+			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, 2, "fs1" });
 			return fs_inputs;
 		}
 
@@ -209,7 +215,7 @@ namespace vk
 			return result;
 		}
 
-		void load_program(vk::command_buffer cmd, VkRenderPass pass, VkImageView src)
+		void load_program(vk::command_buffer cmd, VkRenderPass pass, const std::vector<VkImageView>& src)
 		{
 			vk::glsl::program *program = nullptr;
 			auto found = m_program_cache.find(pass);
@@ -233,14 +239,18 @@ namespace vk
 			{
 				m_sampler = std::make_unique<vk::sampler>(*m_device,
 					VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-					VK_FALSE, 0.f, 1.f, 0.f, 0.f, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
+					VK_FALSE, 0.f, 1.f, 0.f, 0.f, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 			}
 
 			update_uniforms(program);
 
-			VkDescriptorImageInfo info = { m_sampler->value, src, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-			program->bind_uniform(info, "fs0", m_descriptor_set);
-			program->bind_uniform({ m_ubo.heap->value, m_ubo_offset, std::max(m_ubo_length, 4u) }, 1, m_descriptor_set);
+			program->bind_uniform({ m_ubo.heap->value, m_ubo_offset, std::max(m_ubo_length, 4u) }, 0, m_descriptor_set);
+
+			for (int n = 0; n < src.size(); ++n)
+			{
+				VkDescriptorImageInfo info = { m_sampler->value, src[n], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+				program->bind_uniform(info, "fs" + std::to_string(n), m_descriptor_set);
+			}
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, program->pipeline);
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
@@ -343,7 +353,7 @@ namespace vk
 			vkCmdSetScissor(cmd, 0, 1, &vs);
 		}
 
-		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::framebuffer* fbo, VkImageView src, VkRenderPass render_pass)
+		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::framebuffer* fbo, const std::vector<VkImageView>& src, VkRenderPass render_pass)
 		{
 			load_program(cmd, render_pass, src);
 			set_up_viewport(cmd, w, h);
@@ -362,10 +372,16 @@ namespace vk
 			vkCmdEndRenderPass(cmd);
 		}
 
-		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, VkImageView src, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
+		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, const std::vector<VkImageView>& src, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
 		{
 			vk::framebuffer *fbo = get_framebuffer(target, render_pass, framebuffer_resources);
 			run(cmd, w, h, fbo, src, render_pass);
+		}
+
+		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, VkImageView src, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
+		{
+			std::vector<VkImageView> views = { src };
+			run(cmd, w, h, target, views, render_pass, framebuffer_resources);
 		}
 
 		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, vk::image_view* src, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
@@ -397,7 +413,8 @@ namespace vk
 			{
 				"#version 420\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
-				"layout(set=0, binding=0) uniform sampler2D fs0;\n"
+				"#extension GL_ARB_shader_stencil_export : enable\n\n"
+				"layout(set=0, binding=1) uniform sampler2D fs0;\n"
 				"layout(location=0) in vec2 tc0;\n"
 				"\n"
 				"void main()\n"
@@ -409,6 +426,7 @@ namespace vk
 
 			renderpass_config.set_depth_mask(true);
 			renderpass_config.enable_depth_test(VK_COMPARE_OP_ALWAYS);
+			renderpass_config.enable_stencil_test(VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_COMPARE_OP_ALWAYS, 0xFF, 0xFF);
 
 			m_vertex_shader.id = 100002;
 			m_fragment_shader.id = 100003;
@@ -438,7 +456,7 @@ namespace vk
 				"#version 450\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
 				"layout(location=0) in vec4 in_pos;\n"
-				"layout(std140, set=0, binding=1) uniform static_data{ vec4 regs[8]; };\n"
+				"layout(std140, set=0, binding=0) uniform static_data{ vec4 regs[8]; };\n"
 				"layout(location=0) out vec2 tc0;\n"
 				"layout(location=1) out vec4 color;\n"
 				"layout(location=2) out vec4 parameters;\n"
@@ -459,7 +477,7 @@ namespace vk
 			{
 				"#version 420\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
-				"layout(set=0, binding=0) uniform sampler2D fs0;\n"
+				"layout(set=0, binding=1) uniform sampler2D fs0;\n"
 				"layout(location=0) in vec2 tc0;\n"
 				"layout(location=1) in vec4 color;\n"
 				"layout(location=2) in vec4 parameters;\n"
@@ -704,92 +722,10 @@ namespace vk
 					break;
 				}
 
-				overlay_pass::run(cmd, w, h, target, src, render_pass);
+				overlay_pass::run(cmd, w, h, target, { src }, render_pass);
 			}
 
 			ui.update();
-		}
-	};
-
-	struct depth_scaling_pass : public overlay_pass
-	{
-		areaf src_area;
-		areaf dst_area;
-		u16 src_width;
-		u16 src_height;
-
-		depth_scaling_pass()
-		{
-			vs_src =
-			{
-				"#version 450\n"
-				"#extension GL_ARB_separate_shader_objects : enable\n"
-				"layout(std140, set=0, binding=1) uniform static_data{ vec4 regs[8]; };\n"
-				"layout(location=0) out vec2 tc0;\n"
-				"\n"
-				"void main()\n"
-				"{\n"
-				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
-				"	vec2 coords[] = {vec2(0., 0.), vec2(1., 0.), vec2(0., 1.), vec2(1., 1.)};\n"
-				"	gl_Position = vec4(positions[gl_VertexIndex % 4], 0., 1.);\n"
-				"	tc0 = coords[gl_VertexIndex % 4] * regs[0].xy + regs[0].zw;\n"
-				"}\n"
-			};
-
-			fs_src =
-			{
-				"#version 420\n"
-				"#extension GL_ARB_separate_shader_objects : enable\n"
-				"layout(set=0, binding=0) uniform sampler2D fs0;\n"
-				"layout(location=0) in vec2 tc0;\n"
-				"\n"
-				"void main()\n"
-				"{\n"
-				"	gl_FragDepth = texture(fs0, tc0).x;\n"
-				"}\n"
-			};
-
-			renderpass_config.set_depth_mask(true);
-			renderpass_config.enable_depth_test(VK_COMPARE_OP_ALWAYS);
-
-			m_vertex_shader.id = 100006;
-			m_fragment_shader.id = 100007;
-		}
-
-		void update_uniforms(vk::glsl::program* /*program*/) override
-		{
-			m_ubo_offset = (u32)m_ubo.alloc<256>(128);
-			auto dst = (f32*)m_ubo.map(m_ubo_offset, 128);
-			dst[0] = f32(src_area.x2 - src_area.x1) / src_width;
-			dst[1] = f32(src_area.y2 - src_area.y1) / src_height;
-			dst[2] = src_area.x1 / f32(src_area.x2 - src_area.x1);
-			dst[3] = src_area.y1 / f32(src_area.y2 - src_area.y1);
-			m_ubo.unmap();
-		}
-
-		void set_up_viewport(vk::command_buffer &cmd, u16 max_w, u16 max_h) override
-		{
-			VkRect2D region = { { s32(dst_area.x1), s32(dst_area.y1) },{ u32(dst_area.x2 - dst_area.x1), u32(dst_area.y2 - dst_area.y1) } };
-			vkCmdSetScissor(cmd, 0, 1, &region);
-
-			VkViewport vp{};
-			vp.x = dst_area.x1;
-			vp.y = dst_area.y1;
-			vp.width = f32(region.extent.width);
-			vp.height = f32(region.extent.height);
-			vp.minDepth = 0.f;
-			vp.maxDepth = 1.f;
-			vkCmdSetViewport(cmd, 0, 1, &vp);
-		}
-
-		void run(vk::command_buffer &cmd, const areaf& src_rect, const areaf& dst_rect, vk::image* target, vk::image* src, vk::image_view* src_view, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
-		{
-			src_area = src_rect;
-			dst_area = dst_rect;
-			src_width = src->width();
-			src_height = src->height();
-
-			overlay_pass::run(cmd, target->width(), target->height(), target, src_view, render_pass, framebuffer_resources);
 		}
 	};
 
@@ -805,7 +741,7 @@ namespace vk
 			{
 				"#version 450\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
-				"layout(std140, set=0, binding=1) uniform static_data{ vec4 regs[8]; };\n"
+				"layout(std140, set=0, binding=0) uniform static_data{ vec4 regs[8]; };\n"
 				"layout(location=0) out vec2 tc0;\n"
 				"layout(location=1) out vec4 color;\n"
 				"layout(location=2) out vec4 mask;\n"
@@ -825,7 +761,7 @@ namespace vk
 			{
 				"#version 420\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
-				"layout(set=0, binding=0) uniform sampler2D fs0;\n"
+				"layout(set=0, binding=1) uniform sampler2D fs0;\n"
 				"layout(location=0) in vec2 tc0;\n"
 				"layout(location=1) in vec4 color;\n"
 				"layout(location=2) in vec4 mask;\n"

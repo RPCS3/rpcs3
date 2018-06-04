@@ -1632,8 +1632,13 @@ void GLGSRender::synchronize_buffers()
 
 bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 {
-	m_samplers_dirty.store(true);
-	return m_gl_texture_cache.blit(src, dst, interpolate, m_rtts);
+	if (m_gl_texture_cache.blit(src, dst, interpolate, m_rtts))
+	{
+		m_samplers_dirty.store(true);
+		return true;
+	}
+
+	return false;
 }
 
 void GLGSRender::notify_tile_unbound(u32 tile)

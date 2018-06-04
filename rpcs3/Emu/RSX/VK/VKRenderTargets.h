@@ -19,7 +19,7 @@ namespace vk
 		u16 surface_height = 0;
 
 		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
-		std::unordered_map<u32, std::unique_ptr<vk::image_view>> views;
+		std::unordered_multimap<u32, std::unique_ptr<vk::image_view>> views;
 
 		u64 frame_tag = 0; //frame id when invalidated, 0 if not invalid
 
@@ -40,12 +40,16 @@ namespace vk
 					mipmaps, layers, samples, initial_layout, tiling, usage, image_flags)
 		{}
 
-		vk::image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
+		vk::image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
+			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
 		{
-			auto found = views.find(remap_encoding);
-			if (found != views.end())
+			auto found = views.equal_range(remap_encoding);
+			for (auto It = found.first; It != found.second; ++It)
 			{
-				return found->second.get();
+				if (It->second->info.subresourceRange.aspectMask & mask)
+				{
+					return It->second.get();
+				}
 			}
 
 			VkComponentMapping real_mapping = vk::apply_swizzle_remap
@@ -55,10 +59,10 @@ namespace vk
 			);
 
 			auto view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), value, VK_IMAGE_VIEW_TYPE_2D, info.format,
-					real_mapping, vk::get_image_subresource_range(0, 0, 1, 1, attachment_aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT)));
+					real_mapping, vk::get_image_subresource_range(0, 0, 1, 1, attachment_aspect_flag & mask));
 
 			auto result = view.get();
-			views[remap_encoding] = std::move(view);
+			views.emplace(remap_encoding, std::move(view));
 			return result;
 		}
 

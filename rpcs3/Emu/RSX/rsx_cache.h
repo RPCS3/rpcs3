@@ -502,7 +502,7 @@ namespace rsx
 				entries.push_back(tmp);
 			}
 
-			if ((entry_count = entries.size()) <= 2)
+			if ((entry_count = (u32)entries.size()) <= 2)
 				return;
 
 			root.rewind();

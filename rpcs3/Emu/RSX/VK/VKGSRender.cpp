@@ -634,9 +634,6 @@ VKGSRender::VKGSRender() : GSRender()
 	m_depth_converter.reset(new vk::depth_convert_pass());
 	m_depth_converter->create(*m_device);
 
-	m_depth_scaler.reset(new vk::depth_scaling_pass());
-	m_depth_scaler->create(*m_device);
-
 	m_attachment_clear_pass.reset(new vk::attachment_clear_pass());
 	m_attachment_clear_pass->create(*m_device);
 
@@ -763,10 +760,6 @@ VKGSRender::~VKGSRender()
 	//RGBA->depth cast helper
 	m_depth_converter->destroy();
 	m_depth_converter.reset();
-
-	//Depth surface blitter
-	m_depth_scaler->destroy();
-	m_depth_scaler.reset();
 
 	//Attachment clear helper
 	m_attachment_clear_pass->destroy();
@@ -1164,24 +1157,11 @@ void VKGSRender::end()
 				const auto dst_w = std::get<2>(region);
 				const auto dst_h = std::get<3>(region);
 
-				if (!is_depth || (src_w == dst_w && src_h == dst_h))
-				{
-					const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
+				const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
 
-					vk::copy_scaled_image(*m_current_command_buffer, surface->old_contents->value, surface->value,
-						surface->old_contents->current_layout, surface->current_layout, 0, 0, src_w, src_h,
-						0, 0, dst_w, dst_h, 1, aspect, true);
-				}
-				else
-				{
-					auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, surface->info.format, 0);
-					auto render_pass = m_render_passes[rp];
-
-					vk::change_image_layout(*m_current_command_buffer, surface->old_contents, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-					m_depth_scaler->run(*m_current_command_buffer, { 0, 0, (f32)src_w, (f32)src_h }, { 0, 0, (f32)dst_w, (f32)dst_h }, surface,
-						surface->old_contents, static_cast<vk::render_target*>(surface->old_contents)->get_view(0xAAE4, rsx::default_remap_vector), render_pass, m_framebuffers_to_clean);
-				}
+				vk::copy_scaled_image(*m_current_command_buffer, surface->old_contents->value, surface->value,
+					surface->old_contents->current_layout, surface->current_layout, 0, 0, src_w, src_h,
+					0, 0, dst_w, dst_h, 1, aspect, true, VK_FILTER_LINEAR, surface->info.format, surface->old_contents->info.format);
 			}
 		};
 
@@ -2048,7 +2028,6 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 		m_attachment_clear_pass->free_resources();
 		m_depth_converter->free_resources();
-		m_depth_scaler->free_resources();
 		m_ui_renderer->free_resources();
 
 		ctx->buffer_views_to_clean.clear();
@@ -3311,46 +3290,8 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 	//Stop all parallel operations until this is finished
 	std::lock_guard<shared_mutex> lock(m_secondary_cb_guard);
 
-	auto result = m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer);
-	m_current_command_buffer->begin();
-
-	if (result.succeeded)
+	if (m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer))
 	{
-		bool require_flush = false;
-		if (result.deferred)
-		{
-			//Requires manual scaling; depth/stencil surface
-			auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, result.dst_image->info.format, 0);
-			auto render_pass = m_render_passes[rp];
-
-			auto old_src_layout = result.src_image->current_layout;
-			auto old_dst_layout = result.dst_image->current_layout;
-
-			vk::change_image_layout(*m_current_command_buffer, result.src_image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			vk::change_image_layout(*m_current_command_buffer, result.dst_image, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
-			// TODO: Insets
-			const areaf src_area = { 0, 0, (f32)result.src_image->width(), (f32)result.src_image->height() };
-			const areaf dst_area = { 0, 0, (f32)result.dst_image->width(), (f32)result.dst_image->height() };
-			m_depth_scaler->run(*m_current_command_buffer, src_area, dst_area, result.dst_image, result.src_image,
-					result.src_view, render_pass, m_framebuffers_to_clean);
-
-			vk::change_image_layout(*m_current_command_buffer, result.src_image, old_src_layout);
-			vk::change_image_layout(*m_current_command_buffer, result.dst_image, old_dst_layout);
-
-			require_flush = true;
-		}
-
-		if (result.dst_image)
-		{
-			if (m_texture_cache.flush_if_cache_miss_likely(result.dst_image->info.format, result.real_dst_address, result.real_dst_size,
-				*m_current_command_buffer, m_swapchain->get_graphics_queue()))
-				require_flush = true;
-		}
-
-		if (require_flush)
-			flush_command_queue();
-
 		m_samplers_dirty.store(true);
 		return true;
 	}
