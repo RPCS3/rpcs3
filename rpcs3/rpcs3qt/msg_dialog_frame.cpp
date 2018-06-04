@@ -7,7 +7,7 @@
 
 constexpr auto qstr = QString::fromStdString;
 
-void msg_dialog_frame::Create(const std::string& msg)
+void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 {
 	static const auto& barWidth = [](){return QLabel("This is the very length of the progressbar due to hidpi reasons.").sizeHint().width();};
 
@@ -18,7 +18,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 	}
 
 	m_dialog = new custom_dialog(type.disable_cancel);
-	m_dialog->setWindowTitle(type.se_normal ? "Normal dialog" : "Error dialog");
+	m_dialog->setWindowTitle(title.empty() ? (type.se_normal ? "Normal dialog" : "Error dialog") : qstr(title));
 	m_dialog->setWindowOpacity(type.bg_invisible ? 1. : 0.75);
 
 	m_text = new QLabel(qstr(msg));
