@@ -39,6 +39,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 		text = new QLabel("", m_dialog);
 		bar = new QProgressBar(m_dialog);
 		bar->setRange(0, m_gauge_max);
+		bar->setValue(0);
 		bar->setFixedWidth(barWidth());
 		bar->setAlignment(Qt::AlignCenter);
 
@@ -66,7 +67,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 		m_tb_progress->setVisible(true);
 #elif HAVE_QTDBUS
 		UpdateProgress(0);
-		progressValue = new int(0);
+		progressValue = 0;
 #endif
 	}
 
@@ -321,12 +322,9 @@ msg_dialog_frame::~msg_dialog_frame()
 		m_tb_button->deleteLater();
 	}
 #elif HAVE_QTDBUS
-	if (progressValue)
-	{
-		UpdateProgress(0, false);
-		delete progressValue;
-	}
+	UpdateProgress(0, false);
 #endif
+
 	if (m_dialog)
 	{
 		m_dialog->deleteLater();
@@ -358,7 +356,7 @@ void msg_dialog_frame::ProgressBarReset(u32 index)
 {
 	if (index == 0 && m_gauge1)
 	{
-		m_gauge1->reset();
+		m_gauge1->setValue(0);
 #ifdef _WIN32
 		m_tb_progress->reset();
 #elif HAVE_QTDBUS
@@ -368,7 +366,7 @@ void msg_dialog_frame::ProgressBarReset(u32 index)
 
 	if (index == 1 && m_gauge2)
 	{
-		m_gauge2->reset();
+		m_gauge2->setValue(0);
 	}
 }
 
@@ -382,8 +380,8 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 #ifdef _WIN32
 			m_tb_progress->setValue(m_tb_progress->value() + delta);
 #elif HAVE_QTDBUS
-			*progressValue += delta;
-			UpdateProgress(*progressValue);
+			progressValue += delta;
+			UpdateProgress(progressValue);
 #endif
 		}
 
@@ -413,9 +411,12 @@ void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
 #ifdef HAVE_QTDBUS
 void msg_dialog_frame::UpdateProgress(int progress, bool disable)
 {
-	QDBusMessage message = QDBusMessage::createSignal(QStringLiteral("/"),
-										QStringLiteral("com.canonical.Unity.LauncherEntry"),
-										QStringLiteral("Update"));
+	QDBusMessage message = QDBusMessage::createSignal
+	(
+		QStringLiteral("/"),
+		QStringLiteral("com.canonical.Unity.LauncherEntry"),
+		QStringLiteral("Update")
+	);
 	QVariantMap properties;
 	if (disable)
 		properties.insert(QStringLiteral("progress-visible"), false);

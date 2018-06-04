@@ -39,7 +39,7 @@ class msg_dialog_frame : public QObject, public MsgDialogBase
 	QWinTaskbarProgress* m_tb_progress = nullptr;
 
 #elif HAVE_QTDBUS
-	int* progressValue = nullptr;
+	int progressValue = 0;
 #endif
 	custom_dialog* m_dialog =nullptr;
 	QLabel* m_text = nullptr;
