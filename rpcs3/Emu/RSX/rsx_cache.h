@@ -423,7 +423,7 @@ namespace rsx
 
 				Emu.CallAfter([&]()
 				{
-					dlg->Create("Preloading cached shaders from disk.\nPlease wait...");
+					dlg->Create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
 					initialized.store(true);
 				});
 
