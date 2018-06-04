@@ -38,13 +38,15 @@
 
 #include "Utilities/GDBDebugServer.h"
 
+#include "Utilities/sysinfo.h"
+
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
 
 cfg_root g_cfg;
 
-bool g_use_rtm = utils::has_rtm();
+bool g_use_rtm;
 
 std::string g_cfg_defaults;
 
@@ -627,6 +629,13 @@ void Emulator::Load(bool add_only)
 #endif
 
 		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", g_cfg.to_string());
+		
+		// Set RTM usage
+		g_use_rtm = utils::has_rtm() && (utils::has_mpx() || g_cfg.core.enable_TSX);
+		if (g_cfg.core.enable_TSX)
+		{
+			LOG_WARNING(GENERAL, "TSX forced by User");
+		}
 
 		// Load patches from different locations
 		fxm::check_unlocked<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");

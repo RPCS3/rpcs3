@@ -20,6 +20,7 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Crypto/unself.h"
+#include "Utilities/sysinfo.h"
 
 #include <unordered_set>
 #include <thread>
@@ -1076,6 +1077,36 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->spuDebug, emu_settings::SPUDebug);
 	SubscribeTooltip(ui->spuDebug, json_debug["spuDebug"].toString());
+		
+	if (utils::has_rtm() && !utils::has_mpx())
+	{
+		xemu_settings->EnhanceCheckBox(ui->enableTSX, emu_settings::EnableTSX);
+		SubscribeTooltip(ui->enableTSX, json_debug["enableTSX"].toString());
+
+		// connect the toogled signal so that the stateChanged signal in EnhanceCheckBox can be prevented
+		connect(ui->enableTSX, &QCheckBox::toggled, [this](bool checked)
+		{
+			if (checked && QMessageBox::No == QMessageBox::critical(this, tr("Haswell/Broadwell TSX Warning"), tr(
+				R"(
+					<p style="white-space: nowrap;">
+						RPCS3 has detected you are using TSX functions on a Haswell or Broadwell CPU.<br>
+						Intel has deactivated these functions in newer Microcode revisions, since they can lead to unpredicted behaviour.<br>
+						That means using TSX may break games or even <font color="red"><b>damage</b></font> your data.<br>
+						We recommend to disable this feature and update your computer BIOS.<br><br>
+						Do you wish to use TSX anyway?
+					</p>
+				)"
+			), QMessageBox::Yes, QMessageBox::No))
+			{
+				// Uncheck if the messagebox was answered with no. This prevents the stateChanged signal in EnhanceCheckBox
+				ui->enableTSX->setChecked(false);
+			}
+		});
+	}
+	else
+	{
+		ui->enableTSX->setHidden(true);
+	}
 
 	//
 	// Layout fix for High Dpi
