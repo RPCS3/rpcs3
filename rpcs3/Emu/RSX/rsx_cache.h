@@ -404,6 +404,8 @@ namespace rsx
 
 		struct progress_dialog_helper
 		{
+			s32 taskbar_index = -1; // -1 to combine all progressbars in the taskbar progress
+
 			std::shared_ptr<MsgDialogBase> dlg;
 			atomic_t<bool> initialized{ false };
 
@@ -413,6 +415,7 @@ namespace rsx
 				dlg->type.se_normal = true;
 				dlg->type.bg_invisible = true;
 				dlg->type.progress_bar_count = 2;
+				dlg->taskbar_index = taskbar_index;
 				dlg->on_close = [](s32 status)
 				{
 					Emu.CallAfter([]()

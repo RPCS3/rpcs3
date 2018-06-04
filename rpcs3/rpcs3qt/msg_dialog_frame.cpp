@@ -33,7 +33,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	{
 		text = new QLabel("", m_dialog);
 		bar = new QProgressBar(m_dialog);
-		bar->setRange(0, m_gauge_max);
+		bar->setRange(0, 100);
 		bar->setValue(0);
 		bar->setFixedWidth(barWidth());
 		bar->setAlignment(Qt::AlignCenter);
@@ -58,11 +58,11 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 #ifdef _WIN32
 		m_tb_button = new QWinTaskbarButton();
 		m_tb_progress = m_tb_button->progress();
-		m_tb_progress->setRange(0, m_gauge_max);
+		m_tb_progress->setRange(0, 100);
 		m_tb_progress->setVisible(true);
 #elif HAVE_QTDBUS
 		UpdateProgress(0);
-		progressValue = 0;
+		m_progress_value = 0;
 #endif
 	}
 
@@ -274,58 +274,101 @@ void msg_dialog_frame::ProgressBarSetMsg(u32 index, const std::string& msg)
 
 void msg_dialog_frame::ProgressBarReset(u32 index)
 {
+	if (!m_dialog)
+	{
+		return;
+	}
+
 	if (index == 0 && m_gauge1)
 	{
 		m_gauge1->setValue(0);
-#ifdef _WIN32
-		m_tb_progress->reset();
-#elif HAVE_QTDBUS
-		UpdateProgress(0);
-#endif
 	}
 
 	if (index == 1 && m_gauge2)
 	{
 		m_gauge2->setValue(0);
 	}
+
+	if (index == taskbar_index)
+	{
+#ifdef _WIN32
+		if (m_tb_progress)
+		{
+			m_tb_progress->reset();
+		}
+#elif HAVE_QTDBUS
+		UpdateProgress(0);
+#endif
+	}
 }
 
 void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 {
-	if (m_dialog)
+	if (!m_dialog)
 	{
-		if (index == 0 && m_gauge1)
-		{
-			m_gauge1->setValue(m_gauge1->value() + delta);
-#ifdef _WIN32
-			m_tb_progress->setValue(m_tb_progress->value() + delta);
-#elif HAVE_QTDBUS
-			progressValue += delta;
-			UpdateProgress(progressValue);
-#endif
-		}
+		return;
+	}
 
-		if (index == 1 && m_gauge2)
+	if (index == 0 && m_gauge1)
+	{
+		m_gauge1->setValue(m_gauge1->value() + delta);
+	}
+
+	if (index == 1 && m_gauge2)
+	{
+		m_gauge2->setValue(m_gauge2->value() + delta);
+	}
+
+	if (index == taskbar_index || taskbar_index == -1)
+	{
+#ifdef _WIN32
+		if (m_tb_progress)
 		{
-			m_gauge2->setValue(m_gauge2->value() + delta);
+			m_tb_progress->setValue(m_tb_progress->value() + delta);
 		}
+#elif HAVE_QTDBUS
+		m_progress_value += delta;
+		UpdateProgress(m_progress_value);
+#endif
 	}
 }
 
 void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
 {
-	if (m_dialog)
+	if (!m_dialog)
 	{
-		if (index == 0 && m_gauge1)
-		{
-			m_gauge1->setMaximum(limit);
-		}
-
-		if (index == 1 && m_gauge2)
-		{
-			m_gauge2->setMaximum(limit);
-		}
+		return;
 	}
+
+	if (index == 0 && m_gauge1)
+	{
+		m_gauge1->setMaximum(limit);
+	}
+
+	if (index == 1 && m_gauge2)
+	{
+		m_gauge2->setMaximum(limit);
+	}
+
+	bool set_taskbar_limit = false;
+
+	if (index == taskbar_index)
+	{
+		m_gauge_max = limit;
+		set_taskbar_limit = true;
+	}
+	else if (taskbar_index == -1)
+	{
+		m_gauge_max += limit;
+		set_taskbar_limit = true;
+	}
+
+#ifdef _WIN32
+	if (set_taskbar_limit && m_tb_progress)
+	{
+		m_tb_progress->setMaximum(m_gauge_max);
+	}
+#endif
 }
 
 #ifdef HAVE_QTDBUS
