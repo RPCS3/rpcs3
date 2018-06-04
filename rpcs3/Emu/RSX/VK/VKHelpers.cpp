@@ -6,10 +6,12 @@ namespace vk
 {
 	context* g_current_vulkan_ctx = nullptr;
 	render_device g_current_renderer;
+	driver_vendor g_driver_vendor = driver_vendor::unknown;
 	std::shared_ptr<vk::mem_allocator_base> g_mem_allocator = nullptr;
 
 	std::unique_ptr<image> g_null_texture;
 	std::unique_ptr<image_view> g_null_image_view;
+	std::unordered_map<VkFormat, std::unique_ptr<image>> g_typeless_textures;
 
 	VkSampler g_null_sampler = nullptr;
 
@@ -148,7 +150,7 @@ namespace vk
 		if (g_null_image_view)
 			return g_null_image_view->value;
 
-		g_null_texture.reset(new image(g_current_renderer, get_memory_mapping(g_current_renderer.gpu()).device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		g_null_texture.reset(new image(g_current_renderer, g_current_renderer.get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, 4, 4, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0));
 
@@ -167,6 +169,25 @@ namespace vk
 		return g_null_image_view->value;
 	}
 
+	vk::image* get_typeless_helper(VkFormat format)
+	{
+		auto create_texture = [&]()
+		{
+			return new vk::image(g_current_renderer, g_current_renderer.get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				VK_IMAGE_TYPE_2D, format, 4096, 4096, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
+		};
+
+		auto &ptr = g_typeless_textures[format];
+		if (!ptr)
+		{
+			auto _img = create_texture();
+			ptr.reset(_img);
+		}
+
+		return ptr.get();
+	}
+
 	void acquire_global_submit_lock()
 	{
 		g_submit_mutex.lock();
@@ -180,7 +201,9 @@ namespace vk
 	void destroy_global_resources()
 	{
 		g_null_texture.reset();
-		g_null_image_view .reset();
+		g_null_image_view.reset();
+
+		g_typeless_textures.clear();
 
 		if (g_null_sampler)
 			vkDestroySampler(g_current_renderer, g_null_sampler, nullptr);
@@ -222,6 +245,7 @@ namespace vk
 		g_drv_disable_fence_reset = false;
 		g_num_processed_frames = 0;
 		g_num_total_frames = 0;
+		g_driver_vendor = driver_vendor::unknown;
 
 		const auto gpu_name = g_current_renderer.gpu().name();
 
@@ -240,14 +264,33 @@ namespace vk
 		//Disable fence reset for proprietary driver and delete+initialize a new fence instead
 		if (gpu_name.find("Radeon") != std::string::npos)
 		{
+			g_driver_vendor = driver_vendor::AMD;
 			g_drv_disable_fence_reset = true;
 		}
 
 		//Nvidia cards are easily susceptible to NaN poisoning
 		if (gpu_name.find("NVIDIA") != std::string::npos || gpu_name.find("GeForce") != std::string::npos)
 		{
+			g_driver_vendor = driver_vendor::NVIDIA;
 			g_drv_sanitize_fp_values = true;
 		}
+
+		if (g_driver_vendor == driver_vendor::unknown)
+		{
+			if (gpu_name.find("RADV") != std::string::npos)
+			{
+				g_driver_vendor = driver_vendor::RADV;
+			}
+			else
+			{
+				LOG_WARNING(RSX, "Unknown driver vendor for device '%s'", gpu_name);
+			}
+		}
+	}
+
+	driver_vendor get_driver_vendor()
+	{
+		return g_driver_vendor;
 	}
 
 	bool emulate_primitive_restart(rsx::primitive_type type)

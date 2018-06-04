@@ -66,6 +66,7 @@ namespace vk
 	struct image;
 	struct vk_data_heap;
 	class mem_allocator_base;
+	enum driver_vendor;
 
 	vk::context *get_current_thread_ctx();
 	void set_current_thread_ctx(const vk::context &ctx);
@@ -80,6 +81,7 @@ namespace vk
 	bool emulate_primitive_restart(rsx::primitive_type type);
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
+	driver_vendor get_driver_vendor();
 
 	VkComponentMapping default_component_map();
 	VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector);
@@ -89,6 +91,7 @@ namespace vk
 
 	VkSampler null_sampler();
 	VkImageView null_image_view(vk::command_buffer&);
+	image* get_typeless_helper(VkFormat format);
 
 	//Sync helpers around vkQueueSubmit
 	void acquire_global_submit_lock();
@@ -109,8 +112,14 @@ namespace vk
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, VkImageSubresourceRange range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
-	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 width, u32 height, u32 mipmaps, VkImageAspectFlagBits aspect);
-	void copy_scaled_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height, u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height, u32 mipmaps, VkImageAspectFlags aspect, bool compatible_formats);
+
+	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
+			const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
+			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
+
+	void copy_scaled_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
+			u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height, u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height, u32 mipmaps,
+			VkImageAspectFlags aspect, bool compatible_formats, VkFilter filter = VK_FILTER_LINEAR, VkFormat src_format = VK_FORMAT_UNDEFINED, VkFormat dst_format = VK_FORMAT_UNDEFINED);
 
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
@@ -133,6 +142,14 @@ namespace vk
 	void reset_fence(VkFence *pFence);
 
 	void die_with_error(const char* faulting_addr, VkResult error_code);
+
+	enum driver_vendor
+	{
+		unknown,
+		AMD,
+		NVIDIA,
+		RADV
+	};
 
 	struct memory_type_mapping
 	{
@@ -328,7 +345,7 @@ namespace vk
 	public:
 		using mem_handle_t = void *;
 
-		mem_allocator_base(VkDevice dev, VkPhysicalDevice pdev) : m_device(dev) {};
+		mem_allocator_base(VkDevice dev, VkPhysicalDevice /*pdev*/) : m_device(dev) {};
 		~mem_allocator_base() {};
 
 		virtual void destroy() = 0;
@@ -386,7 +403,7 @@ namespace vk
 			vmaFreeMemory(m_allocator, static_cast<VmaAllocation>(mem_handle));
 		}
 
-		void *map(mem_handle_t mem_handle, u64 offset, u64 size) override
+		void *map(mem_handle_t mem_handle, u64 offset, u64 /*size*/) override
 		{
 			void *data = nullptr;
 
@@ -432,7 +449,7 @@ namespace vk
 
 		void destroy() override {};
 
-		mem_handle_t alloc(u64 block_sz, u64 alignment, uint32_t memory_type_index) override
+		mem_handle_t alloc(u64 block_sz, u64 /*alignment*/, uint32_t memory_type_index) override
 		{
 			VkDeviceMemory memory;
 			VkMemoryAllocateInfo info = {};
@@ -466,7 +483,7 @@ namespace vk
 			return (VkDeviceMemory)mem_handle;
 		}
 
-		u64 get_vk_device_memory_offset(mem_handle_t mem_handle)
+		u64 get_vk_device_memory_offset(mem_handle_t /*mem_handle*/)
 		{
 			return 0;
 		}

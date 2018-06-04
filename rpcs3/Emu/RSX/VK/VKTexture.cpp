@@ -55,30 +55,39 @@ namespace vk
 		}
 	}
 
-	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 width, u32 height, u32 mipmaps, VkImageAspectFlagBits aspect)
+	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
+			const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
+			VkImageAspectFlags src_transfer_mask, VkImageAspectFlags dst_transfer_mask)
 	{
+		// NOTE: src_aspect should match dst_aspect according to spec but drivers seem to work just fine with the mismatch
+		// TODO: Implement separate pixel transfer for drivers that refuse this workaround
+
 		VkImageSubresourceLayers a_src = {}, a_dst = {};
-		a_src.aspectMask = aspect;
+		a_src.aspectMask = src_aspect & src_transfer_mask;
 		a_src.baseArrayLayer = 0;
 		a_src.layerCount = 1;
 		a_src.mipLevel = 0;
 
 		a_dst = a_src;
+		a_dst.aspectMask = dst_aspect & dst_transfer_mask;
 
 		VkImageCopy rgn = {};
 		rgn.extent.depth = 1;
-		rgn.extent.width = width;
-		rgn.extent.height = height;
-		rgn.dstOffset = { 0, 0, 0 };
-		rgn.srcOffset = { 0, 0, 0 };
+		rgn.extent.width = u32(src_rect.x2 - src_rect.x1);
+		rgn.extent.height = u32(src_rect.y2 - src_rect.y1);
+		rgn.dstOffset = { dst_rect.x1, dst_rect.y1, 0 };
+		rgn.srcOffset = { src_rect.x1, src_rect.y1, 0 };
 		rgn.srcSubresource = a_src;
 		rgn.dstSubresource = a_dst;
 
-		if (srcLayout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-			change_image_layout(cmd, src, srcLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
+		auto preferred_src_format = (src == dst) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		auto preferred_dst_format = (src == dst) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
-		if (dstLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-			change_image_layout(cmd, dst, dstLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
+		if (srcLayout != preferred_src_format)
+			change_image_layout(cmd, src, srcLayout, preferred_src_format, vk::get_image_subresource_range(0, 0, 1, 1, src_aspect));
+
+		if (dstLayout != preferred_dst_format)
+			change_image_layout(cmd, dst, dstLayout, preferred_dst_format, vk::get_image_subresource_range(0, 0, 1, 1, dst_aspect));
 
 		for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
 		{
@@ -88,11 +97,11 @@ namespace vk
 			rgn.dstSubresource.mipLevel++;
 		}
 
-		if (srcLayout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-			change_image_layout(cmd, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, srcLayout, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
+		if (srcLayout != preferred_src_format)
+			change_image_layout(cmd, src, preferred_src_format, srcLayout, vk::get_image_subresource_range(0, 0, 1, 1, src_aspect));
 
-		if (dstLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-			change_image_layout(cmd, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLayout, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
+		if (dstLayout != preferred_dst_format)
+			change_image_layout(cmd, dst, preferred_dst_format, dstLayout, vk::get_image_subresource_range(0, 0, 1, 1, dst_aspect));
 	}
 
 	void copy_scaled_image(VkCommandBuffer cmd,
@@ -100,7 +109,8 @@ namespace vk
 			VkImageLayout srcLayout, VkImageLayout dstLayout,
 			u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height,
 			u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height,
-			u32 mipmaps, VkImageAspectFlags aspect, bool compatible_formats)
+			u32 mipmaps, VkImageAspectFlags aspect, bool compatible_formats,
+			VkFilter filter, VkFormat src_format, VkFormat dst_format)
 	{
 		VkImageSubresourceLayers a_src = {}, a_dst = {};
 		a_src.aspectMask = aspect;
@@ -110,22 +120,129 @@ namespace vk
 
 		a_dst = a_src;
 
+		auto preferred_src_format = (src == dst) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		auto preferred_dst_format = (src == dst) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
 		//TODO: Use an array of offsets/dimensions for mipmapped blits (mipmap count > 1) since subimages will have different dimensions
-		if (srcLayout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-			change_image_layout(cmd, src, srcLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
+		if (srcLayout != preferred_src_format)
+			change_image_layout(cmd, src, srcLayout, preferred_src_format, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 
-		if (dstLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-			change_image_layout(cmd, dst, dstLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
+		if (dstLayout != preferred_dst_format)
+			change_image_layout(cmd, dst, dstLayout, preferred_dst_format, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 
-		if (src_width != dst_width || src_height != dst_height || mipmaps > 1 || !compatible_formats)
+		if (compatible_formats && src_width == dst_width && src_height != dst_height)
 		{
-			if ((aspect & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != 0)
-			{
-				//Most depth/stencil formats cannot be scaled using hw blit
-				LOG_ERROR(RSX, "Cannot perform scaled blit for depth/stencil images");
-				return;
-			}
+			VkImageCopy copy_rgn;
+			copy_rgn.srcOffset = { (int32_t)src_x_offset, (int32_t)src_y_offset, 0 };
+			copy_rgn.dstOffset = { (int32_t)dst_x_offset, (int32_t)dst_y_offset, 0 };
+			copy_rgn.dstSubresource = { (VkImageAspectFlags)aspect, 0, 0, 1 };
+			copy_rgn.srcSubresource = { (VkImageAspectFlags)aspect, 0, 0, 1 };
+			copy_rgn.extent = { src_width, src_height, 1 };
 
+			vkCmdCopyImage(cmd, src, preferred_src_format, dst, preferred_dst_format, 1, &copy_rgn);
+		}
+		else if ((aspect & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != 0)
+		{
+			//Most depth/stencil formats cannot be scaled using hw blit
+			if (src_format == VK_FORMAT_UNDEFINED || dst_width > 4096 || (src_height + dst_height) > 4096)
+			{
+				LOG_ERROR(RSX, "Could not blit depth/stencil image. src_fmt=0x%x, src=%dx%d, dst=%dx%d",
+					(u32)src_format, src_width, src_height, dst_width, dst_height);
+			}
+			else
+			{
+				auto stretch_image_typeless = [&cmd, preferred_src_format, preferred_dst_format](VkImage src, VkImage dst, VkImage typeless,
+						const areai& src_rect, const areai& dst_rect, VkImageAspectFlags aspect, VkImageAspectFlags transfer_flags = 0xFF)
+				{
+					const u32 src_w = u32(src_rect.x2 - src_rect.x1);
+					const u32 src_h = u32(src_rect.y2 - src_rect.y1);
+					const u32 dst_w = u32(dst_rect.x2 - dst_rect.x1);
+					const u32 dst_h = u32(dst_rect.y2 - dst_rect.y1);
+
+					// Drivers are not very accepting of aspect COLOR -> aspect DEPTH or aspect STENCIL separately
+					// However, this works okay for D24S8 (nvidia-only format)
+					// To work around the problem we use the non-existent DEPTH/STENCIL/DEPTH_STENCIL aspect of the color texture instead
+					VkImageAspectFlags typeless_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+					if (transfer_flags == VK_IMAGE_ASPECT_DEPTH_BIT || transfer_flags == VK_IMAGE_ASPECT_STENCIL_BIT)
+					{
+						// NOTE: This path is only taken for VK_FORMAT_D32_SFLOAT_S8_UINT as there is no 36-bit format available
+						// On Nvidia, the default format is VK_FORMAT_D24_UNORM_S8_UINT which does not require this workaround
+						switch (vk::get_driver_vendor())
+						{
+						case driver_vendor::AMD:
+							// Quirks: This workaround allows proper transfer of stencil data
+						case driver_vendor::NVIDIA:
+							// Quirks: This workaround allows only transfer of depth data, stencil is ignored
+							typeless_aspect = aspect;
+							break;
+						default:
+							break;
+						}
+					}
+
+					//1. Copy unscaled to typeless surface
+					copy_image(cmd, src, typeless, preferred_src_format, VK_IMAGE_LAYOUT_GENERAL,
+						src_rect, { 0, 0, (s32)src_w, (s32)src_h }, 1, aspect, typeless_aspect, transfer_flags, 0xFF);
+
+					//2. Blit typeless surface to self
+					copy_scaled_image(cmd, typeless, typeless, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
+						0, 0, src_w, src_h, 0, src_h, dst_w, dst_h, 1, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_FILTER_NEAREST);
+
+					//3. Copy back the aspect bits
+					copy_image(cmd, typeless, dst, VK_IMAGE_LAYOUT_GENERAL, preferred_dst_format,
+						{0, (s32)src_h, (s32)dst_w, s32(src_h + dst_h) }, dst_rect, 1, typeless_aspect, aspect, 0xFF, transfer_flags);
+				};
+
+				areai src_rect = { (s32)src_x_offset, (s32)src_y_offset, s32(src_x_offset + src_width), s32(src_y_offset + src_height) };
+				areai dst_rect = { (s32)dst_x_offset, (s32)dst_y_offset, s32(dst_x_offset + dst_width), s32(dst_y_offset + dst_height) };
+
+				switch (src_format)
+				{
+				case VK_FORMAT_D16_UNORM:
+				{
+					auto typeless = vk::get_typeless_helper(VK_FORMAT_R16_UNORM);
+					change_image_layout(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL);
+					stretch_image_typeless(src, dst, typeless->value, src_rect, dst_rect, VK_IMAGE_ASPECT_DEPTH_BIT);
+					break;
+				}
+				case VK_FORMAT_D24_UNORM_S8_UINT:
+				{
+					auto typeless = vk::get_typeless_helper(VK_FORMAT_B8G8R8A8_UNORM);
+					change_image_layout(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL);
+					stretch_image_typeless(src, dst, typeless->value, src_rect, dst_rect, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+					break;
+				}
+				case VK_FORMAT_D32_SFLOAT_S8_UINT:
+				{
+					// NOTE: Typeless transfer (Depth/Stencil->Equivalent Color->Depth/Stencil) of single aspects does not work on AMD when done from a non-depth texture
+					// Since the typeless transfer itself violates spec, the only way to make it work is to use a D32S8 intermediate
+					// Copy from src->intermediate then intermediate->dst for each aspect separately
+
+					auto typeless_depth = vk::get_typeless_helper(VK_FORMAT_R32_SFLOAT);
+					auto typeless_stencil = vk::get_typeless_helper(VK_FORMAT_R8_UINT);
+					change_image_layout(cmd, typeless_depth, VK_IMAGE_LAYOUT_GENERAL);
+					change_image_layout(cmd, typeless_stencil, VK_IMAGE_LAYOUT_GENERAL);
+
+					auto intermediate = vk::get_typeless_helper(VK_FORMAT_D32_SFLOAT_S8_UINT);
+					change_image_layout(cmd, intermediate, preferred_dst_format);
+
+					const areai intermediate_rect = { 0, 0, (s32)dst_width, (s32)dst_height };
+					const VkImageAspectFlags depth_stencil = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+
+					// Blit DEPTH aspect
+					stretch_image_typeless(src, intermediate->value, typeless_depth->value, src_rect, intermediate_rect, depth_stencil, VK_IMAGE_ASPECT_DEPTH_BIT);
+					copy_image(cmd, intermediate->value, dst, preferred_dst_format, preferred_dst_format, intermediate_rect, dst_rect, 1, depth_stencil, depth_stencil, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+					// Blit STENCIL aspect
+					stretch_image_typeless(src, intermediate->value, typeless_stencil->value, src_rect, intermediate_rect, depth_stencil, VK_IMAGE_ASPECT_STENCIL_BIT);
+					copy_image(cmd, intermediate->value, dst, preferred_dst_format, preferred_dst_format, intermediate_rect, dst_rect, 1, depth_stencil, depth_stencil, VK_IMAGE_ASPECT_STENCIL_BIT, VK_IMAGE_ASPECT_STENCIL_BIT);
+					break;
+				}
+				}
+			}
+		}
+		else
+		{
 			VkImageBlit rgn = {};
 			rgn.srcOffsets[0] = { (int32_t)src_x_offset, (int32_t)src_y_offset, 0 };
 			rgn.srcOffsets[1] = { (int32_t)(src_width + src_x_offset), (int32_t)(src_height + src_y_offset), 1 };
@@ -136,29 +253,18 @@ namespace vk
 
 			for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
 			{
-				vkCmdBlitImage(cmd, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &rgn, VK_FILTER_LINEAR);
+				vkCmdBlitImage(cmd, src, preferred_src_format, dst, preferred_dst_format, 1, &rgn, filter);
 
 				rgn.srcSubresource.mipLevel++;
 				rgn.dstSubresource.mipLevel++;
 			}
 		}
-		else
-		{
-			VkImageCopy copy_rgn;
-			copy_rgn.srcOffset = { (int32_t)src_x_offset, (int32_t)src_y_offset, 0 };
-			copy_rgn.dstOffset = { (int32_t)dst_x_offset, (int32_t)dst_y_offset, 0 };
-			copy_rgn.dstSubresource = { (VkImageAspectFlags)aspect, 0, 0, 1 };
-			copy_rgn.srcSubresource = { (VkImageAspectFlags)aspect, 0, 0, 1 };
-			copy_rgn.extent = { src_width, src_height, 1 };
 
-			vkCmdCopyImage(cmd, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_rgn);
-		}
+		if (srcLayout != preferred_src_format)
+			change_image_layout(cmd, src, preferred_src_format, srcLayout, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 
-		if (srcLayout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-			change_image_layout(cmd, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, srcLayout, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
-
-		if (dstLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-			change_image_layout(cmd, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLayout, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
+		if (dstLayout != preferred_dst_format)
+			change_image_layout(cmd, dst, preferred_dst_format, dstLayout, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 	}
 
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
