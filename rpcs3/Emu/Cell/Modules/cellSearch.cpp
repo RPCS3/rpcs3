@@ -2,18 +2,19 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "cellFs.h"
 #include "cellMusic.h"
 #include "cellSysutil.h"
 
 #include "cellSearch.h"
+#include "xxhash.h"
 
 logs::channel cellSearch("cellSearch");
 
-template<>
+template <>
 void fmt_class_string<CellSearchError>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](auto error)
-	{
+	format_enum(out, arg, [](auto error) {
 		switch (error)
 		{
 			STR_CASE(CELL_SEARCH_CANCELED);
@@ -55,18 +56,26 @@ struct search_object_t
 	static const u32 id_step  = 1;
 	static const u32 id_count = 64;
 	static const u32 invalid  = 0xFFFFFFFF;
+	std::vector<u64> content_ids;
+};
+
+struct search_content_t
+{
+	CellSearchContentType type = CELL_SEARCH_CONTENTTYPE_NONE;
+	std::string contentPath;
+	std::string thumbnailPath;
+	std::unique_ptr<u8[]> data;
 };
 
 error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<void> userData)
 {
-	cellSearch.warning("cellSearchInitialize(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x)", (u32) mode, container, func, userData);
+	cellSearch.warning("cellSearchInitialize(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x)", (u32)mode, container, func, userData);
 
 	const auto search = fxm::make_always<search_t>();
-	search->func = func;
-	search->userData = userData;
+	search->func      = func;
+	search->userData  = userData;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
 		func(ppu, CELL_SEARCH_EVENT_INITIALIZE_RESULT, CELL_OK, vm::null, userData);
 		return CELL_OK;
 	});
@@ -78,8 +87,7 @@ error_code cellSearchFinalize()
 {
 	cellSearch.warning("cellSearchFinalize()");
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
 		const auto search = fxm::get_always<search_t>();
 
 		search->func(ppu, CELL_SEARCH_EVENT_FINALIZE_RESULT, CELL_OK, vm::null, search->userData);
@@ -91,7 +99,7 @@ error_code cellSearchFinalize()
 
 error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartListSearch(type=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32) type, (u32) sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartListSearch(type=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32)type, (u32)sortOrder, outSearchId);
 
 	if (!outSearchId)
 	{
@@ -100,12 +108,11 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 
 	*outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
 		const auto search = fxm::get_always<search_t>();
 
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId = *outSearchId;
+		resultParam->searchId  = *outSearchId;
 		resultParam->resultNum = 0; // TODO
 
 		search->func(ppu, CELL_SEARCH_EVENT_LISTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
@@ -117,7 +124,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 
 error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> listId, CellSearchSortKey sortKey, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartContentSearchInList(listId=*0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", listId, (u32) sortKey, (u32) sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartContentSearchInList(listId=*0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", listId, (u32)sortKey, (u32)sortOrder, outSearchId);
 
 	if (!listId || !outSearchId)
 	{
@@ -126,12 +133,11 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 
 	*outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
 		const auto search = fxm::get_always<search_t>();
 
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId = *outSearchId;
+		resultParam->searchId  = *outSearchId;
 		resultParam->resultNum = 0; // TODO
 
 		search->func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_INLIST_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
@@ -143,22 +149,106 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 
 error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSearchSortKey sortKey, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartContentSearch(type=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32) type, (u32) sortKey, (u32) sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartContentSearch(type=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32)type, (u32)sortKey, (u32)sortOrder, outSearchId);
 
 	if (!outSearchId)
 	{
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
+	char* media_dir = (char*)malloc(6);
+	switch (type)
+	{
+		case CELL_SEARCH_CONTENTSEARCHTYPE_MUSIC_ALL: std::strcpy(media_dir, "music"); break;
+		case CELL_SEARCH_CONTENTSEARCHTYPE_PHOTO_ALL: std::strcpy(media_dir, "photo"); break;
+		case CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL: std::strcpy(media_dir, "video"); break;
+		default: return CELL_SEARCH_ERROR_PARAM;
+	}
+
 	*outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
 		const auto search = fxm::get_always<search_t>();
+		const auto content_map = fxm::get_always<std::unordered_map<u32, search_content_t>>();
+		auto curr_search = idm::get<search_object_t>(*outSearchId);
 
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId = *outSearchId;
+		resultParam->searchId  = *outSearchId;
 		resultParam->resultNum = 0; // TODO
+
+		std::string search_dir = vfs::get(fmt::format("/dev_hdd0/%s", media_dir));
+		cellSearch.success("media path: \"%s\"", search_dir);
+
+		std::function<void(std::string&)> searchInFolder = [&, type](std::string& path) {
+			for (auto&& item : fs::dir(path))
+			{
+				item.name = vfs::unescape(item.name);
+				std::string fpath(path + "/" + item.name);
+
+				//if (!(std::strcmp(item.name.c_str(), ".") && std::strcmp(item.name.c_str(), "..")))
+				if (item.name.length() < 3) // "." and ".." SHOULD be the only cases, and this is a simpler condition to check
+				{
+					continue;
+				}
+
+				if (item.is_directory)
+				{
+					searchInFolder(fpath);
+					continue;
+				}
+				
+				/* Perform first check that file is of desired type. For example, don't wanna go
+				 * identifying "AlbumArt.jpg" as an MP3. Hrm... Postpone this thought. Do games
+				 * perform their own checks? DIVA ignores anything without the MP3 extension.
+				 */
+
+				u64 path_hash = XXH64(fpath.c_str(), fpath.length(), 0);
+				if (content_map->find(path_hash) == content_map->end()) // content isn't yet being tracked
+				{
+					search_content_t curr_find;
+					curr_find.contentPath.assign(std::strstr(fpath.c_str(), "/dev_hdd0"));
+					if (type == CELL_SEARCH_CONTENTSEARCHTYPE_MUSIC_ALL)
+					{
+						curr_find.type = CELL_SEARCH_CONTENTTYPE_MUSIC;
+						curr_find.data.reset(new u8[sizeof(CellSearchMusicInfo)]);
+						CellSearchMusicInfo* info = (CellSearchMusicInfo*)curr_find.data.get();
+						/* Some kinda file music analysis and assign the values as such */
+						strcpy(info->title, item.name.c_str()); // it'll do for the moment...
+						info->size = item.size;
+					}
+					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_PHOTO_ALL)
+					{
+						curr_find.type = CELL_SEARCH_CONTENTTYPE_PHOTO;
+						curr_find.data.reset(new u8[sizeof(CellSearchPhotoInfo)]);
+						CellSearchPhotoInfo* info = (CellSearchPhotoInfo*)curr_find.data.get();
+						/* Some kinda file photo analysis and assign the values as such */
+						strcpy(info->title, item.name.c_str()); // it'll do for the moment...
+						info->size = item.size;
+					}
+					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL)
+					{
+						curr_find.type = CELL_SEARCH_CONTENTTYPE_VIDEO;
+						curr_find.data.reset(new u8[sizeof(CellSearchVideoInfo)]);
+						CellSearchVideoInfo* info = (CellSearchVideoInfo*)curr_find.data.get();
+						/* Some kinda file video analysis and assign the values as such */
+						strcpy(info->title, item.name.c_str()); // it'll do for the moment...
+						info->size = item.size;
+					}
+					content_map->try_emplace(path_hash, std::move(curr_find));
+				}
+				else // file is already stored and tracked
+				{
+					/* Perform checks to see if the identified file has been modified since last checked */
+					/* In which case, update the stored content's properties */
+					// auto content_found = &content_map->at(content_id);
+				}
+				curr_search->content_ids.push_back(path_hash); // place this file's "ID" into the list of found types
+
+				cellSearch.success("Content ID: %08X   Path: \"%s\"", path_hash, fpath);
+			}
+		};
+		searchInFolder(search_dir);
+		resultParam->resultNum = curr_search->content_ids.size();
 
 		search->func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
 		return CELL_OK;
@@ -169,7 +259,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 
 error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> videoId, CellSearchSceneSearchType searchType, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartSceneSearchInVideo(videoId=*0x%x, searchType=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", videoId, (u32) searchType, (u32) sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartSceneSearchInVideo(videoId=*0x%x, searchType=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", videoId, (u32)searchType, (u32)sortOrder, outSearchId);
 
 	if (!videoId || !outSearchId)
 	{
@@ -178,12 +268,11 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 
 	*outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
 		const auto search = fxm::get_always<search_t>();
 
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId = *outSearchId;
+		resultParam->searchId  = *outSearchId;
 		resultParam->resultNum = 0; // TODO
 
 		search->func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_INVIDEO_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
@@ -193,9 +282,11 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 	return CELL_OK;
 }
 
-error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::cptr<char> gameTitle, vm::cpptr<char> tags, u32 tagNum, CellSearchSortKey sortKey, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
+error_code cellSearchStartSceneSearch(
+    CellSearchSceneSearchType searchType, vm::cptr<char> gameTitle, vm::cpptr<char> tags, u32 tagNum, CellSearchSortKey sortKey, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartSceneSearch(searchType=0x%x, gameTitle=%s, tags=**0x%x, tagNum=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32) searchType, gameTitle, tags, tagNum, (u32) sortKey, (u32) sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartSceneSearch(searchType=0x%x, gameTitle=%s, tags=**0x%x, tagNum=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32)searchType, gameTitle, tags, tagNum,
+	    (u32)sortKey, (u32)sortOrder, outSearchId);
 
 	if (!gameTitle || !outSearchId)
 	{
@@ -204,12 +295,11 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 
 	*outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
 		const auto search = fxm::get_always<search_t>();
 
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId = *outSearchId;
+		resultParam->searchId  = *outSearchId;
 		resultParam->resultNum = 0; // TODO
 
 		search->func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
@@ -221,18 +311,52 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 
 error_code cellSearchGetContentInfoByOffset(CellSearchId searchId, s32 offset, vm::ptr<void> infoBuffer, vm::ptr<CellSearchContentType> outContentType, vm::ptr<CellSearchContentId> outContentId)
 {
-	cellSearch.todo("cellSearchGetContentInfoByOffset(searchId=0x%x, offset=0x%x, infoBuffer=*0x%x, outContentType=*0x%x, outContentId=*0x%x)", searchId, offset, infoBuffer, outContentType, outContentId);
+	cellSearch.todo(
+	    "cellSearchGetContentInfoByOffset(searchId=0x%x, offset=0x%x, infoBuffer=*0x%x, outContentType=*0x%x, outContentId=*0x%x)", searchId, offset, infoBuffer, outContentType, outContentId);
 
 	if (!outContentType)
 	{
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
+	const auto content_map  = fxm::get_always<std::unordered_map<u32, search_content_t>>();
 	const auto searchObject = idm::get<search_object_t>(searchId);
 
 	if (!searchObject)
 	{
 		return CELL_SEARCH_ERROR_INVALID_SEARCHID;
+	}
+
+	auto content_id = searchObject->content_ids.at(offset);
+	if (content_map->find(content_id) != content_map->end())
+	{
+		auto found = &content_map->at(content_id);
+		switch(found->type)
+		{
+			case CELL_SEARCH_CONTENTTYPE_MUSIC:
+				std::memcpy(infoBuffer.get_ptr(), (void*)found->data.get(), sizeof(CellSearchMusicInfo));
+				break;
+			case CELL_SEARCH_CONTENTTYPE_PHOTO:
+				std::memcpy(infoBuffer.get_ptr(), (void*)found->data.get(), sizeof(CellSearchPhotoInfo));
+				break;
+			case CELL_SEARCH_CONTENTTYPE_VIDEO:
+				std::memcpy(infoBuffer.get_ptr(), (void*)found->data.get(), sizeof(CellSearchVideoInfo));
+				break;
+
+			// TODO
+			case CELL_SEARCH_CONTENTTYPE_MUSICLIST:
+			case CELL_SEARCH_CONTENTTYPE_PHOTOLIST:
+			case CELL_SEARCH_CONTENTTYPE_VIDEOLIST:
+			case CELL_SEARCH_CONTENTTYPE_SCENE:
+			default:
+				return CELL_SEARCH_ERROR_GENERIC;
+		}
+
+		*outContentType = found->type;
+		std::memcpy((void*)outContentId->data, &u128(content_id), CELL_SEARCH_CONTENT_ID_SIZE);
+	} else // content ID not found, perform a search first
+	{
+		return CELL_SEARCH_ERROR_OUT_OF_RANGE;
 	}
 
 	return CELL_OK;
@@ -269,9 +393,11 @@ error_code cellSearchGetOffsetByContentId(CellSearchId searchId, vm::cptr<CellSe
 	return CELL_OK;
 }
 
-error_code cellSearchGetContentIdByOffset(CellSearchId searchId, s32 offset, vm::ptr<CellSearchContentType> outContentType, vm::ptr<CellSearchContentId> outContentId, vm::ptr<CellSearchTimeInfo> outTimeInfo)
+error_code cellSearchGetContentIdByOffset(
+    CellSearchId searchId, s32 offset, vm::ptr<CellSearchContentType> outContentType, vm::ptr<CellSearchContentId> outContentId, vm::ptr<CellSearchTimeInfo> outTimeInfo)
 {
-	cellSearch.todo("cellSearchGetContentIdByOffset(searchId=0x%x, offset=0x%x, outContentType=*0x%x, outContentId=*0x%x, outTimeInfo=*0x%x)", searchId, offset, outContentType, outContentId, outTimeInfo);
+	cellSearch.todo(
+	    "cellSearchGetContentIdByOffset(searchId=0x%x, offset=0x%x, outContentType=*0x%x, outContentId=*0x%x, outTimeInfo=*0x%x)", searchId, offset, outContentType, outContentId, outTimeInfo);
 
 	if (!outContentType || !outContentId)
 	{
@@ -300,9 +426,10 @@ error_code cellSearchGetContentInfoGameComment(vm::cptr<CellSearchContentId> con
 	return CELL_OK;
 }
 
-error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<CellSearchContentId> contentId, CellSearchRepeatMode repeatMode, CellSearchContextOption option, vm::ptr<CellMusicSelectionContext> outContext)
+error_code cellSearchGetMusicSelectionContext(
+    CellSearchId searchId, vm::cptr<CellSearchContentId> contentId, CellSearchRepeatMode repeatMode, CellSearchContextOption option, vm::ptr<CellMusicSelectionContext> outContext)
 {
-	cellSearch.todo("cellSearchGetMusicSelectionContext(searchId=0x%x, contentId=*0x%x, repeatMode=0x%x, option=0x%x, outContext=*0x%x)", searchId, contentId, (u32) repeatMode, (u32) option, outContext);
+	cellSearch.todo("cellSearchGetMusicSelectionContext(searchId=0x%x, contentId=*0x%x, repeatMode=0x%x, option=0x%x, outContext=*0x%x)", searchId, contentId, (u32)repeatMode, (u32)option, outContext);
 
 	if (!outContext)
 	{
@@ -339,6 +466,19 @@ error_code cellSearchGetContentInfoPath(vm::cptr<CellSearchContentId> contentId,
 	{
 		return CELL_SEARCH_ERROR_PARAM;
 	}
+
+	u128 id = *(u128*)contentId->data;
+	const auto content_map  = fxm::get_always<std::unordered_map<u32, search_content_t>>();
+	if(content_map->find(id.lo) != content_map->end())
+	{
+		auto found = &content_map->at(id.lo);
+		std::strcpy(infoPath->contentPath,   found->contentPath.c_str());
+		std::strcpy(infoPath->thumbnailPath, found->thumbnailPath.c_str());
+	} else {
+		return CELL_SEARCH_ERROR_CONTENT_NOT_FOUND;
+	}
+
+	cellSearch.success("contentId = %08X  contentPath = %s", id.lo, infoPath->contentPath);
 
 	return CELL_OK;
 }
@@ -421,8 +561,8 @@ error_code cellSearchEnd(CellSearchId searchId)
 	return CELL_OK;
 }
 
-DECLARE(ppu_module_manager::cellSearch)("cellSearchUtility", []()
-{
+DECLARE(ppu_module_manager::cellSearch)
+("cellSearchUtility", []() {
 	REG_FUNC(cellSearchUtility, cellSearchInitialize);
 	REG_FUNC(cellSearchUtility, cellSearchFinalize);
 	REG_FUNC(cellSearchUtility, cellSearchStartListSearch);
