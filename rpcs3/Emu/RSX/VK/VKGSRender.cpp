@@ -1430,7 +1430,8 @@ void VKGSRender::end()
 	bool primitive_emulated = false;
 	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
 
-	const bool single_draw = (!supports_multidraw ||
+	const bool allow_multidraw = supports_multidraw && !g_cfg.video.disable_FIFO_reordering;
+	const bool single_draw = (!allow_multidraw ||
 		rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 ||
 		rsx::method_registers.current_draw_clause.is_disjoint_primitive);
 
