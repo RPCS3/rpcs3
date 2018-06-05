@@ -136,6 +136,9 @@ namespace fs
 	// Try to get parent directory (returns empty string on failure)
 	std::string get_parent_dir(const std::string& path);
 
+	// Try to get file extension (returns empty string if directory or no extension)
+	std::string get_extension(const std::string& filename);
+
 	// Get file information
 	bool stat(const std::string& path, stat_t& info);
 
@@ -159,6 +162,12 @@ namespace fs
 
 	// Create directories
 	bool create_path(const std::string& path);
+
+	// Create a hard link to a file
+	bool create_hard_link(const std::string& from, const std::string& to);
+
+	// Create a soft/symbolic link to a file
+	bool create_soft_link(const std::string& from, const std::string& to);
 
 	// Rename (move) file or directory
 	bool rename(const std::string& from, const std::string& to, bool overwrite);

@@ -264,6 +264,19 @@ std::string fs::get_parent_dir(const std::string& path)
 	}
 }
 
+std::string fs::get_extension(const std::string& filename)
+{
+	size_t pos = 0;
+	auto temp = fs::get_parent_dir(filename);
+	if (temp != "")
+	{
+		pos = temp.size() - 1;
+	}
+	temp.assign(&filename.at(pos));
+	pos = temp.find_last_of(".");
+	return temp.substr(pos);
+}
+
 bool fs::stat(const std::string& path, stat_t& info)
 {
 	if (auto device = get_virtual_device(path))
@@ -509,6 +522,43 @@ bool fs::create_path(const std::string& path)
 	}
 
 	return true;
+}
+
+bool fs::create_hard_link(const std::string& from, const std::string& to)
+{ // TODO
+#ifdef _WIN32
+	if (!CreateHardLinkA((LPCSTR)to.c_str(), (LPCSTR)from.c_str(), NULL))
+	{
+		return false;
+	}
+
+	return true;
+#else
+
+	return false;
+#endif
+}
+
+bool fs::create_soft_link(const std::string& from, const std::string& to)
+{
+#ifdef _WIN32
+	// TODO - Workaround for older versions of Windows...
+	/* https://blogs.windows.com/buildingapps/2016/12/02/symlinks-windows-10/ */
+	DWORD link_flags = 0x02; // SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE (Only Windows 10 Build 14972 and up)
+	if (fs::is_dir(from))
+	{
+		link_flags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
+	}
+
+	if (!CreateSymbolicLinkA((LPCSTR)to.c_str(), (LPCSTR)from.c_str(), link_flags))
+	{
+		return false;
+	}
+
+	return true;
+#else
+
+#endif
 }
 
 bool fs::remove_dir(const std::string& path)
