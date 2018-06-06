@@ -10,10 +10,11 @@
 
 logs::channel cellSearch("cellSearch");
 
-template <>
+template<>
 void fmt_class_string<CellSearchError>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](auto error) {
+	format_enum(out, arg, [](auto error)
+	{
 		switch (error)
 		{
 			STR_CASE(CELL_SEARCH_CANCELED);
@@ -70,13 +71,14 @@ using ContentIdMap = std::unordered_map<u64, search_content_t>;
 
 error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<void> userData)
 {
-	cellSearch.success("cellSearchInitialize(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x)", (u32)mode, container, func, userData);
+	cellSearch.success("cellSearchInitialize(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x)", (u32) mode, container, func, userData);
 
 	const auto search = fxm::make_always<search_t>();
-	search->func      = func;
-	search->userData  = userData;
+	search->func = func;
+	search->userData = userData;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
 		func(ppu, CELL_SEARCH_EVENT_INITIALIZE_RESULT, CELL_OK, vm::null, userData);
 		return CELL_OK;
 	});
@@ -88,7 +90,8 @@ error_code cellSearchFinalize()
 {
 	cellSearch.success("cellSearchFinalize()");
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
 		const auto search = fxm::get_always<search_t>();
 
 		search->func(ppu, CELL_SEARCH_EVENT_FINALIZE_RESULT, CELL_OK, vm::null, search->userData);
@@ -100,7 +103,7 @@ error_code cellSearchFinalize()
 
 error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartListSearch(type=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32)type, (u32)sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartListSearch(type=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32) type, (u32) sortOrder, outSearchId);
 
 	if (!outSearchId)
 	{
@@ -109,11 +112,12 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 
 	*outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
 		const auto search = fxm::get_always<search_t>();
 
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId  = *outSearchId;
+		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // TODO
 
 		search->func(ppu, CELL_SEARCH_EVENT_LISTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
@@ -125,7 +129,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 
 error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> listId, CellSearchSortKey sortKey, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartContentSearchInList(listId=*0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", listId, (u32)sortKey, (u32)sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartContentSearchInList(listId=*0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", listId, (u32) sortKey, (u32) sortOrder, outSearchId);
 
 	if (!listId || !outSearchId)
 	{
@@ -134,11 +138,12 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 
 	*outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
 		const auto search = fxm::get_always<search_t>();
 
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId  = *outSearchId;
+		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // TODO
 
 		search->func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_INLIST_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
@@ -150,7 +155,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 
 error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSearchSortKey sortKey, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartContentSearch(type=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32)type, (u32)sortKey, (u32)sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartContentSearch(type=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32) type, (u32) sortKey, (u32) sortOrder, outSearchId);
 
 	if (!outSearchId)
 	{
@@ -168,20 +173,22 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 
 	*outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
 		const auto search = fxm::get_always<search_t>();
 		const auto content_map = fxm::get_always<ContentIdMap>();
 		auto curr_search = idm::get<search_object_t>(*outSearchId);
 
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId  = *outSearchId;
+		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // Set again later
 
 		fs::create_path(vfs::get("/dev_hdd0/.temp")); // don't care if it fails... just don't make a file called ".temp"
 		std::string search_dir = vfs::get(fmt::format("/dev_hdd0/%s", media_dir));
 		//cellSearch.success("media path: \"%s\"", search_dir);
 
-		std::function<void(std::string&)> searchInFolder = [&, type](std::string& path) {
+		std::function<void(std::string&)> searchInFolder = [&, type](std::string& path)
+		{
 			for (auto&& item : fs::dir(path))
 			{
 				item.name = vfs::unescape(item.name);
@@ -212,9 +219,8 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 				{
 					std::string extension = fs::get_extension(item.name); // used again later if no "Title" found
 					std::string link_path = fmt::format("/dev_hdd0/.temp/%08X%s", path_hash, extension);
-					cellSearch.success("setting a link path = %s", link_path);
 					if (!fs::create_soft_link(fpath, vfs::get(link_path)))
-					{ // NotLikeThis
+					{
 						cellSearch.error("failed to create a link \"%s\"", link_path);
 						continue;
 					}
@@ -249,7 +255,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						std::strcpy(info->title, std::string(item.name.c_str(), item.name.length() - extension.length()).c_str()); // it'll do for the moment...
 						info->size = item.size;
 					}
-					content_map->try_emplace(path_hash, std::move(curr_find));
+					content_map->emplace(path_hash, std::move(curr_find));
 				}
 				else // file is already stored and tracked
 				{ // TODO
@@ -274,7 +280,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 
 error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> videoId, CellSearchSceneSearchType searchType, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartSceneSearchInVideo(videoId=*0x%x, searchType=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", videoId, (u32)searchType, (u32)sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartSceneSearchInVideo(videoId=*0x%x, searchType=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", videoId, (u32) searchType, (u32) sortOrder, outSearchId);
 
 	if (!videoId || !outSearchId)
 	{
@@ -283,11 +289,12 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 
 	*outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
 		const auto search = fxm::get_always<search_t>();
 
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId  = *outSearchId;
+		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // TODO
 
 		search->func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_INVIDEO_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
@@ -299,8 +306,7 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 
 error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::cptr<char> gameTitle, vm::cpptr<char> tags, u32 tagNum, CellSearchSortKey sortKey, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartSceneSearch(searchType=0x%x, gameTitle=%s, tags=**0x%x, tagNum=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32)searchType, gameTitle, tags, tagNum,
-	    (u32)sortKey, (u32)sortOrder, outSearchId);
+	cellSearch.todo("cellSearchStartSceneSearch(searchType=0x%x, gameTitle=%s, tags=**0x%x, tagNum=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32) searchType, gameTitle, tags, tagNum, (u32) sortKey, (u32) sortOrder, outSearchId);
 
 	if (!gameTitle || !outSearchId)
 	{
@@ -309,11 +315,12 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 
 	*outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	{
 		const auto search = fxm::get_always<search_t>();
 
 		vm::var<CellSearchResultParam> resultParam;
-		resultParam->searchId  = *outSearchId;
+		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // TODO
 
 		search->func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
@@ -366,8 +373,9 @@ error_code cellSearchGetContentInfoByOffset(CellSearchId searchId, s32 offset, v
 		}
 
 		*outContentType = found->type;
-		std::memcpy((void*)outContentId->data, &u128(content_id), CELL_SEARCH_CONTENT_ID_SIZE);
-	} else // content ID not found, perform a search first
+		std::memcpy((void*)outContentId->data, &content_id, CELL_SEARCH_CONTENT_ID_SIZE);
+	}
+	else // content ID not found, perform a search first
 	{
 		return CELL_SEARCH_ERROR_OUT_OF_RANGE;
 	}
@@ -478,17 +486,19 @@ error_code cellSearchGetContentInfoPath(vm::cptr<CellSearchContentId> contentId,
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	u128 id = *(u128*)contentId->data;
+	u64 id = *(u64*)contentId->data;
 	const auto content_map  = fxm::get_always<ContentIdMap>();
-	if(content_map->find(id.lo) != content_map->end())
+	if(content_map->find(id) != content_map->end())
 	{
-		auto found = &content_map->at(id.lo);
+		auto found = &content_map->at(id);
 		std::memcpy(infoPath.get_ptr(), (void*)&found->infoPath, sizeof(CellSearchContentInfoPath));
-	} else {
+	}
+	else
+	{
 		return CELL_SEARCH_ERROR_CONTENT_NOT_FOUND;
 	}
 
-	cellSearch.success("contentId = %08X  contentPath = \"%s\"", id.lo, infoPath->contentPath);
+	cellSearch.success("contentId = %08X  contentPath = \"%s\"", id, infoPath->contentPath);
 
 	return CELL_OK;
 }
@@ -572,7 +582,8 @@ error_code cellSearchEnd(CellSearchId searchId)
 }
 
 DECLARE(ppu_module_manager::cellSearch)
-("cellSearchUtility", []() {
+("cellSearchUtility", []()
+{
 	REG_FUNC(cellSearchUtility, cellSearchInitialize);
 	REG_FUNC(cellSearchUtility, cellSearchFinalize);
 	REG_FUNC(cellSearchUtility, cellSearchStartListSearch);
