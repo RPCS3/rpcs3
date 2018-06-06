@@ -557,7 +557,6 @@ VKGSRender::VKGSRender() : GSRender()
 		m_mem_allocator = std::make_shared<vk::mem_allocator_vma>(*m_device, m_device->gpu());
 	}
 
-	
 	vk::set_current_mem_allocator(m_mem_allocator);
 
 	m_client_width = m_frame->client_width();
@@ -781,11 +780,9 @@ VKGSRender::~VKGSRender()
 	m_secondary_command_buffer.destroy();
 	m_secondary_command_buffer_pool.destroy();
 
-	// Memory allocator (device memory)
-	m_mem_allocator->destroy();
-
 	//Device handles/contexts
 	m_swapchain->destroy();
+	m_mem_allocator->destroy();
 	m_thread_context.close();
 	
 #if !defined(_WIN32) && defined(HAVE_VULKAN)

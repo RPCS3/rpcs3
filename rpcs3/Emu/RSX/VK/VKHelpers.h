@@ -58,6 +58,14 @@ namespace vk
 
 	//VkAllocationCallbacks default_callbacks();
 
+	enum driver_vendor
+	{
+		unknown,
+		AMD,
+		NVIDIA,
+		RADV
+	};
+
 	class context;
 	class render_device;
 	class swap_chain_image;
@@ -66,7 +74,8 @@ namespace vk
 	struct image;
 	struct vk_data_heap;
 	class mem_allocator_base;
-	enum driver_vendor;
+	struct memory_type_mapping;
+	struct gpu_formats_support;
 
 	vk::context *get_current_thread_ctx();
 	void set_current_thread_ctx(const vk::context &ctx);
@@ -92,6 +101,9 @@ namespace vk
 	VkSampler null_sampler();
 	VkImageView null_image_view(vk::command_buffer&);
 	image* get_typeless_helper(VkFormat format);
+
+	memory_type_mapping get_memory_mapping(const physical_device& dev);
+	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
 
 	//Sync helpers around vkQueueSubmit
 	void acquire_global_submit_lock();
@@ -143,14 +155,6 @@ namespace vk
 
 	void die_with_error(const char* faulting_addr, VkResult error_code);
 
-	enum driver_vendor
-	{
-		unknown,
-		AMD,
-		NVIDIA,
-		RADV
-	};
-
 	struct memory_type_mapping
 	{
 		uint32_t host_visible_coherent;
@@ -162,9 +166,6 @@ namespace vk
 		bool d24_unorm_s8;
 		bool d32_sfloat_s8;
 	};
-
-	memory_type_mapping get_memory_mapping(const physical_device& dev);
-	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
 
 	class physical_device
 	{
@@ -1310,7 +1311,6 @@ public:
 		{
 			window_handle = handle;
 			hDstDC = GetDC(handle);
-			init();
 		}
 
 		void destroy(bool full=true) override
@@ -1403,7 +1403,6 @@ public:
 			}
 
 			gc = DefaultGC(display, DefaultScreen(display));
-			init();
 		}
 
 		void destroy(bool full=true) override
