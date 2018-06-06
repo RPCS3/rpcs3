@@ -1137,11 +1137,14 @@ void VKGSRender::end()
 	{
 		if (ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM)
 		{
+			// TODO: Partial memory transfer
 			auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
 			auto render_pass = m_render_passes[rp];
 			m_depth_converter->run(*m_current_command_buffer, ds->width(), ds->height(), ds,
 				static_cast<vk::render_target*>(ds->old_contents)->get_view(0xAAE4, rsx::default_remap_vector),
 				render_pass, m_framebuffers_to_clean);
+
+			ds->on_write();
 		}
 	}
 
@@ -1162,6 +1165,10 @@ void VKGSRender::end()
 				vk::copy_scaled_image(*m_current_command_buffer, surface->old_contents->value, surface->value,
 					surface->old_contents->current_layout, surface->current_layout, 0, 0, src_w, src_h,
 					0, 0, dst_w, dst_h, 1, aspect, true, VK_FILTER_LINEAR, surface->info.format, surface->old_contents->info.format);
+
+				// Memory has been transferred, discard old contents and update memory flags
+				// TODO: Preserve memory outside surface clip region
+				surface->on_write();
 			}
 		};
 
