@@ -214,6 +214,10 @@ void GLGSRender::end()
 			//Copy data from old contents onto this one
 			const auto region = rsx::get_transferable_region(surface);
 			gl::g_hw_blitter->scale_image(surface->old_contents, surface, { 0, 0, std::get<0>(region), std::get<1>(region) }, { 0, 0, std::get<2>(region) , std::get<3>(region) }, !is_depth, is_depth, {});
+
+			// Memory has been transferred, discard old contents and update memory flags
+			// TODO: Preserve memory outside surface clip region
+			surface->on_write();
 		}
 		//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
 	};
@@ -275,7 +279,9 @@ void GLGSRender::end()
 	if (ds && ds->old_contents != nullptr && ds->get_rsx_pitch() == static_cast<gl::render_target*>(ds->old_contents)->get_rsx_pitch() &&
 		ds->old_contents->get_internal_format() == gl::texture::internal_format::rgba8)
 	{
+		// TODO: Partial memory transfer
 		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
+		ds->on_write();
 	}
 
 	if (g_cfg.video.strict_rendering_mode)
