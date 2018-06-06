@@ -63,8 +63,6 @@ struct search_content_t
 	CellSearchContentType type = CELL_SEARCH_CONTENTTYPE_NONE;
 	CellSearchTimeInfo timeInfo;
 	CellSearchContentInfoPath infoPath;
-	//std::string contentPath;
-	//std::string thumbnailPath;
 	std::unique_ptr<u8[]> data;
 };
 
@@ -217,7 +215,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 					cellSearch.success("setting a link path = %s", link_path);
 					if (!fs::create_soft_link(fpath, vfs::get(link_path)))
 					{ // NotLikeThis
-						cellSearch.error("failed to create a symbolic link \"%s\"", link_path);
+						cellSearch.error("failed to create a link \"%s\"", link_path);
 						continue;
 					}
 
@@ -486,8 +484,6 @@ error_code cellSearchGetContentInfoPath(vm::cptr<CellSearchContentId> contentId,
 	{
 		auto found = &content_map->at(id.lo);
 		std::memcpy(infoPath.get_ptr(), (void*)&found->infoPath, sizeof(CellSearchContentInfoPath));
-		//std::strcpy(infoPath->contentPath,   found->contentPath.c_str());
-		//std::strcpy(infoPath->thumbnailPath, found->thumbnailPath.c_str());
 	} else {
 		return CELL_SEARCH_ERROR_CONTENT_NOT_FOUND;
 	}
