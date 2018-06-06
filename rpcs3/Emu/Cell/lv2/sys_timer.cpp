@@ -315,8 +315,8 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 
 			if (remaining > host_min_quantum)
 			{
-				// Wait on multiple of min quantum for large durations
-				thread_ctrl::wait_for(remaining - (remaining % host_min_quantum));
+				// Wait until the end of the last quantum before the target time
+				thread_ctrl::wait_for(remaining - host_min_quantum);
 			}
 			else
 			{
