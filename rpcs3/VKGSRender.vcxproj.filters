@@ -75,5 +75,8 @@
     <ClCompile Include="Emu\RSX\VK\VKFormats.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\VKMemAlloc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

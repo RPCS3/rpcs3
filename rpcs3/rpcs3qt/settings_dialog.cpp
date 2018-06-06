@@ -24,6 +24,11 @@
 #include <unordered_set>
 #include <thread>
 
+#ifdef WITH_DISCORD_RPC
+#include "discord_rpc.h"
+#include "discord_register.h"
+#endif
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
@@ -39,6 +44,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xgui_settings->SetValue(gui::m_showDebugTab, showDebugTab);
 	if (!showDebugTab)
 	{
+		ui->tab_widget_settings->removeTab(8);
+	}
+	if (game)
+	{
 		ui->tab_widget_settings->removeTab(7);
 	}
 
@@ -50,6 +59,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeDescription(ui->description_system);
 	SubscribeDescription(ui->description_network);
 	SubscribeDescription(ui->description_emulator);
+	SubscribeDescription(ui->description_gui);
 	SubscribeDescription(ui->description_debug);
 
 	// read tooltips from json
@@ -75,9 +85,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	QJsonObject json_sys   = json_obj.value("system").toObject();
 	QJsonObject json_net   = json_obj.value("network").toObject();
 
-	QJsonObject json_emu      = json_obj.value("emulator").toObject();
-	QJsonObject json_emu_gui  = json_emu.value("gui").toObject();
-	QJsonObject json_emu_misc = json_emu.value("misc").toObject();
+	QJsonObject json_emu         = json_obj.value("emulator").toObject();
+	QJsonObject json_emu_misc    = json_emu.value("misc").toObject();
+	QJsonObject json_emu_overlay = json_emu.value("overlay").toObject();
+
+	QJsonObject json_gui = json_obj.value("gui").toObject();
 
 	QJsonObject json_debug = json_obj.value("debug").toObject();
 
@@ -91,6 +103,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		xemu_settings->LoadSettings();
 		setWindowTitle(tr("Settings"));
 	}
+
+	// Discord variables
+	bool use_discord = xgui_settings->GetValue(gui::m_richPresence).toBool();
+	QString discord_state = xgui_settings->GetValue(gui::m_discordState).toString();
 
 	// Various connects
 	connect(ui->okButton, &QAbstractButton::clicked, [=]
@@ -108,6 +124,32 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		xemu_settings->SaveSelectedLibraries(selected_ls);
 		xemu_settings->SaveSettings();
 		accept();
+
+#ifdef WITH_DISCORD_RPC
+		bool use_discord_new = xgui_settings->GetValue(gui::m_richPresence).toBool();
+		QString discord_state_new = xgui_settings->GetValue(gui::m_discordState).toString();
+
+		if (use_discord != use_discord_new || discord_state != discord_state_new)
+		{
+			if (use_discord_new)
+			{
+				DiscordEventHandlers handlers = {};
+				Discord_Initialize("424004941485572097", &handlers, 1, NULL);
+
+				DiscordRichPresence discordPresence = {};
+				discordPresence.details = "Idle";
+				discordPresence.state = sstr(discord_state_new).c_str();
+				discordPresence.largeImageKey = "rpcs3_logo";
+				discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
+				discordPresence.startTimestamp = time(0);
+				Discord_UpdatePresence(&discordPresence);
+			}
+			else
+			{
+				Discord_ClearPresence();
+			}
+		}
+#endif
 	});
 
 	connect(ui->cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
@@ -693,21 +735,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeTooltip(ui->maxLLVMThreads, json_emu_misc["maxLLVMThreads"].toString());
 	ui->maxLLVMThreads->setItemText(ui->maxLLVMThreads->findData("0"), tr("All (%1)").arg(std::thread::hardware_concurrency()));
 
-	SubscribeTooltip(ui->combo_configs, json_emu_gui["configs"].toString());
-
-	SubscribeTooltip(ui->combo_stylesheets, json_emu_gui["stylesheets"].toString());
+	xemu_settings->EnhanceComboBox(ui->perfOverlayDetailLevel, emu_settings::PerfOverlayDetailLevel);
+	SubscribeTooltip(ui->perfOverlayDetailLevel, json_emu_overlay["perfOverlayDetailLevel"].toString());
 
 	// Checkboxes
 
 	SubscribeTooltip(ui->gs_resizeOnBoot, json_emu_misc["gs_resizeOnBoot"].toString());
 
 	SubscribeTooltip(ui->gs_disableMouse, json_emu_misc["gs_disableMouse"].toString());
-
-	SubscribeTooltip(ui->cb_show_welcome, json_emu_gui["show_welcome"].toString());
-
-	SubscribeTooltip(ui->cb_custom_colors, json_emu_gui["custom_colors"].toString());
-
-	SubscribeTooltip(ui->useRichPresence, json_emu_gui["useRichPresence"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->exitOnStop, emu_settings::ExitRPCS3OnFinish);
 	SubscribeTooltip(ui->exitOnStop, json_emu_misc["exitOnStop"].toString());
@@ -730,15 +765,118 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->showShaderCompilationHint, emu_settings::ShowShaderCompilationHint);
 	SubscribeTooltip(ui->showShaderCompilationHint, json_emu_misc["showShaderCompilationHint"].toString());
 
-	if (game)
+	xemu_settings->EnhanceCheckBox(ui->perfOverlayEnabled, emu_settings::PerfOverlayEnabled);
+	SubscribeTooltip(ui->perfOverlayEnabled, json_emu_overlay["perfOverlayEnabled"].toString());
+	auto EnablePerfOverlayOptions = [this](bool enabled)
 	{
-		ui->gb_stylesheets->setEnabled(false);
-		ui->gb_settings->setEnabled(false);
-		ui->gb_colors->setEnabled(false);
-		ui->gb_viewport->setEnabled(false);
+		ui->label_detail_level->setEnabled(enabled);
+		ui->label_update_interval->setEnabled(enabled);
+		ui->label_font_size->setEnabled(enabled);
+		ui->perfOverlayDetailLevel->setEnabled(enabled);
+		ui->perfOverlayUpdateInterval->setEnabled(enabled);
+		ui->perfOverlayFontSize->setEnabled(enabled);
+	};
+	EnablePerfOverlayOptions(ui->perfOverlayEnabled->isChecked());
+	connect(ui->perfOverlayEnabled, &QCheckBox::clicked, EnablePerfOverlayOptions);
+
+	// Sliders
+
+	xemu_settings->EnhanceSlider(ui->perfOverlayUpdateInterval, emu_settings::PerfOverlayUpdateInterval, true);
+	SubscribeTooltip(ui->perfOverlayUpdateInterval, json_emu_overlay["perfOverlayUpdateInterval"].toString());
+	ui->label_update_interval->setText(tr("Update Interval: %0 ms").arg(ui->perfOverlayUpdateInterval->value()));
+	connect(ui->perfOverlayUpdateInterval, &QSlider::valueChanged, [this](int value)
+	{
+		ui->label_update_interval->setText(tr("Update Interval: %0 ms").arg(value));
+	});
+
+	xemu_settings->EnhanceSlider(ui->perfOverlayFontSize, emu_settings::PerfOverlayFontSize, true);
+	SubscribeTooltip(ui->perfOverlayFontSize, json_emu_overlay["perfOverlayFontSize"].toString());
+	ui->label_font_size->setText(tr("Font Size: %0 px").arg(ui->perfOverlayFontSize->value()));
+	connect(ui->perfOverlayFontSize, &QSlider::valueChanged, [this](int value)
+	{
+		ui->label_font_size->setText(tr("Font Size: %0 px").arg(value));
+	});
+
+	// Global settings (gui_settings)
+	if (!game)
+	{
+		ui->gs_disableMouse->setChecked(xgui_settings->GetValue(gui::gs_disableMouse).toBool());
+		connect(ui->gs_disableMouse, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(gui::gs_disableMouse, val);
+		});
+
+		bool enableButtons = xgui_settings->GetValue(gui::gs_resize).toBool();
+		ui->gs_resizeOnBoot->setChecked(enableButtons);
+		ui->gs_width->setEnabled(enableButtons);
+		ui->gs_height->setEnabled(enableButtons);
+
+		QRect screen = QApplication::desktop()->screenGeometry();
+		int width = xgui_settings->GetValue(gui::gs_width).toInt();
+		int height = xgui_settings->GetValue(gui::gs_height).toInt();
+		ui->gs_width->setValue(std::min(width, screen.width()));
+		ui->gs_height->setValue(std::min(height, screen.height()));
+
+		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(gui::gs_resize, val);
+			ui->gs_width->setEnabled(val);
+			ui->gs_height->setEnabled(val);
+		});
+		connect(ui->gs_width, &QSpinBox::editingFinished, [=]()
+		{
+			ui->gs_width->setValue(std::min(ui->gs_width->value(), QApplication::desktop()->screenGeometry().width()));
+			xgui_settings->SetValue(gui::gs_width, ui->gs_width->value());
+		});
+		connect(ui->gs_height, &QSpinBox::editingFinished, [=]()
+		{
+			ui->gs_height->setValue(std::min(ui->gs_height->value(), QApplication::desktop()->screenGeometry().height()));
+			xgui_settings->SetValue(gui::gs_height, ui->gs_height->value());
+		});
 	}
-	else
+
+	//     _____  _    _  _   _______    _     
+	//    / ____|| |  | || | |__   __|  | |    
+	//   | |  __|| |  | || |    | | __ _| |__  
+	//   | | |_ || |  | || |    | |/ _` | '_ \
+	//   | |__| || |__| || |    | | (_| | |_) |
+	//    \_____| \____/ |_|    |_|\__,_|_.__/ 
+
+	// Comboboxes
+	SubscribeTooltip(ui->combo_configs, json_gui["configs"].toString());
+
+	SubscribeTooltip(ui->combo_stylesheets, json_gui["stylesheets"].toString());
+
+	// Checkboxes:
+	SubscribeTooltip(ui->cb_custom_colors, json_gui["custom_colors"].toString());
+
+	// Checkboxes: gui options
+	SubscribeTooltip(ui->cb_show_welcome, json_gui["show_welcome"].toString());
+
+	SubscribeTooltip(ui->useRichPresence, json_gui["useRichPresence"].toString());
+
+	SubscribeTooltip(ui->discordState, json_gui["discordState"].toString());
+
+	if (!game)
 	{
+		// Discord:
+		ui->useRichPresence->setChecked(use_discord);
+		ui->label_discordState->setEnabled(use_discord);
+		ui->discordState->setEnabled(use_discord);
+		ui->discordState->setText(discord_state);
+
+		connect(ui->useRichPresence, &QCheckBox::clicked, [this](bool checked)
+		{
+			ui->discordState->setEnabled(checked);
+			ui->label_discordState->setEnabled(checked);
+			xgui_settings->SetValue(gui::m_richPresence, checked);
+		});
+
+		connect(ui->discordState, &QLineEdit::editingFinished, [this]()
+		{
+			xgui_settings->SetValue(gui::m_discordState, ui->discordState->text());
+		});
+
 		// colorize preview icons
 		auto addColoredIcon = [&](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor())
 		{
@@ -800,7 +938,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			}
 		};
 
-		connect(ui->okButton, &QAbstractButton::clicked, [=]() { ApplyGuiOptions(); });
+		connect(ui->okButton, &QAbstractButton::clicked, [=]()
+		{
+			ApplyGuiOptions();
+		});
 
 		connect(ui->pb_reset_default, &QAbstractButton::clicked, [=]
 		{
@@ -876,47 +1017,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			colorDialog(gui::mw_toolIconColor, tr("Choose tool icon color"), ui->pb_tool_icon_color);
 		});
 
-		ui->gs_disableMouse->setChecked(xgui_settings->GetValue(gui::gs_disableMouse).toBool());
-		connect(ui->gs_disableMouse, &QCheckBox::clicked, [=](bool val)
-		{
-			xgui_settings->SetValue(gui::gs_disableMouse, val);
-		});
-
-		bool enableButtons = xgui_settings->GetValue(gui::gs_resize).toBool();
-		ui->gs_resizeOnBoot->setChecked(enableButtons);
-		ui->gs_width->setEnabled(enableButtons);
-		ui->gs_height->setEnabled(enableButtons);
-
-		QRect screen = QApplication::desktop()->screenGeometry();
-		int width = xgui_settings->GetValue(gui::gs_width).toInt();
-		int height = xgui_settings->GetValue(gui::gs_height).toInt();
-		ui->gs_width->setValue(std::min(width, screen.width()));
-		ui->gs_height->setValue(std::min(height, screen.height()));
-
-		connect(ui->gs_resizeOnBoot, &QCheckBox::clicked, [=](bool val)
-		{
-			xgui_settings->SetValue(gui::gs_resize, val);
-			ui->gs_width->setEnabled(val);
-			ui->gs_height->setEnabled(val);
-		});
-		connect(ui->gs_width, &QSpinBox::editingFinished, [=]()
-		{
-			ui->gs_width->setValue(std::min(ui->gs_width->value(), QApplication::desktop()->screenGeometry().width()));
-			xgui_settings->SetValue(gui::gs_width, ui->gs_width->value());
-		});
-		connect(ui->gs_height, &QSpinBox::editingFinished, [=]()
-		{
-			ui->gs_height->setValue(std::min(ui->gs_height->value(), QApplication::desktop()->screenGeometry().height()));
-			xgui_settings->SetValue(gui::gs_height, ui->gs_height->value());
-		});
-
-		ui->useRichPresence->setChecked(xgui_settings->GetValue(gui::m_richPresence).toBool());
-
-		connect(ui->useRichPresence, &QCheckBox::clicked, [=](bool val)
-		{
-			xgui_settings->SetValue(gui::m_richPresence, val);
-		});
-
 		AddConfigs();
 		AddStylesheets();
 	}
@@ -963,6 +1063,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, json_debug["disableOnDiskShaderCache"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->disableVulkanMemAllocator, emu_settings::DisableVulkanMemAllocator);
+	SubscribeTooltip(ui->disableVulkanMemAllocator, json_debug["disableVulkanMemAllocator"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->disableFIFOReordering, emu_settings::DisableFIFOReordering);
+	SubscribeTooltip(ui->disableFIFOReordering, json_debug["disableFIFOReordering"].toString());
 
 	// Checkboxes: core debug options
 	xemu_settings->EnhanceCheckBox(ui->ppuDebug, emu_settings::PPUDebug);

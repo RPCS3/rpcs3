@@ -547,6 +547,19 @@ VKGSRender::VKGSRender() : GSRender()
 	vk::set_current_thread_ctx(m_thread_context);
 	vk::set_current_renderer(m_swapchain->get_device());
 
+	// Choose memory allocator (device memory)
+	if (g_cfg.video.disable_vulkan_mem_allocator) 
+	{
+		m_mem_allocator = std::make_shared<vk::mem_allocator_vk>(*m_device, m_device->gpu());
+	}
+	else 
+	{
+		m_mem_allocator = std::make_shared<vk::mem_allocator_vma>(*m_device, m_device->gpu());
+	}
+
+	
+	vk::set_current_mem_allocator(m_mem_allocator);
+
 	m_client_width = m_frame->client_width();
 	m_client_height = m_frame->client_height();
 	if (!m_swapchain->init(m_client_width, m_client_height))
@@ -659,7 +672,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_ui_renderer.reset(new vk::ui_overlay_renderer());
 	m_ui_renderer->create(*m_current_command_buffer, m_texture_upload_buffer_ring_info);
 
-	supports_multidraw = !g_cfg.video.strict_rendering_mode;
+	supports_multidraw = true;
 	supports_native_ui = (bool)g_cfg.misc.use_native_interface;
 }
 
@@ -775,6 +788,9 @@ VKGSRender::~VKGSRender()
 	m_secondary_command_buffer.destroy();
 	m_secondary_command_buffer_pool.destroy();
 
+	// Memory allocator (device memory)
+	m_mem_allocator->destroy();
+
 	//Device handles/contexts
 	m_swapchain->destroy();
 	m_thread_context.close();
@@ -841,9 +857,6 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 			if (target_cb)
 				target_cb->wait();
-
-			if (is_rsxthr)
-				m_last_flushable_cb = -1;
 		}
 
 		if (has_queue_ref)
@@ -864,7 +877,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	return false;
 }
 
-void VKGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
+void VKGSRender::on_invalidate_memory_range(u32 address_base, u32 size)
 {
 	std::lock_guard<shared_mutex> lock(m_secondary_cb_guard);
 	if (m_texture_cache.invalidate_range(address_base, size, true, true, false,
@@ -1585,7 +1598,7 @@ void VKGSRender::on_init_thread()
 			{
 				MsgDialogType type = {};
 				type.disable_cancel = true;
-				type.progress_bar_count = 1;
+				type.progress_bar_count = 2;
 
 				dlg = fxm::get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>();
 				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
@@ -1595,15 +1608,22 @@ void VKGSRender::on_init_thread()
 				});
 			}
 
-			void update_msg(u32 processed, u32 entry_count) override
+			void update_msg(u32 index, u32 processed, u32 entry_count) override
 			{
-				dlg->progress_bar_set_message(0, fmt::format("Loading pipeline object %u of %u", processed, entry_count));
+				const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
+				dlg->progress_bar_set_message(index, fmt::format(text, processed, entry_count));
 				owner->flip(0);
 			}
 
-			void inc_value(u32 value) override
+			void inc_value(u32 index, u32 value) override
 			{
-				dlg->progress_bar_increment(0, (f32)value);
+				dlg->progress_bar_increment(index, (f32)value);
+				owner->flip(0);
+			}
+
+			void set_limit(u32 index, u32 limit) override
+			{
+				dlg->progress_bar_set_limit(index, limit);
 				owner->flip(0);
 			}
 
@@ -1842,7 +1862,6 @@ void VKGSRender::copy_render_targets_to_dma_location()
 
 	vk::leave_uninterruptible();
 
-	m_last_flushable_cb = m_current_cb_index;
 	flush_command_queue();
 
 	m_flush_draw_buffers = false;
@@ -1868,7 +1887,6 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 				cb.poke();
 		}
 
-		m_last_flushable_cb = -1;
 		m_flush_requests.clear_pending_flag();
 	}
 	else
@@ -1888,9 +1906,6 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 		}
 
 		m_current_command_buffer->reset();
-
-		if (m_last_flushable_cb == m_current_cb_index)
-			m_last_flushable_cb = -1;
 	}
 
 	open_command_buffer();
@@ -2028,12 +2043,19 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 		if (m_overlay_manager && m_overlay_manager->has_dirty())
 		{
+			m_overlay_manager->lock();
+
+			std::vector<u32> uids_to_dispose;
+			uids_to_dispose.reserve(m_overlay_manager->get_dirty().size());
+
 			for (const auto& view : m_overlay_manager->get_dirty())
 			{
 				m_ui_renderer->remove_temp_resources(view->uid);
+				uids_to_dispose.push_back(view->uid);
 			}
 
-			m_overlay_manager->clear_dirty();
+			m_overlay_manager->unlock();
+			m_overlay_manager->dispose(uids_to_dispose);
 		}
 
 		m_attachment_clear_pass->free_resources();
@@ -2066,7 +2088,7 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 	ctx->swap_command_buffer = nullptr;
 }
 
-void VKGSRender::do_local_task(bool /*idle*/)
+void VKGSRender::do_local_task(rsx::FIFO_state state)
 {
 	if (m_flush_requests.pending())
 	{
@@ -2079,22 +2101,19 @@ void VKGSRender::do_local_task(bool /*idle*/)
 		m_flush_requests.clear_pending_flag();
 		m_flush_requests.consumer_wait();
 	}
-	else if (!in_begin_end)
+	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
 	{
 		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
 		//Only call when there are no waiters
 		m_texture_cache.do_update();
 	}
 
-	if (m_last_flushable_cb > -1)
+	rsx::thread::do_local_task(state);
+
+	if (state == rsx::FIFO_state::lock_wait)
 	{
-		auto cb = &m_primary_cb_list[m_last_flushable_cb];
-
-		if (cb->pending)
-			cb->poke();
-
-		if (!cb->pending)
-			m_last_flushable_cb = -1;
+		// Critical check finished
+		return;
 	}
 
 #ifdef _WIN32
@@ -3221,6 +3240,9 @@ void VKGSRender::flip(int buffer)
 
 		if (has_overlay)
 		{
+			// Lock to avoid modification during run-update chain
+			std::lock_guard<rsx::overlays::display_manager> lock(*m_overlay_manager);
+
 			for (const auto& view : m_overlay_manager->get_views())
 			{
 				m_ui_renderer->run(*m_current_command_buffer, direct_fbo->width(), direct_fbo->height(), direct_fbo.get(), single_target_pass, m_texture_upload_buffer_ring_info, *view.get());

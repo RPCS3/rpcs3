@@ -295,6 +295,7 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlays.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_perf_metrics.cpp" />
     <ClCompile Include="Emu\RSX\rsx_methods.cpp" />
     <ClCompile Include="Emu\RSX\rsx_utils.cpp" />
     <ClCompile Include="Crypto\aes.cpp">

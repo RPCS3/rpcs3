@@ -287,7 +287,6 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only)
 			discordPresence.largeImageKey = "rpcs3_logo";
 			discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
 			discordPresence.startTimestamp = time(0);
-			discordPresence.instance = 0;
 			Discord_UpdatePresence(&discordPresence);
 		}
 #endif
@@ -837,9 +836,13 @@ void main_window::OnEmuStop()
 	// Discord Rich Presence Integration
 	if (guiSettings->GetValue(gui::m_richPresence).toBool())
 	{
+		QString discord_state = guiSettings->GetValue(gui::m_discordState).toString();
 		DiscordRichPresence discordPresence = {};
+		discordPresence.details = "Idle";
+		discordPresence.state = sstr(discord_state).c_str();
 		discordPresence.largeImageKey = "rpcs3_logo";
 		discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
+		discordPresence.startTimestamp = time(0);
 		Discord_UpdatePresence(&discordPresence);
 	}
 #endif

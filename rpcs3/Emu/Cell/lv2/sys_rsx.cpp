@@ -9,15 +9,9 @@
 #include "sys_event.h"
 
 
-
 logs::channel sys_rsx("sys_rsx");
 
 extern u64 get_timebased_time();
-
-struct SysRsxConfig {
-	be_t<u32> rsx_event_port{ 0 };
-	u32 driverInfo{ 0 };
-};
 
 u64 rsxTimeStamp() {
 	return get_timebased_time();
@@ -51,7 +45,7 @@ s32 sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u64> mem_addr, u32 
 {
 	sys_rsx.warning("sys_rsx_memory_allocate(mem_handle=*0x%x, mem_addr=*0x%x, size=0x%x, flags=0x%llx, a5=0x%llx, a6=0x%llx, a7=0x%llx)", mem_handle, mem_addr, size, flags, a5, a6, a7);
 
-	*mem_handle = 1;
+	*mem_handle = 0x5a5a5a5b;
 	*mem_addr = vm::falloc(0xC0000000, size, vm::video);
 
 	return CELL_OK;
@@ -150,7 +144,7 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
 
 	m_sysrsx->rsx_event_port = queueId->value();
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	render->display_buffers_count = 0;
 	render->current_display_buffer = 0;
 	render->main_mem_addr = 0;
@@ -182,10 +176,13 @@ s32 sys_rsx_context_free(u32 context_id)
 s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags)
 {
 	sys_rsx.warning("sys_rsx_context_iomap(context_id=0x%x, io=0x%x, ea=0x%x, size=0x%x, flags=0x%llx)", context_id, io, ea, size, flags);
-	if (size == 0) return CELL_OK;
-	if (RSXIOMem.Map(ea, size, io))
-		return CELL_OK;
-	return CELL_EINVAL;
+
+	if (!RSXIOMem.Map(ea, size, io))
+	{
+		return CELL_EINVAL;
+	}
+
+	return CELL_OK;
 }
 
 /*
@@ -222,7 +219,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 
 	// todo: these event ports probly 'shouldnt' be here as i think its supposed to be interrupts that are sent from rsx somewhere in lv1
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 
 	//hle protection
 	if (render->isHLE)
@@ -419,8 +416,8 @@ s32 sys_rsx_device_map(vm::ptr<u64> addr, vm::ptr<u64> a2, u32 dev_id)
 		fmt::throw_exception("sys_rsx_device_map: Invalid dev_id %d", dev_id);
 	}
 
-	// a2 seems to not be referenced in cellGcmSys
-	*a2 = 0;
+	// a2 seems to not be referenced in cellGcmSys, tests show this arg is ignored
+	//*a2 = 0;
 
 	*addr = 0x40000000;
 

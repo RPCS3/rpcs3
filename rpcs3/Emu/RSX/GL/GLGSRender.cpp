@@ -31,7 +31,7 @@ GLGSRender::GLGSRender() : GSRender()
 	else
 		m_vertex_cache.reset(new gl::weak_vertex_cache());
 
-	supports_multidraw = !g_cfg.video.strict_rendering_mode;
+	supports_multidraw = true;
 	supports_native_ui = (bool)g_cfg.misc.use_native_interface;
 }
 
@@ -845,7 +845,7 @@ void GLGSRender::on_init_thread()
 			{
 				MsgDialogType type = {};
 				type.disable_cancel = true;
-				type.progress_bar_count = 1;
+				type.progress_bar_count = 2;
 
 				dlg = fxm::get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>();
 				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
@@ -855,15 +855,22 @@ void GLGSRender::on_init_thread()
 				});
 			}
 
-			void update_msg(u32 processed, u32 entry_count) override
+			void update_msg(u32 index, u32 processed, u32 entry_count) override
 			{
-				dlg->progress_bar_set_message(0, fmt::format("Loading pipeline object %u of %u", processed, entry_count));
+				const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
+				dlg->progress_bar_set_message(index, fmt::format(text, processed, entry_count));
 				owner->flip(0);
 			}
 
-			void inc_value(u32 value) override
+			void inc_value(u32 index, u32 value) override
 			{
-				dlg->progress_bar_increment(0, (f32)value);
+				dlg->progress_bar_increment(index, (f32)value);
+				owner->flip(0);
+			}
+
+			void set_limit(u32 index, u32 limit) override
+			{
+				dlg->progress_bar_set_limit(index, limit);
 				owner->flip(0);
 			}
 
@@ -1468,18 +1475,28 @@ void GLGSRender::flip(int buffer)
 	{
 		if (m_overlay_manager->has_dirty())
 		{
+			m_overlay_manager->lock();
+
+			std::vector<u32> uids_to_dispose;
+			uids_to_dispose.reserve(m_overlay_manager->get_dirty().size());
+
 			for (const auto& view : m_overlay_manager->get_dirty())
 			{
 				m_ui_renderer.remove_temp_resources(view->uid);
+				uids_to_dispose.push_back(view->uid);
 			}
 
-			m_overlay_manager->clear_dirty();
+			m_overlay_manager->unlock();
+			m_overlay_manager->dispose(uids_to_dispose);
 		}
 
 		if (m_overlay_manager->has_visible())
 		{
 			gl::screen.bind();
 			glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
+
+			// Lock to avoid modification during run-update chain
+			std::lock_guard<rsx::overlays::display_manager> lock(*m_overlay_manager);
 
 			for (const auto& view : m_overlay_manager->get_views())
 			{
@@ -1547,19 +1564,15 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 		work_item &task = post_flush_request(address, result);
 
 		vm::temporary_unlock();
-		{
-			std::unique_lock<std::mutex> lock(task.guard_mutex);
-			task.cv.wait(lock, [&task] { return task.processed; });
-		}
+		task.producer_wait();
 
-		task.received = true;
 		return true;
 	}
 
 	return true;
 }
 
-void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
+void GLGSRender::on_invalidate_memory_range(u32 address_base, u32 size)
 {
 	//Discard all memory in that range without bothering with writeback (Force it for strict?)
 	if (m_gl_texture_cache.invalidate_range(address_base, size, true, true, false).violation_handled)
@@ -1572,10 +1585,8 @@ void GLGSRender::on_notify_memory_unmapped(u32 address_base, u32 size)
 	}
 }
 
-void GLGSRender::do_local_task(bool /*idle*/)
+void GLGSRender::do_local_task(rsx::FIFO_state state)
 {
-	m_frame->clear_wm_events();
-
 	if (!work_queue.empty())
 	{
 		std::lock_guard<shared_mutex> lock(queue_guard);
@@ -1586,21 +1597,26 @@ void GLGSRender::do_local_task(bool /*idle*/)
 		{
 			if (q.processed) continue;
 
-			std::unique_lock<std::mutex> lock(q.guard_mutex);
 			q.result = m_gl_texture_cache.flush_all(q.section_data);
 			q.processed = true;
-
-			//Notify thread waiting on this
-			lock.unlock();
-			q.cv.notify_one();
 		}
 	}
-	else if (!in_begin_end)
+	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
 	{
 		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
 		//Only call when there are no waiters
 		m_gl_texture_cache.do_update();
 	}
+
+	rsx::thread::do_local_task(state);
+
+	if (state == rsx::FIFO_state::lock_wait)
+	{
+		// Critical check finished
+		return;
+	}
+
+	m_frame->clear_wm_events();
 
 	if (m_overlay_manager)
 	{
@@ -1644,6 +1660,11 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	//u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
 	//on_notify_memory_unmapped(addr, tiles[tile].size);
 	//m_rtts.invalidate_surface_address(addr, false);
+
+	{
+		std::lock_guard<shared_mutex> lock(m_sampler_mutex);
+		m_samplers_dirty.store(true);
+	}
 }
 
 void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)

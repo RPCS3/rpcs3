@@ -14,8 +14,6 @@
 #include <thread>
 #include <atomic>
 
-#pragma comment(lib, "VKstatic.1.lib")
-
 namespace vk
 {
 	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range<VkFormat>, VkFormat>;
@@ -243,7 +241,7 @@ struct flush_request_task
 		while (pending_state.load())
 		{
 			_mm_lfence();
-			_mm_pause();
+			std::this_thread::yield();
 		}
 	}
 };
@@ -282,6 +280,8 @@ public:
 	//vk::fbo draw_fbo;
 	std::unique_ptr<vk::vertex_cache> m_vertex_cache;
 	std::unique_ptr<vk::shader_cache> m_shaders_cache;
+
+	std::shared_ptr<vk::mem_allocator_base> m_mem_allocator;
 
 private:
 	std::unique_ptr<VKProgramBuffer> m_prog_buffer;
@@ -351,7 +351,6 @@ private:
 
 	u8 m_draw_buffers_count = 0;
 	bool m_flush_draw_buffers = false;
-	std::atomic<int> m_last_flushable_cb = {-1 };
 	
 	shared_mutex m_flush_queue_mutex;
 	flush_request_task m_flush_requests;
@@ -420,10 +419,10 @@ protected:
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
 
-	void do_local_task(bool idle) override;
+	void do_local_task(rsx::FIFO_state state) override;
 	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;
 	void notify_tile_unbound(u32 tile) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_notify_memory_unmapped(u32 address_base, u32 size) override;
+	void on_invalidate_memory_range(u32 address_base, u32 size) override;
 };

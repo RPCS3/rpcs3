@@ -147,13 +147,20 @@ enum class frame_limit_type
 	_auto,
 };
 
+enum class detail_level
+{
+	minimal,
+	low,
+	medium,
+	high,
+};
+
 enum CellNetCtlState : s32;
 enum CellSysutilLang : s32;
 
 struct EmuCallbacks
 {
 	std::function<void(std::function<void()>)> call_after;
-	std::function<void()> process_events;
 	std::function<void()> on_run;
 	std::function<void()> on_pause;
 	std::function<void()> on_resume;
@@ -314,6 +321,9 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_loop_detection{this, "SPU loop detection", true}; //Try to detect wait loops and trigger thread yield
 		cfg::_bool spu_shared_runtime{this, "SPU Shared Runtime", true}; // Share compiled SPU functions between all threads
 		cfg::_enum<spu_block_size_type> spu_block_size{this, "SPU Block Size"};
+		cfg::_bool spu_accurate_getllar{this, "Accurate GETLLAR", false};
+		cfg::_bool spu_verification{this, "SPU Verification", true}; // Should be enabled
+		cfg::_bool spu_cache{this, "SPU Cache", true};
 
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::liblv2only};
 		cfg::_bool hook_functions{this, "Hook static functions"};
@@ -362,9 +372,11 @@ struct cfg_root : cfg::node
 		cfg::_bool strict_rendering_mode{this, "Strict Rendering Mode"};
 		cfg::_bool disable_zcull_queries{this, "Disable ZCull Occlusion Queries", false};
 		cfg::_bool disable_vertex_cache{this, "Disable Vertex Cache", false};
+		cfg::_bool disable_FIFO_reordering{this, "Disable FIFO Reordering", false};
 		cfg::_bool frame_skip_enabled{this, "Enable Frame Skip", false};
 		cfg::_bool force_cpu_blit_processing{this, "Force CPU Blit", false}; // Debugging option
 		cfg::_bool disable_on_disk_shader_cache{this, "Disable On-Disk Shader Cache", false};
+		cfg::_bool disable_vulkan_mem_allocator{ this, "Disable Vulkan Memory Allocator", false };
 		cfg::_bool full_rgb_range_output{this, "Use full RGB output range", true}; // Video out dynamic range
 		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames To Draw", 1};
 		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames To Skip", 1};
@@ -390,6 +402,17 @@ struct cfg_root : cfg::node
 			cfg::_bool force_primitive_restart{this, "Force primitive restart flag"};
 
 		} vk{this};
+
+		struct node_perf_overlay : cfg::node
+		{
+			node_perf_overlay(cfg::node* _this) : cfg::node(_this, "Performance Overlay") {}
+
+			cfg::_bool perf_overlay_enabled{this, "Enabled", false};
+			cfg::_enum<detail_level> level{this, "Detail level", detail_level::high};
+			cfg::_int<30, 5000> update_interval{this, "Metrics update interval (ms)", 350};
+			cfg::_int<4, 36> font_size{this, "Font size (px)", 10};
+
+		} perf_overlay{this};
 
 	} video{this};
 
