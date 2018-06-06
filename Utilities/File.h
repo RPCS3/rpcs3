@@ -136,8 +136,11 @@ namespace fs
 	// Try to get parent directory (returns empty string on failure)
 	std::string get_parent_dir(const std::string& path);
 
-	// Try to get file extension (returns empty string if directory or no extension)
+	// Try to get file extension (returns empty string if no extension)
 	std::string get_extension(const std::string& filename);
+
+	// Try to fetch the final path of a file (such that if it's a symlink)
+	std::string get_final_path(const std::string& path);
 
 	// Get file information
 	bool stat(const std::string& path, stat_t& info);

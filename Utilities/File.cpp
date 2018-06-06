@@ -277,6 +277,32 @@ std::string fs::get_extension(const std::string& filename)
 	return temp.substr(pos);
 }
 
+std::string fs::get_final_path(const std::string& path)
+{
+	// Check for symbolic link
+	std::string out;
+#ifdef _WIN32
+	size_t required_size;
+	std::unique_ptr<wchar_t[]> finalpath;
+	HANDLE temp_handle = CreateFileW(to_wchar(path).get(), FILE_READ_ATTRIBUTES, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if ((temp_handle != INVALID_HANDLE_VALUE) && (required_size = GetFinalPathNameByHandleW(temp_handle, nullptr, 0, FILE_NAME_NORMALIZED)))
+	{
+		finalpath.reset(new wchar_t[required_size]);
+		GetFinalPathNameByHandleW(temp_handle, finalpath.get(), required_size, FILE_NAME_NORMALIZED);
+		CloseHandle(temp_handle);
+	}
+	else
+	{ // Welp, abandon that plan
+		finalpath.swap(to_wchar(path));
+	}
+
+	to_utf8(out, finalpath.get());
+	return out;
+#else
+
+#endif
+}
+
 bool fs::stat(const std::string& path, stat_t& info)
 {
 	if (auto device = get_virtual_device(path))
@@ -527,7 +553,9 @@ bool fs::create_path(const std::string& path)
 bool fs::create_hard_link(const std::string& from, const std::string& to)
 { // TODO
 #ifdef _WIN32
-	if (!CreateHardLinkA((LPCSTR)to.c_str(), (LPCSTR)from.c_str(), NULL))
+	auto from_wstr = to_wchar(from);
+	auto to_wstr   = to_wchar(to);
+	if (!CreateHardLinkW((LPCWSTR)to_wstr.get(), (LPCWSTR)from_wstr.get(), NULL))
 	{
 		return false;
 	}
@@ -550,7 +578,9 @@ bool fs::create_soft_link(const std::string& from, const std::string& to)
 		link_flags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
 	}
 
-	if (!CreateSymbolicLinkA((LPCSTR)to.c_str(), (LPCSTR)from.c_str(), link_flags))
+	auto from_wstr = to_wchar(from);
+	auto to_wstr   = to_wchar(to);
+	if (!CreateSymbolicLinkW((LPCWSTR)to_wstr.get(), (LPCWSTR)from_wstr.get(), link_flags))
 	{
 		return false;
 	}

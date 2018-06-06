@@ -280,7 +280,8 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 		fmt::throw_exception("sys_fs_open(%s): Invalid or unimplemented flags: %#o" HERE, path, flags);
 	}
 
-	fs::file file(local_path, open_mode);
+	const std::string& final_path = fs::get_final_path(local_path);
+	fs::file file(final_path, open_mode);
 
 	if (!file && open_mode == fs::read && fs::g_tls_error == fs::error::noent)
 	{
@@ -369,7 +370,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 		}
 	}
 
-	if (const u32 id = idm::make<lv2_fs_object, lv2_file>(path.get_ptr(), std::move(file), mode, flags))
+	if (const u32 id = idm::make<lv2_fs_object, lv2_file>(final_path.c_str(), std::move(file), mode, flags))
 	{
 		*fd = id;
 		return CELL_OK;
@@ -574,7 +575,8 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 		return CELL_OK;
 	}
 
-	if (!fs::stat(local_path, info))
+	const std::string& final_path = fs::get_final_path(local_path);
+	if (!fs::stat(final_path, info))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
