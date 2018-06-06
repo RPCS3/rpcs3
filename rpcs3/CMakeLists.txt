@@ -259,10 +259,6 @@ if(NOT APPLE AND USE_VULKAN)
 	find_package(Vulkan)
 	if(VULKAN_FOUND)
 		add_definitions(-DHAVE_VULKAN)
-		list(APPEND ADDITIONAL_LIBS Vulkan::Vulkan)
-		if(VULKAN_PREBUILT)
-			list(APPEND ADDITIONAL_LIBS glslang HLSL OGLCompiler SPIRV OSDependent)
-		endif()
 	else()
 		message("WARNING! USE_VULKAN was enabled, but libvulkan was not found. RPCS3 will be compiled without Vulkan support.")
 	endif()
@@ -299,8 +295,6 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../Utilities/yaml-cpp/include"
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 "${RPCS3_SRC_DIR}/../3rdparty/GSL/include"
-"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/Public"
-"${RPCS3_SRC_DIR}/../Vulkan/glslang/"
 "${RPCS3_SRC_DIR}/../3rdparty/hidapi/hidapi"
 # Includes 3rdparty stuff that isn't included yet
 "${RPCS3_SRC_DIR}/../3rdparty/GL"
@@ -352,21 +346,6 @@ RPCS3_SRC
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit/*.cpp"
 )
 
-if(NOT WIN32 AND VULKAN_FOUND)
-# Compile glslang and SPIRV modules needed for glsl compilation
-	file(
-	GLOB_RECURSE
-	UNIX_GLSLANG
-	"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/GenericCodeGen/*.cpp"
-	"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/MachineIndependent/*.cpp"
-	"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/OSDependent/Unix/*.cpp"
-	"${RPCS3_SRC_DIR}/../Vulkan/glslang/OGLCompilersDLL/*.cpp"
-	"${RPCS3_SRC_DIR}/../Vulkan/glslang/SPIRV/*.cpp"
-	)
-
-	set(RPCS3_SRC ${RPCS3_SRC} ${UNIX_GLSLANG})
-endif()
-
 #File exclusion section
 
 if(NOT WIN32 AND NOT VULKAN_FOUND)
@@ -414,10 +393,15 @@ if(UNIX)
 	target_link_libraries(rpcs3 ${X11_LIBRARIES})
 endif()
 
+if(VULKAN_FOUND)
+	target_include_directories(rpcs3 PUBLIC ${glslang_SOURCE_DIR})
+	target_link_libraries(rpcs3 SPIRV Vulkan::Vulkan)
+endif()
+
 target_link_libraries(rpcs3 xxhash)
 
 if(WIN32)
-	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
+	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib setupapi.lib hidapi-hid Shlwapi.lib)
 	if(NOT MSVC)
 		target_link_libraries(rpcs3 ${OPENGL_LIBRARIES} opengl32.lib glu32.lib)
 	else()
