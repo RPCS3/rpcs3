@@ -25,13 +25,13 @@ endif()
 if(NOT Qt5Widgets_FOUND)
 	if(Qt5Widgets_VERSION VERSION_LESS 5.10.0)
 		message("Minimum supported Qt5 version is 5.10.0! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
-		if("${CMAKE_SYSTEM}" MATCHES "Linux")
+		if(CMAKE_SYSTEM MATCHES "Linux")
 			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.
 If you're on Ubuntu or Linux Mint, there are PPAs you can use to install an up-to-date qt5 version.
-        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-xenial
-        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-trusty
+		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-xenial
+		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-trusty
 just make sure to run
-    source /opt/qt510/bin/qt510-env.sh
+	source /opt/qt510/bin/qt510-env.sh
 before re-running cmake")
 		elseif(WIN32)
 			message(FATAL_ERROR "You can download the latest version of Qt5 here: https://www.qt.io/download-open-source/")
@@ -43,7 +43,7 @@ before re-running cmake")
 	message("CMake was unable to find Qt5!")
 	if(WIN32)
 		message(FATAL_ERROR "Make sure the QTDIR env variable has been set properly. (for example C:\\Qt\\5.10.1\\msvc2017_64\\)")
-	elseif("${CMAKE_SYSTEM}" MATCHES "Linux")
+	elseif(CMAKE_SYSTEM MATCHES "Linux")
 		message(FATAL_ERROR "Make sure to install your distro's qt5 package!")
 	else()
 		message(FATAL_ERROR "You need to have Qt5 installed, look online for instructions on installing Qt5 on ${CMAKE_SYSTEM}.")
@@ -93,7 +93,7 @@ if(WIN32)
 else()
 	add_definitions(-DGL_GLEXT_PROTOTYPES)
 	add_definitions(-DGLX_GLXEXT_PROTOTYPES)
-	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux" OR APPLE)
+	if(CMAKE_SYSTEM MATCHES "Linux" OR APPLE)
 		# We don't want Discord Rich Presence on the BSDs and other OSes
 		add_definitions(-DWITH_DISCORD_RPC)
 	endif()
@@ -160,7 +160,7 @@ else()
 endif()
 
 set(ADDITIONAL_LIBS "")
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if(CMAKE_SYSTEM MATCHES "Linux")
 	#on some Linux distros shm_unlink and similar functions are in librt only
 	set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "rt")
 elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
@@ -188,9 +188,9 @@ set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if(NOT WITHOUT_LLVM)
-    if (EXISTS "${CMAKE_SOURCE_DIR}/llvmlibs")
-        find_package(LLVM 6.0 CONFIG)
-    endif()
+	if (EXISTS "${CMAKE_SOURCE_DIR}/llvmlibs")
+		find_package(LLVM 6.0 CONFIG)
+	endif()
 	if(NOT LLVM_FOUND)
 		message("LLVM will be built from the submodule.")
 
@@ -414,7 +414,7 @@ else()
 	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
 	if(APPLE)
 		target_link_libraries(rpcs3 hidapi-mac "-framework CoreFoundation" "-framework IOKit")
-	elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	elseif(CMAKE_SYSTEM MATCHES "Linux")
 		target_link_libraries(rpcs3 hidapi-hidraw udev)
 	else()
 		target_link_libraries(rpcs3 hidapi-libusb usb)
@@ -432,7 +432,7 @@ else()
 		target_link_libraries(rpcs3 png16_static)
 	endif()
 	# Link Discord Rich Presence, but only on Linux
-	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+	if(CMAKE_SYSTEM MATCHES "Linux")
 		target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/libdiscord-rpc-linux.a")
 	elseif(APPLE)
 		target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/libdiscord-rpc-mac.a")
@@ -471,9 +471,9 @@ cotire(rpcs3)
 
 if (UNIX)
 # Copy icons to executable directory
-add_custom_command(TARGET rpcs3 POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory
-                       ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons)
+add_custom_command(	TARGET rpcs3 POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy_directory
+					${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons)
 endif()
 
 # Unix installation
@@ -489,9 +489,9 @@ if(UNIX AND NOT APPLE)
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
 	install(FILES rpcs3.appdata.xml
 			DESTINATION ${CMAKE_INSTALL_PREFIX}/share/metainfo)
-    # Install other files
-    install(DIRECTORY ../bin/Icons
+	# Install other files
+	install(DIRECTORY ../bin/Icons
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
-    install(DIRECTORY ../bin/GuiConfigs
+	install(DIRECTORY ../bin/GuiConfigs
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
 endif()

@@ -15,7 +15,9 @@
 #include <mutex>
 #include <thread>
 
-extern u64 get_system_time();
+extern atomic_t<const char*> g_progr;
+extern atomic_t<u64> g_progr_ptotal;
+extern atomic_t<u64> g_progr_pdone;
 
 const spu_decoder<spu_itype> s_spu_itype;
 
@@ -88,8 +90,14 @@ void spu_cache::initialize()
 		return;
 	}
 
+	if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+	{
+		// Force Safe mode
+		g_cfg.core.spu_block_size.from_default();
+	}
+
 	// SPU cache file (version + block size type)
-	const std::string loc = _main->cache + u8"spu-§" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v2.dat";
+	const std::string loc = _main->cache + u8"spu-§" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v3.dat";
 
 	auto cache = std::make_shared<spu_cache>(loc);
 
@@ -130,12 +138,19 @@ void spu_cache::initialize()
 		// Fake LS
 		std::vector<be_t<u32>> ls(0x10000);
 
-		// Used to show progress
-		u64 timex = get_system_time();
+		// Initialize progress dialog
+		g_progr = "Building SPU cache...";
+		g_progr_ptotal += func_list.size();
 
 		// Build functions
 		for (auto&& func : func_list)
 		{
+			if (Emu.IsStopped())
+			{
+				g_progr_pdone++;
+				continue;
+			}
+
 			// Initialize LS with function data only
 			for (u32 i = 1, pos = func[0]; i < func.size(); i++, pos += 4)
 			{
@@ -163,20 +178,13 @@ void spu_cache::initialize()
 				ls[pos / 4] = 0;
 			}
 
-			if (Emu.IsStopped())
-			{
-				LOG_ERROR(SPU, "SPU Runtime: Cache building aborted.");
-				return;
-			}
+			g_progr_pdone++;
+		}
 
-			// Print progress every 400 ms
-			const u64 timed = get_system_time() - timex;
-
-			if (timed >= 400000)
-			{
-				LOG_SUCCESS(SPU, "Building SPU cache (%u/%u)...", &func - func_list.data(), func_list.size());
-				timex += 400000;
-			}
+		if (Emu.IsStopped())
+		{
+			LOG_ERROR(SPU, "SPU Runtime: Cache building aborted.");
+			return;
 		}
 
 		LOG_SUCCESS(SPU, "SPU Runtime: Built %u functions.", func_list.size());
@@ -382,7 +390,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 				continue;
 			}
 
-			if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
+			if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
 			{
 				// Stop on special instructions (TODO)
 				m_targets[pos].push_back(-1);
@@ -435,8 +443,9 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 					add_block(target);
 				}
 
-				if (type == spu_itype::BISL && target >= lsa && g_cfg.core.spu_block_size == spu_block_size_type::giga)
+				if (type == spu_itype::BISL && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 				{
+					m_targets[pos].push_back(pos + 4);
 					add_block(pos + 4);
 				}
 			}
@@ -546,7 +555,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 
 			if (type == spu_itype::BI || type == spu_itype::BISL)
 			{
-				if (type == spu_itype::BI || g_cfg.core.spu_block_size != spu_block_size_type::giga)
+				if (type == spu_itype::BI || g_cfg.core.spu_block_size == spu_block_size_type::safe)
 				{
 					if (m_targets[pos].empty())
 					{
@@ -555,6 +564,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 				}
 				else
 				{
+					m_targets[pos].push_back(pos + 4);
 					add_block(pos + 4);
 				}
 			}
@@ -585,8 +595,9 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 
 			m_targets[pos].push_back(target);
 
-			if (target >= lsa && g_cfg.core.spu_block_size == spu_block_size_type::giga)
+			if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
 			{
+				m_targets[pos].push_back(pos + 4);
 				add_block(pos + 4);
 			}
 
@@ -801,23 +812,83 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 lsa)
 		}
 	}
 
-	while (g_cfg.core.spu_block_size == spu_block_size_type::safe)
+	while (g_cfg.core.spu_block_size != spu_block_size_type::giga)
 	{
 		const u32 initial_size = result.size();
 
-		// Check unreachable blocks in safe mode (TODO)
+		// Check unreachable blocks in safe and mega modes (TODO)
 		u32 limit = lsa + result.size() * 4 - 4;
 
 		for (auto& pair : m_preds)
 		{
 			bool reachable = false;
 
-			for (u32 pred : pair.second)
+			if (pair.first >= limit)
 			{
-				if (pred >= lsa && pred < limit)
+				continue;
+			}
+
+			// All (direct and indirect) predecessors to check
+			std::basic_string<u32> workload;
+
+			// Bit array used to deduplicate workload list
+			workload.push_back(pair.first);
+			m_bits[pair.first / 4] = true;
+
+			for (std::size_t i = 0; !reachable && i < workload.size(); i++)
+			{
+				for (u32 j = workload[i];; j -= 4)
 				{
-					reachable = true;
+					// Go backward from an address until the entry point (=lsa) is reached
+					if (j == lsa)
+					{
+						reachable = true;
+						break;
+					}
+
+					const auto found = m_preds.find(j);
+
+					bool had_fallthrough = false;
+
+					if (found != m_preds.end())
+					{
+						for (u32 new_pred : found->second)
+						{
+							// Check whether the predecessor is previous instruction
+							if (new_pred == j - 4)
+							{
+								had_fallthrough = true;
+								continue;
+							}
+
+							// Check whether in range and not already added
+							if (new_pred >= lsa && new_pred < limit && !m_bits[new_pred / 4])
+							{
+								workload.push_back(new_pred);
+								m_bits[new_pred / 4] = true;
+							}
+						}
+					}
+
+					// Check for possible fallthrough predecessor
+					if (!had_fallthrough)
+					{
+						if (result.at((j - lsa) / 4) == 0 || m_targets.count(j - 4))
+						{
+							break;
+						}
+					}
+
+					if (i == 0)
+					{
+						// TODO
+					}
 				}
+			}
+
+			for (u32 pred : workload)
+			{
+				m_bits[pred / 4] = false;
 			}
 
 			if (!reachable && pair.first < limit)
@@ -1249,9 +1320,10 @@ public:
 		// Emit code check
 		m_ir->SetInsertPoint(label_test);
 
-		if (false)
+		if (!g_cfg.core.spu_verification)
 		{
-			// Disable check (not available)
+			// Disable check (unsafe)
+			m_ir->CreateBr(label_body);
 		}
 		else if (func.size() - 1 == 1)
 		{
@@ -1381,6 +1453,36 @@ public:
 				}
 
 				m_ir->SetInsertPoint(found->second);
+
+				// Build state check if necessary (TODO: more conditions)
+				bool need_check_state = false;
+
+				const auto pfound = m_preds.find(pos);
+
+				if (pfound != m_preds.end())
+				{
+					for (u32 pred : pfound->second)
+					{
+						if (pred >= pos)
+						{
+							// If this block is a target of a backward branch (possibly loop), emit a check
+							need_check_state = true;
+							break;
+						}
+					}
+				}
+
+				if (need_check_state)
+				{
+					// Call cpu_thread::check_state if necessary and return or continue (full check)
+					const auto _body = BasicBlock::Create(m_context, "", m_function);
+					const auto check = BasicBlock::Create(m_context, "", m_function);
+					m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(pstate), m_ir->getInt32(0)), _body, check);
+					m_ir->SetInsertPoint(check);
+					m_ir->CreateStore(m_ir->getInt32(pos), spu_ptr<u32>(&SPUThread::pc));
+					m_ir->CreateCondBr(call(&check_state, m_thread), m_stop, _body);
+					m_ir->SetInsertPoint(_body);
+				}
 			}
 
 			if (!m_ir->GetInsertBlock()->getTerminator())
@@ -1405,9 +1507,17 @@ public:
 		m_ir->CreateRetVoid();
 
 		m_ir->SetInsertPoint(label_diff);
-		const auto pbfail = spu_ptr<u64>(&SPUThread::block_failure);
-		m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(pbfail), m_ir->getInt64(1)), pbfail);
-		tail(&spu_recompiler_base::dispatch, m_thread, m_ir->getInt32(0), m_ir->getInt32(0));
+
+		if (g_cfg.core.spu_verification)
+		{
+			const auto pbfail = spu_ptr<u64>(&SPUThread::block_failure);
+			m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(pbfail), m_ir->getInt64(1)), pbfail);
+			tail(&spu_recompiler_base::dispatch, m_thread, m_ir->getInt32(0), m_ir->getInt32(0));
+		}
+		else
+		{
+			m_ir->CreateUnreachable();
+		}
 
 		// Clear context
 		m_gpr.fill({});
@@ -1606,12 +1716,17 @@ public:
 			fs::file(m_spurt->m_cache_path + "../spu.log", fs::write + fs::append).write(log);
 		}
 
-		if (m_cache)
+		if (m_cache && g_cfg.core.spu_cache)
 		{
 			m_cache->add(func);
 		}
 
 		return fn;
+	}
+
+	static bool check_state(SPUThread* _spu)
+	{
+		return _spu->check_state();
 	}
 
 	template <spu_inter_func_t F>
@@ -2976,16 +3091,15 @@ public:
 
 	void branch_fixed(u32 target)
 	{
-		m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&SPUThread::pc));
-
 		const auto found = m_instr_map.find(target);
 
 		if (found != m_instr_map.end())
 		{
-			m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::state)), m_ir->getInt32(0)), m_stop, found->second);
+			m_ir->CreateBr(found->second);
 			return;
 		}
 
+		m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&SPUThread::pc));
 		const auto addr = m_ir->CreateAdd(m_thread, m_ir->getInt64(::offset32(&SPUThread::jit_dispatcher) + target * 2));
 		const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u64>(), get_type<u64>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
 		const auto func = m_ir->CreateLoad(m_ir->CreateIntToPtr(addr, type));
