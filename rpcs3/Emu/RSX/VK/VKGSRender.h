@@ -287,8 +287,6 @@ public:
 	std::unique_ptr<vk::vertex_cache> m_vertex_cache;
 	std::unique_ptr<vk::shader_cache> m_shaders_cache;
 
-	std::shared_ptr<vk::mem_allocator_base> m_mem_allocator;
-
 private:
 	std::unique_ptr<VKProgramBuffer> m_prog_buffer;
 

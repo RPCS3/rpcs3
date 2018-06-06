@@ -77,14 +77,13 @@ namespace vk
 	struct memory_type_mapping;
 	struct gpu_formats_support;
 
-	vk::context *get_current_thread_ctx();
+	const vk::context *get_current_thread_ctx();
 	void set_current_thread_ctx(const vk::context &ctx);
 
-	vk::render_device *get_current_renderer();
+	const vk::render_device *get_current_renderer();
 	void set_current_renderer(const vk::render_device &device);
 
-	void set_current_mem_allocator(std::shared_ptr<vk::mem_allocator_base> mem_allocator);
-	std::shared_ptr<vk::mem_allocator_base> get_current_mem_allocator();
+	mem_allocator_base *get_current_mem_allocator();
 
 	//Compatibility workarounds
 	bool emulate_primitive_restart(rsx::primitive_type type);
@@ -165,178 +164,6 @@ namespace vk
 	{
 		bool d24_unorm_s8;
 		bool d32_sfloat_s8;
-	};
-
-	class physical_device
-	{
-		VkPhysicalDevice dev = nullptr;
-		VkPhysicalDeviceProperties props;
-		VkPhysicalDeviceMemoryProperties memory_properties;
-		std::vector<VkQueueFamilyProperties> queue_props;
-
-	public:
-
-		physical_device() {}
-		~physical_device() {}
-
-		void set_device(VkPhysicalDevice pdev)
-		{
-			dev = pdev;
-			vkGetPhysicalDeviceProperties(pdev, &props);
-			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
-		}
-
-		std::string name() const
-		{
-			return props.deviceName;
-		}
-
-		uint32_t get_queue_count() const
-		{
-			if (queue_props.size())
-				return (u32)queue_props.size();
-
-			uint32_t count = 0;
-			vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
-
-			return count;
-		}
-
-		VkQueueFamilyProperties get_queue_properties(uint32_t queue)
-		{
-			if (!queue_props.size())
-			{
-				uint32_t count = 0;
-				vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
-
-				queue_props.resize(count);
-				vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, queue_props.data());
-			}
-
-			if (queue >= queue_props.size()) fmt::throw_exception("Bad queue index passed to get_queue_properties (%u)" HERE, queue);
-			return queue_props[queue];
-		}
-
-		VkPhysicalDeviceMemoryProperties get_memory_properties() const
-		{
-			return memory_properties;
-		}
-
-		operator VkPhysicalDevice() const
-		{
-			return dev;
-		}
-	};
-
-	class render_device
-	{
-		physical_device *pgpu = nullptr;
-		memory_type_mapping memory_map{};
-		gpu_formats_support m_formats_support{};
-		VkDevice dev = VK_NULL_HANDLE;
-
-	public:
-		render_device()
-		{}
-
-		render_device(vk::physical_device &pdev, uint32_t graphics_queue_idx)
-		{
-			float queue_priorities[1] = { 0.f };
-			pgpu = &pdev;
-
-			VkDeviceQueueCreateInfo queue = {};
-			queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			queue.pNext = NULL;
-			queue.queueFamilyIndex = graphics_queue_idx;
-			queue.queueCount = 1;
-			queue.pQueuePriorities = queue_priorities;
-
-			//Set up instance information
-			const char *requested_extensions[] =
-			{
-				VK_KHR_SWAPCHAIN_EXTENSION_NAME
-			};
-
-			//Enable hardware features manually
-			//Currently we require:
-			//1. Anisotropic sampling
-			//2. DXT support
-			VkPhysicalDeviceFeatures available_features;
-			vkGetPhysicalDeviceFeatures(*pgpu, &available_features);
-
-			available_features.samplerAnisotropy = VK_TRUE;
-			available_features.textureCompressionBC = VK_TRUE;
-
-			VkDeviceCreateInfo device = {};
-			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-			device.pNext = NULL;
-			device.queueCreateInfoCount = 1;
-			device.pQueueCreateInfos = &queue;
-			device.enabledLayerCount = 0;
-			device.ppEnabledLayerNames = nullptr; // Deprecated
-			device.enabledExtensionCount = 1;
-			device.ppEnabledExtensionNames = requested_extensions;
-			device.pEnabledFeatures = &available_features;
-
-			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
-
-			memory_map = vk::get_memory_mapping(pdev);
-			m_formats_support = vk::get_optimal_tiling_supported_formats(pdev);
-		}
-
-		~render_device()
-		{
-		}
-
-		void destroy()
-		{
-			if (dev && pgpu)
-			{
-				vkDestroyDevice(dev, nullptr);
-				dev = nullptr;
-			}
-		}
-
-		bool get_compatible_memory_type(u32 typeBits, u32 desired_mask, u32 *type_index)
-		{
-			VkPhysicalDeviceMemoryProperties mem_infos = pgpu->get_memory_properties();
-
-			for (uint32_t i = 0; i < 32; i++)
-			{
-				if ((typeBits & 1) == 1)
-				{
-					if ((mem_infos.memoryTypes[i].propertyFlags & desired_mask) == desired_mask)
-					{
-						*type_index = i;
-						return true;
-					}
-				}
-
-				typeBits >>= 1;
-			}
-
-			return false;
-		}
-
-		const physical_device& gpu() const
-		{
-			return *pgpu;
-		}
-
-		const memory_type_mapping& get_memory_mapping() const
-		{
-			return memory_map;
-		}
-
-		const gpu_formats_support& get_formats_support() const
-		{
-			return m_formats_support;
-		}
-
-		operator VkDevice&()
-		{
-			return dev;
-		}
 	};
 
 	// Memory Allocator - base class
@@ -530,8 +357,198 @@ namespace vk
 
 	private:
 		VkDevice m_device;
-		std::shared_ptr<vk::mem_allocator_base> m_mem_allocator;
+		vk::mem_allocator_base* m_mem_allocator;
 		mem_allocator_base::mem_handle_t m_mem_handle;
+	};
+
+	class physical_device
+	{
+		VkPhysicalDevice dev = nullptr;
+		VkPhysicalDeviceProperties props;
+		VkPhysicalDeviceMemoryProperties memory_properties;
+		std::vector<VkQueueFamilyProperties> queue_props;
+
+	public:
+
+		physical_device() {}
+		~physical_device() {}
+
+		void set_device(VkPhysicalDevice pdev)
+		{
+			dev = pdev;
+			vkGetPhysicalDeviceProperties(pdev, &props);
+			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+		}
+
+		std::string name() const
+		{
+			return props.deviceName;
+		}
+
+		uint32_t get_queue_count() const
+		{
+			if (queue_props.size())
+				return (u32)queue_props.size();
+
+			uint32_t count = 0;
+			vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
+
+			return count;
+		}
+
+		VkQueueFamilyProperties get_queue_properties(uint32_t queue)
+		{
+			if (!queue_props.size())
+			{
+				uint32_t count = 0;
+				vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
+
+				queue_props.resize(count);
+				vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, queue_props.data());
+			}
+
+			if (queue >= queue_props.size()) fmt::throw_exception("Bad queue index passed to get_queue_properties (%u)" HERE, queue);
+			return queue_props[queue];
+		}
+
+		VkPhysicalDeviceMemoryProperties get_memory_properties() const
+		{
+			return memory_properties;
+		}
+
+		operator VkPhysicalDevice() const
+		{
+			return dev;
+		}
+	};
+
+	class render_device
+	{
+		physical_device *pgpu = nullptr;
+		memory_type_mapping memory_map{};
+		gpu_formats_support m_formats_support{};
+		std::unique_ptr<mem_allocator_base> m_allocator;
+		VkDevice dev = VK_NULL_HANDLE;
+
+	public:
+		render_device()
+		{}
+
+		~render_device()
+		{}
+
+		void create(vk::physical_device &pdev, uint32_t graphics_queue_idx)
+		{
+			float queue_priorities[1] = { 0.f };
+			pgpu = &pdev;
+
+			VkDeviceQueueCreateInfo queue = {};
+			queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			queue.pNext = NULL;
+			queue.queueFamilyIndex = graphics_queue_idx;
+			queue.queueCount = 1;
+			queue.pQueuePriorities = queue_priorities;
+
+			//Set up instance information
+			const char *requested_extensions[] =
+			{
+				VK_KHR_SWAPCHAIN_EXTENSION_NAME
+			};
+
+			//Enable hardware features manually
+			//Currently we require:
+			//1. Anisotropic sampling
+			//2. DXT support
+			VkPhysicalDeviceFeatures available_features;
+			vkGetPhysicalDeviceFeatures(*pgpu, &available_features);
+
+			available_features.samplerAnisotropy = VK_TRUE;
+			available_features.textureCompressionBC = VK_TRUE;
+
+			VkDeviceCreateInfo device = {};
+			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+			device.pNext = NULL;
+			device.queueCreateInfoCount = 1;
+			device.pQueueCreateInfos = &queue;
+			device.enabledLayerCount = 0;
+			device.ppEnabledLayerNames = nullptr; // Deprecated
+			device.enabledExtensionCount = 1;
+			device.ppEnabledExtensionNames = requested_extensions;
+			device.pEnabledFeatures = &available_features;
+
+			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
+
+			memory_map = vk::get_memory_mapping(pdev);
+			m_formats_support = vk::get_optimal_tiling_supported_formats(pdev);
+
+			if (g_cfg.video.disable_vulkan_mem_allocator)
+				m_allocator = std::make_unique<vk::mem_allocator_vk>(dev, pdev);
+			else
+				m_allocator = std::make_unique<vk::mem_allocator_vma>(dev, pdev);
+		}
+
+		void destroy()
+		{
+			if (dev && pgpu)
+			{
+				if (m_allocator)
+				{
+					m_allocator->destroy();
+					m_allocator.reset();
+				}
+
+				vkDestroyDevice(dev, nullptr);
+				dev = nullptr;
+				memory_map = {};
+				m_formats_support = {};
+			}
+		}
+
+		bool get_compatible_memory_type(u32 typeBits, u32 desired_mask, u32 *type_index) const
+		{
+			VkPhysicalDeviceMemoryProperties mem_infos = pgpu->get_memory_properties();
+
+			for (uint32_t i = 0; i < 32; i++)
+			{
+				if ((typeBits & 1) == 1)
+				{
+					if ((mem_infos.memoryTypes[i].propertyFlags & desired_mask) == desired_mask)
+					{
+						*type_index = i;
+						return true;
+					}
+				}
+
+				typeBits >>= 1;
+			}
+
+			return false;
+		}
+
+		const physical_device& gpu() const
+		{
+			return *pgpu;
+		}
+
+		const memory_type_mapping& get_memory_mapping() const
+		{
+			return memory_map;
+		}
+
+		const gpu_formats_support& get_formats_support() const
+		{
+			return m_formats_support;
+		}
+
+		mem_allocator_base* get_allocator() const
+		{
+			return m_allocator.get();
+		}
+
+		operator VkDevice() const
+		{
+			return dev;
+		}
 	};
 
 	struct image
@@ -542,7 +559,7 @@ namespace vk
 		VkImageCreateInfo info = {};
 		std::shared_ptr<vk::memory_block> memory;
 
-		image(vk::render_device &dev,
+		image(const vk::render_device &dev,
 			uint32_t memory_type_index,
 			uint32_t access_flags,
 			VkImageType image_type,
@@ -1179,7 +1196,7 @@ public:
 	public:
 		swapchain_base(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
 		{
-			dev = render_device(gpu, _graphics_queue);
+			dev.create(gpu, _graphics_queue);
 
 			if (_graphics_queue < UINT32_MAX) vkGetDeviceQueue(dev, _graphics_queue, 0, &vk_graphics_queue);
 			if (_present_queue < UINT32_MAX) vkGetDeviceQueue(dev, _present_queue, 0, &vk_present_queue);
