@@ -318,6 +318,11 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 				// Wait until the end of the last quantum before the target time
 				thread_ctrl::wait_for(remaining - host_min_quantum);
 			}
+			else if (sleep_time == 300)
+			{
+				// Special case, on ps3 sleeps for random duration, on windows causes high idle CPU usage if unmanaged
+				thread_ctrl::wait_for(1);
+			}
 			else
 			{
 				// Try yielding. May cause long wake latency but helps weaker CPUs a lot by alleviating resource pressure
