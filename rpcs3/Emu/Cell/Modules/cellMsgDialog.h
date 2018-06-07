@@ -2,7 +2,11 @@
 
 #include "Utilities/BitField.h"
 
-
+enum
+{
+	CELL_MSGDIALOG_PROGRESSBAR_STRING_SIZE = 64,
+	CELL_MSGDIALOG_STRING_SIZE             = 512,
+};
 
 enum
 {
@@ -47,6 +51,13 @@ enum : s32
 	CELL_MSGDIALOG_BUTTON_YES     = 1,
 	CELL_MSGDIALOG_BUTTON_NO      = 2,
 	CELL_MSGDIALOG_BUTTON_ESCAPE  = 3,
+};
+
+enum CellMsgDialogProgressBarIndex
+{
+	CELL_MSGDIALOG_PROGRESSBAR_INDEX_SINGLE       = 0, // the only bar in a single bar dialog
+	CELL_MSGDIALOG_PROGRESSBAR_INDEX_DOUBLE_UPPER = 0, // the upper bar in a double bar dialog
+	CELL_MSGDIALOG_PROGRESSBAR_INDEX_DOUBLE_LOWER = 1, // the lower bar in a double bar dialog
 };
 
 using CellMsgDialogCallback = void(s32 buttonType, vm::ptr<void> userData);
