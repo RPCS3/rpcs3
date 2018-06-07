@@ -9,8 +9,13 @@ void basic_mouse_handler::Init(const u32 max_connect)
 	m_info.max_connect = max_connect;
 	m_info.now_connect = std::min(m_mice.size(), (size_t)max_connect);
 	m_info.info = 0; // Ownership of mouse data: 0=Application, 1=System
+	for (u32 i = 1; i < max_connect; i++)
+	{
+		m_info.status[i] = CELL_MOUSE_STATUS_DISCONNECTED;
+		m_info.mode[i] = CELL_MOUSE_INFO_TABLET_MOUSE_MODE;
+		m_info.tablet_is_supported[i] = CELL_MOUSE_INFO_TABLET_NOT_SUPPORTED;
+	}
 	m_info.status[0] = CELL_MOUSE_STATUS_CONNECTED;										// (TODO: Support for more mice)
-	for (u32 i = 1; i<max_connect; i++) m_info.status[i] = CELL_MOUSE_STATUS_DISCONNECTED;
 	m_info.vendor_id[0] = 0x1234;
 	m_info.product_id[0] = 0x1234;
 }
