@@ -36,6 +36,8 @@ if (NOT USE_SYSTEM_LIBPNG)
 	add_subdirectory(3rdparty/libpng EXCLUDE_FROM_ALL)
 endif()
 
+add_subdirectory(3rdparty/pugixml EXCLUDE_FROM_ALL)
+
 # TODO: do real installation, including copying directory structure
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/bin")
