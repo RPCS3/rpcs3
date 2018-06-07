@@ -91,11 +91,14 @@ enum ButtonDataOffset
 	CELL_PAD_BTN_OFFSET_SENSOR_G       = 23,
 };
 
-static const u32 CELL_MAX_PADS = 127;
-static const u32 CELL_PAD_MAX_PORT_NUM = 7;
-static const u32 CELL_PAD_MAX_CODES = 64;
-static const u32 CELL_PAD_MAX_CAPABILITY_INFO = 32;
-static const u32 CELL_PAD_ACTUATOR_MAX = 2;
+enum
+{
+	CELL_PAD_ACTUATOR_MAX        = 2,
+	CELL_PAD_MAX_PORT_NUM        = 7,
+	CELL_PAD_MAX_CAPABILITY_INFO = 32,
+	CELL_PAD_MAX_CODES           = 64,
+	CELL_MAX_PADS                = 127,
+};
 
 struct Button
 {
