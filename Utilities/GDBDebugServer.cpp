@@ -338,6 +338,7 @@ bool GDBDebugServer::select_thread(u64 id)
 		selected_thread = ppu.ptr;
 		return true;
 	}
+	gdbDebugServer.warning("Unable to select thread! Is the emulator running?");
 	return false;
 }
 
