@@ -20,6 +20,9 @@ namespace vk
 		VkPipelineLayout m_pipeline_layout = nullptr;
 		u32 m_used_descriptors = 0;
 
+		VkFilter m_sampler_filter = VK_FILTER_LINEAR;
+		u32 m_num_usable_samplers = 1;
+
 		std::unordered_map<VkRenderPass, std::unique_ptr<vk::glsl::program>> m_program_cache;
 		std::unique_ptr<vk::sampler> m_sampler;
 		std::unique_ptr<vk::framebuffer> m_draw_fbo;
@@ -69,34 +72,34 @@ namespace vk
 		{
 			VkDescriptorPoolSize descriptor_pool_sizes[2] =
 			{
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 120 },
+				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 120 * m_num_usable_samplers },
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 120 },
 			};
 
 			//Reserve descriptor pools
 			m_descriptor_pool.create(*m_device, descriptor_pool_sizes, 2);
 
-			VkDescriptorSetLayoutBinding bindings[3] = {};
+			std::vector<VkDescriptorSetLayoutBinding> bindings(1 + m_num_usable_samplers);
 
 			bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			bindings[0].descriptorCount = 1;
 			bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			bindings[0].binding = 0;
+			bindings[0].pImmutableSamplers = nullptr;
 
-			bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			bindings[1].descriptorCount = 1;
-			bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			bindings[1].binding = 1;
-
-			bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			bindings[2].descriptorCount = 1;
-			bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			bindings[2].binding = 2;
+			for (u32 n = 1; n <= m_num_usable_samplers; ++n)
+			{
+				bindings[n].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				bindings[n].descriptorCount = 1;
+				bindings[n].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+				bindings[n].binding = n;
+				bindings[n].pImmutableSamplers = nullptr;
+			}
 
 			VkDescriptorSetLayoutCreateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			infos.pBindings = bindings;
-			infos.bindingCount = 3;
+			infos.pBindings = bindings.data();
+			infos.bindingCount = 1 + m_num_usable_samplers;
 
 			CHECK_RESULT(vkCreateDescriptorSetLayout(*m_device, &infos, nullptr, &m_descriptor_layout));
 
@@ -122,8 +125,12 @@ namespace vk
 		{
 			std::vector<vk::glsl::program_input> fs_inputs;
 			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_uniform_buffer,{},{}, 0, "static_data" });
-			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, 1, "fs0" });
-			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, 2, "fs1" });
+
+			for (u32 n = 1; n <= m_num_usable_samplers; ++n)
+			{
+				fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, s32(n), "fs" + std::to_string(n-1) });
+			}
+
 			return fs_inputs;
 		}
 
@@ -239,7 +246,7 @@ namespace vk
 			{
 				m_sampler = std::make_unique<vk::sampler>(*m_device,
 					VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-					VK_FALSE, 0.f, 1.f, 0.f, 0.f, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
+					VK_FALSE, 0.f, 1.f, 0.f, 0.f, m_sampler_filter, m_sampler_filter, VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 			}
 
 			update_uniforms(program);
