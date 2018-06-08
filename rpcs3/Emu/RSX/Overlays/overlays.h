@@ -722,6 +722,8 @@ namespace rsx
 			overlay_element bottom_bar, background;
 			progress_bar progress_1, progress_2;
 			u8 num_progress_bars = 0;
+			s32 taskbar_index = 0;
+			s32 taskbar_limit = 0;
 
 			bool interactive = false;
 			bool ok_only = false;
@@ -900,6 +902,16 @@ namespace rsx
 				return CELL_OK;
 			}
 
+			u32 progress_bar_count()
+			{
+				return num_progress_bars;
+			}
+
+			void progress_bar_set_taskbar_index(s32 index)
+			{
+				taskbar_index = index;
+			}
+
 			s32 progress_bar_set_message(u32 index, const std::string& msg)
 			{
 				if (index >= num_progress_bars)
@@ -923,6 +935,9 @@ namespace rsx
 				else
 					progress_2.inc(value);
 
+				if (index == taskbar_index || taskbar_index == -1)
+					Emu.GetCallbacks().handle_taskbar_progress(1, value);
+
 				return CELL_OK;
 			}
 
@@ -936,6 +951,8 @@ namespace rsx
 				else
 					progress_2.set_value(0.f);
 
+				Emu.GetCallbacks().handle_taskbar_progress(0, 0);
+
 				return CELL_OK;
 			}
 
@@ -948,6 +965,17 @@ namespace rsx
 					progress_1.set_limit((float)limit);
 				else
 					progress_2.set_limit((float)limit);
+
+				if (index == taskbar_index)
+				{
+					taskbar_limit = limit;
+					Emu.GetCallbacks().handle_taskbar_progress(2, taskbar_limit);
+				}
+				else if (taskbar_index == -1)
+				{
+					taskbar_limit += limit;
+					Emu.GetCallbacks().handle_taskbar_progress(2, taskbar_limit);
+				}
 
 				return CELL_OK;
 			}

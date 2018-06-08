@@ -73,13 +73,14 @@ enum class MsgDialogState
 
 class MsgDialogBase
 {
+protected:
+	// the progressbar that will be represented in the taskbar. Use -1 to combine the progress.
+	s32 taskbar_index = 0;
+
 public:
 	atomic_t<MsgDialogState> state{ MsgDialogState::Open };
 
 	MsgDialogType type{};
-
-	// the progressbar that will be represented in the taskbar. Use -1 to combine the progress.
-	s32 taskbar_index = 0;
 
 	std::function<void(s32 status)> on_close;
 	std::function<void()> on_osk_input_entered;
@@ -92,4 +93,9 @@ public:
 	virtual void ProgressBarReset(u32 progressBarIndex) = 0;
 	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) = 0;
 	virtual void ProgressBarSetLimit(u32 index, u32 limit) = 0;
+
+	void ProgressBarSetTaskbarIndex(s32 index)
+	{
+		taskbar_index = index;
+	}
 };
