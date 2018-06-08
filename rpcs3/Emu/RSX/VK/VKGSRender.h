@@ -94,14 +94,16 @@ struct command_buffer_chunk: public vk::command_buffer
 
 	bool poke()
 	{
+		reader_lock lock(guard_mutex);
+
 		if (vkGetFenceStatus(m_device, submit_fence) == VK_SUCCESS)
 		{
-			std::lock_guard<shared_mutex> lock(guard_mutex);
+			lock.upgrade();
 
 			if (pending)
 			{
-				vk::reset_fence(&submit_fence);
 				pending = false;
+				vk::reset_fence(&submit_fence);
 			}
 		}
 
@@ -110,7 +112,7 @@ struct command_buffer_chunk: public vk::command_buffer
 
 	void wait()
 	{
-		std::lock_guard<shared_mutex> lock(guard_mutex);
+		reader_lock lock(guard_mutex);
 
 		if (!pending)
 			return;
@@ -124,8 +126,13 @@ struct command_buffer_chunk: public vk::command_buffer
 			break;
 		}
 
-		vk::reset_fence(&submit_fence);
-		pending = false;
+		lock.upgrade();
+
+		if (pending)
+		{
+			vk::reset_fence(&submit_fence);
+			pending = false;
+		}
 	}
 };
 
@@ -261,7 +268,6 @@ private:
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
 	std::unique_ptr<vk::depth_convert_pass> m_depth_converter;
-	std::unique_ptr<vk::depth_scaling_pass> m_depth_scaler;
 	std::unique_ptr<vk::ui_overlay_renderer> m_ui_renderer;
 	std::unique_ptr<vk::attachment_clear_pass> m_attachment_clear_pass;
 
@@ -280,8 +286,6 @@ public:
 	//vk::fbo draw_fbo;
 	std::unique_ptr<vk::vertex_cache> m_vertex_cache;
 	std::unique_ptr<vk::shader_cache> m_shaders_cache;
-
-	std::shared_ptr<vk::mem_allocator_base> m_mem_allocator;
 
 private:
 	std::unique_ptr<VKProgramBuffer> m_prog_buffer;

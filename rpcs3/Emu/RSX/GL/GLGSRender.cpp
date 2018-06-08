@@ -207,24 +207,19 @@ void GLGSRender::end()
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
-	auto copy_rtt_contents = [](gl::render_target *surface)
+	auto copy_rtt_contents = [](gl::render_target *surface, bool is_depth)
 	{
 		if (surface->get_internal_format() == surface->old_contents->get_internal_format())
 		{
 			//Copy data from old contents onto this one
-			//1. Clip a rectangular region defining the data
-			//2. Perform a GPU blit
-			u16 parent_w = surface->old_contents->width();
-			u16 parent_h = surface->old_contents->height();
-			u16 copy_w, copy_h;
+			const auto region = rsx::get_transferable_region(surface);
+			gl::g_hw_blitter->scale_image(surface->old_contents, surface, { 0, 0, std::get<0>(region), std::get<1>(region) }, { 0, 0, std::get<2>(region) , std::get<3>(region) }, !is_depth, is_depth, {});
 
-			std::tie(std::ignore, std::ignore, copy_w, copy_h) = rsx::clip_region<u16>(parent_w, parent_h, 0, 0, surface->width(), surface->height(), true);
-			glCopyImageSubData(surface->old_contents->id(), GL_TEXTURE_2D, 0, 0, 0, 0, surface->id(), GL_TEXTURE_2D, 0, 0, 0, 0, copy_w, copy_h, 1);
-			surface->set_cleared();
+			// Memory has been transferred, discard old contents and update memory flags
+			// TODO: Preserve memory outside surface clip region
+			surface->on_write();
 		}
 		//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
-
-		surface->old_contents = nullptr;
 	};
 
 	//Check if we have any 'recycled' surfaces in memory and if so, clear them
@@ -279,35 +274,29 @@ void GLGSRender::end()
 
 		if (clear_depth)
 			gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
-
-		ds->set_cleared();
 	}
 
-	if (ds && ds->old_contents != nullptr && ds->get_rsx_pitch() == ds->old_contents->get_rsx_pitch() &&
+	if (ds && ds->old_contents != nullptr && ds->get_rsx_pitch() == static_cast<gl::render_target*>(ds->old_contents)->get_rsx_pitch() &&
 		ds->old_contents->get_internal_format() == gl::texture::internal_format::rgba8)
 	{
+		// TODO: Partial memory transfer
 		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
-		ds->old_contents = nullptr;
+		ds->on_write();
 	}
 
 	if (g_cfg.video.strict_rendering_mode)
 	{
 		if (ds && ds->old_contents != nullptr)
-			copy_rtt_contents(ds);
+			copy_rtt_contents(ds, true);
 
 		for (auto &rtt : m_rtts.m_bound_render_targets)
 		{
 			if (auto surface = std::get<1>(rtt))
 			{
 				if (surface->old_contents != nullptr)
-					copy_rtt_contents(surface);
+					copy_rtt_contents(surface, false);
 			}
 		}
-	}
-	else
-	{
-		// Old contents are one use only. Keep the depth conversion check from firing over and over
-		if (ds) ds->old_contents = nullptr;
 	}
 
 	glEnable(GL_SCISSOR_TEST);
@@ -476,7 +465,10 @@ void GLGSRender::end()
 	}
 
 	const GLenum draw_mode = gl::draw_mode(rsx::method_registers.current_draw_clause.primitive);
-	bool single_draw = !supports_multidraw || (rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 || rsx::method_registers.current_draw_clause.is_disjoint_primitive);
+	const bool allow_multidraw = supports_multidraw && !g_cfg.video.disable_FIFO_reordering;
+	const bool single_draw = (!allow_multidraw ||
+		rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 ||
+		rsx::method_registers.current_draw_clause.is_disjoint_primitive);
 
 	if (upload_info.index_info)
 	{
@@ -576,6 +568,8 @@ void GLGSRender::end()
 			}
 		}
 	}
+
+	m_rtts.on_write();
 
 	m_attrib_ring_buffer->notify();
 	m_index_ring_buffer->notify();
@@ -995,11 +989,9 @@ void GLGSRender::clear_surface(u32 arg)
 		gl_state.clear_depth(f32(clear_depth) / max_depth_value);
 		mask |= GLenum(gl::buffers::depth);
 
-		gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-		if (ds && !ds->cleared())
+		if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
 		{
-			ds->set_cleared();
-			ds->old_contents = nullptr;
+			ds->on_write();
 		}
 	}
 
@@ -1043,10 +1035,9 @@ void GLGSRender::clear_surface(u32 arg)
 
 			for (auto &rtt : m_rtts.m_bound_render_targets)
 			{
-				if (std::get<0>(rtt) != 0)
+				if (auto surface = std::get<1>(rtt))
 				{
-					std::get<1>(rtt)->set_cleared(true);
-					std::get<1>(rtt)->old_contents = nullptr;
+					surface->on_write();
 				}
 			}
 
@@ -1651,8 +1642,13 @@ void GLGSRender::synchronize_buffers()
 
 bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 {
-	m_samplers_dirty.store(true);
-	return m_gl_texture_cache.blit(src, dst, interpolate, m_rtts);
+	if (m_gl_texture_cache.blit(src, dst, interpolate, m_rtts))
+	{
+		m_samplers_dirty.store(true);
+		return true;
+	}
+
+	return false;
 }
 
 void GLGSRender::notify_tile_unbound(u32 tile)
