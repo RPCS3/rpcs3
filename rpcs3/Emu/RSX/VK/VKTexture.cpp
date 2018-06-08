@@ -161,23 +161,26 @@ namespace vk
 
 					// Drivers are not very accepting of aspect COLOR -> aspect DEPTH or aspect STENCIL separately
 					// However, this works okay for D24S8 (nvidia-only format)
-					// To work around the problem we use the non-existent DEPTH/STENCIL/DEPTH_STENCIL aspect of the color texture instead
-					VkImageAspectFlags typeless_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-					if (transfer_flags == VK_IMAGE_ASPECT_DEPTH_BIT || transfer_flags == VK_IMAGE_ASPECT_STENCIL_BIT)
+					// To work around the problem we use the non-existent DEPTH/STENCIL aspect of the color texture instead (AMD only)
+					VkImageAspectFlags typeless_aspect;
+					const bool single_aspect = (transfer_flags == VK_IMAGE_ASPECT_DEPTH_BIT || transfer_flags == VK_IMAGE_ASPECT_STENCIL_BIT);
+
+					switch (vk::get_driver_vendor())
 					{
-						// NOTE: This path is only taken for VK_FORMAT_D32_SFLOAT_S8_UINT as there is no 36-bit format available
-						// On Nvidia, the default format is VK_FORMAT_D24_UNORM_S8_UINT which does not require this workaround
-						switch (vk::get_driver_vendor())
-						{
-						case driver_vendor::AMD:
-							// Quirks: This workaround allows proper transfer of stencil data
-						case driver_vendor::NVIDIA:
-							// Quirks: This workaround allows only transfer of depth data, stencil is ignored
-							typeless_aspect = aspect;
-							break;
-						default:
-							break;
-						}
+					case driver_vendor::AMD:
+						// This workaround allows proper transfer of stencil data
+						typeless_aspect = aspect;
+						break;
+					case driver_vendor::NVIDIA:
+						// This workaround allows only transfer of depth data, stencil is ignored (D32S8 only)
+						// However, transfer from r32 to d24s8 in color->depth_stencil works
+						typeless_aspect = (single_aspect)? aspect : VK_IMAGE_ASPECT_COLOR_BIT;
+						break;
+					case driver_vendor::RADV:
+						// This workaround allows only transfer of depth data, stencil is ignored (D32S8 only)
+					default:
+						typeless_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+						break;
 					}
 
 					//1. Copy unscaled to typeless surface
