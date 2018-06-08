@@ -84,8 +84,29 @@ namespace gl
 			s32 old_fbo = 0;
 			glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
 
-			filter interp = linear_interpolation ? filter::linear : filter::nearest;
-			GLenum attachment = is_depth_copy ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0;
+			filter interp = (linear_interpolation && !is_depth_copy) ? filter::linear : filter::nearest;
+			GLenum attachment;
+			gl::buffers target;
+
+			if (is_depth_copy)
+			{
+				if (src->get_internal_format() == gl::texture::internal_format::depth16 ||
+					dst->get_internal_format() == gl::texture::internal_format::depth16)
+				{
+					attachment = GL_DEPTH_ATTACHMENT;
+					target = gl::buffers::depth;
+				}
+				else
+				{
+					attachment = GL_DEPTH_STENCIL_ATTACHMENT;
+					target = gl::buffers::depth_stencil;
+				}
+			}
+			else
+			{
+				attachment = GL_COLOR_ATTACHMENT0;
+				target = gl::buffers::color;
+			}
 
 			blit_src.bind();
 			glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, src_id, 0);
@@ -99,7 +120,7 @@ namespace gl
 			if (scissor_test_enabled)
 				glDisable(GL_SCISSOR_TEST);
 
-			blit_src.blit(blit_dst, src_rect, dst_rect, is_depth_copy ? buffers::depth : buffers::color, interp);
+			blit_src.blit(blit_dst, src_rect, dst_rect, target, interp);
 
 			if (xfer_info.dst_is_typeless)
 			{
@@ -265,7 +286,7 @@ namespace gl
 				if (pbo_id == 0)
 					init_buffer();
 
-				aa_mode = static_cast<gl::render_target*>(image)->aa_mode;
+				aa_mode = static_cast<gl::render_target*>(image)->read_aa_mode;
 			}
 
 			flushed = false;

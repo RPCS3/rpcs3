@@ -740,7 +740,7 @@ namespace rsx
 		template <typename T, typename U>
 		inline void get_native_dimensions(T &width, T &height, U surface)
 		{
-			switch (surface->aa_mode)
+			switch (surface->read_aa_mode)
 			{
 			case rsx::surface_antialiasing::center_1_sample:
 				return;
@@ -758,7 +758,7 @@ namespace rsx
 		template <typename T, typename U>
 		inline void get_rsx_dimensions(T &width, T &height, U surface)
 		{
-			switch (surface->aa_mode)
+			switch (surface->read_aa_mode)
 			{
 			case rsx::surface_antialiasing::center_1_sample:
 				return;
@@ -776,7 +776,7 @@ namespace rsx
 		template <typename T>
 		inline f32 get_internal_scaling_x(T surface)
 		{
-			switch (surface->aa_mode)
+			switch (surface->read_aa_mode)
 			{
 			default:
 			case rsx::surface_antialiasing::center_1_sample:
@@ -791,7 +791,7 @@ namespace rsx
 		template <typename T>
 		inline f32 get_internal_scaling_y(T surface)
 		{
-			switch (surface->aa_mode)
+			switch (surface->read_aa_mode)
 			{
 			default:
 			case rsx::surface_antialiasing::center_1_sample:
@@ -1593,8 +1593,8 @@ namespace rsx
 
 			if (requires_processing)
 			{
-				const auto w = rsx::apply_resolution_scale(internal_width, true);
-				const auto h = rsx::apply_resolution_scale(internal_height, true);
+				const auto w = rsx::apply_resolution_scale(std::min<u16>(internal_width, surface_width), true);
+				const auto h = rsx::apply_resolution_scale(std::min<u16>(internal_height, surface_height), true);
 
 				auto command = update_subresource_cache ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
 				return { texptr->get_surface(), command, texaddr, format, 0, 0, w, h, 1,

@@ -587,6 +587,52 @@ namespace rsx
 	}
 
 	/**
+	 * Calculates the regions used for memory transfer between rendertargets on succession events
+	 */
+	template <typename SurfaceType>
+	std::tuple<u16, u16, u16, u16> get_transferable_region(SurfaceType* surface)
+	{
+		const u16 src_w = surface->old_contents->width();
+		const u16 src_h = surface->old_contents->height();
+		u16 dst_w = src_w;
+		u16 dst_h = src_h;
+
+		switch (static_cast<SurfaceType*>(surface->old_contents)->read_aa_mode)
+		{
+		case rsx::surface_antialiasing::center_1_sample:
+			break;
+		case rsx::surface_antialiasing::diagonal_centered_2_samples:
+			dst_w *= 2;
+			break;
+		case rsx::surface_antialiasing::square_centered_4_samples:
+		case rsx::surface_antialiasing::square_rotated_4_samples:
+			dst_w *= 2;
+			dst_h *= 2;
+			break;
+		}
+
+		switch (surface->write_aa_mode)
+		{
+		case rsx::surface_antialiasing::center_1_sample:
+			break;
+		case rsx::surface_antialiasing::diagonal_centered_2_samples:
+			dst_w /= 2;
+			break;
+		case rsx::surface_antialiasing::square_centered_4_samples:
+		case rsx::surface_antialiasing::square_rotated_4_samples:
+			dst_w /= 2;
+			dst_h /= 2;
+			break;
+		}
+
+		const f32 scale_x = (f32)dst_w / src_w;
+		const f32 scale_y = (f32)dst_h / src_h;
+
+		std::tie(std::ignore, std::ignore, dst_w, dst_h) = clip_region<u16>(dst_w, dst_h, 0, 0, surface->width(), surface->height(), true);
+		return std::make_tuple(u16(dst_w / scale_x), u16(dst_h / scale_y), dst_w, dst_h);
+	}
+
+	/**
 	 * Remove restart index and emulate using degenerate triangles
 	 * Can be used as a workaround when restart_index doesnt work too well
 	 * dst should be able to hold at least 2xcount entries

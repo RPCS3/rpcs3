@@ -62,6 +62,32 @@ gs_frame::gs_frame(const QString& title, const QRect& geometry, QIcon appIcon, b
 
 	// Change cursor when in fullscreen.
 	connect(this, &QWindow::visibilityChanged, this, &gs_frame::HandleCursor);
+
+#ifdef _WIN32
+	m_tb_button = new QWinTaskbarButton();
+	m_tb_progress = m_tb_button->progress();
+	m_tb_progress->setRange(0, m_gauge_max);
+	m_tb_progress->setVisible(false);
+#elif HAVE_QTDBUS
+	UpdateProgress(0);
+	m_progress_value = 0;
+#endif
+}
+
+gs_frame::~gs_frame()
+{
+#ifdef _WIN32
+	if (m_tb_progress)
+	{
+		m_tb_progress->hide();
+	}
+	if (m_tb_button)
+	{
+		m_tb_button->deleteLater();
+	}
+#elif HAVE_QTDBUS
+	UpdateProgress(0, false);
+#endif
 }
 
 void gs_frame::paintEvent(QPaintEvent *event)
@@ -159,6 +185,15 @@ void gs_frame::show()
 			setVisibility(FullScreen);
 		}
 	});
+
+#ifdef _WIN32
+	// if we do this before show, the QWinTaskbarProgress won't show
+	if (m_tb_button)
+	{
+		m_tb_button->setWindow(this);
+		m_tb_progress->show();
+	}
+#endif
 }
 
 display_handle_t gs_frame::handle() const
@@ -381,3 +416,66 @@ wm_event gs_frame::get_default_wm_event() const
 {
 	return (m_user_interaction_active) ? wm_event::geometry_change_in_progress : wm_event::none;
 }
+
+void gs_frame::progress_reset()
+{
+#ifdef _WIN32
+	if (m_tb_progress)
+	{
+		m_tb_progress->reset();
+	}
+#elif HAVE_QTDBUS
+	UpdateProgress(0);
+#endif
+}
+
+void gs_frame::progress_increment(int delta)
+{
+	if (delta == 0)
+	{
+		return;
+	}
+
+#ifdef _WIN32
+	if (m_tb_progress)
+	{
+		m_tb_progress->setValue(m_tb_progress->value() + delta);
+	}
+#elif HAVE_QTDBUS
+	m_progress_value += delta;
+	UpdateProgress(m_progress_value);
+#endif
+}
+
+void gs_frame::progress_set_limit(int limit)
+{
+#ifdef _WIN32
+	if (m_tb_progress)
+	{
+		m_tb_progress->setMaximum(limit);
+	}
+#elif HAVE_QTDBUS
+	m_gauge_max = limit;
+#endif
+}
+
+#ifdef HAVE_QTDBUS
+void gs_frame::UpdateProgress(int progress, bool disable)
+{
+	QDBusMessage message = QDBusMessage::createSignal
+	(
+		QStringLiteral("/"),
+		QStringLiteral("com.canonical.Unity.LauncherEntry"),
+		QStringLiteral("Update")
+	);
+	QVariantMap properties;
+	if (disable)
+		properties.insert(QStringLiteral("progress-visible"), false);
+	else
+		properties.insert(QStringLiteral("progress-visible"), true);
+	//Progress takes a value from 0.0 to 0.1
+	properties.insert(QStringLiteral("progress"), (double)progress / (double)m_gauge_max);
+	message << QStringLiteral("application://rpcs3.desktop") << properties;
+	QDBusConnection::sessionBus().send(message);
+}
+#endif
