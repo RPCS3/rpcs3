@@ -588,6 +588,8 @@ public:
 
 	std::array<spu_function_t, 0x10000> jit_dispatcher; // Dispatch table for indirect calls
 
+	std::array<v128, 0x4000> stack_mirror; // Return address information
+
 	void push_snr(u32 number, u32 value);
 	void do_dma_transfer(const spu_mfc_cmd& args);
 	bool do_dma_check(const spu_mfc_cmd& args);

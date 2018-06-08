@@ -637,8 +637,17 @@ SPUThread::SPUThread(const std::string& name, u32 index, lv2_spu_group* group)
 		jit = spu_recompiler_base::make_llvm_recompiler();
 	}
 
-	// Initialize lookup table
-	jit_dispatcher.fill(&spu_recompiler_base::dispatch);
+	if (g_cfg.core.spu_decoder != spu_decoder_type::fast && g_cfg.core.spu_decoder != spu_decoder_type::precise)
+	{
+		// Initialize lookup table
+		jit_dispatcher.fill(&spu_recompiler_base::dispatch);
+
+		if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
+		{
+			// Initialize stack mirror
+			std::memset(stack_mirror.data(), 0xff, sizeof(stack_mirror));
+		}
+	}
 }
 
 void SPUThread::push_snr(u32 number, u32 value)
@@ -1006,6 +1015,12 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 	else
 	{
 		auto& res = vm::reservation_lock(addr, 128);
+
+		vm::_ref<atomic_t<u32>>(addr) += 0;
+
+		// Full lock (heavyweight)
+		// TODO: vm::check_addr
+		vm::writer_lock lock(1);
 		data = to_write;
 		vm::reservation_update(addr, 128);
 	}
@@ -1149,9 +1164,8 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		if (is_polling)
 		{
 			rtime = vm::reservation_acquire(raddr, 128);
-			_mm_lfence();
 
-			while (vm::reservation_acquire(raddr, 128) == rtime && rdata == data)
+			while (rdata == data && vm::reservation_acquire(raddr, 128) == rtime)
 			{
 				if (test(state, cpu_flag::stop))
 				{
@@ -1164,7 +1178,26 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 
 		if (LIKELY(g_use_rtm))
 		{
-			const u64 count = spu_getll_tx(raddr, rdata.data(), &rtime);
+			u64 count = 0;
+
+			if (g_cfg.core.spu_accurate_getllar)
+			{
+				count = spu_getll_tx(raddr, rdata.data(), &rtime);
+			}
+
+			if (count == 0)
+			{
+				for (++count;; count++, busy_wait(300))
+				{
+					rtime = vm::reservation_acquire(raddr, 128);
+					rdata = data;
+
+					if (LIKELY(vm::reservation_acquire(raddr, 128) == rtime))
+					{
+						break;
+					}
+				}
+			}
 
 			if (count > 9)
 			{
@@ -1174,9 +1207,25 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		else
 		{
 			auto& res = vm::reservation_lock(raddr, 128);
-			rtime = res & ~1ull;
-			rdata = data;
-			res &= ~1ull;
+
+			if (g_cfg.core.spu_accurate_getllar)
+			{
+				vm::_ref<atomic_t<u32>>(raddr) += 0;
+
+				// Full lock (heavyweight)
+				// TODO: vm::check_addr
+				vm::writer_lock lock(1);
+
+				rtime = res & ~1ull;
+				rdata = data;
+				res &= ~1ull;
+			}
+			else
+			{
+				rtime = res & ~1ull;
+				rdata = data;
+				res &= ~1ull;
+			}
 		}
 
 		// Copy to LS

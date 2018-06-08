@@ -296,9 +296,13 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 
 	if (sleep_time)
 	{
+#ifdef __linux__
+		constexpr u32 host_min_quantum = 100;
+#else
 		// Host scheduler quantum for windows (worst case)
 		// NOTE: On ps3 this function has very high accuracy
-		const u32  host_min_quantum = 500;
+		constexpr u32 host_min_quantum = 500;
+#endif
 
 		u64 passed = 0;
 		u64 remaining;

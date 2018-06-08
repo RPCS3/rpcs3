@@ -161,7 +161,6 @@ enum CellSysutilLang : s32;
 struct EmuCallbacks
 {
 	std::function<void(std::function<void()>)> call_after;
-	std::function<void()> process_events;
 	std::function<void()> on_run;
 	std::function<void()> on_pause;
 	std::function<void()> on_resume;
@@ -322,6 +321,9 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_loop_detection{this, "SPU loop detection", true}; //Try to detect wait loops and trigger thread yield
 		cfg::_bool spu_shared_runtime{this, "SPU Shared Runtime", true}; // Share compiled SPU functions between all threads
 		cfg::_enum<spu_block_size_type> spu_block_size{this, "SPU Block Size"};
+		cfg::_bool spu_accurate_getllar{this, "Accurate GETLLAR", false};
+		cfg::_bool spu_verification{this, "SPU Verification", true}; // Should be enabled
+		cfg::_bool spu_cache{this, "SPU Cache", true};
 
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::liblv2only};
 		cfg::_bool hook_functions{this, "Hook static functions"};
