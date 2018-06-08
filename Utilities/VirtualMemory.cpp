@@ -12,9 +12,17 @@
 #include <sys/types.h>
 #endif
 
-#if 0
+#ifdef __linux__
 #include <sys/syscall.h>
-static int memfd_create(const char *name, unsigned int flags)
+
+#ifdef __NR_memfd_create
+#elif __x86_64__
+#define __NR_memfd_create 319
+#elif __aarch64__
+#define __NR_memfd_create 279
+#endif
+
+static int memfd_create_(const char *name, uint flags)
 {
     return syscall(__NR_memfd_create, name, flags);
 }
@@ -124,10 +132,10 @@ namespace utils
 #ifdef _WIN32
 		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, m_size, NULL);
 		verify(HERE), m_handle != INVALID_HANDLE_VALUE;
-//#elif __linux__
-//		m_file = ::memfd_create("", 0);
-//		verify(HERE), m_file >= 0;
-//		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
+#elif __linux__
+		m_file = ::memfd_create_("", 0);
+		verify(HERE), m_file >= 0;
+		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
 #else
 		while ((m_file = ::shm_open("/rpcs3-mem1", O_RDWR | O_CREAT | O_EXCL, S_IWUSR | S_IRUSR)) == -1)
 		{

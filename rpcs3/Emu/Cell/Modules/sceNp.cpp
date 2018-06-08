@@ -1191,6 +1191,12 @@ s32 sceNpManagerRequestTicket()
 s32 sceNpManagerRequestTicket2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
+	
+	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	{
+		return SCE_NP_ERROR_OFFLINE;
+	}
+	
 	return CELL_OK;
 }
 

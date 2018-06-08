@@ -122,6 +122,12 @@ struct lv2_obj
 		sleep_timeout(thread, timeout);
 	}
 
+	static void yield(cpu_thread& thread)
+	{
+		vm::temporary_unlock(thread);
+		awake(thread, -4);
+	}
+
 	// Schedule the thread
 	static void awake(cpu_thread&, u32 prio);
 

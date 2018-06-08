@@ -208,6 +208,13 @@ public:
 		getGraphicPipelineState(vp, fp, props, std::forward<Args>(args)...);
 	}
 
+    void preload_programs(RSXVertexProgram &vp, RSXFragmentProgram &fp)
+    {
+        vp.skip_vertex_input_check = true;
+        search_vertex_program(vp);
+        search_fragment_program(fp);
+    }
+
 	bool check_cache_missed() const
 	{
 		return m_cache_miss_flag;

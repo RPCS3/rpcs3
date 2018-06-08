@@ -48,16 +48,10 @@
 		"disableOcclusionQueries": "Disables running occlusion queries. Minor to moderate performance boost.\nMight introduce issues with broken occlusion e.g missing geometry and extreme pop-in.",
 		"forceCpuBlitEmulation": "Forces emulation of all blit and image manipulation operations on the CPU.\nRequires 'Write Color Buffers' option to also be enabled in most cases to avoid missing graphics.\nSignificantly degrades performance but is more accurate in some cases.\nThis setting overrides the 'GPU texture scaling' option.",
 		"disableOnDiskShaderCache": "Disables the loading and saving of shaders from and to the shader cache in the data directory.",
-		"disableVulkanMemAllocator": "Disables the custom Vulkan memory allocator and reverts to direct calls to VkAllocateMemory/VkFreeMemory."
+		"disableVulkanMemAllocator": "Disables the custom Vulkan memory allocator and reverts to direct calls to VkAllocateMemory/VkFreeMemory.",
+		"disableFIFOReordering": "Disables RSX FIFO optimizations completely. Draws are processed as they are received by the DMA puller."
 	},
 	"emulator": {
-		"gui": {
-			"configs": "Only useful to developers.\nIf unsure, don't use this option.",
-			"stylesheets": "Changes the overall look of RPCS3.\nChoose a stylesheet and click Apply to change between styles.",
-			"show_welcome": "Shows the initial welcome screen upon starting RPCS3.",
-			"useRichPresence": "Enables use of Discord Rich Presence to show what game you are playing on Discord.\nRequires a restart of RPCS3 to apply.",
-			"custom_colors": "Prioritize custom user interface colors over properties set in stylesheet."
-		},
 		"misc": {
 			"exitOnStop": "Automatically close RPCS3 when closing a game, or when a game closes itself.",
 			"alwaysStart": "Leave this enabled unless you are a developer.",
@@ -69,6 +63,12 @@
 			"maxLLVMThreads": "Limits the maximum number of threads used for PPU Module compilation.\nLower this in order to increase performance of other open applications.\nThe default uses all available threads.",
 			"showShaderCompilationHint": "Show shader compilation hints using the native overlay.",
 			"useNativeInterface": "Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, only the English language is supported."
+		},
+		"overlay": {
+			"perfOverlayEnabled": "Enables or disables the performance overlay.",
+			"perfOverlayDetailLevel": "Controls the amount of information displayed on the performance overlay.",
+			"perfOverlayUpdateInterval": "Sets the time interval in which the performance overlay is being updated (measured in milliseconds).",
+			"perfOverlayFontSize": "Sets the font size of the performance overlay (measured in pixels)."
 		}
 	},
 	"gpu": {
@@ -94,6 +94,14 @@
 			"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.",
 			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area."
 		}
+	},
+	"gui": {
+		"configs": "Only useful to developers.\nIf unsure, don't use this option.",
+		"stylesheets": "Changes the overall look of RPCS3.\nChoose a stylesheet and click Apply to change between styles.",
+		"show_welcome": "Shows the initial welcome screen upon starting RPCS3.",
+		"useRichPresence": "Enables use of Discord Rich Presence to show what game you are playing on Discord.\nRequires a restart of RPCS3 to completely close the connection.",
+		"discordState": "Tell your friends what you are doing.",
+		"custom_colors": "Prioritize custom user interface colors over properties set in stylesheet."
 	},
 	"input": {
 		"padHandlerBox": "If you want to use the keyboard to control, select the Keyboard option.\nIf you have a DualShock 4, select DualShock 4.\nIf you have an Xbox controller, or another compatible device, use XInput.\nOlder controllers such as PS2 controllers with an adapter usually work fine with MMJoystick.\nCheck button mappings in the Windows control panel.",
