@@ -72,6 +72,7 @@ namespace vk
 	class physical_device;
 	class command_buffer;
 	struct image;
+	struct buffer;
 	struct vk_data_heap;
 	class mem_allocator_base;
 	struct memory_type_mapping;
@@ -100,6 +101,7 @@ namespace vk
 	VkSampler null_sampler();
 	VkImageView null_image_view(vk::command_buffer&);
 	image* get_typeless_helper(VkFormat format);
+	buffer* get_scratch_buffer();
 
 	memory_type_mapping get_memory_mapping(const physical_device& dev);
 	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
@@ -123,6 +125,10 @@ namespace vk
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, VkImageSubresourceRange range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
+
+	void copy_image_typeless(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
+		const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
+		VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
 	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
 			const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
@@ -701,7 +707,7 @@ namespace vk
 		VkBufferCreateInfo info = {};
 		std::unique_ptr<vk::memory_block> memory;
 
-		buffer(vk::render_device& dev, u64 size, uint32_t memory_type_index, uint32_t access_flags, VkBufferUsageFlagBits usage, VkBufferCreateFlags flags)
+		buffer(const vk::render_device& dev, u64 size, uint32_t memory_type_index, uint32_t access_flags, VkBufferUsageFlags usage, VkBufferCreateFlags flags)
 			: m_device(dev)
 		{
 			info.size = size;

@@ -9,6 +9,7 @@ namespace vk
 
 	std::unique_ptr<image> g_null_texture;
 	std::unique_ptr<image_view> g_null_image_view;
+	std::unique_ptr<buffer> g_scratch_buffer;
 	std::unordered_map<u32, std::unique_ptr<image>> g_typeless_textures;
 
 	VkSampler g_null_sampler = nullptr;
@@ -187,6 +188,19 @@ namespace vk
 		return ptr.get();
 	}
 
+	vk::buffer* get_scratch_buffer()
+	{
+		if (!g_scratch_buffer)
+		{
+			// 32M disposable scratch memory
+			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, 32 * 0x100000,
+				g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+		}
+
+		return g_scratch_buffer.get();
+	}
+
 	void acquire_global_submit_lock()
 	{
 		g_submit_mutex.lock();
@@ -201,6 +215,7 @@ namespace vk
 	{
 		g_null_texture.reset();
 		g_null_image_view.reset();
+		g_scratch_buffer.reset();
 
 		g_typeless_textures.clear();
 
