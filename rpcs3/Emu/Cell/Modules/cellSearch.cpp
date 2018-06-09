@@ -183,7 +183,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // Set again later
 
-		std::function<void(std::string&, const std::string*)> searchInFolder = [&, type](std::string& path, const std::string* prev = nullptr)
+		std::function<void(std::string&, const std::string*)> searchInFolder = [&, type](std::string& path, const std::string* prev = NULL)
 		{
 			std::string rel_path = (prev ? *prev + "/" : "") + path;
 			std::string curr_dir = vfs::get(rel_path);
@@ -301,7 +301,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 				cellSearch.success("Content ID: %08X   Path: \"%s\"", path_hash, (rel_path + "/" + item.name));
 			}
 		};
-		searchInFolder(fmt::format("/dev_hdd0/%s", media_dir), nullptr);
+		searchInFolder(fmt::format("/dev_hdd0/%s", media_dir), NULL);
 		resultParam->resultNum = curr_search->content_ids.size();
 
 		search->func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
