@@ -418,10 +418,8 @@ void main_window::InstallPkg(const QString& dropPath)
 	const std::string fileName = sstr(QFileInfo(filePath).fileName());
 	const std::string path = sstr(filePath);
 
-	progress_dialog pdlg(0, 1000, this);
+	progress_dialog pdlg(tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
 	pdlg.setWindowTitle(tr("RPCS3 Package Installer"));
-	pdlg.setLabelText(tr("Installing package ... please wait ..."));
-	pdlg.setCancelButtonText(tr("Cancel"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
@@ -530,10 +528,8 @@ void main_window::InstallPup(const QString& dropPath)
 		return;
 	}
 
-	progress_dialog pdlg(0, static_cast<int>(updatefilenames.size()), this);
+	progress_dialog pdlg(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
 	pdlg.setWindowTitle(tr("RPCS3 Firmware Installer"));
-	pdlg.setLabelText(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)));
-	pdlg.setCancelButtonText(tr("Cancel"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
