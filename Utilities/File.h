@@ -139,9 +139,6 @@ namespace fs
 	// Try to get file extension (returns empty string if no extension)
 	std::string get_extension(const std::string& filename);
 
-	// Try to fetch the final path of a file (such that if it's a symlink)
-	std::string get_final_path(const std::string& path);
-
 	// Get file information
 	bool stat(const std::string& path, stat_t& info);
 
@@ -165,12 +162,6 @@ namespace fs
 
 	// Create directories
 	bool create_path(const std::string& path);
-
-	// Create a hard link to a file
-	bool create_hard_link(const std::string& from, const std::string& to);
-
-	// Create a soft/symbolic link to a file
-	bool create_soft_link(const std::string& from, const std::string& to);
 
 	// Rename (move) file or directory
 	bool rename(const std::string& from, const std::string& to, bool overwrite);

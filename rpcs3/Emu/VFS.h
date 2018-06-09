@@ -15,4 +15,10 @@ namespace vfs
 
 	// Invert escape operation
 	std::string unescape(const std::string& path);
+
+	// Create a VFS link from a path (Uses xxhash XXH64)
+	bool link(const std::string& vpath, std::string& vlinkout);
+
+	// Removes a registered VFS link
+	bool unlink(const std::string& vlink);
 }

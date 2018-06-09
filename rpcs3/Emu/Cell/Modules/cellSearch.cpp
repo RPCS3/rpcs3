@@ -155,7 +155,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 
 error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSearchSortKey sortKey, CellSearchSortOrder sortOrder, vm::ptr<CellSearchId> outSearchId)
 {
-	cellSearch.todo("cellSearchStartContentSearch(type=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32) type, (u32) sortKey, (u32) sortOrder, outSearchId);
+	cellSearch.warning("cellSearchStartContentSearch(type=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", (u32) type, (u32) sortKey, (u32) sortOrder, outSearchId);
 
 	if (!outSearchId)
 	{
@@ -183,16 +183,15 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // Set again later
 
-		fs::create_path(vfs::get("/dev_hdd0/.temp")); // don't care if it fails... just don't make a file called ".temp"
-		std::string search_dir = vfs::get(fmt::format("/dev_hdd0/%s", media_dir));
-		//cellSearch.success("media path: \"%s\"", search_dir);
-
-		std::function<void(std::string&)> searchInFolder = [&, type](std::string& path)
+		std::function<void(std::string&, const std::string*)> searchInFolder = [&, type](std::string& path, const std::string* prev = nullptr)
 		{
-			for (auto&& item : fs::dir(path))
+			std::string rel_path = (prev ? *prev + "/" : "") + path;
+			std::string curr_dir = vfs::get(rel_path);
+
+			for (auto&& item : fs::dir(curr_dir))
 			{
 				item.name = vfs::unescape(item.name);
-				std::string fpath(path + "/" + item.name);
+				std::string item_path(curr_dir + "/" + item.name);
 
 				//if (!(std::strcmp(item.name.c_str(), ".") && std::strcmp(item.name.c_str(), "..")))
 				if (item.name.length() < 3) // "." and ".." SHOULD be the only cases, and this is a simpler condition to check
@@ -202,7 +201,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 
 				if (item.is_directory)
 				{
-					searchInFolder(fpath);
+					searchInFolder(item.name, &rel_path);
 					continue;
 				}
 
@@ -214,14 +213,14 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 
 				// TODO - Identify sorting method and insert the appropriate values where applicable.
 
-				u64 path_hash = XXH64(fpath.c_str(), fpath.length(), 0);
+				u64 path_hash = XXH64(item_path.c_str(), item_path.length(), 0);
 				if (content_map->find(path_hash) == content_map->end()) // content isn't yet being tracked
 				{
+					std::string link_path;
 					std::string extension = fs::get_extension(item.name); // used again later if no "Title" found
-					std::string link_path = fmt::format("/dev_hdd0/.temp/%08X%s", path_hash, extension);
-					if (!fs::create_soft_link(fpath, vfs::get(link_path)))
+					if (!vfs::link((rel_path + "/" + item.name), link_path)) // This is actually the job of cellSearchPrepareFile!!
 					{
-						cellSearch.error("failed to create a link \"%s\"", link_path);
+						cellSearch.error("cellSearchStartContentSearch(): error creating a link!");
 						continue;
 					}
 
@@ -234,8 +233,23 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						curr_find.data.reset(new u8[sizeof(CellSearchMusicInfo)]);
 						CellSearchMusicInfo* info = (CellSearchMusicInfo*)curr_find.data.get();
 						/* Some kinda file music analysis and assign the values as such */
-						std::strcpy(info->title, std::string(item.name.c_str(), item.name.length() - extension.length()).c_str()); // it'll do for the moment...
+						info->duration = 0;
 						info->size = item.size;
+						info->importedDate = 0;
+						info->lastPlayedDate = 0;
+						info->releasedYear = 0;
+						info->trackNumber = 0;
+						info->bitrate = 0;
+						info->samplingRate = 0;
+						info->quantizationBitrate = 0;
+						info->playCount = 0;
+						info->drmEncrypted = 0;
+						info->codec = 0;  // CellSearchCodec
+						info->status = 0; // CellSearchContentStatus
+						std::strcpy(info->title, std::string(item.name.c_str(), item.name.length() - extension.length()).c_str()); // it'll do for the moment...
+						std::strcpy(info->albumTitle, "ALBUM TITLE"); // std::strcpy(info->albumTitle, ALBUM TITLE );
+						std::strcpy(info->artistName, "ARTIST NAME"); // std::strcpy(info->artistName, ARTIST NAME );
+						std::strcpy(info->genreName, "GENRE NAME");   // std::strcpy(info->genreName,  GENRE NAME  );
 					}
 					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_PHOTO_ALL)
 					{
@@ -243,8 +257,16 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						curr_find.data.reset(new u8[sizeof(CellSearchPhotoInfo)]);
 						CellSearchPhotoInfo* info = (CellSearchPhotoInfo*)curr_find.data.get();
 						/* Some kinda file photo analysis and assign the values as such */
-						std::strcpy(info->title, std::string(item.name.c_str(), item.name.length() - extension.length()).c_str()); // it'll do for the moment...
 						info->size = item.size;
+						info->importedDate = 0;
+						info->takenDate = 0;
+						info->width = 0;
+						info->height = 0;
+						info->orientation = 0;  //CellSearchOrientation
+						info->codec = 0;        //CellSearchCodec
+						info->status = 0;       //CellSearchContentStatus
+						std::strcpy(info->title, std::string(item.name.c_str(), item.name.length() - extension.length()).c_str()); // it'll do for the moment...
+						std::strcpy(info->albumTitle, "ALBUM TITLE"); // std::strcpy(info->albumTitle, ALBUM TITLE );
 					}
 					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL)
 					{
@@ -252,8 +274,19 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						curr_find.data.reset(new u8[sizeof(CellSearchVideoInfo)]);
 						CellSearchVideoInfo* info = (CellSearchVideoInfo*)curr_find.data.get();
 						/* Some kinda file video analysis and assign the values as such */
-						std::strcpy(info->title, std::string(item.name.c_str(), item.name.length() - extension.length()).c_str()); // it'll do for the moment...
+						info->duration = 0;
 						info->size = item.size;
+						info->importedDate = 0;
+						info->takenDate = 0;
+						info->videoBitrate = 0;
+						info->audioBitrate = 0;
+						info->playCount = 0;
+						info->drmEncrypted = 0;
+						info->videoCodec = 0; // CellSearchCodec
+						info->audioCodec = 0; // CellSearchCodec
+						info->status = 0;     // CellSearchContentStatus
+						std::strcpy(info->title, std::string(item.name.c_str(), item.name.length() - extension.length()).c_str()); // it'll do for the moment...
+						std::strcpy(info->albumTitle, "ALBUM TITLE"); // std::strcpy(info->albumTitle, ALBUM TITLE );
 					}
 					content_map->emplace(path_hash, std::move(curr_find));
 				}
@@ -265,10 +298,10 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 				}
 				curr_search->content_ids.push_back(path_hash); // place this file's "ID" into the list of found types
 
-				cellSearch.success("Content ID: %08X   Path: \"%s\"", path_hash, fpath);
+				cellSearch.success("Content ID: %08X   Path: \"%s\"", path_hash, (rel_path + "/" + item.name));
 			}
 		};
-		searchInFolder(search_dir);
+		searchInFolder(fmt::format("/dev_hdd0/%s", media_dir), nullptr);
 		resultParam->resultNum = curr_search->content_ids.size();
 
 		search->func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
@@ -517,12 +550,16 @@ error_code cellSearchGetContentInfoPathMovieThumb(vm::cptr<CellSearchContentId> 
 
 error_code cellSearchPrepareFile(vm::cptr<char> path)
 {
-	cellSearch.todo("cellSearchPrepareFile(path=%s)", path);
+	cellSearch.warning("cellSearchPrepareFile(path=%s)", path);
 
 	if (!path)
 	{
 		return CELL_SEARCH_ERROR_PARAM;
 	}
+
+	// 
+	// Do nothing. The behaviour here is fulfilled during cellSearchStartContentSearch
+	// 
 
 	return CELL_OK;
 }

@@ -574,8 +574,7 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 		return CELL_OK;
 	}
 
-	const std::string& final_path = fs::get_final_path(local_path);
-	if (!fs::stat(final_path, info))
+	if (!fs::stat(local_path, info))
 	{
 		switch (auto error = fs::g_tls_error)
 		{

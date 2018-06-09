@@ -277,32 +277,6 @@ std::string fs::get_extension(const std::string& filename)
 	return temp.substr(pos);
 }
 
-std::string fs::get_final_path(const std::string& path)
-{
-	// Check for symbolic link
-	std::string out;
-#ifdef _WIN32
-	size_t required_size;
-	std::unique_ptr<wchar_t[]> finalpath;
-	HANDLE temp_handle = CreateFileW(to_wchar(path).get(), FILE_READ_ATTRIBUTES, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if ((temp_handle != INVALID_HANDLE_VALUE) && (required_size = GetFinalPathNameByHandleW(temp_handle, nullptr, 0, FILE_NAME_NORMALIZED)))
-	{
-		finalpath.reset(new wchar_t[required_size]);
-		GetFinalPathNameByHandleW(temp_handle, finalpath.get(), required_size, FILE_NAME_NORMALIZED);
-		CloseHandle(temp_handle);
-	}
-	else
-	{ // Welp, abandon that plan
-		finalpath.swap(to_wchar(path));
-	}
-
-	to_utf8(out, finalpath.get());
-	return out;
-#else
-
-#endif
-}
-
 bool fs::stat(const std::string& path, stat_t& info)
 {
 	if (auto device = get_virtual_device(path))
@@ -548,47 +522,6 @@ bool fs::create_path(const std::string& path)
 	}
 
 	return true;
-}
-
-bool fs::create_hard_link(const std::string& from, const std::string& to)
-{ // TODO
-#ifdef _WIN32
-	auto from_wstr = to_wchar(from);
-	auto to_wstr   = to_wchar(to);
-	if (!CreateHardLinkW((LPCWSTR)to_wstr.get(), (LPCWSTR)from_wstr.get(), NULL))
-	{
-		return false;
-	}
-
-	return true;
-#else
-
-	return false;
-#endif
-}
-
-bool fs::create_soft_link(const std::string& from, const std::string& to)
-{
-#ifdef _WIN32
-	// TODO - Workaround for older versions of Windows...
-	/* https://blogs.windows.com/buildingapps/2016/12/02/symlinks-windows-10/ */
-	DWORD link_flags = 0x02; // SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE (Only Windows 10 Build 14972 and up)
-	if (fs::is_dir(from))
-	{
-		link_flags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
-	}
-
-	auto from_wstr = to_wchar(from);
-	auto to_wstr   = to_wchar(to);
-	if (!CreateSymbolicLinkW((LPCWSTR)to_wstr.get(), (LPCWSTR)from_wstr.get(), link_flags))
-	{
-		return false;
-	}
-
-	return true;
-#else
-
-#endif
 }
 
 bool fs::remove_dir(const std::string& path)
