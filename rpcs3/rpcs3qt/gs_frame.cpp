@@ -439,10 +439,10 @@ void gs_frame::progress_increment(int delta)
 #ifdef _WIN32
 	if (m_tb_progress)
 	{
-		m_tb_progress->setValue(m_tb_progress->value() + delta);
+		m_tb_progress->setValue(std::clamp(m_tb_progress->value() + delta, m_tb_progress->minimum(), m_tb_progress->maximum()));
 	}
 #elif HAVE_QTDBUS
-	m_progress_value += delta;
+	m_progress_value = std::clamp(m_progress_value + delta, 0, m_gauge_max);
 	UpdateProgress(m_progress_value);
 #endif
 }

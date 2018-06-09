@@ -311,12 +311,12 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 
 	if (index == 0 && m_gauge1)
 	{
-		m_gauge1->setValue(m_gauge1->value() + delta);
+		m_gauge1->setValue(std::min(m_gauge1->value() + (int)delta, m_gauge1->maximum()));
 	}
 
 	if (index == 1 && m_gauge2)
 	{
-		m_gauge2->setValue(m_gauge2->value() + delta);
+		m_gauge2->setValue(std::min(m_gauge2->value() + (int)delta, m_gauge2->maximum()));
 	}
 
 	if (index == taskbar_index || taskbar_index == -1)
@@ -324,10 +324,10 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 #ifdef _WIN32
 		if (m_tb_progress)
 		{
-			m_tb_progress->setValue(m_tb_progress->value() + delta);
+			m_tb_progress->setValue(std::min(m_tb_progress->value() + (int)delta, m_tb_progress->maximum()));
 		}
 #elif HAVE_QTDBUS
-		m_progress_value += delta;
+		m_progress_value = std::min(m_progress_value + (int)delta, m_gauge_max);
 		UpdateProgress(m_progress_value);
 #endif
 	}
