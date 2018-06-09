@@ -634,8 +634,8 @@ error_code sys_fs_link(vm::cptr<char> from, vm::cptr<char> to)
 	if(!from && !to[0])
 		return CELL_ENOENT;
 
-	const std::string from_path = vfs::get(from.get_ptr());
-	const std::string to_path   = vfs::get(to.get_ptr());
+	std::string from_path = vfs::get(from.get_ptr());
+	std::string to_path   = vfs::get(to.get_ptr());
 
 	if (from_path.empty())
 	 	return {CELL_ENOTMOUNTED, from_path};
@@ -643,7 +643,7 @@ error_code sys_fs_link(vm::cptr<char> from, vm::cptr<char> to)
 	if (to_path.empty())
 	 	return {CELL_ENOTMOUNTED, to_path};
 
-	if (!fs::create_hard_link(from_path, to_path))
+	if (!vfs::link(from_path, to_path))
 	{
 		return CELL_EFSSPECIFIC;
 	}
@@ -1366,8 +1366,8 @@ error_code sys_fs_symbolic_link(vm::cptr<char> target, vm::cptr<char> linkpath)
 	if (!target[0] && !linkpath[0])
 		return CELL_ENOENT;
 
-	const std::string target_path = vfs::get(target.get_ptr());
-	const std::string link_path = vfs::get(linkpath.get_ptr());
+	std::string target_path = vfs::get(target.get_ptr());
+	std::string link_path = vfs::get(linkpath.get_ptr());
 
 	if (target_path.empty())
 		return {CELL_ENOTMOUNTED, target_path};
@@ -1375,7 +1375,7 @@ error_code sys_fs_symbolic_link(vm::cptr<char> target, vm::cptr<char> linkpath)
 	if (link_path.empty())
 		return {CELL_ENOTMOUNTED, link_path};
 
-	if (!fs::create_soft_link(target_path, link_path))
+	if (!vfs::link(target_path, link_path))
 	{
 		return CELL_EFSSPECIFIC;
 	}

@@ -74,7 +74,6 @@ std::string vfs::get(const std::string& vpath, const std::string* prev, std::siz
 			auto found = table->virtual_links.find(key);
 			if (found != table->virtual_links.end())
 			{
-				LOG_SUCCESS(GENERAL, "vfs::get(): Located link's target: \"%s\"", found->second);
 				return vfs::get(found->second);
 			}
 			LOG_ERROR(GENERAL, "vfs::get(): virtual link key was not found: %s", lhash);
