@@ -55,6 +55,51 @@ namespace vk
 		}
 	}
 
+	void copy_image_typeless(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
+		const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
+		VkImageAspectFlags src_transfer_mask, VkImageAspectFlags dst_transfer_mask)
+	{
+		if (src == dst)
+		{
+			copy_image(cmd, src, dst, srcLayout, dstLayout, src_rect, dst_rect, mipmaps, src_aspect, dst_aspect, src_transfer_mask, dst_transfer_mask);
+			return;
+		}
+
+		auto preferred_src_format = (src == dst) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		auto preferred_dst_format = (src == dst) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+		if (srcLayout != preferred_src_format)
+			change_image_layout(cmd, src, srcLayout, preferred_src_format, vk::get_image_subresource_range(0, 0, 1, 1, src_aspect));
+
+		if (dstLayout != preferred_dst_format)
+			change_image_layout(cmd, dst, dstLayout, preferred_dst_format, vk::get_image_subresource_range(0, 0, 1, 1, dst_aspect));
+
+		auto scratch_buf = vk::get_scratch_buffer();
+		VkBufferImageCopy src_copy{}, dst_copy{};
+		src_copy.imageExtent = { u32(src_rect.x2 - src_rect.x1), u32(src_rect.y2 - src_rect.y1), 1 };
+		src_copy.imageOffset = { src_rect.x1, src_rect.y1, 0 };
+		src_copy.imageSubresource = { src_aspect & src_transfer_mask, 0, 0, 1 };
+
+		dst_copy.imageExtent = { u32(dst_rect.x2 - dst_rect.x1), u32(dst_rect.y2 - dst_rect.y1), 1 };
+		dst_copy.imageOffset = { dst_rect.x1, dst_rect.y1, 0 };
+		dst_copy.imageSubresource = { dst_aspect & dst_transfer_mask, 0, 0, 1 };
+
+		for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
+		{
+			vkCmdCopyImageToBuffer(cmd, src, preferred_src_format, scratch_buf->value, 1, &src_copy);
+			vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst, preferred_dst_format, 1, &dst_copy);
+
+			src_copy.imageSubresource.mipLevel++;
+			dst_copy.imageSubresource.mipLevel++;
+		}
+
+		if (srcLayout != preferred_src_format)
+			change_image_layout(cmd, src, preferred_src_format, srcLayout, vk::get_image_subresource_range(0, 0, 1, 1, src_aspect));
+
+		if (dstLayout != preferred_dst_format)
+			change_image_layout(cmd, dst, preferred_dst_format, dstLayout, vk::get_image_subresource_range(0, 0, 1, 1, dst_aspect));
+	}
+
 	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
 			const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
 			VkImageAspectFlags src_transfer_mask, VkImageAspectFlags dst_transfer_mask)
