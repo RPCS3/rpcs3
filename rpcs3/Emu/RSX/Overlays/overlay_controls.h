@@ -1300,12 +1300,7 @@ namespace rsx
 
 			void set_value(f32 value)
 			{
-				if (value < 0.f)
-					m_value = 0.f;
-				else if (value > m_limit)
-					m_value = m_limit;
-				else
-					m_value = value;
+				m_value = std::clamp(value, 0.f, m_limit);
 
 				f32 indicator_width = (w * m_value) / m_limit;
 				indicator.set_size((u16)indicator_width, h);
