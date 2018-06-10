@@ -581,7 +581,7 @@
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\3rdparty\libpng\projects\vstudio\libpng\libpng.vcxproj">
+    <ProjectReference Include="..\3rdparty\libpng.vcxproj">
       <Project>{d6973076-9317-4ef2-a0b8-b7a18ac0713e}</Project>
     </ProjectReference>
     <ProjectReference Include="..\asmjitsrc\asmjit.vcxproj">
