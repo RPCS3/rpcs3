@@ -115,7 +115,7 @@ error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::
 	}
 
 	// Generate a new mem ID
-	*mem_id = idm::make<lv2_obj, lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000, flags, dct);
+	*mem_id = idm::make<lv2_obj, lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, dct);
 
 	return CELL_OK;
 }
@@ -175,7 +175,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 	}
 
 	// Generate a new mem ID
-	*mem_id = idm::make<lv2_obj, lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000, flags, ct.ptr);
+	*mem_id = idm::make<lv2_obj, lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, ct.ptr);
 
 	return CELL_OK;
 }
@@ -279,7 +279,7 @@ error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
 
 	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
 	{
-		const u32 page_alignment = area->flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000;
+		const u32 page_alignment = area->flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000;
 
 		if (mem.align < page_alignment)
 		{
