@@ -25,12 +25,12 @@ if (CCACHE_FOUND)
 	set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif()
 
-# We use libpng's static library and don't need to build the shared library and run the tests
-set(PNG_SHARED OFF CACHE BOOL "Build shared lib." FORCE)
-set(PNG_TESTS  OFF CACHE BOOL "Build tests." FORCE)
-
 # Select the version of libpng to use, default is builtin
 if (NOT USE_SYSTEM_LIBPNG)
+	# We use libpng's static library and don't need to build the shared library and run the tests
+	set(PNG_SHARED OFF CACHE BOOL "Build shared lib" FORCE)
+	set(PNG_TESTS OFF CACHE BOOL "Build libpng tests" FORCE)
+	set(SKIP_INSTALL_ALL ON)
 	add_subdirectory(3rdparty/libpng EXCLUDE_FROM_ALL)
 endif()
 
