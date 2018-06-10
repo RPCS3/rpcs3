@@ -67,6 +67,7 @@
 		},
 		"overlay": {
 			"perfOverlayEnabled": "Enables or disables the performance overlay.",
+			"perfOverlayPosition": "Sets the on-screen position (quadrant) of the perfomance overlay.",
 			"perfOverlayDetailLevel": "Controls the amount of information displayed on the performance overlay.",
 			"perfOverlayUpdateInterval": "Sets the time interval in which the performance overlay is being updated (measured in milliseconds).",
 			"perfOverlayFontSize": "Sets the font size of the performance overlay (measured in pixels)."

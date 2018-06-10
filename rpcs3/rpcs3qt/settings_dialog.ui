@@ -1448,6 +1448,16 @@
                <widget class="QComboBox" name="perfOverlayDetailLevel"/>
               </item>
               <item>
+               <widget class="QLabel" name="label_position">
+                <property name="text">
+                 <string>Position:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="perfOverlayPosition"/>
+              </item>
+              <item>
                <widget class="QLabel" name="label_update_interval">
                 <property name="text">
                  <string>Update Interval:</string>

@@ -742,6 +742,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceComboBox(ui->perfOverlayDetailLevel, emu_settings::PerfOverlayDetailLevel);
 	SubscribeTooltip(ui->perfOverlayDetailLevel, json_emu_overlay["perfOverlayDetailLevel"].toString());
 
+	xemu_settings->EnhanceComboBox(ui->perfOverlayPosition, emu_settings::PerfOverlayPosition);
+	SubscribeTooltip(ui->perfOverlayPosition, json_emu_overlay["perfOverlayPosition"].toString());
+
 	// Checkboxes
 
 	SubscribeTooltip(ui->gs_resizeOnBoot, json_emu_misc["gs_resizeOnBoot"].toString());
@@ -777,6 +780,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->label_update_interval->setEnabled(enabled);
 		ui->label_font_size->setEnabled(enabled);
 		ui->perfOverlayDetailLevel->setEnabled(enabled);
+		ui->perfOverlayPosition->setEnabled(enabled);
 		ui->perfOverlayUpdateInterval->setEnabled(enabled);
 		ui->perfOverlayFontSize->setEnabled(enabled);
 	};

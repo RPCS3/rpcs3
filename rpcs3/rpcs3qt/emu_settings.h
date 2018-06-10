@@ -72,6 +72,7 @@ public:
 		// Performance Overlay
 		PerfOverlayEnabled,
 		PerfOverlayDetailLevel,
+		PerfOverlayPosition,
 		PerfOverlayUpdateInterval,
 		PerfOverlayFontSize,
 
@@ -241,6 +242,7 @@ private:
 		// Performance Overlay
 		{ PerfOverlayEnabled,       { "Video", "Performance Overlay", "Enabled" } },
 		{ PerfOverlayDetailLevel,   { "Video", "Performance Overlay", "Detail level" } },
+		{ PerfOverlayPosition,      { "Video", "Performance Overlay", "Position" } },
 		{ PerfOverlayUpdateInterval,{ "Video", "Performance Overlay", "Metrics update interval (ms)" } },
 		{ PerfOverlayFontSize,      { "Video", "Performance Overlay", "Font size (px)" } },
 
