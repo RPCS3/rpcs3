@@ -679,13 +679,17 @@ namespace rsx
 						m_unreleased_texture_objects++;
 					}
 
-					//Only unsynchronized (no-flush) sections should reach here, and only if the rendering thread is the caller
+					// Only unsynchronized (no-flush) sections should reach here, and only if the rendering thread is the caller
 					if (discard_only)
+					{
 						obj.first->discard();
+						obj.second->remove_one();
+					}
 					else
-						obj.first->unprotect();
-
-					obj.second->remove_one();
+					{
+						// Delay unprotect in case there are sections to flush
+						result.sections_to_unprotect.push_back(obj.first);
+					}
 				}
 
 				if (deferred_flush && result.sections_to_flush.size())
