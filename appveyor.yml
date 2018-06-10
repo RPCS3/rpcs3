@@ -109,9 +109,11 @@ after_build:
     7z a -m0=LZMA2 -mx9 $env:BUILD .\bin\*
     7z a -m0=LZMA2 -mx9 openssl_win64.7z C:\OpenSSL-Win64\bin\libeay32.dll `
       C:\OpenSSL-Win64\bin\ssleay32.dll
+    $env:FILESIZEMB = (Get-Item $env:BUILD).length/1MB
 
 - ps: | # generate sha256 hashes
     (get-filehash $env:BUILD -algorithm SHA256).Hash | out-file ("{0}.sha256" -f $env:BUILD) -encoding ascii
+    $env:SHA256SUM = (get-filehash $env:BUILD -algorithm SHA256).Hash
     (get-filehash openssl_win64.7z -algorithm SHA256).Hash | out-file "openssl_win64.7z.sha256" -encoding ascii
 
 test: off
@@ -125,6 +127,23 @@ artifacts:
   name: openssl
 - path: openssl_win64.7z.sha256
   name: openssl sha256 hash
+  
+deploy:
+    provider: GitHub
+    # Description is a semi-colon seperated list for easy parsing
+    description: "$(SHA256SUM);$(FILESIZEMB)MB"
+    tag: build-$(APPVEYOR_REPO_COMMIT)
+    release: $(AVVER)
+    artifact: $(BUILD)
+    repository: RPCS3/rpcs3-binaries-win
+    draft: false
+    prerelease: false
+    force_update: true
+    auth_token:
+        secure: gTZqN6J9QNQTv9vu2qtExWk1x4o9dSfyTH/y86Yhe3qu+2w6Mly1MaDFMaXgrN1e
+    on:
+        branch: master
+        appveyor_repo_name: RPCS3/rpcs3
 
 on_success:
 - ps: | # update appveyor build version, done last to prevent webhook breakage

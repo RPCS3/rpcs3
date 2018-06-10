@@ -34,12 +34,12 @@ class msg_dialog_frame : public QObject, public MsgDialogBase
 {
 	Q_OBJECT
 
+private:
 #ifdef _WIN32
 	QWinTaskbarButton* m_tb_button = nullptr;
 	QWinTaskbarProgress* m_tb_progress = nullptr;
-
 #elif HAVE_QTDBUS
-	int* progressValue = nullptr;
+	int m_progress_value = 0;
 #endif
 	custom_dialog* m_dialog =nullptr;
 	QLabel* m_text = nullptr;
@@ -56,12 +56,12 @@ class msg_dialog_frame : public QObject, public MsgDialogBase
 	custom_dialog* m_osk_dialog = nullptr;
 	char16_t* m_osk_text_return;
 
-	const int m_gauge_max = 100;
+	int m_gauge_max = 0;
 
 public:
 	msg_dialog_frame(QWindow* taskbarTarget);
 	~msg_dialog_frame();
-	virtual void Create(const std::string& msg) override;
+	virtual void Create(const std::string& msg, const std::string& title = "") override;
 	virtual void CreateOsk(const std::string& msg, char16_t* osk_text, u32 charlimit) override;
 	virtual void SetMsg(const std::string& msg) override;
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) override;

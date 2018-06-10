@@ -60,8 +60,8 @@ class GDBDebugServer : public named_thread {
 	void try_read_cmd(gdb_cmd& out_cmd);
 	//reads commands until receiveing one with valid checksum
 	//in case of other exception (i.e. wrong first char of command)
-	//it will log exception text and return false 
-	//in that case best for caller would be to stop reading, because 
+	//it will log exception text and return false
+	//in that case best for caller would be to stop reading, because
 	//chance of getting correct command is low
 	bool read_cmd(gdb_cmd& out_cmd);
 	//send cnt bytes from buf to client
