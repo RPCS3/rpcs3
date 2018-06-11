@@ -283,6 +283,16 @@ bool game_list_frame::IsEntryVisible(const game_info& game)
 
 void game_list_frame::SortGameList()
 {
+	// Back-up old header sizes to handle unwanted column resize in case of zero search results
+	QList<int> column_widths;
+	int old_row_count = m_gameList->rowCount();
+	int old_game_count = m_game_data.count();
+
+	for (int i = 0; i < m_gameList->columnCount(); i++)
+	{
+		column_widths.append(m_gameList->columnWidth(i));
+	}
+
 	// Sorting resizes hidden columns, so unhide them as a workaround
 	QList<int> columns_to_hide;
 
@@ -304,13 +314,34 @@ void game_list_frame::SortGameList()
 		m_gameList->setColumnHidden(i, true);
 	}
 
+	// Don't resize the columns if no game is shown to preserve the header settings
+	if (!m_gameList->rowCount())
+	{
+		for (int i = 0; i < m_gameList->columnCount(); i++)
+		{
+			m_gameList->setColumnWidth(i, column_widths[i]);
+		}
+
+		m_gameList->horizontalHeader()->setSectionResizeMode(gui::column_icon, QHeaderView::Fixed);
+		return;
+	}
+
 	// Fixate vertical header and row height
 	m_gameList->verticalHeader()->setMinimumSectionSize(m_Icon_Size.height());
 	m_gameList->verticalHeader()->setMaximumSectionSize(m_Icon_Size.height());
 	m_gameList->resizeRowsToContents();
 
-	// Resize and fixate icon column
-	m_gameList->resizeColumnToContents(gui::column_icon);
+	// Resize columns if the game list was empty before
+	if (!old_row_count && !old_game_count)
+	{
+		ResizeColumnsToContents();
+	}
+	else
+	{
+		m_gameList->resizeColumnToContents(gui::column_icon);
+	}
+
+	// Fixate icon column
 	m_gameList->horizontalHeader()->setSectionResizeMode(gui::column_icon, QHeaderView::Fixed);
 
 	// Shorten the last section to remove horizontal scrollbar if possible
@@ -456,16 +487,9 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 	if (m_isListLayout)
 	{
 		int scroll_position = m_gameList->verticalScrollBar()->value();
-		int rows = m_gameList->rowCount();
 		int row = PopulateGameList();
 		m_gameList->selectRow(row);
 		SortGameList();
-
-		// Resize columns if the game list was empty before
-		if (!rows)
-		{
-			ResizeColumnsToContents();
-		}
 
 		if (scrollAfter)
 		{
