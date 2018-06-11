@@ -254,6 +254,7 @@ private:
 	QList<QAction*> m_columnActs;
 	Qt::SortOrder m_colSortOrder;
 	int m_sortColumn;
+	QMap<QString, QString> m_notes;
 
 	// Categories
 	QStringList m_categoryFilters;
