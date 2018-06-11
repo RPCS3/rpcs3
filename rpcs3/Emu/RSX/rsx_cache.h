@@ -413,6 +413,7 @@ namespace rsx
 				dlg->type.se_normal = true;
 				dlg->type.bg_invisible = true;
 				dlg->type.progress_bar_count = 2;
+				dlg->ProgressBarSetTaskbarIndex(-1); // -1 to combine all progressbars in the taskbar progress
 				dlg->on_close = [](s32 status)
 				{
 					Emu.CallAfter([]()
@@ -423,7 +424,7 @@ namespace rsx
 
 				Emu.CallAfter([&]()
 				{
-					dlg->Create("Preloading cached shaders from disk.\nPlease wait...");
+					dlg->Create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
 					initialized.store(true);
 				});
 
@@ -502,7 +503,7 @@ namespace rsx
 				entries.push_back(tmp);
 			}
 
-			if ((entry_count = entries.size()) <= 2)
+			if ((entry_count = (u32)entries.size()) <= 2)
 				return;
 
 			root.rewind();

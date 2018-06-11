@@ -1379,7 +1379,7 @@ void PPUTranslator::VSLH(ppu_opcode_t op)
 void PPUTranslator::VSLO(ppu_opcode_t op)
 {
 	// TODO (rare)
-	SetVr(op.vd, m_ir->CreateShl(GetVr(op.va, VrType::i128), m_ir->CreateShl(m_ir->CreateAnd(GetVr(op.vb, VrType::i128), 15), 3)));
+	SetVr(op.vd, m_ir->CreateShl(GetVr(op.va, VrType::i128), m_ir->CreateAnd(GetVr(op.vb, VrType::i128), 0x78)));
 }
 
 void PPUTranslator::VSLW(ppu_opcode_t op)
@@ -1460,7 +1460,7 @@ void PPUTranslator::VSRH(ppu_opcode_t op)
 void PPUTranslator::VSRO(ppu_opcode_t op)
 {
 	// TODO (very rare)
-	SetVr(op.vd, m_ir->CreateLShr(GetVr(op.va, VrType::i128), m_ir->CreateShl(m_ir->CreateAnd(GetVr(op.vb, VrType::i128), 15), 3)));
+	SetVr(op.vd, m_ir->CreateLShr(GetVr(op.va, VrType::i128), m_ir->CreateAnd(GetVr(op.vb, VrType::i128), 0x78)));
 }
 
 void PPUTranslator::VSRW(ppu_opcode_t op)
