@@ -398,13 +398,15 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 		return CELL_GAME_ERROR_FAILURE;
 	}
 
-	if (prm->can_create && prm->temp.empty())
+	const std::string dir = prm->dir.empty() ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + prm->dir;
+
+	if (prm->can_create && prm->temp.empty() && !fs::is_dir(vfs::get(dir)))
 	{
+		strcpy_trunc(*contentInfoPath, "");
+		strcpy_trunc(*usrdirPath, "");
 		verify(HERE), fxm::remove<content_permission>();
 		return CELL_OK;
 	}
-
-	const std::string dir = prm->dir.empty() ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + prm->dir;
 
 	if (!prm->temp.empty())
 	{
