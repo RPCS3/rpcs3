@@ -23,22 +23,22 @@
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
-	: custom_dock_widget(tr("Game List"), parent), xgui_settings(guiSettings), xemu_settings(emuSettings)
+	: custom_dock_widget(tr("Game List"), parent), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
 {
-	m_isListLayout    = xgui_settings->GetValue(gui::gl_listMode).toBool();
-	m_Margin_Factor   = xgui_settings->GetValue(gui::gl_marginFactor).toReal();
-	m_Text_Factor     = xgui_settings->GetValue(gui::gl_textFactor).toReal();
-	m_Icon_Color      = xgui_settings->GetValue(gui::gl_iconColor).value<QColor>();
-	m_colSortOrder    = xgui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
-	m_sortColumn      = xgui_settings->GetValue(gui::gl_sortCol).toInt();
-	m_hidden_list     = xgui_settings->GetValue(gui::gl_hidden_list).toStringList().toSet();
+	m_isListLayout    = m_gui_settings->GetValue(gui::gl_listMode).toBool();
+	m_Margin_Factor   = m_gui_settings->GetValue(gui::gl_marginFactor).toReal();
+	m_Text_Factor     = m_gui_settings->GetValue(gui::gl_textFactor).toReal();
+	m_Icon_Color      = m_gui_settings->GetValue(gui::gl_iconColor).value<QColor>();
+	m_colSortOrder    = m_gui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
+	m_sortColumn      = m_gui_settings->GetValue(gui::gl_sortCol).toInt();
+	m_hidden_list     = m_gui_settings->GetValue(gui::gl_hidden_list).toStringList().toSet();
 
 	m_oldLayoutIsList = m_isListLayout;
 
 	// Save factors for first setup
-	xgui_settings->SetValue(gui::gl_iconColor, m_Icon_Color);
-	xgui_settings->SetValue(gui::gl_marginFactor, m_Margin_Factor);
-	xgui_settings->SetValue(gui::gl_textFactor, m_Text_Factor);
+	m_gui_settings->SetValue(gui::gl_iconColor, m_Icon_Color);
+	m_gui_settings->SetValue(gui::gl_marginFactor, m_Margin_Factor);
+	m_gui_settings->SetValue(gui::gl_textFactor, m_Text_Factor);
 
 	m_Game_Dock = new QMainWindow(this);
 	m_Game_Dock->setWindowFlags(Qt::Widget);
@@ -70,7 +70,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_gameList->installEventFilter(this);
 	m_gameList->setColumnCount(gui::column_count);
 
-	m_game_compat = std::make_unique<game_compatibility>(xgui_settings);
+	m_game_compat = std::make_unique<game_compatibility>(m_gui_settings);
 
 	m_Central_Widget = new QStackedWidget(this);
 	m_Central_Widget->addWidget(m_gameList);
@@ -151,7 +151,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 				int c = 0;
 				for (int i = 0; i < m_columnActs.count(); ++i)
 				{
-					if (xgui_settings->GetGamelistColVisibility(i) && ++c > 1)
+					if (m_gui_settings->GetGamelistColVisibility(i) && ++c > 1)
 						break;
 				}
 				if (c < 2)
@@ -161,7 +161,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 				}
 			}
 			m_gameList->setColumnHidden(col, !checked); // Negate because it's a set col hidden and we have menu say show.
-			xgui_settings->SetGamelistColVisibility(col, checked);
+			m_gui_settings->SetGamelistColVisibility(col, checked);
 
 			if (checked) // handle hidden columns that have zero width after showing them (stuck between others)
 			{
@@ -173,13 +173,13 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 
 void game_list_frame::LoadSettings()
 {
-	m_colSortOrder = xgui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
-	m_sortColumn = xgui_settings->GetValue(gui::gl_sortCol).toInt();
-	m_categoryFilters = xgui_settings->GetGameListCategoryFilters();
+	m_colSortOrder = m_gui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
+	m_sortColumn = m_gui_settings->GetValue(gui::gl_sortCol).toInt();
+	m_categoryFilters = m_gui_settings->GetGameListCategoryFilters();
 
 	Refresh(true);
 
-	QByteArray state = xgui_settings->GetValue(gui::gl_state).toByteArray();
+	QByteArray state = m_gui_settings->GetValue(gui::gl_state).toByteArray();
 	if (!m_gameList->horizontalHeader()->restoreState(state) && m_gameList->rowCount())
 	{
 		// If no settings exist, resize to contents.
@@ -188,7 +188,7 @@ void game_list_frame::LoadSettings()
 
 	for (int col = 0; col < m_columnActs.count(); ++col)
 	{
-		bool vis = xgui_settings->GetGamelistColVisibility(col);
+		bool vis = m_gui_settings->GetGamelistColVisibility(col);
 		m_columnActs[col]->setChecked(vis);
 		m_gameList->setColumnHidden(col, !vis);
 	}
@@ -259,8 +259,8 @@ void game_list_frame::OnColClicked(int col)
 	}
 	m_sortColumn = col;
 
-	xgui_settings->SetValue(gui::gl_sortAsc, m_colSortOrder == Qt::AscendingOrder);
-	xgui_settings->SetValue(gui::gl_sortCol, col);
+	m_gui_settings->SetValue(gui::gl_sortAsc, m_colSortOrder == Qt::AscendingOrder);
+	m_gui_settings->SetValue(gui::gl_sortCol, col);
 
 	SortGameList();
 }
@@ -448,7 +448,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		// clean up hidden games list
 		m_hidden_list.intersect(serials);
-		xgui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.toList()));
+		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.toList()));
 	}
 
 	// Fill Game List / Game Grid
@@ -516,12 +516,12 @@ void game_list_frame::SaveSettings()
 {
 	for (int col = 0; col < m_columnActs.count(); ++col)
 	{
-		xgui_settings->SetGamelistColVisibility(col, m_columnActs[col]->isChecked());
+		m_gui_settings->SetGamelistColVisibility(col, m_columnActs[col]->isChecked());
 	}
-	xgui_settings->SetValue(gui::gl_sortCol, m_sortColumn);
-	xgui_settings->SetValue(gui::gl_sortAsc, m_colSortOrder == Qt::AscendingOrder);
+	m_gui_settings->SetValue(gui::gl_sortCol, m_sortColumn);
+	m_gui_settings->SetValue(gui::gl_sortAsc, m_colSortOrder == Qt::AscendingOrder);
 
-	xgui_settings->SetValue(gui::gl_state, m_gameList->horizontalHeader()->saveState());
+	m_gui_settings->SetValue(gui::gl_state, m_gameList->horizontalHeader()->saveState());
 }
 
 static void open_dir(const std::string& spath)
@@ -617,7 +617,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(configure, &QAction::triggered, [=]
 	{
-		settings_dialog dlg(xgui_settings, xemu_settings, 0, this, &currGame);
+		settings_dialog dlg(m_gui_settings, m_emu_settings, 0, this, &currGame);
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomConfig)
 		{
 			ShowCustomConfigIcon(item, true);
@@ -630,7 +630,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		else
 			m_hidden_list.remove(serial);
 
-		xgui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.toList()));
+		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.toList()));
 		Refresh();
 	});
 	connect(createLLVMCache, &QAction::triggered, [=]
@@ -875,9 +875,9 @@ void game_list_frame::RepaintIcons(const bool& fromSettings)
 {
 	if (fromSettings)
 	{
-		if (xgui_settings->GetValue(gui::m_enableUIColors).toBool())
+		if (m_gui_settings->GetValue(gui::m_enableUIColors).toBool())
 		{
-			m_Icon_Color = xgui_settings->GetValue(gui::gl_iconColor).value<QColor>();
+			m_Icon_Color = m_gui_settings->GetValue(gui::gl_iconColor).value<QColor>();
 		}
 		else
 		{
@@ -903,7 +903,7 @@ void game_list_frame::SetListMode(const bool& isList)
 	m_oldLayoutIsList = m_isListLayout;
 	m_isListLayout = isList;
 
-	xgui_settings->SetValue(gui::gl_listMode, isList);
+	m_gui_settings->SetValue(gui::gl_listMode, isList);
 
 	Refresh(true);
 

@@ -263,8 +263,8 @@ private:
 	bool m_oldLayoutIsList = true;
 
 	// Data
-	std::shared_ptr<gui_settings> xgui_settings;
-	std::shared_ptr<emu_settings> xemu_settings;
+	std::shared_ptr<gui_settings> m_gui_settings;
+	std::shared_ptr<emu_settings> m_emu_settings;
 	QList<game_info> m_game_data;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};
