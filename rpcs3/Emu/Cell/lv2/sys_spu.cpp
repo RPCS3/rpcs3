@@ -755,13 +755,15 @@ error_code sys_spu_thread_write_ls(u32 id, u32 lsa, u64 value, u32 type)
 		return CELL_EINVAL;
 	}
 
-	const auto group = thread->group;
-
-	semaphore_lock lock(group->mutex);
-
-	if (group->run_state < SPU_THREAD_GROUP_STATUS_WAITING || group->run_state > SPU_THREAD_GROUP_STATUS_RUNNING)
 	{
-		return CELL_ESTAT;
+		const auto group = thread->group;
+
+		semaphore_lock lock(group->mutex);
+
+		if (group->run_state < SPU_THREAD_GROUP_STATUS_WAITING)
+		{
+			return CELL_ESTAT;
+		}
 	}
 
 	switch (type)
@@ -792,13 +794,15 @@ error_code sys_spu_thread_read_ls(u32 id, u32 lsa, vm::ptr<u64> value, u32 type)
 		return CELL_EINVAL;
 	}
 
-	const auto group = thread->group;
-
-	semaphore_lock lock(group->mutex);
-
-	if (group->run_state < SPU_THREAD_GROUP_STATUS_WAITING || group->run_state > SPU_THREAD_GROUP_STATUS_RUNNING)
 	{
-		return CELL_ESTAT;
+		const auto group = thread->group;
+
+		semaphore_lock lock(group->mutex);
+
+		if (group->run_state < SPU_THREAD_GROUP_STATUS_WAITING)
+		{
+			return CELL_ESTAT;
+		}
 	}
 
 	switch (type)
