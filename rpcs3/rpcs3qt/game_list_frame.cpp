@@ -21,6 +21,8 @@
 #include <QScrollBar>
 #include <QInputDialog>
 #include <QToolTip>
+#include <QApplication>
+#include <QClipboard>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -639,6 +641,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* downloadCompat = myMenu.addAction(tr("&Download Compatibility Database"));
 	myMenu.addSeparator();
 	QAction* editNotes = myMenu.addAction(tr("&Edit Tooltip Notes"));
+	QMenu* infoMenu = myMenu.addMenu(tr("&Copy Info"));
+	QAction* copyName = infoMenu->addAction(tr("&Copy Name"));
+	QAction* copySerial = infoMenu->addAction(tr("&Copy Serial"));
 
 	const std::string config_base_dir = fs::get_config_dir() + "data/" + currGame.serial;
 
@@ -748,6 +753,14 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			m_gui_settings->SetValue(gui::notes, serial, new_notes);
 			Refresh();
 		}
+	});
+	connect(copyName, &QAction::triggered, [=]
+	{
+		QApplication::clipboard()->setText(name);
+	});
+	connect(copySerial, &QAction::triggered, [=]
+	{
+		QApplication::clipboard()->setText(serial);
 	});
 
 	//Disable options depending on software category
