@@ -19,6 +19,8 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QScrollBar>
+#include <QInputDialog>
+#include <QToolTip>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -355,6 +357,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		// Load PSF
 
 		m_game_data.clear();
+		m_notes.clear();
 
 		const std::string _hdd = Emu.GetHddDir();
 
@@ -417,7 +420,9 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				continue;
 			}
 
-			serials.insert(qstr(game.serial));
+			QString serial = qstr(game.serial);
+			m_notes[serial] = m_gui_settings->GetValue(gui::notes, serial, "").toString();
+			serials.insert(serial);
 
 			auto cat = category::cat_boot.find(game.category);
 			if (cat != category::cat_boot.end())
@@ -607,6 +612,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	GameInfo currGame = gameinfo->info;
 	const QString serial = qstr(currGame.serial);
+	const QString name = qstr(currGame.name).simplified();
 
 	// Make Actions
 	QMenu myMenu;
@@ -631,6 +637,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	myMenu.addSeparator();
 	QAction* checkCompat = myMenu.addAction(tr("&Check Game Compatibility"));
 	QAction* downloadCompat = myMenu.addAction(tr("&Download Compatibility Database"));
+	myMenu.addSeparator();
+	QAction* editNotes = myMenu.addAction(tr("&Edit Tooltip Notes"));
 
 	const std::string config_base_dir = fs::get_config_dir() + "data/" + currGame.serial;
 
@@ -672,7 +680,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			return;
 		}
 
-		QMessageBox* mb = new QMessageBox(QMessageBox::Question, tr("Confirm %1 Removal").arg(qstr(currGame.category)), tr("Permanently remove %0 from drive?\nPath: %1").arg(qstr(currGame.name)).arg(qstr(currGame.path)), QMessageBox::Yes | QMessageBox::No, this);
+		QMessageBox* mb = new QMessageBox(QMessageBox::Question, tr("Confirm %1 Removal").arg(qstr(currGame.category)), tr("Permanently remove %0 from drive?\nPath: %1").arg(name).arg(qstr(currGame.path)), QMessageBox::Yes | QMessageBox::No, this);
 		mb->setCheckBox(new QCheckBox(tr("Remove caches and custom config")));
 		mb->deleteLater();
 		if (mb->exec() == QMessageBox::Yes)
@@ -721,12 +729,25 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(checkCompat, &QAction::triggered, [=]
 	{
-		QString link = "https://rpcs3.net/compatibility?g=" + qstr(currGame.serial);
+		QString link = "https://rpcs3.net/compatibility?g=" + serial;
 		QDesktopServices::openUrl(QUrl(link));
 	});
 	connect(downloadCompat, &QAction::triggered, [=]
 	{
 		m_game_compat->RequestCompatibility(true);
+	});
+	connect(editNotes, &QAction::triggered, [=]
+	{
+		bool accepted;
+		const QString old_notes = m_gui_settings->GetValue(gui::notes, serial, "").toString();
+		const QString new_notes = QInputDialog::getMultiLineText(this, tr("Edit Tooltip Notes"), QString("%0\n%1").arg(name).arg(serial), old_notes, &accepted);
+
+		if (accepted)
+		{
+			m_notes[serial] = new_notes;
+			m_gui_settings->SetValue(gui::notes, serial, new_notes);
+			Refresh();
+		}
 	});
 
 	//Disable options depending on software category
@@ -988,6 +1009,33 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 			}
 		}
 	}
+	else if (event->type() == QEvent::ToolTip)
+	{
+		QHelpEvent *helpEvent = static_cast<QHelpEvent *>(event);
+		QTableWidgetItem* item;
+
+		if (m_isListLayout)
+		{
+			item = m_gameList->itemAt(helpEvent->globalPos());
+		}
+		else
+		{
+			item = m_xgrid->itemAt(helpEvent->globalPos());
+		}
+
+		if (item && !item->toolTip().isEmpty() && (!m_isListLayout || item->column() == gui::column_name || item->column() == gui::column_serial))
+		{
+			QToolTip::showText(helpEvent->globalPos(), item->toolTip());
+		}
+		else
+		{
+			QToolTip::hideText();
+			event->ignore();
+		}
+
+		return true;
+	}
+
 	return QDockWidget::eventFilter(object, event);
 }
 
@@ -1011,6 +1059,10 @@ int game_list_frame::PopulateGameList()
 		if (!IsEntryVisible(game))
 			continue;
 
+		const QString name = qstr(game->info.name).simplified();
+		const QString serial = qstr(game->info.serial);
+		const QString notes = m_notes[serial];
+
 		// Icon
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
 		icon_item->setData(Qt::DecorationRole, game->pxmap);
@@ -1022,6 +1074,16 @@ int game_list_frame::PopulateGameList()
 		if (game->hasCustomConfig)
 		{
 			title_item->setIcon(QIcon(":/Icons/cog_black.png"));
+		}
+
+		// Serial
+		custom_table_widget_item* serial_item = new custom_table_widget_item(game->info.serial);
+
+		if (!notes.isEmpty())
+		{
+			const QString tool_tip = tr("%0 [%1]\n\nNotes:\n%2").arg(name).arg(serial).arg(notes);
+			title_item->setToolTip(tool_tip);
+			serial_item->setToolTip(tool_tip);
 		}
 
 		// Move Support (http://www.psdevwiki.com/ps3/PARAM.SFO#ATTRIBUTE)
@@ -1039,7 +1101,7 @@ int game_list_frame::PopulateGameList()
 
 		m_gameList->setItem(row, gui::column_icon,       icon_item);
 		m_gameList->setItem(row, gui::column_name,       title_item);
-		m_gameList->setItem(row, gui::column_serial,     new custom_table_widget_item(game->info.serial));
+		m_gameList->setItem(row, gui::column_serial,     serial_item);
 		m_gameList->setItem(row, gui::column_firmware,   new custom_table_widget_item(game->info.fw));
 		m_gameList->setItem(row, gui::column_version,    new custom_table_widget_item(game->info.app_ver));
 		m_gameList->setItem(row, gui::column_category,   new custom_table_widget_item(game->info.category));
@@ -1109,12 +1171,25 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 	m_xgrid->setRowCount(maxRows);
 	m_xgrid->setColumnCount(maxCols);
 
+	QString title, serial, notes;
+
 	for (const auto& app : matching_apps)
 	{
-		const QString title = qstr(app->info.name).simplified(); // simplified() forces single line text
+		title = qstr(app->info.name).simplified(); // simplified() forces single line text
+		serial = qstr(app->info.serial);
+		notes = m_notes[serial];
 
-		m_xgrid->addItem(app->pxmap, title, r, c);
+		m_xgrid->addItem(app->pxmap, title,  r, c);
 		m_xgrid->item(r, c)->setData(gui::game_role, QVariant::fromValue(app));
+
+		if (!notes.isEmpty())
+		{
+			m_xgrid->item(r, c)->setToolTip(tr("%0 [%1]\n\nNotes:\n%2").arg(title).arg(serial).arg(notes));
+		}
+		else
+		{
+			m_xgrid->item(r, c)->setToolTip(tr("%0 [%1]").arg(title).arg(serial));
+		}
 
 		if (selected_item == app->info.icon_path)
 		{
