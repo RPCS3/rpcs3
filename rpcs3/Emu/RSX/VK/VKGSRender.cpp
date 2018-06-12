@@ -1812,7 +1812,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 			if (!m_surface_info[index].pitch)
 				continue;
 
-			m_texture_cache.flush_memory_to_cache(m_surface_info[index].address, m_surface_info[index].pitch * m_surface_info[index].height, true,
+			m_texture_cache.flush_memory_to_cache(m_surface_info[index].address, m_surface_info[index].pitch * m_surface_info[index].height, true, 0xFF,
 					*m_current_command_buffer, m_swapchain->get_graphics_queue());
 		}
 	}
@@ -1821,7 +1821,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 	{
 		if (m_depth_surface_info.pitch)
 		{
-			m_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, true,
+			m_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, true, 0xFF,
 				*m_current_command_buffer, m_swapchain->get_graphics_queue());
 		}
 	}
