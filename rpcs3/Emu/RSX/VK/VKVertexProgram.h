@@ -46,7 +46,7 @@ public:
 	ParamArray parr;
 	VkShaderModule handle = nullptr;
 	u32 id;
-	std::string shader;
+	vk::glsl::shader shader;
 	std::vector<vk::glsl::program_input> uniforms;
 
 	void Decompile(const RSXVertexProgram& prog);

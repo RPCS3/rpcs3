@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "VKHelpers.h"
+#include "VKCompute.h"
 #include "Utilities/mutex.h"
 
 namespace vk
@@ -11,6 +12,7 @@ namespace vk
 	std::unique_ptr<image_view> g_null_image_view;
 	std::unique_ptr<buffer> g_scratch_buffer;
 	std::unordered_map<u32, std::unique_ptr<image>> g_typeless_textures;
+	std::unordered_map<u32, std::unique_ptr<vk::compute_task>> g_compute_tasks;
 
 	VkSampler g_null_sampler = nullptr;
 
@@ -195,7 +197,7 @@ namespace vk
 			// 32M disposable scratch memory
 			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, 32 * 0x100000,
 				g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0);
 		}
 
 		return g_scratch_buffer.get();
@@ -211,6 +213,14 @@ namespace vk
 		g_submit_mutex.unlock();
 	}
 
+	void reset_compute_tasks()
+	{
+		for (const auto &p : g_compute_tasks)
+		{
+			p.second->free_resources();
+		}
+	}
+
 	void destroy_global_resources()
 	{
 		g_null_texture.reset();
@@ -223,6 +233,13 @@ namespace vk
 			vkDestroySampler(*g_current_renderer, g_null_sampler, nullptr);
 
 		g_null_sampler = nullptr;
+
+		for (const auto& p : g_compute_tasks)
+		{
+			p.second->destroy();
+		}
+
+		g_compute_tasks.clear();
 	}
 
 	vk::mem_allocator_base* get_current_mem_allocator()
@@ -328,6 +345,21 @@ namespace vk
 	bool fence_reset_disabled()
 	{
 		return g_drv_disable_fence_reset;
+	}
+
+	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask)
+	{
+		VkBufferMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.buffer = buffer;
+		barrier.offset = 0;
+		barrier.size = VK_WHOLE_SIZE;
+		barrier.srcAccessMask = src_mask;
+		barrier.dstAccessMask = dst_mask;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 	}
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)

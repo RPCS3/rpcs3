@@ -1195,8 +1195,7 @@ namespace vk
 						src_area.x1 = (u16)(src_area.x1 * xfer_info.src_scaling_hint);
 						src_area.x2 = (u16)(src_area.x2 * xfer_info.src_scaling_hint);
 
-						vk::copy_image_typeless(*commands, src->value, real_src->value, src->current_layout, real_src->current_layout,
-							{ 0, 0, (s32)src->width(), (s32)src->height() }, { 0, 0, (s32)internal_width, (s32)src->height() }, 1,
+						vk::copy_image_typeless(*commands, src, real_src, { 0, 0, (s32)src->width(), (s32)src->height() }, { 0, 0, (s32)internal_width, (s32)src->height() }, 1,
 							vk::get_aspect_flags(src->info.format), vk::get_aspect_flags(format));
 					}
 
@@ -1210,8 +1209,7 @@ namespace vk
 						dst_area.x1 = (u16)(dst_area.x1 * xfer_info.dst_scaling_hint);
 						dst_area.x2 = (u16)(dst_area.x2 * xfer_info.dst_scaling_hint);
 
-						vk::copy_image_typeless(*commands, dst->value, real_dst->value, dst->current_layout, real_dst->current_layout,
-							{ 0, 0, (s32)dst->width(), (s32)dst->height() }, { 0, 0, (s32)internal_width, (s32)dst->height() }, 1,
+						vk::copy_image_typeless(*commands, dst, real_dst, { 0, 0, (s32)dst->width(), (s32)dst->height() }, { 0, 0, (s32)internal_width, (s32)dst->height() }, 1,
 							vk::get_aspect_flags(dst->info.format), vk::get_aspect_flags(format));
 					}
 
@@ -1246,8 +1244,7 @@ namespace vk
 					if (real_dst != dst)
 					{
 						auto internal_width = dst->width() * xfer_info.dst_scaling_hint;
-						vk::copy_image_typeless(*commands, real_dst->value, dst->value, real_dst->current_layout, dst->current_layout,
-							{ 0, 0, (s32)internal_width, (s32)dst->height() }, { 0, 0, (s32)dst->width(), (s32)dst->height() }, 1,
+						vk::copy_image_typeless(*commands, real_dst, dst, { 0, 0, (s32)internal_width, (s32)dst->height() }, { 0, 0, (s32)dst->width(), (s32)dst->height() }, 1,
 							vk::get_aspect_flags(real_dst->info.format), vk::get_aspect_flags(dst->info.format));
 					}
 

@@ -49,7 +49,7 @@ public:
 	ParamArray parr;
 	VkShaderModule handle = nullptr;
 	u32 id;
-	std::string shader;
+	vk::glsl::shader shader;
 	std::vector<size_t> FragmentConstantOffsetCache;
 
 	std::array<u32, 4> output_color_masks{ {} };

@@ -140,7 +140,8 @@ namespace vk
 
 	bool compile_glsl_to_spv(std::string& shader, program_domain domain, std::vector<u32>& spv)
 	{
-		EShLanguage lang = (domain == glsl_fragment_program) ? EShLangFragment : EShLangVertex;
+		EShLanguage lang = (domain == glsl_fragment_program) ? EShLangFragment :
+			(domain == glsl_vertex_program)? EShLangVertex : EShLangCompute;
 
 		glslang::TProgram program;
 		glslang::TShader shader_object(lang);
