@@ -706,7 +706,7 @@ void GLGSRender::write_buffers()
 				*/
 
 				const u32 range = m_surface_info[i].pitch * m_surface_info[i].height;
-				__glcheck m_gl_texture_cache.flush_memory_to_cache(m_surface_info[i].address, range, true);
+				__glcheck m_gl_texture_cache.flush_memory_to_cache(m_surface_info[i].address, range, true, 0xFF);
 			}
 		};
 
@@ -721,6 +721,6 @@ void GLGSRender::write_buffers()
 		u32 range = m_depth_surface_info.width * m_depth_surface_info.height * 2;
 		if (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) range *= 2;
 
-		m_gl_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, range, true);
+		m_gl_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, range, true, 0xFF);
 	}
 }
