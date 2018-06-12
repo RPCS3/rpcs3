@@ -895,11 +895,6 @@ error_code sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 		return CELL_EINVAL;
 	}
 
-	//if (group->state < SPU_THREAD_GROUP_STATUS_WAITING || group->state > SPU_THREAD_GROUP_STATUS_RUNNING) // ???
-	//{
-	//	return CELL_ESTAT;
-	//}
-
 	thread->push_snr(number, value);
 
 	return CELL_OK;
