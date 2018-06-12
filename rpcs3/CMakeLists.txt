@@ -295,7 +295,6 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/Crypto"
 "${RPCS3_SRC_DIR}/.."
 "${RPCS3_SRC_DIR}/../Utilities/yaml-cpp/include"
-"${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 "${RPCS3_SRC_DIR}/../3rdparty/GSL/include"
 "${RPCS3_SRC_DIR}/../3rdparty/hidapi/hidapi"
 # Includes 3rdparty stuff that isn't included yet
@@ -345,7 +344,6 @@ GLOB_RECURSE
 RPCS3_SRC
 "${RPCS3_SRC_DIR}/*.cpp"
 "${RPCS3_SRC_DIR}/../Utilities/*.cpp"
-"${RPCS3_SRC_DIR}/../asmjit/src/asmjit/*.cpp"
 )
 
 #File exclusion section
@@ -379,6 +377,10 @@ else()
 endif()
 
 add_dependencies(rpcs3 GitVersion)
+
+target_sources(rpcs3 PUBLIC ${ASMJIT_SRC})
+target_include_directories(rpcs3 PUBLIC ${ASMJIT_INCLUDE_DIR})
+target_link_libraries(rpcs3 ${ASMJIT_DEPS})
 
 if(NOT MSVC)
 	find_package(GLEW 1.13.0 REQUIRED)
