@@ -52,6 +52,20 @@ class spu_decoder
 		u32 magn; // Count = 2 ^ magn
 		u32 value;
 		T pointer;
+
+		instruction_info(u32 m, u32 v, T p)
+			: magn(m)
+			, value(v)
+			, pointer(p)
+		{
+		}
+
+		instruction_info(u32 m, u32 v, const T* p)
+			: magn(m)
+			, value(v)
+			, pointer(*p)
+		{
+		}
 	};
 
 public:

@@ -250,9 +250,9 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 
 	// Get our evdev device
 	EvdevDevice* device = get_device(padId);
-	libevdev* dev = device->device;
-	if (dev == nullptr)
+	if (device == nullptr || device->device == nullptr)
 		return;
+	libevdev* dev = device->device;
 
 	// Try to query the latest event from the joystick.
 	input_event evt;

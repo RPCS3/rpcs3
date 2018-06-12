@@ -130,12 +130,6 @@ void rpcs3_app::InitializeCallbacks()
 		RequestCallAfter(std::move(func));
 	};
 
-	callbacks.process_events = [this]()
-	{
-		RPCS3MainWin->update();
-		processEvents();
-	};
-
 	callbacks.get_kb_handler = [=]() -> std::shared_ptr<KeyboardHandlerBase>
 	{
 		switch (keyboard_handler type = g_cfg.io.keyboard)
@@ -280,6 +274,28 @@ void rpcs3_app::InitializeCallbacks()
 	callbacks.on_resume = [=]() { OnEmulatorResume(); };
 	callbacks.on_stop = [=]() { OnEmulatorStop(); };
 	callbacks.on_ready = [=]() { OnEmulatorReady(); };
+
+	callbacks.handle_taskbar_progress = [=](s32 type, s32 value)
+	{
+		if (gameWindow)
+		{
+			switch (type)
+			{
+			case 0:
+				((gs_frame*)gameWindow)->progress_reset();
+				break;
+			case 1:
+				((gs_frame*)gameWindow)->progress_increment(value);
+				break;
+			case 2:
+				((gs_frame*)gameWindow)->progress_set_limit(value);
+				break;
+			default:
+				LOG_FATAL(GENERAL, "Unknown type in handle_taskbar_progress(type=%d, value=%d)", type, value);
+				break;
+			}
+		}
+	};
 
 	Emu.SetCallbacks(std::move(callbacks));
 }

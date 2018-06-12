@@ -19,6 +19,8 @@
 #include "../Common/GLSLCommon.h"
 #include "../rsx_cache.h"
 
+#include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
+
 #ifndef _WIN32
 #include <X11/Xutil.h>
 #endif
@@ -56,6 +58,14 @@ namespace vk
 
 	//VkAllocationCallbacks default_callbacks();
 
+	enum driver_vendor
+	{
+		unknown,
+		AMD,
+		NVIDIA,
+		RADV
+	};
+
 	class context;
 	class render_device;
 	class swap_chain_image;
@@ -63,17 +73,23 @@ namespace vk
 	class command_buffer;
 	struct image;
 	struct vk_data_heap;
+	class mem_allocator_base;
+	struct memory_type_mapping;
+	struct gpu_formats_support;
 
-	vk::context *get_current_thread_ctx();
+	const vk::context *get_current_thread_ctx();
 	void set_current_thread_ctx(const vk::context &ctx);
 
-	vk::render_device *get_current_renderer();
+	const vk::render_device *get_current_renderer();
 	void set_current_renderer(const vk::render_device &device);
+
+	mem_allocator_base *get_current_mem_allocator();
 
 	//Compatibility workarounds
 	bool emulate_primitive_restart(rsx::primitive_type type);
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
+	driver_vendor get_driver_vendor();
 
 	VkComponentMapping default_component_map();
 	VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector);
@@ -83,6 +99,10 @@ namespace vk
 
 	VkSampler null_sampler();
 	VkImageView null_image_view(vk::command_buffer&);
+	image* get_typeless_helper(VkFormat format);
+
+	memory_type_mapping get_memory_mapping(const physical_device& dev);
+	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
 
 	//Sync helpers around vkQueueSubmit
 	void acquire_global_submit_lock();
@@ -103,8 +123,14 @@ namespace vk
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, VkImageSubresourceRange range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
-	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 width, u32 height, u32 mipmaps, VkImageAspectFlagBits aspect);
-	void copy_scaled_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height, u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height, u32 mipmaps, VkImageAspectFlagBits aspect, bool compatible_formats);
+
+	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
+			const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
+			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
+
+	void copy_scaled_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
+			u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height, u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height, u32 mipmaps,
+			VkImageAspectFlags aspect, bool compatible_formats, VkFilter filter = VK_FILTER_LINEAR, VkFormat src_format = VK_FORMAT_UNDEFINED, VkFormat dst_format = VK_FORMAT_UNDEFINED);
 
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
@@ -140,8 +166,200 @@ namespace vk
 		bool d32_sfloat_s8;
 	};
 
-	memory_type_mapping get_memory_mapping(const physical_device& dev);
-	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
+	// Memory Allocator - base class
+
+	class mem_allocator_base
+	{
+	public:
+		using mem_handle_t = void *;
+
+		mem_allocator_base(VkDevice dev, VkPhysicalDevice /*pdev*/) : m_device(dev) {};
+		~mem_allocator_base() {};
+
+		virtual void destroy() = 0;
+
+		virtual mem_handle_t alloc(u64 block_sz, u64 alignment, uint32_t memory_type_index) = 0;
+		virtual void free(mem_handle_t mem_handle) = 0;
+		virtual void *map(mem_handle_t mem_handle, u64 offset, u64 size) = 0;
+		virtual void unmap(mem_handle_t mem_handle) = 0;
+		virtual VkDeviceMemory get_vk_device_memory(mem_handle_t mem_handle) = 0;
+		virtual u64 get_vk_device_memory_offset(mem_handle_t mem_handle) = 0;
+
+	protected:
+		VkDevice m_device;
+	private:
+	};
+
+	// Memory Allocator - Vulkan Memory Allocator 
+	// https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+
+	class mem_allocator_vma : public mem_allocator_base
+	{
+	public:
+		mem_allocator_vma(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev)
+		{
+			VmaAllocatorCreateInfo allocatorInfo = {};
+			allocatorInfo.physicalDevice = pdev;
+			allocatorInfo.device = dev;
+
+			vmaCreateAllocator(&allocatorInfo, &m_allocator);
+		}
+
+		~mem_allocator_vma() {};
+
+		void destroy() override
+		{
+			vmaDestroyAllocator(m_allocator);
+		}
+
+		mem_handle_t alloc(u64 block_sz, u64 alignment, uint32_t memory_type_index) override
+		{
+			VmaAllocation vma_alloc;
+			VkMemoryRequirements mem_req = {};
+			VmaAllocationCreateInfo create_info = {};
+
+			mem_req.memoryTypeBits = 1u << memory_type_index;
+			mem_req.size = block_sz;
+			mem_req.alignment = alignment;
+			create_info.memoryTypeBits = 1u << memory_type_index;
+			CHECK_RESULT(vmaAllocateMemory(m_allocator, &mem_req, &create_info, &vma_alloc, nullptr));
+			return vma_alloc;
+		}
+
+		void free(mem_handle_t mem_handle) override
+		{
+			vmaFreeMemory(m_allocator, static_cast<VmaAllocation>(mem_handle));
+		}
+
+		void *map(mem_handle_t mem_handle, u64 offset, u64 /*size*/) override
+		{
+			void *data = nullptr;
+
+			CHECK_RESULT(vmaMapMemory(m_allocator, static_cast<VmaAllocation>(mem_handle), &data));
+
+			// Add offset
+			data = static_cast<u8 *>(data) + offset;
+			return data;
+		}
+
+		void unmap(mem_handle_t mem_handle) override
+		{
+			vmaUnmapMemory(m_allocator, static_cast<VmaAllocation>(mem_handle));
+		}
+
+		VkDeviceMemory get_vk_device_memory(mem_handle_t mem_handle)
+		{
+			VmaAllocationInfo alloc_info;
+
+			vmaGetAllocationInfo(m_allocator, static_cast<VmaAllocation>(mem_handle), &alloc_info);
+			return alloc_info.deviceMemory;
+		}
+
+		u64 get_vk_device_memory_offset(mem_handle_t mem_handle)
+		{
+			VmaAllocationInfo alloc_info;
+
+			vmaGetAllocationInfo(m_allocator, static_cast<VmaAllocation>(mem_handle), &alloc_info);
+			return alloc_info.offset;
+		}
+
+	private:
+		VmaAllocator m_allocator;
+	};
+
+	// Memory Allocator - built-in Vulkan device memory allocate/free
+
+	class mem_allocator_vk : public mem_allocator_base
+	{
+	public:
+		mem_allocator_vk(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev) {};
+		~mem_allocator_vk() {};
+
+		void destroy() override {};
+
+		mem_handle_t alloc(u64 block_sz, u64 /*alignment*/, uint32_t memory_type_index) override
+		{
+			VkDeviceMemory memory;
+			VkMemoryAllocateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+			info.allocationSize = block_sz;
+			info.memoryTypeIndex = memory_type_index;
+
+			CHECK_RESULT(vkAllocateMemory(m_device, &info, nullptr, &memory));
+			return memory;
+		}
+
+		void free(mem_handle_t mem_handle) override
+		{
+			vkFreeMemory(m_device, (VkDeviceMemory)mem_handle, nullptr);
+		}
+
+		void *map(mem_handle_t mem_handle, u64 offset, u64 size) override
+		{
+			void *data = nullptr;
+			CHECK_RESULT(vkMapMemory(m_device, (VkDeviceMemory)mem_handle, offset, std::max<u64>(size, 1u), 0, &data));
+			return data;
+		}
+
+		void unmap(mem_handle_t mem_handle) override
+		{
+			vkUnmapMemory(m_device, (VkDeviceMemory)mem_handle);
+		}
+
+		VkDeviceMemory get_vk_device_memory(mem_handle_t mem_handle) override
+		{
+			return (VkDeviceMemory)mem_handle;
+		}
+
+		u64 get_vk_device_memory_offset(mem_handle_t /*mem_handle*/)
+		{
+			return 0;
+		}
+
+	private:
+	};
+
+	struct memory_block
+	{
+		memory_block(VkDevice dev, u64 block_sz, u64 alignment, uint32_t memory_type_index) : m_device(dev)
+		{
+			m_mem_allocator = get_current_mem_allocator();
+			m_mem_handle = m_mem_allocator->alloc(block_sz, alignment, memory_type_index);
+		}
+
+		~memory_block()
+		{
+			m_mem_allocator->free(m_mem_handle);
+		}
+
+		VkDeviceMemory get_vk_device_memory()
+		{
+			return m_mem_allocator->get_vk_device_memory(m_mem_handle);
+		}
+
+		u64 get_vk_device_memory_offset()
+		{
+			return m_mem_allocator->get_vk_device_memory_offset(m_mem_handle);
+		}
+
+		void *map(u64 offset, u64 size)
+		{
+			return m_mem_allocator->map(m_mem_handle, offset, size);
+		}
+
+		void unmap()
+		{
+			m_mem_allocator->unmap(m_mem_handle);
+		}
+
+		memory_block(const memory_block&) = delete;
+		memory_block(memory_block&&) = delete;
+
+	private:
+		VkDevice m_device;
+		vk::mem_allocator_base* m_mem_allocator;
+		mem_allocator_base::mem_handle_t m_mem_handle;
+	};
 
 	class physical_device
 	{
@@ -209,13 +427,17 @@ namespace vk
 		physical_device *pgpu = nullptr;
 		memory_type_mapping memory_map{};
 		gpu_formats_support m_formats_support{};
+		std::unique_ptr<mem_allocator_base> m_allocator;
 		VkDevice dev = VK_NULL_HANDLE;
 
 	public:
 		render_device()
 		{}
 
-		render_device(vk::physical_device &pdev, uint32_t graphics_queue_idx)
+		~render_device()
+		{}
+
+		void create(vk::physical_device &pdev, uint32_t graphics_queue_idx)
 		{
 			float queue_priorities[1] = { 0.f };
 			pgpu = &pdev;
@@ -233,11 +455,6 @@ namespace vk
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME
 			};
 
-			std::vector<const char *> layers;
-
-			if (g_cfg.video.debug_output)
-				layers.push_back("VK_LAYER_LUNARG_standard_validation");
-
 			//Enable hardware features manually
 			//Currently we require:
 			//1. Anisotropic sampling
@@ -253,8 +470,8 @@ namespace vk
 			device.pNext = NULL;
 			device.queueCreateInfoCount = 1;
 			device.pQueueCreateInfos = &queue;
-			device.enabledLayerCount = static_cast<uint32_t>(layers.size());
-			device.ppEnabledLayerNames = layers.data();
+			device.enabledLayerCount = 0;
+			device.ppEnabledLayerNames = nullptr; // Deprecated
 			device.enabledExtensionCount = 1;
 			device.ppEnabledExtensionNames = requested_extensions;
 			device.pEnabledFeatures = &available_features;
@@ -263,22 +480,31 @@ namespace vk
 
 			memory_map = vk::get_memory_mapping(pdev);
 			m_formats_support = vk::get_optimal_tiling_supported_formats(pdev);
-		}
 
-		~render_device()
-		{
+			if (g_cfg.video.disable_vulkan_mem_allocator)
+				m_allocator = std::make_unique<vk::mem_allocator_vk>(dev, pdev);
+			else
+				m_allocator = std::make_unique<vk::mem_allocator_vma>(dev, pdev);
 		}
 
 		void destroy()
 		{
 			if (dev && pgpu)
 			{
+				if (m_allocator)
+				{
+					m_allocator->destroy();
+					m_allocator.reset();
+				}
+
 				vkDestroyDevice(dev, nullptr);
 				dev = nullptr;
+				memory_map = {};
+				m_formats_support = {};
 			}
 		}
 
-		bool get_compatible_memory_type(u32 typeBits, u32 desired_mask, u32 *type_index)
+		bool get_compatible_memory_type(u32 typeBits, u32 desired_mask, u32 *type_index) const
 		{
 			VkPhysicalDeviceMemoryProperties mem_infos = pgpu->get_memory_properties();
 
@@ -314,106 +540,14 @@ namespace vk
 			return m_formats_support;
 		}
 
-		operator VkDevice&()
+		mem_allocator_base* get_allocator() const
+		{
+			return m_allocator.get();
+		}
+
+		operator VkDevice() const
 		{
 			return dev;
-		}
-	};
-
-	struct memory_block
-	{
-		VkMemoryAllocateInfo info = {};
-		VkDeviceMemory memory;
-
-		memory_block(VkDevice dev, u64 block_sz, uint32_t memory_type_index) : m_device(dev)
-		{
-			info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			info.allocationSize = block_sz;
-			info.memoryTypeIndex = memory_type_index;
-
-			CHECK_RESULT(vkAllocateMemory(m_device, &info, nullptr, &memory));
-		}
-
-		~memory_block()
-		{
-			vkFreeMemory(m_device, memory, nullptr);
-		}
-
-		memory_block(const memory_block&) = delete;
-		memory_block(memory_block&&) = delete;
-
-	private:
-		VkDevice m_device;
-	};
-
-	class memory_block_deprecated
-	{
-		VkDeviceMemory vram = nullptr;
-		vk::render_device *owner = nullptr;
-		u64 vram_block_sz = 0;
-		bool mappable = false;
-
-	public:
-		memory_block_deprecated() {}
-		~memory_block_deprecated() {}
-
-		void allocate_from_pool(vk::render_device &device, u64 block_sz, bool host_visible, u32 typeBits)
-		{
-			if (vram)
-				destroy();
-
-			u32 typeIndex = 0;
-
-			owner = (vk::render_device*)&device;
-			VkDevice dev = (VkDevice)(*owner);
-
-			u32 access_mask = 0;
-
-			if (host_visible)
-				access_mask |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-
-			if (!owner->get_compatible_memory_type(typeBits, access_mask, &typeIndex))
-				fmt::throw_exception("Could not find suitable memory type!" HERE);
-
-			VkMemoryAllocateInfo infos;
-			infos.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			infos.pNext = nullptr;
-			infos.allocationSize = block_sz;
-			infos.memoryTypeIndex = typeIndex;
-
-			CHECK_RESULT(vkAllocateMemory(dev, &infos, nullptr, &vram));
-			vram_block_sz = block_sz;
-			mappable = host_visible;
-		}
-
-		void allocate_from_pool(vk::render_device &device, u64 block_sz, u32 typeBits)
-		{
-			allocate_from_pool(device, block_sz, true, typeBits);
-		}
-
-		void destroy()
-		{
-			VkDevice dev = (VkDevice)(*owner);
-			vkFreeMemory(dev, vram, nullptr);
-
-			owner = nullptr;
-			vram = nullptr;
-			vram_block_sz = 0;
-		}
-
-		bool is_mappable()
-		{
-			return mappable;
-		}
-
-		vk::render_device& get_owner()
-		{
-			return (*owner);
-		}
-
-		operator VkDeviceMemory()
-		{
-			return vram;
 		}
 	};
 
@@ -425,7 +559,7 @@ namespace vk
 		VkImageCreateInfo info = {};
 		std::shared_ptr<vk::memory_block> memory;
 
-		image(vk::render_device &dev,
+		image(const vk::render_device &dev,
 			uint32_t memory_type_index,
 			uint32_t access_flags,
 			VkImageType image_type,
@@ -465,8 +599,8 @@ namespace vk
 					fmt::throw_exception("No compatible memory type was found!" HERE);
 			}
 
-			memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_type_index);
-			CHECK_RESULT(vkBindImageMemory(m_device, value, memory->memory, 0));
+			memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_req.alignment, memory_type_index);
+			CHECK_RESULT(vkBindImageMemory(m_device, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset()));
 		}
 
 		// TODO: Ctor that uses a provided memory heap
@@ -590,8 +724,8 @@ namespace vk
 					fmt::throw_exception("No compatible memory type was found!" HERE);
 			}
 
-			memory.reset(new memory_block(m_device, memory_reqs.size, memory_type_index));
-			vkBindBufferMemory(dev, value, memory->memory, 0);
+			memory.reset(new memory_block(m_device, memory_reqs.size, memory_reqs.alignment, memory_type_index));
+			vkBindBufferMemory(dev, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset());
 		}
 
 		~buffer()
@@ -601,14 +735,12 @@ namespace vk
 
 		void *map(u64 offset, u64 size)
 		{
-			void *data = nullptr;
-			CHECK_RESULT(vkMapMemory(m_device, memory->memory, offset, std::max<u64>(size, 1u), 0, &data));
-			return data;
+			return memory->map(offset, size);
 		}
 
 		void unmap()
 		{
-			vkUnmapMemory(m_device, memory->memory);
+			memory->unmap();
 		}
 
 		u32 size() const
@@ -1064,7 +1196,7 @@ public:
 	public:
 		swapchain_base(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
 		{
-			dev = render_device(gpu, _graphics_queue);
+			dev.create(gpu, _graphics_queue);
 
 			if (_graphics_queue < UINT32_MAX) vkGetDeviceQueue(dev, _graphics_queue, 0, &vk_graphics_queue);
 			if (_present_queue < UINT32_MAX) vkGetDeviceQueue(dev, _present_queue, 0, &vk_present_queue);
@@ -1196,7 +1328,6 @@ public:
 		{
 			window_handle = handle;
 			hDstDC = GetDC(handle);
-			init();
 		}
 
 		void destroy(bool full=true) override
@@ -1289,7 +1420,6 @@ public:
 			}
 
 			gc = DefaultGC(display, DefaultScreen(display));
-			init();
 		}
 
 		void destroy(bool full=true) override
@@ -1710,34 +1840,38 @@ public:
 			std::vector<const char *> layers;
 
 #ifndef __APPLE__
-			extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-			extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+			if (!fast)
+			{
+				extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+				extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 #ifdef _WIN32
-			extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+				extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #else
-			supported_extensions support;
-			bool found_surface_ext = false;
-			if (support.is_supported(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
-			{
-				extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-				found_surface_ext = true;
-			}
+				supported_extensions support;
+				bool found_surface_ext = false;
+				if (support.is_supported(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
+				{
+					extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+					found_surface_ext = true;
+				}
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-			if (support.is_supported(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
-			{
-				extensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
-				found_surface_ext = true;
+				if (support.is_supported(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
+				{
+					extensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+					found_surface_ext = true;
+				}
+#endif //(WAYLAND)
+				if (!found_surface_ext)
+				{
+					LOG_ERROR(RSX, "Could not find a supported Vulkan surface extension");
+					return 0;
+				}
+#endif //(WIN32)
+				if (g_cfg.video.debug_output)
+					layers.push_back("VK_LAYER_LUNARG_standard_validation");
 			}
-#endif
-			if (!found_surface_ext)
-			{
-				LOG_ERROR(RSX, "Could not find a supported Vulkan surface extension");
-				return 0;
-			}
-#endif
-			if (!fast && g_cfg.video.debug_output)
-				layers.push_back("VK_LAYER_LUNARG_standard_validation");
-#endif
+#endif //(!APPLE)
+
 			VkInstanceCreateInfo instance_info = {};
 			instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 			instance_info.pApplicationInfo = &app;

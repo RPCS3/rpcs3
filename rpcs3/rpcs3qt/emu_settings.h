@@ -60,11 +60,19 @@ public:
 		StrictRenderingMode,
 		DisableVertexCache,
 		DisableOcclusionQueries,
+		DisableFIFOReordering,
 		AnisotropicFilterOverride,
 		ResolutionScale,
 		MinimumScalableDimension,
 		ForceCPUBlitEmulation,
 		DisableOnDiskShaderCache,
+		DisableVulkanMemAllocator,
+
+		// Performance Overlay
+		PerfOverlayEnabled,
+		PerfOverlayDetailLevel,
+		PerfOverlayUpdateInterval,
+		PerfOverlayFontSize,
 
 		// Audio
 		AudioRenderer,
@@ -218,13 +226,21 @@ private:
 		{ StrictRenderingMode,      { "Video", "Strict Rendering Mode"}},
 		{ DisableVertexCache,       { "Video", "Disable Vertex Cache"}},
 		{ DisableOcclusionQueries,  { "Video", "Disable ZCull Occlusion Queries" }},
+		{ DisableFIFOReordering,    { "Video", "Disable FIFO Reordering" }},
 		{ ForceCPUBlitEmulation,    { "Video", "Force CPU Blit" }},
 		{ DisableOnDiskShaderCache, { "Video", "Disable On-Disk Shader Cache"}},
+		{ DisableVulkanMemAllocator,{ "Video", "Disable Vulkan Memory Allocator" }},
 		{ AnisotropicFilterOverride,{ "Video", "Anisotropic Filter Override" }},
 		{ ResolutionScale,          { "Video", "Resolution Scale" }},
 		{ MinimumScalableDimension, { "Video", "Minimum Scalable Dimension" }},
 		{ D3D12Adapter,             { "Video", "D3D12", "Adapter"}},
 		{ VulkanAdapter,            { "Video", "Vulkan", "Adapter"}},
+
+		// Performance Overlay
+		{ PerfOverlayEnabled,       { "Video", "Performance Overlay", "Enabled" } },
+		{ PerfOverlayDetailLevel,   { "Video", "Performance Overlay", "Detail level" } },
+		{ PerfOverlayUpdateInterval,{ "Video", "Performance Overlay", "Metrics update interval (ms)" } },
+		{ PerfOverlayFontSize,      { "Video", "Performance Overlay", "Font size (px)" } },
 
 		// Audio
 		{ AudioRenderer,  { "Audio", "Renderer"}},

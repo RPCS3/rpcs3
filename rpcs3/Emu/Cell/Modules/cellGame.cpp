@@ -83,8 +83,8 @@ void fmt_class_string<CellDiscGameError>::format(std::string& out, u64 arg)
 // contentInfo = "/dev_bdvd/PS3_GAME"
 // usrdir = "/dev_bdvd/PS3_GAME/USRDIR"
 // Temporary content directory (dir is not empty):
-// contentInfo = "/dev_hdd1/game/" + dir
-// usrdir = "/dev_hdd1/game/" + dir + "/USRDIR"
+// contentInfo = "/dev_hdd0/game/_GDATA_" + time_since_epoch
+// usrdir = "/dev_hdd0/game/_GDATA_" + time_since_epoch + "/USRDIR"
 // Normal content directory (dir is not empty):
 // contentInfo = "/dev_hdd0/game/" + dir
 // usrdir = "/dev_hdd0/game/" + dir + "/USRDIR"
@@ -119,7 +119,7 @@ struct content_permission final
 		}
 		catch (...)
 		{
-			cellGame.fatal("Failed to clean directory '/dev_hdd1/game/%s'", dir);
+			cellGame.fatal("Failed to clean directory '%s'", temp);
 			catch_all_exceptions();
 		}
 	}
@@ -400,6 +400,14 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 
 	const std::string dir = prm->dir.empty() ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + prm->dir;
 
+	if (prm->can_create && prm->temp.empty() && !fs::is_dir(vfs::get(dir)))
+	{
+		strcpy_trunc(*contentInfoPath, "");
+		strcpy_trunc(*usrdirPath, "");
+		verify(HERE), fxm::remove<content_permission>();
+		return CELL_OK;
+	}
+
 	if (!prm->temp.empty())
 	{
 		// Make temporary directory persistent
@@ -581,8 +589,9 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
 
-	std::string tmp_contentInfo = "/dev_hdd1/game/" + prm->dir;
-	std::string tmp_usrdir = "/dev_hdd1/game/" + prm->dir + "/USRDIR";
+	std::string dirname = "_GDATA_" + std::to_string(steady_clock::now().time_since_epoch().count());
+	std::string tmp_contentInfo = "/dev_hdd0/game/" + dirname;
+	std::string tmp_usrdir = "/dev_hdd0/game/" + dirname + "/USRDIR";
 
 	if (!fs::create_dir(vfs::get(tmp_contentInfo)))
 	{

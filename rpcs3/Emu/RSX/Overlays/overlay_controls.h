@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <locale>
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -119,33 +120,58 @@ namespace rsx
 			{
 				//Init glyph
 				std::vector<u8> bytes;
+				std::vector<std::string> font_dirs;
 				std::vector<std::string> fallback_fonts;
 #ifdef _WIN32
-				std::string font_dir = "C:/Windows/Fonts/";
+				font_dirs.push_back("C:/Windows/Fonts/");
 				fallback_fonts.push_back("C:/Windows/Fonts/Arial.ttf");
 #else
 				char *home = getenv("HOME");
 				if (home == nullptr)
 					home = getpwuid(getuid())->pw_dir;
 
-				std::string font_dir = home;
-				if (home[font_dir.length() - 1] == '/')
-					font_dir += ".fonts/";
+				font_dirs.push_back(home);
+				if (home[font_dirs[0].length() - 1] == '/')
+					font_dirs[0] += ".fonts/";
 				else
-					font_dir += "/.fonts/";
+					font_dirs[0] += "/.fonts/";
 
 				fallback_fonts.push_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //ubuntu
 				fallback_fonts.push_back("/usr/share/fonts/TTF/DejaVuSans.ttf"); //arch
 #endif
-				//Also attempt to load from dev_flash as a last resort
+				//Search dev_flash for the font too
+				font_dirs.push_back(Emu.GetEmuDir() + "dev_flash/data/font/");
+				font_dirs.push_back(Emu.GetEmuDir() + "dev_flash/data/font/SONY-CC/");
+
+				//Attempt to load a font from dev_flash as a last resort
 				fallback_fonts.push_back(Emu.GetEmuDir() + "dev_flash/data/font/SCE-PS3-VR-R-LATIN.TTF");
 
-				std::string requested_file = font_dir + ttf_name + ".ttf";
-				std::string file_path = requested_file;
-
-				if (!fs::is_file(requested_file))
+				//Attemt to load requested font
+				std::string file_path;
+				bool font_found = false;
+				for (auto& font_dir : font_dirs)
 				{
-					bool font_found = false;
+					std::string requested_file = font_dir + ttf_name;
+
+					//Append ".ttf" if not present
+					std::string font_lower(requested_file);
+
+					std::transform(requested_file.begin(), requested_file.end(), font_lower.begin(), ::tolower);
+					if (font_lower.substr(font_lower.size() - 4) != ".ttf")
+						requested_file += ".ttf";
+
+					file_path = requested_file;
+
+					if (fs::is_file(requested_file))
+					{
+						font_found = true;
+						break;
+					}
+				}
+
+				//Attemt to load a fallback if request font wasn't found
+				if (!font_found)
+				{
 					for (auto &fallback_font : fallback_fonts)
 					{
 						if (fs::is_file(fallback_font))
@@ -157,16 +183,19 @@ namespace rsx
 							break;
 						}
 					}
-
-					if (!font_found)
-					{
-						LOG_ERROR(RSX, "Failed to initialize font '%s.ttf'", ttf_name);
-						return;
-					}
 				}
 
-				fs::file f(file_path);
-				f.read(bytes, f.size());
+				//Read font
+				if (font_found)
+				{
+					fs::file f(file_path);
+					f.read(bytes, f.size());
+				}
+				else
+				{
+					LOG_ERROR(RSX, "Failed to initialize font '%s.ttf'", ttf_name);
+					return;
+				}
 
 				glyph_data.resize(width * height);
 				pack_info.resize(256);
@@ -625,8 +654,14 @@ namespace rsx
 			f32 padding_top = 0.f;
 			f32 padding_bottom = 0.f;
 
+			f32 margin_left = 0.f;
+			f32 margin_right = 0.f;
+			f32 margin_top = 0.f;
+			f32 margin_bottom = 0.f;
+
 			overlay_element() {}
 			overlay_element(u16 _w, u16 _h) : w(_w), h(_h) {}
+			virtual ~overlay_element() = default;
 
 			virtual void refresh()
 			{
@@ -688,6 +723,22 @@ namespace rsx
 				is_compiled = false;
 			}
 
+			virtual void set_margin(f32 left, f32 right, f32 top, f32 bottom)
+			{
+				margin_left = left;
+				margin_right = right;
+				margin_top = top;
+				margin_bottom = bottom;
+
+				is_compiled = false;
+			}
+
+			virtual void set_margin(f32 margin)
+			{
+				margin_left = margin_right = margin_top = margin_bottom = margin;
+				is_compiled = false;
+			}
+
 			virtual void set_text(const std::string& text)
 			{
 				this->text = text;
@@ -721,7 +772,8 @@ namespace rsx
 			virtual std::vector<vertex> render_text(const char *string, f32 x, f32 y)
 			{
 				auto renderer = font_ref;
-				if (!renderer) renderer = fontmgr::get("Arial", 12);
+				if (!renderer)
+					renderer = fontmgr::get("Arial", 12);
 
 				f32 text_extents_w = 0.f;
 				u16 clip_width = clip_text ? w : UINT16_MAX;
@@ -806,10 +858,10 @@ namespace rsx
 
 					auto& verts = compiled_resources.draw_commands.front().second;
 					verts.resize(4);
-					verts[0].vec4(x + padding_left, y + padding_bottom, 0.f, 0.f);
-					verts[1].vec4(x + w - padding_right, y + padding_bottom, 1.f, 0.f);
-					verts[2].vec4(x + padding_left, y + h - padding_top, 0.f, 1.f);
-					verts[3].vec4(x + w - padding_right, y + h - padding_top, 1.f, 1.f);
+					verts[0].vec4(x + padding_left - margin_left, y + padding_bottom - margin_bottom, 0.f, 0.f);
+					verts[1].vec4(x + w - padding_right + margin_right, y + padding_bottom - margin_top, 1.f, 0.f);
+					verts[2].vec4(x + padding_left - margin_left, y + h - padding_top + margin_top, 0.f, 1.f);
+					verts[3].vec4(x + w - padding_right + margin_right, y + h - padding_top + margin_bottom, 1.f, 1.f);
 
 					if (!text.empty())
 					{
@@ -949,7 +1001,7 @@ namespace rsx
 
 		struct vertical_layout : public layout_container
 		{
-			overlay_element* add_element(std::unique_ptr<overlay_element>& item, int offset = -1)
+			overlay_element* add_element(std::unique_ptr<overlay_element>& item, int offset = -1) override
 			{
 				if (auto_resize)
 				{
@@ -1023,7 +1075,7 @@ namespace rsx
 
 		struct horizontal_layout : public layout_container
 		{
-			overlay_element* add_element(std::unique_ptr<overlay_element>& item, int offset = -1)
+			overlay_element* add_element(std::unique_ptr<overlay_element>& item, int offset = -1) override
 			{
 				if (auto_resize)
 				{
@@ -1248,12 +1300,7 @@ namespace rsx
 
 			void set_value(f32 value)
 			{
-				if (value < 0.f)
-					m_value = 0.f;
-				else if (value > m_limit)
-					m_value = m_limit;
-				else
-					m_value = value;
+				m_value = std::clamp(value, 0.f, m_limit);
 
 				f32 indicator_width = (w * m_value) / m_limit;
 				indicator.set_size((u16)indicator_width, h);
@@ -1490,7 +1537,7 @@ namespace rsx
 				m_cancel_btn->translate(_x, _y);
 			}
 
-			compiled_resource& get_compiled()
+			compiled_resource& get_compiled() override
 			{
 				if (!is_compiled)
 				{

@@ -4,6 +4,7 @@
 #include "Utilities/geometry.h"
 #include "gcm_enums.h"
 #include <atomic>
+#include <memory>
 
 // TODO: replace the code below by #include <optional> when C++17 or newer will be used
 #include <optional.hpp>
@@ -20,12 +21,183 @@ extern "C"
 
 namespace rsx
 {
+	class thread;
+	extern thread* g_current_renderer;
+
 	//Base for resources with reference counting
 	struct ref_counted
 	{
 		u8 deref_count = 0;
 
 		void reset_refs() { deref_count = 0; }
+	};
+
+	//Weak pointer without lock semantics
+	//Backed by a real shared_ptr for non-rsx memory
+	//Backed by a global shared pool for rsx memory
+	class weak_ptr
+	{
+	public:
+		using memory_block_t = std::pair<std::shared_ptr<u8>, u32>;
+
+	private:
+		void* _ptr = nullptr;
+		std::vector<memory_block_t> _blocks;
+		std::vector<u8> io_cache;
+		bool contiguous = true;
+		bool synchronized = true;
+
+	public:
+		weak_ptr(void* raw, bool is_rsx_mem = true)
+		{
+			_ptr = raw;
+
+			if (!is_rsx_mem)
+			{
+				_blocks.push_back({});
+				_blocks.back().first.reset((u8*)raw);
+			}
+		}
+
+		weak_ptr(std::shared_ptr<u8>& block)
+		{
+			_blocks.push_back({ block, 0 });
+			_ptr = block.get();
+		}
+
+		weak_ptr(std::vector<memory_block_t>& blocks)
+		{
+			verify(HERE), blocks.size() > 0;
+
+			_blocks = std::move(blocks);
+			_ptr = nullptr;
+
+			if (blocks.size() == 1)
+			{
+				_ptr = _blocks[0].first.get();
+				contiguous = true;
+			}
+			else
+			{
+				u32 block_length = 0;
+				for (const auto &block : _blocks)
+				{
+					block_length += block.second;
+				}
+
+				io_cache.resize(block_length);
+				contiguous = false;
+				synchronized = false;
+			}
+		}
+
+		weak_ptr()
+		{
+			_ptr = nullptr;
+		}
+
+		template <typename T = void>
+		T* get(u32 offset = 0, bool no_sync = false)
+		{
+			if (contiguous)
+			{
+				return (T*)((u8*)_ptr + offset);
+			}
+			else
+			{
+				if (!synchronized && !no_sync)
+					sync();
+
+				return (T*)(io_cache.data() + offset);
+			}
+		}
+
+		void sync()
+		{
+			if (synchronized)
+				return;
+
+			u8* dst = (u8*)io_cache.data();
+			for (const auto &block : _blocks)
+			{
+				memcpy(dst, block.first.get(), block.second);
+				dst += block.second;
+			}
+
+			synchronized = true;
+		}
+
+		void flush(u32 offset = 0, u32 len = 0) const
+		{
+			if (contiguous)
+				return;
+
+			u8* src = (u8*)io_cache.data();
+
+			if (!offset && (!len || len == io_cache.size()))
+			{
+				for (const auto &block : _blocks)
+				{
+					memcpy(block.first.get(), src, block.second);
+					src += block.second;
+				}
+			}
+			else
+			{
+				auto remaining_bytes = len? len : io_cache.size() - offset;
+				const auto write_end = remaining_bytes + offset;
+
+				u32 write_offset;
+				u32 write_length;
+				u32 base_offset = 0;
+
+				for (const auto &block : _blocks)
+				{
+					const u32 block_end = base_offset + block.second;
+
+					if (offset >= base_offset && offset < block_end)
+					{
+						// Head
+						write_offset = (offset - base_offset);
+						write_length = std::min<u32>(block.second - write_offset, (u32)remaining_bytes);
+					}
+					else if (base_offset > offset && block_end <= write_end)
+					{
+						// Completely spanned
+						write_offset = 0;
+						write_length = block.second;
+					}
+					else if (base_offset > offset && write_end < block_end)
+					{
+						// Tail
+						write_offset = 0;
+						write_length = (u32)remaining_bytes;
+					}
+					else
+					{
+						// No overlap; skip
+						write_length = 0;
+					}
+
+					if (write_length)
+					{
+						memcpy(block.first.get() + write_offset, src + (base_offset + write_offset), write_length);
+
+						verify(HERE), write_length <= remaining_bytes;
+						remaining_bytes -= write_length;
+						if (!remaining_bytes)
+							break;
+					}
+
+					base_offset += block.second;
+				}
+			}
+		}
+
+		operator bool() const
+		{
+			return (_ptr != nullptr || _blocks.size() > 1);
+		}
 	};
 
 	//Holds information about a framebuffer
@@ -289,6 +461,9 @@ namespace rsx
 
 	std::array<float, 4> get_constant_blend_colors();
 
+	// Acquire memory mirror with r/w permissions
+	weak_ptr get_super_ptr(u32 addr, u32 size);
+
 	/**
 	 * Shuffle texel layout from xyzw to wzyx
 	 * TODO: Variable src/dst and optional se conversion
@@ -412,6 +587,52 @@ namespace rsx
 	}
 
 	/**
+	 * Calculates the regions used for memory transfer between rendertargets on succession events
+	 */
+	template <typename SurfaceType>
+	std::tuple<u16, u16, u16, u16> get_transferable_region(SurfaceType* surface)
+	{
+		const u16 src_w = surface->old_contents->width();
+		const u16 src_h = surface->old_contents->height();
+		u16 dst_w = src_w;
+		u16 dst_h = src_h;
+
+		switch (static_cast<SurfaceType*>(surface->old_contents)->read_aa_mode)
+		{
+		case rsx::surface_antialiasing::center_1_sample:
+			break;
+		case rsx::surface_antialiasing::diagonal_centered_2_samples:
+			dst_w *= 2;
+			break;
+		case rsx::surface_antialiasing::square_centered_4_samples:
+		case rsx::surface_antialiasing::square_rotated_4_samples:
+			dst_w *= 2;
+			dst_h *= 2;
+			break;
+		}
+
+		switch (surface->write_aa_mode)
+		{
+		case rsx::surface_antialiasing::center_1_sample:
+			break;
+		case rsx::surface_antialiasing::diagonal_centered_2_samples:
+			dst_w /= 2;
+			break;
+		case rsx::surface_antialiasing::square_centered_4_samples:
+		case rsx::surface_antialiasing::square_rotated_4_samples:
+			dst_w /= 2;
+			dst_h /= 2;
+			break;
+		}
+
+		const f32 scale_x = (f32)dst_w / src_w;
+		const f32 scale_y = (f32)dst_h / src_h;
+
+		std::tie(std::ignore, std::ignore, dst_w, dst_h) = clip_region<u16>(dst_w, dst_h, 0, 0, surface->width(), surface->height(), true);
+		return std::make_tuple(u16(dst_w / scale_x), u16(dst_h / scale_y), dst_w, dst_h);
+	}
+
+	/**
 	 * Remove restart index and emulate using degenerate triangles
 	 * Can be used as a workaround when restart_index doesnt work too well
 	 * dst should be able to hold at least 2xcount entries
@@ -497,5 +718,10 @@ namespace rsx
 		result.r = ((colorref >> 16) & 0xFF) / 255.f;
 		result.a = ((colorref >> 24) & 0xFF) / 255.f;
 		return result;
+	}
+
+	static inline thread* get_current_renderer()
+	{
+		return g_current_renderer;
 	}
 }

@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 #include "Emu/RSX/GCM.h"
 
 enum
@@ -19,6 +17,8 @@ struct CellGcmOffsetTable
 	vm::bptr<u16> ioAddress;
 	vm::bptr<u16> eaAddress;
 };
+
+void InitOffsetTable();
 
 // Auxiliary functions
 s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict);

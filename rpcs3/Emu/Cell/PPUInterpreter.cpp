@@ -307,20 +307,20 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value);
 
 class ppu_scale_table_t
 {
-	std::array<__m128, 32 + 31> m_data;
+	std::array<v128, 32 + 31> m_data;
 
 public:
 	ppu_scale_table_t()
 	{
 		for (s32 i = -31; i < 32; i++)
 		{
-			m_data[i + 31] = _mm_set1_ps(static_cast<float>(std::exp2(i)));
+			m_data[i + 31].vf = _mm_set1_ps(static_cast<float>(std::exp2(i)));
 		}
 	}
 
 	FORCE_INLINE __m128 operator [] (s32 scale) const
 	{
-		return m_data[scale + 31];
+		return m_data[scale + 31].vf;
 	}
 }
 const g_ppu_scale_table;

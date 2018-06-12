@@ -205,26 +205,20 @@ namespace vk
 		}
 
 		template<typename T, bool swapped>
-		void do_memory_transfer(void *pixels_dst, const void *pixels_src, u32 channels_count)
+		void do_memory_transfer(void *pixels_dst, const void *pixels_src, u32 max_length)
 		{
-			if (sizeof(T) == 1)
-				memcpy(pixels_dst, pixels_src, cpu_address_range);
+			if (sizeof(T) == 1 || !swapped)
+			{
+				memcpy(pixels_dst, pixels_src, max_length);
+			}
 			else
 			{
-				const u32 block_size = width * height * channels_count;
+				const u32 block_size = max_length / sizeof(T);
+				auto typed_dst = (be_t<T> *)pixels_dst;
+				auto typed_src = (T *)pixels_src;
 
-				if (swapped)
-				{
-					auto typed_dst = (be_t<T> *)pixels_dst;
-					auto typed_src = (T *)pixels_src;
-
-					for (u32 px = 0; px < block_size; ++px)
-						typed_dst[px] = typed_src[px];
-				}
-				else
-				{
-					memcpy(pixels_dst, pixels_src, block_size * sizeof(T));
-				}
+				for (u32 px = 0; px < block_size; ++px)
+					typed_dst[px] = typed_src[px];
 			}
 		}
 
@@ -249,12 +243,12 @@ namespace vk
 
 			flushed = true;
 
-			void* pixels_src = dma_buffer->map(0, cpu_address_range);
-			void* pixels_dst = vm::base(cpu_address_base);
+			const auto valid_range = get_confirmed_range();
+			void* pixels_src = dma_buffer->map(valid_range.first, valid_range.second);
+			void* pixels_dst = get_raw_ptr(valid_range.first, true);
 
 			const auto texel_layout = vk::get_format_element_size(vram_texture->info.format);
 			const auto elem_size = texel_layout.first;
-			const auto channel_count = texel_layout.second;
 
 			//We have to do our own byte swapping since the driver doesnt do it for us
 			if (real_pitch == rsx_pitch)
@@ -263,10 +257,10 @@ namespace vk
 				switch (vram_texture->info.format)
 				{
 				case VK_FORMAT_D32_SFLOAT_S8_UINT:
-					rsx::convert_le_f32_to_be_d24(pixels_dst, pixels_src, cpu_address_range >> 2, 1);
+					rsx::convert_le_f32_to_be_d24(pixels_dst, pixels_src, valid_range.second >> 2, 1);
 					break;
 				case VK_FORMAT_D24_UNORM_S8_UINT:
-					rsx::convert_le_d24x8_to_be_d24x8(pixels_dst, pixels_src, cpu_address_range >> 2, 1);
+					rsx::convert_le_d24x8_to_be_d24x8(pixels_dst, pixels_src, valid_range.second >> 2, 1);
 					break;
 				default:
 					is_depth_format = false;
@@ -280,19 +274,19 @@ namespace vk
 					default:
 						LOG_ERROR(RSX, "Invalid element width %d", elem_size);
 					case 1:
-						do_memory_transfer<u8, false>(pixels_dst, pixels_src, channel_count);
+						do_memory_transfer<u8, false>(pixels_dst, pixels_src, valid_range.second);
 						break;
 					case 2:
 						if (pack_unpack_swap_bytes)
-							do_memory_transfer<u16, true>(pixels_dst, pixels_src, channel_count);
+							do_memory_transfer<u16, true>(pixels_dst, pixels_src, valid_range.second);
 						else
-							do_memory_transfer<u16, false>(pixels_dst, pixels_src, channel_count);
+							do_memory_transfer<u16, false>(pixels_dst, pixels_src, valid_range.second);
 						break;
 					case 4:
 						if (pack_unpack_swap_bytes)
-							do_memory_transfer<u32, true>(pixels_dst, pixels_src, channel_count);
+							do_memory_transfer<u32, true>(pixels_dst, pixels_src, valid_range.second);
 						else
-							do_memory_transfer<u32, false>(pixels_dst, pixels_src, channel_count);
+							do_memory_transfer<u32, false>(pixels_dst, pixels_src, valid_range.second);
 						break;
 					}
 				}
@@ -302,7 +296,7 @@ namespace vk
 				//Scale image to fit
 				//usually we can just get away with nearest filtering
 				u8 samples_u = 1, samples_v = 1;
-				switch (static_cast<vk::render_target*>(vram_texture)->aa_mode)
+				switch (static_cast<vk::render_target*>(vram_texture)->read_aa_mode)
 				{
 				case rsx::surface_antialiasing::diagonal_centered_2_samples:
 					samples_u = 2;
@@ -314,20 +308,22 @@ namespace vk
 					break;
 				}
 
-				u16 row_length = u16(width * channel_count);
-				rsx::scale_image_nearest(pixels_dst, pixels_src, row_length, height, rsx_pitch, real_pitch, elem_size, samples_u, samples_v, pack_unpack_swap_bytes);
+				const u16 row_length = u16(width * texel_layout.second);
+				const u16 usable_height = (valid_range.second / rsx_pitch) / samples_v;
+				rsx::scale_image_nearest(pixels_dst, pixels_src, row_length, usable_height, rsx_pitch, real_pitch, elem_size, samples_u, samples_v, pack_unpack_swap_bytes);
 
 				switch (vram_texture->info.format)
 				{
 				case VK_FORMAT_D32_SFLOAT_S8_UINT:
-					rsx::convert_le_f32_to_be_d24(pixels_dst, pixels_dst, cpu_address_range >> 2, 1);
+					rsx::convert_le_f32_to_be_d24(pixels_dst, pixels_dst, valid_range.second >> 2, 1);
 					break;
 				case VK_FORMAT_D24_UNORM_S8_UINT:
-					rsx::convert_le_d24x8_to_be_d24x8(pixels_dst, pixels_dst, cpu_address_range >> 2, 1);
+					rsx::convert_le_d24x8_to_be_d24x8(pixels_dst, pixels_dst, valid_range.second >> 2, 1);
 					break;
 				}
 			}
 
+			flush_io(valid_range.first, valid_range.second);
 			dma_buffer->unmap();
 			reset_write_statistics();
 
@@ -338,6 +334,16 @@ namespace vk
 		void set_unpack_swap_bytes(bool swap_bytes)
 		{
 			pack_unpack_swap_bytes = swap_bytes;
+		}
+
+		void reprotect(utils::protection prot, const std::pair<u32, u32>& range)
+		{
+			//Reset properties and protect again
+			flushed = false;
+			synchronized = false;
+			sync_timestamp = 0ull;
+
+			protect(prot, range);
 		}
 
 		void reprotect(utils::protection prot)
@@ -896,7 +902,7 @@ namespace vk
 			else
 			{
 				//TODO: Confirm byte swap patterns
-				region.protect(utils::protection::no);
+				//NOTE: Protection is handled by the caller
 				region.set_unpack_swap_bytes((aspect_flags & VK_IMAGE_ASPECT_COLOR_BIT) == VK_IMAGE_ASPECT_COLOR_BIT);
 				no_access_range = region.get_min_max(no_access_range);
 			}
@@ -1008,7 +1014,7 @@ namespace vk
 			{
 			default:
 				//TODO
-				err_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)vk_format, gcm_format);
+				warn_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)vk_format, gcm_format);
 				return false;
 			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 				return (vk_format == VK_FORMAT_R16G16B16A16_SFLOAT);
@@ -1032,18 +1038,6 @@ namespace vk
 				return (vk_format == VK_FORMAT_D16_UNORM);
 			}
 		}
-
-	public:
-
-		struct vk_blit_op_result : public blit_op_result
-		{
-			bool deferred = false;
-			vk::image *src_image = nullptr;
-			vk::image *dst_image = nullptr;
-			vk::image_view *src_view = nullptr;
-
-			using blit_op_result::blit_op_result;
-		};
 
 	public:
 
@@ -1077,7 +1071,7 @@ namespace vk
 				if (tex.is_dirty())
 					continue;
 
-				if (!tex.overlaps(rsx_address, true))
+				if (!tex.overlaps(rsx_address, rsx::overlap_test_bounds::full_range))
 					continue;
 
 				if ((rsx_address + rsx_size - tex.get_section_base()) <= tex.get_section_size())
@@ -1127,14 +1121,14 @@ namespace vk
 			return upload_texture(cmd, tex, m_rtts, cmd, const_cast<const VkQueue>(m_submit_queue));
 		}
 
-		vk::image *upload_image_simple(vk::command_buffer& /*cmd*/, u32 address, u32 width, u32 height)
+		vk::image *upload_image_simple(vk::command_buffer& cmd, u32 address, u32 width, u32 height)
 		{
 			//Uploads a linear memory range as a BGRA8 texture
 			auto image = std::make_unique<vk::image>(*m_device, m_memory_types.host_visible_coherent,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 				VK_IMAGE_TYPE_2D,
 				VK_FORMAT_B8G8R8A8_UNORM,
-				width, height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				width, height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
 				VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0);
 
 			VkImageSubresource subresource{};
@@ -1143,8 +1137,7 @@ namespace vk
 			VkSubresourceLayout layout{};
 			vkGetImageSubresourceLayout(*m_device, image->value, &subresource, &layout);
 
-			void* mem = nullptr;
-			vkMapMemory(*m_device, image->memory->memory, 0, layout.rowPitch * height, 0, &mem);
+			void* mem = image->memory->map(0, layout.rowPitch * height);
 
 			u32 row_pitch = width * 4;
 			char *src = (char *)vm::base(address);
@@ -1163,7 +1156,9 @@ namespace vk
 				dst += layout.rowPitch;
 			}
 
-			vkUnmapMemory(*m_device, image->memory->memory);
+			image->memory->unmap();
+
+			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 			auto result = image.get();
 			const u32 resource_memory = width * height * 4; //Rough approximate
@@ -1174,22 +1169,16 @@ namespace vk
 			return result;
 		}
 
-		vk_blit_op_result blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)
+		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)
 		{
 			struct blit_helper
 			{
 				vk::command_buffer* commands;
+				VkFormat format;
 				blit_helper(vk::command_buffer *c) : commands(c) {}
 
-				bool deferred = false;
-				vk::image* deferred_op_src = nullptr;
-				vk::image* deferred_op_dst = nullptr;
-
-				void scale_image(vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool /*interpolate*/, bool is_depth, const rsx::typeless_xfer& /*typeless*/)
+				void scale_image(vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, bool /*is_depth*/, const rsx::typeless_xfer& /*typeless*/)
 				{
-					VkImageAspectFlagBits aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-					if (is_depth) aspect = (VkImageAspectFlagBits)(src->info.format == VK_FORMAT_D16_UNORM ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
-
 					//Checks
 					if (src_area.x2 <= src_area.x1 || src_area.y2 <= src_area.y1 || dst_area.x2 <= dst_area.x1 || dst_area.y2 <= dst_area.y1)
 					{
@@ -1209,54 +1198,35 @@ namespace vk
 						return;
 					}
 
+					const auto aspect = vk::get_aspect_flags(src->info.format);
 					const auto src_width = src_area.x2 - src_area.x1;
 					const auto src_height = src_area.y2 - src_area.y1;
 					const auto dst_width = dst_area.x2 - dst_area.x1;
 					const auto dst_height = dst_area.y2 - dst_area.y1;
 
-					deferred_op_src = src;
-					deferred_op_dst = dst;
-
-					if (aspect & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT))
-					{
-						if (src_width != dst_width || src_height != dst_height || src->info.format != dst->info.format)
-						{
-							//Scaled depth scaling
-							deferred = true;
-						}
-					}
-
-					if (!deferred)
-					{
-						copy_scaled_image(*commands, src->value, dst->value, src->current_layout, dst->current_layout, src_area.x1, src_area.y1, src_width, src_height,
-							dst_area.x1, dst_area.y1, dst_width, dst_height, 1, aspect, src->info.format == dst->info.format);
-					}
+					copy_scaled_image(*commands, src->value, dst->value, src->current_layout, dst->current_layout, src_area.x1, src_area.y1, src_width, src_height,
+						dst_area.x1, dst_area.y1, dst_width, dst_height, 1, aspect, src->info.format == dst->info.format,
+						interpolate? VK_FILTER_LINEAR : VK_FILTER_NEAREST, src->info.format, dst->info.format);
 
 					change_image_layout(*commands, dst, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, {(VkImageAspectFlags)aspect, 0, dst->info.mipLevels, 0, dst->info.arrayLayers});
+					format = dst->info.format;
 				}
 			}
 			helper(&cmd);
 
 			auto reply = upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, cmd, const_cast<const VkQueue>(m_submit_queue));
 
-			vk_blit_op_result result = reply.succeeded;
-			result.real_dst_address = reply.real_dst_address;
-			result.real_dst_size = reply.real_dst_size;
-			result.is_depth = reply.is_depth;
-			result.deferred = helper.deferred;
-			result.dst_image = helper.deferred_op_dst;
-			result.src_image = helper.deferred_op_src;
+			if (reply.succeeded)
+			{
+				if (reply.real_dst_size)
+				{
+					flush_if_cache_miss_likely(helper.format, reply.real_dst_address, reply.real_dst_size, cmd, m_submit_queue);
+				}
 
-			if (!helper.deferred)
-				return result;
+				return true;
+			}
 
-			VkImageSubresourceRange view_range = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 };
-			auto tmp_view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), helper.deferred_op_src->value, VK_IMAGE_VIEW_TYPE_2D,
-					helper.deferred_op_src->info.format, helper.deferred_op_src->native_component_map, view_range);
-
-			result.src_view = tmp_view.get();
-			m_discardable_storage.push_back(tmp_view);
-			return result;
+			return false;
 		}
 
 		const u32 get_unreleased_textures_count() const override

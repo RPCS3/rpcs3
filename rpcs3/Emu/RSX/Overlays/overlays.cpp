@@ -14,18 +14,26 @@ namespace rsx
 			//Force unload
 			exit = true;
 			if (auto manager = fxm::get<display_manager>())
+			{
+				if (auto dlg = manager->get<rsx::overlays::message_dialog>())
+				{
+					if (dlg->progress_bar_count())
+						Emu.GetCallbacks().handle_taskbar_progress(0, 0);
+				}
+
 				manager->remove(uid);
+			}
 
 			if (on_close)
 				on_close(return_code);
 		}
 
-		void user_interface::refresh()
+		void overlay::refresh()
 		{
-			if (auto rsxthr = fxm::get<GSRender>())
+			if (auto rsxthr = rsx::get_current_renderer())
 			{
 				rsxthr->native_ui_flip_request.store(true);
 			}
 		}
-	}
-}
+	} // namespace overlays
+} // namespace rsx

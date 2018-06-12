@@ -287,7 +287,6 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only)
 			discordPresence.largeImageKey = "rpcs3_logo";
 			discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
 			discordPresence.startTimestamp = time(0);
-			discordPresence.instance = 0;
 			Discord_UpdatePresence(&discordPresence);
 		}
 #endif
@@ -419,10 +418,8 @@ void main_window::InstallPkg(const QString& dropPath)
 	const std::string fileName = sstr(QFileInfo(filePath).fileName());
 	const std::string path = sstr(filePath);
 
-	progress_dialog pdlg(0, 1000, this);
+	progress_dialog pdlg(tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
 	pdlg.setWindowTitle(tr("RPCS3 Package Installer"));
-	pdlg.setLabelText(tr("Installing package ... please wait ..."));
-	pdlg.setCancelButtonText(tr("Cancel"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
@@ -531,10 +528,8 @@ void main_window::InstallPup(const QString& dropPath)
 		return;
 	}
 
-	progress_dialog pdlg(0, static_cast<int>(updatefilenames.size()), this);
+	progress_dialog pdlg(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
 	pdlg.setWindowTitle(tr("RPCS3 Firmware Installer"));
-	pdlg.setLabelText(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)));
-	pdlg.setCancelButtonText(tr("Cancel"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
@@ -837,9 +832,13 @@ void main_window::OnEmuStop()
 	// Discord Rich Presence Integration
 	if (guiSettings->GetValue(gui::m_richPresence).toBool())
 	{
+		QString discord_state = guiSettings->GetValue(gui::m_discordState).toString();
 		DiscordRichPresence discordPresence = {};
+		discordPresence.details = "Idle";
+		discordPresence.state = sstr(discord_state).c_str();
 		discordPresence.largeImageKey = "rpcs3_logo";
 		discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
+		discordPresence.startTimestamp = time(0);
 		Discord_UpdatePresence(&discordPresence);
 	}
 #endif

@@ -783,6 +783,11 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		case CELL_SAVEDATA_FILEOP_WRITE:
 		{
 			fs::file file(dir_path + file_path, fs::write + fs::create);
+			if (!file)
+			{
+				fmt::throw_exception("Failed to open file. The file might be read-only: %s%s" HERE, dir_path, file_path);
+			}
+
 			file.seek(fileSet->fileOffset);
 			const auto start = static_cast<uchar*>(fileSet->fileBuf.get_ptr());
 			std::vector<uchar> buf(start, start + std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
@@ -801,6 +806,11 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		case CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC:
 		{
 			fs::file file(dir_path + file_path, fs::write + fs::create);
+			if (!file)
+			{
+				fmt::throw_exception("Failed to open file. The file might be read-only: %s%s" HERE, dir_path, file_path);
+			}
+
 			file.seek(fileSet->fileOffset);
 			const auto start = static_cast<uchar*>(fileSet->fileBuf.get_ptr());
 			std::vector<uchar> buf(start, start + std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));

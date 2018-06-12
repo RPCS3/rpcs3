@@ -7,13 +7,23 @@
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/System.h"
 
+#include "rsx_utils.h"
+#include <thread>
+
 namespace rsx
 {
 	enum protection_policy
 	{
-		protect_policy_one_page,	//Only guard one page, preferably one where this section 'wholly' fits
+		protect_policy_one_page,     //Only guard one page, preferrably one where this section 'wholly' fits
 		protect_policy_conservative, //Guards as much memory as possible that is guaranteed to only be covered by the defined range without sharing
-		protect_policy_full_range	//Guard the full memory range. Shared pages may be invalidated by access outside the object we're guarding
+		protect_policy_full_range    //Guard the full memory range. Shared pages may be invalidated by access outside the object we're guarding
+	};
+
+	enum overlap_test_bounds
+	{
+		full_range,
+		protected_range,
+		confirmed_range
 	};
 
 	class buffered_section
@@ -21,6 +31,24 @@ namespace rsx
 	private:
 		u32 locked_address_base = 0;
 		u32 locked_address_range = 0;
+		weak_ptr locked_memory_ptr;
+		std::pair<u32, u32> confirmed_range;
+
+		inline void tag_memory()
+		{
+			if (locked_memory_ptr)
+			{
+				const u32 valid_limit = (confirmed_range.second) ? confirmed_range.first + confirmed_range.second : cpu_address_range;
+				u32* first = locked_memory_ptr.get<u32>(confirmed_range.first, true);
+				u32* last = locked_memory_ptr.get<u32>(valid_limit - 4, true);
+
+				*first = cpu_address_base + confirmed_range.first;
+				*last = cpu_address_base + valid_limit - 4;
+
+				locked_memory_ptr.flush(confirmed_range.first, 4);
+				locked_memory_ptr.flush(valid_limit - 4, 4);
+			}
+		}
 
 	protected:
 		u32 cpu_address_base = 0;
@@ -37,21 +65,11 @@ namespace rsx
 			return (base1 < limit2 && base2 < limit1);
 		}
 
-	public:
-
-		buffered_section() {}
-		~buffered_section() {}
-
-		void reset(u32 base, u32 length, protection_policy protect_policy = protect_policy_full_range)
+		inline void init_lockable_range(u32 base, u32 length)
 		{
-			verify(HERE), locked == false;
-
-			cpu_address_base = base;
-			cpu_address_range = length;
-
 			locked_address_base = (base & ~4095);
 
-			if ((protect_policy != protect_policy_full_range) && (length >= 4096))
+			if ((guard_policy != protect_policy_full_range) && (length >= 4096))
 			{
 				const u32 limit = base + length;
 				const u32 block_end = (limit & ~4095);
@@ -64,7 +82,7 @@ namespace rsx
 					//Page boundaries cover at least one unique page
 					locked_address_base = block_start;
 
-					if (protect_policy == protect_policy_conservative)
+					if (guard_policy == protect_policy_conservative)
 					{
 						//Protect full unique range
 						locked_address_range = (block_end - block_start);
@@ -75,24 +93,83 @@ namespace rsx
 				locked_address_range = align(base + length, 4096) - locked_address_base;
 
 			verify(HERE), locked_address_range > 0;
+		}
+
+	public:
+
+		buffered_section() {}
+		~buffered_section() {}
+
+		void reset(u32 base, u32 length, protection_policy protect_policy = protect_policy_full_range)
+		{
+			verify(HERE), locked == false;
+
+			cpu_address_base = base;
+			cpu_address_range = length;
+
+			confirmed_range = { 0, 0 };
 			protection = utils::protection::rw;
 			guard_policy = protect_policy;
 			locked = false;
+
+			init_lockable_range(cpu_address_base, cpu_address_range);
 		}
 
 		void protect(utils::protection prot)
 		{
 			if (prot == protection) return;
+
 			verify(HERE), locked_address_range > 0;
 			utils::memory_protect(vm::base(locked_address_base), locked_address_range, prot);
 			protection = prot;
 			locked = prot != utils::protection::rw;
+
+			if (prot == utils::protection::no)
+			{
+				locked_memory_ptr = rsx::get_super_ptr(cpu_address_base, cpu_address_range);
+				tag_memory();
+			}
+			else
+			{
+				if (!locked)
+				{
+					//Unprotect range also invalidates secured range
+					confirmed_range = { 0, 0 };
+				}
+
+				locked_memory_ptr = {};
+			}
+		}
+
+		void protect(utils::protection prot, const std::pair<u32, u32>& range_confirm)
+		{
+			if (prot != utils::protection::rw)
+			{
+				const auto old_prot = protection;
+				const auto old_locked_base = locked_address_base;
+				const auto old_locked_length = locked_address_range;
+				protection = utils::protection::rw;
+
+				if (confirmed_range.second)
+				{
+					const u32 range_limit = std::max(range_confirm.first + range_confirm.second, confirmed_range.first + confirmed_range.second);
+					confirmed_range.first = std::min(confirmed_range.first, range_confirm.first);
+					confirmed_range.second = range_limit - confirmed_range.first;
+				}
+				else
+				{
+					confirmed_range = range_confirm;
+				}
+
+				init_lockable_range(confirmed_range.first + cpu_address_base, confirmed_range.second);
+			}
+
+			protect(prot);
 		}
 
 		void unprotect()
 		{
 			protect(utils::protection::rw);
-			locked = false;
 		}
 
 		void discard()
@@ -112,27 +189,55 @@ namespace rsx
 			return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
 		}
 
-		bool overlaps(u32 address, bool ignore_protection_range) const
+		bool overlaps(u32 address, overlap_test_bounds bounds) const
 		{
-			if (!ignore_protection_range)
-				return (locked_address_base <= address && (address - locked_address_base) < locked_address_range);
-			else
+			switch (bounds)
+			{
+			case overlap_test_bounds::full_range:
+			{
 				return (cpu_address_base <= address && (address - cpu_address_base) < cpu_address_range);
+			}
+			case overlap_test_bounds::protected_range:
+			{
+				return (locked_address_base <= address && (address - locked_address_base) < locked_address_range);
+			}
+			case overlap_test_bounds::confirmed_range:
+			{
+				const auto range = get_confirmed_range();
+				return ((range.first + cpu_address_base) <= address && (address - range.first) < range.second);
+			}
+			default:
+				fmt::throw_exception("Unreachable" HERE);
+			}
 		}
 
-		bool overlaps(std::pair<u32, u32> range, bool ignore_protection_range) const
+		bool overlaps(const std::pair<u32, u32>& range, overlap_test_bounds bounds) const
 		{
-			if (!ignore_protection_range)
-				return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
-			else
+			switch (bounds)
+			{
+			case overlap_test_bounds::full_range:
+			{
 				return region_overlaps(cpu_address_base, cpu_address_base + cpu_address_range, range.first, range.first + range.second);
+			}
+			case overlap_test_bounds::protected_range:
+			{
+				return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
+			}
+			case overlap_test_bounds::confirmed_range:
+			{
+				const auto test_range = get_confirmed_range();
+				return region_overlaps(test_range.first + cpu_address_base, test_range.first + cpu_address_base + test_range.second, range.first, range.first + range.second);
+			}
+			default:
+				fmt::throw_exception("Unreachable" HERE);
+			}
 		}
 
 		/**
 		 * Check if the page containing the address tramples this section. Also compares a former trampled page range to compare
 		 * If true, returns the range <min, max> with updated invalid range
 		 */
-		std::tuple<bool, std::pair<u32, u32>> overlaps_page(std::pair<u32, u32> old_range, u32 address, bool full_range_check) const
+		std::tuple<bool, std::pair<u32, u32>> overlaps_page(const std::pair<u32, u32>& old_range, u32 address, overlap_test_bounds bounds) const
 		{
 			const u32 page_base = address & ~4095;
 			const u32 page_limit = address + 4096;
@@ -141,16 +246,29 @@ namespace rsx
 			const u32 compare_max = std::max(old_range.second, page_limit);
 
 			u32 memory_base, memory_range;
-			if (full_range_check && guard_policy != protection_policy::protect_policy_full_range)
+			switch (bounds)
 			{
-				//Make sure protection range is full range
+			case overlap_test_bounds::full_range:
+			{
 				memory_base = (cpu_address_base & ~4095);
 				memory_range = align(cpu_address_base + cpu_address_range, 4096u) - memory_base;
+				break;
 			}
-			else
+			case overlap_test_bounds::protected_range:
 			{
 				memory_base = locked_address_base;
 				memory_range = locked_address_range;
+				break;
+			}
+			case overlap_test_bounds::confirmed_range:
+			{
+				const auto range = get_confirmed_range();
+				memory_base = (cpu_address_base + range.first) & ~4095;
+				memory_range = align(cpu_address_base + range.first + range.second, 4096u) - memory_base;
+				break;
+			}
+			default:
+				fmt::throw_exception("Unreachable" HERE);
 			}
 
 			if (!region_overlaps(memory_base, memory_base + memory_range, compare_min, compare_max))
@@ -191,7 +309,7 @@ namespace rsx
 			return (cpu_address_base == cpu_address && cpu_address_range == size);
 		}
 
-		std::pair<u32, u32> get_min_max(std::pair<u32, u32> current_min_max) const
+		std::pair<u32, u32> get_min_max(const std::pair<u32, u32>& current_min_max) const
 		{
 			u32 min = std::min(current_min_max.first, locked_address_base);
 			u32 max = std::max(current_min_max.second, locked_address_base + locked_address_range);
@@ -202,6 +320,51 @@ namespace rsx
 		utils::protection get_protection() const
 		{
 			return protection;
+		}
+
+		template <typename T = void>
+		T* get_raw_ptr(u32 offset = 0, bool no_sync = false)
+		{
+			verify(HERE), locked_memory_ptr;
+			return locked_memory_ptr.get<T>(offset, no_sync);
+		}
+
+		bool test_memory_head()
+		{
+			if (!locked_memory_ptr)
+			{
+				return false;
+			}
+
+			const u32* first = locked_memory_ptr.get<u32>(confirmed_range.first);
+			return (*first == (cpu_address_base + confirmed_range.first));
+		}
+
+		bool test_memory_tail()
+		{
+			if (!locked_memory_ptr)
+			{
+				return false;
+			}
+
+			const u32 valid_limit = (confirmed_range.second) ? confirmed_range.first + confirmed_range.second : cpu_address_range;
+			const u32* last = locked_memory_ptr.get<u32>(valid_limit - 4);
+			return (*last == (cpu_address_base + valid_limit - 4));
+		}
+
+		void flush_io(u32 offset = 0, u32 len = 0) const
+		{
+			locked_memory_ptr.flush(offset, len);
+		}
+
+		std::pair<u32, u32> get_confirmed_range() const
+		{
+			if (confirmed_range.second == 0)
+			{
+				return { 0, cpu_address_range };
+			}
+
+			return confirmed_range;
 		}
 	};
 
@@ -249,7 +412,8 @@ namespace rsx
 				dlg = Emu.GetCallbacks().get_msg_dialog();
 				dlg->type.se_normal = true;
 				dlg->type.bg_invisible = true;
-				dlg->type.progress_bar_count = 1;
+				dlg->type.progress_bar_count = 2;
+				dlg->ProgressBarSetTaskbarIndex(-1); // -1 to combine all progressbars in the taskbar progress
 				dlg->on_close = [](s32 status)
 				{
 					Emu.CallAfter([]()
@@ -260,7 +424,7 @@ namespace rsx
 
 				Emu.CallAfter([&]()
 				{
-					dlg->Create("Preloading cached shaders from disk.\nPlease wait...");
+					dlg->Create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
 					initialized.store(true);
 				});
 
@@ -270,21 +434,33 @@ namespace rsx
 				}
 			}
 
-			virtual void update_msg(u32 processed, u32 entry_count)
+			virtual void update_msg(u32 index, u32 processed, u32 entry_count)
 			{
 				Emu.CallAfter([=]()
 				{
-					dlg->ProgressBarSetMsg(0, fmt::format("Loading pipeline object %u of %u", processed, entry_count));
+					const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
+					dlg->ProgressBarSetMsg(index, fmt::format(text, processed, entry_count));
 				});
 			}
 
-			virtual void inc_value(u32 value)
+			virtual void inc_value(u32 index, u32 value)
 			{
 				Emu.CallAfter([=]()
 				{
-					dlg->ProgressBarInc(0, value);
+					dlg->ProgressBarInc(index, value);
 				});
 			}
+			
+			virtual void set_limit(u32 index, u32 limit)
+			{
+				Emu.CallAfter([=]()
+				{
+					dlg->ProgressBarSetLimit(index, limit);
+				});
+			}
+
+			virtual void refresh()
+			{};
 
 			virtual void close()
 			{}
@@ -317,17 +493,21 @@ namespace rsx
 			}
 
 			fs::dir root = fs::dir(directory_path);
-			fs::dir_entry tmp;
 
 			u32 entry_count = 0;
-			for (auto It = root.begin(); It != root.end(); ++It, entry_count++);
+			std::vector<fs::dir_entry> entries;
+			for (auto It = root.begin(); It != root.end(); ++It, entry_count++)
+			{
+				fs::dir_entry tmp = *It;
 
-			if (entry_count <= 2)
+				if (tmp.name == "." || tmp.name == "..")
+					continue;
+
+				entries.push_back(tmp);
+			}
+
+			if ((entry_count = (u32)entries.size()) <= 2)
 				return;
-
-			entry_count -= 2;
-			f32 delta = 100.f / entry_count;
-			f32 tally = 0.f;
 
 			root.rewind();
 
@@ -343,39 +523,112 @@ namespace rsx
 			}
 
 			dlg->create();
+			dlg->set_limit(0, entry_count);
+			dlg->set_limit(1, entry_count);
+			dlg->update_msg(0, 0, entry_count);
+			dlg->update_msg(1, 0, entry_count);
 
-			const auto prefix_length = version_prefix.length();
-			u32 processed = 0;
-			while (root.read(tmp) && !Emu.IsStopped())
+			// Setup worker threads
+			unsigned nb_threads = std::thread::hardware_concurrency();
+			std::vector<std::thread> worker_threads(nb_threads);
+
+			// Preload everything needed to compile the shaders
+			// Can probably be parallelized too, but since it's mostly reading files it's probably not worth it
+			std::vector<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>> unpackeds;
+			std::chrono::time_point<steady_clock> last_update;
+			u32 processed_since_last_update = 0;
+
+			for (u32 i = 0; (i < entry_count) && !Emu.IsStopped(); i++)
 			{
-				if (tmp.name == "." || tmp.name == "..")
-					continue;
+				fs::dir_entry tmp = entries[i];
 
 				const auto filename = directory_path + "/" + tmp.name;
 				std::vector<u8> bytes;
 				fs::file f(filename);
-
-				processed++;
-				dlg->update_msg(processed, entry_count);
-
 				if (f.size() != sizeof(pipeline_data))
 				{
 					LOG_ERROR(RSX, "Cached pipeline object %s is not binary compatible with the current shader cache", tmp.name.c_str());
 					invalid_entries.push_back(filename);
 					continue;
 				}
-
 				f.read<u8>(bytes, f.size());
+
 				auto unpacked = unpack(*(pipeline_data*)bytes.data());
-				m_storage.add_pipeline_entry(std::get<1>(unpacked), std::get<2>(unpacked), std::get<0>(unpacked), std::forward<Args>(args)...);
+				m_storage.preload_programs(std::get<1>(unpacked), std::get<2>(unpacked));
+				unpackeds.push_back(unpacked);
 
-				tally += delta;
-				if (tally > 1.f)
+				// Only update the screen at about 10fps since updating it everytime slows down the process
+				std::chrono::time_point<steady_clock> now = std::chrono::steady_clock::now();
+				processed_since_last_update++;
+				if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (i == entry_count - 1))
 				{
-					u32 value = (u32)tally;
-					dlg->inc_value(value);
+					dlg->update_msg(0, i + 1, entry_count);
+					dlg->inc_value(0, processed_since_last_update);
+					last_update = now;
+					processed_since_last_update = 0;
+				}
+			}
 
-					tally -= (f32)value;
+			atomic_t<u32> processed(0);
+			std::function<void(u32)> shader_comp_worker = [&](u32 index)
+			{
+				u32 pos;
+				while (((pos = processed++) < entry_count) && !Emu.IsStopped())
+				{
+					auto unpacked = unpackeds[pos];
+					m_storage.add_pipeline_entry(std::get<1>(unpacked), std::get<2>(unpacked), std::get<0>(unpacked), std::forward<Args>(args)...);
+				}
+			};
+
+			if (g_cfg.video.renderer == video_renderer::vulkan)
+			{
+				// Start workers
+				for (u32 i = 0; i < nb_threads; i++)
+				{
+					worker_threads[i] = std::thread(shader_comp_worker, i);
+				}
+
+				// Wait for the workers to finish their task while updating UI
+				u32 current_progress = 0;
+				u32 last_update_progress = 0;
+
+				while ((current_progress < entry_count) && !Emu.IsStopped())
+				{
+					std::this_thread::sleep_for(100ms); // Around 10fps should be good enough
+
+					current_progress = std::min(processed.load(), entry_count);
+					processed_since_last_update = current_progress - last_update_progress;
+					last_update_progress = current_progress;
+
+					if (processed_since_last_update > 0)
+					{
+						dlg->update_msg(1, current_progress, entry_count);
+						dlg->inc_value(1, processed_since_last_update);
+					}
+				}
+
+				// Need to join the threads to be absolutely sure shader compilation is done.
+				for (std::thread& worker_thread : worker_threads)
+					worker_thread.join();
+			}
+			else
+			{
+				u32 pos;
+				while (((pos = processed++) < entry_count) && !Emu.IsStopped())
+				{
+					auto unpacked = unpackeds[pos];
+					m_storage.add_pipeline_entry(std::get<1>(unpacked), std::get<2>(unpacked), std::get<0>(unpacked), std::forward<Args>(args)...);
+
+					// Update screen at about 10fps
+					std::chrono::time_point<steady_clock> now = std::chrono::steady_clock::now();
+					processed_since_last_update++;
+					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (pos == entry_count - 1))
+					{
+						dlg->update_msg(1, pos + 1, entry_count);
+						dlg->inc_value(1, processed_since_last_update);
+						last_update = now;
+						processed_since_last_update = 0;
+					}
 				}
 			}
 
@@ -389,6 +642,7 @@ namespace rsx
 				LOG_NOTICE(RSX, "shader cache: %d entries were marked as invalid and removed", invalid_entries.size());
 			}
 
+			dlg->refresh();
 			dlg->close();
 		}
 

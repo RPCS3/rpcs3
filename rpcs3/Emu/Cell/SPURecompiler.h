@@ -45,10 +45,14 @@ protected:
 	// List of possible targets for the instruction ({} = next instruction, {-1} = no targets)
 	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_targets;
 
-	// List of block predecessors
+	// List of block predecessors (incomplete, doesn't include all fallthrough predecessors)
 	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_preds;
 
 	std::shared_ptr<spu_cache> m_cache;
+
+private:
+	// For private use
+	std::bitset<0x10000> m_bits;
 
 public:
 	spu_recompiler_base();
