@@ -15,6 +15,16 @@ MsgDialogBase::~MsgDialogBase()
 {
 }
 
+// forward declaration for open_msg_dialog
+s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam);
+
+// wrapper to call for other hle dialogs
+s32 open_msg_dialog(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback = vm::null, vm::ptr<void> userData = vm::null, vm::ptr<void> extParam = vm::null)
+{
+	cellSysutil.warning("open_msg_dialog called. This will call cellMsgDialogOpen2");
+	return cellMsgDialogOpen2(type, msgString, callback, userData, extParam);
+}
+
 s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
 	cellSysutil.warning("cellMsgDialogOpen2(type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", type, msgString, callback, userData, extParam);
