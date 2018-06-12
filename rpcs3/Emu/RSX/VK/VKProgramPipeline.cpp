@@ -48,7 +48,7 @@ namespace vk
 			return false;
 		}
 
-		void program::bind_uniform(VkDescriptorImageInfo image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set)
+		void program::bind_uniform(const VkDescriptorImageInfo &image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set)
 		{
 			for (auto &uniform : uniforms)
 			{
@@ -72,19 +72,9 @@ namespace vk
 			LOG_NOTICE(RSX, "texture not found in program: %s", uniform_name.c_str());
 		}
 
-		void program::bind_uniform(VkDescriptorBufferInfo buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set)
+		void program::bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set)
 		{
-			VkWriteDescriptorSet descriptor_writer = {};
-			descriptor_writer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptor_writer.dstSet = descriptor_set;
-			descriptor_writer.descriptorCount = 1;
-			descriptor_writer.pBufferInfo = &buffer_descriptor;
-			descriptor_writer.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptor_writer.dstArrayElement = 0;
-			descriptor_writer.dstBinding = binding_point;
-
-			vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
-			attribute_location_mask |= (1ull << binding_point);
+			bind_buffer(buffer_descriptor, binding_point, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptor_set);
 		}
 
 		void program::bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set)
@@ -109,6 +99,21 @@ namespace vk
 			}
 			
 			LOG_NOTICE(RSX, "vertex buffer not found in program: %s", binding_name.c_str());
+		}
+
+		void program::bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorType type, VkDescriptorSet &descriptor_set)
+		{
+			VkWriteDescriptorSet descriptor_writer = {};
+			descriptor_writer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptor_writer.dstSet = descriptor_set;
+			descriptor_writer.descriptorCount = 1;
+			descriptor_writer.pBufferInfo = &buffer_descriptor;
+			descriptor_writer.descriptorType = type;
+			descriptor_writer.dstArrayElement = 0;
+			descriptor_writer.dstBinding = binding_point;
+
+			vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
+			attribute_location_mask |= (1ull << binding_point);
 		}
 
 		u64 program::get_vertex_input_attributes_mask()

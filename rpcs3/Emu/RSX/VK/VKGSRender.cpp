@@ -2024,6 +2024,8 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 			m_overlay_manager->dispose(uids_to_dispose);
 		}
 
+		vk::reset_compute_tasks();
+
 		m_attachment_clear_pass->free_resources();
 		m_depth_converter->free_resources();
 		m_ui_renderer->free_resources();
