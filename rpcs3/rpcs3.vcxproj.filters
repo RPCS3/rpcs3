@@ -557,9 +557,6 @@
     <ClCompile Include="rpcs3qt\msg_dialog_frame.cpp">
       <Filter>Gui\message dialog</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\syntax_highlighter.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
     <ClCompile Include="evdev_joystick_handler.cpp">
       <Filter>Io\evdev</Filter>
     </ClCompile>
@@ -830,9 +827,6 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\msg_dialog_frame.h">
       <Filter>Gui\message dialog</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\syntax_highlighter.h">
-      <Filter>Generated Files</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\save_manager_dialog.h">
       <Filter>Gui\save</Filter>
