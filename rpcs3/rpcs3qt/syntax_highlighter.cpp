@@ -55,7 +55,7 @@ void Highlighter::highlightBlock(const QString &text)
 
 AsmHighlighter::AsmHighlighter(QTextDocument *parent) : Highlighter(parent)
 {
-	addRule("^([^\\s]+).*$",                 Qt::darkBlue);    // Instructions
+	addRule("^[A-Z]+",                       Qt::darkBlue);    // Instructions
 	addRule(",?\\s(-?R\\d[^,;\\s]*)",        Qt::darkRed);     // -R0.*
 	addRule(",?\\s(-?H\\d[^,;\\s]*)",        Qt::red);         // -H1.*
 	addRule(",?\\s(-?v\\[\\d\\]*[^,;\\s]*)", Qt::darkCyan);    // -v[xyz].*
