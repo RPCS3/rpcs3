@@ -294,7 +294,6 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/Loader"
 "${RPCS3_SRC_DIR}/Crypto"
 "${RPCS3_SRC_DIR}/.."
-"${RPCS3_SRC_DIR}/../Utilities/yaml-cpp/include"
 "${RPCS3_SRC_DIR}/../3rdparty/GSL/include"
 "${RPCS3_SRC_DIR}/../3rdparty/hidapi/hidapi"
 # Includes 3rdparty stuff that isn't included yet
@@ -402,7 +401,7 @@ if(VULKAN_FOUND)
 	target_link_libraries(rpcs3 SPIRV Vulkan::Vulkan)
 endif()
 
-target_link_libraries(rpcs3 xxhash)
+target_link_libraries(rpcs3 xxhash yaml-cpp)
 
 if(WIN32)
 	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib setupapi.lib hidapi-hid Shlwapi.lib)

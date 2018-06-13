@@ -19,9 +19,6 @@
 [submodule "Vulkan/glslang"]
 	path = Vulkan/glslang
 	url = https://github.com/KhronosGroup/glslang.git
-[submodule "Utilities/yaml-cpp"]
-	path = Utilities/yaml-cpp
-	url = https://github.com/RPCS3/yaml-cpp
 [submodule "3rdparty/cereal"]
 	path = 3rdparty/cereal
 	url = https://github.com/USCiLab/cereal.git
@@ -42,3 +39,6 @@
 [submodule "3rdparty/xxHash"]
 	path = 3rdparty/xxHash
 	url = https://github.com/Cyan4973/xxHash
+[submodule "3rdparty/yaml-cpp"]
+	path = 3rdparty/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp.git

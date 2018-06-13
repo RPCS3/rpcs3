@@ -57,6 +57,11 @@ else()
 	#list(APPEND LIBS hidapi-libusb)
 endif()
 
+set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Enable testing" FORCE)
+set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Enable parse tools" FORCE)
+set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Enable contrib stuff in library" FORCE)
+add_subdirectory(3rdparty/yaml-cpp EXCLUDE_FROM_ALL)
+
 set(XXHASH_BUNDLED_MODE ON)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Make xxHash build static libs")
 add_subdirectory(3rdparty/xxHash/cmake_unofficial)
