@@ -10,10 +10,10 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QTableWidget>
-#include <QProgressDialog>
 #include <QTimer>
 
 #include "gui_settings.h"
+#include "progress_dialog.h"
 
 struct compat_status
 {
@@ -45,7 +45,7 @@ class game_compatibility : public QObject
 	QNetworkRequest m_network_request;
 	std::shared_ptr<gui_settings> m_xgui_settings;
 	std::unique_ptr<QTimer> m_progress_timer;
-	std::unique_ptr<QProgressDialog> m_progress_dialog;
+	std::unique_ptr<progress_dialog> m_progress_dialog;
 	std::unique_ptr<QNetworkAccessManager> m_network_access_manager;
 	std::map<std::string, compat_status> m_compat_database;
 

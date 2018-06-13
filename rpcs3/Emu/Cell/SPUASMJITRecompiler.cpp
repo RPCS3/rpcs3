@@ -1480,20 +1480,34 @@ void spu_recompiler::UNK(spu_opcode_t op)
 	m_pos = -1;
 }
 
+void spu_stop(SPUThread* _spu, u32 code, spu_function_t _ret)
+{
+	if (!_spu->stop_and_signal(code))
+	{
+		_ret = check_state_ret;
+	}
+
+	_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
+}
+
 void spu_recompiler::STOP(spu_opcode_t op)
 {
-	auto gate = [](SPUThread* _spu, u32 code)
-	{
-		if (_spu->stop_and_signal(code))
-		{
-			_spu->pc += 4;
-		}
-	};
+	using namespace asmjit;
 
+	Label ret = c->newLabel();
 	c->mov(SPU_OFF_32(pc), m_pos);
-	c->mov(*ls, op.opcode);
-	c->jmp(asmjit::imm_ptr<void(*)(SPUThread*, u32)>(gate));
-	m_pos = -1;
+	c->mov(*ls, op.opcode & 0x3fff);
+	c->lea(*qw0, x86::qword_ptr(ret));
+	c->jmp(imm_ptr(spu_stop));
+	c->align(kAlignCode, 16);
+	c->bind(ret);
+
+	if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
+	{
+		c->mov(SPU_OFF_32(pc), m_pos + 4);
+		c->ret();
+		m_pos = -1;
+	}
 }
 
 void spu_recompiler::LNOP(spu_opcode_t op)
@@ -1504,12 +1518,19 @@ void spu_recompiler::SYNC(spu_opcode_t op)
 {
 	// This instruction must be used following a store instruction that modifies the instruction stream.
 	c->mfence();
+
+	if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
+	{
+		c->mov(SPU_OFF_32(pc), m_pos + 4);
+		c->ret();
+		m_pos = -1;
+	}
 }
 
 void spu_recompiler::DSYNC(spu_opcode_t op)
 {
 	// This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
-	c->mfence();
+	SYNC(op);
 }
 
 void spu_recompiler::MFSPR(spu_opcode_t op)
@@ -2806,7 +2827,7 @@ void spu_recompiler::BIHNZ(spu_opcode_t op)
 
 void spu_recompiler::STOPD(spu_opcode_t op)
 {
-	fall(op);
+	STOP(spu_opcode_t{0x3fff});
 }
 
 void spu_recompiler::STQX(spu_opcode_t op)

@@ -244,7 +244,7 @@ const auto spu_putllc_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, cons
 	c.ret();
 });
 
-const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, u64* out_rtime)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_getll_tx = build_function_asm<bool(*)(u32 raddr, void* rdata, u64* out_rtime)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -258,7 +258,7 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, u64*
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
 	c.shr(args[0], 4);
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
-	c.mov(args[0].r32(), 1);
+	c.mov(args[0].r32(), 2);
 
 	// Begin transaction
 	Label begin = build_transaction_enter(c, fall);
@@ -274,7 +274,7 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, u64*
 	c.vmovups(x86::yword_ptr(args[1], 96), x86::ymm3);
 	c.vzeroupper();
 	c.mov(x86::qword_ptr(args[2]), x86::rax);
-	c.mov(x86::rax, args[0]);
+	c.mov(x86::eax, 1);
 	c.ret();
 
 	// Touch memory after transaction failure
@@ -282,11 +282,13 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, u64*
 	c.pause();
 	c.mov(x86::rax, x86::qword_ptr(x86::r11));
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
-	c.add(args[0], 1);
-	c.jmp(begin);
+	c.sub(args[0], 1);
+	c.jnz(begin);
+	c.xor_(x86::eax, x86::eax);
+	c.ret();
 });
 
-const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rdata)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rdata)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -300,7 +302,7 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
 	c.shr(args[0], 4);
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
-	c.mov(args[0].r32(), 1);
+	c.mov(args[0].r32(), 2);
 
 	// Prepare data
 	c.vmovups(x86::ymm0, x86::yword_ptr(args[1], 0));
@@ -317,7 +319,7 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 	c.add(x86::qword_ptr(x86::r10), 1);
 	c.xend();
 	c.vzeroupper();
-	c.mov(x86::rax, args[0]);
+	c.mov(x86::eax, 1);
 	c.ret();
 
 	// Touch memory after transaction failure
@@ -325,8 +327,10 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 	c.pause();
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
-	c.add(args[0], 1);
-	c.jmp(begin);
+	c.sub(args[0], 1);
+	c.jnz(begin);
+	c.xor_(x86::eax, x86::eax);
+	c.ret();
 });
 
 void spu_int_ctrl_t::set(u64 ints)
@@ -1005,7 +1009,13 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 	// Store unconditionally
 	if (LIKELY(g_use_rtm))
 	{
-		const u64 count = spu_putlluc_tx(addr, to_write.data());
+		u64 count = 1;
+
+		while (!spu_putlluc_tx(addr, to_write.data()))
+		{
+			std::this_thread::yield();
+			count += 2;
+		}
 
 		if (count > 5)
 		{
@@ -1018,11 +1028,19 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 
 		vm::_ref<atomic_t<u32>>(addr) += 0;
 
-		// Full lock (heavyweight)
-		// TODO: vm::check_addr
-		vm::writer_lock lock(1);
-		data = to_write;
-		vm::reservation_update(addr, 128);
+		if (g_cfg.core.spu_accurate_putlluc)
+		{
+			// Full lock (heavyweight)
+			// TODO: vm::check_addr
+			vm::writer_lock lock(1);
+			data = to_write;
+			vm::reservation_update(addr, 128);
+		}
+		else
+		{
+			data = to_write;
+			vm::reservation_update(addr, 128);
+		}
 	}
 
 	vm::reservation_notifier(addr, 128).notify_all();
@@ -1178,16 +1196,17 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 
 		if (LIKELY(g_use_rtm))
 		{
-			u64 count = 0;
+			u64 count = 1;
 
-			if (g_cfg.core.spu_accurate_getllar)
+			while (g_cfg.core.spu_accurate_getllar && !spu_getll_tx(raddr, rdata.data(), &rtime))
 			{
-				count = spu_getll_tx(raddr, rdata.data(), &rtime);
+				std::this_thread::yield();
+				count += 2;
 			}
 
-			if (count == 0)
+			if (!g_cfg.core.spu_accurate_getllar)
 			{
-				for (++count;; count++, busy_wait(300))
+				for (;; count++, busy_wait(300))
 				{
 					rtime = vm::reservation_acquire(raddr, 128);
 					rdata = data;
