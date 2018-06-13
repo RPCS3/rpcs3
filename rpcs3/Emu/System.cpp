@@ -38,13 +38,15 @@
 
 #include "Utilities/GDBDebugServer.h"
 
+#include "Utilities/sysinfo.h"
+
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
 
 cfg_root g_cfg;
 
-bool g_use_rtm = utils::has_rtm();
+bool g_use_rtm;
 
 std::string g_cfg_defaults;
 
@@ -216,6 +218,22 @@ inline void fmt_class_string<detail_level>::format(std::string& out, u64 arg)
 		case detail_level::low: return "Low";
 		case detail_level::medium: return "Medium";
 		case detail_level::high: return "High";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<tsx_usage>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](tsx_usage value)
+	{
+		switch (value)
+		{
+		case tsx_usage::disabled: return "Disabled";
+		case tsx_usage::enabled: return "Enabled";
+		case tsx_usage::forced: return "Forced";
 		}
 
 		return unknown;
@@ -626,6 +644,13 @@ void Emulator::Load(bool add_only)
 #endif
 
 		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", g_cfg.to_string());
+		
+		// Set RTM usage
+		g_use_rtm = utils::has_rtm() && ((utils::has_mpx() && g_cfg.core.enable_TSX == tsx_usage::enabled) || g_cfg.core.enable_TSX == tsx_usage::forced);
+		if (g_use_rtm && !utils::has_mpx())
+		{
+			LOG_WARNING(GENERAL, "TSX forced by User");
+		}
 
 		// Load patches from different locations
 		fxm::check_unlocked<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
