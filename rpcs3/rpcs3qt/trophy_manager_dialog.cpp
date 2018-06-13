@@ -58,7 +58,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 
 
 	// Get the currently selected user's trophy path.
-	m_trophy_dir = fmt::format("/dev_hdd0/home/%s/trophy/", Emu.GetUsr());
+	m_trophy_dir = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/";
 
 	// Game chooser combo box
 	m_game_combo = new QComboBox();

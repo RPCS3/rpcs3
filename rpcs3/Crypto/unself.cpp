@@ -1295,7 +1295,7 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 
 	// Try to find a matching RAP file under exdata folder.
 	const std::string ci_str = reinterpret_cast<const char*>(content_id);
-	const std::string rap_path = fmt::format("/dev_hdd0/home/%s/exdata/%s.rap", Emu.GetUsr(), ci_str);
+	const std::string rap_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + ci_str + ".rap";
 
 	// Open the RAP file and read the key.
 	const fs::file rap_file(vfs::get(rap_path));

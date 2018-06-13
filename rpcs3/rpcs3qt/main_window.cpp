@@ -1789,7 +1789,7 @@ void main_window::dropEvent(QDropEvent* event)
 		{
 			const std::string rapname = sstr(QFileInfo(rap).fileName());
 
-			if (!fs::copy_file(sstr(rap), fmt::format("%s/home/%s/exdata/%s", Emu.GetHddDir(), Emu.GetUsr(), rapname), false))
+			if (!fs::copy_file(sstr(rap), Emu.GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + rapname, false))
 			{
 				LOG_WARNING(GENERAL, "Could not copy rap file by drop: %s", rapname);
 			}

@@ -208,11 +208,11 @@ void user_manager_dialog::GenerateUser(const std::string& username)
 	const std::string homeDir = Emu.GetHddDir() + "home/";
 	const std::string userDir = homeDir + nextUserId;
 	fs::create_dir(homeDir);
-	fs::create_dir(fmt::format("%s/", userDir));
-	fs::create_dir(fmt::format("%s/exdata/", userDir));
-	fs::create_dir(fmt::format("%s/savedata/", userDir));
-	fs::create_dir(fmt::format("%s/trophy/", userDir));
-	fs::write_file(fmt::format("%s/localusername", userDir), fs::create + fs::excl + fs::write, username);
+	fs::create_dir(userDir + "/");
+	fs::create_dir(userDir + "/exdata/");
+	fs::create_dir(userDir + "/savedata/");
+	fs::create_dir(userDir + "/trophy/");
+	fs::write_file(userDir + "/localusername", fs::create + fs::excl + fs::write, username);
 }
 
 bool user_manager_dialog::ValidateUsername(const QString& textToValidate)
