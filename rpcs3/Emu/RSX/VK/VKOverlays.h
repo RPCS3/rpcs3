@@ -677,7 +677,7 @@ namespace vk
 			m_ubo.unmap();
 		}
 
-		void emit_geometry(vk::command_buffer &cmd)
+		void emit_geometry(vk::command_buffer &cmd) override
 		{
 			//Split into groups of 4
 			u32 first = 0;
