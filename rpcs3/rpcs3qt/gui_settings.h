@@ -126,6 +126,7 @@ namespace gui
 	const QString gs_frame    = "GSFrame";
 	const QString trophy      = "Trophy";
 	const QString savedata    = "SaveData";
+	const QString notes       = "Notes";
 
 	const QColor gl_icon_color       = QColor(209, 209, 209, 255);
 	const QColor mw_tool_icon_color  = QColor( 64,  64,  64, 255);
@@ -239,6 +240,7 @@ public:
 
 	bool GetCategoryVisibility(int cat);
 	QVariant GetValue(const gui_save& entry);
+	QVariant GetValue(const QString& key, const QString& name, const QString& def);
 	QVariant List2Var(const q_pair_list& list);
 	q_pair_list Var2List(const QVariant &var);
 
@@ -257,6 +259,7 @@ public Q_SLOTS:
 
 	/** Write value to entry */
 	void SetValue(const gui_save& entry, const QVariant& value);
+	void SetValue(const QString& key, const QString& name, const QVariant& value);
 
 	/** Sets the visibility of the chosen category. */
 	void SetCategoryVisibility(int cat, const bool& val);
@@ -277,5 +280,3 @@ private:
 	QSettings m_settings;
 	QDir m_settingsDir;
 };
-
-	static gui_save GetGuiSaveForColumn(int col);

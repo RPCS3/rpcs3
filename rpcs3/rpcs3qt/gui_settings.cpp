@@ -62,6 +62,11 @@ QVariant gui_settings::GetValue(const gui_save& entry)
 	return m_settings.value(entry.key + "/" + entry.name, entry.def);
 }
 
+QVariant gui_settings::GetValue(const QString& key, const QString& name, const QString& def)
+{
+	return m_settings.value(key + "/" + name, def);
+}
+
 QVariant gui_settings::List2Var(const q_pair_list& list)
 {
 	QByteArray ba;
@@ -83,6 +88,13 @@ void gui_settings::SetValue(const gui_save& entry, const QVariant& value)
 {
 	m_settings.beginGroup(entry.key);
 	m_settings.setValue(entry.name, value);
+	m_settings.endGroup();
+}
+
+void gui_settings::SetValue(const QString& key, const QString& name, const QVariant& value)
+{
+	m_settings.beginGroup(key);
+	m_settings.setValue(name, value);
 	m_settings.endGroup();
 }
 
