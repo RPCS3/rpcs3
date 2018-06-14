@@ -150,8 +150,6 @@ if(NOT MSVC)
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -nopie")
 		endif()
 	endif()
-
-	find_package(ZLIB REQUIRED)
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:throwingNew /D _CRT_SECURE_NO_DEPRECATE=1 /D _CRT_NON_CONFORMING_SWPRINTFS=1 /D _SCL_SECURE_NO_WARNINGS=1")
 
@@ -402,6 +400,10 @@ endif()
 
 target_link_libraries(rpcs3 pugixml xxhash yaml-cpp)
 
+find_package(ZLIB REQUIRED)
+target_include_directories(rpcs3 PUBLIC ${ZLIB_INCLUDE_DIRS})
+target_link_libraries(rpcs3 ${ZLIB_LIBRARIES})
+
 if(WIN32)
 	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib setupapi.lib hidapi-hid Shlwapi.lib)
 	if(NOT MSVC)
@@ -421,7 +423,7 @@ else()
 	else()
 		target_link_libraries(rpcs3 hidapi-libusb usb)
 	endif()
-	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} ZLIB::ZLIB ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} ${ADDITIONAL_LIBS})
 	if(USE_SYSTEM_FFMPEG)
 		target_link_libraries(rpcs3 ${FFMPEG_LIBRARIES})
 	else()
