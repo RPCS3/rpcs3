@@ -185,6 +185,8 @@ endif()
 
 set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
 
+# Prefer GLVND for OpenGL rather than legacy
+set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if(NOT WITHOUT_LLVM)
@@ -292,8 +294,6 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/Loader"
 "${RPCS3_SRC_DIR}/Crypto"
 "${RPCS3_SRC_DIR}/.."
-"${RPCS3_SRC_DIR}/../Utilities/yaml-cpp/include"
-"${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 "${RPCS3_SRC_DIR}/../3rdparty/GSL/include"
 "${RPCS3_SRC_DIR}/../3rdparty/hidapi/hidapi"
 # Includes 3rdparty stuff that isn't included yet
@@ -343,7 +343,6 @@ GLOB_RECURSE
 RPCS3_SRC
 "${RPCS3_SRC_DIR}/*.cpp"
 "${RPCS3_SRC_DIR}/../Utilities/*.cpp"
-"${RPCS3_SRC_DIR}/../asmjit/src/asmjit/*.cpp"
 )
 
 #File exclusion section
@@ -378,6 +377,10 @@ endif()
 
 add_dependencies(rpcs3 GitVersion)
 
+target_sources(rpcs3 PUBLIC ${ASMJIT_SRC})
+target_include_directories(rpcs3 PUBLIC ${ASMJIT_INCLUDE_DIR})
+target_link_libraries(rpcs3 ${ASMJIT_DEPS})
+
 if(NOT MSVC)
 	find_package(GLEW 1.13.0 REQUIRED)
 	target_link_libraries(rpcs3 GLEW::GLEW)
@@ -398,7 +401,7 @@ if(VULKAN_FOUND)
 	target_link_libraries(rpcs3 SPIRV Vulkan::Vulkan)
 endif()
 
-target_link_libraries(rpcs3 xxhash)
+target_link_libraries(rpcs3 xxhash yaml-cpp)
 
 if(WIN32)
 	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib setupapi.lib hidapi-hid Shlwapi.lib)
@@ -421,8 +424,7 @@ else()
 	endif()
 	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} ZLIB::ZLIB ${ADDITIONAL_LIBS})
 	if(USE_SYSTEM_FFMPEG)
-		link_libraries(${FFMPEG_LIBRARY_DIR})
-		target_link_libraries(rpcs3 libavformat.so libavcodec.so libavutil.so libswscale.so)
+		target_link_libraries(rpcs3 ${FFMPEG_LIBRARIES})
 	else()
 		target_link_libraries(rpcs3 libavformat.a libavcodec.a libavutil.a libswscale.a)
 	endif()

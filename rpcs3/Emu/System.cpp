@@ -26,7 +26,7 @@
 
 #include "../Crypto/unself.h"
 #include "../Crypto/unpkg.h"
-#include "yaml-cpp/yaml.h"
+#include <yaml-cpp/yaml.h>
 
 #include "cereal/archives/binary.hpp"
 

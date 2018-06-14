@@ -55,7 +55,7 @@ install:
      fi;
 
 before_script:
-  - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng Utilities/yaml-cpp 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional 3rdparty/xxHash Vulkan/glslang
+  - git submodule update --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng 3rdparty/cereal 3rdparty/hidapi 3rdparty/Optional 3rdparty/xxHash 3rdparty/yaml-cpp Vulkan/glslang
   - mkdir build ; cd build
   - if [ "$TRAVIS_PULL_REQUEST" = false ]; then
       export CXXFLAGS="$CXXFLAGS -DBRANCH=$TRAVIS_REPO_SLUG/$TRAVIS_BRANCH";
@@ -132,3 +132,8 @@ addons:
       - libudev-dev
       - libevdev-dev
       - libpulse-dev
+      # Wayland support, Ubuntu 14.04's version is quite old, but it's better than nothing
+      - libwayland-dev
+      - libwayland-cursor0
+      - libwayland-client0
+      - libwayland-server0

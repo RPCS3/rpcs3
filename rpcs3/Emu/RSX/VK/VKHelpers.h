@@ -247,7 +247,7 @@ namespace vk
 			vmaUnmapMemory(m_allocator, static_cast<VmaAllocation>(mem_handle));
 		}
 
-		VkDeviceMemory get_vk_device_memory(mem_handle_t mem_handle)
+		VkDeviceMemory get_vk_device_memory(mem_handle_t mem_handle) override
 		{
 			VmaAllocationInfo alloc_info;
 
@@ -255,7 +255,7 @@ namespace vk
 			return alloc_info.deviceMemory;
 		}
 
-		u64 get_vk_device_memory_offset(mem_handle_t mem_handle)
+		u64 get_vk_device_memory_offset(mem_handle_t mem_handle) override
 		{
 			VmaAllocationInfo alloc_info;
 
@@ -311,7 +311,7 @@ namespace vk
 			return (VkDeviceMemory)mem_handle;
 		}
 
-		u64 get_vk_device_memory_offset(mem_handle_t /*mem_handle*/)
+		u64 get_vk_device_memory_offset(mem_handle_t /*mem_handle*/) override
 		{
 			return 0;
 		}
@@ -1476,7 +1476,7 @@ public:
 			swapchain_images[index].second->do_dma_transfer(cmd);
 		}
 
-		VkImage& get_image(u32 index)
+		VkImage& get_image(u32 index) override
 		{
 			return (VkImage&)(*swapchain_images[index].second.get());
 		}
@@ -1720,7 +1720,7 @@ public:
 			return queuePresentKHR(vk_present_queue, &present);
 		}
 
-		VkImage& get_image(u32 index)
+		VkImage& get_image(u32 index) override
 		{
 			return (VkImage&)swapchain_images[index];
 		}

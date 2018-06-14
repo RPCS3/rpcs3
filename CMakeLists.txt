@@ -8,7 +8,9 @@ if (WITH_GDB)
 	add_definitions(-DWITH_GDB_DEBUGGER)
 endif()
 
-set(ASMJIT_STATIC TRUE)
+set(ASMJIT_EMBED TRUE)
+set(ASMJIT_DIR "${CMAKE_CURRENT_LIST_DIR}/asmjit" CACHE PATH "Location of 'asmjit'")
+include("${ASMJIT_DIR}/CMakeLists.txt")
 
 if (NOT CMAKE_BUILD_TYPE)
 	message(STATUS "No build type selected, default to Release")
@@ -54,6 +56,11 @@ else()
 	add_subdirectory(3rdparty/hidapi/libusb EXCLUDE_FROM_ALL)
 	#list(APPEND LIBS hidapi-libusb)
 endif()
+
+set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Enable testing" FORCE)
+set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Enable parse tools" FORCE)
+set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Enable contrib stuff in library" FORCE)
+add_subdirectory(3rdparty/yaml-cpp EXCLUDE_FROM_ALL)
 
 set(XXHASH_BUNDLED_MODE ON)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Make xxHash build static libs")

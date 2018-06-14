@@ -52,9 +52,9 @@ install:
       3rdparty/Optional `
       3rdparty/pugixml `
       3rdparty/xxHash `
+      3rdparty/yaml-cpp `
       3rdparty/zlib `
       asmjit `
-      Utilities/yaml-cpp `
       Vulkan/glslang
 
 platform: x64
@@ -77,16 +77,16 @@ before_build:
     if (!(test-path glslang.7z)) { irm $env:GLSLANG -outfile glslang.7z }
     7z x llvmlibs.7z -aos -o"." | out-null
     7z x glslang.7z -aos -o".\lib\$env:CONFIGURATION-$env:PLATFORM" | out-null
-    if (!(test-path vulkan-sdk.exe)) 
+    if (!(test-path vulkan-sdk.exe))
     {
         foreach ($url in $VULKAN_SDK_URLS) {
-            irm $url -outfile vulkan-sdk.exe 
-            if ($env:VULKAN_SDK_SHA -eq $(Get-FileHash .\vulkan-sdk.exe).Hash) 
+            irm $url -outfile vulkan-sdk.exe
+            if ($env:VULKAN_SDK_SHA -eq $(Get-FileHash .\vulkan-sdk.exe).Hash)
             {
                 echo "Successfully downloaded and verified vulkan-sdk.exe!"
                 break
             }
-            else 
+            else
             {
                 echo "Invalid file hash, Vulkan SDK Setup was possibly tampered with, retrying with a different mirror..."
             }

@@ -1,9 +1,9 @@
 #pragma once
 
-#define ASMJIT_STATIC
+#define ASMJIT_EMBED
 #define ASMJIT_DEBUG
 
-#include "asmjit.h"
+#include <asmjit/asmjit.h>
 #include <array>
 #include <functional>
 

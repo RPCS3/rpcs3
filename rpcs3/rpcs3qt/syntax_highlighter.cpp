@@ -54,13 +54,13 @@ void Highlighter::highlightBlock(const QString &text)
 
 AsmHighlighter::AsmHighlighter(QTextDocument *parent) : Highlighter(parent)
 {
-	addRule("^([^\\s]+).*$",                 Qt::darkBlue);    // Instructions
-	addRule(",?\\s(-?R\\d[^,;\\s]*)",        Qt::darkRed);     // -R0.*
-	addRule(",?\\s(-?H\\d[^,;\\s]*)",        Qt::red);         // -H1.*
-	addRule(",?\\s(-?v\\[\\d\\]*[^,;\\s]*)", Qt::darkCyan);    // -v[xyz].*
-	addRule(",?\\s(-?o\\[\\d\\]*[^,;\\s]*)", Qt::darkMagenta); // -o[xyz].*
-	addRule(",?\\s(-?c\\[\\d\\]*[^,;\\s]*)", Qt::darkYellow);  // -c[xyz].*
-	addRule("#[^\\n]*", Qt::darkGreen);                        // Single line comment
+	addRule("^[A-Z0-9]+",             Qt::darkBlue);    // Instructions
+	addRule("-?R\\d[^,;\\s]*",        Qt::darkRed);     // -R0.*
+	addRule("-?H\\d[^,;\\s]*",        Qt::red);         // -H1.*
+	addRule("-?v\\[\\d\\]*[^,;\\s]*", Qt::darkCyan);    // -v[xyz].*
+	addRule("-?o\\[\\d\\]*[^,;\\s]*", Qt::darkMagenta); // -o[xyz].*
+	addRule("-?c\\[\\d\\]*[^,;\\s]*", Qt::darkYellow);  // -c[xyz].*
+	addRule("#[^\\n]*",               Qt::darkGreen);   // Single line comment
 }
 
 GlslHighlighter::GlslHighlighter(QTextDocument *parent) : Highlighter(parent)
