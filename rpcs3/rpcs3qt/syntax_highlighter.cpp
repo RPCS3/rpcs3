@@ -45,8 +45,7 @@ void Highlighter::highlightBlock(const QString &text)
 		}
 		else
 		{
-			commentLength = endIndex - startIndex
-							+ match.capturedLength();
+			commentLength = endIndex - startIndex + match.capturedLength();
 		}
 		setFormat(startIndex, commentLength, multiLineCommentFormat);
 		startIndex = text.indexOf(commentStartExpression, startIndex + commentLength);

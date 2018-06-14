@@ -59,7 +59,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeDescription(ui->description_system);
 	SubscribeDescription(ui->description_network);
 	SubscribeDescription(ui->description_emulator);
-	SubscribeDescription(ui->description_gui);
+	if (!game)
+	{
+		SubscribeDescription(ui->description_gui);
+	}
 	SubscribeDescription(ui->description_debug);
 
 	// read tooltips from json
