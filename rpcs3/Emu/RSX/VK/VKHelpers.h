@@ -2566,19 +2566,50 @@ public:
 
 	struct vk_data_heap : public data_heap
 	{
-		std::unique_ptr<vk::buffer> heap;
+		std::unique_ptr<buffer> heap;
 		bool mapped = false;
+		void *_ptr = nullptr;
+
+		// NOTE: Some drivers (RADV) use heavyweight OS map/unmap routines that are insanely slow
+		// Avoid mapping/unmapping to keep these drivers from stalling
+		// NOTE2: HOST_CACHED flag does not keep the mapped ptr around in the driver either
+
+		void create(VkBufferUsageFlags usage, size_t size, const char *name = "unnamed", size_t guard = 0x10000)
+		{
+			const auto device = get_current_renderer();
+			const auto memory_map = device->get_memory_mapping();
+			const VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+			data_heap::init(size, name, guard);
+			heap.reset(new buffer(*device, size, memory_map.host_visible_coherent, memory_flags, usage, 0));
+		}
+
+		void destroy()
+		{
+			if (mapped)
+			{
+				heap->unmap();
+				mapped = false;
+			}
+
+			heap.reset();
+		}
 
 		void* map(size_t offset, size_t size)
 		{
-			mapped = true;
-			return heap->map(offset, size);
+			if (!_ptr)
+			{
+				_ptr = heap->map(0, heap->size());
+				mapped = true;
+			}
+
+			return (u8*)_ptr + offset;
 		}
 
 		void unmap()
 		{
-			mapped = false;
-			heap->unmap();
+			//mapped = false;
+			//heap->unmap();
 		}
 	};
 }
