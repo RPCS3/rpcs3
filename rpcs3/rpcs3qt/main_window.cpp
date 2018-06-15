@@ -1620,7 +1620,8 @@ Add valid disc games to gamelist (games.yml)
 */
 void main_window::AddGamesFromDir(const QString& path)
 {
-	if (!QFileInfo(path).isDir()) return;
+	if (!QFileInfo(path).isDir())
+		return;
 
 	const std::string s_path = sstr(path);
 
@@ -1631,13 +1632,10 @@ void main_window::AddGamesFromDir(const QString& path)
 	}
 
 	// search direct subdirectories, that way we can drop one folder containing all games
-	for (const auto& entry : fs::dir(s_path))
+	QDirIterator dir_iter(path, QDir::Dirs | QDir::NoDotAndDotDot);
+	while (dir_iter.hasNext())
 	{
-		if (entry.name == "." || entry.name == "..") continue;
-
-		const std::string pth = s_path + "/" + entry.name;
-
-		if (!QFileInfo(qstr(pth)).isDir()) continue;
+		std::string pth = sstr(dir_iter.next());
 
 		if (Emu.BootGame(pth, false, true))
 		{

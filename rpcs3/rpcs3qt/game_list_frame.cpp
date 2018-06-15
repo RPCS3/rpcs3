@@ -832,17 +832,18 @@ bool game_list_frame::DeleteShadersCache(const std::string& base_dir, bool is_in
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete shaders cache?")) != QMessageBox::Yes)
 		return false;
 
-	fs::dir root = fs::dir(base_dir);
-	fs::dir_entry tmp;
-
-	while (root.read(tmp))
+	QDirIterator dir_iter(qstr(base_dir), QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	while (dir_iter.hasNext())
 	{
-		if (!fs::is_dir(base_dir + "/" + tmp.name))
-			continue;
+		const QString filepath = dir_iter.next();
 
-		const std::string shader_cache_name = base_dir + "/" + tmp.name + "/shaders_cache";
-		if (fs::is_dir(shader_cache_name))
-			fs::remove_all(shader_cache_name, true);
+		if (dir_iter.fileName() == "shaders_cache")
+		{
+			if (QDir(filepath).removeRecursively())
+				LOG_NOTICE(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
+			else
+				LOG_WARNING(GENERAL, "Could not remove shaders cache file: %s", sstr(filepath));
+		}
 	}
 
 	LOG_SUCCESS(GENERAL, "Removed shaders cache in %s", base_dir);
@@ -857,21 +858,21 @@ bool game_list_frame::DeleteLLVMCache(const std::string& base_dir, bool is_inter
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete LLVM cache?")) != QMessageBox::Yes)
 		return false;
 
-	for (auto&& subdir : fs::dir{ base_dir })
+	QDirIterator dir_iter(qstr(base_dir), QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	while (dir_iter.hasNext())
 	{
-		if (!subdir.is_directory || subdir.name == "." || subdir.name == "..")
-			continue;
+		const QString filepath = dir_iter.next();
 
-		const std::string dir = base_dir + "/" + subdir.name;
-
-		for (auto&& entry : fs::dir{ dir })
+		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".obj", Qt::CaseInsensitive))
 		{
-			if (entry.name.size() >= 4 && entry.name.compare(entry.name.size() - 4, 4, ".obj", 4) == 0)
-				fs::remove_file(dir + "/" + entry.name);
+			if (QFile::remove(filepath))
+				LOG_NOTICE(GENERAL, "Removed LLVM cache file: %s", sstr(filepath));
+			else
+				LOG_WARNING(GENERAL, "Could not remove LLVM cache file: %s", sstr(filepath));
 		}
 	}
 
-	LOG_SUCCESS(GENERAL, "Removed llvm cache in %s", base_dir);
+	LOG_SUCCESS(GENERAL, "Removed LLVM cache in %s", base_dir);
 	return true;
 }
 
