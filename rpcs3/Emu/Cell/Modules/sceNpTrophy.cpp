@@ -422,6 +422,11 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 		trophy_base = trophy_base->GetChildren();
 	}
 
+	if (details)
+		memset(details.get_ptr(), 0, sizeof(SceNpTrophyGameDetails));
+	if (data)
+		memset(data.get_ptr(), 0, sizeof(SceNpTrophyGameData));
+
 	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
 	{
 		const std::string n_name = n->GetName();
@@ -430,14 +435,12 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 		{
 			if (n_name == "title-name")
 			{
-				std::string titleName = n->GetNodeContent();
-				memcpy(details->title, titleName.c_str(), titleName.size());
+				strcpy_trunc(details->title, n->GetNodeContent());
 				continue;
 			}
 			else if (n_name == "title-detail")
 			{
-				std::string titleDetail = n->GetNodeContent();
-				memcpy(details->description, titleDetail.c_str(), titleDetail.size());
+				strcpy_trunc(details->description, n->GetNodeContent());
 				continue;
 			}
 		}
@@ -617,6 +620,11 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 	}
 
+	if (details)
+		memset(details.get_ptr(), 0, sizeof(SceNpTrophyDetails));
+	if (data)
+		memset(data.get_ptr(), 0, sizeof(SceNpTrophyData));
+
 	rXmlDocument doc;
 	doc.Read(config.to_string());
 
@@ -661,13 +669,11 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 
 					if (n2_name == "name")
 					{
-						std::string name = n2->GetNodeContent();
-						memcpy(details->name, name.c_str(), std::min((size_t)SCE_NP_TROPHY_NAME_MAX_SIZE, name.length() + 1));
+						strcpy_trunc(details->name, n2->GetNodeContent());
 					}
 					else if (n2_name == "detail")
 					{
-						std::string detail = n2->GetNodeContent();
-						memcpy(details->description, detail.c_str(), std::min((size_t)SCE_NP_TROPHY_DESCR_MAX_SIZE, detail.length() + 1));
+						strcpy_trunc(details->description, n2->GetNodeContent());
 					}
 				}
 			}
