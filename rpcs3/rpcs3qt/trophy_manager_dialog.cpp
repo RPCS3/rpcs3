@@ -111,14 +111,10 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_splitter->addWidget(m_trophy_table);
 
 	// Populate the trophy database
-	QDirIterator dir_iter(qstr(vfs::get(m_TROPHY_DIR)));
+	QDirIterator dir_iter(qstr(vfs::get(m_TROPHY_DIR)), QDir::Dirs | QDir::NoDotAndDotDot);
 	while (dir_iter.hasNext()) 
 	{
 		dir_iter.next();
-		if (dir_iter.fileName() == "." || dir_iter.fileName() == ".." || dir_iter.fileName() == ".gitignore")
-		{
-			continue;
-		}
 		std::string dirName = sstr(dir_iter.fileName());
 		LOG_TRACE(GENERAL, "Loading trophy dir: %s", dirName);
 		LoadTrophyFolderToDB(dirName);
