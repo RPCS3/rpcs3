@@ -27,6 +27,7 @@
 #include <QDesktopServices>
 #include <QUrl>
 #include <QScrollBar>
+#include <QWheelEvent>
 
 static const char* m_TROPHY_DIR = "/dev_hdd0/home/00000001/trophy/";
 
@@ -68,6 +69,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_table->setShowGrid(false);
 	m_game_table->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 	m_game_table->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_game_table->verticalScrollBar()->installEventFilter(this);
 	m_game_table->verticalScrollBar()->setSingleStep(20);
 	m_game_table->horizontalScrollBar()->setSingleStep(20);
 	m_game_table->setItemDelegate(new table_item_delegate(this));
@@ -81,12 +83,14 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	m_game_table->verticalHeader()->setVisible(false);
 	m_game_table->setAlternatingRowColors(true);
+	m_game_table->installEventFilter(this);
 
 	// Trophy Table
 	m_trophy_table = new QTableWidget();
 	m_trophy_table->setShowGrid(false);
 	m_trophy_table->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 	m_trophy_table->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_trophy_table->verticalScrollBar()->installEventFilter(this);
 	m_trophy_table->verticalScrollBar()->setSingleStep(20);
 	m_trophy_table->horizontalScrollBar()->setSingleStep(20);
 	m_trophy_table->setItemDelegate(new table_item_delegate(this));
@@ -100,6 +104,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_trophy_table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	m_trophy_table->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_trophy_table->setAlternatingRowColors(true);
+	m_trophy_table->installEventFilter(this);
 
 	m_splitter = new QSplitter();
 	m_splitter->addWidget(m_game_table);
@@ -695,6 +700,66 @@ void trophy_manager_dialog::ReadjustTrophyTable()
 
 	// Shorten the last section to remove horizontal scrollbar if possible
 	m_trophy_table->resizeColumnToContents(TrophyColumns::Count - 1);
+}
+
+bool trophy_manager_dialog::eventFilter(QObject *object, QEvent *event)
+{
+	const bool is_trophy_scroll = object == m_trophy_table->verticalScrollBar();
+	const bool is_trophy_table  = object == m_trophy_table;
+	const bool is_game_scroll   = object == m_game_table->verticalScrollBar();
+	const bool is_game_table    = object == m_game_table;
+	int zoom_val = 0;
+
+	switch (event->type())
+	{
+	case QEvent::Wheel:
+	{
+		QWheelEvent *wheelEvent = static_cast<QWheelEvent *>(event);
+
+		if (wheelEvent->modifiers() & Qt::ControlModifier && (is_trophy_scroll || is_game_scroll))
+		{
+			QPoint numSteps = wheelEvent->angleDelta() / 8 / 15;	// http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
+			zoom_val = numSteps.y();
+		}
+		break;
+	}
+	case QEvent::KeyPress:
+	{
+		QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+
+		if (keyEvent->modifiers() & Qt::ControlModifier && (is_trophy_table || is_game_table))
+		{
+			if (keyEvent->key() == Qt::Key_Plus)
+			{
+				zoom_val = 1;
+			}
+			else if (keyEvent->key() == Qt::Key_Minus)
+			{
+				zoom_val = -1;
+			}
+		}
+		break;
+	}
+	default:
+		break;
+	}
+
+	if (zoom_val != 0)
+	{
+		if (m_icon_slider && (is_trophy_table || is_trophy_scroll))
+		{
+			m_save_icon_height = true;
+			m_icon_slider->setSliderPosition(zoom_val + m_icon_slider->value());
+		}
+		else if (m_game_icon_slider && (is_game_table || is_game_scroll))
+		{
+			m_save_game_icon_size = true;
+			m_game_icon_slider->setSliderPosition(zoom_val + m_game_icon_slider->value());
+		}
+		return true;
+	}
+
+	return QWidget::eventFilter(object, event);
 }
 
 void trophy_manager_dialog::closeEvent(QCloseEvent *event)
