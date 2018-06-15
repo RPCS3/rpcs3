@@ -241,6 +241,26 @@ void main_window::SetAppIconFromPath(const std::string& path)
 	m_appIcon = QApplication::windowIcon();
 }
 
+void main_window::ResizeIcons(int index)
+{
+	if (ui->sizeSlider->value() != index)
+	{
+		ui->sizeSlider->setSliderPosition(index);
+		return; // ResizeIcons will be triggered again by setSliderPosition, so return here
+	}
+
+	if (m_save_slider_pos)
+	{
+		m_save_slider_pos = false;
+		guiSettings->SetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid, index);
+
+		// this will also fire when we used the actions, but i didn't want to add another boolean member
+		SetIconSizeActions(index);
+	}
+
+	m_gameListFrame->ResizeIcons(index);
+}
+
 void main_window::OnPlayOrPause()
 {
 	if (Emu.IsReady())
@@ -1304,43 +1324,31 @@ void main_window::CreateConnects()
 
 	connect(ui->aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
 
-	auto resizeIcons = [=](const int& index)
-	{
-		if (ui->sizeSlider->value() != index)
-		{
-			ui->sizeSlider->setSliderPosition(index);
-		}
-		if (m_save_slider_pos)
-		{
-			m_save_slider_pos = false;
-			guiSettings->SetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid, index);
-		}
-		m_gameListFrame->ResizeIcons(index);
-	};
-
 	connect(m_iconSizeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
+		static const int index_small  = gui::get_Index(gui::gl_icon_size_small);
+		static const int index_medium = gui::get_Index(gui::gl_icon_size_medium);
+
 		int index;
 
 		if (act == ui->setIconSizeTinyAct)
 			index = 0;
 		else if (act == ui->setIconSizeSmallAct)
-			index = gui::get_Index(gui::gl_icon_size_small);
+			index = index_small;
 		else if (act == ui->setIconSizeMediumAct)
-			index = gui::get_Index(gui::gl_icon_size_medium);
+			index = index_medium;
 		else
 			index = gui::gl_max_slider_pos;
 
 		m_save_slider_pos = true;
-		resizeIcons(index);
+		ResizeIcons(index);
 	});
 
 	connect (m_gameListFrame, &game_list_frame::RequestIconSizeChange, [=](const int& val)
 	{
 		const int idx = ui->sizeSlider->value() + val;
 		m_save_slider_pos = true;
-		SetIconSizeActions(idx);
-		resizeIcons(idx);
+		ResizeIcons(idx);
 	});
 
 	connect(m_listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
@@ -1382,10 +1390,12 @@ void main_window::CreateConnects()
 	connect(ui->toolbar_list, &QAction::triggered, [=]() { ui->setlistModeListAct->trigger(); });
 	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });
 
-	connect(ui->sizeSlider, &QSlider::valueChanged, resizeIcons);
+	connect(ui->sizeSlider, &QSlider::valueChanged, this, &main_window::ResizeIcons);
 	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [&]
 	{
-		guiSettings->SetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid, ui->sizeSlider->value());
+		const int index = ui->sizeSlider->value();
+		guiSettings->SetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid, index);
+		SetIconSizeActions(index);
 	});
 	connect(ui->sizeSlider, &QSlider::actionTriggered, [&](int action)
 	{
@@ -1540,11 +1550,15 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 
 void main_window::SetIconSizeActions(int idx)
 {
-	if (idx < gui::get_Index((gui::gl_icon_size_small + gui::gl_icon_size_min) / 2))
+	static const int threshold_tiny = gui::get_Index((gui::gl_icon_size_small + gui::gl_icon_size_min) / 2);
+	static const int threshold_small = gui::get_Index((gui::gl_icon_size_medium + gui::gl_icon_size_small) / 2);
+	static const int threshold_medium = gui::get_Index((gui::gl_icon_size_max + gui::gl_icon_size_medium) / 2);
+
+	if (idx < threshold_tiny)
 		ui->setIconSizeTinyAct->setChecked(true);
-	else if (idx < gui::get_Index((gui::gl_icon_size_medium + gui::gl_icon_size_small) / 2))
+	else if (idx < threshold_small)
 		ui->setIconSizeSmallAct->setChecked(true);
-	else if (idx < gui::get_Index((gui::gl_icon_size_max + gui::gl_icon_size_medium) / 2))
+	else if (idx < threshold_medium)
 		ui->setIconSizeMediumAct->setChecked(true);
 	else
 		ui->setIconSizeLargeAct->setChecked(true);
