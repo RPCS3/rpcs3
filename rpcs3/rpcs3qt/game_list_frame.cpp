@@ -633,6 +633,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* removeConfig = myMenu.addAction(tr("&Remove Custom Configuration"));
 	QAction* deleteShadersCache = myMenu.addAction(tr("&Delete Shaders Cache"));
 	QAction* deleteLLVMCache = myMenu.addAction(tr("&Delete LLVM Cache"));
+	QAction* deleteSPUCache = myMenu.addAction(tr("&Delete SPU Cache"));
 	myMenu.addSeparator();
 	QAction* openGameFolder = myMenu.addAction(tr("&Open Install Folder"));
 	QAction* openConfig = myMenu.addAction(tr("&Open Config Folder"));
@@ -695,6 +696,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			{
 				DeleteShadersCache(config_base_dir);
 				DeleteLLVMCache(config_base_dir);
+				DeleteSPUCache(config_base_dir);
 				RemoveCustomConfiguration(config_base_dir);
 			}
 			fs::remove_all(currGame.path);
@@ -724,6 +726,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(deleteLLVMCache, &QAction::triggered, [=]()
 	{
 		DeleteLLVMCache(config_base_dir, true);
+	});
+	connect(deleteSPUCache, &QAction::triggered, [=]()
+	{
+		DeleteSPUCache(config_base_dir, true);
 	});
 	connect(openGameFolder, &QAction::triggered, [=]()
 	{
@@ -796,6 +802,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	{
 		deleteShadersCache->setEnabled(false);
 		deleteLLVMCache->setEnabled(false);
+		deleteSPUCache->setEnabled(false);
 	}
 
 	myMenu.exec(globalPos);
@@ -873,6 +880,32 @@ bool game_list_frame::DeleteLLVMCache(const std::string& base_dir, bool is_inter
 	}
 
 	LOG_SUCCESS(GENERAL, "Removed LLVM cache in %s", base_dir);
+	return true;
+}
+
+bool game_list_frame::DeleteSPUCache(const std::string& base_dir, bool is_interactive)
+{
+	if (!fs::is_dir(base_dir))
+		return false;
+
+	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete SPU cache?")) != QMessageBox::Yes)
+		return false;
+
+	QDirIterator dir_iter(qstr(base_dir), QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	while (dir_iter.hasNext())
+	{
+		const QString filepath = dir_iter.next();
+
+		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".dat", Qt::CaseInsensitive))
+		{
+			if (QFile::remove(filepath))
+				LOG_NOTICE(GENERAL, "Removed SPU cache file: %s", sstr(filepath));
+			else
+				LOG_WARNING(GENERAL, "Could not remove SPU cache file: %s", sstr(filepath));
+		}
+	}
+
+	LOG_SUCCESS(GENERAL, "Removed SPU cache in %s", base_dir);
 	return true;
 }
 
