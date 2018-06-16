@@ -638,6 +638,9 @@
     <ClCompile Include="QTGeneratedFiles\qrc_windows.cpp">
       <Filter>Generated Files</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\_discord_utils.cpp">
+      <Filter>Gui\utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -720,6 +723,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\custom_dock_widget.h">
       <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\_discord_utils.h">
+      <Filter>Gui\utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

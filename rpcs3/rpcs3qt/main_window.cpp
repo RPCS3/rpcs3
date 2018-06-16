@@ -9,8 +9,7 @@
 #include <QMimeData>
 
 #ifdef WITH_DISCORD_RPC
-#include "discord_rpc.h"
-#include "discord_register.h"
+#include "_discord_utils.h"
 #endif
 
 #include "qt_utils.h"
@@ -65,7 +64,7 @@ main_window::~main_window()
 {
 	delete ui;
 #ifdef WITH_DISCORD_RPC
-	Discord_Shutdown();
+	discord::shutdown();
 #endif
 }
 
@@ -277,19 +276,6 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only)
 		LOG_SUCCESS(LOADER, "Boot successful.");
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
 		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
-#ifdef WITH_DISCORD_RPC
-		// Discord Rich Presence Integration
-		if (guiSettings->GetValue(gui::m_richPresence).toBool())
-		{
-			DiscordRichPresence discordPresence = {};
-			discordPresence.state = Emu.GetTitleID().c_str();
-			discordPresence.details = Emu.GetTitle().c_str();
-			discordPresence.largeImageKey = "rpcs3_logo";
-			discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
-			discordPresence.startTimestamp = time(0);
-			Discord_UpdatePresence(&discordPresence);
-		}
-#endif
 	}
 	else
 	{
@@ -775,6 +761,14 @@ void main_window::OnEmuRun()
 	ui->toolbar_start->setIcon(m_icon_pause);
 	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 	EnableMenus(true);
+
+#ifdef WITH_DISCORD_RPC
+	// Discord Rich Presence Integration
+	if (guiSettings->GetValue(gui::m_richPresence).toBool())
+	{
+		discord::update_presence(Emu.GetTitleID(), Emu.GetTitle());
+	}
+#endif
 }
 
 void main_window::OnEmuResume()
@@ -832,14 +826,7 @@ void main_window::OnEmuStop()
 	// Discord Rich Presence Integration
 	if (guiSettings->GetValue(gui::m_richPresence).toBool())
 	{
-		QString discord_state = guiSettings->GetValue(gui::m_discordState).toString();
-		DiscordRichPresence discordPresence = {};
-		discordPresence.details = "Idle";
-		discordPresence.state = sstr(discord_state).c_str();
-		discordPresence.largeImageKey = "rpcs3_logo";
-		discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
-		discordPresence.startTimestamp = time(0);
-		Discord_UpdatePresence(&discordPresence);
+		discord::update_presence(sstr(guiSettings->GetValue(gui::m_discordState).toString()));
 	}
 #endif
 }
