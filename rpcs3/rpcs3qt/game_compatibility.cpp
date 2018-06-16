@@ -15,74 +15,73 @@ game_compatibility::game_compatibility(std::shared_ptr<gui_settings> settings) :
 	RequestCompatibility();
 }
 
+bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_download)
+{
+	int return_code = json_data["return_code"].toInt();
+
+	if (return_code < 0)
+	{
+		if (after_download)
+		{
+			std::string error_message;
+			switch (return_code)
+			{
+			case -1:
+				error_message = "Server Error - Internal Error";
+				break;
+			case -2:
+				error_message = "Server Error - Maintenance Mode";
+				break;
+			default:
+				error_message = "Server Error - Unknown Error";
+				break;
+			}
+			LOG_ERROR(GENERAL, "Compatibility error: { %s: return code %d }", error_message, return_code);
+			Q_EMIT DownloadError(qstr(error_message) + " " + QString::number(return_code));
+		}
+		else
+		{
+			LOG_ERROR(GENERAL, "Compatibility error: { Database Error - Invalid: return code %d }", return_code);
+		}
+		return false;
+	}
+
+	if (!json_data["results"].isObject())
+	{
+		LOG_ERROR(GENERAL, "Compatibility error: { Database Error - No Results found }");
+		return false;
+	}
+
+	m_compat_database.clear();
+
+	QJsonObject json_results = json_data["results"].toObject();
+
+	// Retrieve status data for every valid entry
+	for (const auto& key : json_results.keys())
+	{
+		if (!json_results[key].isObject())
+		{
+			LOG_ERROR(GENERAL, "Compatibility error: { Database Error - Unusable object %s }", sstr(key));
+			continue;
+		}
+
+		QJsonObject json_result = json_results[key].toObject();
+
+		// Retrieve compatibility information from json
+		compat_status status = Status_Data.at(json_result.value("status").toString("NoResult"));
+
+		// Add date if possible
+		status.date = json_result.value("date").toString();
+
+		// Add status to map
+		m_compat_database.emplace(std::pair<std::string, compat_status>(sstr(key), status));
+	}
+
+	return true;
+}
+
 void game_compatibility::RequestCompatibility(bool online)
 {
-	// Creates new map from database
-	auto ReadJSON = [=](const QJsonObject& json_data, bool after_download)
-	{
-		int return_code = json_data["return_code"].toInt();
-
-		if (return_code < 0)
-		{
-			if (after_download)
-			{
-				std::string error_message;
-				switch (return_code)
-				{
-				case -1:
-					error_message = "Server Error - Internal Error";
-					break;
-				case -2:
-					error_message = "Server Error - Maintenance Mode";
-					break;
-				default:
-					error_message = "Server Error - Unknown Error";
-					break;
-				}
-				LOG_ERROR(GENERAL, "Compatibility error: { %s: return code %d }", error_message, return_code);
-				Q_EMIT DownloadError(qstr(error_message) + " " + QString::number(return_code));
-			}
-			else
-			{
-				LOG_ERROR(GENERAL, "Compatibility error: { Database Error - Invalid: return code %d }", return_code);
-			}
-			return false;
-		}
-
-		if (!json_data["results"].isObject())
-		{
-			LOG_ERROR(GENERAL, "Compatibility error: { Database Error - No Results found }");
-			return false;
-		}
-
-		m_compat_database.clear();
-
-		QJsonObject json_results = json_data["results"].toObject();
-
-		// Retrieve status data for every valid entry
-		for (const auto& key : json_results.keys())
-		{
-			if (!json_results[key].isObject())
-			{
-				LOG_ERROR(GENERAL, "Compatibility error: { Database Error - Unusable object %s }", sstr(key));
-				continue;
-			}
-
-			QJsonObject json_result = json_results[key].toObject();
-
-			// Retrieve compatibility information from json
-			compat_status status = Status_Data.at(json_result.value("status").toString("NoResult"));
-
-			// Add date if possible
-			status.date = json_result.value("date").toString();
-
-			// Add status to map
-			m_compat_database.emplace(std::pair<std::string, compat_status>(sstr(key), status));
-		}
-
-		return true;
-	};
-
 	if (!online)
 	{
 		// Retrieve database from file
