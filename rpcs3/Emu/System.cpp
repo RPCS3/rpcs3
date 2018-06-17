@@ -225,6 +225,23 @@ inline void fmt_class_string<detail_level>::format(std::string& out, u64 arg)
 }
 
 template <>
+inline void fmt_class_string<screen_quadrant>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](screen_quadrant value)
+	{
+		switch (value)
+		{
+		case screen_quadrant::top_left: return "Top Left";
+		case screen_quadrant::top_right: return "Top Right";
+		case screen_quadrant::bottom_left: return "Bottom Left";
+		case screen_quadrant::bottom_right: return "Bottom Right";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<tsx_usage>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](tsx_usage value)

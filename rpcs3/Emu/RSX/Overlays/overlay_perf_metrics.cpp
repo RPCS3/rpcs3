@@ -11,26 +11,67 @@ namespace rsx
 {
 	namespace overlays
 	{
+		void perf_metrics_overlay::reset_transform(label& elm) const
+		{
+			const u32 text_padding = m_font_size / 2;
+
+			// left, top, right, bottom
+			const areau padding { text_padding, text_padding - 4, text_padding, text_padding };
+			const positionu margin { m_margin, m_margin };
+			positionu pos;
+
+			const auto overlay_width = m_body.w + margin.x;
+			const auto overlay_height = m_body.h + margin.y;
+
+			switch (m_quadrant)
+			{
+			case screen_quadrant::top_left:
+				pos.x = margin.x;
+				pos.y = margin.y;
+				break;
+			case screen_quadrant::top_right:
+				pos.x = virtual_width - overlay_width;
+				pos.y = margin.y;
+				break;
+			case screen_quadrant::bottom_left:
+				pos.x = margin.x;
+				pos.y = virtual_height - overlay_height;
+				break;
+			case screen_quadrant::bottom_right:
+				pos.x = virtual_width - overlay_width;
+				pos.y = virtual_height - overlay_height;
+				break;
+			}
+
+			elm.set_pos(pos.x, pos.y);
+			elm.set_padding(padding.x1, padding.x2, padding.y1, padding.y2);
+		}
+
+		void perf_metrics_overlay::reset_transforms()
+		{
+			reset_transform(m_body);
+			reset_transform(m_titles);
+		}
+
 		void perf_metrics_overlay::reset_body()
 		{
-			m_body.set_font("n023055ms.ttf", m_font_size);
-			m_body.set_pos(50, 50);
-			m_body.fore_color     = {0xFF / 255.f, 0xe1 / 255.f, 0x38 / 255.f, 1.0f};
-			m_body.back_color     = {0x00 / 255.f, 0x23 / 255.f, 0x39 / 255.f, 0.7f};
-			m_body.padding_top    = 0;
-			m_body.padding_bottom = -14;
-			m_body.set_margin(5, 5, 0, 0);
+			const float text_opacity = get_text_opacity();
+			const float bg_opacity = m_opacity;
+
+			m_body.set_font(m_font.c_str(), m_font_size);
+			m_body.fore_color     = {0xFF / 255.f, 0xE1 / 255.f, 0x38 / 255.f, text_opacity};
+			m_body.back_color     = {0x00 / 255.f, 0x23 / 255.f, 0x39 / 255.f, bg_opacity};
+			reset_transform(m_body);
 		}
 
 		void perf_metrics_overlay::reset_titles()
 		{
-			m_titles.set_font("n023055ms.ttf", m_font_size);
-			m_titles.set_pos(50, 50);
-			m_titles.fore_color     = {0xf2 / 256.0, 0x6C / 256.0, 0x24 / 256.0, 1.0f};
+			const float text_opacity = get_text_opacity();
+
+			m_titles.set_font(m_font.c_str(), m_font_size);
+			m_titles.fore_color     = {0xF2 / 256.0, 0x6C / 256.0, 0x24 / 256.0, text_opacity};
 			m_titles.back_color     = {0.0f, 0.0f, 0.0f, 0.0f};
-			m_titles.padding_top    = 0;
-			m_titles.padding_bottom = -14;
-			m_titles.set_margin(5, 5, 0, 0);
+			reset_transform(m_titles);
 
 			switch (m_detail)
 			{
@@ -43,25 +84,40 @@ namespace rsx
 			m_titles.refresh();
 		}
 
+		void perf_metrics_overlay::reset_text()
+		{
+			reset_body();
+			reset_titles();
+		}
+
 		void perf_metrics_overlay::init()
 		{
-			reset_titles();
-			reset_body();
-
+			reset_text();
 			force_next_update();
 			update();
 			m_update_timer.Start();
+
+			m_is_initialised = true;
 		}
 
-		perf_metrics_overlay::perf_metrics_overlay(bool initialize)
+		void perf_metrics_overlay::set_detail_level(detail_level level)
 		{
-			// Default values, will change based on config options
-			m_update_interval = 350;
-			m_detail          = detail_level::high;
-			m_font_size       = 10;
+			m_detail = level;
 
-			if (initialize)
-				init();
+			if (m_is_initialised)
+			{
+				reset_titles();
+			}
+		}
+
+		void perf_metrics_overlay::set_position(screen_quadrant quadrant)
+		{
+			m_quadrant = quadrant;
+
+			if (m_is_initialised)
+			{
+				reset_transforms();
+			}
 		}
 
 		// In ms
@@ -70,17 +126,44 @@ namespace rsx
 			m_update_interval = update_interval;
 		}
 
-		void perf_metrics_overlay::set_detail_level(detail_level level)
+		void perf_metrics_overlay::set_font(std::string font)
 		{
-			m_detail = level;
-			reset_titles();
+			m_font = font;
+
+			if (m_is_initialised)
+			{
+				reset_text();
+			}
 		}
 
 		void perf_metrics_overlay::set_font_size(u32 font_size)
 		{
 			m_font_size = font_size;
-			reset_titles();
-			reset_body();
+
+			if (m_is_initialised)
+			{
+				reset_text();
+			}
+		}
+
+		void perf_metrics_overlay::set_margin(u32 margin)
+		{
+			m_margin = margin;
+
+			if (m_is_initialised)
+			{
+				reset_transforms();
+			}
+		}
+
+		void perf_metrics_overlay::set_opacity(f32 opacity)
+		{
+			m_opacity = opacity;
+
+			if (m_is_initialised)
+			{
+				reset_text();
+			}
 		}
 
 		void perf_metrics_overlay::force_next_update()
@@ -91,7 +174,7 @@ namespace rsx
 		void perf_metrics_overlay::update()
 		{
 			const auto elapsed = m_update_timer.GetElapsedTimeInMilliSec();
-			
+
 			if (!m_force_update)
 			{
 				++m_frames;
@@ -214,7 +297,12 @@ namespace rsx
 				}
 
 				m_body.text = perf_text;
-				m_body.auto_resize();
+
+				if (m_body.auto_resize())
+				{
+					reset_transforms();
+				}
+
 				m_body.refresh();
 
 				if (!m_force_update)
