@@ -794,9 +794,9 @@ namespace rsx
 						text_extents_w = std::max(v.values[0], text_extents_w);
 
 						//Apply transform.
-						//(0, 0) has text sitting 50% off the top left corner (text is outside the rect) hence the offset by text height / 2
+						//(0, 0) has text sitting one line off the top left corner (text is outside the rect) hence the offset by text height
 						v.values[0] += x + padding_left;
-						v.values[1] += y + padding_top + (f32)renderer->size_px * 0.5f;
+						v.values[1] += y + padding_top + (f32)renderer->size_px;
 					}
 
 					if (alignment == center)
@@ -1201,7 +1201,8 @@ namespace rsx
 
 		struct image_button : public image_view
 		{
-			u16 text_offset = 0;
+			const u16 text_horizontal_offset = 25;
+			u16 m_text_offset = 0;
 
 			image_button()
 			{
@@ -1219,7 +1220,7 @@ namespace rsx
 			void set_size(u16 /*w*/, u16 h) override
 			{
 				image_view::set_size(h, h);
-				text_offset = (h / 2) + 10; //By default text is at the horizontal center
+				m_text_offset = (h / 2) + text_horizontal_offset; //By default text is at the horizontal center
 			}
 
 			compiled_resource& get_compiled() override
@@ -1227,18 +1228,14 @@ namespace rsx
 				if (!is_compiled)
 				{
 					auto& compiled = image_view::get_compiled();
-					for (auto &cmd : compiled.draw_commands)
+					for (auto& cmd : compiled.draw_commands)
 					{
 						if (cmd.config.texture_ref == image_resource_id::font_file)
 						{
 							//Text, translate geometry to the right
-							const f32 text_height = font_ref ? font_ref->size_px : 16.f;
-							const f32 offset_y = (h > text_height) ? (f32)(h - text_height) : ((f32)h - text_height);
-
 							for (auto &v : cmd.verts)
 							{
-								v.values[0] += text_offset + 15.f;
-								v.values[1] += offset_y + 5.f;
+								v.values[0] += m_text_offset;
 							}
 						}
 					}
@@ -1317,7 +1314,7 @@ namespace rsx
 			{
 				u16 text_w, text_h;
 				text_view.measure_text(text_w, text_h);
-				text_h += 5;
+				text_h += 13;
 
 				overlay_element::set_pos(_x, _y + text_h);
 				indicator.set_pos(_x, _y + text_h);

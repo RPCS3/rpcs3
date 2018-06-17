@@ -491,7 +491,7 @@ namespace rsx
 					std::unique_ptr<overlay_element> header_text = std::make_unique<label>(text1);
 					std::unique_ptr<overlay_element> subtext = std::make_unique<label>(text2);
 
-					padding->set_size(1, 10);
+					padding->set_size(1, 1);
 					header_text->set_size(800, 40);
 					header_text->text = text1;
 					header_text->set_font("Arial", 16);
@@ -550,11 +550,11 @@ namespace rsx
 				m_list->set_pos(20, 85);
 
 				m_description->set_font("Arial", 20);
-				m_description->set_pos(20, 50);
+				m_description->set_pos(20, 37);
 				m_description->text = "Save Dialog";
 
 				m_time_thingy->set_font("Arial", 14);
-				m_time_thingy->set_pos(1000, 40);
+				m_time_thingy->set_pos(1000, 30);
 				m_time_thingy->text = current_time();
 
 				static_cast<label*>(m_description.get())->auto_resize();
@@ -736,7 +736,7 @@ namespace rsx
 				background.back_color.a = 0.85f;
 
 				text_display.set_size(1100, 40);
-				text_display.set_pos(90, 375);
+				text_display.set_pos(90, 364);
 				text_display.set_font("Arial", 16);
 				text_display.align_text(overlay_element::text_align::center);
 				text_display.set_wrap_text(true);
@@ -844,13 +844,13 @@ namespace rsx
 				num_progress_bars = type.progress_bar_count;
 				if (num_progress_bars)
 				{
-					u16 offset = 50;
-					progress_1.set_pos(240, 420);
+					u16 offset = 58;
+					progress_1.set_pos(240, 412);
 
 					if (num_progress_bars > 1)
 					{
-						progress_2.set_pos(240, 470);
-						offset = 90;
+						progress_2.set_pos(240, 462);
+						offset = 98;
 					}
 
 					//Push the other stuff down
@@ -1003,7 +1003,7 @@ namespace rsx
 				image.back_color.a = 0.f;
 
 				text_view.set_pos(85, 0);
-				text_view.set_padding(0.f, 0.f, 30.f, 0.f);
+				text_view.set_padding(0.f, 0.f, 24.f, 0.f);
 				text_view.set_font("Arial", 8);
 				text_view.align_text(overlay_element::text_align::center);
 				text_view.back_color.a = 0.f;
@@ -1072,7 +1072,7 @@ namespace rsx
 				m_text.set_font("Arial", 16);
 				m_text.set_text("Compiling shaders");
 				m_text.auto_resize();
-				m_text.set_pos(20, 700);
+				m_text.set_pos(20, 690);
 
 				m_text.back_color.a = 0.f;
 
