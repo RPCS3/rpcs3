@@ -155,6 +155,14 @@ enum class detail_level
 	high,
 };
 
+enum class screen_quadrant
+{
+	top_left,
+	top_right,
+	bottom_left,
+	bottom_right
+};
+
 enum class tsx_usage
 {
 	disabled,
@@ -419,8 +427,12 @@ struct cfg_root : cfg::node
 
 			cfg::_bool perf_overlay_enabled{this, "Enabled", false};
 			cfg::_enum<detail_level> level{this, "Detail level", detail_level::high};
-			cfg::_int<30, 5000> update_interval{this, "Metrics update interval (ms)", 350};
-			cfg::_int<4, 36> font_size{this, "Font size (px)", 10};
+			cfg::_int<30, 5000> update_interval{ this, "Metrics update interval (ms)", 350 };
+			cfg::_int<4, 36> font_size{ this, "Font size (px)", 10 };
+			cfg::_enum<screen_quadrant> position{this, "Position", screen_quadrant::top_left};
+			cfg::string font{this, "Font", "n023055ms.ttf"};
+			cfg::_int<0, 500> margin{this, "Margin (px)", 50};
+			cfg::_int<0, 100> opacity{this, "Opacity (%)", 70};
 
 		} perf_overlay{this};
 

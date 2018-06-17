@@ -418,6 +418,9 @@ namespace rsx
 			 */
 			detail_level m_detail;
 
+			screen_quadrant m_quadrant;
+			positioni m_position;
+
 			label m_body;
 			label m_titles;
 
@@ -425,24 +428,39 @@ namespace rsx
 			Timer m_update_timer;
 			u32 m_update_interval; // in ms
 			u32 m_frames{ 0 };
+			std::string m_font;
 			u32 m_font_size;
+			u32 m_margin; // distance to screen borders in px
+			f32 m_opacity;	// 0..1
 
 			bool m_force_update;
+			bool m_is_initialised{ false };
 
 			const std::string title1_medium{"CPU Utilization:"};
 			const std::string title1_high{"Host Utilization (CPU):"};
 			const std::string title2{"Guest Utilization (PS3):"};
 
+			void reset_transform(label& elm) const;
+			void reset_transforms();
 			void reset_body();
 			void reset_titles();
+			void reset_text();
+
+			u32 get_text_opacity() const
+			{
+				return std::clamp(m_opacity + 0.3f, 0.3f, 1.0f);
+			}
 
 		public:
-			perf_metrics_overlay(bool initialize = true);
-
 			void init();
+
 			void set_detail_level(detail_level level);
+			void set_position(screen_quadrant pos);
 			void set_update_interval(u32 update_interval);
+			void set_font(std::string font);
 			void set_font_size(u32 font_size);
+			void set_margin(u32 margin);
+			void set_opacity(f32 opacity);
 			void force_next_update();
 
 			void update() override;
