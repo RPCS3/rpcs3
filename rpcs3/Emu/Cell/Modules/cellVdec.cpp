@@ -245,7 +245,9 @@ struct vdec_thread : ppu_thread
 
 					if (decode < 0)
 					{
-						fmt::throw_exception("AU decoding error(0x%x)" HERE, decode);
+						char av_error[AV_ERROR_MAX_STRING_SIZE];
+						av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, decode);
+						fmt::throw_exception("AU decoding error(0x%x): %s" HERE, decode, av_error);
 					}
 
 					if (got_picture == 0)
