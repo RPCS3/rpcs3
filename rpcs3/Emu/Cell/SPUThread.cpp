@@ -967,7 +967,7 @@ bool SPUThread::do_list_transfer(spu_mfc_cmd& args)
 		args.lsa &= 0x3fff0;
 		item = _ref<list_element>(args.eal & 0x3fff8);
 
-		const u32 size = item.ts;
+		const u32 size = item.ts & 0x7fff;
 		const u32 addr = item.ea;
 
 		LOG_TRACE(SPU, "LIST: addr=0x%x, size=0x%x, lsa=0x%05x, sb=0x%x", addr, size, args.lsa | (addr & 0xf), item.sb);
