@@ -1290,10 +1290,14 @@ namespace rsx
 				this->text = text;
 			}
 
-			void auto_resize(bool grow_only = false, u16 limit_w = UINT16_MAX, u16 limit_h = UINT16_MAX)
+			bool auto_resize(bool grow_only = false, u16 limit_w = UINT16_MAX, u16 limit_h = UINT16_MAX)
 			{
 				u16 new_width, new_height;
+				u16 old_width = w, old_height = h;
 				measure_text(new_width, new_height, true);
+
+				new_width += padding_left + padding_right;
+				new_height += padding_top + padding_bottom;
 
 				if (new_width > limit_w && wrap_text)
 					measure_text(new_width, new_height, false);
@@ -1306,6 +1310,9 @@ namespace rsx
 
 				w = std::min(new_width, limit_w);
 				h = std::min(new_height, limit_h);
+
+				bool size_changed = old_width != new_width || old_height != new_height;
+				return size_changed;
 			}
 		};
 
