@@ -156,6 +156,8 @@ public:
 		Render_Creator();
 	};
 
+	std::set<SettingsType> m_broken_types; // list of broken settings
+
 	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml
 	* Settings are only written when SaveSettings is called.
 	*/
@@ -169,7 +171,7 @@ public:
 	void EnhanceCheckBox(QCheckBox* checkbox, SettingsType type);
 
 	/** Connects a slider with the target settings type*/
-	void EnhanceSlider(QSlider* slider, SettingsType type, bool is_ranged = false);
+	void EnhanceSlider(QSlider* slider, SettingsType type);
 
 	std::vector<std::string> GetLoadedLibraries();
 	void SaveSelectedLibraries(const std::vector<std::string>& libs);
@@ -194,6 +196,9 @@ public:
 
 	/** Loads the settings from path.*/
 	void LoadSettings(const std::string& path = "");
+
+	/** Fixes all registered invalid settings after asking the user for permission.*/
+	void OpenCorrectionDialog(QWidget* parent = Q_NULLPTR);
 
 public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
