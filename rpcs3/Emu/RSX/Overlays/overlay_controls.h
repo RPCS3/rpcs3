@@ -627,6 +627,26 @@ namespace rsx
 					draw_commands[n].config.clip_region = true;
 				}
 			}
+
+			//! Clear commands list
+			void clear()
+			{
+				draw_commands.clear();
+			}
+
+			//! Append the command to the back of the commands list and return it
+			command& append(const command& new_command)
+			{
+				draw_commands.emplace_back(new_command);
+				return draw_commands.back();
+			}
+
+			//! Prepend the command to the front of the commands list and return it
+			command& prepend(const command& new_command)
+			{
+				draw_commands.emplace(draw_commands.begin(), new_command);
+				return draw_commands.front();
+			}
 		};
 
 		struct overlay_element
@@ -661,9 +681,7 @@ namespace rsx
 			f32 padding_bottom = 0.f;
 
 			f32 margin_left = 0.f;
-			f32 margin_right = 0.f;
 			f32 margin_top = 0.f;
-			f32 margin_bottom = 0.f;
 
 			overlay_element() {}
 			overlay_element(u16 _w, u16 _h) : w(_w), h(_h) {}
@@ -729,19 +747,18 @@ namespace rsx
 				is_compiled = false;
 			}
 
-			virtual void set_margin(f32 left, f32 right, f32 top, f32 bottom)
+			// NOTE: Functions as a simple position offset. Top left corner is the anchor.
+			virtual void set_margin(f32 left, f32 top)
 			{
 				margin_left = left;
-				margin_right = right;
 				margin_top = top;
-				margin_bottom = bottom;
 
 				is_compiled = false;
 			}
 
 			virtual void set_margin(f32 margin)
 			{
-				margin_left = margin_right = margin_top = margin_bottom = margin;
+				margin_left = margin_top = margin;
 				is_compiled = false;
 			}
 
@@ -855,29 +872,36 @@ namespace rsx
 			{
 				if (!is_compiled)
 				{
-					compiled_resources = {};
-					compiled_resources.draw_commands.push_back({});
+					compiled_resources.clear();
 
-					auto &config = compiled_resources.draw_commands.front().config;
+					compiled_resource compiled_resources_temp = {};
+					auto& cmd_bg = compiled_resources_temp.append({});
+					auto& config = cmd_bg.config;
+
 					config.color = back_color;
 					config.pulse_glow = pulse_effect_enabled;
 
-					auto& verts = compiled_resources.draw_commands.front().verts;
+					auto& verts = compiled_resources_temp.draw_commands.front().verts;
 					verts.resize(4);
-					verts[0].vec4(x + padding_left - margin_left, y + padding_bottom - margin_bottom, 0.f, 0.f);
-					verts[1].vec4(x + w - padding_right + margin_right, y + padding_bottom - margin_top, 1.f, 0.f);
-					verts[2].vec4(x + padding_left - margin_left, y + h - padding_top + margin_top, 0.f, 1.f);
-					verts[3].vec4(x + w - padding_right + margin_right, y + h - padding_top + margin_bottom, 1.f, 1.f);
+
+					verts[0].vec4(x, y, 0.f, 0.f);
+					verts[1].vec4(x + w, y, 1.f, 0.f);
+					verts[2].vec4(x, y + h, 0.f, 1.f);
+					verts[3].vec4(x + w, y + h, 1.f, 1.f);
+
+					compiled_resources.add(std::move(compiled_resources_temp), margin_left, margin_top);
 
 					if (!text.empty())
 					{
-						compiled_resources.draw_commands.push_back({});
-						compiled_resources.draw_commands.back().config.set_font(font_ref ? font_ref : fontmgr::get("Arial", 12));
-						compiled_resources.draw_commands.back().config.color = fore_color;
-						compiled_resources.draw_commands.back().verts = render_text(text.c_str(), (f32)x, (f32)y);
+						compiled_resources_temp.clear();
+						auto& cmd_text = compiled_resources_temp.append({});
 
-						if (compiled_resources.draw_commands.back().verts.size() == 0)
-							compiled_resources.draw_commands.pop_back();
+						cmd_text.config.set_font(font_ref ? font_ref : fontmgr::get("Arial", 12));
+						cmd_text.config.color = fore_color;
+						cmd_text.verts = render_text(text.c_str(), (f32)x, (f32)y);
+
+						if (cmd_text.verts.size() > 0)
+							compiled_resources.add(std::move(compiled_resources_temp), margin_left, margin_top);
 					}
 
 					is_compiled = true;
@@ -1177,10 +1201,22 @@ namespace rsx
 			{
 				if (!is_compiled)
 				{
-					auto &result = overlay_element::get_compiled();
-					result.draw_commands.front().config.set_image_resource(image_resource_ref);
-					result.draw_commands.front().config.color = fore_color;
-					result.draw_commands.front().config.external_data_ref = external_ref;
+					auto& result  = overlay_element::get_compiled();
+					auto& cmd_img = result.draw_commands.front();
+
+					cmd_img.config.set_image_resource(image_resource_ref);
+					cmd_img.config.color = fore_color;
+					cmd_img.config.external_data_ref = external_ref;
+
+					// Make padding work for images (treat them as the content instead of the 'background')
+					auto& verts = cmd_img.verts;
+
+					verts[0] += vertex(padding_left, padding_bottom, 0, 0);
+					verts[1] += vertex(-padding_right, padding_bottom, 0, 0);
+					verts[2] += vertex(padding_left, -padding_top, 0, 0);
+					verts[3] += vertex(-padding_right, -padding_top, 0, 0);
+
+					is_compiled = true;
 				}
 
 				return compiled_resources;
