@@ -567,20 +567,26 @@ namespace rsx
 
 				command_config() {}
 
-				command_config(u8 ref)
+				void set_image_resource(u8 ref)
 				{
 					texture_ref = ref;
 					font_ref = nullptr;
 				}
 
-				command_config(font *ref)
+				void set_font(font *ref)
 				{
 					texture_ref = image_resource_id::font_file;
 					font_ref = ref;
 				}
 			};
 
-			std::vector<std::pair<command_config, std::vector<vertex>>> draw_commands;
+			struct command
+			{
+				command_config config;
+				std::vector<vertex> verts;
+			};
+
+			std::vector<command> draw_commands;
 
 			void add(const compiled_resource& other)
 			{
@@ -597,7 +603,7 @@ namespace rsx
 
 				for (size_t n = old_size; n < draw_commands.size(); ++n)
 				{
-					for (auto &v : draw_commands[n].second)
+					for (auto &v : draw_commands[n].verts)
 					{
 						v += vertex(x_offset, y_offset, 0.f, 0.f);
 					}
@@ -612,13 +618,13 @@ namespace rsx
 
 				for (size_t n = old_size; n < draw_commands.size(); ++n)
 				{
-					for (auto &v : draw_commands[n].second)
+					for (auto &v : draw_commands[n].verts)
 					{
 						v += vertex(x_offset, y_offset, 0.f, 0.f);
 					}
 
-					draw_commands[n].first.clip_rect = clip_rect;
-					draw_commands[n].first.clip_region = true;
+					draw_commands[n].config.clip_rect = clip_rect;
+					draw_commands[n].config.clip_region = true;
 				}
 			}
 		};
@@ -852,11 +858,11 @@ namespace rsx
 					compiled_resources = {};
 					compiled_resources.draw_commands.push_back({});
 
-					auto &config = compiled_resources.draw_commands.front().first;
+					auto &config = compiled_resources.draw_commands.front().config;
 					config.color = back_color;
 					config.pulse_glow = pulse_effect_enabled;
 
-					auto& verts = compiled_resources.draw_commands.front().second;
+					auto& verts = compiled_resources.draw_commands.front().verts;
 					verts.resize(4);
 					verts[0].vec4(x + padding_left - margin_left, y + padding_bottom - margin_bottom, 0.f, 0.f);
 					verts[1].vec4(x + w - padding_right + margin_right, y + padding_bottom - margin_top, 1.f, 0.f);
@@ -866,11 +872,11 @@ namespace rsx
 					if (!text.empty())
 					{
 						compiled_resources.draw_commands.push_back({});
-						compiled_resources.draw_commands.back().first = font_ref? font_ref : fontmgr::get("Arial", 12);
-						compiled_resources.draw_commands.back().first.color = fore_color;
-						compiled_resources.draw_commands.back().second = render_text(text.c_str(), (f32)x, (f32)y);
+						compiled_resources.draw_commands.back().config.set_font(font_ref ? font_ref : fontmgr::get("Arial", 12));
+						compiled_resources.draw_commands.back().config.color = fore_color;
+						compiled_resources.draw_commands.back().verts = render_text(text.c_str(), (f32)x, (f32)y);
 
-						if (compiled_resources.draw_commands.back().second.size() == 0)
+						if (compiled_resources.draw_commands.back().verts.size() == 0)
 							compiled_resources.draw_commands.pop_back();
 					}
 
@@ -1172,9 +1178,9 @@ namespace rsx
 				if (!is_compiled)
 				{
 					auto &result = overlay_element::get_compiled();
-					result.draw_commands.front().first = image_resource_ref;
-					result.draw_commands.front().first.color = fore_color;
-					result.draw_commands.front().first.external_data_ref = external_ref;
+					result.draw_commands.front().config.set_image_resource(image_resource_ref);
+					result.draw_commands.front().config.color = fore_color;
+					result.draw_commands.front().config.external_data_ref = external_ref;
 				}
 
 				return compiled_resources;
@@ -1223,13 +1229,13 @@ namespace rsx
 					auto& compiled = image_view::get_compiled();
 					for (auto &cmd : compiled.draw_commands)
 					{
-						if (cmd.first.texture_ref == image_resource_id::font_file)
+						if (cmd.config.texture_ref == image_resource_id::font_file)
 						{
 							//Text, translate geometry to the right
 							const f32 text_height = font_ref ? font_ref->size_px : 16.f;
 							const f32 offset_y = (h > text_height) ? (f32)(h - text_height) : ((f32)h - text_height);
 
-							for (auto &v : cmd.second)
+							for (auto &v : cmd.verts)
 							{
 								v.values[0] += text_offset + 15.f;
 								v.values[1] += offset_y + 5.f;

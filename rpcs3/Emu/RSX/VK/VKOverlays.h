@@ -698,19 +698,19 @@ namespace vk
 
 			for (auto &command : ui.get_compiled().draw_commands)
 			{
-				num_drawable_elements = (u32)command.second.size();
+				num_drawable_elements = (u32)command.verts.size();
 				const u32 value_count = num_drawable_elements * 4;
 
-				upload_vertex_data((f32*)command.second.data(), value_count);
+				upload_vertex_data((f32*)command.verts.data(), value_count);
 
 				m_skip_texture_read = false;
-				m_color = command.first.color;
-				m_pulse_glow = command.first.pulse_glow;
-				m_clip_enabled = command.first.clip_region;
-				m_clip_region = command.first.clip_rect;
+				m_color = command.config.color;
+				m_pulse_glow = command.config.pulse_glow;
+				m_clip_enabled = command.config.clip_region;
+				m_clip_region = command.config.clip_rect;
 
 				auto src = vk::null_image_view(cmd);
-				switch (command.first.texture_ref)
+				switch (command.config.texture_ref)
 				{
 				case rsx::overlays::image_resource_id::game_icon:
 				case rsx::overlays::image_resource_id::backbuffer:
@@ -719,13 +719,13 @@ namespace vk
 					m_skip_texture_read = true;
 					break;
 				case rsx::overlays::image_resource_id::font_file:
-					src = find_font(command.first.font_ref, cmd, upload_heap)->value;
+					src = find_font(command.config.font_ref, cmd, upload_heap)->value;
 					break;
 				case rsx::overlays::image_resource_id::raw_image:
-					src = find_temp_image((rsx::overlays::image_info*)command.first.external_data_ref, cmd, upload_heap, ui.uid)->value;
+					src = find_temp_image((rsx::overlays::image_info*)command.config.external_data_ref, cmd, upload_heap, ui.uid)->value;
 					break;
 				default:
-					src = view_cache[command.first.texture_ref]->value;
+					src = view_cache[command.config.texture_ref]->value;
 					break;
 				}
 
