@@ -195,31 +195,39 @@ void emu_settings::LoadSettings(const std::string& path)
 	m_currentSettings = YAML::Load(g_cfg_defaults);
 
 	// Add global config
-	m_config = fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
-	m_currentSettings += YAML::Load(m_config.to_string());
+	fs::file config(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
+	m_currentSettings += YAML::Load(config.to_string());
+	config.close();
 
 	// Add game config
 	if (!path.empty() && fs::is_file(fs::get_config_dir() + path + "/config.yml"))
 	{
-		m_config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write);
-		m_currentSettings += YAML::Load(m_config.to_string());
+		config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write);
+		m_currentSettings += YAML::Load(config.to_string());
+		config.close();
 	}
 }
 
 void emu_settings::SaveSettings()
 {
+	fs::file config;
 	YAML::Emitter out;
 	emitData(out, m_currentSettings);
 
 	if (!m_path.empty())
 	{
-		m_config = fs::file(fs::get_config_dir() + m_path + "/config.yml", fs::read + fs::write + fs::create);
+		config = fs::file(fs::get_config_dir() + m_path + "/config.yml", fs::read + fs::write + fs::create);
+	}
+	else
+	{
+		config = fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
 	}
 
 	// Save config
-	m_config.seek(0);
-	m_config.trunc(0);
-	m_config.write(out.c_str(), out.size());
+	config.seek(0);
+	config.trunc(0);
+	config.write(out.c_str(), out.size());
+	config.close();
 }
 
 void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged, bool use_max, int max)
