@@ -358,6 +358,90 @@ void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type)
 	});
 }
 
+void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, SettingsType type, const QString& prefix, const QString& suffix)
+{
+	if (!spinbox)
+	{
+		LOG_FATAL(GENERAL, "EnhanceSpinBox '%s' was used with an invalid object", GetSettingName(type));
+		return;
+	}
+
+	QStringList range = GetSettingOptions(type);
+	bool ok_def, ok_sel, ok_min, ok_max;
+
+	int def = qstr(GetSettingDefault(type)).toInt(&ok_def);
+	int min = range.first().toInt(&ok_min);
+	int max = range.last().toInt(&ok_max);
+
+	if (!ok_def || !ok_min || !ok_max)
+	{
+		LOG_FATAL(GENERAL, "EnhanceSpinBox '%s' was used with an invalid type", GetSettingName(type));
+		return;
+	}
+
+	std::string selected = GetSetting(type);
+	int val = qstr(selected).toInt(&ok_sel);
+
+	if (!ok_sel || val < min || val > max)
+	{
+		LOG_ERROR(GENERAL, "EnhanceSpinBox '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", GetSettingName(type), selected, def, min, max);
+		val = def;
+		m_broken_types.insert(type);
+	}
+
+	spinbox->setPrefix(prefix);
+	spinbox->setSuffix(suffix);
+	spinbox->setRange(min, max);
+	spinbox->setValue(val);
+
+	connect(spinbox, QOverload<const QString &>::of(&QSpinBox::valueChanged), [=](const QString&/* value*/)
+	{
+		SetSetting(type, sstr(spinbox->cleanText()));
+	});
+}
+
+void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, SettingsType type, const QString& prefix, const QString& suffix)
+{
+	if (!spinbox)
+	{
+		LOG_FATAL(GENERAL, "EnhanceDoubleSpinBox '%s' was used with an invalid object", GetSettingName(type));
+		return;
+	}
+
+	QStringList range = GetSettingOptions(type);
+	bool ok_def, ok_sel, ok_min, ok_max;
+
+	double def = qstr(GetSettingDefault(type)).toDouble(&ok_def);
+	double min = range.first().toDouble(&ok_min);
+	double max = range.last().toDouble(&ok_max);
+
+	if (!ok_def || !ok_min || !ok_max)
+	{
+		LOG_FATAL(GENERAL, "EnhanceDoubleSpinBox '%s' was used with an invalid type", GetSettingName(type));
+		return;
+	}
+
+	std::string selected = GetSetting(type);
+	double val = qstr(selected).toDouble(&ok_sel);
+
+	if (!ok_sel || val < min || val > max)
+	{
+		LOG_ERROR(GENERAL, "EnhanceDoubleSpinBox '%s' tried to set an invalid value: %f. Setting to default: %f. Allowed range: [%f, %f]", GetSettingName(type), val, def, min, max);
+		val = def;
+		m_broken_types.insert(type);
+	}
+
+	spinbox->setPrefix(prefix);
+	spinbox->setSuffix(suffix);
+	spinbox->setRange(min, max);
+	spinbox->setValue(val);
+
+	connect(spinbox, QOverload<const QString &>::of(&QDoubleSpinBox::valueChanged), [=](const QString&/* value*/)
+	{
+		SetSetting(type, sstr(spinbox->cleanText()));
+	});
+}
+
 std::vector<std::string> emu_settings::GetLoadedLibraries()
 {
 	return m_currentSettings["Core"]["Load libraries"].as<std::vector<std::string>, std::initializer_list<std::string>>({});

@@ -10,6 +10,7 @@
 #include <QMap>
 #include <QObject>
 #include <QComboBox>
+#include <QSpinBox>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -172,6 +173,12 @@ public:
 
 	/** Connects a slider with the target settings type*/
 	void EnhanceSlider(QSlider* slider, SettingsType type);
+
+	/** Connects an integer spin box with the target settings type*/
+	void EnhanceSpinBox(QSpinBox* slider, SettingsType type, const QString& prefix = "", const QString& suffix = "");
+
+	/** Connects a double spin box with the target settings type*/
+	void EnhanceDoubleSpinBox(QDoubleSpinBox* slider, SettingsType type, const QString& prefix = "", const QString& suffix = "");
 
 	std::vector<std::string> GetLoadedLibraries();
 	void SaveSelectedLibraries(const std::vector<std::string>& libs);
