@@ -129,7 +129,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 {
 	const auto cpu = _cpu.get();
 
-	std::string reg = sstr(m_register_combo->itemData(m_register_combo->currentIndex()));
+	std::string reg = sstr(m_register_combo->currentText());
 	std::string value = sstr(m_value_line->text());
 
 	if (cpu->id_type() == 1)
