@@ -1021,6 +1021,31 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 				return true;
 			}
 		}
+		else
+		{
+			if (keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return)
+			{
+				QTableWidgetItem* item;
+
+				if (object == m_gameList)
+					item = m_gameList->item(m_gameList->currentRow(), gui::column_icon);
+				else
+					item = m_xgrid->currentItem();
+
+				if (!item || !item->isSelected())
+					return false;
+
+				game_info gameinfo = GetGameInfoFromItem(item);
+
+				if (gameinfo.get() == nullptr)
+					return false;
+
+				LOG_NOTICE(LOADER, "Booting from gamelist by pressing %s...", keyEvent->key() == Qt::Key_Enter ? "Enter" : "Return");
+				Q_EMIT RequestBoot(gameinfo->info.path);
+
+				return true;
+			}
+		}
 	}
 	else if (event->type() == QEvent::ToolTip)
 	{
