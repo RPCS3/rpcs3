@@ -336,41 +336,23 @@ VKVertexProgram::~VKVertexProgram()
 
 void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 {
-	VKVertexDecompilerThread decompiler(prog, shader, parr, *this);
+	std::string source;
+	VKVertexDecompilerThread decompiler(prog, source, parr, *this);
 	decompiler.Task();
+
+	shader.create(::glsl::program_domain::glsl_vertex_program, source);
 }
 
 void VKVertexProgram::Compile()
 {
 	fs::create_path(fs::get_config_dir() + "/shaderlog");
-	fs::file(fs::get_config_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader);
-
-	std::vector<u32> spir_v;
-	if (!vk::compile_glsl_to_spv(shader, glsl::glsl_vertex_program, spir_v))
-		fmt::throw_exception("Failed to compile vertex shader" HERE);
-
-	VkShaderModuleCreateInfo vs_info;
-	vs_info.codeSize = spir_v.size() * sizeof(u32);
-	vs_info.pNext = nullptr;
-	vs_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	vs_info.pCode = (uint32_t*)spir_v.data();
-	vs_info.flags = 0;
-
-	VkDevice dev = (VkDevice)*vk::get_current_renderer();
-	vkCreateShaderModule(dev, &vs_info, nullptr, &handle);
+	fs::file(fs::get_config_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
+	handle = shader.compile();
 }
 
 void VKVertexProgram::Delete()
 {
-	shader.clear();
-
-	if (handle)
-	{
-		VkDevice dev = (VkDevice)*vk::get_current_renderer();
-		vkDestroyShaderModule(dev, handle, nullptr);
-
-		handle = nullptr;
-	}
+	shader.destroy();
 }
 
 void VKVertexProgram::SetInputs(std::vector<vk::glsl::program_input>& inputs)

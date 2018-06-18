@@ -11,8 +11,8 @@ namespace vk
 	//TODO: Refactor text print class to inherit from this base class
 	struct overlay_pass
 	{
-		VKVertexProgram m_vertex_shader;
-		VKFragmentProgram m_fragment_shader;
+		vk::glsl::shader m_vertex_shader;
+		vk::glsl::shader m_fragment_shader;
 
 		vk::descriptor_pool m_descriptor_pool;
 		VkDescriptorSet m_descriptor_set = nullptr;
@@ -149,11 +149,11 @@ namespace vk
 		{
 			if (!compiled)
 			{
-				m_vertex_shader.shader = vs_src;
-				m_vertex_shader.Compile();
+				m_vertex_shader.create(::glsl::program_domain::glsl_vertex_program, vs_src);
+				m_vertex_shader.compile();
 
-				m_fragment_shader.shader = fs_src;
-				m_fragment_shader.Compile();
+				m_fragment_shader.create(::glsl::program_domain::glsl_fragment_program, fs_src);
+				m_fragment_shader.compile();
 
 				compiled = true;
 			}
@@ -161,12 +161,12 @@ namespace vk
 			VkPipelineShaderStageCreateInfo shader_stages[2] = {};
 			shader_stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			shader_stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-			shader_stages[0].module = m_vertex_shader.handle;
+			shader_stages[0].module = m_vertex_shader.get_handle();
 			shader_stages[0].pName = "main";
 
 			shader_stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			shader_stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-			shader_stages[1].module = m_fragment_shader.handle;
+			shader_stages[1].module = m_fragment_shader.get_handle();
 			shader_stages[1].pName = "main";
 
 			VkDynamicState dynamic_state_descriptors[VK_DYNAMIC_STATE_RANGE_SIZE] = {};
@@ -282,6 +282,8 @@ namespace vk
 		{
 			if (initialized)
 			{
+				m_vertex_shader.destroy();
+				m_fragment_shader.destroy();
 				m_program_cache.clear();
 				m_sampler.reset();
 
@@ -434,9 +436,6 @@ namespace vk
 			renderpass_config.set_depth_mask(true);
 			renderpass_config.enable_depth_test(VK_COMPARE_OP_ALWAYS);
 			renderpass_config.enable_stencil_test(VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_COMPARE_OP_ALWAYS, 0xFF, 0xFF);
-
-			m_vertex_shader.id = 100002;
-			m_fragment_shader.id = 100003;
 		}
 	};
 
@@ -521,9 +520,6 @@ namespace vk
 				VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_SRC_ALPHA,
 				VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
 				VK_BLEND_OP_ADD, VK_BLEND_OP_ADD);
-
-			m_vertex_shader.id = 100004;
-			m_fragment_shader.id = 100005;
 		}
 
 		vk::image_view* upload_simple_texture(vk::render_device &dev, vk::command_buffer &cmd,
@@ -784,9 +780,6 @@ namespace vk
 			renderpass_config.set_depth_mask(false);
 			renderpass_config.set_color_mask(true, true, true, true);
 			renderpass_config.set_attachment_count(1);
-
-			m_vertex_shader.id = 100006;
-			m_fragment_shader.id = 100007;
 		}
 
 		void update_uniforms(vk::glsl::program* /*program*/) override

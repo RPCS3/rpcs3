@@ -13,10 +13,10 @@
 #include "Emu/RSX/GSRender.h"
 #include "Emu/System.h"
 #include "VulkanAPI.h"
+#include "VKCommonDecompiler.h"
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
 #include "../Common/ring_buffer_helper.h"
-#include "../Common/GLSLCommon.h"
 #include "../rsx_cache.h"
 
 #include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
@@ -72,6 +72,7 @@ namespace vk
 	class physical_device;
 	class command_buffer;
 	struct image;
+	struct buffer;
 	struct vk_data_heap;
 	class mem_allocator_base;
 	struct memory_type_mapping;
@@ -100,6 +101,7 @@ namespace vk
 	VkSampler null_sampler();
 	VkImageView null_image_view(vk::command_buffer&);
 	image* get_typeless_helper(VkFormat format);
+	buffer* get_scratch_buffer();
 
 	memory_type_mapping get_memory_mapping(const physical_device& dev);
 	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
@@ -107,6 +109,10 @@ namespace vk
 	//Sync helpers around vkQueueSubmit
 	void acquire_global_submit_lock();
 	void release_global_submit_lock();
+
+	template<class T>
+	T* get_compute_task();
+	void reset_compute_tasks();
 
 	void destroy_global_resources();
 
@@ -124,11 +130,15 @@ namespace vk
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, VkImageSubresourceRange range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
 
-	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
+	void copy_image_typeless(const command_buffer &cmd, const image *src, const image *dst, const areai& src_rect, const areai& dst_rect,
+		u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
+		VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
+
+	void copy_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
 			const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
 			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
-	void copy_scaled_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
+	void copy_scaled_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
 			u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height, u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height, u32 mipmaps,
 			VkImageAspectFlags aspect, bool compatible_formats, VkFilter filter = VK_FILTER_LINEAR, VkFormat src_format = VK_FORMAT_UNDEFINED, VkFormat dst_format = VK_FORMAT_UNDEFINED);
 
@@ -138,6 +148,8 @@ namespace vk
 	//Texture barrier applies to a texture to ensure writes to it are finished before any reads are attempted to avoid RAW hazards
 	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range);
 	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image);
+
+	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask);
 
 	//Manage 'uininterruptible' state where secondary operations (e.g violation handlers) will have to wait
 	void enter_uninterruptible();
@@ -701,7 +713,7 @@ namespace vk
 		VkBufferCreateInfo info = {};
 		std::unique_ptr<vk::memory_block> memory;
 
-		buffer(vk::render_device& dev, u64 size, uint32_t memory_type_index, uint32_t access_flags, VkBufferUsageFlagBits usage, VkBufferCreateFlags flags)
+		buffer(const vk::render_device& dev, u64 size, uint32_t memory_type_index, uint32_t access_flags, VkBufferUsageFlags usage, VkBufferCreateFlags flags)
 			: m_device(dev)
 		{
 			info.size = size;
@@ -1015,7 +1027,7 @@ namespace vk
 			return *pool;
 		}
 
-		operator VkCommandBuffer()
+		operator VkCommandBuffer() const
 		{
 			return commands;
 		}
@@ -2110,13 +2122,13 @@ public:
 	class descriptor_pool
 	{
 		VkDescriptorPool pool = nullptr;
-		vk::render_device *owner = nullptr;
+		const vk::render_device *owner = nullptr;
 
 	public:
 		descriptor_pool() {}
 		~descriptor_pool() {}
 
-		void create(vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count)
+		void create(const vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count)
 		{
 			VkDescriptorPoolCreateInfo infos = {};
 			infos.flags = 0;
@@ -2420,7 +2432,8 @@ public:
 		{
 			input_type_uniform_buffer = 0,
 			input_type_texel_buffer = 1,
-			input_type_texture = 2
+			input_type_texture = 2,
+			input_type_storage_buffer = 3
 		};
 
 		struct bound_sampler
@@ -2450,6 +2463,80 @@ public:
 			std::string name;
 		};
 
+		class shader
+		{
+			::glsl::program_domain type = ::glsl::program_domain::glsl_vertex_program;
+			VkShaderModule m_handle = VK_NULL_HANDLE;
+			std::string m_source;
+			std::vector<u32> m_compiled;
+
+		public:
+			shader()
+			{}
+
+			~shader()
+			{}
+
+			void create(::glsl::program_domain domain, const std::string& source)
+			{
+				type = domain;
+				m_source = source;
+			}
+
+			VkShaderModule compile()
+			{
+				verify(HERE), m_handle == VK_NULL_HANDLE;
+
+				if (!vk::compile_glsl_to_spv(m_source, type, m_compiled))
+				{
+					std::string shader_type = type == ::glsl::program_domain::glsl_vertex_program ? "vertex" :
+						type == ::glsl::program_domain::glsl_fragment_program ? "fragment" : "compute";
+
+					fmt::throw_exception("Failed to compile %s shader" HERE, shader_type);
+				}
+
+				VkShaderModuleCreateInfo vs_info;
+				vs_info.codeSize = m_compiled.size() * sizeof(u32);
+				vs_info.pNext = nullptr;
+				vs_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+				vs_info.pCode = (uint32_t*)m_compiled.data();
+				vs_info.flags = 0;
+
+				VkDevice dev = (VkDevice)*vk::get_current_renderer();
+				vkCreateShaderModule(dev, &vs_info, nullptr, &m_handle);
+
+				return m_handle;
+			}
+
+			void destroy()
+			{
+				m_source.clear();
+				m_compiled.clear();
+
+				if (m_handle)
+				{
+					VkDevice dev = (VkDevice)*vk::get_current_renderer();
+					vkDestroyShaderModule(dev, m_handle, nullptr);
+					m_handle = nullptr;
+				}
+			}
+
+			const std::string& get_source() const
+			{
+				return m_source;
+			}
+
+			const std::vector<u32> get_compiled() const
+			{
+				return m_compiled;
+			}
+
+			VkShaderModule get_handle() const
+			{
+				return m_handle;
+			}
+		};
+
 		class program
 		{
 			std::vector<program_input> uniforms;
@@ -2467,9 +2554,11 @@ public:
 			program& load_uniforms(::glsl::program_domain domain, const std::vector<program_input>& inputs);
 
 			bool has_uniform(std::string uniform_name);
-			void bind_uniform(VkDescriptorImageInfo image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set);
-			void bind_uniform(VkDescriptorBufferInfo buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
+			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set);
+			void bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set);
+
+			void bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorType type, VkDescriptorSet &descriptor_set);
 
 			u64 get_vertex_input_attributes_mask();
 		};
@@ -2477,19 +2566,50 @@ public:
 
 	struct vk_data_heap : public data_heap
 	{
-		std::unique_ptr<vk::buffer> heap;
+		std::unique_ptr<buffer> heap;
 		bool mapped = false;
+		void *_ptr = nullptr;
+
+		// NOTE: Some drivers (RADV) use heavyweight OS map/unmap routines that are insanely slow
+		// Avoid mapping/unmapping to keep these drivers from stalling
+		// NOTE2: HOST_CACHED flag does not keep the mapped ptr around in the driver either
+
+		void create(VkBufferUsageFlags usage, size_t size, const char *name = "unnamed", size_t guard = 0x10000)
+		{
+			const auto device = get_current_renderer();
+			const auto memory_map = device->get_memory_mapping();
+			const VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+			data_heap::init(size, name, guard);
+			heap.reset(new buffer(*device, size, memory_map.host_visible_coherent, memory_flags, usage, 0));
+		}
+
+		void destroy()
+		{
+			if (mapped)
+			{
+				heap->unmap();
+				mapped = false;
+			}
+
+			heap.reset();
+		}
 
 		void* map(size_t offset, size_t size)
 		{
-			mapped = true;
-			return heap->map(offset, size);
+			if (!_ptr)
+			{
+				_ptr = heap->map(0, heap->size());
+				mapped = true;
+			}
+
+			return (u8*)_ptr + offset;
 		}
 
 		void unmap()
 		{
-			mapped = false;
-			heap->unmap();
+			//mapped = false;
+			//heap->unmap();
 		}
 	};
 }
