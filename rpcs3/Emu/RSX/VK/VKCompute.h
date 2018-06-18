@@ -39,7 +39,7 @@ namespace vk
 			VkDescriptorSetLayoutCreateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 			infos.pBindings = bindings.data();
-			infos.bindingCount = bindings.size();
+			infos.bindingCount = (u32)bindings.size();
 
 			CHECK_RESULT(vkCreateDescriptorSetLayout(*get_current_renderer(), &infos, nullptr, &m_descriptor_layout));
 
