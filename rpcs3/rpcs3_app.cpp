@@ -280,7 +280,7 @@ void rpcs3_app::InitializeCallbacks()
 			switch (type)
 			{
 			case 0:
-				((gs_frame*)gameWindow)->progress_reset();
+				((gs_frame*)gameWindow)->progress_reset(value);
 				break;
 			case 1:
 				((gs_frame*)gameWindow)->progress_increment(value);
