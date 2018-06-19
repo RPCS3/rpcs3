@@ -5,8 +5,7 @@
 #include "rpcs3qt/welcome_dialog.h"
 
 #ifdef WITH_DISCORD_RPC
-#include "discord_rpc.h"
-#include "discord_register.h"
+#include "rpcs3qt/_discord_utils.h"
 #endif
 
 #include "Emu/System.h"
@@ -98,8 +97,7 @@ void rpcs3_app::Init()
 	// Discord Rich Presence Integration
 	if (guiSettings->GetValue(gui::m_richPresence).toBool())
 	{
-		DiscordEventHandlers handlers = {};
-		Discord_Initialize("424004941485572097", &handlers, 1, NULL);
+		discord::initialize();
 	}
 #endif
 

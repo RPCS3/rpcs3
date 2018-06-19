@@ -641,9 +641,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* downloadCompat = myMenu.addAction(tr("&Download Compatibility Database"));
 	myMenu.addSeparator();
 	QAction* editNotes = myMenu.addAction(tr("&Edit Tooltip Notes"));
-	QMenu* infoMenu = myMenu.addMenu(tr("&Copy Info"));
-	QAction* copyName = infoMenu->addAction(tr("&Copy Name"));
-	QAction* copySerial = infoMenu->addAction(tr("&Copy Serial"));
+	QMenu* info_menu = myMenu.addMenu(tr("&Copy Info"));
+	QAction* copy_info = info_menu->addAction(tr("&Copy Name + Serial"));
+	QAction* copy_name = info_menu->addAction(tr("&Copy Name"));
+	QAction* copy_serial = info_menu->addAction(tr("&Copy Serial"));
 
 	const std::string config_base_dir = fs::get_config_dir() + "data/" + currGame.serial;
 
@@ -754,11 +755,15 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			Refresh();
 		}
 	});
-	connect(copyName, &QAction::triggered, [=]
+	connect(copy_info, &QAction::triggered, [=]
+	{
+		QApplication::clipboard()->setText(name + " [" + serial + "]");
+	});
+	connect(copy_name, &QAction::triggered, [=]
 	{
 		QApplication::clipboard()->setText(name);
 	});
-	connect(copySerial, &QAction::triggered, [=]
+	connect(copy_serial, &QAction::triggered, [=]
 	{
 		QApplication::clipboard()->setText(serial);
 	});
@@ -1018,6 +1023,31 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 			else if (keyEvent->key() == Qt::Key_Minus)
 			{
 				Q_EMIT RequestIconSizeChange(-1);
+				return true;
+			}
+		}
+		else
+		{
+			if (keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return)
+			{
+				QTableWidgetItem* item;
+
+				if (object == m_gameList)
+					item = m_gameList->item(m_gameList->currentRow(), gui::column_icon);
+				else
+					item = m_xgrid->currentItem();
+
+				if (!item || !item->isSelected())
+					return false;
+
+				game_info gameinfo = GetGameInfoFromItem(item);
+
+				if (gameinfo.get() == nullptr)
+					return false;
+
+				LOG_NOTICE(LOADER, "Booting from gamelist by pressing %s...", keyEvent->key() == Qt::Key_Enter ? "Enter" : "Return");
+				Q_EMIT RequestBoot(gameinfo->info.path);
+
 				return true;
 			}
 		}
