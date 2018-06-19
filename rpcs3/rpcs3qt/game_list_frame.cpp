@@ -641,9 +641,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* downloadCompat = myMenu.addAction(tr("&Download Compatibility Database"));
 	myMenu.addSeparator();
 	QAction* editNotes = myMenu.addAction(tr("&Edit Tooltip Notes"));
-	QMenu* infoMenu = myMenu.addMenu(tr("&Copy Info"));
-	QAction* copyName = infoMenu->addAction(tr("&Copy Name"));
-	QAction* copySerial = infoMenu->addAction(tr("&Copy Serial"));
+	QMenu* info_menu = myMenu.addMenu(tr("&Copy Info"));
+	QAction* copy_info = info_menu->addAction(tr("&Copy Name + Serial"));
+	QAction* copy_name = info_menu->addAction(tr("&Copy Name"));
+	QAction* copy_serial = info_menu->addAction(tr("&Copy Serial"));
 
 	const std::string config_base_dir = fs::get_config_dir() + "data/" + currGame.serial;
 
@@ -754,11 +755,15 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			Refresh();
 		}
 	});
-	connect(copyName, &QAction::triggered, [=]
+	connect(copy_info, &QAction::triggered, [=]
+	{
+		QApplication::clipboard()->setText(name + " [" + serial + "]");
+	});
+	connect(copy_name, &QAction::triggered, [=]
 	{
 		QApplication::clipboard()->setText(name);
 	});
-	connect(copySerial, &QAction::triggered, [=]
+	connect(copy_serial, &QAction::triggered, [=]
 	{
 		QApplication::clipboard()->setText(serial);
 	});
