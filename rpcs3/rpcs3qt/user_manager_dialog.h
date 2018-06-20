@@ -35,7 +35,7 @@ private Q_SLOTS:
 	void OnSort(int logicalIndex);
 private:
 	void Init();
-	void UpdateTable();
+	void UpdateTable(bool mark_only = false);
 	void GenerateUser(const std::string& user_id, const std::string& username);
 	bool ValidateUsername(const QString& text_to_validate);
 
@@ -43,9 +43,11 @@ private:
 
 	void closeEvent(QCloseEvent* event) override;
 
+	u32 GetUserKey();
+
 	QTableWidget* m_table;
 	std::string m_active_user;
-	std::vector<UserAccount*> m_user_list;
+	std::map<u32, UserAccount> m_user_list;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<emu_settings> m_emu_settings;
