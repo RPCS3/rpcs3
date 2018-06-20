@@ -11,7 +11,7 @@
 class UserAccount
 {
 public:
-	explicit UserAccount(const std::string& user_id);
+	explicit UserAccount(const std::string& user_id = "00000001");
 
 	std::string GetUserId() { return m_user_id; };
 	std::string GetUserDir() { return m_user_dir; };

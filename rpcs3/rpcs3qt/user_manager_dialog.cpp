@@ -8,9 +8,9 @@
 
 namespace
 {
-	std::vector<UserAccount*> GetUserAccounts(const std::string& base_dir)
+	std::map<u32, UserAccount> GetUserAccounts(const std::string& base_dir)
 	{
-		std::vector<UserAccount*> user_list;
+		std::map<u32, UserAccount> user_list;
 
 		// I believe this gets the folder list sorted alphabetically by default,
 		// but I can't find proof of this always being true.
@@ -24,7 +24,8 @@ namespace
 			// Is the folder name exactly 8 all-numerical characters long?
 			// We use strtol to find any non-numeric characters in folder name.
 			char* non_numeric_char;
-			std::strtol(user_folder.name.c_str(), &non_numeric_char, 10);
+			u32 key = static_cast<u32>(std::strtol(user_folder.name.c_str(), &non_numeric_char, 10));
+
 			if (user_folder.name.length() != 8 || *non_numeric_char != '\0')
 			{
 				continue;
@@ -36,7 +37,7 @@ namespace
 				continue;
 			}
 
-			user_list.emplace_back(new UserAccount(user_folder.name));
+			user_list.emplace(key, UserAccount(user_folder.name));
 		}
 		return user_list;
 	}
@@ -97,16 +98,15 @@ void user_manager_dialog::Init()
 	// Use this in multiple connects to protect the current user from deletion/rename.
 	auto enableButtons = [=]()
 	{
-		int idx = m_table->currentRow();
-		if (idx < 0)
+		u32 key = GetUserKey();
+		if (key == 0)
 		{
 			push_rename_user->setEnabled(false);
 			push_remove_user->setEnabled(false);
 			return;
 		}
 
-		int idx_real = m_table->item(idx, 0)->data(Qt::UserRole).toInt();
-		std::string idx_user = m_user_list[idx_real]->GetUserId();
+		std::string idx_user = m_user_list[key].GetUserId();
 		bool enable = idx_user != m_active_user;
 
 		push_rename_user->setEnabled(enable);
@@ -128,8 +128,36 @@ void user_manager_dialog::Init()
 	connect(m_table, &QTableWidget::itemSelectionChanged, this, enableButtons);
 }
 
-void user_manager_dialog::UpdateTable()
+void user_manager_dialog::UpdateTable(bool mark_only)
 {
+	// For indicating logged-in user.
+	QFont bold_font;
+	bold_font.setBold(true);
+
+	if (mark_only)
+	{
+		QString active_user = qstr(m_active_user);
+
+		for (int i = 0; i < m_table->rowCount(); i++)
+		{
+			QTableWidgetItem* user_id_item = m_table->item(i, 0);
+			QTableWidgetItem* username_item = m_table->item(i, 1);
+
+			// Compare current config value with the one in this user
+			if (active_user == user_id_item->text())
+			{
+				user_id_item->setFont(bold_font);
+				username_item->setFont(bold_font);
+			}
+			else
+			{
+				user_id_item->setFont(QFont());
+				username_item->setFont(QFont());
+			}
+		}
+		return;
+	}
+
 	// Get the user folders in the home directory and the currently logged in user.
 	m_user_list.clear();
 	m_user_list = GetUserAccounts(Emu.GetHddDir() + "home");
@@ -137,31 +165,28 @@ void user_manager_dialog::UpdateTable()
 	// Clear and then repopulate the table with the list gathered above.
 	m_table->setRowCount(static_cast<int>(m_user_list.size()));
 
-	// For indicating logged-in user.
-	QFont bold_font;
-	bold_font.setBold(true);
-
 	int row = 0;
-	for (UserAccount* user : m_user_list)
+	for (auto& user : m_user_list)
 	{
-		QTableWidgetItem* user_id_item = new QTableWidgetItem(qstr(user->GetUserId()));
-		user_id_item->setData(Qt::UserRole, row); // For sorting to work properly
+		QTableWidgetItem* user_id_item = new QTableWidgetItem(qstr(user.second.GetUserId()));
+		user_id_item->setData(Qt::UserRole, user.first); // For sorting to work properly
 		user_id_item->setFlags(user_id_item->flags() & ~Qt::ItemIsEditable);
 		m_table->setItem(row, 0, user_id_item);
 
-		QTableWidgetItem* username_item = new QTableWidgetItem(qstr(user->GetUserName()));
-		username_item->setData(Qt::UserRole, row); // For sorting to work properly
+		QTableWidgetItem* username_item = new QTableWidgetItem(qstr(user.second.GetUserName()));
+		username_item->setData(Qt::UserRole, user.first); // For sorting to work properly
 		username_item->setFlags(username_item->flags() & ~Qt::ItemIsEditable);
 		m_table->setItem(row, 1, username_item);
 
 		// Compare current config value with the one in this user (only 8 digits in userId)
-		if (m_active_user.compare(0, 8, user->GetUserId()) == 0)
+		if (m_active_user.compare(0, 8, user.second.GetUserId()) == 0)
 		{
 			user_id_item->setFont(bold_font);
 			username_item->setFont(bold_font);
 		}
 		++row;
 	}
+
 	// GUI resizing
 	m_table->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
 	m_table->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
@@ -179,16 +204,15 @@ void user_manager_dialog::UpdateTable()
 // Remove a user folder, needs to be confirmed.
 void user_manager_dialog::OnUserRemove()
 {
-	const int idx = m_table->currentRow();
-	if (idx < 0)
+	u32 key = GetUserKey();
+	if (key == 0)
 	{
 		return;
 	}
 
-	const int idx_real = m_table->item(idx, 0)->data(Qt::UserRole).toInt();
-	const QString username = qstr(m_user_list[idx_real]->GetUserName());
-	const QString user_id = qstr(m_user_list[idx_real]->GetUserId());
-	const std::string user_dir = m_user_list[idx_real]->GetUserDir();
+	const QString username = qstr(m_user_list[key].GetUserName());
+	const QString user_id = qstr(m_user_list[key].GetUserId());
+	const std::string user_dir = m_user_list[key].GetUserDir();
 
 	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete the following user?\n\nUser ID: %0\nUsername: %1\n\n"
 		"This will remove all files in:\n%2").arg(user_id).arg(username).arg(qstr(user_dir)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
@@ -225,15 +249,14 @@ bool user_manager_dialog::ValidateUsername(const QString& text_to_validate)
 
 void user_manager_dialog::OnUserRename()
 {
-	const int idx = m_table->currentRow();
-	if (idx < 0)
+	u32 key = GetUserKey();
+	if (key == 0)
 	{
 		return;
 	}
 
-	const int idx_real = m_table->item(idx, 0)->data(Qt::UserRole).toInt();
-	const std::string user_id = m_user_list[idx_real]->GetUserId();
-	const std::string username = m_user_list[idx_real]->GetUserName();
+	const std::string user_id = m_user_list[key].GetUserId();
+	const std::string username = m_user_list[key].GetUserName();
 
 	QInputDialog* dialog = new QInputDialog(this);
 	dialog->setWindowTitle(tr("Rename User"));
@@ -270,12 +293,22 @@ void user_manager_dialog::OnUserRename()
 
 void user_manager_dialog::OnUserCreate()
 {
-	// If the user list is sorted by default from fs::dir, then we just need the last one in the list.
-	std::string largest_user_id = m_user_list[m_user_list.size() - 1]->GetUserId();
+	// Take the smallest user id > 0, then reformat the result into an 8-digit string.
+	u32 smallest = 1;
 
-	// Add one to the largest user id, then reformat the result into an 8-digit string.
-	u8 next_largest = static_cast<u8>(std::stoul(largest_user_id) + 1u);
-	const std::string next_user_id = fmt::format("%08d", next_largest);
+	for (auto it = m_user_list.begin(); it != m_user_list.end(); ++it)
+	{
+		if (it->first > smallest)
+		{
+			break;
+		}
+		else
+		{
+			smallest++;
+		}
+	}
+
+	const std::string next_user_id = fmt::format("%08d", smallest);
 
 	QInputDialog* dialog = new QInputDialog(this);
 	dialog->setWindowTitle(tr("New User"));
@@ -301,19 +334,18 @@ void user_manager_dialog::OnUserCreate()
 
 void user_manager_dialog::OnUserLogin()
 {
-	int idx = m_table->currentRow();
-	if (idx < 0)
+	u32 key = GetUserKey();
+	if (key == 0)
 	{
 		return;
 	}
 
-	int idx_real = m_table->item(idx, 0)->data(Qt::UserRole).toInt();
-	std::string selected_user_id = m_user_list[idx_real]->GetUserId();
+	std::string selected_user_id = m_user_list[key].GetUserId();
 
 	m_active_user = selected_user_id;
 	m_emu_settings->SetSetting(emu_settings::SelectedUser, m_active_user);
 	m_emu_settings->SaveSettings();
-	UpdateTable();
+	UpdateTable(true);
 	Q_EMIT OnUserLoginSuccess();
 }
 
@@ -332,14 +364,13 @@ void user_manager_dialog::OnSort(int logicalIndex)
 		m_sort_ascending = true;
 	}
 	m_sort_column = logicalIndex;
-	Qt::SortOrder sort_order = m_sort_ascending ? Qt::AscendingOrder : Qt::DescendingOrder;
-	m_table->sortByColumn(m_sort_column, sort_order);
+	m_table->sortByColumn(m_sort_column, m_sort_ascending ? Qt::AscendingOrder : Qt::DescendingOrder);
 }
 
 void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 {
-	int idx = m_table->currentRow();
-	if (idx < 0)
+	u32 key = GetUserKey();
+	if (key == 0)
 	{
 		return;
 	}
@@ -358,8 +389,7 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 	QAction* show_dir_act = menu->addAction(tr("&Open User Directory"));
 
 	// Only enable actions if selected user is not logged in user.
-	int idx_real = m_table->item(idx, 0)->data(Qt::UserRole).toInt();
-	std::string idx_user = m_user_list[idx_real]->GetUserId();
+	std::string idx_user = m_user_list[key].GetUserId();
 	bool enable = idx_user != m_active_user;
 
 	remove_act->setEnabled(enable);
@@ -371,8 +401,7 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 	connect(login_act, &QAction::triggered, this, &user_manager_dialog::OnUserLogin);
 	connect(show_dir_act, &QAction::triggered, [=]()
 	{
-		int idx_real = m_table->item(idx, 0)->data(Qt::UserRole).toInt();
-		QString path = qstr(m_user_list[idx_real]->GetUserDir());
+		QString path = qstr(m_user_list[key].GetUserDir());
 		QDesktopServices::openUrl(QUrl("file:///" + path));
 	});
 
@@ -380,6 +409,30 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 	connect(username_act, &QAction::triggered, this, [=] {OnSort(1); });
 
 	menu->exec(global_pos);
+}
+
+// Returns the current user's key > 0. if no user is selected, return 0
+u32 user_manager_dialog::GetUserKey()
+{
+	int idx = m_table->currentRow();
+	if (idx < 0)
+	{
+		return 0;
+	}
+
+	QTableWidgetItem* item = m_table->item(idx, 0);
+	if (!item)
+	{
+		return 0;
+	}
+
+	const u32 idx_real = item->data(Qt::UserRole).toUInt();
+	if (m_user_list.find(idx_real) == m_user_list.end())
+	{
+		return 0;
+	}
+
+	return idx_real;
 }
 
 void user_manager_dialog::closeEvent(QCloseEvent *event)
