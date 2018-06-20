@@ -427,10 +427,10 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						info.drmEncrypted = 0;
 						info.codec = 0;  // CellSearchCodec
 						info.status = 0; // CellSearchContentStatus
-						strcpy_s(info.title, item.name.substr(0, ext_offset).c_str()); // it'll do for the moment...
-						strcpy_s(info.albumTitle, "ALBUM TITLE"); // std::strcpy(info->albumTitle, ALBUM TITLE );
-						strcpy_s(info.artistName, "ARTIST NAME"); // std::strcpy(info->artistName, ARTIST NAME );
-						strcpy_s(info.genreName, "GENRE NAME");   // std::strcpy(info->genreName,  GENRE NAME  );
+						std::strcpy(info.title, item.name.substr(0, ext_offset).c_str()); // it'll do for the moment...
+						std::strcpy(info.albumTitle, "ALBUM TITLE"); // std::strcpy(info->albumTitle, ALBUM TITLE );
+						std::strcpy(info.artistName, "ARTIST NAME"); // std::strcpy(info->artistName, ARTIST NAME );
+						std::strcpy(info.genreName, "GENRE NAME");   // std::strcpy(info->genreName,  GENRE NAME  );
 					}
 					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_PHOTO_ALL)
 					{
@@ -446,8 +446,8 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						info.orientation = 0;  //CellSearchOrientation
 						info.codec = 0;        //CellSearchCodec
 						info.status = 0;       //CellSearchContentStatus
-						strcpy_s(info.title, item.name.substr(0, ext_offset).c_str()); // it'll do for the moment...
-						strcpy_s(info.albumTitle, "ALBUM TITLE"); // std::strcpy(info->albumTitle, ALBUM TITLE );
+						std::strcpy(info.title, item.name.substr(0, ext_offset).c_str()); // it'll do for the moment...
+						std::strcpy(info.albumTitle, "ALBUM TITLE"); // std::strcpy(info->albumTitle, ALBUM TITLE );
 					}
 					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL)
 					{
@@ -466,8 +466,8 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						info.videoCodec = 0; // CellSearchCodec
 						info.audioCodec = 0; // CellSearchCodec
 						info.status = 0;     // CellSearchContentStatus
-						strcpy_s(info.title, item.name.substr(0, ext_offset).c_str()); // it'll do for the moment...
-						strcpy_s(info.albumTitle, "ALBUM TITLE"); // std::strcpy(info->albumTitle, ALBUM TITLE );
+						std::strcpy(info.title, item.name.substr(0, ext_offset).c_str()); // it'll do for the moment...
+						std::strcpy(info.albumTitle, "ALBUM TITLE"); // std::strcpy(info->albumTitle, ALBUM TITLE );
 					}
 
 					content_map->emplace(hash, curr_find->get_shared());
