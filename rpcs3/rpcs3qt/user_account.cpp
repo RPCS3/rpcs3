@@ -1,27 +1,26 @@
 #include "user_account.h"
 
-UserAccount::UserAccount(const std::string& userId)
+UserAccount::UserAccount(const std::string& user_id)
 {
 	// Setting userId.
-	m_userId = userId;
+	m_user_id = user_id;
 
 	// Setting userDir.
-	m_userDir = Emu.GetHddDir() + "home/" + m_userId + "/";
+	m_user_dir = Emu.GetHddDir() + "home/" + m_user_id + "/";
 
 	// Setting userName.
 	fs::file file;
-	if (file.open(m_userDir + "localusername", fs::read))
+	if (file.open(m_user_dir + "localusername", fs::read))
 	{
-		file.read(m_userName, 16*sizeof(char)); //max of 16 chars on real PS3
+		file.read(m_username, 16*sizeof(char)); // max of 16 chars on real PS3
 		file.close();
 	}
 	else
 	{
-		LOG_WARNING(GENERAL, "UserAccount: localusername file read error (userId=%s, userDir=%s).", m_userId, m_userDir);
+		LOG_WARNING(GENERAL, "UserAccount: localusername file read error (userId=%s, userDir=%s).", m_user_id, m_user_dir);
 	}
 }
 
 UserAccount::~UserAccount()
 {
 }
-

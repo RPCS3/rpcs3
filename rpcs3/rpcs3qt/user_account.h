@@ -11,16 +11,15 @@
 class UserAccount
 {
 public:
-	explicit UserAccount(const std::string& userId);
+	explicit UserAccount(const std::string& user_id);
 
-	std::string GetUserId() { return m_userId; };
-	std::string GetUserDir() { return m_userDir; };
-	std::string GetUserName() { return m_userName; };
+	std::string GetUserId() { return m_user_id; };
+	std::string GetUserDir() { return m_user_dir; };
+	std::string GetUserName() { return m_username; };
 	~UserAccount();
 
 private:
-	std::string m_userId;
-	std::string m_userDir;
-	std::string m_userName;
-
+	std::string m_user_id;
+	std::string m_user_dir;
+	std::string m_username;
 };

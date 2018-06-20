@@ -509,7 +509,6 @@ struct cfg_root : cfg::node
 	{
 		node_usr(cfg::node* _this) : cfg::node(_this, "User") {}
 
-		// This is only a default, will get read from existing config.yml.
 		cfg::string selected_usr{ this, "Selected User", "00000001" }; 
 
 	} usr{this};
