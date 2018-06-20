@@ -484,7 +484,8 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 				}
 			}
 		};
-		searchInFolder(fmt::format("/dev_hdd0/%s", media_dir), "");
+		std::string search_vpath = fmt::format("/dev_hdd0/%s", media_dir);
+		searchInFolder(search_vpath, "");
 		resultParam->resultNum = curr_search->content_ids.size();
 
 		s_search_state = SEARCH_STATE_IDLE;
