@@ -492,7 +492,7 @@ std::string ppu_thread::dump() const
 		stack_max += 4096;
 	}
 
-	for (u64 sp = vm::read64(stack_ptr); sp >= stack_min && sp + 0x200 < stack_max; sp = vm::read64(static_cast<u32>(sp)))
+	for (u64 sp = vm::read64(stack_ptr); sp >= stack_min && std::max(sp, sp + 0x200) < stack_max; sp = vm::read64(static_cast<u32>(sp)))
 	{
 		// TODO: print also function addresses
 		fmt::append(ret, "> from 0x%08llx (0x0)\n", vm::read64(static_cast<u32>(sp + 16)));
