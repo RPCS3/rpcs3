@@ -1,5 +1,5 @@
 ﻿#include "stdafx.h"
-#include "xxhash.h"
+#include "Crypto/sha1.h"
 #include "IdManager.h"
 #include "VFS.h"
 
@@ -11,8 +11,8 @@ struct vfs_manager
 
 	// Device name -> Real path
 	std::unordered_map<std::string, std::string> mounted;
-	// Virtual Link ID -> Virtual Path (these can be hundreds in count)
-	std::unordered_map<u64, std::string> virtual_links;
+	// Virtual Link Hash -> Virtual Path (these can be hundreds in count)
+	std::unordered_map<std::string, std::string> virtual_links;
 };
 
 const std::regex s_regex_ps3("^/+(.*?)(?:$|/)(.*)", std::regex::optimize);
@@ -70,8 +70,7 @@ std::string vfs::get(const std::string& vpath, const std::string* prev, std::siz
 		if (!s_link_device.compare(match.str(1)))
 		{
 			std::string lhash(vpath.c_str() + vpath.find_last_of("/") + 1, vpath.c_str() + vpath.find_last_of("."));
-			u64 key = std::stoull(lhash, 0, 16);
-			auto found = table->virtual_links.find(key);
+			auto found = table->virtual_links.find(lhash);
 			if (found != table->virtual_links.end())
 			{
 				return vfs::get(found->second);
@@ -321,21 +320,30 @@ std::string vfs::unescape(const std::string& path)
 
 bool vfs::link(const std::string& vpath, std::string& vlinkout)
 {
-	std::string real = vfs::get(vpath);
-	u64 path_hash = XXH64(real.c_str(), real.length(), 0);
+	u8 hash[20];
+	sha1((u8*)vpath.data(), vpath.size(), &hash[0]);
+	std::string hash_str;
+	for (auto b : hash)
+	{
+		hash_str += fmt::format("%02X", b);
+	}
 
 	const auto table = fxm::get_always<vfs_manager>();
 
 	safe_reader_lock lock1(table->mutex);
 
-	const auto found = table->virtual_links.find(path_hash);
+	const auto found = table->virtual_links.find(hash_str);
 	if (found == table->virtual_links.end())
 	{
 		safe_writer_lock lock2(table->mutex);
-		vlinkout.assign(fmt::format("/%s/%08X%s", s_link_device, path_hash, fs::get_extension(vpath)));
-		return table->virtual_links.emplace(path_hash, vpath).second;
+		vlinkout.assign(fmt::format("/%s/%s%s", s_link_device, hash_str, vpath.substr(vpath.find_last_of("."))));
+		return table->virtual_links.emplace(hash_str, vpath).second;
 	}
-	return true;
+	else
+	{
+		vlinkout.assign(found->second);
+		return true;
+	}
 }
 
 bool vfs::unlink(const std::string& vlink)
@@ -345,7 +353,7 @@ bool vfs::unlink(const std::string& vlink)
 	safe_reader_lock lock(table->mutex);
 
 	std::string lhash(vlink.c_str() + vlink.find_last_of("/") + 1, vlink.c_str() + vlink.find_last_of("."));
-	const auto found = table->virtual_links.find(std::stoll(lhash));
+	const auto found = table->virtual_links.find(lhash);
 	if (found != table->virtual_links.end())
 	{
 		table->virtual_links.erase(found);

@@ -643,7 +643,7 @@ error_code sys_fs_link(vm::cptr<char> from, vm::cptr<char> to)
 	if (to_path.empty())
 	 	return {CELL_ENOTMOUNTED, to_path};
 
-	if (!vfs::link(from_path, to_path))
+	if (!vfs::link(from.get_ptr(), to_path))
 	{
 		return CELL_EFSSPECIFIC;
 	}
@@ -1375,7 +1375,7 @@ error_code sys_fs_symbolic_link(vm::cptr<char> target, vm::cptr<char> linkpath)
 	if (link_path.empty())
 		return {CELL_ENOTMOUNTED, link_path};
 
-	if (!vfs::link(target_path, link_path))
+	if (!vfs::link(target.get_ptr(), link_path))
 	{
 		return CELL_EFSSPECIFIC;
 	}

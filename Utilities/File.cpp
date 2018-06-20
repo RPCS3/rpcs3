@@ -264,19 +264,6 @@ std::string fs::get_parent_dir(const std::string& path)
 	}
 }
 
-std::string fs::get_extension(const std::string& filename)
-{
-	size_t pos = 0;
-	auto temp = fs::get_parent_dir(filename);
-	if (temp != "")
-	{
-		pos = temp.size() - 1;
-	}
-	temp.assign(&filename.at(pos));
-	pos = temp.find_last_of(".");
-	return temp.substr(pos);
-}
-
 bool fs::stat(const std::string& path, stat_t& info)
 {
 	if (auto device = get_virtual_device(path))
