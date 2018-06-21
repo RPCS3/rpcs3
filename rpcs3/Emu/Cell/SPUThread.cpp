@@ -997,15 +997,16 @@ bool SPUThread::do_list_transfer(spu_mfc_cmd& args)
 
 void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 {
-	if (raddr && args.eal == raddr)
+	const u32 addr = args.eal & -128u;
+
+	if (raddr && addr == raddr)
 	{
 		ch_event_stat |= SPU_EVENT_LR;
 		raddr = 0;
 	}
 
-	const u32 addr = args.eal;
 	auto& data = vm::_ref<decltype(rdata)>(addr);
-	const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ffff);
+	const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
 
 	// Store unconditionally
 	if (LIKELY(g_use_rtm))
@@ -1174,14 +1175,15 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 	{
 	case MFC_GETLLAR_CMD:
 	{
-		auto& data = vm::_ref<decltype(rdata)>(args.eal);
+		const u32 addr = args.eal & -128u;
+		auto& data = vm::_ref<decltype(rdata)>(addr);
 
-		if (raddr && raddr != args.eal)
+		if (raddr && raddr != addr)
 		{
 			ch_event_stat |= SPU_EVENT_LR;
 		}
 
-		raddr = args.eal;
+		raddr = addr;
 
 		const bool is_polling = false; // TODO
 
@@ -1254,7 +1256,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		}
 
 		// Copy to LS
-		_ref<decltype(rdata)>(args.lsa & 0x3ffff) = rdata;
+		_ref<decltype(rdata)>(args.lsa & 0x3ff80) = rdata;
 		ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
 		return true;
 	}
@@ -1262,12 +1264,13 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 	case MFC_PUTLLC_CMD:
 	{
 		// Store conditionally
-		auto& data = vm::_ref<decltype(rdata)>(args.eal);
-		const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ffff);
+		const u32 addr = args.eal & -128u;
+		auto& data = vm::_ref<decltype(rdata)>(addr);
+		const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
 
 		bool result = false;
 
-		if (raddr == args.eal && rtime == vm::reservation_acquire(raddr, 128))
+		if (raddr == addr && rtime == vm::reservation_acquire(raddr, 128))
 		{
 			if (LIKELY(g_use_rtm))
 			{
