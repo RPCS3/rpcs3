@@ -18,7 +18,7 @@ namespace rsx
 				if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 				{
 					if (dlg->progress_bar_count())
-						Emu.GetCallbacks().handle_taskbar_progress(0, 0);
+						Emu.GetCallbacks().handle_taskbar_progress(0, 1);
 				}
 
 				manager->remove(uid);

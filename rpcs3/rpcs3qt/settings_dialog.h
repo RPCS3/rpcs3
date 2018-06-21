@@ -47,6 +47,10 @@ private:
 	std::shared_ptr<gui_settings> xgui_settings;
 	std::shared_ptr<emu_settings> xemu_settings;
 
+	// Discord
+	bool m_use_discord;
+	QString m_discord_state;
+
 	// descriptions
 	QList<QPair<QLabel*, QString>> m_description_labels;
 	QHash<QObject*, QString> m_descriptions;
