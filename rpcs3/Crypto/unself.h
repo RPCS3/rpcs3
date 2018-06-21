@@ -1,6 +1,7 @@
 #pragma once
 
 #include "key_vault.h"
+#include "zlib.h"
 
 struct AppInfo 
 {
@@ -414,6 +415,82 @@ public:
 	bool DecryptData();
 	bool DecryptNPDRM(u8 *metadata, u32 metadata_size);
 	bool GetKeyFromRap(u8 *content_id, u8 *npdrm_key);
+
+private:
+	template<typename EHdr, typename SHdr, typename PHdr>
+	void WriteElf(fs::file& e, EHdr ehdr, SHdr shdr, PHdr phdr)
+	{
+		// Set initial offset.
+		u32 data_buf_offset = 0;
+
+		// Write ELF header.
+		WriteEhdr(e, ehdr);
+
+		// Write program headers.
+		for (u32 i = 0; i < ehdr.e_phnum; ++i)
+		{
+			WritePhdr(e, phdr[i]);
+		}
+
+		for (unsigned int i = 0; i < meta_hdr.section_count; i++)
+		{
+			// PHDR type.
+			if (meta_shdr[i].type == 2)
+			{
+				// Decompress if necessary.
+				if (meta_shdr[i].compressed == 2)
+				{
+					const auto filesz = phdr[meta_shdr[i].program_idx].p_filesz;
+
+					// Create a pointer to a buffer for decompression.
+					std::unique_ptr<u8[]> decomp_buf(new u8[filesz]);
+
+					// Create a buffer separate from data_buf to uncompress.
+					std::unique_ptr<u8[]> zlib_buf(new u8[data_buf_length]);
+					memcpy(zlib_buf.get(), data_buf.get(), data_buf_length);
+
+					uLongf decomp_buf_length = ::narrow<uLongf>(filesz);
+
+					// Use zlib uncompress on the new buffer.
+					// decomp_buf_length changes inside the call to uncompress
+					int rv = uncompress(decomp_buf.get(), &decomp_buf_length, zlib_buf.get() + data_buf_offset, data_buf_length);
+
+					// Check for errors (TODO: Probably safe to remove this once these changes have passed testing.)
+					switch (rv)
+					{
+					case Z_MEM_ERROR: LOG_ERROR(LOADER, "MakeELF encountered a Z_MEM_ERROR!"); break;
+					case Z_BUF_ERROR: LOG_ERROR(LOADER, "MakeELF encountered a Z_BUF_ERROR!"); break;
+					case Z_DATA_ERROR: LOG_ERROR(LOADER, "MakeELF encountered a Z_DATA_ERROR!"); break;
+					default: break;
+					}
+
+					// Seek to the program header data offset and write the data.
+					e.seek(phdr[meta_shdr[i].program_idx].p_offset);
+					e.write(decomp_buf.get(), filesz);
+				}
+				else
+				{
+					// Seek to the program header data offset and write the data.
+					e.seek(phdr[meta_shdr[i].program_idx].p_offset);
+					e.write(data_buf.get() + data_buf_offset, meta_shdr[i].data_size);
+				}
+
+				// Advance the data buffer offset by data size.
+				data_buf_offset += meta_shdr[i].data_size;
+			}
+		}
+
+		// Write section headers.
+		if (self_hdr.se_shdroff != 0)
+		{
+			e.seek(ehdr.e_shoff);
+
+			for (u32 i = 0; i < ehdr.e_shnum; ++i)
+			{
+				WriteShdr(e, shdr[i]);
+			}
+		}
+	}
 };
 
 extern fs::file decrypt_self(fs::file elf_or_self, u8* klic_key = nullptr);
