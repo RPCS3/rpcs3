@@ -275,7 +275,7 @@ namespace vk
 		if (dstLayout != preferred_dst_format)
 			change_image_layout(cmd, dst, dstLayout, preferred_dst_format, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 
-		if (compatible_formats && src_width == dst_width && src_height != dst_height)
+		if (compatible_formats && src_width == dst_width && src_height == dst_height)
 		{
 			VkImageCopy copy_rgn;
 			copy_rgn.srcOffset = { (int32_t)src_x_offset, (int32_t)src_y_offset, 0 };
