@@ -281,6 +281,8 @@ void Emulator::Init()
 	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
 
 	fs::create_path(dev_hdd0);
+	fs::create_path(dev_hdd1);
+	fs::create_path(dev_usb);
 	fs::create_dir(dev_hdd0 + "game/");
 	fs::create_dir(dev_hdd0 + "game/TEST12345/");
 	fs::create_dir(dev_hdd0 + "game/TEST12345/USRDIR/");
@@ -294,8 +296,7 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd0 + "disc/");
 	fs::create_dir(dev_hdd1 + "cache/");
 	fs::create_dir(dev_hdd1 + "game/");
-	fs::create_path(dev_hdd1);
-	fs::create_path(dev_usb);
+	fs::create_path(emu_dir + "/shaderlog");
 
 #ifdef WITH_GDB_DEBUGGER
 	LOG_SUCCESS(GENERAL, "GDB debug server will be started and listening on %d upon emulator boot", (int) g_cfg.misc.gdb_server_port);
