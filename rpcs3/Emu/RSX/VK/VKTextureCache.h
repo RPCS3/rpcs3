@@ -66,8 +66,6 @@ namespace vk
 			else
 				this->rsx_pitch = cpu_address_range / height;
 
-			real_pitch = vk::get_format_texel_width(image->info.format) * width;
-
 			//Even if we are managing the same vram section, we cannot guarantee contents are static
 			//The create method is only invoked when a new mangaged session is required
 			synchronized = false;
@@ -166,25 +164,61 @@ namespace vk
 				cmd.begin();
 			}
 
-			const u16 internal_width = (context != rsx::texture_upload_context::framebuffer_storage? width : std::min(width, rsx::apply_resolution_scale(width, true)));
-			const u16 internal_height = (context != rsx::texture_upload_context::framebuffer_storage? height : std::min(height, rsx::apply_resolution_scale(height, true)));
+			vk::image *target = vram_texture;
+			real_pitch = vk::get_format_texel_width(vram_texture->info.format) * vram_texture->width();
+
 			VkImageAspectFlags aspect_flag = vk::get_aspect_flags(vram_texture->info.format);
-
-			//TODO: Read back stencil values (is this really necessary?)
-			VkBufferImageCopy copyRegion = {};
-			copyRegion.bufferOffset = 0;
-			copyRegion.bufferRowLength = internal_width;
-			copyRegion.bufferImageHeight = internal_height;
-			copyRegion.imageSubresource = {aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1};
-			copyRegion.imageOffset = {};
-			copyRegion.imageExtent = {internal_width, internal_height, 1};
-
 			VkImageSubresourceRange subresource_range = { aspect_flag, 0, 1, 0, 1 };
-			
-			VkImageLayout layout = vram_texture->current_layout;
+			u32 transfer_width = width;
+			u32 transfer_height = height;
+
+			VkImageLayout old_layout = vram_texture->current_layout;
 			change_image_layout(cmd, vram_texture, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
-			vkCmdCopyImageToBuffer(cmd, vram_texture->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dma_buffer->value, 1, &copyRegion);
-			change_image_layout(cmd, vram_texture, layout, subresource_range);
+
+			if ((rsx::get_resolution_scale_percent() != 100 && context == rsx::texture_upload_context::framebuffer_storage) ||
+				(real_pitch != rsx_pitch))
+			{
+				if (context == rsx::texture_upload_context::framebuffer_storage)
+				{
+					switch (static_cast<vk::render_target*>(vram_texture)->read_aa_mode)
+					{
+					case rsx::surface_antialiasing::center_1_sample:
+						break;
+					case rsx::surface_antialiasing::diagonal_centered_2_samples:
+						transfer_width *= 2;
+						break;
+					default:
+						transfer_width *= 2;
+						transfer_height *= 2;
+						break;
+					}
+				}
+
+				if (transfer_width != vram_texture->width() || transfer_height != vram_texture->height())
+				{
+					// TODO: Synchronize access to typeles textures
+					target = vk::get_typeless_helper(vram_texture->info.format);
+					vk::copy_scaled_image(cmd, vram_texture->value, target->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, target->current_layout,
+						0, 0, vram_texture->width(), vram_texture->height(), 0, 0, transfer_width, transfer_height, 1, aspect_flag, true, VK_FILTER_NEAREST,
+						vram_texture->info.format, target->info.format);
+				}
+			}
+
+			if (target->current_layout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+			{
+				// Using a scaled intermediary
+				verify(HERE), target != vram_texture;
+				change_image_layout(cmd, target, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+			}
+
+			// TODO: Read back stencil values (is this really necessary?)
+			VkBufferImageCopy region = {};
+			region.imageSubresource = {aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1};
+			region.imageExtent = {transfer_width, transfer_height, 1};
+			vkCmdCopyImageToBuffer(cmd, target->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dma_buffer->value, 1, &region);
+
+			change_image_layout(cmd, vram_texture, old_layout, subresource_range);
+			real_pitch = vk::get_format_texel_width(vram_texture->info.format) * transfer_width;
 
 			if (manage_cb_lifetime)
 			{
@@ -205,7 +239,7 @@ namespace vk
 		}
 
 		template<typename T, bool swapped>
-		void do_memory_transfer(void *pixels_dst, const void *pixels_src, u32 max_length)
+		void do_memory_transfer_packed(void *pixels_dst, const void *pixels_src, u32 max_length)
 		{
 			if (sizeof(T) == 1 || !swapped)
 			{
@@ -219,6 +253,38 @@ namespace vk
 
 				for (u32 px = 0; px < block_size; ++px)
 					typed_dst[px] = typed_src[px];
+			}
+		}
+
+		template<typename T, bool swapped>
+		void do_memory_transfer_padded(void *pixels_dst, const void *pixels_src, u32 src_pitch, u32 dst_pitch, u32 num_rows)
+		{
+			auto src = (char*)pixels_src;
+			auto dst = (char*)pixels_dst;
+
+			if (sizeof(T) == 1 || !swapped)
+			{
+				for (u32 y = 0; y < num_rows; ++y)
+				{
+					memcpy(dst, src, src_pitch);
+					src += src_pitch;
+					dst += dst_pitch;
+				}
+			}
+			else
+			{
+				const u32 block_size = src_pitch / sizeof(T);
+				for (u32 y = 0; y < num_rows; ++y)
+				{
+					auto typed_dst = (be_t<T> *)dst;
+					auto typed_src = (T *)src;
+
+					for (u32 px = 0; px < block_size; ++px)
+						typed_dst[px] = typed_src[px];
+
+					src += src_pitch;
+					dst += dst_pitch;
+				}
 			}
 		}
 
@@ -241,6 +307,7 @@ namespace vk
 				result = false;
 			}
 
+			verify(HERE), real_pitch > 0;
 			flushed = true;
 
 			const auto valid_range = get_confirmed_range();
@@ -250,67 +317,81 @@ namespace vk
 			const auto texel_layout = vk::get_format_element_size(vram_texture->info.format);
 			const auto elem_size = texel_layout.first;
 
-			//We have to do our own byte swapping since the driver doesnt do it for us
-			if (real_pitch == rsx_pitch)
+			auto memory_transfer_packed = [=]()
 			{
-				bool is_depth_format = true;
+				switch (elem_size)
+				{
+				default:
+					LOG_ERROR(RSX, "Invalid element width %d", elem_size);
+				case 1:
+					do_memory_transfer_packed<u8, false>(pixels_dst, pixels_src, valid_range.second);
+					break;
+				case 2:
+					if (pack_unpack_swap_bytes)
+						do_memory_transfer_packed<u16, true>(pixels_dst, pixels_src, valid_range.second);
+					else
+						do_memory_transfer_packed<u16, false>(pixels_dst, pixels_src, valid_range.second);
+					break;
+				case 4:
+					if (pack_unpack_swap_bytes)
+						do_memory_transfer_packed<u32, true>(pixels_dst, pixels_src, valid_range.second);
+					else
+						do_memory_transfer_packed<u32, false>(pixels_dst, pixels_src, valid_range.second);
+					break;
+				}
+			};
+
+			auto memory_transfer_padded = [=]()
+			{
+				const u32 num_rows = valid_range.second / rsx_pitch;
+				switch (elem_size)
+				{
+				default:
+					LOG_ERROR(RSX, "Invalid element width %d", elem_size);
+				case 1:
+					do_memory_transfer_padded<u8, false>(pixels_dst, pixels_src, real_pitch, rsx_pitch, num_rows);
+					break;
+				case 2:
+					if (pack_unpack_swap_bytes)
+						do_memory_transfer_padded<u16, true>(pixels_dst, pixels_src, real_pitch, rsx_pitch, num_rows);
+					else
+						do_memory_transfer_padded<u16, false>(pixels_dst, pixels_src, real_pitch, rsx_pitch, num_rows);
+					break;
+				case 4:
+					if (pack_unpack_swap_bytes)
+						do_memory_transfer_padded<u32, true>(pixels_dst, pixels_src, real_pitch, rsx_pitch, num_rows);
+					else
+						do_memory_transfer_padded<u32, false>(pixels_dst, pixels_src, real_pitch, rsx_pitch, num_rows);
+					break;
+				}
+			};
+
+			// NOTE: We have to do our own byte swapping since the driver doesnt do it for us
+			// TODO: Replace the cpu-side transformations with trivial compute pipelines
+			if (real_pitch >= rsx_pitch || valid_range.second <= rsx_pitch)
+			{
 				switch (vram_texture->info.format)
 				{
 				case VK_FORMAT_D32_SFLOAT_S8_UINT:
+				{
 					rsx::convert_le_f32_to_be_d24(pixels_dst, pixels_src, valid_range.second >> 2, 1);
 					break;
+				}
 				case VK_FORMAT_D24_UNORM_S8_UINT:
+				{
 					rsx::convert_le_d24x8_to_be_d24x8(pixels_dst, pixels_src, valid_range.second >> 2, 1);
 					break;
+				}
 				default:
-					is_depth_format = false;
+				{
+					memory_transfer_packed();
 					break;
 				}
-
-				if (!is_depth_format)
-				{
-					switch (elem_size)
-					{
-					default:
-						LOG_ERROR(RSX, "Invalid element width %d", elem_size);
-					case 1:
-						do_memory_transfer<u8, false>(pixels_dst, pixels_src, valid_range.second);
-						break;
-					case 2:
-						if (pack_unpack_swap_bytes)
-							do_memory_transfer<u16, true>(pixels_dst, pixels_src, valid_range.second);
-						else
-							do_memory_transfer<u16, false>(pixels_dst, pixels_src, valid_range.second);
-						break;
-					case 4:
-						if (pack_unpack_swap_bytes)
-							do_memory_transfer<u32, true>(pixels_dst, pixels_src, valid_range.second);
-						else
-							do_memory_transfer<u32, false>(pixels_dst, pixels_src, valid_range.second);
-						break;
-					}
 				}
 			}
 			else
 			{
-				//Scale image to fit
-				//usually we can just get away with nearest filtering
-				u8 samples_u = 1, samples_v = 1;
-				switch (static_cast<vk::render_target*>(vram_texture)->read_aa_mode)
-				{
-				case rsx::surface_antialiasing::diagonal_centered_2_samples:
-					samples_u = 2;
-					break;
-				case rsx::surface_antialiasing::square_centered_4_samples:
-				case rsx::surface_antialiasing::square_rotated_4_samples:
-					samples_u = 2;
-					samples_v = 2;
-					break;
-				}
-
-				const u16 row_length = u16(width * texel_layout.second);
-				const u16 usable_height = (valid_range.second / rsx_pitch) / samples_v;
-				rsx::scale_image_nearest(pixels_dst, pixels_src, row_length, usable_height, rsx_pitch, real_pitch, elem_size, samples_u, samples_v, pack_unpack_swap_bytes);
+				memory_transfer_padded();
 
 				switch (vram_texture->info.format)
 				{

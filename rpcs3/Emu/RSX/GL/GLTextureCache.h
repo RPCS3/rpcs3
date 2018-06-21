@@ -296,6 +296,7 @@ namespace gl
 			this->width = w;
 			this->height = h;
 			this->rsx_pitch = rsx_pitch;
+			this->real_pitch = 0;
 			this->depth = depth;
 			this->mipmaps = mipmaps;
 
@@ -330,7 +331,6 @@ namespace gl
 			this->width = width;
 			this->height = height;
 			rsx_pitch = pitch;
-			real_pitch = width * get_pixel_size(format, type);
 		}
 
 		void set_format(texture::format gl_format, texture::type gl_type, bool swap_bytes)
@@ -351,8 +351,6 @@ namespace gl
 					break;
 				}
 			}
-
-			real_pitch = width * get_pixel_size(format, type);
 		}
 
 		void set_depth_flag(bool is_depth_fmt)
@@ -374,7 +372,7 @@ namespace gl
 
 			gl::texture* target_texture = vram_texture;
 			if ((rsx::get_resolution_scale_percent() != 100 && context == rsx::texture_upload_context::framebuffer_storage) ||
-				(real_pitch != rsx_pitch))
+				(vram_texture->pitch() != rsx_pitch))
 			{
 				u32 real_width = width;
 				u32 real_height = height;
@@ -435,6 +433,7 @@ namespace gl
 				pack_settings.swap_bytes(pack_unpack_swap_bytes);
 
 			target_texture->copy_to(nullptr, format, type, pack_settings);
+			real_pitch = target_texture->pitch();
 
 			if (auto error = glGetError())
 			{
@@ -495,6 +494,8 @@ namespace gl
 				result = false;
 			}
 
+			verify(HERE), real_pitch > 0;
+
 			m_fence.wait_for_signal();
 			flushed = true;
 
@@ -514,7 +515,7 @@ namespace gl
 					require_manual_shuffle = true;
 			}
 
-			if (real_pitch >= rsx_pitch || scaled_texture != 0 || valid_range.second <= rsx_pitch)
+			if (real_pitch >= rsx_pitch || valid_range.second <= rsx_pitch)
 			{
 				memcpy(dst, src, valid_range.second);
 			}
