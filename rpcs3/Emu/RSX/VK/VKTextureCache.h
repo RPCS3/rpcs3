@@ -221,13 +221,16 @@ namespace vk
 			change_image_layout(cmd, vram_texture, old_layout, subresource_range);
 			real_pitch = vk::get_format_texel_width(vram_texture->info.format) * transfer_width;
 
+			// Handle any format conversions using compute tasks
+			vk::cs_shuffle_base *shuffle_kernel = nullptr;
+
 			if (vram_texture->info.format == VK_FORMAT_D24_UNORM_S8_UINT)
 			{
-				vk::get_compute_task<vk::cs_shuffle_se_d24x8>()->run(cmd, dma_buffer.get(), cpu_address_range);
+				shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_se_d24x8>();
 			}
 			else if (vram_texture->info.format == VK_FORMAT_D32_SFLOAT_S8_UINT)
 			{
-				vk::get_compute_task<vk::cs_shuffle_se_f32_d24x8>()->run(cmd, dma_buffer.get(), cpu_address_range);
+				shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_se_f32_d24x8>();
 			}
 			else if (pack_unpack_swap_bytes)
 			{
@@ -236,12 +239,21 @@ namespace vk
 
 				if (elem_size == 2)
 				{
-					vk::get_compute_task<vk::cs_shuffle_16>()->run(cmd, dma_buffer.get(), cpu_address_range);
+					shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_16>();
 				}
 				else if (elem_size == 4)
 				{
-					vk::get_compute_task<vk::cs_shuffle_32>()->run(cmd, dma_buffer.get(), cpu_address_range);
+					shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_32>();
 				}
+			}
+
+			if (shuffle_kernel)
+			{
+				vk::insert_buffer_memory_barrier(cmd, dma_buffer->value, 0, cpu_address_range,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+
+				shuffle_kernel->run(cmd, dma_buffer.get(), cpu_address_range);
 			}
 
 			if (manage_cb_lifetime)
