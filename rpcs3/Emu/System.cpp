@@ -1071,11 +1071,9 @@ void Emulator::Load(bool add_only)
 			{
 				elf_file.open(decrypted_path);
 			}
-			else
+			// Decrypt SELF
+			else if (elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data()))
 			{
-				// Decrypt SELF
-				elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data());
-
 				if (fs::file elf_out{decrypted_path, fs::rewrite})
 				{
 					elf_out.write(elf_file.to_vector<u8>());
@@ -1089,16 +1087,17 @@ void Emulator::Load(bool add_only)
 			}
 		}
 
-		ppu_exec_object ppu_exec;
-		ppu_prx_object ppu_prx;
-		spu_exec_object spu_exec;
-
 		if (!elf_file)
 		{
 			LOG_ERROR(LOADER, "Failed to decrypt SELF: %s", elf_path);
 			return;
 		}
-		else if (ppu_exec.open(elf_file) == elf_error::ok)
+
+		ppu_exec_object ppu_exec;
+		ppu_prx_object ppu_prx;
+		spu_exec_object spu_exec;
+
+		if (ppu_exec.open(elf_file) == elf_error::ok)
 		{
 			// PS3 executable
 			m_state = system_state::ready;
