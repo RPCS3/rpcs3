@@ -1225,9 +1225,6 @@ extern void ppu_initialize()
 		fmt::throw_exception("Failed to create cache directory: %s (%s)", _main->cache, fs::g_tls_error);
 	}
 
-	// Initialize SPU cache
-	spu_cache::initialize();
-
 	if (Emu.IsStopped())
 	{
 		return;
@@ -1248,6 +1245,9 @@ extern void ppu_initialize()
 	{
 		ppu_initialize(*ptr);
 	}
+
+	// Initialize SPU cache
+	spu_cache::initialize();
 }
 
 extern void ppu_initialize(const ppu_module& info)

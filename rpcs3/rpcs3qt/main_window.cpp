@@ -566,7 +566,7 @@ void main_window::InstallPup(const QString& dropPath)
 				}
 
 				tar_object dev_flash_tar(dev_flash_tar_f[2]);
-				if (!dev_flash_tar.extract(Emu.GetEmuDir()))
+				if (!dev_flash_tar.extract(fs::get_config_dir()))
 				{
 					LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
 					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: TAR contents are invalid."));
@@ -607,7 +607,7 @@ void main_window::InstallPup(const QString& dropPath)
 		guiSettings->ShowInfoBox(gui::ib_pup_success, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), this);
 
 		Emu.SetForceBoot(true);
-		Emu.BootGame(Emu.GetLibDir(), true);
+		Emu.BootGame(fs::get_config_dir() + "dev_flash/sys/external/", true);
 	}
 }
 

@@ -111,7 +111,6 @@ public:
 		emulatorLocation,
 		dev_hdd0Location,
 		dev_hdd1Location,
-		dev_flashLocation,
 		dev_usb000Location,
 	};
 
@@ -281,7 +280,6 @@ private:
 		{ emulatorLocation,   { "VFS", "$(EmulatorDir)"}},
 		{ dev_hdd0Location,   { "VFS", "/dev_hdd0/" }},
 		{ dev_hdd1Location,   { "VFS", "/dev_hdd1/" }},
-		{ dev_flashLocation,  { "VFS", "/dev_flash/"}},
 		{ dev_usb000Location, { "VFS", "/dev_usb000/"}},
 	};
 
