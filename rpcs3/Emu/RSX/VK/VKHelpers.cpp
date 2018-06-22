@@ -347,13 +347,13 @@ namespace vk
 		return g_drv_disable_fence_reset;
 	}
 
-	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask)
+	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask)
 	{
 		VkBufferMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 		barrier.buffer = buffer;
-		barrier.offset = 0;
-		barrier.size = VK_WHOLE_SIZE;
+		barrier.offset = offset;
+		barrier.size = length;
 		barrier.srcAccessMask = src_mask;
 		barrier.dstAccessMask = dst_mask;
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
