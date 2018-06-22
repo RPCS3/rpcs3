@@ -152,7 +152,10 @@ namespace vk
 				}
 				else
 				{
-					insert_buffer_memory_barrier(cmd, scratch_buf->value, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					const auto elem_size = vk::get_format_texel_width(src->info.format);
+					const auto length = elem_size * src_copy.imageExtent.width * src_copy.imageExtent.height;
+
+					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
 					vk::cs_shuffle_base *shuffle_kernel = nullptr;
@@ -177,12 +180,9 @@ namespace vk
 						}
 					}
 
-					const auto elem_size = vk::get_format_texel_width(src->info.format);
-					const auto length = elem_size * src_copy.imageExtent.width * src_copy.imageExtent.height;
-
 					shuffle_kernel->run(cmd, scratch_buf, length);
 
-					insert_buffer_memory_barrier(cmd, scratch_buf->value, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, length, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 				}
 			}
@@ -338,7 +338,7 @@ namespace vk
 					info.imageSubresource = { aspect & transfer_flags, 0, 0, 1 };
 
 					vkCmdCopyImageToBuffer(cmd, src, preferred_src_format, scratch_buf->value, 1, &info);
-					insert_buffer_memory_barrier(cmd, scratch_buf->value, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, VK_WHOLE_SIZE, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
 					info.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
 					vkCmdCopyBufferToImage(cmd, scratch_buf->value, typeless, VK_IMAGE_LAYOUT_GENERAL, 1, &info);
@@ -352,7 +352,7 @@ namespace vk
 					info.imageOffset = { 0, (s32)src_h, 0 };
 
 					vkCmdCopyImageToBuffer(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL, scratch_buf->value, 1, &info);
-					insert_buffer_memory_barrier(cmd, scratch_buf->value, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, VK_WHOLE_SIZE, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
 					info.imageOffset = { dst_rect.x1, dst_rect.y1, 0 };
 					info.imageSubresource = { aspect & transfer_flags, 0, 0, 1 };
@@ -432,7 +432,6 @@ namespace vk
 		u32 mipmap_level = 0;
 		u32 block_in_pixel = get_format_block_size_in_texel(format);
 		u8 block_size_in_bytes = get_format_block_size_in_bytes(format);
-		std::vector<u8> staging_buffer;
 
 		//TODO: Depth and stencil transfer together
 		flags &= ~(VK_IMAGE_ASPECT_STENCIL_BIT);
@@ -447,48 +446,31 @@ namespace vk
 			void *mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size + 8);
 			void *dst = mapped_buffer;
 
-			bool use_staging = false;
-			if (dst_image->info.format == VK_FORMAT_D24_UNORM_S8_UINT ||
-				dst_image->info.format == VK_FORMAT_D32_SFLOAT_S8_UINT)
+			if (dst_image->info.format == VK_FORMAT_D24_UNORM_S8_UINT)
 			{
 				//Misalign intentionally to skip the first stencil byte in D24S8 data
 				//Ensures the real depth data is dword aligned
 
-				if (dst_image->info.format == VK_FORMAT_D32_SFLOAT_S8_UINT)
-				{
-					//Emulate D24x8 passthrough to D32 format
-					//Reads from GPU managed memory are slow at best and at worst unreliable
-					use_staging = true;
-					staging_buffer.resize(image_linear_size + 8);
-					dst = staging_buffer.data() + 4 - 1;
-				}
-				else
-				{
-					//Skip leading dword when writing to texture
-					offset_in_buffer += 4;
-					dst = (char*)(mapped_buffer) + 4 - 1;
-				}
+				//Skip leading dword when writing to texture
+				offset_in_buffer += 4;
+				dst = (char*)(mapped_buffer) + 4 - 1;
 			}
 
 			gsl::span<gsl::byte> mapped{ (gsl::byte*)dst, ::narrow<int>(image_linear_size) };
 			upload_texture_subresource(mapped, layout, format, is_swizzled, false, 256);
-
-			if (use_staging)
-			{
-				if (dst_image->info.format == VK_FORMAT_D32_SFLOAT_S8_UINT)
-				{
-					//Map depth component from D24x8 to a f32 depth value
-					//NOTE: One byte (contains first S8 value) is skipped
-					rsx::convert_le_d24x8_to_le_f32(mapped_buffer, (char*)dst + 1, image_linear_size >> 2, 1);
-				}
-				else //unused
-				{
-					//Copy emulated data back to the target buffer
-					memcpy(mapped_buffer, dst, image_linear_size);
-				}
-			}
-
 			upload_heap.unmap();
+
+			if (dst_image->info.format == VK_FORMAT_D32_SFLOAT_S8_UINT)
+			{
+				// Run GPU compute task to convert the D24x8 to FP32
+				// NOTE: On commandbuffer submission, the HOST_WRITE to ALL_COMMANDS barrier is implicitly inserted according to spec
+				// No need to add another explicit barrier unless a driver bug is found
+
+				vk::get_compute_task<vk::cs_shuffle_d24x8_f32>()->run(cmd, upload_heap.heap.get(), image_linear_size, offset_in_buffer);
+
+				insert_buffer_memory_barrier(cmd, upload_heap.heap->value, offset_in_buffer, image_linear_size, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+			}
 
 			VkBufferImageCopy copy_info = {};
 			copy_info.bufferOffset = offset_in_buffer;

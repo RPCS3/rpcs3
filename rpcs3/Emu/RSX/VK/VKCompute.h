@@ -97,7 +97,7 @@ namespace vk
 		virtual void bind_resources()
 		{}
 
-		void load_program(const vk::command_buffer& cmd)
+		void load_program(VkCommandBuffer cmd)
 		{
 			if (!m_program)
 			{
@@ -141,7 +141,7 @@ namespace vk
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
 		}
 
-		virtual void run(const vk::command_buffer& cmd, u32 num_invocations)
+		virtual void run(VkCommandBuffer cmd, u32 num_invocations)
 		{
 			load_program(cmd);
 			vkCmdDispatch(cmd, num_invocations, 1, 1);
@@ -151,6 +151,8 @@ namespace vk
 	struct cs_shuffle_base : compute_task
 	{
 		vk::buffer* m_data;
+		u32 m_data_offset = 0;
+		u32 m_data_length = 0;
 		u32 kernel_size = 1;
 
 		void build(const char* function_name, u32 _kernel_size)
@@ -164,9 +166,16 @@ namespace vk
 				"layout(std430, set=0, binding=0) buffer ssbo{ uint data[]; };\n\n"
 				"\n"
 				"#define KERNEL_SIZE %ks\n"
+				"\n"
+				"// Generic swap routines\n"
 				"#define bswap_u16(bits)     (bits & 0xFF) << 8 | (bits & 0xFF00) >> 8 | (bits & 0xFF0000) << 8 | (bits & 0xFF000000) >> 8\n"
 				"#define bswap_u32(bits)     (bits & 0xFF) << 24 | (bits & 0xFF00) << 8 | (bits & 0xFF0000) >> 8 | (bits & 0xFF000000) >> 24\n"
 				"#define bswap_u16_u32(bits) (bits & 0xFFFF) << 16 | (bits & 0xFFFF0000) >> 16\n"
+				"\n"
+				"// Depth format conversions\n"
+				"#define d24x8_to_f32(bits)           floatBitsToUint(float(bits >> 8) / 16777214.f)\n"
+				"#define d24x8_to_d24x8_swapped(bits) (bits & 0xFF00FF00) | (bits & 0xFF0000) >> 16 | (bits & 0xFF) << 16\n"
+				"#define f32_to_d24x8_swapped(bits)   d24x8_to_d24x8_swapped(uint(uintBitsToFloat(bits) * 16777214.f))\n"
 				"\n"
 				"void main()\n"
 				"{\n"
@@ -192,23 +201,23 @@ namespace vk
 
 		void bind_resources() override
 		{
-			m_program->bind_buffer({ m_data->value, 0, VK_WHOLE_SIZE }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			m_program->bind_buffer({ m_data->value, m_data_offset, m_data_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 		}
 
-		void run(const vk::command_buffer& cmd, vk::buffer* data, u32 mem_size)
+		void run(VkCommandBuffer cmd, vk::buffer* data, u32 data_length, u32 data_offset = 0)
 		{
 			m_data = data;
+			m_data_offset = data_offset;
+			m_data_length = data_length;
 
 			const auto num_bytes_per_invocation = optimal_group_size * kernel_size * 4;
-			const auto num_invocations = align(mem_size, 256) / num_bytes_per_invocation;
+			const auto num_invocations = align(data_length, 256) / num_bytes_per_invocation;
 			compute_task::run(cmd, num_invocations);
 		}
 	};
 
 	struct cs_shuffle_16 : cs_shuffle_base
 	{
-		vk::buffer* m_data;
-
 		// byteswap ushort
 		cs_shuffle_16()
 		{
@@ -231,6 +240,33 @@ namespace vk
 		cs_shuffle_32_16()
 		{
 			cs_shuffle_base::build("bswap_u16_u32", 32);
+		}
+	};
+
+	struct cs_shuffle_d24x8_f32 : cs_shuffle_base
+	{
+		// convert d24x8 to f32
+		cs_shuffle_d24x8_f32()
+		{
+			cs_shuffle_base::build("d24x8_to_f32", 32);
+		}
+	};
+
+	struct cs_shuffle_se_f32_d24x8 : cs_shuffle_base
+	{
+		// convert f32 to d24x8 and swap endianness
+		cs_shuffle_se_f32_d24x8()
+		{
+			cs_shuffle_base::build("f32_to_d24x8_swapped", 32);
+		}
+	};
+
+	struct cs_shuffle_se_d24x8 : cs_shuffle_base
+	{
+		// swap endianness of d24x8
+		cs_shuffle_se_d24x8()
+		{
+			cs_shuffle_base::build("d24x8_to_d24x8_swapped", 32);
 		}
 	};
 

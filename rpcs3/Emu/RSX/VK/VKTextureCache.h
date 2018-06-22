@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "VKRenderTargets.h"
 #include "VKGSRender.h"
+#include "VKCompute.h"
 #include "Emu/System.h"
 #include "../Common/TextureUtils.h"
 #include "../rsx_utils.h"
@@ -220,6 +221,29 @@ namespace vk
 			change_image_layout(cmd, vram_texture, old_layout, subresource_range);
 			real_pitch = vk::get_format_texel_width(vram_texture->info.format) * transfer_width;
 
+			if (vram_texture->info.format == VK_FORMAT_D24_UNORM_S8_UINT)
+			{
+				vk::get_compute_task<vk::cs_shuffle_se_d24x8>()->run(cmd, dma_buffer.get(), cpu_address_range);
+			}
+			else if (vram_texture->info.format == VK_FORMAT_D32_SFLOAT_S8_UINT)
+			{
+				vk::get_compute_task<vk::cs_shuffle_se_f32_d24x8>()->run(cmd, dma_buffer.get(), cpu_address_range);
+			}
+			else if (pack_unpack_swap_bytes)
+			{
+				const auto texel_layout = vk::get_format_element_size(vram_texture->info.format);
+				const auto elem_size = texel_layout.first;
+
+				if (elem_size == 2)
+				{
+					vk::get_compute_task<vk::cs_shuffle_16>()->run(cmd, dma_buffer.get(), cpu_address_range);
+				}
+				else if (elem_size == 4)
+				{
+					vk::get_compute_task<vk::cs_shuffle_32>()->run(cmd, dma_buffer.get(), cpu_address_range);
+				}
+			}
+
 			if (manage_cb_lifetime)
 			{
 				cmd.end();
@@ -236,56 +260,6 @@ namespace vk
 
 			synchronized = true;
 			sync_timestamp = get_system_time();
-		}
-
-		template<typename T, bool swapped>
-		void do_memory_transfer_packed(void *pixels_dst, const void *pixels_src, u32 max_length)
-		{
-			if (sizeof(T) == 1 || !swapped)
-			{
-				memcpy(pixels_dst, pixels_src, max_length);
-			}
-			else
-			{
-				const u32 block_size = max_length / sizeof(T);
-				auto typed_dst = (be_t<T> *)pixels_dst;
-				auto typed_src = (T *)pixels_src;
-
-				for (u32 px = 0; px < block_size; ++px)
-					typed_dst[px] = typed_src[px];
-			}
-		}
-
-		template<typename T, bool swapped>
-		void do_memory_transfer_padded(void *pixels_dst, const void *pixels_src, u32 src_pitch, u32 dst_pitch, u32 num_rows)
-		{
-			auto src = (char*)pixels_src;
-			auto dst = (char*)pixels_dst;
-
-			if (sizeof(T) == 1 || !swapped)
-			{
-				for (u32 y = 0; y < num_rows; ++y)
-				{
-					memcpy(dst, src, src_pitch);
-					src += src_pitch;
-					dst += dst_pitch;
-				}
-			}
-			else
-			{
-				const u32 block_size = src_pitch / sizeof(T);
-				for (u32 y = 0; y < num_rows; ++y)
-				{
-					auto typed_dst = (be_t<T> *)dst;
-					auto typed_src = (T *)src;
-
-					for (u32 px = 0; px < block_size; ++px)
-						typed_dst[px] = typed_src[px];
-
-					src += src_pitch;
-					dst += dst_pitch;
-				}
-			}
 		}
 
 		bool flush(vk::command_buffer& cmd, VkQueue submit_queue)
@@ -314,93 +288,26 @@ namespace vk
 			void* pixels_src = dma_buffer->map(valid_range.first, valid_range.second);
 			void* pixels_dst = get_raw_ptr(valid_range.first, true);
 
-			const auto texel_layout = vk::get_format_element_size(vram_texture->info.format);
-			const auto elem_size = texel_layout.first;
-
-			auto memory_transfer_packed = [=]()
-			{
-				switch (elem_size)
-				{
-				default:
-					LOG_ERROR(RSX, "Invalid element width %d", elem_size);
-				case 1:
-					do_memory_transfer_packed<u8, false>(pixels_dst, pixels_src, valid_range.second);
-					break;
-				case 2:
-					if (pack_unpack_swap_bytes)
-						do_memory_transfer_packed<u16, true>(pixels_dst, pixels_src, valid_range.second);
-					else
-						do_memory_transfer_packed<u16, false>(pixels_dst, pixels_src, valid_range.second);
-					break;
-				case 4:
-					if (pack_unpack_swap_bytes)
-						do_memory_transfer_packed<u32, true>(pixels_dst, pixels_src, valid_range.second);
-					else
-						do_memory_transfer_packed<u32, false>(pixels_dst, pixels_src, valid_range.second);
-					break;
-				}
-			};
-
-			auto memory_transfer_padded = [=]()
-			{
-				const u32 num_rows = valid_range.second / rsx_pitch;
-				switch (elem_size)
-				{
-				default:
-					LOG_ERROR(RSX, "Invalid element width %d", elem_size);
-				case 1:
-					do_memory_transfer_padded<u8, false>(pixels_dst, pixels_src, real_pitch, rsx_pitch, num_rows);
-					break;
-				case 2:
-					if (pack_unpack_swap_bytes)
-						do_memory_transfer_padded<u16, true>(pixels_dst, pixels_src, real_pitch, rsx_pitch, num_rows);
-					else
-						do_memory_transfer_padded<u16, false>(pixels_dst, pixels_src, real_pitch, rsx_pitch, num_rows);
-					break;
-				case 4:
-					if (pack_unpack_swap_bytes)
-						do_memory_transfer_padded<u32, true>(pixels_dst, pixels_src, real_pitch, rsx_pitch, num_rows);
-					else
-						do_memory_transfer_padded<u32, false>(pixels_dst, pixels_src, real_pitch, rsx_pitch, num_rows);
-					break;
-				}
-			};
-
-			// NOTE: We have to do our own byte swapping since the driver doesnt do it for us
-			// TODO: Replace the cpu-side transformations with trivial compute pipelines
 			if (real_pitch >= rsx_pitch || valid_range.second <= rsx_pitch)
 			{
-				switch (vram_texture->info.format)
-				{
-				case VK_FORMAT_D32_SFLOAT_S8_UINT:
-				{
-					rsx::convert_le_f32_to_be_d24(pixels_dst, pixels_src, valid_range.second >> 2, 1);
-					break;
-				}
-				case VK_FORMAT_D24_UNORM_S8_UINT:
-				{
-					rsx::convert_le_d24x8_to_be_d24x8(pixels_dst, pixels_src, valid_range.second >> 2, 1);
-					break;
-				}
-				default:
-				{
-					memory_transfer_packed();
-					break;
-				}
-				}
+				memcpy(pixels_dst, pixels_src, valid_range.second);
 			}
 			else
 			{
-				memory_transfer_padded();
-
-				switch (vram_texture->info.format)
+				if (valid_range.second % rsx_pitch)
 				{
-				case VK_FORMAT_D32_SFLOAT_S8_UINT:
-					rsx::convert_le_f32_to_be_d24(pixels_dst, pixels_dst, valid_range.second >> 2, 1);
-					break;
-				case VK_FORMAT_D24_UNORM_S8_UINT:
-					rsx::convert_le_d24x8_to_be_d24x8(pixels_dst, pixels_dst, valid_range.second >> 2, 1);
-					break;
+					fmt::throw_exception("Unreachable" HERE);
+				}
+
+				const u32 num_rows = valid_range.second / rsx_pitch;
+				auto _src = (u8*)pixels_src;
+				auto _dst = (u8*)pixels_dst;
+
+				for (u32 y = 0; y < num_rows; ++y)
+				{
+					memcpy(_dst, _src, real_pitch);
+					_src += real_pitch;
+					_dst += real_pitch;
 				}
 			}
 
