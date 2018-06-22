@@ -396,11 +396,8 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 	{
 		QString config_dir = qstr(fs::get_config_dir());
 
-		// HACK: dev_flash must be mounted for vfs to work for loading fonts.
-		vfs::mount("dev_flash", fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", Emu.GetEmuDir()));
-
 		// Add PS3 fonts
-		QDirIterator ps3_font_it(qstr(vfs::get("/dev_flash/data/font/")), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+		QDirIterator ps3_font_it(qstr(fs::get_config_dir() + "dev_flash/data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
 		while (ps3_font_it.hasNext())
 			QFontDatabase::addApplicationFont(ps3_font_it.next());
 

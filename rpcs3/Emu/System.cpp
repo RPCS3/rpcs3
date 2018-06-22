@@ -296,7 +296,8 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd0 + "disc/");
 	fs::create_dir(dev_hdd1 + "cache/");
 	fs::create_dir(dev_hdd1 + "game/");
-	fs::create_path(emu_dir + "/shaderlog");
+
+	fs::create_path(fs::get_config_dir() + "shaderlog/");
 
 #ifdef WITH_GDB_DEBUGGER
 	LOG_SUCCESS(GENERAL, "GDB debug server will be started and listening on %d upon emulator boot", (int) g_cfg.misc.gdb_server_port);
@@ -530,11 +531,6 @@ std::string Emulator::GetHddDir()
 	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", GetEmuDir());
 }
 
-std::string Emulator::GetLibDir()
-{
-	return fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", GetEmuDir()) + "sys/external/";
-}
-
 void Emulator::SetForceBoot(bool force_boot)
 {
 	m_force_boot = force_boot;
@@ -662,7 +658,7 @@ void Emulator::Load(bool add_only)
 #endif
 
 		LOG_NOTICE(LOADER, "Used configuration:\n%s\n", g_cfg.to_string());
-		
+
 		// Set RTM usage
 		g_use_rtm = utils::has_rtm() && ((utils::has_mpx() && g_cfg.core.enable_TSX == tsx_usage::enabled) || g_cfg.core.enable_TSX == tsx_usage::forced);
 		if (g_use_rtm && !utils::has_mpx())
@@ -683,7 +679,7 @@ void Emulator::Load(bool add_only)
 		vfs::mount("", fs::get_config_dir() + "delete_this_dir/");
 		vfs::mount("dev_hdd0", fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir));
 		vfs::mount("dev_hdd1", fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir));
-		vfs::mount("dev_flash", fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", emu_dir));
+		vfs::mount("dev_flash", fs::get_config_dir() + "dev_flash/");
 		vfs::mount("dev_usb", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
 		vfs::mount("dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
 		vfs::mount("app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
