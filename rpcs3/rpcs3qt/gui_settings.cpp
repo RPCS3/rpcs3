@@ -102,7 +102,7 @@ QStringList gui_settings::GetGameListCategoryFilters()
 {
 	QStringList filterList;
 	if (GetCategoryVisibility(Category::Non_Disc_Game)) filterList.append(category::non_disc_games);
-	if (GetCategoryVisibility(Category::Disc_Game)) filterList.append(category::disc_Game);
+	if (GetCategoryVisibility(Category::Disc_Game)) filterList.append(category::disc_game);
 	if (GetCategoryVisibility(Category::Home)) filterList.append(category::home);
 	if (GetCategoryVisibility(Category::Media)) filterList.append(category::media);
 	if (GetCategoryVisibility(Category::Data)) filterList.append(category::data);

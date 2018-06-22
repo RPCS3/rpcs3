@@ -777,7 +777,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	//Disable options depending on software category
 	QString category = qstr(currGame.category);
 
-	if (category == category::disc_Game)
+	if (category == category::disc_game)
 	{
 		removeGame->setEnabled(false);
 	}
@@ -789,7 +789,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		openConfig->setEnabled(false);
 		checkCompat->setEnabled(false);
 	}
-	else if (category != category::hdd_Game)
+	else if (category != category::hdd_game)
 	{
 		checkCompat->setEnabled(false);
 	}
