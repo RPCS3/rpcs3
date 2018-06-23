@@ -4171,7 +4171,7 @@ void PPUTranslator::FMADD(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
+	const auto result = Call(GetType<f64>(), "llvm.fmuladd.f64", a, c, b);
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c));
