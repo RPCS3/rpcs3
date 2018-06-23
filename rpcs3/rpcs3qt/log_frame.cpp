@@ -463,9 +463,37 @@ void log_frame::UpdateUI()
 
 		if (buf.size() && m_TTYAct->isChecked())
 		{
+			// save old scroll bar state
+			QScrollBar *sb = m_tty->verticalScrollBar();
+			const int sb_pos = sb->value();
+			const bool is_max = sb_pos == sb->maximum();
+
+			// save old selection
 			QTextCursor text_cursor{m_tty->document()};
+			const int sel_pos = text_cursor.position();
+			int sel_start = text_cursor.selectionStart();
+			int sel_end = text_cursor.selectionEnd();
+
+			// clear selection or else it will get colorized as well
+			text_cursor.clearSelection();
+
+			// write text to the end
 			text_cursor.movePosition(QTextCursor::End);
 			text_cursor.insertText(qstr(buf));
+
+			// if we mark text from right to left we need to swap sides (start is always smaller than end)
+			if (sel_pos < sel_end)
+			{
+				std::swap(sel_start, sel_end);
+			}
+
+			// reset old text cursor and selection
+			text_cursor.setPosition(sel_start);
+			text_cursor.setPosition(sel_end, QTextCursor::KeepAnchor);
+			m_tty->setTextCursor(text_cursor);
+
+			// set scrollbar to max means auto-scroll
+			sb->setValue(is_max ? sb->maximum() : sb_pos);
 		}
 
 		// Limit processing time
