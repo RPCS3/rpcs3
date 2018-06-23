@@ -1277,8 +1277,7 @@ void PPUTranslator::VPKUWUS(ppu_opcode_t op)
 
 void PPUTranslator::VREFP(ppu_opcode_t op)
 {
-	const auto result = m_ir->CreateFDiv(ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 1.0)), GetVr(op.vb, VrType::vf));
-	SetVr(op.vd, result);
+	SetVr(op.vd, Call(GetType<f32[4]>(), "llvm.x86.sse.rcp.ps", GetVr(op.vb, VrType::vf)));
 }
 
 void PPUTranslator::VRFIM(ppu_opcode_t op)
