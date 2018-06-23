@@ -260,6 +260,7 @@ namespace gl
 
 			flushed = false;
 			synchronized = false;
+			sync_timestamp = 0ull;
 			is_depth = false;
 
 			vram_texture = nullptr;
@@ -291,6 +292,7 @@ namespace gl
 
 			flushed = false;
 			synchronized = false;
+			sync_timestamp = 0ull;
 			is_depth = false;
 
 			this->width = w;
@@ -454,6 +456,7 @@ namespace gl
 
 			m_fence.reset();
 			synchronized = true;
+			sync_timestamp = get_system_time();
 		}
 
 		void fill_texture(gl::texture* tex)
@@ -601,20 +604,6 @@ namespace gl
 			reset_write_statistics();
 
 			return result;
-		}
-
-		void reprotect(utils::protection prot, const std::pair<u32, u32>& range)
-		{
-			flushed = false;
-			synchronized = false;
-			protect(prot, range);
-		}
-
-		void reprotect(utils::protection prot)
-		{
-			flushed = false;
-			synchronized = false;
-			protect(prot);
 		}
 
 		void destroy()

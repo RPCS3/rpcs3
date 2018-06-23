@@ -2065,9 +2065,13 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 	}
 	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
 	{
-		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
-		//Only call when there are no waiters
-		m_texture_cache.do_update();
+		if (m_graphics_state & rsx::pipeline_state::framebuffer_reads_dirty)
+		{
+			//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
+			//Only call when there are no waiters
+			m_texture_cache.do_update();
+			m_graphics_state &= ~rsx::pipeline_state::framebuffer_reads_dirty;
+		}
 	}
 
 	rsx::thread::do_local_task(state);
@@ -2417,7 +2421,7 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 	}
 
 	//Clear flags
-	m_graphics_state = 0;
+	m_graphics_state &= ~rsx::pipeline_state::memory_barrier_bits;
 }
 
 static const u32 mr_color_offset[rsx::limits::color_buffers_count] =

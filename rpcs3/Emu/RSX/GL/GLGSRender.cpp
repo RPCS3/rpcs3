@@ -1183,7 +1183,7 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 	}
 
 	// Fragment state
-	fill_fragment_state_buffer(buf+fragment_constants_size, current_fragment_program);
+	fill_fragment_state_buffer(buf + fragment_constants_size, current_fragment_program);
 
 	m_vertex_state_buffer->bind_range(0, vertex_state_offset, 512);
 	m_fragment_constants_buffer->bind_range(2, fragment_constants_offset, fragment_buffer_size);
@@ -1198,7 +1198,7 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 		if (update_transform_constants) m_transform_constants_buffer->unmap();
 	}
 
-	m_graphics_state = 0;
+	m_graphics_state &= ~rsx::pipeline_state::memory_barrier_bits;
 }
 
 void GLGSRender::update_draw_state()
@@ -1600,9 +1600,13 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 	}
 	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
 	{
-		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
-		//Only call when there are no waiters
-		m_gl_texture_cache.do_update();
+		if (m_graphics_state & rsx::pipeline_state::framebuffer_reads_dirty)
+		{
+			//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
+			//Only call when there are no waiters
+			m_gl_texture_cache.do_update();
+			m_graphics_state &= ~rsx::pipeline_state::framebuffer_reads_dirty;
+		}
 	}
 
 	rsx::thread::do_local_task(state);
