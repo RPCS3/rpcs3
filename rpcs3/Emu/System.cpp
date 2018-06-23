@@ -294,6 +294,8 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd0 + "home/00000001/trophy/");
 	fs::write_file(dev_hdd0 + "home/00000001/localusername", fs::create + fs::excl + fs::write, "User"s);
 	fs::create_dir(dev_hdd0 + "disc/");
+	fs::create_dir(dev_hdd0 + "savedata/");
+	fs::create_dir(dev_hdd0 + "savedata/vmc/");
 	fs::create_dir(dev_hdd1 + "cache/");
 	fs::create_dir(dev_hdd1 + "game/");
 
@@ -453,6 +455,7 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 		"/USRDIR/EBOOT.BIN",
 		"/EBOOT.BIN",
 		"/eboot.bin",
+		"/USRDIR/ISO.BIN.EDAT",
 	};
 
 	if (direct && fs::exists(path))
@@ -893,6 +896,40 @@ void Emulator::Load(bool add_only)
 			YAML::Emitter out;
 			out << games;
 			fs::file(fs::get_config_dir() + "/games.yml", fs::rewrite).write(out.c_str(), out.size());
+		}
+		else if (m_cat == "1P" && from_hdd0_game)
+		{
+			//PS1 Classics
+			LOG_NOTICE(LOADER, "PS1 Game: %s, %s", m_title_id, m_title);
+
+			std::string gamePath = m_path.substr(m_path.find("/dev_hdd0/game/"), 24);
+
+			LOG_NOTICE(LOADER, "Forcing manual lib loading mode");
+			g_cfg.core.lib_loading.from_string(fmt::format("%s", lib_loading_type::manual));
+			g_cfg.core.load_libraries.from_list({});
+
+			argv.resize(9);
+			argv[0] = "/dev_flash/ps1emu/ps1_newemu.self";
+			argv[1] = m_title_id + "_mc1.VM1";    // virtual mc 1 /dev_hdd0/savedata/vmc/%argv[1]%
+			argv[2] = m_title_id + "_mc2.VM1";    // virtual mc 2 /dev_hdd0/savedata/vmc/%argv[2]%
+			argv[3] = "0082";                     // region target
+			argv[4] = "1600";                     // ??? arg4 600 / 1200 / 1600, resolution scale? (purely a guess, the numbers seem to match closely to resolutions tho)
+			argv[5] = gamePath;                   // ps1 game folder path (not the game serial)
+			argv[6] = "1";                        // ??? arg6 1 ?
+			argv[7] = "2";                        // ??? arg7 2 -- full screen on/off 2/1 ?
+			argv[8] = "1";                        // ??? arg8 2 -- smoothing	on/off	= 1/0 ?
+
+			//TODO, this seems like it would normally be done by sysutil etc
+			//Basically make 2 128KB memory cards 0 filled and let the games handle formatting.
+
+			fs::file card_1_file(vfs::get("/dev_hdd0/savedata/vmc/" + argv[1]), fs::write + fs::create);
+			card_1_file.trunc(128 * 1024);
+			fs::file card_2_file(vfs::get("/dev_hdd0/savedata/vmc/" + argv[2]), fs::write + fs::create);
+			card_2_file.trunc(128 * 1024);
+
+			//Rewrite the path to be the emulator
+			m_path = vfs::get(argv[0]);
+
 		}
 		else if (m_cat != "DG" && m_cat != "GD")
 		{
