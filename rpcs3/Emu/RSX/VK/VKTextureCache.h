@@ -199,6 +199,8 @@ namespace vk
 				{
 					// TODO: Synchronize access to typeles textures
 					target = vk::get_typeless_helper(vram_texture->info.format);
+					change_image_layout(cmd, target, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+
 					vk::copy_scaled_image(cmd, vram_texture->value, target->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, target->current_layout,
 						0, 0, vram_texture->width(), vram_texture->height(), 0, 0, transfer_width, transfer_height, 1, aspect_flag, true, VK_FILTER_NEAREST,
 						vram_texture->info.format, target->info.format);
@@ -211,15 +213,6 @@ namespace vk
 				verify(HERE), target != vram_texture;
 				change_image_layout(cmd, target, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
 			}
-
-			// TODO: Read back stencil values (is this really necessary?)
-			VkBufferImageCopy region = {};
-			region.imageSubresource = {aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1};
-			region.imageExtent = {transfer_width, transfer_height, 1};
-			vkCmdCopyImageToBuffer(cmd, target->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dma_buffer->value, 1, &region);
-
-			change_image_layout(cmd, vram_texture, old_layout, subresource_range);
-			real_pitch = vk::get_format_texel_width(vram_texture->info.format) * transfer_width;
 
 			// Handle any format conversions using compute tasks
 			vk::cs_shuffle_base *shuffle_kernel = nullptr;
@@ -247,13 +240,35 @@ namespace vk
 				}
 			}
 
+			// Do not run the compute task on host visible memory
+			vk::buffer* mem_target = shuffle_kernel ? vk::get_scratch_buffer() : dma_buffer.get();
+
+			// TODO: Read back stencil values (is this really necessary?)
+			VkBufferImageCopy region = {};
+			region.imageSubresource = {aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1};
+			region.imageExtent = {transfer_width, transfer_height, 1};
+			vkCmdCopyImageToBuffer(cmd, target->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mem_target->value, 1, &region);
+
+			change_image_layout(cmd, vram_texture, old_layout, subresource_range);
+			real_pitch = vk::get_format_texel_width(vram_texture->info.format) * transfer_width;
+
 			if (shuffle_kernel)
 			{
-				vk::insert_buffer_memory_barrier(cmd, dma_buffer->value, 0, cpu_address_range,
+				verify (HERE), mem_target->value != dma_buffer->value;
+
+				vk::insert_buffer_memory_barrier(cmd, mem_target->value, 0, cpu_address_range,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
-				shuffle_kernel->run(cmd, dma_buffer.get(), cpu_address_range);
+				shuffle_kernel->run(cmd, mem_target, cpu_address_range);
+
+				vk::insert_buffer_memory_barrier(cmd, mem_target->value, 0, cpu_address_range,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+
+				VkBufferCopy copy = {};
+				copy.size = cpu_address_range;
+				vkCmdCopyBuffer(cmd, mem_target->value, dma_buffer->value, 1, &copy);
 			}
 
 			if (manage_cb_lifetime)
