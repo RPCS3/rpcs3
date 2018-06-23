@@ -674,7 +674,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 			// Perform bitwise comparison and accumulate
 			c->xorps(dest, x86::dqword_ptr(x86::rax, code_off));
 
-			if (first)
+			if (!first)
 			{
 				c->orps(reg0, dest);
 			}
