@@ -300,7 +300,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->lleList->addItem(item);
 	}
 
-	const std::string lle_dir = fs::get_config_dir() + "dev_flash/sys/external/";
+	const std::string lle_dir = g_cfg.vfs.get_dev_flash() + "sys/external/";
 
 	std::unordered_set<std::string> set(loadedLibs.begin(), loadedLibs.end());
 	std::vector<std::string> lle_module_list_unselected;

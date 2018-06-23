@@ -397,7 +397,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 		QString config_dir = qstr(fs::get_config_dir());
 
 		// Add PS3 fonts
-		QDirIterator ps3_font_it(qstr(fs::get_config_dir() + "dev_flash/data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+		QDirIterator ps3_font_it(qstr(g_cfg.vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
 		while (ps3_font_it.hasNext())
 			QFontDatabase::addApplicationFont(ps3_font_it.next());
 
