@@ -927,9 +927,7 @@ void Emulator::Load(bool add_only)
 			fs::file card_2_file(vfs::get("/dev_hdd0/savedata/vmc/" + argv[2]), fs::write + fs::create);
 			card_2_file.trunc(128 * 1024);
 
-			//Rewrite the path to be the emulator
-			m_path = vfs::get(argv[0]);
-
+			m_cache_path = fs::get_data_dir("", vfs::get(argv[0]));
 		}
 		else if (m_cat != "DG" && m_cat != "GD")
 		{
@@ -1042,11 +1040,19 @@ void Emulator::Load(bool add_only)
 		}
 
 		// Open SELF or ELF
-		fs::file elf_file(m_path);
+		std::string elf_path = m_path;
+
+		if (m_cat == "1P")
+		{
+			// Use emulator path
+			elf_path = vfs::get(argv[0]);
+		}
+
+		fs::file elf_file(elf_path);
 
 		if (!elf_file)
 		{
-			LOG_ERROR(LOADER, "Failed to open executable: %s", m_path);
+			LOG_ERROR(LOADER, "Failed to open executable: %s", elf_path);
 			return;
 		}
 
@@ -1087,7 +1093,7 @@ void Emulator::Load(bool add_only)
 
 		if (!elf_file)
 		{
-			LOG_ERROR(LOADER, "Failed to decrypt SELF: %s", m_path);
+			LOG_ERROR(LOADER, "Failed to decrypt SELF: %s", elf_path);
 			return;
 		}
 		else if (ppu_exec.open(elf_file) == elf_error::ok)
@@ -1157,7 +1163,7 @@ void Emulator::Load(bool add_only)
 		}
 		else
 		{
-			LOG_ERROR(LOADER, "Invalid or unsupported file format: %s", m_path);
+			LOG_ERROR(LOADER, "Invalid or unsupported file format: %s", elf_path);
 
 			LOG_WARNING(LOADER, "** ppu_exec -> %s", ppu_exec.get_error());
 			LOG_WARNING(LOADER, "** ppu_prx  -> %s", ppu_prx.get_error());
