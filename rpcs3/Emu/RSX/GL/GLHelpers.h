@@ -1567,13 +1567,36 @@ namespace gl
 				}
 				else
 				{
-					GLint r, g, b, a;
-					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_RED_SIZE, &r);
-					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_GREEN_SIZE, &g);
-					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_BLUE_SIZE, &b);
-					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_ALPHA_SIZE, &a);
+					switch (sized_format)
+					{
+					case GL_DEPTH_COMPONENT16:
+					{
+						m_pitch = width * 2;
+						break;
+					}
+					case GL_DEPTH24_STENCIL8:
+					case GL_DEPTH32F_STENCIL8:
+					{
+						m_pitch = width * 4;
+						break;
+					}
+					default:
+					{
+						GLint r, g, b, a;
+						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_RED_SIZE, &r);
+						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_GREEN_SIZE, &g);
+						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_BLUE_SIZE, &b);
+						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_ALPHA_SIZE, &a);
 
-					m_pitch = width * (r + g + b + a) / 8;
+						m_pitch = width * (r + g + b + a) / 8;
+						break;
+					}
+					}
+
+					if (!m_pitch)
+					{
+						fmt::throw_exception("Unhandled GL format 0x%X" HERE, sized_format);
+					}
 				}
 			}
 
