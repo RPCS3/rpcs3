@@ -679,7 +679,7 @@ void Emulator::Load(bool add_only)
 		vfs::mount("", fs::get_config_dir() + "delete_this_dir/");
 		vfs::mount("dev_hdd0", fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir));
 		vfs::mount("dev_hdd1", fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir));
-		vfs::mount("dev_flash", fs::get_config_dir() + "dev_flash/");
+		vfs::mount("dev_flash", g_cfg.vfs.get_dev_flash());
 		vfs::mount("dev_usb", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
 		vfs::mount("dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
 		vfs::mount("app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
@@ -1360,6 +1360,16 @@ void Emulator::Stop(bool restart)
 	klic.clear();
 
 	m_force_boot = false;
+}
+
+std::string cfg_root::node_vfs::get(const cfg::string& _cfg, const char* _def) const
+{
+	if (_cfg.get().empty())
+	{
+		return fs::get_config_dir() + _def;
+	}
+
+	return fmt::replace_all(_cfg.get(), "$(EmulatorDir)", emulator_dir.get().empty() ? fs::get_config_dir() : emulator_dir.get());
 }
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)

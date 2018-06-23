@@ -354,12 +354,20 @@ struct cfg_root : cfg::node
 	{
 		node_vfs(cfg::node* _this) : cfg::node(_this, "VFS") {}
 
+		std::string get(const cfg::string&, const char*) const;
+
 		cfg::string emulator_dir{this, "$(EmulatorDir)"}; // Default (empty): taken from fs::get_config_dir()
 		cfg::string dev_hdd0{this, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/"};
 		cfg::string dev_hdd1{this, "/dev_hdd1/", "$(EmulatorDir)dev_hdd1/"};
+		cfg::string dev_flash{this, "/dev_flash/"};
 		cfg::string dev_usb000{this, "/dev_usb000/", "$(EmulatorDir)dev_usb000/"};
 		cfg::string dev_bdvd{this, "/dev_bdvd/"}; // Not mounted
 		cfg::string app_home{this, "/app_home/"}; // Not mounted
+
+		std::string get_dev_flash() const
+		{
+			return get(dev_flash, "dev_flash/");
+		}
 
 		cfg::_bool host_root{this, "Enable /host_root/"};
 
