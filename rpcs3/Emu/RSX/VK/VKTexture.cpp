@@ -445,6 +445,7 @@ namespace vk
 			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size + 8);
 			void *mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size + 8);
 			void *dst = mapped_buffer;
+			VkBuffer buffer_handle = upload_heap.heap->value;
 
 			if (dst_image->info.format == VK_FORMAT_D24_UNORM_S8_UINT)
 			{
@@ -466,10 +467,26 @@ namespace vk
 				// NOTE: On commandbuffer submission, the HOST_WRITE to ALL_COMMANDS barrier is implicitly inserted according to spec
 				// No need to add another explicit barrier unless a driver bug is found
 
+				// Executing GPU tasks on host_visible RAM is awful, copy to device-local buffer instead
+				auto scratch_buf = vk::get_scratch_buffer();
+
+				VkBufferCopy copy = {};
+				copy.srcOffset = offset_in_buffer;
+				copy.dstOffset = 0;
+				copy.size = image_linear_size;
+
+				vkCmdCopyBuffer(cmd, buffer_handle, scratch_buf->value, 1, &copy);
+
+				insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, image_linear_size, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+
 				vk::get_compute_task<vk::cs_shuffle_d24x8_f32>()->run(cmd, upload_heap.heap.get(), image_linear_size, offset_in_buffer);
 
-				insert_buffer_memory_barrier(cmd, upload_heap.heap->value, offset_in_buffer, image_linear_size, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, image_linear_size, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+
+				buffer_handle = scratch_buf->value;
+				offset_in_buffer = 0;
 			}
 
 			VkBufferImageCopy copy_info = {};
@@ -483,7 +500,7 @@ namespace vk
 			copy_info.imageSubresource.mipLevel = mipmap_level % mipmap_count;
 			copy_info.bufferRowLength = block_in_pixel * row_pitch / block_size_in_bytes;
 
-			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_info);
+			vkCmdCopyBufferToImage(cmd, buffer_handle, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_info);
 			mipmap_level++;
 		}
 	}

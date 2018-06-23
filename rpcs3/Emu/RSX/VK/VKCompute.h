@@ -16,7 +16,9 @@ namespace vk
 		u32 m_used_descriptors = 0;
 
 		bool initialized = false;
-		u32 optimal_group_size = 64;
+		bool unroll_loops = true;
+		u32 optimal_group_size = 1;
+		u32 optimal_kernel_size = 1;
 
 		void init_descriptors()
 		{
@@ -62,7 +64,15 @@ namespace vk
 				case vk::driver_vendor::unknown:
 					// Probably intel
 				case vk::driver_vendor::NVIDIA:
+					unroll_loops = true;
 					optimal_group_size = 32;
+					optimal_kernel_size = 16;
+					break;
+				case vk::driver_vendor::AMD:
+				case vk::driver_vendor::RADV:
+					unroll_loops = false;
+					optimal_kernel_size = 1;
+					optimal_group_size = 64;
 					break;
 				}
 
@@ -155,9 +165,12 @@ namespace vk
 		u32 m_data_length = 0;
 		u32 kernel_size = 1;
 
-		void build(const char* function_name, u32 _kernel_size)
+		void build(const char* function_name, u32 _kernel_size = 0)
 		{
-			kernel_size = _kernel_size;
+			// Initialize to allow detecting optimal settings
+			create();
+
+			kernel_size = _kernel_size? _kernel_size : optimal_kernel_size;
 
 			m_src =
 			{
@@ -180,12 +193,23 @@ namespace vk
 				"void main()\n"
 				"{\n"
 				"	uint index = gl_GlobalInvocationID.x * KERNEL_SIZE;\n"
-				"	for (uint loop = 0; loop < KERNEL_SIZE; ++loop)\n"
-				"	{\n"
-				"		uint value = data[index];\n"
+				"	uint value;\n"
+				"\n"
+			};
+
+			std::string work_kernel =
+			{
+				"		value = data[index];\n"
 				"		data[index] = %f(value);\n"
+			};
+
+			std::string loop_advance =
+			{
 				"		index++;\n"
-				"	}\n"
+			};
+
+			const std::string suffix =
+			{
 				"}\n"
 			};
 
@@ -197,6 +221,40 @@ namespace vk
 			};
 
 			m_src = fmt::replace_all(m_src, syntax_replace);
+			work_kernel = fmt::replace_all(work_kernel, syntax_replace);
+
+			if (kernel_size <= 1)
+			{
+				m_src += "	{\n" + work_kernel + "	}\n";
+			}
+			else if (unroll_loops)
+			{
+				work_kernel += loop_advance + "\n";
+
+				m_src += std::string
+				(
+					"	//Unrolled loop\n"
+					"	{\n"
+				);
+
+				// Assemble body with manual loop unroll to try loweing GPR usage
+				for (u32 n = 0; n < kernel_size; ++n)
+				{
+					m_src += work_kernel;
+				}
+
+				m_src += "	}\n";
+			}
+			else
+			{
+				m_src += "	for (int loop = 0; loop < KERNEL_SIZE; ++loop)\n";
+				m_src += "	{\n";
+				m_src += work_kernel;
+				m_src += loop_advance;
+				m_src += "	}\n";
+			}
+
+			m_src += suffix;
 		}
 
 		void bind_resources() override
@@ -221,7 +279,7 @@ namespace vk
 		// byteswap ushort
 		cs_shuffle_16()
 		{
-			cs_shuffle_base::build("bswap_u16", 32);
+			cs_shuffle_base::build("bswap_u16");
 		}
 	};
 
@@ -230,7 +288,7 @@ namespace vk
 		// byteswap_ulong
 		cs_shuffle_32()
 		{
-			cs_shuffle_base::build("bswap_u32", 32);
+			cs_shuffle_base::build("bswap_u32");
 		}
 	};
 
@@ -239,7 +297,7 @@ namespace vk
 		// byteswap_ulong + byteswap_ushort
 		cs_shuffle_32_16()
 		{
-			cs_shuffle_base::build("bswap_u16_u32", 32);
+			cs_shuffle_base::build("bswap_u16_u32");
 		}
 	};
 
@@ -248,7 +306,7 @@ namespace vk
 		// convert d24x8 to f32
 		cs_shuffle_d24x8_f32()
 		{
-			cs_shuffle_base::build("d24x8_to_f32", 32);
+			cs_shuffle_base::build("d24x8_to_f32");
 		}
 	};
 
@@ -257,7 +315,7 @@ namespace vk
 		// convert f32 to d24x8 and swap endianness
 		cs_shuffle_se_f32_d24x8()
 		{
-			cs_shuffle_base::build("f32_to_d24x8_swapped", 32);
+			cs_shuffle_base::build("f32_to_d24x8_swapped");
 		}
 	};
 
@@ -266,7 +324,7 @@ namespace vk
 		// swap endianness of d24x8
 		cs_shuffle_se_d24x8()
 		{
-			cs_shuffle_base::build("d24x8_to_d24x8_swapped", 32);
+			cs_shuffle_base::build("d24x8_to_d24x8_swapped");
 		}
 	};
 

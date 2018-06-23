@@ -472,11 +472,13 @@ namespace vk
 			//Currently we require:
 			//1. Anisotropic sampling
 			//2. DXT support
+			//3. Indexable storage buffers
 			VkPhysicalDeviceFeatures available_features;
 			vkGetPhysicalDeviceFeatures(*pgpu, &available_features);
 
 			available_features.samplerAnisotropy = VK_TRUE;
 			available_features.textureCompressionBC = VK_TRUE;
+			available_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 
 			VkDeviceCreateInfo device = {};
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
