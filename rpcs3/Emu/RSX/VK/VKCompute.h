@@ -187,7 +187,7 @@ namespace vk
 				"\n"
 				"// Depth format conversions\n"
 				"#define d24x8_to_f32(bits)           floatBitsToUint(float(bits >> 8) / 16777214.f)\n"
-				"#define d24x8_to_d24x8_swapped(bits) (bits & 0xFF00FF00) | (bits & 0xFF0000) >> 16 | (bits & 0xFF) << 16\n"
+				"#define d24x8_to_d24x8_swapped(bits) (bits & 0xFF00) | (bits & 0xFF0000) >> 16 | (bits & 0xFF) << 16\n"
 				"#define f32_to_d24x8_swapped(bits)   d24x8_to_d24x8_swapped(uint(uintBitsToFloat(bits) * 16777214.f))\n"
 				"\n"
 				"void main()\n"
