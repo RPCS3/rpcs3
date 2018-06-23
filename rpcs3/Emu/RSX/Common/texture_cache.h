@@ -70,6 +70,7 @@ namespace rsx
 		u32 gcm_format = 0;
 		bool pack_unpack_swap_bytes = false;
 
+		u64 sync_timestamp = 0;
 		bool synchronized = false;
 		bool flushed = false;
 
@@ -249,6 +250,31 @@ namespace rsx
 			}
 
 			return true;
+		}
+
+		void reprotect(utils::protection prot, const std::pair<u32, u32>& range)
+		{
+			//Reset properties and protect again
+			flushed = false;
+			synchronized = false;
+			sync_timestamp = 0ull;
+
+			protect(prot, range);
+		}
+
+		void reprotect(utils::protection prot)
+		{
+			//Reset properties and protect again
+			flushed = false;
+			synchronized = false;
+			sync_timestamp = 0ull;
+
+			protect(prot);
+		}
+
+		u64 get_sync_timestamp() const
+		{
+			return sync_timestamp;
 		}
 	};
 
@@ -701,6 +727,18 @@ namespace rsx
 							}
 							else
 							{
+								if (obj.first->get_memory_read_flags() == rsx::memory_read_flags::flush_always)
+								{
+									// This region is set to always read from itself (unavoi
+									const auto ROP_timestamp = rsx::get_current_renderer()->ROP_sync_timestamp;
+									if (obj.first->is_synchronized() && ROP_timestamp > obj.first->get_sync_timestamp())
+									{
+										m_num_cache_mispredictions++;
+										m_num_cache_misses++;
+										obj.first->copy_texture(true, std::forward<Args>(extras)...);
+									}
+								}
+
 								if (!obj.first->flush(std::forward<Args>(extras)...))
 								{
 									//Missed address, note this
@@ -1216,6 +1254,18 @@ namespace rsx
 				{
 					if (tex->is_locked())
 					{
+						if (tex->get_memory_read_flags() == rsx::memory_read_flags::flush_always)
+						{
+							// This region is set to always read from itself (unavoi
+							const auto ROP_timestamp = rsx::get_current_renderer()->ROP_sync_timestamp;
+							if (tex->is_synchronized() && ROP_timestamp > tex->get_sync_timestamp())
+							{
+								m_num_cache_mispredictions++;
+								m_num_cache_misses++;
+								tex->copy_texture(true, std::forward<Args>(extras)...);
+							}
+						}
+
 						if (!tex->flush(std::forward<Args>(extras)...))
 						{
 							record_cache_miss(*tex);
@@ -1303,9 +1353,13 @@ namespace rsx
 			// Auto flush if this address keeps missing (not properly synchronized)
 			if (value.misses >= 4)
 			{
-				// TODO: Determine better way of setting threshold
-				// Allow all types
-				flush_mask = 0xFF;
+				// Disable prediction if memory is flagged as flush_always
+				if (m_flush_always_cache.find(memory_address) == m_flush_always_cache.end())
+				{
+					// TODO: Determine better way of setting threshold
+					// Allow all types
+					flush_mask = 0xFF;
+				}
 			}
 
 			if (!flush_memory_to_cache(memory_address, memory_size, true, flush_mask, std::forward<Args>(extras)...) &&

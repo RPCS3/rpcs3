@@ -20,8 +20,6 @@ namespace vk
 
 		//DMA relevant data
 		VkFence dma_fence = VK_NULL_HANDLE;
-		u64 sync_timestamp = 0;
-		u64 last_use_timestamp = 0;
 		vk::render_device* m_device = nullptr;
 		vk::image *vram_texture = nullptr;
 		std::unique_ptr<vk::buffer> dma_buffer;
@@ -72,7 +70,6 @@ namespace vk
 			synchronized = false;
 			flushed = false;
 			sync_timestamp = 0ull;
-			last_use_timestamp = get_system_time();
 		}
 
 		void release_dma_resources()
@@ -351,39 +348,9 @@ namespace vk
 			pack_unpack_swap_bytes = swap_bytes;
 		}
 
-		void reprotect(utils::protection prot, const std::pair<u32, u32>& range)
-		{
-			//Reset properties and protect again
-			flushed = false;
-			synchronized = false;
-			sync_timestamp = 0ull;
-
-			protect(prot, range);
-		}
-
-		void reprotect(utils::protection prot)
-		{
-			//Reset properties and protect again
-			flushed = false;
-			synchronized = false;
-			sync_timestamp = 0ull;
-
-			protect(prot);
-		}
-
-		void invalidate_cached()
-		{
-			synchronized = false;
-		}
-
 		bool is_synchronized() const
 		{
 			return synchronized;
-		}
-
-		bool sync_valid() const
-		{
-			return (sync_timestamp > last_use_timestamp);
 		}
 
 		bool has_compatible_format(vk::image* tex) const
@@ -402,11 +369,6 @@ namespace vk
 			default:
 				return false;
 			}
-		}
-
-		u64 get_sync_timestamp() const
-		{
-			return sync_timestamp;
 		}
 	};
 	

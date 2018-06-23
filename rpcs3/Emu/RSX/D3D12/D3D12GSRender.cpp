@@ -404,7 +404,7 @@ void D3D12GSRender::end()
 			);
 	}
 
-	m_graphics_state = 0;
+	m_graphics_state &= ~rsx::pipeline_state::memory_barrier_bits;
 
 	std::chrono::time_point<steady_clock> constants_duration_end = steady_clock::now();
 	m_timers.constants_duration += std::chrono::duration_cast<std::chrono::microseconds>(constants_duration_end - constants_duration_start).count();

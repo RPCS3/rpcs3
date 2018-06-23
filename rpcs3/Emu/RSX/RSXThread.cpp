@@ -330,6 +330,9 @@ namespace rsx
 
 		in_begin_end = false;
 
+		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
+		ROP_sync_timestamp = get_system_time();
+
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932

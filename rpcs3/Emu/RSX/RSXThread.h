@@ -76,8 +76,10 @@ namespace rsx
 		fragment_state_dirty = 4,
 		vertex_state_dirty = 8,
 		transform_constants_dirty = 16,
+		framebuffer_reads_dirty = 32,
 
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
+		memory_barrier_bits = framebuffer_reads_dirty,
 		all_dirty = 255
 	};
 
@@ -358,6 +360,7 @@ namespace rsx
 		bool m_vertex_textures_dirty[4];
 		bool m_framebuffer_state_contested = false;
 		u32  m_graphics_state = 0;
+		u64  ROP_sync_timestamp = 0;
 
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
