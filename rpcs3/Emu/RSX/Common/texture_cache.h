@@ -72,8 +72,9 @@ namespace rsx
 
 		bool synchronized = false;
 		bool flushed = false;
-		u32  num_writes = 0;
-		u32  required_writes = 1;
+
+		u32 num_writes = 0;
+		std::deque<u32> read_history;
 
 		u64 cache_tag = 0;
 
@@ -120,7 +121,12 @@ namespace rsx
 
 		void reset_write_statistics()
 		{
-			required_writes = num_writes;
+			if (read_history.size() == 16)
+			{
+				read_history.pop_back();
+			}
+
+			read_history.push_front(num_writes);
 			num_writes = 0;
 		}
 
@@ -196,8 +202,51 @@ namespace rsx
 
 		bool writes_likely_completed() const
 		{
+			// TODO: Move this to the miss statistics block
 			if (context == rsx::texture_upload_context::blit_engine_dst)
-				return num_writes >= required_writes;
+			{
+				const auto num_records = read_history.size();
+
+				if (num_records == 0)
+				{
+					return false;
+				}
+				else if (num_records == 1)
+				{
+					return num_writes >= read_history.front();
+				}
+				else
+				{
+					const u32 last = read_history.front();
+					const u32 prev_last = read_history[1];
+
+					if (last == prev_last && num_records <= 3)
+					{
+						return num_writes >= last;
+					}
+
+					u32 compare = UINT32_MAX;
+					for (u32 n = 1; n < num_records; n++)
+					{
+						if (read_history[n] == last)
+						{
+							// Uncertain, but possible
+							compare = read_history[n - 1];
+
+							if (num_records > (n + 1))
+							{
+								if (read_history[n + 1] == prev_last)
+								{
+									// Confirmed with 2 values
+									break;
+								}
+							}
+						}
+					}
+
+					return num_writes >= compare;
+				}
+			}
 
 			return true;
 		}
@@ -679,13 +728,17 @@ namespace rsx
 						m_unreleased_texture_objects++;
 					}
 
-					//Only unsynchronized (no-flush) sections should reach here, and only if the rendering thread is the caller
+					// Only unsynchronized (no-flush) sections should reach here, and only if the rendering thread is the caller
 					if (discard_only)
+					{
 						obj.first->discard();
+						obj.second->remove_one();
+					}
 					else
-						obj.first->unprotect();
-
-					obj.second->remove_one();
+					{
+						// Delay unprotect in case there are sections to flush
+						result.sections_to_unprotect.push_back(obj.first);
+					}
 				}
 
 				if (deferred_flush && result.sections_to_flush.size())
@@ -1041,7 +1094,7 @@ namespace rsx
 		}
 
 		template <typename ...Args>
-		bool flush_memory_to_cache(u32 memory_address, u32 memory_size, bool skip_synchronized, Args&&... extra)
+		bool flush_memory_to_cache(u32 memory_address, u32 memory_size, bool skip_synchronized, u32 allowed_types_mask, Args&&... extra)
 		{
 			writer_lock lock(m_cache_mutex);
 			section_storage_type* region = find_flushable_section(memory_address, memory_size);
@@ -1052,6 +1105,9 @@ namespace rsx
 
 			if (skip_synchronized && region->is_synchronized())
 				return false;
+
+			if ((allowed_types_mask & region->get_context()) == 0)
+				return true;
 
 			if (!region->writes_likely_completed())
 				return true;
@@ -1239,23 +1295,26 @@ namespace rsx
 				//Reset since the data has changed
 				//TODO: Keep track of all this information together
 				m_cache_miss_statistics_table[memory_address] = { 0, memory_size, fmt };
-				return false;
 			}
 
-			//Properly synchronized - no miss
-			if (!value.misses) return false;
+			// By default, blit targets are always to be tested for readback
+			u32 flush_mask = rsx::texture_upload_context::blit_engine_dst;
 
-			//Auto flush if this address keeps missing (not properly synchronized)
-			if (value.misses > 16)
+			// Auto flush if this address keeps missing (not properly synchronized)
+			if (value.misses >= 4)
 			{
-				//TODO: Determine better way of setting threshold
-				if (!flush_memory_to_cache(memory_address, memory_size, true, std::forward<Args>(extras)...))
-					value.misses--;
-
-				return true;
+				// TODO: Determine better way of setting threshold
+				// Allow all types
+				flush_mask = 0xFF;
 			}
 
-			return false;
+			if (!flush_memory_to_cache(memory_address, memory_size, true, flush_mask, std::forward<Args>(extras)...) &&
+				value.misses > 0)
+			{
+				value.misses--;
+			}
+
+			return true;
 		}
 
 		void purge_dirty()

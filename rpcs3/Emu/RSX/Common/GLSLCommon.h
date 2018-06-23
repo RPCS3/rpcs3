@@ -83,7 +83,8 @@ namespace glsl
 	enum program_domain
 	{
 		glsl_vertex_program = 0,
-		glsl_fragment_program = 1
+		glsl_fragment_program = 1,
+		glsl_compute_program = 2
 	};
 
 	enum glsl_rules

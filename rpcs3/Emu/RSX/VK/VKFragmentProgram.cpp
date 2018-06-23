@@ -362,8 +362,11 @@ VKFragmentProgram::~VKFragmentProgram()
 void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 {
 	u32 size;
-	VKFragmentDecompilerThread decompiler(shader, parr, prog, size, *this);
+	std::string source;
+	VKFragmentDecompilerThread decompiler(source, parr, prog, size, *this);
 	decompiler.Task();
+
+	shader.create(::glsl::program_domain::glsl_fragment_program, source);
 	
 	for (const ParamType& PT : decompiler.m_parr.params[PF_PARAM_UNIFORM])
 	{
@@ -383,35 +386,13 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 
 void VKFragmentProgram::Compile()
 {
-	fs::create_path(fs::get_config_dir() + "/shaderlog");
-	fs::file(fs::get_config_dir() + "shaderlog/FragmentProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader);
-
-	std::vector<u32> spir_v;
-	if (!vk::compile_glsl_to_spv(shader, glsl::glsl_fragment_program, spir_v))
-		fmt::throw_exception("Failed to compile fragment shader" HERE);
-
-	//Create the object and compile
-	VkShaderModuleCreateInfo fs_info;
-	fs_info.codeSize = spir_v.size() * sizeof(u32);
-	fs_info.pNext = nullptr;
-	fs_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	fs_info.pCode = (uint32_t*)spir_v.data();
-	fs_info.flags = 0;
-
-	VkDevice dev = (VkDevice)*vk::get_current_renderer();
-	vkCreateShaderModule(dev, &fs_info, nullptr, &handle);
+	fs::file(fs::get_config_dir() + "shaderlog/FragmentProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
+	handle = shader.compile();
 }
 
 void VKFragmentProgram::Delete()
 {
-	shader.clear();
-
-	if (handle)
-	{
-		VkDevice dev = (VkDevice)*vk::get_current_renderer();
-		vkDestroyShaderModule(dev, handle, NULL);
-		handle = nullptr;
-	}
+	shader.destroy();
 }
 
 void VKFragmentProgram::SetInputs(std::vector<vk::glsl::program_input>& inputs)

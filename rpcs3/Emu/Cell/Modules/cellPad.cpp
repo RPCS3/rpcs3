@@ -726,6 +726,15 @@ s32 cellPadLddUnregisterController(s32 handle)
 }
 
 
+s32 sys_io_3733EA3C(u32 port_no, vm::ptr<u32> device_type, vm::ptr<CellPadData> data)
+{
+	//Used by the ps1 emulator built into the firmware
+	//Seems to call the same function that getdataextra does
+	sys_io.trace("sys_io_3733EA3C(port_no=%d, device_type=*0x%x, data=*0x%x)", port_no, device_type, data);
+	return cellPadGetDataExtra(port_no, device_type, data);
+}
+
+
 void cellPad_init()
 {
 	REG_FUNC(sys_io, cellPadInit);
@@ -749,4 +758,6 @@ void cellPad_init()
 	REG_FUNC(sys_io, cellPadLddDataInsert);
 	REG_FUNC(sys_io, cellPadLddGetPortNo);
 	REG_FUNC(sys_io, cellPadLddUnregisterController);
+
+	REG_FNID(sys_io, 0x3733EA3C, sys_io_3733EA3C);
 }

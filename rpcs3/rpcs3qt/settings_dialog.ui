@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>752</width>
-    <height>519</height>
+    <width>849</width>
+    <height>615</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>7</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -1448,6 +1448,16 @@
                <widget class="QComboBox" name="perfOverlayDetailLevel"/>
               </item>
               <item>
+               <widget class="QLabel" name="label_position">
+                <property name="text">
+                 <string>Position:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="perfOverlayPosition"/>
+              </item>
+              <item>
                <widget class="QLabel" name="label_update_interval">
                 <property name="text">
                  <string>Update Interval:</string>
@@ -1968,6 +1978,16 @@
                <string>SPU Debug</string>
               </property>
              </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_enableTSX">
+              <property name="text">
+               <string>Enable TSX:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="enableTSX"/>
             </item>
             <item>
              <spacer name="verticalSpacer">

@@ -37,6 +37,7 @@
 	"debug": {
 		"ppuDebug": "Never use this.",
 		"spuDebug": "Never use this.",
+		"enableTSX": "Enable usage of TSX instructions.\nNeeds to be forced on some Haswell or Broadwell CPUs.\nForcing this on older Hardware can lead to system instability, use it with caution.",
 		"readColor": "Never use this.",
 		"dumpDepth": "Never use this.",
 		"readDepth": "Never use this.",
@@ -66,6 +67,7 @@
 		},
 		"overlay": {
 			"perfOverlayEnabled": "Enables or disables the performance overlay.",
+			"perfOverlayPosition": "Sets the on-screen position (quadrant) of the perfomance overlay.",
 			"perfOverlayDetailLevel": "Controls the amount of information displayed on the performance overlay.",
 			"perfOverlayUpdateInterval": "Sets the time interval in which the performance overlay is being updated (measured in milliseconds).",
 			"perfOverlayFontSize": "Sets the font size of the performance overlay (measured in pixels)."

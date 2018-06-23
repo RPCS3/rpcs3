@@ -155,6 +155,21 @@ enum class detail_level
 	high,
 };
 
+enum class screen_quadrant
+{
+	top_left,
+	top_right,
+	bottom_left,
+	bottom_right
+};
+
+enum class tsx_usage
+{
+	disabled,
+	enabled,
+	forced,
+};
+
 enum CellNetCtlState : s32;
 enum CellSysutilLang : s32;
 
@@ -167,7 +182,7 @@ struct EmuCallbacks
 	std::function<void()> on_stop;
 	std::function<void()> on_ready;
 	std::function<void()> exit;
-	std::function<void(s32, s32)> handle_taskbar_progress;
+	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit
 	std::function<std::shared_ptr<class KeyboardHandlerBase>()> get_kb_handler;
 	std::function<std::shared_ptr<class MouseHandlerBase>()> get_mouse_handler;
 	std::function<std::shared_ptr<class pad_thread>()> get_pad_handler;
@@ -271,9 +286,10 @@ public:
 	bool BootRsxCapture(const std::string& path);
 	bool InstallPkg(const std::string& path);
 
+private:
 	static std::string GetEmuDir();
+public:
 	static std::string GetHddDir();
-	static std::string GetLibDir();
 
 	void SetForceBoot(bool force_boot);
 
@@ -326,6 +342,7 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_accurate_putlluc{this, "Accurate PUTLLUC", false};
 		cfg::_bool spu_verification{this, "SPU Verification", true}; // Should be enabled
 		cfg::_bool spu_cache{this, "SPU Cache", true};
+		cfg::_enum<tsx_usage> enable_TSX{this, "Enable TSX", tsx_usage::enabled}; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
 
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::liblv2only};
 		cfg::_bool hook_functions{this, "Hook static functions"};
@@ -337,13 +354,20 @@ struct cfg_root : cfg::node
 	{
 		node_vfs(cfg::node* _this) : cfg::node(_this, "VFS") {}
 
+		std::string get(const cfg::string&, const char*) const;
+
 		cfg::string emulator_dir{this, "$(EmulatorDir)"}; // Default (empty): taken from fs::get_config_dir()
 		cfg::string dev_hdd0{this, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/"};
 		cfg::string dev_hdd1{this, "/dev_hdd1/", "$(EmulatorDir)dev_hdd1/"};
-		cfg::string dev_flash{this, "/dev_flash/", "$(EmulatorDir)dev_flash/"};
+		cfg::string dev_flash{this, "/dev_flash/"};
 		cfg::string dev_usb000{this, "/dev_usb000/", "$(EmulatorDir)dev_usb000/"};
 		cfg::string dev_bdvd{this, "/dev_bdvd/"}; // Not mounted
 		cfg::string app_home{this, "/app_home/"}; // Not mounted
+
+		std::string get_dev_flash() const
+		{
+			return get(dev_flash, "dev_flash/");
+		}
 
 		cfg::_bool host_root{this, "Enable /host_root/"};
 
@@ -411,8 +435,12 @@ struct cfg_root : cfg::node
 
 			cfg::_bool perf_overlay_enabled{this, "Enabled", false};
 			cfg::_enum<detail_level> level{this, "Detail level", detail_level::high};
-			cfg::_int<30, 5000> update_interval{this, "Metrics update interval (ms)", 350};
-			cfg::_int<4, 36> font_size{this, "Font size (px)", 10};
+			cfg::_int<30, 5000> update_interval{ this, "Metrics update interval (ms)", 350 };
+			cfg::_int<4, 36> font_size{ this, "Font size (px)", 10 };
+			cfg::_enum<screen_quadrant> position{this, "Position", screen_quadrant::top_left};
+			cfg::string font{this, "Font", "n023055ms.ttf"};
+			cfg::_int<0, 500> margin{this, "Margin (px)", 50};
+			cfg::_int<0, 100> opacity{this, "Opacity (%)", 70};
 
 		} perf_overlay{this};
 

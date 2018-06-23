@@ -13,8 +13,8 @@ namespace vk
 		std::unique_ptr<vk::buffer> m_uniforms_buffer;
 		
 		std::unique_ptr<vk::glsl::program> m_program;
-		VKVertexProgram m_vertex_shader;
-		VKFragmentProgram m_fragment_shader;
+		vk::glsl::shader m_vertex_shader;
+		vk::glsl::shader m_fragment_shader;
 
 		vk::descriptor_pool m_descriptor_pool;
 		VkDescriptorSet m_descriptor_set = nullptr;
@@ -102,23 +102,21 @@ namespace vk
 				"}\n"
 			};
 
-			m_vertex_shader.shader = vs;
-			m_vertex_shader.id = 100000;
-			m_vertex_shader.Compile();
+			m_vertex_shader.create(::glsl::program_domain::glsl_vertex_program, vs);
+			m_vertex_shader.compile();
 
-			m_fragment_shader.shader = fs;
-			m_fragment_shader.id = 100001;
-			m_fragment_shader.Compile();
+			m_fragment_shader.create(::glsl::program_domain::glsl_fragment_program, fs);
+			m_fragment_shader.compile();
 
 			VkPipelineShaderStageCreateInfo shader_stages[2] = {};
 			shader_stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			shader_stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-			shader_stages[0].module = m_vertex_shader.handle;
+			shader_stages[0].module = m_vertex_shader.get_handle();
 			shader_stages[0].pName = "main";
 
 			shader_stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			shader_stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-			shader_stages[1].module = m_fragment_shader.handle;
+			shader_stages[1].module = m_fragment_shader.get_handle();
 			shader_stages[1].pName = "main";
 
 			VkDynamicState dynamic_state_descriptors[VK_DYNAMIC_STATE_RANGE_SIZE] = {};
@@ -246,6 +244,9 @@ namespace vk
 		{
 			if (initialized)
 			{
+				m_vertex_shader.destroy();
+				m_fragment_shader.destroy();
+
 				vkDestroyDescriptorSetLayout(device, m_descriptor_layout, nullptr);
 				vkDestroyPipelineLayout(device, m_pipeline_layout, nullptr);
 				m_descriptor_pool.destroy();

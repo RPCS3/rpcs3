@@ -5,8 +5,7 @@
 #include "rpcs3qt/welcome_dialog.h"
 
 #ifdef WITH_DISCORD_RPC
-#include "discord_rpc.h"
-#include "discord_register.h"
+#include "rpcs3qt/_discord_utils.h"
 #endif
 
 #include "Emu/System.h"
@@ -98,8 +97,7 @@ void rpcs3_app::Init()
 	// Discord Rich Presence Integration
 	if (guiSettings->GetValue(gui::m_richPresence).toBool())
 	{
-		DiscordEventHandlers handlers = {};
-		Discord_Initialize("424004941485572097", &handlers, 1, NULL);
+		discord::initialize();
 	}
 #endif
 
@@ -282,7 +280,7 @@ void rpcs3_app::InitializeCallbacks()
 			switch (type)
 			{
 			case 0:
-				((gs_frame*)gameWindow)->progress_reset();
+				((gs_frame*)gameWindow)->progress_reset(value);
 				break;
 			case 1:
 				((gs_frame*)gameWindow)->progress_increment(value);
@@ -398,11 +396,8 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 	{
 		QString config_dir = qstr(fs::get_config_dir());
 
-		// HACK: dev_flash must be mounted for vfs to work for loading fonts.
-		vfs::mount("dev_flash", fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", Emu.GetEmuDir()));
-
 		// Add PS3 fonts
-		QDirIterator ps3_font_it(qstr(vfs::get("/dev_flash/data/font/")), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+		QDirIterator ps3_font_it(qstr(g_cfg.vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
 		while (ps3_font_it.hasNext())
 			QFontDatabase::addApplicationFont(ps3_font_it.next());
 

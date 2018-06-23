@@ -52,7 +52,7 @@ public:
 	wm_event get_default_wm_event() const override;
 
 	// taskbar progress
-	void progress_reset();
+	void progress_reset(bool reset_limit = false);
 	void progress_increment(int delta);
 	void progress_set_limit(int limit);
 

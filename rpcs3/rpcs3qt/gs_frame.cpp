@@ -417,7 +417,7 @@ wm_event gs_frame::get_default_wm_event() const
 	return (m_user_interaction_active) ? wm_event::geometry_change_in_progress : wm_event::none;
 }
 
-void gs_frame::progress_reset()
+void gs_frame::progress_reset(bool reset_limit)
 {
 #ifdef _WIN32
 	if (m_tb_progress)
@@ -427,6 +427,11 @@ void gs_frame::progress_reset()
 #elif HAVE_QTDBUS
 	UpdateProgress(0);
 #endif
+
+	if (reset_limit)
+	{
+		progress_set_limit(100);
+	}
 }
 
 void gs_frame::progress_increment(int delta)

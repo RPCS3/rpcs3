@@ -633,6 +633,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* removeConfig = myMenu.addAction(tr("&Remove Custom Configuration"));
 	QAction* deleteShadersCache = myMenu.addAction(tr("&Delete Shaders Cache"));
 	QAction* deleteLLVMCache = myMenu.addAction(tr("&Delete LLVM Cache"));
+	QAction* deleteSPUCache = myMenu.addAction(tr("&Delete SPU Cache"));
 	myMenu.addSeparator();
 	QAction* openGameFolder = myMenu.addAction(tr("&Open Install Folder"));
 	QAction* openConfig = myMenu.addAction(tr("&Open Config Folder"));
@@ -641,9 +642,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* downloadCompat = myMenu.addAction(tr("&Download Compatibility Database"));
 	myMenu.addSeparator();
 	QAction* editNotes = myMenu.addAction(tr("&Edit Tooltip Notes"));
-	QMenu* infoMenu = myMenu.addMenu(tr("&Copy Info"));
-	QAction* copyName = infoMenu->addAction(tr("&Copy Name"));
-	QAction* copySerial = infoMenu->addAction(tr("&Copy Serial"));
+	QMenu* info_menu = myMenu.addMenu(tr("&Copy Info"));
+	QAction* copy_info = info_menu->addAction(tr("&Copy Name + Serial"));
+	QAction* copy_name = info_menu->addAction(tr("&Copy Name"));
+	QAction* copy_serial = info_menu->addAction(tr("&Copy Serial"));
 
 	const std::string config_base_dir = fs::get_config_dir() + "data/" + currGame.serial;
 
@@ -694,6 +696,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			{
 				DeleteShadersCache(config_base_dir);
 				DeleteLLVMCache(config_base_dir);
+				DeleteSPUCache(config_base_dir);
 				RemoveCustomConfiguration(config_base_dir);
 			}
 			fs::remove_all(currGame.path);
@@ -723,6 +726,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(deleteLLVMCache, &QAction::triggered, [=]()
 	{
 		DeleteLLVMCache(config_base_dir, true);
+	});
+	connect(deleteSPUCache, &QAction::triggered, [=]()
+	{
+		DeleteSPUCache(config_base_dir, true);
 	});
 	connect(openGameFolder, &QAction::triggered, [=]()
 	{
@@ -754,11 +761,15 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			Refresh();
 		}
 	});
-	connect(copyName, &QAction::triggered, [=]
+	connect(copy_info, &QAction::triggered, [=]
+	{
+		QApplication::clipboard()->setText(name + " [" + serial + "]");
+	});
+	connect(copy_name, &QAction::triggered, [=]
 	{
 		QApplication::clipboard()->setText(name);
 	});
-	connect(copySerial, &QAction::triggered, [=]
+	connect(copy_serial, &QAction::triggered, [=]
 	{
 		QApplication::clipboard()->setText(serial);
 	});
@@ -791,6 +802,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	{
 		deleteShadersCache->setEnabled(false);
 		deleteLLVMCache->setEnabled(false);
+		deleteSPUCache->setEnabled(false);
 	}
 
 	myMenu.exec(globalPos);
@@ -827,17 +839,18 @@ bool game_list_frame::DeleteShadersCache(const std::string& base_dir, bool is_in
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete shaders cache?")) != QMessageBox::Yes)
 		return false;
 
-	fs::dir root = fs::dir(base_dir);
-	fs::dir_entry tmp;
-
-	while (root.read(tmp))
+	QDirIterator dir_iter(qstr(base_dir), QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	while (dir_iter.hasNext())
 	{
-		if (!fs::is_dir(base_dir + "/" + tmp.name))
-			continue;
+		const QString filepath = dir_iter.next();
 
-		const std::string shader_cache_name = base_dir + "/" + tmp.name + "/shaders_cache";
-		if (fs::is_dir(shader_cache_name))
-			fs::remove_all(shader_cache_name, true);
+		if (dir_iter.fileName() == "shaders_cache")
+		{
+			if (QDir(filepath).removeRecursively())
+				LOG_NOTICE(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
+			else
+				LOG_WARNING(GENERAL, "Could not remove shaders cache file: %s", sstr(filepath));
+		}
 	}
 
 	LOG_SUCCESS(GENERAL, "Removed shaders cache in %s", base_dir);
@@ -852,21 +865,47 @@ bool game_list_frame::DeleteLLVMCache(const std::string& base_dir, bool is_inter
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete LLVM cache?")) != QMessageBox::Yes)
 		return false;
 
-	for (auto&& subdir : fs::dir{ base_dir })
+	QDirIterator dir_iter(qstr(base_dir), QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	while (dir_iter.hasNext())
 	{
-		if (!subdir.is_directory || subdir.name == "." || subdir.name == "..")
-			continue;
+		const QString filepath = dir_iter.next();
 
-		const std::string dir = base_dir + "/" + subdir.name;
-
-		for (auto&& entry : fs::dir{ dir })
+		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".obj", Qt::CaseInsensitive))
 		{
-			if (entry.name.size() >= 4 && entry.name.compare(entry.name.size() - 4, 4, ".obj", 4) == 0)
-				fs::remove_file(dir + "/" + entry.name);
+			if (QFile::remove(filepath))
+				LOG_NOTICE(GENERAL, "Removed LLVM cache file: %s", sstr(filepath));
+			else
+				LOG_WARNING(GENERAL, "Could not remove LLVM cache file: %s", sstr(filepath));
 		}
 	}
 
-	LOG_SUCCESS(GENERAL, "Removed llvm cache in %s", base_dir);
+	LOG_SUCCESS(GENERAL, "Removed LLVM cache in %s", base_dir);
+	return true;
+}
+
+bool game_list_frame::DeleteSPUCache(const std::string& base_dir, bool is_interactive)
+{
+	if (!fs::is_dir(base_dir))
+		return false;
+
+	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete SPU cache?")) != QMessageBox::Yes)
+		return false;
+
+	QDirIterator dir_iter(qstr(base_dir), QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	while (dir_iter.hasNext())
+	{
+		const QString filepath = dir_iter.next();
+
+		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".dat", Qt::CaseInsensitive))
+		{
+			if (QFile::remove(filepath))
+				LOG_NOTICE(GENERAL, "Removed SPU cache file: %s", sstr(filepath));
+			else
+				LOG_WARNING(GENERAL, "Could not remove SPU cache file: %s", sstr(filepath));
+		}
+	}
+
+	LOG_SUCCESS(GENERAL, "Removed SPU cache in %s", base_dir);
 	return true;
 }
 
@@ -1018,6 +1057,31 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 			else if (keyEvent->key() == Qt::Key_Minus)
 			{
 				Q_EMIT RequestIconSizeChange(-1);
+				return true;
+			}
+		}
+		else
+		{
+			if (keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return)
+			{
+				QTableWidgetItem* item;
+
+				if (object == m_gameList)
+					item = m_gameList->item(m_gameList->currentRow(), gui::column_icon);
+				else
+					item = m_xgrid->currentItem();
+
+				if (!item || !item->isSelected())
+					return false;
+
+				game_info gameinfo = GetGameInfoFromItem(item);
+
+				if (gameinfo.get() == nullptr)
+					return false;
+
+				LOG_NOTICE(LOADER, "Booting from gamelist by pressing %s...", keyEvent->key() == Qt::Key_Enter ? "Enter" : "Return");
+				Q_EMIT RequestBoot(gameinfo->info.path);
+
 				return true;
 			}
 		}

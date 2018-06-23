@@ -588,17 +588,11 @@ VKGSRender::VKGSRender() : GSRender()
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
 	//VRAM allocation
-	const auto& memory_map = m_device->get_memory_mapping();
-	m_attrib_ring_info.init(VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, "attrib buffer", 0x400000);
-	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
-	m_uniform_buffer_ring_info.init(VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "uniform buffer");
-	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
-	m_transform_constants_ring_info.init(VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
-	m_transform_constants_ring_info.heap.reset(new vk::buffer(*m_device, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
-	m_index_buffer_ring_info.init(VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
-	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
-	m_texture_upload_buffer_ring_info.init(VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
-	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, "attrib buffer", 0x400000);
+	m_uniform_buffer_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "uniform buffer");
+	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
+	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
+	m_texture_upload_buffer_ring_info.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
 
 	for (auto &ctx : frame_context_storage)
 	{
@@ -606,6 +600,7 @@ VKGSRender::VKGSRender() : GSRender()
 		ctx.descriptor_pool.create(*m_device, sizes.data(), static_cast<uint32_t>(sizes.size()));
 	}
 
+	const auto& memory_map = m_device->get_memory_mapping();
 	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R8_UINT, 0, 32);
 
@@ -685,11 +680,11 @@ VKGSRender::~VKGSRender()
 	vk::destroy_global_resources();
 
 	//Heaps
-	m_index_buffer_ring_info.heap.reset();
-	m_uniform_buffer_ring_info.heap.reset();
-	m_transform_constants_ring_info.heap.reset();
-	m_attrib_ring_info.heap.reset();
-	m_texture_upload_buffer_ring_info.heap.reset();
+	m_index_buffer_ring_info.destroy();
+	m_uniform_buffer_ring_info.destroy();
+	m_transform_constants_ring_info.destroy();
+	m_attrib_ring_info.destroy();
+	m_texture_upload_buffer_ring_info.destroy();
 
 	//Fallback bindables
 	null_buffer.reset();
@@ -1812,7 +1807,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 			if (!m_surface_info[index].pitch)
 				continue;
 
-			m_texture_cache.flush_memory_to_cache(m_surface_info[index].address, m_surface_info[index].pitch * m_surface_info[index].height, true,
+			m_texture_cache.flush_memory_to_cache(m_surface_info[index].address, m_surface_info[index].pitch * m_surface_info[index].height, true, 0xFF,
 					*m_current_command_buffer, m_swapchain->get_graphics_queue());
 		}
 	}
@@ -1821,7 +1816,7 @@ void VKGSRender::copy_render_targets_to_dma_location()
 	{
 		if (m_depth_surface_info.pitch)
 		{
-			m_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, true,
+			m_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, true, 0xFF,
 				*m_current_command_buffer, m_swapchain->get_graphics_queue());
 		}
 	}
@@ -2023,6 +2018,8 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 			m_overlay_manager->unlock();
 			m_overlay_manager->dispose(uids_to_dispose);
 		}
+
+		vk::reset_compute_tasks();
 
 		m_attachment_clear_pass->free_resources();
 		m_depth_converter->free_resources();
@@ -2538,11 +2535,15 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	const auto depth_fmt = rsx::method_registers.surface_depth_fmt();
 	const auto target = rsx::method_registers.surface_color_target();
 
+	const auto aa_mode = rsx::method_registers.surface_antialias();
+	const u32 aa_factor_u = (aa_mode == rsx::surface_antialiasing::center_1_sample) ? 1 : 2;
+	const u32 aa_factor_v = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
+
 	//NOTE: Its is possible that some renders are done on a swizzled context. Pitch is meaningless in that case
 	//Seen in Nier (color) and GT HD concept (z buffer)
 	//Restriction is that the dimensions are powers of 2. Also, dimensions are passed via log2w and log2h entries
-	const auto required_zeta_pitch = std::max<u32>((u32)(depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4), 64u);
-	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(color_fmt, clip_width), 64u);
+	const auto required_zeta_pitch = std::max<u32>((u32)(depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4) * aa_factor_u, 64u);
+	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(color_fmt, clip_width) * aa_factor_v, 64u);
 	const bool stencil_test_enabled = depth_fmt == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
 	const auto lg2w = rsx::method_registers.surface_log2_width();
 	const auto lg2h = rsx::method_registers.surface_log2_height();
@@ -2639,9 +2640,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	const auto fbo_width = rsx::apply_resolution_scale(clip_width, true);
 	const auto fbo_height = rsx::apply_resolution_scale(clip_height, true);
-	const auto aa_mode = rsx::method_registers.surface_antialias();
 	const auto bpp = get_format_block_size_in_bytes(color_fmt);
-	const u32 aa_factor = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
 
 	//Window (raster) offsets
 	const auto window_offset_x = rsx::method_registers.window_offset_x();
@@ -2661,7 +2660,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			if (surface_addresses[index])
 			{
-				const u32 window_offset_bytes = (std::max<u32>(surface_pitchs[index], clip_width * aa_factor * bpp) * window_offset_y) + ((aa_factor * bpp) * window_offset_x);
+				const u32 window_offset_bytes = (std::max<u32>(surface_pitchs[index], required_color_pitch) * window_offset_y) + ((aa_factor_u * bpp) * window_offset_x);
 				surface_addresses[index] += window_offset_bytes;
 			}
 		}
@@ -2669,7 +2668,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		if (zeta_address)
 		{
 			const auto depth_bpp = (depth_fmt == rsx::surface_depth_format::z16 ? 2 : 4);
-			zeta_address += (std::max<u32>(zeta_pitch, clip_width * aa_factor * depth_bpp) * window_offset_y) + ((aa_factor * depth_bpp) * window_offset_x);
+			zeta_address += (std::max<u32>(zeta_pitch, required_zeta_pitch) * window_offset_y) + ((aa_factor_u * depth_bpp) * window_offset_x);
 		}
 	}
 
@@ -2781,7 +2780,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			bound_images.push_back(surface);
 
 			m_surface_info[index].address = surface_addresses[index];
-			m_surface_info[index].pitch = surface_pitchs[index];
+			m_surface_info[index].pitch = std::max(surface_pitchs[index], required_color_pitch);
 			surface->rsx_pitch = surface_pitchs[index];
 
 			surface->write_aa_mode = aa_mode;
@@ -2798,7 +2797,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		bound_images.push_back(ds);
 
 		m_depth_surface_info.address = zeta_address;
-		m_depth_surface_info.pitch = rsx::method_registers.surface_z_pitch();
+		m_depth_surface_info.pitch = std::max(zeta_pitch, required_zeta_pitch);
 		ds->rsx_pitch = m_depth_surface_info.pitch;
 
 		ds->write_aa_mode = aa_mode;
@@ -2814,7 +2813,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
 
-			const u32 range = m_surface_info[index].pitch * m_surface_info[index].height * aa_factor;
+			const u32 range = m_surface_info[index].pitch * m_surface_info[index].height * aa_factor_v;
 			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[index]), m_surface_info[index].address, range,
 				m_surface_info[index].width, m_surface_info[index].height, m_surface_info[index].pitch, color_fmt_info.first, color_fmt_info.second);
 		}
@@ -2824,16 +2823,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 		{
-			u32 pitch = m_depth_surface_info.width * 2;
-			u32 gcm_format = CELL_GCM_TEXTURE_DEPTH16;
-
-			if (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16)
-			{
-				gcm_format = CELL_GCM_TEXTURE_DEPTH24_D8;
-				pitch *= 2;
-			}
-
-			const u32 range = pitch * m_depth_surface_info.height * aa_factor;
+			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16)? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
+			const u32 range = m_depth_surface_info.pitch * m_depth_surface_info.height * aa_factor_v;
 			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range,
 				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch, gcm_format, false);
 		}

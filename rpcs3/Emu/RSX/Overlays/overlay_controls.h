@@ -140,11 +140,11 @@ namespace rsx
 				fallback_fonts.push_back("/usr/share/fonts/TTF/DejaVuSans.ttf"); //arch
 #endif
 				//Search dev_flash for the font too
-				font_dirs.push_back(Emu.GetEmuDir() + "dev_flash/data/font/");
-				font_dirs.push_back(Emu.GetEmuDir() + "dev_flash/data/font/SONY-CC/");
+				font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/");
+				font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SONY-CC/");
 
 				//Attempt to load a font from dev_flash as a last resort
-				fallback_fonts.push_back(Emu.GetEmuDir() + "dev_flash/data/font/SCE-PS3-VR-R-LATIN.TTF");
+				fallback_fonts.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SCE-PS3-VR-R-LATIN.TTF");
 
 				//Attemt to load requested font
 				std::string file_path;
@@ -567,20 +567,26 @@ namespace rsx
 
 				command_config() {}
 
-				command_config(u8 ref)
+				void set_image_resource(u8 ref)
 				{
 					texture_ref = ref;
 					font_ref = nullptr;
 				}
 
-				command_config(font *ref)
+				void set_font(font *ref)
 				{
 					texture_ref = image_resource_id::font_file;
 					font_ref = ref;
 				}
 			};
 
-			std::vector<std::pair<command_config, std::vector<vertex>>> draw_commands;
+			struct command
+			{
+				command_config config;
+				std::vector<vertex> verts;
+			};
+
+			std::vector<command> draw_commands;
 
 			void add(const compiled_resource& other)
 			{
@@ -597,7 +603,7 @@ namespace rsx
 
 				for (size_t n = old_size; n < draw_commands.size(); ++n)
 				{
-					for (auto &v : draw_commands[n].second)
+					for (auto &v : draw_commands[n].verts)
 					{
 						v += vertex(x_offset, y_offset, 0.f, 0.f);
 					}
@@ -612,14 +618,34 @@ namespace rsx
 
 				for (size_t n = old_size; n < draw_commands.size(); ++n)
 				{
-					for (auto &v : draw_commands[n].second)
+					for (auto &v : draw_commands[n].verts)
 					{
 						v += vertex(x_offset, y_offset, 0.f, 0.f);
 					}
 
-					draw_commands[n].first.clip_rect = clip_rect;
-					draw_commands[n].first.clip_region = true;
+					draw_commands[n].config.clip_rect = clip_rect;
+					draw_commands[n].config.clip_region = true;
 				}
+			}
+
+			//! Clear commands list
+			void clear()
+			{
+				draw_commands.clear();
+			}
+
+			//! Append the command to the back of the commands list and return it
+			command& append(const command& new_command)
+			{
+				draw_commands.emplace_back(new_command);
+				return draw_commands.back();
+			}
+
+			//! Prepend the command to the front of the commands list and return it
+			command& prepend(const command& new_command)
+			{
+				draw_commands.emplace(draw_commands.begin(), new_command);
+				return draw_commands.front();
 			}
 		};
 
@@ -655,9 +681,7 @@ namespace rsx
 			f32 padding_bottom = 0.f;
 
 			f32 margin_left = 0.f;
-			f32 margin_right = 0.f;
 			f32 margin_top = 0.f;
-			f32 margin_bottom = 0.f;
 
 			overlay_element() {}
 			overlay_element(u16 _w, u16 _h) : w(_w), h(_h) {}
@@ -723,19 +747,18 @@ namespace rsx
 				is_compiled = false;
 			}
 
-			virtual void set_margin(f32 left, f32 right, f32 top, f32 bottom)
+			// NOTE: Functions as a simple position offset. Top left corner is the anchor.
+			virtual void set_margin(f32 left, f32 top)
 			{
 				margin_left = left;
-				margin_right = right;
 				margin_top = top;
-				margin_bottom = bottom;
 
 				is_compiled = false;
 			}
 
 			virtual void set_margin(f32 margin)
 			{
-				margin_left = margin_right = margin_top = margin_bottom = margin;
+				margin_left = margin_top = margin;
 				is_compiled = false;
 			}
 
@@ -788,9 +811,9 @@ namespace rsx
 						text_extents_w = std::max(v.values[0], text_extents_w);
 
 						//Apply transform.
-						//(0, 0) has text sitting 50% off the top left corner (text is outside the rect) hence the offset by text height / 2
+						//(0, 0) has text sitting one line off the top left corner (text is outside the rect) hence the offset by text height
 						v.values[0] += x + padding_left;
-						v.values[1] += y + padding_top + (f32)renderer->size_px * 0.5f;
+						v.values[1] += y + padding_top + (f32)renderer->size_px;
 					}
 
 					if (alignment == center)
@@ -849,29 +872,36 @@ namespace rsx
 			{
 				if (!is_compiled)
 				{
-					compiled_resources = {};
-					compiled_resources.draw_commands.push_back({});
+					compiled_resources.clear();
 
-					auto &config = compiled_resources.draw_commands.front().first;
+					compiled_resource compiled_resources_temp = {};
+					auto& cmd_bg = compiled_resources_temp.append({});
+					auto& config = cmd_bg.config;
+
 					config.color = back_color;
 					config.pulse_glow = pulse_effect_enabled;
 
-					auto& verts = compiled_resources.draw_commands.front().second;
+					auto& verts = compiled_resources_temp.draw_commands.front().verts;
 					verts.resize(4);
-					verts[0].vec4(x + padding_left - margin_left, y + padding_bottom - margin_bottom, 0.f, 0.f);
-					verts[1].vec4(x + w - padding_right + margin_right, y + padding_bottom - margin_top, 1.f, 0.f);
-					verts[2].vec4(x + padding_left - margin_left, y + h - padding_top + margin_top, 0.f, 1.f);
-					verts[3].vec4(x + w - padding_right + margin_right, y + h - padding_top + margin_bottom, 1.f, 1.f);
+
+					verts[0].vec4(x, y, 0.f, 0.f);
+					verts[1].vec4(x + w, y, 1.f, 0.f);
+					verts[2].vec4(x, y + h, 0.f, 1.f);
+					verts[3].vec4(x + w, y + h, 1.f, 1.f);
+
+					compiled_resources.add(std::move(compiled_resources_temp), margin_left, margin_top);
 
 					if (!text.empty())
 					{
-						compiled_resources.draw_commands.push_back({});
-						compiled_resources.draw_commands.back().first = font_ref? font_ref : fontmgr::get("Arial", 12);
-						compiled_resources.draw_commands.back().first.color = fore_color;
-						compiled_resources.draw_commands.back().second = render_text(text.c_str(), (f32)x, (f32)y);
+						compiled_resources_temp.clear();
+						auto& cmd_text = compiled_resources_temp.append({});
 
-						if (compiled_resources.draw_commands.back().second.size() == 0)
-							compiled_resources.draw_commands.pop_back();
+						cmd_text.config.set_font(font_ref ? font_ref : fontmgr::get("Arial", 12));
+						cmd_text.config.color = fore_color;
+						cmd_text.verts = render_text(text.c_str(), (f32)x, (f32)y);
+
+						if (cmd_text.verts.size() > 0)
+							compiled_resources.add(std::move(compiled_resources_temp), margin_left, margin_top);
 					}
 
 					is_compiled = true;
@@ -1171,10 +1201,22 @@ namespace rsx
 			{
 				if (!is_compiled)
 				{
-					auto &result = overlay_element::get_compiled();
-					result.draw_commands.front().first = image_resource_ref;
-					result.draw_commands.front().first.color = fore_color;
-					result.draw_commands.front().first.external_data_ref = external_ref;
+					auto& result  = overlay_element::get_compiled();
+					auto& cmd_img = result.draw_commands.front();
+
+					cmd_img.config.set_image_resource(image_resource_ref);
+					cmd_img.config.color = fore_color;
+					cmd_img.config.external_data_ref = external_ref;
+
+					// Make padding work for images (treat them as the content instead of the 'background')
+					auto& verts = cmd_img.verts;
+
+					verts[0] += vertex(padding_left, padding_bottom, 0, 0);
+					verts[1] += vertex(-padding_right, padding_bottom, 0, 0);
+					verts[2] += vertex(padding_left, -padding_top, 0, 0);
+					verts[3] += vertex(-padding_right, -padding_top, 0, 0);
+
+					is_compiled = true;
 				}
 
 				return compiled_resources;
@@ -1195,7 +1237,8 @@ namespace rsx
 
 		struct image_button : public image_view
 		{
-			u16 text_offset = 0;
+			const u16 text_horizontal_offset = 25;
+			u16 m_text_offset = 0;
 
 			image_button()
 			{
@@ -1213,7 +1256,7 @@ namespace rsx
 			void set_size(u16 /*w*/, u16 h) override
 			{
 				image_view::set_size(h, h);
-				text_offset = (h / 2) + 10; //By default text is at the horizontal center
+				m_text_offset = (h / 2) + text_horizontal_offset; //By default text is at the horizontal center
 			}
 
 			compiled_resource& get_compiled() override
@@ -1221,18 +1264,14 @@ namespace rsx
 				if (!is_compiled)
 				{
 					auto& compiled = image_view::get_compiled();
-					for (auto &cmd : compiled.draw_commands)
+					for (auto& cmd : compiled.draw_commands)
 					{
-						if (cmd.first.texture_ref == image_resource_id::font_file)
+						if (cmd.config.texture_ref == image_resource_id::font_file)
 						{
 							//Text, translate geometry to the right
-							const f32 text_height = font_ref ? font_ref->size_px : 16.f;
-							const f32 offset_y = (h > text_height) ? (f32)(h - text_height) : ((f32)h - text_height);
-
-							for (auto &v : cmd.second)
+							for (auto &v : cmd.verts)
 							{
-								v.values[0] += text_offset + 15.f;
-								v.values[1] += offset_y + 5.f;
+								v.values[0] += m_text_offset;
 							}
 						}
 					}
@@ -1251,10 +1290,14 @@ namespace rsx
 				this->text = text;
 			}
 
-			void auto_resize(bool grow_only = false, u16 limit_w = UINT16_MAX, u16 limit_h = UINT16_MAX)
+			bool auto_resize(bool grow_only = false, u16 limit_w = UINT16_MAX, u16 limit_h = UINT16_MAX)
 			{
 				u16 new_width, new_height;
+				u16 old_width = w, old_height = h;
 				measure_text(new_width, new_height, true);
+
+				new_width += padding_left + padding_right;
+				new_height += padding_top + padding_bottom;
 
 				if (new_width > limit_w && wrap_text)
 					measure_text(new_width, new_height, false);
@@ -1267,6 +1310,9 @@ namespace rsx
 
 				w = std::min(new_width, limit_w);
 				h = std::min(new_height, limit_h);
+
+				bool size_changed = old_width != new_width || old_height != new_height;
+				return size_changed;
 			}
 		};
 
@@ -1311,7 +1357,7 @@ namespace rsx
 			{
 				u16 text_w, text_h;
 				text_view.measure_text(text_w, text_h);
-				text_h += 5;
+				text_h += 13;
 
 				overlay_element::set_pos(_x, _y + text_h);
 				indicator.set_pos(_x, _y + text_h);
