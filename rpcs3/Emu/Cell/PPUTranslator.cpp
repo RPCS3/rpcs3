@@ -896,7 +896,7 @@ void PPUTranslator::VLOGEFP(ppu_opcode_t op)
 void PPUTranslator::VMADDFP(ppu_opcode_t op)
 {
 	const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
-	SetVr(op.vd, m_ir->CreateFAdd(m_ir->CreateFMul(acb[0], acb[1]), acb[2]));
+	SetVr(op.vd, Call(GetType<f32[4]>(), "llvm.fmuladd.v4f32", acb[0], acb[1], acb[2]));
 }
 
 void PPUTranslator::VMAXFP(ppu_opcode_t op)
