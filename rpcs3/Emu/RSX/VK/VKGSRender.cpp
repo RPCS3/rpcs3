@@ -3241,11 +3241,12 @@ void VKGSRender::flip(int buffer)
 			const auto tmp_texture_memory_size = m_texture_cache.get_temporary_memory_in_use() / (1024 * 1024);
 			const auto num_flushes = m_texture_cache.get_num_flush_requests();
 			const auto num_mispredict = m_texture_cache.get_num_cache_mispredictions();
+			const auto num_speculate = m_texture_cache.get_num_cache_speculative_writes();
 			const auto cache_miss_ratio = (u32)ceil(m_texture_cache.get_cache_miss_ratio() * 100);
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 144, direct_fbo->width(), direct_fbo->height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 162, direct_fbo->width(), direct_fbo->height(), "Texture cache memory: " + std::to_string(texture_memory_size) + "M");
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 180, direct_fbo->width(), direct_fbo->height(), "Temporary texture memory: " + std::to_string(tmp_texture_memory_size) + "M");
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 198, direct_fbo->width(), direct_fbo->height(), fmt::format("Flush requests: %d (%d%% hard faults, %d mispredictions)", num_flushes, cache_miss_ratio, num_mispredict));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 198, direct_fbo->width(), direct_fbo->height(), fmt::format("Flush requests: %d (%d%% hard faults, %d misprediction(s), %d speculation(s))", num_flushes, cache_miss_ratio, num_mispredict, num_speculate));
 		}
 
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, present_layout, subres);

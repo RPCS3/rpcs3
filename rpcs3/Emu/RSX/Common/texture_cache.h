@@ -204,52 +204,47 @@ namespace rsx
 		bool writes_likely_completed() const
 		{
 			// TODO: Move this to the miss statistics block
-			if (context == rsx::texture_upload_context::blit_engine_dst)
+			const auto num_records = read_history.size();
+
+			if (num_records == 0)
 			{
-				const auto num_records = read_history.size();
+				return false;
+			}
+			else if (num_records == 1)
+			{
+				return num_writes >= read_history.front();
+			}
+			else
+			{
+				const u32 last = read_history.front();
+				const u32 prev_last = read_history[1];
 
-				if (num_records == 0)
+				if (last == prev_last && num_records <= 3)
 				{
-					return false;
+					return num_writes >= last;
 				}
-				else if (num_records == 1)
-				{
-					return num_writes >= read_history.front();
-				}
-				else
-				{
-					const u32 last = read_history.front();
-					const u32 prev_last = read_history[1];
 
-					if (last == prev_last && num_records <= 3)
+				u32 compare = UINT32_MAX;
+				for (u32 n = 1; n < num_records; n++)
+				{
+					if (read_history[n] == last)
 					{
-						return num_writes >= last;
-					}
+						// Uncertain, but possible
+						compare = read_history[n - 1];
 
-					u32 compare = UINT32_MAX;
-					for (u32 n = 1; n < num_records; n++)
-					{
-						if (read_history[n] == last)
+						if (num_records > (n + 1))
 						{
-							// Uncertain, but possible
-							compare = read_history[n - 1];
-
-							if (num_records > (n + 1))
+							if (read_history[n + 1] == prev_last)
 							{
-								if (read_history[n + 1] == prev_last)
-								{
-									// Confirmed with 2 values
-									break;
-								}
+								// Confirmed with 2 values
+								break;
 							}
 						}
 					}
-
-					return num_writes >= compare;
 				}
-			}
 
-			return true;
+				return num_writes >= compare;
+			}
 		}
 
 		void reprotect(utils::protection prot, const std::pair<u32, u32>& range)
@@ -473,8 +468,10 @@ namespace rsx
 		std::atomic<u32> m_texture_memory_in_use = { 0 };
 
 		//Other statistics
+		const u32 m_cache_miss_threshold = 8; // How many times an address can miss speculative writing before it is considered high priority
 		std::atomic<u32> m_num_flush_requests = { 0 };
 		std::atomic<u32> m_num_cache_misses = { 0 };
+		std::atomic<u32> m_num_cache_speculative_writes = { 0 };
 		std::atomic<u32> m_num_cache_mispredictions = { 0 };
 
 		/* Helpers */
@@ -729,7 +726,7 @@ namespace rsx
 							{
 								if (obj.first->get_memory_read_flags() == rsx::memory_read_flags::flush_always)
 								{
-									// This region is set to always read from itself (unavoi
+									// This region is set to always read from itself (unavoidable hard sync)
 									const auto ROP_timestamp = rsx::get_current_renderer()->ROP_sync_timestamp;
 									if (obj.first->is_synchronized() && ROP_timestamp > obj.first->get_sync_timestamp())
 									{
@@ -1072,6 +1069,7 @@ namespace rsx
 			region.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 			region.set_image_type(rsx::texture_dimension_extended::texture_dimension_2d);
 			region.set_memory_read_flags(memory_read_flags::flush_always);
+			region.touch();
 
 			m_flush_always_cache[memory_address] = memory_size;
 
@@ -1151,6 +1149,7 @@ namespace rsx
 				return true;
 
 			region->copy_texture(false, std::forward<Args>(extra)...);
+			m_num_cache_speculative_writes++;
 			return true;
 		}
 
@@ -1256,7 +1255,7 @@ namespace rsx
 					{
 						if (tex->get_memory_read_flags() == rsx::memory_read_flags::flush_always)
 						{
-							// This region is set to always read from itself (unavoi
+							// This region is set to always read from itself (unavoidable hard sync)
 							const auto ROP_timestamp = rsx::get_current_renderer()->ROP_sync_timestamp;
 							if (tex->is_synchronized() && ROP_timestamp > tex->get_sync_timestamp())
 							{
@@ -1351,7 +1350,7 @@ namespace rsx
 			u32 flush_mask = rsx::texture_upload_context::blit_engine_dst;
 
 			// Auto flush if this address keeps missing (not properly synchronized)
-			if (value.misses >= 4)
+			if (value.misses >= m_cache_miss_threshold)
 			{
 				// Disable prediction if memory is flagged as flush_always
 				if (m_flush_always_cache.find(memory_address) == m_flush_always_cache.end())
@@ -2485,6 +2484,7 @@ namespace rsx
 			m_num_flush_requests.store(0u);
 			m_num_cache_misses.store(0u);
 			m_num_cache_mispredictions.store(0u);
+			m_num_cache_speculative_writes.store(0u);
 		}
 
 		virtual const u32 get_unreleased_textures_count() const
@@ -2505,6 +2505,11 @@ namespace rsx
 		virtual u32 get_num_cache_mispredictions() const
 		{
 			return m_num_cache_mispredictions;
+		}
+
+		virtual u32 get_num_cache_speculative_writes() const
+		{
+			return m_num_cache_speculative_writes;
 		}
 
 		virtual f32 get_cache_miss_ratio() const
