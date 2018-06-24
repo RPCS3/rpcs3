@@ -338,7 +338,7 @@ namespace rsx
 	*    Restriction: Only works with 2D surfaces
 	*/
 	template<typename T>
-	void convert_linear_swizzle(void* input_pixels, void* output_pixels, u16 width, u16 height, bool input_is_swizzled)
+	void convert_linear_swizzle(void* input_pixels, void* output_pixels, u16 width, u16 height, u32 pitch, bool input_is_swizzled)
 	{
 		u32 log2width = ceil_log2(width);
 		u32 log2height = ceil_log2(height);
@@ -362,11 +362,13 @@ namespace rsx
 		u32 offs_x0 = 0; //total y-carry offset for x
 		u32 y_incr = limit_mask;
 
+		u32 adv = pitch / sizeof(T);
+
 		if (!input_is_swizzled)
 		{
 			for (int y = 0; y < height; ++y)
 			{
-				T *src = static_cast<T*>(input_pixels) + y * width;
+				T* src = static_cast<T*>(input_pixels) + y * adv;
 				T *dst = static_cast<T*>(output_pixels) + offs_y;
 				offs_x = offs_x0;
 
@@ -389,7 +391,7 @@ namespace rsx
 			for (int y = 0; y < height; ++y)
 			{
 				T *src = static_cast<T*>(input_pixels) + offs_y;
-				T *dst = static_cast<T*>(output_pixels) + y * width;
+				T* dst = static_cast<T*>(output_pixels) + y * adv;
 				offs_x = offs_x0;
 
 				for (int x = 0; x < width; ++x)
@@ -419,7 +421,7 @@ namespace rsx
 	{
 		if (depth == 1)
 		{
-			convert_linear_swizzle<T>(input_pixels, output_pixels, width, height, true);
+			convert_linear_swizzle<T>(input_pixels, output_pixels, width, height, width * sizeof(T), true);
 			return;
 		}
 
