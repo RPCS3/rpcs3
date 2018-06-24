@@ -214,6 +214,7 @@ private Q_SLOTS:
 	bool RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive = false);
 	bool DeleteShadersCache(const std::string& base_dir, bool is_interactive = false);
 	bool DeleteLLVMCache(const std::string& base_dir, bool is_interactive = false);
+	bool DeleteSPUCache(const std::string& base_dir, bool is_interactive = false);
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void doubleClickedSlot(QTableWidgetItem *item);

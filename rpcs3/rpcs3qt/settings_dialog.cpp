@@ -159,12 +159,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->cancelButton->setFocus();
 	});
 
-	//     _____ _____  _    _   _______    _     
-	//    / ____|  __ \| |  | | |__   __|  | |    
-	//   | |    | |__) | |  | |    | | __ _| |__  
+	//     _____ _____  _    _   _______    _
+	//    / ____|  __ \| |  | | |__   __|  | |
+	//   | |    | |__) | |  | |    | | __ _| |__
 	//   | |    |  ___/| |  | |    | |/ _` | '_ \
 	//   | |____| |    | |__| |    | | (_| | |_) |
-	//    \_____|_|     \____/     |_|\__,_|_.__/ 
+	//    \_____|_|     \____/     |_|\__,_|_.__/
 
 	// Checkboxes
 
@@ -299,7 +299,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		item->setCheckState(Qt::Checked); // AND initialize check state
 		ui->lleList->addItem(item);
 	}
-	const std::string& lle_dir = Emu.GetLibDir(); // TODO
+
+	const std::string lle_dir = g_cfg.vfs.get_dev_flash() + "sys/external/";
 
 	std::unordered_set<std::string> set(loadedLibs.begin(), loadedLibs.end());
 	std::vector<std::string> lle_module_list_unselected;
@@ -387,12 +388,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		l_OnLibButtonClicked(buttid);
 	}
 
-	//     _____ _____  _    _   _______    _     
-	//    / ____|  __ \| |  | | |__   __|  | |    
-	//   | |  __| |__) | |  | |    | | __ _| |__  
+	//     _____ _____  _    _   _______    _
+	//    / ____|  __ \| |  | | |__   __|  | |
+	//   | |  __| |__) | |  | |    | | __ _| |__
 	//   | | |_ |  ___/| |  | |    | |/ _` | '_ \
 	//   | |__| | |    | |__| |    | | (_| | |_) |
-	//    \_____|_|     \____/     |_|\__,_|_.__/ 
+	//    \_____|_|     \____/     |_|\__,_|_.__/
 
 	emu_settings::Render_Creator render_creator = xemu_settings.get()->m_render_creator;
 
@@ -640,12 +641,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	fixGLLegacy(ui->renderBox->currentText()); // Init
 	connect(ui->renderBox, &QComboBox::currentTextChanged, fixGLLegacy);
 
-	//                      _ _         _______    _     
-	//       /\            | (_)       |__   __|  | |    
-	//      /  \  _   _  __| |_  ___      | | __ _| |__  
+	//                      _ _         _______    _
+	//       /\            | (_)       |__   __|  | |
+	//      /  \  _   _  __| |_  ___      | | __ _| |__
 	//     / /\ \| | | |/ _` | |/ _ \     | |/ _` | '_ \
 	//    / ____ \ |_| | (_| | | (_) |    | | (_| | |_) |
-	//   /_/    \_\__,_|\__,_|_|\___/     |_|\__,_|_.__/ 
+	//   /_/    \_\__,_|\__,_|_|\___/     |_|\__,_|_.__/
 
 	// Comboboxes
 
@@ -667,12 +668,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->downmix, emu_settings::DownmixStereo);
 	SubscribeTooltip(ui->downmix, json_audio["downmix"].toString());
 
-	//    _____       __   ____    _______    _     
-	//   |_   _|     / /  / __ \  |__   __|  | |    
-	//     | |      / /  | |  | |    | | __ _| |__  
+	//    _____       __   ____    _______    _
+	//   |_   _|     / /  / __ \  |__   __|  | |
+	//     | |      / /  | |  | |    | | __ _| |__
 	//     | |     / /   | |  | |    | |/ _` | '_ \
 	//    _| |_   / /    | |__| |    | | (_| | |_) |
-	//   |_____| /_/      \____/     |_|\__,_|_.__/ 
+	//   |_____| /_/      \____/     |_|\__,_|_.__/
 
 	// Comboboxes
 
@@ -691,14 +692,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceComboBox(ui->moveBox, emu_settings::Move);
 	SubscribeTooltip(ui->moveBox, json_input["moveBox"].toString());
 
-	//     _____           _                   _______    _     
-	//    / ____|         | |                 |__   __|  | |    
-	//   | (___  _   _ ___| |_ ___ _ __ ___      | | __ _| |__  
+	//     _____           _                   _______    _
+	//    / ____|         | |                 |__   __|  | |
+	//   | (___  _   _ ___| |_ ___ _ __ ___      | | __ _| |__
 	//    \___ \| | | / __| __/ _ \ '_ ` _ \     | |/ _` | '_ \
 	//    ____) | |_| \__ \ ||  __/ | | | | |    | | (_| | |_) |
-	//   |_____/ \__, |___/\__\___|_| |_| |_|    |_|\__,_|_.__/ 
-	//            __/ |                                         
-	//           |___/                                          
+	//   |_____/ \__, |___/\__\___|_| |_| |_|    |_|\__,_|_.__/
+	//            __/ |
+	//           |___/
 
 	// Comboboxes
 
@@ -710,24 +711,24 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->enableHostRoot, emu_settings::EnableHostRoot);
 	SubscribeTooltip(ui->enableHostRoot, json_sys["enableHostRoot"].toString());
 
-	//    _   _      _                      _      _______    _     
-	//   | \ | |    | |                    | |    |__   __|  | |    
-	//   |  \| | ___| |___      _____  _ __| | __    | | __ _| |__  
+	//    _   _      _                      _      _______    _
+	//   | \ | |    | |                    | |    |__   __|  | |
+	//   |  \| | ___| |___      _____  _ __| | __    | | __ _| |__
 	//   | . ` |/ _ \ __\ \ /\ / / _ \| '__| |/ /    | |/ _` | '_ \
 	//   | |\  |  __/ |_ \ V  V / (_) | |  |   <     | | (_| | |_) |
-	//   |_| \_|\___|\__| \_/\_/ \___/|_|  |_|\_\    |_|\__,_|_.__/ 
+	//   |_| \_|\___|\__| \_/\_/ \___/|_|  |_|\_\    |_|\__,_|_.__/
 
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->netStatusBox, emu_settings::ConnectionStatus);
 	SubscribeTooltip(ui->netStatusBox, json_net["netStatusBox"].toString());
 
-	//    ______                 _       _               _______    _     
-	//   |  ____|               | |     | |             |__   __|  | |    
-	//   | |__   _ __ ___  _   _| | __ _| |_ ___  _ __     | | __ _| |__  
+	//    ______                 _       _               _______    _
+	//   |  ____|               | |     | |             |__   __|  | |
+	//   | |__   _ __ ___  _   _| | __ _| |_ ___  _ __     | | __ _| |__
 	//   |  __| | '_ ` _ \| | | | |/ _` | __/ _ \| '__|    | |/ _` | '_ \
 	//   | |____| | | | | | |_| | | (_| | || (_) | |       | | (_| | |_) |
-	//   |______|_| |_| |_|\__,_|_|\__,_|\__\___/|_|       |_|\__,_|_.__/ 
+	//   |______|_| |_| |_|\__,_|_|\__,_|\__\___/|_|       |_|\__,_|_.__/
 
 	// Comboboxes
 
@@ -839,12 +840,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		});
 	}
 
-	//     _____  _    _  _   _______    _     
-	//    / ____|| |  | || | |__   __|  | |    
-	//   | |  __|| |  | || |    | | __ _| |__  
+	//     _____  _    _  _   _______    _
+	//    / ____|| |  | || | |__   __|  | |
+	//   | |  __|| |  | || |    | | __ _| |__
 	//   | | |_ || |  | || |    | |/ _` | '_ \
 	//   | |__| || |__| || |    | | (_| | |_) |
-	//    \_____| \____/ |_|    |_|\__,_|_.__/ 
+	//    \_____| \____/ |_|    |_|\__,_|_.__/
 
 	// Comboboxes
 	SubscribeTooltip(ui->combo_configs, json_gui["configs"].toString());
@@ -1025,14 +1026,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		AddStylesheets();
 	}
 
-	//    _____       _                   _______    _     
-	//   |  __ \     | |                 |__   __|  | |    
-	//   | |  | | ___| |__  _   _  __ _     | | __ _| |__  
+	//    _____       _                   _______    _
+	//   |  __ \     | |                 |__   __|  | |
+	//   | |  | | ___| |__  _   _  __ _     | | __ _| |__
 	//   | |  | |/ _ \ '_ \| | | |/ _` |    | |/ _` | '_ \
 	//   | |__| |  __/ |_) | |_| | (_| |    | | (_| | |_) |
-	//   |_____/ \___|_.__/ \__,_|\__, |    |_|\__,_|_.__/ 
-	//                             __/ |                   
-	//                            |___/                    
+	//   |_____/ \___|_.__/ \__,_|\__, |    |_|\__,_|_.__/
+	//                             __/ |
+	//                            |___/
 
 	// Checkboxes: gpu debug options
 	xemu_settings->EnhanceCheckBox(ui->glLegacyBuffers, emu_settings::LegacyBuffers);
@@ -1080,7 +1081,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->spuDebug, emu_settings::SPUDebug);
 	SubscribeTooltip(ui->spuDebug, json_debug["spuDebug"].toString());
-		
+
 	if (utils::has_rtm())
 	{
 		xemu_settings->EnhanceComboBox(ui->enableTSX, emu_settings::EnableTSX);
@@ -1235,6 +1236,7 @@ int settings_dialog::exec()
 	// If we use setCurrentIndex now we will miraculously see a resize of the dialog as soon as we
 	// switch to the cpu tab after conjuring the settings_dialog with another tab opened first.
 	// Weirdly enough this won't happen if we change the tab order so that anything else is at index 0.
+	ui->tab_widget_settings->setCurrentIndex(0);
 	QTimer::singleShot(0, [=]{ ui->tab_widget_settings->setCurrentIndex(m_tab_Index); });
 	return QDialog::exec();
 }

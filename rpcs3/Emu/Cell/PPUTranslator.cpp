@@ -3407,7 +3407,18 @@ void PPUTranslator::STW(ppu_opcode_t op)
 		m_rel = nullptr;
 	}
 
-	WriteMemory(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), imm) : imm, GetGpr(op.rs, 32));
+	const auto value = GetGpr(op.rs, 32);
+	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), imm) : imm;
+	WriteMemory(addr, value);
+
+	//Insomniac engine v3 & v4 (newer R&C, Fuse, Resitance 3)
+	if (auto ci = llvm::dyn_cast<ConstantInt>(value))
+	{
+		if (ci->getZExtValue() == 0xAAAAAAAA)
+		{
+			Call(GetType<void>(), "__resupdate", m_thread, addr, m_ir->getInt32(128));
+		}
+	}
 }
 
 void PPUTranslator::STWU(ppu_opcode_t op)

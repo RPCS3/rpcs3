@@ -527,6 +527,8 @@ void SPUThread::cpu_task()
 			jit_dispatcher[pc / 4](*this, vm::_ptr<u8>(offset), nullptr);
 		}
 
+		// Print some stats
+		LOG_NOTICE(SPU, "Stats: block %u (fails: %u);", block_counter, block_failure);
 		return;
 	}
 

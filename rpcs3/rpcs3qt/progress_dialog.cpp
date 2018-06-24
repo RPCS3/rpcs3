@@ -5,7 +5,7 @@ progress_dialog::progress_dialog(const QString &labelText, const QString &cancel
 {
 #ifdef _WIN32
 	m_tb_button = std::make_unique<QWinTaskbarButton>();
-	m_tb_button->setWindow(parent->windowHandle());
+	m_tb_button->setWindow(parent ? parent->windowHandle() : windowHandle());
 	m_tb_progress = m_tb_button->progress();
 	m_tb_progress->setRange(minimum, maximum);
 	m_tb_progress->setVisible(true);

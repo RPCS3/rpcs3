@@ -217,9 +217,9 @@ void save_manager_dialog::OnSort(int logicalIndex)
 		{
 			m_sort_ascending = true;
 		}
+		m_sort_column = logicalIndex;
 		Qt::SortOrder sort_order = m_sort_ascending ? Qt::AscendingOrder : Qt::DescendingOrder;
 		m_list->sortByColumn(m_sort_column, sort_order);
-		m_sort_column = logicalIndex;
 	}
 }
 
