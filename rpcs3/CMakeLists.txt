@@ -287,7 +287,6 @@ endif()
 include_directories(
 ${OPENAL_INCLUDE_DIR}
 ${LLVM_INCLUDE_DIRS}
-"${RPCS3_SRC_DIR}/../3rdparty/pugixml/src"
 "${RPCS3_SRC_DIR}"
 "${RPCS3_SRC_DIR}/Loader"
 "${RPCS3_SRC_DIR}/Crypto"
@@ -399,7 +398,7 @@ if(VULKAN_FOUND)
 	target_link_libraries(rpcs3 SPIRV Vulkan::Vulkan)
 endif()
 
-target_link_libraries(rpcs3 xxhash yaml-cpp)
+target_link_libraries(rpcs3 pugixml xxhash yaml-cpp)
 
 find_package(ZLIB REQUIRED)
 target_include_directories(rpcs3 PUBLIC ${ZLIB_INCLUDE_DIRS})

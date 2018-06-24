@@ -798,7 +798,6 @@ namespace vm
 				std::make_shared<block_t>(0xC0000000, 0x10000000), // video
 				std::make_shared<block_t>(0xD0000000, 0x10000000), // stack
 				std::make_shared<block_t>(0xE0000000, 0x20000000), // SPU reserved
-				std::make_shared<block_t>(0x40000000, 0x10000000), // rsx contexts
 				std::make_shared<block_t>(0x30000000, 0x10000000), // main extend
 			};
 		}

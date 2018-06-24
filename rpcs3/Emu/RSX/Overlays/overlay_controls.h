@@ -140,11 +140,11 @@ namespace rsx
 				fallback_fonts.push_back("/usr/share/fonts/TTF/DejaVuSans.ttf"); //arch
 #endif
 				//Search dev_flash for the font too
-				font_dirs.push_back(Emu.GetEmuDir() + "dev_flash/data/font/");
-				font_dirs.push_back(Emu.GetEmuDir() + "dev_flash/data/font/SONY-CC/");
+				font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/");
+				font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SONY-CC/");
 
 				//Attempt to load a font from dev_flash as a last resort
-				fallback_fonts.push_back(Emu.GetEmuDir() + "dev_flash/data/font/SCE-PS3-VR-R-LATIN.TTF");
+				fallback_fonts.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SCE-PS3-VR-R-LATIN.TTF");
 
 				//Attemt to load requested font
 				std::string file_path;

@@ -103,6 +103,7 @@ struct SysRsxConfig
 {
 	be_t<u32> rsx_event_port{ 0 };
 	u32 driverInfo{ 0 };
+	u32 rsx_context_addr{ 0 }; 
 };
 
 // SysCalls
@@ -115,6 +116,6 @@ s32 sys_rsx_context_free(u32 context_id);
 s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags);
 s32 sys_rsx_context_iounmap(u32 context_id, u32 a2, u32 io_addr, u32 size);
 s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u64 a5, u64 a6);
-s32 sys_rsx_device_map(vm::ptr<u64> addr, vm::ptr<u64> a2, u32 dev_id);
+s32 sys_rsx_device_map(vm::ptr<u64> dev_addr, vm::ptr<u64> a2, u32 dev_id);
 s32 sys_rsx_device_unmap(u32 dev_id);
 s32 sys_rsx_attribute(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5);

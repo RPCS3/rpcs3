@@ -1,5 +1,4 @@
-#ifndef TROPHY_MANAGER_DIALOG
-#define TROPHY_MANAGER_DIALOG
+#pragma once
 
 #include "stdafx.h"
 #include "rpcs3/Loader/TROPUSR.h"
@@ -76,6 +75,7 @@ private:
 	void ReadjustTrophyTable();
 
 	void closeEvent(QCloseEvent *event) override;
+	bool eventFilter(QObject *object, QEvent *event) override;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
@@ -103,5 +103,3 @@ private:
 	bool m_save_game_icon_size = false;
 	QSlider* m_game_icon_slider = nullptr;
 };
-
-#endif

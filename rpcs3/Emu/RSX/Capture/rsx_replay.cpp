@@ -17,6 +17,9 @@ namespace rsx
 			fmt::throw_exception("Capture Replay: context alloc failed");
 		const auto& contextInfo = vm::_ref<rsx_context>(contextAddr);
 
+		if (sys_rsx_device_map(vm::make_var<u64>(0), vm::null, 0x8) != CELL_OK)
+			fmt::throw_exception("Capture Replay: sys_rsx_device_map failed!");
+
 		if (sys_rsx_memory_allocate(vm::get_addr(&contextInfo.mem_handle), vm::get_addr(&contextInfo.mem_addr), 0x0F900000, 0, 0, 0, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_memory_allocate failed!");
 
