@@ -310,6 +310,19 @@ enum CellCameraAttribute : s32
 	CELL_CAMERA_ATTRIBUTE_UNKNOWN = 500,
 };
 
+// Request codes
+enum
+{
+	SET_CUR  = 0x01,
+	GET_CUR  = 0x81,
+	GET_MIN  = 0x82,
+	GET_MAX  = 0x83,
+	GET_RES  = 0x84,
+	GET_LEN  = 0x85,
+	GET_INFO = 0x86,
+	GET_DEF  = 0x87,
+};
+
 struct CellCameraInfoEx
 {
 	be_t<s32> format;     // CellCameraFormat
