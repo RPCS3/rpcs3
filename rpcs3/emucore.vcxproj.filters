@@ -1447,5 +1447,8 @@
     <ClInclude Include="Emu\RSX\Overlays\overlays.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
+    <ClInclude Include="date_time.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
