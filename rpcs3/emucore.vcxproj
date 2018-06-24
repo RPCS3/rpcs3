@@ -390,6 +390,7 @@
     <ClInclude Include="Crypto\unpkg.h" />
     <ClInclude Include="Crypto\unself.h" />
     <ClInclude Include="Crypto\utils.h" />
+    <ClInclude Include="date_time.h" />
     <ClInclude Include="define_new_memleakdetect.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_gpio.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_net.h" />
