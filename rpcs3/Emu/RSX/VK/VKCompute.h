@@ -269,7 +269,16 @@ namespace vk
 			m_data_length = data_length;
 
 			const auto num_bytes_per_invocation = optimal_group_size * kernel_size * 4;
-			const auto num_invocations = align(data_length, 256) / num_bytes_per_invocation;
+			const auto num_bytes_to_process = align(data_length, num_bytes_per_invocation);
+			const auto num_invocations = num_bytes_to_process / num_bytes_per_invocation;
+
+			if (num_bytes_to_process > data->size())
+			{
+				// Technically robust buffer access should keep the driver from crashing in OOB situations
+				LOG_ERROR(RSX, "Inadequate buffer length submitted for a compute operation."
+					"Required=%d bytes, Available=%d bytes", num_bytes_to_process, data->size());
+			}
+
 			compute_task::run(cmd, num_invocations);
 		}
 	};
