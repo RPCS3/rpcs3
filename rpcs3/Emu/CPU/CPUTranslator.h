@@ -26,6 +26,14 @@
 #include <array>
 #include <vector>
 
+enum class i2 : char
+{
+};
+
+enum class i4 : char
+{
+};
+
 template <typename T = void>
 struct llvm_value_t
 {
@@ -74,6 +82,38 @@ struct llvm_value_t<bool> : llvm_value_t<void>
 	static llvm::Type* get_type(llvm::LLVMContext& context)
 	{
 		return llvm::Type::getInt1Ty(context);
+	}
+};
+
+template <>
+struct llvm_value_t<i2> : llvm_value_t<void>
+{
+	using type = i2;
+	using base = llvm_value_t<void>;
+	using base::base;
+
+	static constexpr uint esize  = 2;
+	static constexpr uint is_int = true;
+
+	static llvm::Type* get_type(llvm::LLVMContext& context)
+	{
+		return llvm::Type::getIntNTy(context, 2);
+	}
+};
+
+template <>
+struct llvm_value_t<i4> : llvm_value_t<void>
+{
+	using type = i4;
+	using base = llvm_value_t<void>;
+	using base::base;
+
+	static constexpr uint esize  = 4;
+	static constexpr uint is_int = true;
+
+	static llvm::Type* get_type(llvm::LLVMContext& context)
+	{
+		return llvm::Type::getIntNTy(context, 4);
 	}
 };
 
@@ -753,6 +793,8 @@ struct llvm_icmp_t
 		UPred == llvm::ICmpInst::ICMP_ULT ? llvm::ICmpInst::ICMP_SLT :
 		UPred == llvm::ICmpInst::ICMP_ULE ? llvm::ICmpInst::ICMP_SLE : UPred;
 
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || UPred == llvm::ICmpInst::ICMP_EQ || UPred == llvm::ICmpInst::ICMP_NE, "llvm_eq_t<>: invalid type(II)");
+
 	static inline llvm::Value* icmp(llvm::IRBuilder<>* ir, llvm::Value* lhs, llvm::Value* rhs)
 	{
 		return ir->CreateICmp(pred, lhs, rhs);
@@ -1056,6 +1098,17 @@ public:
 		return result;
 	}
 
+	template <typename T, typename... Args>
+	auto build(Args... args)
+	{
+		using value_type = std::remove_extent_t<T>;
+		const value_type values[]{static_cast<value_type>(args)...};
+		static_assert(sizeof(T) / sizeof(value_type) == sizeof...(Args), "build: unexpected number of arguments");
+		value_t<T> result;
+		result.value = llvm::ConstantDataVector::get(m_context, values);
+		return result;
+	}
+
 	template <typename... Types>
 	llvm::Function* get_intrinsic(llvm::Intrinsic::ID id)
 	{
@@ -1102,6 +1155,12 @@ public:
 		result.value = m_ir->CreateFCmp(FPred, a.eval(m_ir), b.eval(m_ir));
 		return result;
 	}
+
+	template <typename R = v128>
+	R get_const_vector(llvm::Constant*, u32 a, u32 b);
+
+	template <typename T = v128>
+	llvm::Constant* make_const_vector(T, llvm::Type*);
 };
 
 #endif
