@@ -2882,67 +2882,57 @@ public:
 
 	void ROTQBYBI(spu_opcode_t op)
 	{
-		value_t<u8[16]> sh;
-		u8 initial[16]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-		sh.value = llvm::ConstantDataVector::get(m_context, initial);
+		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 		sh = eval((sh - (zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3)) & 0xf);
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
 	void ROTQMBYBI(spu_opcode_t op)
 	{
-		value_t<u8[16]> sh;
-		u8 initial[16]{112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127};
-		sh.value = llvm::ConstantDataVector::get(m_context, initial);
+		auto sh = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
 		sh = eval(sh + (-(zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3) & 0x1f));
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
 	void SHLQBYBI(spu_opcode_t op)
 	{
-		value_t<u8[16]> sh;
-		u8 initial[16]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-		sh.value = llvm::ConstantDataVector::get(m_context, initial);
+		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 		sh = eval(sh - (zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3));
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
 	void CBX(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0xf);
-		value_t<u8[16]> r;
-		u8 initial[16]{0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
+		const auto i = eval(~s & 0xf);
+		auto r = build<u8[16]>(0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt8(0x3), i.value);
 		set_vr(op.rt, r);
 	}
 
 	void CHX(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) >> 1 & 0x7);
-		value_t<u16[8]> r;
-		u16 initial[8]{0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
+		const auto i = eval(~s >> 1 & 0x7);
+		auto r = build<u16[8]>(0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt16(0x0203), i.value);
 		set_vr(op.rt, r);
 	}
 
 	void CWX(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) >> 2 & 0x3);
-		value_t<u32[4]> r;
-		u32 initial[4]{0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
+		const auto i = eval(~s >> 2 & 0x3);
+		auto r = build<u32[4]>(0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt32(0x010203), i.value);
 		set_vr(op.rt, r);
 	}
 
 	void CDX(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) >> 3 & 0x1);
-		value_t<u64[2]> r;
-		u64 initial[2]{0x18191a1b1c1d1e1f, 0x1011121314151617};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
+		const auto i = eval(~s >> 3 & 0x1);
+		auto r = build<u64[2]>(0x18191a1b1c1d1e1f, 0x1011121314151617);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt64(0x01020304050607), i.value);
 		set_vr(op.rt, r);
 	}
@@ -2970,29 +2960,29 @@ public:
 
 	void ROTQBY(spu_opcode_t op)
 	{
-		value_t<u8[16]> sh;
-		u8 initial[16]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-		sh.value = llvm::ConstantDataVector::get(m_context, initial);
-		sh = eval((sh - zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)) & 0xf);
-		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
+		const auto a = get_vr<u8[16]>(op.ra);
+		const auto b = get_vr<u8[16]>(op.rb);
+		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		sh = eval((sh - zshuffle<u8[16]>(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)) & 0xf);
+		set_vr(op.rt, pshufb(a, sh));
 	}
 
 	void ROTQMBY(spu_opcode_t op)
 	{
-		value_t<u8[16]> sh;
-		u8 initial[16]{112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127};
-		sh.value = llvm::ConstantDataVector::get(m_context, initial);
-		sh = eval(sh + (-zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f));
-		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
+		const auto a = get_vr<u8[16]>(op.ra);
+		const auto b = get_vr<u8[16]>(op.rb);
+		auto sh = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
+		sh = eval(sh + (-zshuffle<u8[16]>(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f));
+		set_vr(op.rt, pshufb(a, sh));
 	}
 
 	void SHLQBY(spu_opcode_t op)
 	{
-		value_t<u8[16]> sh;
-		u8 initial[16]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-		sh.value = llvm::ConstantDataVector::get(m_context, initial);
-		sh = eval(sh - (zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f));
-		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
+		const auto a = get_vr<u8[16]>(op.ra);
+		const auto b = get_vr<u8[16]>(op.rb);
+		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		sh = eval(sh - (zshuffle<u8[16]>(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f));
+		set_vr(op.rt, pshufb(a, sh));
 	}
 
 	void ORX(spu_opcode_t op)
@@ -3005,40 +2995,36 @@ public:
 
 	void CBD(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + op.i7) & 0xf);
-		value_t<u8[16]> r;
-		u8 initial[16]{0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto a = eval(extract(get_vr(op.ra), 3) + op.i7);
+		const auto i = eval(~a & 0xf);
+		auto r = build<u8[16]>(0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt8(0x3), i.value);
 		set_vr(op.rt, r);
 	}
 
 	void CHD(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + op.i7) >> 1 & 0x7);
-		value_t<u16[8]> r;
-		u16 initial[8]{0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto a = eval(extract(get_vr(op.ra), 3) + op.i7);
+		const auto i = eval(~a >> 1 & 0x7);
+		auto r = build<u16[8]>(0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt16(0x0203), i.value);
 		set_vr(op.rt, r);
 	}
 
 	void CWD(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + op.i7) >> 2 & 0x3);
-		value_t<u32[4]> r;
-		u32 initial[4]{0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto a = eval(extract(get_vr(op.ra), 3) + op.i7);
+		const auto i = eval(~a >> 2 & 0x3);
+		auto r = build<u32[4]>(0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt32(0x010203), i.value);
 		set_vr(op.rt, r);
 	}
 
 	void CDD(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + op.i7) >> 3 & 0x1);
-		value_t<u64[2]> r;
-		u64 initial[2]{0x18191a1b1c1d1e1f, 0x1011121314151617};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto a = eval(extract(get_vr(op.ra), 3) + op.i7);
+		const auto i = eval(~a >> 3 & 0x1);
+		auto r = build<u64[2]>(0x18191a1b1c1d1e1f, 0x1011121314151617);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt64(0x01020304050607), i.value);
 		set_vr(op.rt, r);
 	}
@@ -3297,11 +3283,11 @@ public:
 
 	void FSMBI(spu_opcode_t op)
 	{
-		u8 data[16];
+		v128 data;
 		for (u32 i = 0; i < 16; i++)
-			data[i] = op.i16 & (1u << i) ? 0xff : 0;
+			data._bytes[i] = op.i16 & (1u << i) ? -1 : 0;
 		value_t<u8[16]> r;
-		r.value = llvm::ConstantDataVector::get(m_context, data);
+		r.value = make_const_vector<v128>(data, get_type<u8[16]>());
 		set_vr(op.rt, r);
 	}
 
@@ -4137,10 +4123,7 @@ public:
 
 	void set_link(spu_opcode_t op)
 	{
-		u32 values[4]{0, 0, 0, spu_branch_target(m_pos + 4)};
-		value_t<u32[4]> r;
-		r.value = llvm::ConstantDataVector::get(m_context, values);
-		set_vr(op.rt, r);
+		set_vr(op.rt, build<u32[4]>(0, 0, 0, spu_branch_target(m_pos + 4)));
 
 		if (g_cfg.core.spu_block_size != spu_block_size_type::safe && m_block_info[m_pos / 4 + 1] && m_entry_info[m_pos / 4 + 1])
 		{
