@@ -1440,10 +1440,12 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	{
 		// Get function chunk name
 		const std::string name = fmt::format("spu-chunk-0x%05x", addr);
-		llvm::Function* result = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(name, get_type<void>(), get_type<u64>(), get_type<u64>(), get_type<u32>()));
+		llvm::Function* result = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(name, get_type<void>(), get_type<u8*>(), get_type<u8*>(), get_type<u32>()));
 
 		// Set parameters
 		result->setLinkage(llvm::GlobalValue::InternalLinkage);
+		result->addAttribute(1, llvm::Attribute::NoAlias);
+		result->addAttribute(2, llvm::Attribute::NoAlias);
 
 		// Enqueue if necessary
 		if (m_functions.emplace(addr, result).second)
@@ -1500,9 +1502,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
 			m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&SPUThread::pc));
-			const auto addr = m_ir->CreateAdd(m_thread, m_ir->getInt64(::offset32(&SPUThread::jit_dispatcher) + target * 2));
-			const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u64>(), get_type<u64>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
-			tail(m_ir->CreateLoad(m_ir->CreateIntToPtr(addr, type)));
+			const auto addr = m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(&SPUThread::jit_dispatcher) + target * 2));
+			const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u8*>(), get_type<u8*>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
+			tail(m_ir->CreateLoad(m_ir->CreateBitCast(addr, type)));
 			m_ir->SetInsertPoint(cblock);
 			return result;
 		}
@@ -1534,8 +1536,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	template <typename T>
 	llvm::Value* _ptr(llvm::Value* base, u32 offset, std::string name = "")
 	{
-		const auto off = m_ir->CreateAdd(base, m_ir->getInt64(offset));
-		const auto ptr = m_ir->CreateIntToPtr(off, get_type<T>()->getPointerTo(), name);
+		const auto off = m_ir->CreateGEP(base, m_ir->getInt64(offset));
+		const auto ptr = m_ir->CreateBitCast(off, get_type<T*>(), name);
 		return ptr;
 	}
 
@@ -1548,8 +1550,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	template <typename T, typename... Args>
 	llvm::Value* spu_ptr(value_t<u64> add, Args... offset_args)
 	{
-		const auto off = m_ir->CreateAdd(m_thread, m_ir->getInt64(::offset32(offset_args...)));
-		const auto ptr = m_ir->CreateIntToPtr(m_ir->CreateAdd(off, add.value), get_type<T>()->getPointerTo());
+		const auto off = m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(offset_args...)));
+		const auto ptr = m_ir->CreateBitCast(m_ir->CreateAdd(off, add.value), get_type<T*>());
 		return ptr;
 	}
 
@@ -1926,7 +1928,7 @@ public:
 		m_ir = &irb;
 
 		// Add entry function (contains only state/code check)
-		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_type<void>(), get_type<u64>(), get_type<u64>()));
+		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_type<void>(), get_type<u8*>(), get_type<u8*>()));
 		set_function(main_func);
 
 		// Start compilation
@@ -2223,7 +2225,7 @@ public:
 			std::vector<llvm::Constant*> chunks;
 			chunks.reserve(m_size / 4);
 
-			const auto null = cast<Function>(module->getOrInsertFunction("spu-null", get_type<void>(), get_type<u64>(), get_type<u64>(), get_type<u32>()));
+			const auto null = cast<Function>(module->getOrInsertFunction("spu-null", get_type<void>(), get_type<u8*>(), get_type<u8*>(), get_type<u32>()));
 			null->setLinkage(llvm::GlobalValue::InternalLinkage);
 			set_function(null);
 			m_ir->CreateRetVoid();
@@ -2286,7 +2288,7 @@ public:
 
 		if (size0 > 1)
 		{
-			const auto trampoline = cast<Function>(module->getOrInsertFunction(fmt::format("spu-0x%05x-trampoline-%03u", func[0], size0), get_type<void>(), get_type<u64>(), get_type<u64>()));
+			const auto trampoline = cast<Function>(module->getOrInsertFunction(fmt::format("spu-0x%05x-trampoline-%03u", func[0], size0), get_type<void>(), get_type<u8*>(), get_type<u8*>()));
 			set_function(trampoline);
 
 			struct work
@@ -2436,8 +2438,8 @@ public:
 				}
 
 				m_ir->SetInsertPoint(w.label);
-				const auto add = m_ir->CreateAdd(m_lsptr, m_ir->getInt64(start + w.level * 4 - 4));
-				const auto ptr = m_ir->CreateIntToPtr(add, get_type<u32*>());
+				const auto add = m_ir->CreateGEP(m_lsptr, m_ir->getInt64(start + w.level * 4 - 4));
+				const auto ptr = m_ir->CreateBitCast(add, get_type<u32*>());
 				const auto val = m_ir->CreateLoad(ptr);
 				const auto sw = m_ir->CreateSwitch(val, def, ::size32(targets));
 
@@ -3662,18 +3664,16 @@ public:
 	void STQX(spu_opcode_t op) //
 	{
 		value_t<u64> addr = zext<u64>((extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0x3fff0);
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		m_ir->CreateStore(r.value, m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 	}
 
 	void LQX(spu_opcode_t op) //
 	{
 		value_t<u64> addr = zext<u64>((extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0x3fff0);
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r;
-		r.value = m_ir->CreateLoad(m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 		set_vr(op.rt, r);
 	}
@@ -3681,18 +3681,16 @@ public:
 	void STQA(spu_opcode_t op) //
 	{
 		value_t<u64> addr = splat<u64>(spu_ls_target(0, op.i16));
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		m_ir->CreateStore(r.value, m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 	}
 
 	void LQA(spu_opcode_t op) //
 	{
 		value_t<u64> addr = splat<u64>(spu_ls_target(0, op.i16));
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r;
-		r.value = m_ir->CreateLoad(m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 		set_vr(op.rt, r);
 	}
@@ -3700,18 +3698,16 @@ public:
 	void STQR(spu_opcode_t op) //
 	{
 		value_t<u64> addr = splat<u64>(spu_ls_target(m_pos, op.i16));
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		m_ir->CreateStore(r.value, m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 	}
 
 	void LQR(spu_opcode_t op) //
 	{
 		value_t<u64> addr = splat<u64>(spu_ls_target(m_pos, op.i16));
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r;
-		r.value = m_ir->CreateLoad(m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 		set_vr(op.rt, r);
 	}
@@ -3719,18 +3715,16 @@ public:
 	void STQD(spu_opcode_t op) //
 	{
 		value_t<u64> addr = zext<u64>((extract(get_vr(op.ra), 3) + (op.si10 << 4)) & 0x3fff0);
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		m_ir->CreateStore(r.value, m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 	}
 
 	void LQD(spu_opcode_t op) //
 	{
 		value_t<u64> addr = zext<u64>((extract(get_vr(op.ra), 3) + (op.si10 << 4)) & 0x3fff0);
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r;
-		r.value = m_ir->CreateLoad(m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 		set_vr(op.rt, r);
 	}
@@ -3900,41 +3894,42 @@ public:
 		}
 
 		m_ir->CreateStore(addr.value, spu_ptr<u32>(&SPUThread::pc));
-		const auto disp = m_ir->CreateAdd(m_thread, m_ir->getInt64(::offset32(&SPUThread::jit_dispatcher)));
-		const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u64>(), get_type<u64>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
-		const auto ad64 = zext<u64>(addr).value;
+		const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u8*>(), get_type<u8*>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
+		const auto disp = m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(&SPUThread::jit_dispatcher))), type);
+		const auto ad64 = m_ir->CreateZExt(addr.value, get_type<u64>());
 
 		if (ret && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 		{
 			// Compare address stored in stack mirror with addr
 			const auto stack0 = eval(zext<u64>(sp) + ::offset32(&SPUThread::stack_mirror));
 			const auto stack1 = eval(stack0 + 8);
-			const auto _ret = m_ir->CreateLoad(m_ir->CreateIntToPtr(m_ir->CreateAdd(m_thread, stack0.value), type));
-			const auto link = m_ir->CreateLoad(m_ir->CreateIntToPtr(m_ir->CreateAdd(m_thread, stack1.value), get_type<u64*>()));
+			const auto _ret = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), type));
+			const auto link = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack1.value), get_type<u64*>()));
 			const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
 			const auto done = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->CreateCondBr(m_ir->CreateICmpEQ(ad64, link), done, fail);
 			m_ir->SetInsertPoint(done);
 
 			// Clear stack mirror and return by tail call to the provided return address
-			m_ir->CreateStore(splat<u64[2]>(-1).value, m_ir->CreateIntToPtr(m_ir->CreateAdd(m_thread, stack0.value), get_type<u64[2]>()->getPointerTo()));
+			m_ir->CreateStore(splat<u64[2]>(-1).value, m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), get_type<u64(*)[2]>()));
 			tail(_ret);
 			m_ir->SetInsertPoint(fail);
 		}
 
-		llvm::Value* ax2 = m_ir->CreateShl(ad64, 1);
-		llvm::Value* ptr = m_ir->CreateIntToPtr(m_ir->CreateAdd(disp, ax2), type);
+		llvm::Value* ptr = m_ir->CreateGEP(disp, m_ir->CreateLShr(ad64, 2, "", true));
 
 		if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
 		{
 			// Try to load chunk address from the function table
+			llvm::Value* index = ad64;
+
 			if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
 			{
-				ax2 = m_ir->CreateSub(ad64, m_ir->getInt64(m_function_queue[0] * 2));
+				index = m_ir->CreateSub(ad64, m_ir->getInt64(m_function_queue[0]));
 			}
 
-			const auto use_ftable = m_ir->CreateICmpULT(ax2, m_ir->getInt64(m_size * 2));
-			ptr = m_ir->CreateSelect(use_ftable, m_ir->CreateGEP(m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(ax2, 3, "", true)}), ptr);
+			const auto use_ftable = m_ir->CreateICmpULT(index, m_ir->getInt64(m_size));
+			ptr = m_ir->CreateSelect(use_ftable, m_ir->CreateGEP(m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(index, 2, "", true)}), ptr);
 		}
 
 		tail(m_ir->CreateLoad(ptr));
@@ -4153,8 +4148,8 @@ public:
 			const auto func = add_function(m_pos + 4);
 			const auto stack0 = eval(zext<u64>(extract(get_vr(1), 3) & 0x3fff0) + ::offset32(&SPUThread::stack_mirror));
 			const auto stack1 = eval(stack0 + 8);
-			m_ir->CreateStore(func, m_ir->CreateIntToPtr(m_ir->CreateAdd(m_thread, stack0.value), func->getType()->getPointerTo()));
-			m_ir->CreateStore(m_ir->getInt64(m_pos + 4), m_ir->CreateIntToPtr(m_ir->CreateAdd(m_thread, stack1.value), get_type<u64*>()));
+			m_ir->CreateStore(func, m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), func->getType()->getPointerTo()));
+			m_ir->CreateStore(m_ir->getInt64(m_pos + 4), m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack1.value), get_type<u64*>()));
 		}
 	}
 
