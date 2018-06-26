@@ -293,7 +293,7 @@ public:
 
 	void SetForceBoot(bool force_boot);
 
-	void Load(bool add_only = false);
+	void Load(bool add_only = false, bool is_update = false);
 	void Run();
 	bool Pause();
 	void Resume();
