@@ -319,86 +319,93 @@ void rpcs3_app::InitializeConnects()
 * Handle a request to change the stylesheet. May consider adding reporting of errors in future.
 * Empty string means default.
 */
-void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
+void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 {
-	QFile file(sheetFilePath);
-	if (sheetFilePath == "")
+	auto rgba = [](const QColor& c, int v = 0)
 	{
-		auto rgba = [](const QColor& c, int v = 0)
-		{
-			return QString("rgba(%1, %2, %3, %4);").arg(c.red() + v).arg(c.green() + v).arg(c.blue() + v).arg(c.alpha() + v);
-		};
+		return QString("rgba(%1, %2, %3, %4);").arg(c.red() + v).arg(c.green() + v).arg(c.blue() + v).arg(c.alpha() + v);
+	};
 
-		QString rgba_tool_bar = rgba(gui::mw_tool_bar_color);
-		QString style_sheet = QString
-		(
-			// main window toolbar search
-			//"QLineEdit#mw_searchbar { margin-left:14px; background-color: " + rgba_tool_bar + " }"
-			"QLineEdit#mw_searchbar { border-radius: 1.25em; padding: 0 1em; background: #bbbbbb; selection-background-color: lightblue; margin: .8em; }"
+	QString rgba_tool_bar = rgba(gui::mw_tool_bar_color);
+	QString style_sheet
+	(
+		// main window toolbar search
+		//"QLineEdit#mw_searchbar { margin-left:14px; background-color: " + rgba_tool_bar + " }"
+		"QLineEdit#mw_searchbar { border-radius: 1.25em; padding: 0 1em; background: #bbbbbb; selection-background-color: lightblue; margin: .8em; }"
 
-			// main window toolbar slider
-			"QSlider#sizeSlider { color: #505050; background: " + rgba_tool_bar + "; }"
-			"QSlider::handle:horizontal { border: 0em smooth #404040; border-radius: .49em; background: #404040; width: 1em; margin: -.4em 0; }"
-			"QSlider::groove:horizontal { border-radius: .15em; background: #505050; height: .3em; }"
+		// main window toolbar slider
+		"QSlider#sizeSlider { color: #505050; background: " + rgba_tool_bar + "; }"
+		"QSlider::handle:horizontal { border: 0em smooth #404040; border-radius: .49em; background: #404040; width: 1em; margin: -.4em 0; }"
+		"QSlider::groove:horizontal { border-radius: .15em; background: #505050; height: .3em; }"
 
-			// main window toolbar
-			"QToolBar#mw_toolbar { background-color: " + rgba_tool_bar + " }"
-			"QToolBar#mw_toolbar::separator { background-color: " + rgba(gui::mw_tool_bar_color, -20) + " width: 1px; margin-top: 2px; margin-bottom: 2px; }"
+		// main window toolbar
+		"QToolBar#mw_toolbar { background-color: " + rgba_tool_bar + " }"
+		"QToolBar#mw_toolbar::separator { background-color: " + rgba(gui::mw_tool_bar_color, -20) + " width: 1px; margin-top: 2px; margin-bottom: 2px; }"
 
-			// main window toolbar icon color
-			"QLabel#toolbar_icon_color { color: " + rgba(gui::mw_tool_icon_color) + " }"
+		// main window toolbar icon color
+		"QLabel#toolbar_icon_color { color: " + rgba(gui::mw_tool_icon_color) + " }"
 
-			// thumbnail icon color
-			"QLabel#thumbnail_icon_color { color: " + rgba(gui::mw_thumb_icon_color) + " }"
+		// thumbnail icon color
+		"QLabel#thumbnail_icon_color { color: " + rgba(gui::mw_thumb_icon_color) + " }"
 
-			// game list icon color
-			"QLabel#gamelist_icon_background_color { color: " + rgba(gui::gl_icon_color) + " }"
+		// game list icon color
+		"QLabel#gamelist_icon_background_color { color: " + rgba(gui::gl_icon_color) + " }"
 
-			// log frame tty
-			"QTextEdit#tty_frame { background-color: #ffffff; }"
-			"QLabel#tty_text { color: #000000; }"
+		// log frame tty
+		"QTextEdit#tty_frame { background-color: #ffffff; }"
+		"QLabel#tty_text { color: #000000; }"
 
-			// log frame log
-			"QTextEdit#log_frame { background-color: #ffffff; }"
-			"QLabel#log_level_always { color: #107896; }"
-			"QLabel#log_level_fatal { color: #ff00ff; }"
-			"QLabel#log_level_error { color: #C02F1D; }"
-			"QLabel#log_level_todo { color: #ff6000; }"
-			"QLabel#log_level_success { color: #008000; }"
-			"QLabel#log_level_warning { color: #BA8745; }"
-			"QLabel#log_level_notice { color: #000000; }"
-			"QLabel#log_level_trace { color: #808080; }"
-			"QLabel#log_stack { color: #000000; }"
+		// log frame log
+		"QTextEdit#log_frame { background-color: #ffffff; }"
+		"QLabel#log_level_always { color: #107896; }"
+		"QLabel#log_level_fatal { color: #ff00ff; }"
+		"QLabel#log_level_error { color: #C02F1D; }"
+		"QLabel#log_level_todo { color: #ff6000; }"
+		"QLabel#log_level_success { color: #008000; }"
+		"QLabel#log_level_warning { color: #BA8745; }"
+		"QLabel#log_level_notice { color: #000000; }"
+		"QLabel#log_level_trace { color: #808080; }"
+		"QLabel#log_stack { color: #000000; }"
 
-			// about dialog
-			"QWidget#header_section { background-color: #ffffff; }"
+		// about dialog
+		"QWidget#header_section { background-color: #ffffff; }"
 
-			// kernel explorer
-			"QDialog#kernel_explorer { background-color: rgba(240, 240, 240, 255); }"
+		// kernel explorer
+		"QDialog#kernel_explorer { background-color: rgba(240, 240, 240, 255); }"
 
-			// memory viewer
-			"QDialog#memory_viewer { background-color: rgba(240, 240, 240, 255); }"
-			"QLabel#memory_viewer_address_panel { color: rgba(75, 135, 150, 255); background-color: rgba(240, 240, 240, 255); }"
-			"QLabel#memory_viewer_hex_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
-			"QLabel#memory_viewer_ascii_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
+		// memory viewer
+		"QDialog#memory_viewer { background-color: rgba(240, 240, 240, 255); }"
+		"QLabel#memory_viewer_address_panel { color: rgba(75, 135, 150, 255); background-color: rgba(240, 240, 240, 255); }"
+		"QLabel#memory_viewer_hex_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
+		"QLabel#memory_viewer_ascii_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
 
-			// debugger frame
-			"QLabel#debugger_frame_breakpoint { color: #000000; background-color: #ffff00; }"
-			"QLabel#debugger_frame_pc { color: #000000; background-color: #00ff00; }"
+		// debugger frame
+		"QLabel#debugger_frame_breakpoint { color: #000000; background-color: #ffff00; }"
+		"QLabel#debugger_frame_pc { color: #000000; background-color: #00ff00; }"
 
-			// rsx debugger
-			"QLabel#rsx_debugger_display_buffer { background-color: rgba(240, 240, 240, 255); }"
+		// rsx debugger
+		"QLabel#rsx_debugger_display_buffer { background-color: rgba(240, 240, 240, 255); }"
 
-			// pad settings
-			"QLabel#l_controller { color: #434343; }"
+		// pad settings
+		"QLabel#l_controller { color: #434343; }"
 
-			// game list
-			"QTableView::item { border-left: 1px solid white; border-right: 1px solid white; }"
+		// game list
+		"QTableView::item { border-left: 1px solid white; border-right: 1px solid white; }"
 
-			// game grid
-			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
-		);
+		// game grid
+		"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
+	);
 
+	QFile file(path);
+
+#if !defined(_WIN32) && !defined(__APPLE__)
+	// If we can't open the file, try the /share folder
+	QString share_dir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/";
+	QFile share_file(share_dir + "GuiConfigs/" + QFileInfo(file.fileName()).fileName());
+#endif
+
+	if (path == "")
+	{
 		setStyleSheet(style_sheet);
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -421,19 +428,18 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 		file.close();
 	}
 #if !defined(_WIN32) && !defined(__APPLE__)
-	else
+	else if (share_file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
-		// If we can't open the file, try the /share folder
-		QString shareDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/";
-		QDir::setCurrent(shareDir);
-		QFile newFile(shareDir + "GuiConfigs/" + QFileInfo(file.fileName()).fileName());
-		if (newFile.open(QIODevice::ReadOnly | QIODevice::Text))
-		{
-			setStyleSheet(newFile.readAll());
-			newFile.close();
-		}
+		QDir::setCurrent(share_dir);
+		setStyleSheet(share_file.readAll());
+		share_file.close();
 	}
 #endif
+	else
+	{
+		setStyleSheet(style_sheet);
+	}
+
 	gui::stylesheet = styleSheet();
 	RPCS3MainWin->RepaintGui();
 }
