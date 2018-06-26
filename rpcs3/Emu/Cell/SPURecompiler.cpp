@@ -3979,8 +3979,14 @@ public:
 			{
 				if (m_block_info[target / 4])
 				{
-					targets.emplace(target, add_block(target));
+					targets.emplace(target, nullptr);
 				}
+			}
+
+			// Initialize target basic blocks
+			for (auto& pair : targets)
+			{
+				pair.second = add_block(pair.first);
 			}
 
 			// Get jump table bounds (optimization)
