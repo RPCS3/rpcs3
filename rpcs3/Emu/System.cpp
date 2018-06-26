@@ -539,7 +539,7 @@ void Emulator::SetForceBoot(bool force_boot)
 	m_force_boot = force_boot;
 }
 
-void Emulator::Load(bool add_only)
+void Emulator::Load(bool add_only, bool is_update)
 {
 	if (!IsStopped())
 	{
@@ -599,9 +599,28 @@ void Emulator::Load(bool add_only)
 
 			return fs::file{elf_dir + "/../PARAM.SFO"};
 		}());
-		m_title = psf::get_string(_psf, "TITLE", m_path.substr(m_path.find_last_of('/') + 1));
-		m_title_id = psf::get_string(_psf, "TITLE_ID");
-		m_cat = psf::get_string(_psf, "CATEGORY");
+
+		const std::string new_title    = psf::get_string(_psf, "TITLE", m_path.substr(m_path.find_last_of('/') + 1));
+		const std::string new_title_id = psf::get_string(_psf, "TITLE_ID");
+		const std::string new_cat      = psf::get_string(_psf, "CATEGORY");
+
+		if (is_update)
+		{
+			if (!new_title.empty())
+				m_title = new_title;
+
+			if (!new_title_id.empty())
+				m_title_id = new_title_id;
+
+			if (!new_cat.empty())
+				m_cat = new_cat;
+		}
+		else
+		{
+			m_title    = new_title;
+			m_title_id = new_title_id;
+			m_cat      = new_cat;
+		}
 
 		for (auto& c : m_title)
 		{
@@ -1029,8 +1048,8 @@ void Emulator::Load(bool add_only)
 		if (disc.empty() && m_cat == "DG" && fs::is_file(hdd0_boot))
 		{
 			// Booting game update
-			LOG_SUCCESS(LOADER, "Updates found at /dev_hdd0/game/%s/!", m_title_id);
-			return m_path = hdd0_boot, Load();
+			LOG_SUCCESS(LOADER, "Updates found at /dev_hdd0/game/%s/", m_title_id);
+			return m_path = hdd0_boot, Load(false, true);
 		}
 
 		// Mount /host_root/ if necessary
