@@ -1363,7 +1363,7 @@ bool ppu_interpreter::VMULOUH(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VNMSUBFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_sub_ps(ppu.vr[op.vb].vf, _mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf));
+	ppu.vr[op.vd].vf = _mm_xor_ps(_mm_sub_ps(_mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf), ppu.vr[op.vb].vf), _mm_set1_ps(-0.0f));
 	return true;
 }
 
