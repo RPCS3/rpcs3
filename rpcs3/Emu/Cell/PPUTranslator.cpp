@@ -1175,7 +1175,7 @@ void PPUTranslator::VMULOUH(ppu_opcode_t op)
 void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 {
 	const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
-	SetVr(op.vd, m_ir->CreateFSub(acb[2], m_ir->CreateFMul(acb[0], acb[1])));
+	SetVr(op.vd, m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(acb[0], acb[1]), acb[2])));
 }
 
 void PPUTranslator::VNOR(ppu_opcode_t op)
