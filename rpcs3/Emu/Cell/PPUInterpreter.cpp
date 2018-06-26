@@ -4660,7 +4660,7 @@ bool ppu_interpreter::FMSUBS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FNMSUBS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc]) + ppu.fpr[op.frb]);
+	ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
