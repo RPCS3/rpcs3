@@ -991,13 +991,6 @@ public:
 		return (a & c) | (b & ~c);
 	}
 
-	// Average: (a + b + 1) >> 1
-	template <typename T>
-	static inline auto avg(T a, T b)
-	{
-		return (a >> 1) + (b >> 1) + ((a | b) & 1);
-	}
-
 	// Rotate left
 	template <typename T>
 	static inline auto rol(T a, T b)
@@ -1012,6 +1005,30 @@ public:
 	{
 		static constexpr u64 mask = value_t<typename T::type>::esize - 1;
 		return a << (b & mask) | a >> ((0 - b) & mask);
+	}
+
+	// Average: (a + b + 1) >> 1
+	template <typename T>
+	inline auto avg(T a, T b)
+	{
+		//return (a >> 1) + (b >> 1) + ((a | b) & 1);
+
+		value_t<typename T::type> result;
+		llvm::Instruction::CastOps cast_op = llvm::Instruction::BitCast;
+		if (result.is_sint)
+			cast_op = llvm::Instruction::SExt;
+		if (result.is_uint)
+			cast_op = llvm::Instruction::ZExt;
+		llvm::Type* cast_t = m_ir->getIntNTy(result.esize * 2);
+		if (result.is_vector != 0)
+			cast_t = llvm::VectorType::get(cast_t, result.is_vector);
+
+		const auto axt = m_ir->CreateCast(cast_op, a.eval(m_ir), cast_t);
+		const auto bxt = m_ir->CreateCast(cast_op, b.eval(m_ir), cast_t);
+		const auto cxt = llvm::ConstantInt::get(cast_t, 1, false);
+		const auto abc = m_ir->CreateAdd(m_ir->CreateAdd(axt, bxt), cxt);
+		result.value = m_ir->CreateTrunc(m_ir->CreateLShr(abc, 1), result.get_type(m_context));
+		return result;
 	}
 
 	// Select (c ? a : b)
