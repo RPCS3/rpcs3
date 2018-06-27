@@ -78,9 +78,6 @@ void main_window::Init()
 
 	setAcceptDrops(true);
 
-	// hide utilities from the average user
-	ui->menuUtilities->menuAction()->setVisible(guiSettings->GetValue(gui::m_showDebugTab).toBool());
-
 	// add toolbar widgets (crappy Qt designer is not able to)
 	ui->toolBar->setObjectName("mw_toolbar");
 	ui->sizeSlider->setRange(0, gui::gl_max_slider_pos);
@@ -1545,6 +1542,9 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 			i--; // list count is now an entry shorter so we have to repeat the same index in order to load all other entries
 		}
 	}
+
+	// hide utilities from the average user
+	ui->menuUtilities->menuAction()->setVisible(guiSettings->GetValue(gui::m_showDebugTab).toBool());
 
 	ui->showLogAct->setChecked(guiSettings->GetValue(gui::mw_logger).toBool());
 	ui->showGameListAct->setChecked(guiSettings->GetValue(gui::mw_gamelist).toBool());

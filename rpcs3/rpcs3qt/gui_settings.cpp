@@ -8,9 +8,17 @@
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-gui_settings::gui_settings(QObject* parent) : QObject(parent), m_settings(ComputeSettingsDir() + tr("CurrentSettings") + ".ini", QSettings::Format::IniFormat, parent),
-	m_settingsDir(ComputeSettingsDir())
+gui_settings::gui_settings(QObject* parent) : QObject(parent)
+	, m_current_name(gui::Settings)
+	, m_settings(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent)
+	, m_settingsDir(ComputeSettingsDir())
 {
+	const QString settings_name = GetValue(gui::m_currentConfig).toString();
+
+	if (settings_name != m_current_name)
+	{
+		ChangeToConfig(settings_name);
+	}
 }
 
 gui_settings::~gui_settings()
@@ -45,19 +53,46 @@ QString gui_settings::ComputeSettingsDir()
 	return QString::fromStdString(fs::get_config_dir()) + "/GuiConfigs/";
 }
 
-void gui_settings::ChangeToConfig(const QString& name)
+bool gui_settings::ChangeToConfig(const QString& friendly_name)
 {
-	if (name != tr("CurrentSettings"))
-	{ // don't try to change to yourself.
-		Reset(false);
-
-		QSettings other(m_settingsDir.absoluteFilePath(name + ".ini"), QSettings::IniFormat);
-		for (const QString& key : other.allKeys())
-		{
-			m_settings.setValue(key, other.value(key));
-		}
-		m_settings.sync();
+	if (m_current_name == friendly_name)
+	{
+		return false;
 	}
+
+	if (friendly_name != gui::Settings)
+	{
+		if (m_current_name == gui::Settings)
+		{
+			SetValue(gui::m_currentConfig, friendly_name);
+		}
+		else
+		{
+			QSettings tmp(m_settingsDir.absoluteFilePath(gui::Settings + ".ini"), QSettings::Format::IniFormat, parent());
+			tmp.beginGroup(gui::m_currentConfig.key);
+			tmp.setValue(gui::m_currentConfig.name, friendly_name);
+			tmp.endGroup();
+		}
+	}
+
+	m_settings.sync();
+
+	Reset(true);
+
+	QSettings other(m_settingsDir.absoluteFilePath(friendly_name + ".ini"), QSettings::IniFormat);
+
+	for (const QString& key : other.allKeys())
+	{
+		m_settings.setValue(key, other.value(key));
+	}
+
+	SetValue(gui::m_currentConfig, friendly_name);
+
+	m_settings.sync();
+
+	m_current_name = friendly_name;
+
+	return true;
 }
 
 void gui_settings::Reset(bool removeMeta)
@@ -211,10 +246,26 @@ void gui_settings::SetCustomColor(int col, const QColor& val)
 	SetValue(gui_save(gui::meta, "CustomColor" + QString::number(col), gui::gl_icon_color), val);
 }
 
-void gui_settings::SaveCurrentConfig(const QString& friendlyName)
+void gui_settings::SaveCurrentConfig(const QString& friendly_name)
 {
-	SetValue(gui::m_currentConfig, friendlyName);
-	BackupSettingsToTarget(friendlyName);
+	if (friendly_name != gui::Settings)
+	{
+		if (m_current_name == gui::Settings)
+		{
+			SetValue(gui::m_currentConfig, friendly_name);
+			m_settings.sync();
+		}
+		else
+		{
+			QSettings tmp(m_settingsDir.absoluteFilePath(gui::Settings + ".ini"), QSettings::Format::IniFormat, parent());
+			tmp.beginGroup(gui::m_currentConfig.key);
+			tmp.setValue(gui::m_currentConfig.name, friendly_name);
+			tmp.endGroup();
+		}
+	}
+
+	BackupSettingsToTarget(friendly_name);
+	ChangeToConfig(friendly_name);
 }
 
 logs::level gui_settings::GetLogLevel()
@@ -246,9 +297,10 @@ QStringList gui_settings::GetConfigEntries()
 	return res;
 }
 
-void gui_settings::BackupSettingsToTarget(const QString& friendlyName)
+void gui_settings::BackupSettingsToTarget(const QString& friendly_name)
 {	
-	QSettings target(ComputeSettingsDir() + friendlyName + ".ini", QSettings::Format::IniFormat);
+	QSettings target(ComputeSettingsDir() + friendly_name + ".ini", QSettings::Format::IniFormat);
+
 	for (const QString& key : m_settings.allKeys())
 	{
 		if (!key.startsWith(gui::meta))
@@ -256,6 +308,7 @@ void gui_settings::BackupSettingsToTarget(const QString& friendlyName)
 			target.setValue(key, m_settings.value(key));
 		}
 	}
+
 	target.sync();
 }
 
