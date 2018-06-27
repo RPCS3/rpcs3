@@ -576,30 +576,34 @@ namespace rsx
 				continue;
 			}
 
-			//Validate put and get registers
-			//TODO: Who should handle graphics exceptions??
-			const u32 get_address = RSXIOMem.RealAddr(internal_get);
-
-			if (!get_address)
+			// Validate put and get registers before reading the command
+			// TODO: Who should handle graphics exceptions??
+			u32 cmd;
 			{
-				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", internal_get.load(), put);
+				u32 get_address;
 
-				if (mem_faults_count >= 3)
+				if (!RSXIOMem.getRealAddr(internal_get, get_address))
 				{
-					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
-					internal_get = restore_point.load();;
-				}
-				else
-				{
-					mem_faults_count++;
-					std::this_thread::sleep_for(10ms);
+					LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", internal_get.load(), put);
+
+					if (mem_faults_count >= 3)
+					{
+						LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
+						internal_get = restore_point.load();
+					}
+					else
+					{
+						mem_faults_count++;
+						std::this_thread::sleep_for(10ms);
+					}
+
+					invalid_command_interrupt_raised = true;
+					continue;
 				}
 
-				invalid_command_interrupt_raised = true;
-				continue;
+				cmd = vm::read32(get_address);
 			}
 
-			const u32 cmd = ReadIO32(internal_get);
 			const u32 count = (cmd >> 18) & 0x7ff;
 
 			if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
