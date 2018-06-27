@@ -115,6 +115,7 @@ namespace gui
 		return q_string_pair(path, title.simplified()); // simplified() forces single line text
 	}
 
+	const QString Settings    = QObject::tr("CurrentSettings");
 	const QString Default     = QObject::tr("default");
 	const QString main_window = "main_window";
 	const QString game_list   = "GameList";
@@ -188,7 +189,7 @@ namespace gui
 	const gui_save rsx_geometry = gui_save(rsx, "geometry", QByteArray());
 	const gui_save rsx_states   = gui_save(rsx, "states",   QVariantMap());
 
-	const gui_save m_currentConfig     = gui_save(meta, "currentConfig",     QObject::tr("CurrentSettings"));
+	const gui_save m_currentConfig     = gui_save(meta, "currentConfig",     Settings);
 	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", Default);
 	const gui_save m_saveNotes         = gui_save(meta, "saveNotes",         QVariantMap());
 	const gui_save m_showDebugTab      = gui_save(meta, "showDebugTab",      false);
@@ -231,7 +232,7 @@ public:
 	QString GetSettingsDir();
 
 	/** Changes the settings file to the destination preset*/
-	void ChangeToConfig(const QString& destination);
+	bool ChangeToConfig(const QString& friendly_name);
 
 	bool GetCategoryVisibility(int cat);
 	QVariant GetValue(const gui_save& entry);
@@ -263,15 +264,16 @@ public Q_SLOTS:
 
 	void SetCustomColor(int col, const QColor& val);
 
-	void SaveCurrentConfig(const QString& friendlyName);
+	void SaveCurrentConfig(const QString& friendly_name);
 
 	static QSize SizeFromSlider(int pos);
 	static gui_save GetGuiSaveForColumn(int col);
 
 private:
 	QString ComputeSettingsDir();
-	void BackupSettingsToTarget(const QString& destination);
+	void BackupSettingsToTarget(const QString& friendly_name);
 
 	QSettings m_settings;
 	QDir m_settingsDir;
+	QString m_current_name;
 };

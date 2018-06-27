@@ -972,7 +972,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				ui->combo_stylesheets->setCurrentIndex(0);
 			}
 			// Only attempt to load a config if changes occurred.
-			if (m_currentConfig != xgui_settings->GetValue(gui::m_currentConfig).toString())
+			if (m_currentConfig != ui->combo_configs->currentText())
 			{
 				OnApplyConfig();
 			}
@@ -1124,9 +1124,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings::HookStaticFuncs);
 	SubscribeTooltip(ui->hookStFunc, json_debug["hookStFunc"].toString());
 
-	//
 	// Layout fix for High Dpi
-	//
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
 
@@ -1149,7 +1147,7 @@ void settings_dialog::AddConfigs()
 		}
 	}
 
-	m_currentConfig = tr("CurrentSettings");
+	m_currentConfig = xgui_settings->GetValue(gui::m_currentConfig).toString();
 
 	int index = ui->combo_configs->findText(m_currentConfig);
 	if (index != -1)
@@ -1158,7 +1156,7 @@ void settings_dialog::AddConfigs()
 	}
 	else
 	{
-		LOG_WARNING(GENERAL, "Trying to set an invalid config index ", index);
+		LOG_WARNING(GENERAL, "Trying to set an invalid config index %d", index);
 	}
 }
 
@@ -1199,41 +1197,55 @@ void settings_dialog::OnBackupCurrentConfig()
 	while (dialog->exec() != QDialog::Rejected)
 	{
 		dialog->resize(500, 100);
-		QString friendlyName = dialog->textValue();
-		if (friendlyName == "")
+		QString friendly_name = dialog->textValue();
+		if (friendly_name == "")
 		{
 			QMessageBox::warning(this, tr("Error"), tr("Name cannot be empty"));
 			continue;
 		}
-		if (friendlyName.contains("."))
+		if (friendly_name.contains("."))
 		{
 			QMessageBox::warning(this, tr("Error"), tr("Must choose a name with no '.'"));
 			continue;
 		}
-		if (ui->combo_configs->findText(friendlyName) != -1)
+		if (ui->combo_configs->findText(friendly_name) != -1)
 		{
 			QMessageBox::warning(this, tr("Error"), tr("Please choose a non-existing name"));
 			continue;
 		}
 		Q_EMIT GuiSettingsSaveRequest();
-		xgui_settings->SaveCurrentConfig(friendlyName);
-		ui->combo_configs->addItem(friendlyName);
-		ui->combo_configs->setCurrentIndex(ui->combo_configs->findText(friendlyName));
+		xgui_settings->SaveCurrentConfig(friendly_name);
+		ui->combo_configs->addItem(friendly_name);
+		ui->combo_configs->setCurrentText(friendly_name);
+		m_currentConfig = friendly_name;
 		break;
 	}
 }
 
 void settings_dialog::OnApplyConfig()
 {
-	m_currentConfig = ui->combo_configs->currentText();
-	xgui_settings->SetValue(gui::m_currentConfig, m_currentConfig);
-	xgui_settings->ChangeToConfig(m_currentConfig);
+	const QString new_config = ui->combo_configs->currentText();
+
+	if (new_config == m_currentConfig)
+	{
+		return;
+	}
+
+	if (!xgui_settings->ChangeToConfig(new_config))
+	{
+		const int new_config_idx = ui->combo_configs->currentIndex();
+		ui->combo_configs->setCurrentText(m_currentConfig);
+		ui->combo_configs->removeItem(new_config_idx);
+		return;
+	}
+
+	m_currentConfig = new_config;
 	Q_EMIT GuiSettingsSyncRequest(true);
 }
 
 void settings_dialog::OnApplyStylesheet()
 {
-	m_currentStylesheet = ui->combo_stylesheets->currentData().toString();
+	m_currentStylesheet = ui->combo_stylesheets->currentText();
 	xgui_settings->SetValue(gui::m_currentStylesheet, m_currentStylesheet);
 	Q_EMIT GuiStylesheetRequest(xgui_settings->GetCurrentStylesheetPath());
 }
