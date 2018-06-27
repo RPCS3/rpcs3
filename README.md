@@ -6,7 +6,7 @@ RPCS3
 
 The world's first open-source PlayStation 3 emulator/debugger written in C++ for Windows and Linux.
 
-You can find some basic information in our [**website**](https://rpcs3.net/). 
+You can find some basic information in our [**website**](https://rpcs3.net/).
 For discussion about this emulator and PS3 emulation please visit our [**forums**](https://forums.rpcs3.net) and our [**Discord server**](https://discord.me/RPCS3).
 
 [**Support Lead Developers Nekotekina and kd-11 on Patreon**](https://www.patreon.com/Nekotekina)
@@ -51,7 +51,7 @@ To initialize the repository don't forget to execute `git submodule update --ini
 
 ### Configuring Qt
 
-*If you're using Visual Studio 2017 without Qt plugin support (or simply dont want to use it):* 
+*If you're using Visual Studio 2017 without Qt plugin support (or simply dont want to use it):*
 1) Add `QTDIR` environment variable and set it to e.g `<QtInstallFolder>\5.11.1\msvc2015_64\`
 
 Open `rpcs3.sln`
@@ -59,12 +59,12 @@ Open `rpcs3.sln`
 
 *If you wish to use the Visual Studio plugin for Qt:* </br>
 1) Go to the Qt5 menu and edit Qt5 options. Add the path to your Qt installation with compiler e.g. `C:\Qt\5.11.1\msvc2015_64`.
-2) While selecting the rpcs3qt project, go to Qt5->Project Setting and select the version you added. 
+2) While selecting the rpcs3qt project, go to Qt5->Project Setting and select the version you added.
 
 ### Building the projects
 The recommended build configuration is Release - LLVM, for all purposes.
 
-You may want to download precompiled [LLVM lib](https://github.com/RPCS3/llvm/releases/download/continuous-release_60/llvmlibs.7z) and extract to root rpcs3 folder (which contains `rpcs3.sln`), as well as download and extract [additional libs](https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R) to `lib\%CONFIGURATION%-x64\` to speed up compilation time (unoptimised/debug libs are currently not available precompiled).
+You may want to download precompiled [LLVM lib](https://github.com/RPCS3/llvm/releases/download/continuous-master/llvmlibs.7z) and extract to root rpcs3 folder (which contains `rpcs3.sln`), as well as download and extract [additional libs](https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R) to `lib\%CONFIGURATION%-x64\` to speed up compilation time (unoptimised/debug libs are currently not available precompiled).
 
 If you're not using precompiled libs, build the projects in *__BUILD_BEFORE* folder: right-click on every project > *Build*.
 
@@ -92,22 +92,22 @@ When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop no
 
 ## CMake Build Options (Linux & Mac OS)
 
-- ```-DUSE_SYSTEM_LIBPNG=ON/OFF``` (default = *OFF*)  
+- ```-DUSE_SYSTEM_LIBPNG=ON/OFF``` (default = *OFF*)
 Build against the shared libpng instead of using the builtin one. libpng 1.6+ highly recommended. Try this option if you get version conflict errors or only see black game icons.
 
-- ```-DUSE_SYSTEM_FFMPEG=ON/OFF``` (default = *OFF*)  
+- ```-DUSE_SYSTEM_FFMPEG=ON/OFF``` (default = *OFF*)
 Build against the shared ffmpeg libraries instead of using the builtin patched version. Try this if the builtin version breaks the OpenGL renderer for you.
 
-- ```-DWITHOUT_LLVM=ON/OFF``` (default = *OFF*)  
+- ```-DWITHOUT_LLVM=ON/OFF``` (default = *OFF*)
 This forces RPCS3 to build without LLVM, not recommended.
 
-- ```-DWITH_GDB=ON/OFF``` (default = *OFF*)  
+- ```-DWITH_GDB=ON/OFF``` (default = *OFF*)
 This Builds RPCS3 with support for debugging PS3 games using gdb.
 
-- ```-DUSE_VULKAN=ON/OFF``` (default = *ON*)  
+- ```-DUSE_VULKAN=ON/OFF``` (default = *ON*)
 This builds RPCS3 with Vulkan support.
 
-- ```-DUSE_NATIVE_INSTRUCTIONS=ON/OFF``` (default = *ON*)  
+- ```-DUSE_NATIVE_INSTRUCTIONS=ON/OFF``` (default = *ON*)
 This builds rpcs3 with -march=native, which is useful for local builds, but not good for packages.
 
 ## License

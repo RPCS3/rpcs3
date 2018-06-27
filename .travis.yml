@@ -49,7 +49,7 @@ install:
     fi;
   # Download pre-compiled LLVM libs
   -  if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-        wget https://github.com/RPCS3/llvm/releases/download/continuous-linux-release_60/llvmlibs-linux.tar.gz;
+        wget https://github.com/RPCS3/llvm/releases/download/continuous-linux-master/llvmlibs-linux.tar.gz;
         mkdir llvmlibs;
         tar -xzf ./llvmlibs-linux.tar.gz -C llvmlibs;
      fi;

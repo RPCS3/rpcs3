@@ -5,7 +5,7 @@ image: Visual Studio 2015
 
 environment:
   QTDIR: C:\Qt\5.11\msvc2015_64
-  LLVMLIBS: https://github.com/RPCS3/llvm/releases/download/continuous-release_60/llvmlibs.7z
+  LLVMLIBS: https://github.com/RPCS3/llvm/releases/download/continuous-master/llvmlibs.7z
   GLSLANG: https://drive.google.com/uc?export=download&id=1nJK_NEeRzJ_r_u4zWLySwLmMrV8ZO_wL
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export
   VULKAN_SDK: "C:\\VulkanSDK\\1.1.73.0"
@@ -127,7 +127,7 @@ artifacts:
   name: openssl
 - path: openssl_win64.7z.sha256
   name: openssl sha256 hash
-  
+
 deploy:
     provider: GitHub
     # Description is a semi-colon seperated list for easy parsing
