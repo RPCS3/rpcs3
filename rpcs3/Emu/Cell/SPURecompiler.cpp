@@ -20,6 +20,7 @@ extern atomic_t<u64> g_progr_ptotal;
 extern atomic_t<u64> g_progr_pdone;
 
 const spu_decoder<spu_itype> s_spu_itype;
+const spu_decoder<spu_iname> s_spu_iname;
 
 spu_cache::spu_cache(const std::string& loc)
 	: m_file(loc, fs::read + fs::write + fs::create)
@@ -480,6 +481,11 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 				m_regmod[pos / 4] = op.rt;
 				vflags[op.rt] = +vf::is_const;
 				values[op.rt] = pos + 4;
+
+				if (op.rt == 1 && (pos + 4) % 16)
+				{
+					LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: BISL", pos);
+				}
 			}
 
 			if (test(af, vf::is_const))
@@ -710,6 +716,11 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = pos + 4;
 
+			if (op.rt == 1 && (pos + 4) % 16)
+			{
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: BRSL", pos);
+			}
+
 			if (target == pos + 4)
 			{
 				// Get next instruction address idiom
@@ -795,6 +806,17 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			break;
 		}
 
+		case spu_itype::LQA:
+		case spu_itype::LQD:
+		case spu_itype::LQR:
+		case spu_itype::LQX:
+		{
+			// Unconst
+			m_regmod[pos / 4] = op.rt;
+			vflags[op.rt] = {};
+			break;
+		}
+
 		case spu_itype::HBR:
 		{
 			hbr_loc = spu_branch_target(pos, op.roh << 7 | op.rt);
@@ -821,6 +843,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.si16;
+
+			if (op.rt == 1 && values[1] & ~0x3fff0u)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: IL -> 0x%x", pos, values[1]);
+			}
+
 			break;
 		}
 		case spu_itype::ILA:
@@ -828,6 +856,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.i18;
+
+			if (op.rt == 1 && values[1] & ~0x3fff0u)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ILA -> 0x%x", pos, values[1]);
+			}
+
 			break;
 		}
 		case spu_itype::ILH:
@@ -835,6 +869,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.i16 << 16 | op.i16;
+
+			if (op.rt == 1 && values[1] & ~0x3fff0u)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ILH -> 0x%x", pos, values[1]);
+			}
+
 			break;
 		}
 		case spu_itype::ILHU:
@@ -842,12 +882,24 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.i16 << 16;
+
+			if (op.rt == 1 && values[1] & ~0x3fff0u)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ILHU -> 0x%x", pos, values[1]);
+			}
+
 			break;
 		}
 		case spu_itype::IOHL:
 		{
 			m_regmod[pos / 4] = op.rt;
 			values[op.rt] = values[op.rt] | op.i16;
+
+			if (op.rt == 1 && op.i16 % 16)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: IOHL, 0x%x", pos, op.i16);
+			}
+
 			break;
 		}
 		case spu_itype::ORI:
@@ -855,6 +907,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = values[op.ra] | op.si10;
+
+			if (op.rt == 1)
+			{
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: ORI", pos);
+			}
+
 			break;
 		}
 		case spu_itype::OR:
@@ -862,6 +920,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.ra] | values[op.rb];
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: OR", pos);
+			}
+
 			break;
 		}
 		case spu_itype::ANDI:
@@ -869,6 +933,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = values[op.ra] & op.si10;
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ANDI", pos);
+			}
+
 			break;
 		}
 		case spu_itype::AND:
@@ -876,6 +946,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.ra] & values[op.rb];
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: AND", pos);
+			}
+
 			break;
 		}
 		case spu_itype::AI:
@@ -883,6 +959,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = values[op.ra] + op.si10;
+
+			if (op.rt == 1 && op.si10 % 16)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: AI, 0x%x", pos, op.si10 + 0u);
+			}
+
 			break;
 		}
 		case spu_itype::A:
@@ -890,6 +972,22 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.ra] + values[op.rb];
+
+			if (op.rt == 1)
+			{
+				if (op.ra == 1 || op.rb == 1)
+				{
+					const u32 r2 = op.ra == 1 ? +op.rb : +op.ra;
+
+					if (test(vflags[r2], vf::is_const) && (values[r2] % 16) == 0)
+					{
+						break;
+					}
+				}
+
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: A", pos);
+			}
+
 			break;
 		}
 		case spu_itype::SFI:
@@ -897,6 +995,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = op.si10 - values[op.ra];
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: SFI", pos);
+			}
+
 			break;
 		}
 		case spu_itype::SF:
@@ -904,11 +1008,22 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.rb] - values[op.ra];
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: SF", pos);
+			}
+
 			break;
 		}
 		case spu_itype::ROTMI:
 		{
 			m_regmod[pos / 4] = op.rt;
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ROTMI", pos);
+			}
 
 			if (-op.i7 & 0x20)
 			{
@@ -924,6 +1039,11 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 		case spu_itype::SHLI:
 		{
 			m_regmod[pos / 4] = op.rt;
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: SHLI", pos);
+			}
 
 			if (op.i7 & 0x20)
 			{
@@ -943,6 +1063,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			const u32 op_rt = type & spu_itype::_quadrop ? +op.rt4 : +op.rt;
 			m_regmod[pos / 4] = op_rt;
 			vflags[op_rt] = {};
+
+			if (op_rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: %s", pos, s_spu_iname.decode(data));
+			}
+
 			break;
 		}
 		}
