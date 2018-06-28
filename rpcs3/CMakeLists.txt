@@ -397,7 +397,6 @@ if(UNIX)
 endif()
 
 if(VULKAN_FOUND)
-	target_include_directories(rpcs3 PUBLIC ${glslang_SOURCE_DIR})
 	target_link_libraries(rpcs3 SPIRV Vulkan::Vulkan)
 endif()
 
