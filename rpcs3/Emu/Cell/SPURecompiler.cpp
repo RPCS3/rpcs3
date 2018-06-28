@@ -1892,36 +1892,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_ir->CreateRetVoid();
 	}
 
-	template <typename T1, typename T2>
-	value_t<u8[16]> pshufb(T1 a, T2 b)
-	{
-		value_t<u8[16]> result;
-
-		if (m_spurt->m_jit.has_ssse3())
-		{
-			result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_ssse3_pshuf_b_128), {a.eval(m_ir), b.eval(m_ir)});
-		}
-		else
-		{
-			const auto data0 = a.eval(m_ir);
-			const auto index = b.eval(m_ir);
-			const auto mask = m_ir->CreateAnd(index, 0xf);
-			const auto zero = llvm::ConstantInt::get(get_type<u8[16]>(), 0u);
-
-			result.value = zero;
-
-			for (u32 i = 0; i < 16; i++)
-			{
-				const auto x = m_ir->CreateExtractElement(data0, m_ir->CreateExtractElement(mask, i));
-				result.value = m_ir->CreateInsertElement(result.value, x, i);
-			}
-
-			result.value = m_ir->CreateSelect(m_ir->CreateICmpSLT(index, zero), zero, result.value);
-		}
-
-		return result;
-	}
-
 public:
 	spu_llvm_recompiler()
 		: spu_recompiler_base()
@@ -1942,6 +1912,7 @@ public:
 			m_cache = fxm::get<spu_cache>();
 			m_spurt = fxm::get_always<spu_llvm_runtime>();
 			m_context = m_spurt->m_jit.get_context();
+			m_use_ssse3 = m_spurt->m_jit.has_ssse3();
 		}
 	}
 

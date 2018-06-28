@@ -11,13 +11,14 @@ using namespace llvm;
 
 const ppu_decoder<PPUTranslator> s_ppu_decoder;
 
-PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_module& info)
+PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_module& info, bool ssse3)
 	: cpu_translator(module, false)
 	, m_info(info)
 	, m_pure_attr(AttributeList::get(m_context, AttributeList::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadNone}))
 {
 	// Bind context
 	m_context = context;
+	m_use_ssse3 = ssse3;
 
 	// There is no weak linkage on JIT, so let's create variables with different names for each module part
 	const u32 gsuffix = m_info.name.empty() ? info.funcs[0].addr : info.funcs[0].addr - m_info.segs[0].addr;
@@ -1193,8 +1194,11 @@ void PPUTranslator::VOR(ppu_opcode_t op)
 
 void PPUTranslator::VPERM(ppu_opcode_t op)
 {
-	const auto abc = GetVrs(VrType::vi8, op.va, op.vb, op.vc);
-	SetVr(op.vd, Call(GetType<u8[16]>(), m_pure_attr, "__vperm", abc[0], abc[1], abc[2]));
+	const auto a = get_vr<u8[16]>(op.va);
+	const auto b = get_vr<u8[16]>(op.vb);
+	const auto c = get_vr<u8[16]>(op.vc);
+	const auto i = eval(~c & 0x1f);
+	set_vr(op.vd, select(bitcast<s8[16]>(c << 3) >= 0, pshufb(a, i), pshufb(b, i)));
 }
 
 void PPUTranslator::VPKPX(ppu_opcode_t op)
