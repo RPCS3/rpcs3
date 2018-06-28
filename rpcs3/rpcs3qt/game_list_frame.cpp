@@ -911,26 +911,28 @@ bool game_list_frame::DeleteSPUCache(const std::string& base_dir, bool is_intera
 
 QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon)
 {
-	QImage scaled = QImage(m_Icon_Size, QImage::Format_ARGB32);
-	scaled.fill(m_Icon_Color);
+	const QSize original_size = img.size();
 
-	QPainter painter(&scaled);
+	QImage image = QImage(original_size, QImage::Format_ARGB32);
+	image.fill(m_Icon_Color);
+
+	QPainter painter(&image);
 
 	if (!img.isNull())
 	{
-		painter.drawImage(QPoint(0, 0), img.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+		painter.drawImage(QPoint(0, 0), img);
 	}
 
 	if (paint_config_icon && !m_isListLayout)
 	{
-		int width = m_Icon_Size.width() * 0.2;
-		QPoint origin = QPoint(m_Icon_Size.width() - width, 0);
+		const int width = original_size.width() * 0.2;
+		const QPoint origin = QPoint(original_size.width() - width, 0);
 		painter.drawImage(origin, QImage(":/Icons/custom_config_2.png").scaled(QSize(width, width), Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 	}
 
 	painter.end();
 
-	return QPixmap::fromImage(scaled);
+	return QPixmap::fromImage(image.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 }
 
 void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled)
