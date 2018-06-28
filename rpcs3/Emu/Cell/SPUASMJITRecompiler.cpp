@@ -3921,9 +3921,8 @@ void spu_recompiler::DFNMA(spu_opcode_t op)
 	const XmmLink& va = XmmGet(op.ra, XmmType::Double);
 	const XmmLink& vt = XmmGet(op.rt, XmmType::Double);
 	c->mulpd(va, SPU_OFF_128(gpr, op.rb));
-	c->addpd(vt, va);
-	c->xorpd(va, va);
-	c->subpd(va, vt);
+	c->addpd(va, vt);
+	c->xorpd(va, XmmConst(_mm_set1_epi64x(0x8000000000000000)));
 	c->movapd(SPU_OFF_128(gpr, op.rt), va);
 }
 
