@@ -4141,7 +4141,7 @@ public:
 
 	void DFNMA(spu_opcode_t op) //
 	{
-		set_vr(op.rt, -get_vr<f64[2]>(op.rt) - get_vr<f64[2]>(op.ra) * get_vr<f64[2]>(op.rb));
+		set_vr(op.rt, -(get_vr<f64[2]>(op.ra) * get_vr<f64[2]>(op.rb) + get_vr<f64[2]>(op.rt)));
 	}
 
 	void FREST(spu_opcode_t op) //
