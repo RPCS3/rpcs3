@@ -1,7 +1,7 @@
 #include "game_list_grid_delegate.h"
 
 game_list_grid_delegate::game_list_grid_delegate(const QSize& size, const qreal& margin_factor, const qreal& text_factor, const QFont& font, const QColor& font_color, QObject *parent)
-	 : QAbstractItemDelegate(parent), m_size(size), m_margin_factor(margin_factor), m_text_factor(text_factor), m_font(font), m_font_color(font_color)
+	 : QStyledItemDelegate(parent), m_size(size), m_margin_factor(margin_factor), m_text_factor(text_factor), m_font(font), m_font_color(font_color)
 {
 }
 
@@ -15,8 +15,8 @@ void game_list_grid_delegate::paint(QPainter * painter, const QStyleOptionViewIt
 
 	painter->eraseRect(r);
 
-	//Get title and image
-	QPixmap image = (qvariant_cast<QPixmap>(index.data(Qt::DecorationRole)));
+	// Get title and image
+	QPixmap image = qvariant_cast<QPixmap>(index.data(Qt::DecorationRole));
 	QString title = index.data(Qt::DisplayRole).toString();
 
 	// image
@@ -28,11 +28,7 @@ void game_list_grid_delegate::paint(QPainter * painter, const QStyleOptionViewIt
 	// Add selection overlay
 	if (option.state & QStyle::State_Selected)
 	{
-		QLinearGradient gradientSelected(r.left(), r.top(), r.left(), r.height() + r.top());
-		gradientSelected.setColorAt(0.0, QColor::fromRgba(qRgba(119, 213, 247, 128)));
-		gradientSelected.setColorAt(0.9, QColor::fromRgba(qRgba(27, 134, 183, 128)));
-		gradientSelected.setColorAt(1.0, QColor::fromRgba(qRgba(0, 120, 174, 128)));
-		painter->fillRect(r, gradientSelected);
+		painter->fillRect(r, QColor(20, 138, 255, 128));
 	}
 
 	int h = r.height() / (1 + m_margin_factor + m_margin_factor*m_text_factor);

@@ -909,7 +909,7 @@ bool game_list_frame::DeleteSPUCache(const std::string& base_dir, bool is_intera
 	return true;
 }
 
-QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paintConfigIcon)
+QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon)
 {
 	QImage scaled = QImage(m_Icon_Size, QImage::Format_ARGB32);
 	scaled.fill(m_Icon_Color);
@@ -921,7 +921,7 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paintConfigIcon)
 		painter.drawImage(QPoint(0, 0), img.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 	}
 
-	if (paintConfigIcon && !m_isListLayout)
+	if (paint_config_icon && !m_isListLayout)
 	{
 		int width = m_Icon_Size.width() * 0.2;
 		QPoint origin = QPoint(m_Icon_Size.width() - width, 0);

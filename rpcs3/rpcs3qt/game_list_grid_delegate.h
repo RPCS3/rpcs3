@@ -1,9 +1,9 @@
 #pragma once
 
 #include <QPainter>
-#include <QAbstractItemDelegate>
+#include <QStyledItemDelegate>
 
-class game_list_grid_delegate : public QAbstractItemDelegate
+class game_list_grid_delegate : public QStyledItemDelegate
 {
 public:
 	game_list_grid_delegate(const QSize& imageSize, const qreal& margin_factor, const qreal& margin_ratio, const QFont& font, const QColor& font_color, QObject *parent = 0);
