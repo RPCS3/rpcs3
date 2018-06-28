@@ -228,7 +228,7 @@ protected:
 	void resizeEvent(QResizeEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
-	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
+	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false);
 	void ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const game_info& game);
