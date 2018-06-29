@@ -938,7 +938,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			}
 			else
 			{
-				button->setIcon(gui::utils::get_colorized_icon(icon, iconColor, color));
+				button->setIcon(gui::utils::get_colorized_icon(icon, iconColor, color, true));
 			}
 			button->setText("");
 			button->setStyleSheet(styleSheet().append("text-align:left;"));
@@ -951,7 +951,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		{
 			addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(gui::gl_iconColor).value<QColor>());
 			addColoredIcon(ui->pb_tool_bar_color, xgui_settings->GetValue(gui::mw_toolBarColor).value<QColor>());
-			addColoredIcon(ui->pb_tool_icon_color, xgui_settings->GetValue(gui::mw_toolIconColor).value<QColor>(), QIcon(":/Icons/stop.png"), gui::mw_tool_icon_color);
+			addColoredIcon(ui->pb_tool_icon_color, xgui_settings->GetValue(gui::mw_toolIconColor).value<QColor>());
 		};
 		AddColoredIcons();
 

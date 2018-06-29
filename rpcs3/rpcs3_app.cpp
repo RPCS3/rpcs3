@@ -334,8 +334,8 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 
 		// main window toolbar slider
 		"QSlider#sizeSlider { color: #505050; background: " + rgba_tool_bar + "; }"
-		"QSlider#sizeSlider::handle:horizontal { border: 0em smooth rgba(227, 227, 227, 255); border-radius: .58em; background: #404040; width: 1.2em; margin: -.5em 0; }"
-		"QSlider#sizeSlider::groove:horizontal { border-radius: .15em; background: #5b5b5b; height: .3em; }"
+		"QSlider#sizeSlider::handle:horizontal { border: 0em smooth " + rgba(gui::mw_tool_bar_color, -13) + " border-radius: .58em; background: " + rgba(gui::mw_tool_icon_color, -27) + " width: 1.2em; margin: -.5em 0; }"
+		"QSlider#sizeSlider::groove:horizontal { border-radius: .15em; background: " + rgba(gui::mw_tool_icon_color) + " height: .3em; }"
 
 		// main window toolbar
 		"QToolBar#mw_toolbar { background-color: " + rgba_tool_bar + " }"
@@ -355,7 +355,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 		"QTableWidget#game_grid { alternate-background-color: #f2f2f2; background-color: rgba(255, 255, 255, 255); font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
 		"QTableView::item { border-left: 0.063em solid white; border-right: 0.063em solid white; padding-left:0.313em; }"
 		"QTableView::item:selected { background-color: #148aff; color: #fff; }"
-		"QHeaderView::section { padding: .5em; border: 0.063em solid #ffffff; }"
+		"QHeaderView::section { padding: .5em; border: 0.063em solid #ffffff; font-size: 1.500em; }"
 
 		// log frame tty
 		"QTextEdit#tty_frame { background-color: #ffffff; }"
