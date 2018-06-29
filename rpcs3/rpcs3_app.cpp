@@ -355,7 +355,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 		"QTableWidget#game_grid { alternate-background-color: #f2f2f2; background-color: rgba(255, 255, 255, 255); font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
 		"QTableView::item { border-left: 0.063em solid white; border-right: 0.063em solid white; padding-left:0.313em; }"
 		"QTableView::item:selected { background-color: #148aff; color: #fff; }"
-		"QHeaderView::section { padding: .5em; border: 0.063em solid #ffffff; font-size: 1.500em; }"
+		"QHeaderView::section { padding-left: .5em; padding-right: .5em; padding-top: .4em; padding-bottom: -.1em; border: 0.063em solid #ffffff; }"
 
 		// log frame tty
 		"QTextEdit#tty_frame { background-color: #ffffff; }"
