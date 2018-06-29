@@ -2703,10 +2703,94 @@ public:
 		return _spu->get_ch_count(ch);
 	}
 
+	static u32 exec_get_events(SPUThread* _spu)
+	{
+		return _spu->get_events();
+	}
+
+	llvm::Value* get_rchcnt(u32 off, u64 inv = 0)
+	{
+		const auto val = m_ir->CreateLoad(_ptr<u64>(m_thread, off), true);
+		const auto shv = m_ir->CreateLShr(val, spu_channel::off_count);
+		return m_ir->CreateTrunc(m_ir->CreateXor(shv, u64{inv}), get_type<u32>());
+	}
+
 	void RCHCNT(spu_opcode_t op) //
 	{
 		value_t<u32> res;
-		res.value = call(&exec_rchcnt, m_thread, m_ir->getInt32(op.ra));
+
+		switch (op.ra)
+		{
+		case SPU_WrOutMbox:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_out_mbox), true);
+			break;
+		}
+		case SPU_WrOutIntrMbox:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_out_intr_mbox), true);
+			break;
+		}
+		case MFC_RdTagStat:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_tag_stat));
+			break;
+		}
+		case MFC_RdListStallStat:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_stall_stat));
+			break;
+		}
+		case SPU_RdSigNotify1:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_snr1));
+			break;
+		}
+		case SPU_RdSigNotify2:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_snr2));
+			break;
+		}
+		case MFC_RdAtomicStat:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_atomic_stat));
+			break;
+		}
+		case MFC_WrTagUpdate:
+		{
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_tag_upd), true);
+			res.value = m_ir->CreateICmpEQ(res.value, m_ir->getInt32(0));
+			res.value = m_ir->CreateZExt(res.value, get_type<u32>());
+			break;
+		}
+		case MFC_Cmd:
+		{
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::mfc_size), true);
+			res.value = m_ir->CreateSub(m_ir->getInt32(16), res.value);
+			break;
+		}
+		case SPU_RdInMbox:
+		{
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_in_mbox), true);
+			res.value = m_ir->CreateLShr(res.value, 8);
+			res.value = m_ir->CreateAnd(res.value, 7);
+			break;
+		}
+		case SPU_RdEventStat:
+		{
+			res.value = call(&exec_get_events, m_thread);
+			res.value = m_ir->CreateICmpNE(res.value, m_ir->getInt32(0));
+			res.value = m_ir->CreateZExt(res.value, get_type<u32>());
+			break;
+		}
+
+		default:
+		{
+			res.value = call(&exec_rchcnt, m_thread, m_ir->getInt32(op.ra));
+			break;
+		}
+		}
+
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, res));
 	}
 
