@@ -1840,7 +1840,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 	void update_pc()
 	{
-		m_ir->CreateStore(m_ir->getInt32(m_pos), spu_ptr<u32>(&SPUThread::pc));
+		m_ir->CreateStore(m_ir->getInt32(m_pos), spu_ptr<u32>(&SPUThread::pc))->setVolatile(true);
 	}
 
 	// Call cpu_thread::check_state if necessary and return or continue (full check)
@@ -2039,7 +2039,7 @@ public:
 
 		// Emit state check
 		const auto pstate = spu_ptr<u32>(&SPUThread::state);
-		m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(pstate), m_ir->getInt32(0)), label_stop, label_test);
+		m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(pstate, true), m_ir->getInt32(0)), label_stop, label_test);
 
 		// Emit code check
 		u32 check_iterations = 0;
@@ -2729,12 +2729,10 @@ public:
 
 	void LNOP(spu_opcode_t op) //
 	{
-		update_pc();
 	}
 
 	void NOP(spu_opcode_t op) //
 	{
-		update_pc();
 	}
 
 	void SYNC(spu_opcode_t op) //
