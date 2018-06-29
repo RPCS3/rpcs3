@@ -330,17 +330,16 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 	QString style_sheet
 	(
 		// main window toolbar search
-		//"QLineEdit#mw_searchbar { margin-left:14px; background-color: " + rgba_tool_bar + " }"
-		"QLineEdit#mw_searchbar { border-radius: 1.25em; padding: 0 1em; background: #bbbbbb; selection-background-color: lightblue; margin: .8em; }"
+		"QLineEdit#mw_searchbar { padding: 0 1em; background: #fdfdfd; selection-background-color: #148aff; margin: .8em; color:#000000; }"
 
 		// main window toolbar slider
 		"QSlider#sizeSlider { color: #505050; background: " + rgba_tool_bar + "; }"
-		"QSlider::handle:horizontal { border: 0em smooth #404040; border-radius: .49em; background: #404040; width: 1em; margin: -.4em 0; }"
-		"QSlider::groove:horizontal { border-radius: .15em; background: #505050; height: .3em; }"
+		"QSlider#sizeSlider::handle:horizontal { border: 0em smooth rgba(227, 227, 227, 255); border-radius: .58em; background: #404040; width: 1.2em; margin: -.5em 0; }"
+		"QSlider#sizeSlider::groove:horizontal { border-radius: .15em; background: #5b5b5b; height: .3em; }"
 
 		// main window toolbar
 		"QToolBar#mw_toolbar { background-color: " + rgba_tool_bar + " }"
-		"QToolBar#mw_toolbar::separator { background-color: " + rgba(gui::mw_tool_bar_color, -20) + " width: 1px; margin-top: 2px; margin-bottom: 2px; }"
+		"QToolBar#mw_toolbar::separator { background-color: " + rgba(gui::mw_tool_bar_color, -20) + " width: 0.125em; margin-top: 0.250em; margin-bottom: 0.250em; }"
 
 		// main window toolbar icon color
 		"QLabel#toolbar_icon_color { color: " + rgba(gui::mw_tool_icon_color) + " }"
@@ -350,6 +349,13 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 
 		// game list icon color
 		"QLabel#gamelist_icon_background_color { color: " + rgba(gui::gl_icon_color) + " }"
+
+		// tables
+		"QTableWidget { alternate-background-color: #f2f2f2; background-color: rgba(255, 255, 255, 255); }"
+		"QTableWidget#game_grid { alternate-background-color: #f2f2f2; background-color: rgba(255, 255, 255, 255); font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
+		"QTableView::item { border-left: 0.063em solid white; border-right: 0.063em solid white; padding-left:0.313em; }"
+		"QTableView::item:selected { background-color: #148aff; color: #fff; }"
+		"QHeaderView::section { padding: .5em; border: 0.063em solid #ffffff; }"
 
 		// log frame tty
 		"QTextEdit#tty_frame { background-color: #ffffff; }"
@@ -388,12 +394,6 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 
 		// pad settings
 		"QLabel#l_controller { color: #434343; }"
-
-		// game list
-		"QTableView::item { border-left: 1px solid white; border-right: 1px solid white; }"
-
-		// game grid
-		"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
 	);
 
 	QFile file(path);

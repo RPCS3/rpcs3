@@ -128,9 +128,9 @@ namespace gui
 	const QString savedata    = "SaveData";
 	const QString notes       = "Notes";
 
-	const QColor gl_icon_color       = QColor(209, 209, 209, 255);
-	const QColor mw_tool_icon_color  = QColor( 64,  64,  64, 255);
-	const QColor mw_tool_bar_color   = QColor(227, 227, 227, 255);
+	const QColor gl_icon_color       = QColor( 36,  36,  36, 255);
+	const QColor mw_tool_icon_color  = QColor( 91,  91,  91, 255);
+	const QColor mw_tool_bar_color   = QColor(240, 240, 240, 255);
 	const QColor mw_thumb_icon_color = QColor(  0, 100, 231, 255);
 
 	const gui_save rg_freeze  = gui_save(main_window, "recentGamesFrozen", false);
