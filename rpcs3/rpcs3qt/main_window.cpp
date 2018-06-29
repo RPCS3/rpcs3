@@ -1098,15 +1098,23 @@ void main_window::RepaintToolbar()
 	if (guiSettings->GetValue(gui::m_enableUIColors).toBool())
 	{
 		QColor tbc = guiSettings->GetValue(gui::mw_toolBarColor).value<QColor>();
+		QColor tic = guiSettings->GetValue(gui::mw_toolIconColor).value<QColor>();
 
-		ui->toolBar->setStyleSheet(gui::stylesheet + QString(
-			"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
-			"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
-			"QSlider { background-color: rgba(%1, %2, %3, %4); }"
-			"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
-			.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
-			.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20)
-		);
+		QString tool_bar_color_1 = QString("rgba(%0, %1, %2, %3)").arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha());
+		QString tool_bar_color_2 = QString("rgba(%0, %1, %2, %3)").arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20);
+
+		QString tool_icon_color_1 = QString("rgba(%0, %1, %2, %3)").arg(tic.red()).arg(tic.green()).arg(tic.blue()).arg(tic.alpha());
+		QString tool_icon_color_2 = QString("rgba(%0, %1, %2, %3)").arg(tic.red() - 10).arg(tic.green() - 10).arg(tic.blue() - 10).arg(tic.alpha() - 10);
+
+		ui->toolBar->setStyleSheet(gui::stylesheet + QString
+		(
+			"QToolBar { background-color: " + tool_bar_color_1 + "; }"
+			"QToolBar::separator {background-color: " + tool_bar_color_2 + "; width: 1px; margin-top: 2px; margin-bottom: 2px;}"
+			"QSlider { color: " + tool_bar_color_2 + "; background: " + tool_bar_color_1 + "; }"
+			"QSlider::handle:horizontal { border: 0em smooth " + tool_bar_color_2 + "; border-radius: .58em; background: " + tool_icon_color_2 + "; width: 1.2em; margin: -.5em 0; }"
+			"QSlider::groove:horizontal { border-radius: .15em; color: " + tool_icon_color_2 + "; background: " + tool_icon_color_1 + "; height: .3em; }"
+			"QLineEdit { background-color: " + tool_bar_color_1 + "; }"
+		));
 	}
 	else
 	{
