@@ -548,7 +548,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 					add_block(pos + 4);
 				}
 			}
-			else if (type == spu_itype::BI && !op.d && !op.e)
+			else if (type == spu_itype::BI && !op.d && !op.e && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 			{
 				// Analyse jump table (TODO)
 				std::basic_string<u32> jt_abs;
