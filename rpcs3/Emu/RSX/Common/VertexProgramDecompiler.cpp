@@ -428,6 +428,7 @@ std::string VertexProgramDecompiler::Decompile()
 	bool is_has_BRA = false;
 	bool program_end = false;
 	u32 i = 1;
+	u32 last_label_addr = 0;
 
 	while (i < m_data.size())
 	{
@@ -443,28 +444,35 @@ std::string VertexProgramDecompiler::Decompile()
 			switch (d1.sca_opcode)
 			{
 			case RSX_SCA_OPCODE_BRA:
+			{
 				LOG_ERROR(RSX, "Unimplemented VP opcode BRA");
 				is_has_BRA = true;
 				m_jump_lvls.clear();
 				d3.HEX = m_data[++i];
 				i += 4;
 				break;
-
+			}
 			case RSX_SCA_OPCODE_BRB:
 			case RSX_SCA_OPCODE_BRI:
 			case RSX_SCA_OPCODE_CAL:
 			case RSX_SCA_OPCODE_CLI:
 			case RSX_SCA_OPCODE_CLB:
+			{
 				d2.HEX = m_data[i++];
 				d3.HEX = m_data[i];
 				i += 2;
-				m_jump_lvls.emplace(GetAddr());
-				break;
 
+				const u32 label_addr = GetAddr();
+				last_label_addr = std::max(last_label_addr, label_addr);
+				m_jump_lvls.emplace(label_addr);
+				break;
+			}
 			default:
+			{
 				d3.HEX = m_data[++i];
 				i += 2;
 				break;
+			}
 			}
 		}
 	}
@@ -565,8 +573,7 @@ std::string VertexProgramDecompiler::Decompile()
 		if (!src[0].reg_type || !src[1].reg_type || !src[2].reg_type)
 		{
 			AddCode("//Src check failed. Aborting");
-			do_program_exit(true);
-			break;
+			program_end = true;
 		}
 
 		if (m_call_stack.empty())
@@ -583,8 +590,6 @@ std::string VertexProgramDecompiler::Decompile()
 				m_cur_instr->open_scopes++;
 			}
 		}
-
-		program_end = !!d3.end;
 
 		switch (d1.vec_opcode)
 		{
@@ -640,7 +645,7 @@ std::string VertexProgramDecompiler::Decompile()
 		{
 			if (m_call_stack.empty())
 			{
-				AddCode("$if ($cond) //BRA");
+				AddCode("$ifcond //BRA");
 				AddCode("{");
 				m_cur_instr->open_scopes++;
 				AddCode("jump_position = $a$am;");
@@ -698,8 +703,6 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_BRB:
 			// works differently (BRB o[1].x !b0, L0;)
 		{
-			LOG_WARNING(RSX, "sca_opcode BRB, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
-
 			if (m_call_stack.empty())
 			{
 				u32 jump_position = find_jump_lvl(GetAddr());
@@ -742,10 +745,20 @@ std::string VertexProgramDecompiler::Decompile()
 			break;
 		}
 
-		if (program_end)
+		if (program_end || !!d3.end)
 		{
 			do_program_exit(!d3.end);
-			break;
+
+			if (i >= last_label_addr)
+			{
+				if ((i + 1) < m_instr_count)
+				{
+					// In rare cases, this might be harmless (large coalesced program blocks controlled via branches aka ubershaders)
+					LOG_ERROR(RSX, "Vertex program aborted prematurely. Expect glitches");
+				}
+
+				break;
+			}
 		}
 	}
 
