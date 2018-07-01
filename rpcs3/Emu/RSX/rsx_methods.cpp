@@ -582,12 +582,58 @@ namespace rsx
 		{
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
-				u16 x = method_registers.nv308a_x();
-				u16 y = method_registers.nv308a_y();
+				if (index >= method_registers.nv308a_size_out_x())
+				{
+					// Skip
+					return;
+				}
 
-				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x << 2);
-				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + index * 4, method_registers.blit_engine_output_location_nv3062());
-				vm::write32(address, arg);
+				u32 color = arg;
+				u32 write_len = 4;
+				switch (method_registers.blit_engine_nv3062_color_format())
+				{
+				case blit_engine::transfer_destination_format::a8r8g8b8:
+				case blit_engine::transfer_destination_format::y32:
+				{
+					// Bit cast
+					break;
+				}
+				case blit_engine::transfer_destination_format::r5g6b5:
+				{
+					// Input is considered to be ARGB8
+					u32 r = (arg >> 16) & 0xFF;
+					u32 g = (arg >> 8) & 0xFF;
+					u32 b = arg & 0xFF;
+
+					r = u32(r * 32 / 255.f);
+					g = u32(g * 64 / 255.f);
+					b = u32(b * 32 / 255.f);
+					color = (r << 11) | (g << 5) | b;
+					write_len = 2;
+					break;
+				}
+				default:
+				{
+					fmt::throw_exception("Unreachable" HERE);
+				}
+				}
+
+				const u16 x = method_registers.nv308a_x();
+				const u16 y = method_registers.nv308a_y();
+				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x * write_len);
+				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + (index * write_len), method_registers.blit_engine_output_location_nv3062());
+
+				switch (write_len)
+				{
+				case 4:
+					vm::write32(address, color);
+					break;
+				case 2:
+					vm::write16(address, (u16)(color));
+					break;
+				default:
+					fmt::throw_exception("Unreachable" HERE);
+				}
 
 				rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
 			}
