@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>849</width>
-    <height>615</height>
+    <width>752</width>
+    <height>519</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -44,7 +44,7 @@
       </attribute>
       <layout class="QVBoxLayout" name="coreTabLayout" stretch="1,0,0">
        <item>
-        <layout class="QHBoxLayout" name="coreTabItemLayout" stretch="1,1,2">
+        <layout class="QHBoxLayout" name="coreTabItemLayout" stretch="1,1,1">
          <item>
           <layout class="QVBoxLayout" name="coreTabLeftLayout" stretch="1,1,0">
            <item>
@@ -115,7 +115,13 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="groupBox_6">
+            <widget class="QGroupBox" name="gb_spu_threads">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="title">
               <string>Preferred SPU Threads</string>
              </property>
@@ -129,7 +135,7 @@
           </layout>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="coreTabMiddleLayout" stretch="1,1">
+          <layout class="QVBoxLayout" name="coreTabMiddleLayout" stretch="1,1,0">
            <item>
             <widget class="QGroupBox" name="lib_settings">
              <property name="sizePolicy">
@@ -225,11 +231,29 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="hookStFunc">
+               <widget class="QCheckBox" name="spuCache">
                 <property name="text">
-                 <string>Hook static functions</string>
+                 <string>SPU Cache</string>
                 </property>
                </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="gb_spuBlockSize">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="title">
+              <string>SPU Block Size</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_11">
+              <item>
+               <widget class="QComboBox" name="spuBlockSize"/>
               </item>
              </layout>
             </widget>
@@ -266,15 +290,6 @@
                 </property>
                </widget>
               </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="QGroupBox" name="groupBox_40">
-             <property name="title">
-              <string>Search Libraries</string>
-             </property>
-             <layout class="QVBoxLayout" name="verticalLayout_11">
               <item>
                <widget class="QLineEdit" name="searchBox">
                 <property name="sizePolicy">
@@ -284,6 +299,24 @@
                  </sizepolicy>
                 </property>
                </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="gb_tsx">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="title">
+              <string>TSX Instructions</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_69">
+              <item>
+               <widget class="QComboBox" name="enableTSX"/>
               </item>
              </layout>
             </widget>
@@ -344,7 +377,7 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_61">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,1,1">
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_7">
            <item>
@@ -789,23 +822,10 @@
           </layout>
          </item>
          <item>
-          <widget class="QWidget" name="widget_2" native="true"/>
+          <widget class="QWidget" name="widget_8" native="true"/>
          </item>
          <item>
-          <spacer name="horizontalSpacer_8">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
+          <widget class="QWidget" name="widget_2" native="true"/>
          </item>
         </layout>
        </item>
@@ -927,20 +947,7 @@
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_7">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
+          <widget class="QWidget" name="widget_7" native="true"/>
          </item>
         </layout>
        </item>
@@ -1026,20 +1033,7 @@
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_4">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
+          <widget class="QWidget" name="widget_3" native="true"/>
          </item>
         </layout>
        </item>
@@ -1064,20 +1058,7 @@
           <widget class="QWidget" name="widget_4" native="true"/>
          </item>
          <item>
-          <spacer name="horizontalSpacer_5">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
+          <widget class="QWidget" name="widget_6" native="true"/>
          </item>
         </layout>
        </item>
@@ -1147,23 +1128,10 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="widget_5" native="true"/>
+          <widget class="QWidget" name="widget_10" native="true"/>
          </item>
          <item>
-          <spacer name="horizontalSpacer_3">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
+          <widget class="QWidget" name="widget_5" native="true"/>
          </item>
         </layout>
        </item>
@@ -1252,7 +1220,7 @@
               <item>
                <widget class="QCheckBox" name="showFPSInTitle">
                 <property name="text">
-                 <string>Show framerate counter in window title</string>
+                 <string>Show framerate in the window title</string>
                 </property>
                </widget>
               </item>
@@ -1321,7 +1289,7 @@
               <item>
                <widget class="QCheckBox" name="gs_disableMouse">
                 <property name="text">
-                 <string>Don't use doubleclick for Fullscreen mode</string>
+                 <string>Ignore doubleclicks for Fullscreen</string>
                 </property>
                </widget>
               </item>
@@ -1980,14 +1948,39 @@
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="label_enableTSX">
+             <widget class="QCheckBox" name="spuVerification">
               <property name="text">
-               <string>Enable TSX:</string>
+               <string>SPU Verification</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QComboBox" name="enableTSX"/>
+             <widget class="QCheckBox" name="setDAZandFTZ">
+              <property name="text">
+               <string>Set DAZ and FTZ</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="accurateGETLLAR">
+              <property name="text">
+               <string>Accurate GETLLAR</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="accuratePUTLLUC">
+              <property name="text">
+               <string>Accurate PUTLLUC</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="hookStFunc">
+              <property name="text">
+               <string>Hook static functions</string>
+              </property>
+             </widget>
             </item>
             <item>
              <spacer name="verticalSpacer">
@@ -2006,20 +1999,7 @@
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
+          <widget class="QWidget" name="widget_11" native="true"/>
          </item>
         </layout>
        </item>

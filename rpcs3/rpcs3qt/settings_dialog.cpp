@@ -168,8 +168,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Checkboxes
 
-	xemu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings::HookStaticFuncs);
-	SubscribeTooltip(ui->hookStFunc, json_cpu_cbs["hookStFunc"].toString());
+	xemu_settings->EnhanceCheckBox(ui->spuCache, emu_settings::SPUCache);
+	SubscribeTooltip(ui->spuCache, json_cpu_cbs["spuCache"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->enableScheduler, emu_settings::EnableThreadScheduler);
 	SubscribeTooltip(ui->enableScheduler, json_cpu_cbs["enableThreadScheduler"].toString());
@@ -182,9 +182,47 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Comboboxes
 
+	xemu_settings->EnhanceComboBox(ui->spuBlockSize, emu_settings::SPUBlockSize);
+	SubscribeTooltip(ui->spuBlockSize, json_cpu_cbo["spuBlockSize"].toString());
+
 	xemu_settings->EnhanceComboBox(ui->preferredSPUThreads, emu_settings::PreferredSPUThreads, true);
 	SubscribeTooltip(ui->preferredSPUThreads, json_cpu_cbo["preferredSPUThreads"].toString());
 	ui->preferredSPUThreads->setItemText(ui->preferredSPUThreads->findData("0"), tr("Auto"));
+
+	if (utils::has_rtm())
+	{
+		xemu_settings->EnhanceComboBox(ui->enableTSX, emu_settings::EnableTSX);
+		SubscribeTooltip(ui->enableTSX, json_cpu_cbo["enableTSX"].toString());
+
+		static const QString tsx_forced = qstr(fmt::format("%s", tsx_usage::forced));
+		static const QString tsx_default = qstr(xemu_settings->GetSettingDefault(emu_settings::EnableTSX));
+
+		// connect the toogled signal so that the stateChanged signal in EnhanceCheckBox can be prevented
+		connect(ui->enableTSX, &QComboBox::currentTextChanged, [this](const QString& text)
+		{
+			if (text == tsx_forced && !utils::has_mpx() && QMessageBox::No == QMessageBox::critical(this, tr("Haswell/Broadwell TSX Warning"), tr(
+				R"(
+					<p style="white-space: nowrap;">
+						RPCS3 has detected you are using TSX functions on a Haswell or Broadwell CPU.<br>
+						Intel has deactivated these functions in newer Microcode revisions, since they can lead to unpredicted behaviour.<br>
+						That means using TSX may break games or even <font color="red"><b>damage</b></font> your data.<br>
+						We recommend to disable this feature and update your computer BIOS.<br><br>
+						Do you wish to use TSX anyway?
+					</p>
+				)"
+			), QMessageBox::Yes, QMessageBox::No))
+			{
+				// Reset if the messagebox was answered with no. This prevents the currentIndexChanged signal in EnhanceComboBox
+				ui->enableTSX->setCurrentText(tsx_default);
+			}
+		});
+	}
+	else
+	{
+		ui->enableTSX->setEnabled(false);
+		ui->enableTSX->addItem(tr("Not supported"));
+		SubscribeTooltip(ui->enableTSX, tr("Unfortunately your cpu model does not support this instruction set."));
+	}
 
 	// PPU tool tips
 	SubscribeTooltip(ui->ppu_precise, json_cpu_ppu["precise"].toString());
@@ -325,6 +363,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		item->setCheckState(Qt::Unchecked); // AND initialize check state
 		ui->lleList->addItem(item);
 	}
+
+	ui->searchBox->setPlaceholderText(tr("Search libraries"));
 
 	auto l_OnLibButtonClicked = [=](int ind)
 	{
@@ -1082,39 +1122,20 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->spuDebug, emu_settings::SPUDebug);
 	SubscribeTooltip(ui->spuDebug, json_debug["spuDebug"].toString());
 
-	if (utils::has_rtm())
-	{
-		xemu_settings->EnhanceComboBox(ui->enableTSX, emu_settings::EnableTSX);
-		SubscribeTooltip(ui->enableTSX, json_debug["enableTSX"].toString());
+	xemu_settings->EnhanceCheckBox(ui->spuVerification, emu_settings::SPUVerification);
+	SubscribeTooltip(ui->spuVerification, json_debug["spuVerification"].toString());
 
-		static const QString tsx_forced  = qstr(fmt::format("%s", tsx_usage::forced));
-		static const QString tsx_default = qstr(xemu_settings->GetSettingDefault(emu_settings::EnableTSX));
+	xemu_settings->EnhanceCheckBox(ui->setDAZandFTZ, emu_settings::SetDAZandFTZ);
+	SubscribeTooltip(ui->setDAZandFTZ, json_debug["setDAZandFTZ"].toString());
 
-		// connect the toogled signal so that the stateChanged signal in EnhanceCheckBox can be prevented
-		connect(ui->enableTSX, &QComboBox::currentTextChanged, [this](const QString& text)
-		{
-			if (text == tsx_forced && !utils::has_mpx() && QMessageBox::No == QMessageBox::critical(this, tr("Haswell/Broadwell TSX Warning"), tr(
-				R"(
-					<p style="white-space: nowrap;">
-						RPCS3 has detected you are using TSX functions on a Haswell or Broadwell CPU.<br>
-						Intel has deactivated these functions in newer Microcode revisions, since they can lead to unpredicted behaviour.<br>
-						That means using TSX may break games or even <font color="red"><b>damage</b></font> your data.<br>
-						We recommend to disable this feature and update your computer BIOS.<br><br>
-						Do you wish to use TSX anyway?
-					</p>
-				)"
-			), QMessageBox::Yes, QMessageBox::No))
-			{
-				// Reset if the messagebox was answered with no. This prevents the currentIndexChanged signal in EnhanceComboBox
-				ui->enableTSX->setCurrentText(tsx_default);
-			}
-		});
-	}
-	else
-	{
-		ui->label_enableTSX->setHidden(true);
-		ui->enableTSX->setHidden(true);
-	}
+	xemu_settings->EnhanceCheckBox(ui->accurateGETLLAR, emu_settings::AccurateGETLLAR);
+	SubscribeTooltip(ui->accurateGETLLAR, json_debug["accurateGETLLAR"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->accuratePUTLLUC, emu_settings::AccuratePUTLLUC);
+	SubscribeTooltip(ui->accuratePUTLLUC, json_debug["accuratePUTLLUC"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings::HookStaticFuncs);
+	SubscribeTooltip(ui->hookStFunc, json_debug["hookStFunc"].toString());
 
 	//
 	// Layout fix for High Dpi
