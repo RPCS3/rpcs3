@@ -1,5 +1,8 @@
 #pragma once
 
+#include <bitset>
+#include <set>
+
 enum vp_reg_type
 {
 	RSX_VP_REGISTER_TYPE_TEMP = 1,
@@ -229,4 +232,9 @@ struct RSXVertexProgram
 	std::vector<rsx_vertex_input> rsx_vertex_inputs;
 	u32 output_mask;
 	bool skip_vertex_input_check;
+
+	u32 base_address;
+	u32 entry;
+	std::bitset<512> instruction_mask;
+	std::set<u32> jump_table;
 };

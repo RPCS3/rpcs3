@@ -29,12 +29,13 @@ namespace program_hash_util
 	{
 		struct vertex_program_metadata
 		{
-			u32 ucode_size;
+			std::bitset<512> instruction_mask;
+			u32 ucode_length;
 		};
 
 		static size_t get_vertex_program_ucode_hash(const RSXVertexProgram &program);
 
-		static vertex_program_metadata analyse_vertex_program(const std::vector<u32>& data);
+		static vertex_program_metadata analyse_vertex_program(const u32* data, u32 entry, RSXVertexProgram& dst_prog);
 	};
 
 	struct vertex_program_storage_hash

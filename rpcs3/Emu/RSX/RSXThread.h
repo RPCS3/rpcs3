@@ -377,7 +377,7 @@ namespace rsx
 		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
 		program_hash_util::vertex_program_utils::vertex_program_metadata current_vp_metadata = {};
 
-		void get_current_vertex_program();
+		void get_current_vertex_program(bool skip_vertex_inputs = true);
 
 		/**
 		 * Gets current fragment program and associated fragment state
