@@ -38,6 +38,12 @@ public:
 		SPUDebug,
 		MaxLLVMThreads,
 		EnableTSX,
+		AccurateGETLLAR,
+		AccuratePUTLLUC,
+		SetDAZandFTZ,
+		SPUBlockSize,
+		SPUCache,
+		SPUVerification,
 
 		// Graphics
 		Renderer,
@@ -208,6 +214,12 @@ private:
 		{ SPUDebug,                 { "Core", "SPU Debug"}},
 		{ MaxLLVMThreads,           { "Core", "Max LLVM Compile Threads"}},
 		{ EnableTSX,                { "Core", "Enable TSX"}},
+		{ AccurateGETLLAR,          { "Core", "Accurate GETLLAR"}},
+		{ AccuratePUTLLUC,          { "Core", "Accurate PUTLLUC"}},
+		{ SetDAZandFTZ,             { "Core", "Set DAZ and FTZ"}},
+		{ SPUBlockSize,             { "Core", "SPU Block Size"}},
+		{ SPUCache,                 { "Core", "SPU Cache"}},
+		{ SPUVerification,          { "Core", "SPU Verification"}},
 
 		// Graphics Tab
 		{ Renderer,                 { "Video", "Renderer"}},
