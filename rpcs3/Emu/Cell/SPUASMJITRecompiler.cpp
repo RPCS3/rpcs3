@@ -1250,6 +1250,11 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 	}
 	else if (op.e)
 	{
+		auto _throw = [](SPUThread* _spu)
+		{
+			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, +_spu->ch_event_mask);
+		};
+
 		Label no_intr = c->newLabel();
 		Label intr = c->newLabel();
 		Label fail = c->newLabel();
@@ -1264,8 +1269,7 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 		c->jmp(no_intr);
 		c->bind(fail);
 		c->mov(SPU_OFF_32(pc), *addr);
-		c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
-		c->mov(asmjit::x86::dword_ptr(addr->r64()), "INTR"_u32);
+		c->jmp(imm_ptr<void(*)(SPUThread*)>(_throw));
 
 		// Save addr in srr0 and disable interrupts
 		c->bind(intr);
@@ -1518,10 +1522,26 @@ void spu_recompiler::get_events()
 		c->jmp(label2);
 	});
 
+	Label fail = c->newLabel();
+
+	after.emplace_back([=]
+	{
+		auto _throw = [](SPUThread* _spu)
+		{
+			fmt::throw_exception("SPU Events not implemented (mask=0x%x)" HERE, +_spu->ch_event_mask);
+		};
+
+		c->bind(fail);
+		c->jmp(imm_ptr<void(*)(SPUThread*)>(_throw));
+	});
+
 	// Load active events into addr
 	c->bind(label2);
 	c->mov(*addr, SPU_OFF_32(ch_event_stat));
-	c->and_(*addr, SPU_OFF_32(ch_event_mask));
+	c->mov(qw1->r32(), SPU_OFF_32(ch_event_mask));
+	c->test(qw1->r32(), ~SPU_EVENT_IMPLEMENTED);
+	c->jnz(fail);
+	c->and_(*addr, qw1->r32());
 }
 
 void spu_recompiler::UNK(spu_opcode_t op)
@@ -2759,46 +2779,13 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	}
 	case SPU_WrEventMask:
 	{
-		Label fail = c->newLabel();
-		Label ret = c->newLabel();
 		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
-		c->mov(*addr, ~SPU_EVENT_IMPLEMENTED);
-		c->mov(qw1->r32(), ~SPU_EVENT_INTR_IMPLEMENTED);
-		c->bt(SPU_OFF_8(interrupts_enabled), 0);
-		c->cmovc(*addr, qw1->r32());
-		c->test(qw0->r32(), *addr);
-		c->jnz(fail);
-
-		after.emplace_back([=, pos = m_pos]
-		{
-			c->bind(fail);
-			c->mov(SPU_OFF_32(pc), pos);
-			c->mov(ls->r32(), op.ra);
-			c->lea(*qw1, x86::qword_ptr(ret));
-			c->jmp(imm_ptr(spu_wrch));
-		});
-
 		c->mov(SPU_OFF_32(ch_event_mask), qw0->r32());
-		c->bind(ret);
 		return;
 	}
 	case SPU_WrEventAck:
 	{
-		Label fail = c->newLabel();
-		Label ret = c->newLabel();
 		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
-		c->test(qw0->r32(), ~SPU_EVENT_IMPLEMENTED);
-		c->jnz(fail);
-
-		after.emplace_back([=, pos = m_pos]
-		{
-			c->bind(fail);
-			c->mov(SPU_OFF_32(pc), pos);
-			c->mov(ls->r32(), op.ra);
-			c->lea(*qw1, x86::qword_ptr(ret));
-			c->jmp(imm_ptr(spu_wrch));
-		});
-
 		c->not_(qw0->r32());
 		c->lock().and_(SPU_OFF_32(ch_event_stat), qw0->r32());
 		return;
