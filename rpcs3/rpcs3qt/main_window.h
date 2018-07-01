@@ -108,7 +108,6 @@ protected:
 	void dragLeaveEvent(QDragLeaveEvent* event) override;
 	void SetAppIconFromPath(const std::string& path);
 private:
-	void RepaintToolbar();
 	void RepaintToolBarIcons();
 	void RepaintThumbnailIcons();
 	void CreateActions();

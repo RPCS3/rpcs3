@@ -128,10 +128,7 @@ namespace gui
 	const QString savedata    = "SaveData";
 	const QString notes       = "Notes";
 
-	const QColor gl_icon_color       = QColor( 36,  36,  36, 255);
-	const QColor mw_tool_icon_color  = QColor( 91,  91,  91, 255);
-	const QColor mw_tool_bar_color   = QColor(240, 240, 240, 255);
-	const QColor mw_thumb_icon_color = QColor(  0, 100, 231, 255);
+	const QColor gl_icon_color = QColor(36, 36, 36, 255);
 
 	const gui_save rg_freeze  = gui_save(main_window, "recentGamesFrozen", false);
 	const gui_save rg_entries = gui_save(main_window, "recentGamesNames",  QVariant::fromValue(q_pair_list()));
@@ -151,8 +148,6 @@ namespace gui
 	const gui_save mw_logger         = gui_save(main_window, "loggerVisible",   true);
 	const gui_save mw_gamelist       = gui_save(main_window, "gamelistVisible", true);
 	const gui_save mw_toolBarVisible = gui_save(main_window, "toolBarVisible",  true);
-	const gui_save mw_toolBarColor   = gui_save(main_window, "toolBarColor",    mw_tool_bar_color);
-	const gui_save mw_toolIconColor  = gui_save(main_window, "toolIconColor",   mw_tool_icon_color);
 	const gui_save mw_geometry       = gui_save(main_window, "geometry",        QByteArray());
 	const gui_save mw_windowState    = gui_save(main_window, "windowState",     QByteArray());
 	const gui_save mw_mwState        = gui_save(main_window, "wwState",         QByteArray());
