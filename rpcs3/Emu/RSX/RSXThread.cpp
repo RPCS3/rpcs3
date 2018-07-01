@@ -1393,7 +1393,7 @@ namespace rsx
 		return rsx::get_address(offset_zeta, m_context_dma_z);
 	}
 
-	void thread::get_current_vertex_program()
+	void thread::get_current_vertex_program(bool skip_vertex_inputs)
 	{
 		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_dirty))
 			return;
@@ -1401,57 +1401,60 @@ namespace rsx
 		m_graphics_state &= ~(rsx::pipeline_state::vertex_program_dirty);
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
-		current_vertex_program.skip_vertex_input_check = false;
+		current_vertex_program.skip_vertex_input_check = skip_vertex_inputs;
 
 		current_vertex_program.rsx_vertex_inputs.resize(0);
-		current_vertex_program.data.resize((512 - transform_program_start) * 4);
+		current_vertex_program.data.reserve(512 * 4);
+		current_vertex_program.jump_table.clear();
 
-		u32* ucode_src = rsx::method_registers.transform_program.data() + (transform_program_start * 4);
-		u32* ucode_dst = current_vertex_program.data.data();
+		current_vp_metadata = program_hash_util::vertex_program_utils::analyse_vertex_program
+		(
+			method_registers.transform_program.data(),  // Input raw block
+			transform_program_start,                    // Address of entry point
+			current_vertex_program                      // [out] Program object
+		);
 
-		memcpy(ucode_dst, ucode_src, current_vertex_program.data.size() * sizeof(u32));
-
-		current_vp_metadata = program_hash_util::vertex_program_utils::analyse_vertex_program(current_vertex_program.data);
-		current_vertex_program.data.resize(current_vp_metadata.ucode_size);
-
-		const u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
-		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
-
-		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		if (!skip_vertex_inputs)
 		{
-			bool enabled = !!(input_mask & (1 << index));
-			if (!enabled)
-				continue;
+			const u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
+			const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
 
-			if (rsx::method_registers.vertex_arrays_info[index].size() > 0)
+			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 			{
-				current_vertex_program.rsx_vertex_inputs.push_back(
-					{index,
-						rsx::method_registers.vertex_arrays_info[index].size(),
-						rsx::method_registers.vertex_arrays_info[index].frequency(),
-						!!((modulo_mask >> index) & 0x1),
-						true,
-						is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
-			}
-			else if (vertex_push_buffers[index].vertex_count > 1)
-			{
-				current_vertex_program.rsx_vertex_inputs.push_back(
-				{ index,
-					rsx::method_registers.register_vertex_info[index].size,
-					1,
-					false,
-					true,
-					is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
-			}
-			else if (rsx::method_registers.register_vertex_info[index].size > 0)
-			{
-				current_vertex_program.rsx_vertex_inputs.push_back(
-					{index,
-						rsx::method_registers.register_vertex_info[index].size,
-						rsx::method_registers.register_vertex_info[index].frequency,
-						!!((modulo_mask >> index) & 0x1),
-						false,
-						is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
+				bool enabled = !!(input_mask & (1 << index));
+				if (!enabled)
+					continue;
+
+				if (rsx::method_registers.vertex_arrays_info[index].size() > 0)
+				{
+					current_vertex_program.rsx_vertex_inputs.push_back(
+						{ index,
+							rsx::method_registers.vertex_arrays_info[index].size(),
+							rsx::method_registers.vertex_arrays_info[index].frequency(),
+							!!((modulo_mask >> index) & 0x1),
+							true,
+							is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
+				}
+				else if (vertex_push_buffers[index].vertex_count > 1)
+				{
+					current_vertex_program.rsx_vertex_inputs.push_back(
+						{ index,
+							rsx::method_registers.register_vertex_info[index].size,
+							1,
+							false,
+							true,
+							is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
+				}
+				else if (rsx::method_registers.register_vertex_info[index].size > 0)
+				{
+					current_vertex_program.rsx_vertex_inputs.push_back(
+						{ index,
+							rsx::method_registers.register_vertex_info[index].size,
+							rsx::method_registers.register_vertex_info[index].frequency,
+							!!((modulo_mask >> index) & 0x1),
+							false,
+							is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
+				}
 			}
 		}
 	}

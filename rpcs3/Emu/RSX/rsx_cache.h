@@ -378,6 +378,11 @@ namespace rsx
 			u64 pipeline_storage_hash;
 
 			u32 vp_ctrl;
+			u64 vp_instruction_mask[8];
+
+			u32 vp_base_address;
+			u32 vp_entry;
+			u16 vp_jump_table[32];
 
 			u32 fp_ctrl;
 			u32 fp_texture_dimensions;
@@ -653,6 +658,12 @@ namespace rsx
 				return;
 			}
 
+			if (vp.jump_table.size() > 32)
+			{
+				LOG_ERROR(RSX, "shaders_cache: vertex program has more than 32 jump addresses. Entry not saved to cache");
+				return;
+			}
+
 			pipeline_data data = pack(pipeline, vp, fp);
 			std::string fp_name = root_path + "/raw/" + fmt::format("%llX.fp", data.fragment_program_hash);
 			std::string vp_name = root_path + "/raw/" + fmt::format("%llX.vp", data.vertex_program_hash);
@@ -723,6 +734,22 @@ namespace rsx
 			pipeline_storage_type pipeline = data.pipeline_properties;
 
 			vp.output_mask = data.vp_ctrl;
+			vp.base_address = data.vp_base_address;
+			vp.entry = data.vp_entry;
+
+			pack_bitset<512>(vp.instruction_mask, data.vp_instruction_mask);
+
+			for (u8 index = 0; index < 32; ++index)
+			{
+				const auto address = data.vp_jump_table[index];
+				if (address == UINT16_MAX)
+				{
+					// End of list marker
+					break;
+				}
+
+				vp.jump_table.emplace(address);
+			}
 
 			fp.ctrl = data.fp_ctrl;
 			fp.texture_dimensions = data.fp_texture_dimensions;
@@ -753,6 +780,28 @@ namespace rsx
 			data_block.pipeline_storage_hash = m_storage.get_hash(pipeline);
 
 			data_block.vp_ctrl = vp.output_mask;
+			data_block.vp_base_address = vp.base_address;
+			data_block.vp_entry = vp.entry;
+
+			unpack_bitset<512>(vp.instruction_mask, data_block.vp_instruction_mask);
+
+			u8 index = 0;
+			while (index < 32)
+			{
+				if (!index && !vp.jump_table.empty())
+				{
+					for (auto &address : vp.jump_table)
+					{
+						data_block.vp_jump_table[index++] = (u16)address;
+					}
+				}
+				else
+				{
+					// End of list marker
+					data_block.vp_jump_table[index] = UINT16_MAX;
+					break;
+				}
+			}
 
 			data_block.fp_ctrl = fp.ctrl;
 			data_block.fp_texture_dimensions = fp.texture_dimensions;

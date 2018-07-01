@@ -53,11 +53,10 @@ struct VertexProgramDecompiler
 	Instruction* m_cur_instr;
 	size_t m_instr_count;
 
-	std::set<int> m_jump_lvls;
 	std::vector<std::string> m_body;
 	std::stack<u32> m_call_stack;
 
-	const std::vector<u32>& m_data;
+	const RSXVertexProgram& m_prog;
 	ParamArray m_parr;
 
 	std::string NotZeroPositive(const std::string& code);

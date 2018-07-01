@@ -53,7 +53,7 @@ void D3D12GSRender::load_program()
 		return std::make_tuple(true, native_pitch);
 	};
 
-	get_current_vertex_program();
+	get_current_vertex_program(false);
 	get_current_fragment_program_legacy(rtt_lookup_func);
 
 	if (!current_fragment_program.valid)

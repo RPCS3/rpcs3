@@ -5,6 +5,7 @@
 #include "gcm_enums.h"
 #include <atomic>
 #include <memory>
+#include <bitset>
 
 // TODO: replace the code below by #include <optional> when C++17 or newer will be used
 #include <optional.hpp>
@@ -725,5 +726,42 @@ namespace rsx
 	static inline thread* get_current_renderer()
 	{
 		return g_current_renderer;
+	}
+
+	template <int N>
+	void unpack_bitset(std::bitset<N>& block, u64* values)
+	{
+		constexpr int count = N / 64;
+		for (int n = 0; n < count; ++n)
+		{
+			int i = (n << 6);
+			values[n] = 0;
+
+			for (int bit = 0; bit < 64; ++bit, ++i)
+			{
+				if (block[i])
+				{
+					values[n] |= (1 << bit);
+				}
+			}
+		}
+	}
+
+	template <int N>
+	void pack_bitset(std::bitset<N>& block, u64* values)
+	{
+		constexpr int count = N / 64;
+		for (int n = (count - 1); n >= 0; --n)
+		{
+			if ((n + 1) < count)
+			{
+				block <<= 64;
+			}
+
+			if (values[n])
+			{
+				block |= values[n];
+			}
+		}
 	}
 }
