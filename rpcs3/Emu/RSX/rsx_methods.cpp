@@ -340,9 +340,11 @@ namespace rsx
 				static constexpr u32 reg = index / 4;
 				static constexpr u8 subreg = index % 4;
 
-				u32 load = rsx::method_registers.transform_constant_load();
-				if ((load + index) >= 512)
+				const u32 load = rsx::method_registers.transform_constant_load();
+				const u32 address = load + reg;
+				if (address >= 468)
 				{
+					// Ignore addresses outside the usable [0, 467] range
 					LOG_ERROR(RSX, "Invalid transform register index (load=%d, index=%d)", load, index);
 					return;
 				}
@@ -538,7 +540,7 @@ namespace rsx
 			rsx->sync();
 		}
 
-		void invalidate_L2(thread* rsx, u32, u32)
+		void set_shader_program_dirty(thread* rsx, u32, u32)
 		{
 			rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
 		}
@@ -1757,7 +1759,7 @@ namespace rsx
 		bind_range<NV4097_SET_TEXTURE_ADDRESS, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_CONTROL0, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_CONTROL1, 8, 16, nv4097::set_texture_dirty_bit>();
-		bind_range<NV4097_SET_TEXTURE_CONTROL2, 8, 16, nv4097::set_texture_dirty_bit>();
+		bind_range<NV4097_SET_TEXTURE_CONTROL2, 1, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_CONTROL3, 1, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_FILTER, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_IMAGE_RECT, 8, 16, nv4097::set_texture_dirty_bit>();
@@ -1782,7 +1784,8 @@ namespace rsx
 		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
 		bind<NV4097_ZCULL_SYNC, nv4097::sync>();
 		bind<NV4097_SET_CONTEXT_DMA_REPORT, nv4097::sync>();
-		bind<NV4097_INVALIDATE_L2, nv4097::invalidate_L2>();
+		bind<NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty>();
+		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start>();
 		bind<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask>();
 
