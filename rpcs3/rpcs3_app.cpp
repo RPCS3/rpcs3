@@ -332,7 +332,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 		"QSlider#sizeSlider::groove:horizontal { border-radius: .15em; background: #5b5b5b; height: .3em; }"
 
 		// main window toolbar
-		"QToolBar#mw_toolbar { background-color: #F0F0F0; }"
+		"QToolBar#mw_toolbar { background-color: #F0F0F0; border: none; }"
 		"QToolBar#mw_toolbar::separator { background-color: rgba(207, 207, 207, 235); width: 0.125em; margin-top: 0.250em; margin-bottom: 0.250em; }"
 
 		// main window toolbar icon color
@@ -345,11 +345,20 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 		"QLabel#gamelist_icon_background_color { color: rgba(36, 36, 36, 255); }"
 
 		// tables
-		"QTableWidget { alternate-background-color: #f2f2f2; background-color: #fff; }"
-		"QTableWidget#game_grid { alternate-background-color: #f2f2f2; background-color: #fff; font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
+		"QTableWidget { alternate-background-color: #f2f2f2; background-color: #fff; border: none; }"
+		"QTableWidget#game_grid { alternate-background-color: #f2f2f2; background-color: #fff; font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); border: 0em solid white; }"
 		"QTableView::item { border-left: 0.063em solid white; border-right: 0.063em solid white; padding-left:0.313em; }"
 		"QTableView::item:selected { background-color: #148aff; color: #fff; }"
+		"QTableView#game_grid::item:hover:!selected { background-color: #94c9ff; color: #fff; }"
+		"QTableView#game_grid::item:hover:selected { background-color: #007fff; color: #fff; }"
 		"QHeaderView::section { padding-left: .5em; padding-right: .5em; padding-top: .4em; padding-bottom: -.1em; border: 0.063em solid #ffffff; }"
+		"QHeaderView::section:hover { background: #e3e3e3; padding-left: .5em; padding-right: .5em; padding-top: .4em; padding-bottom: -.1em; border: 0.063em solid #ffffff; }"
+
+		// dock widget
+		"QDockWidget{ background: transparent; color: black; }"
+		"[floating = \"true\"]{ background: white; }"
+		"QDockWidget::title{ background: #e3e3e3; border: none; padding-top: 0.2em; padding-left: 0.2em; }"
+		"QDockWidget::close-button, QDockWidget::float-button{ background-color: #e3e3e3; }"
 
 		// log frame tty
 		"QTextEdit#tty_frame { background-color: #ffffff; }"
