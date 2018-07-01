@@ -1470,7 +1470,7 @@
                 <property name="sizeHint" stdset="0">
                  <size>
                   <width>0</width>
-                  <height>55</height>
+                  <height>0</height>
                  </size>
                 </property>
                </spacer>
@@ -1572,62 +1572,32 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="pb_tool_bar_color">
-                  <property name="text">
-                   <string>Main window tool bar</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="pb_tool_icon_color">
-                  <property name="text">
-                   <string>Main window tool icons</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
                  <widget class="QPushButton" name="pb_gl_icon_color">
                   <property name="text">
                    <string>Gamelist icons</string>
                   </property>
                  </widget>
                 </item>
+                <item>
+                 <spacer name="verticalSpacer_5">
+                  <property name="orientation">
+                   <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeType">
+                   <enum>QSizePolicy::MinimumExpanding</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>0</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
                </layout>
               </widget>
              </item>
-             <item>
-              <spacer name="verticalSpacer_5">
-               <property name="orientation">
-                <enum>Qt::Vertical</enum>
-               </property>
-               <property name="sizeType">
-                <enum>QSizePolicy::MinimumExpanding</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>0</width>
-                 <height>0</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
             </layout>
-           </item>
-           <item>
-            <spacer name="verticalSpacer_4">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::MinimumExpanding</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-            </spacer>
            </item>
           </layout>
          </item>
@@ -1657,6 +1627,13 @@
                <widget class="QPushButton" name="pb_open_folder">
                 <property name="text">
                  <string>Open configuration folder</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>Load Settings:</string>
                 </property>
                </widget>
               </item>
