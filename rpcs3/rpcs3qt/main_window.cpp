@@ -80,30 +80,6 @@ void main_window::Init()
 	// hide utilities from the average user
 	ui->menuUtilities->menuAction()->setVisible(guiSettings->GetValue(gui::m_showDebugTab).toBool());
 
-	// for highdpi resize toolbar icons and height dynamically
-	// choose factors to mimic Gui-Design in main_window.ui
-	// TODO: delete this in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp
-#ifdef _WIN32
-	const int toolIconHeight = menuBar()->sizeHint().height() * 1.5;
-	ui->toolBar->setIconSize(QSize(toolIconHeight, toolIconHeight));
-#endif
-
-	const int toolBarHeight = ui->toolBar->sizeHint().height();
-
-	// resize toolbar actions
-	for (const auto& act : ui->toolBar->actions())
-	{
-		if (act->isSeparator())
-		{
-			continue;
-		}
-
-		ui->toolBar->widgetForAction(act)->setMinimumWidth(toolBarHeight);
-	}
-
-	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 4);
-	ui->mw_searchbar->setFixedWidth(toolBarHeight * 5);
-
 	// add toolbar widgets (crappy Qt designer is not able to)
 	ui->toolBar->setObjectName("mw_toolbar");
 	ui->sizeSlider->setRange(0, gui::gl_max_slider_pos);
@@ -767,6 +743,31 @@ void main_window::RepaintToolBarIcons()
 
 	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
 		.arg(newColor.red()).arg(newColor.green()).arg(newColor.blue()).arg(newColor.alpha()));
+
+	// resize toolbar elements
+
+	// for highdpi resize toolbar icons and height dynamically
+	// choose factors to mimic Gui-Design in main_window.ui
+	// TODO: delete this in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp
+#ifdef _WIN32
+	const int toolIconHeight = menuBar()->sizeHint().height() * 1.5;
+	ui->toolBar->setIconSize(QSize(toolIconHeight, toolIconHeight));
+#endif
+
+	const int toolBarHeight = ui->toolBar->sizeHint().height();
+
+	for (const auto& act : ui->toolBar->actions())
+	{
+		if (act->isSeparator())
+		{
+			continue;
+		}
+
+		ui->toolBar->widgetForAction(act)->setMinimumWidth(toolBarHeight);
+	}
+
+	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 4);
+	ui->mw_searchbar->setFixedWidth(toolBarHeight * 5);
 }
 
 void main_window::OnEmuRun()
