@@ -18,6 +18,7 @@
 extern atomic_t<const char*> g_progr;
 extern atomic_t<u64> g_progr_ptotal;
 extern atomic_t<u64> g_progr_pdone;
+extern u64 get_timebased_time();
 
 const spu_decoder<spu_itype> s_spu_itype;
 const spu_decoder<spu_iname> s_spu_iname;
@@ -5394,6 +5395,12 @@ public:
 	static u32 exec_check_interrupts(spu_thread* _spu, u32 addr)
 	{
 		_spu->set_interrupt_status(true);
+
+		if (!(_spu->ch_dec_start_timestamp & 1) && (_spu->ch_dec_value - (get_timebased_time() - _spu->ch_dec_start_timestamp)) >> 31)
+		{
+			_spu->ch_event_stat |= SPU_EVENT_TM;
+			_spu->ch_dec_start_timestamp |= 1; // Block the event until the next decrementer write
+		}
 
 		if ((_spu->ch_event_mask & _spu->ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
 		{

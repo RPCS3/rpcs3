@@ -69,7 +69,7 @@ enum : u32
 	SPU_EVENT_TG = 0x1,    // MFC Tag Group status update event
 
 	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN, // Mask of implemented events
-	SPU_EVENT_INTR_IMPLEMENTED = SPU_EVENT_SN,
+	SPU_EVENT_INTR_IMPLEMENTED = SPU_EVENT_SN | SPU_EVENT_TM,
 
 	SPU_EVENT_WAITING      = 0x80000000, // Originally unused, set when SPU thread starts waiting on ch_event_stat
 	//SPU_EVENT_AVAILABLE  = 0x40000000, // Originally unused, channel count of the SPU_RdEventStat channel
