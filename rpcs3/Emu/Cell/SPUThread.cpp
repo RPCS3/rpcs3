@@ -1465,12 +1465,10 @@ u32 spu_thread::get_events(bool waiting)
 	}
 
 	// SPU Decrementer Event
-	if (!ch_dec_value || (ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 31)
+	if (!(ch_dec_start_timestamp & 1) && (ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 31)
 	{
-		if ((ch_event_stat & SPU_EVENT_TM) == 0)
-		{
-			ch_event_stat |= SPU_EVENT_TM;
-		}
+		ch_event_stat |= SPU_EVENT_TM;
+		ch_dec_start_timestamp |= 1; // Block the event until the next decrementer write
 	}
 
 	// Simple polling or polling with atomically set/removed SPU_EVENT_WAITING flag
@@ -2019,7 +2017,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrDec:
 	{
-		ch_dec_start_timestamp = get_timebased_time();
+		ch_dec_start_timestamp = get_timebased_time() & ~1ull;
 		ch_dec_value = value;
 		return true;
 	}
