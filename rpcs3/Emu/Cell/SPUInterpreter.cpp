@@ -11,6 +11,8 @@
 #include <cfenv>
 #include <atomic>
 
+extern u64 get_timebased_time();
+
 // Compare 16 packed unsigned bytes (greater than)
 inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
 {
@@ -104,6 +106,13 @@ void spu_interpreter::set_interrupt_status(SPUThread& spu, spu_opcode_t op)
 	else if (op.d)
 	{
 		spu.set_interrupt_status(false);
+		return;
+	}
+
+	if (!(spu.ch_dec_start_timestamp & 1) && (spu.ch_dec_value - (get_timebased_time() - spu.ch_dec_start_timestamp)) >> 31)
+	{
+		spu.set_event(5); // SPU_EVENT_TM
+		spu.ch_dec_start_timestamp |= 1; // Block the event until the next decrementer write
 	}
 
 	if (spu.ch_event_count && test_and_reset(spu.ch_event_stat, (u32)SPU_EVENT_INTR_ENABLED))

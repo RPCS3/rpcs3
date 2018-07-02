@@ -1255,9 +1255,35 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, _spu->ch_event_mask);
 		};
 
+		auto sub = [](SPUThread* _spu, void(*_ret)(SPUThread&, void*, u32))
+		{
+			const u32 result = _spu->ch_dec_value - static_cast<u32>(get_timebased_time() - _spu->ch_dec_start_timestamp);
+
+			// Return decrementer value in the third argument
+			_ret(*_spu, _spu->_ptr<u8>(0), result);
+		};
+
 		Label no_intr = c->newLabel();
 		Label intr = c->newLabel();
 		Label fail = c->newLabel();
+		Label next = c->newLabel();
+		Label no_event = c->newLabel();
+
+		c->mov(*qw1, SPU_OFF_64(ch_dec_start_timestamp));
+		c->test(qw1->r32(), 1);
+		c->jnz(no_event);
+		c->mov(SPU_OFF_32(pc), *addr); // Save addr
+		c->lea(*ls, x86::qword_ptr(next));
+		c->jmp(imm_ptr<void(*)(SPUThread*, void(*)(SPUThread&, void*, u32))>(sub));
+		c->align(kAlignCode, 16);
+		c->bind(next);
+		c->mov(*addr, SPU_OFF_32(pc)); // Restore addr
+		c->test(qw0->r32(), qw0->r32());
+		c->jns(no_event);
+		c->or_(SPU_OFF_64(ch_dec_start_timestamp), 1);
+		set_event(5); // SPU_EVENT_TM
+		c->xor_(qw0->r32(), qw0->r32());
+		c->bind(no_event);
 
 		c->mov(qw1->r32(), SPU_OFF_32(ch_event_mask));
 		c->test(qw1->r32(), ~SPU_EVENT_INTR_IMPLEMENTED);
