@@ -1502,9 +1502,10 @@ u32 SPUThread::get_events()
 	}
 
 	// SPU Decrementer Event
-	if (!ch_dec_value || (ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 31)
+	if (!(ch_dec_start_timestamp & 1) && (ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 31)
 	{
 		set_event(5); // TM_EVENT
+		ch_dec_start_timestamp |= 1; // Block the event until the next decrementer write
 	}
 
 	return ch_event_count;
@@ -2038,7 +2039,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrDec:
 	{
-		ch_dec_start_timestamp = get_timebased_time();
+		ch_dec_start_timestamp = get_timebased_time() & ~1ull;
 		ch_dec_value = value;
 		return true;
 	}
