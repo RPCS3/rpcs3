@@ -81,6 +81,7 @@ after_script:
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
       rm ./appdir/usr/lib/libfreetype.so.6 ;
       rm ./appdir/usr/lib/libglapi.so.0 ;
+      rm ./appdir/usr/lib/libxcb* ;
       rm -r ./appdir/usr/share/doc ;
       rm -r ./appdir/usr/share/man ;
       rm -r ./appdir/usr/include ;
