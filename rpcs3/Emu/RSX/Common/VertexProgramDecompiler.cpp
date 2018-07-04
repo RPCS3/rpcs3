@@ -52,7 +52,7 @@ std::string VertexProgramDecompiler::GetDST(bool isSca)
 	default:
 		if (d3.dst > 15)
 			LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
-		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? getFloatTypeName(4) + "(0.0f, 0.0f, 0.0f, 1.0f)" : getFloatTypeName(4) + "(0.0, 0.0, 0.0, 0.0)") + mask;
+		ret += m_parr.AddParam(PF_PARAM_OUT, getFloatTypeName(4), std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? getFloatTypeName(4) + "(0.0f, 0.0f, 0.0f, 1.0f)" : getFloatTypeName(4) + "(0.0, 0.0, 0.0, 0.0)") + mask;
 		// Handle double destination register as 'dst_reg = tmp'
 		if (d0.dst_tmp != 0x3f)
 			ret += " = " + m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("tmp") + std::to_string(d0.dst_tmp)) + mask;
@@ -389,6 +389,13 @@ std::string VertexProgramDecompiler::BuildCode()
 		}
 
 		lvl += m_instructions[i].open_scopes;
+	}
+
+	bool is_valid = m_parr.HasParam(PF_PARAM_OUT, getFloatTypeName(4), "dst_reg0");
+	if (!is_valid)
+	{
+		LOG_WARNING(RSX, "Vertex program has no POS output, shader will be NOPed");
+		main_body = "/*" + main_body + "*/";
 	}
 
 	std::stringstream OS;
