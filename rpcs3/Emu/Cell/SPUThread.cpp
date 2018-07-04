@@ -424,8 +424,7 @@ std::string SPUThread::dump() const
 {
 	std::string ret = cpu_thread::dump();
 
-	// Print some transaction statistics
-	fmt::append(ret, "\nBlocks: %u; Fail: %u", block_counter, block_failure);
+	fmt::append(ret, "\nBlock Weight: %u (Retreats: %u)", block_counter, block_failure);
 	fmt::append(ret, "\n[%s]", ch_mfc_cmd);
 	fmt::append(ret, "\nTag Mask: 0x%08x", ch_tag_mask);
 	fmt::append(ret, "\nMFC Stall: 0x%08x", ch_stall_mask);
@@ -528,7 +527,7 @@ void SPUThread::cpu_task()
 		}
 
 		// Print some stats
-		LOG_NOTICE(SPU, "Stats: block %u (fails: %u);", block_counter, block_failure);
+		LOG_NOTICE(SPU, "Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
 		return;
 	}
 
