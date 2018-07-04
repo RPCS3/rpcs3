@@ -324,10 +324,13 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	strcpy_trunc(param->getCachePath, cache_path);
 
 	// TODO: implement (what?)
-	fs::create_dir(vfs::get(cache_path));
 	fxm::make_always<CellSysCacheParam>(*param);
+	if (!fs::create_dir(vfs::get(cache_path)))
+	{
+		return CELL_SYSCACHE_RET_OK_RELAYED;
+	}
 
-	return CELL_SYSCACHE_RET_OK_RELAYED;
+	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
 
 bool g_bgm_playback_enabled = true;
