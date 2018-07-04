@@ -300,7 +300,7 @@ s32 cellSysCacheClear()
 
 	const std::string& cache_id = param->cacheId;
 
-	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
+	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id;
 	const std::string& dir_path = vfs::get(cache_path);
 
 	if (!fs::exists(dir_path) || !fs::is_dir(dir_path))
@@ -320,7 +320,7 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	const std::string& cache_id = param->cacheId;
 	verify(HERE), cache_id.size() < sizeof(param->cacheId);
 
-	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
+	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id;
 	strcpy_trunc(param->getCachePath, cache_path);
 
 	// TODO: implement (what?)
