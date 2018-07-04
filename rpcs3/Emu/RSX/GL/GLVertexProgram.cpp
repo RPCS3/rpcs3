@@ -156,7 +156,7 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	for (int i = 0; i < 16; ++i)
 	{
 		std::string reg_name = "dst_reg" + std::to_string(i);
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
+		if (m_parr.HasParam(PF_PARAM_OUT, "vec4", reg_name))
 		{
 			if (parameters.length())
 				parameters += ", ";
@@ -213,7 +213,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	std::string parameters = "";
 
-	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_NONE, "vec4"))
+	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_OUT, "vec4"))
 	{
 		for (int i = 0; i < 16; ++i)
 		{
@@ -258,7 +258,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 		if (front_back_specular && name == "spec_color")
 			name = "back_spec_color";
 
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg))
+		if (m_parr.HasParam(PF_PARAM_OUT, "vec4", i.src_reg))
 		{
 			if (i.check_mask && (rsx_vertex_program.output_mask & i.check_mask_value) == 0)
 				continue;
@@ -290,11 +290,11 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	}
 
 	if (insert_back_diffuse && insert_front_diffuse)
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "dst_reg1"))
+		if (m_parr.HasParam(PF_PARAM_OUT, "vec4", "dst_reg1"))
 			OS << "	front_diff_color = dst_reg1;\n";
 
 	if (insert_back_specular && insert_front_specular)
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "dst_reg2"))
+		if (m_parr.HasParam(PF_PARAM_OUT, "vec4", "dst_reg2"))
 			OS << "	front_spec_color = dst_reg2;\n";
 
 	OS << "	gl_PointSize = point_size;\n";
