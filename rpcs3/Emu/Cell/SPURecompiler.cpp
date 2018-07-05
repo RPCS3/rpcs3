@@ -3081,7 +3081,8 @@ public:
 
 	void ROTM(spu_opcode_t op)
 	{
-		set_vr(op.rt, trunc<u32[4]>(zext<u64[4]>(get_vr(op.ra)) >> zext<u64[4]>(-get_vr(op.rb) & 0x3f)));
+		const auto sh = eval(-get_vr(op.rb) & 0x3f);
+		set_vr(op.rt, select(sh < 0x20, eval(get_vr(op.ra) >> sh), splat<u32[4]>(0)));
 	}
 
 	void ROTMA(spu_opcode_t op)
@@ -3092,7 +3093,8 @@ public:
 
 	void SHL(spu_opcode_t op)
 	{
-		set_vr(op.rt, trunc<u32[4]>(zext<u64[4]>(get_vr(op.ra)) << zext<u64[4]>(get_vr(op.rb) & 0x3f)));
+		const auto sh = eval(get_vr(op.rb) & 0x3f);
+		set_vr(op.rt, select(sh < 0x20, eval(get_vr(op.ra) << sh), splat<u32[4]>(0)));
 	}
 
 	void ROTH(spu_opcode_t op)
@@ -3102,7 +3104,8 @@ public:
 
 	void ROTHM(spu_opcode_t op)
 	{
-		set_vr(op.rt, trunc<u16[8]>(zext<u32[8]>(get_vr<u16[8]>(op.ra)) >> zext<u32[8]>(-get_vr<u16[8]>(op.rb) & 0x1f)));
+		const auto sh = eval(-get_vr<u16[8]>(op.rb) & 0x1f);
+		set_vr(op.rt, select(sh < 0x10, eval(get_vr<u16[8]>(op.ra) >> sh), splat<u16[8]>(0)));
 	}
 
 	void ROTMAH(spu_opcode_t op)
@@ -3113,7 +3116,8 @@ public:
 
 	void SHLH(spu_opcode_t op)
 	{
-		set_vr(op.rt, trunc<u16[8]>(zext<u32[8]>(get_vr<u16[8]>(op.ra)) << zext<u32[8]>(get_vr<u16[8]>(op.rb) & 0x1f)));
+		const auto sh = eval(get_vr<u16[8]>(op.rb) & 0x1f);
+		set_vr(op.rt, select(sh < 0x10, eval(get_vr<u16[8]>(op.ra) << sh), splat<u16[8]>(0)));
 	}
 
 	void ROTI(spu_opcode_t op)
