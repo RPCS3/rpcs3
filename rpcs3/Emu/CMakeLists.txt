@@ -55,6 +55,7 @@ endif()
 # Crypto
 target_sources(rpcs3_emu PRIVATE
 	../Crypto/aes.cpp
+	../Crypto/aesni.cpp
 	../Crypto/ec.cpp
 	../Crypto/key_vault.cpp
 	../Crypto/lz.cpp

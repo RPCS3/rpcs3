@@ -326,6 +326,9 @@
     <ClCompile Include="Crypto\aes.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Crypto\aesni.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="Crypto\ec.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -407,6 +410,7 @@
     <ClInclude Include="..\Utilities\version.h" />
     <ClInclude Include="..\Utilities\VirtualMemory.h" />
     <ClInclude Include="Crypto\aes.h" />
+    <ClInclude Include="Crypto\aesni.h" />
     <ClInclude Include="Crypto\ec.h" />
     <ClInclude Include="Crypto\key_vault.h" />
     <ClInclude Include="Crypto\lz.h" />
