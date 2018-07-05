@@ -3870,6 +3870,88 @@ public:
 	void SHUFB(spu_opcode_t op)
 	{
 		const auto c = get_vr<u8[16]>(op.rc);
+
+		if (auto ci = llvm::dyn_cast<llvm::Constant>(c.value))
+		{
+			// Optimization: SHUFB with constant mask
+			v128 mask = get_const_vector(ci, m_pos, 57216);
+
+			if (((mask._u64[0] | mask._u64[1]) & 0xe0e0e0e0e0e0e0e0) == 0)
+			{
+				// Trivial insert or constant shuffle (TODO)
+				static constexpr struct mask_info
+				{
+					u64 i1;
+					u64 i0;
+					decltype(&cpu_translator::get_type<void>) type;
+					u64 extract_from;
+					u64 insert_to;
+				} s_masks[30]
+				{
+					{ 0x0311121314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 15 },
+					{ 0x1003121314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 14 },
+					{ 0x1011031314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 13 },
+					{ 0x1011120314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 12 },
+					{ 0x1011121303151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 11 },
+					{ 0x1011121314031617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 10 },
+					{ 0x1011121314150317, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 9 },
+					{ 0x1011121314151603, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 8 },
+					{ 0x1011121314151617, 0x03191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 7 },
+					{ 0x1011121314151617, 0x18031a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 6 },
+					{ 0x1011121314151617, 0x1819031b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 5 },
+					{ 0x1011121314151617, 0x18191a031c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 4 },
+					{ 0x1011121314151617, 0x18191a1b031d1e1f, &cpu_translator::get_type<u8[16]>, 12, 3 },
+					{ 0x1011121314151617, 0x18191a1b1c031e1f, &cpu_translator::get_type<u8[16]>, 12, 2 },
+					{ 0x1011121314151617, 0x18191a1b1c1d031f, &cpu_translator::get_type<u8[16]>, 12, 1 },
+					{ 0x1011121314151617, 0x18191a1b1c1d1e03, &cpu_translator::get_type<u8[16]>, 12, 0 },
+					{ 0x0203121314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u16[8]>, 6, 7 },
+					{ 0x1011020314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u16[8]>, 6, 6 },
+					{ 0x1011121302031617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u16[8]>, 6, 5 },
+					{ 0x1011121314150203, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u16[8]>, 6, 4 },
+					{ 0x1011121314151617, 0x02031a1b1c1d1e1f, &cpu_translator::get_type<u16[8]>, 6, 3 },
+					{ 0x1011121314151617, 0x181902031c1d1e1f, &cpu_translator::get_type<u16[8]>, 6, 2 },
+					{ 0x1011121314151617, 0x18191a1b02031e1f, &cpu_translator::get_type<u16[8]>, 6, 1 },
+					{ 0x1011121314151617, 0x18191a1b1c1d0203, &cpu_translator::get_type<u16[8]>, 6, 0 },
+					{ 0x0001020314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u32[4]>, 3, 3 },
+					{ 0x1011121300010203, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u32[4]>, 3, 2 },
+					{ 0x1011121314151617, 0x000102031c1d1e1f, &cpu_translator::get_type<u32[4]>, 3, 1 },
+					{ 0x1011121314151617, 0x18191a1b00010203, &cpu_translator::get_type<u32[4]>, 3, 0 },
+					{ 0x0001020304050607, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u64[2]>, 1, 1 },
+					{ 0x1011121303151617, 0x0001020304050607, &cpu_translator::get_type<u64[2]>, 1, 0 },
+				};
+
+				// Check important constants from CWD-like constant generation instructions
+				for (const auto& cm : s_masks)
+				{
+					if (mask._u64[0] == cm.i0 && mask._u64[1] == cm.i1)
+					{
+						const auto t = (this->*cm.type)();
+						const auto a = get_vr(op.ra, t);
+						const auto b = get_vr(op.rb, t);
+						const auto e = m_ir->CreateExtractElement(a, cm.extract_from);
+						set_vr(op.rt4, m_ir->CreateInsertElement(b, e, cm.insert_to));
+						return;
+					}
+				}
+
+				// Generic constant shuffle without constant-generation bits
+				mask = mask ^ v128::from8p(0x1f);
+
+				if (op.ra == op.rb)
+				{
+					mask = mask & v128::from8p(0xf);
+				}
+
+				const auto a = get_vr<u8[16]>(op.ra);
+				const auto b = get_vr<u8[16]>(op.rb);
+				const auto c = make_const_vector(mask, get_type<u8[16]>());
+				set_vr(op.rt4, m_ir->CreateShuffleVector(b.value, op.ra == op.rb ? b.value : a.value, m_ir->CreateZExt(c, get_type<u32[16]>())));
+				return;
+			}
+
+			LOG_TODO(SPU, "[0x%x] Const SHUFB mask: %s", m_pos, mask);
+		}
+
 		const auto x = avg(sext<u8[16]>((c & 0xc0) == 0xc0), sext<u8[16]>((c & 0xe0) == 0xc0));
 		const auto cr = c ^ 0xf;
 		const auto a = pshufb(get_vr<u8[16]>(op.ra), cr);
