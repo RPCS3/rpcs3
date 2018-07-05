@@ -583,7 +583,7 @@ void PPUTranslator::VADDCUW(ppu_opcode_t op)
 {
 	const auto a = get_vr<u32[4]>(op.va);
 	const auto b = get_vr<u32[4]>(op.vb);
-	set_vr(op.vd, eval(ucarry(a, b, eval(a + b)) >> 31));
+	set_vr(op.vd, zext<u32[4]>(a + b < a));
 }
 
 void PPUTranslator::VADDFP(ppu_opcode_t op)
@@ -635,11 +635,11 @@ void PPUTranslator::VADDUBM(ppu_opcode_t op)
 
 void PPUTranslator::VADDUBS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s8[16]>(op.va);
-	const auto b = get_vr<s8[16]>(op.vb);
+	const auto a = get_vr<u8[16]>(op.va);
+	const auto b = get_vr<u8[16]>(op.vb);
 	const auto s = eval(a + b);
-	const auto x = eval(ucarry(a, b, s) >> 7);
-	set_vr(op.vd, eval(s | x));
+	const auto x = eval(s < a);
+	set_vr(op.vd, select(x, splat<u8[16]>(-1), s));
 	SetSat(IsNotZero(x.value));
 }
 
@@ -652,11 +652,11 @@ void PPUTranslator::VADDUHM(ppu_opcode_t op)
 
 void PPUTranslator::VADDUHS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s16[8]>(op.va);
-	const auto b = get_vr<s16[8]>(op.vb);
+	const auto a = get_vr<u16[8]>(op.va);
+	const auto b = get_vr<u16[8]>(op.vb);
 	const auto s = eval(a + b);
-	const auto x = eval(ucarry(a, b, s) >> 15);
-	set_vr(op.vd, eval(s | x));
+	const auto x = eval(s < a);
+	set_vr(op.vd, select(x, splat<u16[8]>(-1), s));
 	SetSat(IsNotZero(x.value));
 }
 
@@ -669,11 +669,11 @@ void PPUTranslator::VADDUWM(ppu_opcode_t op)
 
 void PPUTranslator::VADDUWS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s32[4]>(op.va);
-	const auto b = get_vr<s32[4]>(op.vb);
+	const auto a = get_vr<u32[4]>(op.va);
+	const auto b = get_vr<u32[4]>(op.vb);
 	const auto s = eval(a + b);
-	const auto x = eval(ucarry(a, b, s) >> 31);
-	set_vr(op.vd, eval(s | x));
+	const auto x = eval(s < a);
+	set_vr(op.vd, select(x, splat<u32[4]>(-1), s));
 	SetSat(IsNotZero(x.value));
 }
 
