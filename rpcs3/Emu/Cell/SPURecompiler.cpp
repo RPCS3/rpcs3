@@ -1693,42 +1693,60 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 	llvm::Value* init_vr(u32 index)
 	{
-		if (!m_reg_addr.at(index))
+		auto& ptr = m_reg_addr.at(index);
+
+		if (!ptr)
 		{
 			// Save and restore current insert point if necessary
 			const auto block_cur = m_ir->GetInsertBlock();
 
 			// Emit register pointer at the beginning of the function chunk
 			m_ir->SetInsertPoint(m_function->getEntryBlock().getTerminator());
-			m_reg_addr[index] = _ptr<u32[4]>(m_thread, ::offset32(&SPUThread::gpr, index), fmt::format("Reg$%u", index));
+			ptr = _ptr<u32[4]>(m_thread, ::offset32(&SPUThread::gpr, index), fmt::format("Reg$%u", index));
 			m_ir->SetInsertPoint(block_cur);
 		}
 
-		return m_reg_addr[index];
+		return ptr;
+	}
+
+	llvm::Value* get_vr(u32 index, llvm::Type* type)
+	{
+		auto& reg = m_block->reg.at(index);
+
+		if (!reg)
+		{
+			// Load register value if necessary
+			reg = m_ir->CreateLoad(init_vr(index), fmt::format("Load$%u", index));
+		}
+
+		// Bitcast the constant if necessary
+		if (auto c = llvm::dyn_cast<llvm::Constant>(reg))
+		{
+			// TODO
+			if (index < 128)
+			{
+				return make_const_vector(get_const_vector(c, m_pos, index), type);
+			}
+		}
+
+		return m_ir->CreateBitCast(reg, type);
 	}
 
 	template <typename T = u32[4]>
 	value_t<T> get_vr(u32 index)
 	{
-		if (!m_block->reg.at(index))
-		{
-			// Load register value if necessary
-			m_block->reg[index] = m_ir->CreateLoad(init_vr(index), fmt::format("Load$%u", index));
-		}
-
 		value_t<T> r;
-		r.value = m_ir->CreateBitCast(m_block->reg[index], get_type<T>());
+		r.value = get_vr(index, get_type<T>());
 		return r;
 	}
 
-	template <typename T>
-	void set_vr(u32 index, T expr)
+	void set_vr(u32 index, llvm::Value* value)
 	{
 		// Check
 		verify(HERE), m_regmod[m_pos / 4] == index;
 
 		// Set register value
-		m_block->reg.at(index) = expr.eval(m_ir);
+		m_block->reg.at(index) = value;
 
 		// Get register location
 		const auto addr = init_vr(index);
@@ -1741,7 +1759,13 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		}
 
 		// Write register to the context
-		m_block->store[index] = m_ir->CreateStore(m_ir->CreateBitCast(m_block->reg[index], addr->getType()->getPointerElementType()), addr);
+		m_block->store[index] = m_ir->CreateStore(m_ir->CreateBitCast(value, addr->getType()->getPointerElementType()), addr);
+	}
+
+	template <typename T>
+	void set_vr(u32 index, T expr)
+	{
+		set_vr(index, expr.eval(m_ir));
 	}
 
 	// Return either basic block addr with single dominating value, or negative number of PHI entries
@@ -2229,9 +2253,16 @@ public:
 											// Value hasn't been loaded yet
 											value = m_ir->CreateLoad(regptr);
 										}
-
-										// Value possibly needs a bitcast
-										value = m_ir->CreateBitCast(value, _phi->getType());
+										else if (i < 128 && llvm::isa<llvm::Constant>(value))
+										{
+											// Bitcast the constant
+											value = make_const_vector(get_const_vector(llvm::cast<llvm::Constant>(value), baddr, i), _phi->getType());
+										}
+										else
+										{
+											// Ensure correct value type
+											value = m_ir->CreateBitCast(value, _phi->getType());
+										}
 
 										m_ir->SetInsertPoint(cblock);
 
@@ -4169,6 +4200,10 @@ public:
 
 			// Fixed branch excludes the possibility it's a function return (TODO)
 			ret = false;
+		}
+		else if (llvm::isa<llvm::Constant>(addr.value))
+		{
+			LOG_ERROR(SPU, "[0x%x] Unexpected constant (add_block_indirect)", m_pos);
 		}
 
 		// Load stack addr if necessary
