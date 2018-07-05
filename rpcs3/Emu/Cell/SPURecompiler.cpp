@@ -3869,8 +3869,67 @@ public:
 
 	void SELB(spu_opcode_t op)
 	{
-		const auto c = get_vr(op.rc);
-		set_vr(op.rt4, (get_vr(op.ra) & ~c) | (get_vr(op.rb) & c));
+		if (auto ei = llvm::dyn_cast_or_null<llvm::CastInst>(m_block->reg[op.rc]))
+		{
+			// Detect if the mask comes from a comparison instruction
+			if (ei->getOpcode() == llvm::Instruction::SExt && ei->getSrcTy()->isIntOrIntVectorTy(1))
+			{
+				auto op0 = ei->getOperand(0);
+				auto typ = ei->getDestTy();
+				auto op1 = m_block->reg[op.rb];
+				auto op2 = m_block->reg[op.ra];
+
+				if (typ == get_type<u64[2]>())
+				{
+					if (op1 && op1->getType() == get_type<f64[2]>() || op2 && op2->getType() == get_type<f64[2]>())
+					{
+						op1 = get_vr<f64[2]>(op.rb).value;
+						op2 = get_vr<f64[2]>(op.ra).value;
+					}
+					else
+					{
+						op1 = get_vr<u64[2]>(op.rb).value;
+						op2 = get_vr<u64[2]>(op.ra).value;
+					}
+				}
+				else if (typ == get_type<u32[4]>())
+				{
+					if (op1 && op1->getType() == get_type<f32[4]>() || op2 && op2->getType() == get_type<f32[4]>())
+					{
+						op1 = get_vr<f32[4]>(op.rb).value;
+						op2 = get_vr<f32[4]>(op.ra).value;
+					}
+					else
+					{
+						op1 = get_vr<u32[4]>(op.rb).value;
+						op2 = get_vr<u32[4]>(op.ra).value;
+					}
+				}
+				else if (typ == get_type<u16[8]>())
+				{
+					op1 = get_vr<u16[8]>(op.rb).value;
+					op2 = get_vr<u16[8]>(op.ra).value;
+				}
+				else if (typ == get_type<u8[16]>())
+				{
+					op1 = get_vr<u8[16]>(op.rb).value;
+					op2 = get_vr<u8[16]>(op.ra).value;
+				}
+				else
+				{
+					LOG_ERROR(SPU, "[0x%x] SELB: unknown cast destination type", m_pos);
+					op0 = nullptr;
+				}
+
+				if (op0 && op1 && op2)
+				{
+					set_vr(op.rt4, m_ir->CreateSelect(op0, op1, op2));
+					return;
+				}
+			}
+		}
+
+		set_vr(op.rt4, merge(get_vr(op.rc), get_vr(op.rb), get_vr(op.ra)));
 	}
 
 	void SHUFB(spu_opcode_t op)
