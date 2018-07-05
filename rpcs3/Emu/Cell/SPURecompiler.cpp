@@ -3812,80 +3812,55 @@ public:
 		set_vr(op.rt, r);
 	}
 
-	void make_halt(llvm::BasicBlock* next)
+	void make_halt(value_t<bool> cond)
 	{
+		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
+		m_ir->CreateCondBr(cond.value, halt, next);
+		m_ir->SetInsertPoint(halt);
 		const auto pstatus = spu_ptr<u32>(&SPUThread::status);
 		const auto chalt = m_ir->getInt32(SPU_STATUS_STOPPED_BY_HALT);
 		m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Or, pstatus, chalt, llvm::AtomicOrdering::Release)->setVolatile(true);
 		const auto ptr = m_ir->CreateIntToPtr(m_ir->getInt64(reinterpret_cast<u64>(vm::base(0xffdead00))), get_type<u32*>());
 		m_ir->CreateStore(m_ir->getInt32("HALT"_u32), ptr)->setVolatile(true);
 		m_ir->CreateBr(next);
+		m_ir->SetInsertPoint(next);
 	}
 
 	void HGT(spu_opcode_t op) //
 	{
 		const auto cond = eval(extract(get_vr<s32[4]>(op.ra), 3) > extract(get_vr<s32[4]>(op.rb), 3));
-		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(cond.value, halt, next);
-		m_ir->SetInsertPoint(halt);
-		make_halt(next);
-		m_ir->SetInsertPoint(next);
+		make_halt(cond);
 	}
 
 	void HEQ(spu_opcode_t op) //
 	{
 		const auto cond = eval(extract(get_vr(op.ra), 3) == extract(get_vr(op.rb), 3));
-		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(cond.value, halt, next);
-		m_ir->SetInsertPoint(halt);
-		make_halt(next);
-		m_ir->SetInsertPoint(next);
+		make_halt(cond);
 	}
 
 	void HLGT(spu_opcode_t op) //
 	{
 		const auto cond = eval(extract(get_vr(op.ra), 3) > extract(get_vr(op.rb), 3));
-		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(cond.value, halt, next);
-		m_ir->SetInsertPoint(halt);
-		make_halt(next);
-		m_ir->SetInsertPoint(next);
+		make_halt(cond);
 	}
 
 	void HGTI(spu_opcode_t op) //
 	{
 		const auto cond = eval(extract(get_vr<s32[4]>(op.ra), 3) > op.si10);
-		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(cond.value, halt, next);
-		m_ir->SetInsertPoint(halt);
-		make_halt(next);
-		m_ir->SetInsertPoint(next);
+		make_halt(cond);
 	}
 
 	void HEQI(spu_opcode_t op) //
 	{
 		const auto cond = eval(extract(get_vr(op.ra), 3) == op.si10);
-		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(cond.value, halt, next);
-		m_ir->SetInsertPoint(halt);
-		make_halt(next);
-		m_ir->SetInsertPoint(next);
+		make_halt(cond);
 	}
 
 	void HLGTI(spu_opcode_t op) //
 	{
 		const auto cond = eval(extract(get_vr(op.ra), 3) > op.si10);
-		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(cond.value, halt, next);
-		m_ir->SetInsertPoint(halt);
-		make_halt(next);
-		m_ir->SetInsertPoint(next);
+		make_halt(cond);
 	}
 
 	void HBR(spu_opcode_t op) //
