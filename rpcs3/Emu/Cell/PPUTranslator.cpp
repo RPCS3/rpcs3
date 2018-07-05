@@ -1477,7 +1477,7 @@ void PPUTranslator::VSUBCUW(ppu_opcode_t op)
 {
 	const auto a = get_vr<u32[4]>(op.va);
 	const auto b = get_vr<u32[4]>(op.vb);
-	set_vr(op.vd, eval(~ucarry(b, eval(a - b), a) >> 31));
+	set_vr(op.vd, zext<u32[4]>(a >= b));
 }
 
 void PPUTranslator::VSUBFP(ppu_opcode_t op)
@@ -1529,11 +1529,11 @@ void PPUTranslator::VSUBUBM(ppu_opcode_t op)
 
 void PPUTranslator::VSUBUBS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s8[16]>(op.va);
-	const auto b = get_vr<s8[16]>(op.vb);
+	const auto a = get_vr<u8[16]>(op.va);
+	const auto b = get_vr<u8[16]>(op.vb);
 	const auto d = eval(a - b);
-	const auto x = eval(ucarry(b, d, a) >> 7);
-	set_vr(op.vd, eval(d & ~x));
+	const auto x = eval(a < b);
+	set_vr(op.vd, select(x, splat<u8[16]>(0), d));
 	SetSat(IsNotZero(x.value));
 }
 
@@ -1546,11 +1546,11 @@ void PPUTranslator::VSUBUHM(ppu_opcode_t op)
 
 void PPUTranslator::VSUBUHS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s16[8]>(op.va);
-	const auto b = get_vr<s16[8]>(op.vb);
+	const auto a = get_vr<u16[8]>(op.va);
+	const auto b = get_vr<u16[8]>(op.vb);
 	const auto d = eval(a - b);
-	const auto x = eval(ucarry(b, d, a) >> 15);
-	set_vr(op.vd, eval(d & ~x));
+	const auto x = eval(a < b);
+	set_vr(op.vd, select(x, splat<u16[8]>(0), d));
 	SetSat(IsNotZero(x.value));
 }
 
@@ -1563,11 +1563,11 @@ void PPUTranslator::VSUBUWM(ppu_opcode_t op)
 
 void PPUTranslator::VSUBUWS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s32[4]>(op.va);
-	const auto b = get_vr<s32[4]>(op.vb);
+	const auto a = get_vr<u32[4]>(op.va);
+	const auto b = get_vr<u32[4]>(op.vb);
 	const auto d = eval(a - b);
-	const auto x = eval(ucarry(b, d, a) >> 31);
-	set_vr(op.vd, eval(d & ~x));
+	const auto x = eval(a < b);
+	set_vr(op.vd, select(x, splat<u32[4]>(0), d));
 	SetSat(IsNotZero(x.value));
 }
 
