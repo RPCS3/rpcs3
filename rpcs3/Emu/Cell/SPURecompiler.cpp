@@ -3869,6 +3869,50 @@ public:
 
 	void SHUFB(spu_opcode_t op)
 	{
+		if (auto ii = llvm::dyn_cast_or_null<llvm::InsertElementInst>(m_block->reg[op.rc]))
+		{
+			// Detect if the mask comes from a CWD-like constant generation instruction
+			auto c0 = llvm::dyn_cast<llvm::Constant>(ii->getOperand(0));
+
+			if (c0 && get_const_vector(c0, m_pos, op.rc) != v128::from64(0x18191a1b1c1d1e1f, 0x1011121314151617))
+			{
+				c0 = nullptr;
+			}
+
+			auto c1 = llvm::dyn_cast<llvm::ConstantInt>(ii->getOperand(1));
+
+			llvm::Type* vtype = nullptr;
+			llvm::Value* _new = nullptr;
+
+			// Optimization: emit SHUFB as simple vector insert
+			if (c0 && c1 && c1->getType() == get_type<u64>() && c1->getZExtValue() == 0x01020304050607)
+			{
+				vtype = get_type<u64[2]>();
+				_new  = extract(get_vr<u64[2]>(op.ra), 1).value;
+			}
+			else if (c0 && c1 && c1->getType() == get_type<u32>() && c1->getZExtValue() == 0x010203)
+			{
+				vtype = get_type<u32[4]>();
+				_new  = extract(get_vr<u32[4]>(op.ra), 3).value;
+			}
+			else if (c0 && c1 && c1->getType() == get_type<u16>() && c1->getZExtValue() == 0x0203)
+			{
+				vtype = get_type<u16[8]>();
+				_new  = extract(get_vr<u16[8]>(op.ra), 6).value;
+			}
+			else if (c0 && c1 && c1->getType() == get_type<u8>() && c1->getZExtValue() == 0x03)
+			{
+				vtype = get_type<u8[16]>();
+				_new  = extract(get_vr<u8[16]>(op.ra), 12).value;
+			}
+
+			if (vtype && _new)
+			{
+				set_vr(op.rt4, m_ir->CreateInsertElement(get_vr(op.rb, vtype), _new, ii->getOperand(2)));
+				return;
+			}
+		}
+
 		const auto c = get_vr<u8[16]>(op.rc);
 
 		if (auto ci = llvm::dyn_cast<llvm::Constant>(c.value))
