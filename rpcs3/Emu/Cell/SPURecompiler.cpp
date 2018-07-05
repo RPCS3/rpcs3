@@ -3086,7 +3086,8 @@ public:
 
 	void ROTMA(spu_opcode_t op)
 	{
-		set_vr(op.rt, trunc<u32[4]>(sext<s64[4]>(get_vr(op.ra)) >> zext<s64[4]>(-get_vr(op.rb) & 0x3f)));
+		const auto sh = eval(-get_vr(op.rb) & 0x3f);
+		set_vr(op.rt, get_vr<s32[4]>(op.ra) >> bitcast<s32[4]>(min(sh, splat<u32[4]>(0x1f))));
 	}
 
 	void SHL(spu_opcode_t op)
@@ -3106,7 +3107,8 @@ public:
 
 	void ROTMAH(spu_opcode_t op)
 	{
-		set_vr(op.rt, trunc<u16[8]>(sext<s32[8]>(get_vr<u16[8]>(op.ra)) >> zext<s32[8]>(-get_vr<u16[8]>(op.rb) & 0x1f)));
+		const auto sh = eval(-get_vr<u16[8]>(op.rb) & 0x1f);
+		set_vr(op.rt, get_vr<s16[8]>(op.ra) >> bitcast<s16[8]>(min(sh, splat<u16[8]>(0xf))));
 	}
 
 	void SHLH(spu_opcode_t op)
