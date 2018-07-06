@@ -283,32 +283,45 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 		COMPARE::FUNCTION_SGE,
 	};
 
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
-
-	std::string swizzle;
-	swizzle += f[d0.mask_x];
-	swizzle += f[d0.mask_y];
-	swizzle += f[d0.mask_z];
-	swizzle += f[d0.mask_w];
-
-	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-
-	std::string cond = compareFunction(cond_string_table[d0.cond], AddCondReg() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
-
 	ShaderVariable dst_var(dst);
 	dst_var.simplify();
 
-	//const char *c_mask = f;
+	static const char f[4] = { 'x', 'y', 'z', 'w' };
+	const u32 mask_index[4] = { d0.mask_x, d0.mask_y, d0.mask_z, d0.mask_w };
+
+	auto get_masked_dst = [](const std::string& dest, const char mask)
+	{
+		const auto selector = std::string(".") + mask;
+		const auto pos = dest.find("=");
+
+		std::string result = dest + selector;
+
+		if (pos != std::string::npos)
+		{
+			result.insert(pos - 1, selector);
+		}
+
+		return result;
+	};
+
+	auto get_cond_func = [this, &mask_index](COMPARE op, int index)
+	{
+		// Condition reg check for single element (x,y,z,w)
+		const auto cond_mask = f[mask_index[index]];
+		return compareFunction(op, AddCondReg() + "." + cond_mask, "0.", true);
+	};
 
 	if (dst_var.swizzles[0].length() == 1)
 	{
-		AddCode("if (" + cond + ".x) " + dst + " = " + src + ";");
+		const std::string cond = get_cond_func(cond_string_table[d0.cond], 0);
+		AddCode("if (" + cond + ") " + dst + " = " + src + ";");
 	}
 	else
 	{
 		for (int i = 0; i < dst_var.swizzles[0].length(); ++i)
 		{
-			AddCode("if (" + cond + "." + f[i] + ") " + dst + "." + f[i] + " = " + src + "." + f[i] + ";");
+			const std::string cond = get_cond_func(cond_string_table[d0.cond], i);
+			AddCode("if (" + cond + ") " + get_masked_dst(dst, f[i]) + " = " + src + "." + f[i] + ";");
 		}
 	}
 }

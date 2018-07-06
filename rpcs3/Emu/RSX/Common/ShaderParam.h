@@ -177,7 +177,20 @@ public:
 	ShaderVariable() = default;
 	ShaderVariable(const std::string& var)
 	{
-		auto var_blocks = fmt::split(var, { "." });
+		// Separate 'double destination' variables 'X=Y=SRC'
+		std::string simple_var;
+		const auto pos = var.find("=");
+
+		if (pos != std::string::npos)
+		{
+			simple_var = var.substr(0, pos - 1);
+		}
+		else
+		{
+			simple_var = var;
+		}
+
+		auto var_blocks = fmt::split(simple_var, { "." });
 
 		verify(HERE), (var_blocks.size() != 0);
 

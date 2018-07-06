@@ -21,7 +21,7 @@ std::string D3D12VertexProgramDecompiler::getFunction(enum class FUNCTION f)
 	return getFunctionImp(f);
 }
 
-std::string D3D12VertexProgramDecompiler::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
+std::string D3D12VertexProgramDecompiler::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1, bool /*scalar*/)
 {
 	return compareFunctionImp(f, Op0, Op1);
 }
