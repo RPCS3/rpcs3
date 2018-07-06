@@ -896,7 +896,7 @@ void PPUTranslator::VLOGEFP(ppu_opcode_t op)
 void PPUTranslator::VMADDFP(ppu_opcode_t op)
 {
 	const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
-	SetVr(op.vd, m_ir->CreateFAdd(m_ir->CreateFMul(acb[0], acb[1]), acb[2]));
+	SetVr(op.vd, Call(GetType<f32[4]>(), "llvm.fmuladd.v4f32", acb[0], acb[1], acb[2]));
 }
 
 void PPUTranslator::VMAXFP(ppu_opcode_t op)
@@ -3851,7 +3851,7 @@ void PPUTranslator::FMADDS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b), GetType<f32>());
+	const auto result = m_ir->CreateFPTrunc(Call(GetType<f64>(), "llvm.fmuladd.f64", a, c, b), GetType<f32>());
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c));
@@ -3905,7 +3905,7 @@ void PPUTranslator::FNMADDS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFNeg(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b)), GetType<f32>());
+	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFNeg(Call(GetType<f64>(), "llvm.fmuladd.f64", a, c, b)), GetType<f32>());
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
@@ -4171,7 +4171,7 @@ void PPUTranslator::FMADD(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
+	const auto result = Call(GetType<f64>(), "llvm.fmuladd.f64", a, c, b);
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c));
@@ -4207,7 +4207,7 @@ void PPUTranslator::FNMADD(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFNeg(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b));
+	const auto result = m_ir->CreateFNeg(Call(GetType<f64>(), "llvm.fmuladd.f64", a, c, b));
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
