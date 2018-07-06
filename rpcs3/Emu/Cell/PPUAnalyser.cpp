@@ -545,6 +545,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 
 	// Known functions
 	std::map<u32, ppu_function> fmap;
+	std::set<u32> known_functions;
 
 	// Function analysis workload
 	std::vector<std::reference_wrapper<ppu_function>> func_queue;
@@ -614,15 +615,8 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 	// Get next reliable function address
 	auto get_limit = [&](u32 addr) -> u32
 	{
-		for (auto it = fmap.lower_bound(addr), end = fmap.end(); it != end; it++)
-		{
-			if (test(it->second.attr, ppu_attr::known_addr))
-			{
-				return it->first;
-			}
-		}
-
-		return end;
+		auto it = known_functions.lower_bound(addr);
+		return it == known_functions.end() ? end : *it;
 	};
 
 	// Find references indiscriminately
@@ -705,6 +699,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			TOCs.emplace(toc);
 			auto& func = add_func(addr, addr_heap.count(ptr.addr()) ? toc : 0, 0);
 			func.attr += ppu_attr::known_addr;
+			known_functions.emplace(addr);
 		}
 	}
 
@@ -835,6 +830,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 				//func.attr += ppu_attr::known_addr;
 				//func.attr += ppu_attr::known_size;
 				//func.size = size;
+				//known_functions.emplace(func);
 			}
 		}
 	}
@@ -999,6 +995,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 				func.size = 0x20;
 				func.blocks.emplace(func.addr, func.size);
 				func.attr += ppu_attr::known_addr;
+				known_functions.emplace(func.addr);
 				func.attr += ppu_attr::known_size;
 
 				// Look for another imports to fill gaps (hack)
@@ -1020,6 +1017,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 					next.attr += ppu_attr::known_addr;
 					next.attr += ppu_attr::known_size;
 					p2 += 8;
+					known_functions.emplace(next.addr);
 				}
 
 				continue;
