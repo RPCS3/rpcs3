@@ -1676,6 +1676,11 @@ namespace rsx
 				{
 					switch (format)
 					{
+					case CELL_GCM_TEXTURE_X16:
+					{
+						// NOP, a simple way to quickly read DEPTH16 data without shadow comparison
+						break;
+					}
 					case CELL_GCM_TEXTURE_A8R8G8B8:
 					case CELL_GCM_TEXTURE_D8R8G8B8:
 					case CELL_GCM_TEXTURE_A4R4G4B4: //TODO
