@@ -410,7 +410,7 @@ namespace rsx
 		struct progress_dialog_helper
 		{
 			std::shared_ptr<MsgDialogBase> dlg;
-			atomic_t<bool> initialized{ false };
+			atomic_t<int> ref_cnt;
 
 			virtual void create()
 			{
@@ -427,13 +427,15 @@ namespace rsx
 					});
 				};
 
+				ref_cnt++;
+
 				Emu.CallAfter([&]()
 				{
 					dlg->Create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
-					initialized.store(true);
+					ref_cnt--;
 				});
 
-				while (!initialized.load() && !Emu.IsStopped())
+				while (ref_cnt.load() && !Emu.IsStopped())
 				{
 					_mm_pause();
 				}
@@ -441,26 +443,35 @@ namespace rsx
 
 			virtual void update_msg(u32 index, u32 processed, u32 entry_count)
 			{
-				Emu.CallAfter([=]()
+				ref_cnt++;
+
+				Emu.CallAfter([&]()
 				{
 					const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
 					dlg->ProgressBarSetMsg(index, fmt::format(text, processed, entry_count));
+					ref_cnt--;
 				});
 			}
 
 			virtual void inc_value(u32 index, u32 value)
 			{
-				Emu.CallAfter([=]()
+				ref_cnt++;
+
+				Emu.CallAfter([&]()
 				{
 					dlg->ProgressBarInc(index, value);
+					ref_cnt--;
 				});
 			}
 			
 			virtual void set_limit(u32 index, u32 limit)
 			{
-				Emu.CallAfter([=]()
+				ref_cnt++;
+
+				Emu.CallAfter([&]()
 				{
 					dlg->ProgressBarSetLimit(index, limit);
+					ref_cnt--;
 				});
 			}
 
@@ -468,7 +479,12 @@ namespace rsx
 			{};
 
 			virtual void close()
-			{}
+			{
+				while (ref_cnt.load() && !Emu.IsStopped())
+				{
+					_mm_pause();
+				}
+			}
 		};
 
 		shaders_cache(backend_storage& storage, std::string pipeline_class, std::string version_prefix_str = "v1")
