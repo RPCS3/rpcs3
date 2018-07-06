@@ -98,7 +98,7 @@ protected:
 
 	/** returns string calling comparison function on 2 args passed as strings.
 	*/
-	virtual std::string compareFunction(COMPARE, const std::string &, const std::string &) = 0;
+	virtual std::string compareFunction(COMPARE, const std::string &, const std::string &, bool scalar = false) = 0;
 
 	/** Insert header of shader file (eg #version, "system constants"...)
 	*/
