@@ -54,7 +54,11 @@ class trophy_manager_dialog : public QWidget
 public:
 	explicit trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings);
 
+public Q_SLOTS:
+	void RepaintUI();
+
 private Q_SLOTS:
+	void ResizeGameIcon(int index);
 	void ResizeGameIcons();
 	void ResizeTrophyIcons();
 	void ApplyFilter();
@@ -66,10 +70,18 @@ private:
 	*/
 	bool LoadTrophyFolderToDB(const std::string& trop_name);
 
-	/** Fills UI with information.
+	/** Populate the trophy database */
+	void PopulateTrophyDB();
+
+	/** Fills game table with information.
 	Takes results from LoadTrophyFolderToDB and puts it into the UI.
 	*/
-	void PopulateUI();
+	void PopulateGameTable();
+
+	/** Fills trophy table with information.
+	Takes results from LoadTrophyFolderToDB and puts it into the UI.
+	*/
+	void PopulateTrophyTable();
 
 	void ReadjustGameTable();
 	void ReadjustTrophyTable();
@@ -102,4 +114,5 @@ private:
 	QSize m_game_icon_size = QSize(m_game_icon_size_index, m_game_icon_size_index);
 	bool m_save_game_icon_size = false;
 	QSlider* m_game_icon_slider = nullptr;
+	QColor m_game_icon_color;
 };
