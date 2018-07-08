@@ -117,6 +117,8 @@ private:
 	void InstallPkg(const QString& dropPath = "");
 	void InstallPup(const QString& dropPath = "");
 
+	void DecryptIso();
+
 	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
 	void AddGamesFromDir(const QString& path);
 
