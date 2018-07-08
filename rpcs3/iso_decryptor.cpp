@@ -8,7 +8,6 @@
 #include <QString>
 #include <QByteArray>
 #include <QFileDevice>
-#include <QMessageBox>
 #include <QDesktopServices>
 
 #include "Crypto/aes.h"
