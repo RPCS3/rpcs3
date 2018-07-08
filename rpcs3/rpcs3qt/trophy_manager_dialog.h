@@ -53,9 +53,10 @@ class trophy_manager_dialog : public QWidget
 
 public:
 	explicit trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings);
+	void RepaintUI(bool refresh_trophies = false);
 
 public Q_SLOTS:
-	void RepaintUI();
+	void HandleRepaintUiRequest();
 
 private Q_SLOTS:
 	void ResizeGameIcon(int index);

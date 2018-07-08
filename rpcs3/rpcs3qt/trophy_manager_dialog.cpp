@@ -43,6 +43,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	// Nonspecific widget settings
 	setWindowTitle(tr("Trophy Manager"));
 	setObjectName("trophy_manager");
+	setAttribute(Qt::WA_DeleteOnClose);
 
 	m_game_icon_size_index   = m_gui_settings->GetValue(gui::tr_game_iconSize).toInt();
 	m_icon_height            = m_gui_settings->GetValue(gui::tr_icon_height).toInt();
@@ -314,7 +315,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		m_game_combo->setCurrentText(m_game_table->item(m_game_table->currentRow(), GameColumns::GameName)->text());
 	});
 
-	RepaintUI();
+	RepaintUI(true);
 }
 
 bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
@@ -388,7 +389,7 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 	return true;
 }
 
-void trophy_manager_dialog::RepaintUI()
+void trophy_manager_dialog::RepaintUI(bool refresh_trophies)
 {
 	if (m_gui_settings->GetValue(gui::m_enableUIColors).toBool())
 	{
@@ -399,7 +400,11 @@ void trophy_manager_dialog::RepaintUI()
 		m_game_icon_color = gui::utils::get_label_color("gamelist_icon_background_color");
 	}
 
-	PopulateTrophyDB();
+	if (refresh_trophies)
+	{
+		PopulateTrophyDB();
+	}
+
 	PopulateGameTable();
 
 	if (!restoreGeometry(m_gui_settings->GetValue(gui::tr_geometry).toByteArray()))
@@ -438,6 +443,11 @@ void trophy_manager_dialog::RepaintUI()
 	show();
 	ReadjustGameTable();
 	ReadjustTrophyTable();
+}
+
+void trophy_manager_dialog::HandleRepaintUiRequest()
+{
+	RepaintUI();
 }
 
 void trophy_manager_dialog::ResizeGameIcon(int index)
@@ -567,6 +577,8 @@ void trophy_manager_dialog::ShowContextMenu(const QPoint& loc)
 
 void trophy_manager_dialog::PopulateTrophyDB()
 {
+	m_trophies_db.clear();
+
 	QDirIterator dir_iter(qstr(vfs::get(m_TROPHY_DIR)), QDir::Dirs | QDir::NoDotAndDotDot);
 	while (dir_iter.hasNext())
 	{
