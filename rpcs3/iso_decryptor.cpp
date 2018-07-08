@@ -2,14 +2,10 @@
 
 #include "iso_decryptor.h"
 
-#include <iostream>
-
 #include <QDir>
 #include <QUrl>
 #include <QFile>
-#include <QObject>
 #include <QString>
-#include <QtGlobal>
 #include <QByteArray>
 #include <QFileDevice>
 #include <QMessageBox>
@@ -18,7 +14,6 @@
 #include "Crypto/aes.h"
 #include "Utilities/Log.h"
 #include "Utilities/File.h"
-#include "rpcs3qt/progress_dialog.h"
 
 iso_decryptor::iso_decryptor(QString filePath)
     : m_iso_file(filePath)
