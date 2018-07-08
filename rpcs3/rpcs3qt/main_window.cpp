@@ -1084,6 +1084,8 @@ void main_window::RepaintGui()
 
 	RepaintToolBarIcons();
 	RepaintThumbnailIcons();
+
+	Q_EMIT RequestTrophyManagerRepaint();
 }
 
 void main_window::CreateActions()
@@ -1214,6 +1216,7 @@ void main_window::CreateConnects()
 	connect(ui->actionManage_Trophy_Data, &QAction::triggered, [=]
 	{
 		trophy_manager_dialog* trop_manager = new trophy_manager_dialog(guiSettings);
+		connect(this, &main_window::RequestTrophyManagerRepaint, trop_manager, &trophy_manager_dialog::HandleRepaintUiRequest);
 		trop_manager->show();
 	});
 
