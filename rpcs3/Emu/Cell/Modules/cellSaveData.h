@@ -250,7 +250,7 @@ struct CellSaveDataFileSet
 	be_t<u32> fileOperation;
 	vm::bptr<void> reserved;
 	be_t<u32> fileType;
-	u8 secureFileId[CELL_SAVEDATA_SECUREFILEID_SIZE];
+	be_t<v128, 1> secureFileId;
 	vm::bptr<char> fileName;
 	be_t<u32> fileOffset;
 	be_t<u32> fileSize;
