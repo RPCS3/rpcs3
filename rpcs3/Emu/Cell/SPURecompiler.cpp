@@ -3054,7 +3054,7 @@ public:
 	{
 		const auto a = get_vr(op.ra);
 		const auto b = get_vr(op.rb);
-		set_vr(op.rt, ~ucarry(a, eval(b - a), b) >> 31);
+		set_vr(op.rt, zext<u32[4]>(a <= b));
 	}
 
 	void SFH(spu_opcode_t op) //
@@ -3194,7 +3194,7 @@ public:
 	{
 		const auto a = get_vr(op.ra);
 		const auto b = get_vr(op.rb);
-		set_vr(op.rt, ucarry(a, b, eval(a + b)) >> 31);
+		set_vr(op.rt, zext<u32[4]>(a + b < a));
 	}
 
 	void AH(spu_opcode_t op) //
@@ -3653,18 +3653,17 @@ public:
 	{
 		const auto a = get_vr(op.ra);
 		const auto b = get_vr(op.rb);
-		const auto c = eval(get_vr(op.rt) << 31);
+		const auto c = eval(get_vr<s32[4]>(op.rt) << 31);
 		const auto s = eval(a + b);
-		set_vr(op.rt, (ucarry(a, b, s) | (sext<u32[4]>(s == 0xffffffffu) & c)) >> 31);
+		set_vr(op.rt, zext<u32[4]>(s < a | (s == -1 & c < 0)));
 	}
 
 	void BGX(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
 		const auto b = get_vr(op.rb);
-		const auto c = eval(get_vr(op.rt) << 31);
-		const auto d = eval(b - a);
-		set_vr(op.rt, (~ucarry(a, d, b) & ~(sext<u32[4]>(d == 0) & ~c)) >> 31);
+		const auto c = eval(get_vr<s32[4]>(op.rt) << 31);
+		set_vr(op.rt, zext<u32[4]>(a <= b & ~(a == b & c >= 0)));
 	}
 
 	void MPYHHA(spu_opcode_t op)
