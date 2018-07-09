@@ -279,7 +279,8 @@ private:
 	GLFragmentProgram m_fragment_prog;
 	GLVertexProgram m_vertex_prog;
 
-	gl::sampler_state m_gl_sampler_states[rsx::limits::fragment_textures_count];
+	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];
+	gl::sampler_state m_vs_sampler_states[rsx::limits::vertex_textures_count];
 
 	gl::glsl::program *m_program;
 

@@ -829,15 +829,15 @@ namespace rsx
 					}
 					default:
 					{
-						//TODO: Reorder draw commands between synchronization events to maximize batched sizes
+						// TODO: Reorder draw commands between synchronization events to maximize batched sizes
 						static const std::pair<u32, u32> skippable_ranges[] =
 						{
-							//Texture configuration
+							// Texture configuration
 							{ NV4097_SET_TEXTURE_OFFSET, 8 * 16 },
 							{ NV4097_SET_TEXTURE_CONTROL2, 16 },
 							{ NV4097_SET_TEXTURE_CONTROL3, 16 },
 							{ NV4097_SET_VERTEX_TEXTURE_OFFSET, 8 * 4 },
-							//Surface configuration
+							// Surface configuration
 							{ NV4097_SET_SURFACE_CLIP_HORIZONTAL, 1 },
 							{ NV4097_SET_SURFACE_CLIP_VERTICAL, 1 },
 							{ NV4097_SET_SURFACE_COLOR_AOFFSET, 1 },
@@ -855,7 +855,11 @@ namespace rsx
 							{ NV4097_SET_SURFACE_PITCH_B, 1 },
 							{ NV4097_SET_SURFACE_PITCH_C, 1 },
 							{ NV4097_SET_SURFACE_PITCH_D, 1 },
-							{ NV4097_SET_SURFACE_PITCH_Z, 1 }
+							{ NV4097_SET_SURFACE_PITCH_Z, 1 },
+							// Program configuration
+							{ NV4097_SET_TRANSFORM_PROGRAM_START, 1 },
+							{ NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, 1 },
+							{ NV4097_SET_TRANSFORM_PROGRAM, 512 }
 						};
 
 						if (has_deferred_call)
@@ -1393,7 +1397,7 @@ namespace rsx
 		return rsx::get_address(offset_zeta, m_context_dma_z);
 	}
 
-	void thread::get_current_vertex_program(bool skip_vertex_inputs)
+	void thread::get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors, bool skip_textures, bool skip_vertex_inputs)
 	{
 		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_dirty))
 			return;
@@ -1406,6 +1410,7 @@ namespace rsx
 		current_vertex_program.rsx_vertex_inputs.resize(0);
 		current_vertex_program.data.reserve(512 * 4);
 		current_vertex_program.jump_table.clear();
+		current_vertex_program.texture_dimensions = 0;
 
 		current_vp_metadata = program_hash_util::vertex_program_utils::analyse_vertex_program
 		(
@@ -1413,6 +1418,18 @@ namespace rsx
 			transform_program_start,                    // Address of entry point
 			current_vertex_program                      // [out] Program object
 		);
+
+		if (!skip_textures && current_vp_metadata.referenced_textures_mask != 0)
+		{
+			for (u32 i = 0; i < rsx::limits::vertex_textures_count; ++i)
+			{
+				const auto &tex = rsx::method_registers.vertex_textures[i];
+				if (tex.enabled() && (current_vp_metadata.referenced_textures_mask & (1 << i)))
+				{
+					current_vertex_program.texture_dimensions |= ((u32)sampler_descriptors[i]->image_type << (i << 1));
+				}
+			}
+		}
 
 		if (!skip_vertex_inputs)
 		{

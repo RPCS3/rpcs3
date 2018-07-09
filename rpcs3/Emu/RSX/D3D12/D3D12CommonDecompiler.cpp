@@ -25,7 +25,7 @@ std::string getFunctionImp(FUNCTION f)
 	switch (f)
 	{
 	default:
-		abort();
+		fmt::throw_exception("Unsupported program function %d", (u32)f);
 	case FUNCTION::FUNCTION_DP2:
 		return "dot($0.xy, $1.xy).xxxx";
 	case FUNCTION::FUNCTION_DP2A:

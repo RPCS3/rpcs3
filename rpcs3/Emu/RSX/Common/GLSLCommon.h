@@ -604,8 +604,13 @@ namespace glsl
 			return "dFdx($0)";
 		case FUNCTION::FUNCTION_DFDY:
 			return "dFdy($0)";
+		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH1D:
+			return "textureLod($t, $0.x, 0)";
 		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D:
 			return "textureLod($t, $0.xy, 0)";
+		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH3D:
+		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCHCUBE:
+			return "textureLod($t, $0.xyz, 0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
 			return "TEX2D_DEPTH_RGBA8($_i, $t, $0.xy)";
 		}
