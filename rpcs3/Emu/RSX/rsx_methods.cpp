@@ -563,7 +563,11 @@ namespace rsx
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				rsx->m_textures_dirty[index] = true;
-				rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
+
+				if (rsx->current_fp_metadata.referenced_textures_mask & (1 << index))
+				{
+					rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
+				}
 			}
 		};
 
@@ -573,6 +577,11 @@ namespace rsx
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				rsx->m_vertex_textures_dirty[index] = true;
+
+				if (rsx->current_vp_metadata.referenced_textures_mask & (1 << index))
+				{
+					rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
+				}
 			}
 		};
 	}

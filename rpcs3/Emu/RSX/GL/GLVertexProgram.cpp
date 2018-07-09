@@ -191,17 +191,6 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 			OS << "	vec4 " << PI.name << "= read_location(" << std::to_string(PI.location) << ");\n";
 		}
 	}
-
-	for (const ParamType &PT : m_parr.params[PF_PARAM_UNIFORM])
-	{
-		if (PT.type == "sampler2D")
-		{
-			for (const ParamItem &PI : PT.items)
-			{
-				OS << "	vec2 " << PI.name << "_coord_scale = vec2(1.);\n";
-			}
-		}
-	}
 }
 
 void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)

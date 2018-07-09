@@ -378,6 +378,7 @@ namespace rsx
 			u64 pipeline_storage_hash;
 
 			u32 vp_ctrl;
+			u32 vp_texture_dimensions;
 			u64 vp_instruction_mask[8];
 
 			u32 vp_base_address;
@@ -698,6 +699,7 @@ namespace rsx
 			u64 state_hash = 0;
 			state_hash ^= rpcs3::hash_base<u32>(data.vp_ctrl);
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_ctrl);
+			state_hash ^= rpcs3::hash_base<u32>(data.vp_texture_dimensions);
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_texture_dimensions);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_unnormalized_coords);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_height);
@@ -750,6 +752,7 @@ namespace rsx
 			pipeline_storage_type pipeline = data.pipeline_properties;
 
 			vp.output_mask = data.vp_ctrl;
+			vp.texture_dimensions = data.vp_texture_dimensions;
 			vp.base_address = data.vp_base_address;
 			vp.entry = data.vp_entry;
 
@@ -796,6 +799,7 @@ namespace rsx
 			data_block.pipeline_storage_hash = m_storage.get_hash(pipeline);
 
 			data_block.vp_ctrl = vp.output_mask;
+			data_block.vp_texture_dimensions = vp.texture_dimensions;
 			data_block.vp_base_address = vp.base_address;
 			data_block.vp_entry = vp.entry;
 

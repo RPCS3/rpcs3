@@ -24,7 +24,7 @@ namespace
 
 GLGSRender::GLGSRender() : GSRender()
 {
-	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.5"));
+	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.6"));
 
 	if (g_cfg.video.disable_vertex_cache)
 		m_vertex_cache.reset(new gl::null_vertex_cache());
@@ -330,7 +330,7 @@ void GLGSRender::end()
 					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.fragment_textures[i], m_rtts);
 
 					if (m_textures_dirty[i])
-						m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i], fs_sampler_state[i].get());
+						m_fs_sampler_states[i].apply(rsx::method_registers.fragment_textures[i], fs_sampler_state[i].get());
 				}
 				else
 				{
@@ -354,6 +354,9 @@ void GLGSRender::end()
 				if (rsx::method_registers.vertex_textures[i].enabled())
 				{
 					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.vertex_textures[i], m_rtts);
+
+					if (m_vertex_textures_dirty[i])
+						m_vs_sampler_states[i].apply(rsx::method_registers.vertex_textures[i], vs_sampler_state[i].get());
 				}
 				else
 					*sampler_state = {};
@@ -783,8 +786,14 @@ void GLGSRender::on_init_thread()
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
-		m_gl_sampler_states[i].create();
-		m_gl_sampler_states[i].bind(i);
+		m_fs_sampler_states[i].create();
+		m_fs_sampler_states[i].bind(i);
+	}
+
+	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+	{
+		m_vs_sampler_states[i].create();
+		m_vs_sampler_states[i].bind(rsx::limits::fragment_textures_count + i);
 	}
 
 	//Occlusion query
@@ -917,7 +926,12 @@ void GLGSRender::on_exit()
 	m_gl_persistent_stream_buffer.reset();
 	m_gl_volatile_stream_buffer.reset();
 
-	for (auto &sampler : m_gl_sampler_states)
+	for (auto &sampler : m_fs_sampler_states)
+	{
+		sampler.remove();
+	}
+
+	for (auto &sampler : m_vs_sampler_states)
 	{
 		sampler.remove();
 	}
@@ -1101,7 +1115,7 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 		get_current_fragment_program(fs_sampler_state);
 		verify(HERE), current_fragment_program.valid;
 
-		get_current_vertex_program();
+		get_current_vertex_program(vs_sampler_state);
 
 		current_vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
 		current_fragment_program.unnormalized_coords = 0; //unused

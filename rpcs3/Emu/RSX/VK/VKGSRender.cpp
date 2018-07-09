@@ -626,7 +626,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache.reset(new vk::weak_vertex_cache());
 
-	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.5"));
+	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.6"));
 
 	open_command_buffer();
 
@@ -2200,7 +2200,7 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 		get_current_fragment_program(fs_sampler_state);
 		verify(HERE), current_fragment_program.valid;
 
-		get_current_vertex_program();
+		get_current_vertex_program(vs_sampler_state);
 	}
 
 	auto &vertex_program = current_vertex_program;

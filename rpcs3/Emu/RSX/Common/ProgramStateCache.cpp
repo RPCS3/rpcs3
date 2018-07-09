@@ -31,7 +31,7 @@ size_t vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgra
 
 vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vertex_program(const u32* data, u32 entry, RSXVertexProgram& dst_prog)
 {
-	vertex_program_utils::vertex_program_metadata result;
+	vertex_program_utils::vertex_program_metadata result{};
 	u32 last_instruction_address = 0;
 	u32 first_instruction_address = entry;
 
@@ -78,6 +78,17 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			result.instruction_mask[current_instrution] = 1;
 			instruction_range.first = std::min(current_instrution, instruction_range.first);
 			instruction_range.second = std::max(current_instrution, instruction_range.second);
+
+			// Basic vec op analysis, must be done before flow analysis
+			switch (d1.vec_opcode)
+			{
+			case RSX_VEC_OPCODE_TXL:
+			{
+				d2.HEX = instruction->word[2];
+				result.referenced_textures_mask |= (1 << d2.tex_num);
+				break;
+			}
+			}
 
 			bool static_jump = false;
 			bool function_call = true;
@@ -223,7 +234,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 		// Verification
 		for (const u32 target : dst_prog.jump_table)
 		{
-			if (!result.instruction_mask[target])
+			if (!dst_prog.instruction_mask[target])
 			{
 				LOG_ERROR(RSX, "vp_analyser: Failed, branch target 0x%x was not resolved", target);
 			}
@@ -237,12 +248,15 @@ size_t vertex_program_storage_hash::operator()(const RSXVertexProgram &program) 
 {
 	size_t hash = vertex_program_utils::get_vertex_program_ucode_hash(program);
 	hash ^= program.output_mask;
+	hash ^= program.texture_dimensions;
 	return hash;
 }
 
 bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const RSXVertexProgram &binary2) const
 {
 	if (binary1.output_mask != binary2.output_mask)
+		return false;
+	if (binary1.texture_dimensions != binary2.texture_dimensions)
 		return false;
 	if (binary1.data.size() != binary2.data.size())
 		return false;

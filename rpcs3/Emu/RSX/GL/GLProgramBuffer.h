@@ -48,14 +48,14 @@ struct GLTraits
 		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			int location;
-			if (result.uniforms.has_location("tex" + std::to_string(i), &location))
+			if (result.uniforms.has_location(rsx::constants::fragment_texture_names[i], &location))
 				result.uniforms[location] = i;
 		}
 
 		for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
 		{
 			int location;
-			if (result.uniforms.has_location("vtex" + std::to_string(i), &location))
+			if (result.uniforms.has_location(rsx::constants::vertex_texture_names[i], &location))
 				result.uniforms[location] = (i + rsx::limits::fragment_textures_count);
 		}
 

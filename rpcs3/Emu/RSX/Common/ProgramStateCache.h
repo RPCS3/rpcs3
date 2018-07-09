@@ -31,6 +31,7 @@ namespace program_hash_util
 		{
 			std::bitset<512> instruction_mask;
 			u32 ucode_length;
+			u32 referenced_textures_mask;
 		};
 
 		static size_t get_vertex_program_ucode_hash(const RSXVertexProgram &program);
