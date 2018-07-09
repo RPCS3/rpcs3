@@ -741,7 +741,7 @@ namespace rsx
 			{
 				if (block[i])
 				{
-					values[n] |= (1 << bit);
+					values[n] |= (1ull << bit);
 				}
 			}
 		}
