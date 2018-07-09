@@ -177,7 +177,7 @@ struct gl_render_target_traits
 		result->set_native_component_layout(native_layout);
 		result->old_contents = old_surface;
 
-		result->set_cleared();
+		result->set_cleared(false);
 		result->update_surface();
 		return result;
 	}
@@ -204,6 +204,7 @@ struct gl_render_target_traits
 		result->set_native_component_layout(native_layout);
 		result->old_contents = old_surface;
 
+		result->set_cleared(false);
 		result->update_surface();
 		return result;
 	}
