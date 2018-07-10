@@ -895,7 +895,7 @@ bool SPUThread::do_dma_check(const spu_mfc_cmd& args)
 {
 	const u32 mask = 1u << args.tag;
 
-	if (UNLIKELY(mfc_barrier & mask || (args.cmd & MFC_FENCE_MASK && mfc_fence & mask)))
+	if (UNLIKELY(mfc_barrier & mask || (args.cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK) && mfc_fence & mask)))
 	{
 		// Check for special value combination (normally impossible)
 		if (false)
@@ -1080,8 +1080,13 @@ void SPUThread::do_mfc(bool wait)
 			return false;
 		}
 
-		if (args.cmd & MFC_FENCE_MASK && fence & mask)
+		if (args.cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK) && fence & mask)
 		{
+			if (args.cmd & MFC_BARRIER_MASK)
+			{
+				barrier |= mask;
+			}
+
 			return false;
 		}
 
