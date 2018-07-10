@@ -140,7 +140,10 @@ s32 cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 e
 	vm::var<CellHddGameStatGet> get;
 	vm::var<CellHddGameStatSet> set;
 
-	get->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+	// 40 GB - 1 kilobyte. The reasoning is that many games take this number and multiply it by 1024, to get the amount of bytes. With 40GB exactly,
+	// this will result in an overflow, and the size would be 0, preventing the game from running. By reducing 1 kilobyte, we make sure that even
+	// after said overflow, the number would still be high enough to contain the game's data.
+	get->hddFreeSizeKB = 40 * 1024 * 1024 - 1;
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
 	get->sysSizeKB = 0; // TODO
 	get->atime = 0; // TODO
@@ -262,7 +265,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	if (size)
 	{
 		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40000000; // 40 GB
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
 
 		// TODO: Calculate data size for HG and DG games, if necessary.
 		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
@@ -318,7 +321,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 	if (size)
 	{
 		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40000000; // 40 GB
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
 
 		// TODO: Calculate data size for patch data, if necessary.
 		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
@@ -350,7 +353,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	if (size)
 	{
 		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40000000; //40 GB
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
 
 		// TODO: Calculate data size for game data, if necessary.
 		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
@@ -462,7 +465,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-	cbGet->hddFreeSizeKB = 40000000; //40 GB
+	cbGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
 
 
 	strcpy_trunc(cbGet->contentInfoPath, dir);
