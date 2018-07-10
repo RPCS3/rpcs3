@@ -310,12 +310,13 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	ctxt->tropusr.reset(tropusr);
 
 	// TODO: Callbacks
+	// From RE-ing a game's state machine, it seems the possible order is one of the following: 
+	// * Install (Not installed)  - Setup - Progress * ? - Finalize - Complete - Installed
+	// * Reinstall (Corrupted)    - Setup - Progress * ? - Finalize - Complete - Installed
+	// * Update (Required update) - Setup - Progress * ? - Finalize - Complete - Installed
+	// * Installed
+	// We will go with the easy path of Installed, and that's it.
 	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg) < 0)
-	{
-		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
-	}
-
-	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 100, 100, arg) < 0)
 	{
 		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
 	}
