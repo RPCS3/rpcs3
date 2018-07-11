@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 
 #include <QOpenGLContext>
+#include <qoffscreensurface.h>
 #include <QWindow>
 
 gl_gs_frame::gl_gs_frame(const QRect& geometry, QIcon appIcon, bool disableMouse)
@@ -24,42 +25,87 @@ gl_gs_frame::gl_gs_frame(const QRect& geometry, QIcon appIcon, bool disableMouse
 
 draw_context_t gl_gs_frame::make_context()
 {
-	auto context = new QOpenGLContext();
-	context->setFormat(m_format);
-	context->create();
+	auto context = new GLContext();
+	context->handle = new QOpenGLContext();
+
+	if (m_primary_context)
+	{
+		auto surface = new QOffscreenSurface();
+		surface->setFormat(m_format);
+		surface->create();
+
+		// Share resources with the first created context
+		context->handle->setShareContext(m_primary_context->handle);
+		context->surface = surface;
+		context->owner = true;
+	}
+	else
+	{
+		// This is the first created context, all others will share resources with this one
+		m_primary_context = context;
+		context->surface = this;
+		context->owner = false;
+	}
+
+	context->handle->setFormat(m_format);
+	context->handle->create();
 
 	return context;
 }
 
 void gl_gs_frame::set_current(draw_context_t ctx)
 {
-	if (!((QOpenGLContext*)ctx)->makeCurrent(this))
+	if (!ctx)
 	{
-		create();
-		((QOpenGLContext*)ctx)->makeCurrent(this);
+		fmt::throw_exception("Null context handle passed to set_current" HERE);
+	}
+
+	auto context = (GLContext*)(ctx);
+	if (!context->handle->makeCurrent(context->surface))
+	{
+		if (!context->owner)
+		{
+			create();
+		}
+		else if (!context->handle->isValid())
+		{
+			context->handle->create();
+		}
+
+		if (!context->handle->makeCurrent(context->surface))
+		{
+			fmt::throw_exception("Could not bind OpenGL context" HERE);
+		}
 	}
 }
 
 void gl_gs_frame::delete_context(draw_context_t ctx)
 {
 
-	auto gl_ctx = (QOpenGLContext*)ctx;
-	gl_ctx->doneCurrent();
+	auto gl_ctx = (GLContext*)ctx;
+	gl_ctx->handle->doneCurrent();
 
 #ifndef _WIN32
-	delete gl_ctx;
+	delete gl_ctx->handle;
 #else
 	//AMD driver crashes when executing wglDeleteContext
 	//Catch with SEH
 	__try
 	{
-		delete gl_ctx;
+		delete gl_ctx->handle;
 	}
 	__except(GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 	{
 		LOG_FATAL(RSX, "Your graphics driver just crashed whilst cleaning up. All consumed VRAM should have been released, but you may want to restart the emulator just in case");
 	}
 #endif
+
+	if (gl_ctx->owner)
+	{
+		delete gl_ctx->surface;
+	}
+
+	delete gl_ctx;
 }
 
 void gl_gs_frame::flip(draw_context_t context, bool skip_frame)
@@ -69,5 +115,6 @@ void gl_gs_frame::flip(draw_context_t context, bool skip_frame)
 	//Do not swap buffers if frame skip is active
 	if (skip_frame) return;
 
-	((QOpenGLContext*)context)->swapBuffers(this);
+	auto gl_ctx = (GLContext*)context;
+	gl_ctx->handle->swapBuffers(gl_ctx->surface);
 }

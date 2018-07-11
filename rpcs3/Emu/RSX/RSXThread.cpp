@@ -422,6 +422,47 @@ namespace rsx
 			}
 		});
 
+		thread_ctrl::spawn(m_decompiler_thread, "RSX Decompiler Thread", [this]
+		{
+			if (g_cfg.video.disable_asynchronous_shader_compiler)
+			{
+				// Die
+				return;
+			}
+
+			on_decompiler_init();
+
+			if (g_cfg.core.thread_scheduler_enabled)
+			{
+				thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
+			}
+
+			// Weak cpus need all the help they can get, sleep instead of yield loop
+			// Lowers decompiler responsiveness but improves emulator performance
+			const bool prefer_sleep = (std::thread::hardware_concurrency() < 6);
+
+			while (!Emu.IsStopped() && !m_rsx_thread_exiting)
+			{
+				if (!on_decompiler_task())
+				{
+					if (Emu.IsPaused())
+					{
+						std::this_thread::sleep_for(1ms);
+					}
+					else if (prefer_sleep)
+					{
+						std::this_thread::sleep_for(500us);
+					}
+					else
+					{
+						std::this_thread::yield();
+					}
+				}
+			}
+
+			on_decompiler_exit();
+		});
+
 		// Raise priority above other threads
 		thread_ctrl::set_native_priority(1);
 
@@ -968,6 +1009,12 @@ namespace rsx
 		{
 			m_vblank_thread->join();
 			m_vblank_thread.reset();
+		}
+
+		if (m_decompiler_thread)
+		{
+			m_decompiler_thread->join();
+			m_decompiler_thread.reset();
 		}
 	}
 
@@ -1651,6 +1698,7 @@ namespace rsx
 
 		result.addr = ((u8*)result.addr + current_fp_metadata.program_start_offset);
 		result.offset = program_offset + current_fp_metadata.program_start_offset;
+		result.ucode_length = current_fp_metadata.program_ucode_length;
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;
@@ -1781,6 +1829,7 @@ namespace rsx
 
 		result.addr = ((u8*)result.addr + program_info.program_start_offset);
 		result.offset = program_offset + program_info.program_start_offset;
+		result.ucode_length = program_info.program_ucode_length;
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;

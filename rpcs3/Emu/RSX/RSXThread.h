@@ -275,6 +275,7 @@ namespace rsx
 	class thread : public named_thread
 	{
 		std::shared_ptr<thread_ctrl> m_vblank_thread;
+		std::shared_ptr<thread_ctrl> m_decompiler_thread;
 
 	protected:
 		atomic_t<bool> m_rsx_thread_exiting{false};
@@ -423,6 +424,10 @@ namespace rsx
 		 * Execute a backend local task queue
 		 */
 		virtual void do_local_task(FIFO_state state);
+
+		virtual void on_decompiler_init() {}
+		virtual void on_decompiler_exit() {}
+		virtual bool on_decompiler_task() { return false; }
 
 	public:
 		virtual std::string get_name() const override;

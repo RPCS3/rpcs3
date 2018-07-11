@@ -32,6 +32,8 @@ namespace rsx
 			u16 virtual_width = 1280;
 			u16 virtual_height = 720;
 
+			u32 min_refresh_duration_us = 16600;
+
 			virtual ~overlay() = default;
 
 			virtual void update() {}
@@ -1103,6 +1105,9 @@ namespace rsx
 
 				creation_time = get_system_time();
 				expire_time = creation_time + 1000000;
+
+				// Disable forced refresh unless fps dips below 4
+				min_refresh_duration_us = 250000;
 			}
 
 			void update_animation(u64 t)

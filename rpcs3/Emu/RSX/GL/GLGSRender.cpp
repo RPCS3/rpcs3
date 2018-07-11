@@ -372,9 +372,19 @@ void GLGSRender::end()
 	}
 
 	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
-	//Load program here since it is dependent on vertex state
 
-	load_program(upload_info);
+	// NOTE: Due to common OpenGL driver architecture, vertex data has to be uploaded as far away from the draw as possible
+	// TODO: Implement shaders cache prediction to avoid uploading vertex data if draw is going to skip
+	if (!load_program())
+	{
+		// Program is not ready, skip drawing this
+		std::this_thread::yield();
+		rsx::thread::end();
+		return;
+	}
+
+	// Load program here since it is dependent on vertex state
+	load_program_env(upload_info);
 
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
@@ -619,7 +629,16 @@ void GLGSRender::set_viewport()
 
 void GLGSRender::on_init_thread()
 {
-	GSRender::on_init_thread();
+	verify(HERE), m_frame;
+
+	// NOTES: All contexts have to be created before any is bound to a thread
+	// This allows context sharing to work (both GLRCs passed to wglShareLists have to be idle or you get ERROR_BUSY)
+	m_context = m_frame->make_context();
+	m_decompiler_context = m_frame->make_context();
+
+	// Bind primary context to main RSX thread
+	m_frame->set_current(m_context);
+
 	zcull_ctrl.reset(static_cast<::rsx::reports::ZCULL_control*>(this));
 
 	gl::init();
@@ -1108,7 +1127,7 @@ bool GLGSRender::check_program_state()
 	return (rsx::method_registers.shader_program_address() != 0);
 }
 
-void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
+bool GLGSRender::load_program()
 {
 	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
@@ -1119,35 +1138,49 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 
 		current_vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
 		current_fragment_program.unnormalized_coords = 0; //unused
-		void* pipeline_properties = nullptr;
+	}
+	else if (m_program)
+	{
+		// Program already loaded
+		return true;
+	}
 
-		m_program = &m_prog_buffer.getGraphicPipelineState(current_vertex_program, current_fragment_program, pipeline_properties);
-		m_program->use();
+	void* pipeline_properties = nullptr;
+	m_program = m_prog_buffer.get_graphics_pipeline(current_vertex_program, current_fragment_program, pipeline_properties,
+			!g_cfg.video.disable_asynchronous_shader_compiler).get();
 
-		if (m_prog_buffer.check_cache_missed())
+	if (m_prog_buffer.check_cache_missed())
+	{
+		if (m_prog_buffer.check_program_linked_flag())
 		{
+			// Program was linked or queued for linking
 			m_shaders_cache->store(pipeline_properties, current_vertex_program, current_fragment_program);
+		}
 
-			//Notify the user with HUD notification
-			if (g_cfg.misc.show_shader_compilation_hint)
+		// Notify the user with HUD notification
+		if (g_cfg.misc.show_shader_compilation_hint)
+		{
+			if (m_overlay_manager)
 			{
-				if (m_overlay_manager)
+				if (auto dlg = m_overlay_manager->get<rsx::overlays::shader_compile_notification>())
 				{
-					if (auto dlg = m_overlay_manager->get<rsx::overlays::shader_compile_notification>())
-					{
-						//Extend duration
-						dlg->touch();
-					}
-					else
-					{
-						//Create dialog but do not show immediately
-						m_overlay_manager->create<rsx::overlays::shader_compile_notification>();
-					}
+					// Extend duration
+					dlg->touch();
+				}
+				else
+				{
+					// Create dialog but do not show immediately
+					m_overlay_manager->create<rsx::overlays::shader_compile_notification>();
 				}
 			}
 		}
 	}
 
+	return m_program != nullptr;
+}
+
+void GLGSRender::load_program_env(const gl::vertex_upload_info& upload_info)
+{
 	u8 *buf;
 	u32 vertex_state_offset;
 	u32 vertex_constants_offset;
@@ -1156,6 +1189,13 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 	const u32 fragment_constants_size = (const u32)m_prog_buffer.get_fragment_constants_buffer_size(current_fragment_program);
 	const u32 fragment_buffer_size = fragment_constants_size + (18 * 4 * sizeof(float));
 	const bool update_transform_constants = !!(m_graphics_state & rsx::pipeline_state::transform_constants_dirty);
+
+	if (!m_program)
+	{
+		fmt::throw_exception("Unreachable right now" HERE);
+	}
+
+	m_program->use();
 
 	if (manually_flush_ring_buffers)
 	{
@@ -1212,7 +1252,8 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 		if (update_transform_constants) m_transform_constants_buffer->unmap();
 	}
 
-	m_graphics_state &= ~rsx::pipeline_state::memory_barrier_bits;
+	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty);
+	m_graphics_state &= ~handled_flags;
 }
 
 void GLGSRender::update_draw_state()
@@ -1729,4 +1770,27 @@ void GLGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 		//Discard is being called on an active query, close it
 		glEndQuery(GL_ANY_SAMPLES_PASSED);
 	}
+}
+
+void GLGSRender::on_decompiler_init()
+{
+	// Bind decompiler context to this thread
+	m_frame->set_current(m_decompiler_context);
+}
+
+void GLGSRender::on_decompiler_exit()
+{
+	// Cleanup
+	m_frame->delete_context(m_decompiler_context);
+}
+
+bool GLGSRender::on_decompiler_task()
+{
+	bool ret = m_prog_buffer.async_update(8);
+
+	// TODO: Proper synchronization with renderer
+	// Finish works well enough for now but it is not a proper soulution
+	glFinish();
+
+	return ret;
 }

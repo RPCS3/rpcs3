@@ -326,20 +326,20 @@ size_t fragment_program_utils::get_fragment_program_ucode_size(void *ptr)
 fragment_program_utils::fragment_program_metadata fragment_program_utils::analyse_fragment_program(void *ptr)
 {
 	const qword *instBuffer = (const qword*)ptr;
-	size_t instIndex = 0;
+	s32 index = 0;
 	s32 program_offset = -1;
 	u32 ucode_size = 0;
 	u16 textures_mask = 0;
 
 	while (true)
 	{
-		const qword& inst = instBuffer[instIndex];
+		const qword& inst = instBuffer[index];
 		const u32 opcode = (inst.word[0] >> 16) & 0x3F;
 
 		if (opcode)
 		{
 			if (program_offset < 0)
-				program_offset = instIndex * 16;
+				program_offset = index * 16;
 
 			switch(opcode)
 			{
@@ -362,7 +362,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			if (is_constant(inst.word[1]) || is_constant(inst.word[2]) || is_constant(inst.word[3]))
 			{
 				//Instruction references constant, skip one slot occupied by data
-				instIndex++;
+				index++;
 				ucode_size += 16;
 			}
 		}
@@ -376,14 +376,14 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 		{
 			if (program_offset < 0)
 			{
-				program_offset = instIndex * 16;
+				program_offset = index * 16;
 				ucode_size = 16;
 			}
 
 			break;
 		}
 
-		instIndex++;
+		index++;
 	}
 
 	return{ (u32)program_offset, ucode_size, textures_mask };
