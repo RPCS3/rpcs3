@@ -310,7 +310,7 @@ void D3D12GSRender::load_program()
 		}
 	}
 
-	m_current_pso = m_pso_cache.getGraphicPipelineState(current_vertex_program, current_fragment_program, prop, m_device.Get(), m_shared_root_signature.Get());
+	m_current_pso = m_pso_cache.get_graphics_pipeline(current_vertex_program, current_fragment_program, prop, false, m_device.Get(), m_shared_root_signature.Get());
 	return;
 }
 

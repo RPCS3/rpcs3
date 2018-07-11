@@ -402,7 +402,8 @@ private:
 
 public:
 	bool check_program_status();
-	void load_program(const vk::vertex_upload_info& vertex_info);
+	bool load_program();
+	void load_program_env(const vk::vertex_upload_info& vertex_info);
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 	void read_buffers();
 	void write_buffers();
@@ -429,4 +430,6 @@ protected:
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_invalidate_memory_range(u32 address_base, u32 size) override;
+
+	bool on_decompiler_task() override;
 };
