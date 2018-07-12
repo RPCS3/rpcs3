@@ -469,7 +469,7 @@ public:
 		{
 			auto buf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(cached.size());
 			cached.read(buf->getBufferStart(), buf->getBufferSize());
-			return buf;
+			return std::move(buf);
 		}
 
 		return nullptr;
