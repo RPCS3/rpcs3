@@ -1,5 +1,9 @@
 #include "JIT.h"
 
+#ifndef _XABORT_RETRY
+#define _XABORT_RETRY (1 << 1)
+#endif
+
 asmjit::JitRuntime& asmjit::get_global_runtime()
 {
 	// Magic static
