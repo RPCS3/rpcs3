@@ -309,7 +309,7 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 	auto get_masked_dst = [](const std::string& dest, const char mask)
 	{
 		const auto selector = std::string(".") + mask;
-		const auto pos = dest.find("=");
+		const auto pos = dest.find('=');
 
 		std::string result = dest + selector;
 
