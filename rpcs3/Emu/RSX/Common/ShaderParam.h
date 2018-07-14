@@ -179,7 +179,7 @@ public:
 	{
 		// Separate 'double destination' variables 'X=Y=SRC'
 		std::string simple_var;
-		const auto pos = var.find("=");
+		const auto pos = var.find('=');
 
 		if (pos != std::string::npos)
 		{
