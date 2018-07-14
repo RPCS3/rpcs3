@@ -500,6 +500,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings::DisableVertexCache);
 	SubscribeTooltip(ui->disableVertexCache, json_gpu_main["disableVertexCache"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->disableAsyncShaders, emu_settings::DisableAsyncShaderCompiler);
+	SubscribeTooltip(ui->disableAsyncShaders, json_gpu_main["disableAsyncShaders"].toString());
+
 	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
 	SubscribeTooltip(ui->scrictModeRendering, json_gpu_main["scrictModeRendering"].toString());
 	connect(ui->scrictModeRendering, &QCheckBox::clicked, [=](bool checked)
