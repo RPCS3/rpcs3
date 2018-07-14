@@ -76,8 +76,10 @@ namespace rsx
 		fragment_state_dirty = 4,
 		vertex_state_dirty = 8,
 		transform_constants_dirty = 16,
+		framebuffer_reads_dirty = 32,
 
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
+		memory_barrier_bits = framebuffer_reads_dirty,
 		all_dirty = 255
 	};
 
@@ -358,6 +360,10 @@ namespace rsx
 		bool m_vertex_textures_dirty[4];
 		bool m_framebuffer_state_contested = false;
 		u32  m_graphics_state = 0;
+		u64  ROP_sync_timestamp = 0;
+
+		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
+		program_hash_util::vertex_program_utils::vertex_program_metadata current_vp_metadata = {};
 
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
@@ -371,10 +377,7 @@ namespace rsx
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
 
-		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
-		program_hash_util::vertex_program_utils::vertex_program_metadata current_vp_metadata = {};
-
-		void get_current_vertex_program();
+		void get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors, bool skip_textures = false, bool skip_vertex_inputs = true);
 
 		/**
 		 * Gets current fragment program and associated fragment state

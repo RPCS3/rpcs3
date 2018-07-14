@@ -26,6 +26,14 @@
 #include <array>
 #include <vector>
 
+enum class i2 : char
+{
+};
+
+enum class i4 : char
+{
+};
+
 template <typename T = void>
 struct llvm_value_t
 {
@@ -74,6 +82,38 @@ struct llvm_value_t<bool> : llvm_value_t<void>
 	static llvm::Type* get_type(llvm::LLVMContext& context)
 	{
 		return llvm::Type::getInt1Ty(context);
+	}
+};
+
+template <>
+struct llvm_value_t<i2> : llvm_value_t<void>
+{
+	using type = i2;
+	using base = llvm_value_t<void>;
+	using base::base;
+
+	static constexpr uint esize  = 2;
+	static constexpr uint is_int = true;
+
+	static llvm::Type* get_type(llvm::LLVMContext& context)
+	{
+		return llvm::Type::getIntNTy(context, 2);
+	}
+};
+
+template <>
+struct llvm_value_t<i4> : llvm_value_t<void>
+{
+	using type = i4;
+	using base = llvm_value_t<void>;
+	using base::base;
+
+	static constexpr uint esize  = 4;
+	static constexpr uint is_int = true;
+
+	static llvm::Type* get_type(llvm::LLVMContext& context)
+	{
+		return llvm::Type::getIntNTy(context, 4);
 	}
 };
 
@@ -753,6 +793,8 @@ struct llvm_icmp_t
 		UPred == llvm::ICmpInst::ICMP_ULT ? llvm::ICmpInst::ICMP_SLT :
 		UPred == llvm::ICmpInst::ICMP_ULE ? llvm::ICmpInst::ICMP_SLE : UPred;
 
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || UPred == llvm::ICmpInst::ICMP_EQ || UPred == llvm::ICmpInst::ICMP_NE, "llvm_eq_t<>: invalid type(II)");
+
 	static inline llvm::Value* icmp(llvm::IRBuilder<>* ir, llvm::Value* lhs, llvm::Value* rhs)
 	{
 		return ir->CreateICmp(pred, lhs, rhs);
@@ -861,6 +903,9 @@ protected:
 	// Endianness, affects vector element numbering (TODO)
 	bool m_is_be;
 
+	// Allow PSHUFB intrinsic
+	bool m_use_ssse3;
+
 	// IR builder
 	llvm::IRBuilder<>* m_ir;
 
@@ -949,13 +994,6 @@ public:
 		return (a & c) | (b & ~c);
 	}
 
-	// Average: (a + b + 1) >> 1
-	template <typename T>
-	static inline auto avg(T a, T b)
-	{
-		return (a >> 1) + (b >> 1) + ((a | b) & 1);
-	}
-
 	// Rotate left
 	template <typename T>
 	static inline auto rol(T a, T b)
@@ -970,6 +1008,30 @@ public:
 	{
 		static constexpr u64 mask = value_t<typename T::type>::esize - 1;
 		return a << (b & mask) | a >> ((0 - b) & mask);
+	}
+
+	// Average: (a + b + 1) >> 1
+	template <typename T>
+	inline auto avg(T a, T b)
+	{
+		//return (a >> 1) + (b >> 1) + ((a | b) & 1);
+
+		value_t<typename T::type> result;
+		llvm::Instruction::CastOps cast_op = llvm::Instruction::BitCast;
+		if (result.is_sint)
+			cast_op = llvm::Instruction::SExt;
+		if (result.is_uint)
+			cast_op = llvm::Instruction::ZExt;
+		llvm::Type* cast_t = m_ir->getIntNTy(result.esize * 2);
+		if (result.is_vector != 0)
+			cast_t = llvm::VectorType::get(cast_t, result.is_vector);
+
+		const auto axt = m_ir->CreateCast(cast_op, a.eval(m_ir), cast_t);
+		const auto bxt = m_ir->CreateCast(cast_op, b.eval(m_ir), cast_t);
+		const auto cxt = llvm::ConstantInt::get(cast_t, 1, false);
+		const auto abc = m_ir->CreateAdd(m_ir->CreateAdd(axt, bxt), cxt);
+		result.value = m_ir->CreateTrunc(m_ir->CreateLShr(abc, 1), result.get_type(m_context));
+		return result;
 	}
 
 	// Select (c ? a : b)
@@ -1056,6 +1118,17 @@ public:
 		return result;
 	}
 
+	template <typename T, typename... Args>
+	auto build(Args... args)
+	{
+		using value_type = std::remove_extent_t<T>;
+		const value_type values[]{static_cast<value_type>(args)...};
+		static_assert(sizeof(T) / sizeof(value_type) == sizeof...(Args), "build: unexpected number of arguments");
+		value_t<T> result;
+		result.value = llvm::ConstantDataVector::get(m_context, values);
+		return result;
+	}
+
 	template <typename... Types>
 	llvm::Function* get_intrinsic(llvm::Intrinsic::ID id)
 	{
@@ -1102,6 +1175,75 @@ public:
 		result.value = m_ir->CreateFCmp(FPred, a.eval(m_ir), b.eval(m_ir));
 		return result;
 	}
+
+	template <typename T1, typename T2>
+	value_t<u8[16]> pshufb(T1 a, T2 b)
+	{
+		value_t<u8[16]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto index = b.eval(m_ir);
+		const auto zeros = llvm::ConstantAggregateZero::get(get_type<u8[16]>());
+
+		if (auto c = llvm::dyn_cast<llvm::Constant>(index))
+		{
+			// Convert PSHUFB index back to LLVM vector shuffle mask
+			v128 mask{};
+
+			const auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(c);
+
+			if (cv)
+			{
+				for (u32 i = 0; i < 16; i++)
+				{
+					const u64 b = cv->getElementAsInteger(i);
+					mask._u8[i] = b < 128 ? b % 16 : 16;
+				}
+			}
+
+			if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
+			{
+				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef((const u8*)mask._bytes, 16));
+				result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
+				result.value = m_ir->CreateShuffleVector(data0, zeros, result.value);
+				return result;
+			}
+		}
+
+		if (m_use_ssse3)
+		{
+			result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_ssse3_pshuf_b_128), {data0, index});
+		}
+		else
+		{
+			// Emulate PSHUFB (TODO)
+			const auto mask = m_ir->CreateAnd(index, 0xf);
+			const auto loop = llvm::BasicBlock::Create(m_context, "", m_ir->GetInsertBlock()->getParent());
+			const auto next = llvm::BasicBlock::Create(m_context, "", m_ir->GetInsertBlock()->getParent());
+			const auto prev = m_ir->GetInsertBlock();
+
+			m_ir->CreateBr(loop);
+			m_ir->SetInsertPoint(loop);
+			const auto i = m_ir->CreatePHI(get_type<u32>(), 2);
+			const auto v = m_ir->CreatePHI(get_type<u8[16]>(), 2);
+			i->addIncoming(m_ir->getInt32(0), prev);
+			i->addIncoming(m_ir->CreateAdd(i, m_ir->getInt32(1)), loop);
+			v->addIncoming(zeros, prev);
+			result.value = m_ir->CreateInsertElement(v, m_ir->CreateExtractElement(data0, m_ir->CreateExtractElement(mask, i)), i);
+			v->addIncoming(result.value, loop);
+			m_ir->CreateCondBr(m_ir->CreateICmpULT(i, m_ir->getInt32(16)), loop, next);
+			m_ir->SetInsertPoint(next);
+			result.value = m_ir->CreateSelect(m_ir->CreateICmpSLT(index, zeros), zeros, result.value);
+		}
+
+		return result;
+	}
+
+	template <typename R = v128>
+	R get_const_vector(llvm::Constant*, u32 a, u32 b);
+
+	template <typename T = v128>
+	llvm::Constant* make_const_vector(T, llvm::Type*);
 };
 
 #endif

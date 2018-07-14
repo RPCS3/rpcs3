@@ -24,7 +24,7 @@ namespace
 
 GLGSRender::GLGSRender() : GSRender()
 {
-	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.3"));
+	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.6"));
 
 	if (g_cfg.video.disable_vertex_cache)
 		m_vertex_cache.reset(new gl::null_vertex_cache());
@@ -330,7 +330,7 @@ void GLGSRender::end()
 					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.fragment_textures[i], m_rtts);
 
 					if (m_textures_dirty[i])
-						m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i], fs_sampler_state[i].get());
+						m_fs_sampler_states[i].apply(rsx::method_registers.fragment_textures[i], fs_sampler_state[i].get());
 				}
 				else
 				{
@@ -354,6 +354,9 @@ void GLGSRender::end()
 				if (rsx::method_registers.vertex_textures[i].enabled())
 				{
 					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.vertex_textures[i], m_rtts);
+
+					if (m_vertex_textures_dirty[i])
+						m_vs_sampler_states[i].apply(rsx::method_registers.vertex_textures[i], vs_sampler_state[i].get());
 				}
 				else
 					*sampler_state = {};
@@ -783,8 +786,14 @@ void GLGSRender::on_init_thread()
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
-		m_gl_sampler_states[i].create();
-		m_gl_sampler_states[i].bind(i);
+		m_fs_sampler_states[i].create();
+		m_fs_sampler_states[i].bind(i);
+	}
+
+	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+	{
+		m_vs_sampler_states[i].create();
+		m_vs_sampler_states[i].bind(rsx::limits::fragment_textures_count + i);
 	}
 
 	//Occlusion query
@@ -917,7 +926,12 @@ void GLGSRender::on_exit()
 	m_gl_persistent_stream_buffer.reset();
 	m_gl_volatile_stream_buffer.reset();
 
-	for (auto &sampler : m_gl_sampler_states)
+	for (auto &sampler : m_fs_sampler_states)
+	{
+		sampler.remove();
+	}
+
+	for (auto &sampler : m_vs_sampler_states)
 	{
 		sampler.remove();
 	}
@@ -1101,7 +1115,7 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 		get_current_fragment_program(fs_sampler_state);
 		verify(HERE), current_fragment_program.valid;
 
-		get_current_vertex_program();
+		get_current_vertex_program(vs_sampler_state);
 
 		current_vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
 		current_fragment_program.unnormalized_coords = 0; //unused
@@ -1183,7 +1197,7 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 	}
 
 	// Fragment state
-	fill_fragment_state_buffer(buf+fragment_constants_size, current_fragment_program);
+	fill_fragment_state_buffer(buf + fragment_constants_size, current_fragment_program);
 
 	m_vertex_state_buffer->bind_range(0, vertex_state_offset, 512);
 	m_fragment_constants_buffer->bind_range(2, fragment_constants_offset, fragment_buffer_size);
@@ -1198,7 +1212,7 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 		if (update_transform_constants) m_transform_constants_buffer->unmap();
 	}
 
-	m_graphics_state = 0;
+	m_graphics_state &= ~rsx::pipeline_state::memory_barrier_bits;
 }
 
 void GLGSRender::update_draw_state()
@@ -1518,10 +1532,11 @@ void GLGSRender::flip(int buffer)
 		const auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
 		const auto num_flushes = m_gl_texture_cache.get_num_flush_requests();
 		const auto num_mispredict = m_gl_texture_cache.get_num_cache_mispredictions();
+		const auto num_speculate = m_gl_texture_cache.get_num_cache_speculative_writes();
 		const auto cache_miss_ratio = (u32)ceil(m_gl_texture_cache.get_cache_miss_ratio() * 100);
 		m_text_printer.print_text(0, 126, m_frame->client_width(), m_frame->client_height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
 		m_text_printer.print_text(0, 144, m_frame->client_width(), m_frame->client_height(), "Texture memory: " + std::to_string(texture_memory_size) + "M");
-		m_text_printer.print_text(0, 162, m_frame->client_width(), m_frame->client_height(), fmt::format("Flush requests: %d (%d%% hard faults, %d mispredictions)", num_flushes, cache_miss_ratio, num_mispredict));
+		m_text_printer.print_text(0, 162, m_frame->client_width(), m_frame->client_height(), fmt::format("Flush requests: %d (%d%% hard faults, %d misprediction(s), %d speculation(s))", num_flushes, cache_miss_ratio, num_mispredict, num_speculate));
 	}
 
 	m_frame->flip(m_context);
@@ -1600,9 +1615,13 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 	}
 	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
 	{
-		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
-		//Only call when there are no waiters
-		m_gl_texture_cache.do_update();
+		if (m_graphics_state & rsx::pipeline_state::framebuffer_reads_dirty)
+		{
+			//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
+			//Only call when there are no waiters
+			m_gl_texture_cache.do_update();
+			m_graphics_state &= ~rsx::pipeline_state::framebuffer_reads_dirty;
+		}
 	}
 
 	rsx::thread::do_local_task(state);

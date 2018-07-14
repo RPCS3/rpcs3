@@ -34,5 +34,5 @@ public:
 
 	fs::file get_file(std::string path);
 
-	bool extract(std::string path); // extract all files in archive to path
+	bool extract(std::string path, std::string ignore = ""); // extract all files in archive to path
 };

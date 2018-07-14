@@ -27,6 +27,13 @@ if (CCACHE_FOUND)
 	set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif()
 
+find_package(ZLIB QUIET)
+if (NOT ZLIB_FOUND)
+    add_subdirectory(3rdparty/zlib EXCLUDE_FROM_ALL)
+    set(ZLIB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/zlib" "${CMAKE_CURRENT_BINARY_DIR}/3rdparty/zlib" CACHE INTERNAL "")
+    set(ZLIB_LIBRARY zlibstatic)
+endif()
+
 # Select the version of libpng to use, default is builtin
 if (NOT USE_SYSTEM_LIBPNG)
 	# We use libpng's static library and don't need to build the shared library and run the tests
@@ -35,6 +42,8 @@ if (NOT USE_SYSTEM_LIBPNG)
 	set(SKIP_INSTALL_ALL ON)
 	add_subdirectory(3rdparty/libpng EXCLUDE_FROM_ALL)
 endif()
+
+add_subdirectory(3rdparty/pugixml EXCLUDE_FROM_ALL)
 
 # TODO: do real installation, including copying directory structure
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")

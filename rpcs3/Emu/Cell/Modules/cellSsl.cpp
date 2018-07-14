@@ -57,7 +57,7 @@ s32 cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm::ptr<u
 	cellSsl.trace("cellSslCertificateLoader(flag=%llu, buffer=0x%x, size=%zu, required=0x%x)", flag, buffer, size, required);
 
 	const std::bitset<58> flagBits(flag);
-	const std::string certPath = vfs::get("/dev_flash/") + "data/cert/";
+	const std::string certPath = vfs::get("/dev_flash/data/cert/");
 
 	if (required)
 	{

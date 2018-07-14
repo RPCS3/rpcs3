@@ -23,9 +23,9 @@ std::string GLVertexDecompilerThread::getFunction(FUNCTION f)
 	return glsl::getFunctionImpl(f);
 }
 
-std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
+std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar)
 {
-	return glsl::compareFunctionImpl(f, Op0, Op1);
+	return glsl::compareFunctionImpl(f, Op0, Op1, scalar);
 }
 
 void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
@@ -156,7 +156,7 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	for (int i = 0; i < 16; ++i)
 	{
 		std::string reg_name = "dst_reg" + std::to_string(i);
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
+		if (m_parr.HasParam(PF_PARAM_OUT, "vec4", reg_name))
 		{
 			if (parameters.length())
 				parameters += ", ";
@@ -191,17 +191,6 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 			OS << "	vec4 " << PI.name << "= read_location(" << std::to_string(PI.location) << ");\n";
 		}
 	}
-
-	for (const ParamType &PT : m_parr.params[PF_PARAM_UNIFORM])
-	{
-		if (PT.type == "sampler2D")
-		{
-			for (const ParamItem &PI : PT.items)
-			{
-				OS << "	vec2 " << PI.name << "_coord_scale = vec2(1.);\n";
-			}
-		}
-	}
 }
 
 void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
@@ -213,7 +202,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	std::string parameters = "";
 
-	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_NONE, "vec4"))
+	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_OUT, "vec4"))
 	{
 		for (int i = 0; i < 16; ++i)
 		{
@@ -258,7 +247,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 		if (front_back_specular && name == "spec_color")
 			name = "back_spec_color";
 
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg))
+		if (m_parr.HasParam(PF_PARAM_OUT, "vec4", i.src_reg))
 		{
 			if (i.check_mask && (rsx_vertex_program.output_mask & i.check_mask_value) == 0)
 				continue;
@@ -290,11 +279,11 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	}
 
 	if (insert_back_diffuse && insert_front_diffuse)
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "dst_reg1"))
+		if (m_parr.HasParam(PF_PARAM_OUT, "vec4", "dst_reg1"))
 			OS << "	front_diff_color = dst_reg1;\n";
 
 	if (insert_back_specular && insert_front_specular)
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "dst_reg2"))
+		if (m_parr.HasParam(PF_PARAM_OUT, "vec4", "dst_reg2"))
 			OS << "	front_spec_color = dst_reg2;\n";
 
 	OS << "	gl_PointSize = point_size;\n";
@@ -352,7 +341,6 @@ void GLVertexProgram::Compile()
 	const char* str = shader.c_str();
 	const int strlen = ::narrow<int>(shader.length());
 
-	fs::create_path(fs::get_config_dir() + "/shaderlog");
 	fs::file(fs::get_config_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".glsl", fs::rewrite).write(str);
 
 	glShaderSource(id, 1, &str, &strlen);

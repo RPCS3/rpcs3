@@ -75,6 +75,7 @@ public:
 
 Q_SIGNALS:
 	void RequestGlobalStylesheetChange(const QString& sheetFilePath);
+	void RequestTrophyManagerRepaint();
 
 public Q_SLOTS:
 	void OnEmuStop();
@@ -96,6 +97,7 @@ private Q_SLOTS:
 	void SaveWindowState();
 	void ConfigureGuiFromSettings(bool configure_all = false);
 	void SetIconSizeActions(int idx);
+	void ResizeIcons(int index);
 
 protected:
 	void closeEvent(QCloseEvent *event) override;
@@ -107,7 +109,6 @@ protected:
 	void dragLeaveEvent(QDragLeaveEvent* event) override;
 	void SetAppIconFromPath(const std::string& path);
 private:
-	void RepaintToolbar();
 	void RepaintToolBarIcons();
 	void RepaintThumbnailIcons();
 	void CreateActions();

@@ -42,11 +42,17 @@ protected:
 	// GPR modified by the instruction (-1 = not set)
 	std::array<u8, 0x10000> m_regmod;
 
-	// List of possible targets for the instruction ({} = next instruction, {-1} = no targets)
+	// List of possible targets for the instruction (entry shouldn't exist for simple instructions)
 	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_targets;
 
-	// List of block predecessors (incomplete, doesn't include all fallthrough predecessors)
+	// List of block predecessors
 	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_preds;
+
+	// List of function entry points and return points (set after BRSL, BRASL, BISL, BISLED)
+	std::bitset<0x10000> m_entry_info;
+
+	// Compressed address of unique entry point for each instruction
+	std::array<u16, 0x10000> m_entry_map{};
 
 	std::shared_ptr<spu_cache> m_cache;
 
@@ -77,9 +83,15 @@ public:
 	// Get the block at specified address
 	std::vector<u32> block(const be_t<u32>* ls, u32 lsa);
 
+	// Print analyser internal state
+	void dump(std::string& out);
+
 	// Create recompiler instance (ASMJIT)
 	static std::unique_ptr<spu_recompiler_base> make_asmjit_recompiler();
 
 	// Create recompiler instance (LLVM)
 	static std::unique_ptr<spu_recompiler_base> make_llvm_recompiler();
+
+	// Max number of registers (for m_regmod)
+	static constexpr u8 s_reg_max = 128;
 };

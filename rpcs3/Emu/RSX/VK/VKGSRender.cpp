@@ -626,7 +626,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache.reset(new vk::weak_vertex_cache());
 
-	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.3"));
+	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.6"));
 
 	open_command_buffer();
 
@@ -2065,9 +2065,13 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 	}
 	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
 	{
-		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
-		//Only call when there are no waiters
-		m_texture_cache.do_update();
+		if (m_graphics_state & rsx::pipeline_state::framebuffer_reads_dirty)
+		{
+			//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
+			//Only call when there are no waiters
+			m_texture_cache.do_update();
+			m_graphics_state &= ~rsx::pipeline_state::framebuffer_reads_dirty;
+		}
 	}
 
 	rsx::thread::do_local_task(state);
@@ -2196,7 +2200,7 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 		get_current_fragment_program(fs_sampler_state);
 		verify(HERE), current_fragment_program.valid;
 
-		get_current_vertex_program();
+		get_current_vertex_program(vs_sampler_state);
 	}
 
 	auto &vertex_program = current_vertex_program;
@@ -2417,7 +2421,7 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 	}
 
 	//Clear flags
-	m_graphics_state = 0;
+	m_graphics_state &= ~rsx::pipeline_state::memory_barrier_bits;
 }
 
 static const u32 mr_color_offset[rsx::limits::color_buffers_count] =
@@ -2535,11 +2539,15 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	const auto depth_fmt = rsx::method_registers.surface_depth_fmt();
 	const auto target = rsx::method_registers.surface_color_target();
 
+	const auto aa_mode = rsx::method_registers.surface_antialias();
+	const u32 aa_factor_u = (aa_mode == rsx::surface_antialiasing::center_1_sample) ? 1 : 2;
+	const u32 aa_factor_v = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
+
 	//NOTE: Its is possible that some renders are done on a swizzled context. Pitch is meaningless in that case
 	//Seen in Nier (color) and GT HD concept (z buffer)
 	//Restriction is that the dimensions are powers of 2. Also, dimensions are passed via log2w and log2h entries
-	const auto required_zeta_pitch = std::max<u32>((u32)(depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4), 64u);
-	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(color_fmt, clip_width), 64u);
+	const auto required_zeta_pitch = std::max<u32>((u32)(depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4) * aa_factor_u, 64u);
+	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(color_fmt, clip_width) * aa_factor_v, 64u);
 	const bool stencil_test_enabled = depth_fmt == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
 	const auto lg2w = rsx::method_registers.surface_log2_width();
 	const auto lg2h = rsx::method_registers.surface_log2_height();
@@ -2636,9 +2644,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	const auto fbo_width = rsx::apply_resolution_scale(clip_width, true);
 	const auto fbo_height = rsx::apply_resolution_scale(clip_height, true);
-	const auto aa_mode = rsx::method_registers.surface_antialias();
 	const auto bpp = get_format_block_size_in_bytes(color_fmt);
-	const u32 aa_factor = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
 
 	//Window (raster) offsets
 	const auto window_offset_x = rsx::method_registers.window_offset_x();
@@ -2658,7 +2664,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			if (surface_addresses[index])
 			{
-				const u32 window_offset_bytes = (std::max<u32>(surface_pitchs[index], clip_width * aa_factor * bpp) * window_offset_y) + ((aa_factor * bpp) * window_offset_x);
+				const u32 window_offset_bytes = (std::max<u32>(surface_pitchs[index], required_color_pitch) * window_offset_y) + ((aa_factor_u * bpp) * window_offset_x);
 				surface_addresses[index] += window_offset_bytes;
 			}
 		}
@@ -2666,7 +2672,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		if (zeta_address)
 		{
 			const auto depth_bpp = (depth_fmt == rsx::surface_depth_format::z16 ? 2 : 4);
-			zeta_address += (std::max<u32>(zeta_pitch, clip_width * aa_factor * depth_bpp) * window_offset_y) + ((aa_factor * depth_bpp) * window_offset_x);
+			zeta_address += (std::max<u32>(zeta_pitch, required_zeta_pitch) * window_offset_y) + ((aa_factor_u * depth_bpp) * window_offset_x);
 		}
 	}
 
@@ -2778,7 +2784,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			bound_images.push_back(surface);
 
 			m_surface_info[index].address = surface_addresses[index];
-			m_surface_info[index].pitch = surface_pitchs[index];
+			m_surface_info[index].pitch = std::max(surface_pitchs[index], required_color_pitch);
 			surface->rsx_pitch = surface_pitchs[index];
 
 			surface->write_aa_mode = aa_mode;
@@ -2795,7 +2801,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		bound_images.push_back(ds);
 
 		m_depth_surface_info.address = zeta_address;
-		m_depth_surface_info.pitch = rsx::method_registers.surface_z_pitch();
+		m_depth_surface_info.pitch = std::max(zeta_pitch, required_zeta_pitch);
 		ds->rsx_pitch = m_depth_surface_info.pitch;
 
 		ds->write_aa_mode = aa_mode;
@@ -2811,7 +2817,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
 
-			const u32 range = m_surface_info[index].pitch * m_surface_info[index].height * aa_factor;
+			const u32 range = m_surface_info[index].pitch * m_surface_info[index].height * aa_factor_v;
 			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[index]), m_surface_info[index].address, range,
 				m_surface_info[index].width, m_surface_info[index].height, m_surface_info[index].pitch, color_fmt_info.first, color_fmt_info.second);
 		}
@@ -2821,16 +2827,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 		{
-			u32 pitch = m_depth_surface_info.width * 2;
-			u32 gcm_format = CELL_GCM_TEXTURE_DEPTH16;
-
-			if (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16)
-			{
-				gcm_format = CELL_GCM_TEXTURE_DEPTH24_D8;
-				pitch *= 2;
-			}
-
-			const u32 range = pitch * m_depth_surface_info.height * aa_factor;
+			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16)? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
+			const u32 range = m_depth_surface_info.pitch * m_depth_surface_info.height * aa_factor_v;
 			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range,
 				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch, gcm_format, false);
 		}
@@ -3243,11 +3241,12 @@ void VKGSRender::flip(int buffer)
 			const auto tmp_texture_memory_size = m_texture_cache.get_temporary_memory_in_use() / (1024 * 1024);
 			const auto num_flushes = m_texture_cache.get_num_flush_requests();
 			const auto num_mispredict = m_texture_cache.get_num_cache_mispredictions();
+			const auto num_speculate = m_texture_cache.get_num_cache_speculative_writes();
 			const auto cache_miss_ratio = (u32)ceil(m_texture_cache.get_cache_miss_ratio() * 100);
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 144, direct_fbo->width(), direct_fbo->height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 162, direct_fbo->width(), direct_fbo->height(), "Texture cache memory: " + std::to_string(texture_memory_size) + "M");
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 180, direct_fbo->width(), direct_fbo->height(), "Temporary texture memory: " + std::to_string(tmp_texture_memory_size) + "M");
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 198, direct_fbo->width(), direct_fbo->height(), fmt::format("Flush requests: %d (%d%% hard faults, %d mispredictions)", num_flushes, cache_miss_ratio, num_mispredict));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 198, direct_fbo->width(), direct_fbo->height(), fmt::format("Flush requests: %d (%d%% hard faults, %d misprediction(s), %d speculation(s))", num_flushes, cache_miss_ratio, num_mispredict, num_speculate));
 		}
 
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, present_layout, subres);

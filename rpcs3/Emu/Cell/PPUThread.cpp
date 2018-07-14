@@ -1218,15 +1218,21 @@ extern void ppu_initialize()
 	}
 
 	// New PPU cache location
-	_main->cache = fmt::format("%sdata/%s/ppu-%s-%s/", fs::get_config_dir(), Emu.GetTitleID(), fmt::base57(_main->sha1), Emu.GetBoot().substr(Emu.GetBoot().find_last_of('/') + 1));
+	_main->cache = fs::get_config_dir() + "data/";
+
+	if (!Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
+	{
+		// TODO
+		_main->cache += Emu.GetTitleID();
+		_main->cache += '/';
+	}
+
+	fmt::append(_main->cache, "ppu-%s-%s/", fmt::base57(_main->sha1), _main->path.substr(_main->path.find_last_of('/') + 1));
 
 	if (!fs::create_path(_main->cache))
 	{
 		fmt::throw_exception("Failed to create cache directory: %s (%s)", _main->cache, fs::g_tls_error);
 	}
-
-	// Initialize SPU cache
-	spu_cache::initialize();
 
 	if (Emu.IsStopped())
 	{
@@ -1248,6 +1254,9 @@ extern void ppu_initialize()
 	{
 		ppu_initialize(*ptr);
 	}
+
+	// Initialize SPU cache
+	spu_cache::initialize();
 }
 
 extern void ppu_initialize(const ppu_module& info)
@@ -1293,13 +1302,14 @@ extern void ppu_initialize(const ppu_module& info)
 			{ "__stdcx", (u64)&ppu_stdcx },
 			{ "__vexptefp", (u64)&sse_exp2_ps },
 			{ "__vlogefp", (u64)&sse_log2_ps },
-			{ "__vperm", s_use_ssse3 ? (u64)&sse_altivec_vperm : (u64)&sse_altivec_vperm_v0 },
+			{ "__vperm", s_use_ssse3 ? (u64)&sse_altivec_vperm : (u64)&sse_altivec_vperm_v0 }, // Obsolete
 			{ "__lvsl", (u64)&sse_altivec_lvsl },
 			{ "__lvsr", (u64)&sse_altivec_lvsr },
 			{ "__lvlx", s_use_ssse3 ? (u64)&sse_cellbe_lvlx : (u64)&sse_cellbe_lvlx_v0 },
 			{ "__lvrx", s_use_ssse3 ? (u64)&sse_cellbe_lvrx : (u64)&sse_cellbe_lvrx_v0 },
 			{ "__stvlx", s_use_ssse3 ? (u64)&sse_cellbe_stvlx : (u64)&sse_cellbe_stvlx_v0 },
 			{ "__stvrx", s_use_ssse3 ? (u64)&sse_cellbe_stvrx : (u64)&sse_cellbe_stvrx_v0 },
+			{ "__resupdate", (u64)&vm::reservation_update },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
@@ -1675,7 +1685,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
 
 	// Initialize translator
-	PPUTranslator translator(jit.get_context(), module.get(), module_part);
+	PPUTranslator translator(jit.get_context(), module.get(), module_part, jit.has_ssse3());
 
 	// Define some types
 	const auto _void = Type::getVoidTy(jit.get_context());

@@ -308,6 +308,83 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 	}
 };
 
+// Simple memory manager
+struct MemoryManager2 : llvm::RTDyldMemoryManager
+{
+	// Reserve 2 GiB
+	void* const m_memory = utils::memory_reserve(0x80000000);
+
+	u8* const m_code = static_cast<u8*>(m_memory) + 0x00000000;
+	u8* const m_data = static_cast<u8*>(m_memory) + 0x40000000;
+
+	u64 m_code_pos = 0;
+	u64 m_data_pos = 0;
+
+	MemoryManager2() = default;
+
+	~MemoryManager2() override
+	{
+		utils::memory_release(m_memory, 0x80000000);
+	}
+
+	u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
+	{
+		// Simple allocation
+		const u64 old = m_code_pos;
+		const u64 pos = ::align(m_code_pos, align);
+		m_code_pos = ::align(pos + size, align);
+
+		if (m_code_pos > 0x40000000)
+		{
+			LOG_FATAL(GENERAL, "LLVM: Out of code memory (size=0x%x, align=0x%x)", size, align);
+			return nullptr;
+		}
+
+		const u64 olda = ::align(old, 0x10000);
+		const u64 newa = ::align(m_code_pos, 0x10000);
+
+		if (olda != newa)
+		{
+			// Commit more memory
+			utils::memory_commit(m_code + olda, newa - olda, utils::protection::wx);
+		}
+
+		LOG_NOTICE(GENERAL, "LLVM: Code section %u '%s' allocated -> %p (size=0x%x, align=0x%x)", sec_id, sec_name.data(), m_code + pos, size, align);
+		return m_code + pos;
+	}
+
+	u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
+	{
+		// Simple allocation
+		const u64 old = m_data_pos;
+		const u64 pos = ::align(m_data_pos, align);
+		m_data_pos = ::align(pos + size, align);
+
+		if (m_data_pos > 0x40000000)
+		{
+			LOG_FATAL(GENERAL, "LLVM: Out of data memory (size=0x%x, align=0x%x)", size, align);
+			return nullptr;
+		}
+
+		const u64 olda = ::align(old, 0x10000);
+		const u64 newa = ::align(m_data_pos, 0x10000);
+
+		if (olda != newa)
+		{
+			// Commit more memory
+			utils::memory_commit(m_data + olda, newa - olda);
+		}
+
+		LOG_NOTICE(GENERAL, "LLVM: Data section %u '%s' allocated -> %p (size=0x%x, align=0x%x, %s)", sec_id, sec_name.data(), m_data + pos, size, align, is_ro ? "ro" : "rw");
+		return m_data + pos;
+	}
+
+	bool finalizeMemory(std::string* = nullptr) override
+	{
+		return false;
+	}
+};
+
 // Helper class
 struct EventListener : llvm::JITEventListener
 {
@@ -383,7 +460,7 @@ public:
 		std::string name = m_path;
 		name.append(module->getName());
 		fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
-		LOG_SUCCESS(GENERAL, "LLVM: Created module: %s", module->getName().data());
+		LOG_NOTICE(GENERAL, "LLVM: Created module: %s", module->getName().data());
 	}
 
 	static std::unique_ptr<llvm::MemoryBuffer> load(const std::string& path)
@@ -405,7 +482,7 @@ public:
 
 		if (auto buf = load(path))
 		{
-			LOG_SUCCESS(GENERAL, "LLVM: Loaded module: %s", module->getName().data());
+			LOG_NOTICE(GENERAL, "LLVM: Loaded module: %s", module->getName().data());
 			return buf;
 		}
 
@@ -464,6 +541,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null_", m_context))
 			.setErrorStr(&result)
 			.setEngineKind(llvm::EngineKind::JIT)
+			.setMCJITMemoryManager(std::make_unique<MemoryManager2>())
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
 			.setCodeModel(large ? llvm::CodeModel::Large : llvm::CodeModel::Small)
 			.setMCPU(m_cpu)

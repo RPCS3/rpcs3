@@ -19,6 +19,9 @@ class spu_runtime
 	// All dispatchers
 	std::array<atomic_t<spu_function_t>, 0x10000> m_dispatcher;
 
+	// Debug module output location
+	std::string m_cache_path;
+
 	friend class spu_recompiler;
 
 public:

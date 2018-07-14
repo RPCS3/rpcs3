@@ -86,12 +86,12 @@ fs::file tar_object::get_file(std::string path)
 				largest_offset = offset;
 			}
 		}
-		
+
 		return fs::file();
 	}
 }
 
-bool tar_object::extract(std::string path)
+bool tar_object::extract(std::string path, std::string ignore)
 {
 	if (!m_file) return false;
 
@@ -99,25 +99,32 @@ bool tar_object::extract(std::string path)
 	for (auto iter : m_map)
 	{
 		TARHeader header = read_header(iter.second);
-		if (std::string(header.name).empty()) continue;
+		if (!header.name[0]) continue;
+
+		std::string result = path + header.name;
+
+		if (result.compare(path.size(), ignore.size(), ignore) == 0)
+		{
+			result.erase(path.size(), ignore.size());
+		}
 
 		switch (header.filetype)
 		{
 		case '0':
 		{
-			fs::file file(path + header.name, fs::rewrite);
+			fs::file file(result, fs::rewrite);
 			file.write(get_file(header.name).to_vector<u8>());
 			break;
 		}
-			
+
 		case '5':
 		{
-			fs::create_dir(path + header.name);
+			fs::create_dir(result);
 			break;
 		}
 
 		default:
-			LOG_ERROR(GENERAL,"Tar loader: unknown file type: %c", header.filetype);
+			LOG_ERROR(GENERAL, "TAR Loader: unknown file type: 0x%x", header.filetype);
 			return false;
 		}
 	}

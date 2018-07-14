@@ -633,6 +633,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* removeConfig = myMenu.addAction(tr("&Remove Custom Configuration"));
 	QAction* deleteShadersCache = myMenu.addAction(tr("&Delete Shaders Cache"));
 	QAction* deleteLLVMCache = myMenu.addAction(tr("&Delete LLVM Cache"));
+	QAction* deleteSPUCache = myMenu.addAction(tr("&Delete SPU Cache"));
 	myMenu.addSeparator();
 	QAction* openGameFolder = myMenu.addAction(tr("&Open Install Folder"));
 	QAction* openConfig = myMenu.addAction(tr("&Open Config Folder"));
@@ -695,6 +696,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			{
 				DeleteShadersCache(config_base_dir);
 				DeleteLLVMCache(config_base_dir);
+				DeleteSPUCache(config_base_dir);
 				RemoveCustomConfiguration(config_base_dir);
 			}
 			fs::remove_all(currGame.path);
@@ -724,6 +726,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(deleteLLVMCache, &QAction::triggered, [=]()
 	{
 		DeleteLLVMCache(config_base_dir, true);
+	});
+	connect(deleteSPUCache, &QAction::triggered, [=]()
+	{
+		DeleteSPUCache(config_base_dir, true);
 	});
 	connect(openGameFolder, &QAction::triggered, [=]()
 	{
@@ -796,6 +802,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	{
 		deleteShadersCache->setEnabled(false);
 		deleteLLVMCache->setEnabled(false);
+		deleteSPUCache->setEnabled(false);
 	}
 
 	myMenu.exec(globalPos);
@@ -832,17 +839,18 @@ bool game_list_frame::DeleteShadersCache(const std::string& base_dir, bool is_in
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete shaders cache?")) != QMessageBox::Yes)
 		return false;
 
-	fs::dir root = fs::dir(base_dir);
-	fs::dir_entry tmp;
-
-	while (root.read(tmp))
+	QDirIterator dir_iter(qstr(base_dir), QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	while (dir_iter.hasNext())
 	{
-		if (!fs::is_dir(base_dir + "/" + tmp.name))
-			continue;
+		const QString filepath = dir_iter.next();
 
-		const std::string shader_cache_name = base_dir + "/" + tmp.name + "/shaders_cache";
-		if (fs::is_dir(shader_cache_name))
-			fs::remove_all(shader_cache_name, true);
+		if (dir_iter.fileName() == "shaders_cache")
+		{
+			if (QDir(filepath).removeRecursively())
+				LOG_NOTICE(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
+			else
+				LOG_WARNING(GENERAL, "Could not remove shaders cache file: %s", sstr(filepath));
+		}
 	}
 
 	LOG_SUCCESS(GENERAL, "Removed shaders cache in %s", base_dir);
@@ -857,46 +865,74 @@ bool game_list_frame::DeleteLLVMCache(const std::string& base_dir, bool is_inter
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete LLVM cache?")) != QMessageBox::Yes)
 		return false;
 
-	for (auto&& subdir : fs::dir{ base_dir })
+	QDirIterator dir_iter(qstr(base_dir), QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	while (dir_iter.hasNext())
 	{
-		if (!subdir.is_directory || subdir.name == "." || subdir.name == "..")
-			continue;
+		const QString filepath = dir_iter.next();
 
-		const std::string dir = base_dir + "/" + subdir.name;
-
-		for (auto&& entry : fs::dir{ dir })
+		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".obj", Qt::CaseInsensitive))
 		{
-			if (entry.name.size() >= 4 && entry.name.compare(entry.name.size() - 4, 4, ".obj", 4) == 0)
-				fs::remove_file(dir + "/" + entry.name);
+			if (QFile::remove(filepath))
+				LOG_NOTICE(GENERAL, "Removed LLVM cache file: %s", sstr(filepath));
+			else
+				LOG_WARNING(GENERAL, "Could not remove LLVM cache file: %s", sstr(filepath));
 		}
 	}
 
-	LOG_SUCCESS(GENERAL, "Removed llvm cache in %s", base_dir);
+	LOG_SUCCESS(GENERAL, "Removed LLVM cache in %s", base_dir);
 	return true;
 }
 
-QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paintConfigIcon)
+bool game_list_frame::DeleteSPUCache(const std::string& base_dir, bool is_interactive)
 {
-	QImage scaled = QImage(m_Icon_Size, QImage::Format_ARGB32);
-	scaled.fill(m_Icon_Color);
+	if (!fs::is_dir(base_dir))
+		return false;
 
-	QPainter painter(&scaled);
+	if (is_interactive && QMessageBox::question(this, tr("Confirm Delete"), tr("Delete SPU cache?")) != QMessageBox::Yes)
+		return false;
+
+	QDirIterator dir_iter(qstr(base_dir), QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	while (dir_iter.hasNext())
+	{
+		const QString filepath = dir_iter.next();
+
+		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".dat", Qt::CaseInsensitive))
+		{
+			if (QFile::remove(filepath))
+				LOG_NOTICE(GENERAL, "Removed SPU cache file: %s", sstr(filepath));
+			else
+				LOG_WARNING(GENERAL, "Could not remove SPU cache file: %s", sstr(filepath));
+		}
+	}
+
+	LOG_SUCCESS(GENERAL, "Removed SPU cache in %s", base_dir);
+	return true;
+}
+
+QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon)
+{
+	const QSize original_size = img.size();
+
+	QImage image = QImage(original_size, QImage::Format_ARGB32);
+	image.fill(m_Icon_Color);
+
+	QPainter painter(&image);
 
 	if (!img.isNull())
 	{
-		painter.drawImage(QPoint(0, 0), img.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+		painter.drawImage(QPoint(0, 0), img);
 	}
 
-	if (paintConfigIcon && !m_isListLayout)
+	if (paint_config_icon && !m_isListLayout)
 	{
-		int width = m_Icon_Size.width() * 0.2;
-		QPoint origin = QPoint(m_Icon_Size.width() - width, 0);
-		painter.drawImage(origin, QImage(":/Icons/cog_gray.png").scaled(QSize(width, width), Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+		const int width = original_size.width() * 0.2;
+		const QPoint origin = QPoint(original_size.width() - width, 0);
+		painter.drawImage(origin, QImage(":/Icons/custom_config_2.png").scaled(QSize(width, width), Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 	}
 
 	painter.end();
 
-	return QPixmap::fromImage(scaled);
+	return QPixmap::fromImage(image.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 }
 
 void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled)
@@ -918,7 +954,7 @@ void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled)
 	}
 	else if (enabled)
 	{
-		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/cog_black.png"));
+		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/custom_config.png"));
 	}
 	else
 	{
@@ -1116,7 +1152,7 @@ int game_list_frame::PopulateGameList()
 		custom_table_widget_item* title_item = new custom_table_widget_item(game->info.name);
 		if (game->hasCustomConfig)
 		{
-			title_item->setIcon(QIcon(":/Icons/cog_black.png"));
+			title_item->setIcon(QIcon(":/Icons/custom_config.png"));
 		}
 
 		// Serial

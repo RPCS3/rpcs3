@@ -55,6 +55,11 @@ namespace rsx
 				vec4(x, y, z, w);
 			}
 
+			vertex(int x, int y, int z, int w)
+			{
+				vec4((f32)x, (f32)y, (f32)z, (f32)w);
+			}
+
 			float& operator[](int index)
 			{
 				return values[index];
@@ -140,11 +145,11 @@ namespace rsx
 				fallback_fonts.push_back("/usr/share/fonts/TTF/DejaVuSans.ttf"); //arch
 #endif
 				//Search dev_flash for the font too
-				font_dirs.push_back(Emu.GetEmuDir() + "dev_flash/data/font/");
-				font_dirs.push_back(Emu.GetEmuDir() + "dev_flash/data/font/SONY-CC/");
+				font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/");
+				font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SONY-CC/");
 
 				//Attempt to load a font from dev_flash as a last resort
-				fallback_fonts.push_back(Emu.GetEmuDir() + "dev_flash/data/font/SCE-PS3-VR-R-LATIN.TTF");
+				fallback_fonts.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SCE-PS3-VR-R-LATIN.TTF");
 
 				//Attemt to load requested font
 				std::string file_path;
@@ -675,13 +680,13 @@ namespace rsx
 			compiled_resource compiled_resources;
 			bool is_compiled = false;
 
-			f32 padding_left = 0.f;
-			f32 padding_right = 0.f;
-			f32 padding_top = 0.f;
-			f32 padding_bottom = 0.f;
+			u16 padding_left = 0;
+			u16 padding_right = 0;
+			u16 padding_top = 0;
+			u16 padding_bottom = 0;
 
-			f32 margin_left = 0.f;
-			f32 margin_top = 0.f;
+			u16 margin_left = 0;
+			u16 margin_top = 0;
 
 			overlay_element() {}
 			overlay_element(u16 _w, u16 _h) : w(_w), h(_h) {}
@@ -731,7 +736,7 @@ namespace rsx
 				is_compiled = false;
 			}
 
-			virtual void set_padding(f32 left, f32 right, f32 top, f32 bottom)
+			virtual void set_padding(u16 left, u16 right, u16 top, u16 bottom)
 			{
 				padding_left = left;
 				padding_right = right;
@@ -741,14 +746,14 @@ namespace rsx
 				is_compiled = false;
 			}
 
-			virtual void set_padding(f32 padding)
+			virtual void set_padding(u16 padding)
 			{
 				padding_left = padding_right = padding_top = padding_bottom = padding;
 				is_compiled = false;
 			}
 
 			// NOTE: Functions as a simple position offset. Top left corner is the anchor.
-			virtual void set_margin(f32 left, f32 top)
+			virtual void set_margin(u16 left, u16 top)
 			{
 				margin_left = left;
 				margin_top = top;
@@ -756,7 +761,7 @@ namespace rsx
 				is_compiled = false;
 			}
 
-			virtual void set_margin(f32 margin)
+			virtual void set_margin(u16 margin)
 			{
 				margin_left = margin_top = margin;
 				is_compiled = false;
@@ -885,9 +890,9 @@ namespace rsx
 					verts.resize(4);
 
 					verts[0].vec4(x, y, 0.f, 0.f);
-					verts[1].vec4(x + w, y, 1.f, 0.f);
-					verts[2].vec4(x, y + h, 0.f, 1.f);
-					verts[3].vec4(x + w, y + h, 1.f, 1.f);
+					verts[1].vec4(f32(x + w), y, 1.f, 0.f);
+					verts[2].vec4(x, f32(y + h), 0.f, 1.f);
+					verts[3].vec4(f32(x + w), f32(y + h), 1.f, 1.f);
 
 					compiled_resources.add(std::move(compiled_resources_temp), margin_left, margin_top);
 

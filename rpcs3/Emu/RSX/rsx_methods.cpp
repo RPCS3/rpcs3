@@ -72,7 +72,7 @@ namespace rsx
 			while (vm::read32(addr) != arg)
 			{
 				// todo: LLE: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
-				if (addr == 0x40000030)
+				if (addr == get_current_renderer()->ctxt_addr + 0x30)
 					return;
 
 				if (Emu.IsStopped())
@@ -340,9 +340,11 @@ namespace rsx
 				static constexpr u32 reg = index / 4;
 				static constexpr u8 subreg = index % 4;
 
-				u32 load = rsx::method_registers.transform_constant_load();
-				if ((load + index) >= 512)
+				const u32 load = rsx::method_registers.transform_constant_load();
+				const u32 address = load + reg;
+				if (address >= 468)
 				{
+					// Ignore addresses outside the usable [0, 467] range
 					LOG_ERROR(RSX, "Invalid transform register index (load=%d, index=%d)", load, index);
 					return;
 				}
@@ -538,7 +540,7 @@ namespace rsx
 			rsx->sync();
 		}
 
-		void invalidate_L2(thread* rsx, u32, u32)
+		void set_shader_program_dirty(thread* rsx, u32, u32)
 		{
 			rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
 		}
@@ -561,7 +563,11 @@ namespace rsx
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				rsx->m_textures_dirty[index] = true;
-				rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
+
+				if (rsx->current_fp_metadata.referenced_textures_mask & (1 << index))
+				{
+					rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
+				}
 			}
 		};
 
@@ -571,6 +577,11 @@ namespace rsx
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
 				rsx->m_vertex_textures_dirty[index] = true;
+
+				if (rsx->current_vp_metadata.referenced_textures_mask & (1 << index))
+				{
+					rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
+				}
 			}
 		};
 	}
@@ -582,12 +593,58 @@ namespace rsx
 		{
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
-				u16 x = method_registers.nv308a_x();
-				u16 y = method_registers.nv308a_y();
+				if (index >= method_registers.nv308a_size_out_x())
+				{
+					// Skip
+					return;
+				}
 
-				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x << 2);
-				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + index * 4, method_registers.blit_engine_output_location_nv3062());
-				vm::write32(address, arg);
+				u32 color = arg;
+				u32 write_len = 4;
+				switch (method_registers.blit_engine_nv3062_color_format())
+				{
+				case blit_engine::transfer_destination_format::a8r8g8b8:
+				case blit_engine::transfer_destination_format::y32:
+				{
+					// Bit cast
+					break;
+				}
+				case blit_engine::transfer_destination_format::r5g6b5:
+				{
+					// Input is considered to be ARGB8
+					u32 r = (arg >> 16) & 0xFF;
+					u32 g = (arg >> 8) & 0xFF;
+					u32 b = arg & 0xFF;
+
+					r = u32(r * 32 / 255.f);
+					g = u32(g * 64 / 255.f);
+					b = u32(b * 32 / 255.f);
+					color = (r << 11) | (g << 5) | b;
+					write_len = 2;
+					break;
+				}
+				default:
+				{
+					fmt::throw_exception("Unreachable" HERE);
+				}
+				}
+
+				const u16 x = method_registers.nv308a_x();
+				const u16 y = method_registers.nv308a_y();
+				const u32 pixel_offset = (method_registers.blit_engine_output_pitch_nv3062() * y) + (x * write_len);
+				u32 address = get_address(method_registers.blit_engine_output_offset_nv3062() + pixel_offset + (index * write_len), method_registers.blit_engine_output_location_nv3062());
+
+				switch (write_len)
+				{
+				case 4:
+					vm::write32(address, color);
+					break;
+				case 2:
+					vm::write16(address, (u16)(color));
+					break;
+				default:
+					fmt::throw_exception("Unreachable" HERE);
+				}
 
 				rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
 			}
@@ -691,15 +748,6 @@ namespace rsx
 			const u32 in_bpp = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
 			const u32 out_bpp = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? 2 : 4;
 
-			const u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
-			const s32 out_offset = out_x * out_bpp + out_pitch * out_y;
-
-			const tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);
-			const tiled_region dst_region = rsx->get_tiled_address(dst_offset + out_offset, dst_dma & 0xf);
-
-			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
-			u8* pixels_dst = vm::_ptr<u8>(get_address(dst_offset + out_offset, dst_dma));
-
 			if (out_pitch == 0)
 			{
 				out_pitch = out_bpp * out_w;
@@ -709,6 +757,15 @@ namespace rsx
 			{
 				in_pitch = in_bpp * in_w;
 			}
+
+			const u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
+			const s32 out_offset = out_x * out_bpp + out_pitch * out_y;
+
+			const tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);
+			const tiled_region dst_region = rsx->get_tiled_address(dst_offset + out_offset, dst_dma & 0xf);
+
+			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
+			u8* pixels_dst = vm::_ptr<u8>(get_address(dst_offset + out_offset, dst_dma));
 
 			const auto read_address = get_address(src_offset, src_dma);
 			rsx->read_barrier(read_address, in_pitch * in_h);
@@ -940,13 +997,13 @@ namespace rsx
 				switch (out_bpp)
 				{
 				case 1:
-					convert_linear_swizzle<u8>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
+					convert_linear_swizzle<u8>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch, false);
 					break;
 				case 2:
-					convert_linear_swizzle<u16>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
+					convert_linear_swizzle<u16>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch, false);
 					break;
 				case 4:
-					convert_linear_swizzle<u32>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
+					convert_linear_swizzle<u32>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch, false);
 					break;
 				}
 
@@ -1711,7 +1768,7 @@ namespace rsx
 		bind_range<NV4097_SET_TEXTURE_ADDRESS, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_CONTROL0, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_CONTROL1, 8, 16, nv4097::set_texture_dirty_bit>();
-		bind_range<NV4097_SET_TEXTURE_CONTROL2, 8, 16, nv4097::set_texture_dirty_bit>();
+		bind_range<NV4097_SET_TEXTURE_CONTROL2, 1, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_CONTROL3, 1, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_FILTER, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_IMAGE_RECT, 8, 16, nv4097::set_texture_dirty_bit>();
@@ -1736,7 +1793,8 @@ namespace rsx
 		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
 		bind<NV4097_ZCULL_SYNC, nv4097::sync>();
 		bind<NV4097_SET_CONTEXT_DMA_REPORT, nv4097::sync>();
-		bind<NV4097_INVALIDATE_L2, nv4097::invalidate_L2>();
+		bind<NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty>();
+		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start>();
 		bind<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask>();
 

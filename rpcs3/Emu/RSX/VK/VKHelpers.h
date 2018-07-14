@@ -149,7 +149,8 @@ namespace vk
 	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range);
 	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image);
 
-	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask);
+	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length,
+			VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask);
 
 	//Manage 'uininterruptible' state where secondary operations (e.g violation handlers) will have to wait
 	void enter_uninterruptible();
@@ -471,11 +472,13 @@ namespace vk
 			//Currently we require:
 			//1. Anisotropic sampling
 			//2. DXT support
+			//3. Indexable storage buffers
 			VkPhysicalDeviceFeatures available_features;
 			vkGetPhysicalDeviceFeatures(*pgpu, &available_features);
 
 			available_features.samplerAnisotropy = VK_TRUE;
 			available_features.textureCompressionBC = VK_TRUE;
+			available_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 
 			VkDeviceCreateInfo device = {};
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

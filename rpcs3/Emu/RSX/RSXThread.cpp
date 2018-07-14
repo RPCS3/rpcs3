@@ -62,7 +62,7 @@ namespace rsx
 		}
 
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL:
-			return 0x40301400 + offset;
+			return get_current_renderer()->label_addr + 0x1400 + offset;
 
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
 		{
@@ -82,13 +82,13 @@ namespace rsx
 
 		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW:
 		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R:
-			return 0x40300000 + offset;
+			return get_current_renderer()->label_addr + offset;
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
-			return 0x40000000 + offset;
+			return get_current_renderer()->ctxt_addr + offset;
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_R:
-			return 0x40000000 + offset;
+			return get_current_renderer()->ctxt_addr + offset;
 
 		default:
 			fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
@@ -329,6 +329,9 @@ namespace rsx
 			capture::capture_draw_memory(this);
 
 		in_begin_end = false;
+
+		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
+		ROP_sync_timestamp = get_system_time();
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
@@ -573,30 +576,34 @@ namespace rsx
 				continue;
 			}
 
-			//Validate put and get registers
-			//TODO: Who should handle graphics exceptions??
-			const u32 get_address = RSXIOMem.RealAddr(internal_get);
-
-			if (!get_address)
+			// Validate put and get registers before reading the command
+			// TODO: Who should handle graphics exceptions??
+			u32 cmd;
 			{
-				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", internal_get.load(), put);
+				u32 get_address;
 
-				if (mem_faults_count >= 3)
+				if (!RSXIOMem.getRealAddr(internal_get, get_address))
 				{
-					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
-					internal_get = restore_point.load();;
-				}
-				else
-				{
-					mem_faults_count++;
-					std::this_thread::sleep_for(10ms);
+					LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", internal_get.load(), put);
+
+					if (mem_faults_count >= 3)
+					{
+						LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
+						internal_get = restore_point.load();
+					}
+					else
+					{
+						mem_faults_count++;
+						std::this_thread::sleep_for(10ms);
+					}
+
+					invalid_command_interrupt_raised = true;
+					continue;
 				}
 
-				invalid_command_interrupt_raised = true;
-				continue;
+				cmd = vm::read32(get_address);
 			}
 
-			const u32 cmd = ReadIO32(internal_get);
 			const u32 count = (cmd >> 18) & 0x7ff;
 
 			if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
@@ -822,15 +829,15 @@ namespace rsx
 					}
 					default:
 					{
-						//TODO: Reorder draw commands between synchronization events to maximize batched sizes
+						// TODO: Reorder draw commands between synchronization events to maximize batched sizes
 						static const std::pair<u32, u32> skippable_ranges[] =
 						{
-							//Texture configuration
+							// Texture configuration
 							{ NV4097_SET_TEXTURE_OFFSET, 8 * 16 },
 							{ NV4097_SET_TEXTURE_CONTROL2, 16 },
 							{ NV4097_SET_TEXTURE_CONTROL3, 16 },
 							{ NV4097_SET_VERTEX_TEXTURE_OFFSET, 8 * 4 },
-							//Surface configuration
+							// Surface configuration
 							{ NV4097_SET_SURFACE_CLIP_HORIZONTAL, 1 },
 							{ NV4097_SET_SURFACE_CLIP_VERTICAL, 1 },
 							{ NV4097_SET_SURFACE_COLOR_AOFFSET, 1 },
@@ -848,7 +855,11 @@ namespace rsx
 							{ NV4097_SET_SURFACE_PITCH_B, 1 },
 							{ NV4097_SET_SURFACE_PITCH_C, 1 },
 							{ NV4097_SET_SURFACE_PITCH_D, 1 },
-							{ NV4097_SET_SURFACE_PITCH_Z, 1 }
+							{ NV4097_SET_SURFACE_PITCH_Z, 1 },
+							// Program configuration
+							{ NV4097_SET_TRANSFORM_PROGRAM_START, 1 },
+							{ NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, 1 },
+							{ NV4097_SET_TRANSFORM_PROGRAM, 512 }
 						};
 
 						if (has_deferred_call)
@@ -1386,7 +1397,7 @@ namespace rsx
 		return rsx::get_address(offset_zeta, m_context_dma_z);
 	}
 
-	void thread::get_current_vertex_program()
+	void thread::get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors, bool skip_textures, bool skip_vertex_inputs)
 	{
 		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_dirty))
 			return;
@@ -1394,57 +1405,73 @@ namespace rsx
 		m_graphics_state &= ~(rsx::pipeline_state::vertex_program_dirty);
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
-		current_vertex_program.skip_vertex_input_check = false;
+		current_vertex_program.skip_vertex_input_check = skip_vertex_inputs;
 
 		current_vertex_program.rsx_vertex_inputs.resize(0);
-		current_vertex_program.data.resize((512 - transform_program_start) * 4);
+		current_vertex_program.data.reserve(512 * 4);
+		current_vertex_program.jump_table.clear();
+		current_vertex_program.texture_dimensions = 0;
 
-		u32* ucode_src = rsx::method_registers.transform_program.data() + (transform_program_start * 4);
-		u32* ucode_dst = current_vertex_program.data.data();
+		current_vp_metadata = program_hash_util::vertex_program_utils::analyse_vertex_program
+		(
+			method_registers.transform_program.data(),  // Input raw block
+			transform_program_start,                    // Address of entry point
+			current_vertex_program                      // [out] Program object
+		);
 
-		memcpy(ucode_dst, ucode_src, current_vertex_program.data.size() * sizeof(u32));
-
-		current_vp_metadata = program_hash_util::vertex_program_utils::analyse_vertex_program(current_vertex_program.data);
-		current_vertex_program.data.resize(current_vp_metadata.ucode_size);
-
-		const u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
-		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
-
-		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		if (!skip_textures && current_vp_metadata.referenced_textures_mask != 0)
 		{
-			bool enabled = !!(input_mask & (1 << index));
-			if (!enabled)
-				continue;
+			for (u32 i = 0; i < rsx::limits::vertex_textures_count; ++i)
+			{
+				const auto &tex = rsx::method_registers.vertex_textures[i];
+				if (tex.enabled() && (current_vp_metadata.referenced_textures_mask & (1 << i)))
+				{
+					current_vertex_program.texture_dimensions |= ((u32)sampler_descriptors[i]->image_type << (i << 1));
+				}
+			}
+		}
 
-			if (rsx::method_registers.vertex_arrays_info[index].size() > 0)
+		if (!skip_vertex_inputs)
+		{
+			const u32 input_mask = rsx::method_registers.vertex_attrib_input_mask();
+			const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
+
+			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 			{
-				current_vertex_program.rsx_vertex_inputs.push_back(
-					{index,
-						rsx::method_registers.vertex_arrays_info[index].size(),
-						rsx::method_registers.vertex_arrays_info[index].frequency(),
-						!!((modulo_mask >> index) & 0x1),
-						true,
-						is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
-			}
-			else if (vertex_push_buffers[index].vertex_count > 1)
-			{
-				current_vertex_program.rsx_vertex_inputs.push_back(
-				{ index,
-					rsx::method_registers.register_vertex_info[index].size,
-					1,
-					false,
-					true,
-					is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
-			}
-			else if (rsx::method_registers.register_vertex_info[index].size > 0)
-			{
-				current_vertex_program.rsx_vertex_inputs.push_back(
-					{index,
-						rsx::method_registers.register_vertex_info[index].size,
-						rsx::method_registers.register_vertex_info[index].frequency,
-						!!((modulo_mask >> index) & 0x1),
-						false,
-						is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0});
+				bool enabled = !!(input_mask & (1 << index));
+				if (!enabled)
+					continue;
+
+				if (rsx::method_registers.vertex_arrays_info[index].size() > 0)
+				{
+					current_vertex_program.rsx_vertex_inputs.push_back(
+						{ index,
+							rsx::method_registers.vertex_arrays_info[index].size(),
+							rsx::method_registers.vertex_arrays_info[index].frequency(),
+							!!((modulo_mask >> index) & 0x1),
+							true,
+							is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
+				}
+				else if (vertex_push_buffers[index].vertex_count > 1)
+				{
+					current_vertex_program.rsx_vertex_inputs.push_back(
+						{ index,
+							rsx::method_registers.register_vertex_info[index].size,
+							1,
+							false,
+							true,
+							is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
+				}
+				else if (rsx::method_registers.register_vertex_info[index].size > 0)
+				{
+					current_vertex_program.rsx_vertex_inputs.push_back(
+						{ index,
+							rsx::method_registers.register_vertex_info[index].size,
+							rsx::method_registers.register_vertex_info[index].frequency,
+							!!((modulo_mask >> index) & 0x1),
+							false,
+							is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
+				}
 			}
 		}
 	}
@@ -1666,6 +1693,11 @@ namespace rsx
 				{
 					switch (format)
 					{
+					case CELL_GCM_TEXTURE_X16:
+					{
+						// NOP, a simple way to quickly read DEPTH16 data without shadow comparison
+						break;
+					}
 					case CELL_GCM_TEXTURE_A8R8G8B8:
 					case CELL_GCM_TEXTURE_D8R8G8B8:
 					case CELL_GCM_TEXTURE_A4R4G4B4: //TODO

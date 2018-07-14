@@ -214,6 +214,7 @@ private Q_SLOTS:
 	bool RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive = false);
 	bool DeleteShadersCache(const std::string& base_dir, bool is_interactive = false);
 	bool DeleteLLVMCache(const std::string& base_dir, bool is_interactive = false);
+	bool DeleteSPUCache(const std::string& base_dir, bool is_interactive = false);
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void doubleClickedSlot(QTableWidgetItem *item);
@@ -227,7 +228,7 @@ protected:
 	void resizeEvent(QResizeEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
-	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
+	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false);
 	void ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const game_info& game);

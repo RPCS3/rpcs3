@@ -1363,7 +1363,7 @@ bool ppu_interpreter::VMULOUH(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VNMSUBFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_sub_ps(ppu.vr[op.vb].vf, _mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf));
+	ppu.vr[op.vd].vf = _mm_xor_ps(_mm_sub_ps(_mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf), ppu.vr[op.vb].vf), _mm_set1_ps(-0.0f));
 	return true;
 }
 
@@ -4405,7 +4405,15 @@ bool ppu_interpreter::LBZU(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::STW(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	vm::write32(vm::cast(addr, HERE), (u32)ppu.gpr[op.rs]);
+	const u32 value = (u32)ppu.gpr[op.rs];
+	vm::write32(vm::cast(addr, HERE), value);
+
+	//Insomniac engine v3 & v4 (newer R&C, Fuse, Resitance 3)
+	if (UNLIKELY(value == 0xAAAAAAAA))
+	{
+		vm::reservation_update(addr, 128);
+	}
+
 	return true;
 }
 
@@ -4652,7 +4660,7 @@ bool ppu_interpreter::FMSUBS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FNMSUBS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc]) + ppu.fpr[op.frb]);
+	ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
@@ -4805,7 +4813,7 @@ bool ppu_interpreter::FMADD(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FNMSUB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.fpr[op.frd] = -(ppu.fpr[op.fra] * ppu.fpr[op.frc]) + ppu.fpr[op.frb];
+	ppu.fpr[op.frd] = -(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]);
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }

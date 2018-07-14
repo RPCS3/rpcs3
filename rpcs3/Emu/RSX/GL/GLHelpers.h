@@ -1469,6 +1469,8 @@ namespace gl
 		GLuint m_height = 0;
 		GLuint m_depth = 0;
 		GLuint m_mipmaps = 0;
+		GLuint m_pitch = 0;
+		GLuint m_compressed = GL_FALSE;
 
 		target m_target = target::texture2D;
 		internal_format m_internal_format = internal_format::rgba8;
@@ -1553,6 +1555,49 @@ namespace gl
 				m_height = height;
 				m_depth = depth;
 				m_mipmaps = mipmaps;
+
+				GLenum query_target = (target == GL_TEXTURE_CUBE_MAP) ? GL_TEXTURE_CUBE_MAP_POSITIVE_X : target;
+				glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_COMPRESSED, (GLint*)&m_compressed);
+
+				if (m_compressed)
+				{
+					GLint compressed_size;
+					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &compressed_size);
+					m_pitch = compressed_size / height;
+				}
+				else
+				{
+					switch (sized_format)
+					{
+					case GL_DEPTH_COMPONENT16:
+					{
+						m_pitch = width * 2;
+						break;
+					}
+					case GL_DEPTH24_STENCIL8:
+					case GL_DEPTH32F_STENCIL8:
+					{
+						m_pitch = width * 4;
+						break;
+					}
+					default:
+					{
+						GLint r, g, b, a;
+						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_RED_SIZE, &r);
+						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_GREEN_SIZE, &g);
+						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_BLUE_SIZE, &b);
+						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_ALPHA_SIZE, &a);
+
+						m_pitch = width * (r + g + b + a) / 8;
+						break;
+					}
+					}
+
+					if (!m_pitch)
+					{
+						fmt::throw_exception("Unhandled GL format 0x%X" HERE, sized_format);
+					}
+				}
 			}
 
 			m_target = static_cast<texture::target>(target);
@@ -1620,6 +1665,16 @@ namespace gl
 		GLuint levels() const
 		{
 			return m_mipmaps;
+		}
+
+		GLuint pitch() const
+		{
+			return m_pitch;
+		}
+
+		GLboolean compressed() const
+		{
+			return m_compressed;
 		}
 
 		sizei size2D() const
@@ -2241,7 +2296,6 @@ namespace gl
 						break;
 					}
 
-					fs::create_path(fs::get_config_dir() + "/shaderlog");
 					fs::file(fs::get_config_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str);
 				}
 

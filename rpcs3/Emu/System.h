@@ -286,9 +286,10 @@ public:
 	bool BootRsxCapture(const std::string& path);
 	bool InstallPkg(const std::string& path);
 
+private:
 	static std::string GetEmuDir();
+public:
 	static std::string GetHddDir();
-	static std::string GetLibDir();
 
 	void SetForceBoot(bool force_boot);
 
@@ -336,7 +337,7 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 16> spu_delay_penalty{this, "SPU delay penalty", 3}; //Number of milliseconds to block a thread if a virtual 'core' isn't free
 		cfg::_bool spu_loop_detection{this, "SPU loop detection", true}; //Try to detect wait loops and trigger thread yield
 		cfg::_bool spu_shared_runtime{this, "SPU Shared Runtime", true}; // Share compiled SPU functions between all threads
-		cfg::_enum<spu_block_size_type> spu_block_size{this, "SPU Block Size"};
+		cfg::_enum<spu_block_size_type> spu_block_size{this, "SPU Block Size", spu_block_size_type::safe};
 		cfg::_bool spu_accurate_getllar{this, "Accurate GETLLAR", false};
 		cfg::_bool spu_accurate_putlluc{this, "Accurate PUTLLUC", false};
 		cfg::_bool spu_verification{this, "SPU Verification", true}; // Should be enabled
@@ -353,13 +354,20 @@ struct cfg_root : cfg::node
 	{
 		node_vfs(cfg::node* _this) : cfg::node(_this, "VFS") {}
 
+		std::string get(const cfg::string&, const char*) const;
+
 		cfg::string emulator_dir{this, "$(EmulatorDir)"}; // Default (empty): taken from fs::get_config_dir()
 		cfg::string dev_hdd0{this, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/"};
 		cfg::string dev_hdd1{this, "/dev_hdd1/", "$(EmulatorDir)dev_hdd1/"};
-		cfg::string dev_flash{this, "/dev_flash/", "$(EmulatorDir)dev_flash/"};
+		cfg::string dev_flash{this, "/dev_flash/"};
 		cfg::string dev_usb000{this, "/dev_usb000/", "$(EmulatorDir)dev_usb000/"};
 		cfg::string dev_bdvd{this, "/dev_bdvd/"}; // Not mounted
 		cfg::string app_home{this, "/app_home/"}; // Not mounted
+
+		std::string get_dev_flash() const
+		{
+			return get(dev_flash, "dev_flash/");
+		}
 
 		cfg::_bool host_root{this, "Enable /host_root/"};
 
