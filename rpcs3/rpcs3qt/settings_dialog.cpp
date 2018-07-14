@@ -500,6 +500,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings::DisableVertexCache);
 	SubscribeTooltip(ui->disableVertexCache, json_gpu_main["disableVertexCache"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->disableAsyncShaders, emu_settings::DisableAsyncShaderCompiler);
+	SubscribeTooltip(ui->disableAsyncShaders, json_gpu_main["disableAsyncShaders"].toString());
+
 	xemu_settings->EnhanceCheckBox(ui->scrictModeRendering, emu_settings::StrictRenderingMode);
 	SubscribeTooltip(ui->scrictModeRendering, json_gpu_main["scrictModeRendering"].toString());
 	connect(ui->scrictModeRendering, &QCheckBox::clicked, [=](bool checked)
@@ -938,7 +941,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			}
 			else
 			{
-				button->setIcon(gui::utils::get_colorized_icon(icon, iconColor, color));
+				button->setIcon(gui::utils::get_colorized_icon(icon, iconColor, color, true));
 			}
 			button->setText("");
 			button->setStyleSheet(styleSheet().append("text-align:left;"));
@@ -950,8 +953,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		auto AddColoredIcons = [=]()
 		{
 			addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(gui::gl_iconColor).value<QColor>());
-			addColoredIcon(ui->pb_tool_bar_color, xgui_settings->GetValue(gui::mw_toolBarColor).value<QColor>());
-			addColoredIcon(ui->pb_tool_icon_color, xgui_settings->GetValue(gui::mw_toolIconColor).value<QColor>(), QIcon(":/Icons/stop.png"), gui::mw_tool_icon_color);
 		};
 		AddColoredIcons();
 
@@ -960,8 +961,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		bool enableUIColors = xgui_settings->GetValue(gui::m_enableUIColors).toBool();
 		ui->cb_custom_colors->setChecked(enableUIColors);
 		ui->pb_gl_icon_color->setEnabled(enableUIColors);
-		ui->pb_tool_bar_color->setEnabled(enableUIColors);
-		ui->pb_tool_icon_color->setEnabled(enableUIColors);
 
 		auto ApplyGuiOptions = [&](bool reset = false)
 		{
@@ -1021,8 +1020,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		{
 			xgui_settings->SetValue(gui::m_enableUIColors, val);
 			ui->pb_gl_icon_color->setEnabled(val);
-			ui->pb_tool_bar_color->setEnabled(val);
-			ui->pb_tool_icon_color->setEnabled(val);
 			Q_EMIT GuiRepaintRequest();
 		});
 		auto colorDialog = [&](const gui_save& color, const QString& title, QPushButton *button)
@@ -1050,16 +1047,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]()
 		{
 			colorDialog(gui::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color);
-		});
-
-		connect(ui->pb_tool_bar_color, &QAbstractButton::clicked, [=]()
-		{
-			colorDialog(gui::mw_toolBarColor, tr("Choose tool bar color"), ui->pb_tool_bar_color);
-		});
-
-		connect(ui->pb_tool_icon_color, &QAbstractButton::clicked, [=]()
-		{
-			colorDialog(gui::mw_toolIconColor, tr("Choose tool icon color"), ui->pb_tool_icon_color);
 		});
 
 		AddConfigs();

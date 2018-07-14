@@ -15,6 +15,8 @@ extern bool user_asked_for_frame_capture;
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent)
 	: custom_dock_widget(tr("Debugger"), parent), xgui_settings(settings)
 {
+	setContentsMargins(0, 0, 0, 0);
+
 	m_update = new QTimer(this);
 	connect(m_update, &QTimer::timeout, this, &debugger_frame::UpdateUI);
 	EnableUpdateTimer(true);
@@ -23,8 +25,10 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	m_mono.setPointSize(10);
 
 	QVBoxLayout* vbox_p_main = new QVBoxLayout();
-	QHBoxLayout* hbox_b_main = new QHBoxLayout();
+	vbox_p_main->setContentsMargins(5, 5, 5, 5);
 
+	QHBoxLayout* hbox_b_main = new QHBoxLayout();
+	hbox_b_main->setContentsMargins(0, 0, 0, 0);
 
 	m_breakpoint_handler = new breakpoint_handler();
 	m_debugger_list = new debugger_list(this, settings, m_breakpoint_handler);

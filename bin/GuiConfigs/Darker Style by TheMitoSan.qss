@@ -198,7 +198,7 @@ QLabel#l_controller {
 }
 
 /* Game Grid Font */
-QLabel#gamegrid_font {
+QTableWidget#game_grid {
 	font-weight: 600;
 	font-size: 8pt;
 	font-family: Lucida Grande;
@@ -208,6 +208,17 @@ QLabel#gamegrid_font {
 /* Slider on toolbar */
 QWidget#sizeSliderContainer {
 	background: transparent;
+}
+
+QSlider#sizeSlider::groove:horizontal {
+	border: 0em solid transparent;
+	height: .3em;
+	background: #fff;
+}
+
+QSlider#sizeSlider::handle:horizontal {
+	width: 1em;
+	margin: -.8em 0;
 }
 
 /* Debug UI Settings buttons */
@@ -224,7 +235,6 @@ QLineEdit#mw_searchbar {
 /* Uniform colors in Toolbar */
 QToolButton {
 	background: transparent;
-	color: transparent;
 	border-radius: 0.125em;
 	padding: 0.09375em;
 	margin-left: 0.125em;

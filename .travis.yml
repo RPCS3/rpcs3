@@ -49,7 +49,7 @@ install:
     fi;
   # Download pre-compiled LLVM libs
   -  if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-        wget https://github.com/RPCS3/llvm/releases/download/continuous-linux-release_60/llvmlibs-linux.tar.gz;
+        wget https://github.com/RPCS3/llvm/releases/download/continuous-linux-master/llvmlibs-linux.tar.gz;
         mkdir llvmlibs;
         tar -xzf ./llvmlibs-linux.tar.gz -C llvmlibs;
      fi;
@@ -81,6 +81,7 @@ after_script:
       ./linuxdeployqt*.AppImage ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs ;
       rm ./appdir/usr/lib/libfreetype.so.6 ;
       rm ./appdir/usr/lib/libglapi.so.0 ;
+      rm ./appdir/usr/lib/libxcb* ;
       rm -r ./appdir/usr/share/doc ;
       rm -r ./appdir/usr/share/man ;
       rm -r ./appdir/usr/include ;

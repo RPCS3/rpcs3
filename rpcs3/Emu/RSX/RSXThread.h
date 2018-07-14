@@ -275,6 +275,7 @@ namespace rsx
 	class thread : public named_thread
 	{
 		std::shared_ptr<thread_ctrl> m_vblank_thread;
+		std::shared_ptr<thread_ctrl> m_decompiler_thread;
 
 	protected:
 		atomic_t<bool> m_rsx_thread_exiting{false};
@@ -362,6 +363,9 @@ namespace rsx
 		u32  m_graphics_state = 0;
 		u64  ROP_sync_timestamp = 0;
 
+		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
+		program_hash_util::vertex_program_utils::vertex_program_metadata current_vp_metadata = {};
+
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
@@ -374,10 +378,7 @@ namespace rsx
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
 
-		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
-		program_hash_util::vertex_program_utils::vertex_program_metadata current_vp_metadata = {};
-
-		void get_current_vertex_program();
+		void get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors, bool skip_textures = false, bool skip_vertex_inputs = true);
 
 		/**
 		 * Gets current fragment program and associated fragment state
@@ -423,6 +424,10 @@ namespace rsx
 		 * Execute a backend local task queue
 		 */
 		virtual void do_local_task(FIFO_state state);
+
+		virtual void on_decompiler_init() {}
+		virtual void on_decompiler_exit() {}
+		virtual bool on_decompiler_task() { return false; }
 
 	public:
 		virtual std::string get_name() const override;

@@ -32,6 +32,8 @@ namespace rsx
 			u16 virtual_width = 1280;
 			u16 virtual_height = 720;
 
+			u32 min_refresh_duration_us = 16600;
+
 			virtual ~overlay() = default;
 
 			virtual void update() {}
@@ -446,7 +448,7 @@ namespace rsx
 			void reset_titles();
 			void reset_text();
 
-			u32 get_text_opacity() const
+			f32 get_text_opacity() const
 			{
 				return std::clamp(m_opacity + 0.3f, 0.3f, 1.0f);
 			}
@@ -486,7 +488,7 @@ namespace rsx
 				{
 					std::unique_ptr<overlay_element> image = std::make_unique<image_view>();
 					image->set_size(160, 110);
-					image->set_padding(36.f, 36.f, 11.f, 11.f); //Square image, 88x88
+					image->set_padding(36, 36, 11, 11); //Square image, 88x88
 
 					if (resource_id != image_resource_id::raw_image)
 					{
@@ -494,7 +496,7 @@ namespace rsx
 					}
 					else if (icon_buf.size())
 					{
-						image->set_padding(0.f, 0.f, 11.f, 11.f); //Half sized icon, 320x176->160x88
+						image->set_padding(0, 0, 11, 11); //Half sized icon, 320x176->160x88
 						icon_data = std::make_unique<image_info>(icon_buf);
 						static_cast<image_view*>(image.get())->set_raw_image(icon_data.get());
 					}
@@ -954,7 +956,7 @@ namespace rsx
 					progress_2.inc(value);
 
 				if (index == taskbar_index || taskbar_index == -1)
-					Emu.GetCallbacks().handle_taskbar_progress(1, value);
+					Emu.GetCallbacks().handle_taskbar_progress(1, (s32)value);
 
 				return CELL_OK;
 			}
@@ -1021,7 +1023,7 @@ namespace rsx
 				image.back_color.a = 0.f;
 
 				text_view.set_pos(85, 0);
-				text_view.set_padding(0.f, 0.f, 24.f, 0.f);
+				text_view.set_padding(0, 0, 24, 0);
 				text_view.set_font("Arial", 8);
 				text_view.align_text(overlay_element::text_align::center);
 				text_view.back_color.a = 0.f;
@@ -1103,6 +1105,9 @@ namespace rsx
 
 				creation_time = get_system_time();
 				expire_time = creation_time + 1000000;
+
+				// Disable forced refresh unless fps dips below 4
+				min_refresh_duration_us = 250000;
 			}
 
 			void update_animation(u64 t)

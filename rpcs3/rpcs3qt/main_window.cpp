@@ -84,20 +84,7 @@ void main_window::Init()
 	ui->toolBar->setObjectName("mw_toolbar");
 	ui->sizeSlider->setRange(0, gui::gl_max_slider_pos);
 	ui->toolBar->addWidget(ui->sizeSliderContainer);
-	ui->toolBar->addSeparator();
 	ui->toolBar->addWidget(ui->mw_searchbar);
-
-	// for highdpi resize toolbar icons and height dynamically
-	// choose factors to mimic Gui-Design in main_window.ui
-	// TODO: in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp we only need the else branch
-#ifdef _WIN32
-	const int toolBarHeight = menuBar()->sizeHint().height() * 1.5;
-	ui->toolBar->setIconSize(QSize(toolBarHeight, toolBarHeight));
-#else
-	const int toolBarHeight = ui->toolBar->iconSize().height();
-#endif
-	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 5);
-	ui->sizeSlider->setFixedHeight(toolBarHeight * 0.65f);
 
 	CreateActions();
 	CreateDockWindows();
@@ -691,7 +678,7 @@ void main_window::RepaintThumbnailIcons()
 
 	auto icon = [&newColor](const QString& path)
 	{
-		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), gui::mw_tool_icon_color, newColor);
+		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, newColor);
 	};
 
 #ifdef _WIN32
@@ -710,20 +697,11 @@ void main_window::RepaintThumbnailIcons()
 
 void main_window::RepaintToolBarIcons()
 {
-	QColor newColor;
-
-	if (guiSettings->GetValue(gui::m_enableUIColors).toBool())
-	{
-		newColor = guiSettings->GetValue(gui::mw_toolIconColor).value<QColor>();
-	}
-	else
-	{
-		newColor = gui::utils::get_label_color("toolbar_icon_color");
-	}
+	QColor newColor = gui::utils::get_label_color("toolbar_icon_color");
 
 	auto icon = [&newColor](const QString& path)
 	{
-		return gui::utils::get_colorized_icon(QIcon(path), gui::mw_tool_icon_color, newColor);
+		return gui::utils::get_colorized_icon(QIcon(path), Qt::black, newColor);
 	};
 
 	m_icon_play           = icon(":/Icons/play.png");
@@ -731,16 +709,14 @@ void main_window::RepaintToolBarIcons()
 	m_icon_stop           = icon(":/Icons/stop.png");
 	m_icon_restart        = icon(":/Icons/restart.png");
 	m_icon_fullscreen_on  = icon(":/Icons/fullscreen.png");
-	m_icon_fullscreen_off = icon(":/Icons/fullscreen_invert.png");
+	m_icon_fullscreen_off = icon(":/Icons/exit_fullscreen.png");
 
 	ui->toolbar_config  ->setIcon(icon(":/Icons/configure.png"));
 	ui->toolbar_controls->setIcon(icon(":/Icons/controllers.png"));
-	ui->toolbar_disc    ->setIcon(icon(":/Icons/disc.png"));
+	ui->toolbar_open    ->setIcon(icon(":/Icons/open.png"));
 	ui->toolbar_grid    ->setIcon(icon(":/Icons/grid.png"));
 	ui->toolbar_list    ->setIcon(icon(":/Icons/list.png"));
 	ui->toolbar_refresh ->setIcon(icon(":/Icons/refresh.png"));
-	ui->toolbar_snap    ->setIcon(icon(":/Icons/screenshot.png"));
-	ui->toolbar_sort    ->setIcon(icon(":/Icons/sort.png"));
 	ui->toolbar_stop    ->setIcon(icon(":/Icons/stop.png"));
 
 	if (Emu.IsRunning())
@@ -767,6 +743,31 @@ void main_window::RepaintToolBarIcons()
 
 	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
 		.arg(newColor.red()).arg(newColor.green()).arg(newColor.blue()).arg(newColor.alpha()));
+
+	// resize toolbar elements
+
+	// for highdpi resize toolbar icons and height dynamically
+	// choose factors to mimic Gui-Design in main_window.ui
+	// TODO: delete this in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp
+#ifdef _WIN32
+	const int toolIconHeight = menuBar()->sizeHint().height() * 1.5;
+	ui->toolBar->setIconSize(QSize(toolIconHeight, toolIconHeight));
+#endif
+
+	const int toolBarHeight = ui->toolBar->sizeHint().height();
+
+	for (const auto& act : ui->toolBar->actions())
+	{
+		if (act->isSeparator())
+		{
+			continue;
+		}
+
+		ui->toolBar->widgetForAction(act)->setMinimumWidth(toolBarHeight);
+	}
+
+	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 4);
+	ui->mw_searchbar->setFixedWidth(toolBarHeight * 5);
 }
 
 void main_window::OnEmuRun()
@@ -779,6 +780,7 @@ void main_window::OnEmuRun()
 	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
+	ui->toolbar_start->setText(tr("Pause"));
 	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 	EnableMenus(true);
 
@@ -800,6 +802,7 @@ void main_window::OnEmuResume()
 	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
+	ui->toolbar_start->setText(tr("Pause"));
 	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 }
 
@@ -812,6 +815,7 @@ void main_window::OnEmuPause()
 	ui->sysPauseAct->setText(tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
+	ui->toolbar_start->setText(tr("Play"));
 	ui->toolbar_start->setToolTip(tr("Resume emulation"));
 }
 
@@ -831,6 +835,7 @@ void main_window::OnEmuStop()
 	{
 		ui->toolbar_start->setEnabled(true);
 		ui->toolbar_start->setIcon(m_icon_restart);
+		ui->toolbar_start->setText(tr("Restart"));
 		ui->toolbar_start->setToolTip(tr("Restart emulation"));
 		ui->sysRebootAct->setEnabled(true);
 #ifdef _WIN32
@@ -840,6 +845,7 @@ void main_window::OnEmuStop()
 	else
 	{
 		ui->toolbar_start->setIcon(m_icon_play);
+		ui->toolbar_start->setText(tr("Play"));
 		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	}
 #ifdef WITH_DISCORD_RPC
@@ -861,6 +867,7 @@ void main_window::OnEmuReady()
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
+	ui->toolbar_start->setText(tr("Play"));
 	ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	EnableMenus(true);
 }
@@ -1073,30 +1080,10 @@ void main_window::RepaintGui()
 		m_debuggerFrame->ChangeColors();
 	}
 
-	RepaintToolbar();
 	RepaintToolBarIcons();
 	RepaintThumbnailIcons();
-}
 
-void main_window::RepaintToolbar()
-{
-	if (guiSettings->GetValue(gui::m_enableUIColors).toBool())
-	{
-		QColor tbc = guiSettings->GetValue(gui::mw_toolBarColor).value<QColor>();
-
-		ui->toolBar->setStyleSheet(gui::stylesheet + QString(
-			"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
-			"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
-			"QSlider { background-color: rgba(%1, %2, %3, %4); }"
-			"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
-			.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
-			.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20)
-		);
-	}
-	else
-	{
-		ui->toolBar->setStyleSheet(gui::stylesheet);
-	}
+	Q_EMIT RequestTrophyManagerRepaint();
 }
 
 void main_window::CreateActions()
@@ -1226,6 +1213,7 @@ void main_window::CreateConnects()
 	connect(ui->actionManage_Trophy_Data, &QAction::triggered, [=]
 	{
 		trophy_manager_dialog* trop_manager = new trophy_manager_dialog(guiSettings);
+		connect(this, &main_window::RequestTrophyManagerRepaint, trop_manager, &trophy_manager_dialog::HandleRepaintUiRequest);
 		trop_manager->show();
 	});
 
@@ -1366,7 +1354,7 @@ void main_window::CreateConnects()
 		m_categoryVisibleActGroup->setEnabled(m_is_list_mode);
 	});
 
-	connect(ui->toolbar_disc, &QAction::triggered, this, &main_window::BootGame);
+	connect(ui->toolbar_open, &QAction::triggered, this, &main_window::BootGame);
 	connect(ui->toolbar_refresh, &QAction::triggered, [=]() { m_gameListFrame->Refresh(true); });
 	connect(ui->toolbar_stop, &QAction::triggered, [=]() { Emu.Stop(); });
 	connect(ui->toolbar_start, &QAction::triggered, this, &main_window::OnPlayOrPause);
@@ -1511,8 +1499,6 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	m_logFrame->setVisible(ui->showLogAct->isChecked());
 	m_gameListFrame->setVisible(ui->showGameListAct->isChecked());
 	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
-
-	RepaintToolbar();
 
 	ui->showHiddenEntriesAct->setChecked(guiSettings->GetValue(gui::gl_show_hidden).toBool());
 	m_gameListFrame->SetShowHidden(ui->showHiddenEntriesAct->isChecked()); // prevent GetValue in m_gameListFrame->LoadSettings

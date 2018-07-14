@@ -503,6 +503,13 @@ namespace vm
 		// Allocate compressed reservation info area (avoid SPU MMIO area)
 		if (addr != 0xe0000000)
 		{
+			// Beginning of the address space
+			if (addr == 0x10000)
+			{
+				utils::memory_commit(g_reservations, 0x1000);
+				utils::memory_commit(g_reservations2, 0x1000);
+			}
+
 			utils::memory_commit(g_reservations + addr / 16, size / 16);
 			utils::memory_commit(g_reservations2 + addr / 16, size / 16);
 		}
@@ -514,6 +521,10 @@ namespace vm
 				utils::memory_commit(g_reservations + addr / 16 + i * 0x10000, 0x4000);
 				utils::memory_commit(g_reservations2 + addr / 16 + i * 0x10000, 0x4000);
 			}
+
+			// End of the address space
+			utils::memory_commit(g_reservations + 0xfff0000, 0x10000);
+			utils::memory_commit(g_reservations2 + 0xfff0000, 0x10000);
 		}
 	}
 

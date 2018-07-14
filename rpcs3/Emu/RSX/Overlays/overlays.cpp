@@ -32,7 +32,11 @@ namespace rsx
 		{
 			if (auto rsxthr = rsx::get_current_renderer())
 			{
-				rsxthr->native_ui_flip_request.store(true);
+				const auto now = get_system_time() - 1000000;
+				if ((now - rsxthr->last_flip_time) > min_refresh_duration_us)
+				{
+					rsxthr->native_ui_flip_request.store(true);
+				}
 			}
 		}
 	} // namespace overlays

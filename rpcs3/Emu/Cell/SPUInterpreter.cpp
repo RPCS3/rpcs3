@@ -1090,7 +1090,7 @@ bool spu_interpreter_fast::DFNMS(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter_fast::DFNMA(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vd = _mm_sub_pd(_mm_set1_pd(0.0), _mm_add_pd(_mm_mul_pd(spu.gpr[op.ra].vd, spu.gpr[op.rb].vd), spu.gpr[op.rt].vd));
+	spu.gpr[op.rt].vd = _mm_xor_pd(_mm_add_pd(_mm_mul_pd(spu.gpr[op.ra].vd, spu.gpr[op.rb].vd), spu.gpr[op.rt].vd), _mm_set1_pd(-0.0));
 	return true;
 }
 

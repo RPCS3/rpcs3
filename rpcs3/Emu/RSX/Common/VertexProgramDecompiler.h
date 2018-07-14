@@ -53,11 +53,10 @@ struct VertexProgramDecompiler
 	Instruction* m_cur_instr;
 	size_t m_instr_count;
 
-	std::set<int> m_jump_lvls;
 	std::vector<std::string> m_body;
 	std::stack<u32> m_call_stack;
 
-	const std::vector<u32>& m_data;
+	const RSXVertexProgram& m_prog;
 	ParamArray m_parr;
 
 	std::string NotZeroPositive(const std::string& code);
@@ -99,7 +98,7 @@ protected:
 
 	/** returns string calling comparison function on 2 args passed as strings.
 	*/
-	virtual std::string compareFunction(COMPARE, const std::string &, const std::string &) = 0;
+	virtual std::string compareFunction(COMPARE, const std::string &, const std::string &, bool scalar = false) = 0;
 
 	/** Insert header of shader file (eg #version, "system constants"...)
 	*/

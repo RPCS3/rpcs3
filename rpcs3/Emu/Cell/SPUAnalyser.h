@@ -1,8 +1,5 @@
 #pragma once
 
-#include <vector>
-#include <set>
-
 // SPU Instruction Type
 struct spu_itype
 {
@@ -243,38 +240,225 @@ struct spu_itype
 	}
 };
 
-class SPUThread;
-
-// SPU basic function information structure
-struct spu_function
+// Encode instruction name: 6 bits per character (0x20..0x5f), max 10
+static constexpr u64 spu_iname_encode(const char* ptr, u64 value = 0)
 {
-	// Entry point (LS address)
-	const u32 addr;
+	return *ptr == '\0' ? value : spu_iname_encode(ptr + 1, (*ptr - 0x20) | (value << 6));
+}
 
-	// Function size (in bytes)
-	const u32 size;
+#define NAME(x) x = spu_iname_encode(#x)
 
-	// Function contents (binary copy)
-	std::vector<be_t<u32>> data;
-
-	// Basic blocks (start addresses)
-	std::set<u32> blocks;
-
-	// Functions possibly called by this function (may not be available)
-	std::set<u32> adjacent;
-
-	// Jump table values (start addresses)
-	std::set<u32> jtable;
-
-	// Whether ila $SP,* instruction found
-	bool does_reset_stack;
-
-	// Pointer to the compiled function
-	u32(*compiled)(SPUThread* _spu, be_t<u32>* _ls) = nullptr;
-
-	spu_function(u32 addr, u32 size)
-		: addr(addr)
-		, size(size)
+struct spu_iname
+{
+	enum type : u64
 	{
+		NAME(UNK),
+		NAME(HEQ),
+		NAME(HEQI),
+		NAME(HGT),
+		NAME(HGTI),
+		NAME(HLGT),
+		NAME(HLGTI),
+		NAME(HBR),
+		NAME(HBRA),
+		NAME(HBRR),
+		NAME(STOP),
+		NAME(STOPD),
+		NAME(LNOP),
+		NAME(NOP),
+		NAME(SYNC),
+		NAME(DSYNC),
+		NAME(MFSPR),
+		NAME(MTSPR),
+		NAME(RDCH),
+		NAME(RCHCNT),
+		NAME(WRCH),
+		NAME(LQD),
+		NAME(LQX),
+		NAME(LQA),
+		NAME(LQR),
+		NAME(STQD),
+		NAME(STQX),
+		NAME(STQA),
+		NAME(STQR),
+		NAME(CBD),
+		NAME(CBX),
+		NAME(CHD),
+		NAME(CHX),
+		NAME(CWD),
+		NAME(CWX),
+		NAME(CDD),
+		NAME(CDX),
+		NAME(ILH),
+		NAME(ILHU),
+		NAME(IL),
+		NAME(ILA),
+		NAME(IOHL),
+		NAME(FSMBI),
+		NAME(AH),
+		NAME(AHI),
+		NAME(A),
+		NAME(AI),
+		NAME(SFH),
+		NAME(SFHI),
+		NAME(SF),
+		NAME(SFI),
+		NAME(ADDX),
+		NAME(CG),
+		NAME(CGX),
+		NAME(SFX),
+		NAME(BG),
+		NAME(BGX),
+		NAME(MPY),
+		NAME(MPYU),
+		NAME(MPYI),
+		NAME(MPYUI),
+		NAME(MPYH),
+		NAME(MPYS),
+		NAME(MPYHH),
+		NAME(MPYHHA),
+		NAME(MPYHHU),
+		NAME(MPYHHAU),
+		NAME(CLZ),
+		NAME(CNTB),
+		NAME(FSMB),
+		NAME(FSMH),
+		NAME(FSM),
+		NAME(GBB),
+		NAME(GBH),
+		NAME(GB),
+		NAME(AVGB),
+		NAME(ABSDB),
+		NAME(SUMB),
+		NAME(XSBH),
+		NAME(XSHW),
+		NAME(XSWD),
+		NAME(AND),
+		NAME(ANDC),
+		NAME(ANDBI),
+		NAME(ANDHI),
+		NAME(ANDI),
+		NAME(OR),
+		NAME(ORC),
+		NAME(ORBI),
+		NAME(ORHI),
+		NAME(ORI),
+		NAME(ORX),
+		NAME(XOR),
+		NAME(XORBI),
+		NAME(XORHI),
+		NAME(XORI),
+		NAME(NAND),
+		NAME(NOR),
+		NAME(EQV),
+		NAME(MPYA),
+		NAME(SELB),
+		NAME(SHUFB),
+		NAME(SHLH),
+		NAME(SHLHI),
+		NAME(SHL),
+		NAME(SHLI),
+		NAME(SHLQBI),
+		NAME(SHLQBII),
+		NAME(SHLQBY),
+		NAME(SHLQBYI),
+		NAME(SHLQBYBI),
+		NAME(ROTH),
+		NAME(ROTHI),
+		NAME(ROT),
+		NAME(ROTI),
+		NAME(ROTQBY),
+		NAME(ROTQBYI),
+		NAME(ROTQBYBI),
+		NAME(ROTQBI),
+		NAME(ROTQBII),
+		NAME(ROTHM),
+		NAME(ROTHMI),
+		NAME(ROTM),
+		NAME(ROTMI),
+		NAME(ROTQMBY),
+		NAME(ROTQMBYI),
+		NAME(ROTQMBYBI),
+		NAME(ROTQMBI),
+		NAME(ROTQMBII),
+		NAME(ROTMAH),
+		NAME(ROTMAHI),
+		NAME(ROTMA),
+		NAME(ROTMAI),
+		NAME(CEQB),
+		NAME(CEQBI),
+		NAME(CEQH),
+		NAME(CEQHI),
+		NAME(CEQ),
+		NAME(CEQI),
+		NAME(CGTB),
+		NAME(CGTBI),
+		NAME(CGTH),
+		NAME(CGTHI),
+		NAME(CGT),
+		NAME(CGTI),
+		NAME(CLGTB),
+		NAME(CLGTBI),
+		NAME(CLGTH),
+		NAME(CLGTHI),
+		NAME(CLGT),
+		NAME(CLGTI),
+		NAME(BR),
+		NAME(BRA),
+		NAME(BRSL),
+		NAME(BRASL),
+		NAME(BI),
+		NAME(IRET),
+		NAME(BISLED),
+		NAME(BISL),
+		NAME(BRNZ),
+		NAME(BRZ),
+		NAME(BRHNZ),
+		NAME(BRHZ),
+		NAME(BIZ),
+		NAME(BINZ),
+		NAME(BIHZ),
+		NAME(BIHNZ),
+		NAME(FA),
+		NAME(DFA),
+		NAME(FS),
+		NAME(DFS),
+		NAME(FM),
+		NAME(DFM),
+		NAME(DFMA),
+		NAME(DFNMS),
+		NAME(DFMS),
+		NAME(DFNMA),
+		NAME(FREST),
+		NAME(FRSQEST),
+		NAME(FI),
+		NAME(CSFLT),
+		NAME(CFLTS),
+		NAME(CUFLT),
+		NAME(CFLTU),
+		NAME(FRDS),
+		NAME(FESD),
+		NAME(FCEQ),
+		NAME(FCMEQ),
+		NAME(FCGT),
+		NAME(FCMGT),
+		NAME(FSCRWR),
+		NAME(FSCRRD),
+		NAME(DFCEQ),
+		NAME(DFCMEQ),
+		NAME(DFCGT),
+		NAME(DFCMGT),
+		NAME(DFTSV),
+		NAME(FMA),
+		NAME(FNMS),
+		NAME(FMS),
+	};
+
+	// Enable address-of operator for spu_decoder<>
+	friend constexpr type operator &(type value)
+	{
+		return value;
 	}
 };
+
+#undef NAME

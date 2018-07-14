@@ -20,6 +20,9 @@ extern atomic_t<u64> g_progr_ptotal;
 extern atomic_t<u64> g_progr_pdone;
 
 const spu_decoder<spu_itype> s_spu_itype;
+const spu_decoder<spu_iname> s_spu_iname;
+
+extern u64 get_timebased_time();
 
 spu_cache::spu_cache(const std::string& loc)
 	: m_file(loc, fs::read + fs::write + fs::create)
@@ -91,7 +94,7 @@ void spu_cache::initialize()
 	}
 
 	// SPU cache file (version + block size type)
-	const std::string loc = _main->cache + u8"spu-§" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v4.dat";
+	const std::string loc = _main->cache + "spu-" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v5.dat";
 
 	auto cache = std::make_shared<spu_cache>(loc);
 
@@ -480,6 +483,11 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 				m_regmod[pos / 4] = op.rt;
 				vflags[op.rt] = +vf::is_const;
 				values[op.rt] = pos + 4;
+
+				if (op.rt == 1 && (pos + 4) % 16)
+				{
+					LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: BISL", pos);
+				}
 			}
 
 			if (test(af, vf::is_const))
@@ -548,7 +556,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 					add_block(pos + 4);
 				}
 			}
-			else if (type == spu_itype::BI && !op.d && !op.e)
+			else if (type == spu_itype::BI && g_cfg.core.spu_block_size != spu_block_size_type::safe && !op.d && !op.e && !sync)
 			{
 				// Analyse jump table (TODO)
 				std::basic_string<u32> jt_abs;
@@ -582,6 +590,8 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 					if (std::max(jt_abs.size(), jt_rel.size()) * 4 + start <= i)
 					{
 						// Neither type of jump table completes
+						jt_abs.clear();
+						jt_rel.clear();
 						break;
 					}
 				}
@@ -611,6 +621,8 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 						{
 							jt_abs.clear();
 						}
+
+						verify(HERE), jt_abs.size() != jt_rel.size();
 					}
 
 					if (jt_abs.size() >= jt_rel.size())
@@ -677,6 +689,10 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 					LOG_WARNING(SPU, "[0x%x] No patterns detected (hbr=0x%x:0x%x)", pos, hbr_loc, hbr_tg);
 				}
 			}
+			else if (type == spu_itype::BI && sync)
+			{
+				LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring indirect branch (SYNC)", result[0], pos);
+			}
 
 			if (type == spu_itype::BI || sl)
 			{
@@ -709,6 +725,11 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = pos + 4;
+
+			if (op.rt == 1 && (pos + 4) % 16)
+			{
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: BRSL", pos);
+			}
 
 			if (target == pos + 4)
 			{
@@ -795,6 +816,17 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			break;
 		}
 
+		case spu_itype::LQA:
+		case spu_itype::LQD:
+		case spu_itype::LQR:
+		case spu_itype::LQX:
+		{
+			// Unconst
+			m_regmod[pos / 4] = op.rt;
+			vflags[op.rt] = {};
+			break;
+		}
+
 		case spu_itype::HBR:
 		{
 			hbr_loc = spu_branch_target(pos, op.roh << 7 | op.rt);
@@ -821,6 +853,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.si16;
+
+			if (op.rt == 1 && values[1] & ~0x3fff0u)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: IL -> 0x%x", pos, values[1]);
+			}
+
 			break;
 		}
 		case spu_itype::ILA:
@@ -828,6 +866,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.i18;
+
+			if (op.rt == 1 && values[1] & ~0x3fff0u)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ILA -> 0x%x", pos, values[1]);
+			}
+
 			break;
 		}
 		case spu_itype::ILH:
@@ -835,6 +879,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.i16 << 16 | op.i16;
+
+			if (op.rt == 1 && values[1] & ~0x3fff0u)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ILH -> 0x%x", pos, values[1]);
+			}
+
 			break;
 		}
 		case spu_itype::ILHU:
@@ -842,12 +892,24 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.i16 << 16;
+
+			if (op.rt == 1 && values[1] & ~0x3fff0u)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ILHU -> 0x%x", pos, values[1]);
+			}
+
 			break;
 		}
 		case spu_itype::IOHL:
 		{
 			m_regmod[pos / 4] = op.rt;
 			values[op.rt] = values[op.rt] | op.i16;
+
+			if (op.rt == 1 && op.i16 % 16)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: IOHL, 0x%x", pos, op.i16);
+			}
+
 			break;
 		}
 		case spu_itype::ORI:
@@ -855,6 +917,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = values[op.ra] | op.si10;
+
+			if (op.rt == 1)
+			{
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: ORI", pos);
+			}
+
 			break;
 		}
 		case spu_itype::OR:
@@ -862,6 +930,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.ra] | values[op.rb];
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: OR", pos);
+			}
+
 			break;
 		}
 		case spu_itype::ANDI:
@@ -869,6 +943,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = values[op.ra] & op.si10;
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ANDI", pos);
+			}
+
 			break;
 		}
 		case spu_itype::AND:
@@ -876,6 +956,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.ra] & values[op.rb];
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: AND", pos);
+			}
+
 			break;
 		}
 		case spu_itype::AI:
@@ -883,6 +969,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = values[op.ra] + op.si10;
+
+			if (op.rt == 1 && op.si10 % 16)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: AI, 0x%x", pos, op.si10 + 0u);
+			}
+
 			break;
 		}
 		case spu_itype::A:
@@ -890,6 +982,22 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.ra] + values[op.rb];
+
+			if (op.rt == 1)
+			{
+				if (op.ra == 1 || op.rb == 1)
+				{
+					const u32 r2 = op.ra == 1 ? +op.rb : +op.ra;
+
+					if (test(vflags[r2], vf::is_const) && (values[r2] % 16) == 0)
+					{
+						break;
+					}
+				}
+
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: A", pos);
+			}
+
 			break;
 		}
 		case spu_itype::SFI:
@@ -897,6 +1005,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = op.si10 - values[op.ra];
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: SFI", pos);
+			}
+
 			break;
 		}
 		case spu_itype::SF:
@@ -904,11 +1018,22 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.rb] - values[op.ra];
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: SF", pos);
+			}
+
 			break;
 		}
 		case spu_itype::ROTMI:
 		{
 			m_regmod[pos / 4] = op.rt;
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ROTMI", pos);
+			}
 
 			if (-op.i7 & 0x20)
 			{
@@ -924,6 +1049,11 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 		case spu_itype::SHLI:
 		{
 			m_regmod[pos / 4] = op.rt;
+
+			if (op.rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: SHLI", pos);
+			}
 
 			if (op.i7 & 0x20)
 			{
@@ -943,6 +1073,12 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 			const u32 op_rt = type & spu_itype::_quadrop ? +op.rt4 : +op.rt;
 			m_regmod[pos / 4] = op_rt;
 			vflags[op_rt] = {};
+
+			if (op_rt == 1)
+			{
+				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: %s", pos, s_spu_iname.decode(data));
+			}
+
 			break;
 		}
 		}
@@ -1440,10 +1576,12 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	{
 		// Get function chunk name
 		const std::string name = fmt::format("spu-chunk-0x%05x", addr);
-		llvm::Function* result = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(name, get_type<void>(), get_type<u64>(), get_type<u64>(), get_type<u32>()));
+		llvm::Function* result = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(name, get_type<void>(), get_type<u8*>(), get_type<u8*>(), get_type<u32>()));
 
 		// Set parameters
 		result->setLinkage(llvm::GlobalValue::InternalLinkage);
+		result->addAttribute(1, llvm::Attribute::NoAlias);
+		result->addAttribute(2, llvm::Attribute::NoAlias);
 
 		// Enqueue if necessary
 		if (m_functions.emplace(addr, result).second)
@@ -1500,9 +1638,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
 			m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&SPUThread::pc));
-			const auto addr = m_ir->CreateAdd(m_thread, m_ir->getInt64(::offset32(&SPUThread::jit_dispatcher) + target * 2));
-			const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u64>(), get_type<u64>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
-			tail(m_ir->CreateLoad(m_ir->CreateIntToPtr(addr, type)));
+			const auto addr = m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(&SPUThread::jit_dispatcher) + target * 2));
+			const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u8*>(), get_type<u8*>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
+			tail(m_ir->CreateLoad(m_ir->CreateBitCast(addr, type)));
 			m_ir->SetInsertPoint(cblock);
 			return result;
 		}
@@ -1534,8 +1672,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	template <typename T>
 	llvm::Value* _ptr(llvm::Value* base, u32 offset, std::string name = "")
 	{
-		const auto off = m_ir->CreateAdd(base, m_ir->getInt64(offset));
-		const auto ptr = m_ir->CreateIntToPtr(off, get_type<T>()->getPointerTo(), name);
+		const auto off = m_ir->CreateGEP(base, m_ir->getInt64(offset));
+		const auto ptr = m_ir->CreateBitCast(off, get_type<T*>(), name);
 		return ptr;
 	}
 
@@ -1548,49 +1686,67 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	template <typename T, typename... Args>
 	llvm::Value* spu_ptr(value_t<u64> add, Args... offset_args)
 	{
-		const auto off = m_ir->CreateAdd(m_thread, m_ir->getInt64(::offset32(offset_args...)));
-		const auto ptr = m_ir->CreateIntToPtr(m_ir->CreateAdd(off, add.value), get_type<T>()->getPointerTo());
+		const auto off = m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(offset_args...)));
+		const auto ptr = m_ir->CreateBitCast(m_ir->CreateAdd(off, add.value), get_type<T*>());
 		return ptr;
 	}
 
 	llvm::Value* init_vr(u32 index)
 	{
-		if (!m_reg_addr.at(index))
+		auto& ptr = m_reg_addr.at(index);
+
+		if (!ptr)
 		{
 			// Save and restore current insert point if necessary
 			const auto block_cur = m_ir->GetInsertBlock();
 
 			// Emit register pointer at the beginning of the function chunk
 			m_ir->SetInsertPoint(m_function->getEntryBlock().getTerminator());
-			m_reg_addr[index] = _ptr<u32[4]>(m_thread, ::offset32(&SPUThread::gpr, index), fmt::format("Reg$%u", index));
+			ptr = _ptr<u32[4]>(m_thread, ::offset32(&SPUThread::gpr, index), fmt::format("Reg$%u", index));
 			m_ir->SetInsertPoint(block_cur);
 		}
 
-		return m_reg_addr[index];
+		return ptr;
+	}
+
+	llvm::Value* get_vr(u32 index, llvm::Type* type)
+	{
+		auto& reg = m_block->reg.at(index);
+
+		if (!reg)
+		{
+			// Load register value if necessary
+			reg = m_ir->CreateLoad(init_vr(index), fmt::format("Load$%u", index));
+		}
+
+		// Bitcast the constant if necessary
+		if (auto c = llvm::dyn_cast<llvm::Constant>(reg))
+		{
+			// TODO
+			if (index < 128)
+			{
+				return make_const_vector(get_const_vector(c, m_pos, index), type);
+			}
+		}
+
+		return m_ir->CreateBitCast(reg, type);
 	}
 
 	template <typename T = u32[4]>
 	value_t<T> get_vr(u32 index)
 	{
-		if (!m_block->reg.at(index))
-		{
-			// Load register value if necessary
-			m_block->reg[index] = m_ir->CreateLoad(init_vr(index), fmt::format("Load$%u", index));
-		}
-
 		value_t<T> r;
-		r.value = m_ir->CreateBitCast(m_block->reg[index], get_type<T>());
+		r.value = get_vr(index, get_type<T>());
 		return r;
 	}
 
-	template <typename T>
-	void set_vr(u32 index, T expr)
+	void set_vr(u32 index, llvm::Value* value)
 	{
 		// Check
 		verify(HERE), m_regmod[m_pos / 4] == index;
 
 		// Set register value
-		m_block->reg.at(index) = expr.eval(m_ir);
+		m_block->reg.at(index) = value;
 
 		// Get register location
 		const auto addr = init_vr(index);
@@ -1603,7 +1759,13 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		}
 
 		// Write register to the context
-		m_block->store[index] = m_ir->CreateStore(m_ir->CreateBitCast(m_block->reg[index], addr->getType()->getPointerElementType()), addr);
+		m_block->store[index] = m_ir->CreateStore(m_ir->CreateBitCast(value, addr->getType()->getPointerElementType()), addr);
+	}
+
+	template <typename T>
+	void set_vr(u32 index, T expr)
+	{
+		set_vr(index, expr.eval(m_ir));
 	}
 
 	// Return either basic block addr with single dominating value, or negative number of PHI entries
@@ -1712,7 +1874,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 	void update_pc()
 	{
-		m_ir->CreateStore(m_ir->getInt32(m_pos), spu_ptr<u32>(&SPUThread::pc));
+		m_ir->CreateStore(m_ir->getInt32(m_pos), spu_ptr<u32>(&SPUThread::pc))->setVolatile(true);
 	}
 
 	// Call cpu_thread::check_state if necessary and return or continue (full check)
@@ -1764,36 +1926,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_ir->CreateRetVoid();
 	}
 
-	template <typename T1, typename T2>
-	value_t<u8[16]> pshufb(T1 a, T2 b)
-	{
-		value_t<u8[16]> result;
-
-		if (m_spurt->m_jit.has_ssse3())
-		{
-			result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_ssse3_pshuf_b_128), {a.eval(m_ir), b.eval(m_ir)});
-		}
-		else
-		{
-			const auto data0 = a.eval(m_ir);
-			const auto index = b.eval(m_ir);
-			const auto mask = m_ir->CreateAnd(index, 0xf);
-			const auto zero = llvm::ConstantInt::get(get_type<u8[16]>(), 0u);
-
-			result.value = zero;
-
-			for (u32 i = 0; i < 16; i++)
-			{
-				const auto x = m_ir->CreateExtractElement(data0, m_ir->CreateExtractElement(mask, i));
-				result.value = m_ir->CreateInsertElement(result.value, x, i);
-			}
-
-			result.value = m_ir->CreateSelect(m_ir->CreateICmpSLT(index, zero), zero, result.value);
-		}
-
-		return result;
-	}
-
 public:
 	spu_llvm_recompiler()
 		: spu_recompiler_base()
@@ -1814,6 +1946,7 @@ public:
 			m_cache = fxm::get<spu_cache>();
 			m_spurt = fxm::get_always<spu_llvm_runtime>();
 			m_context = m_spurt->m_jit.get_context();
+			m_use_ssse3 = m_spurt->m_jit.has_ssse3();
 		}
 	}
 
@@ -1926,7 +2059,7 @@ public:
 		m_ir = &irb;
 
 		// Add entry function (contains only state/code check)
-		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_type<void>(), get_type<u64>(), get_type<u64>()));
+		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_type<void>(), get_type<u8*>(), get_type<u8*>()));
 		set_function(main_func);
 
 		// Start compilation
@@ -1940,7 +2073,7 @@ public:
 
 		// Emit state check
 		const auto pstate = spu_ptr<u32>(&SPUThread::state);
-		m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(pstate), m_ir->getInt32(0)), label_stop, label_test);
+		m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(pstate, true), m_ir->getInt32(0)), label_stop, label_test);
 
 		// Emit code check
 		u32 check_iterations = 0;
@@ -2120,9 +2253,16 @@ public:
 											// Value hasn't been loaded yet
 											value = m_ir->CreateLoad(regptr);
 										}
-
-										// Value possibly needs a bitcast
-										value = m_ir->CreateBitCast(value, _phi->getType());
+										else if (i < 128 && llvm::isa<llvm::Constant>(value))
+										{
+											// Bitcast the constant
+											value = make_const_vector(get_const_vector(llvm::cast<llvm::Constant>(value), baddr, i), _phi->getType());
+										}
+										else
+										{
+											// Ensure correct value type
+											value = m_ir->CreateBitCast(value, _phi->getType());
+										}
 
 										m_ir->SetInsertPoint(cblock);
 
@@ -2223,7 +2363,7 @@ public:
 			std::vector<llvm::Constant*> chunks;
 			chunks.reserve(m_size / 4);
 
-			const auto null = cast<Function>(module->getOrInsertFunction("spu-null", get_type<void>(), get_type<u64>(), get_type<u64>(), get_type<u32>()));
+			const auto null = cast<Function>(module->getOrInsertFunction("spu-null", get_type<void>(), get_type<u8*>(), get_type<u8*>(), get_type<u32>()));
 			null->setLinkage(llvm::GlobalValue::InternalLinkage);
 			set_function(null);
 			m_ir->CreateRetVoid();
@@ -2286,7 +2426,7 @@ public:
 
 		if (size0 > 1)
 		{
-			const auto trampoline = cast<Function>(module->getOrInsertFunction(fmt::format("spu-0x%05x-trampoline-%03u", func[0], size0), get_type<void>(), get_type<u64>(), get_type<u64>()));
+			const auto trampoline = cast<Function>(module->getOrInsertFunction(fmt::format("spu-0x%05x-trampoline-%03u", func[0], size0), get_type<void>(), get_type<u8*>(), get_type<u8*>()));
 			set_function(trampoline);
 
 			struct work
@@ -2436,8 +2576,8 @@ public:
 				}
 
 				m_ir->SetInsertPoint(w.label);
-				const auto add = m_ir->CreateAdd(m_lsptr, m_ir->getInt64(start + w.level * 4 - 4));
-				const auto ptr = m_ir->CreateIntToPtr(add, get_type<u32*>());
+				const auto add = m_ir->CreateGEP(m_lsptr, m_ir->getInt64(start + w.level * 4 - 4));
+				const auto ptr = m_ir->CreateBitCast(add, get_type<u32*>());
 				const auto val = m_ir->CreateLoad(ptr);
 				const auto sw = m_ir->CreateSwitch(val, def, ::size32(targets));
 
@@ -2585,18 +2725,168 @@ public:
 		return _spu->get_ch_value(ch);
 	}
 
-	void RDCH(spu_opcode_t op) //
+	static s64 exec_read_in_mbox(SPUThread* _spu)
 	{
-		update_pc();
-		value_t<s64> res;
-		res.value = call(&exec_rdch, m_thread, m_ir->getInt32(op.ra));
-		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+		// TODO
+		return _spu->get_ch_value(SPU_RdInMbox);
+	}
+
+	static u32 exec_read_dec(SPUThread* _spu)
+	{
+		const u32 res = _spu->ch_dec_value - static_cast<u32>(get_timebased_time() - _spu->ch_dec_start_timestamp);
+
+		if (res > 1500 && g_cfg.core.spu_loop_detection)
+		{
+			std::this_thread::yield();
+		}
+
+		return res;
+	}
+
+	static s64 exec_read_events(SPUThread* _spu)
+	{
+		if (const u32 events = _spu->get_events())
+		{
+			return events;
+		}
+
+		// TODO
+		return _spu->get_ch_value(SPU_RdEventStat);
+	}
+
+	llvm::Value* get_rdch(spu_opcode_t op, u32 off, bool atomic)
+	{
+		const auto ptr = _ptr<u64>(m_thread, off);
+		llvm::Value* val0;
+
+		if (atomic)
+		{
+			const auto val = m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Xchg, ptr, m_ir->getInt64(0), llvm::AtomicOrdering::Acquire);
+			val0 = val;
+		}
+		else
+		{
+			const auto val = m_ir->CreateLoad(ptr);
+			m_ir->CreateStore(m_ir->getInt64(0), ptr);
+			val0 = val;
+		}
+
+		const auto _cur = m_ir->GetInsertBlock();
+		const auto done = llvm::BasicBlock::Create(m_context, "", m_function);
+		const auto wait = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto stop = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(m_ir->CreateICmpSLT(res.value, m_ir->getInt64(0)), stop, next);
+		m_ir->CreateCondBr(m_ir->CreateICmpSLT(val0, m_ir->getInt64(0)), done, wait);
+		m_ir->SetInsertPoint(wait);
+		const auto val1 = call(&exec_rdch, m_thread, m_ir->getInt32(op.ra));
+		m_ir->CreateCondBr(m_ir->CreateICmpSLT(val1, m_ir->getInt64(0)), stop, done);
 		m_ir->SetInsertPoint(stop);
 		m_ir->CreateRetVoid();
-		m_ir->SetInsertPoint(next);
-		set_vr(op.rt, insert(splat<u32[4]>(0), 3, trunc<u32>(res)));
+		m_ir->SetInsertPoint(done);
+		const auto rval = m_ir->CreatePHI(get_type<u64>(), 2);
+		rval->addIncoming(val0, _cur);
+		rval->addIncoming(val1, wait);
+		return m_ir->CreateTrunc(rval, get_type<u32>());
+	}
+
+	void RDCH(spu_opcode_t op) //
+	{
+		value_t<u32> res;
+
+		switch (op.ra)
+		{
+		case SPU_RdSRR0:
+		{
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::srr0));
+			break;
+		}
+		case SPU_RdInMbox:
+		{
+			update_pc();
+			res.value = call(&exec_read_in_mbox, m_thread);
+			const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+			const auto stop = llvm::BasicBlock::Create(m_context, "", m_function);
+			m_ir->CreateCondBr(m_ir->CreateICmpSLT(res.value, m_ir->getInt64(0)), stop, next);
+			m_ir->SetInsertPoint(stop);
+			m_ir->CreateRetVoid();
+			m_ir->SetInsertPoint(next);
+			res.value = m_ir->CreateTrunc(res.value, get_type<u32>());
+			break;
+		}
+		case MFC_RdTagStat:
+		{
+			res.value = get_rdch(op, ::offset32(&SPUThread::ch_tag_stat), false);
+			break;
+		}
+		case MFC_RdTagMask:
+		{
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_tag_mask));
+			break;
+		}
+		case SPU_RdSigNotify1:
+		{
+			res.value = get_rdch(op, ::offset32(&SPUThread::ch_snr1), true);
+			break;
+		}
+		case SPU_RdSigNotify2:
+		{
+			res.value = get_rdch(op, ::offset32(&SPUThread::ch_snr2), true);
+			break;
+		}
+		case MFC_RdAtomicStat:
+		{
+			res.value = get_rdch(op, ::offset32(&SPUThread::ch_atomic_stat), false);
+			break;
+		}
+		case MFC_RdListStallStat:
+		{
+			res.value = get_rdch(op, ::offset32(&SPUThread::ch_stall_stat), false);
+			break;
+		}
+		case SPU_RdDec:
+		{
+			res.value = call(&exec_read_dec, m_thread);
+			break;
+		}
+		case SPU_RdEventMask:
+		{
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_event_mask));
+			break;
+		}
+		case SPU_RdEventStat:
+		{
+			update_pc();
+			res.value = call(&exec_read_events, m_thread);
+			const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+			const auto stop = llvm::BasicBlock::Create(m_context, "", m_function);
+			m_ir->CreateCondBr(m_ir->CreateICmpSLT(res.value, m_ir->getInt64(0)), stop, next);
+			m_ir->SetInsertPoint(stop);
+			m_ir->CreateRetVoid();
+			m_ir->SetInsertPoint(next);
+			res.value = m_ir->CreateTrunc(res.value, get_type<u32>());
+			break;
+		}
+		case SPU_RdMachStat:
+		{
+			res.value = m_ir->CreateZExt(m_ir->CreateLoad(spu_ptr<u8>(&SPUThread::interrupts_enabled)), get_type<u32>());
+			break;
+		}
+
+		default:
+		{
+			update_pc();
+			res.value = call(&exec_rdch, m_thread, m_ir->getInt32(op.ra));
+			const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+			const auto stop = llvm::BasicBlock::Create(m_context, "", m_function);
+			m_ir->CreateCondBr(m_ir->CreateICmpSLT(res.value, m_ir->getInt64(0)), stop, next);
+			m_ir->SetInsertPoint(stop);
+			m_ir->CreateRetVoid();
+			m_ir->SetInsertPoint(next);
+			res.value = m_ir->CreateTrunc(res.value, get_type<u32>());
+			break;
+		}
+		}
+
+		set_vr(op.rt, insert(splat<u32[4]>(0), 3, res));
 	}
 
 	static u32 exec_rchcnt(SPUThread* _spu, u32 ch)
@@ -2604,10 +2894,94 @@ public:
 		return _spu->get_ch_count(ch);
 	}
 
+	static u32 exec_get_events(SPUThread* _spu)
+	{
+		return _spu->get_events();
+	}
+
+	llvm::Value* get_rchcnt(u32 off, u64 inv = 0)
+	{
+		const auto val = m_ir->CreateLoad(_ptr<u64>(m_thread, off), true);
+		const auto shv = m_ir->CreateLShr(val, spu_channel::off_count);
+		return m_ir->CreateTrunc(m_ir->CreateXor(shv, u64{inv}), get_type<u32>());
+	}
+
 	void RCHCNT(spu_opcode_t op) //
 	{
 		value_t<u32> res;
-		res.value = call(&exec_rchcnt, m_thread, m_ir->getInt32(op.ra));
+
+		switch (op.ra)
+		{
+		case SPU_WrOutMbox:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_out_mbox), true);
+			break;
+		}
+		case SPU_WrOutIntrMbox:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_out_intr_mbox), true);
+			break;
+		}
+		case MFC_RdTagStat:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_tag_stat));
+			break;
+		}
+		case MFC_RdListStallStat:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_stall_stat));
+			break;
+		}
+		case SPU_RdSigNotify1:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_snr1));
+			break;
+		}
+		case SPU_RdSigNotify2:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_snr2));
+			break;
+		}
+		case MFC_RdAtomicStat:
+		{
+			res.value = get_rchcnt(::offset32(&SPUThread::ch_atomic_stat));
+			break;
+		}
+		case MFC_WrTagUpdate:
+		{
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_tag_upd), true);
+			res.value = m_ir->CreateICmpEQ(res.value, m_ir->getInt32(0));
+			res.value = m_ir->CreateZExt(res.value, get_type<u32>());
+			break;
+		}
+		case MFC_Cmd:
+		{
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::mfc_size), true);
+			res.value = m_ir->CreateSub(m_ir->getInt32(16), res.value);
+			break;
+		}
+		case SPU_RdInMbox:
+		{
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_in_mbox), true);
+			res.value = m_ir->CreateLShr(res.value, 8);
+			res.value = m_ir->CreateAnd(res.value, 7);
+			break;
+		}
+		case SPU_RdEventStat:
+		{
+			res.value = call(&exec_get_events, m_thread);
+			res.value = m_ir->CreateICmpNE(res.value, m_ir->getInt32(0));
+			res.value = m_ir->CreateZExt(res.value, get_type<u32>());
+			break;
+		}
+
+		default:
+		{
+			res.value = call(&exec_rchcnt, m_thread, m_ir->getInt32(op.ra));
+			break;
+		}
+		}
+
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, res));
 	}
 
@@ -2630,12 +3004,10 @@ public:
 
 	void LNOP(spu_opcode_t op) //
 	{
-		update_pc();
 	}
 
 	void NOP(spu_opcode_t op) //
 	{
-		update_pc();
 	}
 
 	void SYNC(spu_opcode_t op) //
@@ -2709,17 +3081,20 @@ public:
 
 	void ROTM(spu_opcode_t op)
 	{
-		set_vr(op.rt, trunc<u32[4]>(zext<u64[4]>(get_vr(op.ra)) >> zext<u64[4]>(-get_vr(op.rb) & 0x3f)));
+		const auto sh = eval(-get_vr(op.rb) & 0x3f);
+		set_vr(op.rt, select(sh < 0x20, eval(get_vr(op.ra) >> sh), splat<u32[4]>(0)));
 	}
 
 	void ROTMA(spu_opcode_t op)
 	{
-		set_vr(op.rt, trunc<u32[4]>(sext<s64[4]>(get_vr(op.ra)) >> zext<s64[4]>(-get_vr(op.rb) & 0x3f)));
+		const auto sh = eval(-get_vr(op.rb) & 0x3f);
+		set_vr(op.rt, get_vr<s32[4]>(op.ra) >> bitcast<s32[4]>(min(sh, splat<u32[4]>(0x1f))));
 	}
 
 	void SHL(spu_opcode_t op)
 	{
-		set_vr(op.rt, trunc<u32[4]>(zext<u64[4]>(get_vr(op.ra)) << zext<u64[4]>(get_vr(op.rb) & 0x3f)));
+		const auto sh = eval(get_vr(op.rb) & 0x3f);
+		set_vr(op.rt, select(sh < 0x20, eval(get_vr(op.ra) << sh), splat<u32[4]>(0)));
 	}
 
 	void ROTH(spu_opcode_t op)
@@ -2729,17 +3104,20 @@ public:
 
 	void ROTHM(spu_opcode_t op)
 	{
-		set_vr(op.rt, trunc<u16[8]>(zext<u32[8]>(get_vr<u16[8]>(op.ra)) >> zext<u32[8]>(-get_vr<u16[8]>(op.rb) & 0x1f)));
+		const auto sh = eval(-get_vr<u16[8]>(op.rb) & 0x1f);
+		set_vr(op.rt, select(sh < 0x10, eval(get_vr<u16[8]>(op.ra) >> sh), splat<u16[8]>(0)));
 	}
 
 	void ROTMAH(spu_opcode_t op)
 	{
-		set_vr(op.rt, trunc<u16[8]>(sext<s32[8]>(get_vr<u16[8]>(op.ra)) >> zext<s32[8]>(-get_vr<u16[8]>(op.rb) & 0x1f)));
+		const auto sh = eval(-get_vr<u16[8]>(op.rb) & 0x1f);
+		set_vr(op.rt, get_vr<s16[8]>(op.ra) >> bitcast<s16[8]>(min(sh, splat<u16[8]>(0xf))));
 	}
 
 	void SHLH(spu_opcode_t op)
 	{
-		set_vr(op.rt, trunc<u16[8]>(zext<u32[8]>(get_vr<u16[8]>(op.ra)) << zext<u32[8]>(get_vr<u16[8]>(op.rb) & 0x1f)));
+		const auto sh = eval(get_vr<u16[8]>(op.rb) & 0x1f);
+		set_vr(op.rt, select(sh < 0x10, eval(get_vr<u16[8]>(op.ra) << sh), splat<u16[8]>(0)));
 	}
 
 	void ROTI(spu_opcode_t op)
@@ -2836,111 +3214,156 @@ public:
 
 	void GB(spu_opcode_t op)
 	{
-		// TODO
-		value_t<u32> m;
-		m.value = eval((get_vr<s32[4]>(op.ra) << 31) < 0).value;
-		m.value = m_ir->CreateBitCast(m.value, m_ir->getIntNTy(4));
-		m.value = m_ir->CreateZExt(m.value, get_type<u32>());
+		const auto a = get_vr<s32[4]>(op.ra);
+
+		if (auto cv = llvm::dyn_cast<llvm::Constant>(a.value))
+		{
+			v128 data = get_const_vector(cv, m_pos, 680);
+			u32 res = 0;
+			for (u32 i = 0; i < 4; i++)
+				res |= (data._u32[i] & 1) << i;
+			set_vr(op.rt, build<u32[4]>(0, 0, 0, res));
+			return;
+		}
+
+		const auto m = zext<u32>(bitcast<i4>(trunc<bool[4]>(a)));
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, m));
 	}
 
 	void GBH(spu_opcode_t op)
 	{
-		const auto m = zext<u32>(bitcast<u8>((get_vr<s16[8]>(op.ra) << 15) < 0));
+		const auto a = get_vr<s16[8]>(op.ra);
+
+		if (auto cv = llvm::dyn_cast<llvm::Constant>(a.value))
+		{
+			v128 data = get_const_vector(cv, m_pos, 684);
+			u32 res = 0;
+			for (u32 i = 0; i < 8; i++)
+				res |= (data._u16[i] & 1) << i;
+			set_vr(op.rt, build<u32[4]>(0, 0, 0, res));
+			return;
+		}
+
+		const auto m = zext<u32>(bitcast<u8>(trunc<bool[8]>(a)));
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, m));
 	}
 
 	void GBB(spu_opcode_t op)
 	{
-		const auto m = zext<u32>(bitcast<u16>((get_vr<s8[16]>(op.ra) << 7) < 0));
+		const auto a = get_vr<s8[16]>(op.ra);
+
+		if (auto cv = llvm::dyn_cast<llvm::Constant>(a.value))
+		{
+			v128 data = get_const_vector(cv, m_pos, 688);
+			u32 res = 0;
+			for (u32 i = 0; i < 16; i++)
+				res |= (data._u8[i] & 1) << i;
+			set_vr(op.rt, build<u32[4]>(0, 0, 0, res));
+			return;
+		}
+
+		const auto m = zext<u32>(bitcast<u16>(trunc<bool[16]>(a)));
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, m));
 	}
 
 	void FSM(spu_opcode_t op)
 	{
-		// TODO
-		value_t<bool[4]> m;
-		m.value = extract(get_vr(op.ra), 3).value;
-		m.value = m_ir->CreateTrunc(m.value, m_ir->getIntNTy(4));
-		m.value = m_ir->CreateBitCast(m.value, get_type<bool[4]>());
+		const auto v = extract(get_vr(op.ra), 3);
+
+		if (auto cv = llvm::dyn_cast<llvm::ConstantInt>(v.value))
+		{
+			const u64 v = cv->getZExtValue() & 0xf;
+			set_vr(op.rt, -(build<u32[4]>(v >> 0, v >> 1, v >> 2, v >> 3) & 1));
+			return;
+		}
+
+		const auto m = bitcast<bool[4]>(trunc<i4>(v));
 		set_vr(op.rt, sext<u32[4]>(m));
 	}
 
 	void FSMH(spu_opcode_t op)
 	{
-		const auto m = bitcast<bool[8]>(trunc<u8>(extract(get_vr(op.ra), 3)));
+		const auto v = extract(get_vr(op.ra), 3);
+
+		if (auto cv = llvm::dyn_cast<llvm::ConstantInt>(v.value))
+		{
+			const u64 v = cv->getZExtValue() & 0xff;
+			set_vr(op.rt, -(build<u16[8]>(v >> 0, v >> 1, v >> 2, v >> 3, v >> 4, v >> 5, v >> 6, v >> 7) & 1));
+			return;
+		}
+
+		const auto m = bitcast<bool[8]>(trunc<u8>(v));
 		set_vr(op.rt, sext<u16[8]>(m));
 	}
 
 	void FSMB(spu_opcode_t op)
 	{
-		const auto m = bitcast<bool[16]>(trunc<u16>(extract(get_vr(op.ra), 3)));
+		const auto v = extract(get_vr(op.ra), 3);
+
+		if (auto cv = llvm::dyn_cast<llvm::ConstantInt>(v.value))
+		{
+			const u64 v = cv->getZExtValue() & 0xffff;
+			op.i16 = static_cast<u32>(v);
+			return FSMBI(op);
+		}
+
+		const auto m = bitcast<bool[16]>(trunc<u16>(v));
 		set_vr(op.rt, sext<u8[16]>(m));
 	}
 
 	void ROTQBYBI(spu_opcode_t op)
 	{
-		value_t<u8[16]> sh;
-		u8 initial[16]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-		sh.value = llvm::ConstantDataVector::get(m_context, initial);
+		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 		sh = eval((sh - (zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3)) & 0xf);
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
 	void ROTQMBYBI(spu_opcode_t op)
 	{
-		value_t<u8[16]> sh;
-		u8 initial[16]{112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127};
-		sh.value = llvm::ConstantDataVector::get(m_context, initial);
+		auto sh = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
 		sh = eval(sh + (-(zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3) & 0x1f));
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
 	void SHLQBYBI(spu_opcode_t op)
 	{
-		value_t<u8[16]> sh;
-		u8 initial[16]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-		sh.value = llvm::ConstantDataVector::get(m_context, initial);
+		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 		sh = eval(sh - (zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3));
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
 	void CBX(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0xf);
-		value_t<u8[16]> r;
-		u8 initial[16]{0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
+		const auto i = eval(~s & 0xf);
+		auto r = build<u8[16]>(0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt8(0x3), i.value);
 		set_vr(op.rt, r);
 	}
 
 	void CHX(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) >> 1 & 0x7);
-		value_t<u16[8]> r;
-		u16 initial[8]{0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
+		const auto i = eval(~s >> 1 & 0x7);
+		auto r = build<u16[8]>(0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt16(0x0203), i.value);
 		set_vr(op.rt, r);
 	}
 
 	void CWX(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) >> 2 & 0x3);
-		value_t<u32[4]> r;
-		u32 initial[4]{0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
+		const auto i = eval(~s >> 2 & 0x3);
+		auto r = build<u32[4]>(0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt32(0x010203), i.value);
 		set_vr(op.rt, r);
 	}
 
 	void CDX(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) >> 3 & 0x1);
-		value_t<u64[2]> r;
-		u64 initial[2]{0x18191a1b1c1d1e1f, 0x1011121314151617};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
+		const auto i = eval(~s >> 3 & 0x1);
+		auto r = build<u64[2]>(0x18191a1b1c1d1e1f, 0x1011121314151617);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt64(0x01020304050607), i.value);
 		set_vr(op.rt, r);
 	}
@@ -2968,29 +3391,29 @@ public:
 
 	void ROTQBY(spu_opcode_t op)
 	{
-		value_t<u8[16]> sh;
-		u8 initial[16]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-		sh.value = llvm::ConstantDataVector::get(m_context, initial);
-		sh = eval((sh - zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)) & 0xf);
-		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
+		const auto a = get_vr<u8[16]>(op.ra);
+		const auto b = get_vr<u8[16]>(op.rb);
+		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		sh = eval((sh - zshuffle<u8[16]>(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)) & 0xf);
+		set_vr(op.rt, pshufb(a, sh));
 	}
 
 	void ROTQMBY(spu_opcode_t op)
 	{
-		value_t<u8[16]> sh;
-		u8 initial[16]{112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127};
-		sh.value = llvm::ConstantDataVector::get(m_context, initial);
-		sh = eval(sh + (-zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f));
-		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
+		const auto a = get_vr<u8[16]>(op.ra);
+		const auto b = get_vr<u8[16]>(op.rb);
+		auto sh = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
+		sh = eval(sh + (-zshuffle<u8[16]>(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f));
+		set_vr(op.rt, pshufb(a, sh));
 	}
 
 	void SHLQBY(spu_opcode_t op)
 	{
-		value_t<u8[16]> sh;
-		u8 initial[16]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-		sh.value = llvm::ConstantDataVector::get(m_context, initial);
-		sh = eval(sh - (zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f));
-		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
+		const auto a = get_vr<u8[16]>(op.ra);
+		const auto b = get_vr<u8[16]>(op.rb);
+		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		sh = eval(sh - (zshuffle<u8[16]>(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f));
+		set_vr(op.rt, pshufb(a, sh));
 	}
 
 	void ORX(spu_opcode_t op)
@@ -3003,40 +3426,36 @@ public:
 
 	void CBD(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + op.i7) & 0xf);
-		value_t<u8[16]> r;
-		u8 initial[16]{0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto a = eval(extract(get_vr(op.ra), 3) + op.i7);
+		const auto i = eval(~a & 0xf);
+		auto r = build<u8[16]>(0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt8(0x3), i.value);
 		set_vr(op.rt, r);
 	}
 
 	void CHD(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + op.i7) >> 1 & 0x7);
-		value_t<u16[8]> r;
-		u16 initial[8]{0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto a = eval(extract(get_vr(op.ra), 3) + op.i7);
+		const auto i = eval(~a >> 1 & 0x7);
+		auto r = build<u16[8]>(0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt16(0x0203), i.value);
 		set_vr(op.rt, r);
 	}
 
 	void CWD(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + op.i7) >> 2 & 0x3);
-		value_t<u32[4]> r;
-		u32 initial[4]{0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto a = eval(extract(get_vr(op.ra), 3) + op.i7);
+		const auto i = eval(~a >> 2 & 0x3);
+		auto r = build<u32[4]>(0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt32(0x010203), i.value);
 		set_vr(op.rt, r);
 	}
 
 	void CDD(spu_opcode_t op)
 	{
-		const auto i = eval(~(extract(get_vr(op.ra), 3) + op.i7) >> 3 & 0x1);
-		value_t<u64[2]> r;
-		u64 initial[2]{0x18191a1b1c1d1e1f, 0x1011121314151617};
-		r.value = llvm::ConstantDataVector::get(m_context, initial);
+		const auto a = eval(extract(get_vr(op.ra), 3) + op.i7);
+		const auto i = eval(~a >> 3 & 0x1);
+		auto r = build<u64[2]>(0x18191a1b1c1d1e1f, 0x1011121314151617);
 		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt64(0x01020304050607), i.value);
 		set_vr(op.rt, r);
 	}
@@ -3295,11 +3714,11 @@ public:
 
 	void FSMBI(spu_opcode_t op)
 	{
-		u8 data[16];
+		v128 data;
 		for (u32 i = 0; i < 16; i++)
-			data[i] = op.i16 & (1u << i) ? 0xff : 0;
+			data._bytes[i] = op.i16 & (1u << i) ? -1 : 0;
 		value_t<u8[16]> r;
-		r.value = llvm::ConstantDataVector::get(m_context, data);
+		r.value = make_const_vector<v128>(data, get_type<u8[16]>());
 		set_vr(op.rt, r);
 	}
 
@@ -3450,13 +3869,198 @@ public:
 
 	void SELB(spu_opcode_t op)
 	{
-		const auto c = get_vr(op.rc);
-		set_vr(op.rt4, (get_vr(op.ra) & ~c) | (get_vr(op.rb) & c));
+		if (auto ei = llvm::dyn_cast_or_null<llvm::CastInst>(m_block->reg[op.rc]))
+		{
+			// Detect if the mask comes from a comparison instruction
+			if (ei->getOpcode() == llvm::Instruction::SExt && ei->getSrcTy()->isIntOrIntVectorTy(1))
+			{
+				auto op0 = ei->getOperand(0);
+				auto typ = ei->getDestTy();
+				auto op1 = m_block->reg[op.rb];
+				auto op2 = m_block->reg[op.ra];
+
+				if (typ == get_type<u64[2]>())
+				{
+					if (op1 && op1->getType() == get_type<f64[2]>() || op2 && op2->getType() == get_type<f64[2]>())
+					{
+						op1 = get_vr<f64[2]>(op.rb).value;
+						op2 = get_vr<f64[2]>(op.ra).value;
+					}
+					else
+					{
+						op1 = get_vr<u64[2]>(op.rb).value;
+						op2 = get_vr<u64[2]>(op.ra).value;
+					}
+				}
+				else if (typ == get_type<u32[4]>())
+				{
+					if (op1 && op1->getType() == get_type<f32[4]>() || op2 && op2->getType() == get_type<f32[4]>())
+					{
+						op1 = get_vr<f32[4]>(op.rb).value;
+						op2 = get_vr<f32[4]>(op.ra).value;
+					}
+					else
+					{
+						op1 = get_vr<u32[4]>(op.rb).value;
+						op2 = get_vr<u32[4]>(op.ra).value;
+					}
+				}
+				else if (typ == get_type<u16[8]>())
+				{
+					op1 = get_vr<u16[8]>(op.rb).value;
+					op2 = get_vr<u16[8]>(op.ra).value;
+				}
+				else if (typ == get_type<u8[16]>())
+				{
+					op1 = get_vr<u8[16]>(op.rb).value;
+					op2 = get_vr<u8[16]>(op.ra).value;
+				}
+				else
+				{
+					LOG_ERROR(SPU, "[0x%x] SELB: unknown cast destination type", m_pos);
+					op0 = nullptr;
+				}
+
+				if (op0 && op1 && op2)
+				{
+					set_vr(op.rt4, m_ir->CreateSelect(op0, op1, op2));
+					return;
+				}
+			}
+		}
+
+		set_vr(op.rt4, merge(get_vr(op.rc), get_vr(op.rb), get_vr(op.ra)));
 	}
 
 	void SHUFB(spu_opcode_t op)
 	{
+		if (auto ii = llvm::dyn_cast_or_null<llvm::InsertElementInst>(m_block->reg[op.rc]))
+		{
+			// Detect if the mask comes from a CWD-like constant generation instruction
+			auto c0 = llvm::dyn_cast<llvm::Constant>(ii->getOperand(0));
+
+			if (c0 && get_const_vector(c0, m_pos, op.rc) != v128::from64(0x18191a1b1c1d1e1f, 0x1011121314151617))
+			{
+				c0 = nullptr;
+			}
+
+			auto c1 = llvm::dyn_cast<llvm::ConstantInt>(ii->getOperand(1));
+
+			llvm::Type* vtype = nullptr;
+			llvm::Value* _new = nullptr;
+
+			// Optimization: emit SHUFB as simple vector insert
+			if (c0 && c1 && c1->getType() == get_type<u64>() && c1->getZExtValue() == 0x01020304050607)
+			{
+				vtype = get_type<u64[2]>();
+				_new  = extract(get_vr<u64[2]>(op.ra), 1).value;
+			}
+			else if (c0 && c1 && c1->getType() == get_type<u32>() && c1->getZExtValue() == 0x010203)
+			{
+				vtype = get_type<u32[4]>();
+				_new  = extract(get_vr<u32[4]>(op.ra), 3).value;
+			}
+			else if (c0 && c1 && c1->getType() == get_type<u16>() && c1->getZExtValue() == 0x0203)
+			{
+				vtype = get_type<u16[8]>();
+				_new  = extract(get_vr<u16[8]>(op.ra), 6).value;
+			}
+			else if (c0 && c1 && c1->getType() == get_type<u8>() && c1->getZExtValue() == 0x03)
+			{
+				vtype = get_type<u8[16]>();
+				_new  = extract(get_vr<u8[16]>(op.ra), 12).value;
+			}
+
+			if (vtype && _new)
+			{
+				set_vr(op.rt4, m_ir->CreateInsertElement(get_vr(op.rb, vtype), _new, ii->getOperand(2)));
+				return;
+			}
+		}
+
 		const auto c = get_vr<u8[16]>(op.rc);
+
+		if (auto ci = llvm::dyn_cast<llvm::Constant>(c.value))
+		{
+			// Optimization: SHUFB with constant mask
+			v128 mask = get_const_vector(ci, m_pos, 57216);
+
+			if (((mask._u64[0] | mask._u64[1]) & 0xe0e0e0e0e0e0e0e0) == 0)
+			{
+				// Trivial insert or constant shuffle (TODO)
+				static constexpr struct mask_info
+				{
+					u64 i1;
+					u64 i0;
+					decltype(&cpu_translator::get_type<void>) type;
+					u64 extract_from;
+					u64 insert_to;
+				} s_masks[30]
+				{
+					{ 0x0311121314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 15 },
+					{ 0x1003121314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 14 },
+					{ 0x1011031314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 13 },
+					{ 0x1011120314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 12 },
+					{ 0x1011121303151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 11 },
+					{ 0x1011121314031617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 10 },
+					{ 0x1011121314150317, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 9 },
+					{ 0x1011121314151603, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 8 },
+					{ 0x1011121314151617, 0x03191a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 7 },
+					{ 0x1011121314151617, 0x18031a1b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 6 },
+					{ 0x1011121314151617, 0x1819031b1c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 5 },
+					{ 0x1011121314151617, 0x18191a031c1d1e1f, &cpu_translator::get_type<u8[16]>, 12, 4 },
+					{ 0x1011121314151617, 0x18191a1b031d1e1f, &cpu_translator::get_type<u8[16]>, 12, 3 },
+					{ 0x1011121314151617, 0x18191a1b1c031e1f, &cpu_translator::get_type<u8[16]>, 12, 2 },
+					{ 0x1011121314151617, 0x18191a1b1c1d031f, &cpu_translator::get_type<u8[16]>, 12, 1 },
+					{ 0x1011121314151617, 0x18191a1b1c1d1e03, &cpu_translator::get_type<u8[16]>, 12, 0 },
+					{ 0x0203121314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u16[8]>, 6, 7 },
+					{ 0x1011020314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u16[8]>, 6, 6 },
+					{ 0x1011121302031617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u16[8]>, 6, 5 },
+					{ 0x1011121314150203, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u16[8]>, 6, 4 },
+					{ 0x1011121314151617, 0x02031a1b1c1d1e1f, &cpu_translator::get_type<u16[8]>, 6, 3 },
+					{ 0x1011121314151617, 0x181902031c1d1e1f, &cpu_translator::get_type<u16[8]>, 6, 2 },
+					{ 0x1011121314151617, 0x18191a1b02031e1f, &cpu_translator::get_type<u16[8]>, 6, 1 },
+					{ 0x1011121314151617, 0x18191a1b1c1d0203, &cpu_translator::get_type<u16[8]>, 6, 0 },
+					{ 0x0001020314151617, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u32[4]>, 3, 3 },
+					{ 0x1011121300010203, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u32[4]>, 3, 2 },
+					{ 0x1011121314151617, 0x000102031c1d1e1f, &cpu_translator::get_type<u32[4]>, 3, 1 },
+					{ 0x1011121314151617, 0x18191a1b00010203, &cpu_translator::get_type<u32[4]>, 3, 0 },
+					{ 0x0001020304050607, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u64[2]>, 1, 1 },
+					{ 0x1011121303151617, 0x0001020304050607, &cpu_translator::get_type<u64[2]>, 1, 0 },
+				};
+
+				// Check important constants from CWD-like constant generation instructions
+				for (const auto& cm : s_masks)
+				{
+					if (mask._u64[0] == cm.i0 && mask._u64[1] == cm.i1)
+					{
+						const auto t = (this->*cm.type)();
+						const auto a = get_vr(op.ra, t);
+						const auto b = get_vr(op.rb, t);
+						const auto e = m_ir->CreateExtractElement(a, cm.extract_from);
+						set_vr(op.rt4, m_ir->CreateInsertElement(b, e, cm.insert_to));
+						return;
+					}
+				}
+
+				// Generic constant shuffle without constant-generation bits
+				mask = mask ^ v128::from8p(0x1f);
+
+				if (op.ra == op.rb)
+				{
+					mask = mask & v128::from8p(0xf);
+				}
+
+				const auto a = get_vr<u8[16]>(op.ra);
+				const auto b = get_vr<u8[16]>(op.rb);
+				const auto c = make_const_vector(mask, get_type<u8[16]>());
+				set_vr(op.rt4, m_ir->CreateShuffleVector(b.value, op.ra == op.rb ? b.value : a.value, m_ir->CreateZExt(c, get_type<u32[16]>())));
+				return;
+			}
+
+			LOG_TODO(SPU, "[0x%x] Const SHUFB mask: %s", m_pos, mask);
+		}
+
 		const auto x = avg(sext<u8[16]>((c & 0xc0) == 0xc0), sext<u8[16]>((c & 0xe0) == 0xc0));
 		const auto cr = c ^ 0xf;
 		const auto a = pshufb(get_vr<u8[16]>(op.ra), cr);
@@ -3537,7 +4141,7 @@ public:
 
 	void DFNMA(spu_opcode_t op) //
 	{
-		set_vr(op.rt, -get_vr<f64[2]>(op.rt) - get_vr<f64[2]>(op.ra) * get_vr<f64[2]>(op.rb));
+		set_vr(op.rt, -(get_vr<f64[2]>(op.ra) * get_vr<f64[2]>(op.rb) + get_vr<f64[2]>(op.rt)));
 	}
 
 	void FREST(spu_opcode_t op) //
@@ -3662,18 +4266,16 @@ public:
 	void STQX(spu_opcode_t op) //
 	{
 		value_t<u64> addr = zext<u64>((extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0x3fff0);
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		m_ir->CreateStore(r.value, m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 	}
 
 	void LQX(spu_opcode_t op) //
 	{
 		value_t<u64> addr = zext<u64>((extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0x3fff0);
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r;
-		r.value = m_ir->CreateLoad(m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 		set_vr(op.rt, r);
 	}
@@ -3681,18 +4283,16 @@ public:
 	void STQA(spu_opcode_t op) //
 	{
 		value_t<u64> addr = splat<u64>(spu_ls_target(0, op.i16));
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		m_ir->CreateStore(r.value, m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 	}
 
 	void LQA(spu_opcode_t op) //
 	{
 		value_t<u64> addr = splat<u64>(spu_ls_target(0, op.i16));
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r;
-		r.value = m_ir->CreateLoad(m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 		set_vr(op.rt, r);
 	}
@@ -3700,18 +4300,16 @@ public:
 	void STQR(spu_opcode_t op) //
 	{
 		value_t<u64> addr = splat<u64>(spu_ls_target(m_pos, op.i16));
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		m_ir->CreateStore(r.value, m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 	}
 
 	void LQR(spu_opcode_t op) //
 	{
 		value_t<u64> addr = splat<u64>(spu_ls_target(m_pos, op.i16));
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r;
-		r.value = m_ir->CreateLoad(m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 		set_vr(op.rt, r);
 	}
@@ -3719,96 +4317,69 @@ public:
 	void STQD(spu_opcode_t op) //
 	{
 		value_t<u64> addr = zext<u64>((extract(get_vr(op.ra), 3) + (op.si10 << 4)) & 0x3fff0);
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		m_ir->CreateStore(r.value, m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 	}
 
 	void LQD(spu_opcode_t op) //
 	{
 		value_t<u64> addr = zext<u64>((extract(get_vr(op.ra), 3) + (op.si10 << 4)) & 0x3fff0);
-		addr.value = m_ir->CreateAdd(m_lsptr, addr.value);
 		value_t<u8[16]> r;
-		r.value = m_ir->CreateLoad(m_ir->CreateIntToPtr(addr.value, get_type<u8[16]>()->getPointerTo()));
+		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 		set_vr(op.rt, r);
 	}
 
-	void make_halt(llvm::BasicBlock* next)
+	void make_halt(value_t<bool> cond)
 	{
+		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
+		m_ir->CreateCondBr(cond.value, halt, next);
+		m_ir->SetInsertPoint(halt);
 		const auto pstatus = spu_ptr<u32>(&SPUThread::status);
 		const auto chalt = m_ir->getInt32(SPU_STATUS_STOPPED_BY_HALT);
 		m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Or, pstatus, chalt, llvm::AtomicOrdering::Release)->setVolatile(true);
 		const auto ptr = m_ir->CreateIntToPtr(m_ir->getInt64(reinterpret_cast<u64>(vm::base(0xffdead00))), get_type<u32*>());
 		m_ir->CreateStore(m_ir->getInt32("HALT"_u32), ptr)->setVolatile(true);
 		m_ir->CreateBr(next);
+		m_ir->SetInsertPoint(next);
 	}
 
 	void HGT(spu_opcode_t op) //
 	{
 		const auto cond = eval(extract(get_vr<s32[4]>(op.ra), 3) > extract(get_vr<s32[4]>(op.rb), 3));
-		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(cond.value, halt, next);
-		m_ir->SetInsertPoint(halt);
-		make_halt(next);
-		m_ir->SetInsertPoint(next);
+		make_halt(cond);
 	}
 
 	void HEQ(spu_opcode_t op) //
 	{
 		const auto cond = eval(extract(get_vr(op.ra), 3) == extract(get_vr(op.rb), 3));
-		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(cond.value, halt, next);
-		m_ir->SetInsertPoint(halt);
-		make_halt(next);
-		m_ir->SetInsertPoint(next);
+		make_halt(cond);
 	}
 
 	void HLGT(spu_opcode_t op) //
 	{
 		const auto cond = eval(extract(get_vr(op.ra), 3) > extract(get_vr(op.rb), 3));
-		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(cond.value, halt, next);
-		m_ir->SetInsertPoint(halt);
-		make_halt(next);
-		m_ir->SetInsertPoint(next);
+		make_halt(cond);
 	}
 
 	void HGTI(spu_opcode_t op) //
 	{
 		const auto cond = eval(extract(get_vr<s32[4]>(op.ra), 3) > op.si10);
-		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(cond.value, halt, next);
-		m_ir->SetInsertPoint(halt);
-		make_halt(next);
-		m_ir->SetInsertPoint(next);
+		make_halt(cond);
 	}
 
 	void HEQI(spu_opcode_t op) //
 	{
 		const auto cond = eval(extract(get_vr(op.ra), 3) == op.si10);
-		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(cond.value, halt, next);
-		m_ir->SetInsertPoint(halt);
-		make_halt(next);
-		m_ir->SetInsertPoint(next);
+		make_halt(cond);
 	}
 
 	void HLGTI(spu_opcode_t op) //
 	{
 		const auto cond = eval(extract(get_vr(op.ra), 3) > op.si10);
-		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
-		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(cond.value, halt, next);
-		m_ir->SetInsertPoint(halt);
-		make_halt(next);
-		m_ir->SetInsertPoint(next);
+		make_halt(cond);
 	}
 
 	void HBR(spu_opcode_t op) //
@@ -3876,6 +4447,10 @@ public:
 			// Fixed branch excludes the possibility it's a function return (TODO)
 			ret = false;
 		}
+		else if (llvm::isa<llvm::Constant>(addr.value))
+		{
+			LOG_ERROR(SPU, "[0x%x] Unexpected constant (add_block_indirect)", m_pos);
+		}
 
 		// Load stack addr if necessary
 		value_t<u32> sp;
@@ -3900,41 +4475,42 @@ public:
 		}
 
 		m_ir->CreateStore(addr.value, spu_ptr<u32>(&SPUThread::pc));
-		const auto disp = m_ir->CreateAdd(m_thread, m_ir->getInt64(::offset32(&SPUThread::jit_dispatcher)));
-		const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u64>(), get_type<u64>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
-		const auto ad64 = zext<u64>(addr).value;
+		const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u8*>(), get_type<u8*>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
+		const auto disp = m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(&SPUThread::jit_dispatcher))), type);
+		const auto ad64 = m_ir->CreateZExt(addr.value, get_type<u64>());
 
 		if (ret && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 		{
 			// Compare address stored in stack mirror with addr
 			const auto stack0 = eval(zext<u64>(sp) + ::offset32(&SPUThread::stack_mirror));
 			const auto stack1 = eval(stack0 + 8);
-			const auto _ret = m_ir->CreateLoad(m_ir->CreateIntToPtr(m_ir->CreateAdd(m_thread, stack0.value), type));
-			const auto link = m_ir->CreateLoad(m_ir->CreateIntToPtr(m_ir->CreateAdd(m_thread, stack1.value), get_type<u64*>()));
+			const auto _ret = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), type));
+			const auto link = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack1.value), get_type<u64*>()));
 			const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
 			const auto done = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->CreateCondBr(m_ir->CreateICmpEQ(ad64, link), done, fail);
 			m_ir->SetInsertPoint(done);
 
 			// Clear stack mirror and return by tail call to the provided return address
-			m_ir->CreateStore(splat<u64[2]>(-1).value, m_ir->CreateIntToPtr(m_ir->CreateAdd(m_thread, stack0.value), get_type<u64[2]>()->getPointerTo()));
+			m_ir->CreateStore(splat<u64[2]>(-1).value, m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), get_type<u64(*)[2]>()));
 			tail(_ret);
 			m_ir->SetInsertPoint(fail);
 		}
 
-		llvm::Value* ax2 = m_ir->CreateShl(ad64, 1);
-		llvm::Value* ptr = m_ir->CreateIntToPtr(m_ir->CreateAdd(disp, ax2), type);
+		llvm::Value* ptr = m_ir->CreateGEP(disp, m_ir->CreateLShr(ad64, 2, "", true));
 
 		if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
 		{
 			// Try to load chunk address from the function table
+			llvm::Value* index = ad64;
+
 			if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
 			{
-				ax2 = m_ir->CreateSub(ad64, m_ir->getInt64(m_function_queue[0] * 2));
+				index = m_ir->CreateSub(ad64, m_ir->getInt64(m_function_queue[0]));
 			}
 
-			const auto use_ftable = m_ir->CreateICmpULT(ax2, m_ir->getInt64(m_size * 2));
-			ptr = m_ir->CreateSelect(use_ftable, m_ir->CreateGEP(m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(ax2, 3, "", true)}), ptr);
+			const auto use_ftable = m_ir->CreateICmpULT(index, m_ir->getInt64(m_size));
+			ptr = m_ir->CreateSelect(use_ftable, m_ir->CreateGEP(m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(index, 2, "", true)}), ptr);
 		}
 
 		tail(m_ir->CreateLoad(ptr));
@@ -3998,8 +4574,14 @@ public:
 			{
 				if (m_block_info[target / 4])
 				{
-					targets.emplace(target, add_block(target));
+					targets.emplace(target, nullptr);
 				}
+			}
+
+			// Initialize target basic blocks
+			for (auto& pair : targets)
+			{
+				pair.second = add_block(pair.first);
 			}
 
 			// Get jump table bounds (optimization)
@@ -4142,10 +4724,7 @@ public:
 
 	void set_link(spu_opcode_t op)
 	{
-		u32 values[4]{0, 0, 0, spu_branch_target(m_pos + 4)};
-		value_t<u32[4]> r;
-		r.value = llvm::ConstantDataVector::get(m_context, values);
-		set_vr(op.rt, r);
+		set_vr(op.rt, build<u32[4]>(0, 0, 0, spu_branch_target(m_pos + 4)));
 
 		if (g_cfg.core.spu_block_size != spu_block_size_type::safe && m_block_info[m_pos / 4 + 1] && m_entry_info[m_pos / 4 + 1])
 		{
@@ -4153,8 +4732,8 @@ public:
 			const auto func = add_function(m_pos + 4);
 			const auto stack0 = eval(zext<u64>(extract(get_vr(1), 3) & 0x3fff0) + ::offset32(&SPUThread::stack_mirror));
 			const auto stack1 = eval(stack0 + 8);
-			m_ir->CreateStore(func, m_ir->CreateIntToPtr(m_ir->CreateAdd(m_thread, stack0.value), func->getType()->getPointerTo()));
-			m_ir->CreateStore(m_ir->getInt64(m_pos + 4), m_ir->CreateIntToPtr(m_ir->CreateAdd(m_thread, stack1.value), get_type<u64*>()));
+			m_ir->CreateStore(func, m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), func->getType()->getPointerTo()));
+			m_ir->CreateStore(m_ir->getInt64(m_pos + 4), m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack1.value), get_type<u64*>()));
 		}
 	}
 

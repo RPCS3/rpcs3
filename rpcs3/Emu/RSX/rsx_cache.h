@@ -378,6 +378,12 @@ namespace rsx
 			u64 pipeline_storage_hash;
 
 			u32 vp_ctrl;
+			u32 vp_texture_dimensions;
+			u64 vp_instruction_mask[8];
+
+			u32 vp_base_address;
+			u32 vp_entry;
+			u16 vp_jump_table[32];
 
 			u32 fp_ctrl;
 			u32 fp_texture_dimensions;
@@ -405,7 +411,7 @@ namespace rsx
 		struct progress_dialog_helper
 		{
 			std::shared_ptr<MsgDialogBase> dlg;
-			atomic_t<bool> initialized{ false };
+			atomic_t<int> ref_cnt;
 
 			virtual void create()
 			{
@@ -422,13 +428,15 @@ namespace rsx
 					});
 				};
 
+				ref_cnt++;
+
 				Emu.CallAfter([&]()
 				{
 					dlg->Create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
-					initialized.store(true);
+					ref_cnt--;
 				});
 
-				while (!initialized.load() && !Emu.IsStopped())
+				while (ref_cnt.load() && !Emu.IsStopped())
 				{
 					_mm_pause();
 				}
@@ -436,26 +444,35 @@ namespace rsx
 
 			virtual void update_msg(u32 index, u32 processed, u32 entry_count)
 			{
-				Emu.CallAfter([=]()
+				ref_cnt++;
+
+				Emu.CallAfter([&]()
 				{
 					const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
 					dlg->ProgressBarSetMsg(index, fmt::format(text, processed, entry_count));
+					ref_cnt--;
 				});
 			}
 
 			virtual void inc_value(u32 index, u32 value)
 			{
-				Emu.CallAfter([=]()
+				ref_cnt++;
+
+				Emu.CallAfter([&]()
 				{
 					dlg->ProgressBarInc(index, value);
+					ref_cnt--;
 				});
 			}
 			
 			virtual void set_limit(u32 index, u32 limit)
 			{
-				Emu.CallAfter([=]()
+				ref_cnt++;
+
+				Emu.CallAfter([&]()
 				{
 					dlg->ProgressBarSetLimit(index, limit);
+					ref_cnt--;
 				});
 			}
 
@@ -463,7 +480,12 @@ namespace rsx
 			{};
 
 			virtual void close()
-			{}
+			{
+				while (ref_cnt.load() && !Emu.IsStopped())
+				{
+					_mm_pause();
+				}
+			}
 		};
 
 		shaders_cache(backend_storage& storage, std::string pipeline_class, std::string version_prefix_str = "v1")
@@ -653,14 +675,19 @@ namespace rsx
 				return;
 			}
 
+			if (vp.jump_table.size() > 32)
+			{
+				LOG_ERROR(RSX, "shaders_cache: vertex program has more than 32 jump addresses. Entry not saved to cache");
+				return;
+			}
+
 			pipeline_data data = pack(pipeline, vp, fp);
 			std::string fp_name = root_path + "/raw/" + fmt::format("%llX.fp", data.fragment_program_hash);
 			std::string vp_name = root_path + "/raw/" + fmt::format("%llX.vp", data.vertex_program_hash);
 
 			if (!fs::is_file(fp_name))
 			{
-				const auto size = program_hash_util::fragment_program_utils::get_fragment_program_ucode_size(fp.addr);
-				fs::file(fp_name, fs::rewrite).write(fp.addr, size);
+				fs::file(fp_name, fs::rewrite).write(fp.addr, fp.ucode_length);
 			}
 
 			if (!fs::is_file(vp_name))
@@ -671,6 +698,7 @@ namespace rsx
 			u64 state_hash = 0;
 			state_hash ^= rpcs3::hash_base<u32>(data.vp_ctrl);
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_ctrl);
+			state_hash ^= rpcs3::hash_base<u32>(data.vp_texture_dimensions);
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_texture_dimensions);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_unnormalized_coords);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_height);
@@ -712,6 +740,7 @@ namespace rsx
 			RSXFragmentProgram fp = {};
 			fragment_program_data[program_hash] = data;
 			fp.addr = fragment_program_data[program_hash].data();
+			fp.ucode_length = (u32)data.size();
 
 			return fp;
 		}
@@ -723,6 +752,23 @@ namespace rsx
 			pipeline_storage_type pipeline = data.pipeline_properties;
 
 			vp.output_mask = data.vp_ctrl;
+			vp.texture_dimensions = data.vp_texture_dimensions;
+			vp.base_address = data.vp_base_address;
+			vp.entry = data.vp_entry;
+
+			pack_bitset<512>(vp.instruction_mask, data.vp_instruction_mask);
+
+			for (u8 index = 0; index < 32; ++index)
+			{
+				const auto address = data.vp_jump_table[index];
+				if (address == UINT16_MAX)
+				{
+					// End of list marker
+					break;
+				}
+
+				vp.jump_table.emplace(address);
+			}
 
 			fp.ctrl = data.fp_ctrl;
 			fp.texture_dimensions = data.fp_texture_dimensions;
@@ -753,6 +799,29 @@ namespace rsx
 			data_block.pipeline_storage_hash = m_storage.get_hash(pipeline);
 
 			data_block.vp_ctrl = vp.output_mask;
+			data_block.vp_texture_dimensions = vp.texture_dimensions;
+			data_block.vp_base_address = vp.base_address;
+			data_block.vp_entry = vp.entry;
+
+			unpack_bitset<512>(vp.instruction_mask, data_block.vp_instruction_mask);
+
+			u8 index = 0;
+			while (index < 32)
+			{
+				if (!index && !vp.jump_table.empty())
+				{
+					for (auto &address : vp.jump_table)
+					{
+						data_block.vp_jump_table[index++] = (u16)address;
+					}
+				}
+				else
+				{
+					// End of list marker
+					data_block.vp_jump_table[index] = UINT16_MAX;
+					break;
+				}
+			}
 
 			data_block.fp_ctrl = fp.ctrl;
 			data_block.fp_texture_dimensions = fp.texture_dimensions;

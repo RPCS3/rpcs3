@@ -21,7 +21,7 @@ std::string D3D12VertexProgramDecompiler::getFunction(enum class FUNCTION f)
 	return getFunctionImp(f);
 }
 
-std::string D3D12VertexProgramDecompiler::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
+std::string D3D12VertexProgramDecompiler::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1, bool /*scalar*/)
 {
 	return compareFunctionImp(f, Op0, Op1);
 }
@@ -175,8 +175,22 @@ void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 	OS << "PixelInput main(uint vertex_id : SV_VertexID)\n";
 	OS << "{\n";
 
-	// Declare inside main function
+	// Declare temp registers
 	for (const ParamType PT : m_parr.params[PF_PARAM_NONE])
+	{
+		for (const ParamItem &PI : PT.items)
+		{
+			OS << "	" << PT.type << " " << PI.name;
+			if (!PI.value.empty())
+				OS << " = " << PI.value;
+			else
+				OS << " = " << "float4(0., 0., 0., 0.);";
+			OS << ";\n";
+		}
+	}
+
+	// Declare outputs
+	for (const ParamType PT : m_parr.params[PF_PARAM_OUT])
 	{
 		for (const ParamItem &PI : PT.items)
 		{
@@ -212,7 +226,7 @@ void D3D12VertexProgramDecompiler::insertMainEnd(std::stringstream & OS)
 	// Declare inside main function
 	for (auto &i : reg_table)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, "float4", i.src_reg))
+		if (m_parr.HasParam(PF_PARAM_OUT, "float4", i.src_reg))
 		{
 			if (i.name == "front_diff_color")
 				insert_front_diffuse = false;
@@ -238,11 +252,11 @@ void D3D12VertexProgramDecompiler::insertMainEnd(std::stringstream & OS)
 
 	//If 2 sided lighting is active and only back is written, copy the value to the front side (Outrun online arcade)
 	if (insert_front_diffuse && insert_back_diffuse)
-		if (m_parr.HasParam(PF_PARAM_NONE, "float4", "dst_reg1"))
+		if (m_parr.HasParam(PF_PARAM_OUT, "float4", "dst_reg1"))
 			OS << "	Out.dst_reg3 = dst_reg1;\n";
 
 	if (insert_front_specular && insert_back_specular)
-		if (m_parr.HasParam(PF_PARAM_NONE, "float4", "dst_reg2"))
+		if (m_parr.HasParam(PF_PARAM_OUT, "float4", "dst_reg2"))
 			OS << "	Out.dst_reg4 = dst_reg2;\n";
 
 	OS << "	Out.dst_reg0 = mul(Out.dst_reg0, scaleOffsetMat);\n";

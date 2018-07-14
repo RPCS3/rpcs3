@@ -52,7 +52,7 @@ std::string VertexProgramDecompiler::GetDST(bool isSca)
 	default:
 		if (d3.dst > 15)
 			LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
-		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? getFloatTypeName(4) + "(0.0f, 0.0f, 0.0f, 1.0f)" : getFloatTypeName(4) + "(0.0, 0.0, 0.0, 0.0)") + mask;
+		ret += m_parr.AddParam(PF_PARAM_OUT, getFloatTypeName(4), std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? getFloatTypeName(4) + "(0.0f, 0.0f, 0.0f, 1.0f)" : getFloatTypeName(4) + "(0.0, 0.0, 0.0, 0.0)") + mask;
 		// Handle double destination register as 'dst_reg = tmp'
 		if (d0.dst_tmp != 0x3f)
 			ret += " = " + m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("tmp") + std::to_string(d0.dst_tmp)) + mask;
@@ -176,7 +176,24 @@ void VertexProgramDecompiler::SetDST(bool is_sca, std::string value)
 
 std::string VertexProgramDecompiler::GetTex()
 {
-	return m_parr.AddParam(PF_PARAM_UNIFORM, "sampler2D", std::string("vtex") + std::to_string(d2.tex_num));
+	std::string sampler;
+	switch (m_prog.get_texture_dimension(d2.tex_num))
+	{
+	case rsx::texture_dimension_extended::texture_dimension_1d:
+		sampler = "sampler1D";
+		break;
+	case rsx::texture_dimension_extended::texture_dimension_2d:
+		sampler = "sampler2D";
+		break;
+	case rsx::texture_dimension_extended::texture_dimension_3d:
+		sampler = "sampler3D";
+		break;
+	case rsx::texture_dimension_extended::texture_dimension_cubemap:
+		sampler = "samplerCube";
+		break;
+	}
+
+	return m_parr.AddParam(PF_PARAM_UNIFORM, sampler, std::string("vtex") + std::to_string(d2.tex_num));
 }
 
 std::string VertexProgramDecompiler::Format(const std::string& code)
@@ -283,32 +300,45 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 		COMPARE::FUNCTION_SGE,
 	};
 
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
-
-	std::string swizzle;
-	swizzle += f[d0.mask_x];
-	swizzle += f[d0.mask_y];
-	swizzle += f[d0.mask_z];
-	swizzle += f[d0.mask_w];
-
-	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-
-	std::string cond = compareFunction(cond_string_table[d0.cond], AddCondReg() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)");
-
 	ShaderVariable dst_var(dst);
 	dst_var.simplify();
 
-	//const char *c_mask = f;
+	static const char f[4] = { 'x', 'y', 'z', 'w' };
+	const u32 mask_index[4] = { d0.mask_x, d0.mask_y, d0.mask_z, d0.mask_w };
+
+	auto get_masked_dst = [](const std::string& dest, const char mask)
+	{
+		const auto selector = std::string(".") + mask;
+		const auto pos = dest.find("=");
+
+		std::string result = dest + selector;
+
+		if (pos != std::string::npos)
+		{
+			result.insert(pos - 1, selector);
+		}
+
+		return result;
+	};
+
+	auto get_cond_func = [this, &mask_index](COMPARE op, int index)
+	{
+		// Condition reg check for single element (x,y,z,w)
+		const auto cond_mask = f[mask_index[index]];
+		return compareFunction(op, AddCondReg() + "." + cond_mask, "0.", true);
+	};
 
 	if (dst_var.swizzles[0].length() == 1)
 	{
-		AddCode("if (" + cond + ".x) " + dst + " = " + src + ";");
+		const std::string cond = get_cond_func(cond_string_table[d0.cond], 0);
+		AddCode("if (" + cond + ") " + dst + " = " + src + ";");
 	}
 	else
 	{
 		for (int i = 0; i < dst_var.swizzles[0].length(); ++i)
 		{
-			AddCode("if (" + cond + "." + f[i] + ") " + dst + "." + f[i] + " = " + src + "." + f[i] + ";");
+			const std::string cond = get_cond_func(cond_string_table[d0.cond], i);
+			AddCode("if (" + cond + ") " + get_masked_dst(dst, f[i]) + " = " + src + "." + f[i] + ";");
 		}
 	}
 }
@@ -391,6 +421,13 @@ std::string VertexProgramDecompiler::BuildCode()
 		lvl += m_instructions[i].open_scopes;
 	}
 
+	bool is_valid = m_parr.HasParam(PF_PARAM_OUT, getFloatTypeName(4), "dst_reg0");
+	if (!is_valid)
+	{
+		LOG_WARNING(RSX, "Vertex program has no POS output, shader will be NOPed");
+		main_body = "/*" + main_body + "*/";
+	}
+
 	std::stringstream OS;
 	insertHeader(OS);
 
@@ -409,98 +446,54 @@ std::string VertexProgramDecompiler::BuildCode()
 }
 
 VertexProgramDecompiler::VertexProgramDecompiler(const RSXVertexProgram& prog) :
-	m_data(prog.data)
+	m_prog(prog)
 {
 }
 
 std::string VertexProgramDecompiler::Decompile()
 {
-	for (unsigned i = 0; i < PF_PARAM_COUNT; i++)
-		m_parr.params[i].clear();
+	const auto& data = m_prog.data;
+	m_instr_count = data.size() / 4;
 
-	m_instr_count = m_data.size() / 4;
+	bool is_has_BRA = false;
+	bool program_end = false;
+	u32 i = 1;
+	u32 last_label_addr = 0;
+
+	for (unsigned i = 0; i < PF_PARAM_COUNT; i++)
+	{
+		m_parr.params[i].clear();
+	}
 
 	for (int i = 0; i < m_max_instr_count; ++i)
 	{
 		m_instructions[i].reset();
 	}
 
-	bool is_has_BRA = false;
-	bool program_end = false;
-	u32 i = 1;
-
-	while (i < m_data.size())
+	if (m_prog.jump_table.size())
 	{
-		if (is_has_BRA)
-		{
-			d3.HEX = m_data[i];
-			i += 4;
-		}
-		else
-		{
-			d1.HEX = m_data[i++];
-
-			switch (d1.sca_opcode)
-			{
-			case RSX_SCA_OPCODE_BRA:
-				LOG_ERROR(RSX, "Unimplemented VP opcode BRA");
-				is_has_BRA = true;
-				m_jump_lvls.clear();
-				d3.HEX = m_data[++i];
-				i += 4;
-				break;
-
-			case RSX_SCA_OPCODE_BRB:
-			case RSX_SCA_OPCODE_BRI:
-			case RSX_SCA_OPCODE_CAL:
-			case RSX_SCA_OPCODE_CLI:
-			case RSX_SCA_OPCODE_CLB:
-				d2.HEX = m_data[i++];
-				d3.HEX = m_data[i];
-				i += 2;
-				m_jump_lvls.emplace(GetAddr());
-				break;
-
-			default:
-				d3.HEX = m_data[++i];
-				i += 2;
-				break;
-			}
-		}
-	}
-
-	uint jump_position = 0;
-	if (is_has_BRA || !m_jump_lvls.empty())
-	{
-		m_cur_instr = &m_instructions[0];
-		AddCode("int jump_position = 0;");
-		AddCode("while (true)");
-		AddCode("{");
-		m_cur_instr->open_scopes++;
-
-		AddCode(fmt::format("if (jump_position <= %u)", jump_position++));
-		AddCode("{");
-		m_cur_instr->open_scopes++;
+		last_label_addr = *m_prog.jump_table.rbegin();
 	}
 
 	auto find_jump_lvl = [this](u32 address)
 	{
 		u32 jump = 1;
 
-		for (auto pos : m_jump_lvls)
+		for (auto pos : m_prog.jump_table)
 		{
 			if (address == pos)
-				break;
+				return jump;
 
 			++jump;
 		}
 
-		return jump;
+		return UINT32_MAX;
 	};
 
 	auto do_function_call = [this, &i](const std::string& condition)
 	{
-		//call function
+		// Call function
+		// NOTE: Addresses are assumed to have been patched
 		m_call_stack.push(i+1);
 		AddCode(condition);
 		AddCode("{");
@@ -544,17 +537,41 @@ std::string VertexProgramDecompiler::Decompile()
 		}
 	};
 
-	for (i = 0; i < m_instr_count; ++i)
+	if (is_has_BRA || !m_prog.jump_table.empty())
 	{
-		if (m_call_stack.empty())
+		m_cur_instr = &m_instructions[0];
+
+		u32 jump_position = 0;
+		if (m_prog.entry != m_prog.base_address)
 		{
-			m_cur_instr = &m_instructions[i];
+			jump_position = find_jump_lvl(m_prog.entry - m_prog.base_address);
+			verify(HERE), jump_position != UINT32_MAX;
 		}
 
-		d0.HEX = m_data[i * 4 + 0];
-		d1.HEX = m_data[i * 4 + 1];
-		d2.HEX = m_data[i * 4 + 2];
-		d3.HEX = m_data[i * 4 + 3];
+		AddCode(fmt::format("int jump_position = %u;", jump_position));
+		AddCode("while (true)");
+		AddCode("{");
+		m_cur_instr->open_scopes++;
+
+		AddCode("if (jump_position <= 0)");
+		AddCode("{");
+		m_cur_instr->open_scopes++;
+	}
+
+	for (i = 0; i < m_instr_count; ++i)
+	{
+		if (!m_prog.instruction_mask[i])
+		{
+			// Dead code, skip
+			continue;
+		}
+
+		m_cur_instr = &m_instructions[i];
+
+		d0.HEX = data[i * 4 + 0];
+		d1.HEX = data[i * 4 + 1];
+		d2.HEX = data[i * 4 + 2];
+		d3.HEX = data[i * 4 + 3];
 
 		src[0].src0l = d2.src0l;
 		src[0].src0h = d1.src0h;
@@ -562,29 +579,28 @@ std::string VertexProgramDecompiler::Decompile()
 		src[2].src2l = d3.src2l;
 		src[2].src2h = d2.src2h;
 
-		if (!src[0].reg_type || !src[1].reg_type || !src[2].reg_type)
-		{
-			AddCode("//Src check failed. Aborting");
-			do_program_exit(true);
-			break;
-		}
-
-		if (m_call_stack.empty())
+		if (m_call_stack.empty() && i)
 		{
 			//TODO: Subroutines can also have arbitrary jumps!
-			if (i && (is_has_BRA || std::find(m_jump_lvls.begin(), m_jump_lvls.end(), i) != m_jump_lvls.end()))
+			u32 jump_position = find_jump_lvl(i);
+			if (is_has_BRA || jump_position != UINT32_MAX)
 			{
 				m_cur_instr->close_scopes++;
 				AddCode("}");
 				AddCode("");
 
-				AddCode(fmt::format("if (jump_position <= %u)", jump_position++));
+				AddCode(fmt::format("if (jump_position <= %u)", jump_position));
 				AddCode("{");
 				m_cur_instr->open_scopes++;
 			}
 		}
 
-		program_end = !!d3.end;
+		if (!src[0].reg_type || !src[1].reg_type || !src[2].reg_type)
+		{
+			AddCode("//Src check failed. Aborting");
+			program_end = true;
+			d1.vec_opcode = d1.sca_opcode = 0;
+		}
 
 		switch (d1.vec_opcode)
 		{
@@ -613,8 +629,26 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_SNE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")"); break;
 		case RSX_VEC_OPCODE_STR: SetDSTVec(getFunction(FUNCTION::FUNCTION_STR)); break;
 		case RSX_VEC_OPCODE_SSG: SetDSTVec("sign($0)"); break;
-		case RSX_VEC_OPCODE_TXL: SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D)); break;
+		case RSX_VEC_OPCODE_TXL:
+		{
+			switch (m_prog.get_texture_dimension(d2.tex_num))
+			{
+			case rsx::texture_dimension_extended::texture_dimension_1d:
+				SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH1D));
+				break;
+			case rsx::texture_dimension_extended::texture_dimension_2d:
+				SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D));
+				break;
+			case rsx::texture_dimension_extended::texture_dimension_3d:
+				SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH3D));
+				break;
+			case rsx::texture_dimension_extended::texture_dimension_cubemap:
+				SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCHCUBE));
+				break;
+			}
 
+			break;
+		}
 		default:
 			AddCode(fmt::format("//Unknown vp opcode 0x%x", u32{ d1.vec_opcode }));
 			LOG_ERROR(RSX, "Unknown vp opcode 0x%x", u32{ d1.vec_opcode });
@@ -640,7 +674,7 @@ std::string VertexProgramDecompiler::Decompile()
 		{
 			if (m_call_stack.empty())
 			{
-				AddCode("$if ($cond) //BRA");
+				AddCode("$ifcond //BRA");
 				AddCode("{");
 				m_cur_instr->open_scopes++;
 				AddCode("jump_position = $a$am;");
@@ -698,8 +732,6 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_BRB:
 			// works differently (BRB o[1].x !b0, L0;)
 		{
-			LOG_WARNING(RSX, "sca_opcode BRB, d0=0x%X, d1=0x%X, d2=0x%X, d3=0x%X", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
-
 			if (m_call_stack.empty())
 			{
 				u32 jump_position = find_jump_lvl(GetAddr());
@@ -742,14 +774,24 @@ std::string VertexProgramDecompiler::Decompile()
 			break;
 		}
 
-		if (program_end)
+		if (program_end || !!d3.end)
 		{
 			do_program_exit(!d3.end);
-			break;
+
+			if (i >= last_label_addr)
+			{
+				if ((i + 1) < m_instr_count)
+				{
+					// In rare cases, this might be harmless (large coalesced program blocks controlled via branches aka ubershaders)
+					LOG_ERROR(RSX, "Vertex program block aborts prematurely. Expect glitches");
+				}
+
+				break;
+			}
 		}
 	}
 
-	if (is_has_BRA || !m_jump_lvls.empty())
+	if (is_has_BRA || !m_prog.jump_table.empty())
 	{
 		m_cur_instr = &m_instructions[m_instr_count - 1];
 		m_cur_instr->close_scopes++;
@@ -761,8 +803,6 @@ std::string VertexProgramDecompiler::Decompile()
 
 	std::string result = BuildCode();
 
-	m_jump_lvls.clear();
 	m_body.clear();
-
 	return result;
 }
