@@ -28,7 +28,7 @@ const u32 tiled_pitches[] = {
 
 struct CellGcmSysConfig {
 	u32 zculls_addr;
-	vm::ptr<CellGcmDisplayInfo> gcm_buffers{ vm::null };
+	vm::ptr<CellGcmDisplayInfo> gcm_buffers = vm::null;
 	u32 tiles_addr;
 	u32 ctxt_addr;
 	CellGcmConfig current_config;
