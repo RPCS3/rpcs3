@@ -251,7 +251,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 384: return "sys_sm_get_tzpb";
 	case 385: return "sys_sm_request_led";
 	case 386: return "sys_sm_control_led";
-	case 387: return "sys_sm_get_platform_info";
+	case 387: return "sys_sm_get_system_info";
 	case 388: return "sys_sm_ring_buzzer";
 	case 389: return "sys_sm_set_fan_policy";
 	case 390: return "sys_sm_request_error_log";
