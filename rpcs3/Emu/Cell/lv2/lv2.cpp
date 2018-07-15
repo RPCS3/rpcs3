@@ -387,7 +387,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_sm_get_tzpb)                  //384 (0x180)  ROOT
 	null_func,//BIND_FUNC(sys_sm_request_led)               //385 (0x181)  ROOT
 	null_func,//BIND_FUNC(sys_sm_control_led)               //386 (0x182)  ROOT
-	null_func,//BIND_FUNC(sys_sm_get_platform_info)         //387 (0x183)  DBG
+	null_func,//BIND_FUNC(sys_sm_get_system_info)           //387 (0x183)  DBG
 	null_func,//BIND_FUNC(sys_sm_ring_buzzer)               //388 (0x184)  ROOT
 	null_func,//BIND_FUNC(sys_sm_set_fan_policy)            //389 (0x185)  PM
 	null_func,//BIND_FUNC(sys_sm_request_error_log)         //390 (0x186)  ROOT
