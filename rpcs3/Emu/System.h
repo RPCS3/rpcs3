@@ -510,7 +510,7 @@ struct cfg_root : cfg::node
 	{
 		node_sys(cfg::node* _this) : cfg::node(_this, "System") {}
 
-		cfg::_enum<CellSysutilLang> language{this, "Language"};
+		cfg::_enum<CellSysutilLang> language{this, "Language", (CellSysutilLang)1}; // CELL_SYSUTIL_LANG_ENGLISH_US
 
 	} sys{this};
 
