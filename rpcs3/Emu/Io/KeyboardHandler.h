@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mutex>
+
 // TODO: HLE info (constants, structs, etc.) should not be available here
 
 extern u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode); // (TODO: Can it be problematic to place SysCalls in middle of nowhere?)
@@ -192,6 +194,19 @@ enum CellKbMappingType
 	CELL_KB_MAPPING_TURKISH_TURKEY
 };
 
+enum QtKeys
+{
+	Key_Shift      = 0x01000020,
+	Key_Control    = 0x01000021,
+	Key_Meta       = 0x01000022,
+	Key_Alt        = 0x01000023,
+	Key_CapsLock   = 0x01000024,
+	Key_NumLock    = 0x01000025,
+	Key_ScrollLock = 0x01000026,
+	Key_Super_L    = 0x01000053,
+	Key_Super_R    = 0x01000054
+};
+
 static const u32 KB_MAX_KEYBOARDS = 127;
 static const u32 KB_MAX_KEYCODES = 62;
 
@@ -208,7 +223,7 @@ struct KbData
 	u32 led;
 	u32 mkey;
 	s32 len;
-	u16 keycode[KB_MAX_KEYCODES];
+	std::pair<u16, u32> keycode[KB_MAX_KEYCODES];
 
 	KbData()
 		: led(0)
@@ -225,7 +240,7 @@ struct KbConfig
 	u32 code_type;
 
 	KbConfig()
-		: arrange(CELL_KB_MAPPING_106)
+		: arrange(CELL_KB_MAPPING_101)
 		, read_mode(CELL_KB_RMODE_INPUTCHAR)
 		, code_type(CELL_KB_CODETYPE_ASCII)
 	{
@@ -268,64 +283,136 @@ protected:
 	std::vector<Keyboard> m_keyboards;
 
 public:
+	std::mutex m_mutex;
+
 	virtual void Init(const u32 max_connect) = 0;
 
 	virtual ~KeyboardHandlerBase() = default;
 
-	void Key(const u32 code, bool pressed)
+	void Key(u32 code, bool pressed)
 	{
-		for(Keyboard& keyboard : m_keyboards)
+		// TODO: Key Repeat
+
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		for (Keyboard& keyboard : m_keyboards)
 		{
 			KbData& data = keyboard.m_data;
 			KbConfig& config = keyboard.m_config;
 
-			// TODO: handle read modes
-
-			for(KbButton& button : keyboard.m_buttons)
+			for (const KbButton& button : keyboard.m_buttons)
 			{
-				if(button.m_keyCode != code)
+				if (button.m_keyCode != code)
 					continue;
+
+				u16 kcode = CELL_KEYC_NO_EVENT;
+				bool is_meta_key = IsMetaKey(code);
+
+				if (!is_meta_key)
+				{
+					if (config.code_type == CELL_KB_CODETYPE_RAW)
+					{
+						kcode = button.m_outKeyCode;
+					}
+					else // config.code_type == CELL_KB_CODETYPE_ASCII
+					{
+						kcode = cellKbCnvRawCode(config.arrange, data.mkey, data.led, button.m_outKeyCode);
+					}
+				}
 
 				if (pressed)
 				{
+					if (data.len == 1 && data.keycode[0].first == CELL_KEYC_NO_EVENT)
+					{
+						data.len = 0;
+					}
+
 					// Meta Keys
-					if (code == 308 || code == 307 || code == 306 || code == 393 || code == 396 || code == 394)
+					if (is_meta_key)
 					{
 						data.mkey |= button.m_outKeyCode;
+
+						if (config.read_mode == CELL_KB_RMODE_INPUTCHAR)
+						{
+							data.keycode[0] = {CELL_KEYC_NO_EVENT, button.m_outKeyCode};
+						}
+						else
+						{
+							data.keycode[data.len % KB_MAX_KEYCODES] = { CELL_KEYC_NO_EVENT, button.m_outKeyCode };
+						}
 					}
 					else
 					{
 						// Led Keys
-						if (code == 364) data.led ^= CELL_KB_LED_NUM_LOCK;
-						if (code == 311) data.led ^= CELL_KB_LED_CAPS_LOCK;
-						if (code == 365) data.led ^= CELL_KB_LED_SCROLL_LOCK;
+						if (code == Key_CapsLock)   data.led ^= CELL_KB_LED_CAPS_LOCK;
+						if (code == Key_NumLock)    data.led ^= CELL_KB_LED_NUM_LOCK;
+						if (code == Key_ScrollLock) data.led ^= CELL_KB_LED_SCROLL_LOCK;
+						// if (code == Key_Kana_Lock) data.led ^= CELL_KB_LED_KANA;
+						// if (code == ???) data.led ^= CELL_KB_LED_COMPOSE;
 
-						u16 kcode;
-						if (config.code_type == CELL_KB_CODETYPE_RAW)
+						if (config.read_mode == CELL_KB_RMODE_INPUTCHAR)
 						{
-							kcode = button.m_outKeyCode;
+							data.keycode[0] = { kcode, 0 };
 						}
-						else //config.code_type == CELL_KB_CODETYPE_ASCII
+						else
 						{
-							kcode =  cellKbCnvRawCode(config.arrange, data.mkey, data.led, button.m_outKeyCode);
+							data.keycode[data.len % KB_MAX_KEYCODES] = { kcode, 0 };
 						}
-						data.keycode[data.len % KB_MAX_KEYCODES] = kcode;
-						data.len++;
 					}
+
+					data.len = std::min(data.len + 1, (int)KB_MAX_KEYCODES);
 				}
 				else
 				{
 					// Meta Keys
-					if (code == 308 || code == 307 || code == 306 || code == 393 || code == 396 || code == 394)
+					if (is_meta_key)
 					{
 						data.mkey &= ~button.m_outKeyCode;
 					}
+
 					// Needed to indicate key releases. Without this you have to tap another key before using the same key again
-					data.keycode[0] = CELL_KEYC_NO_EVENT;
-					data.len = 1;
+					if (config.read_mode == CELL_KB_RMODE_INPUTCHAR)
+					{
+						data.keycode[0] = { CELL_KEYC_NO_EVENT, 0 };
+						data.len = 1;
+					}
+					else
+					{
+						s32 index = data.len;
+
+						for (s32 i = 0; i < data.len; i++)
+						{
+							if (data.keycode[i].first == kcode && (!is_meta_key || data.keycode[i].second == button.m_outKeyCode))
+							{
+								index = i;
+								break;
+							}
+						}
+
+						for (s32 i = index; i < data.len - 1; i++)
+						{
+							data.keycode[i] = data.keycode[i + 1];
+						}
+
+						if (data.len <= 1)
+						{
+							data.keycode[0] = { CELL_KEYC_NO_EVENT, 0 };
+						}
+
+						data.len = std::max(1, data.len - 1);
+					}
 				}
 			}
 		}
+	}
+
+	bool IsMetaKey(u32 code)
+	{
+		return code == Key_Control
+		    || code == Key_Shift
+		    || code == Key_Alt
+		    || code == Key_Super_L
+		    || code == Key_Super_R;
 	}
 
 	KbInfo& GetInfo() { return m_info; }

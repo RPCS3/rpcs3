@@ -71,6 +71,8 @@ error_code cellKbClearBuf(u32 port_no)
 	if (port_no >= CELL_KB_MAX_KEYBOARDS)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
+	std::lock_guard<std::mutex> lock(handler->m_mutex);
+
 	const KbInfo& current_info = handler->GetInfo();
 
 	if (port_no >= handler->GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
@@ -83,7 +85,7 @@ error_code cellKbClearBuf(u32 port_no)
 
 	for (int i = 0; i < CELL_KB_MAX_KEYCODES; i++)
 	{
-		current_data.keycode[i] = 0;
+		current_data.keycode[i] = { 0, 0 };
 	}
 
 	return CELL_OK;
@@ -110,27 +112,102 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 	if (rawcode == 0x58) return 0x0A | 0x4000;                                // '\n'
 
 	// ASCII
+
+	const bool is_shift = mkey & (CELL_KB_MKEY_L_SHIFT | CELL_KB_MKEY_R_SHIFT);
+	const bool is_caps_lock = led & (CELL_KB_LED_CAPS_LOCK);
+
+	auto get_ascii = [is_shift, is_caps_lock](u16 lower, u16 upper)
+	{
+		return is_shift || is_caps_lock ? upper : lower;
+	};
+
+	if (arrange == CELL_KB_MAPPING_106) // (Japanese)
+	{
+		if (rawcode == 0x1E) return get_ascii(rawcode + 0x13, 0x21);            // '1' or '!'
+		if (rawcode == 0x1F) return get_ascii(rawcode + 0x13, 0x22);            // '2' or '"'
+		if (rawcode == 0x20) return get_ascii(rawcode + 0x13, 0x23);            // '3' or '#'
+		if (rawcode == 0x21) return get_ascii(rawcode + 0x13, 0x24);            // '4' or '$'
+		if (rawcode == 0x22) return get_ascii(rawcode + 0x13, 0x25);            // '5' or '%'
+		if (rawcode == 0x23) return get_ascii(rawcode + 0x13, 0x26);            // '6' or '&'
+		if (rawcode == 0x24) return get_ascii(rawcode + 0x13, 0x27);            // '7' or '''
+		if (rawcode == 0x25) return get_ascii(rawcode + 0x13, 0x28);            // '8' or '('
+		if (rawcode == 0x26) return get_ascii(rawcode + 0x13, 0x29);            // '9' or ')'
+		if (rawcode == 0x27) return get_ascii(0x303, 0x7E);                     // '0' or '~'
+
+		if (rawcode == 0x2E) return get_ascii(0x5E, 0x7E);                      // '^' or '~'
+		if (rawcode == 0x2F) return get_ascii(0x40, 0x60);                      // '@' or '`'
+		if (rawcode == 0x30) return get_ascii(0x5B, 0x7B);                      // '[' or '{'
+		if (rawcode == 0x32) return get_ascii(0x5D, 0x7D);                      // ']' or '}'
+		if (rawcode == 0x33) return get_ascii(0x3B, 0x2B);                      // ';' or '+'
+		if (rawcode == 0x34) return get_ascii(0x3A, 0x2A);                      // ':' or '*'
+		if (rawcode == 0x87) return get_ascii(rawcode, 0x5F);                   // '\' or '_'
+		if (rawcode == 0x36) return get_ascii(0x2C, 0x3C);                      // ',' or '<'
+		if (rawcode == 0x37) return get_ascii(0x2E, 0x3E);                      // '.' or '>'
+		if (rawcode == 0x38) return get_ascii(0x2F, 0x3F);                      // '/' or '?'
+		if (rawcode == 0x89) return get_ascii(0xBE, 0x7C);                      // '&yen;' or '|'
+	}
+	else if (arrange == CELL_KB_MAPPING_101) // (US)
+	{
+		if (rawcode == 0x1E) return get_ascii(rawcode + 0x13, 0x21);            // '1' or '!'
+		if (rawcode == 0x1F) return get_ascii(rawcode + 0x13, 0x40);            // '2' or '@'
+		if (rawcode == 0x20) return get_ascii(rawcode + 0x13, 0x23);            // '3' or '#'
+		if (rawcode == 0x21) return get_ascii(rawcode + 0x13, 0x24);            // '4' or '$'
+		if (rawcode == 0x22) return get_ascii(rawcode + 0x13, 0x25);            // '5' or '%'
+		if (rawcode == 0x23) return get_ascii(rawcode + 0x13, 0x5E);            // '6' or '^'
+		if (rawcode == 0x24) return get_ascii(rawcode + 0x13, 0x26);            // '7' or '&'
+		if (rawcode == 0x25) return get_ascii(rawcode + 0x13, 0x2A);            // '8' or '*'
+		if (rawcode == 0x26) return get_ascii(rawcode + 0x13, 0x28);            // '9' or '('
+		if (rawcode == 0x27) return get_ascii(0x303, 0x29);                     // '0' or ')'
+
+		if (rawcode == 0x2D) return get_ascii(0x2D, 0x5F);                      // '-' or '_'
+		if (rawcode == 0x2E) return get_ascii(0x3D, 0x2B);                      // '=' or '+'
+		if (rawcode == 0x2F) return get_ascii(0x5B, 0x7B);                      // '[' or '{'
+		if (rawcode == 0x30) return get_ascii(0x5D, 0x7D);                      // ']' or '}'
+		if (rawcode == 0x31) return get_ascii(0x5C, 0x7C);                      // '\' or '|'
+		if (rawcode == 0x33) return get_ascii(0x3B, 0x3A);                      // ';' or ':'
+		if (rawcode == 0x34) return get_ascii(0x27, 0x22);                      // ''' or '"'
+		if (rawcode == 0x36) return get_ascii(0x2C, 0x3C);                      // ',' or '<'
+		if (rawcode == 0x37) return get_ascii(0x2E, 0x3E);                      // '.' or '>'
+		if (rawcode == 0x38) return get_ascii(0x2F, 0x3F);                      // '/' or '?'
+	}
+	else if (arrange == CELL_KB_MAPPING_GERMAN_GERMANY)
+	{
+		if (rawcode == 0x1E) return get_ascii(rawcode + 0x13, 0x21);            // '1' or '!'
+		if (rawcode == 0x1F) return get_ascii(rawcode + 0x13, 0x22);            // '2' or '"'
+		if (rawcode == 0x20) return rawcode + 0x13;                             // '3' (or '�')
+		if (rawcode == 0x21) return get_ascii(rawcode + 0x13, 0x24);            // '4' or '$'
+		if (rawcode == 0x22) return get_ascii(rawcode + 0x13, 0x25);            // '5' or '%'
+		if (rawcode == 0x23) return get_ascii(rawcode + 0x13, 0x26);            // '6' or '&'
+		if (rawcode == 0x24) return get_ascii(rawcode + 0x13, 0x2F);            // '7' or '/'
+		if (rawcode == 0x25) return get_ascii(rawcode + 0x13, 0x28);            // '8' or '('
+		if (rawcode == 0x26) return get_ascii(rawcode + 0x13, 0x29);            // '9' or ')'
+		if (rawcode == 0x27) return get_ascii(0x303, 0x3D);                     // '0' or '='
+
+		if (rawcode == 0x2D) return get_ascii(0x2D, 0x5F);                      // '-' or '_'
+		if (rawcode == 0x2E) return 0x5E;                                       // '^' (or '�')
+		if (rawcode == 0x36) return get_ascii(0x2C, 0x3B);                      // ',' or ';'
+		if (rawcode == 0x37) return get_ascii(0x2E, 0x3A);                      // '.' or ':'
+
+		// TODO: <>#'+*~[]{}\|
+	}
+
 	if (rawcode >= 0x04 && rawcode <= 0x1D)                                   // 'A' - 'Z'
 	{
 		rawcode -=
-			(mkey&(CELL_KB_MKEY_L_SHIFT|CELL_KB_MKEY_R_SHIFT)) ?
-			((led&(CELL_KB_LED_CAPS_LOCK)) ? 0 : 0x20) :
-			((led&(CELL_KB_LED_CAPS_LOCK)) ? 0x20 : 0);
+			(is_shift)
+				? ((led & (CELL_KB_LED_CAPS_LOCK)) ? 0 : 0x20)
+				: ((led & (CELL_KB_LED_CAPS_LOCK)) ? 0x20 : 0);
 		return rawcode + 0x5D;
 	}
 	if (rawcode >= 0x1E && rawcode <= 0x26) return rawcode + 0x13;            // '1' - '9'
 	if (rawcode == 0x27) return 0x30;                                         // '0'
 	if (rawcode == 0x28) return 0x0A;                                         // '\n'
+	if (rawcode == 0x29) return 0x1B;                                         // 'ESC'
+	if (rawcode == 0x2A) return 0x08;                                         // '\b'
 	if (rawcode == 0x2B) return 0x09;                                         // '\t'
-	if (rawcode == 0x2C) return 0x20;                                         // ' '
-	if (rawcode == 0x2D) return 0x2D;                                         // '-'
-	if (rawcode == 0x2E) return 0x3D;                                         // '='
-	if (rawcode == 0x36) return 0x2C;                                         // ','
-	if (rawcode == 0x37) return 0x2E;                                         // '.'
-	if (rawcode == 0x38) return 0x2F;                                         // '/'
-	if (rawcode == 0x87) return 0x5C;                                         // '\'
+	if (rawcode == 0x2C) return 0x20;                                         // 'space'
 
-	// (TODO: Add more cases)
+	// TODO: Add more cases (e.g. what about '`' and '~' on english layouts) and layouts (e.g. german)
 
 	return 0x0000;
 }
@@ -146,6 +223,8 @@ error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 
 	if (!info)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
+
+	std::lock_guard<std::mutex> lock(handler->m_mutex);
 
 	const KbInfo& current_info = handler->GetInfo();
 	info->max_connect = current_info.max_connect;
@@ -172,6 +251,8 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 	if (port_no >= CELL_KB_MAX_KEYBOARDS || !data)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
+	std::lock_guard<std::mutex> lock(handler->m_mutex);
+
 	const KbInfo& current_info = handler->GetInfo();
 
 	if (port_no >= handler->GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
@@ -184,10 +265,8 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 
 	for (s32 i = 0; i < current_data.len; i++)
 	{
-		data->keycode[i] = current_data.keycode[i];
+		data->keycode[i] = current_data.keycode[i].first;
 	}
-
-	current_data.len = 0;
 
 	return CELL_OK;
 }
@@ -206,6 +285,8 @@ error_code cellKbSetCodeType(u32 port_no, u32 type)
 
 	if (port_no >= handler->GetKeyboards().size())
 		return CELL_OK;
+
+	std::lock_guard<std::mutex> lock(handler->m_mutex);
 
 	KbConfig& current_config = handler->GetConfig(port_no);
 	current_config.code_type = type;
@@ -233,6 +314,8 @@ error_code cellKbSetLEDStatus(u32 port_no, u8 led)
 	if (port_no >= handler->GetKeyboards().size() || handler->GetInfo().status[port_no] != CELL_KB_STATUS_CONNECTED)
 		return CELL_KB_ERROR_FATAL;
 
+	std::lock_guard<std::mutex> lock(handler->m_mutex);
+
 	KbData& current_data = handler->GetData(port_no);
 	current_data.led = static_cast<u32>(led);
 
@@ -254,6 +337,8 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 	if (port_no >= handler->GetKeyboards().size())
 		return CELL_OK;
 
+	std::lock_guard<std::mutex> lock(handler->m_mutex);
+
 	KbConfig& current_config = handler->GetConfig(port_no);
 	current_config.read_mode = rmode;
 
@@ -273,6 +358,8 @@ error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 
 	if (port_no >= CELL_KB_MAX_KEYBOARDS)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
+
+	std::lock_guard<std::mutex> lock(handler->m_mutex);
 
 	const KbInfo& current_info = handler->GetInfo();
 
