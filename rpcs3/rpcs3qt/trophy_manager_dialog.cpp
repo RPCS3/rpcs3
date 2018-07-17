@@ -581,7 +581,7 @@ void trophy_manager_dialog::PopulateTrophyDB()
 {
 	m_trophies_db.clear();
 
-	QDirIterator dir_iter(qstr(vfs::get(m_TROPHY_DIR)), QDir::Dirs | QDir::NoDotAndDotDot);
+	QDirIterator dir_iter(qstr(vfs::get(m_trophy_dir)), QDir::Dirs | QDir::NoDotAndDotDot);
 	while (dir_iter.hasNext())
 	{
 		dir_iter.next();
