@@ -561,7 +561,7 @@ namespace vk
 			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 			change_image_layout(cmd, tex.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 
-			auto view = std::make_unique<vk::image_view>(dev, tex.get(), range, mapping);
+			auto view = std::make_unique<vk::image_view>(dev, tex.get(), mapping, range);
 
 			auto result = view.get();
 

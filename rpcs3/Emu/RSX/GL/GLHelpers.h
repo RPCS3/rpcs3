@@ -68,6 +68,9 @@ namespace gl
 	bool is_primitive_native(rsx::primitive_type in);
 	GLenum draw_mode(rsx::primitive_type in);
 
+	// Texture helpers
+	std::array<GLenum, 4> apply_swizzle_remap(const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap);
+
 	class exception : public std::exception
 	{
 	protected:
@@ -1886,6 +1889,28 @@ namespace gl
 		std::array<GLenum, 4> component_mapping() const
 		{
 			return{ component_swizzle[3], component_swizzle[0], component_swizzle[1], component_swizzle[2] };
+		}
+	};
+
+	class viewable_image : public texture
+	{
+		std::unordered_map<u32, std::unique_ptr<texture_view>> views;
+
+public:
+		using texture::texture;
+		texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
+		{
+			auto found = views.find(remap_encoding);
+			if (found != views.end())
+			{
+				return found->second.get();
+			}
+
+			auto mapping = apply_swizzle_remap(get_native_component_layout(), remap);
+			auto view = std::make_unique<texture_view>(this, mapping.data());
+			auto result = view.get();
+			views[remap_encoding] = std::move(view);
+			return result;
 		}
 	};
 
