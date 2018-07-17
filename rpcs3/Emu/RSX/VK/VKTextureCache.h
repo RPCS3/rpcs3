@@ -15,13 +15,12 @@ namespace vk
 {
 	class cached_texture_section : public rsx::cached_texture_section
 	{
-		std::unique_ptr<vk::image_view> uploaded_image_view;
-		std::unique_ptr<vk::image> managed_texture = nullptr;
+		std::unique_ptr<vk::viewable_image> managed_texture = nullptr;
 
 		//DMA relevant data
 		VkFence dma_fence = VK_NULL_HANDLE;
 		vk::render_device* m_device = nullptr;
-		vk::image *vram_texture = nullptr;
+		vk::viewable_image *vram_texture = nullptr;
 		std::unique_ptr<vk::buffer> dma_buffer;
 
 	public:
@@ -37,7 +36,7 @@ namespace vk
 			rsx::buffered_section::reset(base, length, policy);
 		}
 
-		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image_view *view, vk::image *image, u32 rsx_pitch, bool managed, u32 gcm_format, bool pack_swap_bytes = false)
+		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image *image, u32 rsx_pitch, bool managed, u32 gcm_format, bool pack_swap_bytes = false)
 		{
 			width = w;
 			height = h;
@@ -47,17 +46,12 @@ namespace vk
 			this->gcm_format = gcm_format;
 			this->pack_unpack_swap_bytes = pack_swap_bytes;
 
+			vram_texture = static_cast<vk::viewable_image*>(image);
+
 			if (managed)
 			{
-				managed_texture.reset(image);
-				uploaded_image_view.reset(view);
+				managed_texture.reset(vram_texture);
 			}
-			else
-			{
-				verify(HERE), uploaded_image_view.get() == nullptr;
-			}
-
-			vram_texture = image;
 
 			//TODO: Properly compute these values
 			if (rsx_pitch > 0)
@@ -97,27 +91,24 @@ namespace vk
 			return (vram_texture != nullptr);
 		}
 
-		std::unique_ptr<vk::image_view>& get_view()
+		vk::image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
 		{
-			return uploaded_image_view;
-		}
-
-		std::unique_ptr<vk::image>& get_texture()
-		{
-			return managed_texture;
+			return vram_texture->get_view(remap_encoding, remap);
 		}
 
 		vk::image_view* get_raw_view()
 		{
-			if (context != rsx::texture_upload_context::framebuffer_storage)
-				return uploaded_image_view.get();
-			else
-				return static_cast<vk::render_target*>(vram_texture)->get_view(0xAAE4, rsx::default_remap_vector);
+			return vram_texture->get_view(0xAAE4, rsx::default_remap_vector);
 		}
 
 		vk::image* get_raw_texture()
 		{
 			return managed_texture.get();
+		}
+
+		std::unique_ptr<vk::viewable_image>& get_texture()
+		{
+			return managed_texture;
 		}
 
 		VkFormat get_format()
@@ -134,7 +125,7 @@ namespace vk
 		bool is_flushed() const
 		{
 			//This memory section was flushable, but a flush has already removed protection
-			return (protection == utils::protection::rw && uploaded_image_view.get() == nullptr && managed_texture.get() == nullptr);
+			return flushed;
 		}
 
 		void copy_texture(bool manage_cb_lifetime, vk::command_buffer& cmd, VkQueue submit_queue)
@@ -374,6 +365,7 @@ namespace vk
 	
 	struct discarded_storage
 	{
+		std::unique_ptr<vk::viewable_image> combined_image;
 		std::unique_ptr<vk::image_view> view;
 		std::unique_ptr<vk::image> img;
 
@@ -401,8 +393,7 @@ namespace vk
 
 		discarded_storage(cached_texture_section& tex)
 		{
-			view = std::move(tex.get_view());
-			img = std::move(tex.get_texture());
+			combined_image = std::move(tex.get_texture());
 			block_size = tex.get_section_size();
 		}
 
@@ -784,8 +775,7 @@ namespace vk
 		}
 
 		cached_texture_section* create_new_texture(vk::command_buffer& cmd, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
-				rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags,
-				rsx::texture_colorspace colorspace, const texture_channel_remap_t& remap_vector) override
+				rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags) override
 		{
 			const u16 section_depth = depth;
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
@@ -842,32 +832,25 @@ namespace vk
 			default:
 				aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
 				vk_format = get_compatible_sampler_format(m_formats_support, gcm_format);
-
-				if (colorspace != rsx::texture_colorspace::rgb_linear)
-					vk_format = get_compatible_srgb_format(vk_format);
 				break;
 			}
 
-			vk::image *image = new vk::image(*m_device, m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			auto *image = new vk::viewable_image(*m_device, m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				image_type,
 				vk_format,
 				width, height, depth, mipmaps, layer, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL, usage_flags, is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0);
 
-			mapping = apply_component_mapping_flags(gcm_format, flags, remap_vector);
-
-			vk::image_view *view = new vk::image_view(*m_device, image->value, image_view_type, vk_format,
-				mapping, { (aspect_flags & ~VK_IMAGE_ASPECT_STENCIL_BIT), 0, mipmaps, 0, layer});
+			image->native_component_map = apply_component_mapping_flags(gcm_format, flags, rsx::default_remap_vector);
 
 			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect_flags, 0, mipmaps, 0, layer });
 
 			cached_texture_section& region = find_cached_texture(rsx_address, rsx_size, true, width, height, section_depth);
 			region.reset(rsx_address, rsx_size);
-			region.create(width, height, section_depth, mipmaps, view, image, 0, true, gcm_format);
+			region.create(width, height, section_depth, mipmaps, image, 0, true, gcm_format);
 			region.set_dirty(false);
 			region.set_context(context);
 			region.set_gcm_format(gcm_format);
-			region.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 			region.set_image_type(type);
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
@@ -889,11 +872,10 @@ namespace vk
 		}
 
 		cached_texture_section* upload_image_from_cpu(vk::command_buffer& cmd, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
-			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type,
-			rsx::texture_colorspace colorspace, bool swizzled, const texture_channel_remap_t& remap_vector) override
+			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) override
 		{
 			auto section = create_new_texture(cmd, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
-					rsx::texture_create_flags::default_component_order, colorspace, remap_vector);
+					rsx::texture_create_flags::default_component_order);
 
 			auto image = section->get_raw_texture();
 			auto subres_range = section->get_raw_view()->info.subresourceRange;
@@ -915,12 +897,6 @@ namespace vk
 			{
 				//Swizzling is ignored for blit engine copy and emulated using remapping
 				input_swizzled = false;
-				section->set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
-			}
-			else
-			{
-				//Generic upload - sampler status will be set on upload
-				section->set_sampler_status(rsx::texture_sampler_status::status_ready);
 			}
 
 			vk::copy_mipmaped_image_using_buffer(cmd, image, subresource_layout, gcm_format, input_swizzled, mipmaps, subres_range.aspectMask,
@@ -938,45 +914,10 @@ namespace vk
 			if (expected_flags == section.get_view_flags())
 				return;
 
-			vk::image* image = section.get_raw_texture();
-			auto& view = section.get_view();
-
-			VkComponentMapping mapping = apply_component_mapping_flags(gcm_format, expected_flags, rsx::default_remap_vector);
-
-			if (mapping.a != view->info.components.a ||
-				mapping.b != view->info.components.b ||
-				mapping.g != view->info.components.g ||
-				mapping.r != view->info.components.r)
-			{
-				//Replace view map
-				vk::image_view *new_view = new vk::image_view(*m_device, image->value, view->info.viewType, view->info.format,
-					mapping, view->info.subresourceRange);
-
-				view.reset(new_view);
-			}
+			const VkComponentMapping mapping = apply_component_mapping_flags(gcm_format, expected_flags, rsx::default_remap_vector);
+			section.get_raw_texture()->native_component_map = mapping;
 
 			section.set_view_flags(expected_flags);
-			section.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
-		}
-
-		void set_up_remap_vector(cached_texture_section& section, const texture_channel_remap_t& remap_vector) override
-		{
-			auto& view = section.get_view();
-			auto& original_remap = view->info.components;
-			std::array<VkComponentSwizzle, 4> base_remap = {original_remap.a, original_remap.r, original_remap.g, original_remap.b};
-
-			auto final_remap = vk::apply_swizzle_remap(base_remap, remap_vector);
-			if (final_remap.a != original_remap.a ||
-				final_remap.r != original_remap.r ||
-				final_remap.g != original_remap.g ||
-				final_remap.b != original_remap.b)
-			{
-				vk::image_view *new_view = new vk::image_view(*m_device, view->info.image, view->info.viewType, view->info.format,
-					final_remap, view->info.subresourceRange);
-
-				view.reset(new_view);
-			}
-			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 
 		void insert_texture_barrier(vk::command_buffer& cmd, vk::image* tex) override
