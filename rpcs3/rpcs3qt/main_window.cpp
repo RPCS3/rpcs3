@@ -380,14 +380,45 @@ void main_window::BootRsxCapture()
 		LOG_SUCCESS(LOADER, "Capture Boot Success");
 }
 
-void main_window::InstallPkg(const QString& dropPath)
+void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 {
 	QString filePath = dropPath;
 
-	if (filePath.isEmpty())
+	if (m_install_bulk == QMessageBox::NoToAll)
+	{
+		LOG_NOTICE(LOADER, "PKG: Skipped installation from drop. File: %s", sstr(filePath));
+		return;
+	}
+	else if (m_install_bulk == QMessageBox::YesToAll)
+	{
+		LOG_NOTICE(LOADER, "PKG: Continuing bulk installation from drop. File: %s", sstr(filePath));
+	}
+	else if (filePath.isEmpty())
 	{
 		QString path_last_PKG = guiSettings->GetValue(gui::fd_install_pkg).toString();
 		filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
+	}
+	else if (is_bulk)
+	{
+		QMessageBox::StandardButton ret = QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(filePath),
+			QMessageBox::Yes | QMessageBox::YesToAll | QMessageBox::NoToAll | QMessageBox::No, QMessageBox::No);
+
+		if (ret == QMessageBox::No)
+		{
+			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(filePath));
+			return;
+		}
+		else if (ret == QMessageBox::NoToAll)
+		{
+			LOG_NOTICE(LOADER, "PKG: Cancelled bulk installation from drop. File: %s", sstr(filePath));
+			m_install_bulk = ret;
+			return;
+		}
+		else if (ret == QMessageBox::YesToAll)
+		{
+			LOG_NOTICE(LOADER, "PKG: Accepted bulk installation from drop. File: %s", sstr(filePath));
+			m_install_bulk = ret;
+		}
 	}
 	else
 	{
@@ -1714,8 +1745,9 @@ void main_window::dropEvent(QDropEvent* event)
 	case drop_type::drop_pkg: // install the packages
 		for (const auto& path : dropPaths)
 		{
-			InstallPkg(path);
+			InstallPkg(path, dropPaths.count() > 1);
 		}
+		m_install_bulk = QMessageBox::NoButton;
 		break;
 	case drop_type::drop_pup: // install the firmware
 		InstallPup(dropPaths.first());
