@@ -15,10 +15,8 @@
 #include "Emu/System.h"
 
 #ifdef _WIN32
-#include "xinput_pad_handler.h"
-#endif
-#ifdef _MSC_VER
 #include "mm_joystick_handler.h"
+#include "xinput_pad_handler.h"
 #endif
 #ifdef HAVE_LIBEVDEV
 #include "evdev_joystick_handler.h"

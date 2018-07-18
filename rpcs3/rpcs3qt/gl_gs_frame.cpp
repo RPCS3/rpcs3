@@ -85,9 +85,7 @@ void gl_gs_frame::delete_context(draw_context_t ctx)
 	auto gl_ctx = (GLContext*)ctx;
 	gl_ctx->handle->doneCurrent();
 
-#ifndef _WIN32
-	delete gl_ctx->handle;
-#else
+#if defined(_MSC_VER)
 	//AMD driver crashes when executing wglDeleteContext
 	//Catch with SEH
 	__try
@@ -98,6 +96,8 @@ void gl_gs_frame::delete_context(draw_context_t ctx)
 	{
 		LOG_FATAL(RSX, "Your graphics driver just crashed whilst cleaning up. All consumed VRAM should have been released, but you may want to restart the emulator just in case");
 	}
+#else
+	delete gl_ctx->handle;
 #endif
 
 	if (gl_ctx->owner)

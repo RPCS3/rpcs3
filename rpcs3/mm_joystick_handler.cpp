@@ -493,8 +493,8 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 				};
 
 				float rad = static_cast<float>(js_info.dwPOV / 100 * acos(-1) / 180);
-				emplacePOVs(std::cosf(rad) * 255.0f, JOY_POVBACKWARD, JOY_POVFORWARD);
-				emplacePOVs(std::sinf(rad) * 255.0f, JOY_POVLEFT, JOY_POVRIGHT);
+				emplacePOVs(cosf(rad) * 255.0f, JOY_POVBACKWARD, JOY_POVFORWARD);
+				emplacePOVs(sinf(rad) * 255.0f, JOY_POVLEFT, JOY_POVRIGHT);
 			}
 		}
 		else if (js_caps.wCaps & JOYCAPS_POV4DIR)

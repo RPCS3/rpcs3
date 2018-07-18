@@ -95,7 +95,7 @@ gamepads_settings_dialog::gamepads_settings_dialog(QWidget* parent)
 		co_inputtype[i] = new QComboBox();
 		co_inputtype[i]->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
 		co_inputtype[i]->view()->setTextElideMode(Qt::ElideNone);
-#ifdef WIN32
+#ifdef _WIN32
 		co_inputtype[i]->setToolTip(json_input["padHandlerBox"].toString());
 #else
 		co_inputtype[i]->setToolTip(json_input["padHandlerBox_Linux"].toString());
@@ -286,12 +286,10 @@ std::shared_ptr<PadHandlerBase> gamepads_settings_dialog::GetHandler(pad_handler
 	case pad_handler::ds4:
 		ret_handler = std::make_unique<ds4_pad_handler>();
 		break;
-#ifdef _MSC_VER
+#ifdef _WIN32
 	case pad_handler::xinput:
 		ret_handler = std::make_unique<xinput_pad_handler>();
 		break;
-#endif
-#ifdef _WIN32
 	case pad_handler::mm:
 		ret_handler = std::make_unique<mm_joystick_handler>();
 		break;
@@ -331,7 +329,7 @@ void gamepads_settings_dialog::ChangeInputType(int player)
 
 	switch (cur_pad_handler->m_type)
 	{
-#ifdef _MSC_VER
+#ifdef _WIN32
 	case pad_handler::xinput:
 	{
 		QString name_string = qstr(cur_pad_handler->name_string());

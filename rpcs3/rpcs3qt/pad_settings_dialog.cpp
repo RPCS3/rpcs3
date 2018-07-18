@@ -39,14 +39,12 @@ pad_settings_dialog::pad_settings_dialog(const std::string& device, const std::s
 		setWindowTitle(tr("Configure DS4"));
 		((ds4_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 	}
-#ifdef _MSC_VER
+#ifdef _WIN32
 	else if (m_handler_type == pad_handler::xinput)
 	{
 		setWindowTitle(tr("Configure XInput"));
 		((xinput_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 	}
-#endif
-#ifdef _WIN32
 	else if (m_handler_type == pad_handler::mm)
 	{
 		setWindowTitle(tr("Configure MMJoystick"));

@@ -24,10 +24,8 @@
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "keyboard_pad_handler.h"
 #include "ds4_pad_handler.h"
-#ifdef _MSC_VER
-#include "xinput_pad_handler.h"
-#endif
 #ifdef _WIN32
+#include "xinput_pad_handler.h"
 #include "mm_joystick_handler.h"
 #endif
 #ifdef HAVE_LIBEVDEV
