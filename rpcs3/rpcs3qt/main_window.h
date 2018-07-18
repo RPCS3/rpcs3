@@ -64,7 +64,8 @@ class main_window : public QMainWindow
 		drop_pup,
 		drop_rap,
 		drop_dir,
-		drop_game
+		drop_game,
+		drop_rrc
 	};
 
 public:
@@ -91,7 +92,7 @@ private Q_SLOTS:
 	void Boot(const std::string& path, bool direct = false, bool add_only = false);
 	void BootElf();
 	void BootGame();
-	void BootRsxCapture();
+	void BootRsxCapture(std::string path = "");
 	void DecryptSPRXLibraries();
 
 	void SaveWindowState();
