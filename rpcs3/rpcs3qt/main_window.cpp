@@ -354,30 +354,42 @@ void main_window::BootGame()
 	Boot(path);
 }
 
-void main_window::BootRsxCapture()
+void main_window::BootRsxCapture(std::string path)
 {
-	bool stopped = false;
-	if (Emu.IsRunning())
+	if (path.empty())
 	{
-		Emu.Pause();
-		stopped = true;
+		bool is_stopped = false;
+
+		if (Emu.IsRunning())
+		{
+			Emu.Pause();
+			is_stopped = true;
+		}
+
+		QString filePath = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), "", tr("RRC files (*.rrc);;All files (*.*)"));
+
+		if (filePath.isEmpty())
+		{
+			if (is_stopped)
+			{
+				Emu.Resume();
+			}
+			return;
+		}
+		path = sstr(filePath);
 	}
 
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), "", tr("RRC files (*.rrc);;All files (*.*)"));
-	if (filePath.isEmpty())
-	{
-		if (stopped) Emu.Resume();
-		return;
-	}
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
-	const std::string path = sstr(filePath);
-
 	if (!Emu.BootRsxCapture(path))
-		LOG_ERROR(GENERAL, "Capture Boot Failed");
+	{
+		LOG_ERROR(GENERAL, "Capture Boot Failed. path: %s", path);
+	}
 	else
-		LOG_SUCCESS(LOADER, "Capture Boot Success");
+	{
+		LOG_SUCCESS(LOADER, "Capture Boot Success. path: %s", path);
+	}
 }
 
 void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
@@ -1149,7 +1161,7 @@ void main_window::CreateConnects()
 {
 	connect(ui->bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
-	connect(ui->actionopen_rsx_capture, &QAction::triggered, this, &main_window::BootRsxCapture);
+	connect(ui->actionopen_rsx_capture, &QAction::triggered, [this](){ BootRsxCapture(); });
 
 	connect(ui->bootRecentMenu, &QMenu::aboutToShow, [=]
 	{
@@ -1718,7 +1730,14 @@ int main_window::IsValidFile(const QMimeData& md, QStringList* dropPaths)
 		}
 		else if (list.size() == 1)
 		{
-			dropType = drop_type::drop_game;
+			if (info.suffix() == "rrc")
+			{
+				dropType = drop_type::drop_rrc;
+			}
+			else
+			{
+				dropType = drop_type::drop_game;
+			}
 		}
 		else
 		{
@@ -1782,6 +1801,11 @@ void main_window::dropEvent(QDropEvent* event)
 		}
 		m_gameListFrame->Refresh(true);
 		break;
+	case drop_type::drop_rrc: // replay a rsx capture file
+		if (Emu.BootRsxCapture(sstr(dropPaths.first())))
+		{
+			LOG_SUCCESS(GENERAL, "rcc Boot from drag and drop done: %s", sstr(dropPaths.first()));
+		}
 	default:
 		LOG_WARNING(GENERAL, "Invalid dropType in gamelist dropEvent");
 		break;
