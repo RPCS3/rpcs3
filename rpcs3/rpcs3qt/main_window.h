@@ -115,7 +115,7 @@ private:
 	void CreateConnects();
 	void CreateDockWindows();
 	void EnableMenus(bool enabled);
-	void InstallPkg(const QString& dropPath = "");
+	void InstallPkg(const QString& dropPath = "", bool is_bulk = false);
 	void InstallPup(const QString& dropPath = "");
 
 	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
@@ -131,6 +131,8 @@ private:
 	QActionGroup* m_iconSizeActGroup;
 	QActionGroup* m_listModeActGroup;
 	QActionGroup* m_categoryVisibleActGroup;
+
+	QMessageBox::StandardButton m_install_bulk = QMessageBox::NoButton;
 
 	// Dockable widget frames
 	QMainWindow *m_mw;
