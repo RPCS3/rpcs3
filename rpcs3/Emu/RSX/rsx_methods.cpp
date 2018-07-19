@@ -160,6 +160,8 @@ namespace rsx
 
 		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
+			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
+
 			const u32 index = method_registers.semaphore_offset_4097() >> 4;
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
@@ -169,7 +171,6 @@ namespace rsx
 				//
 			}
 
-			rsx->sync();
 			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
 			sema.semaphore[index].val = arg;
 			sema.semaphore[index].pad = 0;
@@ -178,6 +179,8 @@ namespace rsx
 
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
+			// Full pipeline barrier
+
 			const u32 index = method_registers.semaphore_offset_4097() >> 4;
 			if (index > 63 && !rsx->do_method(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg))
 			{

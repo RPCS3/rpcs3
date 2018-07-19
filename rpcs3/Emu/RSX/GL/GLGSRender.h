@@ -325,7 +325,6 @@ private:
 	shared_mutex queue_guard;
 	std::list<work_item> work_queue;
 
-	bool flush_draw_buffers = false;
 	std::thread::id m_thread_id;
 
 	GLProgramBuffer m_prog_buffer;
@@ -369,10 +368,8 @@ private:
 
 public:
 	void read_buffers();
-	void write_buffers();
 	void set_viewport();
 
-	void synchronize_buffers();
 	work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
 
 	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;

@@ -593,7 +593,6 @@ void GLGSRender::end()
 	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
 	m_draw_calls++;
 
-	synchronize_buffers();
 	rsx::thread::end();
 }
 
@@ -1100,7 +1099,6 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 			if (arg & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 
 			init_buffers((rsx::framebuffer_creation_context)ctx, true);
-			synchronize_buffers();
 			clear_surface(arg);
 		}
 
@@ -1113,9 +1111,15 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 		return true;
 	}
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
-	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
-		flush_draw_buffers = true;
+	{
+		// Texture barrier, seemingly not very useful
 		return true;
+	}
+	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
+	{
+		//flush_draw_buffers = true;
+		return true;
+	}
 	}
 
 	return false;
@@ -1693,15 +1697,6 @@ work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrash
 	result.address_to_flush = address;
 	result.section_data = std::move(flush_data);
 	return result;
-}
-
-void GLGSRender::synchronize_buffers()
-{
-	if (flush_draw_buffers)
-	{
-		write_buffers();
-		flush_draw_buffers = false;
-	}
 }
 
 bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
