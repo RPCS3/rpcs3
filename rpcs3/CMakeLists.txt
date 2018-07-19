@@ -178,7 +178,6 @@ if(UNIX AND NOT APPLE)
 	endif()
 endif()
 
-
 if(NOT RPCS3_SRC_DIR)
 	set(RPCS3_SRC_DIR ${CMAKE_CURRENT_LIST_DIR})
 	message("-- Initializing RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
@@ -206,6 +205,10 @@ if(NOT WITHOUT_LLVM)
 		option(LLVM_INCLUDE_TOOLS OFF)
 		option(LLVM_INCLUDE_UTILS OFF)
 		option(WITH_POLLY OFF)
+
+		if(WIN32 AND NOT MSVC)
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_FORMAT_MACROS=1")
+		endif()
 
 		# LLVM needs to be built out-of-tree
 		add_subdirectory(../llvm ../llvm_build EXCLUDE_FROM_ALL)

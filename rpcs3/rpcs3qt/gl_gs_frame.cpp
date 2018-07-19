@@ -85,7 +85,7 @@ void gl_gs_frame::delete_context(draw_context_t ctx)
 	auto gl_ctx = (GLContext*)ctx;
 	gl_ctx->handle->doneCurrent();
 
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
 	//AMD driver crashes when executing wglDeleteContext
 	//Catch with SEH
 	__try
