@@ -354,7 +354,6 @@ private:
 	s64 m_flip_time = 0;
 
 	u8 m_draw_buffers_count = 0;
-	bool m_flush_draw_buffers = false;
 	
 	shared_mutex m_flush_queue_mutex;
 	flush_request_task m_flush_requests;
@@ -380,9 +379,7 @@ private:
 	void clear_surface(u32 mask);
 	void close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	void open_command_buffer();
-	void sync_at_semaphore_release();
 	void prepare_rtts(rsx::framebuffer_creation_context context);
-	void copy_render_targets_to_dma_location();
 
 	void flush_command_queue(bool hard_sync = false);
 	void queue_swap_request();

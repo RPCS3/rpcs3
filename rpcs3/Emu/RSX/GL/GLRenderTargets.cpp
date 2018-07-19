@@ -179,9 +179,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		return;
 	}
 
-	//We are about to change buffers, flush any pending requests for the old buffers
-	synchronize_buffers();
-
 	m_rtts_dirty = false;
 	zcull_surface_active = false;
 
@@ -475,28 +472,28 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	case rsx::surface_target::none: break;
 
 	case rsx::surface_target::surface_a:
-		__glcheck draw_fbo.draw_buffer(draw_fbo.color[0]);
-		__glcheck draw_fbo.read_buffer(draw_fbo.color[0]);
+		draw_fbo.draw_buffer(draw_fbo.color[0]);
+		draw_fbo.read_buffer(draw_fbo.color[0]);
 		break;
 
 	case rsx::surface_target::surface_b:
-		__glcheck draw_fbo.draw_buffer(draw_fbo.color[1]);
-		__glcheck draw_fbo.read_buffer(draw_fbo.color[1]);
+		draw_fbo.draw_buffer(draw_fbo.color[1]);
+		draw_fbo.read_buffer(draw_fbo.color[1]);
 		break;
 
 	case rsx::surface_target::surfaces_a_b:
-		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1] });
-		__glcheck draw_fbo.read_buffer(draw_fbo.color[0]);
+		draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1] });
+		draw_fbo.read_buffer(draw_fbo.color[0]);
 		break;
 
 	case rsx::surface_target::surfaces_a_b_c:
-		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1], draw_fbo.color[2] });
-		__glcheck draw_fbo.read_buffer(draw_fbo.color[0]);
+		draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1], draw_fbo.color[2] });
+		draw_fbo.read_buffer(draw_fbo.color[0]);
 		break;
 
 	case rsx::surface_target::surfaces_a_b_c_d:
-		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1], draw_fbo.color[2], draw_fbo.color[3] });
-		__glcheck draw_fbo.read_buffer(draw_fbo.color[0]);
+		draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1], draw_fbo.color[2], draw_fbo.color[3] });
+		draw_fbo.read_buffer(draw_fbo.color[0]);
 		break;
 	}
 
@@ -590,7 +587,7 @@ void GLGSRender::read_buffers()
 				{
 					if (!color_buffer.tile)
 					{
-						__glcheck std::get<1>(m_rtts.m_bound_render_targets[i])->copy_from(color_buffer.ptr, color_format.format, color_format.type);
+						std::get<1>(m_rtts.m_bound_render_targets[i])->copy_from(color_buffer.ptr, color_format.format, color_format.type);
 					}
 					else
 					{
@@ -599,7 +596,7 @@ void GLGSRender::read_buffers()
 						std::unique_ptr<u8[]> buffer(new u8[pitch * height]);
 						color_buffer.read(buffer.get(), width, height, pitch);
 
-						__glcheck std::get<1>(m_rtts.m_bound_render_targets[i])->copy_from(buffer.get(), color_format.format, color_format.type);
+						std::get<1>(m_rtts.m_bound_render_targets[i])->copy_from(buffer.get(), color_format.format, color_format.type);
 					}
 				}
 			}
@@ -654,8 +651,8 @@ void GLGSRender::read_buffers()
 		int pixel_size    = rsx::internals::get_pixel_size(rsx::method_registers.surface_depth_fmt());
 		gl::buffer pbo_depth;
 
-		__glcheck pbo_depth.create(width * height * pixel_size);
-		__glcheck pbo_depth.map([&](GLubyte* pixels)
+		pbo_depth.create(width * height * pixel_size);
+		pbo_depth.map([&](GLubyte* pixels)
 		{
 			u32 depth_address = rsx::get_address(rsx::method_registers.surface_z_offset(), rsx::method_registers.surface_z_dma());
 
@@ -679,42 +676,6 @@ void GLGSRender::read_buffers()
 			}
 		}, gl::buffer::access::write);
 
-		__glcheck std::get<1>(m_rtts.m_bound_depth_stencil)->copy_from(pbo_depth, depth_format.format, depth_format.type);
-	}
-}
-
-void GLGSRender::write_buffers()
-{
-	if (!draw_fbo)
-		return;
-
-	if (g_cfg.video.write_color_buffers)
-	{
-		auto write_color_buffers = [&](int index, int count)
-		{
-			for (int i = index; i < index + count; ++i)
-			{
-				if (m_surface_info[i].pitch == 0)
-					continue;
-
-				/**Even tiles are loaded as whole textures during read_buffers from testing.
-				* Need further evaluation to determine correct behavior. Separate paths for both show no difference,
-				* but using the GPU to perform the caching is many times faster.
-				*/
-
-				const u32 range = m_surface_info[i].pitch * m_surface_info[i].height;
-				m_gl_texture_cache.flush_memory_to_cache(m_surface_info[i].address, range, true, 0xFF);
-			}
-		};
-
-		write_color_buffers(0, 4);
-	}
-
-	if (g_cfg.video.write_depth_buffer)
-	{
-		if (m_depth_surface_info.pitch == 0) return;
-
-		const u32 range = m_depth_surface_info.pitch * m_depth_surface_info.height;
-		m_gl_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, range, true, 0xFF);
+		std::get<1>(m_rtts.m_bound_depth_stencil)->copy_from(pbo_depth, depth_format.format, depth_format.type);
 	}
 }

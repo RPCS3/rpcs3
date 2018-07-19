@@ -587,7 +587,7 @@ namespace rsx
 					}
 					else if (zcull_ctrl->has_pending())
 					{
-						zcull_ctrl->sync(this);
+						//zcull_ctrl->sync(this);
 					}
 					else
 					{

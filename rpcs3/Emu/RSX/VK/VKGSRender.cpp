@@ -1491,7 +1491,6 @@ void VKGSRender::end()
 	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	m_draw_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_end - textures_end).count();
 
-	copy_render_targets_to_dma_location();
 	m_draw_calls++;
 
 	rsx::thread::end();
@@ -1637,8 +1636,6 @@ void VKGSRender::clear_surface(u32 mask)
 	init_buffers((rsx::framebuffer_creation_context)ctx);
 
 	if (!framebuffer_status_valid) return;
-
-	copy_render_targets_to_dma_location();
 
 	float depth_clear = 1.f;
 	u32   stencil_clear = 0;
@@ -1791,53 +1788,6 @@ void VKGSRender::clear_surface(u32 mask)
 		vkCmdClearAttachments(*m_current_command_buffer, (u32)clear_descriptors.size(), clear_descriptors.data(), 1, &region);
 		close_render_pass();
 	}
-}
-
-void VKGSRender::sync_at_semaphore_release()
-{
-	m_flush_draw_buffers = true;
-}
-
-void VKGSRender::copy_render_targets_to_dma_location()
-{
-	if (!m_flush_draw_buffers)
-		return;
-
-	if (!g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer)
-		return;
-
-	//TODO: Make this asynchronous. Should be similar to a glFlush() but in this case its similar to glFinish
-	//This is due to all the hard waits for fences
-	//TODO: Use a command buffer array to allow explicit draw command tracking
-
-	vk::enter_uninterruptible();
-
-	if (g_cfg.video.write_color_buffers)
-	{
-		for (u8 index = 0; index < rsx::limits::color_buffers_count; index++)
-		{
-			if (!m_surface_info[index].pitch)
-				continue;
-
-			m_texture_cache.flush_memory_to_cache(m_surface_info[index].address, m_surface_info[index].pitch * m_surface_info[index].height, true, 0xFF,
-					*m_current_command_buffer, m_swapchain->get_graphics_queue());
-		}
-	}
-
-	if (g_cfg.video.write_depth_buffer)
-	{
-		if (m_depth_surface_info.pitch)
-		{
-			m_texture_cache.flush_memory_to_cache(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, true, 0xFF,
-				*m_current_command_buffer, m_swapchain->get_graphics_queue());
-		}
-	}
-
-	vk::leave_uninterruptible();
-
-	flush_command_queue();
-
-	m_flush_draw_buffers = false;
 }
 
 void VKGSRender::flush_command_queue(bool hard_sync)
@@ -2192,9 +2142,11 @@ bool VKGSRender::do_method(u32 cmd, u32 arg)
 		clear_surface(arg);
 		return true;
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
+		// Texture barrier, seemingly not very useful
+		return true;
 	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
-		sync_at_semaphore_release();
-		return false; //call rsx::thread method implementation
+		//sync_at_semaphore_release();
+		return true;
 	default:
 		return false;
 	}
@@ -2541,7 +2493,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	if (m_draw_fbo && !m_rtts_dirty)
 		return;
 
-	copy_render_targets_to_dma_location();
 	m_rtts_dirty = false;
 
 	u32 clip_width = rsx::method_registers.surface_clip_width();
