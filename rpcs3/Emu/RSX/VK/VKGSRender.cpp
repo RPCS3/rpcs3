@@ -816,19 +816,29 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 		if (sync_timestamp > 0)
 		{
-			//Wait for earliest cb submitted after the sync timestamp to finish
+			// Wait for earliest cb submitted after the sync timestamp to finish
 			command_buffer_chunk *target_cb = nullptr;
 			for (auto &cb : m_primary_cb_list)
 			{
-				if (cb.pending && cb.last_sync >= sync_timestamp)
+				if (cb.last_sync >= sync_timestamp)
 				{
+					if (!cb.pending)
+					{
+						target_cb = nullptr;
+						break;
+					}
+
 					if (target_cb == nullptr || target_cb->last_sync > cb.last_sync)
+					{
 						target_cb = &cb;
+					}
 				}
 			}
 
 			if (target_cb)
+			{
 				target_cb->wait();
+			}
 		}
 
 		if (has_queue_ref)
@@ -1435,6 +1445,8 @@ void VKGSRender::end()
 		m_occlusion_query_pool.begin_query(*m_current_command_buffer, occlusion_id);
 		m_occlusion_map[m_active_query_info->driver_handle].indices.push_back(occlusion_id);
 		m_occlusion_map[m_active_query_info->driver_handle].command_buffer_to_wait = m_current_command_buffer;
+
+		m_current_command_buffer->flags |= cb_has_occlusion_task;
 	}
 
 	if (!upload_info.index_info)
@@ -1486,6 +1498,7 @@ void VKGSRender::end()
 	close_render_pass();
 	vk::leave_uninterruptible();
 
+	m_current_command_buffer->num_draws++;
 	m_rtts.on_write();
 
 	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
@@ -1832,6 +1845,22 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 	}
 
 	open_command_buffer();
+}
+
+void VKGSRender::sync_hint(rsx::FIFO_hint hint)
+{
+	if (hint == rsx::FIFO_hint::hint_conditional_render_eval)
+	{
+		if (m_current_command_buffer->flags & cb_has_occlusion_task)
+		{
+			// Occlusion test result evaluation is coming up, avoid a hard sync
+			if (!m_flush_requests.pending())
+			{
+				m_flush_requests.post(false);
+				m_flush_requests.remove_one();
+			}
+		}
+	}
 }
 
 void VKGSRender::advance_queued_frames()
@@ -3290,8 +3319,11 @@ void VKGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 	//Avoid stalling later if this query is already tied to a report
 	if (query->num_draws && query->owned && !m_flush_requests.pending())
 	{
-		m_flush_requests.post(false);
-		m_flush_requests.remove_one();
+		if (0)//m_current_command_buffer->flags & cb_has_occlusion_task)
+		{
+			m_flush_requests.post(false);
+			m_flush_requests.remove_one();
+		}
 	}
 }
 

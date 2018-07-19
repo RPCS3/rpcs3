@@ -47,10 +47,18 @@ namespace vk
 
 extern u64 get_system_time();
 
+enum command_buffer_data_flag
+{
+	cb_has_occlusion_task = 1
+};
+
 struct command_buffer_chunk: public vk::command_buffer
 {
 	VkFence submit_fence = VK_NULL_HANDLE;
 	VkDevice m_device = VK_NULL_HANDLE;
+
+	u32 num_draws = 0;
+	u32 flags = 0;
 
 	std::atomic_bool pending = { false };
 	std::atomic<u64> last_sync = { 0 };
@@ -90,11 +98,16 @@ struct command_buffer_chunk: public vk::command_buffer
 			wait();
 
 		CHECK_RESULT(vkResetCommandBuffer(commands, 0));
+		num_draws = 0;
+		flags = 0;
 	}
 
 	bool poke()
 	{
 		reader_lock lock(guard_mutex);
+
+		if (!pending)
+			return true;
 
 		if (vkGetFenceStatus(m_device, submit_fence) == VK_SUCCESS)
 		{
@@ -117,14 +130,8 @@ struct command_buffer_chunk: public vk::command_buffer
 		if (!pending)
 			return;
 
-		switch(vkGetFenceStatus(m_device, submit_fence))
-		{
-		case VK_SUCCESS:
-			break;
-		case VK_NOT_READY:
-			CHECK_RESULT(vkWaitForFences(m_device, 1, &submit_fence, VK_TRUE, UINT64_MAX));
-			break;
-		}
+		// NOTE: vkWaitForFences is slower than polling fence status at least on NV
+		while (vkGetFenceStatus(m_device, submit_fence) == VK_NOT_READY);
 
 		lock.upgrade();
 
@@ -405,6 +412,8 @@ public:
 	void read_buffers();
 	void write_buffers();
 	void set_viewport();
+
+	void sync_hint(rsx::FIFO_hint hint) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;

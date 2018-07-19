@@ -275,6 +275,15 @@ namespace rsx
 
 	void thread::begin()
 	{
+		if (conditional_render_enabled && conditional_render_test_address)
+		{
+			// Evaluate conditional rendering test
+			zcull_ctrl->read_barrier(this, conditional_render_test_address, 4);
+			vm::ptr<CellGcmReportData> result = vm::cast(conditional_render_test_address);
+			conditional_render_test_failed = (result->value == 0);
+			conditional_render_test_address = 0;
+		}
+
 		rsx::method_registers.current_draw_clause.inline_vertex_array.resize(0);
 		in_begin_end = true;
 
@@ -2719,7 +2728,8 @@ namespace rsx
 					{
 						verify(HERE), query->pending;
 
-						if (!result && query->num_draws)
+						const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
+						if (implemented && !result && query->num_draws)
 						{
 							get_occlusion_query_result(query);
 
@@ -2784,12 +2794,22 @@ namespace rsx
 			m_cycles_delay = min_zcull_cycles_delay;
 		}
 
-		void ZCULL_control::update(::rsx::thread* ptimer)
+		void ZCULL_control::update(::rsx::thread* ptimer, u32 sync_address)
 		{
 			m_tsc++;
 
 			if (m_pending_writes.empty())
 				return;
+
+			if (!sync_address)
+			{
+				const auto& front = m_pending_writes.front();
+				if (!front.sink || m_tsc < front.due_tsc)
+				{
+					// Avoid spamming backend with report status updates
+					return;
+				}
+			}
 
 			u32 stat_tag_to_remove = m_statistics_tag_id;
 			u32 processed = 0;
@@ -2810,13 +2830,21 @@ namespace rsx
 				auto query = writer.query;
 				u32 result = m_statistics_map[writer.counter_tag];
 
+				const bool force_read = (sync_address != 0);
+				if (force_read && writer.sink == sync_address)
+				{
+					// Forced reads end here
+					sync_address = 0;
+				}
+
 				if (query)
 				{
 					verify(HERE), query->pending;
 
-					if (UNLIKELY(writer.due_tsc < m_tsc))
+					const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
+					if (force_read || writer.due_tsc < m_tsc)
 					{
-						if (!result && query->num_draws)
+						if (implemented && !result && query->num_draws)
 						{
 							get_occlusion_query_result(query);
 
@@ -2834,12 +2862,7 @@ namespace rsx
 					}
 					else
 					{
-						if (result || !query->num_draws)
-						{
-							//Not necessary to read the result anymore
-							discard_occlusion_query(query);
-						}
-						else
+						if (implemented && !result && query->num_draws)
 						{
 							//Maybe we get lucky and results are ready
 							if (check_occlusion_query_status(query))
@@ -2856,6 +2879,11 @@ namespace rsx
 								//Too early; abort
 								break;
 							}
+						}
+						else
+						{
+							//Not necessary to read the result anymore
+							discard_occlusion_query(query);
 						}
 					}
 
@@ -2903,13 +2931,19 @@ namespace rsx
 				return;
 
 			const auto memory_end = memory_address + memory_range;
+			u32 sync_address = 0;
+
 			for (const auto &writer : m_pending_writes)
 			{
 				if (writer.sink >= memory_address && writer.sink < memory_end)
 				{
-					sync(ptimer);
-					return;
+					sync_address = writer.sink;
 				}
+			}
+
+			if (sync_address)
+			{
+				update(ptimer, sync_address);
 			}
 		}
 	}

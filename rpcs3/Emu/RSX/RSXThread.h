@@ -118,6 +118,11 @@ namespace rsx
 		lock_wait = 4 // Puller is processing a lock acquire
 	};
 
+	enum FIFO_hint : u8
+	{
+		hint_conditional_render_eval = 1
+	};
+
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
 	u32 get_address(u32 offset, u32 location);
@@ -230,7 +235,7 @@ namespace rsx
 			queued_report_write* forwarder;
 			vm::addr_t sink;
 
-			u32 due_tsc;
+			u64 due_tsc;
 		};
 
 		struct ZCULL_control
@@ -249,7 +254,7 @@ namespace rsx
 
 			occlusion_query_info* m_current_task = nullptr;
 			u32 m_statistics_tag_id = 0;
-			u32 m_tsc = 0;
+			u64 m_tsc = 0;
 			u32 m_cycles_delay = max_zcull_cycles_delay;
 
 			std::vector<queued_report_write> m_pending_writes;
@@ -278,8 +283,8 @@ namespace rsx
 			// Conditionally sync any pending writes if range overlaps
 			void read_barrier(class ::rsx::thread* ptimer, u32 memory_address, u32 memory_range);
 
-			// Call once every 'tick' to update
-			void update(class ::rsx::thread* ptimer);
+			// Call once every 'tick' to update, optional address provided to partially sync until address is processed
+			void update(class ::rsx::thread* ptimer, u32 sync_address = 0);
 
 			// Draw call notification
 			void on_draw();
@@ -433,6 +438,7 @@ namespace rsx
 
 		atomic_t<s32> async_tasks_pending{ 0 };
 
+		u32  conditional_render_test_address = 0;
 		bool conditional_render_test_failed = false;
 		bool conditional_render_enabled = false;
 		bool zcull_stats_enabled = false;
@@ -482,6 +488,7 @@ namespace rsx
 		// sync
 		void sync();
 		void read_barrier(u32 memory_address, u32 memory_range);
+		virtual void sync_hint(FIFO_hint hint) {}
 		
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;

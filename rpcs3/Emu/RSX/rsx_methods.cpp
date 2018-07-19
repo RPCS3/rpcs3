@@ -521,9 +521,10 @@ namespace rsx
 				return;
 			}
 
-			rsx->sync();
-			vm::ptr<CellGcmReportData> result = address_ptr;
-			rsx->conditional_render_test_failed = (result->value == 0);
+			// Defer conditional render evaluation
+			rsx->sync_hint(FIFO_hint::hint_conditional_render_eval);
+			rsx->conditional_render_test_address = address_ptr;
+			rsx->conditional_render_test_failed = false;
 		}
 
 		void set_zcull_render_enable(thread* rsx, u32, u32 arg)
@@ -1809,8 +1810,6 @@ namespace rsx
 		bind<NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
-		bind<NV4097_ZCULL_SYNC, nv4097::sync>();
-		bind<NV4097_SET_CONTEXT_DMA_REPORT, nv4097::sync>();
 		bind<NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start>();
