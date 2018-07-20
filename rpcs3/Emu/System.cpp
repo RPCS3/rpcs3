@@ -64,6 +64,8 @@ extern void network_thread_init();
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
+std::array<std::deque<std::string>, 16> g_tty_input;
+std::mutex g_tty_mutex;
 
 // Progress display server synchronization variables
 atomic_t<const char*> g_progr{nullptr};
