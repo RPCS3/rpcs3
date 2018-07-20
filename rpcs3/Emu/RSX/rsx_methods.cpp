@@ -9,9 +9,6 @@
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Capture/rsx_capture.h"
 
-#include <sstream>
-#include <cereal/archives/binary.hpp>
-
 #include <thread>
 
 template <>
@@ -1079,107 +1076,7 @@ namespace rsx
 
 	void flip_command(thread* rsx, u32, u32 arg)
 	{
-		if (user_asked_for_frame_capture && !g_cfg.video.strict_rendering_mode)
-		{
-			// not dealing with non-strict rendering capture for now
-			user_asked_for_frame_capture = false;
-			LOG_FATAL(RSX, "RSX Capture: Capture only supported when ran with strict rendering mode.");
-		}
-		else if (user_asked_for_frame_capture && !rsx->capture_current_frame)
-		{
-			rsx->capture_current_frame = true;
-			user_asked_for_frame_capture = false;
-			frame_debug.reset();
-			frame_capture.reset();
-
-			// random number just to jumpstart the size
-			frame_capture.replay_commands.reserve(8000);
-
-			// capture first tile state with nop cmd
-			rsx::frame_capture_data::replay_command replay_cmd;
-			replay_cmd.rsx_command = std::make_pair(NV4097_NO_OPERATION, 0);
-			frame_capture.replay_commands.push_back(replay_cmd);
-			capture::capture_display_tile_state(rsx, frame_capture.replay_commands.back());
-		}
-		else if (rsx->capture_current_frame)
-		{
-			rsx->capture_current_frame = false;
-			std::stringstream os;
-			cereal::BinaryOutputArchive archive(os);
-			const std::string& filePath = fs::get_config_dir() + "capture.rrc";
-			archive(frame_capture);
-			{
-				// todo: 'dynamicly' create capture filename, also may want to compress this data?
-				fs::file f(filePath, fs::rewrite);
-				f.write(os.str());
-			}
-
-			LOG_SUCCESS(RSX, "capture successful: %s", filePath.c_str());
-
-			frame_capture.reset();
-			Emu.Pause();
-		}
-
-		double limit = 0.;
-		switch (g_cfg.video.frame_limit)
-		{
-		case frame_limit_type::none: limit = 0.; break;
-		case frame_limit_type::_59_94: limit = 59.94; break;
-		case frame_limit_type::_50: limit = 50.; break;
-		case frame_limit_type::_60: limit = 60.; break;
-		case frame_limit_type::_30: limit = 30.; break;
-		case frame_limit_type::_auto: limit = rsx->fps_limit; break; // TODO
-		}
-
-		if (limit)
-		{
-			const u64 time = get_system_time() - Emu.GetPauseTime() - rsx->start_rsx_time;
-
-			if (rsx->int_flip_index == 0)
-			{
-				rsx->start_rsx_time = time;
-			}
-			else
-			{
-				// Convert limit to expected time value
-				double expected = rsx->int_flip_index * 1000000. / limit;
-
-				while (time >= expected + 1000000. / limit)
-				{
-					expected = rsx->int_flip_index++ * 1000000. / limit;
-				}
-
-				if (expected > time + 1000)
-				{
-					const auto delay_us = static_cast<s64>(expected - time);
-					std::this_thread::sleep_for(std::chrono::milliseconds{delay_us / 1000});
-					rsx->performance_counters.idle_time += delay_us;
-				}
-			}
-		}
-
-		rsx->int_flip_index++;
-		rsx->current_display_buffer = arg;
-		rsx->flip(arg);
-		// After each flip PS3 system is executing a routine that changes registers value to some default.
-		// Some game use this default state (SH3).
-		if (rsx->isHLE)
-			rsx->reset();
-
-		rsx->last_flip_time = get_system_time() - 1000000;
-		rsx->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
-
-		if (rsx->flip_handler)
-		{
-			rsx->intr_thread->cmd_list
-			({
-				{ ppu_cmd::set_args, 1 }, u64{1},
-				{ ppu_cmd::lle_call, rsx->flip_handler },
-				{ ppu_cmd::sleep, 0 }
-			});
-
-			rsx->intr_thread->notify();
-		}
+		rsx->request_emu_flip(arg);
 	}
 
 	void user_command(thread* rsx, u32, u32 arg)
@@ -1200,8 +1097,6 @@ namespace rsx
 
 	namespace gcm
 	{
-		// not entirely sure which one should actually do the flip, or if these should be handled separately,
-		// so for now lets flip in queue and just let the driver deal with it
 		template<u32 index>
 		struct driver_flip
 		{
@@ -1217,7 +1112,6 @@ namespace rsx
 		{
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
-				flip_command(rsx, _reg, arg);
 				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
 			}
 		};
