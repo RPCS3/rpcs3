@@ -252,20 +252,26 @@ void gs_frame::delete_context(draw_context_t ctx)
 
 int gs_frame::client_width()
 {
-#if defined(_WIN32) || defined(__APPLE__)
-	return size().width();
-#else
-	return size().width() * devicePixelRatio();
-#endif
+#ifdef _WIN32
+	RECT rect;
+	if (GetClientRect(HWND(winId()), &rect))
+	{
+		return rect.right - rect.left;
+	}
+#endif // _WIN32
+	return width() * devicePixelRatio();
 }
 
 int gs_frame::client_height()
 {
-#if defined(_WIN32) || defined(__APPLE__)
-	return size().height();
-#else
-	return size().height() * devicePixelRatio();
-#endif
+#ifdef _WIN32
+	RECT rect;
+	if (GetClientRect(HWND(winId()), &rect))
+	{
+		return rect.bottom - rect.top;
+	}
+#endif // _WIN32
+	return height() * devicePixelRatio();
 }
 
 void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
