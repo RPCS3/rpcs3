@@ -50,10 +50,10 @@ void PulseThread::Open(const void* src, int size)
 		channel_map.channels =  8;
 		channel_map.map[0] = PA_CHANNEL_POSITION_FRONT_LEFT;
 		channel_map.map[1] = PA_CHANNEL_POSITION_FRONT_RIGHT;
-		channel_map.map[2] = PA_CHANNEL_POSITION_REAR_LEFT;
-		channel_map.map[3] = PA_CHANNEL_POSITION_REAR_RIGHT;
-		channel_map.map[4] = PA_CHANNEL_POSITION_FRONT_CENTER;
-		channel_map.map[5] = PA_CHANNEL_POSITION_LFE;
+		channel_map.map[2] = PA_CHANNEL_POSITION_FRONT_CENTER;
+		channel_map.map[3] = PA_CHANNEL_POSITION_LFE;
+		channel_map.map[4] = PA_CHANNEL_POSITION_REAR_LEFT;
+		channel_map.map[5] = PA_CHANNEL_POSITION_REAR_RIGHT;
 		channel_map.map[6] = PA_CHANNEL_POSITION_SIDE_LEFT;
 		channel_map.map[7] = PA_CHANNEL_POSITION_SIDE_RIGHT;
 	}
