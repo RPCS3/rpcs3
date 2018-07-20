@@ -273,20 +273,50 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		break;
 
 	case 0x102: // Display flip
-		driverInfo.head[a3].flipFlags |= 0x80000000;
-		driverInfo.head[a3].lastFlipTime = rsxTimeStamp(); // should rsxthread set this?
-		// lets give this a shot for giving bufferid back to gcm
-		driverInfo.head[a3].flipBufferId = driverInfo.head[a3].queuedBufferId;
-		// seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
-		vm::_ref<u32>(render->label_addr + 0x10) = 0;
-		if (a3 == 0)
-			sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 3), 0);
-		if (a3 == 1)
-			sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 4), 0);
-		break;
+	{
+		u32 flip_idx = -1u;
+
+		// high bit signifys grabbing a queued buffer
+		// otherwise it contains a display buffer offset
+		if ((a4 & 0x80000000) != 0)
+		{
+			// last half byte gives buffer, 0xf seems to trigger just last queued
+			u8 idx_check = a4 & 0xf;
+			if (idx_check > 7)
+				flip_idx = driverInfo.head[a3].lastQueuedBufferId;
+			else
+				flip_idx = idx_check;
+
+			// fyi -- u32 hardware_channel = (a4 >> 8) & 0xFF;
+
+			// sanity check, the head should have a 'queued' buffer on it, and it should have been previously 'queued'
+			u32 sanity_check = 0x40000000 & (1 << flip_idx);
+			if ((driverInfo.head[a3].flipFlags & sanity_check) != sanity_check)
+				LOG_ERROR(RSX, "Display Flip Queued: Flipping non previously queued buffer 0x%x", a4);
+		}
+		else
+		{
+			for (u32 i = 0; i < render->display_buffers_count; ++i)
+			{
+				if (render->display_buffers[i].offset == a4)
+				{
+					flip_idx = i;
+					break;
+				}
+			}
+			if (flip_idx == -1u)
+			{
+				LOG_ERROR(RSX, "Display Flip: Couldn't find display buffer offset, flipping 0. Offset: 0x%x", a4);
+				flip_idx = 0;
+			}
+		}
+
+		render->request_emu_flip(flip_idx);
+	}
+	break;
 
 	case 0x103: // Display Queue
-		driverInfo.head[a3].queuedBufferId = a4;
+		driverInfo.head[a3].lastQueuedBufferId = a4;
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
 		if (a3 == 0)
 			sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 5), 0);
@@ -475,4 +505,28 @@ s32 sys_rsx_attribute(u32 packageId, u32 a2, u32 a3, u32 a4, u32 a5)
 	sys_rsx.warning("sys_rsx_attribute(packageId=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x)", packageId, a2, a3, a4, a5);
 
 	return CELL_OK;
+}
+
+void sys_rsx_flip_event(u32 buffer)
+{
+	auto m_sysrsx = fxm::get<SysRsxConfig>();
+	if (!m_sysrsx)
+		return;
+
+	auto &driverInfo = vm::_ref<RsxDriverInfo>(m_sysrsx->driverInfo);
+	const auto render = rsx::get_current_renderer();
+
+	// we only ever use head 1 for now
+
+	driverInfo.head[1].flipFlags |= 0x80000000;
+	driverInfo.head[1].lastFlipTime = rsxTimeStamp(); // should rsxthread set this?
+	driverInfo.head[1].flipBufferId = buffer;
+
+	// seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
+	vm::_ref<u32>(render->label_addr + 0x10) = 0;
+
+	//if (a3 == 0)
+	//	sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 3), 0);
+	//if (a3 == 1)
+	sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 4), 0);
 }
