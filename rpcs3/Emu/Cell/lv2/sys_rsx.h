@@ -21,9 +21,9 @@ struct RsxDriverInfo
 	{
 		be_t<u64> lastFlipTime;    // 0x0 last flip time
 		be_t<u32> flipFlags;       // 0x8 flags to handle flip/queue
-		be_t<u32> unk1;            // 0xC
+		be_t<u32> offset;          // 0xC
 		be_t<u32> flipBufferId;    // 0x10
-		be_t<u32> queuedBufferId;  // 0x14 todo: this is definately not this variable but its 'unused' so im using it for queueId to pass to flip handler
+		be_t<u32> lastQueuedBufferId; // 0x14 todo: this is definately not this variable but its 'unused' so im using it for queueId to pass to flip handler
 		be_t<u32> unk3;            // 0x18
 		be_t<u32> unk6;            // 0x18 possible low bits of time stamp?  used in getlastVBlankTime
 		be_t<u64> lastSecondVTime; // 0x20 last time for second vhandler freq
@@ -101,7 +101,7 @@ struct RsxDisplayInfo
 
 struct SysRsxConfig
 {
-	be_t<u32> rsx_event_port{ 0 };
+	u32 rsx_event_port{ 0 };
 	u32 driverInfo{ 0 };
 	u32 rsx_context_addr{ 0 }; 
 };
@@ -119,3 +119,6 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 s32 sys_rsx_device_map(vm::ptr<u64> dev_addr, vm::ptr<u64> a2, u32 dev_id);
 s32 sys_rsx_device_unmap(u32 dev_id);
 s32 sys_rsx_attribute(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5);
+
+// Custom 'RSX Events', not lv2 syscalls
+void sys_rsx_flip_event(u32 buffer);
