@@ -364,7 +364,7 @@ void main_window::BootRsxCapture(std::string path)
 			is_stopped = true;
 		}
 
-		QString filePath = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), "", tr("RRC files (*.rrc);;All files (*.*)"));
+		QString filePath = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), qstr(fs::get_config_dir() + "captures/"), tr("RRC files (*.rrc);;All files (*.*)"));
 
 		if (filePath.isEmpty())
 		{

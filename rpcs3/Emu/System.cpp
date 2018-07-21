@@ -302,6 +302,7 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd1 + "game/");
 
 	fs::create_path(fs::get_config_dir() + "shaderlog/");
+	fs::create_path(fs::get_config_dir() + "captures/");
 
 #ifdef WITH_GDB_DEBUGGER
 	LOG_SUCCESS(GENERAL, "GDB debug server will be started and listening on %d upon emulator boot", (int) g_cfg.misc.gdb_server_port);
