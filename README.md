@@ -88,7 +88,7 @@ If you're not using precompiled libs, build the projects in *__BUILD_BEFORE* fol
 - `mingw32-make.exe GitVersion && mingw32-make.exe discord-rpc`
 - If you use ```-DUSE_SYSTEM_FFMPEG=OFF```, run `mingw32-make ffmpeg-mingw`
 5) Build rpcs3
-- Run `mingw-make32` or `mingw32-make -jX` where X is your CPU cores.
+- Run `mingw32-make` or `mingw32-make -jX` where X is your CPU cores.
 6) Copy dependencies
 - `cd ./bin`
 - `for l in $(ntldd.exe -R rpcs3.exe|grep mingw64|sed -e 's/^[ \t]*//'|cut -d' ' -f3);do cp $l .;done`
