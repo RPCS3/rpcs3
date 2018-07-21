@@ -387,6 +387,7 @@ public:
 			TaskVP();
 			RSXVertexProgram prog;
 			prog.data = m_data;
+			prog.instruction_mask.set(); // force showing all instructions
 			GLVertexDecompilerThread(prog, m_glsl_shader, param_array).Task();
 		}
 	}
