@@ -1107,7 +1107,7 @@ namespace rsx
 			rsx->capture_current_frame = false;
 			std::stringstream os;
 			cereal::BinaryOutputArchive archive(os);
-			const std::string& filePath = fs::get_config_dir() + Emu.GetTitleID() + "_" + get_current_date_time() +"_capture.rrc";
+			const std::string& filePath = fs::get_config_dir() + "captures/" + Emu.GetTitleID() + "_" + get_current_date_time() +"_capture.rrc";
 			archive(frame_capture);
 			{
 				// todo: 'dynamicly' create capture filename, also may want to compress this data?
