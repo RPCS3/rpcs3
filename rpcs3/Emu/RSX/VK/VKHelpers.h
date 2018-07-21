@@ -149,7 +149,8 @@ namespace vk
 	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range);
 	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image);
 
-	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask);
+	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length,
+			VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask);
 
 	//Manage 'uininterruptible' state where secondary operations (e.g violation handlers) will have to wait
 	void enter_uninterruptible();
@@ -471,11 +472,13 @@ namespace vk
 			//Currently we require:
 			//1. Anisotropic sampling
 			//2. DXT support
+			//3. Indexable storage buffers
 			VkPhysicalDeviceFeatures available_features;
 			vkGetPhysicalDeviceFeatures(*pgpu, &available_features);
 
 			available_features.samplerAnisotropy = VK_TRUE;
 			available_features.textureCompressionBC = VK_TRUE;
+			available_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 
 			VkDeviceCreateInfo device = {};
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -2279,24 +2282,51 @@ public:
 
 		graphics_pipeline_state()
 		{
-			ia = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
-			cs = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
-			ds = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-			rs = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+			// NOTE: Vk** structs have padding bytes
+			memset(this, 0, sizeof(graphics_pipeline_state));
 
-			for (int i = 0; i < 4; ++i)
-			{
-				att_state[i] = {};
-			}
+			ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+			cs.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+			ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 
+			rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 			rs.polygonMode = VK_POLYGON_MODE_FILL;
 			rs.cullMode = VK_CULL_MODE_NONE;
 			rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 			rs.lineWidth = 1.f;
 		}
 
+		graphics_pipeline_state(const graphics_pipeline_state& other)
+		{
+			// NOTE: Vk** structs have padding bytes
+			memcpy(this, &other, sizeof(graphics_pipeline_state));
+
+			if (other.cs.pAttachments == other.att_state)
+			{
+				// Rebase pointer
+				cs.pAttachments = att_state;
+			}
+		}
+
 		~graphics_pipeline_state()
 		{}
+
+		graphics_pipeline_state& operator = (const graphics_pipeline_state& other)
+		{
+			if (this != &other)
+			{
+				// NOTE: Vk** structs have padding bytes
+				memcpy(this, &other, sizeof(graphics_pipeline_state));
+
+				if (other.cs.pAttachments == other.att_state)
+				{
+					// Rebase pointer
+					cs.pAttachments = att_state;
+				}
+			}
+
+			return *this;
+		}
 
 		void set_primitive_type(VkPrimitiveTopology type)
 		{

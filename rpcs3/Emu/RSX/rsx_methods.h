@@ -1169,6 +1169,16 @@ namespace rsx
 			return decode<NV308A_POINT>().y();
 		}
 
+		u16 nv308a_size_in_x() const
+		{
+			return u16(registers[NV308A_SIZE_IN] & 0xFFFF);
+		}
+
+		u16 nv308a_size_out_x() const
+		{
+			return u16(registers[NV308A_SIZE_OUT] & 0xFFFF);
+		}
+
 		void commit_4_transform_program_instructions(u32 index)
 		{
 			u32& load = registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];

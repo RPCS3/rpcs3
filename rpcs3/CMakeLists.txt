@@ -27,10 +27,13 @@ if(NOT Qt5Widgets_FOUND)
 		message("Minimum supported Qt5 version is 5.10.0! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
 		if(CMAKE_SYSTEM MATCHES "Linux")
 			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.
-If you're on Ubuntu or Linux Mint, there are PPAs you can use to install an up-to-date qt5 version.
-		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-xenial
+If you're on Ubuntu or Linux Mint, there are PPAs you can use to install one of the latest qt5 versions.
+		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.11.0-bionic
+		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.11.0-xenial
 		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-trusty
 just make sure to run
+	source /opt/qt511/bin/qt511-env.sh
+respective
 	source /opt/qt510/bin/qt510-env.sh
 before re-running cmake")
 		elseif(WIN32)
@@ -42,7 +45,7 @@ before re-running cmake")
 
 	message("CMake was unable to find Qt5!")
 	if(WIN32)
-		message(FATAL_ERROR "Make sure the QTDIR env variable has been set properly. (for example C:\\Qt\\5.10.1\\msvc2017_64\\)")
+		message(FATAL_ERROR "Make sure the QTDIR env variable has been set properly. (for example C:\\Qt\\5.11.1\\msvc2017_64\\)")
 	elseif(CMAKE_SYSTEM MATCHES "Linux")
 		message(FATAL_ERROR "Make sure to install your distro's qt5 package!")
 	else()
@@ -181,15 +184,13 @@ else()
 	message("-- Using Custom RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
 endif()
 
-set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
-
 # Prefer GLVND for OpenGL rather than legacy
 set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if(NOT WITHOUT_LLVM)
 	if (EXISTS "${CMAKE_SOURCE_DIR}/llvmlibs")
-		find_package(LLVM 6.0 CONFIG)
+		find_package(LLVM 7.0 CONFIG)
 	endif()
 	if(NOT LLVM_FOUND)
 		message("LLVM will be built from the submodule.")
@@ -209,7 +210,7 @@ if(NOT WITHOUT_LLVM)
 		set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/../llvm_build/lib/cmake/llvm/")
 
 		# now tries to find LLVM again
-		find_package(LLVM 6.0 CONFIG)
+		find_package(LLVM 7.0 CONFIG)
 		if(NOT LLVM_FOUND)
 			message(WARNING "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()
@@ -394,7 +395,6 @@ if(UNIX)
 endif()
 
 if(VULKAN_FOUND)
-	target_include_directories(rpcs3 PUBLIC ${glslang_SOURCE_DIR})
 	target_link_libraries(rpcs3 SPIRV Vulkan::Vulkan)
 endif()
 
@@ -461,11 +461,11 @@ if(MSVC)
 	# them from the local QT installation at the end of the build.
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir ${CMAKE_BINARY_DIR}/bin/qt/plugins --debug ${CMAKE_BINARY_DIR}/bin
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "${CMAKE_BINARY_DIR}/bin/qt/plugins" --debug "${CMAKE_BINARY_DIR}/bin"
 		)
 	else()
 		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir ${CMAKE_BINARY_DIR}/bin/qt/plugins ${CMAKE_BINARY_DIR}/bin
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "${CMAKE_BINARY_DIR}/bin/qt/plugins" "${CMAKE_BINARY_DIR}/bin"
 		)
 	endif()
 endif()

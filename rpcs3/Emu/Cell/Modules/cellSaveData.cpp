@@ -314,7 +314,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		auto delete_save = [&](const std::string& del_path)
 		{
 			strcpy_trunc(doneGet->dirName, save_entries[selected].dirName);
-			doneGet->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB
+			doneGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
 			doneGet->sizeKB        = 0;
 			doneGet->excResult     = CELL_OK;
 			std::memset(doneGet->reserved, 0, sizeof(doneGet->reserved));
@@ -481,7 +481,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			// error
 		}
 
-		statGet->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB
+		statGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
 		statGet->isNewData = save_entry.isNew = psf.empty();
 
 		statGet->dir.atime = save_entry.atime = dir_info.atime;
@@ -708,6 +708,12 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			}
 
 			file_path = fileSet->fileName.get_ptr();
+
+			if (type == CELL_SAVEDATA_FILETYPE_SECUREFILE)
+			{
+				cellSaveData.notice("SECUREFILE: %s -> %s", file_path, fileSet->secureFileId);
+			}
+
 			break;
 		}
 

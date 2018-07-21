@@ -110,23 +110,45 @@ namespace glsl
 		}
 	}
 
-	static std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::string &Op1)
+	static std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar = false)
 	{
-		switch (f)
+		if (scalar)
 		{
-		case COMPARE::FUNCTION_SEQ:
-			return "equal(" + Op0 + ", " + Op1 + ")";
-		case COMPARE::FUNCTION_SGE:
-			return "greaterThanEqual(" + Op0 + ", " + Op1 + ")";
-		case COMPARE::FUNCTION_SGT:
-			return "greaterThan(" + Op0 + ", " + Op1 + ")";
-		case COMPARE::FUNCTION_SLE:
-			return "lessThanEqual(" + Op0 + ", " + Op1 + ")";
-		case COMPARE::FUNCTION_SLT:
-			return "lessThan(" + Op0 + ", " + Op1 + ")";
-		case COMPARE::FUNCTION_SNE:
-			return "notEqual(" + Op0 + ", " + Op1 + ")";
+			switch (f)
+			{
+			case COMPARE::FUNCTION_SEQ:
+				return Op0 + " == " + Op1;
+			case COMPARE::FUNCTION_SGE:
+				return Op0 + " >= " + Op1;
+			case COMPARE::FUNCTION_SGT:
+				return Op0 + " > " + Op1;
+			case COMPARE::FUNCTION_SLE:
+				return Op0 + " <= " + Op1;
+			case COMPARE::FUNCTION_SLT:
+				return Op0 + " < " + Op1;
+			case COMPARE::FUNCTION_SNE:
+				return Op0 + " != " + Op1;
+			}
 		}
+		else
+		{
+			switch (f)
+			{
+			case COMPARE::FUNCTION_SEQ:
+				return "equal(" + Op0 + ", " + Op1 + ")";
+			case COMPARE::FUNCTION_SGE:
+				return "greaterThanEqual(" + Op0 + ", " + Op1 + ")";
+			case COMPARE::FUNCTION_SGT:
+				return "greaterThan(" + Op0 + ", " + Op1 + ")";
+			case COMPARE::FUNCTION_SLE:
+				return "lessThanEqual(" + Op0 + ", " + Op1 + ")";
+			case COMPARE::FUNCTION_SLT:
+				return "lessThan(" + Op0 + ", " + Op1 + ")";
+			case COMPARE::FUNCTION_SNE:
+				return "notEqual(" + Op0 + ", " + Op1 + ")";
+			}
+		}
+
 		fmt::throw_exception("Unknown compare function" HERE);
 	}
 
@@ -582,8 +604,13 @@ namespace glsl
 			return "dFdx($0)";
 		case FUNCTION::FUNCTION_DFDY:
 			return "dFdy($0)";
+		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH1D:
+			return "textureLod($t, $0.x, 0)";
 		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D:
 			return "textureLod($t, $0.xy, 0)";
+		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH3D:
+		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCHCUBE:
+			return "textureLod($t, $0.xyz, 0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
 			return "TEX2D_DEPTH_RGBA8($_i, $t, $0.xy)";
 		}

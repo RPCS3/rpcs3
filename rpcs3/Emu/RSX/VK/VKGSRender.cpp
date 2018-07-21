@@ -626,7 +626,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache.reset(new vk::weak_vertex_cache());
 
-	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.3"));
+	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer.get(), "vulkan", "v1.6"));
 
 	open_command_buffer();
 
@@ -1066,13 +1066,7 @@ void VKGSRender::end()
 		return;
 	}
 
-	//Programs data is dependent on vertex state
-	std::chrono::time_point<steady_clock> vertex_start = steady_clock::now();
-	auto upload_info = upload_vertex_data();
-	std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
-	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - vertex_start).count();
-
-	std::chrono::time_point<steady_clock> textures_start = vertex_end;
+	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
 	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 	//Clear any 'dirty' surfaces - possible is a recycled cache surface is used
@@ -1303,19 +1297,37 @@ void VKGSRender::end()
 	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
 	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
-	//Load program
 	std::chrono::time_point<steady_clock> program_start = textures_end;
-	load_program(upload_info);
+	if (!load_program())
+	{
+		// Program is not ready, skip drawing this
+		std::this_thread::yield();
+		rsx::thread::end();
+		return;
+	}
+
+	std::chrono::time_point<steady_clock> program_end = steady_clock::now();
+	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_end - program_start).count();
+
+	// Programs data is dependent on vertex state
+	std::chrono::time_point<steady_clock> vertex_start = program_end;
+	auto upload_info = upload_vertex_data();
+	std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
+	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - vertex_start).count();
+
+	// Load program execution environment
+	program_start = textures_end;
+	load_program_env(upload_info);
 
 	VkBufferView persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
 	VkBufferView volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
 	m_program->bind_uniform(persistent_buffer, "persistent_input_stream", m_current_frame->descriptor_set);
 	m_program->bind_uniform(volatile_buffer, "volatile_input_stream", m_current_frame->descriptor_set);
 
-	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
-	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
+	program_end = steady_clock::now();
+	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_end - program_start).count();
 
-	textures_start = program_stop;
+	textures_start = program_end;
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
@@ -2065,9 +2077,13 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 	}
 	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
 	{
-		//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
-		//Only call when there are no waiters
-		m_texture_cache.do_update();
+		if (m_graphics_state & rsx::pipeline_state::framebuffer_reads_dirty)
+		{
+			//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
+			//Only call when there are no waiters
+			m_texture_cache.do_update();
+			m_graphics_state &= ~rsx::pipeline_state::framebuffer_reads_dirty;
+		}
 	}
 
 	rsx::thread::do_local_task(state);
@@ -2189,21 +2205,23 @@ bool VKGSRender::check_program_status()
 	return (rsx::method_registers.shader_program_address() != 0);
 }
 
-void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
+bool VKGSRender::load_program()
 {
 	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
 		verify(HERE), current_fragment_program.valid;
 
-		get_current_vertex_program();
+		get_current_vertex_program(vs_sampler_state);
+
+		m_graphics_state &= ~rsx::pipeline_state::invalidate_pipeline_bits;
 	}
 
 	auto &vertex_program = current_vertex_program;
 	auto &fragment_program = current_fragment_program;
 	auto old_program = m_program;
 
-	vk::pipeline_props properties = {};
+	vk::pipeline_props properties{};
 
 	// Input assembly
 	bool emulated_primitive_type;
@@ -2331,36 +2349,51 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 	//Load current program from buffer
 	vertex_program.skip_vertex_input_check = true;
 	fragment_program.unnormalized_coords = 0;
-	m_program = m_prog_buffer->getGraphicPipelineState(vertex_program, fragment_program, properties, *m_device, pipeline_layout).get();
+	m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
+			!g_cfg.video.disable_asynchronous_shader_compiler, *m_device, pipeline_layout).get();
+
+	vk::leave_uninterruptible();
 
 	if (m_prog_buffer->check_cache_missed())
 	{
-		m_shaders_cache->store(properties, vertex_program, fragment_program);
+		if (m_prog_buffer->check_program_linked_flag())
+		{
+			// Program was linked or queued for linking
+			m_shaders_cache->store(properties, vertex_program, fragment_program);
+		}
 
-		//Notify the user with HUD notification
+		// Notify the user with HUD notification
 		if (g_cfg.misc.show_shader_compilation_hint)
 		{
 			if (m_overlay_manager)
 			{
 				if (auto dlg = m_overlay_manager->get<rsx::overlays::shader_compile_notification>())
 				{
-					//Extend duration
+					// Extend duration
 					dlg->touch();
 				}
 				else
 				{
-					//Create dialog but do not show immediately
+					// Create dialog but do not show immediately
 					m_overlay_manager->create<rsx::overlays::shader_compile_notification>();
 				}
 			}
 		}
 	}
 
-	vk::leave_uninterruptible();
+	return m_program != nullptr;
+}
+
+void VKGSRender::load_program_env(const vk::vertex_upload_info& vertex_info)
+{
+	if (!m_program)
+	{
+		fmt::throw_exception("Unreachable right now" HERE);
+	}
 
 	if (1)//m_graphics_state & (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty))
 	{
-		const size_t fragment_constants_sz = m_prog_buffer->get_fragment_constants_buffer_size(fragment_program);
+		const size_t fragment_constants_sz = m_prog_buffer->get_fragment_constants_buffer_size(current_fragment_program);
 		const size_t fragment_buffer_sz = fragment_constants_sz + (18 * 4 * sizeof(float));
 		const size_t required_mem = 512 + fragment_buffer_sz;
 
@@ -2380,18 +2413,18 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 		*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
 
 		fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, reinterpret_cast<s32*>(buf + 160),
-				vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
-		
+			vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
+
 		//Fragment constants
 		buf = buf + 512;
 		if (fragment_constants_sz)
 		{
 			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) },
-					fragment_program, vk::sanitize_fp_values());
+				current_fragment_program, vk::sanitize_fp_values());
 		}
 
-		fill_fragment_state_buffer(buf + fragment_constants_sz, fragment_program);
-		
+		fill_fragment_state_buffer(buf + fragment_constants_sz, current_fragment_program);
+
 		m_uniform_buffer_ring_info.unmap();
 
 		m_vertex_state_buffer_info = { m_uniform_buffer_ring_info.heap->value, vertex_state_offset, 512 };
@@ -2417,7 +2450,8 @@ void VKGSRender::load_program(const vk::vertex_upload_info& vertex_info)
 	}
 
 	//Clear flags
-	m_graphics_state = 0;
+	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty);
+	m_graphics_state &= ~handled_flags;
 }
 
 static const u32 mr_color_offset[rsx::limits::color_buffers_count] =
@@ -3237,11 +3271,12 @@ void VKGSRender::flip(int buffer)
 			const auto tmp_texture_memory_size = m_texture_cache.get_temporary_memory_in_use() / (1024 * 1024);
 			const auto num_flushes = m_texture_cache.get_num_flush_requests();
 			const auto num_mispredict = m_texture_cache.get_num_cache_mispredictions();
+			const auto num_speculate = m_texture_cache.get_num_cache_speculative_writes();
 			const auto cache_miss_ratio = (u32)ceil(m_texture_cache.get_cache_miss_ratio() * 100);
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 144, direct_fbo->width(), direct_fbo->height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 162, direct_fbo->width(), direct_fbo->height(), "Texture cache memory: " + std::to_string(texture_memory_size) + "M");
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 180, direct_fbo->width(), direct_fbo->height(), "Temporary texture memory: " + std::to_string(tmp_texture_memory_size) + "M");
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 198, direct_fbo->width(), direct_fbo->height(), fmt::format("Flush requests: %d (%d%% hard faults, %d mispredictions)", num_flushes, cache_miss_ratio, num_mispredict));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 198, direct_fbo->width(), direct_fbo->height(), fmt::format("Flush requests: %d (%d%% hard faults, %d misprediction(s), %d speculation(s))", num_flushes, cache_miss_ratio, num_mispredict, num_speculate));
 		}
 
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, present_layout, subres);
@@ -3403,4 +3438,9 @@ void VKGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 
 	m_occlusion_query_pool.reset_queries(*m_current_command_buffer, data.indices);
 	m_occlusion_map.erase(query->driver_handle);
+}
+
+bool VKGSRender::on_decompiler_task()
+{
+	return m_prog_buffer->async_update(8, *m_device, pipeline_layout);
 }

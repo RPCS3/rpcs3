@@ -424,8 +424,7 @@ std::string SPUThread::dump() const
 {
 	std::string ret = cpu_thread::dump();
 
-	// Print some transaction statistics
-	fmt::append(ret, "\nBlocks: %u; Fail: %u", block_counter, block_failure);
+	fmt::append(ret, "\nBlock Weight: %u (Retreats: %u)", block_counter, block_failure);
 	fmt::append(ret, "\n[%s]", ch_mfc_cmd);
 	fmt::append(ret, "\nTag Mask: 0x%08x", ch_tag_mask);
 	fmt::append(ret, "\nMFC Stall: 0x%08x", ch_stall_mask);
@@ -528,7 +527,7 @@ void SPUThread::cpu_task()
 		}
 
 		// Print some stats
-		LOG_NOTICE(SPU, "Stats: block %u (fails: %u);", block_counter, block_failure);
+		LOG_NOTICE(SPU, "Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
 		return;
 	}
 
@@ -896,7 +895,7 @@ bool SPUThread::do_dma_check(const spu_mfc_cmd& args)
 {
 	const u32 mask = 1u << args.tag;
 
-	if (UNLIKELY(mfc_barrier & mask || (args.cmd & MFC_FENCE_MASK && mfc_fence & mask)))
+	if (UNLIKELY(mfc_barrier & mask || (args.cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK) && mfc_fence & mask)))
 	{
 		// Check for special value combination (normally impossible)
 		if (false)
@@ -998,15 +997,16 @@ bool SPUThread::do_list_transfer(spu_mfc_cmd& args)
 
 void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 {
-	if (raddr && args.eal == raddr)
+	const u32 addr = args.eal & -128u;
+
+	if (raddr && addr == raddr)
 	{
 		ch_event_stat |= SPU_EVENT_LR;
 		raddr = 0;
 	}
 
-	const u32 addr = args.eal;
 	auto& data = vm::_ref<decltype(rdata)>(addr);
-	const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ffff);
+	const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
 
 	// Store unconditionally
 	if (LIKELY(g_use_rtm))
@@ -1081,8 +1081,13 @@ void SPUThread::do_mfc(bool wait)
 			return false;
 		}
 
-		if (args.cmd & MFC_FENCE_MASK && fence & mask)
+		if (args.cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK) && fence & mask)
 		{
+			if (args.cmd & MFC_BARRIER_MASK)
+			{
+				barrier |= mask;
+			}
+
 			return false;
 		}
 
@@ -1170,14 +1175,15 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 	{
 	case MFC_GETLLAR_CMD:
 	{
-		auto& data = vm::_ref<decltype(rdata)>(args.eal);
+		const u32 addr = args.eal & -128u;
+		auto& data = vm::_ref<decltype(rdata)>(addr);
 
-		if (raddr && raddr != args.eal)
+		if (raddr && raddr != addr)
 		{
 			ch_event_stat |= SPU_EVENT_LR;
 		}
 
-		raddr = args.eal;
+		raddr = addr;
 
 		const bool is_polling = false; // TODO
 
@@ -1250,7 +1256,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 		}
 
 		// Copy to LS
-		_ref<decltype(rdata)>(args.lsa & 0x3ffff) = rdata;
+		_ref<decltype(rdata)>(args.lsa & 0x3ff80) = rdata;
 		ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
 		return true;
 	}
@@ -1258,12 +1264,13 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 	case MFC_PUTLLC_CMD:
 	{
 		// Store conditionally
-		auto& data = vm::_ref<decltype(rdata)>(args.eal);
-		const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ffff);
+		const u32 addr = args.eal & -128u;
+		auto& data = vm::_ref<decltype(rdata)>(addr);
+		const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
 
 		bool result = false;
 
-		if (raddr == args.eal && rtime == vm::reservation_acquire(raddr, 128))
+		if (raddr == addr && rtime == vm::reservation_acquire(raddr, 128))
 		{
 			if (LIKELY(g_use_rtm))
 			{
@@ -1442,6 +1449,13 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 
 u32 SPUThread::get_events(bool waiting)
 {
+	const u32 mask1 = ch_event_mask;
+
+	if (mask1 & ~SPU_EVENT_IMPLEMENTED)
+	{
+		fmt::throw_exception("SPU Events not implemented (mask=0x%x)" HERE, mask1);
+	}
+
 	// Check reservation status and set SPU_EVENT_LR if lost
 	if (raddr && (vm::reservation_acquire(raddr, sizeof(rdata)) != rtime || rdata != vm::_ref<decltype(rdata)>(raddr)))
 	{
@@ -1459,9 +1473,9 @@ u32 SPUThread::get_events(bool waiting)
 	}
 
 	// Simple polling or polling with atomically set/removed SPU_EVENT_WAITING flag
-	return !waiting ? ch_event_stat & ch_event_mask : ch_event_stat.atomic_op([&](u32& stat) -> u32
+	return !waiting ? ch_event_stat & mask1 : ch_event_stat.atomic_op([&](u32& stat) -> u32
 	{
-		if (u32 res = stat & ch_event_mask)
+		if (u32 res = stat & mask1)
 		{
 			stat &= ~SPU_EVENT_WAITING;
 			return res;
@@ -1474,9 +1488,9 @@ u32 SPUThread::get_events(bool waiting)
 
 void SPUThread::set_events(u32 mask)
 {
-	if (u32 unimpl = mask & ~SPU_EVENT_IMPLEMENTED)
+	if (mask & ~SPU_EVENT_IMPLEMENTED)
 	{
-		fmt::throw_exception("Unimplemented events (0x%x)" HERE, unimpl);
+		fmt::throw_exception("SPU Events not implemented (mask=0x%x)" HERE, mask);
 	}
 
 	// Set new events, get old event mask
@@ -1493,11 +1507,12 @@ void SPUThread::set_interrupt_status(bool enable)
 {
 	if (enable)
 	{
-		// detect enabling interrupts with events masked
-		if (u32 mask = ch_event_mask & ~SPU_EVENT_INTR_IMPLEMENTED)
+		// Detect enabling interrupts with events masked
+		if (ch_event_mask & ~SPU_EVENT_INTR_IMPLEMENTED)
 		{
-			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, mask);
+			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, +ch_event_mask);
 		}
+
 		interrupts_enabled = true;
 	}
 	else
@@ -2007,29 +2022,12 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrEventMask:
 	{
-		// detect masking events with enabled interrupt status
-		if (value & ~SPU_EVENT_INTR_IMPLEMENTED && interrupts_enabled)
-		{
-			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, value);
-		}
-
-		// detect masking unimplemented events
-		if (value & ~SPU_EVENT_IMPLEMENTED)
-		{
-			break;
-		}
-
 		ch_event_mask = value;
 		return true;
 	}
 
 	case SPU_WrEventAck:
 	{
-		if (value & ~SPU_EVENT_IMPLEMENTED)
-		{
-			break;
-		}
-
 		ch_event_stat &= ~value;
 		return true;
 	}

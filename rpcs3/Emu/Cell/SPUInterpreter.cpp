@@ -1090,7 +1090,7 @@ bool spu_interpreter_fast::DFNMS(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter_fast::DFNMA(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vd = _mm_sub_pd(_mm_set1_pd(0.0), _mm_add_pd(_mm_mul_pd(spu.gpr[op.ra].vd, spu.gpr[op.rb].vd), spu.gpr[op.rt].vd));
+	spu.gpr[op.rt].vd = _mm_xor_pd(_mm_add_pd(_mm_mul_pd(spu.gpr[op.ra].vd, spu.gpr[op.rb].vd), spu.gpr[op.rt].vd), _mm_set1_pd(-0.0));
 	return true;
 }
 
@@ -2155,18 +2155,18 @@ static void DFASM(SPUThread& spu, spu_opcode_t op, DoubleOp operation)
 			case DFASM_M: result = a * b; break;
 			}
 			const u32 e = _mm_getcsr();
-			if (e & _MM_MASK_INVALID)
+			if (e & _MM_EXCEPT_INVALID)
 			{
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINV);
 				result = DOUBLE_NAN;
 			}
 			else
 			{
-				if (e & _MM_MASK_OVERFLOW)
+				if (e & _MM_EXCEPT_OVERFLOW)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DOVF);
-				if (e & _MM_MASK_UNDERFLOW)
+				if (e & _MM_EXCEPT_UNDERFLOW)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DUNF);
-				if (e & _MM_MASK_INEXACT)
+				if (e & _MM_EXCEPT_INEXACT)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINX);
 			}
 		}
@@ -2216,18 +2216,18 @@ static void DFMA(SPUThread& spu, spu_opcode_t op, bool neg, bool sub)
 			feclearexcept(FE_ALL_EXCEPT);
 			result = fma(a, b, sub ? -c : c);
 			const u32 e = _mm_getcsr();
-			if (e & _MM_MASK_INVALID)
+			if (e & _MM_EXCEPT_INVALID)
 			{
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINV);
 				result = DOUBLE_NAN;
 			}
 			else
 			{
-				if (e & _MM_MASK_OVERFLOW)
+				if (e & _MM_EXCEPT_OVERFLOW)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DOVF);
-				if (e & _MM_MASK_UNDERFLOW)
+				if (e & _MM_EXCEPT_UNDERFLOW)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DUNF);
-				if (e & _MM_MASK_INEXACT)
+				if (e & _MM_EXCEPT_INEXACT)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINX);
 				if (neg) result = -result;
 			}
@@ -2293,11 +2293,11 @@ bool spu_interpreter_precise::FRDS(SPUThread& spu, spu_opcode_t op)
 			feclearexcept(FE_ALL_EXCEPT);
 			spu.gpr[op.rt]._f[i * 2 + 1] = (float)a;
 			const u32 e = _mm_getcsr();
-			if (e & _MM_MASK_OVERFLOW)
+			if (e & _MM_EXCEPT_OVERFLOW)
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DOVF);
-			if (e & _MM_MASK_UNDERFLOW)
+			if (e & _MM_EXCEPT_UNDERFLOW)
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DUNF);
-			if (e & _MM_MASK_INEXACT)
+			if (e & _MM_EXCEPT_INEXACT)
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINX);
 		}
 		spu.gpr[op.rt]._u32[i * 2] = 0;
