@@ -1090,10 +1090,13 @@ namespace rsx
 
 			shader_compile_notification()
 			{
+				const u16 pos_x = g_cfg.video.shader_compilation_hint.pos_x;
+				const u16 pos_y = g_cfg.video.shader_compilation_hint.pos_y;
+
 				m_text.set_font("Arial", 16);
 				m_text.set_text("Compiling shaders");
 				m_text.auto_resize();
-				m_text.set_pos(20, 690);
+				m_text.set_pos(pos_x, pos_y);
 
 				m_text.back_color.a = 0.f;
 
@@ -1101,7 +1104,7 @@ namespace rsx
 				{
 					dots[n].set_size(2, 2);
 					dots[n].back_color = color4f(1.f, 1.f, 1.f, 1.f);
-					dots[n].set_pos( m_text.w + 25 + (6 * n), 710);
+					dots[n].set_pos(m_text.w + pos_x + 5 + (6 * n), pos_y + 20);
 				}
 
 				creation_time = get_system_time();
