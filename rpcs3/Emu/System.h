@@ -440,8 +440,10 @@ struct cfg_root : cfg::node
 			cfg::_int<4, 36> font_size{ this, "Font size (px)", 10 };
 			cfg::_enum<screen_quadrant> position{this, "Position", screen_quadrant::top_left};
 			cfg::string font{this, "Font", "n023055ms.ttf"};
-			cfg::_int<0, 500> margin_x{this, "Horizontal Margin (px)", 50}; // horizontal distance to the screen border relative to the screen_quadrant in px
-			cfg::_int<0, 500> margin_y{this, "Vertical Margin (px)", 50}; // vertical distance to the screen border relative to the screen_quadrant in px
+			cfg::_int<0, 1280> margin_x{this, "Horizontal Margin (px)", 50}; // horizontal distance to the screen border relative to the screen_quadrant in px
+			cfg::_int<0, 720> margin_y{this, "Vertical Margin (px)", 50}; // vertical distance to the screen border relative to the screen_quadrant in px
+			cfg::_bool center_x{ this, "Center Horizontally", false };
+			cfg::_bool center_y{ this, "Center Vertically", false };
 			cfg::_int<0, 100> opacity{this, "Opacity (%)", 70};
 
 		} perf_overlay{this};

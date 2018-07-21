@@ -43,6 +43,16 @@ namespace rsx
 				break;
 			}
 
+			if (g_cfg.video.perf_overlay.center_x)
+			{
+				pos.x = (virtual_width - m_body.w) / 2;
+			}
+
+			if (g_cfg.video.perf_overlay.center_y)
+			{
+				pos.y = (virtual_height - m_body.h) / 2;
+			}
+
 			elm.set_pos(pos.x, pos.y);
 			elm.set_padding(padding.x1, padding.x2, padding.y1, padding.y2);
 		}

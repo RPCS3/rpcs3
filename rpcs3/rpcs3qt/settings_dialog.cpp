@@ -812,6 +812,22 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->showShaderCompilationHint, emu_settings::ShowShaderCompilationHint);
 	SubscribeTooltip(ui->showShaderCompilationHint, json_emu_misc["showShaderCompilationHint"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->perfOverlayCenterX, emu_settings::PerfOverlayCenterX);
+	SubscribeTooltip(ui->perfOverlayCenterX, json_emu_overlay["perfOverlayCenterX"].toString());
+	connect(ui->perfOverlayCenterX, &QCheckBox::clicked, [this](bool checked)
+	{
+		ui->perfOverlayMarginX->setEnabled(!checked);
+	});
+	ui->perfOverlayMarginX->setEnabled(!ui->perfOverlayCenterX->isChecked());
+
+	xemu_settings->EnhanceCheckBox(ui->perfOverlayCenterY, emu_settings::PerfOverlayCenterY);
+	SubscribeTooltip(ui->perfOverlayCenterY, json_emu_overlay["perfOverlayCenterY"].toString());
+	connect(ui->perfOverlayCenterY, &QCheckBox::clicked, [this](bool checked)
+	{
+		ui->perfOverlayMarginY->setEnabled(!checked);
+	});
+	ui->perfOverlayMarginY->setEnabled(!ui->perfOverlayCenterY->isChecked());
+
 	xemu_settings->EnhanceCheckBox(ui->perfOverlayEnabled, emu_settings::PerfOverlayEnabled);
 	SubscribeTooltip(ui->perfOverlayEnabled, json_emu_overlay["perfOverlayEnabled"].toString());
 	auto EnablePerfOverlayOptions = [this](bool enabled)

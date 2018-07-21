@@ -86,6 +86,8 @@ public:
 		PerfOverlayOpacity,
 		PerfOverlayMarginX,
 		PerfOverlayMarginY,
+		PerfOverlayCenterX,
+		PerfOverlayCenterY,
 
 		// Audio
 		AudioRenderer,
@@ -277,6 +279,8 @@ private:
 		{ PerfOverlayOpacity,       { "Video", "Performance Overlay", "Opacity (%)" } },
 		{ PerfOverlayMarginX,       { "Video", "Performance Overlay", "Horizontal Margin (px)" } },
 		{ PerfOverlayMarginY,       { "Video", "Performance Overlay", "Vertical Margin (px)" } },
+		{ PerfOverlayCenterX,       { "Video", "Performance Overlay", "Center Horizontally" } },
+		{ PerfOverlayCenterY,       { "Video", "Performance Overlay", "Center Vertically" } },
 
 		// Audio
 		{ AudioRenderer,  { "Audio", "Renderer"}},
