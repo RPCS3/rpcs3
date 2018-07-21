@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>703</width>
-    <height>482</height>
+    <height>499</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -1433,11 +1433,18 @@
                <widget class="QComboBox" name="perfOverlayPosition"/>
               </item>
               <item>
-               <layout class="QHBoxLayout" name="layout_margin_x" stretch="2,1">
+               <widget class="QLabel" name="label_margin_x">
+                <property name="text">
+                 <string>Horizontal Margin:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="layout_margin_x" stretch="0,0">
                 <item>
-                 <widget class="QLabel" name="label_margin_x">
+                 <widget class="QCheckBox" name="perfOverlayCenterX">
                   <property name="text">
-                   <string>Horizontal Margin:</string>
+                   <string>Centered</string>
                   </property>
                  </widget>
                 </item>
@@ -1447,11 +1454,18 @@
                </layout>
               </item>
               <item>
-               <layout class="QHBoxLayout" name="layout_margin_y" stretch="2,1">
+               <widget class="QLabel" name="label_margin_y">
+                <property name="text">
+                 <string>Vertical Margin:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="layout_margin_y" stretch="0,0">
                 <item>
-                 <widget class="QLabel" name="label_margin_y">
+                 <widget class="QCheckBox" name="perfOverlayCenterY">
                   <property name="text">
-                   <string>Vertical Margin:</string>
+                   <string>Centered</string>
                   </property>
                  </widget>
                 </item>
