@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>752</width>
-    <height>519</height>
+    <width>703</width>
+    <height>482</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -1433,6 +1433,34 @@
                <widget class="QComboBox" name="perfOverlayPosition"/>
               </item>
               <item>
+               <layout class="QHBoxLayout" name="layout_margin_x" stretch="2,1">
+                <item>
+                 <widget class="QLabel" name="label_margin_x">
+                  <property name="text">
+                   <string>Horizontal Margin:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="perfOverlayMarginX"/>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="layout_margin_y" stretch="2,1">
+                <item>
+                 <widget class="QLabel" name="label_margin_y">
+                  <property name="text">
+                   <string>Vertical Margin:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="perfOverlayMarginY"/>
+                </item>
+               </layout>
+              </item>
+              <item>
                <widget class="QLabel" name="label_update_interval">
                 <property name="text">
                  <string>Update Interval:</string>
@@ -1461,6 +1489,20 @@
               </item>
               <item>
                <widget class="QSlider" name="perfOverlayFontSize">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_opacity">
+                <property name="text">
+                 <string>Opacity:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="perfOverlayOpacity">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
