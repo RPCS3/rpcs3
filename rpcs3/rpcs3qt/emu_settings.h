@@ -83,6 +83,9 @@ public:
 		PerfOverlayPosition,
 		PerfOverlayUpdateInterval,
 		PerfOverlayFontSize,
+		PerfOverlayOpacity,
+		PerfOverlayMarginX,
+		PerfOverlayMarginY,
 
 		// Audio
 		AudioRenderer,
@@ -271,6 +274,9 @@ private:
 		{ PerfOverlayPosition,      { "Video", "Performance Overlay", "Position" } },
 		{ PerfOverlayUpdateInterval,{ "Video", "Performance Overlay", "Metrics update interval (ms)" } },
 		{ PerfOverlayFontSize,      { "Video", "Performance Overlay", "Font size (px)" } },
+		{ PerfOverlayOpacity,       { "Video", "Performance Overlay", "Opacity (%)" } },
+		{ PerfOverlayMarginX,       { "Video", "Performance Overlay", "Horizontal Margin (px)" } },
+		{ PerfOverlayMarginY,       { "Video", "Performance Overlay", "Vertical Margin (px)" } },
 
 		// Audio
 		{ AudioRenderer,  { "Audio", "Renderer"}},

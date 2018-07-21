@@ -17,7 +17,7 @@ namespace rsx
 
 			// left, top, right, bottom
 			const areau padding { text_padding, text_padding - 4, text_padding, text_padding };
-			const positionu margin { m_margin, m_margin };
+			const positionu margin { m_margin_x, m_margin_y };
 			positionu pos;
 
 			const auto overlay_width = m_body.w + margin.x;
@@ -146,9 +146,10 @@ namespace rsx
 			}
 		}
 
-		void perf_metrics_overlay::set_margin(u32 margin)
+		void perf_metrics_overlay::set_margins(u32 margin_x, u32 margin_y)
 		{
-			m_margin = margin;
+			m_margin_x = margin_x;
+			m_margin_y = margin_y;
 
 			if (m_is_initialised)
 			{

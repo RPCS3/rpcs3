@@ -819,10 +819,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->label_detail_level->setEnabled(enabled);
 		ui->label_update_interval->setEnabled(enabled);
 		ui->label_font_size->setEnabled(enabled);
+		ui->label_position->setEnabled(enabled);
+		ui->label_opacity->setEnabled(enabled);
+		ui->label_margin_x->setEnabled(enabled);
+		ui->label_margin_y->setEnabled(enabled);
 		ui->perfOverlayDetailLevel->setEnabled(enabled);
 		ui->perfOverlayPosition->setEnabled(enabled);
 		ui->perfOverlayUpdateInterval->setEnabled(enabled);
 		ui->perfOverlayFontSize->setEnabled(enabled);
+		ui->perfOverlayOpacity->setEnabled(enabled);
+		ui->perfOverlayMarginX->setEnabled(enabled);
+		ui->perfOverlayMarginY->setEnabled(enabled);
 	};
 	EnablePerfOverlayOptions(ui->perfOverlayEnabled->isChecked());
 	connect(ui->perfOverlayEnabled, &QCheckBox::clicked, EnablePerfOverlayOptions);
@@ -844,6 +851,22 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	{
 		ui->label_font_size->setText(tr("Font Size: %0 px").arg(value));
 	});
+
+	xemu_settings->EnhanceSlider(ui->perfOverlayOpacity, emu_settings::PerfOverlayOpacity);
+	SubscribeTooltip(ui->perfOverlayOpacity, json_emu_overlay["perfOverlayOpacity"].toString());
+	ui->label_opacity->setText(tr("Opacity: %0 %").arg(ui->perfOverlayOpacity->value()));
+	connect(ui->perfOverlayOpacity, &QSlider::valueChanged, [this](int value)
+	{
+		ui->label_opacity->setText(tr("Opacity: %0 %").arg(value));
+	});
+
+	// SpinBoxes
+
+	xemu_settings->EnhanceSpinBox(ui->perfOverlayMarginX, emu_settings::PerfOverlayMarginX, "", tr("px"));
+	SubscribeTooltip(ui->perfOverlayMarginX, json_emu_overlay["perfOverlayMarginX"].toString());
+
+	xemu_settings->EnhanceSpinBox(ui->perfOverlayMarginY, emu_settings::PerfOverlayMarginY, "", tr("px"));
+	SubscribeTooltip(ui->perfOverlayMarginY, json_emu_overlay["perfOverlayMarginY"].toString());
 
 	// Global settings (gui_settings)
 	if (!game)

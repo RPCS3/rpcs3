@@ -76,7 +76,10 @@
 			"perfOverlayPosition": "Sets the on-screen position (quadrant) of the perfomance overlay.",
 			"perfOverlayDetailLevel": "Controls the amount of information displayed on the performance overlay.",
 			"perfOverlayUpdateInterval": "Sets the time interval in which the performance overlay is being updated (measured in milliseconds).",
-			"perfOverlayFontSize": "Sets the font size of the performance overlay (measured in pixels)."
+			"perfOverlayFontSize": "Sets the font size of the performance overlay (measured in pixels).",
+			"perfOverlayOpacity": "Sets the opacity of the performance overlay (measured in %).",
+			"perfOverlayMarginX": "Sets the horizontal distance to the screen border relative to the screen quadrant (measured in pixels).",
+			"perfOverlayMarginY": "Sets the vertical distance to the screen border relative to the screen quadrant (measured in pixels)."
 		}
 	},
 	"gpu": {

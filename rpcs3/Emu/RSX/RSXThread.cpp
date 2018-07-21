@@ -369,7 +369,7 @@ namespace rsx
 				perf_overlay->set_update_interval(perf_settings.update_interval);
 				perf_overlay->set_font(perf_settings.font);
 				perf_overlay->set_font_size(perf_settings.font_size);
-				perf_overlay->set_margin(perf_settings.margin);
+				perf_overlay->set_margins(perf_settings.margin_x, perf_settings.margin_y);
 				perf_overlay->set_opacity(perf_settings.opacity / 100.f);
 				perf_overlay->init();
 			}
