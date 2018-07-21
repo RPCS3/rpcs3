@@ -449,11 +449,6 @@ namespace rsx
 			void reset_titles();
 			void reset_text();
 
-			f32 get_text_opacity() const
-			{
-				return std::clamp(m_opacity + 0.3f, 0.3f, 1.0f);
-			}
-
 		public:
 			void init();
 

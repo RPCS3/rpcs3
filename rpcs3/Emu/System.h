@@ -445,6 +445,10 @@ struct cfg_root : cfg::node
 			cfg::_bool center_x{ this, "Center Horizontally", false };
 			cfg::_bool center_y{ this, "Center Vertically", false };
 			cfg::_int<0, 100> opacity{this, "Opacity (%)", 70};
+			cfg::string color_body{ this, "Body Color (hex)", "#FFE138FF" };
+			cfg::string background_body{ this, "Body Background (hex)", "#002339FF" };
+			cfg::string color_title{ this, "Title Color (hex)", "#F26C24FF" };
+			cfg::string background_title{ this, "Title Background (hex)", "#00000000" };
 
 		} perf_overlay{this};
 
