@@ -780,7 +780,6 @@ namespace vk
 			const u16 section_depth = depth;
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
 			VkFormat vk_format;
-			VkComponentMapping mapping;
 			VkImageAspectFlags aspect_flags;
 			VkImageType image_type;
 			VkImageViewType image_view_type;

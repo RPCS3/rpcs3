@@ -2435,35 +2435,51 @@ public:
 
 				bool has_location(const std::string &name, int *location = nullptr)
 				{
-					int result = glGetUniformLocation(m_program.id(), name.c_str());
+					auto found = locations.find(name);
+					if (found != locations.end())
+					{
+						if (location)
+						{
+							*location = found->second;
+						}
 
-					if (result < 0)
-						return false;
+						return (found->second >= 0);
+					}
 
+					auto result = glGetUniformLocation(m_program.id(), name.c_str());
 					locations[name] = result;
 
 					if (location)
+					{
 						*location = result;
+					}
 
-					return true;
+					return (result >= 0);
 				}
 
 				GLint location(const std::string &name)
 				{
-					auto finded = locations.find(name);
-
-					if (finded != locations.end())
+					auto found = locations.find(name);
+					if (found != locations.end())
 					{
-						return finded->second;
+						if (found->second >= 0)
+						{
+							return found->second;
+						}
+						else
+						{
+							throw not_found_exception(name);
+						}
 					}
 
-					int result = glGetUniformLocation(m_program.id(), name.c_str());
+					auto result = glGetUniformLocation(m_program.id(), name.c_str());
 
 					if (result < 0)
+					{
 						throw not_found_exception(name);
+					}
 
 					locations[name] = result;
-
 					return result;
 				}
 
@@ -2474,28 +2490,6 @@ public:
 					(*this)[location] = active_texture;
 
 					return active_texture;
-				}
-
-				int texture(const std::string &name, int active_texture, const gl::texture_view& texture_)
-				{
-					return texture(location(name), active_texture, texture_);
-				}
-
-				int texture(const std::string &name, const gl::texture_view& texture_)
-				{
-					int atex;
-					auto finded = locations.find(name);
-
-					if (finded != locations.end())
-					{
-						atex = finded->second;
-					}
-					else
-					{
-						atex = active_texture++;
-					}
-
-					return texture(name, atex, texture_);
 				}
 
 				uniform_t operator[](GLint location)
@@ -2514,83 +2508,6 @@ public:
 					std::swap(active_texture, uniforms.active_texture);
 				}
 			} uniforms{ this };
-
-			class attribs_t
-			{
-				program& m_program;
-				std::unordered_map<std::string, GLint> m_locations;
-
-			public:
-				attribs_t(program* program) : m_program(*program)
-				{
-				}
-
-				void clear()
-				{
-					m_locations.clear();
-				}
-
-				GLint location(const std::string &name)
-				{
-					auto finded = m_locations.find(name);
-
-					if (finded != m_locations.end())
-					{
-						if (finded->second < 0)
-							throw not_found_exception(name);
-
-						return finded->second;
-					}
-
-					int result = glGetAttribLocation(m_program.id(), name.c_str());
-
-					if (result < 0)
-						throw not_found_exception(name);
-
-					m_locations[name] = result;
-
-					return result;
-				}
-
-				bool has_location(const std::string &name, int *location_ = nullptr)
-				{
-					auto finded = m_locations.find(name);
-
-					if (finded != m_locations.end())
-					{
-						if (finded->second < 0)
-							return false;
-
-						*location_ = finded->second;
-						return true;
-					}
-
-					int loc = glGetAttribLocation(m_program.id(), name.c_str());
-
-					m_locations[name] = loc;
-
-					if (loc < 0)
-						return false;
-
-					*location_ = loc;
-					return true;
-				}
-
-				attrib_t operator[](GLint location)
-				{
-					return{ location };
-				}
-
-				attrib_t operator[](const std::string &name)
-				{
-					return{ location(name) };
-				}
-
-				void swap(attribs_t& attribs)
-				{
-					m_locations.swap(attribs.m_locations);
-				}
-			} attribs{ this };
 
 			program& recreate()
 			{
@@ -2686,7 +2603,6 @@ public:
 			void set_id(uint id)
 			{
 				uniforms.clear();
-				attribs.clear();
 				m_id = id;
 			}
 
@@ -2764,7 +2680,6 @@ public:
 				set_id(program_.id());
 				program_.set_id(my_old_id);
 				uniforms.swap(program_.uniforms);
-				attribs.swap(program_.attribs);
 			}
 
 			program& operator = (const program& rhs) = delete;
