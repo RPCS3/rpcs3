@@ -84,7 +84,7 @@ If you're not using precompiled libs, build the projects in *__BUILD_BEFORE* fol
 - `cd ..`
 4) Configure and compile rpcs3
 - `mkdir rpcs3_build && cd rpcs3_build`
-- `cmake -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_BUILD_TYPE=Release ../rpcs3/`
+- `cmake -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make ../rpcs3/`
 - `mingw32-make.exe GitVersion && mingw32-make.exe discord-rpc`
 - If you use ```-DUSE_SYSTEM_FFMPEG=OFF```, run `mingw32-make ffmpeg-mingw`
 5) Build rpcs3
