@@ -1326,7 +1326,7 @@ void VKGSRender::end()
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - vertex_start).count();
 
 	// Load program execution environment
-	program_start = textures_end;
+	program_start = vertex_end;
 	load_program_env(upload_info);
 
 	VkBufferView persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
@@ -2374,7 +2374,7 @@ void VKGSRender::load_program_env(const vk::vertex_upload_info& vertex_info)
 
 	if (1)//m_graphics_state & (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty))
 	{
-		const size_t fragment_constants_sz = m_prog_buffer->get_fragment_constants_buffer_size(current_fragment_program);
+		const size_t fragment_constants_sz = current_fp_metadata.program_constants_buffer_length;
 		const size_t fragment_buffer_sz = fragment_constants_sz + (18 * 4 * sizeof(float));
 		const size_t required_mem = 512 + fragment_buffer_sz;
 

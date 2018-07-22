@@ -1189,7 +1189,7 @@ void GLGSRender::load_program_env(const gl::vertex_upload_info& upload_info)
 	u32 vertex_constants_offset;
 	u32 fragment_constants_offset;
 
-	const u32 fragment_constants_size = (const u32)m_prog_buffer.get_fragment_constants_buffer_size(current_fragment_program);
+	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
 	const u32 fragment_buffer_size = fragment_constants_size + (18 * 4 * sizeof(float));
 	const bool update_transform_constants = !!(m_graphics_state & rsx::pipeline_state::transform_constants_dirty);
 
