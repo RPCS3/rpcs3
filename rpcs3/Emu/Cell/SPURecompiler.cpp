@@ -1553,8 +1553,27 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		std::array<llvm::StoreInst*, s_reg_max> store{};
 	};
 
+	struct chunk_info
+	{
+		// Callable function
+		llvm::Function* func;
+
+		// Constants in non-volatile registers at the entry point
+		std::array<llvm::Value*, s_reg_max> reg{};
+
+		chunk_info() = default;
+
+		chunk_info(llvm::Function* func)
+			: func(func)
+		{
+		}
+	};
+
 	// Current block
 	block_info* m_block;
+
+	// Current chunk
+	chunk_info* m_finfo;
 
 	// All blocks in the current function chunk
 	std::unordered_map<u32, block_info, value_hash<u32, 2>> m_blocks;
@@ -1563,7 +1582,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	std::vector<u32> m_block_queue;
 
 	// All function chunks in current SPU compile unit
-	std::unordered_map<u32, llvm::Function*, value_hash<u32, 2>> m_functions;
+	std::unordered_map<u32, chunk_info, value_hash<u32, 2>> m_functions;
 
 	// Function chunk list for processing
 	std::vector<u32> m_function_queue;
@@ -1584,9 +1603,28 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		result->addAttribute(2, llvm::Attribute::NoAlias);
 
 		// Enqueue if necessary
-		if (m_functions.emplace(addr, result).second)
+		const auto empl = m_functions.emplace(addr, chunk_info{result});
+
+		if (empl.second)
 		{
 			m_function_queue.push_back(addr);
+
+			if (m_block && g_cfg.core.spu_block_size != spu_block_size_type::safe)
+			{
+				// Initialize constants for non-volatile registers (TODO)
+				auto& regs = empl.first->second.reg;
+
+				for (u32 i = 80; i <= 127; i++)
+				{
+					if (auto c = llvm::dyn_cast_or_null<llvm::Constant>(m_block->reg[i]))
+					{
+						if (!(find_reg_origin(addr, i, false) >> 31))
+						{
+							regs[i] = c;
+						}
+					}
+				}
+			}
 		}
 
 		return result;
@@ -1600,6 +1638,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		m_reg_addr.fill(nullptr);
 		m_block = nullptr;
+		m_finfo = nullptr;
 		m_blocks.clear();
 		m_block_queue.clear();
 		m_ir->SetInsertPoint(llvm::BasicBlock::Create(m_context, "", m_function));
@@ -1769,12 +1808,12 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	}
 
 	// Return either basic block addr with single dominating value, or negative number of PHI entries
-	u32 find_reg_origin(u32 addr, u32 index)
+	u32 find_reg_origin(u32 addr, u32 index, bool chunk_only = true)
 	{
 		u32 result = -1;
 
 		// Handle entry point specially
-		if (m_entry_info[addr / 4])
+		if (chunk_only && m_entry_info[addr / 4])
 		{
 			result = addr;
 		}
@@ -1791,10 +1830,12 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		{
 			for (u32 pred : pfound->second)
 			{
-				if (m_entry_map[pred / 4] == root)
+				if (chunk_only && m_entry_map[pred / 4] != root)
 				{
-					m_scan_queue.push_back(pred);
+					continue;
 				}
+
+				m_scan_queue.push_back(pred);
 			}
 		}
 
@@ -1831,7 +1872,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 					// Enqueue predecessors if register is not modified there
 					for (u32 pred : pfound->second)
 					{
-						if (m_entry_map[pred / 4] != root)
+						if (chunk_only && m_entry_map[pred / 4] != root)
 						{
 							continue;
 						}
@@ -1847,7 +1888,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				break;
 			}
 
-			if (regmod || m_entry_info[addr / 4])
+			if (regmod || (chunk_only && m_entry_info[addr / 4]))
 			{
 				if (result == -1)
 				{
@@ -2200,7 +2241,8 @@ public:
 		{
 			// Initialize function info
 			m_entry = m_function_queue[fi];
-			set_function(m_functions[m_entry]);
+			set_function(m_functions[m_entry].func);
+			m_finfo = &m_functions[m_entry];
 			m_ir->CreateBr(add_block(m_entry));
 
 			// Emit instructions for basic blocks
@@ -2251,9 +2293,10 @@ public:
 										if (!value)
 										{
 											// Value hasn't been loaded yet
-											value = m_ir->CreateLoad(regptr);
+											value = m_finfo->reg[i] ? m_finfo->reg[i] : m_ir->CreateLoad(regptr);
 										}
-										else if (i < 128 && llvm::isa<llvm::Constant>(value))
+
+										if (i < 128 && llvm::isa<llvm::Constant>(value))
 										{
 											// Bitcast the constant
 											value = make_const_vector(get_const_vector(llvm::cast<llvm::Constant>(value), baddr, i), _phi->getType());
@@ -2279,7 +2322,7 @@ public:
 								const auto regptr = init_vr(i);
 								const auto cblock = m_ir->GetInsertBlock();
 								m_ir->SetInsertPoint(m_function->getEntryBlock().getTerminator());
-								const auto value = m_ir->CreateLoad(regptr);
+								const auto value = m_finfo->reg[i] ? m_finfo->reg[i] : m_ir->CreateLoad(regptr);
 								m_ir->SetInsertPoint(cblock);
 								_phi->addIncoming(value, &m_function->getEntryBlock());
 							}
@@ -2294,6 +2337,11 @@ public:
 							{
 								m_block->reg[i] = bfound->second.reg[i];
 							}
+						}
+						else if (baddr == m_entry)
+						{
+							// Passthrough constant from a different chunk
+							m_block->reg[i] = m_finfo->reg[i];
 						}
 					}
 
@@ -2380,10 +2428,19 @@ public:
 					}
 
 					chunks.push_back(null);
+					continue;
 				}
-				else
+
+				chunks.push_back(found->second.func);
+
+				// If a chunk has incoming constants, we can't add it to the function table (TODO)
+				for (const auto c : found->second.reg)
 				{
-					chunks.push_back(found->second);
+					if (c != nullptr)
+					{
+						chunks.back() = null;
+						break;
+					}
 				}
 			}
 
@@ -2406,7 +2463,7 @@ public:
 
 		for (const auto& func : m_functions)
 		{
-			pm.run(*func.second);
+			pm.run(*func.second.func);
 		}
 
 		// Clear context (TODO)
@@ -4498,18 +4555,11 @@ public:
 
 		llvm::Value* ptr = m_ir->CreateGEP(disp, m_ir->CreateLShr(ad64, 2, "", true));
 
-		if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
+		if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
 		{
 			// Try to load chunk address from the function table
-			llvm::Value* index = ad64;
-
-			if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
-			{
-				index = m_ir->CreateSub(ad64, m_ir->getInt64(m_function_queue[0]));
-			}
-
-			const auto use_ftable = m_ir->CreateICmpULT(index, m_ir->getInt64(m_size));
-			ptr = m_ir->CreateSelect(use_ftable, m_ir->CreateGEP(m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(index, 2, "", true)}), ptr);
+			const auto use_ftable = m_ir->CreateICmpULT(ad64, m_ir->getInt64(m_size));
+			ptr = m_ir->CreateSelect(use_ftable, m_ir->CreateGEP(m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(ad64, 2, "", true)}), ptr);
 		}
 
 		tail(m_ir->CreateLoad(ptr));
