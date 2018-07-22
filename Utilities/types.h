@@ -51,7 +51,7 @@
 #define STRINGIZE_DETAIL(x) #x ""
 #define STRINGIZE(x) STRINGIZE_DETAIL(x)
 
-#define HERE "\n(in file " __FILE__ ":" STRINGIZE(__LINE__) ")"
+#define HERE " (in file " __FILE__ ":" STRINGIZE(__LINE__) ")"
 
 // Ensure that the expression evaluates to true. Obsolete.
 //#define EXPECTS(...) do { if (!(__VA_ARGS__)) fmt::raw_error("Precondition failed: " #__VA_ARGS__ HERE); } while (0)
