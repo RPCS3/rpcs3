@@ -17,12 +17,6 @@ namespace rsx
 		swapped_native_component_order = 2,
 	};
 
-	enum texture_sampler_status
-	{
-		status_uninitialized = 0,
-		status_ready = 1
-	};
-
 	enum memory_read_flags
 	{
 		flush_always = 0,
@@ -83,7 +77,6 @@ namespace rsx
 		rsx::texture_create_flags view_flags = rsx::texture_create_flags::default_component_order;
 		rsx::texture_upload_context context = rsx::texture_upload_context::shader_read;
 		rsx::texture_dimension_extended image_type = rsx::texture_dimension_extended::texture_dimension_2d;
-		rsx::texture_sampler_status sampler_status = rsx::texture_sampler_status::status_uninitialized;
 
 		bool matches(u32 rsx_address, u32 rsx_size)
 		{
@@ -146,11 +139,6 @@ namespace rsx
 			image_type = type;
 		}
 
-		void set_sampler_status(rsx::texture_sampler_status status)
-		{
-			sampler_status = status;
-		}
-
 		void set_gcm_format(u32 format)
 		{
 			gcm_format = format;
@@ -194,11 +182,6 @@ namespace rsx
 		memory_read_flags get_memory_read_flags() const
 		{
 			return readback_behaviour;
-		}
-
-		rsx::texture_sampler_status get_sampler_status() const
-		{
-			return sampler_status;
 		}
 
 		bool writes_likely_completed() const
@@ -479,11 +462,10 @@ namespace rsx
 		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_resource_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector) = 0;
 		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_storage_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector) = 0;
 		virtual section_storage_type* create_new_texture(commandbuffer_type&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
-				rsx::texture_upload_context context, rsx::texture_dimension_extended type, texture_create_flags flags, rsx::texture_colorspace colorspace, const texture_channel_remap_t& remap_vector) = 0;
+				rsx::texture_upload_context context, rsx::texture_dimension_extended type, texture_create_flags flags) = 0;
 		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format, texture_upload_context context,
-				const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, rsx::texture_colorspace colorspace, bool swizzled, const texture_channel_remap_t& remap_vector) = 0;
+				const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) = 0;
 		virtual void enforce_surface_creation_type(section_storage_type& section, u32 gcm_format, texture_create_flags expected) = 0;
-		virtual void set_up_remap_vector(section_storage_type& section, const texture_channel_remap_t& remap_vector) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex) = 0;
 		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
 		virtual image_view_type generate_3d_from_2d_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
@@ -1064,9 +1046,8 @@ namespace rsx
 				no_access_range = region.get_min_max(no_access_range);
 			}
 
-			region.create(width, height, 1, 1, nullptr, image, pitch, false, std::forward<Args>(extras)...);
+			region.create(width, height, 1, 1, image, pitch, false, std::forward<Args>(extras)...);
 			region.set_context(texture_upload_context::framebuffer_storage);
-			region.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 			region.set_image_type(rsx::texture_dimension_extended::texture_dimension_2d);
 			region.set_memory_read_flags(memory_read_flags::flush_always);
 			region.touch();
@@ -1860,10 +1841,7 @@ namespace rsx
 						if (cached_texture->get_image_type() == rsx::texture_dimension_extended::texture_dimension_1d)
 							scale_y = 0.f;
 
-						if (cached_texture->get_sampler_status() != rsx::texture_sampler_status::status_ready)
-							set_up_remap_vector(*cached_texture, tex.decoded_remap());
-
-						return{ cached_texture->get_raw_view(), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
+						return{ cached_texture->get_view(tex.remap(), tex.decoded_remap()), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
 					}
 				}
 
@@ -1899,9 +1877,6 @@ namespace rsx
 										break;
 									}
 
-									if (surface->get_sampler_status() != rsx::texture_sampler_status::status_ready)
-										set_up_remap_vector(*surface, tex.decoded_remap());
-
 									auto src_image = surface->get_raw_texture();
 									return{ src_image, deferred_request_command::copy_image_static, surface->get_section_base(), format, offset_x, offset_y, tex_width, tex_height, 1,
 										texture_upload_context::blit_engine_dst, surface->is_depth_texture(), scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d,
@@ -1917,7 +1892,6 @@ namespace rsx
 			writer_lock lock(m_cache_mutex);
 			const bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
 			auto subresources_layout = get_subresources_layout(tex);
-			auto remap_vector = tex.decoded_remap();
 
 			bool is_depth_format = false;
 			switch (format)
@@ -1936,7 +1910,7 @@ namespace rsx
 			//NOTE: SRGB correction is to be handled in the fragment shader; upload as linear RGB
 			m_texture_memory_in_use += (tex_pitch * tex_height);
 			return{ upload_image_from_cpu(cmd, texaddr, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
-				texture_upload_context::shader_read, subresources_layout, extended_dimension, rsx::texture_colorspace::rgb_linear, is_swizzled, remap_vector)->get_raw_view(),
+				texture_upload_context::shader_read, subresources_layout, extended_dimension, is_swizzled)->get_view(tex.remap(), tex.decoded_remap()),
 				texture_upload_context::shader_read, is_depth_format, scale_x, scale_y, extended_dimension };
 		}
 
@@ -2220,7 +2194,7 @@ namespace rsx
 
 					const u32 gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 					vram_texture = upload_image_from_cpu(cmd, src_address, src.width, src.slice_h, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
-						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, rsx::texture_colorspace::rgb_linear, dst.swizzled, rsx::default_remap_vector)->get_raw_texture();
+						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled)->get_raw_texture();
 
 					m_texture_memory_in_use += src.pitch * src.slice_h;
 				}
@@ -2356,7 +2330,7 @@ namespace rsx
 				cached_dest = create_new_texture(cmd, dst.rsx_address, dst.pitch * dst_dimensions.height,
 					dst_dimensions.width, dst_dimensions.height, 1, 1,
 					gcm_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
-					channel_order, rsx::texture_colorspace::rgb_linear, rsx::default_remap_vector);
+					channel_order);
 
 				dest_texture = cached_dest->get_raw_texture();
 				m_texture_memory_in_use += dst.pitch * dst_dimensions.height;

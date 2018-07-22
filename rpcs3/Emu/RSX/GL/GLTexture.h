@@ -19,7 +19,7 @@ namespace gl
 	float max_aniso(rsx::texture_max_anisotropy aniso);
 	std::array<GLenum, 4> get_swizzle_remap(u32 texture_format);
 
-	texture* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, rsx::texture_dimension_extended type, rsx::texture_colorspace colorspace);
+	viewable_image* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, rsx::texture_dimension_extended type);
 
 	void copy_typeless(texture* dst, const texture* src);
 	/**
@@ -31,8 +31,7 @@ namespace gl
 	 * static_state - set up the texture without consideration for sampler state (useful for vertex textures which have no real sampler state on RSX)
 	 */
 	void upload_texture(GLuint id, u32 texaddr, u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
-		const std::vector<rsx_subresource_layout>& subresources_layout, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap, bool static_state,
-		rsx::texture_colorspace colorspace);
+		const std::vector<rsx_subresource_layout>& subresources_layout);
 
 	std::array<GLenum, 4> apply_swizzle_remap(const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap);
 

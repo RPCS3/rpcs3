@@ -148,10 +148,9 @@ namespace gl
 		u32 pbo_id = 0;
 		u32 pbo_size = 0;
 
-		gl::texture* vram_texture = nullptr;
+		gl::viewable_image* vram_texture = nullptr;
 
-		std::unique_ptr<gl::texture_view> view;
-		std::unique_ptr<gl::texture> managed_texture;
+		std::unique_ptr<gl::viewable_image> managed_texture;
 		std::unique_ptr<gl::texture> scaled_texture;
 
 		bool is_depth = false;
@@ -265,25 +264,20 @@ namespace gl
 
 			vram_texture = nullptr;
 			managed_texture.reset();
-			view.reset();
 		}
 
-		void create(u16 w, u16 h, u16 depth, u16 mipmaps, gl::texture_view* _view,
-				gl::texture* image, u32 rsx_pitch, bool read_only,
+		void create(u16 w, u16 h, u16 depth, u16 mipmaps, gl::texture* image, u32 rsx_pitch, bool read_only,
 				gl::texture::format gl_format, gl::texture::type gl_type, bool swap_bytes)
 		{
+			vram_texture = static_cast<gl::viewable_image*>(image);
+
 			if (read_only)
 			{
-				managed_texture.reset(image);
-				view.reset(_view);
-
+				managed_texture.reset(vram_texture);
 				aa_mode = rsx::surface_antialiasing::center_1_sample;
 			}
 			else
 			{
-				view.reset();
-				managed_texture.reset();
-
 				if (pbo_id == 0)
 					init_buffer();
 
@@ -302,11 +296,10 @@ namespace gl
 			this->depth = depth;
 			this->mipmaps = mipmaps;
 
-			vram_texture = image;
 			set_format(gl_format, gl_type, swap_bytes);
 		}
 
-		void create_read_only(gl::texture* image, gl::texture_view* _view, u32 width, u32 height, u32 depth, u32 mipmaps)
+		void create_read_only(gl::viewable_image* image, u32 width, u32 height, u32 depth, u32 mipmaps)
 		{
 			//Only to be used for ro memory, we dont care about most members, just dimensions and the vram texture handle
 			this->width = width;
@@ -315,7 +308,6 @@ namespace gl
 			this->mipmaps = mipmaps;
 
 			managed_texture.reset(image);
-			view.reset(_view);
 			vram_texture = image;
 
 			rsx_pitch = 0;
@@ -358,11 +350,6 @@ namespace gl
 		void set_depth_flag(bool is_depth_fmt)
 		{
 			is_depth = is_depth_fmt;
-		}
-
-		void set_source(gl::texture &source)
-		{
-			vram_texture = &source;
 		}
 
 		void copy_texture(bool=false)
@@ -619,7 +606,6 @@ namespace gl
 			{
 				//Read-only texture, destroy texture memory
 				managed_texture.reset();
-				view.reset();
 			}
 			else
 			{
@@ -648,7 +634,7 @@ namespace gl
 
 		bool is_flushable() const
 		{
-			return (locked && pbo_id != 0);
+			return (protection == utils::protection::no);
 		}
 
 		bool is_flushed() const
@@ -671,9 +657,9 @@ namespace gl
 			return vram_texture == 0;
 		}
 
-		gl::texture_view* get_raw_view() const
+		gl::texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
 		{
-			return view.get();
+			return vram_texture->get_view(remap_encoding, remap);
 		}
 
 		gl::texture* get_raw_texture() const
@@ -681,9 +667,9 @@ namespace gl
 			return managed_texture.get();
 		}
 
-		std::unique_ptr<gl::texture_view>& get_view()
+		gl::texture_view* get_raw_view()
 		{
-			return view;
+			return vram_texture->get_view(0xAAE4, rsx::default_remap_vector);
 		}
 
 		bool is_depth_texture() const
@@ -732,11 +718,11 @@ namespace gl
 		blitter m_hw_blitter;
 		std::vector<discardable_storage> m_temporary_surfaces;
 
-		cached_texture_section& create_texture(gl::texture* image, gl::texture_view* view, u32 texaddr, u32 texsize, u32 w, u32 h, u32 depth, u32 mipmaps)
+		cached_texture_section& create_texture(gl::viewable_image* image, u32 texaddr, u32 texsize, u32 w, u32 h, u32 depth, u32 mipmaps)
 		{
 			cached_texture_section& tex = find_cached_texture(texaddr, texsize, true, w, h, depth);
 			tex.reset(texaddr, texsize, false);
-			tex.create_read_only(image, view, w, h, depth, mipmaps);
+			tex.create_read_only(image, w, h, depth, mipmaps);
 			read_only_range = tex.get_min_max(read_only_range);
 			return tex;
 		}
@@ -962,8 +948,7 @@ namespace gl
 		}
 
 		cached_texture_section* create_new_texture(void*&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
-				rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags,
-				rsx::texture_colorspace colorspace, const texture_channel_remap_t& remap_vector) override
+				rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags) override
 		{
 			bool depth_flag = false;
 			switch (gcm_format)
@@ -974,18 +959,17 @@ namespace gl
 				break;
 			}
 
-			auto image = gl::create_texture(gcm_format, width, height, depth, mipmaps, type, colorspace);
-			auto swizzle = get_component_mapping(gcm_format, flags);
-			swizzle = gl::apply_swizzle_remap(swizzle, remap_vector);
-			auto view = new gl::texture_view(image, swizzle.data());
+			auto image = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
 
-			auto& cached = create_texture(image, view, rsx_address, rsx_size, width, height, depth, mipmaps);
+			const auto swizzle = get_component_mapping(gcm_format, flags);
+			image->set_native_component_layout(swizzle);
+
+			auto& cached = create_texture(image, rsx_address, rsx_size, width, height, depth, mipmaps);
 			cached.set_dirty(false);
 			cached.set_depth_flag(depth_flag);
 			cached.set_view_flags(flags);
 			cached.set_context(context);
 			cached.set_gcm_format(gcm_format);
-			cached.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
 			cached.set_image_type(type);
 
 			if (context != rsx::texture_upload_context::blit_engine_dst)
@@ -1034,28 +1018,15 @@ namespace gl
 		}
 
 		cached_texture_section* upload_image_from_cpu(void*&, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
-			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type,
-			rsx::texture_colorspace colorspace, bool swizzled, const texture_channel_remap_t& remap_vector) override
+			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool input_swizzled) override
 		{
 			void* unused = nullptr;
 			auto section = create_new_texture(unused, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
-				rsx::texture_create_flags::default_component_order, colorspace, remap_vector);
-
-			bool input_swizzled = swizzled;
-			if (context == rsx::texture_upload_context::blit_engine_src)
-			{
-				//Swizzling is ignored for blit engine copy and emulated using remapping
-				input_swizzled = false;
-				section->set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
-			}
-			else
-			{
-				//Generic upload - sampler status will be set on upload
-				section->set_sampler_status(rsx::texture_sampler_status::status_ready);
-			}
+				rsx::texture_create_flags::default_component_order);
 
 			gl::upload_texture(section->get_raw_texture()->id(), rsx_address, gcm_format, width, height, depth, mipmaps,
-					input_swizzled, type, subresource_layout, remap_vector, false, colorspace);
+					input_swizzled, type, subresource_layout);
+
 			return section;
 		}
 
@@ -1064,30 +1035,10 @@ namespace gl
 			if (flags == section.get_view_flags())
 				return;
 
-			auto swizzle = get_component_mapping(gcm_format, flags);
-			auto& view = section.get_view();
-
-			if (!view->compare_swizzle(swizzle.data()))
-			{
-				view.reset(new gl::texture_view(view->image(), swizzle.data()));
-			}
+			const auto swizzle = get_component_mapping(gcm_format, flags);
+			section.get_raw_texture()->set_native_component_layout(swizzle);
 
 			section.set_view_flags(flags);
-			section.set_sampler_status(rsx::texture_sampler_status::status_uninitialized);
-		}
-
-		void set_up_remap_vector(cached_texture_section& section, const texture_channel_remap_t& remap_vector) override
-		{
-			auto& view = section.get_view();
-			auto swizzle = view->component_mapping();
-
-			swizzle = apply_swizzle_remap(swizzle, remap_vector);
-			if (!view->compare_swizzle(swizzle.data()))
-			{
-				view.reset(new gl::texture_view(view->image(), swizzle.data()));
-			}
-
-			section.set_sampler_status(rsx::texture_sampler_status::status_ready);
 		}
 
 		void insert_texture_barrier(void*&, gl::texture*) override

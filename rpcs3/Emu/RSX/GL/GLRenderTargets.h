@@ -49,7 +49,7 @@ namespace rsx
 
 namespace gl
 {
-	class render_target : public texture, public rsx::ref_counted, public rsx::render_target_descriptor<texture*>
+	class render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<texture*>
 	{
 		u32 rsx_pitch = 0;
 		u16 native_pitch = 0;
@@ -60,11 +60,9 @@ namespace gl
 		u16 surface_width = 0;
 		u16 surface_pixel_size = 0;
 
-		std::unordered_map<u32, std::unique_ptr<texture_view>> views;
-
 	public:
 		render_target(GLuint width, GLuint height, GLenum sized_format)
-			:texture(GL_TEXTURE_2D, width, height, 1, 1, sized_format)
+			: viewable_image(GL_TEXTURE_2D, width, height, 1, 1, sized_format)
 		{}
 
 		void set_cleared(bool clear=true)
@@ -112,21 +110,6 @@ namespace gl
 		texture* get_surface() override
 		{
 			return (gl::texture*)this;
-		}
-
-		texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
-		{
-			auto found = views.find(remap_encoding);
-			if (found != views.end())
-			{
-				return found->second.get();
-			}
-
-			auto mapping = gl::apply_swizzle_remap(get_native_component_layout(), remap);
-			auto view = std::make_unique<texture_view>(this, mapping.data());
-			auto result = view.get();
-			views[remap_encoding] = std::move(view);
-			return result;
 		}
 
 		u32 raw_handle() const
