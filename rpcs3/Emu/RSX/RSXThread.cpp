@@ -2333,7 +2333,7 @@ namespace rsx
 
 		if (zcull_ctrl->has_pending())
 		{
-			LOG_ERROR(RSX, "Dangling reports found, discarding...");
+			LOG_TRACE(RSX, "Dangling reports found, discarding...");
 			zcull_ctrl->sync(this);
 		}
 
