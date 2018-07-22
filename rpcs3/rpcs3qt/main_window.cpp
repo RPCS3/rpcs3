@@ -29,7 +29,7 @@
 #include "main_window.h"
 #include "emu_settings.h"
 #include "about_dialog.h"
-#include "gamepads_settings_dialog.h"
+#include "pad_settings_dialog.h"
 #include "progress_dialog.h"
 
 #include <thread>
@@ -1228,11 +1228,13 @@ void main_window::CreateConnects()
 	connect(ui->confIOAct,     &QAction::triggered, [=]() { openSettings(3); });
 	connect(ui->confSystemAct, &QAction::triggered, [=]() { openSettings(4); });
 
-	connect(ui->confPadsAct, &QAction::triggered, this, [=]
+	auto openPadSettings = [this]
 	{
-		gamepads_settings_dialog dlg(this);
+		pad_settings_dialog dlg(this);
 		dlg.exec();
-	});
+	};
+
+	connect(ui->confPadsAct, &QAction::triggered, openPadSettings);
 
 	connect(ui->confAutopauseManagerAct, &QAction::triggered, [=]
 	{
@@ -1416,7 +1418,7 @@ void main_window::CreateConnects()
 		}
 	});
 
-	connect(ui->toolbar_controls, &QAction::triggered, [=]() { gamepads_settings_dialog dlg(this); dlg.exec(); });
+	connect(ui->toolbar_controls, &QAction::triggered, openPadSettings);
 	connect(ui->toolbar_config, &QAction::triggered, [=]() { openSettings(0); });
 	connect(ui->toolbar_list, &QAction::triggered, [=]() { ui->setlistModeListAct->trigger(); });
 	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });

@@ -491,9 +491,6 @@
     <ClCompile Include="rpcs3qt\gs_frame.cpp">
       <Filter>Gui\game window</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\gamepads_settings_dialog.cpp">
-      <Filter>Gui\settings</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\pad_settings_dialog.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
@@ -687,9 +684,6 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\gl_gs_frame.h">
       <Filter>Gui\game window</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\gamepads_settings_dialog.h">
-      <Filter>Gui\settings</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\game_list.h">
       <Filter>Gui\game list</Filter>
