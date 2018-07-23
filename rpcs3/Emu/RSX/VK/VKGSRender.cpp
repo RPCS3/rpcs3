@@ -2516,231 +2516,55 @@ void VKGSRender::open_command_buffer()
 	m_current_command_buffer->begin();
 }
 
-
 void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 {
+	if (m_framebuffer_state_contested && (m_framebuffer_contest_type != context))
+	{
+		// Clear commands affect contested memory
+		m_rtts_dirty = true;
+	}
+
 	if (m_draw_fbo && !m_rtts_dirty)
 		return;
 
 	m_rtts_dirty = false;
-
-	u32 clip_width = rsx::method_registers.surface_clip_width();
-	u32 clip_height = rsx::method_registers.surface_clip_height();
-	u32 clip_x = rsx::method_registers.surface_clip_origin_x();
-	u32 clip_y = rsx::method_registers.surface_clip_origin_y();
-
 	framebuffer_status_valid = false;
 	m_framebuffer_state_contested = false;
 
-	if (clip_width == 0 || clip_height == 0)
+	const auto layout = get_framebuffer_layout(context);
+	if (!framebuffer_status_valid)
 	{
-		LOG_ERROR(RSX, "Invalid framebuffer setup, w=%d, h=%d", clip_width, clip_height);
 		return;
 	}
 
-	auto surface_addresses = get_color_surface_addresses();
-	auto zeta_address = get_zeta_surface_address();
-
-	const auto zeta_pitch = rsx::method_registers.surface_z_pitch();
-	const u32 surface_pitchs[] = { rsx::method_registers.surface_a_pitch(), rsx::method_registers.surface_b_pitch(),
-		rsx::method_registers.surface_c_pitch(), rsx::method_registers.surface_d_pitch() };
-
-	const auto color_fmt = rsx::method_registers.surface_color();
-	const auto depth_fmt = rsx::method_registers.surface_depth_fmt();
-	const auto target = rsx::method_registers.surface_color_target();
-
-	const auto aa_mode = rsx::method_registers.surface_antialias();
-	const u32 aa_factor_u = (aa_mode == rsx::surface_antialiasing::center_1_sample) ? 1 : 2;
-	const u32 aa_factor_v = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
-
-	//NOTE: Its is possible that some renders are done on a swizzled context. Pitch is meaningless in that case
-	//Seen in Nier (color) and GT HD concept (z buffer)
-	//Restriction is that the dimensions are powers of 2. Also, dimensions are passed via log2w and log2h entries
-	const auto required_zeta_pitch = std::max<u32>((u32)(depth_fmt == rsx::surface_depth_format::z16 ? clip_width * 2 : clip_width * 4) * aa_factor_u, 64u);
-	const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(color_fmt, clip_width) * aa_factor_v, 64u);
-	const bool stencil_test_enabled = depth_fmt == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
-	const auto lg2w = rsx::method_registers.surface_log2_width();
-	const auto lg2h = rsx::method_registers.surface_log2_height();
-	const auto clipw_log2 = (u32)floor(log2(clip_width));
-	const auto cliph_log2 = (u32)floor(log2(clip_height));
-
-	if (zeta_address)
+	if (m_draw_fbo && layout.ignore_change)
 	{
-		if (!rsx::method_registers.depth_test_enabled() &&
-			!stencil_test_enabled &&
-			target != rsx::surface_target::none)
+		// Nothing has changed, we're still using the same framebuffer
+		// Update flags to match current
+
+		const auto aa_mode = rsx::method_registers.surface_antialias();
+
+		for (u32 index = 0; index < 4; index++)
 		{
-			//Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
-			const bool is_depth_clear = !!(context & rsx::framebuffer_creation_context::context_clear_depth);
-			if (!is_depth_clear)
+			if (auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]))
 			{
-				zeta_address = 0;
-				m_framebuffer_state_contested = true;
+				surface->write_aa_mode = layout.aa_mode;
 			}
 		}
 
-		if (zeta_address && zeta_pitch < required_zeta_pitch)
+		if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
 		{
-			if (lg2w < clipw_log2 || lg2h < cliph_log2)
-			{
-				//Cannot fit
-				zeta_address = 0;
-
-				if (lg2w > 0 || lg2h > 0)
-				{
-					//Something was actually declared for the swizzle context dimensions
-					LOG_WARNING(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
-				}
-			}
-			else
-			{
-				LOG_TRACE(RSX, "Swizzled context depth surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
-			}
-		}
-	}
-
-	for (const auto &index : rsx::utility::get_rtt_indexes(target))
-	{
-		if (surface_pitchs[index] < required_color_pitch)
-		{
-			if (lg2w < clipw_log2 || lg2h < cliph_log2)
-			{
-				surface_addresses[index] = 0;
-
-				if (lg2w > 0 || lg2h > 0)
-				{
-					//Something was actually declared for the swizzle context dimensions
-					LOG_WARNING(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
-				}
-			}
-			else
-			{
-				LOG_TRACE(RSX, "Swizzled context color surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, clip_width, clip_height);
-			}
+			ds->write_aa_mode = layout.aa_mode;
 		}
 
-		if (surface_addresses[index] == zeta_address)
-		{
-			LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, zeta_pitch = %d, color_pitch=%d", zeta_address, zeta_pitch, surface_pitchs[index]);
-			if (context == rsx::framebuffer_creation_context::context_clear_depth ||
-				rsx::method_registers.depth_test_enabled() || stencil_test_enabled ||
-				(!rsx::method_registers.color_write_enabled() && rsx::method_registers.depth_write_enabled()))
-			{
-				// Use address for depth data
-				// TODO: create a temporary render buffer for this to keep MRT outputs aligned
-				surface_addresses[index] = 0;
-			}
-			else
-			{
-				// Use address for color data
-				zeta_address = 0;
-				m_framebuffer_state_contested = true;
-				break;
-			}
-		}
-
-		if (surface_addresses[index])
-			framebuffer_status_valid = true;
-	}
-
-	if (!framebuffer_status_valid && !zeta_address)
-	{
-		LOG_WARNING(RSX, "Framebuffer setup failed. Draw calls may have been lost");
 		return;
-	}
-
-	//At least one attachment exists
-	framebuffer_status_valid = true;
-
-	const auto fbo_width = rsx::apply_resolution_scale(clip_width, true);
-	const auto fbo_height = rsx::apply_resolution_scale(clip_height, true);
-	const auto bpp = get_format_block_size_in_bytes(color_fmt);
-
-	//Window (raster) offsets
-	const auto window_offset_x = rsx::method_registers.window_offset_x();
-	const auto window_offset_y = rsx::method_registers.window_offset_y();
-	const auto window_clip_width = rsx::method_registers.window_clip_horizontal();
-	const auto window_clip_height = rsx::method_registers.window_clip_vertical();
-
-	if (window_offset_x || window_offset_y)
-	{
-		//Window offset is what affects the raster position!
-		//Tested with Turbo: Super stunt squad that only changes the window offset to declare new framebuffers
-		//Sampling behavior clearly indicates the addresses are expected to have changed
-		if (auto clip_type = rsx::method_registers.window_clip_type())
-			LOG_ERROR(RSX, "Unknown window clip type 0x%X" HERE, clip_type);
-
-		for (const auto &index : rsx::utility::get_rtt_indexes(target))
-		{
-			if (surface_addresses[index])
-			{
-				const u32 window_offset_bytes = (std::max<u32>(surface_pitchs[index], required_color_pitch) * window_offset_y) + ((aa_factor_u * bpp) * window_offset_x);
-				surface_addresses[index] += window_offset_bytes;
-			}
-		}
-
-		if (zeta_address)
-		{
-			const auto depth_bpp = (depth_fmt == rsx::surface_depth_format::z16 ? 2 : 4);
-			zeta_address += (std::max<u32>(zeta_pitch, required_zeta_pitch) * window_offset_y) + ((aa_factor_u * depth_bpp) * window_offset_x);
-		}
-	}
-
-	if ((window_clip_width && window_clip_width < clip_width) ||
-		(window_clip_height && window_clip_height < clip_height))
-	{
-		LOG_ERROR(RSX, "Unexpected window clip dimensions: window_clip=%dx%d, surface_clip=%dx%d",
-			window_clip_width, window_clip_height, clip_width, clip_height);
-	}
-
-	if (m_draw_fbo)
-	{
-		bool really_changed = false;
-
-		if (m_draw_fbo->width() == fbo_width && m_draw_fbo->height() == fbo_height)
-		{
-			for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
-			{
-				if (m_surface_info[i].address != surface_addresses[i])
-				{
-					really_changed = true;
-					break;
-				}
-			}
-
-			if (!really_changed)
-			{
-				if (zeta_address == m_depth_surface_info.address)
-				{
-					// Nothing has changed, we're still using the same framebuffer
-					// Update flags to match current
-
-					const auto aa_mode = rsx::method_registers.surface_antialias();
-
-					for (u32 index = 0; index < 4; index++)
-					{
-						if (auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]))
-						{
-							surface->write_aa_mode = aa_mode;
-						}
-					}
-
-					if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
-					{
-						ds->write_aa_mode = aa_mode;
-					}
-
-					return;
-				}
-			}
-		}
 	}
 
 	m_rtts.prepare_render_target(&*m_current_command_buffer,
-		color_fmt, depth_fmt,
-		clip_width, clip_height,
-		target,
-		surface_addresses, zeta_address,
+		layout.color_format, layout.depth_format,
+		layout.width, layout.height,
+		layout.target,
+		layout.color_addresses, layout.zeta_address,
 		(*m_device), &*m_current_command_buffer);
 
 	//Reset framebuffer information
@@ -2759,9 +2583,9 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		}
 
 		m_surface_info[i].address = m_surface_info[i].pitch = 0;
-		m_surface_info[i].width = clip_width;
-		m_surface_info[i].height = clip_height;
-		m_surface_info[i].color_format = color_fmt;
+		m_surface_info[i].width = layout.width;
+		m_surface_info[i].height = layout.height;
+		m_surface_info[i].color_format = layout.color_format;
 	}
 
 	//Process depth surface as well
@@ -2775,13 +2599,13 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		}
 
 		m_depth_surface_info.address = m_depth_surface_info.pitch = 0;
-		m_depth_surface_info.width = clip_width;
-		m_depth_surface_info.height = clip_height;
-		m_depth_surface_info.depth_format = depth_fmt;
+		m_depth_surface_info.width = layout.width;
+		m_depth_surface_info.height = layout.height;
+		m_depth_surface_info.depth_format = layout.depth_format;
 	}
 
 	//Bind created rtts as current fbo...
-	std::vector<u8> draw_buffers = rsx::utility::get_rtt_indexes(target);
+	const auto draw_buffers = rsx::utility::get_rtt_indexes(layout.target);
 	m_draw_buffers_count = 0;
 
 	std::vector<vk::image*> bound_images;
@@ -2793,14 +2617,13 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			bound_images.push_back(surface);
 
-			m_surface_info[index].address = surface_addresses[index];
-			m_surface_info[index].pitch = std::max(surface_pitchs[index], required_color_pitch);
-			surface->rsx_pitch = surface_pitchs[index];
+			m_surface_info[index].address = layout.color_addresses[index];
+			m_surface_info[index].pitch = layout.color_pitch[index];
+			surface->rsx_pitch = layout.color_pitch[index];
 
-			surface->write_aa_mode = aa_mode;
-			m_texture_cache.notify_surface_changed(surface_addresses[index]);
-
-			m_texture_cache.tag_framebuffer(surface_addresses[index]);
+			surface->write_aa_mode = layout.aa_mode;
+			m_texture_cache.notify_surface_changed(layout.color_addresses[index]);
+			m_texture_cache.tag_framebuffer(layout.color_addresses[index]);
 			m_draw_buffers_count++;
 		}
 	}
@@ -2810,26 +2633,25 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		bound_images.push_back(ds);
 
-		m_depth_surface_info.address = zeta_address;
-		m_depth_surface_info.pitch = std::max(zeta_pitch, required_zeta_pitch);
-		ds->rsx_pitch = m_depth_surface_info.pitch;
+		m_depth_surface_info.address = layout.zeta_address;
+		m_depth_surface_info.pitch = layout.zeta_pitch;
+		ds->rsx_pitch = layout.zeta_pitch;
 
-		ds->write_aa_mode = aa_mode;
-		m_texture_cache.notify_surface_changed(zeta_address);
-
-		m_texture_cache.tag_framebuffer(zeta_address);
+		ds->write_aa_mode = layout.aa_mode;
+		m_texture_cache.notify_surface_changed(layout.zeta_address);
+		m_texture_cache.tag_framebuffer(layout.zeta_address);
 	}
 
 	if (g_cfg.video.write_color_buffers)
 	{
-		const auto color_fmt_info = vk::get_compatible_gcm_format(color_fmt);
+		const auto color_fmt_info = vk::get_compatible_gcm_format(layout.color_format);
 		for (u8 index : draw_buffers)
 		{
 			if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
 
-			const u32 range = m_surface_info[index].pitch * m_surface_info[index].height * aa_factor_v;
+			const u32 range = m_surface_info[index].pitch * m_surface_info[index].height * layout.aa_factors[1];
 			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[index]), m_surface_info[index].address, range,
-				m_surface_info[index].width, m_surface_info[index].height, m_surface_info[index].pitch, color_fmt_info.first, color_fmt_info.second);
+				m_surface_info[index].width, m_surface_info[index].height, layout.actual_color_pitch[index], color_fmt_info.first, color_fmt_info.second);
 		}
 	}
 
@@ -2838,17 +2660,19 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 		{
 			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16)? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
-			const u32 range = m_depth_surface_info.pitch * m_depth_surface_info.height * aa_factor_v;
+			const u32 range = m_depth_surface_info.pitch * m_depth_surface_info.height * layout.aa_factors[1];
 			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range,
-				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch, gcm_format, false);
+				m_depth_surface_info.width, m_depth_surface_info.height, layout.actual_zeta_pitch, gcm_format, false);
 		}
 	}
 
-	auto vk_depth_format = (zeta_address == 0) ? VK_FORMAT_UNDEFINED : vk::get_compatible_depth_surface_format(m_device->get_formats_support(), depth_fmt);
-	m_current_renderpass_id = vk::get_render_pass_location(vk::get_compatible_surface_format(color_fmt).first, vk_depth_format, m_draw_buffers_count);
+	auto vk_depth_format = (layout.zeta_address == 0) ? VK_FORMAT_UNDEFINED : vk::get_compatible_depth_surface_format(m_device->get_formats_support(), layout.depth_format);
+	m_current_renderpass_id = vk::get_render_pass_location(vk::get_compatible_surface_format(layout.color_format).first, vk_depth_format, m_draw_buffers_count);
 
 	//Search old framebuffers for this same configuration
 	bool framebuffer_found = false;
+	const auto fbo_width = rsx::apply_resolution_scale(layout.width, true);
+	const auto fbo_height = rsx::apply_resolution_scale(layout.height, true);
 
 	for (auto &fbo : m_framebuffers_to_clean)
 	{
