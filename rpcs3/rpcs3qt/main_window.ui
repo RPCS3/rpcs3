@@ -502,9 +502,6 @@
    </property>
   </action>
   <action name="actionManage_Users">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string>User Accounts</string>
    </property>

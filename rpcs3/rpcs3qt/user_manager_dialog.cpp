@@ -1,5 +1,6 @@
 #include "user_manager_dialog.h"
 #include "table_item_delegate.h"
+#include "rpcs3_app.h"
 
 #include "Utilities/StrUtil.h"
 
@@ -43,14 +44,13 @@ namespace
 	}
 }
 
-user_manager_dialog::user_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, QWidget* parent)
-	: QDialog(parent), m_user_list(), m_sort_column(1), m_sort_ascending(true), m_gui_settings(gui_settings), m_emu_settings(emu_settings)
+user_manager_dialog::user_manager_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
+	: QDialog(parent), m_user_list(), m_sort_column(1), m_sort_ascending(true), m_gui_settings(gui_settings)
 {
 	setWindowTitle(tr("User Manager"));
 	setMinimumSize(QSize(400, 400));
 	setModal(true);
 
-	m_emu_settings->LoadSettings();
 	Init();
 }
 
@@ -90,7 +90,7 @@ void user_manager_dialog::Init()
 	vbox_main->addLayout(hbox_buttons);
 	setLayout(vbox_main);
 
-	m_active_user = m_emu_settings->GetSetting(emu_settings::SelectedUser);
+	m_active_user = m_gui_settings->GetValue(gui::um_active_user).toString().toStdString();
 	UpdateTable();
 
 	restoreGeometry(m_gui_settings->GetValue(gui::um_geometry).toByteArray());
@@ -173,7 +173,7 @@ void user_manager_dialog::UpdateTable(bool mark_only)
 		user_id_item->setFlags(user_id_item->flags() & ~Qt::ItemIsEditable);
 		m_table->setItem(row, 0, user_id_item);
 
-		QTableWidgetItem* username_item = new QTableWidgetItem(qstr(user.second.GetUserName()));
+		QTableWidgetItem* username_item = new QTableWidgetItem(qstr(user.second.GetUsername()));
 		username_item->setData(Qt::UserRole, user.first); // For sorting to work properly
 		username_item->setFlags(username_item->flags() & ~Qt::ItemIsEditable);
 		m_table->setItem(row, 1, username_item);
@@ -210,7 +210,7 @@ void user_manager_dialog::OnUserRemove()
 		return;
 	}
 
-	const QString username = qstr(m_user_list[key].GetUserName());
+	const QString username = qstr(m_user_list[key].GetUsername());
 	const QString user_id = qstr(m_user_list[key].GetUserId());
 	const std::string user_dir = m_user_list[key].GetUserDir();
 
@@ -256,7 +256,7 @@ void user_manager_dialog::OnUserRename()
 	}
 
 	const std::string user_id = m_user_list[key].GetUserId();
-	const std::string username = m_user_list[key].GetUserName();
+	const std::string username = m_user_list[key].GetUsername();
 
 	QInputDialog* dialog = new QInputDialog(this);
 	dialog->setWindowTitle(tr("Rename User"));
@@ -334,17 +334,26 @@ void user_manager_dialog::OnUserCreate()
 
 void user_manager_dialog::OnUserLogin()
 {
-	u32 key = GetUserKey();
-	if (key == 0)
+	if (!Emu.IsStopped() && QMessageBox::question(this, tr("Stop emulator?"),
+		tr("In order to change the user you have to stop the emulator first.\n\nStop the emulator now?"),
+		QMessageBox::Yes | QMessageBox::Abort) != QMessageBox::Yes)
 	{
 		return;
 	}
 
-	std::string selected_user_id = m_user_list[key].GetUserId();
+	Emu.Stop();
 
-	m_active_user = selected_user_id;
-	m_emu_settings->SetSetting(emu_settings::SelectedUser, m_active_user);
-	m_emu_settings->SaveSettings();
+	const u32 key = GetUserKey();
+	const std::string new_user = m_user_list[key].GetUserId();
+
+	if (!rpcs3_app::InitializeEmulator(new_user, false))
+	{
+		LOG_FATAL(GENERAL, "Failed to login user! username=%s key=%d", new_user, key);
+		return;
+	}
+
+	m_active_user = new_user;
+	m_gui_settings->SetValue(gui::um_active_user, qstr(m_active_user));
 	UpdateTable(true);
 	Q_EMIT OnUserLoginSuccess();
 }

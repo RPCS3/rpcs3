@@ -218,7 +218,8 @@ namespace gui
 
 	const gui_save sd_geometry = gui_save(savedata, "geometry", QByteArray());
 
-	const gui_save um_geometry = gui_save(users, "geometry", QByteArray());
+	const gui_save um_geometry    = gui_save(users, "geometry",    QByteArray());
+	const gui_save um_active_user = gui_save(users, "active_user", "00000001");
 }
 
 /** Class for GUI settings..
@@ -231,6 +232,7 @@ public:
 	explicit gui_settings(QObject* parent = nullptr);
 	~gui_settings();
 
+	QString GetCurrentUser();
 	QString GetSettingsDir();
 
 	/** Changes the settings file to the destination preset*/
