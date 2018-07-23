@@ -100,7 +100,15 @@ EmuCallbacks main_application::CreateCallbacks()
 		{
 		case mouse_handler::null:
 		{
-			g_fxo->init<MouseHandlerBase, NullMouseHandler>();
+			if (g_cfg.io.move == move_handler::mouse)
+			{
+				basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>();
+				ret->moveToThread(get_thread());
+				ret->SetTargetWindow(m_game_window);
+			}
+			else
+				g_fxo->init<MouseHandlerBase, NullMouseHandler>();
+
 			break;
 		}
 		case mouse_handler::basic:

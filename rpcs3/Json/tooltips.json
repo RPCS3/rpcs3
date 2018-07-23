@@ -153,7 +153,7 @@
 		"mouseHandlerBox": "Some games support native mouse input.\nBasic will work in these cases.",
 		"cameraBox": "Camera support is not implemented, leave this on null.",
 		"cameraTypeBox": "Camera support is not implemented, leave this on unknown.",
-		"moveBox": "PlayStation Move support.\nFake: Experimental! This maps Move controls to DS4 controller mappings."
+		"moveBox": "PlayStation Move support.\nFake: Experimental! This maps Move controls to DS3 controller mappings.\nMouse: Emulate PSMove with Mouse handler."
 	},
 	"network": {
 		"netStatusBox": "Leave as disconnected unless you're debugging.\nRPCS3 has no online support."

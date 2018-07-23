@@ -419,7 +419,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	if (m_disable_mouse) return;
+	if (m_disable_mouse || g_cfg.io.move == move_handler::mouse) return;
 
 	if (ev->button() == Qt::LeftButton)
 	{
