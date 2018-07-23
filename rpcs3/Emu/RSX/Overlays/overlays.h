@@ -1,6 +1,7 @@
 #pragma once
 #include "overlay_controls.h"
 
+#include "../../../Utilities/date_time.h"
 #include "../../../Utilities/Thread.h"
 #include "../../Io/PadHandler.h"
 #include "Emu/Memory/vm.h"
@@ -13,8 +14,6 @@
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 #include "Utilities/CPUStats.h"
 #include "Utilities/Timer.h"
-
-#include <time.h>
 
 extern u64 get_system_time();
 
@@ -542,15 +541,6 @@ namespace rsx
 			std::unique_ptr<label> m_time_thingy;
 			std::unique_ptr<label> m_no_saves_text;
 
-			std::string current_time()
-			{
-				time_t t = time(NULL);
-				char buf[128];
-				strftime(buf, 128, "%c", localtime(&t));
-
-				return buf;
-			}
-
 			bool m_no_saves = false;
 
 		public:
@@ -571,7 +561,7 @@ namespace rsx
 
 				m_time_thingy->set_font("Arial", 14);
 				m_time_thingy->set_pos(1000, 30);
-				m_time_thingy->text = current_time();
+				m_time_thingy->text = date_time::current_time();
 
 				static_cast<label*>(m_description.get())->auto_resize();
 				static_cast<label*>(m_time_thingy.get())->auto_resize();
@@ -723,7 +713,7 @@ namespace rsx
 
 			void update() override
 			{
-				m_time_thingy->set_text(current_time());
+				m_time_thingy->set_text(date_time::current_time());
 				static_cast<label*>(m_time_thingy.get())->auto_resize();
 			}
 		};
