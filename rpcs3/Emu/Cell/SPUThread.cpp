@@ -1279,8 +1279,11 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 					vm::reservation_notifier(raddr, 128).notify_all();
 					result = true;
 				}
-
-				// Don't fallback to heavyweight lock, just give up
+				else
+				{
+					// Don't fallback to heavyweight lock, just give up
+					vm::writer_lock dummy(0);
+				}
 			}
 			else if (rdata == data)
 			{
