@@ -1269,7 +1269,7 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Users, &QAction::triggered, [=]
 	{
-		user_manager_dialog* user_manager = new user_manager_dialog(guiSettings, emuSettings, this);
+		user_manager_dialog* user_manager = new user_manager_dialog(guiSettings, this);
 		user_manager->show();
 	});
 

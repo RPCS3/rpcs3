@@ -282,10 +282,6 @@ void Emulator::Init()
 	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
 	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
 
-	// Set selected user.
-	m_usr = g_cfg.usr.selected_usr;
-	m_usrid = static_cast<u32>(std::stoul(m_usr));
-
 	fs::create_path(dev_hdd0);
 	fs::create_path(dev_hdd1);
 	fs::create_path(dev_usb);
@@ -407,6 +403,34 @@ void Emulator::Init()
 
 		server.detach();
 	}
+}
+
+const bool Emulator::SetUsr(const std::string& user)
+{
+	if (user.empty())
+	{
+		return false;
+	}
+
+	u32 id;
+
+	try
+	{
+		id = static_cast<u32>(std::stoul(user));
+	}
+	catch (const std::exception&)
+	{
+		id = 0;
+	}
+
+	if (id == 0)
+	{
+		return false;
+	}
+
+	m_usrid = id;
+	m_usr = user;
+	return true;
 }
 
 bool Emulator::BootRsxCapture(const std::string& path)

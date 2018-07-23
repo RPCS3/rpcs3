@@ -15,7 +15,7 @@ public:
 
 	std::string GetUserId() { return m_user_id; };
 	std::string GetUserDir() { return m_user_dir; };
-	std::string GetUserName() { return m_username; };
+	std::string GetUsername() { return m_username; };
 	~UserAccount();
 
 private:

@@ -209,8 +209,8 @@ class Emulator final
 	std::string m_title;
 	std::string m_cat;
 	std::string m_dir;
-	std::string m_usr;
-	u32 m_usrid;
+	std::string m_usr{"00000001"};
+	u32 m_usrid{1};
 
 	bool m_force_boot = false;
 
@@ -290,6 +290,8 @@ public:
 	{
 		return m_usrid;
 	}
+
+	const bool SetUsr(const std::string& user);
 
 	u64 GetPauseTime()
 	{
@@ -504,14 +506,6 @@ struct cfg_root : cfg::node
 		cfg::string ip_address{this, "IP address", "192.168.1.1"};
 
 	} net{this};
-
-	struct node_usr : cfg::node
-	{
-		node_usr(cfg::node* _this) : cfg::node(_this, "User") {}
-
-		cfg::string selected_usr{ this, "Selected User", "00000001" }; 
-
-	} usr{this};
 
 	struct node_misc : cfg::node
 	{

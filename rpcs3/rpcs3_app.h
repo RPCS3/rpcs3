@@ -34,6 +34,9 @@ public:
 	/** Call this method before calling app.exec
 	*/
 	void Init();
+
+	/** Emu.Init() wrapper for user manager */
+	static bool InitializeEmulator(const std::string& user, bool force_init);
 Q_SIGNALS:
 	void OnEmulatorRun();
 	void OnEmulatorPause();

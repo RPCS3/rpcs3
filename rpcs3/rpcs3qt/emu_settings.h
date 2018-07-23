@@ -110,9 +110,6 @@ public:
 		// Network
 		ConnectionStatus,
 
-		// User
-		SelectedUser,
-
 		// Language
 		Language,
 		EnableHostRoot,
@@ -289,9 +286,6 @@ private:
 
 		// Networking
 		{ ConnectionStatus, { "Net", "Connection status"}},
-
-		// User
-		{SelectedUser,  {"User", "Selected User"}},
 
 		// System
 		{ Language,       { "System", "Language"}},
