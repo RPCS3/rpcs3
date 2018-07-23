@@ -2688,8 +2688,12 @@ public:
 
 		void unmap()
 		{
-			//mapped = false;
-			//heap->unmap();
+			if (g_cfg.video.disable_vulkan_mem_allocator)
+			{
+				heap->unmap();
+				mapped = false;
+				_ptr = nullptr;
+			}
 		}
 	};
 }

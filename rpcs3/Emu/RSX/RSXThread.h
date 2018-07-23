@@ -213,6 +213,24 @@ namespace rsx
 		std::array<attribute_buffer_placement, 16> attribute_placement;
 	};
 
+	struct framebuffer_layout
+	{
+		u16 width;
+		u16 height;
+		std::array<u32, 4> color_addresses;
+		std::array<u32, 4> color_pitch;
+		std::array<u32, 4> actual_color_pitch;
+		u32 zeta_address;
+		u32 zeta_pitch;
+		u32 actual_zeta_pitch;
+		rsx::surface_target target;
+		rsx::surface_color_format color_format;
+		rsx::surface_depth_format depth_format;
+		rsx::surface_antialiasing aa_mode;
+		u32 aa_factors[2];
+		bool ignore_change;
+	};
+
 	namespace reports
 	{
 		struct occlusion_query_info
@@ -391,6 +409,8 @@ namespace rsx
 		bool m_textures_dirty[16];
 		bool m_vertex_textures_dirty[4];
 		bool m_framebuffer_state_contested = false;
+		rsx::framebuffer_creation_context m_framebuffer_contest_type = rsx::framebuffer_creation_context::context_draw;
+
 		u32  m_graphics_state = 0;
 		u64  ROP_sync_timestamp = 0;
 
@@ -400,6 +420,8 @@ namespace rsx
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
+
+		framebuffer_layout get_framebuffer_layout(rsx::framebuffer_creation_context context);
 
 		/**
 		 * Analyze vertex inputs and group all interleaved blocks
