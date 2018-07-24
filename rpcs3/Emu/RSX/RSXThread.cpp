@@ -1207,10 +1207,19 @@ namespace rsx
 		}
 	}
 
-	u64 thread::timestamp() const
+	u64 thread::timestamp()
 	{
 		// Get timestamp, and convert it from microseconds to nanoseconds
-		return get_system_time() * 1000;
+		const u64 t = get_system_time() * 1000;
+		if (t != timestamp_ctrl)
+		{
+			timestamp_ctrl = t;
+			timestamp_subvalue = 0;
+			return t;
+		}
+
+		timestamp_subvalue += 10;
+		return t + timestamp_subvalue;
 	}
 
 	gsl::span<const gsl::byte> thread::get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const

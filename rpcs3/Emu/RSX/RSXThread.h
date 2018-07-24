@@ -326,6 +326,9 @@ namespace rsx
 		std::shared_ptr<thread_ctrl> m_vblank_thread;
 		std::shared_ptr<thread_ctrl> m_decompiler_thread;
 
+		u64 timestamp_ctrl = 0;
+		u64 timestamp_subvalue = 0;
+
 	protected:
 		atomic_t<bool> m_rsx_thread_exiting{true};
 		s32 m_return_addr{-1}, restore_ret_addr{-1};
@@ -496,7 +499,7 @@ namespace rsx
 		virtual void on_init_thread() = 0;
 		virtual bool do_method(u32 /*cmd*/, u32 /*value*/) { return false; }
 		virtual void flip(int buffer) = 0;
-		virtual u64 timestamp() const;
+		virtual u64 timestamp();
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
 		virtual void on_invalidate_memory_range(u32 /*address*/, u32 /*range*/) {}
 		virtual void notify_tile_unbound(u32 /*tile*/) {}
