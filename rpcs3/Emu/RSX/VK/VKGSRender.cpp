@@ -3140,15 +3140,7 @@ void VKGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 	m_occlusion_query_active = false;
 	m_active_query_info = nullptr;
 
-	//Avoid stalling later if this query is already tied to a report
-	if (query->num_draws && query->owned && !m_flush_requests.pending())
-	{
-		if (0)//m_current_command_buffer->flags & cb_has_occlusion_task)
-		{
-			m_flush_requests.post(false);
-			m_flush_requests.remove_one();
-		}
-	}
+	// NOTE: flushing the queue is very expensive, do not flush just because query stopped
 }
 
 bool VKGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info* query)
