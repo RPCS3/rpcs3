@@ -39,7 +39,6 @@ void basic_keyboard_handler::SetTargetWindow(QWindow* target)
 	}
 }
 
-
 bool basic_keyboard_handler::eventFilter(QObject* target, QEvent* ev)
 {
 	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
