@@ -214,6 +214,16 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	// set trophy context parameters (could be passed to constructor through make_ptr call)
 	ctxt->trp_name = std::move(name);
 	ctxt->trp_stream = std::move(stream);
+
+	std::string trophyPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name;
+
+	TROPUSRLoader* tropusr = new TROPUSRLoader();
+	std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
+	std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
+
+	tropusr->Load(trophyUsrPath, trophyConfPath);
+	ctxt->tropusr.reset(tropusr);
+
 	*context = idm::last_id();
 
 	return CELL_OK;
@@ -301,12 +311,6 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	{
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
-
-	TROPUSRLoader* tropusr = new TROPUSRLoader();
-	std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
-	std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
-	tropusr->Load(trophyUsrPath, trophyConfPath);
-	ctxt->tropusr.reset(tropusr);
 
 	// TODO: Callbacks
 	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg) < 0)
