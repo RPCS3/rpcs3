@@ -105,6 +105,9 @@
     <Filter Include="Gui\user accounts">
       <UniqueIdentifier>{bebec4fb-789c-4456-a838-5ba7e158af5c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\Keyboard">
+      <UniqueIdentifier>{d306c01f-90e0-4eb9-b913-57b2ca9cc657}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\rpcs3qt\*.cpp">
@@ -309,9 +312,6 @@
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="basic_mouse_handler.cpp">
-      <Filter>Io\Basic</Filter>
-    </ClCompile>
-    <ClCompile Include="keyboard_pad_handler.cpp">
       <Filter>Io\Basic</Filter>
     </ClCompile>
     <ClCompile Include="ds4_pad_handler.cpp">
@@ -659,13 +659,13 @@
     <ClCompile Include="rpcs3qt\_discord_utils.cpp">
       <Filter>Gui\utils</Filter>
     </ClCompile>
+    <ClCompile Include="keyboard_pad_handler.cpp">
+      <Filter>Io\Keyboard</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="keyboard_pad_handler.h">
-      <Filter>Io\Basic</Filter>
     </ClInclude>
     <ClInclude Include="ds4_pad_handler.h">
       <Filter>Io\DS4</Filter>
@@ -744,6 +744,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\_discord_utils.h">
       <Filter>Gui\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="keyboard_pad_handler.h">
+      <Filter>Io\Keyboard</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
