@@ -1082,7 +1082,6 @@ void VKGSRender::end()
 	//Clear any 'dirty' surfaces - possible is a recycled cache surface is used
 	std::vector<VkClearAttachment> buffers_to_clear;
 	buffers_to_clear.reserve(4);
-	const auto targets = rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target());
 
 	//Check for memory clears
 	if (ds && ds->dirty)
@@ -1093,7 +1092,7 @@ void VKGSRender::end()
 		buffers_to_clear.push_back({ vk::get_aspect_flags(ds->info.format), 0, clear_value });
 	}
 
-	for (u32 index = 0; index < targets.size(); ++index)
+	for (u32 index = 0; index < m_draw_buffers.size(); ++index)
 	{
 		if (auto rtt = std::get<1>(m_rtts.m_bound_render_targets[index]))
 		{
@@ -1670,7 +1669,6 @@ void VKGSRender::clear_surface(u32 mask)
 	std::tie(scissor_x, scissor_y, scissor_w, scissor_h) = rsx::clip_region<u16>(fb_width, fb_height, scissor_x, scissor_y, scissor_w, scissor_h, true);
 	VkClearRect region = { { { scissor_x, scissor_y },{ scissor_w, scissor_h } }, 0, 1 };
 
-	auto targets = rsx::utility::get_rtt_indexes(rsx::method_registers.surface_color_target());
 	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (mask & 0x1)
@@ -1700,7 +1698,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (auto colormask = (mask & 0xF0))
 	{
-		if (m_draw_buffers_count > 0)
+		if (!m_draw_buffers.empty())
 		{
 			bool use_fast_clear = false;
 			bool ignore_clear = false;
@@ -1737,7 +1735,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 				if (use_fast_clear)
 				{
-					for (u32 index = 0; index < m_draw_buffers_count; ++index)
+					for (u32 index = 0; index < m_draw_buffers.size(); ++index)
 					{
 						clear_descriptors.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, index, color_clear_values });
 					}
@@ -1758,7 +1756,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 					m_attachment_clear_pass->update_config(colormask, clear_color);
 
-					for (u32 index = 0; index < m_draw_buffers_count; ++index)
+					for (const auto &index : m_draw_buffers)
 					{
 						if (auto rtt = std::get<1>(m_rtts.m_bound_render_targets[index]))
 						{
@@ -2213,7 +2211,7 @@ bool VKGSRender::load_program()
 		properties.state.enable_primitive_restart();
 
 	// Rasterizer state
-	properties.state.set_attachment_count(m_draw_buffers_count);
+	properties.state.set_attachment_count((u32)m_draw_buffers.size());
 	properties.state.set_front_face(vk::get_front_face(rsx::method_registers.front_face_mode()));
 	properties.state.enable_depth_clamp(rsx::method_registers.depth_clamp_enabled() || !rsx::method_registers.depth_clip_enabled());
 	properties.state.enable_depth_bias(true);
@@ -2283,7 +2281,7 @@ bool VKGSRender::load_program()
 			equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
 		}
 
-		for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
+		for (u8 idx = 0; idx < m_draw_buffers.size(); ++idx)
 		{
 			if (mrt_blend_enabled[idx])
 			{
@@ -2323,7 +2321,7 @@ bool VKGSRender::load_program()
 
 	properties.render_pass = m_render_passes[m_current_renderpass_id];
 	properties.render_pass_location = (int)m_current_renderpass_id;
-	properties.num_targets = m_draw_buffers_count;
+	properties.num_targets = (u32)m_draw_buffers.size();
 
 	vk::enter_uninterruptible();
 
@@ -2606,7 +2604,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	//Bind created rtts as current fbo...
 	const auto draw_buffers = rsx::utility::get_rtt_indexes(layout.target);
-	m_draw_buffers_count = 0;
+	m_draw_buffers.resize(0);
 
 	std::vector<vk::image*> bound_images;
 	bound_images.reserve(5);
@@ -2624,7 +2622,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			surface->write_aa_mode = layout.aa_mode;
 			m_texture_cache.notify_surface_changed(layout.color_addresses[index]);
 			m_texture_cache.tag_framebuffer(layout.color_addresses[index]);
-			m_draw_buffers_count++;
+			m_draw_buffers.push_back(index);
 		}
 	}
 
@@ -2645,7 +2643,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	if (g_cfg.video.write_color_buffers)
 	{
 		const auto color_fmt_info = vk::get_compatible_gcm_format(layout.color_format);
-		for (u8 index : draw_buffers)
+		for (u8 index : m_draw_buffers)
 		{
 			if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
 
@@ -2667,7 +2665,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	}
 
 	auto vk_depth_format = (layout.zeta_address == 0) ? VK_FORMAT_UNDEFINED : vk::get_compatible_depth_surface_format(m_device->get_formats_support(), layout.depth_format);
-	m_current_renderpass_id = vk::get_render_pass_location(vk::get_compatible_surface_format(layout.color_format).first, vk_depth_format, m_draw_buffers_count);
+	m_current_renderpass_id = vk::get_render_pass_location(vk::get_compatible_surface_format(layout.color_format).first, vk_depth_format, (u8)m_draw_buffers.size());
 
 	//Search old framebuffers for this same configuration
 	bool framebuffer_found = false;
