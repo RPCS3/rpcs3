@@ -805,7 +805,6 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 		case spu_itype::LNOP:
 		case spu_itype::NOP:
 		case spu_itype::MTSPR:
-		case spu_itype::WRCH:
 		case spu_itype::FSCRWR:
 		case spu_itype::STQA:
 		case spu_itype::STQD:
@@ -813,6 +812,35 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 		case spu_itype::STQX:
 		{
 			// Do nothing
+			break;
+		}
+
+		case spu_itype::WRCH:
+		{
+			switch (op.ra)
+			{
+			case MFC_EAL:
+			{
+				m_regmod[pos / 4] = s_reg_mfc_eal;
+				break;
+			}
+			case MFC_LSA:
+			{
+				m_regmod[pos / 4] = s_reg_mfc_lsa;
+				break;
+			}
+			case MFC_TagID:
+			{
+				m_regmod[pos / 4] = s_reg_mfc_tag;
+				break;
+			}
+			case MFC_Size:
+			{
+				m_regmod[pos / 4] = s_reg_mfc_size;
+				break;
+			}
+			}
+
 			break;
 		}
 
@@ -1523,6 +1551,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	llvm::Value* m_thread;
 	llvm::Value* m_lsptr;
 
+	// i8*, contains constant vm::g_base_addr value
+	llvm::Value* m_memptr;
+
 	// Pointers to registers in the thread context
 	std::array<llvm::Value*, s_reg_max> m_reg_addr;
 
@@ -1642,6 +1673,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_blocks.clear();
 		m_block_queue.clear();
 		m_ir->SetInsertPoint(llvm::BasicBlock::Create(m_context, "", m_function));
+		m_memptr = m_ir->CreateIntToPtr(m_ir->getInt64((u64)vm::g_base_addr), get_type<u8*>());
 	}
 
 	// Add block with current block as a predecessor
@@ -1700,7 +1732,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			{
 				if (const auto phi = m_blocks[target].phi[i])
 				{
-					phi->addIncoming(get_vr(i).value, m_block->block_end);
+					phi->addIncoming(get_vr(i, get_reg_type(i)), m_block->block_end);
 				}
 			}
 		}
@@ -1708,11 +1740,11 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return result;
 	}
 
-	template <typename T>
-	llvm::Value* _ptr(llvm::Value* base, u32 offset, std::string name = "")
+	template <typename T = u8>
+	llvm::Value* _ptr(llvm::Value* base, u32 offset)
 	{
 		const auto off = m_ir->CreateGEP(base, m_ir->getInt64(offset));
-		const auto ptr = m_ir->CreateBitCast(off, get_type<T*>(), name);
+		const auto ptr = m_ir->CreateBitCast(off, get_type<T*>());
 		return ptr;
 	}
 
@@ -1730,6 +1762,46 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return ptr;
 	}
 
+	// Return default register type
+	llvm::Type* get_reg_type(u32 index)
+	{
+		if (index < 128)
+		{
+			return get_type<u32[4]>();
+		}
+
+		switch (index)
+		{
+		case s_reg_mfc_eal:
+		case s_reg_mfc_lsa:
+			return get_type<u32>();
+		case s_reg_mfc_tag:
+			return get_type<u8>();
+		case s_reg_mfc_size:
+			return get_type<u16>();
+		default:
+			fmt::throw_exception("get_reg_type(%u): invalid register index" HERE, index);
+		}
+	}
+
+	u32 get_reg_offset(u32 index)
+	{
+		if (index < 128)
+		{
+			return ::offset32(&SPUThread::gpr, index);
+		}
+
+		switch (index)
+		{
+		case s_reg_mfc_eal: return ::offset32(&SPUThread::ch_mfc_cmd, &spu_mfc_cmd::eal);
+		case s_reg_mfc_lsa: return ::offset32(&SPUThread::ch_mfc_cmd, &spu_mfc_cmd::lsa);
+		case s_reg_mfc_tag: return ::offset32(&SPUThread::ch_mfc_cmd, &spu_mfc_cmd::tag);
+		case s_reg_mfc_size: return ::offset32(&SPUThread::ch_mfc_cmd, &spu_mfc_cmd::size);
+		default:
+			fmt::throw_exception("get_reg_offset(%u): invalid register index" HERE, index);
+		}
+	}
+
 	llvm::Value* init_vr(u32 index)
 	{
 		auto& ptr = m_reg_addr.at(index);
@@ -1741,7 +1813,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 			// Emit register pointer at the beginning of the function chunk
 			m_ir->SetInsertPoint(m_function->getEntryBlock().getTerminator());
-			ptr = _ptr<u32[4]>(m_thread, ::offset32(&SPUThread::gpr, index), fmt::format("Reg$%u", index));
+			ptr = _ptr<u8>(m_thread, get_reg_offset(index));
+			ptr = m_ir->CreateBitCast(ptr, get_reg_type(index)->getPointerTo());
 			m_ir->SetInsertPoint(block_cur);
 		}
 
@@ -1755,7 +1828,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		if (!reg)
 		{
 			// Load register value if necessary
-			reg = m_ir->CreateLoad(init_vr(index), fmt::format("Load$%u", index));
+			reg = m_ir->CreateLoad(init_vr(index));
 		}
 
 		// Bitcast the constant if necessary
@@ -2266,7 +2339,7 @@ public:
 						if (src >> 31)
 						{
 							// TODO: type
-							const auto _phi = m_ir->CreatePHI(get_type<u32[4]>(), 0 - src);
+							const auto _phi = m_ir->CreatePHI(get_reg_type(i), 0 - src);
 							m_block->phi[i] = _phi;
 							m_block->reg[i] = _phi;
 
@@ -3047,10 +3120,418 @@ public:
 		return _spu->set_ch_value(ch, value);
 	}
 
+	static void exec_mfc(SPUThread* _spu)
+	{
+		return _spu->do_mfc();
+	}
+
+	static bool exec_mfc_cmd(SPUThread* _spu)
+	{
+		return _spu->process_mfc_cmd(_spu->ch_mfc_cmd);
+	}
+
 	void WRCH(spu_opcode_t op) //
 	{
+		const auto val = extract(get_vr(op.rt), 3);
+
+		switch (op.ra)
+		{
+		case SPU_WrSRR0:
+		{
+			m_ir->CreateStore(val.value, spu_ptr<u32>(&SPUThread::srr0));
+			return;
+		}
+		case SPU_WrOutIntrMbox:
+		{
+			// TODO
+			break;
+		}
+		case SPU_WrOutMbox:
+		{
+			// TODO
+			break;
+		}
+		case MFC_WrTagMask:
+		{
+			// TODO
+			m_ir->CreateStore(val.value, spu_ptr<u32>(&SPUThread::ch_tag_mask));
+			return;
+		}
+		case MFC_WrTagUpdate:
+		{
+			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(val.value))
+			{
+				const u64 upd = ci->getZExtValue();
+
+				const auto tag_mask  = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_tag_mask));
+				const auto mfc_fence = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::mfc_fence));
+				const auto completed = m_ir->CreateAnd(tag_mask, m_ir->CreateNot(mfc_fence));
+				const auto upd_ptr   = spu_ptr<u32>(&SPUThread::ch_tag_upd);
+				const auto stat_ptr  = spu_ptr<u64>(&SPUThread::ch_tag_stat);
+				const auto stat_val  = m_ir->CreateOr(m_ir->CreateZExt(completed, get_type<u64>()), INT64_MIN);
+
+				if (upd == 0)
+				{
+					m_ir->CreateStore(m_ir->getInt32(0), upd_ptr);
+					m_ir->CreateStore(stat_val, stat_ptr);
+					return;
+				}
+				else if (upd == 1)
+				{
+					const auto cond = m_ir->CreateICmpNE(completed, m_ir->getInt32(0));
+					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(1), m_ir->getInt32(0)), upd_ptr);
+					m_ir->CreateStore(m_ir->CreateSelect(cond, stat_val, m_ir->getInt64(0)), stat_ptr);
+					return;
+				}
+				else if (upd == 2)
+				{
+					const auto cond = m_ir->CreateICmpEQ(completed, tag_mask);
+					m_ir->CreateStore(m_ir->CreateSelect(cond, m_ir->getInt32(2), m_ir->getInt32(0)), upd_ptr);
+					m_ir->CreateStore(m_ir->CreateSelect(cond, stat_val, m_ir->getInt64(0)), stat_ptr);
+					return;
+				}
+			}
+
+			LOG_TODO(SPU, "[0x%x] MFC_WrTagUpdate: $%u is not a good constant", m_pos, +op.rt);
+			break;
+		}
+		case MFC_LSA:
+		{
+			set_vr(s_reg_mfc_lsa, val);
+			return;
+		}
+		case MFC_EAH:
+		{
+			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(val.value))
+			{
+				if (ci->getZExtValue() == 0)
+				{
+					return;
+				}
+			}
+
+			LOG_WARNING(SPU, "[0x%x] MFC_EAH: $%u is not a zero constant", m_pos, +op.rt);
+			//m_ir->CreateStore(val.value, spu_ptr<u32>(&SPUThread::ch_mfc_cmd, &spu_mfc_cmd::eah));
+			return;
+		}
+		case MFC_EAL:
+		{
+			set_vr(s_reg_mfc_eal, val);
+			return;
+		}
+		case MFC_Size:
+		{
+			set_vr(s_reg_mfc_size, trunc<u16>(val & 0x7fff));
+			return;
+		}
+		case MFC_TagID:
+		{
+			set_vr(s_reg_mfc_tag, trunc<u8>(val & 0x1f));
+			return;
+		}
+		case MFC_Cmd:
+		{
+			// Prevent store elimination (TODO)
+			m_block->store[s_reg_mfc_eal] = nullptr;
+			m_block->store[s_reg_mfc_lsa] = nullptr;
+			m_block->store[s_reg_mfc_tag] = nullptr;
+			m_block->store[s_reg_mfc_size] = nullptr;
+
+			if (!g_use_rtm)
+			{
+				// TODO: don't require TSX (current implementation is TSX-only)
+				break;
+			}
+
+			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(trunc<u8>(val).value))
+			{
+				const auto eal = get_vr<u32>(s_reg_mfc_eal);
+				const auto lsa = get_vr<u32>(s_reg_mfc_lsa);
+				const auto tag = get_vr<u8>(s_reg_mfc_tag);
+
+				const auto size = get_vr<u16>(s_reg_mfc_size);
+				const auto mask = m_ir->CreateShl(m_ir->getInt32(1), zext<u32>(tag).value);
+				const auto exec = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+
+				const auto pf = spu_ptr<u32>(&SPUThread::mfc_fence);
+				const auto pb = spu_ptr<u32>(&SPUThread::mfc_barrier);
+
+				switch (u64 cmd = ci->getZExtValue())
+				{
+				case MFC_GETLLAR_CMD:
+				case MFC_PUTLLC_CMD:
+				case MFC_PUTLLUC_CMD:
+				case MFC_PUTQLLUC_CMD:
+				case MFC_PUTL_CMD:
+				case MFC_PUTLB_CMD:
+				case MFC_PUTLF_CMD:
+				case MFC_PUTRL_CMD:
+				case MFC_PUTRLB_CMD:
+				case MFC_PUTRLF_CMD:
+				case MFC_GETL_CMD:
+				case MFC_GETLB_CMD:
+				case MFC_GETLF_CMD:
+				{
+					// TODO
+					m_ir->CreateBr(next);
+					m_ir->SetInsertPoint(exec);
+					m_ir->CreateUnreachable();
+					m_ir->SetInsertPoint(fail);
+					m_ir->CreateUnreachable();
+					m_ir->SetInsertPoint(next);
+					m_ir->CreateStore(ci, spu_ptr<u8>(&SPUThread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
+					call(&exec_mfc_cmd, m_thread);
+					return;
+				}
+				case MFC_SNDSIG_CMD:
+				case MFC_SNDSIGB_CMD:
+				case MFC_SNDSIGF_CMD:
+				case MFC_PUT_CMD:
+				case MFC_PUTB_CMD:
+				case MFC_PUTF_CMD:
+				case MFC_PUTR_CMD:
+				case MFC_PUTRB_CMD:
+				case MFC_PUTRF_CMD:
+				case MFC_GET_CMD:
+				case MFC_GETB_CMD:
+				case MFC_GETF_CMD:
+				{
+					// Try to obtain constant size
+					u64 csize = -1;
+
+					if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(size.value))
+					{
+						csize = ci->getZExtValue();
+					}
+
+					if (cmd >= MFC_SNDSIG_CMD)
+					{
+						csize = 4;
+					}
+
+					llvm::Value* src = m_ir->CreateGEP(m_lsptr, zext<u64>(lsa).value);
+					llvm::Value* dst = m_ir->CreateGEP(m_memptr, zext<u64>(eal).value);
+
+					if (cmd & MFC_GET_CMD)
+					{
+						std::swap(src, dst);
+					}
+
+					llvm::Value* barrier = m_ir->CreateLoad(pb);
+
+					if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK))
+					{
+						barrier = m_ir->CreateOr(barrier, m_ir->CreateLoad(pf));
+					}
+
+					const auto cond = m_ir->CreateIsNull(m_ir->CreateAnd(mask, barrier));
+					m_ir->CreateCondBr(cond, exec, fail);
+					m_ir->SetInsertPoint(exec);
+
+					llvm::Type* vtype = get_type<u8(*)[16]>();
+
+					switch (csize)
+					{
+					case 0:
+					case UINT64_MAX:
+					{
+						break;
+					}
+					case 1:
+					{
+						vtype = get_type<u8*>();
+						break;
+					}
+					case 2:
+					{
+						vtype = get_type<u16*>();
+						break;
+					}
+					case 4:
+					{
+						vtype = get_type<u32*>();
+						break;
+					}
+					case 8:
+					{
+						vtype = get_type<u64*>();
+						break;
+					}
+					default:
+					{
+						if (csize % 16 || csize > 0x4000)
+						{
+							LOG_ERROR(SPU, "[0x%x] MFC_Cmd: invalid size %u", m_pos, csize);
+						}
+					}
+					}
+
+					if (csize > 0 && csize <= 16)
+					{
+						// Generate single copy operation
+						m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateBitCast(src, vtype), true), m_ir->CreateBitCast(dst, vtype), true);
+					}
+					else if (csize <= 256)
+					{
+						// Generate fixed sequence of copy operations
+						for (u32 i = 0; i < csize; i += 16)
+						{
+							const auto _src = m_ir->CreateGEP(src, m_ir->getInt32(i));
+							const auto _dst = m_ir->CreateGEP(dst, m_ir->getInt32(i));
+							m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateBitCast(_src, vtype), true), m_ir->CreateBitCast(_dst, vtype), true);
+						}
+					}
+					else
+					{
+						// TODO
+						m_ir->CreateCall(get_intrinsic<u8*, u8*, u32>(llvm::Intrinsic::memcpy), {dst, src, zext<u32>(size).value, m_ir->getTrue()});
+					}
+
+					m_ir->CreateBr(next);
+					break;
+				}
+				case MFC_BARRIER_CMD:
+				case MFC_EIEIO_CMD:
+				case MFC_SYNC_CMD:
+				{
+					const auto cond = m_ir->CreateIsNull(m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::mfc_size)));
+					m_ir->CreateCondBr(cond, exec, fail);
+					m_ir->SetInsertPoint(exec);
+					m_ir->CreateFence(llvm::AtomicOrdering::SequentiallyConsistent);
+					m_ir->CreateBr(next);
+					break;
+				}
+				default:
+				{
+					// TODO
+					LOG_ERROR(SPU, "[0x%x] MFC_Cmd: unknown command (0x%x)", m_pos, cmd);
+					m_ir->CreateBr(next);
+					m_ir->SetInsertPoint(exec);
+					m_ir->CreateUnreachable();
+					break;
+				}
+				}
+
+				// Fallback: enqueue the command
+				m_ir->SetInsertPoint(fail);
+
+				// Get MFC slot, redirect to invalid memory address
+				const auto slot = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::mfc_size));
+				const auto off0 = m_ir->CreateAdd(m_ir->CreateMul(slot, m_ir->getInt32(sizeof(spu_mfc_cmd))), m_ir->getInt32(::offset32(&SPUThread::mfc_queue)));
+				const auto ptr0 = m_ir->CreateGEP(m_thread, m_ir->CreateZExt(off0, get_type<u64>()));
+				const auto ptr1 = m_ir->CreateGEP(m_memptr, m_ir->getInt64(0xffdeadf0));
+				const auto pmfc = m_ir->CreateSelect(m_ir->CreateICmpULT(slot, m_ir->getInt32(16)), ptr0, ptr1);
+				m_ir->CreateStore(ci, _ptr<u8>(pmfc, ::offset32(&spu_mfc_cmd::cmd)));
+
+				switch (u64 cmd = ci->getZExtValue())
+				{
+				case MFC_GETLLAR_CMD:
+				case MFC_PUTLLC_CMD:
+				case MFC_PUTLLUC_CMD:
+				case MFC_PUTQLLUC_CMD:
+				{
+					break;
+				}
+				case MFC_PUTL_CMD:
+				case MFC_PUTLB_CMD:
+				case MFC_PUTLF_CMD:
+				case MFC_PUTRL_CMD:
+				case MFC_PUTRLB_CMD:
+				case MFC_PUTRLF_CMD:
+				case MFC_GETL_CMD:
+				case MFC_GETLB_CMD:
+				case MFC_GETLF_CMD:
+				{
+					break;
+				}
+				case MFC_SNDSIG_CMD:
+				case MFC_SNDSIGB_CMD:
+				case MFC_SNDSIGF_CMD:
+				case MFC_PUT_CMD:
+				case MFC_PUTB_CMD:
+				case MFC_PUTF_CMD:
+				case MFC_PUTR_CMD:
+				case MFC_PUTRB_CMD:
+				case MFC_PUTRF_CMD:
+				case MFC_GET_CMD:
+				case MFC_GETB_CMD:
+				case MFC_GETF_CMD:
+				{
+					m_ir->CreateStore(tag.value, _ptr<u8>(pmfc, ::offset32(&spu_mfc_cmd::tag)));
+					m_ir->CreateStore(size.value, _ptr<u16>(pmfc, ::offset32(&spu_mfc_cmd::size)));
+					m_ir->CreateStore(lsa.value, _ptr<u32>(pmfc, ::offset32(&spu_mfc_cmd::lsa)));
+					m_ir->CreateStore(eal.value, _ptr<u32>(pmfc, ::offset32(&spu_mfc_cmd::eal)));
+					m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(pb), mask), pb);
+					if (cmd & MFC_FENCE_MASK)
+						m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(pf), mask), pf);
+					break;
+				}
+				case MFC_BARRIER_CMD:
+				case MFC_EIEIO_CMD:
+				case MFC_SYNC_CMD:
+				{
+					m_ir->CreateStore(m_ir->getInt32(-1), pb);
+					break;
+				}
+				default:
+				{
+					m_ir->CreateUnreachable();
+					break;
+				}
+				}
+
+				m_ir->CreateStore(m_ir->CreateAdd(slot, m_ir->getInt32(1)), spu_ptr<u32>(&SPUThread::mfc_size));
+				m_ir->CreateBr(next);
+				m_ir->SetInsertPoint(next);
+				return;
+			}
+
+			// Fallback to unoptimized WRCH implementation (TODO)
+			LOG_TODO(SPU, "[0x%x] MFC_Cmd: $%u is not a constant", m_pos, +op.rt);
+			break;
+		}
+		case MFC_WrListStallAck:
+		{
+			const auto mask = eval(splat<u32>(1) << (val & 0x1f));
+			const auto _ptr = spu_ptr<u32>(&SPUThread::ch_stall_mask);
+			const auto _old = m_ir->CreateLoad(_ptr);
+			const auto _new = m_ir->CreateAnd(_old, m_ir->CreateNot(mask.value));
+			m_ir->CreateStore(_new, _ptr);
+			const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+			const auto _mfc = llvm::BasicBlock::Create(m_context, "", m_function);
+			m_ir->CreateCondBr(m_ir->CreateICmpNE(_old, _new), _mfc, next);
+			m_ir->SetInsertPoint(_mfc);
+			call(&exec_mfc, m_thread);
+			m_ir->CreateBr(next);
+			m_ir->SetInsertPoint(next);
+			return;
+		}
+		case SPU_WrDec:
+		{
+			m_ir->CreateStore(call(&get_timebased_time), spu_ptr<u64>(&SPUThread::ch_dec_start_timestamp));
+			m_ir->CreateStore(val.value, spu_ptr<u32>(&SPUThread::ch_dec_value));
+			return;
+		}
+		case SPU_WrEventMask:
+		{
+			m_ir->CreateStore(val.value, spu_ptr<u32>(&SPUThread::ch_event_mask))->setVolatile(true);
+			return;
+		}
+		case SPU_WrEventAck:
+		{
+			m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::And, spu_ptr<u32>(&SPUThread::ch_event_stat), eval(~val).value, llvm::AtomicOrdering::Release);
+			return;
+		}
+		case 69:
+		{
+			return;
+		}
+		}
+
 		update_pc();
-		const auto succ = call(&exec_wrch, m_thread, m_ir->getInt32(op.ra), extract(get_vr(op.rt), 3).value);
+		const auto succ = call(&exec_wrch, m_thread, m_ir->getInt32(op.ra), val.value);
 		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto stop = llvm::BasicBlock::Create(m_context, "", m_function);
 		m_ir->CreateCondBr(succ, next, stop);
@@ -4396,7 +4877,7 @@ public:
 		const auto pstatus = spu_ptr<u32>(&SPUThread::status);
 		const auto chalt = m_ir->getInt32(SPU_STATUS_STOPPED_BY_HALT);
 		m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Or, pstatus, chalt, llvm::AtomicOrdering::Release)->setVolatile(true);
-		const auto ptr = m_ir->CreateIntToPtr(m_ir->getInt64(reinterpret_cast<u64>(vm::base(0xffdead00))), get_type<u32*>());
+		const auto ptr = _ptr<u32>(m_memptr, 0xffdead00);
 		m_ir->CreateStore(m_ir->getInt32("HALT"_u32), ptr)->setVolatile(true);
 		m_ir->CreateBr(next);
 		m_ir->SetInsertPoint(next);
