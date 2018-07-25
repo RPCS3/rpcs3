@@ -166,7 +166,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir $(TargetDir)\qt\plugins $(TargetPath)
+        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "$(TargetDir)qt\plugins" "$(TargetPath)"
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -218,7 +218,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir $(TargetDir)\qt\plugins $(TargetPath)
+        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "$(TargetDir)qt\plugins" "$(TargetPath)"
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -271,7 +271,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir $(TargetDir)\qt\plugins --debug $(TargetPath)
+        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "$(TargetDir)qt\plugins" --debug "$(TargetPath)"
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -324,7 +324,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir $(TargetDir)\qt\plugins --debug $(TargetPath)
+        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "$(TargetDir)qt\plugins" --debug "$(TargetPath)"
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -1007,7 +1007,6 @@
     <ClCompile Include="rpcs3qt\debugger_list.cpp" />
     <ClCompile Include="rpcs3qt\_discord_utils.cpp" />
     <ClCompile Include="rpcs3qt\find_dialog.cpp" />
-    <ClCompile Include="rpcs3qt\gamepads_settings_dialog.cpp" />
     <ClCompile Include="rpcs3qt\game_compatibility.cpp" />
     <ClCompile Include="rpcs3qt\game_list_grid.cpp" />
     <ClCompile Include="rpcs3qt\game_list_grid_delegate.cpp" />
@@ -1450,7 +1449,6 @@
     <ClInclude Include="rpcs3qt\_discord_utils.h" />
     <ClInclude Include="rpcs3qt\find_dialog.h" />
     <ClInclude Include="rpcs3qt\custom_table_widget_item.h" />
-    <ClInclude Include="rpcs3qt\gamepads_settings_dialog.h" />
     <CustomBuild Include="rpcs3qt\game_compatibility.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">Moc%27ing game_compatibility.h...</Message>

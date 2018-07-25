@@ -437,10 +437,6 @@ namespace rsx
 				thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
 			}
 
-			// Weak cpus need all the help they can get, sleep instead of yield loop
-			// Lowers decompiler responsiveness but improves emulator performance
-			const bool prefer_sleep = (std::thread::hardware_concurrency() < 6);
-
 			while (!Emu.IsStopped() && !m_rsx_thread_exiting)
 			{
 				if (!on_decompiler_task())
@@ -449,13 +445,9 @@ namespace rsx
 					{
 						std::this_thread::sleep_for(1ms);
 					}
-					else if (prefer_sleep)
-					{
-						std::this_thread::sleep_for(500us);
-					}
 					else
 					{
-						std::this_thread::yield();
+						std::this_thread::sleep_for(500us);
 					}
 				}
 			}

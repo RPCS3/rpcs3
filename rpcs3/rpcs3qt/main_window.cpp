@@ -30,7 +30,7 @@
 #include "main_window.h"
 #include "emu_settings.h"
 #include "about_dialog.h"
-#include "gamepads_settings_dialog.h"
+#include "pad_settings_dialog.h"
 #include "progress_dialog.h"
 
 #include <thread>
@@ -355,40 +355,83 @@ void main_window::BootGame()
 	Boot(path);
 }
 
-void main_window::BootRsxCapture()
+void main_window::BootRsxCapture(std::string path)
 {
-	bool stopped = false;
-	if (Emu.IsRunning())
+	if (path.empty())
 	{
-		Emu.Pause();
-		stopped = true;
+		bool is_stopped = false;
+
+		if (Emu.IsRunning())
+		{
+			Emu.Pause();
+			is_stopped = true;
+		}
+
+		QString filePath = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), "", tr("RRC files (*.rrc);;All files (*.*)"));
+
+		if (filePath.isEmpty())
+		{
+			if (is_stopped)
+			{
+				Emu.Resume();
+			}
+			return;
+		}
+		path = sstr(filePath);
 	}
 
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), "", tr("RRC files (*.rrc);;All files (*.*)"));
-	if (filePath.isEmpty())
-	{
-		if (stopped) Emu.Resume();
-		return;
-	}
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
-	const std::string path = sstr(filePath);
-
 	if (!Emu.BootRsxCapture(path))
-		LOG_ERROR(GENERAL, "Capture Boot Failed");
+	{
+		LOG_ERROR(GENERAL, "Capture Boot Failed. path: %s", path);
+	}
 	else
-		LOG_SUCCESS(LOADER, "Capture Boot Success");
+	{
+		LOG_SUCCESS(LOADER, "Capture Boot Success. path: %s", path);
+	}
 }
 
-void main_window::InstallPkg(const QString& dropPath)
+void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 {
 	QString filePath = dropPath;
 
-	if (filePath.isEmpty())
+	if (m_install_bulk == QMessageBox::NoToAll)
+	{
+		LOG_NOTICE(LOADER, "PKG: Skipped installation from drop. File: %s", sstr(filePath));
+		return;
+	}
+	else if (m_install_bulk == QMessageBox::YesToAll)
+	{
+		LOG_NOTICE(LOADER, "PKG: Continuing bulk installation from drop. File: %s", sstr(filePath));
+	}
+	else if (filePath.isEmpty())
 	{
 		QString path_last_PKG = guiSettings->GetValue(gui::fd_install_pkg).toString();
 		filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
+	}
+	else if (is_bulk)
+	{
+		QMessageBox::StandardButton ret = QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(filePath),
+			QMessageBox::Yes | QMessageBox::YesToAll | QMessageBox::NoToAll | QMessageBox::No, QMessageBox::No);
+
+		if (ret == QMessageBox::No)
+		{
+			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(filePath));
+			return;
+		}
+		else if (ret == QMessageBox::NoToAll)
+		{
+			LOG_NOTICE(LOADER, "PKG: Cancelled bulk installation from drop. File: %s", sstr(filePath));
+			m_install_bulk = ret;
+			return;
+		}
+		else if (ret == QMessageBox::YesToAll)
+		{
+			LOG_NOTICE(LOADER, "PKG: Accepted bulk installation from drop. File: %s", sstr(filePath));
+			m_install_bulk = ret;
+		}
 	}
 	else
 	{
@@ -1123,7 +1166,7 @@ void main_window::CreateConnects()
 {
 	connect(ui->bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
-	connect(ui->actionopen_rsx_capture, &QAction::triggered, this, &main_window::BootRsxCapture);
+	connect(ui->actionopen_rsx_capture, &QAction::triggered, [this](){ BootRsxCapture(); });
 
 	connect(ui->bootRecentMenu, &QMenu::aboutToShow, [=]
 	{
@@ -1190,11 +1233,13 @@ void main_window::CreateConnects()
 	connect(ui->confIOAct,     &QAction::triggered, [=]() { openSettings(3); });
 	connect(ui->confSystemAct, &QAction::triggered, [=]() { openSettings(4); });
 
-	connect(ui->confPadsAct, &QAction::triggered, this, [=]
+	auto openPadSettings = [this]
 	{
-		gamepads_settings_dialog dlg(this);
+		pad_settings_dialog dlg(this);
 		dlg.exec();
-	});
+	};
+
+	connect(ui->confPadsAct, &QAction::triggered, openPadSettings);
 
 	connect(ui->confAutopauseManagerAct, &QAction::triggered, [=]
 	{
@@ -1384,7 +1429,7 @@ void main_window::CreateConnects()
 		}
 	});
 
-	connect(ui->toolbar_controls, &QAction::triggered, [=]() { gamepads_settings_dialog dlg(this); dlg.exec(); });
+	connect(ui->toolbar_controls, &QAction::triggered, openPadSettings);
 	connect(ui->toolbar_config, &QAction::triggered, [=]() { openSettings(0); });
 	connect(ui->toolbar_list, &QAction::triggered, [=]() { ui->setlistModeListAct->trigger(); });
 	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });
@@ -1698,7 +1743,14 @@ int main_window::IsValidFile(const QMimeData& md, QStringList* dropPaths)
 		}
 		else if (list.size() == 1)
 		{
-			dropType = drop_type::drop_game;
+			if (info.suffix() == "rrc")
+			{
+				dropType = drop_type::drop_rrc;
+			}
+			else
+			{
+				dropType = drop_type::drop_game;
+			}
 		}
 		else
 		{
@@ -1725,8 +1777,9 @@ void main_window::dropEvent(QDropEvent* event)
 	case drop_type::drop_pkg: // install the packages
 		for (const auto& path : dropPaths)
 		{
-			InstallPkg(path);
+			InstallPkg(path, dropPaths.count() > 1);
 		}
+		m_install_bulk = QMessageBox::NoButton;
 		break;
 	case drop_type::drop_pup: // install the firmware
 		InstallPup(dropPaths.first());
@@ -1760,6 +1813,11 @@ void main_window::dropEvent(QDropEvent* event)
 		}
 		m_gameListFrame->Refresh(true);
 		break;
+	case drop_type::drop_rrc: // replay a rsx capture file
+		if (Emu.BootRsxCapture(sstr(dropPaths.first())))
+		{
+			LOG_SUCCESS(GENERAL, "rcc Boot from drag and drop done: %s", sstr(dropPaths.first()));
+		}
 	default:
 		LOG_WARNING(GENERAL, "Invalid dropType in gamelist dropEvent");
 		break;

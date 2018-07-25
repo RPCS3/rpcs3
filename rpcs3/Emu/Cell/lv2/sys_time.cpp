@@ -177,13 +177,35 @@ s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	// get time since Epoch in nanoseconds
 	const u64 time = s_time_aux_info.start_ftime * 100u + diff;
 
+	if (!sec)
+	{
+		return CELL_EFAULT;
+	}
+
 	*sec  = time / 1000000000u;
+
+	if (!nsec)
+	{
+		return CELL_EFAULT;
+	}
+
 	*nsec = time % 1000000000u;
 #else
 	struct timespec ts;
 	verify(HERE), ::clock_gettime(CLOCK_REALTIME, &ts) == 0;
 
+	if (!sec)
+	{
+		return CELL_EFAULT;
+	}
+
 	*sec  = ts.tv_sec;
+
+	if (!nsec)
+	{
+		return CELL_EFAULT;
+	}
+
 	*nsec = ts.tv_nsec;
 #endif
 

@@ -261,7 +261,6 @@
     <addaction name="showToolBarAct"/>
     <addaction name="separator"/>
     <addaction name="showGameListAct"/>
-    <addaction name="showGameToolBarAct"/>
     <addaction name="separator"/>
     <addaction name="showHiddenEntriesAct"/>
     <addaction name="separator"/>

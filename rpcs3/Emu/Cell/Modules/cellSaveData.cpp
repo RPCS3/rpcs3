@@ -707,6 +707,12 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			}
 
 			file_path = fileSet->fileName.get_ptr();
+
+			if (type == CELL_SAVEDATA_FILETYPE_SECUREFILE)
+			{
+				cellSaveData.notice("SECUREFILE: %s -> %s", file_path, fileSet->secureFileId);
+			}
+
 			break;
 		}
 
