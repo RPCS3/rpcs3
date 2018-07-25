@@ -218,21 +218,42 @@ s32 cellHddGameGetSizeKB(vm::ptr<u32> size)
 	return CELL_OK;
 }
 
-s32 cellHddGameSetSystemVer()
+s32 cellHddGameSetSystemVer(vm::cptr<char> systemVersion)
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.todo("cellHddGameSetSystemVer(systemVersion=%s)", systemVersion);
+
+	if (!systemVersion)
+	{
+		return CELL_HDDGAME_ERROR_PARAM;
+	}
+
 	return CELL_OK;
 }
 
 s32 cellHddGameExitBroken()
 {
-	fmt::throw_exception("Unimplemented" HERE);
-}
+	cellGame.warning("cellHddGameExitBroken()");
 
+	s32 res = open_msg_dialog(CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON,
+		vm::make_str("There has been an error!\n\nPlease reinstall the HDD boot game."));
+
+	if (res != CELL_OK)
+	{
+		return CELL_HDDGAME_ERROR_INTERNAL;
+	}
+
+	sysutil_send_system_cmd(CELL_SYSUTIL_REQUEST_EXITGAME, 0);
+	return CELL_OK;
+}
 
 s32 cellGameDataGetSizeKB(vm::ptr<u32> size)
 {
 	cellGame.warning("cellGameDataGetSizeKB(size=*0x%x)", size);
+
+	if (!size)
+	{
+		return CELL_GAMEDATA_ERROR_PARAM;
+	}
 
 	const std::string local_dir = vfs::get(Emu.GetDir());
 
@@ -246,17 +267,33 @@ s32 cellGameDataGetSizeKB(vm::ptr<u32> size)
 	return CELL_OK;
 }
 
-s32 cellGameDataSetSystemVer()
+s32 cellGameDataSetSystemVer(vm::cptr<char> systemVersion)
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.todo("cellGameDataSetSystemVer(systemVersion=%s)", systemVersion);
+
+	if (!systemVersion)
+	{
+		return CELL_GAMEDATA_ERROR_PARAM;
+	}
+
 	return CELL_OK;
 }
 
 s32 cellGameDataExitBroken()
 {
-	fmt::throw_exception("Unimplemented" HERE);
-}
+	cellGame.warning("cellGameDataExitBroken()");
 
+	s32 res = open_msg_dialog(CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON,
+		vm::make_str("There has been an error!\n\nPlease delete the game's game data."));
+
+	if (res != CELL_OK)
+	{
+		return CELL_GAMEDATA_ERROR_INTERNAL;
+	}
+
+	sysutil_send_system_cmd(CELL_SYSUTIL_REQUEST_EXITGAME, 0);
+	return CELL_OK;
+}
 
 error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
 {
@@ -629,15 +666,26 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 	return CELL_OK;
 }
 
-s32 cellGameDeleteGameData()
+s32 cellGameDeleteGameData(vm::cptr<char> dirName)
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.todo("cellGameDeleteGameData(dirName=%s)", dirName);
+
+	if (!dirName)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellGameGetParamInt(s32 id, vm::ptr<s32> value)
 {
 	cellGame.warning("cellGameGetParamInt(id=%d, value=*0x%x)", id, value);
+
+	if (!value)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
 
 	const auto prm = fxm::get<content_permission>();
 
@@ -772,6 +820,11 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 {
 	cellGame.warning("cellGameGetSizeKB(size=*0x%x)", size);
 
+	if (!size)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
+
 	const auto prm = fxm::get<content_permission>();
 
 	if (!prm)
@@ -791,15 +844,27 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 	return CELL_OK;
 }
 
-s32 cellGameGetDiscContentInfoUpdatePath()
+s32 cellGameGetDiscContentInfoUpdatePath(vm::ptr<char> updatePath)
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.todo("cellGameGetDiscContentInfoUpdatePath(updatePath=*0x%x)", updatePath);
+
+	if (!updatePath)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellGameGetLocalWebContentPath()
+s32 cellGameGetLocalWebContentPath(vm::ptr<char> contentPath)
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.todo("cellGameGetLocalWebContentPath(contentPath=*0x%x)", contentPath);
+
+	if (!contentPath)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
+
 	return CELL_OK;
 }
 
@@ -834,44 +899,29 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 		errorMsg += fmt::format("\nDirectory name: %s", dirName);
 	}
 
-	const auto dlg = Emu.GetCallbacks().get_msg_dialog();
+	verify(HERE), CELL_OK == open_msg_dialog(CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON, vm::make_str(errorMsg));
 
-	dlg->type.bg_invisible = true;
-	dlg->type.button_type = 2; // OK
-	dlg->type.disable_cancel = true;
+	return CELL_OK;
+}
 
-	atomic_t<bool> result(false);
+s32 cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileName, u32 option)
+{
+	cellGame.todo("cellGameThemeInstall(usrdirPath=%s, fileName=%s, option=0x%x)", usrdirPath, fileName, option);
 
-	dlg->on_close = [&](s32 status)
+	if (!fileName || !usrdirPath || usrdirPath.size() > CELL_GAME_PATH_MAX)
 	{
-		result = true;
-	};
-
-	Emu.CallAfter([&]()
-	{
-		dlg->Create(errorMsg);
-	});
-
-	while (!result)
-	{
-		thread_ctrl::wait_for(1000);
+		return CELL_GAME_ERROR_PARAM;
 	}
 
 	return CELL_OK;
 }
 
-s32 cellGameThemeInstall()
+s32 cellGameThemeInstallFromBuffer(u32 fileSize, u32 bufSize, vm::ptr<void> buf, vm::ptr<CellGameThemeInstallCallback> func, u32 option)
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.todo("cellGameThemeInstallFromBuffer(fileSize=%d, bufSize=%d, buf=*0x%x, func=*0x%x, option=0x%x)", fileSize, bufSize, buf, func, option);
+
 	return CELL_OK;
 }
-
-s32 cellGameThemeInstallFromBuffer()
-{
-	UNIMPLEMENTED_FUNC(cellGame);
-	return CELL_OK;
-}
-
 
 s32 cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getParam)
 {
@@ -899,30 +949,33 @@ s32 cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getParam)
 	return CELL_OK;
 }
 
-s32 cellDiscGameRegisterDiscChangeCallback()
+s32 cellDiscGameRegisterDiscChangeCallback(vm::ptr<CellDiscGameDiscEjectCallback> funcEject, vm::ptr<CellDiscGameDiscInsertCallback> funcInsert)
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.todo("cellDiscGameRegisterDiscChangeCallback(funcEject=*0x%x, funcInsert=*0x%x)", funcEject, funcInsert);
+
 	return CELL_OK;
 }
 
 s32 cellDiscGameUnregisterDiscChangeCallback()
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.todo("cellDiscGameUnregisterDiscChangeCallback()");
+
 	return CELL_OK;
 }
 
-s32 cellGameRegisterDiscChangeCallback()
+s32 cellGameRegisterDiscChangeCallback(vm::ptr<CellGameDiscEjectCallback> funcEject, vm::ptr<CellGameDiscInsertCallback> funcInsert)
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.todo("cellGameRegisterDiscChangeCallback(funcEject=*0x%x, funcInsert=*0x%x)", funcEject, funcInsert);
+
 	return CELL_OK;
 }
 
 s32 cellGameUnregisterDiscChangeCallback()
 {
-	UNIMPLEMENTED_FUNC(cellGame);
+	cellGame.todo("cellGameUnregisterDiscChangeCallback()");
+
 	return CELL_OK;
 }
-
 
 void cellSysutil_GameData_init()
 {
