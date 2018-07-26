@@ -23,11 +23,11 @@ namespace
 			}
 
 			// Is the folder name exactly 8 all-numerical characters long?
-			// We use strtol to find any non-numeric characters in folder name.
+			// We use strtoul to find any non-numeric characters in folder name.
 			char* non_numeric_char;
-			u32 key = static_cast<u32>(std::strtol(user_folder.name.c_str(), &non_numeric_char, 10));
+			const u32 key = static_cast<u32>(std::strtoul(user_folder.name.c_str(), &non_numeric_char, 10));
 
-			if (user_folder.name.length() != 8 || *non_numeric_char != '\0')
+			if (key == 0 || user_folder.name.length() != 8 || *non_numeric_char != '\0')
 			{
 				continue;
 			}
