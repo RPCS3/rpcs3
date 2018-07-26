@@ -195,7 +195,7 @@ namespace vk
 		if (!g_scratch_buffer)
 		{
 			// 32M disposable scratch memory
-			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, 32 * 0x100000,
+			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, 64 * 0x100000,
 				g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0);
 		}
