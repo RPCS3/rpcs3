@@ -69,6 +69,7 @@ void user_manager_dialog::Init()
 	m_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	m_table->horizontalHeader()->setStretchLastSection(true);
 	m_table->horizontalHeader()->setDefaultSectionSize(150);
+	m_table->installEventFilter(this);
 
 	QPushButton* push_remove_user = new QPushButton(tr("Delete User"), this);
 	push_remove_user->setAutoDefault(false);
@@ -83,7 +84,7 @@ void user_manager_dialog::Init()
 	push_rename_user->setAutoDefault(false);
 
 	QPushButton* push_close = new QPushButton(tr("&Close"), this);
-	push_close->setAutoDefault(true);
+	push_close->setAutoDefault(false);
 
 	// Button Layout
 	QHBoxLayout* hbox_buttons = new QHBoxLayout();
@@ -109,7 +110,7 @@ void user_manager_dialog::Init()
 	// Use this in multiple connects to protect the current user from deletion/rename.
 	auto enableButtons = [=]()
 	{
-		u32 key = GetUserKey();
+		const u32 key = GetUserKey();
 		if (key == 0)
 		{
 			push_login_user->setEnabled(false);
@@ -460,4 +461,36 @@ void user_manager_dialog::closeEvent(QCloseEvent *event)
 {
 	m_gui_settings->SetValue(gui::um_geometry, saveGeometry());
 	QDialog::closeEvent(event);
+}
+
+bool user_manager_dialog::eventFilter(QObject *object, QEvent *event)
+{
+	const u32 key = GetUserKey();
+	if (key == 0 || object != m_table || m_user_list[key].GetUserId() == m_active_user)
+	{
+		return QDialog::eventFilter(object, event);
+	}
+
+	if (event->type() == QEvent::KeyRelease)
+	{
+		const QKeyEvent* key_event = static_cast<QKeyEvent*>(event);
+
+		switch (key_event->key())
+		{
+		case Qt::Key_F2:
+			OnUserRename();
+			break;
+		case Qt::Key_Delete:
+			OnUserRemove();
+			break;
+		case Qt::Key_Return:
+		case Qt::Key_Enter:
+			OnUserLogin();
+			break;
+		default:
+			break;
+		}
+	}
+
+	return QDialog::eventFilter(object, event);
 }
