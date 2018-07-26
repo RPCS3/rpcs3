@@ -33,6 +33,8 @@ namespace rsx
 		u32 dst_gcm_format = 0;
 		f32 src_scaling_hint = 1.f;
 		f32 dst_scaling_hint = 1.f;
+		texture_upload_context src_context = texture_upload_context::blit_engine_src;
+		texture_upload_context dst_context = texture_upload_context::blit_engine_dst;
 
 		void analyse()
 		{
@@ -2125,6 +2127,7 @@ namespace rsx
 				if (cached_dest)
 				{
 					dest_texture = cached_dest->get_raw_texture();
+					typeless_info.dst_context = cached_dest->get_context();
 
 					max_dst_width = cached_dest->get_width();
 					max_dst_height = cached_dest->get_height();
@@ -2144,6 +2147,7 @@ namespace rsx
 				dst_area.y2 += dst_subres.y;
 
 				dest_texture = dst_subres.surface->get_surface();
+				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
 
 				max_dst_width = (u16)(dst_subres.surface->get_surface_width() * typeless_info.dst_scaling_hint);
 				max_dst_height = dst_subres.surface->get_surface_height();
@@ -2179,6 +2183,7 @@ namespace rsx
 						src_area.y2 <= surface->get_height())
 					{
 						vram_texture = surface->get_raw_texture();
+						typeless_info.src_context = surface->get_context();
 						break;
 					}
 
@@ -2206,6 +2211,7 @@ namespace rsx
 						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled)->get_raw_texture();
 
 					m_texture_memory_in_use += src.pitch * src.slice_h;
+					typeless_info.src_context = texture_upload_context::blit_engine_src;
 				}
 			}
 			else
@@ -2232,6 +2238,7 @@ namespace rsx
 				src_area.y2 += src_subres.y;
 
 				vram_texture = src_subres.surface->get_surface();
+				typeless_info.src_context = texture_upload_context::framebuffer_storage;
 			}
 
 			const bool src_is_depth = src_subres.is_depth_surface;
@@ -2342,6 +2349,7 @@ namespace rsx
 					channel_order);
 
 				dest_texture = cached_dest->get_raw_texture();
+				typeless_info.dst_context = texture_upload_context::blit_engine_dst;
 				m_texture_memory_in_use += dst.pitch * dst_dimensions.height;
 			}
 

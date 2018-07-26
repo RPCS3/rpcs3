@@ -1129,8 +1129,49 @@ namespace vk
 						vk::copy_image_typeless(*commands, dst, real_dst, { 0, 0, (s32)dst->width(), (s32)dst->height() }, { 0, 0, (s32)internal_width, (s32)dst->height() }, 1,
 							vk::get_aspect_flags(dst->info.format), vk::get_aspect_flags(format));
 					}
+					else if (xfer_info.dst_context == rsx::texture_upload_context::framebuffer_storage)
+					{
+						if (xfer_info.src_context != rsx::texture_upload_context::blit_engine_dst &&
+							xfer_info.src_context != rsx::texture_upload_context::framebuffer_storage)
+						{
+							// Data moving to rendertarget, where byte ordering has to be preserved
+							// NOTE: This is a workaround, true accuracy would require all RTT<->cache transfers to invoke this step but thats too slow
+							// Sampling is ok; image view swizzle will work around it
+							if (dst->info.format == VK_FORMAT_B8G8R8A8_UNORM)
+							{
+								// For this specific format, channel ordering is faked via custom remap, undo this before transfer
+								VkBufferImageCopy copy{};
+								copy.imageExtent = src->info.extent;
+								copy.imageOffset = { 0, 0, 0 };
+								copy.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
 
-					//Checks
+								const auto scratch_buf = vk::get_scratch_buffer();
+								const auto data_length = src->info.extent.width * src->info.extent.height * 4;
+
+								const auto current_layout = src->current_layout;
+								vk::change_image_layout(*commands, real_src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+								vkCmdCopyImageToBuffer(*commands, src->value, src->current_layout, scratch_buf->value, 1, &copy);
+								vk::change_image_layout(*commands, real_src, current_layout, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+
+								vk::insert_buffer_memory_barrier(*commands, scratch_buf->value, 0, data_length,
+									VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+									VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+
+								vk::get_compute_task<vk::cs_shuffle_32>()->run(*commands, scratch_buf, data_length);
+
+								vk::insert_buffer_memory_barrier(*commands, scratch_buf->value, 0, data_length,
+									VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+									VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+
+								real_src = vk::get_typeless_helper(src->info.format);
+								vk::change_image_layout(*commands, real_src, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
+
+								vkCmdCopyBufferToImage(*commands, scratch_buf->value, real_src->value, real_src->current_layout, 1, &copy);
+							}
+						}
+					}
+
+					// Checks
 					if (src_area.x2 <= src_area.x1 || src_area.y2 <= src_area.y1 || dst_area.x2 <= dst_area.x1 || dst_area.y2 <= dst_area.y1)
 					{
 						LOG_ERROR(RSX, "Blit request consists of an empty region descriptor!");
