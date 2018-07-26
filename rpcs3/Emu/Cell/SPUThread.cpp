@@ -244,7 +244,7 @@ const auto spu_putllc_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, cons
 	c.ret();
 });
 
-const auto spu_getll_tx = build_function_asm<bool(*)(u32 raddr, void* rdata, u64* out_rtime)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_getll_tx = build_function_asm<bool(*)(u32 raddr, void* rdata, u64* out_rtime, void* out_data)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -272,6 +272,61 @@ const auto spu_getll_tx = build_function_asm<bool(*)(u32 raddr, void* rdata, u64
 	c.vmovups(x86::yword_ptr(args[1], 32), x86::ymm1);
 	c.vmovups(x86::yword_ptr(args[1], 64), x86::ymm2);
 	c.vmovups(x86::yword_ptr(args[1], 96), x86::ymm3);
+	c.vmovaps(x86::yword_ptr(args[3], 0), x86::ymm0);
+	c.vmovaps(x86::yword_ptr(args[3], 32), x86::ymm1);
+	c.vmovaps(x86::yword_ptr(args[3], 64), x86::ymm2);
+	c.vmovaps(x86::yword_ptr(args[3], 96), x86::ymm3);
+	c.vzeroupper();
+	c.mov(x86::qword_ptr(args[2]), x86::rax);
+	c.mov(x86::eax, 1);
+	c.ret();
+
+	// Touch memory after transaction failure
+	c.bind(fall);
+	c.pause();
+	c.mov(x86::rax, x86::qword_ptr(x86::r11));
+	c.mov(x86::rax, x86::qword_ptr(x86::r10));
+	c.sub(args[0], 1);
+	c.jnz(begin);
+	c.xor_(x86::eax, x86::eax);
+	c.ret();
+});
+
+// TODO: make this usable for non-TSX CPUs
+const auto spu_getll = build_function_asm<bool(*)(u32 raddr, void* rdata, u64* out_rtime, void* out_data)>([](asmjit::X86Assembler& c, auto& args)
+{
+	using namespace asmjit;
+
+	Label fall = c.newLabel();
+	Label begin = c.newLabel();
+
+	// Prepare registers
+	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
+	c.mov(x86::r10, x86::qword_ptr(x86::rax));
+	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
+	c.mov(x86::r11, x86::qword_ptr(x86::rax));
+	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
+	c.shr(args[0], 4);
+	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
+	c.mov(args[0].r32(), 2);
+
+	c.bind(begin);
+	c.mov(x86::rax, x86::qword_ptr(x86::r10));
+	c.vmovaps(x86::ymm0, x86::yword_ptr(x86::r11, 0));
+	c.vmovaps(x86::ymm1, x86::yword_ptr(x86::r11, 32));
+	c.vmovaps(x86::ymm2, x86::yword_ptr(x86::r11, 64));
+	c.vmovaps(x86::ymm3, x86::yword_ptr(x86::r11, 96));
+	c.vmovups(x86::yword_ptr(args[1], 0), x86::ymm0);
+	c.vmovups(x86::yword_ptr(args[1], 32), x86::ymm1);
+	c.vmovups(x86::yword_ptr(args[1], 64), x86::ymm2);
+	c.vmovups(x86::yword_ptr(args[1], 96), x86::ymm3);
+	c.cmp(x86::rax, x86::qword_ptr(x86::r10));
+	c.jne(fall);
+
+	c.vmovaps(x86::yword_ptr(args[3], 0), x86::ymm0);
+	c.vmovaps(x86::yword_ptr(args[3], 32), x86::ymm1);
+	c.vmovaps(x86::yword_ptr(args[3], 64), x86::ymm2);
+	c.vmovaps(x86::yword_ptr(args[3], 96), x86::ymm3);
 	c.vzeroupper();
 	c.mov(x86::qword_ptr(args[2]), x86::rax);
 	c.mov(x86::eax, 1);
@@ -1193,32 +1248,32 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 
 		if (LIKELY(g_use_rtm))
 		{
-			u64 count = 1;
+			u32 count = 1;
 
-			while (g_cfg.core.spu_accurate_getllar && !spu_getll_tx(raddr, rdata.data(), &rtime))
+			if (g_cfg.core.spu_accurate_getllar)
 			{
-				std::this_thread::yield();
-				count += 2;
-			}
-
-			if (!g_cfg.core.spu_accurate_getllar)
-			{
-				for (;; count++, busy_wait(300))
+				while (!spu_getll_tx(addr, rdata.data(), &rtime, _ptr<void>(args.lsa & 0x3ff80)))
 				{
-					rtime = vm::reservation_acquire(raddr, 128);
-					rdata = data;
-
-					if (LIKELY(vm::reservation_acquire(raddr, 128) == rtime))
-					{
-						break;
-					}
+					std::this_thread::yield();
+					count++;
+				}
+			}
+			else
+			{
+				while (!spu_getll(addr, rdata.data(), &rtime, _ptr<void>(args.lsa & 0x3ff80)))
+				{
+					std::this_thread::yield();
+					count++;
 				}
 			}
 
-			if (count > 9)
+			if (count > 5)
 			{
-				LOG_ERROR(SPU, "%s took too long: %u", args.cmd, count);
+				LOG_ERROR(SPU, "GETLLAR took too long: %u", count);
 			}
+
+			ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
+			return true;
 		}
 		else
 		{
