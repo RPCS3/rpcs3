@@ -1373,6 +1373,24 @@ namespace rsx
 				for (const auto& range : m_invalidated_memory_ranges)
 				{
 					on_invalidate_memory_range(range.first, range.second);
+
+					// Clean the main memory super_ptr cache if invalidated
+					const auto range_end = range.first + range.second;
+					for (auto It = main_super_memory_block.begin(); It != main_super_memory_block.end();)
+					{
+						const auto mem_start = It->first;
+						const auto mem_end = mem_start + It->second.size();
+						const bool overlaps = (mem_start < range_end && range.first < mem_end);
+
+						if (overlaps)
+						{
+							It = main_super_memory_block.erase(It);
+						}
+						else
+						{
+							It++;
+						}
+					}
 				}
 
 				m_invalidated_memory_ranges.clear();

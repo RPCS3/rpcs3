@@ -60,9 +60,9 @@ namespace rsx
 			}
 		}
 
-		weak_ptr(std::shared_ptr<u8>& block)
+		weak_ptr(std::shared_ptr<u8>& block, u32 size)
 		{
-			_blocks.push_back({ block, 0 });
+			_blocks.push_back({ block, size });
 			_ptr = block.get();
 		}
 
@@ -193,6 +193,11 @@ namespace rsx
 					base_offset += block.second;
 				}
 			}
+		}
+
+		u32 size() const
+		{
+			return contiguous ? _blocks[0].second : (u32)io_cache.size();
 		}
 
 		operator bool() const

@@ -3113,9 +3113,6 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 	//Verify enough memory exists before attempting to handle data transfer
 	check_heap_status();
 
-	//Stop all parallel operations until this is finished
-	std::lock_guard<shared_mutex> lock(m_secondary_cb_guard);
-
 	if (m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer))
 	{
 		m_samplers_dirty.store(true);
