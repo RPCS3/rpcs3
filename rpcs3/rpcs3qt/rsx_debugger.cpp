@@ -91,7 +91,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 
 	m_tw_rsx = new QTabWidget();
 
-	//adds a tab containing a list to the tabwidget
+	// adds a tab containing a list to the tabwidget
 	auto l_addRSXTab = [=](QTableWidget* table, const QString& tabname, int columns)
 	{
 		table = new QTableWidget();
@@ -119,7 +119,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	m_list_texture = l_addRSXTab(m_list_texture, tr("Texture"), 9);
 	m_list_settings = l_addRSXTab(m_list_settings, tr("Settings"), 2);
 
-	//Tabs: List Columns
+	// Tabs: List Columns
 	m_list_commands->viewport()->installEventFilter(this);
 	m_list_commands->setHorizontalHeaderLabels(QStringList() << tr("Column") << tr("Value") << tr("Command") << tr("Count"));
 	m_list_commands->setColumnWidth(0, 70);
@@ -149,7 +149,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	m_list_settings->setColumnWidth(0, 170);
 	m_list_settings->setColumnWidth(1, 270);
 
-	//Tools: Tools = Controls + Notebook Tabs
+	// Tools: Tools = Controls + Notebook Tabs
 	QVBoxLayout* vbox_tools = new QVBoxLayout();
 	vbox_tools->addLayout(hbox_controls);
 	vbox_tools->addWidget(m_tw_rsx);

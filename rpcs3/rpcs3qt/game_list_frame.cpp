@@ -52,7 +52,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 
 	m_gameList = new game_list();
 	m_gameList->setShowGrid(false);
-	m_gameList->setItemDelegate(new table_item_delegate(this));
+	m_gameList->setItemDelegate(new table_item_delegate(this, true));
 	m_gameList->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_gameList->setSelectionMode(QAbstractItemView::SingleSelection);

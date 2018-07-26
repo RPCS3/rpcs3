@@ -6,15 +6,18 @@
 /** This class is used to get rid of somewhat ugly item focus rectangles. You could change the rectangle instead of omiting it if you wanted */
 class table_item_delegate : public QStyledItemDelegate
 {
+private:
+	bool m_has_icons;
+
 public:
-	explicit table_item_delegate(QObject *parent = 0) : QStyledItemDelegate(parent) {}
+	explicit table_item_delegate(QObject *parent = 0, bool has_icons = false) : QStyledItemDelegate(parent), m_has_icons(has_icons) {}
 
 	virtual void initStyleOption(QStyleOptionViewItem *option, const QModelIndex &index) const override
 	{
 		// Remove the focus frame around selected items
 		option->state &= ~QStyle::State_HasFocus;
 
-		if (index.column() == 0)
+		if (m_has_icons && index.column() == 0)
 		{
 			// Don't highlight icons
 			option->state &= ~QStyle::State_Selected;
