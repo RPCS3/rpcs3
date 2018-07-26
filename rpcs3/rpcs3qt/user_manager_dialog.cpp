@@ -64,8 +64,11 @@ void user_manager_dialog::Init()
 	m_table->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_table->setColumnCount(2);
 	m_table->setCornerButtonEnabled(false);
+	m_table->setAlternatingRowColors(true);
 	m_table->setHorizontalHeaderLabels(QStringList() << tr("User ID") << tr("User Name"));
 	m_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+	m_table->horizontalHeader()->setStretchLastSection(true);
+	m_table->horizontalHeader()->setDefaultSectionSize(150);
 
 	QPushButton* push_remove_user = new QPushButton(tr("Delete User"), this);
 	push_remove_user->setAutoDefault(false);
