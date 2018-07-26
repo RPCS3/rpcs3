@@ -270,10 +270,12 @@ void user_manager_dialog::OnUserRename()
 
 	const std::string user_id = m_user_list[key].GetUserId();
 	const std::string username = m_user_list[key].GetUsername();
+	const QString q_username = qstr(username);
 
 	QInputDialog* dialog = new QInputDialog(this);
 	dialog->setWindowTitle(tr("Rename User"));
-	dialog->setLabelText(tr("User Id: %0\nOld Username: %1\n\nNew Username: ").arg(qstr(user_id)).arg(qstr(username)));
+	dialog->setLabelText(tr("User Id: %0\nOld Username: %1\n\nNew Username: ").arg(qstr(user_id)).arg(q_username));
+	dialog->setTextValue(q_username);
 	dialog->resize(200, 100);
 
 	while (dialog->exec() != QDialog::Rejected)
