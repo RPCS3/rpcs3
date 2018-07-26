@@ -42,6 +42,7 @@ private:
 	void ShowContextMenu(const QPoint &pos);
 
 	void closeEvent(QCloseEvent* event) override;
+	bool eventFilter(QObject* object, QEvent* event) override;
 
 	u32 GetUserKey();
 
