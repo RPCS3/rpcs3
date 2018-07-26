@@ -63,13 +63,21 @@ void user_manager_dialog::Init()
 	m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_table->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_table->setColumnCount(2);
+	m_table->setCornerButtonEnabled(false);
 	m_table->setHorizontalHeaderLabels(QStringList() << tr("User ID") << tr("User Name"));
 	m_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 
 	QPushButton* push_remove_user = new QPushButton(tr("Delete User"), this);
+	push_remove_user->setAutoDefault(false);
+
 	QPushButton* push_create_user = new QPushButton(tr("Create User"), this);
+	push_create_user->setAutoDefault(false);
+
 	QPushButton* push_login_user = new QPushButton(tr("Log In User"), this);
+	push_login_user->setAutoDefault(false);
+
 	QPushButton* push_rename_user = new QPushButton(tr("Rename User"), this);
+	push_rename_user->setAutoDefault(false);
 
 	QPushButton* push_close = new QPushButton(tr("&Close"), this);
 	push_close->setAutoDefault(true);
@@ -101,14 +109,15 @@ void user_manager_dialog::Init()
 		u32 key = GetUserKey();
 		if (key == 0)
 		{
+			push_login_user->setEnabled(false);
 			push_rename_user->setEnabled(false);
 			push_remove_user->setEnabled(false);
 			return;
 		}
 
-		std::string idx_user = m_user_list[key].GetUserId();
-		bool enable = idx_user != m_active_user;
+		const bool enable = m_user_list[key].GetUserId() != m_active_user;
 
+		push_login_user->setEnabled(enable);
 		push_rename_user->setEnabled(enable);
 		push_remove_user->setEnabled(enable);
 	};
