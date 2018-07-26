@@ -1119,12 +1119,14 @@ namespace rsx
 
 	void rsx_state::reset()
 	{
-		//setup method registers
+		// setup method registers
 		std::memset(registers.data(), 0, registers.size() * sizeof(u32));
 
 		registers[NV4097_SET_COLOR_MASK] = CELL_GCM_COLOR_MASK_R | CELL_GCM_COLOR_MASK_G | CELL_GCM_COLOR_MASK_B | CELL_GCM_COLOR_MASK_A;
 		registers[NV4097_SET_SCISSOR_HORIZONTAL] = (4096 << 16) | 0;
 		registers[NV4097_SET_SCISSOR_VERTICAL] = (4096 << 16) | 0;
+
+		registers[NV4097_SET_ANTI_ALIASING_CONTROL] = 0xffff0000;
 
 		registers[NV4097_SET_ALPHA_FUNC] = CELL_GCM_ALWAYS;
 		registers[NV4097_SET_ALPHA_REF] = 0;
@@ -1177,16 +1179,29 @@ namespace rsx
 		registers[NV4097_SET_CULL_FACE] = CELL_GCM_BACK;
 		registers[NV4097_SET_FRONT_FACE] = CELL_GCM_CCW;
 		registers[NV4097_SET_RESTART_INDEX] = -1;
+		registers[NV4097_SET_RENDER_ENABLE] = (1 << 24);
 
 		registers[NV4097_SET_CLEAR_RECT_HORIZONTAL] = (4096 << 16) | 0;
 		registers[NV4097_SET_CLEAR_RECT_VERTICAL] = (4096 << 16) | 0;
+
+		registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK] = 0xffff;
+
+		(f32&)registers[NV4097_SET_POINT_SIZE] = 1.;
+
+		registers[NV4097_SET_DITHER_ENABLE] = 1;
 
 		// Stencil bits init to 00 - Tested with NPEB90184 (never sets the depth_stencil clear values but uses stencil test)
 		registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffff00;
 		registers[NV4097_SET_ZMIN_MAX_CONTROL] = 1;
 
-		// CELL_GCM_SURFACE_A8R8G8B8, CELL_GCM_SURFACE_Z24S8 and CELL_GCM_SURFACE_CENTER_1
-		registers[NV4097_SET_SURFACE_FORMAT] = (8 << 0) | (2 << 5) | (0 << 12) | (1 << 16) | (1 << 24);
+		// CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5, CELL_GCM_SURFACE_Z16 and CELL_GCM_SURFACE_CENTER_1
+		registers[NV4097_SET_SURFACE_FORMAT] = (1 << 0) | (1 << 5) | (0 << 12) | (1 << 16) | (1 << 24);
+		registers[NV4097_SET_SURFACE_PITCH_A] = 64;
+		registers[NV4097_SET_SURFACE_PITCH_B] = 64;
+		registers[NV4097_SET_SURFACE_PITCH_C] = 64;
+		registers[NV4097_SET_SURFACE_PITCH_D] = 64;
+		registers[NV4097_SET_SURFACE_COLOR_TARGET] = 1; // CELL_GCM_SURFACE_TARGET_0
+		registers[NV4097_SET_SURFACE_PITCH_Z] = 64;
 
 		// rsx dma initial values
 		registers[NV4097_SET_CONTEXT_DMA_REPORT] = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL;

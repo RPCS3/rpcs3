@@ -128,7 +128,7 @@ namespace rsx
 	struct rsx_state
 	{
 	protected:
-		std::array<u32, 0x10000 / 4> registers;
+		std::array<u32, 0x10000 / 4> registers{};
 
 		template<u32 opcode>
 		using decoded_type = typename registers_decoder<opcode>::decoded_type;
