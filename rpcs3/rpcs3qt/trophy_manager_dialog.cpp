@@ -76,7 +76,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_table->verticalScrollBar()->installEventFilter(this);
 	m_game_table->verticalScrollBar()->setSingleStep(20);
 	m_game_table->horizontalScrollBar()->setSingleStep(20);
-	m_game_table->setItemDelegate(new table_item_delegate(this));
+	m_game_table->setItemDelegate(new table_item_delegate(this, true));
 	m_game_table->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_game_table->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_game_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -98,7 +98,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_trophy_table->verticalScrollBar()->installEventFilter(this);
 	m_trophy_table->verticalScrollBar()->setSingleStep(20);
 	m_trophy_table->horizontalScrollBar()->setSingleStep(20);
-	m_trophy_table->setItemDelegate(new table_item_delegate(this));
+	m_trophy_table->setItemDelegate(new table_item_delegate(this, true));
 	m_trophy_table->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_trophy_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_trophy_table->setColumnCount(TrophyColumns::Count);
