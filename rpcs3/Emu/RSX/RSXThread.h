@@ -382,7 +382,8 @@ namespace rsx
 		GcmZcullInfo zculls[limits::zculls_count];
 
 		// Super memory map (mapped block with r/w permissions)
-		std::pair<u32, std::shared_ptr<u8>> super_memory_map;
+		std::pair<u32, std::shared_ptr<u8>> local_super_memory_block;
+		std::unordered_map<u32, rsx::weak_ptr> main_super_memory_block;
 
 		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
