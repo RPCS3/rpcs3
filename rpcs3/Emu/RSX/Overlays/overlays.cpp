@@ -35,7 +35,7 @@ namespace rsx
 				const auto now = get_system_time() - 1000000;
 				if ((now - rsxthr->last_flip_time) > min_refresh_duration_us)
 				{
-					rsxthr->native_ui_flip_request.store(true);
+					rsxthr->async_flip_requested.test_and_set(rsx::thread::flip_request::native_ui);
 				}
 			}
 		}

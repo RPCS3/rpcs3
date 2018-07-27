@@ -905,7 +905,7 @@ void PPUDisAsm::SC(ppu_opcode_t op)
 
 void PPUDisAsm::B(ppu_opcode_t op)
 {
-	const u32 li = op.li;
+	const u32 li = ((u32)op.li << 2);
 	const u32 aa = op.aa;
 	const u32 lk = op.lk;
 

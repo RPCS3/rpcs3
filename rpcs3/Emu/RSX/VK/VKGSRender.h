@@ -359,7 +359,6 @@ private:
 	shared_mutex m_flush_queue_mutex;
 	flush_request_task m_flush_requests;
 
-	std::thread::id rsx_thread;
 	std::atomic<u64> m_last_sync_event = { 0 };
 
 	bool render_pass_open = false;
