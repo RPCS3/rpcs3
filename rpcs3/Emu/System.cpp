@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/bin_patch.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/PPUThread.h"
@@ -469,6 +469,9 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	auto gsrender = fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render);
 	if (gsrender.get() == nullptr)
 		return false;
+
+	memset(RSXIOMem.ea, 0xFF, 512 * sizeof(u16));
+	memset(RSXIOMem.io, 0xFF, 3072 * sizeof(u16));
 
 	GetCallbacks().on_run();
 	m_state = system_state::running;
@@ -1134,6 +1137,8 @@ void Emulator::Load(bool add_only)
 			GetCallbacks().on_ready();
 
 			vm::init();
+			memset(RSXIOMem.ea, 0xFF, 512 * sizeof(u16));
+			memset(RSXIOMem.io, 0xFF, 3072 * sizeof(u16));
 
 			if (argv.empty())
 			{
@@ -1410,7 +1415,6 @@ void Emulator::Stop(bool restart)
 
 	LOG_NOTICE(GENERAL, "Objects cleared...");
 
-	RSXIOMem.Clear();
 	vm::close();
 
 	if (do_exit)

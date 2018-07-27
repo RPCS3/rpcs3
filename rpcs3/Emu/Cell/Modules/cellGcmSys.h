@@ -18,6 +18,8 @@ struct CellGcmOffsetTable
 	vm::bptr<u16> eaAddress;
 };
 
+extern CellGcmOffsetTable offsetTable;
+
 void InitOffsetTable();
 
 // Auxiliary functions

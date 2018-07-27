@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
 

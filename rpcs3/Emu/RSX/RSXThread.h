@@ -24,12 +24,36 @@
 #include "define_new_memleakdetect.h"
 
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/Cell/Modules/cellGcmSys.h"
 
 extern u64 get_system_time();
 
 extern bool user_asked_for_frame_capture;
 extern rsx::frame_trace_data frame_debug;
 extern rsx::frame_capture_data frame_capture;
+
+struct RsxIoAddrTable
+{
+	u16 ea[512];
+	u16 io[3072];
+};
+
+extern RsxIoAddrTable RSXIOMem;
+
+FORCE_INLINE u32 RSXIoAddr(const u32 ioOffset)
+{
+	if (ioOffset & 0xE0000000)
+		return 0; // offset is bigger than max
+
+	const s32 upper = RSXIOMem.ea[ioOffset >> 20] << 20;
+
+	if (upper < 0)
+	{
+		return 0;
+	}
+
+	return upper | (ioOffset & 0xFFFFF);
+};
 
 namespace rsx
 {
@@ -278,7 +302,7 @@ namespace rsx
 		std::shared_ptr<thread_ctrl> m_decompiler_thread;
 
 	protected:
-		atomic_t<bool> m_rsx_thread_exiting{false};
+		atomic_t<bool> m_rsx_thread_exiting{true};
 		s32 m_return_addr{-1}, restore_ret_addr{-1};
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
 		std::vector<u32> element_push_buffer;
@@ -354,7 +378,7 @@ namespace rsx
 		u32 ctxt_addr;
 		u32 label_addr;
 
-		u32 local_mem_addr, main_mem_addr;
+		u32 local_mem_addr, main_mem_addr, main_mem_size{0};
 
 		bool m_rtts_dirty;
 		bool m_textures_dirty[16];
