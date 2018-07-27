@@ -184,6 +184,11 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent)
 	m_tabs->widget(0)->layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
+
+	show();
+
+	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), 0, 0);
+	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0);
 }
 
 pad_settings_dialog::~pad_settings_dialog()
