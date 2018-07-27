@@ -1060,15 +1060,12 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 		raddr = 0;
 	}
 
-	auto& data = vm::_ref<decltype(rdata)>(addr);
-	const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
-
 	// Store unconditionally
 	if (LIKELY(g_use_rtm))
 	{
 		u64 count = 1;
 
-		while (!spu_putlluc_tx(addr, to_write.data()))
+		while (!spu_putlluc_tx(addr, _ptr<void>(args.lsa & 0x3ff80)))
 		{
 			std::this_thread::yield();
 			count += 2;
@@ -1081,6 +1078,8 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	}
 	else
 	{
+		const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
+		auto& data = vm::_ref<decltype(rdata)>(addr);
 		auto& res = vm::reservation_lock(addr, 128);
 
 		vm::_ref<atomic_t<u32>>(addr) += 0;
@@ -1323,63 +1322,66 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 	case MFC_PUTLLC_CMD:
 	{
 		// Store conditionally
-		const u32 addr = args.eal & -128u;
-		auto& data = vm::_ref<decltype(rdata)>(addr);
-		const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
-
-		bool result = false;
-
-		if (raddr == addr && rtime == vm::reservation_acquire(raddr, 128))
+		if (const u32 addr = args.eal & -128u; raddr == addr)
 		{
-			if (LIKELY(g_use_rtm))
+			if (rtime == vm::reservation_acquire(addr, 128))
 			{
-				if (spu_putllc_tx(raddr, rtime, rdata.data(), to_write.data()))
+				if (LIKELY(g_use_rtm))
 				{
-					vm::reservation_notifier(raddr, 128).notify_all();
-					result = true;
-				}
+					if (spu_putllc_tx(addr, rtime, rdata.data(), _ptr<void>(args.lsa & 0x3ff80)))
+					{
+						vm::reservation_notifier(addr, 128).notify_all();
+						raddr = 0;
+						return ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS), true;
+					}
 
-				// Don't fallback to heavyweight lock, just give up
-			}
-			else if (rdata == data)
-			{
-				auto& res = vm::reservation_lock(raddr, 128);
-
-				vm::_ref<atomic_t<u32>>(raddr) += 0;
-
-				// Full lock (heavyweight)
-				// TODO: vm::check_addr
-				vm::writer_lock lock(1);
-
-				if (rtime == (res & ~1ull) && rdata == data)
-				{
-					data = to_write;
-					vm::reservation_update(raddr, 128);
-					vm::reservation_notifier(raddr, 128).notify_all();
-					result = true;
+					// Don't fallback to heavyweight lock, just give up
 				}
 				else
 				{
-					res &= ~1ull;
+					auto& data = vm::_ref<decltype(rdata)>(addr);
+					const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
+
+					if (rdata == data)
+					{
+						auto& res = vm::reservation_lock(addr, 128);
+
+						vm::_ref<atomic_t<u32>>(addr) += 0;
+
+						// Full lock (heavyweight)
+						// TODO: vm::check_addr
+						vm::writer_lock lock(1);
+
+						if (rtime == (res & ~1ull) && rdata == data)
+						{
+							data = to_write;
+							vm::reservation_update(addr, 128);
+							vm::reservation_notifier(addr, 128).notify_all();
+							raddr = 0;
+							return ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS), true;
+						}
+						else
+						{
+							res &= ~1ull;
+						}
+					}
 				}
+			}
+
+			ch_event_stat.raw() |= SPU_EVENT_LR;
+			_mm_pause();
+		}
+		else if (const u32 old = raddr)
+		{
+			// Check for previous event on old reservation
+			if (rtime != vm::reservation_acquire(old, 128) || rdata != vm::_ref<decltype(rdata)>(old))
+			{
+				ch_event_stat.raw() |= SPU_EVENT_LR;
 			}
 		}
 
-		if (result)
-		{
-			ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS);
-		}
-		else
-		{
-			ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
-		}
-
-		if (raddr && !result)
-		{
-			ch_event_stat |= SPU_EVENT_LR;
-		}
-
 		raddr = 0;
+		ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
 		return true;
 	}
 	case MFC_PUTLLUC_CMD:
