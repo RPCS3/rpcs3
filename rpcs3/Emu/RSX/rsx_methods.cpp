@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "rsx_utils.h"
 #include "rsx_decode.h"

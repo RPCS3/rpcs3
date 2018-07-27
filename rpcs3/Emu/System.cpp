@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/bin_patch.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/PPUThread.h"
@@ -1403,7 +1403,6 @@ void Emulator::Stop(bool restart)
 
 	LOG_NOTICE(GENERAL, "Objects cleared...");
 
-	RSXIOMem.Clear();
 	vm::close();
 
 	if (do_exit)
