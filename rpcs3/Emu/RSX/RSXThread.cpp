@@ -2838,7 +2838,7 @@ namespace rsx
 				if (!It->sink)
 				{
 					It->counter_tag = m_statistics_tag_id;
-					It->due_tsc = m_tsc + m_cycles_delay;
+					It->due_tsc = get_system_time() + m_cycles_delay;
 					It->sink = sink;
 					It->type = type;
 
@@ -2901,7 +2901,7 @@ namespace rsx
 				}
 
 				//All slots are occupied, try to pop the earliest entry
-				m_tsc += max_zcull_cycles_delay;
+				m_tsc += max_zcull_delay_us;
 				update(ptimer);
 
 				retries++;
@@ -2940,7 +2940,7 @@ namespace rsx
 			if (m_current_task)
 				m_current_task->num_draws++;
 
-			m_cycles_delay = max_zcull_cycles_delay;
+			m_cycles_delay = max_zcull_delay_us;
 		}
 
 		void ZCULL_control::write(vm::addr_t sink, u32 timestamp, u32 type, u32 value)
@@ -3053,20 +3053,30 @@ namespace rsx
 			}
 
 			//Critical, since its likely a WAIT_FOR_IDLE type has been processed, all results are considered available
-			m_cycles_delay = min_zcull_cycles_delay;
+			m_cycles_delay = min_zcull_delay_us;
+			m_tsc = std::max(m_tsc, get_system_time());
 		}
 
 		void ZCULL_control::update(::rsx::thread* ptimer, u32 sync_address)
 		{
-			m_tsc++;
-
 			if (m_pending_writes.empty())
+			{
 				return;
+			}
+
+			const auto& front = m_pending_writes.front();
+			if (!front.sink)
+			{
+				// No writables in queue, abort
+				return;
+			}
+
+			// Update timestamp and proceed with processing only if there is work to be done
+			m_tsc = std::max(m_tsc, get_system_time());
 
 			if (!sync_address)
 			{
-				const auto& front = m_pending_writes.front();
-				if (!front.sink || m_tsc < front.due_tsc)
+				if (m_tsc < front.due_tsc)
 				{
 					// Avoid spamming backend with report status updates
 					return;
