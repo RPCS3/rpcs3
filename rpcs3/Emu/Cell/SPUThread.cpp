@@ -1049,7 +1049,7 @@ void SPUThread::do_putlluc(const spu_mfc_cmd& args)
 {
 	const u32 addr = args.eal & -128u;
 
-	if (raddr && addr == raddr)
+	if (addr == raddr)
 	{
 		raddr = 0;
 	}
@@ -1359,12 +1359,11 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 			ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
 		}
 
-		if (raddr == addr && !result)
+		if (std::exchange(raddr, 0) == addr && !result)
 		{
 			set_event(10); // LR_EVENT
 		}
 
-		raddr = 0;
 		return true;
 	}
 	case MFC_PUTLLUC_CMD:
