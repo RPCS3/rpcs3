@@ -1732,7 +1732,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			{
 				if (const auto phi = m_blocks[target].phi[i])
 				{
-					phi->addIncoming(get_vr(i, get_reg_type(i)), m_block->block_end);
+					const auto typ = phi->getType() == get_type<f64[4]>() ? get_type<f64[4]>() : get_reg_type(i);
+					phi->addIncoming(get_vr(i, typ), m_block->block_end);
 				}
 			}
 		}
@@ -1821,6 +1822,133 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return ptr;
 	}
 
+	llvm::Value* double_as_uint64(llvm::Value* val)
+	{
+		if (llvm::isa<llvm::ConstantAggregateZero>(val))
+		{
+			return splat<u64[4]>(0).value;
+		}
+
+		if (auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(val))
+		{
+			const f64 data[4]
+			{
+				cv->getElementAsDouble(0),
+				cv->getElementAsDouble(1),
+				cv->getElementAsDouble(2),
+				cv->getElementAsDouble(3)
+			};
+
+			return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef((const u64*)(const u8*)+data, 4));
+		}
+
+		if (llvm::isa<llvm::Constant>(val))
+		{
+			fmt::throw_exception("[0x%x] double_as_uint64: bad constant type", m_pos);
+		}
+
+		return m_ir->CreateBitCast(val, get_type<u64[4]>());
+	}
+
+	llvm::Value* uint64_as_double(llvm::Value* val)
+	{
+		if (llvm::isa<llvm::ConstantAggregateZero>(val))
+		{
+			return fsplat<f64[4]>(0.).value;
+		}
+
+		if (auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(val))
+		{
+			const u64 data[4]
+			{
+				cv->getElementAsInteger(0),
+				cv->getElementAsInteger(1),
+				cv->getElementAsInteger(2),
+				cv->getElementAsInteger(3)
+			};
+
+			return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef((const f64*)(const u8*)+data, 4));
+		}
+
+		if (llvm::isa<llvm::Constant>(val))
+		{
+			fmt::throw_exception("[0x%x] uint64_as_double: bad constant type", m_pos);
+		}
+
+		return m_ir->CreateBitCast(val, get_type<f64[4]>());
+	}
+
+	llvm::Value* double_to_xfloat(llvm::Value* val)
+	{
+		verify("double_to_xfloat" HERE), val, val->getType() == get_type<f64[4]>();
+
+		// Detect xfloat_to_double to avoid unnecessary ops and prevent zeroed denormals
+		if (auto _bitcast = llvm::dyn_cast<llvm::CastInst>(val))
+		{
+			if (_bitcast->getOpcode() == llvm::Instruction::BitCast)
+			{
+				if (auto _select = llvm::dyn_cast<llvm::SelectInst>(_bitcast->getOperand(0)))
+				{
+					if (auto _icmp = llvm::dyn_cast<llvm::ICmpInst>(_select->getOperand(0)))
+					{
+						if (auto _and = llvm::dyn_cast<llvm::BinaryOperator>(_icmp->getOperand(0)))
+						{
+							if (auto _zext = llvm::dyn_cast<llvm::CastInst>(_and->getOperand(0)))
+							{
+								// TODO: check all details and return xfloat_to_double() arg
+							}
+						}
+					}
+				}
+			}
+		}
+
+		const auto d = double_as_uint64(val);
+		const auto s = m_ir->CreateAnd(m_ir->CreateLShr(d, 32), 0x80000000);
+		const auto m = m_ir->CreateXor(m_ir->CreateLShr(d, 29), 0x40000000);
+		const auto r = m_ir->CreateOr(m_ir->CreateAnd(m, 0x7fffffff), s);
+		return m_ir->CreateTrunc(m_ir->CreateSelect(m_ir->CreateIsNotNull(d), r, splat<u64[4]>(0).value), get_type<u32[4]>());
+	}
+
+	llvm::Value* xfloat_to_double(llvm::Value* val)
+	{
+		verify("xfloat_to_double" HERE), val, val->getType() == get_type<u32[4]>();
+
+		const auto x = m_ir->CreateZExt(val, get_type<u64[4]>());
+		const auto s = m_ir->CreateShl(m_ir->CreateAnd(x, 0x80000000), 32);
+		const auto a = m_ir->CreateAnd(x, 0x7fffffff);
+		const auto m = m_ir->CreateShl(m_ir->CreateAdd(a, splat<u64[4]>(0x1c0000000).value), 29);
+		const auto r = m_ir->CreateSelect(m_ir->CreateICmpSGT(a, splat<u64[4]>(0x7fffff).value), m, splat<u64[4]>(0).value);
+		const auto f = m_ir->CreateOr(s, r);
+		return uint64_as_double(f);
+	}
+
+	// Clamp double values to ±Smax, flush values smaller than ±Smin to positive zero
+	llvm::Value* xfloat_in_double(llvm::Value* val)
+	{
+		verify("xfloat_in_double" HERE), val, val->getType() == get_type<f64[4]>();
+
+		const auto smax = uint64_as_double(splat<u64[4]>(0x47ffffffe0000000).value);
+		const auto smin = uint64_as_double(splat<u64[4]>(0x3810000000000000).value);
+
+		const auto d = double_as_uint64(val);
+		const auto s = m_ir->CreateAnd(d, 0x8000000000000000);
+		const auto a = uint64_as_double(m_ir->CreateAnd(d, 0x7fffffffe0000000));
+		const auto n = m_ir->CreateFCmpOLT(a, smax);
+		const auto z = m_ir->CreateFCmpOLT(a, smin);
+		const auto c = double_as_uint64(m_ir->CreateSelect(n, a, smax));
+		return m_ir->CreateSelect(z, fsplat<f64[4]>(0.).value, uint64_as_double(m_ir->CreateOr(c, s)));
+	}
+
+	// Expand 32-bit mask for xfloat values to 64-bit, 29 least significant bits are always zero
+	llvm::Value* conv_xfloat_mask(llvm::Value* val)
+	{
+		const auto d = m_ir->CreateZExt(val, get_type<u64[4]>());
+		const auto s = m_ir->CreateShl(m_ir->CreateAnd(d, 0x80000000), 32);
+		const auto e = m_ir->CreateLShr(m_ir->CreateAShr(m_ir->CreateShl(d, 33), 4), 1);
+		return m_ir->CreateOr(s, e);
+	}
+
 	llvm::Value* get_vr(u32 index, llvm::Type* type)
 	{
 		auto& reg = m_block->reg.at(index);
@@ -1829,6 +1957,67 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		{
 			// Load register value if necessary
 			reg = m_ir->CreateLoad(init_vr(index));
+		}
+
+		if (reg->getType() == get_type<f64[4]>())
+		{
+			if (type == reg->getType())
+			{
+				return reg;
+			}
+
+			const auto res = double_to_xfloat(reg);
+
+			if (auto c = llvm::dyn_cast<llvm::Constant>(res))
+			{
+				return make_const_vector(get_const_vector(c, m_pos, 1000 + index), type);
+			}
+
+			return m_ir->CreateBitCast(res, type);
+		}
+
+		if (type == get_type<f64[4]>())
+		{
+			if (const auto phi = llvm::dyn_cast<llvm::PHINode>(reg))
+			{
+				if (phi->getNumUses())
+				{
+					LOG_TODO(SPU, "[0x%x] $%u: Phi has uses :(", m_pos, index);
+				}
+				else
+				{
+					const auto cblock = m_ir->GetInsertBlock();
+					m_ir->SetInsertPoint(phi);
+
+					const auto newphi = m_ir->CreatePHI(get_type<f64[4]>(), phi->getNumIncomingValues());
+
+					for (u32 i = 0; i < phi->getNumIncomingValues(); i++)
+					{
+						const auto iblock = phi->getIncomingBlock(i);
+						m_ir->SetInsertPoint(iblock->getTerminator());
+						const auto ivalue = phi->getIncomingValue(i);
+						newphi->addIncoming(xfloat_to_double(ivalue), iblock);
+					}
+
+					if (phi->getParent() == m_block->block)
+					{
+						m_block->phi[index] = newphi;
+					}
+
+					reg = newphi;
+
+					m_ir->SetInsertPoint(cblock);
+					phi->eraseFromParent();
+					return reg;
+				}
+			}
+
+			if (auto c = llvm::dyn_cast<llvm::Constant>(reg))
+			{
+				return xfloat_to_double(make_const_vector(get_const_vector(c, m_pos, 2000 + index), get_type<u32[4]>()));
+			}
+
+			return xfloat_to_double(m_ir->CreateBitCast(reg, get_type<u32[4]>()));
 		}
 
 		// Bitcast the constant if necessary
@@ -1852,13 +2041,19 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return r;
 	}
 
-	void set_vr(u32 index, llvm::Value* value)
+	void set_vr(u32 index, llvm::Value* value, bool fixup = true)
 	{
 		// Check
 		verify(HERE), m_regmod[m_pos / 4] == index;
 
+		// Test for special case
+		const bool is_xfloat = value->getType() == get_type<f64[4]>();
+
+		// Clamp value if necessary
+		const auto saved_value = is_xfloat && fixup ? xfloat_in_double(value) : value;
+
 		// Set register value
-		m_block->reg.at(index) = value;
+		m_block->reg.at(index) = saved_value;
 
 		// Get register location
 		const auto addr = init_vr(index);
@@ -1871,13 +2066,13 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		}
 
 		// Write register to the context
-		m_block->store[index] = m_ir->CreateStore(m_ir->CreateBitCast(value, addr->getType()->getPointerElementType()), addr);
+		m_block->store[index] = m_ir->CreateStore(is_xfloat ? double_to_xfloat(saved_value) : m_ir->CreateBitCast(value, addr->getType()->getPointerElementType()), addr);
 	}
 
 	template <typename T>
-	void set_vr(u32 index, T expr)
+	void set_vr(u32 index, T expr, bool fixup = true)
 	{
-		set_vr(index, expr.eval(m_ir));
+		set_vr(index, expr.eval(m_ir), fixup);
 	}
 
 	// Return either basic block addr with single dominating value, or negative number of PHI entries
@@ -2374,7 +2569,11 @@ public:
 											value = m_finfo->reg[i] ? m_finfo->reg[i] : m_ir->CreateLoad(regptr);
 										}
 
-										if (i < 128 && llvm::isa<llvm::Constant>(value))
+										if (value->getType() == get_type<f64[4]>())
+										{
+											value = double_to_xfloat(value);
+										}
+										else if (i < 128 && llvm::isa<llvm::Constant>(value))
 										{
 											// Bitcast the constant
 											value = make_const_vector(get_const_vector(llvm::cast<llvm::Constant>(value), baddr, i), _phi->getType());
@@ -2546,9 +2745,11 @@ public:
 
 		// Basic optimizations
 		pm.add(createEarlyCSEPass());
-		pm.add(createAggressiveDCEPass());
 		pm.add(createCFGSimplificationPass());
+		pm.add(createNewGVNPass());
 		pm.add(createDeadStoreEliminationPass());
+		pm.add(createLoopVersioningLICMPass());
+		pm.add(createAggressiveDCEPass());
 		//pm.add(createLintPass()); // Check
 
 		for (const auto& func : m_functions)
@@ -4448,6 +4649,11 @@ public:
 						op1 = get_vr<f32[4]>(op.rb).value;
 						op2 = get_vr<f32[4]>(op.ra).value;
 					}
+					else if (op1 && op1->getType() == get_type<f64[4]>() || op2 && op2->getType() == get_type<f64[4]>())
+					{
+						op1 = get_vr<f64[4]>(op.rb).value;
+						op2 = get_vr<f64[4]>(op.ra).value;
+					}
 					else
 					{
 						op1 = get_vr<u32[4]>(op.rb).value;
@@ -4476,6 +4682,22 @@ public:
 					return;
 				}
 			}
+		}
+
+		const auto op1 = m_block->reg[op.rb];
+		const auto op2 = m_block->reg[op.ra];
+
+		if (op1 && op1->getType() == get_type<f64[4]>() || op2 && op2->getType() == get_type<f64[4]>())
+		{
+			// Optimization: keep xfloat values in doubles even if the mask is unpredictable (hard way)
+			const auto c = get_vr<u32[4]>(op.rc);
+			const auto b = get_vr<f64[4]>(op.rb);
+			const auto a = get_vr<f64[4]>(op.ra);
+			const auto m = conv_xfloat_mask(c.value);
+			const auto x = m_ir->CreateAnd(double_as_uint64(b.value), m);
+			const auto y = m_ir->CreateAnd(double_as_uint64(a.value), m_ir->CreateNot(m));
+			set_vr(op.rt4, uint64_as_double(m_ir->CreateOr(x, y)));
+			return;
 		}
 
 		set_vr(op.rt4, merge(get_vr(op.rc), get_vr(op.rb), get_vr(op.ra)));
@@ -4695,121 +4917,343 @@ public:
 
 	void FREST(spu_opcode_t op) //
 	{
-		set_vr(op.rt, fsplat<f32[4]>(1.0) / get_vr<f32[4]>(op.ra));
+		// TODO
+		if (g_cfg.core.spu_accurate_xfloat)
+			set_vr(op.rt, fsplat<f64[4]>(1.0) / get_vr<f64[4]>(op.ra));
+		else
+			set_vr(op.rt, fsplat<f32[4]>(1.0) / get_vr<f32[4]>(op.ra));
 	}
 
 	void FRSQEST(spu_opcode_t op) //
 	{
-		set_vr(op.rt, fsplat<f32[4]>(1.0) / sqrt(fabs(get_vr<f32[4]>(op.ra))));
+		// TODO
+		if (g_cfg.core.spu_accurate_xfloat)
+			set_vr(op.rt, fsplat<f64[4]>(1.0) / sqrt(fabs(get_vr<f64[4]>(op.ra))));
+		else
+			set_vr(op.rt, fsplat<f32[4]>(1.0) / sqrt(fabs(get_vr<f32[4]>(op.ra))));
 	}
 
 	void FCGT(spu_opcode_t op) //
 	{
-		set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb))));
+		if (g_cfg.core.spu_accurate_xfloat)
+			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb))));
+		else
+			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb))));
 	}
 
 	void FCMGT(spu_opcode_t op) //
 	{
-		set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(fabs(get_vr<f32[4]>(op.ra)), fabs(get_vr<f32[4]>(op.rb)))));
+		if (g_cfg.core.spu_accurate_xfloat)
+			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(fabs(get_vr<f64[4]>(op.ra)), fabs(get_vr<f64[4]>(op.rb)))));
+		else
+			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(fabs(get_vr<f32[4]>(op.ra)), fabs(get_vr<f32[4]>(op.rb)))));
 	}
 
 	void FA(spu_opcode_t op) //
 	{
-		set_vr(op.rt, get_vr<f32[4]>(op.ra) + get_vr<f32[4]>(op.rb));
+		if (g_cfg.core.spu_accurate_xfloat)
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) + get_vr<f64[4]>(op.rb));
+		else
+			set_vr(op.rt, get_vr<f32[4]>(op.ra) + get_vr<f32[4]>(op.rb));
 	}
 
 	void FS(spu_opcode_t op) //
 	{
-		set_vr(op.rt, get_vr<f32[4]>(op.ra) - get_vr<f32[4]>(op.rb));
+		if (g_cfg.core.spu_accurate_xfloat)
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) - get_vr<f64[4]>(op.rb));
+		else
+			set_vr(op.rt, get_vr<f32[4]>(op.ra) - get_vr<f32[4]>(op.rb));
 	}
 
 	void FM(spu_opcode_t op) //
 	{
-		set_vr(op.rt, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb));
+		if (g_cfg.core.spu_accurate_xfloat)
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) * get_vr<f64[4]>(op.rb));
+		else
+			set_vr(op.rt, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb));
 	}
 
 	void FESD(spu_opcode_t op) //
 	{
-		value_t<f64[2]> r;
-		r.value = m_ir->CreateFPExt(shuffle2<f32[2]>(get_vr<f32[4]>(op.ra), fsplat<f32[4]>(0.), 1, 3).value, get_type<f64[2]>());
-		set_vr(op.rt, r);
+		if (g_cfg.core.spu_accurate_xfloat)
+		{
+			const auto r = shuffle2<f64[2]>(get_vr<f64[4]>(op.ra), fsplat<f64[4]>(0.), 1, 3);
+			const auto d = bitcast<s64[2]>(r);
+			const auto a = eval(d & 0x7fffffffffffffff);
+			const auto s = eval(d & 0x8000000000000000);
+			const auto i = select(a == 0x47f0000000000000, eval(s | 0x7ff0000000000000), d);
+			const auto n = select(a > 0x47f0000000000000, splat<s64[2]>(0x7ff8000000000000), i);
+			set_vr(op.rt, bitcast<f64[2]>(n));
+		}
+		else
+		{
+			value_t<f64[2]> r;
+			r.value = m_ir->CreateFPExt(shuffle2<f32[2]>(get_vr<f32[4]>(op.ra), fsplat<f32[4]>(0.), 1, 3).value, get_type<f64[2]>());
+			set_vr(op.rt, r);
+		}
 	}
 
 	void FRDS(spu_opcode_t op) //
 	{
-		value_t<f32[2]> r;
-		r.value = m_ir->CreateFPTrunc(get_vr<f64[2]>(op.ra).value, get_type<f32[2]>());
-		set_vr(op.rt, shuffle2<f32[4]>(r, fsplat<f32[2]>(0.), 2, 0, 3, 1));
+		if (g_cfg.core.spu_accurate_xfloat)
+		{
+			const auto r = get_vr<f64[2]>(op.ra);
+			const auto d = bitcast<s64[2]>(r);
+			const auto a = eval(d & 0x7fffffffffffffff);
+			const auto s = eval(d & 0x8000000000000000);
+			const auto i = select(a > 0x47f0000000000000, eval(s | 0x47f0000000000000), d);
+			const auto n = select(a > 0x7ff0000000000000, splat<s64[2]>(0x47f8000000000000), i);
+			const auto z = select(a < 0x3810000000000000, s, n);
+			set_vr(op.rt, shuffle2<f64[4]>(bitcast<f64[2]>(z), fsplat<f64[2]>(0.), 2, 0, 3, 1), false);
+		}
+		else
+		{
+			value_t<f32[2]> r;
+			r.value = m_ir->CreateFPTrunc(get_vr<f64[2]>(op.ra).value, get_type<f32[2]>());
+			set_vr(op.rt, shuffle2<f32[4]>(r, fsplat<f32[2]>(0.), 2, 0, 3, 1));
+		}
 	}
 
 	void FCEQ(spu_opcode_t op) //
 	{
-		set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OEQ>(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb))));
+		if (g_cfg.core.spu_accurate_xfloat)
+			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OEQ>(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb))));
+		else
+			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OEQ>(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb))));
 	}
 
 	void FCMEQ(spu_opcode_t op) //
 	{
-		set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OEQ>(fabs(get_vr<f32[4]>(op.ra)), fabs(get_vr<f32[4]>(op.rb)))));
+		if (g_cfg.core.spu_accurate_xfloat)
+			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OEQ>(fabs(get_vr<f64[4]>(op.ra)), fabs(get_vr<f64[4]>(op.rb)))));
+		else
+			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OEQ>(fabs(get_vr<f32[4]>(op.ra)), fabs(get_vr<f32[4]>(op.rb)))));
 	}
 
 	void FNMS(spu_opcode_t op) //
 	{
-		set_vr(op.rt4, get_vr<f32[4]>(op.rc) - get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb));
+		// See FMA.
+		if (g_cfg.core.spu_accurate_xfloat)
+			set_vr(op.rt4, -fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))));
+		else
+			set_vr(op.rt4, get_vr<f32[4]>(op.rc) - get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb));
 	}
 
 	void FMA(spu_opcode_t op) //
 	{
-		set_vr(op.rt4, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb) + get_vr<f32[4]>(op.rc));
+		// Hardware FMA produces the same result as multiple + add on the limited double range (xfloat).
+		if (g_cfg.core.spu_accurate_xfloat)
+			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
+		else
+			set_vr(op.rt4, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb) + get_vr<f32[4]>(op.rc));
 	}
 
 	void FMS(spu_opcode_t op) //
 	{
-		set_vr(op.rt4, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb) - get_vr<f32[4]>(op.rc));
+		// See FMA.
+		if (g_cfg.core.spu_accurate_xfloat)
+			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))));
+		else
+			set_vr(op.rt4, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb) - get_vr<f32[4]>(op.rc));
 	}
 
 	void FI(spu_opcode_t op) //
 	{
-		set_vr(op.rt, get_vr<f32[4]>(op.rb));
+		// TODO
+		if (g_cfg.core.spu_accurate_xfloat)
+			set_vr(op.rt, get_vr<f64[4]>(op.rb));
+		else
+			set_vr(op.rt, get_vr<f32[4]>(op.rb));
 	}
 
 	void CFLTS(spu_opcode_t op) //
 	{
-		value_t<f32[4]> a = get_vr<f32[4]>(op.ra);
-		if (op.i8 != 173)
-			a = eval(a * fsplat<f32[4]>(std::exp2(static_cast<float>(static_cast<s16>(173 - op.i8)))));
+		if (g_cfg.core.spu_accurate_xfloat)
+		{
+			value_t<f64[4]> a = get_vr<f64[4]>(op.ra);
+			if (op.i8 != 173)
+				a = eval(a * fsplat<f64[4]>(std::exp2(static_cast<int>(173 - op.i8))));
 
-		value_t<s32[4]> r;
-		r.value = m_ir->CreateFPToSI(a.value, get_type<s32[4]>());
-		set_vr(op.rt, r ^ sext<s32[4]>(fcmp<llvm::FCmpInst::FCMP_OGE>(a, fsplat<f32[4]>(std::exp2(31.f)))));
+			value_t<s32[4]> r;
+
+			if (auto ca = llvm::dyn_cast<llvm::ConstantDataVector>(a.value))
+			{
+				const f64 data[4]
+				{
+					ca->getElementAsDouble(0),
+					ca->getElementAsDouble(1),
+					ca->getElementAsDouble(2),
+					ca->getElementAsDouble(3)
+				};
+
+				v128 result;
+
+				for (u32 i = 0; i < 4; i++)
+				{
+					if (data[i] >= std::exp2(31.f))
+					{
+						result._s32[i] = INT32_MAX;
+					}
+					else if (data[i] < std::exp2(-31.f))
+					{
+						result._s32[i] = INT32_MIN;
+					}
+					else
+					{
+						result._s32[i] = static_cast<s32>(data[i]);
+					}
+				}
+
+				r.value = make_const_vector(result, get_type<s32[4]>());
+				set_vr(op.rt, r);
+				return;
+			}
+
+			if (llvm::isa<llvm::ConstantAggregateZero>(a.value))
+			{
+				set_vr(op.rt, splat<u32[4]>(0));
+				return;
+			}
+
+			r.value = m_ir->CreateFPToSI(a.value, get_type<s32[4]>());
+			set_vr(op.rt, r ^ sext<s32[4]>(fcmp<llvm::FCmpInst::FCMP_OGE>(a, fsplat<f64[4]>(std::exp2(31.f)))));
+		}
+		else
+		{
+			value_t<f32[4]> a = get_vr<f32[4]>(op.ra);
+			if (op.i8 != 173)
+				a = eval(a * fsplat<f32[4]>(std::exp2(static_cast<float>(static_cast<s16>(173 - op.i8)))));
+
+			value_t<s32[4]> r;
+			r.value = m_ir->CreateFPToSI(a.value, get_type<s32[4]>());
+			set_vr(op.rt, r ^ sext<s32[4]>(fcmp<llvm::FCmpInst::FCMP_OGE>(a, fsplat<f32[4]>(std::exp2(31.f)))));
+		}
 	}
 
 	void CFLTU(spu_opcode_t op) //
 	{
-		value_t<f32[4]> a = get_vr<f32[4]>(op.ra);
-		if (op.i8 != 173)
-			a = eval(a * fsplat<f32[4]>(std::exp2(static_cast<float>(static_cast<s16>(173 - op.i8)))));
+		if (g_cfg.core.spu_accurate_xfloat)
+		{
+			value_t<f64[4]> a = get_vr<f64[4]>(op.ra);
+			if (op.i8 != 173)
+				a = eval(a * fsplat<f64[4]>(std::exp2(static_cast<int>(173 - op.i8))));
 
-		value_t<s32[4]> r;
-		r.value = m_ir->CreateFPToUI(a.value, get_type<s32[4]>());
-		set_vr(op.rt, r & ~(bitcast<s32[4]>(a) >> 31));
+			value_t<s32[4]> r;
+
+			if (auto ca = llvm::dyn_cast<llvm::ConstantDataVector>(a.value))
+			{
+				const f64 data[4]
+				{
+					ca->getElementAsDouble(0),
+					ca->getElementAsDouble(1),
+					ca->getElementAsDouble(2),
+					ca->getElementAsDouble(3)
+				};
+
+				v128 result;
+
+				for (u32 i = 0; i < 4; i++)
+				{
+					if (data[i] >= std::exp2(32.f))
+					{
+						result._u32[i] = UINT32_MAX;
+					}
+					else if (data[i] < 0.)
+					{
+						result._u32[i] = 0;
+					}
+					else
+					{
+						result._u32[i] = static_cast<u32>(data[i]);
+					}
+				}
+
+				r.value = make_const_vector(result, get_type<s32[4]>());
+				set_vr(op.rt, r);
+				return;
+			}
+
+			if (llvm::isa<llvm::ConstantAggregateZero>(a.value))
+			{
+				set_vr(op.rt, splat<u32[4]>(0));
+				return;
+			}
+
+			r.value = m_ir->CreateFPToUI(a.value, get_type<s32[4]>());
+			set_vr(op.rt, r & sext<s32[4]>(fcmp<llvm::FCmpInst::FCMP_OGE>(a, fsplat<f64[4]>(0.))));
+		}
+		else
+		{
+			value_t<f32[4]> a = get_vr<f32[4]>(op.ra);
+			if (op.i8 != 173)
+				a = eval(a * fsplat<f32[4]>(std::exp2(static_cast<float>(static_cast<s16>(173 - op.i8)))));
+
+			value_t<s32[4]> r;
+			r.value = m_ir->CreateFPToUI(a.value, get_type<s32[4]>());
+			set_vr(op.rt, r & ~(bitcast<s32[4]>(a) >> 31));
+		}
 	}
 
 	void CSFLT(spu_opcode_t op) //
 	{
-		value_t<f32[4]> r;
-		r.value = m_ir->CreateSIToFP(get_vr<s32[4]>(op.ra).value, get_type<f32[4]>());
-		if (op.i8 != 155)
-			r = eval(r * fsplat<f32[4]>(std::exp2(static_cast<float>(static_cast<s16>(op.i8 - 155)))));
-		set_vr(op.rt, r);
+		if (g_cfg.core.spu_accurate_xfloat)
+		{
+			value_t<s32[4]> a = get_vr<s32[4]>(op.ra);
+			value_t<f64[4]> r;
+
+			if (auto ca = llvm::dyn_cast<llvm::Constant>(a.value))
+			{
+				v128 data = get_const_vector(ca, m_pos, 25971);
+				r = build<f64[4]>(data._s32[0], data._s32[1], data._s32[2], data._s32[3]);
+			}
+			else
+			{
+				r.value = m_ir->CreateSIToFP(a.value, get_type<f64[4]>());
+			}
+
+			if (op.i8 != 155)
+				r = eval(r * fsplat<f64[4]>(std::exp2(static_cast<int>(op.i8 - 155))));
+			set_vr(op.rt, r);
+		}
+		else
+		{
+			value_t<f32[4]> r;
+			r.value = m_ir->CreateSIToFP(get_vr<s32[4]>(op.ra).value, get_type<f32[4]>());
+			if (op.i8 != 155)
+				r = eval(r * fsplat<f32[4]>(std::exp2(static_cast<float>(static_cast<s16>(op.i8 - 155)))));
+			set_vr(op.rt, r);
+		}
 	}
 
 	void CUFLT(spu_opcode_t op) //
 	{
-		value_t<f32[4]> r;
-		r.value = m_ir->CreateUIToFP(get_vr<s32[4]>(op.ra).value, get_type<f32[4]>());
-		if (op.i8 != 155)
-			r = eval(r * fsplat<f32[4]>(std::exp2(static_cast<float>(static_cast<s16>(op.i8 - 155)))));
-		set_vr(op.rt, r);
+		if (g_cfg.core.spu_accurate_xfloat)
+		{
+			value_t<s32[4]> a = get_vr<s32[4]>(op.ra);
+			value_t<f64[4]> r;
+
+			if (auto ca = llvm::dyn_cast<llvm::Constant>(a.value))
+			{
+				v128 data = get_const_vector(ca, m_pos, 20971);
+				r = build<f64[4]>(data._u32[0], data._u32[1], data._u32[2], data._u32[3]);
+			}
+			else
+			{
+				r.value = m_ir->CreateUIToFP(a.value, get_type<f64[4]>());
+			}
+
+			if (op.i8 != 155)
+				r = eval(r * fsplat<f64[4]>(std::exp2(static_cast<int>(op.i8 - 155))));
+			set_vr(op.rt, r);
+		}
+		else
+		{
+			value_t<f32[4]> r;
+			r.value = m_ir->CreateUIToFP(get_vr<s32[4]>(op.ra).value, get_type<f32[4]>());
+			if (op.i8 != 155)
+				r = eval(r * fsplat<f32[4]>(std::exp2(static_cast<float>(static_cast<s16>(op.i8 - 155)))));
+			set_vr(op.rt, r);
+		}
 	}
 
 	void STQX(spu_opcode_t op) //

@@ -927,6 +927,19 @@ public:
 	using value_t = llvm_value_t<T>;
 
 	template <typename T>
+	value_t<T> value(llvm::Value* value)
+	{
+		if (!value || value->getType() != get_type<T>())
+		{
+			fmt::throw_exception("cpu_translator::value<>(): invalid value type");
+		}
+
+		value_t<T> result;
+		result.value = value;
+		return result;
+	}
+
+	template <typename T>
 	auto eval(T expr)
 	{
 		value_t<typename T::type> result;
@@ -1166,6 +1179,18 @@ public:
 	{
 		value_t<std::conditional_t<llvm_value_t<typename T::type>::is_vector != 0, bool[llvm_value_t<typename T::type>::is_vector], bool>> result;
 		result.value = m_ir->CreateFCmp(FPred, a.eval(m_ir), b.eval(m_ir));
+		return result;
+	}
+
+	// Opportunistic hardware FMA, can be used if results are identical for all possible input values
+	template <typename T>
+	auto fmuladd(T a, T b, T c)
+	{
+		value_t<typename T::type> result;
+		const auto av = a.eval(m_ir);
+		const auto bv = b.eval(m_ir);
+		const auto cv = c.eval(m_ir);
+		result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::fmuladd), {av, bv, cv});
 		return result;
 	}
 
