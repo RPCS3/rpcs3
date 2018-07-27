@@ -1,7 +1,7 @@
 #include "stdafx.h"
 
 #include "Emu/Cell/ErrorCodes.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "sys_dbg.h"
 #include "Emu/Cell/Modules/sys_lv2dbg.h"
 

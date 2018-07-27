@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/RSX/GSRender.h"
@@ -124,10 +124,13 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
 	dmaControl.put = 0;
 	dmaControl.ref = 0xFFFFFFFF;
 
+	memset(RSXIOMem.ea, 0xFF, 512 * sizeof(u16));
+	memset(RSXIOMem.io, 0xFF, 3072 * sizeof(u16));
+
 	if (false/*system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB*/)
-		RSXIOMem.SetRange(0, 0x20000000 /*512MB*/);
+		rsx::get_current_renderer()->main_mem_size = 0x20000000; //512MB
 	else
-		RSXIOMem.SetRange(0, 0x10000000 /*256MB*/);
+		rsx::get_current_renderer()->main_mem_size = 0x10000000; //256MB
 
 	sys_event_queue_attribute_t attr;
 	attr.protocol = SYS_SYNC_PRIORITY;
@@ -175,9 +178,18 @@ s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags)
 {
 	sys_rsx.warning("sys_rsx_context_iomap(context_id=0x%x, io=0x%x, ea=0x%x, size=0x%x, flags=0x%llx)", context_id, io, ea, size, flags);
 
-	if (!RSXIOMem.Map(ea, size, io))
+	if (!size || io & 0xFFFFF || ea & 0xFFFFF || size & 0xFFFFF
+	 || rsx::get_current_renderer()->main_mem_size < io + size)
 	{
 		return CELL_EINVAL;
+	}
+
+	io >>= 20, ea >>= 20, size >>= 20;
+
+	for (u32 i = 0; i < size; i++)
+	{
+		RSXIOMem.io[ea + i] = io + i;
+		RSXIOMem.ea[io + i] = ea + i;
 	}
 
 	return CELL_OK;
@@ -186,15 +198,26 @@ s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags)
 /*
  * lv2 SysCall 673 (0x2A1): sys_rsx_context_iounmap
  * @param context_id (IN): RSX context, E.g. 0x55555555 (in vsh.self)
- * @param io_addr (IN): IO address. E.g. 0x00600000 (Start page 6)
+ * @param io (IN): IO address. E.g. 0x00600000 (Start page 6)
  * @param size (IN): Size to unmap in byte. E.g. 0x00200000
  */
-s32 sys_rsx_context_iounmap(u32 context_id, u32 io_addr, u32 size)
+s32 sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 {
-	sys_rsx.warning("sys_rsx_context_iounmap(context_id=0x%x, io_addr=0x%x, size=0x%x)", context_id, io_addr, size);
-	if (RSXIOMem.UnmapAddress(io_addr, size))
-		return CELL_OK;
-	return CELL_EINVAL;
+	sys_rsx.warning("sys_rsx_context_iounmap(context_id=0x%x, io=0x%x, size=0x%x)", context_id, io, size);
+
+	if (!size || rsx::get_current_renderer()->main_mem_size < io + size)
+	{
+		return CELL_EINVAL;
+	}
+
+	const u32 end = (io >>= 20) + (size >>= 20);
+	for (u32 ea = RSXIOMem.ea[io]; io < end;) 
+	{
+		RSXIOMem.io[ea++] = 0xFFFF;
+		RSXIOMem.ea[io++] = 0xFFFF;
+	}
+
+	return CELL_OK;
 }
 
 /*

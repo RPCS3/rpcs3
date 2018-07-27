@@ -11,7 +11,7 @@
 #include "rpcs3/Emu/VFS.h"
 #include "Emu/System.h"
 
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 
 #include "yaml-cpp/yaml.h"

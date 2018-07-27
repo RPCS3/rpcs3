@@ -327,9 +327,6 @@
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThread.cpp" />
     <ClCompile Include="Emu\VFS.cpp" />
-    <ClCompile Include="Emu\Memory\Memory.cpp">
-      <ObjectFileName>$(IntDir)OldMemory.obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\GSRender.cpp" />
     <ClCompile Include="Emu\RSX\RSXTexture.cpp" />
     <ClCompile Include="Emu\RSX\RSXThread.cpp" />
@@ -546,8 +543,6 @@
     <ClInclude Include="Emu\Io\Null\NullMouseHandler.h" />
     <ClInclude Include="Emu\Io\Null\NullPadHandler.h" />
     <ClInclude Include="Emu\Io\PadHandler.h" />
-    <ClInclude Include="Emu\Memory\Memory.h" />
-    <ClInclude Include="Emu\Memory\MemoryBlock.h" />
     <ClInclude Include="Emu\RSX\CgBinaryProgram.h" />
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h" />
     <ClInclude Include="Emu\RSX\Common\FragmentProgramDecompiler.h" />

@@ -215,8 +215,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	{
 		if (const auto render = rsx::get_current_renderer())
 		{
-			u32 realAddr;
-			if (RSXIOMem.getRealAddr(render->ctrl->get.load(), realAddr))
+			if (u32 realAddr = RSXIOMem.RealAddr(render->ctrl->get.load()))
 			{
 				m_addr = realAddr;
 				UpdateInformation();
@@ -227,8 +226,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	{
 		if (const auto render = rsx::get_current_renderer())
 		{
-			u32 realAddr;
-			if (RSXIOMem.getRealAddr(render->ctrl->put.load(), realAddr))
+			if (u32 realAddr = RSXIOMem.RealAddr(render->ctrl->put.load()))
 			{
 				m_addr = realAddr;
 				UpdateInformation();
