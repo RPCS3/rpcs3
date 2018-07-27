@@ -3710,9 +3710,9 @@ public:
 	{
 		const auto a = get_vr(op.ra);
 		const auto b = get_vr(op.rb);
-		const auto c = eval(get_vr<s32[4]>(op.rt) << 31);
+		const auto x = eval(~get_vr<u32[4]>(op.rt) & 1);
 		const auto s = eval(a + b);
-		set_vr(op.rt, zext<u32[4]>(s < a | (s == -1 & c < 0)));
+		set_vr(op.rt, zext<u32[4]>((sext<u32[4]>(s < a) | (s & ~x)) == -1));
 	}
 
 	void BGX(spu_opcode_t op)
