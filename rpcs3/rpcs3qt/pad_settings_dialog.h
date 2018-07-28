@@ -61,6 +61,7 @@ class pad_settings_dialog : public QDialog
 		id_reset_parameters,
 		id_blacklist,
 		id_refresh,
+		id_add_profile,
 		id_ok,
 		id_cancel
 	};

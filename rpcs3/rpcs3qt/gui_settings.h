@@ -127,6 +127,7 @@ namespace gui
 	const QString gs_frame    = "GSFrame";
 	const QString trophy      = "Trophy";
 	const QString savedata    = "SaveData";
+	const QString users       = "Users";
 	const QString notes       = "Notes";
 
 	const QColor gl_icon_color = QColor(36, 36, 36, 255);
@@ -217,6 +218,9 @@ namespace gui
 	const gui_save tr_trophy_state  = gui_save(trophy, "trophy_state",  QByteArray());
 
 	const gui_save sd_geometry = gui_save(savedata, "geometry", QByteArray());
+
+	const gui_save um_geometry    = gui_save(users, "geometry",    QByteArray());
+	const gui_save um_active_user = gui_save(users, "active_user", "00000001");
 }
 
 /** Class for GUI settings..
@@ -229,6 +233,7 @@ public:
 	explicit gui_settings(QObject* parent = nullptr);
 	~gui_settings();
 
+	QString GetCurrentUser();
 	QString GetSettingsDir();
 
 	/** Changes the settings file to the destination preset*/

@@ -209,6 +209,8 @@ class Emulator final
 	std::string m_title;
 	std::string m_cat;
 	std::string m_dir;
+	std::string m_usr{"00000001"};
+	u32 m_usrid{1};
 
 	bool m_force_boot = false;
 
@@ -276,6 +278,20 @@ public:
 	{
 		return m_dir;
 	}
+
+	// String for GUI dialogs.
+	const std::string& GetUsr() const
+	{
+		return m_usr;
+	}
+
+	// u32 for cell.
+	const u32 GetUsrId() const
+	{
+		return m_usrid;
+	}
+
+	const bool SetUsr(const std::string& user);
 
 	u64 GetPauseTime()
 	{
