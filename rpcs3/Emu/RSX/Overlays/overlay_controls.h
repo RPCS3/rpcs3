@@ -1331,7 +1331,10 @@ namespace rsx
 			f32 m_value = 0.f;
 
 		public:
-			using overlay_element::overlay_element;
+			progress_bar()
+			{
+				text_view.back_color = { 0.f, 0.f, 0.f, 0.f };
+			}
 
 			void inc(f32 value)
 			{

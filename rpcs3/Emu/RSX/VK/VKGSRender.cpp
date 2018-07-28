@@ -1616,7 +1616,7 @@ void VKGSRender::on_init_thread()
 				type.disable_cancel = true;
 				type.progress_bar_count = 2;
 
-				dlg = fxm::get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>();
+				dlg = fxm::get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>(true);
 				dlg->progress_bar_set_taskbar_index(-1);
 				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
 				{
