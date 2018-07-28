@@ -726,6 +726,7 @@ namespace rsx
 			image_button btn_cancel;
 
 			overlay_element bottom_bar, background;
+			image_view background_poster;
 			progress_bar progress_1, progress_2;
 			u8 num_progress_bars = 0;
 			s32 taskbar_index = 0;
@@ -735,8 +736,10 @@ namespace rsx
 			bool ok_only = false;
 			bool cancel_only = false;
 
+			std::unique_ptr<image_info> background_image;
+
 		public:
-			message_dialog()
+			message_dialog(bool use_custom_background = false)
 			{
 				background.set_size(1280, 720);
 				background.back_color.a = 0.85f;
@@ -746,6 +749,7 @@ namespace rsx
 				text_display.set_font("Arial", 16);
 				text_display.align_text(overlay_element::text_align::center);
 				text_display.set_wrap_text(true);
+				text_display.back_color.a = 0.f;
 
 				bottom_bar.back_color = color4f(1.f, 1.f, 1.f, 1.f);
 				bottom_bar.set_size(1200, 2);
@@ -768,20 +772,55 @@ namespace rsx
 				btn_cancel.set_pos(685, 420);
 				btn_cancel.set_font("Arial", 16);
 
+				if (use_custom_background)
+				{
+					std::string root_path = Emu.GetBoot();
+					root_path = root_path.substr(0, root_path.find_last_of("/"));
+
+					auto icon_path = root_path + "../../PIC1.PNG";
+					if (!fs::exists(icon_path))
+					{
+						// Fallback path
+						icon_path = root_path + "../../ICON0.PNG";
+					}
+
+					if (fs::exists(icon_path))
+					{
+						background_image = std::make_unique<image_info>(icon_path.c_str());
+						if (background_image->data)
+						{
+							background.back_color.a = 0.65;
+
+							background_poster.set_size(1280, 720);
+							background_poster.set_raw_image(background_image.get());
+						}
+					}
+				}
+
 				return_code = CELL_MSGDIALOG_BUTTON_NONE;
 			}
 
 			compiled_resource get_compiled() override
 			{
 				compiled_resource result;
+
+				if (background_image && background_image->data)
+				{
+					result.add(background_poster.get_compiled());
+				}
+
 				result.add(background.get_compiled());
 				result.add(text_display.get_compiled());
 
 				if (num_progress_bars > 0)
+				{
 					result.add(progress_1.get_compiled());
+				}
 
 				if (num_progress_bars > 1)
+				{
 					result.add(progress_2.get_compiled());
+				}
 
 				if (interactive)
 				{
