@@ -566,6 +566,7 @@ namespace rsx
 				{
 					//New internal get is valid, use it
 					restore_point = internal_get.load();
+					restore_ret_addr = m_return_addr;
 				}
 				else
 				{
@@ -623,6 +624,7 @@ namespace rsx
 					{
 						LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
 						internal_get = restore_point.load();
+						m_return_addr = restore_ret_addr;
 					}
 					else
 					{
@@ -677,23 +679,28 @@ namespace rsx
 			}
 			if ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
 			{
-				m_call_stack.push(internal_get + 4);
+				if (m_return_addr != -1)
+				{
+					// Only one layer is allowed in the call stack. 
+					LOG_ERROR(RSX, "FIFO: CALL found inside a subroutine. Discarding subroutine");
+					internal_get = std::exchange(m_return_addr, -1);
+					continue;
+				}
 				u32 offs = cmd & ~3;
 				//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-				internal_get = offs;
+				m_return_addr = std::exchange(internal_get.raw(), offs) + 4;
 				continue;
 			}
 			if (cmd == RSX_METHOD_RETURN_CMD)
 			{
-				if (m_call_stack.size() == 0)
+				if (m_return_addr == -1)
 				{
 					LOG_ERROR(RSX, "FIFO: RET found without corresponding CALL. Discarding queue");
 					internal_get = put;
 					continue;
 				}
 
-				u32 get = m_call_stack.top();
-				m_call_stack.pop();
+				u32 get = std::exchange(m_return_addr, -1);
 				//LOG_WARNING(RSX, "rsx return(0x%x)", get);
 				internal_get = get;
 				continue;
@@ -721,6 +728,7 @@ namespace rsx
 				{
 					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
 					internal_get = restore_point.load();
+					m_return_addr = restore_ret_addr;
 				}
 				else
 				{
@@ -987,6 +995,7 @@ namespace rsx
 				//Ignore the rest of the chain
 				LOG_ERROR(RSX, "FIFO contents may be corrupted. Resetting...");
 				internal_get = restore_point.load();
+				m_return_addr = restore_ret_addr;
 				continue;
 			}
 
