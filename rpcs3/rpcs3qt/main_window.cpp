@@ -1814,10 +1814,7 @@ void main_window::dropEvent(QDropEvent* event)
 		m_gameListFrame->Refresh(true);
 		break;
 	case drop_type::drop_rrc: // replay a rsx capture file
-		if (Emu.BootRsxCapture(sstr(dropPaths.first())))
-		{
-			LOG_SUCCESS(GENERAL, "rcc Boot from drag and drop done: %s", sstr(dropPaths.first()));
-		}
+		BootRsxCapture(sstr(dropPaths.first()));
 	default:
 		LOG_WARNING(GENERAL, "Invalid dropType in gamelist dropEvent");
 		break;
