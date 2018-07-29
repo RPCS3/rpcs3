@@ -2,6 +2,7 @@
 #include "custom_table_widget_item.h"
 #include "table_item_delegate.h"
 #include "qt_utils.h"
+#include "game_list.h"
 
 #include "stdafx.h"
 
@@ -68,7 +69,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_progress = new QLabel(tr("Progress: %1% (%2/%3)").arg(0).arg(0).arg(0));
 
 	// Games Table
-	m_game_table = new QTableWidget();
+	m_game_table = new game_list();
 	m_game_table->setObjectName("trophy_manager_game_table");
 	m_game_table->setShowGrid(false);
 	m_game_table->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -90,7 +91,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_table->installEventFilter(this);
 
 	// Trophy Table
-	m_trophy_table = new QTableWidget();
+	m_trophy_table = new game_list();
 	m_trophy_table->setObjectName("trophy_manager_trophy_table");
 	m_trophy_table->setShowGrid(false);
 	m_trophy_table->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -314,7 +315,11 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 
 	connect(m_game_table, &QTableWidget::itemSelectionChanged, [this]
 	{
-		m_game_combo->setCurrentText(m_game_table->item(m_game_table->currentRow(), GameColumns::GameName)->text());
+		if (m_game_table->selectedItems().isEmpty())
+		{
+			return;
+		}
+		m_game_combo->setCurrentText(m_game_table->item(m_game_table->selectedItems().first()->row(), GameColumns::GameName)->text());
 	});
 
 	RepaintUI(true);
