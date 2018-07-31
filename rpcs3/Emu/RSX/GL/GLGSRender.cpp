@@ -632,7 +632,11 @@ void GLGSRender::on_init_thread()
 	// NOTES: All contexts have to be created before any is bound to a thread
 	// This allows context sharing to work (both GLRCs passed to wglShareLists have to be idle or you get ERROR_BUSY)
 	m_context = m_frame->make_context();
-	m_decompiler_context = m_frame->make_context();
+
+	if (!g_cfg.video.disable_asynchronous_shader_compiler)
+	{
+		m_decompiler_context = m_frame->make_context();
+	}
 
 	// Bind primary context to main RSX thread
 	m_frame->set_current(m_context);
