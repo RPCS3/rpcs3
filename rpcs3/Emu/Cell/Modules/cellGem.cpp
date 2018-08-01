@@ -6,6 +6,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "pad_thread.h"
+#include "Emu/Io/MouseHandler.h"
 #include "Utilities/Timer.h"
 
 logs::channel cellGem("cellGem");
@@ -143,7 +144,7 @@ static bool check_gem_num(const u32 gem_num)
  * \param analog_t Analog value of Move's Trigger. Currently mapped to R2.
  * \return true on success, false if port_no controller is invalid
  */
-static bool map_to_ds3_input(const u32 port_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
+static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
 {
 	const auto handler = fxm::get<pad_thread>();
 
@@ -243,7 +244,7 @@ static bool map_to_ds3_input(const u32 port_no, be_t<u16>& digital_buttons, be_t
  * \param ext External data to modify
  * \return true on success, false if port_no controller is invalid
  */
-static bool map_ext_to_ds3_input(const u32 port_no, CellGemExtPortData& ext)
+static bool ds3_input_to_ext(const u32 port_no, CellGemExtPortData& ext)
 {
 	const auto handler = fxm::get<pad_thread>();
 
@@ -276,6 +277,71 @@ static bool map_ext_to_ds3_input(const u32 port_no, CellGemExtPortData& ext)
 	ext.analog_right_y = pad->m_analog_right_y;
 	ext.digital1 = pad->m_digital_1;
 	ext.digital2 = pad->m_digital_2;
+
+	return true;
+}
+
+/**
+* \brief Maps Move controller data (digital buttons, and analog Trigger data) to mouse input.
+*        Move Button: Mouse1
+*        Trigger:     Mouse2
+* \param mouse_no Mouse index number to use
+* \param digital_buttons Bitmask filled with CELL_GEM_CTRL_* values
+* \param analog_t Analog value of Move's Trigger.
+* \return true on success, false if mouse mouse_no is invalid
+*/
+static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
+{
+	const auto handler = fxm::get<MouseHandlerBase>();
+
+	if (!handler || handler->GetInfo().status[mouse_no] != CELL_MOUSE_STATUS_CONNECTED)
+	{
+		return false;
+	}
+
+	const MouseData& mouse_data = handler->GetDataList(mouse_no).front();
+
+	memset(&digital_buttons, 0, sizeof(digital_buttons));
+
+	if (mouse_data.buttons & CELL_MOUSE_BUTTON_1)
+		digital_buttons |= CELL_GEM_CTRL_T;
+
+	if (mouse_data.buttons & CELL_MOUSE_BUTTON_2)
+		digital_buttons |= CELL_GEM_CTRL_MOVE;
+
+	if (mouse_data.buttons & CELL_MOUSE_BUTTON_3)
+		digital_buttons |= CELL_GEM_CTRL_CROSS;
+
+	analog_t = mouse_data.buttons & CELL_MOUSE_BUTTON_1 ? 0xFFFF : 0;
+
+	return true;
+}
+
+static bool mouse_input_to_gem(const u32 mouse_no, vm::ptr<CellGemState>& gem_state)
+{
+	const auto handler = fxm::get<MouseHandlerBase>();
+	
+	if (!gem_state || !handler)
+	{
+		return false;
+	}
+
+	auto& mouse = handler->GetMice().at(0);
+
+	f32 x_pos = mouse.x_pos;
+	f32 y_pos = mouse.y_pos;
+
+	static constexpr auto aspect_ratio = 1.2;
+
+	static constexpr auto screen_offset_x = 400.0;
+	static constexpr auto screen_offset_y = screen_offset_x * aspect_ratio;
+
+	static constexpr auto screen_scale = 6.0;
+
+	gem_state->pos[0] = screen_offset_x / screen_scale + x_pos / screen_scale;
+	gem_state->pos[1] = screen_offset_y / screen_scale + -y_pos / screen_scale * aspect_ratio;
+	gem_state->pos[2] = 2000;
+	gem_state->pos[3] = 0;
 
 	return true;
 }
@@ -396,6 +462,12 @@ s32 cellGemEnd()
 	if (!fxm::remove<gem_t>())
 	{
 		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (g_cfg.io.move == move_handler::fake &&
+		g_cfg.io.mouse == mouse_handler::basic)
+	{
+		fxm::remove<MouseHandlerBase>();
 	}
 
 	return CELL_OK;
@@ -527,9 +599,9 @@ s32 cellGemGetHuePixels(vm::cptr<void> camera_frame, u32 hue, vm::ptr<u8> pixels
 	return CELL_OK;
 }
 
-s32 cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> image_state)
+s32 cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_image_state)
 {
-	cellGem.todo("cellGemGetImageState(gem_num=%d, image_state=&0x%x)", gem_num, image_state);
+	cellGem.todo("cellGemGetImageState(gem_num=%d, image_state=&0x%x)", gem_num, gem_image_state);
 	const auto gem = fxm::get<gem_t>();
 
 	if (!gem)
@@ -537,7 +609,7 @@ s32 cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> image_state)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!check_gem_num(gem_num) || !image_state)
+	if (!check_gem_num(gem_num) || !gem_image_state)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -546,17 +618,40 @@ s32 cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> image_state)
 	{
 		auto shared_data = fxm::get_always<gem_camera_shared>();
 
-		image_state->frame_timestamp = shared_data->frame_timestamp.load();
-		image_state->timestamp = image_state->frame_timestamp + 10;   // arbitrarily define 10 usecs of frame processing
-		image_state->visible = true;
-		image_state->u = 0;
-		image_state->v = 0;
-		image_state->r = 20;
-		image_state->r_valid = true;
-		image_state->distance = 2 * 1000;   // 2 meters away from camera
+		if (g_cfg.io.mouse == mouse_handler::basic)
+		{
+			const auto handler = fxm::get<MouseHandlerBase>();
+			auto& mouse = handler->GetMice().at(0);
+
+			f32 x_pos = mouse.x_pos;
+			f32 y_pos = mouse.y_pos;
+
+			static constexpr auto aspect_ratio = 1.2;
+
+			static constexpr auto screen_offset_x = 400.0;
+			static constexpr auto screen_offset_y = screen_offset_x * aspect_ratio;
+
+			static constexpr auto screen_scale = 3.0;
+
+			gem_image_state->u = screen_offset_x / screen_scale + x_pos / screen_scale;
+			gem_image_state->v = screen_offset_y / screen_scale + y_pos / screen_scale * aspect_ratio;
+			gem_image_state->r = 10;
+		}
+		else
+		{
+			gem_image_state->u = 0;
+			gem_image_state->v = 0;
+			gem_image_state->r = 20;
+		}
+
+		gem_image_state->frame_timestamp = shared_data->frame_timestamp.load();
+		gem_image_state->timestamp = gem_image_state->frame_timestamp + 10;   // arbitrarily define 10 usecs of frame processing
+		gem_image_state->visible = true;
+		gem_image_state->r_valid = true;
+		gem_image_state->distance = 2 * 1000;   // 2 meters away from camera
 		// TODO
-		image_state->projectionx = 1;
-		image_state->projectiony = 1;
+		gem_image_state->projectionx = 1;
+		gem_image_state->projectiony = 1;
 	}
 
 	return CELL_OK;
@@ -579,8 +674,16 @@ s32 cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, vm::ptr<
 
 	if (g_cfg.io.move == move_handler::fake)
 	{
-		map_to_ds3_input(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
-		map_ext_to_ds3_input(gem_num, inertial_state->ext);
+		ds3_input_to_ext(gem_num, inertial_state->ext);
+
+		if (g_cfg.io.mouse == mouse_handler::basic)
+		{
+			mouse_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
+		}
+		else
+		{
+			ds3_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
+		}
 
 		inertial_state->timestamp = gem->timer.GetElapsedTimeInMicroSec();
 
@@ -643,7 +746,7 @@ s32 cellGemGetRGB(u32 gem_num, vm::ptr<float> r, vm::ptr<float> g, vm::ptr<float
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!check_gem_num(gem_num) | !r || !g || !b )
+	if (!check_gem_num(gem_num) || !r || !g || !b )
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -693,8 +796,17 @@ s32 cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<CellGemSt
 
 	if (g_cfg.io.move == move_handler::fake)
 	{
-		map_to_ds3_input(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
-		map_ext_to_ds3_input(gem_num, gem_state->ext);
+		ds3_input_to_ext(gem_num, gem_state->ext);
+
+		if (g_cfg.io.mouse == mouse_handler::basic)
+		{
+			mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
+			mouse_input_to_gem(gem_num, gem_state);
+		}
+		else
+		{
+			ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
+		}
 
 		gem_state->tracking_flags = CELL_GEM_TRACKING_FLAG_POSITION_TRACKED | CELL_GEM_TRACKING_FLAG_VISIBLE;
 		gem_state->timestamp = gem->timer.GetElapsedTimeInMicroSec();
@@ -783,6 +895,15 @@ s32 cellGemInit(vm::cptr<CellGemAttribute> attribute)
 	}
 
 	gem->attribute = *attribute;
+
+	if (g_cfg.io.move == move_handler::fake &&
+		g_cfg.io.mouse == mouse_handler::basic)
+	{
+		// init mouse handler
+		const auto handler = fxm::import_always<MouseHandlerBase>(Emu.GetCallbacks().get_mouse_handler);
+
+		handler->Init(std::min(attribute->max_connect.value(), static_cast<u32>(CELL_GEM_MAX_NUM)));
+	}
 
 	for (auto gem_num = 0; gem_num < CELL_GEM_MAX_NUM; gem_num++)
 	{
@@ -885,7 +1006,7 @@ s32 cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_attribu
 
 s32 cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, vm::ptr<u8[CELL_GEM_EXTERNAL_PORT_DEVICE_INFO_SIZE]> ext_info)
 {
-	cellGem.todo("cellGemReset(gem_num=%d, ext_id=*0x%x, ext_info=%s)", gem_num, ext_id, ext_info);
+	cellGem.todo("cellGemReadExternalPortDeviceInfo(gem_num=%d, ext_id=*0x%x, ext_info=%s)", gem_num, ext_id, ext_info);
 	auto gem = fxm::get<gem_t>();
 
 	if (!gem)
