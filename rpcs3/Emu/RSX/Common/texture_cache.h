@@ -1600,39 +1600,36 @@ namespace rsx
 				scale_y = 0.f;
 			}
 
-			if (internal_width > surface_width || internal_height > surface_height)
+			auto bpp = get_format_block_size_in_bytes(format);
+			auto overlapping = m_rtts.get_merged_texture_memory_region(texaddr, tex_width, tex_height, tex_pitch, bpp);
+
+			if (overlapping.size() > 1)
 			{
-				auto bpp = get_format_block_size_in_bytes(format);
-				auto overlapping = m_rtts.get_merged_texture_memory_region(texaddr, tex_width, tex_height, tex_pitch, bpp);
+				const auto w = rsx::apply_resolution_scale(internal_width, true);
+				const auto h = rsx::apply_resolution_scale(internal_height, true);
 
-				if (overlapping.size() > 1)
+				sampled_image_descriptor result = { texptr->get_surface(), deferred_request_command::atlas_gather,
+						texaddr, format, 0, 0, w, h, 1, texture_upload_context::framebuffer_storage, is_depth,
+						scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
+
+				result.external_subresource_desc.sections_to_copy.reserve(overlapping.size());
+
+				for (auto &section : overlapping)
 				{
-					const auto w = rsx::apply_resolution_scale(internal_width, true);
-					const auto h = rsx::apply_resolution_scale(internal_height, true);
-
-					sampled_image_descriptor result = { texptr->get_surface(), deferred_request_command::atlas_gather,
-							texaddr, format, 0, 0, w, h, 1, texture_upload_context::framebuffer_storage, is_depth,
-							scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
-
-					result.external_subresource_desc.sections_to_copy.reserve(overlapping.size());
-
-					for (auto &section : overlapping)
-					{
-						result.external_subresource_desc.sections_to_copy.push_back
-						({
-							section.surface->get_surface(),
-							rsx::apply_resolution_scale(section.src_x, true),
-							rsx::apply_resolution_scale(section.src_y, true),
-							rsx::apply_resolution_scale(section.dst_x, true),
-							rsx::apply_resolution_scale(section.dst_y, true),
-							0,
-							rsx::apply_resolution_scale(section.width, true),
-							rsx::apply_resolution_scale(section.height, true)
-						});
-					}
-
-					return result;
+					result.external_subresource_desc.sections_to_copy.push_back
+					({
+						section.surface->get_surface(),
+						rsx::apply_resolution_scale(section.src_x, true),
+						rsx::apply_resolution_scale(section.src_y, true),
+						rsx::apply_resolution_scale(section.dst_x, true),
+						rsx::apply_resolution_scale(section.dst_y, true),
+						0,
+						rsx::apply_resolution_scale(section.width, true),
+						rsx::apply_resolution_scale(section.height, true)
+					});
 				}
+
+				return result;
 			}
 
 			bool requires_processing = surface_width > internal_width || surface_height > internal_height;

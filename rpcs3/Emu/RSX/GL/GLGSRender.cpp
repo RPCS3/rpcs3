@@ -1029,9 +1029,9 @@ void GLGSRender::clear_surface(u32 arg)
 		gl_state.clear_depth(f32(clear_depth) / max_depth_value);
 		mask |= GLenum(gl::buffers::depth);
 
-		if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+		if (const auto address = std::get<0>(m_rtts.m_bound_depth_stencil))
 		{
-			ds->on_write();
+			m_rtts.on_write(address);
 		}
 	}
 
@@ -1075,9 +1075,9 @@ void GLGSRender::clear_surface(u32 arg)
 
 			for (auto &rtt : m_rtts.m_bound_render_targets)
 			{
-				if (auto surface = std::get<1>(rtt))
+				if (const auto address = std::get<0>(rtt))
 				{
-					surface->on_write();
+					m_rtts.on_write(address);
 				}
 			}
 
