@@ -632,7 +632,6 @@ namespace rsx
 						std::this_thread::sleep_for(10ms);
 					}
 
-					invalid_command_interrupt_raised = true;
 					continue;
 				}
 
@@ -716,6 +715,14 @@ namespace rsx
 				internal_get += 4;
 				continue;
 			}
+			if (cmd & 0x3)
+			{
+				// TODO: Check for more invalid bits combinations
+				LOG_ERROR(RSX, "FIFO: Illegal command(0x%x) was executed. Resetting...", cmd);
+				internal_get = restore_point.load();
+				m_return_addr = restore_ret_addr;
+				continue;
+			}
 
 			//Validate the args ptr if the command attempts to read from it
 			const u32 args_address = RSXIOMem.RealAddr(internal_get + 4);
@@ -736,7 +743,6 @@ namespace rsx
 					std::this_thread::sleep_for(10ms);
 				}
 
-				invalid_command_interrupt_raised = true;
 				continue;
 			}
 
@@ -744,16 +750,7 @@ namespace rsx
 			mem_faults_count = 0;
 
 			auto args = vm::ptr<u32>::make(args_address);
-			invalid_command_interrupt_raised = false;
-			bool unaligned_command = false;
-
 			u32 first_cmd = (cmd & 0xfffc) >> 2;
-
-			if (cmd & 0x3)
-			{
-				LOG_WARNING(RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
-				unaligned_command = true;
-			}
 
 			// Not sure if this is worth trying to fix, but if it happens, its bad
 			// so logging it until its reported
@@ -984,19 +981,11 @@ namespace rsx
 
 				if (invalid_command_interrupt_raised)
 				{
+					invalid_command_interrupt_raised = false;
+
 					//Skip the rest of this command
 					break;
 				}
-			}
-
-			if (unaligned_command && invalid_command_interrupt_raised)
-			{
-				//This is almost guaranteed to be heap corruption at this point
-				//Ignore the rest of the chain
-				LOG_ERROR(RSX, "FIFO contents may be corrupted. Resetting...");
-				internal_get = restore_point.load();
-				m_return_addr = restore_ret_addr;
-				continue;
 			}
 
 			internal_get += (count + 1) * 4;
