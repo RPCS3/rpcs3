@@ -508,11 +508,11 @@ namespace rsx
 
 					padding->set_size(1, 1);
 					header_text->set_size(800, 40);
-					header_text->text = text1;
+					header_text->set_text(text1);
 					header_text->set_font("Arial", 16);
 					header_text->set_wrap_text(true);
 					subtext->set_size(800, 40);
-					subtext->text = text2;
+					subtext->set_text(text2);
 					subtext->set_font("Arial", 14);
 					subtext->set_wrap_text(true);
 
@@ -557,11 +557,11 @@ namespace rsx
 
 				m_description->set_font("Arial", 20);
 				m_description->set_pos(20, 37);
-				m_description->text = "Save Dialog";
+				m_description->set_text("Save Dialog");
 
 				m_time_thingy->set_font("Arial", 14);
 				m_time_thingy->set_pos(1000, 30);
-				m_time_thingy->text = date_time::current_time();
+				m_time_thingy->set_text(date_time::current_time());
 
 				static_cast<label*>(m_description.get())->auto_resize();
 				static_cast<label*>(m_time_thingy.get())->auto_resize();
@@ -624,15 +624,15 @@ namespace rsx
 
 				if (op >= 8)
 				{
-					m_description->text = "Delete Save";
+					m_description->set_text("Delete Save");
 				}
 				else if (op & 1)
 				{
-					m_description->text = "Load Save";
+					m_description->set_text("Load Save");
 				}
 				else
 				{
-					m_description->text = "Save";
+					m_description->set_text("Save");
 				}
 
 				const bool newpos_head = listSet->newData && listSet->newData->iconPosition == CELL_SAVEDATA_ICONPOS_HEAD;
