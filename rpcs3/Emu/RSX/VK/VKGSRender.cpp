@@ -1775,9 +1775,9 @@ void VKGSRender::clear_surface(u32 mask)
 
 				for (auto &rtt : m_rtts.m_bound_render_targets)
 				{
-					if (auto surface = std::get<1>(rtt))
+					if (const auto address = std::get<0>(rtt))
 					{
-						surface->on_write();
+						m_rtts.on_write(address);
 					}
 				}
 			}
@@ -1786,9 +1786,9 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (mask & 0x3)
 	{
-		if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+		if (const auto address = std::get<0>(m_rtts.m_bound_depth_stencil))
 		{
-			ds->on_write();
+			m_rtts.on_write(address);
 			clear_descriptors.push_back({ (VkImageAspectFlags)depth_stencil_mask, 0, depth_stencil_clear_values });
 		}
 	}

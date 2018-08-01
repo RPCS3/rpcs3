@@ -59,6 +59,26 @@ namespace rsx
 	};
 
 	template <typename image_storage_type>
+	struct surface_hierachy_info
+	{
+		struct memory_overlap_t
+		{
+			image_storage_type _ref;
+			u32 memory_address;
+			u32 x;
+			u32 y;
+			u32 w;
+			u32 h;
+		};
+
+		u32 memory_address;
+		u32 memory_range;
+		image_storage_type memory_contents;
+
+		std::vector<memory_overlap_t> overlapping_set;
+	};
+
+	template <typename image_storage_type>
 	struct render_target_descriptor
 	{
 		bool dirty = false;
@@ -155,12 +175,98 @@ namespace rsx
 		std::tuple<u32, surface_type> m_bound_depth_stencil = {};
 
 		std::list<surface_storage_type> invalidated_resources;
+		std::vector<surface_hierachy_info<surface_type>> m_memory_tree;
 		u64 cache_tag = 0ull;
 		u64 write_tag = 0ull;
+		u64 memory_tag = 0ull;
 
 		surface_store() = default;
 		~surface_store() = default;
 		surface_store(const surface_store&) = delete;
+
+	private:
+		void generate_render_target_memory_tree()
+		{
+			auto process_entry = [](surface_hierachy_info<surface_type>& block_info,
+				const surface_format_info& info,
+				u32 memory_address, u32 memory_end,
+				u32 address, surface_type surface)
+			{
+				if (address <= memory_address) // also intentionally fails on self-test
+					return;
+
+				if (address >= memory_end)
+					return;
+
+				surface_format_info info2;
+				Traits::get_surface_info(surface, &info2);
+				const auto offset = (address - memory_address);
+				const auto offset_y = (offset / info.rsx_pitch);
+				const auto offset_x = (offset % info.rsx_pitch) / info.bpp;
+				const auto pitch2 = info2.bpp * info2.surface_width;
+
+				const bool fits_w = ((offset % info.rsx_pitch) + pitch2) <= info.rsx_pitch;
+				const bool fits_h = ((offset_y + info2.surface_height) * info.rsx_pitch) <= (memory_end - memory_address);
+
+				if (fits_w && fits_h)
+				{
+					surface_hierachy_info<surface_type>::memory_overlap_t overlap;
+					overlap._ref = surface;
+					overlap.memory_address = address;
+					overlap.x = offset_x;
+					overlap.y = offset_y;
+					overlap.w = info2.surface_width;
+					overlap.h = info2.surface_height;
+
+					block_info.overlapping_set.push_back(overlap);
+				}
+				else
+				{
+					// TODO
+				}
+			};
+
+			auto process_block = [this, process_entry](u32 memory_address, surface_type surface)
+			{
+				surface_hierachy_info<surface_type> block_info;
+				surface_format_info info;
+				Traits::get_surface_info(surface, &info);
+				const auto memory_end = memory_address + (info.rsx_pitch * info.surface_height);
+
+				for (const auto &rtt : m_render_targets_storage)
+				{
+					process_entry(block_info, info, memory_address, memory_end, rtt.first, Traits::get(rtt.second));
+				}
+
+				for (const auto &ds : m_depth_stencil_storage)
+				{
+					process_entry(block_info, info, memory_address, memory_end, ds.first, Traits::get(ds.second));
+				}
+
+				if (!block_info.overlapping_set.empty())
+				{
+					block_info.memory_address = memory_address;
+					block_info.memory_range = (memory_end - memory_address);
+					block_info.memory_contents = surface;
+
+					m_memory_tree.push_back(block_info);
+				}
+			};
+
+			for (auto &rtt : m_bound_render_targets)
+			{
+				if (const auto address = std::get<0>(rtt))
+				{
+					process_block(address, std::get<1>(rtt));
+				}
+			}
+
+			if (const auto address = std::get<0>(m_bound_depth_stencil))
+			{
+				process_block(address, std::get<1>(m_bound_depth_stencil));
+			}
+		}
+
 	protected:
 		/**
 		* If render target already exists at address, issue state change operation on cmdList.
@@ -357,6 +463,7 @@ namespace rsx
 //			u32 clip_y = clip_vertical_reg;
 
 			cache_tag++;
+			m_memory_tree.clear();
 
 			// Make previous RTTs sampleable
 			for (std::tuple<u32, surface_type> &rtt : m_bound_render_targets)
@@ -907,13 +1014,43 @@ namespace rsx
 			return result;
 		}
 
-		void on_write()
+		void on_write(u32 address = 0)
 		{
-			if (write_tag == cache_tag)
+			if (!address && write_tag == cache_tag)
+			{
+				// Nothing to do
 				return;
+			}
+
+			if (memory_tag != cache_tag)
+			{
+				generate_render_target_memory_tree();
+				memory_tag = cache_tag;
+			}
+
+			if (!m_memory_tree.empty())
+			{
+				for (auto &e : m_memory_tree)
+				{
+					if (address && e.memory_address != address)
+					{
+						continue;
+					}
+
+					for (auto &entry : e.overlapping_set)
+					{
+						entry._ref->dirty = true;
+					}
+				}
+			}
 
 			for (auto &rtt : m_bound_render_targets)
 			{
+				if (address && std::get<0>(rtt) != address)
+				{
+					continue;
+				}
+
 				if (auto surface = std::get<1>(rtt))
 				{
 					surface->on_write();
@@ -922,10 +1059,21 @@ namespace rsx
 
 			if (auto ds = std::get<1>(m_bound_depth_stencil))
 			{
-				ds->on_write();
+				if (!address || std::get<0>(m_bound_depth_stencil) == address)
+				{
+					ds->on_write();
+				}
 			}
 
-			write_tag = cache_tag;
+			if (!address)
+			{
+				write_tag = cache_tag;
+			}
+		}
+
+		void notify_memory_structure_changed()
+		{
+			cache_tag++;
 		}
 	};
 }
