@@ -2718,15 +2718,13 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	}
 	case MFC_Size:
 	{
-		c->mov(*addr, SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
-		c->and_(*addr, 0x7fff);
+		c->mov(addr->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
 		c->mov(SPU_OFF_16(ch_mfc_cmd, &spu_mfc_cmd::size), addr->r16());
 		return;
 	}
 	case MFC_TagID:
 	{
-		c->mov(*addr, SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
-		c->and_(*addr, 0x1f);
+		c->mov(addr->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
 		c->mov(SPU_OFF_8(ch_mfc_cmd, &spu_mfc_cmd::tag), addr->r8());
 		return;
 	}
