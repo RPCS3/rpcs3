@@ -1339,7 +1339,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 	case MFC_SNDSIGB_CMD:
 	case MFC_SNDSIGF_CMD:
 	{
-		args.size = 4;
+		if (args.size != 4) break;
 		// Fallthrough
 	}
 	case MFC_PUT_CMD:
