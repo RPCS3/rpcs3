@@ -1072,8 +1072,9 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 	if (LIKELY(g_use_rtm))
 	{
-		if (ppu_stwcx_tx(addr, ppu.rtime, ppu.rdata, reg_value))
+		if (data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value))
 		{
+			vm::reservation_update(addr, sizeof(u32));
 			vm::reservation_notifier(addr, sizeof(u32)).notify_all();
 			ppu.raddr = 0;
 			return true;
@@ -1164,8 +1165,9 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	if (LIKELY(g_use_rtm))
 	{
-		if (ppu_stdcx_tx(addr, ppu.rtime, ppu.rdata, reg_value))
+		if (data.compare_and_swap_test(ppu.rdata, reg_value))
 		{
+			vm::reservation_update(addr, sizeof(u64));
 			vm::reservation_notifier(addr, sizeof(u64)).notify_all();
 			ppu.raddr = 0;
 			return true;
