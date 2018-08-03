@@ -33,9 +33,9 @@ spu_cache::~spu_cache()
 {
 }
 
-std::vector<std::vector<u32>> spu_cache::get()
+std::deque<std::vector<u32>> spu_cache::get()
 {
-	std::vector<std::vector<u32>> result;
+	std::deque<std::vector<u32>> result;
 
 	if (!m_file)
 	{
@@ -64,7 +64,7 @@ std::vector<std::vector<u32>> spu_cache::get()
 			break;
 		}
 
-		result.emplace_back(std::move(func));
+		result.emplace_front(std::move(func));
 	}
 
 	return result;
@@ -2161,6 +2161,11 @@ public:
 			fs::file(m_spurt->m_cache_path + "spu.log", fs::write + fs::append).write(log);
 		}
 
+		if (m_cache && g_cfg.core.spu_cache)
+		{
+			m_cache->add(func);
+		}
+
 		using namespace llvm;
 
 		// Create LLVM module
@@ -2447,7 +2452,19 @@ public:
 					}
 
 					// Execute recompiler function (TODO)
-					(this->*g_decoder.decode(op))({op});
+					try
+					{
+						(this->*g_decoder.decode(op))({op});
+					}
+					catch (const std::exception& e)
+					{
+						std::string dump;
+						raw_string_ostream out(dump);
+						out << *module; // print IR
+						out.flush();
+						LOG_ERROR(SPU, "[0x%x] LLVM dump:\n%s", m_pos, dump);
+						throw;
+					}
 				}
 
 				// Finalize block with fallthrough if necessary
@@ -2778,11 +2795,6 @@ public:
 		{
 			out.flush();
 			fs::file(m_spurt->m_cache_path + "spu.log", fs::write + fs::append).write(log);
-		}
-
-		if (m_cache && g_cfg.core.spu_cache)
-		{
-			m_cache->add(func);
 		}
 
 		return fn;

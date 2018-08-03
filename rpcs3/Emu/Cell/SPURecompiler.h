@@ -6,6 +6,7 @@
 #include <bitset>
 #include <memory>
 #include <string>
+#include <deque>
 
 // Helper class
 class spu_cache
@@ -22,7 +23,7 @@ public:
 		return m_file.operator bool();
 	}
 
-	std::vector<std::vector<u32>> get();
+	std::deque<std::vector<u32>> get();
 
 	void add(const std::vector<u32>& func);
 
