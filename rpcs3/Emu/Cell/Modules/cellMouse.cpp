@@ -4,6 +4,9 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Io/MouseHandler.h"
+
+#include "Utilities/sema.h"
+
 #include "cellMouse.h"
 
 extern logs::channel sys_io;
@@ -159,6 +162,8 @@ s32 cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
+	semaphore_lock lock(handler->mutex);
+
 	const MouseInfo& current_info = handler->GetInfo();
 
 	if (port_no >= handler->GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
@@ -168,7 +173,15 @@ s32 cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 
 	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_MOUSE_MODE) has any impact
 
-	MouseData& current_data = handler->GetDataList(port_no).front();
+	MouseDataList& data_list = handler->GetDataList(port_no);
+
+	if (data_list.size() == 0)
+	{
+		*data = {};
+		return CELL_OK;
+	}
+
+	const MouseData current_data = data_list.front();
 	data->update = current_data.update;
 	data->buttons = current_data.buttons;
 	data->x_axis = current_data.x_axis;
@@ -176,10 +189,7 @@ s32 cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 	data->wheel = current_data.wheel;
 	data->tilt = current_data.tilt;
 
-	current_data.update = CELL_MOUSE_DATA_NON;
-	current_data.x_axis = 0;
-	current_data.y_axis = 0;
-	current_data.wheel = 0;
+	data_list.pop_front();
 
 	return CELL_OK;
 }
@@ -199,6 +209,8 @@ s32 cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 	{
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
+
+	semaphore_lock lock(handler->mutex);
 
 	const MouseInfo& current_info = handler->GetInfo();
 
@@ -221,12 +233,9 @@ s32 cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 		data->list[i].y_axis = it->y_axis;
 		data->list[i].wheel = it->wheel;
 		data->list[i].tilt = it->tilt;
-
-		it->update = CELL_MOUSE_DATA_NON;
-		it->x_axis = 0;
-		it->y_axis = 0;
-		it->wheel = 0;
 	}
+
+	list.clear();
 
 	return CELL_OK;
 }

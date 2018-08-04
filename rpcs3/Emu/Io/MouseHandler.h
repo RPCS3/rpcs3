@@ -1,6 +1,7 @@
 #pragma once
 
 #include <list>
+#include "Utilities/sema.h"
 
 // TODO: HLE info (constants, structs, etc.) should not be available here
 
@@ -108,6 +109,7 @@ struct Mouse
 {
 	s16 x_pos;
 	s16 y_pos;
+	u8 buttons; // actual mouse button positions
 
 	MouseTabletDataList m_tablet_datalist;
 	MouseDataList m_datalist;
@@ -127,14 +129,32 @@ class MouseHandlerBase
 protected:
 	MouseInfo m_info;
 	std::vector<Mouse> m_mice;
+	std::chrono::steady_clock::time_point last_update;
+
+	bool is_time_for_update(double elapsed_time = 10.0) // 4-10 ms, let's use 10 for now
+	{
+		std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+		double elapsed = std::chrono::duration_cast<std::chrono::microseconds>(now - last_update).count() / 1000.0;
+
+		if (elapsed > elapsed_time)
+		{
+			last_update = now;
+			return true;
+		}
+		return false;
+	}
 
 public:
+	semaphore<> mutex;
+
 	virtual void Init(const u32 max_connect) = 0;
 	virtual ~MouseHandlerBase() = default;
 
 	void Button(u8 button, bool pressed)
 	{
-		for(u32 p=0; p < (u32)m_mice.size(); ++p)
+		semaphore_lock lock(mutex);
+
+		for (u32 p = 0; p < (u32)m_mice.size(); ++p)
 		{
 			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
 			{
@@ -148,13 +168,14 @@ public:
 				datalist.pop_front();
 			}
 
+			if (pressed)
+				m_mice[p].buttons |= button;
+			else
+				m_mice[p].buttons &= ~button;
+
 			MouseData new_data;
 			new_data.update = CELL_MOUSE_DATA_UPDATE;
-
-			if (pressed)
-				new_data.buttons |= button;
-			else
-				new_data.buttons &= ~button;
+			new_data.buttons = m_mice[p].buttons;
 
 			datalist.push_back(new_data);
 		}
@@ -162,7 +183,9 @@ public:
 
 	void Scroll(const s8 rotation)
 	{
-		for(u32 p=0; p < (u32)m_mice.size(); ++p)
+		semaphore_lock lock(mutex);
+
+		for (u32 p = 0; p < (u32)m_mice.size(); ++p)
 		{
 			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
 			{
@@ -179,14 +202,17 @@ public:
 			MouseData new_data;
 			new_data.update = CELL_MOUSE_DATA_UPDATE;
 			new_data.wheel = rotation / 120; //120=event.GetWheelDelta()
+			new_data.buttons = m_mice[p].buttons;
 
 			datalist.push_back(new_data);
 		}
 	}
 
-	void Move(const s16 x_pos_new, const s16 y_pos_new)
+	void Move(const s32 x_pos_new, const s32 y_pos_new, bool is_qt_fullscreen = false)
 	{
-		for(u32 p=0; p < (u32)m_mice.size(); ++p)
+		semaphore_lock lock(mutex);
+
+		for (u32 p = 0; p < (u32)m_mice.size(); ++p)
 		{
 			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
 			{
@@ -202,11 +228,21 @@ public:
 
 			MouseData new_data;
 			new_data.update = CELL_MOUSE_DATA_UPDATE;
-			new_data.x_axis += x_pos_new - m_mice[p].x_pos;
-			new_data.y_axis += y_pos_new - m_mice[p].y_pos;
+			new_data.buttons = m_mice[p].buttons;
 
-			m_mice[p].x_pos = x_pos_new;
-			m_mice[p].y_pos = y_pos_new;
+			if (is_qt_fullscreen)
+			{
+				new_data.x_axis = static_cast<s8>(std::clamp(x_pos_new, -127, 128));
+				new_data.y_axis = static_cast<s8>(std::clamp(y_pos_new, -127, 128));
+			}
+			else
+			{
+				new_data.x_axis = static_cast<s8>(std::clamp(x_pos_new - m_mice[p].x_pos, -127, 128));
+				new_data.y_axis = static_cast<s8>(std::clamp(y_pos_new - m_mice[p].y_pos, -127, 128));
+
+				m_mice[p].x_pos = x_pos_new;
+				m_mice[p].y_pos = y_pos_new;
+			}
 
 			/*CellMouseRawData& rawdata = GetRawData(p);
 			rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)

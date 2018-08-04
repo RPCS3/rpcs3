@@ -1,6 +1,7 @@
 #include "basic_mouse_handler.h"
 
 #include <QApplication>
+#include <QCursor>
 
 void basic_mouse_handler::Init(const u32 max_connect)
 {
@@ -83,11 +84,22 @@ void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
 
 void basic_mouse_handler::MouseScroll(QWheelEvent* event)
 {
-	// Woo lads, Qt handles multidimensional scrolls. Just gonna grab the x for now. Not sure if this works. TODO: Test
-	MouseHandlerBase::Scroll(event->angleDelta().x());
+	MouseHandlerBase::Scroll(event->angleDelta().y());
 }
 
 void basic_mouse_handler::MouseMove(QMouseEvent* event)
 {
-	MouseHandlerBase::Move(event->x(), event->y());
+	if (is_time_for_update())
+	{
+		if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen)
+		{
+			QPoint p_delta = m_target->geometry().topLeft() + QPoint(m_target->width() / 2, m_target->height() / 2);
+			QCursor::setPos(p_delta);
+			MouseHandlerBase::Move(event->x() - p_delta.x(), event->y() - p_delta.y(), true);
+		}
+		else
+		{
+			MouseHandlerBase::Move(event->x(), event->y());
+		}
+	}
 }
