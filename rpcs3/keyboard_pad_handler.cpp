@@ -8,6 +8,11 @@ constexpr auto qstr = QString::fromStdString;
 
 bool keyboard_pad_handler::Init()
 {
+	std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+	m_last_mouse_move_left  = now;
+	m_last_mouse_move_right = now;
+	m_last_mouse_move_up    = now;
+	m_last_mouse_move_down  = now;
 	return true;
 }
 
@@ -75,11 +80,13 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			bool is_max = pad->m_sticks[i].m_keyCodeMax == code;
 			bool is_min = pad->m_sticks[i].m_keyCodeMin == code;
 
+			u16 normalized_value = std::max(u16(1), static_cast<u16>(std::floor((double)value / 2.0)));
+
 			if (is_max)
-				m_stick_max[i] = pressed ? 255 : 128;
+				m_stick_max[i] = pressed ? 128 + normalized_value : 128;
 
 			if (is_min)
-				m_stick_min[i] = pressed ? 128 : 0;
+				m_stick_min[i] = pressed ? normalized_value : 0;
 
 			if (is_max || is_min)
 				pad->m_sticks[i].m_value = m_stick_max[i] - m_stick_min[i];
@@ -135,6 +142,9 @@ bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 			break;
 		case QEvent::MouseButtonRelease:
 			mouseReleaseEvent(static_cast<QMouseEvent*>(ev));
+			break;
+		case QEvent::MouseMove:
+			mouseMoveEvent(static_cast<QMouseEvent*>(ev));
 			break;
 		default:
 			break;
@@ -221,6 +231,54 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 
 void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
 {
+	if (event->modifiers() & Qt::AltModifier)
+	{
+		switch (event->key())
+		{
+		case Qt::Key_I:
+			m_deadzone_y = std::min(m_deadzone_y + 1, 255);
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone y = %d", m_deadzone_y);
+			event->ignore();
+			return;
+		case Qt::Key_U:
+			m_deadzone_y = std::max(0, m_deadzone_y - 1);
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone y = %d", m_deadzone_y);
+			event->ignore();
+			return;
+		case Qt::Key_Z:
+			m_deadzone_x = std::min(m_deadzone_x + 1, 255);
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone x = %d", m_deadzone_x);
+			event->ignore();
+			return;
+		case Qt::Key_T:
+			m_deadzone_x = std::max(0, m_deadzone_x - 1);
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone x = %d", m_deadzone_x);
+			event->ignore();
+			return;
+		case Qt::Key_K:
+			m_multi_y = std::min(m_multi_y + 0.1, 5.0);
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %.2f", m_multi_y);
+			event->ignore();
+			return;
+		case Qt::Key_J:
+			m_multi_y = std::max(0.0, m_multi_y - 0.1);
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %.2f", m_multi_y);
+			event->ignore();
+			return;
+		case Qt::Key_H:
+			m_multi_x = std::min(m_multi_x + 0.1, 5.0);
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %.2f", m_multi_x);
+			event->ignore();
+			return;
+		case Qt::Key_G:
+			m_multi_x = std::max(0.0, m_multi_x - 0.1);
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %.2f", m_multi_x);
+			event->ignore();
+			return;
+		default:
+			break;
+		}
+	}
 	processKeyEvent(event, 1);
 }
 
@@ -238,6 +296,63 @@ void keyboard_pad_handler::mousePressEvent(QMouseEvent* event)
 void keyboard_pad_handler::mouseReleaseEvent(QMouseEvent* event)
 {
 	Key(event->button(), 0, 0);
+	event->ignore();
+}
+
+void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
+{
+	static int movement_x = 0;
+	static int movement_y = 0;
+	static int last_pos_x = 0;
+	static int last_pos_y = 0;
+
+	if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen)
+	{
+		QPoint p_delta = m_target->geometry().topLeft() + QPoint(m_target->width() / 2, m_target->height() / 2);
+		QCursor::setPos(p_delta);
+
+		movement_x = event->x() - p_delta.x();
+		movement_y = event->y() - p_delta.y();
+	}
+	else
+	{
+		movement_x = event->x() - last_pos_x;
+		movement_y = event->y() - last_pos_y;
+
+		last_pos_x = event->x();
+		last_pos_y = event->y();
+	}
+
+	movement_x = m_multi_x * (double)movement_x;
+	movement_y = m_multi_y * (double)movement_y;
+
+	if (movement_x < 0)
+	{
+		Key(mouse::move_right, 0);
+		Key(mouse::move_left, 1, std::min(m_deadzone_x + std::abs(movement_x), 255));
+		m_last_mouse_move_left = std::chrono::steady_clock::now();
+	}
+	else if (movement_x > 0)
+	{
+		Key(mouse::move_left, 0);
+		Key(mouse::move_right, 1, std::min(m_deadzone_x + movement_x, 255));
+		m_last_mouse_move_right = std::chrono::steady_clock::now();
+	}
+
+	// in Qt mouse up is equivalent to movement_y < 0
+	if (movement_y < 0)
+	{
+		Key(mouse::move_down, 0);
+		Key(mouse::move_up, 1, std::min(m_deadzone_y + std::abs(movement_y), 255));
+		m_last_mouse_move_up = std::chrono::steady_clock::now();
+	}
+	else if (movement_y > 0)
+	{
+		Key(mouse::move_up, 0);
+		Key(mouse::move_down, 1, std::min(m_deadzone_y + movement_y, 255));
+		m_last_mouse_move_down = std::chrono::steady_clock::now();
+	}
+
 	event->ignore();
 }
 
@@ -453,6 +568,38 @@ void keyboard_pad_handler::ThreadProc()
 			bindings[i]->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 			last_connection_status[i] = true;
 			connected++;
+		}
+		else
+		{
+			static std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+			now = std::chrono::steady_clock::now();
+
+			double elapsed_left  = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_left).count() / 1000.0;
+			double elapsed_right = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_right).count() / 1000.0;
+			double elapsed_up    = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_up).count() / 1000.0;
+			double elapsed_down  = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_down).count() / 1000.0;
+
+			// roughly 1-2 frames to process the next mouse move
+			if (elapsed_left > 30.0)
+			{
+				Key(mouse::move_left, 0);
+				m_last_mouse_move_left = now;
+			}
+			if (elapsed_right > 30.0)
+			{
+				Key(mouse::move_right, 0);
+				m_last_mouse_move_right = now;
+			}
+			if (elapsed_up> 30.0)
+			{
+				Key(mouse::move_up, 0);
+				m_last_mouse_move_up = now;
+			}
+			if (elapsed_down > 30.0)
+			{
+				Key(mouse::move_down, 0);
+				m_last_mouse_move_down = now;
+			}
 		}
 	}
 }
