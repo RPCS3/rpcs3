@@ -245,7 +245,7 @@ void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
 			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone y = %d", m_deadzone_y);
 			event->ignore();
 			return;
-		case Qt::Key_Z:
+		case Qt::Key_Y:
 			m_deadzone_x = std::min(m_deadzone_x + 1, 255);
 			LOG_SUCCESS(GENERAL, "mouse move adjustment: deadzone x = %d", m_deadzone_x);
 			event->ignore();
