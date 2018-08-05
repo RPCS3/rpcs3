@@ -456,6 +456,7 @@ void pad_settings_dialog::ReactivateButtons()
 	if (m_padButtons->button(m_button_id))
 	{
 		m_padButtons->button(m_button_id)->setPalette(m_palette);
+		m_padButtons->button(m_button_id)->releaseMouse();
 	}
 
 	m_button_id = button_ids::id_pad_begin;
@@ -528,7 +529,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 	ReactivateButtons();
 }
 
-void pad_settings_dialog::mousePressEvent(QMouseEvent* event)
+void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 {
 	if (m_handler->m_type != pad_handler::keyboard)
 	{
@@ -553,12 +554,66 @@ void pad_settings_dialog::mousePressEvent(QMouseEvent* event)
 	ReactivateButtons();
 }
 
+void pad_settings_dialog::mouseMoveEvent(QMouseEvent* event)
+{
+	if (m_handler->m_type != pad_handler::keyboard)
+	{
+		return;
+	}
+
+	if (m_button_id == button_ids::id_pad_begin)
+	{
+		return;
+	}
+
+	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
+	{
+		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+	}
+	else
+	{
+		QPoint mouse_pos = QCursor::pos();
+		int delta_x = mouse_pos.x() - m_last_pos.x();
+		int delta_y = mouse_pos.y() - m_last_pos.y();
+
+		u32 key = 0;
+
+		if (delta_x > 100)
+		{
+			key = mouse::move_right;
+		}
+		else if (delta_x < -100)
+		{
+			key = mouse::move_left;
+		}
+		else if (delta_y > 100)
+		{
+			key = mouse::move_down;
+		}
+		else if (delta_y < -100)
+		{
+			key = mouse::move_up;
+		}
+
+		if (key != 0)
+		{
+			m_cfg_entries[m_button_id].key = ((keyboard_pad_handler*)m_handler.get())->GetMouseName(key);
+			m_cfg_entries[m_button_id].text = qstr(m_cfg_entries[m_button_id].key);
+			ReactivateButtons();
+		}
+	}
+}
+
 bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
 {
 	// Disabled buttons should not absorb mouseclicks
-	if (event->type() == QEvent::MouseButtonPress)
+	if (event->type() == QEvent::MouseButtonRelease)
 	{
 		event->ignore();
+	}
+	if (event->type() == QEvent::MouseMove)
+	{
+		mouseMoveEvent((QMouseEvent*)event);
 	}
 	return QDialog::eventFilter(object, event);
 }
@@ -637,9 +692,12 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	ui->chooseHandler->setFocusPolicy(Qt::ClickFocus);
 	ui->chooseDevice->setFocusPolicy(Qt::ClickFocus);
 
+	m_last_pos = QCursor::pos();
+
 	m_button_id = id;
 	m_padButtons->button(m_button_id)->setText(tr("[ Waiting %1 ]").arg(MAX_SECONDS));
 	m_padButtons->button(m_button_id)->setPalette(QPalette(Qt::blue));
+	m_padButtons->button(m_button_id)->grabMouse();
 	SwitchButtons(false); // disable all buttons, needed for using Space, Enter and other specific buttons
 	m_timer.start(1000);
 }
