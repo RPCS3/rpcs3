@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Memory/Memory.h"
@@ -2745,9 +2745,10 @@ public:
 
 	static s64 exec_read_events(SPUThread* _spu)
 	{
-		if (const u32 events = _spu->get_events())
+		if (_spu->get_events())
 		{
-			return events;
+			 _spu->ch_event_count = 0;
+			return _spu->ch_event_stat &_spu->ch_event_mask;
 		}
 
 		// TODO
@@ -2867,7 +2868,7 @@ public:
 		}
 		case SPU_RdMachStat:
 		{
-			res.value = m_ir->CreateZExt(m_ir->CreateLoad(spu_ptr<u8>(&SPUThread::interrupts_enabled)), get_type<u32>());
+			res.value = m_ir->CreateLShr(m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_event_stat)), 31);
 			break;
 		}
 
@@ -2970,8 +2971,6 @@ public:
 		case SPU_RdEventStat:
 		{
 			res.value = call(&exec_get_events, m_thread);
-			res.value = m_ir->CreateICmpNE(res.value, m_ir->getInt32(0));
-			res.value = m_ir->CreateZExt(res.value, get_type<u32>());
 			break;
 		}
 
@@ -4401,9 +4400,9 @@ public:
 	{
 		_spu->set_interrupt_status(true);
 
-		if ((_spu->ch_event_mask & _spu->ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
+		if (_spu->ch_event_count)
 		{
-			_spu->interrupts_enabled = false;
+			_spu->ch_event_stat &= ~SPU_EVENT_INTR_ENABLED;
 			_spu->srr0 = addr;
 
 			// Test for BR/BRA instructions (they are equivalent at zero pc)
@@ -4470,7 +4469,7 @@ public:
 
 		if (op.d)
 		{
-			m_ir->CreateStore(m_ir->getFalse(), spu_ptr<bool>(&SPUThread::interrupts_enabled))->setVolatile(true);
+			m_ir->CreateStore(m_ir->CreateAnd(m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_event_stat)), ~SPU_EVENT_INTR_ENABLED), spu_ptr<u32>(&SPUThread::ch_event_stat));
 		}
 
 		m_ir->CreateStore(addr.value, spu_ptr<u32>(&SPUThread::pc));

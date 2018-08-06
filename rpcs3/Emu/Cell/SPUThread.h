@@ -73,11 +73,10 @@ enum : u32
 	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN, // Mask of implemented events
 	SPU_EVENT_INTR_IMPLEMENTED = SPU_EVENT_SN,
 
-	SPU_EVENT_WAITING      = 0x80000000, // Originally unused, set when SPU thread starts waiting on ch_event_stat
-	//SPU_EVENT_AVAILABLE  = 0x40000000, // Originally unused, channel count of the SPU_RdEventStat channel
-	//SPU_EVENT_INTR_ENABLED = 0x20000000, // Originally unused, represents "SPU Interrupts Enabled" status
+	//SPU_EVENT_AVAILABLE  = 0x80000000, // Originally unused, channel count of the SPU_RdEventStat channel
+	SPU_EVENT_INTR_ENABLED = 0x80000000, // Originally unused, represents "SPU Interrupts Enabled" status
 
-	SPU_EVENT_INTR_TEST = SPU_EVENT_INTR_IMPLEMENTED
+	SPU_EVENT_INTR_TEST = SPU_EVENT_INTR_IMPLEMENTED /// | SPU_EVENT_AVAILABLE,
 };
 
 // SPU Class 0 Interrupts
@@ -558,9 +557,9 @@ public:
 	spu_channel ch_snr1; // SPU Signal Notification Register 1
 	spu_channel ch_snr2; // SPU Signal Notification Register 2
 
-	atomic_t<u32> ch_event_mask;
-	atomic_t<u32> ch_event_stat;
-	atomic_t<bool> interrupts_enabled;
+	u32 ch_event_mask;
+	u32 ch_event_stat;
+	u8 ch_event_count;
 
 	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
 	u32 ch_dec_value; // written decrementer value
@@ -599,8 +598,8 @@ public:
 	u32 get_mfc_completed();
 
 	bool process_mfc_cmd(spu_mfc_cmd args);
-	u32 get_events(bool waiting = false);
-	void set_events(u32 mask);
+	u32 get_events();
+	void set_event(const u32 bit);
 	void set_interrupt_status(bool enable);
 	u32 get_ch_count(u32 ch);
 	s64 get_ch_value(u32 ch);

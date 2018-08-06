@@ -1246,25 +1246,24 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 
 	if (op.d)
 	{
-		c->mov(SPU_OFF_8(interrupts_enabled), 0);
+		c->and_(SPU_OFF_32(ch_event_stat), ~(1u << 31));
 	}
 	else if (op.e)
 	{
 		auto _throw = [](SPUThread* _spu)
 		{
-			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, +_spu->ch_event_mask);
+			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, _spu->ch_event_mask);
 		};
 
 		Label no_intr = c->newLabel();
 		Label intr = c->newLabel();
 		Label fail = c->newLabel();
 
-		c->mov(SPU_OFF_8(interrupts_enabled), 1);
 		c->mov(qw1->r32(), SPU_OFF_32(ch_event_mask));
 		c->test(qw1->r32(), ~SPU_EVENT_INTR_IMPLEMENTED);
 		c->jnz(fail);
-		c->and_(qw1->r32(), SPU_OFF_32(ch_event_stat));
-		c->test(qw1->r32(), SPU_EVENT_INTR_IMPLEMENTED);
+		c->or_(SPU_OFF_32(ch_event_stat), SPU_EVENT_INTR_ENABLED);
+		c->test(SPU_OFF_32(ch_event_count), 1);
 		c->jnz(intr);
 		c->jmp(no_intr);
 		c->bind(fail);
@@ -1273,7 +1272,7 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 
 		// Save addr in srr0 and disable interrupts
 		c->bind(intr);
-		c->mov(SPU_OFF_8(interrupts_enabled), 0);
+		c->and_(SPU_OFF_32(ch_event_stat), ~SPU_EVENT_INTR_ENABLED);
 		c->mov(SPU_OFF_32(srr0), *addr);
 
 		// Test for BR/BRA instructions (they are equivalent at zero pc)
@@ -1411,6 +1410,17 @@ void spu_recompiler::load_rcx()
 #endif
 }
 
+void spu_recompiler::set_event(u8 bit)
+{
+	asmjit::Label no_count = c->newLabel();
+	c->bts(SPU_OFF_32(ch_event_stat), bit);
+	c->jc(no_count);
+	c->test(SPU_OFF_32(ch_event_mask), 1u << bit);
+	c->jz(no_count);
+	c->mov(SPU_OFF_32(ch_event_count), 1);
+	c->bind(no_count);
+}
+
 void spu_recompiler::get_events()
 {
 	using namespace asmjit;
@@ -1482,7 +1492,7 @@ void spu_recompiler::get_events()
 		}
 
 		c->bind(fail);
-		c->lock().bts(SPU_OFF_32(ch_event_stat), 10);
+		set_event(10); // SPU_EVENT_LR
 		c->mov(SPU_OFF_32(raddr), 0);
 		c->jmp(label1);
 	});
@@ -1490,6 +1500,7 @@ void spu_recompiler::get_events()
 	c->bind(label1);
 	c->cmp(SPU_OFF_32(ch_dec_value), 0);
 	c->jnz(tcheck);
+	set_event(5); // SPU_EVENT_TM
 
 	// Check decrementer event (unlikely)
 	after.emplace_back([=]
@@ -1498,7 +1509,7 @@ void spu_recompiler::get_events()
 		{
 			if ((_spu->ch_dec_value - (get_timebased_time() - _spu->ch_dec_start_timestamp)) >> 31)
 			{
-				_spu->ch_event_stat |= SPU_EVENT_TM;
+				_spu->set_event(5); // SPU_EVENT_TM
 			}
 
 			// Restore args and return
@@ -1508,18 +1519,6 @@ void spu_recompiler::get_events()
 		c->bind(tcheck);
 		c->lea(*ls, x86::qword_ptr(label2));
 		c->jmp(imm_ptr<void(*)(SPUThread*, spu_function_t)>(sub));
-	});
-
-	// Check whether SPU_EVENT_TM is already set
-	c->bt(SPU_OFF_32(ch_event_stat), 5);
-	c->jnc(treset);
-
-	// Set SPU_EVENT_TM (unlikely)
-	after.emplace_back([=]
-	{
-		c->bind(treset);
-		c->lock().bts(SPU_OFF_32(ch_event_stat), 5);
-		c->jmp(label2);
 	});
 
 	Label fail = c->newLabel();
@@ -1542,6 +1541,7 @@ void spu_recompiler::get_events()
 	c->test(qw1->r32(), ~SPU_EVENT_IMPLEMENTED);
 	c->jnz(fail);
 	c->and_(*addr, qw1->r32());
+	c->test(SPU_OFF_32(ch_event_count), 1);
 }
 
 void spu_recompiler::UNK(spu_opcode_t op)
@@ -1777,6 +1777,7 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 		Label wait = c->newLabel();
 		Label ret = c->newLabel();
 		c->jz(wait);
+		c->mov(SPU_OFF_32(ch_event_count), 0);
 
 		after.emplace_back([=, pos = m_pos]
 		{
@@ -1797,7 +1798,8 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 	case SPU_RdMachStat:
 	{
 		const XmmLink& vr = XmmAlloc();
-		c->movzx(*addr, SPU_OFF_8(interrupts_enabled));
+		c->mov(addr->r32(), SPU_OFF_32(ch_event_stat));
+		c->shr(addr->r32(), 31);
 		c->movd(vr, *addr);
 		c->pslldq(vr, 12);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
@@ -2779,15 +2781,26 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	}
 	case SPU_WrEventMask:
 	{
+		Label no_count = c->newLabel();
 		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
 		c->mov(SPU_OFF_32(ch_event_mask), qw0->r32());
+		c->and_(qw0->r32(), SPU_OFF_32(ch_event_stat));
+		c->je(no_count);
+		c->mov(SPU_OFF_32(ch_event_count), 1);
+		c->bind(no_count);
 		return;
 	}
 	case SPU_WrEventAck:
 	{
+		Label no_count = c->newLabel();
 		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
 		c->not_(qw0->r32());
-		c->lock().and_(SPU_OFF_32(ch_event_stat), qw0->r32());
+		c->and_(qw0->r32(), SPU_OFF_32(ch_event_stat));
+		c->mov(SPU_OFF_32(ch_event_stat), qw0->r32());
+		c->and_(qw0->r32(), SPU_OFF_32(ch_event_mask));
+		c->je(no_count);
+		c->mov(SPU_OFF_32(ch_event_count), 1);
+		c->bind(no_count);
 		return;
 	}
 	case 69:

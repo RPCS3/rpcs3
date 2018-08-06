@@ -9,6 +9,7 @@
 
 #include <cmath>
 #include <cfenv>
+#include <atomic>
 
 // Compare 16 packed unsigned bytes (greater than)
 inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
@@ -105,9 +106,8 @@ void spu_interpreter::set_interrupt_status(SPUThread& spu, spu_opcode_t op)
 		spu.set_interrupt_status(false);
 	}
 
-	if (spu.interrupts_enabled && (spu.ch_event_mask & spu.ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
+	if (spu.ch_event_count && test_and_reset(spu.ch_event_stat, (u32)SPU_EVENT_INTR_ENABLED))
 	{
-		spu.interrupts_enabled = false;
 		spu.srr0 = std::exchange(spu.pc, 0);
 	}
 }
