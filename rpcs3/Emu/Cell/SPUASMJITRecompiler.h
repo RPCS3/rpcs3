@@ -95,8 +95,6 @@ private:
 	void branch_set_link(u32 target);
 	void fall(spu_opcode_t op);
 
-	void get_events();
-
 public:
 	void UNK(spu_opcode_t op);
 
