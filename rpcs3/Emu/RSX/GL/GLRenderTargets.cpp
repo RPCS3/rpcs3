@@ -179,7 +179,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		m_rtts_dirty = true;
 	}
 
-	if (draw_fbo && !m_rtts_dirty)
+	if (m_draw_fbo && !m_rtts_dirty)
 	{
 		set_viewport();
 		return;
@@ -195,7 +195,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		return;
 	}
 
-	if (draw_fbo && layout.ignore_change)
+	if (m_draw_fbo && layout.ignore_change)
 	{
 		// Nothing has changed, we're still using the same framebuffer
 		// Update flags to match current
@@ -218,12 +218,11 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	m_rtts.prepare_render_target(nullptr, layout.color_format, layout.depth_format, layout.width, layout.height,
 		layout.target, layout.color_addresses, layout.zeta_address);
 
-	draw_fbo.recreate();
-	draw_fbo.bind();
-	draw_fbo.set_extents({ (int)layout.width, (int)layout.height });
-
 	bool old_format_found = false;
 	gl::texture::format old_format;
+
+	std::array<GLuint, 4> color_targets;
+	GLuint depth_stencil_target;
 
 	const auto color_offsets = get_offsets();
 	const auto color_locations = get_locations();
@@ -245,7 +244,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		if (std::get<0>(m_rtts.m_bound_render_targets[i]))
 		{
 			auto rtt = std::get<1>(m_rtts.m_bound_render_targets[i]);
-			draw_fbo.color[i] = *rtt;
+			color_targets[i] = rtt->id();
 
 			rtt->set_rsx_pitch(layout.color_pitch[i]);
 			m_surface_info[i] = { layout.color_addresses[i], layout.actual_color_pitch[i], false, layout.color_format, layout.depth_format, layout.width, layout.height };
@@ -256,7 +255,10 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			m_gl_texture_cache.tag_framebuffer(m_surface_info[i].address);
 		}
 		else
+		{
+			color_targets[i] = GL_NONE;
 			m_surface_info[i] = {};
+		}
 	}
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil))
@@ -271,10 +273,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		}
 
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-		if (layout.depth_format == rsx::surface_depth_format::z24s8)
-			draw_fbo.depth_stencil = *ds;
-		else
-			draw_fbo.depth = *ds;
+		depth_stencil_target = ds->id();
 
 		std::get<1>(m_rtts.m_bound_depth_stencil)->set_rsx_pitch(rsx::method_registers.surface_z_pitch());
 		m_depth_surface_info = { layout.zeta_address, layout.actual_zeta_pitch, true, layout.color_format, layout.depth_format, layout.width, layout.height };
@@ -284,43 +283,90 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		m_gl_texture_cache.tag_framebuffer(layout.zeta_address);
 	}
 	else
+	{
+		depth_stencil_target = GL_NONE;
 		m_depth_surface_info = {};
+	}
 
-	framebuffer_status_valid = draw_fbo.check();
+	framebuffer_status_valid = false;
+
+	for (auto &fbo : m_framebuffer_cache)
+	{
+		if (fbo.matches(color_targets, depth_stencil_target))
+		{
+			m_draw_fbo = &fbo;
+			framebuffer_status_valid = true;
+			break;
+		}
+	}
+
+	if (!framebuffer_status_valid)
+	{
+		m_framebuffer_cache.emplace_back();
+		m_draw_fbo = &m_framebuffer_cache.back();
+		m_draw_fbo->create();
+		m_draw_fbo->bind();
+		m_draw_fbo->set_extents({ (int)layout.width, (int)layout.height });
+
+		for (int i = 0; i < 4; ++i)
+		{
+			if (color_targets[i])
+			{
+				m_draw_fbo->color[i] = color_targets[i];
+			}
+		}
+
+		if (depth_stencil_target)
+		{
+			if (layout.depth_format == rsx::surface_depth_format::z24s8)
+			{
+				m_draw_fbo->depth_stencil = depth_stencil_target;
+			}
+			else
+			{
+				m_draw_fbo->depth = depth_stencil_target;
+			}
+		}
+
+		switch (rsx::method_registers.surface_color_target())
+		{
+		case rsx::surface_target::none: break;
+
+		case rsx::surface_target::surface_a:
+			m_draw_fbo->draw_buffer(m_draw_fbo->color[0]);
+			m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
+			break;
+
+		case rsx::surface_target::surface_b:
+			m_draw_fbo->draw_buffer(m_draw_fbo->color[1]);
+			m_draw_fbo->read_buffer(m_draw_fbo->color[1]);
+			break;
+
+		case rsx::surface_target::surfaces_a_b:
+			m_draw_fbo->draw_buffers({ m_draw_fbo->color[0], m_draw_fbo->color[1] });
+			m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
+			break;
+
+		case rsx::surface_target::surfaces_a_b_c:
+			m_draw_fbo->draw_buffers({ m_draw_fbo->color[0], m_draw_fbo->color[1], m_draw_fbo->color[2] });
+			m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
+			break;
+
+		case rsx::surface_target::surfaces_a_b_c_d:
+			m_draw_fbo->draw_buffers({ m_draw_fbo->color[0], m_draw_fbo->color[1], m_draw_fbo->color[2], m_draw_fbo->color[3] });
+			m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
+			break;
+		}
+
+		framebuffer_status_valid = m_draw_fbo->check();
+	}
+	
 	if (!framebuffer_status_valid) return;
+
+	m_draw_fbo->bind();
 
 	check_zcull_status(true);
 	set_viewport();
-
-	switch (rsx::method_registers.surface_color_target())
-	{
-	case rsx::surface_target::none: break;
-
-	case rsx::surface_target::surface_a:
-		draw_fbo.draw_buffer(draw_fbo.color[0]);
-		draw_fbo.read_buffer(draw_fbo.color[0]);
-		break;
-
-	case rsx::surface_target::surface_b:
-		draw_fbo.draw_buffer(draw_fbo.color[1]);
-		draw_fbo.read_buffer(draw_fbo.color[1]);
-		break;
-
-	case rsx::surface_target::surfaces_a_b:
-		draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1] });
-		draw_fbo.read_buffer(draw_fbo.color[0]);
-		break;
-
-	case rsx::surface_target::surfaces_a_b_c:
-		draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1], draw_fbo.color[2] });
-		draw_fbo.read_buffer(draw_fbo.color[0]);
-		break;
-
-	case rsx::surface_target::surfaces_a_b_c_d:
-		draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1], draw_fbo.color[2], draw_fbo.color[3] });
-		draw_fbo.read_buffer(draw_fbo.color[0]);
-		break;
-	}
 
 	m_gl_texture_cache.clear_ro_tex_invalidate_intr();
 
@@ -373,7 +419,7 @@ std::array<std::vector<gsl::byte>, 2> GLGSRender::copy_depth_stencil_buffer_to_m
 
 void GLGSRender::read_buffers()
 {
-	if (!draw_fbo)
+	if (!m_draw_fbo)
 		return;
 
 	glDisable(GL_STENCIL_TEST);

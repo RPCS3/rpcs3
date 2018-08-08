@@ -306,6 +306,20 @@ namespace gl
 		return m_size;
 	}
 
+	bool fbo::matches(std::array<GLuint, 4> color_targets, GLuint depth_stencil_target)
+	{
+		for (u32 index = 0; index < 4; ++index)
+		{
+			if (color[index].resource_id() != color_targets[index])
+			{
+				return false;
+			}
+		}
+
+		const auto depth_resource = depth.resource_id() | depth_stencil.resource_id();
+		return depth_resource == depth_stencil_target;
+	}
+
 	bool is_primitive_native(rsx::primitive_type in)
 	{
 		switch (in)

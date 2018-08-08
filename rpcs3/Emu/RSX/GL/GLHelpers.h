@@ -2026,6 +2026,9 @@ public:
 		GLuint m_id = GL_NONE;
 		size2i m_size;
 
+	protected:
+		std::unordered_map<GLenum, GLuint> m_resource_bindings;
+
 	public:
 		fbo() = default;
 
@@ -2095,9 +2098,21 @@ public:
 				return m_id;
 			}
 
+			GLuint resource_id() const
+			{
+				const auto found = m_parent.m_resource_bindings.find(m_id);
+				if (found != m_parent.m_resource_bindings.end())
+				{
+					return found->second;
+				}
+
+				return GL_NONE;
+			}
+
 			void operator = (const rbo& rhs)
 			{
 				save_binding_state save(m_parent);
+				m_parent.m_resource_bindings[m_id] = rhs.id();
 				glFramebufferRenderbuffer(GL_FRAMEBUFFER, m_id, GL_RENDERBUFFER, rhs.id());
 			}
 
@@ -2106,12 +2121,14 @@ public:
 				save_binding_state save(m_parent);
 
 				verify(HERE), rhs.get_target() == texture::target::texture2D;
+				m_parent.m_resource_bindings[m_id] = rhs.id();
 				glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs.id(), 0);
 			}
 
 			void operator = (const GLuint rhs)
 			{
 				save_binding_state save(m_parent);
+				m_parent.m_resource_bindings[m_id] = rhs;
 				glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs, 0);
 			}
 		};
@@ -2199,6 +2216,8 @@ public:
 
 		void set_extents(size2i extents);
 		size2i get_extents() const;
+
+		bool matches(std::array<GLuint, 4> color_targets, GLuint depth_stencil_target);
 
 		explicit operator bool() const
 		{
