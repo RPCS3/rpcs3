@@ -331,7 +331,8 @@ private:
 	draw_context_t m_decompiler_context;
 
 	//buffer
-	gl::fbo draw_fbo;
+	gl::fbo* m_draw_fbo = nullptr;
+	std::list<gl::fbo> m_framebuffer_cache;
 	gl::fbo m_flip_fbo;
 	std::unique_ptr<gl::texture> m_flip_tex_color;
 

@@ -269,7 +269,7 @@ void GLGSRender::end()
 			GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
 			//It is impossible for the render target to be type A or B here (clear all would have been flagged)
 			for (auto &i : buffers_to_clear)
-				glClearBufferfv(draw_fbo.id(), i, colors);
+				glClearBufferfv(m_draw_fbo->id(), i, colors);
 		}
 
 		if (clear_depth)
@@ -924,10 +924,12 @@ void GLGSRender::on_exit()
 
 	m_prog_buffer.clear();
 
-	if (draw_fbo)
+	for (auto &fbo : m_framebuffer_cache)
 	{
-		draw_fbo.remove();
+		fbo.remove();
 	}
+
+	m_framebuffer_cache.clear();
 
 	if (m_flip_fbo)
 	{
@@ -1595,6 +1597,16 @@ void GLGSRender::flip(int buffer)
 
 	m_rtts.free_invalidated();
 	m_vertex_cache->purge();
+
+	if (m_framebuffer_cache.size() > 32)
+	{
+		for (auto &fbo : m_framebuffer_cache)
+		{
+			fbo.remove();
+		}
+
+		m_framebuffer_cache.clear();
+	}
 
 	//If we are skipping the next frame, do not reset perf counters
 	if (skip_frame) return;
