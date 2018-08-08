@@ -48,6 +48,7 @@
 cfg_root g_cfg;
 
 bool g_use_rtm;
+u64 g_timestamp{0};
 
 std::string g_cfg_defaults;
 

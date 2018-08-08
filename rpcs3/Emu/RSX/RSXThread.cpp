@@ -395,7 +395,7 @@ namespace rsx
 			// TODO: exit condition
 			while (!Emu.IsStopped() && !m_rsx_thread_exiting)
 			{
-				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
+				if ((g_timestamp = get_system_time()) - start_time > vblank_count * 1000000 / 60)
 				{
 					vblank_count++;
 					sys_rsx_context_attribute(0x55555555, 0xFED, 1, 0, 0, 0);
@@ -759,7 +759,7 @@ namespace rsx
 			if (performance_counters.state != FIFO_state::running)
 			{
 				//Update performance counters with time spent in idle mode
-				performance_counters.idle_time += (get_system_time() - performance_counters.FIFO_idle_timestamp);
+				performance_counters.idle_time += (g_timestamp - performance_counters.FIFO_idle_timestamp);
 
 				if (performance_counters.state == FIFO_state::spinning)
 				{
