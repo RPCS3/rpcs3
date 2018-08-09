@@ -207,11 +207,14 @@ void GLGSRender::end()
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
-	auto copy_rtt_contents = [](gl::render_target *surface, bool is_depth)
+	auto copy_rtt_contents = [this](gl::render_target *surface, bool is_depth)
 	{
 		if (surface->get_internal_format() == surface->old_contents->get_internal_format())
 		{
-			//Copy data from old contents onto this one
+			// Disable stencil test to avoid switching off and back on later
+			gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
+
+			// Copy data from old contents onto this one
 			const auto region = rsx::get_transferable_region(surface);
 			gl::g_hw_blitter->scale_image(surface->old_contents, surface, { 0, 0, std::get<0>(region), std::get<1>(region) }, { 0, 0, std::get<2>(region) , std::get<3>(region) }, !is_depth, is_depth, {});
 
@@ -244,11 +247,9 @@ void GLGSRender::end()
 		clear_depth = true;
 	}
 
-	//Temporarily disable pixel tests
-	glDisable(GL_SCISSOR_TEST);
-
 	if (clear_depth || buffers_to_clear.size() > 0)
 	{
+		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 		GLenum mask = 0;
 
 		if (clear_depth)
@@ -280,6 +281,7 @@ void GLGSRender::end()
 		ds->old_contents->get_internal_format() == gl::texture::internal_format::rgba8)
 	{
 		// TODO: Partial memory transfer
+		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
 		ds->on_write();
 	}
@@ -299,9 +301,10 @@ void GLGSRender::end()
 		}
 	}
 
-	glEnable(GL_SCISSOR_TEST);
+	// Unconditionally enable stencil test if it was disabled before
+	gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
 
-	//Load textures
+	// Load textures
 	{
 		std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
