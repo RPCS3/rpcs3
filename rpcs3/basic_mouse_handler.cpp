@@ -93,9 +93,30 @@ void basic_mouse_handler::MouseMove(QMouseEvent* event)
 	{
 		if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen)
 		{
-			QPoint p_delta = m_target->geometry().topLeft() + QPoint(m_target->width() / 2, m_target->height() / 2);
-			QCursor::setPos(p_delta);
-			MouseHandlerBase::Move(event->x() - p_delta.x(), event->y() - p_delta.y(), true);
+			// get the screen dimensions
+			const QSize screen = m_target->size();
+
+			// get the center of the screen in global coordinates
+			QPoint p_center = m_target->geometry().topLeft() + QPoint(screen.width() / 2, screen.height() / 2);
+
+			// reset the mouse to the center for consistent results since edge movement won't be registered
+			QCursor::setPos(m_target->screen(), p_center);
+
+			// convert the center into screen coordinates
+			p_center = m_target->mapFromGlobal(p_center);
+
+			// current mouse position, starting at the center
+			static QPoint p_real(p_center);
+
+			// get the delta of the mouse position to the screen center
+			const QPoint p_delta = event->pos() - p_center;
+
+			// update the current position without leaving the screen borders
+			p_real.setX(std::clamp(p_real.x() + p_delta.x(), 0, screen.width()));
+			p_real.setY(std::clamp(p_real.y() + p_delta.y(), 0, screen.height()));
+
+			// pass the 'real' position and the current delta to the screen center
+			MouseHandlerBase::Move(p_real.x(), p_real.y(), true, p_delta.x(), p_delta.y());
 		}
 		else
 		{

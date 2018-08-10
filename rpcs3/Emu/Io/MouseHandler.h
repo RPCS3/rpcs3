@@ -107,8 +107,8 @@ using MouseDataList = std::list<MouseData>;
 
 struct Mouse
 {
-	s16 x_pos;
-	s16 y_pos;
+	s32 x_pos;
+	s32 y_pos;
 	u8 buttons; // actual mouse button positions
 
 	MouseTabletDataList m_tablet_datalist;
@@ -208,7 +208,7 @@ public:
 		}
 	}
 
-	void Move(const s32 x_pos_new, const s32 y_pos_new, bool is_qt_fullscreen = false)
+	void Move(const s32 x_pos_new, const s32 y_pos_new, const bool is_qt_fullscreen = false, s32 x_delta = 0, s32 y_delta = 0)
 	{
 		semaphore_lock lock(mutex);
 
@@ -230,19 +230,17 @@ public:
 			new_data.update = CELL_MOUSE_DATA_UPDATE;
 			new_data.buttons = m_mice[p].buttons;
 
-			if (is_qt_fullscreen)
+			if (!is_qt_fullscreen)
 			{
-				new_data.x_axis = static_cast<s8>(std::clamp(x_pos_new, -127, 128));
-				new_data.y_axis = static_cast<s8>(std::clamp(y_pos_new, -127, 128));
+				x_delta = x_pos_new - m_mice[p].x_pos;
+				y_delta = y_pos_new - m_mice[p].y_pos;
 			}
-			else
-			{
-				new_data.x_axis = static_cast<s8>(std::clamp(x_pos_new - m_mice[p].x_pos, -127, 128));
-				new_data.y_axis = static_cast<s8>(std::clamp(y_pos_new - m_mice[p].y_pos, -127, 128));
 
-				m_mice[p].x_pos = x_pos_new;
-				m_mice[p].y_pos = y_pos_new;
-			}
+			new_data.x_axis = static_cast<s8>(std::clamp(x_delta, -127, 128));
+			new_data.y_axis = static_cast<s8>(std::clamp(y_delta, -127, 128));
+
+			m_mice[p].x_pos = x_pos_new;
+			m_mice[p].y_pos = y_pos_new;
 
 			/*CellMouseRawData& rawdata = GetRawData(p);
 			rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)
