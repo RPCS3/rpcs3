@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
@@ -1246,25 +1246,50 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 
 	if (op.d)
 	{
-		c->mov(SPU_OFF_8(interrupts_enabled), 0);
+		c->and_(SPU_OFF_32(ch_event_stat), ~(1u << 31));
 	}
 	else if (op.e)
 	{
 		auto _throw = [](SPUThread* _spu)
 		{
-			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, +_spu->ch_event_mask);
+			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)" HERE, _spu->ch_event_mask);
+		};
+
+		auto sub = [](SPUThread* _spu, void(*_ret)(SPUThread&, void*, u32))
+		{
+			const u32 result = _spu->ch_dec_value - static_cast<u32>(get_timebased_time() - _spu->ch_dec_start_timestamp);
+
+			// Return decrementer value in the third argument
+			_ret(*_spu, _spu->_ptr<u8>(0), result);
 		};
 
 		Label no_intr = c->newLabel();
 		Label intr = c->newLabel();
 		Label fail = c->newLabel();
+		Label next = c->newLabel();
+		Label no_event = c->newLabel();
 
-		c->mov(SPU_OFF_8(interrupts_enabled), 1);
+		c->mov(*qw1, SPU_OFF_64(ch_dec_start_timestamp));
+		c->test(qw1->r32(), 1);
+		c->jnz(no_event);
+		c->mov(SPU_OFF_32(pc), *addr); // Save addr
+		c->lea(*ls, x86::qword_ptr(next));
+		c->jmp(imm_ptr<void(*)(SPUThread*, void(*)(SPUThread&, void*, u32))>(sub));
+		c->align(kAlignCode, 16);
+		c->bind(next);
+		c->mov(*addr, SPU_OFF_32(pc)); // Restore addr
+		c->test(qw0->r32(), qw0->r32());
+		c->jns(no_event);
+		c->or_(SPU_OFF_64(ch_dec_start_timestamp), 1);
+		set_event(5); // SPU_EVENT_TM
+		c->xor_(qw0->r32(), qw0->r32());
+		c->bind(no_event);
+
 		c->mov(qw1->r32(), SPU_OFF_32(ch_event_mask));
 		c->test(qw1->r32(), ~SPU_EVENT_INTR_IMPLEMENTED);
 		c->jnz(fail);
-		c->and_(qw1->r32(), SPU_OFF_32(ch_event_stat));
-		c->test(qw1->r32(), SPU_EVENT_INTR_IMPLEMENTED);
+		c->or_(SPU_OFF_32(ch_event_stat), SPU_EVENT_INTR_ENABLED);
+		c->test(SPU_OFF_32(ch_event_count), 1);
 		c->jnz(intr);
 		c->jmp(no_intr);
 		c->bind(fail);
@@ -1273,7 +1298,7 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 
 		// Save addr in srr0 and disable interrupts
 		c->bind(intr);
-		c->mov(SPU_OFF_8(interrupts_enabled), 0);
+		c->and_(SPU_OFF_32(ch_event_stat), ~SPU_EVENT_INTR_ENABLED);
 		c->mov(SPU_OFF_32(srr0), *addr);
 
 		// Test for BR/BRA instructions (they are equivalent at zero pc)
@@ -1411,6 +1436,17 @@ void spu_recompiler::load_rcx()
 #endif
 }
 
+void spu_recompiler::set_event(u8 bit)
+{
+	asmjit::Label no_count = c->newLabel();
+	c->bts(SPU_OFF_32(ch_event_stat), bit);
+	c->jc(no_count);
+	c->test(SPU_OFF_32(ch_event_mask), 1u << bit);
+	c->jz(no_count);
+	c->mov(SPU_OFF_32(ch_event_count), 1);
+	c->bind(no_count);
+}
+
 void spu_recompiler::get_events()
 {
 	using namespace asmjit;
@@ -1418,7 +1454,6 @@ void spu_recompiler::get_events()
 	Label label1 = c->newLabel();
 	Label rcheck = c->newLabel();
 	Label tcheck = c->newLabel();
-	Label treset = c->newLabel();
 	Label label2 = c->newLabel();
 
 	// Check if reservation exists
@@ -1482,14 +1517,14 @@ void spu_recompiler::get_events()
 		}
 
 		c->bind(fail);
-		c->lock().bts(SPU_OFF_32(ch_event_stat), 10);
+		set_event(10); // SPU_EVENT_LR
 		c->mov(SPU_OFF_32(raddr), 0);
 		c->jmp(label1);
 	});
 
 	c->bind(label1);
-	c->cmp(SPU_OFF_32(ch_dec_value), 0);
-	c->jnz(tcheck);
+	c->test(SPU_OFF_64(ch_dec_start_timestamp), 1);
+	c->jz(tcheck);
 
 	// Check decrementer event (unlikely)
 	after.emplace_back([=]
@@ -1498,7 +1533,8 @@ void spu_recompiler::get_events()
 		{
 			if ((_spu->ch_dec_value - (get_timebased_time() - _spu->ch_dec_start_timestamp)) >> 31)
 			{
-				_spu->ch_event_stat |= SPU_EVENT_TM;
+				_spu->set_event(5); // SPU_EVENT_TM
+				_spu->ch_dec_start_timestamp |= 1; // Block the event until the next decrementer write
 			}
 
 			// Restore args and return
@@ -1508,18 +1544,6 @@ void spu_recompiler::get_events()
 		c->bind(tcheck);
 		c->lea(*ls, x86::qword_ptr(label2));
 		c->jmp(imm_ptr<void(*)(SPUThread*, spu_function_t)>(sub));
-	});
-
-	// Check whether SPU_EVENT_TM is already set
-	c->bt(SPU_OFF_32(ch_event_stat), 5);
-	c->jnc(treset);
-
-	// Set SPU_EVENT_TM (unlikely)
-	after.emplace_back([=]
-	{
-		c->bind(treset);
-		c->lock().bts(SPU_OFF_32(ch_event_stat), 5);
-		c->jmp(label2);
 	});
 
 	Label fail = c->newLabel();
@@ -1542,6 +1566,7 @@ void spu_recompiler::get_events()
 	c->test(qw1->r32(), ~SPU_EVENT_IMPLEMENTED);
 	c->jnz(fail);
 	c->and_(*addr, qw1->r32());
+	c->test(SPU_OFF_32(ch_event_count), 1);
 }
 
 void spu_recompiler::UNK(spu_opcode_t op)
@@ -1692,8 +1717,70 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 	}
 	case SPU_RdInMbox:
 	{
-		// TODO
-		break;
+		Label wait = c->newLabel();
+		Label fall = c->newLabel();
+		Label intr = c->newLabel();
+		Label ret = c->newLabel();
+
+		const XmmLink& vr = XmmAlloc();
+		auto count = SPU_OFF_8(ch_in_mbox, &spu_channel_4::count);
+		auto lock = SPU_OFF_8(ch_in_mbox, &spu_channel_4::lock);
+
+		c->cmp(count, 0);
+		c->je(fall);
+
+		after.emplace_back([=, pos = m_pos]
+		{
+			c->align(kAlignCode, 16);
+			c->bind(fall);
+			c->mov(SPU_OFF_32(pc), pos);
+			c->mov(ls->r32(), op.ra);
+			c->lea(*qw0, x86::qword_ptr(ret));
+			c->jmp(imm_ptr(spu_rdch));
+		});
+
+		c->bind(wait);
+		c->pause();
+		c->cmp(lock, 0);
+		c->jne(wait);
+		c->lock().bts(lock, 0);
+		c->jc(wait);
+
+		c->dec(count);
+
+		// Pop the first value
+		c->mov(qw0->r32(), SPU_OFF_32(ch_in_mbox, &spu_channel_4::values, 0));
+		c->mov(*qw1, SPU_OFF_64(ch_in_mbox, &spu_channel_4::values, 1));
+		c->mov(SPU_OFF_64(ch_in_mbox, &spu_channel_4::values, 0), *qw1);
+		c->mov(qw1->r32(), SPU_OFF_32(ch_in_mbox, &spu_channel_4::values, 3));
+		c->mov(SPU_OFF_32(ch_in_mbox, &spu_channel_4::values, 2), qw1->r32());
+
+		c->sfence();
+		c->cmp(count, 3);
+		c->mov(lock, 0);
+		c->je(intr);
+
+		after.emplace_back([=]
+		{
+			auto sub = [](SPUThread* _spu, void(*_ret)(SPUThread&, void*, u32), u32 mail)
+			{
+				_spu->int_ctrl[2].set(SPU_INT2_STAT_SPU_MAILBOX_THRESHOLD_INT);
+
+				// Restore args, mailbox value read and return
+				_ret(*_spu, _spu->_ptr<u8>(0), mail);
+			};
+
+			c->align(kAlignCode, 16);
+			c->bind(intr);
+			c->lea(*ls, x86::qword_ptr(ret));
+			c->jmp(imm_ptr<void(*)(SPUThread*, void(*)(SPUThread&, void*, u32), u32)>(sub));
+		});
+
+		c->bind(ret);
+		c->movd(vr, qw0->r32());
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		return;
 	}
 	case MFC_RdTagStat:
 	{
@@ -1777,6 +1864,7 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 		Label wait = c->newLabel();
 		Label ret = c->newLabel();
 		c->jz(wait);
+		c->mov(SPU_OFF_32(ch_event_count), 0);
 
 		after.emplace_back([=, pos = m_pos]
 		{
@@ -1797,7 +1885,8 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 	case SPU_RdMachStat:
 	{
 		const XmmLink& vr = XmmAlloc();
-		c->movzx(*addr, SPU_OFF_8(interrupts_enabled));
+		c->mov(addr->r32(), SPU_OFF_32(ch_event_stat));
+		c->shr(addr->r32(), 31);
 		c->movd(vr, *addr);
 		c->pslldq(vr, 12);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
@@ -2716,15 +2805,13 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	}
 	case MFC_Size:
 	{
-		c->mov(*addr, SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
-		c->and_(*addr, 0x7fff);
+		c->mov(addr->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
 		c->mov(SPU_OFF_16(ch_mfc_cmd, &spu_mfc_cmd::size), addr->r16());
 		return;
 	}
 	case MFC_TagID:
 	{
-		c->mov(*addr, SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
-		c->and_(*addr, 0x1f);
+		c->mov(addr->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
 		c->mov(SPU_OFF_8(ch_mfc_cmd, &spu_mfc_cmd::tag), addr->r8());
 		return;
 	}
@@ -2764,7 +2851,7 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	{
 		auto sub = [](SPUThread* _spu, spu_function_t _ret)
 		{
-			_spu->ch_dec_start_timestamp = get_timebased_time();
+			_spu->ch_dec_start_timestamp = get_timebased_time() & ~1ull;
 			_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
 		};
 
@@ -2779,15 +2866,26 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	}
 	case SPU_WrEventMask:
 	{
+		Label no_count = c->newLabel();
 		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
 		c->mov(SPU_OFF_32(ch_event_mask), qw0->r32());
+		c->and_(qw0->r32(), SPU_OFF_32(ch_event_stat));
+		c->je(no_count);
+		c->mov(SPU_OFF_32(ch_event_count), 1);
+		c->bind(no_count);
 		return;
 	}
 	case SPU_WrEventAck:
 	{
+		Label no_count = c->newLabel();
 		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
 		c->not_(qw0->r32());
-		c->lock().and_(SPU_OFF_32(ch_event_stat), qw0->r32());
+		c->and_(qw0->r32(), SPU_OFF_32(ch_event_stat));
+		c->mov(SPU_OFF_32(ch_event_stat), qw0->r32());
+		c->and_(qw0->r32(), SPU_OFF_32(ch_event_mask));
+		c->je(no_count);
+		c->mov(SPU_OFF_32(ch_event_count), 1);
+		c->bind(no_count);
 		return;
 	}
 	case 69:
@@ -2935,7 +3033,23 @@ void spu_recompiler::IRET(spu_opcode_t op)
 
 void spu_recompiler::BISLED(spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
+	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
+	c->and_(*addr, 0x3fffc);
+
+	const XmmLink& vr = XmmAlloc();
+	c->movdqa(vr, XmmConst(_mm_set_epi32(spu_branch_target(m_pos + 4), 0, 0, 0)));
+	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+
+	asmjit::Label branch_label = c->newLabel();
+	get_events(); // Zero flag is set when no events were being reported
+	c->jne(branch_label);
+
+	after.emplace_back([=]
+	{
+		c->align(asmjit::kAlignCode, 16);
+		c->bind(branch_label);
+		branch_indirect(op);
+	});
 }
 
 void spu_recompiler::HBR(spu_opcode_t op)

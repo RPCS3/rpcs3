@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "rsx_utils.h"
 #include "rsx_decode.h"
@@ -68,12 +68,13 @@ namespace rsx
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 			if (vm::read32(addr) == arg) return;
 
-			u64 start = get_system_time();
+			// todo: LLE: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
+			if (addr == get_current_renderer()->ctxt_addr + 0x30)
+				return;
+
+			u64 start = g_timestamp;
 			while (vm::read32(addr) != arg)
 			{
-				// todo: LLE: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
-				if (addr == get_current_renderer()->ctxt_addr + 0x30)
-					return;
 
 				if (Emu.IsStopped())
 					return;
@@ -88,14 +89,15 @@ namespace rsx
 						}
 
 						// Reset
-						start = get_system_time();
+						start = g_timestamp;
 					}
 					else
 					{
-						if ((get_system_time() - start) > tdr)
+						if ((g_timestamp - start) > tdr)
 						{
 							// If longer than driver timeout force exit
 							LOG_ERROR(RSX, "nv406e::semaphore_acquire has timed out. semaphore_address=0x%X", addr);
+							vm::write32(addr, arg);
 							break;
 						}
 					}
@@ -105,7 +107,7 @@ namespace rsx
 				std::this_thread::yield();
 			}
 
-			rsx->performance_counters.idle_time += (get_system_time() - start);
+			rsx->performance_counters.idle_time += (g_timestamp - start);
 		}
 
 		void semaphore_release(thread* rsx, u32 _reg, u32 arg)
@@ -1166,7 +1168,7 @@ namespace rsx
 		if (rsx->isHLE)
 			rsx->reset();
 
-		rsx->last_flip_time = get_system_time() - 1000000;
+		rsx->last_flip_time = g_timestamp - 1000000;
 		rsx->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 
 		if (rsx->flip_handler)

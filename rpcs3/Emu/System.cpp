@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/bin_patch.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/PPUThread.h"
@@ -13,6 +13,7 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/Cell/lv2/sys_spu.h"
 
 #include "Emu/IdManager.h"
 #include "Emu/RSX/GSRender.h"
@@ -47,6 +48,7 @@
 cfg_root g_cfg;
 
 bool g_use_rtm;
+u64 g_timestamp{0};
 
 std::string g_cfg_defaults;
 
@@ -468,6 +470,9 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	auto gsrender = fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render);
 	if (gsrender.get() == nullptr)
 		return false;
+
+	memset(RSXIOMem.ea, 0xFF, 512 * sizeof(u16));
+	memset(RSXIOMem.io, 0xFF, 3072 * sizeof(u16));
 
 	GetCallbacks().on_run();
 	m_state = system_state::running;
@@ -1133,6 +1138,8 @@ void Emulator::Load(bool add_only)
 			GetCallbacks().on_ready();
 
 			vm::init();
+			memset(RSXIOMem.ea, 0xFF, 512 * sizeof(u16));
+			memset(RSXIOMem.io, 0xFF, 3072 * sizeof(u16));
 
 			if (argv.empty())
 			{
@@ -1372,6 +1379,12 @@ void Emulator::Stop(bool restart)
 
 	auto e_stop = std::make_exception_ptr(cpu_flag::dbg_global_stop);
 
+	// Abort all pending SPU group joins
+	idm::select<lv2_spu_group>([&](u32, lv2_spu_group& group)
+	{
+		group.cv.notify_one();
+	});
+
 	auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		cpu.state += cpu_flag::dbg_global_stop;
@@ -1403,7 +1416,6 @@ void Emulator::Stop(bool restart)
 
 	LOG_NOTICE(GENERAL, "Objects cleared...");
 
-	RSXIOMem.Clear();
 	vm::close();
 
 	if (do_exit)

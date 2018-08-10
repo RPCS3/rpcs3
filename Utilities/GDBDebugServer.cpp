@@ -4,7 +4,7 @@
 #include "GDBDebugServer.h"
 #include "Log.h"
 #include <algorithm>
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/CPU/CPUThread.h"

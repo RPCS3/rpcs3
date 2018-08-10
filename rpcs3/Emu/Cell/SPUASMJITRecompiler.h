@@ -112,6 +112,7 @@ private:
 	void save_rcx();
 	void load_rcx();
 
+	void set_event(u8 bit);
 	void get_events();
 
 public:

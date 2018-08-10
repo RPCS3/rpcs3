@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
@@ -373,8 +373,6 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 
 	semaphore_lock lock(group->mutex);
 
-	group->join_state = 0;
-
 	for (auto& thread : group->threads)
 	{
 		if (thread)
@@ -587,7 +585,8 @@ error_code sys_spu_thread_group_terminate(u32 id, s32 value)
 
 	group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	group->exit_status = value;
-	group->join_state |= SPU_TGJSF_TERMINATED;
+	group->join_state = SYS_SPU_THREAD_GROUP_JOIN_TERMINATED;
+	_mm_sfence();
 	group->cv.notify_one();
 
 	return CELL_OK;
@@ -595,8 +594,6 @@ error_code sys_spu_thread_group_terminate(u32 id, s32 value)
 
 error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 {
-	vm::temporary_unlock(ppu);
-
 	sys_spu.warning("sys_spu_thread_group_join(id=0x%x, cause=*0x%x, status=*0x%x)", id, cause, status);
 
 	const auto group = idm::get<lv2_spu_group>(id);
@@ -606,9 +603,6 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		return CELL_ESRCH;
 	}
 
-	u32 join_state = 0;
-	s32 exit_value = 0;
-
 	{
 		semaphore_lock lock(group->mutex);
 
@@ -617,7 +611,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 			return CELL_ESTAT;
 		}
 
-		if (group->join_state.fetch_or(SPU_TGJSF_IS_JOINING) & SPU_TGJSF_IS_JOINING)
+		if (group->join_state.test_and_set(SYS_SPU_THREAD_GROUP_IS_JOINING))
 		{
 			// another PPU thread is joining this thread group
 			return CELL_EBUSY;
@@ -625,67 +619,13 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 
 		lv2_obj::sleep(ppu);
 
-		while ((group->join_state & ~SPU_TGJSF_IS_JOINING) == 0)
-		{
-			bool stopped = true;
-
-			for (auto& t : group->threads)
-			{
-				if (t)
-				{
-					if ((t->status & SPU_STATUS_STOPPED_BY_STOP) == 0)
-					{
-						stopped = false;
-						break;
-					}
-				}
-			}
-
-			if (stopped)
-			{
-				break;
-			}
-
-			// TODO
-			group->cv.wait(lock, 1000);
-			thread_ctrl::test();
-		}
-
-		join_state = group->join_state;
-		exit_value = group->exit_status;
-		group->join_state &= ~SPU_TGJSF_IS_JOINING;
-		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED; // hack
+		// Wait for the SPU thread group to be terminated
+		group->cv.wait(lock);
 	}
 
-	ppu.test_state();
+	*cause = group->join_state.exchange(SYS_SPU_THREAD_GROUP_NO_JOIN); // Clear all join flags
 
-	switch (join_state & ~SPU_TGJSF_IS_JOINING)
-	{
-	case 0:
-	{
-		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
-		break;
-	}
-	case SPU_TGJSF_GROUP_EXIT:
-	{
-		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
-		break;
-	}
-	case SPU_TGJSF_TERMINATED:
-	{
-		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_TERMINATED;
-		break;
-	}
-	default:
-	{
-		fmt::throw_exception("Unexpected join_state" HERE);
-	}
-	}
-
-	if (status)
-	{
-		*status = group->exit_status;
-	}
+	*status = group->exit_status;
 
 	return CELL_OK;
 }
@@ -755,13 +695,15 @@ error_code sys_spu_thread_write_ls(u32 id, u32 lsa, u64 value, u32 type)
 		return CELL_EINVAL;
 	}
 
-	const auto group = thread->group;
-
-	semaphore_lock lock(group->mutex);
-
-	if (group->run_state < SPU_THREAD_GROUP_STATUS_WAITING || group->run_state > SPU_THREAD_GROUP_STATUS_RUNNING)
 	{
-		return CELL_ESTAT;
+		const auto group = thread->group;
+
+		semaphore_lock lock(group->mutex);
+
+		if (group->run_state < SPU_THREAD_GROUP_STATUS_WAITING)
+		{
+			return CELL_ESTAT;
+		}
 	}
 
 	switch (type)
@@ -792,13 +734,15 @@ error_code sys_spu_thread_read_ls(u32 id, u32 lsa, vm::ptr<u64> value, u32 type)
 		return CELL_EINVAL;
 	}
 
-	const auto group = thread->group;
-
-	semaphore_lock lock(group->mutex);
-
-	if (group->run_state < SPU_THREAD_GROUP_STATUS_WAITING || group->run_state > SPU_THREAD_GROUP_STATUS_RUNNING)
 	{
-		return CELL_ESTAT;
+		const auto group = thread->group;
+
+		semaphore_lock lock(group->mutex);
+
+		if (group->run_state < SPU_THREAD_GROUP_STATUS_WAITING)
+		{
+			return CELL_ESTAT;
+		}
 	}
 
 	switch (type)
@@ -822,15 +766,6 @@ error_code sys_spu_thread_write_spu_mb(u32 id, u32 value)
 	if (!thread)
 	{
 		return CELL_ESRCH;
-	}
-
-	const auto group = thread->group;
-
-	semaphore_lock lock(group->mutex);
-
-	if (group->run_state < SPU_THREAD_GROUP_STATUS_WAITING || group->run_state > SPU_THREAD_GROUP_STATUS_RUNNING)
-	{
-		return CELL_ESTAT;
 	}
 
 	thread->ch_in_mbox.push(*thread, value);
@@ -890,11 +825,6 @@ error_code sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 	{
 		return CELL_EINVAL;
 	}
-
-	//if (group->state < SPU_THREAD_GROUP_STATUS_WAITING || group->state > SPU_THREAD_GROUP_STATUS_RUNNING) // ???
-	//{
-	//	return CELL_ESTAT;
-	//}
 
 	thread->push_snr(number, value);
 

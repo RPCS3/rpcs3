@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Utilities/JIT.h"
 #include "Utilities/sysinfo.h"
@@ -9,6 +9,9 @@
 
 #include <cmath>
 #include <cfenv>
+#include <atomic>
+
+extern u64 get_timebased_time();
 
 // Compare 16 packed unsigned bytes (greater than)
 inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
@@ -103,11 +106,17 @@ void spu_interpreter::set_interrupt_status(SPUThread& spu, spu_opcode_t op)
 	else if (op.d)
 	{
 		spu.set_interrupt_status(false);
+		return;
 	}
 
-	if (spu.interrupts_enabled && (spu.ch_event_mask & spu.ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
+	if (!(spu.ch_dec_start_timestamp & 1) && (spu.ch_dec_value - (get_timebased_time() - spu.ch_dec_start_timestamp)) >> 31)
 	{
-		spu.interrupts_enabled = false;
+		spu.set_event(5); // SPU_EVENT_TM
+		spu.ch_dec_start_timestamp |= 1; // Block the event until the next decrementer write
+	}
+
+	if (spu.ch_event_count && test_and_reset(spu.ch_event_stat, (u32)SPU_EVENT_INTR_ENABLED))
+	{
 		spu.srr0 = std::exchange(spu.pc, 0);
 	}
 }
@@ -115,7 +124,7 @@ void spu_interpreter::set_interrupt_status(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter::STOP(SPUThread& spu, spu_opcode_t op)
 {
-	return spu.stop_and_signal(op.opcode & 0x3fff);
+	return spu.stop_and_signal(op.opcode & 0x3fff) && spu.offset < RAW_SPU_BASE_ADDR;
 }
 
 bool spu_interpreter::LNOP(SPUThread& spu, spu_opcode_t op)
@@ -483,7 +492,15 @@ bool spu_interpreter::IRET(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter::BISLED(SPUThread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
+	const u32 target = spu_branch_target(spu.gpr[op.ra]._u32[3]);
+	spu.gpr[op.rt] = v128::from32r(spu_branch_target(spu.pc + 4));
+
+	if (spu.get_events())
+	{
+		spu.pc = target;
+		set_interrupt_status(spu, op);
+		return false;
+	}
 	return true;
 }
 

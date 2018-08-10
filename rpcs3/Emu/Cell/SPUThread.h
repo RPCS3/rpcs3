@@ -71,13 +71,12 @@ enum : u32
 	SPU_EVENT_TG = 0x1,    // MFC Tag Group status update event
 
 	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN, // Mask of implemented events
-	SPU_EVENT_INTR_IMPLEMENTED = SPU_EVENT_SN,
+	SPU_EVENT_INTR_IMPLEMENTED = SPU_EVENT_SN | SPU_EVENT_TM,
 
-	SPU_EVENT_WAITING      = 0x80000000, // Originally unused, set when SPU thread starts waiting on ch_event_stat
-	//SPU_EVENT_AVAILABLE  = 0x40000000, // Originally unused, channel count of the SPU_RdEventStat channel
-	//SPU_EVENT_INTR_ENABLED = 0x20000000, // Originally unused, represents "SPU Interrupts Enabled" status
+	//SPU_EVENT_AVAILABLE  = 0x80000000, // Originally unused, channel count of the SPU_RdEventStat channel
+	SPU_EVENT_INTR_ENABLED = 0x80000000, // Originally unused, represents "SPU Interrupts Enabled" status
 
-	SPU_EVENT_INTR_TEST = SPU_EVENT_INTR_IMPLEMENTED
+	SPU_EVENT_INTR_TEST = SPU_EVENT_INTR_IMPLEMENTED /// | SPU_EVENT_AVAILABLE,
 };
 
 // SPU Class 0 Interrupts
@@ -265,92 +264,71 @@ public:
 	}
 };
 
-struct spu_channel_4_t
+struct alignas(16) spu_channel_4
 {
-	struct alignas(16) sync_var_t
-	{
-		u8 waiting;
-		u8 count;
-		u32 value0;
-		u32 value1;
-		u32 value2;
-	};
+	u8 waiting;
+	u8 count;
 
-	atomic_t<sync_var_t> values;
-	atomic_t<u32> value3;
+	atomic_t<u8> lock{0};
+	u32 values[4];
 
 public:
 	void clear()
 	{
-		values.store({});
-		value3 = 0;
+		count = 0;
 	}
 
 	// push unconditionally (overwriting latest value), returns true if needs signaling
 	void push(cpu_thread& spu, u32 value)
 	{
-		value3 = value; _mm_sfence();
+		while (lock || lock.test_and_set(1)) _mm_pause();
 
-		if (values.atomic_op([=](sync_var_t& data) -> bool
-		{
-			switch (data.count++)
-			{
-			case 0: data.value0 = value; break;
-			case 1: data.value1 = value; break;
-			case 2: data.value2 = value; break;
-			default: data.count = 4;
-			}
+		values[count == 4 ? 3 : count++] = value;
 
-			if (data.waiting)
-			{
-				data.waiting = 0;
-
-				return true;
-			}
-
-			return false;
-		}))
+		if (std::exchange(waiting, 0))
 		{
 			spu.notify();
 		}
+
+		lock = 0;
 	}
 
 	// returns non-zero value on success: queue size before removal
 	uint try_pop(u32& out)
 	{
-		return values.atomic_op([&](sync_var_t& data)
+		while (lock || lock.test_and_set(1)) _mm_pause();
+
+		const u32 cnt = count;
+
+		if (!cnt)
 		{
-			const uint result = data.count;
+			waiting = 1;
+		}
+		else
+		{
+			this->count--;
+			out = std::exchange(values[0], values[1]);
+			values[1] = values[2];
+			values[2] = values[3];
+		}
 
-			if (result != 0)
-			{
-				data.waiting = 0;
-				data.count--;
-				out = data.value0;
-
-				data.value0 = data.value1;
-				data.value1 = data.value2;
-				_mm_lfence();
-				data.value2 = this->value3;
-			}
-			else
-			{
-				data.waiting = 1;
-			}
-
-			return result;
-		});
+		_mm_sfence();
+		lock = 0;
+		return cnt;
 	}
 
 	u32 get_count()
 	{
-		return values.raw().count;
+		return count;
 	}
 
 	void set_values(u32 count, u32 value0, u32 value1 = 0, u32 value2 = 0, u32 value3 = 0)
 	{
-		this->values.raw() = { 0, static_cast<u8>(count), value0, value1, value2 };
-		this->value3 = value3;
+		this->count = count;
+		values[0] = value0;
+		values[1] = value1;
+		values[2] = value2;
+		values[3] = value3;
 	}
 };
 
@@ -361,7 +339,7 @@ struct spu_int_ctrl_t
 
 	std::shared_ptr<struct lv2_int_tag> tag;
 
-	void set(u64 ints);
+	bool set(u64 ints);
 
 	void clear(u64 ints)
 	{
@@ -548,19 +526,19 @@ public:
 	spu_channel ch_stall_stat;
 	spu_channel ch_atomic_stat;
 
-	spu_channel_4_t ch_in_mbox;
+	spu_channel_4 ch_in_mbox{};
 
 	spu_channel ch_out_mbox;
 	spu_channel ch_out_intr_mbox;
 
-	u64 snr_config; // SPU SNR Config Register
+	u64 snr_config{ 0 }; // SPU SNR Config Register
 
-	spu_channel ch_snr1; // SPU Signal Notification Register 1
-	spu_channel ch_snr2; // SPU Signal Notification Register 2
+	spu_channel ch_snr1{}; // SPU Signal Notification Register 1
+	spu_channel ch_snr2{}; // SPU Signal Notification Register 2
 
-	atomic_t<u32> ch_event_mask;
-	atomic_t<u32> ch_event_stat;
-	atomic_t<bool> interrupts_enabled;
+	u32 ch_event_mask;
+	u32 ch_event_stat;
+	u8 ch_event_count;
 
 	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
 	u32 ch_dec_value; // written decrementer value
@@ -599,8 +577,8 @@ public:
 	u32 get_mfc_completed();
 
 	bool process_mfc_cmd(spu_mfc_cmd args);
-	u32 get_events(bool waiting = false);
-	void set_events(u32 mask);
+	u32 get_events();
+	void set_event(const u32 bit);
 	void set_interrupt_status(bool enable);
 	u32 get_ch_count(u32 ch);
 	s64 get_ch_value(u32 ch);

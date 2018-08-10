@@ -4,7 +4,7 @@
 #include "table_item_delegate.h"
 #include "custom_table_widget_item.h"
 
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Loader/PSF.h"
 #include "Utilities/types.h"

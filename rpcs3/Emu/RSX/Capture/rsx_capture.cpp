@@ -5,7 +5,7 @@
 #include "Emu/RSX/Common/surface_store.h"
 #include "Emu/RSX/GCM.h"
 #include "Emu/RSX/RSXThread.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 
 #include "xxhash.h"
 
@@ -20,14 +20,14 @@ namespace rsx
 			case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
 			case CELL_GCM_LOCATION_MAIN:
 			{
-				if (u32 result = RSXIOMem.RealAddr(offset))
+				if (u32 result = RSXIoAddr(offset))
 				{
 					return offset;
 				}
 			}
 			case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
 			{
-				if (u32 result = RSXIOMem.RealAddr(0x0e000000 + offset))
+				if (u32 result = RSXIoAddr(0x0e000000 + offset))
 				{
 					return 0x0e000000 + offset;
 				}

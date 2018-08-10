@@ -544,3 +544,4 @@ struct cfg_root : cfg::node
 extern cfg_root g_cfg;
 
 extern bool g_use_rtm;
+extern u64 g_timestamp; // Global timestamp for code that doesnt need accurate timestamps (+-1ms precision)

@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Loader/ELF.h"
@@ -21,7 +21,7 @@ void RawSPUThread::cpu_task()
 	SPUThread::cpu_task();
 
 	// save next PC and current SPU Interrupt status
-	npc = pc | (interrupts_enabled);
+	npc = pc | (ch_event_stat >> 31);
 }
 
 void RawSPUThread::on_init(const std::shared_ptr<void>& _this)
@@ -149,8 +149,8 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 
 	case MFC_Size_Tag_offs:
 	{
-		g_tls_mfc[index].tag = value & 0x1f;
-		g_tls_mfc[index].size = (value >> 16) & 0x7fff;
+		g_tls_mfc[index].tag = value;
+		g_tls_mfc[index].size = value >> 16;
 		return true;
 	}
 
@@ -173,6 +173,9 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 		case MFC_PUTS_CMD:
 		case MFC_PUTBS_CMD:
 		case MFC_PUTFS_CMD:
+		case MFC_PUTR_CMD:
+		case MFC_PUTRF_CMD:
+		case MFC_PUTRB_CMD:
 		case MFC_GET_CMD:
 		case MFC_GETB_CMD:
 		case MFC_GETF_CMD:

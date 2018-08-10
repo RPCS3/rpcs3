@@ -1,7 +1,7 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
 
@@ -18,6 +18,7 @@
 extern atomic_t<const char*> g_progr;
 extern atomic_t<u64> g_progr_ptotal;
 extern atomic_t<u64> g_progr_pdone;
+extern u64 get_timebased_time();
 
 const spu_decoder<spu_itype> s_spu_itype;
 const spu_decoder<spu_iname> s_spu_iname;
@@ -2745,9 +2746,10 @@ public:
 
 	static s64 exec_read_events(SPUThread* _spu)
 	{
-		if (const u32 events = _spu->get_events())
+		if (_spu->get_events())
 		{
-			return events;
+			 _spu->ch_event_count = 0;
+			return _spu->ch_event_stat &_spu->ch_event_mask;
 		}
 
 		// TODO
@@ -2867,7 +2869,7 @@ public:
 		}
 		case SPU_RdMachStat:
 		{
-			res.value = m_ir->CreateZExt(m_ir->CreateLoad(spu_ptr<u8>(&SPUThread::interrupts_enabled)), get_type<u32>());
+			res.value = m_ir->CreateLShr(m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_event_stat)), 31);
 			break;
 		}
 
@@ -2970,8 +2972,6 @@ public:
 		case SPU_RdEventStat:
 		{
 			res.value = call(&exec_get_events, m_thread);
-			res.value = m_ir->CreateICmpNE(res.value, m_ir->getInt32(0));
-			res.value = m_ir->CreateZExt(res.value, get_type<u32>());
 			break;
 		}
 
@@ -4401,9 +4401,15 @@ public:
 	{
 		_spu->set_interrupt_status(true);
 
-		if ((_spu->ch_event_mask & _spu->ch_event_stat & SPU_EVENT_INTR_IMPLEMENTED) > 0)
+		if (!(_spu->ch_dec_start_timestamp & 1) && (_spu->ch_dec_value - (get_timebased_time() - _spu->ch_dec_start_timestamp)) >> 31)
 		{
-			_spu->interrupts_enabled = false;
+			_spu->set_event(5); // SPU_EVENT_TM
+			_spu->ch_dec_start_timestamp |= 1; // Block the event until the next decrementer write
+		}
+
+		if (_spu->ch_event_count)
+		{
+			_spu->ch_event_stat &= ~SPU_EVENT_INTR_ENABLED;
 			_spu->srr0 = addr;
 
 			// Test for BR/BRA instructions (they are equivalent at zero pc)
@@ -4470,7 +4476,7 @@ public:
 
 		if (op.d)
 		{
-			m_ir->CreateStore(m_ir->getFalse(), spu_ptr<bool>(&SPUThread::interrupts_enabled))->setVolatile(true);
+			m_ir->CreateStore(m_ir->CreateAnd(m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_event_stat)), ~SPU_EVENT_INTR_ENABLED), spu_ptr<u32>(&SPUThread::ch_event_stat));
 		}
 
 		m_ir->CreateStore(addr.value, spu_ptr<u32>(&SPUThread::pc));

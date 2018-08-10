@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/ErrorCodes.h"
@@ -114,7 +114,7 @@ u64 get_timebased_time()
 {
 #ifdef _WIN32
 	LARGE_INTEGER count;
-	verify(HERE), QueryPerformanceCounter(&count);
+	QueryPerformanceCounter(&count);
 
 	const u64 time = count.QuadPart;
 	const u64 freq = s_time_aux_info.perf_freq;
@@ -135,7 +135,7 @@ u64 get_system_time()
 	{
 #ifdef _WIN32
 		LARGE_INTEGER count;
-		verify(HERE), QueryPerformanceCounter(&count);
+		QueryPerformanceCounter(&count);
 
 		const u64 time = count.QuadPart;
 		const u64 freq = s_time_aux_info.perf_freq;
