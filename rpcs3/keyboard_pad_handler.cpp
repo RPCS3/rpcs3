@@ -306,13 +306,25 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 	static int last_pos_x = 0;
 	static int last_pos_y = 0;
 
-	if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen)
+	if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen && m_target->isActive())
 	{
-		QPoint p_delta = m_target->geometry().topLeft() + QPoint(m_target->width() / 2, m_target->height() / 2);
-		QCursor::setPos(p_delta);
+		// get the screen dimensions 
+		const QSize screen = m_target->size();
 
-		movement_x = event->x() - p_delta.x();
-		movement_y = event->y() - p_delta.y();
+		// get the center of the screen in global coordinates 
+		QPoint p_center = m_target->geometry().topLeft() + QPoint(screen.width() / 2, screen.height() / 2);
+
+		// reset the mouse to the center for consistent results since edge movement won't be registered 
+		QCursor::setPos(m_target->screen(), p_center);
+
+		// convert the center into screen coordinates 
+		p_center = m_target->mapFromGlobal(p_center);
+
+		// get the delta of the mouse position to the screen center 
+		const QPoint p_delta = event->pos() - p_center;
+
+		movement_x = p_delta.x();
+		movement_y = p_delta.y();
 	}
 	else
 	{
