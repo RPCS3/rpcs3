@@ -240,7 +240,7 @@ namespace rsx
 		std::tuple<bool, std::pair<u32, u32>> overlaps_page(const std::pair<u32, u32>& old_range, u32 address, overlap_test_bounds bounds) const
 		{
 			const u32 page_base = address & ~4095;
-			const u32 page_limit = address + 4096;
+			const u32 page_limit = page_base + 4096;
 
 			const u32 compare_min = std::min(old_range.first, page_base);
 			const u32 compare_max = std::max(old_range.second, page_limit);
