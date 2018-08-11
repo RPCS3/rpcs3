@@ -52,7 +52,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 
 	m_gameList = new game_list();
 	m_gameList->setShowGrid(false);
-	m_gameList->setItemDelegate(new table_item_delegate(this));
+	m_gameList->setItemDelegate(new table_item_delegate(this, true));
 	m_gameList->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_gameList->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_gameList->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -777,7 +777,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	//Disable options depending on software category
 	QString category = qstr(currGame.category);
 
-	if (category == category::disc_Game)
+	if (category == category::disc_game)
 	{
 		removeGame->setEnabled(false);
 	}
@@ -789,7 +789,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		openConfig->setEnabled(false);
 		checkCompat->setEnabled(false);
 	}
-	else if (category != category::hdd_Game)
+	else if (category != category::hdd_game)
 	{
 		checkCompat->setEnabled(false);
 	}

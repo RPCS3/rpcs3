@@ -10,6 +10,7 @@
 #include <QMap>
 #include <QObject>
 #include <QComboBox>
+#include <QSpinBox>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -82,6 +83,11 @@ public:
 		PerfOverlayPosition,
 		PerfOverlayUpdateInterval,
 		PerfOverlayFontSize,
+		PerfOverlayOpacity,
+		PerfOverlayMarginX,
+		PerfOverlayMarginY,
+		PerfOverlayCenterX,
+		PerfOverlayCenterY,
 
 		// Audio
 		AudioRenderer,
@@ -156,6 +162,8 @@ public:
 		Render_Creator();
 	};
 
+	std::set<SettingsType> m_broken_types; // list of broken settings
+
 	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml
 	* Settings are only written when SaveSettings is called.
 	*/
@@ -169,7 +177,13 @@ public:
 	void EnhanceCheckBox(QCheckBox* checkbox, SettingsType type);
 
 	/** Connects a slider with the target settings type*/
-	void EnhanceSlider(QSlider* slider, SettingsType type, bool is_ranged = false);
+	void EnhanceSlider(QSlider* slider, SettingsType type);
+
+	/** Connects an integer spin box with the target settings type*/
+	void EnhanceSpinBox(QSpinBox* slider, SettingsType type, const QString& prefix = "", const QString& suffix = "");
+
+	/** Connects a double spin box with the target settings type*/
+	void EnhanceDoubleSpinBox(QDoubleSpinBox* slider, SettingsType type, const QString& prefix = "", const QString& suffix = "");
 
 	std::vector<std::string> GetLoadedLibraries();
 	void SaveSelectedLibraries(const std::vector<std::string>& libs);
@@ -194,6 +208,9 @@ public:
 
 	/** Loads the settings from path.*/
 	void LoadSettings(const std::string& path = "");
+
+	/** Fixes all registered invalid settings after asking the user for permission.*/
+	void OpenCorrectionDialog(QWidget* parent = Q_NULLPTR);
 
 public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
@@ -259,6 +276,11 @@ private:
 		{ PerfOverlayPosition,      { "Video", "Performance Overlay", "Position" } },
 		{ PerfOverlayUpdateInterval,{ "Video", "Performance Overlay", "Metrics update interval (ms)" } },
 		{ PerfOverlayFontSize,      { "Video", "Performance Overlay", "Font size (px)" } },
+		{ PerfOverlayOpacity,       { "Video", "Performance Overlay", "Opacity (%)" } },
+		{ PerfOverlayMarginX,       { "Video", "Performance Overlay", "Horizontal Margin (px)" } },
+		{ PerfOverlayMarginY,       { "Video", "Performance Overlay", "Vertical Margin (px)" } },
+		{ PerfOverlayCenterX,       { "Video", "Performance Overlay", "Center Horizontally" } },
+		{ PerfOverlayCenterY,       { "Video", "Performance Overlay", "Center Vertically" } },
 
 		// Audio
 		{ AudioRenderer,  { "Audio", "Renderer"}},

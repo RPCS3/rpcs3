@@ -64,7 +64,8 @@ class main_window : public QMainWindow
 		drop_pup,
 		drop_rap,
 		drop_dir,
-		drop_game
+		drop_game,
+		drop_rrc
 	};
 
 public:
@@ -91,7 +92,7 @@ private Q_SLOTS:
 	void Boot(const std::string& path, bool direct = false, bool add_only = false);
 	void BootElf();
 	void BootGame();
-	void BootRsxCapture();
+	void BootRsxCapture(std::string path = "");
 	void DecryptSPRXLibraries();
 
 	void SaveWindowState();
@@ -115,7 +116,7 @@ private:
 	void CreateConnects();
 	void CreateDockWindows();
 	void EnableMenus(bool enabled);
-	void InstallPkg(const QString& dropPath = "");
+	void InstallPkg(const QString& dropPath = "", bool is_bulk = false);
 	void InstallPup(const QString& dropPath = "");
 
 	int IsValidFile(const QMimeData& md, QStringList* dropPaths = nullptr);
@@ -131,6 +132,8 @@ private:
 	QActionGroup* m_iconSizeActGroup;
 	QActionGroup* m_listModeActGroup;
 	QActionGroup* m_categoryVisibleActGroup;
+
+	QMessageBox::StandardButton m_install_bulk = QMessageBox::NoButton;
 
 	// Dockable widget frames
 	QMainWindow *m_mw;

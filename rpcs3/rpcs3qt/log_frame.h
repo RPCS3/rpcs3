@@ -49,12 +49,15 @@ private:
 	QList<QColor> m_color;
 	QColor m_color_stack;
 	QTextEdit* m_log;
-	QTextEdit* m_tty;
 	QString m_old_text;
 	ullong m_log_counter;
 	bool m_stack_log;
 
 	fs::file m_tty_file;
+	QWidget* m_tty_container;
+	QTextEdit* m_tty;
+	QLineEdit* m_tty_input;
+	int m_tty_channel = -1;
 
 	QAction* m_clearAct;
 	QAction* m_clearTTYAct;
@@ -72,6 +75,8 @@ private:
 	QAction* m_stackAct;
 
 	QAction* m_TTYAct;
+
+	QActionGroup* m_tty_channel_acts;
 
 	std::shared_ptr<gui_settings> xgui_settings;
 };

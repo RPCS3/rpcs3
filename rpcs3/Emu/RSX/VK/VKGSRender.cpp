@@ -3442,5 +3442,5 @@ void VKGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 
 bool VKGSRender::on_decompiler_task()
 {
-	return m_prog_buffer->async_update(8, *m_device, pipeline_layout);
+	return m_prog_buffer->async_update(8, *m_device, pipeline_layout).first;
 }

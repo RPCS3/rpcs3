@@ -444,7 +444,7 @@ bool ppu_interpreter_precise::VADDSWS(ppu_thread& ppu, ppu_opcode_t op)
 
 	for (u8 i = 0; i < 4; i++)
 	{
-		const s64 sum = a._s32[i] + b._s32[i];
+		const s64 sum = (s64)a._s32[i] + (s64)b._s32[i];
 
 		if (sum < INT32_MIN)
 		{
@@ -560,7 +560,7 @@ bool ppu_interpreter_precise::VADDUWS(ppu_thread& ppu, ppu_opcode_t op)
 
 	for (u8 i = 0; i < 4; i++)
 	{
-		const u64 sum = a._u32[i] + b._u32[i];
+		const u64 sum =  (u64)a._u32[i] + (u64)b._u32[i];
 
 		if (sum > UINT32_MAX)
 		{

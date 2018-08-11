@@ -2,6 +2,7 @@
 #include "custom_table_widget_item.h"
 #include "table_item_delegate.h"
 #include "qt_utils.h"
+#include "game_list.h"
 
 #include "stdafx.h"
 
@@ -28,8 +29,6 @@
 #include <QUrl>
 #include <QScrollBar>
 #include <QWheelEvent>
-
-static const char* m_TROPHY_DIR = "/dev_hdd0/home/00000001/trophy/";
 
 namespace
 {
@@ -58,6 +57,10 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	// HACK: dev_hdd0 must be mounted for vfs to work for loading trophies.
 	vfs::mount("dev_hdd0", Emu.GetHddDir());
 
+
+	// Get the currently selected user's trophy path.
+	m_trophy_dir = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/";
+
 	// Game chooser combo box
 	m_game_combo = new QComboBox();
 	m_game_combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
@@ -66,7 +69,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_progress = new QLabel(tr("Progress: %1% (%2/%3)").arg(0).arg(0).arg(0));
 
 	// Games Table
-	m_game_table = new QTableWidget();
+	m_game_table = new game_list();
 	m_game_table->setObjectName("trophy_manager_game_table");
 	m_game_table->setShowGrid(false);
 	m_game_table->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -74,7 +77,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_table->verticalScrollBar()->installEventFilter(this);
 	m_game_table->verticalScrollBar()->setSingleStep(20);
 	m_game_table->horizontalScrollBar()->setSingleStep(20);
-	m_game_table->setItemDelegate(new table_item_delegate(this));
+	m_game_table->setItemDelegate(new table_item_delegate(this, true));
 	m_game_table->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_game_table->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_game_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -88,7 +91,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_table->installEventFilter(this);
 
 	// Trophy Table
-	m_trophy_table = new QTableWidget();
+	m_trophy_table = new game_list();
 	m_trophy_table->setObjectName("trophy_manager_trophy_table");
 	m_trophy_table->setShowGrid(false);
 	m_trophy_table->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -96,7 +99,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_trophy_table->verticalScrollBar()->installEventFilter(this);
 	m_trophy_table->verticalScrollBar()->setSingleStep(20);
 	m_trophy_table->horizontalScrollBar()->setSingleStep(20);
-	m_trophy_table->setItemDelegate(new table_item_delegate(this));
+	m_trophy_table->setItemDelegate(new table_item_delegate(this, true));
 	m_trophy_table->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_trophy_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_trophy_table->setColumnCount(TrophyColumns::Count);
@@ -312,7 +315,11 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 
 	connect(m_game_table, &QTableWidget::itemSelectionChanged, [this]
 	{
-		m_game_combo->setCurrentText(m_game_table->item(m_game_table->currentRow(), GameColumns::GameName)->text());
+		if (m_game_table->selectedItems().isEmpty())
+		{
+			return;
+		}
+		m_game_combo->setCurrentText(m_game_table->item(m_game_table->selectedItems().first()->row(), GameColumns::GameName)->text());
 	});
 
 	RepaintUI(true);
@@ -320,7 +327,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 
 bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 {
-	std::string trophyPath = m_TROPHY_DIR + trop_name;
+	std::string trophyPath = m_trophy_dir + trop_name;
 
 	// Populate GameTrophiesData
 	std::unique_ptr<GameTrophiesData> game_trophy_data = std::make_unique<GameTrophiesData>();
@@ -579,7 +586,7 @@ void trophy_manager_dialog::PopulateTrophyDB()
 {
 	m_trophies_db.clear();
 
-	QDirIterator dir_iter(qstr(vfs::get(m_TROPHY_DIR)), QDir::Dirs | QDir::NoDotAndDotDot);
+	QDirIterator dir_iter(qstr(vfs::get(m_trophy_dir)), QDir::Dirs | QDir::NoDotAndDotDot);
 	while (dir_iter.hasNext())
 	{
 		dir_iter.next();

@@ -753,7 +753,7 @@ bool ds4_pad_handler::Init()
 	}
 
 	if (controllers.size() == 0)
-		LOG_ERROR(HLE, "[DS4] No controllers found!");
+		LOG_WARNING(HLE, "[DS4] No controllers found!");
 	else
 		LOG_SUCCESS(HLE, "[DS4] Controllers found: %d", controllers.size());
 
