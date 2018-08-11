@@ -572,7 +572,8 @@ namespace rsx
 			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
 			const bool strict_range_check = g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer;
 
-			for (auto It = m_cache.begin(); It != m_cache.end(); It++)
+			auto It = m_cache.begin();
+			while(It != m_cache.end())
 			{
 				auto &range_data = It->second;
 				const u32 base = It->first;
@@ -585,7 +586,10 @@ namespace rsx
 				{
 					//Only if a valid range, ignore empty sets
 					if (trampled_range.first >= (range_data.max_addr + range_data.max_range) || range_data.min_addr >= trampled_range.second)
+					{
+						It++;
 						continue;
+					}
 				}
 
 				for (int i = 0; i < range_data.data.size(); i++)
@@ -621,6 +625,8 @@ namespace rsx
 					last_dirty_block = base;
 					It = m_cache.begin();
 				}
+				else
+					It++;
 			}
 
 			return result;
