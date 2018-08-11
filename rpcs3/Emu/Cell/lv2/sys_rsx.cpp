@@ -446,7 +446,7 @@ s32 sys_rsx_device_map(vm::ptr<u64> dev_addr, vm::ptr<u64> a2, u32 dev_id)
 		return CELL_EINVAL; // sys_rsx_device_map called twice
 	}
 
-	for (u32 addr = 0x40000000; addr < 0xC0000000; addr += 0x10000000)
+	for (u32 addr = 0x30000000; addr < 0xC0000000; addr += 0x10000000)
 	{
 		if (vm::map(addr, 0x10000000, 0x400))
 		{
