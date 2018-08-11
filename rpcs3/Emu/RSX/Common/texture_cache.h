@@ -567,66 +567,65 @@ namespace rsx
 		{
 			std::vector<std::pair<section_storage_type*, ranged_storage*>> result;
 			u32 last_dirty_block = UINT32_MAX;
+			bool repeat_loop = false;
 			const u64 cache_tag = get_system_time();
 
 			std::pair<u32, u32> trampled_range = std::make_pair(address, address + range);
 			const bool strict_range_check = g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer;
 
 			auto It = m_cache.begin();
-			while(It != m_cache.end())
+			while (It != m_cache.end())
 			{
-				auto &range_data = It->second;
 				const u32 base = It->first;
-				bool range_reset = false;
+				auto &range_data = It->second;
 
-				if (base == last_dirty_block && range_data.valid_count == 0)
-					continue;
-
-				if (trampled_range.first <= trampled_range.second)
+				// Ignore invalid or empty sets
+				if (trampled_range.first <= trampled_range.second &&
+					!(trampled_range.first >= (range_data.max_addr + range_data.max_range) || range_data.min_addr >= trampled_range.second))
 				{
-					//Only if a valid range, ignore empty sets
-					if (trampled_range.first >= (range_data.max_addr + range_data.max_range) || range_data.min_addr >= trampled_range.second)
+
+					for (int i = 0; i < range_data.data.size(); i++)
 					{
-						It++;
-						continue;
-					}
-				}
+						auto &tex = range_data.data[i];
+						if (tex.cache_tag == cache_tag) continue; //already processed
+						if (!tex.is_locked()) continue;	//flushable sections can be 'clean' but unlocked. TODO: Handle this better
 
-				for (int i = 0; i < range_data.data.size(); i++)
-				{
-					auto &tex = range_data.data[i];
-					if (tex.cache_tag == cache_tag) continue; //already processed
-					if (!tex.is_locked()) continue;	//flushable sections can be 'clean' but unlocked. TODO: Handle this better
+						const auto bounds_test = (strict_range_check || tex.get_context() == rsx::texture_upload_context::blit_engine_dst) ?
+							rsx::overlap_test_bounds::full_range :
+							rsx::overlap_test_bounds::protected_range;
 
-					const auto bounds_test = (strict_range_check || tex.get_context() == rsx::texture_upload_context::blit_engine_dst) ?
-						rsx::overlap_test_bounds::full_range :
-						rsx::overlap_test_bounds::protected_range;
-
-					auto overlapped = tex.overlaps_page(trampled_range, address, bounds_test);
-					if (std::get<0>(overlapped))
-					{
-						auto &new_range = std::get<1>(overlapped);
-
-						if (new_range.first != trampled_range.first ||
-							new_range.second != trampled_range.second)
+						auto overlapped = tex.overlaps_page(trampled_range, address, bounds_test);
+						if (std::get<0>(overlapped))
 						{
-							i = 0;
-							trampled_range = new_range;
-							range_reset = true;
-						}
+							auto &new_range = std::get<1>(overlapped);
 
-						tex.cache_tag = cache_tag;
-						result.push_back({&tex, &range_data});
+							if (new_range.first != trampled_range.first ||
+								new_range.second != trampled_range.second)
+							{
+								trampled_range = new_range;
+								repeat_loop = true; // we will need to repeat the loop again
+								last_dirty_block = base; // stop the repeat loop once we finish this block
+							}
+
+							tex.cache_tag = cache_tag;
+							result.push_back({ &tex, &range_data });
+						}
 					}
 				}
 
-				if (range_reset)
+				// On the last loop, we stop once we're done with the last dirty block
+				if (!repeat_loop && base == last_dirty_block)
+					break;
+
+				// Iterate
+				It++;
+
+				// repeat_loop==true means some blocks are still dirty and we need to repeat the loop again
+				if (repeat_loop && It == m_cache.end())
 				{
-					last_dirty_block = base;
 					It = m_cache.begin();
+					repeat_loop = false;
 				}
-				else
-					It++;
 			}
 
 			return result;
