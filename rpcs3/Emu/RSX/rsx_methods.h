@@ -159,6 +159,8 @@ namespace rsx
 
 		draw_clause current_draw_clause;
 
+		bool register_change_flag;
+
 		/**
 		* RSX can sources vertex attributes from 2 places:
 		* 1. Immediate values passed by NV4097_SET_VERTEX_DATA*_M + ARRAY_ID write.

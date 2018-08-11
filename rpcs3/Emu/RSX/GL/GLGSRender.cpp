@@ -402,13 +402,12 @@ void GLGSRender::end()
 
 	//Bind textures and resolve external copy operations
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
-	int unused_location;
 	void *unused = nullptr;
 	gl::texture_view* tmp_view;
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
-		if (m_program->uniforms.has_location(rsx::constants::fragment_texture_names[i], &unused_location))
+		if (m_program->uniforms.has_location(rsx::constants::fragment_texture_names[i]))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 			auto &tex = rsx::method_registers.fragment_textures[i];
@@ -444,7 +443,7 @@ void GLGSRender::end()
 
 	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
 	{
-		if (m_program->uniforms.has_location(rsx::constants::vertex_texture_names[i], &unused_location))
+		if (m_program->uniforms.has_location(rsx::constants::vertex_texture_names[i]))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
 			glActiveTexture(GL_TEXTURE0 + rsx::limits::fragment_textures_count + i);
@@ -1786,11 +1785,13 @@ void GLGSRender::on_decompiler_exit()
 
 bool GLGSRender::on_decompiler_task()
 {
-	bool ret = m_prog_buffer.async_update(8);
+	const auto result = m_prog_buffer.async_update(8);
+	if (result.second)
+	{
+		// TODO: Proper synchronization with renderer
+		// Finish works well enough for now but it is not a proper soulution
+		glFinish();
+	}
 
-	// TODO: Proper synchronization with renderer
-	// Finish works well enough for now but it is not a proper soulution
-	glFinish();
-
-	return ret;
+	return result.first;
 }

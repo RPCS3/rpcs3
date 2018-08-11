@@ -334,8 +334,11 @@ public:
 		fmt::throw_exception("Trying to get unknown shader program" HERE);
 	}
 
+	// Returns 2 booleans.
+	// First flag hints that there is more work to do (busy hint)
+	// Second flag is true if at least one program has been linked successfully (sync hint)
 	template<typename... Args>
-	bool async_update(u32 max_decompile_count, Args&& ...args)
+	std::pair<bool, bool> async_update(u32 max_decompile_count, Args&& ...args)
 	{
 		// Decompile shaders and link one pipeline object per 'run'
 		// NOTE: Linking is much slower than decompilation step, so always decompile at least 1 unit
@@ -381,7 +384,7 @@ public:
 			}
 			else
 			{
-				return busy;
+				return { busy, false };
 			}
 		}
 
@@ -392,7 +395,7 @@ public:
 		m_storage[key] = std::move(pipeline);
 		m_link_queue.erase(key);
 
-		return (busy || !m_link_queue.empty());
+		return { (busy || !m_link_queue.empty()), true };
 	}
 
 	template<typename... Args>

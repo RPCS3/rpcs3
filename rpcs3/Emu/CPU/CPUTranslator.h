@@ -966,13 +966,6 @@ public:
 		return result;
 	}
 
-	// Get unsigned addition carry into the sign bit (s = a + b)
-	template <typename T>
-	static inline auto ucarry(T a, T b, T s)
-	{
-		return ((a ^ b) & ~s) | (a & b);
-	}
-
 	// Get signed addition overflow into the sign bit (s = a + b)
 	template <typename T>
 	static inline auto scarry(T a, T b, T s)

@@ -278,7 +278,7 @@ void Emulator::Init()
 
 	// Create directories
 	const std::string emu_dir = GetEmuDir();
-	const std::string dev_hdd0 = fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir);
+	const std::string dev_hdd0 = GetHddDir();
 	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
 	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
 
@@ -290,11 +290,11 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd0 + "game/TEST12345/USRDIR/");
 	fs::create_dir(dev_hdd0 + "game/.locks/");
 	fs::create_dir(dev_hdd0 + "home/");
-	fs::create_dir(dev_hdd0 + "home/00000001/");
-	fs::create_dir(dev_hdd0 + "home/00000001/exdata/");
-	fs::create_dir(dev_hdd0 + "home/00000001/savedata/");
-	fs::create_dir(dev_hdd0 + "home/00000001/trophy/");
-	fs::write_file(dev_hdd0 + "home/00000001/localusername", fs::create + fs::excl + fs::write, "User"s);
+	fs::create_dir(dev_hdd0 + "home/" + m_usr + "/");
+	fs::create_dir(dev_hdd0 + "home/" + m_usr + "/exdata/");
+	fs::create_dir(dev_hdd0 + "home/" + m_usr + "/savedata/");
+	fs::create_dir(dev_hdd0 + "home/" + m_usr + "/trophy/");
+	fs::write_file(dev_hdd0 + "home/" + m_usr + "/localusername", fs::create + fs::excl + fs::write, "User"s);
 	fs::create_dir(dev_hdd0 + "disc/");
 	fs::create_dir(dev_hdd0 + "savedata/");
 	fs::create_dir(dev_hdd0 + "savedata/vmc/");
@@ -302,6 +302,7 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd1 + "game/");
 
 	fs::create_path(fs::get_config_dir() + "shaderlog/");
+	fs::create_path(fs::get_config_dir() + "captures/");
 
 #ifdef WITH_GDB_DEBUGGER
 	LOG_SUCCESS(GENERAL, "GDB debug server will be started and listening on %d upon emulator boot", (int) g_cfg.misc.gdb_server_port);
@@ -403,6 +404,34 @@ void Emulator::Init()
 
 		server.detach();
 	}
+}
+
+const bool Emulator::SetUsr(const std::string& user)
+{
+	if (user.empty())
+	{
+		return false;
+	}
+
+	u32 id;
+
+	try
+	{
+		id = static_cast<u32>(std::stoul(user));
+	}
+	catch (const std::exception&)
+	{
+		id = 0;
+	}
+
+	if (id == 0)
+	{
+		return false;
+	}
+
+	m_usrid = id;
+	m_usr = user;
+	return true;
 }
 
 bool Emulator::BootRsxCapture(const std::string& path)
@@ -1071,11 +1100,9 @@ void Emulator::Load(bool add_only)
 			{
 				elf_file.open(decrypted_path);
 			}
-			else
+			// Decrypt SELF
+			else if (elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data()))
 			{
-				// Decrypt SELF
-				elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data());
-
 				if (fs::file elf_out{decrypted_path, fs::rewrite})
 				{
 					elf_out.write(elf_file.to_vector<u8>());
@@ -1089,16 +1116,17 @@ void Emulator::Load(bool add_only)
 			}
 		}
 
-		ppu_exec_object ppu_exec;
-		ppu_prx_object ppu_prx;
-		spu_exec_object spu_exec;
-
 		if (!elf_file)
 		{
 			LOG_ERROR(LOADER, "Failed to decrypt SELF: %s", elf_path);
 			return;
 		}
-		else if (ppu_exec.open(elf_file) == elf_error::ok)
+
+		ppu_exec_object ppu_exec;
+		ppu_prx_object ppu_prx;
+		spu_exec_object spu_exec;
+
+		if (ppu_exec.open(elf_file) == elf_error::ok)
 		{
 			// PS3 executable
 			m_state = system_state::ready;

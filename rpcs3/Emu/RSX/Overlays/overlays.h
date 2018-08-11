@@ -1,6 +1,7 @@
 #pragma once
 #include "overlay_controls.h"
 
+#include "../../../Utilities/date_time.h"
 #include "../../../Utilities/Thread.h"
 #include "../../Io/PadHandler.h"
 #include "Emu/Memory/vm.h"
@@ -13,8 +14,6 @@
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 #include "Utilities/CPUStats.h"
 #include "Utilities/Timer.h"
-
-#include <time.h>
 
 extern u64 get_system_time();
 
@@ -432,7 +431,8 @@ namespace rsx
 			u32 m_frames{ 0 };
 			std::string m_font;
 			u32 m_font_size;
-			u32 m_margin; // distance to screen borders in px
+			u32 m_margin_x; // horizontal distance to the screen border relative to the screen_quadrant in px
+			u32 m_margin_y; // vertical distance to the screen border relative to the screen_quadrant in px
 			f32 m_opacity;	// 0..1
 
 			bool m_force_update;
@@ -448,11 +448,6 @@ namespace rsx
 			void reset_titles();
 			void reset_text();
 
-			f32 get_text_opacity() const
-			{
-				return std::clamp(m_opacity + 0.3f, 0.3f, 1.0f);
-			}
-
 		public:
 			void init();
 
@@ -461,7 +456,7 @@ namespace rsx
 			void set_update_interval(u32 update_interval);
 			void set_font(std::string font);
 			void set_font_size(u32 font_size);
-			void set_margin(u32 margin);
+			void set_margins(u32 margin_x, u32 margin_y);
 			void set_opacity(f32 opacity);
 			void force_next_update();
 
@@ -513,11 +508,11 @@ namespace rsx
 
 					padding->set_size(1, 1);
 					header_text->set_size(800, 40);
-					header_text->text = text1;
+					header_text->set_text(text1);
 					header_text->set_font("Arial", 16);
 					header_text->set_wrap_text(true);
 					subtext->set_size(800, 40);
-					subtext->text = text2;
+					subtext->set_text(text2);
 					subtext->set_font("Arial", 14);
 					subtext->set_wrap_text(true);
 
@@ -546,15 +541,6 @@ namespace rsx
 			std::unique_ptr<label> m_time_thingy;
 			std::unique_ptr<label> m_no_saves_text;
 
-			std::string current_time()
-			{
-				time_t t = time(NULL);
-				char buf[128];
-				strftime(buf, 128, "%c", localtime(&t));
-
-				return buf;
-			}
-
 			bool m_no_saves = false;
 
 		public:
@@ -571,11 +557,11 @@ namespace rsx
 
 				m_description->set_font("Arial", 20);
 				m_description->set_pos(20, 37);
-				m_description->text = "Save Dialog";
+				m_description->set_text("Save Dialog");
 
 				m_time_thingy->set_font("Arial", 14);
 				m_time_thingy->set_pos(1000, 30);
-				m_time_thingy->text = current_time();
+				m_time_thingy->set_text(date_time::current_time());
 
 				static_cast<label*>(m_description.get())->auto_resize();
 				static_cast<label*>(m_time_thingy.get())->auto_resize();
@@ -638,15 +624,15 @@ namespace rsx
 
 				if (op >= 8)
 				{
-					m_description->text = "Delete Save";
+					m_description->set_text("Delete Save");
 				}
 				else if (op & 1)
 				{
-					m_description->text = "Load Save";
+					m_description->set_text("Load Save");
 				}
 				else
 				{
-					m_description->text = "Save";
+					m_description->set_text("Save");
 				}
 
 				const bool newpos_head = listSet->newData && listSet->newData->iconPosition == CELL_SAVEDATA_ICONPOS_HEAD;
@@ -727,7 +713,7 @@ namespace rsx
 
 			void update() override
 			{
-				m_time_thingy->set_text(current_time());
+				m_time_thingy->set_text(date_time::current_time());
 				static_cast<label*>(m_time_thingy.get())->auto_resize();
 			}
 		};
@@ -1089,10 +1075,13 @@ namespace rsx
 
 			shader_compile_notification()
 			{
+				const u16 pos_x = g_cfg.video.shader_compilation_hint.pos_x;
+				const u16 pos_y = g_cfg.video.shader_compilation_hint.pos_y;
+
 				m_text.set_font("Arial", 16);
 				m_text.set_text("Compiling shaders");
 				m_text.auto_resize();
-				m_text.set_pos(20, 690);
+				m_text.set_pos(pos_x, pos_y);
 
 				m_text.back_color.a = 0.f;
 
@@ -1100,7 +1089,7 @@ namespace rsx
 				{
 					dots[n].set_size(2, 2);
 					dots[n].back_color = color4f(1.f, 1.f, 1.f, 1.f);
-					dots[n].set_pos( m_text.w + 25 + (6 * n), 710);
+					dots[n].set_pos(m_text.w + pos_x + 5 + (6 * n), pos_y + 20);
 				}
 
 				creation_time = get_system_time();
