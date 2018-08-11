@@ -53,18 +53,18 @@ namespace rpcs3
 	template <>
 	size_t hash_struct<vk::pipeline_props>(const vk::pipeline_props &pipelineProperties)
 	{
-		size_t seed = hash_base<int>(pipelineProperties.num_targets);
+		size_t seed = hash_base(pipelineProperties.num_targets);
 		seed ^= hash_struct(pipelineProperties.state.ia);
 		seed ^= hash_struct(pipelineProperties.state.ds);
 		seed ^= hash_struct(pipelineProperties.state.rs);
 
-		//Do not compare pointers to memory!
-		auto tmp = pipelineProperties.state.cs;
+		// Do not compare pointers to memory!
+		VkPipelineColorBlendStateCreateInfo tmp;
+		memcpy(&tmp, &pipelineProperties.state.cs, sizeof(VkPipelineColorBlendStateCreateInfo));
 		tmp.pAttachments = nullptr;
-		seed ^= hash_struct(tmp);
 
 		seed ^= hash_struct(pipelineProperties.state.att_state[0]);
-		return hash_base<size_t>(seed);
+		return hash_base(seed);
 	}
 }
 
@@ -142,13 +142,17 @@ struct VKTraits
 		ms.pSampleMask = NULL;
 		ms.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
+		// Rebase pointers from pipeline structure in case it is moved/copied
+		VkPipelineColorBlendStateCreateInfo cs = pipelineProperties.state.cs;
+		cs.pAttachments = pipelineProperties.state.att_state;
+
 		VkPipeline pipeline;
 		VkGraphicsPipelineCreateInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		info.pVertexInputState = &vi;
 		info.pInputAssemblyState = &pipelineProperties.state.ia;
 		info.pRasterizationState = &pipelineProperties.state.rs;
-		info.pColorBlendState = &pipelineProperties.state.cs;
+		info.pColorBlendState = &cs;
 		info.pMultisampleState = &ms;
 		info.pViewportState = &vp;
 		info.pDepthStencilState = &pipelineProperties.state.ds;
@@ -201,11 +205,9 @@ public:
 	template <typename... Args>
 	void add_pipeline_entry(RSXVertexProgram &vp, RSXFragmentProgram &fp, vk::pipeline_props &props, Args&& ...args)
 	{
-		//Extract pointers from pipeline props
 		props.render_pass = m_render_pass_data[props.render_pass_location];
-		props.state.cs.pAttachments = props.state.att_state;
 		vp.skip_vertex_input_check = true;
-		getGraphicPipelineState(vp, fp, props, std::forward<Args>(args)...);
+		get_graphics_pipeline(vp, fp, props, false, std::forward<Args>(args)...);
 	}
 
     void preload_programs(RSXVertexProgram &vp, RSXFragmentProgram &fp)
@@ -218,5 +220,10 @@ public:
 	bool check_cache_missed() const
 	{
 		return m_cache_miss_flag;
+	}
+
+	bool check_program_linked_flag() const
+	{
+		return m_program_compiled_flag;
 	}
 };

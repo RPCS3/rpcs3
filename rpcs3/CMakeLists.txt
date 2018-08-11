@@ -184,8 +184,6 @@ else()
 	message("-- Using Custom RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
 endif()
 
-set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
-
 # Prefer GLVND for OpenGL rather than legacy
 set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
@@ -463,11 +461,11 @@ if(MSVC)
 	# them from the local QT installation at the end of the build.
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir ${CMAKE_BINARY_DIR}/bin/qt/plugins --debug ${CMAKE_BINARY_DIR}/bin
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "${CMAKE_BINARY_DIR}/bin/qt/plugins" --debug "${CMAKE_BINARY_DIR}/bin"
 		)
 	else()
 		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir ${CMAKE_BINARY_DIR}/bin/qt/plugins ${CMAKE_BINARY_DIR}/bin
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "${CMAKE_BINARY_DIR}/bin/qt/plugins" "${CMAKE_BINARY_DIR}/bin"
 		)
 	endif()
 endif()

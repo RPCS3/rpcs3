@@ -369,7 +369,7 @@ namespace rsx
 				perf_overlay->set_update_interval(perf_settings.update_interval);
 				perf_overlay->set_font(perf_settings.font);
 				perf_overlay->set_font_size(perf_settings.font_size);
-				perf_overlay->set_margin(perf_settings.margin);
+				perf_overlay->set_margins(perf_settings.margin_x, perf_settings.margin_y);
 				perf_overlay->set_opacity(perf_settings.opacity / 100.f);
 				perf_overlay->init();
 			}
@@ -420,6 +420,39 @@ namespace rsx
 
 				std::this_thread::sleep_for(1ms); // hack
 			}
+		});
+
+		thread_ctrl::spawn(m_decompiler_thread, "RSX Decompiler Thread", [this]
+		{
+			if (g_cfg.video.disable_asynchronous_shader_compiler)
+			{
+				// Die
+				return;
+			}
+
+			on_decompiler_init();
+
+			if (g_cfg.core.thread_scheduler_enabled)
+			{
+				thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
+			}
+
+			while (!Emu.IsStopped() && !m_rsx_thread_exiting)
+			{
+				if (!on_decompiler_task())
+				{
+					if (Emu.IsPaused())
+					{
+						std::this_thread::sleep_for(1ms);
+					}
+					else
+					{
+						std::this_thread::sleep_for(500us);
+					}
+				}
+			}
+
+			on_decompiler_exit();
 		});
 
 		// Raise priority above other threads
@@ -968,6 +1001,12 @@ namespace rsx
 		{
 			m_vblank_thread->join();
 			m_vblank_thread.reset();
+		}
+
+		if (m_decompiler_thread)
+		{
+			m_decompiler_thread->join();
+			m_decompiler_thread.reset();
 		}
 	}
 
@@ -1651,6 +1690,7 @@ namespace rsx
 
 		result.addr = ((u8*)result.addr + current_fp_metadata.program_start_offset);
 		result.offset = program_offset + current_fp_metadata.program_start_offset;
+		result.ucode_length = current_fp_metadata.program_ucode_length;
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;
@@ -1781,6 +1821,7 @@ namespace rsx
 
 		result.addr = ((u8*)result.addr + program_info.program_start_offset);
 		result.offset = program_offset + program_info.program_start_offset;
+		result.ucode_length = program_info.program_ucode_length;
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;

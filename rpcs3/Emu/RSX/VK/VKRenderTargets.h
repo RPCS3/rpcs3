@@ -10,7 +10,7 @@
 
 namespace vk
 {
-	struct render_target : public image, public rsx::ref_counted, public rsx::render_target_descriptor<vk::image*>
+	struct render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<vk::image*>
 	{
 		u16 native_pitch = 0;
 		u16 rsx_pitch = 0;
@@ -36,35 +36,9 @@ namespace vk
 			VkImageUsageFlags usage,
 			VkImageCreateFlags image_flags)
 
-			:image(dev, memory_type_index, access_flags, image_type, format, width, height, depth,
+			: viewable_image(dev, memory_type_index, access_flags, image_type, format, width, height, depth,
 					mipmaps, layers, samples, initial_layout, tiling, usage, image_flags)
 		{}
-
-		vk::image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
-			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
-		{
-			auto found = views.equal_range(remap_encoding);
-			for (auto It = found.first; It != found.second; ++It)
-			{
-				if (It->second->info.subresourceRange.aspectMask & mask)
-				{
-					return It->second.get();
-				}
-			}
-
-			VkComponentMapping real_mapping = vk::apply_swizzle_remap
-			(
-				{native_component_map.a, native_component_map.r, native_component_map.g, native_component_map.b },
-				remap
-			);
-
-			auto view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), value, VK_IMAGE_VIEW_TYPE_2D, info.format,
-					real_mapping, vk::get_image_subresource_range(0, 0, 1, 1, attachment_aspect_flag & mask));
-
-			auto result = view.get();
-			views.emplace(remap_encoding, std::move(view));
-			return result;
-		}
 
 		vk::image* get_surface() override
 		{

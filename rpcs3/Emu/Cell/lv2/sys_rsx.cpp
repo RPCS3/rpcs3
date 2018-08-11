@@ -186,13 +186,12 @@ s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags)
 /*
  * lv2 SysCall 673 (0x2A1): sys_rsx_context_iounmap
  * @param context_id (IN): RSX context, E.g. 0x55555555 (in vsh.self)
- * @param a2 (IN): ?
  * @param io_addr (IN): IO address. E.g. 0x00600000 (Start page 6)
  * @param size (IN): Size to unmap in byte. E.g. 0x00200000
  */
-s32 sys_rsx_context_iounmap(u32 context_id, u32 io_addr, u32 a3, u32 size)
+s32 sys_rsx_context_iounmap(u32 context_id, u32 io_addr, u32 size)
 {
-	sys_rsx.warning("sys_rsx_context_iounmap(context_id=0x%x, io_addr=0x%x, a3=0x%x, size=0x%x)", context_id, io_addr, a3, size);
+	sys_rsx.warning("sys_rsx_context_iounmap(context_id=0x%x, io_addr=0x%x, size=0x%x)", context_id, io_addr, size);
 	if (RSXIOMem.UnmapAddress(io_addr, size))
 		return CELL_OK;
 	return CELL_EINVAL;

@@ -329,6 +329,7 @@ private:
 	std::thread::id m_thread_id;
 
 	GLProgramBuffer m_prog_buffer;
+	draw_context_t m_decompiler_context;
 
 	//buffer
 	gl::fbo draw_fbo;
@@ -361,7 +362,8 @@ private:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 
 	bool check_program_state();
-	void load_program(const gl::vertex_upload_info& upload_info);
+	bool load_program();
+	void load_program_env(const gl::vertex_upload_info& upload_info);
 
 	void update_draw_state();
 
@@ -398,4 +400,8 @@ protected:
 
 	std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
 	std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
+
+	void on_decompiler_init() override;
+	void on_decompiler_exit() override;
+	bool on_decompiler_task() override;
 };

@@ -7,7 +7,7 @@ struct GLTraits
 {
 	using vertex_program_type = GLVertexProgram;
 	using fragment_program_type = GLFragmentProgram;
-	using pipeline_storage_type = gl::glsl::program;
+	using pipeline_storage_type = std::unique_ptr<gl::glsl::program>;
 	using pipeline_properties = void*;
 
 	static
@@ -32,8 +32,8 @@ struct GLTraits
 	static
 	pipeline_storage_type build_pipeline(const vertex_program_type &vertexProgramData, const fragment_program_type &fragmentProgramData, const pipeline_properties&)
 	{
-		pipeline_storage_type result;
-		__glcheck result.create()
+		pipeline_storage_type result = std::make_unique<gl::glsl::program>();
+		result->create()
 			.attach(gl::glsl::shader_view(vertexProgramData.id))
 			.attach(gl::glsl::shader_view(fragmentProgramData.id))
 			.bind_fragment_data_location("ocol0", 0)
@@ -41,31 +41,30 @@ struct GLTraits
 			.bind_fragment_data_location("ocol2", 2)
 			.bind_fragment_data_location("ocol3", 3)
 			.make();
-		__glcheck result.use();
 
 		//Progam locations are guaranteed to not change after linking
 		//Texture locations are simply bound to the TIUs so this can be done once
 		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			int location;
-			if (result.uniforms.has_location(rsx::constants::fragment_texture_names[i], &location))
-				result.uniforms[location] = i;
+			if (result->uniforms.has_location(rsx::constants::fragment_texture_names[i], &location))
+				result->uniforms[location] = i;
 		}
 
 		for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
 		{
 			int location;
-			if (result.uniforms.has_location(rsx::constants::vertex_texture_names[i], &location))
-				result.uniforms[location] = (i + rsx::limits::fragment_textures_count);
+			if (result->uniforms.has_location(rsx::constants::vertex_texture_names[i], &location))
+				result->uniforms[location] = (i + rsx::limits::fragment_textures_count);
 		}
 
 		const int stream_buffer_start = rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
 
 		//Bind locations 0 and 1 to the stream buffers
-		result.uniforms[0] = stream_buffer_start;
-		result.uniforms[1] = stream_buffer_start + 1;
+		result->uniforms[0] = stream_buffer_start;
+		result->uniforms[1] = stream_buffer_start + 1;
 
-		LOG_NOTICE(RSX, "*** prog id = %d", result.id());
+		LOG_NOTICE(RSX, "*** prog id = %d", result->id());
 		LOG_NOTICE(RSX, "*** vp id = %d", vertexProgramData.id);
 		LOG_NOTICE(RSX, "*** fp id = %d", fragmentProgramData.id);
 
@@ -99,7 +98,7 @@ public:
 	void add_pipeline_entry(RSXVertexProgram &vp, RSXFragmentProgram &fp, void* &props, Args&& ...args)
 	{
 		vp.skip_vertex_input_check = true;
-		getGraphicPipelineState(vp, fp, props, std::forward<Args>(args)...);
+		get_graphics_pipeline(vp, fp, props, false, std::forward<Args>(args)...);
 	}
 
     void preload_programs(RSXVertexProgram &vp, RSXFragmentProgram &fp)
@@ -111,5 +110,10 @@ public:
 	bool check_cache_missed() const
 	{
 		return m_cache_miss_flag;
+	}
+
+	bool check_program_linked_flag() const
+	{
+		return m_program_compiled_flag;
 	}
 };

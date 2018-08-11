@@ -1,6 +1,19 @@
 #pragma once
 
+#include <list>
+
 // TODO: HLE info (constants, structs, etc.) should not be available here
+
+enum
+{
+	// is_supported
+	CELL_MOUSE_INFO_TABLET_NOT_SUPPORTED = 0,
+	CELL_MOUSE_INFO_TABLET_SUPPORTED     = 1,
+
+	// mode
+	CELL_MOUSE_INFO_TABLET_MOUSE_MODE    = 1,
+	CELL_MOUSE_INFO_TABLET_TABLET_MODE   = 2,
+};
 
 enum MousePortStatus
 {
@@ -35,6 +48,8 @@ struct MouseInfo
 	u32 max_connect;
 	u32 now_connect;
 	u32 info;
+	u32 mode[MAX_MICE]; // TODO: tablet support
+	u32 tablet_is_supported[MAX_MICE]; // TODO: tablet support
 	u16 vendor_id[MAX_MICE];
 	u16 product_id[MAX_MICE];
 	u8 status[MAX_MICE];
@@ -71,27 +86,35 @@ struct MouseData
 	}
 };
 
-struct MouseDataList
+struct MouseTabletData
 {
-	u32 list_num;
-	MouseData list[MOUSE_MAX_DATA_LIST_NUM];
+	s32 len;
+	u8 data[MOUSE_MAX_CODES];
 
-	MouseDataList()
-		: list_num(0)
+	MouseTabletData()
+		: len(0)
 	{
+		for (auto d : data)
+		{
+			d = 0;
+		}
 	}
 };
+
+using MouseTabletDataList = std::list<MouseTabletData>;
+using MouseDataList = std::list<MouseData>;
 
 struct Mouse
 {
 	s16 x_pos;
 	s16 y_pos;
 
-	MouseData m_data;
+	MouseTabletDataList m_tablet_datalist;
+	MouseDataList m_datalist;
 	MouseRawData m_rawdata;
 
 	Mouse()
-		: m_data()
+		: m_datalist()
 		, m_rawdata()
 	{
 		x_pos = 0;
@@ -113,13 +136,27 @@ public:
 	{
 		for(u32 p=0; p < (u32)m_mice.size(); ++p)
 		{
-			if (m_info.status[p] == CELL_MOUSE_STATUS_CONNECTED)
+			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
 			{
-				MouseData& data = GetData(p);
-				data.update = CELL_MOUSE_DATA_UPDATE;
-				if (pressed) data.buttons |= button;
-				else data.buttons &= ~button;
+				continue;
 			}
+
+			MouseDataList& datalist = GetDataList(p);
+
+			if (datalist.size() > MOUSE_MAX_DATA_LIST_NUM)
+			{
+				datalist.pop_front();
+			}
+
+			MouseData new_data;
+			new_data.update = CELL_MOUSE_DATA_UPDATE;
+
+			if (pressed)
+				new_data.buttons |= button;
+			else
+				new_data.buttons &= ~button;
+
+			datalist.push_back(new_data);
 		}
 	}
 
@@ -127,12 +164,23 @@ public:
 	{
 		for(u32 p=0; p < (u32)m_mice.size(); ++p)
 		{
-			if (m_info.status[p] == CELL_MOUSE_STATUS_CONNECTED)
+			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
 			{
-				MouseData& data = GetData(p);
-				data.update = CELL_MOUSE_DATA_UPDATE;
-				data.wheel = rotation/120; //120=event.GetWheelDelta()
+				continue;
 			}
+
+			MouseDataList& datalist = GetDataList(p);
+
+			if (datalist.size() > MOUSE_MAX_DATA_LIST_NUM)
+			{
+				datalist.pop_front();
+			}
+
+			MouseData new_data;
+			new_data.update = CELL_MOUSE_DATA_UPDATE;
+			new_data.wheel = rotation / 120; //120=event.GetWheelDelta()
+
+			datalist.push_back(new_data);
 		}
 	}
 
@@ -140,25 +188,37 @@ public:
 	{
 		for(u32 p=0; p < (u32)m_mice.size(); ++p)
 		{
-			if (m_info.status[p] == CELL_MOUSE_STATUS_CONNECTED)
+			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
 			{
-				MouseData& data = GetData(p);
-				data.update = CELL_MOUSE_DATA_UPDATE;
-				data.x_axis += x_pos_new - m_mice[p].x_pos;
-				data.y_axis += y_pos_new - m_mice[p].y_pos;
-
-				m_mice[p].x_pos = x_pos_new;
-				m_mice[p].y_pos = y_pos_new;
-
-				/*CellMouseRawData& rawdata = GetRawData(p);
-				rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)
-				rawdata.len++;*/
+				continue;
 			}
+
+			MouseDataList& datalist = GetDataList(p);
+
+			if (datalist.size() > MOUSE_MAX_DATA_LIST_NUM)
+			{
+				datalist.pop_front();
+			}
+
+			MouseData new_data;
+			new_data.update = CELL_MOUSE_DATA_UPDATE;
+			new_data.x_axis += x_pos_new - m_mice[p].x_pos;
+			new_data.y_axis += y_pos_new - m_mice[p].y_pos;
+
+			m_mice[p].x_pos = x_pos_new;
+			m_mice[p].y_pos = y_pos_new;
+
+			/*CellMouseRawData& rawdata = GetRawData(p);
+			rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)
+			rawdata.len++;*/
+
+			datalist.push_back(new_data);
 		}
 	}
 
 	MouseInfo& GetInfo() { return m_info; }
 	std::vector<Mouse>& GetMice() { return m_mice; }
-	MouseData& GetData(const u32 mouse) { return m_mice[mouse].m_data; }
+	MouseDataList& GetDataList(const u32 mouse) { return m_mice[mouse].m_datalist; }
+	MouseTabletDataList& GetTabletDataList(const u32 mouse) { return m_mice[mouse].m_tablet_datalist; }
 	MouseRawData& GetRawData(const u32 mouse) { return m_mice[mouse].m_rawdata; }
 };

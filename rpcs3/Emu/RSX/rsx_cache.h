@@ -687,8 +687,7 @@ namespace rsx
 
 			if (!fs::is_file(fp_name))
 			{
-				const auto size = program_hash_util::fragment_program_utils::get_fragment_program_ucode_size(fp.addr);
-				fs::file(fp_name, fs::rewrite).write(fp.addr, size);
+				fs::file(fp_name, fs::rewrite).write(fp.addr, fp.ucode_length);
 			}
 
 			if (!fs::is_file(vp_name))
@@ -741,6 +740,7 @@ namespace rsx
 			RSXFragmentProgram fp = {};
 			fragment_program_data[program_hash] = data;
 			fp.addr = fragment_program_data[program_hash].data();
+			fp.ucode_length = (u32)data.size();
 
 			return fp;
 		}

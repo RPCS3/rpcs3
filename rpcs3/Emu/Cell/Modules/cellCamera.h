@@ -310,6 +310,19 @@ enum CellCameraAttribute : s32
 	CELL_CAMERA_ATTRIBUTE_UNKNOWN = 500,
 };
 
+// Request codes
+enum
+{
+	SET_CUR  = 0x01,
+	GET_CUR  = 0x81,
+	GET_MIN  = 0x82,
+	GET_MAX  = 0x83,
+	GET_RES  = 0x84,
+	GET_LEN  = 0x85,
+	GET_INFO = 0x86,
+	GET_DEF  = 0x87,
+};
+
 struct CellCameraInfoEx
 {
 	be_t<s32> format;     // CellCameraFormat
@@ -354,6 +367,21 @@ private:
 public:
 	void on_init(const std::shared_ptr<void>&) override;
 	void send_attach_state(bool attached);
+	void set_attr(s32 attrib, u32 arg1, u32 arg2);
+
+	/**
+	 * \brief Sets up notify event queue supplied and immediately sends an ATTACH event to it
+	 * \param key Event queue key to add
+	 * \param source Event source port
+	 * \param flag Event flag (CELL_CAMERA_EFLAG_*)
+	 */
+	void add_queue(u64 key, u64 source, u64 flag);
+
+	/**
+	 * \brief Unsets/removes event queue specified
+	 * \param key Event queue key to remove
+	 */
+	void remove_queue(u64 key);
 
 	std::map<u64, notify_event_data> notify_data_map;
 
@@ -361,10 +389,10 @@ public:
 	semaphore<> mutex_notify_data_map;
 	Timer timer;
 
-	atomic_t<u8> read_mode;
-	atomic_t<bool> is_streaming;
-	atomic_t<bool> is_attached;
-	atomic_t<bool> is_open;
+	atomic_t<u8> read_mode{0};
+	atomic_t<bool> is_streaming{false};
+	atomic_t<bool> is_attached{false};
+	atomic_t<bool> is_open{false};
 
 	CellCameraInfoEx info;
 

@@ -4,6 +4,8 @@
 #include "Emu/System.h"
 #include "Utilities/Config.h"
 
+#include <QMessageBox>
+
 #ifdef _MSC_VER
 #include <Windows.h>
 #undef GetHwnd
@@ -232,6 +234,12 @@ void emu_settings::SaveSettings()
 
 void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged, bool use_max, int max)
 {
+	if (!combobox)
+	{
+		LOG_FATAL(GENERAL, "EnhanceComboBox '%s' was used with an invalid object", GetSettingName(type));
+		return;
+	}
+
 	if (is_ranged)
 	{
 		QStringList range = GetSettingOptions(type);
@@ -251,11 +259,15 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 		}
 	}
 
-	QString selected = qstr(GetSetting(type));
-	int index = combobox->findData(selected);
+	std::string selected = GetSetting(type);
+	int index = combobox->findData(qstr(selected));
+
 	if (index == -1)
 	{
-		LOG_WARNING(GENERAL, "Current setting not found while creating combobox");
+		std::string def = GetSettingDefault(type);
+		LOG_ERROR(GENERAL, "EnhanceComboBox '%s' tried to set an invalid value: %s. Setting to default: %s", GetSettingName(type), selected, def);
+		combobox->setCurrentIndex(combobox->findData(qstr(def)));
+		m_broken_types.insert(type);
 	}
 	else
 	{
@@ -270,14 +282,33 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 
 void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 {
-	std::string currSet = GetSetting(type);
-	if (currSet == "true")
+	if (!checkbox)
+	{
+		LOG_FATAL(GENERAL, "EnhanceCheckBox '%s' was used with an invalid object", GetSettingName(type));
+		return;
+	}
+
+	std::string def = GetSettingDefault(type);
+	std::transform(def.begin(), def.end(), def.begin(), ::tolower);
+
+	if (def != "true" && def != "false")
+	{
+		LOG_FATAL(GENERAL, "EnhanceCheckBox '%s' was used with an invalid SettingsType", GetSettingName(type));
+		return;
+	}
+
+	std::string selected = GetSetting(type);
+	std::transform(selected.begin(), selected.end(), selected.begin(), ::tolower);
+
+	if (selected == "true")
 	{
 		checkbox->setChecked(true);
 	}
-	else if (currSet != "false")
+	else if (selected != "false")
 	{
-		LOG_WARNING(GENERAL, "Passed in an invalid setting for creating enhanced checkbox");
+		LOG_ERROR(GENERAL, "EnhanceCheckBox '%s' tried to set an invalid value: %s. Setting to default: %s", GetSettingName(type), selected, def);
+		checkbox->setChecked(def == "true");
+		m_broken_types.insert(type);
 	}
 
 	connect(checkbox, &QCheckBox::stateChanged, [=](int val)
@@ -287,36 +318,127 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, SettingsType type)
 	});
 }
 
-void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type, bool is_ranged)
+void emu_settings::EnhanceSlider(QSlider* slider, SettingsType type)
 {
+	if (!slider)
+	{
+		LOG_FATAL(GENERAL, "EnhanceSlider '%s' was used with an invalid object", GetSettingName(type));
+		return;
+	}
+
+	QStringList range = GetSettingOptions(type);
+	bool ok_def, ok_sel, ok_min, ok_max;
+
+	int def = qstr(GetSettingDefault(type)).toInt(&ok_def);
+	int min = range.first().toInt(&ok_min);
+	int max = range.last().toInt(&ok_max);
+
+	if (!ok_def || !ok_min || !ok_max)
+	{
+		LOG_FATAL(GENERAL, "EnhanceSlider '%s' was used with an invalid SettingsType", GetSettingName(type));
+		return;
+	}
+
 	QString selected = qstr(GetSetting(type));
+	int val = selected.toInt(&ok_sel);
 
-	if (is_ranged)
+	if (!ok_sel || val < min || val > max)
 	{
-		QStringList range = GetSettingOptions(type);
-		int min = range.first().toInt();
-		int max = range.last().toInt();
-		int val = selected.toInt();
-
-		if (val < min || val > max)
-		{
-			LOG_ERROR(GENERAL, "Passed in an invalid setting for creating enhanced slider");
-			val = min;
-		}
-
-		slider->setMinimum(min);
-		slider->setMaximum(max);
-		slider->setValue(val);
+		LOG_ERROR(GENERAL, "EnhanceSlider '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", GetSettingName(type), val, def, min, max);
+		val = def;
+		m_broken_types.insert(type);
 	}
-	else
-	{
-		//TODO ?
-		LOG_ERROR(GENERAL, "TODO: implement unranged enhanced slider");
-	}
+
+	slider->setRange(min, max);
+	slider->setValue(val);
 
 	connect(slider, &QSlider::valueChanged, [=](int value)
 	{
 		SetSetting(type, sstr(value));
+	});
+}
+
+void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, SettingsType type, const QString& prefix, const QString& suffix)
+{
+	if (!spinbox)
+	{
+		LOG_FATAL(GENERAL, "EnhanceSpinBox '%s' was used with an invalid object", GetSettingName(type));
+		return;
+	}
+
+	QStringList range = GetSettingOptions(type);
+	bool ok_def, ok_sel, ok_min, ok_max;
+
+	int def = qstr(GetSettingDefault(type)).toInt(&ok_def);
+	int min = range.first().toInt(&ok_min);
+	int max = range.last().toInt(&ok_max);
+
+	if (!ok_def || !ok_min || !ok_max)
+	{
+		LOG_FATAL(GENERAL, "EnhanceSpinBox '%s' was used with an invalid type", GetSettingName(type));
+		return;
+	}
+
+	std::string selected = GetSetting(type);
+	int val = qstr(selected).toInt(&ok_sel);
+
+	if (!ok_sel || val < min || val > max)
+	{
+		LOG_ERROR(GENERAL, "EnhanceSpinBox '%s' tried to set an invalid value: %d. Setting to default: %d. Allowed range: [%d, %d]", GetSettingName(type), selected, def, min, max);
+		val = def;
+		m_broken_types.insert(type);
+	}
+
+	spinbox->setPrefix(prefix);
+	spinbox->setSuffix(suffix);
+	spinbox->setRange(min, max);
+	spinbox->setValue(val);
+
+	connect(spinbox, QOverload<const QString &>::of(&QSpinBox::valueChanged), [=](const QString&/* value*/)
+	{
+		SetSetting(type, sstr(spinbox->cleanText()));
+	});
+}
+
+void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, SettingsType type, const QString& prefix, const QString& suffix)
+{
+	if (!spinbox)
+	{
+		LOG_FATAL(GENERAL, "EnhanceDoubleSpinBox '%s' was used with an invalid object", GetSettingName(type));
+		return;
+	}
+
+	QStringList range = GetSettingOptions(type);
+	bool ok_def, ok_sel, ok_min, ok_max;
+
+	double def = qstr(GetSettingDefault(type)).toDouble(&ok_def);
+	double min = range.first().toDouble(&ok_min);
+	double max = range.last().toDouble(&ok_max);
+
+	if (!ok_def || !ok_min || !ok_max)
+	{
+		LOG_FATAL(GENERAL, "EnhanceDoubleSpinBox '%s' was used with an invalid type", GetSettingName(type));
+		return;
+	}
+
+	std::string selected = GetSetting(type);
+	double val = qstr(selected).toDouble(&ok_sel);
+
+	if (!ok_sel || val < min || val > max)
+	{
+		LOG_ERROR(GENERAL, "EnhanceDoubleSpinBox '%s' tried to set an invalid value: %f. Setting to default: %f. Allowed range: [%f, %f]", GetSettingName(type), val, def, min, max);
+		val = def;
+		m_broken_types.insert(type);
+	}
+
+	spinbox->setPrefix(prefix);
+	spinbox->setSuffix(suffix);
+	spinbox->setRange(min, max);
+	spinbox->setValue(val);
+
+	connect(spinbox, QOverload<const QString &>::of(&QDoubleSpinBox::valueChanged), [=](const QString&/* value*/)
+	{
+		SetSetting(type, sstr(spinbox->cleanText()));
 	});
 }
 
@@ -354,4 +476,29 @@ std::string emu_settings::GetSetting(SettingsType type) const
 void emu_settings::SetSetting(SettingsType type, const std::string& val)
 {
 	cfg_adapter::get_node(m_currentSettings, SettingsLoc[type]) = val;
+}
+
+void emu_settings::OpenCorrectionDialog(QWidget* parent)
+{
+	if (m_broken_types.size() && QMessageBox::question(parent, tr("Fix invalid settings?"),
+		tr(
+			"Your config file contained one or more unrecognized settings.\n"
+			"Their default value will be used until they are corrected.\n"
+			"Consider that a correction might render them invalid for other versions of RPCS3.\n"
+			"\n"
+			"Do you wish to let the program correct them for you?\n"
+			"This change will only be final when you save the config."
+		),
+		QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
+	{
+		for (const auto& type : m_broken_types)
+		{
+			std::string def = GetSettingDefault(type);
+			SetSetting(type, def);
+			LOG_SUCCESS(GENERAL, "The config entry '%s' was corrected from '%s' to '%s'", GetSettingName(type), GetSetting(type), def);
+		}
+
+		m_broken_types.clear();
+		LOG_SUCCESS(GENERAL, "You need to save the settings in order to make these changes permanent!");
+	}
 }
