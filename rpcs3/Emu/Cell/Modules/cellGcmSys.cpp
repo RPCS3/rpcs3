@@ -399,7 +399,7 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	// Create contexts
 
 	u32 rsx_ctxaddr = 0;
-	for (u32 addr = 0x40000000; addr < 0xC0000000; addr += 0x10000000)
+	for (u32 addr = 0x30000000; addr < 0xC0000000; addr += 0x10000000)
 	{
 		if (vm::map(addr, 0x10000000, 0x400))
 		{
