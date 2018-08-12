@@ -492,7 +492,7 @@ std::string ppu_thread::dump() const
 		stack_max += 4096;
 	}
 
-	for (u64 sp = vm::read64(stack_ptr); sp >= stack_min && sp + 0x200 < stack_max; sp = vm::read64(static_cast<u32>(sp)))
+	for (u64 sp = vm::read64(stack_ptr); sp >= stack_min && std::max(sp, sp + 0x200) < stack_max; sp = vm::read64(static_cast<u32>(sp)))
 	{
 		// TODO: print also function addresses
 		fmt::append(ret, "> from 0x%08llx (0x0)\n", vm::read64(static_cast<u32>(sp + 16)));
@@ -1072,8 +1072,9 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 	if (LIKELY(g_use_rtm))
 	{
-		if (ppu_stwcx_tx(addr, ppu.rtime, ppu.rdata, reg_value))
+		if (data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value))
 		{
+			vm::reservation_update(addr, sizeof(u32));
 			vm::reservation_notifier(addr, sizeof(u32)).notify_all();
 			ppu.raddr = 0;
 			return true;
@@ -1164,8 +1165,9 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	if (LIKELY(g_use_rtm))
 	{
-		if (ppu_stdcx_tx(addr, ppu.rtime, ppu.rdata, reg_value))
+		if (data.compare_and_swap_test(ppu.rdata, reg_value))
 		{
+			vm::reservation_update(addr, sizeof(u64));
 			vm::reservation_notifier(addr, sizeof(u64)).notify_all();
 			ppu.raddr = 0;
 			return true;
@@ -1317,6 +1319,7 @@ extern void ppu_initialize(const ppu_module& info)
 			if (auto sc = ppu_get_syscall(index))
 			{
 				link_table.emplace(fmt::format("%s", ppu_syscall_code(index)), (u64)sc);
+				link_table.emplace(fmt::format("syscall_%u", index), (u64)sc);
 			}
 		}
 
