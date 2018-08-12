@@ -1319,6 +1319,7 @@ extern void ppu_initialize(const ppu_module& info)
 			if (auto sc = ppu_get_syscall(index))
 			{
 				link_table.emplace(fmt::format("%s", ppu_syscall_code(index)), (u64)sc);
+				link_table.emplace(fmt::format("syscall_%u", index), (u64)sc);
 			}
 		}
 
