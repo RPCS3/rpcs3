@@ -739,6 +739,9 @@ namespace rsx
 						else if (deferred_flush)
 						{
 							//allow_flush = false and not synchronized
+							obj.first->set_dirty(true);
+							m_unreleased_texture_objects++;
+
 							result.sections_to_unprotect.push_back(obj.first);
 							continue;
 						}
@@ -776,6 +779,7 @@ namespace rsx
 					//Flushes happen in one go, now its time to remove protection
 					for (auto& section : result.sections_to_unprotect)
 					{
+						verify(HERE), section->is_flushed() || section->is_dirty();
 						section->unprotect();
 						m_cache[get_block_address(section->get_section_base())].remove_one();
 					}
@@ -1265,7 +1269,7 @@ namespace rsx
 				{
 					if (tex->is_locked())
 					{
-						tex->set_dirty(true);
+						verify(HERE), tex->is_dirty();
 						tex->unprotect();
 						m_cache[get_block_address(tex->get_section_base())].remove_one();
 					}
