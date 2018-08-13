@@ -2,7 +2,7 @@
 
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/Cell/PPUThread.h"
