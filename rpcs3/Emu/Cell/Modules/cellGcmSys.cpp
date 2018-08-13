@@ -46,7 +46,7 @@ u32 local_addr = 0;
 /*
  * Get usable local memory size for a specific game SDK version
  * Example: For 0x00446000 (FW 4.46) we get a localSize of 0x0F900000 (249MB)
- */ 
+ */
 u32 gcmGetLocalMemorySize(u32 sdk_version)
 {
 	if (sdk_version >= 0x00220000)
@@ -397,16 +397,8 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	m_config->current_config.coreFrequency = 500000000;
 
 	// Create contexts
-
-	u32 rsx_ctxaddr = 0;
-	for (u32 addr = 0x30000000; addr < 0xC0000000; addr += 0x10000000)
-	{
-		if (vm::map(addr, 0x10000000, 0x400))
-		{
-			rsx_ctxaddr = addr;
-			break;
-		}
-	}
+	auto ctx_area = vm::find_map(0x10000000, 0x10000000, 0x403);
+	u32 rsx_ctxaddr = ctx_area ? ctx_area->addr : 0;
 
 	if (!rsx_ctxaddr || vm::falloc(rsx_ctxaddr, 0x400000) != rsx_ctxaddr)
 		fmt::throw_exception("Failed to alloc rsx context.");
@@ -898,7 +890,7 @@ s32 cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset)
 	{
 		result = address - 0xC0000000;
 	}
-	// Address in main memory else check 
+	// Address in main memory else check
 	else
 	{
 		const u32 upper12Bits = offsetTable.ioAddress[address >> 20];

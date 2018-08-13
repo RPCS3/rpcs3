@@ -44,7 +44,7 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	}
 
 	// Allocate memory, write back the start address of the allocated area
-	*alloc_addr = verify(HERE, vm::alloc(size, vm::user_space, align));
+	*alloc_addr = verify(HERE, vm::alloc(size, align == 0x10000 ? vm::user64k : vm::user1m, align));
 
 	return CELL_OK;
 }
@@ -94,7 +94,7 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 	const auto mem = idm::make_ptr<lv2_memory_alloca>(size, align, flags, ct.ptr);
 
 	// Allocate memory
-	*alloc_addr = verify(HERE, vm::get(vm::user_space)->alloc(size, mem->align, &mem->shm));
+	*alloc_addr = verify(HERE, vm::get(align == 0x10000 ? vm::user64k : vm::user1m)->alloc(size, mem->align, &mem->shm));
 
 	return CELL_OK;
 }
@@ -103,7 +103,12 @@ error_code sys_memory_free(u32 addr)
 {
 	sys_memory.warning("sys_memory_free(addr=0x%x)", addr);
 
-	const auto area = vm::get(vm::user_space);
+	const auto area = vm::get(vm::any, addr);
+
+	if ((area->flags & 3) != 1)
+	{
+		return {CELL_EINVAL, addr};
+	}
 
 	const auto shm = area->get(addr);
 

@@ -20,19 +20,14 @@ error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy
 		return CELL_ESRCH;
 	}
 
-	// Look for unmapped space (roughly)
-	for (u32 found = 0x30000000; found <= 0xC0000000 - vsize; found += 0x1000000)
+	// Look for unmapped space
+	if (const auto area = vm::find_map(vsize, vsize == 0x10000000 ? 0x10000000 : 0x1000000, 2 | (flag & SYS_MEMORY_PAGE_SIZE_MASK)))
 	{
-		// Try to map
-		if (const auto area = vm::map(found, vsize, flag))
-		{
-			// Alloc all memory (shall not fail)
-			verify(HERE), area->alloc(vsize);
+		// Alloc all memory (shall not fail)
+		verify(HERE), area->alloc(vsize);
 
-			// Write a pointer for the allocated memory
-			*addr = found;
-			return CELL_OK;
-		}
+		// Write a pointer for the allocated memory
+		*addr = area->addr;
 	}
 
 	return CELL_ENOMEM;
@@ -52,7 +47,7 @@ error_code sys_vm_unmap(u32 addr)
 
 	if (!vm::unmap(addr))
 	{
-		return CELL_EINVAL;
+		return {CELL_EINVAL, addr};
 	}
 
 	return CELL_OK;
