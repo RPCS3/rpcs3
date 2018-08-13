@@ -218,7 +218,7 @@ namespace rsx
 
 				if (fits_w && fits_h)
 				{
-					surface_hierachy_info<surface_type>::memory_overlap_t overlap;
+					typename surface_hierachy_info<surface_type>::memory_overlap_t overlap;
 					overlap._ref = surface;
 					overlap.memory_address = address;
 					overlap.x = offset_x;
