@@ -2,7 +2,7 @@
 
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "table_item_delegate.h"
 
 #include <QDialog>

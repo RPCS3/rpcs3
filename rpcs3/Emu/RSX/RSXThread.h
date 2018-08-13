@@ -27,9 +27,35 @@
 
 extern u64 get_system_time();
 
+struct RSXIOTable
+{
+	u16 ea[512];
+	u16 io[3072];
+
+	// try to get the real address given a mapped address
+	// return non zero on success
+	inline u32 RealAddr(u32 offs)
+	{
+		if (offs & 0xE0000000)
+		{
+			return 0; // offset is beyond the limit
+		}
+
+		const s32 upper = this->ea[offs >> 20] << 20;
+
+		if (upper < 0)
+		{
+			return 0;
+		}
+
+		return upper | (offs & 0xFFFFF);
+	}
+};
+
 extern bool user_asked_for_frame_capture;
 extern rsx::frame_trace_data frame_debug;
 extern rsx::frame_capture_data frame_capture;
+extern RSXIOTable RSXIOMem;
 
 namespace rsx
 {
@@ -278,8 +304,8 @@ namespace rsx
 		std::shared_ptr<thread_ctrl> m_decompiler_thread;
 
 	protected:
-		atomic_t<bool> m_rsx_thread_exiting{false};
-		std::stack<u32> m_call_stack;
+		atomic_t<bool> m_rsx_thread_exiting{true};
+		s32 m_return_addr{-1}, restore_ret_addr{-1};
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
 		std::vector<u32> element_push_buffer;
 
@@ -354,7 +380,7 @@ namespace rsx
 		u32 ctxt_addr;
 		u32 label_addr;
 
-		u32 local_mem_addr, main_mem_addr;
+		u32 local_mem_addr, main_mem_addr, main_mem_size{0};
 
 		bool m_rtts_dirty;
 		bool m_textures_dirty[16];

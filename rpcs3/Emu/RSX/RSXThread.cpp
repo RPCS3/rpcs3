@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "RSXThread.h"
@@ -28,6 +28,7 @@ class GSRender;
 bool user_asked_for_frame_capture = false;
 rsx::frame_trace_data frame_debug;
 rsx::frame_capture_data frame_capture;
+RSXIOTable RSXIOMem;
 
 extern CellGcmOffsetTable offsetTable;
 
@@ -566,6 +567,7 @@ namespace rsx
 				{
 					//New internal get is valid, use it
 					restore_point = internal_get.load();
+					restore_ret_addr = m_return_addr;
 				}
 				else
 				{
@@ -612,29 +614,28 @@ namespace rsx
 			// Validate put and get registers before reading the command
 			// TODO: Who should handle graphics exceptions??
 			u32 cmd;
+
+			if (u32 addr = RSXIOMem.RealAddr(internal_get))
 			{
-				u32 get_address;
+				cmd = vm::read32(addr);
+			}
+			else
+			{
+				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", internal_get.load(), put);
 
-				if (!RSXIOMem.getRealAddr(internal_get, get_address))
+				if (mem_faults_count >= 3)
 				{
-					LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", internal_get.load(), put);
-
-					if (mem_faults_count >= 3)
-					{
-						LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
-						internal_get = restore_point.load();
-					}
-					else
-					{
-						mem_faults_count++;
-						std::this_thread::sleep_for(10ms);
-					}
-
-					invalid_command_interrupt_raised = true;
-					continue;
+					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
+					internal_get = restore_point.load();
+					m_return_addr = restore_ret_addr;
+				}
+				else
+				{
+					mem_faults_count++;
+					std::this_thread::sleep_for(10ms);
 				}
 
-				cmd = vm::read32(get_address);
+				continue;
 			}
 
 			const u32 count = (cmd >> 18) & 0x7ff;
@@ -677,23 +678,28 @@ namespace rsx
 			}
 			if ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
 			{
-				m_call_stack.push(internal_get + 4);
+				if (m_return_addr != -1)
+				{
+					// Only one layer is allowed in the call stack. 
+					LOG_ERROR(RSX, "FIFO: CALL found inside a subroutine. Discarding subroutine");
+					internal_get = std::exchange(m_return_addr, -1);
+					continue;
+				}
 				u32 offs = cmd & ~3;
 				//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-				internal_get = offs;
+				m_return_addr = std::exchange(internal_get.raw(), offs) + 4;
 				continue;
 			}
 			if (cmd == RSX_METHOD_RETURN_CMD)
 			{
-				if (m_call_stack.size() == 0)
+				if (m_return_addr == -1)
 				{
 					LOG_ERROR(RSX, "FIFO: RET found without corresponding CALL. Discarding queue");
 					internal_get = put;
 					continue;
 				}
 
-				u32 get = m_call_stack.top();
-				m_call_stack.pop();
+				u32 get = std::exchange(m_return_addr, -1);
 				//LOG_WARNING(RSX, "rsx return(0x%x)", get);
 				internal_get = get;
 				continue;
@@ -709,6 +715,14 @@ namespace rsx
 				internal_get += 4;
 				continue;
 			}
+			if (cmd & 0x3)
+			{
+				// TODO: Check for more invalid bits combinations
+				LOG_ERROR(RSX, "FIFO: Illegal command(0x%x) was executed. Resetting...", cmd);
+				internal_get = restore_point.load();
+				m_return_addr = restore_ret_addr;
+				continue;
+			}
 
 			//Validate the args ptr if the command attempts to read from it
 			const u32 args_address = RSXIOMem.RealAddr(internal_get + 4);
@@ -721,6 +735,7 @@ namespace rsx
 				{
 					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
 					internal_get = restore_point.load();
+					m_return_addr = restore_ret_addr;
 				}
 				else
 				{
@@ -728,7 +743,6 @@ namespace rsx
 					std::this_thread::sleep_for(10ms);
 				}
 
-				invalid_command_interrupt_raised = true;
 				continue;
 			}
 
@@ -736,16 +750,7 @@ namespace rsx
 			mem_faults_count = 0;
 
 			auto args = vm::ptr<u32>::make(args_address);
-			invalid_command_interrupt_raised = false;
-			bool unaligned_command = false;
-
 			u32 first_cmd = (cmd & 0xfffc) >> 2;
-
-			if (cmd & 0x3)
-			{
-				LOG_WARNING(RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
-				unaligned_command = true;
-			}
 
 			// Not sure if this is worth trying to fix, but if it happens, its bad
 			// so logging it until its reported
@@ -976,18 +981,11 @@ namespace rsx
 
 				if (invalid_command_interrupt_raised)
 				{
+					invalid_command_interrupt_raised = false;
+
 					//Skip the rest of this command
 					break;
 				}
-			}
-
-			if (unaligned_command && invalid_command_interrupt_raised)
-			{
-				//This is almost guaranteed to be heap corruption at this point
-				//Ignore the rest of the chain
-				LOG_ERROR(RSX, "FIFO contents may be corrupted. Resetting...");
-				internal_get = restore_point.load();
-				continue;
 			}
 
 			internal_get += (count + 1) * 4;
@@ -1979,22 +1977,22 @@ namespace rsx
 
 	u32 thread::ReadIO32(u32 addr)
 	{
-		u32 value;
-
-		if (!RSXIOMem.Read32(addr, &value))
+		if (u32 ea = RSXIOMem.RealAddr(addr))
 		{
-			fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
+			return vm::read32(ea);
 		}
 
-		return value;
+		fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
 	}
 
 	void thread::WriteIO32(u32 addr, u32 value)
 	{
-		if (!RSXIOMem.Write32(addr, value))
+		if (u32 ea = RSXIOMem.RealAddr(addr))
 		{
-			fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
+			return vm::write32(ea, value);
 		}
+
+		fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
 	}
 
 	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 vertex_count)
@@ -2424,30 +2422,31 @@ namespace rsx
 
 	void thread::on_notify_memory_unmapped(u32 base_address, u32 size)
 	{
+		if (!m_rsx_thread_exiting && base_address < 0xC0000000)
 		{
-			s32 io_addr = RSXIOMem.getMappedAddress(base_address);
-			if (io_addr >= 0)
+			u32 ea = base_address >> 20, io = RSXIOMem.io[ea];
+
+			if (io < 512)
 			{
 				if (!isHLE)
 				{
-					const u64 unmap_key = u64((1ull << (size >> 20)) - 1) << ((io_addr >> 20) & 0x3f);
-					const u64 gcm_flag = 0x100000000ull << (io_addr >> 26);
+					const u64 unmap_key = u64((1ull << (size >> 20)) - 1) << (io & 0x3f);
+					const u64 gcm_flag = 0x100000000ull << (io >> 6);
 					sys_event_port_send(fxm::get<SysRsxConfig>()->rsx_event_port, 0, gcm_flag, unmap_key);
 				}
 				else
 				{
-					const u32 end = (base_address + size) >> 20;
-					for (base_address >>= 20, io_addr >>= 20; base_address < end;) 
+					for (const u32 end = ea + (size >> 20); ea < end;) 
 					{
-						offsetTable.ioAddress[base_address++] = 0xFFFF;
-						offsetTable.eaAddress[io_addr++] = 0xFFFF;
+						offsetTable.ioAddress[ea++] = 0xFFFF;
+						offsetTable.eaAddress[io++] = 0xFFFF;
 					}
 				}
 			}
-		}
 
-		writer_lock lock(m_mtx_task);
-		m_invalidated_memory_ranges.push_back({ base_address, size });
+			writer_lock lock(m_mtx_task);
+			m_invalidated_memory_ranges.push_back({ base_address, size });
+		}
 	}
 
 	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!

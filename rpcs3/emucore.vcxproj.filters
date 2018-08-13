@@ -116,9 +116,6 @@
     <ClCompile Include="Emu\Audio\AudioDumper.cpp">
       <Filter>Emu\Audio</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Memory\Memory.cpp">
-      <Filter>Emu\Memory</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Memory\vm.cpp">
       <Filter>Emu\Memory</Filter>
     </ClCompile>
@@ -837,12 +834,6 @@
     </ClInclude>
     <ClInclude Include="Emu\Audio\AudioDumper.h">
       <Filter>Emu\Audio</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Memory\Memory.h">
-      <Filter>Emu\Memory</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Memory\MemoryBlock.h">
-      <Filter>Emu\Memory</Filter>
     </ClInclude>
     <ClInclude Include="Loader\PSF.h">
       <Filter>Loader</Filter>
