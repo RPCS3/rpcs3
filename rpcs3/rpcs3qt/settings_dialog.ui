@@ -237,6 +237,13 @@
                 </property>
                </widget>
               </item>
+              <item>
+               <widget class="QCheckBox" name="accurateXFloat">
+                <property name="text">
+                 <string>Accurate xfloat</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </item>
