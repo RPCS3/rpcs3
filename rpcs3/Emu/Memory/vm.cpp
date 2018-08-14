@@ -735,11 +735,7 @@ namespace vm
 		{
 			if (_test_map(addr, size))
 			{
-				auto block = std::make_shared<block_t>(addr, size, flags);
-
-				g_locations.emplace_back(block);
-
-				return block;
+				return std::make_shared<block_t>(addr, size, flags);
 			}
 		}
 
@@ -794,7 +790,11 @@ namespace vm
 			return nullptr;
 		}
 
-		return _find_map(size, align, flags);
+		auto block = _find_map(size, align, flags);
+
+		g_locations.emplace_back(block);
+
+		return block;
 	}
 
 	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty)
