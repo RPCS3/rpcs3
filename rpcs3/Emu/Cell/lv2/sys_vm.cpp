@@ -28,6 +28,7 @@ error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy
 
 		// Write a pointer for the allocated memory
 		*addr = area->addr;
+		return CELL_OK;
 	}
 
 	return CELL_ENOMEM;
