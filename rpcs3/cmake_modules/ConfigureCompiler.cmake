@@ -53,8 +53,6 @@ if(NOT MSVC)
 		# This fixes 'some' of the st11range issues. See issue #2516
 		if(APPLE)
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-image_base,0x10000 -Wl,-pagezero_size,0x10000")
-		else()
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -image-base=0x10000")
 		endif()
 	endif()
 
