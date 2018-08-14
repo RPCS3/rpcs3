@@ -1602,8 +1602,25 @@ namespace rsx
 
 			auto bpp = get_format_block_size_in_bytes(format);
 			auto overlapping = m_rtts.get_merged_texture_memory_region(texaddr, tex_width, tex_height, tex_pitch, bpp);
+			bool requires_merging = false;
 
 			if (overlapping.size() > 1)
+			{
+				// The returned values are sorted with oldest first and newest last
+				// This allows newer data to overwrite older memory when merging the list
+				if (overlapping.back().surface == texptr)
+				{
+					// The texture 'proposed' by the previous lookup is the newest one
+					// If it occupies the entire requested region, just use it as-is
+					requires_merging = (internal_width > surface_width || internal_height > surface_height);
+				}
+				else
+				{
+					requires_merging = true;
+				}
+			}
+
+			if (requires_merging)
 			{
 				const auto w = rsx::apply_resolution_scale(internal_width, true);
 				const auto h = rsx::apply_resolution_scale(internal_height, true);

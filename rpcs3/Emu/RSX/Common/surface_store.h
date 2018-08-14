@@ -81,6 +81,8 @@ namespace rsx
 	template <typename image_storage_type>
 	struct render_target_descriptor
 	{
+		u64 last_use_tag = 0; // tag indicating when this block was last confirmed to have been written to
+
 		bool dirty = false;
 		image_storage_type old_contents = nullptr;
 		rsx::surface_antialiasing read_aa_mode = rsx::surface_antialiasing::center_1_sample;
@@ -105,8 +107,14 @@ namespace rsx
 			write_aa_mode = read_aa_mode = rsx::surface_antialiasing::center_1_sample;
 		}
 
-		void on_write()
+		void on_write(u64 write_tag = 0)
 		{
+			if (write_tag)
+			{
+				// Update use tag if requested
+				last_use_tag = write_tag;
+			}
+
 			read_aa_mode = write_aa_mode;
 			dirty = false;
 			old_contents = nullptr;
@@ -1011,15 +1019,39 @@ namespace rsx
 
 			process_list_function(m_render_targets_storage, false);
 			process_list_function(m_depth_stencil_storage, true);
+
+			if (result.size() > 1)
+			{
+				std::sort(result.begin(), result.end(), [](const auto &a, const auto &b)
+				{
+					if (a.surface->last_use_tag == b.surface->last_use_tag)
+					{
+						const auto area_a = a.width * a.height;
+						const auto area_b = b.width * b.height;
+
+						return area_a < area_b;
+					}
+
+					return a.surface->last_use_tag < b.surface->last_use_tag;
+				});
+			}
+
 			return result;
 		}
 
 		void on_write(u32 address = 0)
 		{
-			if (!address && write_tag == cache_tag)
+			if (!address)
 			{
-				// Nothing to do
-				return;
+				if (write_tag == cache_tag)
+				{
+					// Nothing to do
+					return;
+				}
+				else
+				{
+					write_tag = cache_tag;
+				}
 			}
 
 			if (memory_tag != cache_tag)
@@ -1053,7 +1085,7 @@ namespace rsx
 
 				if (auto surface = std::get<1>(rtt))
 				{
-					surface->on_write();
+					surface->on_write(write_tag);
 				}
 			}
 
@@ -1061,13 +1093,8 @@ namespace rsx
 			{
 				if (!address || std::get<0>(m_bound_depth_stencil) == address)
 				{
-					ds->on_write();
+					ds->on_write(write_tag);
 				}
-			}
-
-			if (!address)
-			{
-				write_tag = cache_tag;
 			}
 		}
 
