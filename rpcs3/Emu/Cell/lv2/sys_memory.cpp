@@ -22,7 +22,7 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	const u32 align =
 		flags == SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 :
 		flags == SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 :
-		flags == 0 ? 0x10000 : 0;
+		flags == 0 ? 0x100000 : 0;
 
 	if (!align)
 	{
@@ -57,7 +57,7 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 	const u32 align =
 		flags == SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 :
 		flags == SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 :
-		flags == 0 ? 0x10000 : 0;
+		flags == 0 ? 0x100000 : 0;
 
 	if (!align)
 	{
