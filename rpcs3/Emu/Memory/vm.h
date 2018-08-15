@@ -21,10 +21,10 @@ namespace vm
 	enum memory_location_t : uint
 	{
 		main,
-		video,
-		stack,
 		user64k,
 		user1m,
+		video,
+		stack,
 
 		memory_location_max,
 		any = 0xffffffff,
