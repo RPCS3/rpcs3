@@ -791,7 +791,7 @@ namespace rsx
 				bool execute_method_call = true;
 
 				//TODO: Flatten draw calls when multidraw is not supported to simplify checking in the end() methods
-				if (supports_multidraw && !g_cfg.video.disable_FIFO_reordering)
+				if (supports_multidraw && !g_cfg.video.disable_FIFO_reordering && !capture_current_frame)
 				{
 					//TODO: Make this cleaner
 					bool flush_commands_flag = has_deferred_call;
