@@ -211,7 +211,7 @@ s32 sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 	}
 
 	const u32 end = (io >>= 20) + (size >>= 20);
-	for (u32 ea = RSXIOMem.ea[io]; io < end;) 
+	for (u32 ea = RSXIOMem.ea[io]; io < end;)
 	{
 		RSXIOMem.io[ea++] = 0xFFFF;
 		RSXIOMem.ea[io++] = 0xFFFF;
@@ -446,16 +446,11 @@ s32 sys_rsx_device_map(vm::ptr<u64> dev_addr, vm::ptr<u64> a2, u32 dev_id)
 		return CELL_EINVAL; // sys_rsx_device_map called twice
 	}
 
-	for (u32 addr = 0x30000000; addr < 0xC0000000; addr += 0x10000000)
+	if (const auto area = vm::find_map(0x10000000, 0x10000000, 0x403))
 	{
-		if (vm::map(addr, 0x10000000, 0x400))
-		{
-			vm::falloc(addr, 0x400000);
-
-			m_sysrsx->rsx_context_addr = *dev_addr = addr;
-
-			return CELL_OK;
-		}
+		vm::falloc(area->addr, 0x400000);
+		m_sysrsx->rsx_context_addr = *dev_addr = area->addr;
+		return CELL_OK;
 	}
 
 	return CELL_ENOMEM;

@@ -21,7 +21,8 @@ namespace vm
 	enum memory_location_t : uint
 	{
 		main,
-		user_space,
+		user64k,
+		user1m,
 		video,
 		stack,
 
@@ -176,6 +177,9 @@ namespace vm
 
 	// Create new memory block with specified parameters and return it
 	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags = 0);
+
+	// Create new memory block with at arbitrary position with specified alignment
+	std::shared_ptr<block_t> find_map(u32 size, u32 align, u64 flags = 0);
 
 	// Delete existing memory block with specified start address, return it
 	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty = false);

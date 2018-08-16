@@ -45,13 +45,10 @@ error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::
 	case 0x40000000:
 	case 0x80000000:
 	{
-		for (u64 addr = ::align<u64>(0x30000000, alignment); addr < 0xC0000000; addr += alignment)
+		if (const auto area = vm::find_map(static_cast<u32>(size), static_cast<u32>(alignment), flags & SYS_MEMORY_PAGE_SIZE_MASK))
 		{
-			if (const auto area = vm::map(static_cast<u32>(addr), static_cast<u32>(size), flags))
-			{
-				*alloc_addr = static_cast<u32>(addr);
-				return CELL_OK;
-			}
+			*alloc_addr = area->addr;
+			return CELL_OK;
 		}
 
 		return CELL_ENOMEM;
@@ -191,6 +188,11 @@ error_code sys_mmapper_free_address(u32 addr)
 {
 	sys_mmapper.error("sys_mmapper_free_address(addr=0x%x)", addr);
 
+	if (addr < 0x20000000 || addr >= 0xC0000000)
+	{
+		return {CELL_EINVAL, addr};
+	}
+
 	// If page fault notify exists and an address in this area is faulted, we can't free the memory.
 	auto pf_events = fxm::get_always<page_fault_event_entries>();
 	semaphore_lock pf_lock(pf_events->pf_mutex);
@@ -209,7 +211,7 @@ error_code sys_mmapper_free_address(u32 addr)
 
 	if (!area)
 	{
-		return CELL_EINVAL;
+		return {CELL_EINVAL, addr};
 	}
 
 	if (!area.unique())
@@ -272,7 +274,7 @@ error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
 
 	const auto area = vm::get(vm::any, addr);
 
-	if (!area || addr < 0x30000000 || addr >= 0xC0000000)
+	if (!area || addr < 0x20000000 || addr >= 0xC0000000)
 	{
 		return CELL_EINVAL;
 	}
@@ -320,7 +322,7 @@ error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm:
 
 	const auto area = vm::get(vm::any, start_addr);
 
-	if (!area || start_addr < 0x30000000 || start_addr >= 0xC0000000)
+	if (!area || start_addr < 0x20000000 || start_addr >= 0xC0000000)
 	{
 		return {CELL_EINVAL, start_addr};
 	}
@@ -353,7 +355,7 @@ error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 
 	const auto area = vm::get(vm::any, addr);
 
-	if (!area || addr < 0x30000000 || addr >= 0xC0000000)
+	if (!area || addr < 0x20000000 || addr >= 0xC0000000)
 	{
 		return {CELL_EINVAL, addr};
 	}

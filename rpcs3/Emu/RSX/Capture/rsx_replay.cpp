@@ -12,6 +12,11 @@ namespace rsx
 {
 	be_t<u32> rsx_replay_thread::allocate_context()
 	{
+		// 'fake' initialize usermemory
+		// todo: seriously, need to probly watch the replay memory map and just make sure its mapped before we copy rather than do this
+		const auto user_mem = vm::get(vm::user64k);
+		vm::falloc(user_mem->addr, 0x10000000);
+
 		const u32 contextAddr = vm::alloc(sizeof(rsx_context), vm::main);
 		if (contextAddr == 0)
 			fmt::throw_exception("Capture Replay: context alloc failed");
@@ -26,10 +31,6 @@ namespace rsx
 		if (sys_rsx_context_allocate(vm::get_addr(&contextInfo.context_id), vm::get_addr(&contextInfo.dma_addr), vm::get_addr(&contextInfo.driver_info), vm::get_addr(&contextInfo.reports_addr), contextInfo.mem_handle, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
 
-		// 'fake' initialize usermemory
-		// todo: seriously, need to probly watch the replay memory map and just make sure its mapped before we copy rather than do this
-		vm::falloc(0x20000000, 0x10000000, vm::user_space);
-
 		return contextInfo.context_id;
 	}
 
@@ -37,7 +38,7 @@ namespace rsx
 	{
 		u32 fifo_size = 4;
 
-		// run through replay commands to figure out how big command buffer needs to be 
+		// run through replay commands to figure out how big command buffer needs to be
 		// technically we could do this in batches if it gets too big, but we should be fine
 		// as we aren't allocating anything on main memory, although it may make issues with iooffset later
 		for (const auto& rc : frame->replay_commands)

@@ -12,6 +12,7 @@
 #include <QVBoxLayout>
 
 #include <deque>
+#include <mutex>
 #include "Utilities/sema.h"
 
 extern fs::file g_tty;

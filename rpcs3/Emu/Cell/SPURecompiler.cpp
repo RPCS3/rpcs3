@@ -884,7 +884,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op.rt == 1 && values[1] & ~0x3fff0u)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: IL -> 0x%x", pos, values[1]);
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: IL -> 0x%x", pos, values[1]);
 			}
 
 			break;
@@ -897,7 +897,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op.rt == 1 && values[1] & ~0x3fff0u)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ILA -> 0x%x", pos, values[1]);
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: ILA -> 0x%x", pos, values[1]);
 			}
 
 			break;
@@ -910,7 +910,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op.rt == 1 && values[1] & ~0x3fff0u)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ILH -> 0x%x", pos, values[1]);
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: ILH -> 0x%x", pos, values[1]);
 			}
 
 			break;
@@ -923,7 +923,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op.rt == 1 && values[1] & ~0x3fff0u)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ILHU -> 0x%x", pos, values[1]);
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: ILHU -> 0x%x", pos, values[1]);
 			}
 
 			break;
@@ -935,7 +935,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op.rt == 1 && op.i16 % 16)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: IOHL, 0x%x", pos, op.i16);
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: IOHL, 0x%x", pos, op.i16);
 			}
 
 			break;
@@ -961,7 +961,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op.rt == 1)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: OR", pos);
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: OR", pos);
 			}
 
 			break;
@@ -974,7 +974,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op.rt == 1)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ANDI", pos);
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: ANDI", pos);
 			}
 
 			break;
@@ -987,7 +987,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op.rt == 1)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: AND", pos);
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: AND", pos);
 			}
 
 			break;
@@ -1000,7 +1000,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op.rt == 1 && op.si10 % 16)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: AI, 0x%x", pos, op.si10 + 0u);
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: AI, 0x%x", pos, op.si10 + 0u);
 			}
 
 			break;
@@ -1036,7 +1036,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op.rt == 1)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: SFI", pos);
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: SFI", pos);
 			}
 
 			break;
@@ -1049,7 +1049,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op.rt == 1)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: SF", pos);
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: SF", pos);
 			}
 
 			break;
@@ -1060,7 +1060,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op.rt == 1)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: ROTMI", pos);
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: ROTMI", pos);
 			}
 
 			if (-op.i7 & 0x20)
@@ -1080,7 +1080,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op.rt == 1)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: SHLI", pos);
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: SHLI", pos);
 			}
 
 			if (op.i7 & 0x20)
@@ -1104,7 +1104,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 
 			if (op_rt == 1)
 			{
-				LOG_TODO(SPU, "[0x%x] Unexpected instruction on $SP: %s", pos, s_spu_iname.decode(data));
+				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: %s", pos, s_spu_iname.decode(data));
 			}
 
 			break;
@@ -1982,7 +1982,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			{
 				if (phi->getNumUses())
 				{
-					LOG_TODO(SPU, "[0x%x] $%u: Phi has uses :(", m_pos, index);
+					LOG_WARNING(SPU, "[0x%x] $%u: Phi has uses :(", m_pos, index);
 				}
 				else
 				{
@@ -3405,7 +3405,7 @@ public:
 				}
 			}
 
-			LOG_TODO(SPU, "[0x%x] MFC_WrTagUpdate: $%u is not a good constant", m_pos, +op.rt);
+			LOG_WARNING(SPU, "[0x%x] MFC_WrTagUpdate: $%u is not a good constant", m_pos, +op.rt);
 			break;
 		}
 		case MFC_LSA:
@@ -3702,7 +3702,7 @@ public:
 			}
 
 			// Fallback to unoptimized WRCH implementation (TODO)
-			LOG_TODO(SPU, "[0x%x] MFC_Cmd: $%u is not a constant", m_pos, +op.rt);
+			LOG_WARNING(SPU, "[0x%x] MFC_Cmd: $%u is not a constant", m_pos, +op.rt);
 			break;
 		}
 		case MFC_WrListStallAck:
