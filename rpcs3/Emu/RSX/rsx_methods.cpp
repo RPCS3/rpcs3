@@ -348,7 +348,7 @@ namespace rsx
 				if (address >= 468)
 				{
 					// Ignore addresses outside the usable [0, 467] range
-					LOG_ERROR(RSX, "Invalid transform register index (load=%d, index=%d)", load, index);
+					LOG_WARNING(RSX, "Invalid transform register index (load=%d, index=%d)", load, index);
 					return;
 				}
 
@@ -367,6 +367,15 @@ namespace rsx
 		{
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
+				if (rsx::method_registers.transform_program_load() >= 512)
+				{
+					// PS3 seems to allow exceeding the program buffer by upto 32 instructions before crashing
+					// Discard the "excess" instructions to not overflow our transform program buffer
+					// TODO: Check if the instructions in the overflow area are executed by PS3
+					LOG_WARNING(RSX, "Program buffer overflow!");
+					return;
+				}
+
 				method_registers.commit_4_transform_program_instructions(index);
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
 			}
