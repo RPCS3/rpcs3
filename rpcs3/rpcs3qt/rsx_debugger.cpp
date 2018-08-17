@@ -215,9 +215,9 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	{
 		if (const auto render = rsx::get_current_renderer())
 		{
-			if (u32 realAddr = RSXIOMem.RealAddr(render->ctrl->get.load()))
+			if (RSXIOMem.RealAddr(render->ctrl->get.load()))
 			{
-				m_addr = realAddr;
+				m_addr = render->ctrl->get.load();
 				UpdateInformation();
 			}
 		}
@@ -226,9 +226,9 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	{
 		if (const auto render = rsx::get_current_renderer())
 		{
-			if (u32 realAddr = RSXIOMem.RealAddr(render->ctrl->put.load()))
+			if (RSXIOMem.RealAddr(render->ctrl->put.load()))
 			{
-				m_addr = realAddr;
+				m_addr = render->ctrl->put.load();
 				UpdateInformation();
 			}
 		}
@@ -622,12 +622,12 @@ void rsx_debugger::GetMemory()
 		address_item->setData(Qt::UserRole, addr);
 		m_list_commands->setItem(i, 0, address_item);
 
-		if (vm::check_addr(addr))
+		if (vm::check_addr(RSXIOMem.RealAddr(addr)))
 		{
-			u32 cmd = vm::read32(addr);
+			u32 cmd = vm::read32(RSXIOMem.RealAddr(addr));
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
-			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr, 0)));
+			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr)));
 			m_list_commands->setItem(i, 3, new QTableWidgetItem(QString::number(count)));
 
 			if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
@@ -1066,7 +1066,7 @@ const char* rsx_debugger::ParseGCMEnum(u32 value, u32 type)
 	index = (cmd - a) / m; \
 	case a \
 
-QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioAddr)
+QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 {
 	std::string disasm;
 
@@ -1074,17 +1074,17 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 	if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 	{
 		u32 jumpAddr = cmd & RSX_METHOD_OLD_JUMP_OFFSET_MASK;
-		DISASM("JUMP: %08x -> %08x", currentAddr, ioAddr+jumpAddr);
+		DISASM("JUMP: %08x -> %08x", ioAddr, jumpAddr);
 	}
 	else if((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
 	{
 		u32 jumpAddr = cmd & RSX_METHOD_NEW_JUMP_OFFSET_MASK;
-		DISASM("JUMP: %08x -> %08x", currentAddr, ioAddr + jumpAddr);
+		DISASM("JUMP: %08x -> %08x", ioAddr, jumpAddr);
 	}
 	else if((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
 	{
 		u32 callAddr = cmd & RSX_METHOD_CALL_OFFSET_MASK;
-		DISASM("CALL: %08x -> %08x", currentAddr, ioAddr+callAddr);
+		DISASM("CALL: %08x -> %08x", ioAddr, callAddr);
 	}
 	if(cmd == RSX_METHOD_RETURN_CMD)
 	{
@@ -1093,14 +1093,14 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 
 	if(cmd == 0)
 	{
-		DISASM("Null cmd");
+		DISASM("NOP");
 	}
 	else if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
 		&& (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) != RSX_METHOD_NEW_JUMP_CMD
 		&& (cmd & RSX_METHOD_CALL_CMD_MASK) != RSX_METHOD_CALL_CMD
 		&& cmd != RSX_METHOD_RETURN_CMD)
 	{
-		auto args = vm::ptr<u32>::make(currentAddr + 4);
+		auto args = vm::ptr<u32>::make(RSXIOMem.RealAddr(ioAddr + 4));
 
 		u32 index = 0;
 		switch((cmd & 0x3ffff) >> 2)
