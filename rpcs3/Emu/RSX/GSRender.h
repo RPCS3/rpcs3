@@ -5,6 +5,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#elif defined(__APPLE__)
+// nothing
 #else
 // Cannot include Xlib.h before Qt5
 // and we don't need all of Xlib anyway
@@ -49,6 +51,8 @@ using draw_context_t = void*;
 
 #ifdef _WIN32
 	using display_handle_t = HWND;
+#elif defined(__APPLE__)
+	using display_handle_t = void*; // NSView
 #else
 	using display_handle_t = std::variant<
 		std::pair<Display*, Window>

@@ -375,7 +375,7 @@ private:
 	//Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
 
-#if !defined(_WIN32) && defined(HAVE_VULKAN)
+#if !defined(_WIN32) && !defined(__APPLE__) && defined(HAVE_VULKAN)
 	Display *m_display_handle = nullptr;
 #endif
 

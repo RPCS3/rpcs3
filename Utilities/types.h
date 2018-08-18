@@ -73,7 +73,11 @@ using ulong  = unsigned long;
 using ullong = unsigned long long;
 using llong  = long long;
 
+#if __APPLE__
+using uptr = std::uint64_t;
+#else
 using uptr = std::uintptr_t;
+#endif
 
 using u8  = std::uint8_t;
 using u16 = std::uint16_t;
