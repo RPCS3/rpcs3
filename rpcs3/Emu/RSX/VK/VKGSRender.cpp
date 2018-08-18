@@ -516,7 +516,7 @@ VKGSRender::VKGSRender() : GSRender()
 
 	display_handle_t display = m_frame->handle();
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__APPLE__)
 	display.match([this](std::pair<Display*, Window> p) { m_display_handle = p.first; XFlush(m_display_handle); }, [](auto _) {});
 #endif
 
@@ -776,7 +776,7 @@ VKGSRender::~VKGSRender()
 	m_swapchain->destroy();
 	m_thread_context.close();
 	
-#if !defined(_WIN32) && defined(HAVE_VULKAN)
+#if !defined(_WIN32) && !defined(__APPLE__) && defined(HAVE_VULKAN)
 	if (m_display_handle)
 		XCloseDisplay(m_display_handle);
 #endif

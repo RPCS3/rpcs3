@@ -9,6 +9,10 @@
 #include <memory>
 #include <unordered_map>
 
+#if !defined(_WIN32) && !defined(__APPLE__)
+#include <X11/Xutil.h>
+#endif
+
 #include "Utilities/variant.hpp"
 #include "Emu/RSX/GSRender.h"
 #include "Emu/System.h"
@@ -20,10 +24,6 @@
 #include "../rsx_cache.h"
 
 #include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
-
-#ifndef _WIN32
-#include <X11/Xutil.h>
-#endif
 
 #ifdef __APPLE__
 #define VK_DISABLE_COMPONENT_SWIZZLE 1
@@ -1502,6 +1502,52 @@ public:
 			src.first = false;
 			return VK_SUCCESS;
 		}
+#elif defined(__APPLE__)
+
+	class swapchain_MacOS : public native_swapchain_base
+	{
+		void* nsView = NULL;
+
+	public:
+		swapchain_MacOS(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		{}
+
+		~swapchain_MacOS(){}
+
+		bool init() override
+		{
+			//TODO: get from `nsView`
+			m_width = 0;
+			m_height = 0;
+
+			if (m_width == 0 || m_height == 0)
+			{
+				LOG_ERROR(RSX, "Invalid window dimensions %d x %d", m_width, m_height);
+				return false;
+			}
+
+			init_swapchain_images(dev, 3);
+			return true;
+		}
+
+		void create(display_handle_t& window_handle) override
+		{
+			nsView = window_handle;
+		}
+
+		void destroy(bool full=true) override
+		{
+			swapchain_images.clear();
+
+			if (full)
+				dev.destroy();
+		}
+
+		VkResult present(u32 index) override
+		{
+			fmt::throw_exception("Native macOS swapchain is not implemented yet!");
+		}
 #else
 
 	class swapchain_X11 : public native_swapchain_base
@@ -1991,15 +2037,20 @@ public:
 			std::vector<const char *> extensions;
 			std::vector<const char *> layers;
 
-#ifndef __APPLE__
 			if (!fast)
 			{
+				supported_extensions support;
+
 				extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-				extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+				if (support.is_supported(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
+				{
+					extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+				}
 #ifdef _WIN32
 				extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif defined(__APPLE__)
+				extensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
 #else
-				supported_extensions support;
 				bool found_surface_ext = false;
 				if (support.is_supported(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
 				{
@@ -2018,11 +2069,10 @@ public:
 					LOG_ERROR(RSX, "Could not find a supported Vulkan surface extension");
 					return 0;
 				}
-#endif //(WIN32)
+#endif //(WIN32, __APPLE__)
 				if (g_cfg.video.debug_output)
 					layers.push_back("VK_LAYER_LUNARG_standard_validation");
 			}
-#endif //(!APPLE)
 
 			VkInstanceCreateInfo instance_info = {};
 			instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -2095,6 +2145,7 @@ public:
 
 		swapchain_base* createSwapChain(display_handle_t window_handle, vk::physical_device &dev)
 		{
+			VkSurfaceKHR surface;
 #ifdef _WIN32
 			using swapchain_NATIVE = swapchain_WIN32;
 			HINSTANCE hInstance = NULL;
@@ -2104,16 +2155,17 @@ public:
 			createInfo.hinstance = hInstance;
 			createInfo.hwnd = window_handle;
 
-			VkSurfaceKHR surface;
 			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface));
 
 #elif defined(__APPLE__)
-			using swapchain_NATIVE = swapchain_X11;
-			VkSurfaceKHR surface;
+			using swapchain_NATIVE = swapchain_MacOS;
+			VkMacOSSurfaceCreateInfoMVK createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
+			createInfo.pView = window_handle;
 
+			CHECK_RESULT(vkCreateMacOSSurfaceMVK(m_instance, &createInfo, NULL, &surface));
 #else
 			using swapchain_NATIVE = swapchain_X11;
-			VkSurfaceKHR surface;
 
 			window_handle.match(
 				[&](std::pair<Display*, Window> p)
@@ -2141,7 +2193,6 @@ public:
 			std::vector<VkBool32> supportsPresent(device_queues, VK_FALSE);
 			bool present_possible = false;
 
-#ifndef __APPLE__
 			for (u32 index = 0; index < device_queues; index++)
 			{
 				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, surface, &supportsPresent[index]);
@@ -2160,7 +2211,6 @@ public:
 			{
 				LOG_ERROR(RSX, "It is not possible for the currently selected GPU to present to the window (Likely caused by NVIDIA driver running the current display)");
 			}
-#endif
 
 			// Search for a graphics and a present queue in the array of queue
 			// families, try to find one that supports both
@@ -2218,10 +2268,6 @@ public:
 				swapchain->create(window_handle);
 				return swapchain;
 			}
-
-#ifdef __APPLE__
-			fmt::throw_exception("Unreachable" HERE);
-#endif
 
 			// Get the list of VkFormat's that are supported:
 			uint32_t formatCount;
