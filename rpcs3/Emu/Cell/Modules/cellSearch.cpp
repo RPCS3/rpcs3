@@ -679,7 +679,7 @@ error_code cellSearchGetContentInfoByOffset(CellSearchId searchId, s32 offset, v
 		}
 
 		*outContentType = content_info->type;
-		std::memcpy((void*)outContentId->data, (void*)content_id.first, CELL_SEARCH_CONTENT_ID_SIZE);
+		std::memcpy((void*)outContentId->data, (void*)&content_id.first, CELL_SEARCH_CONTENT_ID_SIZE);
 	}
 	else // content ID not found, perform a search first
 	{
@@ -839,7 +839,7 @@ error_code cellSearchGetContentIdByOffset(CellSearchId searchId, s32 offset, vm:
 	{
 		auto& content_id = searchObject->content_ids.at(offset);
 		*outContentType = content_id.second->type;
-		std::memcpy((void*)outContentId->data, (void*)content_id.first, CELL_SEARCH_CONTENT_ID_SIZE);
+		std::memcpy((void*)outContentId->data, (void*)&content_id.first, CELL_SEARCH_CONTENT_ID_SIZE);
 
 		if (outTimeInfo)
 		{
