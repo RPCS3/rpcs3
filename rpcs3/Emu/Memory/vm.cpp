@@ -801,7 +801,7 @@ namespace vm
 	{
 		vm::writer_lock lock(0);
 
-		for (auto it = g_locations.begin(); it != g_locations.end(); it++)
+		for (auto it = g_locations.begin() + memory_location_max; it != g_locations.end(); it++)
 		{
 			if (*it && (*it)->addr == addr)
 			{
