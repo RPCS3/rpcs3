@@ -155,7 +155,6 @@ namespace vm
 	}
 
 	reader_lock::reader_lock()
-		: locked(true)
 	{
 		auto cpu = get_current_cpu_thread();
 
@@ -175,10 +174,25 @@ namespace vm
 
 	reader_lock::~reader_lock()
 	{
-		if (locked)
+		if (m_upgraded)
+		{
+			g_mutex.unlock();
+		}
+		else
 		{
 			g_mutex.unlock_shared();
 		}
+	}
+
+	void reader_lock::upgrade()
+	{
+		if (m_upgraded)
+		{
+			return;
+		}
+
+		g_mutex.lock_upgrade();
+		m_upgraded = true;
 	}
 
 	writer_lock::writer_lock(int full)
@@ -844,15 +858,13 @@ namespace vm
 				{
 					if (location == vm::user64k || location == vm::user1m)
 					{
-						g_mutex.lock_upgrade();
+						lock.upgrade();
 
 						if (!loc)
 						{
 							// Deferred allocation
 							loc = _find_map(0x10000000, 0x10000000, location == vm::user64k ? 0x201 : 0x401);
 						}
-
-						g_mutex.lock_degrade();
 					}
 				}
 

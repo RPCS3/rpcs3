@@ -64,15 +64,16 @@ namespace vm
 	void temporary_unlock(cpu_thread& cpu) noexcept;
 	void temporary_unlock() noexcept;
 
-	struct reader_lock final
+	class reader_lock final
 	{
-		const bool locked;
+		bool m_upgraded = false;
 
+	public:
 		reader_lock(const reader_lock&) = delete;
 		reader_lock();
 		~reader_lock();
 
-		explicit operator bool() const { return locked; }
+		void upgrade();
 	};
 
 	struct writer_lock final
