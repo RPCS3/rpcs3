@@ -25,6 +25,7 @@ namespace vm
 		user1m,
 		video,
 		stack,
+		spu,
 
 		memory_location_max,
 		any = 0xffffffff,
