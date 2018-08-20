@@ -91,7 +91,7 @@ void basic_mouse_handler::MouseMove(QMouseEvent* event)
 {
 	if (is_time_for_update())
 	{
-		if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen)
+		if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen && m_target->isActive())
 		{
 			// get the screen dimensions
 			const QSize screen = m_target->size();
