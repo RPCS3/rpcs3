@@ -1281,6 +1281,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 				}
 
 				// Don't fallback to heavyweight lock, just give up
+				vm::writer_lock dummy(0);
 			}
 			else if (rdata == data)
 			{
