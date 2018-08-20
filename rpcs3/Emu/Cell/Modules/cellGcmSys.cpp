@@ -81,6 +81,7 @@ void InitOffsetTable()
 	memset(IoMapTable, 0, 3072 * sizeof(u16));
 
 	memset(&RSXIOMem, 0xFF, sizeof(RSXIOMem));
+	reserved_size = 0;
 }
 
 //----------------------------------------------------------------------------
