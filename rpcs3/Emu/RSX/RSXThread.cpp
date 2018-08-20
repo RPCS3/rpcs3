@@ -648,8 +648,6 @@ namespace rsx
 				continue;
 			}
 
-			const u32 count = (cmd >> 18) & 0x7ff;
-
 			if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 			{
 				u32 offs = cmd & 0x1ffffffc;
@@ -734,6 +732,8 @@ namespace rsx
 				continue;
 			}
 
+			u32 count = (cmd >> 18) & 0x7ff;
+
 			//Validate the args ptr if the command attempts to read from it
 			const u32 args_address = RSXIOMem.RealAddr(internal_get + 4);
 
@@ -762,10 +762,11 @@ namespace rsx
 			auto args = vm::ptr<u32>::make(args_address);
 			u32 first_cmd = (cmd & 0xfffc) >> 2;
 
-			// Not sure if this is worth trying to fix, but if it happens, its bad
-			// so logging it until its reported
-			if (internal_get < put && ((internal_get + (count + 1) * 4) > put))
-				LOG_ERROR(RSX, "Get pointer jumping over put pointer! This is bad!");
+			// Stop command execution if put will be equal to get ptr during the execution itself 
+			if (count * 4 + 4 > put - internal_get)
+			{
+				count = (put - internal_get) / 4 - 1;
+			}
 
 			if (performance_counters.state != FIFO_state::running)
 			{
