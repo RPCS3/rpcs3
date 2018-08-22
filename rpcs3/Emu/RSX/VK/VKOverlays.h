@@ -447,6 +447,7 @@ namespace vk
 		bool m_pulse_glow = false;
 		bool m_skip_texture_read = false;
 		bool m_clip_enabled;
+		int  m_texture_type;
 		areaf m_clip_region;
 
 		std::vector<std::unique_ptr<vk::image>> resources;
@@ -506,10 +507,12 @@ namespace vk
 				"	if (parameters.y != 0)\n"
 				"		diff_color.a *= (sin(parameters.x) + 1.f) * 0.5f;\n"
 				"\n"
-				"	if (parameters.z != 0)\n"
-				"		ocol = texture(fs0, tc0) * diff_color;\n"
-				"	else\n"
+				"	if (parameters.z < 1.)\n"
 				"		ocol = diff_color;\n"
+				"	else if (parameters.z > 1.)\n"
+				"		ocol = texture(fs0, tc0).rrrr * diff_color;\n"
+				"	else\n"
+				"		ocol = texture(fs0, tc0).bgra * diff_color;\n"	
 				"}\n"
 			};
 
@@ -530,10 +533,6 @@ namespace vk
 			const u32 data_size = pitch * h;
 			const auto offset = upload_heap.alloc<512>(data_size);
 			const auto addr = upload_heap.map(offset, data_size);
-
-			const VkComponentMapping bgra = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A };
-			const VkComponentMapping rrrr = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
-			const VkComponentMapping mapping = (font) ? rrrr : bgra;
 
 			const VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
@@ -561,7 +560,7 @@ namespace vk
 			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 			change_image_layout(cmd, tex.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 
-			auto view = std::make_unique<vk::image_view>(dev, tex.get(), mapping, range);
+			auto view = std::make_unique<vk::image_view>(dev, tex.get());
 
 			auto result = view.get();
 
@@ -664,7 +663,7 @@ namespace vk
 			dst[7] = m_color.a;
 			dst[8] = m_time;
 			dst[9] = m_pulse_glow? 1.f : 0.f;
-			dst[10] = m_skip_texture_read? 0.f : 1.f;
+			dst[10] = m_skip_texture_read? 0.f : (f32)m_texture_type;
 			dst[11] = m_clip_enabled ? 1.f : 0.f;
 			dst[12] = m_clip_region.x1;
 			dst[13] = m_clip_region.y1;
@@ -704,6 +703,7 @@ namespace vk
 				m_pulse_glow = command.config.pulse_glow;
 				m_clip_enabled = command.config.clip_region;
 				m_clip_region = command.config.clip_rect;
+				m_texture_type = 1;
 
 				auto src = vk::null_image_view(cmd);
 				switch (command.config.texture_ref)
@@ -715,6 +715,7 @@ namespace vk
 					m_skip_texture_read = true;
 					break;
 				case rsx::overlays::image_resource_id::font_file:
+					m_texture_type = 2;
 					src = find_font(command.config.font_ref, cmd, upload_heap)->value;
 					break;
 				case rsx::overlays::image_resource_id::raw_image:
