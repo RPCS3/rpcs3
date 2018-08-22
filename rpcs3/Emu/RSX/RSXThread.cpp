@@ -2060,7 +2060,10 @@ namespace rsx
 					}
 				}
 
-				result.texture_scale[i][3] = (f32)texture_control;
+#ifdef __APPLE__
+				texture_control |= (sampler_descriptors[i]->encoded_component_map() << 16);
+#endif
+				result.texture_scale[i][3] = (f32&)texture_control;
 			}
 		}
 

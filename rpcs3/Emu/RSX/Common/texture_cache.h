@@ -423,6 +423,16 @@ namespace rsx
 				scale_y = y_scale;
 				image_type = type;
 			}
+
+			u32 encoded_component_map() const override
+			{
+				if (image_handle)
+				{
+					return image_handle->encoded_component_map();
+				}
+
+				return 0;
+			}
 		};
 
 	protected:

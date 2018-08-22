@@ -25,6 +25,12 @@
 #include <X11/Xutil.h>
 #endif
 
+#ifdef __APPLE__
+#define VK_DISABLE_COMPONENT_SWIZZLE 1
+#else
+#define VK_DISABLE_COMPONENT_SWIZZLE 0
+#endif
+
 #define DESCRIPTOR_MAX_DRAW_CALLS 4096
 
 #define VERTEX_BUFFERS_FIRST_BIND_SLOT 3
@@ -658,17 +664,17 @@ namespace vk
 			info.format = format;
 			info.image = image;
 			info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			info.viewType = view_type;
 			info.components = mapping;
+			info.viewType = view_type;
 			info.subresourceRange = range;
 
-			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+			create_impl();
 		}
 
 		image_view(VkDevice dev, VkImageViewCreateInfo create_info)
 			: m_device(dev), info(create_info)
 		{
-			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+			create_impl();
 		}
 
 		image_view(VkDevice dev, vk::image* resource,
@@ -698,7 +704,7 @@ namespace vk
 				break;
 			}
 
-			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+			create_impl();
 		}
 
 		~image_view()
@@ -706,10 +712,41 @@ namespace vk
 			vkDestroyImageView(m_device, value, nullptr);
 		}
 
+		u32 encoded_component_map() const
+		{
+#if	(VK_DISABLE_COMPONENT_SWIZZLE)
+			u32 result = (u32)info.components.a - 1;
+			result |= ((u32)info.components.r - 1) << 3;
+			result |= ((u32)info.components.g - 1) << 6;
+			result |= ((u32)info.components.b - 1) << 9;
+
+			return result;
+#else
+			return 0;
+#endif
+		}
+
 		image_view(const image_view&) = delete;
 		image_view(image_view&&) = delete;
+
 	private:
 		VkDevice m_device;
+
+		void create_impl()
+		{
+#if (VK_DISABLE_COMPONENT_SWIZZLE)
+			// Force identity
+			const auto mapping = info.components;
+			info.components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
+#endif
+
+			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+
+#if (VK_DISABLE_COMPONENT_SWIZZLE)
+			// Restore requested mapping
+			info.components = mapping;
+#endif
+		}
 	};
 
 	struct viewable_image : public image

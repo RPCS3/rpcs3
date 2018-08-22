@@ -1890,6 +1890,12 @@ namespace gl
 		{
 			return{ component_swizzle[3], component_swizzle[0], component_swizzle[1], component_swizzle[2] };
 		}
+
+		u32 encoded_component_map() const
+		{
+			// Unused, OGL supports proper component swizzles
+			return 0u;
+		}
 	};
 
 	class viewable_image : public texture
