@@ -155,7 +155,6 @@ namespace vm
 	}
 
 	reader_lock::reader_lock()
-		: locked(true)
 	{
 		auto cpu = get_current_cpu_thread();
 
@@ -175,10 +174,25 @@ namespace vm
 
 	reader_lock::~reader_lock()
 	{
-		if (locked)
+		if (m_upgraded)
+		{
+			g_mutex.unlock();
+		}
+		else
 		{
 			g_mutex.unlock_shared();
 		}
+	}
+
+	void reader_lock::upgrade()
+	{
+		if (m_upgraded)
+		{
+			return;
+		}
+
+		g_mutex.lock_upgrade();
+		m_upgraded = true;
 	}
 
 	writer_lock::writer_lock(int full)
@@ -801,7 +815,7 @@ namespace vm
 	{
 		vm::writer_lock lock(0);
 
-		for (auto it = g_locations.begin(); it != g_locations.end(); it++)
+		for (auto it = g_locations.begin() + memory_location_max; it != g_locations.end(); it++)
 		{
 			if (*it && (*it)->addr == addr)
 			{
@@ -844,15 +858,13 @@ namespace vm
 				{
 					if (location == vm::user64k || location == vm::user1m)
 					{
-						g_mutex.lock_upgrade();
+						lock.upgrade();
 
 						if (!loc)
 						{
 							// Deferred allocation
 							loc = _find_map(0x10000000, 0x10000000, location == vm::user64k ? 0x201 : 0x401);
 						}
-
-						g_mutex.lock_degrade();
 					}
 				}
 
@@ -881,7 +893,7 @@ namespace vm
 			g_locations =
 			{
 				std::make_shared<block_t>(0x00010000, 0x1FFF0000), // main
-				nullptr, // user 64k pages
+				std::make_shared<block_t>(0x20000000, 0x10000000, 0x201), // user 64k pages
 				nullptr, // user 1m pages
 				std::make_shared<block_t>(0xC0000000, 0x10000000), // video
 				std::make_shared<block_t>(0xD0000000, 0x10000000), // stack

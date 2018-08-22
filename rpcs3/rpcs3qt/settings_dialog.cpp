@@ -1232,7 +1232,7 @@ void settings_dialog::AddStylesheets()
 	}
 	else
 	{
-		LOG_WARNING(GENERAL, "Trying to set an invalid stylesheets index ", index);
+		LOG_WARNING(GENERAL, "Trying to set an invalid stylesheets index: %d (%s)", index, sstr(m_currentStylesheet));
 	}
 }
 
@@ -1294,7 +1294,7 @@ void settings_dialog::OnApplyConfig()
 
 void settings_dialog::OnApplyStylesheet()
 {
-	m_currentStylesheet = ui->combo_stylesheets->currentText();
+	m_currentStylesheet = ui->combo_stylesheets->currentData().toString();
 	xgui_settings->SetValue(gui::m_currentStylesheet, m_currentStylesheet);
 	Q_EMIT GuiStylesheetRequest(xgui_settings->GetCurrentStylesheetPath());
 }

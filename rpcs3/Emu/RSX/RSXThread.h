@@ -29,26 +29,21 @@ extern u64 get_system_time();
 
 struct RSXIOTable
 {
-	u16 ea[512];
+	u16 ea[4096];
 	u16 io[3072];
 
 	// try to get the real address given a mapped address
 	// return non zero on success
 	inline u32 RealAddr(u32 offs)
 	{
-		if (offs & 0xE0000000)
-		{
-			return 0; // offset is beyond the limit
-		}
+		const u32 upper = this->ea[offs >> 20];
 
-		const s32 upper = this->ea[offs >> 20] << 20;
-
-		if (upper < 0)
+		if (static_cast<s16>(upper) < 0)
 		{
 			return 0;
 		}
 
-		return upper | (offs & 0xFFFFF);
+		return (upper << 20) | (offs & 0xFFFFF);
 	}
 };
 
@@ -116,6 +111,11 @@ namespace rsx
 		spinning = 2, // Puller continuously jumps to self addr (synchronization technique)
 		nop = 3,      // Puller is processing a NOP command
 		lock_wait = 4 // Puller is processing a lock acquire
+	};
+
+	enum FIFO_hint : u8
+	{
+		hint_conditional_render_eval = 1
 	};
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
@@ -208,6 +208,24 @@ namespace rsx
 		std::array<attribute_buffer_placement, 16> attribute_placement;
 	};
 
+	struct framebuffer_layout
+	{
+		u16 width;
+		u16 height;
+		std::array<u32, 4> color_addresses;
+		std::array<u32, 4> color_pitch;
+		std::array<u32, 4> actual_color_pitch;
+		u32 zeta_address;
+		u32 zeta_pitch;
+		u32 actual_zeta_pitch;
+		rsx::surface_target target;
+		rsx::surface_color_format color_format;
+		rsx::surface_depth_format depth_format;
+		rsx::surface_antialiasing aa_mode;
+		u32 aa_factors[2];
+		bool ignore_change;
+	};
+
 	namespace reports
 	{
 		struct occlusion_query_info
@@ -230,14 +248,14 @@ namespace rsx
 			queued_report_write* forwarder;
 			vm::addr_t sink;
 
-			u32 due_tsc;
+			u64 due_tsc;
 		};
 
 		struct ZCULL_control
 		{
-			// Delay in 'cycles' before a report update operation is forced to retire
-			const u32 max_zcull_cycles_delay = 128;
-			const u32 min_zcull_cycles_delay = 16;
+			// Delay before a report update operation is forced to retire
+			const u32 max_zcull_delay_us = 500;
+			const u32 min_zcull_delay_us = 50;
 
 			// Number of occlusion query slots available. Real hardware actually has far fewer units before choking
 			const u32 occlusion_query_count = 128;
@@ -249,8 +267,8 @@ namespace rsx
 
 			occlusion_query_info* m_current_task = nullptr;
 			u32 m_statistics_tag_id = 0;
-			u32 m_tsc = 0;
-			u32 m_cycles_delay = max_zcull_cycles_delay;
+			u64 m_tsc = 0;
+			u32 m_cycles_delay = max_zcull_delay_us;
 
 			std::vector<queued_report_write> m_pending_writes;
 			std::unordered_map<u32, u32> m_statistics_map;
@@ -278,8 +296,8 @@ namespace rsx
 			// Conditionally sync any pending writes if range overlaps
 			void read_barrier(class ::rsx::thread* ptimer, u32 memory_address, u32 memory_range);
 
-			// Call once every 'tick' to update
-			void update(class ::rsx::thread* ptimer);
+			// Call once every 'tick' to update, optional address provided to partially sync until address is processed
+			void update(class ::rsx::thread* ptimer, u32 sync_address = 0);
 
 			// Draw call notification
 			void on_draw();
@@ -302,6 +320,9 @@ namespace rsx
 	{
 		std::shared_ptr<thread_ctrl> m_vblank_thread;
 		std::shared_ptr<thread_ctrl> m_decompiler_thread;
+
+		u64 timestamp_ctrl = 0;
+		u64 timestamp_subvalue = 0;
 
 	protected:
 		atomic_t<bool> m_rsx_thread_exiting{true};
@@ -356,7 +377,8 @@ namespace rsx
 		GcmZcullInfo zculls[limits::zculls_count];
 
 		// Super memory map (mapped block with r/w permissions)
-		std::pair<u32, std::shared_ptr<u8>> super_memory_map;
+		std::pair<u32, std::shared_ptr<u8>> local_super_memory_block;
+		std::unordered_map<u32, rsx::weak_ptr> main_super_memory_block;
 
 		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
@@ -386,6 +408,8 @@ namespace rsx
 		bool m_textures_dirty[16];
 		bool m_vertex_textures_dirty[4];
 		bool m_framebuffer_state_contested = false;
+		rsx::framebuffer_creation_context m_framebuffer_contest_type = rsx::framebuffer_creation_context::context_draw;
+
 		u32  m_graphics_state = 0;
 		u64  ROP_sync_timestamp = 0;
 
@@ -395,6 +419,8 @@ namespace rsx
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
+
+		framebuffer_layout get_framebuffer_layout(rsx::framebuffer_creation_context context);
 
 		/**
 		 * Analyze vertex inputs and group all interleaved blocks
@@ -433,6 +459,7 @@ namespace rsx
 
 		atomic_t<s32> async_tasks_pending{ 0 };
 
+		u32  conditional_render_test_address = 0;
 		bool conditional_render_test_failed = false;
 		bool conditional_render_enabled = false;
 		bool zcull_stats_enabled = false;
@@ -468,7 +495,7 @@ namespace rsx
 		virtual void on_init_thread() = 0;
 		virtual bool do_method(u32 /*cmd*/, u32 /*value*/) { return false; }
 		virtual void flip(int buffer) = 0;
-		virtual u64 timestamp() const;
+		virtual u64 timestamp();
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
 		virtual void on_invalidate_memory_range(u32 /*address*/, u32 /*range*/) {}
 		virtual void notify_tile_unbound(u32 /*tile*/) {}
@@ -482,6 +509,7 @@ namespace rsx
 		// sync
 		void sync();
 		void read_barrier(u32 memory_address, u32 memory_range);
+		virtual void sync_hint(FIFO_hint hint) {}
 		
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;

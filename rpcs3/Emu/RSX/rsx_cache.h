@@ -354,7 +354,8 @@ namespace rsx
 
 		void flush_io(u32 offset = 0, u32 len = 0) const
 		{
-			locked_memory_ptr.flush(offset, len);
+			const auto write_length = len ? len : (cpu_address_range - offset);
+			locked_memory_ptr.flush(offset, write_length);
 		}
 
 		std::pair<u32, u32> get_confirmed_range() const

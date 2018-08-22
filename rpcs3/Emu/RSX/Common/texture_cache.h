@@ -33,6 +33,8 @@ namespace rsx
 		u32 dst_gcm_format = 0;
 		f32 src_scaling_hint = 1.f;
 		f32 dst_scaling_hint = 1.f;
+		texture_upload_context src_context = texture_upload_context::blit_engine_src;
+		texture_upload_context dst_context = texture_upload_context::blit_engine_dst;
 
 		void analyse()
 		{
@@ -1598,39 +1600,53 @@ namespace rsx
 				scale_y = 0.f;
 			}
 
-			if (internal_width > surface_width || internal_height > surface_height)
+			auto bpp = get_format_block_size_in_bytes(format);
+			auto overlapping = m_rtts.get_merged_texture_memory_region(texaddr, tex_width, tex_height, tex_pitch, bpp);
+			bool requires_merging = false;
+
+			if (overlapping.size() > 1)
 			{
-				auto bpp = get_format_block_size_in_bytes(format);
-				auto overlapping = m_rtts.get_merged_texture_memory_region(texaddr, tex_width, tex_height, tex_pitch, bpp);
-
-				if (overlapping.size() > 1)
+				// The returned values are sorted with oldest first and newest last
+				// This allows newer data to overwrite older memory when merging the list
+				if (overlapping.back().surface == texptr)
 				{
-					const auto w = rsx::apply_resolution_scale(internal_width, true);
-					const auto h = rsx::apply_resolution_scale(internal_height, true);
-
-					sampled_image_descriptor result = { texptr->get_surface(), deferred_request_command::atlas_gather,
-							texaddr, format, 0, 0, w, h, 1, texture_upload_context::framebuffer_storage, is_depth,
-							scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
-
-					result.external_subresource_desc.sections_to_copy.reserve(overlapping.size());
-
-					for (auto &section : overlapping)
-					{
-						result.external_subresource_desc.sections_to_copy.push_back
-						({
-							section.surface->get_surface(),
-							rsx::apply_resolution_scale(section.src_x, true),
-							rsx::apply_resolution_scale(section.src_y, true),
-							rsx::apply_resolution_scale(section.dst_x, true),
-							rsx::apply_resolution_scale(section.dst_y, true),
-							0,
-							rsx::apply_resolution_scale(section.width, true),
-							rsx::apply_resolution_scale(section.height, true)
-						});
-					}
-
-					return result;
+					// The texture 'proposed' by the previous lookup is the newest one
+					// If it occupies the entire requested region, just use it as-is
+					requires_merging = (internal_width > surface_width || internal_height > surface_height);
 				}
+				else
+				{
+					requires_merging = true;
+				}
+			}
+
+			if (requires_merging)
+			{
+				const auto w = rsx::apply_resolution_scale(internal_width, true);
+				const auto h = rsx::apply_resolution_scale(internal_height, true);
+
+				sampled_image_descriptor result = { texptr->get_surface(), deferred_request_command::atlas_gather,
+						texaddr, format, 0, 0, w, h, 1, texture_upload_context::framebuffer_storage, is_depth,
+						scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
+
+				result.external_subresource_desc.sections_to_copy.reserve(overlapping.size());
+
+				for (auto &section : overlapping)
+				{
+					result.external_subresource_desc.sections_to_copy.push_back
+					({
+						section.surface->get_surface(),
+						rsx::apply_resolution_scale(section.src_x, true),
+						rsx::apply_resolution_scale(section.src_y, true),
+						rsx::apply_resolution_scale(section.dst_x, true),
+						rsx::apply_resolution_scale(section.dst_y, true),
+						0,
+						rsx::apply_resolution_scale(section.width, true),
+						rsx::apply_resolution_scale(section.height, true)
+					});
+				}
+
+				return result;
 			}
 
 			bool requires_processing = surface_width > internal_width || surface_height > internal_height;
@@ -2125,6 +2141,7 @@ namespace rsx
 				if (cached_dest)
 				{
 					dest_texture = cached_dest->get_raw_texture();
+					typeless_info.dst_context = cached_dest->get_context();
 
 					max_dst_width = cached_dest->get_width();
 					max_dst_height = cached_dest->get_height();
@@ -2144,6 +2161,7 @@ namespace rsx
 				dst_area.y2 += dst_subres.y;
 
 				dest_texture = dst_subres.surface->get_surface();
+				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
 
 				max_dst_width = (u16)(dst_subres.surface->get_surface_width() * typeless_info.dst_scaling_hint);
 				max_dst_height = dst_subres.surface->get_surface_height();
@@ -2179,6 +2197,7 @@ namespace rsx
 						src_area.y2 <= surface->get_height())
 					{
 						vram_texture = surface->get_raw_texture();
+						typeless_info.src_context = surface->get_context();
 						break;
 					}
 
@@ -2206,6 +2225,7 @@ namespace rsx
 						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled)->get_raw_texture();
 
 					m_texture_memory_in_use += src.pitch * src.slice_h;
+					typeless_info.src_context = texture_upload_context::blit_engine_src;
 				}
 			}
 			else
@@ -2232,6 +2252,7 @@ namespace rsx
 				src_area.y2 += src_subres.y;
 
 				vram_texture = src_subres.surface->get_surface();
+				typeless_info.src_context = texture_upload_context::framebuffer_storage;
 			}
 
 			const bool src_is_depth = src_subres.is_depth_surface;
@@ -2342,6 +2363,7 @@ namespace rsx
 					channel_order);
 
 				dest_texture = cached_dest->get_raw_texture();
+				typeless_info.dst_context = texture_upload_context::blit_engine_dst;
 				m_texture_memory_in_use += dst.pitch * dst_dimensions.height;
 			}
 

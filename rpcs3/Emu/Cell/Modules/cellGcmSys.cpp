@@ -80,8 +80,8 @@ void InitOffsetTable()
 	memset(offsetTable.eaAddress.get_ptr(), 0xFF, 512 * sizeof(u16));
 	memset(IoMapTable, 0, 3072 * sizeof(u16));
 
-	memset(RSXIOMem.ea, 0xFF, 512 * sizeof(u16));
-	memset(RSXIOMem.io, 0xFF, 3072 * sizeof(u16));
+	memset(&RSXIOMem, 0xFF, sizeof(RSXIOMem));
+	reserved_size = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -698,6 +698,7 @@ void cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart,
 	zcull.sFunc = sFunc;
 	zcull.sRef = sRef;
 	zcull.sMask = sMask;
+	zcull.binded = (zCullFormat > 0);
 
 	vm::_ptr<CellGcmZcullInfo>(m_config->zculls_addr)[index] = zcull.pack();
 }
@@ -1261,6 +1262,7 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 	tile.comp = comp;
 	tile.base = base;
 	tile.bank = bank;
+	tile.binded = (pitch > 0);
 
 	vm::_ptr<CellGcmTileInfo>(m_config->tiles_addr)[index] = tile.pack();
 	return CELL_OK;

@@ -43,7 +43,7 @@ namespace rsx
 	{
 		//Don't throw, gather information and ignore broken/garbage commands
 		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
-		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
+		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
 		rsx->invalid_command_interrupt_raised = true;
 	}
 
@@ -160,6 +160,8 @@ namespace rsx
 
 		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
+			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
+
 			const u32 index = method_registers.semaphore_offset_4097() >> 4;
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
@@ -169,7 +171,6 @@ namespace rsx
 				//
 			}
 
-			rsx->sync();
 			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
 			sema.semaphore[index].val = arg;
 			sema.semaphore[index].pad = 0;
@@ -178,6 +179,8 @@ namespace rsx
 
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
+			// Full pipeline barrier
+
 			const u32 index = method_registers.semaphore_offset_4097() >> 4;
 			if (index > 63 && !rsx->do_method(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg))
 			{
@@ -345,7 +348,7 @@ namespace rsx
 				if (address >= 468)
 				{
 					// Ignore addresses outside the usable [0, 467] range
-					LOG_ERROR(RSX, "Invalid transform register index (load=%d, index=%d)", load, index);
+					LOG_WARNING(RSX, "Invalid transform register index (load=%d, index=%d)", load, index);
 					return;
 				}
 
@@ -364,6 +367,15 @@ namespace rsx
 		{
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
+				if (rsx::method_registers.transform_program_load() >= 512)
+				{
+					// PS3 seems to allow exceeding the program buffer by upto 32 instructions before crashing
+					// Discard the "excess" instructions to not overflow our transform program buffer
+					// TODO: Check if the instructions in the overflow area are executed by PS3
+					LOG_WARNING(RSX, "Program buffer overflow!");
+					return;
+				}
+
 				method_registers.commit_4_transform_program_instructions(index);
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
 			}
@@ -518,9 +530,10 @@ namespace rsx
 				return;
 			}
 
-			rsx->sync();
-			vm::ptr<CellGcmReportData> result = address_ptr;
-			rsx->conditional_render_test_failed = (result->value == 0);
+			// Defer conditional render evaluation
+			rsx->sync_hint(FIFO_hint::hint_conditional_render_eval);
+			rsx->conditional_render_test_address = address_ptr;
+			rsx->conditional_render_test_failed = false;
 		}
 
 		void set_zcull_render_enable(thread* rsx, u32, u32 arg)
@@ -1079,13 +1092,7 @@ namespace rsx
 
 	void flip_command(thread* rsx, u32, u32 arg)
 	{
-		if (user_asked_for_frame_capture && !g_cfg.video.strict_rendering_mode)
-		{
-			// not dealing with non-strict rendering capture for now
-			user_asked_for_frame_capture = false;
-			LOG_FATAL(RSX, "RSX Capture: Capture only supported when ran with strict rendering mode.");
-		}
-		else if (user_asked_for_frame_capture && !rsx->capture_current_frame)
+		if (user_asked_for_frame_capture && !rsx->capture_current_frame)
 		{
 			rsx->capture_current_frame = true;
 			user_asked_for_frame_capture = false;
@@ -1806,8 +1813,6 @@ namespace rsx
 		bind<NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
-		bind<NV4097_ZCULL_SYNC, nv4097::sync>();
-		bind<NV4097_SET_CONTEXT_DMA_REPORT, nv4097::sync>();
 		bind<NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start>();

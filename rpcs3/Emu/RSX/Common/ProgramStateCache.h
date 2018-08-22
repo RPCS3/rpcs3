@@ -57,6 +57,7 @@ namespace program_hash_util
 		{
 			u32 program_start_offset;
 			u32 program_ucode_length;
+			u32 program_constants_buffer_length;
 			u16 referenced_textures_mask;
 		};
 

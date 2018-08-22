@@ -124,8 +124,7 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
 	dmaControl.put = 0;
 	dmaControl.ref = 0xFFFFFFFF;
 
-	memset(RSXIOMem.ea, 0xFF, 512 * sizeof(u16));
-	memset(RSXIOMem.io, 0xFF, 3072 * sizeof(u16));
+	memset(&RSXIOMem, 0xFF, sizeof(RSXIOMem));
 
 	if (false/*system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB*/)
 		rsx::get_current_renderer()->main_mem_size = 0x20000000; //512MB
