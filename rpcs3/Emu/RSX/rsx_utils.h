@@ -733,6 +733,11 @@ namespace rsx
 		return g_current_renderer;
 	}
 
+	static inline bool region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2)
+	{
+		return (base1 < limit2 && base2 < limit1);
+	}
+
 	template <int N>
 	void unpack_bitset(std::bitset<N>& block, u64* values)
 	{
