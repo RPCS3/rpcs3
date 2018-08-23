@@ -31,6 +31,9 @@ before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
       export CXX="g++-8" CC="gcc-8" CXXFLAGS="-Wno-format-security";
     fi;
+  - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "clang++" ]; then
+      export CXX="clang++-6.0" CC="clang-6.0";
+    fi;
 
 install:
   # Install updated libglew-dev since the version provided by trusty is outdated
@@ -41,6 +44,12 @@ install:
       wget https://mirrors.kernel.org/ubuntu/pool/universe/v/vulkan/libvulkan-dev_1.1.73+dfsg-1_amd64.deb;
       sudo apt-get install --only-upgrade dpkg;
       sudo dpkg -i libglew2.0_2.0.0-5_amd64.deb libglew-dev_2.0.0-5_amd64.deb libvulkan1_1.1.73+dfsg-1_amd64.deb libvulkan-dev_1.1.73+dfsg-1_amd64.deb;
+      if [ "$CXX" = "clang++-6.0" ]; then
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -;
+        sudo apt-add-repository "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-6.0 main";
+        sudo apt-get update;
+        sudo apt-get install -y clang-6.0 lld-6.0;
+      fi;
     else
       brew install ccache glew ninja qt;
       export CCACHE_SLOPPINESS=pch_defines,time_macros;
@@ -120,8 +129,6 @@ addons:
       #- libvulkan1
       #- libvulkan-dev
       - libc6-dev
-      # Clang 5.0 is now bundled in travis, so we no longer need the ppa version.
-      #- clang-4.0
       - libedit-dev
       - g++-8
       - gcc-8
