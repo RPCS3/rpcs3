@@ -153,20 +153,8 @@ struct atomic_test_and_complement;
 template <typename T>
 class atomic_t;
 
-#ifdef _MSC_VER
-using std::void_t;
-#else
-namespace void_details
-{
-	template <typename...>
-	struct make_void
-	{
-		using type = void;
-	};
-}
-
-template <typename... T>
-using void_t = typename void_details::make_void<T...>::type;
+#if defined(__INTELLISENSE__) && !defined(_MSC_VER)
+namespace std { template <typename...> using void_t = void; }
 #endif
 
 // Extract T::simple_type if available, remove cv qualifiers
@@ -177,7 +165,7 @@ struct simple_type_helper
 };
 
 template <typename T>
-struct simple_type_helper<T, void_t<typename T::simple_type>>
+struct simple_type_helper<T, std::void_t<typename T::simple_type>>
 {
 	using type = typename T::simple_type;
 };
@@ -725,7 +713,7 @@ struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std
 
 // Simple type enabled (TODO: allow for To as well)
 template <typename From, typename To>
-struct narrow_impl<From, To, void_t<typename From::simple_type>>
+struct narrow_impl<From, To, std::void_t<typename From::simple_type>>
 	: narrow_impl<simple_t<From>, To>
 {
 };
@@ -953,7 +941,7 @@ struct error_code
 	};
 
 	template<typename ET>
-	struct is_error<ET, void_t<decltype(ET::__not_an_error)>> : std::false_type
+	struct is_error<ET, std::void_t<decltype(ET::__not_an_error)>> : std::false_type
 	{
 	};
 
