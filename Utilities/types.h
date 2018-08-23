@@ -45,6 +45,9 @@
 // Return 32 bit alignof() to avoid widening/narrowing conversions with size_t
 #define ALIGN_32(...) static_cast<u32>(alignof(__VA_ARGS__))
 
+// Variant pattern matching helper
+#define MATCH(arg, ...) constexpr(std::is_same_v<std::decay_t<decltype(arg)>, __VA_ARGS__>)
+
 #define CONCATENATE_DETAIL(x, y) x ## y
 #define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
 
