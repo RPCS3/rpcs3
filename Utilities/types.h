@@ -114,45 +114,6 @@ struct se_storage;
 template <typename T, bool Se = true, std::size_t Align = alignof(T)>
 class se_t;
 
-template <typename T, std::size_t Size = sizeof(T)>
-struct atomic_storage;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_add;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_sub;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_and;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_or;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_xor;
-
-template <typename T, typename = void>
-struct atomic_pre_inc;
-
-template <typename T, typename = void>
-struct atomic_post_inc;
-
-template <typename T, typename = void>
-struct atomic_pre_dec;
-
-template <typename T, typename = void>
-struct atomic_post_dec;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_test_and_set;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_test_and_reset;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_test_and_complement;
-
 template <typename T>
 class atomic_t;
 
