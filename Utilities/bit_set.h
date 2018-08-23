@@ -43,6 +43,7 @@ Intersection (&) and symmetric difference (^) is also available.
 */
 
 #include "types.h"
+#include "Atomic.h"
 
 // Helper template
 template<typename T>
@@ -368,7 +369,7 @@ struct atomic_xor<BS, T, std::void_t<decltype(T::__bitset_enum_max), std::enable
 };
 
 template<typename T>
-struct atomic_add<T, T, std::void_t<decltype(T::__bitset_set_type)>>
+struct atomic_add<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
 {
 	using under = std::underlying_type_t<T>;
 
@@ -389,7 +390,7 @@ struct atomic_add<T, T, std::void_t<decltype(T::__bitset_set_type)>>
 };
 
 template<typename T>
-struct atomic_sub<T, T, std::void_t<decltype(T::__bitset_set_type)>>
+struct atomic_sub<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
 {
 	using under = std::underlying_type_t<T>;
 
@@ -410,7 +411,7 @@ struct atomic_sub<T, T, std::void_t<decltype(T::__bitset_set_type)>>
 };
 
 template<typename T>
-struct atomic_and<T, T, std::void_t<decltype(T::__bitset_set_type)>>
+struct atomic_and<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
 {
 	using under = std::underlying_type_t<T>;
 
@@ -431,7 +432,7 @@ struct atomic_and<T, T, std::void_t<decltype(T::__bitset_set_type)>>
 };
 
 template<typename T>
-struct atomic_xor<T, T, std::void_t<decltype(T::__bitset_set_type)>>
+struct atomic_xor<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
 {
 	using under = std::underlying_type_t<T>;
 
@@ -497,7 +498,7 @@ struct atomic_test_and_complement<BS, T, std::void_t<decltype(T::__bitset_enum_m
 };
 
 template<typename T>
-struct atomic_test_and_set<T, T, std::void_t<decltype(T::__bitset_set_type)>>
+struct atomic_test_and_set<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
 {
 	using under = std::underlying_type_t<T>;
 
@@ -512,7 +513,7 @@ struct atomic_test_and_set<T, T, std::void_t<decltype(T::__bitset_set_type)>>
 };
 
 template<typename T>
-struct atomic_test_and_reset<T, T, std::void_t<decltype(T::__bitset_set_type)>>
+struct atomic_test_and_reset<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
 {
 	using under = std::underlying_type_t<T>;
 
@@ -527,7 +528,7 @@ struct atomic_test_and_reset<T, T, std::void_t<decltype(T::__bitset_set_type)>>
 };
 
 template<typename T>
-struct atomic_test_and_complement<T, T, std::void_t<decltype(T::__bitset_set_type)>>
+struct atomic_test_and_complement<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
 {
 	using under = std::underlying_type_t<T>;
 
@@ -624,7 +625,7 @@ inline bool test_and_complement(T& lhs, T rhs)
 }
 
 template<typename T>
-struct atomic_or<T, T, std::void_t<decltype(T::__bitwise_ops), std::enable_if_t<std::is_enum<T>::value>>>
+struct atomic_or<T, T, std::enable_if_t<sizeof(T::__bitwise_ops) != 0 && std::is_enum<T>::value>>
 {
 	using under = std::underlying_type_t<T>;
 
@@ -645,7 +646,7 @@ struct atomic_or<T, T, std::void_t<decltype(T::__bitwise_ops), std::enable_if_t<
 };
 
 template<typename T>
-struct atomic_and<T, T, std::void_t<decltype(T::__bitwise_ops), std::enable_if_t<std::is_enum<T>::value>>>
+struct atomic_and<T, T, std::enable_if_t<sizeof(T::__bitwise_ops) != 0 && std::is_enum<T>::value>>
 {
 	using under = std::underlying_type_t<T>;
 
@@ -666,7 +667,7 @@ struct atomic_and<T, T, std::void_t<decltype(T::__bitwise_ops), std::enable_if_t
 };
 
 template<typename T>
-struct atomic_xor<T, T, std::void_t<decltype(T::__bitwise_ops), std::enable_if_t<std::is_enum<T>::value>>>
+struct atomic_xor<T, T, std::enable_if_t<sizeof(T::__bitwise_ops) != 0 && std::is_enum<T>::value>>
 {
 	using under = std::underlying_type_t<T>;
 
@@ -687,7 +688,7 @@ struct atomic_xor<T, T, std::void_t<decltype(T::__bitwise_ops), std::enable_if_t
 };
 
 template<typename T>
-struct atomic_test_and_set<T, T, std::void_t<decltype(T::__bitwise_ops), std::enable_if_t<std::is_enum<T>::value>>>
+struct atomic_test_and_set<T, T, std::enable_if_t<sizeof(T::__bitwise_ops) != 0 && std::is_enum<T>::value>>
 {
 	using under = std::underlying_type_t<T>;
 
@@ -702,7 +703,7 @@ struct atomic_test_and_set<T, T, std::void_t<decltype(T::__bitwise_ops), std::en
 };
 
 template<typename T>
-struct atomic_test_and_reset<T, T, std::void_t<decltype(T::__bitwise_ops), std::enable_if_t<std::is_enum<T>::value>>>
+struct atomic_test_and_reset<T, T, std::enable_if_t<sizeof(T::__bitwise_ops) != 0 && std::is_enum<T>::value>>
 {
 	using under = std::underlying_type_t<T>;
 
@@ -717,7 +718,7 @@ struct atomic_test_and_reset<T, T, std::void_t<decltype(T::__bitwise_ops), std::
 };
 
 template<typename T>
-struct atomic_test_and_complement<T, T, std::void_t<decltype(T::__bitwise_ops), std::enable_if_t<std::is_enum<T>::value>>>
+struct atomic_test_and_complement<T, T, std::enable_if_t<sizeof(T::__bitwise_ops) != 0 && std::is_enum<T>::value>>
 {
 	using under = std::underlying_type_t<T>;
 
