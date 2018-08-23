@@ -1314,6 +1314,10 @@ namespace rsx
 		registers[NV4097_SET_CONTEXT_DMA_COLOR_D] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
 		registers[NV4097_SET_CONTEXT_DMA_ZETA] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
 
+		// Vertex shader attributes masks
+		registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK] = 0xFFFF;
+		registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK] = 0x3FFFFF;
+
 		registers[NV3089_SET_CONTEXT_SURFACE] = 0x313371C3; // CELL_GCM_CONTEXT_SURFACE2D
 
 		for (auto& tex : fragment_textures) tex.init();
