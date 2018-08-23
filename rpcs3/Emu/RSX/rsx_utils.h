@@ -6,14 +6,7 @@
 #include <atomic>
 #include <memory>
 #include <bitset>
-
-// TODO: replace the code below by #include <optional> when C++17 or newer will be used
-#include <optional.hpp>
-namespace std
-{
-	template<class T>
-	using optional = experimental::optional<T>;
-}
+#include <optional>
 
 extern "C"
 {
@@ -686,7 +679,7 @@ namespace rsx
 		return dst_index;
 	}
 
-	// The rsx internally adds the 'data_base_offset' and the 'vert_offset' and masks it 
+	// The rsx internally adds the 'data_base_offset' and the 'vert_offset' and masks it
 	// before actually attempting to translate to the internal address. Seen happening heavily in R&C games
 	static inline u32 get_vertex_offset_from_base(u32 vert_data_base_offset, u32 vert_base_offset)
 	{
