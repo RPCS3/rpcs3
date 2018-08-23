@@ -96,6 +96,7 @@ namespace vk
 	bool emulate_primitive_restart(rsx::primitive_type type);
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
+	VkFlags get_heap_compatible_buffer_types();
 	driver_vendor get_driver_vendor();
 
 	VkComponentMapping default_component_map();
@@ -535,7 +536,11 @@ namespace vk
 				{
 					if ((mem_infos.memoryTypes[i].propertyFlags & desired_mask) == desired_mask)
 					{
-						*type_index = i;
+						if (type_index)
+						{
+							*type_index = i;
+						}
+
 						return true;
 					}
 				}
@@ -1078,6 +1083,8 @@ namespace vk
 	{
 	private:
 		bool is_open = false;
+		bool is_pending = false;
+		VkFence m_submit_fence = VK_NULL_HANDLE;
 
 	protected:
 		vk::command_pool *pool = nullptr;
@@ -1095,21 +1102,33 @@ namespace vk
 		command_buffer() {}
 		~command_buffer() {}
 
-		void create(vk::command_pool &cmd_pool)
+		void create(vk::command_pool &cmd_pool, bool auto_reset = false)
 		{
 			VkCommandBufferAllocateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 			infos.commandBufferCount = 1;
 			infos.commandPool = (VkCommandPool)cmd_pool;
 			infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
 			CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
+
+			if (auto_reset)
+			{
+				VkFenceCreateInfo info = {};
+				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+				CHECK_RESULT(vkCreateFence(cmd_pool.get_owner(), &info, nullptr, &m_submit_fence));
+			}
+
 			pool = &cmd_pool;
 		}
 
 		void destroy()
 		{
 			vkFreeCommandBuffers(pool->get_owner(), (*pool), 1, &commands);
+
+			if (m_submit_fence)
+			{
+				vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
+			}
 		}
 
 		vk::command_pool& get_command_pool() const
@@ -1124,6 +1143,15 @@ namespace vk
 
 		void begin()
 		{
+			if (m_submit_fence && is_pending)
+			{
+				while (vkGetFenceStatus(pool->get_owner(), m_submit_fence) != VK_SUCCESS);
+				is_pending = false;
+
+				CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
+				CHECK_RESULT(vkResetCommandBuffer(commands, 0));
+			}
+
 			if (is_open)
 				return;
 
@@ -1158,6 +1186,11 @@ namespace vk
 				return;
 			}
 
+			if (fence == VK_NULL_HANDLE)
+			{
+				fence = m_submit_fence;
+			}
+
 			VkSubmitInfo infos = {};
 			infos.commandBufferCount = 1;
 			infos.pCommandBuffers = &commands;
@@ -1169,6 +1202,8 @@ namespace vk
 			acquire_global_submit_lock();
 			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
 			release_global_submit_lock();
+
+			is_pending = true;
 		}
 	};
 
@@ -2695,49 +2730,97 @@ public:
 		bool mapped = false;
 		void *_ptr = nullptr;
 
+		std::unique_ptr<buffer> shadow;
+		std::vector<VkBufferCopy> dirty_ranges;
+
 		// NOTE: Some drivers (RADV) use heavyweight OS map/unmap routines that are insanely slow
 		// Avoid mapping/unmapping to keep these drivers from stalling
 		// NOTE2: HOST_CACHED flag does not keep the mapped ptr around in the driver either
 
 		void create(VkBufferUsageFlags usage, size_t size, const char *name = "unnamed", size_t guard = 0x10000)
 		{
+			data_heap::init(size, name, guard);
+
 			const auto device = get_current_renderer();
 			const auto memory_map = device->get_memory_mapping();
-			const VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-			data_heap::init(size, name, guard);
-			heap.reset(new buffer(*device, size, memory_map.host_visible_coherent, memory_flags, usage, 0));
+			VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+			auto memory_index = memory_map.host_visible_coherent;
+
+			if (!(get_heap_compatible_buffer_types() & usage))
+			{
+				LOG_WARNING(RSX, "Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", (u32)usage);
+
+				shadow.reset(new buffer(*device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+				usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+				memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+				memory_index = memory_map.device_local;
+			}
+
+			heap.reset(new buffer(*device, size, memory_index, memory_flags, usage, 0));
 		}
 
 		void destroy()
 		{
 			if (mapped)
 			{
-				heap->unmap();
-				mapped = false;
+				unmap(true);
 			}
 
 			heap.reset();
+			shadow.reset();
 		}
 
 		void* map(size_t offset, size_t size)
 		{
 			if (!_ptr)
 			{
-				_ptr = heap->map(0, heap->size());
+				if (shadow)
+					_ptr = shadow->map(0, shadow->size());
+				else
+					_ptr = heap->map(0, heap->size());
+
 				mapped = true;
+			}
+
+			if (shadow)
+			{
+				dirty_ranges.push_back({offset, offset, size});
 			}
 
 			return (u8*)_ptr + offset;
 		}
 
-		void unmap()
+		void unmap(bool force = false)
 		{
-			if (g_cfg.video.disable_vulkan_mem_allocator)
+			if (force || g_cfg.video.disable_vulkan_mem_allocator)
 			{
-				heap->unmap();
+				if (shadow)
+					shadow->unmap();
+				else
+					heap->unmap();
+
 				mapped = false;
 				_ptr = nullptr;
+			}
+		}
+
+		bool dirty()
+		{
+			return !dirty_ranges.empty();
+		}
+
+		void sync(const vk::command_buffer& cmd)
+		{
+			if (!dirty_ranges.empty())
+			{
+				verify (HERE), shadow, heap;
+				vkCmdCopyBuffer(cmd, shadow->value, heap->value, (u32)dirty_ranges.size(), dirty_ranges.data());
+				dirty_ranges.resize(0);
+
+				insert_buffer_memory_barrier(cmd, heap->value, 0, heap->size(),
+						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 			}
 		}
 	};

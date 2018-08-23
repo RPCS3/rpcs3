@@ -58,13 +58,8 @@ namespace vk
 		{
 			if (!m_vao.heap)
 			{
-				auto memory_types = vk::get_memory_mapping(m_device->gpu());
-
-				m_vao.init(1 * 0x100000, "overlays VAO", 128);
-				m_vao.heap = std::make_unique<vk::buffer>(*m_device, 1 * 0x100000, memory_types.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0);
-
-				m_ubo.init(8 * 0x100000, "overlays UBO", 128);
-				m_ubo.heap = std::make_unique<vk::buffer>(*m_device, 8 * 0x100000, memory_types.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0);
+				m_vao.create(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 1 * 0x100000, "overlays VAO", 128);
+				m_ubo.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 8 * 0x100000, "overlays UBO", 128);
 			}
 		}
 

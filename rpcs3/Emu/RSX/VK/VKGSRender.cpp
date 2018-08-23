@@ -565,7 +565,7 @@ VKGSRender::VKGSRender() : GSRender()
 	
 	//Create secondary command_buffer for parallel operations
 	m_secondary_command_buffer_pool.create((*m_device));
-	m_secondary_command_buffer.create(m_secondary_command_buffer_pool);
+	m_secondary_command_buffer.create(m_secondary_command_buffer_pool, true);
 	m_secondary_command_buffer.access_hint = vk::command_buffer::access_type_hint::all;
 
 	//Precalculated stuff
@@ -601,7 +601,7 @@ VKGSRender::VKGSRender() : GSRender()
 	}
 
 	const auto& memory_map = m_device->get_memory_mapping();
-	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
+	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, memory_map.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R8_UINT, 0, 32);
 
 	vk::initialize_compiler_context();
@@ -2504,6 +2504,25 @@ void VKGSRender::write_buffers()
 
 void VKGSRender::close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
 {
+	if (m_attrib_ring_info.dirty() ||
+		m_uniform_buffer_ring_info.dirty() ||
+		m_index_buffer_ring_info.dirty() ||
+		m_transform_constants_ring_info.dirty() ||
+		m_texture_upload_buffer_ring_info.dirty())
+	{
+		std::lock_guard<shared_mutex> lock(m_secondary_cb_guard);
+		m_secondary_command_buffer.begin();
+
+		m_attrib_ring_info.sync(m_secondary_command_buffer);
+		m_uniform_buffer_ring_info.sync(m_secondary_command_buffer);
+		m_index_buffer_ring_info.sync(m_secondary_command_buffer);
+		m_transform_constants_ring_info.sync(m_secondary_command_buffer);
+		m_texture_upload_buffer_ring_info.sync(m_secondary_command_buffer);
+
+		m_secondary_command_buffer.end();
+		m_secondary_command_buffer.submit(m_swapchain->get_graphics_queue(), {}, VK_NULL_HANDLE, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+	}
+
 	m_current_command_buffer->end();
 	m_current_command_buffer->tag();
 	m_current_command_buffer->submit(m_swapchain->get_graphics_queue(), semaphores, fence, pipeline_stage_flags);
