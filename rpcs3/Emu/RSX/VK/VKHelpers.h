@@ -398,6 +398,8 @@ namespace vk
 			dev = pdev;
 			vkGetPhysicalDeviceProperties(pdev, &props);
 			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+
+			LOG_NOTICE(RSX, "Physical device intialized. GPU=%s, driver=%u", props.deviceName, props.driverVersion);
 		}
 
 		std::string name() const
@@ -434,6 +436,11 @@ namespace vk
 		VkPhysicalDeviceMemoryProperties get_memory_properties() const
 		{
 			return memory_properties;
+		}
+
+		VkPhysicalDeviceLimits get_limits() const
+		{
+			return props.limits;
 		}
 
 		operator VkPhysicalDevice() const
