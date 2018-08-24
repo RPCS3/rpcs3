@@ -244,10 +244,6 @@ struct fmt_type_info
 	}
 };
 
-// Argument array type (each element generated via fmt_unveil<>)
-template <typename... Args>
-using fmt_args_t = const u64(&&)[sizeof...(Args) + 1];
-
 namespace fmt
 {
 	// Base-57 format helper
@@ -274,10 +270,13 @@ namespace fmt
 	SAFE_BUFFERS FORCE_INLINE const fmt_type_info* get_type_info()
 	{
 		// Constantly initialized null-terminated list of type-specific information
-		static constexpr fmt_type_info result[sizeof...(Args) + 1]{fmt_type_info::make<Args>()...};
+		static constexpr fmt_type_info result[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
 
 		return result;
 	}
+
+	template <typename... Args>
+	constexpr const fmt_type_info type_info_v[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
 
 	// Internal formatting function
 	void raw_append(std::string& out, const char*, const fmt_type_info*, const u64*) noexcept;
@@ -286,7 +285,9 @@ namespace fmt
 	template <typename... Args>
 	SAFE_BUFFERS FORCE_INLINE void append(std::string& out, const char* fmt, const Args&... args)
 	{
-		raw_append(out, fmt, fmt::get_type_info<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
+		static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
+		const u64 arg_array[sizeof...(Args) + 1]{fmt_unveil<Args>::get(args)...};
+		raw_append(out, fmt, type_list, arg_array);
 	}
 
 	// Formatting function
@@ -306,6 +307,8 @@ namespace fmt
 	template <typename T = std::runtime_error, typename... Args>
 	[[noreturn]] SAFE_BUFFERS FORCE_INLINE void throw_exception(const char* fmt, const Args&... args)
 	{
-		raw_throw_exception<T>(fmt, fmt::get_type_info<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
+		static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
+		const u64 arg_array[sizeof...(Args) + 1]{fmt_unveil<Args>::get(args)...};
+		raw_throw_exception<T>(fmt, type_list, arg_array);
 	}
 }
