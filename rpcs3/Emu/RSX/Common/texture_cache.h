@@ -449,7 +449,7 @@ namespace rsx
 		std::unordered_map<u32, framebuffer_memory_characteristics> m_cache_miss_statistics_table;
 
 		//Map of messages to only emit once
-		std::unordered_map<std::string, bool> m_once_only_messages_map;
+		std::unordered_set<std::string> m_once_only_messages_set;
 
 		//Set when a shader read-only texture data suddenly becomes contested, usually by fbo memory
 		bool read_only_tex_invalidate = false;
@@ -494,31 +494,29 @@ namespace rsx
 			m_cache_update_tag++;
 		}
 
-		template <typename ...Args>
-		void emit_once(bool error, const char* fmt, Args&&... params)
+		template <typename... Args>
+		void emit_once(bool error, const char* fmt, const Args&... params)
 		{
-			const std::string message = fmt::format(fmt, std::forward<Args>(params)...);
-			if (m_once_only_messages_map.find(message) != m_once_only_messages_map.end())
+			const auto result = m_once_only_messages_set.emplace(fmt::format(fmt, params...));
+			if (!result.second)
 				return;
 
 			if (error)
-				logs::RSX.error(message.c_str());
+				LOG_ERROR(RSX, "%s", *result.first);
 			else
-				logs::RSX.warning(message.c_str());
-
-			m_once_only_messages_map[message] = true;
+				LOG_WARNING(RSX, "%s", *result.first);
 		}
 
-		template <typename ...Args>
-		void err_once(const char* fmt, Args&&... params)
+		template <typename... Args>
+		void err_once(const char* fmt, const Args&... params)
 		{
-			emit_once(true, fmt, std::forward<Args>(params)...);
+			emit_once(true, fmt, params...);
 		}
 
-		template <typename ...Args>
-		void warn_once(const char* fmt, Args&&... params)
+		template <typename... Args>
+		void warn_once(const char* fmt, const Args&... params)
 		{
-			emit_once(false, fmt, std::forward<Args>(params)...);
+			emit_once(false, fmt, params...);
 		}
 
 	private:
