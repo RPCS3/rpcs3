@@ -1170,8 +1170,7 @@ namespace rsx
 		rsx->flip(arg);
 		// After each flip PS3 system is executing a routine that changes registers value to some default.
 		// Some game use this default state (SH3).
-		if (rsx->isHLE)
-			rsx->reset();
+		rsx->reset();
 
 		rsx->last_flip_time = get_system_time() - 1000000;
 		rsx->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
@@ -1214,7 +1213,6 @@ namespace rsx
 		{
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
-				rsx->reset();
 				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
 			}
 		};
