@@ -24,7 +24,7 @@ namespace vk
 		std::unique_ptr<vk::buffer> dma_buffer;
 
 	public:
-	
+
 		cached_texture_section() {}
 
 		void reset(u32 base, u32 length)
@@ -365,7 +365,7 @@ namespace vk
 			}
 		}
 	};
-	
+
 	struct discarded_storage
 	{
 		std::unique_ptr<vk::viewable_image> combined_image;
@@ -485,7 +485,7 @@ namespace vk
 
 			return mapping;
 		}
-		
+
 	protected:
 
 		void free_texture_section(cached_texture_section& tex) override

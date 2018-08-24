@@ -510,13 +510,13 @@ namespace rsx
 		template <typename... Args>
 		void err_once(const char* fmt, const Args&... params)
 		{
-			emit_once(true, fmt, params...);
+			logs::RSX.error(fmt, params...);
 		}
 
 		template <typename... Args>
 		void warn_once(const char* fmt, const Args&... params)
 		{
-			emit_once(false, fmt, params...);
+			logs::RSX.warning(fmt, params...);
 		}
 
 	private:
