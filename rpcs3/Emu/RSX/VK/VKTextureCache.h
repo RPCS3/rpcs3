@@ -268,9 +268,9 @@ namespace vk
 				cmd.submit(submit_queue, {}, dma_fence, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 
 				//Now we need to restart the command-buffer to restore it to the way it was before...
-				CHECK_RESULT(vkWaitForFences(*m_device, 1, &dma_fence, VK_TRUE, UINT64_MAX));
-				CHECK_RESULT(vkResetCommandBuffer(cmd, 0));
+				vk::wait_for_fence(dma_fence);
 				vk::reset_fence(&dma_fence);
+				CHECK_RESULT(vkResetCommandBuffer(cmd, 0));
 
 				if (cmd.access_hint != vk::command_buffer::access_type_hint::all)
 					cmd.begin();

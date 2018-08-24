@@ -130,8 +130,7 @@ struct command_buffer_chunk: public vk::command_buffer
 		if (!pending)
 			return;
 
-		// NOTE: vkWaitForFences is slower than polling fence status at least on NV
-		while (vkGetFenceStatus(m_device, submit_fence) == VK_NOT_READY);
+		vk::wait_for_fence(submit_fence);
 
 		lock.upgrade();
 
