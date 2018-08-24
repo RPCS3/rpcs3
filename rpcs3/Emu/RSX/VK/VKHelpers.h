@@ -171,6 +171,7 @@ namespace vk
 
 	//Fence reset with driver workarounds in place
 	void reset_fence(VkFence *pFence);
+	void wait_for_fence(VkFence pFence);
 
 	void die_with_error(const char* faulting_addr, VkResult error_code);
 
@@ -1152,7 +1153,7 @@ namespace vk
 		{
 			if (m_submit_fence && is_pending)
 			{
-				while (vkGetFenceStatus(pool->get_owner(), m_submit_fence) != VK_SUCCESS);
+				wait_for_fence(m_submit_fence);
 				is_pending = false;
 
 				CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
@@ -1196,6 +1197,7 @@ namespace vk
 			if (fence == VK_NULL_HANDLE)
 			{
 				fence = m_submit_fence;
+				is_pending = (fence != VK_NULL_HANDLE);
 			}
 
 			VkSubmitInfo infos = {};
@@ -1209,8 +1211,6 @@ namespace vk
 			acquire_global_submit_lock();
 			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
 			release_global_submit_lock();
-
-			is_pending = true;
 		}
 	};
 

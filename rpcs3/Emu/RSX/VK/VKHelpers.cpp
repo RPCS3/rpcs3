@@ -587,6 +587,21 @@ namespace vk
 		}
 	}
 
+	void wait_for_fence(VkFence fence)
+	{
+		while (auto status = vkGetFenceStatus(*g_current_renderer, fence))
+		{
+			switch (status)
+			{
+			case VK_NOT_READY:
+				continue;
+			default:
+				die_with_error(HERE, status);
+				return;
+			}
+		}
+	}
+
 	void die_with_error(const char* faulting_addr, VkResult error_code)
 	{
 		std::string error_message;

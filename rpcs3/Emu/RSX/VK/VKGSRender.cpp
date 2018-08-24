@@ -2831,7 +2831,7 @@ void VKGSRender::reinitialize_swapchain()
 
 	//Flush the command buffer
 	close_and_submit_command_buffer({}, resize_fence);
-	CHECK_RESULT(vkWaitForFences((*m_device), 1, &resize_fence, VK_TRUE, UINT64_MAX));
+	vk::wait_for_fence(resize_fence);
 	vkDestroyFence((*m_device), resize_fence, nullptr);
 
 	m_current_command_buffer->reset();
