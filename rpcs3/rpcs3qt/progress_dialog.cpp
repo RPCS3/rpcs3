@@ -1,19 +1,17 @@
 #include "progress_dialog.h"
 
-progress_dialog::progress_dialog(int min, int max, QWidget* parent, Qt::WindowFlags flags) : QProgressDialog(parent, flags)
+progress_dialog::progress_dialog(const QString &labelText, const QString &cancelButtonText, int minimum, int maximum, QWidget *parent, Qt::WindowFlags flags)
+	: QProgressDialog(labelText, cancelButtonText, minimum, maximum, parent, flags)
 {
 #ifdef _WIN32
 	m_tb_button = std::make_unique<QWinTaskbarButton>();
-	m_tb_button->setWindow(parent->windowHandle());
+	m_tb_button->setWindow(parent ? parent->windowHandle() : windowHandle());
 	m_tb_progress = m_tb_button->progress();
-	m_tb_progress->setRange(min, max);
+	m_tb_progress->setRange(minimum, maximum);
 	m_tb_progress->setVisible(true);
 #elif HAVE_QTDBUS
-	m_max = max;
 	UpdateProgress(0);
 #endif
-
-	QProgressDialog::setRange(min, max);
 }
 
 progress_dialog::~progress_dialog()
@@ -27,13 +25,15 @@ progress_dialog::~progress_dialog()
 
 void progress_dialog::SetValue(int progress)
 {
+	const int value = std::clamp(progress, minimum(), maximum());
+
 #ifdef _WIN32
-	m_tb_progress->setValue(progress);
+	m_tb_progress->setValue(value);
 #elif HAVE_QTDBUS
-	UpdateProgress(progress);
+	UpdateProgress(value);
 #endif
 
-	QProgressDialog::setValue(progress);
+	QProgressDialog::setValue(value);
 }
 
 #ifdef HAVE_QTDBUS
@@ -49,7 +49,7 @@ void progress_dialog::UpdateProgress(int progress, bool disable)
 	else
 		properties.insert(QStringLiteral("progress-visible"), true);
 	//Progress takes a value from 0.0 to 0.1
-	properties.insert(QStringLiteral("progress"), (double)progress / (double)m_max);
+	properties.insert(QStringLiteral("progress"), (double)progress / (double)maximum());
 	message << QStringLiteral("application://rpcs3.desktop") << properties;
 	QDBusConnection::sessionBus().send(message);
 }

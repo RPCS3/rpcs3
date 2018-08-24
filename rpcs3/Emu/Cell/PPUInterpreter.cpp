@@ -307,20 +307,20 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value);
 
 class ppu_scale_table_t
 {
-	std::array<__m128, 32 + 31> m_data;
+	std::array<v128, 32 + 31> m_data;
 
 public:
 	ppu_scale_table_t()
 	{
 		for (s32 i = -31; i < 32; i++)
 		{
-			m_data[i + 31] = _mm_set1_ps(static_cast<float>(std::exp2(i)));
+			m_data[i + 31].vf = _mm_set1_ps(static_cast<float>(std::exp2(i)));
 		}
 	}
 
 	FORCE_INLINE __m128 operator [] (s32 scale) const
 	{
-		return m_data[scale + 31];
+		return m_data[scale + 31].vf;
 	}
 }
 const g_ppu_scale_table;
@@ -444,7 +444,7 @@ bool ppu_interpreter_precise::VADDSWS(ppu_thread& ppu, ppu_opcode_t op)
 
 	for (u8 i = 0; i < 4; i++)
 	{
-		const s64 sum = a._s32[i] + b._s32[i];
+		const s64 sum = (s64)a._s32[i] + (s64)b._s32[i];
 
 		if (sum < INT32_MIN)
 		{
@@ -560,7 +560,7 @@ bool ppu_interpreter_precise::VADDUWS(ppu_thread& ppu, ppu_opcode_t op)
 
 	for (u8 i = 0; i < 4; i++)
 	{
-		const u64 sum = a._u32[i] + b._u32[i];
+		const u64 sum =  (u64)a._u32[i] + (u64)b._u32[i];
 
 		if (sum > UINT32_MAX)
 		{
@@ -1363,7 +1363,7 @@ bool ppu_interpreter::VMULOUH(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VNMSUBFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_sub_ps(ppu.vr[op.vb].vf, _mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf));
+	ppu.vr[op.vd].vf = _mm_xor_ps(_mm_sub_ps(_mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf), ppu.vr[op.vb].vf), _mm_set1_ps(-0.0f));
 	return true;
 }
 
@@ -4405,7 +4405,15 @@ bool ppu_interpreter::LBZU(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::STW(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + op.simm16 : op.simm16;
-	vm::write32(vm::cast(addr, HERE), (u32)ppu.gpr[op.rs]);
+	const u32 value = (u32)ppu.gpr[op.rs];
+	vm::write32(vm::cast(addr, HERE), value);
+
+	//Insomniac engine v3 & v4 (newer R&C, Fuse, Resitance 3)
+	if (UNLIKELY(value == 0xAAAAAAAA))
+	{
+		vm::reservation_update(addr, 128);
+	}
+
 	return true;
 }
 
@@ -4652,7 +4660,7 @@ bool ppu_interpreter::FMSUBS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FNMSUBS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc]) + ppu.fpr[op.frb]);
+	ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
@@ -4805,7 +4813,7 @@ bool ppu_interpreter::FMADD(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FNMSUB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.fpr[op.frd] = -(ppu.fpr[op.fra] * ppu.fpr[op.frc]) + ppu.fpr[op.frb];
+	ppu.fpr[op.frd] = -(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]);
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }

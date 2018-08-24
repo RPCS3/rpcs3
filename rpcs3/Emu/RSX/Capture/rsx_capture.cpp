@@ -5,7 +5,7 @@
 #include "Emu/RSX/Common/surface_store.h"
 #include "Emu/RSX/GCM.h"
 #include "Emu/RSX/RSXThread.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 
 #include "xxhash.h"
 

@@ -1,21 +1,26 @@
 #include "stdafx.h"
 #include "VKHelpers.h"
-
+#include "VKCompute.h"
 #include "Utilities/mutex.h"
 
 namespace vk
 {
-	context* g_current_vulkan_ctx = nullptr;
-	render_device g_current_renderer;
+	const context* g_current_vulkan_ctx = nullptr;
+	const render_device* g_current_renderer;
 
 	std::unique_ptr<image> g_null_texture;
 	std::unique_ptr<image_view> g_null_image_view;
+	std::unique_ptr<buffer> g_scratch_buffer;
+	std::unordered_map<u32, std::unique_ptr<image>> g_typeless_textures;
+	std::unordered_map<u32, std::unique_ptr<vk::compute_task>> g_compute_tasks;
 
 	VkSampler g_null_sampler = nullptr;
 
 	atomic_t<bool> g_cb_no_interrupt_flag { false };
 
 	//Driver compatibility workarounds
+	VkFlags g_heap_compatible_buffer_types = 0;
+	driver_vendor g_driver_vendor = driver_vendor::unknown;
 	bool g_drv_no_primitive_restart_flag = false;
 	bool g_drv_sanitize_fp_values = false;
 	bool g_drv_disable_fence_reset = false;
@@ -139,7 +144,7 @@ namespace vk
 		sampler_info.compareOp = VK_COMPARE_OP_NEVER;
 		sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 
-		vkCreateSampler(g_current_renderer, &sampler_info, nullptr, &g_null_sampler);
+		vkCreateSampler(*g_current_renderer, &sampler_info, nullptr, &g_null_sampler);
 		return g_null_sampler;
 	}
 
@@ -148,11 +153,11 @@ namespace vk
 		if (g_null_image_view)
 			return g_null_image_view->value;
 
-		g_null_texture.reset(new image(g_current_renderer, get_memory_mapping(g_current_renderer.gpu()).device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		g_null_texture.reset(new image(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, 4, 4, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0));
 
-		g_null_image_view.reset(new image_view(g_current_renderer, g_null_texture->value, VK_IMAGE_VIEW_TYPE_2D,
+		g_null_image_view.reset(new image_view(*g_current_renderer, g_null_texture->value, VK_IMAGE_VIEW_TYPE_2D,
 			VK_FORMAT_B8G8R8A8_UNORM, {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A},
 			{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}));
 
@@ -167,6 +172,38 @@ namespace vk
 		return g_null_image_view->value;
 	}
 
+	vk::image* get_typeless_helper(VkFormat format)
+	{
+		auto create_texture = [&]()
+		{
+			return new vk::image(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				VK_IMAGE_TYPE_2D, format, 4096, 4096, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
+		};
+
+		auto &ptr = g_typeless_textures[(u32)format];
+		if (!ptr)
+		{
+			auto _img = create_texture();
+			ptr.reset(_img);
+		}
+
+		return ptr.get();
+	}
+
+	vk::buffer* get_scratch_buffer()
+	{
+		if (!g_scratch_buffer)
+		{
+			// 32M disposable scratch memory
+			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, 64 * 0x100000,
+				g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0);
+		}
+
+		return g_scratch_buffer.get();
+	}
+
 	void acquire_global_submit_lock()
 	{
 		g_submit_mutex.lock();
@@ -177,36 +214,69 @@ namespace vk
 		g_submit_mutex.unlock();
 	}
 
+	void reset_compute_tasks()
+	{
+		for (const auto &p : g_compute_tasks)
+		{
+			p.second->free_resources();
+		}
+	}
+
 	void destroy_global_resources()
 	{
 		g_null_texture.reset();
-		g_null_image_view .reset();
+		g_null_image_view.reset();
+		g_scratch_buffer.reset();
+
+		g_typeless_textures.clear();
 
 		if (g_null_sampler)
-			vkDestroySampler(g_current_renderer, g_null_sampler, nullptr);
+			vkDestroySampler(*g_current_renderer, g_null_sampler, nullptr);
 
 		g_null_sampler = nullptr;
+
+		for (const auto& p : g_compute_tasks)
+		{
+			p.second->destroy();
+		}
+
+		g_compute_tasks.clear();
+	}
+
+	vk::mem_allocator_base* get_current_mem_allocator()
+	{
+		verify (HERE, g_current_renderer);
+		return g_current_renderer->get_allocator();
 	}
 
 	void set_current_thread_ctx(const vk::context &ctx)
 	{
-		g_current_vulkan_ctx = (vk::context *)&ctx;
+		g_current_vulkan_ctx = &ctx;
 	}
 
-	context *get_current_thread_ctx()
+	const context *get_current_thread_ctx()
 	{
 		return g_current_vulkan_ctx;
 	}
 
-	vk::render_device *get_current_renderer()
+	const vk::render_device *get_current_renderer()
 	{
-		return &g_current_renderer;
+		return g_current_renderer;
 	}
 
 	void set_current_renderer(const vk::render_device &device)
 	{
-		g_current_renderer = device;
-		const auto gpu_name = g_current_renderer.gpu().name();
+		g_current_renderer = &device;
+		g_cb_no_interrupt_flag.store(false);
+		g_drv_no_primitive_restart_flag = false;
+		g_drv_sanitize_fp_values = false;
+		g_drv_disable_fence_reset = false;
+		g_num_processed_frames = 0;
+		g_num_total_frames = 0;
+		g_driver_vendor = driver_vendor::unknown;
+		g_heap_compatible_buffer_types = 0;
+
+		const auto gpu_name = g_current_renderer->gpu().name();
 
 		//Radeon fails to properly handle degenerate primitives if primitive restart is enabled
 		//One has to choose between using degenerate primitives or primitive restart to break up lists but not both
@@ -223,14 +293,76 @@ namespace vk
 		//Disable fence reset for proprietary driver and delete+initialize a new fence instead
 		if (gpu_name.find("Radeon") != std::string::npos)
 		{
+			g_driver_vendor = driver_vendor::AMD;
 			g_drv_disable_fence_reset = true;
 		}
 
 		//Nvidia cards are easily susceptible to NaN poisoning
 		if (gpu_name.find("NVIDIA") != std::string::npos || gpu_name.find("GeForce") != std::string::npos)
 		{
+			g_driver_vendor = driver_vendor::NVIDIA;
 			g_drv_sanitize_fp_values = true;
 		}
+
+		if (g_driver_vendor == driver_vendor::unknown)
+		{
+			if (gpu_name.find("RADV") != std::string::npos)
+			{
+				g_driver_vendor = driver_vendor::RADV;
+			}
+			else
+			{
+				LOG_WARNING(RSX, "Unknown driver vendor for device '%s'", gpu_name);
+			}
+		}
+
+		{
+			// Buffer memory tests, only useful for portability on macOS
+			VkBufferUsageFlags types[] =
+			{
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT,
+				VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
+			};
+
+			VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+			VkBuffer tmp;
+			VkMemoryRequirements memory_reqs;
+
+			VkBufferCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			info.size = 4096;
+			info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			info.flags = 0;
+
+			for (const auto &usage : types)
+			{
+				info.usage = usage;
+				CHECK_RESULT(vkCreateBuffer(*g_current_renderer, &info, nullptr, &tmp));
+				
+				vkGetBufferMemoryRequirements(*g_current_renderer, tmp, &memory_reqs);
+				if (g_current_renderer->get_compatible_memory_type(memory_reqs.memoryTypeBits, memory_flags, nullptr))
+				{
+					g_heap_compatible_buffer_types |= usage;
+				}
+
+				vkDestroyBuffer(*g_current_renderer, tmp, nullptr);
+			}
+		}
+	}
+
+	VkFlags get_heap_compatible_buffer_types()
+	{
+		return g_heap_compatible_buffer_types;
+	}
+
+	driver_vendor get_driver_vendor()
+	{
+		return g_driver_vendor;
 	}
 
 	bool emulate_primitive_restart(rsx::primitive_type type)
@@ -258,6 +390,21 @@ namespace vk
 	bool fence_reset_disabled()
 	{
 		return g_drv_disable_fence_reset;
+	}
+
+	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask)
+	{
+		VkBufferMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.buffer = buffer;
+		barrier.offset = offset;
+		barrier.size = length;
+		barrier.srcAccessMask = src_mask;
+		barrier.dstAccessMask = dst_mask;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 	}
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)
@@ -428,15 +575,15 @@ namespace vk
 	{
 		if (g_drv_disable_fence_reset)
 		{
-			vkDestroyFence(g_current_renderer, *pFence, nullptr);
+			vkDestroyFence(*g_current_renderer, *pFence, nullptr);
 
 			VkFenceCreateInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-			CHECK_RESULT(vkCreateFence(g_current_renderer, &info, nullptr, pFence));
+			CHECK_RESULT(vkCreateFence(*g_current_renderer, &info, nullptr, pFence));
 		}
 		else
 		{
-			CHECK_RESULT(vkResetFences(g_current_renderer, 1, pFence));
+			CHECK_RESULT(vkResetFences(*g_current_renderer, 1, pFence));
 		}
 	}
 

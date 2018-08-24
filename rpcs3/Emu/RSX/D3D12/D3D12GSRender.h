@@ -1,7 +1,7 @@
 #pragma once
 
 #include "D3D12Utils.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/RSX/GSRender.h"
 
@@ -173,7 +173,7 @@ private:
 protected:
 	virtual void on_init_thread() override;
 	virtual void on_exit() override;
-	virtual void do_local_task(bool idle) override;
+	virtual void do_local_task(rsx::FIFO_state state) override;
 	virtual bool do_method(u32 cmd, u32 arg) override;
 	virtual void end() override;
 	virtual void flip(int buffer) override;

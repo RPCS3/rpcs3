@@ -140,14 +140,15 @@ namespace vk
 
 	bool compile_glsl_to_spv(std::string& shader, program_domain domain, std::vector<u32>& spv)
 	{
-		EShLanguage lang = (domain == glsl_fragment_program) ? EShLangFragment : EShLangVertex;
+		EShLanguage lang = (domain == glsl_fragment_program) ? EShLangFragment :
+			(domain == glsl_vertex_program)? EShLangVertex : EShLangCompute;
 
 		glslang::TProgram program;
 		glslang::TShader shader_object(lang);
 
 		shader_object.setEnvInput(glslang::EShSourceGlsl, lang, glslang::EShClientVulkan, 100);
-		shader_object.setEnvClient(glslang::EShClientVulkan, 100);
-		shader_object.setEnvTarget(glslang::EshTargetSpv, 0x00001000);
+		shader_object.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetClientVersion::EShTargetVulkan_1_0);
+		shader_object.setEnvTarget(glslang::EshTargetSpv, glslang::EShTargetLanguageVersion::EShTargetSpv_1_0);
 		
 		bool success = false;
 		const char *shader_text = shader.data();

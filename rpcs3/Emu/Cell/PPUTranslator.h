@@ -47,10 +47,6 @@ class PPUTranslator final : public cpu_translator
 	// Callable functions
 	llvm::GlobalVariable* m_call;
 
-	// Main block
-	llvm::BasicBlock* m_body;
-	llvm::BasicBlock* m_entry;
-
 	// Thread context struct
 	llvm::StructType* m_thread_type;
 
@@ -313,7 +309,7 @@ public:
 	// Handle compilation errors
 	void CompilationError(const std::string& error);
 
-	PPUTranslator(llvm::LLVMContext& context, llvm::Module* module, const ppu_module& info);
+	PPUTranslator(llvm::LLVMContext& context, llvm::Module* module, const ppu_module& info, bool ssse3);
 	~PPUTranslator();
 
 	// Get thread context struct type

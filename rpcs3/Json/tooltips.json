@@ -25,18 +25,26 @@
 			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this.\nThis is the preferred option."
 		},
 		"checkboxes": {
-			"hookStFunc": "Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.",
+			"accurateXFloat": "Fixes bugs in various games at the cost of performance.\nThis setting is only applied when SPU LLVM is active.",
+			"spuCache": "Should normally stay enabled.\nDisable this if the cache becomes too large.\nDisabling it does not remove the existing cache.",
 			"enableThreadScheduler": "Allows RPCS3 to manually schedule physical cores to run specific tasks on, instead of letting the OS handle it.\nVery useful on Windows, especially for AMD Ryzen systems where it can give huge performance gains.",
 			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen.",
 			"spuLoopDetection": "Try to detect loop conditions in SPU kernels and use them as scheduling hints.\nImproves performance and reduces CPU usage.\nMay cause severe audio stuttering in rare cases."
 		},
 		"comboboxes": {
+			"enableTSX": "Enable usage of TSX instructions.\nNeeds to be forced on some Haswell or Broadwell CPUs.\nForcing this on older Hardware can lead to system instability, use it with caution.",
+			"spuBlockSize": "This option controls the SPU analyser, particularly the size of compiled units. The Mega and Giga modes may improve performance by tying smaller units together, decreasing the number of compiled units but increasing their size.\nUse the Safe mode for maximum compatibility.",
 			"preferredSPUThreads": "Some SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value."
 		}
 	},
 	"debug": {
 		"ppuDebug": "Never use this.",
 		"spuDebug": "Never use this.",
+		"spuVerification": "Never disable this.",
+		"setDAZandFTZ": "Never use this.",
+		"accurateGETLLAR": "Never use this.",
+		"accuratePUTLLUC": "Never use this.",
+		"hookStFunc": "Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.",
 		"readColor": "Never use this.",
 		"dumpDepth": "Never use this.",
 		"readDepth": "Never use this.",
@@ -47,16 +55,11 @@
 		"logProg": "Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option.",
 		"disableOcclusionQueries": "Disables running occlusion queries. Minor to moderate performance boost.\nMight introduce issues with broken occlusion e.g missing geometry and extreme pop-in.",
 		"forceCpuBlitEmulation": "Forces emulation of all blit and image manipulation operations on the CPU.\nRequires 'Write Color Buffers' option to also be enabled in most cases to avoid missing graphics.\nSignificantly degrades performance but is more accurate in some cases.\nThis setting overrides the 'GPU texture scaling' option.",
-		"disableOnDiskShaderCache": "Disables the loading and saving of shaders from and to the shader cache in the data directory."
+		"disableOnDiskShaderCache": "Disables the loading and saving of shaders from and to the shader cache in the data directory.",
+		"disableVulkanMemAllocator": "Disables the custom Vulkan memory allocator and reverts to direct calls to VkAllocateMemory/VkFreeMemory.",
+		"disableFIFOReordering": "Disables RSX FIFO optimizations completely. Draws are processed as they are received by the DMA puller."
 	},
 	"emulator": {
-		"gui": {
-			"configs": "Only useful to developers.\nIf unsure, don't use this option.",
-			"stylesheets": "Changes the overall look of RPCS3.\nChoose a stylesheet and click Apply to change between styles.",
-			"show_welcome": "Shows the initial welcome screen upon starting RPCS3.",
-			"useRichPresence": "Enables use of Discord Rich Presence to show what game you are playing on Discord.\nRequires a restart of RPCS3 to apply.",
-			"custom_colors": "Prioritize custom user interface colors over properties set in stylesheet."
-		},
 		"misc": {
 			"exitOnStop": "Automatically close RPCS3 when closing a game, or when a game closes itself.",
 			"alwaysStart": "Leave this enabled unless you are a developer.",
@@ -68,6 +71,18 @@
 			"maxLLVMThreads": "Limits the maximum number of threads used for PPU Module compilation.\nLower this in order to increase performance of other open applications.\nThe default uses all available threads.",
 			"showShaderCompilationHint": "Show shader compilation hints using the native overlay.",
 			"useNativeInterface": "Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, only the English language is supported."
+		},
+		"overlay": {
+			"perfOverlayEnabled": "Enables or disables the performance overlay.",
+			"perfOverlayPosition": "Sets the on-screen position (quadrant) of the perfomance overlay.",
+			"perfOverlayDetailLevel": "Controls the amount of information displayed on the performance overlay.",
+			"perfOverlayUpdateInterval": "Sets the time interval in which the performance overlay is being updated (measured in milliseconds).",
+			"perfOverlayFontSize": "Sets the font size of the performance overlay (measured in pixels).",
+			"perfOverlayOpacity": "Sets the opacity of the performance overlay (measured in %).",
+			"perfOverlayMarginX": "Sets the horizontal distance to the screen border relative to the screen quadrant (measured in pixels).",
+			"perfOverlayMarginY": "Sets the vertical distance to the screen border relative to the screen quadrant (measured in pixels).",
+			"perfOverlayCenterX": "Centers the performance overlay horizontally and overrides the horizontal margin.",
+			"perfOverlayCenterY": "Centers the performance overlay vertically and overrides the vertical margin."
 		}
 	},
 	"gpu": {
@@ -91,8 +106,17 @@
 			"gpuTextureScaling": "Small to significant performance boost in most games and rarely with side effects.\nMay cause texture corruption in rare cases.",
 			"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
 			"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.",
+			"disableAsyncShaders": "Disables asynchronous shader compilation.\nFixes missing graphics while shaders are compiling but introduces stuttering.\nDisable if you do not want to deal with graphics pop-in, or for testing before filing any bug reports.",
 			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area."
 		}
+	},
+	"gui": {
+		"configs": "Only useful to developers.\nIf unsure, don't use this option.",
+		"stylesheets": "Changes the overall look of RPCS3.\nChoose a stylesheet and click Apply to change between styles.",
+		"show_welcome": "Shows the initial welcome screen upon starting RPCS3.",
+		"useRichPresence": "Enables use of Discord Rich Presence to show what game you are playing on Discord.\nRequires a restart of RPCS3 to completely close the connection.",
+		"discordState": "Tell your friends what you are doing.",
+		"custom_colors": "Prioritize custom user interface colors over properties set in stylesheet."
 	},
 	"input": {
 		"padHandlerBox": "If you want to use the keyboard to control, select the Keyboard option.\nIf you have a DualShock 4, select DualShock 4.\nIf you have an Xbox controller, or another compatible device, use XInput.\nOlder controllers such as PS2 controllers with an adapter usually work fine with MMJoystick.\nCheck button mappings in the Windows control panel.",

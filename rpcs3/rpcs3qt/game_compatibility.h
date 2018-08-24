@@ -10,10 +10,10 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QTableWidget>
-#include <QProgressDialog>
 #include <QTimer>
 
 #include "gui_settings.h"
+#include "progress_dialog.h"
 
 struct compat_status
 {
@@ -28,6 +28,7 @@ class game_compatibility : public QObject
 {
 	Q_OBJECT
 
+private:
 	const std::map<QString, compat_status> Status_Data =
 	{
 		{ "Playable", { 0, "", "#1ebc61", QObject::tr("Playable"),         QObject::tr("Games that can be properly played from start to finish") } },
@@ -45,9 +46,12 @@ class game_compatibility : public QObject
 	QNetworkRequest m_network_request;
 	std::shared_ptr<gui_settings> m_xgui_settings;
 	std::unique_ptr<QTimer> m_progress_timer;
-	std::unique_ptr<QProgressDialog> m_progress_dialog;
+	std::unique_ptr<progress_dialog> m_progress_dialog;
 	std::unique_ptr<QNetworkAccessManager> m_network_access_manager;
 	std::map<std::string, compat_status> m_compat_database;
+
+	/** Creates new map from the database */
+	bool ReadJSON(const QJsonObject& json_data, bool after_download);
 
 public:
 	/** Handles reads, writes and downloads for the compatibility database */

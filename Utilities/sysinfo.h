@@ -37,6 +37,8 @@ namespace utils
 
 	bool has_rtm();
 
+	bool has_mpx();
+
 	bool has_512();
 
 	bool has_xop();

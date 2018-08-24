@@ -7,14 +7,9 @@
 
 constexpr auto qstr = QString::fromStdString;
 
-void msg_dialog_frame::Create(const std::string& msg)
+void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 {
 	static const auto& barWidth = [](){return QLabel("This is the very length of the progressbar due to hidpi reasons.").sizeHint().width();};
-	static const auto& horizontalSpacing = []() {return QLabel("Ora").sizeHint().width(); };
-	static const auto& verticalSpacing = []() {return QLabel("Ora Ora").sizeHint().width(); };
-	static int dialog_nr;
-	static int dialog_count;
-	++dialog_count;
 
 	if (m_dialog)
 	{
@@ -23,7 +18,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 	}
 
 	m_dialog = new custom_dialog(type.disable_cancel);
-	m_dialog->setWindowTitle(type.se_normal ? "Normal dialog" : "Error dialog");
+	m_dialog->setWindowTitle(title.empty() ? (type.se_normal ? "Normal dialog" : "Error dialog") : qstr(title));
 	m_dialog->setWindowOpacity(type.bg_invisible ? 1. : 0.75);
 
 	m_text = new QLabel(qstr(msg));
@@ -38,7 +33,8 @@ void msg_dialog_frame::Create(const std::string& msg)
 	{
 		text = new QLabel("", m_dialog);
 		bar = new QProgressBar(m_dialog);
-		bar->setRange(0, m_gauge_max);
+		bar->setRange(0, 100);
+		bar->setValue(0);
 		bar->setFixedWidth(barWidth());
 		bar->setAlignment(Qt::AlignCenter);
 
@@ -62,11 +58,11 @@ void msg_dialog_frame::Create(const std::string& msg)
 #ifdef _WIN32
 		m_tb_button = new QWinTaskbarButton();
 		m_tb_progress = m_tb_button->progress();
-		m_tb_progress->setRange(0, m_gauge_max);
+		m_tb_progress->setRange(0, 100);
 		m_tb_progress->setVisible(true);
 #elif HAVE_QTDBUS
 		UpdateProgress(0);
-		progressValue = new int(0);
+		m_progress_value = 0;
 #endif
 	}
 
@@ -144,82 +140,7 @@ void msg_dialog_frame::Create(const std::string& msg)
 		}
 	});
 
-	connect(m_dialog, &QDialog::destroyed, [=]
-	{
-		if (--dialog_count <= 0)
-		{
-			dialog_nr = 0;
-		}
-	});
-
 	//Fix size
-	m_dialog->setFixedSize(m_dialog->sizeHint());
-
-	// order compile-dialogs on screen
-	if (qstr(msg).contains("Compiling PPU module"))
-	{
-		const QSize screensize = QApplication::primaryScreen()->geometry().size();
-		const double ratio = (double)screensize.width() / (double)screensize.height();
-		const int thread_count = QThread::idealThreadCount();
-		const int min_x = screensize.width() / 10;
-		const int max_x = screensize.width() - min_x;
-		const int min_y = screensize.height() / 10;
-		const int max_y = screensize.height() - min_y;
-		const int s_width = horizontalSpacing() + m_dialog->frameSize().width();
-		const int s_height = verticalSpacing() + m_dialog->frameSize().height();
-		const int max_dialogs_x = std::max(1, (max_x - min_x) / s_width);
-		const int max_dialogs_y = std::max(1, (max_y - min_y) / s_height);
-		int dialogs_x = std::min(max_dialogs_x, thread_count);
-		int dialogs_y = std::min(max_dialogs_y, (int)((double)thread_count / (double)max_dialogs_x + 0.5));
-		const int dialogs = std::min(dialogs_x * dialogs_y, thread_count);
-
-		// resize to better aspect ratio
-		while ((double)dialogs_x / (double)dialogs_y > ratio)
-		{
-			--dialogs_x;
-			while (dialogs_x * dialogs_y < dialogs)
-			{
-				++dialogs_y;
-			}
-		}
-
-		const int origin_x = (screensize.width() - dialogs_x * s_width) / 2;
-		const int origin_y = (screensize.height() - dialogs_y * s_height) / 2;
-
-		// create positions
-		QList<QPoint> location;
-		for (int y = 0; y < dialogs_y; y++)
-		{
-			for (int x = 0; x < dialogs_x; x++)
-			{
-				location.append(QPoint(origin_x + x * s_width, origin_y + y * s_height));
-			}
-		}
-
-		// create offset positions for moar threads than your window can handle
-		if (dialogs_x * dialogs_y < thread_count)
-		{
-			for (int y = 0; y < dialogs_y; y++)
-			{
-				for (int x = 0; x < dialogs_x; x++)
-				{
-					location.append(QPoint(origin_x + s_width / 2 + x * s_width, origin_y + s_height / 2 + y * s_height));
-				}
-			}
-		}
-
-		// move to position
-		m_dialog->move(location.at(dialog_nr));
-
-		// reset dialog_nr if needed
-		if (++dialog_nr >= location.count()) dialog_nr = 0;
-	}
-	else
-	{
-		// we assume compilation is over, so reset dialog_nr
-		dialog_nr = 0;
-	}
-
 	m_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);
 	m_dialog->show();
 
@@ -321,12 +242,9 @@ msg_dialog_frame::~msg_dialog_frame()
 		m_tb_button->deleteLater();
 	}
 #elif HAVE_QTDBUS
-	if (progressValue)
-	{
-		UpdateProgress(0, false);
-		delete progressValue;
-	}
+	UpdateProgress(0, false);
 #endif
+
 	if (m_dialog)
 	{
 		m_dialog->deleteLater();
@@ -356,50 +274,112 @@ void msg_dialog_frame::ProgressBarSetMsg(u32 index, const std::string& msg)
 
 void msg_dialog_frame::ProgressBarReset(u32 index)
 {
+	if (!m_dialog)
+	{
+		return;
+	}
+
 	if (index == 0 && m_gauge1)
 	{
-		m_gauge1->reset();
-#ifdef _WIN32
-		m_tb_progress->reset();
-#elif HAVE_QTDBUS
-		UpdateProgress(0);
-#endif
+		m_gauge1->setValue(0);
 	}
 
 	if (index == 1 && m_gauge2)
 	{
-		m_gauge2->reset();
+		m_gauge2->setValue(0);
+	}
+
+	if (index == taskbar_index)
+	{
+#ifdef _WIN32
+		if (m_tb_progress)
+		{
+			m_tb_progress->reset();
+		}
+#elif HAVE_QTDBUS
+		UpdateProgress(0);
+#endif
 	}
 }
 
 void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 {
-	if (m_dialog)
+	if (!m_dialog)
 	{
-		if (index == 0 && m_gauge1)
-		{
-			m_gauge1->setValue(m_gauge1->value() + delta);
-#ifdef _WIN32
-			m_tb_progress->setValue(m_tb_progress->value() + delta);
-#elif HAVE_QTDBUS
-			*progressValue += delta;
-			UpdateProgress(*progressValue);
-#endif
-		}
-
-		if (index == 1 && m_gauge2)
-		{
-			m_gauge2->setValue(m_gauge2->value() + delta);
-		}
+		return;
 	}
+
+	if (index == 0 && m_gauge1)
+	{
+		m_gauge1->setValue(std::min(m_gauge1->value() + (int)delta, m_gauge1->maximum()));
+	}
+
+	if (index == 1 && m_gauge2)
+	{
+		m_gauge2->setValue(std::min(m_gauge2->value() + (int)delta, m_gauge2->maximum()));
+	}
+
+	if (index == taskbar_index || taskbar_index == -1)
+	{
+#ifdef _WIN32
+		if (m_tb_progress)
+		{
+			m_tb_progress->setValue(std::min(m_tb_progress->value() + (int)delta, m_tb_progress->maximum()));
+		}
+#elif HAVE_QTDBUS
+		m_progress_value = std::min(m_progress_value + (int)delta, m_gauge_max);
+		UpdateProgress(m_progress_value);
+#endif
+	}
+}
+
+void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
+{
+	if (!m_dialog)
+	{
+		return;
+	}
+
+	if (index == 0 && m_gauge1)
+	{
+		m_gauge1->setMaximum(limit);
+	}
+
+	if (index == 1 && m_gauge2)
+	{
+		m_gauge2->setMaximum(limit);
+	}
+
+	bool set_taskbar_limit = false;
+
+	if (index == taskbar_index)
+	{
+		m_gauge_max = limit;
+		set_taskbar_limit = true;
+	}
+	else if (taskbar_index == -1)
+	{
+		m_gauge_max += limit;
+		set_taskbar_limit = true;
+	}
+
+#ifdef _WIN32
+	if (set_taskbar_limit && m_tb_progress)
+	{
+		m_tb_progress->setMaximum(m_gauge_max);
+	}
+#endif
 }
 
 #ifdef HAVE_QTDBUS
 void msg_dialog_frame::UpdateProgress(int progress, bool disable)
 {
-	QDBusMessage message = QDBusMessage::createSignal(QStringLiteral("/"),
-										QStringLiteral("com.canonical.Unity.LauncherEntry"),
-										QStringLiteral("Update"));
+	QDBusMessage message = QDBusMessage::createSignal
+	(
+		QStringLiteral("/"),
+		QStringLiteral("com.canonical.Unity.LauncherEntry"),
+		QStringLiteral("Update")
+	);
 	QVariantMap properties;
 	if (disable)
 		properties.insert(QStringLiteral("progress-visible"), false);

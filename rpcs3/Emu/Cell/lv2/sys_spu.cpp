@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
@@ -1024,7 +1024,7 @@ error_code sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 		return CELL_ESRCH;
 	}
 
-	if (et != SYS_SPU_THREAD_EVENT_USER || spup > 63 || queue->type != SYS_PPU_QUEUE)
+	if (et != SYS_SPU_THREAD_EVENT_USER || spup > 63)
 	{
 		sys_spu.error("sys_spu_thread_connect_event(): invalid arguments (et=%d, spup=%d, queue->type=%d)", et, spup, queue->type);
 		return CELL_EINVAL;

@@ -1,16 +1,14 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
+#include "Utilities/JIT.h"
+#include "Utilities/sysinfo.h"
 
 #include "SPUThread.h"
 #include "SPUInterpreter.h"
 
 #include <cmath>
 #include <cfenv>
-
-#if !defined(_MSC_VER) && !defined(__SSSE3__)
-#define _mm_shuffle_epi8
-#endif
 
 // Compare 16 packed unsigned bytes (greater than)
 inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
@@ -30,6 +28,59 @@ inline __m128i sse_cmpgt_epu32(__m128i A, __m128i B)
 {
 	const auto sign = _mm_set1_epi32(0x80000000);
 	return _mm_cmpgt_epi32(_mm_xor_si128(A, sign), _mm_xor_si128(B, sign));
+}
+
+namespace asmjit
+{
+	template <uint I, uint N>
+	static void build_spu_gpr_load(X86Assembler& c, X86Xmm x, const bf_t<u32, I, N>& reg, bool store = false)
+	{
+		static_assert(N == 7, "Invalid bitfield");
+
+#ifdef _WIN32
+		const auto& spu = x86::rcx;
+		const auto& op = x86::edx;
+#else
+		const auto& spu = x86::rdi;
+		const auto& op = x86::esi;
+#endif
+
+		c.mov(x86::eax, op);
+
+		if (I >= 4)
+		{
+			c.shr(x86::eax, I - 4);
+			c.and_(x86::eax, 0x7f << 4);
+		}
+		else
+		{
+			c.and_(x86::eax, 0x7f);
+			c.shl(x86::eax, I + 4);
+		}
+
+		const auto ptr = x86::oword_ptr(spu, x86::rax, 0, ::offset32(&SPUThread::gpr));
+
+		if (utils::has_avx())
+		{
+			if (store)
+				c.vmovdqa(ptr, x);
+			else
+				c.vmovdqa(x, ptr);
+		}
+		else
+		{
+			if (store)
+				c.movdqa(ptr, x);
+			else
+				c.movdqa(x, ptr);
+		}
+	}
+
+	template <uint I, uint N>
+	static void build_spu_gpr_store(X86Assembler& c, X86Xmm x, const bf_t<u32, I, N>& reg, bool store = true)
+	{
+		build_spu_gpr_load(c, x, reg, store);
+	}
 }
 
 bool spu_interpreter::UNK(SPUThread& spu, spu_opcode_t op)
@@ -398,8 +449,7 @@ bool spu_interpreter::BIHNZ(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter::STOPD(SPUThread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
-	return true;
+	return spu.stop_and_signal(0x3fff);
 }
 
 bool spu_interpreter::STQX(SPUThread& spu, spu_opcode_t op)
@@ -462,19 +512,27 @@ bool spu_interpreter::GBB(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter::FSM(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = g_spu_imm.fsm[spu.gpr[op.ra]._u32[3] & 0xf];
+	const auto bits = _mm_shuffle_epi32(spu.gpr[op.ra].vi, 0xff);
+	const auto mask = _mm_set_epi32(8, 4, 2, 1);
+	spu.gpr[op.rt].vi = _mm_cmpeq_epi32(_mm_and_si128(bits, mask), mask);
 	return true;
 }
 
 bool spu_interpreter::FSMH(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = g_spu_imm.fsmh[spu.gpr[op.ra]._u32[3] & 0xff];
+	const auto vsrc = spu.gpr[op.ra].vi;
+	const auto bits = _mm_shuffle_epi32(_mm_unpackhi_epi16(vsrc, vsrc), 0xaa);
+	const auto mask = _mm_set_epi16(128, 64, 32, 16, 8, 4, 2, 1);
+	spu.gpr[op.rt].vi = _mm_cmpeq_epi16(_mm_and_si128(bits, mask), mask);
 	return true;
 }
 
 bool spu_interpreter::FSMB(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = g_spu_imm.fsmb[spu.gpr[op.ra]._u32[3] & 0xffff];
+	const auto vsrc = spu.gpr[op.ra].vi;
+	const auto bits = _mm_shuffle_epi32(_mm_shufflehi_epi16(_mm_unpackhi_epi8(vsrc, vsrc), 0x50), 0xfa);
+	const auto mask = _mm_set_epi8(128, 64, 32, 16, 8, 4, 2, 1, 128, 64, 32, 16, 8, 4, 2, 1);
+	spu.gpr[op.rt].vi = _mm_cmpeq_epi8(_mm_and_si128(bits, mask), mask);
 	return true;
 }
 
@@ -497,7 +555,7 @@ bool spu_interpreter::LQX(SPUThread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter_precise::ROTQBYBI(SPUThread& spu, spu_opcode_t op)
+bool spu_interpreter::ROTQBYBI(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(32) const __m128i buf[2]{a, a};
@@ -505,13 +563,7 @@ bool spu_interpreter_precise::ROTQBYBI(SPUThread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter_fast::ROTQBYBI(SPUThread& spu, spu_opcode_t op)
-{
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.rldq_pshufb[spu.gpr[op.rb]._u32[3] >> 3 & 0xf].vi);
-	return true;
-}
-
-bool spu_interpreter_precise::ROTQMBYBI(SPUThread& spu, spu_opcode_t op)
+bool spu_interpreter::ROTQMBYBI(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
@@ -519,23 +571,11 @@ bool spu_interpreter_precise::ROTQMBYBI(SPUThread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter_fast::ROTQMBYBI(SPUThread& spu, spu_opcode_t op)
-{
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.srdq_pshufb[spu.gpr[op.rb]._s32[3] >> 3 & 0x1f].vi);
-	return true;
-}
-
-bool spu_interpreter_precise::SHLQBYBI(SPUThread& spu, spu_opcode_t op)
+bool spu_interpreter::SHLQBYBI(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{_mm_setzero_si128(), _mm_setzero_si128(), a};
 	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (32 - (spu.gpr[op.rb]._u32[3] >> 3 & 0x1f))));
-	return true;
-}
-
-bool spu_interpreter_fast::SHLQBYBI(SPUThread& spu, spu_opcode_t op)
-{
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.sldq_pshufb[spu.gpr[op.rb]._u32[3] >> 3 & 0x1f].vi);
 	return true;
 }
 
@@ -615,7 +655,7 @@ bool spu_interpreter::SHLQBI(SPUThread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter_precise::ROTQBY(SPUThread& spu, spu_opcode_t op)
+bool spu_interpreter::ROTQBY(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(32) const __m128i buf[2]{a, a};
@@ -623,13 +663,7 @@ bool spu_interpreter_precise::ROTQBY(SPUThread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter_fast::ROTQBY(SPUThread& spu, spu_opcode_t op)
-{
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.rldq_pshufb[spu.gpr[op.rb]._u32[3] & 0xf].vi);
-	return true;
-}
-
-bool spu_interpreter_precise::ROTQMBY(SPUThread& spu, spu_opcode_t op)
+bool spu_interpreter::ROTQMBY(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
@@ -637,23 +671,11 @@ bool spu_interpreter_precise::ROTQMBY(SPUThread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter_fast::ROTQMBY(SPUThread& spu, spu_opcode_t op)
-{
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.srdq_pshufb[spu.gpr[op.rb]._s32[3] & 0x1f].vi);
-	return true;
-}
-
-bool spu_interpreter_precise::SHLQBY(SPUThread& spu, spu_opcode_t op)
+bool spu_interpreter::SHLQBY(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{_mm_setzero_si128(), _mm_setzero_si128(), a};
 	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (32 - (spu.gpr[op.rb]._u32[3] & 0x1f))));
-	return true;
-}
-
-bool spu_interpreter_fast::SHLQBY(SPUThread& spu, spu_opcode_t op)
-{
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.sldq_pshufb[spu.gpr[op.rb]._u32[3] & 0x1f].vi);
 	return true;
 }
 
@@ -739,7 +761,7 @@ bool spu_interpreter::SHLQBII(SPUThread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter_precise::ROTQBYI(SPUThread& spu, spu_opcode_t op)
+bool spu_interpreter::ROTQBYI(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(32) const __m128i buf[2]{a, a};
@@ -747,13 +769,7 @@ bool spu_interpreter_precise::ROTQBYI(SPUThread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter_fast::ROTQBYI(SPUThread& spu, spu_opcode_t op)
-{
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.rldq_pshufb[op.i7 & 0xf].vi);
-	return true;
-}
-
-bool spu_interpreter_precise::ROTQMBYI(SPUThread& spu, spu_opcode_t op)
+bool spu_interpreter::ROTQMBYI(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
@@ -761,23 +777,11 @@ bool spu_interpreter_precise::ROTQMBYI(SPUThread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter_fast::ROTQMBYI(SPUThread& spu, spu_opcode_t op)
-{
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.srdq_pshufb[op.i7 & 0x1f].vi);
-	return true;
-}
-
-bool spu_interpreter_precise::SHLQBYI(SPUThread& spu, spu_opcode_t op)
+bool spu_interpreter::SHLQBYI(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{_mm_setzero_si128(), _mm_setzero_si128(), a};
 	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (32 - (op.i7 & 0x1f))));
-	return true;
-}
-
-bool spu_interpreter_fast::SHLQBYI(SPUThread& spu, spu_opcode_t op)
-{
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.sldq_pshufb[op.i7 & 0x1f].vi);
 	return true;
 }
 
@@ -1086,7 +1090,7 @@ bool spu_interpreter_fast::DFNMS(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter_fast::DFNMA(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vd = _mm_sub_pd(_mm_set1_pd(0.0), _mm_add_pd(_mm_mul_pd(spu.gpr[op.ra].vd, spu.gpr[op.rb].vd), spu.gpr[op.rt].vd));
+	spu.gpr[op.rt].vd = _mm_xor_pd(_mm_add_pd(_mm_mul_pd(spu.gpr[op.ra].vd, spu.gpr[op.rb].vd), spu.gpr[op.rt].vd), _mm_set1_pd(-0.0));
 	return true;
 }
 
@@ -1385,7 +1389,10 @@ bool spu_interpreter::BR(SPUThread& spu, spu_opcode_t op)
 
 bool spu_interpreter::FSMBI(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = g_spu_imm.fsmb[op.i16];
+	const auto vsrc = _mm_set_epi32(0, 0, 0, op.i16);
+	const auto bits = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_unpacklo_epi8(vsrc, vsrc), 0x50), 0x50);
+	const auto mask = _mm_set_epi8(128, 64, 32, 16, 8, 4, 2, 1, 128, 64, 32, 16, 8, 4, 2, 1);
+	spu.gpr[op.rt].vi = _mm_cmpeq_epi8(_mm_and_si128(bits, mask), mask);
 	return true;
 }
 
@@ -1637,64 +1644,100 @@ bool spu_interpreter::SELB(SPUThread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter_precise::SHUFB(SPUThread& spu, spu_opcode_t op)
+static bool SHUFB_(SPUThread& spu, spu_opcode_t op)
 {
-	alignas(16) static thread_local u8 s_lut[256]
-	{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	__m128i ab[2]{spu.gpr[op.rb].vi, spu.gpr[op.ra].vi};
+	v128 c = spu.gpr[op.rc];
+	v128 x = v128::fromV(_mm_andnot_si128(c.vi, _mm_set1_epi8(0x1f)));
+	v128 res;
 
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-		0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-	};
-
-	const auto _a = spu.gpr[op.ra].vi;
-	const auto _b = spu.gpr[op.rb].vi;
-	_mm_store_si128((__m128i*)(s_lut + 0x00), _a);
-	_mm_store_si128((__m128i*)(s_lut + 0x10), _b);
-	_mm_store_si128((__m128i*)(s_lut + 0x20), _a);
-	_mm_store_si128((__m128i*)(s_lut + 0x30), _b);
-	_mm_store_si128((__m128i*)(s_lut + 0x40), _a);
-	_mm_store_si128((__m128i*)(s_lut + 0x50), _b);
-	_mm_store_si128((__m128i*)(s_lut + 0x60), _a);
-	_mm_store_si128((__m128i*)(s_lut + 0x70), _b);
-	v128 mask = v128::fromV(_mm_xor_si128(spu.gpr[op.rc].vi, _mm_set1_epi8(0xf)));
-	auto& t = spu.gpr[op.rt4];
-
+	// Select bytes
 	for (int i = 0; i < 16; i++)
 	{
-		t._u8[i] = s_lut[mask._u8[i]];
+		res._u8[i] = ((u8*)+ab)[x._u8[i]];
 	}
+
+	// Select special values
+	const auto xc0 = _mm_set1_epi8(0xc0);
+	const auto xe0 = _mm_set1_epi8(0xe0);
+	const auto cmp0 = _mm_cmpgt_epi8(_mm_setzero_si128(), c.vi);
+	const auto cmp1 = _mm_cmpeq_epi8(_mm_and_si128(c.vi, xc0), xc0);
+	const auto cmp2 = _mm_cmpeq_epi8(_mm_and_si128(c.vi, xe0), xc0);
+	spu.gpr[op.rt4].vi = _mm_or_si128(_mm_andnot_si128(cmp0, res.vi), _mm_avg_epu8(cmp1, cmp2));
 	return true;
 }
 
-bool spu_interpreter_fast::SHUFB(SPUThread& spu, spu_opcode_t op)
+const spu_inter_func_t spu_interpreter::SHUFB = !utils::has_ssse3() ? &SHUFB_ : build_function_asm<spu_inter_func_t>([](asmjit::X86Assembler& c, auto& args)
 {
-	const auto index = _mm_xor_si128(spu.gpr[op.rc].vi, _mm_set1_epi32(0x0f0f0f0f));
-	const auto res1 = _mm_shuffle_epi8(spu.gpr[op.ra].vi, index);
-	const auto bit4 = _mm_set1_epi32(0x10101010);
-	const auto k1 = _mm_cmpeq_epi8(_mm_and_si128(index, bit4), bit4);
-	const auto res2 = _mm_or_si128(_mm_and_si128(k1, _mm_shuffle_epi8(spu.gpr[op.rb].vi, index)), _mm_andnot_si128(k1, res1));
-	const auto bit67 = _mm_set1_epi32(0xc0c0c0c0);
-	const auto k2 = _mm_cmpeq_epi8(_mm_and_si128(index, bit67), bit67);
-	const auto res3 = _mm_or_si128(res2, k2);
-	const auto bit567 = _mm_set1_epi32(0xe0e0e0e0);
-	const auto k3 = _mm_cmpeq_epi8(_mm_and_si128(index, bit567), bit567);
-	spu.gpr[op.rt4].vi = _mm_sub_epi8(res3, _mm_and_si128(k3, _mm_set1_epi32(0x7f7f7f7f)));
-	return true;
-}
+	using namespace asmjit;
+
+	const auto& va = x86::xmm0;
+	const auto& vb = x86::xmm1;
+	const auto& vc = x86::xmm2;
+	const auto& vt = x86::xmm3;
+	const auto& vm = x86::xmm4;
+	const auto& v5 = x86::xmm5;
+
+	Label xc0 = c.newLabel();
+	Label xe0 = c.newLabel();
+	Label x0f = c.newLabel();
+
+	build_spu_gpr_load(c, va, decltype(spu_opcode_t::ra)());
+	build_spu_gpr_load(c, vb, decltype(spu_opcode_t::rb)());
+	build_spu_gpr_load(c, vc, decltype(spu_opcode_t::rc)());
+
+	if (utils::has_avx())
+	{
+		c.vpand(v5, vc, x86::oword_ptr(xe0));
+		c.vpxor(vc, vc, x86::oword_ptr(x0f));
+		c.vpshufb(va, va, vc);
+		c.vpslld(vt, vc, 3);
+		c.vmovdqa(vm, x86::oword_ptr(xc0));
+		c.vpcmpeqb(v5, v5, vm);
+		c.vpshufb(vb, vb, vc);
+		c.vpand(vc, vc, vm);
+		c.vpblendvb(vb, va, vb, vt);
+		c.vpcmpeqb(vt, vc, vm);
+		c.vpavgb(vt, vt, v5);
+		c.vpor(vt, vt, vb);
+	}
+	else
+	{
+		c.movdqa(v5, vc);
+		c.pand(v5, x86::oword_ptr(xe0));
+		c.movdqa(vt, vc);
+		c.movdqa(vm, x86::oword_ptr(xc0));
+		c.pand(vt, vm);
+		c.pxor(vc, x86::oword_ptr(x0f));
+		c.pshufb(va, vc);
+		c.pshufb(vb, vc);
+		c.pslld(vc, 3);
+		c.pcmpeqb(v5, vm);
+		c.pcmpeqb(vt, vm);
+		c.pcmpeqb(vm, vm);
+		c.pcmpgtb(vc, vm);
+		c.pand(va, vc);
+		c.pandn(vc, vb);
+		c.por(vc, va);
+		c.pavgb(vt, v5);
+		c.por(vt, vc);
+	}
+
+	build_spu_gpr_store(c, vt, decltype(spu_opcode_t::rt4)());
+	c.mov(x86::eax, 1);
+	c.ret();
+
+	c.align(kAlignData, 16);
+	c.bind(xc0);
+	c.dq(0xc0c0c0c0c0c0c0c0);
+	c.dq(0xc0c0c0c0c0c0c0c0);
+	c.bind(xe0);
+	c.dq(0xe0e0e0e0e0e0e0e0);
+	c.dq(0xe0e0e0e0e0e0e0e0);
+	c.bind(x0f);
+	c.dq(0x0f0f0f0f0f0f0f0f);
+	c.dq(0x0f0f0f0f0f0f0f0f);
+});
 
 bool spu_interpreter::MPYA(SPUThread& spu, spu_opcode_t op)
 {
@@ -2112,18 +2155,18 @@ static void DFASM(SPUThread& spu, spu_opcode_t op, DoubleOp operation)
 			case DFASM_M: result = a * b; break;
 			}
 			const u32 e = _mm_getcsr();
-			if (e & _MM_MASK_INVALID)
+			if (e & _MM_EXCEPT_INVALID)
 			{
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINV);
 				result = DOUBLE_NAN;
 			}
 			else
 			{
-				if (e & _MM_MASK_OVERFLOW)
+				if (e & _MM_EXCEPT_OVERFLOW)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DOVF);
-				if (e & _MM_MASK_UNDERFLOW)
+				if (e & _MM_EXCEPT_UNDERFLOW)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DUNF);
-				if (e & _MM_MASK_INEXACT)
+				if (e & _MM_EXCEPT_INEXACT)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINX);
 			}
 		}
@@ -2173,18 +2216,18 @@ static void DFMA(SPUThread& spu, spu_opcode_t op, bool neg, bool sub)
 			feclearexcept(FE_ALL_EXCEPT);
 			result = fma(a, b, sub ? -c : c);
 			const u32 e = _mm_getcsr();
-			if (e & _MM_MASK_INVALID)
+			if (e & _MM_EXCEPT_INVALID)
 			{
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINV);
 				result = DOUBLE_NAN;
 			}
 			else
 			{
-				if (e & _MM_MASK_OVERFLOW)
+				if (e & _MM_EXCEPT_OVERFLOW)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DOVF);
-				if (e & _MM_MASK_UNDERFLOW)
+				if (e & _MM_EXCEPT_UNDERFLOW)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DUNF);
-				if (e & _MM_MASK_INEXACT)
+				if (e & _MM_EXCEPT_INEXACT)
 					spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINX);
 				if (neg) result = -result;
 			}
@@ -2250,11 +2293,11 @@ bool spu_interpreter_precise::FRDS(SPUThread& spu, spu_opcode_t op)
 			feclearexcept(FE_ALL_EXCEPT);
 			spu.gpr[op.rt]._f[i * 2 + 1] = (float)a;
 			const u32 e = _mm_getcsr();
-			if (e & _MM_MASK_OVERFLOW)
+			if (e & _MM_EXCEPT_OVERFLOW)
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DOVF);
-			if (e & _MM_MASK_UNDERFLOW)
+			if (e & _MM_EXCEPT_UNDERFLOW)
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DUNF);
-			if (e & _MM_MASK_INEXACT)
+			if (e & _MM_EXCEPT_INEXACT)
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINX);
 		}
 		spu.gpr[op.rt]._u32[i * 2] = 0;
@@ -2551,3 +2594,7 @@ bool spu_interpreter_precise::FNMS(SPUThread& spu, spu_opcode_t op) { ::FMA(spu,
 bool spu_interpreter_precise::FMA(SPUThread& spu, spu_opcode_t op) { ::FMA(spu, op, false, false); return true; }
 
 bool spu_interpreter_precise::FMS(SPUThread& spu, spu_opcode_t op) { ::FMA(spu, op, false, true); return true; }
+
+extern const spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise{};
+
+extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast{};

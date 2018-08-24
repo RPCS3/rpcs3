@@ -19,6 +19,9 @@ class spu_runtime
 	// All dispatchers
 	std::array<atomic_t<spu_function_t>, 0x10000> m_dispatcher;
 
+	// Debug module output location
+	std::string m_cache_path;
+
 	friend class spu_recompiler;
 
 public:
@@ -103,7 +106,8 @@ private:
 	asmjit::X86Mem XmmConst(__m128i data);
 
 	void branch_fixed(u32 target);
-	void branch_indirect(spu_opcode_t op, bool local = false);
+	void branch_indirect(spu_opcode_t op, bool jt = false, bool ret = true);
+	void branch_set_link(u32 target);
 	void fall(spu_opcode_t op);
 	void save_rcx();
 	void load_rcx();

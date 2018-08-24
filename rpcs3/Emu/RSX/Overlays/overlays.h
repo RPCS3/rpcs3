@@ -1,6 +1,7 @@
 #pragma once
 #include "overlay_controls.h"
 
+#include "../../../Utilities/date_time.h"
 #include "../../../Utilities/Thread.h"
 #include "../../Io/PadHandler.h"
 #include "Emu/Memory/vm.h"
@@ -11,8 +12,8 @@
 #include "Emu/Cell/Modules/cellSaveData.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
-
-#include <time.h>
+#include "Utilities/CPUStats.h"
+#include "Utilities/Timer.h"
 
 extern u64 get_system_time();
 
@@ -21,7 +22,27 @@ namespace rsx
 {
 	namespace overlays
 	{
-		struct user_interface
+		// Non-interactable UI element
+		struct overlay
+		{
+			u32 uid = UINT32_MAX;
+			u32 type_index = UINT32_MAX;
+
+			u16 virtual_width = 1280;
+			u16 virtual_height = 720;
+
+			u32 min_refresh_duration_us = 16600;
+
+			virtual ~overlay() = default;
+
+			virtual void update() {}
+			virtual compiled_resource get_compiled() = 0;
+
+			void refresh();
+		};
+
+		// Interactable UI element
+		struct user_interface : overlay
 		{
 			//Move this somewhere to avoid duplication
 			enum selection_code
@@ -43,29 +64,21 @@ namespace rsx
 				cross
 			};
 
-			u32 uid = UINT32_MAX;
-			u32 type_index = UINT32_MAX;
-
-			u16 virtual_width = 1280;
-			u16 virtual_height = 720;
-
 			u64  input_timestamp = 0;
 			bool exit = false;
 
 			s32 return_code = CELL_OK;
 			std::function<void(s32 status)> on_close;
 
-			virtual compiled_resource get_compiled() = 0;
-
-			void close();
-			void refresh();
-
-			virtual void update(){}
+			virtual void update() override {}
+			virtual compiled_resource get_compiled() override = 0;
 
 			virtual void on_button_pressed(pad_button /*button_press*/)
 			{
 				close();
-			};
+			}
+
+			void close();
 
 			s32 run_input_loop()
 			{
@@ -168,16 +181,76 @@ namespace rsx
 		{
 		private:
 			atomic_t<u32> m_uid_ctr { 0u };
-			std::vector<std::unique_ptr<user_interface>> m_iface_list;
-			std::vector<std::unique_ptr<user_interface>> m_dirty_list;
+			std::vector<std::unique_ptr<overlay>> m_iface_list;
+			std::vector<std::unique_ptr<overlay>> m_dirty_list;
+
+			shared_mutex m_list_mutex;
+			std::vector<u32> m_uids_to_remove;
+			std::vector<u32> m_type_ids_to_remove;
+
+			bool remove_type(u32 type_id)
+			{
+				bool found = false;
+				for (auto It = m_iface_list.begin(); It != m_iface_list.end();)
+				{
+					if (It->get()->type_index == type_id)
+					{
+						m_dirty_list.push_back(std::move(*It));
+						It = m_iface_list.erase(It);
+						found = true;
+					}
+					else
+					{
+						++It;
+					}
+				}
+
+				return found;
+			}
+
+			bool remove_uid(u32 uid)
+			{
+				for (auto It = m_iface_list.begin(); It != m_iface_list.end(); It++)
+				{
+					const auto e = It->get();
+					if (e->uid == uid)
+					{
+						m_dirty_list.push_back(std::move(*It));
+						m_iface_list.erase(It);
+						return true;
+					}
+				}
+
+				return false;
+			}
+
+			void cleanup_internal()
+			{
+				for (const auto &uid : m_uids_to_remove)
+				{
+					remove_uid(uid);
+				}
+
+				for (const auto &type_id : m_type_ids_to_remove)
+				{
+					remove_type(type_id);
+				}
+
+				m_uids_to_remove.clear();
+				m_type_ids_to_remove.clear();
+			}
 
 		public:
 			display_manager() {}
 			~display_manager() {}
 
+			// Adds an object to the internal list. Optionally removes other objects of the same type.
+			// Original handle loses ownership but a usable pointer is returned
 			template <typename T>
 			T* add(std::unique_ptr<T>& entry, bool remove_existing = true)
 			{
+				writer_lock lock(m_list_mutex);
+
 				T* e = entry.get();
 				e->uid = m_uid_ctr.fetch_add(1);
 				e->type_index = id_manager::typeinfo::get_index<T>();
@@ -201,6 +274,7 @@ namespace rsx
 				return e;
 			}
 
+			// Allocates object and adds to internal list. Returns pointer to created object
 			template <typename T, typename ...Args>
 			T* create(Args&&... args)
 			{
@@ -208,37 +282,33 @@ namespace rsx
 				return add(object);
 			}
 
-			bool remove(u32 uid)
+			// Removes item from list if it matches the uid
+			void remove(u32 uid)
 			{
-				for (auto It = m_iface_list.begin(); It != m_iface_list.end(); It++)
+				if (m_list_mutex.try_lock())
 				{
-					const auto e = It->get();
-					if (e->uid == uid)
-					{
-						m_dirty_list.push_back(std::move(*It));
-						m_iface_list.erase(It);
-						return true;
-					}
+					remove_uid(uid);
+					m_list_mutex.unlock();
 				}
-
-				return false;
+				else
+				{
+					m_uids_to_remove.push_back(uid);
+				}
 			}
 
+			// Removes all objects of this type from the list
 			template <typename T>
-			bool remove()
+			void remove()
 			{
 				const auto type_id = id_manager::typeinfo::get_index<T>();
-				for (auto It = m_iface_list.begin(); It != m_iface_list.end();)
+				if (m_list_mutex.try_lock())
 				{
-					if (It->get()->type_index == type_id)
-					{
-						m_dirty_list.push_back(std::move(*It));
-						It = m_iface_list.erase(It);
-					}
-					else
-					{
-						++It;
-					}
+					remove_type(type_id);
+					m_list_mutex.unlock();
+				}
+				else
+				{
+					m_type_ids_to_remove.push_back(type_id);
 				}
 			}
 
@@ -254,23 +324,44 @@ namespace rsx
 				return !m_dirty_list.empty();
 			}
 
-			const std::vector<std::unique_ptr<user_interface>>& get_views() const
+			// Returns current list for reading. Caller must ensure synchronization by first locking the list
+			const std::vector<std::unique_ptr<overlay>>& get_views() const
 			{
 				return m_iface_list;
 			}
 
-			const std::vector<std::unique_ptr<user_interface>>& get_dirty() const
+			// Returns current list of removed objects not yet deallocated for reading.
+			// Caller must ensure synchronization by first locking the list
+			const std::vector<std::unique_ptr<overlay>>& get_dirty() const
 			{
 				return m_dirty_list;
 			}
 
-			void clear_dirty()
+			// Deallocate object. Object must first be removed via the remove() functions
+			void dispose(const std::vector<u32>& uids)
 			{
-				m_dirty_list.clear();
+				writer_lock lock(m_list_mutex);
+
+				if (!m_uids_to_remove.empty() || !m_type_ids_to_remove.empty())
+				{
+					cleanup_internal();
+				}
+
+				m_dirty_list.erase
+				(
+					std::remove_if(m_dirty_list.begin(), m_dirty_list.end(), [&uids](std::unique_ptr<overlay>& e)
+					{
+						return std::find(uids.begin(), uids.end(), e->uid) != uids.end();
+					}),
+					m_dirty_list.end()
+				);
 			}
 
-			user_interface* get(u32 uid) const
+			// Returns pointer to the object matching the given uid
+			overlay* get(u32 uid)
 			{
+				reader_lock lock(m_list_mutex);
+
 				for (const auto& iface : m_iface_list)
 				{
 					if (iface->uid == uid)
@@ -280,9 +371,12 @@ namespace rsx
 				return nullptr;
 			}
 
+			// Returns pointer to the first object matching the given type
 			template <typename T>
-			T* get() const
+			T* get()
 			{
+				reader_lock lock(m_list_mutex);
+
 				const auto type_id = id_manager::typeinfo::get_index<T>();
 				for (const auto& iface : m_iface_list)
 				{
@@ -294,29 +388,85 @@ namespace rsx
 
 				return nullptr;
 			}
+
+			// Lock for read-only access (BasicLockable)
+			void lock()
+			{
+				m_list_mutex.lock_shared();
+			}
+
+			// Release read-only lock (BasicLockable). May perform internal cleanup before returning
+			void unlock()
+			{
+				m_list_mutex.unlock_shared();
+
+				if (!m_uids_to_remove.empty() || !m_type_ids_to_remove.empty())
+				{
+					writer_lock lock(m_list_mutex);
+					cleanup_internal();
+				}
+			}
 		};
 
-		struct fps_display : user_interface
+		struct perf_metrics_overlay : overlay
 		{
-			label m_display;
+		private:
+			/*
+			   minimal - fps
+			   low - fps, total cpu usage
+			   medium  - fps, detailed cpu usage
+			   high - fps, frametime, detailed cpu usage, thread number, rsx load
+			 */
+			detail_level m_detail;
 
-			fps_display()
-			{
-				m_display.w = 150;
-				m_display.h = 30;
-				m_display.set_font("Arial", 16);
-				m_display.set_pos(1100, 20);
-			}
+			screen_quadrant m_quadrant;
+			positioni m_position;
 
-			void update(std::string current_fps)
-			{
-				m_display.text = current_fps;
-				m_display.refresh();
-			}
+			label m_body;
+			label m_titles;
+
+			CPUStats m_cpu_stats;
+			Timer m_update_timer;
+			u32 m_update_interval; // in ms
+			u32 m_frames{ 0 };
+			std::string m_font;
+			u32 m_font_size;
+			u32 m_margin_x; // horizontal distance to the screen border relative to the screen_quadrant in px
+			u32 m_margin_y; // vertical distance to the screen border relative to the screen_quadrant in px
+			f32 m_opacity;	// 0..1
+
+			bool m_force_update;
+			bool m_is_initialised{ false };
+
+			const std::string title1_medium{"CPU Utilization:"};
+			const std::string title1_high{"Host Utilization (CPU):"};
+			const std::string title2{"Guest Utilization (PS3):"};
+
+			void reset_transform(label& elm) const;
+			void reset_transforms();
+			void reset_body();
+			void reset_titles();
+			void reset_text();
+
+		public:
+			void init();
+
+			void set_detail_level(detail_level level);
+			void set_position(screen_quadrant pos);
+			void set_update_interval(u32 update_interval);
+			void set_font(std::string font);
+			void set_font_size(u32 font_size);
+			void set_margins(u32 margin_x, u32 margin_y);
+			void set_opacity(f32 opacity);
+			void force_next_update();
+
+			void update() override;
 
 			compiled_resource get_compiled() override
 			{
-				return m_display.get_compiled();
+				auto result = m_body.get_compiled();
+				result.add(m_titles.get_compiled());
+				return result;
 			}
 		};
 
@@ -333,7 +483,7 @@ namespace rsx
 				{
 					std::unique_ptr<overlay_element> image = std::make_unique<image_view>();
 					image->set_size(160, 110);
-					image->set_padding(36.f, 36.f, 11.f, 11.f); //Square image, 88x88
+					image->set_padding(36, 36, 11, 11); //Square image, 88x88
 
 					if (resource_id != image_resource_id::raw_image)
 					{
@@ -341,7 +491,7 @@ namespace rsx
 					}
 					else if (icon_buf.size())
 					{
-						image->set_padding(0.f, 0.f, 11.f, 11.f); //Half sized icon, 320x176->160x88
+						image->set_padding(0, 0, 11, 11); //Half sized icon, 320x176->160x88
 						icon_data = std::make_unique<image_info>(icon_buf);
 						static_cast<image_view*>(image.get())->set_raw_image(icon_data.get());
 					}
@@ -356,13 +506,13 @@ namespace rsx
 					std::unique_ptr<overlay_element> header_text = std::make_unique<label>(text1);
 					std::unique_ptr<overlay_element> subtext = std::make_unique<label>(text2);
 
-					padding->set_size(1, 10);
+					padding->set_size(1, 1);
 					header_text->set_size(800, 40);
-					header_text->text = text1;
+					header_text->set_text(text1);
 					header_text->set_font("Arial", 16);
 					header_text->set_wrap_text(true);
 					subtext->set_size(800, 40);
-					subtext->text = text2;
+					subtext->set_text(text2);
 					subtext->set_font("Arial", 14);
 					subtext->set_wrap_text(true);
 
@@ -391,15 +541,6 @@ namespace rsx
 			std::unique_ptr<label> m_time_thingy;
 			std::unique_ptr<label> m_no_saves_text;
 
-			std::string current_time()
-			{
-				time_t t = time(NULL);
-				char buf[128];
-				strftime(buf, 128, "%c", localtime(&t));
-
-				return buf;
-			}
-
 			bool m_no_saves = false;
 
 		public:
@@ -415,12 +556,12 @@ namespace rsx
 				m_list->set_pos(20, 85);
 
 				m_description->set_font("Arial", 20);
-				m_description->set_pos(20, 50);
-				m_description->text = "Save Dialog";
+				m_description->set_pos(20, 37);
+				m_description->set_text("Save Dialog");
 
 				m_time_thingy->set_font("Arial", 14);
-				m_time_thingy->set_pos(1000, 40);
-				m_time_thingy->text = current_time();
+				m_time_thingy->set_pos(1000, 30);
+				m_time_thingy->set_text(date_time::current_time());
 
 				static_cast<label*>(m_description.get())->auto_resize();
 				static_cast<label*>(m_time_thingy.get())->auto_resize();
@@ -483,15 +624,15 @@ namespace rsx
 
 				if (op >= 8)
 				{
-					m_description->text = "Delete Save";
+					m_description->set_text("Delete Save");
 				}
 				else if (op & 1)
 				{
-					m_description->text = "Load Save";
+					m_description->set_text("Load Save");
 				}
 				else
 				{
-					m_description->text = "Save";
+					m_description->set_text("Save");
 				}
 
 				const bool newpos_head = listSet->newData && listSet->newData->iconPosition == CELL_SAVEDATA_ICONPOS_HEAD;
@@ -572,7 +713,7 @@ namespace rsx
 
 			void update() override
 			{
-				m_time_thingy->set_text(current_time());
+				m_time_thingy->set_text(date_time::current_time());
 				static_cast<label*>(m_time_thingy.get())->auto_resize();
 			}
 		};
@@ -587,6 +728,8 @@ namespace rsx
 			overlay_element bottom_bar, background;
 			progress_bar progress_1, progress_2;
 			u8 num_progress_bars = 0;
+			s32 taskbar_index = 0;
+			s32 taskbar_limit = 0;
 
 			bool interactive = false;
 			bool ok_only = false;
@@ -599,7 +742,7 @@ namespace rsx
 				background.back_color.a = 0.85f;
 
 				text_display.set_size(1100, 40);
-				text_display.set_pos(90, 375);
+				text_display.set_pos(90, 364);
 				text_display.set_font("Arial", 16);
 				text_display.align_text(overlay_element::text_align::center);
 				text_display.set_wrap_text(true);
@@ -707,13 +850,13 @@ namespace rsx
 				num_progress_bars = type.progress_bar_count;
 				if (num_progress_bars)
 				{
-					u16 offset = 50;
-					progress_1.set_pos(240, 420);
+					u16 offset = 58;
+					progress_1.set_pos(240, 412);
 
 					if (num_progress_bars > 1)
 					{
-						progress_2.set_pos(240, 470);
-						offset = 90;
+						progress_2.set_pos(240, 462);
+						offset = 98;
 					}
 
 					//Push the other stuff down
@@ -765,6 +908,16 @@ namespace rsx
 				return CELL_OK;
 			}
 
+			u32 progress_bar_count()
+			{
+				return num_progress_bars;
+			}
+
+			void progress_bar_set_taskbar_index(s32 index)
+			{
+				taskbar_index = index;
+			}
+
 			s32 progress_bar_set_message(u32 index, const std::string& msg)
 			{
 				if (index >= num_progress_bars)
@@ -788,6 +941,9 @@ namespace rsx
 				else
 					progress_2.inc(value);
 
+				if (index == taskbar_index || taskbar_index == -1)
+					Emu.GetCallbacks().handle_taskbar_progress(1, (s32)value);
+
 				return CELL_OK;
 			}
 
@@ -800,6 +956,32 @@ namespace rsx
 					progress_1.set_value(0.f);
 				else
 					progress_2.set_value(0.f);
+
+				Emu.GetCallbacks().handle_taskbar_progress(0, 0);
+
+				return CELL_OK;
+			}
+
+			s32 progress_bar_set_limit(u32 index, u32 limit)
+			{
+				if (index >= num_progress_bars)
+					return CELL_MSGDIALOG_ERROR_PARAM;
+
+				if (index == 0)
+					progress_1.set_limit((float)limit);
+				else
+					progress_2.set_limit((float)limit);
+
+				if (index == taskbar_index)
+				{
+					taskbar_limit = limit;
+					Emu.GetCallbacks().handle_taskbar_progress(2, taskbar_limit);
+				}
+				else if (taskbar_index == -1)
+				{
+					taskbar_limit += limit;
+					Emu.GetCallbacks().handle_taskbar_progress(2, taskbar_limit);
+				}
 
 				return CELL_OK;
 			}
@@ -827,7 +1009,7 @@ namespace rsx
 				image.back_color.a = 0.f;
 
 				text_view.set_pos(85, 0);
-				text_view.set_padding(0.f, 0.f, 30.f, 0.f);
+				text_view.set_padding(0, 0, 24, 0);
 				text_view.set_font("Arial", 8);
 				text_view.align_text(overlay_element::text_align::center);
 				text_view.back_color.a = 0.f;
@@ -893,10 +1075,13 @@ namespace rsx
 
 			shader_compile_notification()
 			{
+				const u16 pos_x = g_cfg.video.shader_compilation_hint.pos_x;
+				const u16 pos_y = g_cfg.video.shader_compilation_hint.pos_y;
+
 				m_text.set_font("Arial", 16);
 				m_text.set_text("Compiling shaders");
 				m_text.auto_resize();
-				m_text.set_pos(20, 700);
+				m_text.set_pos(pos_x, pos_y);
 
 				m_text.back_color.a = 0.f;
 
@@ -904,11 +1089,14 @@ namespace rsx
 				{
 					dots[n].set_size(2, 2);
 					dots[n].back_color = color4f(1.f, 1.f, 1.f, 1.f);
-					dots[n].set_pos( m_text.w + 25 + (6 * n), 710);
+					dots[n].set_pos(m_text.w + pos_x + 5 + (6 * n), pos_y + 20);
 				}
 
 				creation_time = get_system_time();
 				expire_time = creation_time + 1000000;
+
+				// Disable forced refresh unless fps dips below 4
+				min_refresh_duration_us = 250000;
 			}
 
 			void update_animation(u64 t)

@@ -33,8 +33,13 @@ bool utils::has_avx2()
 
 bool utils::has_rtm()
 {
-	// Check RTM and MPX extensions in order to filter out TSX on Haswell CPUs
-	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x4800) == 0x4800;
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x800) == 0x800;
+	return g_value;
+}
+
+bool utils::has_mpx()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x4000) == 0x4000;
 	return g_value;
 }
 
@@ -114,6 +119,10 @@ std::string utils::get_system_info()
 	if (has_rtm())
 	{
 		result += " | TSX";
+		if (!has_mpx())
+		{
+			result += " disabled by default";
+		}
 	}
 
 	return result;

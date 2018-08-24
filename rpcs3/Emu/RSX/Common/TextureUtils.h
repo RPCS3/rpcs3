@@ -9,10 +9,10 @@ namespace rsx
 {
 	enum texture_upload_context
 	{
-		shader_read = 0,
-		blit_engine_src = 1,
-		blit_engine_dst = 2,
-		framebuffer_storage = 3
+		shader_read = 1,
+		blit_engine_src = 2,
+		blit_engine_dst = 4,
+		framebuffer_storage = 8
 	};
 
 	enum texture_colorspace
@@ -29,6 +29,8 @@ namespace rsx
 		bool is_depth_texture = false;
 		f32 scale_x = 1.f;
 		f32 scale_y = 1.f;
+
+		virtual u32 encoded_component_map() const = 0;
 	};
 }
 

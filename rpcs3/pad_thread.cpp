@@ -1,5 +1,4 @@
 #include "pad_thread.h"
-#include "rpcs3qt/gamepads_settings_dialog.h"
 #include "../ds4_pad_handler.h"
 #ifdef _WIN32
 #include "../xinput_pad_handler.h"

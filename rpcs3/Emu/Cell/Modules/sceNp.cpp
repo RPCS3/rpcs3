@@ -65,8 +65,7 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 	npdrmkeys->devKlic.fill(0);
 	npdrmkeys->rifKey.fill(0);
 
-	// todo: profile for rap_dir_path
-	std::string rap_dir_path = "/dev_hdd0/home/00000001/exdata/";
+	std::string rap_dir_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/";
 
 	const std::string& enc_drm_path_local = vfs::get(enc_drm_path);
 	const fs::file enc_file(enc_drm_path_local);
@@ -145,7 +144,7 @@ s32 sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 		return SCE_NP_DRM_ERROR_INVALID_PARAM;
 	}
 
-	if (!fs::is_file(vfs::get("/dev_hdd0/home/00000001/exdata/") + content_id.get_ptr() + ".rap"))
+	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_id.get_ptr() + ".rap")))
 	{
 		// Game hasn't been purchased therefore no RAP file present
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
@@ -164,7 +163,7 @@ s32 sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 		return SCE_NP_DRM_ERROR_INVALID_PARAM;
 	}
 
-	if (!fs::is_file(vfs::get("/dev_hdd0/home/00000001/exdata/") + content_id.get_ptr() + ".rap"))
+	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_id.get_ptr() + ".rap")))
 	{
 		// Game hasn't been purchased therefore no RAP file present
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
@@ -1191,6 +1190,12 @@ s32 sceNpManagerRequestTicket()
 s32 sceNpManagerRequestTicket2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
+	
+	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
+	{
+		return SCE_NP_ERROR_OFFLINE;
+	}
+	
 	return CELL_OK;
 }
 

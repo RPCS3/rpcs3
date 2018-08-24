@@ -5,8 +5,7 @@
 #include "rpcs3qt/welcome_dialog.h"
 
 #ifdef WITH_DISCORD_RPC
-#include "discord_rpc.h"
-#include "discord_register.h"
+#include "rpcs3qt/_discord_utils.h"
 #endif
 
 #include "Emu/System.h"
@@ -73,10 +72,11 @@ void rpcs3_app::Init()
 	setApplicationName("RPCS3");
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 
-	Emu.Init();
-
 	guiSettings.reset(new gui_settings());
 	emuSettings.reset(new emu_settings());
+
+	// Force init the emulator
+	InitializeEmulator(guiSettings->GetCurrentUser().toStdString(), true);
 
 	// Create the main window
 	RPCS3MainWin = new main_window(guiSettings, emuSettings, nullptr);
@@ -98,8 +98,7 @@ void rpcs3_app::Init()
 	// Discord Rich Presence Integration
 	if (guiSettings->GetValue(gui::m_richPresence).toBool())
 	{
-		DiscordEventHandlers handlers = {};
-		Discord_Initialize("424004941485572097", &handlers, 1, NULL);
+		discord::initialize();
 	}
 #endif
 
@@ -115,6 +114,21 @@ void rpcs3_app::Init()
 #endif
 }
 
+/** Emu.Init() wrapper for user manager */
+bool rpcs3_app::InitializeEmulator(const std::string& user, bool force_init)
+{
+	// try to set a new user
+	const bool user_was_set = Emu.SetUsr(user);
+
+	// only init the emulation if forced or a user was set
+	if (user_was_set || force_init)
+	{
+		Emu.Init();
+	}
+
+	return user_was_set;
+}
+
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here.
 */
 void rpcs3_app::InitializeCallbacks()
@@ -128,12 +142,6 @@ void rpcs3_app::InitializeCallbacks()
 	callbacks.call_after = [=](std::function<void()> func)
 	{
 		RequestCallAfter(std::move(func));
-	};
-
-	callbacks.process_events = [this]()
-	{
-		RPCS3MainWin->update();
-		processEvents();
 	};
 
 	callbacks.get_kb_handler = [=]() -> std::shared_ptr<KeyboardHandlerBase>
@@ -281,6 +289,28 @@ void rpcs3_app::InitializeCallbacks()
 	callbacks.on_stop = [=]() { OnEmulatorStop(); };
 	callbacks.on_ready = [=]() { OnEmulatorReady(); };
 
+	callbacks.handle_taskbar_progress = [=](s32 type, s32 value)
+	{
+		if (gameWindow)
+		{
+			switch (type)
+			{
+			case 0:
+				((gs_frame*)gameWindow)->progress_reset(value);
+				break;
+			case 1:
+				((gs_frame*)gameWindow)->progress_increment(value);
+				break;
+			case 2:
+				((gs_frame*)gameWindow)->progress_set_limit(value);
+				break;
+			default:
+				LOG_FATAL(GENERAL, "Unknown type in handle_taskbar_progress(type=%d, value=%d)", type, value);
+				break;
+			}
+		}
+	};
+
 	Emu.SetCallbacks(std::move(callbacks));
 }
 
@@ -305,88 +335,111 @@ void rpcs3_app::InitializeConnects()
 * Handle a request to change the stylesheet. May consider adding reporting of errors in future.
 * Empty string means default.
 */
-void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
+void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 {
-	QFile file(sheetFilePath);
-	if (sheetFilePath == "")
+	QString style_sheet
+	(
+		// main window toolbar search
+		"QLineEdit#mw_searchbar { padding: 0 1em; background: #fdfdfd; selection-background-color: #148aff; margin: .8em; color:#000000; }"
+
+		// main window toolbar slider
+		"QSlider#sizeSlider { color: #505050; background: #F0F0F0; }"
+		"QSlider#sizeSlider::handle:horizontal { border: 0em smooth rgba(227, 227, 227, 255); border-radius: .58em; background: #404040; width: 1.2em; margin: -.5em 0; }"
+		"QSlider#sizeSlider::groove:horizontal { border-radius: .15em; background: #5b5b5b; height: .3em; }"
+
+		// main window toolbar
+		"QToolBar#mw_toolbar { background-color: #F0F0F0; border: none; }"
+		"QToolBar#mw_toolbar::separator { background-color: rgba(207, 207, 207, 235); width: 0.125em; margin-top: 0.250em; margin-bottom: 0.250em; }"
+
+		// main window toolbar icon color
+		"QLabel#toolbar_icon_color { color: #5b5b5b; }"
+
+		// thumbnail icon color
+		"QLabel#thumbnail_icon_color { color: rgba(0, 100, 231, 255); }"
+
+		// game list icon color
+		"QLabel#gamelist_icon_background_color { color: rgba(36, 36, 36, 255); }"
+
+		// tables
+		"QTableWidget { alternate-background-color: #f2f2f2; background-color: #fff; border: none; }"
+		"QTableWidget#game_grid { alternate-background-color: #f2f2f2; background-color: #fff; font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); border: 0em solid white; }"
+		"QTableView::item { border-left: 0.063em solid white; border-right: 0.063em solid white; padding-left:0.313em; }"
+		"QTableView::item:selected { background-color: #148aff; color: #fff; }"
+		"QTableView#game_grid::item:hover:!selected { background-color: #94c9ff; color: #fff; }"
+		"QTableView#game_grid::item:hover:selected { background-color: #007fff; color: #fff; }"
+
+		// table headers
+#if (QT_VERSION < QT_VERSION_CHECK(5,11,0))
+		"QHeaderView::section { padding: .5em; border: 0.063em solid #ffffff; }"
+		"QHeaderView::section:hover { background: #e3e3e3; padding: .5em; border: 0.063em solid #ffffff; }"
+#else
+		"QHeaderView::section { padding-left: .5em; padding-right: .5em; padding-top: .4em; padding-bottom: -.1em; border: 0.063em solid #ffffff; }"
+		"QHeaderView::section:hover { background: #e3e3e3; padding-left: .5em; padding-right: .5em; padding-top: .4em; padding-bottom: -.1em; border: 0.063em solid #ffffff; }"
+#endif
+
+		// dock widget
+		"QDockWidget{ background: transparent; color: black; }"
+		"[floating = \"true\"]{ background: white; }"
+		"QDockWidget::title{ background: #e3e3e3; border: none; padding-top: 0.2em; padding-left: 0.2em; }"
+		"QDockWidget::close-button, QDockWidget::float-button{ background-color: #e3e3e3; }"
+
+		// log frame tty
+		"QTextEdit#tty_frame { background-color: #ffffff; }"
+		"QLabel#tty_text { color: #000000; }"
+
+		// log frame log
+		"QTextEdit#log_frame { background-color: #ffffff; }"
+		"QLabel#log_level_always { color: #107896; }"
+		"QLabel#log_level_fatal { color: #ff00ff; }"
+		"QLabel#log_level_error { color: #C02F1D; }"
+		"QLabel#log_level_todo { color: #ff6000; }"
+		"QLabel#log_level_success { color: #008000; }"
+		"QLabel#log_level_warning { color: #BA8745; }"
+		"QLabel#log_level_notice { color: #000000; }"
+		"QLabel#log_level_trace { color: #808080; }"
+		"QLabel#log_stack { color: #000000; }"
+
+		// about dialog
+		"QWidget#header_section { background-color: #ffffff; }"
+
+		// kernel explorer
+		"QDialog#kernel_explorer { background-color: rgba(240, 240, 240, 255); }"
+
+		// memory viewer
+		"QDialog#memory_viewer { background-color: rgba(240, 240, 240, 255); }"
+		"QLabel#memory_viewer_address_panel { color: rgba(75, 135, 150, 255); background-color: rgba(240, 240, 240, 255); }"
+		"QLabel#memory_viewer_hex_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
+		"QLabel#memory_viewer_ascii_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
+
+		// debugger frame
+		"QLabel#debugger_frame_breakpoint { color: #000000; background-color: #ffff00; }"
+		"QLabel#debugger_frame_pc { color: #000000; background-color: #00ff00; }"
+
+		// rsx debugger
+		"QLabel#rsx_debugger_display_buffer { background-color: rgba(240, 240, 240, 255); }"
+
+		// pad settings
+		"QLabel#l_controller { color: #434343; }"
+	);
+
+	QFile file(path);
+
+#if !defined(_WIN32) && !defined(__APPLE__)
+	// If we can't open the file, try the /share folder
+	QString share_dir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/";
+	QFile share_file(share_dir + "GuiConfigs/" + QFileInfo(file.fileName()).fileName());
+#endif
+
+	if (path == "")
 	{
-		auto rgba = [](const QColor& c, int v = 0)
-		{
-			return QString("rgba(%1, %2, %3, %4);").arg(c.red() + v).arg(c.green() + v).arg(c.blue() + v).arg(c.alpha() + v);
-		};
-
-		// toolbar color stylesheet
-		QString rgba_tool_bar = rgba(gui::mw_tool_bar_color);
-		QString style_toolbar = QString
-		(
-			"QLineEdit#mw_searchbar { margin-left:14px; background-color: " + rgba_tool_bar + " }"
-			"QToolBar#mw_toolbar { background-color: " + rgba_tool_bar + " }"
-			"QToolBar#mw_toolbar QSlider { background-color: " + rgba_tool_bar + " }"
-			"QToolBar#mw_toolbar::separator { background-color: " + rgba(gui::mw_tool_bar_color, -20) + " width: 1px; margin-top: 2px; margin-bottom: 2px; }"
-		);
-
-		// toolbar icon color stylesheet
-		QString style_toolbar_icons = QString
-		(
-			"QLabel#toolbar_icon_color { color: " + rgba(gui::mw_tool_icon_color) + " }"
-		);
-
-		// thumbnail icon color stylesheet
-		QString style_thumbnail_icons = QString
-		(
-			"QLabel#thumbnail_icon_color { color: " + rgba(gui::mw_thumb_icon_color) + " }"
-		);
-
-		// gamelist icon color stylesheet
-		QString style_gamelist_icons = QString
-		(
-			"QLabel#gamelist_icon_background_color { color: " + rgba(gui::gl_icon_color) + " }"
-		);
-
-		// log stylesheet
-		QString style_log = QString
-		(
-			"QTextEdit#tty_frame { background-color: #ffffff; }"
-			"QLabel#tty_text { color: #000000; }"
-			"QTextEdit#log_frame { background-color: #ffffff; }"
-			"QLabel#log_level_always { color: #107896; }"
-			"QLabel#log_level_fatal { color: #ff00ff; }"
-			"QLabel#log_level_error { color: #C02F1D; }"
-			"QLabel#log_level_todo { color: #ff6000; }"
-			"QLabel#log_level_success { color: #008000; }"
-			"QLabel#log_level_warning { color: #BA8745; }"
-			"QLabel#log_level_notice { color: #000000; }"
-			"QLabel#log_level_trace { color: #808080; }"
-			"QLabel#log_stack { color: #000000; }"
-		);
-
-		// other objects' stylesheet
-		QString style_rest = QString
-		(
-			"QWidget#header_section { background-color: #ffffff; }"
-			"QDialog#kernel_explorer { background-color: rgba(240, 240, 240, 255); }"
-			"QDialog#memory_viewer { background-color: rgba(240, 240, 240, 255); }"
-			"QLabel#memory_viewer_address_panel { color: rgba(75, 135, 150, 255); background-color: rgba(240, 240, 240, 255); }"
-			"QLabel#memory_viewer_hex_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
-			"QLabel#memory_viewer_ascii_panel { color: #000000; background-color: rgba(240, 240, 240, 255); }"
-			"QLabel#debugger_frame_breakpoint { color: #000000; background-color: #ffff00; }"
-			"QLabel#debugger_frame_pc { color: #000000; background-color: #00ff00; }"
-			"QLabel#rsx_debugger_display_buffer { background-color: rgba(240, 240, 240, 255); }"
-			"QLabel#l_controller { color: #434343; }"
-			"QLabel#gamegrid_font { font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); }"
-		);
-
-		setStyleSheet(style_toolbar + style_toolbar_icons + style_thumbnail_icons + style_gamelist_icons + style_log + style_rest);
+		setStyleSheet(style_sheet);
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
 		QString config_dir = qstr(fs::get_config_dir());
 
-		// HACK: dev_flash must be mounted for vfs to work for loading fonts.
-		vfs::mount("dev_flash", fmt::replace_all(g_cfg.vfs.dev_flash, "$(EmulatorDir)", Emu.GetEmuDir()));
-
 		// Add PS3 fonts
-		QDirIterator ps3_font_it(qstr(vfs::get("/dev_flash/data/font/")), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+		QDirIterator ps3_font_it(qstr(g_cfg.vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
 		while (ps3_font_it.hasNext())
 			QFontDatabase::addApplicationFont(ps3_font_it.next());
 
@@ -401,19 +454,18 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& sheetFilePath)
 		file.close();
 	}
 #if !defined(_WIN32) && !defined(__APPLE__)
-	else
+	else if (share_file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
-		// If we can't open the file, try the /share folder
-		QString shareDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/";
-		QDir::setCurrent(shareDir);
-		QFile newFile(shareDir + "GuiConfigs/" + QFileInfo(file.fileName()).fileName());
-		if (newFile.open(QIODevice::ReadOnly | QIODevice::Text))
-		{
-			setStyleSheet(newFile.readAll());
-			newFile.close();
-		}
+		QDir::setCurrent(share_dir);
+		setStyleSheet(share_file.readAll());
+		share_file.close();
 	}
 #endif
+	else
+	{
+		setStyleSheet(style_sheet);
+	}
+
 	gui::stylesheet = styleSheet();
 	RPCS3MainWin->RepaintGui();
 }

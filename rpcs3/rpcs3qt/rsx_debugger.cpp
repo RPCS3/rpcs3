@@ -91,7 +91,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 
 	m_tw_rsx = new QTabWidget();
 
-	//adds a tab containing a list to the tabwidget
+	// adds a tab containing a list to the tabwidget
 	auto l_addRSXTab = [=](QTableWidget* table, const QString& tabname, int columns)
 	{
 		table = new QTableWidget();
@@ -119,7 +119,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	m_list_texture = l_addRSXTab(m_list_texture, tr("Texture"), 9);
 	m_list_settings = l_addRSXTab(m_list_settings, tr("Settings"), 2);
 
-	//Tabs: List Columns
+	// Tabs: List Columns
 	m_list_commands->viewport()->installEventFilter(this);
 	m_list_commands->setHorizontalHeaderLabels(QStringList() << tr("Column") << tr("Value") << tr("Command") << tr("Count"));
 	m_list_commands->setColumnWidth(0, 70);
@@ -149,7 +149,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	m_list_settings->setColumnWidth(0, 170);
 	m_list_settings->setColumnWidth(1, 270);
 
-	//Tools: Tools = Controls + Notebook Tabs
+	// Tools: Tools = Controls + Notebook Tabs
 	QVBoxLayout* vbox_tools = new QVBoxLayout();
 	vbox_tools->addLayout(hbox_controls);
 	vbox_tools->addWidget(m_tw_rsx);
@@ -213,24 +213,22 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	//Events
 	connect(b_goto_get, &QAbstractButton::clicked, [=]
 	{
-		if (const auto render = fxm::get<GSRender>())
+		if (const auto render = rsx::get_current_renderer())
 		{
-			u32 realAddr;
-			if (RSXIOMem.getRealAddr(render->ctrl->get.load(), realAddr))
+			if (RSXIOMem.RealAddr(render->ctrl->get.load()))
 			{
-				m_addr = realAddr;
+				m_addr = render->ctrl->get.load();
 				UpdateInformation();
 			}
 		}
 	});
 	connect(b_goto_put, &QAbstractButton::clicked, [=]
 	{
-		if (const auto render = fxm::get<GSRender>())
+		if (const auto render = rsx::get_current_renderer())
 		{
-			u32 realAddr;
-			if (RSXIOMem.getRealAddr(render->ctrl->put.load(), realAddr))
+			if (RSXIOMem.RealAddr(render->ctrl->put.load()))
 			{
-				m_addr = realAddr;
+				m_addr = render->ctrl->put.load();
 				UpdateInformation();
 			}
 		}
@@ -377,7 +375,7 @@ void Buffer::showImage(const QImage& image)
 
 void Buffer::ShowWindowed()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 		return;
 
@@ -624,12 +622,12 @@ void rsx_debugger::GetMemory()
 		address_item->setData(Qt::UserRole, addr);
 		m_list_commands->setItem(i, 0, address_item);
 
-		if (vm::check_addr(addr))
+		if (vm::check_addr(RSXIOMem.RealAddr(addr)))
 		{
-			u32 cmd = vm::read32(addr);
+			u32 cmd = vm::read32(RSXIOMem.RealAddr(addr));
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
-			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr, 0)));
+			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr)));
 			m_list_commands->setItem(i, 3, new QTableWidgetItem(QString::number(count)));
 
 			if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
@@ -667,7 +665,7 @@ void rsx_debugger::GetMemory()
 
 void rsx_debugger::GetBuffers()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 	{
 		return;
@@ -744,7 +742,7 @@ void rsx_debugger::GetBuffers()
 
 void rsx_debugger::GetFlags()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 	{
 		return;
@@ -781,7 +779,7 @@ void rsx_debugger::GetFlags()
 
 void rsx_debugger::GetLightning()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 	{
 		return;
@@ -800,7 +798,7 @@ void rsx_debugger::GetLightning()
 
 void rsx_debugger::GetTexture()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 	{
 		return;
@@ -843,7 +841,7 @@ void rsx_debugger::GetTexture()
 
 void rsx_debugger::GetSettings()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 	{
 		return;
@@ -942,7 +940,7 @@ void rsx_debugger::SetFlags()
 
 void rsx_debugger::SetPrograms()
 {
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 	if (!render)
 	{
 		return;
@@ -1068,7 +1066,7 @@ const char* rsx_debugger::ParseGCMEnum(u32 value, u32 type)
 	index = (cmd - a) / m; \
 	case a \
 
-QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioAddr)
+QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 {
 	std::string disasm;
 
@@ -1076,17 +1074,17 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 	if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 	{
 		u32 jumpAddr = cmd & RSX_METHOD_OLD_JUMP_OFFSET_MASK;
-		DISASM("JUMP: %08x -> %08x", currentAddr, ioAddr+jumpAddr);
+		DISASM("JUMP: %08x -> %08x", ioAddr, jumpAddr);
 	}
 	else if((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
 	{
 		u32 jumpAddr = cmd & RSX_METHOD_NEW_JUMP_OFFSET_MASK;
-		DISASM("JUMP: %08x -> %08x", currentAddr, ioAddr + jumpAddr);
+		DISASM("JUMP: %08x -> %08x", ioAddr, jumpAddr);
 	}
 	else if((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
 	{
 		u32 callAddr = cmd & RSX_METHOD_CALL_OFFSET_MASK;
-		DISASM("CALL: %08x -> %08x", currentAddr, ioAddr+callAddr);
+		DISASM("CALL: %08x -> %08x", ioAddr, callAddr);
 	}
 	if(cmd == RSX_METHOD_RETURN_CMD)
 	{
@@ -1095,14 +1093,14 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 
 	if(cmd == 0)
 	{
-		DISASM("Null cmd");
+		DISASM("NOP");
 	}
 	else if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
 		&& (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) != RSX_METHOD_NEW_JUMP_CMD
 		&& (cmd & RSX_METHOD_CALL_CMD_MASK) != RSX_METHOD_CALL_CMD
 		&& cmd != RSX_METHOD_RETURN_CMD)
 	{
-		auto args = vm::ptr<u32>::make(currentAddr + 4);
+		auto args = vm::ptr<u32>::make(RSXIOMem.RealAddr(ioAddr + 4));
 
 		u32 index = 0;
 		switch((cmd & 0x3ffff) >> 2)

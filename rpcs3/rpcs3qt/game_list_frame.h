@@ -31,17 +31,17 @@ enum Category
 namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories 
 {
 	// PS3 bootable
-	const QString app_Music = QObject::tr("App Music");
-	const QString app_Photo = QObject::tr("App Photo");
-	const QString app_TV    = QObject::tr("App TV");
-	const QString app_Video = QObject::tr("App Video");
-	const QString bc_Video  = QObject::tr("Broadcast Video");
-	const QString disc_Game = QObject::tr("Disc Game");
-	const QString hdd_Game  = QObject::tr("HDD Game");
+	const QString app_music = QObject::tr("App Music");
+	const QString app_photo = QObject::tr("App Photo");
+	const QString app_tv    = QObject::tr("App TV");
+	const QString app_video = QObject::tr("App Video");
+	const QString bc_video  = QObject::tr("Broadcast Video");
+	const QString disc_game = QObject::tr("Disc Game");
+	const QString hdd_game  = QObject::tr("HDD Game");
 	const QString home      = QObject::tr("Home");
 	const QString network   = QObject::tr("Network");
-	const QString store_FE  = QObject::tr("Store");
-	const QString web_TV    = QObject::tr("Web TV");
+	const QString store_fe  = QObject::tr("Store");
+	const QString web_tv    = QObject::tr("Web TV");
 
 	// PS2 bootable
 	const QString ps2_game = QObject::tr("PS2 Classics");
@@ -56,12 +56,12 @@ namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 	const QString psp_rema = QObject::tr("PSP Remasters");
 
 	// Data
-	const QString ps3_Data = QObject::tr("PS3 Game Data");
-	const QString ps2_Data = QObject::tr("PS2 Emulator Data");
+	const QString ps3_data = QObject::tr("PS3 Game Data");
+	const QString ps2_data = QObject::tr("PS2 Emulator Data");
 
 	// Save
-	const QString ps3_Save = QObject::tr("PS3 Save Data");
-	const QString psp_Save = QObject::tr("PSP Minis Save Data");
+	const QString ps3_save = QObject::tr("PS3 Save Data");
+	const QString psp_save = QObject::tr("PSP Minis Save Data");
 
 	// others
 	const QString trophy  = QObject::tr("Trophy");
@@ -70,36 +70,36 @@ namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 
 	const q_from_char cat_boot =
 	{
-		{ "AM",app_Music }, // media
-		{ "AP",app_Photo }, // media
-		{ "AT",app_TV },    // media
-		{ "AV",app_Video }, // media
-		{ "BV",bc_Video },  // media
-		{ "DG",disc_Game }, // disc_Game
-		{ "HG",hdd_Game },  // non_disc_games
-		{ "HM",home },      // home
-		{ "CB",network },   // other
-		{ "SF",store_FE },  // other
-		{ "WT",web_TV },    // media
-		{ "2P",ps2_game },  // non_disc_games
-		{ "2G",ps2_inst },  // non_disc_games
-		{ "1P",ps1_game },  // non_disc_games
-		{ "PP",psp_game },  // non_disc_games
-		{ "MN",psp_mini },  // non_disc_games
-		{ "PE",psp_rema }   // non_disc_games
+		{ "AM", app_music }, // media
+		{ "AP", app_photo }, // media
+		{ "AT", app_tv    }, // media
+		{ "AV", app_video }, // media
+		{ "BV", bc_video  }, // media
+		{ "WT", web_tv    }, // media
+		{ "HM", home      }, // home
+		{ "CB", network   }, // other
+		{ "SF", store_fe  }, // other
+		{ "DG", disc_game }, // disc_Game
+		{ "HG", hdd_game  }, // non_disc_games
+		{ "2P", ps2_game  }, // non_disc_games
+		{ "2G", ps2_inst  }, // non_disc_games
+		{ "1P", ps1_game  }, // non_disc_games
+		{ "PP", psp_game  }, // non_disc_games
+		{ "MN", psp_mini  }, // non_disc_games
+		{ "PE", psp_rema  }, // non_disc_games
 	};
 	const q_from_char cat_data =
 	{
-		{ "GD",ps3_Data }, // data
-		{ "2D",ps2_Data }, // data
-		{ "SD",ps3_Save }, // data
-		{ "MS",psp_Save }  // data
+		{ "GD", ps3_data }, // data
+		{ "2D", ps2_data }, // data
+		{ "SD", ps3_save }, // data
+		{ "MS", psp_save }  // data
 	};
 
-	const QStringList non_disc_games = { hdd_Game, ps2_game, ps2_inst, ps1_game, psp_game, psp_mini, psp_rema };
-	const QStringList media = { app_Photo, app_Video, bc_Video, app_Music, app_TV, web_TV };
-	const QStringList data = { ps3_Data, ps2_Data, ps3_Save, psp_Save };
-	const QStringList others = { network, store_FE, trophy, other };
+	const QStringList non_disc_games = { hdd_game, ps2_game, ps2_inst, ps1_game, psp_game, psp_mini, psp_rema };
+	const QStringList media = { app_photo, app_video, bc_video, app_music, app_tv, web_tv };
+	const QStringList data = { ps3_data, ps2_data, ps3_save, psp_save };
+	const QStringList others = { network, store_fe, trophy, other };
 
 	inline bool CategoryInMap(const std::string& cat, const q_from_char& map)
 	{
@@ -214,6 +214,7 @@ private Q_SLOTS:
 	bool RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive = false);
 	bool DeleteShadersCache(const std::string& base_dir, bool is_interactive = false);
 	bool DeleteLLVMCache(const std::string& base_dir, bool is_interactive = false);
+	bool DeleteSPUCache(const std::string& base_dir, bool is_interactive = false);
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void doubleClickedSlot(QTableWidgetItem *item);
@@ -227,7 +228,7 @@ protected:
 	void resizeEvent(QResizeEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
-	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
+	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false);
 	void ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const game_info& game);
@@ -254,6 +255,7 @@ private:
 	QList<QAction*> m_columnActs;
 	Qt::SortOrder m_colSortOrder;
 	int m_sortColumn;
+	QMap<QString, QString> m_notes;
 
 	// Categories
 	QStringList m_categoryFilters;
@@ -263,8 +265,8 @@ private:
 	bool m_oldLayoutIsList = true;
 
 	// Data
-	std::shared_ptr<gui_settings> xgui_settings;
-	std::shared_ptr<emu_settings> xemu_settings;
+	std::shared_ptr<gui_settings> m_gui_settings;
+	std::shared_ptr<emu_settings> m_emu_settings;
 	QList<game_info> m_game_data;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};

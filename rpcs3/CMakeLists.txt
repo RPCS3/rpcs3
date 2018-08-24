@@ -25,13 +25,16 @@ endif()
 if(NOT Qt5Widgets_FOUND)
 	if(Qt5Widgets_VERSION VERSION_LESS 5.10.0)
 		message("Minimum supported Qt5 version is 5.10.0! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
-		if("${CMAKE_SYSTEM}" MATCHES "Linux")
+		if(CMAKE_SYSTEM MATCHES "Linux")
 			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.
-If you're on Ubuntu or Linux Mint, there are PPAs you can use to install an up-to-date qt5 version.
-        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-xenial
-        https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-trusty
+If you're on Ubuntu or Linux Mint, there are PPAs you can use to install one of the latest qt5 versions.
+		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.11.0-bionic
+		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.11.0-xenial
+		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-trusty
 just make sure to run
-    source /opt/qt510/bin/qt510-env.sh
+	source /opt/qt511/bin/qt511-env.sh
+respective
+	source /opt/qt510/bin/qt510-env.sh
 before re-running cmake")
 		elseif(WIN32)
 			message(FATAL_ERROR "You can download the latest version of Qt5 here: https://www.qt.io/download-open-source/")
@@ -42,8 +45,8 @@ before re-running cmake")
 
 	message("CMake was unable to find Qt5!")
 	if(WIN32)
-		message(FATAL_ERROR "Make sure the QTDIR env variable has been set properly. (for example C:\\Qt\\5.10.1\\msvc2017_64\\)")
-	elseif("${CMAKE_SYSTEM}" MATCHES "Linux")
+		message(FATAL_ERROR "Make sure the QTDIR env variable has been set properly. (for example C:\\Qt\\5.11.1\\msvc2017_64\\)")
+	elseif(CMAKE_SYSTEM MATCHES "Linux")
 		message(FATAL_ERROR "Make sure to install your distro's qt5 package!")
 	else()
 		message(FATAL_ERROR "You need to have Qt5 installed, look online for instructions on installing Qt5 on ${CMAKE_SYSTEM}.")
@@ -93,7 +96,7 @@ if(WIN32)
 else()
 	add_definitions(-DGL_GLEXT_PROTOTYPES)
 	add_definitions(-DGLX_GLXEXT_PROTOTYPES)
-	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux" OR APPLE)
+	if(CMAKE_SYSTEM MATCHES "Linux" OR APPLE)
 		# We don't want Discord Rich Presence on the BSDs and other OSes
 		add_definitions(-DWITH_DISCORD_RPC)
 	endif()
@@ -150,8 +153,6 @@ if(NOT MSVC)
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -nopie")
 		endif()
 	endif()
-
-	find_package(ZLIB REQUIRED)
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:throwingNew /D _CRT_SECURE_NO_DEPRECATE=1 /D _CRT_NON_CONFORMING_SWPRINTFS=1 /D _SCL_SECURE_NO_WARNINGS=1")
 
@@ -160,7 +161,7 @@ else()
 endif()
 
 set(ADDITIONAL_LIBS "")
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if(CMAKE_SYSTEM MATCHES "Linux")
 	#on some Linux distros shm_unlink and similar functions are in librt only
 	set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "rt")
 elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
@@ -183,14 +184,14 @@ else()
 	message("-- Using Custom RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
 endif()
 
-set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
-
+# Prefer GLVND for OpenGL rather than legacy
+set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 if(NOT WITHOUT_LLVM)
-    if (EXISTS "${CMAKE_SOURCE_DIR}/llvmlibs")
-        find_package(LLVM 6.0 CONFIG)
-    endif()
+	if (EXISTS "${CMAKE_SOURCE_DIR}/llvmlibs")
+		find_package(LLVM 7.0 CONFIG)
+	endif()
 	if(NOT LLVM_FOUND)
 		message("LLVM will be built from the submodule.")
 
@@ -209,7 +210,7 @@ if(NOT WITHOUT_LLVM)
 		set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/../llvm_build/lib/cmake/llvm/")
 
 		# now tries to find LLVM again
-		find_package(LLVM 6.0 CONFIG)
+		find_package(LLVM 7.0 CONFIG)
 		if(NOT LLVM_FOUND)
 			message(WARNING "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()
@@ -259,10 +260,6 @@ if(NOT APPLE AND USE_VULKAN)
 	find_package(Vulkan)
 	if(VULKAN_FOUND)
 		add_definitions(-DHAVE_VULKAN)
-		list(APPEND ADDITIONAL_LIBS Vulkan::Vulkan)
-		if(VULKAN_PREBUILT)
-			list(APPEND ADDITIONAL_LIBS glslang HLSL OGLCompiler SPIRV OSDependent)
-		endif()
 	else()
 		message("WARNING! USE_VULKAN was enabled, but libvulkan was not found. RPCS3 will be compiled without Vulkan support.")
 	endif()
@@ -275,7 +272,7 @@ if(USE_SYSTEM_LIBPNG)
 	include_directories("${PNG_INCLUDE_DIRS}")
 else()
 	message("-- RPCS3: using builtin libpng")
-	include_directories("${RPCS3_SRC_DIR}/../3rdparty/libpng")
+	include_directories("${libpng_BINARY_DIR}" "${libpng_SOURCE_DIR}")
 endif()
 
 # Select the version of ffmpeg to use, default is builtin
@@ -291,16 +288,11 @@ endif()
 include_directories(
 ${OPENAL_INCLUDE_DIR}
 ${LLVM_INCLUDE_DIRS}
-"${RPCS3_SRC_DIR}/../3rdparty/pugixml/src"
 "${RPCS3_SRC_DIR}"
 "${RPCS3_SRC_DIR}/Loader"
 "${RPCS3_SRC_DIR}/Crypto"
 "${RPCS3_SRC_DIR}/.."
-"${RPCS3_SRC_DIR}/../Utilities/yaml-cpp/include"
-"${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 "${RPCS3_SRC_DIR}/../3rdparty/GSL/include"
-"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/Public"
-"${RPCS3_SRC_DIR}/../Vulkan/glslang/"
 "${RPCS3_SRC_DIR}/../3rdparty/hidapi/hidapi"
 # Includes 3rdparty stuff that isn't included yet
 "${RPCS3_SRC_DIR}/../3rdparty/GL"
@@ -309,6 +301,7 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../3rdparty/Optional"
 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/include"
 "${RPCS3_SRC_DIR}/../3rdparty/xxHash"
+"${RPCS3_SRC_DIR}/../3rdparty/GPUOpen/include"
 )
 
 if(WIN32)
@@ -348,23 +341,7 @@ GLOB_RECURSE
 RPCS3_SRC
 "${RPCS3_SRC_DIR}/*.cpp"
 "${RPCS3_SRC_DIR}/../Utilities/*.cpp"
-"${RPCS3_SRC_DIR}/../asmjit/src/asmjit/*.cpp"
 )
-
-if(NOT WIN32 AND VULKAN_FOUND)
-# Compile glslang and SPIRV modules needed for glsl compilation
-	file(
-	GLOB_RECURSE
-	UNIX_GLSLANG
-	"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/GenericCodeGen/*.cpp"
-	"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/MachineIndependent/*.cpp"
-	"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/OSDependent/Unix/*.cpp"
-	"${RPCS3_SRC_DIR}/../Vulkan/glslang/OGLCompilersDLL/*.cpp"
-	"${RPCS3_SRC_DIR}/../Vulkan/glslang/SPIRV/*.cpp"
-	)
-
-	set(RPCS3_SRC ${RPCS3_SRC} ${UNIX_GLSLANG})
-endif()
 
 #File exclusion section
 
@@ -398,6 +375,10 @@ endif()
 
 add_dependencies(rpcs3 GitVersion)
 
+target_sources(rpcs3 PUBLIC ${ASMJIT_SRC})
+target_include_directories(rpcs3 PUBLIC ${ASMJIT_INCLUDE_DIR})
+target_link_libraries(rpcs3 ${ASMJIT_DEPS})
+
 if(NOT MSVC)
 	find_package(GLEW 1.13.0 REQUIRED)
 	target_link_libraries(rpcs3 GLEW::GLEW)
@@ -413,41 +394,48 @@ if(UNIX)
 	target_link_libraries(rpcs3 ${X11_LIBRARIES})
 endif()
 
-target_link_libraries(rpcs3 xxhash)
+if(VULKAN_FOUND)
+	target_link_libraries(rpcs3 SPIRV Vulkan::Vulkan)
+endif()
+
+target_link_libraries(rpcs3 pugixml xxhash yaml-cpp)
+
+find_package(ZLIB REQUIRED)
+target_include_directories(rpcs3 PUBLIC ${ZLIB_INCLUDE_DIRS})
+target_link_libraries(rpcs3 ${ZLIB_LIBRARIES})
 
 if(WIN32)
-	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib VKstatic.1 glslang OSDependent OGLCompiler SPIRV HLSL setupapi.lib hidapi-hid Shlwapi.lib)
+	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib setupapi.lib hidapi-hid Shlwapi.lib)
 	if(NOT MSVC)
 		target_link_libraries(rpcs3 ${OPENGL_LIBRARIES} opengl32.lib glu32.lib)
 	else()
 		target_link_libraries(rpcs3 dxgi.lib d2d1.lib dwrite.lib)
 	endif()
-	target_link_libraries(rpcs3 avformat.lib avcodec.lib avutil.lib swscale.lib png16_static ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3 avformat.lib avcodec.lib avutil.lib swscale.lib png_static ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
 	# Link Discord Rich Presence
 	target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/discord-rpc.lib")
 else()
 	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
 	if(APPLE)
 		target_link_libraries(rpcs3 hidapi-mac "-framework CoreFoundation" "-framework IOKit")
-	elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	elseif(CMAKE_SYSTEM MATCHES "Linux")
 		target_link_libraries(rpcs3 hidapi-hidraw udev)
 	else()
 		target_link_libraries(rpcs3 hidapi-libusb usb)
 	endif()
-	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} ZLIB::ZLIB ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} ${ADDITIONAL_LIBS})
 	if(USE_SYSTEM_FFMPEG)
-		link_libraries(${FFMPEG_LIBRARY_DIR})
-		target_link_libraries(rpcs3 libavformat.so libavcodec.so libavutil.so libswscale.so)
+		target_link_libraries(rpcs3 ${FFMPEG_LIBRARIES})
 	else()
 		target_link_libraries(rpcs3 libavformat.a libavcodec.a libavutil.a libswscale.a)
 	endif()
 	if(USE_SYSTEM_LIBPNG)
 		target_link_libraries(rpcs3 ${PNG_LIBRARIES})
 	else()
-		target_link_libraries(rpcs3 png16_static)
+		target_link_libraries(rpcs3 png_static)
 	endif()
 	# Link Discord Rich Presence, but only on Linux
-	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+	if(CMAKE_SYSTEM MATCHES "Linux")
 		target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/libdiscord-rpc-linux.a")
 	elseif(APPLE)
 		target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/libdiscord-rpc-mac.a")
@@ -473,11 +461,11 @@ if(MSVC)
 	# them from the local QT installation at the end of the build.
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir ${CMAKE_BINARY_DIR}/bin/qt/plugins --debug ${CMAKE_BINARY_DIR}/bin
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "${CMAKE_BINARY_DIR}/bin/qt/plugins" --debug "${CMAKE_BINARY_DIR}/bin"
 		)
 	else()
 		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir ${CMAKE_BINARY_DIR}/bin/qt/plugins ${CMAKE_BINARY_DIR}/bin
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "${CMAKE_BINARY_DIR}/bin/qt/plugins" "${CMAKE_BINARY_DIR}/bin"
 		)
 	endif()
 endif()
@@ -486,9 +474,9 @@ cotire(rpcs3)
 
 if (UNIX)
 # Copy icons to executable directory
-add_custom_command(TARGET rpcs3 POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory
-                       ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons)
+add_custom_command(	TARGET rpcs3 POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy_directory
+					${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons)
 endif()
 
 # Unix installation
@@ -504,9 +492,9 @@ if(UNIX AND NOT APPLE)
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
 	install(FILES rpcs3.appdata.xml
 			DESTINATION ${CMAKE_INSTALL_PREFIX}/share/metainfo)
-    # Install other files
-    install(DIRECTORY ../bin/Icons
+	# Install other files
+	install(DIRECTORY ../bin/Icons
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
-    install(DIRECTORY ../bin/GuiConfigs
+	install(DIRECTORY ../bin/GuiConfigs
 		DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
 endif()

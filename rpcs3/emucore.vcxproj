@@ -295,6 +295,7 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlays.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_perf_metrics.cpp" />
     <ClCompile Include="Emu\RSX\rsx_methods.cpp" />
     <ClCompile Include="Emu\RSX\rsx_utils.cpp" />
     <ClCompile Include="Crypto\aes.cpp">
@@ -326,9 +327,6 @@
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThread.cpp" />
     <ClCompile Include="Emu\VFS.cpp" />
-    <ClCompile Include="Emu\Memory\Memory.cpp">
-      <ObjectFileName>$(IntDir)OldMemory.obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\GSRender.cpp" />
     <ClCompile Include="Emu\RSX\RSXTexture.cpp" />
     <ClCompile Include="Emu\RSX\RSXThread.cpp" />
@@ -357,6 +355,7 @@
     <ClInclude Include="..\Utilities\cfmt.h" />
     <ClInclude Include="..\Utilities\cond.h" />
     <ClInclude Include="..\Utilities\CRC.h" />
+    <ClInclude Include="..\Utilities\date_time.h" />
     <ClInclude Include="..\Utilities\dynamic_library.h" />
     <ClInclude Include="..\Utilities\event.h" />
     <ClInclude Include="..\Utilities\GDBDebugServer.h" />
@@ -544,8 +543,6 @@
     <ClInclude Include="Emu\Io\Null\NullMouseHandler.h" />
     <ClInclude Include="Emu\Io\Null\NullPadHandler.h" />
     <ClInclude Include="Emu\Io\PadHandler.h" />
-    <ClInclude Include="Emu\Memory\Memory.h" />
-    <ClInclude Include="Emu\Memory\MemoryBlock.h" />
     <ClInclude Include="Emu\RSX\CgBinaryProgram.h" />
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h" />
     <ClInclude Include="Emu\RSX\Common\FragmentProgramDecompiler.h" />
@@ -580,13 +577,13 @@
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\3rdparty\libpng\projects\vstudio\libpng\libpng.vcxproj">
+    <ProjectReference Include="..\3rdparty\libpng.vcxproj">
       <Project>{d6973076-9317-4ef2-a0b8-b7a18ac0713e}</Project>
     </ProjectReference>
     <ProjectReference Include="..\asmjitsrc\asmjit.vcxproj">
       <Project>{ac40ff01-426e-4838-a317-66354cefae88}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\Utilities\yaml-cpp.vcxproj">
+    <ProjectReference Include="..\3rdparty\yaml-cpp.vcxproj">
       <Project>{fdc361c5-7734-493b-8cfb-037308b35122}</Project>
     </ProjectReference>
   </ItemGroup>

@@ -147,19 +147,42 @@ enum class frame_limit_type
 	_auto,
 };
 
+enum class detail_level
+{
+	minimal,
+	low,
+	medium,
+	high,
+};
+
+enum class screen_quadrant
+{
+	top_left,
+	top_right,
+	bottom_left,
+	bottom_right
+};
+
+enum class tsx_usage
+{
+	disabled,
+	enabled,
+	forced,
+};
+
 enum CellNetCtlState : s32;
 enum CellSysutilLang : s32;
 
 struct EmuCallbacks
 {
 	std::function<void(std::function<void()>)> call_after;
-	std::function<void()> process_events;
 	std::function<void()> on_run;
 	std::function<void()> on_pause;
 	std::function<void()> on_resume;
 	std::function<void()> on_stop;
 	std::function<void()> on_ready;
 	std::function<void()> exit;
+	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit
 	std::function<std::shared_ptr<class KeyboardHandlerBase>()> get_kb_handler;
 	std::function<std::shared_ptr<class MouseHandlerBase>()> get_mouse_handler;
 	std::function<std::shared_ptr<class pad_thread>()> get_pad_handler;
@@ -186,6 +209,8 @@ class Emulator final
 	std::string m_title;
 	std::string m_cat;
 	std::string m_dir;
+	std::string m_usr{"00000001"};
+	u32 m_usrid{1};
 
 	bool m_force_boot = false;
 
@@ -254,6 +279,20 @@ public:
 		return m_dir;
 	}
 
+	// String for GUI dialogs.
+	const std::string& GetUsr() const
+	{
+		return m_usr;
+	}
+
+	// u32 for cell.
+	const u32 GetUsrId() const
+	{
+		return m_usrid;
+	}
+
+	const bool SetUsr(const std::string& user);
+
 	u64 GetPauseTime()
 	{
 		return m_pause_amend_time;
@@ -263,9 +302,10 @@ public:
 	bool BootRsxCapture(const std::string& path);
 	bool InstallPkg(const std::string& path);
 
+private:
 	static std::string GetEmuDir();
+public:
 	static std::string GetHddDir();
-	static std::string GetLibDir();
 
 	void SetForceBoot(bool force_boot);
 
@@ -313,7 +353,13 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 16> spu_delay_penalty{this, "SPU delay penalty", 3}; //Number of milliseconds to block a thread if a virtual 'core' isn't free
 		cfg::_bool spu_loop_detection{this, "SPU loop detection", true}; //Try to detect wait loops and trigger thread yield
 		cfg::_bool spu_shared_runtime{this, "SPU Shared Runtime", true}; // Share compiled SPU functions between all threads
-		cfg::_enum<spu_block_size_type> spu_block_size{this, "SPU Block Size"};
+		cfg::_enum<spu_block_size_type> spu_block_size{this, "SPU Block Size", spu_block_size_type::safe};
+		cfg::_bool spu_accurate_getllar{this, "Accurate GETLLAR", false};
+		cfg::_bool spu_accurate_putlluc{this, "Accurate PUTLLUC", false};
+		cfg::_bool spu_verification{this, "SPU Verification", true}; // Should be enabled
+		cfg::_bool spu_cache{this, "SPU Cache", true};
+		cfg::_enum<tsx_usage> enable_TSX{this, "Enable TSX", tsx_usage::enabled}; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
+		cfg::_bool spu_accurate_xfloat{this, "Accurate xfloat", false};
 
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::liblv2only};
 		cfg::_bool hook_functions{this, "Hook static functions"};
@@ -325,13 +371,20 @@ struct cfg_root : cfg::node
 	{
 		node_vfs(cfg::node* _this) : cfg::node(_this, "VFS") {}
 
+		std::string get(const cfg::string&, const char*) const;
+
 		cfg::string emulator_dir{this, "$(EmulatorDir)"}; // Default (empty): taken from fs::get_config_dir()
 		cfg::string dev_hdd0{this, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/"};
 		cfg::string dev_hdd1{this, "/dev_hdd1/", "$(EmulatorDir)dev_hdd1/"};
-		cfg::string dev_flash{this, "/dev_flash/", "$(EmulatorDir)dev_flash/"};
+		cfg::string dev_flash{this, "/dev_flash/"};
 		cfg::string dev_usb000{this, "/dev_usb000/", "$(EmulatorDir)dev_usb000/"};
 		cfg::string dev_bdvd{this, "/dev_bdvd/"}; // Not mounted
 		cfg::string app_home{this, "/app_home/"}; // Not mounted
+
+		std::string get_dev_flash() const
+		{
+			return get(dev_flash, "dev_flash/");
+		}
 
 		cfg::_bool host_root{this, "Enable /host_root/"};
 
@@ -356,16 +409,19 @@ struct cfg_root : cfg::node
 		cfg::_bool debug_output{this, "Debug output"};
 		cfg::_bool overlay{this, "Debug overlay"};
 		cfg::_bool gl_legacy_buffers{this, "Use Legacy OpenGL Buffers"};
-		cfg::_bool use_gpu_texture_scaling{this, "Use GPU texture scaling", true};
+		cfg::_bool use_gpu_texture_scaling{this, "Use GPU texture scaling", false};
 		cfg::_bool stretch_to_display_area{this, "Stretch To Display Area"};
 		cfg::_bool force_high_precision_z_buffer{this, "Force High Precision Z buffer"};
 		cfg::_bool strict_rendering_mode{this, "Strict Rendering Mode"};
 		cfg::_bool disable_zcull_queries{this, "Disable ZCull Occlusion Queries", false};
 		cfg::_bool disable_vertex_cache{this, "Disable Vertex Cache", false};
+		cfg::_bool disable_FIFO_reordering{this, "Disable FIFO Reordering", false};
 		cfg::_bool frame_skip_enabled{this, "Enable Frame Skip", false};
 		cfg::_bool force_cpu_blit_processing{this, "Force CPU Blit", false}; // Debugging option
 		cfg::_bool disable_on_disk_shader_cache{this, "Disable On-Disk Shader Cache", false};
+		cfg::_bool disable_vulkan_mem_allocator{this, "Disable Vulkan Memory Allocator", false};
 		cfg::_bool full_rgb_range_output{this, "Use full RGB output range", true}; // Video out dynamic range
+		cfg::_bool disable_asynchronous_shader_compiler{this, "Disable Asynchronous Shader Compiler", false};
 		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames To Draw", 1};
 		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames To Skip", 1};
 		cfg::_int<50, 800> resolution_scale_percent{this, "Resolution Scale", 100};
@@ -390,6 +446,37 @@ struct cfg_root : cfg::node
 			cfg::_bool force_primitive_restart{this, "Force primitive restart flag"};
 
 		} vk{this};
+
+		struct node_perf_overlay : cfg::node
+		{
+			node_perf_overlay(cfg::node* _this) : cfg::node(_this, "Performance Overlay") {}
+
+			cfg::_bool perf_overlay_enabled{this, "Enabled", false};
+			cfg::_enum<detail_level> level{this, "Detail level", detail_level::high};
+			cfg::_int<30, 5000> update_interval{ this, "Metrics update interval (ms)", 350 };
+			cfg::_int<4, 36> font_size{ this, "Font size (px)", 10 };
+			cfg::_enum<screen_quadrant> position{this, "Position", screen_quadrant::top_left};
+			cfg::string font{this, "Font", "n023055ms.ttf"};
+			cfg::_int<0, 1280> margin_x{this, "Horizontal Margin (px)", 50}; // horizontal distance to the screen border relative to the screen_quadrant in px
+			cfg::_int<0, 720> margin_y{this, "Vertical Margin (px)", 50}; // vertical distance to the screen border relative to the screen_quadrant in px
+			cfg::_bool center_x{ this, "Center Horizontally", false };
+			cfg::_bool center_y{ this, "Center Vertically", false };
+			cfg::_int<0, 100> opacity{this, "Opacity (%)", 70};
+			cfg::string color_body{ this, "Body Color (hex)", "#FFE138FF" };
+			cfg::string background_body{ this, "Body Background (hex)", "#002339FF" };
+			cfg::string color_title{ this, "Title Color (hex)", "#F26C24FF" };
+			cfg::string background_title{ this, "Title Background (hex)", "#00000000" };
+
+		} perf_overlay{this};
+
+		struct node_shader_compilation_hint : cfg::node
+		{
+			node_shader_compilation_hint(cfg::node* _this) : cfg::node(_this, "Shader Compilation Hint") {}
+
+			cfg::_int<0, 1280> pos_x{this, "Position X (px)", 20}; // horizontal position starting from the upper border in px
+			cfg::_int<0, 720> pos_y{this, "Position Y (px)", 690}; // vertical position starting from the left border in px
+
+		} shader_compilation_hint{this};
 
 	} video{this};
 

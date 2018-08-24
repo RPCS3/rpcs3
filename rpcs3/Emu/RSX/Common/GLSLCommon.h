@@ -83,7 +83,8 @@ namespace glsl
 	enum program_domain
 	{
 		glsl_vertex_program = 0,
-		glsl_fragment_program = 1
+		glsl_fragment_program = 1,
+		glsl_compute_program = 2
 	};
 
 	enum glsl_rules
@@ -109,23 +110,45 @@ namespace glsl
 		}
 	}
 
-	static std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::string &Op1)
+	static std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar = false)
 	{
-		switch (f)
+		if (scalar)
 		{
-		case COMPARE::FUNCTION_SEQ:
-			return "equal(" + Op0 + ", " + Op1 + ")";
-		case COMPARE::FUNCTION_SGE:
-			return "greaterThanEqual(" + Op0 + ", " + Op1 + ")";
-		case COMPARE::FUNCTION_SGT:
-			return "greaterThan(" + Op0 + ", " + Op1 + ")";
-		case COMPARE::FUNCTION_SLE:
-			return "lessThanEqual(" + Op0 + ", " + Op1 + ")";
-		case COMPARE::FUNCTION_SLT:
-			return "lessThan(" + Op0 + ", " + Op1 + ")";
-		case COMPARE::FUNCTION_SNE:
-			return "notEqual(" + Op0 + ", " + Op1 + ")";
+			switch (f)
+			{
+			case COMPARE::FUNCTION_SEQ:
+				return Op0 + " == " + Op1;
+			case COMPARE::FUNCTION_SGE:
+				return Op0 + " >= " + Op1;
+			case COMPARE::FUNCTION_SGT:
+				return Op0 + " > " + Op1;
+			case COMPARE::FUNCTION_SLE:
+				return Op0 + " <= " + Op1;
+			case COMPARE::FUNCTION_SLT:
+				return Op0 + " < " + Op1;
+			case COMPARE::FUNCTION_SNE:
+				return Op0 + " != " + Op1;
+			}
 		}
+		else
+		{
+			switch (f)
+			{
+			case COMPARE::FUNCTION_SEQ:
+				return "equal(" + Op0 + ", " + Op1 + ")";
+			case COMPARE::FUNCTION_SGE:
+				return "greaterThanEqual(" + Op0 + ", " + Op1 + ")";
+			case COMPARE::FUNCTION_SGT:
+				return "greaterThan(" + Op0 + ", " + Op1 + ")";
+			case COMPARE::FUNCTION_SLE:
+				return "lessThanEqual(" + Op0 + ", " + Op1 + ")";
+			case COMPARE::FUNCTION_SLT:
+				return "lessThan(" + Op0 + ", " + Op1 + ")";
+			case COMPARE::FUNCTION_SNE:
+				return "notEqual(" + Op0 + ", " + Op1 + ")";
+			}
+		}
+
 		fmt::throw_exception("Unknown compare function" HERE);
 	}
 
@@ -449,10 +472,27 @@ namespace glsl
 			OS << "	return pow((cs + 0.055) / 1.055, 2.4);\n";
 			OS << "}\n\n";
 
+#ifdef __APPLE__
+			OS << "vec4 remap_vector(vec4 rgba, uint remap_bits)\n";
+			OS << "{\n";
+			OS << "	uvec4 selector = (uvec4(remap_bits) >> uvec4(3, 6, 9, 0)) & 0x7;\n";
+			OS << "	bvec4 choice = greaterThan(selector, uvec4(1));\n";
+			OS << "\n";
+			OS << "	vec4 direct = vec4(selector);\n";
+			OS << "	selector = min(selector - 2, selector);\n";
+			OS << "	vec4 indexed = vec4(rgba[selector.r], rgba[selector.g], rgba[selector.b], rgba[selector.a]);\n";
+			OS << "	return mix(direct, indexed, choice);\n";
+			OS << "}\n\n";
+#endif
+
 			//TODO: Move all the texture read control operations here
 			OS << "vec4 process_texel(vec4 rgba, uint control_bits)\n";
 			OS << "{\n";
-			OS << "	if (control_bits == 0) return rgba;\n\n";
+#ifdef __APPLE__
+			OS << "	uint remap_bits = (control_bits >> 16) & 0xFFFF;\n";
+			OS << "	if (remap_bits != 0x8D5) rgba = remap_vector(rgba, remap_bits);\n\n";
+#endif
+			OS << "	if ((control_bits & 0xFFFF) == 0) return rgba;\n\n";
 			OS << "	if ((control_bits & 0x10) > 0)\n";
 			OS << "	{\n";
 			OS << "		//Alphakill\n";
@@ -471,27 +511,27 @@ namespace glsl
 			OS << "	return rgba;\n";
 			OS << "}\n\n";
 
-			OS << "#define TEX1D(index, tex, coord1) process_texel(texture(tex, coord1 * texture_parameters[index].x), uint(texture_parameters[index].w))\n";
-			OS << "#define TEX1D_BIAS(index, tex, coord1, bias) process_texel(texture(tex, coord1 * texture_parameters[index].x, bias), uint(texture_parameters[index].w))\n";
-			OS << "#define TEX1D_LOD(index, tex, coord1, lod) process_texel(textureLod(tex, coord1 * texture_parameters[index].x, lod), uint(texture_parameters[index].w))\n";
-			OS << "#define TEX1D_GRAD(index, tex, coord1, dpdx, dpdy) process_texel(textureGrad(tex, coord1 * texture_parameters[index].x, dpdx, dpdy), uint(texture_parameters[index].w))\n";
-			OS << "#define TEX1D_PROJ(index, tex, coord2) process_texel(textureProj(tex, coord2 * vec2(texture_parameters[index].x, 1.)), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX1D(index, tex, coord1) process_texel(texture(tex, coord1 * texture_parameters[index].x), floatBitsToUint(texture_parameters[index].w))\n";
+			OS << "#define TEX1D_BIAS(index, tex, coord1, bias) process_texel(texture(tex, coord1 * texture_parameters[index].x, bias), floatBitsToUint(texture_parameters[index].w))\n";
+			OS << "#define TEX1D_LOD(index, tex, coord1, lod) process_texel(textureLod(tex, coord1 * texture_parameters[index].x, lod), floatBitsToUint(texture_parameters[index].w))\n";
+			OS << "#define TEX1D_GRAD(index, tex, coord1, dpdx, dpdy) process_texel(textureGrad(tex, coord1 * texture_parameters[index].x, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n";
+			OS << "#define TEX1D_PROJ(index, tex, coord2) process_texel(textureProj(tex, coord2 * vec2(texture_parameters[index].x, 1.)), floatBitsToUint(texture_parameters[index].w))\n";
 
-			OS << "#define TEX2D(index, tex, coord2) process_texel(texture(tex, coord2 * texture_parameters[index].xy), uint(texture_parameters[index].w))\n";
-			OS << "#define TEX2D_BIAS(index, tex, coord2, bias) process_texel(texture(tex, coord2 * texture_parameters[index].xy, bias), uint(texture_parameters[index].w))\n";
-			OS << "#define TEX2D_LOD(index, tex, coord2, lod) process_texel(textureLod(tex, coord2 * texture_parameters[index].xy, lod), uint(texture_parameters[index].w))\n";
-			OS << "#define TEX2D_GRAD(index, tex, coord2, dpdx, dpdy) process_texel(textureGrad(tex, coord2 * texture_parameters[index].xy, dpdx, dpdy), uint(texture_parameters[index].w))\n";
-			OS << "#define TEX2D_PROJ(index, tex, coord4) process_texel(textureProj(tex, coord4 * vec4(texture_parameters[index].xy, 1., 1.)), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX2D(index, tex, coord2) process_texel(texture(tex, coord2 * texture_parameters[index].xy), floatBitsToUint(texture_parameters[index].w))\n";
+			OS << "#define TEX2D_BIAS(index, tex, coord2, bias) process_texel(texture(tex, coord2 * texture_parameters[index].xy, bias), floatBitsToUint(texture_parameters[index].w))\n";
+			OS << "#define TEX2D_LOD(index, tex, coord2, lod) process_texel(textureLod(tex, coord2 * texture_parameters[index].xy, lod), floatBitsToUint(texture_parameters[index].w))\n";
+			OS << "#define TEX2D_GRAD(index, tex, coord2, dpdx, dpdy) process_texel(textureGrad(tex, coord2 * texture_parameters[index].xy, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n";
+			OS << "#define TEX2D_PROJ(index, tex, coord4) process_texel(textureProj(tex, coord4 * vec4(texture_parameters[index].xy, 1., 1.)), floatBitsToUint(texture_parameters[index].w))\n";
 
-			OS << "#define TEX2D_DEPTH_RGBA8(index, tex, coord2) process_texel(texture2DReconstruct(tex, coord2 * texture_parameters[index].xy, texture_parameters[index].z), uint(texture_parameters[index].w))\n";
+			OS << "#define TEX2D_DEPTH_RGBA8(index, tex, coord2) process_texel(texture2DReconstruct(tex, coord2 * texture_parameters[index].xy, texture_parameters[index].z), floatBitsToUint(texture_parameters[index].w))\n";
 			OS << "#define TEX2D_SHADOW(index, tex, coord3) texture(tex, coord3 * vec3(texture_parameters[index].xy, 1.))\n";
 			OS << "#define TEX2D_SHADOWPROJ(index, tex, coord4) textureProj(tex, coord4 * vec4(texture_parameters[index].xy, 1., 1.))\n";
 
-			OS << "#define TEX3D(index, tex, coord3) process_texel(texture(tex, coord3), uint(texture_parameters[index].w))\n";
-			OS << "#define TEX3D_BIAS(index, tex, coord3, bias) process_texel(texture(tex, coord3, bias), uint(texture_parameters[index].w))\n";
-			OS << "#define TEX3D_LOD(index, tex, coord3, lod) process_texel(textureLod(tex, coord3, lod), uint(texture_parameters[index].w))\n";
-			OS << "#define TEX3D_GRAD(index, tex, coord3, dpdx, dpdy) process_texel(textureGrad(tex, coord3, dpdx, dpdy), uint(texture_parameters[index].w))\n";
-			OS << "#define TEX3D_PROJ(index, tex, coord4) process_texel(textureProj(tex, coord4), uint(texture_parameters[index].w))\n\n";
+			OS << "#define TEX3D(index, tex, coord3) process_texel(texture(tex, coord3), floatBitsToUint(texture_parameters[index].w))\n";
+			OS << "#define TEX3D_BIAS(index, tex, coord3, bias) process_texel(texture(tex, coord3, bias), floatBitsToUint(texture_parameters[index].w))\n";
+			OS << "#define TEX3D_LOD(index, tex, coord3, lod) process_texel(textureLod(tex, coord3, lod), floatBitsToUint(texture_parameters[index].w))\n";
+			OS << "#define TEX3D_GRAD(index, tex, coord3, dpdx, dpdy) process_texel(textureGrad(tex, coord3, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n";
+			OS << "#define TEX3D_PROJ(index, tex, coord4) process_texel(textureProj(tex, coord4), floatBitsToUint(texture_parameters[index].w))\n\n";
 		}
 
 		if (require_wpos)
@@ -581,8 +621,13 @@ namespace glsl
 			return "dFdx($0)";
 		case FUNCTION::FUNCTION_DFDY:
 			return "dFdy($0)";
+		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH1D:
+			return "textureLod($t, $0.x, 0)";
 		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D:
 			return "textureLod($t, $0.xy, 0)";
+		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH3D:
+		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCHCUBE:
+			return "textureLod($t, $0.xyz, 0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
 			return "TEX2D_DEPTH_RGBA8($_i, $t, $0.xy)";
 		}

@@ -12,9 +12,17 @@
 #include <sys/types.h>
 #endif
 
-#if 0
+#ifdef __linux__
 #include <sys/syscall.h>
-static int memfd_create(const char *name, unsigned int flags)
+
+#ifdef __NR_memfd_create
+#elif __x86_64__
+#define __NR_memfd_create 319
+#elif __aarch64__
+#define __NR_memfd_create 279
+#endif
+
+static int memfd_create_(const char *name, uint flags)
 {
     return syscall(__NR_memfd_create, name, flags);
 }
@@ -99,18 +107,17 @@ namespace utils
 #ifdef _WIN32
 		for (u64 addr = (u64)pointer, end = addr + size; addr < end;)
 		{
-			// Query current region
-			::MEMORY_BASIC_INFORMATION mem;
-			verify(HERE), ::VirtualQuery((void*)addr, &mem, sizeof(mem));
+			const u64 boundary = (addr + 0x10000) & -0x10000;
+			const u64 block_size = std::min(boundary, end) - addr;
 
 			DWORD old;
-			if (!::VirtualProtect(mem.BaseAddress, std::min<u64>(end - (u64)mem.BaseAddress, mem.RegionSize), +prot, &old))
+			if (!::VirtualProtect((LPVOID)addr, block_size, +prot, &old))
 			{
 				fmt::throw_exception("VirtualProtect failed (%p, 0x%x, addr=0x%x, error=%#x)", pointer, size, addr, GetLastError());
 			}
 
 			// Next region
-			addr = (u64)mem.BaseAddress + mem.RegionSize;
+			addr += block_size;
 		}
 #else
 		verify(HERE), ::mprotect((void*)((u64)pointer & -4096), ::align(size, 4096), +prot) != -1;
@@ -124,10 +131,10 @@ namespace utils
 #ifdef _WIN32
 		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, m_size, NULL);
 		verify(HERE), m_handle != INVALID_HANDLE_VALUE;
-//#elif __linux__
-//		m_file = ::memfd_create("", 0);
-//		verify(HERE), m_file >= 0;
-//		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
+#elif __linux__
+		m_file = ::memfd_create_("", 0);
+		verify(HERE), m_file >= 0;
+		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
 #else
 		while ((m_file = ::shm_open("/rpcs3-mem1", O_RDWR | O_CREAT | O_EXCL, S_IWUSR | S_IRUSR)) == -1)
 		{

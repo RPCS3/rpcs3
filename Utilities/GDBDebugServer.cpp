@@ -4,7 +4,7 @@
 #include "GDBDebugServer.h"
 #include "Log.h"
 #include <algorithm>
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/CPU/CPUThread.h"
@@ -338,6 +338,7 @@ bool GDBDebugServer::select_thread(u64 id)
 		selected_thread = ppu.ptr;
 		return true;
 	}
+	gdbDebugServer.warning("Unable to select thread! Is the emulator running?");
 	return false;
 }
 

@@ -300,7 +300,7 @@ s32 cellSysCacheClear()
 
 	const std::string& cache_id = param->cacheId;
 
-	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
+	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id;
 	const std::string& dir_path = vfs::get(cache_path);
 
 	if (!fs::exists(dir_path) || !fs::is_dir(dir_path))
@@ -308,7 +308,7 @@ s32 cellSysCacheClear()
 		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
 	}
 
-	fs::remove_all(dir_path, true);
+	fs::remove_all(dir_path, false);
 
 	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
@@ -320,14 +320,17 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	const std::string& cache_id = param->cacheId;
 	verify(HERE), cache_id.size() < sizeof(param->cacheId);
 
-	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
+	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id;
 	strcpy_trunc(param->getCachePath, cache_path);
 
 	// TODO: implement (what?)
-	fs::create_dir(vfs::get(cache_path));
 	fxm::make_always<CellSysCacheParam>(*param);
+	if (!fs::create_dir(vfs::get(cache_path)))
+	{
+		return CELL_SYSCACHE_RET_OK_RELAYED;
+	}
 
-	return CELL_SYSCACHE_RET_OK_RELAYED;
+	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
 
 bool g_bgm_playback_enabled = true;

@@ -10,9 +10,8 @@
 
 namespace vk
 {
-	struct render_target : public image, public rsx::ref_counted, public rsx::render_target_descriptor<vk::image*>
+	struct render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<vk::image*>
 	{
-		bool dirty = false;
 		u16 native_pitch = 0;
 		u16 rsx_pitch = 0;
 
@@ -20,9 +19,8 @@ namespace vk
 		u16 surface_height = 0;
 
 		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
-		std::unordered_map<u32, std::unique_ptr<vk::image_view>> views;
+		std::unordered_multimap<u32, std::unique_ptr<vk::image_view>> views;
 
-		render_target *old_contents = nullptr; //Data occupying the memory location that this surface is replacing
 		u64 frame_tag = 0; //frame id when invalidated, 0 if not invalid
 
 		render_target(vk::render_device &dev,
@@ -38,31 +36,9 @@ namespace vk
 			VkImageUsageFlags usage,
 			VkImageCreateFlags image_flags)
 
-			:image(dev, memory_type_index, access_flags, image_type, format, width, height, depth,
+			: viewable_image(dev, memory_type_index, access_flags, image_type, format, width, height, depth,
 					mipmaps, layers, samples, initial_layout, tiling, usage, image_flags)
 		{}
-
-		vk::image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
-		{
-			auto found = views.find(remap_encoding);
-			if (found != views.end())
-			{
-				return found->second.get();
-			}
-
-			VkComponentMapping real_mapping = vk::apply_swizzle_remap
-			(
-				{native_component_map.a, native_component_map.r, native_component_map.g, native_component_map.b },
-				remap
-			);
-
-			auto view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), value, VK_IMAGE_VIEW_TYPE_2D, info.format,
-					real_mapping, vk::get_image_subresource_range(0, 0, 1, 1, attachment_aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT)));
-
-			auto result = view.get();
-			views[remap_encoding] = std::move(view);
-			return result;
-		}
 
 		vk::image* get_surface() override
 		{
@@ -240,19 +216,12 @@ namespace rsx
 			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 		}
 
-		static void invalidate_rtt_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *rtt, vk::render_target *old_surface, bool forced)
+		static
+		void invalidate_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *surface, vk::render_target *old_surface)
 		{
-			if (forced)
-			{
-				rtt->old_contents = old_surface;
-				rtt->dirty = true;
-			}
-		}
-		
-		static void invalidate_depth_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *ds, vk::render_target *old_surface, bool /*forced*/)
-		{
-			ds->dirty = true;
-			ds->old_contents = old_surface;
+			surface->old_contents = old_surface;
+			surface->dirty = true;
+			surface->reset_aa_mode();
 		}
 
 		static
@@ -260,6 +229,12 @@ namespace rsx
 		{
 			surface->frame_tag = vk::get_current_frame_id();
 			if (!surface->frame_tag) surface->frame_tag = 1;
+		}
+
+		static
+		void notify_surface_persist(const std::unique_ptr<vk::render_target> &surface)
+		{
+			surface->save_aa_mode();
 		}
 
 		static bool rtt_has_format_width_height(const std::unique_ptr<vk::render_target> &rtt, surface_color_format format, size_t width, size_t height, bool check_refs=false)

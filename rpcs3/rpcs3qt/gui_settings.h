@@ -115,6 +115,7 @@ namespace gui
 		return q_string_pair(path, title.simplified()); // simplified() forces single line text
 	}
 
+	const QString Settings    = QObject::tr("CurrentSettings");
 	const QString Default     = QObject::tr("default");
 	const QString main_window = "main_window";
 	const QString game_list   = "GameList";
@@ -126,11 +127,10 @@ namespace gui
 	const QString gs_frame    = "GSFrame";
 	const QString trophy      = "Trophy";
 	const QString savedata    = "SaveData";
+	const QString users       = "Users";
+	const QString notes       = "Notes";
 
-	const QColor gl_icon_color       = QColor(209, 209, 209, 255);
-	const QColor mw_tool_icon_color  = QColor( 64,  64,  64, 255);
-	const QColor mw_tool_bar_color   = QColor(227, 227, 227, 255);
-	const QColor mw_thumb_icon_color = QColor(  0, 100, 231, 255);
+	const QColor gl_icon_color = QColor(36, 36, 36, 255);
 
 	const gui_save rg_freeze  = gui_save(main_window, "recentGamesFrozen", false);
 	const gui_save rg_entries = gui_save(main_window, "recentGamesNames",  QVariant::fromValue(q_pair_list()));
@@ -150,8 +150,6 @@ namespace gui
 	const gui_save mw_logger         = gui_save(main_window, "loggerVisible",   true);
 	const gui_save mw_gamelist       = gui_save(main_window, "gamelistVisible", true);
 	const gui_save mw_toolBarVisible = gui_save(main_window, "toolBarVisible",  true);
-	const gui_save mw_toolBarColor   = gui_save(main_window, "toolBarColor",    mw_tool_bar_color);
-	const gui_save mw_toolIconColor  = gui_save(main_window, "toolIconColor",   mw_tool_icon_color);
 	const gui_save mw_geometry       = gui_save(main_window, "geometry",        QByteArray());
 	const gui_save mw_windowState    = gui_save(main_window, "windowState",     QByteArray());
 	const gui_save mw_mwState        = gui_save(main_window, "wwState",         QByteArray());
@@ -192,12 +190,13 @@ namespace gui
 	const gui_save rsx_geometry = gui_save(rsx, "geometry", QByteArray());
 	const gui_save rsx_states   = gui_save(rsx, "states",   QVariantMap());
 
-	const gui_save m_currentConfig     = gui_save(meta, "currentConfig",     QObject::tr("CurrentSettings"));
+	const gui_save m_currentConfig     = gui_save(meta, "currentConfig",     Settings);
 	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", Default);
 	const gui_save m_saveNotes         = gui_save(meta, "saveNotes",         QVariantMap());
 	const gui_save m_showDebugTab      = gui_save(meta, "showDebugTab",      false);
 	const gui_save m_enableUIColors    = gui_save(meta, "enableUIColors",    false);
 	const gui_save m_richPresence      = gui_save(meta, "useRichPresence",   true);
+	const gui_save m_discordState      = gui_save(meta, "discordState",      "");
 
 	const gui_save gs_disableMouse = gui_save(gs_frame, "disableMouse", false);
 	const gui_save gs_resize       = gui_save(gs_frame, "resize",       false);
@@ -219,6 +218,9 @@ namespace gui
 	const gui_save tr_trophy_state  = gui_save(trophy, "trophy_state",  QByteArray());
 
 	const gui_save sd_geometry = gui_save(savedata, "geometry", QByteArray());
+
+	const gui_save um_geometry    = gui_save(users, "geometry",    QByteArray());
+	const gui_save um_active_user = gui_save(users, "active_user", "00000001");
 }
 
 /** Class for GUI settings..
@@ -231,13 +233,15 @@ public:
 	explicit gui_settings(QObject* parent = nullptr);
 	~gui_settings();
 
+	QString GetCurrentUser();
 	QString GetSettingsDir();
 
 	/** Changes the settings file to the destination preset*/
-	void ChangeToConfig(const QString& destination);
+	bool ChangeToConfig(const QString& friendly_name);
 
 	bool GetCategoryVisibility(int cat);
 	QVariant GetValue(const gui_save& entry);
+	QVariant GetValue(const QString& key, const QString& name, const QString& def);
 	QVariant List2Var(const q_pair_list& list);
 	q_pair_list Var2List(const QVariant &var);
 
@@ -256,6 +260,7 @@ public Q_SLOTS:
 
 	/** Write value to entry */
 	void SetValue(const gui_save& entry, const QVariant& value);
+	void SetValue(const QString& key, const QString& name, const QVariant& value);
 
 	/** Sets the visibility of the chosen category. */
 	void SetCategoryVisibility(int cat, const bool& val);
@@ -264,17 +269,16 @@ public Q_SLOTS:
 
 	void SetCustomColor(int col, const QColor& val);
 
-	void SaveCurrentConfig(const QString& friendlyName);
+	void SaveCurrentConfig(const QString& friendly_name);
 
 	static QSize SizeFromSlider(int pos);
 	static gui_save GetGuiSaveForColumn(int col);
 
 private:
 	QString ComputeSettingsDir();
-	void BackupSettingsToTarget(const QString& destination);
+	void BackupSettingsToTarget(const QString& friendly_name);
 
 	QSettings m_settings;
 	QDir m_settingsDir;
+	QString m_current_name;
 };
-
-	static gui_save GetGuiSaveForColumn(int col);

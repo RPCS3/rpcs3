@@ -9,6 +9,8 @@
 game_list_grid::game_list_grid(const QSize& icon_size, const QColor& icon_color, const qreal& margin_factor, const qreal& text_factor, const bool& showText)
 	: game_list(), m_icon_size(icon_size), m_icon_color(icon_color), m_margin_factor(margin_factor), m_text_factor(text_factor), m_text_enabled(showText)
 {
+	setObjectName("game_grid");
+
 	QSize item_size;
 	if (m_text_enabled)
 	{
@@ -19,11 +21,7 @@ game_list_grid::game_list_grid(const QSize& icon_size, const QColor& icon_color,
 		item_size = m_icon_size + m_icon_size * m_margin_factor * 2;
 	}
 
-	// font by stylesheet
-	QFont font = gui::utils::get_label_font("gamegrid_font");
-	QColor font_color = gui::utils::get_label_color("gamegrid_font");
-
-	grid_item_delegate = new game_list_grid_delegate(item_size, m_margin_factor, m_text_factor, font, font_color, this);
+	grid_item_delegate = new game_list_grid_delegate(item_size, m_margin_factor, m_text_factor, this);
 	setItemDelegate(grid_item_delegate);
 	setSelectionBehavior(QAbstractItemView::SelectItems);
 	setSelectionMode(QAbstractItemView::SingleSelection);
@@ -91,7 +89,6 @@ void game_list_grid::addItem(const QPixmap& img, const QString& name, const int&
 	// create item with expanded image, title and position
 	QTableWidgetItem* item = new QTableWidgetItem();
 	item->setData(Qt::ItemDataRole::DecorationRole, QPixmap::fromImage(exp_img));
-	item->setData(Qt::ItemDataRole::ToolTipRole, name);
 
 	if (m_text_enabled)
 	{

@@ -159,6 +159,8 @@ namespace rsx
 
 		draw_clause current_draw_clause;
 
+		bool register_change_flag;
+
 		/**
 		* RSX can sources vertex attributes from 2 places:
 		* 1. Immediate values passed by NV4097_SET_VERTEX_DATA*_M + ARRAY_ID write.
@@ -1169,6 +1171,21 @@ namespace rsx
 			return decode<NV308A_POINT>().y();
 		}
 
+		u16 nv308a_size_in_x() const
+		{
+			return u16(registers[NV308A_SIZE_IN] & 0xFFFF);
+		}
+
+		u16 nv308a_size_out_x() const
+		{
+			return u16(registers[NV308A_SIZE_OUT] & 0xFFFF);
+		}
+
+		u32 transform_program_load()
+		{
+			return registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];
+		}
+
 		void commit_4_transform_program_instructions(u32 index)
 		{
 			u32& load = registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];
@@ -1182,7 +1199,7 @@ namespace rsx
 
 		u32 transform_constant_load()
 		{
-			return decode<NV4097_SET_TRANSFORM_CONSTANT_LOAD>().transform_constant_load();
+			return registers[NV4097_SET_TRANSFORM_CONSTANT_LOAD];
 		}
 
 		u32 transform_branch_bits()

@@ -83,8 +83,8 @@ void fmt_class_string<CellDiscGameError>::format(std::string& out, u64 arg)
 // contentInfo = "/dev_bdvd/PS3_GAME"
 // usrdir = "/dev_bdvd/PS3_GAME/USRDIR"
 // Temporary content directory (dir is not empty):
-// contentInfo = "/dev_hdd1/game/" + dir
-// usrdir = "/dev_hdd1/game/" + dir + "/USRDIR"
+// contentInfo = "/dev_hdd0/game/_GDATA_" + time_since_epoch
+// usrdir = "/dev_hdd0/game/_GDATA_" + time_since_epoch + "/USRDIR"
 // Normal content directory (dir is not empty):
 // contentInfo = "/dev_hdd0/game/" + dir
 // usrdir = "/dev_hdd0/game/" + dir + "/USRDIR"
@@ -119,7 +119,7 @@ struct content_permission final
 		}
 		catch (...)
 		{
-			cellGame.fatal("Failed to clean directory '/dev_hdd1/game/%s'", dir);
+			cellGame.fatal("Failed to clean directory '%s'", temp);
 			catch_all_exceptions();
 		}
 	}
@@ -140,7 +140,10 @@ s32 cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 e
 	vm::var<CellHddGameStatGet> get;
 	vm::var<CellHddGameStatSet> set;
 
-	get->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+	// 40 GB - 1 kilobyte. The reasoning is that many games take this number and multiply it by 1024, to get the amount of bytes. With 40GB exactly,
+	// this will result in an overflow, and the size would be 0, preventing the game from running. By reducing 1 kilobyte, we make sure that even
+	// after said overflow, the number would still be high enough to contain the game's data.
+	get->hddFreeSizeKB = 40 * 1024 * 1024 - 1;
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
 	get->sysSizeKB = 0; // TODO
 	get->atime = 0; // TODO
@@ -262,7 +265,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	if (size)
 	{
 		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40000000; // 40 GB
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
 
 		// TODO: Calculate data size for HG and DG games, if necessary.
 		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
@@ -318,7 +321,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 	if (size)
 	{
 		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40000000; // 40 GB
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
 
 		// TODO: Calculate data size for patch data, if necessary.
 		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
@@ -350,7 +353,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	if (size)
 	{
 		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40000000; //40 GB
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
 
 		// TODO: Calculate data size for game data, if necessary.
 		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
@@ -399,6 +402,14 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 	}
 
 	const std::string dir = prm->dir.empty() ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + prm->dir;
+
+	if (prm->can_create && prm->temp.empty() && !fs::is_dir(vfs::get(dir)))
+	{
+		strcpy_trunc(*contentInfoPath, "");
+		strcpy_trunc(*usrdirPath, "");
+		verify(HERE), fxm::remove<content_permission>();
+		return CELL_OK;
+	}
 
 	if (!prm->temp.empty())
 	{
@@ -452,11 +463,9 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	vm::var<CellGameDataStatSet>  cbSet;
 	cbGet->isNewData = fs::is_dir(vfs::get(dir)) ? CELL_GAMEDATA_ISNEWDATA_NO : CELL_GAMEDATA_ISNEWDATA_YES;
 
-	vm::var<CellGameDataSystemFileParam> setParam;
-	cbSet->setParam = setParam;
 
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-	cbGet->hddFreeSizeKB = 40000000; //40 GB
+	cbGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
 
 
 	strcpy_trunc(cbGet->contentInfoPath, dir);
@@ -482,6 +491,10 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	{
 		strcpy_trunc(cbGet->getParam.titleLang[i], psf::get_string(sfo, fmt::format("TITLE_%02d", i)));
 	}
+
+	vm::var<CellGameDataSystemFileParam> setParam;
+	*setParam = cbGet->getParam;
+	cbSet->setParam = setParam;
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
 
@@ -581,8 +594,9 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
 
-	std::string tmp_contentInfo = "/dev_hdd1/game/" + prm->dir;
-	std::string tmp_usrdir = "/dev_hdd1/game/" + prm->dir + "/USRDIR";
+	std::string dirname = "_GDATA_" + std::to_string(steady_clock::now().time_since_epoch().count());
+	std::string tmp_contentInfo = "/dev_hdd0/game/" + dirname;
+	std::string tmp_usrdir = "/dev_hdd0/game/" + dirname + "/USRDIR";
 
 	if (!fs::create_dir(vfs::get(tmp_contentInfo)))
 	{

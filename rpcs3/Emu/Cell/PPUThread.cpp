@@ -3,7 +3,7 @@
 #include "Utilities/sysinfo.h"
 #include "Utilities/JIT.h"
 #include "Crypto/sha1.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "PPUThread.h"
@@ -48,7 +48,6 @@
 #include "define_new_memleakdetect.h"
 
 #include "PPUTranslator.h"
-#include "Modules/cellMsgDialog.h"
 #endif
 
 #include <thread>
@@ -67,7 +66,9 @@ const bool s_use_ssse3 =
 
 extern u64 get_system_time();
 
-
+extern atomic_t<const char*> g_progr;
+extern atomic_t<u64> g_progr_ptotal;
+extern atomic_t<u64> g_progr_pdone;
 
 enum class join_status : u32
 {
@@ -164,7 +165,7 @@ extern const ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast([](auto& t
 
 extern void ppu_initialize();
 extern void ppu_initialize(const ppu_module& info);
-static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name, u32 fragment_index, const std::shared_ptr<atomic_t<u32>>&);
+static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name);
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 
 // Get pointer to executable cache
@@ -491,7 +492,7 @@ std::string ppu_thread::dump() const
 		stack_max += 4096;
 	}
 
-	for (u64 sp = vm::read64(stack_ptr); sp >= stack_min && sp + 0x200 < stack_max; sp = vm::read64(static_cast<u32>(sp)))
+	for (u64 sp = vm::read64(stack_ptr); sp >= stack_min && std::max(sp, sp + 0x200) < stack_max; sp = vm::read64(static_cast<u32>(sp)))
 	{
 		// TODO: print also function addresses
 		fmt::append(ret, "> from 0x%08llx (0x0)\n", vm::read64(static_cast<u32>(sp + 16)));
@@ -1217,15 +1218,21 @@ extern void ppu_initialize()
 	}
 
 	// New PPU cache location
-	_main->cache = fmt::format("%sdata/%s/ppu-%s-%s/", fs::get_config_dir(), Emu.GetTitleID(), fmt::base57(_main->sha1), Emu.GetBoot().substr(Emu.GetBoot().find_last_of('/') + 1));
+	_main->cache = fs::get_config_dir() + "data/";
+
+	if (!Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
+	{
+		// TODO
+		_main->cache += Emu.GetTitleID();
+		_main->cache += '/';
+	}
+
+	fmt::append(_main->cache, "ppu-%s-%s/", fmt::base57(_main->sha1), _main->path.substr(_main->path.find_last_of('/') + 1));
 
 	if (!fs::create_path(_main->cache))
 	{
 		fmt::throw_exception("Failed to create cache directory: %s (%s)", _main->cache, fs::g_tls_error);
 	}
-
-	// Initialize SPU cache
-	spu_cache::initialize();
 
 	if (Emu.IsStopped())
 	{
@@ -1247,6 +1254,9 @@ extern void ppu_initialize()
 	{
 		ppu_initialize(*ptr);
 	}
+
+	// Initialize SPU cache
+	spu_cache::initialize();
 }
 
 extern void ppu_initialize(const ppu_module& info)
@@ -1292,13 +1302,14 @@ extern void ppu_initialize(const ppu_module& info)
 			{ "__stdcx", (u64)&ppu_stdcx },
 			{ "__vexptefp", (u64)&sse_exp2_ps },
 			{ "__vlogefp", (u64)&sse_log2_ps },
-			{ "__vperm", s_use_ssse3 ? (u64)&sse_altivec_vperm : (u64)&sse_altivec_vperm_v0 },
+			{ "__vperm", s_use_ssse3 ? (u64)&sse_altivec_vperm : (u64)&sse_altivec_vperm_v0 }, // Obsolete
 			{ "__lvsl", (u64)&sse_altivec_lvsl },
 			{ "__lvsr", (u64)&sse_altivec_lvsr },
 			{ "__lvlx", s_use_ssse3 ? (u64)&sse_cellbe_lvlx : (u64)&sse_cellbe_lvlx_v0 },
 			{ "__lvrx", s_use_ssse3 ? (u64)&sse_cellbe_lvrx : (u64)&sse_cellbe_lvrx_v0 },
 			{ "__stvlx", s_use_ssse3 ? (u64)&sse_cellbe_stvlx : (u64)&sse_cellbe_stvlx_v0 },
 			{ "__stvrx", s_use_ssse3 ? (u64)&sse_cellbe_stvrx : (u64)&sse_cellbe_stvrx_v0 },
+			{ "__resupdate", (u64)&vm::reservation_update },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
@@ -1306,6 +1317,7 @@ extern void ppu_initialize(const ppu_module& info)
 			if (auto sc = ppu_get_syscall(index))
 			{
 				link_table.emplace(fmt::format("%s", ppu_syscall_code(index)), (u64)sc);
+				link_table.emplace(fmt::format("syscall_%u", index), (u64)sc);
 			}
 		}
 
@@ -1337,6 +1349,9 @@ extern void ppu_initialize(const ppu_module& info)
 	}
 
 #ifdef LLVM_AVAILABLE
+	// Initialize progress dialog
+	g_progr = "Compiling PPU modules...";
+
 	// Compiled PPU module info
 	struct jit_module
 	{
@@ -1379,10 +1394,6 @@ extern void ppu_initialize(const ppu_module& info)
 
 	// Difference between function name and current location
 	const u32 reloc = info.name.empty() ? 0 : info.segs.at(0).addr;
-
-	std::shared_ptr<atomic_t<u32>> fragment_sync = std::make_shared<atomic_t<u32>>(0);
-
-	u32 fragment_count{0};
 
 	while (jit_mod.vars.empty() && fpos < info.funcs.size())
 	{
@@ -1546,8 +1557,11 @@ extern void ppu_initialize(const ppu_module& info)
 			continue;
 		}
 
+		// Update progress dialog
+		g_progr_ptotal++;
+
 		// Create worker thread for compilation
-		jthreads.emplace_back([&jit, obj_name = obj_name, part = std::move(part), &cache_path, fragment_sync, jcores, findex = ::size32(jthreads)]()
+		jthreads.emplace_back([&jit, obj_name = obj_name, part = std::move(part), &cache_path, jcores]()
 		{
 			// Set low priority
 			thread_ctrl::set_native_priority(-1);
@@ -1556,14 +1570,14 @@ extern void ppu_initialize(const ppu_module& info)
 			{
 				semaphore_lock jlock(jcores->sem);
 
-				if (Emu.IsStopped())
+				if (!Emu.IsStopped())
 				{
-					return;
+					// Use another JIT instance
+					jit_compiler jit2({}, g_cfg.core.llvm_cpu);
+					ppu_initialize2(jit2, part, cache_path, obj_name);
 				}
 
-				// Use another JIT instance
-				jit_compiler jit2({}, g_cfg.core.llvm_cpu);
-				ppu_initialize2(jit2, part, cache_path, obj_name, findex, fragment_sync);
+				g_progr_pdone++;
 			}
 
 			if (Emu.IsStopped() || !jit || !fs::is_file(cache_path + obj_name))
@@ -1576,9 +1590,6 @@ extern void ppu_initialize(const ppu_module& info)
 			jit->add(cache_path + obj_name);
 		});
 	}
-
-	// Initialize fragment count sync var
-	fragment_sync->exchange(::size32(jthreads));
 
 	// Join worker threads
 	for (auto& thread : jthreads)
@@ -1663,7 +1674,7 @@ extern void ppu_initialize(const ppu_module& info)
 #endif
 }
 
-static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name, u32 fragment_index, const std::shared_ptr<atomic_t<u32>>& fragment_sync)
+static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name)
 {
 #ifdef LLVM_AVAILABLE
 	using namespace llvm;
@@ -1675,7 +1686,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
 
 	// Initialize translator
-	PPUTranslator translator(jit.get_context(), module.get(), module_part);
+	PPUTranslator translator(jit.get_context(), module.get(), module_part, jit.has_ssse3());
 
 	// Define some types
 	const auto _void = Type::getVoidTy(jit.get_context());
@@ -1690,8 +1701,6 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 			f->addAttribute(1, Attribute::NoAlias);
 		}
 	}
-
-	std::shared_ptr<MsgDialogBase> dlg;
 
 	{
 		legacy::FunctionPassManager pm(module.get());
@@ -1716,25 +1725,6 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		//pm.add(createCFGSimplificationPass());
 		//pm.add(createLintPass()); // Check
 
-		// Initialize message dialog
-		dlg = Emu.GetCallbacks().get_msg_dialog();
-		dlg->type.se_normal = true;
-		dlg->type.bg_invisible = true;
-		dlg->type.progress_bar_count = 1;
-		dlg->on_close = [](s32 status)
-		{
-			Emu.CallAfter([]()
-			{
-				// Abort everything
-				Emu.Stop();
-			});
-		};
-
-		Emu.CallAfter([=]()
-		{
-			dlg->Create("Compiling PPU module:\n" + obj_name + "\nPlease wait...");
-		});
-
 		// Translate functions
 		for (size_t fi = 0, fmax = module_part.funcs.size(); fi < fmax; fi++)
 		{
@@ -1746,18 +1736,6 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 			if (module_part.funcs[fi].size)
 			{
-				// Update dialog
-				Emu.CallAfter([=, max = module_part.funcs.size()]()
-				{
-					dlg->ProgressBarSetMsg(0, fmt::format("Compiling %u of %u", fi + 1, fmax));
-
-					if (fi * 100 / fmax != (fi + 1) * 100 / fmax)
-						dlg->ProgressBarInc(0, 1);
-
-					if (u32 fragment_count = fragment_sync->load())
-						dlg->SetMsg(fmt::format("Compiling PPU module (%u of %u):\n%s\nPlease wait...", fragment_index + 1, fragment_count, obj_name));
-				});
-
 				// Translate
 				if (const auto func = translator.Translate(module_part.funcs[fi]))
 				{
@@ -1779,16 +1757,6 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		//mpm.add(createFunctionInliningPass());
 		//mpm.add(createDeadInstEliminationPass());
 		//mpm.run(*module);
-
-		// Update dialog
-		Emu.CallAfter([=]()
-		{
-			dlg->ProgressBarSetMsg(0, "Generating code, this may take a long time...");
-			dlg->ProgressBarInc(0, 100);
-
-			if (u32 fragment_count = fragment_sync->load())
-				dlg->SetMsg(fmt::format("Compiling PPU module (%u of %u):\n%s\nPlease wait...", fragment_index + 1, fragment_count, obj_name));
-		});
 
 		std::string result;
 		raw_string_ostream out(result);

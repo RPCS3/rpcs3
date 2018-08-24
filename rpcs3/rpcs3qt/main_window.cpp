@@ -9,14 +9,14 @@
 #include <QMimeData>
 
 #ifdef WITH_DISCORD_RPC
-#include "discord_rpc.h"
-#include "discord_register.h"
+#include "_discord_utils.h"
 #endif
 
 #include "qt_utils.h"
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
 #include "trophy_manager_dialog.h"
+#include "user_manager_dialog.h"
 #include "kernel_explorer.h"
 #include "game_list_frame.h"
 #include "debugger_frame.h"
@@ -30,14 +30,14 @@
 #include "main_window.h"
 #include "emu_settings.h"
 #include "about_dialog.h"
-#include "gamepads_settings_dialog.h"
+#include "pad_settings_dialog.h"
 #include "progress_dialog.h"
 
 #include <thread>
 
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
@@ -65,7 +65,7 @@ main_window::~main_window()
 {
 	delete ui;
 #ifdef WITH_DISCORD_RPC
-	Discord_Shutdown();
+	discord::shutdown();
 #endif
 }
 
@@ -78,27 +78,11 @@ void main_window::Init()
 
 	setAcceptDrops(true);
 
-	// hide utilities from the average user
-	ui->menuUtilities->menuAction()->setVisible(guiSettings->GetValue(gui::m_showDebugTab).toBool());
-
 	// add toolbar widgets (crappy Qt designer is not able to)
 	ui->toolBar->setObjectName("mw_toolbar");
 	ui->sizeSlider->setRange(0, gui::gl_max_slider_pos);
 	ui->toolBar->addWidget(ui->sizeSliderContainer);
-	ui->toolBar->addSeparator();
 	ui->toolBar->addWidget(ui->mw_searchbar);
-
-	// for highdpi resize toolbar icons and height dynamically
-	// choose factors to mimic Gui-Design in main_window.ui
-	// TODO: in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp we only need the else branch
-#ifdef _WIN32
-	const int toolBarHeight = menuBar()->sizeHint().height() * 1.5;
-	ui->toolBar->setIconSize(QSize(toolBarHeight, toolBarHeight));
-#else
-	const int toolBarHeight = ui->toolBar->iconSize().height();
-#endif
-	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 5);
-	ui->sizeSlider->setFixedHeight(toolBarHeight * 0.65f);
 
 	CreateActions();
 	CreateDockWindows();
@@ -242,6 +226,26 @@ void main_window::SetAppIconFromPath(const std::string& path)
 	m_appIcon = QApplication::windowIcon();
 }
 
+void main_window::ResizeIcons(int index)
+{
+	if (ui->sizeSlider->value() != index)
+	{
+		ui->sizeSlider->setSliderPosition(index);
+		return; // ResizeIcons will be triggered again by setSliderPosition, so return here
+	}
+
+	if (m_save_slider_pos)
+	{
+		m_save_slider_pos = false;
+		guiSettings->SetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid, index);
+
+		// this will also fire when we used the actions, but i didn't want to add another boolean member
+		SetIconSizeActions(index);
+	}
+
+	m_gameListFrame->ResizeIcons(index);
+}
+
 void main_window::OnPlayOrPause()
 {
 	if (Emu.IsReady())
@@ -277,20 +281,6 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only)
 		LOG_SUCCESS(LOADER, "Boot successful.");
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
 		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
-#ifdef WITH_DISCORD_RPC
-		// Discord Rich Presence Integration
-		if (guiSettings->GetValue(gui::m_richPresence).toBool())
-		{
-			DiscordRichPresence discordPresence = {};
-			discordPresence.state = Emu.GetTitleID().c_str();
-			discordPresence.details = Emu.GetTitle().c_str();
-			discordPresence.largeImageKey = "rpcs3_logo";
-			discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
-			discordPresence.startTimestamp = time(0);
-			discordPresence.instance = 0;
-			Discord_UpdatePresence(&discordPresence);
-		}
-#endif
 	}
 	else
 	{
@@ -362,40 +352,83 @@ void main_window::BootGame()
 	Boot(path);
 }
 
-void main_window::BootRsxCapture()
+void main_window::BootRsxCapture(std::string path)
 {
-	bool stopped = false;
-	if (Emu.IsRunning())
+	if (path.empty())
 	{
-		Emu.Pause();
-		stopped = true;
+		bool is_stopped = false;
+
+		if (Emu.IsRunning())
+		{
+			Emu.Pause();
+			is_stopped = true;
+		}
+
+		QString filePath = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), qstr(fs::get_config_dir() + "captures/"), tr("RRC files (*.rrc);;All files (*.*)"));
+
+		if (filePath.isEmpty())
+		{
+			if (is_stopped)
+			{
+				Emu.Resume();
+			}
+			return;
+		}
+		path = sstr(filePath);
 	}
 
-	QString filePath = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), "", tr("RRC files (*.rrc);;All files (*.*)"));
-	if (filePath.isEmpty())
-	{
-		if (stopped) Emu.Resume();
-		return;
-	}
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
-	const std::string path = sstr(filePath);
-
 	if (!Emu.BootRsxCapture(path))
-		LOG_ERROR(GENERAL, "Capture Boot Failed");
+	{
+		LOG_ERROR(GENERAL, "Capture Boot Failed. path: %s", path);
+	}
 	else
-		LOG_SUCCESS(LOADER, "Capture Boot Success");
+	{
+		LOG_SUCCESS(LOADER, "Capture Boot Success. path: %s", path);
+	}
 }
 
-void main_window::InstallPkg(const QString& dropPath)
+void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 {
 	QString filePath = dropPath;
 
-	if (filePath.isEmpty())
+	if (m_install_bulk == QMessageBox::NoToAll)
+	{
+		LOG_NOTICE(LOADER, "PKG: Skipped installation from drop. File: %s", sstr(filePath));
+		return;
+	}
+	else if (m_install_bulk == QMessageBox::YesToAll)
+	{
+		LOG_NOTICE(LOADER, "PKG: Continuing bulk installation from drop. File: %s", sstr(filePath));
+	}
+	else if (filePath.isEmpty())
 	{
 		QString path_last_PKG = guiSettings->GetValue(gui::fd_install_pkg).toString();
 		filePath = QFileDialog::getOpenFileName(this, tr("Select PKG To Install"), path_last_PKG, tr("PKG files (*.pkg);;All files (*.*)"));
+	}
+	else if (is_bulk)
+	{
+		QMessageBox::StandardButton ret = QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(filePath),
+			QMessageBox::Yes | QMessageBox::YesToAll | QMessageBox::NoToAll | QMessageBox::No, QMessageBox::No);
+
+		if (ret == QMessageBox::No)
+		{
+			LOG_NOTICE(LOADER, "PKG: Cancelled installation from drop. File: %s", sstr(filePath));
+			return;
+		}
+		else if (ret == QMessageBox::NoToAll)
+		{
+			LOG_NOTICE(LOADER, "PKG: Cancelled bulk installation from drop. File: %s", sstr(filePath));
+			m_install_bulk = ret;
+			return;
+		}
+		else if (ret == QMessageBox::YesToAll)
+		{
+			LOG_NOTICE(LOADER, "PKG: Accepted bulk installation from drop. File: %s", sstr(filePath));
+			m_install_bulk = ret;
+		}
 	}
 	else
 	{
@@ -419,10 +452,8 @@ void main_window::InstallPkg(const QString& dropPath)
 	const std::string fileName = sstr(QFileInfo(filePath).fileName());
 	const std::string path = sstr(filePath);
 
-	progress_dialog pdlg(0, 1000, this);
+	progress_dialog pdlg(tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
 	pdlg.setWindowTitle(tr("RPCS3 Package Installer"));
-	pdlg.setLabelText(tr("Installing package ... please wait ..."));
-	pdlg.setCancelButtonText(tr("Cancel"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
@@ -531,10 +562,8 @@ void main_window::InstallPup(const QString& dropPath)
 		return;
 	}
 
-	progress_dialog pdlg(0, static_cast<int>(updatefilenames.size()), this);
+	progress_dialog pdlg(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
 	pdlg.setWindowTitle(tr("RPCS3 Firmware Installer"));
-	pdlg.setLabelText(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)));
-	pdlg.setCancelButtonText(tr("Cancel"));
 	pdlg.setWindowModality(Qt::WindowModal);
 	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
@@ -565,7 +594,7 @@ void main_window::InstallPup(const QString& dropPath)
 				}
 
 				tar_object dev_flash_tar(dev_flash_tar_f[2]);
-				if (!dev_flash_tar.extract(Emu.GetEmuDir()))
+				if (!dev_flash_tar.extract(g_cfg.vfs.get_dev_flash(), "dev_flash/"))
 				{
 					LOG_ERROR(GENERAL, "Error while installing firmware: TAR contents are invalid.");
 					QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: TAR contents are invalid."));
@@ -606,7 +635,7 @@ void main_window::InstallPup(const QString& dropPath)
 		guiSettings->ShowInfoBox(gui::ib_pup_success, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), this);
 
 		Emu.SetForceBoot(true);
-		Emu.BootGame(Emu.GetLibDir(), true);
+		Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys/external/", true);
 	}
 }
 
@@ -690,7 +719,7 @@ void main_window::RepaintThumbnailIcons()
 
 	auto icon = [&newColor](const QString& path)
 	{
-		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), gui::mw_tool_icon_color, newColor);
+		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, newColor);
 	};
 
 #ifdef _WIN32
@@ -709,20 +738,11 @@ void main_window::RepaintThumbnailIcons()
 
 void main_window::RepaintToolBarIcons()
 {
-	QColor newColor;
-
-	if (guiSettings->GetValue(gui::m_enableUIColors).toBool())
-	{
-		newColor = guiSettings->GetValue(gui::mw_toolIconColor).value<QColor>();
-	}
-	else
-	{
-		newColor = gui::utils::get_label_color("toolbar_icon_color");
-	}
+	QColor newColor = gui::utils::get_label_color("toolbar_icon_color");
 
 	auto icon = [&newColor](const QString& path)
 	{
-		return gui::utils::get_colorized_icon(QIcon(path), gui::mw_tool_icon_color, newColor);
+		return gui::utils::get_colorized_icon(QIcon(path), Qt::black, newColor);
 	};
 
 	m_icon_play           = icon(":/Icons/play.png");
@@ -730,16 +750,14 @@ void main_window::RepaintToolBarIcons()
 	m_icon_stop           = icon(":/Icons/stop.png");
 	m_icon_restart        = icon(":/Icons/restart.png");
 	m_icon_fullscreen_on  = icon(":/Icons/fullscreen.png");
-	m_icon_fullscreen_off = icon(":/Icons/fullscreen_invert.png");
+	m_icon_fullscreen_off = icon(":/Icons/exit_fullscreen.png");
 
 	ui->toolbar_config  ->setIcon(icon(":/Icons/configure.png"));
 	ui->toolbar_controls->setIcon(icon(":/Icons/controllers.png"));
-	ui->toolbar_disc    ->setIcon(icon(":/Icons/disc.png"));
+	ui->toolbar_open    ->setIcon(icon(":/Icons/open.png"));
 	ui->toolbar_grid    ->setIcon(icon(":/Icons/grid.png"));
 	ui->toolbar_list    ->setIcon(icon(":/Icons/list.png"));
 	ui->toolbar_refresh ->setIcon(icon(":/Icons/refresh.png"));
-	ui->toolbar_snap    ->setIcon(icon(":/Icons/screenshot.png"));
-	ui->toolbar_sort    ->setIcon(icon(":/Icons/sort.png"));
 	ui->toolbar_stop    ->setIcon(icon(":/Icons/stop.png"));
 
 	if (Emu.IsRunning())
@@ -766,6 +784,31 @@ void main_window::RepaintToolBarIcons()
 
 	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
 		.arg(newColor.red()).arg(newColor.green()).arg(newColor.blue()).arg(newColor.alpha()));
+
+	// resize toolbar elements
+
+	// for highdpi resize toolbar icons and height dynamically
+	// choose factors to mimic Gui-Design in main_window.ui
+	// TODO: delete this in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp
+#ifdef _WIN32
+	const int toolIconHeight = menuBar()->sizeHint().height() * 1.5;
+	ui->toolBar->setIconSize(QSize(toolIconHeight, toolIconHeight));
+#endif
+
+	const int toolBarHeight = ui->toolBar->sizeHint().height();
+
+	for (const auto& act : ui->toolBar->actions())
+	{
+		if (act->isSeparator())
+		{
+			continue;
+		}
+
+		ui->toolBar->widgetForAction(act)->setMinimumWidth(toolBarHeight);
+	}
+
+	ui->sizeSliderContainer->setFixedWidth(toolBarHeight * 4);
+	ui->mw_searchbar->setFixedWidth(toolBarHeight * 5);
 }
 
 void main_window::OnEmuRun()
@@ -778,8 +821,17 @@ void main_window::OnEmuRun()
 	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
+	ui->toolbar_start->setText(tr("Pause"));
 	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 	EnableMenus(true);
+
+#ifdef WITH_DISCORD_RPC
+	// Discord Rich Presence Integration
+	if (guiSettings->GetValue(gui::m_richPresence).toBool())
+	{
+		discord::update_presence(Emu.GetTitleID(), Emu.GetTitle());
+	}
+#endif
 }
 
 void main_window::OnEmuResume()
@@ -791,6 +843,7 @@ void main_window::OnEmuResume()
 	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
+	ui->toolbar_start->setText(tr("Pause"));
 	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 }
 
@@ -803,6 +856,7 @@ void main_window::OnEmuPause()
 	ui->sysPauseAct->setText(tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
+	ui->toolbar_start->setText(tr("Play"));
 	ui->toolbar_start->setToolTip(tr("Resume emulation"));
 }
 
@@ -822,6 +876,7 @@ void main_window::OnEmuStop()
 	{
 		ui->toolbar_start->setEnabled(true);
 		ui->toolbar_start->setIcon(m_icon_restart);
+		ui->toolbar_start->setText(tr("Restart"));
 		ui->toolbar_start->setToolTip(tr("Restart emulation"));
 		ui->sysRebootAct->setEnabled(true);
 #ifdef _WIN32
@@ -831,16 +886,16 @@ void main_window::OnEmuStop()
 	else
 	{
 		ui->toolbar_start->setIcon(m_icon_play);
+		ui->toolbar_start->setText(tr("Play"));
 		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	}
+	ui->actionManage_Users->setEnabled(true);
+
 #ifdef WITH_DISCORD_RPC
 	// Discord Rich Presence Integration
 	if (guiSettings->GetValue(gui::m_richPresence).toBool())
 	{
-		DiscordRichPresence discordPresence = {};
-		discordPresence.largeImageKey = "rpcs3_logo";
-		discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
-		Discord_UpdatePresence(&discordPresence);
+		discord::update_presence(sstr(guiSettings->GetValue(gui::m_discordState).toString()));
 	}
 #endif
 }
@@ -855,8 +910,11 @@ void main_window::OnEmuReady()
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Start\tCtrl+E") : tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
+	ui->toolbar_start->setText(tr("Play"));
 	ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	EnableMenus(true);
+
+	ui->actionManage_Users->setEnabled(false);
 }
 
 void main_window::EnableMenus(bool enabled)
@@ -1067,30 +1125,10 @@ void main_window::RepaintGui()
 		m_debuggerFrame->ChangeColors();
 	}
 
-	RepaintToolbar();
 	RepaintToolBarIcons();
 	RepaintThumbnailIcons();
-}
 
-void main_window::RepaintToolbar()
-{
-	if (guiSettings->GetValue(gui::m_enableUIColors).toBool())
-	{
-		QColor tbc = guiSettings->GetValue(gui::mw_toolBarColor).value<QColor>();
-
-		ui->toolBar->setStyleSheet(gui::stylesheet + QString(
-			"QToolBar { background-color: rgba(%1, %2, %3, %4); }"
-			"QToolBar::separator {background-color: rgba(%5, %6, %7, %8); width: 1px; margin-top: 2px; margin-bottom: 2px;}"
-			"QSlider { background-color: rgba(%1, %2, %3, %4); }"
-			"QLineEdit { background-color: rgba(%1, %2, %3, %4); }")
-			.arg(tbc.red()).arg(tbc.green()).arg(tbc.blue()).arg(tbc.alpha())
-			.arg(tbc.red() - 20).arg(tbc.green() - 20).arg(tbc.blue() - 20).arg(tbc.alpha() - 20)
-		);
-	}
-	else
-	{
-		ui->toolBar->setStyleSheet(gui::stylesheet);
-	}
+	Q_EMIT RequestTrophyManagerRepaint();
 }
 
 void main_window::CreateActions()
@@ -1125,7 +1163,7 @@ void main_window::CreateConnects()
 {
 	connect(ui->bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
-	connect(ui->actionopen_rsx_capture, &QAction::triggered, this, &main_window::BootRsxCapture);
+	connect(ui->actionopen_rsx_capture, &QAction::triggered, [this](){ BootRsxCapture(); });
 
 	connect(ui->bootRecentMenu, &QMenu::aboutToShow, [=]
 	{
@@ -1192,11 +1230,13 @@ void main_window::CreateConnects()
 	connect(ui->confIOAct,     &QAction::triggered, [=]() { openSettings(3); });
 	connect(ui->confSystemAct, &QAction::triggered, [=]() { openSettings(4); });
 
-	connect(ui->confPadsAct, &QAction::triggered, this, [=]
+	auto openPadSettings = [this]
 	{
-		gamepads_settings_dialog dlg(this);
+		pad_settings_dialog dlg(this);
 		dlg.exec();
-	});
+	};
+
+	connect(ui->confPadsAct, &QAction::triggered, openPadSettings);
 
 	connect(ui->confAutopauseManagerAct, &QAction::triggered, [=]
 	{
@@ -1220,7 +1260,14 @@ void main_window::CreateConnects()
 	connect(ui->actionManage_Trophy_Data, &QAction::triggered, [=]
 	{
 		trophy_manager_dialog* trop_manager = new trophy_manager_dialog(guiSettings);
+		connect(this, &main_window::RequestTrophyManagerRepaint, trop_manager, &trophy_manager_dialog::HandleRepaintUiRequest);
 		trop_manager->show();
+	});
+
+	connect(ui->actionManage_Users, &QAction::triggered, [=]
+	{
+		user_manager_dialog* user_manager = new user_manager_dialog(guiSettings, this);
+		user_manager->show();
 	});
 
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=]
@@ -1298,7 +1345,7 @@ void main_window::CreateConnects()
 		const bool& checked = act->isChecked();
 
 		if      (act == ui->showCatHDDGameAct)    categories += category::non_disc_games, id = Category::Non_Disc_Game;
-		else if (act == ui->showCatDiscGameAct)   categories += category::disc_Game, id = Category::Disc_Game;
+		else if (act == ui->showCatDiscGameAct)   categories += category::disc_game, id = Category::Disc_Game;
 		else if (act == ui->showCatHomeAct)       categories += category::home, id = Category::Home;
 		else if (act == ui->showCatAudioVideoAct) categories += category::media, id = Category::Media;
 		else if (act == ui->showCatGameDataAct)   categories += category::data, id = Category::Data;
@@ -1318,43 +1365,31 @@ void main_window::CreateConnects()
 
 	connect(ui->aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
 
-	auto resizeIcons = [=](const int& index)
-	{
-		if (ui->sizeSlider->value() != index)
-		{
-			ui->sizeSlider->setSliderPosition(index);
-		}
-		if (m_save_slider_pos)
-		{
-			m_save_slider_pos = false;
-			guiSettings->SetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid, index);
-		}
-		m_gameListFrame->ResizeIcons(index);
-	};
-
 	connect(m_iconSizeActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
+		static const int index_small  = gui::get_Index(gui::gl_icon_size_small);
+		static const int index_medium = gui::get_Index(gui::gl_icon_size_medium);
+
 		int index;
 
 		if (act == ui->setIconSizeTinyAct)
 			index = 0;
 		else if (act == ui->setIconSizeSmallAct)
-			index = gui::get_Index(gui::gl_icon_size_small);
+			index = index_small;
 		else if (act == ui->setIconSizeMediumAct)
-			index = gui::get_Index(gui::gl_icon_size_medium);
+			index = index_medium;
 		else
 			index = gui::gl_max_slider_pos;
 
 		m_save_slider_pos = true;
-		resizeIcons(index);
+		ResizeIcons(index);
 	});
 
 	connect (m_gameListFrame, &game_list_frame::RequestIconSizeChange, [=](const int& val)
 	{
 		const int idx = ui->sizeSlider->value() + val;
 		m_save_slider_pos = true;
-		SetIconSizeActions(idx);
-		resizeIcons(idx);
+		ResizeIcons(idx);
 	});
 
 	connect(m_listModeActGroup, &QActionGroup::triggered, [=](QAction* act)
@@ -1372,7 +1407,7 @@ void main_window::CreateConnects()
 		m_categoryVisibleActGroup->setEnabled(m_is_list_mode);
 	});
 
-	connect(ui->toolbar_disc, &QAction::triggered, this, &main_window::BootGame);
+	connect(ui->toolbar_open, &QAction::triggered, this, &main_window::BootGame);
 	connect(ui->toolbar_refresh, &QAction::triggered, [=]() { m_gameListFrame->Refresh(true); });
 	connect(ui->toolbar_stop, &QAction::triggered, [=]() { Emu.Stop(); });
 	connect(ui->toolbar_start, &QAction::triggered, this, &main_window::OnPlayOrPause);
@@ -1391,15 +1426,17 @@ void main_window::CreateConnects()
 		}
 	});
 
-	connect(ui->toolbar_controls, &QAction::triggered, [=]() { gamepads_settings_dialog dlg(this); dlg.exec(); });
+	connect(ui->toolbar_controls, &QAction::triggered, openPadSettings);
 	connect(ui->toolbar_config, &QAction::triggered, [=]() { openSettings(0); });
 	connect(ui->toolbar_list, &QAction::triggered, [=]() { ui->setlistModeListAct->trigger(); });
 	connect(ui->toolbar_grid, &QAction::triggered, [=]() { ui->setlistModeGridAct->trigger(); });
 
-	connect(ui->sizeSlider, &QSlider::valueChanged, resizeIcons);
+	connect(ui->sizeSlider, &QSlider::valueChanged, this, &main_window::ResizeIcons);
 	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [&]
 	{
-		guiSettings->SetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid, ui->sizeSlider->value());
+		const int index = ui->sizeSlider->value();
+		guiSettings->SetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid, index);
+		SetIconSizeActions(index);
 	});
 	connect(ui->sizeSlider, &QSlider::actionTriggered, [&](int action)
 	{
@@ -1506,6 +1543,9 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 		}
 	}
 
+	// hide utilities from the average user
+	ui->menuUtilities->menuAction()->setVisible(guiSettings->GetValue(gui::m_showDebugTab).toBool());
+
 	ui->showLogAct->setChecked(guiSettings->GetValue(gui::mw_logger).toBool());
 	ui->showGameListAct->setChecked(guiSettings->GetValue(gui::mw_gamelist).toBool());
 	ui->showDebuggerAct->setChecked(guiSettings->GetValue(gui::mw_debugger).toBool());
@@ -1515,8 +1555,6 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	m_logFrame->setVisible(ui->showLogAct->isChecked());
 	m_gameListFrame->setVisible(ui->showGameListAct->isChecked());
 	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
-
-	RepaintToolbar();
 
 	ui->showHiddenEntriesAct->setChecked(guiSettings->GetValue(gui::gl_show_hidden).toBool());
 	m_gameListFrame->SetShowHidden(ui->showHiddenEntriesAct->isChecked()); // prevent GetValue in m_gameListFrame->LoadSettings
@@ -1554,11 +1592,15 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 
 void main_window::SetIconSizeActions(int idx)
 {
-	if (idx < gui::get_Index((gui::gl_icon_size_small + gui::gl_icon_size_min) / 2))
+	static const int threshold_tiny = gui::get_Index((gui::gl_icon_size_small + gui::gl_icon_size_min) / 2);
+	static const int threshold_small = gui::get_Index((gui::gl_icon_size_medium + gui::gl_icon_size_small) / 2);
+	static const int threshold_medium = gui::get_Index((gui::gl_icon_size_max + gui::gl_icon_size_medium) / 2);
+
+	if (idx < threshold_tiny)
 		ui->setIconSizeTinyAct->setChecked(true);
-	else if (idx < gui::get_Index((gui::gl_icon_size_medium + gui::gl_icon_size_small) / 2))
+	else if (idx < threshold_small)
 		ui->setIconSizeSmallAct->setChecked(true);
-	else if (idx < gui::get_Index((gui::gl_icon_size_max + gui::gl_icon_size_medium) / 2))
+	else if (idx < threshold_medium)
 		ui->setIconSizeMediumAct->setChecked(true);
 	else
 		ui->setIconSizeLargeAct->setChecked(true);
@@ -1620,7 +1662,8 @@ Add valid disc games to gamelist (games.yml)
 */
 void main_window::AddGamesFromDir(const QString& path)
 {
-	if (!QFileInfo(path).isDir()) return;
+	if (!QFileInfo(path).isDir())
+		return;
 
 	const std::string s_path = sstr(path);
 
@@ -1631,13 +1674,10 @@ void main_window::AddGamesFromDir(const QString& path)
 	}
 
 	// search direct subdirectories, that way we can drop one folder containing all games
-	for (const auto& entry : fs::dir(s_path))
+	QDirIterator dir_iter(path, QDir::Dirs | QDir::NoDotAndDotDot);
+	while (dir_iter.hasNext())
 	{
-		if (entry.name == "." || entry.name == "..") continue;
-
-		const std::string pth = s_path + "/" + entry.name;
-
-		if (!QFileInfo(qstr(pth)).isDir()) continue;
+		std::string pth = sstr(dir_iter.next());
 
 		if (Emu.BootGame(pth, false, true))
 		{
@@ -1703,7 +1743,14 @@ int main_window::IsValidFile(const QMimeData& md, QStringList* dropPaths)
 		}
 		else if (list.size() == 1)
 		{
-			dropType = drop_type::drop_game;
+			if (info.suffix() == "rrc")
+			{
+				dropType = drop_type::drop_rrc;
+			}
+			else
+			{
+				dropType = drop_type::drop_game;
+			}
 		}
 		else
 		{
@@ -1730,8 +1777,9 @@ void main_window::dropEvent(QDropEvent* event)
 	case drop_type::drop_pkg: // install the packages
 		for (const auto& path : dropPaths)
 		{
-			InstallPkg(path);
+			InstallPkg(path, dropPaths.count() > 1);
 		}
+		m_install_bulk = QMessageBox::NoButton;
 		break;
 	case drop_type::drop_pup: // install the firmware
 		InstallPup(dropPaths.first());
@@ -1741,8 +1789,7 @@ void main_window::dropEvent(QDropEvent* event)
 		{
 			const std::string rapname = sstr(QFileInfo(rap).fileName());
 
-			// TODO: use correct user ID once User Manager is implemented
-			if (!fs::copy_file(sstr(rap), fmt::format("%s/home/%s/exdata/%s", Emu.GetHddDir(), "00000001", rapname), false))
+			if (!fs::copy_file(sstr(rap), Emu.GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + rapname, false))
 			{
 				LOG_WARNING(GENERAL, "Could not copy rap file by drop: %s", rapname);
 			}
@@ -1766,6 +1813,8 @@ void main_window::dropEvent(QDropEvent* event)
 		}
 		m_gameListFrame->Refresh(true);
 		break;
+	case drop_type::drop_rrc: // replay a rsx capture file
+		BootRsxCapture(sstr(dropPaths.first()));
 	default:
 		LOG_WARNING(GENERAL, "Invalid dropType in gamelist dropEvent");
 		break;

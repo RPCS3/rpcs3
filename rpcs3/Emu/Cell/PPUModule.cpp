@@ -833,7 +833,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 				ppu_reloc _rel;
 				const u32 raddr = _rel.addr = vm::cast(prx->segs.at(rel.index_addr).addr + rel.offset, HERE);
 				const u32 rtype = _rel.type = rel.type;
-				const u64 rdata = _rel.data = prx->segs.at(rel.index_value).addr + rel.ptr.addr();
+				const u64 rdata = _rel.data = rel.index_value == 0xFF ? rel.ptr.addr().value() : prx->segs.at(rel.index_value).addr + rel.ptr.addr();
 				prx->relocs.emplace_back(_rel);
 
 				switch (rtype)

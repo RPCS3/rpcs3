@@ -14,8 +14,6 @@
 #include <thread>
 #include <atomic>
 
-#pragma comment(lib, "VKstatic.1.lib")
-
 namespace vk
 {
 	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range<VkFormat>, VkFormat>;
@@ -49,10 +47,18 @@ namespace vk
 
 extern u64 get_system_time();
 
+enum command_buffer_data_flag
+{
+	cb_has_occlusion_task = 1
+};
+
 struct command_buffer_chunk: public vk::command_buffer
 {
 	VkFence submit_fence = VK_NULL_HANDLE;
 	VkDevice m_device = VK_NULL_HANDLE;
+
+	u32 num_draws = 0;
+	u32 flags = 0;
 
 	std::atomic_bool pending = { false };
 	std::atomic<u64> last_sync = { 0 };
@@ -92,18 +98,25 @@ struct command_buffer_chunk: public vk::command_buffer
 			wait();
 
 		CHECK_RESULT(vkResetCommandBuffer(commands, 0));
+		num_draws = 0;
+		flags = 0;
 	}
 
 	bool poke()
 	{
+		reader_lock lock(guard_mutex);
+
+		if (!pending)
+			return true;
+
 		if (vkGetFenceStatus(m_device, submit_fence) == VK_SUCCESS)
 		{
-			std::lock_guard<shared_mutex> lock(guard_mutex);
+			lock.upgrade();
 
 			if (pending)
 			{
-				vk::reset_fence(&submit_fence);
 				pending = false;
+				vk::reset_fence(&submit_fence);
 			}
 		}
 
@@ -112,22 +125,21 @@ struct command_buffer_chunk: public vk::command_buffer
 
 	void wait()
 	{
-		std::lock_guard<shared_mutex> lock(guard_mutex);
+		reader_lock lock(guard_mutex);
 
 		if (!pending)
 			return;
 
-		switch(vkGetFenceStatus(m_device, submit_fence))
-		{
-		case VK_SUCCESS:
-			break;
-		case VK_NOT_READY:
-			CHECK_RESULT(vkWaitForFences(m_device, 1, &submit_fence, VK_TRUE, UINT64_MAX));
-			break;
-		}
+		// NOTE: vkWaitForFences is slower than polling fence status at least on NV
+		while (vkGetFenceStatus(m_device, submit_fence) == VK_NOT_READY);
 
-		vk::reset_fence(&submit_fence);
-		pending = false;
+		lock.upgrade();
+
+		if (pending)
+		{
+			vk::reset_fence(&submit_fence);
+			pending = false;
+		}
 	}
 };
 
@@ -243,7 +255,7 @@ struct flush_request_task
 		while (pending_state.load())
 		{
 			_mm_lfence();
-			_mm_pause();
+			std::this_thread::yield();
 		}
 	}
 };
@@ -263,7 +275,6 @@ private:
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
 	std::unique_ptr<vk::depth_convert_pass> m_depth_converter;
-	std::unique_ptr<vk::depth_scaling_pass> m_depth_scaler;
 	std::unique_ptr<vk::ui_overlay_renderer> m_ui_renderer;
 	std::unique_ptr<vk::attachment_clear_pass> m_attachment_clear_pass;
 
@@ -349,9 +360,7 @@ private:
 	s64 m_draw_time = 0;
 	s64 m_flip_time = 0;
 
-	u8 m_draw_buffers_count = 0;
-	bool m_flush_draw_buffers = false;
-	std::atomic<int> m_last_flushable_cb = {-1 };
+	std::vector<u8> m_draw_buffers;
 	
 	shared_mutex m_flush_queue_mutex;
 	flush_request_task m_flush_requests;
@@ -377,9 +386,7 @@ private:
 	void clear_surface(u32 mask);
 	void close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	void open_command_buffer();
-	void sync_at_semaphore_release();
 	void prepare_rtts(rsx::framebuffer_creation_context context);
-	void copy_render_targets_to_dma_location();
 
 	void flush_command_queue(bool hard_sync = false);
 	void queue_swap_request();
@@ -399,11 +406,14 @@ private:
 
 public:
 	bool check_program_status();
-	void load_program(const vk::vertex_upload_info& vertex_info);
+	bool load_program();
+	void load_program_env(const vk::vertex_upload_info& vertex_info);
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 	void read_buffers();
 	void write_buffers();
 	void set_viewport();
+
+	void sync_hint(rsx::FIFO_hint hint) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;
@@ -420,10 +430,12 @@ protected:
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
 
-	void do_local_task(bool idle) override;
+	void do_local_task(rsx::FIFO_state state) override;
 	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;
 	void notify_tile_unbound(u32 tile) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_notify_memory_unmapped(u32 address_base, u32 size) override;
+	void on_invalidate_memory_range(u32 address_base, u32 size) override;
+
+	bool on_decompiler_task() override;
 };

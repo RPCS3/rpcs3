@@ -1,9 +1,9 @@
 #pragma once
 
-#define ASMJIT_STATIC
+#define ASMJIT_EMBED
 #define ASMJIT_DEBUG
 
-#include "asmjit.h"
+#include <asmjit/asmjit.h>
 #include <array>
 #include <functional>
 
@@ -110,6 +110,9 @@ public:
 	{
 		return *m_engine;
 	}
+
+	// Test SSSE3 feature
+	bool has_ssse3() const;
 
 	// Add module (path to obj cache dir)
 	void add(std::unique_ptr<llvm::Module> module, const std::string& path);

@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "gui_settings.h"
+#include "syntax_highlighter.h"
 
 class cg_disasm_window : public QWidget
 {
@@ -24,6 +25,9 @@ private:
 	QAction *openCgBinaryProgram;
 
 	std::shared_ptr<gui_settings> xgui_settings;
+
+	AsmHighlighter* sh_asm;
+	GlslHighlighter* sh_glsl;
 
 public:
 	explicit cg_disasm_window(std::shared_ptr<gui_settings> xSettings);

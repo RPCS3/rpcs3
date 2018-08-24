@@ -14,7 +14,7 @@ protected:
 	virtual std::string getFloatTypeName(size_t elementCount) override;
 	std::string getIntTypeName(size_t elementCount) override;
 	virtual std::string getFunction(FUNCTION) override;
-	virtual std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
+	virtual std::string compareFunction(COMPARE, const std::string&, const std::string&, bool scalar) override;
 
 	virtual void insertHeader(std::stringstream &OS) override;
 	virtual void insertInputs(std::stringstream &OS, const std::vector<ParamType> &inputs) override;
@@ -46,7 +46,7 @@ public:
 	ParamArray parr;
 	VkShaderModule handle = nullptr;
 	u32 id;
-	std::string shader;
+	vk::glsl::shader shader;
 	std::vector<vk::glsl::program_input> uniforms;
 
 	void Decompile(const RSXVertexProgram& prog);

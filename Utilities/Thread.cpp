@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/RawSPUThread.h"
@@ -31,6 +31,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <time.h>
 #endif
 
 #include "sync.h"
@@ -1851,6 +1852,36 @@ void thread_ctrl::notify()
 	}
 }
 
+u64 thread_ctrl::get_cycles()
+{
+	u64 cycles;
+
+#ifdef _WIN32
+	if (QueryThreadCycleTime((HANDLE)m_thread.load(), &cycles))
+	{
+#else
+	struct timespec thread_time;
+	if (!clock_gettime(CLOCK_THREAD_CPUTIME_ID, &thread_time))
+	{
+		cycles = static_cast<u64>(thread_time.tv_sec) * 1'000'000'000 + thread_time.tv_nsec;
+#endif
+		// Report 0 the first time this function is called
+		if (m_cycles == 0)
+		{
+			m_cycles = cycles;
+			return 0;
+		}
+
+		const auto diff_cycles = cycles - m_cycles;
+		m_cycles = cycles;
+		return diff_cycles;
+	}
+	else
+	{
+		return m_cycles;
+	}
+}
+
 void thread_ctrl::test()
 {
 	const auto _this = g_tls_this_thread;
@@ -1878,10 +1909,8 @@ void thread_ctrl::detect_cpu_layout()
 	{
 		g_native_core_layout.store(native_core_arrangement::amd_ccx);
 	}
-	else if (system_id.find("i3") != std::string::npos || system_id.find("i7") != std::string::npos)
-	{
-		g_native_core_layout.store(native_core_arrangement::intel_ht);
-	}
+
+	// TODO: Detect hyperthreaded intel CPUs
 }
 
 u16 thread_ctrl::get_affinity_mask(thread_class group)

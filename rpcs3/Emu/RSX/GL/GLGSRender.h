@@ -35,15 +35,23 @@ namespace gl
 
 struct work_item
 {
-	std::condition_variable cv;
-	std::mutex guard_mutex;
-
 	u32  address_to_flush = 0;
 	gl::texture_cache::thrashed_set section_data;
 
 	volatile bool processed = false;
 	volatile bool result = false;
 	volatile bool received = false;
+
+	void producer_wait()
+	{
+		while (!processed)
+		{
+			_mm_lfence();
+			std::this_thread::yield();
+		}
+
+		received = true;
+	}
 };
 
 struct driver_state
@@ -271,7 +279,8 @@ private:
 	GLFragmentProgram m_fragment_prog;
 	GLVertexProgram m_vertex_prog;
 
-	gl::sampler_state m_gl_sampler_states[rsx::limits::fragment_textures_count];
+	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];
+	gl::sampler_state m_vs_sampler_states[rsx::limits::vertex_textures_count];
 
 	gl::glsl::program *m_program;
 
@@ -316,13 +325,14 @@ private:
 	shared_mutex queue_guard;
 	std::list<work_item> work_queue;
 
-	bool flush_draw_buffers = false;
 	std::thread::id m_thread_id;
 
 	GLProgramBuffer m_prog_buffer;
+	draw_context_t m_decompiler_context;
 
 	//buffer
-	gl::fbo draw_fbo;
+	gl::fbo* m_draw_fbo = nullptr;
+	std::list<gl::fbo> m_framebuffer_cache;
 	gl::fbo m_flip_fbo;
 	std::unique_ptr<gl::texture> m_flip_tex_color;
 
@@ -352,16 +362,15 @@ private:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 
 	bool check_program_state();
-	void load_program(const gl::vertex_upload_info& upload_info);
+	bool load_program();
+	void load_program_env(const gl::vertex_upload_info& upload_info);
 
 	void update_draw_state();
 
 public:
 	void read_buffers();
-	void write_buffers();
 	void set_viewport();
 
-	void synchronize_buffers();
 	work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
 
 	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;
@@ -381,12 +390,16 @@ protected:
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
 
-	void do_local_task(bool idle) override;
+	void do_local_task(rsx::FIFO_state state) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_notify_memory_unmapped(u32 address_base, u32 size) override;
+	void on_invalidate_memory_range(u32 address_base, u32 size) override;
 	void notify_tile_unbound(u32 tile) override;
 
 	std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
 	std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
+
+	void on_decompiler_init() override;
+	void on_decompiler_exit() override;
+	bool on_decompiler_task() override;
 };

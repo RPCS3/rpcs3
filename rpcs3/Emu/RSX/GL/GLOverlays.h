@@ -523,19 +523,19 @@ namespace gl
 			}
 		}
 
-		void run(u16 w, u16 h, GLuint target, rsx::overlays::user_interface& ui)
+		void run(u16 w, u16 h, GLuint target, rsx::overlays::overlay& ui)
 		{
 			program_handle.uniforms["ui_scale"] = color4f((f32)ui.virtual_width, (f32)ui.virtual_height, 1.f, 1.f);
 			program_handle.uniforms["time"] = (f32)(get_system_time() / 1000) * 0.005f;
 			for (auto &cmd : ui.get_compiled().draw_commands)
 			{
-				upload_vertex_data((f32*)cmd.second.data(), (u32)cmd.second.size() * 4u);
-				num_drawable_elements = (u32)cmd.second.size();
+				upload_vertex_data((f32*)cmd.verts.data(), (u32)cmd.verts.size() * 4u);
+				num_drawable_elements = (u32)cmd.verts.size();
 				is_font_draw = false;
 				GLint texture_exists = GL_TRUE;
 
 				glActiveTexture(GL_TEXTURE31);
-				switch (cmd.first.texture_ref)
+				switch (cmd.config.texture_ref)
 				{
 				case rsx::overlays::image_resource_id::game_icon:
 				case rsx::overlays::image_resource_id::backbuffer:
@@ -548,27 +548,27 @@ namespace gl
 				}
 				case rsx::overlays::image_resource_id::raw_image:
 				{
-					glBindTexture(GL_TEXTURE_2D, find_temp_image((rsx::overlays::image_info*)cmd.first.external_data_ref, ui.uid)->id());
+					glBindTexture(GL_TEXTURE_2D, find_temp_image((rsx::overlays::image_info*)cmd.config.external_data_ref, ui.uid)->id());
 					break;
 				}
 				case rsx::overlays::image_resource_id::font_file:
 				{
 					is_font_draw = true;
-					glBindTexture(GL_TEXTURE_2D, find_font(cmd.first.font_ref)->id());
+					glBindTexture(GL_TEXTURE_2D, find_font(cmd.config.font_ref)->id());
 					break;
 				}
 				default:
 				{
-					glBindTexture(GL_TEXTURE_2D, view_cache[cmd.first.texture_ref - 1]->id());
+					glBindTexture(GL_TEXTURE_2D, view_cache[cmd.config.texture_ref - 1]->id());
 					break;
 				}
 				}
 
-				program_handle.uniforms["color"] = cmd.first.color;
+				program_handle.uniforms["color"] = cmd.config.color;
 				program_handle.uniforms["read_texture"] = texture_exists;
-				program_handle.uniforms["pulse_glow"] = (s32)cmd.first.pulse_glow;
-				program_handle.uniforms["clip_region"] = (s32)cmd.first.clip_region;
-				program_handle.uniforms["clip_bounds"] = cmd.first.clip_rect;
+				program_handle.uniforms["pulse_glow"] = (s32)cmd.config.pulse_glow;
+				program_handle.uniforms["clip_region"] = (s32)cmd.config.clip_region;
+				program_handle.uniforms["clip_bounds"] = cmd.config.clip_rect;
 				overlay_pass::run(w, h, target, false, true);
 			}
 
