@@ -24,7 +24,7 @@ namespace vk
 		std::unique_ptr<vk::buffer> dma_buffer;
 
 	public:
-	
+
 		cached_texture_section() {}
 
 		void reset(u32 base, u32 length)
@@ -365,7 +365,7 @@ namespace vk
 			}
 		}
 	};
-	
+
 	struct discarded_storage
 	{
 		std::unique_ptr<vk::viewable_image> combined_image;
@@ -485,7 +485,7 @@ namespace vk
 
 			return mapping;
 		}
-		
+
 	protected:
 
 		void free_texture_section(cached_texture_section& tex) override
@@ -934,7 +934,7 @@ namespace vk
 			{
 			default:
 				//TODO
-				warn_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)vk_format, gcm_format);
+				//warn_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)vk_format, gcm_format);
 				return false;
 			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 				return (vk_format == VK_FORMAT_R16G16B16A16_SFLOAT);

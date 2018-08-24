@@ -794,7 +794,7 @@ namespace gl
 				if (src)
 				{
 					//Format mismatch
-					err_once("GL format mismatch (data cast?). Sized ifmt=0x%X vs Src ifmt=0x%X", sized_internal_fmt, (GLenum)ifmt);
+					//err_once("GL format mismatch (data cast?). Sized ifmt=0x%X vs Src ifmt=0x%X", sized_internal_fmt, (GLenum)ifmt);
 				}
 
 				//Apply base component map onto the new texture if a data cast has been done
@@ -1048,7 +1048,7 @@ namespace gl
 			{
 			default:
 				//TODO
-				warn_once("Format incompatibility detected, reporting failure to force data copy (GL_INTERNAL_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)ifmt, gcm_format);
+				//warn_once("Format incompatibility detected, reporting failure to force data copy (GL_INTERNAL_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)ifmt, gcm_format);
 				return false;
 			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 				return (ifmt == gl::texture::internal_format::rgba16f);

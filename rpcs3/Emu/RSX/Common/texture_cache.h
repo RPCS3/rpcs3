@@ -494,30 +494,30 @@ namespace rsx
 			m_cache_update_tag++;
 		}
 
-		template <typename... Args>
-		void emit_once(bool error, const char* fmt, const Args&... params)
-		{
-			const auto result = m_once_only_messages_set.emplace(fmt::format(fmt, params...));
-			if (!result.second)
-				return;
+		// template <typename... Args>
+		// void emit_once(bool error, const char* fmt, const Args&... params)
+		// {
+		// 	const auto result = m_once_only_messages_set.emplace(fmt::format(fmt, params...));
+		// 	if (!result.second)
+		// 		return;
 
-			if (error)
-				LOG_ERROR(RSX, "%s", *result.first);
-			else
-				LOG_WARNING(RSX, "%s", *result.first);
-		}
+		// 	if (error)
+		// 		LOG_ERROR(RSX, "%s", *result.first);
+		// 	else
+		// 		LOG_WARNING(RSX, "%s", *result.first);
+		// }
 
-		template <typename... Args>
-		void err_once(const char* fmt, const Args&... params)
-		{
-			emit_once(true, fmt, params...);
-		}
+		// template <typename... Args>
+		// void err_once(const char* fmt, const Args&... params)
+		// {
+		// 	emit_once(true, fmt, params...);
+		// }
 
-		template <typename... Args>
-		void warn_once(const char* fmt, const Args&... params)
-		{
-			emit_once(false, fmt, params...);
-		}
+		// template <typename... Args>
+		// void warn_once(const char* fmt, const Args&... params)
+		// {
+		// 	emit_once(false, fmt, params...);
+		// }
 
 	private:
 		//Internal implementation methods and helpers
