@@ -4,7 +4,7 @@
 
 #pragma push_macro("new")
 #undef new
-#include <gsl.h>
+#include <gsl/gsl>
 #pragma pop_macro("new")
 #undef Expects
 #undef Ensures

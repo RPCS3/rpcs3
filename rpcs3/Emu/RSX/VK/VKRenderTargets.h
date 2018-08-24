@@ -289,7 +289,7 @@ namespace rsx
 
 		gsl::span<const gsl::byte> map_downloaded_buffer(download_buffer_object, ...)
 		{
-			return{ (gsl::byte*)nullptr, 0 };
+			return {};
 		}
 
 		static void unmap_downloaded_buffer(download_buffer_object, ...)

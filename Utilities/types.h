@@ -9,6 +9,7 @@
 #include <emmintrin.h>
 
 #include <cstdint>
+#include <cstddef>
 #include <type_traits>
 #include <utility>
 #include <chrono>
@@ -90,7 +91,7 @@ using steady_clock = std::conditional<
 
 namespace gsl
 {
-	enum class byte : u8;
+	using std::byte;
 }
 
 // Formatting helper, type-specific preprocessing for improving safety and functionality
