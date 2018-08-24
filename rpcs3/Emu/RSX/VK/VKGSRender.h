@@ -327,6 +327,8 @@ private:
 	bool renderer_unavailable = false;
 
 	u64 m_last_heap_sync_time = 0;
+	u32 m_texbuffer_view_size = 0;
+
 	vk::vk_data_heap m_attrib_ring_info;
 	vk::vk_data_heap m_uniform_buffer_ring_info;
 	vk::vk_data_heap m_transform_constants_ring_info;

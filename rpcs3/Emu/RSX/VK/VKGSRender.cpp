@@ -594,6 +594,15 @@ VKGSRender::VKGSRender() : GSRender()
 	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
 	m_texture_upload_buffer_ring_info.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
 
+	const auto limits = m_device->gpu().get_limits();
+	m_texbuffer_view_size = std::min(limits.maxTexelBufferElements, 0x4000000u);
+
+	if (m_texbuffer_view_size < 0x800000)
+	{
+		// Warn, only possibly expected on macOS
+		LOG_WARNING(RSX, "Current driver may crash due to memory limitations (%uk)", m_texbuffer_view_size / 1024);
+	}
+
 	for (auto &ctx : frame_context_storage)
 	{
 		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.present_semaphore);
