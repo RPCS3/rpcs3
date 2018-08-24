@@ -228,7 +228,7 @@ protected:
 		}
 
 		LOG_NOTICE(RSX, "FP not found in buffer!");
-		gsl::not_null<void*> fragment_program_ucode_copy = malloc(rsx_fp.ucode_length);
+		void* fragment_program_ucode_copy = malloc(rsx_fp.ucode_length);
 		std::memcpy(fragment_program_ucode_copy, rsx_fp.addr, rsx_fp.ucode_length);
 		RSXFragmentProgram new_fp_key = rsx_fp;
 		new_fp_key.addr = fragment_program_ucode_copy;

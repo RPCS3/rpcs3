@@ -15,7 +15,7 @@ struct render_target_traits
 {
 	using surface_storage_type = ComPtr<ID3D12Resource>;
 	using surface_type = ID3D12Resource*;
-	using command_list_type = gsl::not_null<ID3D12GraphicsCommandList*>;
+	using command_list_type = ID3D12GraphicsCommandList*;
 	using download_buffer_object = std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE>; // heap offset, size, last_put_pos, fence, handle
 
 	//TODO: Move this somewhere else
@@ -26,7 +26,7 @@ struct render_target_traits
 		u32 address,
 		surface_color_format color_format, size_t width, size_t height,
 		ID3D12Resource* /*old*/,
-		gsl::not_null<ID3D12Device*> device, const std::array<float, 4> &clear_color, float, u8)
+		ID3D12Device* device, const std::array<float, 4> &clear_color, float, u8)
 	{
 		DXGI_FORMAT dxgi_format = get_color_surface_format(color_format);
 		ComPtr<ID3D12Resource> rtt;
@@ -68,7 +68,7 @@ struct render_target_traits
 
 	static
 	void prepare_rtt_for_drawing(
-		gsl::not_null<ID3D12GraphicsCommandList*> command_list,
+		ID3D12GraphicsCommandList* command_list,
 		ID3D12Resource* rtt)
 	{
 		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(rtt, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
@@ -76,7 +76,7 @@ struct render_target_traits
 
 	static
 	void prepare_rtt_for_sampling(
-		gsl::not_null<ID3D12GraphicsCommandList*> command_list,
+		ID3D12GraphicsCommandList* command_list,
 		ID3D12Resource* rtt)
 	{
 		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(rtt, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
@@ -87,7 +87,7 @@ struct render_target_traits
 		u32 address,
 		surface_depth_format surfaceDepthFormat, size_t width, size_t height,
 		ID3D12Resource* /*old*/,
-		gsl::not_null<ID3D12Device*> device, const std::array<float, 4>& , float clear_depth, u8 clear_stencil)
+		ID3D12Device* device, const std::array<float, 4>& , float clear_depth, u8 clear_stencil)
 	{
 		D3D12_CLEAR_VALUE clear_depth_value = {};
 		clear_depth_value.DepthStencil.Depth = clear_depth;
@@ -113,7 +113,7 @@ struct render_target_traits
 
 	static
 	void prepare_ds_for_drawing(
-		gsl::not_null<ID3D12GraphicsCommandList*> command_list,
+		ID3D12GraphicsCommandList* command_list,
 		ID3D12Resource* ds)
 	{
 		// set the resource as depth write
@@ -122,7 +122,7 @@ struct render_target_traits
 
 	static
 	void prepare_ds_for_sampling(
-		gsl::not_null<ID3D12GraphicsCommandList*> command_list,
+		ID3D12GraphicsCommandList* command_list,
 		ID3D12Resource* ds)
 	{
 		command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(ds, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
@@ -130,7 +130,7 @@ struct render_target_traits
 
 	static
 	void invalidate_surface_contents(
-		gsl::not_null<ID3D12GraphicsCommandList*>,
+		ID3D12GraphicsCommandList*,
 		ID3D12Resource*, ID3D12Resource*)
 	{}
 
@@ -158,9 +158,9 @@ struct render_target_traits
 
 	static
 	std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> issue_download_command(
-		gsl::not_null<ID3D12Resource*> rtt,
+		ID3D12Resource* rtt,
 		surface_color_format color_format, size_t width, size_t height,
-		gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, d3d12_data_heap &readback_heap, resource_storage &res_store
+		ID3D12Device* device, ID3D12CommandQueue* command_queue, d3d12_data_heap &readback_heap, resource_storage &res_store
 		)
 	{
 		ID3D12GraphicsCommandList* command_list = res_store.command_list.Get();
@@ -191,9 +191,9 @@ struct render_target_traits
 
 	static
 	std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> issue_depth_download_command(
-		gsl::not_null<ID3D12Resource*> ds,
+		ID3D12Resource* ds,
 		surface_depth_format depth_format, size_t width, size_t height,
-		gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, d3d12_data_heap &readback_heap, resource_storage &res_store
+		ID3D12Device* device, ID3D12CommandQueue* command_queue, d3d12_data_heap &readback_heap, resource_storage &res_store
 			)
 	{
 		ID3D12GraphicsCommandList* command_list = res_store.command_list.Get();
@@ -224,9 +224,9 @@ struct render_target_traits
 
 	static
 		std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> issue_stencil_download_command(
-			gsl::not_null<ID3D12Resource*> stencil,
+			ID3D12Resource* stencil,
 			size_t width, size_t height,
-			gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, d3d12_data_heap &readback_heap, resource_storage &res_store
+			ID3D12Device* device, ID3D12CommandQueue* command_queue, d3d12_data_heap &readback_heap, resource_storage &res_store
 			)
 	{
 		ID3D12GraphicsCommandList* command_list = res_store.command_list.Get();
@@ -256,7 +256,7 @@ struct render_target_traits
 
 	static
 	gsl::span<const gsl::byte> map_downloaded_buffer(const std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> &sync_data,
-		gsl::not_null<ID3D12Device*>, gsl::not_null<ID3D12CommandQueue*>, d3d12_data_heap &readback_heap, resource_storage&)
+		ID3D12Device*, ID3D12CommandQueue*, d3d12_data_heap &readback_heap, resource_storage&)
 	{
 		size_t offset;
 		size_t buffer_size;
@@ -273,7 +273,7 @@ struct render_target_traits
 
 	static
 	void unmap_downloaded_buffer(const std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> &,
-		gsl::not_null<ID3D12Device*>, gsl::not_null<ID3D12CommandQueue*>, d3d12_data_heap &readback_heap, resource_storage&)
+		ID3D12Device*, ID3D12CommandQueue*, d3d12_data_heap &readback_heap, resource_storage&)
 	{
 		readback_heap.unmap();
 	}

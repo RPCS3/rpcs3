@@ -10,6 +10,15 @@ enum GCMEnumTypes
 
 constexpr auto qstr = QString::fromStdString;
 
+namespace
+{
+	template <typename T>
+	gsl::span<T> as_const_span(gsl::span<const gsl::byte> unformated_span)
+	{
+		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+	}
+}
+
 rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
 	: QDialog(parent)
 	, m_gui_settings(gui_settings)
@@ -416,12 +425,12 @@ namespace
 		{
 		case rsx::surface_color_format::b8:
 		{
-			u8 value = gsl::as_span<const u8>(orig_buffer)[idx];
+			u8 value = as_const_span<const u8>(orig_buffer)[idx];
 			return{ value, value, value };
 		}
 		case rsx::surface_color_format::x32:
 		{
-			be_t<u32> stored_val = gsl::as_span<const be_t<u32>>(orig_buffer)[idx];
+			be_t<u32> stored_val = as_const_span<const be_t<u32>>(orig_buffer)[idx];
 			u32 swapped_val = stored_val;
 			f32 float_val = (f32&)swapped_val;
 			u8 val = float_val * 255.f;
@@ -431,19 +440,19 @@ namespace
 		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
 		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
 		{
-			auto ptr = gsl::as_span<const u8>(orig_buffer);
+			auto ptr = as_const_span<const u8>(orig_buffer);
 			return{ ptr[1 + idx * 4], ptr[2 + idx * 4], ptr[3 + idx * 4] };
 		}
 		case rsx::surface_color_format::a8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
 		{
-			auto ptr = gsl::as_span<const u8>(orig_buffer);
+			auto ptr = as_const_span<const u8>(orig_buffer);
 			return{ ptr[3 + idx * 4], ptr[2 + idx * 4], ptr[1 + idx * 4] };
 		}
 		case rsx::surface_color_format::w16z16y16x16:
 		{
-			auto ptr = gsl::as_span<const u16>(orig_buffer);
+			auto ptr = as_const_span<const u16>(orig_buffer);
 			f16 h0 = f16(ptr[4 * idx]);
 			f16 h1 = f16(ptr[4 * idx + 1]);
 			f16 h2 = f16(ptr[4 * idx + 2]);
@@ -524,7 +533,7 @@ void rsx_debugger::OnClickDrawCalls()
 				{
 					for (u32 col = 0; col < width; col++)
 					{
-						u32 depth_val = gsl::as_span<const u32>(orig_buffer)[row * width + col];
+						u32 depth_val = as_const_span<const u32>(orig_buffer)[row * width + col];
 						u8 displayed_depth_val = 255 * depth_val / 0xFFFFFF;
 						buffer[4 * col + 0 + width * row * 4] = displayed_depth_val;
 						buffer[4 * col + 1 + width * row * 4] = displayed_depth_val;
@@ -539,7 +548,7 @@ void rsx_debugger::OnClickDrawCalls()
 				{
 					for (u32 col = 0; col < width; col++)
 					{
-						u16 depth_val = gsl::as_span<const u16>(orig_buffer)[row * width + col];
+						u16 depth_val = as_const_span<const u16>(orig_buffer)[row * width + col];
 						u8 displayed_depth_val = 255 * depth_val / 0xFFFF;
 						buffer[4 * col + 0 + width * row * 4] = displayed_depth_val;
 						buffer[4 * col + 1 + width * row * 4] = displayed_depth_val;
@@ -563,7 +572,7 @@ void rsx_debugger::OnClickDrawCalls()
 			{
 				for (u32 col = 0; col < width; col++)
 				{
-					u8 stencil_val = gsl::as_span<const u8>(orig_buffer)[row * width + col];
+					u8 stencil_val = as_const_span<const u8>(orig_buffer)[row * width + col];
 					buffer[4 * col + 0 + width * row * 4] = stencil_val;
 					buffer[4 * col + 1 + width * row * 4] = stencil_val;
 					buffer[4 * col + 2 + width * row * 4] = stencil_val;
