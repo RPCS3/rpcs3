@@ -21,7 +21,7 @@ extern "C"
 
 extern std::mutex g_mutex_avcodec_open2;
 
-logs::channel cellAdec("cellAdec");
+LOG_CHANNEL(cellAdec);
 
 class AudioDecoder : public ppu_thread
 {
@@ -252,7 +252,7 @@ public:
 				if (just_started && just_finished)
 				{
 					avcodec_flush_buffers(ctx);
-					
+
 					reader.init = true; // wrong
 					just_finished = false;
 					just_started = false;
@@ -531,7 +531,7 @@ bool adecCheckType(s32 type)
 		cellAdec.todo("Unimplemented audio codec type (%d)", type);
 		Emu.Pause();
 		break;
-	}	
+	}
 	default: return false;
 	}
 

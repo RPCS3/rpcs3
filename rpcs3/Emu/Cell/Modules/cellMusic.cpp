@@ -11,7 +11,7 @@
 
 #include "cellMusic.h"
 
-logs::channel cellMusic("cellMusic");
+LOG_CHANNEL(cellMusic);
 
 struct music_t
 {

@@ -8,7 +8,7 @@
 
 #include "Utilities/StrUtil.h"
 
-logs::channel cellNetCtl("cellNetCtl");
+LOG_CHANNEL(cellNetCtl);
 
 template <>
 void fmt_class_string<CellNetCtlError>::format(std::string& out, u64 arg)

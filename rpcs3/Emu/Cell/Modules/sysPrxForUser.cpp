@@ -9,7 +9,7 @@
 #include "Emu/Cell/lv2/sys_tty.h"
 #include "sysPrxForUser.h"
 
-logs::channel sysPrxForUser("sysPrxForUser");
+LOG_CHANNEL(sysPrxForUser);
 
 extern u64 get_system_time();
 

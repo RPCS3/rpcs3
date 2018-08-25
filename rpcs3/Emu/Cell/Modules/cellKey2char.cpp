@@ -3,7 +3,7 @@
 
 
 
-logs::channel cellKey2char("cellKey2char");
+LOG_CHANNEL(cellKey2char);
 
 // Return Codes
 enum CellKey2CharError : u32

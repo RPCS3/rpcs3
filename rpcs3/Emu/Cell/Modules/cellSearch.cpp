@@ -7,7 +7,7 @@
 
 #include "cellSearch.h"
 
-logs::channel cellSearch("cellSearch");
+LOG_CHANNEL(cellSearch);
 
 template<>
 void fmt_class_string<CellSearchError>::format(std::string& out, u64 arg)

@@ -11,7 +11,7 @@
 #include <thread>
 #include <mutex>
 
-logs::channel libmixer("libmixer");
+LOG_CHANNEL(libmixer);
 
 struct SurMixerConfig
 {
@@ -91,7 +91,7 @@ s32 cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 			const float center = addr[i];
 			g_surmx.mixdata[i * 8 + 0] += center;
 			g_surmx.mixdata[i * 8 + 1] += center;
-		}		
+		}
 	}
 	else if (type == CELL_SURMIXER_CHSTRIP_TYPE2A)
 	{
@@ -132,7 +132,7 @@ s32 cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 		}
 	}
 
-	return CELL_OK; 
+	return CELL_OK;
 }
 
 s32 cellAANConnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
@@ -170,7 +170,7 @@ s32 cellAANDisconnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePort
 
 	return CELL_OK;
 }
- 
+
 s32 cellSSPlayerCreate(vm::ptr<u32> handle, vm::ptr<CellSSPlayerConfig> config)
 {
 	libmixer.warning("cellSSPlayerCreate(handle=*0x%x, config=*0x%x)", handle, config);
@@ -188,7 +188,7 @@ s32 cellSSPlayerCreate(vm::ptr<u32> handle, vm::ptr<CellSSPlayerConfig> config)
 	p.m_connected = false;
 	p.m_active = false;
 	p.m_channels = config->channels;
-	
+
 	g_ssp.push_back(p);
 	*handle = (u32)g_ssp.size() - 1;
 	return CELL_OK;
@@ -292,7 +292,7 @@ s32 cellSSPlayerSetParam(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 	}
 
 	// TODO: check parameters
-	
+
 	g_ssp[handle].m_level = info->level;
 	g_ssp[handle].m_speed = info->speed;
 	g_ssp[handle].m_x = info->position.x;
@@ -301,7 +301,7 @@ s32 cellSSPlayerSetParam(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 
 	return CELL_OK;
 }
- 
+
 s32 cellSSPlayerGetState(u32 handle)
 {
 	libmixer.warning("cellSSPlayerGetState(handle=0x%x)", handle);

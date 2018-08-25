@@ -6,7 +6,7 @@
 #include "sys_memory.h"
 #include "sys_mmapper.h"
 
-logs::channel sys_mmapper("sys_mmapper");
+LOG_CHANNEL(sys_mmapper);
 
 lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container>& ct)
 	: size(size)

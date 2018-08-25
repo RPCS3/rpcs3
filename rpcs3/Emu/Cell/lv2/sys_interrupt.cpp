@@ -10,7 +10,7 @@
 
 
 
-logs::channel sys_interrupt("sys_interrupt");
+LOG_CHANNEL(sys_interrupt);
 
 void lv2_int_serv::exec()
 {

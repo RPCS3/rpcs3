@@ -9,7 +9,7 @@
 #include "sys_event.h"
 
 
-logs::channel sys_rsx("sys_rsx");
+LOG_CHANNEL(sys_rsx);
 
 extern u64 get_timebased_time();
 

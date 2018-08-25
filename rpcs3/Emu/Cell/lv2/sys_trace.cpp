@@ -7,7 +7,7 @@
 
 
 
-logs::channel sys_trace("sys_trace");
+LOG_CHANNEL(sys_trace);
 
 s32 sys_trace_create()
 {

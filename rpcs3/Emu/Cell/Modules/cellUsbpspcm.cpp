@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellUsbPspcm("cellUsbPspcm");
+LOG_CHANNEL(cellUsbPspcm);
 
 // Return Codes
 enum

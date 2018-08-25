@@ -3,7 +3,7 @@
 
 #include "cellSubDisplay.h"
 
-logs::channel cellSubDisplay("cellSubDisplay");
+LOG_CHANNEL(cellSubDisplay);
 
 template<>
 void fmt_class_string<CellSubDisplayError>::format(std::string& out, u64 arg)

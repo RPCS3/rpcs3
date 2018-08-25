@@ -10,7 +10,7 @@
 
 
 
-logs::channel sys_rwlock("sys_rwlock");
+LOG_CHANNEL(sys_rwlock);
 
 template<> DECLARE(ipc_manager<lv2_rwlock, u64>::g_ipc) {};
 

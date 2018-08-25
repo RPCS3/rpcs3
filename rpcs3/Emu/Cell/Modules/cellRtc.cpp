@@ -3,11 +3,11 @@
 
 #include "cellRtc.h"
 
-logs::channel cellRtc("cellRtc");
+LOG_CHANNEL(cellRtc);
 
 s64 convertToUNIXTime(u16 seconds, u16 minutes, u16 hours, u16 days, s32 years)
 {
-	return (s64)seconds + (s64)minutes * 60 + (s64)hours * 3600 + (s64)days * 86400 + 
+	return (s64)seconds + (s64)minutes * 60 + (s64)hours * 3600 + (s64)days * 86400 +
 		(s64)(years - 70) * 31536000 + (s64)((years - 69) / 4) * 86400 -
 		(s64)((years - 1) / 100) * 86400 + (s64)((years + 299) / 400) * 86400;
 }
@@ -58,14 +58,14 @@ s32 cellRtcFormatRfc2822LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick
 s32 cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc, s32 iTimeZone)
 {
 	cellRtc.todo("cellRtcFormatRfc3339(pszDateTime=*0x%x, pUtc=*0x%x, iTimeZone=%d)", pszDateTime, pUtc, iTimeZone);
-	
+
 	return CELL_OK;
 }
 
 s32 cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc)
 {
 	cellRtc.todo("cellRtcFormatRfc3339LocalTime(pszDateTime=*0x%x, pUtc=*0x%x)", pszDateTime, pUtc);
-	
+
 	return CELL_OK;
 }
 
@@ -93,7 +93,7 @@ s32 cellRtcGetTick(vm::ptr<CellRtcDateTime> pTime, vm::ptr<CellRtcTick> pTick)
 s32 cellRtcSetTick(vm::ptr<CellRtcDateTime> pTime, vm::ptr<CellRtcTick> pTick)
 {
 	cellRtc.todo("cellRtcSetTick(pTime=*0x%x, pTick=*0x%x)", pTime, pTick);
-	
+
 	return CELL_OK;
 }
 
@@ -107,7 +107,7 @@ s32 cellRtcTickAddTicks(vm::ptr<CellRtcTick> pTick0, vm::ptr<CellRtcTick> pTick1
 s32 cellRtcTickAddMicroseconds(vm::ptr<CellRtcTick> pTick0, vm::ptr<CellRtcTick> pTick1, s64 lAdd)
 {
 	cellRtc.todo("cellRtcTickAddMicroseconds(pTick0=*0x%x, pTick1=*0x%x, lAdd=%lld)", pTick0, pTick1, lAdd);
-	
+
 	return CELL_OK;
 }
 
@@ -121,7 +121,7 @@ s32 cellRtcTickAddSeconds(vm::ptr<CellRtcTick> pTick0, vm::ptr<CellRtcTick> pTic
 s32 cellRtcTickAddMinutes(vm::ptr<CellRtcTick> pTick0, vm::ptr<CellRtcTick> pTick1, s64 lAdd)
 {
 	cellRtc.todo("cellRtcTickAddMinutes(pTick0=*0x%x, pTick1=*0x%x, lAdd=%lld)", pTick0, pTick1, lAdd);
-	
+
 	return CELL_OK;
 }
 

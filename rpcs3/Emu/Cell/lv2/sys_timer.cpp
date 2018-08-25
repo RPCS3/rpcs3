@@ -13,7 +13,7 @@
 
 
 
-logs::channel sys_timer("sys_timer");
+LOG_CHANNEL(sys_timer);
 
 extern u64 get_system_time();
 

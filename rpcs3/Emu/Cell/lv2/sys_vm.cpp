@@ -4,7 +4,7 @@
 
 
 
-logs::channel sys_vm("sys_vm");
+LOG_CHANNEL(sys_vm);
 
 error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
 {

@@ -9,7 +9,7 @@
 
 #include <thread>
 
-logs::channel cellCamera("cellCamera");
+LOG_CHANNEL(cellCamera);
 
 // **************
 // * Prototypes *
@@ -392,7 +392,7 @@ s32 cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 	{
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
-	
+
 	s32 status;
 	if ((status = cellCameraSetAttribute(dev_num, CELL_CAMERA_READMODE, info->read_mode, 0)) != CELL_OK)
 	{

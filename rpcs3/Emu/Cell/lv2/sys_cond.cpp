@@ -11,7 +11,7 @@
 
 
 
-logs::channel sys_cond("sys_cond");
+LOG_CHANNEL(sys_cond);
 
 template<> DECLARE(ipc_manager<lv2_cond, u64>::g_ipc) {};
 

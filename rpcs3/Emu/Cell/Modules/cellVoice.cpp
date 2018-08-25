@@ -4,7 +4,7 @@
 
 #include "cellVoice.h"
 
-logs::channel cellVoice("cellVoice");
+LOG_CHANNEL(cellVoice);
 
 
 s32 cellVoiceConnectIPortToOPort()

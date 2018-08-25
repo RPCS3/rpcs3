@@ -12,7 +12,7 @@
 
 
 
-logs::channel sys_event_flag("sys_event_flag");
+LOG_CHANNEL(sys_event_flag);
 
 template<> DECLARE(ipc_manager<lv2_event_flag, u64>::g_ipc) {};
 

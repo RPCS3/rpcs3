@@ -11,7 +11,7 @@
 
 
 
-logs::channel sys_fs("sys_fs");
+LOG_CHANNEL(sys_fs);
 
 struct lv2_fs_mount_point
 {
