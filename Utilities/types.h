@@ -770,7 +770,7 @@ struct value_hash
 template <template <typename> class TT, std::size_t S, std::size_t A = S>
 struct alignas(A) any_pod
 {
-	std::aligned_storage_t<S, A> data;
+	alignas(A) std::byte data[S];
 
 	any_pod() = default;
 
