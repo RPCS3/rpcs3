@@ -244,6 +244,10 @@ struct fmt_type_info
 	}
 };
 
+// Argument array type (each element generated via fmt_unveil<>)
+template <typename... Args>
+using fmt_args_t = const u64(&&)[sizeof...(Args) + 1];
+
 namespace fmt
 {
 	// Base-57 format helper
@@ -286,8 +290,7 @@ namespace fmt
 	SAFE_BUFFERS FORCE_INLINE void append(std::string& out, const char* fmt, const Args&... args)
 	{
 		static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
-		const u64 arg_array[sizeof...(Args) + 1]{fmt_unveil<Args>::get(args)...};
-		raw_append(out, fmt, type_list, arg_array);
+		raw_append(out, fmt, type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 	}
 
 	// Formatting function
@@ -308,7 +311,6 @@ namespace fmt
 	[[noreturn]] SAFE_BUFFERS FORCE_INLINE void throw_exception(const char* fmt, const Args&... args)
 	{
 		static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
-		const u64 arg_array[sizeof...(Args) + 1]{fmt_unveil<Args>::get(args)...};
-		raw_throw_exception<T>(fmt, type_list, arg_array);
+		raw_throw_exception<T>(fmt, type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 	}
 }

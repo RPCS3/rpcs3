@@ -74,8 +74,7 @@ namespace logs
 			if (UNLIKELY(sev <= enabled))
 			{
 				static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
-				const u64 arg_array[sizeof...(Args) + 1]{fmt_unveil<Args>::get(args)...};
-				message{this, sev}.broadcast(fmt, type_list, arg_array);
+				message{this, sev}.broadcast(fmt, type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 			}
 		}
 
