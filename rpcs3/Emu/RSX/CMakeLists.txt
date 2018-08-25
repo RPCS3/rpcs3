@@ -21,4 +21,4 @@ target_link_libraries(rpcs3_rsx
 		3rdparty::opengl 3rdparty::gsl
 		3rdparty::stblib 3rdparty::xxhash
 		3rdparty::ffmpeg 3rdparty::vulkan
-		3rdparty::dx12)
+		3rdparty::dx12 3rdparty::glew)

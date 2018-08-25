@@ -326,6 +326,18 @@ if (WIN32)
 endif()
 
 
+# GLEW
+add_library(3rdparty_glew INTERFACE)
+if(NOT MSVC)
+	find_package(GLEW 1.13.0 REQUIRED)
+	target_link_libraries(3rdparty_glew INTERFACE GLEW::GLEW)
+
+	set(CMAKE_THREAD_PREFER_PTHREAD 1)
+	find_package(Threads REQUIRED)
+	target_link_libraries(3rdparty_glew INTERFACE Threads::Threads)
+endif()
+
+
 # add nice ALIAS targets for ease of use
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
 add_library(3rdparty::pugixml ALIAS pugixml)
@@ -345,3 +357,4 @@ add_library(3rdparty::vulkan ALIAS ${VULKAN_TARGET})
 add_library(3rdparty::openal ALIAS 3rdparty_openal)
 add_library(3rdparty::ffmpeg ALIAS 3rdparty_ffmpeg)
 add_library(3rdparty::dx12 ALIAS 3rdparty_dx12)
+add_library(3rdparty::glew ALIAS 3rdparty_glew)

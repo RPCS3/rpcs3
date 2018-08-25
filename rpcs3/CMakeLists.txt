@@ -122,15 +122,6 @@ target_link_libraries(rpcs3 ${ADDITIONAL_LIBS})
 target_link_libraries(rpcs3 rpcs3_emu rpcs3_ui rpcs3_loader rpcs3_crypto rpcs3_utilities)
 target_link_libraries(rpcs3 3rdparty::discord-rpc)
 
-if(NOT MSVC)
-	find_package(GLEW 1.13.0 REQUIRED)
-	target_link_libraries(rpcs3 GLEW::GLEW)
-
-	set(CMAKE_THREAD_PREFER_PTHREAD 1)
-	find_package(Threads REQUIRED)
-	target_link_libraries(rpcs3 Threads::Threads)
-endif()
-
 if(UNIX)
 	find_package(X11 REQUIRED)
 	target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
