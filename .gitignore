@@ -59,6 +59,7 @@
 *.VC.*
 *.vcxproj.user
 enc_temp_folder/*
+CMakeSettings.json
 
 # Ignore other system generated files
 x64/*
