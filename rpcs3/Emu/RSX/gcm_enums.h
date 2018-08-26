@@ -271,14 +271,12 @@ namespace rsx
 
 	front_face to_front_face(u16 in);
 
-	enum class cull_face : u8
+	enum class cull_face : u32
 	{
-		front,
-		back,
-		front_and_back,
+		front = 0x0404, // CELL_GCM_FRONT
+		back = 0x0405, // CELL_GCM_BACK
+		front_and_back = 0x0408, // CELL_GCM_FRONT_AND_BACK
 	};
-
-	cull_face to_cull_face(u16 in);
 
 	enum class user_clip_plane_op : u8
 	{
