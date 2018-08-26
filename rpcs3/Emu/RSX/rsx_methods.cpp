@@ -158,6 +158,20 @@ namespace rsx
 			}
 		}
 
+		void set_cull_face(thread* rsx, u32 reg, u32 arg)
+		{
+			switch(arg)
+			{
+			case CELL_GCM_FRONT_AND_BACK: return;
+			case CELL_GCM_FRONT: return;
+			case CELL_GCM_BACK: return;
+			default: break;
+			}
+
+			// Ignore value if unknown
+			method_registers.registers[reg] = method_registers.register_previous_value;
+		}
+
 		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
@@ -381,17 +395,17 @@ namespace rsx
 			}
 		};
 
-		void set_transform_program_start(thread* rsx, u32, u32)
+		void set_transform_program_start(thread* rsx, u32 reg, u32)
 		{
-			if (method_registers.register_change_flag)
+			if (method_registers.registers[reg] != method_registers.register_previous_value)
 			{
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
 			}
 		}
 
-		void set_vertex_attribute_output_mask(thread* rsx, u32, u32)
+		void set_vertex_attribute_output_mask(thread* rsx, u32 reg, u32)
 		{
-			if (method_registers.register_change_flag)
+			if (method_registers.registers[reg] != method_registers.register_previous_value)
 			{
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty | rsx::pipeline_state::fragment_program_dirty;
 			}
@@ -1325,16 +1339,8 @@ namespace rsx
 
 	void rsx_state::decode(u32 reg, u32 value)
 	{
-		auto& old_value = registers[reg];
-		if (old_value != value)
-		{
-			register_change_flag = true;
-			old_value = value;
-		}
-		else
-		{
-			register_change_flag = false;
-		}
+		// Store new value and save previous
+		register_previous_value = std::exchange(registers[reg], value);
 	}
 
 	bool rsx_state::test(u32 reg, u32 value) const
@@ -1747,6 +1753,7 @@ namespace rsx
 		bind<NV406E_SEMAPHORE_RELEASE, nv406e::semaphore_release>();
 
 		// NV4097
+		bind<NV4097_SET_CULL_FACE, nv4097::set_cull_face>();
 		bind<NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097::texture_read_semaphore_release>();
 		bind<NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097::back_end_write_semaphore_release>();
 		bind<NV4097_SET_BEGIN_END, nv4097::set_begin_end>();
