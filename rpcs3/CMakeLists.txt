@@ -6,10 +6,8 @@ include(cotire)
 
 # Generate git-version.h at build time.
 add_custom_target(GitVersion ALL
-	DEPENDS something_that_never_exists)
-add_custom_command(OUTPUT something_that_never_exists
 	COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
-		-P ${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 
 # Check for a sufficient compiler and set build options
 include(ConfigureCompiler)
@@ -73,7 +71,7 @@ set_target_properties(rpcs3
 
 target_link_libraries(rpcs3 ${ADDITIONAL_LIBS})
 target_link_libraries(rpcs3 rpcs3_emu rpcs3_ui rpcs3_loader rpcs3_crypto rpcs3_utilities)
-target_link_libraries(rpcs3 3rdparty::discord-rpc 3rdparty::qt5)
+target_link_libraries(rpcs3 3rdparty::discord-rpc 3rdparty::qt5 3rdparty::hidapi)
 
 if(UNIX)
 	find_package(X11 REQUIRED)
@@ -86,11 +84,6 @@ if(WIN32)
 else()
 	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS})
 endif()
-
-target_link_libraries(rpcs3
-	${RPCS3_QT_LIBS}
-	3rdparty::hidapi
-)
 
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 
