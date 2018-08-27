@@ -3,12 +3,16 @@ cmake_minimum_required(VERSION 3.8.2)
 project(rpcs3)
 
 option(WITH_GDB "WITH_GDB" OFF)
-option(WITHOUT_LLVM "WITHOUT_LLVM" OFF)
 option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
+
+option(WITH_LLVM "Enable usage of LLVM library" ON)
+option(BUILD_LLVM_SUBMODULE "Build LLVM from git submodule" ON)
 
 option(USE_ALSA "ALSA audio backend" ON)
 option(USE_PULSE "PulseAudio audio backend" ON)
 option(USE_LIBEVDEV "libevdev-based joystick support" ON)
+
+option(USE_SYSTEM_ZLIB "Prefer system ZLIB instead of the builtin one" ON)
 
 option(USE_VULKAN "Vulkan render backend" ON)
 

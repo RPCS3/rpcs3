@@ -14,8 +14,6 @@ add_library(3rdparty_dummy_lib INTERFACE)
 
 
 # ZLib
-option(USE_SYSTEM_ZLIB "Prefer system ZLIB instead of the builtin one" ON)
-
 if (USE_SYSTEM_ZLIB)
 	find_package(ZLIB QUIET)
 endif()
