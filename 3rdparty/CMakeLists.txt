@@ -338,6 +338,10 @@ if(NOT MSVC)
 endif()
 
 
+# LLVM
+include(llvm.cmake)
+
+
 # add nice ALIAS targets for ease of use
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
 add_library(3rdparty::pugixml ALIAS pugixml)
