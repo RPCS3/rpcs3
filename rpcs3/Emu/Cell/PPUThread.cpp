@@ -348,7 +348,7 @@ void ppu_thread::on_init(const std::shared_ptr<void>& _this)
 	if (!stack_addr)
 	{
 		// Allocate stack + gap between stacks
-		auto new_stack_base = vm::alloc(stack_size + 4096, vm::stack);
+		auto new_stack_base = vm::alloc(stack_size + 4096, vm::stack, 4096);
 		if (!new_stack_base)
 		{
 			fmt::throw_exception("Out of stack memory (size=0x%x)" HERE, stack_size);
