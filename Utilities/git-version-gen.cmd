@@ -71,11 +71,11 @@ if defined APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH (
 	)
 
 	rem // Make GIT_VERSION the last commit (shortened); Don't include commit count on non-master builds
-	for /F %%I IN ('call %GIT% rev-parse --short=8 HEAD') do set GIT_VERSION=%%I
+	for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%%I
 
 ) else (
 	rem // Get last commit (shortened) and concat after commit count in GIT_VERSION
-	for /F %%I IN ('call %GIT% rev-parse --short=8 HEAD') do set GIT_VERSION=%COMMIT_COUNT%-%%I
+	for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%COMMIT_COUNT%-%%I
 
 	for /F %%I IN ('call %GIT% rev-parse --abbrev-ref HEAD') do set GIT_BRANCH=%%I
 )
