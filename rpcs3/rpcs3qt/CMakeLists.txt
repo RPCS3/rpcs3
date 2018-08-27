@@ -4,9 +4,14 @@ file(GLOB UI_FILES "*.ui")
 
 add_library(rpcs3_ui ${SRC_FILES} ${UI_FILES})
 
+set_target_properties(rpcs3_ui
+	PROPERTIES
+		AUTOMOC ON
+		AUTOUIC ON)
+
 target_link_libraries(rpcs3_ui
 	PUBLIC
-		${RPCS3_QT_LIBS} 3rdparty::yaml-cpp
+		3rdparty::qt5 3rdparty::yaml-cpp
 
 	PRIVATE
 		rpcs3_emu rpcs3_utilities
