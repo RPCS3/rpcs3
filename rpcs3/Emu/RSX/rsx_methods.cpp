@@ -1182,9 +1182,9 @@ namespace rsx
 		rsx->int_flip_index++;
 		rsx->current_display_buffer = arg;
 		rsx->flip(arg);
-		// After each flip PS3 system is executing a routine that changes registers value to some default.
+		// After each flip cellGcmSys is executing a routine that changes registers value to some default.
 		// Some game use this default state (SH3).
-		rsx->reset();
+		if (rsx->isHLE) rsx->reset();
 
 		rsx->last_flip_time = get_system_time() - 1000000;
 		rsx->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
