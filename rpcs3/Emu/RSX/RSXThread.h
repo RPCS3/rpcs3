@@ -138,6 +138,7 @@ namespace rsx
 		u8 stride;
 		gsl::span<const gsl::byte> data;
 		u8 index;
+		bool is_be;
 	};
 
 	struct vertex_array_register

@@ -226,7 +226,10 @@ namespace rsx
 			const auto vtype = vertex_data_type_from_element_type<type>::type;
 
 			if (rsx->in_begin_end)
+			{
+				// Update to immediate mode register/array, aliasing with the register view
 				rsx->append_to_push_buffer(attribute_index, count, vertex_subreg, vtype, arg);
+			}
 
 			auto& info = rsx::method_registers.register_vertex_info[attribute_index];
 
