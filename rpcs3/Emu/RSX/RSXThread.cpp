@@ -1292,7 +1292,7 @@ namespace rsx
 			{
 				const rsx::data_array_format_info& info = state.vertex_arrays_info[index];
 				result.push_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
-					get_raw_vertex_buffer(info, state.vertex_data_base_offset(), vertex_ranges), index});
+					get_raw_vertex_buffer(info, state.vertex_data_base_offset(), vertex_ranges), index, true});
 				continue;
 			}
 
@@ -1302,7 +1302,7 @@ namespace rsx
 				const u8 element_size = info.size * sizeof(u32);
 
 				gsl::span<const gsl::byte> vertex_src = { (const gsl::byte*)vertex_push_buffers[index].data.data(), vertex_push_buffers[index].vertex_count * element_size };
-				result.push_back(vertex_array_buffer{ info.type, info.size, element_size, vertex_src, index });
+				result.push_back(vertex_array_buffer{ info.type, info.size, element_size, vertex_src, index, false });
 				continue;
 			}
 
@@ -2416,7 +2416,7 @@ namespace rsx
 			s32 size = 0;
 			s32 attributes = 0;
 
-			bool is_be_type = true;
+			bool swap_u8_types = false;
 
 			if (layout.attribute_placement[index] == attribute_buffer_placement::transient)
 			{
@@ -2429,12 +2429,14 @@ namespace rsx
 					attributes = layout.interleaved_blocks[0].attribute_stride;
 					attributes |= default_frequency_mask | volatile_storage_mask;
 
-					is_be_type = false;
+					// [NPEA90002] Grass is rendered via inline array
+					// Expects swapped bytes for u8 types
+					swap_u8_types = true;
 				}
 				else
 				{
-					//Data is either from an immediate render or register input
-					//Immediate data overrides register input
+					// Data is either from an immediate render or register input
+					// Immediate data overrides register input
 
 					if (rsx::method_registers.current_draw_clause.is_immediate_draw &&
 						vertex_push_buffers[index].vertex_count > 1)
@@ -2446,11 +2448,13 @@ namespace rsx
 						attributes = rsx::get_vertex_type_size_on_host(type, size);
 						attributes |= default_frequency_mask | volatile_storage_mask;
 
-						is_be_type = true;
+						// RDR intro contains text passed via immediate render mode
+						// Expects swapped bytes for u8 types
+						swap_u8_types = true;
 					}
 					else
 					{
-						//Register
+						// Register
 						const auto& info = rsx::method_registers.register_vertex_info[index];
 						type = info.type;
 						size = info.size;
@@ -2458,7 +2462,8 @@ namespace rsx
 						attributes = rsx::get_vertex_type_size_on_host(type, size);
 						attributes |= volatile_storage_mask;
 
-						is_be_type = false;
+						// Resistance intro expects u8 types in native order
+						// swap_u8_types = false;
 					}
 				}
 			}
@@ -2478,8 +2483,10 @@ namespace rsx
 					{
 					case 0:
 					case 1:
+					{
 						attributes |= default_frequency_mask;
 						break;
+					}
 					default:
 					{
 						if (modulo_mask & (1 << index))
@@ -2487,24 +2494,30 @@ namespace rsx
 
 						attributes |= repeating_frequency_mask;
 						attributes |= (frequency << 13) & input_divisor_mask;
+						break;
 					}
 					}
 				}
 			} //end attribute placement check
 
+			// If data is passed via registers, it is already received in little endian
+			const bool is_be_type = (layout.attribute_placement[index] != attribute_buffer_placement::transient);
+			bool to_swap_bytes = is_be_type;
+
 			switch (type)
 			{
 			case rsx::vertex_base_type::cmp:
+				// Compressed 4 components into one 4-byte value
 				size = 1;
-				//fall through
-			default:
-				if (is_be_type) attributes |= swap_storage_mask;
 				break;
 			case rsx::vertex_base_type::ub:
 			case rsx::vertex_base_type::ub256:
-				if (!is_be_type) attributes |= swap_storage_mask;
+				// These are single byte formats, but inverted order (BGRA vs ARGB) when passed via registers
+				to_swap_bytes = swap_u8_types;
 				break;
 			}
+
+			if (to_swap_bytes) attributes |= swap_storage_mask;
 
 			buffer[index * 4 + 0] = static_cast<s32>(type);
 			buffer[index * 4 + 1] = size;
@@ -2529,7 +2542,7 @@ namespace rsx
 				return;
 			}
 
-			//NOTE: Order is important! Transient ayout is always push_buffers followed by register data
+			//NOTE: Order is important! Transient layout is always push_buffers followed by register data
 			if (draw_call.is_immediate_draw)
 			{
 				//NOTE: It is possible for immediate draw to only contain index data, so vertex data can be in persistent memory

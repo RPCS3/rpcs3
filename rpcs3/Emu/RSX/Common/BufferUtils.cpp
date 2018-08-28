@@ -435,7 +435,7 @@ namespace
 	}
 }
 
-void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::span<const gsl::byte> src_ptr, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride)
+void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::span<const gsl::byte> src_ptr, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, bool swap_endianness)
 {
 	verify(HERE), (vector_element_count > 0);
 	const u32 src_read_stride = rsx::get_vertex_type_size_on_host(type, vector_element_count);
@@ -460,12 +460,15 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 
 #if !DEBUG_VERTEX_STREAMING
 
-	if (real_count >= count || real_count == 1)
+	if (swap_endianness)
 	{
-		if (attribute_src_stride == dst_stride && src_read_stride == dst_stride)
-			use_stream_no_stride = true;
-		else
-			use_stream_with_stride = true;
+		if (real_count >= count || real_count == 1)
+		{
+			if (attribute_src_stride == dst_stride && src_read_stride == dst_stride)
+				use_stream_no_stride = true;
+			else
+				use_stream_with_stride = true;
+		}
 	}
 
 #endif
@@ -492,8 +495,10 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 			stream_data_to_memory_swapped_u16(raw_dst_span.data(), src_ptr.data(), count, attribute_src_stride);
 		else if (use_stream_with_stride)
 			stream_data_to_memory_swapped_u16_non_continuous(raw_dst_span.data(), src_ptr.data(), count, dst_stride, attribute_src_stride);
-		else
+		else if (swap_endianness)
 			copy_whole_attribute_array<be_t<u16>, u16>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
+		else
+			copy_whole_attribute_array<u16, u16>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
 
 		return;
 	}
@@ -503,8 +508,10 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 			stream_data_to_memory_swapped_u32(raw_dst_span.data(), src_ptr.data(), count, attribute_src_stride);
 		else if (use_stream_with_stride)
 			stream_data_to_memory_swapped_u32_non_continuous(raw_dst_span.data(), src_ptr.data(), count, dst_stride, attribute_src_stride);
-		else
+		else if (swap_endianness)
 			copy_whole_attribute_array<be_t<u32>, u32>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
+		else
+			copy_whole_attribute_array<u32, u32>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
 
 		return;
 	}
@@ -513,10 +520,11 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 		gsl::span<u16> dst_span = as_span_workaround<u16>(raw_dst_span);
 		for (u32 i = 0; i < count; ++i)
 		{
-			be_t<u32> src_value;
-			memcpy(&src_value,
-			    src_ptr.subspan(attribute_src_stride * i).data(),
-			    sizeof(be_t<u32>));
+			u32 src_value;
+			memcpy(&src_value, src_ptr.subspan(attribute_src_stride * i).data(), sizeof(u32));
+
+			if (swap_endianness) src_value = se_storage<u32>::swap(src_value);
+
 			const auto& decoded_vector                 = decode_cmp_vector(src_value);
 			dst_span[i * dst_stride / sizeof(u16)] = decoded_vector[0];
 			dst_span[i * dst_stride / sizeof(u16) + 1] = decoded_vector[1];
