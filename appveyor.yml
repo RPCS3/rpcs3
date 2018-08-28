@@ -22,7 +22,7 @@ install:
 - ps: | # set env vars for versioning
     $env:COMM_TAG = $(git describe --tags $(git rev-list --tags --max-count=1))
     $env:COMM_COUNT = $(git rev-list --count HEAD)
-    $env:COMM_HASH = $env:APPVEYOR_REPO_COMMIT.Substring(0,8)
+    $env:COMM_HASH = $(git rev-parse --short=8 HEAD)
 
     if ($env:APPVEYOR_PULL_REQUEST_NUMBER) {
         $env:BUILD = "rpcs3-{0}-{1}_win64.7z" -f $env:COMM_TAG, $env:COMM_HASH
