@@ -4,7 +4,7 @@ RPCS3
 [![Build Status](https://travis-ci.org/RPCS3/rpcs3.svg?branch=master)](https://travis-ci.org/RPCS3/rpcs3)
 [![Build status](https://ci.appveyor.com/api/projects/status/411c4clmiohtx7eo/branch/master?svg=true)](https://ci.appveyor.com/project/rpcs3/rpcs3/branch/master)
 
-The world's first open-source PlayStation 3 emulator/debugger written in C++ for Windows and Linux.
+The world's first open-source PlayStation 3 emulator/debugger, written in C++ for Windows and Linux.
 
 You can find some basic information in our [**website**](https://rpcs3.net/). Game info is being populated on the [**wiki**](https://wiki.rpcs3.net/).
 For discussion about this emulator and PS3 emulation, or game compatibility reports, please visit our [**forums**](https://forums.rpcs3.net) and our [**Discord server**](https://discord.me/RPCS3).
