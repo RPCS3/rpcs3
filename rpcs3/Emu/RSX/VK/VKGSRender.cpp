@@ -517,7 +517,13 @@ VKGSRender::VKGSRender() : GSRender()
 	display_handle_t display = m_frame->handle();
 
 #if !defined(_WIN32) && !defined(__APPLE__)
-	display.match([this](std::pair<Display*, Window> p) { m_display_handle = p.first; XFlush(m_display_handle); }, [](auto _) {});
+	std::visit([this](auto&& p) {
+		using T = std::decay_t<decltype(p)>;
+		if constexpr (std::is_same_v<T, std::pair<Display*, Window>>)
+		{
+			m_display_handle = p.first; XFlush(m_display_handle);
+		}
+	}, display);
 #endif
 
 	for (auto &gpu : gpus)
