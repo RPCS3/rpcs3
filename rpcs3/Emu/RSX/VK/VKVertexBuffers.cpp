@@ -236,7 +236,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 	m_vertex_layout = analyse_inputs_interleaved();
 
 	draw_command_visitor visitor(m_index_buffer_ring_info, m_vertex_layout);
-	auto result = std::apply_visitor(visitor, get_draw_command(rsx::method_registers));
+	auto result = std::visit(visitor, get_draw_command(rsx::method_registers));
 
 	auto &vertex_count = result.allocated_vertex_count;
 	auto &vertex_base = result.vertex_data_base;

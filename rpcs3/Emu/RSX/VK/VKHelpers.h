@@ -8,12 +8,12 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <variant>
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 #include <X11/Xutil.h>
 #endif
 
-#include "Utilities/variant.hpp"
 #include "Emu/RSX/GSRender.h"
 #include "Emu/System.h"
 #include "VulkanAPI.h"
@@ -1601,7 +1601,15 @@ public:
 
 		void create(display_handle_t& window_handle) override
 		{
-			window_handle.match([&](std::pair<Display*, Window> p) { display = p.first; window = p.second; }, [](auto _) {});
+			std::visit([&](auto&& p)
+			{
+				using T = std::decay_t<decltype(p)>;
+				if constexpr (std::is_same_v<T, std::pair<Display*, Window>>)
+				{
+					display = p.first;
+					window = p.second;
+				}
+			}, window_handle);
 
 			if (display == NULL)
 			{
@@ -2167,26 +2175,33 @@ public:
 #else
 			using swapchain_NATIVE = swapchain_X11;
 
-			window_handle.match(
-				[&](std::pair<Display*, Window> p)
+			std::visit([&](auto&& p)
+			{
+				using T = std::decay_t<decltype(p)>;
+
+				if constexpr (std::is_same_v<T, std::pair<Display*, Window>>)
 				{
 					VkXlibSurfaceCreateInfoKHR createInfo = {};
-					createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-					createInfo.dpy = p.first;
-					createInfo.window = p.second;
+					createInfo.sType                      = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+					createInfo.dpy                        = p.first;
+					createInfo.window                     = p.second;
 					CHECK_RESULT(vkCreateXlibSurfaceKHR(this->m_instance, &createInfo, nullptr, &surface));
 				}
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-				, [&](std::pair<wl_display*, wl_surface*> p)
+				else if constexpr (std::is_same_v<T, std::pair<wl_display*, wl_surface*>>)
 				{
 					VkWaylandSurfaceCreateInfoKHR createInfo = {};
-					createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-					createInfo.display = p.first;
-					createInfo.surface = p.second;
+					createInfo.sType                         = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+					createInfo.display                       = p.first;
+					createInfo.surface                       = p.second;
 					CHECK_RESULT(vkCreateWaylandSurfaceKHR(this->m_instance, &createInfo, nullptr, &surface));
 				}
+				else
+				{
+					static_assert(std::conditional_t<true, std::false_type, T>::value, "Unhandled window_handle type in std::variant");
+				}
 #endif
-			);
+			}, window_handle);
 #endif
 
 			uint32_t device_queues = dev.get_queue_count();

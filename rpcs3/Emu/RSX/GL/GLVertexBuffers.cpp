@@ -187,7 +187,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 	m_vertex_layout = analyse_inputs_interleaved();
 
 	//Write index buffers and count verts
-	auto result = std::apply_visitor(draw_command_visitor(*m_index_ring_buffer, m_vertex_layout), get_draw_command(rsx::method_registers));
+	auto result = std::visit(draw_command_visitor(*m_index_ring_buffer, m_vertex_layout), get_draw_command(rsx::method_registers));
 
 	auto &vertex_count = result.allocated_vertex_count;
 	auto &vertex_base = result.vertex_data_base;

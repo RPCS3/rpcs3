@@ -5,6 +5,7 @@
 #include <set>
 #include <mutex>
 #include <atomic>
+#include <variant>
 #include "GCM.h"
 #include "rsx_cache.h"
 #include "RSXTexture.h"
@@ -20,7 +21,6 @@
 #include "Capture/rsx_trace.h"
 #include "Capture/rsx_replay.h"
 #include "restore_new.h"
-#include "Utilities/variant.hpp"
 #include "define_new_memleakdetect.h"
 
 #include "Emu/Cell/lv2/sys_rsx.h"
