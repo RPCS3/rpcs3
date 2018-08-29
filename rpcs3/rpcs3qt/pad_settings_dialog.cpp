@@ -16,8 +16,6 @@
 #include "ds4_pad_handler.h"
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
-#endif
-#ifdef _MSC_VER
 #include "mm_joystick_handler.h"
 #endif
 #ifdef HAVE_LIBEVDEV
@@ -673,12 +671,10 @@ std::shared_ptr<PadHandlerBase> pad_settings_dialog::GetHandler(pad_handler type
 	case pad_handler::ds4:
 		ret_handler = std::make_unique<ds4_pad_handler>();
 		break;
-#ifdef _MSC_VER
+#ifdef _WIN32
 	case pad_handler::xinput:
 		ret_handler = std::make_unique<xinput_pad_handler>();
 		break;
-#endif
-#ifdef _WIN32
 	case pad_handler::mm:
 		ret_handler = std::make_unique<mm_joystick_handler>();
 		break;
@@ -720,7 +716,7 @@ void pad_settings_dialog::ChangeInputType()
 	// Refill the device combobox with currently available devices
 	switch (m_handler->m_type)
 	{
-#ifdef _MSC_VER
+#ifdef _WIN32
 	case pad_handler::xinput:
 	{
 		const QString name_string = qstr(m_handler->name_string());
@@ -819,12 +815,10 @@ void pad_settings_dialog::ChangeProfile()
 	case pad_handler::ds4:
 		((ds4_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
-#ifdef _MSC_VER
+#ifdef _WIN32
 	case pad_handler::xinput:
 		((xinput_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
-#endif
-#ifdef _WIN32
 	case pad_handler::mm:
 		((mm_joystick_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;

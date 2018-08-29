@@ -68,6 +68,34 @@ If you're not using precompiled libs, build the projects in *__BUILD_BEFORE* fol
 `Build > Build Solution`
 
 
+## Building on Windows (MinGW):
+
+1) Install packages
+- `pacman -S base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-yasm mingw-w64-x86_64-python2 mingw-w64-x86_64-ntldd-git mingw-w64-x86_64-qt5 mingw-w64-x86_64-openal mingw-w64-x86_64-glew git`
+2) Clone repository
+- `git clone https://github.com/RPCS3/rpcs3.git`
+3) Update submodules
+- `cd rpcs3`
+- `git submodule update --init`
+- `cd ..`
+4) Configure and compile rpcs3
+- `mkdir rpcs3_build && cd rpcs3_build`
+- `cmake -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make ../rpcs3/`
+- `mingw32-make.exe GitVersion && mingw32-make.exe discord-rpc`
+- If you use ```-DUSE_SYSTEM_FFMPEG=OFF```, run `mingw32-make ffmpeg-mingw`
+5) Build rpcs3
+- Run `mingw32-make` or `mingw32-make -jX` where X is your CPU cores.
+6) Copy dependencies
+- `cd ./bin`
+- `for l in $(ntldd.exe -R rpcs3.exe|grep mingw64|sed -e 's/^[ \t]*//'|cut -d' ' -f3);do cp $l .;done`
+7) Copy qt plugins
+- `mkdir -p ./qt/plugins/{bearer,imageformats,platforms,styles}`
+- `cp /mingw64/share/qt5/plugins/bearer/qgenericbearer.dll ./qt/plugins/bearer/`
+- `cp /mingw64/share/qt5/plugins/imageformats/{qgif.dll,qicns.dll,qico.dll,qjpeg.dll,qtga.dll,qtiff.dll,qwbmp.dll,qwebp.dll} ./qt/plugins/imageformats/`
+- `cp /mingw64/share/qt5/plugins/platforms/qwindows.dll ./qt/plugins/platforms/`
+- `cp /mingw64/share/qt5/plugins/styles/qwindowsvistastyle.dll ./qt/plugins/styles/`
+8) Run RPCS3 with `./rpcs3`
+
 
 ## Building on Linux & Mac OS:
 
