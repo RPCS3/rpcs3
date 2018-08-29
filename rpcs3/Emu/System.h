@@ -62,10 +62,8 @@ enum class pad_handler
 	null,
 	keyboard,
 	ds4,
-#ifdef _MSC_VER
-	xinput,
-#endif
 #ifdef _WIN32
+	xinput,
 	mm,
 #endif
 #ifdef HAVE_LIBEVDEV
