@@ -6,7 +6,7 @@
 #include "cellOskDialog.h"
 #include "cellMsgDialog.h"
 
-logs::channel cellOskDialog("cellOskDialog");
+LOG_CHANNEL(cellOskDialog);
 
 static char16_t s_osk_text[CELL_OSKDIALOG_STRING_SIZE];
 
@@ -133,7 +133,7 @@ s32 cellOskDialogSetLayoutMode(s32 layoutMode)
 s32 cellOskDialogGetInputText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo)
 {
 	cellOskDialog.warning("cellOskDialogGetInputText(OutputInfo=*0x%x)", OutputInfo);
-	return cellOskDialogUnloadAsync(OutputInfo); //Same but for use with cellOskDialogSetSeparateWindowOption(). TODO. 
+	return cellOskDialogUnloadAsync(OutputInfo); //Same but for use with cellOskDialogSetSeparateWindowOption(). TODO.
 }
 
 s32 cellOskDialogExtInputDeviceUnlock()

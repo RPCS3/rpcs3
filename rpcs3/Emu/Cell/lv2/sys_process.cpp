@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
@@ -25,7 +25,7 @@
 
 
 
-logs::channel sys_process("sys_process");
+LOG_CHANNEL(sys_process);
 
 u32 g_ps3_sdk_version;
 

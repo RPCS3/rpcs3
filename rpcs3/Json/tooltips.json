@@ -25,6 +25,7 @@
 			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this.\nThis is the preferred option."
 		},
 		"checkboxes": {
+			"accurateXFloat": "Fixes bugs in various games at the cost of performance.\nThis setting is only applied when SPU LLVM is active.",
 			"spuCache": "Should normally stay enabled.\nDisable this if the cache becomes too large.\nDisabling it does not remove the existing cache.",
 			"enableThreadScheduler": "Allows RPCS3 to manually schedule physical cores to run specific tasks on, instead of letting the OS handle it.\nVery useful on Windows, especially for AMD Ryzen systems where it can give huge performance gains.",
 			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen.",

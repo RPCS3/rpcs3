@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUThread.h"
@@ -26,7 +26,7 @@
 
 
 
-logs::channel sys_net("sys_net");
+LOG_CHANNEL(sys_net);
 
 static std::vector<ppu_thread*> s_to_awake;
 

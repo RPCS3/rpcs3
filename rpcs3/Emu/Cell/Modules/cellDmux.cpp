@@ -9,7 +9,7 @@
 
 #include <thread>
 
-logs::channel cellDmux("cellDmux");
+LOG_CHANNEL(cellDmux);
 
 /* Demuxer Thread Classes */
 
@@ -68,9 +68,9 @@ struct DemuxerStream
 
 	u64 get_ts(u8 c)
 	{
-		u8 v[4]; get((u32&)v); 
+		u8 v[4]; get((u32&)v);
 		return
-			(((u64)c & 0x0e) << 29) | 
+			(((u64)c & 0x0e) << 29) |
 			(((u64)v[0]) << 21) |
 			(((u64)v[1] & 0x7e) << 15) |
 			(((u64)v[2]) << 7) | ((u64)v[3] >> 1);
@@ -226,14 +226,14 @@ public:
 			{
 				break;
 			}
-			
+
 			if (!job.try_peek(task) && is_running && stream.addr)
 			{
 				// default task (demuxing) (if there is no other work)
 				be_t<u32> code;
 				be_t<u16> len;
 
-				if (!stream.peek(code)) 
+				if (!stream.peek(code))
 				{
 					// demuxing finished
 					is_running = false;
@@ -248,10 +248,10 @@ public:
 					is_working = false;
 
 					stream = {};
-					
+
 					continue;
 				}
-				
+
 				switch (code)
 				{
 				case PACK_START_CODE:
@@ -338,7 +338,7 @@ public:
 						fmt::throw_exception("End of block (PRIVATE_STREAM_1, PesHeader + fid_minor, len=%d)" HERE, len);
 					}
 					len -= pes.size + 4;
-					
+
 					u8 fid_minor;
 					if (!stream.get(fid_minor))
 					{
@@ -388,7 +388,7 @@ public:
 							if (size < frame_size + 8) break; // skip non-complete AU
 
 							if (es.isfull(frame_size + 8)) break; // skip if cannot push AU
-							
+
 							es.push_au(frame_size + 8, es.last_dts, es.last_pts, stream.userdata, false /* TODO: set correct value */, 0);
 
 							//cellDmux.notice("ATX AU pushed (ats=0x%llx, frame_size=%d)", *(be_t<u64>*)data, frame_size);
@@ -465,7 +465,7 @@ public:
 							es.cbFunc(*this, id, es.id, esMsg, es.cbArg);
 							lv2_obj::sleep(*this);
 						}
-						
+
 						if (pes.has_ts)
 						{
 							// preserve dts/pts for next AU
@@ -631,7 +631,7 @@ public:
 					es.cbFunc(*this, id, es.id, esMsg, es.cbArg);
 					lv2_obj::sleep(*this);
 				}
-				
+
 				if (es.raw_data.size())
 				{
 					cellDmux.error("dmuxFlushEs: 0x%x bytes lost (es_id=%d)", (u32)es.raw_data.size(), es.id);
@@ -651,7 +651,7 @@ public:
 				task.es.es_ptr->reset();
 				break;
 			}
-			
+
 			case dmuxClose:
 			{
 				break;
@@ -660,7 +660,7 @@ public:
 			default:
 			{
 				fmt::throw_exception("Demuxer thread error: unknown task (0x%x)" HERE, (u32)task.type);
-			}	
+			}
 			}
 		}
 
@@ -689,7 +689,7 @@ PesHeader::PesHeader(DemuxerStream& stream)
 	{
 		fmt::throw_exception("End of stream (size=%d)" HERE, size);
 	}
-	
+
 	u8 pos = 0;
 	while (pos++ < size)
 	{

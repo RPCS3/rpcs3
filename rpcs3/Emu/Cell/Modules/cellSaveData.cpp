@@ -11,7 +11,7 @@
 #include <mutex>
 #include <algorithm>
 
-logs::channel cellSaveData("cellSaveData");
+LOG_CHANNEL(cellSaveData);
 
 SaveDialogBase::~SaveDialogBase()
 {

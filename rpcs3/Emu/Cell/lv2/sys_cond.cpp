@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
@@ -11,7 +11,7 @@
 
 
 
-logs::channel sys_cond("sys_cond");
+LOG_CHANNEL(sys_cond);
 
 template<> DECLARE(ipc_manager<lv2_cond, u64>::g_ipc) {};
 

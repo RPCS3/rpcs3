@@ -12,7 +12,7 @@
 
 #include <thread>
 
-logs::channel cellGame("cellGame");
+LOG_CHANNEL(cellGame);
 
 template<>
 void fmt_class_string<CellGameError>::format(std::string& out, u64 arg)

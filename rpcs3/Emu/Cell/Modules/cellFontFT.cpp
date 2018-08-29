@@ -3,7 +3,7 @@
 
 #include "cellFontFT.h"
 
-logs::channel cellFontFT("cellFontFT");
+LOG_CHANNEL(cellFontFT);
 
 s32 cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<CellFontLibraryConfigFT> config, vm::pptr<CellFontLibrary> lib)
 {

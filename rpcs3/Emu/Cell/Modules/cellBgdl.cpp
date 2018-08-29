@@ -6,7 +6,7 @@
 
 
 
-logs::channel cellBGDL("cellBGDL");
+LOG_CHANNEL(cellBGDL);
 
 s32 cellBGDLGetInfo(vm::cptr<char> content_id, vm::ptr<CellBGDLInfo> info, s32 num)
 {

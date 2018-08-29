@@ -3,7 +3,7 @@
 
 #include "cellGame.h"
 
-logs::channel cellGameExec("cellGameExec");
+LOG_CHANNEL(cellGameExec);
 
 s32 cellGameSetExitParam(u32 execdata)
 {

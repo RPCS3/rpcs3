@@ -73,7 +73,8 @@ namespace logs
 		{
 			if (UNLIKELY(sev <= enabled))
 			{
-				message{this, sev}.broadcast(fmt, fmt::get_type_info<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
+				static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
+				message{this, sev}.broadcast(fmt, type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 			}
 		}
 
@@ -111,6 +112,8 @@ namespace logs
 	// Log level control: register channel if necessary, set channel level
 	void set_level(const std::string&, level);
 }
+
+#define LOG_CHANNEL(ch, ...) ::logs::channel ch(#ch, ##__VA_ARGS__);
 
 // Legacy:
 

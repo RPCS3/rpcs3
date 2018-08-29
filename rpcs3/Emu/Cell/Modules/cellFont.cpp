@@ -8,13 +8,13 @@
 
 #include "cellFont.h"
 
-logs::channel cellFont("cellFont");
+LOG_CHANNEL(cellFont);
 
 // Functions
 s32 cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> config)
 {
 	cellFont.warning("cellFontInitializeWithRevision(revisionFlags=0x%llx, config=*0x%x)", revisionFlags, config);
-	
+
 	if (config->fc_size < 24)
 	{
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
@@ -90,7 +90,7 @@ s32 cellFontOpenFontset(ppu_thread& ppu, vm::ptr<CellFontLibrary> library, vm::p
 	{
 		cellFont.warning("cellFontOpenFontset: Only Unicode is supported");
 	}
-	
+
 	std::string file;
 	switch((u32)fontType->type)
 	{
@@ -186,7 +186,7 @@ s32 cellFontSetFontOpenMode(u32 openMode)
 s32 cellFontCreateRenderer(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontRendererConfig> config, vm::ptr<CellFontRenderer> Renderer)
 {
 	cellFont.todo("cellFontCreateRenderer(library=*0x%x, config=*0x%x, Renderer=*0x%x)", library, config, Renderer);
-	
+
 	//Write data in Renderer
 
 	return CELL_OK;
@@ -255,7 +255,7 @@ s32 cellFontBindRenderer(vm::ptr<CellFont> font, vm::ptr<CellFontRenderer> rende
 s32 cellFontUnbindRenderer(vm::ptr<CellFont> font)
 {
 	cellFont.warning("cellFontBindRenderer(font=*0x%x)", font);
-	
+
 	if (!font->renderer_addr)
 	{
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
@@ -403,7 +403,7 @@ s32 cellFontGetCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFo
 	float scale = stbtt_ScaleForPixelHeight(font->stbfont, font->scale_y);
 	stbtt_GetCodepointBox(font->stbfont, code, &x0, &y0, &x1, &y1);
 	stbtt_GetCodepointHMetrics(font->stbfont, code, &advanceWidth, &leftSideBearing);
-	
+
 	// TODO: Add the rest of the information
 	metrics->width = (x1-x0) * scale;
 	metrics->height = (y1-y0) * scale;

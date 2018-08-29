@@ -1,6 +1,6 @@
 #pragma once
 #include <sstream>
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/RSX/GL/GLVertexProgram.h"
 #include "Emu/RSX/GL/GLFragmentProgram.h"
 

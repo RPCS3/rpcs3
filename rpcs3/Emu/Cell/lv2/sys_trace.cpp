@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/ErrorCodes.h"
@@ -7,7 +7,7 @@
 
 
 
-logs::channel sys_trace("sys_trace");
+LOG_CHANNEL(sys_trace);
 
 s32 sys_trace_create()
 {

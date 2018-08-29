@@ -4,7 +4,7 @@
 #include "cellVideoUpload.h"
 #include "cellSysutil.h"
 
-logs::channel cellVideoUpload("cellVideoUpload");
+LOG_CHANNEL(cellVideoUpload);
 
 error_code cellVideoUploadInitialize(vm::cptr<CellVideoUploadParam> pParam, vm::ptr<CellVideoUploadCallback> cb, vm::ptr<void> userdata)
 {

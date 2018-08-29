@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/bin_patch.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/PPUThread.h"
@@ -99,10 +99,8 @@ void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
 		case pad_handler::null: return "Null";
 		case pad_handler::keyboard: return "Keyboard";
 		case pad_handler::ds4: return "DualShock 4";
-#ifdef _MSC_VER
-		case pad_handler::xinput: return "XInput";
-#endif
 #ifdef _WIN32
+		case pad_handler::xinput: return "XInput";
 		case pad_handler::mm: return "MMJoystick";
 #endif
 #ifdef HAVE_LIBEVDEV
@@ -1304,7 +1302,7 @@ void Emulator::Resume()
 
 		std::string dump;
 
-		for (u32 i = 0x10000; i < 0x40000000;)
+		for (u32 i = 0x10000; i < 0x20000000;)
 		{
 			if (vm::check_addr(i))
 			{
@@ -1403,7 +1401,6 @@ void Emulator::Stop(bool restart)
 
 	LOG_NOTICE(GENERAL, "Objects cleared...");
 
-	RSXIOMem.Clear();
 	vm::close();
 
 	if (do_exit)

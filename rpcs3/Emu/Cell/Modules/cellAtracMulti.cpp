@@ -4,7 +4,7 @@
 
 #include "cellAtracMulti.h"
 
-logs::channel cellAtracMulti("cellAtracMulti");
+LOG_CHANNEL(cellAtracMulti);
 
 s32 cellAtracMultiSetDataAndGetMemSize(vm::ptr<CellAtracMultiHandle> pHandle, vm::ptr<u8> pucBufferAddr, u32 uiReadByte, u32 uiBufferByte, u32 uiOutputChNum, vm::ptr<s32> piTrackArray, vm::ptr<u32> puiWorkMemByte)
 {

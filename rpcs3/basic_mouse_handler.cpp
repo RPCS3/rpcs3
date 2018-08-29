@@ -1,6 +1,7 @@
 #include "basic_mouse_handler.h"
 
 #include <QApplication>
+#include <QCursor>
 
 void basic_mouse_handler::Init(const u32 max_connect)
 {
@@ -9,8 +10,13 @@ void basic_mouse_handler::Init(const u32 max_connect)
 	m_info.max_connect = max_connect;
 	m_info.now_connect = std::min(m_mice.size(), (size_t)max_connect);
 	m_info.info = 0; // Ownership of mouse data: 0=Application, 1=System
+	for (u32 i = 1; i < max_connect; i++)
+	{
+		m_info.status[i] = CELL_MOUSE_STATUS_DISCONNECTED;
+		m_info.mode[i] = CELL_MOUSE_INFO_TABLET_MOUSE_MODE;
+		m_info.tablet_is_supported[i] = CELL_MOUSE_INFO_TABLET_NOT_SUPPORTED;
+	}
 	m_info.status[0] = CELL_MOUSE_STATUS_CONNECTED;										// (TODO: Support for more mice)
-	for (u32 i = 1; i<max_connect; i++) m_info.status[i] = CELL_MOUSE_STATUS_DISCONNECTED;
 	m_info.vendor_id[0] = 0x1234;
 	m_info.product_id[0] = 0x1234;
 }
@@ -78,11 +84,43 @@ void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
 
 void basic_mouse_handler::MouseScroll(QWheelEvent* event)
 {
-	// Woo lads, Qt handles multidimensional scrolls. Just gonna grab the x for now. Not sure if this works. TODO: Test
-	MouseHandlerBase::Scroll(event->angleDelta().x());
+	MouseHandlerBase::Scroll(event->angleDelta().y());
 }
 
 void basic_mouse_handler::MouseMove(QMouseEvent* event)
 {
-	MouseHandlerBase::Move(event->x(), event->y());
+	if (is_time_for_update())
+	{
+		if (m_target && m_target->visibility() == QWindow::Visibility::FullScreen && m_target->isActive())
+		{
+			// get the screen dimensions
+			const QSize screen = m_target->size();
+
+			// get the center of the screen in global coordinates
+			QPoint p_center = m_target->geometry().topLeft() + QPoint(screen.width() / 2, screen.height() / 2);
+
+			// reset the mouse to the center for consistent results since edge movement won't be registered
+			QCursor::setPos(m_target->screen(), p_center);
+
+			// convert the center into screen coordinates
+			p_center = m_target->mapFromGlobal(p_center);
+
+			// current mouse position, starting at the center
+			static QPoint p_real(p_center);
+
+			// get the delta of the mouse position to the screen center
+			const QPoint p_delta = event->pos() - p_center;
+
+			// update the current position without leaving the screen borders
+			p_real.setX(std::clamp(p_real.x() + p_delta.x(), 0, screen.width()));
+			p_real.setY(std::clamp(p_real.y() + p_delta.y(), 0, screen.height()));
+
+			// pass the 'real' position and the current delta to the screen center
+			MouseHandlerBase::Move(p_real.x(), p_real.y(), true, p_delta.x(), p_delta.y());
+		}
+		else
+		{
+			MouseHandlerBase::Move(event->x(), event->y());
+		}
+	}
 }

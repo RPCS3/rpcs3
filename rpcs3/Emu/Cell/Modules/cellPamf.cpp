@@ -12,7 +12,7 @@ bool squeue_test_exit()
 	return Emu.IsStopped();
 }
 
-logs::channel cellPamf("cellPamf");
+LOG_CHANNEL(cellPamf);
 
 s32 pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
 {
@@ -20,7 +20,7 @@ s32 pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
 	verify(HERE), (ch < 16);
 	pEsFilterId.supplementalInfo1 = type == CELL_PAMF_STREAM_TYPE_AVC;
 	pEsFilterId.supplementalInfo2 = 0;
-	
+
 	switch (type)
 	{
 	case CELL_PAMF_STREAM_TYPE_AVC:
@@ -38,7 +38,7 @@ s32 pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
 		pEsFilterId.filterIdMinor = 0;
 		break;
 	}
-		
+
 	case CELL_PAMF_STREAM_TYPE_ATRAC3PLUS:
 	{
 		// code = 0xdc
@@ -46,7 +46,7 @@ s32 pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
 		pEsFilterId.filterIdMinor = ch;
 		break;
 	}
-		
+
 	case CELL_PAMF_STREAM_TYPE_PAMF_LPCM:
 	{
 		// code = 0x80
@@ -62,7 +62,7 @@ s32 pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
 		pEsFilterId.filterIdMinor = 0x30 | ch;
 		break;
 	}
-		
+
 	case CELL_PAMF_STREAM_TYPE_USER_DATA:
 	{
 		// code = 0xdd
@@ -102,7 +102,7 @@ s32 pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
 		pEsFilterId.filterIdMinor = 0x20 | ch;
 		break;
 	}
-		
+
 	default:
 	{
 		cellPamf.error("pamfStreamTypeToEsFilterId(): unknown type (%d, ch=%d)", type, ch);
@@ -149,13 +149,13 @@ u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u32 stream)
 		verify(HERE), (header.fid_major & 0xf0) == 0xe0, header.fid_minor == 0;
 		return header.fid_major % 16;
 	}
-		
+
 	case 0xdc: // ATRAC3PLUS
 	{
 		verify(HERE), header.fid_major == 0xbd, (header.fid_minor & 0xf0) == 0;
 		return header.fid_minor % 16;
 	}
-		
+
 	case 0x80: // LPCM
 	{
 		verify(HERE), header.fid_major == 0xbd, (header.fid_minor & 0xf0) == 0x40;
@@ -224,7 +224,7 @@ s32 cellPamfVerify(vm::ptr<PamfHeader> pAddr, u64 fileSize)
 s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::cptr<PamfHeader> pAddr, u64 fileSize, u32 attribute)
 {
 	cellPamf.warning("cellPamfReaderInitialize(pSelf=*0x%x, pAddr=*0x%x, fileSize=0x%llx, attribute=0x%x)", pSelf, pAddr, fileSize, attribute);
-	
+
 	if (fileSize)
 	{
 		pSelf->fileSize = fileSize;
@@ -286,7 +286,7 @@ u8 cellPamfReaderGetNumberOfStreams(vm::ptr<CellPamfReader> pSelf)
 u8 cellPamfReaderGetNumberOfSpecificStreams(vm::ptr<CellPamfReader> pSelf, u8 streamType)
 {
 	cellPamf.warning("cellPamfReaderGetNumberOfSpecificStreams(pSelf=*0x%x, streamType=%d)", pSelf, streamType);
-	
+
 	// cannot return error code
 
 	u8 counts[256] = {};
@@ -307,12 +307,12 @@ u8 cellPamfReaderGetNumberOfSpecificStreams(vm::ptr<CellPamfReader> pSelf, u8 st
 	{
 		return counts[streamType];
 	}
-		
+
 	case CELL_PAMF_STREAM_TYPE_VIDEO:
 	{
 		return counts[CELL_PAMF_STREAM_TYPE_AVC] + counts[CELL_PAMF_STREAM_TYPE_M2V];
 	}
-		
+
 	case CELL_PAMF_STREAM_TYPE_AUDIO:
 	{
 		return counts[CELL_PAMF_STREAM_TYPE_ATRAC3PLUS] + counts[CELL_PAMF_STREAM_TYPE_PAMF_LPCM] + counts[CELL_PAMF_STREAM_TYPE_AC3];
@@ -351,7 +351,7 @@ s32 cellPamfReaderSetStreamWithTypeAndChannel(vm::ptr<CellPamfReader> pSelf, u8 
 
 	for (u8 i = 0; i < pSelf->pAddr->stream_count; i++)
 	{
-		if (pamfGetStreamType(pSelf, i) == streamType) 
+		if (pamfGetStreamType(pSelf, i) == streamType)
 		{
 			if (pamfGetStreamChannel(pSelf, i) == ch)
 			{
@@ -388,7 +388,7 @@ s32 cellPamfReaderSetStreamWithTypeAndIndex(vm::ptr<CellPamfReader> pSelf, u8 st
 			}
 			break;
 		}
-			
+
 		case CELL_PAMF_STREAM_TYPE_AUDIO:
 		{
 			if (type == CELL_PAMF_STREAM_TYPE_ATRAC3PLUS || type == CELL_PAMF_STREAM_TYPE_AC3 || type == CELL_PAMF_STREAM_TYPE_PAMF_LPCM)
@@ -397,7 +397,7 @@ s32 cellPamfReaderSetStreamWithTypeAndIndex(vm::ptr<CellPamfReader> pSelf, u8 st
 			}
 			break;
 		}
-			
+
 		default:
 		{
 			if (streamType > 5)
@@ -425,7 +425,7 @@ s32 cellPamfStreamTypeToEsFilterId(u8 type, u8 ch, vm::ptr<CellCodecEsFilterId> 
 	{
 		return CELL_PAMF_ERROR_INVALID_ARG;
 	}
-	
+
 	return pamfStreamTypeToEsFilterId(type, ch, *pEsFilterId);
 }
 
@@ -524,7 +524,7 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 			info->transferCharacteristics = 0;
 			info->matrixCoefficients = 0;
 		}
-		
+
 		info->entropyCodingModeFlag = (header.AVC.x18 & 0x80) >> 7;
 		info->deblockingFilterFlag = (header.AVC.x18 & 0x40) >> 6;
 		info->minNumSlicePerPictureIdc = (header.AVC.x18 & 0x30) >> 4;
@@ -534,7 +534,7 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 		cellPamf.notice("cellPamfReaderGetStreamInfo(): CELL_PAMF_STREAM_TYPE_AVC");
 		break;
 	}
-		
+
 	case CELL_PAMF_STREAM_TYPE_M2V:
 	{
 		if (size < sizeof(CellPamfM2vInfo))
@@ -592,8 +592,8 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 		cellPamf.notice("cellPamfReaderGetStreamInfo(): CELL_PAMF_STREAM_TYPE_M2V");
 		break;
 	}
-		
-	case CELL_PAMF_STREAM_TYPE_ATRAC3PLUS: 
+
+	case CELL_PAMF_STREAM_TYPE_ATRAC3PLUS:
 	{
 		if (size < sizeof(CellPamfAtrac3plusInfo))
 		{
@@ -694,7 +694,7 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
 	}
-	
+
 	return CELL_OK;
 }
 

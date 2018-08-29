@@ -180,6 +180,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->spuLoopDetection, emu_settings::SPULoopDetection);
 	SubscribeTooltip(ui->spuLoopDetection, json_cpu_cbs["spuLoopDetection"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->accurateXFloat, emu_settings::AccurateXFloat);
+	SubscribeTooltip(ui->accurateXFloat, json_cpu_cbs["accurateXFloat"].toString());
+
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->spuBlockSize, emu_settings::SPUBlockSize);
@@ -281,6 +284,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			});
 		}
 	}
+
+	connect(ui->spu_llvm, &QAbstractButton::toggled, [this](bool checked)
+	{
+		ui->accurateXFloat->setEnabled(checked);
+	});
+
+	ui->accurateXFloat->setEnabled(ui->spu_llvm->isChecked());
 
 #ifndef LLVM_AVAILABLE
 	ui->ppu_llvm->setEnabled(false);
@@ -1222,7 +1232,7 @@ void settings_dialog::AddStylesheets()
 	}
 	else
 	{
-		LOG_WARNING(GENERAL, "Trying to set an invalid stylesheets index ", index);
+		LOG_WARNING(GENERAL, "Trying to set an invalid stylesheets index: %d (%s)", index, sstr(m_currentStylesheet));
 	}
 }
 
@@ -1284,7 +1294,7 @@ void settings_dialog::OnApplyConfig()
 
 void settings_dialog::OnApplyStylesheet()
 {
-	m_currentStylesheet = ui->combo_stylesheets->currentText();
+	m_currentStylesheet = ui->combo_stylesheets->currentData().toString();
 	xgui_settings->SetValue(gui::m_currentStylesheet, m_currentStylesheet);
 	Q_EMIT GuiStylesheetRequest(xgui_settings->GetCurrentStylesheetPath());
 }

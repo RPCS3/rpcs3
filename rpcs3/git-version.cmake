@@ -12,7 +12,7 @@ if(GIT_FOUND AND EXISTS "${SOURCE_DIR}/../.git/")
 	if(NOT ${exit_code} EQUAL 0)
 		message(WARNING "git rev-list failed, unable to include version.")
 	endif()
-	execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+	execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short=8 HEAD
 		WORKING_DIRECTORY ${SOURCE_DIR}
 		RESULT_VARIABLE exit_code
 		OUTPUT_VARIABLE GIT_VERSION_)
@@ -49,7 +49,7 @@ if(EXISTS ${GIT_VERSION_FILE})
 		REGEX "${GIT_VERSION}")
 	if(NOT "${match}" STREQUAL "")
 		set(GIT_VERSION_UPDATE "0")
-	endif()	
+	endif()
 endif()
 
 set(code_string "// This is a generated file.\n\n"

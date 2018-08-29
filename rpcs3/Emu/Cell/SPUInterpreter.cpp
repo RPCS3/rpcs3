@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Utilities/JIT.h"
 #include "Utilities/sysinfo.h"
@@ -32,8 +32,10 @@ inline __m128i sse_cmpgt_epu32(__m128i A, __m128i B)
 
 namespace asmjit
 {
+	static constexpr spu_opcode_t s_op{};
+
 	template <uint I, uint N>
-	static void build_spu_gpr_load(X86Assembler& c, X86Xmm x, const bf_t<u32, I, N>& reg, bool store = false)
+	static void build_spu_gpr_load(X86Assembler& c, X86Xmm x, const bf_t<u32, I, N>&, bool store = false)
 	{
 		static_assert(N == 7, "Invalid bitfield");
 
@@ -77,9 +79,9 @@ namespace asmjit
 	}
 
 	template <uint I, uint N>
-	static void build_spu_gpr_store(X86Assembler& c, X86Xmm x, const bf_t<u32, I, N>& reg, bool store = true)
+	static void build_spu_gpr_store(X86Assembler& c, X86Xmm x, const bf_t<u32, I, N>&, bool store = true)
 	{
-		build_spu_gpr_load(c, x, reg, store);
+		build_spu_gpr_load(c, x, bf_t<u32, I, N>{}, store);
 	}
 }
 
@@ -1682,9 +1684,9 @@ const spu_inter_func_t spu_interpreter::SHUFB = !utils::has_ssse3() ? &SHUFB_ : 
 	Label xe0 = c.newLabel();
 	Label x0f = c.newLabel();
 
-	build_spu_gpr_load(c, va, decltype(spu_opcode_t::ra)());
-	build_spu_gpr_load(c, vb, decltype(spu_opcode_t::rb)());
-	build_spu_gpr_load(c, vc, decltype(spu_opcode_t::rc)());
+	build_spu_gpr_load(c, va, s_op.ra);
+	build_spu_gpr_load(c, vb, s_op.rb);
+	build_spu_gpr_load(c, vc, s_op.rc);
 
 	if (utils::has_avx())
 	{
@@ -1723,7 +1725,7 @@ const spu_inter_func_t spu_interpreter::SHUFB = !utils::has_ssse3() ? &SHUFB_ : 
 		c.por(vt, vc);
 	}
 
-	build_spu_gpr_store(c, vt, decltype(spu_opcode_t::rt4)());
+	build_spu_gpr_store(c, vt, s_op.rt4);
 	c.mov(x86::eax, 1);
 	c.ret();
 

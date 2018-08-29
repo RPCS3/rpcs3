@@ -4,7 +4,7 @@
 #include <deque>
 #include <mutex>
 
-logs::channel sys_tty("sys_tty");
+LOG_CHANNEL(sys_tty);
 
 extern fs::file g_tty;
 extern atomic_t<s64> g_tty_size;

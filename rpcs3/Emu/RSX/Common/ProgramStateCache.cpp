@@ -329,6 +329,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 	s32 index = 0;
 	s32 program_offset = -1;
 	u32 ucode_size = 0;
+	u32 constants_size = 0;
 	u16 textures_mask = 0;
 
 	while (true)
@@ -364,6 +365,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 				//Instruction references constant, skip one slot occupied by data
 				index++;
 				ucode_size += 16;
+				constants_size += 16;
 			}
 		}
 
@@ -386,7 +388,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 		index++;
 	}
 
-	return{ (u32)program_offset, ucode_size, textures_mask };
+	return{ (u32)program_offset, ucode_size, constants_size, textures_mask };
 }
 
 size_t fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentProgram& program)

@@ -80,15 +80,15 @@ namespace rsx
 	{
 		verify(HERE), g_current_renderer;
 
-		if (!g_current_renderer->super_memory_map.first)
+		if (!g_current_renderer->local_super_memory_block.first)
 		{
 			auto block = vm::get(vm::any, 0xC0000000);
 			if (block)
 			{
-				g_current_renderer->super_memory_map.first = block->used();
-				g_current_renderer->super_memory_map.second = vm::get_super_ptr<u8>(0xC0000000, g_current_renderer->super_memory_map.first - 1);
+				g_current_renderer->local_super_memory_block.first = block->used();
+				g_current_renderer->local_super_memory_block.second = vm::get_super_ptr<u8>(0xC0000000, g_current_renderer->local_super_memory_block.first - 1);
 
-				if (!g_current_renderer->super_memory_map.second)
+				if (!g_current_renderer->local_super_memory_block.second)
 				{
 					//Disjoint allocation?
 					LOG_ERROR(RSX, "Could not initialize contiguous RSX super-memory");
@@ -100,18 +100,30 @@ namespace rsx
 			}
 		}
 
-		if (g_current_renderer->super_memory_map.second)
+		if (g_current_renderer->local_super_memory_block.second)
 		{
-			if (addr >= 0xC0000000 && (addr + len) <= (0xC0000000 + g_current_renderer->super_memory_map.first))
+			if (addr >= 0xC0000000 && (addr + len) <= (0xC0000000 + g_current_renderer->local_super_memory_block.first))
 			{
 				//RSX local
-				return { g_current_renderer->super_memory_map.second.get() + (addr - 0xC0000000) };
+				return { g_current_renderer->local_super_memory_block.second.get() + (addr - 0xC0000000) };
+			}
+		}
+
+		const auto cached = g_current_renderer->main_super_memory_block.find(addr);
+		if (cached != g_current_renderer->main_super_memory_block.end())
+		{
+			const auto& _ptr = cached->second;
+			if (_ptr.size() >= len)
+			{
+				return _ptr;
 			}
 		}
 
 		if (auto result = vm::get_super_ptr<u8>(addr, len - 1))
 		{
-			return { result };
+			weak_ptr _ptr = { result, len };
+			auto &ret = g_current_renderer->main_super_memory_block[addr] = std::move(_ptr);
+			return _ptr;
 		}
 
 		//Probably allocated as split blocks. Try to grab separate chunks
@@ -137,7 +149,9 @@ namespace rsx
 			next = region.first + region.second->size();
 			if (next >= limit)
 			{
-				return { blocks };
+				weak_ptr _ptr = { blocks };
+				auto &ret = g_current_renderer->main_super_memory_block[addr] = std::move(_ptr);
+				return ret;
 			}
 		}
 

@@ -6,7 +6,7 @@
 #include "Emu/RSX/GCM.h"
 #include "cellResc.h"
 
-logs::channel cellResc("cellResc");
+LOG_CHANNEL(cellResc);
 
 s32 cellRescInit(vm::ptr<CellRescInitConfig> initConfig)
 {

@@ -47,10 +47,6 @@ class PPUTranslator final : public cpu_translator
 	// Callable functions
 	llvm::GlobalVariable* m_call;
 
-	// Main block
-	llvm::BasicBlock* m_body;
-	llvm::BasicBlock* m_entry;
-
 	// Thread context struct
 	llvm::StructType* m_thread_type;
 

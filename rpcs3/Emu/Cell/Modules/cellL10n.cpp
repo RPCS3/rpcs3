@@ -15,7 +15,7 @@ typedef const char *HostCode;
 
 #include "cellL10n.h"
 
-logs::channel cellL10n("cellL10n");
+LOG_CHANNEL(cellL10n);
 
 // Translate code id to code name. some codepage may has another name.
 // If this makes your compilation fail, try replace the string code with one in "iconv -l"
@@ -53,8 +53,8 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 	case L10N_CODEPAGE_866:     retCode = 866;          return true;
 	case L10N_CODEPAGE_932:     retCode = 932;          return true;
 	case L10N_CODEPAGE_936:     retCode = 936;          return true; // GBK
-	case L10N_GBK:              retCode = 936;          return true; 
-	case L10N_CODEPAGE_949:     retCode = 949;          return true; // UHC 
+	case L10N_GBK:              retCode = 936;          return true;
+	case L10N_CODEPAGE_949:     retCode = 949;          return true; // UHC
 	case L10N_UHC:              retCode = 949;          return true; // UHC
 	case L10N_CODEPAGE_950:     retCode = 950;          return true;
 	case L10N_CODEPAGE_1251:    retCode = 1251;         return true; // CYRL
@@ -409,7 +409,7 @@ s32 jis2sjis()
 s32 jstrnchk(vm::cptr<u8> src, s32 src_len)
 {
 	u8 r = 0;
-	
+
 	for (u32 len = 0; len < src_len; len++)
 	{
 		if (src != vm::null)
@@ -418,14 +418,14 @@ s32 jstrnchk(vm::cptr<u8> src, s32 src_len)
 			{
 				cellL10n.warning("jstrnchk: EUCJP (src=*0x%x, src_len=*0x%x)", src, src_len);
 				r |= L10N_STR_EUCJP;
-			} 
-			else if( ((*src >=  0x81 && *src <= 0x9f) || (*src >= 0xe0 && *src <= 0xfc)) || (*src >= 0x40 && *src <= 0xfc && *src != 0x7f) ) 
+			}
+			else if( ((*src >=  0x81 && *src <= 0x9f) || (*src >= 0xe0 && *src <= 0xfc)) || (*src >= 0x40 && *src <= 0xfc && *src != 0x7f) )
 			{
 				cellL10n.warning("jstrnchk: SJIS (src=*0x%x, src_len=*0x%x)", src, src_len);
 				r |= L10N_STR_SJIS;
 			}
 			// ISO-2022-JP. (JIS X 0202) That's an inaccurate general range which (contains ASCII and UTF-8 characters?).
-			else if (*src >= 0x21 && *src <= 0x7e) 
+			else if (*src >= 0x21 && *src <= 0x7e)
 			{
 				cellL10n.warning("jstrnchk: JIS (src=*0x%x, src_len=*0x%x)", src, src_len);
 				r |= L10N_STR_JIS;
@@ -437,7 +437,7 @@ s32 jstrnchk(vm::cptr<u8> src, s32 src_len)
 			// TODO:
 			// L10N_STR_ASCII
 			// L10N_STR_UTF8
-			
+
 			// L10N_STR_UNKNOWN
 			// L10N_STR_ILLEGAL
 			// L10N_STR_ERROR
@@ -683,7 +683,7 @@ s32 EUCKRtoUHC()
 s32 UCS2toSJIS(u16 ch, vm::ptr<void> dst)
 {
 	cellL10n.todo("UCS2toSJIS(ch=%d, dst=*0x%x)", ch, dst);
-	// Should be L10N_UCS2 (16bit) not L10N_UTF8 (8bit) and L10N_SHIFT_JIS 
+	// Should be L10N_UCS2 (16bit) not L10N_UTF8 (8bit) and L10N_SHIFT_JIS
 	// return _L10nConvertCharNoResult(L10N_UTF8, &ch, sizeof(ch), L10N_CODEPAGE_932, dst);
 	return 0;
 }

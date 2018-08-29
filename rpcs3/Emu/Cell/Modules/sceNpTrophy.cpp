@@ -14,7 +14,7 @@
 
 #include "Utilities/StrUtil.h"
 
-logs::channel sceNpTrophy("sceNpTrophy");
+LOG_CHANNEL(sceNpTrophy);
 
 TrophyNotificationBase::~TrophyNotificationBase()
 {

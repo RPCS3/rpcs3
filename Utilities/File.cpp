@@ -9,6 +9,7 @@
 #include <cstring>
 #include <cerrno>
 #include <typeinfo>
+#include <map>
 
 using namespace std::literals::string_literals;
 
@@ -1470,6 +1471,122 @@ u64 fs::get_dir_size(const std::string& path)
 		}
 	}
 
+	return result;
+}
+
+fs::file fs::make_gather(std::vector<fs::file> files)
+{
+	struct gather_stream : file_base
+	{
+		u64 pos = 0;
+		u64 end = 0;
+		std::vector<file> files;
+		std::map<u64, u64> ends; // Fragment End Offset -> Index
+
+		gather_stream(std::vector<fs::file> arg)
+			: files(std::move(arg))
+		{
+			// Preprocess files
+			for (auto&& f : files)
+			{
+				end += f.size();
+				ends.emplace(end, ends.size());
+			}
+		}
+
+		~gather_stream() override
+		{
+		}
+
+		fs::stat_t stat() override
+		{
+			fs::stat_t result{};
+
+			if (!files.empty())
+			{
+				result = files[0].stat();
+			}
+
+			result.is_directory = false;
+			result.is_writable = false;
+			result.size = end;
+			return result;
+		}
+
+		bool trunc(u64 length) override
+		{
+			return false;
+		}
+
+		u64 read(void* buffer, u64 size) override
+		{
+			if (pos < end)
+			{
+				// Current pos
+				const u64 start = pos;
+
+				// Get readable size
+				if (const u64 max = std::min<u64>(size, end - pos))
+				{
+					u8* buf_out = static_cast<u8*>(buffer);
+					u64 buf_max = max;
+
+					for (auto it = ends.upper_bound(pos); it != ends.end(); ++it)
+					{
+						// Set position for the fragment
+						files[it->second].seek(pos - it->first, fs::seek_end);
+
+						const u64 count = std::min<u64>(it->first - pos, buf_max);
+						const u64 read  = files[it->second].read(buf_out, count);
+
+						buf_out += count;
+						buf_max -= count;
+						pos     += read;
+
+						if (read < count || buf_max == 0)
+						{
+							break;
+						}
+					}
+
+					return pos - start;
+				}
+			}
+
+			return 0;
+		}
+
+		u64 write(const void* buffer, u64 size) override
+		{
+			return 0;
+		}
+
+		u64 seek(s64 offset, seek_mode whence) override
+		{
+			const s64 new_pos =
+				whence == fs::seek_set ? offset :
+				whence == fs::seek_cur ? offset + pos :
+				whence == fs::seek_end ? offset + end :
+				(fmt::raw_error("fs::gather_stream::seek(): invalid whence"), 0);
+
+			if (new_pos < 0)
+			{
+				fs::g_tls_error = fs::error::inval;
+				return -1;
+			}
+
+			pos = new_pos;
+			return pos;
+		}
+
+		u64 size() override
+		{
+			return end;
+		}
+	};
+
+	fs::file result;
+	result.reset(std::make_unique<gather_stream>(std::move(files)));
 	return result;
 }
 

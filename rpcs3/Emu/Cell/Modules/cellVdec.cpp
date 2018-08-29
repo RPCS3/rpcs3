@@ -22,7 +22,7 @@ extern "C"
 
 std::mutex g_mutex_avcodec_open2;
 
-logs::channel cellVdec("cellVdec");
+LOG_CHANNEL(cellVdec);
 
 vm::gvar<s32> _cell_vdec_prx_ver; // ???
 
@@ -345,7 +345,7 @@ struct vdec_thread : ppu_thread
 								// Hack
 								cellVdec.error("Unsupported time_base.num (%d/%d, tpf=%d)", ctx->time_base.den, ctx->time_base.num, ctx->ticks_per_frame);
 								amend = u64{90000} / 30;
-								frame.frc = CELL_VDEC_FRC_30;			
+								frame.frc = CELL_VDEC_FRC_30;
 							}
 
 							next_pts += amend;
