@@ -24,9 +24,6 @@ namespace rsx
 		fragment_texture(u8 idx, std::array<u32, 0x10000 / 4> &r) : m_index(idx), registers(r) { }
 		fragment_texture() = delete;
 
-		//initialize texture registers with default values
-		void init();
-
 		// Offset
 		u32 offset() const;
 
@@ -107,9 +104,6 @@ namespace rsx
 	public:
 		vertex_texture(u8 idx, std::array<u32, 0x10000 / 4> &r) : m_index(idx), registers(r) { }
 		vertex_texture() = delete;
-
-		//initialize texture registers with default values
-		void init();
 
 		// Offset
 		u32 offset() const;
