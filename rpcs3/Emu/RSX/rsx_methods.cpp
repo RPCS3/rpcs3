@@ -1343,7 +1343,7 @@ namespace rsx
 		registers[NV4097_SET_TEXTURE_CONTROL2 + 5] = 0x2dc8;
 		registers[NV4097_SET_TEXTURE_CONTROL2 + 6] = 0x2dc8;
 		registers[NV4097_SET_TEXTURE_CONTROL2 + 7] = 0x2dc8;
-		registers[NV4097_SET_VERTEX_DATA_SCALED4S_M + 10] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 8] = 0x2dc8;
 		registers[NV4097_SET_TEXTURE_CONTROL2 + 9] = 0x2dc8;
 		registers[NV4097_SET_TEXTURE_CONTROL2 + 10] = 0x2dc8;
 		registers[NV4097_SET_TEXTURE_CONTROL2 + 11] = 0x2dc8;
