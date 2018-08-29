@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.8.2)
 
 option(WITH_GDB "WITH_GDB" OFF)
 option(WITHOUT_LLVM "WITHOUT_LLVM" OFF)
