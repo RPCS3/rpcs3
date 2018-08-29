@@ -487,8 +487,8 @@ void GLGSRender::end()
 
 	if (upload_info.index_info)
 	{
-		const GLenum index_type = std::get<0>(upload_info.index_info.value());
-		const u32 index_offset = std::get<1>(upload_info.index_info.value());
+		const GLenum index_type = std::get<0>(*upload_info.index_info);
+		const u32 index_offset = std::get<1>(*upload_info.index_info);
 		const bool restarts_valid = gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive) && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
 
 		if (gl_state.enable(restarts_valid && rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
