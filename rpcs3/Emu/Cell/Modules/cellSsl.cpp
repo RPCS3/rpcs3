@@ -7,7 +7,7 @@
 #include "Utilities/File.h"
 #include "Emu/VFS.h"
 
-logs::channel cellSsl("cellSsl");
+LOG_CHANNEL(cellSsl);
 
 
 

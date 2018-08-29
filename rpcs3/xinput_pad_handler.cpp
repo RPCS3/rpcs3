@@ -1,5 +1,5 @@
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 #include "xinput_pad_handler.h"
 
 xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)

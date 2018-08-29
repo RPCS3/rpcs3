@@ -2,7 +2,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "cellImeJp.h"
 
-logs::channel cellImeJp("cellImeJp");
+LOG_CHANNEL(cellImeJp);
 
 // Return Codes
 enum

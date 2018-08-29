@@ -8,7 +8,7 @@
 #include "pad_thread.h"
 #include "Utilities/Timer.h"
 
-logs::channel cellGem("cellGem");
+LOG_CHANNEL(cellGem);
 
 // **********************
 // * HLE helper structs *

@@ -29,7 +29,7 @@ env:
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
-      export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
+      export CXX="g++-8" CC="gcc-8" CXXFLAGS="-Wno-format-security";
     fi;
 
 install:
@@ -123,8 +123,8 @@ addons:
       # Clang 5.0 is now bundled in travis, so we no longer need the ppa version.
       #- clang-4.0
       - libedit-dev
-      - g++-5
-      - gcc-5
+      - g++-8
+      - gcc-8
       - libstdc++-5-dev
       - lib32stdc++6
       - zlib1g-dev

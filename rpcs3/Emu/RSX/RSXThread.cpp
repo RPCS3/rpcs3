@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "RSXThread.h"
@@ -8,6 +8,7 @@
 
 #include "Common/BufferUtils.h"
 #include "Common/texture_cache.h"
+#include "Common/surface_store.h"
 #include "Capture/rsx_capture.h"
 #include "rsx_methods.h"
 #include "rsx_utils.h"
@@ -28,6 +29,7 @@ class GSRender;
 bool user_asked_for_frame_capture = false;
 rsx::frame_trace_data frame_debug;
 rsx::frame_capture_data frame_capture;
+RSXIOTable RSXIOMem;
 
 extern CellGcmOffsetTable offsetTable;
 
@@ -274,6 +276,15 @@ namespace rsx
 
 	void thread::begin()
 	{
+		if (conditional_render_enabled && conditional_render_test_address)
+		{
+			// Evaluate conditional rendering test
+			zcull_ctrl->read_barrier(this, conditional_render_test_address, 4);
+			vm::ptr<CellGcmReportData> result = vm::cast(conditional_render_test_address);
+			conditional_render_test_failed = (result->value == 0);
+			conditional_render_test_address = 0;
+		}
+
 		rsx::method_registers.current_draw_clause.inline_vertex_array.resize(0);
 		in_begin_end = true;
 
@@ -566,6 +577,7 @@ namespace rsx
 				{
 					//New internal get is valid, use it
 					restore_point = internal_get.load();
+					restore_ret_addr = m_return_addr;
 				}
 				else
 				{
@@ -585,7 +597,7 @@ namespace rsx
 					}
 					else if (zcull_ctrl->has_pending())
 					{
-						zcull_ctrl->sync(this);
+						//zcull_ctrl->sync(this);
 					}
 					else
 					{
@@ -612,32 +624,29 @@ namespace rsx
 			// Validate put and get registers before reading the command
 			// TODO: Who should handle graphics exceptions??
 			u32 cmd;
+
+			if (u32 addr = RSXIOMem.RealAddr(internal_get))
 			{
-				u32 get_address;
+				cmd = vm::read32(addr);
+			}
+			else
+			{
+				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", internal_get.load(), put);
 
-				if (!RSXIOMem.getRealAddr(internal_get, get_address))
+				if (mem_faults_count >= 3)
 				{
-					LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", internal_get.load(), put);
-
-					if (mem_faults_count >= 3)
-					{
-						LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
-						internal_get = restore_point.load();
-					}
-					else
-					{
-						mem_faults_count++;
-						std::this_thread::sleep_for(10ms);
-					}
-
-					invalid_command_interrupt_raised = true;
-					continue;
+					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
+					internal_get = restore_point.load();
+					m_return_addr = restore_ret_addr;
+				}
+				else
+				{
+					mem_faults_count++;
+					std::this_thread::sleep_for(10ms);
 				}
 
-				cmd = vm::read32(get_address);
+				continue;
 			}
-
-			const u32 count = (cmd >> 18) & 0x7ff;
 
 			if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 			{
@@ -677,23 +686,28 @@ namespace rsx
 			}
 			if ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
 			{
-				m_call_stack.push(internal_get + 4);
+				if (m_return_addr != -1)
+				{
+					// Only one layer is allowed in the call stack. 
+					LOG_ERROR(RSX, "FIFO: CALL found inside a subroutine. Discarding subroutine");
+					internal_get = std::exchange(m_return_addr, -1);
+					continue;
+				}
 				u32 offs = cmd & ~3;
 				//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-				internal_get = offs;
+				m_return_addr = std::exchange(internal_get.raw(), offs) + 4;
 				continue;
 			}
 			if (cmd == RSX_METHOD_RETURN_CMD)
 			{
-				if (m_call_stack.size() == 0)
+				if (m_return_addr == -1)
 				{
 					LOG_ERROR(RSX, "FIFO: RET found without corresponding CALL. Discarding queue");
 					internal_get = put;
 					continue;
 				}
 
-				u32 get = m_call_stack.top();
-				m_call_stack.pop();
+				u32 get = std::exchange(m_return_addr, -1);
 				//LOG_WARNING(RSX, "rsx return(0x%x)", get);
 				internal_get = get;
 				continue;
@@ -709,6 +723,16 @@ namespace rsx
 				internal_get += 4;
 				continue;
 			}
+			if (cmd & 0x3)
+			{
+				// TODO: Check for more invalid bits combinations
+				LOG_ERROR(RSX, "FIFO: Illegal command(0x%x) was executed. Resetting...", cmd);
+				internal_get = restore_point.load();
+				m_return_addr = restore_ret_addr;
+				continue;
+			}
+
+			u32 count = (cmd >> 18) & 0x7ff;
 
 			//Validate the args ptr if the command attempts to read from it
 			const u32 args_address = RSXIOMem.RealAddr(internal_get + 4);
@@ -721,6 +745,7 @@ namespace rsx
 				{
 					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
 					internal_get = restore_point.load();
+					m_return_addr = restore_ret_addr;
 				}
 				else
 				{
@@ -728,7 +753,6 @@ namespace rsx
 					std::this_thread::sleep_for(10ms);
 				}
 
-				invalid_command_interrupt_raised = true;
 				continue;
 			}
 
@@ -736,21 +760,13 @@ namespace rsx
 			mem_faults_count = 0;
 
 			auto args = vm::ptr<u32>::make(args_address);
-			invalid_command_interrupt_raised = false;
-			bool unaligned_command = false;
-
 			u32 first_cmd = (cmd & 0xfffc) >> 2;
 
-			if (cmd & 0x3)
+			// Stop command execution if put will be equal to get ptr during the execution itself 
+			if (count * 4 + 4 > put - internal_get)
 			{
-				LOG_WARNING(RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
-				unaligned_command = true;
+				count = (put - internal_get) / 4 - 1;
 			}
-
-			// Not sure if this is worth trying to fix, but if it happens, its bad
-			// so logging it until its reported
-			if (internal_get < put && ((internal_get + (count + 1) * 4) > put))
-				LOG_ERROR(RSX, "Get pointer jumping over put pointer! This is bad!");
 
 			if (performance_counters.state != FIFO_state::running)
 			{
@@ -776,7 +792,7 @@ namespace rsx
 				bool execute_method_call = true;
 
 				//TODO: Flatten draw calls when multidraw is not supported to simplify checking in the end() methods
-				if (supports_multidraw && !g_cfg.video.disable_FIFO_reordering)
+				if (supports_multidraw && !g_cfg.video.disable_FIFO_reordering && !capture_current_frame)
 				{
 					//TODO: Make this cleaner
 					bool flush_commands_flag = has_deferred_call;
@@ -976,18 +992,11 @@ namespace rsx
 
 				if (invalid_command_interrupt_raised)
 				{
+					invalid_command_interrupt_raised = false;
+
 					//Skip the rest of this command
 					break;
 				}
-			}
-
-			if (unaligned_command && invalid_command_interrupt_raised)
-			{
-				//This is almost guaranteed to be heap corruption at this point
-				//Ignore the rest of the chain
-				LOG_ERROR(RSX, "FIFO contents may be corrupted. Resetting...");
-				internal_get = restore_point.load();
-				continue;
 			}
 
 			internal_get += (count + 1) * 4;
@@ -1199,10 +1208,19 @@ namespace rsx
 		}
 	}
 
-	u64 thread::timestamp() const
+	u64 thread::timestamp()
 	{
 		// Get timestamp, and convert it from microseconds to nanoseconds
-		return get_system_time() * 1000;
+		const u64 t = get_system_time() * 1000;
+		if (t != timestamp_ctrl)
+		{
+			timestamp_ctrl = t;
+			timestamp_subvalue = 0;
+			return t;
+		}
+
+		timestamp_subvalue += 10;
+		return t + timestamp_subvalue;
 	}
 
 	gsl::span<const gsl::byte> thread::get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const
@@ -1356,6 +1374,24 @@ namespace rsx
 				for (const auto& range : m_invalidated_memory_ranges)
 				{
 					on_invalidate_memory_range(range.first, range.second);
+
+					// Clean the main memory super_ptr cache if invalidated
+					const auto range_end = range.first + range.second;
+					for (auto It = main_super_memory_block.begin(); It != main_super_memory_block.end();)
+					{
+						const auto mem_start = It->first;
+						const auto mem_end = mem_start + It->second.size();
+						const bool overlaps = (mem_start < range_end && range.first < mem_end);
+
+						if (overlaps)
+						{
+							It = main_super_memory_block.erase(It);
+						}
+						else
+						{
+							It++;
+						}
+					}
 				}
 
 				m_invalidated_memory_ranges.clear();
@@ -1434,6 +1470,240 @@ namespace rsx
 		u32 m_context_dma_z = rsx::method_registers.surface_z_dma();
 		u32 offset_zeta = rsx::method_registers.surface_z_offset();
 		return rsx::get_address(offset_zeta, m_context_dma_z);
+	}
+
+	framebuffer_layout thread::get_framebuffer_layout(rsx::framebuffer_creation_context context)
+	{
+		framebuffer_layout layout;
+		memset(&layout, 0, sizeof(layout));
+
+		layout.ignore_change = true;
+		layout.width = rsx::method_registers.surface_clip_width();
+		layout.height = rsx::method_registers.surface_clip_height();
+
+		framebuffer_status_valid = false;
+		m_framebuffer_state_contested = false;
+		m_framebuffer_contest_type = context;
+
+		if (layout.width == 0 || layout.height == 0)
+		{
+			LOG_TRACE(RSX, "Invalid framebuffer setup, w=%d, h=%d", layout.width, layout.height);
+			return layout;
+		}
+
+		const u16 clip_x = rsx::method_registers.surface_clip_origin_x();
+		const u16 clip_y = rsx::method_registers.surface_clip_origin_y();
+
+		layout.color_addresses = get_color_surface_addresses();
+		layout.zeta_address = get_zeta_surface_address();
+		layout.zeta_pitch = rsx::method_registers.surface_z_pitch();
+		layout.color_pitch =
+		{
+			rsx::method_registers.surface_a_pitch(),
+			rsx::method_registers.surface_b_pitch(),
+			rsx::method_registers.surface_c_pitch(),
+			rsx::method_registers.surface_d_pitch(),
+		};
+
+		layout.color_format = rsx::method_registers.surface_color();
+		layout.depth_format = rsx::method_registers.surface_depth_fmt();
+		layout.target = rsx::method_registers.surface_color_target();
+
+		const auto aa_mode = rsx::method_registers.surface_antialias();
+		const u32 aa_factor_u = (aa_mode == rsx::surface_antialiasing::center_1_sample) ? 1 : 2;
+		const u32 aa_factor_v = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
+
+		// NOTE: Its is possible that some renders are done on a swizzled context. Pitch is meaningless in that case
+		// Seen in Nier (color) and GT HD concept (z buffer)
+		// Restriction is that the dimensions are powers of 2. Also, dimensions are passed via log2w and log2h entries
+		const auto required_zeta_pitch = std::max<u32>((u32)(layout.depth_format == rsx::surface_depth_format::z16 ? layout.width * 2 : layout.width * 4) * aa_factor_u, 64u);
+		const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(layout.color_format, layout.width) * aa_factor_u, 64u);
+		const bool color_write_enabled = (context & rsx::framebuffer_creation_context::context_clear_color) ? true : rsx::method_registers.color_write_enabled();
+		const bool depth_write_enabled = (context & rsx::framebuffer_creation_context::context_clear_depth) ? true : rsx::method_registers.depth_write_enabled();
+		const auto lg2w = rsx::method_registers.surface_log2_width();
+		const auto lg2h = rsx::method_registers.surface_log2_height();
+		const auto clipw_log2 = (u32)floor(log2(layout.width));
+		const auto cliph_log2 = (u32)floor(log2(layout.height));
+
+		const bool stencil_test_enabled = layout.depth_format == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
+		const bool depth_test_enabled = rsx::method_registers.depth_test_enabled();
+		const bool ignore_depth = (context == rsx::framebuffer_creation_context::context_clear_color);
+		const bool ignore_color = (context == rsx::framebuffer_creation_context::context_clear_depth);
+
+		if (layout.zeta_address)
+		{
+			if (!depth_test_enabled &&
+				!stencil_test_enabled &&
+				layout.target != rsx::surface_target::none)
+			{
+				// Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
+				const bool is_depth_clear = !!(context & rsx::framebuffer_creation_context::context_clear_depth);
+				if (!is_depth_clear)
+				{
+					layout.zeta_address = 0;
+					m_framebuffer_state_contested = true;
+				}
+			}
+
+			if (layout.zeta_address && layout.zeta_pitch < required_zeta_pitch)
+			{
+				if (lg2w < clipw_log2 || lg2h < cliph_log2)
+				{
+					// Cannot fit
+					layout.zeta_address = 0;
+
+					if (lg2w > 0 || lg2h > 0)
+					{
+						// Something was actually declared for the swizzle context dimensions
+						LOG_WARNING(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, layout.width, layout.height);
+					}
+				}
+				else
+				{
+					LOG_TRACE(RSX, "Swizzled context depth surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, layout.width, layout.height);
+				}
+			}
+
+			if (layout.zeta_address)
+			{
+				// Still exists? Unlikely to get discarded
+				layout.actual_zeta_pitch = std::max(layout.zeta_pitch, required_zeta_pitch);
+			}
+		}
+
+		for (const auto &index : rsx::utility::get_rtt_indexes(layout.target))
+		{
+			if (layout.color_pitch[index] < required_color_pitch)
+			{
+				if (lg2w < clipw_log2 || lg2h < cliph_log2)
+				{
+					layout.color_addresses[index] = 0;
+
+					if (lg2w > 0 || lg2h > 0)
+					{
+						// Something was actually declared for the swizzle context dimensions
+						LOG_WARNING(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, layout.width, layout.height);
+					}
+				}
+				else
+				{
+					LOG_TRACE(RSX, "Swizzled context color surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, layout.width, layout.height);
+				}
+			}
+
+			if (layout.zeta_address && (layout.color_addresses[index] == layout.zeta_address))
+			{
+				LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, color_index=%d, zeta_pitch = %d, color_pitch=%d, context=%d",
+					layout.zeta_address, index, layout.zeta_pitch, layout.color_pitch[index], (u32)context);
+
+				// TODO: Research clearing both depth AND color
+				// TODO: If context is creation_draw, deal with possibility of a lost buffer clear
+				if (!ignore_depth &&
+					(ignore_color || depth_test_enabled || stencil_test_enabled ||
+					(!color_write_enabled && depth_write_enabled)))
+				{
+					// Use address for depth data
+					layout.color_addresses[index] = 0;
+				}
+				else
+				{
+					// Use address for color data
+					layout.zeta_address = 0;
+					m_framebuffer_state_contested = true;
+				}
+			}
+
+			if (layout.color_addresses[index])
+			{
+				layout.actual_color_pitch[index] = std::max(layout.color_pitch[index], required_color_pitch);
+				framebuffer_status_valid = true;
+			}
+		}
+
+		if (!framebuffer_status_valid && !layout.zeta_address)
+		{
+			LOG_WARNING(RSX, "Framebuffer setup failed. Draw calls may have been lost");
+			return layout;
+		}
+
+		// At least one attachment exists
+		framebuffer_status_valid = true;
+
+		// Window (raster) offsets
+		const auto window_offset_x = rsx::method_registers.window_offset_x();
+		const auto window_offset_y = rsx::method_registers.window_offset_y();
+		const auto window_clip_width = rsx::method_registers.window_clip_horizontal();
+		const auto window_clip_height = rsx::method_registers.window_clip_vertical();
+
+		const auto bpp = get_format_block_size_in_bytes(layout.color_format);
+
+		if (window_offset_x || window_offset_y)
+		{
+			// Window offset is what affects the raster position!
+			// Tested with Turbo: Super stunt squad that only changes the window offset to declare new framebuffers
+			// Sampling behavior clearly indicates the addresses are expected to have changed
+			if (auto clip_type = rsx::method_registers.window_clip_type())
+				LOG_ERROR(RSX, "Unknown window clip type 0x%X" HERE, clip_type);
+
+			for (const auto &index : rsx::utility::get_rtt_indexes(layout.target))
+			{
+				if (layout.color_addresses[index])
+				{
+					const u32 window_offset_bytes = (std::max<u32>(layout.color_pitch[index], required_color_pitch) * window_offset_y) + ((aa_factor_u * bpp) * window_offset_x);
+					layout.color_addresses[index] += window_offset_bytes;
+				}
+			}
+
+			if (layout.zeta_address)
+			{
+				const auto depth_bpp = (layout.depth_format == rsx::surface_depth_format::z16) ? 2 : 4;
+				layout.zeta_address += (std::max<u32>(layout.zeta_pitch, required_zeta_pitch) * window_offset_y) + ((aa_factor_u * depth_bpp) * window_offset_x);
+			}
+		}
+
+		if ((window_clip_width && window_clip_width < layout.width) ||
+			(window_clip_height && window_clip_height < layout.height))
+		{
+			LOG_ERROR(RSX, "Unexpected window clip dimensions: window_clip=%dx%d, surface_clip=%dx%d",
+				window_clip_width, window_clip_height, layout.width, layout.height);
+		}
+
+		layout.aa_mode = aa_mode;
+		layout.aa_factors[0] = aa_factor_u;
+		layout.aa_factors[1] = aa_factor_v;
+
+		bool really_changed = false;
+
+		for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
+		{
+			if (m_surface_info[i].address != layout.color_addresses[i])
+			{
+				really_changed = true;
+				break;
+			}
+
+			if (layout.color_addresses[i])
+			{
+				if (m_surface_info[i].width != layout.width ||
+					m_surface_info[i].height != layout.height)
+				{
+					really_changed = true;
+					break;
+				}
+			}
+		}
+
+		if (!really_changed)
+		{
+			if (layout.zeta_address == m_depth_surface_info.address)
+			{
+				// Same target is reused
+				return layout;
+			}
+		}
+
+		layout.ignore_change = false;
+		return layout;
 	}
 
 	void thread::get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors, bool skip_textures, bool skip_vertex_inputs)
@@ -1642,7 +1912,7 @@ namespace rsx
 					block.base_offset = base_address;
 					block.attribute_stride = info.stride();
 					block.memory_location = info.offset() >> 31;
-					block.locations.reserve(4);
+					block.locations.reserve(8);
 					block.locations.push_back(index);
 					block.min_divisor = info.frequency();
 					block.all_modulus = !!(frequency_divider_mask & (1 << index));
@@ -1790,7 +2060,10 @@ namespace rsx
 					}
 				}
 
-				result.texture_scale[i][3] = (f32)texture_control;
+#ifdef __APPLE__
+				texture_control |= (sampler_descriptors[i]->encoded_component_map() << 16);
+#endif
+				result.texture_scale[i][3] = (f32&)texture_control;
 			}
 		}
 
@@ -1979,22 +2252,22 @@ namespace rsx
 
 	u32 thread::ReadIO32(u32 addr)
 	{
-		u32 value;
-
-		if (!RSXIOMem.Read32(addr, &value))
+		if (u32 ea = RSXIOMem.RealAddr(addr))
 		{
-			fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
+			return vm::read32(ea);
 		}
 
-		return value;
+		fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
 	}
 
 	void thread::WriteIO32(u32 addr, u32 value)
 	{
-		if (!RSXIOMem.Write32(addr, value))
+		if (u32 ea = RSXIOMem.RealAddr(addr))
 		{
-			fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
+			return vm::write32(ea, value);
 		}
+
+		fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
 	}
 
 	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 vertex_count)
@@ -2326,7 +2599,7 @@ namespace rsx
 
 		if (zcull_ctrl->has_pending())
 		{
-			LOG_ERROR(RSX, "Dangling reports found, discarding...");
+			LOG_TRACE(RSX, "Dangling reports found, discarding...");
 			zcull_ctrl->sync(this);
 		}
 
@@ -2424,30 +2697,31 @@ namespace rsx
 
 	void thread::on_notify_memory_unmapped(u32 base_address, u32 size)
 	{
+		if (!m_rsx_thread_exiting && base_address < 0xC0000000)
 		{
-			s32 io_addr = RSXIOMem.getMappedAddress(base_address);
-			if (io_addr >= 0)
+			u32 ea = base_address >> 20, io = RSXIOMem.io[ea];
+
+			if (io < 512)
 			{
 				if (!isHLE)
 				{
-					const u64 unmap_key = u64((1ull << (size >> 20)) - 1) << ((io_addr >> 20) & 0x3f);
-					const u64 gcm_flag = 0x100000000ull << (io_addr >> 26);
+					const u64 unmap_key = u64((1ull << (size >> 20)) - 1) << (io & 0x3f);
+					const u64 gcm_flag = 0x100000000ull << (io >> 6);
 					sys_event_port_send(fxm::get<SysRsxConfig>()->rsx_event_port, 0, gcm_flag, unmap_key);
 				}
 				else
 				{
-					const u32 end = (base_address + size) >> 20;
-					for (base_address >>= 20, io_addr >>= 20; base_address < end;) 
+					for (const u32 end = ea + (size >> 20); ea < end;) 
 					{
-						offsetTable.ioAddress[base_address++] = 0xFFFF;
-						offsetTable.eaAddress[io_addr++] = 0xFFFF;
+						offsetTable.ioAddress[ea++] = 0xFFFF;
+						offsetTable.eaAddress[io++] = 0xFFFF;
 					}
 				}
 			}
-		}
 
-		writer_lock lock(m_mtx_task);
-		m_invalidated_memory_ranges.push_back({ base_address, size });
+			writer_lock lock(m_mtx_task);
+			m_invalidated_memory_ranges.push_back({ base_address, size });
+		}
 	}
 
 	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!
@@ -2568,7 +2842,7 @@ namespace rsx
 				if (!It->sink)
 				{
 					It->counter_tag = m_statistics_tag_id;
-					It->due_tsc = m_tsc + m_cycles_delay;
+					It->due_tsc = get_system_time() + m_cycles_delay;
 					It->sink = sink;
 					It->type = type;
 
@@ -2631,7 +2905,7 @@ namespace rsx
 				}
 
 				//All slots are occupied, try to pop the earliest entry
-				m_tsc += max_zcull_cycles_delay;
+				m_tsc += max_zcull_delay_us;
 				update(ptimer);
 
 				retries++;
@@ -2670,7 +2944,7 @@ namespace rsx
 			if (m_current_task)
 				m_current_task->num_draws++;
 
-			m_cycles_delay = max_zcull_cycles_delay;
+			m_cycles_delay = max_zcull_delay_us;
 		}
 
 		void ZCULL_control::write(vm::addr_t sink, u32 timestamp, u32 type, u32 value)
@@ -2720,7 +2994,8 @@ namespace rsx
 					{
 						verify(HERE), query->pending;
 
-						if (!result && query->num_draws)
+						const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
+						if (implemented && !result && query->num_draws)
 						{
 							get_occlusion_query_result(query);
 
@@ -2782,15 +3057,35 @@ namespace rsx
 			}
 
 			//Critical, since its likely a WAIT_FOR_IDLE type has been processed, all results are considered available
-			m_cycles_delay = min_zcull_cycles_delay;
+			m_cycles_delay = min_zcull_delay_us;
+			m_tsc = std::max(m_tsc, get_system_time());
 		}
 
-		void ZCULL_control::update(::rsx::thread* ptimer)
+		void ZCULL_control::update(::rsx::thread* ptimer, u32 sync_address)
 		{
-			m_tsc++;
-
 			if (m_pending_writes.empty())
+			{
 				return;
+			}
+
+			const auto& front = m_pending_writes.front();
+			if (!front.sink)
+			{
+				// No writables in queue, abort
+				return;
+			}
+
+			// Update timestamp and proceed with processing only if there is work to be done
+			m_tsc = std::max(m_tsc, get_system_time());
+
+			if (!sync_address)
+			{
+				if (m_tsc < front.due_tsc)
+				{
+					// Avoid spamming backend with report status updates
+					return;
+				}
+			}
 
 			u32 stat_tag_to_remove = m_statistics_tag_id;
 			u32 processed = 0;
@@ -2811,13 +3106,21 @@ namespace rsx
 				auto query = writer.query;
 				u32 result = m_statistics_map[writer.counter_tag];
 
+				const bool force_read = (sync_address != 0);
+				if (force_read && writer.sink == sync_address)
+				{
+					// Forced reads end here
+					sync_address = 0;
+				}
+
 				if (query)
 				{
 					verify(HERE), query->pending;
 
-					if (UNLIKELY(writer.due_tsc < m_tsc))
+					const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
+					if (force_read || writer.due_tsc < m_tsc)
 					{
-						if (!result && query->num_draws)
+						if (implemented && !result && query->num_draws)
 						{
 							get_occlusion_query_result(query);
 
@@ -2835,12 +3138,7 @@ namespace rsx
 					}
 					else
 					{
-						if (result || !query->num_draws)
-						{
-							//Not necessary to read the result anymore
-							discard_occlusion_query(query);
-						}
-						else
+						if (implemented && !result && query->num_draws)
 						{
 							//Maybe we get lucky and results are ready
 							if (check_occlusion_query_status(query))
@@ -2857,6 +3155,11 @@ namespace rsx
 								//Too early; abort
 								break;
 							}
+						}
+						else
+						{
+							//Not necessary to read the result anymore
+							discard_occlusion_query(query);
 						}
 					}
 
@@ -2904,13 +3207,19 @@ namespace rsx
 				return;
 
 			const auto memory_end = memory_address + memory_range;
+			u32 sync_address = 0;
+
 			for (const auto &writer : m_pending_writes)
 			{
 				if (writer.sink >= memory_address && writer.sink < memory_end)
 				{
-					sync(ptimer);
-					return;
+					sync_address = writer.sink;
 				}
+			}
+
+			if (sync_address)
+			{
+				update(ptimer, sync_address);
 			}
 		}
 	}

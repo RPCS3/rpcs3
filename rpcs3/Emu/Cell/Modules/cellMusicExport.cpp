@@ -4,7 +4,7 @@
 
 
 
-logs::channel cellMusicExport("cellMusicExport");
+LOG_CHANNEL(cellMusicExport);
 
 // Return Codes
 enum

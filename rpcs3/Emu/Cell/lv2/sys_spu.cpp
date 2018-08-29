@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
@@ -17,7 +17,7 @@
 
 
 
-logs::channel sys_spu("sys_spu");
+LOG_CHANNEL(sys_spu);
 
 void sys_spu_image::load(const fs::file& stream)
 {

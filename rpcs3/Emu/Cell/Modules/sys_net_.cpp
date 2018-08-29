@@ -6,7 +6,7 @@
 
 
 
-logs::channel libnet("libnet");
+LOG_CHANNEL(libnet);
 
 struct sys_net_tls_data
 {

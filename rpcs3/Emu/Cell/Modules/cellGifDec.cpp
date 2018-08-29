@@ -9,7 +9,7 @@
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "cellGifDec.h"
 
-logs::channel cellGifDec("cellGifDec");
+LOG_CHANNEL(cellGifDec);
 
 // cellGifDec aliases (only for cellGifDec.cpp)
 using PPMainHandle = vm::pptr<GifDecoder>;
@@ -85,7 +85,7 @@ s32 cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo inf
 	const u32& fd = subHandle->fd;
 	const u64& fileSize = subHandle->fileSize;
 	CellGifDecInfo& current_info = subHandle->info;
-	
+
 	// Write the header to buffer
 	u8 buffer[13];
 
@@ -121,7 +121,7 @@ s32 cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo inf
 	current_info.SPixelAspectRatio       = buffer[12];
 
 	*info = current_info;
-	
+
 	return CELL_OK;
 }
 
@@ -168,7 +168,7 @@ s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u
 
 	const u32& fd = subHandle->fd;
 	const u64& fileSize = subHandle->fileSize;
-	const CellGifDecOutParam& current_outParam = subHandle->outParam; 
+	const CellGifDecOutParam& current_outParam = subHandle->outParam;
 
 	//Copy the GIF file to a buffer
 	std::unique_ptr<u8[]> gif(new u8[fileSize]);
@@ -251,14 +251,14 @@ s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u
 			uint* img = (uint*)new char[image_size];
 			uint* source_current = (uint*)&(image.get()[0]);
 			uint* dest_current = img;
-			for (uint i = 0; i < image_size / nComponents; i++) 
+			for (uint i = 0; i < image_size / nComponents; i++)
 			{
 				uint val = *source_current;
 				*dest_current = (val >> 24) | (val << 8); // set alpha (A8) as leftmost byte
 				source_current++;
 				dest_current++;
 			}
-			memcpy(data.get_ptr(), img, image_size); 
+			memcpy(data.get_ptr(), img, image_size);
 			delete[] img;
 		}
 	}
@@ -306,7 +306,7 @@ DECLARE(ppu_module_manager::cellGifDec)("cellGifDec", []()
 	REG_FUNC(cellGifDec, cellGifDecDecodeData);
 	REG_FUNC(cellGifDec, cellGifDecClose);
 	REG_FUNC(cellGifDec, cellGifDecDestroy);
-	
+
 	REG_FUNC(cellGifDec, cellGifDecExtOpen);
 	REG_FUNC(cellGifDec, cellGifDecExtReadHeader);
 	REG_FUNC(cellGifDec, cellGifDecExtSetParameter);

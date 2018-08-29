@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
@@ -11,7 +11,7 @@
 
 
 
-logs::channel sys_ppu_thread("sys_ppu_thread");
+LOG_CHANNEL(sys_ppu_thread);
 
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {

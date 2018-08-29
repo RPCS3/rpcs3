@@ -2,7 +2,7 @@
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
 #include "D3D12RenderTargetSets.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/RSX/GSRender.h"
 #include "../rsx_methods.h"

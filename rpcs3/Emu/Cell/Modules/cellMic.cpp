@@ -7,7 +7,7 @@
 #include <Emu/Cell/lv2/sys_event.h>
 #include <thread>
 
-logs::channel cellMic("cellMic");
+LOG_CHANNEL(cellMic);
 
 void mic_thread::on_init(const std::shared_ptr<void>& _this)
 {

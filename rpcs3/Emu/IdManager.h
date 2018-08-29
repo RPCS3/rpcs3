@@ -25,7 +25,7 @@ namespace id_manager
 	};
 
 	template <typename T>
-	struct id_traits<T, void_t<decltype(&T::id_base), decltype(&T::id_step), decltype(&T::id_count)>>
+	struct id_traits<T, std::void_t<decltype(&T::id_base), decltype(&T::id_step), decltype(&T::id_count)>>
 	{
 		static const u32 base    = T::id_base;
 		static const u32 step    = T::id_step;
@@ -83,7 +83,7 @@ namespace id_manager
 	};
 
 	template <typename T, typename T2>
-	struct id_verify<T, T2, void_t<typename T2::id_type>> : std::integral_constant<bool, std::is_same<T, typename T2::id_type>::value>
+	struct id_verify<T, T2, std::void_t<typename T2::id_type>> : std::integral_constant<bool, std::is_same<T, typename T2::id_type>::value>
 	{
 		// If T2 contains id_type type, T must be equal to it
 	};
@@ -427,7 +427,7 @@ public:
 			func(*ptr);
 			return ptr;
 		}
-		
+
 		return nullptr;
 	}
 
@@ -537,7 +537,7 @@ public:
 					result++;
 				}
 			}
-		}	
+		}
 
 		return result;
 	}
@@ -690,7 +690,7 @@ class fxm
 public:
 	// Initialize object manager
 	static void init();
-	
+
 	// Remove all objects
 	static void clear();
 

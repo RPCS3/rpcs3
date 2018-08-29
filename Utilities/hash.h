@@ -9,19 +9,43 @@ namespace rpcs3
 		return static_cast<size_t>(value);
 	}
 
-	template<typename T>
-	static size_t hash_struct(const T& value)
+	template<typename T, typename U>
+	static size_t hash_struct_base(const T& value)
 	{
 		// FNV 64-bit
 		size_t result = 14695981039346656037ull;
-		const unsigned char *bytes = reinterpret_cast<const unsigned char*>(&value);
+		const U *bits = reinterpret_cast<const U*>(&value);
 
-		for (size_t n = 0; n < sizeof(T); ++n)
+		for (size_t n = 0; n < (sizeof(T) / sizeof(U)); ++n)
 		{
-			result ^= bytes[n];
+			result ^= bits[n];
 			result *= 1099511628211ull;
 		}
 
 		return result;
+	}
+
+	template<typename T>
+	static size_t hash_struct(const T& value)
+	{
+		// TODO: use c++17 if constexpr
+		static constexpr auto block_sz = sizeof(T);
+
+		if ((block_sz & 0x7) == 0)
+		{
+			return hash_struct_base<T, u64>(value);
+		}
+
+		if ((block_sz & 0x3) == 0)
+		{
+			return hash_struct_base<T, u32>(value);
+		}
+
+		if ((block_sz & 0x1) == 0)
+		{
+			return hash_struct_base<T, u16>(value);
+		}
+
+		return hash_struct_base<T, u8>(value);
 	}
 }

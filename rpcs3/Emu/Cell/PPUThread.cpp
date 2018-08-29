@@ -3,7 +3,7 @@
 #include "Utilities/sysinfo.h"
 #include "Utilities/JIT.h"
 #include "Crypto/sha1.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "PPUThread.h"
@@ -1317,6 +1317,7 @@ extern void ppu_initialize(const ppu_module& info)
 			if (auto sc = ppu_get_syscall(index))
 			{
 				link_table.emplace(fmt::format("%s", ppu_syscall_code(index)), (u64)sc);
+				link_table.emplace(fmt::format("syscall_%u", index), (u64)sc);
 			}
 		}
 

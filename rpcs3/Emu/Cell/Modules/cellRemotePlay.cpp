@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellRemotePlay("cellRemotePlay");
+LOG_CHANNEL(cellRemotePlay);
 
 s32 cellRemotePlayGetStatus()
 {

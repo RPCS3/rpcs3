@@ -232,7 +232,7 @@ namespace rsx
 		case cull_face::front: return "front";
 		case cull_face::front_and_back: return "front and back";
 		}
-		fmt::throw_exception("Unexpected enum found" HERE);
+		return "Unknown cull face value";
 	}
 
 	std::string to_string(surface_target target)
@@ -825,17 +825,6 @@ rsx::front_face rsx::to_front_face(u16 in)
 	case CELL_GCM_CCW: return rsx::front_face::ccw;
 	}
 	fmt::throw_exception("Unknown front face 0x%x" HERE, in);
-}
-
-rsx::cull_face rsx::to_cull_face(u16 in)
-{
-	switch (in)
-	{
-	case CELL_GCM_FRONT_AND_BACK: return rsx::cull_face::front_and_back;
-	case CELL_GCM_FRONT: return rsx::cull_face::front;
-	case CELL_GCM_BACK: return rsx::cull_face::back;
-	}
-	fmt::throw_exception("Unknown cull face 0x%x" HERE, in);
 }
 
 enum

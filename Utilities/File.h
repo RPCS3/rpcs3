@@ -625,4 +625,6 @@ namespace fs
 
 		return false;
 	}
+
+	file make_gather(std::vector<file>);
 }

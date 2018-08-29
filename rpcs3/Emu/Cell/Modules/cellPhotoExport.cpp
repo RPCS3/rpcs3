@@ -4,7 +4,7 @@
 
 
 
-logs::channel cellPhotoExport("cellPhotoExport");
+LOG_CHANNEL(cellPhotoExport);
 
 // Return Codes
 enum

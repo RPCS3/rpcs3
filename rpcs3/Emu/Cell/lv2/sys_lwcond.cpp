@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
@@ -10,7 +10,7 @@
 
 
 
-logs::channel sys_lwcond("sys_lwcond");
+LOG_CHANNEL(sys_lwcond);
 
 extern u64 get_system_time();
 

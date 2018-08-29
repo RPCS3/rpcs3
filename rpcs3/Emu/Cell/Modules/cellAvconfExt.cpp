@@ -9,7 +9,7 @@
 #include "cellVideoOut.h"
 #include "cellSysutil.h"
 
-logs::channel cellAvconfExt("cellAvconfExt");
+LOG_CHANNEL(cellAvconfExt);
 
 s32 cellAudioOutUnregisterDevice(u32 deviceNumber)
 {

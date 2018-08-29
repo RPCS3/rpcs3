@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
 #include "Emu/IdManager.h"
@@ -63,14 +63,14 @@ void kernel_explorer::Update()
 {
 	m_tree->clear();
 
-	const auto vm_block = vm::get(vm::user_space);
+	const auto dct = fxm::get_always<lv2_memory_container>();
 
-	if (!vm_block)
+	if (!dct)
 	{
 		return;
 	}
 
-	const u32 total_memory_usage = vm_block->used();
+	const u32 total_memory_usage = dct->used;
 
 	QTreeWidgetItem* root = new QTreeWidgetItem();
 	root->setText(0, qstr(fmt::format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024))));

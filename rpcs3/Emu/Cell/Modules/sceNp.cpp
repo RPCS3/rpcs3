@@ -10,7 +10,7 @@
 #include "sceNp.h"
 #include "cellSysutil.h"
 
-logs::channel sceNp("sceNp");
+LOG_CHANNEL(sceNp);
 
 s32 g_psn_connection_status = SCE_NP_MANAGER_STATUS_OFFLINE;
 
@@ -89,7 +89,7 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 			sceNp.error("npDrmIsAvailable(): Failed to verify sce file %s", enc_drm_path);
 			return SCE_NP_DRM_ERROR_NO_ENTITLEMENT;
 		}
-		
+
 	}
 	else if (magic == "NPD\0"_u32)
 	{
@@ -204,7 +204,7 @@ s32 sceNpDrmProcessExitSpawn(ppu_thread& ppu, vm::cptr<u8> klicensee, vm::cptr<c
 s32 sceNpDrmProcessExitSpawn2(ppu_thread& ppu, vm::cptr<u8> klicensee, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 flags)
 {
 	sceNp.warning("sceNpDrmProcessExitSpawn2(klicensee=*0x%x, path=%s, argv=**0x%x, envp=**0x%x, data=*0x%x, data_size=0x%x, prio=%d, flags=0x%x)", klicensee, path, argv, envp, data, data_size, prio, flags);
-	
+
 	if (s32 error = npDrmIsAvailable(klicensee, path))
 	{
 		return error;
@@ -1190,12 +1190,12 @@ s32 sceNpManagerRequestTicket()
 s32 sceNpManagerRequestTicket2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
-	
+
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
 		return SCE_NP_ERROR_OFFLINE;
 	}
-	
+
 	return CELL_OK;
 }
 

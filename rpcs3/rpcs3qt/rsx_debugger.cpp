@@ -10,6 +10,15 @@ enum GCMEnumTypes
 
 constexpr auto qstr = QString::fromStdString;
 
+namespace
+{
+	template <typename T>
+	gsl::span<T> as_const_span(gsl::span<const gsl::byte> unformated_span)
+	{
+		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+	}
+}
+
 rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
 	: QDialog(parent)
 	, m_gui_settings(gui_settings)
@@ -215,10 +224,9 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	{
 		if (const auto render = rsx::get_current_renderer())
 		{
-			u32 realAddr;
-			if (RSXIOMem.getRealAddr(render->ctrl->get.load(), realAddr))
+			if (RSXIOMem.RealAddr(render->ctrl->get.load()))
 			{
-				m_addr = realAddr;
+				m_addr = render->ctrl->get.load();
 				UpdateInformation();
 			}
 		}
@@ -227,10 +235,9 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	{
 		if (const auto render = rsx::get_current_renderer())
 		{
-			u32 realAddr;
-			if (RSXIOMem.getRealAddr(render->ctrl->put.load(), realAddr))
+			if (RSXIOMem.RealAddr(render->ctrl->put.load()))
 			{
-				m_addr = realAddr;
+				m_addr = render->ctrl->put.load();
 				UpdateInformation();
 			}
 		}
@@ -418,12 +425,12 @@ namespace
 		{
 		case rsx::surface_color_format::b8:
 		{
-			u8 value = gsl::as_span<const u8>(orig_buffer)[idx];
+			u8 value = as_const_span<const u8>(orig_buffer)[idx];
 			return{ value, value, value };
 		}
 		case rsx::surface_color_format::x32:
 		{
-			be_t<u32> stored_val = gsl::as_span<const be_t<u32>>(orig_buffer)[idx];
+			be_t<u32> stored_val = as_const_span<const be_t<u32>>(orig_buffer)[idx];
 			u32 swapped_val = stored_val;
 			f32 float_val = (f32&)swapped_val;
 			u8 val = float_val * 255.f;
@@ -433,19 +440,19 @@ namespace
 		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
 		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
 		{
-			auto ptr = gsl::as_span<const u8>(orig_buffer);
+			auto ptr = as_const_span<const u8>(orig_buffer);
 			return{ ptr[1 + idx * 4], ptr[2 + idx * 4], ptr[3 + idx * 4] };
 		}
 		case rsx::surface_color_format::a8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
 		{
-			auto ptr = gsl::as_span<const u8>(orig_buffer);
+			auto ptr = as_const_span<const u8>(orig_buffer);
 			return{ ptr[3 + idx * 4], ptr[2 + idx * 4], ptr[1 + idx * 4] };
 		}
 		case rsx::surface_color_format::w16z16y16x16:
 		{
-			auto ptr = gsl::as_span<const u16>(orig_buffer);
+			auto ptr = as_const_span<const u16>(orig_buffer);
 			f16 h0 = f16(ptr[4 * idx]);
 			f16 h1 = f16(ptr[4 * idx + 1]);
 			f16 h2 = f16(ptr[4 * idx + 2]);
@@ -526,7 +533,7 @@ void rsx_debugger::OnClickDrawCalls()
 				{
 					for (u32 col = 0; col < width; col++)
 					{
-						u32 depth_val = gsl::as_span<const u32>(orig_buffer)[row * width + col];
+						u32 depth_val = as_const_span<const u32>(orig_buffer)[row * width + col];
 						u8 displayed_depth_val = 255 * depth_val / 0xFFFFFF;
 						buffer[4 * col + 0 + width * row * 4] = displayed_depth_val;
 						buffer[4 * col + 1 + width * row * 4] = displayed_depth_val;
@@ -541,7 +548,7 @@ void rsx_debugger::OnClickDrawCalls()
 				{
 					for (u32 col = 0; col < width; col++)
 					{
-						u16 depth_val = gsl::as_span<const u16>(orig_buffer)[row * width + col];
+						u16 depth_val = as_const_span<const u16>(orig_buffer)[row * width + col];
 						u8 displayed_depth_val = 255 * depth_val / 0xFFFF;
 						buffer[4 * col + 0 + width * row * 4] = displayed_depth_val;
 						buffer[4 * col + 1 + width * row * 4] = displayed_depth_val;
@@ -565,7 +572,7 @@ void rsx_debugger::OnClickDrawCalls()
 			{
 				for (u32 col = 0; col < width; col++)
 				{
-					u8 stencil_val = gsl::as_span<const u8>(orig_buffer)[row * width + col];
+					u8 stencil_val = as_const_span<const u8>(orig_buffer)[row * width + col];
 					buffer[4 * col + 0 + width * row * 4] = stencil_val;
 					buffer[4 * col + 1 + width * row * 4] = stencil_val;
 					buffer[4 * col + 2 + width * row * 4] = stencil_val;
@@ -624,12 +631,12 @@ void rsx_debugger::GetMemory()
 		address_item->setData(Qt::UserRole, addr);
 		m_list_commands->setItem(i, 0, address_item);
 
-		if (vm::check_addr(addr))
+		if (vm::check_addr(RSXIOMem.RealAddr(addr)))
 		{
-			u32 cmd = vm::read32(addr);
+			u32 cmd = vm::read32(RSXIOMem.RealAddr(addr));
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
-			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr, 0)));
+			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr)));
 			m_list_commands->setItem(i, 3, new QTableWidgetItem(QString::number(count)));
 
 			if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
@@ -1068,7 +1075,7 @@ const char* rsx_debugger::ParseGCMEnum(u32 value, u32 type)
 	index = (cmd - a) / m; \
 	case a \
 
-QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioAddr)
+QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 {
 	std::string disasm;
 
@@ -1076,17 +1083,17 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 	if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 	{
 		u32 jumpAddr = cmd & RSX_METHOD_OLD_JUMP_OFFSET_MASK;
-		DISASM("JUMP: %08x -> %08x", currentAddr, ioAddr+jumpAddr);
+		DISASM("JUMP: %08x -> %08x", ioAddr, jumpAddr);
 	}
 	else if((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
 	{
 		u32 jumpAddr = cmd & RSX_METHOD_NEW_JUMP_OFFSET_MASK;
-		DISASM("JUMP: %08x -> %08x", currentAddr, ioAddr + jumpAddr);
+		DISASM("JUMP: %08x -> %08x", ioAddr, jumpAddr);
 	}
 	else if((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
 	{
 		u32 callAddr = cmd & RSX_METHOD_CALL_OFFSET_MASK;
-		DISASM("CALL: %08x -> %08x", currentAddr, ioAddr+callAddr);
+		DISASM("CALL: %08x -> %08x", ioAddr, callAddr);
 	}
 	if(cmd == RSX_METHOD_RETURN_CMD)
 	{
@@ -1095,14 +1102,14 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 
 	if(cmd == 0)
 	{
-		DISASM("Null cmd");
+		DISASM("NOP");
 	}
 	else if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
 		&& (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) != RSX_METHOD_NEW_JUMP_CMD
 		&& (cmd & RSX_METHOD_CALL_CMD_MASK) != RSX_METHOD_CALL_CMD
 		&& cmd != RSX_METHOD_RETURN_CMD)
 	{
-		auto args = vm::ptr<u32>::make(currentAddr + 4);
+		auto args = vm::ptr<u32>::make(RSXIOMem.RealAddr(ioAddr + 4));
 
 		u32 index = 0;
 		switch((cmd & 0x3ffff) >> 2)
