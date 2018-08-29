@@ -1484,7 +1484,7 @@ void VKGSRender::end()
 		const u32 index_count = upload_info.vertex_draw_count;
 		VkDeviceSize offset;
 
-		std::tie(offset, index_type) = upload_info.index_info.value();
+		std::tie(offset, index_type) = *upload_info.index_info;
 		vkCmdBindIndexBuffer(*m_current_command_buffer, m_index_buffer_ring_info.heap->value, offset, index_type);
 
 		if (single_draw)
