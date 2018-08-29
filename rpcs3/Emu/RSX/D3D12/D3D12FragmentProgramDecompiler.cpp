@@ -3,7 +3,7 @@
 #include "stdafx_d3d12.h"
 #include "D3D12FragmentProgramDecompiler.h"
 #include "D3D12CommonDecompiler.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include <set>
 

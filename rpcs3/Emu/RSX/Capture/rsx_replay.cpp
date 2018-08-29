@@ -3,7 +3,7 @@
 
 #include "Emu/System.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/RSX/GSRender.h"
 
 #include <map>
@@ -12,6 +12,11 @@ namespace rsx
 {
 	be_t<u32> rsx_replay_thread::allocate_context()
 	{
+		// 'fake' initialize usermemory
+		// todo: seriously, need to probly watch the replay memory map and just make sure its mapped before we copy rather than do this
+		const auto user_mem = vm::get(vm::user64k);
+		vm::falloc(user_mem->addr, 0x10000000);
+
 		const u32 contextAddr = vm::alloc(sizeof(rsx_context), vm::main);
 		if (contextAddr == 0)
 			fmt::throw_exception("Capture Replay: context alloc failed");
@@ -26,10 +31,6 @@ namespace rsx
 		if (sys_rsx_context_allocate(vm::get_addr(&contextInfo.context_id), vm::get_addr(&contextInfo.dma_addr), vm::get_addr(&contextInfo.driver_info), vm::get_addr(&contextInfo.reports_addr), contextInfo.mem_handle, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
 
-		// 'fake' initialize usermemory
-		// todo: seriously, need to probly watch the replay memory map and just make sure its mapped before we copy rather than do this
-		vm::falloc(0x20000000, 0x10000000, vm::user_space);
-
 		return contextInfo.context_id;
 	}
 
@@ -37,7 +38,7 @@ namespace rsx
 	{
 		u32 fifo_size = 4;
 
-		// run through replay commands to figure out how big command buffer needs to be 
+		// run through replay commands to figure out how big command buffer needs to be
 		// technically we could do this in batches if it gets too big, but we should be fine
 		// as we aren't allocating anything on main memory, although it may make issues with iooffset later
 		for (const auto& rc : frame->replay_commands)
@@ -104,12 +105,12 @@ namespace rsx
 				fmt::throw_exception("Capture Replay: no space in io for fifo commands! size: 0x%x, lowest in capture: 0x%x, largest_free_block: 0x%x", fifo_size, lowest_iooffset, largest_free_block);
 		}
 
-		return std::make_tuple(fifo_start_addr, fifo_size);
+		return std::make_tuple(fifo_start_addr, ::align<u32>(fifo_size, 0x100000));
 	}
 
 	std::vector<u32> rsx_replay_thread::alloc_write_fifo(be_t<u32> context_id, u32 fifo_start_addr, u32 fifo_size)
 	{
-		const u32 fifo_mem = vm::alloc(fifo_size, vm::main);
+		const u32 fifo_mem = vm::alloc(fifo_size, vm::main, 0x100000);
 		if (fifo_mem == 0)
 			fmt::throw_exception("Capture Replay: fifo alloc failed! size: 0x%x", fifo_size);
 
@@ -282,7 +283,7 @@ namespace rsx
 			if (memblock.ioOffset <= fifo_start_addr + fifo_size && fifo_start_addr <= memblock.size + memblock.offset)
 				fmt::throw_exception("Capture Replay: overlap detected between game io allocs and fifo alloc, algorithms botched.");
 
-			if (sys_rsx_context_iomap(context_id, memblock.ioOffset, memblock.addr, memblock.size + memblock.offset, 0) != CELL_OK)
+			if (sys_rsx_context_iomap(context_id, memblock.ioOffset & ~0xFFFFF, memblock.addr & ~0xFFFFF, ::align<u32>(memblock.size + memblock.offset, 0x100000), 0) != CELL_OK)
 				fmt::throw_exception("rsx io map failed for block");
 		}
 

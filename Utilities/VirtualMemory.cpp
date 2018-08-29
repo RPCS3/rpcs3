@@ -107,18 +107,17 @@ namespace utils
 #ifdef _WIN32
 		for (u64 addr = (u64)pointer, end = addr + size; addr < end;)
 		{
-			// Query current region
-			::MEMORY_BASIC_INFORMATION mem;
-			verify(HERE), ::VirtualQuery((void*)addr, &mem, sizeof(mem));
+			const u64 boundary = (addr + 0x10000) & -0x10000;
+			const u64 block_size = std::min(boundary, end) - addr;
 
 			DWORD old;
-			if (!::VirtualProtect(mem.BaseAddress, std::min<u64>(end - (u64)mem.BaseAddress, mem.RegionSize), +prot, &old))
+			if (!::VirtualProtect((LPVOID)addr, block_size, +prot, &old))
 			{
 				fmt::throw_exception("VirtualProtect failed (%p, 0x%x, addr=0x%x, error=%#x)", pointer, size, addr, GetLastError());
 			}
 
 			// Next region
-			addr = (u64)mem.BaseAddress + mem.RegionSize;
+			addr += block_size;
 		}
 #else
 		verify(HERE), ::mprotect((void*)((u64)pointer & -4096), ::align(size, 4096), +prot) != -1;

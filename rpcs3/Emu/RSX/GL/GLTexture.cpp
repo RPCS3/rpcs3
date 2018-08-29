@@ -204,7 +204,7 @@ namespace gl
 	}
 
 	//Apply sampler state settings
-	void sampler_state::apply(rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image)
+	void sampler_state::apply(const rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image)
 	{
 		const color4f border_color = rsx::decode_border_color(tex.border_color());
 
@@ -272,6 +272,22 @@ namespace gl
 		}
 		else
 			glSamplerParameteri(samplerHandle, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+	}
+
+	void sampler_state::apply(const rsx::vertex_texture& tex, const rsx::sampled_image_descriptor_base* /*sampled_image*/)
+	{
+		const color4f border_color = rsx::decode_border_color(tex.border_color());
+		glSamplerParameterfv(samplerHandle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
+
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_S, wrap_mode(tex.wrap_s()));
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_T, wrap_mode(tex.wrap_t()));
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_R, wrap_mode(tex.wrap_r()));
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glSamplerParameterf(samplerHandle, GL_TEXTURE_LOD_BIAS, tex.bias());
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 	}
 
 	bool is_compressed_format(u32 texture_format)
@@ -371,8 +387,8 @@ namespace gl
 		fmt::throw_exception("Unknown format 0x%x" HERE, texture_format);
 	}
 
-	gl::texture* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps,
-			rsx::texture_dimension_extended type, rsx::texture_colorspace colorspace)
+	gl::viewable_image* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps,
+			rsx::texture_dimension_extended type)
 	{
 		if (is_compressed_format(gcm_format))
 		{
@@ -384,9 +400,6 @@ namespace gl
 
 		GLenum target;
 		GLenum internal_format = get_sized_internal_format(gcm_format);
-
-		if (colorspace != rsx::texture_colorspace::rgb_linear)
-			internal_format = get_srgb_format(internal_format);
 
 		switch (type)
 		{
@@ -404,7 +417,7 @@ namespace gl
 			break;
 		}
 
-		return new gl::texture(target, width, height, depth, mipmaps, internal_format);
+		return new gl::viewable_image(target, width, height, depth, mipmaps, internal_format);
 	}
 
 	void fill_texture(rsx::texture_dimension_extended dim, u16 mipmap_count, int format, u16 width, u16 height, u16 depth,
@@ -548,8 +561,7 @@ namespace gl
 	}
 
 	void upload_texture(GLuint id, u32 texaddr, u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
-			const std::vector<rsx_subresource_layout>& subresources_layout, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap, bool static_state,
-			rsx::texture_colorspace colorspace)
+			const std::vector<rsx_subresource_layout>& subresources_layout)
 	{
 		const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
 		
@@ -580,21 +592,9 @@ namespace gl
 		glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
 		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, mipmaps - 1);
 
-		if (static_state)
-		{
-			//Usually for vertex textures
-			glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(target, GL_TEXTURE_WRAP_R, GL_REPEAT);
-
-			glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameterf(target, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.f);
-		}
-
 		//The rest of sampler state is now handled by sampler state objects
 		const auto format_type = get_format_type(gcm_format);
-		const GLenum gl_format = (colorspace == rsx::texture_colorspace::rgb_linear)? std::get<0>(format_type) : get_srgb_format(std::get<0>(format_type));
+		const GLenum gl_format = std::get<0>(format_type);
 		const GLenum gl_type = std::get<1>(format_type);
 		fill_texture(type, mipmaps, gcm_format, width, height, depth, subresources_layout, is_swizzled, gl_format, gl_type, data_upload_buf);
 	}

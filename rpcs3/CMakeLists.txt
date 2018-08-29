@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
 set(RES_FILES "")
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 include(CheckCXXCompilerFlag)
+include(ExternalProject)
 
 # Qt section
 find_package(Qt5 5.10 COMPONENTS Widgets Network Qml)
@@ -154,7 +155,7 @@ if(NOT MSVC)
 		endif()
 	endif()
 else()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:throwingNew /D _CRT_SECURE_NO_DEPRECATE=1 /D _CRT_NON_CONFORMING_SWPRINTFS=1 /D _SCL_SECURE_NO_WARNINGS=1")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:throwingNew /std:c++latest /D _CRT_SECURE_NO_DEPRECATE=1 /D _CRT_NON_CONFORMING_SWPRINTFS=1 /D _SCL_SECURE_NO_WARNINGS=1")
 
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrtd.lib")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /DYNAMICBASE:NO /BASE:0x10000 /FIXED")
@@ -184,8 +185,6 @@ else()
 	message("-- Using Custom RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
 endif()
 
-set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
-
 # Prefer GLVND for OpenGL rather than legacy
 set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
@@ -206,6 +205,10 @@ if(NOT WITHOUT_LLVM)
 		option(LLVM_INCLUDE_TOOLS OFF)
 		option(LLVM_INCLUDE_UTILS OFF)
 		option(WITH_POLLY OFF)
+
+		if(WIN32 AND NOT MSVC)
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_FORMAT_MACROS=1")
+		endif()
 
 		# LLVM needs to be built out-of-tree
 		add_subdirectory(../llvm ../llvm_build EXCLUDE_FROM_ALL)
@@ -258,10 +261,11 @@ if(USE_LIBEVDEV)
 	endif()
 endif()
 option(USE_VULKAN "Vulkan render backend" ON)
-if(NOT APPLE AND USE_VULKAN)
+if(USE_VULKAN)
 	find_package(Vulkan)
 	if(VULKAN_FOUND)
 		add_definitions(-DHAVE_VULKAN)
+		include_directories("${Vulkan_INCLUDE_DIRS}")
 	else()
 		message("WARNING! USE_VULKAN was enabled, but libvulkan was not found. RPCS3 will be compiled without Vulkan support.")
 	endif()
@@ -284,7 +288,31 @@ if(USE_SYSTEM_FFMPEG)
 	include_directories("${FFMPEG_INCLUDE_DIR}")
 else()
 	message("-- RPCS3: using builtin ffmpeg")
-	include_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/include")
+	if(MSVC OR NOT WIN32)
+		include_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/include")
+		link_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/lib")
+	else()
+		ExternalProject_Add(ffmpeg-mingw
+			DOWNLOAD_COMMAND ""
+			SOURCE_DIR /e/src/rpcs3/3rdparty/ffmpeg
+			BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ffmpeg
+			CONFIGURE_COMMAND  /e/src/rpcs3/3rdparty/ffmpeg/configure --prefix=./Windows/x86_64 --arch=x86_64 --disable-avdevice --disable-programs --disable-avfilter --disable-postproc --disable-doc --disable-pthreads --enable-w32threads --disable-network --disable-everything --disable-encoders --disable-muxers --disable-hwaccels --disable-parsers --disable-protocols --enable-dxva2 --enable-static --disable-shared --enable-decoder=aac --enable-decoder=aac_latm --enable-decoder=atrac3 --enable-decoder=atrac3p --enable-decoder=mp3 --enable-decoder=pcm_s16le --enable-decoder=pcm_s8 --enable-decoder=h264 --enable-decoder=mpeg4 --enable-decoder=mpeg2video --enable-decoder=mjpeg --enable-decoder=mjpegb --enable-encoder=pcm_s16le --enable-encoder=ffv1 --enable-encoder=mpeg4 --enable-parser=h264 --enable-parser=mpeg4video --enable-parser=mpegaudio --enable-parser=mpegvideo --enable-parser=mjpeg --enable-parser=aac --enable-parser=aac_latm --enable-muxer=avi --enable-demuxer=h264 --enable-demuxer=m4v --enable-demuxer=mp3 --enable-demuxer=mpegvideo --enable-demuxer=mpegps --enable-demuxer=mjpeg --enable-demuxer=avi --enable-demuxer=aac --enable-demuxer=pmp --enable-demuxer=oma --enable-demuxer=pcm_s16le --enable-demuxer=pcm_s8 --enable-demuxer=wav --enable-hwaccel=h264_dxva2 --enable-indev=dshow --enable-protocol=file
+			BUILD_COMMAND make -j 4
+			INSTALL_COMMAND make install
+		)
+		include_directories("${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/${PLATFORM_ARCH}/include")
+		link_directories("${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/${PLATFORM_ARCH}/lib")
+	endif()
+endif()
+
+# Build discord-rpc for mingw
+if(WIN32 AND NOT MSVC)
+	ExternalProject_Add(discord-rpc
+		GIT_REPOSITORY https://github.com/discordapp/discord-rpc
+		BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/discord-rpc
+		INSTALL_COMMAND ""
+	)
+	link_directories(rpcs3 "${CMAKE_CURRENT_BINARY_DIR}/discord-rpc/src/")
 endif()
 
 include_directories(
@@ -326,12 +354,6 @@ else()
 endif()
 
 link_directories("${RPCS3_SRC_DIR}/../3rdparty/minidx12/")
-
-if(NOT USE_SYSTEM_FFMPEG)
-	if(MSVC OR NOT WIN32)
-		link_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/lib")
-	endif()
-endif()
 
 get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 foreach (dir ${dirs})
@@ -390,7 +412,7 @@ if(NOT MSVC)
 	target_link_libraries(rpcs3 Threads::Threads)
 endif()
 
-if(UNIX)
+if(NOT APPLE AND UNIX)
 	find_package(X11 REQUIRED)
 	target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
 	target_link_libraries(rpcs3 ${X11_LIBRARIES})
@@ -407,15 +429,15 @@ target_include_directories(rpcs3 PUBLIC ${ZLIB_INCLUDE_DIRS})
 target_link_libraries(rpcs3 ${ZLIB_LIBRARIES})
 
 if(WIN32)
-	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib setupapi.lib hidapi-hid Shlwapi.lib)
-	if(NOT MSVC)
-		target_link_libraries(rpcs3 ${OPENGL_LIBRARIES} opengl32.lib glu32.lib)
+	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib Shlwapi.lib)
+	if(MSVC)
+		target_link_libraries(rpcs3 dxgi.lib d2d1.lib dwrite.lib hidapi-hid setupapi.lib)
+		# Link Discord Rich Presence
+		target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/discord-rpc.lib")
 	else()
-		target_link_libraries(rpcs3 dxgi.lib d2d1.lib dwrite.lib)
+		target_link_libraries(rpcs3 ${OPENGL_LIBRARIES} opengl32.lib glu32.lib hidapi-hid libsetupapi.a libdiscord-rpc.a)
 	endif()
 	target_link_libraries(rpcs3 avformat.lib avcodec.lib avutil.lib swscale.lib png_static ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
-	# Link Discord Rich Presence
-	target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/discord-rpc.lib")
 else()
 	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
 	if(APPLE)
@@ -440,7 +462,7 @@ else()
 	if(CMAKE_SYSTEM MATCHES "Linux")
 		target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/libdiscord-rpc-linux.a")
 	elseif(APPLE)
-		target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/libdiscord-rpc-mac.a")
+		target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/libdiscord-rpc-mac.a" objc "-framework Foundation" "-framework CoreServices")
 	endif()
 endif()
 
@@ -463,11 +485,11 @@ if(MSVC)
 	# them from the local QT installation at the end of the build.
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir ${CMAKE_BINARY_DIR}/bin/qt/plugins --debug ${CMAKE_BINARY_DIR}/bin
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "${CMAKE_BINARY_DIR}/bin/qt/plugins" --debug "${CMAKE_BINARY_DIR}/bin"
 		)
 	else()
 		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir ${CMAKE_BINARY_DIR}/bin/qt/plugins ${CMAKE_BINARY_DIR}/bin
+			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "${CMAKE_BINARY_DIR}/bin/qt/plugins" "${CMAKE_BINARY_DIR}/bin"
 		)
 	endif()
 endif()

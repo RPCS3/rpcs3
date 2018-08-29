@@ -10,7 +10,7 @@
 #include <mutex>
 #include <queue>
 
-logs::channel cellSysutil("cellSysutil");
+LOG_CHANNEL(cellSysutil);
 
 struct sysutil_cb_manager
 {

@@ -5,7 +5,7 @@
 
 
 
-logs::channel sys_libc("sys_libc");
+LOG_CHANNEL(sys_libc);
 
 void sys_libc_memcpy(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
 {

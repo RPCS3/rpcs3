@@ -10,6 +10,7 @@
 #include <QMap>
 #include <QObject>
 #include <QComboBox>
+#include <QSpinBox>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -40,6 +41,7 @@ public:
 		EnableTSX,
 		AccurateGETLLAR,
 		AccuratePUTLLUC,
+		AccurateXFloat,
 		SetDAZandFTZ,
 		SPUBlockSize,
 		SPUCache,
@@ -74,6 +76,7 @@ public:
 		ForceCPUBlitEmulation,
 		DisableOnDiskShaderCache,
 		DisableVulkanMemAllocator,
+		DisableAsyncShaderCompiler,
 
 		// Performance Overlay
 		PerfOverlayEnabled,
@@ -81,6 +84,11 @@ public:
 		PerfOverlayPosition,
 		PerfOverlayUpdateInterval,
 		PerfOverlayFontSize,
+		PerfOverlayOpacity,
+		PerfOverlayMarginX,
+		PerfOverlayMarginY,
+		PerfOverlayCenterX,
+		PerfOverlayCenterY,
 
 		// Audio
 		AudioRenderer,
@@ -155,6 +163,8 @@ public:
 		Render_Creator();
 	};
 
+	std::set<SettingsType> m_broken_types; // list of broken settings
+
 	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml
 	* Settings are only written when SaveSettings is called.
 	*/
@@ -168,7 +178,13 @@ public:
 	void EnhanceCheckBox(QCheckBox* checkbox, SettingsType type);
 
 	/** Connects a slider with the target settings type*/
-	void EnhanceSlider(QSlider* slider, SettingsType type, bool is_ranged = false);
+	void EnhanceSlider(QSlider* slider, SettingsType type);
+
+	/** Connects an integer spin box with the target settings type*/
+	void EnhanceSpinBox(QSpinBox* slider, SettingsType type, const QString& prefix = "", const QString& suffix = "");
+
+	/** Connects a double spin box with the target settings type*/
+	void EnhanceDoubleSpinBox(QDoubleSpinBox* slider, SettingsType type, const QString& prefix = "", const QString& suffix = "");
 
 	std::vector<std::string> GetLoadedLibraries();
 	void SaveSelectedLibraries(const std::vector<std::string>& libs);
@@ -194,6 +210,9 @@ public:
 	/** Loads the settings from path.*/
 	void LoadSettings(const std::string& path = "");
 
+	/** Fixes all registered invalid settings after asking the user for permission.*/
+	void OpenCorrectionDialog(QWidget* parent = Q_NULLPTR);
+
 public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
@@ -216,40 +235,42 @@ private:
 		{ EnableTSX,                { "Core", "Enable TSX"}},
 		{ AccurateGETLLAR,          { "Core", "Accurate GETLLAR"}},
 		{ AccuratePUTLLUC,          { "Core", "Accurate PUTLLUC"}},
+		{ AccurateXFloat,           { "Core", "Accurate xfloat"}},
 		{ SetDAZandFTZ,             { "Core", "Set DAZ and FTZ"}},
 		{ SPUBlockSize,             { "Core", "SPU Block Size"}},
 		{ SPUCache,                 { "Core", "SPU Cache"}},
 		{ SPUVerification,          { "Core", "SPU Verification"}},
 
 		// Graphics Tab
-		{ Renderer,                 { "Video", "Renderer"}},
-		{ Resolution,               { "Video", "Resolution"}},
-		{ AspectRatio,              { "Video", "Aspect ratio"}},
-		{ FrameLimit,               { "Video", "Frame limit"}},
-		{ LogShaderPrograms,        { "Video", "Log shader programs"}},
-		{ WriteDepthBuffer,         { "Video", "Write Depth Buffer"}},
-		{ WriteColorBuffers,        { "Video", "Write Color Buffers"}},
-		{ ReadColorBuffers,         { "Video", "Read Color Buffers"}},
-		{ ReadDepthBuffer,          { "Video", "Read Depth Buffer"}},
-		{ VSync,                    { "Video", "VSync"}},
-		{ DebugOutput,              { "Video", "Debug output"}},
-		{ DebugOverlay,             { "Video", "Debug overlay"}},
-		{ LegacyBuffers,            { "Video", "Use Legacy OpenGL Buffers"}},
-		{ GPUTextureScaling,        { "Video", "Use GPU texture scaling"}},
-		{ StretchToDisplayArea,     { "Video", "Stretch To Display Area"}},
-		{ ForceHighpZ,              { "Video", "Force High Precision Z buffer"}},
-		{ StrictRenderingMode,      { "Video", "Strict Rendering Mode"}},
-		{ DisableVertexCache,       { "Video", "Disable Vertex Cache"}},
-		{ DisableOcclusionQueries,  { "Video", "Disable ZCull Occlusion Queries" }},
-		{ DisableFIFOReordering,    { "Video", "Disable FIFO Reordering" }},
-		{ ForceCPUBlitEmulation,    { "Video", "Force CPU Blit" }},
-		{ DisableOnDiskShaderCache, { "Video", "Disable On-Disk Shader Cache"}},
-		{ DisableVulkanMemAllocator,{ "Video", "Disable Vulkan Memory Allocator" }},
-		{ AnisotropicFilterOverride,{ "Video", "Anisotropic Filter Override" }},
-		{ ResolutionScale,          { "Video", "Resolution Scale" }},
-		{ MinimumScalableDimension, { "Video", "Minimum Scalable Dimension" }},
-		{ D3D12Adapter,             { "Video", "D3D12", "Adapter"}},
-		{ VulkanAdapter,            { "Video", "Vulkan", "Adapter"}},
+		{ Renderer,                   { "Video", "Renderer"}},
+		{ Resolution,                 { "Video", "Resolution"}},
+		{ AspectRatio,                { "Video", "Aspect ratio"}},
+		{ FrameLimit,                 { "Video", "Frame limit"}},
+		{ LogShaderPrograms,          { "Video", "Log shader programs"}},
+		{ WriteDepthBuffer,           { "Video", "Write Depth Buffer"}},
+		{ WriteColorBuffers,          { "Video", "Write Color Buffers"}},
+		{ ReadColorBuffers,           { "Video", "Read Color Buffers"}},
+		{ ReadDepthBuffer,            { "Video", "Read Depth Buffer"}},
+		{ VSync,                      { "Video", "VSync"}},
+		{ DebugOutput,                { "Video", "Debug output"}},
+		{ DebugOverlay,               { "Video", "Debug overlay"}},
+		{ LegacyBuffers,              { "Video", "Use Legacy OpenGL Buffers"}},
+		{ GPUTextureScaling,          { "Video", "Use GPU texture scaling"}},
+		{ StretchToDisplayArea,       { "Video", "Stretch To Display Area"}},
+		{ ForceHighpZ,                { "Video", "Force High Precision Z buffer"}},
+		{ StrictRenderingMode,        { "Video", "Strict Rendering Mode"}},
+		{ DisableVertexCache,         { "Video", "Disable Vertex Cache"}},
+		{ DisableOcclusionQueries,    { "Video", "Disable ZCull Occlusion Queries"}},
+		{ DisableFIFOReordering,      { "Video", "Disable FIFO Reordering"}},
+		{ ForceCPUBlitEmulation,      { "Video", "Force CPU Blit"}},
+		{ DisableOnDiskShaderCache,   { "Video", "Disable On-Disk Shader Cache"}},
+		{ DisableVulkanMemAllocator,  { "Video", "Disable Vulkan Memory Allocator"}},
+		{ DisableAsyncShaderCompiler, { "Video", "Disable Asynchronous Shader Compiler"}},
+		{ AnisotropicFilterOverride,  { "Video", "Anisotropic Filter Override"}},
+		{ ResolutionScale,            { "Video", "Resolution Scale"}},
+		{ MinimumScalableDimension,   { "Video", "Minimum Scalable Dimension"}},
+		{ D3D12Adapter,               { "Video", "D3D12", "Adapter"}},
+		{ VulkanAdapter,              { "Video", "Vulkan", "Adapter"}},
 
 		// Performance Overlay
 		{ PerfOverlayEnabled,       { "Video", "Performance Overlay", "Enabled" } },
@@ -257,6 +278,11 @@ private:
 		{ PerfOverlayPosition,      { "Video", "Performance Overlay", "Position" } },
 		{ PerfOverlayUpdateInterval,{ "Video", "Performance Overlay", "Metrics update interval (ms)" } },
 		{ PerfOverlayFontSize,      { "Video", "Performance Overlay", "Font size (px)" } },
+		{ PerfOverlayOpacity,       { "Video", "Performance Overlay", "Opacity (%)" } },
+		{ PerfOverlayMarginX,       { "Video", "Performance Overlay", "Horizontal Margin (px)" } },
+		{ PerfOverlayMarginY,       { "Video", "Performance Overlay", "Vertical Margin (px)" } },
+		{ PerfOverlayCenterX,       { "Video", "Performance Overlay", "Center Horizontally" } },
+		{ PerfOverlayCenterY,       { "Video", "Performance Overlay", "Center Vertically" } },
 
 		// Audio
 		{ AudioRenderer,  { "Audio", "Renderer"}},

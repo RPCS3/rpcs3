@@ -47,10 +47,18 @@ namespace vk
 
 extern u64 get_system_time();
 
+enum command_buffer_data_flag
+{
+	cb_has_occlusion_task = 1
+};
+
 struct command_buffer_chunk: public vk::command_buffer
 {
 	VkFence submit_fence = VK_NULL_HANDLE;
 	VkDevice m_device = VK_NULL_HANDLE;
+
+	u32 num_draws = 0;
+	u32 flags = 0;
 
 	std::atomic_bool pending = { false };
 	std::atomic<u64> last_sync = { 0 };
@@ -90,11 +98,16 @@ struct command_buffer_chunk: public vk::command_buffer
 			wait();
 
 		CHECK_RESULT(vkResetCommandBuffer(commands, 0));
+		num_draws = 0;
+		flags = 0;
 	}
 
 	bool poke()
 	{
 		reader_lock lock(guard_mutex);
+
+		if (!pending)
+			return true;
 
 		if (vkGetFenceStatus(m_device, submit_fence) == VK_SUCCESS)
 		{
@@ -117,14 +130,7 @@ struct command_buffer_chunk: public vk::command_buffer
 		if (!pending)
 			return;
 
-		switch(vkGetFenceStatus(m_device, submit_fence))
-		{
-		case VK_SUCCESS:
-			break;
-		case VK_NOT_READY:
-			CHECK_RESULT(vkWaitForFences(m_device, 1, &submit_fence, VK_TRUE, UINT64_MAX));
-			break;
-		}
+		vk::wait_for_fence(submit_fence);
 
 		lock.upgrade();
 
@@ -320,6 +326,8 @@ private:
 	bool renderer_unavailable = false;
 
 	u64 m_last_heap_sync_time = 0;
+	u32 m_texbuffer_view_size = 0;
+
 	vk::vk_data_heap m_attrib_ring_info;
 	vk::vk_data_heap m_uniform_buffer_ring_info;
 	vk::vk_data_heap m_transform_constants_ring_info;
@@ -353,8 +361,7 @@ private:
 	s64 m_draw_time = 0;
 	s64 m_flip_time = 0;
 
-	u8 m_draw_buffers_count = 0;
-	bool m_flush_draw_buffers = false;
+	std::vector<u8> m_draw_buffers;
 	
 	shared_mutex m_flush_queue_mutex;
 	flush_request_task m_flush_requests;
@@ -368,7 +375,7 @@ private:
 	//Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
 
-#if !defined(_WIN32) && defined(HAVE_VULKAN)
+#if !defined(_WIN32) && !defined(__APPLE__) && defined(HAVE_VULKAN)
 	Display *m_display_handle = nullptr;
 #endif
 
@@ -380,9 +387,7 @@ private:
 	void clear_surface(u32 mask);
 	void close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	void open_command_buffer();
-	void sync_at_semaphore_release();
 	void prepare_rtts(rsx::framebuffer_creation_context context);
-	void copy_render_targets_to_dma_location();
 
 	void flush_command_queue(bool hard_sync = false);
 	void queue_swap_request();
@@ -402,11 +407,14 @@ private:
 
 public:
 	bool check_program_status();
-	void load_program(const vk::vertex_upload_info& vertex_info);
+	bool load_program();
+	void load_program_env(const vk::vertex_upload_info& vertex_info);
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 	void read_buffers();
 	void write_buffers();
 	void set_viewport();
+
+	void sync_hint(rsx::FIFO_hint hint) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;
@@ -429,4 +437,6 @@ protected:
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_invalidate_memory_range(u32 address_base, u32 size) override;
+
+	bool on_decompiler_task() override;
 };

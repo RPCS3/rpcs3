@@ -127,8 +127,9 @@ namespace rsx
 
 	struct rsx_state
 	{
-	protected:
-		std::array<u32, 0x10000 / 4> registers;
+	public:
+		std::array<u32, 0x10000 / 4> registers{};
+		u32 register_previous_value;
 
 		template<u32 opcode>
 		using decoded_type = typename registers_decoder<opcode>::decoded_type;
@@ -140,7 +141,6 @@ namespace rsx
 			return decoded_type<opcode>(register_value);
 		}
 
-	public:
 		rsx_state &operator=(const rsx_state& in)
 		{
 			registers = in.registers;
@@ -1179,6 +1179,11 @@ namespace rsx
 			return u16(registers[NV308A_SIZE_OUT] & 0xFFFF);
 		}
 
+		u32 transform_program_load()
+		{
+			return registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];
+		}
+
 		void commit_4_transform_program_instructions(u32 index)
 		{
 			u32& load = registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];
@@ -1192,7 +1197,7 @@ namespace rsx
 
 		u32 transform_constant_load()
 		{
-			return decode<NV4097_SET_TRANSFORM_CONSTANT_LOAD>().transform_constant_load();
+			return registers[NV4097_SET_TRANSFORM_CONSTANT_LOAD];
 		}
 
 		u32 transform_branch_bits()

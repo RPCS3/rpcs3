@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellRtcAlarm("cellRtcAlarm");
+LOG_CHANNEL(cellRtcAlarm);
 
 s32 cellRtcAlarmRegister()
 {

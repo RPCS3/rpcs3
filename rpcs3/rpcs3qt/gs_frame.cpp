@@ -13,6 +13,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#elif defined(__APPLE__)
+//nothing
 #else
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 #include <QGuiApplication>
@@ -200,6 +202,8 @@ display_handle_t gs_frame::handle() const
 {
 #ifdef _WIN32
 	return (HWND) this->winId();
+#elif defined(__APPLE__)
+	return (void*) this->winId(); //NSView
 #else
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 	QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
@@ -238,7 +242,7 @@ void gs_frame::delete_context(draw_context_t ctx)
 
 int gs_frame::client_width()
 {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
 	return size().width();
 #else
 	return size().width() * devicePixelRatio();
@@ -247,7 +251,7 @@ int gs_frame::client_width()
 
 int gs_frame::client_height()
 {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
 	return size().height();
 #else
 	return size().height() * devicePixelRatio();
@@ -320,7 +324,14 @@ bool gs_frame::nativeEvent(const QByteArray &eventType, void *message, long *res
 
 		{
 			std::lock_guard<std::mutex> lock(wm_event_lock);
-			MSG* msg = static_cast<MSG*>(message);
+
+			// https://bugreports.qt.io/browse/QTBUG-69074?focusedCommentId=409797&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-409797
+#if (QT_VERSION == QT_VERSION_CHECK(5, 11, 1))
+			MSG* msg = *reinterpret_cast<MSG**>(message);
+#else
+			MSG* msg = reinterpret_cast<MSG*>(message);
+#endif
+
 			switch (msg->message)
 			{
 			case WM_WINDOWPOSCHANGING:

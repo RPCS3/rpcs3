@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "GLGSRender.h"
 #include "GLVertexProgram.h"
@@ -24,7 +24,7 @@ namespace
 
 GLGSRender::GLGSRender() : GSRender()
 {
-	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.5"));
+	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.6"));
 
 	if (g_cfg.video.disable_vertex_cache)
 		m_vertex_cache.reset(new gl::null_vertex_cache());
@@ -207,11 +207,14 @@ void GLGSRender::end()
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
-	auto copy_rtt_contents = [](gl::render_target *surface, bool is_depth)
+	auto copy_rtt_contents = [this](gl::render_target *surface, bool is_depth)
 	{
 		if (surface->get_internal_format() == surface->old_contents->get_internal_format())
 		{
-			//Copy data from old contents onto this one
+			// Disable stencil test to avoid switching off and back on later
+			gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
+
+			// Copy data from old contents onto this one
 			const auto region = rsx::get_transferable_region(surface);
 			gl::g_hw_blitter->scale_image(surface->old_contents, surface, { 0, 0, std::get<0>(region), std::get<1>(region) }, { 0, 0, std::get<2>(region) , std::get<3>(region) }, !is_depth, is_depth, {});
 
@@ -244,11 +247,9 @@ void GLGSRender::end()
 		clear_depth = true;
 	}
 
-	//Temporarily disable pixel tests
-	glDisable(GL_SCISSOR_TEST);
-
 	if (clear_depth || buffers_to_clear.size() > 0)
 	{
+		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 		GLenum mask = 0;
 
 		if (clear_depth)
@@ -269,7 +270,7 @@ void GLGSRender::end()
 			GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
 			//It is impossible for the render target to be type A or B here (clear all would have been flagged)
 			for (auto &i : buffers_to_clear)
-				glClearBufferfv(draw_fbo.id(), i, colors);
+				glClearBufferfv(m_draw_fbo->id(), i, colors);
 		}
 
 		if (clear_depth)
@@ -280,6 +281,7 @@ void GLGSRender::end()
 		ds->old_contents->get_internal_format() == gl::texture::internal_format::rgba8)
 	{
 		// TODO: Partial memory transfer
+		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
 		ds->on_write();
 	}
@@ -299,9 +301,10 @@ void GLGSRender::end()
 		}
 	}
 
-	glEnable(GL_SCISSOR_TEST);
+	// Unconditionally enable stencil test if it was disabled before
+	gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
 
-	//Load textures
+	// Load textures
 	{
 		std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
@@ -330,7 +333,7 @@ void GLGSRender::end()
 					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.fragment_textures[i], m_rtts);
 
 					if (m_textures_dirty[i])
-						m_gl_sampler_states[i].apply(rsx::method_registers.fragment_textures[i], fs_sampler_state[i].get());
+						m_fs_sampler_states[i].apply(rsx::method_registers.fragment_textures[i], fs_sampler_state[i].get());
 				}
 				else
 				{
@@ -354,6 +357,9 @@ void GLGSRender::end()
 				if (rsx::method_registers.vertex_textures[i].enabled())
 				{
 					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.vertex_textures[i], m_rtts);
+
+					if (m_vertex_textures_dirty[i])
+						m_vs_sampler_states[i].apply(rsx::method_registers.vertex_textures[i], vs_sampler_state[i].get());
 				}
 				else
 					*sampler_state = {};
@@ -369,9 +375,19 @@ void GLGSRender::end()
 	}
 
 	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
-	//Load program here since it is dependent on vertex state
 
-	load_program(upload_info);
+	// NOTE: Due to common OpenGL driver architecture, vertex data has to be uploaded as far away from the draw as possible
+	// TODO: Implement shaders cache prediction to avoid uploading vertex data if draw is going to skip
+	if (!load_program())
+	{
+		// Program is not ready, skip drawing this
+		std::this_thread::yield();
+		rsx::thread::end();
+		return;
+	}
+
+	// Load program here since it is dependent on vertex state
+	load_program_env(upload_info);
 
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
@@ -389,13 +405,12 @@ void GLGSRender::end()
 
 	//Bind textures and resolve external copy operations
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
-	int unused_location;
 	void *unused = nullptr;
 	gl::texture_view* tmp_view;
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
-		if (m_program->uniforms.has_location(rsx::constants::fragment_texture_names[i], &unused_location))
+		if (m_program->uniforms.has_location(rsx::constants::fragment_texture_names[i]))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 			auto &tex = rsx::method_registers.fragment_textures[i];
@@ -431,7 +446,7 @@ void GLGSRender::end()
 
 	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
 	{
-		if (m_program->uniforms.has_location(rsx::constants::vertex_texture_names[i], &unused_location))
+		if (m_program->uniforms.has_location(rsx::constants::vertex_texture_names[i]))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
 			glActiveTexture(GL_TEXTURE0 + rsx::limits::fragment_textures_count + i);
@@ -581,7 +596,6 @@ void GLGSRender::end()
 	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
 	m_draw_calls++;
 
-	synchronize_buffers();
 	rsx::thread::end();
 }
 
@@ -616,7 +630,20 @@ void GLGSRender::set_viewport()
 
 void GLGSRender::on_init_thread()
 {
-	GSRender::on_init_thread();
+	verify(HERE), m_frame;
+
+	// NOTES: All contexts have to be created before any is bound to a thread
+	// This allows context sharing to work (both GLRCs passed to wglShareLists have to be idle or you get ERROR_BUSY)
+	m_context = m_frame->make_context();
+
+	if (!g_cfg.video.disable_asynchronous_shader_compiler)
+	{
+		m_decompiler_context = m_frame->make_context();
+	}
+
+	// Bind primary context to main RSX thread
+	m_frame->set_current(m_context);
+
 	zcull_ctrl.reset(static_cast<::rsx::reports::ZCULL_control*>(this));
 
 	gl::init();
@@ -783,8 +810,14 @@ void GLGSRender::on_init_thread()
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
-		m_gl_sampler_states[i].create();
-		m_gl_sampler_states[i].bind(i);
+		m_fs_sampler_states[i].create();
+		m_fs_sampler_states[i].bind(i);
+	}
+
+	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+	{
+		m_vs_sampler_states[i].create();
+		m_vs_sampler_states[i].bind(rsx::limits::fragment_textures_count + i);
 	}
 
 	//Occlusion query
@@ -894,10 +927,12 @@ void GLGSRender::on_exit()
 
 	m_prog_buffer.clear();
 
-	if (draw_fbo)
+	for (auto &fbo : m_framebuffer_cache)
 	{
-		draw_fbo.remove();
+		fbo.remove();
 	}
+
+	m_framebuffer_cache.clear();
 
 	if (m_flip_fbo)
 	{
@@ -917,7 +952,12 @@ void GLGSRender::on_exit()
 	m_gl_persistent_stream_buffer.reset();
 	m_gl_volatile_stream_buffer.reset();
 
-	for (auto &sampler : m_gl_sampler_states)
+	for (auto &sampler : m_fs_sampler_states)
+	{
+		sampler.remove();
+	}
+
+	for (auto &sampler : m_vs_sampler_states)
 	{
 		sampler.remove();
 	}
@@ -994,9 +1034,9 @@ void GLGSRender::clear_surface(u32 arg)
 		gl_state.clear_depth(f32(clear_depth) / max_depth_value);
 		mask |= GLenum(gl::buffers::depth);
 
-		if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+		if (const auto address = std::get<0>(m_rtts.m_bound_depth_stencil))
 		{
-			ds->on_write();
+			m_rtts.on_write(address);
 		}
 	}
 
@@ -1040,9 +1080,9 @@ void GLGSRender::clear_surface(u32 arg)
 
 			for (auto &rtt : m_rtts.m_bound_render_targets)
 			{
-				if (auto surface = std::get<1>(rtt))
+				if (const auto address = std::get<0>(rtt))
 				{
-					surface->on_write();
+					m_rtts.on_write(address);
 				}
 			}
 
@@ -1068,7 +1108,6 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 			if (arg & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 
 			init_buffers((rsx::framebuffer_creation_context)ctx, true);
-			synchronize_buffers();
 			clear_surface(arg);
 		}
 
@@ -1081,9 +1120,15 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 		return true;
 	}
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
-	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
-		flush_draw_buffers = true;
+	{
+		// Texture barrier, seemingly not very useful
 		return true;
+	}
+	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
+	{
+		//flush_draw_buffers = true;
+		return true;
+	}
 	}
 
 	return false;
@@ -1094,54 +1139,75 @@ bool GLGSRender::check_program_state()
 	return (rsx::method_registers.shader_program_address() != 0);
 }
 
-void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
+bool GLGSRender::load_program()
 {
 	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
 		verify(HERE), current_fragment_program.valid;
 
-		get_current_vertex_program();
+		get_current_vertex_program(vs_sampler_state);
 
 		current_vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
 		current_fragment_program.unnormalized_coords = 0; //unused
-		void* pipeline_properties = nullptr;
+	}
+	else if (m_program)
+	{
+		// Program already loaded
+		return true;
+	}
 
-		m_program = &m_prog_buffer.getGraphicPipelineState(current_vertex_program, current_fragment_program, pipeline_properties);
-		m_program->use();
+	void* pipeline_properties = nullptr;
+	m_program = m_prog_buffer.get_graphics_pipeline(current_vertex_program, current_fragment_program, pipeline_properties,
+			!g_cfg.video.disable_asynchronous_shader_compiler).get();
 
-		if (m_prog_buffer.check_cache_missed())
+	if (m_prog_buffer.check_cache_missed())
+	{
+		if (m_prog_buffer.check_program_linked_flag())
 		{
+			// Program was linked or queued for linking
 			m_shaders_cache->store(pipeline_properties, current_vertex_program, current_fragment_program);
+		}
 
-			//Notify the user with HUD notification
-			if (g_cfg.misc.show_shader_compilation_hint)
+		// Notify the user with HUD notification
+		if (g_cfg.misc.show_shader_compilation_hint)
+		{
+			if (m_overlay_manager)
 			{
-				if (m_overlay_manager)
+				if (auto dlg = m_overlay_manager->get<rsx::overlays::shader_compile_notification>())
 				{
-					if (auto dlg = m_overlay_manager->get<rsx::overlays::shader_compile_notification>())
-					{
-						//Extend duration
-						dlg->touch();
-					}
-					else
-					{
-						//Create dialog but do not show immediately
-						m_overlay_manager->create<rsx::overlays::shader_compile_notification>();
-					}
+					// Extend duration
+					dlg->touch();
+				}
+				else
+				{
+					// Create dialog but do not show immediately
+					m_overlay_manager->create<rsx::overlays::shader_compile_notification>();
 				}
 			}
 		}
 	}
 
+	return m_program != nullptr;
+}
+
+void GLGSRender::load_program_env(const gl::vertex_upload_info& upload_info)
+{
 	u8 *buf;
 	u32 vertex_state_offset;
 	u32 vertex_constants_offset;
 	u32 fragment_constants_offset;
 
-	const u32 fragment_constants_size = (const u32)m_prog_buffer.get_fragment_constants_buffer_size(current_fragment_program);
+	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
 	const u32 fragment_buffer_size = fragment_constants_size + (18 * 4 * sizeof(float));
 	const bool update_transform_constants = !!(m_graphics_state & rsx::pipeline_state::transform_constants_dirty);
+
+	if (!m_program)
+	{
+		fmt::throw_exception("Unreachable right now" HERE);
+	}
+
+	m_program->use();
 
 	if (manually_flush_ring_buffers)
 	{
@@ -1198,7 +1264,8 @@ void GLGSRender::load_program(const gl::vertex_upload_info& upload_info)
 		if (update_transform_constants) m_transform_constants_buffer->unmap();
 	}
 
-	m_graphics_state &= ~rsx::pipeline_state::memory_barrier_bits;
+	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty);
+	m_graphics_state &= ~handled_flags;
 }
 
 void GLGSRender::update_draw_state()
@@ -1534,6 +1601,16 @@ void GLGSRender::flip(int buffer)
 	m_rtts.free_invalidated();
 	m_vertex_cache->purge();
 
+	if (m_framebuffer_cache.size() > 32)
+	{
+		for (auto &fbo : m_framebuffer_cache)
+		{
+			fbo.remove();
+		}
+
+		m_framebuffer_cache.clear();
+	}
+
 	//If we are skipping the next frame, do not reset perf counters
 	if (skip_frame) return;
 
@@ -1641,15 +1718,6 @@ work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrash
 	return result;
 }
 
-void GLGSRender::synchronize_buffers()
-{
-	if (flush_draw_buffers)
-	{
-		write_buffers();
-		flush_draw_buffers = false;
-	}
-}
-
 bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 {
 	if (m_gl_texture_cache.blit(src, dst, interpolate, m_rtts))
@@ -1715,4 +1783,29 @@ void GLGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 		//Discard is being called on an active query, close it
 		glEndQuery(GL_ANY_SAMPLES_PASSED);
 	}
+}
+
+void GLGSRender::on_decompiler_init()
+{
+	// Bind decompiler context to this thread
+	m_frame->set_current(m_decompiler_context);
+}
+
+void GLGSRender::on_decompiler_exit()
+{
+	// Cleanup
+	m_frame->delete_context(m_decompiler_context);
+}
+
+bool GLGSRender::on_decompiler_task()
+{
+	const auto result = m_prog_buffer.async_update(8);
+	if (result.second)
+	{
+		// TODO: Proper synchronization with renderer
+		// Finish works well enough for now but it is not a proper soulution
+		glFinish();
+	}
+
+	return result.first;
 }

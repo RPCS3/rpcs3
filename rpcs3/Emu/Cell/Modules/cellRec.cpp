@@ -5,7 +5,7 @@
 
 
 
-logs::channel cellRec("cellRec");
+LOG_CHANNEL(cellRec);
 
 enum
 {

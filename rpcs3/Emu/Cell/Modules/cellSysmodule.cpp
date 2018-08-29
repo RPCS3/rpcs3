@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellSysmodule("cellSysmodule");
+LOG_CHANNEL(cellSysmodule);
 
 enum
 {
@@ -321,7 +321,7 @@ s32 cellSysmoduleUnloadModule(u16 id)
 
 	//	m->Unload();
 	//}
-	
+
 	return CELL_OK;
 }
 

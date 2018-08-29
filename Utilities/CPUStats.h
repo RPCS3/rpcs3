@@ -95,7 +95,7 @@ public:
 		GetProcessTimes(m_self, &ftime, &ftime, &fsys, &fusr);
 		memcpy(&sys, &fsys, sizeof(FILETIME));
 		memcpy(&usr, &fusr, sizeof(FILETIME));
-		double percent = (sys.QuadPart - m_sys_cpu.QuadPart) + (usr.QuadPart - m_usr_cpu.QuadPart);
+		double percent = double(sys.QuadPart - m_sys_cpu.QuadPart) + (usr.QuadPart - m_usr_cpu.QuadPart);
 		percent /= (now.QuadPart - m_last_cpu.QuadPart);
 		percent /= m_num_processors;
 

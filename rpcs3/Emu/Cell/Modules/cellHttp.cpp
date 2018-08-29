@@ -3,7 +3,7 @@
 
 #include "cellHttp.h"
 
-logs::channel cellHttp("cellHttp");
+LOG_CHANNEL(cellHttp);
 
 s32 cellHttpAuthCacheExport()
 {

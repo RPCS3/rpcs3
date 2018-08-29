@@ -6,6 +6,7 @@
 #include "D3D12Formats.h"
 #include "../rsx_methods.h"
 #include "../rsx_utils.h"
+#include "../Common/TextureUtils.h"
 
 #define TO_STRING(x) #x
 
@@ -53,7 +54,7 @@ void D3D12GSRender::load_program()
 		return std::make_tuple(true, native_pitch);
 	};
 
-	get_current_vertex_program(false);
+	get_current_vertex_program({}, true);
 	get_current_fragment_program_legacy(rtt_lookup_func);
 
 	if (!current_fragment_program.valid)
@@ -309,7 +310,7 @@ void D3D12GSRender::load_program()
 		}
 	}
 
-	m_current_pso = m_pso_cache.getGraphicPipelineState(current_vertex_program, current_fragment_program, prop, m_device.Get(), m_shared_root_signature.Get());
+	m_current_pso = m_pso_cache.get_graphics_pipeline(current_vertex_program, current_fragment_program, prop, false, m_device.Get(), m_shared_root_signature.Get());
 	return;
 }
 

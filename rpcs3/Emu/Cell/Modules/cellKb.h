@@ -12,7 +12,11 @@ enum CellKbError : u32
 	CELL_KB_ERROR_SYS_SETTING_FAILED         = 0x80121008,
 };
 
-static const u32 CELL_KB_MAX_KEYBOARDS = 127;
+enum
+{
+	CELL_KB_MAX_KEYCODES  = 62,
+	CELL_KB_MAX_KEYBOARDS = 127,
+};
 
 struct CellKbInfo
 {
@@ -21,8 +25,6 @@ struct CellKbInfo
 	be_t<u32> info;
 	u8 status[CELL_KB_MAX_KEYBOARDS];
 };
-
-static const u32 CELL_KB_MAX_KEYCODES = 62;
 
 struct CellKbData
 {

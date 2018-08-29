@@ -4,7 +4,7 @@
 #include "GDBDebugServer.h"
 #include "Log.h"
 #include <algorithm>
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/CPU/CPUThread.h"
@@ -19,7 +19,7 @@
 extern void ppu_set_breakpoint(u32 addr);
 extern void ppu_remove_breakpoint(u32 addr);
 
-logs::channel gdbDebugServer("gdbDebugServer");
+LOG_CHANNEL(gdbDebugServer);
 
 int sock_init(void)
 {

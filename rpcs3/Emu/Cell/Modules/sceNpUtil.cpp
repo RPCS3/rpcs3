@@ -4,7 +4,7 @@
 #include "sceNp.h"
 #include "sceNpUtil.h"
 
-logs::channel sceNpUtil("sceNpUtil");
+LOG_CHANNEL(sceNpUtil);
 
 s32 sceNpUtilBandwidthTestInitStart(u32 prio, size_t stack)
 {

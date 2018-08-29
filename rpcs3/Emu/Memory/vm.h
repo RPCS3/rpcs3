@@ -21,9 +21,11 @@ namespace vm
 	enum memory_location_t : uint
 	{
 		main,
-		user_space,
+		user64k,
+		user1m,
 		video,
 		stack,
+		spu,
 
 		memory_location_max,
 		any = 0xffffffff,
@@ -63,15 +65,16 @@ namespace vm
 	void temporary_unlock(cpu_thread& cpu) noexcept;
 	void temporary_unlock() noexcept;
 
-	struct reader_lock final
+	class reader_lock final
 	{
-		const bool locked;
+		bool m_upgraded = false;
 
+	public:
 		reader_lock(const reader_lock&) = delete;
 		reader_lock();
 		~reader_lock();
 
-		explicit operator bool() const { return locked; }
+		void upgrade();
 	};
 
 	struct writer_lock final
@@ -176,6 +179,9 @@ namespace vm
 
 	// Create new memory block with specified parameters and return it
 	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags = 0);
+
+	// Create new memory block with at arbitrary position with specified alignment
+	std::shared_ptr<block_t> find_map(u32 size, u32 align, u64 flags = 0);
 
 	// Delete existing memory block with specified start address, return it
 	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty = false);

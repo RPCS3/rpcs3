@@ -143,7 +143,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	std::fill(std::begin(m_globals), std::end(m_globals), nullptr);
 	std::fill(std::begin(m_locals), std::end(m_locals), nullptr);
 
-	IRBuilder<> irb(m_entry = BasicBlock::Create(m_context, "__entry", m_function));
+	IRBuilder<> irb(BasicBlock::Create(m_context, "__entry", m_function));
 	m_ir = &irb;
 
 	// Instruction address is (m_addr + base)
@@ -153,18 +153,18 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	m_thread = &*m_function->arg_begin();
 	m_base_loaded = m_ir->CreateLoad(m_base);
 
-	m_body = BasicBlock::Create(m_context, "__body", m_function);
+	const auto body = BasicBlock::Create(m_context, "__body", m_function);
 
 	// Check status register in the entry block
 	const auto vstate = m_ir->CreateLoad(m_ir->CreateStructGEP(nullptr, m_thread, 1), true);
 	const auto vcheck = BasicBlock::Create(m_context, "__test", m_function);
-	m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), m_body, vcheck, m_md_likely);
+	m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), body, vcheck, m_md_likely);
 
 	// Create tail call to the check function
 	m_ir->SetInsertPoint(vcheck);
 	Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCallKind(llvm::CallInst::TCK_Tail);
 	m_ir->CreateRetVoid();
-	m_ir->SetInsertPoint(m_body);
+	m_ir->SetInsertPoint(body);
 
 	// Process blocks
 	const auto block = std::make_pair(info.addr, info.size);
@@ -178,7 +178,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 		// Process the instructions
 		for (m_addr = block.first - base; m_addr < block.first + block.second - base; m_addr += 4)
 		{
-			if (m_body->getTerminator())
+			if (m_ir->GetInsertBlock()->getTerminator())
 			{
 				break;
 			}
@@ -207,7 +207,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 		}
 
 		// Finalize current block if necessary (create branch to the next address)
-		if (!m_body->getTerminator())
+		if (!m_ir->GetInsertBlock()->getTerminator())
 		{
 			FlushRegisters();
 			CallFunction(m_addr);
@@ -1114,13 +1114,13 @@ void PPUTranslator::VMSUMUHS(ppu_opcode_t op)
 {
 	const auto a = get_vr<u32[4]>(op.va);
 	const auto b = get_vr<u32[4]>(op.vb);
-	const auto c = get_vr<s32[4]>(op.vc);
-	const auto ml = bitcast<s32[4]>((a << 16 >> 16) * (b << 16 >> 16));
-	const auto mh = bitcast<s32[4]>((a >> 16) * (b >> 16));
+	const auto c = get_vr<u32[4]>(op.vc);
+	const auto ml = bitcast<u32[4]>((a << 16 >> 16) * (b << 16 >> 16));
+	const auto mh = bitcast<u32[4]>((a >> 16) * (b >> 16));
 	const auto s = eval(ml + mh);
 	const auto s2 = eval(s + c);
-	const auto x = eval((ucarry(ml, mh, s) | ucarry(s, c, s2)) >> 31);
-	set_vr(op.vd, eval(s2 | x));
+	const auto x = eval(s < ml | s2 < s);
+	set_vr(op.vd, select(x, splat<u32[4]>(-1), s2));
 	SetSat(IsNotZero(x.value));
 }
 

@@ -3,7 +3,7 @@
 
 #include "cellJpgEnc.h"
 
-logs::channel cellJpgEnc("cellJpgEnc");
+LOG_CHANNEL(cellJpgEnc);
 
 
 s32 cellJpgEncQueryAttr()

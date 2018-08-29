@@ -7,7 +7,7 @@
 #include "Utilities/StrUtil.h"
 #include "cellSysutil.h"
 
-logs::channel cellUserInfo("cellUserInfo");
+LOG_CHANNEL(cellUserInfo);
 
 template<>
 void fmt_class_string<CellUserInfoError>::format(std::string& out, u64 arg)
@@ -37,8 +37,8 @@ error_code cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 
 	if (id == CELL_SYSUTIL_USERID_CURRENT)
 	{
-		// TODO: Return current user/profile when that is implemented
-		id = 1;
+		// We want the int value, not the string.
+		id = Emu.GetUsrId();
 	}
 
 	if (!stat)
@@ -121,8 +121,8 @@ error_code cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserLis
 
 	if (currentUserId)
 	{
-		// TODO: Properly set the current user ID here, once implemented
-		*currentUserId = 1;
+		// We want the int value, not the string.
+		*currentUserId = Emu.GetUsrId();
 	}
 
 	return CELL_OK;

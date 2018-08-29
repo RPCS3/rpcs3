@@ -1,43 +1,11 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "RSXThread.h"
 #include "RSXTexture.h"
 #include "rsx_methods.h"
 
 namespace rsx
 {
-	void fragment_texture::init()
-	{
-		// Offset
-		registers[NV4097_SET_TEXTURE_OFFSET + (m_index * 8)] = 0;
-
-		// Format
-		registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] = 0;
-
-		// Address
-		registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] =
-			((/*wraps*/1) | ((/*anisoBias*/0) << 4) | ((/*wrapt*/1) << 8) | ((/*unsignedRemap*/0) << 12) |
-			((/*wrapr*/3) << 16) | ((/*gamma*/0) << 20) | ((/*signedRemap*/0) << 24) | ((/*zfunc*/0) << 28));
-
-		// Control0
-		registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] =
-			(((/*alphakill*/0) << 2) | (/*maxaniso*/0) << 4) | ((/*maxlod*/0xc00) << 7) | ((/*minlod*/0) << 19) | ((/*enable*/0) << 31);
-
-		// Control1
-		registers[NV4097_SET_TEXTURE_CONTROL1 + (m_index * 8)] = 0xAAE4;
-
-		// Filter
-		registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] =
-			((/*bias*/0) | ((/*conv*/1) << 13) | ((/*min*/5) << 16) | ((/*mag*/2) << 24)
-			| ((/*as*/0) << 28) | ((/*rs*/0) << 29) | ((/*gs*/0) << 30) | ((/*bs*/0) << 31));
-
-		// Image Rect
-		registers[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index * 8)] = (/*height*/1) | ((/*width*/1) << 16);
-
-		// Border Color
-		registers[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index * 8)] = 0;
-	}
-
 	u32 fragment_texture::offset() const
 	{
 		return registers[NV4097_SET_TEXTURE_OFFSET + (m_index * 8)];
@@ -309,38 +277,6 @@ namespace rsx
 		return registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] & 0xfffff;
 	}
 
-	void vertex_texture::init()
-	{
-		// Offset
-		registers[NV4097_SET_VERTEX_TEXTURE_OFFSET + (m_index * 8)] = 0;
-
-		// Format
-		registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] = 0;
-
-		// Address
-		registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] =
-			((/*wraps*/1) | ((/*anisoBias*/0) << 4) | ((/*wrapt*/1) << 8) | ((/*unsignedRemap*/0) << 12) |
-			((/*wrapr*/3) << 16) | ((/*gamma*/0) << 20) | ((/*signedRemap*/0) << 24) | ((/*zfunc*/0) << 28));
-
-		// Control0
-		registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] =
-			(((/*alphakill*/0) << 2) | (/*maxaniso*/0) << 4) | ((/*maxlod*/0xc00) << 7) | ((/*minlod*/0) << 19) | ((/*enable*/0) << 31);
-
-		// Control1
-		//registers[NV4097_SET_VERTEX_TEXTURE_CONTROL1 + (m_index * 8)] = 0xE4;
-
-		// Filter
-		registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] =
-			((/*bias*/0) | ((/*conv*/1) << 13) | ((/*min*/5) << 16) | ((/*mag*/2) << 24)
-			| ((/*as*/0) << 28) | ((/*rs*/0) << 29) | ((/*gs*/0) << 30) | ((/*bs*/0) << 31));
-
-		// Image Rect
-		registers[NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + (m_index * 8)] = (/*height*/1) | ((/*width*/1) << 16);
-
-		// Border Color
-		registers[NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + (m_index * 8)] = 0;
-	}
-
 	u32 vertex_texture::offset() const
 	{
 		return registers[NV4097_SET_VERTEX_TEXTURE_OFFSET + (m_index * 8)];
@@ -396,11 +332,6 @@ namespace rsx
 		return (max_mipmap_count > 0) ? max_mipmap_count : 1;
 	}
 
-	u8 vertex_texture::unsigned_remap() const
-	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 12) & 0xf);
-	}
-
 	std::pair<std::array<u8, 4>, std::array<u8, 4>> vertex_texture::decoded_remap() const
 	{
 		return
@@ -414,26 +345,6 @@ namespace rsx
 	{
 		//disabled
 		return 0xAAE4;
-	}
-
-	u8 vertex_texture::zfunc() const
-	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 28) & 0xf);
-	}
-
-	u8 vertex_texture::gamma() const
-	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 20) & 0xf);
-	}
-
-	u8 vertex_texture::aniso_bias() const
-	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 4) & 0xf);
-	}
-
-	u8 vertex_texture::signed_remap() const
-	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 24) & 0xf);
 	}
 
 	bool vertex_texture::enabled() const
@@ -451,16 +362,6 @@ namespace rsx
 		return ((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 7) & 0xfff);
 	}
 
-	rsx::texture_max_anisotropy vertex_texture::max_aniso() const
-	{
-		return rsx::to_texture_max_anisotropy((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 4) & 0x7);
-	}
-
-	bool vertex_texture::alpha_kill_enabled() const
-	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 2) & 0x1);
-	}
-
 	u16 vertex_texture::bias() const
 	{
 		return ((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
@@ -468,37 +369,27 @@ namespace rsx
 
 	rsx::texture_minify_filter vertex_texture::min_filter() const
 	{
-		return rsx::to_texture_minify_filter((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 16) & 0x7);
+		return rsx::texture_minify_filter::nearest;
 	}
 
 	rsx::texture_magnify_filter vertex_texture::mag_filter() const
 	{
-		return rsx::to_texture_magnify_filter((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 24) & 0x7);
+		return rsx::texture_magnify_filter::nearest;
 	}
 
-	u8 vertex_texture::convolution_filter() const
+	rsx::texture_wrap_mode vertex_texture::wrap_s() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 13) & 0xf);
+		return rsx::to_texture_wrap_mode((registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)]) & 0xf);
 	}
 
-	bool vertex_texture::a_signed() const
+	rsx::texture_wrap_mode vertex_texture::wrap_t() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 28) & 0x1);
+		return rsx::to_texture_wrap_mode((registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 8) & 0xf);
 	}
 
-	bool vertex_texture::r_signed() const
+	rsx::texture_wrap_mode vertex_texture::wrap_r() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 29) & 0x1);
-	}
-
-	bool vertex_texture::g_signed() const
-	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 30) & 0x1);
-	}
-
-	bool vertex_texture::b_signed() const
-	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] >> 31) & 0x1);
+		return rsx::texture_wrap_mode::wrap;
 	}
 
 	u16 vertex_texture::width() const

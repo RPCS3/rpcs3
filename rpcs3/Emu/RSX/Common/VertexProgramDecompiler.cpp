@@ -176,7 +176,24 @@ void VertexProgramDecompiler::SetDST(bool is_sca, std::string value)
 
 std::string VertexProgramDecompiler::GetTex()
 {
-	return m_parr.AddParam(PF_PARAM_UNIFORM, "sampler2D", std::string("vtex") + std::to_string(d2.tex_num));
+	std::string sampler;
+	switch (m_prog.get_texture_dimension(d2.tex_num))
+	{
+	case rsx::texture_dimension_extended::texture_dimension_1d:
+		sampler = "sampler1D";
+		break;
+	case rsx::texture_dimension_extended::texture_dimension_2d:
+		sampler = "sampler2D";
+		break;
+	case rsx::texture_dimension_extended::texture_dimension_3d:
+		sampler = "sampler3D";
+		break;
+	case rsx::texture_dimension_extended::texture_dimension_cubemap:
+		sampler = "samplerCube";
+		break;
+	}
+
+	return m_parr.AddParam(PF_PARAM_UNIFORM, sampler, std::string("vtex") + std::to_string(d2.tex_num));
 }
 
 std::string VertexProgramDecompiler::Format(const std::string& code)
@@ -292,7 +309,7 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 	auto get_masked_dst = [](const std::string& dest, const char mask)
 	{
 		const auto selector = std::string(".") + mask;
-		const auto pos = dest.find("=");
+		const auto pos = dest.find('=');
 
 		std::string result = dest + selector;
 
@@ -612,8 +629,26 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_SNE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")"); break;
 		case RSX_VEC_OPCODE_STR: SetDSTVec(getFunction(FUNCTION::FUNCTION_STR)); break;
 		case RSX_VEC_OPCODE_SSG: SetDSTVec("sign($0)"); break;
-		case RSX_VEC_OPCODE_TXL: SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D)); break;
+		case RSX_VEC_OPCODE_TXL:
+		{
+			switch (m_prog.get_texture_dimension(d2.tex_num))
+			{
+			case rsx::texture_dimension_extended::texture_dimension_1d:
+				SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH1D));
+				break;
+			case rsx::texture_dimension_extended::texture_dimension_2d:
+				SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D));
+				break;
+			case rsx::texture_dimension_extended::texture_dimension_3d:
+				SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH3D));
+				break;
+			case rsx::texture_dimension_extended::texture_dimension_cubemap:
+				SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCHCUBE));
+				break;
+			}
 
+			break;
+		}
 		default:
 			AddCode(fmt::format("//Unknown vp opcode 0x%x", u32{ d1.vec_opcode }));
 			LOG_ERROR(RSX, "Unknown vp opcode 0x%x", u32{ d1.vec_opcode });

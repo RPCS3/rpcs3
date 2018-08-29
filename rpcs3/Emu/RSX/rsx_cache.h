@@ -60,11 +60,6 @@ namespace rsx
 		bool locked = false;
 		bool dirty = false;
 
-		inline bool region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2) const
-		{
-			return (base1 < limit2 && base2 < limit1);
-		}
-
 		inline void init_lockable_range(u32 base, u32 length)
 		{
 			locked_address_base = (base & ~4095);
@@ -115,9 +110,9 @@ namespace rsx
 			init_lockable_range(cpu_address_base, cpu_address_range);
 		}
 
-		void protect(utils::protection prot)
+		void protect(utils::protection prot, bool force = false)
 		{
-			if (prot == protection) return;
+			if (prot == protection && !force) return;
 
 			verify(HERE), locked_address_range > 0;
 			utils::memory_protect(vm::base(locked_address_base), locked_address_range, prot);
@@ -148,7 +143,6 @@ namespace rsx
 				const auto old_prot = protection;
 				const auto old_locked_base = locked_address_base;
 				const auto old_locked_length = locked_address_range;
-				protection = utils::protection::rw;
 
 				if (confirmed_range.second)
 				{
@@ -164,7 +158,7 @@ namespace rsx
 				init_lockable_range(confirmed_range.first + cpu_address_base, confirmed_range.second);
 			}
 
-			protect(prot);
+			protect(prot, true);
 		}
 
 		void unprotect()
@@ -240,7 +234,7 @@ namespace rsx
 		std::tuple<bool, std::pair<u32, u32>> overlaps_page(const std::pair<u32, u32>& old_range, u32 address, overlap_test_bounds bounds) const
 		{
 			const u32 page_base = address & ~4095;
-			const u32 page_limit = address + 4096;
+			const u32 page_limit = page_base + 4096;
 
 			const u32 compare_min = std::min(old_range.first, page_base);
 			const u32 compare_max = std::max(old_range.second, page_limit);
@@ -354,7 +348,20 @@ namespace rsx
 
 		void flush_io(u32 offset = 0, u32 len = 0) const
 		{
-			locked_memory_ptr.flush(offset, len);
+			const auto write_length = len ? len : (cpu_address_range - offset);
+			locked_memory_ptr.flush(offset, write_length);
+		}
+
+		std::pair<u32, u32> get_protected_range() const
+		{
+			if (locked)
+			{
+				return { locked_address_base, locked_address_range };
+			}
+			else
+			{
+				return { 0, 0 };
+			}
 		}
 
 		std::pair<u32, u32> get_confirmed_range() const
@@ -378,6 +385,7 @@ namespace rsx
 			u64 pipeline_storage_hash;
 
 			u32 vp_ctrl;
+			u32 vp_texture_dimensions;
 			u64 vp_instruction_mask[8];
 
 			u32 vp_base_address;
@@ -686,8 +694,7 @@ namespace rsx
 
 			if (!fs::is_file(fp_name))
 			{
-				const auto size = program_hash_util::fragment_program_utils::get_fragment_program_ucode_size(fp.addr);
-				fs::file(fp_name, fs::rewrite).write(fp.addr, size);
+				fs::file(fp_name, fs::rewrite).write(fp.addr, fp.ucode_length);
 			}
 
 			if (!fs::is_file(vp_name))
@@ -698,6 +705,7 @@ namespace rsx
 			u64 state_hash = 0;
 			state_hash ^= rpcs3::hash_base<u32>(data.vp_ctrl);
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_ctrl);
+			state_hash ^= rpcs3::hash_base<u32>(data.vp_texture_dimensions);
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_texture_dimensions);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_unnormalized_coords);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_height);
@@ -739,6 +747,7 @@ namespace rsx
 			RSXFragmentProgram fp = {};
 			fragment_program_data[program_hash] = data;
 			fp.addr = fragment_program_data[program_hash].data();
+			fp.ucode_length = (u32)data.size();
 
 			return fp;
 		}
@@ -750,6 +759,7 @@ namespace rsx
 			pipeline_storage_type pipeline = data.pipeline_properties;
 
 			vp.output_mask = data.vp_ctrl;
+			vp.texture_dimensions = data.vp_texture_dimensions;
 			vp.base_address = data.vp_base_address;
 			vp.entry = data.vp_entry;
 
@@ -796,6 +806,7 @@ namespace rsx
 			data_block.pipeline_storage_hash = m_storage.get_hash(pipeline);
 
 			data_block.vp_ctrl = vp.output_mask;
+			data_block.vp_texture_dimensions = vp.texture_dimensions;
 			data_block.vp_base_address = vp.base_address;
 			data_block.vp_entry = vp.entry;
 

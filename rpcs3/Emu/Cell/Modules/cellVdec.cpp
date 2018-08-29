@@ -22,7 +22,7 @@ extern "C"
 
 std::mutex g_mutex_avcodec_open2;
 
-logs::channel cellVdec("cellVdec");
+LOG_CHANNEL(cellVdec);
 
 vm::gvar<s32> _cell_vdec_prx_ver; // ???
 
@@ -321,10 +321,7 @@ struct vdec_thread : ppu_thread
 						}
 						else
 						{
-							const u64 amend = u64{90000} * ctx->time_base.num * ctx->ticks_per_frame / ctx->time_base.den;
-							next_pts += amend;
-							next_dts += amend;
-
+							u64 amend = u64{90000} * ctx->time_base.num * ctx->ticks_per_frame / ctx->time_base.den;
 							const auto freq = 1. * ctx->time_base.den / ctx->time_base.num / ctx->ticks_per_frame;
 
 							if (std::abs(freq - 23.976) < 0.002)
@@ -344,7 +341,15 @@ struct vdec_thread : ppu_thread
 							else if (std::abs(freq - 60.000) < 0.001)
 								frame.frc = CELL_VDEC_FRC_60;
 							else
-								fmt::throw_exception("Unsupported time_base.num (%d/%d, tpf=%d)" HERE, ctx->time_base.den, ctx->time_base.num, ctx->ticks_per_frame);
+							{
+								// Hack
+								cellVdec.error("Unsupported time_base.num (%d/%d, tpf=%d)", ctx->time_base.den, ctx->time_base.num, ctx->ticks_per_frame);
+								amend = u64{90000} / 30;
+								frame.frc = CELL_VDEC_FRC_30;
+							}
+
+							next_pts += amend;
+							next_dts += amend;
 						}
 
 						cellVdec.trace("Got picture (pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", frame.pts, frame->pkt_pts, frame.dts, frame->pkt_dts);

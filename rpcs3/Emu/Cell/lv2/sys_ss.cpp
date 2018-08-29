@@ -30,7 +30,7 @@ const HCRYPTPROV s_crypto_provider = []() -> HCRYPTPROV
 
 
 
-logs::channel sys_ss("sys_ss");
+LOG_CHANNEL(sys_ss);
 
 error_code sys_ss_random_number_generator(u32 arg1, vm::ptr<void> buf, u64 size)
 {

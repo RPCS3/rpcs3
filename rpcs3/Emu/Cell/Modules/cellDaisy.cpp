@@ -3,7 +3,7 @@
 
 #include "cellDaisy.h"
 
-logs::channel cellDaisy("cellDaisy");
+LOG_CHANNEL(cellDaisy);
 
 using LFQueue2 = struct CellDaisyLFQueue2;
 using Lock = struct CellDaisyLock;
@@ -138,7 +138,7 @@ DECLARE(ppu_module_manager::cellDaisy)("cellDaisy", []()
 	REG_FNID(cellDaisy, "_QN4cell5Daisy29LFQueue2HasUnfinishedConsumerEPNS0_8LFQueue2Ej", cellDaisyLFQueue2HasUnfinishedConsumer);
 	REG_FNID(cellDaisy, "_ZN4cell5Daisy16LFQueue2PushOpenEPNS0_8LFQueue2E", cellDaisyLFQueue2PushOpen);
 	REG_FNID(cellDaisy, "_QN4cell5Daisy16LFQueue2PushOpenEPNS0_8LFQueue2E", cellDaisyLFQueue2PushOpen);
-	REG_FNID(cellDaisy, "_ZN4cell5Daisy16LFQueue2PopCloseEPNS0_8LFQueue2EPFiPvjE", cellDaisyLFQueue2PopClose);	
+	REG_FNID(cellDaisy, "_ZN4cell5Daisy16LFQueue2PopCloseEPNS0_8LFQueue2EPFiPvjE", cellDaisyLFQueue2PopClose);
 	REG_FNID(cellDaisy, "_QN4cell5Daisy16LFQueue2PopCloseEPNS0_8LFQueue2EPFiPvjE", cellDaisyLFQueue2PopClose);
 	REG_FNID(cellDaisy, "_ZN4cell5Daisy15LFQueue2PopOpenEPNS0_8LFQueue2E", cellDaisyLFQueue2PopOpen);
 	REG_FNID(cellDaisy, "_QN4cell5Daisy15LFQueue2PopOpenEPNS0_8LFQueue2E", cellDaisyLFQueue2PopOpen);

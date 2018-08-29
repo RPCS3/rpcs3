@@ -50,15 +50,10 @@
 /bin/GuiConfigs/*.dat
 /bin/GuiConfigs/*.dat.*
 
-# Ignore installed games except test homebrews
-!/bin/dev_hdd0/game/
-/bin/dev_hdd0/game/*
-!/bin/dev_hdd0/game/TEST12345/
-/bin/dev_hdd0/disc/*
-
 # Visual Studio Files
 .vs/*
 .vscode/*
+*.ipch
 *.vspx
 *.psess
 *.VC.*

@@ -2927,14 +2927,13 @@ struct registers_decoder<NV4097_SET_CULL_FACE>
 		union
 		{
 			u32 raw_value;
-			bitfield_decoder_t<0, 32> cull_face_mode;
 		} m_data;
 	public:
 		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
 		cull_face cull_face_mode() const
 		{
-			return to_cull_face(m_data.cull_face_mode);
+			return static_cast<cull_face>(m_data.raw_value);
 		}
 	};
 

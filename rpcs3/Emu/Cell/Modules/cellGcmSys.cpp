@@ -4,13 +4,13 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/PPUOpcodes.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/RSX/GSRender.h"
 #include "cellGcmSys.h"
 
 #include <thread>
 
-logs::channel cellGcmSys("cellGcmSys");
+LOG_CHANNEL(cellGcmSys);
 
 extern s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 count);
 
@@ -28,7 +28,7 @@ const u32 tiled_pitches[] = {
 
 struct CellGcmSysConfig {
 	u32 zculls_addr;
-	vm::ptr<CellGcmDisplayInfo> gcm_buffers{ vm::null };
+	vm::ptr<CellGcmDisplayInfo> gcm_buffers = vm::null;
 	u32 tiles_addr;
 	u32 ctxt_addr;
 	CellGcmConfig current_config;
@@ -37,6 +37,7 @@ struct CellGcmSysConfig {
 };
 
 u64 system_mode = 0;
+u32 reserved_size = 0;
 u32 local_size = 0;
 u32 local_addr = 0;
 
@@ -45,7 +46,7 @@ u32 local_addr = 0;
 /*
  * Get usable local memory size for a specific game SDK version
  * Example: For 0x00446000 (FW 4.46) we get a localSize of 0x0F900000 (249MB)
- */ 
+ */
 u32 gcmGetLocalMemorySize(u32 sdk_version)
 {
 	if (sdk_version >= 0x00220000)
@@ -68,6 +69,7 @@ u32 gcmGetLocalMemorySize(u32 sdk_version)
 }
 
 CellGcmOffsetTable offsetTable;
+u16 IoMapTable[0xC00];
 
 void InitOffsetTable()
 {
@@ -76,6 +78,10 @@ void InitOffsetTable()
 
 	memset(offsetTable.ioAddress.get_ptr(), 0xFF, 3072 * sizeof(u16));
 	memset(offsetTable.eaAddress.get_ptr(), 0xFF, 512 * sizeof(u16));
+	memset(IoMapTable, 0, 3072 * sizeof(u16));
+
+	memset(&RSXIOMem, 0xFF, sizeof(RSXIOMem));
+	reserved_size = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -364,15 +370,17 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	cellGcmSys.warning("*** local memory(addr=0x%x, size=0x%x)", local_addr, local_size);
 
 	InitOffsetTable();
+
+	const auto render = rsx::get_current_renderer();
 	if (system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB)
 	{
 		cellGcmSys.warning("cellGcmInit(): 512MB io address space used");
-		RSXIOMem.SetRange(0, 0x20000000 /*512MB*/);
+		render->main_mem_size = 0x20000000;
 	}
 	else
 	{
 		cellGcmSys.warning("cellGcmInit(): 256MB io address space used");
-		RSXIOMem.SetRange(0, 0x10000000 /*256MB*/);
+		render->main_mem_size = 0x10000000;
 	}
 
 	if (gcmMapEaIoAddress(ioAddress, 0, ioSize, false) != CELL_OK)
@@ -389,16 +397,8 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	m_config->current_config.coreFrequency = 500000000;
 
 	// Create contexts
-
-	u32 rsx_ctxaddr = 0;
-	for (u32 addr = 0x40000000; addr < 0xC0000000; addr += 0x10000000)
-	{
-		if (vm::map(addr, 0x10000000, 0x400))
-		{
-			rsx_ctxaddr = addr;
-			break;
-		}
-	}
+	auto ctx_area = vm::find_map(0x10000000, 0x10000000, 0x403);
+	u32 rsx_ctxaddr = ctx_area ? ctx_area->addr : 0;
 
 	if (!rsx_ctxaddr || vm::falloc(rsx_ctxaddr, 0x400000) != rsx_ctxaddr)
 		fmt::throw_exception("Failed to alloc rsx context.");
@@ -430,7 +430,6 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	ctrl.get = 0;
 	ctrl.ref = -1;
 
-	const auto render = rsx::get_current_renderer();
 	render->intr_thread = idm::make_ptr<ppu_thread>("_gcm_intr_thread", 1, 0x4000);
 	render->intr_thread->run();
 	render->main_mem_addr = 0;
@@ -699,6 +698,7 @@ void cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart,
 	zcull.sFunc = sFunc;
 	zcull.sRef = sRef;
 	zcull.sMask = sMask;
+	zcull.binded = (zCullFormat > 0);
 
 	vm::_ptr<CellGcmZcullInfo>(m_config->zculls_addr)[index] = zcull.pack();
 }
@@ -891,7 +891,7 @@ s32 cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset)
 	{
 		result = address - 0xC0000000;
 	}
-	// Address in main memory else check 
+	// Address in main memory else check
 	else
 	{
 		const u32 upper12Bits = offsetTable.ioAddress[address >> 20];
@@ -915,7 +915,7 @@ u32 cellGcmGetMaxIoMapSize()
 {
 	cellGcmSys.trace("cellGcmGetMaxIoMapSize()");
 
-	return RSXIOMem.GetSize() - RSXIOMem.GetReservedAmount();
+	return rsx::get_current_renderer()->main_mem_size - reserved_size;
 }
 
 void cellGcmGetOffsetTable(vm::ptr<CellGcmOffsetTable> table)
@@ -945,24 +945,21 @@ s32 cellGcmIoOffsetToAddress(u32 ioOffset, vm::ptr<u32> address)
 
 s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 {
-	if ((ea & 0xFFFFF) || (io & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
-
-	const auto render = rsx::get_current_renderer();
-
-	// Check if the mapping was successfull
-	if (RSXIOMem.Map(ea, size, io))
+	if (!size || (ea & 0xFFFFF) || (io & 0xFFFFF) || (size & 0xFFFFF)
+	 || rsx::get_current_renderer()->main_mem_size < io + size)
 	{
-		// Fill the offset table
-		for (u32 i = 0; i<(size >> 20); i++)
-		{
-			offsetTable.ioAddress[(ea >> 20) + i] = (io >> 20) + i;
-			offsetTable.eaAddress[(io >> 20) + i] = (ea >> 20) + i;
-		}
+		 return CELL_GCM_ERROR_FAILURE;
 	}
-	else
+
+	ea >>=20, io >>= 20, size >>= 20;
+
+	IoMapTable[ea] = size;
+
+	// Fill the offset table and map memory
+	for (u32 i = 0; i < size; i++)
 	{
-		cellGcmSys.error("gcmMapEaIoAddress: CELL_GCM_ERROR_FAILURE");
-		return CELL_GCM_ERROR_FAILURE;
+		RSXIOMem.io[ea + i] = offsetTable.ioAddress[ea + i] = io + i;
+		RSXIOMem.ea[io + i] = offsetTable.eaAddress[io + i] = ea + i;
 	}
 
 	return CELL_OK;
@@ -1009,24 +1006,23 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 	if (!size || (ea & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
 
 	// Use the offset table to find the next free io address
-	for (u32 io = RSXIOMem.GetRangeStart() >> 20, end = RSXIOMem.GetRangeEnd() >> 20, unmap_count = 1; io < end; unmap_count++)
+	for (u32 io = 0, end = (rsx::get_current_renderer()->main_mem_size - reserved_size) >> 20, unmap_count = 1; io < end; unmap_count++)
 	{
 		if (static_cast<s16>(offsetTable.eaAddress[io + unmap_count - 1]) < 0)
 		{
 			if (unmap_count >= (size >> 20))
 			{
-				io <<= 20;
+				*offset = io << 20;
 
-				RSXIOMem.Map(ea, size, io);
-				*offset = io;
+				ea >>= 20, size >>= 20;
 
-				io >>= 20, ea >>= 20;
+				IoMapTable[ea] = size;
 
-				//fill the offset table
-				for (u32 i = 0; i<(size >> 20); ++i)
+				// Fill the offset table and map memory
+				for (u32 i = 0; i < size; i++)
 				{
-					offsetTable.ioAddress[ea + i] = io + i;
-					offsetTable.eaAddress[io + i] = ea + i;
+					RSXIOMem.io[ea + i] = offsetTable.ioAddress[ea + i] = io + i;
+					RSXIOMem.ea[io + i] = offsetTable.eaAddress[io + i] = ea + i;
 				}
 
 				return CELL_OK;
@@ -1059,7 +1055,7 @@ s32 cellGcmReserveIoMapSize(u32 size)
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	RSXIOMem.Reserve(size);
+	reserved_size += size;
 	return CELL_OK;
 }
 
@@ -1067,15 +1063,14 @@ s32 cellGcmUnmapEaIoAddress(u32 ea)
 {
 	cellGcmSys.trace("cellGcmUnmapEaIoAddress(ea=0x%x)", ea);
 
-	u32 size;
-	if (RSXIOMem.UnmapRealAddress(ea, size))
+	if (const u32 size = std::exchange(IoMapTable[ea >>= 20], 0))
 	{
-		const u32 io = offsetTable.ioAddress[ea >>= 20];
+		const u32 io = offsetTable.ioAddress[ea];
 
-		for (u32 i = 0; i < size >> 20; i++)
+		for (u32 i = 0; i < size; i++)
 		{
-			offsetTable.ioAddress[ea + i] = 0xFFFF;
-			offsetTable.eaAddress[io + i] = 0xFFFF;
+			RSXIOMem.io[ea + i] = offsetTable.ioAddress[ea + i] = 0xFFFF;
+			RSXIOMem.ea[io + i] = offsetTable.eaAddress[io + i] = 0xFFFF;
 		}
 	}
 	else
@@ -1091,15 +1086,14 @@ s32 cellGcmUnmapIoAddress(u32 io)
 {
 	cellGcmSys.trace("cellGcmUnmapIoAddress(io=0x%x)", io);
 
-	u32 size;
-	if (RSXIOMem.UnmapAddress(io, size))
+	if (u32 size = std::exchange(IoMapTable[RSXIOMem.ea[io >>= 20]], 0))
 	{
-		const u32 ea = offsetTable.eaAddress[io >>= 20];
+		const u32 ea = offsetTable.eaAddress[io];
 
-		for (u32 i = 0; i < size >> 20; i++)
+		for (u32 i = 0; i < size; i++)
 		{
-			offsetTable.ioAddress[ea + i] = 0xFFFF;
-			offsetTable.eaAddress[io + i] = 0xFFFF;
+			RSXIOMem.io[ea + i] = offsetTable.ioAddress[ea + i] = 0xFFFF;
+			RSXIOMem.ea[io + i] = offsetTable.eaAddress[io + i] = 0xFFFF;
 		}
 	}
 	else
@@ -1121,13 +1115,13 @@ s32 cellGcmUnreserveIoMapSize(u32 size)
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 	}
 
-	if (size > RSXIOMem.GetReservedAmount())
+	if (size > reserved_size)
 	{
 		cellGcmSys.error("cellGcmUnreserveIoMapSize: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	RSXIOMem.Unreserve(size);
+	reserved_size -= size;
 	return CELL_OK;
 }
 
@@ -1268,6 +1262,7 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 	tile.comp = comp;
 	tile.base = base;
 	tile.bank = bank;
+	tile.binded = (pitch > 0);
 
 	vm::_ptr<CellGcmTileInfo>(m_config->tiles_addr)[index] = tile.pack();
 	return CELL_OK;

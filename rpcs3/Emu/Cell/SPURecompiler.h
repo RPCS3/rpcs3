@@ -6,6 +6,7 @@
 #include <bitset>
 #include <memory>
 #include <string>
+#include <deque>
 
 // Helper class
 class spu_cache
@@ -22,7 +23,7 @@ public:
 		return m_file.operator bool();
 	}
 
-	std::vector<std::vector<u32>> get();
+	std::deque<std::vector<u32>> get();
 
 	void add(const std::vector<u32>& func);
 
@@ -92,6 +93,19 @@ public:
 	// Create recompiler instance (LLVM)
 	static std::unique_ptr<spu_recompiler_base> make_llvm_recompiler();
 
-	// Max number of registers (for m_regmod)
-	static constexpr u8 s_reg_max = 128;
+	enum : u8
+	{
+		s_reg_lr = 0,
+		s_reg_sp = 1,
+		s_reg_80 = 80,
+		s_reg_127 = 127,
+
+		s_reg_mfc_eal,
+		s_reg_mfc_lsa,
+		s_reg_mfc_tag,
+		s_reg_mfc_size,
+
+		// Max number of registers (for m_regmod)
+		s_reg_max
+	};
 };

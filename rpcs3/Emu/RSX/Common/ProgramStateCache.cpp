@@ -31,7 +31,7 @@ size_t vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgra
 
 vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vertex_program(const u32* data, u32 entry, RSXVertexProgram& dst_prog)
 {
-	vertex_program_utils::vertex_program_metadata result;
+	vertex_program_utils::vertex_program_metadata result{};
 	u32 last_instruction_address = 0;
 	u32 first_instruction_address = entry;
 
@@ -78,6 +78,17 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			result.instruction_mask[current_instrution] = 1;
 			instruction_range.first = std::min(current_instrution, instruction_range.first);
 			instruction_range.second = std::max(current_instrution, instruction_range.second);
+
+			// Basic vec op analysis, must be done before flow analysis
+			switch (d1.vec_opcode)
+			{
+			case RSX_VEC_OPCODE_TXL:
+			{
+				d2.HEX = instruction->word[2];
+				result.referenced_textures_mask |= (1 << d2.tex_num);
+				break;
+			}
+			}
 
 			bool static_jump = false;
 			bool function_call = true;
@@ -223,7 +234,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 		// Verification
 		for (const u32 target : dst_prog.jump_table)
 		{
-			if (!result.instruction_mask[target])
+			if (!dst_prog.instruction_mask[target])
 			{
 				LOG_ERROR(RSX, "vp_analyser: Failed, branch target 0x%x was not resolved", target);
 			}
@@ -237,12 +248,15 @@ size_t vertex_program_storage_hash::operator()(const RSXVertexProgram &program) 
 {
 	size_t hash = vertex_program_utils::get_vertex_program_ucode_hash(program);
 	hash ^= program.output_mask;
+	hash ^= program.texture_dimensions;
 	return hash;
 }
 
 bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const RSXVertexProgram &binary2) const
 {
 	if (binary1.output_mask != binary2.output_mask)
+		return false;
+	if (binary1.texture_dimensions != binary2.texture_dimensions)
 		return false;
 	if (binary1.data.size() != binary2.data.size())
 		return false;
@@ -312,20 +326,21 @@ size_t fragment_program_utils::get_fragment_program_ucode_size(void *ptr)
 fragment_program_utils::fragment_program_metadata fragment_program_utils::analyse_fragment_program(void *ptr)
 {
 	const qword *instBuffer = (const qword*)ptr;
-	size_t instIndex = 0;
+	s32 index = 0;
 	s32 program_offset = -1;
 	u32 ucode_size = 0;
+	u32 constants_size = 0;
 	u16 textures_mask = 0;
 
 	while (true)
 	{
-		const qword& inst = instBuffer[instIndex];
+		const qword& inst = instBuffer[index];
 		const u32 opcode = (inst.word[0] >> 16) & 0x3F;
 
 		if (opcode)
 		{
 			if (program_offset < 0)
-				program_offset = instIndex * 16;
+				program_offset = index * 16;
 
 			switch(opcode)
 			{
@@ -348,8 +363,9 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			if (is_constant(inst.word[1]) || is_constant(inst.word[2]) || is_constant(inst.word[3]))
 			{
 				//Instruction references constant, skip one slot occupied by data
-				instIndex++;
+				index++;
 				ucode_size += 16;
+				constants_size += 16;
 			}
 		}
 
@@ -362,17 +378,17 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 		{
 			if (program_offset < 0)
 			{
-				program_offset = instIndex * 16;
+				program_offset = index * 16;
 				ucode_size = 16;
 			}
 
 			break;
 		}
 
-		instIndex++;
+		index++;
 	}
 
-	return{ (u32)program_offset, ucode_size, textures_mask };
+	return{ (u32)program_offset, ucode_size, constants_size, textures_mask };
 }
 
 size_t fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentProgram& program)

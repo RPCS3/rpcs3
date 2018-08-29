@@ -6,7 +6,7 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "cellSync.h"
 
-logs::channel cellSync("cellSync");
+LOG_CHANNEL(cellSync);
 
 template<>
 void fmt_class_string<CellSyncError>::format(std::string& out, u64 arg)
@@ -516,7 +516,7 @@ error_code cellSyncQueuePop(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::p
 	}
 
 	const u32 depth = queue->check_depth();
-	
+
 	u32 position;
 
 	while (!queue->ctrl.atomic_op(&CellSyncQueue::try_pop_begin, depth, &position))
@@ -549,7 +549,7 @@ error_code cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffe
 	const u32 depth = queue->check_depth();
 
 	u32 position;
-	
+
 	if (!queue->ctrl.atomic_op(&CellSyncQueue::try_pop_begin, depth, &position))
 	{
 		return not_an_error(CELL_SYNC_ERROR_BUSY);

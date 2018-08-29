@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Memory.h"
 #include "Emu/System.h"
 #include "Utilities/mutex.h"
 #include "Utilities/cond.h"
@@ -156,7 +155,6 @@ namespace vm
 	}
 
 	reader_lock::reader_lock()
-		: locked(true)
 	{
 		auto cpu = get_current_cpu_thread();
 
@@ -176,10 +174,25 @@ namespace vm
 
 	reader_lock::~reader_lock()
 	{
-		if (locked)
+		if (m_upgraded)
+		{
+			g_mutex.unlock();
+		}
+		else
 		{
 			g_mutex.unlock_shared();
 		}
+	}
+
+	void reader_lock::upgrade()
+	{
+		if (m_upgraded)
+		{
+			return;
+		}
+
+		g_mutex.lock_upgrade();
+		m_upgraded = true;
 	}
 
 	writer_lock::writer_lock(int full)
@@ -712,6 +725,37 @@ namespace vm
 		return imp_used(lock);
 	}
 
+	static bool _test_map(u32 addr, u32 size)
+	{
+		for (auto& block : g_locations)
+		{
+			if (block && block->addr >= addr && block->addr <= addr + size - 1)
+			{
+				return false;
+			}
+
+			if (block && addr >= block->addr && addr <= block->addr + block->size - 1)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	static std::shared_ptr<block_t> _find_map(u32 size, u32 align, u64 flags)
+	{
+		for (u32 addr = ::align<u32>(0x20000000, align); addr < 0xC0000000; addr += align)
+		{
+			if (_test_map(addr, size))
+			{
+				return std::make_shared<block_t>(addr, size, flags);
+			}
+		}
+
+		return nullptr;
+	}
+
 	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
 	{
 		vm::writer_lock lock(0);
@@ -721,17 +765,9 @@ namespace vm
 			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
 		}
 
-		for (auto& block : g_locations)
+		if (!_test_map(addr, size))
 		{
-			if (block->addr >= addr && block->addr <= addr + size - 1)
-			{
-				return nullptr;
-			}
-
-			if (addr >= block->addr && addr <= block->addr + block->size - 1)
-			{
-				return nullptr;
-			}
+			return nullptr;
 		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
@@ -749,14 +785,50 @@ namespace vm
 		return block;
 	}
 
+	std::shared_ptr<block_t> find_map(u32 orig_size, u32 align, u64 flags)
+	{
+		vm::writer_lock lock(0);
+
+		// Align to minimal page size
+		const u32 size = ::align(orig_size, 0x10000);
+
+		// Check alignment
+		if (align < 0x10000 || align != (0x80000000u >> ::cntlz32(align, true)))
+		{
+			fmt::throw_exception("Invalid alignment (size=0x%x, align=0x%x)" HERE, size, align);
+		}
+
+		// Return if size is invalid
+		if (!size || size > 0x40000000)
+		{
+			return nullptr;
+		}
+
+		auto block = _find_map(size, align, flags);
+
+		g_locations.emplace_back(block);
+
+		return block;
+	}
+
 	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty)
 	{
 		vm::writer_lock lock(0);
 
-		for (auto it = g_locations.begin(); it != g_locations.end(); it++)
+		for (auto it = g_locations.begin() + memory_location_max; it != g_locations.end(); it++)
 		{
 			if (*it && (*it)->addr == addr)
 			{
+				if (must_be_empty && (*it)->flags & 0x3)
+				{
+					continue;
+				}
+
+				if (!must_be_empty && ((*it)->flags & 0x3) != 2)
+				{
+					continue;
+				}
+
 				if (must_be_empty && (!it->unique() || (*it)->imp_used(lock)))
 				{
 					return *it;
@@ -780,7 +852,23 @@ namespace vm
 			// return selected location
 			if (location < g_locations.size())
 			{
-				return g_locations[location];
+				auto& loc = g_locations[location];
+
+				if (!loc)
+				{
+					if (location == vm::user64k || location == vm::user1m)
+					{
+						lock.upgrade();
+
+						if (!loc)
+						{
+							// Deferred allocation
+							loc = _find_map(0x10000000, 0x10000000, location == vm::user64k ? 0x201 : 0x401);
+						}
+					}
+				}
+
+				return loc;
 			}
 
 			return nullptr;
@@ -789,7 +877,7 @@ namespace vm
 		// search location by address
 		for (auto& block : g_locations)
 		{
-			if (addr >= block->addr && addr <= block->addr + block->size - 1)
+			if (block && addr >= block->addr && addr <= block->addr + block->size - 1)
 			{
 				return block;
 			}
@@ -805,11 +893,11 @@ namespace vm
 			g_locations =
 			{
 				std::make_shared<block_t>(0x00010000, 0x1FFF0000), // main
-				std::make_shared<block_t>(0x20000000, 0x10000000), // user
+				std::make_shared<block_t>(0x20000000, 0x10000000, 0x201), // user 64k pages
+				nullptr, // user 1m pages
 				std::make_shared<block_t>(0xC0000000, 0x10000000), // video
 				std::make_shared<block_t>(0xD0000000, 0x10000000), // stack
 				std::make_shared<block_t>(0xE0000000, 0x20000000), // SPU reserved
-				std::make_shared<block_t>(0x30000000, 0x10000000), // main extend
 			};
 		}
 	}

@@ -91,7 +91,7 @@ bool mm_joystick_handler::Init()
 	{
 		MMJOYDevice dev;
 
-		if (GetMMJOYDevice(i, dev) == false)
+		if (GetMMJOYDevice(i, &dev) == false)
 			continue;
 
 		m_devices.emplace(i, dev);
@@ -226,7 +226,7 @@ void mm_joystick_handler::ThreadProc()
 
 		if (last_connection_status[i] == false)
 		{
-			if (GetMMJOYDevice(m_dev->device_id, *m_dev) == false)
+			if (GetMMJOYDevice(m_dev->device_id, m_dev.get()) == false)
 				continue;
 			LOG_SUCCESS(HLE, "MMJOY Device %d reconnected.", m_dev->device_id);
 			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
@@ -493,8 +493,8 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 				};
 
 				float rad = static_cast<float>(js_info.dwPOV / 100 * acos(-1) / 180);
-				emplacePOVs(std::cosf(rad) * 255.0f, JOY_POVBACKWARD, JOY_POVFORWARD);
-				emplacePOVs(std::sinf(rad) * 255.0f, JOY_POVLEFT, JOY_POVRIGHT);
+				emplacePOVs(cosf(rad) * 255.0f, JOY_POVBACKWARD, JOY_POVFORWARD);
+				emplacePOVs(sinf(rad) * 255.0f, JOY_POVLEFT, JOY_POVRIGHT);
 			}
 		}
 		else if (js_caps.wCaps & JOYCAPS_POV4DIR)
@@ -558,8 +558,13 @@ int mm_joystick_handler::GetIDByName(const std::string& name)
 	return -1;
 }
 
-bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice& dev)
+bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev)
 {
+	if (!dev)
+	{
+		return false;
+	}
+
 	JOYINFOEX js_info;
 	JOYCAPS js_caps;
 	js_info.dwSize = sizeof(js_info);
@@ -574,10 +579,10 @@ bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice& dev)
 
 	LOG_NOTICE(GENERAL, "Joystick nr.%d found. Driver: %s", index, drv);
 
-	dev.device_id = index;
-	dev.device_name = m_name_string + std::to_string(index);
-	dev.device_info = js_info;
-	dev.device_caps = js_caps;
+	dev->device_id = index;
+	dev->device_name = m_name_string + std::to_string(index);
+	dev->device_info = js_info;
+	dev->device_caps = js_caps;
 
 	return true;
 }

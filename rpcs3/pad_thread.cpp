@@ -1,5 +1,4 @@
 #include "pad_thread.h"
-#include "rpcs3qt/gamepads_settings_dialog.h"
 #include "../ds4_pad_handler.h"
 #ifdef _WIN32
 #include "../xinput_pad_handler.h"
@@ -61,12 +60,10 @@ void pad_thread::Init(const u32 max_connect)
 			case pad_handler::ds4:
 				cur_pad_handler = std::make_shared<ds4_pad_handler>();
 				break;
-#ifdef _MSC_VER
+#ifdef _WIN32
 			case pad_handler::xinput:
 				cur_pad_handler = std::make_shared<xinput_pad_handler>();
 				break;
-#endif
-#ifdef _WIN32
 			case pad_handler::mm:
 				cur_pad_handler = std::make_shared<mm_joystick_handler>();
 				break;
