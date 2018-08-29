@@ -276,45 +276,35 @@ namespace vk
 		g_driver_vendor = driver_vendor::unknown;
 		g_heap_compatible_buffer_types = 0;
 
-		const auto gpu_name = g_current_renderer->gpu().name();
-
-		//Radeon fails to properly handle degenerate primitives if primitive restart is enabled
-		//One has to choose between using degenerate primitives or primitive restart to break up lists but not both
-		//Polaris and newer will crash with ERROR_DEVICE_LOST
-		//Older GCN will work okay most of the time but also occasionally draws garbage without reason (proprietary driver only)
-		if (gpu_name.find("Radeon") != std::string::npos ||  //Proprietary driver
-			gpu_name.find("POLARIS") != std::string::npos || //RADV POLARIS
-			gpu_name.find("VEGA") != std::string::npos)      //RADV VEGA
+		const auto gpu_name = g_current_renderer->gpu().get_name();
+		switch (g_driver_vendor = g_current_renderer->gpu().get_driver_vendor())
 		{
-			g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
-		}
-
-		//Radeon proprietary driver does not properly handle fence reset and can segfault during vkResetFences
-		//Disable fence reset for proprietary driver and delete+initialize a new fence instead
-		if (gpu_name.find("Radeon") != std::string::npos)
-		{
-			g_driver_vendor = driver_vendor::AMD;
+		case driver_vendor::AMD:
+			// Radeon proprietary driver does not properly handle fence reset and can segfault during vkResetFences
+			// Disable fence reset for proprietary driver and delete+initialize a new fence instead
 			g_drv_disable_fence_reset = true;
-		}
-
-		//Nvidia cards are easily susceptible to NaN poisoning
-		if (gpu_name.find("NVIDIA") != std::string::npos || gpu_name.find("GeForce") != std::string::npos)
-		{
-			g_driver_vendor = driver_vendor::NVIDIA;
+			// Fall through
+		case driver_vendor::RADV:
+			// Radeon fails to properly handle degenerate primitives if primitive restart is enabled
+			// One has to choose between using degenerate primitives or primitive restart to break up lists but not both
+			// Polaris and newer will crash with ERROR_DEVICE_LOST
+			// Older GCN will work okay most of the time but also occasionally draws garbage without reason (proprietary driver only)
+			if (g_driver_vendor == driver_vendor::AMD ||
+				gpu_name.find("VEGA") != std::string::npos ||
+				gpu_name.find("POLARIS") != std::string::npos)
+			{
+				g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
+			}
+			break;
+		case driver_vendor::NVIDIA:
+			// Nvidia cards are easily susceptible to NaN poisoning
 			g_drv_sanitize_fp_values = true;
+			break;
+		default:
+			LOG_WARNING(RSX, "Unsupported device: %s", gpu_name);
 		}
 
-		if (g_driver_vendor == driver_vendor::unknown)
-		{
-			if (gpu_name.find("RADV") != std::string::npos)
-			{
-				g_driver_vendor = driver_vendor::RADV;
-			}
-			else
-			{
-				LOG_WARNING(RSX, "Unknown driver vendor for device '%s'", gpu_name);
-			}
-		}
+		LOG_NOTICE(RSX, "Vulkan: Renderer initialized on device '%s'", gpu_name);
 
 		{
 			// Buffer memory tests, only useful for portability on macOS

@@ -528,7 +528,7 @@ VKGSRender::VKGSRender() : GSRender()
 
 	for (auto &gpu : gpus)
 	{
-		if (gpu.name() == adapter_name)
+		if (gpu.get_name() == adapter_name)
 		{
 			m_swapchain.reset(m_thread_context.createSwapChain(display, gpu));
 			gpu_found = true;
