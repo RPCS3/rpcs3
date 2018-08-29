@@ -162,7 +162,7 @@ emu_settings::Render_Creator::Render_Creator()
 
 			for (auto& gpu : gpus)
 			{
-				vulkanAdapters.append(qstr(gpu.name()));
+				vulkanAdapters.append(qstr(gpu.get_name()));
 			}
 		}
 	}

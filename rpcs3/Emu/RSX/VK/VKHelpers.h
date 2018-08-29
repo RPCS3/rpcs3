@@ -400,12 +400,58 @@ namespace vk
 			vkGetPhysicalDeviceProperties(pdev, &props);
 			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
 
-			LOG_NOTICE(RSX, "Physical device intialized. GPU=%s, driver=%u", props.deviceName, props.driverVersion);
+			LOG_NOTICE(RSX, "Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
 		}
 
-		std::string name() const
+		std::string get_name() const
 		{
 			return props.deviceName;
+		}
+
+		driver_vendor get_driver_vendor() const
+		{
+			const auto gpu_name = get_name();
+			if (gpu_name.find("Radeon") != std::string::npos)
+			{
+				return driver_vendor::AMD;
+			}
+
+			if (gpu_name.find("NVIDIA") != std::string::npos || gpu_name.find("GeForce") != std::string::npos)
+			{
+				return driver_vendor::NVIDIA;
+			}
+
+			if (gpu_name.find("RADV") != std::string::npos)
+			{
+				return driver_vendor::RADV;
+			}
+
+			return driver_vendor::unknown;
+		}
+
+		std::string get_driver_version() const
+		{
+			switch (get_driver_vendor())
+			{
+			case driver_vendor::NVIDIA:
+			{
+				// 10 + 8 + 8 + 6
+				const auto major_version = VK_VERSION_MAJOR(props.driverVersion);
+				const auto minor_version = (props.driverVersion >> 14) & 0xff;
+				const auto patch = (props.driverVersion >> 6) & 0xff;
+				const auto revision = (props.driverVersion & 0x3f);
+
+				return fmt::format("%u.%u.%u.%u", major_version, minor_version, patch, revision);
+			}
+			default:
+			{
+				// 10 + 10 + 12 (standard vulkan encoding created with VK_MAKE_VERSION)
+				return fmt::format("%u.%u.%u",
+					VK_VERSION_MAJOR(props.driverVersion),
+					VK_VERSION_MINOR(props.driverVersion),
+					VK_VERSION_PATCH(props.driverVersion));
+			}
+			}
 		}
 
 		uint32_t get_queue_count() const
