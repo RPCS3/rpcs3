@@ -11,7 +11,7 @@
 
 
 
-logs::channel sys_fs("sys_fs");
+LOG_CHANNEL(sys_fs);
 
 struct lv2_fs_mount_point
 {
@@ -281,6 +281,29 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 	}
 
 	fs::file file(local_path, open_mode);
+
+	if (!file && open_mode == fs::read && fs::g_tls_error == fs::error::noent)
+	{
+		// Try to gather split file (TODO)
+		std::vector<fs::file> fragments;
+
+		for (u32 i = 66600; i <= 66699; i++)
+		{
+			if (fs::file fragment{fmt::format("%s.%u", local_path, i)})
+			{
+				fragments.emplace_back(std::move(fragment));
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		if (!fragments.empty())
+		{
+			file = fs::make_gather(std::move(fragments));
+		}
+	}
 
 	if (!file)
 	{

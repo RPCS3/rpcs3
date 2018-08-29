@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
@@ -10,7 +10,7 @@
 
 
 
-logs::channel sys_interrupt("sys_interrupt");
+LOG_CHANNEL(sys_interrupt);
 
 void lv2_int_serv::exec()
 {

@@ -334,7 +334,10 @@ inline v128 operator~(const v128& other)
 template <typename T, std::size_t Align, std::size_t Size>
 struct se_storage
 {
-	using type = std::aligned_storage_t<Size, Align>;
+	struct type
+	{
+		alignas(Align) std::byte data[Size];
+	};
 
 	// Unoptimized generic byteswap for unaligned data
 	static void reverse(u8* dst, const u8* src)

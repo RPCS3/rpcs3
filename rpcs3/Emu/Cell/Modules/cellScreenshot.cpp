@@ -6,7 +6,7 @@
 
 
 
-logs::channel cellScreenshot("cellScreenshot");
+LOG_CHANNEL(cellScreenshot);
 
 s32 cellScreenShotSetParameter(vm::cptr<CellScreenShotSetParam> param)
 {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "D3D12Utils.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/RSX/GSRender.h"
 

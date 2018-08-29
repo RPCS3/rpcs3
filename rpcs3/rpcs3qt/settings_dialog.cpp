@@ -180,6 +180,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->spuLoopDetection, emu_settings::SPULoopDetection);
 	SubscribeTooltip(ui->spuLoopDetection, json_cpu_cbs["spuLoopDetection"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->accurateXFloat, emu_settings::AccurateXFloat);
+	SubscribeTooltip(ui->accurateXFloat, json_cpu_cbs["accurateXFloat"].toString());
+
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->spuBlockSize, emu_settings::SPUBlockSize);
@@ -281,6 +284,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			});
 		}
 	}
+
+	connect(ui->spu_llvm, &QAbstractButton::toggled, [this](bool checked)
+	{
+		ui->accurateXFloat->setEnabled(checked);
+	});
+
+	ui->accurateXFloat->setEnabled(ui->spu_llvm->isChecked());
 
 #ifndef LLVM_AVAILABLE
 	ui->ppu_llvm->setEnabled(false);
@@ -517,7 +527,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		return QLabel(sizer).sizeHint().width();
 	};
 
-	xemu_settings->EnhanceSlider(ui->resolutionScale, emu_settings::ResolutionScale, true);
+	xemu_settings->EnhanceSlider(ui->resolutionScale, emu_settings::ResolutionScale);
 	SubscribeTooltip(ui->gb_resolutionScale, json_gpu_slid["resolutionScale"].toString());
 	ui->gb_resolutionScale->setEnabled(!ui->scrictModeRendering->isChecked());
 	// rename label texts to fit current state of Resolution Scale
@@ -542,7 +552,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->resolutionScale->setValue(resolutionScaleDef);
 	});
 
-	xemu_settings->EnhanceSlider(ui->minimumScalableDimension, emu_settings::MinimumScalableDimension, true);
+	xemu_settings->EnhanceSlider(ui->minimumScalableDimension, emu_settings::MinimumScalableDimension);
 	SubscribeTooltip(ui->gb_minimumScalableDimension, json_gpu_slid["minimumScalableDimension"].toString());
 	ui->gb_minimumScalableDimension->setEnabled(!ui->scrictModeRendering->isChecked());
 	// rename label texts to fit current state of Minimum Scalable Dimension
@@ -812,6 +822,22 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->showShaderCompilationHint, emu_settings::ShowShaderCompilationHint);
 	SubscribeTooltip(ui->showShaderCompilationHint, json_emu_misc["showShaderCompilationHint"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->perfOverlayCenterX, emu_settings::PerfOverlayCenterX);
+	SubscribeTooltip(ui->perfOverlayCenterX, json_emu_overlay["perfOverlayCenterX"].toString());
+	connect(ui->perfOverlayCenterX, &QCheckBox::clicked, [this](bool checked)
+	{
+		ui->perfOverlayMarginX->setEnabled(!checked);
+	});
+	ui->perfOverlayMarginX->setEnabled(!ui->perfOverlayCenterX->isChecked());
+
+	xemu_settings->EnhanceCheckBox(ui->perfOverlayCenterY, emu_settings::PerfOverlayCenterY);
+	SubscribeTooltip(ui->perfOverlayCenterY, json_emu_overlay["perfOverlayCenterY"].toString());
+	connect(ui->perfOverlayCenterY, &QCheckBox::clicked, [this](bool checked)
+	{
+		ui->perfOverlayMarginY->setEnabled(!checked);
+	});
+	ui->perfOverlayMarginY->setEnabled(!ui->perfOverlayCenterY->isChecked());
+
 	xemu_settings->EnhanceCheckBox(ui->perfOverlayEnabled, emu_settings::PerfOverlayEnabled);
 	SubscribeTooltip(ui->perfOverlayEnabled, json_emu_overlay["perfOverlayEnabled"].toString());
 	auto EnablePerfOverlayOptions = [this](bool enabled)
@@ -819,17 +845,24 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->label_detail_level->setEnabled(enabled);
 		ui->label_update_interval->setEnabled(enabled);
 		ui->label_font_size->setEnabled(enabled);
+		ui->label_position->setEnabled(enabled);
+		ui->label_opacity->setEnabled(enabled);
+		ui->label_margin_x->setEnabled(enabled);
+		ui->label_margin_y->setEnabled(enabled);
 		ui->perfOverlayDetailLevel->setEnabled(enabled);
 		ui->perfOverlayPosition->setEnabled(enabled);
 		ui->perfOverlayUpdateInterval->setEnabled(enabled);
 		ui->perfOverlayFontSize->setEnabled(enabled);
+		ui->perfOverlayOpacity->setEnabled(enabled);
+		ui->perfOverlayMarginX->setEnabled(enabled);
+		ui->perfOverlayMarginY->setEnabled(enabled);
 	};
 	EnablePerfOverlayOptions(ui->perfOverlayEnabled->isChecked());
 	connect(ui->perfOverlayEnabled, &QCheckBox::clicked, EnablePerfOverlayOptions);
 
 	// Sliders
 
-	xemu_settings->EnhanceSlider(ui->perfOverlayUpdateInterval, emu_settings::PerfOverlayUpdateInterval, true);
+	xemu_settings->EnhanceSlider(ui->perfOverlayUpdateInterval, emu_settings::PerfOverlayUpdateInterval);
 	SubscribeTooltip(ui->perfOverlayUpdateInterval, json_emu_overlay["perfOverlayUpdateInterval"].toString());
 	ui->label_update_interval->setText(tr("Update Interval: %0 ms").arg(ui->perfOverlayUpdateInterval->value()));
 	connect(ui->perfOverlayUpdateInterval, &QSlider::valueChanged, [this](int value)
@@ -837,13 +870,29 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->label_update_interval->setText(tr("Update Interval: %0 ms").arg(value));
 	});
 
-	xemu_settings->EnhanceSlider(ui->perfOverlayFontSize, emu_settings::PerfOverlayFontSize, true);
+	xemu_settings->EnhanceSlider(ui->perfOverlayFontSize, emu_settings::PerfOverlayFontSize);
 	SubscribeTooltip(ui->perfOverlayFontSize, json_emu_overlay["perfOverlayFontSize"].toString());
 	ui->label_font_size->setText(tr("Font Size: %0 px").arg(ui->perfOverlayFontSize->value()));
 	connect(ui->perfOverlayFontSize, &QSlider::valueChanged, [this](int value)
 	{
 		ui->label_font_size->setText(tr("Font Size: %0 px").arg(value));
 	});
+
+	xemu_settings->EnhanceSlider(ui->perfOverlayOpacity, emu_settings::PerfOverlayOpacity);
+	SubscribeTooltip(ui->perfOverlayOpacity, json_emu_overlay["perfOverlayOpacity"].toString());
+	ui->label_opacity->setText(tr("Opacity: %0 %").arg(ui->perfOverlayOpacity->value()));
+	connect(ui->perfOverlayOpacity, &QSlider::valueChanged, [this](int value)
+	{
+		ui->label_opacity->setText(tr("Opacity: %0 %").arg(value));
+	});
+
+	// SpinBoxes
+
+	xemu_settings->EnhanceSpinBox(ui->perfOverlayMarginX, emu_settings::PerfOverlayMarginX, "", tr("px"));
+	SubscribeTooltip(ui->perfOverlayMarginX, json_emu_overlay["perfOverlayMarginX"].toString());
+
+	xemu_settings->EnhanceSpinBox(ui->perfOverlayMarginY, emu_settings::PerfOverlayMarginY, "", tr("px"));
+	SubscribeTooltip(ui->perfOverlayMarginY, json_emu_overlay["perfOverlayMarginY"].toString());
 
 	// Global settings (gui_settings)
 	if (!game)
@@ -972,7 +1021,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				ui->combo_stylesheets->setCurrentIndex(0);
 			}
 			// Only attempt to load a config if changes occurred.
-			if (m_currentConfig != xgui_settings->GetValue(gui::m_currentConfig).toString())
+			if (m_currentConfig != ui->combo_configs->currentText())
 			{
 				OnApplyConfig();
 			}
@@ -1124,9 +1173,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings::HookStaticFuncs);
 	SubscribeTooltip(ui->hookStFunc, json_debug["hookStFunc"].toString());
 
-	//
 	// Layout fix for High Dpi
-	//
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
 
@@ -1149,7 +1196,7 @@ void settings_dialog::AddConfigs()
 		}
 	}
 
-	m_currentConfig = tr("CurrentSettings");
+	m_currentConfig = xgui_settings->GetValue(gui::m_currentConfig).toString();
 
 	int index = ui->combo_configs->findText(m_currentConfig);
 	if (index != -1)
@@ -1158,7 +1205,7 @@ void settings_dialog::AddConfigs()
 	}
 	else
 	{
-		LOG_WARNING(GENERAL, "Trying to set an invalid config index ", index);
+		LOG_WARNING(GENERAL, "Trying to set an invalid config index %d", index);
 	}
 }
 
@@ -1185,7 +1232,7 @@ void settings_dialog::AddStylesheets()
 	}
 	else
 	{
-		LOG_WARNING(GENERAL, "Trying to set an invalid stylesheets index ", index);
+		LOG_WARNING(GENERAL, "Trying to set an invalid stylesheets index: %d (%s)", index, sstr(m_currentStylesheet));
 	}
 }
 
@@ -1199,35 +1246,49 @@ void settings_dialog::OnBackupCurrentConfig()
 	while (dialog->exec() != QDialog::Rejected)
 	{
 		dialog->resize(500, 100);
-		QString friendlyName = dialog->textValue();
-		if (friendlyName == "")
+		QString friendly_name = dialog->textValue();
+		if (friendly_name == "")
 		{
 			QMessageBox::warning(this, tr("Error"), tr("Name cannot be empty"));
 			continue;
 		}
-		if (friendlyName.contains("."))
+		if (friendly_name.contains("."))
 		{
 			QMessageBox::warning(this, tr("Error"), tr("Must choose a name with no '.'"));
 			continue;
 		}
-		if (ui->combo_configs->findText(friendlyName) != -1)
+		if (ui->combo_configs->findText(friendly_name) != -1)
 		{
 			QMessageBox::warning(this, tr("Error"), tr("Please choose a non-existing name"));
 			continue;
 		}
 		Q_EMIT GuiSettingsSaveRequest();
-		xgui_settings->SaveCurrentConfig(friendlyName);
-		ui->combo_configs->addItem(friendlyName);
-		ui->combo_configs->setCurrentIndex(ui->combo_configs->findText(friendlyName));
+		xgui_settings->SaveCurrentConfig(friendly_name);
+		ui->combo_configs->addItem(friendly_name);
+		ui->combo_configs->setCurrentText(friendly_name);
+		m_currentConfig = friendly_name;
 		break;
 	}
 }
 
 void settings_dialog::OnApplyConfig()
 {
-	m_currentConfig = ui->combo_configs->currentText();
-	xgui_settings->SetValue(gui::m_currentConfig, m_currentConfig);
-	xgui_settings->ChangeToConfig(m_currentConfig);
+	const QString new_config = ui->combo_configs->currentText();
+
+	if (new_config == m_currentConfig)
+	{
+		return;
+	}
+
+	if (!xgui_settings->ChangeToConfig(new_config))
+	{
+		const int new_config_idx = ui->combo_configs->currentIndex();
+		ui->combo_configs->setCurrentText(m_currentConfig);
+		ui->combo_configs->removeItem(new_config_idx);
+		return;
+	}
+
+	m_currentConfig = new_config;
 	Q_EMIT GuiSettingsSyncRequest(true);
 }
 
@@ -1246,6 +1307,10 @@ int settings_dialog::exec()
 	// Weirdly enough this won't happen if we change the tab order so that anything else is at index 0.
 	ui->tab_widget_settings->setCurrentIndex(0);
 	QTimer::singleShot(0, [=]{ ui->tab_widget_settings->setCurrentIndex(m_tab_Index); });
+
+	// Open a dialog if your config file contained invalid entries
+	QTimer::singleShot(10, [this] { xemu_settings->OpenCorrectionDialog(this); });
+
 	return QDialog::exec();
 }
 

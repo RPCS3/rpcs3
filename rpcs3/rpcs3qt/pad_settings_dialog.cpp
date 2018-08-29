@@ -182,6 +182,11 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent)
 	m_tabs->widget(0)->layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
+
+	show();
+
+	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), 0, 0);
+	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0);
 }
 
 pad_settings_dialog::~pad_settings_dialog()
@@ -235,6 +240,7 @@ void pad_settings_dialog::InitButtons()
 	m_padButtons->addButton(ui->b_reset, button_ids::id_reset_parameters);
 	m_padButtons->addButton(ui->b_blacklist, button_ids::id_blacklist);
 	m_padButtons->addButton(ui->b_refresh, button_ids::id_refresh);
+	m_padButtons->addButton(ui->b_addProfile, button_ids::id_add_profile);
 	m_padButtons->addButton(ui->b_ok, button_ids::id_ok);
 	m_padButtons->addButton(ui->b_cancel, button_ids::id_cancel);
 
@@ -460,6 +466,12 @@ void pad_settings_dialog::ReactivateButtons()
 	{
 		but->setFocusPolicy(Qt::StrongFocus);
 	}
+
+	m_tabs->setFocusPolicy(Qt::TabFocus);
+
+	ui->chooseProfile->setFocusPolicy(Qt::WheelFocus);
+	ui->chooseHandler->setFocusPolicy(Qt::WheelFocus);
+	ui->chooseDevice->setFocusPolicy(Qt::WheelFocus);
 }
 
 void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y)
@@ -597,6 +609,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	{
 	case button_ids::id_pad_begin:
 	case button_ids::id_pad_end:
+	case button_ids::id_add_profile:
 	case button_ids::id_refresh:
 	case button_ids::id_ok:
 	case button_ids::id_cancel:
@@ -617,6 +630,12 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	{
 		but->setFocusPolicy(Qt::ClickFocus);
 	}
+
+	m_tabs->setFocusPolicy(Qt::ClickFocus);
+
+	ui->chooseProfile->setFocusPolicy(Qt::ClickFocus);
+	ui->chooseHandler->setFocusPolicy(Qt::ClickFocus);
+	ui->chooseDevice->setFocusPolicy(Qt::ClickFocus);
 
 	m_button_id = id;
 	m_padButtons->button(m_button_id)->setText(tr("[ Waiting %1 ]").arg(MAX_SECONDS));

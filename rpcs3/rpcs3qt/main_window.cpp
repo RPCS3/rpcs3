@@ -16,6 +16,7 @@
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
 #include "trophy_manager_dialog.h"
+#include "user_manager_dialog.h"
 #include "kernel_explorer.h"
 #include "game_list_frame.h"
 #include "debugger_frame.h"
@@ -36,7 +37,7 @@
 
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
@@ -76,9 +77,6 @@ void main_window::Init()
 	ui->setupUi(this);
 
 	setAcceptDrops(true);
-
-	// hide utilities from the average user
-	ui->menuUtilities->menuAction()->setVisible(guiSettings->GetValue(gui::m_showDebugTab).toBool());
 
 	// add toolbar widgets (crappy Qt designer is not able to)
 	ui->toolBar->setObjectName("mw_toolbar");
@@ -366,7 +364,7 @@ void main_window::BootRsxCapture(std::string path)
 			is_stopped = true;
 		}
 
-		QString filePath = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), "", tr("RRC files (*.rrc);;All files (*.*)"));
+		QString filePath = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), qstr(fs::get_config_dir() + "captures/"), tr("RRC files (*.rrc);;All files (*.*)"));
 
 		if (filePath.isEmpty())
 		{
@@ -891,6 +889,8 @@ void main_window::OnEmuStop()
 		ui->toolbar_start->setText(tr("Play"));
 		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	}
+	ui->actionManage_Users->setEnabled(true);
+
 #ifdef WITH_DISCORD_RPC
 	// Discord Rich Presence Integration
 	if (guiSettings->GetValue(gui::m_richPresence).toBool())
@@ -913,6 +913,8 @@ void main_window::OnEmuReady()
 	ui->toolbar_start->setText(tr("Play"));
 	ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	EnableMenus(true);
+
+	ui->actionManage_Users->setEnabled(false);
 }
 
 void main_window::EnableMenus(bool enabled)
@@ -1262,6 +1264,12 @@ void main_window::CreateConnects()
 		trop_manager->show();
 	});
 
+	connect(ui->actionManage_Users, &QAction::triggered, [=]
+	{
+		user_manager_dialog* user_manager = new user_manager_dialog(guiSettings, this);
+		user_manager->show();
+	});
+
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=]
 	{
 		cg_disasm_window* cgdw = new cg_disasm_window(guiSettings);
@@ -1337,7 +1345,7 @@ void main_window::CreateConnects()
 		const bool& checked = act->isChecked();
 
 		if      (act == ui->showCatHDDGameAct)    categories += category::non_disc_games, id = Category::Non_Disc_Game;
-		else if (act == ui->showCatDiscGameAct)   categories += category::disc_Game, id = Category::Disc_Game;
+		else if (act == ui->showCatDiscGameAct)   categories += category::disc_game, id = Category::Disc_Game;
 		else if (act == ui->showCatHomeAct)       categories += category::home, id = Category::Home;
 		else if (act == ui->showCatAudioVideoAct) categories += category::media, id = Category::Media;
 		else if (act == ui->showCatGameDataAct)   categories += category::data, id = Category::Data;
@@ -1534,6 +1542,9 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 			i--; // list count is now an entry shorter so we have to repeat the same index in order to load all other entries
 		}
 	}
+
+	// hide utilities from the average user
+	ui->menuUtilities->menuAction()->setVisible(guiSettings->GetValue(gui::m_showDebugTab).toBool());
 
 	ui->showLogAct->setChecked(guiSettings->GetValue(gui::mw_logger).toBool());
 	ui->showGameListAct->setChecked(guiSettings->GetValue(gui::mw_gamelist).toBool());
@@ -1778,8 +1789,7 @@ void main_window::dropEvent(QDropEvent* event)
 		{
 			const std::string rapname = sstr(QFileInfo(rap).fileName());
 
-			// TODO: use correct user ID once User Manager is implemented
-			if (!fs::copy_file(sstr(rap), fmt::format("%s/home/%s/exdata/%s", Emu.GetHddDir(), "00000001", rapname), false))
+			if (!fs::copy_file(sstr(rap), Emu.GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + rapname, false))
 			{
 				LOG_WARNING(GENERAL, "Could not copy rap file by drop: %s", rapname);
 			}
@@ -1804,10 +1814,7 @@ void main_window::dropEvent(QDropEvent* event)
 		m_gameListFrame->Refresh(true);
 		break;
 	case drop_type::drop_rrc: // replay a rsx capture file
-		if (Emu.BootRsxCapture(sstr(dropPaths.first())))
-		{
-			LOG_SUCCESS(GENERAL, "rcc Boot from drag and drop done: %s", sstr(dropPaths.first()));
-		}
+		BootRsxCapture(sstr(dropPaths.first()));
 	default:
 		LOG_WARNING(GENERAL, "Invalid dropType in gamelist dropEvent");
 		break;

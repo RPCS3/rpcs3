@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/ErrorCodes.h"
@@ -7,7 +7,7 @@
 #include "sys_ppu_thread.h"
 
 
-logs::channel sys_usbd("sys_usbd");
+LOG_CHANNEL(sys_usbd);
 
 std::vector<usbDevice> devices = {
 	// System devices

@@ -6,7 +6,7 @@
 
 void decode_range(unsigned int *range, unsigned int *code, unsigned char **src)
 {
-	if (!((*range) >> 24)) 
+	if (!((*range) >> 24))
 	{
 		(*range) <<= 8;
 		*code = ((*code) << 8) + (*src)++[5];
@@ -16,7 +16,7 @@ void decode_range(unsigned int *range, unsigned int *code, unsigned char **src)
 int decode_bit(unsigned int *range, unsigned int *code, int *index, unsigned char **src, unsigned char *c)
 {
 	decode_range(range, code, src);
-	
+
 	unsigned int val = ((*range) >> 8) * (*c);
 
 	*c -= ((*c) >> 3);
@@ -41,10 +41,10 @@ int decode_number(unsigned char *ptr, int index, int *bit_flag, unsigned int *ra
 {
 	int i = 1;
 
-	if (index >= 3) 
+	if (index >= 3)
 	{
 		decode_bit(range, code, &i, src, ptr + 0x18);
-		if (index >= 4) 
+		if (index >= 4)
 		{
 			decode_bit(range, code, &i, src, ptr + 0x18);
 			if (index >= 5)
@@ -54,8 +54,8 @@ int decode_number(unsigned char *ptr, int index, int *bit_flag, unsigned int *ra
 				{
 					i <<= 1;
 					(*range) >>= 1;
-					if (*code < *range) 
-						i++; 
+					if (*code < *range)
+						i++;
 					else
 						(*code) -= *range;
 				}
@@ -65,14 +65,14 @@ int decode_number(unsigned char *ptr, int index, int *bit_flag, unsigned int *ra
 
 	*bit_flag = decode_bit(range, code, &i, src, ptr);
 
-	if (index >= 1) 
+	if (index >= 1)
 	{
 		decode_bit(range, code, &i, src, ptr + 0x8);
-		if (index >= 2) 
+		if (index >= 2)
 		{
 			decode_bit(range, code, &i, src, ptr + 0x10);
 		}
-	}	
+	}
 
 	return i;
 }
@@ -82,10 +82,10 @@ int decode_word(unsigned char *ptr, int index, int *bit_flag, unsigned int *rang
 	int i = 1;
 	index /= 8;
 
-	if (index >= 3) 
+	if (index >= 3)
 	{
 		decode_bit(range, code, &i, src, ptr + 4);
-		if (index >= 4) 
+		if (index >= 4)
 		{
 			decode_bit(range, code, &i, src, ptr + 4);
 			if (index >= 5)
@@ -95,8 +95,8 @@ int decode_word(unsigned char *ptr, int index, int *bit_flag, unsigned int *rang
 				{
 					i <<= 1;
 					(*range) >>= 1;
-					if (*code < *range) 
-						i++; 
+					if (*code < *range)
+						i++;
 					else
 						(*code) -= *range;
 				}
@@ -106,14 +106,14 @@ int decode_word(unsigned char *ptr, int index, int *bit_flag, unsigned int *rang
 
 	*bit_flag = decode_bit(range, code, &i, src, ptr);
 
-	if (index >= 1) 
+	if (index >= 1)
 	{
 		decode_bit(range, code, &i, src, ptr + 1);
-		if (index >= 2) 
+		if (index >= 2)
 		{
 			decode_bit(range, code, &i, src, ptr + 2);
 		}
-	}	
+	}
 
 	return i;
 }
@@ -185,7 +185,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 				// Identify the data length bit field.
 				do
 				{
-					tmp_sect1 += 8; 
+					tmp_sect1 += 8;
 					bit_flag = decode_bit(&range, &code, 0, &in, tmp_sect1);
 					index += bit_flag;
 				} while ((bit_flag != 0) && (index < 6));
@@ -195,7 +195,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 				tmp_sect2 = tmp + index + 0x7F1;
 
 				// If the data length was found, parse it as a number.
-				if ((index >= 0) || (bit_flag != 0)) 
+				if ((index >= 0) || (bit_flag != 0))
 				{
 					// Locate next section.
 					int sect = (index << 5) | (((((int)(start - out)) << index) & 3) << 3) | (offset & 7);
@@ -203,9 +203,9 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 
 					// Decode the data length (8 bit fields).
 					data_length = decode_number(tmp_sect1, index, &bit_flag, &range, &code, &in);
-					if (data_length == 0xFF) return (start - out);  // End of stream.		
+					if (data_length == 0xFF) return (start - out);  // End of stream.
 				}
-				else 
+				else
 				{
 					// Assume one byte of advance.
 					data_length = 1;
@@ -229,7 +229,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 				} while (diff < 0);
 
 				// If the data offset was found, parse it as a number.
-				if ((diff > 0) || (bit_flag != 0)) 
+				if ((diff > 0) || (bit_flag != 0))
 				{
 					// Adjust diff if needed.
 					if (bit_flag == 0) diff -= 8;

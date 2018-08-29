@@ -325,14 +325,14 @@ private:
 	shared_mutex queue_guard;
 	std::list<work_item> work_queue;
 
-	bool flush_draw_buffers = false;
 	std::thread::id m_thread_id;
 
 	GLProgramBuffer m_prog_buffer;
 	draw_context_t m_decompiler_context;
 
 	//buffer
-	gl::fbo draw_fbo;
+	gl::fbo* m_draw_fbo = nullptr;
+	std::list<gl::fbo> m_framebuffer_cache;
 	gl::fbo m_flip_fbo;
 	std::unique_ptr<gl::texture> m_flip_tex_color;
 
@@ -369,10 +369,8 @@ private:
 
 public:
 	void read_buffers();
-	void write_buffers();
 	void set_viewport();
 
-	void synchronize_buffers();
 	work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
 
 	bool scaled_image_from_memory(rsx::blit_src_info& src_info, rsx::blit_dst_info& dst_info, bool interpolate) override;

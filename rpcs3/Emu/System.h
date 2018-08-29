@@ -207,6 +207,8 @@ class Emulator final
 	std::string m_title;
 	std::string m_cat;
 	std::string m_dir;
+	std::string m_usr{"00000001"};
+	u32 m_usrid{1};
 
 	bool m_force_boot = false;
 
@@ -275,6 +277,20 @@ public:
 		return m_dir;
 	}
 
+	// String for GUI dialogs.
+	const std::string& GetUsr() const
+	{
+		return m_usr;
+	}
+
+	// u32 for cell.
+	const u32 GetUsrId() const
+	{
+		return m_usrid;
+	}
+
+	const bool SetUsr(const std::string& user);
+
 	u64 GetPauseTime()
 	{
 		return m_pause_amend_time;
@@ -341,6 +357,7 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_verification{this, "SPU Verification", true}; // Should be enabled
 		cfg::_bool spu_cache{this, "SPU Cache", true};
 		cfg::_enum<tsx_usage> enable_TSX{this, "Enable TSX", tsx_usage::enabled}; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
+		cfg::_bool spu_accurate_xfloat{this, "Accurate xfloat", false};
 
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::liblv2only};
 		cfg::_bool hook_functions{this, "Hook static functions"};
@@ -438,10 +455,26 @@ struct cfg_root : cfg::node
 			cfg::_int<4, 36> font_size{ this, "Font size (px)", 10 };
 			cfg::_enum<screen_quadrant> position{this, "Position", screen_quadrant::top_left};
 			cfg::string font{this, "Font", "n023055ms.ttf"};
-			cfg::_int<0, 500> margin{this, "Margin (px)", 50};
+			cfg::_int<0, 1280> margin_x{this, "Horizontal Margin (px)", 50}; // horizontal distance to the screen border relative to the screen_quadrant in px
+			cfg::_int<0, 720> margin_y{this, "Vertical Margin (px)", 50}; // vertical distance to the screen border relative to the screen_quadrant in px
+			cfg::_bool center_x{ this, "Center Horizontally", false };
+			cfg::_bool center_y{ this, "Center Vertically", false };
 			cfg::_int<0, 100> opacity{this, "Opacity (%)", 70};
+			cfg::string color_body{ this, "Body Color (hex)", "#FFE138FF" };
+			cfg::string background_body{ this, "Body Background (hex)", "#002339FF" };
+			cfg::string color_title{ this, "Title Color (hex)", "#F26C24FF" };
+			cfg::string background_title{ this, "Title Background (hex)", "#00000000" };
 
 		} perf_overlay{this};
+
+		struct node_shader_compilation_hint : cfg::node
+		{
+			node_shader_compilation_hint(cfg::node* _this) : cfg::node(_this, "Shader Compilation Hint") {}
+
+			cfg::_int<0, 1280> pos_x{this, "Position X (px)", 20}; // horizontal position starting from the upper border in px
+			cfg::_int<0, 720> pos_y{this, "Position Y (px)", 690}; // vertical position starting from the left border in px
+
+		} shader_compilation_hint{this};
 
 	} video{this};
 

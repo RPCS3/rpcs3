@@ -6,7 +6,7 @@
 
 #include "Utilities/StrUtil.h"
 
-logs::channel cellSync2("cellSync2");
+LOG_CHANNEL(cellSync2);
 
 vm::gvar<CellSync2CallerThreadType> gCellSync2CallerThreadTypePpuThread;
 vm::gvar<CellSync2Notifier> gCellSync2NotifierPpuThread;

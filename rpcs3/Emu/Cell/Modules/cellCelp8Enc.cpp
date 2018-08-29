@@ -4,7 +4,7 @@
 
 #include "cellCelp8Enc.h"
 
-logs::channel cellCelp8Enc("cellCelp8Enc");
+LOG_CHANNEL(cellCelp8Enc);
 
 
 s32 cellCelp8EncQueryAttr()

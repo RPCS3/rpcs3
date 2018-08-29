@@ -25,6 +25,7 @@
 			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this.\nThis is the preferred option."
 		},
 		"checkboxes": {
+			"accurateXFloat": "Fixes bugs in various games at the cost of performance.\nThis setting is only applied when SPU LLVM is active.",
 			"spuCache": "Should normally stay enabled.\nDisable this if the cache becomes too large.\nDisabling it does not remove the existing cache.",
 			"enableThreadScheduler": "Allows RPCS3 to manually schedule physical cores to run specific tasks on, instead of letting the OS handle it.\nVery useful on Windows, especially for AMD Ryzen systems where it can give huge performance gains.",
 			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen.",
@@ -76,7 +77,12 @@
 			"perfOverlayPosition": "Sets the on-screen position (quadrant) of the perfomance overlay.",
 			"perfOverlayDetailLevel": "Controls the amount of information displayed on the performance overlay.",
 			"perfOverlayUpdateInterval": "Sets the time interval in which the performance overlay is being updated (measured in milliseconds).",
-			"perfOverlayFontSize": "Sets the font size of the performance overlay (measured in pixels)."
+			"perfOverlayFontSize": "Sets the font size of the performance overlay (measured in pixels).",
+			"perfOverlayOpacity": "Sets the opacity of the performance overlay (measured in %).",
+			"perfOverlayMarginX": "Sets the horizontal distance to the screen border relative to the screen quadrant (measured in pixels).",
+			"perfOverlayMarginY": "Sets the vertical distance to the screen border relative to the screen quadrant (measured in pixels).",
+			"perfOverlayCenterX": "Centers the performance overlay horizontally and overrides the horizontal margin.",
+			"perfOverlayCenterY": "Centers the performance overlay vertically and overrides the vertical margin."
 		}
 	},
 	"gpu": {

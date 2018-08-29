@@ -70,10 +70,11 @@ void rpcs3_app::Init()
 	setApplicationName("RPCS3");
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 
-	Emu.Init();
-
 	guiSettings.reset(new gui_settings());
 	emuSettings.reset(new emu_settings());
+
+	// Force init the emulator
+	InitializeEmulator(guiSettings->GetCurrentUser().toStdString(), true);
 
 	// Create the main window
 	RPCS3MainWin = new main_window(guiSettings, emuSettings, nullptr);
@@ -109,6 +110,21 @@ void rpcs3_app::Init()
 		NtSetTimerResolution(max_res, TRUE, &new_res);
 	}
 #endif
+}
+
+/** Emu.Init() wrapper for user manager */
+bool rpcs3_app::InitializeEmulator(const std::string& user, bool force_init)
+{
+	// try to set a new user
+	const bool user_was_set = Emu.SetUsr(user);
+
+	// only init the emulation if forced or a user was set
+	if (user_was_set || force_init)
+	{
+		Emu.Init();
+	}
+
+	return user_was_set;
 }
 
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here.

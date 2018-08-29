@@ -4,10 +4,10 @@ RPCS3
 [![Build Status](https://travis-ci.org/RPCS3/rpcs3.svg?branch=master)](https://travis-ci.org/RPCS3/rpcs3)
 [![Build status](https://ci.appveyor.com/api/projects/status/411c4clmiohtx7eo/branch/master?svg=true)](https://ci.appveyor.com/project/rpcs3/rpcs3/branch/master)
 
-The world's first open-source PlayStation 3 emulator/debugger written in C++ for Windows and Linux.
+The world's first open-source PlayStation 3 emulator/debugger, written in C++ for Windows and Linux.
 
-You can find some basic information in our [**website**](https://rpcs3.net/).
-For discussion about this emulator and PS3 emulation please visit our [**forums**](https://forums.rpcs3.net) and our [**Discord server**](https://discord.me/RPCS3).
+You can find some basic information in our [**website**](https://rpcs3.net/). Game info is being populated on the [**wiki**](https://wiki.rpcs3.net/).
+For discussion about this emulator and PS3 emulation, or game compatibility reports, please visit our [**forums**](https://forums.rpcs3.net) and our [**Discord server**](https://discord.me/RPCS3).
 
 [**Support Lead Developers Nekotekina and kd-11 on Patreon**](https://www.patreon.com/Nekotekina)
 
@@ -20,17 +20,19 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 ## Dependencies
 
 ### Windows
-* [Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/)
-* [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
-* [Cmake 3.1.0+](https://www.cmake.org/download/) (required; add to PATH)
-* [Python 3.3+](https://www.python.org/downloads/) (required; add to PATH)
-* [Qt 5.10+](https://www.qt.io/download-open-source/) (required; add QTDIR environment variable if you do not want to use the Visual Studio Qt Plugin: e.g. `<QtInstallFolder>\5.11.1\msvc2015_64\`)
-* [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2015) (optional; see above)
-* [Vulkan SDK](https://sdk.lunarg.com/sdk/download/1.1.73.0/windows/VulkanSDK-1.1.73.0-Installer.exe) (required)
+* [Visual Studio 2017](https://www.visualstudio.com/en/downloads/)
+* [Visual C++ Redistributable Packages for Visual Studio 2017](https://go.microsoft.com/fwlink/?LinkId=746572)
+* [Cmake 3.1.0+](https://www.cmake.org/download/) (add to PATH)
+* [Python 3.3+](https://www.python.org/downloads/) (add to PATH)
+* [Vulkan SDK](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
+* [Qt 5.10+](https://www.qt.io/download-open-source/)
+
+
+**Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.11.1\msvc2017_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2017)**
 
 ### Linux
 * [Qt 5.10+](https://www.qt.io/download-open-source/)
-* GCC 5.1+ or Clang 3.5.0+ ([not GCC 6.1](https://github.com/RPCS3/rpcs3/issues/1691))
+* GCC 7.3+ or Clang 5.0+ ([not GCC 6.1](https://github.com/RPCS3/rpcs3/issues/1691))
 * Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git qt5-default`
 * Arch: `sudo pacman -S glew openal cmake vulkan-validation-layers qt5-base`
 * Fedora: `sudo dnf install alsa-lib-devel cmake glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt5-devel vulkan-devel`
@@ -47,24 +49,18 @@ MacOS is not supported at this moment because it doesn't meet system requirement
 ## Building on Windows:
 To initialize the repository don't forget to execute `git submodule update --init` to pull the submodules.
 
-*If you're using Visual Studio 2017, when you first open the project, do not upgrade the targets or the packages. Leave both at "No upgrade". Note that you will need the v140 toolset, which may not be in 2017 by default.*
+*If you're using Visual Studio 2017, when you first open the project, do not upgrade the targets or the packages. Leave both at "No upgrade". Note that you will need the v140 toolset, which may not be in VS 2017 by default. It can be acquired by running the VS installer.*
 
-### Configuring Qt
+### Configuring the Qt plugin (if used)
 
-*If you're using Visual Studio 2017 without Qt plugin support (or simply dont want to use it):*
-1) Add `QTDIR` environment variable and set it to e.g `<QtInstallFolder>\5.11.1\msvc2015_64\`
-
-Open `rpcs3.sln`
-
-
-*If you wish to use the Visual Studio plugin for Qt:* </br>
-1) Go to the Qt5 menu and edit Qt5 options. Add the path to your Qt installation with compiler e.g. `C:\Qt\5.11.1\msvc2015_64`.
+1) Go to the Qt5 menu and edit Qt5 options. Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\5.11.1\msvc2017_64`.
 2) While selecting the rpcs3qt project, go to Qt5->Project Setting and select the version you added.
 
 ### Building the projects
-The recommended build configuration is Release - LLVM, for all purposes.
 
-You may want to download precompiled [LLVM lib](https://github.com/RPCS3/llvm/releases/download/continuous-master/llvmlibs.7z) and extract to root rpcs3 folder (which contains `rpcs3.sln`), as well as download and extract [additional libs](https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R) to `lib\%CONFIGURATION%-x64\` to speed up compilation time (unoptimised/debug libs are currently not available precompiled).
+Open `rpcs3.sln`. The recommended build configuration is `Release - LLVM`, for all purposes.
+
+You may want to download precompiled [LLVM libs](https://github.com/RPCS3/llvm/releases/download/continuous-master/llvmlibs.7z) and extract to root rpcs3 folder (which contains `rpcs3.sln`), as well as download and extract [additional libs](https://drive.google.com/uc?export=download&id=1A2eOMmCO714i0U7J0qI4aEMKnuWl8l_R) to `lib\%CONFIGURATION%-x64\` to speed up compilation time (unoptimised/debug libs are currently not available precompiled).
 
 If you're not using precompiled libs, build the projects in *__BUILD_BEFORE* folder: right-click on every project > *Build*.
 

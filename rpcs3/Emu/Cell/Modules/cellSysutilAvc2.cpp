@@ -5,7 +5,7 @@
 #include "sceNp2.h"
 #include "cellSysutilAvc2.h"
 
-logs::channel cellSysutilAvc2("cellSysutilAvc2");
+LOG_CHANNEL(cellSysutilAvc2);
 
 template<>
 void fmt_class_string<CellSysutilAvc2Error>::format(std::string& out, u64 arg)

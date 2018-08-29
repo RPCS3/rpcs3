@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
@@ -9,7 +9,7 @@
 
 
 
-logs::channel sys_lwmutex("sys_lwmutex");
+LOG_CHANNEL(sys_lwmutex);
 
 extern u64 get_system_time();
 

@@ -4,7 +4,7 @@
 
 
 
-logs::channel cellPhotoDecode("cellPhotoDecode");
+LOG_CHANNEL(cellPhotoDecode);
 
 // Return Codes
 enum

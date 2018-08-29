@@ -11,7 +11,7 @@
 #pragma comment(lib, "Winhttp.lib")
 #endif
 
-logs::channel cellHttpUtil("cellHttpUtil");
+LOG_CHANNEL(cellHttpUtil);
 
 s32 cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm::ptr<void> pool, u32 size, vm::ptr<u32> required)
 {

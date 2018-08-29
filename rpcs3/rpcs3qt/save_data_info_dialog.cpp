@@ -3,6 +3,7 @@
 #include <QPushButton>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include "Emu/System.h"
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -60,7 +61,7 @@ void save_data_info_dialog::UpdateData()
 
 	//Maybe there should be more details of save data.
 	m_list->setItem(0, 0, new QTableWidgetItem(tr("User ID")));
-	m_list->setItem(0, 1, new QTableWidgetItem("00000001 (Default)"));
+	m_list->setItem(0, 1, new QTableWidgetItem(qstr(Emu.GetUsr())));
 
 	m_list->setItem(1, 0, new QTableWidgetItem(tr("Title")));
 	m_list->setItem(1, 1, new QTableWidgetItem(qstr(m_entry.title)));

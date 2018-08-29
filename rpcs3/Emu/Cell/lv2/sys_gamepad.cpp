@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
@@ -9,7 +9,7 @@
 
 
 
-logs::channel sys_gamepad("sys_gamepad");
+LOG_CHANNEL(sys_gamepad);
 
 u32 sys_gamepad_ycon_initalize(vm::ptr<uint8_t> in, vm::ptr<uint8_t> out)
 {

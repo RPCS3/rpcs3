@@ -5,7 +5,7 @@
 
 
 
-logs::channel cellCrossController("cellCrossController");
+LOG_CHANNEL(cellCrossController);
 
 enum
 {
