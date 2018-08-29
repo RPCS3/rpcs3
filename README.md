@@ -22,7 +22,7 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 ### Windows
 * [Visual Studio 2017](https://www.visualstudio.com/en/downloads/)
 * [Visual C++ Redistributable Packages for Visual Studio 2017](https://go.microsoft.com/fwlink/?LinkId=746572)
-* [Cmake 3.1.0+](https://www.cmake.org/download/) (add to PATH)
+* [CMake 3.8.2+](https://www.cmake.org/download/) (add to PATH)
 * [Python 3.3+](https://www.python.org/downloads/) (add to PATH)
 * [Vulkan SDK](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
 * [Qt 5.10+](https://www.qt.io/download-open-source/)
@@ -32,7 +32,8 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 
 ### Linux
 * [Qt 5.10+](https://www.qt.io/download-open-source/)
-* GCC 7.3+ or Clang 5.0+ ([not GCC 6.1](https://github.com/RPCS3/rpcs3/issues/1691))
+* GCC 7.3+ or Clang 5.0+
+* CMake 3.8.2+
 * Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git qt5-default`
 * Arch: `sudo pacman -S glew openal cmake vulkan-validation-layers qt5-base`
 * Fedora: `sudo dnf install alsa-lib-devel cmake glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt5-devel vulkan-devel`
@@ -42,14 +43,12 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 
 ### MacOS
 MacOS is not supported at this moment because it doesn't meet system requirements (OpenGL 4.3)
-* Xcode 6+ (tested with Xcode 6.4)
+* Xcode 10
 * Install with Homebrew: `brew install glew llvm qt cmake`
 
 
 ## Building on Windows:
 To initialize the repository don't forget to execute `git submodule update --init` to pull the submodules.
-
-*If you're using Visual Studio 2017, when you first open the project, do not upgrade the targets or the packages. Leave both at "No upgrade". Note that you will need the v140 toolset, which may not be in VS 2017 by default. It can be acquired by running the VS installer.*
 
 ### Configuring the Qt plugin (if used)
 
