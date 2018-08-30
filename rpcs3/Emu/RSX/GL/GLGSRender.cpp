@@ -202,6 +202,20 @@ void GLGSRender::end()
 		m_index_ring_buffer->reserve_storage_on_heap(16 * 1024);
 	}
 
+	const auto do_heap_cleanup = [this]()
+	{
+		if (manually_flush_ring_buffers)
+		{
+			m_attrib_ring_buffer->unmap();
+			m_index_ring_buffer->unmap();
+		}
+		else
+		{
+			//DMA push; not needed with MAP_COHERENT
+			//glMemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
+		}
+	};
+
 	//Do vertex upload before RTT prep / texture lookups to give the driver time to push data
 	auto upload_info = set_vertex_buffer();
 
@@ -381,6 +395,7 @@ void GLGSRender::end()
 	if (!load_program())
 	{
 		// Program is not ready, skip drawing this
+		do_heap_cleanup();
 		std::this_thread::yield();
 		rsx::thread::end();
 		return;
@@ -391,17 +406,6 @@ void GLGSRender::end()
 
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
-
-	if (manually_flush_ring_buffers)
-	{
-		m_attrib_ring_buffer->unmap();
-		m_index_ring_buffer->unmap();
-	}
-	else
-	{
-		//DMA push; not needed with MAP_COHERENT
-		//glMemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
-	}
 
 	//Bind textures and resolve external copy operations
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
@@ -473,6 +477,8 @@ void GLGSRender::end()
 	update_draw_state();
 
 	std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
+
+	do_heap_cleanup();
 
 	if (g_cfg.video.debug_output)
 	{
