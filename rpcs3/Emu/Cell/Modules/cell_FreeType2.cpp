@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cell_FreeType2("cell_FreeType2");
+LOG_CHANNEL(cell_FreeType2);
 
 // Functions
 s32 cellFreeType2Ex()

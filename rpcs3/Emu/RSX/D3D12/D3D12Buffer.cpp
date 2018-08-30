@@ -262,7 +262,7 @@ namespace
 		std::function<attribute_storage(rsx::rsx_state, std::vector<std::pair<u32, u32>>)>
 			get_vertex_buffers,
 		ID3D12Resource* m_vertex_buffer_data, d3d12_data_heap& m_buffer_data,
-		gsl::not_null<ID3D12GraphicsCommandList*> command_list)
+		ID3D12GraphicsCommandList* command_list)
 	{
 		command_list->ResourceBarrier(1,
 			&CD3DX12_RESOURCE_BARRIER::Transition(m_vertex_buffer_data,

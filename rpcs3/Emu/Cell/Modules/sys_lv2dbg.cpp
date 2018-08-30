@@ -5,7 +5,7 @@
 
 #include "sys_lv2dbg.h"
 
-logs::channel sys_lv2dbg("sys_lv2dbg");
+LOG_CHANNEL(sys_lv2dbg);
 
 template <>
 void fmt_class_string<CellLv2DbgError>::format(std::string& out, u64 arg)

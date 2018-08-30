@@ -4,7 +4,7 @@ RPCS3
 [![Build Status](https://travis-ci.org/RPCS3/rpcs3.svg?branch=master)](https://travis-ci.org/RPCS3/rpcs3)
 [![Build status](https://ci.appveyor.com/api/projects/status/411c4clmiohtx7eo/branch/master?svg=true)](https://ci.appveyor.com/project/rpcs3/rpcs3/branch/master)
 
-The world's first open-source PlayStation 3 emulator/debugger written in C++ for Windows and Linux.
+The world's first open-source PlayStation 3 emulator/debugger, written in C++ for Windows and Linux.
 
 You can find some basic information in our [**website**](https://rpcs3.net/). Game info is being populated on the [**wiki**](https://wiki.rpcs3.net/).
 For discussion about this emulator and PS3 emulation, or game compatibility reports, please visit our [**forums**](https://forums.rpcs3.net) and our [**Discord server**](https://discord.me/RPCS3).
@@ -20,19 +20,20 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 ## Dependencies
 
 ### Windows
-* [Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/)
-* [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
-* [Cmake 3.1.0+](https://www.cmake.org/download/) (add to PATH)
+* [Visual Studio 2017](https://www.visualstudio.com/en/downloads/)
+* [Visual C++ Redistributable Packages for Visual Studio 2017](https://go.microsoft.com/fwlink/?LinkId=746572)
+* [CMake 3.8.2+](https://www.cmake.org/download/) (add to PATH)
 * [Python 3.3+](https://www.python.org/downloads/) (add to PATH)
 * [Vulkan SDK](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
 * [Qt 5.10+](https://www.qt.io/download-open-source/)
 
 
-**Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.11.1\msvc2015_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2015)**
+**Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.11.1\msvc2017_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2017)**
 
 ### Linux
 * [Qt 5.10+](https://www.qt.io/download-open-source/)
-* GCC 5.1+ or Clang 3.5.0+ ([not GCC 6.1](https://github.com/RPCS3/rpcs3/issues/1691))
+* GCC 7.3+ or Clang 5.0+
+* CMake 3.8.2+
 * Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git qt5-default`
 * Arch: `sudo pacman -S glew openal cmake vulkan-validation-layers qt5-base`
 * Fedora: `sudo dnf install alsa-lib-devel cmake glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt5-devel vulkan-devel`
@@ -42,18 +43,16 @@ If you want to contribute please take a look at the [Coding Style](https://githu
 
 ### MacOS
 MacOS is not supported at this moment because it doesn't meet system requirements (OpenGL 4.3)
-* Xcode 6+ (tested with Xcode 6.4)
+* Xcode 10
 * Install with Homebrew: `brew install glew llvm qt cmake`
 
 
 ## Building on Windows:
 To initialize the repository don't forget to execute `git submodule update --init` to pull the submodules.
 
-*If you're using Visual Studio 2017, when you first open the project, do not upgrade the targets or the packages. Leave both at "No upgrade". Note that you will need the v140 toolset, which may not be in VS 2017 by default. It can be acquired by running the VS installer.*
-
 ### Configuring the Qt plugin (if used)
 
-1) Go to the Qt5 menu and edit Qt5 options. Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\5.11.1\msvc2015_64`.
+1) Go to the Qt5 menu and edit Qt5 options. Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\5.11.1\msvc2017_64`.
 2) While selecting the rpcs3qt project, go to Qt5->Project Setting and select the version you added.
 
 ### Building the projects
@@ -67,6 +66,34 @@ If you're not using precompiled libs, build the projects in *__BUILD_BEFORE* fol
 
 `Build > Build Solution`
 
+
+## Building on Windows (MinGW):
+
+1) Install packages
+- `pacman -S base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-yasm mingw-w64-x86_64-python2 mingw-w64-x86_64-ntldd-git mingw-w64-x86_64-qt5 mingw-w64-x86_64-openal mingw-w64-x86_64-glew git`
+2) Clone repository
+- `git clone https://github.com/RPCS3/rpcs3.git`
+3) Update submodules
+- `cd rpcs3`
+- `git submodule update --init`
+- `cd ..`
+4) Configure and compile rpcs3
+- `mkdir rpcs3_build && cd rpcs3_build`
+- `cmake -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make ../rpcs3/`
+- `mingw32-make.exe GitVersion && mingw32-make.exe discord-rpc`
+- If you use ```-DUSE_SYSTEM_FFMPEG=OFF```, run `mingw32-make ffmpeg-mingw`
+5) Build rpcs3
+- Run `mingw32-make` or `mingw32-make -jX` where X is your CPU cores.
+6) Copy dependencies
+- `cd ./bin`
+- `for l in $(ntldd.exe -R rpcs3.exe|grep mingw64|sed -e 's/^[ \t]*//'|cut -d' ' -f3);do cp $l .;done`
+7) Copy qt plugins
+- `mkdir -p ./qt/plugins/{bearer,imageformats,platforms,styles}`
+- `cp /mingw64/share/qt5/plugins/bearer/qgenericbearer.dll ./qt/plugins/bearer/`
+- `cp /mingw64/share/qt5/plugins/imageformats/{qgif.dll,qicns.dll,qico.dll,qjpeg.dll,qtga.dll,qtiff.dll,qwbmp.dll,qwebp.dll} ./qt/plugins/imageformats/`
+- `cp /mingw64/share/qt5/plugins/platforms/qwindows.dll ./qt/plugins/platforms/`
+- `cp /mingw64/share/qt5/plugins/styles/qwindowsvistastyle.dll ./qt/plugins/styles/`
+8) Run RPCS3 with `./rpcs3`
 
 
 ## Building on Linux & Mac OS:

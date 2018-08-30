@@ -4,7 +4,7 @@
 
 #include "cellSysconf.h"
 
-logs::channel cellSysconf("cellSysconf");
+LOG_CHANNEL(cellSysconf);
 
 s32 cellSysconfAbort()
 {

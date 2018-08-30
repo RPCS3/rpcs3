@@ -10,7 +10,7 @@
 
 #include <thread>
 
-logs::channel cellGcmSys("cellGcmSys");
+LOG_CHANNEL(cellGcmSys);
 
 extern s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 count);
 
@@ -80,8 +80,8 @@ void InitOffsetTable()
 	memset(offsetTable.eaAddress.get_ptr(), 0xFF, 512 * sizeof(u16));
 	memset(IoMapTable, 0, 3072 * sizeof(u16));
 
-	memset(RSXIOMem.ea, 0xFF, 512 * sizeof(u16));
-	memset(RSXIOMem.io, 0xFF, 3072 * sizeof(u16));
+	memset(&RSXIOMem, 0xFF, sizeof(RSXIOMem));
+	reserved_size = 0;
 }
 
 //----------------------------------------------------------------------------

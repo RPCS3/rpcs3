@@ -3,7 +3,7 @@
 
 
 
-logs::channel cellSysutilAp("cellSysutilAp");
+LOG_CHANNEL(cellSysutilAp);
 
 // Return Codes
 enum

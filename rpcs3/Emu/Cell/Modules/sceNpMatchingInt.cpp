@@ -4,7 +4,7 @@
 
 
 
-logs::channel sceNpMatchingInt("sceNpMatchingInt");
+LOG_CHANNEL(sceNpMatchingInt);
 
 s32 sceNpMatchingGetRoomMemberList()
 {

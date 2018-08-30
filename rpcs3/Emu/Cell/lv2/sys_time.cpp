@@ -105,7 +105,7 @@ static int clock_gettime(int clk_id, struct timespec* tp)
 
 
 
-logs::channel sys_time("sys_time");
+LOG_CHANNEL(sys_time);
 
 static const u64 g_timebase_freq = /*79800000*/ 80000000; // 80 Mhz
 

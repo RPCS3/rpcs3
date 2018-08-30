@@ -10,7 +10,7 @@
 
 
 
-logs::channel sys_semaphore("sys_semaphore");
+LOG_CHANNEL(sys_semaphore);
 
 template<> DECLARE(ipc_manager<lv2_sema, u64>::g_ipc) {};
 

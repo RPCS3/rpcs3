@@ -10,7 +10,7 @@
 
 
 
-logs::channel cellMusicDecode("cellMusicDecode");
+LOG_CHANNEL(cellMusicDecode);
 
 // Return Codes
 enum

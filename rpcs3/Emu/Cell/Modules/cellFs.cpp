@@ -13,7 +13,7 @@
 
 
 
-logs::channel cellFs("cellFs");
+LOG_CHANNEL(cellFs);
 
 error_code cellFsGetPath(u32 fd, vm::ptr<char> out_path)
 {

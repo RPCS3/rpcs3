@@ -17,7 +17,7 @@
 
 
 
-logs::channel sys_spu("sys_spu");
+LOG_CHANNEL(sys_spu);
 
 void sys_spu_image::load(const fs::file& stream)
 {

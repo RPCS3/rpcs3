@@ -10,7 +10,7 @@
 
 
 
-logs::channel sys_lwcond("sys_lwcond");
+LOG_CHANNEL(sys_lwcond);
 
 extern u64 get_system_time();
 

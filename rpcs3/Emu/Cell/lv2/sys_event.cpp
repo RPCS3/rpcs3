@@ -12,7 +12,7 @@
 
 
 
-logs::channel sys_event("sys_event");
+LOG_CHANNEL(sys_event);
 
 template<> DECLARE(ipc_manager<lv2_event_queue, u64>::g_ipc) {};
 

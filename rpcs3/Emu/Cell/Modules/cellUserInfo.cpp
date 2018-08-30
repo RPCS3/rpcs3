@@ -7,7 +7,7 @@
 #include "Utilities/StrUtil.h"
 #include "cellSysutil.h"
 
-logs::channel cellUserInfo("cellUserInfo");
+LOG_CHANNEL(cellUserInfo);
 
 template<>
 void fmt_class_string<CellUserInfoError>::format(std::string& out, u64 arg)

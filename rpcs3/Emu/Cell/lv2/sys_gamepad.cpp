@@ -9,7 +9,7 @@
 
 
 
-logs::channel sys_gamepad("sys_gamepad");
+LOG_CHANNEL(sys_gamepad);
 
 u32 sys_gamepad_ycon_initalize(vm::ptr<uint8_t> in, vm::ptr<uint8_t> out)
 {

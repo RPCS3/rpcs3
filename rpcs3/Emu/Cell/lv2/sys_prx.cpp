@@ -16,7 +16,7 @@ extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::s
 extern void ppu_unload_prx(const lv2_prx& prx);
 extern void ppu_initialize(const ppu_module&);
 
-logs::channel sys_prx("sys_prx");
+LOG_CHANNEL(sys_prx);
 
 static const std::unordered_map<std::string, int> s_prx_ignore
 {

@@ -9,6 +9,10 @@
 #include <memory>
 #include <unordered_map>
 
+#if !defined(_WIN32) && !defined(__APPLE__)
+#include <X11/Xutil.h>
+#endif
+
 #include "Utilities/variant.hpp"
 #include "Emu/RSX/GSRender.h"
 #include "Emu/System.h"
@@ -21,8 +25,10 @@
 
 #include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
 
-#ifndef _WIN32
-#include <X11/Xutil.h>
+#ifdef __APPLE__
+#define VK_DISABLE_COMPONENT_SWIZZLE 1
+#else
+#define VK_DISABLE_COMPONENT_SWIZZLE 0
 #endif
 
 #define DESCRIPTOR_MAX_DRAW_CALLS 4096
@@ -90,6 +96,7 @@ namespace vk
 	bool emulate_primitive_restart(rsx::primitive_type type);
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
+	VkFlags get_heap_compatible_buffer_types();
 	driver_vendor get_driver_vendor();
 
 	VkComponentMapping default_component_map();
@@ -164,6 +171,7 @@ namespace vk
 
 	//Fence reset with driver workarounds in place
 	void reset_fence(VkFence *pFence);
+	void wait_for_fence(VkFence pFence);
 
 	void die_with_error(const char* faulting_addr, VkResult error_code);
 
@@ -391,6 +399,8 @@ namespace vk
 			dev = pdev;
 			vkGetPhysicalDeviceProperties(pdev, &props);
 			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+
+			LOG_NOTICE(RSX, "Physical device intialized. GPU=%s, driver=%u", props.deviceName, props.driverVersion);
 		}
 
 		std::string name() const
@@ -427,6 +437,11 @@ namespace vk
 		VkPhysicalDeviceMemoryProperties get_memory_properties() const
 		{
 			return memory_properties;
+		}
+
+		VkPhysicalDeviceLimits get_limits() const
+		{
+			return props.limits;
 		}
 
 		operator VkPhysicalDevice() const
@@ -529,7 +544,11 @@ namespace vk
 				{
 					if ((mem_infos.memoryTypes[i].propertyFlags & desired_mask) == desired_mask)
 					{
-						*type_index = i;
+						if (type_index)
+						{
+							*type_index = i;
+						}
+
 						return true;
 					}
 				}
@@ -658,17 +677,17 @@ namespace vk
 			info.format = format;
 			info.image = image;
 			info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			info.viewType = view_type;
 			info.components = mapping;
+			info.viewType = view_type;
 			info.subresourceRange = range;
 
-			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+			create_impl();
 		}
 
 		image_view(VkDevice dev, VkImageViewCreateInfo create_info)
 			: m_device(dev), info(create_info)
 		{
-			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+			create_impl();
 		}
 
 		image_view(VkDevice dev, vk::image* resource,
@@ -698,7 +717,7 @@ namespace vk
 				break;
 			}
 
-			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+			create_impl();
 		}
 
 		~image_view()
@@ -706,10 +725,41 @@ namespace vk
 			vkDestroyImageView(m_device, value, nullptr);
 		}
 
+		u32 encoded_component_map() const
+		{
+#if	(VK_DISABLE_COMPONENT_SWIZZLE)
+			u32 result = (u32)info.components.a - 1;
+			result |= ((u32)info.components.r - 1) << 3;
+			result |= ((u32)info.components.g - 1) << 6;
+			result |= ((u32)info.components.b - 1) << 9;
+
+			return result;
+#else
+			return 0;
+#endif
+		}
+
 		image_view(const image_view&) = delete;
 		image_view(image_view&&) = delete;
+
 	private:
 		VkDevice m_device;
+
+		void create_impl()
+		{
+#if (VK_DISABLE_COMPONENT_SWIZZLE)
+			// Force identity
+			const auto mapping = info.components;
+			info.components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
+#endif
+
+			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+
+#if (VK_DISABLE_COMPONENT_SWIZZLE)
+			// Restore requested mapping
+			info.components = mapping;
+#endif
+		}
 	};
 
 	struct viewable_image : public image
@@ -1041,6 +1091,8 @@ namespace vk
 	{
 	private:
 		bool is_open = false;
+		bool is_pending = false;
+		VkFence m_submit_fence = VK_NULL_HANDLE;
 
 	protected:
 		vk::command_pool *pool = nullptr;
@@ -1058,21 +1110,33 @@ namespace vk
 		command_buffer() {}
 		~command_buffer() {}
 
-		void create(vk::command_pool &cmd_pool)
+		void create(vk::command_pool &cmd_pool, bool auto_reset = false)
 		{
 			VkCommandBufferAllocateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 			infos.commandBufferCount = 1;
 			infos.commandPool = (VkCommandPool)cmd_pool;
 			infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
 			CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
+
+			if (auto_reset)
+			{
+				VkFenceCreateInfo info = {};
+				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+				CHECK_RESULT(vkCreateFence(cmd_pool.get_owner(), &info, nullptr, &m_submit_fence));
+			}
+
 			pool = &cmd_pool;
 		}
 
 		void destroy()
 		{
 			vkFreeCommandBuffers(pool->get_owner(), (*pool), 1, &commands);
+
+			if (m_submit_fence)
+			{
+				vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
+			}
 		}
 
 		vk::command_pool& get_command_pool() const
@@ -1087,6 +1151,15 @@ namespace vk
 
 		void begin()
 		{
+			if (m_submit_fence && is_pending)
+			{
+				wait_for_fence(m_submit_fence);
+				is_pending = false;
+
+				CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
+				CHECK_RESULT(vkResetCommandBuffer(commands, 0));
+			}
+
 			if (is_open)
 				return;
 
@@ -1119,6 +1192,12 @@ namespace vk
 			{
 				LOG_ERROR(RSX, "commandbuffer->submit was called whilst the command buffer is in a recording state");
 				return;
+			}
+
+			if (fence == VK_NULL_HANDLE)
+			{
+				fence = m_submit_fence;
+				is_pending = (fence != VK_NULL_HANDLE);
 			}
 
 			VkSubmitInfo infos = {};
@@ -1422,6 +1501,52 @@ public:
 
 			src.first = false;
 			return VK_SUCCESS;
+		}
+#elif defined(__APPLE__)
+
+	class swapchain_MacOS : public native_swapchain_base
+	{
+		void* nsView = NULL;
+
+	public:
+		swapchain_MacOS(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		{}
+
+		~swapchain_MacOS(){}
+
+		bool init() override
+		{
+			//TODO: get from `nsView`
+			m_width = 0;
+			m_height = 0;
+
+			if (m_width == 0 || m_height == 0)
+			{
+				LOG_ERROR(RSX, "Invalid window dimensions %d x %d", m_width, m_height);
+				return false;
+			}
+
+			init_swapchain_images(dev, 3);
+			return true;
+		}
+
+		void create(display_handle_t& window_handle) override
+		{
+			nsView = window_handle;
+		}
+
+		void destroy(bool full=true) override
+		{
+			swapchain_images.clear();
+
+			if (full)
+				dev.destroy();
+		}
+
+		VkResult present(u32 index) override
+		{
+			fmt::throw_exception("Native macOS swapchain is not implemented yet!");
 		}
 #else
 
@@ -1912,15 +2037,20 @@ public:
 			std::vector<const char *> extensions;
 			std::vector<const char *> layers;
 
-#ifndef __APPLE__
 			if (!fast)
 			{
+				supported_extensions support;
+
 				extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-				extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+				if (support.is_supported(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
+				{
+					extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+				}
 #ifdef _WIN32
 				extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif defined(__APPLE__)
+				extensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
 #else
-				supported_extensions support;
 				bool found_surface_ext = false;
 				if (support.is_supported(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
 				{
@@ -1939,11 +2069,10 @@ public:
 					LOG_ERROR(RSX, "Could not find a supported Vulkan surface extension");
 					return 0;
 				}
-#endif //(WIN32)
+#endif //(WIN32, __APPLE__)
 				if (g_cfg.video.debug_output)
 					layers.push_back("VK_LAYER_LUNARG_standard_validation");
 			}
-#endif //(!APPLE)
 
 			VkInstanceCreateInfo instance_info = {};
 			instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -2016,6 +2145,7 @@ public:
 
 		swapchain_base* createSwapChain(display_handle_t window_handle, vk::physical_device &dev)
 		{
+			VkSurfaceKHR surface;
 #ifdef _WIN32
 			using swapchain_NATIVE = swapchain_WIN32;
 			HINSTANCE hInstance = NULL;
@@ -2025,16 +2155,17 @@ public:
 			createInfo.hinstance = hInstance;
 			createInfo.hwnd = window_handle;
 
-			VkSurfaceKHR surface;
 			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface));
 
 #elif defined(__APPLE__)
-			using swapchain_NATIVE = swapchain_X11;
-			VkSurfaceKHR surface;
+			using swapchain_NATIVE = swapchain_MacOS;
+			VkMacOSSurfaceCreateInfoMVK createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
+			createInfo.pView = window_handle;
 
+			CHECK_RESULT(vkCreateMacOSSurfaceMVK(m_instance, &createInfo, NULL, &surface));
 #else
 			using swapchain_NATIVE = swapchain_X11;
-			VkSurfaceKHR surface;
 
 			window_handle.match(
 				[&](std::pair<Display*, Window> p)
@@ -2062,7 +2193,6 @@ public:
 			std::vector<VkBool32> supportsPresent(device_queues, VK_FALSE);
 			bool present_possible = false;
 
-#ifndef __APPLE__
 			for (u32 index = 0; index < device_queues; index++)
 			{
 				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, surface, &supportsPresent[index]);
@@ -2081,7 +2211,6 @@ public:
 			{
 				LOG_ERROR(RSX, "It is not possible for the currently selected GPU to present to the window (Likely caused by NVIDIA driver running the current display)");
 			}
-#endif
 
 			// Search for a graphics and a present queue in the array of queue
 			// families, try to find one that supports both
@@ -2139,10 +2268,6 @@ public:
 				swapchain->create(window_handle);
 				return swapchain;
 			}
-
-#ifdef __APPLE__
-			fmt::throw_exception("Unreachable" HERE);
-#endif
 
 			// Get the list of VkFormat's that are supported:
 			uint32_t formatCount;
@@ -2658,49 +2783,97 @@ public:
 		bool mapped = false;
 		void *_ptr = nullptr;
 
+		std::unique_ptr<buffer> shadow;
+		std::vector<VkBufferCopy> dirty_ranges;
+
 		// NOTE: Some drivers (RADV) use heavyweight OS map/unmap routines that are insanely slow
 		// Avoid mapping/unmapping to keep these drivers from stalling
 		// NOTE2: HOST_CACHED flag does not keep the mapped ptr around in the driver either
 
 		void create(VkBufferUsageFlags usage, size_t size, const char *name = "unnamed", size_t guard = 0x10000)
 		{
+			data_heap::init(size, name, guard);
+
 			const auto device = get_current_renderer();
 			const auto memory_map = device->get_memory_mapping();
-			const VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-			data_heap::init(size, name, guard);
-			heap.reset(new buffer(*device, size, memory_map.host_visible_coherent, memory_flags, usage, 0));
+			VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+			auto memory_index = memory_map.host_visible_coherent;
+
+			if (!(get_heap_compatible_buffer_types() & usage))
+			{
+				LOG_WARNING(RSX, "Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", (u32)usage);
+
+				shadow.reset(new buffer(*device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+				usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+				memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+				memory_index = memory_map.device_local;
+			}
+
+			heap.reset(new buffer(*device, size, memory_index, memory_flags, usage, 0));
 		}
 
 		void destroy()
 		{
 			if (mapped)
 			{
-				heap->unmap();
-				mapped = false;
+				unmap(true);
 			}
 
 			heap.reset();
+			shadow.reset();
 		}
 
 		void* map(size_t offset, size_t size)
 		{
 			if (!_ptr)
 			{
-				_ptr = heap->map(0, heap->size());
+				if (shadow)
+					_ptr = shadow->map(0, shadow->size());
+				else
+					_ptr = heap->map(0, heap->size());
+
 				mapped = true;
+			}
+
+			if (shadow)
+			{
+				dirty_ranges.push_back({offset, offset, size});
 			}
 
 			return (u8*)_ptr + offset;
 		}
 
-		void unmap()
+		void unmap(bool force = false)
 		{
-			if (g_cfg.video.disable_vulkan_mem_allocator)
+			if (force || g_cfg.video.disable_vulkan_mem_allocator)
 			{
-				heap->unmap();
+				if (shadow)
+					shadow->unmap();
+				else
+					heap->unmap();
+
 				mapped = false;
 				_ptr = nullptr;
+			}
+		}
+
+		bool dirty()
+		{
+			return !dirty_ranges.empty();
+		}
+
+		void sync(const vk::command_buffer& cmd)
+		{
+			if (!dirty_ranges.empty())
+			{
+				verify (HERE), shadow, heap;
+				vkCmdCopyBuffer(cmd, shadow->value, heap->value, (u32)dirty_ranges.size(), dirty_ranges.data());
+				dirty_ranges.resize(0);
+
+				insert_buffer_memory_barrier(cmd, heap->value, 0, heap->size(),
+						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 			}
 		}
 	};

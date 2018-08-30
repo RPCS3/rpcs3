@@ -26,7 +26,7 @@
 
 
 
-logs::channel sys_net("sys_net");
+LOG_CHANNEL(sys_net);
 
 static std::vector<ppu_thread*> s_to_awake;
 

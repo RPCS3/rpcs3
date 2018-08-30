@@ -19,6 +19,7 @@ namespace vk
 	atomic_t<bool> g_cb_no_interrupt_flag { false };
 
 	//Driver compatibility workarounds
+	VkFlags g_heap_compatible_buffer_types = 0;
 	driver_vendor g_driver_vendor = driver_vendor::unknown;
 	bool g_drv_no_primitive_restart_flag = false;
 	bool g_drv_sanitize_fp_values = false;
@@ -273,6 +274,7 @@ namespace vk
 		g_num_processed_frames = 0;
 		g_num_total_frames = 0;
 		g_driver_vendor = driver_vendor::unknown;
+		g_heap_compatible_buffer_types = 0;
 
 		const auto gpu_name = g_current_renderer->gpu().name();
 
@@ -313,6 +315,49 @@ namespace vk
 				LOG_WARNING(RSX, "Unknown driver vendor for device '%s'", gpu_name);
 			}
 		}
+
+		{
+			// Buffer memory tests, only useful for portability on macOS
+			VkBufferUsageFlags types[] =
+			{
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT,
+				VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
+			};
+
+			VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+			VkBuffer tmp;
+			VkMemoryRequirements memory_reqs;
+
+			VkBufferCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			info.size = 4096;
+			info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			info.flags = 0;
+
+			for (const auto &usage : types)
+			{
+				info.usage = usage;
+				CHECK_RESULT(vkCreateBuffer(*g_current_renderer, &info, nullptr, &tmp));
+				
+				vkGetBufferMemoryRequirements(*g_current_renderer, tmp, &memory_reqs);
+				if (g_current_renderer->get_compatible_memory_type(memory_reqs.memoryTypeBits, memory_flags, nullptr))
+				{
+					g_heap_compatible_buffer_types |= usage;
+				}
+
+				vkDestroyBuffer(*g_current_renderer, tmp, nullptr);
+			}
+		}
+	}
+
+	VkFlags get_heap_compatible_buffer_types()
+	{
+		return g_heap_compatible_buffer_types;
 	}
 
 	driver_vendor get_driver_vendor()
@@ -539,6 +584,21 @@ namespace vk
 		else
 		{
 			CHECK_RESULT(vkResetFences(*g_current_renderer, 1, pFence));
+		}
+	}
+
+	void wait_for_fence(VkFence fence)
+	{
+		while (auto status = vkGetFenceStatus(*g_current_renderer, fence))
+		{
+			switch (status)
+			{
+			case VK_NOT_READY:
+				continue;
+			default:
+				die_with_error(HERE, status);
+				return;
+			}
 		}
 	}
 

@@ -3,7 +3,7 @@
 #include "types.h"
 
 // Helper class, provides access to compiler-specific atomic intrinsics
-template<typename T, std::size_t Size>
+template<typename T, std::size_t Size = sizeof(T)>
 struct atomic_storage
 {
 	static_assert(sizeof(T) <= 16 && sizeof(T) == alignof(T), "atomic_storage<> error: invalid type");
@@ -562,7 +562,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 	// TODO
 };
 
-template<typename T1, typename T2, typename>
+template<typename T1, typename T2, typename = void>
 struct atomic_add
 {
 	auto operator()(T1& lhs, const T2& rhs) const
@@ -579,7 +579,7 @@ struct atomic_add<T1, T2, std::enable_if_t<std::is_integral<T1>::value && std::i
 	static constexpr auto atomic_op = &atomic_storage<T1>::add_fetch;
 };
 
-template<typename T1, typename T2, typename>
+template<typename T1, typename T2, typename = void>
 struct atomic_sub
 {
 	auto operator()(T1& lhs, const T2& rhs) const
@@ -596,7 +596,7 @@ struct atomic_sub<T1, T2, std::enable_if_t<std::is_integral<T1>::value && std::i
 	static constexpr auto atomic_op = &atomic_storage<T1>::sub_fetch;
 };
 
-template<typename T, typename>
+template<typename T, typename = void>
 struct atomic_pre_inc
 {
 	auto operator()(T& v) const
@@ -611,7 +611,7 @@ struct atomic_pre_inc<T, std::enable_if_t<std::is_integral<T>::value>>
 	static constexpr auto atomic_op = &atomic_storage<T>::inc_fetch;
 };
 
-template<typename T, typename>
+template<typename T, typename = void>
 struct atomic_post_inc
 {
 	auto operator()(T& v) const
@@ -626,7 +626,7 @@ struct atomic_post_inc<T, std::enable_if_t<std::is_integral<T>::value>>
 	static constexpr auto atomic_op = &atomic_storage<T>::fetch_inc;
 };
 
-template<typename T, typename>
+template<typename T, typename = void>
 struct atomic_pre_dec
 {
 	auto operator()(T& v) const
@@ -641,7 +641,7 @@ struct atomic_pre_dec<T, std::enable_if_t<std::is_integral<T>::value>>
 	static constexpr auto atomic_op = &atomic_storage<T>::dec_fetch;
 };
 
-template<typename T, typename>
+template<typename T, typename = void>
 struct atomic_post_dec
 {
 	auto operator()(T& v) const
@@ -656,7 +656,7 @@ struct atomic_post_dec<T, std::enable_if_t<std::is_integral<T>::value>>
 	static constexpr auto atomic_op = &atomic_storage<T>::fetch_dec;
 };
 
-template<typename T1, typename T2, typename>
+template<typename T1, typename T2, typename = void>
 struct atomic_and
 {
 	auto operator()(T1& lhs, const T2& rhs) const
@@ -673,7 +673,7 @@ struct atomic_and<T1, T2, std::enable_if_t<std::is_integral<T1>::value && std::i
 	static constexpr auto atomic_op = &atomic_storage<T1>::and_fetch;
 };
 
-template<typename T1, typename T2, typename>
+template<typename T1, typename T2, typename = void>
 struct atomic_or
 {
 	auto operator()(T1& lhs, const T2& rhs) const
@@ -690,7 +690,7 @@ struct atomic_or<T1, T2, std::enable_if_t<std::is_integral<T1>::value && std::is
 	static constexpr auto atomic_op = &atomic_storage<T1>::or_fetch;
 };
 
-template<typename T1, typename T2, typename>
+template<typename T1, typename T2, typename = void>
 struct atomic_xor
 {
 	auto operator()(T1& lhs, const T2& rhs) const
@@ -707,7 +707,7 @@ struct atomic_xor<T1, T2, std::enable_if_t<std::is_integral<T1>::value && std::i
 	static constexpr auto atomic_op = &atomic_storage<T1>::xor_fetch;
 };
 
-template<typename T1, typename T2, typename>
+template<typename T1, typename T2, typename = void>
 struct atomic_test_and_set
 {
 	bool operator()(T1& lhs, const T2& rhs) const
@@ -724,7 +724,7 @@ struct atomic_test_and_set<T1, T2, std::enable_if_t<std::is_integral<T1>::value 
 	static constexpr auto atomic_op = &atomic_storage<T1>::test_and_set;
 };
 
-template<typename T1, typename T2, typename>
+template<typename T1, typename T2, typename = void>
 struct atomic_test_and_reset
 {
 	bool operator()(T1& lhs, const T2& rhs) const
@@ -741,7 +741,7 @@ struct atomic_test_and_reset<T1, T2, std::enable_if_t<std::is_integral<T1>::valu
 	static constexpr auto atomic_op = &atomic_storage<T1>::test_and_reset;
 };
 
-template<typename T1, typename T2, typename>
+template<typename T1, typename T2, typename = void>
 struct atomic_test_and_complement
 {
 	bool operator()(T1& lhs, const T2& rhs) const
@@ -916,7 +916,7 @@ public:
 	{
 		return fetch_op(atomic_add<type, T2>{}, rhs);
 	}
-	
+
 	template<typename T2>
 	type add_fetch(const T2& rhs)
 	{

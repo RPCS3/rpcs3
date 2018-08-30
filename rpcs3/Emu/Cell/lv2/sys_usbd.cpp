@@ -7,7 +7,7 @@
 #include "sys_ppu_thread.h"
 
 
-logs::channel sys_usbd("sys_usbd");
+LOG_CHANNEL(sys_usbd);
 
 std::vector<usbDevice> devices = {
 	// System devices

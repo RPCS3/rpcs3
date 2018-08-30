@@ -15,7 +15,7 @@
 #include "sysPrxForUser.h"
 #include "cellSpurs.h"
 
-logs::channel cellSpurs("cellSpurs");
+LOG_CHANNEL(cellSpurs);
 
 error_code sys_spu_image_close(vm::ptr<sys_spu_image> img);
 
@@ -234,7 +234,7 @@ namespace _spurs
 {
 	// Create task
 	s32 create_task(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm::cptr<void> elf, vm::cptr<void> context, u32 size, vm::ptr<CellSpursTaskLsPattern> ls_pattern, vm::ptr<CellSpursTaskArgument> arg);
-	
+
 	// Start task
 	s32 task_start(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, u32 taskId);
 }
@@ -1194,7 +1194,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	}
 
 	spurs->traceBuffer = vm::null;
-	// TODO: Register libprof for user trace 
+	// TODO: Register libprof for user trace
 
 	// Initialise the event port multiplexor
 	_spurs::init_event_port_mux(spurs.ptr(&CellSpurs::eventPortMux), spurs->spuPort, spurs->eventPort, 3);
@@ -1210,7 +1210,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 		return cellSpursWakeUp(ppu, spurs);
 	}
 
-	return CELL_OK;	
+	return CELL_OK;
 }
 
 /// Initialize SPURS
@@ -2047,7 +2047,7 @@ s32 _cellSpursWorkloadAttributeInitialize(vm::ptr<CellSpursWorkloadAttribute> at
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}
-	
+
 	memset(attr.get_ptr(), 0, sizeof(CellSpursWorkloadAttribute));
 	attr->revision = revision;
 	attr->sdkVersion = sdkVersion;
@@ -2121,7 +2121,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
-	
+
 	u32 wnum;
 	const u32 wmax = spurs->flags1 & SF1_32_WORKLOADS ? 0x20u : 0x10u; // TODO: check if can be changed
 	spurs->wklEnabled.atomic_op([spurs, wmax, &wnum](be_t<u32>& value)
@@ -2349,7 +2349,7 @@ s32 cellSpursWakeUp(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 	{
 		_spurs::signal_to_handler_thread(ppu, spurs);
 	}
-	
+
 	return CELL_OK;
 }
 
@@ -2763,7 +2763,7 @@ s32 cellSpursEventFlagSet(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFlag
 
 				// Unblock the waiting SPU task if either all the bits being waited by the task have been set or
 				// if the wait mode of the task is OR and atleast one bit the thread is waiting on has been set
-				if ((eventFlag->spuTaskWaitMask[i] & ~spuTaskRelevantEvents) == 0 || 
+				if ((eventFlag->spuTaskWaitMask[i] & ~spuTaskRelevantEvents) == 0 ||
 					(((eventFlag->spuTaskWaitMode >> j) & 0x0001) == CELL_SPURS_EVENT_FLAG_OR && spuTaskRelevantEvents != 0))
 				{
 					eventsToClear            |= spuTaskRelevantEvents;
@@ -3560,13 +3560,13 @@ s32 cellSpursCreateTask(ppu_thread& ppu, vm::ptr<CellSpursTaskset> taskset, vm::
 	}
 
 	auto rc = _spurs::create_task(taskset, taskId, elf, context, size, lsPattern, argument);
-	if (rc != CELL_OK) 
+	if (rc != CELL_OK)
 	{
 		return rc;
 	}
 
 	rc = _spurs::task_start(ppu, taskset, *taskId);
-	if (rc != CELL_OK) 
+	if (rc != CELL_OK)
 	{
 		return rc;
 	}
@@ -4138,7 +4138,7 @@ s32 cellSpursSemaphoreGetTasksetAddress()
 
 DECLARE(ppu_module_manager::cellSpurs)("cellSpurs", []()
 {
-	// Core 
+	// Core
 	REG_FUNC(cellSpurs, cellSpursInitialize);
 	REG_FUNC(cellSpurs, cellSpursInitializeWithAttribute);
 	REG_FUNC(cellSpurs, cellSpursInitializeWithAttribute2);
@@ -4235,7 +4235,7 @@ DECLARE(ppu_module_manager::cellSpurs)("cellSpurs", []()
 	REG_FUNC(cellSpurs, cellSpursJobGuardInitialize);
 	REG_FUNC(cellSpurs, cellSpursJobGuardNotify);
 	REG_FUNC(cellSpurs, cellSpursJobGuardReset);
-	
+
 	// LFQueue
 	REG_FUNC(cellSpurs, _cellSpursLFQueueInitialize);
 	REG_FUNC(cellSpurs, _cellSpursLFQueuePushBody);

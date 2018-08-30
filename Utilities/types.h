@@ -9,6 +9,7 @@
 #include <emmintrin.h>
 
 #include <cstdint>
+#include <cstddef>
 #include <type_traits>
 #include <utility>
 #include <chrono>
@@ -45,6 +46,9 @@
 // Return 32 bit alignof() to avoid widening/narrowing conversions with size_t
 #define ALIGN_32(...) static_cast<u32>(alignof(__VA_ARGS__))
 
+// Variant pattern matching helper
+#define MATCH(arg, ...) constexpr(std::is_same_v<std::decay_t<decltype(arg)>, __VA_ARGS__>)
+
 #define CONCATENATE_DETAIL(x, y) x ## y
 #define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
 
@@ -69,7 +73,11 @@ using ulong  = unsigned long;
 using ullong = unsigned long long;
 using llong  = long long;
 
+#if __APPLE__
+using uptr = std::uint64_t;
+#else
 using uptr = std::uintptr_t;
+#endif
 
 using u8  = std::uint8_t;
 using u16 = std::uint16_t;
@@ -87,7 +95,7 @@ using steady_clock = std::conditional<
 
 namespace gsl
 {
-	enum class byte : u8;
+	using std::byte;
 }
 
 // Formatting helper, type-specific preprocessing for improving safety and functionality
@@ -111,62 +119,11 @@ struct se_storage;
 template <typename T, bool Se = true, std::size_t Align = alignof(T)>
 class se_t;
 
-template <typename T, std::size_t Size = sizeof(T)>
-struct atomic_storage;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_add;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_sub;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_and;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_or;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_xor;
-
-template <typename T, typename = void>
-struct atomic_pre_inc;
-
-template <typename T, typename = void>
-struct atomic_post_inc;
-
-template <typename T, typename = void>
-struct atomic_pre_dec;
-
-template <typename T, typename = void>
-struct atomic_post_dec;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_test_and_set;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_test_and_reset;
-
-template <typename T1, typename T2, typename = void>
-struct atomic_test_and_complement;
-
 template <typename T>
 class atomic_t;
 
-#ifdef _MSC_VER
-using std::void_t;
-#else
-namespace void_details
-{
-	template <typename...>
-	struct make_void
-	{
-		using type = void;
-	};
-}
-
-template <typename... T>
-using void_t = typename void_details::make_void<T...>::type;
+#if defined(__INTELLISENSE__) && !defined(_MSC_VER)
+namespace std { template <typename...> using void_t = void; }
 #endif
 
 // Extract T::simple_type if available, remove cv qualifiers
@@ -177,7 +134,7 @@ struct simple_type_helper
 };
 
 template <typename T>
-struct simple_type_helper<T, void_t<typename T::simple_type>>
+struct simple_type_helper<T, std::void_t<typename T::simple_type>>
 {
 	using type = typename T::simple_type;
 };
@@ -725,7 +682,7 @@ struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std
 
 // Simple type enabled (TODO: allow for To as well)
 template <typename From, typename To>
-struct narrow_impl<From, To, void_t<typename From::simple_type>>
+struct narrow_impl<From, To, std::void_t<typename From::simple_type>>
 	: narrow_impl<simple_t<From>, To>
 {
 };
@@ -817,7 +774,7 @@ struct value_hash
 template <template <typename> class TT, std::size_t S, std::size_t A = S>
 struct alignas(A) any_pod
 {
-	std::aligned_storage_t<S, A> data;
+	alignas(A) std::byte data[S];
 
 	any_pod() = default;
 
@@ -953,26 +910,23 @@ struct error_code
 	};
 
 	template<typename ET>
-	struct is_error<ET, void_t<decltype(ET::__not_an_error)>> : std::false_type
+	struct is_error<ET, std::enable_if_t<sizeof(ET::__not_an_error) != 0>> : std::false_type
 	{
 	};
 
-	// Not an error constructor
-	template<typename ET, typename = decltype(ET::__not_an_error)>
-	error_code(const ET& value, std::nullptr_t = nullptr)
+	// Common constructor
+	template<typename ET>
+	error_code(const ET& value)
 		: value(static_cast<s32>(value))
 	{
-	}
-
-	// Error constructor
-	template<typename ET, typename = std::enable_if_t<is_error<ET>::value>>
-	error_code(const ET& value)
-		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), nullptr, 0))
-	{
+		if constexpr(is_error<ET>::value)
+		{
+			this->value = error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), nullptr, 0);
+		}
 	}
 
 	// Error constructor (2 args)
-	template<typename ET, typename T2, typename = std::enable_if_t<is_error<ET>::value>>
+	template<typename ET, typename T2>
 	error_code(const ET& value, const T2& value2)
 		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), fmt::get_type_info<fmt_unveil_t<T2>>(), fmt_unveil<T2>::get(value2)))
 	{

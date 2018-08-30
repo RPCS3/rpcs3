@@ -92,7 +92,7 @@ public:
 	virtual void GetSettings();
 
 	const char* ParseGCMEnum(u32 value, u32 type);
-	QString DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioAddr);
+	QString DisAsmCommand(u32 cmd, u32 count, u32 ioAddr);
 
 	void SetPC(const uint pc);
 

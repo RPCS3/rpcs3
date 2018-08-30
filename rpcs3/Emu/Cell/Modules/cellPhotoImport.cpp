@@ -5,7 +5,7 @@
 
 
 
-logs::channel cellPhotoImportUtil("cellPhotoImportUtil");
+LOG_CHANNEL(cellPhotoImportUtil);
 
 // Return Codes
 enum
@@ -46,15 +46,15 @@ enum CellPhotoImportTexRot
 };
 
 struct CellPhotoImportFileDataSub
-{ 
+{
 	be_t<s32> width;
 	be_t<s32> height;
 	be_t<CellPhotoImportFormatType> format;
 	be_t<CellPhotoImportTexRot> rotate;
-}; 
+};
 
 struct CellPhotoImportFileData
-{ 
+{
 	char dstFileName[CELL_FS_MAX_FS_FILE_NAME_LENGTH];
 	char photo_title[CELL_PHOTO_IMPORT_PHOTO_TITLE_MAX_LENGTH * 3];
 	char game_title[CELL_PHOTO_IMPORT_GAME_TITLE_MAX_SIZE];
@@ -65,7 +65,7 @@ struct CellPhotoImportFileData
 };
 
 struct CellPhotoImportSetParam
-{ 
+{
 	be_t<u32> fileSizeMax;
 	vm::bptr<void> reserved1;
 	vm::bptr<void> reserved2;

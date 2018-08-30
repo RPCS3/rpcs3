@@ -4,6 +4,15 @@
 #include "../GCM.h"
 #include <list>
 
+namespace
+{
+	template <typename T>
+	gsl::span<T> as_const_span(gsl::span<const gsl::byte> unformated_span)
+	{
+		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+	}
+}
+
 namespace rsx
 {
 	namespace utility
@@ -206,7 +215,7 @@ namespace rsx
 				if (address >= memory_end)
 					return;
 
-				surface_format_info info2;
+				surface_format_info info2{};
 				Traits::get_surface_info(surface, &info2);
 				const auto offset = (address - memory_address);
 				const auto offset_y = (offset / info.rsx_pitch);
@@ -218,7 +227,7 @@ namespace rsx
 
 				if (fits_w && fits_h)
 				{
-					typename surface_hierachy_info<surface_type>::memory_overlap_t overlap;
+					typename surface_hierachy_info<surface_type>::memory_overlap_t overlap{};
 					overlap._ref = surface;
 					overlap.memory_address = address;
 					overlap.x = offset_x;
@@ -237,7 +246,7 @@ namespace rsx
 			auto process_block = [this, process_entry](u32 memory_address, surface_type surface)
 			{
 				surface_hierachy_info<surface_type> block_info;
-				surface_format_info info;
+				surface_format_info info{};
 				Traits::get_surface_info(surface, &info);
 				const auto memory_end = memory_address + (info.rsx_pitch * info.surface_height);
 
@@ -282,7 +291,7 @@ namespace rsx
 		* returns the corresponding render target resource.
 		*/
 		template <typename ...Args>
-		gsl::not_null<surface_type> bind_address_as_render_targets(
+		surface_type bind_address_as_render_targets(
 			command_list_type command_list,
 			u32 address,
 			surface_color_format color_format, size_t width, size_t height,
@@ -369,7 +378,7 @@ namespace rsx
 		}
 
 		template <typename ...Args>
-		gsl::not_null<surface_type> bind_address_as_depth_stencil(
+		surface_type bind_address_as_depth_stencil(
 			command_list_type command_list,
 			u32 address,
 			surface_depth_format depth_format, size_t width, size_t height,
@@ -494,9 +503,9 @@ namespace rsx
 			// Same for depth buffer
 			if (std::get<1>(m_bound_depth_stencil) != nullptr)
 				Traits::prepare_ds_for_sampling(command_list, std::get<1>(m_bound_depth_stencil));
-			
+
 			m_bound_depth_stencil = std::make_tuple(0, nullptr);
-			
+
 			if (!address_z)
 				return;
 
@@ -584,13 +593,13 @@ namespace rsx
 				case surface_color_format::x32:
 				{
 					gsl::span<be_t<u32>> dst_span{ (be_t<u32>*)result[i].data(), ::narrow<int>(dst_pitch * height / sizeof(be_t<u32>)) };
-					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u32>(raw_src), src_pitch, width, height);
+					copy_pitched_src_to_dst(dst_span, as_const_span<const u32>(raw_src), src_pitch, width, height);
 					break;
 				}
 				case surface_color_format::b8:
 				{
 					gsl::span<u8> dst_span{ (u8*)result[i].data(), ::narrow<int>(dst_pitch * height / sizeof(u8)) };
-					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u8>(raw_src), src_pitch, width, height);
+					copy_pitched_src_to_dst(dst_span, as_const_span<const u8>(raw_src), src_pitch, width, height);
 					break;
 				}
 				case surface_color_format::g8b8:
@@ -599,20 +608,20 @@ namespace rsx
 				case surface_color_format::x1r5g5b5_z1r5g5b5:
 				{
 					gsl::span<be_t<u16>> dst_span{ (be_t<u16>*)result[i].data(), ::narrow<int>(dst_pitch * height / sizeof(be_t<u16>)) };
-					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u16>(raw_src), src_pitch, width, height);
+					copy_pitched_src_to_dst(dst_span, as_const_span<const u16>(raw_src), src_pitch, width, height);
 					break;
 				}
 				// Note : may require some big endian swap
 				case surface_color_format::w32z32y32x32:
 				{
 					gsl::span<u128> dst_span{ (u128*)result[i].data(), ::narrow<int>(dst_pitch * height / sizeof(u128)) };
-					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u128>(raw_src), src_pitch, width, height);
+					copy_pitched_src_to_dst(dst_span, as_const_span<const u128>(raw_src), src_pitch, width, height);
 					break;
 				}
 				case surface_color_format::w16z16y16x16:
 				{
 					gsl::span<u64> dst_span{ (u64*)result[i].data(), ::narrow<int>(dst_pitch * height / sizeof(u64)) };
-					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u64>(raw_src), src_pitch, width, height);
+					copy_pitched_src_to_dst(dst_span, as_const_span<const u64>(raw_src), src_pitch, width, height);
 					break;
 				}
 
@@ -646,13 +655,13 @@ namespace rsx
 			{
 				result[0].resize(width * height * 2);
 				gsl::span<u16> dest{ (u16*)result[0].data(), ::narrow<int>(width * height) };
-				copy_pitched_src_to_dst(dest, gsl::as_span<const u16>(depth_buffer_raw_src), row_pitch, width, height);
+				copy_pitched_src_to_dst(dest, as_const_span<const u16>(depth_buffer_raw_src), row_pitch, width, height);
 			}
 			if (depth_format == surface_depth_format::z24s8)
 			{
 				result[0].resize(width * height * 4);
 				gsl::span<u32> dest{ (u32*)result[0].data(), ::narrow<int>(width * height) };
-				copy_pitched_src_to_dst(dest, gsl::as_span<const u32>(depth_buffer_raw_src), row_pitch, width, height);
+				copy_pitched_src_to_dst(dest, as_const_span<const u32>(depth_buffer_raw_src), row_pitch, width, height);
 			}
 			Traits::unmap_downloaded_buffer(depth_data, std::forward<Args&&>(args)...);
 
@@ -662,7 +671,7 @@ namespace rsx
 			gsl::span<const gsl::byte> stencil_buffer_raw_src = Traits::map_downloaded_buffer(stencil_data, std::forward<Args&&>(args)...);
 			result[1].resize(width * height);
 			gsl::span<u8> dest{ (u8*)result[1].data(), ::narrow<int>(width * height) };
-			copy_pitched_src_to_dst(dest, gsl::as_span<const u8>(stencil_buffer_raw_src), align(width, 256), width, height);
+			copy_pitched_src_to_dst(dest, as_const_span<const u8>(stencil_buffer_raw_src), align(width, 256), width, height);
 			Traits::unmap_downloaded_buffer(stencil_data, std::forward<Args&&>(args)...);
 			return result;
 		}
@@ -774,7 +783,7 @@ namespace rsx
 			}
 			else
 			{
-				surface_format_info info;
+				surface_format_info info{};
 				Traits::get_surface_info(surface, &info);
 
 				bool doubled_x = false;
@@ -862,7 +871,7 @@ namespace rsx
 			{
 				if (surface_overlaps_address(surface, this_address, texaddr, &x_offset, &y_offset))
 				{
-					surface_format_info info;
+					surface_format_info info{};
 					Traits::get_surface_info(surface, &info);
 
 					u16 real_width = requested_width;

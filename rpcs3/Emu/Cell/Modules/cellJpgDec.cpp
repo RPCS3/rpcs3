@@ -9,7 +9,7 @@
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "cellJpgDec.h"
 
-logs::channel cellJpgDec("cellJpgDec");
+LOG_CHANNEL(cellJpgDec);
 
 s32 cellJpgDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
@@ -120,11 +120,11 @@ s32 cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 	if ((le_t<u32>&)(buffer[0]) != 0xE0FFD8FF || // Error: Not a valid SOI header
 		(le_t<u32>&)(buffer[6]) != 0x4649464A)   // Error: Not a valid JFIF string
 	{
-		return CELL_JPGDEC_ERROR_HEADER; 
+		return CELL_JPGDEC_ERROR_HEADER;
 	}
 
 	u32 i = 4;
-	
+
 	if(i >= fileSize)
 		return CELL_JPGDEC_ERROR_HEADER;
 
@@ -176,7 +176,7 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 
 	const u32& fd = subHandle_data->fd;
 	const u64& fileSize = subHandle_data->fileSize;
-	const CellJpgDecOutParam& current_outParam = subHandle_data->outParam; 
+	const CellJpgDecOutParam& current_outParam = subHandle_data->outParam;
 
 	//Copy the JPG file to a buffer
 	std::unique_ptr<u8[]> jpg(new u8[fileSize]);
@@ -264,14 +264,14 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 			uint* img = (uint*)new char[image_size];
 			uint* source_current = (uint*)&(image.get()[0]);
 			uint* dest_current = img;
-			for (uint i = 0; i < image_size / nComponents; i++) 
+			for (uint i = 0; i < image_size / nComponents; i++)
 			{
 				uint val = *source_current;
 				*dest_current = (val >> 24) | (val << 8); // set alpha (A8) as leftmost byte
 				source_current++;
 				dest_current++;
 			}
-			memcpy(data.get_ptr(), img, image_size); 
+			memcpy(data.get_ptr(), img, image_size);
 			delete[] img;
 		}
 	}

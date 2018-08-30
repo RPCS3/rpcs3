@@ -10,7 +10,7 @@
 
 
 
-logs::channel sys_mutex("sys_mutex");
+LOG_CHANNEL(sys_mutex);
 
 template<> DECLARE(ipc_manager<lv2_mutex, u64>::g_ipc) {};
 

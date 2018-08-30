@@ -158,6 +158,20 @@ namespace rsx
 			}
 		}
 
+		void set_cull_face(thread* rsx, u32 reg, u32 arg)
+		{
+			switch(arg)
+			{
+			case CELL_GCM_FRONT_AND_BACK: return;
+			case CELL_GCM_FRONT: return;
+			case CELL_GCM_BACK: return;
+			default: break;
+			}
+
+			// Ignore value if unknown
+			method_registers.registers[reg] = method_registers.register_previous_value;
+		}
+
 		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
@@ -381,17 +395,17 @@ namespace rsx
 			}
 		};
 
-		void set_transform_program_start(thread* rsx, u32, u32)
+		void set_transform_program_start(thread* rsx, u32 reg, u32)
 		{
-			if (method_registers.register_change_flag)
+			if (method_registers.registers[reg] != method_registers.register_previous_value)
 			{
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
 			}
 		}
 
-		void set_vertex_attribute_output_mask(thread* rsx, u32, u32)
+		void set_vertex_attribute_output_mask(thread* rsx, u32 reg, u32)
 		{
-			if (method_registers.register_change_flag)
+			if (method_registers.registers[reg] != method_registers.register_previous_value)
 			{
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty | rsx::pipeline_state::fragment_program_dirty;
 			}
@@ -1168,10 +1182,9 @@ namespace rsx
 		rsx->int_flip_index++;
 		rsx->current_display_buffer = arg;
 		rsx->flip(arg);
-		// After each flip PS3 system is executing a routine that changes registers value to some default.
+		// After each flip cellGcmSys is executing a routine that changes registers value to some default.
 		// Some game use this default state (SH3).
-		if (rsx->isHLE)
-			rsx->reset();
+		if (rsx->isHLE) rsx->reset();
 
 		rsx->last_flip_time = get_system_time() - 1000000;
 		rsx->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
@@ -1214,7 +1227,6 @@ namespace rsx
 		{
 			static void impl(thread* rsx, u32 _reg, u32 arg)
 			{
-				rsx->reset();
 				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
 			}
 		};
@@ -1232,107 +1244,413 @@ namespace rsx
 
 	void rsx_state::reset()
 	{
-		//setup method registers
-		std::memset(registers.data(), 0, registers.size() * sizeof(u32));
+		// TODO: Name unnamed registers and constants, better group methods
+		registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = 0x56616661;
 
-		registers[NV4097_SET_COLOR_MASK] = CELL_GCM_COLOR_MASK_R | CELL_GCM_COLOR_MASK_G | CELL_GCM_COLOR_MASK_B | CELL_GCM_COLOR_MASK_A;
-		registers[NV4097_SET_SCISSOR_HORIZONTAL] = (4096 << 16) | 0;
-		registers[NV4097_SET_SCISSOR_VERTICAL] = (4096 << 16) | 0;
-
-		registers[NV4097_SET_ALPHA_FUNC] = CELL_GCM_ALWAYS;
-		registers[NV4097_SET_ALPHA_REF] = 0;
-
-		registers[NV4097_SET_BLEND_FUNC_SFACTOR] = (CELL_GCM_ONE << 16) | CELL_GCM_ONE;
-		registers[NV4097_SET_BLEND_FUNC_DFACTOR] = (CELL_GCM_ZERO << 16) | CELL_GCM_ZERO;
-		registers[NV4097_SET_BLEND_COLOR] = 0;
-		registers[NV4097_SET_BLEND_COLOR2] = 0;
-		registers[NV4097_SET_BLEND_EQUATION] = (0x8006 << 16) | 0x8006; // (add)
-
-		registers[NV4097_SET_STENCIL_MASK] = 0xff;
-		registers[NV4097_SET_STENCIL_FUNC] = CELL_GCM_ALWAYS;
-		registers[NV4097_SET_STENCIL_FUNC_REF] = 0x00;
-		registers[NV4097_SET_STENCIL_FUNC_MASK] = 0xff;
-		registers[NV4097_SET_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
-		registers[NV4097_SET_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
-		registers[NV4097_SET_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;
-
-		registers[NV4097_SET_BACK_STENCIL_MASK] = 0xff;
-		registers[NV4097_SET_BACK_STENCIL_FUNC] = CELL_GCM_ALWAYS;
-		registers[NV4097_SET_BACK_STENCIL_FUNC_REF] = 0x00;
+		registers[NV4097_SET_OBJECT] = 0x31337000;
+		registers[NV4097_SET_CONTEXT_DMA_NOTIFIES] = 0x66604200;
+		registers[NV4097_SET_CONTEXT_DMA_A] = 0xfeed0000;
+		registers[NV4097_SET_CONTEXT_DMA_B] = 0xfeed0001;
+		registers[NV4097_SET_CONTEXT_DMA_COLOR_B] = 0xfeed0000;
+		registers[NV4097_SET_CONTEXT_DMA_STATE] = 0x0;
+		registers[NV4097_SET_CONTEXT_DMA_COLOR_A] = 0xfeed0000;
+		registers[NV4097_SET_CONTEXT_DMA_ZETA] = 0xfeed0000;
+		registers[NV4097_SET_CONTEXT_DMA_VERTEX_A] = 0xfeed0000;
+		registers[NV4097_SET_CONTEXT_DMA_VERTEX_B] = 0xfeed0001;
+		registers[NV4097_SET_CONTEXT_DMA_SEMAPHORE] = 0x66606660;
+		registers[NV4097_SET_CONTEXT_DMA_REPORT] = 0x66626660;
+		registers[NV4097_SET_CONTEXT_DMA_CLIP_ID] = 0x0;
+		registers[NV4097_SET_CONTEXT_DMA_CULL_DATA] = 0x0;
+		registers[NV4097_SET_CONTEXT_DMA_COLOR_C] = 0xfeed0000;
+		registers[NV4097_SET_CONTEXT_DMA_COLOR_D] = 0xfeed0000;
+		registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = 0x66616661;
+		registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] = 0x0;
+		registers[NV4097_SET_SURFACE_CLIP_VERTICAL] = 0x0;
+		registers[NV4097_SET_SURFACE_FORMAT] = 0x121;
+		registers[NV4097_SET_SURFACE_PITCH_A] = 0x40;
+		registers[NV4097_SET_SURFACE_COLOR_AOFFSET] = 0x0;
+		registers[NV4097_SET_SURFACE_ZETA_OFFSET] = 0x0;
+		registers[NV4097_SET_SURFACE_COLOR_BOFFSET] = 0x0;
+		registers[NV4097_SET_SURFACE_PITCH_B] = 0x40;
+		registers[NV4097_SET_SURFACE_COLOR_TARGET] = 0x1;
+		registers[0x224 / 4] = 0x80;
+		registers[0x228 / 4] = 0x100;
+		registers[NV4097_SET_SURFACE_PITCH_Z] = 0x40;
+		registers[0x230 / 4] = 0x0;
+		registers[NV4097_SET_SURFACE_PITCH_C] = 0x40;
+		registers[NV4097_SET_SURFACE_PITCH_D] = 0x40;
+		registers[NV4097_SET_SURFACE_COLOR_COFFSET] = 0x0;
+		registers[NV4097_SET_SURFACE_COLOR_DOFFSET] = 0x0;
+		registers[0x1d80 / 4] = 0x3;
+		registers[NV4097_SET_WINDOW_OFFSET] = 0x0;
+		registers[0x02bc / 4] = 0x0;
+		registers[0x02c0 / 4] = 0xfff0000;
+		registers[0x02c4 / 4] = 0xfff0000;
+		registers[0x02c8 / 4] = 0xfff0000;
+		registers[0x02cc / 4] = 0xfff0000;
+		registers[0x02d0 / 4] = 0xfff0000;
+		registers[0x02d4 / 4] = 0xfff0000;
+		registers[0x02d8 / 4] = 0xfff0000;
+		registers[0x02dc / 4] = 0xfff0000;
+		registers[0x02e0 / 4] = 0xfff0000;
+		registers[0x02e4 / 4] = 0xfff0000;
+		registers[0x02e8 / 4] = 0xfff0000;
+		registers[0x02ec / 4] = 0xfff0000;
+		registers[0x02f0 / 4] = 0xfff0000;
+		registers[0x02f4 / 4] = 0xfff0000;
+		registers[0x02f8 / 4] = 0xfff0000;
+		registers[0x02fc / 4] = 0xfff0000;
+		registers[0x1d98 / 4] = 0xfff0000;
+		registers[0x1d9c / 4] = 0xfff0000;
+		registers[0x1da4 / 4] = 0x0;
+		registers[NV4097_SET_CONTROL0] = 0x100000;
+		registers[0x1454 / 4] = 0x0;
+		registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK] = 0x3fffff;
+		registers[NV4097_SET_FREQUENCY_DIVIDER_OPERATION] = 0x0;
+		registers[NV4097_SET_ATTRIB_COLOR] = 0x6144321;
+		registers[NV4097_SET_ATTRIB_TEX_COORD] = 0xedcba987;
+		registers[NV4097_SET_ATTRIB_TEX_COORD_EX] = 0x6f;
+		registers[NV4097_SET_ATTRIB_UCLIP0] = 0x171615;
+		registers[NV4097_SET_ATTRIB_UCLIP1] = 0x1b1a19;
+		registers[NV4097_SET_TEX_COORD_CONTROL] = 0x0;
+		registers[NV4097_SET_TEX_COORD_CONTROL + 1] = 0x0;
+		registers[NV4097_SET_TEX_COORD_CONTROL + 2] = 0x0;
+		registers[NV4097_SET_TEX_COORD_CONTROL + 3] = 0x0;
+		registers[NV4097_SET_TEX_COORD_CONTROL + 4] = 0x0;
+		registers[NV4097_SET_TEX_COORD_CONTROL + 5] = 0x0;
+		registers[NV4097_SET_TEX_COORD_CONTROL + 6] = 0x0;
+		registers[NV4097_SET_TEX_COORD_CONTROL + 7] = 0x0;
+		registers[NV4097_SET_TEX_COORD_CONTROL + 8] = 0x0;
+		registers[NV4097_SET_TEX_COORD_CONTROL + 9] = 0x0;
+		registers[0xa0c / 4] = 0x0;
+		registers[0xa60 / 4] = 0x0;
+		registers[NV4097_SET_POLY_OFFSET_LINE_ENABLE] = 0x0;
+		registers[NV4097_SET_POLY_OFFSET_FILL_ENABLE] = 0x0;
+		registers[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR] = 0x0;
+		registers[NV4097_SET_POLYGON_OFFSET_BIAS] = 0x0;
+		registers[0x1428 / 4] = 0x1;
+		registers[NV4097_SET_SHADER_WINDOW] = 0x1000;
+		registers[0x1e94 / 4] = 0x11;
+		registers[0x1450 / 4] = 0x80003;
+		registers[0x1d64 / 4] = 0x2000000;
+		registers[0x145c / 4] = 0x1;
+		registers[NV4097_SET_REDUCE_DST_COLOR] = 0x1;
+		registers[NV4097_SET_TEXTURE_CONTROL2] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 1] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 2] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 3] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 4] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 5] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 6] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 7] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 8] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 9] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 10] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 11] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 12] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 13] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 14] = 0x2dc8;
+		registers[NV4097_SET_TEXTURE_CONTROL2 + 15] = 0x2dc8;
+		registers[NV4097_SET_FOG_MODE] = 0x800;
+		registers[NV4097_SET_FOG_PARAMS] = 0x0;
+		registers[NV4097_SET_FOG_PARAMS + 1] = 0x0;
+		registers[NV4097_SET_FOG_PARAMS + 2] = 0x0;
+		registers[0x240 / 4] = 0xffff;
+		registers[0x244 / 4] = 0x0;
+		registers[0x248 / 4] = 0x0;
+		registers[0x24c / 4] = 0x0;
+		registers[NV4097_SET_ANISO_SPREAD] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 1] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 2] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 3] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 4] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 5] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 6] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 7] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 8] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 9] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 10] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 11] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 12] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 13] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 14] = 0x10101;
+		registers[NV4097_SET_ANISO_SPREAD + 15] = 0x10101;
+		registers[0x400 / 4] = 0x7421;
+		registers[0x404 / 4] = 0x7421;
+		registers[0x408 / 4] = 0x7421;
+		registers[0x40c / 4] = 0x7421;
+		registers[0x410 / 4] = 0x7421;
+		registers[0x414 / 4] = 0x7421;
+		registers[0x418 / 4] = 0x7421;
+		registers[0x41c / 4] = 0x7421;
+		registers[0x420 / 4] = 0x7421;
+		registers[0x424 / 4] = 0x7421;
+		registers[0x428 / 4] = 0x7421;
+		registers[0x42c / 4] = 0x7421;
+		registers[0x430 / 4] = 0x7421;
+		registers[0x434 / 4] = 0x7421;
+		registers[0x438 / 4] = 0x7421;
+		registers[0x43c / 4] = 0x7421;
+		registers[0x440 / 4] = 0x9aabaa98;
+		registers[0x444 / 4] = 0x66666789;
+		registers[0x448 / 4] = 0x98766666;
+		registers[0x44c / 4] = 0x89aabaa9;
+		registers[0x450 / 4] = 0x99999999;
+		registers[0x454 / 4] = 0x88888889;
+		registers[0x458 / 4] = 0x98888888;
+		registers[0x45c / 4] = 0x99999999;
+		registers[0x460 / 4] = 0x56676654;
+		registers[0x464 / 4] = 0x33333345;
+		registers[0x468 / 4] = 0x54333333;
+		registers[0x46c / 4] = 0x45667665;
+		registers[0x470 / 4] = 0xaabbba99;
+		registers[0x474 / 4] = 0x66667899;
+		registers[0x478 / 4] = 0x99876666;
+		registers[0x47c / 4] = 0x99abbbaa;
+		registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_BASE_INDEX] = 0x0;
+		registers[GCM_SET_DRIVER_OBJECT] = 0xcafebabe;
+		registers[NV4097_SET_ALPHA_FUNC] = 0x207;
+		registers[NV4097_SET_ALPHA_REF] = 0x0;
+		registers[NV4097_SET_ALPHA_TEST_ENABLE] = 0x0;
+		registers[NV4097_SET_BACK_STENCIL_FUNC] = 0x207;
+		registers[NV4097_SET_BACK_STENCIL_FUNC_REF] = 0x0;
 		registers[NV4097_SET_BACK_STENCIL_FUNC_MASK] = 0xff;
-		registers[NV4097_SET_BACK_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
-		registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
-		registers[NV4097_SET_BACK_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;
-
-		//registers[NV4097_SET_SHADE_MODE] = CELL_GCM_SMOOTH;
-
-		//registers[NV4097_SET_LOGIC_OP] = CELL_GCM_COPY;
-
-		(f32&)registers[NV4097_SET_DEPTH_BOUNDS_MIN] = 0.f;
-		(f32&)registers[NV4097_SET_DEPTH_BOUNDS_MAX] = 1.f;
-
-		(f32&)registers[NV4097_SET_CLIP_MIN] = 0.f;
-		(f32&)registers[NV4097_SET_CLIP_MAX] = 1.f;
-
-		registers[NV4097_SET_LINE_WIDTH] = 1 << 3;
-
-		// These defaults were found using After Burner Climax (which never set fog mode despite using fog input)
-		registers[NV4097_SET_FOG_MODE] = CELL_GCM_FOG_MODE_LINEAR;
-		(f32&)registers[NV4097_SET_FOG_PARAMS] = 1.;
-		(f32&)registers[NV4097_SET_FOG_PARAMS + 1] = 1.;
-
-		registers[NV4097_SET_DEPTH_FUNC] = CELL_GCM_LESS;
-		registers[NV4097_SET_DEPTH_MASK] = CELL_GCM_TRUE;
-		(f32&)registers[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR] = 0.f;
-		(f32&)registers[NV4097_SET_POLYGON_OFFSET_BIAS] = 0.f;
-		//registers[NV4097_SET_FRONT_POLYGON_MODE] = CELL_GCM_POLYGON_MODE_FILL;
-		//registers[NV4097_SET_BACK_POLYGON_MODE] = CELL_GCM_POLYGON_MODE_FILL;
-		registers[NV4097_SET_CULL_FACE] = CELL_GCM_BACK;
-		registers[NV4097_SET_FRONT_FACE] = CELL_GCM_CCW;
-		registers[NV4097_SET_RESTART_INDEX] = -1;
-
-		registers[NV4097_SET_CLEAR_RECT_HORIZONTAL] = (4096 << 16) | 0;
-		registers[NV4097_SET_CLEAR_RECT_VERTICAL] = (4096 << 16) | 0;
-
-		// Stencil bits init to 00 - Tested with NPEB90184 (never sets the depth_stencil clear values but uses stencil test)
+		registers[NV4097_SET_BACK_STENCIL_MASK] = 0xff;
+		registers[NV4097_SET_BACK_STENCIL_OP_FAIL] = 0x1e00;
+		registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL] = 0x1e00;
+		registers[NV4097_SET_BACK_STENCIL_OP_ZPASS] = 0x1e00;
+		registers[NV4097_SET_BLEND_COLOR] = 0x0;
+		registers[NV4097_SET_BLEND_COLOR2] = 0x0;
+		registers[NV4097_SET_BLEND_ENABLE] = 0x0;
+		registers[NV4097_SET_BLEND_ENABLE_MRT] = 0x0;
+		registers[NV4097_SET_BLEND_EQUATION] = 0x80068006;
+		registers[NV4097_SET_BLEND_FUNC_SFACTOR] = 0x10001;
+		registers[NV4097_SET_BLEND_FUNC_DFACTOR] = 0x0;
 		registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffff00;
-		registers[NV4097_SET_ZMIN_MAX_CONTROL] = 1;
+		registers[NV4097_CLEAR_SURFACE] = 0x0;
+		registers[NV4097_NO_OPERATION] = 0x0;
+		registers[NV4097_SET_COLOR_MASK] = 0x1010101;
+		registers[NV4097_SET_CULL_FACE_ENABLE] = 0x0;
+		registers[NV4097_SET_CULL_FACE] = 0x405;
+		registers[NV4097_SET_DEPTH_BOUNDS_MIN] = 0x0;
+		registers[NV4097_SET_DEPTH_BOUNDS_MAX] = 0x3f800000;
+		registers[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE] = 0x0;
+		registers[NV4097_SET_DEPTH_FUNC] = 0x201;
+		registers[NV4097_SET_DEPTH_MASK] = 0x1;
+		registers[NV4097_SET_DEPTH_TEST_ENABLE] = 0x0;
+		registers[NV4097_SET_DITHER_ENABLE] = 0x1;
+		registers[NV4097_SET_SHADER_PACKER] = 0x0;
+		registers[NV4097_SET_FREQUENCY_DIVIDER_OPERATION] = 0x0;
+		registers[NV4097_SET_FRONT_FACE] = 0x901;
+		registers[NV4097_SET_LINE_WIDTH] = 0x8;
+		registers[NV4097_SET_LOGIC_OP_ENABLE] = 0x0;
+		registers[NV4097_SET_LOGIC_OP] = 0x1503;
+		registers[NV4097_SET_POINT_SIZE] = 0x3f800000;
+		registers[NV4097_SET_POLY_OFFSET_FILL_ENABLE] = 0x0;
+		registers[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR] = 0x0;
+		registers[NV4097_SET_POLYGON_OFFSET_BIAS] = 0x0;
+		registers[NV4097_SET_RESTART_INDEX_ENABLE] = 0x0;
+		registers[NV4097_SET_RESTART_INDEX] = 0xffffffff;
+		registers[NV4097_SET_SCISSOR_HORIZONTAL] = 0x10000000;
+		registers[NV4097_SET_SCISSOR_VERTICAL] = 0x10000000;
+		registers[NV4097_SET_SHADE_MODE] = 0x1d01;
+		registers[NV4097_SET_STENCIL_FUNC] = 0x207;
+		registers[NV4097_SET_STENCIL_FUNC_REF] = 0x0;
+		registers[NV4097_SET_STENCIL_FUNC_MASK] = 0xff;
+		registers[NV4097_SET_STENCIL_MASK] = 0xff;
+		registers[NV4097_SET_STENCIL_OP_FAIL] = 0x1e00;
+		registers[NV4097_SET_STENCIL_OP_ZFAIL] = 0x1e00;
+		registers[NV4097_SET_STENCIL_OP_ZPASS] = 0x1e00;
+		registers[NV4097_SET_STENCIL_TEST_ENABLE] = 0x0;
+		registers[NV4097_SET_TEXTURE_ADDRESS] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 8] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 8] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 8] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 8] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 8] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 16] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 16] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 16] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 24] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 24] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 24] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 24] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 32] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 32] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 32] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 32] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 40] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 40] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 40] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 40] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 48] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 48] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 48] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 48] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 56] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 56] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 56] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 56] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 64] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 64] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 64] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 64] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 72] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 72] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 72] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 72] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 80] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 80] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 80] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 80] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 88] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 88] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 88] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 88] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 96] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 96] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 96] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 96] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 104] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 104] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 104] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 104] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 112] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 112] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 112] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 112] = 0x2052000;
+		registers[NV4097_SET_TEXTURE_ADDRESS + 120] = 0x30101;
+		registers[NV4097_SET_TEXTURE_BORDER_COLOR + 120] = 0x0;
+		registers[NV4097_SET_TEXTURE_CONTROL0 + 120] = 0x60000;
+		registers[NV4097_SET_TEXTURE_FILTER + 120] = 0x2052000;
+		registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 1] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 1] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 2] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 2] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 3] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 3] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 4] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 4] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 5] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 5] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 6] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 6] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 7] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 7] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 8] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 8] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 9] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 9] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 10] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 10] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 11] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 11] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 12] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 12] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 13] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 13] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 14] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 14] = 0x0;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 15] = 0x2;
+		registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 15] = 0x0;
+		registers[NV4097_SET_VIEWPORT_HORIZONTAL] = 0x10000000;
+		registers[NV4097_SET_VIEWPORT_VERTICAL] = 0x10000000;
+		registers[NV4097_SET_CLIP_MIN] = 0x0;
+		registers[NV4097_SET_CLIP_MAX] = 0x3f800000;
+		registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
+		registers[0xa24 / 4] = 0x45000000;
+		registers[0xa28 / 4] = 0x3f000000;
+		registers[0xa2c / 4] = 0x0;
+		registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
+		registers[0xa34 / 4] = 0x45000000;
+		registers[0xa38 / 4] = 0x3f000000;
+		registers[0xa3c / 4] = 0x0;
+		registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
+		registers[0xa24 / 4] = 0x45000000;
+		registers[0xa28 / 4] = 0x3f000000;
+		registers[0xa2c / 4] = 0x0;
+		registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
+		registers[0xa34 / 4] = 0x45000000;
+		registers[0xa38 / 4] = 0x3f000000;
+		registers[0xa3c / 4] = 0x0;
+		registers[NV4097_SET_ANTI_ALIASING_CONTROL] = 0xffff0000;
+		registers[NV4097_SET_BACK_POLYGON_MODE] = 0x1b02;
+		registers[NV4097_SET_COLOR_CLEAR_VALUE] = 0x0;
+		registers[NV4097_SET_COLOR_MASK_MRT] = 0x0;
+		registers[NV4097_SET_FRONT_POLYGON_MODE] = 0x1b02;
+		registers[NV4097_SET_LINE_SMOOTH_ENABLE] = 0x0;
+		registers[NV4097_SET_LINE_STIPPLE] = 0x0;
+		registers[NV4097_SET_POINT_PARAMS_ENABLE] = 0x0;
+		registers[NV4097_SET_POINT_SPRITE_CONTROL] = 0x0;
+		registers[NV4097_SET_POLY_SMOOTH_ENABLE] = 0x0;
+		registers[NV4097_SET_POLYGON_STIPPLE] = 0x0;
+		registers[NV4097_SET_RENDER_ENABLE] = 0x1000000;
+		registers[NV4097_SET_USER_CLIP_PLANE_CONTROL] = 0x0;
+		registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK] = 0xffff;
+		registers[NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE] = 0x0;
+		registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS] = 0x101;
+		registers[NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR] = 0x0;
+		registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0] = 0x60000;
+		registers[NV4097_SET_VERTEX_TEXTURE_FILTER] = 0x0;
+		registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + 8] = 0x101;
+		registers[NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 8] = 0x0;
+		registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 8] = 0x60000;
+		registers[NV4097_SET_VERTEX_TEXTURE_FILTER + 8] = 0x0;
+		registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + 16] = 0x101;
+		registers[NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 16] = 0x0;
+		registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 16] = 0x60000;
+		registers[NV4097_SET_VERTEX_TEXTURE_FILTER + 16] = 0x0;
+		registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + 24] = 0x101;
+		registers[NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + 24] = 0x0;
+		registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + 24] = 0x60000;
+		registers[NV4097_SET_VERTEX_TEXTURE_FILTER + 24] = 0x0;
+		registers[NV4097_SET_CYLINDRICAL_WRAP] = 0x0;
+		registers[NV4097_SET_ZMIN_MAX_CONTROL] = 0x1;
+		registers[NV4097_SET_TWO_SIDE_LIGHT_EN] = 0x0;
+		registers[NV4097_SET_TRANSFORM_BRANCH_BITS] = 0x0;
+		registers[NV4097_SET_NO_PARANOID_TEXTURE_FETCHES] = 0x0;
 
-		// CELL_GCM_SURFACE_A8R8G8B8, CELL_GCM_SURFACE_Z24S8 and CELL_GCM_SURFACE_CENTER_1
-		registers[NV4097_SET_SURFACE_FORMAT] = (8 << 0) | (2 << 5) | (0 << 12) | (1 << 16) | (1 << 24);
+		registers[NV0039_SET_OBJECT] = 0x31337303;
+		registers[NV0039_SET_CONTEXT_DMA_NOTIFIES] = 0x66604200;
+		registers[NV0039_SET_CONTEXT_DMA_BUFFER_IN] = 0xfeed0001;
+		registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT] = 0xfeed0000;
 
-		// rsx dma initial values
-		registers[NV4097_SET_CONTEXT_DMA_REPORT] = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL;
-		registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW;
-		registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
-		registers[NV309E_SET_CONTEXT_DMA_IMAGE] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
-		registers[NV0039_SET_CONTEXT_DMA_BUFFER_IN] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
-		registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
-		registers[NV4097_SET_CONTEXT_DMA_COLOR_A] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
-		registers[NV4097_SET_CONTEXT_DMA_COLOR_B] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
-		registers[NV4097_SET_CONTEXT_DMA_COLOR_C] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
-		registers[NV4097_SET_CONTEXT_DMA_COLOR_D] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
-		registers[NV4097_SET_CONTEXT_DMA_ZETA] = CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER;
+		registers[NV3062_SET_OBJECT] = 0x313371c3;
+		registers[NV3062_SET_CONTEXT_DMA_NOTIFIES] = 0x66604200;
+		registers[NV3062_SET_CONTEXT_DMA_IMAGE_SOURCE] = 0xfeed0000;
+		registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN] = 0xfeed0000;
 
-		registers[NV3089_SET_CONTEXT_SURFACE] = 0x313371C3; // CELL_GCM_CONTEXT_SURFACE2D
+		registers[0xa000 / 4] = 0x31337808;
+		registers[0xa180 / 4] = 0x66604200;
+		registers[0xa184 / 4] = 0x0;
+		registers[0xa188 / 4] = 0x0;
+		registers[0xa18c / 4] = 0x0;
+		registers[0xa190 / 4] = 0x0;
+		registers[0xa194 / 4] = 0x0;
+		registers[0xa198 / 4] = 0x0;
+		registers[0xa19c / 4] = 0x313371c3;
+		registers[0xa2fc / 4] = 0x3;
+		registers[0xa300 / 4] = 0x4;
+		registers[0x8000 / 4] = 0x31337a73;
+		registers[0x8180 / 4] = 0x66604200;
+		registers[0x8184 / 4] = 0xfeed0000;
+		registers[0xc000 / 4] = 0x3137af00;
+		registers[0xc180 / 4] = 0x66604200;
 
-		for (auto& tex : fragment_textures) tex.init();
-		for (auto& tex : vertex_textures) tex.init();
-		for (auto& vtx : vertex_arrays_info) vtx.reset();
+		registers[NV406E_SEMAPHORE_OFFSET] = 0x10;
 	}
 
 	void rsx_state::decode(u32 reg, u32 value)
 	{
-		auto& old_value = registers[reg];
-		if (old_value != value)
-		{
-			register_change_flag = true;
-			old_value = value;
-		}
-		else
-		{
-			register_change_flag = false;
-		}
+		// Store new value and save previous
+		register_previous_value = std::exchange(registers[reg], value);
 	}
 
 	bool rsx_state::test(u32 reg, u32 value) const
@@ -1745,6 +2063,7 @@ namespace rsx
 		bind<NV406E_SEMAPHORE_RELEASE, nv406e::semaphore_release>();
 
 		// NV4097
+		bind<NV4097_SET_CULL_FACE, nv4097::set_cull_face>();
 		bind<NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097::texture_read_semaphore_release>();
 		bind<NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097::back_end_write_semaphore_release>();
 		bind<NV4097_SET_BEGIN_END, nv4097::set_begin_end>();

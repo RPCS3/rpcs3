@@ -10,7 +10,7 @@
 
 #include <thread>
 
-logs::channel cellAudio("cellAudio");
+LOG_CHANNEL(cellAudio);
 
 template <>
 void fmt_class_string<CellAudioError>::format(std::string& out, u64 arg)
@@ -326,7 +326,7 @@ void audio_config::on_task()
 			{
 				if (auto queue = lv2_event_queue::find(key))
 				{
-					queue->send(0, 0, 0, 0); // TODO: check arguments	
+					queue->send(0, 0, 0, 0); // TODO: check arguments
 				}
 			}
 		}
@@ -790,7 +790,7 @@ error_code cellAudioRemoveNotifyEventQueue(u64 key)
 		if (*i == key)
 		{
 			g_audio->keys.erase(i);
-			
+
 			return CELL_OK;
 		}
 	}

@@ -9,7 +9,7 @@
 #include "cellVideoOut.h"
 #include "cellSysutil.h"
 
-logs::channel cellAvconfExt("cellAvconfExt");
+LOG_CHANNEL(cellAvconfExt);
 
 s32 cellAudioOutUnregisterDevice(u32 deviceNumber)
 {
@@ -38,6 +38,17 @@ s32 cellVideoOutSetupDisplay()
 s32 cellAudioInGetDeviceInfo(u32 deviceNumber, u32 deviceIndex, vm::ptr<CellAudioInDeviceInfo> info)
 {
 	cellAvconfExt.todo("cellAudioInGetDeviceInfo(deviceNumber=0x%x, deviceIndex=0x%x, info=*0x%x)", deviceNumber, deviceIndex, info);
+	info->portType = CELL_AUDIO_IN_PORT_USB;
+	info->availableModeCount = 1;
+	info->state = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
+	info->deviceNumber = 0;
+	// Some games check if deviceId and type are the same.
+	info->deviceId = 0xDEADBEEF;
+	info->type = 0xBEEFDEAD;
+	info->availableModes[0].type = CELL_AUDIO_IN_CODING_TYPE_LPCM;
+	info->availableModes[0].channel = CELL_AUDIO_IN_CHNUM_NONE;
+	info->availableModes[0].fs = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
+	strcpy(info->name, "USB Camera");
 	return CELL_OK;
 }
 
@@ -65,7 +76,18 @@ s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
 s32 cellAudioInGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioInDeviceInfo> info)
 {
 	cellAvconfExt.todo("cellAudioInGetAvailableDeviceInfo(count=0x%x, info=*0x%x)", count, info);
-	return 0; // number of available devices
+	info->portType = CELL_AUDIO_IN_PORT_USB;
+	info->availableModeCount = 1;
+	info->state = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
+	info->deviceNumber = 0;
+	// Some games check if deviceId and type are the same.
+	info->deviceId = 0xDEADBEEF;
+	info->type = 0xBEEFDEAD;
+	info->availableModes[0].type = CELL_AUDIO_IN_CODING_TYPE_LPCM;
+	info->availableModes[0].channel = CELL_AUDIO_IN_CHNUM_NONE;
+	info->availableModes[0].fs = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
+	strcpy(info->name, "USB Camera");
+	return 1; // number of available devices
 }
 
 s32 cellAudioOutGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioOutDeviceInfo2> info)

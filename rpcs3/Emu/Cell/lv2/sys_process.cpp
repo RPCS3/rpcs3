@@ -25,7 +25,7 @@
 
 
 
-logs::channel sys_process("sys_process");
+LOG_CHANNEL(sys_process);
 
 u32 g_ps3_sdk_version;
 

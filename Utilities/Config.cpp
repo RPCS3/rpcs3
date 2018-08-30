@@ -7,8 +7,6 @@
 
 namespace cfg
 {
-	logs::channel cfg("CFG");
-
 	_base::_base(type _type)
 		: m_type(_type)
 	{
@@ -67,19 +65,19 @@ bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 	}
 	catch (const std::exception& e)
 	{
-		if (out) cfg.error("cfg::try_to_int('%s'): exception: %s", value, e.what());
+		if (out) LOG_ERROR(GENERAL, "cfg::try_to_int('%s'): exception: %s", value, e.what());
 		return false;
 	}
 
 	if (pos != value.size())
 	{
-		if (out) cfg.error("cfg::try_to_int('%s'): unexpected characters (pos=%zu)", value, pos);
+		if (out) LOG_ERROR(GENERAL, "cfg::try_to_int('%s'): unexpected characters (pos=%zu)", value, pos);
 		return false;
 	}
 
 	if (result < min || result > max)
 	{
-		if (out) cfg.error("cfg::try_to_int('%s'): out of bounds (%lld..%lld)", value, min, max);
+		if (out) LOG_ERROR(GENERAL, "cfg::try_to_int('%s'): out of bounds (%lld..%lld)", value, min, max);
 		return false;
 	}
 
@@ -119,13 +117,13 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 
 		if (pos != value.size())
 		{
-			if (out) cfg.error("cfg::try_to_enum_value('%s'): unexpected characters (pos=%zu)", value, pos);
+			if (out) LOG_ERROR(GENERAL, "cfg::try_to_enum_value('%s'): unexpected characters (pos=%zu)", value, pos);
 			return false;
 		}
 
 		if (val > max)
 		{
-			if (out) cfg.error("cfg::try_to_enum_value('%s'): out of bounds(0..%u)", value, max);
+			if (out) LOG_ERROR(GENERAL, "cfg::try_to_enum_value('%s'): out of bounds(0..%u)", value, max);
 			return false;
 		}
 
@@ -134,7 +132,7 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 	}
 	catch (const std::exception& e)
 	{
-		if (out) cfg.error("cfg::try_to_enum_value('%s'): invalid enum value: %s", value, e.what());
+		if (out) LOG_ERROR(GENERAL, "cfg::try_to_enum_value('%s'): invalid enum value: %s", value, e.what());
 		return false;
 	}
 }
@@ -300,7 +298,7 @@ bool cfg::node::from_string(const std::string& value) try
 }
 catch (const std::exception& e)
 {
-	cfg.fatal("%s thrown: %s", typeid(e).name(), e.what());
+	LOG_FATAL(GENERAL, "%s thrown: %s", typeid(e).name(), e.what());
 	return false;
 }
 

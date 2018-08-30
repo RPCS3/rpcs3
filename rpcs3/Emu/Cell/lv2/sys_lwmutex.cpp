@@ -9,7 +9,7 @@
 
 
 
-logs::channel sys_lwmutex("sys_lwmutex");
+LOG_CHANNEL(sys_lwmutex);
 
 extern u64 get_system_time();
 

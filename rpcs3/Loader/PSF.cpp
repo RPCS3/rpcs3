@@ -19,8 +19,6 @@ void fmt_class_string<psf::format>::format(std::string& out, u64 arg)
 
 namespace psf
 {
-	logs::channel log("PSF");
-
 	struct header_t
 	{
 		le_t<u32> magic;
@@ -178,7 +176,7 @@ namespace psf
 			else
 			{
 				// Possibly unsupported format, entry ignored
-				log.error("Unknown entry format (key='%s', fmt=0x%x, len=0x%x, max=0x%x)", key, indices[i].param_fmt, indices[i].param_len, indices[i].param_max);
+				LOG_ERROR(LOADER, "Unknown entry format (key='%s', fmt=0x%x, len=0x%x, max=0x%x)", key, indices[i].param_fmt, indices[i].param_len, indices[i].param_max);
 			}
 		}
 
@@ -252,7 +250,7 @@ namespace psf
 				if (value.size() + (fmt == format::string) > max)
 				{
 					// TODO: check real limitations of PSF format
-					log.error("Entry value shrinkage (key='%s', value='%s', size=0x%zx, max=0x%x)", entry.first, value, size, max);
+					LOG_ERROR(LOADER, "Entry value shrinkage (key='%s', value='%s', size=0x%zx, max=0x%x)", entry.first, value, size, max);
 				}
 
 				stream.write(value);

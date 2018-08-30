@@ -3,7 +3,7 @@
 #include "Emu/IdManager.h"
 #include "sys_memory.h"
 
-logs::channel sys_memory("sys_memory");
+LOG_CHANNEL(sys_memory);
 
 lv2_memory_alloca::lv2_memory_alloca(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container>& ct)
 	: size(size)

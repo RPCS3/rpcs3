@@ -4,7 +4,7 @@
 
 
 
-logs::channel cellOvis("cellOvis");
+LOG_CHANNEL(cellOvis);
 
 // Return Codes
 enum
