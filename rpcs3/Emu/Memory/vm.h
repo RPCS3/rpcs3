@@ -146,7 +146,10 @@ namespace vm
 		// Mapped regions: addr -> shm handle
 		std::map<u32, std::shared_ptr<utils::shm>> m_map;
 
-		bool try_alloc(u32 addr, u8 flags, std::shared_ptr<utils::shm>&&);
+		// Common mapped region for special cases
+		std::shared_ptr<utils::shm> m_common;
+
+		bool try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&&);
 
 	public:
 		block_t(u32 addr, u32 size, u64 flags = 0);

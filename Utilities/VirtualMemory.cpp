@@ -167,17 +167,35 @@ namespace utils
 	u8* shm::map(void* ptr, protection prot) const
 	{
 #ifdef _WIN32
-		DWORD access = 0;
+		DWORD access = FILE_MAP_WRITE;
 		switch (prot)
 		{
-		case protection::rw: access = FILE_MAP_WRITE; break;
-		case protection::ro: access = FILE_MAP_READ; break;
-		case protection::no: break;
-		case protection::wx: access = FILE_MAP_WRITE | FILE_MAP_EXECUTE; break;
-		case protection::rx: access = FILE_MAP_READ | FILE_MAP_EXECUTE; break;
+		case protection::rw:
+		case protection::ro:
+		case protection::no:
+			break;
+		case protection::wx:
+		case protection::rx:
+			access |= FILE_MAP_EXECUTE;
+			break;
 		}
 
-		return static_cast<u8*>(::MapViewOfFileEx(m_handle, access, 0, 0, m_size, ptr));
+		if (auto ret = static_cast<u8*>(::MapViewOfFileEx(m_handle, access, 0, 0, m_size, ptr)))
+		{
+			if (prot != protection::rw && prot != protection::wx)
+			{
+				DWORD old;
+				if (!::VirtualProtect(ret, m_size, +prot, &old))
+				{
+					::UnmapViewOfFile(ret);
+					return nullptr;
+				}
+			}
+
+			return ret;
+		}
+
+		return nullptr;
 #else
 		return static_cast<u8*>(::mmap((void*)((u64)ptr & -0x10000), m_size, +prot, MAP_SHARED | (ptr ? MAP_FIXED : 0), m_file, 0));
 #endif
