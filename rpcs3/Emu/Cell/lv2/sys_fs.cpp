@@ -578,11 +578,41 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 	{
 		switch (auto error = fs::g_tls_error)
 		{
-		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_stat(): unknown error %s", error);
-		}
+		case fs::error::noent:
+		{
+			// Try to analyse split file (TODO)
+			u64 total_size = 0;
+			u32 total_count = 0;
 
-		return {CELL_EIO, path};
+			for (u32 i = 66600; i <= 66699; i++)
+			{
+				if (fs::stat(fmt::format("%s.%u", local_path, i), info) && !info.is_directory)
+				{
+					total_size += info.size;
+					total_count++;
+				}
+				else
+				{
+					break;
+				}
+			}
+
+			// Use attributes from the first fragment (consistently with sys_fs_open+fstat)
+			if (total_count > 1 && fs::stat(local_path + ".66600", info) && !info.is_directory)
+			{
+				// Success
+				info.size = total_size;
+				break;
+			}
+
+			return {CELL_ENOENT, path};
+		}
+		default:
+		{
+			sys_fs.error("sys_fs_stat(): unknown error %s", error);
+			return {CELL_EIO, path};
+		}
+		}
 	}
 
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
