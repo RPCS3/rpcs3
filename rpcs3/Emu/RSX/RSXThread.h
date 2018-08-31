@@ -20,8 +20,6 @@
 #include "Utilities/geometry.h"
 #include "Capture/rsx_trace.h"
 #include "Capture/rsx_replay.h"
-#include "restore_new.h"
-#include "define_new_memleakdetect.h"
 
 #include "Emu/Cell/lv2/sys_rsx.h"
 

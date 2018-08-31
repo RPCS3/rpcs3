@@ -6,8 +6,6 @@
 #include "VKFormats.h"
 #include "VKTextOut.h"
 #include "VKOverlays.h"
-#include "restore_new.h"
-#include "define_new_memleakdetect.h"
 #include "VKProgramBuffer.h"
 #include "../GCM.h"
 #include "../rsx_utils.h"
