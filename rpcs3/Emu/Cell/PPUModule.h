@@ -152,8 +152,8 @@ public:
 		info.name  = name;
 		info.var   = reinterpret_cast<vm::gvar<void>*>(Var);
 		info.init  = [] {};
-		info.size  = SIZE_32(typename T::type);
-		info.align = ALIGN_32(typename T::type);
+		info.size  = sizeof(typename T::type);
+		info.align = alignof(typename T::type);
 		info.type  = typeid(T).name();
 		info.flags = 0;
 		info.addr  = 0;

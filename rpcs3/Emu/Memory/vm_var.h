@@ -40,7 +40,7 @@ namespace vm
 
 	public:
 		_var_base()
-			: pointer(A::alloc(SIZE_32(T), ALIGN_32(T)))
+			: pointer(A::alloc(SIZE_32(T), alignof(T)))
 		{
 		}
 
@@ -72,7 +72,7 @@ namespace vm
 
 	public:
 		_var_base(u32 count)
-			: pointer(A::alloc(SIZE_32(T) * count, ALIGN_32(T)))
+			: pointer(A::alloc(SIZE_32(T) * count, alignof(T)))
 			, m_size(SIZE_32(T) * count)
 		{
 		}

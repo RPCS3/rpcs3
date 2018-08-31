@@ -43,9 +43,6 @@
 // Return 32 bit sizeof() to avoid widening/narrowing conversions with size_t
 #define SIZE_32(...) static_cast<u32>(sizeof(__VA_ARGS__))
 
-// Return 32 bit alignof() to avoid widening/narrowing conversions with size_t
-#define ALIGN_32(...) static_cast<u32>(alignof(__VA_ARGS__))
-
 // Variant pattern matching helper
 #define MATCH(arg, ...) constexpr(std::is_same_v<std::decay_t<decltype(arg)>, __VA_ARGS__>)
 

@@ -121,7 +121,7 @@ namespace vm
 		// Test address alignment using alignof(T)
 		bool aligned() const
 		{
-			return aligned(ALIGN_32(T));
+			return aligned(alignof(T));
 		}
 
 		// Get type size
@@ -133,7 +133,7 @@ namespace vm
 		// Get type alignment
 		static constexpr u32 align()
 		{
-			return ALIGN_32(T);
+			return alignof(T);
 		}
 
 		// Test address for arbitrary alignment: (addr & (align - 1)) != 0
