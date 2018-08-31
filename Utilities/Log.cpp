@@ -6,6 +6,7 @@
 #include "Utilities/sysinfo.h"
 #include "Utilities/Thread.h"
 #include "rpcs3_version.h"
+#include <cstring>
 #include <string>
 #include <unordered_map>
 #include <thread>

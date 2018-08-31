@@ -17,6 +17,7 @@
 #include <unistd.h>
 #else
 #endif
+#include <algorithm>
 #include <ctime>
 #include <chrono>
 #include <mutex>
