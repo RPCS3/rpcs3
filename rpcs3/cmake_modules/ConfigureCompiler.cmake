@@ -2,13 +2,9 @@ cmake_minimum_required(VERSION 3.8.2)
 # Check and configure compiler options for RPCS3
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-	# GCC 4.9 and lower are too old
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.1)
-		message(FATAL_ERROR "RPCS3 requires at least gcc-5.1.")
-	endif()
-	# GCC 6.1 is blacklisted
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 6.1)
-		message(FATAL_ERROR "RPCS3 can't be compiled with gcc-6.1, see #1691.")
+	# GCC 7.3 or latter is required
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.3)
+		message(FATAL_ERROR "RPCS3 requires at least gcc-7.3.")
 	endif()
 
 	# Set compiler options here
@@ -17,9 +13,9 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 	add_compile_options(-Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
 
 elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
-	# Clang 3.4 and lower are too old
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.5)
-		message(FATAL_ERROR "RPCS3 requires at least clang-3.5.")
+	# Clang 5.0 or latter is required
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
+		message(FATAL_ERROR "RPCS3 requires at least clang-5.0.")
 	endif()
 
 	# Set compiler options here
