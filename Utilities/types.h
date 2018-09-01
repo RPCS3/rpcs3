@@ -54,10 +54,6 @@
 
 #define HERE "\n(in file " __FILE__ ":" STRINGIZE(__LINE__) ")"
 
-// Ensure that the expression evaluates to true. Obsolete.
-//#define EXPECTS(...) do { if (!(__VA_ARGS__)) fmt::raw_error("Precondition failed: " #__VA_ARGS__ HERE); } while (0)
-//#define ENSURES(...) do { if (!(__VA_ARGS__)) fmt::raw_error("Postcondition failed: " #__VA_ARGS__ HERE); } while (0)
-
 #define DECLARE(...) decltype(__VA_ARGS__) __VA_ARGS__
 
 #define STR_CASE(...) case __VA_ARGS__: return #__VA_ARGS__
