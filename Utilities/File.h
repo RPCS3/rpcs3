@@ -619,7 +619,7 @@ namespace fs
 		if (fs::file f{path, mode})
 		{
 			// Write args sequentially
-			int seq[]{ (f.write(args), 0)... };
+			(f.write(args), ...);
 			return true;
 		}
 
