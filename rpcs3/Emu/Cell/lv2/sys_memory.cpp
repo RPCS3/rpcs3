@@ -105,7 +105,7 @@ error_code sys_memory_free(u32 addr)
 
 	const auto area = vm::get(vm::any, addr);
 
-	if ((area->flags & 3) != 1)
+	if (!area || (area->flags & 3) != 1)
 	{
 		return {CELL_EINVAL, addr};
 	}
