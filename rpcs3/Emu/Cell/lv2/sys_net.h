@@ -335,7 +335,7 @@ struct lv2_socket final
 	socket_type socket;
 
 	// Events selected for polling
-	atomic_t<bs_t<poll>> events{};
+	atomic_bs_t<poll> events{};
 
 	// Non-blocking IO option
 	s32 so_nbio = 0;

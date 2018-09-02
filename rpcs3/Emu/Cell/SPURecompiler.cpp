@@ -490,7 +490,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 				}
 			}
 
-			if (test(af, vf::is_const))
+			if (af & vf::is_const)
 			{
 				const u32 target = spu_branch_target(av);
 
@@ -858,7 +858,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 		case spu_itype::HBR:
 		{
 			hbr_loc = spu_branch_target(pos, op.roh << 7 | op.rt);
-			hbr_tg  = test(vflags[op.ra], vf::is_const) && !op.c ? values[op.ra] & 0x3fffc : -1;
+			hbr_tg  = vflags[op.ra] & vf::is_const && !op.c ? values[op.ra] & 0x3fffc : -1;
 			break;
 		}
 
@@ -1017,7 +1017,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 				{
 					const u32 r2 = op.ra == 1 ? +op.rb : +op.ra;
 
-					if (test(vflags[r2], vf::is_const) && (values[r2] % 16) == 0)
+					if (vflags[r2] & vf::is_const && (values[r2] % 16) == 0)
 					{
 						break;
 					}

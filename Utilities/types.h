@@ -707,42 +707,6 @@ constexpr u32 size32(const T (&)[Size], const char* msg = nullptr)
 	return static_cast<u32>(Size);
 }
 
-template <typename T1, typename = std::enable_if_t<std::is_integral<T1>::value>>
-constexpr bool test(const T1& value)
-{
-	return value != 0;
-}
-
-template <typename T1, typename T2, typename = std::enable_if_t<std::is_integral<T1>::value && std::is_integral<T2>::value>>
-constexpr bool test(const T1& lhs, const T2& rhs)
-{
-	return (lhs & rhs) != 0;
-}
-
-template <typename T, typename T2, typename = std::enable_if_t<std::is_integral<T>::value && std::is_integral<T2>::value>>
-inline bool test_and_set(T& lhs, const T2& rhs)
-{
-	const bool result = (lhs & rhs) != 0;
-	lhs |= rhs;
-	return result;
-}
-
-template <typename T, typename T2, typename = std::enable_if_t<std::is_integral<T>::value && std::is_integral<T2>::value>>
-inline bool test_and_reset(T& lhs, const T2& rhs)
-{
-	const bool result = (lhs & rhs) != 0;
-	lhs &= ~rhs;
-	return result;
-}
-
-template <typename T, typename T2, typename = std::enable_if_t<std::is_integral<T>::value && std::is_integral<T2>::value>>
-inline bool test_and_complement(T& lhs, const T2& rhs)
-{
-	const bool result = (lhs & rhs) != 0;
-	lhs ^= rhs;
-	return result;
-}
-
 // Simplified hash algorithm for pointers. May be used in std::unordered_(map|set).
 template <typename T, std::size_t Align = alignof(T)>
 struct pointer_hash

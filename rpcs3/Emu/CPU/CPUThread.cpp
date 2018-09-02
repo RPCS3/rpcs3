@@ -52,10 +52,10 @@ void cpu_thread::on_task()
 	g_tls_current_cpu_thread = this;
 
 	// Check thread status
-	while (!test(state, cpu_flag::exit + cpu_flag::dbg_global_stop))
+	while (!(state & (cpu_flag::exit + cpu_flag::dbg_global_stop)))
 	{
 		// Check stop status
-		if (!test(state & cpu_flag::stop))
+		if (!(state & cpu_flag::stop))
 		{
 			try
 			{
@@ -100,7 +100,8 @@ cpu_thread::cpu_thread(u32 id)
 bool cpu_thread::check_state()
 {
 #ifdef WITH_GDB_DEBUGGER
-	if (test(state, cpu_flag::dbg_pause)) {
+	if (state & cpu_flag::dbg_pause)
+	{
 		fxm::get<GDBDebugServer>()->pause_from(this);
 	}
 #endif
@@ -110,7 +111,7 @@ bool cpu_thread::check_state()
 
 	while (true)
 	{
-		if (test(state, cpu_flag::memory) && state.test_and_reset(cpu_flag::memory))
+		if (state & cpu_flag::memory && state.test_and_reset(cpu_flag::memory))
 		{
 			cpu_flag_memory = true;
 
@@ -121,17 +122,17 @@ bool cpu_thread::check_state()
 			}
 		}
 
-		if (test(state, cpu_flag::exit + cpu_flag::dbg_global_stop))
+		if (state & cpu_flag::exit + cpu_flag::dbg_global_stop)
 		{
 			return true;
 		}
 
-		if (test(state & cpu_flag::signal) && state.test_and_reset(cpu_flag::signal))
+		if (state & cpu_flag::signal && state.test_and_reset(cpu_flag::signal))
 		{
 			cpu_sleep_called = false;
 		}
 
-		if (!test(state, cpu_state_pause))
+		if (!(state & cpu_state_pause))
 		{
 			if (cpu_flag_memory)
 			{
@@ -140,7 +141,7 @@ bool cpu_thread::check_state()
 
 			break;
 		}
-		else if (!cpu_sleep_called && test(state, cpu_flag::suspend))
+		else if (!cpu_sleep_called && state & cpu_flag::suspend)
 		{
 			cpu_sleep();
 			cpu_sleep_called = true;
@@ -152,12 +153,12 @@ bool cpu_thread::check_state()
 
 	const auto state_ = state.load();
 
-	if (test(state_, cpu_flag::ret + cpu_flag::stop))
+	if (state_ & (cpu_flag::ret + cpu_flag::stop))
 	{
 		return true;
 	}
 
-	if (test(state_, cpu_flag::dbg_step))
+	if (state_ & cpu_flag::dbg_step)
 	{
 		state += cpu_flag::dbg_pause;
 		state -= cpu_flag::dbg_step;
@@ -168,7 +169,7 @@ bool cpu_thread::check_state()
 
 void cpu_thread::test_state()
 {
-	if (UNLIKELY(test(state)))
+	if (UNLIKELY(state))
 	{
 		if (check_state())
 		{

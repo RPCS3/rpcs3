@@ -37,7 +37,7 @@ public:
 	cpu_thread(u32 id);
 
 	// Public thread state
-	atomic_t<bs_t<cpu_flag>> state{+cpu_flag::stop};
+	atomic_bs_t<cpu_flag> state{+cpu_flag::stop};
 
 	// Process thread state, return true if the checker must return
 	bool check_state();

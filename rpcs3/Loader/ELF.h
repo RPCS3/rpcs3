@@ -243,8 +243,8 @@ public:
 
 		// Load program headers
 		std::vector<phdr_t> _phdrs;
-		
-		if (!test(opts, elf_opt::no_programs))
+
+		if (!(opts & elf_opt::no_programs))
 		{
 			_phdrs.resize(header.e_phnum);
 			stream.seek(offset + header.e_phoff);
@@ -252,7 +252,7 @@ public:
 				return set_error(elf_error::stream_phdrs);
 		}
 
-		if (!test(opts, elf_opt::no_sections))
+		if (!(opts & elf_opt::no_sections))
 		{
 			shdrs.resize(header.e_shnum);
 			stream.seek(offset + header.e_shoff);
@@ -268,7 +268,7 @@ public:
 
 			static_cast<phdr_t&>(progs.back()) = hdr;
 
-			if (!test(opts, elf_opt::no_data))
+			if (!(opts & elf_opt::no_data))
 			{
 				progs.back().bin.resize(hdr.p_filesz);
 				stream.seek(offset + hdr.p_offset);

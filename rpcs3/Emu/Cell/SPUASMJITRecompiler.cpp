@@ -1183,7 +1183,7 @@ static void check_state_ret(SPUThread& _spu, void*, u8*)
 
 static void check_state(SPUThread* _spu, spu_function_t _ret)
 {
-	if (test(_spu->state) && _spu->check_state())
+	if (_spu->state && _spu->check_state())
 	{
 		_ret = &check_state_ret;
 	}

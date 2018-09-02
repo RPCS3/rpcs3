@@ -114,7 +114,7 @@ namespace vm
 			*ptr = nullptr;
 			ptr = nullptr;
 
-			if (test(cpu.state, cpu_flag::memory))
+			if (cpu.state & cpu_flag::memory)
 			{
 				cpu.state -= cpu_flag::memory;
 			}
@@ -221,7 +221,7 @@ namespace vm
 			{
 				while (cpu_thread* ptr = lock)
 				{
-					if (test(ptr->state, cpu_flag::dbg_global_stop + cpu_flag::exit))
+					if (ptr->state & (cpu_flag::dbg_global_stop + cpu_flag::exit))
 					{
 						break;
 					}

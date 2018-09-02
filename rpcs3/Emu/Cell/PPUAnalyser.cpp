@@ -1051,7 +1051,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		}
 
 		// Get function limit
-		const u32 func_end = std::min<u32>(get_limit(func.addr + 1), test(func.attr, ppu_attr::known_size) ? func.addr + func.size : end);
+		const u32 func_end = std::min<u32>(get_limit(func.addr + 1), func.attr & ppu_attr::known_size ? func.addr + func.size : end);
 
 		// Block analysis workload
 		std::vector<std::reference_wrapper<std::pair<const u32, u32>>> block_queue;
@@ -1084,7 +1084,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		}
 
 		// TODO: lower priority?
-		if (test(func.attr, ppu_attr::no_size))
+		if (func.attr & ppu_attr::no_size)
 		{
 			// Get next function
 			const auto _next = fmap.lower_bound(func.blocks.crbegin()->first + 1);
@@ -1135,12 +1135,12 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 					}
 
 					// Add next block if necessary
-					if ((is_call && !test(pfunc->attr, ppu_attr::no_return)) || (type == ppu_itype::BC && (op.bo & 0x14) != 0x14))
+					if ((is_call && !(pfunc->attr & ppu_attr::no_return)) || (type == ppu_itype::BC && (op.bo & 0x14) != 0x14))
 					{
 						add_block(_ptr.addr());
 					}
 
-					if (is_call && test(pfunc->attr, ppu_attr::no_return))
+					if (is_call && pfunc->attr & ppu_attr::no_return)
 					{
 						// Nothing
 					}
@@ -1201,7 +1201,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 						if (jt_addr != jt_end && _ptr.addr() == jt_addr)
 						{
 							// Acknowledge jumptable detection failure
-							if (!test(func.attr, ppu_attr::no_size))
+							if (!(func.attr & ppu_attr::no_size))
 							{
 								LOG_WARNING(PPU, "[0x%x] Jump table not found! 0x%x-0x%x", func.addr, jt_addr, jt_end);
 							}
@@ -1235,7 +1235,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 					block.second = _ptr.addr() - block.first;
 					break;
 				}
-				else if (type == ppu_itype::STDU && test(func.attr, ppu_attr::no_size) && (op.opcode == *_ptr || *_ptr == ppu_instructions::BLR()))
+				else if (type == ppu_itype::STDU && func.attr & ppu_attr::no_size && (op.opcode == *_ptr || *_ptr == ppu_instructions::BLR()))
 				{
 					// Hack
 					LOG_SUCCESS(PPU, "[0x%x] Instruction repetition: 0x%08x", iaddr, op.opcode);
@@ -1254,7 +1254,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		}
 
 		// Finalization: determine function size
-		if (!test(func.attr, ppu_attr::known_size))
+		if (!(func.attr & ppu_attr::known_size))
 		{
 			const auto last = func.blocks.crbegin();
 
@@ -1320,7 +1320,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		}
 
 		// Finalization: decrease known function size (TODO)
-		if (test(func.attr, ppu_attr::known_size))
+		if (func.attr & ppu_attr::known_size)
 		{
 			const auto last = func.blocks.crbegin();
 

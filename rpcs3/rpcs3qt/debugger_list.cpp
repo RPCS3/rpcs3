@@ -90,7 +90,7 @@ void debugger_list::ShowAddress(u32 addr)
 
 			item(i)->setText((IsBreakpoint(m_pc) ? ">>> " : "    ") + qstr(m_disasm->last_opcode));
 
-			if (test(cpu->state & cpu_state_pause) && m_pc == GetPc())
+			if (cpu->state & cpu_state_pause && m_pc == GetPc())
 			{
 				item(i)->setTextColor(m_text_color_pc);
 				item(i)->setBackgroundColor(m_color_pc);

@@ -799,34 +799,34 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 #ifdef _WIN32
 	DWORD access = 0;
-	if (test(mode & fs::read)) access |= GENERIC_READ;
-	if (test(mode & fs::write)) access |= DELETE | (test(mode & fs::append) ? FILE_APPEND_DATA : GENERIC_WRITE);
+	if (mode & fs::read) access |= GENERIC_READ;
+	if (mode & fs::write) access |= DELETE | (mode & fs::append ? FILE_APPEND_DATA : GENERIC_WRITE);
 
 	DWORD disp = 0;
-	if (test(mode & fs::create))
+	if (mode & fs::create)
 	{
 		disp =
-			test(mode & fs::excl) ? CREATE_NEW :
-			test(mode & fs::trunc) ? CREATE_ALWAYS : OPEN_ALWAYS;
+			mode & fs::excl ? CREATE_NEW :
+			mode & fs::trunc ? CREATE_ALWAYS : OPEN_ALWAYS;
 	}
 	else
 	{
-		if (test(mode & fs::excl))
+		if (mode & fs::excl)
 		{
 			g_tls_error = error::inval;
 			return;
 		}
 
-		disp = test(mode & fs::trunc) ? TRUNCATE_EXISTING : OPEN_EXISTING;
+		disp = mode & fs::trunc ? TRUNCATE_EXISTING : OPEN_EXISTING;
 	}
 
 	DWORD share = 0;
-	if (!test(mode, fs::unread) || !test(mode & fs::write))
+	if (!(mode & fs::unread) || !(mode & fs::write))
 	{
 		share |= FILE_SHARE_READ;
 	}
 
-	if (!test(mode, fs::lock + fs::unread) || !test(mode & fs::write))
+	if (!(mode & (fs::lock + fs::unread)) || !(mode & fs::write))
 	{
 		share |= FILE_SHARE_WRITE | FILE_SHARE_DELETE;
 	}
@@ -949,18 +949,18 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 #else
 	int flags = 0;
 
-	if (test(mode & fs::read) && test(mode & fs::write)) flags |= O_RDWR;
-	else if (test(mode & fs::read)) flags |= O_RDONLY;
-	else if (test(mode & fs::write)) flags |= O_WRONLY;
+	if (mode & fs::read && mode & fs::write) flags |= O_RDWR;
+	else if (mode & fs::read) flags |= O_RDONLY;
+	else if (mode & fs::write) flags |= O_WRONLY;
 
-	if (test(mode & fs::append)) flags |= O_APPEND;
-	if (test(mode & fs::create)) flags |= O_CREAT;
-	if (test(mode & fs::trunc) && !test(mode, fs::lock + fs::unread)) flags |= O_TRUNC;
-	if (test(mode & fs::excl)) flags |= O_EXCL;
+	if (mode & fs::append) flags |= O_APPEND;
+	if (mode & fs::create) flags |= O_CREAT;
+	if (mode & fs::trunc && !(mode & (fs::lock + fs::unread))) flags |= O_TRUNC;
+	if (mode & fs::excl) flags |= O_EXCL;
 
 	int perm = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
-	if (test(mode & fs::write) && test(mode & fs::unread))
+	if (mode & fs::write && mode & fs::unread)
 	{
 		perm = 0;
 	}
@@ -973,14 +973,14 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
-	if (test(mode & fs::write) && test(mode, fs::lock + fs::unread) && ::flock(fd, LOCK_EX | LOCK_NB) != 0)
+	if (mode & fs::write && mode & (fs::lock + fs::unread) && ::flock(fd, LOCK_EX | LOCK_NB) != 0)
 	{
 		g_tls_error = errno == EWOULDBLOCK ? fs::error::acces : to_error(errno);
 		::close(fd);
 		return;
 	}
 
-	if (test(mode & fs::trunc) && test(mode, fs::lock + fs::unread))
+	if (mode & fs::trunc && mode & (fs::lock + fs::unread))
 	{
 		// Postpone truncation in order to avoid using O_TRUNC on a locked file
 		::ftruncate(fd, 0);

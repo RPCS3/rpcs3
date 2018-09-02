@@ -112,7 +112,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 		{
 			if (m_btn_run->text() == RunString && cpu->state.test_and_reset(cpu_flag::dbg_pause))
 			{
-				if (!test(cpu->state, cpu_flag::dbg_pause + cpu_flag::dbg_global_pause))
+				if (!(cpu->state & (cpu_flag::dbg_pause + cpu_flag::dbg_global_pause)))
 				{
 					cpu->notify();
 				}
@@ -293,7 +293,7 @@ void debugger_frame::UpdateUI()
 			m_last_stat = static_cast<u32>(state);
 			DoUpdate();
 
-			if (test(state & cpu_flag::dbg_pause))
+			if (state & cpu_flag::dbg_pause)
 			{
 				m_btn_run->setText(RunString);
 				m_btn_step->setEnabled(true);
@@ -570,13 +570,13 @@ void debugger_frame::DoStep(bool stepOver)
 	{
 		bool should_step_over = stepOver && cpu->id_type() == 1;
 
-		if (test(cpu_flag::dbg_pause, cpu->state.fetch_op([&](bs_t<cpu_flag>& state)
+		if (+cpu_flag::dbg_pause & +cpu->state.fetch_op([&](bs_t<cpu_flag>& state)
 		{
 			if (!should_step_over)
 				state += cpu_flag::dbg_step;
 
 			state -= cpu_flag::dbg_pause;
-		})))
+		}))
 		{
 			if (should_step_over)
 			{
@@ -592,7 +592,7 @@ void debugger_frame::DoStep(bool stepOver)
 				{
 					m_breakpoint_handler->RemoveBreakpoint(next_instruction_pc);
 				}
-					
+
 				m_last_step_over_breakpoint = next_instruction_pc;
 			}
 

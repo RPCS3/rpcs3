@@ -275,7 +275,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 		open_mode = {}; // error
 	}
 
-	if (!test(open_mode))
+	if (!open_mode)
 	{
 		fmt::throw_exception("sys_fs_open(%s): Invalid or unimplemented flags: %#o" HERE, path, flags);
 	}
@@ -307,7 +307,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 
 	if (!file)
 	{
-		if (test(open_mode & fs::excl) && fs::g_tls_error == fs::error::exist)
+		if (open_mode & fs::excl && fs::g_tls_error == fs::error::exist)
 		{
 			return not_an_error(CELL_EEXIST);
 		}

@@ -1,27 +1,8 @@
 #pragma once
 
 /*
-This header helps to extend scoped enum types (enum class) in two possible ways:
-1) Enabling bitwise operators for enums
-2) Advanced bs_t<> template (this converts enum type to another "bitset" enum type)
-
-To enable bitwise operators, enum scope must contain `__bitwise_ops` entry.
-
-enum class flags
-{
-	__bitwise_ops, // Not essential, but recommended to put it first
-
-	flag1 = 1 << 0,
-	flag2 = 1 << 1,
-};
-
-Examples:
-`flags::flag1 | flags::flag2` - bitwise OR
-`flags::flag1 & flags::flag2` - bitwise AND
-`flags::flag1 ^ flags::flag2` - bitwise XOR
-`~flags::flag1` - bitwise NEG
-
-To enable bs_t<> template, enum scope must contain `__bitset_enum_max` entry.
+This header implements bs_t<> class for scoped enum types (enum class).
+To enable bs_t<>, enum scope must contain `__bitset_enum_max` entry.
 
 enum class flagzz : u32
 {
@@ -31,40 +12,42 @@ enum class flagzz : u32
 	__bitset_enum_max // It must be the last value
 };
 
-Now some operators are enabled for two enum types: `flagzz` and `bs_t<flagzz>`.
-These are very different from previously described bitwise operators.
+This also enables helper operators for this enum type.
 
 Examples:
 `+flagzz::flag1` - unary `+` operator convert flagzz value to bs_t<flagzz>
 `flagzz::flag1 + flagzz::flag2` - bitset union
 `flagzz::flag1 - flagzz::flag2` - bitset difference
 Intersection (&) and symmetric difference (^) is also available.
-
 */
 
 #include "types.h"
 #include "Atomic.h"
 
-// Helper template
-template<typename T>
-struct bs_base
+template <typename T>
+class atomic_bs_t;
+
+// Bitset type for enum class with available bits [0, T::__bitset_enum_max)
+template <typename T>
+class bs_t final
 {
+public:
 	// Underlying type
 	using under = std::underlying_type_t<T>;
 
-	// Actual bitset type
-	enum class type : under
-	{
-		null = 0, // Empty bitset
+private:
+	// Underlying value
+	under m_data;
 
-		__bitset_set_type = 0 // SFINAE marker
-	};
+	friend class atomic_bs_t<T>;
 
+public:
 	static constexpr std::size_t bitmax = sizeof(T) * 8;
 	static constexpr std::size_t bitsize = static_cast<under>(T::__bitset_enum_max);
 
 	static_assert(std::is_enum<T>::value, "bs_t<> error: invalid type (must be enum)");
-	static_assert(!bitsize || bitsize <= bitmax, "bs_t<> error: invalid __bitset_enum_max");
+	static_assert(bitsize <= bitmax, "bs_t<> error: invalid __bitset_enum_max");
+	static_assert(bitsize != bitmax || std::is_unsigned<under>::value, "bs_t<> error: invalid __bitset_enum_max (sign bit)");
 
 	// Helper function
 	static constexpr under shift(T value)
@@ -72,662 +55,328 @@ struct bs_base
 		return static_cast<under>(1) << static_cast<under>(value);
 	}
 
-	friend type& operator +=(type& lhs, type rhs)
+	bs_t() = default;
+
+	// Construct from a single bit
+	constexpr bs_t(T bit)
+		: m_data(shift(bit))
 	{
-		reinterpret_cast<under&>(lhs) |= static_cast<under>(rhs);
-		return lhs;
 	}
 
-	friend type& operator -=(type& lhs, type rhs)
+	// Test for empty bitset
+	constexpr explicit operator bool() const
 	{
-		reinterpret_cast<under&>(lhs) &= ~static_cast<under>(rhs);
-		return lhs;
+		return m_data != 0;
 	}
 
-	friend type& operator &=(type& lhs, type rhs)
+	// Extract underlying data
+	constexpr explicit operator under() const
 	{
-		reinterpret_cast<under&>(lhs) &= static_cast<under>(rhs);
-		return lhs;
+		return m_data;
 	}
 
-	friend type& operator ^=(type& lhs, type rhs)
+	// Copy
+	constexpr bs_t operator +() const
 	{
-		reinterpret_cast<under&>(lhs) ^= static_cast<under>(rhs);
-		return lhs;
+		return *this;
 	}
 
-	friend type& operator +=(type& lhs, T rhs)
+	constexpr bs_t& operator +=(bs_t rhs)
 	{
-		reinterpret_cast<under&>(lhs) |= shift(rhs);
-		return lhs;
+		m_data |= static_cast<under>(rhs);
+		return *this;
 	}
 
-	friend type& operator -=(type& lhs, T rhs)
+	constexpr bs_t& operator -=(bs_t rhs)
 	{
-		reinterpret_cast<under&>(lhs) &= ~shift(rhs);
-		return lhs;
+		m_data &= ~static_cast<under>(rhs);
+		return *this;
 	}
 
-	friend type& operator &=(type& lhs, T rhs)
+	constexpr bs_t& operator &=(bs_t rhs)
 	{
-		reinterpret_cast<under&>(lhs) &= shift(rhs);
-		return lhs;
+		m_data &= static_cast<under>(rhs);
+		return *this;
 	}
 
-	friend type& operator ^=(type& lhs, T rhs)
+	constexpr bs_t& operator ^=(bs_t rhs)
 	{
-		reinterpret_cast<under&>(lhs) ^= shift(rhs);
-		return lhs;
+		m_data ^= static_cast<under>(rhs);
+		return *this;
 	}
 
-	friend constexpr type operator +(type lhs, type rhs)
+	constexpr bs_t operator +(bs_t rhs) const
 	{
-		return static_cast<type>(static_cast<under>(lhs) | static_cast<under>(rhs));
+		bs_t r{};
+		r.m_data = m_data | rhs.m_data;
+		return r;
 	}
 
-	friend constexpr type operator -(type lhs, type rhs)
+	constexpr bs_t operator -(bs_t rhs) const
 	{
-		return static_cast<type>(static_cast<under>(lhs) & ~static_cast<under>(rhs));
+		bs_t r{};
+		r.m_data = m_data & ~rhs.m_data;
+		return r;
 	}
 
-	friend constexpr type operator &(type lhs, type rhs)
+	constexpr bs_t operator &(bs_t rhs) const
 	{
-		return static_cast<type>(static_cast<under>(lhs) & static_cast<under>(rhs));
+		bs_t r{};
+		r.m_data = m_data & rhs.m_data;
+		return r;
 	}
 
-	friend constexpr type operator ^(type lhs, type rhs)
+	constexpr bs_t operator ^(bs_t rhs) const
 	{
-		return static_cast<type>(static_cast<under>(lhs) ^ static_cast<under>(rhs));
+		bs_t r{};
+		r.m_data = m_data ^ rhs.m_data;
+		return r;
 	}
 
-	friend constexpr type operator &(type lhs, T rhs)
+	constexpr bool operator ==(bs_t rhs) const
 	{
-		return static_cast<type>(static_cast<under>(lhs) & shift(rhs));
+		return m_data == rhs.m_data;
 	}
 
-	friend constexpr type operator ^(type lhs, T rhs)
+	constexpr bool operator !=(bs_t rhs) const
 	{
-		return static_cast<type>(static_cast<under>(lhs) ^ shift(rhs));
+		return m_data != rhs.m_data;
 	}
 
-	friend constexpr type operator &(T lhs, type rhs)
+	constexpr bool test(bs_t rhs) const
 	{
-		return static_cast<type>(shift(lhs) & static_cast<under>(rhs));
+		return (m_data & rhs.m_data) != 0;
 	}
 
-	friend constexpr type operator ^(T lhs, type rhs)
+	constexpr bool test_and_set(T bit)
 	{
-		return static_cast<type>(shift(lhs) ^ static_cast<under>(rhs));
+		bool r = (m_data & shift(bit)) != 0;
+		m_data |= shift(bit);
+		return r;
 	}
 
-	friend constexpr bool operator ==(T lhs, type rhs)
+	constexpr bool test_and_reset(T bit)
 	{
-		return shift(lhs) == rhs;
+		bool r = (m_data & shift(bit)) != 0;
+		m_data &= ~shift(bit);
+		return r;
 	}
 
-	friend constexpr bool operator ==(type lhs, T rhs)
+	constexpr bool test_and_complement(T bit)
 	{
-		return lhs == shift(rhs);
-	}
-
-	friend constexpr bool operator !=(T lhs, type rhs)
-	{
-		return shift(lhs) != rhs;
-	}
-
-	friend constexpr bool operator !=(type lhs, T rhs)
-	{
-		return lhs != shift(rhs);
-	}
-
-	friend constexpr bool test(type value)
-	{
-		return static_cast<under>(value) != 0;
-	}
-
-	friend constexpr bool test(type lhs, type rhs)
-	{
-		return (static_cast<under>(lhs) & static_cast<under>(rhs)) != 0;
-	}
-
-	friend constexpr bool test(type lhs, T rhs)
-	{
-		return (static_cast<under>(lhs) & shift(rhs)) != 0;
-	}
-
-	friend constexpr bool test(T lhs, type rhs)
-	{
-		return (shift(lhs) & static_cast<under>(rhs)) != 0;
-	}
-
-	friend bool test_and_set(type& lhs, type rhs)
-	{
-		return test_and_set(reinterpret_cast<under&>(lhs), static_cast<under>(rhs));
-	}
-
-	friend bool test_and_set(type& lhs, T rhs)
-	{
-		return test_and_set(reinterpret_cast<under&>(lhs), shift(rhs));
-	}
-
-	friend bool test_and_reset(type& lhs, type rhs)
-	{
-		return test_and_reset(reinterpret_cast<under&>(lhs), static_cast<under>(rhs));
-	}
-
-	friend bool test_and_reset(type& lhs, T rhs)
-	{
-		return test_and_reset(reinterpret_cast<under&>(lhs), shift(rhs));
-	}
-
-	friend bool test_and_complement(type& lhs, type rhs)
-	{
-		return test_and_complement(reinterpret_cast<under&>(lhs), static_cast<under>(rhs));
-	}
-
-	friend bool test_and_complement(type& lhs, T rhs)
-	{
-		return test_and_complement(reinterpret_cast<under&>(lhs), shift(rhs));
+		bool r = (m_data & shift(bit)) != 0;
+		m_data ^= shift(bit);
+		return r;
 	}
 };
-
-// Bitset type for enum class with available bits [0, T::__bitset_enum_max)
-template<typename T>
-using bs_t = typename bs_base<T>::type;
 
 // Unary '+' operator: promote plain enum value to bitset value
-template<typename T, typename = decltype(T::__bitset_enum_max)>
-constexpr bs_t<T> operator +(T value)
+template <typename T, typename = decltype(T::__bitset_enum_max)>
+constexpr bs_t<T> operator +(T bit)
 {
-	return static_cast<bs_t<T>>(bs_base<T>::shift(value));
+	return bit;
 }
 
 // Binary '+' operator: bitset union
-template<typename T, typename = decltype(T::__bitset_enum_max)>
+template <typename T, typename = decltype(T::__bitset_enum_max)>
 constexpr bs_t<T> operator +(T lhs, T rhs)
 {
-	return static_cast<bs_t<T>>(bs_base<T>::shift(lhs) | bs_base<T>::shift(rhs));
-}
-
-// Binary '+' operator: bitset union
-template<typename T, typename = decltype(T::__bitset_enum_max)>
-constexpr bs_t<T> operator +(typename bs_base<T>::type lhs, T rhs)
-{
-	return static_cast<bs_t<T>>(static_cast<typename bs_base<T>::under>(lhs) | bs_base<T>::shift(rhs));
-}
-
-// Binary '+' operator: bitset union
-template<typename T, typename = decltype(T::__bitset_enum_max)>
-constexpr bs_t<T> operator +(T lhs, typename bs_base<T>::type rhs)
-{
-	return static_cast<bs_t<T>>(bs_base<T>::shift(lhs) | static_cast<typename bs_base<T>::under>(rhs));
+	return bs_t<T>(lhs) + bs_t<T>(rhs);
 }
 
 // Binary '-' operator: bitset difference
-template<typename T, typename = decltype(T::__bitset_enum_max)>
+template <typename T, typename = decltype(T::__bitset_enum_max)>
 constexpr bs_t<T> operator -(T lhs, T rhs)
 {
-	return static_cast<bs_t<T>>(bs_base<T>::shift(lhs) & ~bs_base<T>::shift(rhs));
+	return bs_t<T>(lhs) - bs_t<T>(rhs);
 }
 
-// Binary '-' operator: bitset difference
-template<typename T, typename = decltype(T::__bitset_enum_max)>
-constexpr bs_t<T> operator -(typename bs_base<T>::type lhs, T rhs)
+// Binary '&' operator: bitset intersection
+template <typename T, typename = decltype(T::__bitset_enum_max)>
+constexpr bs_t<T> operator &(T lhs, T rhs)
 {
-	return static_cast<bs_t<T>>(static_cast<typename bs_base<T>::under>(lhs) & ~bs_base<T>::shift(rhs));
+	return bs_t<T>(lhs) & bs_t<T>(rhs);
 }
 
-// Binary '-' operator: bitset difference
-template<typename T, typename = decltype(T::__bitset_enum_max)>
-constexpr bs_t<T> operator -(T lhs, typename bs_base<T>::type rhs)
+// Binary '^' operator: bitset symmetric difference
+template <typename T, typename = decltype(T::__bitset_enum_max)>
+constexpr bs_t<T> operator ^(T lhs, T rhs)
 {
-	return static_cast<bs_t<T>>(bs_base<T>::shift(lhs) & ~static_cast<typename bs_base<T>::under>(rhs));
+	return bs_t<T>(lhs) ^ bs_t<T>(rhs);
 }
 
-template<typename BS, typename T>
-struct atomic_add<BS, T, std::void_t<decltype(T::__bitset_enum_max), std::enable_if_t<std::is_same<BS, bs_t<T>>::value>>>
+// Atomic bitset specialization with optimized operations
+template <typename T>
+class atomic_bs_t : public atomic_t<::bs_t<T>> // TODO: true specialization
 {
-	using under = typename bs_base<T>::under;
+	// Corresponding bitset type
+	using bs_t = ::bs_t<T>;
 
-	static inline bs_t<T> op1(bs_t<T>& left, T right)
+	// Base class
+	using base = atomic_t<::bs_t<T>>;
+
+	// Use underlying m_data
+	using base::m_data;
+
+public:
+	// Underlying type
+	using under = typename bs_t::under;
+
+	atomic_bs_t() = default;
+
+	atomic_bs_t(const atomic_bs_t&) = delete;
+
+	atomic_bs_t& operator =(const atomic_bs_t&) = delete;
+
+	explicit constexpr atomic_bs_t(bs_t value)
+		: base(value)
 	{
-		return static_cast<bs_t<T>>(atomic_storage<under>::fetch_or(reinterpret_cast<under&>(left), bs_base<T>::shift(right)));
 	}
 
-	static constexpr auto fetch_op = &op1;
-
-	static inline bs_t<T> op2(bs_t<T>& left, T right)
+	explicit constexpr atomic_bs_t(T bit)
+		: base(bit)
 	{
-		return static_cast<bs_t<T>>(atomic_storage<under>::or_fetch(reinterpret_cast<under&>(left), bs_base<T>::shift(right)));
 	}
 
-	static constexpr auto op_fetch = &op2;
-	static constexpr auto atomic_op = &op2;
-};
-
-template<typename BS, typename T>
-struct atomic_sub<BS, T, std::void_t<decltype(T::__bitset_enum_max), std::enable_if_t<std::is_same<BS, bs_t<T>>::value>>>
-{
-	using under = typename bs_base<T>::under;
-
-	static inline bs_t<T> op1(bs_t<T>& left, T right)
+	explicit operator bool() const
 	{
-		return static_cast<bs_t<T>>(atomic_storage<under>::fetch_and(reinterpret_cast<under&>(left), ~bs_base<T>::shift(right)));
+		return static_cast<bool>(base::load());
 	}
 
-	static constexpr auto fetch_op = &op1;
-
-	static inline bs_t<T> op2(bs_t<T>& left, T right)
+	explicit operator under() const
 	{
-		return static_cast<bs_t<T>>(atomic_storage<under>::and_fetch(reinterpret_cast<under&>(left), ~bs_base<T>::shift(right)));
+		return static_cast<under>(base::load());
 	}
 
-	static constexpr auto op_fetch = &op2;
-	static constexpr auto atomic_op = &op2;
-};
-
-template<typename BS, typename T>
-struct atomic_and<BS, T, std::void_t<decltype(T::__bitset_enum_max), std::enable_if_t<std::is_same<BS, bs_t<T>>::value>>>
-{
-	using under = typename bs_base<T>::under;
-
-	static inline bs_t<T> op1(bs_t<T>& left, T right)
+	bs_t fetch_add(const bs_t& rhs)
 	{
-		return static_cast<bs_t<T>>(atomic_storage<under>::fetch_and(reinterpret_cast<under&>(left), bs_base<T>::shift(right)));
+		bs_t r;
+		r.m_data = atomic_storage<under>::fetch_or(m_data.m_data, rhs.m_data);
+		return r;
 	}
 
-	static constexpr auto fetch_op = &op1;
-
-	static inline bs_t<T> op2(bs_t<T>& left, T right)
+	bs_t add_fetch(const bs_t& rhs)
 	{
-		return static_cast<bs_t<T>>(atomic_storage<under>::and_fetch(reinterpret_cast<under&>(left), bs_base<T>::shift(right)));
+		bs_t r;
+		r.m_data = atomic_storage<under>::or_fetch(m_data.m_data, rhs.m_data);
+		return r;
 	}
 
-	static constexpr auto op_fetch = &op2;
-	static constexpr auto atomic_op = &op2;
-};
-
-template<typename BS, typename T>
-struct atomic_xor<BS, T, std::void_t<decltype(T::__bitset_enum_max), std::enable_if_t<std::is_same<BS, bs_t<T>>::value>>>
-{
-	using under = typename bs_base<T>::under;
-
-	static inline bs_t<T> op1(bs_t<T>& left, T right)
+	bs_t operator +=(const bs_t& rhs)
 	{
-		return static_cast<bs_t<T>>(atomic_storage<under>::fetch_xor(reinterpret_cast<under&>(left), bs_base<T>::shift(right)));
+		return add_fetch(rhs);
 	}
 
-	static constexpr auto fetch_op = &op1;
-
-	static inline bs_t<T> op2(bs_t<T>& left, T right)
+	bs_t fetch_sub(const bs_t& rhs)
 	{
-		return static_cast<bs_t<T>>(atomic_storage<under>::xor_fetch(reinterpret_cast<under&>(left), bs_base<T>::shift(right)));
+		bs_t r;
+		r.m_data = atomic_storage<under>::fetch_and(m_data.m_data, ~rhs.m_data);
+		return r;
 	}
 
-	static constexpr auto op_fetch = &op2;
-	static constexpr auto atomic_op = &op2;
-};
-
-template<typename T>
-struct atomic_add<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
-{
-	using under = std::underlying_type_t<T>;
-
-	static inline T op1(T& left, T right)
+	bs_t sub_fetch(const bs_t& rhs)
 	{
-		return static_cast<T>(atomic_storage<under>::fetch_or(reinterpret_cast<under&>(left), static_cast<under>(right)));
+		bs_t r;
+		r.m_data = atomic_storage<under>::and_fetch(m_data.m_data, ~rhs.m_data);
+		return r;
 	}
 
-	static constexpr auto fetch_op = &op1;
-
-	static inline T op2(T& left, T right)
+	bs_t operator -=(const bs_t& rhs)
 	{
-		return static_cast<T>(atomic_storage<under>::or_fetch(reinterpret_cast<under&>(left), static_cast<under>(right)));
+		return sub_fetch(rhs);
 	}
 
-	static constexpr auto op_fetch = &op2;
-	static constexpr auto atomic_op = &op2;
-};
-
-template<typename T>
-struct atomic_sub<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
-{
-	using under = std::underlying_type_t<T>;
-
-	static inline T op1(T& left, T right)
+	bs_t fetch_and(const bs_t& rhs)
 	{
-		return static_cast<T>(atomic_storage<under>::fetch_and(reinterpret_cast<under&>(left), ~static_cast<under>(right)));
+		bs_t r;
+		r.m_data = atomic_storage<under>::fetch_and(m_data.m_data, rhs.m_data);
+		return r;
 	}
 
-	static constexpr auto fetch_op = &op1;
-
-	static inline T op2(T& left, T right)
+	bs_t and_fetch(const bs_t& rhs)
 	{
-		return static_cast<T>(atomic_storage<under>::and_fetch(reinterpret_cast<under&>(left), ~static_cast<under>(right)));
+		bs_t r;
+		r.m_data = atomic_storage<under>::and_fetch(m_data.m_data, rhs.m_data);
+		return r;
 	}
 
-	static constexpr auto op_fetch = &op2;
-	static constexpr auto atomic_op = &op2;
-};
-
-template<typename T>
-struct atomic_and<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
-{
-	using under = std::underlying_type_t<T>;
-
-	static inline T op1(T& left, T right)
+	bs_t operator &=(const bs_t& rhs)
 	{
-		return static_cast<T>(atomic_storage<under>::fetch_and(reinterpret_cast<under&>(left), static_cast<under>(right)));
+		return and_fetch(rhs);
 	}
 
-	static constexpr auto fetch_op = &op1;
-
-	static inline T op2(T& left, T right)
+	bs_t fetch_xor(const bs_t& rhs)
 	{
-		return static_cast<T>(atomic_storage<under>::and_fetch(reinterpret_cast<under&>(left), static_cast<under>(right)));
+		bs_t r;
+		r.m_data = atomic_storage<under>::fetch_xor(m_data.m_data, rhs.m_data);
+		return r;
 	}
 
-	static constexpr auto op_fetch = &op2;
-	static constexpr auto atomic_op = &op2;
-};
-
-template<typename T>
-struct atomic_xor<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
-{
-	using under = std::underlying_type_t<T>;
-
-	static inline T op1(T& left, T right)
+	bs_t xor_fetch(const bs_t& rhs)
 	{
-		return static_cast<T>(atomic_storage<under>::fetch_xor(reinterpret_cast<under&>(left), static_cast<under>(right)));
+		bs_t r;
+		r.m_data = atomic_storage<under>::xor_fetch(m_data.m_data, rhs.m_data);
+		return r;
 	}
 
-	static constexpr auto fetch_op = &op1;
-
-	static inline T op2(T& left, T right)
+	bs_t operator ^=(const bs_t& rhs)
 	{
-		return static_cast<T>(atomic_storage<under>::xor_fetch(reinterpret_cast<under&>(left), static_cast<under>(right)));
+		return xor_fetch(rhs);
 	}
 
-	static constexpr auto op_fetch = &op2;
-	static constexpr auto atomic_op = &op2;
-};
+	auto fetch_or(const bs_t&) = delete;
+	auto or_fetch(const bs_t&) = delete;
+	auto operator |=(const bs_t&) = delete;
+	auto operator ++() = delete;
+	auto operator --() = delete;
+	auto operator ++(int) = delete;
+	auto operator --(int) = delete;
 
-template<typename BS, typename T>
-struct atomic_test_and_set<BS, T, std::void_t<decltype(T::__bitset_enum_max), std::enable_if_t<std::is_same<BS, bs_t<T>>::value>>>
-{
-	using under = typename bs_base<T>::under;
-
-	static inline bool _op(bs_t<T>& left, T value)
+	bs_t operator +(bs_t rhs) const
 	{
-		return atomic_storage<under>::bts(reinterpret_cast<under&>(left), static_cast<uint>(static_cast<under>(value)));
+		bs_t r{};
+		r.m_data = base::load().m_data | rhs.m_data;
+		return r;
 	}
 
-	static constexpr auto fetch_op = &_op;
-	static constexpr auto op_fetch = &_op;
-	static constexpr auto atomic_op = &_op;
-};
-
-template<typename BS, typename T>
-struct atomic_test_and_reset<BS, T, std::void_t<decltype(T::__bitset_enum_max), std::enable_if_t<std::is_same<BS, bs_t<T>>::value>>>
-{
-	using under = typename bs_base<T>::under;
-
-	static inline bool _op(bs_t<T>& left, T value)
+	bs_t operator -(bs_t rhs) const
 	{
-		return atomic_storage<under>::btr(reinterpret_cast<under&>(left), static_cast<uint>(static_cast<under>(value)));
+		bs_t r{};
+		r.m_data = base::load().m_data & ~rhs.m_data;
+		return r;
 	}
 
-	static constexpr auto fetch_op = &_op;
-	static constexpr auto op_fetch = &_op;
-	static constexpr auto atomic_op = &_op;
-};
-
-template<typename BS, typename T>
-struct atomic_test_and_complement<BS, T, std::void_t<decltype(T::__bitset_enum_max), std::enable_if_t<std::is_same<BS, bs_t<T>>::value>>>
-{
-	using under = typename bs_base<T>::under;
-
-	static inline bool _op(bs_t<T>& left, T value)
+	bs_t operator &(bs_t rhs) const
 	{
-		return atomic_storage<under>::btc(reinterpret_cast<under&>(left), static_cast<uint>(static_cast<under>(value)));
+		bs_t r{};
+		r.m_data = base::load().m_data & rhs.m_data;
+		return r;
 	}
 
-	static constexpr auto fetch_op = &_op;
-	static constexpr auto op_fetch = &_op;
-	static constexpr auto atomic_op = &_op;
-};
-
-template<typename T>
-struct atomic_test_and_set<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
-{
-	using under = std::underlying_type_t<T>;
-
-	static inline bool _op(T& left, T value)
+	bs_t operator ^(bs_t rhs) const
 	{
-		return atomic_storage<under>::test_and_set(reinterpret_cast<under&>(left), static_cast<under>(value));
+		bs_t r{};
+		r.m_data = base::load().m_data ^ rhs.m_data;
+		return r;
 	}
 
-	static constexpr auto fetch_op = &_op;
-	static constexpr auto op_fetch = &_op;
-	static constexpr auto atomic_op = &_op;
-};
-
-template<typename T>
-struct atomic_test_and_reset<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
-{
-	using under = std::underlying_type_t<T>;
-
-	static inline bool _op(T& left, T value)
+	bool test(const bs_t& rhs)
 	{
-		return atomic_storage<under>::test_and_reset(reinterpret_cast<under&>(left), static_cast<under>(value));
+		return base::load().test(rhs);
 	}
 
-	static constexpr auto fetch_op = &_op;
-	static constexpr auto op_fetch = &_op;
-	static constexpr auto atomic_op = &_op;
-};
-
-template<typename T>
-struct atomic_test_and_complement<T, T, std::enable_if_t<sizeof(T::__bitset_set_type) != 0 && std::is_enum<T>::value>>
-{
-	using under = std::underlying_type_t<T>;
-
-	static inline bool _op(T& left, T value)
+	bool test_and_set(T rhs)
 	{
-		return atomic_storage<under>::test_and_complement(reinterpret_cast<under&>(left), static_cast<under>(value));
+		return atomic_storage<under>::bts(m_data.m_data, static_cast<uint>(static_cast<under>(rhs)));
 	}
 
-	static constexpr auto fetch_op = &_op;
-	static constexpr auto op_fetch = &_op;
-	static constexpr auto atomic_op = &_op;
-};
-
-// Binary '|' operator: bitwise OR
-template<typename T, typename = decltype(T::__bitwise_ops)>
-constexpr T operator |(T lhs, T rhs)
-{
-	return static_cast<T>(std::underlying_type_t<T>(lhs) | std::underlying_type_t<T>(rhs));
-}
-
-// Binary '&' operator: bitwise AND
-template<typename T, typename = decltype(T::__bitwise_ops)>
-constexpr T operator &(T lhs, T rhs)
-{
-	return static_cast<T>(std::underlying_type_t<T>(lhs) & std::underlying_type_t<T>(rhs));
-}
-
-// Binary '^' operator: bitwise XOR
-template<typename T, typename = decltype(T::__bitwise_ops)>
-constexpr T operator ^(T lhs, T rhs)
-{
-	return static_cast<T>(std::underlying_type_t<T>(lhs) ^ std::underlying_type_t<T>(rhs));
-}
-
-// Unary '~' operator: bitwise NEG
-template<typename T, typename = decltype(T::__bitwise_ops)>
-constexpr T operator ~(T value)
-{
-	return static_cast<T>(~std::underlying_type_t<T>(value));
-}
-
-// Bitwise OR assignment
-template<typename T, typename = decltype(T::__bitwise_ops)>
-inline T& operator |=(T& lhs, T rhs)
-{
-	reinterpret_cast<std::underlying_type_t<T>&>(lhs) |= std::underlying_type_t<T>(rhs);
-	return lhs;
-}
-
-// Bitwise AND assignment
-template<typename T, typename = decltype(T::__bitwise_ops)>
-inline T& operator &=(T& lhs, T rhs)
-{
-	reinterpret_cast<std::underlying_type_t<T>&>(lhs) &= std::underlying_type_t<T>(rhs);
-	return lhs;
-}
-
-// Bitwise XOR assignment
-template<typename T, typename = decltype(T::__bitwise_ops)>
-inline T& operator ^=(T& lhs, T rhs)
-{
-	reinterpret_cast<std::underlying_type_t<T>&>(lhs) ^= std::underlying_type_t<T>(rhs);
-	return lhs;
-}
-
-template<typename T, typename = decltype(T::__bitwise_ops)>
-constexpr bool test(T value)
-{
-	return std::underlying_type_t<T>(value) != 0;
-}
-
-template<typename T, typename = decltype(T::__bitwise_ops)>
-constexpr bool test(T lhs, T rhs)
-{
-	return (std::underlying_type_t<T>(lhs) & std::underlying_type_t<T>(rhs)) != 0;
-}
-
-template<typename T, typename = decltype(T::__bitwise_ops)>
-inline bool test_and_set(T& lhs, T rhs)
-{
-	return test_and_set(reinterpret_cast<std::underlying_type_t<T>&>(lhs), std::underlying_type_t<T>(rhs));
-}
-
-template<typename T, typename = decltype(T::__bitwise_ops)>
-inline bool test_and_reset(T& lhs, T rhs)
-{
-	return test_and_reset(reinterpret_cast<std::underlying_type_t<T>&>(lhs), std::underlying_type_t<T>(rhs));
-}
-
-template<typename T, typename = decltype(T::__bitwise_ops)>
-inline bool test_and_complement(T& lhs, T rhs)
-{
-	return test_and_complement(reinterpret_cast<std::underlying_type_t<T>&>(lhs), std::underlying_type_t<T>(rhs));
-}
-
-template<typename T>
-struct atomic_or<T, T, std::enable_if_t<sizeof(T::__bitwise_ops) != 0 && std::is_enum<T>::value>>
-{
-	using under = std::underlying_type_t<T>;
-
-	static inline T op1(T& left, T right)
+	bool test_and_reset(T rhs)
 	{
-		return static_cast<T>(atomic_storage<under>::fetch_or(reinterpret_cast<under&>(left), static_cast<under>(right)));
+		return atomic_storage<under>::btr(m_data.m_data, static_cast<uint>(static_cast<under>(rhs)));
 	}
 
-	static constexpr auto fetch_op = &op1;
-
-	static inline T op2(T& left, T right)
+	bool test_and_complement(T rhs)
 	{
-		return static_cast<T>(atomic_storage<under>::or_fetch(reinterpret_cast<under&>(left), static_cast<under>(right)));
+		return atomic_storage<under>::btc(m_data.m_data, static_cast<uint>(static_cast<under>(rhs)));
 	}
-
-	static constexpr auto op_fetch = &op2;
-	static constexpr auto atomic_op = &op2;
-};
-
-template<typename T>
-struct atomic_and<T, T, std::enable_if_t<sizeof(T::__bitwise_ops) != 0 && std::is_enum<T>::value>>
-{
-	using under = std::underlying_type_t<T>;
-
-	static inline T op1(T& left, T right)
-	{
-		return static_cast<T>(atomic_storage<under>::fetch_and(reinterpret_cast<under&>(left), static_cast<under>(right)));
-	}
-
-	static constexpr auto fetch_op = &op1;
-
-	static inline T op2(T& left, T right)
-	{
-		return static_cast<T>(atomic_storage<under>::and_fetch(reinterpret_cast<under&>(left), static_cast<under>(right)));
-	}
-
-	static constexpr auto op_fetch = &op2;
-	static constexpr auto atomic_op = &op2;
-};
-
-template<typename T>
-struct atomic_xor<T, T, std::enable_if_t<sizeof(T::__bitwise_ops) != 0 && std::is_enum<T>::value>>
-{
-	using under = std::underlying_type_t<T>;
-
-	static inline T op1(T& left, T right)
-	{
-		return static_cast<T>(atomic_storage<under>::fetch_xor(reinterpret_cast<under&>(left), static_cast<under>(right)));
-	}
-
-	static constexpr auto fetch_op = &op1;
-
-	static inline T op2(T& left, T right)
-	{
-		return static_cast<T>(atomic_storage<under>::xor_fetch(reinterpret_cast<under&>(left), static_cast<under>(right)));
-	}
-
-	static constexpr auto op_fetch = &op2;
-	static constexpr auto atomic_op = &op2;
-};
-
-template<typename T>
-struct atomic_test_and_set<T, T, std::enable_if_t<sizeof(T::__bitwise_ops) != 0 && std::is_enum<T>::value>>
-{
-	using under = std::underlying_type_t<T>;
-
-	static inline bool _op(T& left, T value)
-	{
-		return atomic_storage<under>::test_and_set(reinterpret_cast<under&>(left), static_cast<under>(value));
-	}
-
-	static constexpr auto fetch_op = &_op;
-	static constexpr auto op_fetch = &_op;
-	static constexpr auto atomic_op = &_op;
-};
-
-template<typename T>
-struct atomic_test_and_reset<T, T, std::enable_if_t<sizeof(T::__bitwise_ops) != 0 && std::is_enum<T>::value>>
-{
-	using under = std::underlying_type_t<T>;
-
-	static inline bool _op(T& left, T value)
-	{
-		return atomic_storage<under>::test_and_reset(reinterpret_cast<under&>(left), static_cast<under>(value));
-	}
-
-	static constexpr auto fetch_op = &_op;
-	static constexpr auto op_fetch = &_op;
-	static constexpr auto atomic_op = &_op;
-};
-
-template<typename T>
-struct atomic_test_and_complement<T, T, std::enable_if_t<sizeof(T::__bitwise_ops) != 0 && std::is_enum<T>::value>>
-{
-	using under = std::underlying_type_t<T>;
-
-	static inline bool _op(T& left, T value)
-	{
-		return atomic_storage<under>::test_and_complement(reinterpret_cast<under&>(left), static_cast<under>(value));
-	}
-
-	static constexpr auto fetch_op = &_op;
-	static constexpr auto op_fetch = &_op;
-	static constexpr auto atomic_op = &_op;
 };

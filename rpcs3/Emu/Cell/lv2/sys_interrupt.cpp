@@ -95,7 +95,7 @@ error_code _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 int
 		}
 
 		// If interrupt thread is running, it's already established on another interrupt tag
-		if (!test(it->state & cpu_flag::stop))
+		if (!(it->state & cpu_flag::stop))
 		{
 			error = CELL_EAGAIN;
 			return result;

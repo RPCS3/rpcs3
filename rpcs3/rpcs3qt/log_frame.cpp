@@ -94,7 +94,7 @@ struct gui_listener : logs::listener
 
 	void pop()
 	{
-		if (const auto head = read->next.exchange(nullptr))
+		if (const auto head = read.load()->next.exchange(nullptr))
 		{
 			delete read.exchange(head);
 		}
@@ -102,7 +102,7 @@ struct gui_listener : logs::listener
 
 	void clear()
 	{
-		while (read->next)
+		while (read.load()->next)
 		{
 			pop();
 		}
@@ -502,7 +502,7 @@ void log_frame::UpdateUI()
 	}
 
 	// Check main logs
-	while (const auto packet = s_gui_listener.read->next.load())
+	while (const auto packet = s_gui_listener.read.load()->next.load())
 	{
 		// Confirm log level
 		if (packet->sev <= s_gui_listener.enabled)

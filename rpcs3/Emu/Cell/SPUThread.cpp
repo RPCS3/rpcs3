@@ -521,7 +521,7 @@ void SPUThread::cpu_task()
 
 	if (jit)
 	{
-		while (LIKELY(!test(state) || !check_state()))
+		while (LIKELY(!state || !check_state()))
 		{
 			jit_dispatcher[pc / 4](*this, vm::_ptr<u8>(offset), nullptr);
 		}
@@ -547,7 +547,7 @@ void SPUThread::cpu_task()
 
 	while (true)
 	{
-		if (UNLIKELY(test(state)))
+		if (UNLIKELY(state))
 		{
 			if (check_state()) return;
 
@@ -594,7 +594,7 @@ void SPUThread::cpu_task()
 						func2 = func4;
 						func3 = func5;
 
-						if (UNLIKELY(test(state)))
+						if (UNLIKELY(state))
 						{
 							break;
 						}
@@ -1093,7 +1093,7 @@ void SPUThread::do_mfc(bool wait)
 
 		if (args.cmd & MFC_LIST_MASK)
 		{
-			if (!test(ch_stall_mask, mask))
+			if (!(ch_stall_mask & mask))
 			{
 				if (do_list_transfer(args))
 				{
@@ -1160,7 +1160,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 	// Stall infinitely if MFC queue is full
 	while (UNLIKELY(mfc_size >= 16))
 	{
-		if (test(state, cpu_flag::stop))
+		if (state & cpu_flag::stop)
 		{
 			return false;
 		}
@@ -1193,7 +1193,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 
 			while (rdata == data && vm::reservation_acquire(raddr, 128) == rtime)
 			{
-				if (test(state, cpu_flag::stop))
+				if (state & cpu_flag::stop)
 				{
 					break;
 				}
@@ -1400,7 +1400,7 @@ bool SPUThread::process_mfc_cmd(spu_mfc_cmd args)
 	{
 		if (LIKELY(args.size <= 0x4000))
 		{
-			if (LIKELY(do_dma_check(args) && !test(ch_stall_mask, 1u << args.tag)))
+			if (LIKELY(do_dma_check(args) && !(ch_stall_mask & 1u << args.tag)))
 			{
 				if (LIKELY(do_list_transfer(args)))
 				{
@@ -1558,7 +1558,7 @@ s64 SPUThread::get_ch_value(u32 ch)
 
 		while (!channel.try_pop(out))
 		{
-			if (test(state, cpu_flag::stop))
+			if (state & cpu_flag::stop)
 			{
 				return -1;
 			}
@@ -1596,7 +1596,7 @@ s64 SPUThread::get_ch_value(u32 ch)
 				return out;
 			}
 
-			if (test(state & cpu_flag::stop))
+			if (state & cpu_flag::stop)
 			{
 				return -1;
 			}
@@ -1700,7 +1700,7 @@ s64 SPUThread::get_ch_value(u32 ch)
 
 			while (res = get_events(), !res)
 			{
-				if (test(state, cpu_flag::stop + cpu_flag::dbg_global_stop))
+				if (state & (cpu_flag::stop + cpu_flag::dbg_global_stop))
 				{
 					return -1;
 				}
@@ -1713,7 +1713,7 @@ s64 SPUThread::get_ch_value(u32 ch)
 
 		while (res = get_events(true), !res)
 		{
-			if (test(state & cpu_flag::stop))
+			if (state & cpu_flag::stop)
 			{
 				return -1;
 			}
@@ -1753,7 +1753,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 		{
 			while (!ch_out_intr_mbox.try_push(value))
 			{
-				if (test(state & cpu_flag::stop))
+				if (state & cpu_flag::stop)
 				{
 					return false;
 				}
@@ -1899,7 +1899,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	{
 		while (!ch_out_mbox.try_push(value))
 		{
-			if (test(state & cpu_flag::stop))
+			if (state & cpu_flag::stop)
 			{
 				return false;
 			}
@@ -2005,8 +2005,11 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	case MFC_WrListStallAck:
 	{
 		// Reset stall status for specified tag
-		if (::test_and_reset(ch_stall_mask, 1u << value))
+		const u32 tag_mask = 1u << value;
+
+		if (ch_stall_mask & tag_mask)
 		{
+			ch_stall_mask &= ~tag_mask;
 			do_mfc(true);
 		}
 
@@ -2085,7 +2088,7 @@ bool SPUThread::stop_and_signal(u32 code)
 		// HACK: wait for executable code
 		while (!_ref<u32>(pc))
 		{
-			if (test(state & cpu_flag::stop))
+			if (state & cpu_flag::stop)
 			{
 				return false;
 			}
@@ -2141,7 +2144,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			// Check group status, wait if necessary
 			while (group->run_state >= SPU_THREAD_GROUP_STATUS_WAITING && group->run_state <= SPU_THREAD_GROUP_STATUS_SUSPENDED)
 			{
-				if (test(state & cpu_flag::stop))
+				if (state & cpu_flag::stop)
 				{
 					return false;
 				}
@@ -2210,7 +2213,7 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		while (true)
 		{
-			if (test(state & cpu_flag::stop))
+			if (state & cpu_flag::stop)
 			{
 				return false;
 			}

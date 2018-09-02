@@ -1014,13 +1014,13 @@ void lv2_obj::sleep_timeout(named_thread& thread, u64 timeout)
 
 		auto state = ppu->state.fetch_op([&](auto& val)
 		{
-			if (!test(val, cpu_flag::signal))
+			if (!(val & cpu_flag::signal))
 			{
 				val += cpu_flag::suspend;
 			}
 		});
 
-		if (test(state, cpu_flag::signal))
+		if (state & cpu_flag::signal)
 		{
 			LOG_TRACE(PPU, "sleep() failed (signaled)");
 			return;
@@ -1156,7 +1156,7 @@ void lv2_obj::schedule_all()
 		{
 			const auto target = g_ppu[i];
 
-			if (test(target->state, cpu_flag::suspend))
+			if (target->state & cpu_flag::suspend)
 			{
 				LOG_TRACE(PPU, "schedule(): %s", target->id);
 				target->state ^= (cpu_flag::signal + cpu_flag::suspend);

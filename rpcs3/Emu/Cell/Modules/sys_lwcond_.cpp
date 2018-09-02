@@ -148,7 +148,7 @@ error_code sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		}
 
 		ppu.test_state();
-		lwmutex->all_info += res;
+		lwmutex->all_info += +res;
 
 		return CELL_OK;
 	}
@@ -173,7 +173,7 @@ error_code sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 
 	if (res > 0)
 	{
-		lwmutex->all_info += res;
+		lwmutex->all_info += +res;
 
 		res = CELL_OK;
 	}
