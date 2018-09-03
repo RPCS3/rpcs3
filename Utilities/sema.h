@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include "types.h"
 #include "Atomic.h"
 
@@ -12,8 +13,6 @@ class semaphore_base
 	void imp_wait();
 
 	void imp_post(s32 _old);
-
-	friend class semaphore_lock;
 
 protected:
 	explicit constexpr semaphore_base(s32 value)
@@ -73,36 +72,36 @@ class semaphore final : public semaphore_base
 public:
 	// Default constructor (recommended)
 	constexpr semaphore()
-		: base{Def}
+		: base(Def)
 	{
 	}
 
 	// Explicit value constructor (not recommended)
 	explicit constexpr semaphore(s32 value)
-		: base{value}
+		: base(value)
 	{
 	}
 
 	// Obtain a semaphore
-	void wait()
+	void lock()
 	{
 		return base::wait();
 	}
 
 	// Try to obtain a semaphore
-	explicit_bool_t try_wait()
+	bool try_lock()
 	{
 		return base::try_wait();
 	}
 
 	// Return a semaphore
-	void post()
+	void unlock()
 	{
 		return base::post(Max);
 	}
 
 	// Try to return a semaphore
-	explicit_bool_t try_post()
+	bool try_unlock()
 	{
 		return base::try_post(Max);
 	}
@@ -111,36 +110,5 @@ public:
 	static constexpr s32 size()
 	{
 		return Max;
-	}
-};
-
-class semaphore_lock
-{
-	semaphore_base& m_base;
-
-	void lock()
-	{
-		m_base.wait();
-	}
-
-	void unlock()
-	{
-		m_base.post(INT32_MAX);
-	}
-
-	friend class cond_variable;
-
-public:
-	explicit semaphore_lock(const semaphore_lock&) = delete;
-
-	semaphore_lock(semaphore_base& sema)
-		: m_base(sema)
-	{
-		lock();
-	}
-
-	~semaphore_lock()
-	{
-		unlock();
 	}
 };

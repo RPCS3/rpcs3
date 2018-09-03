@@ -37,11 +37,11 @@ static semaphore<> s_qt_mutex{};
 
 [[noreturn]] extern void report_fatal_error(const std::string& text)
 {
-	s_qt_mutex.wait();
+	s_qt_mutex.lock();
 
-	if (!s_qt_init.try_wait())
+	if (!s_qt_init.try_lock())
 	{
-		s_init.wait();
+		s_init.lock();
 		static int argc = 1;
 		static char arg1[] = {"ERROR"};
 		static char* argv[] = {arg1};
@@ -95,8 +95,8 @@ int main(int argc, char** argv)
 	QCoreApplication::setAttribute(Qt::AA_DisableWindowContextHelpButton);
 	QCoreApplication::setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
 
-	s_init.post();
-	s_qt_mutex.wait();
+	s_init.unlock();
+	s_qt_mutex.lock();
 	rpcs3_app app(argc, argv);
 
 	// Command line args
@@ -135,7 +135,7 @@ int main(int argc, char** argv)
 		});
 	}
 
-	s_qt_init.post();
-	s_qt_mutex.post();
+	s_qt_init.unlock();
+	s_qt_mutex.unlock();
 	return app.exec();
 }

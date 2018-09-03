@@ -152,7 +152,7 @@ public:
 
 	void Button(u8 button, bool pressed)
 	{
-		semaphore_lock lock(mutex);
+		std::lock_guard lock(mutex);
 
 		for (u32 p = 0; p < (u32)m_mice.size(); ++p)
 		{
@@ -183,7 +183,7 @@ public:
 
 	void Scroll(const s8 rotation)
 	{
-		semaphore_lock lock(mutex);
+		std::lock_guard lock(mutex);
 
 		for (u32 p = 0; p < (u32)m_mice.size(); ++p)
 		{
@@ -210,7 +210,7 @@ public:
 
 	void Move(const s32 x_pos_new, const s32 y_pos_new, const bool is_qt_fullscreen = false, s32 x_delta = 0, s32 y_delta = 0)
 	{
-		semaphore_lock lock(mutex);
+		std::lock_guard lock(mutex);
 
 		for (u32 p = 0; p < (u32)m_mice.size(); ++p)
 		{

@@ -1550,7 +1550,7 @@ extern void ppu_initialize(const ppu_module& info)
 				continue;
 			}
 
-			semaphore_lock lock(jmutex);
+			std::lock_guard lock(jmutex);
 			jit->add(cache_path + obj_name);
 
 			LOG_SUCCESS(PPU, "LLVM: Loaded module %s", obj_name);
@@ -1568,7 +1568,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 			// Allocate "core"
 			{
-				semaphore_lock jlock(jcores->sem);
+				std::lock_guard jlock(jcores->sem);
 
 				if (!Emu.IsStopped())
 				{
@@ -1586,7 +1586,7 @@ extern void ppu_initialize(const ppu_module& info)
 			}
 
 			// Proceed with original JIT instance
-			semaphore_lock lock(jmutex);
+			std::lock_guard lock(jmutex);
 			jit->add(cache_path + obj_name);
 		});
 	}
@@ -1605,7 +1605,7 @@ extern void ppu_initialize(const ppu_module& info)
 	// Jit can be null if the loop doesn't ever enter.
 	if (jit && jit_mod.vars.empty())
 	{
-		semaphore_lock lock(jmutex);
+		std::lock_guard lock(jmutex);
 		jit->fin();
 
 		// Get and install function addresses

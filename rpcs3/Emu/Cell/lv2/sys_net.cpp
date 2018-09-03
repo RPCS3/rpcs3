@@ -90,7 +90,7 @@ static void network_clear_queue(ppu_thread& ppu)
 {
 	idm::select<lv2_socket>([&](u32, lv2_socket& sock)
 	{
-		semaphore_lock lock(sock.mutex);
+		std::lock_guard lock(sock.mutex);
 
 		for (auto it = sock.queue.begin(); it != sock.queue.end();)
 		{
@@ -137,7 +137,7 @@ extern void network_thread_init()
 			::poll(fds, socklist.size(), 1);
 #endif
 
-			semaphore_lock lock(s_nw_mutex);
+			std::lock_guard lock(s_nw_mutex);
 
 			for (std::size_t i = 0; i < socklist.size(); i++)
 			{
@@ -182,7 +182,7 @@ extern void network_thread_init()
 
 				if (events)
 				{
-					semaphore_lock lock(socklist[i]->mutex);
+					std::lock_guard lock(socklist[i]->mutex);
 
 					for (auto it = socklist[i]->queue.begin(); events && it != socklist[i]->queue.end();)
 					{
@@ -276,7 +276,7 @@ s32 sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, 
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
 	{
-		semaphore_lock lock(sock.mutex);
+		std::lock_guard lock(sock.mutex);
 
 		//if (!(sock.events & lv2_socket::poll::read))
 		{
@@ -401,7 +401,7 @@ s32 sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> addr, u
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 	{
-		semaphore_lock lock(sock.mutex);
+		std::lock_guard lock(sock.mutex);
 
 		if (::bind(sock.socket, (::sockaddr*)&name, namelen) == 0)
 		{
@@ -432,7 +432,7 @@ s32 sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr,
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
 	{
-		semaphore_lock lock(sock.mutex);
+		std::lock_guard lock(sock.mutex);
 
 		if (addr->sa_family == 0 && !((sys_net_sockaddr_in*)addr.get_ptr())->sin_port && !((sys_net_sockaddr_in*)addr.get_ptr())->sin_addr)
 		{
@@ -569,7 +569,7 @@ s32 sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> a
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 	{
-		semaphore_lock lock(sock.mutex);
+		std::lock_guard lock(sock.mutex);
 
 		::sockaddr_storage native_addr;
 		::socklen_t native_addrlen = sizeof(native_addr);
@@ -610,7 +610,7 @@ s32 sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> a
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 	{
-		semaphore_lock lock(sock.mutex);
+		std::lock_guard lock(sock.mutex);
 
 		::sockaddr_storage native_addr;
 		::socklen_t native_addrlen = sizeof(native_addr);
@@ -663,7 +663,7 @@ s32 sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optname, vm::
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 	{
-		semaphore_lock lock(sock.mutex);
+		std::lock_guard lock(sock.mutex);
 
 		if (*optlen < sizeof(int))
 		{
@@ -839,7 +839,7 @@ s32 sys_net_bnet_listen(ppu_thread& ppu, s32 s, s32 backlog)
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 	{
-		semaphore_lock lock(sock.mutex);
+		std::lock_guard lock(sock.mutex);
 
 		if (::listen(sock.socket, backlog) == 0)
 		{
@@ -884,7 +884,7 @@ s32 sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 len, s3
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
 	{
-		semaphore_lock lock(sock.mutex);
+		std::lock_guard lock(sock.mutex);
 
 		//if (!(sock.events & lv2_socket::poll::read))
 		{
@@ -1037,7 +1037,7 @@ s32 sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 len, s32
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
 	{
-		semaphore_lock lock(sock.mutex);
+		std::lock_guard lock(sock.mutex);
 
 		//if (!(sock.events & lv2_socket::poll::write))
 		{
@@ -1131,7 +1131,7 @@ s32 sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optname, vm::
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 	{
-		semaphore_lock lock(sock.mutex);
+		std::lock_guard lock(sock.mutex);
 
 		if (optlen >= sizeof(int))
 		{
@@ -1313,7 +1313,7 @@ s32 sys_net_bnet_shutdown(ppu_thread& ppu, s32 s, s32 how)
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 	{
-		semaphore_lock lock(sock.mutex);
+		std::lock_guard lock(sock.mutex);
 
 #ifdef _WIN32
 		const int native_how =
@@ -1421,7 +1421,7 @@ s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s3
 
 	if (nfds)
 	{
-		semaphore_lock nw_lock(s_nw_mutex);
+		std::lock_guard nw_lock(s_nw_mutex);
 
 		reader_lock lock(id_manager::g_mutex);
 
@@ -1503,7 +1503,7 @@ s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s3
 
 			if (auto sock = idm::check_unlocked<lv2_socket>(fds[i].fd))
 			{
-				semaphore_lock lock(sock->mutex);
+				std::lock_guard lock(sock->mutex);
 
 				bs_t<lv2_socket::poll> selected = +lv2_socket::poll::error;
 
@@ -1552,7 +1552,7 @@ s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s3
 
 			if (passed >= timeout)
 			{
-				semaphore_lock nw_lock(s_nw_mutex);
+				std::lock_guard nw_lock(s_nw_mutex);
 
 				if (signaled)
 				{
@@ -1593,7 +1593,7 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 
 	if (nfds >= 0)
 	{
-		semaphore_lock nw_lock(s_nw_mutex);
+		std::lock_guard nw_lock(s_nw_mutex);
 
 		reader_lock lock(id_manager::g_mutex);
 
@@ -1702,7 +1702,7 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 
 			if (auto sock = idm::check_unlocked<lv2_socket>((lv2_socket::id_base & -1024) + i))
 			{
-				semaphore_lock lock(sock->mutex);
+				std::lock_guard lock(sock->mutex);
 
 				sock->events += selected;
 				sock->queue.emplace_back(ppu.id, [sock, selected, i, &rread, &rwrite, &rexcept, &signaled, &ppu](bs_t<lv2_socket::poll> events)
@@ -1746,7 +1746,7 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 
 			if (passed >= timeout)
 			{
-				semaphore_lock nw_lock(s_nw_mutex);
+				std::lock_guard nw_lock(s_nw_mutex);
 
 				if (signaled)
 				{

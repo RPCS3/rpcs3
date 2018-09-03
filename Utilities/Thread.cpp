@@ -1260,7 +1260,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 					auto pf_entries = fxm::get_always<page_fault_event_entries>();
 					{
-						semaphore_lock pf_lock(pf_entries->pf_mutex);
+						std::lock_guard pf_lock(pf_entries->pf_mutex);
 						page_fault_event pf_event{ cpu->id, addr };
 						pf_entries->events.emplace_back(pf_event);
 					}
@@ -1689,7 +1689,7 @@ void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
 	--g_thread_count;
 
 	// Untangle circular reference, set exception
-	semaphore_lock{m_mutex}, m_self.reset(), m_exception = eptr;
+	std::lock_guard{m_mutex}, m_self.reset(), m_exception = eptr;
 
 	// Signal joining waiters
 	m_jcv.notify_all();
@@ -1715,7 +1715,7 @@ bool thread_ctrl::_wait_for(u64 usec)
 
 		void unlock()
 		{
-			ref.post();
+			ref.unlock();
 		}
 	}
 	_lock{_this->m_mutex};
@@ -1741,7 +1741,7 @@ bool thread_ctrl::_wait_for(u64 usec)
 		}
 
 		// Lock (semaphore)
-		_this->m_mutex.wait();
+		_this->m_mutex.lock();
 
 		// Double-check the value
 		if (u32 sig = _this->m_signal.load())
@@ -1754,7 +1754,7 @@ bool thread_ctrl::_wait_for(u64 usec)
 			if (sig & 1)
 			{
 				_this->m_signal &= ~1;
-				_this->m_mutex.post();
+				_this->m_mutex.unlock();
 				return true;
 			}
 		}
@@ -1769,7 +1769,7 @@ bool thread_ctrl::_wait_for(u64 usec)
 {
 	std::exception_ptr ex = std::exchange(m_exception, std::exception_ptr{});
 	m_signal &= ~3;
-	m_mutex.post();
+	m_mutex.unlock();
 	std::rethrow_exception(std::move(ex));
 }
 
@@ -1778,8 +1778,8 @@ void thread_ctrl::_notify(cond_variable thread_ctrl::* ptr)
 	// Optimized lock + unlock
 	if (!m_mutex.get())
 	{
-		m_mutex.wait();
-		m_mutex.post();
+		m_mutex.lock();
+		m_mutex.unlock();
 	}
 
 	(this->*ptr).notify_one();
@@ -1804,13 +1804,13 @@ thread_ctrl::~thread_ctrl()
 
 std::exception_ptr thread_ctrl::get_exception() const
 {
-	semaphore_lock lock(m_mutex);
+	std::lock_guard lock(m_mutex);
 	return m_exception;
 }
 
 void thread_ctrl::set_exception(std::exception_ptr ptr)
 {
-	semaphore_lock lock(m_mutex);
+	std::lock_guard lock(m_mutex);
 	m_exception = ptr;
 
 	if (m_exception)
@@ -1830,7 +1830,7 @@ void thread_ctrl::join()
 	//verify("thread_ctrl::join" HERE), WaitForSingleObjectEx((HANDLE)m_thread.load(), -1, false) == WAIT_OBJECT_0;
 #endif
 
-	semaphore_lock lock(m_mutex);
+	std::unique_lock lock(m_mutex);
 
 	while (m_self)
 	{
@@ -1888,14 +1888,14 @@ void thread_ctrl::test()
 
 	if (_this->m_signal & 2)
 	{
-		_this->m_mutex.wait();
+		_this->m_mutex.lock();
 
 		if (_this->m_exception)
 		{
 			_this->_throw();
 		}
 
-		_this->m_mutex.post();
+		_this->m_mutex.unlock();
 	}
 }
 

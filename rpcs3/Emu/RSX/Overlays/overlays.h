@@ -249,7 +249,7 @@ namespace rsx
 			template <typename T>
 			T* add(std::unique_ptr<T>& entry, bool remove_existing = true)
 			{
-				writer_lock lock(m_list_mutex);
+				std::lock_guard lock(m_list_mutex);
 
 				T* e = entry.get();
 				e->uid = m_uid_ctr.fetch_add(1);
@@ -340,7 +340,7 @@ namespace rsx
 			// Deallocate object. Object must first be removed via the remove() functions
 			void dispose(const std::vector<u32>& uids)
 			{
-				writer_lock lock(m_list_mutex);
+				std::lock_guard lock(m_list_mutex);
 
 				if (!m_uids_to_remove.empty() || !m_type_ids_to_remove.empty())
 				{
@@ -402,7 +402,7 @@ namespace rsx
 
 				if (!m_uids_to_remove.empty() || !m_type_ids_to_remove.empty())
 				{
-					writer_lock lock(m_list_mutex);
+					std::lock_guard lock(m_list_mutex);
 					cleanup_internal();
 				}
 			}

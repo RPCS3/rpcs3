@@ -1160,7 +1160,7 @@ namespace rsx
 		template <typename ...Args>
 		void lock_memory_region(image_storage_type* image, u32 memory_address, u32 memory_size, u32 width, u32 height, u32 pitch, Args&&... extras)
 		{
-			writer_lock lock(m_cache_mutex);
+			std::lock_guard lock(m_cache_mutex);
 			section_storage_type& region = find_cached_texture(memory_address, memory_size, false);
 
 			if (region.get_context() != texture_upload_context::framebuffer_storage &&
@@ -1240,7 +1240,7 @@ namespace rsx
 
 		void set_memory_read_flags(u32 memory_address, u32 memory_size, memory_read_flags flags)
 		{
-			writer_lock lock(m_cache_mutex);
+			std::lock_guard lock(m_cache_mutex);
 
 			if (flags != memory_read_flags::flush_always)
 				m_flush_always_cache.erase(memory_address);
@@ -1259,7 +1259,7 @@ namespace rsx
 		template <typename ...Args>
 		bool flush_memory_to_cache(u32 memory_address, u32 memory_size, bool skip_synchronized, u32 allowed_types_mask, Args&&... extra)
 		{
-			writer_lock lock(m_cache_mutex);
+			std::lock_guard lock(m_cache_mutex);
 			section_storage_type* region = find_flushable_section(memory_address, memory_size);
 
 			//Check if section was released, usually if cell overwrites a currently bound render target
@@ -1353,7 +1353,7 @@ namespace rsx
 			if (!region_intersects_cache(address, range, is_writing))
 				return{};
 
-			writer_lock lock(m_cache_mutex);
+			std::lock_guard lock(m_cache_mutex);
 			return invalidate_range_impl_base(address, range, is_writing, false, allow_flush, std::forward<Args>(extras)...);
 		}
 
@@ -1364,14 +1364,14 @@ namespace rsx
 			if (!region_intersects_cache(address, range, is_writing))
 				return {};
 
-			writer_lock lock(m_cache_mutex);
+			std::lock_guard lock(m_cache_mutex);
 			return invalidate_range_impl_base(address, range, is_writing, discard, allow_flush, std::forward<Args>(extras)...);
 		}
 
 		template <typename ...Args>
 		bool flush_all(thrashed_set& data, Args&&... extras)
 		{
-			writer_lock lock(m_cache_mutex);
+			std::lock_guard lock(m_cache_mutex);
 
 			if (m_cache_update_tag.load(std::memory_order_consume) == data.cache_tag)
 			{
@@ -1483,7 +1483,7 @@ namespace rsx
 
 		void purge_dirty()
 		{
-			writer_lock lock(m_cache_mutex);
+			std::lock_guard lock(m_cache_mutex);
 
 			//Reclaims all graphics memory consumed by dirty textures
 			std::vector<u32> empty_addresses;
@@ -2033,7 +2033,7 @@ namespace rsx
 			}
 
 			//Do direct upload from CPU as the last resort
-			writer_lock lock(m_cache_mutex);
+			std::lock_guard lock(m_cache_mutex);
 			const bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
 			auto subresources_layout = get_subresources_layout(tex);
 
@@ -2575,7 +2575,7 @@ namespace rsx
 			{
 				if (m_cache_update_tag.load(std::memory_order_consume) != m_flush_always_update_timestamp)
 				{
-					writer_lock lock(m_cache_mutex);
+					std::lock_guard lock(m_cache_mutex);
 					bool update_tag = false;
 
 					for (const auto &It : m_flush_always_cache)

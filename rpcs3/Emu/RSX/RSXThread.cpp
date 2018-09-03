@@ -688,7 +688,7 @@ namespace rsx
 			{
 				if (m_return_addr != -1)
 				{
-					// Only one layer is allowed in the call stack. 
+					// Only one layer is allowed in the call stack.
 					LOG_ERROR(RSX, "FIFO: CALL found inside a subroutine. Discarding subroutine");
 					internal_get = std::exchange(m_return_addr, -1);
 					continue;
@@ -762,7 +762,7 @@ namespace rsx
 			auto args = vm::ptr<u32>::make(args_address);
 			u32 first_cmd = (cmd & 0xfffc) >> 2;
 
-			// Stop command execution if put will be equal to get ptr during the execution itself 
+			// Stop command execution if put will be equal to get ptr during the execution itself
 			if (count * 4 + 4 > put - internal_get)
 			{
 				count = (put - internal_get) / 4 - 1;
@@ -1351,7 +1351,7 @@ namespace rsx
 		else
 		{
 			fmt::throw_exception("Disabled" HERE);
-			//std::lock_guard<shared_mutex> lock{ m_mtx_task };
+			//std::lock_guard lock(m_mtx_task);
 
 			//internal_task_entry &front = m_internal_tasks.front();
 
@@ -1369,7 +1369,7 @@ namespace rsx
 		{
 			if (!m_invalidated_memory_ranges.empty())
 			{
-				writer_lock lock(m_mtx_task);
+				std::lock_guard lock(m_mtx_task);
 
 				for (const auto& range : m_invalidated_memory_ranges)
 				{
@@ -1401,7 +1401,7 @@ namespace rsx
 
 	//std::future<void> thread::add_internal_task(std::function<bool()> callback)
 	//{
-	//	std::lock_guard<shared_mutex> lock{ m_mtx_task };
+	//	std::lock_guard lock(m_mtx_task);
 	//	m_internal_tasks.emplace_back(callback);
 
 	//	return m_internal_tasks.back().promise.get_future();
@@ -2711,7 +2711,7 @@ namespace rsx
 				}
 				else
 				{
-					for (const u32 end = ea + (size >> 20); ea < end;) 
+					for (const u32 end = ea + (size >> 20); ea < end;)
 					{
 						offsetTable.ioAddress[ea++] = 0xFFFF;
 						offsetTable.eaAddress[io++] = 0xFFFF;
@@ -2719,7 +2719,7 @@ namespace rsx
 				}
 			}
 
-			writer_lock lock(m_mtx_task);
+			std::lock_guard lock(m_mtx_task);
 			m_invalidated_memory_ranges.push_back({ base_address, size });
 		}
 	}

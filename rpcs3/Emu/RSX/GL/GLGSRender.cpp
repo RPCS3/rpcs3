@@ -322,7 +322,7 @@ void GLGSRender::end()
 	{
 		std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
-		std::lock_guard<shared_mutex> lock(m_sampler_mutex);
+		std::lock_guard lock(m_sampler_mutex);
 		void* unused = nullptr;
 		bool  update_framebuffer_sourced = false;
 
@@ -832,7 +832,7 @@ void GLGSRender::on_init_thread()
 		GLuint handle = 0;
 		auto &query = m_occlusion_query_data[i];
 		glGenQueries(1, &handle);
-		
+
 		query.driver_handle = (u64)handle;
 		query.pending = false;
 		query.active = false;
@@ -1566,7 +1566,7 @@ void GLGSRender::flip(int buffer)
 			glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
 
 			// Lock to avoid modification during run-update chain
-			std::lock_guard<rsx::overlays::display_manager> lock(*m_overlay_manager);
+			std::lock_guard lock(*m_overlay_manager);
 
 			for (const auto& view : m_overlay_manager->get_views())
 			{
@@ -1636,7 +1636,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 		return false;
 
 	{
-		std::lock_guard<shared_mutex> lock(m_sampler_mutex);
+		std::lock_guard lock(m_sampler_mutex);
 		m_samplers_dirty.store(true);
 	}
 
@@ -1660,7 +1660,7 @@ void GLGSRender::on_invalidate_memory_range(u32 address_base, u32 size)
 	{
 		m_gl_texture_cache.purge_dirty();
 		{
-			std::lock_guard<shared_mutex> lock(m_sampler_mutex);
+			std::lock_guard lock(m_sampler_mutex);
 			m_samplers_dirty.store(true);
 		}
 	}
@@ -1670,7 +1670,7 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 {
 	if (!work_queue.empty())
 	{
-		std::lock_guard<shared_mutex> lock(queue_guard);
+		std::lock_guard lock(queue_guard);
 
 		work_queue.remove_if([](work_item &q) { return q.received; });
 
@@ -1715,7 +1715,7 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 
 work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data)
 {
-	std::lock_guard<shared_mutex> lock(queue_guard);
+	std::lock_guard lock(queue_guard);
 
 	work_queue.emplace_back();
 	work_item &result = work_queue.back();
@@ -1743,7 +1743,7 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	//m_rtts.invalidate_surface_address(addr, false);
 
 	{
-		std::lock_guard<shared_mutex> lock(m_sampler_mutex);
+		std::lock_guard lock(m_sampler_mutex);
 		m_samplers_dirty.store(true);
 	}
 }

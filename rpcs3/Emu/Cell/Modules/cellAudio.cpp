@@ -320,7 +320,7 @@ void audio_config::on_task()
 
 			// send aftermix event (normal audio event)
 
-			semaphore_lock lock(mutex);
+			std::lock_guard lock(mutex);
 
 			for (u64 key : keys)
 			{
@@ -748,7 +748,7 @@ error_code cellAudioSetNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	semaphore_lock lock(g_audio->mutex);
+	std::lock_guard lock(g_audio->mutex);
 
 	for (auto k : g_audio->keys) // check for duplicates
 	{
@@ -783,7 +783,7 @@ error_code cellAudioRemoveNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	semaphore_lock lock(g_audio->mutex);
+	std::lock_guard lock(g_audio->mutex);
 
 	for (auto i = g_audio->keys.begin(); i != g_audio->keys.end(); i++)
 	{

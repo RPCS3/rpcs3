@@ -22,7 +22,7 @@ struct sysutil_cb_manager
 
 	std::function<s32(ppu_thread&)> get_cb()
 	{
-		std::lock_guard<std::mutex> lock(mutex);
+		std::lock_guard lock(mutex);
 
 		if (registered.empty())
 		{
@@ -41,7 +41,7 @@ extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 {
 	const auto cbm = fxm::get_always<sysutil_cb_manager>();
 
-	std::lock_guard<std::mutex> lock(cbm->mutex);
+	std::lock_guard lock(cbm->mutex);
 
 	cbm->registered.push(std::move(cb));
 }
@@ -54,7 +54,7 @@ extern void sysutil_send_system_cmd(u64 status, u64 param)
 		{
 			if (cb.first)
 			{
-				std::lock_guard<std::mutex> lock(cbm->mutex);
+				std::lock_guard lock(cbm->mutex);
 
 				cbm->registered.push([=](ppu_thread& ppu) -> s32
 				{

@@ -331,7 +331,7 @@ void log_frame::CreateAndConnectActions()
 		std::string text = m_tty_input->text().toStdString();
 
 		{
-			std::lock_guard<std::mutex> lock(g_tty_mutex);
+			std::lock_guard lock(g_tty_mutex);
 
 			if (m_tty_channel == -1)
 			{

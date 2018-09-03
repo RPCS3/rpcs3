@@ -291,7 +291,7 @@ s32 cellCameraInit()
 		return CELL_CAMERA_ERROR_ALREADY_INIT;
 	}
 
-	semaphore_lock lock(g_camera->mutex);
+	std::lock_guard lock(g_camera->mutex);
 
 	switch (g_cfg.io.camera_type)
 	{
@@ -429,7 +429,7 @@ s32 cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 
 	const auto vbuf_size = get_video_buffer_size(*info);
 
-	semaphore_lock lock(g_camera->mutex);
+	std::lock_guard lock(g_camera->mutex);
 
 	if (info->read_mode == CELL_CAMERA_READ_FUNCCALL && !info->buffer)
 	{
@@ -466,7 +466,7 @@ s32 cellCameraClose(s32 dev_num)
 		return CELL_CAMERA_ERROR_NOT_INIT;
 	}
 
-	semaphore_lock lock(g_camera->mutex);
+	std::lock_guard lock(g_camera->mutex);
 
 	if (!g_camera->is_open)
 	{
@@ -569,7 +569,7 @@ s32 cellCameraIsAttached(s32 dev_num)
 		return false;
 	}
 
-	semaphore_lock lock(g_camera->mutex);
+	std::lock_guard lock(g_camera->mutex);
 
 	bool is_attached = g_camera->is_attached;
 
@@ -603,7 +603,7 @@ s32 cellCameraIsOpen(s32 dev_num)
 		return false;
 	}
 
-	semaphore_lock lock(g_camera->mutex);
+	std::lock_guard lock(g_camera->mutex);
 
 	return g_camera->is_open;
 }
@@ -624,7 +624,7 @@ s32 cellCameraIsStarted(s32 dev_num)
 		return false;
 	}
 
-	semaphore_lock lock(g_camera->mutex);
+	std::lock_guard lock(g_camera->mutex);
 
 	return g_camera->is_streaming;
 }
@@ -657,7 +657,7 @@ s32 cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u
 		return CELL_CAMERA_ERROR_NOT_OPEN;
 	}
 
-	semaphore_lock lock(g_camera->mutex);
+	std::lock_guard lock(g_camera->mutex);
 
 	if (!g_camera->is_attached)
 	{
@@ -759,7 +759,7 @@ s32 cellCameraGetBufferSize(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 		return status;
 	}
 
-	semaphore_lock lock(g_camera->mutex);
+	std::lock_guard lock(g_camera->mutex);
 
 	info->bytesize = get_video_buffer_size(g_camera->info);
 	g_camera->info = *info;
@@ -809,7 +809,7 @@ s32 cellCameraGetBufferInfoEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 		return CELL_CAMERA_ERROR_PARAM;
 	}
 
-	semaphore_lock lock(g_camera->mutex);
+	std::lock_guard lock(g_camera->mutex);
 	*info = g_camera->info;
 
 	return CELL_OK;
@@ -898,7 +898,7 @@ s32 cellCameraStart(s32 dev_num)
 		return CELL_CAMERA_ERROR_NOT_INIT;
 	}
 
-	semaphore_lock lock(g_camera->mutex);
+	std::lock_guard lock(g_camera->mutex);
 
 	if (!g_camera->is_open)
 	{
@@ -963,7 +963,7 @@ s32 cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 		return CELL_CAMERA_ERROR_PARAM;
 	}
 
-	semaphore_lock lock(g_camera->mutex);
+	std::lock_guard lock(g_camera->mutex);
 
 	if (!g_camera->is_open)
 	{
@@ -1041,7 +1041,7 @@ s32 cellCameraStop(s32 dev_num)
 
 	g_camera->is_streaming = false;
 
-	semaphore_lock lock(g_camera->mutex);
+	std::lock_guard lock(g_camera->mutex);
 	g_camera->timer.Stop();
 
 	return CELL_OK;
@@ -1166,7 +1166,7 @@ void camera_thread::on_task()
 			continue;
 		}
 
-		semaphore_lock lock(mutex_notify_data_map);
+		std::lock_guard lock(mutex_notify_data_map);
 
 		for (auto const& notify_data_entry : notify_data_map)
 		{
@@ -1229,7 +1229,7 @@ void camera_thread::on_init(const std::shared_ptr<void>& _this)
 
 void camera_thread::send_attach_state(bool attached)
 {
-	semaphore_lock lock(mutex_notify_data_map);
+	std::lock_guard lock(mutex_notify_data_map);
 
 	if (!notify_data_map.empty())
 	{
@@ -1267,15 +1267,15 @@ void camera_thread::set_attr(s32 attrib, u32 arg1, u32 arg2)
 		read_mode.exchange(arg1);
 	}
 
-	semaphore_lock lock(mutex);
+	std::lock_guard lock(mutex);
 	attr[attrib] = {arg1, arg2};
 }
 
 void camera_thread::add_queue(u64 key, u64 source, u64 flag)
 {
-	semaphore_lock lock(mutex);
+	std::lock_guard lock(mutex);
 	{
-		semaphore_lock lock_data_map(mutex_notify_data_map);
+		std::lock_guard lock_data_map(mutex_notify_data_map);
 
 		notify_data_map[key] = { source, flag };
 	}
@@ -1286,9 +1286,9 @@ void camera_thread::add_queue(u64 key, u64 source, u64 flag)
 
 void camera_thread::remove_queue(u64 key)
 {
-	semaphore_lock lock(mutex);
+	std::lock_guard lock(mutex);
 	{
-		semaphore_lock lock_data_map(mutex_notify_data_map);
+		std::lock_guard lock_data_map(mutex_notify_data_map);
 
 		notify_data_map.erase(key);
 	}

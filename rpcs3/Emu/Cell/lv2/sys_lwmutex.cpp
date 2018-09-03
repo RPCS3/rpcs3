@@ -46,7 +46,7 @@ error_code _sys_lwmutex_destroy(u32 lwmutex_id)
 
 	const auto mutex = idm::withdraw<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex) -> CellError
 	{
-		semaphore_lock lock(mutex.mutex);
+		std::lock_guard lock(mutex.mutex);
 
 		if (!mutex.sq.empty())
 		{
@@ -83,7 +83,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 			}
 		}
 
-		semaphore_lock lock(mutex.mutex);
+		std::lock_guard lock(mutex.mutex);
 
 		if (u32 value = mutex.signaled)
 		{
@@ -118,7 +118,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 			if (passed >= timeout)
 			{
-				semaphore_lock lock(mutex->mutex);
+				std::lock_guard lock(mutex->mutex);
 
 				if (!mutex->unqueue(mutex->sq, &ppu))
 				{
@@ -177,7 +177,7 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 
 	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex) -> cpu_thread*
 	{
-		semaphore_lock lock(mutex.mutex);
+		std::lock_guard lock(mutex.mutex);
 
 		if (const auto cpu = mutex.schedule<ppu_thread>(mutex.sq, mutex.protocol))
 		{

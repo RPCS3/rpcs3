@@ -1694,7 +1694,7 @@ s64 SPUThread::get_ch_value(u32 ch)
 				fmt::throw_exception("Not supported: event mask 0x%x" HERE, mask1);
 			}
 
-			std::shared_lock<notifier> pseudo_lock(vm::reservation_notifier(raddr, 128), std::try_to_lock);
+			std::shared_lock pseudo_lock(vm::reservation_notifier(raddr, 128), std::try_to_lock);
 
 			verify(HERE), pseudo_lock;
 
@@ -1786,7 +1786,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LOG_TRACE(SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
-				const auto queue = (semaphore_lock{group->mutex}, this->spup[spup].lock());
+				const auto queue = (std::lock_guard{group->mutex}, this->spup[spup].lock());
 
 				if (!queue)
 				{
@@ -1818,7 +1818,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LOG_TRACE(SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
-				const auto queue = (semaphore_lock{group->mutex}, this->spup[spup].lock());
+				const auto queue = (std::lock_guard{group->mutex}, this->spup[spup].lock());
 
 				if (!queue)
 				{
@@ -2154,7 +2154,7 @@ bool SPUThread::stop_and_signal(u32 code)
 
 			reader_lock rlock(id_manager::g_mutex);
 
-			semaphore_lock lock(group->mutex);
+			std::lock_guard lock(group->mutex);
 
 			if (group->run_state >= SPU_THREAD_GROUP_STATUS_WAITING && group->run_state <= SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
 			{
@@ -2180,7 +2180,7 @@ bool SPUThread::stop_and_signal(u32 code)
 				return ch_in_mbox.set_values(1, CELL_EINVAL), true; // TODO: check error value
 			}
 
-			semaphore_lock qlock(queue->mutex);
+			std::lock_guard qlock(queue->mutex);
 
 			if (queue->events.empty())
 			{
@@ -2228,7 +2228,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			}
 		}
 
-		semaphore_lock lock(group->mutex);
+		std::lock_guard lock(group->mutex);
 
 		if (group->run_state == SPU_THREAD_GROUP_STATUS_WAITING)
 		{
@@ -2279,7 +2279,7 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		LOG_TRACE(SPU, "sys_spu_thread_group_exit(status=0x%x)", value);
 
-		semaphore_lock lock(group->mutex);
+		std::lock_guard lock(group->mutex);
 
 		for (auto& thread : group->threads)
 		{
@@ -2310,7 +2310,7 @@ bool SPUThread::stop_and_signal(u32 code)
 
 		LOG_TRACE(SPU, "sys_spu_thread_exit(status=0x%x)", ch_out_mbox.get_value());
 
-		semaphore_lock lock(group->mutex);
+		std::lock_guard lock(group->mutex);
 
 		status |= SPU_STATUS_STOPPED_BY_STOP;
 		group->cv.notify_one();

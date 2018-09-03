@@ -177,7 +177,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		if ((u64)s_memory > 0x80000000 - s_memory_size ? (u64)addr - (u64)s_memory >= s_memory_size : addr >= 0x80000000)
 		{
 			// Lock memory manager
-			writer_lock lock(s_mutex);
+			std::lock_guard lock(s_mutex);
 
 			// Allocate memory for trampolines
 			if (!m_tramps)
@@ -213,7 +213,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 	u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
 	{
 		// Lock memory manager
-		writer_lock lock(s_mutex);
+		std::lock_guard lock(s_mutex);
 
 		// Simple allocation
 		const u64 next = ::align((u64)s_next + size, 4096);
@@ -234,7 +234,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 	u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
 	{
 		// Lock memory manager
-		writer_lock lock(s_mutex);
+		std::lock_guard lock(s_mutex);
 
 		// Simple allocation
 		const u64 next = ::align((u64)s_next + size, 4096);
@@ -259,7 +259,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 	bool finalizeMemory(std::string* = nullptr) override
 	{
 		// Lock memory manager
-		writer_lock lock(s_mutex);
+		std::lock_guard lock(s_mutex);
 
 		// TODO: make only read-only sections read-only
 //#ifdef _WIN32
@@ -277,7 +277,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 	{
 #ifdef _WIN32
 		// Lock memory manager
-		writer_lock lock(s_mutex);
+		std::lock_guard lock(s_mutex);
 
 		// Use s_memory as a BASE, compute the difference
 		const u64 unwind_diff = (u64)addr - (u64)s_memory;
@@ -427,7 +427,7 @@ struct EventListener : llvm::JITEventListener
 				}
 
 				// Lock memory manager
-				writer_lock lock(s_mutex);
+				std::lock_guard lock(s_mutex);
 
 				// Use s_memory as a BASE, compute the difference
 				const u64 code_diff = (u64)m_mem.m_code_addr - (u64)s_memory;
@@ -649,7 +649,7 @@ u64 jit_compiler::get(const std::string& name)
 std::unordered_map<std::string, u64> jit_compiler::add(std::unordered_map<std::string, std::string> data)
 {
 	// Lock memory manager
-	writer_lock lock(s_mutex);
+	std::lock_guard lock(s_mutex);
 
 	std::unordered_map<std::string, u64> result;
 

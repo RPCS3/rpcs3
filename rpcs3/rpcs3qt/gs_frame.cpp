@@ -323,7 +323,7 @@ bool gs_frame::nativeEvent(const QByteArray &eventType, void *message, long *res
 		while (wm_event_raised.load(std::memory_order_consume) && !Emu.IsStopped());
 
 		{
-			std::lock_guard<std::mutex> lock(wm_event_lock);
+			std::lock_guard lock(wm_event_lock);
 
 			// https://bugreports.qt.io/browse/QTBUG-69074?focusedCommentId=409797&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-409797
 #if (QT_VERSION == QT_VERSION_CHECK(5, 11, 1))

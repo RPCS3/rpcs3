@@ -35,7 +35,7 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 
 	if (len > 0)
 	{
-		std::lock_guard<std::mutex> lock(g_tty_mutex);
+		std::lock_guard lock(g_tty_mutex);
 
 		if (g_tty_input[ch].size() > 0)
 		{

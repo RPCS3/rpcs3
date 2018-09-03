@@ -97,7 +97,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 			}
 		}
 
-		semaphore_lock lock(sema.mutex);
+		std::lock_guard lock(sema.mutex);
 
 		if (sema.val-- <= 0)
 		{
@@ -129,7 +129,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 			if (passed >= timeout)
 			{
-				semaphore_lock lock(sem->mutex);
+				std::lock_guard lock(sem->mutex);
 
 				if (!sem->unqueue(sem->sq, &ppu))
 				{
@@ -227,7 +227,7 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 	}
 	else
 	{
-		semaphore_lock lock(sem->mutex);
+		std::lock_guard lock(sem->mutex);
 
 		const s32 val = sem->val.fetch_op([=](s32& val)
 		{

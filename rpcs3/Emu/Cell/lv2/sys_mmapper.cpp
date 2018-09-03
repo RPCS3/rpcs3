@@ -195,7 +195,7 @@ error_code sys_mmapper_free_address(u32 addr)
 
 	// If page fault notify exists and an address in this area is faulted, we can't free the memory.
 	auto pf_events = fxm::get_always<page_fault_event_entries>();
-	semaphore_lock pf_lock(pf_events->pf_mutex);
+	std::lock_guard pf_lock(pf_events->pf_mutex);
 
 	for (const auto& ev : pf_events->events)
 	{

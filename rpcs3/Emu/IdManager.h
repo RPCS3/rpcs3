@@ -307,7 +307,7 @@ class idm
 		using traits = id_manager::id_traits<Type>;
 
 		// Allocate new id
-		writer_lock lock(id_manager::g_mutex);
+		std::lock_guard lock(id_manager::g_mutex);
 
 		if (auto* place = allocate_id(info, traits::base, traits::step, traits::count))
 		{
@@ -576,7 +576,7 @@ public:
 	{
 		std::shared_ptr<void> ptr;
 		{
-			writer_lock lock(id_manager::g_mutex);
+			std::lock_guard lock(id_manager::g_mutex);
 
 			if (const auto found = find_id<T, Get>(id))
 			{
@@ -598,7 +598,7 @@ public:
 	{
 		std::shared_ptr<void> ptr;
 		{
-			writer_lock lock(id_manager::g_mutex);
+			std::lock_guard lock(id_manager::g_mutex);
 
 			if (const auto found = find_id<T, Get>(id))
 			{
@@ -622,7 +622,7 @@ public:
 
 		std::shared_ptr<void> ptr;
 		{
-			writer_lock lock(id_manager::g_mutex);
+			std::lock_guard lock(id_manager::g_mutex);
 
 			if (const auto found = find_id<T, Get>(id))
 			{
@@ -649,7 +649,7 @@ public:
 		std::shared_ptr<void> ptr;
 		FRT ret;
 		{
-			writer_lock lock(id_manager::g_mutex);
+			std::lock_guard lock(id_manager::g_mutex);
 
 			if (const auto found = find_id<T, Get>(id))
 			{
@@ -700,7 +700,7 @@ public:
 	{
 		std::shared_ptr<T> ptr;
 		{
-			writer_lock lock(id_manager::g_mutex);
+			std::lock_guard lock(id_manager::g_mutex);
 
 			auto& pair = g_vec[get_type<T>()];
 
@@ -728,7 +728,7 @@ public:
 		std::shared_ptr<T> ptr;
 		std::shared_ptr<void> old;
 		{
-			writer_lock lock(id_manager::g_mutex);
+			std::lock_guard lock(id_manager::g_mutex);
 
 			auto& pair = g_vec[get_type<T>()];
 
@@ -754,7 +754,7 @@ public:
 	{
 		std::shared_ptr<T> ptr;
 		{
-			writer_lock lock(id_manager::g_mutex);
+			std::lock_guard lock(id_manager::g_mutex);
 
 			auto& pair = g_vec[get_type<T>()];
 
@@ -786,7 +786,7 @@ public:
 		std::shared_ptr<T> ptr;
 		std::shared_ptr<void> old;
 		{
-			writer_lock lock(id_manager::g_mutex);
+			std::lock_guard lock(id_manager::g_mutex);
 
 			auto& pair = g_vec[get_type<T>()];
 
@@ -820,7 +820,7 @@ public:
 	{
 		std::shared_ptr<T> ptr;
 		{
-			writer_lock lock(id_manager::g_mutex);
+			std::lock_guard lock(id_manager::g_mutex);
 
 			auto& pair = g_vec[get_type<T>()];
 
@@ -874,7 +874,7 @@ public:
 	{
 		std::shared_ptr<void> ptr;
 		{
-			writer_lock lock(id_manager::g_mutex);
+			std::lock_guard lock(id_manager::g_mutex);
 			ptr = std::move(g_vec[get_type<T>()].second);
 		}
 
@@ -892,7 +892,7 @@ public:
 	{
 		std::shared_ptr<void> ptr;
 		{
-			writer_lock lock(id_manager::g_mutex);
+			std::lock_guard lock(id_manager::g_mutex);
 			ptr = std::move(g_vec[get_type<T>()].second);
 		}
 

@@ -347,7 +347,7 @@ public:
 		bool busy = false;
 		{
 			u32 count = 0;
-			writer_lock lock(m_decompiler_mutex);
+			std::lock_guard lock(m_decompiler_mutex);
 
 			while (!m_decompile_queue.empty())
 			{
@@ -392,7 +392,7 @@ public:
 		pipeline_storage_type pipeline = backend_traits::build_pipeline(link_entry->vp, link_entry->fp, link_entry->props, std::forward<Args>(args)...);
 		LOG_SUCCESS(RSX, "New program compiled successfully");
 
-		writer_lock lock(m_pipeline_mutex);
+		std::lock_guard lock(m_pipeline_mutex);
 		m_storage[key] = std::move(pipeline);
 		m_link_queue.erase(key);
 
@@ -444,7 +444,7 @@ public:
 				m_program_compiled_flag = true;
 
 				pipeline_storage_type pipeline = backend_traits::build_pipeline(vertex_program, fragment_program, pipelineProperties, std::forward<Args>(args)...);
-				writer_lock lock(m_pipeline_mutex);
+				std::lock_guard lock(m_pipeline_mutex);
 				auto &rtn = m_storage[key] = std::move(pipeline);
 				LOG_SUCCESS(RSX, "New program compiled successfully");
 				return rtn;

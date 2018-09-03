@@ -1004,7 +1004,7 @@ DECLARE(lv2_obj::g_waiting);
 
 void lv2_obj::sleep_timeout(named_thread& thread, u64 timeout)
 {
-	semaphore_lock lock(g_mutex);
+	std::lock_guard lock(g_mutex);
 
 	const u64 start_time = get_system_time();
 
@@ -1058,7 +1058,7 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 	// Check thread type
 	if (cpu.id_type() != 1) return;
 
-	semaphore_lock lock(g_mutex);
+	std::lock_guard lock(g_mutex);
 
 	if (prio == -4)
 	{

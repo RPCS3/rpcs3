@@ -116,7 +116,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 		if (result == CELL_EBUSY)
 		{
-			semaphore_lock lock(mutex.mutex);
+			std::lock_guard lock(mutex.mutex);
 
 			if (mutex.try_own(ppu, ppu.id))
 			{
@@ -158,7 +158,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 			if (passed >= timeout)
 			{
-				semaphore_lock lock(mutex->mutex);
+				std::lock_guard lock(mutex->mutex);
 
 				if (!mutex->unqueue(mutex->sq, &ppu))
 				{
@@ -224,7 +224,7 @@ error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 
 	if (mutex.ret == CELL_EBUSY)
 	{
-		semaphore_lock lock(mutex->mutex);
+		std::lock_guard lock(mutex->mutex);
 
 		if (auto cpu = mutex->reown<ppu_thread>())
 		{

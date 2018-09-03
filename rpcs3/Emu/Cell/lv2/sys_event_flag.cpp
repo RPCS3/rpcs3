@@ -121,7 +121,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 			return {};
 		}
 
-		semaphore_lock lock(flag.mutex);
+		std::lock_guard lock(flag.mutex);
 
 		if (flag.pattern.atomic_op(lv2_event_flag::check_pattern, bitptn, mode, &ppu.gpr[6]))
 		{
@@ -165,7 +165,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 			if (passed >= timeout)
 			{
-				semaphore_lock lock(flag->mutex);
+				std::lock_guard lock(flag->mutex);
 
 				if (!flag->unqueue(flag->sq, &ppu))
 				{
@@ -244,7 +244,7 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 
 	if (true)
 	{
-		semaphore_lock lock(flag->mutex);
+		std::lock_guard lock(flag->mutex);
 
 		// Sort sleep queue in required order
 		if (flag->protocol != SYS_SYNC_FIFO)
@@ -336,7 +336,7 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 
 	u32 value = 0;
 	{
-		semaphore_lock lock(flag->mutex);
+		std::lock_guard lock(flag->mutex);
 
 		// Get current pattern
 		const u64 pattern = flag->pattern;

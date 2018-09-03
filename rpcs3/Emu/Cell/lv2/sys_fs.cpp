@@ -395,7 +395,7 @@ error_code sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread
 		return CELL_EBADF;
 	}
 
-	std::lock_guard<std::mutex> lock(file->mp->mutex);
+	std::lock_guard lock(file->mp->mutex);
 
 	*nread = file->op_read(buf, nbytes);
 
@@ -413,7 +413,7 @@ error_code sys_fs_write(u32 fd, vm::cptr<void> buf, u64 nbytes, vm::ptr<u64> nwr
 		return CELL_EBADF;
 	}
 
-	std::lock_guard<std::mutex> lock(file->mp->mutex);
+	std::lock_guard lock(file->mp->mutex);
 
 	if (file->lock)
 	{
@@ -638,7 +638,7 @@ error_code sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 		return CELL_EBADF;
 	}
 
-	std::lock_guard<std::mutex> lock(file->mp->mutex);
+	std::lock_guard lock(file->mp->mutex);
 
 	const fs::stat_t& info = file->file.stat();
 
@@ -862,7 +862,7 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 			return CELL_EBADF;
 		}
 
-		std::lock_guard<std::mutex> lock(file->mp->mutex);
+		std::lock_guard lock(file->mp->mutex);
 
 		if (op == 0x8000000b && file->lock)
 		{
@@ -1207,7 +1207,7 @@ error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 		return CELL_EBADF;
 	}
 
-	std::lock_guard<std::mutex> lock(file->mp->mutex);
+	std::lock_guard lock(file->mp->mutex);
 
 	const u64 result = file->file.seek(offset, static_cast<fs::seek_mode>(whence));
 
@@ -1337,7 +1337,7 @@ error_code sys_fs_ftruncate(u32 fd, u64 size)
 		return CELL_EBADF;
 	}
 
-	std::lock_guard<std::mutex> lock(file->mp->mutex);
+	std::lock_guard lock(file->mp->mutex);
 
 	if (file->lock)
 	{

@@ -891,7 +891,7 @@ struct fs_aio_thread : ppu_thread
 			}
 			else
 			{
-				std::lock_guard<std::mutex> lock(file->mp->mutex);
+				std::lock_guard lock(file->mp->mutex);
 
 				const auto old_pos = file->file.pos(); file->file.seek(aio->offset);
 

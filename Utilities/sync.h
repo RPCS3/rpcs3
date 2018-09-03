@@ -65,7 +65,7 @@ inline int futex(int* uaddr, int futex_op, int val, const timespec* timeout, int
 
 		int operator()(int* uaddr, int futex_op, int val, const timespec* timeout, int*, uint val3)
 		{
-			std::unique_lock<std::mutex> lock(mutex);
+			std::unique_lock lock(mutex);
 
 			switch (futex_op)
 			{

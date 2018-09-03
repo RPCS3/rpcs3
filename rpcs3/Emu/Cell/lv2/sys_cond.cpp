@@ -80,7 +80,7 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 	{
 		if (cond.waiters)
 		{
-			semaphore_lock lock(cond.mutex->mutex);
+			std::lock_guard lock(cond.mutex->mutex);
 
 			if (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.mutex->protocol))
 			{
@@ -119,7 +119,7 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 
 		if (cond.waiters)
 		{
-			semaphore_lock lock(cond.mutex->mutex);
+			std::lock_guard lock(cond.mutex->mutex);
 
 			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.mutex->protocol))
 			{
@@ -156,7 +156,7 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 	{
 		if (cond.waiters)
 		{
-			semaphore_lock lock(cond.mutex->mutex);
+			std::lock_guard lock(cond.mutex->mutex);
 
 			for (auto cpu : cond.sq)
 			{
@@ -221,7 +221,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	}
 	else
 	{
-		semaphore_lock lock(cond->mutex->mutex);
+		std::lock_guard lock(cond->mutex->mutex);
 
 		// Register waiter
 		cond->sq.emplace_back(&ppu);
@@ -247,7 +247,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 
 			if (passed >= timeout)
 			{
-				semaphore_lock lock(cond->mutex->mutex);
+				std::lock_guard lock(cond->mutex->mutex);
 
 				// Try to cancel the waiting
 				if (cond->unqueue(cond->sq, &ppu))

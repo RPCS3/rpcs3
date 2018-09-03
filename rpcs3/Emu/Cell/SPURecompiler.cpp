@@ -2272,7 +2272,7 @@ public:
 		init();
 
 		// Don't lock without shared runtime
-		std::unique_lock<shared_mutex> lock(m_spurt->m_mutex, std::defer_lock);
+		std::unique_lock lock(m_spurt->m_mutex, std::defer_lock);
 
 		if (g_cfg.core.spu_shared_runtime)
 		{

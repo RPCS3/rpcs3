@@ -794,7 +794,7 @@ bool ElementaryStream::is_full(u32 space)
 
 bool ElementaryStream::isfull(u32 space)
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
+	std::lock_guard lock(m_mutex);
 	return is_full(space);
 }
 
@@ -802,7 +802,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 {
 	u32 addr;
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		std::lock_guard lock(m_mutex);
 		verify(HERE), !is_full(size);
 
 		if (put + size + 128 > memAddr + memSize)
@@ -860,7 +860,7 @@ void ElementaryStream::push(DemuxerStream& stream, u32 size)
 
 bool ElementaryStream::release()
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
+	std::lock_guard lock(m_mutex);
 	if (released >= put_count)
 	{
 		cellDmux.error("es::release() error: buffer is empty");
@@ -888,7 +888,7 @@ bool ElementaryStream::release()
 
 bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool update_index)
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
+	std::lock_guard lock(m_mutex);
 	if (got_count < released)
 	{
 		cellDmux.error("es::peek() error: got_count(%d) < released(%d) (put_count=%d)", got_count, released, put_count);
@@ -920,7 +920,7 @@ bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool updat
 
 void ElementaryStream::reset()
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
+	std::lock_guard lock(m_mutex);
 	put = memAddr;
 	entries.clear();
 	put_count = 0;

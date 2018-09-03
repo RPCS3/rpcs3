@@ -66,7 +66,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	PFuncFile funcFile, u32 container, u32 unknown, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
 	// TODO: check arguments
-	std::unique_lock<std::mutex> lock(g_savedata_mutex, std::try_to_lock);
+	std::unique_lock lock(g_savedata_mutex, std::try_to_lock);
 
 	if (!lock)
 	{

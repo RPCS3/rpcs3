@@ -30,7 +30,7 @@ void lv2_timer::on_task()
 
 			if (_now >= next)
 			{
-				semaphore_lock lock(mutex);
+				std::lock_guard lock(mutex);
 
 				if (const auto queue = port.lock())
 				{
@@ -91,7 +91,7 @@ error_code sys_timer_destroy(u32 timer_id)
 
 	const auto timer = idm::withdraw<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer) -> CellError
 	{
-		semaphore_lock lock(timer.mutex);
+		std::lock_guard lock(timer.mutex);
 
 		if (!timer.port.expired())
 		{
@@ -120,7 +120,7 @@ error_code sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information
 
 	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer)
 	{
-		semaphore_lock lock(timer.mutex);
+		std::lock_guard lock(timer.mutex);
 
 		info->next_expire = timer.expire;
 		info->period      = timer.period;
@@ -155,7 +155,7 @@ error_code _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 
 	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer) -> CellError
 	{
-		semaphore_lock lock(timer.mutex);
+		std::lock_guard lock(timer.mutex);
 
 		if (timer.state != SYS_TIMER_STATE_STOP)
 		{
@@ -194,7 +194,7 @@ error_code sys_timer_stop(u32 timer_id)
 
 	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [](lv2_timer& timer)
 	{
-		semaphore_lock lock(timer.mutex);
+		std::lock_guard lock(timer.mutex);
 
 		timer.state = SYS_TIMER_STATE_STOP;
 	});
@@ -220,7 +220,7 @@ error_code sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u
 			return CELL_ESRCH;
 		}
 
-		semaphore_lock lock(timer.mutex);
+		std::lock_guard lock(timer.mutex);
 
 		if (!timer.port.expired())
 		{
@@ -254,7 +254,7 @@ error_code sys_timer_disconnect_event_queue(u32 timer_id)
 
 	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [](lv2_timer& timer) -> CellError
 	{
-		semaphore_lock lock(timer.mutex);
+		std::lock_guard lock(timer.mutex);
 
 		if (timer.port.expired())
 		{

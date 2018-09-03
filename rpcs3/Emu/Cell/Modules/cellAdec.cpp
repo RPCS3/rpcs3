@@ -280,7 +280,7 @@ public:
 					opts = nullptr;
 					av_dict_set(&opts, "refcounted_frames", "1", 0);
 					{
-						std::lock_guard<std::mutex> lock(g_mutex_avcodec_open2);
+						std::lock_guard lock(g_mutex_avcodec_open2);
 						// not multithread-safe (???)
 						err = avcodec_open2(ctx, codec, &opts);
 					}

@@ -217,7 +217,7 @@ std::shared_ptr<fs::device_base> fs::device_manager::get_device(const std::strin
 
 std::shared_ptr<fs::device_base> fs::device_manager::set_device(const std::string& name, const std::shared_ptr<device_base>& device)
 {
-	writer_lock lock(m_mutex);
+	std::lock_guard lock(m_mutex);
 
 	return m_map[name] = device;
 }
