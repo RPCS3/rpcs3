@@ -224,6 +224,16 @@ namespace rsx
 			static const size_t vertex_subreg = index % increment_per_array_index;
 
 			const auto vtype = vertex_data_type_from_element_type<type>::type;
+			verify(HERE), vtype != rsx::vertex_base_type::cmp;
+
+			switch (vtype)
+			{
+			case rsx::vertex_base_type::ub:
+			case rsx::vertex_base_type::ub256:
+				// One-way byteswap
+				arg = se_storage<u32>::swap(arg);
+				break;
+			}
 
 			if (rsx->in_begin_end)
 			{
