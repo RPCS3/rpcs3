@@ -674,17 +674,16 @@ bool SCEDecrypter::LoadHeaders()
 bool SCEDecrypter::LoadMetadata(const u8 erk[32], const u8 riv[16])
 {
 	aes_context aes;
-	u32 metadata_info_size = SIZE_32(meta_info);
-	auto metadata_info = std::make_unique<u8[]>(metadata_info_size);
-	u32 metadata_headers_size = sce_hdr.se_hsize - (SIZE_32(sce_hdr) + sce_hdr.se_meta + SIZE_32(meta_info));
-	auto metadata_headers = std::make_unique<u8[]>(metadata_headers_size);
+	const auto metadata_info = std::make_unique<u8[]>(sizeof(meta_info));
+	const auto metadata_headers_size = sce_hdr.se_hsize - (sizeof(sce_hdr) + sce_hdr.se_meta + sizeof(meta_info));
+	const auto metadata_headers = std::make_unique<u8[]>(metadata_headers_size);
 
 	// Locate and read the encrypted metadata info.
 	sce_f.seek(sce_hdr.se_meta + sizeof(sce_hdr));
-	sce_f.read(metadata_info.get(), metadata_info_size);
+	sce_f.read(metadata_info.get(), sizeof(meta_info));
 
 	// Locate and read the encrypted metadata header and section header.
-	sce_f.seek(sce_hdr.se_meta + sizeof(sce_hdr) + metadata_info_size);
+	sce_f.seek(sce_hdr.se_meta + sizeof(sce_hdr) + sizeof(meta_info));
 	sce_f.read(metadata_headers.get(), metadata_headers_size);
 
 	// Copy the necessary parameters.
@@ -698,7 +697,7 @@ bool SCEDecrypter::LoadMetadata(const u8 erk[32], const u8 riv[16])
 	{
 		// Decrypt the metadata info.
 		aes_setkey_dec(&aes, metadata_key, 256);  // AES-256
-		aes_crypt_cbc(&aes, AES_DECRYPT, metadata_info_size, metadata_iv, metadata_info.get(), metadata_info.get());
+		aes_crypt_cbc(&aes, AES_DECRYPT, sizeof(meta_info), metadata_iv, metadata_info.get(), metadata_info.get());
 	}
 
 	// Load the metadata info.
@@ -1105,7 +1104,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 		// Use klicensee if available.
 		if (key_v.GetKlicenseeKey() != nullptr)
 			memcpy(npdrm_key, key_v.GetKlicenseeKey(), 0x10);
-		else 
+		else
 			memcpy(npdrm_key, NP_KLIC_FREE, 0x10);
 	}
 	else
@@ -1131,17 +1130,16 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 bool SELFDecrypter::LoadMetadata(u8* klic_key)
 {
 	aes_context aes;
-	u32 metadata_info_size = SIZE_32(meta_info);
-	auto metadata_info = std::make_unique<u8[]>(metadata_info_size);
-	u32 metadata_headers_size = sce_hdr.se_hsize - (SIZE_32(sce_hdr) + sce_hdr.se_meta + SIZE_32(meta_info));
-	auto metadata_headers = std::make_unique<u8[]>(metadata_headers_size);
+	const auto metadata_info = std::make_unique<u8[]>(sizeof(meta_info));
+	const auto metadata_headers_size = sce_hdr.se_hsize - (sizeof(sce_hdr) + sce_hdr.se_meta + sizeof(meta_info));
+	const auto metadata_headers = std::make_unique<u8[]>(metadata_headers_size);
 
 	// Locate and read the encrypted metadata info.
 	self_f.seek(sce_hdr.se_meta + sizeof(sce_hdr));
-	self_f.read(metadata_info.get(), metadata_info_size);
+	self_f.read(metadata_info.get(), sizeof(meta_info));
 
 	// Locate and read the encrypted metadata header and section header.
-	self_f.seek(sce_hdr.se_meta + sizeof(sce_hdr) + metadata_info_size);
+	self_f.seek(sce_hdr.se_meta + sizeof(sce_hdr) + sizeof(meta_info));
 	self_f.read(metadata_headers.get(), metadata_headers_size);
 
 	// Find the right keyset from the key vault.
@@ -1161,12 +1159,12 @@ bool SELFDecrypter::LoadMetadata(u8* klic_key)
 	if ((sce_hdr.se_flags & 0x8000) != 0x8000)
 	{
 		// Decrypt the NPDRM layer.
-		if (!DecryptNPDRM(metadata_info.get(), metadata_info_size))
+		if (!DecryptNPDRM(metadata_info.get(), sizeof(meta_info)))
 			return false;
 
 		// Decrypt the metadata info.
 		aes_setkey_dec(&aes, metadata_key, 256);  // AES-256
-		aes_crypt_cbc(&aes, AES_DECRYPT, metadata_info_size, metadata_iv, metadata_info.get(), metadata_info.get());
+		aes_crypt_cbc(&aes, AES_DECRYPT, sizeof(meta_info), metadata_iv, metadata_info.get(), metadata_info.get());
 	}
 
 	// Load the metadata info.
@@ -1325,7 +1323,7 @@ static bool IsSelfElf32(const fs::file& f)
 	SelfHeader sh;
 	hdr.Load(f);
 	sh.Load(f);
-	
+
 	// Locate the class byte and check it.
 	u8 elf_class[0x8];
 
@@ -1377,12 +1375,12 @@ static bool CheckDebugSelf(fs::file& s)
 }
 
 extern fs::file decrypt_self(fs::file elf_or_self, u8* klic_key)
-{	
-	if (!elf_or_self) 
+{
+	if (!elf_or_self)
 	{
 		return fs::file{};
 	}
-	
+
 	elf_or_self.seek(0);
 
 	// Check SELF header first. Check for a debug SELF.
@@ -1400,21 +1398,21 @@ extern fs::file decrypt_self(fs::file elf_or_self, u8* klic_key)
 			LOG_ERROR(LOADER, "SELF: Failed to load SELF file headers!");
 			return fs::file{};
 		}
-		
+
 		// Load and decrypt the SELF file metadata.
 		if (!self_dec.LoadMetadata(klic_key))
 		{
 			LOG_ERROR(LOADER, "SELF: Failed to load SELF file metadata!");
 			return fs::file{};
 		}
-		
+
 		// Decrypt the SELF file data.
 		if (!self_dec.DecryptData())
 		{
 			LOG_ERROR(LOADER, "SELF: Failed to decrypt SELF file data!");
 			return fs::file{};
 		}
-		
+
 		// Make a new ELF file from this SELF.
 		return self_dec.MakeElf(isElf32);
 	}

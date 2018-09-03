@@ -297,18 +297,18 @@ public:
 		header.e_machine = Machine;
 		header.e_version = 1;
 		header.e_entry = this->header.e_entry;
-		header.e_phoff = SIZE_32(ehdr_t);
-		header.e_shoff = SIZE_32(ehdr_t) + SIZE_32(phdr_t) * ::size32(progs);
+		header.e_phoff = u32{sizeof(ehdr_t)};
+		header.e_shoff = u32{sizeof(ehdr_t)} + u32{sizeof(phdr_t)} * ::size32(progs);
 		header.e_flags = this->header.e_flags;
-		header.e_ehsize = SIZE_32(ehdr_t);
-		header.e_phentsize = SIZE_32(phdr_t);
+		header.e_ehsize = u32{sizeof(ehdr_t)};
+		header.e_phentsize = u32{sizeof(phdr_t)};
 		header.e_phnum = ::size32(progs);
-		header.e_shentsize = SIZE_32(shdr_t);
+		header.e_shentsize = u32{sizeof(shdr_t)};
 		header.e_shnum = ::size32(shdrs);
 		header.e_shstrndx = this->header.e_shstrndx;
 		stream.write(header);
 
-		sz_t off = header.e_shoff + SIZE_32(shdr_t) * ::size32(shdrs);
+		sz_t off = header.e_shoff + u32{sizeof(shdr_t)} * ::size32(shdrs);
 
 		for (phdr_t phdr : progs)
 		{

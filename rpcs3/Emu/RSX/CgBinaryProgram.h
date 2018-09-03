@@ -309,7 +309,7 @@ public:
 
 				m_arb_shader += fmt::format("#%d ", i) + param_type + param_name + param_semantic + param_const + "\n";
 
-				offset += SIZE_32(CgBinaryParameter);
+				offset += sizeof(CgBinaryParameter);
 			}
 
 			m_arb_shader += "\n";
@@ -366,7 +366,7 @@ public:
 
 				m_arb_shader += fmt::format("#%d ", i) + param_type + param_name + param_semantic + param_const + "\n";
 
-				offset += SIZE_32(CgBinaryParameter);
+				offset += sizeof(CgBinaryParameter);
 			}
 
 			m_arb_shader += "\n";

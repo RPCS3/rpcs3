@@ -43,7 +43,7 @@ namespace vm
 		_var_base(const _var_base&) = delete;
 
 		_var_base()
-		    : pointer(A::alloc(SIZE_32(T), alignof(T)))
+		    : pointer(A::alloc(sizeof(T), alignof(T)))
 		{
 		}
 
@@ -57,7 +57,7 @@ namespace vm
 		{
 			if (pointer::addr())
 			{
-				A::dealloc(pointer::addr(), SIZE_32(T));
+				A::dealloc(pointer::addr(), sizeof(T));
 			}
 		}
 	};
@@ -75,8 +75,8 @@ namespace vm
 		_var_base(const _var_base&) = delete;
 
 		_var_base(u32 count)
-		    : pointer(A::alloc(SIZE_32(T) * count, alignof(T)))
-		    , m_size(SIZE_32(T) * count)
+		    : pointer(A::alloc(u32{sizeof(T)} * count, alignof(T)))
+		    , m_size(u32{sizeof(T)} * count)
 		{
 		}
 
@@ -101,7 +101,7 @@ namespace vm
 
 		u32 get_count() const
 		{
-			return m_size / SIZE_32(T);
+			return m_size / u32{sizeof(T)};
 		}
 
 		auto begin() const

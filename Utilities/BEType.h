@@ -307,7 +307,7 @@ struct offset32_array<v128::masked_array_t<T, N, M>>
 	template <typename Arg>
 	static inline u32 index32(const Arg& arg)
 	{
-		return SIZE_32(T) * (static_cast<u32>(arg) ^ static_cast<u32>(M));
+		return u32{sizeof(T)} * (static_cast<u32>(arg) ^ static_cast<u32>(M));
 	}
 };
 

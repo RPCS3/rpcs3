@@ -69,7 +69,7 @@ namespace vm
 		template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>>
 		_ptr_base<ET> ptr(MT T2::*const mptr, u32 index) const
 		{
-			return vm::cast(vm::cast(m_addr, HERE) + offset32(mptr) + SIZE_32(ET) * index);
+			return vm::cast(vm::cast(m_addr, HERE) + offset32(mptr) + u32{sizeof(ET)} * index);
 		}
 
 		// Get vm reference to a struct member
@@ -83,7 +83,7 @@ namespace vm
 		template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>>
 		_ref_base<ET> ref(MT T2::*const mptr, u32 index) const
 		{
-			return vm::cast(vm::cast(m_addr, HERE) + offset32(mptr) + SIZE_32(ET) * index);
+			return vm::cast(vm::cast(m_addr, HERE) + offset32(mptr) + u32{sizeof(ET)} * index);
 		}
 
 		// Get vm reference
@@ -109,7 +109,7 @@ namespace vm
 
 		std::add_lvalue_reference_t<T> operator [](u32 index) const
 		{
-			return *static_cast<T*>(vm::base(vm::cast(m_addr, HERE) + SIZE_32(T) * index));
+			return *static_cast<T*>(vm::base(vm::cast(m_addr, HERE) + u32{sizeof(T)} * index));
 		}
 
 		// Test address for arbitrary alignment: (addr & (align - 1)) == 0
@@ -127,7 +127,7 @@ namespace vm
 		// Get type size
 		static constexpr u32 size()
 		{
-			return SIZE_32(T);
+			return sizeof(T);
 		}
 
 		// Get type alignment
@@ -149,61 +149,61 @@ namespace vm
 
 		_ptr_base<T, u32> operator +(u32 count) const
 		{
-			return vm::cast(vm::cast(m_addr, HERE) + count * SIZE_32(T));
+			return vm::cast(vm::cast(m_addr, HERE) + count * size());
 		}
 
 		_ptr_base<T, u32> operator -(u32 count) const
 		{
-			return vm::cast(vm::cast(m_addr, HERE) - count * SIZE_32(T));
+			return vm::cast(vm::cast(m_addr, HERE) - count * size());
 		}
 
 		friend _ptr_base<T, u32> operator +(u32 count, const _ptr_base& ptr)
 		{
-			return vm::cast(vm::cast(ptr.m_addr, HERE) + count * SIZE_32(T));
+			return vm::cast(vm::cast(ptr.m_addr, HERE) + count * size());
 		}
 
 		// Pointer difference operator
 		template<typename T2, typename AT2>
 		std::enable_if_t<std::is_object<T2>::value && std::is_same<std::decay_t<T>, std::decay_t<T2>>::value, s32> operator -(const _ptr_base<T2, AT2>& right) const
 		{
-			return static_cast<s32>(vm::cast(m_addr, HERE) - vm::cast(right.m_addr, HERE)) / SIZE_32(T);
+			return static_cast<s32>(vm::cast(m_addr, HERE) - vm::cast(right.m_addr, HERE)) / size();
 		}
 
 		_ptr_base operator ++(int)
 		{
 			_ptr_base result = *this;
-			m_addr = vm::cast(m_addr, HERE) + SIZE_32(T);
+			m_addr = vm::cast(m_addr, HERE) + size();
 			return result;
 		}
 
 		_ptr_base& operator ++()
 		{
-			m_addr = vm::cast(m_addr, HERE) + SIZE_32(T);
+			m_addr = vm::cast(m_addr, HERE) + size();
 			return *this;
 		}
 
 		_ptr_base operator --(int)
 		{
 			_ptr_base result = *this;
-			m_addr = vm::cast(m_addr, HERE) - SIZE_32(T);
+			m_addr = vm::cast(m_addr, HERE) - size();
 			return result;
 		}
 
 		_ptr_base& operator --()
 		{
-			m_addr = vm::cast(m_addr, HERE) - SIZE_32(T);
+			m_addr = vm::cast(m_addr, HERE) - size();
 			return *this;
 		}
 
 		_ptr_base& operator +=(s32 count)
 		{
-			m_addr = vm::cast(m_addr, HERE) + count * SIZE_32(T);
+			m_addr = vm::cast(m_addr, HERE) + count * size();
 			return *this;
 		}
 
 		_ptr_base& operator -=(s32 count)
 		{
-			m_addr = vm::cast(m_addr, HERE) - count * SIZE_32(T);
+			m_addr = vm::cast(m_addr, HERE) - count * size();
 			return *this;
 		}
 	};

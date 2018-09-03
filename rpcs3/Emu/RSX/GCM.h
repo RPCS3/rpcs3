@@ -173,7 +173,7 @@ namespace rsx
 			*dst++ = cmd.as<u32>();
 		}
 
-		return SIZE_32(u32) * (static_cast<u32>(values.size()) + 1);
+		return u32{sizeof(u32)} * (static_cast<u32>(values.size()) + 1);
 	}
 
 	template<typename AT>
@@ -181,6 +181,6 @@ namespace rsx
 	{
 		*dst++ = RSX_METHOD_OLD_JUMP_CMD | offset;
 
-		return SIZE_32(u32);
+		return sizeof(u32);
 	}
 }

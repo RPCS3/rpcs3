@@ -832,7 +832,7 @@ error_code cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float 
 
 	const audio_port& port = g_audio->ports[portNum];
 
-	const auto dst = vm::ptr<float>::make(port.addr.addr() + u32(port.tag % port.block) * port.channel * 256 * SIZE_32(float));
+	const auto dst = vm::ptr<float>::make(port.addr.addr() + u32(port.tag % port.block) * port.channel * 256 * u32{sizeof(float)});
 
 	for (u32 i = 0; i < samples * port.channel; i++)
 	{
@@ -867,7 +867,7 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 
 	const audio_port& port = g_audio->ports[portNum];
 
-	const auto dst = vm::ptr<float>::make(port.addr.addr() + s32(port.tag % port.block) * port.channel * 256 * SIZE_32(float));
+	const auto dst = vm::ptr<float>::make(port.addr.addr() + s32(port.tag % port.block) * port.channel * 256 * u32{sizeof(float)});
 
 	if (port.channel == 2)
 	{
@@ -929,7 +929,7 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 
 	const audio_port& port = g_audio->ports[portNum];
 
-	const auto dst = vm::ptr<float>::make(port.addr.addr() + s32(port.tag % port.block) * port.channel * 256 * SIZE_32(float));
+	const auto dst = vm::ptr<float>::make(port.addr.addr() + s32(port.tag % port.block) * port.channel * 256 * u32{sizeof(float)});
 
 	if (port.channel == 6)
 	{

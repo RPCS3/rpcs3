@@ -183,7 +183,7 @@ std::string FragmentProgramDecompiler::AddConst()
 		return name;
 	}
 
-	auto data = (be_t<u32>*) ((char*)m_prog.addr + m_size + 4 * SIZE_32(u32));
+	auto data = (be_t<u32>*) ((char*)m_prog.addr + m_size + 4 * u32{sizeof(u32)});
 
 	m_offset = 2 * 4 * sizeof(u32);
 	u32 x = GetData(data[0]);
@@ -264,7 +264,7 @@ std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 p
 bool FragmentProgramDecompiler::DstExpectsSca()
 {
 	int writes = 0;
-	
+
 	if (dst.mask_x) writes++;
 	if (dst.mask_y) writes++;
 	if (dst.mask_z) writes++;

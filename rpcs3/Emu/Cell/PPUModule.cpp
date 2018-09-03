@@ -1436,7 +1436,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	g_ps3_sdk_version = sdk_version;
 
 	// Initialize process arguments
-	auto args = vm::ptr<u64>::make(vm::alloc(SIZE_32(u64) * (::size32(Emu.argv) + ::size32(Emu.envp) + 2), vm::main));
+	auto args = vm::ptr<u64>::make(vm::alloc(u32{sizeof(u64)} * (::size32(Emu.argv) + ::size32(Emu.envp) + 2), vm::main));
 	auto argv = args;
 
 	for (const auto& arg : Emu.argv)

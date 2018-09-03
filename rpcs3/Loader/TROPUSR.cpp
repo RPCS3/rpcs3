@@ -169,8 +169,8 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 			default: trophy_grade = 0;
 			}
 
-			TROPUSREntry4 entry4 = { 4, SIZE_32(TROPUSREntry4) - 0x10, (u32)m_table4.size(), 0, trophy_id, trophy_grade, 0xFFFFFFFF };
-			TROPUSREntry6 entry6 = { 6, SIZE_32(TROPUSREntry6) - 0x10, (u32)m_table6.size(), 0, trophy_id };
+			TROPUSREntry4 entry4 = { 4, u32{sizeof(TROPUSREntry4)} - 0x10, (u32)m_table4.size(), 0, trophy_id, trophy_grade, 0xFFFFFFFF };
+			TROPUSREntry6 entry6 = { 6, u32{sizeof(TROPUSREntry6)} - 0x10, (u32)m_table6.size(), 0, trophy_id };
 
 			m_table4.push_back(entry4);
 			m_table6.push_back(entry6);
@@ -178,9 +178,9 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 	}
 
 	u64 offset = sizeof(TROPUSRHeader) + 2 * sizeof(TROPUSRTableHeader);
-	TROPUSRTableHeader table4header = { 4, SIZE_32(TROPUSREntry4) - 0x10, 1, (u32)m_table4.size(), offset };
+	TROPUSRTableHeader table4header = { 4, u32{sizeof(TROPUSREntry4)} - 0x10, 1, (u32)m_table4.size(), offset };
 	offset += m_table4.size() * sizeof(TROPUSREntry4);
-	TROPUSRTableHeader table6header = { 6, SIZE_32(TROPUSREntry6) - 0x10, 1, (u32)m_table6.size(), offset };
+	TROPUSRTableHeader table6header = { 6, u32{sizeof(TROPUSREntry6)} - 0x10, 1, (u32)m_table6.size(), offset };
 	offset += m_table6.size() * sizeof(TROPUSREntry6);
 
 	m_tableHeaders.clear();
@@ -234,7 +234,7 @@ u64 TROPUSRLoader::GetTrophyTimestamp(u32 id)
 		return 0;
 	}
 
-	// TODO: What timestamp does sceNpTrophyGetTrophyInfo want, timestamp1 or timestamp2? 
+	// TODO: What timestamp does sceNpTrophyGetTrophyInfo want, timestamp1 or timestamp2?
 	return m_table6[id].timestamp2; // Let's assume the trophies are stored ordered
 }
 

@@ -92,7 +92,7 @@ namespace psf
 			return std::min(m_max_size, ::narrow<u32>(m_value_string.size() + (m_type == format::string)));
 
 		case format::integer:
-			return SIZE_32(u32);
+			return sizeof(u32);
 		}
 
 		fmt::throw_exception("Invalid format (0x%x)" HERE, m_type);

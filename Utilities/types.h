@@ -40,9 +40,6 @@
 #define CHECK_MAX_SIZE(type, size) static_assert(sizeof(type) <= size, #type " type size is too big")
 #define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
 
-// Return 32 bit sizeof() to avoid widening/narrowing conversions with size_t
-#define SIZE_32(...) static_cast<u32>(sizeof(__VA_ARGS__))
-
 // Variant pattern matching helper
 #define MATCH(arg, ...) constexpr(std::is_same_v<std::decay_t<decltype(arg)>, __VA_ARGS__>)
 
@@ -421,7 +418,7 @@ struct offset32_array
 	template <typename Arg>
 	static inline u32 index32(const Arg& arg)
 	{
-		return SIZE_32(std::remove_extent_t<T>) * static_cast<u32>(arg);
+		return u32{sizeof(std::remove_extent_t<T>)} * static_cast<u32>(arg);
 	}
 };
 
@@ -431,7 +428,7 @@ struct offset32_array<std::array<T, N>>
 	template <typename Arg>
 	static inline u32 index32(const Arg& arg)
 	{
-		return SIZE_32(T) * static_cast<u32>(arg);
+		return u32{sizeof(T)} * static_cast<u32>(arg);
 	}
 };
 
