@@ -12,14 +12,7 @@ extern vm::gvar<sys_lwmutex_t> g_ppu_prx_lwm;
 // Convert the array of 32-bit pointers to 64-bit pointers using stack allocation
 static auto convert_path_list(vm::cpptr<char> path_list, s32 count)
 {
-	vm::var<vm::cptr<char, u64>[]> result(count);
-
-	for (s32 i = 0; i < count; i++)
-	{
-		result[i] = path_list[i];
-	}
-
-	return std::move(result);
+	return vm::var<vm::cptr<char, u64>[]>(count, path_list.get_ptr());
 }
 
 // Execute start or stop module function

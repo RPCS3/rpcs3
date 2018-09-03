@@ -4,7 +4,7 @@
 
 namespace vm
 {
-	template<memory_location_t Location = vm::main>
+	template <memory_location_t Location = vm::main>
 	struct page_allocator
 	{
 		static inline vm::addr_t alloc(u32 size, u32 align)
@@ -18,7 +18,7 @@ namespace vm
 		}
 	};
 
-	template<typename T>
+	template <typename T>
 	struct stack_allocator
 	{
 		static inline vm::addr_t alloc(u32 size, u32 align)
@@ -32,38 +32,38 @@ namespace vm
 		}
 	};
 
-	// Variable general specialization
-	template<typename T, typename A>
+	// General variable base class
+	template <typename T, typename A>
 	class _var_base final : public _ptr_base<T, const u32>
 	{
 		using pointer = _ptr_base<T, const u32>;
 
 	public:
+		// Unmoveable object
+		_var_base(const _var_base&) = delete;
+
 		_var_base()
-			: pointer(A::alloc(SIZE_32(T), alignof(T)))
+		    : pointer(A::alloc(SIZE_32(T), alignof(T)))
 		{
 		}
 
 		_var_base(const T& right)
-			: _var_base()
+		    : _var_base()
 		{
 			std::memcpy(pointer::get_ptr(), &right, sizeof(T));
 		}
 
-		_var_base(_var_base&& right)
-			: pointer(right)
-		{
-			reinterpret_cast<u32&>(static_cast<pointer&>(right)) = 0;
-		}
-
 		~_var_base()
 		{
-			if (pointer::addr()) A::dealloc(pointer::addr(), SIZE_32(T));
+			if (pointer::addr())
+			{
+				A::dealloc(pointer::addr(), SIZE_32(T));
+			}
 		}
 	};
 
-	// Dynamic length array variable
-	template<typename T, typename A>
+	// Dynamic length array variable specialization
+	template <typename T, typename A>
 	class _var_base<T[], A> final : public _ptr_base<T, const u32>
 	{
 		using pointer = _ptr_base<T, const u32>;
@@ -71,26 +71,33 @@ namespace vm
 		u32 m_size;
 
 	public:
+		// Unmoveable object
+		_var_base(const _var_base&) = delete;
+
 		_var_base(u32 count)
-			: pointer(A::alloc(SIZE_32(T) * count, alignof(T)))
-			, m_size(SIZE_32(T) * count)
+		    : pointer(A::alloc(SIZE_32(T) * count, alignof(T)))
+		    , m_size(SIZE_32(T) * count)
 		{
 		}
 
-		_var_base(_var_base&& right)
-			: pointer(right)
-			, m_size(right.m_size)
+		// Initialize via the iterator
+		template <typename I>
+		_var_base(u32 count, I&& it)
+			: _var_base(count)
 		{
-			reinterpret_cast<u32&>(static_cast<pointer&>(right)) = 0;
+			std::copy_n(std::forward<I>(it), count, pointer::get_ptr());
 		}
 
 		~_var_base()
 		{
-			if (pointer::addr()) A::dealloc(pointer::addr(), m_size);
+			if (pointer::addr())
+			{
+				A::dealloc(pointer::addr(), m_size);
+			}
 		}
 
 		// Remove operator ->
-		T* operator ->() const = delete;
+		T* operator->() const = delete;
 
 		u32 get_count() const
 		{
@@ -109,36 +116,37 @@ namespace vm
 	};
 
 	// LE variable
-	template<typename T, typename A> using varl = _var_base<to_le_t<T>, A>;
+	template <typename T, typename A>
+	using varl = _var_base<to_le_t<T>, A>;
 
 	// BE variable
-	template<typename T, typename A> using varb = _var_base<to_be_t<T>, A>;
+	template <typename T, typename A>
+	using varb = _var_base<to_be_t<T>, A>;
 
 	inline namespace ps3_
 	{
 		// BE variable
-		template<typename T, typename A = stack_allocator<ppu_thread>> using var = varb<T, A>;
+		template <typename T, typename A = stack_allocator<ppu_thread>>
+		using var = varb<T, A>;
 
 		// Make BE variable initialized from value
-		template<typename T, typename A = stack_allocator<ppu_thread>>
-		inline auto make_var(const T& value)
+		template <typename T, typename A = stack_allocator<ppu_thread>>
+		[[nodiscard]] auto make_var(const T& value)
 		{
 			return varb<T, A>(value);
 		}
 
 		// Make char[] variable initialized from std::string
-		template<typename A = stack_allocator<ppu_thread>>
-		static auto make_str(const std::string& str)
+		template <typename A = stack_allocator<ppu_thread>>
+		[[nodiscard]] auto make_str(const std::string& str)
 		{
-			var<char[], A> var_(size32(str) + 1);
-			std::memcpy(var_.get_ptr(), str.c_str(), str.size() + 1);
-			return var_;
+			return _var_base<char[], A>(size32(str) + 1, str.c_str());
 		}
 
 		// Global HLE variable
-		template<typename T>
+		template <typename T>
 		struct gvar : ptr<T>
 		{
 		};
-	}
-}
+	} // namespace ps3_
+} // namespace vm

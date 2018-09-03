@@ -309,7 +309,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	ctxt->tropusr.reset(tropusr);
 
 	// TODO: Callbacks
-	// From RE-ing a game's state machine, it seems the possible order is one of the following: 
+	// From RE-ing a game's state machine, it seems the possible order is one of the following:
 	// * Install (Not installed)  - Setup - Progress * ? - Finalize - Complete - Installed
 	// * Reinstall (Corrupted)    - Setup - Progress * ? - Finalize - Complete - Installed
 	// * Update (Required update) - Setup - Progress * ? - Finalize - Complete - Installed
@@ -533,8 +533,8 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 		std::vector<uchar> trophyIconData;
 		trophyIconFile.read(trophyIconData, iconSize);
 
-		vm::ptr<SceNpTrophyDetails> details = vm::make_var(SceNpTrophyDetails());
-		vm::ptr<SceNpTrophyData> _ = vm::make_var(SceNpTrophyData());
+		vm::var<SceNpTrophyDetails> details({0});
+		vm::var<SceNpTrophyData> _({0});
 
 		s32 ret = sceNpTrophyGetTrophyInfo(context, handle, trophyId, details, _);
 		if (ret != CELL_OK)

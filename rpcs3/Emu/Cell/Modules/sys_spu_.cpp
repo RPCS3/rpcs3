@@ -188,7 +188,7 @@ error_code sys_spu_elf_get_information(u32 elf_img, vm::ptr<u32> entry, vm::ptr<
 	sysPrxForUser.warning("sys_spu_elf_get_information(elf_img=0x%x, entry=*0x%x, nseg=*0x%x)", elf_img, entry, nseg);
 
 	// Initialize ELF loader
-	vm::var<spu_elf_info> info(spu_elf_info{});
+	vm::var<spu_elf_info> info({0});
 
 	if (auto res = info->init(vm::cast(elf_img)))
 	{
@@ -202,7 +202,7 @@ error_code sys_spu_elf_get_information(u32 elf_img, vm::ptr<u32> entry, vm::ptr<
 	}
 
 	// Load ELF header
-	vm::var<elf_ehdr<elf_be, u64>> ehdr(elf_ehdr<elf_be, u64>{});
+	vm::var<elf_ehdr<elf_be, u64>> ehdr({0});
 
 	if (info->ldr->get_ehdr(ehdr) || ehdr->e_machine != elf_machine::spu || !ehdr->e_phnum)
 	{
@@ -234,7 +234,7 @@ error_code sys_spu_elf_get_segments(u32 elf_img, vm::ptr<sys_spu_segment> segmen
 	sysPrxForUser.warning("sys_spu_elf_get_segments(elf_img=0x%x, segments=*0x%x, nseg=0x%x)", elf_img, segments, nseg);
 
 	// Initialize ELF loader
-	vm::var<spu_elf_info> info(spu_elf_info{});
+	vm::var<spu_elf_info> info({0});
 
 	if (auto res = info->init(vm::cast(elf_img)))
 	{
@@ -242,7 +242,7 @@ error_code sys_spu_elf_get_segments(u32 elf_img, vm::ptr<sys_spu_segment> segmen
 	}
 
 	// Load ELF header
-	vm::var<elf_ehdr<elf_be, u64>> ehdr(elf_ehdr<elf_be, u64>{});
+	vm::var<elf_ehdr<elf_be, u64>> ehdr({0});
 
 	if (info->ldr->get_ehdr(ehdr) || ehdr->e_machine != elf_machine::spu || !ehdr->e_phnum)
 	{
@@ -281,7 +281,7 @@ error_code sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 	}
 
 	// Initialize ELF loader
-	vm::var<spu_elf_info> info(spu_elf_info{});
+	vm::var<spu_elf_info> info({0});
 
 	if (auto res = info->init(vm::cast(src)))
 	{
@@ -295,7 +295,7 @@ error_code sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 	}
 
 	// Load ELF header
-	vm::var<elf_ehdr<elf_be, u64>> ehdr(elf_ehdr<elf_be, u64>{});
+	vm::var<elf_ehdr<elf_be, u64>> ehdr({0});
 
 	if (info->ldr->get_ehdr(ehdr) || ehdr->e_machine != elf_machine::spu || !ehdr->e_phnum)
 	{

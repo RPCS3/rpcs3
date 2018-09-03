@@ -131,11 +131,12 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
 	else
 		rsx::get_current_renderer()->main_mem_size = 0x10000000; //256MB
 
-	sys_event_queue_attribute_t attr;
-	attr.protocol = SYS_SYNC_PRIORITY;
-	attr.type = SYS_PPU_QUEUE;
-	auto queueId = vm::make_var<u32>(0);
-	sys_event_queue_create(queueId, vm::make_var(attr), 0, 0x20);
+	vm::var<sys_event_queue_attribute_t> attr;
+	attr->protocol = SYS_SYNC_PRIORITY;
+	attr->type = SYS_PPU_QUEUE;
+	attr->name_u64 = 0;
+	vm::var<u32> queueId(0);
+	sys_event_queue_create(queueId, attr, 0, 0x20);
 	driverInfo.handler_queue = queueId->value();
 
 	sys_event_port_create(queueId, SYS_EVENT_PORT_LOCAL, 0);

@@ -80,7 +80,8 @@ error_code cellPhotoImport(u32 version, vm::cptr<char> dstHddPath, vm::ptr<CellP
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellPhotoImportFileData> filedata;
-		filedata->data_sub = vm::var<CellPhotoImportFileDataSub>();
+		vm::var<CellPhotoImportFileDataSub> sub;
+		filedata->data_sub = sub;
 		funcFinish(ppu, CELL_OK, filedata, userdata);
 		return CELL_OK;
 	});
@@ -95,7 +96,8 @@ error_code cellPhotoImport2(u32 version, vm::cptr<char> dstHddPath, vm::ptr<Cell
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellPhotoImportFileData> filedata;
-		filedata->data_sub = vm::var<CellPhotoImportFileDataSub>();
+		vm::var<CellPhotoImportFileDataSub> sub;
+		filedata->data_sub = sub;
 		funcFinish(ppu, CELL_OK, filedata, userdata);
 		return CELL_OK;
 	});
