@@ -134,7 +134,7 @@ class FragmentProgramDecompiler
 	std::vector<u32> m_end_offsets;
 	std::vector<u32> m_else_offsets;
 
-	std::array<temp_register, 24> temp_registers;
+	std::array<temp_register, 64> temp_registers;
 
 	std::string GetMask();
 
