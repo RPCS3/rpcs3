@@ -2416,8 +2416,6 @@ namespace rsx
 			s32 size = 0;
 			s32 attributes = 0;
 
-			bool swap_u8_types = false;
-
 			if (layout.attribute_placement[index] == attribute_buffer_placement::transient)
 			{
 				if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
@@ -2428,10 +2426,6 @@ namespace rsx
 
 					attributes = layout.interleaved_blocks[0].attribute_stride;
 					attributes |= default_frequency_mask | volatile_storage_mask;
-
-					// [NPEA90002] Grass is rendered via inline array
-					// Expects swapped bytes for u8 types
-					swap_u8_types = true;
 				}
 				else
 				{
@@ -2447,10 +2441,6 @@ namespace rsx
 
 						attributes = rsx::get_vertex_type_size_on_host(type, size);
 						attributes |= default_frequency_mask | volatile_storage_mask;
-
-						// RDR intro contains text passed via immediate render mode
-						// Expects swapped bytes for u8 types
-						swap_u8_types = true;
 					}
 					else
 					{
@@ -2461,9 +2451,6 @@ namespace rsx
 
 						attributes = rsx::get_vertex_type_size_on_host(type, size);
 						attributes |= volatile_storage_mask;
-
-						// Resistance intro expects u8 types in native order
-						// swap_u8_types = false;
 					}
 				}
 			}
@@ -2513,7 +2500,7 @@ namespace rsx
 			case rsx::vertex_base_type::ub:
 			case rsx::vertex_base_type::ub256:
 				// These are single byte formats, but inverted order (BGRA vs ARGB) when passed via registers
-				to_swap_bytes = swap_u8_types;
+				to_swap_bytes = (layout.attribute_placement[index] == attribute_buffer_placement::transient);
 				break;
 			}
 
