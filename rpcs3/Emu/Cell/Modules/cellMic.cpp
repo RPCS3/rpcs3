@@ -58,8 +58,8 @@ s32 cellMicInit()
 s32 cellMicEnd()
 {
 	cellMic.trace("cellMicEnd()");
-	const auto micThread = fxm::withdraw<mic_thread>();
 	micInited = false;
+	const auto micThread = fxm::withdraw<mic_thread>();
 	if (!micThread)
 		return CELL_MIC_ERROR_NOT_INIT;
 
