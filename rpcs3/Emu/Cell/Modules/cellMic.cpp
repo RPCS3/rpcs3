@@ -46,7 +46,7 @@ void mic_thread::on_task()
 
 s32 cellMicInit()
 {
-	cellMic.trace("cellMicInit()");
+	cellMic.notice("cellMicInit()");
 	const auto micThread = fxm::make<mic_thread>();
 	micInited = true;
 	if (!micThread)
@@ -57,7 +57,7 @@ s32 cellMicInit()
 
 s32 cellMicEnd()
 {
-	cellMic.trace("cellMicEnd()");
+	cellMic.notice("cellMicEnd()");
 	micInited = false;
 	const auto micThread = fxm::withdraw<mic_thread>();
 	if (!micThread)
