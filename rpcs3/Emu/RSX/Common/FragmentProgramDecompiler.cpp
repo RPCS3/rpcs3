@@ -111,6 +111,8 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	}
 
 	u32 reg_index = dst.fp16 ? dst.dest_reg >> 1 : dst.dest_reg;
+
+	verify(HERE), reg_index < temp_registers.size();
 	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
 }
 
