@@ -619,7 +619,7 @@ public:
 		{
 			func((_new = old));
 
-			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new))) [[likely]]
+			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
 			{
 				return old;
 			}
@@ -636,7 +636,7 @@ public:
 		{
 			func((_new = old));
 
-			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new))) [[likely]]
+			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
 			{
 				return _new;
 			}
@@ -655,7 +655,7 @@ public:
 			{
 				func((_new = old), args...);
 
-				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new))) [[likely]]
+				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
 				{
 					return;
 				}
@@ -664,7 +664,7 @@ public:
 			{
 				RT result = func((_new = old), args...);
 
-				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new))) [[likely]]
+				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
 				{
 					return result;
 				}
