@@ -1647,7 +1647,7 @@ void VKGSRender::on_init_thread()
 void VKGSRender::on_exit()
 {
 	zcull_ctrl.release();
-	return GSRender::on_exit();
+	GSRender::on_exit();
 }
 
 void VKGSRender::clear_surface(u32 mask)
