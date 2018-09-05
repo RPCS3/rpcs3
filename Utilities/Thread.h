@@ -209,7 +209,7 @@ public:
 	}
 
 	// Wait until pred(). Abortable, may throw.
-	template<typename F, typename RT = std::result_of_t<F()>>
+	template<typename F, typename RT = std::invoke_result_t<F>>
 	static inline RT wait(F&& pred)
 	{
 		while (true)
