@@ -298,7 +298,7 @@ void D3D12GSRender::on_init_thread()
 
 void D3D12GSRender::on_exit()
 {
-	return GSRender::on_exit();
+	GSRender::on_exit();
 }
 
 void D3D12GSRender::do_local_task(rsx::FIFO_state state)
