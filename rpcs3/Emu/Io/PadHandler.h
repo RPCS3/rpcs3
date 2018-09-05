@@ -413,8 +413,6 @@ protected:
 	// return is new x and y values in 0-255 range
 	std::tuple<u16, u16> NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone);
 
-	// get clamped value between min and max
-	s32 Clamp(f32 input, s32 min, s32 max);
 	// get clamped value between 0 and 255
 	u16 Clamp0To255(f32 input);
 	// get clamped value between 0 and 1023

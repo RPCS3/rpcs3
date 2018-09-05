@@ -98,7 +98,7 @@ long PadHandlerBase::FindKeyCodeByString(std::unordered_map<u64, std::string> ma
 float PadHandlerBase::ScaleStickInput(s32 raw_value, int minimum, int maximum)
 {
 	// value based on max range converted to [0, 1]
-	float val = float(Clamp(static_cast<f32>(raw_value), minimum, maximum) - minimum) / float(abs(maximum) + abs(minimum));
+	float val = float(std::clamp(raw_value, minimum, maximum) - minimum) / float(abs(maximum) + abs(minimum));
 	return 255.0f * val;
 }
 
@@ -106,7 +106,7 @@ float PadHandlerBase::ScaleStickInput(s32 raw_value, int minimum, int maximum)
 float PadHandlerBase::ScaleStickInput2(s32 raw_value, int minimum, int maximum)
 {
 	// value based on max range converted to [0, 1]
-	float val = float(Clamp(static_cast<f32>(raw_value), minimum, maximum) - minimum) / float(abs(maximum) + abs(minimum));
+	float val = float(std::clamp(raw_value, minimum, maximum) - minimum) / float(abs(maximum) + abs(minimum));
 	return (510.0f * val) - 255.0f;
 }
 
@@ -136,7 +136,7 @@ u16 PadHandlerBase::NormalizeDirectedInput(u16 raw_value, s32 threshold, s32 max
 		return static_cast<u16>(0);
 	}
 
-	float val = float(Clamp(raw_value, 0, maximum)) / float(maximum); // value based on max range converted to [0, 1]
+	float val = float(std::clamp(static_cast<s32>(raw_value), 0, maximum)) / float(maximum); // value based on max range converted to [0, 1]
 
 	if (threshold <= 0)
 	{
@@ -196,26 +196,16 @@ std::tuple<u16, u16> PadHandlerBase::NormalizeStickDeadzone(s32 inX, s32 inY, u3
 	return std::tuple<u16, u16>(ConvertAxis(X), ConvertAxis(Y));
 }
 
-// get clamped value between min and max
-s32 PadHandlerBase::Clamp(f32 input, s32 min, s32 max)
-{
-	if (input > max)
-		return max;
-	else if (input < min)
-		return min;
-	else return static_cast<s32>(input);
-}
-
 // get clamped value between 0 and 255
 u16 PadHandlerBase::Clamp0To255(f32 input)
 {
-	return static_cast<u16>(Clamp(input, 0, 255));
+	return static_cast<u16>(std::clamp(input, 0.0f, 255.0f));
 }
 
 // get clamped value between 0 and 1023
 u16 PadHandlerBase::Clamp0To1023(f32 input)
 {
-	return static_cast<u16>(Clamp(input, 0, 1023));
+	return static_cast<u16>(std::clamp(input, 0.0f, 1023.0f));
 }
 
 // input has to be [-1,1]. result will be [0,255]

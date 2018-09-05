@@ -23,14 +23,9 @@ struct gem_t
 		gem_color() : r(0.0f), g(0.0f), b(0.0f) {}
 		gem_color(float r_, float g_, float b_)
 		{
-			r = clamp(r_);
-			g = clamp(g_);
-			b = clamp(b_);
-		}
-
-		float clamp(float f) const
-		{
-			return std::max(0.0f, std::min(f, 1.0f));
+			r = std::clamp(r_, 0.0f, 1.0f);
+			g = std::clamp(g_, 0.0f, 1.0f);
+			b = std::clamp(b_, 0.0f, 1.0f);
 		}
 	};
 
