@@ -110,8 +110,7 @@ namespace gl
 			{
 				if (!find_count) break;
 
-				const char *ext = (const char*)glGetStringi(GL_EXTENSIONS, i);
-				const auto ext_name = std::string(ext);
+				const std::string ext_name = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));
 
 				if (ext_name == "GL_ARB_shader_draw_parameters")
 				{
@@ -171,10 +170,9 @@ namespace gl
 			}
 
 			//Workaround for intel drivers which have terrible capability reporting
-			std::string vendor_string;
-			if (const char* raw_string = (const char*)glGetString(GL_VENDOR))
+			std::string vendor_string = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
+			if (!vendor_string.empty())
 			{
-				vendor_string = raw_string;
 				std::transform(vendor_string.begin(), vendor_string.end(), vendor_string.begin(), ::tolower);
 			}
 			else
