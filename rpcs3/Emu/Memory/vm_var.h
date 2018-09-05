@@ -133,14 +133,14 @@ namespace vm
 		template <typename T, typename A = stack_allocator<ppu_thread>>
 		[[nodiscard]] auto make_var(const T& value)
 		{
-			return varb<T, A>(value);
+			return (varb<T, A>(value));
 		}
 
 		// Make char[] variable initialized from std::string
 		template <typename A = stack_allocator<ppu_thread>>
 		[[nodiscard]] auto make_str(const std::string& str)
 		{
-			return _var_base<char[], A>(size32(str) + 1, str.c_str());
+			return (_var_base<char[], A>(size32(str) + 1, str.c_str()));
 		}
 
 		// Global HLE variable

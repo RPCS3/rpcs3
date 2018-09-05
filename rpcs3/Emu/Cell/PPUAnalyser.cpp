@@ -732,7 +732,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		// Probe
 		for (vm::cptr<u32> ptr = vm::cast(sec.addr); ptr < sec_end;)
 		{
-			if (ptr % 4 || ptr.addr() < sec.addr || ptr >= sec_end)
+			if (!ptr.aligned() || ptr.addr() < sec.addr || ptr >= sec_end)
 			{
 				sec_end.set(0);
 				break;

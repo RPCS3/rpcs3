@@ -112,10 +112,6 @@ class se_t;
 template <typename T>
 class atomic_t;
 
-#if defined(__INTELLISENSE__) && !defined(_MSC_VER)
-namespace std { template <typename...> using void_t = void; }
-#endif
-
 // Extract T::simple_type if available, remove cv qualifiers
 template <typename T, typename = void>
 struct simple_type_helper
@@ -148,22 +144,6 @@ public:
 	constexpr operator bool() const
 	{
 		return m_value != 0;
-	}
-};
-
-// Bool wrapper for restricting bool result conversions
-struct explicit_bool_t
-{
-	const bool value;
-
-	constexpr explicit_bool_t(bool value)
-		: value(value)
-	{
-	}
-
-	explicit constexpr operator bool() const
-	{
-		return value;
 	}
 };
 
@@ -381,14 +361,6 @@ CHECK_SIZE_ALIGN(f16, 2, 2);
 
 using f32 = float;
 using f64 = double;
-
-struct ignore
-{
-	template <typename T>
-	ignore(T)
-	{
-	}
-};
 
 template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
 constexpr T align(const T& value, ullong align)
@@ -810,35 +782,6 @@ struct cmd64 : any64
 };
 
 static_assert(sizeof(cmd64) == 8 && std::is_pod<cmd64>::value, "Incorrect cmd64 type");
-
-// Allows to define integer convertible to multiple types
-template <typename T, T Value, typename T1 = void, typename... Ts>
-struct multicast : multicast<T, Value, Ts...>
-{
-	constexpr multicast()
-		: multicast<T, Value, Ts...>()
-	{
-	}
-
-	// Implicit conversion to desired type
-	constexpr operator T1() const
-	{
-		return static_cast<T1>(Value);
-	}
-};
-
-// Recursion terminator
-template <typename T, T Value>
-struct multicast<T, Value, void>
-{
-	constexpr multicast() = default;
-
-	// Explicit conversion to base type
-	explicit constexpr operator T() const
-	{
-		return Value;
-	}
-};
 
 // Error code type (return type), implements error reporting. Could be a template.
 struct error_code

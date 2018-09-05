@@ -556,7 +556,7 @@ public:
 
 	// Remove the ID
 	template <typename T, typename Get = T>
-	static inline explicit_bool_t remove(u32 id)
+	static inline bool remove(u32 id)
 	{
 		std::shared_ptr<void> ptr;
 		{
@@ -832,7 +832,7 @@ public:
 
 	// Delete the object
 	template <typename T>
-	static inline explicit_bool_t remove()
+	static inline bool remove()
 	{
 		std::shared_ptr<void> ptr;
 		{

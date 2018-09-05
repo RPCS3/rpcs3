@@ -2038,7 +2038,7 @@ s32 _cellSpursWorkloadAttributeInitialize(vm::ptr<CellSpursWorkloadAttribute> at
 		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
 	}
 
-	if (pm % 16)
+	if (!pm.aligned(16))
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
@@ -2107,7 +2107,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
 	}
 
-	if (!spurs.aligned() || pm % 16)
+	if (!spurs.aligned() || !pm.aligned(16))
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
@@ -3431,21 +3431,21 @@ s32 _spurs::create_task(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id,
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
-	if (elf % 16)
+	if (!elf.aligned(16))
 	{
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
 	if (_spurs::get_sdk_version() < 0x27FFFF)
 	{
-		if (context % 16)
+		if (!context.aligned(16))
 		{
 			return CELL_SPURS_TASK_ERROR_ALIGN;
 		}
 	}
 	else
 	{
-		if (context % 128)
+		if (!context.aligned(128))
 		{
 			return CELL_SPURS_TASK_ERROR_ALIGN;
 		}

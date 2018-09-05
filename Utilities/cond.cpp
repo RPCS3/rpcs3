@@ -185,7 +185,7 @@ u32 notifier::imp_notify(u32 count)
 	});
 }
 
-explicit_bool_t notifier::wait(u64 usec_timeout)
+bool notifier::wait(u64 usec_timeout)
 {
 	const u32 _old = m_cond.m_value.fetch_add(1);
 

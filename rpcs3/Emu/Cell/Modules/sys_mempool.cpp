@@ -54,7 +54,7 @@ s32 sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, vm::ptr<
 	}
 
 	// Test chunk address aligment
-	if (chunk % 8)
+	if (!chunk.aligned(8))
 	{
 		return CELL_EINVAL;
 	}

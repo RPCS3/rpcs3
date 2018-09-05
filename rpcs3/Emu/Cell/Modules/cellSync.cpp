@@ -256,7 +256,7 @@ error_code cellSyncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer,
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (UNLIKELY(!rwm.aligned() || buffer % 128))
+	if (UNLIKELY(!rwm.aligned() || !buffer.aligned(128)))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -418,7 +418,7 @@ error_code cellSyncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buf
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (UNLIKELY(!queue.aligned() || buffer % 16))
+	if (UNLIKELY(!queue.aligned() || !buffer.aligned(16)))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -744,7 +744,7 @@ error_code cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cptr<vo
 		return CELL_SYNC_ERROR_INVAL;
 	}
 
-	if (UNLIKELY(!queue.aligned() || buffer % 16))
+	if (UNLIKELY(!queue.aligned() || !buffer.aligned(16)))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1075,7 +1075,7 @@ error_code _cellSyncLFQueuePushBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> qu
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (UNLIKELY(!queue.aligned() || buffer % 16))
+	if (UNLIKELY(!queue.aligned() || !buffer.aligned(16)))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1370,7 +1370,7 @@ error_code _cellSyncLFQueuePopBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> que
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (UNLIKELY(!queue.aligned() || buffer % 16))
+	if (UNLIKELY(!queue.aligned() || !buffer.aligned(16)))
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}

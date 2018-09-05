@@ -113,15 +113,9 @@ namespace vm
 		}
 
 		// Test address for arbitrary alignment: (addr & (align - 1)) == 0
-		bool aligned(u32 align) const
+		bool aligned(u32 align = alignof(T)) const
 		{
 			return (m_addr & (align - 1)) == 0;
-		}
-
-		// Test address alignment using alignof(T)
-		bool aligned() const
-		{
-			return aligned(alignof(T));
 		}
 
 		// Get type size
@@ -134,12 +128,6 @@ namespace vm
 		static constexpr u32 align()
 		{
 			return alignof(T);
-		}
-
-		// Test address for arbitrary alignment: (addr & (align - 1)) != 0
-		explicit_bool_t operator %(u32 align) const
-		{
-			return !aligned(align);
 		}
 
 		_ptr_base<T, u32> operator +() const
