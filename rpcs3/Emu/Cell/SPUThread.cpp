@@ -804,42 +804,42 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		{
 		case 1:
 		{
-			auto& res = vm::reservation_lock(eal, 1);
+			vm::reservation_lock(eal, 1);
 			*static_cast<u8*>(dst) = *static_cast<const u8*>(src);
-			res &= ~1ull;
+			vm::reservation_unlock(eal, 1);
 			break;
 		}
 		case 2:
 		{
-			auto& res = vm::reservation_lock(eal, 2);
+			vm::reservation_lock(eal, 2);
 			*static_cast<u16*>(dst) = *static_cast<const u16*>(src);
-			res &= ~1ull;
+			vm::reservation_unlock(eal, 2);
 			break;
 		}
 		case 4:
 		{
-			auto& res = vm::reservation_lock(eal, 4);
+			vm::reservation_lock(eal, 4);
 			*static_cast<u32*>(dst) = *static_cast<const u32*>(src);
-			res &= ~1ull;
+			vm::reservation_unlock(eal, 4);
 			break;
 		}
 		case 8:
 		{
-			auto& res = vm::reservation_lock(eal, 8);
+			vm::reservation_lock(eal, 8);
 			*static_cast<u64*>(dst) = *static_cast<const u64*>(src);
-			res &= ~1ull;
+			vm::reservation_unlock(eal, 8);
 			break;
 		}
 		case 16:
 		{
-			auto& res = vm::reservation_lock(eal, 16);
+			vm::reservation_lock(eal, 16);
 			_mm_store_si128(static_cast<__m128i*>(dst), _mm_load_si128(static_cast<const __m128i*>(src)));
-			res &= ~1ull;
+			vm::reservation_unlock(eal, 16);
 			break;
 		}
 		default:
 		{
-			auto* res = &vm::reservation_lock(eal, 16);
+			vm::reservation_lock(eal, 16);
 			auto vdst = static_cast<__m128i*>(dst);
 			auto vsrc = static_cast<const __m128i*>(src);
 
@@ -851,7 +851,8 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 				if (addr == end)
 				{
-					break;
+					vm::reservation_unlock(addr % 128 ? addr : addr - 128, 16);
+					return;
 				}
 
 				if (addr % 128)
@@ -859,12 +860,9 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					continue;
 				}
 
-				res->fetch_and(~1ull);
-				res = &vm::reservation_lock(addr, 16);
+				vm::reservation_unlock(addr - 128, 16);
+				vm::reservation_lock(addr, 16);
 			}
-
-			res->fetch_and(~1ull);
-			break;
 		}
 		}
 
@@ -1080,9 +1078,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	{
 		const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
 		auto& data = vm::_ref<decltype(rdata)>(addr);
-		auto& res = vm::reservation_lock(addr, 128);
-
-		vm::_ref<atomic_t<u32>>(addr) += 0;
+		vm::reservation_lock(addr, 128);
 
 		if (g_cfg.core.spu_accurate_putlluc)
 		{
@@ -1091,11 +1087,13 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 			vm::writer_lock lock(1);
 			data = to_write;
 			vm::reservation_update(addr, 128);
+			vm::reservation_unlock(addr, 128);
 		}
 		else
 		{
 			data = to_write;
 			vm::reservation_update(addr, 128);
+			vm::reservation_unlock(addr, 128);
 		}
 	}
 
@@ -1290,8 +1288,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 		else
 		{
 			const auto& data = vm::_ref<decltype(rdata)>(addr);
-
-			auto& res = vm::reservation_lock(addr, 128);
+			vm::reservation_lock(addr, 128);
 
 			if (g_cfg.core.spu_accurate_getllar)
 			{
@@ -1301,15 +1298,15 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 				// TODO: vm::check_addr
 				vm::writer_lock lock(1);
 
-				rtime = res & ~1ull;
+				rtime = vm::reservation_acquire(addr, 128);
 				rdata = data;
-				res &= ~1ull;
+				vm::reservation_unlock(addr, 128);
 			}
 			else
 			{
-				rtime = res & ~1ull;
+				rtime = vm::reservation_acquire(addr, 128);
 				rdata = data;
-				res &= ~1ull;
+				vm::reservation_unlock(addr, 128);
 			}
 		}
 
@@ -1344,7 +1341,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 
 					if (rdata == data)
 					{
-						auto& res = vm::reservation_lock(addr, 128);
+						vm::reservation_lock(addr, 128);
 
 						vm::_ref<atomic_t<u32>>(addr) += 0;
 
@@ -1352,17 +1349,18 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 						// TODO: vm::check_addr
 						vm::writer_lock lock(1);
 
-						if (rtime == (res & ~1ull) && rdata == data)
+						if (rtime == vm::reservation_acquire(addr, 128) && rdata == data)
 						{
 							data = to_write;
 							vm::reservation_update(addr, 128);
+							vm::reservation_unlock(addr, 128);
 							vm::reservation_notifier(addr, 128).notify_all();
 							raddr = 0;
 							return ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS), true;
 						}
 						else
 						{
-							res &= ~1ull;
+							vm::reservation_unlock(addr, 128);
 						}
 					}
 				}

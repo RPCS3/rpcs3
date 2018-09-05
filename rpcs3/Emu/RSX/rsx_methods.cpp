@@ -117,9 +117,9 @@ namespace rsx
 			}
 			else
 			{
-				auto& res = vm::reservation_lock(addr, 4);
+				vm::reservation_lock(addr, 4);
 				vm::write32(addr, arg);
-				res &= ~1ull;
+				vm::reservation_unlock(addr, 4);
 			}
 
 			if (addr >> 28 != 0x4)

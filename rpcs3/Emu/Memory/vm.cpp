@@ -48,6 +48,9 @@ namespace vm
 	// Reservation sync variables
 	u8* const g_reservations2 = g_reservations + 0x10000000;
 
+	// Reservation locks
+	u8 g_reservations3[0x100000000 / 128]{0};
+
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
 
@@ -245,11 +248,11 @@ namespace vm
 		}
 	}
 
-	void reservation_lock_internal(atomic_t<u64>& res)
+	void reservation_lock_internal(u8& res)
 	{
 		for (u64 i = 0;; i++)
 		{
-			if (LIKELY(!atomic_storage<u64>::bts(res.raw(), 0)))
+			if (LIKELY(!atomic_storage<u8>::exchange(res, 1)))
 			{
 				break;
 			}

@@ -965,10 +965,9 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}
 
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-
-	if (LIKELY((ppu.rtime & 1) == 0))
+	if (LIKELY(!vm::is_reservation_locked(addr, sizeof(T))))
 	{
+		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
 		ppu.rdata = data;
 
 		if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
@@ -981,10 +980,9 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 	for (u64 i = 0;; i++)
 	{
-		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-
-		if (LIKELY((ppu.rtime & 1) == 0))
+		if (LIKELY(!vm::is_reservation_locked(addr, sizeof(T))))
 		{
+			ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
 			ppu.rdata = data;
 
 			if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
@@ -1092,18 +1090,19 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 	vm::temporary_unlock(ppu);
 
-	auto& res = vm::reservation_lock(addr, sizeof(u32));
+	vm::reservation_lock(addr, sizeof(u32));
 
-	const bool result = ppu.rtime == (res & ~1ull) && data.compare_and_swap_test(old_data, reg_value);
+	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u32)) && data.compare_and_swap_test(old_data, reg_value);
 
 	if (result)
 	{
 		vm::reservation_update(addr, sizeof(u32));
+		vm::reservation_unlock(addr, sizeof(u64));
 		vm::reservation_notifier(addr, sizeof(u32)).notify_all();
 	}
 	else
 	{
-		res &= ~1ull;
+		vm::reservation_unlock(addr, sizeof(u32));
 	}
 
 	ppu.cpu_mem();
@@ -1185,18 +1184,19 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	vm::temporary_unlock(ppu);
 
-	auto& res = vm::reservation_lock(addr, sizeof(u64));
+	vm::reservation_lock(addr, sizeof(u64));
 
-	const bool result = ppu.rtime == (res & ~1ull) && data.compare_and_swap_test(old_data, reg_value);
+	const bool result = ppu.rtime == vm::reservation_acquire(addr, sizeof(u64)) && data.compare_and_swap_test(old_data, reg_value);
 
 	if (result)
 	{
 		vm::reservation_update(addr, sizeof(u64));
+		vm::reservation_unlock(addr, sizeof(u64));
 		vm::reservation_notifier(addr, sizeof(u64)).notify_all();
 	}
 	else
 	{
-		res &= ~1ull;
+		vm::reservation_unlock(addr, sizeof(u64));
 	}
 
 	ppu.cpu_mem();
