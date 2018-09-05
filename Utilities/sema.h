@@ -32,7 +32,10 @@ protected:
 		}
 	}
 
-	bool try_wait();
+	bool try_wait()
+	{
+		return m_value.fetch_dec_sat(0) > 0;
+	}
 
 	void post(s32 _max)
 	{

@@ -111,9 +111,10 @@ public:
 	// Unconditionally set next state
 	void state_next()
 	{
-		T _old, state = m_value.op_fetch([&](T& value)
+		T _old, state = m_value.atomic_op([&](T& value)
 		{
 			_old = value++;
+			return value;
 		});
 
 		(static_cast<CRT*>(this)->*transition_get(state))(_old);
@@ -122,9 +123,10 @@ public:
 	// Unconditionally set previous state
 	void state_prev()
 	{
-		T _old, state = m_value.op_fetch([&](T& value)
+		T _old, state = m_value.atomic_op([&](T& value)
 		{
 			_old = value--;
+			return value;
 		});
 
 		(static_cast<CRT*>(this)->*transition_get(state))(_old);

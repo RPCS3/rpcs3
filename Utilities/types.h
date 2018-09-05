@@ -13,6 +13,7 @@
 #include <type_traits>
 #include <utility>
 #include <chrono>
+#include <limits>
 #include <array>
 
 // Assume little-endian

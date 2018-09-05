@@ -1012,15 +1012,18 @@ void lv2_obj::sleep_timeout(named_thread& thread, u64 timeout)
 	{
 		LOG_TRACE(PPU, "sleep() - waiting (%zu)", g_pending.size());
 
-		auto state = ppu->state.fetch_op([&](auto& val)
+		const auto [_, ok] = ppu->state.fetch_op([&](bs_t<cpu_flag>& val)
 		{
 			if (!(val & cpu_flag::signal))
 			{
 				val += cpu_flag::suspend;
+				return true;
 			}
+
+			return false;
 		});
 
-		if (state & cpu_flag::signal)
+		if (!ok)
 		{
 			LOG_TRACE(PPU, "sleep() failed (signaled)");
 			return;
