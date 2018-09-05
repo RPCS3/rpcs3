@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../../../Utilities/BitField.h"
+#include "Utilities/BitField.h"
+#include "Utilities/asm.h"
 
 template<typename T, u32 I, u32 N> using ppu_bf_t = bf_t<T, sizeof(T) * 8 - N - I, N>;
 
@@ -63,7 +64,7 @@ union ppu_opcode_t
 
 inline u64 ppu_rotate_mask(u32 mb, u32 me)
 {
-	return ror64(~0ull << (63 ^ (me - mb)), mb);
+	return utils::ror64(~0ull << (63 ^ (me - mb)), mb);
 }
 
 inline u32 ppu_decode(u32 inst)

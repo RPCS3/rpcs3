@@ -2,6 +2,7 @@
 
 #include "../System.h"
 #include "Utilities/geometry.h"
+#include "Utilities/asm.h"
 #include "gcm_enums.h"
 #include <atomic>
 #include <memory>
@@ -299,14 +300,14 @@ namespace rsx
 	//
 	static inline u32 ceil_log2(u32 value)
 	{
-		return value <= 1 ? 0 : ::cntlz32((value - 1) << 1, true) ^ 31;
+		return value <= 1 ? 0 : utils::cntlz32((value - 1) << 1, true) ^ 31;
 	}
 
 	static inline u32 next_pow2(u32 x)
 	{
 		if (x <= 2) return x;
 
-		return static_cast<u32>((1ULL << 32) >> ::cntlz32(x - 1, true));
+		return static_cast<u32>((1ULL << 32) >> utils::cntlz32(x - 1, true));
 	}
 
 	// Returns interleaved bits of X|Y|Z used as Z-order curve indices

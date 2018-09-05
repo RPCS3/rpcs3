@@ -3,7 +3,7 @@
 #include "Emu/System.h"
 #include "Utilities/JIT.h"
 #include "Utilities/sysinfo.h"
-
+#include "Utilities/asm.h"
 #include "SPUThread.h"
 #include "SPUInterpreter.h"
 
@@ -209,7 +209,7 @@ bool spu_interpreter::ROT(SPUThread& spu, spu_opcode_t op)
 
 	for (u32 i = 0; i < 4; i++)
 	{
-		spu.gpr[op.rt]._u32[i] = rol32(a._u32[i], b._u32[i]);
+		spu.gpr[op.rt]._u32[i] = utils::rol32(a._u32[i], b._u32[i]);
 	}
 	return true;
 }
@@ -260,7 +260,7 @@ bool spu_interpreter::ROTH(SPUThread& spu, spu_opcode_t op)
 
 	for (u32 i = 0; i < 8; i++)
 	{
-		spu.gpr[op.rt]._u16[i] = rol16(a._u16[i], b._u16[i]);
+		spu.gpr[op.rt]._u16[i] = utils::rol16(a._u16[i], b._u16[i]);
 	}
 	return true;
 }
@@ -855,7 +855,7 @@ bool spu_interpreter::CLZ(SPUThread& spu, spu_opcode_t op)
 {
 	for (u32 i = 0; i < 4; i++)
 	{
-		spu.gpr[op.rt]._u32[i] = cntlz32(spu.gpr[op.ra]._u32[i]);
+		spu.gpr[op.rt]._u32[i] = utils::cntlz32(spu.gpr[op.ra]._u32[i]);
 	}
 	return true;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include "asm.h"
 #include <climits>
 #include <string>
 #include <vector>
@@ -56,7 +57,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 	const auto write_octal = [&](u64 value, u64 min_num)
 	{
-		out.resize(out.size() + std::max<u64>(min_num, 66 / 3 - (cntlz64(value | 1, true) + 2) / 3), '0');
+		out.resize(out.size() + std::max<u64>(min_num, 66 / 3 - (utils::cntlz64(value | 1, true) + 2) / 3), '0');
 
 		// Write in reversed order
 		for (auto i = out.rbegin(); value; i++, value /= 8)
@@ -67,8 +68,8 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 	const auto write_hex = [&](u64 value, bool upper, u64 min_num)
 	{
-		out.resize(out.size() + std::max<u64>(min_num, 64 / 4 - cntlz64(value | 1, true) / 4), '0');
-		
+		out.resize(out.size() + std::max<u64>(min_num, 64 / 4 - utils::cntlz64(value | 1, true) / 4), '0');
+
 		// Write in reversed order
 		for (auto i = out.rbegin(); value; i++, value /= 16)
 		{
@@ -141,7 +142,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		{
 			ctx.width = read_decimal(ch - '0');
 		}
-		
+
 		break;
 	}
 
@@ -157,7 +158,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			ctx.width = std::abs(warg);
 			ctx.left |= warg < 0;
 		}
-		
+
 		break;
 	}
 
@@ -307,7 +308,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 		const std::size_t start = out.size();
 		const std::size_t size1 = src.fmt_string(out, ctx.args);
-		
+
 		if (ctx.dot && size1 > ctx.prec)
 		{
 			// Shrink if necessary
@@ -576,7 +577,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			// Add padding if necessary
 			out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
 		}
-		
+
 		src.skip(ctx.args);
 		ctx = {0};
 		break;

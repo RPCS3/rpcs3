@@ -3,7 +3,6 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GSRender.h"
 #include "cellGcmSys.h"

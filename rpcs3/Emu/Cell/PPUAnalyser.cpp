@@ -4,10 +4,8 @@
 #include "PPUAnalyser.h"
 
 #include <unordered_set>
-
 #include "yaml-cpp/yaml.h"
-
-
+#include "Utilities/asm.h"
 
 const ppu_decoder<ppu_itype> s_ppu_itype;
 
@@ -2051,7 +2049,7 @@ void ppu_acontext::MULLI(ppu_opcode_t op)
 		max = amax * op.simm16;
 
 		// Check overflow
-		if (min >> 63 != ::mulh64(amin, op.simm16) || max >> 63 != ::mulh64(amax, op.simm16))
+		if (min >> 63 != utils::mulh64(amin, op.simm16) || max >> 63 != utils::mulh64(amax, op.simm16))
 		{
 			min = 0;
 			max = -1;
@@ -2062,7 +2060,7 @@ void ppu_acontext::MULLI(ppu_opcode_t op)
 		}
 	}
 
-	gpr[op.rd] = spec_gpr::range(min, max, gpr[op.ra].tz() + ::cnttz64(op.simm16));
+	gpr[op.rd] = spec_gpr::range(min, max, gpr[op.ra].tz() + utils::cnttz64(op.simm16));
 }
 
 void ppu_acontext::SUBFIC(ppu_opcode_t op)
@@ -2163,14 +2161,14 @@ void ppu_acontext::RLWIMI(ppu_opcode_t op)
 	if (op.mb32 <= op.me32)
 	{
 		// 32-bit op, including mnemonics: INSLWI, INSRWI (TODO)
-		min = ::rol32((u32)min, op.sh32) & mask;
-		max = ::rol32((u32)max, op.sh32) & mask;
+		min = utils::rol32((u32)min, op.sh32) & mask;
+		max = utils::rol32((u32)max, op.sh32) & mask;
 	}
 	else
 	{
 		// Full 64-bit op with duplication
-		min = ::rol64((u32)min | min << 32, op.sh32) & mask;
-		max = ::rol64((u32)max | max << 32, op.sh32) & mask;
+		min = utils::rol64((u32)min | min << 32, op.sh32) & mask;
+		max = utils::rol64((u32)max | max << 32, op.sh32) & mask;
 	}
 
 	if (mask != -1)
@@ -2219,14 +2217,14 @@ void ppu_acontext::RLWINM(ppu_opcode_t op)
 			// EXTRWI and other possible mnemonics
 		}
 
-		min = ::rol32((u32)min, op.sh32) & mask;
-		max = ::rol32((u32)max, op.sh32) & mask;
+		min = utils::rol32((u32)min, op.sh32) & mask;
+		max = utils::rol32((u32)max, op.sh32) & mask;
 	}
 	else
 	{
 		// Full 64-bit op with duplication
-		min = ::rol64((u32)min | min << 32, op.sh32) & mask;
-		max = ::rol64((u32)max | max << 32, op.sh32) & mask;
+		min = utils::rol64((u32)min | min << 32, op.sh32) & mask;
+		max = utils::rol64((u32)max | max << 32, op.sh32) & mask;
 	}
 
 	gpr[op.ra] = spec_gpr::approx(min, max);
@@ -2314,8 +2312,8 @@ void ppu_acontext::RLDICL(ppu_opcode_t op)
 		return;
 	}
 
-	min = ::rol64(min, sh) & mask;
-	max = ::rol64(max, sh) & mask;
+	min = utils::rol64(min, sh) & mask;
+	max = utils::rol64(max, sh) & mask;
 	gpr[op.ra] = spec_gpr::approx(min, max);
 }
 
@@ -2343,8 +2341,8 @@ void ppu_acontext::RLDICR(ppu_opcode_t op)
 		return;
 	}
 
-	min = ::rol64(min, sh) & mask;
-	max = ::rol64(max, sh) & mask;
+	min = utils::rol64(min, sh) & mask;
+	max = utils::rol64(max, sh) & mask;
 	gpr[op.ra] = spec_gpr::approx(min, max);
 }
 
@@ -2369,8 +2367,8 @@ void ppu_acontext::RLDIC(ppu_opcode_t op)
 		return;
 	}
 
-	min = ::rol64(min, sh) & mask;
-	max = ::rol64(max, sh) & mask;
+	min = utils::rol64(min, sh) & mask;
+	max = utils::rol64(max, sh) & mask;
 	gpr[op.ra] = spec_gpr::approx(min, max);
 }
 
@@ -2392,8 +2390,8 @@ void ppu_acontext::RLDIMI(ppu_opcode_t op)
 		// INSRDI mnemonic
 	}
 
-	min = ::rol64(min, sh) & mask;
-	max = ::rol64(max, sh) & mask;
+	min = utils::rol64(min, sh) & mask;
+	max = utils::rol64(max, sh) & mask;
 
 	if (mask != -1)
 	{

@@ -1,9 +1,6 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
-#include "Emu/Cell/PPUOpcodes.h"
-
-
 
 LOG_CHANNEL(sys_libc);
 

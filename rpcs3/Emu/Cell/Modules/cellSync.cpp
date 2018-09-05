@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
-
+#include "Utilities/asm.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "cellSync.h"
@@ -966,7 +966,7 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 		{
 			var9_ = 1 << var9_;
 		}
-		s32 var9 = cntlz32((u32)(u16)~(var9_ | (u16)push3.m_h6)) - 16; // count leading zeros in u16
+		s32 var9 = utils::cntlz32((u32)(u16)~(var9_ | (u16)push3.m_h6)) - 16; // count leading zeros in u16
 
 		s32 var5 = (s32)(u16)push3.m_h6 | var9_;
 		if (var9 & 0x30)
@@ -1262,7 +1262,7 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 		{
 			var9_ = 1 << var9_;
 		}
-		s32 var9 = cntlz32((u32)(u16)~(var9_ | (u16)pop3.m_h2)) - 16; // count leading zeros in u16
+		s32 var9 = utils::cntlz32((u32)(u16)~(var9_ | (u16)pop3.m_h2)) - 16; // count leading zeros in u16
 
 		s32 var5 = (s32)(u16)pop3.m_h2 | var9_;
 		if (var9 & 0x30)
