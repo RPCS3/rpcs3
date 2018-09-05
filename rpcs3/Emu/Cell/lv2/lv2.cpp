@@ -518,7 +518,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_usbd_get_isochronous_transfer_status),    //546 (0x222)
 	BIND_FUNC(sys_usbd_get_device_location),                //547 (0x223)
 	BIND_FUNC(sys_usbd_send_event),                         //548 (0x224)
-	null_func,//BIND_FUNC(sys_ubsd_...)                     //549 (0x225)
+	BIND_FUNC(sys_usbd_event_port_send),                    //549 (0x225)
 	BIND_FUNC(sys_usbd_allocate_memory),                    //550 (0x226)
 	BIND_FUNC(sys_usbd_free_memory),                        //551 (0x227)
 	null_func,//BIND_FUNC(sys_ubsd_...)                     //552 (0x228)
