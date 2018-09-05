@@ -514,7 +514,7 @@ public:
 				if (task.stream.discontinuity)
 				{
 					cellDmux.warning("dmuxSetStream (beginning)");
-					for (u32 i = 0; i < sizeof(esALL) / sizeof(esALL[0]); i++)
+					for (u32 i = 0; i < std::size(esALL); i++)
 					{
 						if (esALL[i])
 						{
@@ -595,7 +595,7 @@ public:
 					fmt::throw_exception("dmuxDisableEs: invalid elementary stream" HERE);
 				}
 
-				for (u32 i = 0; i < sizeof(esALL) / sizeof(esALL[0]); i++)
+				for (u32 i = 0; i < std::size(esALL); i++)
 				{
 					if (esALL[i] == &es)
 					{

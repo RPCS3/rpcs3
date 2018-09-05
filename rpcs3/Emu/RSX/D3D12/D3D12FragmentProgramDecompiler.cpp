@@ -92,7 +92,7 @@ void D3D12FragmentDecompiler::insertOutputs(std::stringstream & OS)
 		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 	size_t idx = 0;
-	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
+	for (int i = 0; i < std::size(table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "float4", table[i].second))
 			OS << "	" << "float4" << " " << table[i].first << " : SV_TARGET" << idx++ << ";\n";
@@ -294,7 +294,7 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 
 	std::string first_output_name;
 	OS << "	PixelOutput Out = (PixelOutput)0;\n";
-	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
+	for (int i = 0; i < std::size(table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "float4", table[i].second))
 		{

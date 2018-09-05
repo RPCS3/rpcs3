@@ -178,7 +178,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 		{
 		case 0x00: ret += reg_table[0]; break;
 		default:
-			if (dst.src_attr_reg_num < sizeof(reg_table) / sizeof(reg_table[0]))
+			if (dst.src_attr_reg_num < std::size(reg_table))
 			{
 				ret += fmt::format("%s[%s]", perspective_correction.c_str(), input_attr_reg.c_str());
 			}

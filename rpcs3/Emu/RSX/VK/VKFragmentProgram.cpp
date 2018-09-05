@@ -93,7 +93,7 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 
 	//NOTE: We do not skip outputs, the only possible combinations are a(0), b(0), ab(0,1), abc(0,1,2), abcd(0,1,2,3)
 	u8 output_index = 0;
-	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
+	for (int i = 0; i < std::size(table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
 		{
