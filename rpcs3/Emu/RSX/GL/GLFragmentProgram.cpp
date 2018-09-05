@@ -92,7 +92,7 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
-	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
+	for (int i = 0; i < std::size(table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
 			OS << "layout(location=" << i << ") out vec4 " << table[i].first << ";\n";

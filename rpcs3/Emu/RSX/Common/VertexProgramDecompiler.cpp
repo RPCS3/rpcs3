@@ -82,7 +82,7 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "tmp" + std::to_string(src[n].tmp_src));
 		break;
 	case RSX_VP_REGISTER_TYPE_INPUT:
-		if (d1.input_src < (sizeof(reg_table) / sizeof(reg_table[0])))
+		if (d1.input_src < std::size(reg_table))
 		{
 			ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), reg_table[d1.input_src], d1.input_src);
 		}

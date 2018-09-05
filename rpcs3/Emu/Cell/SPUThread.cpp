@@ -365,7 +365,7 @@ spu_imm_table_t::scale_table_t::scale_table_t()
 
 spu_imm_table_t::spu_imm_table_t()
 {
-	for (u32 i = 0; i < sizeof(sldq_pshufb) / sizeof(sldq_pshufb[0]); i++)
+	for (u32 i = 0; i < std::size(sldq_pshufb); i++)
 	{
 		for (u32 j = 0; j < 16; j++)
 		{
@@ -373,7 +373,7 @@ spu_imm_table_t::spu_imm_table_t()
 		}
 	}
 
-	for (u32 i = 0; i < sizeof(srdq_pshufb) / sizeof(srdq_pshufb[0]); i++)
+	for (u32 i = 0; i < std::size(srdq_pshufb); i++)
 	{
 		const u32 im = (0u - i) & 0x1f;
 
@@ -383,7 +383,7 @@ spu_imm_table_t::spu_imm_table_t()
 		}
 	}
 
-	for (u32 i = 0; i < sizeof(rldq_pshufb) / sizeof(rldq_pshufb[0]); i++)
+	for (u32 i = 0; i < std::size(rldq_pshufb); i++)
 	{
 		for (u32 j = 0; j < 16; j++)
 		{
