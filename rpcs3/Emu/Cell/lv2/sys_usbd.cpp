@@ -265,6 +265,12 @@ s32 sys_usbd_send_event()
 	return CELL_OK;
 }
 
+s32 sys_usbd_event_port_send()
+{
+	sys_usbd.todo("sys_usbd_event_port_send()");
+	return CELL_OK;
+}
+
 s32 sys_usbd_allocate_memory()
 {
 	sys_usbd.todo("sys_usbd_allocate_memory()");

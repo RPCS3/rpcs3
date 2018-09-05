@@ -348,6 +348,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 546: return "sys_usbd_get_isochronous_transfer_status";
 	case 547: return "sys_usbd_get_device_location";
 	case 548: return "sys_usbd_send_event";
+	case 549: return "sys_usbd_event_port_send";
 	case 550: return "sys_usbd_allocate_memory";
 	case 551: return "sys_usbd_free_memory";
 	case 556: return "sys_usbd_get_device_speed";

@@ -57,6 +57,7 @@ s32 sys_usbd_get_transfer_status();
 s32 sys_usbd_get_isochronous_transfer_status();
 s32 sys_usbd_get_device_location();
 s32 sys_usbd_send_event();
+s32 sys_usbd_event_port_send();
 s32 sys_usbd_allocate_memory();
 s32 sys_usbd_free_memory();
 s32 sys_usbd_get_device_speed();
