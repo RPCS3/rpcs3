@@ -1821,7 +1821,7 @@ namespace rsx
 				case rsx::texture_upload_context::shader_read:
 					if (!result.image_handle)
 						break;
-					// Conditional fallthrough
+					[[fallthrough]];
 				default:
 					return result;
 				}

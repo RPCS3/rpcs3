@@ -2130,7 +2130,7 @@ bool spu_thread::process_mfc_cmd()
 			break;
 		}
 
-		// Fallthrough
+		[[fallthrough]];
 	}
 	case MFC_PUT_CMD:
 	case MFC_PUTB_CMD:

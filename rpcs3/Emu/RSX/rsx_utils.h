@@ -158,6 +158,7 @@ namespace rsx
 			{
 			default:
 				rsx_log.error("Invalid AV format 0x%x", format);
+				[[fallthrough]];
 			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
 			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
 				return CELL_GCM_TEXTURE_A8R8G8B8;
@@ -172,6 +173,7 @@ namespace rsx
 			{
 			default:
 				rsx_log.error("Invalid AV format 0x%x", format);
+				[[fallthrough]];
 			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
 			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
 				return 4;

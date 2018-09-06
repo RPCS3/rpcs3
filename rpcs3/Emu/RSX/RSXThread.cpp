@@ -703,6 +703,7 @@ namespace rsx
 			{
 			default:
 				rsx_log.error("bad clip plane control (0x%x)", static_cast<u8>(clip_plane_control[index]));
+				[[fallthrough]];
 
 			case rsx::user_clip_plane_op::disable:
 				clip_enabled_flags[index] = 0;
