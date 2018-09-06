@@ -1,9 +1,5 @@
 #include "JIT.h"
 
-#ifndef _XABORT_RETRY
-#define _XABORT_RETRY (1 << 1)
-#endif
-
 asmjit::JitRuntime& asmjit::get_global_runtime()
 {
 	// Magic static
@@ -473,7 +469,7 @@ public:
 		{
 			auto buf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(cached.size());
 			cached.read(buf->getBufferStart(), buf->getBufferSize());
-			return std::move(buf);
+			return buf;
 		}
 
 		return nullptr;

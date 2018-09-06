@@ -270,7 +270,3 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
 	return upload_info;
 }
-
-namespace
-{
-} // End anonymous namespace

@@ -139,7 +139,7 @@ void audio_config::on_task()
 			{
 				if (first_mix)
 				{
-					for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 2)
+					for (u32 i = 0; i < std::size(buf2ch); i += 2)
 					{
 						step_volume(port);
 
@@ -163,7 +163,7 @@ void audio_config::on_task()
 				}
 				else
 				{
-					for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 2)
+					for (u32 i = 0; i < std::size(buf2ch); i += 2)
 					{
 						step_volume(port);
 
@@ -182,7 +182,7 @@ void audio_config::on_task()
 			{
 				if (first_mix)
 				{
-					for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 2)
+					for (u32 i = 0; i < std::size(buf2ch); i += 2)
 					{
 						step_volume(port);
 
@@ -212,7 +212,7 @@ void audio_config::on_task()
 				}
 				else
 				{
-					for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i += 2)
+					for (u32 i = 0; i < std::size(buf2ch); i += 2)
 					{
 						step_volume(port);
 
@@ -254,14 +254,14 @@ void audio_config::on_task()
 			// Copy output data (2ch or 8ch)
 			if (g_cfg.audio.downmix_to_2ch)
 			{
-				for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i++)
+				for (u32 i = 0; i < std::size(buf2ch); i++)
 				{
 					out_buffer[out_pos][i] = buf2ch[i];
 				}
 			}
 			else
 			{
-				for (u32 i = 0; i < (sizeof(buf8ch) / sizeof(float)); i++)
+				for (u32 i = 0; i < std::size(buf8ch); i++)
 				{
 					out_buffer[out_pos][i] = buf8ch[i];
 				}
