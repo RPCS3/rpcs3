@@ -847,7 +847,7 @@ namespace vk
 				remap
 			);
 
-			const auto range = vk::get_image_subresource_range(0, 0, 1, info.mipLevels, get_aspect_flags(info.format) & mask);
+			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, get_aspect_flags(info.format) & mask);
 			auto view = std::make_unique<vk::image_view>(*get_current_renderer(), this, real_mapping, range);
 
 			auto result = view.get();
