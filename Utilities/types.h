@@ -21,20 +21,34 @@
 #define IS_BE_MACHINE 0
 
 #ifdef _MSC_VER
-#define ASSUME(cond) __assume(cond)
+
+#define ASSUME(...) __assume(__VA_ARGS__) // MSVC __assume ignores side-effects
 #define LIKELY
 #define UNLIKELY
 #define SAFE_BUFFERS __declspec(safebuffers)
 #define NEVER_INLINE __declspec(noinline)
 #define FORCE_INLINE __forceinline
-#else
-#define ASSUME(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
-#define LIKELY(cond) __builtin_expect(!!(cond), 1)
-#define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
+
+#else // not _MSC_VER
+
+#ifdef __clang__
+#if defined(__has_builtin) && __has_builtin(__builtin_assume)
+#pragma clang diagnostic ignored "-Wassume" // ignore the clang "side-effects ignored" warning
+#define ASSUME(...) __builtin_assume(!!(__VA_ARGS__)) // __builtin_assume (supported by modern clang) ignores side-effects
+#endif
+#endif
+
+#ifndef ASSUME // gcc and old clang
+#define ASSUME(...) do { if (!(__VA_ARGS__)) __builtin_unreachable(); } while (0)  // note: the compiler will generate code to evaluate "cond" if the expression is opaque
+#endif
+
+#define LIKELY(...) __builtin_expect(!!(__VA_ARGS__), 1)
+#define UNLIKELY(...) __builtin_expect(!!(__VA_ARGS__), 0)
 #define SAFE_BUFFERS
 #define NEVER_INLINE __attribute__((noinline))
 #define FORCE_INLINE __attribute__((always_inline)) inline
-#endif
+
+#endif // _MSC_VER
 
 #define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " type size")
 #define CHECK_ALIGN(type, align) static_assert(alignof(type) == align, "Invalid " #type " type alignment")
@@ -55,6 +69,16 @@
 #define DECLARE(...) decltype(__VA_ARGS__) __VA_ARGS__
 
 #define STR_CASE(...) case __VA_ARGS__: return #__VA_ARGS__
+
+
+#define ASSERT(...) do { if(!(__VA_ARGS__)) fmt::raw_error("Assertion failed: " STRINGIZE(__VA_ARGS__) HERE); } while(0)
+
+#if defined(_DEBUG) || defined(_AUDIT)
+#define AUDIT(...) ASSERT(__VA_ARGS__)
+#else
+#define AUDIT(...) ((void)0)
+#endif
+
 
 using schar  = signed char;
 using uchar  = unsigned char;
