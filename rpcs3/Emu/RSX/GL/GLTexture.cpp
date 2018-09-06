@@ -586,6 +586,7 @@ namespace gl
 			{
 			default:
 				rsx_log.error("Unknown remap function 0x%X", remap_lookup[channel]);
+				[[fallthrough]];
 			case CELL_GCM_TEXTURE_REMAP_REMAP:
 				remap_values[channel] = swizzle_remap[remap_inputs[channel]];
 				break;

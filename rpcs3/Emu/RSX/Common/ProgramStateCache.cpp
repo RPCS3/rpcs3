@@ -104,12 +104,12 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			{
 				d0.HEX = instruction._u32[0];
 				static_jump = (d0.cond == 0x7);
-				// Fall through
+				[[fallthrough]];
 			}
 			case RSX_SCA_OPCODE_BRB:
 			{
 				function_call = false;
-				// Fall through
+				[[fallthrough]];
 			}
 			case RSX_SCA_OPCODE_CAL:
 			case RSX_SCA_OPCODE_CLI:

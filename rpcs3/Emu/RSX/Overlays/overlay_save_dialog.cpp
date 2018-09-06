@@ -120,7 +120,7 @@ namespace rsx
 				if (m_no_saves)
 					break;
 				return_code = m_list->get_selected_index();
-				// Fall through
+				[[fallthrough]];
 			case pad_button::circle:
 				close(true, true);
 				break;
