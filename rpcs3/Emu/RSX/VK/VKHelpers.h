@@ -185,6 +185,7 @@ namespace vk
 	{
 		bool d24_unorm_s8;
 		bool d32_sfloat_s8;
+		bool bgra8_linear;
 	};
 
 	// Memory Allocator - base class
