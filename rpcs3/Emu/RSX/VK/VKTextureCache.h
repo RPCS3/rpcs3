@@ -1043,7 +1043,12 @@ namespace vk
 
 		vk::image *upload_image_simple(vk::command_buffer& cmd, u32 address, u32 width, u32 height)
 		{
-			//Uploads a linear memory range as a BGRA8 texture
+			if (!m_formats_support.bgra8_linear)
+			{
+				return nullptr;
+			}
+
+			// Uploads a linear memory range as a BGRA8 texture
 			auto image = std::make_unique<vk::image>(*m_device, m_memory_types.host_visible_coherent,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 				VK_IMAGE_TYPE_2D,

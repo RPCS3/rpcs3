@@ -20,9 +20,13 @@ namespace vk
 			&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
 			&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
 
-		//Hide d24_s8 if force high precision z buffer is enabled
+		// Hide d24_s8 if force high precision z buffer is enabled
 		if (g_cfg.video.force_high_precision_z_buffer && result.d32_sfloat_s8)
 			result.d24_unorm_s8 = false;
+
+		// Checks if BGRA8 images can be used for blitting
+		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_B8G8R8A8_UNORM, &props);
+		result.bgra8_linear = !!(props.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
 
 		return result;
 	}
