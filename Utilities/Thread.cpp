@@ -1089,16 +1089,35 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 	const auto cpu = get_current_cpu_thread();
 
-	if (rsx::g_access_violation_handler && rsx::g_access_violation_handler(addr, is_writing))
-	{
-		g_tls_fault_rsx++;
 
-		if (cpu)
+	if (rsx::g_access_violation_handler)
+	{
+		bool handled = false;
+		try
 		{
-			cpu->test_state();
+			handled = rsx::g_access_violation_handler(addr, is_writing);
+		}
+		catch (std::runtime_error &e)
+		{
+			LOG_FATAL(RSX, "g_access_violation_handler(0x%x, %d): %s", addr, is_writing, e.what());
+			if (cpu)
+			{
+				vm::temporary_unlock(*cpu);
+				cpu->state += cpu_flag::dbg_pause;
+				cpu->test_state();
+				return false;
+			}
 		}
 
-		return true;
+		if (handled)
+		{
+			g_tls_fault_rsx++;
+			if (cpu)
+			{
+				cpu->test_state();
+			}
+			return true;
+		}
 	}
 
 	auto code = (const u8*)RIP(context);
@@ -1384,7 +1403,6 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 			return EXCEPTION_CONTINUE_EXECUTION;
 		}
 	}
-
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
