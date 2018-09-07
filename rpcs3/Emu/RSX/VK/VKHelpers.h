@@ -194,8 +194,8 @@ namespace vk
 	public:
 		using mem_handle_t = void *;
 
-		mem_allocator_base(VkDevice dev, VkPhysicalDevice /*pdev*/) : m_device(dev) {};
-		~mem_allocator_base() {};
+		mem_allocator_base(VkDevice dev, VkPhysicalDevice /*pdev*/) : m_device(dev) {}
+		virtual ~mem_allocator_base() {}
 
 		virtual void destroy() = 0;
 
@@ -1396,7 +1396,7 @@ public:
 			m_surface_format = format;
 		}
 
-		~swapchain_base(){}
+		virtual ~swapchain_base() {}
 
 		virtual void create(display_handle_t& handle) = 0;
 		virtual void destroy(bool full = true) = 0;
