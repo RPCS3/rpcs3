@@ -67,6 +67,7 @@ class GSFrameBase
 public:
 	GSFrameBase() = default;
 	GSFrameBase(const GSFrameBase&) = delete;
+	virtual ~GSFrameBase() {}
 
 	virtual void close() = 0;
 	virtual bool shown() = 0;
