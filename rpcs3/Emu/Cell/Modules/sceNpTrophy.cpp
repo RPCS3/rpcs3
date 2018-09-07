@@ -315,9 +315,19 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	// * Update (Required update) - Setup - Progress * ? - Finalize - Complete - Installed
 	// * Installed
 	// We will go with the easy path of Installed, and that's it.
-	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg) < 0)
+
+	auto statuses = {SCE_NP_TROPHY_STATUS_NOT_INSTALLED,
+					 SCE_NP_TROPHY_STATUS_PROCESSING_SETUP,
+					 SCE_NP_TROPHY_STATUS_PROCESSING_PROGRESS,
+					 SCE_NP_TROPHY_STATUS_PROCESSING_FINALIZE,
+					 SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE};
+
+	for (auto status : statuses)
 	{
-		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
+		if (statusCb(ppu, context, status, 100, 100, arg) < 0)
+		{
+			return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
+		}
 	}
 
 	return CELL_OK;
