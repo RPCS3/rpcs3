@@ -10,8 +10,6 @@
 
 extern logs::channel sysPrxForUser;
 
-extern bool g_avoid_lwm;
-
 error_code sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr)
 {
 	sysPrxForUser.trace("sys_lwmutex_create(lwmutex=*0x%x, attr=*0x%x)", lwmutex, attr);
@@ -36,7 +34,7 @@ error_code sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmute
 
 	vm::var<u32> out_id;
 	vm::var<sys_mutex_attribute_t> attrs;
-	attrs->protocol  = attr->protocol;
+	attrs->protocol  = protocol == SYS_SYNC_FIFO ? SYS_SYNC_FIFO : SYS_SYNC_PRIORITY;
 	attrs->recursive = attr->recursive;
 	attrs->pshared   = SYS_SYNC_NOT_PROCESS_SHARED;
 	attrs->adaptive  = SYS_SYNC_NOT_ADAPTIVE;
@@ -44,7 +42,7 @@ error_code sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmute
 	attrs->flags     = 0;
 	attrs->name_u64  = attr->name_u64;
 
-	if (error_code res = g_avoid_lwm ? sys_mutex_create(out_id, attrs) : _sys_lwmutex_create(out_id, protocol, lwmutex, 0x80000001, attr->name_u64, 0))
+	if (error_code res = g_cfg.core.hle_lwmutex ? sys_mutex_create(out_id, attrs) : _sys_lwmutex_create(out_id, protocol, lwmutex, 0x80000001, attr->name_u64, 0))
 	{
 		return res;
 	}
@@ -60,7 +58,7 @@ error_code sys_lwmutex_destroy(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.trace("sys_lwmutex_destroy(lwmutex=*0x%x)", lwmutex);
 
-	if (g_avoid_lwm)
+	if (g_cfg.core.hle_lwmutex)
 	{
 		return sys_mutex_destroy(lwmutex->sleep_queue);
 	}
@@ -96,7 +94,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 {
 	sysPrxForUser.trace("sys_lwmutex_lock(lwmutex=*0x%x, timeout=0x%llx)", lwmutex, timeout);
 
-	if (g_avoid_lwm)
+	if (g_cfg.core.hle_lwmutex)
 	{
 		return sys_mutex_lock(ppu, lwmutex->sleep_queue, timeout);
 	}
@@ -197,7 +195,7 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.trace("sys_lwmutex_trylock(lwmutex=*0x%x)", lwmutex);
 
-	if (g_avoid_lwm)
+	if (g_cfg.core.hle_lwmutex)
 	{
 		return sys_mutex_trylock(ppu, lwmutex->sleep_queue);
 	}
@@ -269,7 +267,7 @@ error_code sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.trace("sys_lwmutex_unlock(lwmutex=*0x%x)", lwmutex);
 
-	if (g_avoid_lwm)
+	if (g_cfg.core.hle_lwmutex)
 	{
 		return sys_mutex_unlock(ppu, lwmutex->sleep_queue);
 	}
@@ -316,9 +314,9 @@ error_code sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 
 void sysPrxForUser_sys_lwmutex_init()
 {
-	REG_FUNC(sysPrxForUser, sys_lwmutex_create);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_destroy);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_lock);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_trylock);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_lock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_trylock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
 }
