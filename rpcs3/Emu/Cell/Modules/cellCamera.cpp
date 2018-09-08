@@ -406,7 +406,7 @@ s32 cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 		}
 	}
 
-	if (!check_dev_num)
+	if (!check_dev_num(dev_num))
 	{
 		return CELL_CAMERA_ERROR_PARAM;
 	}
