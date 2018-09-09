@@ -77,7 +77,7 @@ struct llvm_value_t<bool> : llvm_value_t<void>
 	using base::base;
 
 	static constexpr uint esize  = 1;
-	static constexpr uint is_int = true;
+	static constexpr bool is_int = true;
 
 	static llvm::Type* get_type(llvm::LLVMContext& context)
 	{
@@ -93,7 +93,7 @@ struct llvm_value_t<i2> : llvm_value_t<void>
 	using base::base;
 
 	static constexpr uint esize  = 2;
-	static constexpr uint is_int = true;
+	static constexpr bool is_int = true;
 
 	static llvm::Type* get_type(llvm::LLVMContext& context)
 	{
@@ -109,7 +109,7 @@ struct llvm_value_t<i4> : llvm_value_t<void>
 	using base::base;
 
 	static constexpr uint esize  = 4;
-	static constexpr uint is_int = true;
+	static constexpr bool is_int = true;
 
 	static llvm::Type* get_type(llvm::LLVMContext& context)
 	{
