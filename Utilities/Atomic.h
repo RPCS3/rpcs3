@@ -618,9 +618,11 @@ public:
 
 		while (true)
 		{
+			_new = old;
+
 			if constexpr (std::is_void_v<RT>)
 			{
-				std::invoke(func, (_new = old));
+				std::invoke(std::forward<F>(func), _new);
 
 				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
 				{
@@ -629,7 +631,7 @@ public:
 			}
 			else
 			{
-				RT ret = std::invoke(func, (_new = old));
+				RT ret = std::invoke(std::forward<F>(func), _new);
 
 				if (LIKELY(!ret || atomic_storage<type>::compare_exchange(m_data, old, _new)))
 				{
@@ -639,17 +641,50 @@ public:
 		}
 	}
 
-	// Atomic operation; returns function result value (TODO: remove args)
-	template <typename F, typename... Args, typename RT = std::invoke_result_t<F, T&, const Args&...>>
-	RT atomic_op(F&& func, const Args&... args)
+	// fetch_op overload with function (invokable) provided as a template parameter
+	template <auto F, typename RT = std::invoke_result_t<decltype(F), T&>>
+	std::conditional_t<std::is_void_v<RT>, type, std::pair<type, RT>> fetch_op()
 	{
 		type _new, old = atomic_storage<type>::load(m_data);
 
 		while (true)
 		{
+			_new = old;
+
 			if constexpr (std::is_void_v<RT>)
 			{
-				std::invoke(func, (_new = old), args...);
+				std::invoke(F, _new);
+
+				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				{
+					return old;
+				}
+			}
+			else
+			{
+				RT ret = std::invoke(F, _new);
+
+				if (LIKELY(!ret || atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				{
+					return {old, std::move(ret)};
+				}
+			}
+		}
+	}
+
+	// Atomic operation; returns function result value, function is the lambda
+	template <typename F, typename RT = std::invoke_result_t<F, T&>>
+	RT atomic_op(F&& func)
+	{
+		type _new, old = atomic_storage<type>::load(m_data);
+
+		while (true)
+		{
+			_new = old;
+
+			if constexpr (std::is_void_v<RT>)
+			{
+				std::invoke(std::forward<F>(func), _new);
 
 				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
 				{
@@ -658,7 +693,38 @@ public:
 			}
 			else
 			{
-				RT result = std::invoke(func, (_new = old), args...);
+				RT result = std::invoke(std::forward<F>(func), _new);
+
+				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				{
+					return result;
+				}
+			}
+		}
+	}
+
+	// atomic_op overload with function (invokable) provided as a template parameter
+	template <auto F, typename RT = std::invoke_result_t<decltype(F), T&>>
+	RT atomic_op()
+	{
+		type _new, old = atomic_storage<type>::load(m_data);
+
+		while (true)
+		{
+			_new = old;
+
+			if constexpr (std::is_void_v<RT>)
+			{
+				std::invoke(F, _new);
+
+				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				{
+					return;
+				}
+			}
+			else
+			{
+				RT result = std::invoke(F, _new);
 
 				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
 				{
