@@ -71,7 +71,7 @@ public:
 	}
 
 	// Conditionally set state (optimized)
-	explicit_bool_t state_test_and_set(T expected, T state)
+	bool state_test_and_set(T expected, T state)
 	{
 		if (m_value == expected && m_value.compare_and_swap_test(expected, state))
 		{
@@ -83,7 +83,7 @@ public:
 	}
 
 	// Conditionally set state (list version)
-	explicit_bool_t state_test_and_set(std::initializer_list<T> expected, T state)
+	bool state_test_and_set(std::initializer_list<T> expected, T state)
 	{
 		T _old;
 
@@ -111,9 +111,10 @@ public:
 	// Unconditionally set next state
 	void state_next()
 	{
-		T _old, state = m_value.op_fetch([&](T& value)
+		T _old, state = m_value.atomic_op([&](T& value)
 		{
 			_old = value++;
+			return value;
 		});
 
 		(static_cast<CRT*>(this)->*transition_get(state))(_old);
@@ -122,9 +123,10 @@ public:
 	// Unconditionally set previous state
 	void state_prev()
 	{
-		T _old, state = m_value.op_fetch([&](T& value)
+		T _old, state = m_value.atomic_op([&](T& value)
 		{
 			_old = value--;
+			return value;
 		});
 
 		(static_cast<CRT*>(this)->*transition_get(state))(_old);

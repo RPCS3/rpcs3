@@ -362,6 +362,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::liblv2only};
 		cfg::_bool hook_functions{this, "Hook static functions"};
 		cfg::set_entry load_libraries{this, "Load libraries"};
+		cfg::_bool hle_lwmutex{this, "HLE lwmutex"}; // Force alternative lwmutex/lwcond implementation
 
 	} core{this};
 

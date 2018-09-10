@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include <functional>
 
 // Helper class, provides access to compiler-specific atomic intrinsics
 template<typename T, std::size_t Size = sizeof(T)>
@@ -609,62 +610,123 @@ public:
 		return atomic_storage<type>::compare_exchange(m_data, old, exch);
 	}
 
-	// Atomic operation; returns old value
-	template <typename F>
-	std::enable_if_t<std::is_void<std::invoke_result_t<F, T&>>::value, type> fetch_op(F&& func)
+	// Atomic operation; returns old value, or pair of old value and return value (cancel op if evaluates to false)
+	template <typename F, typename RT = std::invoke_result_t<F, T&>>
+	std::conditional_t<std::is_void_v<RT>, type, std::pair<type, RT>> fetch_op(F&& func)
 	{
 		type _new, old = atomic_storage<type>::load(m_data);
 
 		while (true)
 		{
-			func((_new = old));
+			_new = old;
 
-			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new))) [[likely]]
+			if constexpr (std::is_void_v<RT>)
 			{
-				return old;
+				std::invoke(std::forward<F>(func), _new);
+
+				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				{
+					return old;
+				}
+			}
+			else
+			{
+				RT ret = std::invoke(std::forward<F>(func), _new);
+
+				if (LIKELY(!ret || atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				{
+					return {old, std::move(ret)};
+				}
 			}
 		}
 	}
 
-	// Atomic operation; returns new value
-	template <typename F>
-	std::enable_if_t<std::is_void<std::invoke_result_t<F, T&>>::value, type> op_fetch(F&& func)
+	// fetch_op overload with function (invokable) provided as a template parameter
+	template <auto F, typename RT = std::invoke_result_t<decltype(F), T&>>
+	std::conditional_t<std::is_void_v<RT>, type, std::pair<type, RT>> fetch_op()
 	{
 		type _new, old = atomic_storage<type>::load(m_data);
 
 		while (true)
 		{
-			func((_new = old));
+			_new = old;
 
-			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new))) [[likely]]
+			if constexpr (std::is_void_v<RT>)
 			{
-				return _new;
+				std::invoke(F, _new);
+
+				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				{
+					return old;
+				}
+			}
+			else
+			{
+				RT ret = std::invoke(F, _new);
+
+				if (LIKELY(!ret || atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				{
+					return {old, std::move(ret)};
+				}
 			}
 		}
 	}
 
-	// Atomic operation; returns function result value (TODO: remove args)
-	template <typename F, typename... Args, typename RT = std::invoke_result_t<F, T&, const Args&...>>
-	RT atomic_op(F&& func, const Args&... args)
+	// Atomic operation; returns function result value, function is the lambda
+	template <typename F, typename RT = std::invoke_result_t<F, T&>>
+	RT atomic_op(F&& func)
 	{
 		type _new, old = atomic_storage<type>::load(m_data);
 
 		while (true)
 		{
-			if constexpr(std::is_void<RT>::value)
-			{
-				func((_new = old), args...);
+			_new = old;
 
-				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new))) [[likely]]
+			if constexpr (std::is_void_v<RT>)
+			{
+				std::invoke(std::forward<F>(func), _new);
+
+				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
 				{
 					return;
 				}
 			}
 			else
 			{
-				RT result = func((_new = old), args...);
+				RT result = std::invoke(std::forward<F>(func), _new);
 
-				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new))) [[likely]]
+				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				{
+					return result;
+				}
+			}
+		}
+	}
+
+	// atomic_op overload with function (invokable) provided as a template parameter
+	template <auto F, typename RT = std::invoke_result_t<decltype(F), T&>>
+	RT atomic_op()
+	{
+		type _new, old = atomic_storage<type>::load(m_data);
+
+		while (true)
+		{
+			_new = old;
+
+			if constexpr (std::is_void_v<RT>)
+			{
+				std::invoke(F, _new);
+
+				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+				{
+					return;
+				}
+			}
+			else
+			{
+				RT result = std::invoke(F, _new);
+
+				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
 				{
 					return result;
 				}
@@ -722,9 +784,10 @@ public:
 			return atomic_storage<type>::add_fetch(m_data, rhs);
 		}
 
-		return op_fetch([&](T& v)
+		return atomic_op([&](T& v)
 		{
 			v += rhs;
+			return v;
 		});
 	}
 
@@ -761,9 +824,10 @@ public:
 			return atomic_storage<type>::sub_fetch(m_data, rhs);
 		}
 
-		return op_fetch([&](T& v)
+		return atomic_op([&](T& v)
 		{
 			v -= rhs;
+			return v;
 		});
 	}
 
@@ -800,9 +864,10 @@ public:
 			return atomic_storage<type>::and_fetch(m_data, rhs);
 		}
 
-		return op_fetch([&](T& v)
+		return atomic_op([&](T& v)
 		{
 			v &= rhs;
+			return v;
 		});
 	}
 
@@ -839,9 +904,10 @@ public:
 			return atomic_storage<type>::or_fetch(m_data, rhs);
 		}
 
-		return op_fetch([&](T& v)
+		return atomic_op([&](T& v)
 		{
 			v |= rhs;
+			return v;
 		});
 	}
 
@@ -878,9 +944,10 @@ public:
 			return atomic_storage<type>::xor_fetch(m_data, rhs);
 		}
 
-		return op_fetch([&](T& v)
+		return atomic_op([&](T& v)
 		{
 			v ^= rhs;
+			return v;
 		});
 	}
 
@@ -947,5 +1014,29 @@ public:
 		{
 			return v--;
 		});
+	}
+
+	// Conditionally decrement
+	simple_type fetch_dec_sat(simple_type greater_than = std::numeric_limits<simple_type>::min(), simple_type amount = 1)
+	{
+		type _new, old = atomic_storage<type>::load(m_data);
+
+		while (true)
+		{
+			_new = old;
+
+			if (_new <= greater_than)
+			{
+				// Early exit
+				return old;
+			}
+
+			_new -= amount;
+
+			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+			{
+				return old;
+			}
+		}
 	}
 };

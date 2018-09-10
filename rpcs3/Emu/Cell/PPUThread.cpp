@@ -808,7 +808,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 
 	auto at_ret = gsl::finally([&]()
 	{
-		if (std::uncaught_exception())
+		if (std::uncaught_exceptions())
 		{
 			if (last_function)
 			{

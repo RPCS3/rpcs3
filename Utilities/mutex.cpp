@@ -237,7 +237,7 @@ void shared_mutex::imp_lock_degrade()
 bool shared_mutex::try_lock_shared()
 {
 	// Conditional decrement
-	return m_value.fetch_op([](s64& value) { if (value >= c_min) value -= c_min; }) >= c_min;
+	return m_value.fetch_dec_sat(c_min - 1, c_min) >= c_min;
 }
 
 bool shared_mutex::try_lock()

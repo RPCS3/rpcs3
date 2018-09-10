@@ -290,7 +290,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 				cond->waiters--;
 
-				if (mutex->signaled.fetch_op([](u32& v) { if (v) v--; }))
+				if (mutex->signaled.fetch_dec_sat())
 				{
 					ppu.gpr[3] = CELL_EDEADLK;
 					break;

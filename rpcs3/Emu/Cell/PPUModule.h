@@ -271,7 +271,7 @@ template<typename T, T Func>
 ppu_static_function* ppu_module_manager::registered<T, Func>::info = nullptr;
 
 // Call specified function directly if LLE is not available, call LLE equivalent in callback style otherwise
-template<typename T, T Func, typename... Args, typename RT = std::result_of_t<T(Args...)>>
+template<typename T, T Func, typename... Args, typename RT = std::invoke_result_t<T, Args...>>
 inline RT ppu_execute_function_or_callback(ppu_thread& ppu, Args&&... args)
 {
 	vm::ptr<RT(Args...)> func = vm::cast(*ppu_module_manager::find_static_function<T, Func>().export_addr);

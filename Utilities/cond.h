@@ -23,7 +23,7 @@ public:
 
 	// Intrusive wait algorithm for lockable objects
 	template <typename T>
-	explicit_bool_t wait(T& object, u64 usec_timeout = -1)
+	bool wait(T& object, u64 usec_timeout = -1)
 	{
 		const u32 _old = m_value.fetch_add(1); // Increment waiter counter
 		object.unlock();
@@ -88,7 +88,7 @@ public:
 		imp_unlock(1);
 	}
 
-	explicit_bool_t wait(u64 usec_timeout = -1);
+	bool wait(u64 usec_timeout = -1);
 
 	void notify_all()
 	{

@@ -41,6 +41,12 @@ private:
 
 	friend class atomic_bs_t<T>;
 
+	// Value constructor
+	constexpr explicit bs_t(int, under data)
+		: m_data(data)
+	{
+	}
+
 public:
 	static constexpr std::size_t bitmax = sizeof(T) * 8;
 	static constexpr std::size_t bitsize = static_cast<under>(T::__bitset_enum_max);
@@ -107,30 +113,22 @@ public:
 
 	constexpr bs_t operator +(bs_t rhs) const
 	{
-		bs_t r{};
-		r.m_data = m_data | rhs.m_data;
-		return r;
+		return bs_t(0, m_data | rhs.m_data);
 	}
 
 	constexpr bs_t operator -(bs_t rhs) const
 	{
-		bs_t r{};
-		r.m_data = m_data & ~rhs.m_data;
-		return r;
+		return bs_t(0, m_data & ~rhs.m_data);
 	}
 
 	constexpr bs_t operator &(bs_t rhs) const
 	{
-		bs_t r{};
-		r.m_data = m_data & rhs.m_data;
-		return r;
+		return bs_t(0, m_data & rhs.m_data);
 	}
 
 	constexpr bs_t operator ^(bs_t rhs) const
 	{
-		bs_t r{};
-		r.m_data = m_data ^ rhs.m_data;
-		return r;
+		return bs_t(0, m_data ^ rhs.m_data);
 	}
 
 	constexpr bool operator ==(bs_t rhs) const
@@ -248,18 +246,19 @@ public:
 		return static_cast<under>(base::load());
 	}
 
+	bs_t operator +() const
+	{
+		return base::load();
+	}
+
 	bs_t fetch_add(const bs_t& rhs)
 	{
-		bs_t r;
-		r.m_data = atomic_storage<under>::fetch_or(m_data.m_data, rhs.m_data);
-		return r;
+		return bs_t(0, atomic_storage<under>::fetch_or(m_data.m_data, rhs.m_data));
 	}
 
 	bs_t add_fetch(const bs_t& rhs)
 	{
-		bs_t r;
-		r.m_data = atomic_storage<under>::or_fetch(m_data.m_data, rhs.m_data);
-		return r;
+		return bs_t(0, atomic_storage<under>::or_fetch(m_data.m_data, rhs.m_data));
 	}
 
 	bs_t operator +=(const bs_t& rhs)
@@ -269,16 +268,12 @@ public:
 
 	bs_t fetch_sub(const bs_t& rhs)
 	{
-		bs_t r;
-		r.m_data = atomic_storage<under>::fetch_and(m_data.m_data, ~rhs.m_data);
-		return r;
+		return bs_t(0, atomic_storage<under>::fetch_and(m_data.m_data, ~rhs.m_data));
 	}
 
 	bs_t sub_fetch(const bs_t& rhs)
 	{
-		bs_t r;
-		r.m_data = atomic_storage<under>::and_fetch(m_data.m_data, ~rhs.m_data);
-		return r;
+		return bs_t(0, atomic_storage<under>::and_fetch(m_data.m_data, ~rhs.m_data));
 	}
 
 	bs_t operator -=(const bs_t& rhs)
@@ -288,16 +283,12 @@ public:
 
 	bs_t fetch_and(const bs_t& rhs)
 	{
-		bs_t r;
-		r.m_data = atomic_storage<under>::fetch_and(m_data.m_data, rhs.m_data);
-		return r;
+		return bs_t(0, atomic_storage<under>::fetch_and(m_data.m_data, rhs.m_data));
 	}
 
 	bs_t and_fetch(const bs_t& rhs)
 	{
-		bs_t r;
-		r.m_data = atomic_storage<under>::and_fetch(m_data.m_data, rhs.m_data);
-		return r;
+		return bs_t(0, atomic_storage<under>::and_fetch(m_data.m_data, rhs.m_data));
 	}
 
 	bs_t operator &=(const bs_t& rhs)
@@ -307,16 +298,12 @@ public:
 
 	bs_t fetch_xor(const bs_t& rhs)
 	{
-		bs_t r;
-		r.m_data = atomic_storage<under>::fetch_xor(m_data.m_data, rhs.m_data);
-		return r;
+		return bs_t(0, atomic_storage<under>::fetch_xor(m_data.m_data, rhs.m_data));
 	}
 
 	bs_t xor_fetch(const bs_t& rhs)
 	{
-		bs_t r;
-		r.m_data = atomic_storage<under>::xor_fetch(m_data.m_data, rhs.m_data);
-		return r;
+		return bs_t(0, atomic_storage<under>::xor_fetch(m_data.m_data, rhs.m_data));
 	}
 
 	bs_t operator ^=(const bs_t& rhs)
@@ -334,30 +321,62 @@ public:
 
 	bs_t operator +(bs_t rhs) const
 	{
-		bs_t r{};
-		r.m_data = base::load().m_data | rhs.m_data;
-		return r;
+		return bs_t(0, base::load().m_data | rhs.m_data);
 	}
 
 	bs_t operator -(bs_t rhs) const
 	{
-		bs_t r{};
-		r.m_data = base::load().m_data & ~rhs.m_data;
-		return r;
+		return bs_t(0, base::load().m_data & ~rhs.m_data);
 	}
 
 	bs_t operator &(bs_t rhs) const
 	{
-		bs_t r{};
-		r.m_data = base::load().m_data & rhs.m_data;
-		return r;
+		return bs_t(0, base::load().m_data & rhs.m_data);
 	}
 
 	bs_t operator ^(bs_t rhs) const
 	{
-		bs_t r{};
-		r.m_data = base::load().m_data ^ rhs.m_data;
-		return r;
+		return bs_t(0, base::load().m_data ^ rhs.m_data);
+	}
+
+	bs_t operator ==(bs_t rhs) const
+	{
+		return base::load().m_data == rhs.m_data;
+	}
+
+	bs_t operator !=(bs_t rhs) const
+	{
+		return base::load().m_data != rhs.m_data;
+	}
+
+	friend bs_t operator +(bs_t lhs, const atomic_bs_t& rhs)
+	{
+		return bs_t(0, lhs.m_data | rhs.load().m_data);
+	}
+
+	friend bs_t operator -(bs_t lhs, const atomic_bs_t& rhs)
+	{
+		return bs_t(0, lhs.m_data & ~rhs.load().m_data);
+	}
+
+	friend bs_t operator &(bs_t lhs, const atomic_bs_t& rhs)
+	{
+		return bs_t(0, lhs.m_data & rhs.load().m_data);
+	}
+
+	friend bs_t operator ^(bs_t lhs, const atomic_bs_t& rhs)
+	{
+		return bs_t(0, lhs.m_data ^ rhs.load().m_data);
+	}
+
+	friend bs_t operator ==(bs_t lhs, const atomic_bs_t& rhs)
+	{
+		return lhs.m_data == rhs.load().m_data;
+	}
+
+	friend bs_t operator !=(bs_t lhs, const atomic_bs_t& rhs)
+	{
+		return lhs.m_data != rhs.load().m_data;
 	}
 
 	bool test(const bs_t& rhs)

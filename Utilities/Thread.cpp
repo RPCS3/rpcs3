@@ -1837,7 +1837,7 @@ void thread_ctrl::join()
 		m_jcv.wait(lock);
 	}
 
-	if (UNLIKELY(m_exception && !std::uncaught_exception()))
+	if (UNLIKELY(m_exception && !std::uncaught_exceptions()))
 	{
 		std::rethrow_exception(m_exception);
 	}

@@ -7,6 +7,7 @@
 #include "SPUThread.h"
 #include "SPUInterpreter.h"
 #include "Utilities/sysinfo.h"
+#include "Utilities/asm.h"
 #include "PPUAnalyser.h"
 
 #include <cmath>
@@ -630,7 +631,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 			}
 
 			// Determine which value will be duplicated at hole positions
-			const u32 w3 = func.at((j - start + ~::cntlz32(cmask, true) % 4 * 4) / 4 + 1);
+			const u32 w3 = func.at((j - start + ~utils::cntlz32(cmask, true) % 4 * 4) / 4 + 1);
 			words.push_back(cmask & 1 ? func[(j - start + 0) / 4 + 1] : w3);
 			words.push_back(cmask & 2 ? func[(j - start + 4) / 4 + 1] : w3);
 			words.push_back(cmask & 4 ? func[(j - start + 8) / 4 + 1] : w3);
@@ -3413,7 +3414,7 @@ void spu_recompiler::ROTQBYI(spu_opcode_t op)
 	}
 	else if (s == 4 || s == 8 || s == 12)
 	{
-		c->pshufd(va, va, ::rol8(0xE4, s / 2));
+		c->pshufd(va, va, utils::rol8(0xE4, s / 2));
 	}
 	else if (utils::has_ssse3())
 	{

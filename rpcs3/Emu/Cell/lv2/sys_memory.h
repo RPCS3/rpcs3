@@ -66,20 +66,18 @@ struct lv2_memory_container
 	// Try to get specified amount of "physical" memory
 	u32 take(u32 amount)
 	{
-		const u32 old_value = used.fetch_op([&](u32& value)
+		auto [_, result] = used.fetch_op([&](u32& value) -> u32
 		{
 			if (size - value >= amount)
 			{
 				value += amount;
+				return amount;
 			}
+
+			return 0;
 		});
 
-		if (size - old_value >= amount)
-		{
-			return amount;
-		}
-
-		return 0;
+		return result;
 	}
 };
 

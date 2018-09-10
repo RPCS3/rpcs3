@@ -285,9 +285,13 @@ namespace gl
 			synchronized = false;
 			sync_timestamp = 0ull;
 
+			if (rsx_pitch > 0)
+				this->rsx_pitch = rsx_pitch;
+			else
+				this->rsx_pitch = cpu_address_range / height;
+
 			this->width = w;
 			this->height = h;
-			this->rsx_pitch = rsx_pitch;
 			this->real_pitch = 0;
 			this->depth = depth;
 			this->mipmaps = mipmaps;
@@ -587,7 +591,7 @@ namespace gl
 
 		void destroy()
 		{
-			if (!locked && pbo_id == 0 && vram_texture == 0 && m_fence.is_empty())
+			if (!locked && pbo_id == 0 && vram_texture == nullptr && m_fence.is_empty())
 				//Already destroyed
 				return;
 
@@ -621,7 +625,7 @@ namespace gl
 
 		bool exists() const
 		{
-			return vram_texture != 0;
+			return vram_texture != nullptr;
 		}
 
 		bool is_flushable() const
@@ -646,7 +650,7 @@ namespace gl
 
 		bool is_empty() const
 		{
-			return vram_texture == 0;
+			return vram_texture == nullptr;
 		}
 
 		gl::texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)

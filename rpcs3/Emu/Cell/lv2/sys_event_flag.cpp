@@ -115,7 +115,10 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 	const auto flag = idm::get<lv2_obj, lv2_event_flag>(id, [&](lv2_event_flag& flag) -> CellError
 	{
-		if (flag.pattern.atomic_op(lv2_event_flag::check_pattern, bitptn, mode, &ppu.gpr[6]))
+		if (flag.pattern.atomic_op([&](u64& pat)
+		{
+			return lv2_event_flag::check_pattern(pat, bitptn, mode, &ppu.gpr[6]);
+		}))
 		{
 			// TODO: is it possible to return EPERM in this case?
 			return {};
@@ -123,7 +126,10 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 		std::lock_guard lock(flag.mutex);
 
-		if (flag.pattern.atomic_op(lv2_event_flag::check_pattern, bitptn, mode, &ppu.gpr[6]))
+		if (flag.pattern.atomic_op([&](u64& pat)
+		{
+			return lv2_event_flag::check_pattern(pat, bitptn, mode, &ppu.gpr[6]);
+		}))
 		{
 			return {};
 		}
@@ -208,7 +214,10 @@ error_code sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> res
 
 	const auto flag = idm::check<lv2_obj, lv2_event_flag>(id, [&](lv2_event_flag& flag)
 	{
-		return flag.pattern.atomic_op(lv2_event_flag::check_pattern, bitptn, mode, &pattern);
+		return flag.pattern.atomic_op([&](u64& pat)
+		{
+			return lv2_event_flag::check_pattern(pat, bitptn, mode, &pattern);
+		});
 	});
 
 	if (!flag)

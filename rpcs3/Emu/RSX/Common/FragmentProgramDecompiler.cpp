@@ -444,7 +444,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			properties.has_wpos_input = true;
 			break;
 		default:
-			if (dst.src_attr_reg_num < sizeof(reg_table) / sizeof(reg_table[0]))
+			if (dst.src_attr_reg_num < std::size(reg_table))
 			{
 				ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), reg_table[dst.src_attr_reg_num]);
 			}

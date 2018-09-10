@@ -21,7 +21,7 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 		verify(HERE), rc == WAIT_TIMEOUT;
 
 		// Retire
-		while (!m_value.fetch_op([](u32& value) { if (value) value--; }))
+		while (!m_value.fetch_dec_sat())
 		{
 			timeout.QuadPart = 0;
 
@@ -185,7 +185,7 @@ u32 notifier::imp_notify(u32 count)
 	});
 }
 
-explicit_bool_t notifier::wait(u64 usec_timeout)
+bool notifier::wait(u64 usec_timeout)
 {
 	const u32 _old = m_cond.m_value.fetch_add(1);
 

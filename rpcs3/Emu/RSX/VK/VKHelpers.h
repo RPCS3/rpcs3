@@ -185,6 +185,7 @@ namespace vk
 	{
 		bool d24_unorm_s8;
 		bool d32_sfloat_s8;
+		bool bgra8_linear;
 	};
 
 	// Memory Allocator - base class
@@ -194,8 +195,8 @@ namespace vk
 	public:
 		using mem_handle_t = void *;
 
-		mem_allocator_base(VkDevice dev, VkPhysicalDevice /*pdev*/) : m_device(dev) {};
-		~mem_allocator_base() {};
+		mem_allocator_base(VkDevice dev, VkPhysicalDevice /*pdev*/) : m_device(dev) {}
+		virtual ~mem_allocator_base() {}
 
 		virtual void destroy() = 0;
 
@@ -847,7 +848,7 @@ namespace vk
 				remap
 			);
 
-			const auto range = vk::get_image_subresource_range(0, 0, 1, info.mipLevels, get_aspect_flags(info.format) & mask);
+			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, get_aspect_flags(info.format) & mask);
 			auto view = std::make_unique<vk::image_view>(*get_current_renderer(), this, real_mapping, range);
 
 			auto result = view.get();
@@ -1396,7 +1397,7 @@ public:
 			m_surface_format = format;
 		}
 
-		~swapchain_base(){}
+		virtual ~swapchain_base() {}
 
 		virtual void create(display_handle_t& handle) = 0;
 		virtual void destroy(bool full = true) = 0;
