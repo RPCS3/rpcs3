@@ -2269,9 +2269,7 @@ void PPUTranslator::LVSL(ppu_opcode_t op)
 
 void PPUTranslator::LVEBX(ppu_opcode_t op)
 {
-	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
-	const auto pos = m_ir->CreateXor(m_ir->CreateAnd(addr, 15), m_is_be ? 0 : 15);
-	SetVr(op.vd, m_ir->CreateInsertElement(ConstantVector::getSplat(16, m_ir->getInt8(0)), ReadMemory(addr, GetType<u8>()), pos));
+	return LVX(op);
 }
 
 void PPUTranslator::SUBFC(ppu_opcode_t op)
@@ -2427,9 +2425,7 @@ void PPUTranslator::LVSR(ppu_opcode_t op)
 
 void PPUTranslator::LVEHX(ppu_opcode_t op)
 {
-	const auto addr = m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -2);
-	const auto pos = m_ir->CreateLShr(m_ir->CreateXor(m_ir->CreateAnd(addr, 15), m_is_be ? 0 : 15), 1);
-	SetVr(op.vd, m_ir->CreateInsertElement(ConstantVector::getSplat(8, m_ir->getInt16(0)), ReadMemory(addr, GetType<u16>(), true, 2), pos));
+	return LVX(op);
 }
 
 void PPUTranslator::SUBF(ppu_opcode_t op)
@@ -2482,9 +2478,7 @@ void PPUTranslator::TD(ppu_opcode_t op)
 
 void PPUTranslator::LVEWX(ppu_opcode_t op)
 {
-	const auto addr = m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -4);
-	const auto pos = m_ir->CreateLShr(m_ir->CreateXor(m_ir->CreateAnd(addr, 15), m_is_be ? 0 : 15), 2);
-	SetVr(op.vd, m_ir->CreateInsertElement(ConstantVector::getSplat(4, m_ir->getInt32(0)), ReadMemory(addr, GetType<u32>(), true, 4), pos));
+	return LVX(op);
 }
 
 void PPUTranslator::MULHD(ppu_opcode_t op)
@@ -2520,7 +2514,8 @@ void PPUTranslator::LBZX(ppu_opcode_t op)
 
 void PPUTranslator::LVX(ppu_opcode_t op)
 {
-	const auto data = ReadMemory(m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -16), GetType<u8[16]>(), m_is_be, 16);
+	const auto addr = m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), ~0xfull);
+	const auto data = ReadMemory(addr, GetType<u8[16]>(), m_is_be, 16);
 	SetVr(op.vd, m_is_be ? data : Shuffle(data, nullptr, { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }));
 }
 
