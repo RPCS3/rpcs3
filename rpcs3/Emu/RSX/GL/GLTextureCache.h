@@ -285,9 +285,13 @@ namespace gl
 			synchronized = false;
 			sync_timestamp = 0ull;
 
+			if (rsx_pitch > 0)
+				this->rsx_pitch = rsx_pitch;
+			else
+				this->rsx_pitch = cpu_address_range / height;
+
 			this->width = w;
 			this->height = h;
-			this->rsx_pitch = rsx_pitch;
 			this->real_pitch = 0;
 			this->depth = depth;
 			this->mipmaps = mipmaps;
