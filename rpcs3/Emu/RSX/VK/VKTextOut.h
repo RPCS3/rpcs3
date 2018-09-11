@@ -255,6 +255,8 @@ namespace vk
 
 		void init(vk::render_device &dev, VkRenderPass &render_pass)
 		{
+			verify(HERE), render_pass != VK_NULL_HANDLE;
+
 			//At worst case, 1 char = 16*16*8 bytes (average about 24*8), so ~256K for 128 chars. Allocating 512k for verts
 			//uniform params are 8k in size, allocating for 120 lines (max lines at 4k, one column per row. Can be expanded
 			m_vertex_buffer.reset( new vk::buffer(dev, 524288, dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0));

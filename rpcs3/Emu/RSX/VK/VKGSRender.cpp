@@ -390,18 +390,32 @@ namespace
 		return result;
 	}
 
-	std::array<VkRenderPass, 120> get_precomputed_render_passes(VkDevice dev, const vk::gpu_formats_support &gpu_format_support)
+	std::array<VkRenderPass, 120> get_precomputed_render_passes(VkPhysicalDevice gpu, VkDevice dev, const vk::gpu_formats_support &gpu_format_support)
 	{
 		std::array<VkRenderPass, 120> result = {};
+		VkImageFormatProperties props = {};
 
 		const std::array<VkFormat, 3> depth_format_list = { VK_FORMAT_UNDEFINED, VK_FORMAT_D16_UNORM, gpu_format_support.d24_unorm_s8 ? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT };
 		const std::array<VkFormat, 8> color_format_list = { VK_FORMAT_R5G6B5_UNORM_PACK16, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R8_UNORM, VK_FORMAT_R8G8_UNORM, VK_FORMAT_A1R5G5B5_UNORM_PACK16, VK_FORMAT_R32_SFLOAT };
 
-
 		for (const VkFormat &color_format : color_format_list)
 		{
+			VkResult support = vkGetPhysicalDeviceImageFormatProperties(gpu, color_format, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 0, &props);
+			if (support != VK_SUCCESS)
+			{
+				LOG_ERROR(RSX, "Format 0x%x is not supported for color target usage by your GPU driver. Crashes may arise.", (u32)color_format);
+				verify(HERE), support == VK_ERROR_FORMAT_NOT_SUPPORTED;
+				continue;
+			}
 			for (const VkFormat &depth_stencil_format : depth_format_list)
 			{
+				VkResult support = vkGetPhysicalDeviceImageFormatProperties(gpu, depth_stencil_format, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 0, &props);
+				if (depth_stencil_format != VK_FORMAT_UNDEFINED && support != VK_SUCCESS)
+				{
+					LOG_ERROR(RSX, "Format 0x%x is not supported for depth/stencil target usage by your GPU driver. Crashes may arise.", (u32)depth_stencil_format);
+					verify(HERE), support == VK_ERROR_FORMAT_NOT_SUPPORTED;
+					continue;
+				}
 				for (u8 number_of_draw_buffer = 0; number_of_draw_buffer <= 4; number_of_draw_buffer++)
 				{
 					size_t idx = vk::get_render_pass_location(color_format, depth_stencil_format, number_of_draw_buffer);
@@ -575,7 +589,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_secondary_command_buffer.access_hint = vk::command_buffer::access_type_hint::all;
 
 	//Precalculated stuff
-	m_render_passes = get_precomputed_render_passes(*m_device, m_device->get_formats_support());
+	m_render_passes = get_precomputed_render_passes(m_device->gpu(), *m_device, m_device->get_formats_support());
 	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
 
 	//Occlusion
@@ -1136,6 +1150,8 @@ void VKGSRender::end()
 			// TODO: Partial memory transfer
 			auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
 			auto render_pass = m_render_passes[rp];
+			verify("Usupported renderpass configuration" HERE), render_pass != VK_NULL_HANDLE;
+
 			m_depth_converter->run(*m_current_command_buffer, ds->width(), ds->height(), ds,
 				static_cast<vk::render_target*>(ds->old_contents)->get_view(0xAAE4, rsx::default_remap_vector),
 				render_pass, m_framebuffers_to_clean);
@@ -1767,6 +1783,7 @@ void VKGSRender::clear_surface(u32 mask)
 					const auto fbo_format = vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first;
 					const auto rp_index = vk::get_render_pass_location(fbo_format, VK_FORMAT_UNDEFINED, 1);
 					const auto renderpass = m_render_passes[rp_index];
+					verify("Usupported renderpass configuration" HERE), renderpass != VK_NULL_HANDLE;
 
 					m_attachment_clear_pass->update_config(colormask, clear_color);
 
@@ -2746,6 +2763,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		}
 
 		VkRenderPass current_render_pass = m_render_passes[m_current_renderpass_id];
+		verify("Usupported renderpass configuration" HERE), current_render_pass != VK_NULL_HANDLE;
 
 		if (m_draw_fbo)
 			m_framebuffers_to_clean.push_back(std::move(m_draw_fbo));
@@ -3056,6 +3074,7 @@ void VKGSRender::flip(int buffer)
 
 		size_t idx = vk::get_render_pass_location(m_swapchain->get_surface_format(), VK_FORMAT_UNDEFINED, 1);
 		VkRenderPass single_target_pass = m_render_passes[idx];
+		verify("Usupported renderpass configuration" HERE), single_target_pass != VK_NULL_HANDLE;
 
 		for (auto It = m_framebuffers_to_clean.begin(); It != m_framebuffers_to_clean.end(); It++)
 		{
