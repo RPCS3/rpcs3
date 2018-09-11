@@ -138,32 +138,3 @@ public:
 		m_upgraded ? m_mutex.unlock() : m_mutex.unlock_shared();
 	}
 };
-
-// Safe reader lock. Can be recursive above other safe locks (reader or writer).
-class safe_reader_lock final
-{
-	shared_mutex& m_mutex;
-	bool m_is_owned;
-
-public:
-	safe_reader_lock(const safe_reader_lock&) = delete;
-
-	explicit safe_reader_lock(shared_mutex& mutex);
-
-	~safe_reader_lock();
-};
-
-// Safe writer lock. Can be recursive above other safe locks. Performs upgrade and degrade operations above existing reader lock if necessary.
-class safe_writer_lock final
-{
-	shared_mutex& m_mutex;
-	bool m_is_owned;
-	bool m_is_upgraded;
-
-public:
-	safe_writer_lock(const safe_writer_lock&) = delete;
-
-	explicit safe_writer_lock(shared_mutex& mutex);
-
-	~safe_writer_lock();
-};
