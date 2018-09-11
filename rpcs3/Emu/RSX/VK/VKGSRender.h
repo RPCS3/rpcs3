@@ -404,7 +404,6 @@ private:
 	vk::vertex_upload_info upload_vertex_data();
 
 public:
-	bool check_program_status();
 	bool load_program();
 	void load_program_env(const vk::vertex_upload_info& vertex_info);
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);

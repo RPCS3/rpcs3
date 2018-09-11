@@ -1946,11 +1946,6 @@ namespace rsx
 		auto &result = current_fragment_program = {};
 
 		const u32 shader_program = rsx::method_registers.shader_program_address();
-		if (shader_program == 0)
-		{
-			current_fp_metadata = {};
-			return;
-		}
 
 		const u32 program_location = (shader_program & 0x3) - 1;
 		const u32 program_offset = (shader_program & ~0x3);
@@ -2083,9 +2078,6 @@ namespace rsx
 		auto &result = current_fragment_program = {};
 
 		const u32 shader_program = rsx::method_registers.shader_program_address();
-		if (shader_program == 0)
-			return;
-
 		const u32 program_location = (shader_program & 0x3) - 1;
 		const u32 program_offset = (shader_program & ~0x3);
 

@@ -181,8 +181,7 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> state_check_start = steady_clock::now();
 
 	if (skip_frame || !framebuffer_status_valid ||
-		(conditional_render_enabled && conditional_render_test_failed) ||
-		!check_program_state())
+		(conditional_render_enabled && conditional_render_test_failed))
 	{
 		rsx::thread::end();
 		return;
@@ -1138,11 +1137,6 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 	}
 
 	return false;
-}
-
-bool GLGSRender::check_program_state()
-{
-	return (rsx::method_registers.shader_program_address() != 0);
 }
 
 bool GLGSRender::load_program()

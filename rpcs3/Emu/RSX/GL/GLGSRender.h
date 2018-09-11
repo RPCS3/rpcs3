@@ -359,7 +359,6 @@ private:
 	void clear_surface(u32 arg);
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 
-	bool check_program_state();
 	bool load_program();
 	void load_program_env(const gl::vertex_upload_info& upload_info);
 
