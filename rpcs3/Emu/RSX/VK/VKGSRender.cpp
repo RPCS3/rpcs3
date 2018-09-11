@@ -1084,8 +1084,7 @@ void VKGSRender::close_render_pass()
 void VKGSRender::end()
 {
 	if (skip_frame || !framebuffer_status_valid || renderer_unavailable ||
-		(conditional_render_enabled && conditional_render_test_failed) ||
-		!check_program_status())
+		(conditional_render_enabled && conditional_render_test_failed))
 	{
 		rsx::thread::end();
 		return;
@@ -2192,11 +2191,6 @@ bool VKGSRender::do_method(u32 cmd, u32 arg)
 	default:
 		return false;
 	}
-}
-
-bool VKGSRender::check_program_status()
-{
-	return (rsx::method_registers.shader_program_address() != 0);
 }
 
 bool VKGSRender::load_program()

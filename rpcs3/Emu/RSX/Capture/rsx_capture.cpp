@@ -81,24 +81,23 @@ namespace rsx
 
 			// capture fragment shader mem
 			const u32 shader_program = method_registers.shader_program_address();
-			if (shader_program != 0)
-			{
-				const u32 program_location = (shader_program & 0x3) - 1;
-				const u32 program_offset   = (shader_program & ~0x3);
+			verify("Null shader address!" HERE), shader_program != 0;
 
-				const u32 addr          = get_address(program_offset, program_location);
-				const auto program_info = program_hash_util::fragment_program_utils::analyse_fragment_program(vm::base(addr));
-				const u32 program_start = program_info.program_start_offset;
-				const u32 ucode_size    = program_info.program_ucode_length;
+			const u32 program_location = (shader_program & 0x3) - 1;
+			const u32 program_offset   = (shader_program & ~0x3);
 
-				frame_capture_data::memory_block block;
-				block.addr     = addr;
-				block.ioOffset = get_io_offset(program_offset, program_location);
-				frame_capture_data::memory_block_data block_data;
-				block_data.data.resize(ucode_size + program_start);
-				std::memcpy(block_data.data.data(), vm::base(addr), ucode_size + program_start);
-				insert_mem_block_in_map(mem_changes, std::move(block), std::move(block_data));
-			}
+			const u32 addr          = get_address(program_offset, program_location);
+			const auto program_info = program_hash_util::fragment_program_utils::analyse_fragment_program(vm::base(addr));
+			const u32 program_start = program_info.program_start_offset;
+			const u32 ucode_size    = program_info.program_ucode_length;
+
+			frame_capture_data::memory_block block;
+			block.addr     = addr;
+			block.ioOffset = get_io_offset(program_offset, program_location);
+			frame_capture_data::memory_block_data block_data;
+			block_data.data.resize(ucode_size + program_start);
+			std::memcpy(block_data.data.data(), vm::base(addr), ucode_size + program_start);
+			insert_mem_block_in_map(mem_changes, std::move(block), std::move(block_data));
 
 			// vertex shader is passed in registers, so it can be ignored
 
