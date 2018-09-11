@@ -3201,11 +3201,12 @@ namespace rsx
 			const auto memory_end = memory_address + memory_range;
 			u32 sync_address = 0;
 
-			for (const auto &writer : m_pending_writes)
+			for (auto It = m_pending_writes.crbegin(); It != m_pending_writes.crend(); ++It)
 			{
-				if (writer.sink >= memory_address && writer.sink < memory_end)
+				if (It->sink >= memory_address && It->sink < memory_end)
 				{
-					sync_address = writer.sink;
+					sync_address = It->sink;
+					break;
 				}
 			}
 
