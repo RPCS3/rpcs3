@@ -1,18 +1,20 @@
 #pragma once
 
+#include <vector>
 #include <string>
+#include <string_view>
 
 namespace vfs
 {
 	// Mount VFS device
-	bool mount(const std::string& dev_name, const std::string& path);
+	bool mount(std::string_view vpath, std::string_view path);
 
-	// Convert VFS path to fs path
-	std::string get(const std::string& vpath, const std::string* = nullptr, std::size_t = 0);
+	// Convert VFS path to fs path, optionally listing directories mounted in it
+	std::string get(std::string_view vpath, std::vector<std::string>* out_dir = nullptr);
 
 	// Escape VFS path by replacing non-portable characters with surrogates
-	std::string escape(const std::string& path);
+	std::string escape(std::string_view path);
 
 	// Invert escape operation
-	std::string unescape(const std::string& path);
+	std::string unescape(std::string_view path);
 }

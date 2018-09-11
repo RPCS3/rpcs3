@@ -198,7 +198,13 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 	if (!path[0])
 		return CELL_ENOENT;
 
-	const std::string& local_path = vfs::get(path.get_ptr());
+	const std::string_view vpath = path.get_ptr();
+	const std::string local_path = vfs::get(vpath);
+
+	if (vpath.find_first_not_of('/') == -1)
+	{
+		return {CELL_EISDIR, path};
+	}
 
 	if (local_path.empty())
 	{
@@ -207,7 +213,7 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 
 	// TODO: other checks for path
 
-	if (local_path == "/" || fs::is_dir(local_path))
+	if (fs::is_dir(local_path))
 	{
 		return {CELL_EISDIR, path};
 	}
@@ -462,7 +468,14 @@ error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 	if (!path[0])
 		return CELL_ENOENT;
 
-	const std::string& local_path = vfs::get(path.get_ptr());
+	const std::string_view vpath = path.get_ptr();
+	const std::string local_path = vfs::get(vpath);
+
+	if (vpath.find_first_not_of('/') == -1)
+	{
+		// TODO: open root
+		return {CELL_EPERM, path};
+	}
 
 	if (local_path.empty())
 	{
@@ -470,11 +483,6 @@ error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 	}
 
 	// TODO: other checks for path
-
-	if (local_path == "/")
-	{
-		return {CELL_EPERM, path};
-	}
 
 	if (fs::is_file(local_path))
 	{
@@ -559,7 +567,14 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 	if (!path[0])
 		return CELL_ENOENT;
 
-	const std::string local_path = vfs::get(path.get_ptr());
+	const std::string_view vpath = path.get_ptr();
+	const std::string local_path = vfs::get(vpath);
+
+	if (vpath.find_first_not_of('/') == -1)
+	{
+		*sb = {CELL_FS_S_IFDIR | 0444};
+		return CELL_OK;
+	}
 
 	if (local_path.empty())
 	{
@@ -567,12 +582,6 @@ error_code sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 	}
 
 	fs::stat_t info{};
-
-	if (local_path == "/")
-	{
-		sb->mode = CELL_FS_S_IFDIR | 0444;
-		return CELL_OK;
-	}
 
 	if (!fs::stat(local_path, info))
 	{
@@ -671,16 +680,17 @@ error_code sys_fs_mkdir(vm::cptr<char> path, s32 mode)
 	if (!path[0])
 		return CELL_ENOENT;
 
-	const std::string local_path = vfs::get(path.get_ptr());
+	const std::string_view vpath = path.get_ptr();
+	const std::string local_path = vfs::get(vpath);
+
+	if (vpath.find_first_not_of('/') == -1)
+	{
+		return {CELL_EEXIST, path};
+	}
 
 	if (local_path.empty())
 	{
 		return {CELL_ENOTMOUNTED, path};
-	}
-
-	if (local_path == "/")
-	{
-		return {CELL_EEXIST, path};
 	}
 
 	if (!fs::create_path(local_path))
@@ -703,17 +713,20 @@ error_code sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to)
 {
 	sys_fs.warning("sys_fs_rename(from=%s, to=%s)", from, to);
 
-	const std::string local_from = vfs::get(from.get_ptr());
-	const std::string local_to = vfs::get(to.get_ptr());
+	const std::string_view vfrom = from.get_ptr();
+	const std::string local_from = vfs::get(vfrom);
+
+	const std::string_view vto = to.get_ptr();
+	const std::string local_to = vfs::get(vto);
+
+	if (vfrom.find_first_not_of('/') == -1 || vto.find_first_not_of('/') == -1)
+	{
+		return CELL_EPERM;
+	}
 
 	if (local_from.empty() || local_to.empty())
 	{
 		return CELL_ENOTMOUNTED;
-	}
-
-	if (local_to == "/" || local_from == "/")
-	{
-		return CELL_EPERM;
 	}
 
 	if (!fs::rename(local_from, local_to, false))
@@ -742,16 +755,17 @@ error_code sys_fs_rmdir(vm::cptr<char> path)
 	if (!path[0])
 		return CELL_ENOENT;
 
-	const std::string local_path = vfs::get(path.get_ptr());
+	const std::string_view vpath = path.get_ptr();
+	const std::string local_path = vfs::get(vpath);
+
+	if (vpath.find_first_not_of('/') == -1)
+	{
+		return {CELL_EPERM, path};
+	}
 
 	if (local_path.empty())
 	{
 		return {CELL_ENOTMOUNTED, path};
-	}
-
-	if (local_path == "/")
-	{
-		return {CELL_EPERM, path};
 	}
 
 	if (!fs::remove_dir(local_path))
@@ -780,16 +794,17 @@ error_code sys_fs_unlink(vm::cptr<char> path)
 	if (!path[0])
 		return CELL_ENOENT;
 
-	const std::string local_path = vfs::get(path.get_ptr());
+	const std::string_view vpath = path.get_ptr();
+	const std::string local_path = vfs::get(vpath);
+
+	if (vpath.find_first_not_of('/') == -1)
+	{
+		return {CELL_EISDIR, path};
+	}
 
 	if (local_path.empty())
 	{
 		return {CELL_ENOTMOUNTED, path};
-	}
-
-	if (local_path == "/")
-	{
-		return {CELL_EISDIR, path};
 	}
 
 	if (!fs::remove_file(local_path))
@@ -922,16 +937,17 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000002>(_arg);
 
-		const std::string local_path = vfs::get(arg->path.get_ptr());
+		const std::string_view vpath = arg->path.get_ptr();
+		const std::string local_path = vfs::get(vpath);
+
+		if (vpath.find_first_not_of('/') == -1)
+		{
+			return {CELL_EPERM, vpath};
+		}
 
 		if (local_path.empty())
 		{
-			return {CELL_ENOTMOUNTED, arg->path};
-		}
-
-		if (local_path == "/")
-		{
-			return {CELL_EPERM, arg->path};
+			return {CELL_ENOTMOUNTED, vpath};
 		}
 
 		fs::device_stat info;
@@ -939,7 +955,7 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 		{
 			switch (auto error = fs::g_tls_error)
 			{
-			case fs::error::noent: return {CELL_ENOENT, arg->path};
+			case fs::error::noent: return {CELL_ENOENT, vpath};
 			default: sys_fs.error("sys_fs_fcntl(0xc0000002): unknown error %s", error);
 			}
 
@@ -1300,16 +1316,17 @@ error_code sys_fs_truncate(vm::cptr<char> path, u64 size)
 	if (!path[0])
 		return CELL_ENOENT;
 
-	const std::string local_path = vfs::get(path.get_ptr());
+	const std::string_view vpath = path.get_ptr();
+	const std::string local_path = vfs::get(vpath);
+
+	if (vpath.find_first_not_of('/') == -1)
+	{
+		return {CELL_EISDIR, path};
+	}
 
 	if (local_path.empty())
 	{
 		return {CELL_ENOTMOUNTED, path};
-	}
-
-	if (local_path == "/")
-	{
-		return {CELL_EISDIR, path};
 	}
 
 	if (!fs::truncate_file(local_path, size))
@@ -1398,16 +1415,17 @@ error_code sys_fs_disk_free(vm::cptr<char> path, vm::ptr<u64> total_free, vm::pt
 	if (!path[0])
 		return CELL_EINVAL;
 
-	const std::string local_path = vfs::get(path.get_ptr());
+	const std::string_view vpath = path.get_ptr();
+	const std::string local_path = vfs::get(vpath);
+
+	if (vpath.find_first_not_of('/') == -1)
+	{
+		return {CELL_EPERM, path};
+	}
 
 	if (local_path.empty())
 	{
 		return {CELL_ENOTMOUNTED, path};
-	}
-
-	if (local_path == "/")
-	{
-		return {CELL_EPERM, path};
 	}
 
 	fs::device_stat info;
@@ -1439,16 +1457,17 @@ error_code sys_fs_utime(vm::cptr<char> path, vm::cptr<CellFsUtimbuf> timep)
 	if (!path[0])
 		return CELL_ENOENT;
 
-	const std::string local_path = vfs::get(path.get_ptr());
+	const std::string_view vpath = path.get_ptr();
+	const std::string local_path = vfs::get(vpath);
+
+	if (vpath.find_first_not_of('/') == -1)
+	{
+		return {CELL_EISDIR, path};
+	}
 
 	if (local_path.empty())
 	{
 		return {CELL_ENOTMOUNTED, path};
-	}
-
-	if (local_path == "/")
-	{
-		return {CELL_EISDIR, path};
 	}
 
 	if (!fs::utime(local_path, timep->actime, timep->modtime))

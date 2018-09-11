@@ -513,6 +513,13 @@ bool fs::create_path(const std::string& path)
 
 bool fs::remove_dir(const std::string& path)
 {
+	if (path.empty())
+	{
+		// Don't allow removing empty path (TODO)
+		g_tls_error = fs::error::noent;
+		return false;
+	}
+
 	if (auto device = get_virtual_device(path))
 	{
 		return device->remove_dir(path);
@@ -539,6 +546,13 @@ bool fs::remove_dir(const std::string& path)
 
 bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 {
+	if (from.empty() || to.empty())
+	{
+		// Don't allow opening empty path (TODO)
+		g_tls_error = fs::error::noent;
+		return false;
+	}
+
 	const auto device = get_virtual_device(from);
 
 	if (device != get_virtual_device(to))
@@ -786,6 +800,13 @@ void fs::file::xfail() const
 
 fs::file::file(const std::string& path, bs_t<open_mode> mode)
 {
+	if (path.empty())
+	{
+		// Don't allow opening empty path (TODO)
+		g_tls_error = fs::error::noent;
+		return;
+	}
+
 	if (auto device = get_virtual_device(path))
 	{
 		if (auto&& _file = device->open(path, mode))
@@ -1176,6 +1197,13 @@ void fs::dir::xnull() const
 
 bool fs::dir::open(const std::string& path)
 {
+	if (path.empty())
+	{
+		// Don't allow opening empty path (TODO)
+		g_tls_error = fs::error::noent;
+		return false;
+	}
+
 	if (auto device = get_virtual_device(path))
 	{
 		if (auto&& _dir = device->open_dir(path))

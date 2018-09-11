@@ -4,6 +4,7 @@
 #include "cfmt.h"
 
 #include <algorithm>
+#include <string_view>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -73,32 +74,31 @@ void fmt_class_string<fmt::base57>::format(std::string& out, u64 arg)
 
 void fmt_class_string<const void*>::format(std::string& out, u64 arg)
 {
-	if (arg)
-	{
-		fmt::append(out, "%p", reinterpret_cast<const void*>(static_cast<std::uintptr_t>(arg)));
-	}
-	else
-	{
-		out += "(NULL)";
-	}
+	fmt::append(out, "%p", arg);
 }
 
 void fmt_class_string<const char*>::format(std::string& out, u64 arg)
 {
 	if (arg)
 	{
-		out += reinterpret_cast<const char*>(static_cast<std::uintptr_t>(arg));
+		out += reinterpret_cast<const char*>(arg);
 	}
 	else
 	{
-		out += "(NULL)";
+		out += "(NULLSTR)";
 	}
 }
 
 template <>
 void fmt_class_string<std::string>::format(std::string& out, u64 arg)
 {
-	out += get_object(arg).c_str(); // TODO?
+	out += get_object(arg);
+}
+
+template <>
+void fmt_class_string<std::string_view>::format(std::string& out, u64 arg)
+{
+	out += get_object(arg);
 }
 
 template <>
