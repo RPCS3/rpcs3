@@ -1711,8 +1711,7 @@ work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrash
 {
 	std::lock_guard lock(queue_guard);
 
-	work_queue.emplace_back();
-	work_item &result = work_queue.back();
+	work_item &result = work_queue.emplace_back();
 	result.address_to_flush = address;
 	result.section_data = std::move(flush_data);
 	return result;
