@@ -206,6 +206,7 @@ public:
 	void add_pipeline_entry(RSXVertexProgram &vp, RSXFragmentProgram &fp, vk::pipeline_props &props, Args&& ...args)
 	{
 		props.render_pass = m_render_pass_data[props.render_pass_location];
+		verify("Usupported renderpass configuration" HERE), props.render_pass != VK_NULL_HANDLE;
 		vp.skip_vertex_input_check = true;
 		get_graphics_pipeline(vp, fp, props, false, std::forward<Args>(args)...);
 	}
