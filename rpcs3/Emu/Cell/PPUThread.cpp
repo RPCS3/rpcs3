@@ -1005,11 +1005,13 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr)
 {
+	ppu.lr_64 = false;
 	return ppu_load_acquire_reservation<u32>(ppu, addr);
 }
 
 extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 {
+	ppu.lr_64 = true;
 	return ppu_load_acquire_reservation<u64>(ppu, addr);
 }
 
@@ -1063,6 +1065,8 @@ const auto ppu_stwcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 {
 	atomic_be_t<u32>& data = vm::_ref<atomic_be_t<u32>>(addr);
+
+	if (UNLIKELY(ppu.lr_64)) ppu.rdata >>= 32;
 
 	if (ppu.raddr != addr || ppu.rdata != data.load() || ppu.rtime != vm::reservation_acquire(addr, sizeof(u32)))
 	{
