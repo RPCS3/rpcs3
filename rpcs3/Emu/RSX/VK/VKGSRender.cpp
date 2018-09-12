@@ -407,15 +407,20 @@ namespace
 				verify(HERE), support == VK_ERROR_FORMAT_NOT_SUPPORTED;
 				continue;
 			}
+
 			for (const VkFormat &depth_stencil_format : depth_format_list)
 			{
-				VkResult support = vkGetPhysicalDeviceImageFormatProperties(gpu, depth_stencil_format, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 0, &props);
-				if (depth_stencil_format != VK_FORMAT_UNDEFINED && support != VK_SUCCESS)
+				if (depth_stencil_format != VK_FORMAT_UNDEFINED)
 				{
-					LOG_ERROR(RSX, "Format 0x%x is not supported for depth/stencil target usage by your GPU driver. Crashes may arise.", (u32)depth_stencil_format);
-					verify(HERE), support == VK_ERROR_FORMAT_NOT_SUPPORTED;
-					continue;
+					VkResult support = vkGetPhysicalDeviceImageFormatProperties(gpu, depth_stencil_format, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 0, &props);
+					if (support != VK_SUCCESS)
+					{
+						LOG_ERROR(RSX, "Format 0x%x is not supported for depth/stencil target usage by your GPU driver. Crashes may arise.", (u32)depth_stencil_format);
+						verify(HERE), support == VK_ERROR_FORMAT_NOT_SUPPORTED;
+						continue;
+					}
 				}
+
 				for (u8 number_of_draw_buffer = 0; number_of_draw_buffer <= 4; number_of_draw_buffer++)
 				{
 					size_t idx = vk::get_render_pass_location(color_format, depth_stencil_format, number_of_draw_buffer);
