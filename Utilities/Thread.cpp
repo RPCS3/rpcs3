@@ -1267,9 +1267,9 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 					// Now, we notify the game that a page fault occurred so it can rectify it.
 					// Note, for data3, were the memory readable AND we got a page fault, it must be due to a write violation since reads are allowed.
-					be_t<u64> data1 = addr;
-					be_t<u64> data2 = ((be_t<u64>)SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD << 32) + cpu->id; // TODO: fix hack for now that assumes PPU thread always.
-					be_t<u64> data3 = vm::check_addr(addr, a_size, vm::page_readable) ? SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY : SYS_MEMORY_PAGE_FAULT_CAUSE_NON_MAPPED;
+					u64 data1 = addr;
+					u64 data2 = ((u64)SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD << 32) + cpu->id; // TODO: fix hack for now that assumes PPU thread always.
+					u64 data3 = vm::check_addr(addr, a_size, vm::page_readable) ? SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY : SYS_MEMORY_PAGE_FAULT_CAUSE_NON_MAPPED;
 
 					LOG_ERROR(MEMORY, "Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
 						addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only" : "using unmapped");
