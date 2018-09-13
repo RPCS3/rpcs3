@@ -388,6 +388,8 @@ namespace rsx
 
 		on_init_thread();
 
+		// Special value in initialization, this is not set by a context reset
+		method_registers.registers[NV4097_SET_SHADER_PROGRAM] = (0 << 2) | CELL_GCM_LOCATION_LOCAL + 1;
 		reset();
 
 		if (!zcull_ctrl)
@@ -1946,11 +1948,6 @@ namespace rsx
 		auto &result = current_fragment_program = {};
 
 		const u32 shader_program = rsx::method_registers.shader_program_address();
-		if (shader_program == 0)
-		{
-			current_fp_metadata = {};
-			return;
-		}
 
 		const u32 program_location = (shader_program & 0x3) - 1;
 		const u32 program_offset = (shader_program & ~0x3);
@@ -2083,9 +2080,6 @@ namespace rsx
 		auto &result = current_fragment_program = {};
 
 		const u32 shader_program = rsx::method_registers.shader_program_address();
-		if (shader_program == 0)
-			return;
-
 		const u32 program_location = (shader_program & 0x3) - 1;
 		const u32 program_offset = (shader_program & ~0x3);
 
@@ -3209,11 +3203,12 @@ namespace rsx
 			const auto memory_end = memory_address + memory_range;
 			u32 sync_address = 0;
 
-			for (const auto &writer : m_pending_writes)
+			for (auto It = m_pending_writes.crbegin(); It != m_pending_writes.crend(); ++It)
 			{
-				if (writer.sink >= memory_address && writer.sink < memory_end)
+				if (It->sink >= memory_address && It->sink < memory_end)
 				{
-					sync_address = writer.sink;
+					sync_address = It->sink;
+					break;
 				}
 			}
 

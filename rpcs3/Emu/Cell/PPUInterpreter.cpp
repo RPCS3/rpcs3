@@ -3176,9 +3176,7 @@ bool ppu_interpreter::LVSL(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::LVEBX(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.vr[op.vd]._u8[15 - (addr & 0xf)] = vm::read8(vm::cast(addr, HERE));
-	return true;
+	return LVX(ppu, op);
 }
 
 bool ppu_interpreter::SUBFC(ppu_thread& ppu, ppu_opcode_t op)
@@ -3317,9 +3315,7 @@ bool ppu_interpreter::LVSR(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::LVEHX(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const u64 addr = (op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb]) & ~1ULL;
-	ppu.vr[op.vd]._u16[7 - ((addr >> 1) & 0x7)] = vm::read16(vm::cast(addr, HERE));
-	return true;
+	return LVX(ppu, op);
 }
 
 bool ppu_interpreter::SUBF(ppu_thread& ppu, ppu_opcode_t op)
@@ -3386,9 +3382,7 @@ bool ppu_interpreter::TD(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::LVEWX(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const u64 addr = (op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb]) & ~3ULL;
-	ppu.vr[op.vd]._u32[3 - ((addr >> 2) & 0x3)] = vm::read32(vm::cast(addr, HERE));
-	return true;
+	return LVX(ppu, op);
 }
 
 bool ppu_interpreter::MULHD(ppu_thread& ppu, ppu_opcode_t op)
