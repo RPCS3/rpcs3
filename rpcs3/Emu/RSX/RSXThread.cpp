@@ -389,7 +389,7 @@ namespace rsx
 		on_init_thread();
 
 		// Special value in initialization, this is not set by a context reset
-		method_registers.registers[NV4097_SET_SHADER_PROGRAM] = (0 << 2) | CELL_GCM_LOCATION_LOCAL;
+		method_registers.registers[NV4097_SET_SHADER_PROGRAM] = (0 << 2) | CELL_GCM_LOCATION_LOCAL + 1;
 		reset();
 
 		if (!zcull_ctrl)
