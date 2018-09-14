@@ -941,7 +941,10 @@ static void ppu_trace(u64 addr)
 template <typename T>
 static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 {
-	auto& data = vm::_ref<const atomic_be_t<T>>(addr);
+	// Always load aligned 64-bit value (unaligned reservation will fail to store)
+	auto& data = vm::_ref<const atomic_be_t<u64>>(addr & -8);
+	const u64 size_off = (sizeof(T) * 8) & 63;
+	const u64 data_off = (addr & 7) * 8;
 
 	ppu.raddr = addr;
 
@@ -952,7 +955,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 		if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
 		{
-			return static_cast<T>(ppu.rdata);
+			return static_cast<T>(ppu.rdata << data_off >> size_off);
 		}
 		else
 		{
@@ -968,7 +971,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 		if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
 		{
-			return static_cast<T>(ppu.rdata);
+			return static_cast<T>(ppu.rdata << data_off >> size_off);
 		}
 	}
 
@@ -1000,18 +1003,16 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 	ppu.cpu_mem();
 
-	return static_cast<T>(ppu.rdata);
+	return static_cast<T>(ppu.rdata << data_off >> size_off);
 }
 
 extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr)
 {
-	ppu.lr_64 = false;
 	return ppu_load_acquire_reservation<u32>(ppu, addr);
 }
 
 extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 {
-	ppu.lr_64 = true;
 	return ppu_load_acquire_reservation<u64>(ppu, addr);
 }
 
@@ -1064,11 +1065,10 @@ const auto ppu_stwcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 {
-	atomic_be_t<u32>& data = vm::_ref<atomic_be_t<u32>>(addr);
+	auto& data = vm::_ref<atomic_be_t<u32>>(addr & -4);
+	const u32 old_data = static_cast<u32>(ppu.rdata << ((addr & 7) * 8) >> 32);
 
-	if (UNLIKELY(ppu.lr_64)) ppu.rdata >>= 32;
-
-	if (ppu.raddr != addr || ppu.rdata != data.load() || ppu.rtime != vm::reservation_acquire(addr, sizeof(u32)))
+	if (ppu.raddr != addr || addr & 3 || old_data != data.load() || ppu.rtime != vm::reservation_acquire(addr, sizeof(u32)))
 	{
 		ppu.raddr = 0;
 		return false;
@@ -1076,7 +1076,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 	if (LIKELY(g_use_rtm))
 	{
-		if (ppu_stwcx_tx(addr, ppu.rtime, ppu.rdata, reg_value))
+		if (ppu_stwcx_tx(addr, ppu.rtime, old_data, reg_value))
 		{
 			vm::reservation_notifier(addr, sizeof(u32)).notify_all();
 			ppu.raddr = 0;
@@ -1092,7 +1092,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 	auto& res = vm::reservation_lock(addr, sizeof(u32));
 
-	const bool result = ppu.rtime == (res & ~1ull) && data.compare_and_swap_test(static_cast<u32>(ppu.rdata), reg_value);
+	const bool result = ppu.rtime == (res & ~1ull) && data.compare_and_swap_test(old_data, reg_value);
 
 	if (result)
 	{
@@ -1158,9 +1158,10 @@ const auto ppu_stdcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 
 extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 {
-	atomic_be_t<u64>& data = vm::_ref<atomic_be_t<u64>>(addr);
+	auto& data = vm::_ref<atomic_be_t<u64>>(addr & -8);
+	const u64 old_data = ppu.rdata << ((addr & 7) * 8);
 
-	if (ppu.raddr != addr || ppu.rdata != data.load() || ppu.rtime != vm::reservation_acquire(addr, sizeof(u64)))
+	if (ppu.raddr != addr || addr & 7 || old_data != data.load() || ppu.rtime != vm::reservation_acquire(addr, sizeof(u64)))
 	{
 		ppu.raddr = 0;
 		return false;
@@ -1168,7 +1169,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	if (LIKELY(g_use_rtm))
 	{
-		if (ppu_stdcx_tx(addr, ppu.rtime, ppu.rdata, reg_value))
+		if (ppu_stdcx_tx(addr, ppu.rtime, old_data, reg_value))
 		{
 			vm::reservation_notifier(addr, sizeof(u64)).notify_all();
 			ppu.raddr = 0;
@@ -1184,7 +1185,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	auto& res = vm::reservation_lock(addr, sizeof(u64));
 
-	const bool result = ppu.rtime == (res & ~1ull) && data.compare_and_swap_test(ppu.rdata, reg_value);
+	const bool result = ppu.rtime == (res & ~1ull) && data.compare_and_swap_test(old_data, reg_value);
 
 	if (result)
 	{
