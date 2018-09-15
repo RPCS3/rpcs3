@@ -468,16 +468,11 @@ error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 	if (!path[0])
 		return CELL_ENOENT;
 
+	std::vector<std::string> ext;
 	const std::string_view vpath = path.get_ptr();
-	const std::string local_path = vfs::get(vpath);
+	const std::string local_path = vfs::get(vpath, &ext);
 
-	if (vpath.find_first_not_of('/') == -1)
-	{
-		// TODO: open root
-		return {CELL_EPERM, path};
-	}
-
-	if (local_path.empty())
+	if (local_path.empty() && ext.empty())
 	{
 		return {CELL_ENOTMOUNTED, path};
 	}
@@ -495,14 +490,73 @@ error_code sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 	{
 		switch (auto error = fs::g_tls_error)
 		{
-		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_opendir(): unknown error %s", error);
-		}
+		case fs::error::noent:
+		{
+			if (ext.empty())
+			{
+				return {CELL_ENOENT, path};
+			}
 
-		return {CELL_EIO, path};
+			break;
+		}
+		default:
+		{
+			sys_fs.error("sys_fs_opendir(): unknown error %s", error);
+			return {CELL_EIO, path};
+		}
+		}
 	}
 
-	if (const u32 id = idm::make<lv2_fs_object, lv2_dir>(path.get_ptr(), std::move(dir)))
+	// Build directory as a vector of entries
+	std::vector<fs::dir_entry> data;
+
+	if (dir)
+	{
+		// Add real directories
+		while (dir.read(data.emplace_back()))
+		{
+			// Preprocess entries
+			data.back().name = vfs::unescape(data.back().name);
+
+			// Add additional entries for split file candidates (while ends with .66600)
+			while (data.back().name.size() >= 6 && data.back().name.compare(data.back().name.size() - 6, 6, ".66600", 6) == 0)
+			{
+				data.emplace_back(data.back()).name.resize(data.back().name.size() - 6);
+			}
+		}
+
+		data.resize(data.size() - 1);
+	}
+	else
+	{
+		data.emplace_back().name = ".";
+		data.back().is_directory = true;
+		data.emplace_back().name = "..";
+		data.back().is_directory = true;
+	}
+
+	// Add mount points (TODO)
+	for (auto&& ex : ext)
+	{
+		data.emplace_back().name = std::move(ex);
+		data.back().is_directory = true;
+	}
+
+	// Sort files, keeping . and ..
+	std::stable_sort(data.begin() + 2, data.end(), [](const fs::dir_entry& a, const fs::dir_entry& b)
+	{
+		return a.name < b.name;
+	});
+
+	// Remove duplicates
+	const auto last = std::unique(data.begin(), data.end(), [](const fs::dir_entry& a, const fs::dir_entry& b)
+	{
+		return a.name == b.name;
+	});
+
+	data.erase(last, data.end());
+
+	if (const u32 id = idm::make<lv2_fs_object, lv2_dir>(path.get_ptr(), std::move(data)))
 	{
 		*fd = id;
 		return CELL_OK;
@@ -523,14 +577,11 @@ error_code sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 		return CELL_EBADF;
 	}
 
-	fs::dir_entry info;
-
-	if (directory->dir.read(info))
+	if (auto* info = directory->dir_read())
 	{
-		const std::string vfs_name = vfs::unescape(info.name);
-		dir->d_type = info.is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
-		dir->d_namlen = u8(std::min<size_t>(vfs_name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
-		strcpy_trunc(dir->d_name, vfs_name);
+		dir->d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
+		dir->d_namlen = u8(std::min<size_t>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
+		strcpy_trunc(dir->d_name, info->name);
 		*nread = sizeof(CellFsDirent);
 	}
 	else
@@ -1109,25 +1160,22 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 
 		for (; arg->_size < arg->max; arg->_size++)
 		{
-			fs::dir_entry info;
-
-			if (directory->dir.read(info))
+			if (auto* info = directory->dir_read())
 			{
 				auto& entry = arg->ptr[arg->_size];
 
-				entry.attribute.mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
+				entry.attribute.mode = info->is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 				entry.attribute.uid = 0;
 				entry.attribute.gid = 0;
-				entry.attribute.atime = info.atime;
-				entry.attribute.mtime = info.mtime;
-				entry.attribute.ctime = info.ctime;
-				entry.attribute.size = info.size;
+				entry.attribute.atime = info->atime;
+				entry.attribute.mtime = info->mtime;
+				entry.attribute.ctime = info->ctime;
+				entry.attribute.size = info->size;
 				entry.attribute.blksize = 4096; // ???
 
-				const std::string vfs_name = vfs::unescape(info.name);
-				entry.entry_name.d_type = info.is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
-				entry.entry_name.d_namlen = u8(std::min<size_t>(vfs_name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
-				strcpy_trunc(entry.entry_name.d_name, vfs_name);
+				entry.entry_name.d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
+				entry.entry_name.d_namlen = u8(std::min<size_t>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
+				strcpy_trunc(entry.entry_name.d_name, info->name);
 			}
 			else
 			{
