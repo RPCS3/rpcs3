@@ -132,7 +132,7 @@ class thread_ctrl final
 	// Remotely set or caught exception
 	std::exception_ptr m_exception;
 
-	// Thread initial task or atexit task
+	// Thread initial task
 	task_stack m_task;
 
 	// Fixed name
@@ -149,9 +149,6 @@ class thread_ctrl final
 
 	// Called at the thread end
 	void finalize(std::exception_ptr) noexcept;
-
-	// Add task (atexit)
-	static void _push(task_stack);
 
 	// Internal waiting function, may throw. Infinite value is -1.
 	static bool _wait_for(u64 usec);
@@ -239,13 +236,6 @@ public:
 	static thread_ctrl* get_current()
 	{
 		return g_tls_this_thread;
-	}
-
-	// Register function at thread exit (for the current thread)
-	template<typename F>
-	static inline void atexit(F&& func)
-	{
-		_push(std::forward<F>(func));
 	}
 
 	// Create detached named thread

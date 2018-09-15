@@ -1446,10 +1446,11 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 	static thread_local std::unordered_map<std::string, std::size_t> g_tls_error_stats;
 	static thread_local std::string g_tls_error_str;
 
-	if (g_tls_error_stats.empty())
+	if (!sup)
 	{
-		thread_ctrl::atexit([]
+		if (!sup2)
 		{
+			// Report and clean error state
 			for (auto&& pair : g_tls_error_stats)
 			{
 				if (pair.second > 3)
@@ -1457,7 +1458,10 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 					LOG_ERROR(GENERAL, "Stat: %s [x%u]", pair.first, pair.second);
 				}
 			}
-		});
+
+			g_tls_error_stats.clear();
+			return 0;
+		}
 	}
 
 	logs::channel* channel = &logs::GENERAL;
