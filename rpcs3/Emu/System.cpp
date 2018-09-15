@@ -1465,7 +1465,6 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 	}
 
 	logs::channel* channel = &logs::GENERAL;
-	logs::level level = logs::level::error;
 	const char* func = "Unknown function";
 
 	if (auto thread = get_current_cpu_thread())
@@ -1490,7 +1489,7 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 
 	if (stat <= 3)
 	{
-		channel->format(level, "%s [%u]", g_tls_error_str, stat);
+		channel->error("%s [%u]", g_tls_error_str, stat);
 	}
 
 	return static_cast<s32>(arg);
