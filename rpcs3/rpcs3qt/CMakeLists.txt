@@ -14,7 +14,7 @@ target_link_libraries(rpcs3_ui
 		3rdparty::qt5 3rdparty::yaml-cpp
 
 	PRIVATE
-		rpcs3_emu rpcs3_utilities
+		rpcs3_emu
 		3rdparty::zlib 3rdparty::pugixml
 		3rdparty::discord-rpc
 		3rdparty::hidapi)

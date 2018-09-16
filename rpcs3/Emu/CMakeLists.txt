@@ -3,12 +3,36 @@ file(GLOB SRC_FILES "*.cpp")
 add_library(rpcs3_emu ${SRC_FILES})
 
 target_link_libraries(rpcs3_emu
-	PUBLIC
-		rpcs3_stdafx
-		rpcs3_utilities_jit
 	PRIVATE
-		3rdparty::zlib 3rdparty::yaml-cpp
-)
+		3rdparty::zlib 3rdparty::yaml-cpp)
+
+# For stdafx.h
+target_include_directories(rpcs3_emu
+	PUBLIC
+		${RPCS3_SRC_DIR})
+
+
+# Utilities
+file(GLOB UTILITIES_SRC_FILES "../../Utilities/*.cpp")
+target_sources(rpcs3_emu PRIVATE ${UTILITIES_SRC_FILES})
+
+target_include_directories(rpcs3_emu PUBLIC "${CMAKE_SOURCE_DIR}")
+
+target_link_libraries(rpcs3_emu
+	PUBLIC
+		3rdparty::pugixml
+		3rdparty::gsl)
+
+set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES COMPILE_FLAGS -fno-rtti)
+
+
+# Crypto
+file(GLOB CRYPTO_SRC_FILES "../Crypto/*.cpp")
+target_sources(rpcs3_emu PRIVATE ${CRYPTO_SRC_FILES})
+
+# Loader
+file(GLOB LOADER_SRC_FILES "../Loader/*.cpp")
+target_sources(rpcs3_emu PRIVATE ${LOADER_SRC_FILES})
 
 
 # Audio
@@ -35,7 +59,6 @@ endif()
 
 target_link_libraries(rpcs3_emu
 	PRIVATE
-		rpcs3_utilities rpcs3_crypto rpcs3_loader
 		3rdparty::stblib 3rdparty::libpng)
 
 if(CMAKE_COMPILER_IS_GNUCXX AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 7))
@@ -48,15 +71,12 @@ file(GLOB_RECURSE CPU_SRC_FILES "CPU/*.cpp")
 target_sources(rpcs3_emu PRIVATE ${CPU_SRC_FILES})
 
 target_link_libraries(rpcs3_emu
-	PRIVATE 3rdparty::llvm)
+	PRIVATE 3rdparty::llvm 3rdparty::asmjit)
 
 
 # Io
 file(GLOB_RECURSE IO_SRC_FILES "Io/*.cpp")
 target_sources(rpcs3_emu PRIVATE ${IO_SRC_FILES})
-
-target_link_libraries(rpcs3_emu
-	PRIVATE rpcs3_utilities)
 
 
 # Memory

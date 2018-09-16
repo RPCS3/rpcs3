@@ -43,16 +43,8 @@ endif()
 # be found otherwise
 include(../3rdparty/qt5.cmake)
 
-
-# precompiled header import target
-add_library(rpcs3_stdafx INTERFACE)
-target_include_directories(rpcs3_stdafx INTERFACE .)
-target_link_libraries(rpcs3_stdafx INTERFACE rpcs3_core_utilities)
-
 # subdirectories
-add_subdirectory(Crypto)
 add_subdirectory(Emu)
-add_subdirectory(Loader)
 add_subdirectory(rpcs3qt)
 
 file(GLOB RPCS3_SRC "*.cpp")
@@ -70,7 +62,7 @@ set_target_properties(rpcs3
 		AUTOUIC ON)
 
 target_link_libraries(rpcs3 ${ADDITIONAL_LIBS})
-target_link_libraries(rpcs3 rpcs3_emu rpcs3_ui rpcs3_loader rpcs3_crypto rpcs3_utilities)
+target_link_libraries(rpcs3 rpcs3_emu rpcs3_ui)
 target_link_libraries(rpcs3 3rdparty::discord-rpc 3rdparty::qt5 3rdparty::hidapi)
 
 if(UNIX)
