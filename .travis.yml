@@ -30,4 +30,4 @@ matrix:
         
 git:
   depth: false # Unshallow clone to obtain proper GIT_VERSION
-submodules: false
+  submodules: false
