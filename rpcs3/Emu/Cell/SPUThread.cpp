@@ -716,7 +716,7 @@ void SPUThread::do_dma_transfer(const spu_mfc_cmd& args)
 		{
 			fmt::throw_exception("SPU MMIO used for RawSPU (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
 		}
-		else if (group && index < group->num && group->threads[index])
+		else if (group && group->threads[index])
 		{
 			auto& spu = static_cast<SPUThread&>(*group->threads[index]);
 
