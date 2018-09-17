@@ -708,13 +708,12 @@ void Emulator::Load(bool add_only)
 		std::string bdvd_dir = g_cfg.vfs.dev_bdvd;
 
 		// Mount default relative path to non-existent directory
-		vfs::mount("", fs::get_config_dir() + "delete_this_dir/");
-		vfs::mount("dev_hdd0", fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir));
-		vfs::mount("dev_hdd1", fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir));
-		vfs::mount("dev_flash", g_cfg.vfs.get_dev_flash());
-		vfs::mount("dev_usb", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
-		vfs::mount("dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
-		vfs::mount("app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
+		vfs::mount("/dev_hdd0", fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir));
+		vfs::mount("/dev_hdd1", fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir));
+		vfs::mount("/dev_flash", g_cfg.vfs.get_dev_flash());
+		vfs::mount("/dev_usb", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
+		vfs::mount("/dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
+		vfs::mount("/app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
 
 		// Special boot mode (directory scan)
 		if (fs::is_dir(m_path))
@@ -903,7 +902,7 @@ void Emulator::Load(bool add_only)
 		{
 			fs::file sfb_file;
 
-			vfs::mount("dev_bdvd", bdvd_dir);
+			vfs::mount("/dev_bdvd", bdvd_dir);
 			LOG_NOTICE(LOADER, "Disc: %s", vfs::get("/dev_bdvd"));
 
 			if (!sfb_file.open(vfs::get("/dev_bdvd/PS3_DISC.SFB")) || sfb_file.size() < 4 || sfb_file.read<u32>() != ".SFB"_u32)
@@ -964,7 +963,7 @@ void Emulator::Load(bool add_only)
 		}
 		else if (m_cat == "DG" && from_hdd0_game)
 		{
-			vfs::mount("dev_bdvd/PS3_GAME", hdd0_game + m_path.substr(hdd0_game.size(), 10));
+			vfs::mount("/dev_bdvd/PS3_GAME", hdd0_game + m_path.substr(hdd0_game.size(), 10));
 			LOG_NOTICE(LOADER, "Game: %s", vfs::get("/dev_bdvd/PS3_GAME"));
 		}
 		else if (disc.empty())
@@ -975,7 +974,7 @@ void Emulator::Load(bool add_only)
 		else
 		{
 			bdvd_dir = disc;
-			vfs::mount("dev_bdvd", bdvd_dir);
+			vfs::mount("/dev_bdvd", bdvd_dir);
 			LOG_NOTICE(LOADER, "Disk: %s", vfs::get("/dev_bdvd"));
 		}
 
@@ -1062,10 +1061,10 @@ void Emulator::Load(bool add_only)
 			return m_path = hdd0_boot, Load();
 		}
 
-		// Mount /host_root/ if necessary
+		// Mount /host_root/ if necessary (special value)
 		if (g_cfg.vfs.host_root)
 		{
-			vfs::mount("host_root", {});
+			vfs::mount("/host_root", "/");
 		}
 
 		// Open SELF or ELF
@@ -1447,10 +1446,11 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 	static thread_local std::unordered_map<std::string, std::size_t> g_tls_error_stats;
 	static thread_local std::string g_tls_error_str;
 
-	if (g_tls_error_stats.empty())
+	if (!sup)
 	{
-		thread_ctrl::atexit([]
+		if (!sup2)
 		{
+			// Report and clean error state
 			for (auto&& pair : g_tls_error_stats)
 			{
 				if (pair.second > 3)
@@ -1458,11 +1458,13 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 					LOG_ERROR(GENERAL, "Stat: %s [x%u]", pair.first, pair.second);
 				}
 			}
-		});
+
+			g_tls_error_stats.clear();
+			return 0;
+		}
 	}
 
 	logs::channel* channel = &logs::GENERAL;
-	logs::level level = logs::level::error;
 	const char* func = "Unknown function";
 
 	if (auto thread = get_current_cpu_thread())
@@ -1487,7 +1489,7 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 
 	if (stat <= 3)
 	{
-		channel->format(level, "%s [%u]", g_tls_error_str, stat);
+		channel->error("%s [%u]", g_tls_error_str, stat);
 	}
 
 	return static_cast<s32>(arg);

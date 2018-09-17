@@ -1654,9 +1654,8 @@ void thread_ctrl::initialize()
 
 void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
 {
-	// Run atexit functions
-	m_task.invoke();
-	m_task.reset();
+	// Report pending errors
+	error_code::error_report(0, 0, 0, 0);
 
 #ifdef _WIN32
 	ULONG64 cycles{};
@@ -1693,11 +1692,6 @@ void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
 
 	// Signal joining waiters
 	m_jcv.notify_all();
-}
-
-void thread_ctrl::_push(task_stack task)
-{
-	g_tls_this_thread->m_task.push(std::move(task));
 }
 
 bool thread_ctrl::_wait_for(u64 usec)

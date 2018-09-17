@@ -399,3 +399,15 @@ public:
 		return atomic_storage<under>::btc(m_data.m_data, static_cast<uint>(static_cast<under>(rhs)));
 	}
 };
+
+template <typename T>
+struct fmt_unveil<bs_t<T>, void>
+{
+	// Format as is
+	using type = bs_t<T>;
+
+	static inline u64 get(const bs_t<T>& bitset)
+	{
+		return static_cast<std::underlying_type_t<T>>(bitset);
+	}
+};

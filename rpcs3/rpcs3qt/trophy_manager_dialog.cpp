@@ -55,8 +55,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_show_platinum_trophies = m_gui_settings->GetValue(gui::tr_show_platinum).toBool();
 
 	// HACK: dev_hdd0 must be mounted for vfs to work for loading trophies.
-	vfs::mount("dev_hdd0", Emu.GetHddDir());
-
+	vfs::mount("/dev_hdd0", Emu.GetHddDir());
 
 	// Get the currently selected user's trophy path.
 	m_trophy_dir = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/";
@@ -577,7 +576,7 @@ void trophy_manager_dialog::ShowContextMenu(const QPoint& loc)
 		QString path = qstr(m_trophies_db[db_ind]->path);
 		QDesktopServices::openUrl(QUrl("file:///" + path));
 	});
-	
+
 	menu->addAction(show_trophy_dir);
 	menu->exec(globalPos);
 }

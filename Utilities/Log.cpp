@@ -239,7 +239,7 @@ void logs::listener::add(logs::listener* _new)
 	}
 }
 
-void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u64* args)
+void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, const u64* args) const
 {
 	// Get timestamp
 	const u64 stamp = get_stamp();
