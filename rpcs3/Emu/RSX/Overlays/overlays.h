@@ -777,11 +777,11 @@ namespace rsx
 					std::string root_path = Emu.GetBoot();
 					root_path = root_path.substr(0, root_path.find_last_of("/"));
 
-					auto icon_path = root_path + "../../PIC1.PNG";
+					auto icon_path = root_path + "/../PIC1.PNG";
 					if (!fs::exists(icon_path))
 					{
 						// Fallback path
-						icon_path = root_path + "../../ICON0.PNG";
+						icon_path = root_path + "/../ICON0.PNG";
 					}
 
 					if (fs::exists(icon_path))
@@ -789,10 +789,13 @@ namespace rsx
 						background_image = std::make_unique<image_info>(icon_path.c_str());
 						if (background_image->data)
 						{
-							background.back_color.a = 0.65;
+							f32 color = (100 - g_cfg.video.shader_preloading_dialog.darkening_strength) / 100.f;
+							background_poster.fore_color = color4f(color, color, color, 1.);
+							background.back_color.a = 0.f;
 
 							background_poster.set_size(1280, 720);
 							background_poster.set_raw_image(background_image.get());
+							background_poster.set_blur_strength((u8)g_cfg.video.shader_preloading_dialog.blur_strength);
 						}
 					}
 				}

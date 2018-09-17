@@ -570,6 +570,8 @@ namespace rsx
 				font *font_ref = nullptr;
 				void *external_data_ref = nullptr;
 
+				u8 blur_strength = 0;
+
 				command_config() {}
 
 				void set_image_resource(u8 ref)
@@ -1199,6 +1201,9 @@ namespace rsx
 			u8 image_resource_ref = image_resource_id::none;
 			void *external_ref = nullptr;
 
+			// Strength of blur effect
+			u8 blur_strength = 0;
+
 		public:
 			using overlay_element::overlay_element;
 
@@ -1212,6 +1217,8 @@ namespace rsx
 					cmd_img.config.set_image_resource(image_resource_ref);
 					cmd_img.config.color = fore_color;
 					cmd_img.config.external_data_ref = external_ref;
+
+					cmd_img.config.blur_strength = blur_strength;
 
 					// Make padding work for images (treat them as the content instead of the 'background')
 					auto& verts = cmd_img.verts;
@@ -1237,6 +1244,11 @@ namespace rsx
 			{
 				image_resource_ref = image_resource_id::raw_image;
 				external_ref = raw_image;
+			}
+
+			void set_blur_strength(u8 strength)
+			{
+				blur_strength = strength;
 			}
 		};
 
