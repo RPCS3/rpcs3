@@ -8,7 +8,7 @@ namespace rsx
 {
 	u32 fragment_texture::offset() const
 	{
-		return registers[NV4097_SET_TEXTURE_OFFSET + (m_index * 8)];
+		return registers[NV4097_SET_TEXTURE_OFFSET + (m_index * 8)] & 0x7FFFFFFF;
 	}
 
 	u8 fragment_texture::location() const
@@ -121,7 +121,7 @@ namespace rsx
 
 	bool fragment_texture::enabled() const
 	{
-		return location() <= 1 && ((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 31) & 0x1);
+		return ((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 31) & 0x1);
 	}
 
 	u16 fragment_texture::min_lod() const
@@ -279,7 +279,7 @@ namespace rsx
 
 	u32 vertex_texture::offset() const
 	{
-		return registers[NV4097_SET_VERTEX_TEXTURE_OFFSET + (m_index * 8)];
+		return registers[NV4097_SET_VERTEX_TEXTURE_OFFSET + (m_index * 8)] & 0x7FFFFFFF;
 	}
 
 	u8 vertex_texture::location() const
@@ -349,7 +349,7 @@ namespace rsx
 
 	bool vertex_texture::enabled() const
 	{
-		return location() <= 1 && ((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 31) & 0x1);
+		return ((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 31) & 0x1);
 	}
 
 	u16 vertex_texture::min_lod() const
