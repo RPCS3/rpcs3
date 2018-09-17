@@ -477,6 +477,16 @@ struct cfg_root : cfg::node
 
 		} shader_compilation_hint{this};
 
+		struct node_shader_preloading_dialog : cfg::node
+		{
+			node_shader_preloading_dialog(cfg::node* _this) : cfg::node(_this, "Shader Loading Dialog"){}
+
+			cfg::_bool use_custom_background{this, "Allow custom background", true};
+			cfg::_int<0, 100> darkening_strength{this, "Darkening effect strength", 30};
+			cfg::_int<0, 100> blur_strength{this, "Blur effect strength", 0};
+
+		} shader_preloading_dialog{this};
+
 	} video{this};
 
 	struct node_audio : cfg::node
