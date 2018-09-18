@@ -484,9 +484,6 @@ namespace rsx
 		std::vector<u32> deferred_stack;
 		bool has_deferred_call = false;
 
-		// Track register address faults
-		u32 mem_faults_count = 0;
-
 		auto flush_command_queue = [&]()
 		{
 			const auto num_draws = (u32)method_registers.current_draw_clause.first_count_commands.size();
@@ -631,18 +628,13 @@ namespace rsx
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", internal_get.load(), put);
+				std::this_thread::sleep_for(33ms);
 
-				if (mem_faults_count >= 3)
+				if (!RSXIOMem.RealAddr(internal_get))
 				{
-					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
+					LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found: get=0x%X, put=0x%X; Resetting...", +internal_get, put);
 					internal_get = restore_point.load();
 					m_return_addr = restore_ret_addr;
-				}
-				else
-				{
-					mem_faults_count++;
-					std::this_thread::sleep_for(10ms);
 				}
 
 				continue;
@@ -735,31 +727,22 @@ namespace rsx
 			u32 count = (cmd >> 18) & 0x7ff;
 
 			//Validate the args ptr if the command attempts to read from it
-			const u32 args_address = RSXIOMem.RealAddr(internal_get + 4);
+			auto args = vm::ptr<u32>::make(RSXIOMem.RealAddr(internal_get + 4));
 
-			if (!args_address && count)
+			if (!args && count)
 			{
-				LOG_ERROR(RSX, "Invalid FIFO queue args ptr found, get=0x%X, cmd=0x%X, count=%d", internal_get.load(), cmd, count);
+				std::this_thread::sleep_for(33ms);
 
-				if (mem_faults_count >= 3)
+				if (!RSXIOMem.RealAddr(internal_get + 4))
 				{
-					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
+					LOG_ERROR(RSX, "Invalid FIFO queue args ptr found: get=0x%X, put=0x%X, count=%d; Resetting...", +internal_get, put, count);
 					internal_get = restore_point.load();
 					m_return_addr = restore_ret_addr;
-				}
-				else
-				{
-					mem_faults_count++;
-					std::this_thread::sleep_for(10ms);
 				}
 
 				continue;
 			}
 
-			// All good on valid memory ptrs
-			mem_faults_count = 0;
-
-			auto args = vm::ptr<u32>::make(args_address);
 			u32 first_cmd = (cmd & 0xfffc) >> 2;
 
 			// Stop command execution if put will be equal to get ptr during the execution itself
