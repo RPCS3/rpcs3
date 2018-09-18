@@ -917,7 +917,10 @@ namespace vk
 				return;
 
 			const VkComponentMapping mapping = apply_component_mapping_flags(gcm_format, expected_flags, rsx::default_remap_vector);
-			section.get_raw_texture()->native_component_map = mapping;
+			auto image = static_cast<vk::viewable_image*>(section.get_raw_texture());
+
+			verify(HERE), image != nullptr;
+			image->set_native_component_layout(mapping);
 
 			section.set_view_flags(expected_flags);
 		}

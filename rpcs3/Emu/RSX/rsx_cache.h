@@ -171,6 +171,9 @@ namespace rsx
 			protection = utils::protection::rw;
 			dirty = true;
 			locked = false;
+
+			confirmed_range = { 0, 0 };
+			locked_memory_ptr = {};
 		}
 
 		/**
