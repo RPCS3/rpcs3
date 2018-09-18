@@ -4,7 +4,9 @@ add_library(rpcs3_emu ${SRC_FILES})
 
 target_link_libraries(rpcs3_emu
 	PRIVATE
-		3rdparty::zlib 3rdparty::yaml-cpp)
+		3rdparty::zlib 3rdparty::yaml-cpp
+	PUBLIC
+		3rdparty::libevdev)
 
 # For stdafx.h
 target_include_directories(rpcs3_emu
@@ -45,7 +47,7 @@ if(WIN32)
 endif()
 
 target_link_libraries(rpcs3_emu
-	PRIVATE
+	PUBLIC
 		3rdparty::alsa 3rdparty::pulse 3rdparty::openal)
 
 
@@ -71,7 +73,7 @@ file(GLOB_RECURSE CPU_SRC_FILES "CPU/*.cpp")
 target_sources(rpcs3_emu PRIVATE ${CPU_SRC_FILES})
 
 target_link_libraries(rpcs3_emu
-	PRIVATE 3rdparty::llvm 3rdparty::asmjit)
+	PUBLIC 3rdparty::llvm 3rdparty::asmjit)
 
 
 # Io
