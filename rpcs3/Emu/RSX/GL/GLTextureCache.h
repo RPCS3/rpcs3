@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 
@@ -252,12 +252,7 @@ namespace gl
 
 		void reset(u32 base, u32 size, bool /*flushable*/=false)
 		{
-			rsx::protection_policy policy = g_cfg.video.strict_rendering_mode ? rsx::protection_policy::protect_policy_full_range : rsx::protection_policy::protect_policy_conservative;
-			rsx::buffered_section::reset(base, size, policy);
-
-			flushed = false;
-			synchronized = false;
-			sync_timestamp = 0ull;
+			rsx::cached_texture_section::reset(base, size);
 
 			vram_texture = nullptr;
 			managed_texture.reset();

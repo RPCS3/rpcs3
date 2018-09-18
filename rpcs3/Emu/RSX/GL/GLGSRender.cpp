@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "GLGSRender.h"
@@ -1473,10 +1473,27 @@ void GLGSRender::flip(int buffer)
 
 		if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
 		{
-			buffer_width = render_target_texture->width();
-			buffer_height = render_target_texture->height();
+			if (render_target_texture->last_use_tag == m_rtts.write_tag)
+			{
+				image = render_target_texture->raw_handle();
+			}
+			else
+			{
+				const auto overlap_info = m_rtts.get_merged_texture_memory_region(absolute_address, buffer_width, buffer_height, buffer_pitch, 4);
+				verify(HERE), !overlap_info.empty();
 
-			image = render_target_texture->raw_handle();
+				if (overlap_info.back().surface == render_target_texture)
+				{
+					// Confirmed to be the newest data source in that range
+					image = render_target_texture->raw_handle();
+				}
+			}
+
+			if (image)
+			{
+				buffer_width = render_target_texture->width();
+				buffer_height = render_target_texture->height();
+			}
 		}
 		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address, buffer_width, buffer_height))
 		{
@@ -1484,7 +1501,8 @@ void GLGSRender::flip(int buffer)
 			//The render might have been done offscreen or in software and a blit used to display
 			image = surface->get_raw_texture()->id();
 		}
-		else
+
+		if (!image)
 		{
 			LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
 
