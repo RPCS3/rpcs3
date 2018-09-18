@@ -2218,7 +2218,6 @@ namespace rsx
 			}
 
 			section_storage_type* cached_dest = nullptr;
-			bool invalidate_dst_range = false;
 
 			if (!dst_is_render_target)
 			{
@@ -2265,10 +2264,6 @@ namespace rsx
 
 					max_dst_width = cached_dest->get_width();
 					max_dst_height = cached_dest->get_height();
-				}
-				else if (overlapping_surfaces.size() > 0)
-				{
-					invalidate_dst_range = true;
 				}
 			}
 			else
@@ -2421,11 +2416,6 @@ namespace rsx
 				dest_texture = 0;
 				cached_dest = nullptr;
 			}
-			else if (invalidate_dst_range)
-			{
-				lock.upgrade();
-				invalidate_range_impl_base(dst_address, dst.pitch * dst.height, true, false, true, std::forward<Args>(extras)...);
-			}
 
 			u32 gcm_format;
 			if (is_depth_blit)
@@ -2461,18 +2451,39 @@ namespace rsx
 
 			if (dest_texture == 0)
 			{
-				lock.upgrade();
+				verify(HERE), !dst_is_render_target;
 
-				//render target data is already in correct swizzle layout
+				// Need to calculate the minium required size that will fit the data, anchored on the rsx_address
+				// If the application starts off with an 'inseted' section, the guessed dimensions may not fit!
+				const u32 write_end = dst_address + (dst.pitch * dst.clip_height);
+				const u32 expected_end = dst.rsx_address + (dst.pitch * dst_dimensions.height);
+
+				const u32 section_length = std::max(write_end, expected_end) - dst.rsx_address;
+				dst_dimensions.height = section_length / dst.pitch;
+
+				lock.upgrade();
+				invalidate_range_impl_base(dst.rsx_address, section_length, true, false, true, std::forward<Args>(extras)...);
+
+				const u16 pitch_in_block = dst_is_argb8 ? dst.pitch >> 2 : dst.pitch >> 1;
+				std::vector<rsx_subresource_layout> subresource_layout;
+				rsx_subresource_layout subres = {};
+				subres.width_in_block = dst_dimensions.width;
+				subres.height_in_block = dst_dimensions.height;
+				subres.pitch_in_block = pitch_in_block;
+				subres.depth = 1;
+				subres.data = { (const gsl::byte*)dst.pixels, dst.pitch * dst_dimensions.height };
+				subresource_layout.push_back(subres);
+
+				cached_dest = upload_image_from_cpu(cmd, dst.rsx_address, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
+					gcm_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,
+					rsx::texture_dimension_extended::texture_dimension_2d, false);
+
+				// render target data is already in correct swizzle layout
 				auto channel_order = src_is_render_target ? rsx::texture_create_flags::native_component_order :
 					dst_is_argb8 ? rsx::texture_create_flags::default_component_order :
 					rsx::texture_create_flags::swapped_native_component_order;
 
-				//NOTE: Should upload from cpu instead of creating a blank texture
-				cached_dest = create_new_texture(cmd, dst.rsx_address, dst.pitch * dst_dimensions.height,
-					dst_dimensions.width, dst_dimensions.height, 1, 1,
-					gcm_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
-					channel_order);
+				enforce_surface_creation_type(*cached_dest, gcm_format, channel_order);
 
 				dest_texture = cached_dest->get_raw_texture();
 				typeless_info.dst_context = texture_upload_context::blit_engine_dst;
