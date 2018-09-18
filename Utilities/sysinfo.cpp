@@ -73,8 +73,9 @@ std::string utils::get_system_info()
 		brand = "Unknown CPU";
 	}
 
-	brand.erase(0, brand.find_first_not_of(' '));
+	brand.erase(brand.find_last_not_of('\0') + 1);
 	brand.erase(brand.find_last_not_of(' ') + 1);
+	brand.erase(0, brand.find_first_not_of(' '));
 
 	while (auto found = brand.find("  ") + 1)
 	{
