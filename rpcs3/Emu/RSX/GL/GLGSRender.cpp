@@ -1436,7 +1436,9 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_height = display_buffers[buffer].height;
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
-	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height && buffer_pitch)
+	if (!buffer_pitch) buffer_pitch = buffer_width * 4;
+
+	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height)
 	{
 		// Calculate blit coordinates
 		coordi aspect_ratio;
@@ -1476,7 +1478,7 @@ void GLGSRender::flip(int buffer)
 
 			image = render_target_texture->raw_handle();
 		}
-		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address))
+		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address, buffer_width, buffer_height))
 		{
 			//Hack - this should be the first location to check for output
 			//The render might have been done offscreen or in software and a blit used to display
@@ -1486,7 +1488,6 @@ void GLGSRender::flip(int buffer)
 		{
 			LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
 
-			if (!buffer_pitch) buffer_pitch = buffer_width * 4;
 			gl::pixel_unpack_settings unpack_settings;
 			unpack_settings.alignment(1).row_length(buffer_pitch / 4);
 
