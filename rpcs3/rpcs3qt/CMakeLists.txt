@@ -1,13 +1,19 @@
 file(GLOB SRC_FILES "*.cpp")
-
 file(GLOB UI_FILES "*.ui")
 
-add_library(rpcs3_ui ${SRC_FILES} ${UI_FILES})
+set(RES_FILES "../resources.qrc")
+
+if(WIN32)
+	list(APPEND RES_FILES "../windows.qrc")
+endif()
+
+add_library(rpcs3_ui ${SRC_FILES} ${UI_FILES} ${RES_FILES})
 
 set_target_properties(rpcs3_ui
 	PROPERTIES
 		AUTOMOC ON
-		AUTOUIC ON)
+		AUTOUIC ON
+		AUTORCC ON)
 
 target_link_libraries(rpcs3_ui
 	PUBLIC
