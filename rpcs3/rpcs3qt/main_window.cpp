@@ -74,6 +74,8 @@ main_window::~main_window()
  */
 void main_window::Init()
 {
+	Q_INIT_RESOURCE(resources);
+
 	ui->setupUi(this);
 
 	setAcceptDrops(true);

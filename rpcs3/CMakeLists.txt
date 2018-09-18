@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.8.2)
 
-set(RES_FILES "")
-
 include(cotire)
 
 # Generate git-version.h at build time.
@@ -14,10 +12,6 @@ include(ConfigureCompiler)
 
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_definitions(-DNDEBUG)
-endif()
-
-if(WIN32)
-	set(RES_FILES "rpcs3.rc")
 endif()
 
 set(ADDITIONAL_LIBS "")
@@ -50,9 +44,9 @@ add_subdirectory(rpcs3qt)
 file(GLOB RPCS3_SRC "*.cpp")
 
 if(WIN32)
-	add_executable(rpcs3 WIN32 ${RPCS3_SRC} ${RES_FILES} resources.qrc windows.qrc)
+	add_executable(rpcs3 WIN32 ${RPCS3_SRC})
 else()
-	add_executable(rpcs3 ${RPCS3_SRC} ${RES_FILES} resources.qrc)
+	add_executable(rpcs3 ${RPCS3_SRC})
 endif()
 
 add_dependencies(rpcs3 GitVersion)
@@ -64,6 +58,11 @@ set_target_properties(rpcs3
 target_link_libraries(rpcs3 ${ADDITIONAL_LIBS})
 target_link_libraries(rpcs3 rpcs3_emu rpcs3_ui)
 target_link_libraries(rpcs3 3rdparty::discord-rpc 3rdparty::qt5 3rdparty::hidapi)
+
+# Win resource file
+if (WIN32)
+	target_sources(rpcs3 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.rc")
+endif()
 
 if(UNIX)
 	find_package(X11 REQUIRED)
