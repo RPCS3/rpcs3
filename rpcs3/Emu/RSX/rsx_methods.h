@@ -196,6 +196,8 @@ namespace rsx
 
 		void reset();
 
+		void init();
+
 		template<typename Archive>
 		void serialize(Archive & ar)
 		{
