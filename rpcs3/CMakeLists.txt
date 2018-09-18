@@ -1,86 +1,13 @@
 cmake_minimum_required(VERSION 3.8.2)
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
 set(RES_FILES "")
-set(CMAKE_CXX_STANDARD 17)
-include(CheckCXXCompilerFlag)
-include(ExternalProject)
-
-# Qt section
-find_package(Qt5 5.10 COMPONENTS Widgets Network Qml)
-if(WIN32)
-	find_package(Qt5 5.10 COMPONENTS WinExtras REQUIRED)
-	set(RPCS3_QT_LIBS Qt5::Widgets Qt5::WinExtras Qt5::Network Qt5::Qml)
-else()
-	find_package(Qt5 5.10 COMPONENTS DBus Gui)
-	if(Qt5DBus_FOUND)
-		set(RPCS3_QT_LIBS Qt5::Widgets Qt5::DBus Qt5::Network Qt5::Qml)
-		add_definitions(-DHAVE_QTDBUS)
-	else()
-		set(RPCS3_QT_LIBS Qt5::Widgets Qt5::Network Qt5::Qml)
-	endif()
-	include_directories(${Qt5Gui_PRIVATE_INCLUDE_DIRS})
-endif()
-
-# Let's make sure we have Qt before we continue
-if(NOT Qt5Widgets_FOUND)
-	if(Qt5Widgets_VERSION VERSION_LESS 5.10.0)
-		message("Minimum supported Qt5 version is 5.10.0! You have version ${Qt5Widgets_VERSION} installed, please upgrade!")
-		if(CMAKE_SYSTEM MATCHES "Linux")
-			message(FATAL_ERROR "Most distros do not provide an up-to-date version of Qt.
-If you're on Ubuntu or Linux Mint, there are PPAs you can use to install one of the latest qt5 versions.
-		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.11.0-bionic
-		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.11.0-xenial
-		https://launchpad.net/~beineri/+archive/ubuntu/opt-qt-5.10.1-trusty
-just make sure to run
-	source /opt/qt511/bin/qt511-env.sh
-respective
-	source /opt/qt510/bin/qt510-env.sh
-before re-running cmake")
-		elseif(WIN32)
-			message(FATAL_ERROR "You can download the latest version of Qt5 here: https://www.qt.io/download-open-source/")
-		else()
-			message(FATAL_ERROR "Look online for instructions on installing an up-to-date Qt5 on ${CMAKE_SYSTEM}.")
-		endif()
-	endif()
-
-	message("CMake was unable to find Qt5!")
-	if(WIN32)
-		message(FATAL_ERROR "Make sure the QTDIR env variable has been set properly. (for example C:\\Qt\\5.11.1\\msvc2017_64\\)")
-	elseif(CMAKE_SYSTEM MATCHES "Linux")
-		message(FATAL_ERROR "Make sure to install your distro's qt5 package!")
-	else()
-		message(FATAL_ERROR "You need to have Qt5 installed, look online for instructions on installing Qt5 on ${CMAKE_SYSTEM}.")
-	endif()
-endif()
-
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
-
-# To make UI files on cmake 3.7 or less work
-if(CMAKE_VERION VERSION_LESS 3.8)
-	set(CMAKE_INCLUDE_CURRENT_DIR ON)
-endif()
-
-if(Qt5_POSITION_INDEPENDENT_CODE)
-	set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-	if(UNIX)
-		# Cotire needs this set for some reason
-		set(CMAKE_CXX_COMPILE_OPTIONS_PIE -fPIC)
-	endif()
-endif()
 
 include(cotire)
 
-project(rpcs3)
-
 # Generate git-version.h at build time.
 add_custom_target(GitVersion ALL
-	DEPENDS something_that_never_exists)
-add_custom_command(OUTPUT something_that_never_exists
 	COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
-		-P ${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
+	-P ${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 
 # Check for a sufficient compiler and set build options
 include(ConfigureCompiler)
@@ -90,75 +17,7 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 if(WIN32)
-	add_definitions(-DUNICODE)
-	add_definitions(-D_WIN32_WINNT=0x0601)
-	add_definitions(-DWITH_DISCORD_RPC)
 	set(RES_FILES "rpcs3.rc")
-else()
-	add_definitions(-DGL_GLEXT_PROTOTYPES)
-	add_definitions(-DGLX_GLXEXT_PROTOTYPES)
-	if(CMAKE_SYSTEM MATCHES "Linux" OR APPLE)
-		# We don't want Discord Rich Presence on the BSDs and other OSes
-		add_definitions(-DWITH_DISCORD_RPC)
-	endif()
-endif()
-
-if(USE_NATIVE_INSTRUCTIONS)
-	CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
-	if(COMPILER_SUPPORTS_MARCH_NATIVE)
-		add_compile_options(-march=native)
-	endif()
-endif()
-
-if(NOT MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-invalid-pch -fexceptions")
-	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument")
-	endif()
-
-	# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
-	if(NOT APPLE)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--exclude-libs,ALL")
-	endif()
-
-	if(WIN32)
-		set(CMAKE_RC_COMPILER_INIT windres)
-		enable_language(RC)
-		set(CMAKE_RC_COMPILE_OBJECT "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
-
-		# Workaround for mingw64 (MSYS2)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--allow-multiple-definition")
-	endif()
-
-	add_compile_options(-msse -msse2 -mcx16)
-
-	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-		# This fixes 'some' of the st11range issues. See issue #2516
-		if(APPLE)
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-image_base,0x10000 -Wl,-pagezero_size,0x10000")
-		else()
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -image-base=0x10000")
-		endif()
-	endif()
-
-	# Some distros have the compilers set to use PIE by default, but RPCS3 doesn't work with PIE, so we need to disable it.
-	if(APPLE)
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-no_pie")
-	else()
-		CHECK_CXX_COMPILER_FLAG("-no-pie" HAS_NO_PIE)
-		CHECK_CXX_COMPILER_FLAG("-nopie" HAS_NOPIE)
-
-		if(HAS_NO_PIE)
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -no-pie")
-		elseif(HAS_NOPIE)
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -nopie")
-		endif()
-	endif()
-else()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:throwingNew /std:c++latest /D _CRT_SECURE_NO_DEPRECATE=1 /D _CRT_NON_CONFORMING_SWPRINTFS=1 /D _SCL_SECURE_NO_WARNINGS=1")
-
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrtd.lib")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /DYNAMICBASE:NO /BASE:0x10000 /FIXED")
 endif()
 
 set(ADDITIONAL_LIBS "")
@@ -170,13 +29,6 @@ elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
 	#implementations like the one on OSX don't seem implement them
 	set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "iconv")
 endif()
-if(UNIX AND NOT APPLE)
-	find_package(Wayland)
-	if (WAYLAND_FOUND)
-		include_directories(${WAYLAND_INCLUDE_DIR})
-		add_definitions(-DVK_USE_PLATFORM_WAYLAND_KHR)
-	endif()
-endif()
 
 if(NOT RPCS3_SRC_DIR)
 	set(RPCS3_SRC_DIR ${CMAKE_CURRENT_LIST_DIR})
@@ -185,210 +37,17 @@ else()
 	message("-- Using Custom RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
 endif()
 
-# Prefer GLVND for OpenGL rather than legacy
-set(OpenGL_GL_PREFERENCE GLVND)
-find_package(OpenGL REQUIRED)
-find_package(OpenAL REQUIRED)
-if(NOT WITHOUT_LLVM)
-	if (EXISTS "${CMAKE_SOURCE_DIR}/llvmlibs")
-		find_package(LLVM 7.0 CONFIG)
-	endif()
-	if(NOT LLVM_FOUND)
-		message("LLVM will be built from the submodule.")
+# Qt5
+# finds Qt libraries and setups custom commands for MOC and UIC
+# Must be done here because generated MOC and UIC targets cant
+# be found otherwise
+include(../3rdparty/qt5.cmake)
 
-		set(LLVM_TARGETS_TO_BUILD "X86" CACHE INTERNAL "")
-		option(LLVM_BUILD_RUNTIME OFF)
-		option(LLVM_BUILD_TOOLS OFF)
-		option(LLVM_INCLUDE_DOCS OFF)
-		option(LLVM_INCLUDE_EXAMPLES OFF)
-		option(LLVM_INCLUDE_TESTS OFF)
-		option(LLVM_INCLUDE_TOOLS OFF)
-		option(LLVM_INCLUDE_UTILS OFF)
-		option(WITH_POLLY OFF)
+# subdirectories
+add_subdirectory(Emu)
+add_subdirectory(rpcs3qt)
 
-		if(WIN32 AND NOT MSVC)
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_FORMAT_MACROS=1")
-		endif()
-
-		# LLVM needs to be built out-of-tree
-		add_subdirectory(../llvm ../llvm_build EXCLUDE_FROM_ALL)
-		set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/../llvm_build/lib/cmake/llvm/")
-
-		# now tries to find LLVM again
-		find_package(LLVM 7.0 CONFIG)
-		if(NOT LLVM_FOUND)
-			message(WARNING "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
-		endif()
-	endif()
-endif()
-
-
-if(APPLE)
-	set(PLATFORM_ARCH "macosx/x86_64")
-elseif(WIN32)
-	set(PLATFORM_ARCH "Windows/x86_64")
-else()
-	set(PLATFORM_ARCH "linux/x86_64")
-	option(USE_ALSA "ALSA audio backend" ON)
-	option(USE_PULSE "PulseAudio audio backend" ON)
-	option(USE_LIBEVDEV "libevdev-based joystick support" ON)
-endif()
-
-if(USE_ALSA)
-	find_package(ALSA)
-	if(ALSA_FOUND)
-		add_definitions(-DHAVE_ALSA)
-		include_directories(SYSTEM ${ALSA_INCLUDE_DIRS})
-		list(APPEND ADDITIONAL_LIBS ${ALSA_LIBRARIES})
-	endif()
-endif()
-if(USE_PULSE)
-	find_package(PkgConfig)
-	pkg_check_modules(PULSE libpulse-simple)
-	if(PULSE_FOUND)
-		add_definitions(-DHAVE_PULSE)
-		include_directories(SYSTEM ${PULSE_INCLUDE_DIRS})
-		list(APPEND ADDITIONAL_LIBS ${PULSE_LDFLAGS})
-	endif()
-endif()
-if(USE_LIBEVDEV)
-	find_package(PkgConfig)
-	pkg_check_modules(LIBEVDEV libevdev)
-	if(LIBEVDEV_FOUND)
-		add_definitions(-DHAVE_LIBEVDEV)
-		include_directories(SYSTEM ${LIBEVDEV_INCLUDE_DIRS})
-		list(APPEND ADDITIONAL_LIBS ${LIBEVDEV_LDFLAGS})
-	endif()
-endif()
-option(USE_VULKAN "Vulkan render backend" ON)
-if(USE_VULKAN)
-	find_package(Vulkan)
-	if(VULKAN_FOUND)
-		add_definitions(-DHAVE_VULKAN)
-		include_directories("${Vulkan_INCLUDE_DIRS}")
-	else()
-		message("WARNING! USE_VULKAN was enabled, but libvulkan was not found. RPCS3 will be compiled without Vulkan support.")
-	endif()
-endif()
-
-# Select the version of libpng to use, default is builtin
-if(USE_SYSTEM_LIBPNG)
-	message("-- RPCS3: using shared libpng")
-	find_package(PNG REQUIRED)
-	include_directories("${PNG_INCLUDE_DIRS}")
-else()
-	message("-- RPCS3: using builtin libpng")
-	include_directories("${libpng_BINARY_DIR}" "${libpng_SOURCE_DIR}")
-endif()
-
-# Select the version of ffmpeg to use, default is builtin
-if(USE_SYSTEM_FFMPEG)
-	message("-- RPCS3: using shared ffmpeg")
-	find_package(FFMPEG REQUIRED)
-	include_directories("${FFMPEG_INCLUDE_DIR}")
-else()
-	message("-- RPCS3: using builtin ffmpeg")
-	if(MSVC OR NOT WIN32)
-		include_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/include")
-		link_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/lib")
-	else()
-		ExternalProject_Add(ffmpeg-mingw
-			DOWNLOAD_COMMAND ""
-			SOURCE_DIR /e/src/rpcs3/3rdparty/ffmpeg
-			BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ffmpeg
-			CONFIGURE_COMMAND  /e/src/rpcs3/3rdparty/ffmpeg/configure --prefix=./Windows/x86_64 --arch=x86_64 --disable-avdevice --disable-programs --disable-avfilter --disable-postproc --disable-doc --disable-pthreads --enable-w32threads --disable-network --disable-everything --disable-encoders --disable-muxers --disable-hwaccels --disable-parsers --disable-protocols --enable-dxva2 --enable-static --disable-shared --enable-decoder=aac --enable-decoder=aac_latm --enable-decoder=atrac3 --enable-decoder=atrac3p --enable-decoder=mp3 --enable-decoder=pcm_s16le --enable-decoder=pcm_s8 --enable-decoder=h264 --enable-decoder=mpeg4 --enable-decoder=mpeg2video --enable-decoder=mjpeg --enable-decoder=mjpegb --enable-encoder=pcm_s16le --enable-encoder=ffv1 --enable-encoder=mpeg4 --enable-parser=h264 --enable-parser=mpeg4video --enable-parser=mpegaudio --enable-parser=mpegvideo --enable-parser=mjpeg --enable-parser=aac --enable-parser=aac_latm --enable-muxer=avi --enable-demuxer=h264 --enable-demuxer=m4v --enable-demuxer=mp3 --enable-demuxer=mpegvideo --enable-demuxer=mpegps --enable-demuxer=mjpeg --enable-demuxer=avi --enable-demuxer=aac --enable-demuxer=pmp --enable-demuxer=oma --enable-demuxer=pcm_s16le --enable-demuxer=pcm_s8 --enable-demuxer=wav --enable-hwaccel=h264_dxva2 --enable-indev=dshow --enable-protocol=file
-			BUILD_COMMAND make -j 4
-			INSTALL_COMMAND make install
-		)
-		include_directories("${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/${PLATFORM_ARCH}/include")
-		link_directories("${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/${PLATFORM_ARCH}/lib")
-	endif()
-endif()
-
-# Build discord-rpc for mingw
-if(WIN32 AND NOT MSVC)
-	ExternalProject_Add(discord-rpc
-		GIT_REPOSITORY https://github.com/discordapp/discord-rpc
-		BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/discord-rpc
-		INSTALL_COMMAND ""
-	)
-	link_directories(rpcs3 "${CMAKE_CURRENT_BINARY_DIR}/discord-rpc/src/")
-endif()
-
-include_directories(
-${OPENAL_INCLUDE_DIR}
-${LLVM_INCLUDE_DIRS}
-"${RPCS3_SRC_DIR}"
-"${RPCS3_SRC_DIR}/Loader"
-"${RPCS3_SRC_DIR}/Crypto"
-"${RPCS3_SRC_DIR}/.."
-"${RPCS3_SRC_DIR}/../3rdparty/GSL/include"
-"${RPCS3_SRC_DIR}/../3rdparty/hidapi/hidapi"
-# Includes 3rdparty stuff that isn't included yet
-"${RPCS3_SRC_DIR}/../3rdparty/GL"
-"${RPCS3_SRC_DIR}/../3rdparty/stblib"
-"${RPCS3_SRC_DIR}/../3rdparty/cereal/include"
-"${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/include"
-"${RPCS3_SRC_DIR}/../3rdparty/xxHash"
-"${RPCS3_SRC_DIR}/../3rdparty/GPUOpen/include"
-)
-
-if(WIN32)
-	# Slimmed down version of minidx9 for XAudio2_7 only
-	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/XAudio2_7")
-	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/minidx12/Include")
-endif()
-
-if(NOT LLVM_FOUND)
-	message("LLVM submodule not found. RPCS3 will be compiled without LLVM support.")
-else()
-	add_definitions(${LLVM_DEFINITIONS})
-	add_definitions(-DLLVM_AVAILABLE)
-	set(LLVM_LIBS LLVMMCJIT LLVMX86CodeGen)
-
-	if(NOT MSVC)
-		set_source_files_properties(${RPCS3_SRC_DIR}/../Utilities/JIT.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
-		set_source_files_properties(${RPCS3_SRC_DIR}/Emu/Cell/PPUTranslator.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
-	endif()
-endif()
-
-link_directories("${RPCS3_SRC_DIR}/../3rdparty/minidx12/")
-
-get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-foreach (dir ${dirs})
-	message(STATUS "dir='${dir}'")
-endforeach()
-
-file(
-GLOB_RECURSE
-RPCS3_SRC
-"${RPCS3_SRC_DIR}/*.cpp"
-"${RPCS3_SRC_DIR}/../Utilities/*.cpp"
-)
-
-#File exclusion section
-
-if(NOT WIN32 AND NOT VULKAN_FOUND)
-	set(EXCLUDE_FILES "/RSX/VK/")
-endif()
-
-# Ignore autogenerated moc_* files if present
-set(EXCLUDE_FILES ${EXCLUDE_FILES} "moc_")
-set(EXCLUDE_FILES ${EXCLUDE_FILES} "rpcs3_automoc")
-set(EXCLUDE_FILES ${EXCLUDE_FILES} "qrc_")
-
-foreach (TMP_PATH ${RPCS3_SRC})
-	foreach (EXCLUDE_PATH ${EXCLUDE_FILES})
-		string(FIND ${TMP_PATH} ${EXCLUDE_PATH} EXCLUDE_FILE_FOUND)
-		if(NOT ${EXCLUDE_FILE_FOUND} EQUAL -1)
-			list(REMOVE_ITEM RPCS3_SRC ${TMP_PATH})
-		endif ()
-	endforeach(EXCLUDE_PATH)
-endforeach(TMP_PATH)
-
-# Remove the Qt moc files as part of clean, they are compiled when generating automoc
-file(GLOB_RECURSE TMP_MOC "${RPCS3_SRC_DIR}/moc_*.cpp" "${RPCS3_SRC_DIR}/rpcs3_automoc.cpp" "${RPCS3_SRC_DIR}/qrc_*.cpp")
-set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${TMP_MOC}")
+file(GLOB RPCS3_SRC "*.cpp")
 
 if(WIN32)
 	add_executable(rpcs3 WIN32 ${RPCS3_SRC} ${RES_FILES} resources.qrc windows.qrc)
@@ -397,109 +56,38 @@ else()
 endif()
 
 add_dependencies(rpcs3 GitVersion)
+set_target_properties(rpcs3
+	PROPERTIES
+		AUTOMOC ON
+		AUTOUIC ON)
 
-target_sources(rpcs3 PUBLIC ${ASMJIT_SRC})
-target_include_directories(rpcs3 PUBLIC ${ASMJIT_INCLUDE_DIR})
-target_link_libraries(rpcs3 ${ASMJIT_DEPS})
+target_link_libraries(rpcs3 ${ADDITIONAL_LIBS})
+target_link_libraries(rpcs3 rpcs3_emu rpcs3_ui)
+target_link_libraries(rpcs3 3rdparty::discord-rpc 3rdparty::qt5 3rdparty::hidapi)
 
-if(NOT MSVC)
-	find_package(GLEW 1.13.0 REQUIRED)
-	target_link_libraries(rpcs3 GLEW::GLEW)
-
-	set(CMAKE_THREAD_PREFER_PTHREAD 1)
-	find_package(Threads REQUIRED)
-	target_link_libraries(rpcs3 Threads::Threads)
-endif()
-
-if(NOT APPLE AND UNIX)
+if(UNIX)
 	find_package(X11 REQUIRED)
 	target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
 	target_link_libraries(rpcs3 ${X11_LIBRARIES})
 endif()
 
-if(VULKAN_FOUND)
-	target_link_libraries(rpcs3 SPIRV Vulkan::Vulkan)
-endif()
-
-target_link_libraries(rpcs3 pugixml xxhash yaml-cpp)
-
-find_package(ZLIB REQUIRED)
-target_include_directories(rpcs3 PUBLIC ${ZLIB_INCLUDE_DIRS})
-target_link_libraries(rpcs3 ${ZLIB_LIBRARIES})
-
 if(WIN32)
-	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib Shlwapi.lib)
-	if(MSVC)
-		target_link_libraries(rpcs3 dxgi.lib d2d1.lib dwrite.lib hidapi-hid setupapi.lib)
-		# Link Discord Rich Presence
-		target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/discord-rpc.lib")
-	else()
-		target_link_libraries(rpcs3 ${OPENGL_LIBRARIES} opengl32.lib glu32.lib hidapi-hid libsetupapi.a libdiscord-rpc.a)
-	endif()
-	target_link_libraries(rpcs3 avformat.lib avcodec.lib avutil.lib swscale.lib png_static ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3 ws2_32.lib Winmm.lib Psapi.lib gdi32.lib setupapi.lib)
 else()
-	target_link_libraries(rpcs3 ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES})
-	if(APPLE)
-		target_link_libraries(rpcs3 hidapi-mac "-framework CoreFoundation" "-framework IOKit")
-	elseif(CMAKE_SYSTEM MATCHES "Linux")
-		target_link_libraries(rpcs3 hidapi-hidraw udev)
-	else()
-		target_link_libraries(rpcs3 hidapi-libusb usb)
-	endif()
-	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS} ${ADDITIONAL_LIBS})
-	if(USE_SYSTEM_FFMPEG)
-		target_link_libraries(rpcs3 ${FFMPEG_LIBRARIES})
-	else()
-		target_link_libraries(rpcs3 libavformat.a libavcodec.a libavutil.a libswscale.a)
-	endif()
-	if(USE_SYSTEM_LIBPNG)
-		target_link_libraries(rpcs3 ${PNG_LIBRARIES})
-	else()
-		target_link_libraries(rpcs3 png_static)
-	endif()
-	# Link Discord Rich Presence, but only on Linux
-	if(CMAKE_SYSTEM MATCHES "Linux")
-		target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/libdiscord-rpc-linux.a")
-	elseif(APPLE)
-		target_link_libraries(rpcs3 "${RPCS3_SRC_DIR}/../3rdparty/discord-rpc/lib/libdiscord-rpc-mac.a" objc "-framework Foundation" "-framework CoreServices")
-	endif()
+	target_link_libraries(rpcs3 ${CMAKE_DL_LIBS})
 endif()
 
-# For some reason GCC 7 requires manually linking with -latomic
-if(CMAKE_COMPILER_IS_GNUCXX AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 7))
-	target_link_libraries(rpcs3 -latomic)
-endif()
-
-if(LLVM_FOUND)
-	target_link_libraries(rpcs3 ${LLVM_LIBS})
-endif()
-
-target_link_libraries(rpcs3 ${RPCS3_QT_LIBS})
-
-set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
-
-if(MSVC)
-	# Under Windows, some QT DLLs need to be in the same directory of the compiled
-	# RPCS3 binary, so call the windeployqt tool that will take care of copying
-	# them from the local QT installation at the end of the build.
-	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "${CMAKE_BINARY_DIR}/bin/qt/plugins" --debug "${CMAKE_BINARY_DIR}/bin"
-		)
-	else()
-		add_custom_command(TARGET rpcs3 POST_BUILD
-			COMMAND $ENV{QTDIR}/bin/windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "${CMAKE_BINARY_DIR}/bin/qt/plugins" "${CMAKE_BINARY_DIR}/bin"
-		)
-	endif()
-endif()
+set_target_properties(rpcs3 PROPERTIES
+	COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h"
+	COTIRE_ADD_UNITY_BUILD OFF)
 
 cotire(rpcs3)
 
 if (UNIX)
-# Copy icons to executable directory
-add_custom_command(	TARGET rpcs3 POST_BUILD
-					COMMAND ${CMAKE_COMMAND} -E copy_directory
-					${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons)
+	# Copy icons to executable directory
+	add_custom_command(TARGET rpcs3 POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_directory
+			${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons)
 endif()
 
 # Unix installation

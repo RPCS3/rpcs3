@@ -14,7 +14,6 @@
 #include "rsx_methods.h"
 #include "rsx_utils.h"
 #include "Overlays/overlays.h"
-#include <Utilities/GSL.h>
 
 #include "Utilities/Thread.h"
 #include "Utilities/geometry.h"
