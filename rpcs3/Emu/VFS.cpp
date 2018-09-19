@@ -203,19 +203,20 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir)
 			if (dir.first == name)
 			{
 				list.back() = &dir.second;
+
+				if (dir.second.path == "/"sv)
+				{
+					if (vpath.empty())
+					{
+						return {};
+					}
+
+					// Handle /host_root (not escaped, not processed)
+					return std::string{vpath.substr(1)};
+				}
+
 				break;
 			}
-		}
-
-		if (last->path == "/")
-		{
-			if (vpath.empty())
-			{
-				return {};
-			}
-
-			// Handle /host_root (not escaped, not processed)
-			return std::string{vpath.substr(1)};
 		}
 	}
 
