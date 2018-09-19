@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "../rsx_methods.h"
 #include "GLGSRender.h"
 #include "Emu/System.h"
@@ -294,7 +294,12 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	{
 		if (fbo.matches(color_targets, depth_stencil_target))
 		{
+			fbo.reset_refs();
+
 			m_draw_fbo = &fbo;
+			m_draw_fbo->bind();
+			m_draw_fbo->set_extents({ (int)layout.width, (int)layout.height });
+
 			framebuffer_status_valid = true;
 			break;
 		}
@@ -327,43 +332,40 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 				m_draw_fbo->depth = depth_stencil_target;
 			}
 		}
-
-		switch (rsx::method_registers.surface_color_target())
-		{
-		case rsx::surface_target::none: break;
-
-		case rsx::surface_target::surface_a:
-			m_draw_fbo->draw_buffer(m_draw_fbo->color[0]);
-			m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
-			break;
-
-		case rsx::surface_target::surface_b:
-			m_draw_fbo->draw_buffer(m_draw_fbo->color[1]);
-			m_draw_fbo->read_buffer(m_draw_fbo->color[1]);
-			break;
-
-		case rsx::surface_target::surfaces_a_b:
-			m_draw_fbo->draw_buffers({ m_draw_fbo->color[0], m_draw_fbo->color[1] });
-			m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
-			break;
-
-		case rsx::surface_target::surfaces_a_b_c:
-			m_draw_fbo->draw_buffers({ m_draw_fbo->color[0], m_draw_fbo->color[1], m_draw_fbo->color[2] });
-			m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
-			break;
-
-		case rsx::surface_target::surfaces_a_b_c_d:
-			m_draw_fbo->draw_buffers({ m_draw_fbo->color[0], m_draw_fbo->color[1], m_draw_fbo->color[2], m_draw_fbo->color[3] });
-			m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
-			break;
-		}
-
-		framebuffer_status_valid = m_draw_fbo->check();
 	}
-	
-	if (!framebuffer_status_valid) return;
 
-	m_draw_fbo->bind();
+	switch (rsx::method_registers.surface_color_target())
+	{
+	case rsx::surface_target::none: break;
+
+	case rsx::surface_target::surface_a:
+		m_draw_fbo->draw_buffer(m_draw_fbo->color[0]);
+		m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
+		break;
+
+	case rsx::surface_target::surface_b:
+		m_draw_fbo->draw_buffer(m_draw_fbo->color[1]);
+		m_draw_fbo->read_buffer(m_draw_fbo->color[1]);
+		break;
+
+	case rsx::surface_target::surfaces_a_b:
+		m_draw_fbo->draw_buffers({ m_draw_fbo->color[0], m_draw_fbo->color[1] });
+		m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
+		break;
+
+	case rsx::surface_target::surfaces_a_b_c:
+		m_draw_fbo->draw_buffers({ m_draw_fbo->color[0], m_draw_fbo->color[1], m_draw_fbo->color[2] });
+		m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
+		break;
+
+	case rsx::surface_target::surfaces_a_b_c_d:
+		m_draw_fbo->draw_buffers({ m_draw_fbo->color[0], m_draw_fbo->color[1], m_draw_fbo->color[2], m_draw_fbo->color[3] });
+		m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
+		break;
+	}
+
+	framebuffer_status_valid = m_draw_fbo->check();
+	if (!framebuffer_status_valid) return;
 
 	check_zcull_status(true);
 	set_viewport();
