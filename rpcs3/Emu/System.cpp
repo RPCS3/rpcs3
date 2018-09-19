@@ -1352,7 +1352,11 @@ void Emulator::Stop(bool restart)
 	if (m_state.exchange(system_state::stopped) == system_state::stopped)
 	{
 		m_force_boot = false;
-		return;
+
+		if (restart)
+		{
+			return Load();
+		}
 	}
 
 	const bool do_exit = !restart && !m_force_boot && g_cfg.misc.autoexit;
