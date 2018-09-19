@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Emu/RSX/GSRender.h"
 #include "GLHelpers.h"
 #include "GLTexture.h"
@@ -330,7 +330,7 @@ private:
 
 	//buffer
 	gl::fbo* m_draw_fbo = nullptr;
-	std::list<gl::fbo> m_framebuffer_cache;
+	std::list<gl::framebuffer_holder> m_framebuffer_cache;
 	gl::fbo m_flip_fbo;
 	std::unique_ptr<gl::texture> m_flip_tex_color;
 

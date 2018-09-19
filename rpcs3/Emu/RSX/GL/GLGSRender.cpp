@@ -1616,19 +1616,17 @@ void GLGSRender::flip(int buffer)
 
 	// Cleanup
 	m_gl_texture_cache.on_frame_end();
-
-	m_rtts.free_invalidated();
 	m_vertex_cache->purge();
 
-	if (m_framebuffer_cache.size() > 32)
+	auto removed_textures = m_rtts.free_invalidated();
+	m_framebuffer_cache.remove_if([&](auto& fbo)
 	{
-		for (auto &fbo : m_framebuffer_cache)
-		{
-			fbo.remove();
-		}
+		if (fbo.deref_count >= 2) return true; // Remove if stale
+		if (fbo.references_any(removed_textures)) return true; // Remove if any of the attachments is invalid
 
-		m_framebuffer_cache.clear();
-	}
+		fbo.deref_count++;
+		return false;
+	});
 
 	//If we are skipping the next frame, do not reset perf counters
 	if (skip_frame) return;

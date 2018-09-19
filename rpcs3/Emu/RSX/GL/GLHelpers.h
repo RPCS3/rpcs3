@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <exception>
 #include <string>
@@ -2234,7 +2234,8 @@ public:
 		void set_extents(size2i extents);
 		size2i get_extents() const;
 
-		bool matches(std::array<GLuint, 4> color_targets, GLuint depth_stencil_target);
+		bool matches(const std::array<GLuint, 4>& color_targets, GLuint depth_stencil_target) const;
+		bool references_any(const std::vector<GLuint>& resources) const;
 
 		explicit operator bool() const
 		{

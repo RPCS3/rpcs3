@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "../Common/surface_store.h"
 #include "GLHelpers.h"
 #include "stdafx.h"
@@ -130,6 +130,11 @@ namespace gl
 			//Use forward scaling to account for rounding and clamping errors
 			return (rsx::apply_resolution_scale(_width, true) == internal_width) && (rsx::apply_resolution_scale(_height, true) == internal_height);
 		}
+	};
+
+	struct framebuffer_holder : public gl::fbo, public rsx::ref_counted
+	{
+		using gl::fbo::fbo;
 	};
 }
 
@@ -291,15 +296,21 @@ struct gl_render_target_traits
 
 struct gl_render_targets : public rsx::surface_store<gl_render_target_traits>
 {
-	void free_invalidated()
+	std::vector<GLuint> free_invalidated()
 	{
+		std::vector<GLuint> removed;
 		invalidated_resources.remove_if([&](auto &rtt)
 		{
 			if (rtt->deref_count >= 2)
+			{
+				removed.push_back(rtt->id());
 				return true;
+			}
 
 			rtt->deref_count++;
 			return false;
 		});
+
+		return removed;
 	}
 };
