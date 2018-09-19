@@ -1,4 +1,5 @@
 #include "JIT.h"
+#include <immintrin.h>
 
 asmjit::JitRuntime& asmjit::get_global_runtime()
 {
