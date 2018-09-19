@@ -122,7 +122,7 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
 	auto &dmaControl = vm::_ref<RsxDmaControl>(*lpar_dma_control);
 	dmaControl.get = 0;
 	dmaControl.put = 0;
-	dmaControl.ref = 0xFFFFFFFF;
+	dmaControl.ref = 0; // Set later to -1 by cellGcmSys
 
 	memset(&RSXIOMem, 0xFF, sizeof(RSXIOMem));
 

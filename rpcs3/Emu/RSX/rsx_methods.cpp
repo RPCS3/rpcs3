@@ -1274,6 +1274,7 @@ namespace rsx
 
 		if (get_current_renderer()->isHLE)
 		{
+			// Commands injected by cellGcmInit
 			registers[NV406E_SEMAPHORE_OFFSET] = 0x30;
 			registers[NV406E_SEMAPHORE_ACQUIRE] = 0x1;
 			registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = 0x66616661;
@@ -1802,7 +1803,7 @@ namespace rsx
 			registers[NV308A_POINT] = 0x0;
 			registers[NV308A_SIZE_OUT] = 0x0;
 			registers[NV308A_SIZE_IN] = 0x0;
-			registers[NV406E_SET_REFERENCE] = 0xffffffff;
+			registers[NV406E_SET_REFERENCE] = get_current_renderer()->ctrl->ref = 0xffffffff;
 		}
 	}
 
