@@ -575,7 +575,7 @@ protected:
 	type m_data;
 
 public:
-	atomic_t() = default;
+	atomic_t() noexcept = default;
 
 	atomic_t(const atomic_t&) = delete;
 
@@ -584,7 +584,7 @@ public:
 	// Define simple type
 	using simple_type = simple_t<T>;
 
-	explicit constexpr atomic_t(const type& value)
+	constexpr atomic_t(const type& value) noexcept
 		: m_data(value)
 	{
 	}
