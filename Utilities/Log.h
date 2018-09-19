@@ -31,7 +31,7 @@ namespace logs
 
 	private:
 		// Send log message to global logger instance
-		void broadcast(const char*, const fmt_type_info*, const u64*) const;
+		void broadcast(const char*, const fmt_type_info*, ...) const;
 
 		friend struct channel;
 	};
@@ -73,12 +73,12 @@ namespace logs
 #define GEN_LOG_METHOD(_sev)\
 		const message msg_##_sev{this, level::_sev};\
 		template <typename... Args>\
-		SAFE_BUFFERS void _sev(const char* fmt, const Args&... args)\
+		void _sev(const char* fmt, const Args&... args)\
 		{\
 			if (UNLIKELY(level::_sev <= enabled))\
 			{\
 				static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
-				msg_##_sev.broadcast(fmt, type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});\
+				msg_##_sev.broadcast(fmt, type_list, u64{fmt_unveil<Args>::get(args)}...);\
 			}\
 		}
 

@@ -242,7 +242,7 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 	group->imgs[spu_num] = std::make_pair(*img, std::vector<sys_spu_segment>());
 	group->imgs[spu_num].second.assign(img->segs.get_ptr(), img->segs.get_ptr() + img->nsegs);
 
-	if (++group->init == group->num)
+	if (++group->init == group->max_num)
 	{
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	}
