@@ -177,18 +177,18 @@ const auto spu_putllc_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, cons
 	c.mov(args[0].r32(), 3);
 
 	// Prepare data (Windows has only 6 volatile vector registers)
-	c.vmovups(x86::ymm0, x86::yword_ptr(args[2], 0));
-	c.vmovups(x86::ymm1, x86::yword_ptr(args[2], 32));
-	c.vmovups(x86::ymm2, x86::yword_ptr(args[2], 64));
-	c.vmovups(x86::ymm3, x86::yword_ptr(args[2], 96));
+	c.vmovaps(x86::ymm0, x86::yword_ptr(args[2], 0));
+	c.vmovaps(x86::ymm1, x86::yword_ptr(args[2], 32));
+	c.vmovaps(x86::ymm2, x86::yword_ptr(args[2], 64));
+	c.vmovaps(x86::ymm3, x86::yword_ptr(args[2], 96));
 #ifdef _WIN32
-	c.vmovups(x86::ymm4, x86::yword_ptr(args[3], 0));
-	c.vmovups(x86::ymm5, x86::yword_ptr(args[3], 96));
+	c.vmovaps(x86::ymm4, x86::yword_ptr(args[3], 0));
+	c.vmovaps(x86::ymm5, x86::yword_ptr(args[3], 96));
 #else
-	c.vmovups(x86::ymm6, x86::yword_ptr(args[3], 0));
-	c.vmovups(x86::ymm7, x86::yword_ptr(args[3], 32));
-	c.vmovups(x86::ymm8, x86::yword_ptr(args[3], 64));
-	c.vmovups(x86::ymm9, x86::yword_ptr(args[3], 96));
+	c.vmovaps(x86::ymm6, x86::yword_ptr(args[3], 0));
+	c.vmovaps(x86::ymm7, x86::yword_ptr(args[3], 32));
+	c.vmovaps(x86::ymm8, x86::yword_ptr(args[3], 64));
+	c.vmovaps(x86::ymm9, x86::yword_ptr(args[3], 96));
 #endif
 
 	// Begin transaction
@@ -205,8 +205,8 @@ const auto spu_putllc_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, cons
 	c.vptest(x86::ymm0, x86::ymm0);
 	c.jnz(fail);
 #ifdef _WIN32
-	c.vmovups(x86::ymm2, x86::yword_ptr(args[3], 32));
-	c.vmovups(x86::ymm3, x86::yword_ptr(args[3], 64));
+	c.vmovaps(x86::ymm2, x86::yword_ptr(args[3], 32));
+	c.vmovaps(x86::ymm3, x86::yword_ptr(args[3], 64));
 	c.vmovaps(x86::yword_ptr(x86::r11, 0), x86::ymm4);
 	c.vmovaps(x86::yword_ptr(x86::r11, 32), x86::ymm2);
 	c.vmovaps(x86::yword_ptr(x86::r11, 64), x86::ymm3);
@@ -267,10 +267,10 @@ const auto spu_getll_tx = build_function_asm<bool(*)(u32 raddr, void* rdata, u64
 	c.vmovaps(x86::ymm2, x86::yword_ptr(x86::r11, 64));
 	c.vmovaps(x86::ymm3, x86::yword_ptr(x86::r11, 96));
 	c.xend();
-	c.vmovups(x86::yword_ptr(args[1], 0), x86::ymm0);
-	c.vmovups(x86::yword_ptr(args[1], 32), x86::ymm1);
-	c.vmovups(x86::yword_ptr(args[1], 64), x86::ymm2);
-	c.vmovups(x86::yword_ptr(args[1], 96), x86::ymm3);
+	c.vmovaps(x86::yword_ptr(args[1], 0), x86::ymm0);
+	c.vmovaps(x86::yword_ptr(args[1], 32), x86::ymm1);
+	c.vmovaps(x86::yword_ptr(args[1], 64), x86::ymm2);
+	c.vmovaps(x86::yword_ptr(args[1], 96), x86::ymm3);
 	c.vmovaps(x86::yword_ptr(args[3], 0), x86::ymm0);
 	c.vmovaps(x86::yword_ptr(args[3], 32), x86::ymm1);
 	c.vmovaps(x86::yword_ptr(args[3], 64), x86::ymm2);
@@ -314,10 +314,10 @@ const auto spu_getll = build_function_asm<bool(*)(u32 raddr, void* rdata, u64* o
 	c.vmovaps(x86::ymm1, x86::yword_ptr(x86::r11, 32));
 	c.vmovaps(x86::ymm2, x86::yword_ptr(x86::r11, 64));
 	c.vmovaps(x86::ymm3, x86::yword_ptr(x86::r11, 96));
-	c.vmovups(x86::yword_ptr(args[1], 0), x86::ymm0);
-	c.vmovups(x86::yword_ptr(args[1], 32), x86::ymm1);
-	c.vmovups(x86::yword_ptr(args[1], 64), x86::ymm2);
-	c.vmovups(x86::yword_ptr(args[1], 96), x86::ymm3);
+	c.vmovaps(x86::yword_ptr(args[1], 0), x86::ymm0);
+	c.vmovaps(x86::yword_ptr(args[1], 32), x86::ymm1);
+	c.vmovaps(x86::yword_ptr(args[1], 64), x86::ymm2);
+	c.vmovaps(x86::yword_ptr(args[1], 96), x86::ymm3);
 	c.cmp(x86::rax, x86::qword_ptr(x86::r10));
 	c.jne(fall);
 
@@ -358,10 +358,10 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	c.mov(args[0].r32(), 2);
 
 	// Prepare data
-	c.vmovups(x86::ymm0, x86::yword_ptr(args[1], 0));
-	c.vmovups(x86::ymm1, x86::yword_ptr(args[1], 32));
-	c.vmovups(x86::ymm2, x86::yword_ptr(args[1], 64));
-	c.vmovups(x86::ymm3, x86::yword_ptr(args[1], 96));
+	c.vmovaps(x86::ymm0, x86::yword_ptr(args[1], 0));
+	c.vmovaps(x86::ymm1, x86::yword_ptr(args[1], 32));
+	c.vmovaps(x86::ymm2, x86::yword_ptr(args[1], 64));
+	c.vmovaps(x86::ymm3, x86::yword_ptr(args[1], 96));
 
 	// Begin transaction
 	Label begin = build_transaction_enter(c, fall);

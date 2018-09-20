@@ -532,8 +532,8 @@ public:
 	atomic_t<u32> mfc_prxy_mask;
 
 	// Reservation Data
-	u64 rtime = 0;
-	std::array<u128, 8> rdata{};
+	u64 rtime;
+	alignas(128) std::array<u128, 8> rdata;
 	u32 raddr = 0;
 
 	u32 srr0;

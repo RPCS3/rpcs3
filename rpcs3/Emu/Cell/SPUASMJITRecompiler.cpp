@@ -1442,13 +1442,13 @@ void spu_recompiler::get_events()
 
 		if (utils::has_avx())
 		{
-			c->vmovups(x86::ymm0, x86::yword_ptr(*cpu, offset32(&spu_thread::rdata) + 0));
+			c->vmovaps(x86::ymm0, x86::yword_ptr(*cpu, offset32(&spu_thread::rdata) + 0));
 			c->vxorps(x86::ymm1, x86::ymm0, x86::yword_ptr(*qw0, *addr, 0, 0));
-			c->vmovups(x86::ymm0, x86::yword_ptr(*cpu, offset32(&spu_thread::rdata) + 32));
+			c->vmovaps(x86::ymm0, x86::yword_ptr(*cpu, offset32(&spu_thread::rdata) + 32));
 			c->vxorps(x86::ymm2, x86::ymm0, x86::yword_ptr(*qw0, *addr, 0, 32));
-			c->vmovups(x86::ymm0, x86::yword_ptr(*cpu, offset32(&spu_thread::rdata) + 64));
+			c->vmovaps(x86::ymm0, x86::yword_ptr(*cpu, offset32(&spu_thread::rdata) + 64));
 			c->vxorps(x86::ymm3, x86::ymm0, x86::yword_ptr(*qw0, *addr, 0, 64));
-			c->vmovups(x86::ymm0, x86::yword_ptr(*cpu, offset32(&spu_thread::rdata) + 96));
+			c->vmovaps(x86::ymm0, x86::yword_ptr(*cpu, offset32(&spu_thread::rdata) + 96));
 			c->vxorps(x86::ymm4, x86::ymm0, x86::yword_ptr(*qw0, *addr, 0, 96));
 			c->vorps(x86::ymm0, x86::ymm1, x86::ymm2);
 			c->vorps(x86::ymm1, x86::ymm3, x86::ymm4);
