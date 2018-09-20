@@ -290,7 +290,7 @@ namespace rsx
 
 			void notify(u32 addr, u32 data_size)
 			{
-				verify(HERE), valid_count >= 0;
+				//verify(HERE), valid_count >= 0;
 
 				const u32 addr_base = addr & ~0xfff;
 				const u32 block_sz = align(addr + data_size, 4096u) - addr_base;
@@ -303,7 +303,7 @@ namespace rsx
 
 			void notify()
 			{
-				verify(HERE), valid_count >= 0;
+				//verify(HERE), valid_count >= 0;
 				valid_count++;
 			}
 
@@ -315,7 +315,7 @@ namespace rsx
 
 			void remove_one()
 			{
-				verify(HERE), valid_count > 0;
+				//verify(HERE), valid_count > 0;
 				valid_count--;
 			}
 
@@ -1510,8 +1510,8 @@ namespace rsx
 			{
 				auto &range_data = address_range.second;
 
-				if (range_data.valid_count == 0)
-					empty_addresses.push_back(address_range.first);
+				//if (range_data.valid_count == 0)
+					//empty_addresses.push_back(address_range.first);
 
 				for (auto &tex : range_data.data)
 				{

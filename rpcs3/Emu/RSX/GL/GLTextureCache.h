@@ -1107,8 +1107,8 @@ namespace gl
 			if (found == m_cache.end())
 				return false;
 
-			if (found->second.valid_count == 0)
-				return false;
+			//if (found->second.valid_count == 0)
+				//return false;
 
 			for (auto& tex : found->second.data)
 			{
