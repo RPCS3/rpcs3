@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 
 
@@ -6,7 +6,7 @@
 // libvoice version 100
 
 // Error Codes
-enum
+enum CellVoiceError : u32
 {
 	CELL_VOICE_ERROR_ADDRESS_INVALID       = 0x8031080a,
 	CELL_VOICE_ERROR_ARGUMENT_INVALID      = 0x80310805,
@@ -37,33 +37,27 @@ enum
 	CELLVOICE_GAME_1MB_MAX_OUT_VOICE_PORT = 2,
 	CELLVOICE_MAX_PORT = 128,
 	CELLVOICE_INVALID_PORT_ID = 0xff,
+};
 
-	CELLVOICE_PORTTYPE_NULL = -1,
-	CELLVOICE_PORTTYPE_IN_MIC = 0,
-	CELLVOICE_PORTTYPE_IN_PCMAUDIO = 1,
-	CELLVOICE_PORTTYPE_IN_VOICE = 2,
-	CELLVOICE_PORTTYPE_OUT_PCMAUDIO = 3,
-	CELLVOICE_PORTTYPE_OUT_VOICE = 4,
-	CELLVOICE_PORTTYPE_OUT_SECONDARY = 5,
+enum CellVoiceAppType
+{
+	CELLVOICE_APPTYPE_GAME_1MB = 1 << 29,
+};
 
-	CELLVOICE_PORTSTATE_NULL = -1,
-	CELLVOICE_PORTSTATE_IDLE = 0,
-	CELLVOICE_PORTSTATE_READY = 1,
-	CELLVOICE_PORTSTATE_BUFFERING = 2,
-	CELLVOICE_PORTSTATE_RUNNING = 3,
-
-	CELLVOICE_BITRATE_NULL  = -1,
-	CELLVOICE_BITRATE_3850  = 3850,
-	CELLVOICE_BITRATE_4650  = 4650,
-	CELLVOICE_BITRATE_5700  = 5700,
-	CELLVOICE_BITRATE_7300  = 7300,
+enum CellVoiceBitRate
+{
+	CELLVOICE_BITRATE_NULL = -1,
+	CELLVOICE_BITRATE_3850 = 3850,
+	CELLVOICE_BITRATE_4650 = 4650,
+	CELLVOICE_BITRATE_5700 = 5700,
+	CELLVOICE_BITRATE_7300 = 7300,
 	CELLVOICE_BITRATE_14400 = 14400,
 	CELLVOICE_BITRATE_16000 = 16000,
 	CELLVOICE_BITRATE_22533 = 22533,
+};
 
-	CELLVOICE_SAMPLINGRATE_NULL = -1,
-	CELLVOICE_SAMPLINGRATE_16000 = 16000,
-
+enum CellVoiceEventType
+{
 	CELLVOICE_EVENT_DATA_ERROR = 1 << 0,
 	CELLVOICE_EVENT_PORT_ATTACHED = 1 << 1,
 	CELLVOICE_EVENT_PORT_DETACHED = 1 << 2,
@@ -71,7 +65,10 @@ enum
 	CELLVOICE_EVENT_SERVICE_DETACHED = 1 << 4,
 	CELLVOICE_EVENT_PORT_WEAK_ATTACHED = 1 << 5,
 	CELLVOICE_EVENT_PORT_WEAK_DETACHED = 1 << 6,
+};
 
+enum CellVoicePcmDataType
+{
 	CELLVOICE_PCM_NULL = -1,
 	CELLVOICE_PCM_FLOAT = 0,
 	CELLVOICE_PCM_FLOAT_LITTLE_ENDIAN = 1,
@@ -79,13 +76,119 @@ enum
 	CELLVOICE_PCM_SHORT_LITTLE_ENDIAN = 3,
 	CELLVOICE_PCM_INTEGER = 4,
 	CELLVOICE_PCM_INTEGER_LITTLE_ENDIAN = 5,
+};
 
+enum CellVoicePortAttr
+{
 	CELLVOICE_ATTR_ENERGY_LEVEL = 1000,
 	CELLVOICE_ATTR_VAD = 1001,
 	CELLVOICE_ATTR_DTX = 1002,
 	CELLVOICE_ATTR_AUTO_RESAMPLE = 1003,
 	CELLVOICE_ATTR_LATENCY = 1004,
 	CELLVOICE_ATTR_SILENCE_THRESHOLD = 1005,
+};
 
-	CELLVOICE_APPTYPE_GAME_1MB = 1 << 29
+enum CellVoicePortState
+{
+	CELLVOICE_PORTSTATE_NULL = -1,
+	CELLVOICE_PORTSTATE_IDLE = 0,
+	CELLVOICE_PORTSTATE_READY = 1,
+	CELLVOICE_PORTSTATE_BUFFERING = 2,
+	CELLVOICE_PORTSTATE_RUNNING = 3,
+};
+
+enum CellVoicePortType
+{
+	CELLVOICE_PORTTYPE_NULL = -1,
+	CELLVOICE_PORTTYPE_IN_MIC = 0,
+	CELLVOICE_PORTTYPE_IN_PCMAUDIO = 1,
+	CELLVOICE_PORTTYPE_IN_VOICE = 2,
+	CELLVOICE_PORTTYPE_OUT_PCMAUDIO = 3,
+	CELLVOICE_PORTTYPE_OUT_VOICE = 4,
+	CELLVOICE_PORTTYPE_OUT_SECONDARY = 5,
+};
+
+enum CellVoiceSamplingRate
+{
+	CELLVOICE_SAMPLINGRATE_NULL = -1,
+	CELLVOICE_SAMPLINGRATE_16000 = 16000,
+};
+
+enum CellVoiceVersionCheck
+{
+	CELLVOICE_VERSION_100 = 100,
+};
+
+struct CellVoiceBasePortInfo
+{
+	be_t<s32> portType;
+	be_t<s32> state;
+	be_t<u16> numEdge;
+	vm::bptr<u32> pEdge;
+	be_t<u32> numBytes;
+	be_t<u32> frameSize;
+};
+
+struct CellVoiceInitParam
+{
+	be_t<s32> eventMask;
+	be_t<s32> version;
+	be_t<s32> appType;
+	u8 reserved[20];
+};
+
+struct CellVoicePCMFormat
+{
+	u8 numChannels;
+	u8 sampleAlignment;
+	be_t<s32> dataType;
+	be_t<s32> sampleRate;
+};
+
+struct CellVoicePortParam
+{
+	be_t<s32> portType;
+	be_t<u16> threshold;
+	be_t<u16> bMute;
+	be_t<f32> volume;
+	union
+	{
+		struct
+		{
+			be_t<s32> bitrate;
+		} voice;
+		struct
+		{
+			be_t<u32> bufSize;
+			CellVoicePCMFormat format;
+		} pcmaudio;
+		struct
+		{
+			be_t<u32> playerId;
+		} device;
+	};
+};
+
+struct CellVoiceStartParam
+{
+	be_t<u32> container;
+	u8 reserved[28];
+};
+
+struct port_info
+{
+	s32 bitrate{ CELLVOICE_BITRATE_NULL };
+	s32 state{ CELLVOICE_PORTSTATE_NULL };
+	CellVoicePortParam param;
+};
+
+struct voice_t
+{
+	u32 port_index{ 0 };
+	std::map<u32, port_info> ports;
+	s32 portstate{ CELLVOICE_PORTSTATE_NULL };
+	//u64 eventQueueKey = 0;
+	std::map<u64, u64> event_queues;
+	//u64 source = 0;
+	bool voice_ready = false;
 };
