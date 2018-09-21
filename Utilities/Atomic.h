@@ -610,6 +610,12 @@ public:
 		return atomic_storage<type>::compare_exchange(m_data, old, exch);
 	}
 
+	// As in std::atomic
+	bool compare_exchange(type& cmp_and_old, const type& exch)
+	{
+		return atomic_storage<type>::compare_exchange(m_data, cmp_and_old, exch);
+	}
+
 	// Atomic operation; returns old value, or pair of old value and return value (cancel op if evaluates to false)
 	template <typename F, typename RT = std::invoke_result_t<F, T&>>
 	std::conditional_t<std::is_void_v<RT>, type, std::pair<type, RT>> fetch_op(F&& func)

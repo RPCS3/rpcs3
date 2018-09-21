@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Utilities/JIT.h"
-#include "Utilities/lockless.h"
 #include "Utilities/sysinfo.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
