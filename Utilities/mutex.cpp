@@ -2,255 +2,148 @@
 #include "sync.h"
 
 #include <climits>
-#include <vector>
-#include <algorithm>
 
-void shared_mutex::imp_lock_shared(s64 _old)
+void shared_mutex::imp_lock_shared(u32 val)
 {
-	verify("shared_mutex overflow" HERE), _old <= c_max;
+	verify("shared_mutex underflow" HERE), val < c_err;
 
 	for (int i = 0; i < 10; i++)
 	{
 		busy_wait();
 
-		const s64 value = m_value.load();
-
-		if (value >= c_min && m_value.compare_and_swap_test(value, value - c_min))
+		if (try_lock_shared())
 		{
 			return;
 		}
 	}
 
-#ifdef _WIN32
-	// Acquire writer lock
-	imp_wait(m_value.load());
+	// Acquire writer lock and downgrade
+	const u32 old = m_value.fetch_add(c_one);
 
-	// Convert to reader lock
-	s64 value = m_value.fetch_add(c_one - c_min);
-
-	// Proceed exclusively
-	return;
-
-	if (value != 0)
+	if (old == 0)
 	{
-		imp_unlock(value);
-	}
-
-	// Wait as a reader if necessary
-	if (value + c_one - c_min < 0)
-	{
-		NtWaitForKeyedEvent(nullptr, (int*)&m_value + 1, false, nullptr);
-	}
-#else
-	// Acquire writer lock
-	imp_wait(0);
-
-	// Convert to reader lock
-	m_value += c_one - c_min;
-
-	// Disabled code
-	while (false)
-	{
-		const s64 value0 = m_value.fetch_op([](s64& value)
-		{
-			if (value >= c_min)
-			{
-				value -= c_min;
-			}
-		});
-
-		if (value0 >= c_min)
-		{
-			return;
-		}
-
-		// Acquire writer lock
-		imp_wait(value0);
-
-		// Convert to reader lock
-		s64 value1 = m_value.fetch_add(c_one - c_min);
-
-		if (value1 != 0)
-		{
-			imp_unlock(value1);
-		}
-
-		value1 += c_one - c_min;
-
-		if (value1 > 0)
-		{
-			return;
-		}
-
-		// Wait as a reader if necessary
-		while (futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAIT_BITSET_PRIVATE, int(value1 >> 32), nullptr, nullptr, INT_MIN))
-		{
-			value1 = m_value.load();
-
-			if (value1 >= 0)
-			{
-				return;
-			}
-		}
-
-		// If blocked by writers, release the reader lock and try again
-		const s64 value2 = m_value.fetch_op([](s64& value)
-		{
-			if (value < 0)
-			{
-				value += c_min;
-			}
-		});
-
-		if (value2 >= 0)
-		{
-			return;
-		}
-
-		imp_unlock_shared(value2);
-	}
-#endif
-}
-
-void shared_mutex::imp_unlock_shared(s64 _old)
-{
-	verify("shared_mutex overflow" HERE), _old + c_min <= c_max;
-
-	// Check reader count, notify the writer if necessary
-	if ((_old + c_min) % c_one == 0)
-	{
-#ifdef _WIN32
-		NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
-#else
-		m_value -= c_sig;
-
-		futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAKE_BITSET_PRIVATE, 1, nullptr, nullptr, u32(c_sig >> 32));
-#endif
-	}
-}
-
-void shared_mutex::imp_wait(s64)
-{
-#ifdef _WIN32
-	if (m_value.sub_fetch(c_one))
-	{
-		NtWaitForKeyedEvent(nullptr, &m_value, false, nullptr);
-	}
-#else
-	if (!m_value.sub_fetch(c_one))
-	{
-		// Return immediately if locked
+		lock_downgrade();
 		return;
 	}
 
+	verify("shared_mutex overflow" HERE), (old % c_sig) + c_one < c_sig;
+	imp_wait();
+	lock_downgrade();
+}
+
+void shared_mutex::imp_unlock_shared(u32 old)
+{
+	verify("shared_mutex underflow" HERE), old - 1 < c_err;
+
+	// Check reader count, notify the writer if necessary
+	if ((old - 1) % c_one == 0)
+	{
+#ifdef _WIN32
+		NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
+#else
+		m_value += c_sig;
+
+		futex(reinterpret_cast<int*>(&m_value.raw()), FUTEX_WAKE_BITSET_PRIVATE, 1, nullptr, nullptr, c_sig);
+#endif
+	}
+}
+
+void shared_mutex::imp_wait()
+{
+#ifdef _WIN32
+	NtWaitForKeyedEvent(nullptr, &m_value, false, nullptr);
+#else
 	while (true)
 	{
 		// Load new value, try to acquire c_sig
-		const s64 value = m_value.fetch_op([](s64& value)
+		auto [value, ok] = m_value.fetch_op([](u32& value)
 		{
-			if (value <= c_one - c_sig)
+			if (value >= c_sig)
 			{
-				value += c_sig;
+				value -= c_sig;
+				return true;
 			}
+
+			return false;
 		});
 
-		if (value <= c_one - c_sig)
+		if (ok)
 		{
 			return;
 		}
 
-		futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAIT_BITSET_PRIVATE, int(value >> 32), nullptr, nullptr, u32(c_sig >> 32));
+		futex(reinterpret_cast<int*>(&m_value.raw()), FUTEX_WAIT_BITSET_PRIVATE, value, nullptr, nullptr, c_sig);
 	}
 #endif
 }
 
-void shared_mutex::imp_lock(s64 _old)
+void shared_mutex::imp_lock(u32 val)
 {
-	verify("shared_mutex overflow" HERE), _old <= c_max;
+	verify("shared_mutex underflow" HERE), val < c_err;
 
 	for (int i = 0; i < 10; i++)
 	{
 		busy_wait();
 
-		const s64 value = m_value.load();
-
-		if (value == c_one && m_value.compare_and_swap_test(c_one, 0))
+		if (try_lock())
 		{
 			return;
 		}
 	}
 
-	imp_wait(m_value.load());
+	const u32 old = m_value.fetch_add(c_one);
+
+	if (old == 0)
+	{
+		return;
+	}
+
+	verify("shared_mutex overflow" HERE), (old % c_sig) + c_one < c_sig;
+	imp_wait();
 }
 
-void shared_mutex::imp_unlock(s64 _old)
+void shared_mutex::imp_unlock(u32 old)
 {
-	verify("shared_mutex overflow" HERE), _old + c_one <= c_max;
+	verify("shared_mutex underflow" HERE), old - c_one < c_err;
 
 	// 1) Notify the next writer if necessary
-	// 2) Notify all readers otherwise if necessary
+	// 2) Notify all readers otherwise if necessary (currently indistinguishable from writers)
 #ifdef _WIN32
-	if (_old + c_one <= 0)
+	if (old - c_one)
 	{
 		NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
 	}
-	else if (s64 count = -_old / c_min * 0)
-	{
-		// Disabled code
-		while (count--)
-		{
-			NtReleaseKeyedEvent(nullptr, (int*)&m_value + 1, false, nullptr);
-		}
-	}
 #else
-	if (_old + c_one <= 0)
+	if (old - c_one)
 	{
-		m_value -= c_sig;
+		m_value += c_sig;
 
-		futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAKE_BITSET_PRIVATE, 1, nullptr, nullptr, u32(c_sig >> 32));
-	}
-	else if (false)
-	{
-		// Disabled code
-		futex((int*)&m_value.raw() + IS_LE_MACHINE, FUTEX_WAKE_BITSET_PRIVATE, INT_MAX, nullptr, nullptr, INT_MIN);
+		futex(reinterpret_cast<int*>(&m_value.raw()), FUTEX_WAKE_BITSET_PRIVATE, 1, nullptr, nullptr, c_sig);
 	}
 #endif
 }
 
 void shared_mutex::imp_lock_upgrade()
 {
-	// TODO
-	unlock_shared();
-	lock();
-}
+	for (int i = 0; i < 10; i++)
+	{
+		busy_wait();
 
-void shared_mutex::imp_lock_degrade()
-{
-	// TODO
-	unlock();
-	lock_shared();
-}
+		if (try_lock_upgrade())
+		{
+			return;
+		}
+	}
 
-bool shared_mutex::try_lock_shared()
-{
-	// Conditional decrement
-	return m_value.fetch_dec_sat(c_min - 1, c_min) >= c_min;
-}
+	// Convert to writer lock
+	const u32 old = m_value.fetch_add(c_one - 1);
 
-bool shared_mutex::try_lock()
-{
-	// Conditional decrement (TODO: obtain c_sig)
-	return m_value.compare_and_swap_test(c_one, 0);
-}
+	verify("shared_mutex overflow" HERE), (old % c_sig) + c_one - 1 < c_sig;
 
-bool shared_mutex::try_lock_upgrade()
-{
-	// TODO
-	return m_value.compare_and_swap_test(c_one - c_min, 0);
-}
+	if (old % c_one == 1)
+	{
+		return;
+	}
 
-bool shared_mutex::try_lock_degrade()
-{
-	// TODO
-	return m_value.compare_and_swap_test(0, c_one - c_min);
+	imp_wait();
 }
