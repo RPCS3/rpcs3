@@ -80,6 +80,8 @@ elseif(WIN32)
 	target_link_libraries(3rdparty_hidapi INTERFACE hidapi-hid Shlwapi.lib)
 else()
 	add_subdirectory(hidapi/libusb EXCLUDE_FROM_ALL)
+	target_include_directories(hidapi-libusb PUBLIC hidapi/hidapi)
+
 	target_link_libraries(3rdparty_hidapi INTERFACE hidapi-libusb usb)
 endif()
 
