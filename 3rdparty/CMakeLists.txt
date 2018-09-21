@@ -331,10 +331,6 @@ add_library(3rdparty_glew INTERFACE)
 if(NOT MSVC)
 	find_package(GLEW 1.13.0 REQUIRED)
 	target_link_libraries(3rdparty_glew INTERFACE GLEW::GLEW)
-
-	set(CMAKE_THREAD_PREFER_PTHREAD 1)
-	find_package(Threads REQUIRED)
-	target_link_libraries(3rdparty_glew INTERFACE Threads::Threads)
 endif()
 
 
