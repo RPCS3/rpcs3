@@ -10,10 +10,6 @@ add_custom_target(GitVersion ALL
 # Check for a sufficient compiler and set build options
 include(ConfigureCompiler)
 
-if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-	add_definitions(-DNDEBUG)
-endif()
-
 set(ADDITIONAL_LIBS "")
 if(CMAKE_SYSTEM MATCHES "Linux")
 	#on some Linux distros shm_unlink and similar functions are in librt only

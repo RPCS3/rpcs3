@@ -30,6 +30,10 @@ if (NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release")
 endif()
 
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+	add_definitions(-DNDEBUG)
+endif()
+
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
 	message( FATAL_ERROR "RPCS3 can only be compiled on 64-bit platforms." )
 endif()
