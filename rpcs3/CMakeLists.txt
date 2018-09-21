@@ -68,6 +68,10 @@ if(UNIX)
 	find_package(X11 REQUIRED)
 	target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
 	target_link_libraries(rpcs3 ${X11_LIBRARIES})
+
+	set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+	find_package(Threads REQUIRED)
+	target_link_libraries(rpcs3 Threads::Threads)
 endif()
 
 if(WIN32)
