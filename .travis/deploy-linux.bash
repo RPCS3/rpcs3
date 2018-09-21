@@ -5,7 +5,8 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 	DESTDIR=appdir ninja install
 	curl -sLO "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
 	chmod a+x linuxdeployqt*.AppImage
-	./linuxdeployqt*.AppImage --appimage-extract-and-run ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs
+	./linuxdeployqt*.AppImage --appimage-extract
+	./squashfs-root/AppRun ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs
 	ls ./appdir/usr/lib/
 	rm -r ./appdir/usr/share/doc
 	rm ./appdir/usr/lib/libxcb*
