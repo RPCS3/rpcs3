@@ -25,10 +25,11 @@ namespace utils
 	*/
 	void memory_commit(void* pointer, std::size_t size, protection prot = protection::rw);
 
-	/**
-	* Decommit all memory committed via commit_page_memory.
-	*/
+	// Decommit all memory committed via commit_page_memory.
 	void memory_decommit(void* pointer, std::size_t size);
+
+	// Decommit all memory and commit it again.
+	void memory_reset(void* pointer, std::size_t size, protection prot = protection::rw);
 
 	// Free memory after reserved by memory_reserve, should specify original size
 	void memory_release(void* pointer, std::size_t size);

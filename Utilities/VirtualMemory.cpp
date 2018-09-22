@@ -80,7 +80,7 @@ namespace utils
 #ifdef _WIN32
 		verify(HERE), ::VirtualAlloc(pointer, size, MEM_COMMIT, +prot);
 #else
-		verify(HERE), ::mprotect((void*)((u64)pointer & -4096), ::align(size, 4096), +prot) != -1;
+		verify(HERE), ::mprotect((void*)((u64)pointer & -4096), size + ((u64)pointer & 4095), +prot) != -1;
 #endif
 	}
 
@@ -90,6 +90,16 @@ namespace utils
 		verify(HERE), ::VirtualFree(pointer, size, MEM_DECOMMIT);
 #else
 		verify(HERE), ::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
+#endif
+	}
+
+	void memory_reset(void* pointer, std::size_t size, protection prot)
+	{
+#ifdef _WIN32
+		memory_decommit(pointer, size);
+		memory_commit(pointer, size, prot);
+#else
+		verify(HERE), ::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
 #endif
 	}
 
@@ -120,7 +130,7 @@ namespace utils
 			addr += block_size;
 		}
 #else
-		verify(HERE), ::mprotect((void*)((u64)pointer & -4096), ::align(size, 4096), +prot) != -1;
+		verify(HERE), ::mprotect((void*)((u64)pointer & -4096), size + ((u64)pointer & 4095), +prot) != -1;
 #endif
 	}
 
