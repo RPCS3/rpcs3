@@ -433,7 +433,7 @@ protected:
 	void notify_tile_unbound(u32 tile) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_invalidate_memory_range(u32 address_base, u32 size) override;
+	void on_invalidate_memory_range(const utils::address_range &range) override;
 
 	bool on_decompiler_task() override;
 };

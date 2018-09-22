@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/hash.h"
 #include "Emu/Memory/vm.h"
@@ -6,6 +6,7 @@
 #include "Common/ProgramStateCache.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/System.h"
+#include "Common/texture_cache_checker.h"
 
 #include "rsx_utils.h"
 #include <thread>
@@ -19,109 +20,125 @@ namespace rsx
 		protect_policy_full_range    //Guard the full memory range. Shared pages may be invalidated by access outside the object we're guarding
 	};
 
-	enum overlap_test_bounds
+	enum section_bounds
 	{
 		full_range,
-		protected_range,
+		locked_range,
 		confirmed_range
 	};
 
+	static inline void memory_protect(const address_range& range, utils::protection prot)
+	{
+		verify(HERE), range.is_page_range();
+
+		//LOG_ERROR(RSX, "memory_protect(0x%x, 0x%x, %x)", static_cast<u32>(range.start), static_cast<u32>(range.length()), static_cast<u32>(prot));
+		utils::memory_protect(vm::base(range.start), range.length(), prot);
+
+#ifdef TEXTURE_CACHE_DEBUG
+		tex_cache_checker.set_protection(range, prot);
+#endif
+	}
+
 	class buffered_section
 	{
+	public:
+		static const protection_policy guard_policy = protect_policy_full_range;
+
 	private:
-		u32 locked_address_base = 0;
-		u32 locked_address_range = 0;
-		weak_ptr locked_memory_ptr;
-		std::pair<u32, u32> confirmed_range;
-
-		inline void tag_memory()
-		{
-			if (locked_memory_ptr)
-			{
-				const u32 valid_limit = (confirmed_range.second) ? confirmed_range.first + confirmed_range.second : cpu_address_range;
-				u32* first = locked_memory_ptr.get<u32>(confirmed_range.first, true);
-				u32* last = locked_memory_ptr.get<u32>(valid_limit - 4, true);
-
-				*first = cpu_address_base + confirmed_range.first;
-				*last = cpu_address_base + valid_limit - 4;
-
-				locked_memory_ptr.flush(confirmed_range.first, 4);
-				locked_memory_ptr.flush(valid_limit - 4, 4);
-			}
-		}
-
-	protected:
-		u32 cpu_address_base = 0;
-		u32 cpu_address_range = 0;
+		address_range locked_range;
+		address_range cpu_range = {};
+		address_range confirmed_range;
+		weak_ptr super_ptr;
 
 		utils::protection protection = utils::protection::rw;
-		protection_policy guard_policy;
 
 		bool locked = false;
-		bool dirty = false;
 
-		inline void init_lockable_range(u32 base, u32 length)
+		inline void init_lockable_range(const address_range &range)
 		{
-			locked_address_base = (base & ~4095);
+			locked_range = range.to_page_range();
 
-			if ((guard_policy != protect_policy_full_range) && (length >= 4096))
+			if ((guard_policy != protect_policy_full_range) && (range.length() >= 4096))
 			{
-				const u32 limit = base + length;
-				const u32 block_end = (limit & ~4095);
-				const u32 block_start = (locked_address_base < base) ? (locked_address_base + 4096) : locked_address_base;
-
-				locked_address_range = 4096;
+				const u32 block_start = (locked_range.start < range.start) ? (locked_range.start + 4096u) : locked_range.start;
+				const u32 block_end = locked_range.end;
 
 				if (block_start < block_end)
 				{
-					//Page boundaries cover at least one unique page
-					locked_address_base = block_start;
+					// protect unique page range
+					locked_range.start = block_start;
+					locked_range.end = block_end;
+				}
 
-					if (guard_policy == protect_policy_conservative)
-					{
-						//Protect full unique range
-						locked_address_range = (block_end - block_start);
-					}
+				if (guard_policy == protect_policy_one_page)
+				{
+					// protect exactly one page
+					locked_range.set_length(4096u);
 				}
 			}
-			else
-				locked_address_range = align(base + length, 4096) - locked_address_base;
 
-			verify(HERE), locked_address_range > 0;
+			AUDIT( (locked_range.start == page_start(range.start)) || (locked_range.start == next_page(range.start)) );
+			AUDIT( locked_range.end <= page_end(range.end) );
+			verify(HERE), locked_range.is_page_range();
 		}
 
 	public:
 
-		buffered_section() {}
-		~buffered_section() {}
+		buffered_section() {};
+		~buffered_section() {};
 
-		void reset(u32 base, u32 length, protection_policy protect_policy = protect_policy_full_range)
+		void reset(const address_range &memory_range)
 		{
-			verify(HERE), locked == false;
+			verify(HERE), memory_range.valid() && locked == false;
 
-			cpu_address_base = base;
-			cpu_address_range = length;
+			cpu_range = address_range(memory_range);
+			confirmed_range.invalidate();
+			locked_range.invalidate();
 
-			confirmed_range = { 0, 0 };
 			protection = utils::protection::rw;
-			guard_policy = protect_policy;
 			locked = false;
 
-			init_lockable_range(cpu_address_base, cpu_address_range);
+			super_ptr = {};
+
+			init_lockable_range(cpu_range);
 		}
 
-		void protect(utils::protection prot, bool force = false)
+	protected:
+		void invalidate_range()
 		{
-			if (prot == protection && !force) return;
+			ASSERT(!locked);
 
-			verify(HERE), locked_address_range > 0;
-			utils::memory_protect(vm::base(locked_address_base), locked_address_range, prot);
-			protection = prot;
-			locked = prot != utils::protection::rw;
+			cpu_range.invalidate();
+			confirmed_range.invalidate();
+			locked_range.invalidate();
+		}
 
-			if (prot == utils::protection::no)
+	public:
+		void protect(utils::protection new_prot, bool force = false)
+		{
+			if (new_prot == protection && !force) return;
+
+			verify(HERE), locked_range.is_page_range();
+			AUDIT( !confirmed_range.valid() || confirmed_range.inside(cpu_range) );
+
+#ifdef TEXTURE_CACHE_DEBUG
+			if (new_prot != protection || force)
 			{
-				locked_memory_ptr = rsx::get_super_ptr(cpu_address_base, cpu_address_range);
+				if (locked && !force) // When force=true, it is the responsibility of the caller to remove this section from the checker refcounting
+					tex_cache_checker.remove(locked_range, protection);
+				if (new_prot != utils::protection::rw)
+					tex_cache_checker.add(locked_range, new_prot);
+			}
+#endif // TEXTURE_CACHE_DEBUG
+
+			rsx::memory_protect(locked_range, new_prot);
+			protection = new_prot;
+			locked = (protection != utils::protection::rw);
+
+			if (protection == utils::protection::no)
+			{
+				super_ptr = rsx::get_super_ptr(cpu_range);
+				verify(HERE), super_ptr;
 				tag_memory();
 			}
 			else
@@ -129,254 +146,273 @@ namespace rsx
 				if (!locked)
 				{
 					//Unprotect range also invalidates secured range
-					confirmed_range = { 0, 0 };
+					confirmed_range.invalidate();
 				}
 
-				locked_memory_ptr = {};
+				super_ptr = {};
 			}
+
 		}
 
-		void protect(utils::protection prot, const std::pair<u32, u32>& range_confirm)
+		void protect(utils::protection prot, const std::pair<u32, u32>& new_confirm)
 		{
+			// new_confirm.first is an offset after cpu_range.start
+			// new_confirm.second is the length (after cpu_range.start + new_confirm.first)
+
+#ifdef TEXTURE_CACHE_DEBUG
+			// We need to remove the lockable range from page_info as we will be re-protecting with force==true
+			if (locked)
+				tex_cache_checker.remove(locked_range, protection);
+#endif
+
 			if (prot != utils::protection::rw)
 			{
-				const auto old_prot = protection;
-				const auto old_locked_base = locked_address_base;
-				const auto old_locked_length = locked_address_range;
-
-				if (confirmed_range.second)
+				if (confirmed_range.valid())
 				{
-					const u32 range_limit = std::max(range_confirm.first + range_confirm.second, confirmed_range.first + confirmed_range.second);
-					confirmed_range.first = std::min(confirmed_range.first, range_confirm.first);
-					confirmed_range.second = range_limit - confirmed_range.first;
+					confirmed_range.start = std::min(confirmed_range.start, cpu_range.start + new_confirm.first);
+					confirmed_range.end = std::max(confirmed_range.end, cpu_range.start + new_confirm.first + new_confirm.second - 1);
 				}
 				else
 				{
-					confirmed_range = range_confirm;
+					confirmed_range = address_range::start_length(cpu_range.start + new_confirm.first, new_confirm.second);
+					ASSERT(!locked || locked_range.inside(confirmed_range.to_page_range()));
 				}
-
-				init_lockable_range(confirmed_range.first + cpu_address_base, confirmed_range.second);
+				
+				verify(HERE), confirmed_range.inside(cpu_range);
+				init_lockable_range(confirmed_range);
 			}
 
 			protect(prot, true);
 		}
 
-		void unprotect()
+		inline void unprotect()
 		{
+			AUDIT(protection != utils::protection::rw);
 			protect(utils::protection::rw);
 		}
 
-		void discard()
+		inline void discard()
 		{
+#ifdef TEXTURE_CACHE_DEBUG
+			if (locked)
+				tex_cache_checker.remove(locked_range, protection);
+#endif
+
 			protection = utils::protection::rw;
-			dirty = true;
+			confirmed_range.invalidate();
+			super_ptr = {};
 			locked = false;
-
-			confirmed_range = { 0, 0 };
-			locked_memory_ptr = {};
 		}
 
-		/**
-		* Check if range overlaps with this section.
-		* ignore_protection_range - if true, the test should not check against the aligned protection range, instead
-		* tests against actual range of contents in memory
-		*/
-		bool overlaps(std::pair<u32, u32> range) const
-		{
-			return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
-		}
-
-		bool overlaps(u32 address, overlap_test_bounds bounds) const
+		inline const address_range& get_bounds(section_bounds bounds) const
 		{
 			switch (bounds)
 			{
-			case overlap_test_bounds::full_range:
-			{
-				return (cpu_address_base <= address && (address - cpu_address_base) < cpu_address_range);
-			}
-			case overlap_test_bounds::protected_range:
-			{
-				return (locked_address_base <= address && (address - locked_address_base) < locked_address_range);
-			}
-			case overlap_test_bounds::confirmed_range:
-			{
-				const auto range = get_confirmed_range();
-				return ((range.first + cpu_address_base) <= address && (address - range.first) < range.second);
-			}
+			case section_bounds::full_range:
+				return cpu_range;
+			case section_bounds::locked_range:
+				return locked_range;
+			case section_bounds::confirmed_range:
+				return confirmed_range.valid() ? confirmed_range : cpu_range;
 			default:
-				fmt::throw_exception("Unreachable" HERE);
+				ASSUME(0);
 			}
 		}
 
-		bool overlaps(const std::pair<u32, u32>& range, overlap_test_bounds bounds) const
-		{
-			switch (bounds)
-			{
-			case overlap_test_bounds::full_range:
-			{
-				return region_overlaps(cpu_address_base, cpu_address_base + cpu_address_range, range.first, range.first + range.second);
-			}
-			case overlap_test_bounds::protected_range:
-			{
-				return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
-			}
-			case overlap_test_bounds::confirmed_range:
-			{
-				const auto test_range = get_confirmed_range();
-				return region_overlaps(test_range.first + cpu_address_base, test_range.first + cpu_address_base + test_range.second, range.first, range.first + range.second);
-			}
-			default:
-				fmt::throw_exception("Unreachable" HERE);
-			}
-		}
 
 		/**
-		 * Check if the page containing the address tramples this section. Also compares a former trampled page range to compare
-		 * If true, returns the range <min, max> with updated invalid range
+		 * Overlapping checks
 		 */
-		std::tuple<bool, std::pair<u32, u32>> overlaps_page(const std::pair<u32, u32>& old_range, u32 address, overlap_test_bounds bounds) const
+		inline bool overlaps(const u32 address, section_bounds bounds) const
 		{
-			const u32 page_base = address & ~4095;
-			const u32 page_limit = page_base + 4096;
-
-			const u32 compare_min = std::min(old_range.first, page_base);
-			const u32 compare_max = std::max(old_range.second, page_limit);
-
-			u32 memory_base, memory_range;
-			switch (bounds)
-			{
-			case overlap_test_bounds::full_range:
-			{
-				memory_base = (cpu_address_base & ~4095);
-				memory_range = align(cpu_address_base + cpu_address_range, 4096u) - memory_base;
-				break;
-			}
-			case overlap_test_bounds::protected_range:
-			{
-				memory_base = locked_address_base;
-				memory_range = locked_address_range;
-				break;
-			}
-			case overlap_test_bounds::confirmed_range:
-			{
-				const auto range = get_confirmed_range();
-				memory_base = (cpu_address_base + range.first) & ~4095;
-				memory_range = align(cpu_address_base + range.first + range.second, 4096u) - memory_base;
-				break;
-			}
-			default:
-				fmt::throw_exception("Unreachable" HERE);
-			}
-
-			if (!region_overlaps(memory_base, memory_base + memory_range, compare_min, compare_max))
-				return std::make_tuple(false, old_range);
-
-			const u32 _min = std::min(memory_base, compare_min);
-			const u32 _max = std::max(memory_base + memory_range, compare_max);
-			return std::make_tuple(true, std::make_pair(_min, _max));
+			return get_bounds(bounds).overlaps(address);
 		}
 
-		bool is_locked() const
+		inline bool overlaps(const address_range &other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).overlaps(other);
+		}
+
+		inline bool overlaps(const buffered_section &other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).overlaps(other.get_bounds(bounds));
+		}
+
+		inline bool inside(const address_range &other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).inside(other);
+		}
+
+		inline bool inside(const buffered_section &other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).inside(other.get_bounds(bounds));
+		}
+
+		inline s32 signed_distance(const address_range &other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).signed_distance(other);
+		}
+
+		inline u32 distance(const address_range &other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).distance(other);
+		}
+
+		/**
+		* Utilities
+		*/
+		inline bool valid_range() const
+		{
+			return cpu_range.valid();
+		}
+
+		inline bool is_locked() const
 		{
 			return locked;
 		}
 
-		bool is_dirty() const
+		inline u32 get_section_base() const
 		{
-			return dirty;
+			return cpu_range.start;
 		}
 
-		void set_dirty(bool state)
+		inline u32 get_section_size() const
 		{
-			dirty = state;
+			return cpu_range.valid() ? cpu_range.length() : 0;
 		}
 
-		u32 get_section_base() const
+		inline const address_range& get_locked_range() const
 		{
-			return cpu_address_base;
+			AUDIT( locked );
+			return locked_range;
 		}
 
-		u32 get_section_size() const
+		inline const address_range& get_section_range() const
 		{
-			return cpu_address_range;
+			return cpu_range;
 		}
 
-		bool matches(u32 cpu_address, u32 size) const
+		const address_range& get_confirmed_range() const
 		{
-			return (cpu_address_base == cpu_address && cpu_address_range == size);
+			return confirmed_range.valid() ? confirmed_range : cpu_range;
 		}
 
-		std::pair<u32, u32> get_min_max(const std::pair<u32, u32>& current_min_max) const
+		const std::pair<u32, u32> get_confirmed_range_delta() const
 		{
-			u32 min = std::min(current_min_max.first, locked_address_base);
-			u32 max = std::max(current_min_max.second, locked_address_base + locked_address_range);
+			if (!confirmed_range.valid())
+				return { 0, cpu_range.length() };
 
-			return std::make_pair(min, max);
+			return { confirmed_range.start - cpu_range.start, confirmed_range.length() };
 		}
 
-		utils::protection get_protection() const
+		inline bool matches(const address_range &range) const
+		{
+			return cpu_range.valid() && cpu_range == range;
+		}
+
+		inline utils::protection get_protection() const
 		{
 			return protection;
 		}
 
-		template <typename T = void>
-		T* get_raw_ptr(u32 offset = 0, bool no_sync = false)
+		inline address_range get_min_max(const address_range& current_min_max, section_bounds bounds) const
 		{
-			verify(HERE), locked_memory_ptr;
-			return locked_memory_ptr.get<T>(offset, no_sync);
+			return get_bounds(bounds).get_min_max(current_min_max);
 		}
 
+		/**
+		 * Super Pointer
+		 */
+		template <typename T = void>
+		inline T* get_ptr_by_offset(u32 offset = 0, bool no_sync = false)
+		{
+			verify(HERE), super_ptr && cpu_range.length() >= (offset + sizeof(T));
+			return super_ptr.get<T>(offset, no_sync);
+		}
+
+		// specialization due to sizeof(void) being illegal
+		inline void* get_ptr_by_offset(u32 offset, bool no_sync)
+		{
+			verify(HERE), super_ptr && cpu_range.length() >= (offset + 1);
+			return super_ptr.get<void>(offset, no_sync);
+		}
+
+		template <typename T = void>
+		inline T* get_ptr(u32 address, bool no_sync = false)
+		{
+			verify(HERE), cpu_range.start <= address; // super_ptr & sizeof(T) tests are done by get_ptr_by_offset
+			return get_ptr_by_offset<T>(address - cpu_range.start, no_sync);
+		}
+
+		inline void flush_ptr_by_offset(u32 offset = 0, u32 len = 0) const
+		{
+			verify(HERE), super_ptr && cpu_range.length() >= (offset + len);
+			super_ptr.flush(offset, len);
+		}
+
+		inline void flush_ptr(u32 address, u32 len = 0) const
+		{
+			verify(HERE), cpu_range.start <= address; // super_ptr & length tests are done by flush_ptr_by_offset
+			return flush_ptr_by_offset(address - cpu_range.start, len);
+		}
+
+		inline void flush_ptr(const address_range &range) const
+		{
+			return flush_ptr(range.start, range.length());
+		}
+
+
+		/**
+		 * Memory tagging
+		 */
+	private:
+		inline void tag_memory()
+		{
+			// We only need to tag memory if we are in full-range mode
+			if (guard_policy == protect_policy_full_range)
+				return;
+
+			AUDIT(locked && super_ptr);
+
+			const address_range& range = get_confirmed_range();
+
+			volatile u32* first = get_ptr<volatile u32>(range.start, true);
+			volatile u32* last = get_ptr<volatile u32>(range.end - 3, true);
+
+			*first = range.start;
+			*last = range.end;
+
+			flush_ptr(range.start, 4);
+			flush_ptr(range.end - 3, 4);
+		}
+
+	public:
 		bool test_memory_head()
 		{
-			if (!locked_memory_ptr)
-			{
-				return false;
-			}
+			if (guard_policy == protect_policy_full_range)
+				return true;
 
-			const u32* first = locked_memory_ptr.get<u32>(confirmed_range.first);
-			return (*first == (cpu_address_base + confirmed_range.first));
+			AUDIT(locked && super_ptr);
+
+			const auto& range = get_confirmed_range();
+			volatile const u32* first = get_ptr<volatile const u32>(range.start);
+			return (*first == range.start);
 		}
 
 		bool test_memory_tail()
 		{
-			if (!locked_memory_ptr)
-			{
-				return false;
-			}
+			if (guard_policy == protect_policy_full_range)
+				return true;
 
-			const u32 valid_limit = (confirmed_range.second) ? confirmed_range.first + confirmed_range.second : cpu_address_range;
-			const u32* last = locked_memory_ptr.get<u32>(valid_limit - 4);
-			return (*last == (cpu_address_base + valid_limit - 4));
-		}
+			AUDIT(locked && super_ptr);
 
-		void flush_io(u32 offset = 0, u32 len = 0) const
-		{
-			const auto write_length = len ? len : (cpu_address_range - offset);
-			locked_memory_ptr.flush(offset, write_length);
-		}
-
-		std::pair<u32, u32> get_protected_range() const
-		{
-			if (locked)
-			{
-				return { locked_address_base, locked_address_range };
-			}
-			else
-			{
-				return { 0, 0 };
-			}
-		}
-
-		std::pair<u32, u32> get_confirmed_range() const
-		{
-			if (confirmed_range.second == 0)
-			{
-				return { 0, cpu_address_range };
-			}
-
-			return confirmed_range;
+			const auto& range = get_confirmed_range();
+			volatile const u32* last = get_ptr<volatile const u32>(range.end-3);
+			return (*last == range.end);
 		}
 	};
+
+
 
 	template <typename pipeline_storage_type, typename backend_storage>
 	class shaders_cache

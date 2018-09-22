@@ -1,8 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include "../System.h"
+#include "Utilities/address_range.h"
 #include "Utilities/geometry.h"
 #include "Utilities/asm.h"
+#include "Utilities/VirtualMemory.h"
+#include "Emu/Memory/vm.h"
 #include "gcm_enums.h"
 #include <atomic>
 #include <memory>
@@ -16,6 +19,15 @@ extern "C"
 
 namespace rsx
 {
+	// Import address_range utilities
+	using utils::address_range;
+	using utils::address_range_vector;
+	using utils::page_for;
+	using utils::page_start;
+	using utils::page_end;
+	using utils::next_page;
+
+	// Definitions
 	class thread;
 	extern thread* g_current_renderer;
 
@@ -200,7 +212,14 @@ namespace rsx
 		}
 	};
 
-	//Holds information about a framebuffer
+	// Acquire memory mirror with r/w permissions
+	weak_ptr get_super_ptr(const address_range &range);
+	weak_ptr get_super_ptr(u32 addr, u32 size);
+
+
+	/**
+     * Holds information about a framebuffer
+     */
 	struct gcm_framebuffer_info
 	{
 		u32 address = 0;
@@ -223,6 +242,11 @@ namespace rsx
 		gcm_framebuffer_info(const u32 address_, const u32 pitch_, bool is_depth_, const rsx::surface_color_format fmt_, const rsx::surface_depth_format dfmt_, const u16 w, const u16 h)
 			:address(address_), pitch(pitch_), is_depth_surface(is_depth_), color_format(fmt_), depth_format(dfmt_), width(w), height(h)
 		{}
+
+		address_range get_memory_range(u32 aa_factor = 1) const
+		{
+			return address_range::start_length(address, pitch * height * aa_factor);
+		}
 	};
 
 	struct avconf
@@ -462,9 +486,6 @@ namespace rsx
 	void fill_viewport_matrix(void *buffer, bool transpose);
 
 	std::array<float, 4> get_constant_blend_colors();
-
-	// Acquire memory mirror with r/w permissions
-	weak_ptr get_super_ptr(u32 addr, u32 size);
 
 	/**
 	 * Shuffle texel layout from xyzw to wzyx
@@ -725,11 +746,6 @@ namespace rsx
 	static inline thread* get_current_renderer()
 	{
 		return g_current_renderer;
-	}
-
-	static inline bool region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2)
-	{
-		return (base1 < limit2 && base2 < limit1);
 	}
 
 	template <int N>
