@@ -1441,5 +1441,8 @@
     <ClInclude Include="..\Utilities\date_time.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="..\Utilities\address_range.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

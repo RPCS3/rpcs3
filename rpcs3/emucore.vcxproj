@@ -346,6 +346,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\3rdparty\stblib\stb_image.h" />
+    <ClInclude Include="..\Utilities\address_range.h" />
     <ClInclude Include="..\Utilities\Atomic.h" />
     <ClInclude Include="..\Utilities\AtomicPtr.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
