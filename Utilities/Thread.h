@@ -164,6 +164,8 @@ public:
 
 	thread_ctrl(const thread_ctrl&) = delete;
 
+	thread_ctrl& operator=(const thread_ctrl&) = delete;
+
 	~thread_ctrl();
 
 	// Get thread name
@@ -279,8 +281,9 @@ public:
 
 	virtual ~named_thread();
 
-	// Deleted copy/move constructors + copy/move operators
 	named_thread(const named_thread&) = delete;
+
+	named_thread& operator=(const named_thread&) = delete;
 
 	// Get thread name
 	virtual std::string get_name() const;
@@ -340,8 +343,9 @@ public:
 		thread_ctrl::spawn(m_thread, std::forward<N>(name), std::forward<F>(func));
 	}
 
-	// Deleted copy/move constructors + copy/move operators
 	scope_thread(const scope_thread&) = delete;
+
+	scope_thread& operator=(const scope_thread&) = delete;
 
 	// Destructor with exceptions allowed
 	~scope_thread() noexcept(false)

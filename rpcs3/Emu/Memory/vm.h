@@ -71,6 +71,7 @@ namespace vm
 
 	public:
 		reader_lock(const reader_lock&) = delete;
+		reader_lock& operator=(const reader_lock&) = delete;
 		reader_lock();
 		~reader_lock();
 
@@ -82,6 +83,7 @@ namespace vm
 		const bool locked;
 
 		writer_lock(const writer_lock&) = delete;
+		writer_lock& operator=(const writer_lock&) = delete;
 		writer_lock(int full);
 		~writer_lock();
 

@@ -52,6 +52,8 @@ namespace utils
 
 		shm(const shm&) = delete;
 
+		shm& operator=(const shm&) = delete;
+
 		~shm();
 
 		// Map shared memory
