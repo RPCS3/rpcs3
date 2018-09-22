@@ -1259,19 +1259,27 @@ namespace rsx
 		template <typename ...Args>
 		bool flush_memory_to_cache(const address_range &memory_range, bool skip_synchronized, u32 allowed_types_mask, Args&&... extra)
 		{
+			// Temporarily disable prediction if more than 50% of predictions are wrong. Also lower prediction pressure
+			if (m_num_cache_mispredictions > (m_num_cache_speculative_writes / 2) &&
+				m_num_cache_mispredictions > 8)
+				return false;
+
 			std::lock_guard lock(m_cache_mutex);
 			section_storage_type* region = find_flushable_section(memory_range);
 
-			//Check if section was released, usually if cell overwrites a currently bound render target
+			// Check if section was released, usually if cell overwrites a currently bound render target
 			if (region == nullptr)
 				return true;
 
+			// Skip if already synchronized
 			if (skip_synchronized && region->is_synchronized())
 				return false;
 
+			// Skip if type is not allowed
 			if ((allowed_types_mask & region->get_context()) == 0)
 				return true;
 
+			// Skip if more writes to the same target are likely
 			if (!region->writes_likely_completed())
 				return true;
 
