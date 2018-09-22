@@ -141,8 +141,10 @@ namespace gl
 		}
 	};
 
-	class cached_texture_section : public rsx::cached_texture_section
+	class cached_texture_section : public rsx::cached_texture_section<gl::cached_texture_section>
 	{
+		using baseclass = rsx::cached_texture_section<gl::cached_texture_section>;
+
 	private:
 		fence m_fence;
 		u32 pbo_id = 0;
@@ -226,7 +228,7 @@ namespace gl
 		void init_buffer()
 		{
 			const f32 resolution_scale = (context == rsx::texture_upload_context::framebuffer_storage? rsx::get_resolution_scale() : 1.f);
-			const u32 real_buffer_size = (resolution_scale <= 1.f) ? cpu_address_range : (u32)(resolution_scale * resolution_scale * cpu_address_range);
+			const u32 real_buffer_size = (resolution_scale <= 1.f) ? get_section_size() : (u32)(resolution_scale * resolution_scale * get_section_size());
 			const u32 buffer_size = align(real_buffer_size, 4096);
 
 			if (pbo_id)
@@ -249,13 +251,14 @@ namespace gl
 		}
 
 	public:
+		using baseclass::cached_texture_section;
 
-		void reset(u32 base, u32 size, bool /*flushable*/=false)
+		void reset(const utils::address_range &memory_range)
 		{
-			rsx::cached_texture_section::reset(base, size);
-
 			vram_texture = nullptr;
 			managed_texture.reset();
+
+			baseclass::reset(memory_range);
 		}
 
 		void create(u16 w, u16 h, u16 depth, u16 mipmaps, gl::texture* image, u32 rsx_pitch, bool read_only,
@@ -283,7 +286,7 @@ namespace gl
 			if (rsx_pitch > 0)
 				this->rsx_pitch = rsx_pitch;
 			else
-				this->rsx_pitch = cpu_address_range / height;
+				this->rsx_pitch = get_section_size() / height;
 
 			this->width = w;
 			this->height = h;
@@ -292,6 +295,9 @@ namespace gl
 			this->mipmaps = mipmaps;
 
 			set_format(gl_format, gl_type, swap_bytes);
+
+			// Notify baseclass
+			baseclass::on_section_resources_created();
 		}
 
 		void create_read_only(gl::viewable_image* image, u32 width, u32 height, u32 depth, u32 mipmaps)
@@ -307,6 +313,9 @@ namespace gl
 
 			rsx_pitch = 0;
 			real_pitch = 0;
+
+			// Notify baseclass
+			baseclass::on_section_resources_created();
 		}
 
 		void make_flushable()
@@ -458,11 +467,12 @@ namespace gl
 		bool flush()
 		{
 			if (flushed) return true; //Already written, ignore
+			AUDIT( is_locked() );
 
 			bool result = true;
 			if (!synchronized)
 			{
-				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", cpu_address_base);
+				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", get_section_base());
 				copy_texture();
 
 				if (!synchronized)
@@ -480,11 +490,14 @@ namespace gl
 			m_fence.wait_for_signal();
 			flushed = true;
 
-			const auto valid_range = get_confirmed_range();
-			void *dst = get_raw_ptr(valid_range.first, true);
+			const auto valid_range = get_confirmed_range_delta();
+			const u32 valid_offset = valid_range.first;
+			const u32 valid_length = valid_range.second;
+			AUDIT( valid_length > 0 );
 
+			void *dst = get_ptr_by_offset(valid_range.first, true);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
-			void *src = glMapBufferRange(GL_PIXEL_PACK_BUFFER, valid_range.first, valid_range.second, GL_MAP_READ_BIT);
+			void *src = glMapBufferRange(GL_PIXEL_PACK_BUFFER, valid_offset, valid_length, GL_MAP_READ_BIT);
 
 			//throw if map failed since we'll segfault anyway
 			verify(HERE), src != nullptr;
@@ -496,20 +509,20 @@ namespace gl
 					require_manual_shuffle = true;
 			}
 
-			if (real_pitch >= rsx_pitch || valid_range.second <= rsx_pitch)
+			if (real_pitch >= rsx_pitch || valid_length <= rsx_pitch)
 			{
-				memcpy(dst, src, valid_range.second);
+				memcpy(dst, src, valid_length);
 			}
 			else
 			{
-				if (valid_range.second % rsx_pitch)
+				if (valid_length % rsx_pitch)
 				{
 					fmt::throw_exception("Unreachable" HERE);
 				}
 
 				u8 *_src = (u8*)src;
 				u8 *_dst = (u8*)dst;
-				const auto num_rows = valid_range.second / rsx_pitch;
+				const auto num_rows = valid_length / rsx_pitch;
 				for (u32 row = 0; row < num_rows; ++row)
 				{
 					memcpy(_dst, _src, real_pitch);
@@ -521,7 +534,7 @@ namespace gl
 			if (require_manual_shuffle)
 			{
 				//byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
-				rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, valid_range.second / rsx_pitch);
+				rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, valid_length / rsx_pitch);
 			}
 			else if (pack_unpack_swap_bytes && ::gl::get_driver_caps().vendor_AMD)
 			{
@@ -537,7 +550,7 @@ namespace gl
 				case texture::type::ushort_1_5_5_5_rev:
 				case texture::type::ushort_5_5_5_1:
 				{
-					const u32 num_reps = valid_range.second / 2;
+					const u32 num_reps = valid_length / 2;
 					be_t<u16>* in = (be_t<u16>*)(dst);
 					u16* out = (u16*)dst;
 
@@ -556,7 +569,7 @@ namespace gl
 				case texture::type::uint_2_10_10_10_rev:
 				case texture::type::uint_8_8_8_8:
 				{
-					u32 num_reps = valid_range.second / 4;
+					u32 num_reps = valid_length / 4;
 					be_t<u32>* in = (be_t<u32>*)(dst);
 					u32* out = (u32*)dst;
 
@@ -575,7 +588,7 @@ namespace gl
 				}
 			}
 
-			flush_io(valid_range.first, valid_range.second);
+			flush_ptr_by_offset(valid_offset, valid_length);
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
@@ -586,12 +599,9 @@ namespace gl
 
 		void destroy()
 		{
-			if (!locked && pbo_id == 0 && vram_texture == nullptr && m_fence.is_empty())
+			if (!is_locked() && pbo_id == 0 && vram_texture == nullptr && m_fence.is_empty())
 				//Already destroyed
 				return;
-
-			if (locked)
-				unprotect();
 
 			if (pbo_id == 0)
 			{
@@ -611,21 +621,18 @@ namespace gl
 
 			if (!m_fence.is_empty())
 				m_fence.destroy();
+
+			baseclass::on_section_resources_destroyed();
+		}
+
+		inline bool exists() const
+		{
+			return (vram_texture != nullptr);
 		}
 
 		texture::format get_format() const
 		{
 			return format;
-		}
-
-		bool exists() const
-		{
-			return vram_texture != nullptr;
-		}
-
-		bool is_flushable() const
-		{
-			return (protection == utils::protection::no);
 		}
 
 		bool is_flushed() const
@@ -683,9 +690,10 @@ namespace gl
 		}
 	};
 
-	class texture_cache : public rsx::texture_cache<void*, cached_texture_section, gl::texture*, gl::texture_view*, gl::texture, gl::texture::format>
+	class texture_cache : public rsx::texture_cache<void*, gl::cached_texture_section, gl::texture*, gl::texture_view*, gl::texture, gl::texture::format>
 	{
 	private:
+		using baseclass = rsx::texture_cache<void*, gl::cached_texture_section, gl::texture*, gl::texture_view*, gl::texture, gl::texture::format>;
 
 		struct discardable_storage
 		{
@@ -717,30 +725,10 @@ namespace gl
 		blitter m_hw_blitter;
 		std::vector<discardable_storage> m_temporary_surfaces;
 
-		cached_texture_section& create_texture(gl::viewable_image* image, u32 texaddr, u32 texsize, u32 w, u32 h, u32 depth, u32 mipmaps)
-		{
-			cached_texture_section& tex = find_cached_texture(texaddr, texsize, true, w, h, depth);
-			tex.reset(texaddr, texsize, false);
-			tex.create_read_only(image, w, h, depth, mipmaps);
-			read_only_range = tex.get_min_max(read_only_range);
-			return tex;
-		}
-
 		void clear()
 		{
-			for (auto &address_range : m_cache)
-			{
-				auto &range_data = address_range.second;
-				for (auto &tex : range_data.data)
-				{
-					tex.destroy();
-				}
-
-				range_data.data.resize(0);
-			}
-
+			baseclass::clear();
 			clear_temporary_subresources();
-			m_unreleased_texture_objects = 0;
 		}
 
 		void clear_temporary_subresources()
@@ -850,11 +838,6 @@ namespace gl
 
 	protected:
 
-		void free_texture_section(cached_texture_section& tex) override
-		{
-			tex.destroy();
-		}
-
 		gl::texture_view* create_temporary_subresource_view(void*&, gl::texture** src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
 				const texture_channel_remap_t& remap_vector) override
 		{
@@ -946,7 +929,7 @@ namespace gl
 					dst->image()->id(), GL_TEXTURE_2D, 0, 0, 0, 0, width, height, 1);
 		}
 
-		cached_texture_section* create_new_texture(void*&, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
+		cached_texture_section* create_new_texture(void*&, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
 				rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags) override
 		{
 			auto image = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
@@ -954,15 +937,23 @@ namespace gl
 			const auto swizzle = get_component_mapping(gcm_format, flags);
 			image->set_native_component_layout(swizzle);
 
-			auto& cached = create_texture(image, rsx_address, rsx_size, width, height, depth, mipmaps);
-			cached.set_dirty(false);
+			auto& cached = *find_cached_texture(rsx_range, true, true, width, width, depth, mipmaps);
+			ASSERT(!cached.is_locked());
+
+			// Prepare section
+			cached.reset(rsx_range);
 			cached.set_view_flags(flags);
 			cached.set_context(context);
-			cached.set_gcm_format(gcm_format);
 			cached.set_image_type(type);
+			cached.set_gcm_format(gcm_format);
+
+			cached.create_read_only(image, width, height, depth, mipmaps);
+			cached.set_dirty(false);
 
 			if (context != rsx::texture_upload_context::blit_engine_dst)
 			{
+				AUDIT( cached.get_memory_read_flags() != rsx::memory_read_flags::flush_always );
+				read_only_range = cached.get_min_max(read_only_range, rsx::section_bounds::locked_range); // TODO ruipin: This was outside the if, but is inside the if in Vulkan. Ask kd-11
 				cached.protect(utils::protection::ro);
 			}
 			else
@@ -998,8 +989,8 @@ namespace gl
 
 				//NOTE: Protection is handled by the caller
 				cached.make_flushable();
-				cached.set_dimensions(width, height, depth, (rsx_size / height));
-				no_access_range = cached.get_min_max(no_access_range);
+				cached.set_dimensions(width, height, depth, (rsx_range.length() / height));
+				no_access_range = cached.get_min_max(no_access_range, rsx::section_bounds::locked_range);
 			}
 
 			update_cache_tag();
@@ -1010,7 +1001,8 @@ namespace gl
 			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool input_swizzled) override
 		{
 			void* unused = nullptr;
-			auto section = create_new_texture(unused, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
+			const utils::address_range rsx_range = utils::address_range::start_length(rsx_address, pitch * height);
+			auto section = create_new_texture(unused, rsx_range, width, height, depth, mipmaps, gcm_format, context, type,
 				rsx::texture_create_flags::default_component_order);
 
 			gl::upload_texture(section->get_raw_texture()->id(), rsx_address, gcm_format, width, height, depth, mipmaps,
@@ -1082,9 +1074,7 @@ namespace gl
 
 	public:
 
-		texture_cache() {}
-
-		~texture_cache() {}
+		using baseclass::texture_cache;
 
 		void initialize()
 		{
@@ -1103,19 +1093,17 @@ namespace gl
 		{
 			reader_lock lock(m_cache_mutex);
 
-			auto found = m_cache.find(get_block_address(rsx_address));
-			if (found == m_cache.end())
+			auto &block = m_storage.block_for(rsx_address);
+
+			if (block.get_locked_count() == 0)
 				return false;
 
-			//if (found->second.valid_count == 0)
-				//return false;
-
-			for (auto& tex : found->second.data)
+			for (auto& tex : block)
 			{
 				if (tex.is_dirty())
 					continue;
 
-				if (!tex.overlaps(rsx_address, rsx::overlap_test_bounds::full_range))
+				if (!tex.overlaps(rsx_address, rsx::section_bounds::full_range))
 					continue;
 
 				if ((rsx_address + rsx_size - tex.get_section_base()) <= tex.get_section_size())
@@ -1127,9 +1115,9 @@ namespace gl
 
 		void on_frame_end() override
 		{
-			if (m_unreleased_texture_objects >= m_max_zombie_objects)
+			if (m_storage.m_unreleased_texture_objects >= m_max_zombie_objects)
 			{
-				purge_dirty();
+				purge_unreleased_sections();
 			}
 
 			clear_temporary_subresources();
@@ -1158,7 +1146,7 @@ namespace gl
 							gl::texture::format::depth_stencil : gl::texture::format::depth;
 					}
 
-					flush_if_cache_miss_likely(fmt, result.real_dst_address, result.real_dst_size);
+					flush_if_cache_miss_likely(fmt, result.to_address_range());
 				}
 
 				return true;

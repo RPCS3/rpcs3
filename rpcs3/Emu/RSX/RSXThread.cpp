@@ -1350,34 +1350,12 @@ namespace rsx
 	{
 		if (!in_begin_end && state != FIFO_state::lock_wait)
 		{
-			if (!m_invalidated_memory_ranges.empty())
+			reader_lock lock(m_mtx_task);
+
+			if (m_invalidated_memory_range.valid())
 			{
-				std::lock_guard lock(m_mtx_task);
-
-				for (const auto& range : m_invalidated_memory_ranges)
-				{
-					on_invalidate_memory_range(range.first, range.second);
-
-					// Clean the main memory super_ptr cache if invalidated
-					const auto range_end = range.first + range.second;
-					for (auto It = main_super_memory_block.begin(); It != main_super_memory_block.end();)
-					{
-						const auto mem_start = It->first;
-						const auto mem_end = mem_start + It->second.size();
-						const bool overlaps = (mem_start < range_end && range.first < mem_end);
-
-						if (overlaps)
-						{
-							It = main_super_memory_block.erase(It);
-						}
-						else
-						{
-							It++;
-						}
-					}
-				}
-
-				m_invalidated_memory_ranges.clear();
+				lock.upgrade();
+				handle_invalidated_memory_range();
 			}
 		}
 	}
@@ -2676,15 +2654,32 @@ namespace rsx
 
 	void thread::on_notify_memory_mapped(u32 address, u32 size)
 	{
-		// TODO
+		// In the case where an unmap is followed shortly after by a remap of the same address space
+		// we must block until RSX has invalidated the memory
+		// or lock m_mtx_task and do it ourselves
+
+		if (m_rsx_thread_exiting)
+			return;
+
+		reader_lock lock(m_mtx_task);
+
+		const auto map_range = address_range::start_length(address, size);
+		
+		if (!m_invalidated_memory_range.valid())
+			return;
+
+		if (m_invalidated_memory_range.overlaps(map_range))
+		{
+			lock.upgrade();
+			handle_invalidated_memory_range();
+		}
 	}
 
-
-	void thread::on_notify_memory_unmapped(u32 base_address, u32 size)
+	void thread::on_notify_memory_unmapped(u32 address, u32 size)
 	{
-		if (!m_rsx_thread_exiting && base_address < 0xC0000000)
+		if (!m_rsx_thread_exiting && address < 0xC0000000)
 		{
-			u32 ea = base_address >> 20, io = RSXIOMem.io[ea];
+			u32 ea = address >> 20, io = RSXIOMem.io[ea];
 
 			if (io < 512)
 			{
@@ -2704,9 +2699,54 @@ namespace rsx
 				}
 			}
 
+			// Queue up memory invalidation
 			std::lock_guard lock(m_mtx_task);
-			m_invalidated_memory_ranges.push_back({ base_address, size });
+			const bool existing_range_valid = m_invalidated_memory_range.valid();
+			const auto unmap_range = address_range::start_length(address, size);
+			
+			if (existing_range_valid && m_invalidated_memory_range.touches(unmap_range))
+			{
+				// Merge range-to-invalidate in case of consecutive unmaps
+				m_invalidated_memory_range.set_min_max(unmap_range);
+			}
+			else
+			{
+				if (existing_range_valid)
+				{
+					// We can only delay consecutive unmaps.
+					// Otherwise, to avoid VirtualProtect failures, we need to do the invalidation here
+					handle_invalidated_memory_range();
+				}
+
+				m_invalidated_memory_range = unmap_range;
+			}
 		}
+	}
+
+	// NOTE: m_mtx_task lock must be acquired before calling this method
+	void thread::handle_invalidated_memory_range()
+	{
+		if (!m_invalidated_memory_range.valid())
+			return;
+
+		on_invalidate_memory_range(m_invalidated_memory_range);
+
+		// Clean the main memory super_ptr cache if invalidated
+		for (auto It = main_super_memory_block.begin(); It != main_super_memory_block.end();)
+		{
+			const auto block_range = address_range::start_length(It->first, It->second.size());
+
+			if (m_invalidated_memory_range.overlaps(block_range))
+			{
+				It = main_super_memory_block.erase(It);
+			}
+			else
+			{
+				It++;
+			}
+		}
+
+		m_invalidated_memory_range.invalidate();
 	}
 
 	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!

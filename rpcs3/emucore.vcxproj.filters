@@ -1444,5 +1444,11 @@
     <ClInclude Include="..\Utilities\address_range.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\texture_cache_checker.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\texture_cache_utils.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
