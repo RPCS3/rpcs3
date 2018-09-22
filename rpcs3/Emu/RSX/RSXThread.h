@@ -323,6 +323,7 @@ namespace rsx
 		u64 timestamp_subvalue = 0;
 
 	protected:
+		std::thread::id m_rsx_thread;
 		atomic_t<bool> m_rsx_thread_exiting{true};
 		s32 m_return_addr{-1}, restore_ret_addr{-1};
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
@@ -370,13 +371,13 @@ namespace rsx
 
 		enum class flip_request : u32
 		{
-			emu_requested,
-			native_ui,
+			emu_requested = 1,
+			native_ui = 2,
 
-			__bitset_enum_max
+			any = emu_requested | native_ui
 		};
 
-		atomic_t<bs_t<flip_request>> async_flip_requested{};
+		atomic_bitmask_t<flip_request> async_flip_requested{};
 		u8 async_flip_buffer{ 0 };
 
 		GcmTileInfo tiles[limits::tiles_count];

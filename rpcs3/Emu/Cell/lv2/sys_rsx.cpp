@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
@@ -13,7 +13,8 @@ LOG_CHANNEL(sys_rsx);
 
 extern u64 get_timebased_time();
 
-u64 rsxTimeStamp() {
+u64 rsxTimeStamp()
+{
 	return get_timebased_time();
 }
 
@@ -178,8 +179,8 @@ s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags)
 {
 	sys_rsx.warning("sys_rsx_context_iomap(context_id=0x%x, io=0x%x, ea=0x%x, size=0x%x, flags=0x%llx)", context_id, io, ea, size, flags);
 
-	if (!size || io & 0xFFFFF || ea & 0xFFFFF || size & 0xFFFFF
-	 || rsx::get_current_renderer()->main_mem_size < io + size)
+	if (!size || io & 0xFFFFF || ea & 0xFFFFF || size & 0xFFFFF ||
+		rsx::get_current_renderer()->main_mem_size < io + size)
 	{
 		return CELL_EINVAL;
 	}
@@ -323,6 +324,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		if (a3 == 1)
 			sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 6), 0);
 		break;
+
 	case 0x104: // Display buffer
 	{
 		u8 id = a3 & 0xFF;
@@ -340,11 +342,13 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		render->display_buffers_count = std::max((u32)id + 1, render->display_buffers_count);
 	}
 	break;
+
 	case 0x105: // destroy buffer?
 		break;
 
 	case 0x106: // ? (Used by cellGcmInitPerfMon)
 		break;
+
 	case 0x108: // cellGcmSetSecondVFrequency
 		// a4 == 3, CELL_GCM_DISPLAY_FREQUENCY_59_94HZ
 		// a4 == 2, CELL_GCM_DISPLAY_FREQUENCY_SCANOUT
@@ -352,10 +356,12 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		// Note: Scanout/59_94 is ignored currently as we report refresh rate of 59_94hz as it is, so the difference doesnt matter
 		render->enable_second_vhandler.store(a4 != 4);
 		break;
+
 	case 0x10a: // ? Involved in managing flip status through cellGcmResetFlipStatus
 	{
 		if (a3 > 7)
 			return -17;
+
 		u32 flipStatus = driverInfo.head[a3].flipFlags;
 		flipStatus = (flipStatus & a4) | a5;
 		driverInfo.head[a3].flipFlags = flipStatus;
@@ -417,6 +423,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 
 	case 0x302: // something with zcull
 		break;
+
 	case 0x600: // Framebuffer setup
 		break;
 
@@ -429,14 +436,32 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 	case 0x603: // Framebuffer close
 		break;
 
+	case 0xFEC: // hack: flip event notification
+		// we only ever use head 1 for now
+		driverInfo.head[1].flipFlags |= 0x80000000;
+		driverInfo.head[1].lastFlipTime = rsxTimeStamp(); // should rsxthread set this?
+		driverInfo.head[1].flipBufferId = (u32)a3;
+
+		// seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
+		vm::_ref<u32>(render->label_addr + 0x10) = 0;
+
+		//if (a3 == 0)
+		//	sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 3), 0);
+		//if (a3 == 1)
+		sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 4), 0);
+		break;
+
 	case 0xFED: // hack: vblank command
 		// todo: this is wrong and should be 'second' vblank handler and freq, but since currently everything is reported as being 59.94, this should be fine
 		driverInfo.head[a3].vBlankCount++;
 		driverInfo.head[a3].lastSecondVTime = rsxTimeStamp();
 		sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 1), 0);
+
 		if (render->enable_second_vhandler)
 			sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 11), 0); // second vhandler
+
 		break;
+
 	case 0xFEF: // hack: user command
 		// 'custom' invalid package id for now
 		// as i think we need custom lv1 interrupts to handle this accurately
@@ -444,6 +469,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		driverInfo.userCmdParam = a4;
 		sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 7), 0);
 		break;
+
 	default:
 		return CELL_EINVAL;
 	}
@@ -505,28 +531,4 @@ s32 sys_rsx_attribute(u32 packageId, u32 a2, u32 a3, u32 a4, u32 a5)
 	sys_rsx.warning("sys_rsx_attribute(packageId=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x)", packageId, a2, a3, a4, a5);
 
 	return CELL_OK;
-}
-
-void sys_rsx_flip_event(u32 buffer)
-{
-	auto m_sysrsx = fxm::get<SysRsxConfig>();
-	if (!m_sysrsx)
-		return;
-
-	auto &driverInfo = vm::_ref<RsxDriverInfo>(m_sysrsx->driverInfo);
-	const auto render = rsx::get_current_renderer();
-
-	// we only ever use head 1 for now
-
-	driverInfo.head[1].flipFlags |= 0x80000000;
-	driverInfo.head[1].lastFlipTime = rsxTimeStamp(); // should rsxthread set this?
-	driverInfo.head[1].flipBufferId = buffer;
-
-	// seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
-	vm::_ref<u32>(render->label_addr + 0x10) = 0;
-
-	//if (a3 == 0)
-	//	sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 3), 0);
-	//if (a3 == 1)
-	sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 4), 0);
 }

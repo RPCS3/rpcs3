@@ -1116,6 +1116,8 @@ namespace rsx
 
 	void flip_command(thread* rsx, u32, u32 arg)
 	{
+		verify(HERE), rsx->isHLE;
+		rsx->reset();
 		rsx->request_emu_flip(arg);
 	}
 

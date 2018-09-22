@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "overlays.h"
 #include "../GSRender.h"
 
@@ -35,7 +35,7 @@ namespace rsx
 				const auto now = get_system_time() - 1000000;
 				if ((now - rsxthr->last_flip_time) > min_refresh_duration_us)
 				{
-					rsxthr->async_flip_requested.test_and_set(rsx::thread::flip_request::native_ui);
+					rsxthr->async_flip_requested |= rsx::thread::flip_request::native_ui;
 				}
 			}
 		}

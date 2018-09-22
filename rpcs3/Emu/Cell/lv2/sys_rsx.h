@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 struct RsxDriverInfo
 {
@@ -119,6 +119,3 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 s32 sys_rsx_device_map(vm::ptr<u64> dev_addr, vm::ptr<u64> a2, u32 dev_id);
 s32 sys_rsx_device_unmap(u32 dev_id);
 s32 sys_rsx_attribute(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5);
-
-// Custom 'RSX Events', not lv2 syscalls
-void sys_rsx_flip_event(u32 buffer);
