@@ -292,6 +292,14 @@ namespace vm
 			}
 		}
 
+		// Notify rsx that range has become valid
+		// Note: This must be done *before* memory gets mapped while holding the vm lock, otherwise
+		//       the RSX might try to invalidate memory that got unmapped and remapped
+		if (const auto rsxthr = fxm::check_unlocked<GSRender>())
+		{
+			rsxthr->on_notify_memory_mapped(addr, size);
+		}
+
 		if (!shm)
 		{
 			utils::memory_protect(g_base_addr + addr, size, utils::protection::rw);
@@ -413,6 +421,15 @@ namespace vm
 			}
 		}
 
+		// Notify rsx to invalidate range
+		// Note: This must be done *before* memory gets unmapped while holding the vm lock, otherwise
+		//       the RSX might try to call VirtualProtect on memory that is already unmapped
+		if (const auto rsxthr = fxm::check_unlocked<GSRender>())
+		{
+			rsxthr->on_notify_memory_unmapped(addr, size);
+		}
+
+		// Actually unmap memory
 		if (!shm)
 		{
 			utils::memory_protect(g_base_addr + addr, size, utils::protection::no);
@@ -581,12 +598,6 @@ namespace vm
 				m_common->unmap_critical(vm::base(addr));
 			}
 		}
-
-		// Notify rsx to invalidate range (TODO)
-		if (const auto rsxthr = fxm::check_unlocked<GSRender>())
-		{
-			rsxthr->on_notify_memory_unmapped(addr, size);
-		}
 	}
 
 	u32 block_t::alloc(const u32 orig_size, u32 align, const std::shared_ptr<utils::shm>* src)
@@ -716,12 +727,6 @@ namespace vm
 
 			// Remove entry
 			m_map.erase(found);
-		}
-
-		// Notify rsx to invalidate range (TODO)
-		if (const auto rsxthr = fxm::check_unlocked<GSRender>())
-		{
-			rsxthr->on_notify_memory_unmapped(addr, result);
 		}
 
 		return result;

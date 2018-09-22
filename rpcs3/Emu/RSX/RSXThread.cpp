@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -1382,6 +1382,7 @@ namespace rsx
 		}
 	}
 
+
 	//std::future<void> thread::add_internal_task(std::function<bool()> callback)
 	//{
 	//	std::lock_guard lock(m_mtx_task);
@@ -2672,6 +2673,12 @@ namespace rsx
 	{
 		check_zcull_status(false);
 	}
+
+	void thread::on_notify_memory_mapped(u32 address, u32 size)
+	{
+		// TODO
+	}
+
 
 	void thread::on_notify_memory_unmapped(u32 base_address, u32 size)
 	{
