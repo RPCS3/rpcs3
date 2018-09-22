@@ -1722,9 +1722,10 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 
 	if (m_overlay_manager)
 	{
-		if (!in_begin_end && async_flip_requested.test_and_reset(flip_request::native_ui))
+		if (!in_begin_end && async_flip_requested & flip_request::native_ui)
 		{
-			flip((s32)current_display_buffer);
+			s32 buffer_id = (async_flip_requested & flip_request::emu_requested) ? async_flip_buffer : (s32)current_display_buffer;
+			flip(buffer_id);
 		}
 	}
 }

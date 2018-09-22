@@ -1356,10 +1356,9 @@ namespace rsx
 
 	void thread::do_local_task(FIFO_state state)
 	{
-		if (test(async_flip_requested, flip_request::emu_requested))
+		if (async_flip_requested & flip_request::any)
 		{
 			handle_emu_flip(async_flip_buffer);
-			async_flip_requested.test_and_reset(flip_request::emu_requested);
 		}
 
 		if (!in_begin_end && state != FIFO_state::lock_wait)
@@ -2554,6 +2553,8 @@ namespace rsx
 
 	void thread::flip(int buffer)
 	{
+		async_flip_requested.clear();
+
 		if (g_cfg.video.frame_skip_enabled)
 		{
 			m_skip_frame_ctr++;
@@ -2811,22 +2812,19 @@ namespace rsx
 		// requested through command buffer
 		if (is_rsxthr)
 		{
-			// async flip hasnt been handled before next requested...?
-			if (test(async_flip_requested, flip_request::emu_requested))
-			{
-				handle_emu_flip(async_flip_buffer);
-				async_flip_requested.test_and_reset(flip_request::emu_requested);
-			}
+			// NOTE: The flip will clear any queued flip requests
 			handle_emu_flip(buffer);
 		}
 		else // requested 'manually' through ppu syscall
 		{
-			// ignore multiple requests until previous happens
-			if (test(async_flip_requested, flip_request::emu_requested))
+			if (async_flip_requested & flip_request::emu_requested)
+			{
+				// ignore multiple requests until previous happens
 				return;
+			}
 
 			async_flip_buffer = buffer;
-			async_flip_requested.test_and_set(flip_request::emu_requested);
+			async_flip_requested |= flip_request::emu_requested;
 		}
 	}
 
@@ -2914,10 +2912,6 @@ namespace rsx
 		int_flip_index++;
 		current_display_buffer = buffer;
 		flip(buffer);
-		// After each flip PS3 system is executing a routine that changes registers value to some default.
-		// Some game use this default state (SH3).
-		if (isHLE)
-			reset();
 
 		last_flip_time = get_system_time() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
@@ -2933,7 +2927,8 @@ namespace rsx
 
 			intr_thread->notify();
 		}
-		sys_rsx_flip_event(buffer);
+
+		sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
 	}
 
 

@@ -784,4 +784,56 @@ namespace rsx
 			}
 		}
 	}
+
+	template <typename T, typename bitmask_type = u32>
+	class atomic_bitmask_t
+	{
+	private:
+		atomic_t<bitmask_type> m_data;
+
+	public:
+		atomic_bitmask_t() { m_data.store(0); };
+		~atomic_bitmask_t() {}
+
+		T load() const
+		{
+			return static_cast<T>(m_data.load());
+		}
+
+		void store(T value)
+		{
+			m_data.store(static_cast<bitmask_type>(value));
+		}
+
+		bool operator & (T mask) const
+		{
+			return ((m_data.load() & static_cast<bitmask_type>(mask)) != 0);
+		}
+
+		T operator | (T mask) const
+		{
+			return static_cast<T>(m_data.load() | static_cast<bitmask_type>(mask));
+		}
+
+		void operator &= (T mask)
+		{
+			m_data.fetch_and(static_cast<bitmask_type>(mask));
+		}
+
+		void operator |= (T mask)
+		{
+			m_data.fetch_or(static_cast<bitmask_type>(mask));
+		}
+
+		auto clear(T mask)
+		{
+			bitmask_type clear_mask = ~(static_cast<bitmask_type>(mask));
+			return m_data.and_fetch(clear_mask);
+		}
+
+		void clear()
+		{
+			m_data.store(0);
+		}
+	};
 }
