@@ -80,6 +80,8 @@ elseif(WIN32)
 	target_link_libraries(3rdparty_hidapi INTERFACE hidapi-hid Shlwapi.lib)
 else()
 	add_subdirectory(hidapi/libusb EXCLUDE_FROM_ALL)
+	target_include_directories(hidapi-libusb PUBLIC hidapi/hidapi)
+
 	target_link_libraries(3rdparty_hidapi INTERFACE hidapi-libusb usb)
 endif()
 
@@ -329,10 +331,6 @@ add_library(3rdparty_glew INTERFACE)
 if(NOT MSVC)
 	find_package(GLEW 1.13.0 REQUIRED)
 	target_link_libraries(3rdparty_glew INTERFACE GLEW::GLEW)
-
-	set(CMAKE_THREAD_PREFER_PTHREAD 1)
-	find_package(Threads REQUIRED)
-	target_link_libraries(3rdparty_glew INTERFACE Threads::Threads)
 endif()
 
 

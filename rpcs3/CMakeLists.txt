@@ -10,10 +10,6 @@ add_custom_target(GitVersion ALL
 # Check for a sufficient compiler and set build options
 include(ConfigureCompiler)
 
-if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-	add_definitions(-DNDEBUG)
-endif()
-
 set(ADDITIONAL_LIBS "")
 if(CMAKE_SYSTEM MATCHES "Linux")
 	#on some Linux distros shm_unlink and similar functions are in librt only
@@ -55,9 +51,9 @@ set_target_properties(rpcs3
 		AUTOMOC ON
 		AUTOUIC ON)
 
-target_link_libraries(rpcs3 ${ADDITIONAL_LIBS})
 target_link_libraries(rpcs3 rpcs3_emu rpcs3_ui)
 target_link_libraries(rpcs3 3rdparty::discord-rpc 3rdparty::qt5 3rdparty::hidapi)
+target_link_libraries(rpcs3 ${ADDITIONAL_LIBS})
 
 # Win resource file
 if (WIN32)
@@ -68,6 +64,10 @@ if(UNIX)
 	find_package(X11 REQUIRED)
 	target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
 	target_link_libraries(rpcs3 ${X11_LIBRARIES})
+
+	set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+	find_package(Threads REQUIRED)
+	target_link_libraries(rpcs3 Threads::Threads)
 endif()
 
 if(WIN32)
