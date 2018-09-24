@@ -1487,7 +1487,7 @@ void VKGSRender::end()
 
 	const bool allow_multidraw = supports_multidraw && !g_cfg.video.disable_FIFO_reordering;
 	const bool single_draw = (!allow_multidraw ||
-		rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 ||
+		rsx::method_registers.current_draw_clause.draw_command_ranges.size() <= 1 ||
 		rsx::method_registers.current_draw_clause.is_disjoint_primitive);
 
 	if (m_occlusion_query_active && (occlusion_id != UINT32_MAX))
@@ -1508,10 +1508,10 @@ void VKGSRender::end()
 		}
 		else
 		{
-			const auto base_vertex = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
-			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+			const auto base_vertex = rsx::method_registers.current_draw_clause.draw_command_ranges.front().first;
+			for (const auto &range : rsx::method_registers.current_draw_clause.draw_command_ranges)
 			{
-				vkCmdDraw(*m_current_command_buffer, range.second, 1, range.first - base_vertex, 0);
+				vkCmdDraw(*m_current_command_buffer, range.count, 1, range.first - base_vertex, 0);
 			}
 		}
 	}
@@ -1531,9 +1531,9 @@ void VKGSRender::end()
 		else
 		{
 			u32 first_vertex = 0;
-			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+			for (const auto &range : rsx::method_registers.current_draw_clause.draw_command_ranges)
 			{
-				const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
+				const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.count);
 				vkCmdDrawIndexed(*m_current_command_buffer, verts, 1, first_vertex, 0, 0);
 				first_vertex += verts;
 			}

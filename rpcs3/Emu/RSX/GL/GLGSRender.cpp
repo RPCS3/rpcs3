@@ -500,7 +500,7 @@ void GLGSRender::end()
 	const GLenum draw_mode = gl::draw_mode(rsx::method_registers.current_draw_clause.primitive);
 	const bool allow_multidraw = supports_multidraw && !g_cfg.video.disable_FIFO_reordering;
 	const bool single_draw = (!allow_multidraw ||
-		rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 ||
+		rsx::method_registers.current_draw_clause.draw_command_ranges.size() <= 1 ||
 		rsx::method_registers.current_draw_clause.is_disjoint_primitive);
 
 	if (upload_info.index_info)
@@ -522,7 +522,7 @@ void GLGSRender::end()
 		}
 		else
 		{
-			const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
+			const auto draw_count = rsx::method_registers.current_draw_clause.draw_command_ranges.size();
 			const u32 type_scale = (index_type == GL_UNSIGNED_SHORT) ? 1 : 2;
 			uintptr_t index_ptr = index_offset;
 			m_scratch_buffer.resize(draw_count * 16);
@@ -531,9 +531,9 @@ void GLGSRender::end()
 			const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
 			int dst_index = 0;
 
-			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+			for (const auto &range : rsx::method_registers.current_draw_clause.draw_command_ranges)
 			{
-				const auto index_size = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
+				const auto index_size = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.count);
 				counts[dst_index] = index_size;
 				offsets[dst_index++] = (const GLvoid*)index_ptr;
 
@@ -551,10 +551,10 @@ void GLGSRender::end()
 		}
 		else
 		{
-			const u32 base_index = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
+			const u32 base_index = rsx::method_registers.current_draw_clause.draw_command_ranges.front().first;
 			bool use_draw_arrays_fallback = false;
 
-			const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
+			const auto draw_count = rsx::method_registers.current_draw_clause.draw_command_ranges.size();
 			const auto driver_caps = gl::get_driver_caps();
 
 			m_scratch_buffer.resize(draw_count * 24);
@@ -563,10 +563,10 @@ void GLGSRender::end()
 			const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
 			int dst_index = 0;
 
-			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+			for (const auto &range : rsx::method_registers.current_draw_clause.draw_command_ranges)
 			{
 				const GLint first = range.first - base_index;
-				const GLsizei count = range.second;
+				const GLsizei count = range.count;
 
 				firsts[dst_index] = first;
 				counts[dst_index] = count;
@@ -583,9 +583,9 @@ void GLGSRender::end()
 			if (use_draw_arrays_fallback)
 			{
 				//MultiDrawArrays is broken on some primitive types using AMD. One known type is GL_TRIANGLE_STRIP but there could be more
-				for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+				for (const auto &range : rsx::method_registers.current_draw_clause.draw_command_ranges)
 				{
-					glDrawArrays(draw_mode, range.first - base_index, range.second);
+					glDrawArrays(draw_mode, range.first - base_index, range.count);
 				}
 			}
 			else if (driver_caps.vendor_AMD)

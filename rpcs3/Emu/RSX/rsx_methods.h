@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <array>
 #include <vector>
@@ -23,6 +23,13 @@ namespace rsx
 		indexed,
 	};
 
+	struct draw_range_t
+	{
+		u32 command_data_offset = 0;
+		u32 first = 0;
+		u32 count = 0;
+	};
+
 	struct draw_clause
 	{
 		primitive_type primitive;
@@ -36,20 +43,42 @@ namespace rsx
 		/**
 		* Stores the first and count argument from draw/draw indexed parameters between begin/end clauses.
 		*/
-		std::vector<std::pair<u32, u32> > first_count_commands;
-
-		/**
-		 * Optionally split first-count pairs for disjoint range rendering. Valid when emulating primitive restart
-		 */
-		std::vector<std::pair<u32, u32> > alternate_first_count_commands;
+		std::vector<draw_range_t> draw_command_ranges;
 
 		/**
 		 * Returns how many vertex or index will be consumed by the draw clause.
 		 */
 		u32 get_elements_count() const
 		{
-			return std::accumulate(first_count_commands.begin(), first_count_commands.end(), 0,
-				[](u32 acc, auto b) { return acc + b.second; });
+			u32 count = 0;
+			for (const auto &draw : draw_command_ranges)
+			{
+				count += draw.count;
+			}
+
+			return count;
+		}
+
+		/**
+		 * Optimize draw command stream for rendering
+		 */
+		void compile()
+		{
+
+		}
+
+		/**
+		 * Insert one command range
+		 */
+		void append(u32 first, u32 count)
+		{
+
+		}
+
+		u32 min_index()
+		{
+			LOG_FATAL(RSX, "Unimplemented");
+			return 0;
 		}
 	};
 
