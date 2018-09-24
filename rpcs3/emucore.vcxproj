@@ -296,6 +296,7 @@
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlays.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_perf_metrics.cpp" />
+    <ClCompile Include="Emu\RSX\RSXFIFO.cpp" />
     <ClCompile Include="Emu\RSX\rsx_methods.cpp" />
     <ClCompile Include="Emu\RSX\rsx_utils.cpp" />
     <ClCompile Include="Crypto\aes.cpp">
@@ -534,6 +535,7 @@
     <ClInclude Include="Emu\RSX\gcm_printing.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlays.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_controls.h" />
+    <ClInclude Include="Emu\RSX\RSXFIFO.h" />
     <ClInclude Include="Emu\RSX\rsx_cache.h" />
     <ClInclude Include="Emu\RSX\rsx_decode.h" />
     <ClInclude Include="Emu\RSX\rsx_vertex_data.h" />

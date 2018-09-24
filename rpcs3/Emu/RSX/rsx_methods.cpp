@@ -340,8 +340,7 @@ namespace rsx
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
 			rsx::registers_decoder<NV4097_DRAW_ARRAYS>::decoded_type v(arg);
 
-			rsx::method_registers.current_draw_clause.first_count_commands.emplace_back(
-			    std::make_pair(v.start(), v.count()));
+			rsx::method_registers.current_draw_clause.append(v.start(), v.count());
 		}
 
 		void draw_index_array(thread* rsx, u32 _reg, u32 arg)
@@ -349,8 +348,7 @@ namespace rsx
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::indexed;
 			rsx::registers_decoder<NV4097_DRAW_INDEX_ARRAY>::decoded_type v(arg);
 
-			rsx::method_registers.current_draw_clause.first_count_commands.emplace_back(
-			    std::make_pair(v.start(), v.count()));
+			rsx::method_registers.current_draw_clause.append(v.start(), v.count());
 		}
 
 		void draw_inline_array(thread* rsx, u32 _reg, u32 arg)
@@ -425,7 +423,7 @@ namespace rsx
 		{
 			if (arg)
 			{
-				rsx::method_registers.current_draw_clause.first_count_commands.resize(0);
+				rsx::method_registers.current_draw_clause.draw_command_ranges.clear();
 				rsx::method_registers.current_draw_clause.command = draw_command::none;
 				rsx::method_registers.current_draw_clause.primitive = to_primitive_type(arg);
 				rsxthr->begin();
@@ -444,19 +442,19 @@ namespace rsx
 				if (push_buffer_index_count)
 				{
 					rsx::method_registers.current_draw_clause.command = rsx::draw_command::indexed;
-					rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, push_buffer_index_count));
+					rsx::method_registers.current_draw_clause.append(0, push_buffer_index_count);
 				}
 				else if (push_buffer_vertices_count)
 				{
 					rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
-					rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, push_buffer_vertices_count));
+					rsx::method_registers.current_draw_clause.append(0, push_buffer_vertices_count);
 				}
 			}
 			else
 				rsx::method_registers.current_draw_clause.is_immediate_draw = false;
 
-			if (!(rsx::method_registers.current_draw_clause.first_count_commands.empty() &&
-			        rsx::method_registers.current_draw_clause.inline_vertex_array.empty()))
+			if (!(rsx::method_registers.current_draw_clause.draw_command_ranges.empty() &&
+				  rsx::method_registers.current_draw_clause.inline_vertex_array.empty()))
 			{
 				rsxthr->end();
 			}

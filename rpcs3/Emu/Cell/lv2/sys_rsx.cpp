@@ -258,7 +258,6 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 		render->pause();
 		render->ctrl->get = a3;
 		render->ctrl->put = a4;
-		render->internal_get = a3;
 		render->restore_point = a3;
 		render->unpause();
 		break;

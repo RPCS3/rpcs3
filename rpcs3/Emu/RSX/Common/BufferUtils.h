@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vector>
 
@@ -10,7 +10,7 @@
  * Write count vertex attributes from src_ptr.
  * src_ptr array layout is deduced from the type, vector element count and src_stride arguments.
  */
-void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::span<const gsl::byte> src_ptr, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, bool swap_endianness);
+void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::span<const gsl::byte> src_ptr, const std::vector<rsx::draw_range_t>& first_count_commands, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, bool swap_endianness);
 
 /*
  * If primitive mode is not supported and need to be emulated (using an index buffer) returns false.
@@ -33,7 +33,7 @@ u32 get_index_type_size(rsx::index_array_type type);
  * The function expands index buffer for non native primitive type if expands(draw_mode) return true.
  */
 std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, gsl::span<const gsl::byte> src,
-	rsx::index_array_type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
+	rsx::index_array_type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<rsx::draw_range_t> &first_count_arguments,
 	u32 base_index, std::function<bool(rsx::primitive_type)> expands);
 
 /**

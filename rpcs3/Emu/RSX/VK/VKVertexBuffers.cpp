@@ -104,7 +104,7 @@ namespace
 				rsx::method_registers.current_draw_clause.primitive, primitives_emulated);
 
 			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
-			const u32 min_index = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
+			const u32 min_index = rsx::method_registers.current_draw_clause.min_index();
 
 			if (primitives_emulated)
 			{
@@ -165,7 +165,7 @@ namespace
 				command.raw_index_buffer, index_type,
 				rsx::method_registers.current_draw_clause.primitive,
 				rsx::method_registers.restart_index_enabled(),
-				rsx::method_registers.restart_index(), command.ranges_to_fetch_in_index_buffer,
+				rsx::method_registers.restart_index(), rsx::method_registers.current_draw_clause.draw_command_ranges,
 				rsx::method_registers.vertex_data_base_index(), [](auto prim) { return !vk::is_primitive_native(prim); });
 
 			if (min_index >= max_index)
@@ -204,8 +204,9 @@ namespace
 			bool primitives_emulated = false;
 			auto &draw_clause = rsx::method_registers.current_draw_clause;
 			VkPrimitiveTopology prims = vk::get_appropriate_topology(draw_clause.primitive, primitives_emulated);
-			
-			const u32 vertex_count = ((u32)command.inline_vertex_array.size() * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
+
+			const auto stream_length = rsx::method_registers.current_draw_clause.inline_vertex_array.size();
+			const u32 vertex_count = u32(stream_length * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
 
 			if (!primitives_emulated)
 			{

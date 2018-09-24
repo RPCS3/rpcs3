@@ -20,17 +20,17 @@ namespace
 namespace
 {
 	// return vertex count if primitive type is not native (empty array otherwise)
-	std::tuple<u32, u32> get_index_array_for_emulated_non_indexed_draw(const std::vector<std::pair<u32, u32>> &first_count_commands, rsx::primitive_type primitive_mode, gl::ring_buffer &dst)
+	std::tuple<u32, u32> get_index_array_for_emulated_non_indexed_draw(const std::vector<rsx::draw_range_t> &first_count_commands, rsx::primitive_type primitive_mode, gl::ring_buffer &dst)
 	{
 		//This is an emulated buffer, so our indices only range from 0->original_vertex_array_length
 		u32 vertex_count = 0;
 		u32 element_count = 0;
 		verify(HERE), !gl::is_primitive_native(primitive_mode);
 
-		for (const auto &pair : first_count_commands)
+		for (const auto &range : first_count_commands)
 		{
-			element_count += (u32)get_index_count(primitive_mode, pair.second);
-			vertex_count += pair.second;
+			element_count += (u32)get_index_count(primitive_mode, range.count);
+			vertex_count += range.count;
 		}
 
 		auto mapping = dst.alloc_from_heap(element_count * sizeof(u16), 256);
@@ -40,7 +40,7 @@ namespace
 		return std::make_tuple(element_count, mapping.second);
 	}
 
-	std::tuple<u32, u32, u32> upload_index_buffer(gsl::span<const gsl::byte> raw_index_buffer, void *ptr, rsx::index_array_type type, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32>>& first_count_commands, u32 initial_vertex_count)
+	std::tuple<u32, u32, u32> upload_index_buffer(gsl::span<const gsl::byte> raw_index_buffer, void *ptr, rsx::index_array_type type, rsx::primitive_type draw_mode, const std::vector<rsx::draw_range_t>& first_count_commands, u32 initial_vertex_count)
 	{
 		u32 min_index, max_index, vertex_draw_count = initial_vertex_count;
 
@@ -92,14 +92,14 @@ namespace
 		vertex_input_state operator()(const rsx::draw_array_command& command)
 		{
 			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
-			const u32 min_index    = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
+			const u32 min_index    = rsx::method_registers.current_draw_clause.min_index();
 
 			if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
 			{
 				u32 index_count;
 				u32 offset_in_index_buffer;
 				std::tie(index_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw(
-				    rsx::method_registers.current_draw_clause.first_count_commands,
+				    rsx::method_registers.current_draw_clause.draw_command_ranges,
 				    rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer);
 
 				return{ index_count, vertex_count, min_index, 0, std::make_tuple(GL_UNSIGNED_SHORT, offset_in_index_buffer) };
@@ -129,7 +129,7 @@ namespace
 
 			std::tie(min_index, max_index, index_count) = upload_index_buffer(
 			    command.raw_index_buffer, ptr, type, rsx::method_registers.current_draw_clause.primitive,
-			    rsx::method_registers.current_draw_clause.first_count_commands, vertex_count);
+			    rsx::method_registers.current_draw_clause.draw_command_ranges, vertex_count);
 
 			if (min_index >= max_index)
 			{
@@ -155,14 +155,15 @@ namespace
 
 		vertex_input_state operator()(const rsx::draw_inlined_array& command)
 		{
-			const u32 vertex_count = (u32)(command.inline_vertex_array.size() * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
+			const auto stream_length = rsx::method_registers.current_draw_clause.inline_vertex_array.size();
+			const u32 vertex_count = u32(stream_length * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
 
 			if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
 			{
 				u32 offset_in_index_buffer;
 				u32 index_count;
 				std::tie(index_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw(
-					{ std::make_pair(0, vertex_count) },
+					{ { 0, 0, vertex_count } },
 					rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer);
 
 				return{ index_count, vertex_count, 0, 0, std::make_tuple(GL_UNSIGNED_SHORT, offset_in_index_buffer) };

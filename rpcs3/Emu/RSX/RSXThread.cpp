@@ -428,6 +428,12 @@ namespace rsx
 			zcull_ctrl = std::make_unique<::rsx::reports::ZCULL_control>();
 		}
 
+		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
+
+		fifo_ctrl->register_optimization_pass(new FIFO::flattening_pass());
+		//fifo_ctrl->register_optimization_pass(new FIFO::reordering_pass());
+		//fifo_ctrl->register_optimization_pass(new FIFO::flattening_pass());
+
 		last_flip_time = get_system_time() - 1000000;
 
 		named_thread vblank_thread("VBlank Thread", [this]()
@@ -509,515 +515,24 @@ namespace rsx
 		// Round to nearest to deal with forward/reverse scaling
 		fesetround(FE_TONEAREST);
 
-		// Deferred calls are used to batch draws together
-		u32 deferred_primitive_type = 0;
-		u32 deferred_call_size = 0;
-		s32 deferred_begin_end = 0;
-		std::vector<u32> deferred_stack;
-		bool has_deferred_call = false;
-
-		auto flush_command_queue = [&]()
-		{
-			const auto num_draws = (u32)method_registers.current_draw_clause.first_count_commands.size();
-			bool emit_begin = false;
-			bool emit_end = true;
-
-			if (num_draws > 1)
-			{
-				auto& first_counts = method_registers.current_draw_clause.first_count_commands;
-				deferred_stack.resize(0);
-
-				u32 last = first_counts.front().first;
-				u32 last_index = 0;
-
-				for (u32 draw = 0; draw < num_draws; draw++)
-				{
-					if (first_counts[draw].first != last)
-					{
-						//Disjoint
-						deferred_stack.push_back(draw);
-					}
-
-					last = first_counts[draw].first + first_counts[draw].second;
-				}
-
-				if (deferred_stack.size() > 0)
-				{
-					LOG_TRACE(RSX, "Disjoint draw range detected");
-
-					deferred_stack.push_back(num_draws); //Append last pair
-					std::vector<std::pair<u32, u32>> temp_range = first_counts;
-					auto current_command = rsx::method_registers.current_draw_clause.command;
-
-					u32 last_index = 0;
-
-					for (const u32 draw : deferred_stack)
-					{
-						if (emit_begin)
-							methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
-						else
-							emit_begin = true;
-
-						//NOTE: These values are reset if begin command is emitted
-						first_counts.resize(draw - last_index);
-						std::copy(temp_range.begin() + last_index, temp_range.begin() + draw, first_counts.begin());
-						rsx::method_registers.current_draw_clause.command = current_command;
-
-						methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
-						last_index = draw;
-					}
-
-					emit_end = false;
-				}
-			}
-
-			if (emit_end)
-				methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
-
-			if (deferred_begin_end > 0) //Hanging draw call (useful for immediate rendering where the begin call needs to be noted)
-				methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
-
-			deferred_begin_end = 0;
-			deferred_primitive_type = 0;
-			deferred_call_size = 0;
-			has_deferred_call = false;
-		};
-
 		// TODO: exit condition
 		while (!Emu.IsStopped())
 		{
-			//Wait for external pause events
+			// Wait for external pause events
 			if (external_interrupt_lock.load())
 			{
 				external_interrupt_ack.store(true);
 				while (external_interrupt_lock.load()) _mm_pause();
 			}
 
-			//Execute backend-local tasks first
+			// Execute backend-local tasks first
 			do_local_task(performance_counters.state);
 
-			//Update sub-units
+			// Update sub-units
 			zcull_ctrl->update(this);
 
-			//Set up restore state if needed
-			if (sync_point_request)
-			{
-				if (RSXIOMem.RealAddr(internal_get))
-				{
-					//New internal get is valid, use it
-					restore_point = internal_get.load();
-					restore_ret_addr = m_return_addr;
-				}
-				else
-				{
-					LOG_ERROR(RSX, "Could not update FIFO restore point");
-				}
-
-				sync_point_request = false;
-			}
-			else if (performance_counters.state != FIFO_state::running)
-			{
-				if (performance_counters.state != FIFO_state::nop)
-				{
-					if (has_deferred_call)
-					{
-						//Flush if spinning or queue is empty
-						flush_command_queue();
-					}
-					else if (zcull_ctrl->has_pending())
-					{
-						//zcull_ctrl->sync(this);
-					}
-					else
-					{
-						//do_internal_task();
-					}
-				}
-			}
-
-			//Now load the FIFO ctrl registers
-			ctrl->get.store(internal_get.load());
-			const u32 put = ctrl->put;
-
-			if (put == internal_get || !Emu.IsRunning())
-			{
-				if (performance_counters.state == FIFO_state::running)
-				{
-					performance_counters.FIFO_idle_timestamp = get_system_time();
-					performance_counters.state = FIFO_state::empty;
-				}
-
-				continue;
-			}
-
-			// Validate put and get registers before reading the command
-			// TODO: Who should handle graphics exceptions??
-			u32 cmd;
-
-			if (u32 addr = RSXIOMem.RealAddr(internal_get))
-			{
-				cmd = vm::read32(addr);
-			}
-			else
-			{
-				std::this_thread::sleep_for(33ms);
-
-				if (!RSXIOMem.RealAddr(internal_get))
-				{
-					LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found: get=0x%X, put=0x%X; Resetting...", +internal_get, put);
-					internal_get = restore_point.load();
-					m_return_addr = restore_ret_addr;
-				}
-
-				continue;
-			}
-
-			if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
-			{
-				u32 offs = cmd & 0x1ffffffc;
-				if (offs == internal_get.load())
-				{
-					//Jump to self. Often preceded by NOP
-					if (performance_counters.state == FIFO_state::running)
-					{
-						performance_counters.FIFO_idle_timestamp = get_system_time();
-					}
-
-					performance_counters.state = FIFO_state::spinning;
-				}
-
-				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				internal_get = offs;
-				continue;
-			}
-			if ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
-			{
-				u32 offs = cmd & 0xfffffffc;
-				if (offs == internal_get.load())
-				{
-					//Jump to self. Often preceded by NOP
-					if (performance_counters.state == FIFO_state::running)
-					{
-						performance_counters.FIFO_idle_timestamp = get_system_time();
-					}
-
-					performance_counters.state = FIFO_state::spinning;
-				}
-
-				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				internal_get = offs;
-				continue;
-			}
-			if ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
-			{
-				if (m_return_addr != -1)
-				{
-					// Only one layer is allowed in the call stack.
-					LOG_ERROR(RSX, "FIFO: CALL found inside a subroutine. Discarding subroutine");
-					internal_get = std::exchange(m_return_addr, -1);
-					continue;
-				}
-				u32 offs = cmd & ~3;
-				//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-				m_return_addr = std::exchange(internal_get.raw(), offs) + 4;
-				continue;
-			}
-
-			if (cmd & 0x3)
-			{
-				// TODO: Check for more invalid bits combinations
-				LOG_ERROR(RSX, "FIFO: Illegal command(0x%x) was executed. Resetting...", cmd);
-				internal_get = restore_point.load();
-				m_return_addr = restore_ret_addr;
-				continue;
-			}
-
-			if ((cmd & ~0xfffc) == RSX_METHOD_RETURN_CMD)
-			{
-				if (m_return_addr == -1)
-				{
-					LOG_ERROR(RSX, "FIFO: RET found without corresponding CALL. Discarding queue");
-					internal_get = put;
-					continue;
-				}
-
-				u32 get = std::exchange(m_return_addr, -1);
-				//LOG_WARNING(RSX, "rsx return(0x%x)", get);
-				internal_get = get;
-				continue;
-			}
-
-			u32 count = (cmd >> 18) & 0x7ff;
-
-			if (count == 0) //nop
-			{
-				if (performance_counters.state == FIFO_state::running)
-				{
-					performance_counters.FIFO_idle_timestamp = get_system_time();
-					performance_counters.state = FIFO_state::nop;
-				}
-
-				internal_get += 4;
-				continue;
-			}
-
-			//Validate the args ptr if the command attempts to read from it
-			auto args = vm::ptr<u32>::make(RSXIOMem.RealAddr(internal_get + 4));
-
-			if (!args)
-			{
-				std::this_thread::sleep_for(33ms);
-
-				if (!RSXIOMem.RealAddr(internal_get + 4))
-				{
-					LOG_ERROR(RSX, "Invalid FIFO queue args ptr found: get=0x%X, put=0x%X, count=%d; Resetting...", +internal_get, put, count);
-					internal_get = restore_point.load();
-					m_return_addr = restore_ret_addr;
-				}
-
-				continue;
-			}
-
-			u32 first_cmd = (cmd & 0xfffc) >> 2;
-
-			// Stop command execution if put will be equal to get ptr during the execution itself
-			if (count * 4 + 4 > put - internal_get)
-			{
-				count = (put - internal_get) / 4 - 1;
-			}
-
-			if (performance_counters.state != FIFO_state::running)
-			{
-				//Update performance counters with time spent in idle mode
-				performance_counters.idle_time += (get_system_time() - performance_counters.FIFO_idle_timestamp);
-
-				if (performance_counters.state == FIFO_state::spinning)
-				{
-					//TODO: Properly simulate FIFO wake delay.
-					//NOTE: The typical spin setup is a NOP followed by a jump-to-self
-					//NOTE: There is a small delay when the jump address is dynamically edited by cell
-					busy_wait(3000);
-				}
-
-				performance_counters.state = FIFO_state::running;
-			}
-
-			for (u32 i = 0; i < count; i++)
-			{
-				u32 reg = ((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? first_cmd : first_cmd + i;
-				u32 value = args[i];
-
-				bool execute_method_call = true;
-
-				//TODO: Flatten draw calls when multidraw is not supported to simplify checking in the end() methods
-				if (supports_multidraw && !g_cfg.video.disable_FIFO_reordering && !capture_current_frame)
-				{
-					//TODO: Make this cleaner
-					bool flush_commands_flag = has_deferred_call;
-
-					switch (reg)
-					{
-					case NV4097_SET_BEGIN_END:
-					{
-						// Hook; Allows begin to go through, but ignores end
-						if (value)
-							deferred_begin_end++;
-						else
-							deferred_begin_end--;
-
-						if (value && value != deferred_primitive_type)
-							deferred_primitive_type = value;
-						else
-						{
-							has_deferred_call = true;
-							flush_commands_flag = false;
-							execute_method_call = false;
-
-							deferred_call_size++;
-
-							if (!method_registers.current_draw_clause.is_disjoint_primitive)
-							{
-								// Combine all calls since the last one
-								auto &first_count = method_registers.current_draw_clause.first_count_commands;
-								if (first_count.size() > deferred_call_size)
-								{
-									const auto &batch_first_count = first_count[deferred_call_size - 1];
-									u32 count = batch_first_count.second;
-									u32 next = batch_first_count.first + count;
-
-									for (int n = deferred_call_size; n < first_count.size(); n++)
-									{
-										if (first_count[n].first != next)
-										{
-											LOG_ERROR(RSX, "Non-continuous first-count range passed as one draw; will be split.");
-
-											first_count[deferred_call_size - 1].second = count;
-											deferred_call_size++;
-
-											count = first_count[deferred_call_size - 1].second;
-											next = first_count[deferred_call_size - 1].first + count;
-											continue;
-										}
-
-										count += first_count[n].second;
-										next += first_count[n].second;
-									}
-
-									first_count[deferred_call_size - 1].second = count;
-									first_count.resize(deferred_call_size);
-								}
-							}
-						}
-
-						break;
-					}
-					// These commands do not alter the pipeline state and deferred calls can still be active
-					// TODO: Add more commands here
-					case NV4097_INVALIDATE_VERTEX_FILE:
-						flush_commands_flag = false;
-						break;
-					case NV4097_DRAW_ARRAYS:
-					{
-						const auto cmd = method_registers.current_draw_clause.command;
-						if (cmd != rsx::draw_command::array && cmd != rsx::draw_command::none)
-							break;
-
-						flush_commands_flag = false;
-						break;
-					}
-					case NV4097_DRAW_INDEX_ARRAY:
-					{
-						const auto cmd = method_registers.current_draw_clause.command;
-						if (cmd != rsx::draw_command::indexed && cmd != rsx::draw_command::none)
-							break;
-
-						flush_commands_flag = false;
-						break;
-					}
-					default:
-					{
-						// TODO: Reorder draw commands between synchronization events to maximize batched sizes
-						static const std::pair<u32, u32> skippable_ranges[] =
-						{
-							// Texture configuration
-							{ NV4097_SET_TEXTURE_OFFSET, 8 * 16 },
-							{ NV4097_SET_TEXTURE_CONTROL2, 16 },
-							{ NV4097_SET_TEXTURE_CONTROL3, 16 },
-							{ NV4097_SET_VERTEX_TEXTURE_OFFSET, 8 * 4 },
-							// Surface configuration
-							{ NV4097_SET_SURFACE_CLIP_HORIZONTAL, 1 },
-							{ NV4097_SET_SURFACE_CLIP_VERTICAL, 1 },
-							{ NV4097_SET_SURFACE_COLOR_AOFFSET, 1 },
-							{ NV4097_SET_SURFACE_COLOR_BOFFSET, 1 },
-							{ NV4097_SET_SURFACE_COLOR_COFFSET, 1 },
-							{ NV4097_SET_SURFACE_COLOR_DOFFSET, 1 },
-							{ NV4097_SET_SURFACE_ZETA_OFFSET, 1 },
-							{ NV4097_SET_CONTEXT_DMA_COLOR_A, 1 },
-							{ NV4097_SET_CONTEXT_DMA_COLOR_B, 1 },
-							{ NV4097_SET_CONTEXT_DMA_COLOR_C, 1 },
-							{ NV4097_SET_CONTEXT_DMA_COLOR_D, 1 },
-							{ NV4097_SET_CONTEXT_DMA_ZETA, 1 },
-							{ NV4097_SET_SURFACE_FORMAT, 1 },
-							{ NV4097_SET_SURFACE_PITCH_A, 1 },
-							{ NV4097_SET_SURFACE_PITCH_B, 1 },
-							{ NV4097_SET_SURFACE_PITCH_C, 1 },
-							{ NV4097_SET_SURFACE_PITCH_D, 1 },
-							{ NV4097_SET_SURFACE_PITCH_Z, 1 },
-							// Program configuration
-							{ NV4097_SET_TRANSFORM_PROGRAM_START, 1 },
-							{ NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, 1 },
-							{ NV4097_SET_TRANSFORM_PROGRAM, 512 }
-						};
-
-						if (has_deferred_call)
-						{
-							//Hopefully this is skippable so the batch can keep growing
-							for (const auto &method : skippable_ranges)
-							{
-								if (reg < method.first)
-									continue;
-
-								if (reg - method.first < method.second)
-								{
-									//Safe to ignore if value has not changed
-									if (method_registers.test(reg, value))
-									{
-										execute_method_call = false;
-										flush_commands_flag = false;
-									}
-
-									break;
-								}
-							}
-						}
-
-						break;
-					}
-					}
-
-					if (flush_commands_flag)
-					{
-						flush_command_queue();
-					}
-				}
-
-				if (capture_current_frame)
-				{
-					frame_debug.command_queue.push_back(std::make_pair(reg, value));
-
-					if (!(reg == NV406E_SET_REFERENCE || reg == NV406E_SEMAPHORE_RELEASE || reg == NV406E_SEMAPHORE_ACQUIRE))
-					{
-						// todo: handle nv406e methods better?, do we care about call/jumps?
-						rsx::frame_capture_data::replay_command replay_cmd;
-						replay_cmd.rsx_command = std::make_pair(i == 0 ? cmd : 0, value);
-
-						frame_capture.replay_commands.push_back(replay_cmd);
-
-						// to make this easier, use the replay command 'i' positions back
-						auto it = std::prev(frame_capture.replay_commands.end(), i + 1);
-
-						switch (reg)
-						{
-						case NV4097_GET_REPORT:
-							capture::capture_get_report(this, *it, value);
-							break;
-						case NV3089_IMAGE_IN:
-							capture::capture_image_in(this, *it);
-							break;
-						case NV0039_BUFFER_NOTIFY:
-							capture::capture_buffer_notify(this, *it);
-							break;
-						case NV4097_CLEAR_SURFACE:
-							capture::capture_surface_state(this, *it);
-							break;
-						default:
-							if (reg >= NV308A_COLOR && reg < NV3089_SET_OBJECT)
-								capture::capture_inline_transfer(this, *it, reg - NV308A_COLOR, value);
-							break;
-						}
-					}
-				}
-
-				method_registers.decode(reg, value);
-
-				if (execute_method_call)
-				{
-					if (auto method = methods[reg])
-					{
-						method(this, reg, value);
-					}
-				}
-
-				if (invalid_command_interrupt_raised)
-				{
-					invalid_command_interrupt_raised = false;
-
-					//Skip the rest of this command
-					break;
-				}
-			}
-
-			internal_get += (count + 1) * 4;
+			// Execite FIFO queue
+			run_FIFO();
 		}
 	}
 
@@ -1225,7 +740,7 @@ namespace rsx
 		return t + timestamp_subvalue;
 	}
 
-	gsl::span<const gsl::byte> thread::get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const
+	gsl::span<const gsl::byte> thread::get_raw_index_array(const std::vector<draw_range_t>& draw_indexed_clause) const
 	{
 		if (element_push_buffer.size())
 		{
@@ -1240,43 +755,49 @@ namespace rsx
 		bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
 		u32 primitive_restart_index = rsx::method_registers.restart_index();
 
-		// Disjoint first_counts ranges not supported atm
-		for (int i = 0; i < draw_indexed_clause.size() - 1; i++)
+		u32 min_index = UINT32_MAX;
+		u32 max_index = 0;
+
+		for (const auto &range : draw_indexed_clause)
 		{
-			const std::tuple<u32, u32> &range = draw_indexed_clause[i];
-			const std::tuple<u32, u32> &next_range = draw_indexed_clause[i + 1];
-			verify(HERE), (std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
+			const u32 root_index = (range.command_data_offset / type_size) + range.first;
+			min_index = std::min(root_index, min_index);
+			max_index = std::max(root_index + range.count, max_index);
 		}
-		u32 first = std::get<0>(draw_indexed_clause.front());
-		u32 count = std::get<0>(draw_indexed_clause.back()) + std::get<1>(draw_indexed_clause.back()) - first;
+
+		const u32 first = min_index;
+		const u32 count = max_index - min_index;
 
 		const gsl::byte* ptr = static_cast<const gsl::byte*>(vm::base(address));
 		return{ ptr + first * type_size, count * type_size };
 	}
 
-	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
+	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const std::vector<draw_range_t>& vertex_ranges) const
 	{
 		u32 offset  = vertex_array_info.offset();
 		u32 address = rsx::get_address(rsx::get_vertex_offset_from_base(base_offset, offset & 0x7fffffff), offset >> 31);
 
 		u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array_info.type(), vertex_array_info.size());
 
-		// Disjoint first_counts ranges not supported atm
-		for (int i = 0; i < vertex_ranges.size() - 1; i++)
+		u32 min_index = UINT32_MAX;
+		u32 max_index = 0;
+
+		for (const auto &range : vertex_ranges)
 		{
-			const std::tuple<u32, u32>& range      = vertex_ranges[i];
-			const std::tuple<u32, u32>& next_range = vertex_ranges[i + 1];
-			verify(HERE), (std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
+			const auto root_index = (range.command_data_offset / vertex_array_info.stride()) + range.first;
+			min_index = std::min(root_index, min_index);
+			max_index = std::max(root_index + range.count, max_index);
 		}
-		u32 first = std::get<0>(vertex_ranges.front());
-		u32 count = std::get<0>(vertex_ranges.back()) + std::get<1>(vertex_ranges.back()) - first;
+
+		const u32 first = min_index;
+		const u32 count = max_index - min_index;
 
 		const gsl::byte* ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
 		return {ptr + first * vertex_array_info.stride(), count * vertex_array_info.stride() + element_size};
 	}
 
 	std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-	thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges, const u64 consumed_attrib_mask) const
+	thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<draw_range_t>& vertex_ranges, const u64 consumed_attrib_mask) const
 	{
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> result;
 		result.reserve(rsx::limits::vertex_count);
@@ -1324,21 +845,22 @@ namespace rsx
 	std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 	thread::get_draw_command(const rsx::rsx_state& state) const
 	{
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array) {
-			return draw_array_command{
-				rsx::method_registers.current_draw_clause.first_count_commands};
+		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array)
+		{
+			return draw_array_command{};
 		}
 
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed) {
-			return draw_indexed_array_command{
-				rsx::method_registers.current_draw_clause.first_count_commands,
-				get_raw_index_array(
-					rsx::method_registers.current_draw_clause.first_count_commands)};
+		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed)
+		{
+			return draw_indexed_array_command
+			{
+				get_raw_index_array( rsx::method_registers.current_draw_clause.draw_command_ranges)
+			};
 		}
 
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array) {
-			return draw_inlined_array{
-				rsx::method_registers.current_draw_clause.inline_vertex_array};
+		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
+		{
+			return draw_inlined_array{};
 		}
 
 		fmt::throw_exception("ill-formed draw command" HERE);
@@ -2799,6 +2321,7 @@ namespace rsx
 
 	void thread::unpause()
 	{
+		// TODO: Clean this shit up
 		external_interrupt_lock.store(false);
 	}
 
