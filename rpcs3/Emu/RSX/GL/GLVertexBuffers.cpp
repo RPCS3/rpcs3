@@ -158,7 +158,7 @@ namespace
 
 		vertex_input_state operator()(const rsx::draw_inlined_array& command)
 		{
-			const u32 vertex_count = (u32)command.inline_vertex_array.size() * sizeof(u32) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
+			const u32 vertex_count = m_vertex_layout.interleaved_blocks[0].locations.size() ? ((u32)command.inline_vertex_array.size() * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride : 0;
 
 			if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
 			{
