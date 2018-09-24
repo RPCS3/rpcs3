@@ -1784,7 +1784,10 @@ namespace rsx
 
 			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 			{
-				const u32 mask = (1u << index);
+				// Check if vertex stream is enabled
+				if (!(input_mask & (1 << index)))
+					continue;
+
 				auto &vinfo = state.vertex_arrays_info[index];
 
 				if (vinfo.size() > 0)
@@ -1806,8 +1809,8 @@ namespace rsx
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
-			const bool enabled = !!(input_mask & (1 << index));
-			if (!enabled)
+			// Check if vertex stream is enabled
+			if (!(input_mask & (1 << index)))
 				continue;
 
 			//Check for interleaving
