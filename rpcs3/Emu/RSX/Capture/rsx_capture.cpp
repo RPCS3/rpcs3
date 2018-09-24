@@ -81,7 +81,6 @@ namespace rsx
 
 			// capture fragment shader mem
 			const u32 shader_program = method_registers.shader_program_address();
-			verify("Null shader address!" HERE), shader_program != 0;
 
 			const u32 program_location = (shader_program & 0x3) - 1;
 			const u32 program_offset   = (shader_program & ~0x3);
