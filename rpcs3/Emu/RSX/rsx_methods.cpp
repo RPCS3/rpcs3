@@ -461,8 +461,6 @@ namespace rsx
 			if (!(rsx::method_registers.current_draw_clause.first_count_commands.empty() &&
 			        rsx::method_registers.current_draw_clause.inline_vertex_array.empty()))
 			{
-				verify("Null shader address!" HERE), (method_registers.shader_program_address());
-
 				rsxthr->end();
 			}
 		}
