@@ -1,8 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include "../System.h"
+#include "Utilities/address_range.h"
 #include "Utilities/geometry.h"
 #include "Utilities/asm.h"
+#include "Utilities/VirtualMemory.h"
+#include "Emu/Memory/vm.h"
 #include "gcm_enums.h"
 #include <atomic>
 #include <memory>
@@ -16,6 +19,15 @@ extern "C"
 
 namespace rsx
 {
+	// Import address_range utilities
+	using utils::address_range;
+	using utils::address_range_vector;
+	using utils::page_for;
+	using utils::page_start;
+	using utils::page_end;
+	using utils::next_page;
+
+	// Definitions
 	class thread;
 	extern thread* g_current_renderer;
 
@@ -200,7 +212,14 @@ namespace rsx
 		}
 	};
 
-	//Holds information about a framebuffer
+	// Acquire memory mirror with r/w permissions
+	weak_ptr get_super_ptr(const address_range &range);
+	weak_ptr get_super_ptr(u32 addr, u32 size);
+
+
+	/**
+     * Holds information about a framebuffer
+     */
 	struct gcm_framebuffer_info
 	{
 		u32 address = 0;
@@ -223,6 +242,11 @@ namespace rsx
 		gcm_framebuffer_info(const u32 address_, const u32 pitch_, bool is_depth_, const rsx::surface_color_format fmt_, const rsx::surface_depth_format dfmt_, const u16 w, const u16 h)
 			:address(address_), pitch(pitch_), is_depth_surface(is_depth_), color_format(fmt_), depth_format(dfmt_), width(w), height(h)
 		{}
+
+		address_range get_memory_range(u32 aa_factor = 1) const
+		{
+			return address_range::start_length(address, pitch * height * aa_factor);
+		}
 	};
 
 	struct avconf
@@ -462,9 +486,6 @@ namespace rsx
 	void fill_viewport_matrix(void *buffer, bool transpose);
 
 	std::array<float, 4> get_constant_blend_colors();
-
-	// Acquire memory mirror with r/w permissions
-	weak_ptr get_super_ptr(u32 addr, u32 size);
 
 	/**
 	 * Shuffle texel layout from xyzw to wzyx
@@ -727,11 +748,6 @@ namespace rsx
 		return g_current_renderer;
 	}
 
-	static inline bool region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2)
-	{
-		return (base1 < limit2 && base2 < limit1);
-	}
-
 	template <int N>
 	void unpack_bitset(std::bitset<N>& block, u64* values)
 	{
@@ -768,4 +784,56 @@ namespace rsx
 			}
 		}
 	}
+
+	template <typename T, typename bitmask_type = u32>
+	class atomic_bitmask_t
+	{
+	private:
+		atomic_t<bitmask_type> m_data;
+
+	public:
+		atomic_bitmask_t() { m_data.store(0); };
+		~atomic_bitmask_t() {}
+
+		T load() const
+		{
+			return static_cast<T>(m_data.load());
+		}
+
+		void store(T value)
+		{
+			m_data.store(static_cast<bitmask_type>(value));
+		}
+
+		bool operator & (T mask) const
+		{
+			return ((m_data.load() & static_cast<bitmask_type>(mask)) != 0);
+		}
+
+		T operator | (T mask) const
+		{
+			return static_cast<T>(m_data.load() | static_cast<bitmask_type>(mask));
+		}
+
+		void operator &= (T mask)
+		{
+			m_data.fetch_and(static_cast<bitmask_type>(mask));
+		}
+
+		void operator |= (T mask)
+		{
+			m_data.fetch_or(static_cast<bitmask_type>(mask));
+		}
+
+		auto clear(T mask)
+		{
+			bitmask_type clear_mask = ~(static_cast<bitmask_type>(mask));
+			return m_data.and_fetch(clear_mask);
+		}
+
+		void clear()
+		{
+			m_data.store(0);
+		}
+	};
 }

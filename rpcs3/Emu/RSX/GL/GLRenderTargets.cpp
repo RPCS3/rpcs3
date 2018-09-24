@@ -237,8 +237,9 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 				old_format_found = true;
 			}
 
-			m_gl_texture_cache.set_memory_read_flags(m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height, rsx::memory_read_flags::flush_once);
-			m_gl_texture_cache.flush_if_cache_miss_likely(old_format, m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height);
+			const utils::address_range surface_range = m_surface_info[i].get_memory_range();
+			m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
+			m_gl_texture_cache.flush_if_cache_miss_likely(old_format, surface_range);
 		}
 
 		if (std::get<0>(m_rtts.m_bound_render_targets[i]))
@@ -268,8 +269,9 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			auto bpp = m_depth_surface_info.pitch / m_depth_surface_info.width;
 			auto old_format = (bpp == 2) ? gl::texture::format::depth : gl::texture::format::depth_stencil;
 
-			m_gl_texture_cache.set_memory_read_flags(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, rsx::memory_read_flags::flush_once);
-			m_gl_texture_cache.flush_if_cache_miss_likely(old_format, m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height);
+			const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
+			m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
+			m_gl_texture_cache.flush_if_cache_miss_likely(old_format, surface_range);
 		}
 
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
@@ -381,8 +383,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		{
 			if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
 
-			const u32 range = m_surface_info[i].pitch * m_surface_info[i].height * layout.aa_factors[1];
-			m_gl_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[i]), m_surface_info[i].address, range, m_surface_info[i].width, m_surface_info[i].height, m_surface_info[i].pitch,
+			const utils::address_range surface_range = m_surface_info[i].get_memory_range(layout.aa_factors[1]);
+			m_gl_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[i]), surface_range, m_surface_info[i].width, m_surface_info[i].height, m_surface_info[i].pitch,
 			color_format.format, color_format.type, color_format.swap_bytes);
 		}
 	}
@@ -392,8 +394,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 		{
 			const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(layout.depth_format);
-			const u32 range = m_depth_surface_info.pitch * m_depth_surface_info.height * layout.aa_factors[1];
-			m_gl_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range, m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch,
+			const utils::address_range surface_range = m_depth_surface_info.get_memory_range(layout.aa_factors[1]);
+			m_gl_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), surface_range, m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch,
 				depth_format_gl.format, depth_format_gl.type, true);
 		}
 	}
@@ -448,12 +450,11 @@ void GLGSRender::read_buffers()
 				if (!m_surface_info[i].pitch)
 					continue;
 
-				const u32 range = pitch * height;
-
 				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
 				u32 texaddr = (u32)((u64)color_buffer.ptr - (u64)vm::base(0));
 
-				bool success = m_gl_texture_cache.load_memory_from_cache(texaddr, pitch * height, std::get<1>(m_rtts.m_bound_render_targets[i]));
+				const utils::address_range range = utils::address_range::start_length(texaddr, pitch * height);
+				bool success = m_gl_texture_cache.load_memory_from_cache(range, std::get<1>(m_rtts.m_bound_render_targets[i]));
 
 				//Fall back to slower methods if the image could not be fetched from cache.
 				if (!success)
@@ -464,7 +465,7 @@ void GLGSRender::read_buffers()
 					}
 					else
 					{
-						m_gl_texture_cache.invalidate_range(texaddr, range, false, false, true);
+						m_gl_texture_cache.invalidate_range(range, rsx::invalidation_cause::read);
 
 						std::unique_ptr<u8[]> buffer(new u8[pitch * height]);
 						color_buffer.read(buffer.get(), width, height, pitch);
@@ -512,8 +513,9 @@ void GLGSRender::read_buffers()
 		if (!pitch)
 			return;
 
-		u32 depth_address = rsx::get_address(rsx::method_registers.surface_z_offset(), rsx::method_registers.surface_z_dma());
-		bool in_cache = m_gl_texture_cache.load_memory_from_cache(depth_address, pitch * height, std::get<1>(m_rtts.m_bound_depth_stencil));
+		const u32 depth_address = rsx::get_address(rsx::method_registers.surface_z_offset(), rsx::method_registers.surface_z_dma());
+		const utils::address_range range = utils::address_range::start_length(depth_address, pitch * height);
+		bool in_cache = m_gl_texture_cache.load_memory_from_cache(range, std::get<1>(m_rtts.m_bound_depth_stencil));
 
 		if (in_cache)
 			return;

@@ -76,6 +76,11 @@ namespace rsx
 		}
 	}
 
+	weak_ptr get_super_ptr(const address_range &range)
+	{
+		return get_super_ptr(range.start, range.length());
+	}
+
 	weak_ptr get_super_ptr(u32 addr, u32 len)
 	{
 		verify(HERE), g_current_renderer;
@@ -507,4 +512,8 @@ namespace rsx
 			++src_ptr;
 		}
 	}
+
+#ifdef TEXTURE_CACHE_DEBUG
+	tex_cache_checker_t tex_cache_checker = {};
+#endif
 }

@@ -812,7 +812,9 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	vk::texture_cache::thrashed_set result;
 	{
 		std::lock_guard lock(m_secondary_cb_guard);
-		result = std::move(m_texture_cache.invalidate_address(address, is_writing, false, m_secondary_command_buffer, m_swapchain->get_graphics_queue()));
+
+		const rsx::invalidation_cause cause = is_writing ? rsx::invalidation_cause::deferred_write : rsx::invalidation_cause::deferred_read;
+		result = std::move(m_texture_cache.invalidate_address(address, cause, m_secondary_command_buffer, m_swapchain->get_graphics_queue()));
 	}
 
 	if (!result.violation_handled)
@@ -825,7 +827,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (result.num_flushable > 0)
 	{
-		const bool is_rsxthr = std::this_thread::get_id() == rsx_thread;
+		const bool is_rsxthr = std::this_thread::get_id() == m_rsx_thread;
 		bool has_queue_ref = false;
 
 		u64 sync_timestamp = 0ull;
@@ -893,13 +895,16 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	return false;
 }
 
-void VKGSRender::on_invalidate_memory_range(u32 address_base, u32 size)
+void VKGSRender::on_invalidate_memory_range(const utils::address_range &range)
 {
 	std::lock_guard lock(m_secondary_cb_guard);
-	if (m_texture_cache.invalidate_range(address_base, size, true, true, false,
-		m_secondary_command_buffer, m_swapchain->get_graphics_queue()).violation_handled)
+
+	auto data = std::move(m_texture_cache.invalidate_range(range, rsx::invalidation_cause::unmap, m_secondary_command_buffer, m_swapchain->get_graphics_queue()));
+	AUDIT(data.empty());
+
+	if (data.violation_handled)
 	{
-		m_texture_cache.purge_dirty();
+		m_texture_cache.purge_unreleased_sections();
 		{
 			std::lock_guard lock(m_sampler_mutex);
 			m_samplers_dirty.store(true);
@@ -1589,7 +1594,6 @@ void VKGSRender::on_init_thread()
 	}
 
 	GSRender::on_init_thread();
-	rsx_thread = std::this_thread::get_id();
 	zcull_ctrl.reset(static_cast<::rsx::reports::ZCULL_control*>(this));
 
 	if (!supports_native_ui)
@@ -2188,11 +2192,12 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 
 	if (m_overlay_manager)
 	{
-		if (!in_begin_end && native_ui_flip_request.load())
+		if (!in_begin_end && async_flip_requested & flip_request::native_ui)
 		{
-			native_ui_flip_request.store(false);
+			s32 buffer_id = (async_flip_requested & flip_request::emu_requested) ? async_flip_buffer : (s32)current_display_buffer;
+
 			flush_command_queue(true);
-			flip((s32)current_display_buffer);
+			flip((s32)buffer_id);
 		}
 	}
 }
@@ -2625,9 +2630,9 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			if (old_format == VK_FORMAT_UNDEFINED)
 				old_format = vk::get_compatible_surface_format(m_surface_info[i].color_format).first;
 
-			m_texture_cache.set_memory_read_flags(m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height, rsx::memory_read_flags::flush_once);
-			m_texture_cache.flush_if_cache_miss_likely(old_format, m_surface_info[i].address, m_surface_info[i].pitch * m_surface_info[i].height,
-				*m_current_command_buffer, m_swapchain->get_graphics_queue());
+			const utils::address_range rsx_range = m_surface_info[i].get_memory_range();
+			m_texture_cache.set_memory_read_flags(rsx_range, rsx::memory_read_flags::flush_once);
+			m_texture_cache.flush_if_cache_miss_likely(old_format, rsx_range, *m_current_command_buffer, m_swapchain->get_graphics_queue());
 		}
 
 		m_surface_info[i].address = m_surface_info[i].pitch = 0;
@@ -2641,9 +2646,9 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
 		{
 			auto old_format = vk::get_compatible_depth_surface_format(m_device->get_formats_support(), m_depth_surface_info.depth_format);
-			m_texture_cache.set_memory_read_flags(m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height, rsx::memory_read_flags::flush_once);
-			m_texture_cache.flush_if_cache_miss_likely(old_format, m_depth_surface_info.address, m_depth_surface_info.pitch * m_depth_surface_info.height,
-				*m_current_command_buffer, m_swapchain->get_graphics_queue());
+			const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
+			m_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
+			m_texture_cache.flush_if_cache_miss_likely(old_format, surface_range, *m_current_command_buffer, m_swapchain->get_graphics_queue());
 		}
 
 		m_depth_surface_info.address = m_depth_surface_info.pitch = 0;
@@ -2697,8 +2702,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
 
-			const u32 range = m_surface_info[index].pitch * m_surface_info[index].height * layout.aa_factors[1];
-			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[index]), m_surface_info[index].address, range,
+			const utils::address_range surface_range = m_surface_info[index].get_memory_range(layout.aa_factors[1]);
+			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[index]), surface_range,
 				m_surface_info[index].width, m_surface_info[index].height, layout.actual_color_pitch[index], color_fmt_info.first, color_fmt_info.second);
 		}
 	}
@@ -2708,8 +2713,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 		{
 			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16)? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
-			const u32 range = m_depth_surface_info.pitch * m_depth_surface_info.height * layout.aa_factors[1];
-			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), m_depth_surface_info.address, range,
+			const utils::address_range surface_range = m_depth_surface_info.get_memory_range(layout.aa_factors[1]);
+			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), surface_range,
 				m_depth_surface_info.width, m_depth_surface_info.height, layout.actual_zeta_pitch, gcm_format, false);
 		}
 	}
@@ -3129,13 +3134,13 @@ void VKGSRender::flip(int buffer)
 
 		if (g_cfg.video.overlay)
 		{
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 0, direct_fbo->width(), direct_fbo->height(), "RSX Load: " + std::to_string(get_load()) + "%");
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 18, direct_fbo->width(), direct_fbo->height(), "draw calls: " + std::to_string(m_draw_calls));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 36, direct_fbo->width(), direct_fbo->height(), "draw call setup: " + std::to_string(m_setup_time) + "us");
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 54, direct_fbo->width(), direct_fbo->height(), "vertex upload time: " + std::to_string(m_vertex_upload_time) + "us");
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 72, direct_fbo->width(), direct_fbo->height(), "texture upload time: " + std::to_string(m_textures_upload_time) + "us");
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 90, direct_fbo->width(), direct_fbo->height(), "draw call execution: " + std::to_string(m_draw_time) + "us");
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 108, direct_fbo->width(), direct_fbo->height(), "submit and flip: " + std::to_string(m_flip_time) + "us");
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,   0, direct_fbo->width(), direct_fbo->height(), fmt::format("RSX Load:                 %3d%%", get_load()));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  18, direct_fbo->width(), direct_fbo->height(), fmt::format("draw calls: %17d", m_draw_calls));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  36, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call setup: %12dus", m_setup_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  54, direct_fbo->width(), direct_fbo->height(), fmt::format("vertex upload time: %9dus", m_vertex_upload_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  72, direct_fbo->width(), direct_fbo->height(), fmt::format("texture upload time: %8dus", m_textures_upload_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  90, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call execution: %8dus", m_draw_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 108, direct_fbo->width(), direct_fbo->height(), fmt::format("submit and flip: %12dus", m_flip_time));
 
 			const  auto num_dirty_textures = m_texture_cache.get_unreleased_textures_count();
 			const auto texture_memory_size = m_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
@@ -3144,10 +3149,10 @@ void VKGSRender::flip(int buffer)
 			const auto num_mispredict = m_texture_cache.get_num_cache_mispredictions();
 			const auto num_speculate = m_texture_cache.get_num_cache_speculative_writes();
 			const auto cache_miss_ratio = (u32)ceil(m_texture_cache.get_cache_miss_ratio() * 100);
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 144, direct_fbo->width(), direct_fbo->height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 162, direct_fbo->width(), direct_fbo->height(), "Texture cache memory: " + std::to_string(texture_memory_size) + "M");
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 180, direct_fbo->width(), direct_fbo->height(), "Temporary texture memory: " + std::to_string(tmp_texture_memory_size) + "M");
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 198, direct_fbo->width(), direct_fbo->height(), fmt::format("Flush requests: %d (%d%% hard faults, %d misprediction(s), %d speculation(s))", num_flushes, cache_miss_ratio, num_mispredict, num_speculate));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 144, direct_fbo->width(), direct_fbo->height(), fmt::format("Unreleased textures: %8d", num_dirty_textures));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 162, direct_fbo->width(), direct_fbo->height(), fmt::format("Texture cache memory: %7dM", texture_memory_size));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 180, direct_fbo->width(), direct_fbo->height(), fmt::format("Temporary texture memory: %3dM", tmp_texture_memory_size));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 198, direct_fbo->width(), direct_fbo->height(), fmt::format("Flush requests: %13d  = %3d%% hard faults, %2d misprediction(s), %2d speculation(s)", num_flushes, cache_miss_ratio, num_mispredict, num_speculate));
 		}
 
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, present_layout, subres);
