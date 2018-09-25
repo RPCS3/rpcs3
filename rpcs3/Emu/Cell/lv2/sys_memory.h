@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Emu/Memory/vm.h"
+#include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
 

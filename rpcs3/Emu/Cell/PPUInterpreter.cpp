@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include "Emu/Memory/vm_reservation.h"
 #include "Emu/System.h"
 #include "PPUThread.h"
 #include "PPUInterpreter.h"

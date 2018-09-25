@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Utilities/types.h"
 #include "vm_ref.h"
 
 class ppu_thread;

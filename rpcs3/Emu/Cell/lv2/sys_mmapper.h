@@ -2,6 +2,7 @@
 
 #include "sys_sync.h"
 #include <vector>
+#include "Emu/Memory/vm_ptr.h"
 
 struct lv2_memory_container;
 

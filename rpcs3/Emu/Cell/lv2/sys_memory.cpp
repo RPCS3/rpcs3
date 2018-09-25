@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Utilities/VirtualMemory.h"
+#include "Emu/Memory/vm_locking.h"
 #include "Emu/IdManager.h"
 #include "sys_memory.h"
 

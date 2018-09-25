@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "Emu/Memory/vm_ptr.h"
+
 struct RsxDriverInfo
 {
 	be_t<u32> version_driver;     // 0x0

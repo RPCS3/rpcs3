@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Memory/vm_ptr.h"
+
 enum : u64
 {
 	SYS_GPIO_UNKNOWN_DEVICE_ID,
