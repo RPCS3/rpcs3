@@ -1356,7 +1356,7 @@ namespace rsx
 
 	void thread::do_local_task(FIFO_state state)
 	{
-		if (async_flip_requested & flip_request::any)
+		if (async_flip_requested & flip_request::emu_requested)
 		{
 			handle_emu_flip(async_flip_buffer);
 		}
