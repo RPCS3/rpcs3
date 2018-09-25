@@ -5,7 +5,7 @@ extern "C"
 #include "libswscale/swscale.h"
 }
 
-
+#include "Utilities/BEType.h"
 
 // Error Codes
 enum

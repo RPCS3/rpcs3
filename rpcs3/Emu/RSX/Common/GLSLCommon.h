@@ -4,6 +4,8 @@
 #include "GLSLTypes.h"
 #include "ShaderParam.h"
 
+#include "Utilities/StrFmt.h"
+
 namespace program_common
 {
 	static void insert_compare_op(std::ostream& OS, bool low_precision)

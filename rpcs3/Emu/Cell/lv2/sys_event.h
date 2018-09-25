@@ -2,6 +2,8 @@
 
 #include "sys_sync.h"
 
+#include "Emu/Memory/vm_ptr.h"
+
 class cpu_thread;
 
 // Event Queue Type

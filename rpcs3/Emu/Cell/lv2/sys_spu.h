@@ -3,6 +3,9 @@
 #include "sys_event.h"
 #include "Emu/Cell/SPUThread.h"
 
+#include "Emu/Memory/vm_ptr.h"
+#include "Utilities/File.h"
+
 enum : s32
 {
 	SYS_SPU_THREAD_GROUP_TYPE_NORMAL                = 0x00,

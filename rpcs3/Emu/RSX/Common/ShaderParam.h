@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Utilities/StrUtil.h"
+#include "Utilities/types.h"
 
 enum class FUNCTION {
 	FUNCTION_DP2,

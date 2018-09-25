@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Utilities/types.h"
 #include "Utilities/geometry.h"
+#include "Utilities/File.h"
 #include "Emu/System.h"
 
 #include <string>

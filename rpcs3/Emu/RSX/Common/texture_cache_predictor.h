@@ -3,6 +3,7 @@
 #include "../rsx_cache.h"
 #include "../rsx_utils.h"
 #include "TextureUtils.h"
+#include <atomic>
 
 
 namespace rsx

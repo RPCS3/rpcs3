@@ -7,6 +7,7 @@
 #include "Utilities/GSL.h"
 #include "Utilities/hash.h"
 #include "Utilities/mutex.h"
+#include "Utilities/Log.h"
 
 #include <deque>
 

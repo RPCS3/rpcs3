@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 // Return Codes
 enum CellSync2Error : u32

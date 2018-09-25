@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 // Error Codes
 enum CellUserInfoError : u32

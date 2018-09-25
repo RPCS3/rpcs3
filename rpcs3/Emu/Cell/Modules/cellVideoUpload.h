@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Memory/vm_ptr.h"
+
 struct CellVideoUploadOption
 {
 	be_t<s32> type;

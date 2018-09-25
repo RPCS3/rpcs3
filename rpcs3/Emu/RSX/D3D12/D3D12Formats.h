@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../gcm_enums.h"
+
 #include <d3d12.h>
 
 /**

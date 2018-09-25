@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Memory/vm_ptr.h"
+
 enum CellSpudllError : u32
 {
 	CELL_SPUDLL_ERROR_INVAL        = 0x80410602,

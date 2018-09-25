@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "Utilities/types.h"
+
 struct GameInfo
 {
 	std::string path;

@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include "Utilities/BEType.h"
 
 static const float CELL_GEM_SPHERE_RADIUS_MM = 22.5f;
 

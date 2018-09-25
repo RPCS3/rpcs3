@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 template<typename T1, typename T2> struct range_t
 {
 	T1 _min; // first value

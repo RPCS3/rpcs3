@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-
+#include "Utilities/BEType.h"
 
 // Error Codes
 enum

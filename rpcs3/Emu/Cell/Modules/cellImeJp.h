@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 typedef vm::ptr<void> CellImeJpHandle;
 

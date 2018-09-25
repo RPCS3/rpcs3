@@ -1,6 +1,8 @@
 #pragma once
 
+#include "cellGame.h"
 
+#include "Emu/Memory/vm_ptr.h"
 
 // Error Codes
 enum CellNetCtlError : u32

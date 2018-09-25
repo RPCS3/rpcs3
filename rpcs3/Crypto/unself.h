@@ -3,6 +3,10 @@
 #include "key_vault.h"
 #include "zlib.h"
 
+#include "Utilities/types.h"
+#include "Utilities/File.h"
+#include "Utilities/Log.h"
+
 struct AppInfo 
 {
 	u64 authid;
