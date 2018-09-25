@@ -2201,10 +2201,8 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 	{
 		if (!in_begin_end && async_flip_requested & flip_request::native_ui)
 		{
-			s32 buffer_id = (async_flip_requested & flip_request::emu_requested) ? async_flip_buffer : (s32)current_display_buffer;
-
 			flush_command_queue(true);
-			flip((s32)buffer_id);
+			flip((s32)current_display_buffer);
 		}
 	}
 }
