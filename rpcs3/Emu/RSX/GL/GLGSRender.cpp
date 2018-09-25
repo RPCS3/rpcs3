@@ -218,6 +218,14 @@ void GLGSRender::end()
 	//Do vertex upload before RTT prep / texture lookups to give the driver time to push data
 	auto upload_info = set_vertex_buffer();
 
+	if (upload_info.vertex_draw_count == 0)
+	{
+		// Malformed vertex setup; abort
+		do_heap_cleanup();
+		rsx::thread::end();
+		return;
+	}
+
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
 	auto copy_rtt_contents = [this](gl::render_target *surface, bool is_depth)

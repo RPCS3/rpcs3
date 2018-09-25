@@ -1776,10 +1776,6 @@ namespace rsx
 
 			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 			{
-				// Check if vertex stream is enabled
-				if (!(input_mask & (1 << index)))
-					continue;
-
 				auto &vinfo = state.vertex_arrays_info[index];
 
 				if (vinfo.size() > 0)

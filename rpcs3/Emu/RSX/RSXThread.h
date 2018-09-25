@@ -204,6 +204,39 @@ namespace rsx
 		std::vector<u8> referenced_registers;  // Volatile register data
 
 		std::array<attribute_buffer_placement, 16> attribute_placement;
+
+		vertex_input_layout()
+		{
+			attribute_placement.fill(attribute_buffer_placement::none);
+		}
+
+		bool validate() const
+		{
+			switch (attribute_placement[0])
+			{
+			case attribute_buffer_placement::transient:
+			{
+				if (!referenced_registers.empty() && referenced_registers.front() == 0)
+				{
+					// ATTR[0] is position which cannot be from a register
+					return false;
+				}
+
+				// The source is inline array or immediate draw push buffer
+				return true;
+			}
+			case attribute_buffer_placement::persistent:
+			{
+				// Attribute stride cannot be 0, proper packing stride is computed elsewhere
+				verify(HERE), (!interleaved_blocks.empty() && interleaved_blocks[0].attribute_stride != 0);
+				return true;
+			}
+			case attribute_buffer_placement::none:
+			{
+				return false;
+			}
+			}
+		}
 	};
 
 	struct framebuffer_layout

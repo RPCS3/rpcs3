@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "VKGSRender.h"
@@ -212,7 +212,7 @@ namespace
 			auto &draw_clause = rsx::method_registers.current_draw_clause;
 			VkPrimitiveTopology prims = vk::get_appropriate_topology(draw_clause.primitive, primitives_emulated);
 			
-			const u32 vertex_count = m_vertex_layout.interleaved_blocks[0].locations.size() ? ((u32)command.inline_vertex_array.size() * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride : 0;
+			const u32 vertex_count = ((u32)command.inline_vertex_array.size() * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
 
 			if (!primitives_emulated)
 			{
@@ -234,6 +234,9 @@ namespace
 vk::vertex_upload_info VKGSRender::upload_vertex_data()
 {
 	m_vertex_layout = analyse_inputs_interleaved();
+
+	if (!m_vertex_layout.validate())
+		return {};
 
 	draw_command_visitor visitor(m_index_buffer_ring_info, m_vertex_layout);
 	auto result = std::visit(visitor, get_draw_command(rsx::method_registers));

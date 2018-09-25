@@ -1364,6 +1364,13 @@ void VKGSRender::end()
 	std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
 	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - vertex_start).count();
 
+	if (!upload_info.vertex_draw_count)
+	{
+		// Malformed vertex setup; abort
+		rsx::thread::end();
+		return;
+	}
+
 	// Load program execution environment
 	program_start = vertex_end;
 	load_program_env(upload_info);
