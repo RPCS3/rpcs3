@@ -31,85 +31,27 @@ namespace rsx
 		if (sys_rsx_context_allocate(vm::get_addr(&contextInfo.context_id), vm::get_addr(&contextInfo.dma_addr), vm::get_addr(&contextInfo.driver_info), vm::get_addr(&contextInfo.reports_addr), contextInfo.mem_handle, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
 
+		// 1024Mb, the extra 512Mb memory is needed to allocate FIFO commands on
+		// So there wont be any conflicts with memory used in the capture
+		get_current_renderer()->main_mem_size = 0x40000000;
+
 		return contextInfo.context_id;
 	}
 
-	std::tuple<u32, u32> rsx_replay_thread::get_usable_fifo_range()
+	std::vector<u32> rsx_replay_thread::alloc_write_fifo(be_t<u32> context_id)
 	{
 		u32 fifo_size = 4;
 
-		// run through replay commands to figure out how big command buffer needs to be
-		// technically we could do this in batches if it gets too big, but we should be fine
-		// as we aren't allocating anything on main memory, although it may make issues with iooffset later
+		// run through replay commands to figure out how big command buffer needs to be 
 		for (const auto& rc : frame->replay_commands)
 		{
 			const u32 count = (rc.rsx_command.first >> 18) & 0x7ff;
 			// allocate for register plus w/e number of arguments it has
-			fifo_size += (count + 1) * 4;
+			fifo_size += (count * 4) + 4;
 		}
 
-		// safety check for now
-		// since we are allocating iobuffer, we need to make sure that any memory we use is not being used by the replay
-		std::map<u32, u32> ioOffsets;
-		u32 lowest_iooffset = 0xFFFFFFFF;
-		for (const auto& mm : frame->memory_map)
-		{
-			u32 offset = mm.second.ioOffset;
-			lowest_iooffset = std::min(lowest_iooffset, offset);
-			if (offset != 0xFFFFFFFF)
-			{
-				u32 iosize = mm.second.size + mm.second.offset;
-				auto it = ioOffsets.find(offset);
-				if (it == ioOffsets.end())
-					ioOffsets[offset] = iosize;
-				else
-					ioOffsets[offset] = std::max(ioOffsets[offset], iosize);
-			}
-		}
+		fifo_size = ::align<u32>(fifo_size, 0x100000);
 
-		// if we cant use fifo starting at 0, try to find a block between them
-		u32 fifo_start_addr = 0;
-		if (fifo_size >= lowest_iooffset)
-		{
-			u32 largest_free_block = 0;
-			u32 largest_cur_end = 0; // this keeps track of largest end, in case allocations 'overlap'
-			for (auto io = ioOffsets.begin(); io != ioOffsets.end(); ++io)
-			{
-				auto next = std::next(io);
-
-				// last 'offset' is just end of memory
-				u32 nextOffset = 0x0F900000;
-				if (next != ioOffsets.end())
-					nextOffset = next->first - 4;
-
-				largest_cur_end = std::max(largest_cur_end, io->first + io->second + 4);
-				if (largest_cur_end < nextOffset)
-				{
-					u32 freeSize = nextOffset - largest_cur_end;
-					if (freeSize > largest_free_block)
-					{
-						fifo_start_addr = largest_cur_end;
-						largest_free_block = freeSize;
-					}
-
-					if (largest_free_block > fifo_size)
-						break;
-				}
-
-				if (next == ioOffsets.end())
-					break;
-			}
-
-			// todo: figure out *another* way to inject fifo if both ideas above fail
-			if (largest_free_block < fifo_size)
-				fmt::throw_exception("Capture Replay: no space in io for fifo commands! size: 0x%x, lowest in capture: 0x%x, largest_free_block: 0x%x", fifo_size, lowest_iooffset, largest_free_block);
-		}
-
-		return std::make_tuple(fifo_start_addr, ::align<u32>(fifo_size, 0x100000));
-	}
-
-	std::vector<u32> rsx_replay_thread::alloc_write_fifo(be_t<u32> context_id, u32 fifo_start_addr, u32 fifo_size)
-	{
 		const u32 fifo_mem = vm::alloc(fifo_size, vm::main, 0x100000);
 		if (fifo_mem == 0)
 			fmt::throw_exception("Capture Replay: fifo alloc failed! size: 0x%x", fifo_size);
@@ -119,7 +61,7 @@ namespace rsx
 		auto fifo_addr = vm::ptr<u32>::make(fifo_mem);
 		u32 count = 0;
 		std::vector<u32> fifo_stops;
-		u32 currentOffset = fifo_start_addr;
+		u32 currentOffset = 0x20000000;
 		for (const auto& rc : frame->replay_commands)
 		{
 			bool hasState = (rc.memory_state.size() > 0) || (rc.display_buffer_state != 0) || (rc.tile_state != 0);
@@ -155,7 +97,7 @@ namespace rsx
 
 		fifo_stops.emplace_back(currentOffset);
 
-		if (sys_rsx_context_iomap(context_id, fifo_start_addr, fifo_mem, fifo_size, 0) != CELL_OK)
+		if (sys_rsx_context_iomap(context_id, 0x20000000, fifo_mem, fifo_size, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: fifo mapping failed");
 
 		return fifo_stops;
@@ -265,12 +207,7 @@ namespace rsx
 	{
 		be_t<u32> context_id = allocate_context();
 
-		auto fifo_info = get_usable_fifo_range();
-
-		const u32 fifo_start_addr = std::get<0>(fifo_info);
-		const u32 fifo_size = std::get<1>(fifo_info);
-
-		auto fifo_stops = alloc_write_fifo(context_id, fifo_start_addr, fifo_size);
+		auto fifo_stops = alloc_write_fifo(context_id);
 
 		// map game io
 		for (const auto it : frame->memory_map)
@@ -279,10 +216,6 @@ namespace rsx
 			if (memblock.ioOffset == 0xFFFFFFFF)
 				continue;
 
-			// sanity check
-			if (memblock.ioOffset <= fifo_start_addr + fifo_size && fifo_start_addr <= memblock.size + memblock.offset)
-				fmt::throw_exception("Capture Replay: overlap detected between game io allocs and fifo alloc, algorithms botched.");
-
 			if (sys_rsx_context_iomap(context_id, memblock.ioOffset & ~0xFFFFF, memblock.addr & ~0xFFFFF, ::align<u32>(memblock.size + memblock.offset, 0x100000), 0) != CELL_OK)
 				fmt::throw_exception("rsx io map failed for block");
 		}
@@ -290,7 +223,7 @@ namespace rsx
 		while (!Emu.IsStopped())
 		{
 			// start up fifo buffer by dumping the put ptr to first stop
-			sys_rsx_context_attribute(context_id, 0x001, fifo_start_addr, fifo_stops[0], 0, 0);
+			sys_rsx_context_attribute(context_id, 0x001, 0x20000000, fifo_stops[0], 0, 0);
 
 			auto renderer = fxm::get<GSRender>();
 			size_t stopIdx = 0;
