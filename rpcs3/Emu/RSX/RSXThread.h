@@ -361,10 +361,10 @@ namespace rsx
 
 	struct sampled_image_descriptor_base;
 
-	class thread : public named_thread
+	class thread : public old_thread
 	{
-		std::shared_ptr<thread_ctrl> m_vblank_thread;
-		std::shared_ptr<thread_ctrl> m_decompiler_thread;
+		std::shared_ptr<thread_base> m_vblank_thread;
+		std::shared_ptr<thread_base> m_decompiler_thread;
 
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
@@ -565,7 +565,7 @@ namespace rsx
 		void sync();
 		void read_barrier(u32 memory_address, u32 memory_range);
 		virtual void sync_hint(FIFO_hint hint) {}
-		
+
 		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
 

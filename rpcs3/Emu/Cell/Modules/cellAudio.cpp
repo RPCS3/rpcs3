@@ -52,7 +52,7 @@ void audio_config::on_init(const std::shared_ptr<void>& _this)
 		ports[i].index = m_indexes + i;
 	}
 
-	named_thread::on_init(_this);
+	old_thread::on_init(_this);
 }
 
 void audio_config::on_task()

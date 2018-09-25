@@ -351,7 +351,7 @@ struct CellCameraReadEx
 	vm::bptr<u8> pbuf;
 };
 
-class camera_thread final : public named_thread
+class camera_thread final : public old_thread
 {
 private:
 	struct notify_event_data

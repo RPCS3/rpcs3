@@ -1224,7 +1224,7 @@ void camera_thread::on_task()
 
 void camera_thread::on_init(const std::shared_ptr<void>& _this)
 {
-	named_thread::on_init(_this);
+	old_thread::on_init(_this);
 }
 
 void camera_thread::send_attach_state(bool attached)

@@ -938,13 +938,13 @@ namespace rsx
 				this->on_close = on_close;
 				if (interactive)
 				{
-					thread_ctrl::spawn("dialog input thread", [&]
+					thread_ctrl::make_shared("dialog input thread", [&]
 					{
 						if (auto error = run_input_loop())
 						{
 							LOG_ERROR(RSX, "Dialog input loop exited with error code=%d", error);
 						}
-					});
+					})->detach();
 				}
 
 				return CELL_OK;

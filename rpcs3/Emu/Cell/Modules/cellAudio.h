@@ -119,7 +119,7 @@ struct audio_port
 	atomic_t<level_set_t> level_set;
 };
 
-class audio_config final : public named_thread
+class audio_config final : public old_thread
 {
 	void on_task() override;
 

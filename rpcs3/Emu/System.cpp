@@ -515,21 +515,16 @@ bool Emulator::InstallPkg(const std::string& path)
 
 	atomic_t<double> progress(0.);
 	int int_progress = 0;
+
+	// Run PKG unpacking asynchronously
+	named_thread worker("PKG Installer", [&]
 	{
-		// Run PKG unpacking asynchronously
-		scope_thread worker("PKG Installer", [&]
-		{
-			if (pkg_install(path, progress))
-			{
-				progress = 1.;
-				return;
-			}
+		return pkg_install(path, progress);
+	});
 
-			progress = -1.;
-		});
-
+	{
 		// Wait for the completion
-		while (std::this_thread::sleep_for(5ms), std::abs(progress) < 1.)
+		while (std::this_thread::sleep_for(5ms), worker != thread_state::finished)
 		{
 			// TODO: update unified progress dialog
 			double pval = progress;
@@ -544,12 +539,7 @@ bool Emulator::InstallPkg(const std::string& path)
 		}
 	}
 
-	if (progress >= 1.)
-	{
-		return true;
-	}
-
-	return false;
+	return worker();
 }
 
 std::string Emulator::GetEmuDir()
@@ -730,7 +720,7 @@ void Emulator::Load(bool add_only)
 			// Workaround for analyser glitches
 			vm::falloc(0x10000, 0xf0000, vm::main);
 
-			return thread_ctrl::spawn("SPRX Loader", [this]
+			return thread_ctrl::make_shared("SPRX Loader", [this]
 			{
 				std::vector<std::string> dir_queue;
 				dir_queue.emplace_back(m_path + '/');
@@ -738,7 +728,7 @@ void Emulator::Load(bool add_only)
 				std::vector<std::pair<std::string, u64>> file_queue;
 				file_queue.reserve(2000);
 
-				std::queue<std::shared_ptr<thread_ctrl>> thread_queue;
+				std::queue<std::shared_ptr<thread_base>> thread_queue;
 				const uint max_threads = std::thread::hardware_concurrency();
 
 				// Initialize progress dialog
@@ -812,14 +802,12 @@ void Emulator::Load(bool add_only)
 								std::this_thread::sleep_for(10ms);
 							}
 
-							thread_queue.emplace();
-
-							thread_ctrl::spawn(thread_queue.back(), "Worker " + std::to_string(thread_queue.size()), [_prx = std::move(prx)]
+							thread_queue.emplace(thread_ctrl::make_shared("Worker " + std::to_string(thread_queue.size()), [_prx = std::move(prx)]
 							{
 								ppu_initialize(*_prx);
 								ppu_unload_prx(*_prx);
 								g_progr_fdone++;
-							});
+							}));
 
 							continue;
 						}
@@ -829,18 +817,9 @@ void Emulator::Load(bool add_only)
 					g_progr_fdone++;
 				}
 
-				// Join every thread and print exceptions
+				// Join every thread
 				while (!thread_queue.empty())
 				{
-					try
-					{
-						thread_queue.front()->join();
-					}
-					catch (const std::exception& e)
-					{
-						LOG_FATAL(LOADER, "[%s] %s thrown: %s", thread_queue.front()->get_name(), typeid(e).name(), e.what());
-					}
-
 					thread_queue.pop();
 				}
 
@@ -849,7 +828,7 @@ void Emulator::Load(bool add_only)
 				{
 					Emu.Stop();
 				});
-			});
+			})->detach();
 		}
 
 		// Detect boot location

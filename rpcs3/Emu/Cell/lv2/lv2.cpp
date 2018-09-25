@@ -1002,7 +1002,7 @@ DECLARE(lv2_obj::g_ppu);
 DECLARE(lv2_obj::g_pending);
 DECLARE(lv2_obj::g_waiting);
 
-void lv2_obj::sleep_timeout(named_thread& thread, u64 timeout)
+void lv2_obj::sleep_timeout(old_thread& thread, u64 timeout)
 {
 	std::lock_guard lock(g_mutex);
 

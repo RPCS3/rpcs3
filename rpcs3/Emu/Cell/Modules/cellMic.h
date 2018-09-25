@@ -54,7 +54,7 @@ const u32 bufferSize = 1;
 
 bool micInited = false;
 
-class mic_thread final : public named_thread
+class mic_thread final : public old_thread
 {
 private:
 	void on_task() override;

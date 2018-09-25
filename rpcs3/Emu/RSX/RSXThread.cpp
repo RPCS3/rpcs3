@@ -2675,7 +2675,7 @@ namespace rsx
 		reader_lock lock(m_mtx_task);
 
 		const auto map_range = address_range::start_length(address, size);
-		
+
 		if (!m_invalidated_memory_range.valid())
 			return;
 
@@ -2714,7 +2714,7 @@ namespace rsx
 			std::lock_guard lock(m_mtx_task);
 			const bool existing_range_valid = m_invalidated_memory_range.valid();
 			const auto unmap_range = address_range::start_length(address, size);
-			
+
 			if (existing_range_valid && m_invalidated_memory_range.touches(unmap_range))
 			{
 				// Merge range-to-invalidate in case of consecutive unmaps

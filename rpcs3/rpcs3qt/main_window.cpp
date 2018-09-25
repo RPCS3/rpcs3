@@ -462,25 +462,21 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 
 	// Synchronization variable
 	atomic_t<double> progress(0.);
+
+	// Run PKG unpacking asynchronously
+	named_thread worker("PKG Installer", [&]
 	{
-		// Run PKG unpacking asynchronously
-		scope_thread worker("PKG Installer", [&]
-		{
-			if (pkg_install(path, progress))
-			{
-				progress = 1.;
-				return;
-			}
+		 return pkg_install(path, progress);
+	});
 
-			progress = -1.;
-		});
-
+	{
 		// Wait for the completion
-		while (std::this_thread::sleep_for(5ms), std::abs(progress) < 1.)
+		while (std::this_thread::sleep_for(5ms), worker != thread_state::finished)
 		{
 			if (pdlg.wasCanceled())
 			{
 				progress -= 1.;
+				break;
 			}
 
 			// Update progress window
@@ -490,14 +486,14 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 			QCoreApplication::processEvents();
 		}
 
-		if (progress > 0.)
+		if (worker())
 		{
 			pdlg.SetValue(pdlg.maximum());
 			std::this_thread::sleep_for(100ms);
 		}
 	}
 
-	if (progress >= 1.)
+	if (worker())
 	{
 		m_gameListFrame->Refresh(true);
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
@@ -574,7 +570,7 @@ void main_window::InstallPup(const QString& dropPath)
 	atomic_t<int> progress(0);
 	{
 		// Run asynchronously
-		scope_thread worker("Firmware Installer", [&]
+		named_thread worker("Firmware Installer", [&]
 		{
 			for (const auto& updatefilename : updatefilenames)
 			{

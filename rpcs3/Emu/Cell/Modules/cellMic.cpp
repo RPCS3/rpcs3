@@ -11,7 +11,7 @@ LOG_CHANNEL(cellMic);
 
 void mic_thread::on_init(const std::shared_ptr<void>& _this)
 {
-	named_thread::on_init(_this);
+	old_thread::on_init(_this);
 }
 
 void mic_thread::on_task()

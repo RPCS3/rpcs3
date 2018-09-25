@@ -6,7 +6,6 @@
 #include "Utilities/VirtualMemory.h"
 
 class shared_mutex;
-class named_thread;
 class cpu_thread;
 class notifier;
 
