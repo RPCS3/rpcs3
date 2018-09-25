@@ -244,7 +244,6 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 
 		if (!is_ro)
 		{
-			LOG_ERROR(GENERAL, "LLVM: Writeable data section not supported!");
 		}
 
 		utils::memory_commit(s_next, size);

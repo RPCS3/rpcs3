@@ -3956,7 +3956,7 @@ void PPUTranslator::MTFSFI(ppu_opcode_t op)
 
 void PPUTranslator::MFFS(ppu_opcode_t op)
 {
-	CompilationError("MFFS");
+	LOG_WARNING(PPU, "LLVM: [0x%08x] Warning: MFFS", m_addr + (m_reloc ? m_reloc->addr : 0));
 
 	Value* result = m_ir->getInt64(0);
 
@@ -3972,7 +3972,7 @@ void PPUTranslator::MFFS(ppu_opcode_t op)
 
 void PPUTranslator::MTFSF(ppu_opcode_t op)
 {
-	CompilationError("MTFSF");
+	LOG_WARNING(PPU, "LLVM: [0x%08x] Warning: MTFSF", m_addr + (m_reloc ? m_reloc->addr : 0));
 
 	const auto value = GetFpr(op.frb, 32, true);
 
