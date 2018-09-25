@@ -1,4 +1,10 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
+#include "vm_locking.h"
+#include "vm_ptr.h"
+#include "vm_ref.h"
+#include "vm_reservation.h"
+#include "vm_var.h"
+
 #include "Emu/System.h"
 #include "Utilities/mutex.h"
 #include "Utilities/cond.h"

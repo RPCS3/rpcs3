@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 // error codes
 enum CellOskDialogError : u32

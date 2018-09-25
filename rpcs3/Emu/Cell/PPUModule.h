@@ -1,9 +1,10 @@
-﻿#pragma once
+#pragma once
 
 #include "PPUFunction.h"
 #include "PPUCallback.h"
 #include "ErrorCodes.h"
 #include <typeinfo>
+#include "Emu/Memory/vm_var.h"
 
 // Helper function
 constexpr const char* ppu_select_name(const char* name, u32 id)

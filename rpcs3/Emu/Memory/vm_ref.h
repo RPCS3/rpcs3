@@ -1,5 +1,9 @@
 #pragma once
 
+#include <type_traits>
+#include "Utilities/BEType.h"
+#include "vm.h"
+
 namespace vm
 {
 	template<typename T, typename AT>
