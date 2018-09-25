@@ -2,6 +2,8 @@
 
 #include "sys_sync.h"
 
+#include "Emu/Memory/vm_ptr.h"
+
 struct sys_lwmutex_attribute_t
 {
 	be_t<u32> protocol;

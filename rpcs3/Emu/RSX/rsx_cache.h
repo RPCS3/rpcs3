@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/hash.h"
+#include "Utilities/File.h"
 #include "Emu/Memory/vm.h"
 #include "gcm_enums.h"
 #include "Common/ProgramStateCache.h"
@@ -10,6 +11,7 @@
 
 #include "rsx_utils.h"
 #include <thread>
+#include <chrono>
 
 namespace rsx
 {

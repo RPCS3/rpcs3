@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/types.h"
+
 #include <mutex>
 
 // TODO: HLE info (constants, structs, etc.) should not be available here

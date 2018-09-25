@@ -2,6 +2,8 @@
 
 #include "cellSysutil.h"
 
+#include "Emu/Memory/vm_ptr.h"
+
 //events
 enum CellWebBrowserEvent : s32
 {

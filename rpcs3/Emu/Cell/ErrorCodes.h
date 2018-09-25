@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/types.h"
+
 enum CellNotAnError : s32
 {
 	CELL_OK     = 0,

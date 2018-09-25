@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/types.h"
+
 // Floating-point rounding mode (for both PPU and SPU)
 enum FPSCR_RN
 {

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Emu/RSX/GSRender.h"
 #include "GLHelpers.h"
 #include "GLTexture.h"
@@ -7,8 +7,6 @@
 #include "GLProgramBuffer.h"
 #include "GLTextOut.h"
 #include "GLOverlays.h"
-#include "../rsx_utils.h"
-#include "../rsx_cache.h"
 
 #pragma comment(lib, "opengl32.lib")
 

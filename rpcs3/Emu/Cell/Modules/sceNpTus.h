@@ -1,8 +1,9 @@
 #pragma once
 
-
+#include "Utilities/BEType.h"
 
 #include "cellRtc.h"
+#include "sceNp.h"
 
 // Constants for TUS functions and structures
 enum

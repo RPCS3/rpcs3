@@ -9,6 +9,8 @@
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_event_flag.h"
 
+#include "Emu/Memory/vm_ptr.h"
+
 
 
 // Error Codes

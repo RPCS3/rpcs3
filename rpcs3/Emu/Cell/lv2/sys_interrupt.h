@@ -2,6 +2,8 @@
 
 #include "sys_sync.h"
 
+#include "Emu/Memory/vm_ptr.h"
+
 class ppu_thread;
 
 struct lv2_int_tag final : lv2_obj

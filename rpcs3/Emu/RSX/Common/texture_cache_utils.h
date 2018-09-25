@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../rsx_cache.h"
 #include "../rsx_utils.h"
@@ -6,6 +6,7 @@
 #include "TextureUtils.h"
 
 #include <list>
+#include <unordered_set>
 #include <atomic>
 
 

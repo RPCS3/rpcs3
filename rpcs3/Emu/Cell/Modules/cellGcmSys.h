@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/RSX/GCM.h"
+#include "Emu/Memory/vm_ptr.h"
 
 enum
 {

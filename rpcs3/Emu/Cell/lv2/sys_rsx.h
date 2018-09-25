@@ -1,4 +1,6 @@
-﻿#pragma once
+#pragma once
+
+#include "Emu/Memory/vm_ptr.h"
 
 #include "Emu/Memory/vm_ptr.h"
 

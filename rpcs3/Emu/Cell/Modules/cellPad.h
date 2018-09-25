@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Io/PadHandler.h"
+#include "Utilities/BEType.h"
 #include <array>
 
 enum CellPadError : u32

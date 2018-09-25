@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Utilities/BEType.h"
 #include "Utilities/Thread.h"
 
 // Error Codes

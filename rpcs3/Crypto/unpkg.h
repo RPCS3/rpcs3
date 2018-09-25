@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/BEType.h"
+
 // Constants
 enum
 {

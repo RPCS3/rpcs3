@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include "GCM.h"
+#include "rsx_decode.h"
+
 #include "Utilities/types.h"
 #include "Utilities/BEType.h"
 #include "rsx_utils.h"

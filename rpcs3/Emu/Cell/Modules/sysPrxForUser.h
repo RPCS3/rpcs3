@@ -1,6 +1,7 @@
 ﻿#pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 using spu_printf_cb_t = vm::ptr<s32(u32 arg)>;
 

@@ -16,12 +16,12 @@
 #endif
 #include "define_new_memleakdetect.h"
 
-#include "../Utilities/types.h"
-#include "../Utilities/StrFmt.h"
-#include "../Utilities/BEType.h"
-#include "../Utilities/BitField.h"
-#include "../Utilities/Log.h"
-#include "../Utilities/JIT.h"
+#include "Utilities/types.h"
+#include "Utilities/StrFmt.h"
+#include "Utilities/BEType.h"
+#include "Utilities/BitField.h"
+#include "Utilities/Log.h"
+#include "Utilities/JIT.h"
 
 #include <unordered_map>
 #include <map>

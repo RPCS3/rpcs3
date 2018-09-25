@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Memory/vm_ptr.h"
+
 // Error Codes
 enum CellSearchError : u32
 {

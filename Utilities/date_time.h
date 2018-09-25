@@ -1,5 +1,8 @@
 #pragma once
 
+#include <ctime>
+#include <string>
+
 namespace date_time
 {
 	static inline tm get_time(time_t* _time)
