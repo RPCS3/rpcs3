@@ -5,6 +5,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
+#include "Emu/RSX/rsx_methods.h"
 #include "Emu/RSX/gcm_enums.h"
 
 #include <cereal/types/vector.hpp>
@@ -16,7 +17,7 @@
 namespace rsx
 {
 	constexpr u32 FRAME_CAPTURE_MAGIC = 0x52524300; // ascii 'RRC/0'
-	constexpr u32 FRAME_CAPTURE_VERSION = 0x2;
+	constexpr u32 FRAME_CAPTURE_VERSION = 0x3;
 	struct frame_capture_data
 	{
 
@@ -181,6 +182,8 @@ namespace rsx
 		std::unordered_map<u64, display_buffers_state> display_buffers_map;
 		// actual command queue to hold everything above
 		std::vector<replay_command> replay_commands;
+		// Initial registers state at the beginning of the capture
+		rsx::rsx_state reg_state;
 
 		template<typename Archive>
 		void serialize(Archive & ar)
@@ -192,6 +195,7 @@ namespace rsx
 			ar(memory_data_map);
 			ar(display_buffers_map);
 			ar(replay_commands);
+			ar(reg_state);
 		}
 
 		void reset()
@@ -201,6 +205,7 @@ namespace rsx
 			tile_map.clear();
 			memory_map.clear();
 			replay_commands.clear();
+			reg_state = method_registers;
 		}
 	};
 

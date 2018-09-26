@@ -230,10 +230,15 @@ namespace rsx
 
 		while (!Emu.IsStopped())
 		{
+			// Load registers while the RSX is still idle
+			method_registers = frame->reg_state;
+			_mm_mfence();
+
 			// start up fifo buffer by dumping the put ptr to first stop
 			sys_rsx_context_attribute(context_id, 0x001, 0x20000000, fifo_stops[0], 0, 0);
 
-			auto renderer = rsx::get_current_renderer();
+			auto render = get_current_renderer();
+
 			size_t stopIdx = 0;
 			for (const auto& replay_cmd : frame->replay_commands)
 			{
@@ -248,7 +253,7 @@ namespace rsx
 					continue;
 
 				// wait until rsx idle and at our first 'stop' to apply state
-				while (!Emu.IsStopped() && (renderer->ctrl->get != renderer->ctrl->put) && (renderer->ctrl->get != fifo_stops[stopIdx]))
+				while (!Emu.IsStopped() && (render->ctrl->get != render->ctrl->put) && (render->ctrl->get != fifo_stops[stopIdx]))
 				{
 					while (Emu.IsPaused())
 						std::this_thread::sleep_for(10ms);
@@ -263,14 +268,14 @@ namespace rsx
 				if (stopIdx >= fifo_stops.size())
 					fmt::throw_exception("Capture Replay: StopIdx greater than size of fifo_stops");
 
-				renderer->ctrl->put = fifo_stops[stopIdx];
+				render->ctrl->put = fifo_stops[stopIdx];
 			}
 
 			// dump put to end of stops, which should have actual end
 			u32 end = fifo_stops.back();
-			renderer->ctrl->put = end;
+			render->ctrl->put = end;
 
-			while (renderer->ctrl->get != end && !Emu.IsStopped())
+			while (render->ctrl->get != end && !Emu.IsStopped())
 			{
 				while (Emu.IsPaused())
 					std::this_thread::sleep_for(10ms);
