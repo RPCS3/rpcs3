@@ -14,8 +14,8 @@ namespace rsx
 	{
 		// 'fake' initialize usermemory
 		// todo: seriously, need to probly watch the replay memory map and just make sure its mapped before we copy rather than do this
-		const auto user_mem = vm::get(vm::user64k);
-		vm::falloc(user_mem->addr, 0x10000000);
+		user_mem_addr = vm::falloc(vm::get(vm::user1m)->addr, 0x10000000);
+		verify(HERE), user_mem_addr != 0;
 
 		const u32 contextAddr = vm::alloc(sizeof(rsx_context), vm::main);
 		if (contextAddr == 0)
@@ -120,7 +120,7 @@ namespace rsx
 					fmt::throw_exception("requested memory data state for command not found in memory_data_map");
 
 				const auto& data_block = it_data->second;
-				std::memcpy(vm::base(memblock.addr + memblock.offset), data_block.data.data(), data_block.data.size());
+				std::memcpy(vm::base(get_address(memblock.ioOffset + memblock.offset, memblock.location)), data_block.data.data(), data_block.data.size());
 			}
 		}
 
@@ -213,19 +213,32 @@ namespace rsx
 		for (const auto it : frame->memory_map)
 		{
 			const auto& memblock = it.second;
-			if (memblock.ioOffset == 0xFFFFFFFF)
+			if (memblock.location == CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN)
+			{
+				// Special area for reports
+				if (sys_rsx_context_iomap(context_id, (memblock.ioOffset & ~0xFFFFF) + 0x0e000000, (memblock.ioOffset & ~0xFFFFF) + user_mem_addr + 0x0e000000, 0x100000, 0) != CELL_OK)
+					fmt::throw_exception("rsx io map failed for block");
+				continue;
+			}
+
+			if (const u32 location = memblock.location; location != CELL_GCM_LOCATION_MAIN && location != CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER)
 				continue;
 
-			if (sys_rsx_context_iomap(context_id, memblock.ioOffset & ~0xFFFFF, memblock.addr & ~0xFFFFF, ::align<u32>(memblock.size + memblock.offset, 0x100000), 0) != CELL_OK)
+			if (sys_rsx_context_iomap(context_id, memblock.ioOffset & ~0xFFFFF, user_mem_addr + (memblock.ioOffset & ~0xFFFFF), ::align<u32>(memblock.size + memblock.offset, 0x100000), 0) != CELL_OK)
 				fmt::throw_exception("rsx io map failed for block");
 		}
 
 		while (!Emu.IsStopped())
 		{
+			// Load registers while the RSX is still idle
+			method_registers = frame->reg_state;
+			_mm_mfence();
+
 			// start up fifo buffer by dumping the put ptr to first stop
 			sys_rsx_context_attribute(context_id, 0x001, 0x20000000, fifo_stops[0], 0, 0);
 
-			auto renderer = fxm::get<GSRender>();
+			auto render = get_current_renderer();
+
 			size_t stopIdx = 0;
 			for (const auto& replay_cmd : frame->replay_commands)
 			{
@@ -240,7 +253,7 @@ namespace rsx
 					continue;
 
 				// wait until rsx idle and at our first 'stop' to apply state
-				while (!Emu.IsStopped() && (renderer->ctrl->get != renderer->ctrl->put) && (renderer->ctrl->get != fifo_stops[stopIdx]))
+				while (!Emu.IsStopped() && (render->ctrl->get != render->ctrl->put) && (render->ctrl->get != fifo_stops[stopIdx]))
 				{
 					while (Emu.IsPaused())
 						std::this_thread::sleep_for(10ms);
@@ -255,14 +268,14 @@ namespace rsx
 				if (stopIdx >= fifo_stops.size())
 					fmt::throw_exception("Capture Replay: StopIdx greater than size of fifo_stops");
 
-				renderer->ctrl->put = fifo_stops[stopIdx];
+				render->ctrl->put = fifo_stops[stopIdx];
 			}
 
 			// dump put to end of stops, which should have actual end
 			u32 end = fifo_stops.back();
-			renderer->ctrl->put = end;
+			render->ctrl->put = end;
 
-			while (renderer->ctrl->get != end && !Emu.IsStopped())
+			while (render->ctrl->get != end && !Emu.IsStopped())
 			{
 				while (Emu.IsPaused())
 					std::this_thread::sleep_for(10ms);
