@@ -5,6 +5,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
+#include "Emu/RSX/gcm_enums.h"
 
 #include <cereal/types/vector.hpp>
 #include <cereal/types/array.hpp>
@@ -15,7 +16,7 @@
 namespace rsx
 {
 	constexpr u32 FRAME_CAPTURE_MAGIC = 0x52524300; // ascii 'RRC/0'
-	constexpr u32 FRAME_CAPTURE_VERSION = 0x1;
+	constexpr u32 FRAME_CAPTURE_VERSION = 0x2;
 	struct frame_capture_data
 	{
 
@@ -32,18 +33,18 @@ namespace rsx
 		// simple block to hold ps3 address and data
 		struct memory_block
 		{
-			u32 addr{0};
 			u32 ioOffset{0xFFFFFFFF}; // rsx ioOffset, -1 signifies unused
-			u32 offset{0};			  // offset into addr/ioOffset to copy state into
-			u32 size{0};			  // size of block needed
+			u32 offset{0};		// offset into addr/ioOffset to copy state into
+			u32 size{0}; // size of block needed
+			u32 location{0xFFFFFFFF}; // Location of the block in RSX memory space
 			u64 data_state{0};		  // this can be 0, in which case its just needed as an alloc
 			template<typename Archive>
 			void serialize(Archive & ar)
 			{
-				ar(addr);
 				ar(ioOffset);
 				ar(offset);
 				ar(size);
+				ar(location);
 				ar(data_state);
 			}
 		};
@@ -224,6 +225,7 @@ namespace rsx
 			frame_capture_data::tile_state tile_state;
 		};
 
+		u32 user_mem_addr;
 		current_state cs;
 		std::unique_ptr<frame_capture_data> frame;
 
