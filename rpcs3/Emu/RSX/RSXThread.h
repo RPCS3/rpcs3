@@ -212,30 +212,44 @@ namespace rsx
 
 		bool validate() const
 		{
-			switch (attribute_placement[0])
-			{
-			case attribute_buffer_placement::transient:
-			{
-				if (!referenced_registers.empty() && referenced_registers.front() == 0)
-				{
-					// ATTR[0] is position which cannot be from a register
-					return false;
-				}
+			// Criteria: At least one array stream has to be defined to feed vertex positions
+			// This stream cannot be a const register as the vertices cannot create a zero-area primitive
 
-				// The source is inline array or immediate draw push buffer
+			if (!interleaved_blocks.empty() && interleaved_blocks.front().attribute_stride != 0)
 				return true;
-			}
-			case attribute_buffer_placement::persistent:
-			{
-				// Attribute stride cannot be 0, proper packing stride is computed elsewhere
-				verify(HERE), (!interleaved_blocks.empty() && interleaved_blocks[0].attribute_stride != 0);
+
+			if (!volatile_blocks.empty())
 				return true;
-			}
-			case attribute_buffer_placement::none:
+
+			for (u8 index = 0; index < limits::vertex_count; ++index)
 			{
-				return false;
+				switch (attribute_placement[index])
+				{
+				case attribute_buffer_placement::transient:
+				{
+					// Ignore register reference
+					if (std::find(referenced_registers.begin(), referenced_registers.end(), index) != referenced_registers.end())
+						continue;
+
+					// The source is inline array or immediate draw push buffer
+					return true;
+				}
+				case attribute_buffer_placement::persistent:
+				{
+					return true;
+				}
+				case attribute_buffer_placement::none:
+				{
+					continue;
+				}
+				default:
+				{
+					fmt::throw_exception("Unreachable" HERE);
+				}
+				}
 			}
-			}
+
+			return false;
 		}
 	};
 
