@@ -698,6 +698,16 @@ namespace rsx
 				m_return_addr = std::exchange(internal_get.raw(), offs) + 4;
 				continue;
 			}
+
+			if (cmd & 0x3)
+			{
+				// TODO: Check for more invalid bits combinations
+				LOG_ERROR(RSX, "FIFO: Illegal command(0x%x) was executed. Resetting...", cmd);
+				internal_get = restore_point.load();
+				m_return_addr = restore_ret_addr;
+				continue;
+			}
+
 			if (cmd == RSX_METHOD_RETURN_CMD)
 			{
 				if (m_return_addr == -1)
@@ -712,7 +722,10 @@ namespace rsx
 				internal_get = get;
 				continue;
 			}
-			if (cmd == 0) //nop
+
+			u32 count = (cmd >> 18) & 0x7ff;
+
+			if (count == 0) //nop
 			{
 				if (performance_counters.state == FIFO_state::running)
 				{
@@ -723,21 +736,11 @@ namespace rsx
 				internal_get += 4;
 				continue;
 			}
-			if (cmd & 0x3)
-			{
-				// TODO: Check for more invalid bits combinations
-				LOG_ERROR(RSX, "FIFO: Illegal command(0x%x) was executed. Resetting...", cmd);
-				internal_get = restore_point.load();
-				m_return_addr = restore_ret_addr;
-				continue;
-			}
-
-			u32 count = (cmd >> 18) & 0x7ff;
 
 			//Validate the args ptr if the command attempts to read from it
 			auto args = vm::ptr<u32>::make(RSXIOMem.RealAddr(internal_get + 4));
 
-			if (!args && count)
+			if (!args)
 			{
 				std::this_thread::sleep_for(33ms);
 
