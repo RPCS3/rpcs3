@@ -48,7 +48,6 @@ namespace rsx
 		address_range locked_range;
 		address_range cpu_range = {};
 		address_range confirmed_range;
-		weak_ptr super_ptr;
 
 		utils::protection protection = utils::protection::rw;
 
@@ -98,8 +97,6 @@ namespace rsx
 			protection = utils::protection::rw;
 			locked = false;
 
-			super_ptr = {};
-
 			init_lockable_range(cpu_range);
 		}
 
@@ -137,8 +134,6 @@ namespace rsx
 
 			if (protection == utils::protection::no)
 			{
-				super_ptr = rsx::get_super_ptr(cpu_range);
-				verify(HERE), super_ptr;
 				tag_memory();
 			}
 			else
@@ -148,8 +143,6 @@ namespace rsx
 					//Unprotect range also invalidates secured range
 					confirmed_range.invalidate();
 				}
-
-				super_ptr = {};
 			}
 
 		}
@@ -177,7 +170,7 @@ namespace rsx
 					confirmed_range = address_range::start_length(cpu_range.start + new_confirm.first, new_confirm.second);
 					ASSERT(!locked || locked_range.inside(confirmed_range.to_page_range()));
 				}
-				
+
 				verify(HERE), confirmed_range.inside(cpu_range);
 				init_lockable_range(confirmed_range);
 			}
@@ -200,7 +193,6 @@ namespace rsx
 
 			protection = utils::protection::rw;
 			confirmed_range.invalidate();
-			super_ptr = {};
 			locked = false;
 		}
 
@@ -324,43 +316,10 @@ namespace rsx
 		 * Super Pointer
 		 */
 		template <typename T = void>
-		inline T* get_ptr_by_offset(u32 offset = 0, bool no_sync = false)
+		inline T* get_ptr(u32 address)
 		{
-			verify(HERE), super_ptr && cpu_range.length() >= (offset + sizeof(T));
-			return super_ptr.get<T>(offset, no_sync);
+			return reinterpret_cast<T*>(vm::g_sudo_addr + address);
 		}
-
-		// specialization due to sizeof(void) being illegal
-		inline void* get_ptr_by_offset(u32 offset, bool no_sync)
-		{
-			verify(HERE), super_ptr && cpu_range.length() >= (offset + 1);
-			return super_ptr.get<void>(offset, no_sync);
-		}
-
-		template <typename T = void>
-		inline T* get_ptr(u32 address, bool no_sync = false)
-		{
-			verify(HERE), cpu_range.start <= address; // super_ptr & sizeof(T) tests are done by get_ptr_by_offset
-			return get_ptr_by_offset<T>(address - cpu_range.start, no_sync);
-		}
-
-		inline void flush_ptr_by_offset(u32 offset = 0, u32 len = 0) const
-		{
-			verify(HERE), super_ptr && cpu_range.length() >= (offset + len);
-			super_ptr.flush(offset, len);
-		}
-
-		inline void flush_ptr(u32 address, u32 len = 0) const
-		{
-			verify(HERE), cpu_range.start <= address; // super_ptr & length tests are done by flush_ptr_by_offset
-			return flush_ptr_by_offset(address - cpu_range.start, len);
-		}
-
-		inline void flush_ptr(const address_range &range) const
-		{
-			return flush_ptr(range.start, range.length());
-		}
-
 
 		/**
 		 * Memory tagging
@@ -372,18 +331,15 @@ namespace rsx
 			if (guard_policy == protect_policy_full_range)
 				return;
 
-			AUDIT(locked && super_ptr);
+			AUDIT(locked);
 
 			const address_range& range = get_confirmed_range();
 
-			volatile u32* first = get_ptr<volatile u32>(range.start, true);
-			volatile u32* last = get_ptr<volatile u32>(range.end - 3, true);
+			volatile u32* first = get_ptr<volatile u32>(range.start);
+			volatile u32* last = get_ptr<volatile u32>(range.end - 3);
 
 			*first = range.start;
 			*last = range.end;
-
-			flush_ptr(range.start, 4);
-			flush_ptr(range.end - 3, 4);
 		}
 
 	public:
@@ -392,7 +348,7 @@ namespace rsx
 			if (guard_policy == protect_policy_full_range)
 				return true;
 
-			AUDIT(locked && super_ptr);
+			AUDIT(locked);
 
 			const auto& range = get_confirmed_range();
 			volatile const u32* first = get_ptr<volatile const u32>(range.start);
@@ -404,7 +360,7 @@ namespace rsx
 			if (guard_policy == protect_policy_full_range)
 				return true;
 
-			AUDIT(locked && super_ptr);
+			AUDIT(locked);
 
 			const auto& range = get_confirmed_range();
 			volatile const u32* last = get_ptr<volatile const u32>(range.end-3);
@@ -510,7 +466,7 @@ namespace rsx
 					ref_cnt--;
 				});
 			}
-			
+
 			virtual void set_limit(u32 index, u32 limit)
 			{
 				ref_cnt++;

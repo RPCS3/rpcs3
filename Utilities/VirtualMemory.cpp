@@ -136,7 +136,6 @@ namespace utils
 
 	shm::shm(u32 size)
 		: m_size(::align(size, 0x10000))
-		, m_ptr(nullptr)
 	{
 #ifdef _WIN32
 		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, m_size, NULL);
@@ -159,17 +158,13 @@ namespace utils
 		verify(HERE), ::shm_unlink("/rpcs3-mem1") >= 0;
 		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
 #endif
-
-		m_ptr = verify(HERE, this->map(nullptr));
 	}
 
 	shm::~shm()
 	{
 #ifdef _WIN32
-		::UnmapViewOfFile(m_ptr);
 		::CloseHandle(m_handle);
 #else
-		::munmap(m_ptr, m_size);
 		::close(m_file);
 #endif
 	}

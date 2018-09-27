@@ -46,7 +46,6 @@ namespace utils
 		int m_file;
 #endif
 		u32 m_size;
-		u8* m_ptr;
 
 	public:
 		explicit shm(u32 size);
@@ -68,17 +67,6 @@ namespace utils
 
 		// Unmap shared memory, undoing map_critical
 		void unmap_critical(void* ptr);
-
-		// Access memory with simple range check
-		u8* get(u32 offset, u32 size) const
-		{
-			if (offset >= m_size || m_size - offset < size)
-			{
-				return nullptr;
-			}
-
-			return m_ptr + offset;
-		}
 
 		u32 size() const
 		{

@@ -309,7 +309,7 @@ namespace vk
 			AUDIT( valid_length > 0 );
 
 			void* pixels_src = dma_buffer->map(valid_offset, valid_length);
-			void* pixels_dst = get_ptr_by_offset(valid_offset, true);
+			void* pixels_dst = get_ptr(get_section_base() + valid_offset);
 
 			if (real_pitch >= rsx_pitch || valid_length <= rsx_pitch)
 			{
@@ -334,7 +334,6 @@ namespace vk
 				}
 			}
 
-			flush_ptr_by_offset(valid_offset, valid_length);
 			dma_buffer->unmap();
 			reset_write_statistics();
 

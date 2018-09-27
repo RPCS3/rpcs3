@@ -2744,22 +2744,6 @@ namespace rsx
 			return;
 
 		on_invalidate_memory_range(m_invalidated_memory_range);
-
-		// Clean the main memory super_ptr cache if invalidated
-		for (auto It = main_super_memory_block.begin(); It != main_super_memory_block.end();)
-		{
-			const auto block_range = address_range::start_length(It->first, It->second.size());
-
-			if (m_invalidated_memory_range.overlaps(block_range))
-			{
-				It = main_super_memory_block.erase(It);
-			}
-			else
-			{
-				It++;
-			}
-		}
-
 		m_invalidated_memory_range.invalidate();
 	}
 

@@ -2583,16 +2583,13 @@ namespace rsx
 
 		void tag_framebuffer(u32 texaddr)
 		{
-			auto super_ptr = rsx::get_super_ptr(texaddr, 4);
-			volatile u32 *ptr = super_ptr.get<volatile u32>();
+			auto ptr = vm::get_super_ptr<atomic_t<u32>>(texaddr);
 			*ptr = texaddr;
-			super_ptr.flush(0, 4);
 		}
 
 		bool test_framebuffer(u32 texaddr)
 		{
-			auto super_ptr = rsx::get_super_ptr(texaddr, 4);
-			volatile const u32 *ptr = super_ptr.get<volatile const u32>();
+			auto ptr = vm::get_super_ptr<atomic_t<u32>>(texaddr);
 			return *ptr == texaddr;
 		}
 	};

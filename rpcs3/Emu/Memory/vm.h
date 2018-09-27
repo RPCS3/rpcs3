@@ -12,6 +12,7 @@ class notifier;
 namespace vm
 {
 	extern u8* const g_base_addr;
+	extern u8* const g_sudo_addr;
 	extern u8* const g_exec_addr;
 	extern u8* const g_stat_addr;
 	extern u8* const g_reservations;
@@ -303,32 +304,10 @@ namespace vm
 		}
 
 		// Access memory bypassing memory protection
-		template <typename T>
-		inline std::shared_ptr<to_be_t<T>> get_super_ptr(u32 addr, u32 count = 1)
+		template <typename T = u8>
+		inline to_be_t<T>* get_super_ptr(u32 addr)
 		{
-			const auto area = vm::get(vm::any, addr);
-
-			if (!area || addr + u64{count} * sizeof(T) > UINT32_MAX)
-			{
-				return nullptr;
-			}
-
-			const auto shm = area->get(addr, sizeof(T) * count);
-
-			if (!shm.second || shm.first > addr)
-			{
-				return nullptr;
-			}
-
-			const auto ptr = reinterpret_cast<to_be_t<T>*>(shm.second->get(addr - shm.first, sizeof(T) * count));
-
-			if (!ptr)
-			{
-				return nullptr;
-			}
-
-			// Create a shared pointer using the aliasing constructor
-			return {shm.second, ptr};
+			return reinterpret_cast<to_be_t<T>*>(g_sudo_addr + addr);
 		}
 
 		inline const be_t<u16>& read16(u32 addr)
