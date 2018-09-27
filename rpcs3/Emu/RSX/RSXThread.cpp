@@ -708,7 +708,7 @@ namespace rsx
 				continue;
 			}
 
-			if (cmd == RSX_METHOD_RETURN_CMD)
+			if ((cmd & ~0xfffc) == RSX_METHOD_RETURN_CMD)
 			{
 				if (m_return_addr == -1)
 				{
