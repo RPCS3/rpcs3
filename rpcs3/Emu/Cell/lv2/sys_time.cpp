@@ -1,9 +1,8 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm_ptr.h"
-#include "Emu/System.h"
-
-#include "Emu/Cell/ErrorCodes.h"
 #include "sys_time.h"
+
+#include "Emu/System.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 #ifdef _WIN32
 

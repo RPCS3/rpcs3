@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "sys_spu.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
@@ -14,7 +15,6 @@
 #include "sys_interrupt.h"
 #include "sys_mmapper.h"
 #include "sys_event.h"
-#include "sys_spu.h"
 
 LOG_CHANNEL(sys_spu);
 

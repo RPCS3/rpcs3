@@ -1,11 +1,10 @@
-﻿#pragma once
+#pragma once
 #include "stdafx.h"
 #include "VKRenderTargets.h"
 #include "VKGSRender.h"
 #include "VKCompute.h"
 #include "Emu/System.h"
 #include "../Common/TextureUtils.h"
-#include "../rsx_utils.h"
 #include "Utilities/mutex.h"
 #include "../Common/texture_cache.h"
 

@@ -8,6 +8,8 @@
 #include "GLTextOut.h"
 #include "GLOverlays.h"
 
+#include <optional>
+
 #pragma comment(lib, "opengl32.lib")
 
 namespace gl

@@ -4,13 +4,10 @@
 #include "Utilities/address_range.h"
 #include "Utilities/geometry.h"
 #include "Utilities/asm.h"
-#include "Utilities/VirtualMemory.h"
-#include "Emu/Memory/vm.h"
 #include "gcm_enums.h"
-#include <atomic>
+
 #include <memory>
 #include <bitset>
-#include <optional>
 
 extern "C"
 {

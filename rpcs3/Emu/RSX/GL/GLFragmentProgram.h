@@ -1,8 +1,6 @@
 #pragma once
 #include "../Common/FragmentProgramDecompiler.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
-#include "Utilities/Thread.h"
-#include "OpenGL.h"
 
 struct GLFragmentDecompilerThread : public FragmentProgramDecompiler
 {

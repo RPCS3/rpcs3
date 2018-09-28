@@ -1,6 +1,6 @@
 ﻿#include "stdafx.h"
-#include <set>
-#include "Emu/Memory/vm.h"
+#include "GLFragmentProgram.h"
+
 #include "Emu/System.h"
 #include "GLHelpers.h"
 #include "GLFragmentProgram.h"

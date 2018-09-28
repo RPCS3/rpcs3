@@ -1,12 +1,12 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "sys_interrupt.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUOpcodes.h"
-#include "sys_interrupt.h"
 
 LOG_CHANNEL(sys_interrupt);
 

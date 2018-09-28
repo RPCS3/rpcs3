@@ -9,9 +9,10 @@
 #include "VKProgramBuffer.h"
 #include "VKFramebuffer.h"
 #include "../GCM.h"
-#include "../rsx_utils.h"
+
 #include <thread>
 #include <atomic>
+#include <optional>
 
 namespace vk
 {

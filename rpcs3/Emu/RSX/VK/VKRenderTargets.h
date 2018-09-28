@@ -7,7 +7,6 @@
 #include "../Common/surface_store.h"
 #include "../Common/TextureUtils.h"
 #include "../Common/texture_cache_utils.h"
-#include "../rsx_utils.h"
 
 namespace vk
 {

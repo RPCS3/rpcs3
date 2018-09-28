@@ -1,7 +1,8 @@
 ﻿#include "stdafx.h"
+#include "SPURecompiler.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
-#include "Emu/Memory/vm.h"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/JIT.h"
@@ -11,7 +12,6 @@
 #include "SPUAnalyser.h"
 #include "SPUInterpreter.h"
 #include "SPUDisAsm.h"
-#include "SPURecompiler.h"
 #include <algorithm>
 #include <mutex>
 #include <thread>

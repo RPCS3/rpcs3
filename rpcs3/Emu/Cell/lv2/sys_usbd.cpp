@@ -1,9 +1,9 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "sys_usbd.h"
+
 #include "Emu/System.h"
 
 #include "Emu/Cell/ErrorCodes.h"
-#include "sys_usbd.h"
 #include "sys_ppu_thread.h"
 
 

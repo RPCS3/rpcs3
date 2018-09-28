@@ -1,14 +1,14 @@
-﻿#pragma once
+#pragma once
 
 #include "stdafx.h"
 #include <exception>
 #include <string>
-#include <cstring>
 #include <functional>
 #include <vector>
 #include <memory>
 #include <unordered_map>
 #include <variant>
+#include <stack>
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 #include <X11/Xutil.h>
@@ -19,9 +19,8 @@
 #include "VulkanAPI.h"
 #include "VKCommonDecompiler.h"
 #include "../GCM.h"
-#include "../Common/TextureUtils.h"
 #include "../Common/ring_buffer_helper.h"
-#include "../rsx_cache.h"
+#include "../Common/TextureUtils.h"
 
 #include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
 

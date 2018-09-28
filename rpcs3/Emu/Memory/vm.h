@@ -1,10 +1,8 @@
 #pragma once
 
 #include <map>
-#include <functional>
 #include <memory>
 #include "Utilities/types.h"
-#include "Utilities/Atomic.h"
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/StrFmt.h"
 #include "Utilities/BEType.h"

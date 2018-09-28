@@ -1,12 +1,12 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "sys_rwlock.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sys_rwlock.h"
 
 
 

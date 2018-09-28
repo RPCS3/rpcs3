@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "SPUASMJITRecompiler.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
@@ -13,8 +14,6 @@
 #include <cmath>
 #include <mutex>
 #include <thread>
-
-#include "SPUASMJITRecompiler.h"
 
 #define SPU_OFF_128(x, ...) asmjit::x86::oword_ptr(*cpu, offset32(&spu_thread::x, ##__VA_ARGS__))
 #define SPU_OFF_64(x, ...) asmjit::x86::qword_ptr(*cpu, offset32(&spu_thread::x, ##__VA_ARGS__))

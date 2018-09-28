@@ -5,7 +5,6 @@
 #include "vm_reservation.h"
 #include "vm_var.h"
 
-#include "Emu/System.h"
 #include "Utilities/mutex.h"
 #include "Utilities/cond.h"
 #include "Utilities/Thread.h"

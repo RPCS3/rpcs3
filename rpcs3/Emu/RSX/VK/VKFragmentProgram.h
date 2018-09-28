@@ -1,9 +1,8 @@
 #pragma once
 #include "../Common/FragmentProgramDecompiler.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
-#include "Utilities/Thread.h"
 #include "VulkanAPI.h"
-#include "../VK/VKHelpers.h"
+#include "VKHelpers.h"
 
 struct VKFragmentDecompilerThread : public FragmentProgramDecompiler
 {

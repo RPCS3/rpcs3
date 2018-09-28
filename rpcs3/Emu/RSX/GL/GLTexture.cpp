@@ -3,7 +3,6 @@
 #include "../GCM.h"
 #include "../RSXThread.h"
 #include "../RSXTexture.h"
-#include "../rsx_utils.h"
 
 namespace gl
 {

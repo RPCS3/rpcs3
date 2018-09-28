@@ -2,6 +2,7 @@
 
 #include "Emu/RSX/RSXThread.h"
 #include <memory>
+#include <atomic>
 
 #ifdef _WIN32
 #include <windows.h>
