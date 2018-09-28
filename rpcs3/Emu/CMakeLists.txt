@@ -25,7 +25,9 @@ target_link_libraries(rpcs3_emu
 		3rdparty::pugixml
 		3rdparty::gsl)
 
-if (NOT MSVC)
+if (MSVC)
+	set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES COMPILE_FLAGS /GR-)
+else()
 	set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES COMPILE_FLAGS -fno-rtti)
 endif()
 
