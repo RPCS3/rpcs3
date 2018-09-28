@@ -1693,8 +1693,84 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 	}
 	case SPU_RdInMbox:
 	{
-		// TODO
-		break;
+		Label wait = c->newLabel();
+		Label ret_wait = c->newLabel();
+		Label fall = c->newLabel();
+		Label intr = c->newLabel();
+		Label ret = c->newLabel();
+
+		const XmmLink& vr = XmmAlloc();
+		auto count = SPU_OFF_8(ch_in_mbox, &spu_channel_4::count);
+		auto lock = SPU_OFF_8(ch_in_mbox, &spu_channel_4::lock);
+
+		c->cmp(count, 0);
+		c->je(fall);
+
+		after.emplace_back([=, pos = m_pos]
+		{
+			c->align(kAlignCode, 16);
+			c->bind(fall);
+			c->mov(SPU_OFF_32(pc), pos);
+			c->mov(ls->r32(), op.ra);
+			c->lea(*qw0, x86::qword_ptr(ret));
+			c->jmp(imm_ptr(spu_rdch));
+		});
+
+		after.emplace_back([=]
+		{
+			Label pause = c->newLabel();
+			c->align(kAlignCode, 16);
+			c->bind(wait);
+			save_rcx();
+			c->mov(x86::rcx, 5);
+			c->bind(pause);
+			c->pause();
+			c->loop(pause);
+			load_rcx();
+			c->jmp(ret_wait);
+		});
+
+		c->mov(qw0->r8(), 1);
+		c->xchg(qw0->r8(), lock);
+		c->test(qw0->r8(), qw0->r8());
+		c->jne(wait);
+		c->bind(ret_wait);
+
+		c->dec(count);
+
+		// Pop the first value into qw0
+		c->mov(qw0->r32(), SPU_OFF_32(ch_in_mbox, &spu_channel_4::values, 0));
+		c->mov(*qw1, SPU_OFF_64(ch_in_mbox, &spu_channel_4::values, 1));
+		c->mov(SPU_OFF_64(ch_in_mbox, &spu_channel_4::values, 0), *qw1);
+		c->mov(qw1->r32(), SPU_OFF_32(ch_in_mbox, &spu_channel_4::values, 3));
+		c->mov(SPU_OFF_32(ch_in_mbox, &spu_channel_4::values, 2), qw1->r32());
+
+		c->sfence();
+		c->cmp(count, 3);
+		c->mov(lock, 0);
+		c->je(intr);
+
+		after.emplace_back([=]
+		{
+			auto sub = [](spu_thread* _spu, void(*_ret)(spu_thread&, void*, u32), u32 mail)
+			{
+				_spu->int_ctrl[2].set(SPU_INT2_STAT_SPU_MAILBOX_THRESHOLD_INT);
+
+				// Restore args, mailbox value read and return
+				_ret(*_spu, _spu->_ptr<u8>(0), mail);
+			};
+
+			c->align(kAlignCode, 16);
+			c->bind(intr);
+			c->lea(*ls, x86::qword_ptr(ret));
+			c->jmp(imm_ptr<void(*)(spu_thread*, void(*)(spu_thread&, void*, u32), u32)>(sub));
+		});
+
+		c->bind(ret);
+		c->movd(vr, qw0->r32());
+		c->pslldq(vr, 12);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+		return;
 	}
 	case MFC_RdTagStat:
 	{
