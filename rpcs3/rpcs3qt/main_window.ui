@@ -169,6 +169,8 @@
     <addaction name="bootGameAct"/>
     <addaction name="bootRecentMenu"/>
     <addaction name="separator"/>
+    <addaction name="isoDecryptAct"/>
+    <addaction name="separator"/>
     <addaction name="bootInstallPkgAct"/>
     <addaction name="bootInstallPupAct"/>
     <addaction name="separator"/>
@@ -342,6 +344,11 @@
    <property name="text">
     <string>Boot Game</string>
    </property>
+  </action>
+  <action name="isoDecryptAct">
+    <property name="text">
+      <string>Decrypt .iso</string>
+    </property>
   </action>
   <action name="bootInstallPkgAct">
    <property name="text">

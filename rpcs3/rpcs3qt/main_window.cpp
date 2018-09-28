@@ -1,4 +1,5 @@
 
+#include <QDir>
 #include <QApplication>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -32,6 +33,7 @@
 #include "about_dialog.h"
 #include "pad_settings_dialog.h"
 #include "progress_dialog.h"
+#include "iso_decryptor.h"
 
 #include <thread>
 
@@ -1195,6 +1197,7 @@ void main_window::CreateConnects()
 
 	connect(ui->bootInstallPkgAct, &QAction::triggered, [this] {InstallPkg(); });
 	connect(ui->bootInstallPupAct, &QAction::triggered, [this] {InstallPup(); });
+	connect(ui->isoDecryptAct, &QAction::triggered, [this] { DecryptIso(); });
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 	connect(ui->sysPauseAct, &QAction::triggered, this, &main_window::OnPlayOrPause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
@@ -1838,4 +1841,63 @@ void main_window::dragMoveEvent(QDragMoveEvent* event)
 void main_window::dragLeaveEvent(QDragLeaveEvent* event)
 {
 	event->accept();
+}
+
+void main_window::DecryptIso()
+{
+
+	QString filePath = QFileDialog::getOpenFileName(this, tr("Select PS3 .iso To Decrypt"), QDir::homePath(), tr("PS3 .iso file (*.iso)"));
+
+	LOG_NOTICE(GENERAL, "Decrypting %s, please wait..", filePath.toStdString());
+
+	if (filePath.isEmpty())
+	{
+		return;
+	}
+
+	iso_decryptor decryptor(filePath);
+
+	switch (decryptor.decrypt())
+	{
+	case -4:
+	{
+		LOG_ERROR(GENERAL, "Error while decrypting .iso: Unable to make directory.");
+		QMessageBox::critical(this, tr("Failure!"), tr("Error while decrypting .iso: Unable to make directory."));
+		return;
+	}
+	case -3:
+	{
+		LOG_ERROR(GENERAL, "Error while decrypting .iso: Unable to write to output file.");
+		QMessageBox::critical(this, tr("Failure!"), tr("Error while decrypting .iso: Unable to write to output file."));
+		return;
+	}
+	case -2:
+	{
+		LOG_ERROR(GENERAL, "Error while reading .iso: Last region size is larger than filesize. Most likely corrupt ISO.");
+		QMessageBox::critical(this, tr("Failure!"), tr("Error while reading .iso: Last region size is larger than filesize. Most likely corrupt ISO."));
+		return;
+	}
+	case -1:
+	{
+		LOG_ERROR(GENERAL, "Error while opening .iso: No read access permission.");
+		QMessageBox::critical(this, tr("Failure!"), tr("Error while opening .iso: No read access permission."));
+		return;
+	}
+	case 0:
+		LOG_ERROR(GENERAL, "Error while decrypting .iso: Could not open file.");
+		QMessageBox::critical(this, tr("Failure!"), tr("Error while decrypting .iso: Could not open file."));
+		return;
+	case 1: break;
+	default:
+		LOG_ERROR(GENERAL, "Error while decrypting .iso: Unknown error.");
+		QMessageBox::critical(this, tr("Failure!"), tr("Error while decrypting .iso: Unknown error."));
+		return;
+	}
+
+	LOG_SUCCESS(GENERAL, "Successfully decrypted %s!", filePath.toStdString());
+
+	QMessageBox::information(this, tr("Successfully decrypted .iso!"),
+	    tr("We've opened a folder for you,\n"
+	       "please extract the decrypted .iso with 7-zip.\n"
+	       "You can delete the .iso after extraction, if you wish."));
 }
