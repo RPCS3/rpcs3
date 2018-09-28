@@ -447,8 +447,6 @@ void spu_thread::cpu_init()
 	ch_stall_stat.data.store({});
 	ch_atomic_stat.data.store({});
 
-	ch_in_mbox.clear();
-
 	ch_out_mbox.data.store({});
 	ch_out_intr_mbox.data.store({});
 
@@ -2278,6 +2276,8 @@ bool spu_thread::stop_and_signal(u32 code)
 			fmt::throw_exception("sys_spu_thread_group_exit(): Out_MBox is empty" HERE);
 		}
 
+		ch_in_mbox.clear();
+
 		LOG_TRACE(SPU, "sys_spu_thread_group_exit(status=0x%x)", value);
 
 		std::lock_guard lock(group->mutex);
@@ -2308,6 +2308,8 @@ bool spu_thread::stop_and_signal(u32 code)
 		{
 			fmt::throw_exception("sys_spu_thread_exit(): Out_MBox is empty" HERE);
 		}
+
+		ch_in_mbox.clear();
 
 		LOG_TRACE(SPU, "sys_spu_thread_exit(status=0x%x)", ch_out_mbox.get_value());
 
