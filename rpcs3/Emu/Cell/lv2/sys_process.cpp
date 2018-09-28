@@ -1,5 +1,5 @@
 ﻿#include "stdafx.h"
-#include "Utilities/types.h"
+#include "sys_process.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -23,7 +23,6 @@
 #include "sys_timer.h"
 #include "sys_trace.h"
 #include "sys_fs.h"
-#include "sys_process.h"
 
 
 

@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "sys_timer.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
@@ -7,7 +8,6 @@
 #include "Emu/Cell/PPUThread.h"
 #include "sys_event.h"
 #include "sys_process.h"
-#include "sys_timer.h"
 
 #include <thread>
 

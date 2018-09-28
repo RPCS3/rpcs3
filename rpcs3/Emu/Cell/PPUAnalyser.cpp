@@ -1,7 +1,8 @@
 #include "stdafx.h"
+#include "PPUAnalyser.h"
+
 #include "PPUOpcodes.h"
 #include "PPUModule.h"
-#include "PPUAnalyser.h"
 
 #include <unordered_set>
 #include "yaml-cpp/yaml.h"

@@ -1,4 +1,6 @@
 ﻿#include "stdafx.h"
+#include "Emu/Cell/PPUModule.h"
+
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/bin_patch.h"
 #include "Crypto/sha1.h"
@@ -8,7 +10,6 @@
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/PPUOpcodes.h"
-#include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUAnalyser.h"
 
 #include "Emu/Cell/lv2/sys_prx.h"

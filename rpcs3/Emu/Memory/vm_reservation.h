@@ -3,6 +3,8 @@
 #include "vm.h"
 #include "Utilities/cond.h"
 
+#include "Utilities/Atomic.h"
+
 class notifier;
 
 namespace vm

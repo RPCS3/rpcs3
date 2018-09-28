@@ -1,5 +1,4 @@
-﻿#include "stdafx.h"
-#include "../rsx_methods.h"
+#include "stdafx.h"
 #include "GLGSRender.h"
 #include "Emu/System.h"
 

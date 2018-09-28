@@ -1,7 +1,8 @@
 ﻿#include "stdafx.h"
+#include "CPUThread.h"
+
 #include "Emu/System.h"
 #include "Emu/Memory/vm_locking.h"
-#include "CPUThread.h"
 #include "Emu/IdManager.h"
 #include "Utilities/GDBDebugServer.h"
 #include "Emu/Cell/PPUThread.h"

@@ -1,11 +1,11 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "sys_gpio.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 
-#include "sys_gpio.h"
 
 error_code sys_gpio_get(u64 device_id, vm::ptr<u64> value)
 {

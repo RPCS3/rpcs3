@@ -1,8 +1,8 @@
 ﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
-#include "RSXThread.h"
 #include "RSXTexture.h"
+
 #include "rsx_methods.h"
+#include "rsx_utils.h"
 
 namespace rsx
 {

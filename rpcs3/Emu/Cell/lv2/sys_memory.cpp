@@ -1,8 +1,9 @@
 ﻿#include "stdafx.h"
+#include "sys_memory.h"
+
 #include "Utilities/VirtualMemory.h"
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/IdManager.h"
-#include "sys_memory.h"
 
 LOG_CHANNEL(sys_memory);
 

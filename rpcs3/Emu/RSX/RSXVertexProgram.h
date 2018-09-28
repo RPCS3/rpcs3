@@ -1,7 +1,9 @@
 #pragma once
 
-#include "RSXTexture.h"
+#include "gcm_enums.h"
+#include "Utilities/types.h"
 
+#include <vector>
 #include <bitset>
 #include <set>
 

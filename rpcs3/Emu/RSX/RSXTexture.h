@@ -1,19 +1,8 @@
 ﻿#pragma once
-#include "GCM.h"
+#include "gcm_enums.h"
 
 namespace rsx
 {
-	/**
-	* Use an extra cubemap format
-	*/
-	enum class texture_dimension_extended : u8
-	{
-		texture_dimension_1d = 0,
-		texture_dimension_2d = 1,
-		texture_dimension_cubemap = 2,
-		texture_dimension_3d = 3,
-	};
-
 	class fragment_texture
 	{
 	protected:

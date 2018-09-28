@@ -2,6 +2,7 @@
 #include "BufferUtils.h"
 #include "../rsx_methods.h"
 #include "Utilities/sysinfo.h"
+#include "../RSXThread.h"
 
 #include <limits>
 

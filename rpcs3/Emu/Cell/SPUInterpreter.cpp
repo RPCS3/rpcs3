@@ -1,11 +1,11 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "SPUInterpreter.h"
+
 #include "Emu/System.h"
 #include "Utilities/JIT.h"
 #include "Utilities/sysinfo.h"
 #include "Utilities/asm.h"
 #include "SPUThread.h"
-#include "SPUInterpreter.h"
 #include "Emu/Cell/Common.h"
 
 #include <cmath>

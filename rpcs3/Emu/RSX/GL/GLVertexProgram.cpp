@@ -1,10 +1,10 @@
 ﻿#include "stdafx.h"
+#include "GLVertexProgram.h"
+
 #include "Emu/System.h"
 
-#include "GLVertexProgram.h"
 #include "GLCommonDecompiler.h"
 #include "GLHelpers.h"
-#include "../GCM.h"
 #include "../Common/GLSLCommon.h"
 
 #include <algorithm>

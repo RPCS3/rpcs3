@@ -1,12 +1,12 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "sys_net.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Utilities/Thread.h"
 
 #include "sys_sync.h"
-#include "sys_net.h"
 
 #ifdef _WIN32
 #include <winsock2.h>

@@ -18,7 +18,6 @@
 #include "GLTexture.h"
 #include "../Common/TextureUtils.h"
 #include "../Common/texture_cache.h"
-#include "../../Memory/vm.h"
 
 class GLGSRender;
 

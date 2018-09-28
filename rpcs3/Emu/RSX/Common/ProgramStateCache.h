@@ -2,7 +2,6 @@
 
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include "Emu/RSX/RSXVertexProgram.h"
-#include "Emu/Memory/vm.h"
 
 #include "Utilities/GSL.h"
 #include "Utilities/hash.h"
