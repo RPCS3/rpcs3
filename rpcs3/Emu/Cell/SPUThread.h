@@ -263,92 +263,74 @@ public:
 	}
 };
 
-struct spu_channel_4_t
+struct spu_channel_4
 {
-	struct alignas(16) sync_var_t
-	{
-		u8 waiting;
-		u8 count;
-		u32 value0;
-		u32 value1;
-		u32 value2;
-	};
-
-	atomic_t<sync_var_t> values;
-	atomic_t<u32> value3;
+	u8 waiting{}, count{}, lock{};
+	alignas(16) u32 values[4];
 
 public:
 	void clear()
 	{
-		values.store({});
-		value3 = 0;
+		count = 0;
 	}
 
 	// push unconditionally (overwriting latest value), returns true if needs signaling
 	void push(cpu_thread& spu, u32 value)
 	{
-		value3 = value; _mm_sfence();
+		while (atomic_storage<u8>::exchange(lock, 1)) busy_wait(200);
 
-		if (values.atomic_op([=](sync_var_t& data) -> bool
+		values[count == 4 ? 3 : count++] = value;
+
+		if (waiting)
 		{
-			switch (data.count++)
-			{
-			case 0: data.value0 = value; break;
-			case 1: data.value1 = value; break;
-			case 2: data.value2 = value; break;
-			default: data.count = 4;
-			}
-
-			if (data.waiting)
-			{
-				data.waiting = 0;
-
-				return true;
-			}
-
-			return false;
-		}))
-		{
+			waiting = 0;
+			_mm_sfence();
+			lock = 0;
 			spu.notify();
+			return;
 		}
+
+		_mm_sfence();
+		lock = 0;
 	}
 
 	// returns non-zero value on success: queue size before removal
 	uint try_pop(u32& out)
 	{
-		return values.atomic_op([&](sync_var_t& data)
+		while (atomic_storage<u8>::exchange(lock, 1)) busy_wait(200);
+
+		const u32 cnt = count;
+
+		if (!cnt)
 		{
-			const uint result = data.count;
+			waiting = 1;
+		}
+		else
+		{
+			this->count--;
+			out = values[0];
+			values[0] = values[1];
+			values[1] = values[2];
+			values[2] = values[3];
+		}
 
-			if (result != 0)
-			{
-				data.waiting = 0;
-				data.count--;
-				out = data.value0;
-
-				data.value0 = data.value1;
-				data.value1 = data.value2;
-				_mm_lfence();
-				data.value2 = this->value3;
-			}
-			else
-			{
-				data.waiting = 1;
-			}
-
-			return result;
-		});
+		_mm_sfence();
+		lock = 0;
+		return cnt;
 	}
 
 	u32 get_count()
 	{
-		return values.raw().count;
+		return count;
 	}
 
 	void set_values(u32 count, u32 value0, u32 value1 = 0, u32 value2 = 0, u32 value3 = 0)
 	{
-		this->values.raw() = { 0, static_cast<u8>(count), value0, value1, value2 };
-		this->value3 = value3;
+		this->count = count;
+		values[0] = value0;
+		values[1] = value1;
+		values[2] = value2;
+		values[3] = value3;
 	}
 };
 
@@ -544,7 +526,7 @@ public:
 	spu_channel ch_stall_stat;
 	spu_channel ch_atomic_stat;
 
-	spu_channel_4_t ch_in_mbox;
+	spu_channel_4 ch_in_mbox;
 
 	spu_channel ch_out_mbox;
 	spu_channel ch_out_intr_mbox;

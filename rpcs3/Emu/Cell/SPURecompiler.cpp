@@ -3305,9 +3305,7 @@ public:
 		}
 		case SPU_RdInMbox:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_in_mbox), true);
-			res.value = m_ir->CreateLShr(res.value, 8);
-			res.value = m_ir->CreateAnd(res.value, 7);
+			res.value = m_ir->CreateZExt(m_ir->CreateLoad(spu_ptr<u8>(&spu_thread::ch_in_mbox, &spu_channel_4::count), true), get_type<u32>());
 			break;
 		}
 		case SPU_RdEventStat:

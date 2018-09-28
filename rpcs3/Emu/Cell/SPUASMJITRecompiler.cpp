@@ -1878,8 +1878,8 @@ void spu_recompiler::RCHCNT(spu_opcode_t op)
 	case SPU_RdInMbox:
 	{
 		const XmmLink& vr = XmmAlloc();
-		c->movdqa(vr, SPU_OFF_128(ch_in_mbox));
-		c->pslldq(vr, 14);
+		c->movzx(qw0->r32(), SPU_OFF_8(ch_in_mbox, &spu_channel_4::count));
+		c->movd(vr, qw0->r32());
 		c->psrldq(vr, 3);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 		return;
