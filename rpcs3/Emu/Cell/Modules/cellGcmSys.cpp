@@ -955,6 +955,15 @@ s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 		 return CELL_GCM_ERROR_FAILURE;
 	}
 
+	for (u32 addr = ea, end = ea + size; addr < end; addr += 0x100000)
+	{
+		if (!vm::check_addr(addr, 1, vm::page_1m_size))
+		{
+			// Error code coming from the syscall
+			return CELL_EINVAL;
+		}
+	}
+
 	ea >>=20, io >>= 20, size >>= 20;
 
 	IoMapTable[ea] = size;
@@ -1008,6 +1017,15 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 	cellGcmSys.warning("cellGcmMapMainMemory(ea=0x%x, size=0x%x, offset=*0x%x)", ea, size, offset);
 
 	if (!size || (ea & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
+
+	for (u32 addr = ea, end = ea + size; addr < end; addr += 0x100000)
+	{
+		if (!vm::check_addr(addr, 1, vm::page_1m_size))
+		{
+			// Error code coming from the syscall
+			return CELL_EINVAL;
+		}
+	}
 
 	// Use the offset table to find the next free io address
 	for (u32 io = 0, end = (rsx::get_current_renderer()->main_mem_size - reserved_size) >> 20, unmap_count = 1; io < end; unmap_count++)

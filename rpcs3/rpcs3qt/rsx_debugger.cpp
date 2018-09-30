@@ -639,7 +639,7 @@ void rsx_debugger::GetMemory()
 		address_item->setData(Qt::UserRole, addr);
 		m_list_commands->setItem(i, 0, address_item);
 
-		if (vm::check_addr(RSXIOMem.RealAddr(addr)))
+		if (RSXIOMem.RealAddr(addr))
 		{
 			u32 cmd = *vm::get_super_ptr<u32>(RSXIOMem.RealAddr(addr));
 			u32 count = (cmd >> 18) & 0x7ff;

@@ -422,7 +422,7 @@ namespace vm
 		// Notify rsx to invalidate range
 		// Note: This must be done *before* memory gets unmapped while holding the vm lock, otherwise
 		//       the RSX might try to call VirtualProtect on memory that is already unmapped
-		if (const auto rsxthr = fxm::check_unlocked<GSRender>())
+		if (const auto rsxthr = rsx::get_current_renderer())
 		{
 			rsxthr->on_notify_memory_unmapped(addr, size);
 		}

@@ -182,6 +182,14 @@ s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags)
 		return CELL_EINVAL;
 	}
 
+	for (u32 addr = ea, end = ea + size; addr < end; addr += 0x100000)
+	{
+		if (!vm::check_addr(addr, 1, vm::page_1m_size))
+		{
+			return CELL_EINVAL;
+		}
+	}
+
 	io >>= 20, ea >>= 20, size >>= 20;
 
 	for (u32 i = 0; i < size; i++)

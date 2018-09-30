@@ -4,7 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/Memory/vm.h"
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/RSXThread.h"
 
 #include <map>
 #include <exception>
@@ -31,10 +31,6 @@ namespace rsx
 
 		if (sys_rsx_context_allocate(vm::get_addr(&contextInfo.context_id), vm::get_addr(&contextInfo.dma_addr), vm::get_addr(&contextInfo.driver_info), vm::get_addr(&contextInfo.reports_addr), contextInfo.mem_handle, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
-
-		// 1024Mb, the extra 512Mb memory is needed to allocate FIFO commands on
-		// So there wont be any conflicts with memory used in the capture
-		get_current_renderer()->main_mem_size = 0x40000000;
 
 		return contextInfo.context_id;
 	}
@@ -98,8 +94,13 @@ namespace rsx
 
 		fifo_stops.emplace_back(currentOffset);
 
-		if (sys_rsx_context_iomap(context_id, 0x20000000, fifo_mem, fifo_size, 0) != CELL_OK)
-			fmt::throw_exception("Capture Replay: fifo mapping failed");
+		// Allocate FIFO queue outside of RSX memory space to avoid conflicts with memory used in the capture
+		// Dont use the syscall to bypass error checking
+		for (u32 i = 0, io = 0x20000000 >> 20, ea = fifo_mem >> 20; i<(fifo_size >> 20); i++)
+		{
+			RSXIOMem.io[ea + i] = io + i;
+			RSXIOMem.ea[io + i] = ea + i;
+		}
 
 		return fifo_stops;
 	}

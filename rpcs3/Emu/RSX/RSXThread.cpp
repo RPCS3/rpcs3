@@ -2727,9 +2727,7 @@ namespace rsx
 	{
 		if (!m_rsx_thread_exiting && address < 0xC0000000)
 		{
-			u32 ea = address >> 20, io = RSXIOMem.io[ea];
-
-			if (io < 512)
+			if (u32 ea = address >> 20, io = RSXIOMem.io[ea]; io < 512)
 			{
 				if (!isHLE)
 				{
@@ -2744,6 +2742,13 @@ namespace rsx
 						offsetTable.ioAddress[ea++] = 0xFFFF;
 						offsetTable.eaAddress[io++] = 0xFFFF;
 					}
+				}
+
+				ea = address >> 20, io = RSXIOMem.io[ea];
+				for (const u32 end = ea + (size >> 20); ea < end;)
+				{
+					RSXIOMem.io[ea++] = 0xFFFF;
+					RSXIOMem.ea[io++] = 0xFFFF;
 				}
 			}
 
