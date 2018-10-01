@@ -144,6 +144,11 @@ namespace rsx
 	}
 
 	//
+	static inline u32 floor_log2(u32 value)
+	{
+		return value <= 1 ? 0 : utils::cntlz32(value, true) ^ 31;
+	}
+
 	static inline u32 ceil_log2(u32 value)
 	{
 		return value <= 1 ? 0 : utils::cntlz32((value - 1) << 1, true) ^ 31;

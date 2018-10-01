@@ -214,7 +214,7 @@ namespace gl
 		glSamplerParameterfv(samplerHandle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
 
 		if (sampled_image->upload_context != rsx::texture_upload_context::shader_read ||
-			tex.get_exact_mipmap_count() <= 1)
+			tex.get_exact_mipmap_count() == 1)
 		{
 			GLint min_filter = tex_min_filter(tex.min_filter());
 
