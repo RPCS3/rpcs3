@@ -1771,7 +1771,6 @@ namespace rsx
 			switch (extended_dimension)
 			{
 			case rsx::texture_dimension_extended::texture_dimension_1d:
-				tex_height = 1;
 				depth = 1;
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_2d:
