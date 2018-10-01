@@ -258,7 +258,7 @@ namespace rsx
 
 	u16 fragment_texture::height() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index * 8)]) & 0xffff);
+		return dimension() != rsx::texture_dimension::dimension1d ? ((registers[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index * 8)]) & 0xffff) : 1;
 	}
 
 	u32 fragment_texture::border_color() const
@@ -396,7 +396,7 @@ namespace rsx
 
 	u16 vertex_texture::height() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + (m_index * 8)]) & 0xffff);
+		return dimension() != rsx::texture_dimension::dimension1d ? ((registers[NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + (m_index * 8)]) & 0xffff) : 1;
 	}
 
 	u32 vertex_texture::border_color() const
