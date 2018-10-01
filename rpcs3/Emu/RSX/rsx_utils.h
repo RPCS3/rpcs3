@@ -663,4 +663,237 @@ namespace rsx
 			m_data.store(0);
 		}
 	};
+
+	template <typename Ty>
+	struct simple_array
+	{
+	public:
+		using iterator = Ty * ;
+		using const_iterator = Ty * const;
+
+	private:
+		u32 _capacity = 0;
+		u32 _size = 0;
+		Ty* _data = nullptr;
+
+		inline u32 offset(const_iterator pos)
+		{
+			return (_data) ? (pos - _data) : 0;
+		}
+
+	public:
+		simple_array() {}
+
+		simple_array(u32 initial_size, const Ty val = {})
+		{
+			reserve(initial_size);
+			_size = initial_size;
+
+			for (int n = 0; n < initial_size; ++n)
+			{
+				_data[n] = val;
+			}
+		}
+
+		simple_array(const std::initializer_list<Ty>& args)
+		{
+			reserve(args.size());
+
+			for (const auto& arg : args)
+			{
+				push_back(arg);
+			}
+		}
+
+		~simple_array()
+		{
+			if (_data)
+			{
+				free(_data);
+				_data = nullptr;
+				_size = _capacity = 0;
+			}
+		}
+
+		void swap(simple_array<Ty>& other) noexcept
+		{
+			std::swap(_capacity, other._capacity);
+			std::swap(_size, other._size);
+			std::swap(_data, other._data);
+		}
+
+		void reserve(u32 size)
+		{
+			if (_capacity > size)
+				return;
+
+			auto old_data = _data;
+			auto old_size = _size;
+
+			_data = (Ty*)malloc(sizeof(Ty) * size);
+			_capacity = size;
+
+			if (old_data)
+			{
+				memcpy(_data, old_data, sizeof(Ty) * old_size);
+				free(old_data);
+			}
+		}
+
+		void push_back(const Ty& val)
+		{
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+			}
+
+			_data[_size++] = val;
+		}
+
+		void push_back(Ty&& val)
+		{
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+			}
+
+			_data[_size++] = val;
+		}
+
+		iterator insert(iterator pos, const Ty& val)
+		{
+			verify(HERE), pos >= _data;
+			const auto _loc = offset(pos);
+
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+				pos = _data + _loc;
+			}
+
+			if (_loc >= _size)
+			{
+				_data[_size++] = val;
+				return pos;
+			}
+
+			verify(HERE), _loc < _size;
+
+			const u32 remaining = (_size - _loc);
+			memmove(pos + 1, pos, remaining * sizeof(Ty));
+
+			*pos = val;
+			_size++;
+
+			return pos;
+		}
+
+		iterator insert(iterator pos, Ty&& val)
+		{
+			verify(HERE), pos >= _data;
+			const auto _loc = offset(pos);
+
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+				pos = _data + _loc;
+			}
+
+			if (_loc >= _size)
+			{
+				_data[_size++] = val;
+				return pos;
+			}
+
+			verify(HERE), _loc < _size;
+
+			const u32 remaining = (_size - _loc);
+			memmove(pos + 1, pos, remaining * sizeof(Ty));
+
+			*pos = val;
+			_size++;
+
+			return pos;
+		}
+
+		void clear()
+		{
+			_size = 0;
+		}
+
+		bool empty() const
+		{
+			return _size == 0;
+		}
+
+		u32 size() const
+		{
+			return _size;
+		}
+
+		u32 capacity() const
+		{
+			return _capacity;
+		}
+
+		Ty& operator[] (u32 index)
+		{
+			return _data[index];
+		}
+
+		const Ty& operator[] (u32 index) const
+		{
+			return _data[index];
+		}
+
+		Ty* data()
+		{
+			return _data;
+		}
+
+		const Ty* data() const
+		{
+			return _data;
+		}
+
+		Ty& back()
+		{
+			return _data[_size - 1];
+		}
+
+		const Ty& back() const
+		{
+			return _data[_size - 1];
+		}
+
+		Ty& front()
+		{
+			return _data[0];
+		}
+
+		const Ty& front() const
+		{
+			return _data[0];
+		}
+
+		iterator begin()
+		{
+			return _data;
+		}
+
+		iterator end()
+		{
+			return _data ? _data + _size : nullptr;
+		}
+
+		const_iterator begin() const
+		{
+			return _data;
+		}
+
+		const_iterator end() const
+		{
+			return _data ? _data + _size : nullptr;
+		}
+	};
 }

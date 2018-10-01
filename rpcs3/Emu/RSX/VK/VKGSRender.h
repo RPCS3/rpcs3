@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Emu/RSX/GSRender.h"
 #include "VKHelpers.h"
 #include "VKTextureCache.h"
@@ -403,9 +403,11 @@ private:
 
 	vk::vertex_upload_info upload_vertex_data();
 
-public:
 	bool load_program();
-	void load_program_env(const vk::vertex_upload_info& vertex_info);
+	void load_program_env(const vk::vertex_upload_info& upload_info);
+	void update_vertex_env(const vk::vertex_upload_info& upload_info);
+
+public:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 	void read_buffers();
 	void write_buffers();
@@ -422,6 +424,7 @@ public:
 protected:
 	void begin() override;
 	void end() override;
+	void emit_geometry(u32 sub_index) override;
 
 	void on_init_thread() override;
 	void on_exit() override;

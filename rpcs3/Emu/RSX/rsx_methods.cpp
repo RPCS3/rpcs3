@@ -423,9 +423,7 @@ namespace rsx
 		{
 			if (arg)
 			{
-				rsx::method_registers.current_draw_clause.draw_command_ranges.clear();
-				rsx::method_registers.current_draw_clause.command = draw_command::none;
-				rsx::method_registers.current_draw_clause.primitive = to_primitive_type(arg);
+				rsx::method_registers.current_draw_clause.reset(to_primitive_type(arg));
 				rsxthr->begin();
 				return;
 			}
@@ -453,9 +451,9 @@ namespace rsx
 			else
 				rsx::method_registers.current_draw_clause.is_immediate_draw = false;
 
-			if (!(rsx::method_registers.current_draw_clause.draw_command_ranges.empty() &&
-				  rsx::method_registers.current_draw_clause.inline_vertex_array.empty()))
+			if (!rsx::method_registers.current_draw_clause.empty())
 			{
+				rsx::method_registers.current_draw_clause.compile();
 				rsxthr->end();
 			}
 		}
@@ -596,6 +594,30 @@ namespace rsx
 		{
 			if (rsx->m_framebuffer_state_contested)
 				rsx->m_rtts_dirty = true;
+		}
+
+		void set_vertex_base_offset(thread* rsx, u32 reg, u32 arg)
+		{
+			if (rsx->in_begin_end)
+			{
+				// Revert change to queue later
+				method_registers.decode(reg, method_registers.register_previous_value);
+
+				// Insert base mofifier barrier
+				method_registers.current_draw_clause.insert_command_barrier(vertex_base_modifier_barrier, arg);
+			}
+		}
+
+		void set_index_base_offset(thread* rsx, u32 reg, u32 arg)
+		{
+			if (rsx->in_begin_end)
+			{
+				// Revert change to queue later
+				method_registers.decode(reg, method_registers.register_previous_value);
+
+				// Insert base mofifier barrier
+				method_registers.current_draw_clause.insert_command_barrier(index_base_modifier_barrier, arg);
+			}
 		}
 
 		template<u32 index>
@@ -1154,6 +1176,13 @@ namespace rsx
 				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
 			}
 		};
+	}
+
+	namespace fifo
+	{
+		void draw_barrier(thread* rsx, u32, u32)
+		{
+		}
 	}
 
 	void rsx_state::init()
@@ -2122,6 +2151,34 @@ namespace rsx
 		return registers[reg] == value;
 	}
 
+	u32 draw_clause::execute_pipeline_dependencies() const
+	{
+		u32 result = 0;
+
+		for (const auto &barrier : draw_command_barriers[current_range_index])
+		{
+			switch (barrier.type)
+			{
+			case primitive_restart_barrier:
+				break;
+			case index_base_modifier_barrier:
+				// Change index base offset
+				method_registers.decode(NV4097_SET_VERTEX_DATA_BASE_INDEX, barrier.arg);
+				result |= index_base_changed;
+				break;
+			case vertex_base_modifier_barrier:
+				// Change vertex base offset
+				method_registers.decode(NV4097_SET_VERTEX_DATA_BASE_OFFSET, barrier.arg);
+				result |= vertex_base_changed;
+				break;
+			default:
+				fmt::throw_exception("Unreachable" HERE);
+			}
+		}
+
+		return result;
+	}
+
 	namespace method_detail
 	{
 		template<int Id, int Step, int Count, template<u32> class T, int Index = 0>
@@ -2494,6 +2551,7 @@ namespace rsx
 
 		//Some custom GCM methods
 		methods[GCM_SET_DRIVER_OBJECT]                    = nullptr;
+		methods[FIFO::FIFO_DRAW_BARRIER]                  = nullptr;
 
 		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
 		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
@@ -2600,6 +2658,8 @@ namespace rsx
 		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start>();
 		bind<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask>();
+		bind<NV4097_SET_VERTEX_DATA_BASE_OFFSET, nv4097::set_vertex_base_offset>();
+		bind<NV4097_SET_VERTEX_DATA_BASE_INDEX, nv4097::set_index_base_offset>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();
@@ -2619,6 +2679,8 @@ namespace rsx
 		// custom methods
 		bind<GCM_FLIP_COMMAND, flip_command>();
 
+		// FIFO
+		bind<FIFO::FIFO_DRAW_BARRIER, fifo::draw_barrier>();
 
 		return true;
 	}();

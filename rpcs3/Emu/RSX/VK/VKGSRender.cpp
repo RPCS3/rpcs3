@@ -603,7 +603,7 @@ VKGSRender::VKGSRender() : GSRender()
 	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
 
 	//Occlusion
-	m_occlusion_query_pool.create((*m_device), DESCRIPTOR_MAX_DRAW_CALLS); //Enough for 4k draw calls per pass
+	m_occlusion_query_pool.create((*m_device), OCCLUSION_MAX_POOL_SIZE);
 	for (int n = 0; n < 128; ++n)
 		m_occlusion_query_data[n].driver_handle = n;
 
@@ -619,7 +619,7 @@ VKGSRender::VKGSRender() : GSRender()
 
 	//VRAM allocation
 	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, "attrib buffer", 0x400000);
-	m_uniform_buffer_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "uniform buffer");
+	m_uniform_buffer_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "uniform buffer");
 	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
 	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
 	m_texture_upload_buffer_ring_info.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
@@ -849,10 +849,14 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			m_flush_requests.post(sync_timestamp == 0ull);
 			has_queue_ref = true;
 		}
-		else
+		else if (!vk::is_uninterruptible())
 		{
 			//Flush primary cb queue to sync pending changes (e.g image transitions!)
 			flush_command_queue();
+		}
+		else
+		{
+			LOG_ERROR(RSX, "Fault in uninterruptible code!");
 		}
 
 		if (sync_timestamp > 0)
@@ -1110,6 +1114,145 @@ void VKGSRender::close_render_pass()
 	render_pass_open = false;
 }
 
+void VKGSRender::emit_geometry(u32 sub_index)
+{
+	auto &draw_call = rsx::method_registers.current_draw_clause;
+	//std::chrono::time_point<steady_clock> vertex_start = steady_clock::now();
+
+	if (sub_index == 0)
+	{
+		m_vertex_layout = analyse_inputs_interleaved();
+	}
+
+	if (!m_vertex_layout.validate())
+	{
+		// No vertex inputs enabled
+		draw_call.end();
+		return;
+	}
+
+	if (sub_index > 0 && draw_call.execute_pipeline_dependencies() & rsx::vertex_base_changed)
+	{
+		// Rebase vertex bases instead of 
+		for (auto &info : m_vertex_layout.interleaved_blocks)
+		{
+			const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
+			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location);
+		}
+	}
+
+	const auto old_persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
+	const auto old_volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
+
+	// Programs data is dependent on vertex state
+	auto upload_info = upload_vertex_data();
+	if (!upload_info.vertex_draw_count)
+	{
+		// Malformed vertex setup; abort
+		return;
+	}
+
+	//std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
+	//m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - vertex_start).count();
+
+	auto persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
+	auto volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
+	bool update_descriptors = false;
+
+	if (sub_index == 0)
+	{
+		// Load program execution environment
+		load_program_env(upload_info);
+		update_descriptors = true;
+	}
+	else
+	{
+		// Update vertex fetch environment
+		update_vertex_env(upload_info);
+
+		if (persistent_buffer != old_persistent_buffer || volatile_buffer != old_volatile_buffer)
+		{
+/*			VkDescriptorSetAllocateInfo alloc_info = {};
+			alloc_info.descriptorPool = m_current_frame->descriptor_pool;
+			alloc_info.descriptorSetCount = 1;
+			alloc_info.pSetLayouts = &descriptor_layouts;
+			alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+
+			VkDescriptorSet new_descriptor_set;
+			CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &new_descriptor_set));
+
+			VkCopyDescriptorSet copy = {};
+			copy.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
+			copy
+
+			m_current_frame->descriptor_set = new_descriptor_set;
+			m_current_frame->used_descriptors++;
+
+			update_descriptors = true;*/
+		}
+	}
+
+	if (update_descriptors)
+	{
+		m_program->bind_uniform(persistent_buffer, "persistent_input_stream", m_current_frame->descriptor_set);
+		m_program->bind_uniform(volatile_buffer, "volatile_input_stream", m_current_frame->descriptor_set);
+
+		vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &m_current_frame->descriptor_set, 0, nullptr);
+	}
+
+	//std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
+	//m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_start - vertex_end).count();
+
+	begin_render_pass();
+
+	if (!upload_info.index_info)
+	{
+		if (draw_call.is_single_draw())
+		{
+			vkCmdDraw(*m_current_command_buffer, upload_info.vertex_draw_count, 1, 0, 0);
+		}
+		else
+		{
+			u32 vertex_offset = 0;
+			const auto subranges = draw_call.get_subranges();
+			for (const auto &range : subranges)
+			{
+				vkCmdDraw(*m_current_command_buffer, range.count, 1, vertex_offset, 0);
+				vertex_offset += range.count;
+			}
+		}
+	}
+	else
+	{
+		const VkIndexType index_type = std::get<1>(*upload_info.index_info);
+		const VkDeviceSize offset = std::get<0>(*upload_info.index_info);
+
+		vkCmdBindIndexBuffer(*m_current_command_buffer, m_index_buffer_ring_info.heap->value, offset, index_type);
+
+		if (rsx::method_registers.current_draw_clause.is_single_draw())
+		{
+			const u32 index_count = upload_info.vertex_draw_count;
+			vkCmdDrawIndexed(*m_current_command_buffer, index_count, 1, 0, 0, 0);
+		}
+		else
+		{
+			u32 vertex_offset = 0;
+			const auto subranges = draw_call.get_subranges();
+			for (const auto &range : subranges)
+			{
+				const auto count = get_index_count(draw_call.primitive, range.count);
+				vkCmdDrawIndexed(*m_current_command_buffer, count, 1, vertex_offset, 0, 0);
+				vertex_offset += count;
+			}
+		}
+	}
+
+	close_render_pass();
+
+	//std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
+	//m_draw_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
+}
+
 void VKGSRender::end()
 {
 	if (skip_frame || !framebuffer_status_valid || renderer_unavailable ||
@@ -1363,31 +1506,6 @@ void VKGSRender::end()
 	std::chrono::time_point<steady_clock> program_end = steady_clock::now();
 	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_end - program_start).count();
 
-	// Programs data is dependent on vertex state
-	std::chrono::time_point<steady_clock> vertex_start = program_end;
-	auto upload_info = upload_vertex_data();
-	std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
-	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - vertex_start).count();
-
-	if (!upload_info.vertex_draw_count)
-	{
-		// Malformed vertex setup; abort
-		rsx::thread::end();
-		return;
-	}
-
-	// Load program execution environment
-	program_start = vertex_end;
-	load_program_env(upload_info);
-
-	VkBufferView persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
-	VkBufferView volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
-	m_program->bind_uniform(persistent_buffer, "persistent_input_stream", m_current_frame->descriptor_set);
-	m_program->bind_uniform(volatile_buffer, "volatile_input_stream", m_current_frame->descriptor_set);
-
-	program_end = steady_clock::now();
-	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_end - program_start).count();
-
 	textures_start = program_end;
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
@@ -1453,10 +1571,6 @@ void VKGSRender::end()
 	textures_end = steady_clock::now();
 	m_textures_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
-	//While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
-	//Only textures are synchronized tightly with the GPU and they have been read back above
-	vk::enter_uninterruptible();
-
 	u32 occlusion_id = 0;
 	if (m_occlusion_query_active)
 	{
@@ -1475,20 +1589,8 @@ void VKGSRender::end()
 		}
 	}
 
-	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
-	vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &m_current_frame->descriptor_set, 0, nullptr);
-
-	update_draw_state();
-
-	begin_render_pass();
-
 	bool primitive_emulated = false;
 	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
-
-	const bool allow_multidraw = supports_multidraw && !g_cfg.video.disable_FIFO_reordering;
-	const bool single_draw = (!allow_multidraw ||
-		rsx::method_registers.current_draw_clause.draw_command_ranges.size() <= 1 ||
-		rsx::method_registers.current_draw_clause.is_disjoint_primitive);
 
 	if (m_occlusion_query_active && (occlusion_id != UINT32_MAX))
 	{
@@ -1500,45 +1602,22 @@ void VKGSRender::end()
 		m_current_command_buffer->flags |= cb_has_occlusion_task;
 	}
 
-	if (!upload_info.index_info)
-	{
-		if (single_draw)
-		{
-			vkCmdDraw(*m_current_command_buffer, upload_info.vertex_draw_count, 1, 0, 0);
-		}
-		else
-		{
-			const auto base_vertex = rsx::method_registers.current_draw_clause.draw_command_ranges.front().first;
-			for (const auto &range : rsx::method_registers.current_draw_clause.draw_command_ranges)
-			{
-				vkCmdDraw(*m_current_command_buffer, range.count, 1, range.first - base_vertex, 0);
-			}
-		}
-	}
-	else
-	{
-		VkIndexType index_type;
-		const u32 index_count = upload_info.vertex_draw_count;
-		VkDeviceSize offset;
+	// While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
+	// Only textures are synchronized tightly with the GPU and they have been read back above
+	vk::enter_uninterruptible();
 
-		std::tie(offset, index_type) = *upload_info.index_info;
-		vkCmdBindIndexBuffer(*m_current_command_buffer, m_index_buffer_ring_info.heap->value, offset, index_type);
+	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
+	update_draw_state();
 
-		if (single_draw)
-		{
-			vkCmdDrawIndexed(*m_current_command_buffer, index_count, 1, 0, 0, 0);
-		}
-		else
-		{
-			u32 first_vertex = 0;
-			for (const auto &range : rsx::method_registers.current_draw_clause.draw_command_ranges)
-			{
-				const auto verts = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.count);
-				vkCmdDrawIndexed(*m_current_command_buffer, verts, 1, first_vertex, 0, 0);
-				first_vertex += verts;
-			}
-		}
+	u32 sub_index = 0;
+	rsx::method_registers.current_draw_clause.begin();
+	do
+	{
+		emit_geometry(sub_index++);
 	}
+	while (rsx::method_registers.current_draw_clause.next());
+
+	vk::leave_uninterruptible();
 
 	if (m_occlusion_query_active && (occlusion_id != UINT32_MAX))
 	{
@@ -1546,14 +1625,8 @@ void VKGSRender::end()
 		m_occlusion_query_pool.end_query(*m_current_command_buffer, occlusion_id);
 	}
 
-	close_render_pass();
-	vk::leave_uninterruptible();
-
 	m_current_command_buffer->num_draws++;
 	m_rtts.on_write();
-
-	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
-	m_draw_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_end - textures_end).count();
 
 	m_draw_calls++;
 
@@ -2479,29 +2552,38 @@ void VKGSRender::load_program_env(const vk::vertex_upload_info& vertex_info)
 	m_graphics_state &= ~handled_flags;
 }
 
-static const u32 mr_color_offset[rsx::limits::color_buffers_count] =
+void VKGSRender::update_vertex_env(const vk::vertex_upload_info& vertex_info)
 {
-	NV4097_SET_SURFACE_COLOR_AOFFSET,
-	NV4097_SET_SURFACE_COLOR_BOFFSET,
-	NV4097_SET_SURFACE_COLOR_COFFSET,
-	NV4097_SET_SURFACE_COLOR_DOFFSET
-};
+	// Vertex base index = vertex_offset + 132
+	// Vertex layout = vertex_offset + 160
 
-static const u32 mr_color_dma[rsx::limits::color_buffers_count] =
-{
-	NV4097_SET_CONTEXT_DMA_COLOR_A,
-	NV4097_SET_CONTEXT_DMA_COLOR_B,
-	NV4097_SET_CONTEXT_DMA_COLOR_C,
-	NV4097_SET_CONTEXT_DMA_COLOR_D
-};
+	std::array<s32, 16 * 4> vertex_layout;
+	fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, vertex_layout.data(),
+		vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
 
-static const u32 mr_color_pitch[rsx::limits::color_buffers_count] =
-{
-	NV4097_SET_SURFACE_PITCH_A,
-	NV4097_SET_SURFACE_PITCH_B,
-	NV4097_SET_SURFACE_PITCH_C,
-	NV4097_SET_SURFACE_PITCH_D
-};
+	vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_uniform_buffer_ring_info.heap->value, m_vertex_state_buffer_info.offset, 512,
+		VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+
+	vkCmdUpdateBuffer(*m_current_command_buffer, m_uniform_buffer_ring_info.heap->value, m_vertex_state_buffer_info.offset + 132, 4, &vertex_info.vertex_index_base);
+
+	u32 write_offset = m_vertex_state_buffer_info.offset + 160;
+	s32 *src_ptr = vertex_layout.data();
+
+	for (const auto& placement : m_vertex_layout.attribute_placement)
+	{
+		constexpr u32 data_len = 4 * sizeof(s32);
+		if (placement != rsx::attribute_buffer_placement::none)
+		{
+			vkCmdUpdateBuffer(*m_current_command_buffer, m_uniform_buffer_ring_info.heap->value, write_offset, data_len, src_ptr);
+		}
+
+		write_offset += data_len;
+		src_ptr += 4;
+	}
+
+	vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_uniform_buffer_ring_info.heap->value, m_vertex_state_buffer_info.offset, 512,
+		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_UNIFORM_READ_BIT);
+}
 
 void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
 {
@@ -3048,7 +3130,27 @@ void VKGSRender::flip(int buffer)
 
 		if (!image_to_flip)
 		{
-			//Read from cell
+			// Read from cell
+			const auto range = utils::address_range::start_length(absolute_address, buffer_pitch * buffer_height);
+			const auto overlap = m_texture_cache.find_texture_from_range(range);
+			bool flush_queue = false;
+
+			for (const auto & section : overlap)
+			{
+				if (section->get_protection() == utils::protection::no)
+				{
+					section->copy_texture(false, *m_current_command_buffer, m_swapchain->get_graphics_queue());
+					flush_queue = true;
+				}
+			}
+
+			if (flush_queue)
+			{
+				// Submit for processing to lower hard fault penalty
+				flush_command_queue();
+			}
+
+			m_texture_cache.invalidate_range(range, rsx::invalidation_cause::read, *m_current_command_buffer, m_swapchain->get_graphics_queue());
 			image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, absolute_address, buffer_width, buffer_height);
 		}
 	}
