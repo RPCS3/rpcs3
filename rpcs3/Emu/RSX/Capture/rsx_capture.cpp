@@ -114,7 +114,7 @@ namespace rsx
 				for (const auto& l : layout)
 					texSize += l.data.size();
 
-				if (!texaddr || !texSize)
+				if (!texSize)
 					continue;
 
 				frame_capture_data::memory_block block;
@@ -141,7 +141,7 @@ namespace rsx
 				for (const auto& l : layout)
 					texSize += l.data.size();
 
-				if (!texaddr || !texSize)
+				if (!texSize)
 					continue;
 
 				frame_capture_data::memory_block block;
