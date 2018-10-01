@@ -7,6 +7,8 @@
 #include <memory>
 #include <string>
 
+u64 get_system_time();
+
 enum class system_state
 {
 	running,
