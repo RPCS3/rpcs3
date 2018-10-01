@@ -1165,12 +1165,12 @@ namespace rsx
 
 		for (u32 i = 0; i < 16; i++)
 		{
-			registers[NV4097_SET_TEXTURE_FORMAT + (i * 8)] = (1 << 16 /* mipmap */) | ((CELL_GCM_TEXTURE_R5G6B5 | CELL_GCM_TEXTURE_SZ | CELL_GCM_TEXTURE_NR) << 8) | ((u32)texture_dimension::dimension2d << 4) | CELL_GCM_LOCATION_LOCAL + 1;
+			registers[NV4097_SET_TEXTURE_FORMAT + (i * 8)] = (1 << 16 /* mipmap */) | ((CELL_GCM_TEXTURE_R5G6B5 | CELL_GCM_TEXTURE_SZ | CELL_GCM_TEXTURE_NR) << 8) | (2 << 4 /* 2D */) | CELL_GCM_LOCATION_LOCAL + 1;
 		}
 
 		for (u32 i = 0; i < 4; i++)
 		{
-			registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (i * 8)] = (1 << 16 /* mipmap */) | ((CELL_GCM_TEXTURE_X32_FLOAT | CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_NR) << 8) | ((u32)texture_dimension::dimension2d << 4) | CELL_GCM_LOCATION_LOCAL + 1;
+			registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (i * 8)] = (1 << 16 /* mipmap */) | ((CELL_GCM_TEXTURE_X32_FLOAT | CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_NR) << 8) | (2 << 4 /* 2D */) | CELL_GCM_LOCATION_LOCAL + 1;
 		}
 
 		if (get_current_renderer()->isHLE)
