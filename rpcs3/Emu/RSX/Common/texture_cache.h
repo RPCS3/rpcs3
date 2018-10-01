@@ -1762,7 +1762,7 @@ namespace rsx
 			const bool is_compressed_format = (format == CELL_GCM_TEXTURE_COMPRESSED_DXT1 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT23 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT45);
 
 			const auto extended_dimension = tex.get_extended_texture_dimension();
-			u16 depth = 0;
+			u16 depth;
 			u16 tex_height = (u16)tex.height();
 			const u16 tex_width = tex.width();
 			u16 tex_pitch = is_compressed_format? (u16)(get_texture_size(tex) / tex_height) : tex.pitch(); //NOTE: Compressed textures dont have a real pitch (tex_size = (w*h)/6)

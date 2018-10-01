@@ -268,7 +268,7 @@ namespace rsx
 
 	u16 fragment_texture::depth() const
 	{
-		return registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] >> 20;
+		return dimension() == rsx::texture_dimension::dimension3d ? (registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] >> 20) : 1;
 	}
 
 	u32 fragment_texture::pitch() const
@@ -406,7 +406,7 @@ namespace rsx
 
 	u16 vertex_texture::depth() const
 	{
-		return registers[NV4097_SET_VERTEX_TEXTURE_CONTROL3 + (m_index * 8)] >> 20;
+		return dimension() == rsx::texture_dimension::dimension3d ? (registers[NV4097_SET_VERTEX_TEXTURE_CONTROL3 + (m_index * 8)] >> 20) : 1;
 	}
 
 	u32 vertex_texture::pitch() const
