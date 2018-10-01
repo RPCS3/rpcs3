@@ -5,38 +5,24 @@
 #include "cellMic.h"
 #include <Emu/IdManager.h>
 #include <Emu/Cell/lv2/sys_event.h>
-#include <thread>
 
 LOG_CHANNEL(cellMic);
 
-void mic_thread::on_init(const std::shared_ptr<void>& _this)
+void mic_context::operator()()
 {
-	old_thread::on_init(_this);
-}
-
-void mic_thread::on_task()
-{
-	while (micInited && !Emu.IsStopped())
+	while (fxm::check<mic_thread>() == this && !Emu.IsStopped())
 	{
+		thread_ctrl::wait_for(1000);
+
 		if (Emu.IsPaused())
-		{
-			std::this_thread::sleep_for(1ms); // hack from cellAudio
 			continue;
-		}
+
 		if (!micOpened || !micStarted)
 			continue;
 
-		// If event queue is not set, then we can't send any events
-		if (eventQueueKey == 0)
-			continue;
-
-		std::this_thread::sleep_for(1s);
-
-		// Make sure the mic thread wasn't stopped while we were sleeping
-		if (!micInited)
-			break;
-
 		auto micQueue = lv2_event_queue::find(eventQueueKey);
+		if (!micQueue)
+			continue;
 
 		micQueue->send(0, CELL_MIC_DATA, 0, 0);
 	}
@@ -47,8 +33,8 @@ void mic_thread::on_task()
 s32 cellMicInit()
 {
 	cellMic.notice("cellMicInit()");
-	const auto micThread = fxm::make<mic_thread>();
-	micInited = true;
+
+	const auto micThread = fxm::make<mic_thread>("Mic Thread");
 	if (!micThread)
 		return CELL_MIC_ERROR_ALREADY_INIT;
 
@@ -58,11 +44,13 @@ s32 cellMicInit()
 s32 cellMicEnd()
 {
 	cellMic.notice("cellMicEnd()");
-	micInited = false;
+
 	const auto micThread = fxm::withdraw<mic_thread>();
 	if (!micThread)
 		return CELL_MIC_ERROR_NOT_INIT;
 
+	// Join
+	micThread->operator()();
 	return CELL_OK;
 }
 
@@ -479,8 +467,8 @@ s32 cellMicGetDeviceIdentifier()
 	return CELL_OK;
 }
 
-DECLARE(ppu_module_manager::cellMic)
-("cellMic", []() {
+DECLARE(ppu_module_manager::cellMic)("cellMic", []()
+{
 	REG_FUNC(cellMic, cellMicInit);
 	REG_FUNC(cellMic, cellMicEnd);
 	REG_FUNC(cellMic, cellMicOpen);
