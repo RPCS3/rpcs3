@@ -528,6 +528,8 @@ namespace rsx
 		virtual void on_decompiler_exit() {}
 		virtual bool on_decompiler_task() { return false; }
 
+		virtual void emit_geometry(u32) {}
+
 		void run_FIFO();
 
 	public:
@@ -554,11 +556,11 @@ namespace rsx
 		void read_barrier(u32 memory_address, u32 memory_range);
 		virtual void sync_hint(FIFO_hint hint) {}
 
-		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<draw_range_t>& draw_indexed_clause) const;
-		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<draw_range_t>& vertex_ranges) const;
+		gsl::span<const gsl::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
+		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const draw_clause& draw_array_clause) const;
 
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<draw_range_t>& vertex_ranges, const u64 consumed_attrib_mask) const;
+		get_vertex_buffers(const rsx::rsx_state& state, const u64 consumed_attrib_mask) const;
 
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;

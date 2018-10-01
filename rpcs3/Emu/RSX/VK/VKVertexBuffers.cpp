@@ -106,6 +106,12 @@ namespace
 			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			const u32 min_index = rsx::method_registers.current_draw_clause.min_index();
 
+			//if (rsx::method_registers.current_draw_clause.draw_command_ranges.size() > 1)
+			//{
+				// TODO
+				//LOG_ERROR(RSX, "REEEEEEEEEEEEEEEEEEEEEEE (prims_emulated=%d)", primitives_emulated);
+			//}
+
 			if (primitives_emulated)
 			{
 				u32 index_count;
@@ -165,7 +171,7 @@ namespace
 				command.raw_index_buffer, index_type,
 				rsx::method_registers.current_draw_clause.primitive,
 				rsx::method_registers.restart_index_enabled(),
-				rsx::method_registers.restart_index(), rsx::method_registers.current_draw_clause.draw_command_ranges,
+				rsx::method_registers.restart_index(),
 				rsx::method_registers.vertex_data_base_index(), [](auto prim) { return !vk::is_primitive_native(prim); });
 
 			if (min_index >= max_index)
@@ -227,11 +233,6 @@ namespace
 
 vk::vertex_upload_info VKGSRender::upload_vertex_data()
 {
-	m_vertex_layout = analyse_inputs_interleaved();
-
-	if (!m_vertex_layout.validate())
-		return {};
-
 	draw_command_visitor visitor(m_index_buffer_ring_info, m_vertex_layout);
 	auto result = std::visit(visitor, get_draw_command(rsx::method_registers));
 
@@ -258,6 +259,8 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 			storage_address = m_vertex_layout.interleaved_blocks[0].real_offset_address + vertex_base;
 			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, VK_FORMAT_R8_UINT, required.first))
 			{
+				verify(HERE), cached->local_address == storage_address;
+
 				in_cache = true;
 				persistent_range_base = cached->offset_in_heap;
 			}

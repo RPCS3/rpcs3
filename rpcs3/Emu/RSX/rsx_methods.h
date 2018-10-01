@@ -3,15 +3,20 @@
 #include <array>
 #include <vector>
 #include <numeric>
+#include <deque>
+#include <set>
 
 #include "GCM.h"
 #include "rsx_decode.h"
 #include "RSXTexture.h"
 #include "rsx_vertex_data.h"
+#include "rsx_utils.h"
 #include "Utilities/geometry.h"
 
 #include <cereal/types/array.hpp>
 #include <cereal/types/unordered_map.hpp>
+
+extern u64 get_system_time();
 
 namespace rsx
 {
@@ -23,6 +28,39 @@ namespace rsx
 		indexed,
 	};
 
+	enum command_barrier_type : u32
+	{
+		primitive_restart_barrier,
+		vertex_base_modifier_barrier,
+		index_base_modifier_barrier
+	};
+
+	enum command_execution_flags : u32
+	{
+		vertex_base_changed = (1 << 0),
+		index_base_changed = (1 << 1)
+	};
+
+	struct barrier_t
+	{
+		u64 timestamp;
+
+		u32 address;
+		u32 arg;
+		u32 flags;
+		command_barrier_type type;
+
+		bool operator < (const barrier_t& other) const
+		{
+			if (address != -1u)
+			{
+				return address < other.address;
+			}
+
+			return timestamp < other.timestamp;
+		}
+	};
+
 	struct draw_range_t
 	{
 		u32 command_data_offset = 0;
@@ -30,55 +68,273 @@ namespace rsx
 		u32 count = 0;
 	};
 
-	struct draw_clause
+	class draw_clause
 	{
+		// Stores the first and count argument from draw/draw indexed parameters between begin/end clauses.
+		simple_array<draw_range_t> draw_command_ranges;
+
+		// Stores rasterization barriers for primitive types sensitive to adjacency
+		std::vector<std::set<barrier_t>> draw_command_barriers;
+
+		// Counter used to parse the commands in order
+		u32 current_range_index;
+
+		// Location of last execution barrier
+		u32 last_execution_barrier_index;
+
+		// Helper functions
+		// Add a new draw command
+		void append_draw_command(const draw_range_t& range)
+		{
+			draw_command_ranges.push_back(range);
+			draw_command_barriers.push_back({});
+		}
+
+		// Insert a new draw command within the others
+		void insert_draw_command(int index, const draw_range_t& range)
+		{
+			auto range_It = draw_command_ranges.begin();
+			auto barrier_It = draw_command_barriers.begin();
+
+			// Because deque::insert fails with initializer list on MSVC
+			const std::set<barrier_t> new_barrier;
+
+			while (index--)
+			{
+				++range_It;
+				++barrier_It;
+			}
+
+			draw_command_ranges.insert(range_It, range);
+			draw_command_barriers.insert(barrier_It, new_barrier);
+
+			verify(HERE), draw_command_ranges.size() == draw_command_barriers.size();
+		}
+
+	public:
 		primitive_type primitive;
 		draw_command command;
 
 		bool is_immediate_draw;
 		bool is_disjoint_primitive;
 
-		std::vector<u32> inline_vertex_array;
+		simple_array<u32> inline_vertex_array;
+
+		void insert_command_barrier(command_barrier_type type, u32 arg)
+		{
+			verify(HERE), !draw_command_ranges.empty();
+
+			if (type == primitive_restart_barrier)
+			{
+				// Rasterization flow barrier
+				const auto& last = draw_command_ranges.back();
+				const auto address = last.first + last.count;
+
+				const auto command_index = draw_command_ranges.size() - 1;
+				draw_command_barriers[command_index].insert({ 0, address, arg, 0, type });
+			}
+			else
+			{
+				// Execution dependency barrier
+				append_draw_command({});
+				const auto command_index = draw_command_ranges.size() - 1;
+
+				draw_command_barriers[command_index].insert({ get_system_time(), -1u, arg, 0, type });
+				last_execution_barrier_index = command_index;
+			}
+		}
 
 		/**
-		* Stores the first and count argument from draw/draw indexed parameters between begin/end clauses.
-		*/
-		std::vector<draw_range_t> draw_command_ranges;
+		 * Optimize commands for rendering
+		 */
+		void compile()
+		{
+			// TODO
+		}
+
+		/**
+		 * Insert one command range
+		 */
+
+		void append(u32 first, u32 count)
+		{
+			if (!draw_command_ranges.empty())
+			{
+				auto& last = draw_command_ranges.back();
+
+				if (last.count == 0)
+				{
+					// Special case, usually indicates an execution barrier
+					last.first = first;
+					last.count = count;
+					return;
+				}
+
+				if (last.first + last.count == first)
+				{
+					if (!is_disjoint_primitive)
+					{
+						// Insert barrier
+						insert_command_barrier(primitive_restart_barrier, 0);
+					}
+
+					last.count += count;
+					return;
+				}
+
+				for (int index = last_execution_barrier_index; index < draw_command_ranges.size(); ++index)
+				{
+					if (draw_command_ranges[index].first == first &&
+						draw_command_ranges[index].count == count)
+					{
+						// Duplicate entry? WTF!
+						return;
+					}
+
+					if (draw_command_ranges[index].first > first)
+					{
+						insert_draw_command(index, { 0, first, count });
+						return;
+					}
+				}
+			}
+
+			append_draw_command({ 0, first, count });
+		}
 
 		/**
 		 * Returns how many vertex or index will be consumed by the draw clause.
 		 */
 		u32 get_elements_count() const
 		{
-			u32 count = 0;
-			for (const auto &draw : draw_command_ranges)
+			return get_range().count;
+		}
+
+		u32 min_index() const
+		{
+			return get_range().first;
+		}
+
+		bool is_single_draw() const
+		{
+			if (is_disjoint_primitive)
+				return true;
+
+			if (draw_command_ranges.empty())
 			{
-				count += draw.count;
+				verify(HERE), !inline_vertex_array.empty();
+				return true;
 			}
 
-			return count;
+			verify(HERE), current_range_index != -1u;
+			for (const auto &barrier : draw_command_barriers[current_range_index])
+			{
+				if (barrier.type == primitive_restart_barrier)
+					return false;
+			}
+
+			return true;
+		}
+
+		bool empty() const
+		{
+			return (draw_command_ranges.empty() && inline_vertex_array.empty());
+		}
+
+		void reset(rsx::primitive_type type)
+		{
+			current_range_index = -1u;
+			last_execution_barrier_index = 0;
+
+			command = draw_command::none;
+			primitive = type;
+
+			draw_command_ranges.clear();
+			draw_command_barriers.clear();
+			inline_vertex_array.clear();
+
+			switch (primitive)
+			{
+			case rsx::primitive_type::line_loop:
+			case rsx::primitive_type::line_strip:
+			case rsx::primitive_type::polygon:
+			case rsx::primitive_type::quad_strip:
+			case rsx::primitive_type::triangle_fan:
+			case rsx::primitive_type::triangle_strip:
+				// Adjacency matters for these types
+				is_disjoint_primitive = false;
+				break;
+			default:
+				is_disjoint_primitive = true;
+			}
+		}
+
+		void begin()
+		{
+			current_range_index = 0;
+		}
+
+		void end()
+		{
+			current_range_index = draw_command_ranges.size() - 1;
+		}
+
+		bool next()
+		{
+			current_range_index++;
+			if (current_range_index >= draw_command_ranges.size())
+			{
+				current_range_index = 0;
+				return false;
+			}
+
+			verify(HERE), draw_command_ranges[current_range_index].count != 0;
+			return true;
 		}
 
 		/**
-		 * Optimize draw command stream for rendering
+		 * Executes commands reqiured to make the current draw state valid
 		 */
-		void compile()
-		{
+		u32 execute_pipeline_dependencies() const;
 
+		const draw_range_t& get_range() const
+		{
+			verify(HERE), current_range_index < draw_command_ranges.size();
+			return draw_command_ranges[current_range_index];
 		}
 
-		/**
-		 * Insert one command range
-		 */
-		void append(u32 first, u32 count)
+		simple_array<draw_range_t> get_subranges() const
 		{
+			verify(HERE), !is_single_draw();
 
-		}
+			const auto range = get_range();
+			const auto limit = range.first + range.count;
 
-		u32 min_index()
-		{
-			LOG_FATAL(RSX, "Unimplemented");
-			return 0;
+			simple_array<draw_range_t> ret;
+			u32 previous_barrier = range.first;
+			u32 vertex_counter = 0;
+
+			for (const auto &barrier : draw_command_barriers[current_range_index])
+			{
+				if (barrier.type != primitive_restart_barrier)
+					continue;
+
+				if (barrier.address <= range.first)
+					continue;
+
+				if (barrier.address >= limit)
+					break;
+
+				const u32 count = barrier.address - previous_barrier;
+				ret.push_back({ 0, vertex_counter, count });
+				previous_barrier = (u32)barrier.address;
+				vertex_counter += count;
+			}
+
+			verify(HERE), !ret.empty(), previous_barrier < limit;
+			ret.push_back({ 0, vertex_counter, limit - previous_barrier });
+
+			return ret;
 		}
 	};
 

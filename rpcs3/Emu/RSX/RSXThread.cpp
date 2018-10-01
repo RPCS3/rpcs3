@@ -42,7 +42,135 @@ namespace rsx
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 	thread* g_current_renderer = nullptr;
 
-	//TODO: Restore a working shaders cache
+#pragma optimize("", off)
+	void run_tests()
+	{
+#if 0
+		if (0)
+		{
+			auto _get_method_name = [](u32 reg) -> std::string
+			{
+				if (reg == FIFO::FIFO_DISABLED_COMMAND)
+				{
+					return "COMMAND DISABLED";
+				}
+
+				if (reg == FIFO::FIFO_PACKET_BEGIN)
+				{
+					return "PACKET BEGIN";
+				}
+
+				return rsx::get_method_name(reg >> 2);
+			};
+
+			auto _dump_commands = [&](const std::vector<FIFO::register_pair>& commands)
+			{
+				LOG_ERROR(RSX, "DUMP BEGINS--------------------------------");
+				for (const auto &cmd : commands)
+				{
+					LOG_ERROR(RSX, "%s (0x%x)", _get_method_name(cmd.reg), cmd.value);
+				}
+				LOG_ERROR(RSX, "DUMP ENDS--------------------------------");
+			};
+
+			// Test
+			std::vector<FIFO::register_pair> fake_commands =
+			{
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xdeadbeef },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff000000 },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xcafebabe },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff0000ff },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xdeadbeef },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff0001fe },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ 0xffffffff, 0 },
+
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xcafebabe },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff0002fd },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xdeadbeef },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff0003fc },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xcafebabe },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff0004fb },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xdeadbeef },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff0005fa },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ 0xffffffff, 0xdead },
+			};
+
+			std::vector<u32> fake_registers(16384);
+			std::fill(fake_registers.begin(), fake_registers.end(), 0u);
+
+			FIFO::flattening_pass flattening_pass;
+			FIFO::reordering_pass reordering_pass;
+
+			FIFO::fifo_buffer_info_t info{ 0, fake_commands.size() * 4, /*7*/18, 0 };
+			flattening_pass.optimize(info, fake_commands, fake_registers.data());
+
+			_dump_commands(fake_commands);
+
+			reordering_pass.optimize(info, fake_commands, fake_registers.data());
+
+			_dump_commands(fake_commands);
+
+			LOG_ERROR(RSX, "FINISHED TEST");
+		}
+#endif
+	}
+#pragma optimize("", on)
 
 	u32 get_address(u32 offset, u32 location)
 	{
@@ -97,7 +225,9 @@ namespace rsx
 			return get_current_renderer()->ctxt_addr + offset;
 
 		default:
+		{
 			fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
+		}
 		}
 	}
 
@@ -289,23 +419,7 @@ namespace rsx
 			conditional_render_test_address = 0;
 		}
 
-		rsx::method_registers.current_draw_clause.inline_vertex_array.resize(0);
 		in_begin_end = true;
-
-		switch (rsx::method_registers.current_draw_clause.primitive)
-		{
-		case rsx::primitive_type::line_loop:
-		case rsx::primitive_type::line_strip:
-		case rsx::primitive_type::polygon:
-		case rsx::primitive_type::quad_strip:
-		case rsx::primitive_type::triangle_fan:
-		case rsx::primitive_type::triangle_strip:
-			// Adjacency matters for these types
-			rsx::method_registers.current_draw_clause.is_disjoint_primitive = false;
-			break;
-		default:
-			rsx::method_registers.current_draw_clause.is_disjoint_primitive = true;
-		}
 	}
 
 	void thread::append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value)
@@ -348,15 +462,15 @@ namespace rsx
 		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
 		ROP_sync_timestamp = get_system_time();
 
-		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		for (auto & push_buf : vertex_push_buffers)
 		{
 			//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
 			//rsx::method_registers.register_vertex_info[index].size = 0;
 
-			vertex_push_buffers[index].clear();
+			push_buf.clear();
 		}
 
-		element_push_buffer.resize(0);
+		element_push_buffer.clear();
 
 		if (zcull_ctrl->active)
 			zcull_ctrl->on_draw();
@@ -397,6 +511,7 @@ namespace rsx
 	void thread::on_task()
 	{
 		m_rsx_thread = std::this_thread::get_id();
+		run_tests();
 
 		if (supports_native_ui)
 		{
@@ -430,8 +545,8 @@ namespace rsx
 
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 
-		fifo_ctrl->register_optimization_pass(new FIFO::flattening_pass());
-		//fifo_ctrl->register_optimization_pass(new FIFO::reordering_pass());
+		//fifo_ctrl->register_optimization_pass(new FIFO::flattening_pass());
+		//fifo_ctrl->register_optimization_pass(new FIFO::reordering_pass()); // R&C2 - Not working if flattening is also enabled!!!
 		//fifo_ctrl->register_optimization_pass(new FIFO::flattening_pass());
 
 		last_flip_time = get_system_time() - 1000000;
@@ -539,6 +654,29 @@ namespace rsx
 	void thread::on_exit()
 	{
 		m_rsx_thread_exiting = true;
+
+		if (m_vblank_thread)
+		{
+			m_vblank_thread->join();
+			m_vblank_thread.reset();
+		}
+
+		if (m_decompiler_thread)
+		{
+			m_decompiler_thread->join();
+			m_decompiler_thread.reset();
+		}
+
+		if (fifo_ctrl)
+		{
+			fifo_ctrl->finalize();
+		}
+	}
+
+	std::string thread::get_name() const
+	{
+		return "rsx::thread";
+>>>>>>> rsx: Fixups
 	}
 
 	void thread::fill_scale_offset_data(void *buffer, bool flip_y) const
@@ -740,7 +878,7 @@ namespace rsx
 		return t + timestamp_subvalue;
 	}
 
-	gsl::span<const gsl::byte> thread::get_raw_index_array(const std::vector<draw_range_t>& draw_indexed_clause) const
+	gsl::span<const gsl::byte> thread::get_raw_index_array(const draw_clause& draw_indexed_clause) const
 	{
 		if (element_push_buffer.size())
 		{
@@ -755,49 +893,29 @@ namespace rsx
 		bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
 		u32 primitive_restart_index = rsx::method_registers.restart_index();
 
-		u32 min_index = UINT32_MAX;
-		u32 max_index = 0;
-
-		for (const auto &range : draw_indexed_clause)
-		{
-			const u32 root_index = (range.command_data_offset / type_size) + range.first;
-			min_index = std::min(root_index, min_index);
-			max_index = std::max(root_index + range.count, max_index);
-		}
-
-		const u32 first = min_index;
-		const u32 count = max_index - min_index;
+		const u32 first = draw_indexed_clause.min_index();
+		const u32 count = draw_indexed_clause.get_elements_count();
 
 		const gsl::byte* ptr = static_cast<const gsl::byte*>(vm::base(address));
 		return{ ptr + first * type_size, count * type_size };
 	}
 
-	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const std::vector<draw_range_t>& vertex_ranges) const
+	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const draw_clause& draw_array_clause) const
 	{
 		u32 offset  = vertex_array_info.offset();
 		u32 address = rsx::get_address(rsx::get_vertex_offset_from_base(base_offset, offset & 0x7fffffff), offset >> 31);
 
 		u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array_info.type(), vertex_array_info.size());
 
-		u32 min_index = UINT32_MAX;
-		u32 max_index = 0;
-
-		for (const auto &range : vertex_ranges)
-		{
-			const auto root_index = (range.command_data_offset / vertex_array_info.stride()) + range.first;
-			min_index = std::min(root_index, min_index);
-			max_index = std::max(root_index + range.count, max_index);
-		}
-
-		const u32 first = min_index;
-		const u32 count = max_index - min_index;
+		const u32 first = draw_array_clause.min_index();
+		const u32 count = draw_array_clause.get_elements_count();
 
 		const gsl::byte* ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
 		return {ptr + first * vertex_array_info.stride(), count * vertex_array_info.stride() + element_size};
 	}
 
 	std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-	thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<draw_range_t>& vertex_ranges, const u64 consumed_attrib_mask) const
+	thread::get_vertex_buffers(const rsx::rsx_state& state, const u64 consumed_attrib_mask) const
 	{
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> result;
 		result.reserve(rsx::limits::vertex_count);
@@ -815,7 +933,7 @@ namespace rsx
 			{
 				const rsx::data_array_format_info& info = state.vertex_arrays_info[index];
 				result.push_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
-					get_raw_vertex_buffer(info, state.vertex_data_base_offset(), vertex_ranges), index, true});
+					get_raw_vertex_buffer(info, state.vertex_data_base_offset(), state.current_draw_clause), index, true});
 				continue;
 			}
 
@@ -854,7 +972,7 @@ namespace rsx
 		{
 			return draw_indexed_array_command
 			{
-				get_raw_index_array( rsx::method_registers.current_draw_clause.draw_command_ranges)
+				get_raw_index_array(state.current_draw_clause)
 			};
 		}
 
@@ -1301,7 +1419,6 @@ namespace rsx
 		if (state.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			vertex_input_layout result = {};
-			result.interleaved_blocks.reserve(8);
 
 			interleaved_range_info info = {};
 			info.interleaved = true;
@@ -1336,8 +1453,8 @@ namespace rsx
 
 		const u32 frequency_divider_mask = rsx::method_registers.frequency_divider_operation_mask();
 		vertex_input_layout result = {};
-		result.interleaved_blocks.reserve(8);
-		result.referenced_registers.reserve(4);
+		result.interleaved_blocks.reserve(16);
+		result.referenced_registers.reserve(16);
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
@@ -1430,7 +1547,7 @@ namespace rsx
 					block.base_offset = base_address;
 					block.attribute_stride = info.stride();
 					block.memory_location = info.offset() >> 31;
-					block.locations.reserve(8);
+					block.locations.reserve(16);
 					block.locations.push_back(index);
 					block.min_divisor = info.frequency();
 					block.all_modulus = !!(frequency_divider_mask & (1 << index));

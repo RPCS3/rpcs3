@@ -880,12 +880,42 @@ namespace rsx
 
 			storage_type* find_vertex_range(uintptr_t local_addr, upload_format fmt, u32 data_length) override
 			{
+				const auto data_end = local_addr + data_length;
+
 				for (auto &v : vertex_ranges[local_addr])
 				{
-					if (v.buffer_format == fmt && v.data_length == data_length)
+					if (v.buffer_format == fmt && v.data_length >= data_length)
 						return &v;
 				}
+#if 0
+				for (const auto &range : vertex_ranges)
+				{
+					if (range.first > local_addr)
+						continue;
 
+					for (const auto &v : range.second)
+					{
+						if (v.buffer_format == fmt)
+						{
+							const auto entry_end = v.local_address + v.data_length;
+							if (data_end <= entry_end)
+							{
+								const u32 offset = (local_addr - v.local_address);
+								if (offset % 16)
+									continue; // TexelBuffer alignment rules
+
+								storage_type e = v;
+								e.data_length = data_length;
+								e.local_address = local_addr;
+								e.offset_in_heap += offset;
+
+								auto& ret = vertex_ranges[local_addr].emplace_back(e);
+								return &ret;
+							}
+						}
+					}
+				}
+#endif
 				return nullptr;
 			}
 

@@ -32,6 +32,7 @@
 #endif
 
 #define DESCRIPTOR_MAX_DRAW_CALLS 4096
+#define OCCLUSION_MAX_POOL_SIZE 8192
 
 #define VERTEX_BUFFERS_FIRST_BIND_SLOT 3
 #define FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 2
@@ -652,7 +653,7 @@ namespace vk
 			VkImageTiling tiling,
 			VkImageUsageFlags usage,
 			VkImageCreateFlags image_flags)
-			: m_device(dev)
+			: m_device(dev), current_layout(initial_layout)
 		{
 			info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 			info.imageType = image_type;
@@ -1193,6 +1194,11 @@ namespace vk
 		operator VkCommandBuffer() const
 		{
 			return commands;
+		}
+
+		bool is_recording() const
+		{
+			return is_open;
 		}
 
 		void begin()
@@ -2413,8 +2419,8 @@ public:
 		VkQueryPool query_pool = VK_NULL_HANDLE;
 		vk::render_device* owner = nullptr;
 
+		std::deque<u32> available_slots;
 		std::vector<bool> query_active_status;
-
 	public:
 
 		void create(vk::render_device &dev, u32 num_entries)
@@ -2428,6 +2434,12 @@ public:
 			owner = &dev;
 
 			query_active_status.resize(num_entries, false);
+			available_slots.resize(num_entries);
+
+			for (u32 n = 0; n < num_entries; ++n)
+			{
+				available_slots[n] = n;
+			}
 		}
 
 		void destroy()
@@ -2484,8 +2496,13 @@ public:
 
 		void reset_query(vk::command_buffer &cmd, u32 index)
 		{
-			vkCmdResetQueryPool(cmd, query_pool, index, 1);
-			query_active_status[index] = false;
+			if (query_active_status[index])
+			{
+				vkCmdResetQueryPool(cmd, query_pool, index, 1);
+
+				query_active_status[index] = false;
+				available_slots.push_back(index);
+			}
 		}
 
 		void reset_queries(vk::command_buffer &cmd, std::vector<u32> &list)
@@ -2505,13 +2522,16 @@ public:
 
 		u32 find_free_slot()
 		{
-			for (u32 n = 0; n < query_active_status.size(); n++)
+			if (available_slots.empty())
 			{
-				if (query_active_status[n] == false)
-					return n;
+				return -1u;
 			}
 
-			return UINT32_MAX;
+			u32 result = available_slots.front();
+			available_slots.pop_front();
+
+			verify(HERE), !query_active_status[result];
+			return result;
 		}
 	};
 

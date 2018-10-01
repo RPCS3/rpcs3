@@ -195,17 +195,6 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> state_check_end = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(state_check_end - state_check_start).count();
 
-	if (manually_flush_ring_buffers)
-	{
-		//Use approximations to reserve space. This path is mostly for debug purposes anyway
-		u32 approx_vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
-		u32 approx_working_buffer_size = approx_vertex_count * 256;
-
-		//Allocate 256K heap if we have no approximation at this time (inlined array)
-		m_attrib_ring_buffer->reserve_storage_on_heap(std::max(approx_working_buffer_size, 256 * 1024U));
-		m_index_ring_buffer->reserve_storage_on_heap(16 * 1024);
-	}
-
 	const auto do_heap_cleanup = [this]()
 	{
 		if (manually_flush_ring_buffers)
@@ -219,17 +208,6 @@ void GLGSRender::end()
 			//glMemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
 		}
 	};
-
-	//Do vertex upload before RTT prep / texture lookups to give the driver time to push data
-	auto upload_info = set_vertex_buffer();
-
-	if (upload_info.vertex_draw_count == 0)
-	{
-		// Malformed vertex setup; abort
-		do_heap_cleanup();
-		rsx::thread::end();
-		return;
-	}
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
@@ -407,14 +385,10 @@ void GLGSRender::end()
 	if (!load_program())
 	{
 		// Program is not ready, skip drawing this
-		do_heap_cleanup();
 		std::this_thread::yield();
 		rsx::thread::end();
 		return;
 	}
-
-	// Load program here since it is dependent on vertex state
-	load_program_env(upload_info);
 
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
@@ -490,117 +464,161 @@ void GLGSRender::end()
 
 	std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
 
-	do_heap_cleanup();
-
 	if (g_cfg.video.debug_output)
 	{
 		m_program->validate();
 	}
 
 	const GLenum draw_mode = gl::draw_mode(rsx::method_registers.current_draw_clause.primitive);
-	const bool allow_multidraw = supports_multidraw && !g_cfg.video.disable_FIFO_reordering;
-	const bool single_draw = (!allow_multidraw ||
-		rsx::method_registers.current_draw_clause.draw_command_ranges.size() <= 1 ||
-		rsx::method_registers.current_draw_clause.is_disjoint_primitive);
-
-	if (upload_info.index_info)
+	rsx::method_registers.current_draw_clause.begin();
+	int subdraw = 0;
+	do
 	{
-		const GLenum index_type = std::get<0>(*upload_info.index_info);
-		const u32 index_offset = std::get<1>(*upload_info.index_info);
-		const bool restarts_valid = gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive) && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
-
-		if (gl_state.enable(restarts_valid && rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
+		if (!subdraw)
 		{
-			glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
-		}
-
-		m_index_ring_buffer->bind();
-
-		if (single_draw)
-		{
-			glDrawElements(draw_mode, upload_info.vertex_draw_count, index_type, (GLvoid *)(uintptr_t)index_offset);
+			m_vertex_layout = analyse_inputs_interleaved();
+			if (!m_vertex_layout.validate())
+			{
+				break;
+			}
 		}
 		else
 		{
-			const auto draw_count = rsx::method_registers.current_draw_clause.draw_command_ranges.size();
-			const u32 type_scale = (index_type == GL_UNSIGNED_SHORT) ? 1 : 2;
-			uintptr_t index_ptr = index_offset;
-			m_scratch_buffer.resize(draw_count * 16);
-
-			GLsizei *counts = (GLsizei*)m_scratch_buffer.data();
-			const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
-			int dst_index = 0;
-
-			for (const auto &range : rsx::method_registers.current_draw_clause.draw_command_ranges)
+			if (rsx::method_registers.current_draw_clause.execute_pipeline_dependencies() & rsx::vertex_base_changed)
 			{
-				const auto index_size = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.count);
-				counts[dst_index] = index_size;
-				offsets[dst_index++] = (const GLvoid*)index_ptr;
-
-				index_ptr += (index_size << type_scale);
-			}
-
-			glMultiDrawElements(draw_mode, counts, index_type, offsets, (GLsizei)draw_count);
-		}
-	}
-	else
-	{
-		if (single_draw)
-		{
-			glDrawArrays(draw_mode, 0, upload_info.vertex_draw_count);
-		}
-		else
-		{
-			const u32 base_index = rsx::method_registers.current_draw_clause.draw_command_ranges.front().first;
-			bool use_draw_arrays_fallback = false;
-
-			const auto draw_count = rsx::method_registers.current_draw_clause.draw_command_ranges.size();
-			const auto driver_caps = gl::get_driver_caps();
-
-			m_scratch_buffer.resize(draw_count * 24);
-			GLint* firsts = (GLint*)m_scratch_buffer.data();
-			GLsizei* counts = (GLsizei*)(firsts + draw_count);
-			const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
-			int dst_index = 0;
-
-			for (const auto &range : rsx::method_registers.current_draw_clause.draw_command_ranges)
-			{
-				const GLint first = range.first - base_index;
-				const GLsizei count = range.count;
-
-				firsts[dst_index] = first;
-				counts[dst_index] = count;
-				offsets[dst_index++] = (const GLvoid*)(first << 2);
-
-				if (driver_caps.vendor_AMD && (first + count) > (0x100000 >> 2))
+				// Rebase vertex bases instead of 
+				for (auto &info : m_vertex_layout.interleaved_blocks)
 				{
-					//Unlikely, but added here in case the identity buffer is not large enough somehow
-					use_draw_arrays_fallback = true;
-					break;
+					const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
+					info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location);
 				}
 			}
+		}
 
-			if (use_draw_arrays_fallback)
+		++subdraw;
+
+		if (manually_flush_ring_buffers)
+		{
+			//Use approximations to reserve space. This path is mostly for debug purposes anyway
+			u32 approx_vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
+			u32 approx_working_buffer_size = approx_vertex_count * 256;
+
+			//Allocate 256K heap if we have no approximation at this time (inlined array)
+			m_attrib_ring_buffer->reserve_storage_on_heap(std::max(approx_working_buffer_size, 256 * 1024U));
+			m_index_ring_buffer->reserve_storage_on_heap(16 * 1024);
+		}
+
+		//Do vertex upload before RTT prep / texture lookups to give the driver time to push data
+		auto upload_info = set_vertex_buffer();
+		do_heap_cleanup();
+
+		if (upload_info.vertex_draw_count == 0)
+		{
+			// Malformed vertex setup; abort
+			continue;
+		}
+
+		load_program_env(upload_info);
+
+		if (!upload_info.index_info)
+		{
+			if (rsx::method_registers.current_draw_clause.is_single_draw())
 			{
-				//MultiDrawArrays is broken on some primitive types using AMD. One known type is GL_TRIANGLE_STRIP but there could be more
-				for (const auto &range : rsx::method_registers.current_draw_clause.draw_command_ranges)
-				{
-					glDrawArrays(draw_mode, range.first - base_index, range.count);
-				}
-			}
-			else if (driver_caps.vendor_AMD)
-			{
-				//Use identity index buffer to fix broken vertexID on AMD
-				m_identity_index_buffer->bind();
-				glMultiDrawElements(draw_mode, counts, GL_UNSIGNED_INT, offsets, (GLsizei)draw_count);
+				glDrawArrays(draw_mode, 0, upload_info.vertex_draw_count);
 			}
 			else
 			{
-				//Normal render
-				glMultiDrawArrays(draw_mode, firsts, counts, (GLsizei)draw_count);
+				const auto subranges = rsx::method_registers.current_draw_clause.get_subranges();
+				const auto draw_count = subranges.size();
+				const auto driver_caps = gl::get_driver_caps();
+				bool use_draw_arrays_fallback = false;
+
+				m_scratch_buffer.resize(draw_count * 24);
+				GLint* firsts = (GLint*)m_scratch_buffer.data();
+				GLsizei* counts = (GLsizei*)(firsts + draw_count);
+				const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
+
+				u32 first = 0;
+				u32 dst_index = 0;
+				for (const auto &range : subranges)
+				{
+					firsts[dst_index] = first;
+					counts[dst_index] = range.count;
+					offsets[dst_index++] = (const GLvoid*)(first << 2);
+
+					if (driver_caps.vendor_AMD && (first + range.count) > (0x100000 >> 2))
+					{
+						//Unlikely, but added here in case the identity buffer is not large enough somehow
+						use_draw_arrays_fallback = true;
+						break;
+					}
+
+					first += range.count;
+				}
+
+				if (use_draw_arrays_fallback)
+				{
+					//MultiDrawArrays is broken on some primitive types using AMD. One known type is GL_TRIANGLE_STRIP but there could be more
+					for (int n = 0; n < draw_count; ++n)
+					{
+						glDrawArrays(draw_mode, firsts[n], counts[n]);
+					}
+				}
+				else if (driver_caps.vendor_AMD)
+				{
+					//Use identity index buffer to fix broken vertexID on AMD
+					m_identity_index_buffer->bind();
+					glMultiDrawElements(draw_mode, counts, GL_UNSIGNED_INT, offsets, (GLsizei)draw_count);
+				}
+				else
+				{
+					//Normal render
+					glMultiDrawArrays(draw_mode, firsts, counts, (GLsizei)draw_count);
+				}
 			}
 		}
-	}
+		else
+		{
+			const GLenum index_type = std::get<0>(*upload_info.index_info);
+			const u32 index_offset = std::get<1>(*upload_info.index_info);
+			const bool restarts_valid = gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive) && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
+
+			if (gl_state.enable(restarts_valid && rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
+			{
+				glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT) ? 0xffff : 0xffffffff);
+			}
+
+			m_index_ring_buffer->bind();
+
+			if (rsx::method_registers.current_draw_clause.is_single_draw())
+			{
+				glDrawElements(draw_mode, upload_info.vertex_draw_count, index_type, (GLvoid *)(uintptr_t)index_offset);
+			}
+			else
+			{
+				const auto subranges = rsx::method_registers.current_draw_clause.get_subranges();
+				const auto draw_count = subranges.size();
+				const u32 type_scale = (index_type == GL_UNSIGNED_SHORT) ? 1 : 2;
+				uintptr_t index_ptr = index_offset;
+				m_scratch_buffer.resize(draw_count * 16);
+
+				GLsizei *counts = (GLsizei*)m_scratch_buffer.data();
+				const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
+				int dst_index = 0;
+
+				for (const auto &range : subranges)
+				{
+					const auto index_size = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.count);
+					counts[dst_index] = index_size;
+					offsets[dst_index++] = (const GLvoid*)index_ptr;
+
+					index_ptr += (index_size << type_scale);
+				}
+
+				glMultiDrawElements(draw_mode, counts, index_type, offsets, (GLsizei)draw_count);
+			}
+		}
+	} while (rsx::method_registers.current_draw_clause.next());
 
 	m_rtts.on_write();
 
