@@ -90,6 +90,11 @@ public:
 		PerfOverlayCenterX,
 		PerfOverlayCenterY,
 
+		// Shader Loading Dialog
+		ShaderLoadBgEnabled,
+		ShaderLoadBgDarkening,
+		ShaderLoadBgBlur,
+
 		// Audio
 		AudioRenderer,
 		DumpToFile,
@@ -283,6 +288,11 @@ private:
 		{ PerfOverlayMarginY,       { "Video", "Performance Overlay", "Vertical Margin (px)" } },
 		{ PerfOverlayCenterX,       { "Video", "Performance Overlay", "Center Horizontally" } },
 		{ PerfOverlayCenterY,       { "Video", "Performance Overlay", "Center Vertically" } },
+
+		// Shader Loading Dialog
+		{ ShaderLoadBgEnabled,      { "Video", "Shader Loading Dialog", "Allow custom background" } },
+		{ ShaderLoadBgDarkening,    { "Video", "Shader Loading Dialog", "Darkening effect strength" } },
+		{ ShaderLoadBgBlur,         { "Video", "Shader Loading Dialog", "Blur effect strength" } },
 
 		// Audio
 		{ AudioRenderer,  { "Audio", "Renderer"}},
