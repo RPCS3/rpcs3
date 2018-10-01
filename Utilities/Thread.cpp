@@ -1807,13 +1807,7 @@ bool thread_ctrl::_wait_for(u64 usec)
 
 void thread_base::_notify(cond_variable thread_base::* ptr)
 {
-	// Optimized lock + unlock
-	if (!m_mutex.is_free())
-	{
-		m_mutex.lock();
-		m_mutex.unlock();
-	}
-
+	m_mutex.lock_unlock();
 	(this->*ptr).notify_one();
 }
 
@@ -1832,12 +1826,6 @@ thread_base::~thread_base()
 		pthread_detach((pthread_t)m_thread.raw());
 #endif
 	}
-}
-
-std::exception_ptr thread_base::get_exception() const
-{
-	std::lock_guard lock(m_mutex);
-	return m_exception;
 }
 
 void thread_base::set_exception(std::exception_ptr ptr)
