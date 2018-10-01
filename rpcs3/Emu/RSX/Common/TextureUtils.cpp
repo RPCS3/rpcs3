@@ -528,7 +528,7 @@ u8 get_format_block_size_in_bytes(rsx::surface_color_format format)
 size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignment, size_t mipmap_alignment)
 {
 	size_t w = width;
-	size_t h = std::max<u16>(height, 1);
+	size_t h = height;
 	size_t d = std::max<u16>(depth, 1);
 
 	format &= ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
@@ -547,7 +547,8 @@ size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 form
 		width_in_blocks = std::max<size_t>(width_in_blocks / 2, 1);
 	}
 
-	return result * (cubemap ? 6 : 1);
+	// Mipmap, height and width aren't allowed to be zero
+	return verify("Texture params" HERE, result) * (cubemap ? 6 : 1); 
 }
 
 size_t get_placed_texture_storage_size(const rsx::fragment_texture &texture, size_t row_pitch_alignment, size_t mipmap_alignment)
