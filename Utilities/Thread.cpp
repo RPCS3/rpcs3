@@ -1736,22 +1736,6 @@ bool thread_ctrl::_wait_for(u64 usec)
 {
 	auto _this = g_tls_this_thread;
 
-	struct half_lock
-	{
-		shared_mutex& ref;
-
-		void lock()
-		{
-			// Used to avoid additional lock + unlock
-		}
-
-		void unlock()
-		{
-			ref.unlock();
-		}
-	}
-	_lock{_this->m_mutex};
-
 	do
 	{
 		// Mutex is unlocked at the start and after the waiting
@@ -1772,7 +1756,6 @@ bool thread_ctrl::_wait_for(u64 usec)
 			return false;
 		}
 
-		// Lock (semaphore)
 		_this->m_mutex.lock();
 
 		// Double-check the value
@@ -1791,7 +1774,7 @@ bool thread_ctrl::_wait_for(u64 usec)
 			}
 		}
 	}
-	while (_this->m_cond.wait(_lock, std::exchange(usec, usec > cond_variable::max_timeout ? -1 : 0)));
+	while (_this->m_cond.wait_unlock(std::exchange(usec, usec > cond_variable::max_timeout ? -1 : 0), _this->m_mutex));
 
 	// Timeout
 	return false;
