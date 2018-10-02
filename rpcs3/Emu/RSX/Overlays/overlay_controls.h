@@ -1479,12 +1479,11 @@ namespace rsx
 				m_accept_btn->set_pos(30, height + 20);
 				m_cancel_btn->set_pos(180, height + 20);
 
-				m_accept_btn->text = "Select";
-				m_cancel_btn->text = "Cancel";
+				m_accept_btn->set_text("Select");
+				m_cancel_btn->set_text("Cancel");
 
-				auto fnt = fontmgr::get("Arial", 16);
-				m_accept_btn->font_ref = fnt;
-				m_cancel_btn->font_ref = fnt;
+				m_accept_btn->set_font("Arial", 16);
+				m_cancel_btn->set_font("Arial", 16);
 
 				auto_resize = false;
 				back_color = { 0.15f, 0.15f, 0.15f, 0.8f };
