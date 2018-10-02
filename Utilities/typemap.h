@@ -390,7 +390,7 @@ namespace utils
 
 		friend typemap;
 
-		void unlock()
+		void release()
 		{
 			// Additional semaphore is not used for singletons
 			if constexpr (typeinfo_count<T>::max_count > 1)
@@ -426,7 +426,7 @@ namespace utils
 		{
 			if (m_block)
 			{
-				unlock();
+				release();
 			}
 		}
 
@@ -464,11 +464,11 @@ namespace utils
 		}
 
 		// Release the lock and set invalid state
-		void release()
+		void unlock()
 		{
 			if (m_block)
 			{
-				unlock();
+				release();
 				m_block = nullptr;
 			}
 		}
