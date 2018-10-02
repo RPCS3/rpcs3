@@ -172,7 +172,7 @@ namespace rsx
 					refresh();
 				}
 
-				//Unreachable
+				// Unreachable
 				return 0;
 			}
 		};
@@ -497,7 +497,7 @@ namespace rsx
 					}
 					else
 					{
-						//Fallback
+						// Fallback
 						static_cast<image_view*>(image.get())->set_image_resource(resource_config::standard_image_resource::save);
 					}
 
@@ -516,10 +516,10 @@ namespace rsx
 					subtext->set_font("Arial", 14);
 					subtext->set_wrap_text(true);
 
-					//Auto-resize save details label
+					// Auto-resize save details label
 					static_cast<label*>(subtext.get())->auto_resize(true);
 
-					//Make back color transparent for text
+					// Make back color transparent for text
 					header_text->back_color.a = 0.f;
 					subtext->back_color.a = 0.f;
 
@@ -528,7 +528,7 @@ namespace rsx
 					static_cast<vertical_layout*>(text_stack.get())->add_element(header_text);
 					static_cast<vertical_layout*>(text_stack.get())->add_element(subtext);
 
-					//Pack
+					// Pack
 					this->pack_padding = 15;
 					add_element(image);
 					add_element(text_stack);
@@ -581,7 +581,7 @@ namespace rsx
 					if (m_no_saves)
 						break;
 					return_code = m_list->get_selected_index();
-					//Fall through
+					// Fall through
 				case pad_button::circle:
 					close();
 					break;
@@ -852,7 +852,7 @@ namespace rsx
 					}
 					else if (cancel_only)
 					{
-						//Do not accept for cancel-only dialogs
+						// Do not accept for cancel-only dialogs
 						return;
 					}
 					else
@@ -866,7 +866,7 @@ namespace rsx
 				{
 					if (ok_only)
 					{
-						//Ignore cancel operation for Ok-only
+						// Ignore cancel operation for Ok-only
 						return;
 					}
 					else if (cancel_only)
@@ -901,7 +901,7 @@ namespace rsx
 						offset = 98;
 					}
 
-					//Push the other stuff down
+					// Push the other stuff down
 					bottom_bar.translate(0, offset);
 					btn_ok.translate(0, offset);
 					btn_cancel.translate(0, offset);
@@ -1143,7 +1143,7 @@ namespace rsx
 
 			void update_animation(u64 t)
 			{
-				//Update rate is twice per second
+				// Update rate is twice per second
 				auto elapsed = t - creation_time;
 				elapsed /= 500000;
 
@@ -1163,7 +1163,7 @@ namespace rsx
 				}
 			}
 
-			//Extends visible time by half a second. Also updates the screen
+			// Extends visible time by half a second. Also updates the screen
 			void touch()
 			{
 				if (urgency_ctr == 0 || urgency_ctr > 8)
@@ -1184,7 +1184,7 @@ namespace rsx
 
 				update_animation(current_time);
 
-				//Usually this method is called during a draw-to-screen operation. Reset urgency ctr
+				// Usually this method is called during a draw-to-screen operation. Reset urgency ctr
 				urgency_ctr = 1;
 			}
 
