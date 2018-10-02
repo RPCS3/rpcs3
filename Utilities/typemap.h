@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include "mutex.h"
+#include "cond.h"
 #include "Atomic.h"
 #include "VirtualMemory.h"
 #include <memory>
@@ -348,14 +349,17 @@ namespace utils
 		// Free ID counter
 		atomic_t<uint> m_sema{0};
 
-		// Hint for next free ID
-		atomic_t<uint> m_hint{0};
-
 		// Max ID ever used + 1
 		atomic_t<uint> m_limit{0};
 
 		// Increased on each constructor call
-		atomic_t<ullong> m_total{0};
+		atomic_t<ullong> m_create_count{0};
+
+		// Increased on each destructor call
+		atomic_t<ullong> m_destroy_count{0};
+
+		// Waitable object for the semaphore, signaled on decrease
+		::notifier m_free_notifier;
 
 		// Aligned size of the storage for each object
 		uint m_ssize = 0;
@@ -392,16 +396,6 @@ namespace utils
 
 		void release()
 		{
-			// Additional semaphore is not used for singletons
-			if constexpr (typeinfo_count<T>::max_count > 1)
-			{
-				if (m_block->m_type == 0)
-				{
-					// Object deleted or not created: return semaphore
-					m_head->m_sema--;
-				}
-			}
-
 			if constexpr (type_const())
 			{
 				m_block->m_mutex.unlock_shared();
@@ -409,6 +403,18 @@ namespace utils
 			else
 			{
 				m_block->m_mutex.unlock();
+			}
+
+			if (m_block->m_type == 0)
+			{
+				if constexpr (typeinfo_count<T>::max_count > 1)
+				{
+					// Return semaphore
+					m_head->m_sema--;
+				}
+
+				// Signal free ID availability
+				m_head->m_free_notifier.notify_all();
 			}
 		}
 
@@ -473,21 +479,23 @@ namespace utils
 			}
 		}
 
-		// Call the constructor
+		// Call the constructor, return the stamp
 		template <typename New = std::decay_t<T>, typename... Args>
-		weak_typeptr create(Args&&... args)
+		ullong create(Args&&... args)
 		{
 			static_assert(!type_const());
 
-			const uint this_id = this->get_id();
+			const ullong result = ++m_head->m_create_count;
 
 			if constexpr (typeinfo_count<T>::max_count > 1)
 			{
 				// Update hints only if the object is not being recreated
 				if (!m_block->m_type)
 				{
+					const uint this_id = this->get_id();
+
 					// Update max count
-					auto lim = m_head->m_limit.fetch_op([this_id](uint& limit)
+					m_head->m_limit.fetch_op([this_id](uint& limit)
 					{
 						if (limit <= this_id)
 						{
@@ -496,24 +504,6 @@ namespace utils
 						}
 
 						return false;
-					});
-
-					// Update hint (TODO)
-					m_head->m_hint.atomic_op([this_id, lim](uint& hint)
-					{
-						if (lim.first + 1 == typeinfo_count<T>::max_count && hint <= this_id)
-						{
-							hint = this_id + 1;
-						}
-						else
-						{
-							hint++;
-						}
-
-						if (hint == typeinfo_count<T>::max_count)
-						{
-							hint = 0;
-						}
 					});
 				}
 			}
@@ -525,6 +515,7 @@ namespace utils
 				if (m_block->m_type.exchange(g_typepoly<New, base>.type) != 0)
 				{
 					(*m_block->get_ptr<base*>())->~base();
+					m_head->m_destroy_count++;
 				}
 
 				*m_block->get_ptr<base*>() = new (m_block->get_ptr<New, 16>()) New(std::forward<Args>(args)...);
@@ -538,17 +529,13 @@ namespace utils
 				{
 					// Destroy object if it exists
 					m_block->get_ptr<T>()->~T();
+					m_head->m_destroy_count++;
 				}
 
 				new (m_block->get_ptr<New>()) New(std::forward<Args>(args)...);
 			}
 
-			// Return a weak pointer struct with a unique stamp number
-			weak_typeptr w;
-			w.id    = this_id;
-			w.type  = m_block->m_type;
-			w.stamp = ++m_head->m_total;
-			return w;
+			return result;
 		}
 
 		// Call the destructor if object exists
@@ -570,6 +557,8 @@ namespace utils
 			{
 				m_block->get_ptr<T>()->~T();
 			}
+
+			m_head->m_destroy_count++;
 		}
 
 		// Get the ID
@@ -617,6 +606,21 @@ namespace utils
 
 		// Virtual memory size
 		std::size_t m_total = 0;
+
+		template <typename T>
+		typemap_head* get_head() const
+		{
+			using _type = std::decay_t<T>;
+
+			if constexpr (typeinfo_share<T>::is_shared)
+			{
+				return &m_map[g_sh<_type>.type];
+			}
+			else
+			{
+				return &m_map[g_typeinfo<_type>.type];
+			}
+		}
 
 	public:
 		typemap(const typemap&) = delete;
@@ -681,9 +685,10 @@ namespace utils
 
 					// Reset mutable fields
 					m_map[i].m_sema.raw()  = 0;
-					m_map[i].m_hint.raw()  = 0;
 					m_map[i].m_limit.raw() = 0;
-					m_map[i].m_total.raw() = 0;
+
+					m_map[i].m_create_count.raw()  = 0;
+					m_map[i].m_destroy_count.raw() = 0;
 				}
 			}
 
@@ -748,11 +753,8 @@ namespace utils
 
 		// Prepare pointers
 		template <typename Type, typename Arg>
-		typeptr_base init_ptr(Arg&& id)
+		typeptr_base init_ptr(Arg&& id) const
 		{
-			typemap_head* head;
-			typemap_block* block;
-
 			if constexpr (typeinfo_count<Type>::max_count == 0)
 			{
 				return {};
@@ -760,16 +762,10 @@ namespace utils
 
 			const uint type_id = g_typeinfo<std::decay_t<Type>>.type;
 
-			if constexpr (typeinfo_share<Type>::is_shared)
-			{
-				head = &m_map[g_sh<std::decay_t<Type>>.type];
-			}
-			else
-			{
-				head = &m_map[type_id];
-			}
-
 			using id_tag = std::decay_t<Arg>;
+
+			typemap_head* head = get_head<Type>();
+			typemap_block* block;
 
 			if constexpr (std::is_same_v<id_tag, id_new_t> || std::is_same_v<id_tag, id_any_t> || std::is_same_v<id_tag, id_always_t>)
 			{
@@ -788,7 +784,7 @@ namespace utils
 					else
 					{
 						// Find empty location and lock it, starting from hint index
-						for (uint i = head->m_hint;; i = (i == last ? 0 : i + 1))
+						for (uint lim = head->m_limit, i = (lim > last ? 0 : lim);; i = (i == last ? 0 : i + 1))
 						{
 							block = reinterpret_cast<typemap_block*>(head->m_ptr + std::size_t{i} * head->m_ssize);
 
@@ -901,7 +897,7 @@ namespace utils
 		}
 
 		template <typename Type, typename Arg>
-		void check_ptr(typemap_block*& block, Arg&& id)
+		void check_ptr(typemap_block*& block, Arg&& id) const
 		{
 			using id_tag = std::decay_t<Arg>;
 
@@ -1010,7 +1006,7 @@ namespace utils
 		}
 
 		template <bool Try, typename Type, bool Lock>
-		bool lock_ptr(typemap_block* block)
+		bool lock_ptr(typemap_block* block) const
 		{
 			// Use reader lock for const access
 			constexpr bool is_const = std::is_const_v<std::remove_reference_t<Type>>;
@@ -1063,7 +1059,7 @@ namespace utils
 		}
 
 		template <std::size_t I, typename Type, typename... Types, bool Lock, bool... Locks, std::size_t N>
-		bool try_lock(const std::array<typeptr_base, N>& array, uint locked, std::integer_sequence<bool, Lock, Locks...>)
+		bool try_lock(const std::array<typeptr_base, N>& array, uint locked, std::integer_sequence<bool, Lock, Locks...>) const
 		{
 			// Try to lock mutex if not locked from the previous step
 			if (I == locked || lock_ptr<true, Type, Lock>(array[I].m_block))
@@ -1102,7 +1098,7 @@ namespace utils
 		}
 
 		template <typename... Types, std::size_t N, std::size_t... I, bool... Locks>
-		uint lock_array(const std::array<typeptr_base, N>& array, std::integer_sequence<std::size_t, I...>, std::integer_sequence<bool, Locks...>)
+		uint lock_array(const std::array<typeptr_base, N>& array, std::integer_sequence<std::size_t, I...>, std::integer_sequence<bool, Locks...>) const
 		{
 			// Verify all mutexes are free or wait for one of them and return its index
 			uint locked = 0;
@@ -1111,14 +1107,14 @@ namespace utils
 		}
 
 		template <typename... Types, std::size_t N, std::size_t... I, typename... Args>
-		void check_array(std::array<typeptr_base, N>& array, std::integer_sequence<std::size_t, I...>, Args&&... ids)
+		void check_array(std::array<typeptr_base, N>& array, std::integer_sequence<std::size_t, I...>, Args&&... ids) const
 		{
 			// Check types and unlock on mismatch
 			(check_ptr<Types, Args>(array[I].m_block, std::forward<Args>(ids)), ...);
 		}
 
 		template <typename... Types, std::size_t N, std::size_t... I>
-		std::tuple<typeptr<Types>...> array_to_tuple(const std::array<typeptr_base, N>& array, std::integer_sequence<std::size_t, I...>)
+		std::tuple<typeptr<Types>...> array_to_tuple(const std::array<typeptr_base, N>& array, std::integer_sequence<std::size_t, I...>) const
 		{
 			return {array[I]...};
 		}
@@ -1126,7 +1122,7 @@ namespace utils
 	public:
 		// Lock any objects by their identifiers, special tags id_new/id_any/id_always, or search predicates
 		template <typename... Types, typename... Args, typename = std::enable_if_t<sizeof...(Types) == sizeof...(Args)>>
-		auto lock(Args&&... ids)
+		auto lock(Args&&... ids) const
 		{
 			static_assert(((!std::is_lvalue_reference_v<Types> == !typeinfo_poly<Types>::is_poly) && ...));
 			static_assert(((!std::is_rvalue_reference_v<Types>) && ...));
@@ -1175,18 +1171,9 @@ namespace utils
 
 			const uint type_id = g_typeinfo<std::decay_t<Type>>.type;
 
-			typemap_head* head;
+			typemap_head* head = get_head<Type>();
 
-			if constexpr (typeinfo_share<Type>::is_shared)
-			{
-				head = &m_map[g_sh<std::decay_t<Type>>.type];
-			}
-			else
-			{
-				head = &m_map[type_id];
-			}
-
-			const ullong ix = head->m_total;
+			const ullong ix = head->m_create_count;
 
 			for (std::size_t j = 0; j < (typeinfo_count<Type>::max_count != 1 ? +head->m_limit : 1); j++)
 			{
@@ -1211,7 +1198,7 @@ namespace utils
 			}
 
 			// Return "unsigned negative" value if the creation index has increased
-			const ullong result = ix - head->m_total;
+			const ullong result = ix - head->m_create_count;
 
 			if constexpr (sizeof...(Types) > 0)
 			{
@@ -1221,6 +1208,24 @@ namespace utils
 			{
 				return result;
 			}
+		}
+
+		template <typename Type>
+		ullong get_create_count() const
+		{
+			return get_head<Type>()->m_create_count;
+		}
+
+		template <typename Type>
+		ullong get_destroy_count() const
+		{
+			return get_head<Type>()->m_destroy_count;
+		}
+
+		template <typename Type>
+		std::shared_lock<::notifier> get_free_notifier() const
+		{
+			return std::shared_lock{get_head<Type>()->m_free_notifier};
 		}
 	};
 } // namespace utils
