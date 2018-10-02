@@ -129,7 +129,7 @@ public:
 
 	std::vector<u64> keys;
 
-	shared_mutex mutex;
+	void operator()();
 
 	audio_thread(vm::ptr<char> buf, vm::ptr<u64> ind)
 		: m_buffer(buf)
@@ -142,8 +142,6 @@ public:
 			ports[i].index  = m_indexes + i;
 		}
 	}
-
-	std::pair<u32, u32> operator()();
 
 	audio_port* open_port()
 	{
