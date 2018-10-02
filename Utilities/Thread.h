@@ -84,10 +84,17 @@ using result_storage_t = result_storage<std::invoke_result_t<Context, Args...>>;
 
 // Detect on_abort() method (should return void)
 template <typename T, typename = void>
-struct thread_abort : std::bool_constant<false> {};
+struct thread_on_abort : std::bool_constant<false> {};
 
 template <typename T>
-struct thread_abort<T, decltype(std::declval<named_thread<T>&>().on_abort())> : std::bool_constant<true> {};
+struct thread_on_abort<T, decltype(std::declval<named_thread<T>&>().on_abort())> : std::bool_constant<true> {};
+
+// Detect on_cleanup() static function (should return void)
+template <typename T, typename = void>
+struct thread_on_cleanup : std::bool_constant<false> {};
+
+template <typename T>
+struct thread_on_cleanup<T, decltype(named_thread<T>::on_cleanup(std::declval<named_thread<T>*>()))> : std::bool_constant<true> {};
 
 // Simple list of void() functors
 class task_stack
@@ -498,7 +505,7 @@ public:
 		if (thread::m_state.compare_and_swap_test(thread_state::created, thread_state::aborting))
 		{
 			// Call on_abort() method if it's available
-			if constexpr (thread_abort<Context>())
+			if constexpr (thread_on_abort<Context>())
 			{
 				Context::on_abort();
 			}
