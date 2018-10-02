@@ -8,8 +8,6 @@
 #include "Emu/Audio/AudioThread.h"
 #include "cellAudio.h"
 
-#include <thread>
-
 LOG_CHANNEL(cellAudio);
 
 template <>
@@ -40,22 +38,7 @@ void fmt_class_string<CellAudioError>::format(std::string& out, u64 arg)
 	});
 }
 
-void audio_config::on_init(const std::shared_ptr<void>& _this)
-{
-	m_buffer.set(vm::alloc(AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT, vm::main));
-	m_indexes.set(vm::alloc(sizeof(u64) * AUDIO_PORT_COUNT, vm::main));
-
-	for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
-	{
-		ports[i].number = i;
-		ports[i].addr = m_buffer + AUDIO_PORT_OFFSET * i;
-		ports[i].index = m_indexes + i;
-	}
-
-	old_thread::on_init(_this);
-}
-
-void audio_config::on_task()
+std::pair<u32, u32> audio_thread::operator()()
 {
 	thread_ctrl::set_native_priority(1);
 
@@ -76,11 +59,11 @@ void audio_config::on_task()
 	const auto audio = Emu.GetCallbacks().get_audio();
 	audio->Open(buf8ch, buf_sz);
 
-	while (fxm::check<audio_config>() && !Emu.IsStopped())
+	while (fxm::check<audio_config>() == this && !Emu.IsStopped())
 	{
 		if (Emu.IsPaused())
 		{
-			std::this_thread::sleep_for(1ms); // hack
+			thread_ctrl::wait_for(1000); // hack
 			continue;
 		}
 
@@ -94,7 +77,7 @@ void audio_config::on_task()
 		const u64 expected_time = m_counter * AUDIO_SAMPLES * 1000000 / 48000;
 		if (expected_time >= time_pos)
 		{
-			std::this_thread::sleep_for(1ms); // hack
+			thread_ctrl::wait_for(1000); // hack
 			continue;
 		}
 
@@ -342,17 +325,24 @@ void audio_config::on_task()
 		cellAudio.trace("Audio perf: (access=%d, AddData=%d, events=%d, dump=%d)",
 			stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
 	}
+
+	return {m_buffer.addr(), m_indexes.addr()};
 }
 
 error_code cellAudioInit()
 {
 	cellAudio.warning("cellAudioInit()");
 
+	const auto buf = vm::cast(vm::alloc(AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT, vm::main));
+	const auto ind = vm::cast(vm::alloc(sizeof(u64) * AUDIO_PORT_COUNT, vm::main));
+
 	// Start audio thread
-	const auto g_audio = fxm::make<audio_config>();
+	const auto g_audio = fxm::make<audio_config>("Audio Thread", buf, ind);
 
 	if (!g_audio)
 	{
+		vm::dealloc(buf);
+		vm::dealloc(ind);
 		return CELL_AUDIO_ERROR_ALREADY_INIT;
 	}
 
@@ -371,6 +361,10 @@ error_code cellAudioQuit()
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
+	// Join and dealloc
+	auto [buf, ind] = g_audio->operator()();
+	vm::dealloc(buf);
+	vm::dealloc(ind);
 	return CELL_OK;
 }
 
