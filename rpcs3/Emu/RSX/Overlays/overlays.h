@@ -64,8 +64,8 @@ namespace rsx
 				cross
 			};
 
-			u64  input_timestamp = 0;
-			bool exit = false;
+			Timer input_timer;
+			bool  exit = false;
 
 			s32 return_code = CELL_OK;
 			std::function<void(s32 status)> on_close;
@@ -93,8 +93,16 @@ namespace rsx
 				if (rinfo.max_connect == 0)
 					return selection_code::error;
 
-				std::array<bool, 8> button_state;
-				button_state.fill(true);
+				std::array<std::chrono::steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> timestamp;
+				timestamp.fill(std::chrono::steady_clock::now());
+
+				std::array<std::array<bool, 8>, CELL_PAD_MAX_PORT_NUM> button_state;
+				for (auto& state : button_state)
+				{
+					state.fill(true);
+				}
+
+				input_timer.Start();
 
 				while (!exit)
 				{
@@ -107,8 +115,15 @@ namespace rsx
 						continue;
 					}
 
+					int pad_index = -1;
 					for (const auto &pad : handler->GetPads())
 					{
+						if (++pad_index >= CELL_PAD_MAX_PORT_NUM)
+						{
+							LOG_FATAL(RSX, "The native overlay cannot handle more than 7 pads! Current number of pads: %d", pad_index + 1);
+							continue;
+						}
+
 						for (auto &button : pad->m_buttons)
 						{
 							u8 button_id = 255;
@@ -151,10 +166,25 @@ namespace rsx
 
 							if (button_id < 255)
 							{
-								if (button.m_pressed != button_state[button_id])
-									if (button.m_pressed) on_button_pressed(static_cast<pad_button>(button_id));
+								if (button.m_pressed)
+								{
+									if (button_id < 4) // d-pad button
+									{
+										if (!button_state[pad_index][button_id] || input_timer.GetMsSince(timestamp[pad_index]) > 400)
+										{
+											// d-pad button was not pressed, or was pressed more than 400ms ago
+											timestamp[pad_index] = std::chrono::steady_clock::now();
+											on_button_pressed(static_cast<pad_button>(button_id));
+										}
+									}
+									else if (!button_state[pad_index][button_id])
+									{
+										// button was not pressed
+										on_button_pressed(static_cast<pad_button>(button_id));
+									}
+								}
 
-								button_state[button_id] = button.m_pressed;
+								button_state[pad_index][button_id] = button.m_pressed;
 							}
 
 							if (button.m_flush)
