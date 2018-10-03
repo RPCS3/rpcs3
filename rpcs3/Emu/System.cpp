@@ -257,6 +257,21 @@ void fmt_class_string<tsx_usage>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<enter_button_assign>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](enter_button_assign value)
+	{
+		switch (value)
+		{
+		case enter_button_assign::circle: return "Enter with circle";
+		case enter_button_assign::cross: return "Enter with cross";
+		}
+
+		return unknown;
+	});
+}
+
 void Emulator::Init()
 {
 	if (!g_tty)

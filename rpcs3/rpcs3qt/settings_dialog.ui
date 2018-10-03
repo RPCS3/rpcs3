@@ -1015,7 +1015,7 @@
       <attribute name="title">
        <string>System</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_37">
+      <layout class="QVBoxLayout" name="verticalLayout_73">
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="1,1,1">
          <item>
@@ -1073,6 +1073,39 @@
          </item>
          <item>
           <widget class="QWidget" name="widget_6" native="true"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_17" stretch="1,1,1">
+         <item>
+          <widget class="QGroupBox" name="gb_enterButtonAssignment">
+           <property name="title">
+            <string>Enter Button Assignment</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_72">
+            <item>
+             <widget class="QRadioButton" name="enterButtonAssignCircle">
+              <property name="text">
+               <string>Enter with circle</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="enterButtonAssignCross">
+              <property name="text">
+               <string>Enter with cross</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="widget_12" native="true"/>
+         </item>
+         <item>
+          <widget class="QWidget" name="widget_13" native="true"/>
          </item>
         </layout>
        </item>
