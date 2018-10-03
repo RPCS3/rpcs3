@@ -31,10 +31,13 @@ namespace vm
 	}
 
 	// Emulated virtual memory
-	u8* const g_base_addr = memory_reserve_4GiB(0);
+	u8* const g_base_addr = memory_reserve_4GiB(0x2'0000'0000);
+
+	// Unprotected virtual memory mirror
+	u8* const g_sudo_addr = memory_reserve_4GiB((std::uintptr_t)g_base_addr);
 
 	// Auxiliary virtual memory for executable areas
-	u8* const g_exec_addr = memory_reserve_4GiB((std::uintptr_t)g_base_addr);
+	u8* const g_exec_addr = memory_reserve_4GiB((std::uintptr_t)g_sudo_addr);
 
 	// Stats for debugging
 	u8* const g_stat_addr = memory_reserve_4GiB((std::uintptr_t)g_exec_addr);
@@ -305,7 +308,7 @@ namespace vm
 			utils::memory_protect(g_base_addr + addr, size, utils::protection::rw);
 			std::memset(g_base_addr + addr, 0, size);
 		}
-		else if (shm->map_critical(g_base_addr + addr) != g_base_addr + addr)
+		else if (shm->map_critical(g_base_addr + addr) != g_base_addr + addr || shm->map_critical(g_sudo_addr + addr) != g_sudo_addr + addr)
 		{
 			fmt::throw_exception("Memory mapping failed - blame Windows (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
 		}
@@ -437,6 +440,7 @@ namespace vm
 		else
 		{
 			shm->unmap_critical(g_base_addr + addr);
+			shm->unmap_critical(g_sudo_addr + addr);
 		}
 
 		if (is_exec)
@@ -575,6 +579,7 @@ namespace vm
 			// Special path for 4k-aligned pages
 			m_common = std::make_shared<utils::shm>(size);
 			verify(HERE), m_common->map_critical(vm::base(addr), utils::protection::no) == vm::base(addr);
+			verify(HERE), m_common->map_critical(vm::get_super_ptr(addr), utils::protection::no) == vm::get_super_ptr(addr);
 		}
 	}
 
@@ -596,6 +601,7 @@ namespace vm
 			if (m_common)
 			{
 				m_common->unmap_critical(vm::base(addr));
+				m_common->unmap_critical(vm::get_super_ptr(addr));
 			}
 		}
 	}

@@ -6,12 +6,12 @@ namespace rsx
 {
 	namespace overlays
 	{
-		//Singleton instance declaration
+		// Singleton instance declaration
 		fontmgr* fontmgr::m_instance = nullptr;
 
 		void user_interface::close()
 		{
-			//Force unload
+			// Force unload
 			exit = true;
 			if (auto manager = fxm::get<display_manager>())
 			{

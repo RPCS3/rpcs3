@@ -1015,7 +1015,7 @@
       <attribute name="title">
        <string>System</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_37">
+      <layout class="QVBoxLayout" name="verticalLayout_73">
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="1,1,1">
          <item>
@@ -1073,6 +1073,39 @@
          </item>
          <item>
           <widget class="QWidget" name="widget_6" native="true"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_17" stretch="1,1,1">
+         <item>
+          <widget class="QGroupBox" name="gb_enterButtonAssignment">
+           <property name="title">
+            <string>Enter Button Assignment</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_72">
+            <item>
+             <widget class="QRadioButton" name="enterButtonAssignCircle">
+              <property name="text">
+               <string>Enter with circle</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="enterButtonAssignCross">
+              <property name="text">
+               <string>Enter with cross</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="widget_12" native="true"/>
+         </item>
+         <item>
+          <widget class="QWidget" name="widget_13" native="true"/>
          </item>
         </layout>
        </item>
@@ -1382,6 +1415,50 @@
                  </widget>
                 </item>
                </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="groupBox_3">
+             <property name="title">
+              <string>Shader Loading Screen</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_70">
+              <item>
+               <widget class="QCheckBox" name="shaderLoadBgEnabled">
+                <property name="text">
+                 <string>Allow custom background</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_shaderLoadBgDarkening">
+                <property name="text">
+                 <string>Background darkening:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="shaderLoadBgDarkening">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_shaderLoadBgBlur">
+                <property name="text">
+                 <string>Background blur:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="shaderLoadBgBlur">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
               </item>
               <item>
                <spacer name="verticalSpacer_14">

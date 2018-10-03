@@ -91,6 +91,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	QJsonObject json_emu         = json_obj.value("emulator").toObject();
 	QJsonObject json_emu_misc    = json_emu.value("misc").toObject();
 	QJsonObject json_emu_overlay = json_emu.value("overlay").toObject();
+	QJsonObject json_emu_shaders = json_emu.value("shaderLoadingScreen").toObject();
 
 	QJsonObject json_gui = json_obj.value("gui").toObject();
 
@@ -764,6 +765,35 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->enableHostRoot, emu_settings::EnableHostRoot);
 	SubscribeTooltip(ui->enableHostRoot, json_sys["enableHostRoot"].toString());
 
+	// Radio Buttons
+
+	SubscribeTooltip(ui->gb_enterButtonAssignment, json_sys["enterButtonAssignment"].toString());
+
+	// creating this in ui file keeps scrambling the order...
+	QButtonGroup *enterButtonAssignmentBG = new QButtonGroup(this);
+	enterButtonAssignmentBG->addButton(ui->enterButtonAssignCircle, 0);
+	enterButtonAssignmentBG->addButton(ui->enterButtonAssignCross, 1);
+
+	{ // EnterButtonAssignment options
+		QString assigned_button = qstr(xemu_settings->GetSetting(emu_settings::EnterButtonAssignment));
+		QStringList assignable_buttons = xemu_settings->GetSettingOptions(emu_settings::EnterButtonAssignment);
+
+		for (int i = 0; i < assignable_buttons.count(); i++)
+		{
+			enterButtonAssignmentBG->button(i)->setText(assignable_buttons[i]);
+
+			if (assignable_buttons[i] == assigned_button)
+			{
+				enterButtonAssignmentBG->button(i)->setChecked(true);
+			}
+
+			connect(enterButtonAssignmentBG->button(i), &QAbstractButton::pressed, [=]()
+			{
+				xemu_settings->SetSetting(emu_settings::EnterButtonAssignment, sstr(assignable_buttons[i]));
+			});
+		}
+	}
+
 	//    _   _      _                      _      _______    _
 	//   | \ | |    | |                    | |    |__   __|  | |
 	//   |  \| | ___| |___      _____  _ __| | __    | | __ _| |__
@@ -860,6 +890,18 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	EnablePerfOverlayOptions(ui->perfOverlayEnabled->isChecked());
 	connect(ui->perfOverlayEnabled, &QCheckBox::clicked, EnablePerfOverlayOptions);
 
+	xemu_settings->EnhanceCheckBox(ui->shaderLoadBgEnabled, emu_settings::ShaderLoadBgEnabled);
+	SubscribeTooltip(ui->shaderLoadBgEnabled, json_emu_shaders["shaderLoadBgEnabled"].toString());
+	auto EnableShaderLoaderOptions = [this](bool enabled)
+	{
+		ui->label_shaderLoadBgDarkening->setEnabled(enabled);
+		ui->label_shaderLoadBgBlur->setEnabled(enabled);
+		ui->shaderLoadBgDarkening->setEnabled(enabled);
+		ui->shaderLoadBgBlur->setEnabled(enabled);
+	};
+	EnableShaderLoaderOptions(ui->shaderLoadBgEnabled->isChecked());
+	connect(ui->shaderLoadBgEnabled, &QCheckBox::clicked, EnableShaderLoaderOptions);
+
 	// Sliders
 
 	xemu_settings->EnhanceSlider(ui->perfOverlayUpdateInterval, emu_settings::PerfOverlayUpdateInterval);
@@ -884,6 +926,22 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	connect(ui->perfOverlayOpacity, &QSlider::valueChanged, [this](int value)
 	{
 		ui->label_opacity->setText(tr("Opacity: %0 %").arg(value));
+	});
+
+	xemu_settings->EnhanceSlider(ui->shaderLoadBgDarkening, emu_settings::ShaderLoadBgDarkening);
+	SubscribeTooltip(ui->shaderLoadBgDarkening, json_emu_shaders["shaderLoadBgDarkening"].toString());
+	ui->label_shaderLoadBgDarkening->setText(tr("Background darkening: %0 %").arg(ui->shaderLoadBgDarkening->value()));
+	connect(ui->shaderLoadBgDarkening, &QSlider::valueChanged, [this](int value)
+	{
+		ui->label_shaderLoadBgDarkening->setText(tr("Background darkening: %0 %").arg(value));
+	});
+
+	xemu_settings->EnhanceSlider(ui->shaderLoadBgBlur, emu_settings::ShaderLoadBgBlur);
+	SubscribeTooltip(ui->shaderLoadBgBlur, json_emu_shaders["shaderLoadBgBlur"].toString());
+	ui->label_shaderLoadBgBlur->setText(tr("Background blur: %0 %").arg(ui->shaderLoadBgBlur->value()));
+	connect(ui->shaderLoadBgBlur, &QSlider::valueChanged, [this](int value)
+	{
+		ui->label_shaderLoadBgBlur->setText(tr("Background blur: %0 %").arg(value));
 	});
 
 	// SpinBoxes

@@ -527,27 +527,24 @@ u8 get_format_block_size_in_bytes(rsx::surface_color_format format)
 
 size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignment, size_t mipmap_alignment)
 {
-	size_t w = width;
-	size_t h = std::max<u16>(height, 1);
-	size_t d = std::max<u16>(depth, 1);
-
 	format &= ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 	size_t block_edge = get_format_block_size_in_texel(format);
 	size_t block_size_in_byte = get_format_block_size_in_bytes(format);
 
-	size_t height_in_blocks = (h + block_edge - 1) / block_edge;
-	size_t width_in_blocks = (w + block_edge - 1) / block_edge;
+	size_t height_in_blocks = (height + block_edge - 1) / block_edge;
+	size_t width_in_blocks  = (width + block_edge - 1) / block_edge;
 
 	size_t result = 0;
 	for (u16 i = 0; i < mipmap; ++i)
 	{
 		size_t rowPitch = align(block_size_in_byte * width_in_blocks, row_pitch_alignment);
-		result += align(rowPitch * height_in_blocks * d, mipmap_alignment);
+		result += align(rowPitch * height_in_blocks * depth, mipmap_alignment);
 		height_in_blocks = std::max<size_t>(height_in_blocks / 2, 1);
 		width_in_blocks = std::max<size_t>(width_in_blocks / 2, 1);
 	}
 
-	return result * (cubemap ? 6 : 1);
+	// Mipmap, height and width aren't allowed to be zero
+	return verify("Texture params" HERE, result) * (cubemap ? 6 : 1); 
 }
 
 size_t get_placed_texture_storage_size(const rsx::fragment_texture &texture, size_t row_pitch_alignment, size_t mipmap_alignment)

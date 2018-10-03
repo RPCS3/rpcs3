@@ -112,7 +112,7 @@ static void network_clear_queue(ppu_thread& ppu)
 
 extern void network_thread_init()
 {
-	thread_ctrl::spawn("Network Thread", []()
+	thread_ctrl::make_shared("Network Thread", []()
 	{
 		std::vector<std::shared_ptr<lv2_socket>> socklist;
 		socklist.reserve(lv2_socket::id_count);
@@ -241,7 +241,7 @@ extern void network_thread_init()
 		CloseHandle(_eventh);
 		WSACleanup();
 #endif
-	});
+	})->detach();
 }
 
 lv2_socket::lv2_socket(lv2_socket::socket_type s)

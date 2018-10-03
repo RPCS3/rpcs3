@@ -33,7 +33,7 @@ error_code sys_dbg_read_process_memory(s32 pid, u32 address, u32 size, vm::ptr<v
 		return CELL_EFAULT;
 	}
 
-	std::memcpy(data.get_ptr(), vm::get_super_ptr<u8>(address, size).get(), size);
+	std::memcpy(data.get_ptr(), vm::get_super_ptr(address), size);
 
 	return CELL_OK;
 }
@@ -64,7 +64,7 @@ error_code sys_dbg_write_process_memory(s32 pid, u32 address, u32 size, vm::cptr
 		return CELL_EFAULT;
 	}
 
-	std::memcpy(vm::get_super_ptr<u8>(address, size).get(), data.get_ptr(), size);
+	std::memcpy(vm::get_super_ptr(address), data.get_ptr(), size);
 
 	return CELL_OK;
 }

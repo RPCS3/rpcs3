@@ -1761,14 +1761,8 @@ namespace rsx
 			const u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 			const bool is_compressed_format = (format == CELL_GCM_TEXTURE_COMPRESSED_DXT1 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT23 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT45);
 
-			if (!texaddr || !tex_size || !tex_range.valid())
-			{
-				LOG_ERROR(RSX, "Texture upload requested but texture not found, (address=0x%X, size=0x%X, w=%d, h=%d, p=%d, format=0x%X)", texaddr, tex_size, tex.width(), tex.height(), tex.pitch(), tex.format());
-				return {};
-			}
-
 			const auto extended_dimension = tex.get_extended_texture_dimension();
-			u16 depth = 0;
+			u16 depth;
 			u16 tex_height = (u16)tex.height();
 			const u16 tex_width = tex.width();
 			u16 tex_pitch = is_compressed_format? (u16)(get_texture_size(tex) / tex_height) : tex.pitch(); //NOTE: Compressed textures dont have a real pitch (tex_size = (w*h)/6)
@@ -1777,7 +1771,6 @@ namespace rsx
 			switch (extended_dimension)
 			{
 			case rsx::texture_dimension_extended::texture_dimension_1d:
-				tex_height = 1;
 				depth = 1;
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_2d:
@@ -2583,16 +2576,13 @@ namespace rsx
 
 		void tag_framebuffer(u32 texaddr)
 		{
-			auto super_ptr = rsx::get_super_ptr(texaddr, 4);
-			volatile u32 *ptr = super_ptr.get<volatile u32>();
+			auto ptr = vm::get_super_ptr<atomic_t<u32>>(texaddr);
 			*ptr = texaddr;
-			super_ptr.flush(0, 4);
 		}
 
 		bool test_framebuffer(u32 texaddr)
 		{
-			auto super_ptr = rsx::get_super_ptr(texaddr, 4);
-			volatile const u32 *ptr = super_ptr.get<volatile const u32>();
+			auto ptr = vm::get_super_ptr<atomic_t<u32>>(texaddr);
 			return *ptr == texaddr;
 		}
 	};

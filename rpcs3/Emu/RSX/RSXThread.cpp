@@ -698,7 +698,17 @@ namespace rsx
 				m_return_addr = std::exchange(internal_get.raw(), offs) + 4;
 				continue;
 			}
-			if (cmd == RSX_METHOD_RETURN_CMD)
+
+			if (cmd & 0x3)
+			{
+				// TODO: Check for more invalid bits combinations
+				LOG_ERROR(RSX, "FIFO: Illegal command(0x%x) was executed. Resetting...", cmd);
+				internal_get = restore_point.load();
+				m_return_addr = restore_ret_addr;
+				continue;
+			}
+
+			if ((cmd & ~0xfffc) == RSX_METHOD_RETURN_CMD)
 			{
 				if (m_return_addr == -1)
 				{
@@ -712,7 +722,10 @@ namespace rsx
 				internal_get = get;
 				continue;
 			}
-			if (cmd == 0) //nop
+
+			u32 count = (cmd >> 18) & 0x7ff;
+
+			if (count == 0) //nop
 			{
 				if (performance_counters.state == FIFO_state::running)
 				{
@@ -723,21 +736,11 @@ namespace rsx
 				internal_get += 4;
 				continue;
 			}
-			if (cmd & 0x3)
-			{
-				// TODO: Check for more invalid bits combinations
-				LOG_ERROR(RSX, "FIFO: Illegal command(0x%x) was executed. Resetting...", cmd);
-				internal_get = restore_point.load();
-				m_return_addr = restore_ret_addr;
-				continue;
-			}
-
-			u32 count = (cmd >> 18) & 0x7ff;
 
 			//Validate the args ptr if the command attempts to read from it
 			auto args = vm::ptr<u32>::make(RSXIOMem.RealAddr(internal_get + 4));
 
-			if (!args && count)
+			if (!args)
 			{
 				std::this_thread::sleep_for(33ms);
 
@@ -2675,7 +2678,7 @@ namespace rsx
 		reader_lock lock(m_mtx_task);
 
 		const auto map_range = address_range::start_length(address, size);
-		
+
 		if (!m_invalidated_memory_range.valid())
 			return;
 
@@ -2714,7 +2717,7 @@ namespace rsx
 			std::lock_guard lock(m_mtx_task);
 			const bool existing_range_valid = m_invalidated_memory_range.valid();
 			const auto unmap_range = address_range::start_length(address, size);
-			
+
 			if (existing_range_valid && m_invalidated_memory_range.touches(unmap_range))
 			{
 				// Merge range-to-invalidate in case of consecutive unmaps
@@ -2741,22 +2744,6 @@ namespace rsx
 			return;
 
 		on_invalidate_memory_range(m_invalidated_memory_range);
-
-		// Clean the main memory super_ptr cache if invalidated
-		for (auto It = main_super_memory_block.begin(); It != main_super_memory_block.end();)
-		{
-			const auto block_range = address_range::start_length(It->first, It->second.size());
-
-			if (m_invalidated_memory_range.overlaps(block_range))
-			{
-				It = main_super_memory_block.erase(It);
-			}
-			else
-			{
-				It++;
-			}
-		}
-
 		m_invalidated_memory_range.invalidate();
 	}
 

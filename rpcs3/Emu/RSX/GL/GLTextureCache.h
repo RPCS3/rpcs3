@@ -495,7 +495,7 @@ namespace gl
 			const u32 valid_length = valid_range.second;
 			AUDIT( valid_length > 0 );
 
-			void *dst = get_ptr_by_offset(valid_range.first, true);
+			void *dst = get_ptr(get_section_base() + valid_offset);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 			void *src = glMapBufferRange(GL_PIXEL_PACK_BUFFER, valid_offset, valid_length, GL_MAP_READ_BIT);
 
@@ -588,7 +588,6 @@ namespace gl
 				}
 			}
 
-			flush_ptr_by_offset(valid_offset, valid_length);
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
