@@ -38,13 +38,7 @@ void shared_mutex::imp_unlock_shared(u32 old)
 	// Check reader count, notify the writer if necessary
 	if ((old - 1) % c_one == 0)
 	{
-#ifdef _WIN32
-		NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
-#else
-		m_value += c_sig;
-
-		futex(reinterpret_cast<int*>(&m_value.raw()), FUTEX_WAKE_BITSET_PRIVATE, 1, nullptr, nullptr, c_sig);
-#endif
+		imp_signal();
 	}
 }
 
@@ -77,6 +71,17 @@ void shared_mutex::imp_wait()
 #endif
 }
 
+void shared_mutex::imp_signal()
+{
+#ifdef _WIN32
+	NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
+#else
+	m_value += c_sig;
+	futex(reinterpret_cast<int*>(&m_value.raw()), FUTEX_WAKE_BITSET_PRIVATE, 1, nullptr, nullptr, c_sig);
+	//futex(reinterpret_cast<int*>(&m_value.raw()), FUTEX_WAKE_BITSET_PRIVATE, c_one, nullptr, nullptr, c_sig - 1);
+#endif
+}
+
 void shared_mutex::imp_lock(u32 val)
 {
 	verify("shared_mutex underflow" HERE), val < c_err;
@@ -85,7 +90,7 @@ void shared_mutex::imp_lock(u32 val)
 	{
 		busy_wait();
 
-		if (try_lock())
+		if (!m_value && try_lock())
 		{
 			return;
 		}
@@ -108,19 +113,10 @@ void shared_mutex::imp_unlock(u32 old)
 
 	// 1) Notify the next writer if necessary
 	// 2) Notify all readers otherwise if necessary (currently indistinguishable from writers)
-#ifdef _WIN32
 	if (old - c_one)
 	{
-		NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
+		imp_signal();
 	}
-#else
-	if (old - c_one)
-	{
-		m_value += c_sig;
-
-		futex(reinterpret_cast<int*>(&m_value.raw()), FUTEX_WAKE_BITSET_PRIVATE, 1, nullptr, nullptr, c_sig);
-	}
-#endif
 }
 
 void shared_mutex::imp_lock_upgrade()
@@ -146,4 +142,60 @@ void shared_mutex::imp_lock_upgrade()
 	}
 
 	imp_wait();
+}
+
+void shared_mutex::imp_lock_unlock()
+{
+	u32 _max = 1;
+
+	for (int i = 0; i < 30; i++)
+	{
+		const u32 val = m_value;
+
+		if (val % c_one == 0 && (val / c_one < _max || val >= c_sig))
+		{
+			// Return if have cought a state where:
+			// 1) Mutex is free
+			// 2) Total number of waiters decreased since last check
+			// 3) Signal bit is set (if used on the platform)
+			return;
+		}
+
+		_max = val / c_one;
+
+		busy_wait(1500);
+	}
+
+#ifndef _WIN32
+	while (false)
+	{
+		const u32 val = m_value;
+
+		if (val % c_one == 0 && (val / c_one < _max || val >= c_sig))
+		{
+			return;
+		}
+
+		if (val <= c_one)
+		{
+			// Can't expect a signal
+			break;
+		}
+
+		_max = val / c_one;
+
+		// Monitor all bits except c_sig
+		futex(reinterpret_cast<int*>(&m_value.raw()), FUTEX_WAIT_BITSET_PRIVATE, val, nullptr, nullptr, c_sig - 1);
+	}
+#endif
+
+	// Lock and unlock
+	if (!m_value.fetch_add(c_one))
+	{
+		unlock();
+		return;
+	}
+
+	imp_wait();
+	unlock();
 }

@@ -64,6 +64,11 @@ struct result_storage
 	{
 		return reinterpret_cast<const T*>(&data);
 	}
+
+	void destroy() noexcept
+	{
+		get()->~T();
+	}
 };
 
 template <>
@@ -77,12 +82,19 @@ struct result_storage<void>
 template <class Context, typename... Args>
 using result_storage_t = result_storage<std::invoke_result_t<Context, Args...>>;
 
-// Detect on_stop() method (should return void)
+// Detect on_abort() method (should return void)
 template <typename T, typename = void>
-struct thread_on_stop : std::bool_constant<false> {};
+struct thread_on_abort : std::bool_constant<false> {};
 
 template <typename T>
-struct thread_on_stop<T, decltype(std::declval<named_thread<T>&>().on_stop())> : std::bool_constant<true> {};
+struct thread_on_abort<T, decltype(std::declval<named_thread<T>&>().on_abort())> : std::bool_constant<true> {};
+
+// Detect on_cleanup() static function (should return void)
+template <typename T, typename = void>
+struct thread_on_cleanup : std::bool_constant<false> {};
+
+template <typename T>
+struct thread_on_cleanup<T, decltype(named_thread<T>::on_cleanup(std::declval<named_thread<T>*>()))> : std::bool_constant<true> {};
 
 // Simple list of void() functors
 class task_stack
@@ -153,7 +165,7 @@ public:
 	}
 };
 
-// Thread base class
+// Thread base class (TODO: remove shared_ptr, make private base)
 class thread_base : public std::enable_shared_from_this<thread_base>
 {
 	// Native thread entry point function type
@@ -240,15 +252,6 @@ public:
 	// Get CPU cycles since last time this function was called. First call returns 0.
 	u64 get_cycles();
 
-	// Get platform-specific thread handle
-	std::uintptr_t get_native_handle() const
-	{
-		return m_thread.load();
-	}
-
-	// Get exception
-	std::exception_ptr get_exception() const;
-
 	// Set exception
 	void set_exception(std::exception_ptr ptr);
 
@@ -277,6 +280,32 @@ class thread_ctrl final
 	friend class thread_base;
 
 public:
+	// Get current thread name
+	static std::string_view get_name()
+	{
+		return g_tls_this_thread->m_name.get();
+	}
+
+	// Get thread name
+	template <typename T>
+	static std::string_view get_name(const named_thread<T>& thread)
+	{
+		return static_cast<const thread_base&>(thread).m_name.get();
+	}
+
+	// Set current thread name (not recommended)
+	static void set_name(std::string_view name)
+	{
+		g_tls_this_thread->m_name.assign(name);
+	}
+
+	// Set thread name (not recommended)
+	template <typename T>
+	static void set_name(named_thread<T>& thread, std::string_view name)
+	{
+		static_cast<thread_base&>(thread).m_name.assign(name);
+	}
+
 	// Read current state
 	static inline thread_state state()
 	{
@@ -412,8 +441,9 @@ class named_thread final : public Context, result_storage_t<Context>, public thr
 		return thread::finalize(nullptr);
 	}
 
-public:
+	friend class thread_ctrl;
 
+public:
 	// Normal forwarding constructor
 	template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<Context, Args&&...>>>
 	named_thread(std::string_view name, Args&&... args)
@@ -430,6 +460,10 @@ public:
 	{
 		thread::start(&named_thread::entry_point);
 	}
+
+	named_thread(const named_thread&) = delete;
+
+	named_thread& operator=(const named_thread&) = delete;
 
 	// Wait for the completion and access result (if not void)
 	[[nodiscard]] decltype(auto) operator()()
@@ -459,20 +493,38 @@ public:
 		return thread::m_state.load();
 	}
 
-	// Context type doesn't need virtual destructor
-	~named_thread()
+	// Try to set thread_state::aborting
+	named_thread& operator=(thread_state s)
 	{
+		if (s != thread_state::aborting)
+		{
+			ASSUME(0);
+		}
+
 		// Notify thread if not detached or terminated
 		if (thread::m_state.compare_and_swap_test(thread_state::created, thread_state::aborting))
 		{
-			// Additional notification if on_stop() method exists
-			if constexpr (thread_on_stop<Context>())
+			// Call on_abort() method if it's available
+			if constexpr (thread_on_abort<Context>())
 			{
-				Context::on_stop();
+				Context::on_abort();
 			}
 
 			thread::notify();
-			thread::join();
+		}
+
+		return *this;
+	}
+
+	// Context type doesn't need virtual destructor
+	~named_thread()
+	{
+		*this = thread_state::aborting;
+		thread::join();
+
+		if constexpr (!result::empty)
+		{
+			result::destroy();
 		}
 	}
 };

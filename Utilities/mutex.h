@@ -19,9 +19,11 @@ class shared_mutex final
 	void imp_lock_shared(u32 val);
 	void imp_unlock_shared(u32 old);
 	void imp_wait();
+	void imp_signal();
 	void imp_lock(u32 val);
 	void imp_unlock(u32 old);
 	void imp_lock_upgrade();
+	void imp_lock_unlock();
 
 public:
 	constexpr shared_mutex() = default;
@@ -57,7 +59,7 @@ public:
 
 	bool try_lock()
 	{
-		return m_value == 0 && m_value.compare_and_swap_test(0, c_one);
+		return m_value.compare_and_swap_test(0, c_one);
 	}
 
 	void lock()
@@ -101,6 +103,15 @@ public:
 	{
 		// Convert to reader lock (can result in broken state)
 		m_value -= c_one - 1;
+	}
+
+	// Optimized wait for lockability without locking, relaxed
+	void lock_unlock()
+	{
+		if (UNLIKELY(m_value != 0))
+		{
+			imp_lock_unlock();
+		}
 	}
 
 	// Check whether can immediately obtain an exclusive (writer) lock

@@ -91,6 +91,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	QJsonObject json_emu         = json_obj.value("emulator").toObject();
 	QJsonObject json_emu_misc    = json_emu.value("misc").toObject();
 	QJsonObject json_emu_overlay = json_emu.value("overlay").toObject();
+	QJsonObject json_emu_shaders = json_emu.value("shaderLoadingScreen").toObject();
 
 	QJsonObject json_gui = json_obj.value("gui").toObject();
 
@@ -860,6 +861,18 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	EnablePerfOverlayOptions(ui->perfOverlayEnabled->isChecked());
 	connect(ui->perfOverlayEnabled, &QCheckBox::clicked, EnablePerfOverlayOptions);
 
+	xemu_settings->EnhanceCheckBox(ui->shaderLoadBgEnabled, emu_settings::ShaderLoadBgEnabled);
+	SubscribeTooltip(ui->shaderLoadBgEnabled, json_emu_shaders["shaderLoadBgEnabled"].toString());
+	auto EnableShaderLoaderOptions = [this](bool enabled)
+	{
+		ui->label_shaderLoadBgDarkening->setEnabled(enabled);
+		ui->label_shaderLoadBgBlur->setEnabled(enabled);
+		ui->shaderLoadBgDarkening->setEnabled(enabled);
+		ui->shaderLoadBgBlur->setEnabled(enabled);
+	};
+	EnableShaderLoaderOptions(ui->shaderLoadBgEnabled->isChecked());
+	connect(ui->shaderLoadBgEnabled, &QCheckBox::clicked, EnableShaderLoaderOptions);
+
 	// Sliders
 
 	xemu_settings->EnhanceSlider(ui->perfOverlayUpdateInterval, emu_settings::PerfOverlayUpdateInterval);
@@ -884,6 +897,22 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	connect(ui->perfOverlayOpacity, &QSlider::valueChanged, [this](int value)
 	{
 		ui->label_opacity->setText(tr("Opacity: %0 %").arg(value));
+	});
+
+	xemu_settings->EnhanceSlider(ui->shaderLoadBgDarkening, emu_settings::ShaderLoadBgDarkening);
+	SubscribeTooltip(ui->shaderLoadBgDarkening, json_emu_shaders["shaderLoadBgDarkening"].toString());
+	ui->label_shaderLoadBgDarkening->setText(tr("Background darkening: %0 %").arg(ui->shaderLoadBgDarkening->value()));
+	connect(ui->shaderLoadBgDarkening, &QSlider::valueChanged, [this](int value)
+	{
+		ui->label_shaderLoadBgDarkening->setText(tr("Background darkening: %0 %").arg(value));
+	});
+
+	xemu_settings->EnhanceSlider(ui->shaderLoadBgBlur, emu_settings::ShaderLoadBgBlur);
+	SubscribeTooltip(ui->shaderLoadBgBlur, json_emu_shaders["shaderLoadBgBlur"].toString());
+	ui->label_shaderLoadBgBlur->setText(tr("Background blur: %0 %").arg(ui->shaderLoadBgBlur->value()));
+	connect(ui->shaderLoadBgBlur, &QSlider::valueChanged, [this](int value)
+	{
+		ui->label_shaderLoadBgBlur->setText(tr("Background blur: %0 %").arg(value));
 	});
 
 	// SpinBoxes

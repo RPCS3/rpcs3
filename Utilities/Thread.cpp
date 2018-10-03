@@ -1736,22 +1736,6 @@ bool thread_ctrl::_wait_for(u64 usec)
 {
 	auto _this = g_tls_this_thread;
 
-	struct half_lock
-	{
-		shared_mutex& ref;
-
-		void lock()
-		{
-			// Used to avoid additional lock + unlock
-		}
-
-		void unlock()
-		{
-			ref.unlock();
-		}
-	}
-	_lock{_this->m_mutex};
-
 	do
 	{
 		// Mutex is unlocked at the start and after the waiting
@@ -1772,7 +1756,6 @@ bool thread_ctrl::_wait_for(u64 usec)
 			return false;
 		}
 
-		// Lock (semaphore)
 		_this->m_mutex.lock();
 
 		// Double-check the value
@@ -1791,7 +1774,7 @@ bool thread_ctrl::_wait_for(u64 usec)
 			}
 		}
 	}
-	while (_this->m_cond.wait(_lock, std::exchange(usec, usec > cond_variable::max_timeout ? -1 : 0)));
+	while (_this->m_cond.wait_unlock(std::exchange(usec, usec > cond_variable::max_timeout ? -1 : 0), _this->m_mutex));
 
 	// Timeout
 	return false;
@@ -1807,13 +1790,7 @@ bool thread_ctrl::_wait_for(u64 usec)
 
 void thread_base::_notify(cond_variable thread_base::* ptr)
 {
-	// Optimized lock + unlock
-	if (!m_mutex.is_free())
-	{
-		m_mutex.lock();
-		m_mutex.unlock();
-	}
-
+	m_mutex.lock_unlock();
 	(this->*ptr).notify_one();
 }
 
@@ -1832,12 +1809,6 @@ thread_base::~thread_base()
 		pthread_detach((pthread_t)m_thread.raw());
 #endif
 	}
-}
-
-std::exception_ptr thread_base::get_exception() const
-{
-	std::lock_guard lock(m_mutex);
-	return m_exception;
 }
 
 void thread_base::set_exception(std::exception_ptr ptr)

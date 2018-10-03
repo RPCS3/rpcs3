@@ -351,21 +351,16 @@ struct CellCameraReadEx
 	vm::bptr<u8> pbuf;
 };
 
-class camera_thread final : public old_thread
+class camera_context
 {
-private:
 	struct notify_event_data
 	{
 		u64 source;
 		u64 flag;
 	};
 
-	void on_task() override;
-
-	std::string get_name() const override { return "Camera Thread"; }
-
 public:
-	void on_init(const std::shared_ptr<void>&) override;
+	void operator()();
 	void send_attach_state(bool attached);
 	void set_attr(s32 attrib, u32 arg1, u32 arg2);
 
@@ -385,11 +380,11 @@ public:
 
 	std::map<u64, notify_event_data> notify_data_map;
 
-	semaphore<> mutex;
-	semaphore<> mutex_notify_data_map;
+	shared_mutex mutex;
+	shared_mutex mutex_notify_data_map;
 	Timer timer;
 
-	atomic_t<u8> read_mode{0};
+	atomic_t<u8> read_mode{CELL_CAMERA_READ_FUNCCALL};
 	atomic_t<bool> is_streaming{false};
 	atomic_t<bool> is_attached{false};
 	atomic_t<bool> is_open{false};
@@ -404,10 +399,9 @@ public:
 
 	lv2_memory_container container;
 	atomic_t<u32> frame_num;
-
-	camera_thread() : read_mode(CELL_CAMERA_READ_FUNCCALL) {}
-	~camera_thread() = default;
 };
+
+using camera_thread = named_thread<camera_context>;
 
 /// Shared data between cellGem and cellCamera
 struct gem_camera_shared

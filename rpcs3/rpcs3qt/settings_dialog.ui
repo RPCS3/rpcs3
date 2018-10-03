@@ -1383,6 +1383,50 @@
                 </item>
                </layout>
               </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="groupBox_3">
+             <property name="title">
+              <string>Shader Loading Screen</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_70">
+              <item>
+               <widget class="QCheckBox" name="shaderLoadBgEnabled">
+                <property name="text">
+                 <string>Allow custom background</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_shaderLoadBgDarkening">
+                <property name="text">
+                 <string>Background darkening:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="shaderLoadBgDarkening">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_shaderLoadBgBlur">
+                <property name="text">
+                 <string>Background blur:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="shaderLoadBgBlur">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
               <item>
                <spacer name="verticalSpacer_14">
                 <property name="orientation">

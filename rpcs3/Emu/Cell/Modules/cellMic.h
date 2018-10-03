@@ -52,15 +52,11 @@ enum CellMicCommand
 // TODO: generate this from input from an actual microphone
 const u32 bufferSize = 1;
 
-bool micInited = false;
-
-class mic_thread final : public old_thread
+class mic_context
 {
-private:
-	void on_task() override;
-	std::string get_name() const override { return "Mic Thread"; }
 public:
-	void on_init(const std::shared_ptr<void>&) override;
+	void operator()();
+
 	// Default value of 48000 for no particular reason
 	u32 DspFrequency = 48000; // DSP is the default type
 	u32 rawFrequency = 48000;
@@ -76,9 +72,6 @@ public:
 	f32 signalStateGainControl;
 	f32 signalStateMicSignalLevel; // value is in decibels
 	f32 signalStateSpeakerSignalLevel; // value is in decibels
-	mic_thread() = default;
-	~mic_thread()
-	{
-		micInited = false;
-	}
 };
+
+using mic_thread = named_thread<mic_context>;

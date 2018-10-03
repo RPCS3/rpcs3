@@ -44,6 +44,8 @@
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
 
+utils::typemap g_typemap{nullptr};
+
 cfg_root g_cfg;
 
 bool g_use_rtm;
@@ -51,8 +53,6 @@ bool g_use_rtm;
 std::string g_cfg_defaults;
 
 extern atomic_t<u32> g_thread_count;
-
-extern u64 get_system_time();
 
 extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
@@ -266,6 +266,7 @@ void Emulator::Init()
 
 	idm::init();
 	fxm::init();
+	g_idm->init();
 
 	// Reset defaults, cache them
 	g_cfg.from_default();
@@ -1381,6 +1382,7 @@ void Emulator::Stop(bool restart)
 	lv2_obj::cleanup();
 	idm::clear();
 	fxm::clear();
+	g_idm->init();
 
 	LOG_NOTICE(GENERAL, "Objects cleared...");
 

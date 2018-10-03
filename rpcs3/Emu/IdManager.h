@@ -866,3 +866,13 @@ public:
 		return {ptr, static_cast<T*>(ptr.get())};
 	}
 };
+
+#include "Utilities/typemap.h"
+
+extern utils::typemap g_typemap;
+
+constexpr utils::typemap* g_idm = &g_typemap;
+
+using utils::id_new;
+using utils::id_any;
+using utils::id_always;

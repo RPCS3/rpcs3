@@ -2,8 +2,6 @@
 
 #include "Utilities/Thread.h"
 
-
-
 // Error codes
 enum CellAudioError : u32
 {
@@ -85,8 +83,6 @@ enum : u32
 	AUDIO_SAMPLES = CELL_AUDIO_BLOCK_SAMPLES,
 };
 
-extern u64 get_system_time();
-
 enum class audio_port_state : u32
 {
 	closed,
@@ -96,7 +92,7 @@ enum class audio_port_state : u32
 
 struct audio_port
 {
-	atomic_t<audio_port_state> state{ audio_port_state::closed };
+	atomic_t<audio_port_state> state = audio_port_state::closed;
 
 	u32 number;
 	vm::ptr<char> addr{};
@@ -119,34 +115,32 @@ struct audio_port
 	atomic_t<level_set_t> level_set;
 };
 
-class audio_config final : public old_thread
+class audio_thread
 {
-	void on_task() override;
-
-	std::string get_name() const override { return "Audio Thread"; }
-
-	vm::ptr<char> m_buffer = vm::null;
-	vm::ptr<u64> m_indexes = vm::null;
+	vm::ptr<char> m_buffer;
+	vm::ptr<u64> m_indexes;
 
 	u64 m_counter{};
 
 public:
-	void on_init(const std::shared_ptr<void>&) override;
-
 	const u64 start_time = get_system_time();
 
 	std::array<audio_port, AUDIO_PORT_COUNT> ports;
 
 	std::vector<u64> keys;
 
-	semaphore<> mutex;
+	void operator()();
 
-	audio_config() = default;
-
-	~audio_config()
+	audio_thread(vm::ptr<char> buf, vm::ptr<u64> ind)
+		: m_buffer(buf)
+		, m_indexes(ind)
 	{
-		vm::dealloc_verbose_nothrow(m_buffer.addr());
-		vm::dealloc_verbose_nothrow(m_indexes.addr());
+		for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
+		{
+			ports[i].number = i;
+			ports[i].addr   = m_buffer + AUDIO_PORT_OFFSET * i;
+			ports[i].index  = m_indexes + i;
+		}
 	}
 
 	audio_port* open_port()
@@ -162,3 +156,5 @@ public:
 		return nullptr;
 	}
 };
+
+using audio_config = named_thread<audio_thread>;
