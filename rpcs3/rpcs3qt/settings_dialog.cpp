@@ -765,6 +765,35 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->enableHostRoot, emu_settings::EnableHostRoot);
 	SubscribeTooltip(ui->enableHostRoot, json_sys["enableHostRoot"].toString());
 
+	// Radio Buttons
+
+	SubscribeTooltip(ui->gb_enterButtonAssignment, json_sys["enterButtonAssignment"].toString());
+
+	// creating this in ui file keeps scrambling the order...
+	QButtonGroup *enterButtonAssignmentBG = new QButtonGroup(this);
+	enterButtonAssignmentBG->addButton(ui->enterButtonAssignCircle, 0);
+	enterButtonAssignmentBG->addButton(ui->enterButtonAssignCross, 1);
+
+	{ // EnterButtonAssignment options
+		QString assigned_button = qstr(xemu_settings->GetSetting(emu_settings::EnterButtonAssignment));
+		QStringList assignable_buttons = xemu_settings->GetSettingOptions(emu_settings::EnterButtonAssignment);
+
+		for (int i = 0; i < assignable_buttons.count(); i++)
+		{
+			enterButtonAssignmentBG->button(i)->setText(assignable_buttons[i]);
+
+			if (assignable_buttons[i] == assigned_button)
+			{
+				enterButtonAssignmentBG->button(i)->setChecked(true);
+			}
+
+			connect(enterButtonAssignmentBG->button(i), &QAbstractButton::pressed, [=]()
+			{
+				xemu_settings->SetSetting(emu_settings::EnterButtonAssignment, sstr(assignable_buttons[i]));
+			});
+		}
+	}
+
 	//    _   _      _                      _      _______    _
 	//   | \ | |    | |                    | |    |__   __|  | |
 	//   |  \| | ___| |___      _____  _ __| | __    | | __ _| |__

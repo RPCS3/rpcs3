@@ -1472,8 +1472,17 @@ namespace rsx
 
 				m_scroll_indicator_top->set_image_resource(resource_config::standard_image_resource::fade_top);
 				m_scroll_indicator_bottom->set_image_resource(resource_config::standard_image_resource::fade_bottom);
-				m_accept_btn->set_image_resource(resource_config::standard_image_resource::cross);
-				m_cancel_btn->set_image_resource(resource_config::standard_image_resource::circle);
+
+				if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
+				{
+					m_accept_btn->set_image_resource(resource_config::standard_image_resource::circle);
+					m_cancel_btn->set_image_resource(resource_config::standard_image_resource::cross);
+				}
+				else
+				{
+					m_accept_btn->set_image_resource(resource_config::standard_image_resource::cross);
+					m_cancel_btn->set_image_resource(resource_config::standard_image_resource::circle);
+				}
 
 				m_scroll_indicator_bottom->set_pos(0, height - 40);
 				m_accept_btn->set_pos(30, height + 20);

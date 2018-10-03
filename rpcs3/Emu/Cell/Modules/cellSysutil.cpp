@@ -143,7 +143,7 @@ s32 cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> value)
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN:
-		*value = CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CROSS;
+		*value = g_cfg.sys.enter_button_assignment;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT:

@@ -153,13 +153,13 @@ namespace rsx
 									button_id = pad_button::triangle;
 									break;
 								case CELL_PAD_CTRL_CIRCLE:
-									button_id = pad_button::circle;
+									button_id = g_cfg.sys.enter_button_assignment == enter_button_assign::circle ? pad_button::cross : pad_button::circle;
 									break;
 								case CELL_PAD_CTRL_SQUARE:
 									button_id = pad_button::square;
 									break;
 								case CELL_PAD_CTRL_CROSS:
-									button_id = pad_button::cross;
+									button_id = g_cfg.sys.enter_button_assignment == enter_button_assign::circle ? pad_button::circle : pad_button::cross;
 									break;
 								}
 							}
@@ -790,17 +790,26 @@ namespace rsx
 				progress_1.back_color = color4f(0.25f, 0.f, 0.f, 0.85f);
 				progress_2.back_color = color4f(0.25f, 0.f, 0.f, 0.85f);
 
-				btn_ok.set_image_resource(resource_config::standard_image_resource::cross);
 				btn_ok.set_text("Yes");
 				btn_ok.set_size(140, 30);
 				btn_ok.set_pos(545, 420);
 				btn_ok.set_font("Arial", 16);
 
-				btn_cancel.set_image_resource(resource_config::standard_image_resource::circle);
 				btn_cancel.set_text("No");
 				btn_cancel.set_size(140, 30);
 				btn_cancel.set_pos(685, 420);
 				btn_cancel.set_font("Arial", 16);
+
+				if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
+				{
+					btn_ok.set_image_resource(resource_config::standard_image_resource::circle);
+					btn_cancel.set_image_resource(resource_config::standard_image_resource::cross);
+				}
+				else
+				{
+					btn_ok.set_image_resource(resource_config::standard_image_resource::cross);
+					btn_cancel.set_image_resource(resource_config::standard_image_resource::circle);
+				}
 
 				if (use_custom_background)
 				{

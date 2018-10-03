@@ -122,8 +122,9 @@ public:
 		// Network
 		ConnectionStatus,
 
-		// Language
+		// System
 		Language,
+		EnterButtonAssignment,
 		EnableHostRoot,
 
 		// Virtual File System
@@ -322,8 +323,9 @@ private:
 		{ ConnectionStatus, { "Net", "Connection status"}},
 
 		// System
-		{ Language,       { "System", "Language"}},
-		{ EnableHostRoot, { "VFS", "Enable /host_root/"}},
+		{ Language,              { "System", "Language"}},
+		{ EnterButtonAssignment, { "System", "Enter button assignment"}},
+		{ EnableHostRoot,        { "VFS", "Enable /host_root/"}},
 
 		// Virtual File System
 		{ emulatorLocation,   { "VFS", "$(EmulatorDir)"}},
