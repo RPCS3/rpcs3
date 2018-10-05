@@ -237,7 +237,7 @@ namespace rsx
 						for (u32 i = 0; i < idxCount; ++i)
 						{
 							u16 index = fifo[i];
-							if (is_primitive_restart_enabled && index == (u16)primitive_restart_index)
+							if (is_primitive_restart_enabled && (u32)index == primitive_restart_index)
 								continue;
 							index     = (u16)get_index_from_base(index, method_registers.vertex_data_base_index());
 							min_index = (u16)std::min(index, (u16)min_index);

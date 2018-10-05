@@ -539,7 +539,7 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 namespace
 {
 template<typename T>
-std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index, u32 base_index)
+std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 base_index)
 {
 	T min_index = -1;
 	T max_index = 0;
@@ -549,7 +549,7 @@ std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::spa
 	u32 dst_idx = 0;
 	for (T index : src)
 	{
-		if (is_primitive_restart_enabled && index == primitive_restart_index)
+		if (is_primitive_restart_enabled && (u32)index == primitive_restart_index)
 		{
 			// List types do not need primitive restart. Just skip over this instead
 			if (rsx::method_registers.current_draw_clause.is_disjoint_primitive)
@@ -570,7 +570,7 @@ std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::spa
 }
 
 template<typename T>
-std::tuple<T, T, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index, u32 base_index)
+std::tuple<T, T, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 base_index)
 {
 	const T invalid_index = (T)-1;
 
@@ -593,7 +593,7 @@ std::tuple<T, T, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> sr
 
 		if (needs_anchor)
 		{
-			if (is_primitive_restart_enabled && src[src_idx] == primitive_restart_index)
+			if (is_primitive_restart_enabled && (u32)src[src_idx] == primitive_restart_index)
 				continue;
 
 			anchor = index;
@@ -601,7 +601,7 @@ std::tuple<T, T, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> sr
 			continue;
 		}
 
-		if (is_primitive_restart_enabled && src[src_idx] == primitive_restart_index)
+		if (is_primitive_restart_enabled && (u32)src[src_idx] == primitive_restart_index)
 		{
 			needs_anchor = true;
 			last_index = invalid_index;
@@ -629,7 +629,7 @@ std::tuple<T, T, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> sr
 }
 
 template<typename T>
-std::tuple<T, T, u32> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index, u32 base_index)
+std::tuple<T, T, u32> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 base_index)
 {
 	T min_index = -1;
 	T max_index = 0;
@@ -644,7 +644,7 @@ std::tuple<T, T, u32> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl:
 	{
 		T index = src[src_idx];
 		index = rsx::get_index_from_base(index, base_index);
-		if (is_primitive_restart_enabled && src[src_idx] == primitive_restart_index)
+		if (is_primitive_restart_enabled && (u32)src[src_idx] == primitive_restart_index)
 		{
 			//empty temp buffer
 			set_size = 0;
