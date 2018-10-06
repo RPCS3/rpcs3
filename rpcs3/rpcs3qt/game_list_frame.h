@@ -209,6 +209,7 @@ public:
 public Q_SLOTS:
 	void SetListMode(const bool& isList);
 	void SetSearchText(const QString& text);
+	void SetShowCompatibilityInGrid(bool show);
 
 private Q_SLOTS:
 	bool RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive = false);
@@ -228,7 +229,8 @@ protected:
 	void resizeEvent(QResizeEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
-	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false);
+	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false, const QColor& color = QColor());
+	QColor getGridCompatibilityColor(const QString& string);
 	void ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const game_info& game);
@@ -282,4 +284,5 @@ private:
 	QSize m_Icon_Size = gui::gl_icon_size_min; // ensure a valid size
 	qreal m_Margin_Factor;
 	qreal m_Text_Factor;
+	bool m_drawCompatStatusToGrid;
 };
