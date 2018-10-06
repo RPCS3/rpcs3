@@ -395,7 +395,7 @@ namespace
 				rsx::index_array_type::u32:
 				rsx::method_registers.index_type();
 
-			size_t index_size = get_index_type_size(indexed_type);
+			constexpr size_t index_size = sizeof(u32); // Force u32 destination to avoid overflows when adding base
 
 			// Alloc
 			size_t buffer_size = align(index_count * index_size, 64);
@@ -418,7 +418,7 @@ namespace
 			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 			D3D12_INDEX_BUFFER_VIEW index_buffer_view = {
 				m_buffer_data.get_heap()->GetGPUVirtualAddress() + heap_offset, (UINT)buffer_size,
-				get_index_type(indexed_type)};
+				DXGI_FORMAT_R32_UINT};
 			// m_timers.buffer_upload_size += buffer_size;
 			command_list->IASetIndexBuffer(&index_buffer_view);
 

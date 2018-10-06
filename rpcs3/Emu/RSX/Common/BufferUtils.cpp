@@ -539,10 +539,10 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 namespace
 {
 template<typename T>
-std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 base_index)
+std::tuple<u32, u32, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<u32> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 base_index)
 {
-	T min_index = -1;
-	T max_index = 0;
+	u32 min_index = -1;
+	u32 max_index = 0;
 
 	verify(HERE), (dst.size_bytes() >= src.size_bytes());
 
@@ -555,27 +555,26 @@ std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::spa
 			if (rsx::method_registers.current_draw_clause.is_disjoint_primitive)
 				continue;
 
-			index = -1;
+			dst[dst_idx++] = -1u;
 		}
 		else
 		{
-			index = rsx::get_index_from_base(index, base_index);
-			max_index = std::max(max_index, index);
-			min_index = std::min(min_index, index);
+			const u32 new_index = rsx::get_index_from_base((u32)index, base_index);
+			max_index = std::max(max_index, new_index);
+			min_index = std::min(min_index, new_index);
+			dst[dst_idx++] = new_index;
 		}
-
-		dst[dst_idx++] = index;
 	}
 	return std::make_tuple(min_index, max_index, dst_idx);
 }
 
 template<typename T>
-std::tuple<T, T, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 base_index)
+std::tuple<u32, u32, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gsl::span<u32> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 base_index)
 {
-	const T invalid_index = (T)-1;
+	const u32 invalid_index = -1u;
 
-	T min_index = invalid_index;
-	T max_index = 0;
+	u32 min_index = invalid_index;
+	u32 max_index = 0;
 
 	verify(HERE), (dst.size() >= 3 * (src.size() - 2));
 
@@ -583,12 +582,12 @@ std::tuple<T, T, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> sr
 	u32 src_idx = 0;
 
 	bool needs_anchor = true;
-	T anchor = invalid_index;
-	T last_index = invalid_index;
+	u32 anchor = invalid_index;
+	u32 last_index = invalid_index;
 
 	for (size_t src_idx = 0; src_idx < src.size(); ++src_idx)
 	{
-		T index = src[src_idx];
+		u32 index = src[src_idx];
 		index = rsx::get_index_from_base(index, base_index);
 
 		if (needs_anchor)
@@ -629,20 +628,20 @@ std::tuple<T, T, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> sr
 }
 
 template<typename T>
-std::tuple<T, T, u32> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 base_index)
+std::tuple<u32, u32, u32> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span<u32> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 base_index)
 {
-	T min_index = -1;
-	T max_index = 0;
+	u32 min_index = -1;
+	u32 max_index = 0;
 
 	verify(HERE), (4 * dst.size_bytes() >= 6 * src.size_bytes());
 
 	u32 dst_idx = 0;
 	u8 set_size = 0;
-	T tmp_indices[4];
+	u32 tmp_indices[4];
 
 	for (int src_idx = 0; src_idx < src.size(); ++src_idx)
 	{
-		T index = src[src_idx];
+		u32 index = src[src_idx];
 		index = rsx::get_index_from_base(index, base_index);
 		if (is_primitive_restart_enabled && (u32)src[src_idx] == primitive_restart_index)
 		{
@@ -795,7 +794,7 @@ namespace
 
 	// TODO: Unify indexed and non indexed primitive expansion ?
 	template<typename T>
-	std::tuple<T, T, u32> write_index_array_data_to_buffer_impl(gsl::span<T> dst,
+	std::tuple<u32, u32, u32> write_index_array_data_to_buffer_impl(gsl::span<u32> dst,
 		gsl::span<const be_t<T>> src,
 		rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
 		u32 base_index, std::function<bool(rsx::primitive_type)> expands)
@@ -833,7 +832,7 @@ std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> 
 	switch (type)
 	{
 	case rsx::index_array_type::u16:
-		return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u16>(dst),
+		return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u32>(dst),
 			as_const_span<const be_t<u16>>(src), draw_mode, restart_index_enabled, restart_index, first_count_arguments, base_index, expands);
 	case rsx::index_array_type::u32:
 		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst),
