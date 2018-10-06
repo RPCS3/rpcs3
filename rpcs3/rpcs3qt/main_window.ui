@@ -264,6 +264,8 @@
     <addaction name="separator"/>
     <addaction name="showHiddenEntriesAct"/>
     <addaction name="separator"/>
+    <addaction name="showCompatibilityInGridAct"/>
+    <addaction name="separator"/>
     <addaction name="refreshGameListAct"/>
     <addaction name="menuGame_List_Mode"/>
     <addaction name="menuGame_List_Icons"/>
@@ -590,6 +592,14 @@
    </property>
    <property name="text">
     <string>Show Tool Bar</string>
+   </property>
+  </action>
+  <action name="showCompatibilityInGridAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Game Compatibility in Grid Mode</string>
    </property>
   </action>
   <action name="refreshGameListAct">
