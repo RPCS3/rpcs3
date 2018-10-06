@@ -491,7 +491,7 @@ void _spurs::handler_wait_ready(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 	{
 		if (spurs->handlerExiting)
 		{
-			CHECK_SUCCESS(CALL_FUNC(ppu, sys_lwmutex_unlock, ppu, spurs.ptr(&CellSpurs::mutex)));
+			CHECK_SUCCESS(ppu_execute<&sys_lwmutex_unlock>(ppu, spurs.ptr(&CellSpurs::mutex)));
 
 			return sys_ppu_thread_exit(ppu, 0);
 		}

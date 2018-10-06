@@ -451,7 +451,7 @@ s32 cellVdecOpen(ppu_thread& ppu, vm::cptr<CellVdecType> type, vm::cptr<CellVdec
 	*handle = vdec->id;
 
 	vm::var<u64> _tid;
-	CALL_FUNC(ppu, sys_ppu_thread_create, ppu, +_tid, 1148, 0, 900, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, vm::null);
+	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 1148, 0, 900, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, vm::null);
 	vdec->gpr[13] = idm::get<ppu_thread>(*_tid)->gpr[13];
 	vdec->ppu_tid = *_tid;
 
@@ -471,7 +471,7 @@ s32 cellVdecOpenEx(ppu_thread& ppu, vm::cptr<CellVdecTypeEx> type, vm::cptr<Cell
 	*handle = vdec->id;
 
 	vm::var<u64> _tid;
-	CALL_FUNC(ppu, sys_ppu_thread_create, ppu, +_tid, 1148, 0, 900, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, vm::null);
+	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 1148, 0, 900, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, vm::null);
 	vdec->gpr[13] = idm::get<ppu_thread>(*_tid)->gpr[13];
 	vdec->ppu_tid = *_tid;
 
@@ -501,8 +501,7 @@ s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 
 	vdec->notify();
 	vdec->join();
-	CALL_FUNC(ppu, sys_interrupt_thread_disestablish, ppu, vdec->ppu_tid);
-	idm::remove<ppu_thread>(handle);
+	ppu_execute<&sys_interrupt_thread_disestablish>(ppu, vdec->ppu_tid);
 	return CELL_OK;
 }
 
