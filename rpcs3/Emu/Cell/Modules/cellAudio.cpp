@@ -326,9 +326,6 @@ void audio_thread::operator()()
 		cellAudio.trace("Audio perf: (access=%d, AddData=%d, events=%d, dump=%d)",
 			stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
 	}
-
-	vm::dealloc(m_buffer.addr());
-	vm::dealloc(m_indexes.addr());
 }
 
 error_code cellAudioInit()
@@ -376,7 +373,12 @@ error_code cellAudioQuit()
 
 		if (*g_audio.get() == thread_state::finished)
 		{
+			const auto buf = g_audio->ports[0].addr;
+			const auto ind = g_audio->ports[0].index;
 			g_audio.destroy();
+			g_audio.unlock();
+			vm::dealloc(buf.addr());
+			vm::dealloc(ind.addr());
 			break;
 		}
 	}
