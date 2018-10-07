@@ -1909,6 +1909,7 @@ bool ppu_interpreter::VSL(ppu_thread& ppu, ppu_opcode_t op)
 	d._u8[0] = VA._u8[0] << sh;
 	for (uint b = 1; b < 16; b++)
 	{
+		sh = ppu.vr[op.vb]._u8[b] & 0x7;
 		d._u8[b] = (VA._u8[b] << sh) | (VA._u8[b - 1] >> (8 - sh));
 	}
 	return true;
@@ -2062,11 +2063,12 @@ bool ppu_interpreter::VSR(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
 	v128 VA = ppu.vr[op.va];
-	u8 sh = ppu.vr[op.vb]._u8[0] & 0x7;
+	u8 sh = ppu.vr[op.vb]._u8[15] & 0x7;
 
 	d._u8[15] = VA._u8[15] >> sh;
 	for (uint b = 14; ~b; b--)
 	{
+		sh = ppu.vr[op.vb]._u8[b] & 0x7;
 		d._u8[b] = (VA._u8[b] >> sh) | (VA._u8[b + 1] << (8 - sh));
 	}
 	return true;
