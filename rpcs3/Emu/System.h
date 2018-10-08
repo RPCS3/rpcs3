@@ -401,7 +401,7 @@ struct cfg_root : cfg::node
 	{
 		node_video(cfg::node* _this) : cfg::node(_this, "Video") {}
 
-		cfg::_enum<video_renderer> renderer{this, "Renderer", video_renderer::opengl};
+		cfg::_enum<video_renderer> renderer{this, "Renderer", video_renderer::vulkan};
 
 		cfg::_enum<video_resolution> resolution{this, "Resolution", video_resolution::_720};
 		cfg::_enum<video_aspect> aspect_ratio{this, "Aspect ratio", video_aspect::_16_9};
