@@ -72,7 +72,11 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		// call the syscall
 		if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, -1, 1))
 		{
-			ppu.test_state();
+			if (ppu.test_stopped())
+			{
+				return 0;
+			}
+
 			lwmutex->all_info--;
 
 			if (res != CELL_EPERM)
@@ -103,7 +107,11 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 	// call the syscall
 	if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, -1, 3))
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
+
 		lwmutex->all_info--;
 
 		// unlock the lightweight mutex
@@ -145,9 +153,12 @@ error_code sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 			return res;
 		}
 
-		ppu.test_state();
-		lwmutex->all_info += +res;
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 
+		lwmutex->all_info += +res;
 		return CELL_OK;
 	}
 
@@ -167,7 +178,10 @@ error_code sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 	// if locking succeeded, call the syscall
 	error_code res = _sys_lwcond_signal_all(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, 1);
 
-	ppu.test_state();
+	if (ppu.test_stopped())
+	{
+		return 0;
+	}
 
 	if (res > 0)
 	{
@@ -206,7 +220,11 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 		// call the syscall
 		if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, ppu_thread_id, 1))
 		{
-			ppu.test_state();
+			if (ppu.test_stopped())
+			{
+				return 0;
+			}
+
 			lwmutex->all_info--;
 
 			return res;
@@ -234,7 +252,11 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 	// call the syscall
 	if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, ppu_thread_id, 3))
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
+
 		lwmutex->all_info--;
 
 		// unlock the lightweight mutex

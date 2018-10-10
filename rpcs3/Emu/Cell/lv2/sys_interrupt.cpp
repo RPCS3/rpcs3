@@ -8,8 +8,6 @@
 #include "Emu/Cell/PPUOpcodes.h"
 #include "sys_interrupt.h"
 
-
-
 LOG_CHANNEL(sys_interrupt);
 
 void lv2_int_serv::exec()
@@ -22,7 +20,7 @@ void lv2_int_serv::exec()
 		{ ppu_cmd::sleep, 0 }
 	});
 
-	thread->notify();
+	thread_ctrl::notify(*thread);
 }
 
 void lv2_int_serv::join()
@@ -35,8 +33,8 @@ void lv2_int_serv::join()
 		{ ppu_cmd::opcode, ppu_instructions::SC(0) },
 	});
 
-	thread->notify();
-	thread->join();
+	thread_ctrl::notify(*thread);
+	(*thread)();
 }
 
 error_code sys_interrupt_tag_destroy(u32 intrtag)
@@ -86,7 +84,7 @@ error_code _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 int
 		}
 
 		// Get interrupt thread
-		const auto it = idm::get_unlocked<ppu_thread>(intrthread);
+		const auto it = idm::get_unlocked<named_thread<ppu_thread>>(intrthread);
 
 		if (!it)
 		{
@@ -110,7 +108,8 @@ error_code _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 int
 
 		result = std::make_shared<lv2_int_serv>(it, arg1, arg2);
 		tag->handler = result;
-		it->run();
+		it->state -= cpu_flag::stop;
+		thread_ctrl::notify(*it);
 		return result;
 	});
 
@@ -131,7 +130,7 @@ error_code _sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih, vm::ptr<u
 
 	if (!handler)
 	{
-		if (const auto thread = idm::withdraw<ppu_thread>(ih))
+		if (const auto thread = idm::withdraw<named_thread<ppu_thread>>(ih))
 		{
 			*r13 = thread->gpr[13];
 			return CELL_OK;

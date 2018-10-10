@@ -77,9 +77,6 @@ class ppu_static_module final
 public:
 	const std::string name;
 
-	task_stack on_load;
-	task_stack on_unload;
-
 	std::unordered_map<u32, ppu_static_function, value_hash<u32>> functions;
 	std::unordered_map<u32, ppu_static_variable, value_hash<u32>> variables;
 

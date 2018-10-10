@@ -774,10 +774,8 @@ namespace utils
 					// If max_count > 1 only id_new is supported
 					static_assert(std::is_same_v<id_tag, id_new_t> && !std::is_const_v<std::remove_reference_t<Type>>);
 
-					// Try to acquire the semaphore (conditional increment)
-					const uint old_sema = head->m_sema.load();
-
-					if (UNLIKELY(old_sema > last || !head->m_sema.compare_and_swap_test(old_sema, old_sema + 1)))
+					// Try to acquire the semaphore
+					if (UNLIKELY(!head->m_sema.try_inc(last + 1)))
 					{
 						block = nullptr;
 					}
@@ -1225,7 +1223,7 @@ namespace utils
 		template <typename Type>
 		std::shared_lock<::notifier> get_free_notifier() const
 		{
-			return std::shared_lock{get_head<Type>()->m_free_notifier};
+			return std::shared_lock(get_head<Type>()->m_free_notifier, std::try_to_lock);
 		}
 	};
 } // namespace utils

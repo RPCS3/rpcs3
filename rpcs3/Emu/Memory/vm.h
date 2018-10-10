@@ -146,7 +146,7 @@ namespace vm
 	class block_t final
 	{
 		// Mapped regions: addr -> shm handle
-		std::map<u32, std::shared_ptr<utils::shm>> m_map;
+		std::map<u32, std::pair<u32, std::shared_ptr<utils::shm>>> m_map;
 
 		// Common mapped region for special cases
 		std::shared_ptr<utils::shm> m_common;
@@ -173,7 +173,7 @@ namespace vm
 		u32 dealloc(u32 addr, const std::shared_ptr<utils::shm>* = nullptr);
 
 		// Get memory at specified address (if size = 0, addr assumed exact)
-		std::pair<const u32, std::shared_ptr<utils::shm>> get(u32 addr, u32 size = 0);
+		std::pair<u32, std::shared_ptr<utils::shm>> get(u32 addr, u32 size = 0);
 
 		// Internal
 		u32 imp_used(const vm::writer_lock&);

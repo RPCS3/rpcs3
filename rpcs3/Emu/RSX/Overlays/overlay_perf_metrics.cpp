@@ -230,7 +230,6 @@ namespace rsx
 
 				u32 ppus{0};
 				u32 spus{0};
-				u32 rawspus{0};
 
 				f32 cpu_usage{-1.f};
 				u32 total_threads{0};
@@ -260,16 +259,20 @@ namespace rsx
 				}
 				case detail_level::medium:
 				{
-					ppus = idm::select<ppu_thread>([&ppu_cycles](u32, ppu_thread& ppu) { ppu_cycles += ppu.get()->get_cycles(); });
+					ppus = idm::select<named_thread<ppu_thread>>([&ppu_cycles](u32, named_thread<ppu_thread>& ppu)
+					{
+						ppu_cycles += thread_ctrl::get_cycles(ppu);
+					});
 
-					spus = idm::select<SPUThread>([&spu_cycles](u32, SPUThread& spu) { spu_cycles += spu.get()->get_cycles(); });
-
-					rawspus = idm::select<RawSPUThread>([&spu_cycles](u32, RawSPUThread& rawspu) { spu_cycles += rawspu.get()->get_cycles(); });
+					spus = idm::select<named_thread<spu_thread>>([&spu_cycles](u32, named_thread<spu_thread>& spu)
+					{
+						spu_cycles += thread_ctrl::get_cycles(spu);
+					});
 
 					if (!rsx_thread)
 						rsx_thread = fxm::get<GSRender>();
 
-					rsx_cycles += rsx_thread->get()->get_cycles();
+					rsx_cycles += rsx_thread->get_cycles();
 
 					total_cycles = ppu_cycles + spu_cycles + rsx_cycles;
 					cpu_usage = m_cpu_stats.get_usage();
@@ -329,7 +332,7 @@ namespace rsx
 					                         " Total : %04.1f %% (%2u)\n\n"
 					                         "%s\n"
 					                         " RSX   : %02u %%",
-					    fps, frametime, std::string(title1_high.size(), ' '), ppu_usage, ppus, spu_usage, spus + rawspus, rsx_usage, cpu_usage, total_threads, std::string(title2.size(), ' '), rsx_load);
+					    fps, frametime, std::string(title1_high.size(), ' '), ppu_usage, ppus, spu_usage, spus, rsx_usage, cpu_usage, total_threads, std::string(title2.size(), ' '), rsx_load);
 					break;
 				}
 				}

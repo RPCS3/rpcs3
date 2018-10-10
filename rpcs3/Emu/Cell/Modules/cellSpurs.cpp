@@ -36,7 +36,7 @@ struct cell_error_t
 // Function prototypes
 //----------------------------------------------------------------------------
 
-bool spursKernelEntry(SPUThread& spu);
+bool spursKernelEntry(spu_thread& spu);
 
 // SPURS Internals
 namespace _spurs
@@ -599,18 +599,18 @@ s32 _spurs::create_handler(vm::ptr<CellSpurs> spurs, u32 ppuPriority)
 	{
 		using ppu_thread::ppu_thread;
 
-		virtual void cpu_task() override
+		void non_task()
 		{
 			BIND_FUNC(_spurs::handler_entry)(*this);
 		}
 	};
 
-	auto&& eht = idm::make_ptr<ppu_thread, handler_thread>(std::string(spurs->prefix, spurs->prefixSize) + "SpursHdlr0", ppuPriority, 0x4000);
+	// auto eht = idm::make_ptr<ppu_thread, handler_thread>(std::string(spurs->prefix, spurs->prefixSize) + "SpursHdlr0", ppuPriority, 0x4000);
 
-	spurs->ppu0 = eht->id;
+	// spurs->ppu0 = eht->id;
 
-	eht->gpr[3] = spurs.addr();
-	eht->run();
+	// eht->gpr[3] = spurs.addr();
+	// eht->run();
 
 	return CELL_OK;
 }
@@ -796,15 +796,15 @@ s32 _spurs::create_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 p
 	{
 		using ppu_thread::ppu_thread;
 
-		virtual void cpu_task() override
+		void non_task()
 		{
 			BIND_FUNC(_spurs::event_helper_entry)(*this);
 		}
 	};
 
-	auto&& eht = idm::make_ptr<ppu_thread, event_helper_thread>(std::string(spurs->prefix, spurs->prefixSize) + "SpursHdlr1", ppuPriority, 0x8000);
+	//auto eht = idm::make_ptr<ppu_thread, event_helper_thread>(std::string(spurs->prefix, spurs->prefixSize) + "SpursHdlr1", ppuPriority, 0x8000);
 
-	if (!eht)
+	//if (!eht)
 	{
 		sys_event_port_disconnect(spurs->eventPort);
 		sys_event_port_destroy(spurs->eventPort);
@@ -818,10 +818,10 @@ s32 _spurs::create_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 p
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	eht->gpr[3] = spurs.addr();
-	eht->run();
+	// eht->gpr[3] = spurs.addr();
+	// eht->run();
 
-	spurs->ppu1 = eht->id;
+	// spurs->ppu1 = eht->id;
 	return CELL_OK;
 }
 
@@ -1118,7 +1118,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 		}
 
 		// entry point cannot be initialized immediately because SPU LS will be rewritten by sys_spu_thread_group_start()
-		//idm::get<SPUThread>(spurs->spus[num])->custom_task = [entry = spurs->spuImg.entry_point](SPUThread& spu)
+		//idm::get<named_thread<spu_thread>>(spurs->spus[num])->custom_task = [entry = spurs->spuImg.entry_point](spu_thread& spu)
 		{
 			// Disabled
 			//spu.RegisterHleFunction(entry, spursKernelEntry);

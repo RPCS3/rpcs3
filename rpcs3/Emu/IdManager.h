@@ -35,46 +35,6 @@ namespace id_manager
 		static_assert(u64{step} * count + base < UINT32_MAX, "ID traits: invalid object range");
 	};
 
-	// Optional object initialization function (called after ID registration)
-	template <typename T, typename = void>
-	struct on_init
-	{
-		static inline void func(T*, const std::shared_ptr<void>&)
-		{
-			// Forbid forward declarations
-			static constexpr auto size = sizeof(std::conditional_t<std::is_void<T>::value, void*, T>);
-		}
-	};
-
-	template <typename T>
-	struct on_init<T, decltype(std::declval<T>().on_init(std::declval<const std::shared_ptr<void>&>()))>
-	{
-		static inline void func(T* ptr, const std::shared_ptr<void>& _ptr)
-		{
-			if (ptr) ptr->on_init(_ptr);
-		}
-	};
-
-	// Optional object finalization function (called after ID removal)
-	template <typename T, typename = void>
-	struct on_stop
-	{
-		static inline void func(T*)
-		{
-			// Forbid forward declarations
-			static constexpr auto size = sizeof(std::conditional_t<std::is_void<T>::value, void*, T>);
-		}
-	};
-
-	template <typename T>
-	struct on_stop<T, decltype(std::declval<T>().on_stop())>
-	{
-		static inline void func(T* ptr)
-		{
-			if (ptr) ptr->on_stop();
-		}
-	};
-
 	// Correct usage testing
 	template <typename T, typename T2, typename = void>
 	struct id_verify : std::integral_constant<bool, std::is_base_of<T, T2>::value>
@@ -118,16 +78,6 @@ namespace id_manager
 		{
 			return add_type(0);
 		}
-
-		// Get type finalizer
-		template <typename T>
-		static inline auto get_stop()
-		{
-			return [](void* ptr) -> void
-			{
-				return id_manager::on_stop<T>::func(static_cast<T*>(ptr));
-			};
-		}
 	};
 
 	template <typename T>
@@ -138,15 +88,13 @@ namespace id_manager
 	{
 		u32 m_value;           // ID value
 		u32 m_type;            // True object type
-		void (*m_stop)(void*); // Finalizer
 
 	public:
 		id_key() = default;
 
-		id_key(u32 value, u32 type, void (*stop)(void*))
+		id_key(u32 value, u32 type)
 			: m_value(value)
 			, m_type(type)
-			, m_stop(stop)
 		{
 		}
 
@@ -158,11 +106,6 @@ namespace id_manager
 		u32 type() const
 		{
 			return m_type;
-		}
-
-		auto on_stop() const
-		{
-			return m_stop;
 		}
 
 		operator u32() const
@@ -301,7 +244,7 @@ class idm
 		static_assert(id_manager::id_verify<T, Type>::value, "Invalid ID type combination");
 
 		// ID info
-		const id_manager::id_key info{get_type<T>(), get_type<Type>(), id_manager::typeinfo::get_stop<Type>()};
+		const id_manager::id_key info{get_type<T>(), get_type<Type>()};
 
 		// ID traits
 		using traits = id_manager::id_traits<Type>;
@@ -342,7 +285,6 @@ public:
 	{
 		if (auto pair = create_id<T, Make>([&] { return std::make_shared<Make>(std::forward<Args>(args)...); }))
 		{
-			id_manager::on_init<Make>::func(static_cast<Make*>(pair->second.get()), pair->second);
 			return {pair->second, static_cast<Make*>(pair->second.get())};
 		}
 
@@ -355,7 +297,6 @@ public:
 	{
 		if (auto pair = create_id<T, Make>([&] { return std::make_shared<Make>(std::forward<Args>(args)...); }))
 		{
-			id_manager::on_init<Make>::func(static_cast<Make*>(pair->second.get()), pair->second);
 			return pair->first;
 		}
 
@@ -368,7 +309,6 @@ public:
 	{
 		if (auto pair = create_id<T, Made>([&] { return ptr; }))
 		{
-			id_manager::on_init<Made>::func(static_cast<Made*>(pair->second.get()), pair->second);
 			return pair->first;
 		}
 
@@ -381,7 +321,6 @@ public:
 	{
 		if (auto pair = create_id<T, Made>(std::forward<F>(provider)))
 		{
-			id_manager::on_init<Made>::func(static_cast<Made*>(pair->second.get()), pair->second);
 			return pair->first;
 		}
 
@@ -572,7 +511,6 @@ public:
 			}
 		}
 
-		id_manager::on_stop<Get>::func(static_cast<Get*>(ptr.get()));
 		return true;
 	}
 
@@ -594,7 +532,6 @@ public:
 			}
 		}
 
-		id_manager::on_stop<Get>::func(static_cast<Get*>(ptr.get()));
 		return {ptr, static_cast<Get*>(ptr.get())};
 	}
 
@@ -612,8 +549,6 @@ public:
 			{
 				func(*_ptr);
 				std::shared_ptr<void> ptr = std::move(found->second);
-				lock.unlock();
-				id_manager::on_stop<Get>::func(static_cast<Get*>(ptr.get()));
 				return {ptr, static_cast<Get*>(ptr.get())};
 			}
 			else
@@ -627,8 +562,6 @@ public:
 				}
 
 				std::shared_ptr<void> ptr = std::move(found->second);
-				lock.unlock();
-				id_manager::on_stop<Get>::func(static_cast<Get*>(ptr.get()));
 				return {{ptr, static_cast<Get*>(ptr.get())}, std::move(ret)};
 			}
 		}
@@ -641,7 +574,7 @@ public:
 class fxm
 {
 	// Type Index -> Object. Use global since only one process is supported atm.
-	static std::vector<std::pair<void(*)(void*), std::shared_ptr<void>>> g_vec;
+	static std::vector<std::shared_ptr<void>> g_vec;
 
 	template <typename T>
 	static inline u32 get_type()
@@ -664,14 +597,12 @@ public:
 		{
 			std::lock_guard lock(id_manager::g_mutex);
 
-			auto& pair = g_vec[get_type<T>()];
+			auto& cur = g_vec[get_type<T>()];
 
-			if (!pair.second)
+			if (!cur)
 			{
 				ptr = std::make_shared<Make>(std::forward<Args>(args)...);
-
-				pair.first = id_manager::typeinfo::get_stop<T>();
-				pair.second = ptr;
+				cur = ptr;
 			}
 			else
 			{
@@ -679,7 +610,6 @@ public:
 			}
 		}
 
-		id_manager::on_init<T>::func(ptr.get(), ptr);
 		return ptr;
 	}
 
@@ -692,21 +622,13 @@ public:
 		{
 			std::lock_guard lock(id_manager::g_mutex);
 
-			auto& pair = g_vec[get_type<T>()];
+			auto& cur = g_vec[get_type<T>()];
 
 			ptr = std::make_shared<Make>(std::forward<Args>(args)...);
-			old = std::move(pair.second);
-
-			pair.first = id_manager::typeinfo::get_stop<T>();
-			pair.second = ptr;
+			old = std::move(cur);
+			cur = ptr;
 		}
 
-		if (old)
-		{
-			id_manager::on_stop<T>::func(static_cast<T*>(old.get()));
-		}
-
-		id_manager::on_init<T>::func(ptr.get(), ptr);
 		return ptr;
 	}
 
@@ -718,16 +640,15 @@ public:
 		{
 			std::lock_guard lock(id_manager::g_mutex);
 
-			auto& pair = g_vec[get_type<T>()];
+			auto& cur = g_vec[get_type<T>()];
 
-			if (!pair.second)
+			if (!cur)
 			{
 				ptr = provider();
 
 				if (ptr)
 				{
-					pair.first = id_manager::typeinfo::get_stop<T>();
-					pair.second = ptr;
+					cur = ptr;
 				}
 			}
 
@@ -737,7 +658,6 @@ public:
 			}
 		}
 
-		id_manager::on_init<T>::func(ptr.get(), ptr);
 		return ptr;
 	}
 
@@ -750,16 +670,14 @@ public:
 		{
 			std::lock_guard lock(id_manager::g_mutex);
 
-			auto& pair = g_vec[get_type<T>()];
+			auto& cur = g_vec[get_type<T>()];
 
 			ptr = provider();
 
 			if (ptr)
 			{
-				old = std::move(pair.second);
-
-				pair.first = id_manager::typeinfo::get_stop<T>();
-				pair.second = ptr;
+				old = std::move(cur);
+				cur = ptr;
 			}
 			else
 			{
@@ -767,12 +685,6 @@ public:
 			}
 		}
 
-		if (old)
-		{
-			id_manager::on_stop<T>::func(static_cast<T*>(old.get()));
-		}
-
-		id_manager::on_init<T>::func(ptr.get(), ptr);
 		return ptr;
 	}
 
@@ -784,22 +696,19 @@ public:
 		{
 			std::lock_guard lock(id_manager::g_mutex);
 
-			auto& pair = g_vec[get_type<T>()];
+			auto& old = g_vec[get_type<T>()];
 
-			if (auto& old = pair.second)
+			if (old)
 			{
 				return {old, static_cast<T*>(old.get())};
 			}
 			else
 			{
 				ptr = std::make_shared<Make>(std::forward<Args>(args)...);
-
-				pair.first = id_manager::typeinfo::get_stop<T>();
-				pair.second = ptr;
+				old = ptr;
 			}
 		}
 
-		id_manager::on_init<T>::func(ptr.get(), ptr);
 		return ptr;
 	}
 
@@ -807,7 +716,7 @@ public:
 	template <typename T>
 	static inline T* check_unlocked()
 	{
-		return static_cast<T*>(g_vec[get_type<T>()].second.get());
+		return static_cast<T*>(g_vec[get_type<T>()].get());
 	}
 
 	// Check whether the object exists
@@ -825,7 +734,7 @@ public:
 	{
 		reader_lock lock(id_manager::g_mutex);
 
-		auto& ptr = g_vec[get_type<T>()].second;
+		auto& ptr = g_vec[get_type<T>()];
 
 		return {ptr, static_cast<T*>(ptr.get())};
 	}
@@ -837,12 +746,7 @@ public:
 		std::shared_ptr<void> ptr;
 		{
 			std::lock_guard lock(id_manager::g_mutex);
-			ptr = std::move(g_vec[get_type<T>()].second);
-		}
-
-		if (ptr)
-		{
-			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
+			ptr = std::move(g_vec[get_type<T>()]);
 		}
 
 		return ptr.operator bool();
@@ -855,12 +759,7 @@ public:
 		std::shared_ptr<void> ptr;
 		{
 			std::lock_guard lock(id_manager::g_mutex);
-			ptr = std::move(g_vec[get_type<T>()].second);
-		}
-
-		if (ptr)
-		{
-			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
+			ptr = std::move(g_vec[get_type<T>()]);
 		}
 
 		return {ptr, static_cast<T*>(ptr.get())};

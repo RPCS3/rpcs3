@@ -194,7 +194,7 @@ public:
 	atomic_t<bool> is_working;
 
 	Demuxer(u32 addr, u32 size, vm::ptr<CellDmuxCbMsg> func, u32 arg)
-		: ppu_thread("HLE Demuxer")
+		: ppu_thread({}, "", 0)
 		, is_finished(false)
 		, is_closed(false)
 		, is_running(false)
@@ -206,7 +206,7 @@ public:
 	{
 	}
 
-	virtual void cpu_task() override
+	void non_task()
 	{
 		DemuxerTask task;
 		DemuxerStream stream = {};
@@ -987,13 +987,7 @@ s32 cellDmuxOpen(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResource> res, vm
 	}
 
 	// TODO: check demuxerResource and demuxerCb arguments
-	auto&& dmux = idm::make_ptr<ppu_thread, Demuxer>(res->memAddr, res->memSize, cb->cbMsgFunc, cb->cbArg);
-
-	*handle = dmux->id;
-
-	dmux->run();
-
-	return CELL_OK;
+	fmt::throw_exception("cellDmux disabled, use LLE.");
 }
 
 s32 cellDmuxOpenEx(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResourceEx> resEx, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
@@ -1006,13 +1000,7 @@ s32 cellDmuxOpenEx(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResourceEx> res
 	}
 
 	// TODO: check demuxerResourceEx and demuxerCb arguments
-	auto&& dmux = idm::make_ptr<ppu_thread, Demuxer>(resEx->memAddr, resEx->memSize, cb->cbMsgFunc, cb->cbArg);
-
-	*handle = dmux->id;
-
-	dmux->run();
-
-	return CELL_OK;
+	fmt::throw_exception("cellDmux disabled, use LLE.");
 }
 
 s32 cellDmuxOpenExt(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResourceEx> resEx, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
@@ -1032,13 +1020,7 @@ s32 cellDmuxOpen2(vm::cptr<CellDmuxType2> type2, vm::cptr<CellDmuxResource2> res
 	}
 
 	// TODO: check demuxerType2, demuxerResource2 and demuxerCb arguments
-	auto&& dmux = idm::make_ptr<ppu_thread, Demuxer>(res2->memAddr, res2->memSize, cb->cbMsgFunc, cb->cbArg);
-
-	*handle = dmux->id;
-
-	dmux->run();
-
-	return CELL_OK;
+	fmt::throw_exception("cellDmux disabled, use LLE.");
 }
 
 s32 cellDmuxClose(u32 handle)

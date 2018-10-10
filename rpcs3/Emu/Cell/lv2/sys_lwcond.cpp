@@ -274,6 +274,11 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
+		if (ppu.is_stopped())
+		{
+			return 0;
+		}
+
 		if (timeout)
 		{
 			const u64 passed = get_system_time() - ppu.start_time;
@@ -290,7 +295,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 				cond->waiters--;
 
-				if (mutex->signaled.fetch_dec_sat())
+				if (mutex->signaled.try_dec())
 				{
 					ppu.gpr[3] = CELL_EDEADLK;
 					break;

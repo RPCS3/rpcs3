@@ -127,11 +127,6 @@ namespace vm
 
 	void cleanup_unlock(cpu_thread& cpu) noexcept
 	{
-		if (g_tls_locked && cpu.get() == thread_ctrl::get_current())
-		{
-			g_tls_locked = nullptr;
-		}
-
 		for (u32 i = 0; i < g_locks.size(); i++)
 		{
 			if (g_locks[i] == &cpu)
@@ -225,7 +220,7 @@ namespace vm
 			{
 				while (cpu_thread* ptr = lock)
 				{
-					if (ptr->state & (cpu_flag::dbg_global_stop + cpu_flag::exit))
+					if (ptr->is_stopped())
 					{
 						break;
 					}
@@ -533,11 +528,21 @@ namespace vm
 			}
 		}
 
+		const u32 page_addr = addr + (this->flags & 0x10 ? 0x1000 : 0);
+		const u32 page_size = size - (this->flags & 0x10 ? 0x2000 : 0);
+
+		if (this->flags & 0x10)
+		{
+			// Mark overflow/underflow guard pages as allocated
+			verify(HERE), !g_pages[addr / 4096].flags.exchange(page_allocated);
+			verify(HERE), !g_pages[addr / 4096 + size / 4096 - 1].flags.exchange(page_allocated);
+		}
+
 		// Map "real" memory pages
-		_page_map(addr, flags, size, shm.get());
+		_page_map(page_addr, flags, page_size, shm.get());
 
 		// Add entry
-		m_map[addr] = std::move(shm);
+		m_map[addr] = std::make_pair(size, std::move(shm));
 
 		return true;
 	}
@@ -589,11 +594,11 @@ namespace vm
 			vm::writer_lock lock(0);
 
 			// Deallocate all memory
-			for (auto it = m_map.begin(), end = m_map.end(); it != end;)
+			for (auto it = m_map.begin(), end = m_map.end(); !m_common && it != end;)
 			{
 				const auto next = std::next(it);
-				const auto size = (next == end ? this->addr + this->size : next->first) - it->first;
-				_page_unmap(it->first, size, it->second.get());
+				const auto size = it->second.first;
+				_page_unmap(it->first, size, it->second.second.get());
 				it = next;
 			}
 
@@ -614,7 +619,7 @@ namespace vm
 		const u32 min_page_size = flags & 0x100 ? 0x1000 : 0x10000;
 
 		// Align to minimal page size
-		const u32 size = ::align(orig_size, min_page_size);
+		const u32 size = ::align(orig_size, min_page_size) + (flags & 0x10 ? 0x2000 : 0);
 
 		// Check alignment (it's page allocation, so passing small values there is just silly)
 		if (align < min_page_size || align != (0x80000000u >> utils::cntlz32(align, true)))
@@ -623,7 +628,7 @@ namespace vm
 		}
 
 		// Return if size is invalid
-		if (!size || size > this->size)
+		if (!orig_size || !size || size > this->size)
 		{
 			return 0;
 		}
@@ -654,7 +659,7 @@ namespace vm
 		{
 			if (try_alloc(addr, pflags, size, std::move(shm)))
 			{
-				return addr;
+				return addr + (flags & 0x10 ? 0x1000 : 0);
 			}
 		}
 
@@ -672,7 +677,7 @@ namespace vm
 		const u32 size = ::align(orig_size, min_page_size);
 
 		// return if addr or size is invalid
-		if (!size || size > this->size || addr < this->addr || addr + size - 1 > this->addr + this->size - 1)
+		if (!size || size > this->size || addr < this->addr || addr + size - 1 > this->addr + this->size - 1 || flags & 0x10)
 		{
 			return 0;
 		}
@@ -708,37 +713,42 @@ namespace vm
 
 	u32 block_t::dealloc(u32 addr, const std::shared_ptr<utils::shm>* src)
 	{
-		u32 result = 0;
 		{
 			vm::writer_lock lock(0);
 
-			const auto found = m_map.find(addr);
+			const auto found = m_map.find(addr - (flags & 0x10 ? 0x1000 : 0));
 
 			if (found == m_map.end())
 			{
 				return 0;
 			}
 
-			if (src && found->second.get() != src->get())
+			if (src && found->second.second.get() != src->get())
 			{
 				return 0;
 			}
 
-			// Approximate allocation size
-			const auto next = std::next(found);
-			const auto size = (next == m_map.end() ? this->addr + this->size : next->first) - found->first;
+			// Get allocation size
+			const auto size = found->second.first - (flags & 0x10 ? 0x2000 : 0);
+
+			if (flags & 0x10)
+			{
+				// Clear guard pages
+				verify(HERE), g_pages[addr / 4096 - 1].flags.exchange(0) == page_allocated;
+				verify(HERE), g_pages[addr / 4096 + size / 4096].flags.exchange(0) == page_allocated;
+			}
 
 			// Unmap "real" memory pages
-			result = _page_unmap(addr, size, found->second.get());
+			verify(HERE), size == _page_unmap(addr, size, found->second.second.get());
 
 			// Remove entry
 			m_map.erase(found);
-		}
 
-		return result;
+			return size;
+		}
 	}
 
-	std::pair<const u32, std::shared_ptr<utils::shm>> block_t::get(u32 addr, u32 size)
+	std::pair<u32, std::shared_ptr<utils::shm>> block_t::get(u32 addr, u32 size)
 	{
 		if (addr < this->addr || std::max<u32>(size, addr - this->addr + size) >= this->size)
 		{
@@ -769,12 +779,12 @@ namespace vm
 		}
 
 		// Range check
-		if (std::max<u32>(size, addr - found->first + size) > found->second->size())
+		if (std::max<u32>(size, addr - found->first + size) > found->second.second->size())
 		{
 			return {addr, nullptr};
 		}
 
-		return *found;
+		return {found->first, found->second.second};
 	}
 
 	u32 block_t::imp_used(const vm::writer_lock&)
@@ -783,7 +793,7 @@ namespace vm
 
 		for (auto& entry : m_map)
 		{
-			result += entry.second->size();
+			result += entry.second.first - (flags & 0x10 ? 0x2000 : 0);
 		}
 
 		return result;
@@ -967,7 +977,7 @@ namespace vm
 				std::make_shared<block_t>(0x20000000, 0x10000000, 0x201), // user 64k pages
 				nullptr, // user 1m pages
 				std::make_shared<block_t>(0xC0000000, 0x10000000), // video
-				std::make_shared<block_t>(0xD0000000, 0x10000000, 0x101), // stack
+				std::make_shared<block_t>(0xD0000000, 0x10000000, 0x111), // stack
 				std::make_shared<block_t>(0xE0000000, 0x20000000), // SPU reserved
 			};
 		}

@@ -349,7 +349,7 @@ error_code cellAudioInit()
 	return CELL_OK;
 }
 
-error_code cellAudioQuit()
+error_code cellAudioQuit(ppu_thread& ppu)
 {
 	cellAudio.warning("cellAudioQuit()");
 
@@ -367,6 +367,11 @@ error_code cellAudioQuit()
 
 	while (true)
 	{
+		if (ppu.is_stopped())
+		{
+			return 0;
+		}
+
 		thread_ctrl::wait_for(1000);
 
 		auto g_audio = g_idm->lock<named_thread<audio_thread>>(0);

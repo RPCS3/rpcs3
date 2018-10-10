@@ -1091,33 +1091,40 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 	const auto cpu = get_current_cpu_thread();
 
-
 	if (rsx::g_access_violation_handler)
 	{
 		bool handled = false;
+
 		try
 		{
 			handled = rsx::g_access_violation_handler(addr, is_writing);
 		}
-		catch (std::runtime_error &e)
+		catch (const std::exception& e)
 		{
 			LOG_FATAL(RSX, "g_access_violation_handler(0x%x, %d): %s", addr, is_writing, e.what());
+
 			if (cpu)
 			{
 				vm::temporary_unlock(*cpu);
 				cpu->state += cpu_flag::dbg_pause;
-				cpu->test_state();
-				return false;
+
+				if (cpu->test_stopped())
+				{
+					std::terminate();
+				}
 			}
+
+			return false;
 		}
 
 		if (handled)
 		{
 			g_tls_fault_rsx++;
-			if (cpu)
+			if (cpu && cpu->test_stopped())
 			{
-				cpu->test_state();
+				std::terminate();
 			}
+
 			return true;
 		}
 	}
@@ -1160,7 +1167,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	// check if address is RawSPU MMIO register
 	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
 	{
-		auto thread = idm::get<RawSPUThread>((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET);
+		auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
 
 		if (!thread)
 		{
@@ -1255,9 +1262,9 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 	if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), vm::page_allocated | (is_writing ? vm::page_writable : vm::page_readable)))
 	{
-		if (cpu)
+		if (cpu && cpu->test_stopped())
 		{
-			cpu->test_state();
+			std::terminate();
 		}
 
 		return true;
@@ -1321,6 +1328,11 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
 		cpu->state += cpu_flag::dbg_pause;
 		cpu->check_state();
+
+		if (cpu->test_stopped())
+		{
+			std::terminate();
+		}
 	}
 
 	return true;
@@ -1571,53 +1583,6 @@ thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
 DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined };
 
-void thread_base::start(const std::shared_ptr<thread_base>& ctrl, task_stack task)
-{
-#ifdef _WIN32
-	using thread_result = uint;
-#else
-	using thread_result = void*;
-#endif
-
-	// Thread entry point
-	const native_entry entry = [](void* arg) -> thread_result
-	{
-		// Recover shared_ptr from short-circuited thread_base object pointer
-		std::shared_ptr<thread_base> ctrl = static_cast<thread_base*>(arg)->m_self;
-
-		try
-		{
-			ctrl->initialize();
-			task_stack{std::move(ctrl->m_task)}.invoke();
-		}
-		catch (...)
-		{
-			// Capture exception
-			ctrl->finalize(std::current_exception());
-			finalize();
-			return 0;
-		}
-
-		ctrl->finalize(nullptr);
-		finalize();
-		return 0;
-	};
-
-	ctrl->m_self = ctrl;
-	ctrl->m_task = std::move(task);
-
-#ifdef _WIN32
-	std::uintptr_t thread = _beginthreadex(nullptr, 0, entry, ctrl.get(), 0, nullptr);
-	verify("thread_ctrl::start" HERE), thread != 0;
-#else
-	pthread_t thread;
-	verify("thread_ctrl::start" HERE), pthread_create(&thread, nullptr, entry, ctrl.get()) == 0;
-#endif
-
-	// TODO: this is unsafe and must be duplicated in thread_ctrl::initialize
-	ctrl->m_thread = (uintptr_t)thread;
-}
-
 void thread_base::start(native_entry entry)
 {
 #ifdef _WIN32
@@ -1679,7 +1644,7 @@ void thread_base::initialize()
 #endif
 }
 
-std::shared_ptr<thread_base> thread_base::finalize(std::exception_ptr eptr) noexcept
+bool thread_base::finalize(int) noexcept
 {
 	// Report pending errors
 	error_code::error_report(0, 0, 0, 0);
@@ -1712,17 +1677,13 @@ std::shared_ptr<thread_base> thread_base::finalize(std::exception_ptr eptr) noex
 		g_tls_fault_rsx,
 		g_tls_fault_spu);
 
-	// Untangle circular reference, set exception
-	std::unique_lock lock(m_mutex);
-
-	// Possibly last reference to the thread object
-	std::shared_ptr<thread_base> self = std::move(m_self);
-	m_state = thread_state::finished;
-	m_exception = eptr;
+	// Return true if need to delete thread object
+	const bool result = m_state.exchange(thread_state::finished) == thread_state::detached;
 
 	// Signal waiting threads
-	lock.unlock(), m_jcv.notify_all();
-	return self;
+	m_mutex.lock_unlock();
+	m_jcv.notify_all();
+	return result;
 }
 
 void thread_base::finalize() noexcept
@@ -1741,8 +1702,6 @@ bool thread_ctrl::_wait_for(u64 usec)
 		// Mutex is unlocked at the start and after the waiting
 		if (u32 sig = _this->m_signal.load())
 		{
-			thread_ctrl::test();
-
 			if (sig & 1)
 			{
 				_this->m_signal &= ~1;
@@ -1761,11 +1720,6 @@ bool thread_ctrl::_wait_for(u64 usec)
 		// Double-check the value
 		if (u32 sig = _this->m_signal.load())
 		{
-			if (sig & 2 && _this->m_exception)
-			{
-				_this->_throw();
-			}
-
 			if (sig & 1)
 			{
 				_this->m_signal &= ~1;
@@ -1778,20 +1732,6 @@ bool thread_ctrl::_wait_for(u64 usec)
 
 	// Timeout
 	return false;
-}
-
-[[noreturn]] void thread_base::_throw()
-{
-	std::exception_ptr ex = std::exchange(m_exception, std::exception_ptr{});
-	m_signal &= ~3;
-	m_mutex.unlock();
-	std::rethrow_exception(std::move(ex));
-}
-
-void thread_base::_notify(cond_variable thread_base::* ptr)
-{
-	m_mutex.lock_unlock();
-	(this->*ptr).notify_one();
 }
 
 thread_base::thread_base(std::string_view name)
@@ -1811,22 +1751,6 @@ thread_base::~thread_base()
 	}
 }
 
-void thread_base::set_exception(std::exception_ptr ptr)
-{
-	std::lock_guard lock(m_mutex);
-	m_exception = ptr;
-
-	if (m_exception)
-	{
-		m_signal |= 2;
-		m_cond.notify_one();
-	}
-	else
-	{
-		m_signal &= ~2;
-	}
-}
-
 void thread_base::join() const
 {
 	if (m_state == thread_state::finished)
@@ -1842,33 +1766,13 @@ void thread_base::join() const
 	}
 }
 
-void thread_base::detach()
-{
-	auto self = weak_from_this().lock();
-
-	if (!self)
-	{
-		LOG_FATAL(GENERAL, "Cannot detach thread '%s'", get_name());
-		return;
-	}
-
-	if (self->m_state.compare_and_swap_test(thread_state::created, thread_state::detached))
-	{
-		std::lock_guard lock(m_mutex);
-
-		if (m_state == thread_state::detached)
-		{
-			m_self = std::move(self);
-		}
-	}
-}
-
 void thread_base::notify()
 {
 	if (!(m_signal & 1))
 	{
 		m_signal |= 1;
-		_notify(&thread_base::m_cond);
+		m_mutex.lock_unlock();
+		m_cond.notify_one();
 	}
 }
 
@@ -1886,37 +1790,17 @@ u64 thread_base::get_cycles()
 	{
 		cycles = static_cast<u64>(thread_time.tv_sec) * 1'000'000'000 + thread_time.tv_nsec;
 #endif
-		// Report 0 the first time this function is called
-		if (m_cycles == 0)
+		if (const u64 old_cycles = m_cycles.exchange(cycles))
 		{
-			m_cycles = cycles;
-			return 0;
+			return cycles - old_cycles;
 		}
 
-		const auto diff_cycles = cycles - m_cycles;
-		m_cycles = cycles;
-		return diff_cycles;
+		// Report 0 the first time this function is called
+		return 0;
 	}
 	else
 	{
 		return m_cycles;
-	}
-}
-
-void thread_ctrl::test()
-{
-	const auto _this = g_tls_this_thread;
-
-	if (_this->m_signal & 2)
-	{
-		_this->m_mutex.lock();
-
-		if (_this->m_exception)
-		{
-			_this->_throw();
-		}
-
-		_this->m_mutex.unlock();
 	}
 }
 
@@ -2066,46 +1950,4 @@ void thread_ctrl::set_thread_affinity_mask(u16 mask)
 
 	pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cs);
 #endif
-}
-
-old_thread::old_thread()
-{
-}
-
-old_thread::~old_thread()
-{
-}
-
-std::string old_thread::get_name() const
-{
-	return fmt::format("('%s') Unnamed Thread", typeid(*this).name());
-}
-
-void old_thread::start_thread(const std::shared_ptr<void>& _this)
-{
-	// Ensure it's not called from the constructor and the correct object is passed
-	verify("old_thread::start_thread" HERE), _this.get() == this;
-
-	// Run thread
-	thread_ctrl::spawn(m_thread, get_name(), [this, _this]()
-	{
-		try
-		{
-			LOG_TRACE(GENERAL, "Thread started");
-			on_spawn();
-			on_task();
-			LOG_TRACE(GENERAL, "Thread ended");
-		}
-		catch (const std::exception& e)
-		{
-			LOG_FATAL(GENERAL, "%s thrown: %s", typeid(e).name(), e.what());
-			Emu.Pause();
-		}
-
-		on_exit();
-	});
-}
-
-task_stack::task_base::~task_base()
-{
 }

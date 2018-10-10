@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sys_event.h"
+#include "Emu/Cell/SPUThread.h"
 
 enum : s32
 {
@@ -214,8 +215,6 @@ enum : u32
 	SPU_TGJSF_GROUP_EXIT = (1 << 2), // set if SPU Thread Group is terminated by sys_spu_thread_group_exit
 };
 
-class SPUThread;
-
 struct lv2_spu_group
 {
 	static const u32 id_base = 1; // Wrong?
@@ -236,7 +235,7 @@ struct lv2_spu_group
 	atomic_t<u32> join_state; // flags used to detect exit cause
 	cond_variable cv; // used to signal waiting PPU thread
 
-	std::array<std::shared_ptr<SPUThread>, 256> threads; // SPU Threads
+	std::array<std::shared_ptr<named_thread<spu_thread>>, 256> threads; // SPU Threads
 	std::array<std::pair<sys_spu_image, std::vector<sys_spu_segment>>, 256> imgs; // SPU Images
 	std::array<std::array<u64, 4>, 256> args; // SPU Thread Arguments
 
