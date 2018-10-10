@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "TRP.h"
 #include "Crypto/sha1.h"
+#include "Utilities/StrUtil.h"
 
 TRPLoader::TRPLoader(const fs::file& f)
 	: trp_f(f)
@@ -141,11 +142,11 @@ void TRPLoader::RemoveEntry(const char *filename)
 
 void TRPLoader::RenameEntry(const char *oldname, const char *newname)
 {
-	for (const TRPEntry& entry : m_entries)
+	for (TRPEntry& entry : m_entries)
 	{
 		if (!strcmp(entry.name, oldname))
 		{
-			memcpy((void*)entry.name, newname, 32);
+			strcpy_trunc(entry.name, newname);
 		}
 	}
 }
