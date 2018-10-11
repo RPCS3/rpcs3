@@ -170,7 +170,7 @@ namespace rsx
 				t.size = tstile.size;
 
 				const auto& ti = t.pack();
-				sys_rsx_context_attribute(context_id, 0x300, i, (u64)ti.tile << 32 | ti.limit, (u64)ti.pitch << 32 | ti.format, 0);
+				sys_rsx_context_attribute(context_id, 0x300, i, (u64)ti.tile << 32 | ti.limit, t.binded ? (u64)ti.pitch << 32 | ti.format : 0, 0);
 			}
 
 			for (u32 i = 0; i < limits::zculls_count; ++i)
