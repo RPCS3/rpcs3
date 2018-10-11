@@ -386,7 +386,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 			render->notify_tile_unbound(a3);
 
 		tile.location = ((a4 >> 32) & 0xF) - 1;
-		tile.offset = ((((a4 >> 32) & 0xFFFFFFFF) >> 16) * 0x10000);
+		tile.offset = ((((a4 >> 32) & 0x7FFFFFFF) >> 16) * 0x10000);
 		tile.size = ((((a4 & 0x7FFFFFFF) >> 16) + 1) * 0x10000) - tile.offset;
 		tile.pitch = (((a5 >> 32) & 0xFFFFFFFF) >> 8) * 0x100;
 		tile.comp = ((a5 & 0xFFFFFFFF) >> 26) & 0xF;
