@@ -1880,8 +1880,9 @@ u64 thread_base::get_cycles()
 	if (QueryThreadCycleTime((HANDLE)m_thread.load(), &cycles))
 	{
 #else
+	clockid_t _clock;
 	struct timespec thread_time;
-	if (!clock_gettime(CLOCK_THREAD_CPUTIME_ID, &thread_time))
+	if (!pthread_getcpuclockid((pthread_t)m_thread.load(), &_clock) && !clock_gettime(_clock, &thread_time))
 	{
 		cycles = static_cast<u64>(thread_time.tv_sec) * 1'000'000'000 + thread_time.tv_nsec;
 #endif
