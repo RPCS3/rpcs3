@@ -170,7 +170,7 @@ namespace rsx
 				t.size = tstile.size;
 
 				const auto& ti = t.pack();
-				sys_rsx_context_attribute(context_id, 0x300, i, (u64)ti.tile << 32 | ti.limit, (u64)ti.pitch << 32 | ti.format, 0);
+				sys_rsx_context_attribute(context_id, 0x300, i, (u64)ti.tile << 32 | ti.limit, t.binded ? (u64)ti.pitch << 32 | ti.format : 0, 0);
 			}
 
 			for (u32 i = 0; i < limits::zculls_count; ++i)
@@ -196,7 +196,7 @@ namespace rsx
 				zc.zFormat = zctile.zFormat;
 
 				const auto& zci = zc.pack();
-				sys_rsx_context_attribute(context_id, 0x301, i, (u64)zci.region << 32 | zci.size, (u64)zci.start << 32 | zci.offset, (u64)zci.status0 << 32 | zci.status1);
+				sys_rsx_context_attribute(context_id, 0x301, i, (u64)zci.region << 32 | zci.size, (u64)zci.start << 32 | zci.offset, zc.binded ? (u64)zci.status0 << 32 | zci.status1 : 0);
 			}
 
 			cs.tile_hash = replay_cmd.tile_state;
