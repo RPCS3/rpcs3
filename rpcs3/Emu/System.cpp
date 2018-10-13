@@ -356,7 +356,7 @@ void Emulator::Init()
 
 				Emu.CallAfter([=]()
 				{
-					dlg->Create(+g_progr);
+					dlg->Create(+g_progr, +g_progr);
 				});
 
 				u64 ftotal = 0;
@@ -791,6 +791,8 @@ void Emulator::Load(bool add_only)
 						}
 					}
 				}
+
+				g_progr = "Compiling PPU modules";
 
 				for (std::size_t i = 0; i < file_queue.size(); i++)
 				{
