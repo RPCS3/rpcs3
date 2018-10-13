@@ -1409,4 +1409,5 @@ void game_list_frame::SetShowCompatibilityInGrid(bool show)
 {
 	m_drawCompatStatusToGrid = show;
 	RepaintIcons();
+	m_gui_settings->SetValue(gui::gl_draw_compat, show);
 }
