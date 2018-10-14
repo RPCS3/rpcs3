@@ -89,3 +89,7 @@ rpcs3/rpcs3_autogen/*
 
 # QtCreator
 CMakeLists.txt.user
+
+# CLion
+/.idea/*
+/cmake-build-*/
