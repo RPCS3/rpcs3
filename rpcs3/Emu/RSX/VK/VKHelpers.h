@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include <exception>
@@ -809,26 +809,13 @@ namespace vk
 		}
 	};
 
-	struct viewable_image : public image
+	class viewable_image : public image
 	{
+	private:
 		std::unordered_multimap<u32, std::unique_ptr<vk::image_view>> views;
 
-		viewable_image(vk::render_device &dev,
-			uint32_t memory_type_index,
-			uint32_t access_flags,
-			VkImageType image_type,
-			VkFormat format,
-			uint32_t width, uint32_t height, uint32_t depth,
-			uint32_t mipmaps, uint32_t layers,
-			VkSampleCountFlagBits samples,
-			VkImageLayout initial_layout,
-			VkImageTiling tiling,
-			VkImageUsageFlags usage,
-			VkImageCreateFlags image_flags)
-
-			:image(dev, memory_type_index, access_flags, image_type, format, width, height, depth,
-					mipmaps, layers, samples, initial_layout, tiling, usage, image_flags)
-		{}
+	public:
+		using image::image;
 
 		image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
@@ -854,6 +841,18 @@ namespace vk
 			auto result = view.get();
 			views.emplace(remap_encoding, std::move(view));
 			return result;
+		}
+
+		void set_native_component_layout(VkComponentMapping new_layout)
+		{
+			if (new_layout.r != native_component_map.r ||
+				new_layout.g != native_component_map.g ||
+				new_layout.b != native_component_map.b ||
+				new_layout.a != native_component_map.a)
+			{
+				native_component_map = new_layout;
+				views.clear();
+			}
 		}
 	};
 

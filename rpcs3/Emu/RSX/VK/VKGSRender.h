@@ -364,7 +364,6 @@ private:
 	shared_mutex m_flush_queue_mutex;
 	flush_request_task m_flush_requests;
 
-	std::thread::id rsx_thread;
 	std::atomic<u64> m_last_sync_event = { 0 };
 
 	bool render_pass_open = false;
@@ -433,7 +432,7 @@ protected:
 	void notify_tile_unbound(u32 tile) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_invalidate_memory_range(u32 address_base, u32 size) override;
+	void on_invalidate_memory_range(const utils::address_range &range) override;
 
 	bool on_decompiler_task() override;
 };

@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include "Atomic.h"
+#include <shared_mutex>
 
 // Lightweight condition variable
 class cond_variable
@@ -30,6 +31,15 @@ public:
 		const bool res = imp_wait(_old, usec_timeout);
 		object.lock();
 		return res;
+	}
+
+	// Unlock all specified objects but don't lock them again
+	template <typename... Locks>
+	bool wait_unlock(u64 usec_timeout, Locks&&... locks)
+	{
+		const u32 _old = m_value.fetch_add(1); // Increment waiter counter
+		(..., std::forward<Locks>(locks).unlock());
+		return imp_wait(_old, usec_timeout);
 	}
 
 	// Wake one thread

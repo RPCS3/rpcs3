@@ -501,9 +501,8 @@ s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 
 	vdec->notify();
 	vdec->join();
-	idm::remove<ppu_thread>(handle);
-
 	CALL_FUNC(ppu, sys_interrupt_thread_disestablish, ppu, vdec->ppu_tid);
+	idm::remove<ppu_thread>(handle);
 	return CELL_OK;
 }
 

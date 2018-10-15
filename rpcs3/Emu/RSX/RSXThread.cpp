@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -18,6 +18,9 @@
 #include "Utilities/GSL.h"
 #include "Utilities/StrUtil.h"
 
+#include <cereal/archives/binary.hpp>
+
+#include <sstream>
 #include <thread>
 #include <unordered_set>
 #include <fenv.h>
@@ -364,6 +367,11 @@ namespace rsx
 		}
 	}
 
+	void thread::on_spawn()
+	{
+		m_rsx_thread = std::this_thread::get_id();
+	}
+
 	void thread::on_task()
 	{
 		if (supports_native_ui)
@@ -388,7 +396,7 @@ namespace rsx
 
 		on_init_thread();
 
-		reset();
+		method_registers.init();
 
 		if (!zcull_ctrl)
 		{
@@ -483,9 +491,6 @@ namespace rsx
 		s32 deferred_begin_end = 0;
 		std::vector<u32> deferred_stack;
 		bool has_deferred_call = false;
-
-		// Track register address faults
-		u32 mem_faults_count = 0;
 
 		auto flush_command_queue = [&]()
 		{
@@ -631,18 +636,13 @@ namespace rsx
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found, get=0x%X, put=0x%X", internal_get.load(), put);
+				std::this_thread::sleep_for(33ms);
 
-				if (mem_faults_count >= 3)
+				if (!RSXIOMem.RealAddr(internal_get))
 				{
-					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
+					LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found: get=0x%X, put=0x%X; Resetting...", +internal_get, put);
 					internal_get = restore_point.load();
 					m_return_addr = restore_ret_addr;
-				}
-				else
-				{
-					mem_faults_count++;
-					std::this_thread::sleep_for(10ms);
 				}
 
 				continue;
@@ -698,7 +698,17 @@ namespace rsx
 				m_return_addr = std::exchange(internal_get.raw(), offs) + 4;
 				continue;
 			}
-			if (cmd == RSX_METHOD_RETURN_CMD)
+
+			if (cmd & 0x3)
+			{
+				// TODO: Check for more invalid bits combinations
+				LOG_ERROR(RSX, "FIFO: Illegal command(0x%x) was executed. Resetting...", cmd);
+				internal_get = restore_point.load();
+				m_return_addr = restore_ret_addr;
+				continue;
+			}
+
+			if ((cmd & ~0xfffc) == RSX_METHOD_RETURN_CMD)
 			{
 				if (m_return_addr == -1)
 				{
@@ -712,7 +722,10 @@ namespace rsx
 				internal_get = get;
 				continue;
 			}
-			if (cmd == 0) //nop
+
+			u32 count = (cmd >> 18) & 0x7ff;
+
+			if (count == 0) //nop
 			{
 				if (performance_counters.state == FIFO_state::running)
 				{
@@ -723,43 +736,24 @@ namespace rsx
 				internal_get += 4;
 				continue;
 			}
-			if (cmd & 0x3)
-			{
-				// TODO: Check for more invalid bits combinations
-				LOG_ERROR(RSX, "FIFO: Illegal command(0x%x) was executed. Resetting...", cmd);
-				internal_get = restore_point.load();
-				m_return_addr = restore_ret_addr;
-				continue;
-			}
-
-			u32 count = (cmd >> 18) & 0x7ff;
 
 			//Validate the args ptr if the command attempts to read from it
-			const u32 args_address = RSXIOMem.RealAddr(internal_get + 4);
+			auto args = vm::ptr<u32>::make(RSXIOMem.RealAddr(internal_get + 4));
 
-			if (!args_address && count)
+			if (!args)
 			{
-				LOG_ERROR(RSX, "Invalid FIFO queue args ptr found, get=0x%X, cmd=0x%X, count=%d", internal_get.load(), cmd, count);
+				std::this_thread::sleep_for(33ms);
 
-				if (mem_faults_count >= 3)
+				if (!RSXIOMem.RealAddr(internal_get + 4))
 				{
-					LOG_ERROR(RSX, "Application has failed to recover, resetting FIFO queue");
+					LOG_ERROR(RSX, "Invalid FIFO queue args ptr found: get=0x%X, put=0x%X, count=%d; Resetting...", +internal_get, put, count);
 					internal_get = restore_point.load();
 					m_return_addr = restore_ret_addr;
 				}
-				else
-				{
-					mem_faults_count++;
-					std::this_thread::sleep_for(10ms);
-				}
 
 				continue;
 			}
 
-			// All good on valid memory ptrs
-			mem_faults_count = 0;
-
-			auto args = vm::ptr<u32>::make(args_address);
 			u32 first_cmd = (cmd & 0xfffc) >> 2;
 
 			// Stop command execution if put will be equal to get ptr during the execution itself
@@ -1365,39 +1359,23 @@ namespace rsx
 
 	void thread::do_local_task(FIFO_state state)
 	{
+		if (async_flip_requested & flip_request::emu_requested)
+		{
+			handle_emu_flip(async_flip_buffer);
+		}
+
 		if (!in_begin_end && state != FIFO_state::lock_wait)
 		{
-			if (!m_invalidated_memory_ranges.empty())
+			reader_lock lock(m_mtx_task);
+
+			if (m_invalidated_memory_range.valid())
 			{
-				std::lock_guard lock(m_mtx_task);
-
-				for (const auto& range : m_invalidated_memory_ranges)
-				{
-					on_invalidate_memory_range(range.first, range.second);
-
-					// Clean the main memory super_ptr cache if invalidated
-					const auto range_end = range.first + range.second;
-					for (auto It = main_super_memory_block.begin(); It != main_super_memory_block.end();)
-					{
-						const auto mem_start = It->first;
-						const auto mem_end = mem_start + It->second.size();
-						const bool overlaps = (mem_start < range_end && range.first < mem_end);
-
-						if (overlaps)
-						{
-							It = main_super_memory_block.erase(It);
-						}
-						else
-						{
-							It++;
-						}
-					}
-				}
-
-				m_invalidated_memory_ranges.clear();
+				lock.upgrade();
+				handle_invalidated_memory_range();
 			}
 		}
 	}
+
 
 	//std::future<void> thread::add_internal_task(std::function<bool()> callback)
 	//{
@@ -1801,7 +1779,6 @@ namespace rsx
 
 			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 			{
-				const u32 mask = (1u << index);
 				auto &vinfo = state.vertex_arrays_info[index];
 
 				if (vinfo.size() > 0)
@@ -1823,8 +1800,8 @@ namespace rsx
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
-			const bool enabled = !!(input_mask & (1 << index));
-			if (!enabled)
+			// Check if vertex stream is enabled
+			if (!(input_mask & (1 << index)))
 				continue;
 
 			//Check for interleaving
@@ -2575,6 +2552,8 @@ namespace rsx
 
 	void thread::flip(int buffer)
 	{
+		async_flip_requested.clear();
+
 		if (g_cfg.video.frame_skip_enabled)
 		{
 			m_skip_frame_ctr++;
@@ -2687,11 +2666,34 @@ namespace rsx
 		check_zcull_status(false);
 	}
 
-	void thread::on_notify_memory_unmapped(u32 base_address, u32 size)
+	void thread::on_notify_memory_mapped(u32 address, u32 size)
 	{
-		if (!m_rsx_thread_exiting && base_address < 0xC0000000)
+		// In the case where an unmap is followed shortly after by a remap of the same address space
+		// we must block until RSX has invalidated the memory
+		// or lock m_mtx_task and do it ourselves
+
+		if (m_rsx_thread_exiting)
+			return;
+
+		reader_lock lock(m_mtx_task);
+
+		const auto map_range = address_range::start_length(address, size);
+
+		if (!m_invalidated_memory_range.valid())
+			return;
+
+		if (m_invalidated_memory_range.overlaps(map_range))
 		{
-			u32 ea = base_address >> 20, io = RSXIOMem.io[ea];
+			lock.upgrade();
+			handle_invalidated_memory_range();
+		}
+	}
+
+	void thread::on_notify_memory_unmapped(u32 address, u32 size)
+	{
+		if (!m_rsx_thread_exiting && address < 0xC0000000)
+		{
+			u32 ea = address >> 20, io = RSXIOMem.io[ea];
 
 			if (io < 512)
 			{
@@ -2711,9 +2713,38 @@ namespace rsx
 				}
 			}
 
+			// Queue up memory invalidation
 			std::lock_guard lock(m_mtx_task);
-			m_invalidated_memory_ranges.push_back({ base_address, size });
+			const bool existing_range_valid = m_invalidated_memory_range.valid();
+			const auto unmap_range = address_range::start_length(address, size);
+
+			if (existing_range_valid && m_invalidated_memory_range.touches(unmap_range))
+			{
+				// Merge range-to-invalidate in case of consecutive unmaps
+				m_invalidated_memory_range.set_min_max(unmap_range);
+			}
+			else
+			{
+				if (existing_range_valid)
+				{
+					// We can only delay consecutive unmaps.
+					// Otherwise, to avoid VirtualProtect failures, we need to do the invalidation here
+					handle_invalidated_memory_range();
+				}
+
+				m_invalidated_memory_range = unmap_range;
+			}
 		}
+	}
+
+	// NOTE: m_mtx_task lock must be acquired before calling this method
+	void thread::handle_invalidated_memory_range()
+	{
+		if (!m_invalidated_memory_range.valid())
+			return;
+
+		on_invalidate_memory_range(m_invalidated_memory_range);
+		m_invalidated_memory_range.invalidate();
 	}
 
 	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!
@@ -2756,6 +2787,133 @@ namespace rsx
 
 		return performance_counters.approximate_load;
 	}
+
+	void thread::request_emu_flip(u32 buffer)
+	{
+		const bool is_rsxthr = std::this_thread::get_id() == m_rsx_thread;
+
+		// requested through command buffer
+		if (is_rsxthr)
+		{
+			// NOTE: The flip will clear any queued flip requests
+			handle_emu_flip(buffer);
+		}
+		else // requested 'manually' through ppu syscall
+		{
+			if (async_flip_requested & flip_request::emu_requested)
+			{
+				// ignore multiple requests until previous happens
+				return;
+			}
+
+			async_flip_buffer = buffer;
+			async_flip_requested |= flip_request::emu_requested;
+		}
+	}
+
+	void thread::handle_emu_flip(u32 buffer)
+	{
+		if (user_asked_for_frame_capture && !g_cfg.video.strict_rendering_mode)
+		{
+			// not dealing with non-strict rendering capture for now
+			user_asked_for_frame_capture = false;
+			LOG_FATAL(RSX, "RSX Capture: Capture only supported when ran with strict rendering mode.");
+		}
+		else if (user_asked_for_frame_capture && !capture_current_frame)
+		{
+			capture_current_frame = true;
+			user_asked_for_frame_capture = false;
+			frame_debug.reset();
+			frame_capture.reset();
+
+			// random number just to jumpstart the size
+			frame_capture.replay_commands.reserve(8000);
+
+			// capture first tile state with nop cmd
+			rsx::frame_capture_data::replay_command replay_cmd;
+			replay_cmd.rsx_command = std::make_pair(NV4097_NO_OPERATION, 0);
+			frame_capture.replay_commands.push_back(replay_cmd);
+			capture::capture_display_tile_state(this, frame_capture.replay_commands.back());
+		}
+		else if (capture_current_frame)
+		{
+			capture_current_frame = false;
+			std::stringstream os;
+			cereal::BinaryOutputArchive archive(os);
+			const std::string& filePath = fs::get_config_dir() + "capture.rrc";
+			archive(frame_capture);
+			{
+				// todo: 'dynamicly' create capture filename, also may want to compress this data?
+				fs::file f(filePath, fs::rewrite);
+				f.write(os.str());
+			}
+
+			LOG_SUCCESS(RSX, "capture successful: %s", filePath.c_str());
+
+			frame_capture.reset();
+			Emu.Pause();
+		}
+
+		double limit = 0.;
+		switch (g_cfg.video.frame_limit)
+		{
+		case frame_limit_type::none: limit = 0.; break;
+		case frame_limit_type::_59_94: limit = 59.94; break;
+		case frame_limit_type::_50: limit = 50.; break;
+		case frame_limit_type::_60: limit = 60.; break;
+		case frame_limit_type::_30: limit = 30.; break;
+		case frame_limit_type::_auto: limit = fps_limit; break; // TODO
+		}
+
+		if (limit)
+		{
+			const u64 time = get_system_time() - Emu.GetPauseTime() - start_rsx_time;
+
+			if (int_flip_index == 0)
+			{
+				start_rsx_time = time;
+			}
+			else
+			{
+				// Convert limit to expected time value
+				double expected = int_flip_index * 1000000. / limit;
+
+				while (time >= expected + 1000000. / limit)
+				{
+					expected = int_flip_index++ * 1000000. / limit;
+				}
+
+				if (expected > time + 1000)
+				{
+					const auto delay_us = static_cast<s64>(expected - time);
+					std::this_thread::sleep_for(std::chrono::milliseconds{ delay_us / 1000 });
+					performance_counters.idle_time += delay_us;
+				}
+			}
+		}
+
+		int_flip_index++;
+		current_display_buffer = buffer;
+		flip(buffer);
+
+		last_flip_time = get_system_time() - 1000000;
+		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+
+		if (flip_handler)
+		{
+			intr_thread->cmd_list
+			({
+				{ ppu_cmd::set_args, 1 }, u64{ 1 },
+				{ ppu_cmd::lle_call, flip_handler },
+				{ ppu_cmd::sleep, 0 }
+			});
+
+			intr_thread->notify();
+		}
+
+		sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
+	}
+
 
 	namespace reports
 	{
@@ -3201,11 +3359,12 @@ namespace rsx
 			const auto memory_end = memory_address + memory_range;
 			u32 sync_address = 0;
 
-			for (const auto &writer : m_pending_writes)
+			for (auto It = m_pending_writes.crbegin(); It != m_pending_writes.crend(); ++It)
 			{
-				if (writer.sink >= memory_address && writer.sink < memory_end)
+				if (It->sink >= memory_address && It->sink < memory_end)
 				{
-					sync_address = writer.sink;
+					sync_address = It->sink;
+					break;
 				}
 			}
 

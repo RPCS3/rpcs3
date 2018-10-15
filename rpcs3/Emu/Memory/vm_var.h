@@ -42,6 +42,8 @@ namespace vm
 		// Unmoveable object
 		_var_base(const _var_base&) = delete;
 
+		_var_base& operator=(const _var_base&) = delete;
+
 		_var_base()
 		    : pointer(A::alloc(sizeof(T), alignof(T)))
 		{
@@ -71,8 +73,9 @@ namespace vm
 		u32 m_size;
 
 	public:
-		// Unmoveable object
 		_var_base(const _var_base&) = delete;
+
+		_var_base& operator=(const _var_base&) = delete;
 
 		_var_base(u32 count)
 		    : pointer(A::alloc(u32{sizeof(T)} * count, alignof(T)))

@@ -224,7 +224,7 @@ struct lv2_spu_group
 
 	const std::string name;
 	const u32 id;
-	const u32 num; // SPU Number
+	const u32 max_num;
 	const s32 type; // SPU Thread Group Type
 	const u32 ct; // Memory Container Id
 
@@ -247,7 +247,7 @@ struct lv2_spu_group
 	lv2_spu_group(std::string name, u32 num, s32 prio, s32 type, u32 ct)
 		: id(idm::last_id())
 		, name(name)
-		, num(num)
+		, max_num(num)
 		, init(0)
 		, prio(prio)
 		, type(type)

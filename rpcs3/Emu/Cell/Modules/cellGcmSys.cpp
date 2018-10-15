@@ -427,7 +427,7 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	auto& ctrl = vm::_ref<CellGcmControl>(m_config->gcm_info.control_addr);
 	ctrl.put = 0;
 	ctrl.get = 0;
-	ctrl.ref = -1;
+	ctrl.ref = 0; // Set later to -1 at RSX initialization
 
 	render->intr_thread = idm::make_ptr<ppu_thread>("_gcm_intr_thread", 1, 0x4000);
 	render->intr_thread->run();

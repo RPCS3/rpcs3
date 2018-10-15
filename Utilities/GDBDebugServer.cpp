@@ -829,7 +829,7 @@ void GDBDebugServer::on_stop()
 	this->stop = true;
 	//just in case we are waiting for breakpoint
 	this->notify();
-	named_thread::on_stop();
+	old_thread::on_stop();
 }
 
 void GDBDebugServer::pause_from(cpu_thread* t) {

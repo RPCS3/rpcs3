@@ -35,10 +35,12 @@
 #endif
 
 #include "sync.h"
+#include "Log.h"
 
 thread_local u64 g_tls_fault_all = 0;
 thread_local u64 g_tls_fault_rsx = 0;
 thread_local u64 g_tls_fault_spu = 0;
+extern thread_local std::string(*g_tls_log_prefix)();
 
 [[noreturn]] void catch_all_exceptions()
 {
@@ -48,11 +50,11 @@ thread_local u64 g_tls_fault_spu = 0;
 	}
 	catch (const std::exception& e)
 	{
-		report_fatal_error("Unhandled exception of type '"s + typeid(e).name() + "': "s + e.what());
+		report_fatal_error("{" + g_tls_log_prefix() + "} Unhandled exception of type '"s + typeid(e).name() + "': "s + e.what());
 	}
 	catch (...)
 	{
-		report_fatal_error("Unhandled exception (unknown)");
+		report_fatal_error("{" + g_tls_log_prefix() + "} Unhandled exception (unknown)");
 	}
 }
 
@@ -1089,16 +1091,35 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 	const auto cpu = get_current_cpu_thread();
 
-	if (rsx::g_access_violation_handler && rsx::g_access_violation_handler(addr, is_writing))
-	{
-		g_tls_fault_rsx++;
 
-		if (cpu)
+	if (rsx::g_access_violation_handler)
+	{
+		bool handled = false;
+		try
 		{
-			cpu->test_state();
+			handled = rsx::g_access_violation_handler(addr, is_writing);
+		}
+		catch (std::runtime_error &e)
+		{
+			LOG_FATAL(RSX, "g_access_violation_handler(0x%x, %d): %s", addr, is_writing, e.what());
+			if (cpu)
+			{
+				vm::temporary_unlock(*cpu);
+				cpu->state += cpu_flag::dbg_pause;
+				cpu->test_state();
+				return false;
+			}
 		}
 
-		return true;
+		if (handled)
+		{
+			g_tls_fault_rsx++;
+			if (cpu)
+			{
+				cpu->test_state();
+			}
+			return true;
+		}
 	}
 
 	auto code = (const u8*)RIP(context);
@@ -1384,7 +1405,6 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 			return EXCEPTION_CONTINUE_EXECUTION;
 		}
 	}
-
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
@@ -1549,25 +1569,21 @@ extern atomic_t<u32> g_thread_count(0);
 
 thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
-extern thread_local std::string(*g_tls_log_prefix)();
-
 DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined };
 
-void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack task)
+void thread_base::start(const std::shared_ptr<thread_base>& ctrl, task_stack task)
 {
 #ifdef _WIN32
 	using thread_result = uint;
-	using thread_type = thread_result(__stdcall*)(void* arg);
 #else
 	using thread_result = void*;
-	using thread_type = thread_result(*)(void* arg);
 #endif
 
 	// Thread entry point
-	const thread_type entry = [](void* arg) -> thread_result
+	const native_entry entry = [](void* arg) -> thread_result
 	{
-		// Recover shared_ptr from short-circuited thread_ctrl object pointer
-		const std::shared_ptr<thread_ctrl> ctrl = static_cast<thread_ctrl*>(arg)->m_self;
+		// Recover shared_ptr from short-circuited thread_base object pointer
+		std::shared_ptr<thread_base> ctrl = static_cast<thread_base*>(arg)->m_self;
 
 		try
 		{
@@ -1578,17 +1594,18 @@ void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack tas
 		{
 			// Capture exception
 			ctrl->finalize(std::current_exception());
+			finalize();
 			return 0;
 		}
 
 		ctrl->finalize(nullptr);
+		finalize();
 		return 0;
 	};
 
 	ctrl->m_self = ctrl;
 	ctrl->m_task = std::move(task);
 
-	// TODO: implement simple thread pool
 #ifdef _WIN32
 	std::uintptr_t thread = _beginthreadex(nullptr, 0, entry, ctrl.get(), 0, nullptr);
 	verify("thread_ctrl::start" HERE), thread != 0;
@@ -1601,14 +1618,24 @@ void thread_ctrl::start(const std::shared_ptr<thread_ctrl>& ctrl, task_stack tas
 	ctrl->m_thread = (uintptr_t)thread;
 }
 
-void thread_ctrl::initialize()
+void thread_base::start(native_entry entry)
+{
+#ifdef _WIN32
+	m_thread = ::_beginthreadex(nullptr, 0, entry, this, CREATE_SUSPENDED, nullptr);
+	verify("thread_ctrl::start" HERE), m_thread, ::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1;
+#else
+	verify("thread_ctrl::start" HERE), pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), nullptr, entry, this) == 0;
+#endif
+}
+
+void thread_base::initialize()
 {
 	// Initialize TLS variable
-	g_tls_this_thread = this;
+	thread_ctrl::g_tls_this_thread = this;
 
 	g_tls_log_prefix = []
 	{
-		return g_tls_this_thread->m_name;
+		return thread_ctrl::g_tls_this_thread->m_name.get();
 	};
 
 	++g_thread_count;
@@ -1627,7 +1654,7 @@ void thread_ctrl::initialize()
 	{
 		THREADNAME_INFO info;
 		info.dwType = 0x1000;
-		info.szName = m_name.c_str();
+		info.szName = m_name.get().c_str();
 		info.dwThreadID = -1;
 		info.dwFlags = 0;
 
@@ -1642,21 +1669,20 @@ void thread_ctrl::initialize()
 #endif
 
 #if defined(__APPLE__)
-	pthread_setname_np(m_name.substr(0, 15).c_str());
+	pthread_setname_np(m_name.get().substr(0, 15).c_str());
 #elif defined(__DragonFly__) || defined(__FreeBSD__) || defined(__OpenBSD__)
-	pthread_set_name_np(pthread_self(), m_name.c_str());
+	pthread_set_name_np(pthread_self(), m_name.get().c_str());
 #elif defined(__NetBSD__)
-	pthread_setname_np(pthread_self(), "%s", (void*)m_name.c_str());
+	pthread_setname_np(pthread_self(), "%s", (void*)m_name.get().c_str());
 #elif !defined(_WIN32)
-	pthread_setname_np(pthread_self(), m_name.substr(0, 15).c_str());
+	pthread_setname_np(pthread_self(), m_name.get().substr(0, 15).c_str());
 #endif
 }
 
-void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
+std::shared_ptr<thread_base> thread_base::finalize(std::exception_ptr eptr) noexcept
 {
-	// Run atexit functions
-	m_task.invoke();
-	m_task.reset();
+	// Report pending errors
+	error_code::error_report(0, 0, 0, 0);
 
 #ifdef _WIN32
 	ULONG64 cycles{};
@@ -1676,7 +1702,7 @@ void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
 
 	g_tls_log_prefix = []
 	{
-		return g_tls_this_thread->m_name;
+		return thread_ctrl::g_tls_this_thread->m_name.get();
 	};
 
 	LOG_NOTICE(GENERAL, "Thread time: %fs (%fGc); Faults: %u [rsx:%u, spu:%u];",
@@ -1686,39 +1712,29 @@ void thread_ctrl::finalize(std::exception_ptr eptr) noexcept
 		g_tls_fault_rsx,
 		g_tls_fault_spu);
 
-	--g_thread_count;
-
 	// Untangle circular reference, set exception
-	std::lock_guard{m_mutex}, m_self.reset(), m_exception = eptr;
+	std::unique_lock lock(m_mutex);
 
-	// Signal joining waiters
-	m_jcv.notify_all();
+	// Possibly last reference to the thread object
+	std::shared_ptr<thread_base> self = std::move(m_self);
+	m_state = thread_state::finished;
+	m_exception = eptr;
+
+	// Signal waiting threads
+	lock.unlock(), m_jcv.notify_all();
+	return self;
 }
 
-void thread_ctrl::_push(task_stack task)
+void thread_base::finalize() noexcept
 {
-	g_tls_this_thread->m_task.push(std::move(task));
+	g_tls_log_prefix = []() -> std::string { return {}; };
+	thread_ctrl::g_tls_this_thread = nullptr;
+	--g_thread_count;
 }
 
 bool thread_ctrl::_wait_for(u64 usec)
 {
 	auto _this = g_tls_this_thread;
-
-	struct half_lock
-	{
-		semaphore<>& ref;
-
-		void lock()
-		{
-			// Used to avoid additional lock + unlock
-		}
-
-		void unlock()
-		{
-			ref.unlock();
-		}
-	}
-	_lock{_this->m_mutex};
 
 	do
 	{
@@ -1740,7 +1756,6 @@ bool thread_ctrl::_wait_for(u64 usec)
 			return false;
 		}
 
-		// Lock (semaphore)
 		_this->m_mutex.lock();
 
 		// Double-check the value
@@ -1759,13 +1774,13 @@ bool thread_ctrl::_wait_for(u64 usec)
 			}
 		}
 	}
-	while (_this->m_cond.wait(_lock, std::exchange(usec, usec > cond_variable::max_timeout ? -1 : 0)));
+	while (_this->m_cond.wait_unlock(std::exchange(usec, usec > cond_variable::max_timeout ? -1 : 0), _this->m_mutex));
 
 	// Timeout
 	return false;
 }
 
-[[noreturn]] void thread_ctrl::_throw()
+[[noreturn]] void thread_base::_throw()
 {
 	std::exception_ptr ex = std::exchange(m_exception, std::exception_ptr{});
 	m_signal &= ~3;
@@ -1773,24 +1788,18 @@ bool thread_ctrl::_wait_for(u64 usec)
 	std::rethrow_exception(std::move(ex));
 }
 
-void thread_ctrl::_notify(cond_variable thread_ctrl::* ptr)
+void thread_base::_notify(cond_variable thread_base::* ptr)
 {
-	// Optimized lock + unlock
-	if (!m_mutex.get())
-	{
-		m_mutex.lock();
-		m_mutex.unlock();
-	}
-
+	m_mutex.lock_unlock();
 	(this->*ptr).notify_one();
 }
 
-thread_ctrl::thread_ctrl(std::string&& name)
-	: m_name(std::move(name))
+thread_base::thread_base(std::string_view name)
+	: m_name(name)
 {
 }
 
-thread_ctrl::~thread_ctrl()
+thread_base::~thread_base()
 {
 	if (m_thread)
 	{
@@ -1802,13 +1811,7 @@ thread_ctrl::~thread_ctrl()
 	}
 }
 
-std::exception_ptr thread_ctrl::get_exception() const
-{
-	std::lock_guard lock(m_mutex);
-	return m_exception;
-}
-
-void thread_ctrl::set_exception(std::exception_ptr ptr)
+void thread_base::set_exception(std::exception_ptr ptr)
 {
 	std::lock_guard lock(m_mutex);
 	m_exception = ptr;
@@ -1824,35 +1827,52 @@ void thread_ctrl::set_exception(std::exception_ptr ptr)
 	}
 }
 
-void thread_ctrl::join()
+void thread_base::join() const
 {
-#ifdef _WIN32
-	//verify("thread_ctrl::join" HERE), WaitForSingleObjectEx((HANDLE)m_thread.load(), -1, false) == WAIT_OBJECT_0;
-#endif
+	if (m_state == thread_state::finished)
+	{
+		return;
+	}
 
 	std::unique_lock lock(m_mutex);
 
-	while (m_self)
+	while (m_state != thread_state::finished)
 	{
 		m_jcv.wait(lock);
 	}
+}
 
-	if (UNLIKELY(m_exception && !std::uncaught_exceptions()))
+void thread_base::detach()
+{
+	auto self = weak_from_this().lock();
+
+	if (!self)
 	{
-		std::rethrow_exception(m_exception);
+		LOG_FATAL(GENERAL, "Cannot detach thread '%s'", get_name());
+		return;
+	}
+
+	if (self->m_state.compare_and_swap_test(thread_state::created, thread_state::detached))
+	{
+		std::lock_guard lock(m_mutex);
+
+		if (m_state == thread_state::detached)
+		{
+			m_self = std::move(self);
+		}
 	}
 }
 
-void thread_ctrl::notify()
+void thread_base::notify()
 {
 	if (!(m_signal & 1))
 	{
 		m_signal |= 1;
-		_notify(&thread_ctrl::m_cond);
+		_notify(&thread_base::m_cond);
 	}
 }
 
-u64 thread_ctrl::get_cycles()
+u64 thread_base::get_cycles()
 {
 	u64 cycles;
 
@@ -2047,23 +2067,23 @@ void thread_ctrl::set_thread_affinity_mask(u16 mask)
 #endif
 }
 
-named_thread::named_thread()
+old_thread::old_thread()
 {
 }
 
-named_thread::~named_thread()
+old_thread::~old_thread()
 {
 }
 
-std::string named_thread::get_name() const
+std::string old_thread::get_name() const
 {
 	return fmt::format("('%s') Unnamed Thread", typeid(*this).name());
 }
 
-void named_thread::start_thread(const std::shared_ptr<void>& _this)
+void old_thread::start_thread(const std::shared_ptr<void>& _this)
 {
 	// Ensure it's not called from the constructor and the correct object is passed
-	verify("named_thread::start_thread" HERE), _this.get() == this;
+	verify("old_thread::start_thread" HERE), _this.get() == this;
 
 	// Run thread
 	thread_ctrl::spawn(m_thread, get_name(), [this, _this]()

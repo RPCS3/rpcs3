@@ -575,7 +575,7 @@ protected:
 	type m_data;
 
 public:
-	atomic_t() = default;
+	atomic_t() noexcept = default;
 
 	atomic_t(const atomic_t&) = delete;
 
@@ -584,7 +584,7 @@ public:
 	// Define simple type
 	using simple_type = simple_t<T>;
 
-	explicit constexpr atomic_t(const type& value)
+	constexpr atomic_t(const type& value) noexcept
 		: m_data(value)
 	{
 	}
@@ -608,6 +608,12 @@ public:
 	{
 		type old = cmp;
 		return atomic_storage<type>::compare_exchange(m_data, old, exch);
+	}
+
+	// As in std::atomic
+	bool compare_exchange(type& cmp_and_old, const type& exch)
+	{
+		return atomic_storage<type>::compare_exchange(m_data, cmp_and_old, exch);
 	}
 
 	// Atomic operation; returns old value, or pair of old value and return value (cancel op if evaluates to false)

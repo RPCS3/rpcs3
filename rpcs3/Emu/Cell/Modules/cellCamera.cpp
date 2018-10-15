@@ -7,8 +7,6 @@
 #include "Emu/Io/PadHandler.h"
 #include "Emu/System.h"
 
-#include <thread>
-
 LOG_CHANNEL(cellCamera);
 
 // **************
@@ -284,7 +282,7 @@ s32 cellCameraInit()
 	}
 
 	// Start camera thread
-	const auto g_camera = fxm::make<camera_thread>();
+	const auto g_camera = fxm::make<camera_thread>("Camera Thread");
 
 	if (!g_camera)
 	{
@@ -356,6 +354,13 @@ s32 cellCameraEnd()
 		return CELL_OK;
 	}
 
+	const auto g_camera = fxm::withdraw<camera_thread>();
+
+	if (!g_camera)
+	{
+		return CELL_CAMERA_ERROR_NOT_INIT;
+	}
+
 	// TODO: My tests hinted to this behavior, but I'm not sure, so I'll leave this commented
 	//s32 res = cellCameraClose(0);
 	//if (res != CELL_OK)
@@ -363,11 +368,8 @@ s32 cellCameraEnd()
 	//	return res;
 	//}
 
-	if (!fxm::remove<camera_thread>())
-	{
-		return CELL_CAMERA_ERROR_NOT_INIT;
-	}
-
+	// Join thread
+	g_camera->operator()();
 	return CELL_OK;
 }
 
@@ -1154,19 +1156,19 @@ DECLARE(ppu_module_manager::cellCamera)("cellCamera", []()
 
 // camera_thread members
 
-void camera_thread::on_task()
+void camera_context::operator()()
 {
-	while (fxm::check<camera_thread>() && !Emu.IsStopped())
+	while (fxm::check<camera_thread>() == this && !Emu.IsStopped())
 	{
-		std::chrono::steady_clock::time_point frame_start = std::chrono::steady_clock::now();
+		const u64 frame_start = get_system_time();
 
 		if (Emu.IsPaused())
 		{
-			std::this_thread::sleep_for(1ms); // hack
+			thread_ctrl::wait_for(1000); // hack
 			continue;
 		}
 
-		std::lock_guard lock(mutex_notify_data_map);
+		std::unique_lock lock(mutex_notify_data_map);
 
 		for (auto const& notify_data_entry : notify_data_map)
 		{
@@ -1180,8 +1182,8 @@ void camera_thread::on_task()
 			{
 				if (auto queue = lv2_event_queue::find(key))
 				{
-					u64 data2{ 0 };
-					u64 data3{ 0 };
+					u64 data2 = 0;
+					u64 data3 = 0;
 
 					if (read_mode.load() == CELL_CAMERA_READ_DIRECT)
 					{
@@ -1205,29 +1207,22 @@ void camera_thread::on_task()
 					}
 				}
 			}
-
 		}
 
-		const std::chrono::microseconds frame_target_time{ static_cast<u32>(1000000.0 / info.framerate) };
+		lock.unlock();
 
-		std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-
-		std::chrono::microseconds frame_processing_time = std::chrono::duration_cast<std::chrono::microseconds>(now - frame_start);
-
-		if (frame_processing_time < frame_target_time)
+		for (const u64 frame_target_time = 1000000u / info.framerate;;)
 		{
-			std::chrono::microseconds frame_idle_time = frame_target_time - frame_processing_time;
-			std::this_thread::sleep_for(frame_idle_time);
+			const u64 time_passed = get_system_time() - frame_start;
+			if (time_passed >= frame_target_time)
+				break;
+
+			thread_ctrl::wait_for(frame_target_time - time_passed);
 		}
 	}
 }
 
-void camera_thread::on_init(const std::shared_ptr<void>& _this)
-{
-	named_thread::on_init(_this);
-}
-
-void camera_thread::send_attach_state(bool attached)
+void camera_context::send_attach_state(bool attached)
 {
 	std::lock_guard lock(mutex_notify_data_map);
 
@@ -1255,7 +1250,7 @@ void camera_thread::send_attach_state(bool attached)
 	}
 }
 
-void camera_thread::set_attr(s32 attrib, u32 arg1, u32 arg2)
+void camera_context::set_attr(s32 attrib, u32 arg1, u32 arg2)
 {
 	if (attrib == CELL_CAMERA_READMODE)
 	{
@@ -1271,7 +1266,7 @@ void camera_thread::set_attr(s32 attrib, u32 arg1, u32 arg2)
 	attr[attrib] = {arg1, arg2};
 }
 
-void camera_thread::add_queue(u64 key, u64 source, u64 flag)
+void camera_context::add_queue(u64 key, u64 source, u64 flag)
 {
 	std::lock_guard lock(mutex);
 	{
@@ -1284,7 +1279,7 @@ void camera_thread::add_queue(u64 key, u64 source, u64 flag)
 	send_attach_state(true);
 }
 
-void camera_thread::remove_queue(u64 key)
+void camera_context::remove_queue(u64 key)
 {
 	std::lock_guard lock(mutex);
 	{

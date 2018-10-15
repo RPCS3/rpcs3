@@ -43,5 +43,6 @@ namespace std { inline namespace literals { inline namespace chrono_literals {}}
 #include <functional>
 #include <unordered_map>
 #include <algorithm>
+#include <string_view>
 
 using namespace std::literals;

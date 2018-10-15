@@ -242,7 +242,7 @@ s32 cellMsgDialogClose(f32 delay)
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
-			thread_ctrl::spawn("cellMsgDialogClose() Thread", [=]
+			thread_ctrl::make_shared("cellMsgDialogClose() Thread", [=]
 			{
 				while (get_system_time() < wait_until)
 				{
@@ -256,7 +256,7 @@ s32 cellMsgDialogClose(f32 delay)
 				}
 
 				dlg->close();
-			});
+			})->detach();
 
 			return CELL_OK;
 		}
@@ -269,7 +269,7 @@ s32 cellMsgDialogClose(f32 delay)
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	thread_ctrl::spawn("cellMsgDialogClose() Thread", [=]()
+	thread_ctrl::make_shared("cellMsgDialogClose() Thread", [=]()
 	{
 		while (dlg->state == MsgDialogState::Open && get_system_time() < wait_until)
 		{
@@ -279,7 +279,7 @@ s32 cellMsgDialogClose(f32 delay)
 		}
 
 		dlg->on_close(CELL_MSGDIALOG_BUTTON_NONE);
-	});
+	})->detach();
 
 	return CELL_OK;
 }

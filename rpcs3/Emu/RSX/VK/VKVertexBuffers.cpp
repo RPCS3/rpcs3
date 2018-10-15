@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "VKGSRender.h"
@@ -132,7 +132,7 @@ namespace
 				rsx::index_array_type::u32 :
 				rsx::method_registers.index_type();
 
-			u32 type_size = gsl::narrow<u32>(get_index_type_size(index_type));
+			constexpr u32 type_size = sizeof(u32); // Force u32 index size dest to avoid overflows when adding vertex base index
 
 			u32 index_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			if (primitives_emulated)
@@ -177,20 +177,13 @@ namespace
 
 			if (emulate_restart)
 			{
-				if (index_type == rsx::index_array_type::u16)
-				{
-					index_count = rsx::remove_restart_index((u16*)buf, (u16*)tmp.data(), index_count, (u16)UINT16_MAX);
-				}
-				else
-				{
-					index_count = rsx::remove_restart_index((u32*)buf, (u32*)tmp.data(), index_count, (u32)UINT32_MAX);
-				}
+				index_count = rsx::remove_restart_index((u32*)buf, (u32*)tmp.data(), index_count, (u32)UINT32_MAX);
 			}
 
 			m_index_buffer_ring_info.unmap();
 
 			std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info =
-				std::make_tuple(offset_in_index_buffer, vk::get_index_type(index_type));
+				std::make_tuple(offset_in_index_buffer, VK_INDEX_TYPE_UINT32);
 
 			//check for vertex arrays with frequency modifiers
 			for (auto &block : m_vertex_layout.interleaved_blocks)
@@ -212,7 +205,7 @@ namespace
 			auto &draw_clause = rsx::method_registers.current_draw_clause;
 			VkPrimitiveTopology prims = vk::get_appropriate_topology(draw_clause.primitive, primitives_emulated);
 			
-			const u32 vertex_count = (u32)command.inline_vertex_array.size() * sizeof(u32) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
+			const u32 vertex_count = ((u32)command.inline_vertex_array.size() * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
 
 			if (!primitives_emulated)
 			{
@@ -234,6 +227,9 @@ namespace
 vk::vertex_upload_info VKGSRender::upload_vertex_data()
 {
 	m_vertex_layout = analyse_inputs_interleaved();
+
+	if (!m_vertex_layout.validate())
+		return {};
 
 	draw_command_visitor visitor(m_index_buffer_ring_info, m_vertex_layout);
 	auto result = std::visit(visitor, get_draw_command(rsx::method_registers));

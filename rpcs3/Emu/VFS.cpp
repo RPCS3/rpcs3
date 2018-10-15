@@ -2,88 +2,235 @@
 #include "IdManager.h"
 #include "VFS.h"
 
-#include <regex>
+#include "Utilities/mutex.h"
+#include "Utilities/StrUtil.h"
+
+struct vfs_directory
+{
+	// Real path (empty if root or not exists)
+	std::string path;
+
+	// Virtual subdirectories (vector because only vector allows incomplete types)
+	std::vector<std::pair<std::string, vfs_directory>> dirs;
+};
 
 struct vfs_manager
 {
 	shared_mutex mutex;
 
-	// Device name -> Real path
-	std::unordered_map<std::string, std::string> mounted;
+	// VFS root
+	vfs_directory root;
 };
 
-const std::regex s_regex_ps3("^/+(.*?)(?:$|/)(.*)", std::regex::optimize);
-
-bool vfs::mount(const std::string& dev_name, const std::string& path)
+bool vfs::mount(std::string_view vpath, std::string_view path)
 {
 	const auto table = fxm::get_always<vfs_manager>();
 
-	safe_writer_lock lock(table->mutex);
+	std::lock_guard lock(table->mutex);
 
-	return table->mounted.emplace(dev_name, path).second;
+	if (vpath.empty())
+	{
+		// Empty relative path, should set relative path base; unsupported
+		return false;
+	}
+
+	for (std::vector<vfs_directory*> list{&table->root};;)
+	{
+		// Skip one or more '/'
+		const auto pos = vpath.find_first_not_of('/');
+
+		if (pos == 0)
+		{
+			// Mounting relative path is not supported
+			return false;
+		}
+
+		if (pos == -1)
+		{
+			// Mounting completed
+			list.back()->path = path;
+			return true;
+		}
+
+		// Get fragment name
+		const auto name = vpath.substr(pos, vpath.find_first_of('/', pos) - pos);
+		vpath.remove_prefix(name.size() + pos);
+
+		if (name == ".")
+		{
+			// Keep current
+			continue;
+		}
+
+		if (name == "..")
+		{
+			// Root parent is root
+			if (list.size() == 1)
+			{
+				continue;
+			}
+
+			// Go back one level
+			list.resize(list.size() - 1);
+			continue;
+		}
+
+		// Find or add
+		const auto last = list.back();
+
+		for (auto& dir : last->dirs)
+		{
+			if (dir.first == name)
+			{
+				list.push_back(&dir.second);
+				break;
+			}
+		}
+
+		if (last == list.back())
+		{
+			// Add new entry
+			list.push_back(&last->dirs.emplace_back(name, vfs_directory{}).second);
+		}
+	}
 }
 
-std::string vfs::get(const std::string& vpath, const std::string* prev, std::size_t pos)
+std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir)
 {
 	const auto table = fxm::get_always<vfs_manager>();
 
-	safe_reader_lock lock(table->mutex);
+	reader_lock lock(table->mutex);
 
-	std::smatch match;
+	// Resulting path fragments: decoded ones
+	std::vector<std::string_view> result;
+	result.reserve(vpath.size() / 2);
 
-	if (!std::regex_match(vpath.begin() + pos, vpath.end(), match, s_regex_ps3))
+	// Mounted path
+	std::string_view result_base;
+
+	if (vpath.empty())
 	{
-		const auto found = table->mounted.find("");
+		// Empty relative path (reuse further return)
+		vpath = ".";
+	}
 
-		if (found == table->mounted.end())
+	for (std::vector<const vfs_directory*> list{&table->root};;)
+	{
+		// Skip one or more '/'
+		const auto pos = vpath.find_first_not_of('/');
+
+		if (pos == 0)
 		{
-			LOG_WARNING(GENERAL, "vfs::get(): no default directory: %s", vpath);
-			return {};
+			// Relative path: point to non-existent location
+			return fs::get_config_dir() + "delete_this_dir.../delete_this...";
 		}
 
-		return found->second + vfs::escape(vpath);
-	}
-
-	if (match.length(1) + pos == 0)
-	{
-		return "/";
-	}
-
-	std::string dev;
-
-	if (prev)
-	{
-		dev += *prev;
-		dev += '/';
-	}
-
-	dev += match.str(1);
-
-	const auto found = table->mounted.find(dev);
-
-	if (found == table->mounted.end())
-	{
-		if (match.length(2))
+		if (pos == -1)
 		{
-			return vfs::get(vpath, &dev, pos + match.position(1) + match.length(1));
+			// Absolute path: finalize
+			for (auto it = list.rbegin(), rend = list.rend(); it != rend; it++)
+			{
+				if (auto* dir = *it; dir && !dir->path.empty())
+				{
+					// Save latest valid mount path
+					result_base = dir->path;
+
+					// Erase unnecessary path fragments
+					result.erase(result.begin(), result.begin() + (std::distance(it, rend) - 1));
+
+					// Extract mounted subdirectories (TODO)
+					if (out_dir)
+					{
+						for (auto& pair : dir->dirs)
+						{
+							if (!pair.second.path.empty())
+							{
+								out_dir->emplace_back(pair.first);
+							}
+						}
+					}
+
+					break;
+				}
+			}
+
+			if (!vpath.empty())
+			{
+				// Finalize path with '/'
+				result.emplace_back("");
+			}
+
+			break;
 		}
 
-		LOG_WARNING(GENERAL, "vfs::get(): device not found: %s", vpath);
+		// Get fragment name
+		const auto name = vpath.substr(pos, vpath.find_first_of('/', pos) - pos);
+		vpath.remove_prefix(name.size() + pos);
+
+		// Process special directories
+		if (name == ".")
+		{
+			// Keep current
+			continue;
+		}
+
+		if (name == "..")
+		{
+			// Root parent is root
+			if (list.size() == 1)
+			{
+				continue;
+			}
+
+			// Go back one level
+			list.resize(list.size() - 1);
+			result.resize(result.size() - 1);
+			continue;
+		}
+
+		const auto last = list.back();
+		list.push_back(nullptr);
+
+		result.push_back(name);
+
+		if (!last)
+		{
+			continue;
+		}
+
+		for (auto& dir : last->dirs)
+		{
+			if (dir.first == name)
+			{
+				list.back() = &dir.second;
+
+				if (dir.second.path == "/"sv)
+				{
+					if (vpath.empty())
+					{
+						return {};
+					}
+
+					// Handle /host_root (not escaped, not processed)
+					return std::string{vpath.substr(1)};
+				}
+
+				break;
+			}
+		}
+	}
+
+	if (result_base.empty())
+	{
+		// Not mounted
 		return {};
 	}
 
-	if (found->second.empty())
-	{
-		// Don't escape /host_root (TODO)
-		return match.str(2);
-	}
-
-	// Escape and concatenate
-	return found->second + vfs::escape(match.str(2));
+	// Escape and merge path fragments
+	return std::string{result_base} + vfs::escape(fmt::merge(result, "/"));
 }
 
-
-std::string vfs::escape(const std::string& path)
+std::string vfs::escape(std::string_view path)
 {
 	std::string result;
 	result.reserve(path.size());
@@ -175,7 +322,7 @@ std::string vfs::escape(const std::string& path)
 	return result;
 }
 
-std::string vfs::unescape(const std::string& path)
+std::string vfs::unescape(std::string_view path)
 {
 	std::string result;
 	result.reserve(path.size());

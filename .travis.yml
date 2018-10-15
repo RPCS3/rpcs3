@@ -9,7 +9,7 @@ matrix:
           services: docker
           cache: ccache
           install: "docker pull rpcs3/rpcs3-travis-trusty:1.0"
-          script: 'docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache -e TRAVIS_PULL_REQUEST -e TRAVIS_BRANCH -e UPLOAD_URL -e COMPILER rpcs3/rpcs3-travis-trusty:1.0 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
+          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache -e TRAVIS_PULL_REQUEST -e TRAVIS_BRANCH -e UPLOAD_URL -e COMPILER rpcs3/rpcs3-travis-trusty:1.0 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
         - os: linux
           env:
             - NAME="Linux build"
@@ -19,7 +19,7 @@ matrix:
           services: docker
           cache: ccache
           install: "docker pull rpcs3/rpcs3-travis-trusty:1.0"
-          script: 'docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache -e TRAVIS_PULL_REQUEST -e TRAVIS_BRANCH -e TRAVIS_COMMIT -e COMPILER -e UPLOAD_URL -e DEPLOY_APPIMAGE rpcs3/rpcs3-travis-trusty:1.0 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
+          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache -e TRAVIS_PULL_REQUEST -e TRAVIS_BRANCH -e TRAVIS_COMMIT -e COMPILER -e UPLOAD_URL -e DEPLOY_APPIMAGE rpcs3/rpcs3-travis-trusty:1.0 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
         - os: osx
           osx_image: xcode10
           script: "/bin/bash -ex .travis/build-mac.bash"
@@ -30,4 +30,4 @@ matrix:
         
 git:
   depth: false # Unshallow clone to obtain proper GIT_VERSION
-submodules: false
+  submodules: false

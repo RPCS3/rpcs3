@@ -180,6 +180,7 @@ void game_list_frame::LoadSettings()
 	m_colSortOrder = m_gui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
 	m_sortColumn = m_gui_settings->GetValue(gui::gl_sortCol).toInt();
 	m_categoryFilters = m_gui_settings->GetGameListCategoryFilters();
+	m_drawCompatStatusToGrid = m_gui_settings->GetValue(gui::gl_draw_compat).toBool();
 
 	Refresh(true);
 
@@ -463,11 +464,13 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				LOG_WARNING(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
 			}
 
-			bool hasCustomConfig = fs::is_file(fs::get_config_dir() + "data/" + game.serial + "/config.yml");
+			const auto compat = m_game_compat->GetCompatibility(game.serial);
+			const bool hasCustomConfig = fs::is_file(fs::get_config_dir() + "data/" + game.serial + "/config.yml");
+			const QColor color = getGridCompatibilityColor(compat.color);
 
-			QPixmap pxmap = PaintedPixmap(img, hasCustomConfig);
+			const QPixmap pxmap = PaintedPixmap(img, hasCustomConfig, color);
 
-			m_game_data.push_back(game_info(new gui_game_info{ game, m_game_compat->GetCompatibility(game.serial), img, pxmap, hasCustomConfig }));
+			m_game_data.push_back(game_info(new gui_game_info{ game, compat, img, pxmap, hasCustomConfig }));
 		}
 		catch (const std::exception& e)
 		{
@@ -909,7 +912,7 @@ bool game_list_frame::DeleteSPUCache(const std::string& base_dir, bool is_intera
 	return true;
 }
 
-QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon)
+QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon, const QColor& compatibility_color)
 {
 	const QSize original_size = img.size();
 
@@ -930,6 +933,16 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 		painter.drawImage(origin, QImage(":/Icons/custom_config_2.png").scaled(QSize(width, width), Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 	}
 
+	if (compatibility_color.isValid())
+	{
+		const int size = original_size.height() * 0.2;
+		const int spacing = original_size.height() * 0.05;
+		QColor copyColor = QColor(compatibility_color);
+		copyColor.setAlpha(215); // ~85% opacity
+		painter.setBrush(QBrush(copyColor));
+		painter.drawEllipse(spacing, spacing, size, size);
+	}
+
 	painter.end();
 
 	return QPixmap::fromImage(image.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
@@ -944,7 +957,8 @@ void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled)
 	}
 
 	game->hasCustomConfig = enabled;
-	game->pxmap = PaintedPixmap(game->icon, enabled);
+	const QColor color = getGridCompatibilityColor(game->compat.color);
+	game->pxmap = PaintedPixmap(game->icon, enabled, color);
 
 	if (!m_isListLayout)
 	{
@@ -986,7 +1000,8 @@ void game_list_frame::RepaintIcons(const bool& fromSettings)
 
 	for (auto& game : m_game_data)
 	{
-		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig);
+		QColor color = getGridCompatibilityColor(game->compat.color);
+		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, color);
 	}
 
 	Refresh();
@@ -1379,4 +1394,20 @@ game_info game_list_frame::GetGameInfoFromItem(QTableWidgetItem* item)
 	}
 
 	return var.value<game_info>();
+}
+
+QColor game_list_frame::getGridCompatibilityColor(const QString& string)
+{
+	if (m_drawCompatStatusToGrid && !m_isListLayout)
+	{
+		return QColor(string);
+	}
+	return QColor();
+}
+
+void game_list_frame::SetShowCompatibilityInGrid(bool show)
+{
+	m_drawCompatStatusToGrid = show;
+	RepaintIcons();
+	m_gui_settings->SetValue(gui::gl_draw_compat, show);
 }

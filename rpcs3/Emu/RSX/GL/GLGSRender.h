@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Emu/RSX/GSRender.h"
 #include "GLHelpers.h"
 #include "GLTexture.h"
@@ -330,7 +330,7 @@ private:
 
 	//buffer
 	gl::fbo* m_draw_fbo = nullptr;
-	std::list<gl::fbo> m_framebuffer_cache;
+	std::list<gl::framebuffer_holder> m_framebuffer_cache;
 	gl::fbo m_flip_fbo;
 	std::unique_ptr<gl::texture> m_flip_tex_color;
 
@@ -390,7 +390,7 @@ protected:
 	void do_local_task(rsx::FIFO_state state) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_invalidate_memory_range(u32 address_base, u32 size) override;
+	void on_invalidate_memory_range(const utils::address_range &range) override;
 	void notify_tile_unbound(u32 tile) override;
 
 	std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;

@@ -17,7 +17,7 @@ struct sys_timer_information_t
 	be_t<u32> pad;
 };
 
-struct lv2_timer final : public lv2_obj, public named_thread
+struct lv2_timer final : public lv2_obj, public old_thread
 {
 	static const u32 id_base = 0x11000000;
 

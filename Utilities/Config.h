@@ -49,8 +49,9 @@ namespace cfg
 		_base(type _type, class node* owner, const std::string& name);
 
 	public:
-		// Disallow copy/move constructors and assignments
 		_base(const _base&) = delete;
+
+		_base& operator=(const _base&) = delete;
 
 		// Get type
 		type get_type() const { return m_type; }

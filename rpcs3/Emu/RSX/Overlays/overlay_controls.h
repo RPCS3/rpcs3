@@ -26,12 +26,12 @@ namespace rsx
 	{
 		enum image_resource_id : u8
 		{
-			//NOTE: 1 - 252 are user defined
-			none = 0,         //No image
-			raw_image = 252,  //Raw image data passed via image_info struct
-			font_file = 253,  //Font file
-			game_icon = 254,  //Use game icon
-			backbuffer = 255  //Use current backbuffer contents
+			// NOTE: 1 - 252 are user defined
+			none = 0,         // No image
+			raw_image = 252,  // Raw image data passed via image_info struct
+			font_file = 253,  // Font file
+			game_icon = 254,  // Use game icon
+			backbuffer = 255  // Use current backbuffer contents
 		};
 
 		struct vertex
@@ -111,10 +111,10 @@ namespace rsx
 			const u32 width = 1024;
 			const u32 height = 1024;
 			const u32 oversample = 2;
-			const u32 char_count = 256; //16x16 grid at max 48pt
+			const u32 char_count = 256; // 16x16 grid at max 48pt
 
 			f32 size_pt = 12.f;
-			f32 size_px = 16.f; //Default font 12pt size
+			f32 size_px = 16.f; // Default font 12pt size
 			f32 em_size = 0.f;
 			std::string font_name;
 			std::vector<stbtt_packedchar> pack_info;
@@ -123,7 +123,7 @@ namespace rsx
 
 			font(const char *ttf_name, f32 size)
 			{
-				//Init glyph
+				// Init glyph
 				std::vector<u8> bytes;
 				std::vector<std::string> font_dirs;
 				std::vector<std::string> fallback_fonts;
@@ -144,21 +144,21 @@ namespace rsx
 				fallback_fonts.push_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //ubuntu
 				fallback_fonts.push_back("/usr/share/fonts/TTF/DejaVuSans.ttf"); //arch
 #endif
-				//Search dev_flash for the font too
+				// Search dev_flash for the font too
 				font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/");
 				font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SONY-CC/");
 
-				//Attempt to load a font from dev_flash as a last resort
+				// Attempt to load a font from dev_flash as a last resort
 				fallback_fonts.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SCE-PS3-VR-R-LATIN.TTF");
 
-				//Attemt to load requested font
+				// Attemt to load requested font
 				std::string file_path;
 				bool font_found = false;
 				for (auto& font_dir : font_dirs)
 				{
 					std::string requested_file = font_dir + ttf_name;
 
-					//Append ".ttf" if not present
+					// Append ".ttf" if not present
 					std::string font_lower(requested_file);
 
 					std::transform(requested_file.begin(), requested_file.end(), font_lower.begin(), ::tolower);
@@ -174,7 +174,7 @@ namespace rsx
 					}
 				}
 
-				//Attemt to load a fallback if request font wasn't found
+				// Attemt to load a fallback if request font wasn't found
 				if (!font_found)
 				{
 					for (auto &fallback_font : fallback_fonts)
@@ -190,7 +190,7 @@ namespace rsx
 					}
 				}
 
-				//Read font
+				// Read font
 				if (font_found)
 				{
 					fs::file f(file_path);
@@ -214,7 +214,7 @@ namespace rsx
 
 				stbtt_PackSetOversampling(&context, oversample, oversample);
 
-				//Convert pt to px
+				// Convert pt to px
 				size_px = ceilf((f32)size * 96.f / 72.f);
 				size_pt = size;
 
@@ -263,7 +263,7 @@ namespace rsx
 					{
 						if ((u32)c >= char_count)
 						{
-							//Unsupported glyph, render null for now
+							// Unsupported glyph, render null for now
 							c = ' ';
 						}
 
@@ -300,7 +300,7 @@ namespace rsx
 
 								if (wrap)
 								{
-									//scan previous chars
+									// scan previous chars
 									for (int j = i - 1, nb_chars = 0; j > 0; j--, nb_chars++)
 									{
 										if (text[j] == '\n')
@@ -326,7 +326,7 @@ namespace rsx
 													auto char_index = n / 4;
 													if (text[char_index] == ' ')
 													{
-														//Skip character
+														// Skip character
 														result[n++].vec2(0.f, 0.f);
 														result[n++].vec2(0.f, 0.f);
 														result[n++].vec2(0.f, 0.f);
@@ -365,7 +365,7 @@ namespace rsx
 
 								if (!wrapped)
 								{
-									//TODO: Ellipsize
+									// TODO: Ellipsize
 									break;
 								}
 							}
@@ -376,7 +376,7 @@ namespace rsx
 							result.push_back({ quad.x1, quad.y1, quad.s1, quad.t1 });
 							break;
 						}
-						} //switch
+						} // switch
 					}
 					else
 					{
@@ -389,7 +389,7 @@ namespace rsx
 
 		};
 
-		//TODO: Singletons are cancer
+		// TODO: Singletons are cancer
 		class fontmgr
 		{
 		private:
@@ -479,7 +479,7 @@ namespace rsx
 				new_entry
 			};
 
-			//Define resources
+			// Define resources
 			std::vector<std::string> texture_resource_files;
 			std::vector<std::unique_ptr<image_info>> texture_raw_data;
 
@@ -499,12 +499,12 @@ namespace rsx
 			{
 				for (const auto &res : texture_resource_files)
 				{
-					//First check the global config dir
+					// First check the global config dir
 					auto info = std::make_unique<image_info>((fs::get_config_dir() + "Icons/ui/" + res).c_str());
 
 					if (info->data == nullptr)
 					{
-						//Resource was not found in config dir, try and grab from relative path (linux)
+						// Resource was not found in config dir, try and grab from relative path (linux)
 						info = std::make_unique<image_info>(("Icons/ui/" + res).c_str());
 #ifndef _WIN32
 						// Check for Icons in ../share/rpcs3 for AppImages and /usr/bin/
@@ -528,7 +528,7 @@ namespace rsx
 #endif
 						if (info->data != nullptr)
 						{
-							//Install the image to config dir
+							// Install the image to config dir
 							auto dst_dir = fs::get_config_dir() + "Icons/ui/";
 							auto src = "Icons/ui/" + res;
 							auto dst = dst_dir + res;
@@ -569,6 +569,8 @@ namespace rsx
 				u8 texture_ref = image_resource_id::none;
 				font *font_ref = nullptr;
 				void *external_data_ref = nullptr;
+
+				u8 blur_strength = 0;
 
 				command_config() {}
 
@@ -694,7 +696,7 @@ namespace rsx
 
 			virtual void refresh()
 			{
-				//Just invalidate for draw when get_compiled() is called
+				// Just invalidate for draw when get_compiled() is called
 				is_compiled = false;
 			}
 
@@ -811,20 +813,20 @@ namespace rsx
 				{
 					for (auto &v : result)
 					{
-						//Check for real text region extent
-						//TODO: Ellipsis
+						// Check for real text region extent
+						// TODO: Ellipsis
 						text_extents_w = std::max(v.values[0], text_extents_w);
 
-						//Apply transform.
-						//(0, 0) has text sitting one line off the top left corner (text is outside the rect) hence the offset by text height
+						// Apply transform.
+						// (0, 0) has text sitting one line off the top left corner (text is outside the rect) hence the offset by text height
 						v.values[0] += x + padding_left;
 						v.values[1] += y + padding_top + (f32)renderer->size_px;
 					}
 
 					if (alignment == center)
 					{
-						//Scan for lines and measure them
-						//Reposition them to the center
+						// Scan for lines and measure them
+						// Reposition them to the center
 						std::vector<std::pair<u32, u32>> lines;
 						u32 line_begin = 0;
 						u32 ctr = 0;
@@ -950,7 +952,7 @@ namespace rsx
 
 					if ((u32)c > renderer->char_count)
 					{
-						//Non-existent glyph
+						// Non-existent glyph
 						text_width += renderer->em_size;
 					}
 					else
@@ -997,7 +999,7 @@ namespace rsx
 
 			layout_container()
 			{
-				//Transparent by default
+				// Transparent by default
 				back_color.a = 0.f;
 			}
 
@@ -1080,18 +1082,18 @@ namespace rsx
 
 						if (item_y_limit < 0 || item_y_base > h)
 						{
-							//Out of bounds
+							// Out of bounds
 							continue;
 						}
 						else if (item_y_limit > h || item_y_base < 0)
 						{
-							//Partial render
+							// Partial render
 							areaf clip_rect = { (f32)x, (f32)y, (f32)(x + w), (f32)(y + h) };
 							result.add(item->get_compiled(), 0.f, global_y_offset, clip_rect);
 						}
 						else
 						{
-							//Normal
+							// Normal
 							result.add(item->get_compiled(), 0.f, global_y_offset);
 						}
 					}
@@ -1154,18 +1156,18 @@ namespace rsx
 
 						if (item_x_limit < 0 || item_x_base > h)
 						{
-							//Out of bounds
+							// Out of bounds
 							continue;
 						}
 						else if (item_x_limit > h || item_x_base < 0)
 						{
-							//Partial render
+							// Partial render
 							areaf clip_rect = { (f32)x, (f32)y, (f32)(x + w), (f32)(y + h) };
 							result.add(item->get_compiled(), global_x_offset, 0.f, clip_rect);
 						}
 						else
 						{
-							//Normal
+							// Normal
 							result.add(item->get_compiled(), global_x_offset, 0.f);
 						}
 					}
@@ -1182,13 +1184,13 @@ namespace rsx
 			}
 		};
 
-		//Controls
+		// Controls
 		struct spacer : public overlay_element
 		{
 			using overlay_element::overlay_element;
 			compiled_resource& get_compiled() override
 			{
-				//No draw
+				// No draw
 				return compiled_resources;
 			}
 		};
@@ -1198,6 +1200,9 @@ namespace rsx
 		private:
 			u8 image_resource_ref = image_resource_id::none;
 			void *external_ref = nullptr;
+
+			// Strength of blur effect
+			u8 blur_strength = 0;
 
 		public:
 			using overlay_element::overlay_element;
@@ -1212,6 +1217,8 @@ namespace rsx
 					cmd_img.config.set_image_resource(image_resource_ref);
 					cmd_img.config.color = fore_color;
 					cmd_img.config.external_data_ref = external_ref;
+
+					cmd_img.config.blur_strength = blur_strength;
 
 					// Make padding work for images (treat them as the content instead of the 'background')
 					auto& verts = cmd_img.verts;
@@ -1238,6 +1245,11 @@ namespace rsx
 				image_resource_ref = image_resource_id::raw_image;
 				external_ref = raw_image;
 			}
+
+			void set_blur_strength(u8 strength)
+			{
+				blur_strength = strength;
+			}
 		};
 
 		struct image_button : public image_view
@@ -1247,8 +1259,8 @@ namespace rsx
 
 			image_button()
 			{
-				//Do not clip text to region extents
-				//TODO: Define custom clipping region or use two controls to emulate
+				// Do not clip text to region extents
+				// TODO: Define custom clipping region or use two controls to emulate
 				clip_text = false;
 			}
 
@@ -1261,7 +1273,7 @@ namespace rsx
 			void set_size(u16 /*w*/, u16 h) override
 			{
 				image_view::set_size(h, h);
-				m_text_offset = (h / 2) + text_horizontal_offset; //By default text is at the horizontal center
+				m_text_offset = (h / 2) + text_horizontal_offset; // By default text is at the horizontal center
 			}
 
 			compiled_resource& get_compiled() override
@@ -1273,7 +1285,7 @@ namespace rsx
 					{
 						if (cmd.config.texture_ref == image_resource_id::font_file)
 						{
-							//Text, translate geometry to the right
+							// Text, translate geometry to the right
 							for (auto &v : cmd.verts)
 							{
 								v.values[0] += m_text_offset;
@@ -1331,7 +1343,10 @@ namespace rsx
 			f32 m_value = 0.f;
 
 		public:
-			using overlay_element::overlay_element;
+			progress_bar()
+			{
+				text_view.back_color = { 0.f, 0.f, 0.f, 0.f };
+			}
 
 			void inc(f32 value)
 			{
@@ -1457,19 +1472,27 @@ namespace rsx
 
 				m_scroll_indicator_top->set_image_resource(resource_config::standard_image_resource::fade_top);
 				m_scroll_indicator_bottom->set_image_resource(resource_config::standard_image_resource::fade_bottom);
-				m_accept_btn->set_image_resource(resource_config::standard_image_resource::cross);
-				m_cancel_btn->set_image_resource(resource_config::standard_image_resource::circle);
+
+				if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
+				{
+					m_accept_btn->set_image_resource(resource_config::standard_image_resource::circle);
+					m_cancel_btn->set_image_resource(resource_config::standard_image_resource::cross);
+				}
+				else
+				{
+					m_accept_btn->set_image_resource(resource_config::standard_image_resource::cross);
+					m_cancel_btn->set_image_resource(resource_config::standard_image_resource::circle);
+				}
 
 				m_scroll_indicator_bottom->set_pos(0, height - 40);
 				m_accept_btn->set_pos(30, height + 20);
 				m_cancel_btn->set_pos(180, height + 20);
 
-				m_accept_btn->text = "Select";
-				m_cancel_btn->text = "Cancel";
+				m_accept_btn->set_text("Select");
+				m_cancel_btn->set_text("Cancel");
 
-				auto fnt = fontmgr::get("Arial", 16);
-				m_accept_btn->font_ref = fnt;
-				m_cancel_btn->font_ref = fnt;
+				m_accept_btn->set_font("Arial", 16);
+				m_cancel_btn->set_font("Arial", 16);
 
 				auto_resize = false;
 				back_color = { 0.15f, 0.15f, 0.15f, 0.8f };
@@ -1484,7 +1507,7 @@ namespace rsx
 			{
 				auto current_element = m_items[m_selected_entry * 2].get();
 
-				//Calculate bounds
+				// Calculate bounds
 				auto min_y = current_element->y - y;
 				auto max_y = current_element->y + current_element->h + pack_padding + 2 - y;
 
@@ -1537,11 +1560,11 @@ namespace rsx
 
 			void add_entry(std::unique_ptr<overlay_element>& entry)
 			{
-				//Add entry view
+				// Add entry view
 				add_element(entry);
 				m_elements_count++;
 
-				//Add separator
+				// Add separator
 				auto separator = std::make_unique<overlay_element>();
 				separator->back_color = fore_color;
 				separator->w = w;

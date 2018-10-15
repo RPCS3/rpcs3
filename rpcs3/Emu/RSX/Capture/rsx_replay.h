@@ -5,6 +5,8 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
+#include "Emu/RSX/rsx_methods.h"
+#include "Emu/RSX/gcm_enums.h"
 
 #include <cereal/types/vector.hpp>
 #include <cereal/types/array.hpp>
@@ -15,7 +17,7 @@
 namespace rsx
 {
 	constexpr u32 FRAME_CAPTURE_MAGIC = 0x52524300; // ascii 'RRC/0'
-	constexpr u32 FRAME_CAPTURE_VERSION = 0x1;
+	constexpr u32 FRAME_CAPTURE_VERSION = 0x3;
 	struct frame_capture_data
 	{
 
@@ -32,18 +34,18 @@ namespace rsx
 		// simple block to hold ps3 address and data
 		struct memory_block
 		{
-			u32 addr{0};
 			u32 ioOffset{0xFFFFFFFF}; // rsx ioOffset, -1 signifies unused
-			u32 offset{0};			  // offset into addr/ioOffset to copy state into
-			u32 size{0};			  // size of block needed
+			u32 offset{0};		// offset into addr/ioOffset to copy state into
+			u32 size{0}; // size of block needed
+			u32 location{0xFFFFFFFF}; // Location of the block in RSX memory space
 			u64 data_state{0};		  // this can be 0, in which case its just needed as an alloc
 			template<typename Archive>
 			void serialize(Archive & ar)
 			{
-				ar(addr);
 				ar(ioOffset);
 				ar(offset);
 				ar(size);
+				ar(location);
 				ar(data_state);
 			}
 		};
@@ -180,6 +182,8 @@ namespace rsx
 		std::unordered_map<u64, display_buffers_state> display_buffers_map;
 		// actual command queue to hold everything above
 		std::vector<replay_command> replay_commands;
+		// Initial registers state at the beginning of the capture
+		rsx::rsx_state reg_state;
 
 		template<typename Archive>
 		void serialize(Archive & ar)
@@ -191,6 +195,7 @@ namespace rsx
 			ar(memory_data_map);
 			ar(display_buffers_map);
 			ar(replay_commands);
+			ar(reg_state);
 		}
 
 		void reset()
@@ -200,6 +205,7 @@ namespace rsx
 			tile_map.clear();
 			memory_map.clear();
 			replay_commands.clear();
+			reg_state = method_registers;
 		}
 	};
 
@@ -224,6 +230,7 @@ namespace rsx
 			frame_capture_data::tile_state tile_state;
 		};
 
+		u32 user_mem_addr;
 		current_state cs;
 		std::unique_ptr<frame_capture_data> frame;
 
@@ -234,8 +241,7 @@ namespace rsx
 		virtual void cpu_task() override;
 	private:
 		be_t<u32> allocate_context();
-		std::tuple<u32, u32> get_usable_fifo_range();
-		std::vector<u32> alloc_write_fifo(be_t<u32> context_id, u32 fifo_start_addr, u32 fifo_size);
+		std::vector<u32> alloc_write_fifo(be_t<u32> context_id);
 		void apply_frame_state(be_t<u32> context_id, const frame_capture_data::replay_command& replay_cmd);
 	};
 }

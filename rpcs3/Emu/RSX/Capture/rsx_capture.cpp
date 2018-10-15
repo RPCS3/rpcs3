@@ -81,7 +81,6 @@ namespace rsx
 
 			// capture fragment shader mem
 			const u32 shader_program = method_registers.shader_program_address();
-			verify("Null shader address!" HERE), shader_program != 0;
 
 			const u32 program_location = (shader_program & 0x3) - 1;
 			const u32 program_offset   = (shader_program & ~0x3);
@@ -92,8 +91,8 @@ namespace rsx
 			const u32 ucode_size    = program_info.program_ucode_length;
 
 			frame_capture_data::memory_block block;
-			block.addr     = addr;
-			block.ioOffset = get_io_offset(program_offset, program_location);
+			block.ioOffset = program_offset, 
+			block.location = program_location;
 			frame_capture_data::memory_block_data block_data;
 			block_data.data.resize(ucode_size + program_start);
 			std::memcpy(block_data.data.data(), vm::base(addr), ucode_size + program_start);
@@ -115,12 +114,12 @@ namespace rsx
 				for (const auto& l : layout)
 					texSize += l.data.size();
 
-				if (!texaddr || !texSize)
+				if (!texSize)
 					continue;
 
 				frame_capture_data::memory_block block;
-				block.addr     = texaddr;
-				block.ioOffset = get_io_offset(tex.offset(), tex.location());
+				block.ioOffset = tex.offset();
+				block.location = tex.location();
 
 				frame_capture_data::memory_block_data block_data;
 				block_data.data.resize(texSize);
@@ -142,12 +141,12 @@ namespace rsx
 				for (const auto& l : layout)
 					texSize += l.data.size();
 
-				if (!texaddr || !texSize)
+				if (!texSize)
 					continue;
 
 				frame_capture_data::memory_block block;
-				block.addr     = texaddr;
-				block.ioOffset = get_io_offset(tex.offset(), tex.location());
+				block.ioOffset = tex.offset();
+				block.location = tex.location();
 				frame_capture_data::memory_block_data block_data;
 				block_data.data.resize(texSize);
 				std::memcpy(block_data.data.data(), vm::base(texaddr), texSize);
@@ -182,10 +181,9 @@ namespace rsx
 						const size_t bufferSize = vertCount * vertStride + vertSize;
 
 						frame_capture_data::memory_block block;
-						block.addr     = addr;
-						block.ioOffset = get_io_offset(base_address, memory_location);
+						block.ioOffset = base_address;
+						block.location = memory_location;
 						block.offset   = (count.first * vertStride);
-
 						frame_capture_data::memory_block_data block_data;
 						block_data.data.resize(bufferSize);
 						std::memcpy(block_data.data.data(), vm::base(addr + block.offset), bufferSize);
@@ -222,8 +220,8 @@ namespace rsx
 					const size_t bufferSize = idxCount * type_size;
 
 					frame_capture_data::memory_block block;
-					block.addr     = base_addr;
-					block.ioOffset = get_io_offset(base_address, memory_location);
+					block.ioOffset = base_address;
+					block.location = memory_location;
 					block.offset   = (idxFirst * type_size);
 
 					frame_capture_data::memory_block_data block_data;
@@ -238,12 +236,12 @@ namespace rsx
 						auto fifo = vm::ptr<u16>::make(idxAddr);
 						for (u32 i = 0; i < idxCount; ++i)
 						{
-							u16 index = fifo[i];
-							if (is_primitive_restart_enabled && index == (u16)primitive_restart_index)
+							u32 index = fifo[i];
+							if (is_primitive_restart_enabled && index == primitive_restart_index)
 								continue;
-							index     = (u16)get_index_from_base(index, method_registers.vertex_data_base_index());
-							min_index = (u16)std::min(index, (u16)min_index);
-							max_index = (u16)std::max(index, (u16)max_index);
+							index     = get_index_from_base(index, method_registers.vertex_data_base_index());
+							min_index = std::min(index, min_index);
+							max_index = std::max(index, max_index);
 						}
 						break;
 					}
@@ -290,8 +288,8 @@ namespace rsx
 					const u32 bufferSize = vertStride * (max_index - min_index + 1) + vertSize;
 
 					frame_capture_data::memory_block block;
-					block.addr     = addr;
-					block.ioOffset = get_io_offset(base_address, memory_location);
+					block.ioOffset = base_address;
+					block.location = memory_location;
 					block.offset   = (min_index * vertStride);
 
 					frame_capture_data::memory_block_data block_data;
@@ -340,8 +338,8 @@ namespace rsx
 			const tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);
 
 			frame_capture_data::memory_block block;
-			block.addr     = src_region.address;
-			block.ioOffset = get_io_offset(src_region.tile ? src_region.base : src_offset + in_offset, src_dma & 0xf);
+			block.ioOffset   = src_region.tile ? src_region.base : src_offset + in_offset;
+			block.location = src_dma & 0xf;
 
 			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
 
@@ -388,9 +386,9 @@ namespace rsx
 			const tiled_region dst_region = rsx->get_tiled_address(dst_offset + out_offset, dst_dma & 0xf);
 
 			frame_capture_data::memory_block blockDst;
-			blockDst.addr     = dst_region.address;
-			blockDst.ioOffset = get_io_offset(dst_region.tile ? dst_region.base : dst_offset + out_offset, dst_dma & 0xf);
-			if (blockDst.ioOffset != -1)
+			blockDst.ioOffset = dst_region.tile ? dst_region.base : dst_offset + out_offset;
+			blockDst.location = dst_dma & 0xf;
+			if (get_io_offset(blockDst.ioOffset, blockDst.location) != -1)
 			{
 				u32 blockSize = method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d ? out_pitch * out_h : out_bpp * next_pow2(out_w) * next_pow2(out_h);
 
@@ -423,8 +421,8 @@ namespace rsx
 			const u8* src = (u8*)vm::base(src_addr);
 
 			frame_capture_data::memory_block block;
-			block.addr     = src_addr;
-			block.ioOffset = get_io_offset(src_offset, src_dma);
+			block.ioOffset = src_offset;
+			block.location = src_dma;
 
 			frame_capture_data::memory_block_data block_data;
 			block_data.data.resize(in_pitch * line_count);
@@ -449,11 +447,11 @@ namespace rsx
 			}
 
 			frame_capture_data::memory_block blockDst;
-			blockDst.addr     = dst_addr;
-			blockDst.ioOffset = get_io_offset(dst_offset, dst_dma);
+			blockDst.ioOffset = dst_offset;
+			blockDst.location = dst_dma;
 
-			// only check for iooffset'd data
-			if (blockDst.ioOffset != -1)
+			// check if allocated
+			if (get_io_offset(blockDst.ioOffset, blockDst.location) != -1)
 			{
 				frame_capture_data::memory_block_data block_data;
 				blockDst.size = out_pitch * line_count;
@@ -544,11 +542,12 @@ namespace rsx
 			u32 addr = get_address(offset, location);
 
 			frame_capture_data::memory_block block;
-			block.addr     = addr;
-			block.ioOffset = get_io_offset(offset, location);
+			block.ioOffset = offset;
+			block.location = location;
 			block.size     = 16;
 
 			frame_capture_data::memory_block_data block_data;
+			
 			insert_mem_block_in_map(replay_command.memory_state, std::move(block), std::move(block_data));
 		}
 
@@ -580,11 +579,9 @@ namespace rsx
 				if (ioOffset == -1)
 					return;
 
-				u32 addr = get_address(offset, dma);
-
 				frame_capture_data::memory_block block;
-				block.addr     = addr;
-				block.ioOffset = ioOffset;
+				block.ioOffset = offset;
+				block.location = dma;
 				block.size     = 64;
 
 				frame_capture_data::memory_block_data block_data;
@@ -609,15 +606,15 @@ namespace rsx
 
 			// just need to capture dst for allocation later if in iomem
 
-			u32 ioOffset = get_io_offset(addr_offset, method_registers.blit_engine_output_location_nv3062());
+			const u32 memory_location = method_registers.blit_engine_output_location_nv3062();
+
+			const u32 ioOffset = get_io_offset(addr_offset, memory_location);
 			if (ioOffset == -1)
 				return;
 
-			u32 addr = get_address(addr_offset, method_registers.blit_engine_output_location_nv3062());
-
 			frame_capture_data::memory_block block;
-			block.addr     = addr;
-			block.ioOffset = ioOffset;
+			block.ioOffset   = addr_offset;
+			block.location = memory_location;
 			block.size     = 4;
 
 			frame_capture_data::memory_block_data block_data;

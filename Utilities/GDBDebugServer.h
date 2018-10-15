@@ -40,8 +40,8 @@ public:
 const u64 ALL_THREADS = 0xffffffffffffffff;
 const u64 ANY_THREAD = 0;
 
-class GDBDebugServer : public named_thread {
-
+class GDBDebugServer : public old_thread
+{
 	socket_t server_socket;
 	socket_t client_socket;
 	std::weak_ptr<cpu_thread> selected_thread;

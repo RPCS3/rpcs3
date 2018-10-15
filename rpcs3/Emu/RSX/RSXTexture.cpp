@@ -8,7 +8,7 @@ namespace rsx
 {
 	u32 fragment_texture::offset() const
 	{
-		return registers[NV4097_SET_TEXTURE_OFFSET + (m_index * 8)];
+		return registers[NV4097_SET_TEXTURE_OFFSET + (m_index * 8)] & 0x7FFFFFFF;
 	}
 
 	u8 fragment_texture::location() const
@@ -65,18 +65,17 @@ namespace rsx
 
 	u16 fragment_texture::get_exact_mipmap_count() const
 	{
-		u16 max_mipmap_count = 1;
+		u16 max_mipmap_count;
 		if (is_compressed_format())
 		{
 			// OpenGL considers that highest mipmap level for DXTC format is when either width or height is 1
 			// not both. Assume it's the same for others backend.
-			max_mipmap_count = static_cast<u16>(floor(log2(std::min(width() / 4, height() / 4))) + 1);
+			max_mipmap_count = floor_log2(static_cast<u32>(std::min(width() / 4, height() / 4))) + 1;
 		}
 		else
-			max_mipmap_count = static_cast<u16>(floor(log2(std::max(width(), height()))) + 1);
+			max_mipmap_count = floor_log2(static_cast<u32>(std::max(width(), height()))) + 1;
 		
-		max_mipmap_count = std::min(mipmap(), max_mipmap_count);
-		return (max_mipmap_count > 0) ? max_mipmap_count : 1;
+		return std::min(verify(HERE, mipmap()), max_mipmap_count);
 	}
 
 	rsx::texture_wrap_mode fragment_texture::wrap_s() const
@@ -121,7 +120,7 @@ namespace rsx
 
 	bool fragment_texture::enabled() const
 	{
-		return location() <= 1 && ((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 31) & 0x1);
+		return ((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 31) & 0x1);
 	}
 
 	u16 fragment_texture::min_lod() const
@@ -259,7 +258,7 @@ namespace rsx
 
 	u16 fragment_texture::height() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index * 8)]) & 0xffff);
+		return dimension() != rsx::texture_dimension::dimension1d ? ((registers[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index * 8)]) & 0xffff) : 1;
 	}
 
 	u32 fragment_texture::border_color() const
@@ -269,7 +268,7 @@ namespace rsx
 
 	u16 fragment_texture::depth() const
 	{
-		return registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] >> 20;
+		return dimension() == rsx::texture_dimension::dimension3d ? (registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] >> 20) : 1;
 	}
 
 	u32 fragment_texture::pitch() const
@@ -279,7 +278,7 @@ namespace rsx
 
 	u32 vertex_texture::offset() const
 	{
-		return registers[NV4097_SET_VERTEX_TEXTURE_OFFSET + (m_index * 8)];
+		return registers[NV4097_SET_VERTEX_TEXTURE_OFFSET + (m_index * 8)] & 0x7FFFFFFF;
 	}
 
 	u8 vertex_texture::location() const
@@ -326,10 +325,8 @@ namespace rsx
 
 	u16 vertex_texture::get_exact_mipmap_count() const
 	{
-		u16 max_mipmap_count = static_cast<u16>(floor(log2(std::max(width(), height()))) + 1);
-		max_mipmap_count = std::min(mipmap(), max_mipmap_count);
-
-		return (max_mipmap_count > 0) ? max_mipmap_count : 1;
+		const u16 max_mipmap_count = floor_log2(static_cast<u32>(std::max(width(), height()))) + 1;
+		return std::min(verify(HERE, mipmap()), max_mipmap_count);
 	}
 
 	std::pair<std::array<u8, 4>, std::array<u8, 4>> vertex_texture::decoded_remap() const
@@ -349,7 +346,7 @@ namespace rsx
 
 	bool vertex_texture::enabled() const
 	{
-		return location() <= 1 && ((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 31) & 0x1);
+		return ((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 31) & 0x1);
 	}
 
 	u16 vertex_texture::min_lod() const
@@ -399,7 +396,7 @@ namespace rsx
 
 	u16 vertex_texture::height() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + (m_index * 8)]) & 0xffff);
+		return dimension() != rsx::texture_dimension::dimension1d ? ((registers[NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + (m_index * 8)]) & 0xffff) : 1;
 	}
 
 	u32 vertex_texture::border_color() const
@@ -409,7 +406,7 @@ namespace rsx
 
 	u16 vertex_texture::depth() const
 	{
-		return registers[NV4097_SET_VERTEX_TEXTURE_CONTROL3 + (m_index * 8)] >> 20;
+		return dimension() == rsx::texture_dimension::dimension3d ? (registers[NV4097_SET_VERTEX_TEXTURE_CONTROL3 + (m_index * 8)] >> 20) : 1;
 	}
 
 	u32 vertex_texture::pitch() const

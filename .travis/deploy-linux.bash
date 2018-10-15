@@ -9,9 +9,10 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 	./squashfs-root/AppRun ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs
 	ls ./appdir/usr/lib/
 	rm -r ./appdir/usr/share/doc
+	rm ./appdir/usr/lib/libxcb*
 	export PATH=/rpcs3/build/squashfs-root/usr/bin/:${PATH}
 
-	# Embed newer libstdc++ for distros that don't come with it (ubuntu 14.04)
+	# Embed newer libstdc++ for distros that don't come with it (ubuntu 14.04, 16.04)
 	mkdir -p appdir/usr/optional/ ; mkdir -p appdir/usr/optional/libstdc++/
 	cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ./appdir/usr/optional/libstdc++/
 	rm ./appdir/AppRun

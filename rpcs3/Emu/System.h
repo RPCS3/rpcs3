@@ -7,6 +7,8 @@
 #include <memory>
 #include <string>
 
+u64 get_system_time();
+
 enum class system_state
 {
 	running,
@@ -166,6 +168,12 @@ enum class tsx_usage
 	disabled,
 	enabled,
 	forced,
+};
+
+enum enter_button_assign
+{
+	circle = 0, // CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CIRCLE
+	cross  = 1  // CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CROSS
 };
 
 enum CellNetCtlState : s32;
@@ -477,6 +485,16 @@ struct cfg_root : cfg::node
 
 		} shader_compilation_hint{this};
 
+		struct node_shader_preloading_dialog : cfg::node
+		{
+			node_shader_preloading_dialog(cfg::node* _this) : cfg::node(_this, "Shader Loading Dialog"){}
+
+			cfg::_bool use_custom_background{this, "Allow custom background", true};
+			cfg::_int<0, 100> darkening_strength{this, "Darkening effect strength", 30};
+			cfg::_int<0, 100> blur_strength{this, "Blur effect strength", 0};
+
+		} shader_preloading_dialog{this};
+
 	} video{this};
 
 	struct node_audio : cfg::node
@@ -510,7 +528,8 @@ struct cfg_root : cfg::node
 	{
 		node_sys(cfg::node* _this) : cfg::node(_this, "System") {}
 
-		cfg::_enum<CellSysutilLang> language{this, "Language"};
+		cfg::_enum<CellSysutilLang> language{this, "Language", (CellSysutilLang)1}; // CELL_SYSUTIL_LANG_ENGLISH_US
+		cfg::_enum<enter_button_assign> enter_button_assignment{this, "Enter button assignment", enter_button_assign::cross};
 
 	} sys{this};
 

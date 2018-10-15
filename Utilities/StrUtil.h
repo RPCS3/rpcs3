@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <string_view>
 
 // Copy null-terminated string from std::string to char array with truncation
 template <std::size_t N>
@@ -100,10 +101,10 @@ namespace fmt
 		auto end = source.end();
 		for (--end; it != end; ++it)
 		{
-			result += *it + separator;
+			result += std::string{*it} + separator;
 		}
 
-		return result + source.back();
+		return result + std::string{source.back()};
 	}
 
 	template <typename T>

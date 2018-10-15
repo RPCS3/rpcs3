@@ -1027,7 +1027,9 @@ bool ppu_interpreter_precise::VMHRADDSHS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::VMINFP(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.vr[op.vd].vf = _mm_min_ps(ppu.vr[op.va].vf, ppu.vr[op.vb].vf);
+	const auto a = ppu.vr[op.va].vf;
+	const auto b = ppu.vr[op.vb].vf;
+	ppu.vr[op.vd].vf = _mm_or_ps(_mm_min_ps(a, b),  _mm_min_ps(b, a));
 	return true;
 }
 
@@ -1909,6 +1911,7 @@ bool ppu_interpreter::VSL(ppu_thread& ppu, ppu_opcode_t op)
 	d._u8[0] = VA._u8[0] << sh;
 	for (uint b = 1; b < 16; b++)
 	{
+		sh = ppu.vr[op.vb]._u8[b] & 0x7;
 		d._u8[b] = (VA._u8[b] << sh) | (VA._u8[b - 1] >> (8 - sh));
 	}
 	return true;
@@ -2062,11 +2065,12 @@ bool ppu_interpreter::VSR(ppu_thread& ppu, ppu_opcode_t op)
 {
 	auto& d = ppu.vr[op.vd];
 	v128 VA = ppu.vr[op.va];
-	u8 sh = ppu.vr[op.vb]._u8[0] & 0x7;
+	u8 sh = ppu.vr[op.vb]._u8[15] & 0x7;
 
 	d._u8[15] = VA._u8[15] >> sh;
 	for (uint b = 14; ~b; b--)
 	{
+		sh = ppu.vr[op.vb]._u8[b] & 0x7;
 		d._u8[b] = (VA._u8[b] >> sh) | (VA._u8[b + 1] << (8 - sh));
 	}
 	return true;
@@ -4662,7 +4666,7 @@ bool ppu_interpreter::FNMSUBS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FNMADDS(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc]) - ppu.fpr[op.frb]);
+	ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb]));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
@@ -4815,7 +4819,7 @@ bool ppu_interpreter::FNMSUB(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FNMADD(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.fpr[op.frd] = -(ppu.fpr[op.fra] * ppu.fpr[op.frc]) - ppu.fpr[op.frb];
+	ppu.fpr[op.frd] = -(ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb]);
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }

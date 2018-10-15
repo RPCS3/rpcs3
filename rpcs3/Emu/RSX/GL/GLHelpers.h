@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <exception>
 #include <string>
@@ -1464,7 +1464,7 @@ namespace gl
 			depth = GL_TEXTURE_DEPTH_TYPE
 		};
 
-	private:
+	protected:
 		GLuint m_id = 0;
 		GLuint m_width = 0;
 		GLuint m_height = 0;
@@ -1902,6 +1902,7 @@ namespace gl
 
 public:
 		using texture::texture;
+
 		texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
 		{
 			auto found = views.find(remap_encoding);
@@ -1915,6 +1916,18 @@ public:
 			auto result = view.get();
 			views[remap_encoding] = std::move(view);
 			return result;
+		}
+
+		void set_native_component_layout(const std::array<GLenum, 4>& layout)
+		{
+			if (m_component_layout[0] != layout[0] ||
+				m_component_layout[1] != layout[1] ||
+				m_component_layout[2] != layout[2] ||
+				m_component_layout[3] != layout[3])
+			{
+				texture::set_native_component_layout(layout);
+				views.clear();
+			}
 		}
 	};
 
@@ -2221,7 +2234,8 @@ public:
 		void set_extents(size2i extents);
 		size2i get_extents() const;
 
-		bool matches(std::array<GLuint, 4> color_targets, GLuint depth_stencil_target);
+		bool matches(const std::array<GLuint, 4>& color_targets, GLuint depth_stencil_target) const;
+		bool references_any(const std::vector<GLuint>& resources) const;
 
 		explicit operator bool() const
 		{

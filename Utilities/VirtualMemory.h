@@ -25,10 +25,11 @@ namespace utils
 	*/
 	void memory_commit(void* pointer, std::size_t size, protection prot = protection::rw);
 
-	/**
-	* Decommit all memory committed via commit_page_memory.
-	*/
+	// Decommit all memory committed via commit_page_memory.
 	void memory_decommit(void* pointer, std::size_t size);
+
+	// Decommit all memory and commit it again.
+	void memory_reset(void* pointer, std::size_t size, protection prot = protection::rw);
 
 	// Free memory after reserved by memory_reserve, should specify original size
 	void memory_release(void* pointer, std::size_t size);
@@ -45,12 +46,13 @@ namespace utils
 		int m_file;
 #endif
 		u32 m_size;
-		u8* m_ptr;
 
 	public:
 		explicit shm(u32 size);
 
 		shm(const shm&) = delete;
+
+		shm& operator=(const shm&) = delete;
 
 		~shm();
 
@@ -65,17 +67,6 @@ namespace utils
 
 		// Unmap shared memory, undoing map_critical
 		void unmap_critical(void* ptr);
-
-		// Access memory with simple range check
-		u8* get(u32 offset, u32 size) const
-		{
-			if (offset >= m_size || m_size - offset < size)
-			{
-				return nullptr;
-			}
-
-			return m_ptr + offset;
-		}
 
 		u32 size() const
 		{

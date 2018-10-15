@@ -90,6 +90,11 @@ public:
 		PerfOverlayCenterX,
 		PerfOverlayCenterY,
 
+		// Shader Loading Dialog
+		ShaderLoadBgEnabled,
+		ShaderLoadBgDarkening,
+		ShaderLoadBgBlur,
+
 		// Audio
 		AudioRenderer,
 		DumpToFile,
@@ -117,8 +122,9 @@ public:
 		// Network
 		ConnectionStatus,
 
-		// Language
+		// System
 		Language,
+		EnterButtonAssignment,
 		EnableHostRoot,
 
 		// Virtual File System
@@ -284,6 +290,11 @@ private:
 		{ PerfOverlayCenterX,       { "Video", "Performance Overlay", "Center Horizontally" } },
 		{ PerfOverlayCenterY,       { "Video", "Performance Overlay", "Center Vertically" } },
 
+		// Shader Loading Dialog
+		{ ShaderLoadBgEnabled,      { "Video", "Shader Loading Dialog", "Allow custom background" } },
+		{ ShaderLoadBgDarkening,    { "Video", "Shader Loading Dialog", "Darkening effect strength" } },
+		{ ShaderLoadBgBlur,         { "Video", "Shader Loading Dialog", "Blur effect strength" } },
+
 		// Audio
 		{ AudioRenderer,  { "Audio", "Renderer"}},
 		{ DumpToFile,     { "Audio", "Dump to file"}},
@@ -312,8 +323,9 @@ private:
 		{ ConnectionStatus, { "Net", "Connection status"}},
 
 		// System
-		{ Language,       { "System", "Language"}},
-		{ EnableHostRoot, { "VFS", "Enable /host_root/"}},
+		{ Language,              { "System", "Language"}},
+		{ EnterButtonAssignment, { "System", "Enter button assignment"}},
+		{ EnableHostRoot,        { "VFS", "Enable /host_root/"}},
 
 		// Virtual File System
 		{ emulatorLocation,   { "VFS", "$(EmulatorDir)"}},

@@ -59,6 +59,7 @@
 *.VC.*
 *.vcxproj.user
 enc_temp_folder/*
+CMakeSettings.json
 
 # Ignore other system generated files
 x64/*
@@ -85,3 +86,10 @@ qrc_*.cpp
 rpcs3_automoc.cpp
 ui_*.h
 rpcs3/rpcs3_autogen/*
+
+# QtCreator
+CMakeLists.txt.user
+
+# CLion
+/.idea/*
+/cmake-build-*/

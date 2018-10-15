@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "GLGSRender.h"
@@ -217,6 +217,14 @@ void GLGSRender::end()
 
 	//Do vertex upload before RTT prep / texture lookups to give the driver time to push data
 	auto upload_info = set_vertex_buffer();
+
+	if (upload_info.vertex_draw_count == 0)
+	{
+		// Malformed vertex setup; abort
+		do_heap_cleanup();
+		rsx::thread::end();
+		return;
+	}
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
@@ -879,7 +887,7 @@ void GLGSRender::on_init_thread()
 				type.disable_cancel = true;
 				type.progress_bar_count = 2;
 
-				dlg = fxm::get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>();
+				dlg = fxm::get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>((bool)g_cfg.video.shader_preloading_dialog.use_custom_background);
 				dlg->progress_bar_set_taskbar_index(-1);
 				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
 				{
@@ -1436,7 +1444,9 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_height = display_buffers[buffer].height;
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
-	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height && buffer_pitch)
+	if (!buffer_pitch) buffer_pitch = buffer_width * 4;
+
+	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height)
 	{
 		// Calculate blit coordinates
 		coordi aspect_ratio;
@@ -1471,22 +1481,39 @@ void GLGSRender::flip(int buffer)
 
 		if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
 		{
-			buffer_width = render_target_texture->width();
-			buffer_height = render_target_texture->height();
+			if (render_target_texture->last_use_tag == m_rtts.write_tag)
+			{
+				image = render_target_texture->raw_handle();
+			}
+			else
+			{
+				const auto overlap_info = m_rtts.get_merged_texture_memory_region(absolute_address, buffer_width, buffer_height, buffer_pitch, 4);
+				verify(HERE), !overlap_info.empty();
 
-			image = render_target_texture->raw_handle();
+				if (overlap_info.back().surface == render_target_texture)
+				{
+					// Confirmed to be the newest data source in that range
+					image = render_target_texture->raw_handle();
+				}
+			}
+
+			if (image)
+			{
+				buffer_width = render_target_texture->width();
+				buffer_height = render_target_texture->height();
+			}
 		}
-		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address))
+		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address, buffer_width, buffer_height))
 		{
 			//Hack - this should be the first location to check for output
 			//The render might have been done offscreen or in software and a blit used to display
 			image = surface->get_raw_texture()->id();
 		}
-		else
+
+		if (!image)
 		{
 			LOG_WARNING(RSX, "Flip texture was not found in cache. Uploading surface from CPU");
 
-			if (!buffer_pitch) buffer_pitch = buffer_width * 4;
 			gl::pixel_unpack_settings unpack_settings;
 			unpack_settings.alignment(1).row_length(buffer_pitch / 4);
 
@@ -1574,12 +1601,12 @@ void GLGSRender::flip(int buffer)
 		gl::screen.bind();
 		glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
 
-		m_text_printer.print_text(0, 0, m_frame->client_width(), m_frame->client_height(), "RSX Load: " + std::to_string(get_load()) + "%");
-		m_text_printer.print_text(0, 18, m_frame->client_width(), m_frame->client_height(), "draw calls: " + std::to_string(m_draw_calls));
-		m_text_printer.print_text(0, 36, m_frame->client_width(), m_frame->client_height(), "draw call setup: " + std::to_string(m_begin_time) + "us");
-		m_text_printer.print_text(0, 54, m_frame->client_width(), m_frame->client_height(), "vertex upload time: " + std::to_string(m_vertex_upload_time) + "us");
-		m_text_printer.print_text(0, 72, m_frame->client_width(), m_frame->client_height(), "textures upload time: " + std::to_string(m_textures_upload_time) + "us");
-		m_text_printer.print_text(0, 90, m_frame->client_width(), m_frame->client_height(), "draw call execution: " + std::to_string(m_draw_time) + "us");
+		m_text_printer.print_text(0,  0, m_frame->client_width(), m_frame->client_height(), fmt::format("RSX Load:                %3d%%", get_load()));
+		m_text_printer.print_text(0, 18, m_frame->client_width(), m_frame->client_height(), fmt::format("draw calls: %16d", m_draw_calls));
+		m_text_printer.print_text(0, 36, m_frame->client_width(), m_frame->client_height(), fmt::format("draw call setup: %11dus", m_begin_time));
+		m_text_printer.print_text(0, 54, m_frame->client_width(), m_frame->client_height(), fmt::format("vertex upload time: %8dus", m_vertex_upload_time));
+		m_text_printer.print_text(0, 72, m_frame->client_width(), m_frame->client_height(), fmt::format("textures upload time: %6dus", m_textures_upload_time));
+		m_text_printer.print_text(0, 90, m_frame->client_width(), m_frame->client_height(), fmt::format("draw call execution: %7dus", m_draw_time));
 
 		const auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
 		const auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
@@ -1587,9 +1614,9 @@ void GLGSRender::flip(int buffer)
 		const auto num_mispredict = m_gl_texture_cache.get_num_cache_mispredictions();
 		const auto num_speculate = m_gl_texture_cache.get_num_cache_speculative_writes();
 		const auto cache_miss_ratio = (u32)ceil(m_gl_texture_cache.get_cache_miss_ratio() * 100);
-		m_text_printer.print_text(0, 126, m_frame->client_width(), m_frame->client_height(), "Unreleased textures: " + std::to_string(num_dirty_textures));
-		m_text_printer.print_text(0, 144, m_frame->client_width(), m_frame->client_height(), "Texture memory: " + std::to_string(texture_memory_size) + "M");
-		m_text_printer.print_text(0, 162, m_frame->client_width(), m_frame->client_height(), fmt::format("Flush requests: %d (%d%% hard faults, %d misprediction(s), %d speculation(s))", num_flushes, cache_miss_ratio, num_mispredict, num_speculate));
+		m_text_printer.print_text(0, 126, m_frame->client_width(), m_frame->client_height(), fmt::format("Unreleased textures: %7d", num_dirty_textures));
+		m_text_printer.print_text(0, 144, m_frame->client_width(), m_frame->client_height(), fmt::format("Texture memory: %12dM", texture_memory_size));
+		m_text_printer.print_text(0, 162, m_frame->client_width(), m_frame->client_height(), fmt::format("Flush requests: %12d  = %3d%% hard faults, %2d misprediction(s), %2d speculation(s)", num_flushes, cache_miss_ratio, num_mispredict, num_speculate));
 	}
 
 	m_frame->flip(m_context);
@@ -1597,19 +1624,17 @@ void GLGSRender::flip(int buffer)
 
 	// Cleanup
 	m_gl_texture_cache.on_frame_end();
-
-	m_rtts.free_invalidated();
 	m_vertex_cache->purge();
 
-	if (m_framebuffer_cache.size() > 32)
+	auto removed_textures = m_rtts.free_invalidated();
+	m_framebuffer_cache.remove_if([&](auto& fbo)
 	{
-		for (auto &fbo : m_framebuffer_cache)
-		{
-			fbo.remove();
-		}
+		if (fbo.deref_count >= 2) return true; // Remove if stale
+		if (fbo.references_any(removed_textures)) return true; // Remove if any of the attachments is invalid
 
-		m_framebuffer_cache.clear();
-	}
+		fbo.deref_count++;
+		return false;
+	});
 
 	//If we are skipping the next frame, do not reset perf counters
 	if (skip_frame) return;
@@ -1623,8 +1648,11 @@ void GLGSRender::flip(int buffer)
 
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	bool can_flush = (std::this_thread::get_id() == m_thread_id);
-	auto result = m_gl_texture_cache.invalidate_address(address, is_writing, can_flush);
+	const bool can_flush = (std::this_thread::get_id() == m_thread_id);
+	const rsx::invalidation_cause cause =
+		is_writing ? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
+		           : (can_flush ? rsx::invalidation_cause::read  : rsx::invalidation_cause::deferred_read);
+	auto result = m_gl_texture_cache.invalidate_address(address, cause);
 
 	if (!result.violation_handled)
 		return false;
@@ -1647,12 +1675,15 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 	return true;
 }
 
-void GLGSRender::on_invalidate_memory_range(u32 address_base, u32 size)
+void GLGSRender::on_invalidate_memory_range(const utils::address_range &range)
 {
 	//Discard all memory in that range without bothering with writeback (Force it for strict?)
-	if (m_gl_texture_cache.invalidate_range(address_base, size, true, true, false).violation_handled)
+	auto data = std::move(m_gl_texture_cache.invalidate_range(range, rsx::invalidation_cause::unmap));
+	AUDIT(data.empty());
+
+	if (data.violation_handled)
 	{
-		m_gl_texture_cache.purge_dirty();
+		m_gl_texture_cache.purge_unreleased_sections();
 		{
 			std::lock_guard lock(m_sampler_mutex);
 			m_samplers_dirty.store(true);
@@ -1699,9 +1730,8 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 
 	if (m_overlay_manager)
 	{
-		if (!in_begin_end && native_ui_flip_request.load())
+		if (!in_begin_end && async_flip_requested & flip_request::native_ui)
 		{
-			native_ui_flip_request.store(false);
 			flip((s32)current_display_buffer);
 		}
 	}
@@ -1711,8 +1741,7 @@ work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrash
 {
 	std::lock_guard lock(queue_guard);
 
-	work_queue.emplace_back();
-	work_item &result = work_queue.back();
+	work_item &result = work_queue.emplace_back();
 	result.address_to_flush = address;
 	result.section_data = std::move(flush_data);
 	return result;

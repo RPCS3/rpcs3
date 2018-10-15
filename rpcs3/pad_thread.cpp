@@ -1,13 +1,13 @@
 #include "pad_thread.h"
-#include "../ds4_pad_handler.h"
+#include "ds4_pad_handler.h"
 #ifdef _WIN32
-#include "../xinput_pad_handler.h"
-#include "../mm_joystick_handler.h"
+#include "xinput_pad_handler.h"
+#include "mm_joystick_handler.h"
 #elif HAVE_LIBEVDEV
-#include "../evdev_joystick_handler.h"
+#include "evdev_joystick_handler.h"
 #endif
-#include "../keyboard_pad_handler.h"
-#include "../Emu/Io/Null/NullPadHandler.h"
+#include "keyboard_pad_handler.h"
+#include "Emu/Io/Null/NullPadHandler.h"
 
 
 pad_thread::pad_thread(void *_curthread, void *_curwindow) : curthread(_curthread), curwindow(_curwindow)

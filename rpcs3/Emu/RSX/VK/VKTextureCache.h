@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "stdafx.h"
 #include "VKRenderTargets.h"
 #include "VKGSRender.h"
@@ -13,8 +13,10 @@ extern u64 get_system_time();
 
 namespace vk
 {
-	class cached_texture_section : public rsx::cached_texture_section
+	class cached_texture_section : public rsx::cached_texture_section<vk::cached_texture_section>
 	{
+		using baseclass = typename rsx::cached_texture_section<vk::cached_texture_section>;
+
 		std::unique_ptr<vk::viewable_image> managed_texture = nullptr;
 
 		//DMA relevant data
@@ -24,16 +26,14 @@ namespace vk
 		std::unique_ptr<vk::buffer> dma_buffer;
 
 	public:
+		using baseclass::cached_texture_section;
 
-		cached_texture_section() {}
-
-		void reset(u32 base, u32 length)
+		void reset(const utils::address_range &memory_range)
 		{
-			if (length > cpu_address_range)
+			if (memory_range.length() > get_section_size())
 				release_dma_resources();
 
-			rsx::protection_policy policy = g_cfg.video.strict_rendering_mode ? rsx::protection_policy::protect_policy_full_range : rsx::protection_policy::protect_policy_conservative;
-			rsx::buffered_section::reset(base, length, policy);
+			baseclass::reset(memory_range);
 		}
 
 		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image *image, u32 rsx_pitch, bool managed, u32 gcm_format, bool pack_swap_bytes = false)
@@ -57,13 +57,16 @@ namespace vk
 			if (rsx_pitch > 0)
 				this->rsx_pitch = rsx_pitch;
 			else
-				this->rsx_pitch = cpu_address_range / height;
+				this->rsx_pitch = get_section_size() / height;
 
 			//Even if we are managing the same vram section, we cannot guarantee contents are static
-			//The create method is only invoked when a new mangaged session is required
+			//The create method is only invoked when a new managed session is required
 			synchronized = false;
 			flushed = false;
 			sync_timestamp = 0ull;
+
+			// Notify baseclass
+			baseclass::on_section_resources_created();
 		}
 
 		void release_dma_resources()
@@ -82,11 +85,14 @@ namespace vk
 
 		void destroy()
 		{
+			m_tex_cache->on_section_destroyed(*this);
 			vram_texture = nullptr;
 			release_dma_resources();
+
+			baseclass::on_section_resources_destroyed();
 		}
 
-		bool exists() const
+		inline bool exists() const
 		{
 			return (vram_texture != nullptr);
 		}
@@ -116,12 +122,6 @@ namespace vk
 			return vram_texture->info.format;
 		}
 
-		bool is_flushable() const
-		{
-			//This section is active and can be flushed to cpu
-			return (protection == utils::protection::no);
-		}
-
 		bool is_flushed() const
 		{
 			//This memory section was flushable, but a flush has already removed protection
@@ -145,7 +145,7 @@ namespace vk
 			if (dma_buffer.get() == nullptr)
 			{
 				auto memory_type = m_device->get_memory_mapping().host_visible_coherent;
-				dma_buffer.reset(new vk::buffer(*m_device, align(cpu_address_range, 256), memory_type, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0));
+				dma_buffer.reset(new vk::buffer(*m_device, align(get_section_size(), 256), memory_type, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0));
 			}
 
 			if (manage_cb_lifetime)
@@ -247,18 +247,18 @@ namespace vk
 			{
 				verify (HERE), mem_target->value != dma_buffer->value;
 
-				vk::insert_buffer_memory_barrier(cmd, mem_target->value, 0, cpu_address_range,
+				vk::insert_buffer_memory_barrier(cmd, mem_target->value, 0, get_section_size(),
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
-				shuffle_kernel->run(cmd, mem_target, cpu_address_range);
+				shuffle_kernel->run(cmd, mem_target, get_section_size());
 
-				vk::insert_buffer_memory_barrier(cmd, mem_target->value, 0, cpu_address_range,
+				vk::insert_buffer_memory_barrier(cmd, mem_target->value, 0, get_section_size(),
 					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
 				VkBufferCopy copy = {};
-				copy.size = cpu_address_range;
+				copy.size = get_section_size();
 				vkCmdCopyBuffer(cmd, mem_target->value, dma_buffer->value, 1, &copy);
 			}
 
@@ -283,6 +283,7 @@ namespace vk
 		bool flush(vk::command_buffer& cmd, VkQueue submit_queue)
 		{
 			if (flushed) return true;
+			AUDIT( is_locked() );
 
 			if (m_device == nullptr)
 			{
@@ -294,7 +295,7 @@ namespace vk
 
 			if (!synchronized)
 			{
-				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", cpu_address_base);
+				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", get_section_base());
 				copy_texture(true, cmd, submit_queue);
 				result = false;
 			}
@@ -302,22 +303,26 @@ namespace vk
 			verify(HERE), real_pitch > 0;
 			flushed = true;
 
-			const auto valid_range = get_confirmed_range();
-			void* pixels_src = dma_buffer->map(valid_range.first, valid_range.second);
-			void* pixels_dst = get_raw_ptr(valid_range.first, true);
+			const auto valid_range = get_confirmed_range_delta();
+			const u32 valid_offset = valid_range.first;
+			const u32 valid_length = valid_range.second;
+			AUDIT( valid_length > 0 );
 
-			if (real_pitch >= rsx_pitch || valid_range.second <= rsx_pitch)
+			void* pixels_src = dma_buffer->map(valid_offset, valid_length);
+			void* pixels_dst = get_ptr(get_section_base() + valid_offset);
+
+			if (real_pitch >= rsx_pitch || valid_length <= rsx_pitch)
 			{
-				memcpy(pixels_dst, pixels_src, valid_range.second);
+				memcpy(pixels_dst, pixels_src, valid_length);
 			}
 			else
 			{
-				if (valid_range.second % rsx_pitch)
+				if (valid_length % rsx_pitch)
 				{
 					fmt::throw_exception("Unreachable" HERE);
 				}
 
-				const u32 num_rows = valid_range.second / rsx_pitch;
+				const u32 num_rows = valid_length / rsx_pitch;
 				auto _src = (u8*)pixels_src;
 				auto _dst = (u8*)pixels_dst;
 
@@ -329,7 +334,6 @@ namespace vk
 				}
 			}
 
-			flush_io(valid_range.first, valid_range.second);
 			dma_buffer->unmap();
 			reset_write_statistics();
 
@@ -406,9 +410,18 @@ namespace vk
 		}
 	};
 
-	class texture_cache : public rsx::texture_cache<vk::command_buffer, cached_texture_section, vk::image*, vk::image_view*, vk::image, VkFormat>
+	class texture_cache : public rsx::texture_cache<vk::command_buffer, vk::cached_texture_section, vk::image*, vk::image_view*, vk::image, VkFormat>
 	{
+	public:
+		virtual void on_section_destroyed(cached_texture_section& tex)
+		{
+			m_discarded_memory_size += tex.get_section_size();
+			m_discardable_storage.push_back(tex);
+		}
+
 	private:
+		using baseclass = rsx::texture_cache<vk::command_buffer, vk::cached_texture_section, vk::image*, vk::image_view*, vk::image, VkFormat>;
+
 		//Vulkan internals
 		vk::render_device* m_device;
 		vk::memory_type_mapping m_memory_types;
@@ -420,30 +433,11 @@ namespace vk
 		std::list<discarded_storage> m_discardable_storage;
 		std::atomic<u32> m_discarded_memory_size = { 0 };
 
-		void purge_cache()
+		void clear()
 		{
-			for (auto &address_range : m_cache)
-			{
-				auto &range_data = address_range.second;
-				for (auto &tex : range_data.data)
-				{
-					if (tex.exists())
-					{
-						m_discardable_storage.push_back(tex);
-					}
-
-					if (tex.is_locked())
-						tex.unprotect();
-
-					tex.release_dma_resources();
-				}
-
-				range_data.data.resize(0);
-			}
+			baseclass::clear();
 
 			m_discardable_storage.clear();
-			m_unreleased_texture_objects = 0;
-			m_texture_memory_in_use = 0;
 			m_discarded_memory_size = 0;
 		}
 
@@ -487,14 +481,6 @@ namespace vk
 		}
 
 	protected:
-
-		void free_texture_section(cached_texture_section& tex) override
-		{
-			m_discarded_memory_size += tex.get_section_size();
-			m_discardable_storage.push_back(tex);
-			tex.destroy();
-		}
-
 		vk::image_view* create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,
 			u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector, bool copy)
 		{
@@ -777,7 +763,7 @@ namespace vk
 			vk::change_image_layout(cmd, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
 		}
 
-		cached_texture_section* create_new_texture(vk::command_buffer& cmd, u32 rsx_address, u32 rsx_size, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
+		cached_texture_section* create_new_texture(vk::command_buffer& cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
 				rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags) override
 		{
 			const u16 section_depth = depth;
@@ -847,26 +833,30 @@ namespace vk
 
 			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect_flags, 0, mipmaps, 0, layer });
 
-			cached_texture_section& region = find_cached_texture(rsx_address, rsx_size, true, width, height, section_depth);
-			region.reset(rsx_address, rsx_size);
-			region.create(width, height, section_depth, mipmaps, image, 0, true, gcm_format);
-			region.set_dirty(false);
+			cached_texture_section& region = *find_cached_texture(rsx_range, true, true, width, height, section_depth);
+			ASSERT(!region.is_locked());
+
+			// New section, we must prepare it
+			region.reset(rsx_range);
 			region.set_context(context);
 			region.set_gcm_format(gcm_format);
 			region.set_image_type(type);
+
+			region.create(width, height, section_depth, mipmaps, image, 0, true, gcm_format);
+			region.set_dirty(false);
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
 			if (context != rsx::texture_upload_context::blit_engine_dst)
 			{
 				region.protect(utils::protection::ro);
-				read_only_range = region.get_min_max(read_only_range);
+				read_only_range = region.get_min_max(read_only_range, rsx::section_bounds::locked_range);
 			}
 			else
 			{
 				//TODO: Confirm byte swap patterns
 				//NOTE: Protection is handled by the caller
 				region.set_unpack_swap_bytes((aspect_flags & VK_IMAGE_ASPECT_COLOR_BIT) == VK_IMAGE_ASPECT_COLOR_BIT);
-				no_access_range = region.get_min_max(no_access_range);
+				no_access_range = region.get_min_max(no_access_range, rsx::section_bounds::locked_range);
 			}
 
 			update_cache_tag();
@@ -876,7 +866,8 @@ namespace vk
 		cached_texture_section* upload_image_from_cpu(vk::command_buffer& cmd, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
 			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) override
 		{
-			auto section = create_new_texture(cmd, rsx_address, pitch * height, width, height, depth, mipmaps, gcm_format, context, type,
+			const utils::address_range rsx_range = utils::address_range::start_length(rsx_address, pitch * height);
+			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, gcm_format, context, type,
 					rsx::texture_create_flags::default_component_order);
 
 			auto image = section->get_raw_texture();
@@ -917,7 +908,10 @@ namespace vk
 				return;
 
 			const VkComponentMapping mapping = apply_component_mapping_flags(gcm_format, expected_flags, rsx::default_remap_vector);
-			section.get_raw_texture()->native_component_map = mapping;
+			auto image = static_cast<vk::viewable_image*>(section.get_raw_texture());
+
+			verify(HERE), image != nullptr;
+			image->set_native_component_layout(mapping);
 
 			section.set_view_flags(expected_flags);
 		}
@@ -960,6 +954,7 @@ namespace vk
 		}
 
 	public:
+		using baseclass::texture_cache;
 
 		void initialize(vk::render_device& device, VkQueue submit_queue, vk::vk_data_heap& upload_heap)
 		{
@@ -972,26 +967,24 @@ namespace vk
 
 		void destroy() override
 		{
-			purge_cache();
+			clear();
 		}
 
 		bool is_depth_texture(u32 rsx_address, u32 rsx_size) override
 		{
 			reader_lock lock(m_cache_mutex);
 
-			auto found = m_cache.find(get_block_address(rsx_address));
-			if (found == m_cache.end())
+			auto &block = m_storage.block_for(rsx_address);
+
+			if (block.get_locked_count() == 0)
 				return false;
 
-			if (found->second.valid_count == 0)
-				return false;
-
-			for (auto& tex : found->second.data)
+			for (auto& tex : block)
 			{
 				if (tex.is_dirty())
 					continue;
 
-				if (!tex.overlaps(rsx_address, rsx::overlap_test_bounds::full_range))
+				if (!tex.overlaps(rsx_address, rsx::section_bounds::full_range))
 					continue;
 
 				if ((rsx_address + rsx_size - tex.get_section_base()) <= tex.get_section_size())
@@ -1014,10 +1007,10 @@ namespace vk
 
 		void on_frame_end() override
 		{
-			if (m_unreleased_texture_objects >= m_max_zombie_objects ||
+			if (m_storage.m_unreleased_texture_objects >= m_max_zombie_objects ||
 				m_discarded_memory_size > 0x4000000) //If already holding over 64M in discardable memory, be frugal with memory resources
 			{
-				purge_dirty();
+				purge_unreleased_sections();
 			}
 
 			const u64 last_complete_frame = vk::get_last_completed_frame_id();
@@ -1226,7 +1219,7 @@ namespace vk
 			{
 				if (reply.real_dst_size)
 				{
-					flush_if_cache_miss_likely(helper.format, reply.real_dst_address, reply.real_dst_size, cmd, m_submit_queue);
+					flush_if_cache_miss_likely(helper.format, reply.to_address_range(), cmd, m_submit_queue);
 				}
 
 				return true;
@@ -1237,12 +1230,12 @@ namespace vk
 
 		const u32 get_unreleased_textures_count() const override
 		{
-			return m_unreleased_texture_objects + (u32)m_discardable_storage.size();
+			return m_storage.m_unreleased_texture_objects + (u32)m_discardable_storage.size();
 		}
 
 		const u32 get_texture_memory_in_use() const override
 		{
-			return m_texture_memory_in_use;
+			return m_storage.m_texture_memory_in_use;
 		}
 
 		const u32 get_temporary_memory_in_use()

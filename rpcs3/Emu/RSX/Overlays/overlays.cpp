@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "overlays.h"
 #include "../GSRender.h"
 
@@ -6,12 +6,12 @@ namespace rsx
 {
 	namespace overlays
 	{
-		//Singleton instance declaration
+		// Singleton instance declaration
 		fontmgr* fontmgr::m_instance = nullptr;
 
 		void user_interface::close()
 		{
-			//Force unload
+			// Force unload
 			exit = true;
 			if (auto manager = fxm::get<display_manager>())
 			{
@@ -35,7 +35,7 @@ namespace rsx
 				const auto now = get_system_time() - 1000000;
 				if ((now - rsxthr->last_flip_time) > min_refresh_duration_us)
 				{
-					rsxthr->native_ui_flip_request.store(true);
+					rsxthr->async_flip_requested |= rsx::thread::flip_request::native_ui;
 				}
 			}
 		}

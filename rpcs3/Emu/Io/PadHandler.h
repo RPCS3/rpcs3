@@ -4,8 +4,8 @@
 #include <vector>
 #include <memory>
 #include "stdafx.h"
-#include "../../Utilities/Config.h"
-#include "../../Utilities/types.h"
+#include "Utilities/Config.h"
+#include "Utilities/types.h"
 #include "Emu/System.h"
 
 // TODO: HLE info (constants, structs, etc.) should not be available here
