@@ -1781,17 +1781,20 @@ namespace rsx
 			{
 				auto &vinfo = state.vertex_arrays_info[index];
 
+				if (input_mask & (1u << index)) 
+				{
+					result.attribute_placement[index] = attribute_buffer_placement::transient;
+				}
+
 				if (vinfo.size() > 0)
 				{
 					info.locations.push_back(index);
 					info.attribute_stride += rsx::get_vertex_type_size_on_host(vinfo.type(), vinfo.size());
-					result.attribute_placement[index] = attribute_buffer_placement::transient;
 				}
 				else if (state.register_vertex_info[index].size > 0)
 				{
 					//Reads from register
 					result.referenced_registers.push_back(index);
-					result.attribute_placement[index] = attribute_buffer_placement::transient;
 				}
 			}
 
