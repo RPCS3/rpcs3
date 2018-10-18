@@ -253,18 +253,12 @@ namespace gl
 	public:
 		using baseclass::cached_texture_section;
 
-		void reset(const utils::address_range &memory_range)
-		{
-			vram_texture = nullptr;
-			managed_texture.reset();
-
-			baseclass::reset(memory_range);
-		}
-
 		void create(u16 w, u16 h, u16 depth, u16 mipmaps, gl::texture* image, u32 rsx_pitch, bool read_only,
 				gl::texture::format gl_format, gl::texture::type gl_type, bool swap_bytes)
 		{
-			vram_texture = static_cast<gl::viewable_image*>(image);
+			auto new_texture = static_cast<gl::viewable_image*>(image);
+			ASSERT(!exists() || !is_managed() || vram_texture == new_texture);
+			vram_texture = new_texture;
 
 			if (read_only)
 			{
@@ -277,6 +271,7 @@ namespace gl
 					init_buffer();
 
 				aa_mode = static_cast<gl::render_target*>(image)->read_aa_mode;
+				ASSERT(managed_texture.get() == nullptr);
 			}
 
 			flushed = false;
@@ -302,6 +297,8 @@ namespace gl
 
 		void create_read_only(gl::viewable_image* image, u32 width, u32 height, u32 depth, u32 mipmaps)
 		{
+			ASSERT(!exists() || !is_managed() || vram_texture == image);
+
 			//Only to be used for ro memory, we dont care about most members, just dimensions and the vram texture handle
 			this->width = width;
 			this->height = height;
@@ -353,6 +350,8 @@ namespace gl
 
 		void copy_texture(bool=false)
 		{
+			ASSERT(exists());
+
 			if (!pbo_id)
 			{
 				init_buffer();
@@ -466,8 +465,10 @@ namespace gl
 
 		bool flush()
 		{
+			ASSERT(exists());
+
 			if (flushed) return true; //Already written, ignore
-			AUDIT( is_locked() );
+			AUDIT(is_locked());
 
 			bool result = true;
 			if (!synchronized)
@@ -493,7 +494,7 @@ namespace gl
 			const auto valid_range = get_confirmed_range_delta();
 			const u32 valid_offset = valid_range.first;
 			const u32 valid_length = valid_range.second;
-			AUDIT( valid_length > 0 );
+			AUDIT(valid_length > 0);
 
 			void *dst = get_ptr(get_section_base() + valid_offset);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
@@ -624,9 +625,14 @@ namespace gl
 			baseclass::on_section_resources_destroyed();
 		}
 
-		inline bool exists() const
+		bool exists() const
 		{
 			return (vram_texture != nullptr);
+		}
+
+		bool is_managed() const
+		{
+			return !exists() || managed_texture.get() != nullptr;
 		}
 
 		texture::format get_format() const
@@ -951,7 +957,7 @@ namespace gl
 
 			if (context != rsx::texture_upload_context::blit_engine_dst)
 			{
-				AUDIT( cached.get_memory_read_flags() != rsx::memory_read_flags::flush_always );
+				AUDIT(cached.get_memory_read_flags() != rsx::memory_read_flags::flush_always);
 				read_only_range = cached.get_min_max(read_only_range, rsx::section_bounds::locked_range); // TODO ruipin: This was outside the if, but is inside the if in Vulkan. Ask kd-11
 				cached.protect(utils::protection::ro);
 			}
