@@ -1094,31 +1094,41 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 	}
 
 	// Emplace current thread
-	for (std::size_t i = 0; i <= g_ppu.size(); i++)
+	if ([&]() -> bool 
 	{
-		if (i < g_ppu.size() && g_ppu[i] == &cpu)
+		for (std::size_t i = 0; i < g_ppu.size(); i++)
 		{
-			LOG_TRACE(PPU, "sleep() - suspended (p=%zu)", g_pending.size());
-			break;
+			if (g_ppu[i] == &cpu)
+			{
+				// Thread is already queued
+				LOG_TRACE(PPU, "sleep() - suspended (p=%zu)", g_pending.size());
+				return false;
+			}
 		}
 
-		// Use priority, also preserve FIFO order
-		if (i == g_ppu.size() || g_ppu[i]->prio > static_cast<ppu_thread&>(cpu).prio)
+		return true;
+	}()) 
+	{
+		for (std::size_t i = 0; i <= g_ppu.size(); i++)
 		{
-			LOG_TRACE(PPU, "awake(): %s", cpu.id);
-			g_ppu.insert(g_ppu.cbegin() + i, &static_cast<ppu_thread&>(cpu));
-
-			// Unregister timeout if necessary
-			for (auto it = g_waiting.cbegin(), end = g_waiting.cend(); it != end; it++)
+			// Use priority, also preserve FIFO order
+			if (i == g_ppu.size() || g_ppu[i]->prio > static_cast<ppu_thread&>(cpu).prio)
 			{
-				if (it->second == &cpu)
-				{
-					g_waiting.erase(it);
-					break;
-				}
-			}
+				LOG_TRACE(PPU, "awake(): %s", cpu.id);
+				g_ppu.insert(g_ppu.cbegin() + i, &static_cast<ppu_thread&>(cpu));
 
-			break;
+				// Unregister timeout if necessary
+				for (auto it = g_waiting.cbegin(), end = g_waiting.cend(); it != end; it++)
+				{
+					if (it->second == &cpu)
+					{
+						g_waiting.erase(it);
+						break;
+					}
+				}
+
+				break;
+			}
 		}
 	}
 
