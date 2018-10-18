@@ -28,16 +28,12 @@ namespace vk
 	public:
 		using baseclass::cached_texture_section;
 
-		void reset(const utils::address_range &memory_range)
-		{
-			if (memory_range.length() > get_section_size())
-				release_dma_resources();
-
-			baseclass::reset(memory_range);
-		}
-
 		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image *image, u32 rsx_pitch, bool managed, u32 gcm_format, bool pack_swap_bytes = false)
 		{
+			auto new_texture = static_cast<vk::viewable_image*>(image);
+			ASSERT(!exists() || !is_managed() || vram_texture == new_texture);
+			vram_texture = new_texture;
+
 			width = w;
 			height = h;
 			this->depth = depth;
@@ -45,8 +41,6 @@ namespace vk
 
 			this->gcm_format = gcm_format;
 			this->pack_unpack_swap_bytes = pack_swap_bytes;
-
-			vram_texture = static_cast<vk::viewable_image*>(image);
 
 			if (managed)
 			{
@@ -85,16 +79,25 @@ namespace vk
 
 		void destroy()
 		{
+			if (!exists())
+				return;
+
 			m_tex_cache->on_section_destroyed(*this);
 			vram_texture = nullptr;
+			ASSERT(managed_texture.get() == nullptr);
 			release_dma_resources();
 
 			baseclass::on_section_resources_destroyed();
 		}
 
-		inline bool exists() const
+		bool exists() const
 		{
 			return (vram_texture != nullptr);
+		}
+
+		bool is_managed() const
+		{
+			return !exists() || managed_texture.get() != nullptr;
 		}
 
 		vk::image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
@@ -130,6 +133,8 @@ namespace vk
 
 		void copy_texture(bool manage_cb_lifetime, vk::command_buffer& cmd, VkQueue submit_queue)
 		{
+			ASSERT(exists());
+
 			if (m_device == nullptr)
 			{
 				m_device = &cmd.get_command_pool().get_owner();
@@ -282,8 +287,10 @@ namespace vk
 
 		bool flush(vk::command_buffer& cmd, VkQueue submit_queue)
 		{
+			ASSERT(exists());
+
 			if (flushed) return true;
-			AUDIT( is_locked() );
+			AUDIT(is_locked());
 
 			if (m_device == nullptr)
 			{
@@ -306,7 +313,7 @@ namespace vk
 			const auto valid_range = get_confirmed_range_delta();
 			const u32 valid_offset = valid_range.first;
 			const u32 valid_length = valid_range.second;
-			AUDIT( valid_length > 0 );
+			AUDIT(valid_length > 0);
 
 			void* pixels_src = dma_buffer->map(valid_offset, valid_length);
 			void* pixels_dst = get_ptr(get_section_base() + valid_offset);
@@ -398,7 +405,7 @@ namespace vk
 			view = std::move(_view);
 		}
 
-		discarded_storage(cached_texture_section& tex)
+		discarded_storage(vk::cached_texture_section& tex)
 		{
 			combined_image = std::move(tex.get_texture());
 			block_size = tex.get_section_size();
@@ -415,8 +422,11 @@ namespace vk
 	public:
 		virtual void on_section_destroyed(cached_texture_section& tex)
 		{
-			m_discarded_memory_size += tex.get_section_size();
-			m_discardable_storage.push_back(tex);
+			if (tex.is_managed())
+			{
+				m_discarded_memory_size += tex.get_section_size();
+				m_discardable_storage.push_back(tex);
+			}
 		}
 
 	private:
@@ -1233,7 +1243,7 @@ namespace vk
 			return m_storage.m_unreleased_texture_objects + (u32)m_discardable_storage.size();
 		}
 
-		const u32 get_texture_memory_in_use() const override
+		const u64 get_texture_memory_in_use() const override
 		{
 			return m_storage.m_texture_memory_in_use;
 		}

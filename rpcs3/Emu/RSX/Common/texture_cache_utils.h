@@ -47,57 +47,61 @@ namespace rsx
 			deferred_read,
 			write,
 			deferred_write,
-			unmap
+			unmap, // fault range is being unmapped
+			reprotect, // we are going to reprotect the fault range
+			superseded_by_fbo // used by texture_cache::locked_memory_region
 		} cause;
 
-		bool valid() const
+		constexpr bool valid() const
 		{
 			return cause != invalid;
 		}
 
-		bool is_read() const
+		constexpr bool is_read() const
 		{
 			AUDIT(valid());
 			return (cause == read || cause == deferred_read);
 		}
 
-		bool is_write() const
-		{
-			AUDIT(valid());
-			return (cause == write || cause == deferred_write || cause == unmap);
-		}
-
-		bool is_deferred() const
+		constexpr bool deferred_flush() const
 		{
 			AUDIT(valid());
 			return (cause == deferred_read || cause == deferred_write);
 		}
 
-		bool allow_flush() const
+		constexpr bool destroy_fault_range() const
 		{
-			return (cause == read || cause == write || cause == unmap);
-		}
-
-		bool exclude_fault_range() const
-		{
+			AUDIT(valid());
 			return (cause == unmap);
 		}
 
-		invalidation_cause undefer() const
+		constexpr bool keep_fault_range_protection() const
 		{
-			AUDIT(is_deferred());
-			if (is_read())
+			AUDIT(valid());
+			return (cause == unmap || cause == reprotect || cause == superseded_by_fbo);
+		}
+
+		bool skip_flush() const
+		{
+			AUDIT(valid());
+			return (cause == unmap) || (!g_cfg.video.strict_texture_flushing && cause == superseded_by_fbo);
+		}
+
+		constexpr invalidation_cause undefer() const
+		{
+			AUDIT(deferred_flush());
+			if (cause == deferred_read)
 				return read;
-			else if (is_write())
+			else if (cause == deferred_write)
 				return write;
 			else
 				fmt::throw_exception("Unreachable " HERE);
 		}
 
-		invalidation_cause() : cause(invalid) {}
-		invalidation_cause(enum_type _cause) : cause(_cause) {}
+		constexpr invalidation_cause() : cause(invalid) {}
+		constexpr invalidation_cause(enum_type _cause) : cause(_cause) {}
 		operator enum_type&() { return cause; }
-		operator enum_type() const { return cause; }
+		constexpr operator enum_type() const { return cause; }
 	};
 
 	struct typeless_xfer
@@ -417,6 +421,9 @@ namespace rsx
 		{
 			for (auto &section : *this)
 			{
+				if (section.is_locked())
+					section.unprotect();
+
 				section.destroy();
 			}
 
@@ -580,7 +587,7 @@ namespace rsx
 
 	public:
 		std::atomic<u32> m_unreleased_texture_objects = { 0 }; //Number of invalidated objects not yet freed from memory
-		std::atomic<u32> m_texture_memory_in_use = { 0 };
+		std::atomic<u64> m_texture_memory_in_use = { 0 };
 
 		// Constructor
 		ranged_storage(texture_cache_type *tex_cache) :
@@ -716,8 +723,8 @@ namespace rsx
 
 		void on_section_resources_destroyed(const section_storage_type &section)
 		{
-			u32 size = section.get_section_size();
-			u32 prev_size = m_texture_memory_in_use.fetch_sub(size);
+			u64 size = section.get_section_size();
+			u64 prev_size = m_texture_memory_in_use.fetch_sub(size);
 			ASSERT(prev_size >= size);
 		}
 
@@ -1036,8 +1043,8 @@ namespace rsx
 			AUDIT(memory_range.valid());
 			AUDIT(!is_locked());
 
-			// Invalidate if necessary
-			invalidate_range();
+			// Destroy if necessary
+			destroy();
 
 			// Superclass
 			rsx::buffered_section::reset(memory_range);
@@ -1083,10 +1090,6 @@ namespace rsx
 		 */
 		inline bool is_destroyed() const { return !exists(); } // this section is currently destroyed
 
-		inline bool can_destroy() const {
-			return !is_destroyed() && is_tracked();
-		} // This section may be destroyed
-
 	protected:
 		void on_section_resources_created()
 		{
@@ -1107,15 +1110,11 @@ namespace rsx
 			triggered_exists_callbacks = false;
 
 			AUDIT(valid_range());
+			ASSERT(!is_locked());
+			ASSERT(is_managed());
 
 			// Set dirty
 			set_dirty(true);
-
-			// Unlock
-			if (is_locked())
-			{
-				unprotect();
-			}
 
 			// Trigger callbacks
 			m_block->on_section_resources_destroyed(*derived());
@@ -1204,14 +1203,9 @@ namespace rsx
 		/**
 		 * Misc.
 		 */
-		bool is_tracked() const
-		{
-			return !exists() || (get_context() != framebuffer_storage);
-		}
-
 		bool is_unreleased() const
 		{
-			return is_tracked() && exists() && is_dirty() && !is_locked();
+			return exists() && is_dirty() && !is_locked();
 		}
 
 		bool can_be_reused() const
@@ -1530,12 +1524,17 @@ namespace rsx
 		/**
 		 * Derived wrappers
 		 */
-		inline void destroy()
+		void destroy()
 		{
 			derived()->destroy();
 		}
 
-		inline bool exists() const
+		bool is_managed() const
+		{
+			return derived()->is_managed();
+		}
+
+		bool exists() const
 		{
 			return derived()->exists();
 		}
