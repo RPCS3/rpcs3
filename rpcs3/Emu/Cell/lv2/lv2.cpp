@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/PPUFunction.h"
@@ -1063,7 +1063,15 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 
 	std::lock_guard lock(g_mutex);
 
-	if (prio == -4)
+	if (prio < INT32_MAX)
+	{
+        // Priority set
+        if (static_cast<ppu_thread&>(cpu).prio.exchange(prio) == prio || !unqueue(g_ppu, &cpu))
+        {
+            return;
+        }
+	}
+	else if (prio == -4)
 	{
 		// Yield command
 		const u64 start_time = get_system_time();
@@ -1085,12 +1093,6 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 		unqueue(g_pending, &cpu);
 
 		static_cast<ppu_thread&>(cpu).start_time = start_time;
-	}
-
-	if (prio < INT32_MAX && !unqueue(g_ppu, &cpu))
-	{
-		// Priority set
-		return;
 	}
 
 	// Emplace current thread
